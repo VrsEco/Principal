@@ -1,0 +1,370 @@
+﻿{% extends "base.html" %}
+{% block title %}Dashboard GRV | Gestao de Rotina da Versus{% endblock %}
+{% block body %}{% set active_nav = 'grv' %}{{ super() }}{% endblock %}
+
+{% block extra_head %}
+{{ super() }}
+<style>
+  :root {
+    --dashboard-gap: 16px;
+    --dashboard-radius: 14px;
+    --dashboard-border: 1px solid rgba(15, 23, 42, 0.08);
+  }
+
+  .grv-dashboard-shell {
+    margin: 0;
+    min-height: calc(100vh - 120px);
+    display: grid;
+    align-items: start;
+  }
+
+  .analysis-main {
+    background: #ffffff;
+    border-radius: var(--dashboard-radius);
+    border: var(--dashboard-border);
+    padding: 22px 26px;
+    display: flex;
+    flex-direction: column;
+    gap: var(--dashboard-gap);
+    box-shadow: 0 10px 32px rgba(15, 23, 42, 0.08);
+  }
+
+  .analysis-header {
+    display: flex;
+    justify-content: flex-start;
+    align-items: flex-start;
+    gap: 12px;
+    flex-wrap: wrap;
+  }
+
+  .analysis-header h1 {
+    margin: 0;
+    font-size: 22px;
+    font-weight: 700;
+    color: #0f172a;
+    line-height: 1.3;
+  }
+
+  .analysis-header p {
+    margin: 6px 0 0;
+    color: #64748b;
+    font-size: 13px;
+    line-height: 1.4;
+    max-width: 520px;
+  }
+
+  .analysis-summary {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
+    gap: 14px;
+  }
+
+  .summary-chip {
+    background: linear-gradient(135deg, rgba(59, 130, 246, 0.12), rgba(15, 23, 42, 0.08));
+    border-radius: var(--dashboard-radius);
+    padding: 16px 18px;
+    display: grid;
+    gap: 6px;
+    border: 1px solid rgba(59, 130, 246, 0.18);
+  }
+
+  .summary-chip .label {
+    font-size: 11px;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    color: #1d4ed8;
+    font-weight: 600;
+  }
+
+  .summary-chip .value {
+    display: flex;
+    align-items: baseline;
+    gap: 6px;
+    font-size: 24px;
+    font-weight: 700;
+    color: #0f172a;
+  }
+
+  .summary-chip .value small {
+    font-size: 12px;
+    color: #64748b;
+    font-weight: 500;
+  }
+
+  .summary-chip .footer {
+    font-size: 11px;
+    color: #475569;
+  }
+
+  .companies-section {
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
+  }
+
+  .companies-section-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+  }
+
+  .companies-section-header h2 {
+    margin: 0;
+    font-size: 18px;
+    font-weight: 600;
+    color: #0f172a;
+  }
+
+  .companies-section-header span {
+    font-size: 13px;
+    color: #64748b;
+  }
+
+  .companies-grid {
+    display: grid;
+    gap: 20px;
+    grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+  }
+
+  .company-card {
+    padding: 18px;
+    border-radius: 16px;
+    background: #ffffff;
+    border: 1px solid rgba(15, 23, 42, 0.08);
+    box-shadow: 0 12px 24px rgba(15, 23, 42, 0.08);
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+    transition: all 0.3s ease;
+    cursor: pointer;
+    position: relative;
+    overflow: hidden;
+    text-decoration: none;
+    color: inherit;
+  }
+
+  .company-card::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: linear-gradient(135deg, rgba(59, 130, 246, 0.05), transparent);
+    opacity: 0;
+    transition: opacity 0.3s ease;
+  }
+
+  .company-card:hover::before {
+    opacity: 1;
+  }
+
+  .company-card:hover {
+    transform: translateY(-4px);
+    box-shadow: 0 24px 48px rgba(15, 23, 42, 0.15);
+    border-color: rgba(59, 130, 246, 0.3);
+  }
+
+  .company-card-header {
+    display: flex;
+    gap: 12px;
+    align-items: flex-start;
+  }
+
+  .company-card-icon {
+    width: 48px;
+    height: 48px;
+    border-radius: 12px;
+    background: linear-gradient(135deg, #3b82f6, #2563eb);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-weight: 700;
+    font-size: 18px;
+    color: white;
+    flex-shrink: 0;
+    text-transform: uppercase;
+  }
+
+  .company-card-content {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+  }
+
+  .company-card-title {
+    font-size: 18px;
+    font-weight: 600;
+    color: #0f172a;
+    margin: 0;
+    line-height: 1.3;
+  }
+
+  .company-card-description {
+    color: #64748b;
+    font-size: 13px;
+    line-height: 1.5;
+    margin: 0;
+  }
+
+  .company-card-stats {
+    display: flex;
+    gap: 12px;
+    flex-wrap: wrap;
+  }
+
+  .company-stat-badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    padding: 6px 12px;
+    border-radius: 999px;
+    font-size: 12px;
+    font-weight: 600;
+    background: rgba(59, 130, 246, 0.1);
+    color: #2563eb;
+    border: 1px solid rgba(59, 130, 246, 0.2);
+  }
+
+  .empty-state {
+    background: #f8fafc;
+    border: 2px dashed rgba(148, 163, 184, 0.6);
+    border-radius: var(--dashboard-radius);
+    padding: 38px 26px;
+    text-align: center;
+    display: grid;
+    gap: 12px;
+    color: #475569;
+  }
+
+  .empty-state h3 {
+    margin: 0;
+    font-size: 18px;
+    color: #0f172a;
+  }
+
+  .empty-state p {
+    margin: 0;
+    font-size: 13px;
+    color: #64748b;
+  }
+
+  .empty-state a {
+    justify-self: center;
+    border-radius: 999px;
+    padding: 10px 18px;
+    font-size: 13px;
+    background: #2563eb;
+    color: #ffffff;
+    text-decoration: none;
+    font-weight: 600;
+  }
+
+  .empty-state a:hover {
+    background: #1d4ed8;
+  }
+
+  @media (max-width: 960px) {
+    .companies-grid {
+      grid-template-columns: repeat(auto-fill, minmax(240px, 1fr));
+    }
+  }
+
+  @media (max-width: 768px) {
+    .analysis-main {
+      padding: 18px;
+    }
+
+    .analysis-header {
+      flex-direction: column;
+      align-items: flex-start;
+    }
+
+    .companies-grid {
+      grid-template-columns: 1fr;
+    }
+  }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="grv-dashboard-shell">
+  <main class="analysis-main">
+    <div class="analysis-header">
+      <div>
+        <h1>Visao geral do GRV</h1>
+        <p>Monitore cadastros, estruturas e processos ativos na gestao de rotina da Versus.</p>
+      </div>
+    </div>
+
+    <section class="analysis-summary">
+      <article class="summary-chip">
+        <span class="label">Empresas</span>
+        <div class="value">
+          <span>{{ highlights.companies }}</span>
+          <small>ativas</small>
+        </div>
+        <span class="footer">Registros acompanhados pelo GRV</span>
+      </article>
+      <article class="summary-chip">
+        <span class="label">Projetos</span>
+        <div class="value">
+          <span>{{ highlights.total_projects }}</span>
+          <small>registrados</small>
+        </div>
+        <span class="footer">Projetos acompanhados pelo GRV</span>
+      </article>
+      <article class="summary-chip">
+        <span class="label">Processos</span>
+        <div class="value">
+          <span>{{ total_processes or 0 }}</span>
+          <small>mapeados</small>
+        </div>
+        <span class="footer">Processos documentados</span>
+      </article>
+      <article class="summary-chip">
+        <span class="label">Atualizacao</span>
+        <div class="value">
+          <span>{{ highlights.last_update }}</span>
+        </div>
+        <span class="footer">Ultima movimentacao registrada</span>
+      </article>
+    </section>
+
+    {% if companies %}
+    <section class="companies-section">
+      <div class="companies-section-header">
+        <h2>Empresas cadastradas</h2>
+        <span>{{ companies|length }} empresas</span>
+      </div>
+      <div class="companies-grid">
+        {% for company in companies %}
+        <a class="company-card" href="{{ url_for('grv.grv_company_dashboard', company_id=company.id) }}">
+          <div class="company-card-header">
+            <div class="company-card-icon">
+              {{ (company.client_code or '')|upper or company.id }}
+            </div>
+            <div class="company-card-content">
+              <h3 class="company-card-title">{{ company.name }}</h3>
+              <p class="company-card-description">{{ company.industry or 'Setor nao informado' }}</p>
+            </div>
+          </div>
+          <div class="company-card-stats">
+            <span class="company-stat-badge">{{ company.projects_count or 0 }} projetos</span>
+            <span class="company-stat-badge">{{ company.process_count or 0 }} processos</span>
+          </div>
+        </a>
+        {% endfor %}
+      </div>
+    </section>
+    {% else %}
+    <section class="empty-state">
+      <h3>Nenhuma empresa cadastrada</h3>
+      <p>Cadastre a primeira empresa para liberar os recursos do GRV.</p>
+      <a href="#" onclick="alert('Funcionalidade em desenvolvimento'); return false;">Cadastrar empresa</a>
+    </section>
+    {% endif %}
+  </main>
+</div>
+{% endblock %}

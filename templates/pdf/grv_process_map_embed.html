@@ -1,0 +1,273 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="utf-8" />
+  <title>Mapa de Processos</title>
+  <link rel="icon" type="image/x-icon" href="{{ url_for('static', filename='favicon.ico') }}" />
+  <link rel="shortcut icon" type="image/x-icon" href="{{ url_for('static', filename='favicon.ico') }}" />
+  <style>
+    :root {
+      color-scheme: light;
+    }
+
+    @page {
+      size: A4;
+      margin: 15mm 12mm 20mm 12mm;
+    }
+
+    * {
+      box-sizing: border-box;
+    }
+
+    body {
+      margin: 0;
+      font-family: "Segoe UI", "Inter", Arial, sans-serif;
+      font-size: 11px;
+      line-height: 1.45;
+      background: #ffffff;
+      color: #0f172a;
+    }
+
+    .main {
+      padding: 0 0 12mm 0;
+      background: #ffffff;
+    }
+
+    .summary {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 12px;
+      margin-bottom: 16px;
+    }
+
+    .summary-card {
+      border: 1px solid rgba(148, 163, 184, 0.35);
+      border-radius: 8px;
+      padding: 10px 14px;
+      min-width: 140px;
+      background: #f8fafc;
+      box-shadow: none;
+    }
+
+    .summary-card-title {
+      font-size: 10px;
+      letter-spacing: 0.04em;
+      text-transform: uppercase;
+      color: #64748b;
+      margin-bottom: 4px;
+    }
+
+    .summary-card-value {
+      font-weight: 600;
+      font-size: 14px;
+      color: #0f172a;
+    }
+
+    .area-block {
+      margin: 16px 0 20px 0;
+      page-break-inside: avoid;
+      break-inside: avoid;
+      background: #ffffff;
+    }
+
+    .area-header {
+      border-radius: 10px;
+      padding: 14px 18px;
+      color: #0f172a;
+      background: linear-gradient(135deg, rgba(15, 23, 42, 0.08), rgba(15, 23, 42, 0.02));
+      border: 1px solid rgba(15, 23, 42, 0.08);
+      box-shadow: none;
+    }
+
+    .area-title {
+      font-size: 15px;
+      font-weight: 600;
+      margin: 0 0 4px 0;
+      text-transform: uppercase;
+    }
+
+    .area-meta {
+      font-size: 10px;
+      color: #475569;
+    }
+
+    .macro-block {
+      margin-top: 16px;
+      page-break-inside: avoid;
+      break-inside: avoid;
+      background: #ffffff;
+    }
+
+    .macro-title {
+      font-weight: 600;
+      font-size: 13px;
+      color: #0f172a;
+      margin: 0;
+    }
+
+    .macro-owner {
+      margin: 2px 0 10px;
+      font-size: 10px;
+      color: #475569;
+    }
+
+    .macro-empty,
+    .area-empty {
+      border: 1px dashed rgba(148, 163, 184, 0.5);
+      border-radius: 8px;
+      padding: 12px;
+      font-size: 10.5px;
+      color: #64748b;
+      background: #f8fafc;
+      margin-top: 8px;
+    }
+
+    .process-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(210px, 1fr));
+      gap: 12px;
+      margin-top: 8px;
+    }
+
+    .process-card {
+      border: 1px solid rgba(148, 163, 184, 0.4);
+      border-radius: 10px;
+      padding: 12px;
+      background: #ffffff;
+      box-shadow: none;
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+      page-break-inside: avoid;
+      break-inside: avoid;
+    }
+
+    .process-title {
+      font-weight: 600;
+      font-size: 12px;
+      color: #0f172a;
+      margin: 0;
+    }
+
+    .process-meta {
+      font-size: 10px;
+      color: #475569;
+    }
+
+    .process-description {
+      font-size: 9.8px;
+      color: #334155;
+      line-height: 1.4;
+      margin-top: 4px;
+      word-break: break-word;
+    }
+
+    .badge-group {
+      display: flex;
+      flex-direction: column;
+      gap: 4px;
+    }
+
+    .badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      border-radius: 6px;
+      padding: 4px 6px;
+      font-size: 9.5px;
+      font-weight: 600;
+      background: rgba(15, 23, 42, 0.05);
+      color: #0f172a;
+      line-height: 1.1;
+    }
+
+    .badge-label {
+      text-transform: uppercase;
+      font-weight: 500;
+      color: #475569;
+      letter-spacing: 0.03em;
+    }
+
+    .badge-value {
+      font-weight: 600;
+    }
+
+    .break-avoid {
+      page-break-inside: avoid;
+      break-inside: avoid;
+    }
+  </style>
+</head>
+<body>
+  <main class="main">
+    <section class="summary">
+      <div class="summary-card">
+        <div class="summary-card-title">Áreas</div>
+        <div class="summary-card-value">{{ totals.areas }}</div>
+      </div>
+      <div class="summary-card">
+        <div class="summary-card-title">Macroprocessos</div>
+        <div class="summary-card-value">{{ totals.macros }}</div>
+      </div>
+      <div class="summary-card">
+        <div class="summary-card-title">Processos</div>
+        <div class="summary-card-value">{{ totals.processes }}</div>
+      </div>
+    </section>
+
+    {% if not areas %}
+      <div class="area-empty">Nenhum processo foi mapeado para esta empresa.</div>
+    {% else %}
+      {% for area in areas %}
+        <section class="area-block break-avoid">
+          <div class="area-header" style="background: linear-gradient(135deg, {{ area.color_soft }}, rgba(255,255,255,0.92)); border: 1px solid {{ area.color_soft }};">
+            <div class="area-title">{{ area.display_name }}</div>
+            <div class="area-meta">{{ area.macro_count }} macroprocesso(s) • {{ area.process_count }} processo(s)</div>
+          </div>
+
+          {% if not area.macros %}
+            <div class="area-empty">Nenhum macroprocesso cadastrado para esta área.</div>
+          {% else %}
+            {% for macro in area.macros %}
+              <div class="macro-block break-avoid">
+                <div class="macro-title">{{ macro.display_name }}</div>
+                {% if macro.owner %}
+                  <div class="macro-owner">Responsável: {{ macro.owner }}</div>
+                {% endif %}
+
+                {% if not macro.processes %}
+                  <div class="macro-empty">Nenhum processo cadastrado neste macroprocesso.</div>
+                {% else %}
+                  <div class="process-grid">
+                    {% for proc in macro.processes %}
+                      <div class="process-card break-avoid">
+                        <div class="process-title">{{ proc.display_name }}</div>
+                        {% if proc.responsible %}
+                          <div class="process-meta">Responsável: {{ proc.responsible }}</div>
+                        {% endif %}
+                        <div class="badge-group">
+                          <div class="badge" style="background: {{ proc.structuring.background }}; color: {{ proc.structuring.color }};">
+                            <span class="badge-label">Estruturação</span>
+                            <span class="badge-value">{{ proc.structuring.label }}</span>
+                          </div>
+                          <div class="badge" style="background: {{ proc.performance.background }}; color: {{ proc.performance.color }};">
+                            <span class="badge-label">Desempenho</span>
+                            <span class="badge-value">{{ proc.performance.label }}</span>
+                          </div>
+                        </div>
+                        {% if proc.description %}
+                          <div class="process-description">{{ proc.description }}</div>
+                        {% endif %}
+                      </div>
+                    {% endfor %}
+                  </div>
+                {% endif %}
+              </div>
+            {% endfor %}
+          {% endif %}
+        </section>
+      {% endfor %}
+    {% endif %}
+  </main>
+</body>
+</html>

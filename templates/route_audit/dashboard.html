@@ -1,0 +1,638 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Auditoria de Logs - Sistema Versus</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <style>
+        :root {
+            --primary-color: #2c3e50;
+            --success-color: #27ae60;
+            --warning-color: #f39c12;
+            --danger-color: #e74c3c;
+            --info-color: #3498db;
+        }
+
+        body {
+            background-color: #f8f9fa;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+        }
+
+        .dashboard-header {
+            background: linear-gradient(135deg, var(--primary-color) 0%, #34495e 100%);
+            color: white;
+            padding: 2rem 0;
+            margin-bottom: 2rem;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+        }
+
+        .stat-card {
+            background: white;
+            border-radius: 10px;
+            padding: 1.5rem;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+            transition: transform 0.2s;
+            margin-bottom: 1rem;
+        }
+
+        .stat-card:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 4px 8px rgba(0,0,0,0.15);
+        }
+
+        .stat-number {
+            font-size: 2.5rem;
+            font-weight: bold;
+            margin-bottom: 0.5rem;
+        }
+
+        .stat-label {
+            color: #7f8c8d;
+            font-size: 0.9rem;
+            text-transform: uppercase;
+        }
+
+        .coverage-bar {
+            height: 30px;
+            background: #ecf0f1;
+            border-radius: 15px;
+            overflow: hidden;
+            position: relative;
+            margin: 1rem 0;
+        }
+
+        .coverage-fill {
+            height: 100%;
+            background: linear-gradient(90deg, var(--success-color) 0%, #2ecc71 100%);
+            transition: width 0.5s ease;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: white;
+            font-weight: bold;
+        }
+
+        .route-table {
+            background: white;
+            border-radius: 10px;
+            padding: 1.5rem;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+
+        .badge-method {
+            padding: 0.4rem 0.8rem;
+            border-radius: 5px;
+            font-weight: bold;
+            font-size: 0.75rem;
+        }
+
+        .badge-post { background: #27ae60; color: white; }
+        .badge-put { background: #3498db; color: white; }
+        .badge-delete { background: #e74c3c; color: white; }
+        .badge-get { background: #95a5a6; color: white; }
+
+        .status-badge {
+            padding: 0.4rem 0.8rem;
+            border-radius: 5px;
+            font-weight: bold;
+            font-size: 0.75rem;
+        }
+
+        .status-ok { background: #d4edda; color: #155724; }
+        .status-warning { background: #fff3cd; color: #856404; }
+        .status-danger { background: #f8d7da; color: #721c24; }
+
+        .action-btn {
+            padding: 0.4rem 1rem;
+            border-radius: 5px;
+            border: none;
+            cursor: pointer;
+            transition: all 0.2s;
+            font-size: 0.85rem;
+        }
+
+        .btn-enable {
+            background: var(--success-color);
+            color: white;
+        }
+
+        .btn-enable:hover {
+            background: #229954;
+        }
+
+        .btn-view {
+            background: var(--info-color);
+            color: white;
+        }
+
+        .btn-view:hover {
+            background: #2980b9;
+        }
+
+        .filter-section {
+            background: white;
+            border-radius: 10px;
+            padding: 1.5rem;
+            margin-bottom: 1.5rem;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+
+        .loading {
+            text-align: center;
+            padding: 3rem;
+        }
+
+        .loading i {
+            font-size: 3rem;
+            color: var(--primary-color);
+            animation: spin 1s linear infinite;
+        }
+
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+
+        .empty-state {
+            text-align: center;
+            padding: 3rem;
+            color: #7f8c8d;
+        }
+
+        .empty-state i {
+            font-size: 4rem;
+            margin-bottom: 1rem;
+        }
+
+        .modal-implementation {
+            background: #2c3e50;
+            color: #ecf0f1;
+            padding: 1rem;
+            border-radius: 5px;
+            font-family: 'Courier New', monospace;
+            font-size: 0.9rem;
+            overflow-x: auto;
+        }
+
+        .blueprint-section {
+            margin-bottom: 2rem;
+        }
+
+        .blueprint-header {
+            background: linear-gradient(90deg, #2c3e50 0%, #34495e 100%);
+            color: white;
+            padding: 1rem 1.5rem;
+            border-radius: 8px 8px 0 0;
+            cursor: pointer;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .blueprint-body {
+            background: white;
+            padding: 1rem;
+            border-radius: 0 0 8px 8px;
+            border: 1px solid #dee2e6;
+            border-top: none;
+        }
+    </style>
+</head>
+<body>
+    <!-- Header -->
+    <div class="dashboard-header">
+        <div class="container">
+            <div class="d-flex justify-content-between align-items-center">
+                <div>
+                    <h1><i class="fas fa-shield-alt"></i> Auditoria de Logs</h1>
+                    <p class="mb-0">Sistema de monitoramento e gerenciamento de logging de rotas</p>
+                </div>
+                <div>
+                    <a href="/logs/" class="btn btn-light me-2">
+                        <i class="fas fa-list"></i> Ver Logs
+                    </a>
+                    <button class="btn btn-outline-light" onclick="exportReport()">
+                        <i class="fas fa-download"></i> Exportar Relatório
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="container">
+        <!-- Loading -->
+        <div id="loading" class="loading">
+            <i class="fas fa-spinner fa-spin"></i>
+            <p class="mt-3">Carregando dados de auditoria...</p>
+        </div>
+
+        <!-- Estatísticas -->
+        <div id="stats-section" style="display: none;">
+            <div class="row">
+                <div class="col-md-3">
+                    <div class="stat-card">
+                        <div class="stat-number text-primary" id="total-routes">0</div>
+                        <div class="stat-label">Total de Rotas</div>
+                    </div>
+                </div>
+                <div class="col-md-3">
+                    <div class="stat-card">
+                        <div class="stat-number text-info" id="crud-routes">0</div>
+                        <div class="stat-label">Rotas CRUD</div>
+                    </div>
+                </div>
+                <div class="col-md-3">
+                    <div class="stat-card">
+                        <div class="stat-number text-success" id="routes-with-log">0</div>
+                        <div class="stat-label">Com Logging</div>
+                    </div>
+                </div>
+                <div class="col-md-3">
+                    <div class="stat-card">
+                        <div class="stat-number text-danger" id="routes-without-log">0</div>
+                        <div class="stat-label">Sem Logging</div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Cobertura -->
+            <div class="stat-card mt-3">
+                <h5><i class="fas fa-chart-line"></i> Cobertura de Logging</h5>
+                <div class="coverage-bar">
+                    <div class="coverage-fill" id="coverage-fill" style="width: 0%">
+                        <span id="coverage-text">0%</span>
+                    </div>
+                </div>
+                <p class="text-muted mb-0 mt-2">
+                    <small>Percentual de rotas CRUD com logging configurado</small>
+                </p>
+            </div>
+        </div>
+
+        <!-- Filtros -->
+        <div id="filter-section" class="filter-section" style="display: none;">
+            <div class="row align-items-center">
+                <div class="col-md-4">
+                    <label class="form-label"><i class="fas fa-filter"></i> Filtrar por:</label>
+                    <select class="form-select" id="filter-type" onchange="filterRoutes()">
+                        <option value="without_logging">Sem Logging (Crítico)</option>
+                        <option value="all">Todas as Rotas</option>
+                        <option value="crud">Apenas CRUD</option>
+                        <option value="with_logging">Com Logging</option>
+                    </select>
+                </div>
+                <div class="col-md-4">
+                    <label class="form-label"><i class="fas fa-search"></i> Buscar:</label>
+                    <input type="text" class="form-control" id="search-routes" placeholder="Buscar rota..." oninput="searchRoutes()">
+                </div>
+                <div class="col-md-4">
+                    <label class="form-label">&nbsp;</label>
+                    <button class="btn btn-primary w-100" onclick="loadData()">
+                        <i class="fas fa-sync-alt"></i> Atualizar
+                    </button>
+                </div>
+            </div>
+        </div>
+
+        <!-- Tabela de Rotas -->
+        <div id="routes-section" style="display: none;">
+            <div class="route-table">
+                <h4 class="mb-3"><i class="fas fa-route"></i> Rotas Encontradas</h4>
+                <div id="routes-container"></div>
+            </div>
+        </div>
+
+        <!-- Empty State -->
+        <div id="empty-state" class="empty-state" style="display: none;">
+            <i class="fas fa-check-circle text-success"></i>
+            <h4 class="mt-3">Tudo OK!</h4>
+            <p>Todas as rotas CRUD têm logging configurado.</p>
+        </div>
+    </div>
+
+    <!-- Modal de Detalhes da Rota -->
+    <div class="modal fade" id="routeModal" tabindex="-1">
+        <div class="modal-dialog modal-lg">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title"><i class="fas fa-info-circle"></i> Detalhes da Rota</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body">
+                    <div id="route-details"></div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Fechar</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    <script>
+        let allRoutes = [];
+        let currentFilter = 'without_logging';
+
+        // Carregar dados ao iniciar
+        document.addEventListener('DOMContentLoaded', function() {
+            loadData();
+        });
+
+        async function loadData() {
+            try {
+                document.getElementById('loading').style.display = 'block';
+                document.getElementById('stats-section').style.display = 'none';
+                document.getElementById('filter-section').style.display = 'none';
+                document.getElementById('routes-section').style.display = 'none';
+                document.getElementById('empty-state').style.display = 'none';
+
+                // Carregar resumo
+                const summaryResponse = await fetch('/route-audit/api/summary');
+                const summaryData = await summaryResponse.json();
+
+                if (summaryData.success) {
+                    updateStats(summaryData.summary);
+                }
+
+                // Carregar rotas
+                currentFilter = document.getElementById('filter-type').value;
+                const routesResponse = await fetch(`/route-audit/api/routes?filter=${currentFilter}`);
+                const routesData = await routesResponse.json();
+
+                if (routesData.success) {
+                    allRoutes = routesData.routes;
+                    displayRoutes(allRoutes);
+                }
+
+                document.getElementById('loading').style.display = 'none';
+                document.getElementById('stats-section').style.display = 'block';
+                document.getElementById('filter-section').style.display = 'block';
+
+            } catch (error) {
+                console.error('Erro ao carregar dados:', error);
+                alert('Erro ao carregar dados de auditoria');
+            }
+        }
+
+        function updateStats(summary) {
+            document.getElementById('total-routes').textContent = summary.total_routes;
+            document.getElementById('crud-routes').textContent = summary.total_crud_routes;
+            document.getElementById('routes-with-log').textContent = summary.routes_with_logging;
+            document.getElementById('routes-without-log').textContent = summary.routes_without_logging;
+
+            const coverage = summary.coverage_percentage;
+            document.getElementById('coverage-fill').style.width = coverage + '%';
+            document.getElementById('coverage-text').textContent = coverage + '%';
+
+            // Mudar cor da barra baseado na cobertura
+            const fillElement = document.getElementById('coverage-fill');
+            if (coverage < 50) {
+                fillElement.style.background = 'linear-gradient(90deg, #e74c3c 0%, #c0392b 100%)';
+            } else if (coverage < 80) {
+                fillElement.style.background = 'linear-gradient(90deg, #f39c12 0%, #e67e22 100%)';
+            } else {
+                fillElement.style.background = 'linear-gradient(90deg, #27ae60 0%, #2ecc71 100%)';
+            }
+        }
+
+        function displayRoutes(routes) {
+            const container = document.getElementById('routes-container');
+            
+            if (routes.length === 0) {
+                document.getElementById('routes-section').style.display = 'none';
+                document.getElementById('empty-state').style.display = 'block';
+                return;
+            }
+
+            document.getElementById('routes-section').style.display = 'block';
+            document.getElementById('empty-state').style.display = 'none';
+
+            // Agrupar por blueprint
+            const byBlueprint = {};
+            routes.forEach(route => {
+                const bp = route.blueprint || 'main';
+                if (!byBlueprint[bp]) {
+                    byBlueprint[bp] = [];
+                }
+                byBlueprint[bp].push(route);
+            });
+
+            let html = '';
+
+            for (const [blueprint, bpRoutes] of Object.entries(byBlueprint)) {
+                html += `
+                    <div class="blueprint-section">
+                        <div class="blueprint-header" onclick="toggleBlueprint('${blueprint}')">
+                            <div>
+                                <strong><i class="fas fa-folder"></i> ${blueprint}</strong>
+                                <span class="badge bg-light text-dark ms-2">${bpRoutes.length} rotas</span>
+                            </div>
+                            <i class="fas fa-chevron-down" id="icon-${blueprint}"></i>
+                        </div>
+                        <div class="blueprint-body" id="body-${blueprint}">
+                            <table class="table table-hover">
+                                <thead>
+                                    <tr>
+                                        <th>Endpoint</th>
+                                        <th>Métodos</th>
+                                        <th>Entidade</th>
+                                        <th>Status</th>
+                                        <th>Ações</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                `;
+
+                bpRoutes.forEach(route => {
+                    const hasLogging = route.has_auto_log || route.has_manual_log;
+                    const needsLogging = route.needs_logging;
+
+                    let statusBadge = '';
+                    if (hasLogging) {
+                        statusBadge = '<span class="status-badge status-ok"><i class="fas fa-check-circle"></i> Com Log</span>';
+                    } else if (needsLogging) {
+                        statusBadge = '<span class="status-badge status-danger"><i class="fas fa-exclamation-circle"></i> Sem Log</span>';
+                    } else {
+                        statusBadge = '<span class="status-badge status-warning"><i class="fas fa-info-circle"></i> Não Necessário</span>';
+                    }
+
+                    const methodBadges = route.methods.map(m => {
+                        const badgeClass = `badge-${m.toLowerCase()}`;
+                        return `<span class="badge-method ${badgeClass}">${m}</span>`;
+                    }).join(' ');
+
+                    const entityBadge = route.entity_type ? 
+                        `<span class="badge bg-secondary">${route.entity_type}</span>` : 
+                        '<span class="text-muted">-</span>';
+
+                    const actions = needsLogging && !hasLogging ?
+                        `<button class="action-btn btn-enable" onclick="showImplementationGuide('${route.endpoint}')">
+                            <i class="fas fa-plus-circle"></i> Incluir Log
+                        </button>` :
+                        `<button class="action-btn btn-view" onclick="showRouteDetails('${route.endpoint}')">
+                            <i class="fas fa-eye"></i> Ver Detalhes
+                        </button>`;
+
+                    html += `
+                        <tr>
+                            <td><code>${route.path}</code><br><small class="text-muted">${route.endpoint}</small></td>
+                            <td>${methodBadges}</td>
+                            <td>${entityBadge}</td>
+                            <td>${statusBadge}</td>
+                            <td>${actions}</td>
+                        </tr>
+                    `;
+                });
+
+                html += `
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                `;
+            }
+
+            container.innerHTML = html;
+        }
+
+        function toggleBlueprint(blueprint) {
+            const body = document.getElementById(`body-${blueprint}`);
+            const icon = document.getElementById(`icon-${blueprint}`);
+            
+            if (body.style.display === 'none') {
+                body.style.display = 'block';
+                icon.classList.remove('fa-chevron-right');
+                icon.classList.add('fa-chevron-down');
+            } else {
+                body.style.display = 'none';
+                icon.classList.remove('fa-chevron-down');
+                icon.classList.add('fa-chevron-right');
+            }
+        }
+
+        function filterRoutes() {
+            loadData();
+        }
+
+        function searchRoutes() {
+            const searchTerm = document.getElementById('search-routes').value.toLowerCase();
+            const filtered = allRoutes.filter(route => 
+                route.endpoint.toLowerCase().includes(searchTerm) ||
+                route.path.toLowerCase().includes(searchTerm) ||
+                (route.entity_type && route.entity_type.toLowerCase().includes(searchTerm))
+            );
+            displayRoutes(filtered);
+        }
+
+        async function showImplementationGuide(endpoint) {
+            try {
+                const response = await fetch(`/route-audit/api/routes/${encodeURIComponent(endpoint)}/details`);
+                const data = await response.json();
+
+                if (data.success) {
+                    const guide = data.implementation_guide;
+                    const details = `
+                        <h5><i class="fas fa-code"></i> Guia de Implementação</h5>
+                        <p><strong>Endpoint:</strong> <code>${data.route.endpoint}</code></p>
+                        <p><strong>Path:</strong> <code>${data.route.path}</code></p>
+                        <p><strong>Tipo de Entidade:</strong> <code>${guide.entity_type}</code></p>
+                        
+                        <h6 class="mt-4">1. Adicione o import no topo do arquivo:</h6>
+                        <div class="modal-implementation">
+                            <pre>${guide.decorator_import}</pre>
+                        </div>
+
+                        <h6 class="mt-3">2. Adicione o decorador na função:</h6>
+                        <div class="modal-implementation">
+                            <pre>${guide.example}</pre>
+                        </div>
+
+                        <div class="alert alert-info mt-3">
+                            <i class="fas fa-info-circle"></i> 
+                            <strong>Dica:</strong> O decorador capturará automaticamente as operações CREATE, UPDATE e DELETE nesta rota.
+                        </div>
+                    `;
+
+                    document.getElementById('route-details').innerHTML = details;
+                    const modal = new bootstrap.Modal(document.getElementById('routeModal'));
+                    modal.show();
+                }
+            } catch (error) {
+                console.error('Erro ao carregar detalhes:', error);
+                alert('Erro ao carregar guia de implementação');
+            }
+        }
+
+        async function showRouteDetails(endpoint) {
+            try {
+                const response = await fetch(`/route-audit/api/routes/${encodeURIComponent(endpoint)}/details`);
+                const data = await response.json();
+
+                if (data.success) {
+                    const route = data.route;
+                    const hasLogging = route.has_auto_log || route.has_manual_log;
+                    
+                    const details = `
+                        <h5><i class="fas fa-info-circle"></i> Informações da Rota</h5>
+                        <table class="table">
+                            <tr><td><strong>Endpoint:</strong></td><td><code>${route.endpoint}</code></td></tr>
+                            <tr><td><strong>Path:</strong></td><td><code>${route.path}</code></td></tr>
+                            <tr><td><strong>Métodos:</strong></td><td>${route.methods.join(', ')}</td></tr>
+                            <tr><td><strong>Blueprint:</strong></td><td>${route.blueprint || 'main'}</td></tr>
+                            <tr><td><strong>Tipo de Entidade:</strong></td><td>${route.entity_type || 'N/A'}</td></tr>
+                            <tr><td><strong>É CRUD:</strong></td><td>${route.is_crud ? 'Sim' : 'Não'}</td></tr>
+                            <tr><td><strong>Tem Auto-Log:</strong></td><td>${route.has_auto_log ? '✅ Sim' : '❌ Não'}</td></tr>
+                            <tr><td><strong>Tem Log Manual:</strong></td><td>${route.has_manual_log ? '✅ Sim' : '❌ Não'}</td></tr>
+                            <tr><td><strong>Precisa de Log:</strong></td><td>${route.needs_logging ? 'Sim' : 'Não'}</td></tr>
+                        </table>
+
+                        ${!hasLogging && route.needs_logging ? `
+                            <div class="alert alert-warning">
+                                <i class="fas fa-exclamation-triangle"></i>
+                                <strong>Atenção:</strong> Esta rota não possui logging configurado!
+                            </div>
+                        ` : ''}
+                    `;
+
+                    document.getElementById('route-details').innerHTML = details;
+                    const modal = new bootstrap.Modal(document.getElementById('routeModal'));
+                    modal.show();
+                }
+            } catch (error) {
+                console.error('Erro ao carregar detalhes:', error);
+                alert('Erro ao carregar detalhes da rota');
+            }
+        }
+
+        async function exportReport() {
+            try {
+                const response = await fetch('/route-audit/api/export-report');
+                const data = await response.json();
+
+                if (data.success) {
+                    // Criar download do CSV
+                    const blob = new Blob([data.csv_content], { type: 'text/csv' });
+                    const url = window.URL.createObjectURL(blob);
+                    const a = document.createElement('a');
+                    a.href = url;
+                    a.download = data.filename;
+                    document.body.appendChild(a);
+                    a.click();
+                    document.body.removeChild(a);
+                    window.URL.revokeObjectURL(url);
+
+                    alert('Relatório exportado com sucesso!');
+                } else {
+                    alert('Erro ao exportar relatório: ' + data.message);
+                }
+            } catch (error) {
+                console.error('Erro ao exportar:', error);
+                alert('Erro ao exportar relatório');
+            }
+        }
+    </script>
+</body>
+</html>
+

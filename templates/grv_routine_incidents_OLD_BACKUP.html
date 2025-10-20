@@ -1,0 +1,853 @@
+{% extends "base.html" %}
+{% block title %}GRV | Gestão de Ocorrências{% endblock %}
+{% block body %}{% set active_nav = 'routine-incidents' %}{{ super() }}{% endblock %}
+
+{% block extra_head %}
+{{ super() }}
+<style>
+  /* Override para esta página específica */
+  .plan-layout.incidents-layout {
+    padding: 24px;
+  }
+
+  .incidents-main {
+    background: #ffffff;
+    border-radius: 14px;
+    border: 1px solid rgba(15, 23, 42, 0.08);
+    padding: 22px 24px;
+    box-shadow: 0 12px 32px rgba(15, 23, 42, 0.08);
+    display: grid;
+    gap: 20px;
+  }
+
+  .incidents-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: 16px;
+    flex-wrap: wrap;
+  }
+
+  .incidents-header h1 {
+    margin: 0;
+    font-size: 22px;
+    font-weight: 700;
+    color: #0f172a;
+  }
+
+  .incidents-description {
+    color: #64748b;
+    font-size: 13px;
+    margin-top: 6px;
+    max-width: 520px;
+    line-height: 1.5;
+  }
+
+  .incidents-actions {
+    display: flex;
+    gap: 10px;
+    flex-wrap: wrap;
+  }
+
+  .incidents-button {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    padding: 10px 18px;
+    border-radius: 10px;
+    border: none;
+    cursor: pointer;
+    font-weight: 600;
+    font-size: 13px;
+    letter-spacing: 0.04em;
+    transition: transform 0.2s ease, box-shadow 0.2s ease;
+  }
+
+  .incidents-button.primary {
+    background: linear-gradient(135deg, #3b82f6, #2563eb);
+    color: #fff;
+    box-shadow: 0 16px 28px rgba(37, 99, 235, 0.25);
+  }
+
+  .incidents-button.primary:hover {
+    transform: translateY(-2px);
+  }
+
+  .incidents-filters {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
+    gap: 12px;
+    padding: 18px;
+    background: rgba(59, 130, 246, 0.04);
+    border-radius: 12px;
+    border: 1px solid rgba(59, 130, 246, 0.1);
+  }
+
+  .filter-field {
+    display: grid;
+    gap: 6px;
+  }
+
+  .filter-field label {
+    font-size: 11px;
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+    font-weight: 600;
+    color: #475569;
+  }
+
+  .filter-field select,
+  .filter-field input {
+    border-radius: 8px;
+    border: 1px solid rgba(148, 163, 184, 0.35);
+    padding: 8px 12px;
+    font-size: 13px;
+    transition: border 0.2s ease;
+    font-family: inherit;
+    background: #ffffff;
+  }
+
+  .filter-field select:focus,
+  .filter-field input:focus {
+    outline: none;
+    border-color: #2563eb;
+    box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.18);
+  }
+
+  .incidents-summary {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+    gap: 12px;
+  }
+
+  .incidents-card {
+    border-radius: 12px;
+    border: 1px solid rgba(59, 130, 246, 0.18);
+    background: linear-gradient(135deg, rgba(59, 130, 246, 0.12), rgba(14, 116, 144, 0.08));
+    padding: 16px 18px;
+    display: grid;
+    gap: 6px;
+  }
+
+  .incidents-card span.label {
+    font-size: 11px;
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+    color: #2563eb;
+    font-weight: 600;
+  }
+
+  .incidents-card span.value {
+    font-size: 22px;
+    font-weight: 700;
+    color: #0f172a;
+  }
+
+  .incidents-card small {
+    color: #475569;
+    font-size: 11px;
+  }
+
+  .incidents-table-wrapper {
+    border-radius: 14px;
+    border: 1px solid rgba(15, 23, 42, 0.08);
+    overflow: hidden;
+    background: #f8fafc;
+  }
+
+  table.incidents-table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 13px;
+  }
+
+  table.incidents-table thead {
+    background: rgba(15, 23, 42, 0.05);
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+    font-size: 11px;
+    color: #475569;
+  }
+
+  table.incidents-table th,
+  table.incidents-table td {
+    padding: 12px 16px;
+    text-align: left;
+    vertical-align: middle;
+  }
+
+  table.incidents-table tbody tr {
+    background: #ffffff;
+    border-bottom: 1px solid rgba(15, 23, 42, 0.05);
+    transition: background 0.2s ease;
+  }
+
+  table.incidents-table tbody tr:hover {
+    background: rgba(59, 130, 246, 0.06);
+  }
+
+  .incidents-pill {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    border-radius: 999px;
+    padding: 4px 10px;
+    font-size: 11px;
+    font-weight: 600;
+  }
+
+  .incidents-pill.positive {
+    background: rgba(16, 185, 129, 0.14);
+    color: #059669;
+  }
+
+  .incidents-pill.negative {
+    background: rgba(239, 68, 68, 0.14);
+    color: #dc2626;
+  }
+
+  .incidents-table-actions {
+    display: flex;
+    gap: 10px;
+  }
+
+  .incidents-link {
+    border: none;
+    background: transparent;
+    font-size: 12px;
+    color: #2563eb;
+    font-weight: 600;
+    cursor: pointer;
+    padding: 0;
+  }
+
+  .incidents-link.danger {
+    color: #dc2626;
+  }
+
+  .incidents-empty {
+    padding: 40px;
+    text-align: center;
+    color: #94a3b8;
+    font-size: 13px;
+  }
+
+  /* Modal */
+  .incidents-modal-backdrop {
+    position: fixed;
+    inset: 0;
+    background: rgba(15, 23, 42, 0.6);
+    display: none !important;
+    align-items: center;
+    justify-content: center;
+    z-index: 999;
+    padding: 20px;
+  }
+
+  .incidents-modal-backdrop.open {
+    display: flex !important;
+  }
+
+  .incidents-modal {
+    background: #ffffff;
+    border-radius: 16px;
+    width: min(600px, 100%);
+    max-height: 90vh;
+    overflow-y: auto;
+    padding: 26px;
+    box-shadow: 0 24px 48px rgba(15, 23, 42, 0.25);
+    display: grid;
+    gap: 18px;
+  }
+
+  .incidents-modal header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: 16px;
+  }
+
+  .incidents-modal header h2 {
+    margin: 0;
+    font-size: 18px;
+    font-weight: 700;
+    color: #0f172a;
+  }
+
+  .incidents-modal header button {
+    border: none;
+    background: transparent;
+    font-size: 22px;
+    cursor: pointer;
+    color: #94a3b8;
+  }
+
+  .incidents-form {
+    display: grid;
+    gap: 16px;
+  }
+
+  .incidents-form .field {
+    display: grid;
+    gap: 6px;
+  }
+
+  .incidents-form .field-row {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 16px;
+  }
+
+  .incidents-form label {
+    font-size: 12px;
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+    font-weight: 600;
+    color: #475569;
+  }
+
+  .incidents-form .required {
+    color: #ef4444;
+  }
+
+  .incidents-form input,
+  .incidents-form select,
+  .incidents-form textarea {
+    border-radius: 10px;
+    border: 1px solid rgba(148, 163, 184, 0.35);
+    padding: 10px 12px;
+    font-size: 13px;
+    transition: border 0.2s ease;
+    font-family: inherit;
+  }
+
+  .incidents-form textarea {
+    resize: vertical;
+    min-height: 80px;
+  }
+
+  .incidents-form input:focus,
+  .incidents-form select:focus,
+  .incidents-form textarea:focus {
+    outline: none;
+    border-color: #2563eb;
+    box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.18);
+  }
+
+  .incidents-form footer {
+    display: flex;
+    justify-content: flex-end;
+    gap: 10px;
+  }
+
+  .incidents-form footer button {
+    border: none;
+    border-radius: 10px;
+    padding: 10px 18px;
+    font-weight: 600;
+    cursor: pointer;
+    font-size: 13px;
+  }
+
+  .incidents-form footer .secondary {
+    background: rgba(148, 163, 184, 0.18);
+    color: #475569;
+  }
+
+  .incidents-form footer .primary {
+    background: linear-gradient(135deg, #2563eb, #1d4ed8);
+    color: #fff;
+  }
+
+  @media (max-width: 1280px) {
+    .plan-layout.incidents-layout {
+      grid-template-columns: minmax(0, 1fr);
+    }
+  }
+
+  @media (max-width: 720px) {
+    .plan-layout.incidents-layout {
+      padding: 12px;
+    }
+
+    .incidents-header {
+      flex-direction: column;
+      align-items: flex-start;
+    }
+
+    .incidents-actions {
+      width: 100%;
+      justify-content: flex-start;
+    }
+
+    .incidents-filters {
+      grid-template-columns: minmax(0, 1fr);
+    }
+
+    .incidents-form .field-row {
+      grid-template-columns: 1fr;
+    }
+  }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="plan-layout incidents-layout" data-sidebar-toggle>
+  {% include 'routines_sidebar.html' %}
+
+  <section class="project-content incidents-main">
+    <header class="incidents-header">
+      <div>
+        <h1>Gestão de Ocorrências</h1>
+        <p class="incidents-description">
+          Registre e acompanhe situações positivas ou negativas relacionadas a colaboradores, processos e projetos da empresa.
+        </p>
+      </div>
+      <div class="incidents-actions">
+        <button id="refreshButton" class="incidents-button" type="button">🔄 Atualizar</button>
+        <button id="newIncidentButton" class="incidents-button primary" type="button">➕ Nova Ocorrência</button>
+      </div>
+    </header>
+
+    <section class="incidents-filters">
+      <div class="filter-field">
+        <label for="filterType">Tipo</label>
+        <select id="filterType">
+          <option value="">Todos</option>
+          <option value="positive">Positivo</option>
+          <option value="negative">Negativo</option>
+        </select>
+      </div>
+      <div class="filter-field">
+        <label for="filterEmployee">Colaborador</label>
+        <select id="filterEmployee">
+          <option value="">Todos</option>
+          {% for emp in employees %}
+          <option value="{{ emp.id }}">{{ emp.name }}</option>
+          {% endfor %}
+        </select>
+      </div>
+      <div class="filter-field">
+        <label for="filterProcess">Processo</label>
+        <select id="filterProcess">
+          <option value="">Todos</option>
+          {% for proc in processes %}
+          <option value="{{ proc.id }}">{{ proc.code or proc.id }} - {{ proc.name }}</option>
+          {% endfor %}
+        </select>
+      </div>
+      <div class="filter-field">
+        <label for="filterProject">Projeto</label>
+        <select id="filterProject">
+          <option value="">Todos</option>
+          {% for proj in projects %}
+          <option value="{{ proj.id }}">{{ proj.code or proj.id }} - {{ proj.name }}</option>
+          {% endfor %}
+        </select>
+      </div>
+      <div class="filter-field">
+        <label for="searchInput">Buscar</label>
+        <input id="searchInput" type="text" placeholder="Digite para buscar...">
+      </div>
+    </section>
+
+    <section id="incidentsSummary" class="incidents-summary"></section>
+
+    <div class="incidents-table-wrapper">
+      <table class="incidents-table">
+        <thead>
+          <tr>
+            <th>Ocorrência</th>
+            <th>Tipo</th>
+            <th>Colaborador</th>
+            <th>Vínculo</th>
+            <th>Pontuação</th>
+            <th style="width: 120px;">Ações</th>
+          </tr>
+        </thead>
+        <tbody id="incidentsTableBody">
+          <tr>
+            <td colspan="6" class="incidents-empty">Carregando ocorrências...</td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+  </section>
+</div>
+
+<div id="incidentModal" class="incidents-modal-backdrop" role="dialog" aria-modal="true" aria-hidden="true">
+  <div class="incidents-modal">
+    <header>
+      <h2 id="modalTitle">Nova Ocorrência</h2>
+      <button type="button" id="closeModalButton" aria-label="Fechar">×</button>
+    </header>
+    <form id="incidentForm" class="incidents-form">
+      <input type="hidden" id="incidentId">
+      
+      <div class="field">
+        <label for="incidentEmployee">Colaborador <span class="required">*</span></label>
+        <select id="incidentEmployee" required>
+          <option value="">Selecione um colaborador</option>
+          {% for emp in employees %}
+          <option value="{{ emp.id }}">{{ emp.name }}</option>
+          {% endfor %}
+        </select>
+      </div>
+
+      <div class="field-row">
+        <div class="field">
+          <label for="incidentProcess">Processo</label>
+          <select id="incidentProcess">
+            <option value="">Nenhum</option>
+            {% for proc in processes %}
+            <option value="{{ proc.id }}">{{ proc.code or proc.id }} - {{ proc.name }}</option>
+            {% endfor %}
+          </select>
+        </div>
+        <div class="field">
+          <label for="incidentProject">Projeto</label>
+          <select id="incidentProject">
+            <option value="">Nenhum</option>
+            {% for proj in projects %}
+            <option value="{{ proj.id }}">{{ proj.code or proj.id }} - {{ proj.name }}</option>
+            {% endfor %}
+          </select>
+        </div>
+      </div>
+
+      <div class="field">
+        <label for="incidentTitle">Título <span class="required">*</span></label>
+        <input id="incidentTitle" type="text" placeholder="Ex: Excelente atendimento ao cliente" required>
+      </div>
+
+      <div class="field">
+        <label for="incidentDescription">Descrição</label>
+        <textarea id="incidentDescription" placeholder="Descreva a ocorrência em detalhes..."></textarea>
+      </div>
+
+      <div class="field-row">
+        <div class="field">
+          <label for="incidentType">Tipo <span class="required">*</span></label>
+          <select id="incidentType" required>
+            <option value="">Selecione...</option>
+            <option value="positive">✅ Positivo</option>
+            <option value="negative">⚠️ Negativo</option>
+          </select>
+        </div>
+        <div class="field">
+          <label for="incidentScore">Pontuação</label>
+          <input id="incidentScore" type="number" value="0" min="-100" max="100" placeholder="Ex: 10">
+        </div>
+      </div>
+
+      <footer>
+        <button type="button" class="secondary" id="cancelModalButton">Cancelar</button>
+        <button type="submit" class="primary">Salvar Ocorrência</button>
+      </footer>
+    </form>
+  </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+{{ super() }}
+<script>
+document.addEventListener('DOMContentLoaded', () => {
+  const companyId = {{ company.id }};
+  const summaryContainer = document.getElementById('incidentsSummary');
+  const tableBody = document.getElementById('incidentsTableBody');
+  const refreshButton = document.getElementById('refreshButton');
+  const newButton = document.getElementById('newIncidentButton');
+  const modalBackdrop = document.getElementById('incidentModal');
+  const modalTitle = document.getElementById('modalTitle');
+  const form = document.getElementById('incidentForm');
+  const cancelBtn = document.getElementById('cancelModalButton');
+  const closeBtn = document.getElementById('closeModalButton');
+
+  const fieldId = document.getElementById('incidentId');
+  const fieldEmployee = document.getElementById('incidentEmployee');
+  const fieldProcess = document.getElementById('incidentProcess');
+  const fieldProject = document.getElementById('incidentProject');
+  const fieldTitle = document.getElementById('incidentTitle');
+  const fieldDescription = document.getElementById('incidentDescription');
+  const fieldType = document.getElementById('incidentType');
+  const fieldScore = document.getElementById('incidentScore');
+
+  const filterType = document.getElementById('filterType');
+  const filterEmployee = document.getElementById('filterEmployee');
+  const filterProcess = document.getElementById('filterProcess');
+  const filterProject = document.getElementById('filterProject');
+  const searchInput = document.getElementById('searchInput');
+
+  let allIncidents = [];
+  let filteredIncidents = [];
+
+  loadIncidents();
+
+  refreshButton.addEventListener('click', () => {
+    loadIncidents(true);
+  });
+
+  newButton.addEventListener('click', () => openModal());
+  cancelBtn.addEventListener('click', closeModal);
+  closeBtn.addEventListener('click', closeModal);
+  modalBackdrop.addEventListener('click', (event) => {
+    if (event.target === modalBackdrop) {
+      closeModal();
+    }
+  });
+
+  filterType.addEventListener('change', applyFilters);
+  filterEmployee.addEventListener('change', applyFilters);
+  filterProcess.addEventListener('change', applyFilters);
+  filterProject.addEventListener('change', applyFilters);
+  searchInput.addEventListener('input', applyFilters);
+
+  form.addEventListener('submit', async (event) => {
+    event.preventDefault();
+    const payload = {
+      employee_id: parseInt(fieldEmployee.value),
+      process_id: fieldProcess.value ? parseInt(fieldProcess.value) : null,
+      project_id: fieldProject.value ? parseInt(fieldProject.value) : null,
+      title: fieldTitle.value.trim(),
+      description: fieldDescription.value.trim(),
+      type: fieldType.value,
+      score: parseInt(fieldScore.value) || 0
+    };
+
+    if (!payload.employee_id || !payload.title || !payload.type) {
+      showMessage('Informe colaborador, título e tipo da ocorrência.', 'error');
+      return;
+    }
+
+    try {
+      const isEdit = Boolean(fieldId.value);
+      const url = isEdit
+        ? `/api/companies/${companyId}/occurrences/${fieldId.value}`
+        : `/api/companies/${companyId}/occurrences`;
+      const method = isEdit ? 'PUT' : 'POST';
+      const response = await fetch(url, {
+        method,
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(payload)
+      });
+
+      const data = await response.json();
+      if (!response.ok || !data.success) {
+        throw new Error(data.message || 'Falha ao salvar ocorrência');
+      }
+
+      showMessage(data.message || 'Ocorrência salva com sucesso', 'success');
+      closeModal();
+      await loadIncidents(true);
+    } catch (error) {
+      console.error(error);
+      showMessage(error.message, 'error');
+    }
+  });
+
+  function openModal(incident) {
+    modalBackdrop.classList.add('open');
+    modalBackdrop.setAttribute('aria-hidden', 'false');
+
+    if (incident) {
+      modalTitle.textContent = 'Editar Ocorrência';
+      fieldId.value = incident.id;
+      fieldEmployee.value = incident.employee_id || '';
+      fieldProcess.value = incident.process_id || '';
+      fieldProject.value = incident.project_id || '';
+      fieldTitle.value = incident.title;
+      fieldDescription.value = incident.description || '';
+      fieldType.value = incident.type;
+      fieldScore.value = incident.score || 0;
+    } else {
+      modalTitle.textContent = 'Nova Ocorrência';
+      fieldId.value = '';
+      form.reset();
+    }
+
+    fieldEmployee.focus();
+  }
+
+  function closeModal() {
+    modalBackdrop.classList.remove('open');
+    modalBackdrop.setAttribute('aria-hidden', 'true');
+    form.reset();
+    fieldId.value = '';
+  }
+
+  async function loadIncidents(showToast = false) {
+    try {
+      tableBody.innerHTML = '<tr><td colspan="6" class="incidents-empty">Carregando ocorrências...</td></tr>';
+      const response = await fetch(`/api/companies/${companyId}/occurrences`);
+      
+      if (!response.ok) {
+        throw new Error('Erro ao listar ocorrências');
+      }
+      
+      allIncidents = await response.json();
+      if (!Array.isArray(allIncidents)) {
+        allIncidents = [];
+      }
+      
+      filteredIncidents = [...allIncidents];
+      applyFilters();
+      renderSummary();
+      
+      if (showToast) {
+        showMessage('Ocorrências atualizadas.', 'info');
+      }
+    } catch (error) {
+      console.error(error);
+      allIncidents = [];
+      filteredIncidents = [];
+      renderSummary();
+      tableBody.innerHTML = `<tr><td colspan="6" class="incidents-empty">${error.message}</td></tr>`;
+    }
+  }
+
+  function applyFilters() {
+    const type = filterType.value;
+    const employee = filterEmployee.value;
+    const process = filterProcess.value;
+    const project = filterProject.value;
+    const search = searchInput.value.toLowerCase();
+
+    filteredIncidents = allIncidents.filter(incident => {
+      if (type && incident.type !== type) return false;
+      if (employee && incident.employee_id != employee) return false;
+      if (process && incident.process_id != process) return false;
+      if (project && incident.project_id != project) return false;
+      if (search) {
+        const titleMatch = incident.title.toLowerCase().includes(search);
+        const descMatch = (incident.description || '').toLowerCase().includes(search);
+        if (!titleMatch && !descMatch) return false;
+      }
+      return true;
+    });
+
+    renderTable();
+  }
+
+  function renderSummary() {
+    if (!allIncidents.length) {
+      summaryContainer.innerHTML = `
+        <article class="incidents-card">
+          <span class="label">Ocorrências</span>
+          <span class="value">0</span>
+          <small>Registre a primeira ocorrência para começar.</small>
+        </article>`;
+      return;
+    }
+
+    const total = allIncidents.length;
+    const positive = allIncidents.filter((i) => i.type === 'positive').length;
+    const negative = allIncidents.filter((i) => i.type === 'negative').length;
+    const avgScore = allIncidents.length > 0 
+      ? (allIncidents.reduce((sum, i) => sum + (i.score || 0), 0) / allIncidents.length).toFixed(1)
+      : 0;
+
+    summaryContainer.innerHTML = `
+      <article class="incidents-card">
+        <span class="label">Total de ocorrências</span>
+        <span class="value">${total}</span>
+        <small>Registros cadastrados</small>
+      </article>
+      <article class="incidents-card">
+        <span class="label">Positivas</span>
+        <span class="value">${positive}</span>
+        <small>Reconhecimentos e destaque</small>
+      </article>
+      <article class="incidents-card">
+        <span class="label">Negativas</span>
+        <span class="value">${negative}</span>
+        <small>Pontos de atenção</small>
+      </article>
+      <article class="incidents-card">
+        <span class="label">Pontuação média</span>
+        <span class="value">${avgScore}</span>
+        <small>Média geral das ocorrências</small>
+      </article>`;
+  }
+
+  function renderTable() {
+    if (!filteredIncidents.length) {
+      tableBody.innerHTML = '<tr><td colspan="6" class="incidents-empty">Nenhuma ocorrência encontrada.</td></tr>';
+      return;
+    }
+
+    tableBody.innerHTML = filteredIncidents.map((incident) => {
+      const typeLabel = incident.type === 'positive' ? '✅ Positivo' : '⚠️ Negativo';
+      const employeeName = incident.employee_name || '—';
+      const link = incident.process_name 
+        ? `🔄 ${incident.process_name}` 
+        : incident.project_name 
+        ? `📊 ${incident.project_name}` 
+        : '<span style="color:#94a3b8;">Sem vínculo</span>';
+      const score = incident.score != null ? incident.score : 0;
+      const scoreDisplay = score > 0 ? `+${score}` : score;
+      
+      return `
+        <tr>
+          <td>
+            <div style="display:grid; gap:4px;">
+              <strong style="color:#0f172a; font-size:14px;">${escapeHtml(incident.title)}</strong>
+              <span style="color:#64748b; font-size:12px;">${incident.description ? escapeHtml(incident.description.substring(0, 60) + (incident.description.length > 60 ? '...' : '')) : ''}</span>
+            </div>
+          </td>
+          <td><span class="incidents-pill ${incident.type}">${typeLabel}</span></td>
+          <td>${escapeHtml(employeeName)}</td>
+          <td>${link}</td>
+          <td><strong style="color: ${score >= 0 ? '#059669' : '#dc2626'}">${scoreDisplay}</strong></td>
+          <td>
+            <div class="incidents-table-actions">
+              <button class="incidents-link" type="button" data-action="edit" data-id="${incident.id}">Editar</button>
+              <button class="incidents-link danger" type="button" data-action="remove" data-id="${incident.id}">Excluir</button>
+            </div>
+          </td>
+        </tr>`;
+    }).join('');
+  }
+
+  tableBody.addEventListener('click', async (event) => {
+    const button = event.target.closest('button[data-action]');
+    if (!button) return;
+
+    const action = button.dataset.action;
+    const incidentId = button.dataset.id;
+    const incident = allIncidents.find((item) => String(item.id) === String(incidentId));
+    if (!incident) return;
+
+    if (action === 'edit') {
+      openModal(incident);
+      return;
+    }
+
+    if (action === 'remove') {
+      const confirmDelete = confirm(`Deseja realmente excluir a ocorrência "${incident.title}"?`);
+      if (!confirmDelete) return;
+      try {
+        const response = await fetch(`/api/companies/${companyId}/occurrences/${incidentId}`, { method: 'DELETE' });
+        const data = await response.json();
+        if (!response.ok || !data.success) {
+          throw new Error(data.message || 'Erro ao excluir ocorrência');
+        }
+        showMessage(data.message || 'Ocorrência removida', 'success');
+        await loadIncidents(true);
+      } catch (error) {
+        console.error(error);
+        showMessage(error.message, 'error');
+      }
+    }
+  });
+
+  function escapeHtml(text) {
+    if (!text) return '';
+    const div = document.createElement('div');
+    div.textContent = text;
+    return div.innerHTML;
+  }
+});
+</script>
+<!-- Cache bust: v3.0 - Fixed layout classes -->
+{% endblock %}

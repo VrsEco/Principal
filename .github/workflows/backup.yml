@@ -1,0 +1,57 @@
+# GitHub Actions - Backup Automático Agendado
+# GestaoVersus (APP30)
+
+name: Backup Automático
+
+on:
+  schedule:
+    # Executa todos os dias às 3:00 AM UTC
+    - cron: '0 3 * * *'
+  workflow_dispatch: # Permite execução manual
+
+jobs:
+  backup:
+    name: Backup Database e Uploads
+    runs-on: ubuntu-latest
+    
+    steps:
+      - name: Checkout código
+        uses: actions/checkout@v4
+      
+      - name: Authenticate to Google Cloud
+        uses: google-github-actions/auth@v2
+        with:
+          credentials_json: ${{ secrets.GCP_SA_KEY }}
+      
+      - name: Set up Cloud SDK
+        uses: google-github-actions/setup-gcloud@v2
+      
+      - name: Executar backup do banco
+        run: |
+          DATE=$(date +%Y%m%d_%H%M%S)
+          gcloud sql export sql gestaoversos-db \
+            gs://gestaoversos-backups/database/backup_$DATE.sql \
+            --database=gestaoversos_prod
+      
+      - name: Backup de arquivos (uploads)
+        run: |
+          DATE=$(date +%Y%m%d_%H%M%S)
+          gsutil -m rsync -r gs://gestaoversos-uploads gs://gestaoversos-backups/uploads_$DATE/
+      
+      - name: Limpar backups antigos (manter últimos 30 dias)
+        run: |
+          DATE_30_DAYS_AGO=$(date -d '30 days ago' +%Y%m%d)
+          gsutil -m rm gs://gestaoversos-backups/database/backup_$DATE_30_DAYS_AGO*.sql || true
+          gsutil -m rm -r gs://gestaoversos-backups/uploads_$DATE_30_DAYS_AGO* || true
+      
+      - name: Notificar sucesso
+        if: success()
+        run: |
+          echo "✅ Backup realizado com sucesso em $(date)"
+      
+      - name: Notificar falha
+        if: failure()
+        run: |
+          echo "❌ Backup falhou em $(date)"
+          # Adicionar notificação aqui
+

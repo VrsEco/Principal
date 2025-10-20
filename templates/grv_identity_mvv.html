@@ -1,0 +1,101 @@
+{% extends "base.html" %}
+{% block title %}GRV | Missão / Visão / Valores{% endblock %}
+{% block body %}
+  {% set active_nav = 'dashboard' %}
+  {{ super() }}
+{% endblock %}
+{% block content %}
+<div class="project-layout plan-layout" data-sidebar-toggle>
+  {% include 'identity_sidebar.html' %}
+  <section class="project-content plan-content">
+    <details class="interview-section surface-card company-form" open>
+      <summary class="interview-summary-bar">
+        <div class="interview-summary-text">
+          <span class="section-eyebrow">Identidade Organizacional</span>
+          <h3>Missão / Visão / Valores</h3>
+          <p>Defina e mantenha o MVV utilizado no GRV. Você pode carregar/salvar por plano.</p>
+        </div>
+      </summary>
+      <div class="interview-content">
+        <form id="mvvForm" class="company-form-fields" action="#" method="post">
+          <div class="form-two-cols">
+            <label class="form-field" style="max-width:420px;">
+              <span>Planejamento</span>
+              <select id="mvvPlanSelect">
+                {% for p in plans %}
+                <option value="{{ p.id }}" {% if default_plan_id and p.id == default_plan_id %}selected{% endif %}>{{ p.name }}</option>
+                {% endfor %}
+              </select>
+            </label>
+            <label class="form-field" style="align-self:end;">
+              <span>Usar no GRV</span>
+              <input type="checkbox" name="grv_mvv_in_use" />
+            </label>
+          </div>
+
+          <div class="form-three-cols">
+            <label class="form-field">
+              <span>Missão</span>
+              <textarea name="mission" rows="3" placeholder="Declare a razão de existir"></textarea>
+            </label>
+            <label class="form-field">
+              <span>Visão</span>
+              <textarea name="vision" rows="3" placeholder="Declare onde deseja chegar"></textarea>
+            </label>
+            <label class="form-field">
+              <span>Valores</span>
+              <textarea name="values" rows="3" placeholder="Declare os valores essenciais"></textarea>
+            </label>
+          </div>
+
+          <div style="display:flex;gap:8px;justify-content:flex-end;">
+            <button type="button" id="mvvLoad" class="button button-ghost">Carregar</button>
+            <button type="submit" class="button button-primary">Salvar</button>
+          </div>
+        </form>
+      </div>
+    </details>
+  </section>
+</div>
+<script>
+(function(){
+  function currentPlanId(){
+    const sel = document.getElementById('mvvPlanSelect');
+    return sel && sel.value ? parseInt(sel.value, 10) : null;
+  }
+  const form = document.getElementById('mvvForm');
+  const loadBtn = document.getElementById('mvvLoad');
+  async function load(){
+    const pid = currentPlanId();
+    if(!pid){ window.showMessage('Selecione um planejamento','error'); return; }
+    const res = await fetch(`/api/plans/${pid}/company-data`);
+    const json = await res.json();
+    if(json && json.success){
+      form.mission.value = json.data.mission || '';
+      form.vision.value = json.data.vision || '';
+      form.values.value = json.data.values || '';
+      form.grv_mvv_in_use.checked = !!json.data.grv_mvv_in_use;
+    } else {
+      window.showMessage('Falha ao carregar dados','error');
+    }
+  }
+  if(loadBtn){ loadBtn.addEventListener('click', load); }
+  const sel = document.getElementById('mvvPlanSelect');
+  if(sel){ sel.addEventListener('change', load); }
+  if(form){
+    form.addEventListener('submit', async (e) => {
+      e.preventDefault();
+      const pid = currentPlanId();
+      if(!pid){ window.showMessage('Selecione um planejamento','error'); return; }
+      const payload = { mission: form.mission.value, vision: form.vision.value, values: form.values.value, grv_mvv_in_use: form.grv_mvv_in_use.checked };
+      const res = await fetch(`/api/plans/${pid}/company-data`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload) });
+      const json = await res.json();
+      if(json && json.success){ window.showMessage('MVV salvo','success'); }
+      else { window.showMessage('Falha ao salvar','error'); }
+    });
+  }
+  // Auto-load
+  load();
+})();
+</script>
+{% endblock %}

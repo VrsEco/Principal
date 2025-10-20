@@ -1,0 +1,478 @@
+{
+  "metadata": {
+    "generated_at": "2025-10-12T14:43:10.012498",
+    "report_type": "general",
+    "data_source": "real_system_data"
+  },
+  "companies": [
+    {
+      "id": 6,
+      "nome": "Empresa Teste Fabiano",
+      "cnpj": "12.345.678/0001-90",
+      "endereco": "São Paulo, SP",
+      "telefone": "(65) 4266-7607",
+      "email": "contato@empresatestefabiano.com.br",
+      "descricao": "teste",
+      "setor": "Tecnologia da Informação",
+      "funcionarios": 456,
+      "receita_anual": 2251972
+    },
+    {
+      "id": 5,
+      "nome": "Versus Gestao Corporativa",
+      "cnpj": "15028181000131",
+      "endereco": "Salvador, BA",
+      "telefone": "(54) 7804-7870",
+      "email": "contato@versusgestaocorporativa.com.br",
+      "descricao": "Teste",
+      "setor": "Consultoria Empresarial",
+      "funcionarios": 30,
+      "receita_anual": 7535192
+    },
+    {
+      "id": 4,
+      "nome": "Evolution Gas",
+      "cnpj": "15.571.440/0001-98",
+      "endereco": "Belo Horizonte, MG",
+      "telefone": "(61) 3348-1907",
+      "email": "contato@evolutiongas.com.br",
+      "descricao": "Empresa especializada em Manufatura",
+      "setor": "Manufatura",
+      "funcionarios": 139,
+      "receita_anual": 3136251
+    },
+    {
+      "id": 1,
+      "nome": "Tia Sonia",
+      "cnpj": "30.754.598/0001-73",
+      "endereco": "Porto Alegre, RS",
+      "telefone": "(28) 3599-9198",
+      "email": "contato@tiasonia.com.br",
+      "descricao": "None",
+      "setor": "Serviços Financeiros",
+      "funcionarios": 247,
+      "receita_anual": 9958365
+    },
+    {
+      "id": 2,
+      "nome": "Tech Solutions",
+      "cnpj": "85.733.913/0001-30",
+      "endereco": "Curitiba, PR",
+      "telefone": "(18) 4773-2139",
+      "email": "contato@techsolutions.com.br",
+      "descricao": "Empresa especializada em Varejo",
+      "setor": "Varejo",
+      "funcionarios": 344,
+      "receita_anual": 4020941
+    }
+  ],
+  "projects": [
+    {
+      "id": 30,
+      "codigo": "AA.J.5",
+      "nome": "Teste Fabiano Projeto PEV",
+      "descricao": "Teste Fabiano",
+      "status": "planned",
+      "data_inicio": "2025-10-01",
+      "data_fim": "2025-10-01",
+      "investimento": 460821,
+      "responsavel": "Fabiano Ferreira",
+      "empresa": "Versus Gestao Corporativa",
+      "categoria": "Tecnologia",
+      "progresso": 51,
+      "equipe_size": 7,
+      "prioridade": "Média"
+    },
+    {
+      "id": 29,
+      "codigo": "AA.J.4",
+      "nome": "Pendências e Afazeres",
+      "descricao": "Pendências cadastradas pelo usuário ou por outros colaboradores.",
+      "status": "planned",
+      "data_inicio": "2025-06-16",
+      "data_fim": "2026-04-27",
+      "investimento": 141606,
+      "responsavel": "Carlos Santos",
+      "empresa": "Versus Gestao Corporativa",
+      "categoria": "Processos",
+      "progresso": 70,
+      "equipe_size": 3,
+      "prioridade": "Média"
+    },
+    {
+      "id": 28,
+      "codigo": "AA.J.3",
+      "nome": "Geral",
+      "descricao": "Inclusão de Afazeres não catalogados e outras coisas",
+      "status": "planned",
+      "data_inicio": "2025-08-02",
+      "data_fim": "2026-06-04",
+      "investimento": 451321,
+      "responsavel": "Mariana Costa",
+      "empresa": "Versus Gestao Corporativa",
+      "categoria": "Qualidade",
+      "progresso": 77,
+      "equipe_size": 3,
+      "prioridade": "Baixa"
+    },
+    {
+      "id": 27,
+      "codigo": "AA.J.2",
+      "nome": "Projeto GRV",
+      "descricao": "Projeto estratégico de expansão para modernização e melhoria dos processos organizacionais.",
+      "status": "planned",
+      "data_inicio": "2025-01-01",
+      "data_fim": "2025-12-31",
+      "investimento": 78527,
+      "responsavel": "Ricardo Oliveira",
+      "empresa": "Versus Gestao Corporativa",
+      "categoria": "Expansão",
+      "progresso": 66,
+      "equipe_size": 5,
+      "prioridade": "Média"
+    },
+    {
+      "id": 26,
+      "codigo": "AA.J.1",
+      "nome": "Projeto PEV",
+      "descricao": "Projeto estratégico de inovação para modernização e melhoria dos processos organizacionais.",
+      "status": "planned",
+      "data_inicio": "2025-01-01",
+      "data_fim": "2025-12-31",
+      "investimento": 259968,
+      "responsavel": "Fernanda Lima",
+      "empresa": "Versus Gestao Corporativa",
+      "categoria": "Inovação",
+      "progresso": 77,
+      "equipe_size": 11,
+      "prioridade": "Média"
+    },
+    {
+      "id": 1,
+      "codigo": "AT.J.1",
+      "nome": "Sistema de Gestao",
+      "descricao": "Implementar ERP",
+      "status": "in_progress",
+      "data_inicio": "2025-01-01",
+      "data_fim": "2025-06-30",
+      "investimento": 421418,
+      "responsavel": "Marcos Fenecio",
+      "empresa": "Tia Sonia",
+      "categoria": "Infraestrutura",
+      "progresso": 52,
+      "equipe_size": 7,
+      "prioridade": "Baixa"
+    },
+    {
+      "id": 2,
+      "codigo": "AT.J.2",
+      "nome": "Treinamento Digital",
+      "descricao": "Capacitar equipe",
+      "status": "planned",
+      "data_inicio": "2025-02-01",
+      "data_fim": "2025-04-30",
+      "investimento": 197641,
+      "responsavel": "Ana Souza",
+      "empresa": "Tia Sonia",
+      "categoria": "Capacitação",
+      "progresso": 77,
+      "equipe_size": 7,
+      "prioridade": "Média"
+    },
+    {
+      "id": 3,
+      "codigo": "AT.J.3",
+      "nome": "Otimizacao Logistica",
+      "descricao": "Melhorar distribuicao",
+      "status": "completed",
+      "data_inicio": "2024-10-01",
+      "data_fim": "2024-12-31",
+      "investimento": 161287,
+      "responsavel": "Carlos Silva",
+      "empresa": "Tia Sonia",
+      "categoria": "Sustentabilidade",
+      "progresso": 74,
+      "equipe_size": 15,
+      "prioridade": "Média"
+    },
+    {
+      "id": 4,
+      "codigo": "02.J.1",
+      "nome": "Expansao Norte",
+      "descricao": "Abrir filial no Norte",
+      "status": "planned",
+      "data_inicio": "2025-03-01",
+      "data_fim": "2025-12-31",
+      "investimento": 33984,
+      "responsavel": "João Santos",
+      "empresa": "Tech Solutions",
+      "categoria": "Segurança",
+      "progresso": 61,
+      "equipe_size": 8,
+      "prioridade": "Baixa"
+    },
+    {
+      "id": 5,
+      "codigo": "03.J.1",
+      "nome": "Reestruturacao RH",
+      "descricao": "Nova estrutura de RH",
+      "status": "planned",
+      "data_inicio": "2025-01-15",
+      "data_fim": "2025-05-15",
+      "investimento": 120552,
+      "responsavel": "Maria Oliveira",
+      "empresa": "Consultoria ABC",
+      "categoria": "Digital",
+      "progresso": 40,
+      "equipe_size": 9,
+      "prioridade": "Baixa"
+    }
+  ],
+  "processes": [
+    {
+      "id": 63,
+      "nome": "GERIR HARDWARE (MAN|INST|AQUIS)",
+      "descricao": "Descrição do processo não informada",
+      "estagio": "inbox",
+      "data_criacao": "2025-10-08 21:40:35",
+      "responsavel": "Fabiano Ferreira",
+      "empresa": "Versus Gestao Corporativa"
+    },
+    {
+      "id": 62,
+      "nome": "GERIR HARDWARE (MAN|INST|AQUIS)",
+      "descricao": "Descrição do processo não informada",
+      "estagio": "inbox",
+      "data_criacao": "2025-10-08 21:40:15",
+      "responsavel": "Fabiano Ferreira",
+      "empresa": "Versus Gestao Corporativa"
+    },
+    {
+      "id": 61,
+      "nome": "GERIR SOFTWARE (MAN|INST|AQUIS)",
+      "descricao": "Descrição do processo não informada",
+      "estagio": "inbox",
+      "data_criacao": "2025-10-08 21:39:55",
+      "responsavel": "Fabiano Ferreira",
+      "empresa": "Versus Gestao Corporativa"
+    },
+    {
+      "id": 60,
+      "nome": "GERIR VENDA E DESCARTE DE ATIVOS",
+      "descricao": "Descrição do processo não informada",
+      "estagio": "inbox",
+      "data_criacao": "2025-10-08 20:56:57",
+      "responsavel": "Fabiano Ferreira",
+      "empresa": "Versus Gestao Corporativa"
+    },
+    {
+      "id": 59,
+      "nome": "GERIR MANUTENÇÕES",
+      "descricao": "Descrição do processo não informada",
+      "estagio": "inbox",
+      "data_criacao": "2025-10-08 20:56:34",
+      "responsavel": "Fabiano Ferreira",
+      "empresa": "Versus Gestao Corporativa"
+    },
+    {
+      "id": 58,
+      "nome": "GERIR NECESSIDADE DE AQUISIÇÃO DE ATIVOS",
+      "descricao": "Descrição do processo não informada",
+      "estagio": "inbox",
+      "data_criacao": "2025-10-08 20:54:54",
+      "responsavel": "Fabiano Ferreira",
+      "empresa": "Versus Gestao Corporativa"
+    },
+    {
+      "id": 57,
+      "nome": "GERIR ARQUIVO DIGITAL",
+      "descricao": "Descrição do processo não informada",
+      "estagio": "inbox",
+      "data_criacao": "2025-10-08 20:54:33",
+      "responsavel": "Fabiano Ferreira",
+      "empresa": "Versus Gestao Corporativa"
+    },
+    {
+      "id": 56,
+      "nome": "GERIR ARQUIVO FISICO",
+      "descricao": "Descrição do processo não informada",
+      "estagio": "designing",
+      "data_criacao": "2025-10-08 20:54:18",
+      "responsavel": "Fabiano Ferreira",
+      "empresa": "Versus Gestao Corporativa"
+    }
+  ],
+  "employees": [
+    {
+      "id": 7,
+      "nome": "Joao Silva",
+      "email": "joao@empresa.com",
+      "departamento": "TI",
+      "status": "active",
+      "empresa": "Tia Sonia"
+    },
+    {
+      "id": 8,
+      "nome": "Maria Santos",
+      "email": "maria@empresa.com",
+      "departamento": "RH",
+      "status": "active",
+      "empresa": "Tia Sonia"
+    },
+    {
+      "id": 9,
+      "nome": "Pedro Costa",
+      "email": "pedro@empresa.com",
+      "departamento": "Comercial",
+      "status": "active",
+      "empresa": "Tia Sonia"
+    },
+    {
+      "id": 10,
+      "nome": "Ana Oliveira",
+      "email": "ana@empresa.com",
+      "departamento": "Marketing",
+      "status": "active",
+      "empresa": "Tia Sonia"
+    },
+    {
+      "id": 11,
+      "nome": "Carlos Souza",
+      "email": "carlos@empresa.com",
+      "departamento": "Financeiro",
+      "status": "active",
+      "empresa": "Tia Sonia"
+    },
+    {
+      "id": 6,
+      "nome": "teste",
+      "email": "teste@bol.com.br",
+      "departamento": "teste",
+      "status": "active",
+      "empresa": "Empresa Teste Fabiano"
+    },
+    {
+      "id": 5,
+      "nome": "Fabiano Diretor",
+      "email": "mff2000@gmail.com",
+      "departamento": "Diretoria",
+      "status": "active",
+      "empresa": "Versus Gestao Corporativa"
+    },
+    {
+      "id": 4,
+      "nome": "Fabiano Gerente Operacional",
+      "email": "fabiano@versusconsultoria.com.br",
+      "departamento": "Operação",
+      "status": "active",
+      "empresa": "Versus Gestao Corporativa"
+    },
+    {
+      "id": 3,
+      "nome": "Fabiano - Gerente Adm/Fin",
+      "email": "fabiano@gestaoversus.com.br",
+      "departamento": "Financeiro",
+      "status": "active",
+      "empresa": "Versus Gestao Corporativa"
+    }
+  ],
+  "metrics": {
+    "total_empresas": 6,
+    "total_projetos": 10,
+    "projetos_concluidos": 0,
+    "projetos_andamento": 0,
+    "total_processos": 63,
+    "media_colaboradores": 3.0,
+    "eficiencia_projetos": 0.0
+  },
+  "charts": {
+    "status_distribution": {
+      "planned": 8,
+      "in_progress": 1,
+      "completed": 1,
+      "Teste": 2,
+      "Concluído": 2,
+      "Em Andamento": 2,
+      "Execução": 1,
+      "Finalização": 1,
+      "Pausado": 1,
+      "Planejamento": 1
+    },
+    "top_investments": [
+      {
+        "nome": "Reestruturacao RH",
+        "valor": 428429
+      },
+      {
+        "nome": "Implementação Sistema ERP",
+        "valor": 427493
+      },
+      {
+        "nome": "Projeto PEV",
+        "valor": 408841
+      },
+      {
+        "nome": "Migração Cloud Computing",
+        "valor": 394724
+      },
+      {
+        "nome": "Treinamento Digital",
+        "valor": 320305
+      },
+      {
+        "nome": "Teste Fabiano Projeto PEV",
+        "valor": 272681
+      }
+    ],
+    "timeline_data": [
+      {
+        "projeto": "Teste Fabiano Projet...",
+        "inicio": "2025-10-01",
+        "fim": "2025-10-01",
+        "status": "planned"
+      },
+      {
+        "projeto": "Pendências e Afazere...",
+        "inicio": "2025-05-04",
+        "fim": "2025-12-09",
+        "status": "planned"
+      },
+      {
+        "projeto": "Geral",
+        "inicio": "2025-08-27",
+        "fim": "2026-04-05",
+        "status": "planned"
+      },
+      {
+        "projeto": "Projeto GRV",
+        "inicio": "2025-01-01",
+        "fim": "2025-12-31",
+        "status": "planned"
+      },
+      {
+        "projeto": "Projeto PEV",
+        "inicio": "2025-01-01",
+        "fim": "2025-12-31",
+        "status": "planned"
+      },
+      {
+        "projeto": "Sistema de Gestao",
+        "inicio": "2025-01-01",
+        "fim": "2025-06-30",
+        "status": "in_progress"
+      },
+      {
+        "projeto": "Treinamento Digital",
+        "inicio": "2025-02-01",
+        "fim": "2025-04-30",
+        "status": "planned"
+      },
+      {
+        "projeto": "Otimizacao Logistica",
+        "inicio": "2024-10-01",
+        "fim": "2024-12-31",
+        "status": "completed"
+      }
+    ]
+  }
+}

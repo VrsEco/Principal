@@ -1,0 +1,87 @@
+{# Navegação principal do GRV: atalhos para módulos com sub-sidebars dedicadas #}
+{% set nav_groups = navigation or [] %}
+{% set href_map = {
+  'dashboard': url_for('grv.grv_company_dashboard', company_id=company.id),
+  'identity-mvv': url_for('grv.grv_identity_mvv', company_id=company.id),
+  'identity-roles': url_for('grv.grv_identity_roles', company_id=company.id),
+  'identity-chart': url_for('grv.grv_identity_org_chart', company_id=company.id),
+  'process-map': url_for('grv.grv_process_map', company_id=company.id),
+  'process-modeling': url_for('grv.grv_process_modeling', company_id=company.id),
+  'process-routines': url_for('routines_management', company_id=company.id),
+  'process-instances': url_for('grv.grv_process_instances', company_id=company.id),
+  'process-analysis': url_for('grv.grv_process_analysis', company_id=company.id),
+  'project-portfolios': url_for('grv.grv_projects_portfolios', company_id=company.id),
+  'project-projects': url_for('grv.grv_projects_projects', company_id=company.id),
+  'project-analysis': url_for('grv.grv_projects_analysis', company_id=company.id),
+  'meetings-manage': url_for('meetings.meetings_manage', company_id=company.id),
+  'indicators-tree': url_for('grv.grv_indicators_tree', company_id=company.id),
+  'indicators-list': url_for('grv.grv_indicators_list', company_id=company.id),
+  'indicators-goals': url_for('grv.grv_indicators_goals', company_id=company.id),
+  'indicators-data': url_for('grv.grv_indicators_data', company_id=company.id),
+  'indicators-analysis': url_for('grv.grv_indicators_analysis', company_id=company.id),
+  'routine-work-distribution': url_for('grv.grv_routine_work_distribution', company_id=company.id),
+  'routine-capacity': url_for('grv.grv_routine_capacity', company_id=company.id),
+  'routine-activities': url_for('grv.grv_routine_activities', company_id=company.id),
+  'routine-incidents': url_for('grv.grv_routine_incidents', company_id=company.id),
+  'routine-efficiency': url_for('grv.grv_routine_efficiency', company_id=company.id)
+} %}
+{% if sidebar_href_map is defined and sidebar_href_map %}
+  {% set href_map = sidebar_href_map %}
+{% endif %}
+
+{% set ns = namespace(active_group_index=None) %}
+{% if nav_groups and active_id is defined and active_id %}
+  {% for group in nav_groups %}
+    {% set group_index = loop.index0 %}
+    {% for item in group.get('items', []) %}
+      {% if item.id == active_id %}
+        {% set ns.active_group_index = group_index %}
+      {% endif %}
+    {% endfor %}
+  {% endfor %}
+{% endif %}
+{% if ns.active_group_index is none and nav_groups %}
+  {% set ns.active_group_index = 0 %}
+{% endif %}
+
+<aside class="project-sidebar surface-card plan-sidebar">
+  <span class="project-sidebar-title">{{ sidebar_title | default('Módulos') }}</span>
+  <nav class="project-nav">
+    {% if nav_groups %}
+      {% for group in nav_groups %}
+        {% set group_index = loop.index0 %}
+        {% set landing = group.get('landing') %}
+        {% if not landing %}
+          {% set landing = group.get('items', [])|first %}
+        {% endif %}
+        {% if landing %}
+          {% set landing_id = landing.id %}
+          {% set landing_url = landing.url or href_map.get(landing_id, landing.href if landing.href is defined else '#') %}
+          {% set button_label = group.title or landing.name %}
+          {% set is_active = ns.active_group_index is not none and group_index == ns.active_group_index %}
+          <a
+            class="project-nav-link{% if is_active %} is-active{% endif %}"
+            href="{{ landing_url or '#' }}"
+            {% if button_label %}title="{{ button_label }}"{% endif %}
+          >
+            <span>{{ button_label }}</span>
+          </a>
+        {% endif %}
+      {% endfor %}
+    {% else %}
+      <div class="project-nav-group">
+        <span class="project-nav-group-title">Nenhum módulo disponível</span>
+      </div>
+    {% endif %}
+  </nav>
+  {% if sidebar_meta is defined %}
+    <div class="project-hints plan-sidebar-meta">
+      {{ sidebar_meta | safe }}
+    </div>
+  {% elif company is defined and (company.name or company.legal_name) %}
+    <div class="project-hints plan-sidebar-meta">
+      <span class="summary-eyebrow">Empresa</span>
+      <p><strong>{{ company.name or company.legal_name }}</strong></p>
+    </div>
+  {% endif %}
+</aside>

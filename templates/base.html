@@ -1,0 +1,343 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>{% block title %}PEV 2.0{% endblock %}</title>
+  <link rel="icon" type="image/x-icon" href="{{ url_for('static', filename='favicon.ico') }}" />
+  <link rel="shortcut icon" type="image/x-icon" href="{{ url_for('static', filename='favicon.ico') }}" />
+  <link rel="apple-touch-icon" href="{{ url_for('static', filename='img/favicon.png') }}" />
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="{{ url_for('static', filename='css/main.css') }}" />
+  <link rel="stylesheet" href="{{ url_for('static', filename='css/grv-global-pattern.css') }}" />
+  <link id="themeStylesheet" rel="stylesheet" href="" />
+  <style>
+    .header-nav {
+      display: flex;
+      gap: 16px;
+      margin-right: 20px;
+    }
+    
+    .header-nav a.nav-link {
+      color: #ffffff !important;
+      text-decoration: none;
+      font-weight: 600;
+      padding: 8px 18px;
+      border-radius: 999px;
+      transition: all 0.25s;
+      font-size: 14px;
+      background: rgba(58, 241, 174, 0.08);
+      border: 1px solid rgba(58, 241, 174, 0.22);
+      box-shadow: 0 8px 16px rgba(0, 0, 0, 0.24);
+      backdrop-filter: blur(6px);
+    }
+    
+    .header-nav a.nav-link:hover {
+      background: rgba(58, 241, 174, 0.18) !important;
+      color: #ffffff !important;
+      box-shadow: 0 12px 26px rgba(0, 0, 0, 0.28);
+      transform: translateY(-2px);
+    }
+    
+    .header-nav a.nav-link.active {
+      background: rgba(58, 241, 174, 0.24) !important;
+      color: #ffffff !important;
+      border-color: rgba(58, 241, 174, 0.45);
+    }
+    
+    .header-actions {
+      display: flex;
+      align-items: center;
+    }
+    
+    .app-header {
+      background: linear-gradient(135deg, rgba(6, 8, 8, 0.96) 0%, rgba(9, 13, 11, 0.94) 65%, rgba(6, 8, 8, 0.98) 100%) !important;
+      border-bottom: 1px solid rgba(58, 241, 174, 0.32) !important;
+      backdrop-filter: blur(18px) !important;
+      box-shadow: 0 24px 48px rgba(0, 0, 0, 0.48) !important;
+    }
+    
+    .header-brand {
+      padding: 8px 20px;
+      border-radius: 20px;
+      background: linear-gradient(135deg, rgba(58, 241, 174, 0.06) 0%, rgba(58, 241, 174, 0.02) 100%);
+      border: 1px solid rgba(58, 241, 174, 0.28);
+      box-shadow: inset 0 0 0 1px rgba(0, 0, 0, 0.42), 0 18px 36px rgba(0, 0, 0, 0.32);
+    }
+    
+    .user-pill {
+      background: rgba(58, 241, 174, 0.12) !important;
+      border: 1px solid rgba(58, 241, 174, 0.32) !important;
+      border-radius: 999px !important;
+      padding: 8px 16px !important;
+      box-shadow: 0 12px 24px rgba(0, 0, 0, 0.3) !important;
+    }
+    
+    .user-name {
+      color: #f8fafc !important;
+      font-weight: 600 !important;
+      font-size: 14px !important;
+    }
+    
+    #themeSelect {
+      background: rgba(9, 13, 11, 0.8) !important;
+      color: #e2fdf3 !important;
+      border: 1px solid rgba(58, 241, 174, 0.3) !important;
+      border-radius: 12px !important;
+      padding: 8px 12px !important;
+      font-size: 14px !important;
+      font-weight: 500 !important;
+      box-shadow: 0 12px 28px rgba(0, 0, 0, 0.28);
+    }
+    
+    #themeSelect option {
+      background: #0b120f !important;
+      color: #e2fdf3 !important;
+    }
+  </style>
+  {% block extra_head %}{% endblock %}
+</head>
+<body class="{% block body_class %}{% endblock %}">
+{% block body %}
+  <div class="app-shell">
+    <header class="app-header">
+      <div class="header-brand">
+        <img class="header-banner" src="{{ url_for('static', filename='img/header-banner.png') }}" alt="Versus banner" />
+      </div>
+      <div class="header-actions">
+        {% block header_actions %}
+        <div class="header-nav">
+          <a href="/main" class="nav-link">Ecossistema</a>
+          <a href="{{ url_for('pev.pev_dashboard') }}" class="nav-link">PEV</a>
+          <a href="{{ url_for('grv.grv_dashboard') }}" class="nav-link">GRV</a>
+        </div>
+        <div class="user-pill">
+          <span class="user-name">Usuario</span>
+        </div>
+        <div class="header-nav">
+          <select id="themeSelect" class="nav-link" style="padding:8px 12px; color: #0f172a; background:#ffffff; border:1px solid rgba(15,23,42,0.15);">
+            <option value="versus">Tema Versus</option>
+            <option value="alt">Tema Azul/Branco/Amarelo</option>
+          </select>
+        </div>
+        {% endblock %}
+      </div>
+    </header>
+
+    <main class="app-main">
+      <!-- Flash Messages -->
+      {% with messages = get_flashed_messages(with_categories=true) %}
+        {% if messages %}
+          <div class="flash-messages">
+            {% for category, message in messages %}
+              <div class="flash-message flash-{{ category }}">
+                <span class="flash-icon">
+                  {% if category == 'success' %}✓{% elif category == 'error' %}✗{% else %}ℹ{% endif %}
+                </span>
+                <span class="flash-text">{{ message }}</span>
+                <button class="flash-close" onclick="this.parentElement.remove()">×</button>
+              </div>
+            {% endfor %}
+          </div>
+        {% endif %}
+      {% endwith %}
+      
+      {% block content %}{% endblock %}
+    </main>
+  </div>
+{% endblock %}
+  {% block scripts %}{% endblock %}
+  
+  <script>
+    (function(){
+      const themeMap = {
+        versus: '',
+        alt: '{{ url_for('static', filename='css/theme-alt.css') }}'
+      };
+      function applyTheme(theme){
+        const link = document.getElementById('themeStylesheet');
+        const href = themeMap[theme] || '';
+        link.setAttribute('href', href);
+        localStorage.setItem('app_theme', theme);
+      }
+      function initTheme(){
+        const params = new URLSearchParams(window.location.search);
+        const queryTheme = params.get('theme');
+        const stored = localStorage.getItem('app_theme');
+        let theme = queryTheme || stored || 'versus';
+        if(theme === 'blue' || theme === 'white' || theme === 'yellow'){ theme = 'alt'; }
+        applyTheme(theme);
+        const sel = document.getElementById('themeSelect');
+        if(sel){ sel.value = theme; sel.addEventListener('change', () => applyTheme(sel.value)); }
+      }
+      document.addEventListener('DOMContentLoaded', initTheme);
+    })();
+  </script>
+  <script>
+    window.showMessage = window.showMessage || function(message, type = 'info', timeout = 5000) {
+      const containerId = 'global-feedback-messages';
+      let container = document.getElementById(containerId);
+      if (!container) {
+        container = document.createElement('div');
+        container.id = containerId;
+        container.style.cssText = `
+          position: fixed;
+          top: 20px;
+          right: 20px;
+          display: flex;
+          flex-direction: column;
+          gap: 12px;
+          z-index: 1100;
+        `;
+        document.body.appendChild(container);
+      }
+
+      const messageDiv = document.createElement('div');
+      messageDiv.className = `message message-${type}`;
+      messageDiv.textContent = message;
+      messageDiv.style.cssText = `
+        padding: 12px 20px;
+        border-radius: 4px;
+        color: #fff;
+        font-weight: 500;
+        max-width: 420px;
+        box-shadow: 0 8px 24px rgba(15, 23, 42, 0.2);
+        display: flex;
+        align-items: center;
+        gap: 12px;
+        background-color: ${type === 'success' ? '#10b981' : type === 'error' ? '#ef4444' : '#3b82f6'};
+        transform: translateX(120%);
+        transition: transform 0.25s ease-out;
+      `;
+
+      const closeButton = document.createElement('button');
+      closeButton.type = 'button';
+      closeButton.textContent = '?';
+      closeButton.style.cssText = `
+        margin-left: auto;
+        border: none;
+        background: transparent;
+        color: inherit;
+        font-size: 16px;
+        cursor: pointer;
+      `;
+      closeButton.addEventListener('click', () => {
+        messageDiv.style.transform = 'translateX(120%)';
+        setTimeout(() => messageDiv.remove(), 250);
+      });
+
+      messageDiv.appendChild(closeButton);
+      container.appendChild(messageDiv);
+
+      requestAnimationFrame(() => {
+        messageDiv.style.transform = 'translateX(0)';
+      });
+
+      if (timeout > 0) {
+        setTimeout(() => {
+          messageDiv.style.transform = 'translateX(120%)';
+          setTimeout(() => messageDiv.remove(), 250);
+        }, timeout);
+      }
+
+      return messageDiv;
+    };
+  </script>
+  <script>
+    // Auto-hide flash messages after 5 seconds
+    document.addEventListener('DOMContentLoaded', function() {
+      const flashMessages = document.querySelectorAll('.flash-message');
+      flashMessages.forEach(function(message) {
+        setTimeout(function() {
+          message.style.animation = 'slideOut 0.3s ease-out';
+          setTimeout(function() {
+            message.remove();
+          }, 300);
+        }, 5000);
+      });
+    });
+  </script>
+  <script>
+    document.addEventListener('DOMContentLoaded', function() {
+      const storageKey = 'grv_sidebar_collapsed';
+
+      document.querySelectorAll('.plan-layout[data-sidebar-toggle]').forEach(function(layout) {
+        if (layout.dataset.sidebarToggleReady === 'true') {
+          return;
+        }
+
+        const sidebar = layout.querySelector('.project-sidebar');
+        const content = layout.querySelector('.project-content');
+        if (!sidebar || !content) {
+          return;
+        }
+
+        layout.dataset.sidebarToggleReady = 'true';
+
+        const wrapper = document.createElement('div');
+        wrapper.className = 'project-sidebar-toggle-wrapper';
+
+        const button = document.createElement('button');
+        button.type = 'button';
+        button.className = 'project-sidebar-toggle';
+        button.innerHTML = '<span class="toggle-icon">|||</span><span class="toggle-label">Ocultar menu</span>';
+        button.setAttribute('aria-expanded', 'true');
+
+        wrapper.appendChild(button);
+        content.insertBefore(wrapper, content.firstChild);
+
+        const applyState = function(collapsed) {
+          layout.dataset.sidebarCollapsed = collapsed ? 'true' : 'false';
+          if (collapsed) {
+            layout.style.gridTemplateColumns = 'minmax(0, 1fr)';
+            sidebar.style.display = 'none';
+          } else {
+            layout.style.gridTemplateColumns = '';
+            sidebar.style.display = '';
+          }
+
+          button.setAttribute('aria-expanded', collapsed ? 'false' : 'true');
+          const label = button.querySelector('.toggle-label');
+          if (label) {
+            label.textContent = collapsed ? 'Mostrar menu' : 'Ocultar menu';
+          }
+        };
+
+        let collapsed = false;
+        try {
+          collapsed = localStorage.getItem(storageKey) === 'true';
+        } catch (err) {
+          collapsed = false;
+        }
+
+        applyState(collapsed);
+
+        button.addEventListener('click', function() {
+          collapsed = !collapsed;
+          applyState(collapsed);
+          try {
+            localStorage.setItem(storageKey, collapsed ? 'true' : 'false');
+          } catch (err) {
+            // ignore persistence errors
+          }
+        });
+      });
+    });
+  </script>
+  
+  <style>
+    @keyframes slideOut {
+      from {
+        transform: translateX(0);
+        opacity: 1;
+      }
+      to {
+        transform: translateX(100%);
+        opacity: 0;
+      }
+    }
+  </style>
+</body>
+</html>

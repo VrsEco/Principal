@@ -1,0 +1,79 @@
+{# Sidebar original do GRV - versão limpa #}
+{% set nav_groups = navigation or [] %}
+{% set href_map = {
+  'dashboard': url_for('grv.grv_company_dashboard', company_id=company.id),
+  'identity-mvv': url_for('grv.grv_identity_mvv', company_id=company.id),
+  'identity-roles': url_for('grv.grv_identity_roles', company_id=company.id),
+  'identity-chart': url_for('grv.grv_identity_org_chart', company_id=company.id),
+  'process-map': url_for('grv.grv_process_map', company_id=company.id),
+  'process-modeling': url_for('grv.grv_process_modeling', company_id=company.id),
+  'process-routines': url_for('routines_management', company_id=company.id),
+  'process-instances': url_for('grv.grv_process_instances', company_id=company.id),
+  'process-analysis': url_for('grv.grv_process_analysis', company_id=company.id),
+  'project-projects': url_for('grv.grv_projects_projects', company_id=company.id),
+  'project-analysis': '#',
+  'meetings-manage': url_for('meetings.meetings_manage', company_id=company.id),
+  'indicators-tree': url_for('grv.grv_indicators_tree', company_id=company.id),
+  'indicators-list': url_for('grv.grv_indicators_list', company_id=company.id),
+  'indicators-goals': url_for('grv.grv_indicators_goals', company_id=company.id),
+  'indicators-data': url_for('grv.grv_indicators_data', company_id=company.id),
+  'indicators-analysis': url_for('grv.grv_indicators_analysis', company_id=company.id),
+  'routine-work-distribution': url_for('grv.grv_routine_work_distribution', company_id=company.id),
+  'routine-capacity': url_for('grv.grv_routine_capacity', company_id=company.id),
+  'routine-activities': url_for('grv.grv_routine_activities', company_id=company.id),
+  'routine-incidents': url_for('grv.grv_routine_incidents', company_id=company.id),
+  'routine-efficiency': url_for('grv.grv_routine_efficiency', company_id=company.id)
+} %}
+{% if sidebar_href_map is defined and sidebar_href_map %}
+  {% set href_map = sidebar_href_map %}
+{% endif %}
+
+<aside class="project-sidebar surface-card plan-sidebar">
+  <span class="project-sidebar-title">{{ sidebar_title | default('Módulos') }}</span>
+  <nav class="project-nav">
+    {% for group in nav_groups %}
+      <div class="project-nav-group">
+        {% if group.title %}
+          <span class="project-nav-group-title">{{ group.title }}</span>
+        {% endif %}
+        {% for item in group.get('items', []) %}
+          {% set item_id = item.id %}
+          {% set item_url = item.url or href_map.get(item_id, item.href if item.href is defined else '#') %}
+          {% set item_shortcut = item.shortcut | default('', true) %}
+          {% set link_title = '' %}
+          {% if item.description %}
+            {% set link_title = item.description %}
+          {% endif %}
+          {% if item_shortcut %}
+            {% if link_title %}
+              {% set link_title = link_title ~ ' · ' %}
+            {% endif %}
+            {% set link_title = link_title ~ 'Atalho: ' ~ item_shortcut %}
+          {% endif %}
+          {% set is_active = (active_id is defined and active_id == item_id) or (item.active is defined and item.active) %}
+          <a
+            class="project-nav-link{% if is_active %} is-active{% endif %}"
+            href="{{ item_url or '#' }}"
+            {% if item_shortcut %}data-shortcut="{{ item_shortcut }}"{% endif %}
+            {% if link_title %}title="{{ link_title }}"{% endif %}
+          >
+            <span>{{ item.name }}</span>
+            {% if item_shortcut %}
+              <span class="project-nav-shortcut">{{ item_shortcut }}</span>
+            {% endif %}
+          </a>
+        {% endfor %}
+      </div>
+    {% endfor %}
+  </nav>
+  {% if sidebar_meta is defined %}
+    <div class="project-hints plan-sidebar-meta">
+      {{ sidebar_meta | safe }}
+    </div>
+  {% elif company is defined and (company.name or company.legal_name) %}
+    <div class="project-hints plan-sidebar-meta">
+      <span class="summary-eyebrow">Empresa</span>
+      <p><strong>Versus Gestao Corporativa</strong></p>
+    </div>
+  {% endif %}
+</aside>

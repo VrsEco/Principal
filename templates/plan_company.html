@@ -1,0 +1,782 @@
+{% extends "base.html" %}
+{% block title %}Dados da Organizacao | {{ plan.name }}{% endblock %}
+{% block body %}
+  {% set active_nav = 'projetos' %}
+  {{ super() }}
+{% endblock %}
+{% block content %}
+<div class="project-layout plan-layout company-layout" data-sidebar-toggle>
+  {% set sidebar_meta %}
+    <span class="summary-eyebrow">Dados corporativos</span>
+    <p>{{ plan.company }} atua fisicamente em {{ coverage_physical_label }} e online em {{ coverage_online_label }}.</p>
+    <div class="plan-engagement-card">
+      <span class="chip-label">Progresso</span>
+      <span class="chip-value">{{ plan.progress }}%</span>
+      <span class="chip-meta">Dados preenchidos</span>
+    </div>
+  {% endset %}
+  {% include 'plan_sidebar.html' %}
+
+  <section class="project-content company-content">
+    <!-- Seção 1: Cadastro da Empresa -->
+    <details class="interview-section surface-card company-form" open>
+      <summary class="interview-summary-bar">
+        <div class="interview-summary-text">
+          <span class="section-eyebrow">Cadastro</span>
+          <h3>Identidade da empresa</h3>
+          <p>Configure as informações corporativas, cobertura de atuação e dados financeiros da empresa.</p>
+        </div>
+        <div class="interview-progress alignment-progress">
+          <div>
+            <span class="chip-label">Cobertura</span>
+            <span class="interview-count">{{ coverage_physical_label }}</span>
+          </div>
+          <div>
+            <span class="chip-label">Online</span>
+            <span class="interview-count">{{ coverage_online_label }}</span>
+          </div>
+          <div class="section-status-controls">
+            <!-- Botão Concluir Todas - sempre presente no DOM -->
+            <button class="button button-small button-warning" onclick="closeCompanySection()" title="Concluir todas as seções da página" {% if not company_section_open|default(true) %}style="display: none;"{% endif %}>
+              🎯 Concluir Todas
+              </button>
+            
+            <!-- Botão Reabrir Todas - sempre presente no DOM -->
+            <button class="button button-small button-success" onclick="openCompanySection()" title="Reabrir todas as seções da página" {% if company_section_open|default(true) %}style="display: none;"{% endif %}>
+              🎯 Reabrir Todas
+              </button>
+            
+            <!-- Informações de fechamento - sempre presente no DOM -->
+              {% if company_section_status %}
+              <span class="section-closed-info" {% if company_section_open|default(true) %}style="display: none;"{% endif %}>
+                  Concluída por {{ company_section_status.closed_by or 'Usuário' }} em {{ company_section_status.closed_at[:10] if company_section_status.closed_at else 'Data não informada' }}
+                </span>
+            {% endif %}
+          </div>
+        </div>
+      </summary>
+      <div class="interview-content">
+        {% if not company_section_open|default(true) %}
+        <div class="section-closed-notice">
+          <p>🎯 Esta seção foi concluída e não permite mais edições.</p>
+        </div>
+        {% endif %}
+        <form class="company-form-fields" action="/plans/{{ plan.id }}/company" method="post" enctype="multipart/form-data">
+          
+          <!-- Campos básicos e econômicos removidos -->
+          <!-- Agora gerenciados no Cadastro Centralizado -->
+          
+          <div class="financial-editor">
+            <span class="card-subtitle">Faturamento / Margem por produto</span>
+            <table class="financial-editor-table" id="financial-table">
+              <thead>
+                <tr>
+                  <th>Linha / Produto</th>
+                  <th>Faturamento (R$)</th>
+                  <th>Margem de contribuicao (%)</th>
+                  <th>Tamanho do mercado / Market share / Concorrencia</th>
+                  <th>Ações</th>
+                </tr>
+              </thead>
+              <tbody id="financial-tbody">
+                {% for item in company_data.financials|default([]) %}
+                <tr class="financial-row">
+                  <td><input type="text" name="financial_line_{{ loop.index }}" value="{{ item.line }}" class="financial-input" /></td>
+                  <td><input type="number" name="financial_revenue_{{ loop.index }}" value="{{ item.revenue }}" placeholder="0.00" step="0.01" min="0" class="financial-input revenue-input" /></td>
+                  <td><input type="number" name="financial_margin_{{ loop.index }}" value="{{ item.margin }}" placeholder="0" step="0.01" min="0" max="100" class="financial-input margin-input" /></td>
+                  <td><textarea name="financial_market_{{ loop.index }}" rows="2" placeholder="Descreva o tamanho do mercado, market share e concorrencia" class="financial-input">{{ item.market|default('') }}</textarea></td>
+                  <td><button type="button" class="button-remove-row" onclick="removeFinancialRow(this)">×</button></td>
+                </tr>
+                {% endfor %}
+                <tr class="financial-total-row">
+                  <td><strong>Total</strong></td>
+                  <td><input type="text" name="financial_total_revenue" value="{% if company_data.financial_total_revenue not in (None, '') %}{{ company_data.financial_total_revenue|format_number_br }}{% endif %}" readonly class="total-input" /></td>
+                  <td><input type="text" name="financial_total_margin" value="{% if company_data.financial_total_margin not in (None, '') %}{{ company_data.financial_total_margin|format_percent_br }}{% endif %}" readonly class="total-input" /></td>
+                  <td></td>
+                  <td></td>
+                </tr>
+              </tbody>
+            </table>
+            <button type="button" class="button button-ghost" id="add-financial-row">+ Adicionar linha</button>
+          </div>
+
+          <!-- Campos removidos: Todos os dados básicos e econômicos -->
+          <!-- Agora gerenciados centralmente em /companies/<id> -->
+          <div class="form-field" style="background: #eff6ff; border: 2px solid #3b82f6; border-radius: 12px; padding: 24px; margin: 20px 0;">
+            <div style="display: flex; align-items: center; gap: 12px; margin-bottom: 16px;">
+              <span style="font-size: 32px;">ℹ️</span>
+              <div>
+                <strong style="color: #1e40af; font-size: 18px; display: block;">Dados da Empresa - Cadastro Centralizado</strong>
+                <span style="color: #64748b; font-size: 14px;">Os dados da empresa agora são gerenciados em um único lugar</span>
+              </div>
+            </div>
+            
+            <p style="color: #475569; line-height: 1.6; margin-bottom: 20px; background: white; padding: 12px; border-radius: 8px;">
+              📍 <strong>Acesse o Cadastro Centralizado</strong> para gerenciar todos os dados da empresa de forma organizada e integrada.
+            </p>
+            
+            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 16px; margin-bottom: 20px;">
+              <div style="background: white; padding: 16px; border-radius: 8px;">
+                <strong style="color: #1e40af; display: block; margin-bottom: 8px;">📋 Dados Básicos</strong>
+                <ul style="color: #475569; font-size: 14px; line-height: 1.6; margin: 0; padding-left: 20px;">
+                  <li>Nome fantasia</li>
+                  <li>Razão social</li>
+                  <li>Setor/Indústria</li>
+                  <li>Porte da empresa</li>
+                </ul>
+              </div>
+              
+              <div style="background: white; padding: 16px; border-radius: 8px;">
+                <strong style="color: #1e40af; display: block; margin-bottom: 8px;">🎯 MVV</strong>
+                <ul style="color: #475569; font-size: 14px; line-height: 1.6; margin: 0; padding-left: 20px;">
+                  <li>Missão</li>
+                  <li>Visão</li>
+                  <li>Valores</li>
+                </ul>
+              </div>
+              
+              <div style="background: white; padding: 16px; border-radius: 8px;">
+                <strong style="color: #1e40af; display: block; margin-bottom: 8px;">💰 Dados Econômicos</strong>
+                <ul style="color: #475569; font-size: 14px; line-height: 1.6; margin: 0; padding-left: 20px;">
+                  <li>CNPJ, Cidade, Estado</li>
+                  <li>CNAEs / Atividades</li>
+                  <li>Cobertura física/online</li>
+                  <li>Experiência (total e segmento)</li>
+                </ul>
+              </div>
+              
+              <div style="background: white; padding: 16px; border-radius: 8px;">
+                <strong style="color: #1e40af; display: block; margin-bottom: 8px;">👥 Estrutura Organizacional</strong>
+                <ul style="color: #475569; font-size: 14px; line-height: 1.6; margin: 0; padding-left: 20px;">
+                  <li>Funções/Cargos (com hierarquia)</li>
+                  <li>Colaboradores</li>
+                  <li>Organograma (gerado automaticamente)</li>
+                </ul>
+              </div>
+            </div>
+            
+            <div style="margin-top: 20px; text-align: center;">
+              {% if plan.company_id or company.id %}
+              <a href="/companies/{{ plan.company_id or company.id }}" class="button button-primary" target="_blank" style="font-size: 16px; padding: 14px 28px;">
+                <span>⚙️</span> Acessar Cadastro Centralizado da Empresa
+              </a>
+              {% else %}
+              <span style="color: #64748b;">Vincule uma empresa ao plano para acessar o cadastro centralizado</span>
+              {% endif %}
+            </div>
+          </div>
+          
+          <div class="form-actions">
+            <button type="submit" class="button button-primary" {% if not company_section_open|default(true) %}disabled{% endif %}>Salvar informacoes</button>
+            <button type="reset" class="button button-ghost" {% if not company_section_open|default(true) %}disabled{% endif %}>Descartar alteracoes</button>
+          </div>
+        </form>
+      </div>
+    </details>
+
+    <!-- Seção 2: Análises -->
+    <details class="interview-section surface-card company-ai">
+      <summary class="interview-summary-bar">
+        <div class="interview-summary-text">
+          <span class="section-eyebrow">Análises</span>
+          <h3>Buscas e análises de IA</h3>
+          <p>Gere insights automatizados sobre mercado, concorrência e oportunidades estratégicas.</p>
+        </div>
+        <div class="interview-progress alignment-progress">
+          <div>
+            <span class="chip-label">Status</span>
+            <span class="interview-count">Em desenvolvimento</span>
+          </div>
+        </div>
+      </summary>
+      <div class="interview-content">
+        {% if not company_section_open|default(true) %}
+        <div class="section-closed-notice">
+          <p>🎯 Esta seção foi concluída e não permite mais edições.</p>
+        </div>
+        {% endif %}
+        
+        <form class="analyses-form-fields" action="#" method="post">
+          <label class="form-field">
+            <span>Insights e Análise da IA</span>
+            <textarea name="ai_insights" rows="6" placeholder="As análises geradas ficarão registradas aqui" {% if not company_section_open|default(true) %}disabled{% endif %}>{{ company_data.ai_insights|default('') }}</textarea>
+          </label>
+          <label class="form-field">
+            <span>Análises e Impressões do Consultor</span>
+            <textarea name="consultant_analysis" rows="8" placeholder="Versão detalhada: Registre suas análises completas, impressões e insights sobre a empresa, mercado, oportunidades e desafios identificados durante o processo de planejamento estratégico." {% if not company_section_open|default(true) %}disabled{% endif %}>{{ company_data.consultant_analysis|default('') }}</textarea>
+          </label>
+          <div class="form-actions">
+            <button type="button" class="button button-primary" onclick="saveAnalyses()" {% if not company_section_open|default(true) %}disabled{% endif %}>Salvar análises</button>
+            <button type="button" class="button button-primary" onclick="generateAIInsights()" {% if not company_section_open|default(true) %}disabled{% endif %}>Gerar buscas e análises de IA</button>
+            <button type="button" class="button button-ghost" onclick="resetAnalysesForm()" {% if not company_section_open|default(true) %}disabled{% endif %}>Descartar alterações</button>
+          </div>
+        </form>
+      </div>
+    </details>
+
+    <!-- Seção 3: Resumo Executivo -->
+    <details class="interview-section surface-card company-summary">
+      <summary class="interview-summary-bar">
+        <div class="interview-summary-text">
+          <span class="section-eyebrow">Resumo Executivo</span>
+          <h3>Visão consolidada</h3>
+          <p>Visualize um resumo completo dos dados corporativos e financeiros da empresa.</p>
+        </div>
+        <div class="interview-progress alignment-progress">
+          <div>
+            <span class="chip-label">Dados</span>
+            <span class="interview-count">Consolidados</span>
+          </div>
+        </div>
+      </summary>
+      <div class="interview-content">
+        {% if not company_section_open|default(true) %}
+        <div class="section-closed-notice">
+          <p>🎯 Esta seção foi concluída e não permite mais edições.</p>
+        </div>
+        {% endif %}
+        <div class="summary-grid">
+          <div class="summary-block">
+            <span class="chip-label">Nome fantasia</span>
+            <strong>{{ company_data.trade_name|default(plan.company) }}</strong>
+            <span class="chip-label">Razao social</span>
+            <strong>{{ company_data.legal_name|default('-') }}</strong>
+          </div>
+          <div class="summary-block">
+            <span class="chip-label">CNPJ</span>
+            <strong>{{ (company_data.cnpj|format_cnpj) or '-' }}</strong>
+            <span class="chip-label">Atuacao fisica</span>
+            <strong>{{ coverage_physical_label }}</strong>
+            <span class="chip-label">Atuacao online</span>
+            <strong>{{ coverage_online_label }}</strong>
+          </div>
+          <div class="summary-block">
+            <span class="chip-label">Experiencia total</span>
+            <strong>{{ company_data.experience_total|default('-') }}</strong>
+            <span class="chip-label">Experiencia no segmento</span>
+            <strong>{{ company_data.experience_segment|default('-') }}</strong>
+          </div>
+        </div>
+        <div class="financial-table-wrapper">
+          <table class="financial-table">
+            <thead>
+              <tr>
+                <th>Linha / Produto</th>
+                <th>Faturamento</th>
+                <th>Margem de contribuicao</th>
+              </tr>
+            </thead>
+            <tbody>
+              {% for item in company_data.financials|default([]) %}
+              <tr>
+                <td>{{ item.line }}</td>
+                <td>{{ item.revenue|format_number_br }}</td>
+                <td>{{ item.margin|format_percent_br }}</td>
+              </tr>
+              {% else %}
+              <tr>
+                <td colspan="3" class="table-empty">Nenhum dado de faturamento informado.</td>
+              </tr>
+              {% endfor %}
+            </tbody>
+          </table>
+        </div>
+        <div class="financial-summary">
+          <div class="summary-block">
+            <span class="chip-label">Faturamento total</span>
+            <strong>{{ company_data.financial_total_revenue|format_number_br }}</strong>
+            <span class="chip-label">Margem total</span>
+            <strong>{{ company_data.financial_total_margin|format_percent_br }}</strong>
+          </div>
+        </div>
+        
+        
+        {% if company_data.ai_insights %}
+        <div class="ai-summary">
+          <div class="summary-block summary-notes">
+            <span class="chip-label">Insights da IA</span>
+            <p>{{ company_data.ai_insights|nl2br|safe }}</p>
+          </div>
+        </div>
+        {% endif %}
+        
+        {% if company_data.consultant_analysis %}
+        <div class="consultant-summary">
+          <div class="summary-block summary-notes">
+            <span class="chip-label">Resumo do Consultor</span>
+            <p>{{ company_data.consultant_analysis|nl2br|safe }}</p>
+          </div>
+        </div>
+        {% endif %}
+      </div>
+    </details>
+  </section>
+</div>
+
+<!-- Modal para visualização de PDF -->
+<div id="pdfModal" class="modal" style="display: none;">
+  <div class="modal-content">
+    <div class="modal-header">
+      <h3>Visualizar PDF</h3>
+      <button type="button" class="modal-close" onclick="closePDFModal()">&times;</button>
+    </div>
+    <div class="modal-body">
+      <iframe id="pdfViewer" src="" width="100%" height="600px" style="border: none;"></iframe>
+    </div>
+  </div>
+</div>
+
+<script>
+const originalAiInsights = {{ company_data.ai_insights|default("")|tojson }};
+const originalConsultantAnalysis = {{ company_data.consultant_analysis|default("")|tojson }};
+
+document.addEventListener('DOMContentLoaded', function() {
+    let financialRowIndex = {{ company_data.financials|default([])|length }};
+    
+    // Adicionar nova linha de faturamento
+    document.getElementById('add-financial-row').addEventListener('click', function() {
+        const tbody = document.getElementById('financial-tbody');
+        const totalRow = tbody.querySelector('.financial-total-row');
+        
+        const newRow = document.createElement('tr');
+        newRow.className = 'financial-row';
+        financialRowIndex++;
+        
+        newRow.innerHTML = `
+            <td><input type="text" name="financial_line_${financialRowIndex}" value="" class="financial-input" /></td>
+            <td><input type="number" name="financial_revenue_${financialRowIndex}" value="" placeholder="0.00" step="0.01" min="0" class="financial-input revenue-input" /></td>
+            <td><input type="number" name="financial_margin_${financialRowIndex}" value="" placeholder="0" step="0.01" min="0" max="100" class="financial-input margin-input" /></td>
+            <td><textarea name="financial_market_${financialRowIndex}" rows="2" placeholder="Descreva o tamanho do mercado, market share e concorrencia" class="financial-input"></textarea></td>
+            <td><button type="button" class="button-remove-row" onclick="removeFinancialRow(this)">×</button></td>
+        `;
+        
+        tbody.insertBefore(newRow, totalRow);
+        
+        // Adicionar event listeners para cálculo automático
+        addCalculationListeners(newRow);
+    });
+    
+    // Adicionar event listeners para linhas existentes
+    document.querySelectorAll('.financial-row').forEach(row => {
+        addCalculationListeners(row);
+    });
+    
+    function addCalculationListeners(row) {
+        const revenueInput = row.querySelector('.revenue-input');
+        const marginInput = row.querySelector('.margin-input');
+        
+        if (revenueInput) {
+            revenueInput.addEventListener('input', calculateTotals);
+        }
+        if (marginInput) {
+            marginInput.addEventListener('input', calculateTotals);
+        }
+    }
+    
+    function calculateTotals() {
+        const rows = document.querySelectorAll('.financial-row');
+        let totalRevenue = 0;
+        let totalWeightedMargin = 0;
+        let totalRevenueForMargin = 0;
+        
+        rows.forEach(row => {
+            const revenueInput = row.querySelector('.revenue-input');
+            const marginInput = row.querySelector('.margin-input');
+            
+            if (revenueInput && marginInput) {
+                const revenue = parseFloat(revenueInput.value) || 0;
+                const margin = parseFloat(marginInput.value) || 0;
+                
+                totalRevenue += revenue;
+                totalWeightedMargin += (revenue * margin / 100);
+                totalRevenueForMargin += revenue;
+            }
+        });
+        
+        // Atualizar totais
+        const totalRevenueInput = document.querySelector('input[name="financial_total_revenue"]');
+        const totalMarginInput = document.querySelector('input[name="financial_total_margin"]');
+        
+        if (totalRevenueInput) {
+            totalRevenueInput.value = totalRevenue.toLocaleString('pt-BR', {minimumFractionDigits: 2, maximumFractionDigits: 2});
+        }
+        
+        if (totalMarginInput && totalRevenueForMargin > 0) {
+            const averageMargin = (totalWeightedMargin / totalRevenueForMargin) * 100;
+            totalMarginInput.value = averageMargin.toFixed(2) + '%';
+        }
+    }
+    
+// Função global para remover linha
+    window.removeFinancialRow = function(button) {
+        const row = button.closest('tr');
+        row.remove();
+        calculateTotals();
+    };
+    
+    // Calcular totais iniciais
+    calculateTotals();
+});
+
+function closeCompanySection() {
+    const notes = prompt('Motivo da conclusão de todas as seções (opcional):');
+
+    fetch(`/plans/{{ plan.id }}/sections/company/status`, {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+            status: 'closed',
+            closed_by: 'Usuário',
+            notes: notes || ''
+        })
+    })
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                showMessage('Todas as seções foram concluídas com sucesso!', 'success');
+                // Atualizar interface sem recarregar a página
+                updateSectionStatus('closed');
+            } else {
+                showMessage('Erro ao concluir seção: ' + data.error, 'error');
+            }
+        })
+        .catch(error => {
+            console.error('Erro:', error);
+            showMessage('Erro ao concluir seção de cadastro.', 'error');
+        });
+}
+
+function openCompanySection() {
+    if (confirm('Reabrir todas as seções permite novas edições em todos os campos. Deseja continuar?')) {
+        fetch(`/plans/{{ plan.id }}/sections/company/status`, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({
+                status: 'open',
+                closed_by: null,
+                notes: ''
+            })
+        })
+            .then(response => response.json())
+            .then(data => {
+                if (data.success) {
+                    showMessage('Todas as seções foram reabertas com sucesso!', 'success');
+                    // Atualizar interface sem recarregar a página
+                    updateSectionStatus('open');
+                } else {
+                    showMessage('Erro ao reabrir seção: ' + data.error, 'error');
+                }
+            })
+            .catch(error => {
+                console.error('Erro:', error);
+                showMessage('Erro ao reabrir seção de cadastro.', 'error');
+            });
+    }
+}
+
+// Adicionar estilos CSS para campos desabilitados
+const style = document.createElement('style');
+style.textContent = `
+    .disabled, input:disabled, textarea:disabled, select:disabled, button:disabled {
+        opacity: 0.6;
+        cursor: not-allowed;
+        background-color: #f5f5f5 !important;
+        color: #666 !important;
+    }
+    
+    .section-closed-notice {
+        background-color: #fff3cd;
+        border: 1px solid #ffeaa7;
+        border-radius: 4px;
+        padding: 12px;
+        margin-bottom: 16px;
+        color: #856404;
+        text-align: center;
+    }
+    
+    .section-closed-notice p {
+        margin: 0;
+        font-weight: 500;
+    }
+`;
+document.head.appendChild(style);
+
+function updateSectionStatus(status) {
+    console.log('Atualizando status da seção para:', status);
+    
+    // Atualizar todos os campos da seção 1 (Cadastro)
+    const section1Inputs = document.querySelectorAll('.company-form input, .company-form textarea, .company-form select');
+    const section1Buttons = document.querySelectorAll('.company-form button');
+    
+    // Atualizar todos os campos da seção 2 (Análises)
+    const section2Inputs = document.querySelectorAll('.company-ai input, .company-ai textarea, .company-ai select');
+    const section2Buttons = document.querySelectorAll('.company-ai button');
+    
+    // Buscar botões de controle - agora sempre existem no DOM
+    const closeButton = document.querySelector('.section-status-controls button[onclick="closeCompanySection()"]');
+    const openButton = document.querySelector('.section-status-controls button[onclick="openCompanySection()"]');
+    const statusInfo = document.querySelector('.section-closed-info');
+    
+    console.log('Botões encontrados:', { 
+        closeButton: closeButton ? 'encontrado' : 'não encontrado',
+        openButton: openButton ? 'encontrado' : 'não encontrado',
+        statusInfo: statusInfo ? 'encontrado' : 'não encontrado'
+    });
+    
+    if (status === 'closed') {
+        // Travar todos os campos
+        [...section1Inputs, ...section2Inputs].forEach(input => {
+            input.disabled = true;
+            input.classList.add('disabled');
+        });
+        
+        // Desabilitar botões das seções (exceto botões de controle)
+        [...section1Buttons, ...section2Buttons].forEach(button => {
+            if (button.classList && button.classList.contains('btn-view')) {
+                button.disabled = false;
+                button.classList.remove('disabled');
+                return;
+            }
+            // Não desabilitar botões de controle
+            if (!button.onclick || (!button.onclick.toString().includes('closeCompanySection') && 
+                                   !button.onclick.toString().includes('openCompanySection'))) {
+                button.disabled = true;
+                button.classList.add('disabled');
+            }
+        });
+        
+        // Mostrar botão Reabrir e ocultar botão Concluir
+        if (closeButton) {
+            closeButton.style.display = 'none';
+            closeButton.disabled = false; // Garantir que está habilitado
+            closeButton.classList.remove('disabled');
+            console.log('Botão Concluir Todas ocultado');
+        }
+        if (openButton) {
+            openButton.style.display = 'inline-block';
+            openButton.disabled = false; // Garantir que está habilitado
+            openButton.classList.remove('disabled');
+            console.log('Botão Reabrir Todas mostrado e habilitado');
+        }
+        
+        // Mostrar avisos de seção fechada
+        const closedNotices = document.querySelectorAll('.section-closed-notice');
+        closedNotices.forEach(notice => {
+            notice.style.display = 'block';
+        });
+        
+        // Mostrar informações de fechamento
+        if (statusInfo) {
+            statusInfo.style.display = 'inline';
+        }
+        
+    } else if (status === 'open') {
+        // Liberar todos os campos
+        [...section1Inputs, ...section2Inputs].forEach(input => {
+            input.disabled = false;
+            input.classList.remove('disabled');
+        });
+        
+        // Habilitar botões das seções (exceto botões de controle)
+        [...section1Buttons, ...section2Buttons].forEach(button => {
+            if (button.classList && button.classList.contains('btn-view')) {
+                button.disabled = false;
+                button.classList.remove('disabled');
+                return;
+            }
+            // Não afetar botões de controle (eles sempre devem estar habilitados)
+            if (!button.onclick || (!button.onclick.toString().includes('closeCompanySection') && 
+                                   !button.onclick.toString().includes('openCompanySection'))) {
+                button.disabled = false;
+                button.classList.remove('disabled');
+            }
+        });
+        
+        // Mostrar botão Concluir e ocultar botão Reabrir
+        if (closeButton) {
+            closeButton.style.display = 'inline-block';
+            closeButton.disabled = false; // Garantir que está habilitado
+            closeButton.classList.remove('disabled');
+            console.log('Botão Concluir Todas mostrado e habilitado');
+        }
+        if (openButton) {
+            openButton.style.display = 'none';
+            openButton.disabled = false; // Garantir que está habilitado
+            openButton.classList.remove('disabled');
+            console.log('Botão Reabrir Todas ocultado');
+        }
+        
+        // Esconder avisos de seção fechada
+        const closedNotices = document.querySelectorAll('.section-closed-notice');
+        closedNotices.forEach(notice => {
+            notice.style.display = 'none';
+        });
+        
+        // Esconder informações de fechamento
+        if (statusInfo) {
+            statusInfo.style.display = 'none';
+        }
+    }
+    
+    // Verificação simples: garantir que os botões estão corretos
+    setTimeout(() => {
+        console.log('Verificação final dos botões...');
+        if (!closeButton || !openButton) {
+            console.log('AVISO: Algum botão não foi encontrado, mas isso não deve acontecer agora');
+        } else {
+            console.log('✅ Ambos os botões encontrados e atualizados com sucesso');
+        }
+    }, 100);
+}
+
+// Funções de fallback removidas - não são mais necessárias
+// Agora ambos os botões sempre existem no DOM
+
+function saveAnalyses() {
+    const aiInsights = document.querySelector('textarea[name="ai_insights"]').value;
+    const consultantAnalysis = document.querySelector('textarea[name="consultant_analysis"]').value;
+    
+    fetch(`/plans/{{ plan.id }}/company/update-analyses`, {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+            ai_insights: aiInsights,
+            consultant_analysis: consultantAnalysis
+        })
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.success) {
+            showMessage('Análises salvas com sucesso!', 'success');
+        } else {
+            showMessage('Erro ao salvar análises: ' + data.error, 'error');
+        }
+    })
+    .catch(error => {
+        console.error('Erro:', error);
+        showMessage('Erro ao salvar análises.', 'error');
+    });
+}
+
+function generateAIInsights() {
+    if (confirm('Gerar análises de IA baseadas nos dados da empresa? Isso pode substituir o conteúdo atual do campo "Insights e Análise da IA".')) {
+        showMessage('Gerando análises de IA...', 'info');
+        
+        fetch(`/plans/{{ plan.id }}/company/generate-ai-insights`, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+            }
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                // Preencher o campo de insights da IA com o resultado
+                const aiInsightsField = document.querySelector('textarea[name="ai_insights"]');
+                if (aiInsightsField) {
+                    aiInsightsField.value = data.insights;
+                }
+                showMessage('Análises de IA geradas com sucesso!', 'success');
+            } else {
+                showMessage('Erro ao gerar análises de IA: ' + data.error, 'error');
+            }
+        })
+        .catch(error => {
+            console.error('Erro:', error);
+            showMessage('Erro ao gerar análises de IA.', 'error');
+        });
+    }
+}
+
+function resetAnalysesForm() {
+    if (confirm('Tem certeza que deseja descartar todas as alterações?')) {
+        const aiField = document.querySelector('textarea[name="ai_insights"]');
+        if (aiField) {
+            aiField.value = originalAiInsights || '';
+        }
+        const consultantField = document.querySelector('textarea[name="consultant_analysis"]');
+        if (consultantField) {
+            consultantField.value = originalConsultantAnalysis || '';
+        }
+        showMessage('Alterações descartadas.', 'info');
+    }
+}
+
+
+// Funções para gerenciar PDFs
+function viewPDF(filename) {
+    const modal = document.getElementById('pdfModal');
+    const iframe = document.getElementById('pdfViewer');
+    
+    // Usar PDF.js para visualização
+    iframe.src = `/uploads/${filename}#toolbar=1&navpanes=1&scrollbar=1`;
+    modal.style.display = 'block';
+    
+    // Adicionar classe para animação
+    setTimeout(() => {
+        modal.classList.add('show');
+    }, 10);
+}
+
+function closePDFModal() {
+    const modal = document.getElementById('pdfModal');
+    const iframe = document.getElementById('pdfViewer');
+    
+    modal.classList.remove('show');
+    setTimeout(() => {
+        modal.style.display = 'none';
+        iframe.src = ''; // Limpar o iframe
+    }, 300);
+}
+
+function deleteFile(fileType, filename) {
+    if (confirm(`Tem certeza que deseja excluir o arquivo "${filename}"?`)) {
+        fetch(`/plans/{{ plan.id }}/company/delete-file`, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({
+                file_type: fileType,
+                filename: filename
+            })
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                // Recarregar a página para atualizar a interface
+                location.reload();
+            } else {
+                alert('Erro ao excluir arquivo: ' + data.error);
+            }
+        })
+        .catch(error => {
+            console.error('Erro:', error);
+            alert('Erro ao excluir arquivo');
+        });
+    }
+}
+
+// Fechar modal ao clicar fora dele
+window.onclick = function(event) {
+    const modal = document.getElementById('pdfModal');
+    if (event.target === modal) {
+        closePDFModal();
+    }
+}
+
+// Fechar modal com ESC
+document.addEventListener('keydown', function(event) {
+    if (event.key === 'Escape') {
+        closePDFModal();
+    }
+});
+</script>
+
+{% endblock %}

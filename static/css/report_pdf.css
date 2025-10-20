@@ -1,0 +1,240 @@
+﻿@page {
+  size: A4 portrait;
+  margin: 3cm 2cm 2cm 3cm; /* ABNT: superior 3cm, lateral 2cm, inferior 2cm, esquerda 3cm */
+}
+
+@media print {
+  @page {
+    size: A4 portrait;
+    margin: 3cm 2cm 2cm 3cm;
+  }
+}
+
+:root {
+  --accent: #39f2ae;
+  --accent-light: rgba(57, 242, 174, 0.1);
+  --text: #1a1a1a;
+  --muted: #555555;
+  --border: rgba(57, 242, 174, 0.3);
+  --surface: rgba(255, 255, 255, 0.9);
+}
+
+.pdf-body {
+  font-family: "Poppins", Arial, sans-serif;
+  color: var(--text);
+  margin: 0;
+  font-size: 12pt; /* ABNT padrão */
+  line-height: 1.5; /* ABNT: 1,5 espaçamento */
+  max-width: 21cm;
+  margin: 0 auto;
+}
+
+@media print {
+  .pdf-body {
+    max-width: none;
+    margin: 0;
+  }
+  
+  * {
+    -webkit-print-color-adjust: exact;
+    color-adjust: exact;
+  }
+}
+
+.pdf-cover {
+  border: 2px solid var(--accent);
+  border-radius: 16px;
+  padding: 28.51px; /* Aumentado de 25.92px para 28.51px (+10%) */
+  margin-bottom: 24px;
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-end;
+  background: #ffffff;
+  box-shadow: none;
+  position: relative;
+}
+
+
+.brand-eyebrow {
+  text-transform: uppercase;
+  letter-spacing: 0.4em;
+  font-size: 10pt;
+  color: var(--accent);
+}
+
+.pdf-cover h1 {
+  margin: 12px 0 6px;
+  font-size: 32pt;
+  font-weight: 700;
+  letter-spacing: -0.5px;
+  color: var(--text);
+}
+
+.pdf-cover-meta p {
+  margin: 4px 0;
+  text-align: right;
+  font-size: 10pt;
+}
+
+.pdf-mission {
+  margin-top: 16px;
+  padding: 12px;
+  background: rgba(57, 242, 174, 0.1);
+  border-radius: 6px;
+  border-left: 3px solid var(--accent);
+}
+
+.pdf-mission p {
+  font-size: 12px;
+  color: var(--text);
+  margin: 0;
+  line-height: 1.5;
+}
+
+.pdf-hero {
+  display: grid;
+  gap: 16px;
+  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+  margin-bottom: 24px;
+}
+
+.pdf-hero-card {
+  border: 1px solid var(--accent);
+  border-radius: 12px;
+  padding: 18px;
+  background: linear-gradient(135deg, var(--accent-light), rgba(255, 255, 255, 0.8));
+  box-shadow: 0 4px 12px rgba(57, 242, 174, 0.15);
+}
+
+.pdf-hero-card h2 {
+  margin-top: 0;
+  font-size: 16pt;
+}
+
+.pdf-index {
+  border: 1px solid var(--accent);
+  border-radius: 12px;
+  padding: 20px;
+  margin-bottom: 24px;
+  background: linear-gradient(135deg, var(--accent-light), rgba(255, 255, 255, 0.9));
+  box-shadow: 0 4px 12px rgba(57, 242, 174, 0.1);
+}
+
+.pdf-index h2 {
+  margin-top: 0;
+}
+
+.pdf-section {
+  margin-bottom: 26px;
+}
+
+.pdf-section h2 {
+  margin-bottom: 12px;
+  border-left: 4px solid var(--accent);
+  padding-left: 12px;
+  font-size: 18pt;
+  font-weight: 700;
+  letter-spacing: -0.3px;
+}
+
+.kpi-grid {
+  display: grid;
+  gap: 14px;
+  grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+}
+
+.kpi-card {
+  border: 1px solid var(--accent);
+  border-radius: 12px;
+  padding: 14px;
+  background: linear-gradient(135deg, var(--accent-light), rgba(255, 255, 255, 0.8));
+  display: grid;
+  gap: 6px;
+  box-shadow: 0 2px 8px rgba(57, 242, 174, 0.1);
+}
+
+.kpi-label {
+  font-size: 9pt;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+  color: var(--muted);
+}
+
+.kpi-value {
+  font-size: 20pt;
+  font-weight: 700;
+  color: var(--accent);
+}
+
+.kpi-meta {
+  font-size: 9pt;
+  color: var(--muted);
+}
+
+.info-grid {
+  display: grid;
+  gap: 14px;
+  grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+  margin-bottom: 16px;
+}
+
+.info-card {
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  padding: 12px;
+}
+
+.info-label {
+  display: block;
+  font-size: 9pt;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+  color: var(--muted);
+  margin-bottom: 4px;
+}
+
+.narrative-cards {
+  display: grid;
+  gap: 16px;
+  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+}
+
+.narrative-cards article {
+  border-left: 3px solid var(--accent);
+  padding-left: 16px;
+}
+
+.pdf-section table {
+  width: 100%;
+  border-collapse: collapse;
+  margin-top: 12px;
+  font-size: 10pt;
+}
+
+.pdf-section table th,
+.pdf-section table td {
+  border: 1px solid var(--border);
+  padding: 8px 10px;
+  text-align: left;
+}
+
+.pdf-section table th {
+  background: rgba(57, 242, 174, 0.18);
+  font-weight: 600;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.pdf-signature {
+  margin-top: 24px;
+  width: 240px;
+  display: grid;
+  gap: 6px;
+}
+
+.pdf-signature-line {
+  height: 1px;
+  background: #333333;
+}
+
+

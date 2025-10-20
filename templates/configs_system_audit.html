@@ -1,0 +1,510 @@
+{% extends "base.html" %}
+{% block title %}Auditoria de Rotas | Sistema{% endblock %}
+
+{% block body %}
+  {% set active_nav = 'configs' %}
+  {{ super() }}
+{% endblock %}
+
+{% block header_actions %}
+  <div class="header-nav">
+    <a href="{{ url_for('system_configs') }}" class="nav-link">Configurações</a>
+    <a href="{{ url_for('system_configs_system') }}" class="nav-link">Sistema</a>
+    <span class="nav-link active">Auditoria</span>
+  </div>
+  <div class="user-pill">
+    <span class="user-name">{{ current_user.name if current_user.is_authenticated else 'Usuário' }}</span>
+  </div>
+{% endblock %}
+
+{% block content %}
+<style>
+  .audit-container {
+    max-width: 1600px;
+    margin: 0 auto;
+    padding: 2rem;
+  }
+
+  .audit-header {
+    background: linear-gradient(135deg, #2c3e50 0%, #34495e 100%);
+    color: white;
+    padding: 2rem;
+    border-radius: 12px;
+    margin-bottom: 2rem;
+    box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+  }
+
+  .audit-header h1 {
+    font-size: 2rem;
+    font-weight: 700;
+    margin-bottom: 0.5rem;
+  }
+
+  .audit-header p {
+    opacity: 0.9;
+    font-size: 1rem;
+  }
+
+  .stats-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+    gap: 1.5rem;
+    margin-bottom: 2rem;
+  }
+
+  .stat-card {
+    background: white;
+    border-radius: 10px;
+    padding: 1.5rem;
+    box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+    transition: transform 0.2s;
+  }
+
+  .stat-card:hover {
+    transform: translateY(-5px);
+    box-shadow: 0 4px 8px rgba(0,0,0,0.15);
+  }
+
+  .stat-number {
+    font-size: 2.5rem;
+    font-weight: bold;
+    margin-bottom: 0.5rem;
+  }
+
+  .stat-label {
+    color: #7f8c8d;
+    font-size: 0.9rem;
+    text-transform: uppercase;
+  }
+
+  .stat-number.primary { color: #3498db; }
+  .stat-number.success { color: #27ae60; }
+  .stat-number.danger { color: #e74c3c; }
+  .stat-number.info { color: #9b59b6; }
+
+  .coverage-bar {
+    height: 30px;
+    background: #ecf0f1;
+    border-radius: 15px;
+    overflow: hidden;
+    position: relative;
+    margin: 1rem 0;
+  }
+
+  .coverage-fill {
+    height: 100%;
+    background: linear-gradient(90deg, #27ae60 0%, #2ecc71 100%);
+    transition: width 0.5s ease;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: white;
+    font-weight: bold;
+  }
+
+  .filter-section {
+    background: white;
+    border-radius: 10px;
+    padding: 1.5rem;
+    margin-bottom: 1.5rem;
+    box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+  }
+
+  .filter-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+    gap: 1rem;
+  }
+
+  .filter-item label {
+    display: block;
+    font-weight: 600;
+    color: #2c3e50;
+    margin-bottom: 0.5rem;
+  }
+
+  .filter-item select,
+  .filter-item input {
+    width: 100%;
+    padding: 0.75rem;
+    border: 2px solid #e2e8f0;
+    border-radius: 8px;
+    font-size: 0.95rem;
+    transition: border-color 0.2s;
+  }
+
+  .filter-item select:focus,
+  .filter-item input:focus {
+    outline: none;
+    border-color: #3b82f6;
+  }
+
+  .routes-section {
+    background: white;
+    border-radius: 10px;
+    padding: 1.5rem;
+    box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+  }
+
+  .loading {
+    text-align: center;
+    padding: 3rem;
+  }
+
+  .loading-spinner {
+    font-size: 3rem;
+    color: #3498db;
+    animation: spin 1s linear infinite;
+  }
+
+  @keyframes spin {
+    0% { transform: rotate(0deg); }
+    100% { transform: rotate(360deg); }
+  }
+
+  .btn {
+    padding: 0.75rem 1.5rem;
+    border-radius: 8px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.2s;
+    border: none;
+    font-size: 0.95rem;
+  }
+
+  .btn-primary {
+    background: #3b82f6;
+    color: white;
+  }
+
+  .btn-primary:hover {
+    background: #2563eb;
+  }
+
+  .btn-secondary {
+    background: #e2e8f0;
+    color: #475569;
+  }
+
+  .btn-secondary:hover {
+    background: #cbd5e1;
+  }
+
+  .routes-table {
+    width: 100%;
+    margin-top: 1rem;
+  }
+
+  .routes-table th,
+  .routes-table td {
+    padding: 1rem;
+    text-align: left;
+    border-bottom: 1px solid #e2e8f0;
+  }
+
+  .routes-table th {
+    background: #f8fafc;
+    font-weight: 600;
+    color: #1e293b;
+  }
+
+  .badge {
+    padding: 0.4rem 0.8rem;
+    border-radius: 20px;
+    font-weight: 600;
+    font-size: 0.75rem;
+  }
+
+  .badge-success {
+    background: #d4edda;
+    color: #155724;
+  }
+
+  .badge-danger {
+    background: #f8d7da;
+    color: #721c24;
+  }
+
+  .badge-warning {
+    background: #fff3cd;
+    color: #856404;
+  }
+
+  #routes-container {
+    max-height: 600px;
+    overflow-y: auto;
+  }
+</style>
+
+<div class="audit-container">
+  <!-- Header -->
+  <div class="audit-header">
+    <h1>🔍 Auditoria de Rotas</h1>
+    <p>Sistema de monitoramento e gerenciamento de logging de rotas</p>
+  </div>
+
+  <!-- Loading -->
+  <div id="loading" class="loading">
+    <div class="loading-spinner">⌛</div>
+    <p>Carregando dados de auditoria...</p>
+  </div>
+
+  <!-- Estatísticas -->
+  <div id="stats-section" style="display: none;">
+    <div class="stats-grid">
+      <div class="stat-card">
+        <div class="stat-number primary" id="total-routes">0</div>
+        <div class="stat-label">Total de Rotas</div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-number info" id="crud-routes">0</div>
+        <div class="stat-label">Rotas CRUD</div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-number success" id="routes-with-log">0</div>
+        <div class="stat-label">Com Logging</div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-number danger" id="routes-without-log">0</div>
+        <div class="stat-label">Sem Logging</div>
+      </div>
+    </div>
+
+    <!-- Cobertura -->
+    <div class="stat-card">
+      <h5 style="margin-bottom: 1rem;">📊 Cobertura de Logging</h5>
+      <div class="coverage-bar">
+        <div class="coverage-fill" id="coverage-fill" style="width: 0%">
+          <span id="coverage-text">0%</span>
+        </div>
+      </div>
+      <p style="color: #64748b; font-size: 0.875rem; margin-top: 0.5rem;">
+        Percentual de rotas CRUD com logging configurado
+      </p>
+    </div>
+  </div>
+
+  <!-- Filtros -->
+  <div id="filter-section" class="filter-section" style="display: none;">
+    <div class="filter-grid">
+      <div class="filter-item">
+        <label>Filtrar por:</label>
+        <select id="filter-type" onchange="filterRoutes()">
+          <option value="without_logging">Sem Logging (Crítico)</option>
+          <option value="all">Todas as Rotas</option>
+          <option value="crud">Apenas CRUD</option>
+          <option value="with_logging">Com Logging</option>
+        </select>
+      </div>
+      <div class="filter-item">
+        <label>Buscar:</label>
+        <input type="text" id="search-routes" placeholder="Buscar rota..." oninput="searchRoutes()">
+      </div>
+      <div class="filter-item" style="display: flex; align-items: flex-end; gap: 0.5rem;">
+        <button class="btn btn-primary" onclick="loadData()" style="flex: 1;">🔄 Atualizar</button>
+        <button class="btn btn-secondary" onclick="exportReport()" style="flex: 1;">📥 Exportar</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Tabela de Rotas -->
+  <div id="routes-section" class="routes-section" style="display: none;">
+    <h4 style="margin-bottom: 1rem;">Rotas Encontradas</h4>
+    <div id="routes-container"></div>
+  </div>
+
+  <!-- Empty State -->
+  <div id="empty-state" style="display: none; text-align: center; padding: 3rem; color: #7f8c8d;">
+    <div style="font-size: 4rem;">✅</div>
+    <h4 style="margin-top: 1rem;">Tudo OK!</h4>
+    <p>Todas as rotas CRUD têm logging configurado.</p>
+  </div>
+</div>
+
+<script>
+  let allRoutes = [];
+  let currentFilter = 'without_logging';
+
+  // Carregar dados ao iniciar
+  document.addEventListener('DOMContentLoaded', function() {
+    loadData();
+  });
+
+  async function loadData() {
+    try {
+      document.getElementById('loading').style.display = 'block';
+      document.getElementById('stats-section').style.display = 'none';
+      document.getElementById('filter-section').style.display = 'none';
+      document.getElementById('routes-section').style.display = 'none';
+      document.getElementById('empty-state').style.display = 'none';
+
+      // Carregar resumo
+      const summaryResponse = await fetch('/route-audit/api/summary');
+      const summaryData = await summaryResponse.json();
+
+      if (summaryData.success) {
+        updateStats(summaryData.summary);
+      }
+
+      // Carregar rotas
+      currentFilter = document.getElementById('filter-type').value;
+      const routesResponse = await fetch(`/route-audit/api/routes?filter=${currentFilter}`);
+      const routesData = await routesResponse.json();
+
+      if (routesData.success) {
+        allRoutes = routesData.routes;
+        displayRoutes(allRoutes);
+      }
+
+      document.getElementById('loading').style.display = 'none';
+      document.getElementById('stats-section').style.display = 'block';
+      document.getElementById('filter-section').style.display = 'block';
+
+    } catch (error) {
+      console.error('Erro ao carregar dados:', error);
+      alert('Erro ao carregar dados de auditoria');
+    }
+  }
+
+  function updateStats(summary) {
+    document.getElementById('total-routes').textContent = summary.total_routes;
+    document.getElementById('crud-routes').textContent = summary.total_crud_routes;
+    document.getElementById('routes-with-log').textContent = summary.routes_with_logging;
+    document.getElementById('routes-without-log').textContent = summary.routes_without_logging;
+
+    const coverage = summary.coverage_percentage;
+    document.getElementById('coverage-fill').style.width = coverage + '%';
+    document.getElementById('coverage-text').textContent = coverage.toFixed(1) + '%';
+
+    const fillElement = document.getElementById('coverage-fill');
+    if (coverage < 50) {
+      fillElement.style.background = 'linear-gradient(90deg, #e74c3c 0%, #c0392b 100%)';
+    } else if (coverage < 80) {
+      fillElement.style.background = 'linear-gradient(90deg, #f39c12 0%, #e67e22 100%)';
+    } else {
+      fillElement.style.background = 'linear-gradient(90deg, #27ae60 0%, #2ecc71 100%)';
+    }
+  }
+
+  function displayRoutes(routes) {
+    const container = document.getElementById('routes-container');
+    
+    if (routes.length === 0) {
+      document.getElementById('routes-section').style.display = 'none';
+      document.getElementById('empty-state').style.display = 'block';
+      return;
+    }
+
+    document.getElementById('routes-section').style.display = 'block';
+    document.getElementById('empty-state').style.display = 'none';
+
+    let html = '<table class="routes-table"><thead><tr><th>Endpoint</th><th>Métodos</th><th>Entidade</th><th>Status</th><th>Ações</th></tr></thead><tbody>';
+
+    routes.forEach(route => {
+      const hasLogging = route.has_auto_log || route.has_manual_log;
+      const needsLogging = route.needs_logging;
+
+      let statusBadge = '';
+      if (hasLogging) {
+        statusBadge = '<span class="badge badge-success">✅ Com Log</span>';
+      } else if (needsLogging) {
+        statusBadge = '<span class="badge badge-danger">❌ Sem Log</span>';
+      } else {
+        statusBadge = '<span class="badge badge-warning">ℹ️ Não Necessário</span>';
+      }
+
+      const methodBadges = route.methods.join(', ');
+      const entityBadge = route.entity_type ? `<span class="badge">${route.entity_type}</span>` : '-';
+
+      const actions = needsLogging && !hasLogging ?
+        `<button class="btn btn-primary" style="padding: 0.4rem 1rem; font-size: 0.875rem;" onclick="showImplementationGuide('${route.endpoint}')">➕ Incluir Log</button>` :
+        `<button class="btn btn-secondary" style="padding: 0.4rem 1rem; font-size: 0.875rem;" onclick="showRouteDetails('${route.endpoint}')">👁️ Ver Detalhes</button>`;
+
+      html += `
+        <tr>
+          <td><code style="background: #f1f5f9; padding: 0.25rem 0.5rem; border-radius: 4px;">${route.path}</code><br><small style="color: #64748b;">${route.endpoint}</small></td>
+          <td><small>${methodBadges}</small></td>
+          <td>${entityBadge}</td>
+          <td>${statusBadge}</td>
+          <td>${actions}</td>
+        </tr>
+      `;
+    });
+
+    html += '</tbody></table>';
+    container.innerHTML = html;
+  }
+
+  function filterRoutes() {
+    loadData();
+  }
+
+  function searchRoutes() {
+    const searchTerm = document.getElementById('search-routes').value.toLowerCase();
+    const filtered = allRoutes.filter(route => 
+      route.endpoint.toLowerCase().includes(searchTerm) ||
+      route.path.toLowerCase().includes(searchTerm) ||
+      (route.entity_type && route.entity_type.toLowerCase().includes(searchTerm))
+    );
+    displayRoutes(filtered);
+  }
+
+  async function showImplementationGuide(endpoint) {
+    try {
+      const response = await fetch(`/route-audit/api/routes/${encodeURIComponent(endpoint)}/details`);
+      const data = await response.json();
+
+      if (data.success) {
+        const guide = data.implementation_guide;
+        alert(`Guia de Implementação:\n\n1. Adicione o import:\n${guide.decorator_import}\n\n2. Adicione o decorador:\n${guide.decorator_code}\n\nVeja o console para o exemplo completo.`);
+        console.log(guide.example);
+      }
+    } catch (error) {
+      console.error('Erro ao carregar guia:', error);
+      alert('Erro ao carregar guia de implementação');
+    }
+  }
+
+  async function showRouteDetails(endpoint) {
+    try {
+      const response = await fetch(`/route-audit/api/routes/${encodeURIComponent(endpoint)}/details`);
+      const data = await response.json();
+
+      if (data.success) {
+        const route = data.route;
+        alert(`Detalhes da Rota:\n\nEndpoint: ${route.endpoint}\nPath: ${route.path}\nMétodos: ${route.methods.join(', ')}\nTipo: ${route.entity_type || 'N/A'}\nÉ CRUD: ${route.is_crud ? 'Sim' : 'Não'}\nTem Log: ${route.has_auto_log || route.has_manual_log ? 'Sim' : 'Não'}`);
+      }
+    } catch (error) {
+      console.error('Erro ao carregar detalhes:', error);
+      alert('Erro ao carregar detalhes da rota');
+    }
+  }
+
+  async function exportReport() {
+    try {
+      const response = await fetch('/route-audit/api/export-report');
+      const data = await response.json();
+
+      if (data.success) {
+        const blob = new Blob([data.csv_content], { type: 'text/csv' });
+        const url = window.URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = data.filename;
+        document.body.appendChild(a);
+        a.click();
+        document.body.removeChild(a);
+        window.URL.revokeObjectURL(url);
+
+        alert('Relatório exportado com sucesso!');
+      } else {
+        alert('Erro ao exportar relatório: ' + data.message);
+      }
+    } catch (error) {
+      console.error('Erro ao exportar:', error);
+      alert('Erro ao exportar relatório');
+    }
+  }
+</script>
+{% endblock %}
+

@@ -1,0 +1,171 @@
+﻿{% extends "base.html" %}
+{% block title %}Login | Versus Gestão{% endblock %}
+{% block body_class %}login-page{% endblock %}
+{% block body %}
+<div class="login-experience">
+  <div class="login-experience__art" aria-hidden="true">
+    <div class="login-art__grid"></div>
+    <svg class="login-art__trend" viewBox="0 0 480 320" role="presentation" preserveAspectRatio="none">
+      <defs>
+        <linearGradient id="axisGradient" x1="0" y1="1" x2="0" y2="0">
+          <stop offset="0%" stop-color="rgba(29,78,155,0.08)" />
+          <stop offset="100%" stop-color="rgba(37,99,235,0.45)" />
+        </linearGradient>
+        <linearGradient id="trendGradient" x1="0" y1="1" x2="1" y2="0">
+          <stop offset="0%" stop-color="#1d4ed8" />
+          <stop offset="45%" stop-color="#2563eb" />
+          <stop offset="100%" stop-color="#fbbf24" />
+        </linearGradient>
+        <filter id="glow" x="-20%" y="-40%" width="140%" height="180%">
+          <feGaussianBlur stdDeviation="6" result="blur" />
+          <feMerge>
+            <feMergeNode in="blur" />
+            <feMergeNode in="SourceGraphic" />
+          </feMerge>
+        </filter>
+        <marker id="axisArrow" markerWidth="12" markerHeight="12" refX="6" refY="6" orient="auto">
+          <path d="M2 2 L10 6 L2 10 Z" fill="rgba(37,99,235,0.55)" />
+        </marker>
+      </defs>
+      <g stroke="url(#axisGradient)" stroke-width="5" stroke-linecap="round">
+        <line x1="52" y1="260" x2="52" y2="60" marker-end="url(#axisArrow)" />
+        <line x1="52" y1="260" x2="420" y2="260" marker-end="url(#axisArrow)" />
+      </g>
+      <polyline points="52,250 128,220 188,210 248,180 324,140 420,90" fill="none" stroke="url(#trendGradient)" stroke-width="8" stroke-linecap="round" filter="url(#glow)" />
+      <g fill="#f5f8ff" stroke="#2563eb" stroke-width="3">
+        <circle cx="128" cy="220" r="10" />
+        <circle cx="188" cy="210" r="10" />
+        <circle cx="248" cy="180" r="10" />
+        <circle cx="324" cy="140" r="10" />
+      </g>
+      <circle cx="420" cy="90" r="12" fill="#fefdf6" stroke="#fbbf24" stroke-width="4" />
+    </svg>
+  </div>
+
+  <div class="login-grid">
+    <section class="login-tile login-tile--brand">
+      <div class="brand-emblem">
+        <img src="{{ url_for('static', filename='img/versus-logo.png') }}" alt="Versus Gestão Corporativa" class="brand-emblem__image" />
+      </div>
+      <p class="brand-mission">
+        Auxiliando os gestores e as organizações nas definições e alcance dos seus objetivos.
+      </p>
+    </section>
+
+    <section class="login-tile login-tile--systems">
+      <span class="login-eyebrow">Sistema de Gestão Versus</span>
+      <h2 class="login-heading">Transforme sua empresa na melhor versão de si mesma.</h2>
+      <p class="login-tile__text">
+        Planeje, execute, visualize e evolua. Os quatro módulos atuam em sincronia para conectar estratégia, rotinas, desempenho e finanças.
+      </p>
+      <div class="system-badges">
+        <span class="system-badge">PEV</span>
+        <span class="system-badge">GRV</span>
+        <span class="system-badge">GEV</span>
+        <span class="system-badge">GFV</span>
+      </div>
+    </section>
+
+    <section class="login-tile login-tile--form">
+      <span class="login-eyebrow">Acesso seguro</span>
+      <h2 class="login-heading">Entre na sua central de gestão</h2>
+      <div id="alert-container" style="margin-bottom: 1rem;"></div>
+      <form class="login-form" id="loginForm" novalidate>
+        <div class="form-field">
+          <label for="email">E-mail corporativo</label>
+          <input type="email" id="email" name="email" placeholder="voce@empresa.com" required />
+        </div>
+        <div class="form-field">
+          <label for="password">Senha</label>
+          <input type="password" id="password" name="password" placeholder="Digite sua senha" required />
+        </div>
+        <div class="form-meta">
+          <label class="checkbox-remember">
+            <input type="checkbox" name="remember" id="remember" />
+            <span>Lembrar meu acesso</span>
+          </label>
+          <a class="form-link" href="#">Esqueceu a senha?</a>
+        </div>
+        <button type="submit" class="button button-primary button-full">Entrar</button>
+      </form>
+      <div class="login-footnote">
+        Não possui acesso? <a href="#">Converse com nosso time de onboarding</a>.
+      </div>
+    </section>
+
+    <section class="login-tile login-tile--quote">
+      <blockquote class="management-quote">
+        <span class="quote-mark">"</span>
+        <p>{{ management_quote or "Faça o que você pode, onde você está, com o que você tem." }}</p>
+        <span class="quote-mark quote-mark--closing">"</span>
+      </blockquote>
+      <div class="quote-author">
+        {{ management_quote_source or "Theodore Roosevelt" }}
+      </div>
+    </section>
+  </div>
+</div>
+
+<script>
+document.getElementById('loginForm').addEventListener('submit', async function(e) {
+    e.preventDefault();
+    
+    const formData = new FormData(this);
+    const data = {
+        email: formData.get('email'),
+        password: formData.get('password'),
+        remember: formData.get('remember') === 'on'
+    };
+    
+    const submitBtn = this.querySelector('button[type="submit"]');
+    const originalText = submitBtn.innerHTML;
+    submitBtn.innerHTML = '⏳ Autenticando...';
+    submitBtn.disabled = true;
+    
+    try {
+        const response = await fetch('/login', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+            },
+            body: JSON.stringify(data)
+        });
+        
+        const result = await response.json();
+        
+        if (result.success) {
+            showAlert('success', '✓ ' + result.message);
+            setTimeout(() => {
+                window.location.href = result.redirect || '/main';
+            }, 800);
+        } else {
+            showAlert('error', '✗ ' + (result.message || 'Erro no login'));
+            submitBtn.innerHTML = originalText;
+            submitBtn.disabled = false;
+        }
+    } catch (error) {
+        showAlert('error', '✗ Erro de conexão. Tente novamente.');
+        submitBtn.innerHTML = originalText;
+        submitBtn.disabled = false;
+    }
+});
+
+function showAlert(type, message) {
+    const alertContainer = document.getElementById('alert-container');
+    const bgColor = type === 'success' ? '#d4edda' : '#f8d7da';
+    const textColor = type === 'success' ? '#155724' : '#721c24';
+    const borderColor = type === 'success' ? '#c3e6cb' : '#f5c6cb';
+    
+    alertContainer.innerHTML = `
+        <div style="padding: 0.75rem 1.25rem; margin-bottom: 1rem; border: 1px solid ${borderColor}; border-radius: 0.375rem; background-color: ${bgColor}; color: ${textColor}; font-size: 0.875rem;">
+            ${message}
+        </div>
+    `;
+    
+    // Auto-hide after 5 seconds
+    setTimeout(() => {
+        alertContainer.innerHTML = '';
+    }, 5000);
+}
+</script>
+{% endblock %}

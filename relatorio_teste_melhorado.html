@@ -1,0 +1,683 @@
+
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Relatório de Reuniões</title>
+    <style>
+        
+        
+    @page {
+        size: A4;
+        margin: 25mm 
+                20mm 
+                20mm 
+                20mm;
+    }
+    
+        
+        /* Variáveis CSS */
+        :root {
+            --color-primary: #1a76ff;
+    --color-secondary: #6366f1;
+    --color-accent: #f59e0b;
+    --color-text-dark: #0f172a;
+    --color-text-medium: #475569;
+    --color-text-light: #64748b;
+    --color-text-muted: #94a3b8;
+    --color-bg-white: #ffffff;
+    --color-bg-light: #f8fafc;
+    --color-bg-medium: #f1f5f9;
+    --color-bg-dark: #e2e8f0;
+    --color-border-light: #e2e8f0;
+    --color-border-medium: #cbd5e1;
+    --color-border-dark: #94a3b8;
+    --color-success: #10b981;
+    --color-warning: #f59e0b;
+    --color-error: #ef4444;
+    --color-info: #3b82f6;
+    --color-chart-1: #3b82f6;
+    --color-chart-2: #8b5cf6;
+    --color-chart-3: #ec4899;
+    --color-chart-4: #f59e0b;
+    --color-chart-5: #10b981;
+    --color-chart-6: #06b6d4;
+    --font-family-primary: Arial, Helvetica, sans-serif;
+    --font-family-secondary: "Segoe UI", Tahoma, Geneva, Verdana, sans-serif;
+    --font-family-mono: Consolas, "Courier New", monospace;
+    --font-size-h1: 18pt;
+    --font-size-h2: 15pt;
+    --font-size-h3: 13pt;
+    --font-size-h4: 11pt;
+    --font-size-body: 10pt;
+    --font-size-small: 9pt;
+    --font-size-tiny: 8pt;
+    --font-weight-normal: 400;
+    --font-weight-medium: 500;
+    --font-weight-semibold: 600;
+    --font-weight-bold: 700;
+    --line-height-tight: 1.25;
+    --line-height-normal: 1.5;
+    --line-height-relaxed: 1.75;
+    --page-margin-top: 25mm;
+    --page-margin-right: 20mm;
+    --page-margin-bottom: 20mm;
+    --page-margin-left: 20mm;
+    --header-height: 25mm;
+    --footer-height: 15mm;
+    --space-xs: 4mm;
+    --space-sm: 8mm;
+    --space-md: 12mm;
+    --space-lg: 16mm;
+    --space-xl: 24mm;
+    --padding-xs: 2mm;
+    --padding-sm: 4mm;
+    --padding-md: 6mm;
+    --padding-lg: 8mm;
+    --border-radius-sm: 4px;
+    --border-radius-md: 6px;
+    --border-radius-lg: 8px;
+    --border-radius-xl: 12px;
+    --border-width-thin: 1px;
+    --border-width-medium: 2px;
+    --border-width-thick: 3px;
+            --report-header-offset: 28.00mm;
+            --report-footer-offset: 18.00mm;
+        }
+        
+        /* Reset e Base */
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: Arial, Helvetica, sans-serif;
+            font-size: 10pt;
+            line-height: 1.5;
+            color: #0f172a;
+        }
+        
+        /* Seções */
+        h1 { font-size: 18pt; font-weight: 700; color: #0f172a; margin-top: 16mm; margin-bottom: 12mm; border-bottom: 2px solid #1a76ff; padding-bottom: 4mm; }
+    h2 { font-size: 15pt; font-weight: 600; color: #0f172a; margin-top: 12mm; margin-bottom: 8mm; }
+    h3 { font-size: 13pt; font-weight: 500; color: #475569; margin-top: 8mm; margin-bottom: 6mm; }
+        
+        /* Tabelas */
+        
+    table.data-table {
+        width: 100%;
+        border-collapse: collapse;
+        font-size: 9pt;
+        margin: 8mm 0;
+    }
+    
+    table.data-table th {
+        background: #1a76ff;
+        color: #ffffff;
+        padding: 6px 10px;
+        text-align: left;
+        font-weight: 600;
+        border: 1px solid #cbd5e1;
+    }
+    
+    table.data-table td {
+        padding: 6px 10px;
+        border: 1px solid #cbd5e1;
+    }
+    
+    table.data-table tr:nth-child(even) {
+        background: #ffffff;
+    }
+    
+    table.data-table tr:nth-child(odd) {
+        background: #f8fafc;
+    }
+    
+        
+        /* Quebras de página */
+        .section-content { page-break-inside: avoid; }
+    .table-row { page-break-inside: avoid; }
+    .activity-block { page-break-inside: avoid; }
+    .routine-item { page-break-inside: avoid; }
+    .chart-container { page-break-inside: avoid; }
+    .new-section { page-break-before: always; }
+    h1 { page-break-after: avoid; }
+    h2 { page-break-after: avoid; }
+    h3 { page-break-after: avoid; }
+        
+        /* Cabeçalho e Rodapé - Configuração para impressão */
+        @page {
+            @top-center {
+                content: element(page-header);
+            }
+            @bottom-center {
+                content: element(page-footer);
+            }
+        }
+        
+        /* Cabeçalho */
+        .custom-report-header {
+            position: running(page-header);
+        }
+        
+        .custom-report-footer {
+            position: running(page-footer);
+        }
+        
+        /* Para navegadores que não suportam position: running() */
+        @media print {
+            .custom-report-header {
+                position: fixed;
+                top: 0;
+                left: 0;
+                right: 0;
+                z-index: 1000;
+                background: white;
+            }
+            
+            .custom-report-footer {
+                position: fixed;
+                bottom: 0;
+                left: 0;
+                right: 0;
+                z-index: 1000;
+                background: white;
+            }
+            
+            .report-content {
+                margin-top: var(--report-header-offset);
+                margin-bottom: var(--report-footer-offset);
+            }
+        }
+
+        .report-content {
+            margin-top: var(--report-header-offset);
+            margin-bottom: var(--report-footer-offset);
+        }
+        
+        .report-header {
+            border-bottom: 2px solid #1a76ff;
+            padding-bottom: 6mm;
+            margin-bottom: 12mm;
+        }
+        
+        .header-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr 1fr;
+            gap: 12px;
+        }
+        
+        .header-cell {
+            font-size: 9pt;
+        }
+        
+        .header-center {
+            text-align: center;
+        }
+        
+        .header-right {
+            text-align: right;
+        }
+        
+        /* Rodapé */
+        .report-footer {
+            border-top: 1px solid #cbd5e1;
+            padding-top: 4mm;
+            margin-top: 16mm;
+            font-size: 9pt;
+        }
+        
+        .footer-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+        }
+        
+        .footer-right {
+            text-align: right;
+        }
+
+        .page-number,
+        .total-pages {
+            display: inline-block;
+            min-width: 2ch;
+            text-align: center;
+            font-variant-numeric: tabular-nums;
+        }
+
+        .page-number::after {
+            content: attr(data-page);
+        }
+
+        .total-pages::after {
+            content: attr(data-total);
+        }
+
+        @media print {
+            .page-number::after {
+                content: counter(page);
+            }
+            
+            .total-pages::after {
+                content: counter(pages);
+            }
+        }
+        
+        /* Info boxes */
+        .info-box {
+            padding: 6mm;
+            margin: 8mm 0;
+            border-left: 4px solid;
+            border-radius: 6px;
+        }
+        
+        .info-box-info {
+            background: #f8fafc;
+            border-color: #3b82f6;
+        }
+        
+        .info-box-warning {
+            background: #fef3c7;
+            border-color: #f59e0b;
+        }
+        
+        .info-box-success {
+            background: #d1fae5;
+            border-color: #10b981;
+        }
+        
+        .info-box-error {
+            background: #fee2e2;
+            border-color: #ef4444;
+        }
+        
+        .info-box-title {
+            font-weight: 600;
+            margin-bottom: 4px;
+        }
+        
+        /* Customizações específicas */
+        
+        
+    </style>
+</head>
+<body>
+    
+        <div class="report-header">
+            <div class="header-grid">
+                <div class="header-cell">
+                    <strong>Save Water</strong>
+                </div>
+                <div class="header-cell header-center">
+                    <strong>Relatório de Reuniões</strong>
+                </div>
+                <div class="header-cell header-right">
+                    17/10/2025
+                </div>
+            </div>
+        </div>
+        
+    
+    <div class="report-content">
+        
+    <section class="report-section book-title-wrapper">
+        <h1></h1>
+        <div class="section-content">
+            
+        <div class="book-title">
+            <h1>Relatório de Reunião - Save Water</h1>
+            <div class="report-metadata">
+                <p><strong>Empresa:</strong> Save Water</p>
+                <p><strong>Data do Relatório:</strong> 17/10/2025 às 15:40</p>
+                <p><strong>Modelo de Página:</strong> Padrão</p>
+            </div>
+        </div>
+        
+        </div>
+    </section>
+        
+    <section class="report-section ">
+        <h1>📋 Informações da Reunião</h1>
+        <div class="section-content">
+            
+            <div class="meeting-info-grid">
+                <div class="meeting-info-row">
+                    <span class="meeting-info-label">Título:</span>
+                    <span class="meeting-info-value"><strong>Reunião Semanal Gerencial</strong></span>
+                </div>
+                <div class="meeting-info-row">
+                    <span class="meeting-info-label">Status:</span>
+                    <span class="meeting-info-value">Concluída</span>
+                </div>
+                <div class="meeting-info-row">
+                    <span class="meeting-info-label">Data Prevista:</span>
+                    <span class="meeting-info-value">2025-10-14 às 09:00</span>
+                </div>
+        </div>
+        </div>
+    </section>
+        
+    <section class="report-section ">
+        <h1>👥 Convidados</h1>
+        <div class="section-content">
+            
+                <h3>Colaboradores Internos</h3>
+                <div class="guests-list">
+            
+                    <div class="guest-item">
+                        <strong>Marcel</strong>
+                        <div class="guest-contact">
+                            <span>📧 </span>
+                            <span>📱 </span>
+                        </div>
+                    </div>
+                
+                    <div class="guest-item">
+                        <strong>Erika</strong>
+                        <div class="guest-contact">
+                            <span>📧 </span>
+                            <span>📱 </span>
+                        </div>
+                    </div>
+                
+                    <div class="guest-item">
+                        <strong>Wagner</strong>
+                        <div class="guest-contact">
+                            <span>📧 </span>
+                            <span>📱 </span>
+                        </div>
+                    </div>
+                
+                    <div class="guest-item">
+                        <strong>Fabiano</strong>
+                        <div class="guest-contact">
+                            <span>📧 </span>
+                            <span>📱 </span>
+                        </div>
+                    </div>
+                </div>
+        </div>
+    </section>
+        
+    <section class="report-section ">
+        <h1>📋 Pauta da Reunião</h1>
+        <div class="section-content">
+            <div class="agenda-list">
+                <div class="agenda-item">
+                    <div class="agenda-number">1.</div>
+                    <div class="agenda-content">Implantação da Reunião Semanal</div>
+                </div>
+            
+                <div class="agenda-item">
+                    <div class="agenda-number">2.</div>
+                    <div class="agenda-content">Atividades e Projetos Prioritários para Cada um.</div>
+                </div>
+            </div>
+        </div>
+    </section>
+        
+    <section class="report-section ">
+        <h1>✅ Participantes</h1>
+        <div class="section-content">
+            
+                <h3>Colaboradores que Participaram</h3>
+                <div class="participants-list">
+            
+                    <div class="participant-item">
+                        <strong>Wagner</strong>
+                        <div class="participant-contact">
+                            <span>📧 </span>
+                            <span>📱 </span>
+                        </div>
+                    </div>
+                
+                    <div class="participant-item">
+                        <strong>Fabiano</strong>
+                        <div class="participant-contact">
+                            <span>📧 </span>
+                            <span>📱 </span>
+                        </div>
+                    </div>
+                </div>
+        </div>
+    </section>
+        
+    <section class="report-section ">
+        <h1>💬 Discussões e Decisões</h1>
+        <div class="section-content">
+            <div class="discussions-list">
+                <div class="discussion-item">
+                    <h4>1. Atividades e Projetos Prioritários para Cada um</h4>
+                    <div class="discussion-content">
+                        Wagner: 
+           Controle dos Colaboradores
+
+Erika: 
+           Treinamento Joseane
+           Treinamento Thais
+           Revisar Contrato Padrão
+           Suply Chain - Estruturar
+
+Marcel:
+          Delegar demandas que são de outras áreas, como compras técnicas e relatórios;
+          Reforçar treinamento da equipe até eles ficarem aptos a executar o que é de responsabilidade deles;
+          Vicente melhorar relacionamento com clientes para desvincular Marcel
+          Custeio por cliente
+          Cartões corporativos - Resolver essa questão
+         
+                    </div>
+                </div>
+            </div>
+        </div>
+    </section>
+        
+    <section class="report-section ">
+        <h1>📝 Atividades Geradas</h1>
+        <div class="section-content">
+            <div class="activities-list">
+                <div class="activity-item">
+                    <h4>1. Mudança de Contratos (Conta e Falar com Cliente)</h4>
+                    <div class="activity-details">
+                        <div class="activity-detail-row">
+                            <span class="activity-label">Responsável:</span>
+                            <span class="activity-value">Marcel</span>
+                        </div>
+                        <div class="activity-detail-row">
+                            <span class="activity-label">Prazo:</span>
+                            <span class="activity-value">2025-10-17</span>
+                        </div>
+                        <div class="activity-detail-row">
+                            <span class="activity-label">Status:</span>
+                            <span class="activity-value">Desconhecido</span>
+                        </div>
+                    </div>
+                </div>
+            
+                <div class="activity-item">
+                    <h4>2. Treinamento Joseane e Thais</h4>
+                    <div class="activity-details">
+                        <div class="activity-detail-row">
+                            <span class="activity-label">Responsável:</span>
+                            <span class="activity-value">Erika</span>
+                        </div>
+                        <div class="activity-detail-row">
+                            <span class="activity-label">Prazo:</span>
+                            <span class="activity-value">2025-10-28</span>
+                        </div>
+                        <div class="activity-detail-row">
+                            <span class="activity-label">Status:</span>
+                            <span class="activity-value">Desconhecido</span>
+                        </div>
+                    </div>
+                </div>
+            
+                <div class="activity-item">
+                    <h4>3. Controle de Colaboradores</h4>
+                    <div class="activity-details">
+                        <div class="activity-detail-row">
+                            <span class="activity-label">Responsável:</span>
+                            <span class="activity-value">Erika</span>
+                        </div>
+                        <div class="activity-detail-row">
+                            <span class="activity-label">Prazo:</span>
+                            <span class="activity-value">2025-10-21</span>
+                        </div>
+                        <div class="activity-detail-row">
+                            <span class="activity-label">Status:</span>
+                            <span class="activity-value">Desconhecido</span>
+                        </div>
+                    </div>
+                </div>
+            
+                <div class="activity-item">
+                    <h4>4. Orçamento Base Zero</h4>
+                    <div class="activity-details">
+                        <div class="activity-detail-row">
+                            <span class="activity-label">Responsável:</span>
+                            <span class="activity-value">Marcel</span>
+                        </div>
+                        <div class="activity-detail-row">
+                            <span class="activity-label">Prazo:</span>
+                            <span class="activity-value">2025-10-21</span>
+                        </div>
+                        <div class="activity-detail-row">
+                            <span class="activity-label">Status:</span>
+                            <span class="activity-value">Desconhecido</span>
+                        </div>
+                    </div>
+                </div>
+            
+                <div class="activity-item">
+                    <h4>5. Trocar Dono do Processo</h4>
+                    <div class="activity-details">
+                        <div class="activity-detail-row">
+                            <span class="activity-label">Responsável:</span>
+                            <span class="activity-value">Todos</span>
+                        </div>
+                        <div class="activity-detail-row">
+                            <span class="activity-label">Prazo:</span>
+                            <span class="activity-value">2025-10-21</span>
+                        </div>
+                        <div class="activity-detail-row">
+                            <span class="activity-label">Status:</span>
+                            <span class="activity-value">Desconhecido</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </section>
+        
+    </div>
+    
+    
+        <div class="report-footer">
+            <div class="footer-grid">
+                <div class="footer-cell">
+                    © 2025 Sistema PEVAPP22
+                </div>
+                <div class="footer-cell footer-right">
+                    <span class="page-number"></span>
+                </div>
+            </div>
+        </div>
+        
+    
+    <script>
+    (function() {
+        'use strict';
+
+        function pad(value) {
+            return String(value).padStart(2, '0');
+        }
+
+        function getViewportHeight() {
+            return window.innerHeight || document.documentElement.clientHeight || 1;
+        }
+
+        function getTotalPages() {
+            var body = document.body;
+            var html = document.documentElement;
+            var totalHeight = Math.max(
+                body.scrollHeight,
+                body.offsetHeight,
+                html.clientHeight,
+                html.scrollHeight,
+                html.offsetHeight
+            );
+            var viewport = getViewportHeight();
+            return Math.max(1, Math.ceil(totalHeight / viewport));
+        }
+
+        function getCurrentPage(totalPages) {
+            var scrollTop = window.pageYOffset || document.documentElement.scrollTop || document.body.scrollTop || 0;
+            var viewport = getViewportHeight();
+            return Math.min(totalPages, Math.max(1, Math.floor(scrollTop / viewport) + 1));
+        }
+
+        const DEFAULT_HEADER_OFFSET = {header_offset_px:.2f};
+        const DEFAULT_FOOTER_OFFSET = {footer_offset_px:.2f};
+
+        function collectSpacing(element, fallback) {
+            if (!element) {
+                return fallback;
+            }
+
+            var styles = window.getComputedStyle(element);
+            var height = element.offsetHeight || 0;
+            var marginTop = parseFloat(styles.marginTop || '0');
+            var marginBottom = parseFloat(styles.marginBottom || '0');
+
+            var total = height + marginTop + marginBottom;
+            return total > 0 ? total : fallback;
+        }
+
+        function updateLayoutSpacing() {
+            var root = document.documentElement;
+            var header = document.querySelector('.custom-report-header') || document.querySelector('.report-header');
+            var footer = document.querySelector('.custom-report-footer') || document.querySelector('.report-footer');
+
+            var headerOffset = collectSpacing(header, DEFAULT_HEADER_OFFSET);
+            var footerOffset = collectSpacing(footer, DEFAULT_FOOTER_OFFSET);
+
+            if (headerOffset > 0) {
+                root.style.setProperty('--report-header-offset', headerOffset + 'px');
+            }
+
+            if (footerOffset > 0) {
+                root.style.setProperty('--report-footer-offset', footerOffset + 'px');
+            }
+        }
+
+        function updatePagination() {
+            var totalPages = getTotalPages();
+            var currentPage = getCurrentPage(totalPages);
+
+            document.querySelectorAll('.page-number').forEach(function (el) {
+                el.dataset.page = pad(currentPage);
+                el.textContent = pad(currentPage);
+            });
+
+            document.querySelectorAll('.total-pages').forEach(function (el) {
+                el.dataset.total = pad(totalPages);
+                el.textContent = pad(totalPages);
+            });
+        }
+
+        function refreshLayout() {
+            updateLayoutSpacing();
+            updatePagination();
+        }
+
+        document.addEventListener('DOMContentLoaded', refreshLayout);
+        window.addEventListener('load', refreshLayout);
+        window.addEventListener('resize', refreshLayout);
+        window.addEventListener('scroll', updatePagination);
+    })();
+    </script>
+        
+</body>
+</html>
+        

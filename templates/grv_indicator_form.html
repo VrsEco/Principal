@@ -1,0 +1,527 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="utf-8">
+  <title>{{ 'Editar' if indicator else 'Novo' }} Indicador</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <link rel="icon" type="image/x-icon" href="{{ url_for('static', filename='favicon.ico') }}" />
+  <link rel="shortcut icon" type="image/x-icon" href="{{ url_for('static', filename='favicon.ico') }}" />
+  <style>
+    body {
+      margin: 0;
+      padding: 24px;
+      font-family: "Segoe UI", Tahoma, Arial, sans-serif;
+      background: #f8fafc;
+      color: #0f172a;
+    }
+
+    .shell {
+      max-width: 720px;
+      margin: 0 auto;
+      background: #ffffff;
+      border: 1px solid #e2e8f0;
+      border-radius: 16px;
+      padding: 32px;
+      display: grid;
+      gap: 24px;
+      box-shadow: 0 24px 40px rgba(15, 23, 42, 0.08);
+    }
+
+    h1 {
+      margin: 0;
+      font-size: 22px;
+      font-weight: 700;
+    }
+
+    .subtitle {
+      margin: 8px 0 0;
+      font-size: 13px;
+      color: #64748b;
+      line-height: 1.45;
+    }
+
+    .form-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+      gap: 18px;
+    }
+
+    .form-group {
+      display: grid;
+      gap: 8px;
+    }
+
+    .form-group.full-width {
+      grid-column: 1 / -1;
+    }
+
+    label {
+      font-size: 13px;
+      font-weight: 600;
+      color: #334155;
+    }
+
+    input,
+    select,
+    textarea {
+      width: 100%;
+      padding: 10px 12px;
+      border-radius: 8px;
+      border: 1px solid rgba(15, 23, 42, 0.16);
+      background: #ffffff;
+      font-size: 14px;
+      font-family: inherit;
+    }
+
+    textarea {
+      resize: vertical;
+      min-height: 100px;
+    }
+
+    select[multiple] {
+      min-height: 120px;
+    }
+
+    .actions {
+      display: flex;
+      justify-content: flex-end;
+      gap: 12px;
+      margin-top: 8px;
+    }
+
+    button {
+      border: none;
+      border-radius: 10px;
+      padding: 12px 22px;
+      font-weight: 600;
+      font-size: 14px;
+      cursor: pointer;
+    }
+
+    .btn-secondary {
+      background: #e2e8f0;
+      color: #475569;
+    }
+
+    .btn-primary {
+      background: linear-gradient(135deg, #3b82f6, #2563eb);
+      color: #ffffff;
+      box-shadow: 0 12px 24px rgba(37, 99, 235, 0.2);
+    }
+
+    .help-text {
+      font-size: 12px;
+      color: #64748b;
+    }
+  </style>
+</head>
+<body>
+  <div class="shell">
+    <header>
+      <h1>{{ 'Editar Indicador' if indicator else 'Novo Indicador' }}</h1>
+      <p class="subtitle">
+        Empresa: <strong>{{ company.name if company and company.name else 'N/A' }}</strong>
+        {% if indicator and indicator.code %}
+          <br>
+          <span class="help-text">Codigo atual: {{ indicator.code }}</span>
+        {% endif %}
+      </p>
+    </header>
+
+    <form id="indicatorForm">
+      <div class="form-grid">
+        <div class="form-group">
+          <label for="groupId">Grupo de Indicadores</label>
+          <select id="groupId" name="group_id">
+            <option value="">Nenhum (indicador raiz)</option>
+            {% for group in groups %}
+              <option value="{{ group.id }}">{{ group.code }} - {{ group.name }}</option>
+            {% endfor %}
+          </select>
+        </div>
+
+        <div class="form-group full-width">
+          <label for="indicatorName">Nome *</label>
+          <input id="indicatorName" name="name" type="text" maxlength="160" required>
+        </div>
+
+        <div class="form-group full-width">
+          <label for="unit">Unidade de Medida</label>
+          <input id="unit" name="unit" type="text" maxlength="60">
+        </div>
+
+        <div class="form-group">
+          <label for="polarity">Polaridade</label>
+          <select id="polarity" name="polarity">
+            <option value="">Selecione</option>
+            <option value="positive">Quanto maior melhor</option>
+            <option value="negative">Quanto menor melhor</option>
+          </select>
+        </div>
+      </div>
+
+      <div class="form-grid">
+        <div class="form-group">
+          <label for="processId">Processo associado</label>
+          <select id="processId" name="process_id">
+            <option value="">Selecione</option>
+            {% for process in processes %}
+              <option value="{{ process.id }}">{{ process.code }} - {{ process.name }}</option>
+            {% endfor %}
+          </select>
+        </div>
+
+        <div class="form-group">
+          <label for="projectId">Projeto associado</label>
+          <select id="projectId" name="project_id">
+            <option value="">Selecione</option>
+            {% for project in projects %}
+              <option value="{{ project.id }}">{{ project.code }} - {{ project.name }}</option>
+            {% endfor %}
+          </select>
+        </div>
+      </div>
+
+      <div class="form-grid">
+        <div class="form-group">
+          <label for="planId">Planejamento</label>
+          <select id="planId" name="plan_id">
+            <option value="">Selecione um planejamento</option>
+            {% for plan in plans %}
+              <option value="{{ plan.id }}">{{ plan.name }}</option>
+            {% endfor %}
+          </select>
+        </div>
+
+        <div class="form-group">
+          <label for="okrId">OKR Associado</label>
+          <select id="okrId" name="okr_id" disabled>
+            <option value="">Selecione um planejamento primeiro</option>
+          </select>
+        </div>
+      </div>
+
+      <div class="form-group">
+        <label for="formula">Formula do Indicador</label>
+        <textarea id="formula" name="formula" placeholder="Descreva como o indicador e calculado"></textarea>
+      </div>
+
+      <div class="form-group">
+        <label for="dataSource">Fonte de Dados</label>
+        <textarea id="dataSource" name="data_source" placeholder="Sistemas, relatorios ou responsaveis pela coleta"></textarea>
+      </div>
+
+      <div class="form-group">
+        <label for="responsibleId">Responsavel</label>
+        <select id="responsibleId" name="responsible_id">
+          <option value="">Selecione</option>
+          {% for employee in employees %}
+            <option value="{{ employee.id }}">{{ employee.name }}</option>
+          {% endfor %}
+        </select>
+      </div>
+
+      <div class="form-group">
+        <label for="notes">Observacoes</label>
+        <textarea id="notes" name="notes" placeholder="Referencias, alertas ou anexos relevantes"></textarea>
+      </div>
+
+      <div class="actions">
+        <button type="button" class="btn-secondary" id="cancelButton">Cancelar</button>
+        <button type="submit" class="btn-primary">Salvar Indicador</button>
+      </div>
+    </form>
+  </div>
+
+  <script>
+    const companyId = {{ company_id }};
+    const indicatorData = {{ indicator|tojson|safe if indicator else 'null' }};
+    const defaultProcessId = {{ default_process_id|tojson }};
+    const contextParams = {{ context_params|tojson|safe if context_params else '{}' }};
+
+    const form = document.getElementById('indicatorForm');
+    const groupSelect = document.getElementById('groupId');
+    const nameInput = document.getElementById('indicatorName');
+    const unitInput = document.getElementById('unit');
+    const polaritySelect = document.getElementById('polarity');
+    const processSelect = document.getElementById('processId');
+    const projectSelect = document.getElementById('projectId');
+    const planSelect = document.getElementById('planId');
+    const okrSelect = document.getElementById('okrId');
+    const formulaInput = document.getElementById('formula');
+    const dataSourceInput = document.getElementById('dataSource');
+    const responsibleSelect = document.getElementById('responsibleId');
+    const notesInput = document.getElementById('notes');
+    const cancelButton = document.getElementById('cancelButton');
+
+    document.addEventListener('DOMContentLoaded', () => {
+      if (indicatorData) {
+        populateForm();
+      } else {
+        // Pré-preencher com dados do contexto
+        if (contextParams) {
+          prePopulateFromContext();
+        } else if (defaultProcessId) {
+          processSelect.value = String(defaultProcessId);
+        }
+      }
+    });
+
+    cancelButton.addEventListener('click', () => {
+      window.close();
+    });
+
+    // Carregar OKRs quando um planejamento for selecionado
+    planSelect.addEventListener('change', async () => {
+      const planId = planSelect.value;
+      
+      if (!planId) {
+        okrSelect.disabled = true;
+        okrSelect.innerHTML = '<option value="">Selecione um planejamento primeiro</option>';
+        return;
+      }
+
+      try {
+        const response = await fetch(`/grv/api/plans/${planId}/okrs`);
+        const result = await response.json();
+
+        if (result.success && result.data && result.data.length > 0) {
+          okrSelect.disabled = false;
+          okrSelect.innerHTML = '<option value="">Selecione um OKR (opcional)</option>';
+          
+          result.data.forEach(okr => {
+            const option = document.createElement('option');
+            option.value = okr.id;
+            
+            // Formatar o texto da opção
+            const levelLabel = okr.okr_level === 'global' ? '🌐 Global' : '📍 Área';
+            const typeLabel = okr.okr_type === 'estruturante' ? 'Estruturante' : 'Aceleração';
+            const departmentText = okr.department ? ` - ${okr.department}` : '';
+            
+            option.textContent = `${levelLabel} | ${typeLabel}${departmentText} | ${okr.objective.substring(0, 60)}${okr.objective.length > 60 ? '...' : ''}`;
+            option.setAttribute('data-level', okr.okr_level);
+            option.setAttribute('data-objective', okr.objective);
+            
+            okrSelect.appendChild(option);
+          });
+        } else {
+          okrSelect.disabled = true;
+          okrSelect.innerHTML = '<option value="">Nenhum OKR encontrado para este planejamento</option>';
+        }
+      } catch (error) {
+        console.error('Erro ao carregar OKRs:', error);
+        okrSelect.disabled = true;
+        okrSelect.innerHTML = '<option value="">Erro ao carregar OKRs</option>';
+      }
+    });
+
+    form.addEventListener('submit', async (event) => {
+      event.preventDefault();
+
+      const responsibleId = responsibleSelect.value ? Number(responsibleSelect.value) : null;
+      const selectedOkrOption = okrSelect.selectedOptions[0];
+      const okrLevel = selectedOkrOption ? selectedOkrOption.getAttribute('data-level') : null;
+      const okrObjective = selectedOkrOption ? selectedOkrOption.getAttribute('data-objective') : null;
+
+      const payload = {
+        group_id: groupSelect.value ? Number(groupSelect.value) : null,
+        name: nameInput.value.trim(),
+        process_id: processSelect.value ? Number(processSelect.value) : null,
+        project_id: projectSelect.value ? Number(projectSelect.value) : null,
+        plan_id: planSelect.value || null,
+        okr_id: okrSelect.value ? Number(okrSelect.value) : null,
+        okr_level: okrLevel,
+        okr_reference: okrObjective,
+        department_id: null,
+        collaborators: responsibleId !== null ? [responsibleId] : [],
+        unit: unitInput.value.trim() || null,
+        formula: formulaInput.value.trim() || null,
+        polarity: polaritySelect.value || null,
+        data_source: dataSourceInput.value.trim() || null,
+        notes: notesInput.value.trim() || null
+      };
+
+      if (!payload.name) {
+        alert('Informe o nome do indicador.');
+        nameInput.focus();
+        return;
+      }
+
+      const isEdit = Boolean(indicatorData && indicatorData.id);
+      const url = isEdit
+        ? `/grv/api/company/${companyId}/indicators/${indicatorData.id}`
+        : `/grv/api/company/${companyId}/indicators`;
+      const method = isEdit ? 'PUT' : 'POST';
+
+      try {
+        const response = await fetch(url, {
+          method,
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(payload)
+        });
+
+        const result = await response.json();
+        if (result.success) {
+          alert('Indicador salvo com sucesso!');
+          if (window.opener && !window.opener.closed) {
+            window.opener.location.reload();
+          }
+          window.close();
+        } else {
+          alert('Erro: ' + result.message);
+        }
+      } catch (error) {
+        console.error('Erro ao salvar indicador:', error);
+        alert('Erro ao salvar indicador');
+      }
+    });
+
+    async function prePopulateFromContext() {
+      console.log('Pre-populando com contexto:', contextParams);
+      
+      // Pré-preencher projeto se especificado
+      if (contextParams.project_id) {
+        projectSelect.value = String(contextParams.project_id);
+        console.log('Projeto pré-selecionado:', contextParams.project_id);
+      }
+      
+      // Pré-preencher planejamento se especificado
+      if (contextParams.plan_id) {
+        planSelect.value = String(contextParams.plan_id);
+        console.log('Planejamento pré-selecionado:', contextParams.plan_id);
+        
+        // Carregar OKRs do planejamento
+        try {
+          const response = await fetch(`/grv/api/plans/${contextParams.plan_id}/okrs`);
+          const result = await response.json();
+
+          if (result.success && result.data && result.data.length > 0) {
+            okrSelect.disabled = false;
+            okrSelect.innerHTML = '<option value="">Selecione um OKR (opcional)</option>';
+            
+            result.data.forEach(okr => {
+              const option = document.createElement('option');
+              option.value = okr.id;
+              
+              const levelLabel = okr.okr_level === 'global' ? '🌐 Global' : '📍 Área';
+              const typeLabel = okr.okr_type === 'estruturante' ? 'Estruturante' : 'Aceleração';
+              const departmentText = okr.department ? ` - ${okr.department}` : '';
+              
+              option.textContent = `${levelLabel} | ${typeLabel}${departmentText} | ${okr.objective.substring(0, 60)}${okr.objective.length > 60 ? '...' : ''}`;
+              option.setAttribute('data-level', okr.okr_level);
+              option.setAttribute('data-objective', okr.objective);
+              
+              okrSelect.appendChild(option);
+            });
+            
+            // Pré-selecionar OKR específico se fornecido
+            if (contextParams.okr_id) {
+              okrSelect.value = String(contextParams.okr_id);
+              console.log('OKR pré-selecionado:', contextParams.okr_id);
+            }
+          }
+        } catch (error) {
+          console.error('Erro ao carregar OKRs para contexto:', error);
+        }
+      }
+      
+      // Adicionar informação de contexto nas observações
+      if (contextParams.page_type) {
+        let contextNote = '';
+        if (contextParams.page_type === 'okr-global') {
+          contextNote = 'Indicador criado a partir da página de OKRs Globais.';
+        } else if (contextParams.page_type === 'okr-area') {
+          contextNote = 'Indicador criado a partir da página de OKRs de Área.';
+        } else if (contextParams.page_type === 'projects') {
+          contextNote = 'Indicador criado a partir da página de Projetos.';
+        }
+        
+        if (contextNote && !notesInput.value) {
+          notesInput.value = contextNote;
+        }
+      }
+      
+      // Pré-preencher processo padrão se fornecido
+      if (defaultProcessId) {
+        processSelect.value = String(defaultProcessId);
+      }
+    }
+
+    async function populateForm() {
+      nameInput.value = indicatorData.name || '';
+      unitInput.value = indicatorData.unit || '';
+      formulaInput.value = indicatorData.formula || '';
+      dataSourceInput.value = indicatorData.data_source || '';
+      notesInput.value = indicatorData.notes || '';
+
+      if (indicatorData.group_id) {
+        groupSelect.value = String(indicatorData.group_id);
+      }
+      if (indicatorData.process_id) {
+        processSelect.value = String(indicatorData.process_id);
+      }
+      if (indicatorData.project_id) {
+        projectSelect.value = String(indicatorData.project_id);
+      }
+      if (indicatorData.polarity) {
+        polaritySelect.value = indicatorData.polarity;
+      }
+      
+      // Preencher planejamento e OKR se existirem
+      if (indicatorData.plan_id) {
+        planSelect.value = String(indicatorData.plan_id);
+        
+        // Carregar OKRs do planejamento
+        try {
+          const response = await fetch(`/grv/api/plans/${indicatorData.plan_id}/okrs`);
+          const result = await response.json();
+
+          if (result.success && result.data && result.data.length > 0) {
+            okrSelect.disabled = false;
+            okrSelect.innerHTML = '<option value="">Selecione um OKR (opcional)</option>';
+            
+            result.data.forEach(okr => {
+              const option = document.createElement('option');
+              option.value = okr.id;
+              
+              const levelLabel = okr.okr_level === 'global' ? '🌐 Global' : '📍 Área';
+              const typeLabel = okr.okr_type === 'estruturante' ? 'Estruturante' : 'Aceleração';
+              const departmentText = okr.department ? ` - ${okr.department}` : '';
+              
+              option.textContent = `${levelLabel} | ${typeLabel}${departmentText} | ${okr.objective.substring(0, 60)}${okr.objective.length > 60 ? '...' : ''}`;
+              option.setAttribute('data-level', okr.okr_level);
+              option.setAttribute('data-objective', okr.objective);
+              
+              okrSelect.appendChild(option);
+            });
+            
+            // Selecionar o OKR atual se existir
+            if (indicatorData.okr_id) {
+              okrSelect.value = String(indicatorData.okr_id);
+            }
+          }
+        } catch (error) {
+          console.error('Erro ao carregar OKRs:', error);
+        }
+      }
+      
+      if (indicatorData.collaborators) {
+        let collaborators = [];
+        try {
+          if (Array.isArray(indicatorData.collaborators)) {
+            collaborators = indicatorData.collaborators;
+          } else if (typeof indicatorData.collaborators === 'string') {
+            collaborators = JSON.parse(indicatorData.collaborators || '[]');
+          }
+        } catch (error) {
+          console.warn('Falha ao interpretar colaboradores:', error);
+        }
+
+        if (Array.isArray(collaborators) && collaborators.length > 0) {
+          responsibleSelect.value = String(collaborators[0]);
+        }
+      }
+    }
+  </script>
+</body>
+</html>

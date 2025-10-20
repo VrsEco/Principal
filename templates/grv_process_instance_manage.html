@@ -1,0 +1,797 @@
+{% extends "base.html" %}
+{% block title %}GRV | Gerenciar Instância{% endblock %}
+{% block body %}{% set active_nav = 'process-instances' %}{{ super() }}{% endblock %}
+
+{% block extra_head %}
+{{ super() }}
+<style>
+  .instance-manage-shell {
+    display: grid;
+    grid-template-columns: 250px minmax(0, 1fr);
+    gap: 18px;
+    align-items: start;
+  }
+
+  .instance-manage-main {
+    background: #ffffff;
+    border-radius: 14px;
+    border: 1px solid rgba(15, 23, 42, 0.08);
+    padding: 22px 24px;
+    box-shadow: 0 12px 32px rgba(15, 23, 42, 0.08);
+    display: grid;
+    gap: 24px;
+  }
+
+  .instance-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    gap: 16px;
+    padding-bottom: 20px;
+    border-bottom: 2px solid rgba(15, 23, 42, 0.1);
+  }
+
+  .instance-header-info h1 {
+    margin: 0 0 8px 0;
+    font-size: 24px;
+    font-weight: 700;
+    color: #0f172a;
+  }
+
+  .instance-code {
+    font-size: 13px;
+    font-weight: 600;
+    color: #3b82f6;
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+  }
+
+  .instance-process {
+    font-size: 14px;
+    color: #64748b;
+    margin-top: 4px;
+  }
+
+  .instance-header-actions {
+    display: flex;
+    gap: 10px;
+  }
+
+  .btn-instance {
+    padding: 10px 18px;
+    border-radius: 8px;
+    border: none;
+    font-size: 14px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.2s ease;
+  }
+
+  .btn-complete {
+    background: linear-gradient(135deg, #10b981, #059669);
+    color: #fff;
+    box-shadow: 0 4px 12px rgba(16, 185, 129, 0.3);
+  }
+
+  .btn-complete:hover {
+    transform: translateY(-1px);
+    box-shadow: 0 6px 16px rgba(16, 185, 129, 0.4);
+  }
+
+  .btn-back {
+    background: #f1f5f9;
+    color: #475569;
+  }
+
+  .btn-back:hover {
+    background: #e2e8f0;
+  }
+
+  .instance-meta {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+    gap: 16px;
+    padding: 16px;
+    background: #f8fafc;
+    border-radius: 10px;
+  }
+
+  .meta-item {
+    display: grid;
+    gap: 4px;
+  }
+
+  .meta-label {
+    font-size: 11px;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+    color: #94a3b8;
+  }
+
+  .meta-value {
+    font-size: 14px;
+    color: #0f172a;
+    font-weight: 600;
+  }
+
+  .section-title {
+    font-size: 18px;
+    font-weight: 700;
+    color: #0f172a;
+    margin: 0 0 16px 0;
+    padding-bottom: 12px;
+    border-bottom: 1px solid rgba(15, 23, 42, 0.1);
+  }
+
+  .collaborators-grid {
+    display: grid;
+    gap: 12px;
+  }
+
+  .collaborator-card {
+    display: grid;
+    grid-template-columns: 1fr auto auto;
+    gap: 16px;
+    align-items: center;
+    padding: 16px;
+    border-radius: 10px;
+    border: 1px solid rgba(15, 23, 42, 0.1);
+    background: #fff;
+  }
+
+  .collaborator-info {
+    display: grid;
+    gap: 4px;
+  }
+
+  .collaborator-name {
+    font-size: 15px;
+    font-weight: 600;
+    color: #0f172a;
+  }
+
+  .collaborator-hours {
+    font-size: 13px;
+    color: #64748b;
+  }
+
+  .hours-input-group {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+
+  .hours-input-group label {
+    font-size: 12px;
+    font-weight: 600;
+    color: #64748b;
+    white-space: nowrap;
+  }
+
+  .hours-input {
+    width: 80px;
+    padding: 8px 12px;
+    border-radius: 6px;
+    border: 1px solid rgba(15, 23, 42, 0.15);
+    font-size: 14px;
+    text-align: center;
+  }
+
+  .hours-input:focus {
+    outline: none;
+    border-color: #3b82f6;
+    box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
+  }
+
+  .btn-save-hours {
+    padding: 8px 14px;
+    border-radius: 6px;
+    border: none;
+    background: #3b82f6;
+    color: #fff;
+    font-size: 13px;
+    font-weight: 600;
+    cursor: pointer;
+    white-space: nowrap;
+  }
+
+  .btn-save-hours:hover {
+    background: #2563eb;
+  }
+
+  .logs-section {
+    display: grid;
+    gap: 12px;
+  }
+
+  .log-entry {
+    padding: 14px 16px;
+    border-radius: 8px;
+    background: #f8fafc;
+    border-left: 3px solid #3b82f6;
+  }
+
+  .log-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 8px;
+  }
+
+  .log-author {
+    font-size: 13px;
+    font-weight: 600;
+    color: #475569;
+  }
+
+  .log-date {
+    font-size: 12px;
+    color: #94a3b8;
+  }
+
+  .log-content {
+    font-size: 14px;
+    color: #1e293b;
+    line-height: 1.5;
+  }
+
+  .add-log-form {
+    display: grid;
+    gap: 12px;
+    padding: 16px;
+    background: #f8fafc;
+    border-radius: 10px;
+    border: 1px solid rgba(15, 23, 42, 0.1);
+  }
+
+  .add-log-form textarea {
+    padding: 12px;
+    border-radius: 8px;
+    border: 1px solid rgba(15, 23, 42, 0.15);
+    font-size: 14px;
+    font-family: inherit;
+    resize: vertical;
+    min-height: 80px;
+  }
+
+  .add-log-form textarea:focus {
+    outline: none;
+    border-color: #3b82f6;
+    box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
+  }
+
+  .add-log-form button {
+    justify-self: end;
+    padding: 10px 18px;
+    border-radius: 8px;
+    border: none;
+    background: #3b82f6;
+    color: #fff;
+    font-size: 14px;
+    font-weight: 600;
+    cursor: pointer;
+  }
+
+  .add-log-form button:hover {
+    background: #2563eb;
+  }
+
+  /* Modal styles */
+  .modal-overlay {
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: rgba(0, 0, 0, 0.5);
+    display: none;
+    justify-content: center;
+    align-items: center;
+    z-index: 1000;
+    animation: fadeIn 0.2s ease;
+  }
+
+  .modal-overlay.active {
+    display: flex;
+  }
+
+  .modal-content {
+    background: #fff;
+    border-radius: 16px;
+    padding: 28px 32px;
+    max-width: 500px;
+    width: 90%;
+    box-shadow: 0 20px 50px rgba(0, 0, 0, 0.3);
+    animation: slideUp 0.3s ease;
+  }
+
+  @keyframes fadeIn {
+    from { opacity: 0; }
+    to { opacity: 1; }
+  }
+
+  @keyframes slideUp {
+    from {
+      opacity: 0;
+      transform: translateY(20px);
+    }
+    to {
+      opacity: 1;
+      transform: translateY(0);
+    }
+  }
+
+  .modal-header {
+    margin-bottom: 20px;
+    padding-bottom: 16px;
+    border-bottom: 1px solid rgba(15, 23, 42, 0.1);
+  }
+
+  .modal-header h2 {
+    margin: 0;
+    font-size: 20px;
+    font-weight: 700;
+    color: #0f172a;
+  }
+
+  .modal-form {
+    display: grid;
+    gap: 16px;
+  }
+
+  .field {
+    display: grid;
+    gap: 8px;
+  }
+
+  .field label {
+    font-size: 13px;
+    font-weight: 600;
+    color: #475569;
+  }
+
+  .field input,
+  .field textarea {
+    padding: 10px 14px;
+    border-radius: 8px;
+    border: 1px solid rgba(15, 23, 42, 0.15);
+    font-size: 14px;
+    font-family: inherit;
+  }
+
+  .field input:focus,
+  .field textarea:focus {
+    outline: none;
+    border-color: #3b82f6;
+    box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
+  }
+
+  .modal-footer {
+    display: flex;
+    justify-content: flex-end;
+    gap: 10px;
+    margin-top: 20px;
+    padding-top: 16px;
+    border-top: 1px solid rgba(15, 23, 42, 0.1);
+  }
+
+  .btn-modal {
+    padding: 10px 20px;
+    border-radius: 8px;
+    border: none;
+    font-size: 14px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.2s ease;
+  }
+
+  .btn-modal.cancel {
+    background: #f1f5f9;
+    color: #475569;
+  }
+
+  .btn-modal.cancel:hover {
+    background: #e2e8f0;
+  }
+
+  .btn-modal.submit {
+    background: linear-gradient(135deg, #10b981, #059669);
+    color: #fff;
+    box-shadow: 0 4px 12px rgba(16, 185, 129, 0.3);
+  }
+
+  .btn-modal.submit:hover {
+    transform: translateY(-1px);
+    box-shadow: 0 6px 16px rgba(16, 185, 129, 0.4);
+  }
+
+  .badge {
+    padding: 4px 10px;
+    border-radius: 8px;
+    font-size: 11px;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+    display: inline-block;
+  }
+
+  .badge.status-pending { background: #e2e8f0; color: #475569; }
+  .badge.status-in_progress { background: #dbeafe; color: #1e40af; }
+  .badge.status-waiting { background: #fef3c7; color: #b45309; }
+  .badge.status-completed { background: #d1fae5; color: #065f46; }
+  .badge.status-cancelled { background: #fee2e2; color: #991b1b; }
+
+  .badge.priority-low { background: #f1f5f9; color: #64748b; }
+  .badge.priority-normal { background: #dbeafe; color: #2563eb; }
+  .badge.priority-high { background: #fed7aa; color: #c2410c; }
+  .badge.priority-urgent { background: #fecaca; color: #991b1b; }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="project-layout plan-layout instance-manage-shell" data-sidebar-toggle>
+  <!-- Sidebar -->
+  {% include 'processes_sidebar.html' %}
+
+  <!-- Main Content -->
+  <div class="project-content plan-content instance-manage-main">
+    <!-- Header -->
+    <div class="instance-header">
+      <div class="instance-header-info">
+        <div class="instance-code">{{ instance.instance_code }}</div>
+        <h1>{{ instance.title }}</h1>
+        <div class="instance-process">📋 {{ instance.process_code }} - {{ instance.process_name }}</div>
+      </div>
+      <div class="instance-header-actions">
+        <button class="btn-instance btn-back" onclick="goBack()">
+          ← Voltar
+        </button>
+        {% if instance.status != 'completed' and instance.status != 'cancelled' %}
+        <button class="btn-instance btn-complete" onclick="openCompleteModal()">
+          ✓ Concluir
+        </button>
+        {% endif %}
+      </div>
+    </div>
+
+    <!-- Instance Meta -->
+    <div class="instance-meta">
+      <div class="meta-item">
+        <div class="meta-label">Status</div>
+        <div class="meta-value">
+          <span class="badge status-{{ instance.status }}">
+            {{ {'pending': 'Pendente', 'in_progress': 'Em Andamento', 'waiting': 'Aguardando', 'completed': 'Concluído', 'cancelled': 'Cancelado'}[instance.status] }}
+          </span>
+        </div>
+      </div>
+      <div class="meta-item">
+        <div class="meta-label">Prioridade</div>
+        <div class="meta-value">
+          {% if instance.priority %}
+          <span class="badge priority-{{ instance.priority }}">
+            {{ {'low': 'Baixa', 'normal': 'Normal', 'high': 'Alta', 'urgent': 'Urgente'}[instance.priority] }}
+          </span>
+          {% else %}
+          -
+          {% endif %}
+        </div>
+      </div>
+      <div class="meta-item">
+        <div class="meta-label">Vencimento</div>
+        <div class="meta-value" id="dueDateDisplay">{{ instance.due_date }}</div>
+      </div>
+      <div class="meta-item">
+        <div class="meta-label">Horas Estimadas</div>
+        <div class="meta-value">{{ instance.estimated_hours or 0 }}h</div>
+      </div>
+      <div class="meta-item">
+        <div class="meta-label">Horas Realizadas</div>
+        <div class="meta-value" id="actualHoursDisplay">{{ instance.actual_hours or 0 }}h</div>
+      </div>
+      {% if instance.completed_at %}
+      <div class="meta-item">
+        <div class="meta-label">Concluído em</div>
+        <div class="meta-value" id="completedAtDisplay">{{ instance.completed_at }}</div>
+      </div>
+      {% endif %}
+    </div>
+
+    <!-- Collaborators Section -->
+    <div class="collaborators-section">
+      <h2 class="section-title">Colaboradores e Horas</h2>
+      <div class="collaborators-grid" id="collaboratorsGrid">
+        <!-- Populated by JavaScript -->
+      </div>
+    </div>
+
+    <!-- Logs Section -->
+    <div class="logs-section">
+      <h2 class="section-title">Registro Diário</h2>
+      
+      <div class="add-log-form">
+        <textarea id="logTextarea" placeholder="Adicione uma observação sobre o andamento..."></textarea>
+        <button onclick="addLog()">Adicionar Registro</button>
+      </div>
+
+      <div id="logsContainer">
+        <!-- Populated by JavaScript -->
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Complete Modal -->
+<div class="modal-overlay" id="completeModal">
+  <div class="modal-content">
+    <div class="modal-header">
+      <h2>Concluir Instância</h2>
+    </div>
+    <form class="modal-form" id="completeForm">
+      <div class="field">
+        <label>Data de Conclusão</label>
+        <input type="datetime-local" id="completionDate" required>
+      </div>
+      <div class="field">
+        <label>Observações finais (opcional)</label>
+        <textarea id="completionNotes" rows="3" placeholder="Comentários sobre a conclusão..."></textarea>
+      </div>
+    </form>
+    <div class="modal-footer">
+      <button class="btn-modal cancel" onclick="closeCompleteModal()">Cancelar</button>
+      <button class="btn-modal submit" onclick="submitCompletion()">Confirmar Conclusão</button>
+    </div>
+  </div>
+</div>
+
+<script>
+const companyId = {{ company.id }};
+const instanceId = {{ instance.id }};
+let instanceData = {{ instance | tojson | safe }};
+let collaborators = [];
+let logs = [];
+
+document.addEventListener('DOMContentLoaded', async () => {
+  // Parse assigned collaborators
+  try {
+    collaborators = instanceData.assigned_collaborators ? 
+      JSON.parse(instanceData.assigned_collaborators) : [];
+  } catch (e) {
+    console.error('Error parsing collaborators:', e);
+    collaborators = [];
+  }
+
+  // Parse notes as logs
+  try {
+    logs = instanceData.notes ? JSON.parse(instanceData.notes) : [];
+  } catch (e) {
+    logs = [];
+  }
+
+  renderCollaborators();
+  renderLogs();
+  formatDates();
+
+  // Set default completion date to now
+  const now = new Date();
+  document.getElementById('completionDate').value = now.toISOString().slice(0, 16);
+});
+
+function renderCollaborators() {
+  const grid = document.getElementById('collaboratorsGrid');
+  
+  if (collaborators.length === 0) {
+    grid.innerHTML = '<div style="text-align: center; color: #94a3b8; padding: 20px;">Nenhum colaborador atribuído</div>';
+    return;
+  }
+
+  grid.innerHTML = collaborators.map((collab, index) => `
+    <div class="collaborator-card">
+      <div class="collaborator-info">
+        <div class="collaborator-name">👤 ${collab.name}</div>
+        <div class="collaborator-hours">Previsto: ${collab.hours}h</div>
+      </div>
+      <div class="hours-input-group">
+        <label>Realizado:</label>
+        <input 
+          type="number" 
+          step="0.5" 
+          min="0" 
+          class="hours-input" 
+          id="hours-${index}"
+          value="${collab.actual_hours || 0}"
+          ${instanceData.status === 'completed' || instanceData.status === 'cancelled' ? 'disabled' : ''}
+        >
+      </div>
+      ${instanceData.status !== 'completed' && instanceData.status !== 'cancelled' ? `
+      <button class="btn-save-hours" onclick="saveCollaboratorHours(${index})">Salvar</button>
+      ` : ''}
+    </div>
+  `).join('');
+}
+
+function renderLogs() {
+  const container = document.getElementById('logsContainer');
+  
+  if (logs.length === 0) {
+    container.innerHTML = '<div style="text-align: center; color: #94a3b8; padding: 20px;">Nenhum registro ainda</div>';
+    return;
+  }
+
+  container.innerHTML = logs.map(log => `
+    <div class="log-entry">
+      <div class="log-header">
+        <div class="log-author">${log.author || 'Sistema'}</div>
+        <div class="log-date">${formatDateTime(log.timestamp)}</div>
+      </div>
+      <div class="log-content">${log.content}</div>
+    </div>
+  `).join('');
+}
+
+function formatDates() {
+  // Format due date
+  const dueDate = instanceData.due_date;
+  if (dueDate) {
+    document.getElementById('dueDateDisplay').textContent = formatDateTime(dueDate);
+  }
+
+  // Format completed at
+  if (instanceData.completed_at) {
+    document.getElementById('completedAtDisplay').textContent = formatDateTime(instanceData.completed_at);
+  }
+}
+
+function formatDateTime(dateString) {
+  if (!dateString) return '-';
+  try {
+    const date = new Date(dateString);
+    return date.toLocaleString('pt-BR', {
+      day: '2-digit',
+      month: '2-digit',
+      year: 'numeric',
+      hour: '2-digit',
+      minute: '2-digit'
+    });
+  } catch {
+    return dateString;
+  }
+}
+
+async function saveCollaboratorHours(index) {
+  const input = document.getElementById(`hours-${index}`);
+  const hours = parseFloat(input.value) || 0;
+  
+  collaborators[index].actual_hours = hours;
+  
+  // Calculate total actual hours
+  const totalActualHours = collaborators.reduce((sum, c) => sum + (c.actual_hours || 0), 0);
+  
+  try {
+    const response = await fetch(`/api/companies/${companyId}/process-instances/${instanceId}`, {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        assigned_collaborators: JSON.stringify(collaborators),
+        actual_hours: totalActualHours
+      })
+    });
+
+    if (!response.ok) throw new Error('Erro ao salvar horas');
+
+    // Update display
+    document.getElementById('actualHoursDisplay').textContent = `${totalActualHours}h`;
+    
+    // Add log entry
+    const logEntry = {
+      timestamp: new Date().toISOString(),
+      author: 'Sistema',
+      content: `Horas realizadas atualizadas para ${collaborators[index].name}: ${hours}h`
+    };
+    logs.unshift(logEntry);
+    
+    await fetch(`/api/companies/${companyId}/process-instances/${instanceId}`, {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        notes: JSON.stringify(logs)
+      })
+    });
+
+    renderLogs();
+    
+    alert('Horas salvas com sucesso!');
+  } catch (error) {
+    console.error('Error saving hours:', error);
+    alert('Erro ao salvar horas. Tente novamente.');
+  }
+}
+
+async function addLog() {
+  const textarea = document.getElementById('logTextarea');
+  const content = textarea.value.trim();
+  
+  if (!content) {
+    alert('Digite uma observação');
+    return;
+  }
+
+  const logEntry = {
+    timestamp: new Date().toISOString(),
+    author: 'Usuário',
+    content: content
+  };
+
+  logs.unshift(logEntry);
+
+  try {
+    const response = await fetch(`/api/companies/${companyId}/process-instances/${instanceId}`, {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        notes: JSON.stringify(logs)
+      })
+    });
+
+    if (!response.ok) throw new Error('Erro ao adicionar registro');
+
+    textarea.value = '';
+    renderLogs();
+  } catch (error) {
+    console.error('Error adding log:', error);
+    alert('Erro ao adicionar registro. Tente novamente.');
+  }
+}
+
+function openCompleteModal() {
+  document.getElementById('completeModal').classList.add('active');
+}
+
+function closeCompleteModal() {
+  document.getElementById('completeModal').classList.remove('active');
+}
+
+async function submitCompletion() {
+  const completionDate = document.getElementById('completionDate').value;
+  const notes = document.getElementById('completionNotes').value;
+
+  if (!completionDate) {
+    alert('Selecione a data de conclusão');
+    return;
+  }
+
+  // Add completion log
+  const logEntry = {
+    timestamp: new Date().toISOString(),
+    author: 'Sistema',
+    content: `Instância concluída. ${notes ? `Observações: ${notes}` : ''}`
+  };
+  logs.unshift(logEntry);
+
+  try {
+    const response = await fetch(`/api/companies/${companyId}/process-instances/${instanceId}`, {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        status: 'completed',
+        completed_at: completionDate,
+        notes: JSON.stringify(logs)
+      })
+    });
+
+    if (!response.ok) throw new Error('Erro ao concluir instância');
+
+    alert('Instância concluída com sucesso!');
+    window.location.href = `/grv/company/${companyId}/process/instances`;
+  } catch (error) {
+    console.error('Error completing instance:', error);
+    alert('Erro ao concluir instância. Tente novamente.');
+  }
+}
+
+function goBack() {
+  window.location.href = `/grv/company/${companyId}/process/instances`;
+}
+</script>
+{% endblock %}
+

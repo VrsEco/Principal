@@ -1,0 +1,408 @@
+{% extends "base.html" %}
+{% block title %}Configurações do Sistema{% endblock %}
+{% block body %}
+  {% set active_nav = 'dashboard' %}
+  {{ super() }}
+{% endblock %}
+
+{% block extra_head %}
+  {{ super() }}
+  <style>
+    .configurations-page {
+      /* Azul Bali palette for this page */
+      --bali-blue: #00a3ad; /* primary Azul Bali */
+      --bali-blue-strong: #008a92; /* darker shade */
+      --bali-blue-light: #e6f7f9; /* light tint for card surfaces */
+      --config-card-title-color: var(--bali-blue);
+      max-width: 1400px;
+      margin: 0 auto;
+      padding: 32px 0 64px;
+      display: flex;
+      flex-direction: column;
+      gap: 32px;
+    }
+    .configurations-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: flex-end;
+      gap: 24px;
+      flex-wrap: wrap;
+    }
+    .configurations-heading {
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+    }
+    .configurations-heading h1 {
+      margin: 0;
+    }
+    .configurations-heading p {
+      margin: 0;
+      color: var(--color-muted);
+      max-width: 640px;
+      font-size: 14px;
+      line-height: 1.6;
+    }
+    .configurations-grid {
+      display: grid;
+      gap: 20px;
+      grid-template-columns: repeat(4, 1fr);
+    }
+    
+    /* Responsividade do grid */
+    @media (max-width: 1200px) {
+      .configurations-grid {
+        grid-template-columns: repeat(3, 1fr);
+      }
+    }
+    
+    @media (max-width: 900px) {
+      .configurations-grid {
+        grid-template-columns: repeat(2, 1fr);
+      }
+    }
+    
+    @media (max-width: 600px) {
+      .configurations-grid {
+        grid-template-columns: 1fr;
+      }
+    }
+    
+    .config-card {
+      padding: 28px 24px;
+      border-radius: 16px;
+      background: var(--bali-blue-light);
+      border: 1px solid rgba(0, 163, 173, 0.25);
+      box-shadow: var(--shadow-sm, 0 12px 24px rgba(15, 23, 42, 0.08));
+      display: flex;
+      flex-direction: column;
+      gap: 18px;
+      transition: all 0.3s ease;
+      cursor: pointer;
+      position: relative;
+      overflow: hidden;
+    }
+    
+    .config-card::before {
+      content: '';
+      position: absolute;
+      top: 0;
+      left: 0;
+      right: 0;
+      bottom: 0;
+      background: linear-gradient(135deg, rgba(0, 163, 173, 0.08), transparent);
+      opacity: 0;
+      transition: opacity 0.3s ease;
+    }
+    
+    .config-card:hover::before {
+      opacity: 1;
+    }
+    
+    .config-card:hover {
+      transform: translateY(-4px);
+      box-shadow: var(--shadow-lg, 0 24px 48px rgba(15, 23, 42, 0.15));
+      border-color: rgba(0, 163, 173, 0.5);
+    }
+    
+    .config-card-header {
+      display: flex;
+      gap: 16px;
+      align-items: flex-start;
+    }
+    
+    .config-card-icon {
+      width: 56px;
+      height: 56px;
+      border-radius: 14px;
+      background: linear-gradient(135deg, var(--bali-blue), var(--bali-blue-strong));
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-weight: 700;
+      font-size: 20px;
+      color: white;
+      flex-shrink: 0;
+      text-transform: uppercase;
+    }
+    /* Force all icon variants to Azul Bali */
+    .config-card-icon.reports,
+    .config-card-icon.ai,
+    .config-card-icon.connections,
+    .config-card-icon.security,
+    .config-card-icon.notifications,
+    .config-card-icon.backup,
+    .config-card-icon.users,
+    .config-card-icon.system {
+      background: linear-gradient(135deg, var(--bali-blue), var(--bali-blue-strong));
+    }
+    
+    .config-card-content {
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+    }
+    
+    .config-card-title {
+      font-size: 18px;
+      font-weight: 600;
+      color: var(--config-card-title-color, #fef08a);
+      margin: 0;
+      line-height: 1.3;
+    }
+
+    .config-card-subtitle {
+      color: var(--color-muted);
+      font-size: 12px;
+      margin: 4px 0 8px 0;
+    }
+    
+    .config-card-description {
+      color: var(--color-muted);
+      font-size: 13px;
+      line-height: 1.5;
+      margin: 0;
+    }
+    
+    .config-card-status {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      margin-top: 8px;
+    }
+    
+    .config-status-badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      padding: 4px 12px;
+      border-radius: 999px;
+      font-size: 11px;
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: 0.1em;
+    }
+    
+    .status-active {
+      background: rgba(16, 185, 129, 0.15);
+      color: #10b981;
+      border: 1px solid rgba(16, 185, 129, 0.3);
+    }
+    
+    .status-warning {
+      background: rgba(245, 158, 11, 0.15);
+      color: #f59e0b;
+      border: 1px solid rgba(245, 158, 11, 0.3);
+    }
+    
+    .status-inactive {
+      background: rgba(148, 163, 184, 0.15);
+      color: #94a3b8;
+      border: 1px solid rgba(148, 163, 184, 0.3);
+    }
+    
+    .status-coming-soon {
+      background: rgba(168, 85, 247, 0.15);
+      color: #a855f7;
+      border: 1px solid rgba(168, 85, 247, 0.3);
+    }
+    
+    .config-actions {
+      display: flex;
+      gap: 8px;
+      margin-top: 4px;
+    }
+    
+    .config-action-btn {
+      padding: 6px 12px;
+      border-radius: 8px;
+      border: 1px solid rgba(0, 163, 173, 0.35);
+      background: rgba(0, 163, 173, 0.08);
+      color: var(--bali-blue);
+      font-size: 12px;
+      font-weight: 500;
+      cursor: pointer;
+      transition: all 0.2s ease;
+      text-decoration: none;
+    }
+    
+    .config-action-btn:hover {
+      background: rgba(0, 163, 173, 0.16);
+      border-color: rgba(0, 163, 173, 0.6);
+    }
+    
+    .configurations-empty {
+      padding: 72px 24px;
+      text-align: center;
+      border: 1px dashed var(--color-border);
+      border-radius: 16px;
+      background: var(--color-surface, #fff);
+    }
+  </style>
+{% endblock %}
+
+{% block content %}
+<section class="configurations-page">
+  <header class="configurations-header">
+    <div class="configurations-heading">
+      <span class="section-eyebrow">Sistema</span>
+      <h1>Configurações do Sistema</h1>
+      <p>Central de configurações para personalizar e gerenciar todos os aspectos do ecossistema Versus. Configure relatórios, integrações, segurança e muito mais.</p>
+    </div>
+  </header>
+
+  <div class="configurations-grid">
+    
+    <!-- Card 1: Configurações de Relatórios -->
+    <article class="config-card" onclick="window.location.href='/settings/reports'">
+      <div class="config-card-header">
+        <div class="config-card-icon reports">📊</div>
+        <div class="config-card-content">
+          <h3 class="config-card-title">Relatórios</h3>
+          <p class="config-card-description">Configure layouts, margens, cabeçalhos e modelos reutilizáveis para relatórios.</p>
+        </div>
+      </div>
+      <div class="config-card-status">
+        <span class="config-status-badge status-active">✓ Ativo</span>
+        <div class="config-actions">
+          <a href="/settings/reports" class="config-action-btn" onclick="event.stopPropagation();">Configurar</a>
+        </div>
+      </div>
+    </article>
+
+    <!-- Card 2: Inteligência Artificial -->
+    <article class="config-card" onclick="window.location.href='/configs/ai'">
+      <div class="config-card-header">
+        <div class="config-card-icon ai">🤖</div>
+        <div class="config-card-content">
+          <h3 class="config-card-title">Inteligência Artificial</h3>
+          <p class="config-card-subtitle">Automação estratégica e conectividade inteligente</p>
+          <p class="config-card-description">Configure agentes de IA, chaves de API e parâmetros de análise inteligente.</p>
+        </div>
+      </div>
+      <div class="config-card-status">
+        <span class="config-status-badge status-active">✅ Ativo</span>
+        <div class="config-actions">
+          <a href="/configs/ai" class="config-action-btn" onclick="event.stopPropagation();">Configurar</a>
+        </div>
+      </div>
+    </article>
+
+    <!-- Card 3: Conexões e Integrações -->
+    <article class="config-card">
+      <div class="config-card-header">
+        <div class="config-card-icon connections">🔌</div>
+        <div class="config-card-content">
+          <h3 class="config-card-title">Conexões</h3>
+          <p class="config-card-description">Gerencie integrações com sistemas externos, APIs e serviços de terceiros.</p>
+        </div>
+      </div>
+      <div class="config-card-status">
+        <span class="config-status-badge status-coming-soon">🚀 Em breve</span>
+        <div class="config-actions">
+          <a href="#" class="config-action-btn" onclick="event.stopPropagation();">Aguardar</a>
+        </div>
+      </div>
+    </article>
+
+    <!-- Card 4: Segurança e Permissões -->
+    <article class="config-card">
+      <div class="config-card-header">
+        <div class="config-card-icon security">🔐</div>
+        <div class="config-card-content">
+          <h3 class="config-card-title">Segurança</h3>
+          <p class="config-card-description">Configure permissões de usuário, autenticação e políticas de segurança.</p>
+        </div>
+      </div>
+      <div class="config-card-status">
+        <span class="config-status-badge status-coming-soon">🚀 Em breve</span>
+        <div class="config-actions">
+          <a href="#" class="config-action-btn" onclick="event.stopPropagation();">Aguardar</a>
+        </div>
+      </div>
+    </article>
+
+    <!-- Card 5: Notificações -->
+    <article class="config-card">
+      <div class="config-card-header">
+        <div class="config-card-icon notifications">🔔</div>
+        <div class="config-card-content">
+          <h3 class="config-card-title">Notificações</h3>
+          <p class="config-card-description">Configure alertas, lembretes e sistemas de notificação por email e SMS.</p>
+        </div>
+      </div>
+      <div class="config-card-status">
+        <span class="config-status-badge status-inactive">⚪ Inativo</span>
+        <div class="config-actions">
+          <a href="#" class="config-action-btn" onclick="event.stopPropagation();">Configurar</a>
+        </div>
+      </div>
+    </article>
+
+    <!-- Card 6: Backup e Restauração -->
+    <article class="config-card">
+      <div class="config-card-header">
+        <div class="config-card-icon backup">💾</div>
+        <div class="config-card-content">
+          <h3 class="config-card-title">Backup</h3>
+          <p class="config-card-description">Configure backups automáticos, restauração de dados e políticas de retenção.</p>
+        </div>
+      </div>
+      <div class="config-card-status">
+        <span class="config-status-badge status-warning">⚠ Configurar</span>
+        <div class="config-actions">
+          <a href="#" class="config-action-btn" onclick="event.stopPropagation();">Configurar</a>
+        </div>
+      </div>
+    </article>
+
+    <!-- Card 7: Usuários e Perfis -->
+    <article class="config-card" onclick="window.location.href='/companies'">
+      <div class="config-card-header">
+        <div class="config-card-icon users">👥</div>
+        <div class="config-card-content">
+          <h3 class="config-card-title">Usuários</h3>
+          <p class="config-card-description">Gerencie usuários, perfis de acesso e configurações de conta.</p>
+        </div>
+      </div>
+      <div class="config-card-status">
+        <span class="config-status-badge status-active">✓ Ativo</span>
+        <div class="config-actions">
+          <a href="/companies" class="config-action-btn" onclick="event.stopPropagation();">Gerenciar</a>
+        </div>
+      </div>
+    </article>
+
+    <!-- Card 8: Sistema e Auditoria -->
+    <article class="config-card" onclick="window.location.href='/configs/system'">
+      <div class="config-card-header">
+        <div class="config-card-icon system">🔧</div>
+        <div class="config-card-content">
+          <h3 class="config-card-title">Sistema e Auditoria</h3>
+          <p class="config-card-subtitle">Logs, monitoramento e manutenção</p>
+          <p class="config-card-description">Auditoria de logs, monitoramento de rotas, segurança e configurações do sistema.</p>
+        </div>
+      </div>
+      <div class="config-card-status">
+        <span class="config-status-badge status-active">✅ Ativo</span>
+        <div class="config-actions">
+          <a href="/configs/system" class="config-action-btn" onclick="event.stopPropagation();">Configurar</a>
+        </div>
+      </div>
+    </article>
+
+
+  </div>
+</section>
+{% endblock %}
+
+{% block scripts %}
+{{ super() }}
+<script>
+  document.addEventListener('DOMContentLoaded', function () {
+    // Adicionar interatividade aos cards se necessário
+    console.log('Página de configurações carregada');
+  });
+</script>
+{% endblock %}

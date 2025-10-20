@@ -1,0 +1,940 @@
+/* Alt Theme: combinação Azul + fundo Branco + acentos Amarelos */
+/* Baseado no design da página GRV Process Analysis */
+
+html, body { 
+  background: #eff6ff; 
+  color: #0f172a; 
+}
+
+/* Header - mantém o tema escuro mas com melhores acentos */
+.app-header {
+  background: rgba(15, 23, 42, 0.95);
+  backdrop-filter: blur(18px);
+  border-bottom: 1px solid rgba(37, 99, 235, 0.2);
+}
+
+.header-banner {
+  border: none;
+  filter: drop-shadow(0 16px 28px rgba(15, 23, 42, 0.4));
+}
+
+.user-pill {
+  background: rgba(37, 99, 235, 0.15);
+  border: 1px solid rgba(37, 99, 235, 0.3);
+}
+
+.user-name {
+  color: #f8fafc;
+}
+
+/* Main - área de conteúdo principal com fundo azul claro (consistente com GRV) */
+.app-main,
+.project-content,
+.plan-content,
+.grv-dashboard {
+  background: #eff6ff !important; /* azul claro */
+}
+
+/* Cards brancos sobre fundo azul - consistente com GRV */
+.surface-card { 
+  background: #ffffff !important; 
+  border: 1px solid rgba(15, 23, 42, 0.08);
+  box-shadow: 0 10px 32px rgba(15, 23, 42, 0.08);
+  border-radius: 14px;
+}
+
+.surface-sub { 
+  background: #f8fafc !important;
+  border: 1px solid rgba(15, 23, 42, 0.08);
+}
+
+/* Botões - padrão consistente */
+.button { 
+  background: #f8fafc; 
+  color: #0f172a; 
+  border: 1px solid rgba(15, 23, 42, 0.08);
+  border-radius: 999px;
+  padding: 8px 14px;
+  font-size: 13px;
+  font-weight: 600;
+  transition: all 0.2s ease;
+}
+
+.button-ghost { 
+  background: #f8fafc; 
+  color: #0f172a; 
+  border: 1px solid rgba(15, 23, 42, 0.08);
+}
+
+.button:hover, .button-ghost:hover { 
+  border-color: rgba(15, 23, 42, 0.2);
+  background: #ffffff;
+}
+
+.button-secondary {
+  border: 1px solid rgba(37, 99, 235, 0.4);
+  color: #2563eb;
+  background: transparent;
+}
+
+.button-secondary:hover {
+  color: #1d4ed8;
+  border-color: #1d4ed8;
+  background: rgba(37, 99, 235, 0.05);
+}
+
+:root {
+  --color-accent: #2563eb; /* blue-600 */
+  --color-accent-strong: #1d4ed8; /* blue-700 */
+  --color-accent-warm: #f59e0b; /* amber-500 */
+}
+
+.button-primary {
+  background: #2563eb;
+  color: #ffffff;
+  border: none;
+  box-shadow: 0 2px 8px rgba(37, 99, 235, 0.25);
+}
+
+.button-primary:hover {
+  background: #1d4ed8;
+  box-shadow: 0 4px 12px rgba(37, 99, 235, 0.35);
+}
+
+.avatar { background: rgba(37, 99, 235, 0.12); color: #2563eb; }
+.project-nav-link:hover { background: rgba(37,99,235,.12); }
+
+/* Badges e chips com acento azul */
+.badge { 
+  border-color: rgba(37, 99, 235, 0.25); 
+  color: #0f172a; /* high-contrast text on light badge */
+  background: #e0ecff; /* increase contrast against white cards */
+  border-radius: 999px;
+  padding: 4px 8px;
+  font-size: 11px;
+  font-weight: 600;
+}
+
+.chip-label { color: #1d4ed8; }
+
+/* Sidebar - texto amarelo sobre fundo escuro padrão */
+.project-sidebar-title,
+.plan-sidebar-meta,
+.plan-sidebar-meta p,
+.plan-sidebar-meta strong,
+.project-nav-link {
+  color: #fbbf24 !important; /* amarelo */
+}
+
+.project-nav-link:hover { 
+  color: #f59e0b !important; /* amarelo mais escuro */
+}
+
+.project-nav-link.active {
+  color: #fbbf24 !important;
+}
+
+/* Campos de formulário com boa legibilidade */
+input, select, textarea { 
+  background: #ffffff; 
+  color: #0f172a; 
+  border: 1px solid rgba(15, 23, 42, 0.08);
+  border-radius: 8px;
+  padding: 8px 12px;
+  font-size: 13px;
+}
+
+input:focus, select:focus, textarea:focus {
+  outline: none;
+  border-color: #2563eb;
+  box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.1);
+}
+
+input::placeholder, textarea::placeholder { color: #94a3b8; }
+
+.company-form-card .form-label-highlight {
+  color: #2563eb !important;
+}
+
+.companies-page {
+  --companies-card-title-color: #0f172a;
+}
+
+/* Ajustes específicos para a página de direcionadores (tema claro) */
+.drivers-layout,
+.drivers-layout .drivers-content {
+  background: #eff6ff !important;
+  color: #0f172a !important;
+}
+
+.drivers-layout .drivers-content *,
+.drivers-layout .drivers-content .chip-label,
+.drivers-layout .drivers-content .badge {
+  color: #0f172a !important;
+}
+
+.drivers-layout .drivers-content .surface-card,
+.drivers-layout .drivers-content details.interview-section,
+.drivers-layout .drivers-content .interview-section,
+.drivers-layout .drivers-content .interview-panel,
+.drivers-layout .drivers-content .interview-record,
+.drivers-layout .drivers-content .vision-record,
+.drivers-layout .drivers-content .market-record,
+.drivers-layout .drivers-content .company-record,
+.drivers-layout .drivers-content .alignment-record-item,
+.drivers-layout .drivers-content .misalignment-record-item,
+.drivers-layout .drivers-content .directional-record-item,
+.drivers-layout .drivers-content .driver-section,
+.drivers-layout .drivers-content .driver-item,
+.drivers-layout .drivers-content .driver-block,
+.drivers-layout .drivers-content .adjustment-item,
+.drivers-layout .drivers-content .approval-item,
+.drivers-layout .drivers-content .locked-section-info,
+.drivers-layout .drivers-content .consolidated-main-card {
+  background: #ffffff !important;
+  border: 1px solid rgba(15, 23, 42, 0.08) !important;
+  box-shadow: none !important;
+}
+
+.drivers-layout .drivers-content .driver-block {
+  background: #f8fafc !important;
+}
+
+.drivers-layout .drivers-content summary,
+.drivers-layout .drivers-content .interview-summary-bar,
+.drivers-layout .drivers-content .driver-summary {
+  background: #ffffff !important;
+}
+
+.drivers-layout .drivers-content .driver-footer,
+.drivers-layout .drivers-content .alignment-records,
+.drivers-layout .drivers-content .misalignment-records,
+.drivers-layout .drivers-content .directional-records,
+.drivers-layout .drivers-content .directionals-records,
+.drivers-layout .drivers-content .approvals-records,
+.drivers-layout .drivers-content .adjustments-list {
+  border-top: 1px solid rgba(15, 23, 42, 0.08) !important;
+}
+
+.drivers-layout .drivers-content input,
+.drivers-layout .drivers-content textarea,
+.drivers-layout .drivers-content select {
+  background: #ffffff !important;
+  color: #0f172a !important;
+  border: 1px solid rgba(15, 23, 42, 0.12) !important;
+}
+
+.drivers-layout .drivers-content input::placeholder,
+.drivers-layout .drivers-content textarea::placeholder {
+  color: #64748b !important;
+}
+
+.drivers-layout .drivers-content .button,
+.drivers-layout .drivers-content .button-ghost {
+  color: #0f172a !important;
+  background: #e2e8f0 !important;
+  border-color: rgba(148, 163, 184, 0.6) !important;
+}
+
+.drivers-layout .drivers-content .button:hover,
+.drivers-layout .drivers-content .button-ghost:hover {
+  background: #cbd5f5 !important;
+}
+
+.drivers-layout .drivers-content .button-primary,
+.drivers-layout .drivers-content .button-primary *,
+.drivers-layout .drivers-content .button-danger,
+.drivers-layout .drivers-content .button-danger *,
+.drivers-layout .drivers-content .button-warning,
+.drivers-layout .drivers-content .button-warning *,
+.drivers-layout .drivers-content .button-success,
+.drivers-layout .drivers-content .button-success * {
+  color: #ffffff !important;
+}
+
+.drivers-layout .drivers-content .interview-progress,
+.drivers-layout .drivers-content .interview-progress * {
+  color: #0f172a !important;
+}
+
+/* Botões dentro de cards brancos */
+.surface-card .button-ghost, .surface-card .button { color: #0f172a; }
+
+/* Texto em fundos claros deve ter contraste adequado */
+.surface-card table,
+.surface-card th,
+.surface-card td {
+  color: #0f172a !important; /* preto para contraste em fundo claro */
+}
+
+/* Linhas e células alternativas também visíveis */
+.surface-sub table,
+.surface-sub th,
+.surface-sub td {
+  color: #0f172a !important;
+}
+
+/* Textos em área principal (fundo azul claro) - padrão da modelagem */
+.app-main h1,
+.app-main h2,
+.app-main h3,
+.dashboard-header h1,
+.section-title,
+.header-content h1,
+.header-subtitle,
+.card-header h3,
+.panel-title,
+.page-title {
+  color: #0f172a !important;
+  font-weight: 700;
+}
+
+.section-eyebrow,
+.page-eyebrow {
+  color: #2563eb !important; /* azul */
+  font-size: 12px;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  font-weight: 600;
+}
+
+.text-muted,
+.activity-meta,
+.summary-description,
+.page-subtitle {
+  color: #64748b !important;
+  font-size: 13px;
+  line-height: 1.5;
+}
+
+/* Cards brancos sobre fundo azul claro - estilo GRV */
+.summary-card,
+.activities-panel,
+.quick-link-card,
+.activity-item,
+.stat-card {
+  background: #ffffff !important;
+  border: 1px solid rgba(15, 23, 42, 0.08);
+  box-shadow: 0 10px 32px rgba(15, 23, 42, 0.08);
+  border-radius: 14px;
+}
+
+/* Textos em cards brancos */
+.summary-label,
+.summary-value,
+.summary-description,
+.activity-title,
+.quick-link-label,
+.surface-card h1,
+.surface-card h2,
+.surface-card h3,
+.surface-card h4,
+.surface-card p {
+  color: #0f172a !important;
+}
+.directional-card,
+.okr-workshop-item,
+.okr-approval-item,
+.okr-consolidated-card {
+  background: #ffffff !important;
+  border: 1px solid rgba(15, 23, 42, 0.08) !important;
+  box-shadow: 0 10px 24px rgba(15, 23, 42, 0.08) !important;
+  border-radius: 14px !important;
+  color: #0f172a !important;
+}
+
+.card-header h3,
+.directional-title,
+.panel-title { color: #0f172a !important; }
+
+.panel-hint,
+.summary-meta,
+.kr-meta { color: #475569 !important; }
+
+.button,
+.button-ghost {
+  background: #f8fafc !important;
+  color: #0f172a !important;
+  border: 1px solid rgba(15, 23, 42, 0.12) !important;
+}
+
+.button-primary { background: #2563eb !important; color: #ffffff !important; border: none !important; }
+.button-danger { background: #dc2626 !important; color: #ffffff !important; border: none !important; }
+.button-warning { background: #f59e0b !important; color: #0f172a !important; border: none !important; }
+.button-success { background: linear-gradient(135deg, #10b981, #059669) !important; color: #ffffff !important; }
+
+.okr-type-badge,
+.directional-type-badge { background: #eaf2ff !important; color: #0f172a !important; border: 1px solid rgba(37,99,235,0.25) !important; }
+.okr-type-badge.estruturante,
+.directional-type-badge.type-estruturante { background: #fff6d9 !important; color: #0f172a !important; border-color: rgba(245,158,11,0.35) !important; }
+.okr-type-badge.aceleracao,
+.directional-type-badge.type-acelerador { background: #dcfce7 !important; color: #065f46 !important; border-color: rgba(34,197,94,0.35) !important; }
+
+.summary-label {
+  font-size: 11px;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: #1d4ed8 !important;
+  font-weight: 600;
+}
+
+.summary-value {
+  font-size: 22px;
+  font-weight: 700;
+  color: #0f172a !important;
+}
+
+/* === Estilos específicos do PEV === */
+
+/* Princípios */
+.principle-panel h2,
+.principle-intro h2 {
+  color: #0f172a !important;
+  font-weight: 700;
+}
+
+.principle-intro p {
+  color: #64748b !important;
+}
+
+.principle-card {
+  background: #f8fafc !important;
+  border: 1px solid rgba(15, 23, 42, 0.08);
+  border-radius: 12px;
+}
+
+.principle-number {
+  color: #2563eb !important;
+  font-weight: 700;
+}
+
+.principle-card p {
+  color: #475569 !important;
+}
+
+/* Hub de Projetos */
+.project-hub,
+.project-hub-create,
+.project-hub-selectors {
+  background: #ffffff !important;
+}
+
+.project-hub h2 {
+  color: #0f172a !important;
+}
+
+.project-hub p {
+  color: #64748b !important;
+}
+
+.project-hub-hint span {
+  color: #64748b !important;
+  font-size: 12px;
+}
+
+/* Combos e Seletores */
+.combo-label {
+  color: #475569 !important;
+  font-size: 12px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+
+.combo-control {
+  background: #ffffff !important;
+  color: #0f172a !important;
+  border: 1px solid rgba(15, 23, 42, 0.08);
+  border-radius: 8px;
+}
+
+.combo-control:focus {
+  border-color: #2563eb;
+  box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.1);
+}
+
+/* Seções de IA e Serviços */
+.ia-section,
+.services-section {
+  background: #ffffff !important;
+}
+
+.ia-title h2,
+.services-title h2 {
+  color: #0f172a !important;
+  font-weight: 700;
+}
+
+.ia-subtitle,
+.services-subtitle {
+  color: #64748b !important;
+  font-size: 13px;
+}
+
+.subsection-badge {
+  background: rgba(37, 99, 235, 0.12);
+  color: #2563eb !important;
+  padding: 4px 10px;
+  border-radius: 999px;
+  font-size: 11px;
+  font-weight: 600;
+}
+
+.service-card {
+  background: #f8fafc !important;
+  border: 1px solid rgba(15, 23, 42, 0.08);
+  border-radius: 12px;
+}
+
+.service-name {
+  color: #0f172a !important;
+  font-weight: 600;
+}
+
+.service-provider {
+  color: #64748b !important;
+  font-size: 12px;
+}
+
+.status-indicator {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+}
+
+.status-active {
+  background: #22c55e;
+}
+
+.status-inactive {
+  background: #94a3b8;
+}
+
+.status-text {
+  color: #64748b !important;
+  font-size: 12px;
+}
+
+.detail-label {
+  color: #64748b !important;
+  font-size: 11px;
+}
+
+.detail-value {
+  color: #0f172a !important;
+  font-weight: 600;
+  font-size: 12px;
+}
+
+/* Tabelas */
+.subsection-content table {
+  background: #ffffff !important;
+  border: 1px solid rgba(15, 23, 42, 0.08);
+  border-radius: 12px;
+  overflow: hidden;
+}
+
+.subsection-content thead {
+  background: #f8fafc !important;
+}
+
+.subsection-content th {
+  color: #475569 !important;
+  font-size: 11px;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  font-weight: 600;
+}
+
+.subsection-content td {
+  color: #0f172a !important;
+  font-size: 13px;
+}
+
+.subsection-content tbody tr:hover {
+  background: rgba(37, 99, 235, 0.05) !important;
+}
+
+/* Links e âncoras */
+a {
+  color: #2563eb;
+  text-decoration: none;
+}
+.panel-hint, .summary-meta, .kr-meta {
+  color: #475569 !important; /* darker slate for better contrast on #fff */
+}
+
+/* Ensure type badges inside light cards have dark text */
+.okr-type-badge, .directional-type-badge {
+  background: #eaf2ff; /* light blue background on light theme cards */
+  color: #0f172a !important;
+  border: 1px solid rgba(37, 99, 235, 0.25);
+}
+
+.okr-type-badge.estruturante, .directional-type-badge.type-estruturante {
+  background: #fff6d9; /* light amber */
+  color: #0f172a !important;
+  border-color: rgba(245, 158, 11, 0.35);
+}
+
+.okr-type-badge.aceleracao, .directional-type-badge.type-acelerador {
+  background: #dcfce7; /* light green */
+  color: #065f46 !important;
+  border-color: rgba(34, 197, 94, 0.35);
+}
+
+/* === CORREÇÕES ESPECÍFICAS PARA PÁGINA OKR GLOBAL === */
+
+/* Garantir que todos os cards OKR tenham fundo branco e texto escuro */
+.okr-workshop-item,
+.okr-approval-item,
+.okr-consolidated-card,
+.okr-analysis-item {
+  background: #ffffff !important;
+  border: 1px solid rgba(15, 23, 42, 0.08) !important;
+  box-shadow: 0 10px 24px rgba(15, 23, 42, 0.08) !important;
+  border-radius: 14px !important;
+  color: #0f172a !important;
+}
+
+/* Textos dentro dos cards OKR */
+.okr-workshop-item *,
+.okr-approval-item *,
+.okr-consolidated-card *,
+.okr-analysis-item *,
+.okr-workshop-item p,
+.okr-approval-item p,
+.okr-consolidated-card p,
+.okr-analysis-item p,
+.okr-workshop-item h5,
+.okr-approval-item h5,
+.okr-consolidated-card h5,
+.okr-analysis-item h5,
+.okr-workshop-item strong,
+.okr-approval-item strong,
+.okr-consolidated-card strong,
+.okr-analysis-item strong {
+  color: #0f172a !important;
+}
+
+/* Metadados e informações secundárias */
+.okr-workshop-meta,
+.okr-approval-meta,
+.okr-consolidated-meta,
+.okr-analysis-meta,
+.okr-workshop-meta *,
+.okr-approval-meta *,
+.okr-consolidated-meta *,
+.okr-analysis-meta *,
+.summary-meta,
+.kr-meta {
+  color: #475569 !important;
+}
+
+/* Key Results dentro dos OKRs */
+.okr-kr-list,
+.okr-kr-item,
+.okr-key-results,
+.okr-key-results *,
+.okr-kr-item strong {
+  color: #0f172a !important;
+}
+
+/* Cards de direcionadores */
+.directional-card,
+.directional-card *,
+.directional-card p,
+.directional-card h5,
+.directional-card strong {
+  background: #ffffff !important;
+  border: 1px solid rgba(15, 23, 42, 0.08) !important;
+  box-shadow: 0 10px 24px rgba(15, 23, 42, 0.08) !important;
+  border-radius: 14px !important;
+  color: #0f172a !important;
+}
+
+/* Seções de análise preliminar */
+.ai-suggestions-section,
+.ai-suggestions-results,
+.ai-suggestions-content,
+.ai-suggestion-text {
+  background: #ffffff !important;
+  border: 1px solid rgba(15, 23, 42, 0.08) !important;
+  border-radius: 14px !important;
+  color: #0f172a !important;
+}
+
+.ai-suggestions-section *,
+.ai-suggestions-results *,
+.ai-suggestions-content *,
+.ai-suggestion-text * {
+  color: #0f172a !important;
+}
+
+/* Formulários OKR */
+.okr-analysis-form,
+.okr-workshop-form,
+.okr-approval-form,
+.okr-analysis-form *,
+.okr-workshop-form *,
+.okr-approval-form * {
+  color: #0f172a !important;
+}
+
+.okr-analysis-form input,
+.okr-analysis-form select,
+.okr-analysis-form textarea,
+.okr-workshop-form input,
+.okr-workshop-form select,
+.okr-workshop-form textarea,
+.okr-approval-form input,
+.okr-approval-form select,
+.okr-approval-form textarea {
+  background: #ffffff !important;
+  color: #0f172a !important;
+  border: 1px solid rgba(15, 23, 42, 0.12) !important;
+}
+
+.okr-analysis-form input::placeholder,
+.okr-analysis-form textarea::placeholder,
+.okr-workshop-form input::placeholder,
+.okr-workshop-form textarea::placeholder,
+.okr-approval-form input::placeholder,
+.okr-approval-form textarea::placeholder {
+  color: #64748b !important;
+}
+
+/* Botões de ação dentro dos cards OKR */
+.okr-action-buttons .button,
+.okr-analysis-actions .button {
+  color: #0f172a !important;
+}
+
+/* Loading states */
+.ai-loading,
+.ai-loading * {
+  color: #0f172a !important;
+}
+
+/* Seções de discussões */
+.workshop-discussions-section,
+.approval-discussions-section,
+.workshop-discussions-section *,
+.approval-discussions-section * {
+  background: #ffffff !important;
+  color: #0f172a !important;
+}
+
+/* Estado vazio */
+.empty-state,
+.empty-state *,
+.empty-state h4,
+.empty-state p {
+  background: #ffffff !important;
+  border: 2px dashed rgba(15, 23, 42, 0.08) !important;
+  color: #0f172a !important;
+}
+
+.empty-hint,
+.empty-hint * {
+  background: #f8fafc !important;
+  color: #0f172a !important;
+}
+
+/* Grid de direcionadores */
+.directionals-grid,
+.okr-consolidated-grid {
+  background: transparent !important;
+}
+
+/* Cards de referência direcional */
+.directional-reference,
+.directional-reference * {
+  background: #ffffff !important;
+  color: #0f172a !important;
+}
+
+/* Modal de edição OKR */
+.modal-content {
+  background: #ffffff !important;
+  color: #0f172a !important;
+}
+
+.modal-content *,
+.modal-header h3,
+.modal-body *,
+.modal-footer * {
+  color: #0f172a !important;
+}
+
+/* Correções adicionais para elementos específicos que podem ter problemas de contraste */
+
+/* Headers e títulos dentro de cards */
+.okr-workshop-header h5,
+.okr-approval-header h5,
+.directional-header h5,
+.card-header h3 {
+  color: #0f172a !important;
+}
+
+/* Badges e chips dentro de cards OKR */
+.okr-header-actions .okr-type-badge,
+.directional-header .directional-type-badge {
+  background: #eaf2ff !important;
+  color: #0f172a !important;
+  border: 1px solid rgba(37, 99, 235, 0.25) !important;
+}
+
+/* Botões dentro dos headers dos OKRs */
+.okr-header-actions .button,
+.okr-action-buttons .button {
+  background: #f8fafc !important;
+  color: #0f172a !important;
+  border: 1px solid rgba(15, 23, 42, 0.12) !important;
+}
+
+/* Seções de busca */
+.okr-search-bar,
+.okr-search-bar *,
+.okr-search-bar input {
+  background: #ffffff !important;
+  color: #0f172a !important;
+  border: 1px solid rgba(15, 23, 42, 0.12) !important;
+}
+
+/* Controles de busca */
+.search-controls,
+.search-controls * {
+  background: transparent !important;
+  color: #0f172a !important;
+}
+
+/* Indicadores de progresso */
+.interview-progress,
+.interview-progress *,
+.chip-label,
+.interview-count {
+  color: #0f172a !important;
+}
+
+/* Seções de status */
+.section-status-controls,
+.section-status-controls * {
+  background: transparent !important;
+  color: #0f172a !important;
+}
+
+/* Notificações de seção fechada */
+.section-closed-notice,
+.section-closed-notice * {
+  background: #f8fafc !important;
+  color: #0f172a !important;
+  border: 1px solid rgba(15, 23, 42, 0.08) !important;
+}
+
+/* KPI Grid dentro de formulários OKR */
+.okr-kpi-grid {
+  background: #f8fafc !important;
+  border: 1px dashed rgba(15, 23, 42, 0.15) !important;
+  color: #0f172a !important;
+}
+
+.okr-kpi-grid *,
+.okr-kpi-header *,
+.key-results-list * {
+  color: #0f172a !important;
+}
+
+/* Botão de indicador unificado */
+.unified-indicator-btn {
+  background: linear-gradient(135deg, #10b981, #059669) !important;
+  color: #ffffff !important;
+  border: none !important;
+}
+
+.unified-indicator-btn:hover {
+  background: linear-gradient(135deg, #059669, #047857) !important;
+  color: #ffffff !important;
+}
+
+/* Improve select contrast in header selector */
+select.nav-link {
+  background: #ffffff;
+  color: #0f172a !important;
+  border: 1px solid rgba(15, 23, 42, 0.15);
+}
+
+a:hover {
+  color: #1d4ed8;
+  text-decoration: underline;
+}
+
+/* Pills e Status */
+.pill {
+  border-radius: 999px;
+  padding: 4px 8px;
+  font-size: 11px;
+  font-weight: 600;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.pill.success {
+  background: rgba(34, 197, 94, 0.12);
+  color: #16a34a;
+}
+
+.pill.warning {
+  background: rgba(245, 158, 11, 0.12);
+  color: #d97706;
+}
+
+.pill.danger {
+  background: rgba(248, 113, 113, 0.15);
+  color: #dc2626;
+}
+
+/* Timeline e Atividades */
+.timeline-item {
+  border-left: 2px solid rgba(37, 99, 235, 0.2);
+}
+
+.timeline-item.completed {
+  border-left-color: #22c55e;
+}
+
+.timeline-item.in_progress {
+  border-left-color: #2563eb;
+}
+
+.timeline-item.pending {
+  border-left-color: #94a3b8;
+}
+
+/* Formulários */
+.form-label {
+  color: #475569 !important;
+  font-size: 12px;
+  font-weight: 600;
+}
+
+.form-help-text {
+  color: #64748b !important;
+  font-size: 11px;
+}
+
+/* Selector Summary */
+.selector-summary {
+  background: #f8fafc !important;
+  border: 1px solid rgba(15, 23, 42, 0.08);
+  border-radius: 12px;
+}
+
+.summary-eyebrow {
+  color: #2563eb !important;
+  font-size: 11px;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  font-weight: 600;
+}

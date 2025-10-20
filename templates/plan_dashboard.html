@@ -1,0 +1,126 @@
+{% extends "base.html" %}
+{% block title %}{{ plan.name }} | PEV 2.0{% endblock %}
+{% block body %}
+  {% set active_nav = 'projetos' %}
+  {{ super() }}
+{% endblock %}
+{% block content %}
+<div class="project-layout plan-layout" data-sidebar-toggle>
+  {% set sidebar_meta %}
+    <span class="summary-eyebrow">{{ plan.progress_overall }}% concluído</span>
+    <p>Planejamento liderado por <strong>{{ plan.owner }}</strong>. Patrocinador: <strong>{{ plan.sponsor }}</strong>.</p>
+    <div class="plan-engagement-card">
+      <span class="chip-label">Engajamento</span>
+      <span class="chip-value">{{ plan.participants }}</span>
+      <span class="chip-meta">Participantes ativos</span>
+    </div>
+  {% endset %}
+  {% include 'plan_sidebar.html' %}
+
+  <section class="project-content plan-content">
+    <div class="plan-actions">
+      <a class="button button-ghost" href="{{ url_for('pev.pev_dashboard') }}">Trocar planejamento</a>
+      <button class="button button-primary plan-lock-button" type="button">
+        {% if plan.locked %}
+        Destravar planejamento
+        {% else %}
+        Travar planejamento
+        {% endif %}
+      </button>
+    </div>
+
+    <div class="surface-card plan-overview">
+      <div class="plan-heading">
+        <div>
+          <span class="section-eyebrow">Planejamento estrategico</span>
+          <h1>{{ plan.name }}</h1>
+          <p>{{ plan.company }} &bull; {{ plan.company_industry }} &bull; {{ plan.company_location }}</p>
+        </div>
+        <div class="plan-period">
+          <span class="label">Periodo</span>
+          <strong>{{ plan.start }} &mdash; {{ plan.end }}</strong>
+        </div>
+      </div>
+      <div class="plan-meta-grid">
+        <div class="meta-chip">
+          <span class="chip-label">Participantes</span>
+          <span class="chip-value">{{ plan.participants }}</span>
+          <span class="chip-meta">Pessoas envolvidas no ciclo atual</span>
+        </div>
+        <div class="meta-chip">
+          <span class="chip-label">Direcionadores</span>
+          <span class="chip-value">{{ plan.directionals_count }}</span>
+          <span class="chip-meta">Drivers estrategicos definidos</span>
+        </div>
+        <div class="meta-chip">
+          <span class="chip-label">OKRs Globais</span>
+          <span class="chip-value">{{ plan.okr_global_count }}</span>
+          <span class="chip-meta">Objetivos corporativos ativos</span>
+        </div>
+        <div class="meta-chip">
+          <span class="chip-label">OKRs de Area</span>
+          <span class="chip-value">{{ plan.okr_area_count }}</span>
+          <span class="chip-meta">Metas taticas por area</span>
+        </div>
+        <div class="meta-chip">
+          <span class="chip-label">Projetos</span>
+          <span class="chip-value">{{ plan.projects_count }}</span>
+          <span class="chip-meta">Iniciativas em execução</span>
+        </div>
+      </div>
+    </div>
+
+    <div class="surface-card plan-progress">
+      <div class="card-header">
+        <h3>Progresso por etapa</h3>
+        <span class="badge">Visao consolidada</span>
+      </div>
+      <div class="progress-list">
+        {% for item in sections_progress %}
+        <div class="progress-item">
+          <div class="progress-text">
+            <span class="progress-label">{{ item.label }}</span>
+            <span class="progress-meta">{{ item.value }}% concluído</span>
+          </div>
+          <div class="progress-bar">
+            <div class="progress-track">
+              <span style="width: {{ item.value }}%"></span>
+            </div>
+          </div>
+        </div>
+        {% endfor %}
+      </div>
+      <div class="progress-overall">
+        <span class="progress-overall-label">Conclusao do planejamento</span>
+        <div class="progress-overall-value">{{ plan.progress_overall }}%</div>
+      </div>
+    </div>
+
+    <div class="surface-card plan-directionals">
+      <div class="card-header">
+        <h3>Direcionadores estrategicos</h3>
+        <span class="badge">Resumo executivo</span>
+      </div>
+      <div class="direction-grid">
+        {% for item in plan.directionals %}
+        <div class="direction-card">
+          <div class="direction-header">
+            <span class="direction-name">{{ item.name }}</span>
+            <span class="direction-owner">{{ item.owner }}</span>
+          </div>
+          <p class="direction-summary">{{ item.summary }}</p>
+          <div class="direction-progress">
+            <div class="progress-track">
+              <span style="width: {{ item.progress }}%"></span>
+            </div>
+            <span class="direction-progress-meta">{{ item.status }} &bull; {{ item.progress }}%</span>
+          </div>
+        </div>
+        {% else %}
+        <div class="direction-empty">Nenhum direcionador cadastrado.</div>
+        {% endfor %}
+      </div>
+    </div>
+  </section>
+</div>
+{% endblock %}

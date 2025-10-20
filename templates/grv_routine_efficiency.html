@@ -1,0 +1,636 @@
+{% extends "base.html" %}
+{% block title %}GRV | Gestão da Eficiência{% endblock %}
+{% block body %}{% set active_nav = 'routine-efficiency' %}{{ super() }}{% endblock %}
+
+{% block extra_head %}
+{{ super() }}
+<style>
+  .efficiency-shell {
+    display: grid;
+    grid-template-columns: 250px minmax(0, 1fr);
+    gap: 18px;
+    align-items: start;
+  }
+
+  .efficiency-main {
+    background: #ffffff;
+    border-radius: 14px;
+    border: 1px solid rgba(15, 23, 42, 0.08);
+    padding: 22px 24px;
+    box-shadow: 0 12px 32px rgba(15, 23, 42, 0.08);
+    display: grid;
+    gap: 20px;
+  }
+
+  .efficiency-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    gap: 16px;
+  }
+
+  .efficiency-header h1 {
+    margin: 0;
+    font-size: 22px;
+    font-weight: 700;
+    color: #0f172a;
+  }
+
+  .efficiency-description {
+    color: #64748b;
+    font-size: 13px;
+    margin-top: 6px;
+    max-width: 600px;
+    line-height: 1.5;
+  }
+
+  /* Stats Cards */
+  .stats-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+    gap: 12px;
+  }
+
+  .stat-card {
+    padding: 14px 16px;
+    border-radius: 10px;
+    background: linear-gradient(135deg, rgba(59, 130, 246, 0.1), rgba(14, 116, 144, 0.08));
+    border: 1px solid rgba(59, 130, 246, 0.18);
+  }
+
+  .stat-label {
+    font-size: 11px;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+    color: #64748b;
+    margin-bottom: 6px;
+  }
+
+  .stat-value {
+    font-size: 24px;
+    font-weight: 700;
+    color: #0f172a;
+  }
+
+  .stat-detail {
+    font-size: 11px;
+    color: #64748b;
+    margin-top: 4px;
+  }
+
+  /* Filters */
+  .filters-section {
+    background: rgba(255, 255, 255, 0.5);
+    backdrop-filter: blur(10px);
+    border: 1px solid rgba(15, 23, 42, 0.08);
+    border-radius: 16px;
+    padding: 0;
+    overflow: hidden;
+  }
+
+  .filters-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 16px 20px;
+    cursor: pointer;
+    user-select: none;
+    border-bottom: 1px solid rgba(15, 23, 42, 0.08);
+    transition: background 0.2s;
+  }
+
+  .filters-header:hover {
+    background: rgba(255, 255, 255, 0.5);
+  }
+
+  .filters-header h3 {
+    margin: 0;
+    font-size: 14px;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+    color: #475569;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+
+  .filters-toggle {
+    font-size: 20px;
+    transition: transform 0.3s ease;
+    color: #64748b;
+  }
+
+  .filters-toggle.collapsed {
+    transform: rotate(-90deg);
+  }
+
+  .filters-content {
+    padding: 20px;
+    max-height: 1000px;
+    overflow: hidden;
+    transition: max-height 0.3s ease, padding 0.3s ease;
+  }
+
+  .filters-content.collapsed {
+    max-height: 0;
+    padding: 0 20px;
+  }
+
+  .filters-row {
+    display: flex;
+    gap: 12px;
+    flex-wrap: wrap;
+  }
+
+  .filter-group {
+    flex: 1;
+    min-width: 200px;
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+  }
+
+  .filter-group label {
+    font-size: 11px;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+    color: #64748b;
+  }
+
+  .filter-group select,
+  .filter-group input {
+    padding: 8px 12px;
+    border-radius: 8px;
+    border: 1px solid rgba(15, 23, 42, 0.1);
+    font-size: 13px;
+    background: #fff;
+  }
+
+  /* Collaborators Grid */
+  .collaborators-grid {
+    display: grid;
+    gap: 16px;
+  }
+
+  .collaborator-card {
+    border-radius: 12px;
+    border: 1px solid rgba(15, 23, 42, 0.08);
+    background: #fff;
+    padding: 18px 20px;
+    display: grid;
+    gap: 16px;
+    transition: all 0.2s ease;
+  }
+
+  .collaborator-card:hover {
+    border-color: rgba(59, 130, 246, 0.3);
+    box-shadow: 0 8px 20px rgba(59, 130, 246, 0.12);
+  }
+
+  .collaborator-card-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding-bottom: 14px;
+    border-bottom: 2px solid rgba(15, 23, 42, 0.06);
+  }
+
+  .collaborator-name {
+    font-size: 18px;
+    font-weight: 700;
+    color: #0f172a;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+  }
+
+  .collaborator-metrics {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+    gap: 12px;
+  }
+
+  .metric-box {
+    padding: 12px 14px;
+    border-radius: 8px;
+    border: 1px solid rgba(15, 23, 42, 0.08);
+    background: linear-gradient(135deg, rgba(255, 255, 255, 0.9), rgba(248, 250, 252, 0.9));
+  }
+
+  .metric-box.in-progress {
+    border-left: 3px solid #3b82f6;
+  }
+
+  .metric-box.completed {
+    border-left: 3px solid #10b981;
+  }
+
+  .metric-box.positive {
+    border-left: 3px solid #10b981;
+  }
+
+  .metric-box.negative {
+    border-left: 3px solid #ef4444;
+  }
+
+  .metric-title {
+    font-size: 11px;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+    color: #64748b;
+    margin-bottom: 8px;
+  }
+
+  .metric-values {
+    display: flex;
+    gap: 16px;
+    flex-wrap: wrap;
+  }
+
+  .metric-item {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+  }
+
+  .metric-item-label {
+    font-size: 10px;
+    color: #94a3b8;
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+  }
+
+  .metric-item-value {
+    font-size: 20px;
+    font-weight: 700;
+    color: #0f172a;
+  }
+
+  .metric-item-value.on-time {
+    color: #10b981;
+  }
+
+  .metric-item-value.late {
+    color: #ef4444;
+  }
+
+  .empty-state {
+    text-align: center;
+    padding: 60px 20px;
+    color: #94a3b8;
+  }
+
+  .empty-state h3 {
+    font-size: 18px;
+    font-weight: 600;
+    color: #64748b;
+    margin-bottom: 8px;
+  }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="project-layout plan-layout efficiency-shell" data-sidebar-toggle>
+  <!-- Sidebar -->
+  {% include 'routines_sidebar.html' %}
+
+  <!-- Main Content -->
+  <div class="project-content plan-content efficiency-main">
+    <!-- Header -->
+    <div class="efficiency-header">
+      <div>
+        <h1>👥 Gestão da Eficiência</h1>
+        <p class="efficiency-description">
+          Visualização consolidada da eficiência dos colaboradores por atividades de projetos, 
+          instâncias de processos e ocorrências registradas.
+        </p>
+      </div>
+    </div>
+
+    <!-- Stats -->
+    <div class="stats-grid" id="statsGrid">
+      <div class="stat-card">
+        <div class="stat-label">Em Andamento</div>
+        <div class="stat-value" id="statInProgress">0</div>
+        <div class="stat-detail">
+          <span style="color: #10b981;">●</span> <span id="statInProgressOnTime">0</span> no prazo · 
+          <span style="color: #ef4444;">●</span> <span id="statInProgressLate">0</span> atrasadas
+        </div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-label">Concluídas</div>
+        <div class="stat-value" id="statCompleted">0</div>
+        <div class="stat-detail">
+          <span style="color: #10b981;">●</span> <span id="statCompletedOnTime">0</span> no prazo · 
+          <span style="color: #ef4444;">●</span> <span id="statCompletedLate">0</span> atrasadas
+        </div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-label">Ocorrências Positivas</div>
+        <div class="stat-value" id="statPositiveCount">0</div>
+        <div class="stat-detail">
+          ⭐ <span id="statPositiveScore">0</span> pontos
+        </div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-label">Ocorrências Negativas</div>
+        <div class="stat-value" id="statNegativeCount">0</div>
+        <div class="stat-detail">
+          ⚠️ <span id="statNegativeScore">0</span> pontos
+        </div>
+      </div>
+    </div>
+
+    <!-- Filters -->
+    <div class="filters-section">
+      <div class="filters-header" onclick="toggleFilters()">
+        <h3>
+          <span>🔍</span>
+          <span>Filtros</span>
+        </h3>
+        <span class="filters-toggle" id="filtersToggle">▼</span>
+      </div>
+      <div class="filters-content" id="filtersContent">
+        <div class="filters-row">
+          <div class="filter-group">
+            <label>Buscar Colaborador</label>
+            <input type="text" id="searchInput" placeholder="Nome do colaborador...">
+          </div>
+          <div class="filter-group">
+            <label>Filtrar por Atividade</label>
+            <select id="filterActivity">
+              <option value="">Todos</option>
+              <option value="with_activities">Com atividades</option>
+              <option value="with_occurrences">Com ocorrências</option>
+            </select>
+          </div>
+          <div class="filter-group">
+            <label>Ações</label>
+            <button onclick="clearAllFilters()" style="padding: 8px 14px; border-radius: 6px; border: 1px solid rgba(15, 23, 42, 0.15); background: #fff; font-size: 12px; font-weight: 600; cursor: pointer;">
+              Limpar Filtros
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Collaborators Grid -->
+    <div class="collaborators-grid" id="collaboratorsGrid">
+      <!-- Cards will be inserted here by JavaScript -->
+    </div>
+  </div>
+</div>
+
+<script>
+const companyId = {{ company.id }};
+let allData = [];
+let filteredData = [];
+
+document.addEventListener('DOMContentLoaded', async () => {
+  await loadEfficiencyData();
+  setupFilters();
+  updateStats();
+});
+
+async function loadEfficiencyData() {
+  try {
+    const url = `/api/companies/${companyId}/efficiency/collaborators`;
+    console.log('Carregando dados de:', url);
+    
+    const response = await fetch(url);
+    console.log('Response status:', response.status);
+    
+    if (!response.ok) {
+      const errorText = await response.text();
+      console.error('Erro HTTP:', response.status, errorText);
+      throw new Error(`Erro ${response.status}: ${errorText}`);
+    }
+    
+    allData = await response.json();
+    console.log('Dados carregados:', allData);
+    
+    filteredData = allData;
+    renderCollaborators();
+    
+    console.log(`${allData.length} colaboradores carregados`);
+  } catch (error) {
+    console.error('Erro ao carregar dados de eficiência:', error);
+    showEmptyState(error.message);
+  }
+}
+
+function setupFilters() {
+  document.getElementById('searchInput').addEventListener('input', applyFilters);
+  document.getElementById('filterActivity').addEventListener('change', applyFilters);
+  
+  // Restore filters collapsed state from localStorage
+  const isCollapsed = localStorage.getItem('efficiencyFiltersCollapsed') === 'true';
+  if (isCollapsed) {
+    document.getElementById('filtersContent').classList.add('collapsed');
+    document.getElementById('filtersToggle').classList.add('collapsed');
+  }
+}
+
+function applyFilters() {
+  const search = document.getElementById('searchInput').value.toLowerCase();
+  const activityFilter = document.getElementById('filterActivity').value;
+  
+  filteredData = allData.filter(data => {
+    // Filter by search
+    if (search && !data.employee_name.toLowerCase().includes(search)) return false;
+    
+    // Filter by activity type
+    if (activityFilter === 'with_activities') {
+      const hasActivities = (data.in_progress.total + data.completed.total) > 0;
+      if (!hasActivities) return false;
+    } else if (activityFilter === 'with_occurrences') {
+      const hasOccurrences = (data.positive_occurrences.count + data.negative_occurrences.count) > 0;
+      if (!hasOccurrences) return false;
+    }
+    
+    return true;
+  });
+  
+  renderCollaborators();
+  updateStats();
+}
+
+function clearAllFilters() {
+  document.getElementById('searchInput').value = '';
+  document.getElementById('filterActivity').value = '';
+  applyFilters();
+}
+
+function toggleFilters() {
+  const content = document.getElementById('filtersContent');
+  const toggle = document.getElementById('filtersToggle');
+  
+  content.classList.toggle('collapsed');
+  toggle.classList.toggle('collapsed');
+  
+  // Save state to localStorage
+  const isCollapsed = content.classList.contains('collapsed');
+  localStorage.setItem('efficiencyFiltersCollapsed', isCollapsed);
+}
+
+function renderCollaborators() {
+  const grid = document.getElementById('collaboratorsGrid');
+  
+  if (filteredData.length === 0) {
+    grid.innerHTML = `
+      <div class="empty-state">
+        <h3>Nenhum colaborador encontrado</h3>
+        <p>Ajuste os filtros ou cadastre colaboradores</p>
+      </div>
+    `;
+    return;
+  }
+  
+  grid.innerHTML = filteredData.map(data => {
+    const totalActivities = data.in_progress.total + data.completed.total;
+    const totalOccurrences = data.positive_occurrences.count + data.negative_occurrences.count;
+    
+    return `
+      <div class="collaborator-card">
+        <div class="collaborator-card-header">
+          <div class="collaborator-name">
+            👤 ${data.employee_name}
+          </div>
+          <div style="font-size: 12px; color: #64748b;">
+            ${totalActivities} atividades · ${totalOccurrences} ocorrências
+          </div>
+        </div>
+        
+        <div class="collaborator-metrics">
+          <!-- In Progress -->
+          <div class="metric-box in-progress">
+            <div class="metric-title">📍 Em Andamento</div>
+            <div class="metric-values">
+              <div class="metric-item">
+                <div class="metric-item-label">Total</div>
+                <div class="metric-item-value">${data.in_progress.total}</div>
+              </div>
+              <div class="metric-item">
+                <div class="metric-item-label">No Prazo</div>
+                <div class="metric-item-value on-time">${data.in_progress.on_time}</div>
+              </div>
+              <div class="metric-item">
+                <div class="metric-item-label">Atrasadas</div>
+                <div class="metric-item-value late">${data.in_progress.late}</div>
+              </div>
+            </div>
+          </div>
+          
+          <!-- Completed -->
+          <div class="metric-box completed">
+            <div class="metric-title">✅ Concluídas</div>
+            <div class="metric-values">
+              <div class="metric-item">
+                <div class="metric-item-label">Total</div>
+                <div class="metric-item-value">${data.completed.total}</div>
+              </div>
+              <div class="metric-item">
+                <div class="metric-item-label">No Prazo</div>
+                <div class="metric-item-value on-time">${data.completed.on_time}</div>
+              </div>
+              <div class="metric-item">
+                <div class="metric-item-label">Atrasadas</div>
+                <div class="metric-item-value late">${data.completed.late}</div>
+              </div>
+            </div>
+          </div>
+          
+          <!-- Positive Occurrences -->
+          <div class="metric-box positive">
+            <div class="metric-title">✨ Ocorrências Positivas</div>
+            <div class="metric-values">
+              <div class="metric-item">
+                <div class="metric-item-label">Quantidade</div>
+                <div class="metric-item-value">${data.positive_occurrences.count}</div>
+              </div>
+              <div class="metric-item">
+                <div class="metric-item-label">Pontuação</div>
+                <div class="metric-item-value">⭐ ${data.positive_occurrences.score}</div>
+              </div>
+            </div>
+          </div>
+          
+          <!-- Negative Occurrences -->
+          <div class="metric-box negative">
+            <div class="metric-title">⚠️ Ocorrências Negativas</div>
+            <div class="metric-values">
+              <div class="metric-item">
+                <div class="metric-item-label">Quantidade</div>
+                <div class="metric-item-value">${data.negative_occurrences.count}</div>
+              </div>
+              <div class="metric-item">
+                <div class="metric-item-label">Pontuação</div>
+                <div class="metric-item-value">${data.negative_occurrences.score}</div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    `;
+  }).join('');
+}
+
+function showEmptyState(errorMessage) {
+  document.getElementById('collaboratorsGrid').innerHTML = `
+    <div class="empty-state">
+      <h3>Erro ao carregar dados</h3>
+      <p>${errorMessage || 'Tente recarregar a página'}</p>
+      <p style="margin-top: 10px; font-size: 12px; color: #94a3b8;">
+        Verifique o console do navegador (F12) para mais detalhes
+      </p>
+    </div>
+  `;
+}
+
+function updateStats() {
+  // Aggregate totals from filtered data
+  const totals = filteredData.reduce((acc, data) => {
+    acc.inProgressTotal += data.in_progress.total;
+    acc.inProgressOnTime += data.in_progress.on_time;
+    acc.inProgressLate += data.in_progress.late;
+    acc.completedTotal += data.completed.total;
+    acc.completedOnTime += data.completed.on_time;
+    acc.completedLate += data.completed.late;
+    acc.positiveCount += data.positive_occurrences.count;
+    acc.positiveScore += data.positive_occurrences.score;
+    acc.negativeCount += data.negative_occurrences.count;
+    acc.negativeScore += data.negative_occurrences.score;
+    return acc;
+  }, {
+    inProgressTotal: 0,
+    inProgressOnTime: 0,
+    inProgressLate: 0,
+    completedTotal: 0,
+    completedOnTime: 0,
+    completedLate: 0,
+    positiveCount: 0,
+    positiveScore: 0,
+    negativeCount: 0,
+    negativeScore: 0
+  });
+  
+  document.getElementById('statInProgress').textContent = totals.inProgressTotal;
+  document.getElementById('statInProgressOnTime').textContent = totals.inProgressOnTime;
+  document.getElementById('statInProgressLate').textContent = totals.inProgressLate;
+  
+  document.getElementById('statCompleted').textContent = totals.completedTotal;
+  document.getElementById('statCompletedOnTime').textContent = totals.completedOnTime;
+  document.getElementById('statCompletedLate').textContent = totals.completedLate;
+  
+  document.getElementById('statPositiveCount').textContent = totals.positiveCount;
+  document.getElementById('statPositiveScore').textContent = totals.positiveScore;
+  
+  document.getElementById('statNegativeCount').textContent = totals.negativeCount;
+  document.getElementById('statNegativeScore').textContent = totals.negativeScore;
+}
+</script>
+{% endblock %}

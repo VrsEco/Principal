@@ -1,0 +1,884 @@
+{% extends "base.html" %}
+{% block title %}GRV | Visão Analítica de Processos{% endblock %}
+{% block body %}{% set active_nav = 'dashboard' %}{{ super() }}{% endblock %}
+
+{% block extra_head %}
+{{ super() }}
+<style>
+  :root {
+    --analysis-gap: 16px;
+    --analysis-radius: 14px;
+    --analysis-border: 1px solid rgba(15, 23, 42, 0.08);
+  }
+
+  .analysis-layout {
+    display: grid;
+    grid-template-columns: 260px minmax(0, 1fr);
+    gap: 18px;
+    align-items: start;
+    min-height: calc(100vh - 120px);
+  }
+
+  .analysis-main {
+    background: #ffffff;
+    border-radius: var(--analysis-radius);
+    border: var(--analysis-border);
+    padding: 18px 22px;
+    display: flex;
+    flex-direction: column;
+    gap: var(--analysis-gap);
+    box-shadow: 0 10px 32px rgba(15, 23, 42, 0.08);
+  }
+
+  .analysis-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    gap: 12px;
+  }
+
+  .analysis-header h1 {
+    margin: 0;
+    font-size: 20px;
+    font-weight: 700;
+    color: #0f172a;
+    line-height: 1.3;
+  }
+
+  .analysis-header p {
+    margin: 4px 0 0;
+    color: #64748b;
+    font-size: 13px;
+    line-height: 1.4;
+  }
+
+  .analysis-controls {
+    display: flex;
+    gap: 10px;
+    align-items: center;
+  }
+
+  .analysis-search {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    background: #f8fafc;
+    border-radius: 999px;
+    padding: 8px 14px;
+    border: 1px solid rgba(15, 23, 42, 0.08);
+  }
+
+  .analysis-search input {
+    border: none;
+    background: transparent;
+    font-size: 13px;
+    width: 200px;
+    color: #0f172a;
+  }
+
+  .analysis-search input:focus {
+    outline: none;
+  }
+
+  .analysis-filter {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    padding: 8px 14px;
+    border-radius: 999px;
+    border: 1px solid rgba(15, 23, 42, 0.08);
+    background: #f8fafc;
+    font-size: 13px;
+    color: #0f172a;
+  }
+
+  .analysis-summary {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
+    gap: 12px;
+  }
+
+  .summary-chip {
+    background: linear-gradient(135deg, rgba(59, 130, 246, 0.12), rgba(15, 23, 42, 0.08));
+    border-radius: var(--analysis-radius);
+    padding: 14px 16px;
+    display: grid;
+    gap: 6px;
+    border: 1px solid rgba(59, 130, 246, 0.18);
+  }
+
+  .summary-chip .label {
+    font-size: 11px;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    color: #1d4ed8;
+    font-weight: 600;
+  }
+
+  .summary-chip .value {
+    display: flex;
+    align-items: baseline;
+    gap: 6px;
+    font-size: 22px;
+    font-weight: 700;
+    color: #0f172a;
+  }
+
+  .summary-chip .value small {
+    font-size: 12px;
+    color: #64748b;
+    font-weight: 500;
+  }
+
+  .summary-chip .footer {
+    font-size: 11px;
+    color: #475569;
+  }
+
+  .analysis-panels {
+    display: grid;
+    grid-template-columns: minmax(0, 300px) minmax(0, 1fr);
+    gap: 18px;
+  }
+
+  .panel {
+    border-radius: var(--analysis-radius);
+    border: var(--analysis-border);
+    background: #f8fafc;
+    padding: 18px 20px;
+    display: grid;
+    gap: 14px;
+  }
+
+  .panel-header {
+    display: flex;
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 6px;
+  }
+
+  .panel-header h2 {
+    margin: 0;
+    font-size: 15px;
+    font-weight: 600;
+    color: #0f172a;
+  }
+
+  .panel-note {
+    margin: 0;
+    font-size: 12px;
+    color: #64748b;
+    line-height: 1.4;
+  }
+
+  .panel-note--emphasis {
+    color: #475569;
+  }
+
+  .panel-note--inset {
+    padding-left: 14px;
+  }
+
+  .capacity-meter {
+    display: grid;
+    gap: 10px;
+  }
+
+  .capacity-meter .bar {
+    height: 14px;
+    background: rgba(148, 163, 184, 0.25);
+    border-radius: 999px;
+    overflow: hidden;
+  }
+
+  .capacity-meter .fill {
+    height: 100%;
+    background: linear-gradient(135deg, #22c55e, #16a34a);
+    border-radius: inherit;
+    transition: width 0.4s ease;
+  }
+
+  .capacity-grid {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 12px;
+  }
+
+  .capacity-box {
+    background: white;
+    border-radius: 12px;
+    border: var(--analysis-border);
+    padding: 12px;
+    display: grid;
+    gap: 4px;
+  }
+
+  .capacity-box span {
+    font-size: 12px;
+    color: #475569;
+  }
+
+  .capacity-box strong {
+    font-size: 16px;
+    color: #0f172a;
+  }
+
+  .trend-list {
+    display: grid;
+    gap: 12px;
+  }
+
+  .trend-item {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+    padding: 10px 12px;
+    border-radius: 10px;
+    background: white;
+    border: var(--analysis-border);
+  }
+
+  .trend-item .meta {
+    display: grid;
+    gap: 2px;
+  }
+
+  .trend-item .meta strong {
+    color: #0f172a;
+    font-size: 13px;
+  }
+
+  .trend-item .meta span {
+    font-size: 11px;
+    color: #64748b;
+  }
+
+  .trend-item .delta {
+    font-size: 12px;
+    font-weight: 600;
+  }
+
+  .workforce-table {
+    width: 100%;
+    border-collapse: collapse;
+    background: white;
+    border-radius: var(--analysis-radius);
+    overflow: hidden;
+    border: var(--analysis-border);
+  }
+
+  .workforce-table thead {
+    background: rgba(15, 23, 42, 0.035);
+    text-transform: uppercase;
+    font-size: 11px;
+    letter-spacing: 0.08em;
+    color: #475569;
+  }
+
+  .workforce-table th,
+  .workforce-table td {
+    padding: 12px 14px;
+    text-align: left;
+    vertical-align: middle;
+  }
+
+  .workforce-table tbody tr + tr {
+    border-top: 1px solid rgba(15, 23, 42, 0.06);
+  }
+
+  .workforce-table tbody tr:hover {
+    background: rgba(59, 130, 246, 0.06);
+  }
+
+  .employee-name {
+    font-weight: 600;
+    color: #0f172a;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+  }
+
+  .employee-role {
+    font-size: 12px;
+    color: #64748b;
+  }
+
+  .pill {
+    border-radius: 999px;
+    padding: 4px 8px;
+    font-size: 11px;
+    font-weight: 600;
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+  }
+
+  .pill.success {
+    background: rgba(34, 197, 94, 0.12);
+    color: #16a34a;
+  }
+
+  .pill.warning {
+    background: rgba(245, 158, 11, 0.12);
+    color: #d97706;
+  }
+
+  .pill.danger {
+    background: rgba(248, 113, 113, 0.15);
+    color: #dc2626;
+  }
+
+  .hours-cell {
+    font-weight: 600;
+    color: #0f172a;
+  }
+
+  .util-bar {
+    height: 8px;
+    background: rgba(148, 163, 184, 0.25);
+    border-radius: 8px;
+    overflow: hidden;
+  }
+
+  .util-bar span {
+    display: block;
+    height: 100%;
+    border-radius: inherit;
+    transition: width 0.3s ease;
+  }
+
+  .employee-details {
+    display: none;
+    background: rgba(15, 23, 42, 0.04);
+  }
+
+  .employee-details.open {
+    display: table-row;
+  }
+
+  .details-wrapper {
+    padding: 12px 16px 16px;
+    display: grid;
+    gap: 10px;
+    color: #475569;
+    font-size: 12px;
+  }
+
+  .routine-grid {
+    display: grid;
+    gap: 10px;
+  }
+
+  .routine-line {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: 12px;
+    padding: 8px 10px;
+    border-radius: 8px;
+    background: rgba(255, 255, 255, 0.85);
+    border: 1px solid rgba(148, 163, 184, 0.2);
+  }
+
+  .routine-line strong {
+    color: #0f172a;
+  }
+
+  .routine-line span {
+    color: #64748b;
+  }
+
+  .routine-line .hours {
+    font-weight: 600;
+    color: #0f172a;
+  }
+
+  .toggle-row {
+    cursor: pointer;
+  }
+
+  @media (max-width: 1280px) {
+    .analysis-layout {
+      grid-template-columns: minmax(0, 1fr);
+    }
+
+    .analysis-main {
+      padding: 16px;
+    }
+
+    .analysis-panels {
+      grid-template-columns: 1fr;
+    }
+  }
+
+  @media (max-width: 720px) {
+    .analysis-header {
+      flex-direction: column;
+    }
+
+    .analysis-controls {
+      width: 100%;
+      justify-content: space-between;
+    }
+
+    .analysis-search {
+      flex: 1;
+    }
+
+    .analysis-search input {
+      width: 100%;
+    }
+
+    .workforce-table {
+      font-size: 12px;
+    }
+
+    .workforce-table th,
+    .workforce-table td {
+      padding: 10px;
+    }
+  }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="project-layout plan-layout analysis-layout" data-sidebar-toggle>
+  {% include 'processes_sidebar.html' %}
+
+  <section class="project-content plan-content analysis-main">
+    <div class="analysis-header">
+      <div>
+        <h1>Análises de Capacidade Operacional</h1>
+        <p>
+          Acompanhe a ocupação da equipe, identifique folgas de capacidade e explore as rotinas vinculadas
+          aos processos estratégicos da {{ company.name or company.legal_name or 'Empresa' }}.
+        </p>
+      </div>
+      <div class="analysis-controls">
+        <label class="analysis-search">
+          <span>🔍</span>
+          <input id="employeeSearch" type="search" placeholder="Buscar colaborador ou função">
+        </label>
+        <label class="analysis-filter">
+          <span>🗂️</span>
+          <select id="departmentFilter">
+            <option value="">Todas as áreas</option>
+          </select>
+        </label>
+      </div>
+    </div>
+
+    <section id="summaryChips" class="analysis-summary">
+      <article class="summary-chip skeleton-card">
+        <span class="label">Total de colaboradores</span>
+        <div class="value"><span>--</span><small>carregando</small></div>
+        <span class="footer">Aguardando análise...</span>
+      </article>
+      <article class="summary-chip skeleton-card">
+        <span class="label">Horas semanais</span>
+        <div class="value"><span>--</span><small>h</small></div>
+        <span class="footer">Aguardando análise...</span>
+      </article>
+      <article class="summary-chip skeleton-card">
+        <span class="label">Capacidade total</span>
+        <div class="value"><span>--</span><small>h</small></div>
+        <span class="footer">Aguardando análise...</span>
+      </article>
+      <article class="summary-chip skeleton-card">
+        <span class="label">Utilização média</span>
+        <div class="value"><span>--</span><small>%</small></div>
+        <span class="footer">Aguardando análise...</span>
+      </article>
+    </section>
+
+    <div class="analysis-panels">
+      <section class="panel" id="capacityPanel">
+        <header class="panel-header">
+          <h2>Resumo de capacidade</h2>
+        </header>
+        <div class="capacity-meter">
+          <div class="bar">
+            <div id="capacityFill" class="fill" style="width: 0%"></div>
+          </div>
+        </div>
+        <p class="panel-note panel-note--emphasis panel-note--inset">
+          Percentual de ocupação sobre a carga semanal disponível.
+        </p>
+        <div class="capacity-grid" id="capacityStats">
+          <div class="capacity-box">
+            <span>Horas utilizadas</span>
+            <strong>-- h</strong>
+          </div>
+          <div class="capacity-box">
+            <span>Horas disponíveis</span>
+            <strong>-- h</strong>
+          </div>
+          <div class="capacity-box">
+            <span>Trabalho por colaborador</span>
+            <strong>-- h</strong>
+          </div>
+          <div class="capacity-box">
+            <span>Utilização máxima</span>
+            <strong>-- %</strong>
+          </div>
+        </div>
+        <div class="trend-list" id="highlightList">
+          <div class="trend-item skeleton-card">
+            <div class="meta">
+              <strong>Monitorando indicadores...</strong>
+              <span>Coletando dados das rotinas registradas</span>
+            </div>
+            <span class="delta">--</span>
+          </div>
+        </div>
+      </section>
+
+      <section class="panel">
+        <header class="panel-header">
+          <h2>Equipe e rotinas</h2>
+          <p class="panel-note">Clique na linha para ver detalhes das rotinas</p>
+        </header>
+        <div style="overflow-x: auto; border-radius: var(--analysis-radius);">
+          <table class="workforce-table">
+            <thead>
+              <tr>
+                <th>Colaborador</th>
+                <th>Função</th>
+                <th>Horas semanais</th>
+                <th>Disponível</th>
+                <th>Utilização</th>
+                <th>Rotinas</th>
+              </tr>
+            </thead>
+            <tbody id="workforceBody">
+              <tr>
+                <td colspan="6" style="text-align:center; padding:24px; color:#64748b;">
+                  Carregando análise de capacidade...
+                </td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </section>
+    </div>
+  </section>
+</div>
+{% endblock %}
+
+{% block scripts %}
+{{ super() }}
+<script>
+document.addEventListener('DOMContentLoaded', () => {
+  const companyId = {{ company.id }};
+  const summarySlot = document.getElementById('summaryChips');
+  const capacityFill = document.getElementById('capacityFill');
+  const capacityStats = document.getElementById('capacityStats');
+  const highlightList = document.getElementById('highlightList');
+  const workforceBody = document.getElementById('workforceBody');
+  const departmentFilter = document.getElementById('departmentFilter');
+  const searchInput = document.getElementById('employeeSearch');
+
+  let workforce = [];
+  let filtered = [];
+
+  fetch(`/api/companies/${companyId}/workforce-analysis`)
+    .then((response) => {
+      if (!response.ok) throw new Error('Falha ao carregar dados');
+      return response.json();
+    })
+    .then((payload) => {
+      if (!payload.success) throw new Error(payload.message || 'Erro desconhecido');
+      workforce = payload.employees || [];
+      buildFilters(workforce);
+      applyFilters();
+      renderSummary(workforce);
+      renderHighlights(workforce);
+    })
+    .catch((err) => {
+      console.error(err);
+      workforceBody.innerHTML = `
+        <tr>
+          <td colspan="6" style="text-align:center; padding:26px; color:#ef4444;">
+            ❌ Não foi possível carregar as análises. Recarregue a página ou tente novamente mais tarde.
+          </td>
+        </tr>`;
+    });
+
+  function buildFilters(dataset) {
+    const departments = new Set();
+    dataset.forEach((emp) => {
+      if (emp.department) departments.add(emp.department);
+      if (emp.role_title) departments.add(emp.role_title);
+    });
+    Array.from(departments)
+      .sort()
+      .forEach((item) => {
+        const option = document.createElement('option');
+        option.value = item;
+        option.textContent = item;
+        departmentFilter.appendChild(option);
+      });
+  }
+
+  function applyFilters() {
+    const term = (searchInput.value || '').toLowerCase();
+    const dept = departmentFilter.value;
+    filtered = workforce.filter((emp) => {
+      const matchDept = !dept || emp.department === dept || emp.role_title === dept;
+      const matchTerm =
+        !term ||
+        (emp.name && emp.name.toLowerCase().includes(term)) ||
+        (emp.role_title && emp.role_title.toLowerCase().includes(term)) ||
+        (emp.department && emp.department.toLowerCase().includes(term));
+      return matchDept && matchTerm;
+    });
+    renderTable(filtered);
+  }
+
+  function renderSummary(dataset) {
+    if (!dataset.length) {
+      summarySlot.innerHTML = `
+        <article class="summary-chip">
+          <span class="label">Sem dados</span>
+          <div class="value"><span>0</span><small>colaboradores</small></div>
+          <span class="footer">Cadastre rotinas para iniciar as análises.</span>
+        </article>`;
+      return;
+    }
+
+    const totals = dataset.reduce(
+      (acc, emp) => {
+        acc.count += 1;
+        acc.hours += emp.hours_weekly || 0;
+        acc.capacity += emp.weekly_hours || 40;
+        acc.available += emp.available_hours_weekly || 0;
+        acc.utilSum += emp.utilization_percentage || 0;
+        acc.maxUtil = Math.max(acc.maxUtil, emp.utilization_percentage || 0);
+        return acc;
+      },
+      { count: 0, hours: 0, capacity: 0, available: 0, utilSum: 0, maxUtil: 0 }
+    );
+
+    const averageUtil = totals.utilSum / totals.count;
+    const utilizationPercent = totals.capacity
+      ? Math.min((totals.hours / totals.capacity) * 100, 160)
+      : 0;
+
+    summarySlot.innerHTML = `
+      <article class="summary-chip">
+        <span class="label">Total de colaboradores</span>
+        <div class="value"><span>${totals.count}</span><small>ativos</small></div>
+        <span class="footer">Equipe com rotinas registradas</span>
+      </article>
+      <article class="summary-chip">
+        <span class="label">Horas semanais</span>
+        <div class="value"><span>${totals.hours.toFixed(1)}</span><small>horas</small></div>
+        <span class="footer">Somatório das horas comprometidas</span>
+      </article>
+      <article class="summary-chip">
+        <span class="label">Capacidade total</span>
+        <div class="value"><span>${totals.capacity.toFixed(1)}</span><small>horas</small></div>
+        <span class="footer">Carga disponível considerando jornada</span>
+      </article>
+      <article class="summary-chip">
+        <span class="label">Utilização média</span>
+        <div class="value"><span>${averageUtil.toFixed(1)}%</span><small>sobre a equipe</small></div>
+        <span class="footer">Distribuição média de ocupação</span>
+      </article>
+    `;
+
+    capacityFill.style.width = `${Math.min(utilizationPercent, 100)}%`;
+    capacityStats.innerHTML = `
+      <div class="capacity-box">
+        <span>Horas utilizadas</span>
+        <strong>${totals.hours.toFixed(1)} h</strong>
+      </div>
+      <div class="capacity-box">
+        <span>Horas disponíveis</span>
+        <strong>${totals.available.toFixed(1)} h</strong>
+      </div>
+      <div class="capacity-box">
+        <span>Horas por colaborador</span>
+        <strong>${(totals.hours / totals.count).toFixed(1)} h</strong>
+      </div>
+      <div class="capacity-box">
+        <span>Maior utilização</span>
+        <strong>${totals.maxUtil.toFixed(1)}%</strong>
+      </div>
+    `;
+  }
+
+  function renderHighlights(dataset) {
+    if (!dataset.length) {
+      highlightList.innerHTML = `
+        <div class="trend-item">
+          <div class="meta">
+            <strong>Não há rotinas registradas</strong>
+            <span>Cadastre atividades para acompanhar tendências</span>
+          </div>
+          <span class="delta">--</span>
+        </div>`;
+      return;
+    }
+
+    const sortedByUtil = [...dataset].sort(
+      (a, b) => (b.utilization_percentage || 0) - (a.utilization_percentage || 0)
+    );
+    const sortedByAvailability = [...dataset].sort(
+      (a, b) => (b.available_hours_weekly || 0) - (a.available_hours_weekly || 0)
+    );
+
+    const busiest = sortedByUtil[0];
+    const freeSlot = sortedByAvailability[0];
+
+    highlightList.innerHTML = `
+      <div class="trend-item">
+        <div class="meta">
+          <strong>${busiest.name}</strong>
+          <span>${busiest.role_title || busiest.department || 'Função não informada'}</span>
+        </div>
+        <span class="delta pill danger">${(busiest.utilization_percentage || 0).toFixed(1)}%</span>
+      </div>
+      <div class="trend-item">
+        <div class="meta">
+          <strong>Maior disponibilidade</strong>
+          <span>${freeSlot.name} possui a maior folga semanal</span>
+        </div>
+        <span class="delta pill success">${(freeSlot.available_hours_weekly || 0).toFixed(1)} h</span>
+      </div>
+      <div class="trend-item">
+        <div class="meta">
+          <strong>Horas mensais em média</strong>
+          <span>
+            ${(dataset.reduce((sum, emp) => sum + (emp.hours_monthly || 0), 0) / dataset.length).toFixed(0)}
+            horas / colaborador
+          </span>
+        </div>
+        <span class="delta">📈</span>
+      </div>
+    `;
+  }
+
+  function renderTable(dataset) {
+    if (!dataset.length) {
+      workforceBody.innerHTML = `
+        <tr>
+          <td colspan="6" style="text-align:center; padding:22px; color:#64748b;">
+            Nenhum colaborador atende aos filtros selecionados.
+          </td>
+        </tr>`;
+      return;
+    }
+
+    const rows = dataset
+      .map((emp, index) => {
+        const utilPercent = emp.utilization_percentage || 0;
+        const pillClass = utilPercent >= 95 ? 'danger' : utilPercent >= 75 ? 'warning' : 'success';
+        const routinesCount = emp.routines?.length || 0;
+        const available = emp.available_hours_weekly || 0;
+
+        return `
+          <tr class="toggle-row" data-index="${index}">
+            <td>
+              <div class="employee-name">
+                <span>👤</span>
+                <div>
+                  ${emp.name}
+                  <div class="employee-role">${emp.department || emp.role_title || 'Função não informada'}</div>
+                </div>
+              </div>
+            </td>
+            <td>${emp.role_title || '—'}</td>
+            <td class="hours-cell">${(emp.hours_weekly || 0).toFixed(1)} h</td>
+            <td class="hours-cell">${available.toFixed(1)} h</td>
+            <td>
+              <div class="pill ${pillClass}">${utilPercent.toFixed(1)}%</div>
+              <div class="util-bar" style="margin-top:6px;">
+                <span style="width:${Math.min(utilPercent, 100)}%; background:${
+          pillClass === 'danger' ? '#dc2626' : pillClass === 'warning' ? '#f59e0b' : '#22c55e'
+        };"></span>
+              </div>
+            </td>
+            <td>
+              <span class="pill" style="background:rgba(59, 130, 246, 0.12); color:#1d4ed8;">
+                ${routinesCount} rotina${routinesCount === 1 ? '' : 's'}
+              </span>
+            </td>
+          </tr>
+          <tr class="employee-details" data-details="${index}">
+            <td colspan="6">
+              ${renderDetails(emp)}
+            </td>
+          </tr>
+        `;
+      })
+      .join('');
+
+    workforceBody.innerHTML = rows;
+  }
+
+  function renderDetails(emp) {
+    if (!emp.routines?.length) {
+      return `
+        <div class="details-wrapper">
+          <strong style="color:#0f172a;">Rotinas associadas</strong>
+          <p style="margin:0; color:#475569;">
+            Nenhuma rotina vinculada. Considere associar este colaborador a um processo.
+          </p>
+        </div>`;
+    }
+
+    const routineLines = emp.routines
+      .map((routine) => {
+        return `
+          <div class="routine-line">
+            <div style="display:grid; gap:2px;">
+              <strong>${routine.routine_name || 'Rotina sem nome'}</strong>
+              <span>${routine.process_name || 'Processo não informado'} • ${getScheduleLabel(routine.schedule_type)}</span>
+            </div>
+            <span class="hours">${(routine.hours_used || 0).toFixed(1)} h</span>
+          </div>`;
+      })
+      .join('');
+
+    return `
+      <div class="details-wrapper">
+        <div style="display:flex; justify-content:space-between; align-items:center;">
+          <strong style="color:#0f172a;">Rotinas associadas</strong>
+          <span style="font-size:11px; color:#64748b;">Total: ${emp.routines.length}</span>
+        </div>
+        <div class="routine-grid">
+          ${routineLines}
+        </div>
+      </div>`;
+  }
+
+  function getScheduleLabel(scheduleType) {
+    const labels = {
+      daily: 'Diário',
+      weekly: 'Semanal',
+      monthly: 'Mensal',
+      trimestral: 'Trimestral',
+      anual: 'Anual',
+      specific: 'Data específica'
+    };
+    return labels[scheduleType] || 'Sem frequência definida';
+  }
+
+  departmentFilter.addEventListener('change', applyFilters);
+  searchInput.addEventListener('input', () => {
+    clearTimeout(searchInput._debounce);
+    searchInput._debounce = setTimeout(applyFilters, 180);
+  });
+
+  workforceBody.addEventListener('click', (event) => {
+    const row = event.target.closest('.toggle-row');
+    if (!row) return;
+    const index = row.dataset.index;
+    const detailsRow = workforceBody.querySelector(`.employee-details[data-details="${index}"]`);
+    detailsRow?.classList.toggle('open');
+  });
+});
+</script>
+{% endblock %}

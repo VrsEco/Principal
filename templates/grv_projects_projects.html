@@ -1,0 +1,1059 @@
+﻿{% extends "base.html" %}
+{% block title %}GRV | Projetos{% endblock %}
+{% block body %}{% set active_nav = 'project-projects' %}{{ super() }}{% endblock %}
+
+{% block extra_head %}
+{{ super() }}
+<style>
+  .projects-shell {
+    display: grid;
+    grid-template-columns: 250px minmax(0, 1fr);
+    gap: 18px;
+    align-items: flex-start;
+  }
+
+  .projects-main {
+    background: linear-gradient(135deg, #ffffff 0%, #f8fafc 100%);
+    border-radius: 16px;
+    border: 1px solid rgba(30, 64, 175, 0.1);
+    padding: 24px 28px;
+    box-shadow: 0 18px 36px rgba(30, 64, 175, 0.12);
+    display: grid;
+    gap: 22px;
+  }
+
+  .projects-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 18px;
+  }
+
+  .projects-heading {
+    display: grid;
+    gap: 6px;
+  }
+
+  .projects-heading h1 {
+    margin: 0;
+    font-size: 22px;
+    font-weight: 700;
+    color: #000000 !important;
+  }
+
+  .projects-heading p {
+    margin: 0;
+    font-size: 13px;
+    color: #1e293b !important;
+    max-width: 560px;
+    line-height: 1.5;
+  }
+
+  .projects-actions {
+    display: inline-flex;
+    gap: 10px;
+  }
+
+  .projects-button {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    border-radius: 12px;
+    border: none;
+    padding: 10px 18px;
+    font-size: 13px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: transform 0.2s ease, box-shadow 0.2s ease;
+  }
+
+  .projects-button.primary {
+    background: linear-gradient(135deg, #1e40af, #7c3aed, #dc2626);
+    color: white;
+    box-shadow: 0 16px 28px rgba(30, 64, 175, 0.3);
+    position: relative;
+    overflow: hidden;
+  }
+
+  .projects-button.primary::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: -100%;
+    width: 100%;
+    height: 100%;
+    background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.2), transparent);
+    transition: left 0.5s ease;
+  }
+
+  .projects-button.primary:hover::before {
+    left: 100%;
+  }
+
+  .projects-button.secondary {
+    background: rgba(148, 163, 184, 0.18);
+    color: #1e293b;
+  }
+
+  .projects-button:hover {
+    transform: translateY(-2px);
+  }
+
+  .projects-summary {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+    gap: 14px;
+  }
+
+  .projects-summary-card {
+    border-radius: 14px;
+    padding: 18px 20px;
+    background: linear-gradient(135deg, rgba(37, 99, 235, 0.12), rgba(124, 58, 237, 0.16));
+    border: 1px solid rgba(59, 130, 246, 0.22);
+    display: grid;
+    gap: 6px;
+    transition: all 0.3s ease;
+    position: relative;
+    overflow: hidden;
+  }
+
+  .projects-summary-card::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    height: 3px;
+    background: linear-gradient(90deg, #1e40af, #7c3aed, #dc2626);
+  }
+
+  .projects-summary-card:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 8px 24px rgba(30, 64, 175, 0.15);
+  }
+
+  .projects-summary-card span.label {
+    font-size: 11px;
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+    color: #2563eb;
+    font-weight: 600;
+  }
+
+  .projects-summary-card span.value {
+    font-size: 24px;
+    font-weight: 700;
+    color: #0f172a;
+  }
+
+  .projects-summary-card small {
+    font-size: 11px;
+    color: #1e293b;
+  }
+
+  .projects-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+    gap: 16px;
+  }
+
+  .project-card {
+    border-radius: 16px;
+    border: 1px solid rgba(15, 23, 42, 0.08);
+    background: linear-gradient(135deg, #ffffff 0%, #f8fafc 100%);
+    padding: 20px 22px;
+    box-shadow: 0 12px 24px rgba(15, 23, 42, 0.08);
+    display: grid;
+    gap: 14px;
+    transition: all 0.3s ease;
+    position: relative;
+    overflow: hidden;
+  }
+
+  .project-card::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    height: 4px;
+    background: linear-gradient(90deg, #94a3b8, #3b82f6);
+    opacity: 0.7;
+  }
+
+  /* Cores específicas para cards baseadas no status */
+  .project-card[data-status="planned"]::before {
+    background: linear-gradient(90deg, #94a3b8, #64748b);
+  }
+
+  .project-card[data-status="in_progress"]::before {
+    background: linear-gradient(90deg, #fbbf24, #f59e0b);
+  }
+
+  .project-card[data-status="completed"]::before {
+    background: linear-gradient(90deg, #10b981, #059669);
+  }
+
+  .project-card[data-status="on_hold"]::before {
+    background: linear-gradient(90deg, #ef4444, #dc2626);
+  }
+
+  .project-card:hover {
+    box-shadow: 0 16px 32px rgba(37, 99, 235, 0.12);
+  }
+
+  .project-card header {
+    display: grid;
+    gap: 6px;
+  }
+
+  .project-card h3 {
+    margin: 0;
+    font-size: 18px;
+    font-weight: 700;
+    color: #0f172a;
+  }
+
+  .project-plan-badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    padding: 4px 10px;
+    border-radius: 999px;
+    background: linear-gradient(135deg, rgba(59, 130, 246, 0.2), rgba(37, 99, 235, 0.15));
+    color: #1e293b;
+    font-size: 11px;
+    font-weight: 600;
+    max-width: max-content;
+    border: 1px solid rgba(59, 130, 246, 0.3);
+    box-shadow: 0 2px 4px rgba(59, 130, 246, 0.1);
+  }
+
+  .project-status {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    padding: 4px 10px;
+    border-radius: 999px;
+    font-size: 11px;
+    font-weight: 600;
+  }
+
+  .status-planned { 
+    background: linear-gradient(135deg, rgba(148, 163, 184, 0.2), rgba(100, 116, 139, 0.15)); 
+    color: #1e293b; 
+    border: 1px solid rgba(148, 163, 184, 0.3);
+    box-shadow: 0 2px 4px rgba(148, 163, 184, 0.1);
+  }
+  
+  .status-in_progress { 
+    background: linear-gradient(135deg, rgba(251, 191, 36, 0.2), rgba(245, 158, 11, 0.15)); 
+    color: #a16207; 
+    border: 1px solid rgba(251, 191, 36, 0.3);
+    box-shadow: 0 2px 4px rgba(251, 191, 36, 0.1);
+  }
+  
+  .status-completed { 
+    background: linear-gradient(135deg, rgba(34, 197, 94, 0.2), rgba(5, 150, 105, 0.15)); 
+    color: #047857; 
+    border: 1px solid rgba(34, 197, 94, 0.3);
+    box-shadow: 0 2px 4px rgba(34, 197, 94, 0.1);
+  }
+  
+  .status-on_hold { 
+    background: linear-gradient(135deg, rgba(248, 113, 113, 0.2), rgba(220, 38, 38, 0.15)); 
+    color: #b91c1c; 
+    border: 1px solid rgba(248, 113, 113, 0.3);
+    box-shadow: 0 2px 4px rgba(248, 113, 113, 0.1);
+  }
+
+  .project-meta {
+    display: grid;
+    gap: 6px;
+    font-size: 13px;
+    color: #1e293b;
+  }
+
+  .project-meta span strong {
+    color: #0f172a;
+  }
+
+  /* Sobrescrever regras globais do main.css para garantir cores escuras */
+  .projects-main,
+  .projects-main *,
+  .project-card,
+  .project-card * {
+    color: #1e293b !important;
+  }
+
+  .project-card h3,
+  .project-card strong {
+    color: #0f172a !important;
+  }
+
+  .project-activities-info {
+    display: flex;
+    gap: 12px;
+    font-size: 12px;
+    color: #1e293b;
+  }
+
+  .project-activities-info span {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    padding: 4px 8px;
+    border-radius: 999px;
+    background: linear-gradient(135deg, rgba(148, 163, 184, 0.2), rgba(100, 116, 139, 0.15));
+    color: #1e293b;
+    border: 1px solid rgba(148, 163, 184, 0.3);
+    box-shadow: 0 2px 4px rgba(148, 163, 184, 0.1);
+    transition: all 0.2s ease;
+  }
+
+  .project-activities-info span:hover {
+    transform: translateY(-1px);
+    box-shadow: 0 4px 8px rgba(148, 163, 184, 0.15);
+  }
+
+  .project-actions {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 12px;
+  }
+
+  .project-action {
+    border: none;
+    background: transparent;
+    font-size: 12px;
+    font-weight: 600;
+    color: #1e293b;
+    cursor: pointer;
+    padding: 4px 8px;
+    border-radius: 6px;
+    transition: all 0.2s ease;
+  }
+
+  .project-action:hover {
+    background: rgba(37, 99, 235, 0.1);
+    transform: translateY(-1px);
+  }
+
+  .project-action.danger {
+    color: #dc2626;
+  }
+
+  .project-action.danger:hover {
+    background: rgba(220, 38, 38, 0.1);
+    color: #b91c1c;
+  }
+
+  .projects-empty {
+    padding: 42px;
+    text-align: center;
+    color: #1e293b;
+    background: rgba(148, 163, 184, 0.1);
+    border-radius: 14px;
+    border: 1px dashed rgba(148, 163, 184, 0.4);
+  }
+
+  /* Modal */
+  .project-modal-backdrop {
+    position: fixed;
+    inset: 0;
+    background: rgba(15, 23, 42, 0.68);
+    display: none;
+    align-items: center;
+    justify-content: center;
+    padding: 20px;
+    z-index: 999;
+  }
+
+  .project-modal-backdrop.open {
+    display: flex;
+  }
+
+  .project-modal {
+    background: linear-gradient(135deg, #ffffff 0%, #f8fafc 100%);
+    border-radius: 18px;
+    width: min(680px, 100%);
+    max-height: 90vh;
+    overflow-y: auto;
+    padding: 28px;
+    box-shadow: 0 24px 52px rgba(15, 23, 42, 0.3);
+    display: grid;
+    gap: 18px;
+    border: 1px solid rgba(30, 64, 175, 0.1);
+  }
+
+  .project-modal header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: 16px;
+  }
+
+  .project-modal header h2 {
+    margin: 0;
+    font-size: 20px;
+    font-weight: 700;
+    color: #0f172a;
+  }
+
+  .project-modal header button {
+    border: none;
+    background: transparent;
+    font-size: 26px;
+    line-height: 1;
+    cursor: pointer;
+    color: #1e293b;
+  }
+
+  .project-form {
+    display: grid;
+    gap: 16px;
+  }
+
+  .project-form .field {
+    display: grid;
+    gap: 6px;
+  }
+
+  .project-form label {
+    font-size: 12px;
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+    font-weight: 600;
+    color: #1e293b;
+  }
+
+  .project-form input,
+  .project-form select,
+  .project-form textarea {
+    border-radius: 12px;
+    border: 1px solid rgba(148, 163, 184, 0.35);
+    padding: 10px 12px;
+    font-size: 13px;
+    font-family: inherit;
+    color: #1e293b;
+    transition: border 0.2s ease, box-shadow 0.2s ease;
+  }
+
+  .project-form textarea {
+    resize: vertical;
+    min-height: 100px;
+  }
+
+  .project-form input:focus,
+  .project-form select:focus,
+  .project-form textarea:focus {
+    outline: none;
+    border-color: #2563eb;
+    box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.18);
+  }
+
+  .project-form footer {
+    display: flex;
+    justify-content: flex-end;
+    gap: 12px;
+  }
+
+  .project-form footer button {
+    border: none;
+    border-radius: 12px;
+    padding: 10px 18px;
+    font-size: 13px;
+    font-weight: 600;
+    cursor: pointer;
+  }
+
+  .project-form footer .secondary {
+    background: rgba(148, 163, 184, 0.16);
+    color: #1e293b;
+  }
+
+  .project-form footer .primary {
+    background: linear-gradient(135deg, #1e40af, #7c3aed, #dc2626);
+    color: white;
+    position: relative;
+    overflow: hidden;
+  }
+
+  .project-form footer .primary::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: -100%;
+    width: 100%;
+    height: 100%;
+    background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.2), transparent);
+    transition: left 0.5s ease;
+  }
+
+  .project-form footer .primary:hover::before {
+    left: 100%;
+  }
+
+  @media (max-width: 1280px) {
+    .projects-shell {
+      grid-template-columns: minmax(0, 1fr);
+    }
+  }
+
+  @media (max-width: 720px) {
+    .projects-header {
+      flex-direction: column;
+      align-items: flex-start;
+    }
+
+    .projects-actions {
+      width: 100%;
+      justify-content: flex-start;
+    }
+
+    .projects-grid {
+      grid-template-columns: minmax(0, 1fr);
+    }
+  }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="project-layout plan-layout projects-shell" data-sidebar-toggle>
+  {# Sidebar focado em projetos #}
+  {% set active_id = 'project-projects' %}
+  {% include 'projects_sidebar.html' %}
+
+  <section class="project-content plan-content projects-main">
+    <header class="projects-header">
+      <div class="projects-heading">
+        <h1>Projetos em andamento</h1>
+        <p>Centralize aqui os projetos estratégicos da {{ company.name or company.legal_name or 'empresa' }}. Os planejamentos vinculados do PEV aparecem automaticamente como portfólios.</p>
+      </div>
+      <div class="projects-actions">
+        <button id="refreshProjects" class="projects-button secondary" type="button">🔄 Atualizar</button>
+        <button id="newProjectButton" class="projects-button primary" type="button">➕ Novo Projeto</button>
+      </div>
+    </header>
+
+    <section id="projectsSummary" class="projects-summary"></section>
+
+    <div id="projectsGrid" class="projects-grid">
+      <div class="projects-empty">Carregando projetos...</div>
+    </div>
+  </section>
+</div>
+
+<div id="projectModal" class="project-modal-backdrop" role="dialog" aria-hidden="true">
+  <div class="project-modal">
+    <header>
+      <h2 id="projectModalTitle">Novo Projeto</h2>
+      <button type="button" id="closeProjectModal" aria-label="Fechar">×</button>
+    </header>
+    <form id="projectForm" class="project-form">
+      <input type="hidden" id="projectId">
+      <div class="field">
+        <label for="projectTitle">Título *</label>
+        <input type="text" id="projectTitle" placeholder="Ex: Implantação OKR" required>
+      </div>
+      <div class="field">
+        <label for="projectDescription">Descrição</label>
+        <textarea id="projectDescription" placeholder="Escopo resumido do projeto"></textarea>
+      </div>
+      <div class="field">
+        <label for="projectPlan">Portfólio/Planejamento</label>
+        <select id="projectPlan">
+          <option value="">Sem planejamento vinculado</option>
+          {% for plan in plans %}
+          <option value="{{ plan.id }}" data-origin="{{ plan.origin }}">
+            {% if plan.origin %}{{ plan.origin }} - {% endif %}{{ plan.name }}
+          </option>
+          {% endfor %}
+        </select>
+      </div>
+      <div class="field">
+        <label for="projectPriority">Prioridade</label>
+        <select id="projectPriority">
+          <option value="high">Alta</option>
+          <option value="medium" selected>Média</option>
+          <option value="low">Baixa</option>
+        </select>
+      </div>
+      <div class="field">
+        <label for="projectResponsible">Responsável</label>
+        <select id="projectResponsible">
+          <option value="">Selecione um colaborador</option>
+        </select>
+      </div>
+      <div class="field">
+        <label for="projectStart">Início</label>
+        <input type="date" id="projectStart">
+      </div>
+      <div class="field">
+        <label for="projectEnd">Previsão de Término</label>
+        <input type="date" id="projectEnd">
+      </div>
+      <div class="field">
+        <label for="projectOkrRef">OKR Associado</label>
+        <select id="projectOkrRef">
+          <option value="">Sem OKR associado</option>
+        </select>
+      </div>
+      <div class="field">
+        <label for="projectIndicatorRef">Indicador Associado</label>
+        <input type="text" id="projectIndicatorRef" placeholder="Ex: Taxa de conversão">
+      </div>
+      <div class="field">
+        <label for="projectNotes">Notas</label>
+        <textarea id="projectNotes" placeholder="Observações relevantes"></textarea>
+      </div>
+      <footer>
+        <button type="button" class="secondary" id="cancelProjectModal">Cancelar</button>
+        <button type="submit" class="primary">Salvar Projeto</button>
+      </footer>
+    </form>
+  </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+{{ super() }}
+<script>
+(function() {
+  const companyId = {{ company.id }};
+  const plansData = {{ plans | tojson }};
+
+  const summaryContainer = document.getElementById('projectsSummary');
+  const grid = document.getElementById('projectsGrid');
+  const refreshButton = document.getElementById('refreshProjects');
+  const newButton = document.getElementById('newProjectButton');
+
+  const modalBackdrop = document.getElementById('projectModal');
+  const modalTitle = document.getElementById('projectModalTitle');
+  const form = document.getElementById('projectForm');
+  const cancelButton = document.getElementById('cancelProjectModal');
+  const closeButton = document.getElementById('closeProjectModal');
+
+  const fieldId = document.getElementById('projectId');
+  const fieldTitle = document.getElementById('projectTitle');
+  const fieldDescription = document.getElementById('projectDescription');
+  const fieldPlan = document.getElementById('projectPlan');
+  const fieldPriority = document.getElementById('projectPriority');
+  const fieldResponsible = document.getElementById('projectResponsible');
+  const fieldStart = document.getElementById('projectStart');
+  const fieldEnd = document.getElementById('projectEnd');
+  const fieldOkrRef = document.getElementById('projectOkrRef');
+  const fieldIndicatorRef = document.getElementById('projectIndicatorRef');
+  const fieldNotes = document.getElementById('projectNotes');
+
+  let employees = [];
+  let okrs = [];
+
+  let projects = [];
+
+  function planNameById(planId) {
+    if (!planId) return null;
+    const match = plansData.find((plan) => String(plan.id) === String(planId));
+    return match ? match.name : null;
+  }
+
+  function populatePlanSelect() {
+    if (!plansData.length) {
+      return;
+    }
+    const existing = Array.from(fieldPlan.options).map((opt) => opt.value);
+    plansData.forEach((plan) => {
+      if (!existing.includes(String(plan.id))) {
+        const option = document.createElement('option');
+        option.value = plan.id;
+        option.dataset.origin = plan.origin || '';
+        const prefix = plan.origin ? `${plan.origin} - ` : '';
+        option.textContent = `${prefix}${plan.name}`;
+        fieldPlan.appendChild(option);
+      }
+    });
+  }
+
+  async function loadEmployees() {
+    try {
+      const response = await fetch(`/api/companies/${companyId}/employees`);
+      const data = await response.json();
+      if (response.ok && data.success && data.employees) {
+        employees = data.employees.filter(e => e.status === 'active');
+        populateEmployeeSelect();
+      }
+    } catch (error) {
+      console.error('Erro ao carregar colaboradores:', error);
+    }
+  }
+
+  function populateEmployeeSelect() {
+    fieldResponsible.innerHTML = '<option value="">Selecione um colaborador</option>';
+    employees.forEach((employee) => {
+      const option = document.createElement('option');
+      option.value = employee.id;
+      option.textContent = employee.name + (employee.role_name ? ` (${employee.role_name})` : '');
+      fieldResponsible.appendChild(option);
+    });
+  }
+
+  async function loadOKRs() {
+    try {
+      // Buscar OKRs de todos os planejamentos da empresa
+      const allOkrs = [];
+      for (const plan of plansData) {
+        const response = await fetch(`/api/plans/${plan.id}/okr-global-records?stage=approval`);
+        const data = await response.json();
+        if (response.ok && data.success && data.records) {
+          data.records.forEach(okr => {
+            allOkrs.push({
+              id: okr.id,
+              objective: okr.objective,
+              plan_name: plan.name
+            });
+          });
+        }
+      }
+      okrs = allOkrs;
+      populateOKRSelect();
+    } catch (error) {
+      console.error('Erro ao carregar OKRs:', error);
+    }
+  }
+
+  function populateOKRSelect() {
+    fieldOkrRef.innerHTML = '<option value="">Sem OKR associado</option>';
+    okrs.forEach((okr) => {
+      const option = document.createElement('option');
+      option.value = okr.id;
+      option.textContent = `${okr.objective.substring(0, 60)}${okr.objective.length > 60 ? '...' : ''} (${okr.plan_name})`;
+      fieldOkrRef.appendChild(option);
+    });
+  }
+
+  function openProjectModal(project) {
+    modalBackdrop.classList.add('open');
+    modalBackdrop.setAttribute('aria-hidden', 'false');
+
+    if (project) {
+      modalTitle.textContent = 'Editar Projeto';
+      fieldId.value = project.id;
+      fieldTitle.value = project.title || '';
+      fieldDescription.value = project.description || '';
+      fieldPlan.value = project.plan_id ? String(project.plan_id) : '';
+      fieldPriority.value = project.priority || 'medium';
+      fieldResponsible.value = project.responsible_id ? String(project.responsible_id) : '';
+      fieldStart.value = project.start_date ? project.start_date.substring(0, 10) : '';
+      fieldEnd.value = project.end_date ? project.end_date.substring(0, 10) : '';
+      fieldOkrRef.value = project.okr_reference || '';
+      fieldIndicatorRef.value = project.indicator_reference || '';
+      fieldNotes.value = project.notes || '';
+    } else {
+      modalTitle.textContent = 'Novo Projeto';
+      fieldId.value = '';
+      form.reset();
+      fieldPriority.value = 'medium';
+    }
+
+    fieldTitle.focus();
+  }
+
+  function closeProjectModal() {
+    modalBackdrop.classList.remove('open');
+    modalBackdrop.setAttribute('aria-hidden', 'true');
+    form.reset();
+    fieldId.value = '';
+    fieldPriority.value = 'medium';
+  }
+
+  function isDelayedActivity(activity) {
+    const delayedMarkers = ['delayed', 'overdue', 'late', 'atrasado', 'atrasada'];
+    const status = String(activity?.status || '').toLowerCase();
+    return delayedMarkers.includes(status);
+  }
+
+  function normalizeActivities(raw) {
+    if (!raw) return [];
+    if (Array.isArray(raw)) return raw;
+    try {
+      const parsed = JSON.parse(raw);
+      return Array.isArray(parsed) ? parsed : [];
+    } catch (e) {
+      return [];
+    }
+  }
+
+  function renderSummary() {
+    if (!projects.length) {
+      summaryContainer.innerHTML = `
+        <article class="projects-summary-card">
+          <span class="label">Projetos</span>
+          <span class="value">0</span>
+          <small>Cadastre o primeiro projeto para começar.</small>
+        </article>`;
+      return;
+    }
+
+    const total = projects.length;
+    const linked = projects.filter((proj) => proj.plan_id).length;
+    const owners = new Set(projects.filter((proj) => proj.owner).map((proj) => proj.owner));
+    const totalActivities = projects.reduce((sum, proj) => sum + normalizeActivities(proj.activities).length, 0);
+    const delayedActivities = projects.reduce((sum, proj) => {
+      return sum + normalizeActivities(proj.activities).filter(isDelayedActivity).length;
+    }, 0);
+
+    summaryContainer.innerHTML = `
+      <article class="projects-summary-card">
+        <span class="label">Projetos ativos</span>
+        <span class="value">${total}</span>
+        <small>Total cadastrado para a empresa</small>
+      </article>
+      <article class="projects-summary-card">
+        <span class="label">Com planejamento</span>
+        <span class="value">${linked}</span>
+        <small>Projetos vinculados a um planejamento do PEV</small>
+      </article>
+      <article class="projects-summary-card">
+        <span class="label">Responsáveis únicos</span>
+        <span class="value">${owners.size}</span>
+        <small>Contagem de responsáveis informados</small>
+      </article>
+      <article class="projects-summary-card">
+        <span class="label">Atividades</span>
+        <span class="value">${totalActivities}</span>
+        <small>${delayedActivities} atividade(s) atrasada(s)</small>
+      </article>`;
+  }
+
+  function renderCards() {
+    if (!projects.length) {
+      grid.innerHTML = '<div class="projects-empty">Nenhum projeto cadastrado até o momento.</div>';
+      return;
+    }
+
+    grid.innerHTML = projects.map((project) => {
+      // Montar nome do planejamento com origem
+      let planDisplay = 'Sem planejamento vinculado';
+      if (project.plan_name) {
+        const prefix = project.plan_origin ? `${project.plan_origin} - ` : '';
+        planDisplay = `${prefix}${project.plan_name}`;
+      }
+      
+      const activities = normalizeActivities(project.activities);
+      const delayedCount = activities.filter(isDelayedActivity).length;
+      const description = project.description ? project.description.slice(0, 140) : '';
+      
+      // Calcular status dinâmico baseado nas atividades
+      const completedActivities = activities.filter(a => a.status === 'completed' || a.status === 'concluída').length;
+      const totalActivities = activities.length;
+      let dynamicStatus = 'Planejado';
+      let statusClass = 'status-planned';
+      
+      if (totalActivities > 0) {
+        if (completedActivities === totalActivities) {
+          dynamicStatus = 'Concluído';
+          statusClass = 'status-completed';
+        } else if (completedActivities > 0) {
+          dynamicStatus = 'Em andamento';
+          statusClass = 'status-in_progress';
+        } else {
+          dynamicStatus = 'Iniciado';
+          statusClass = 'status-in_progress';
+        }
+      }
+
+      // Buscar nome do responsável
+      const responsible = employees.find(e => e.id === project.responsible_id);
+      const responsibleDisplay = responsible ? responsible.name : (project.owner || 'Responsável não informado');
+
+      const start = project.start_date ? new Date(project.start_date).toLocaleDateString('pt-BR') : '-';
+      const end = project.end_date ? new Date(project.end_date).toLocaleDateString('pt-BR') : '-';
+      
+      // Prazo previsto (maior prazo das atividades)
+      const predictedDeadline = project.predicted_deadline ? new Date(project.predicted_deadline).toLocaleDateString('pt-BR') : '-';
+
+      // Calcular orçamento total das atividades
+      const totalBudget = project.budget_total || 0;
+      const budgetDisplay = totalBudget > 0 ? `R$ ${totalBudget.toLocaleString('pt-BR', {minimumFractionDigits: 2})}` : 'Não definido';
+
+      // Exibir código do projeto
+      const projectCode = project.code || '-';
+
+      return `
+        <article class="project-card" data-status="${statusClass.replace('status-', '')}">
+          <header>
+            <h3>${project.title}</h3>
+            <span class="project-plan-badge">${planDisplay}</span>
+            <span class="project-status ${statusClass}">${dynamicStatus}</span>
+          </header>
+          ${description ? `<div class="project-meta"><span>${description}${project.description.length > 140 ? '…' : ''}</span></div>` : ''}
+          <div class="project-meta">
+            <span><strong>Código:</strong> ${projectCode}</span>
+            <span><strong>Responsável:</strong> ${responsibleDisplay}</span>
+            <span><strong>Prazo cadastrado:</strong> ${start} – ${end}</span>
+            <span><strong>Prazo previsto:</strong> ${predictedDeadline}</span>
+            <span><strong>Orçamento Total:</strong> ${budgetDisplay}</span>
+          </div>
+          <div class="project-activities-info">
+            <span>🗒️ ${activities.length} atividades</span>
+            <span style="background:${delayedCount ? 'rgba(220,38,38,0.14)' : 'rgba(34,197,94,0.14)'}; color:${delayedCount ? '#991b1b' : '#14532d'};">⚠️ ${delayedCount} atrasadas</span>
+            ${totalActivities > 0 ? `<span>✅ ${completedActivities}/${totalActivities} concluídas</span>` : ''}
+          </div>
+          <div class="project-actions">
+            <a class="project-action" href="/grv/company/${companyId}/projects/${project.id}/manage" style="text-decoration:none;">📋 Gerenciar</a>
+            <button class="project-action" type="button" data-action="edit" data-id="${project.id}">Editar</button>
+            <button class="project-action danger" type="button" data-action="remove" data-id="${project.id}">Excluir</button>
+            ${project.plan_id && project.plan_origin === 'PEV' ? `<a class="project-action" href="/plans/${project.plan_id}/projects" target="_blank">Abrir no planejamento</a>` : ''}
+          </div>
+        </article>`;
+    }).join('');
+  }
+
+  function translateStatus(status) {
+    switch ((status || '').toLowerCase()) {
+      case 'in_progress':
+        return 'Em andamento';
+      case 'completed':
+        return 'Concluído';
+      case 'on_hold':
+        return 'Em pausa';
+      case 'planned':
+      default:
+        return 'Planejado';
+    }
+  }
+
+  async function loadProjects(showToast = false) {
+    grid.innerHTML = '<div class="projects-empty">Carregando projetos...</div>';
+    try {
+      const response = await fetch(`/api/companies/${companyId}/projects`);
+      const data = await response.json();
+      if (!response.ok || !data.success) {
+        throw new Error(data.message || 'Erro ao listar projetos');
+      }
+      projects = data.projects || [];
+      renderSummary();
+      renderCards();
+      if (showToast) {
+        showMessage('Projetos atualizados.', 'info');
+      }
+    } catch (error) {
+      console.error(error);
+      grid.innerHTML = `<div class="projects-empty">${error.message}</div>`;
+    }
+  }
+
+  function collectPayload() {
+    const title = fieldTitle.value.trim();
+    if (!title) {
+      showMessage('Informe o título do projeto.', 'error');
+      return null;
+    }
+
+    const startDate = fieldStart.value || null;
+    const endDate = fieldEnd.value || null;
+    const responsibleId = fieldResponsible.value || null;
+    
+    // Capturar o tipo de planejamento (PEV ou GRV) do option selecionado
+    const selectedOption = fieldPlan.selectedOptions[0];
+    const planType = selectedOption ? selectedOption.dataset.origin : null;
+
+    return {
+      title,
+      description: fieldDescription.value.trim() || null,
+      plan_id: fieldPlan.value || null,
+      plan_type: planType,
+      priority: fieldPriority.value || null,
+      responsible_id: responsibleId,
+      start_date: startDate,
+      end_date: endDate,
+      okr_reference: fieldOkrRef.value || null,
+      indicator_reference: fieldIndicatorRef.value.trim() || null,
+      notes: fieldNotes.value.trim() || null,
+      activities: []
+    };
+  }
+
+  async function submitProject(event) {
+    event.preventDefault();
+    const payload = collectPayload();
+    if (!payload) {
+      return;
+    }
+
+    try {
+      const isEdit = Boolean(fieldId.value);
+      const url = isEdit
+        ? `/api/companies/${companyId}/projects/${fieldId.value}`
+        : `/api/companies/${companyId}/projects`;
+      const method = isEdit ? 'PUT' : 'POST';
+      const response = await fetch(url, {
+        method,
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(payload)
+      });
+      const data = await response.json();
+      if (!response.ok || !data.success) {
+        throw new Error(data.message || 'Falha ao salvar projeto');
+      }
+      showMessage(data.message || 'Projeto salvo com sucesso.', 'success');
+      closeProjectModal();
+      await loadProjects(true);
+    } catch (error) {
+      console.error(error);
+      showMessage(error.message, 'error');
+    }
+  }
+
+  async function handleGridClick(event) {
+    const button = event.target.closest('[data-action]');
+    if (!button) return;
+
+    const projectId = button.dataset.id;
+    const action = button.dataset.action;
+    const project = projects.find((proj) => String(proj.id) === String(projectId));
+    if (!project) return;
+
+    if (action === 'edit') {
+      openProjectModal(project);
+      return;
+    }
+
+    if (action === 'remove') {
+      const confirmed = confirm(`Confirmar exclusão do projeto "${project.title}"?`);
+      if (!confirmed) return;
+      try {
+        const response = await fetch(`/api/companies/${companyId}/projects/${projectId}`, { method: 'DELETE' });
+        const data = await response.json();
+        if (!response.ok || !data.success) {
+          throw new Error(data.message || 'Erro ao excluir projeto');
+        }
+        showMessage(data.message || 'Projeto removido.', 'success');
+        await loadProjects(true);
+      } catch (error) {
+        console.error(error);
+        showMessage(error.message, 'error');
+      }
+    }
+  }
+
+  refreshButton.addEventListener('click', () => loadProjects(true));
+  newButton.addEventListener('click', () => openProjectModal());
+  cancelButton.addEventListener('click', closeProjectModal);
+  closeButton.addEventListener('click', closeProjectModal);
+  modalBackdrop.addEventListener('click', (event) => {
+    if (event.target === modalBackdrop) closeProjectModal();
+  });
+
+  form.addEventListener('submit', submitProject);
+  grid.addEventListener('click', handleGridClick);
+
+  // Inicialização
+  populatePlanSelect();
+  loadEmployees();
+  loadOKRs();
+  loadProjects();
+})();
+</script>
+{% endblock %}

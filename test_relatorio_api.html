@@ -1,0 +1,887 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Diagnostico Cenario Externo - Documentação do Processo</title>
+    <link rel="icon" type="image/x-icon" href="/static/favicon.ico" />
+    <link rel="shortcut icon" type="image/x-icon" href="/static/favicon.ico" />
+    <style>
+        /* =============================================
+           CONFIGURAÇÕES GERAIS E RESETAGEM
+           ============================================= */
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        @page {
+            size: A4 portrait;
+            margin: 140px 15mm 40px 20mm;
+            
+            /* Contador de páginas para impressão */
+            counter-increment: page;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
+            line-height: 1.6;
+            color: #1e293b;
+            font-size: 10pt;
+            background: white;
+        }
+
+        /* =============================================
+           CABEÇALHO E RODAPÉ
+           ============================================= */
+        #header {
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            padding: 12px 20mm 12px 20mm;
+            border-bottom: 3px solid #3b82f6;
+            background: white;
+            z-index: 1000;
+        }
+
+        .header-title-row {
+            text-align: center;
+            font-size: 11pt;
+            font-weight: 700;
+            color: #0f172a;
+            margin-bottom: 10px;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+
+        .header-content-row {
+            display: grid;
+            grid-template-columns: 80px 1fr;
+            gap: 16px;
+            align-items: start;
+        }
+
+        .header-logo {
+            width: 80px;
+            height: 80px;
+            background: #f8fafc;
+            border: 2px solid #cbd5e1;
+            border-radius: 8px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 32px;
+            overflow: hidden;
+        }
+
+        .header-logo img {
+            max-width: 100%;
+            max-height: 100%;
+            object-fit: contain;
+        }
+
+        .header-info-grid {
+            display: flex;
+            flex-direction: column;
+            gap: 6px;
+            font-size: 9pt;
+        }
+
+        .header-info-line {
+            display: flex;
+            align-items: baseline;
+        }
+
+        .header-info-label {
+            font-weight: 600;
+            color: #475569;
+            min-width: 140px;
+            margin-right: 8px;
+        }
+
+        .header-info-value {
+            color: #0f172a;
+            font-weight: 500;
+        }
+
+        #footer {
+            position: fixed;
+            bottom: 0;
+            left: 0;
+            right: 0;
+            display: grid;
+            grid-template-columns: 1fr 1fr 1fr;
+            gap: 16px;
+            align-items: center;
+            padding: 10px 20mm;
+            border-top: 2px solid #3b82f6;
+            background: white;
+            font-size: 8pt;
+            color: #475569;
+            z-index: 1000;
+        }
+
+        .footer-left {
+            font-weight: 600;
+            color: #0f172a;
+        }
+
+        .footer-center {
+            text-align: center;
+            font-weight: 500;
+        }
+        
+        /* Adicionar número da página via CSS - funciona na impressão */
+        .footer-center::after {
+            content: " " counter(page, decimal);
+        }
+
+        .footer-right {
+            text-align: center;
+            font-weight: 500;
+        }
+
+        /* =============================================
+           ESTRUTURA DO DOCUMENTO
+           ============================================= */
+        .document-container {
+            max-width: 100%;
+            margin-top: 140px;
+            margin-bottom: 50px;
+        }
+
+        /* Espaçamento para impressão */
+        @media print {
+            body {
+                padding-top: 0;
+            }
+            
+            .document-container {
+                margin-top: 0;
+                margin-bottom: 0;
+                padding-top: 140px;
+                padding-bottom: 50px;
+            }
+        }
+
+        /* =============================================
+           CAPA DO RELATÓRIO
+           ============================================= */
+        .report-cover {
+            page-break-after: always;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            min-height: 80vh;
+            text-align: center;
+            padding: 40px 20px;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            border-radius: 12px;
+            margin-bottom: 20px;
+        }
+
+        .cover-icon {
+            font-size: 72px;
+            margin-bottom: 24px;
+        }
+
+        .cover-title {
+            font-size: 32pt;
+            font-weight: 700;
+            margin-bottom: 16px;
+            text-shadow: 0 2px 4px rgba(0,0,0,0.2);
+        }
+
+        .cover-subtitle {
+            font-size: 16pt;
+            font-weight: 400;
+            margin-bottom: 32px;
+            opacity: 0.95;
+        }
+
+        .cover-meta {
+            background: rgba(255,255,255,0.15);
+            backdrop-filter: blur(10px);
+            padding: 24px 32px;
+            border-radius: 12px;
+            border: 1px solid rgba(255,255,255,0.2);
+            font-size: 11pt;
+            line-height: 2;
+        }
+
+        .cover-meta strong {
+            font-weight: 600;
+        }
+
+        /* =============================================
+           SEÇÕES DO RELATÓRIO
+           ============================================= */
+        .report-section {
+            margin-bottom: 32px;
+            page-break-inside: avoid;
+        }
+
+        .section-header {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            margin-bottom: 16px;
+            padding-bottom: 8px;
+            border-bottom: 2px solid #3b82f6;
+        }
+
+        .section-icon {
+            font-size: 24px;
+            width: 40px;
+            height: 40px;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            border-radius: 8px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .section-header h2 {
+            font-size: 16pt;
+            font-weight: 600;
+            color: #0f172a;
+            flex: 1;
+        }
+
+        .section-content {
+            padding: 16px 0;
+        }
+
+        /* =============================================
+           INFORMAÇÕES DO PROCESSO
+           ============================================= */
+        .process-info-grid {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 16px;
+            margin-bottom: 20px;
+        }
+
+        .info-card {
+            background: #f8fafc;
+            border: 1px solid #e2e8f0;
+            border-radius: 8px;
+            padding: 12px;
+        }
+
+        .info-label {
+            font-size: 8pt;
+            font-weight: 600;
+            color: #64748b;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            margin-bottom: 4px;
+        }
+
+        .info-value {
+            font-size: 10pt;
+            font-weight: 500;
+            color: #0f172a;
+        }
+
+        .badge {
+            display: inline-block;
+            padding: 4px 12px;
+            border-radius: 12px;
+            font-size: 8pt;
+            font-weight: 600;
+            text-transform: uppercase;
+            letter-spacing: 0.3px;
+        }
+
+        .badge-success { background: #dcfce7; color: #166534; }
+        .badge-warning { background: #fef3c7; color: #92400e; }
+        .badge-info { background: #dbeafe; color: #1e40af; }
+        .badge-default { background: #f1f5f9; color: #475569; }
+
+        /* =============================================
+           ATIVIDADES (POP)
+           ============================================= */
+        .activity-list {
+            display: flex;
+            flex-direction: column;
+            gap: 16px;
+        }
+
+        .activity-item {
+            background: white;
+            border: 1px solid #e2e8f0;
+            border-radius: 8px;
+            padding: 12px;
+            page-break-inside: avoid;
+        }
+
+        .activity-header {
+            display: flex;
+            align-items: flex-start;
+            gap: 12px;
+            margin-bottom: 8px;
+        }
+
+        .activity-number {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            width: 32px;
+            height: 32px;
+            border-radius: 6px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-weight: 700;
+            font-size: 12pt;
+            flex-shrink: 0;
+        }
+
+        .activity-content {
+            flex: 1;
+        }
+
+        .activity-name {
+            font-size: 11pt;
+            font-weight: 600;
+            color: #0f172a;
+            margin-bottom: 4px;
+        }
+
+        .activity-description {
+            font-size: 9pt;
+            color: #64748b;
+            line-height: 1.5;
+        }
+
+        .activity-meta {
+            display: flex;
+            gap: 16px;
+            margin-top: 8px;
+            padding-top: 8px;
+            border-top: 1px solid #f1f5f9;
+            font-size: 8pt;
+            color: #64748b;
+        }
+
+        .activity-meta-item {
+            display: flex;
+            align-items: center;
+            gap: 4px;
+        }
+
+        /* =============================================
+           FLUXOGRAMA
+           ============================================= */
+        .flow-diagram {
+            background: #f8fafc;
+            border: 1px solid #e2e8f0;
+            border-radius: 8px;
+            padding: 16px;
+            text-align: center;
+            page-break-inside: avoid;
+        }
+
+        .flow-diagram svg {
+            max-width: 100%;
+            height: auto;
+        }
+
+        .flow-placeholder {
+            padding: 40px;
+            color: #94a3b8;
+            font-size: 10pt;
+            font-style: italic;
+        }
+
+        /* =============================================
+           ROTINAS
+           ============================================= */
+        .routine-list {
+            display: flex;
+            flex-direction: column;
+            gap: 12px;
+        }
+
+        .routine-card {
+            background: white;
+            border: 1px solid #e2e8f0;
+            border-radius: 8px;
+            padding: 12px;
+            page-break-inside: avoid;
+        }
+
+        .routine-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 8px;
+        }
+
+        .routine-name {
+            font-size: 11pt;
+            font-weight: 600;
+            color: #0f172a;
+        }
+
+        .routine-schedule {
+            font-size: 8pt;
+            color: #64748b;
+            background: #f1f5f9;
+            padding: 4px 8px;
+            border-radius: 4px;
+        }
+
+        .routine-description {
+            font-size: 9pt;
+            color: #64748b;
+            margin-bottom: 8px;
+        }
+
+        .collaborators-list {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 8px;
+            margin-top: 8px;
+        }
+
+        .collaborator-tag {
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+            background: #eff6ff;
+            border: 1px solid #bfdbfe;
+            color: #1e40af;
+            padding: 4px 10px;
+            border-radius: 6px;
+            font-size: 8pt;
+            font-weight: 500;
+        }
+
+        /* =============================================
+           INDICADORES
+           ============================================= */
+        .indicators-grid {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 12px;
+        }
+
+        .indicator-card {
+            background: white;
+            border: 1px solid #e2e8f0;
+            border-radius: 8px;
+            padding: 12px;
+            page-break-inside: avoid;
+        }
+
+        .indicator-name {
+            font-size: 10pt;
+            font-weight: 600;
+            color: #0f172a;
+            margin-bottom: 6px;
+        }
+
+        .indicator-value {
+            font-size: 20pt;
+            font-weight: 700;
+            color: #3b82f6;
+            margin-bottom: 4px;
+        }
+
+        .indicator-description {
+            font-size: 8pt;
+            color: #64748b;
+        }
+
+        /* =============================================
+           TABELAS
+           ============================================= */
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin: 12px 0;
+            font-size: 9pt;
+        }
+
+        thead {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+        }
+
+        th {
+            padding: 10px 12px;
+            text-align: left;
+            font-weight: 600;
+            font-size: 9pt;
+        }
+
+        td {
+            padding: 8px 12px;
+            border-bottom: 1px solid #e2e8f0;
+        }
+
+        tbody tr:hover {
+            background: #f8fafc;
+        }
+
+        /* =============================================
+           UTILITÁRIOS
+           ============================================= */
+        .text-muted {
+            color: #64748b;
+        }
+
+        .text-center {
+            text-align: center;
+        }
+
+        .mb-2 { margin-bottom: 8px; }
+        .mb-3 { margin-bottom: 12px; }
+        .mb-4 { margin-bottom: 16px; }
+
+        .page-break {
+            page-break-after: always;
+        }
+
+        .no-page-break {
+            page-break-inside: avoid;
+        }
+
+        /* =============================================
+           IMPRESSÃO
+           ============================================= */
+        @media print {
+            body {
+                background: white;
+            }
+            
+            #header {
+                position: fixed;
+                top: 0;
+            }
+            
+            #footer {
+                position: fixed;
+                bottom: 0;
+            }
+            
+            .no-print {
+                display: none !important;
+            }
+            
+            /* Garantir quebra de página adequada */
+            .report-section {
+                page-break-inside: avoid;
+            }
+            
+            .report-cover {
+                page-break-after: always;
+            }
+        }
+    </style>
+    <script>
+        // Script para atualizar número da página na impressão
+        window.addEventListener('beforeprint', function() {
+            // Este evento dispara antes da impressão
+            // O contador de páginas CSS cuidará da numeração
+        });
+        
+        // Para navegadores que suportam, usar o page counter
+        if (window.matchMedia) {
+            var mediaQueryList = window.matchMedia('print');
+            mediaQueryList.addListener(function(mql) {
+                if (mql.matches) {
+                    // Entrando no modo de impressão
+                }
+            });
+        }
+    </script>
+</head>
+<body>
+    <!-- Cabeçalho (aparece em todas as páginas) -->
+    <div id="header">
+        <!-- Linha 1: Título completo ocupando as 3 colunas -->
+        <div class="header-title-row">
+            Book de Processos - AB.C.1.1.1 - Diagnostico Cenario Externo
+        </div>
+        
+        <!-- Linha 2: Logo + Informações -->
+        <div class="header-content-row">
+            <!-- Coluna 1: Logo -->
+            <div class="header-logo">
+                
+                📋
+                
+            </div>
+            
+            <!-- Colunas 2 e 3: Informações -->
+            <div class="header-info-grid">
+                <div class="header-info-line">
+                    <span class="header-info-label">Empresa:</span>
+                    <span class="header-info-value">Versus Gestao Corporativa</span>
+                </div>
+                <div class="header-info-line">
+                    <span class="header-info-label">Macroprocesso:</span>
+                    <span class="header-info-value">PLANEJAMENTO ESTRATÉGICO</span>
+                </div>
+                <div class="header-info-line">
+                    <span class="header-info-label">Dono do Macroprocesso:</span>
+                    <span class="header-info-value">Fabiano Ferreira</span>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Rodapé (aparece em todas as páginas) -->
+    <div id="footer">
+        <div class="footer-left">
+            Versus Gestão Corporativa
+        </div>
+        <div class="footer-center" id="page-counter">
+            Página
+        </div>
+        <div class="footer-right">
+            Emitido em 12/10/2025 às 20:01
+        </div>
+    </div>
+
+    <!-- Conteúdo do Documento -->
+    <div class="document-container">
+        <!-- Capa do Relatório -->
+        
+        <div class="report-cover">
+            <div class="cover-icon">📋</div>
+            <h1 class="cover-title">Diagnostico Cenario Externo</h1>
+            <p class="cover-subtitle">Documentação do Processo</p>
+            <div class="cover-meta">
+                <div><strong>Código:</strong> AB.C.1.1.1</div>
+                <div><strong>Empresa:</strong> Versus Gestao Corporativa</div>
+                <div><strong>Responsável:</strong> Fabiano Ferreira</div>
+                <div><strong>Data de Geração:</strong> 12/10/2025 às 20:01</div>
+            </div>
+        </div>
+        
+
+        <!-- Seção: Informações Gerais -->
+        <div class="report-section">
+            <div class="section-header">
+                <div class="section-icon">ℹ️</div>
+                <h2>Informações Gerais do Processo</h2>
+            </div>
+            <div class="section-content">
+                <div class="process-info-grid">
+                    <div class="info-card">
+                        <div class="info-label">Código do Processo</div>
+                        <div class="info-value">AB.C.1.1.1</div>
+                    </div>
+                    <div class="info-card">
+                        <div class="info-label">Nome do Processo</div>
+                        <div class="info-value">Diagnostico Cenario Externo</div>
+                    </div>
+                    <div class="info-card">
+                        <div class="info-label">Macroprocesso</div>
+                        <div class="info-value">PLANEJAMENTO ESTRATÉGICO</div>
+                    </div>
+                    <div class="info-card">
+                        <div class="info-label">Responsável</div>
+                        <div class="info-value">Fabiano Ferreira</div>
+                    </div>
+                    <div class="info-card">
+                        <div class="info-label">Status de Estruturação</div>
+                        <div class="info-value">
+                            
+                            <span class="badge badge-warning">⚠ Em Andamento</span>
+                            
+                        </div>
+                    </div>
+                    <div class="info-card">
+                        <div class="info-label">Nível de Desempenho</div>
+                        <div class="info-value">
+                            
+                            <span class="badge badge-default">○ Não Avaliado</span>
+                            
+                        </div>
+                    </div>
+                </div>
+                
+                
+            </div>
+        </div>
+
+        <!-- Seção: Fluxo do Processo -->
+        
+        <div class="report-section">
+            <div class="section-header">
+                <div class="section-icon">🔄</div>
+                <h2>Fluxo do Processo</h2>
+            </div>
+            <div class="section-content">
+                <div class="flow-diagram">
+                    
+                    <div class="flow-placeholder">
+                        Fluxograma não disponível ou ainda não foi desenhado para este processo.
+                    </div>
+                    
+                </div>
+            </div>
+        </div>
+        
+
+        <!-- Seção: POP - Procedimento Operacional Padrão -->
+        
+        <div class="report-section">
+            <div class="section-header">
+                <div class="section-icon">📋</div>
+                <h2>POP - Procedimento Operacional Padrão</h2>
+            </div>
+            <div class="section-content">
+                
+                <div class="activity-list">
+                    
+                    <div class="activity-item">
+                        <div class="activity-header">
+                            <div class="activity-number">1</div>
+                            <div class="activity-content">
+                                <div class="activity-name">Atividade 01</div>
+                                
+                                <div class="activity-meta">
+                                    
+                                    
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="activity-item">
+                        <div class="activity-header">
+                            <div class="activity-number">2</div>
+                            <div class="activity-content">
+                                <div class="activity-name">Atividade 02</div>
+                                
+                                <div class="activity-meta">
+                                    
+                                    
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="activity-item">
+                        <div class="activity-header">
+                            <div class="activity-number">3</div>
+                            <div class="activity-content">
+                                <div class="activity-name">Atividade 03</div>
+                                
+                                <div class="activity-meta">
+                                    
+                                    
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="activity-item">
+                        <div class="activity-header">
+                            <div class="activity-number">4</div>
+                            <div class="activity-content">
+                                <div class="activity-name">Atividade 04</div>
+                                
+                                <div class="activity-meta">
+                                    
+                                    
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="activity-item">
+                        <div class="activity-header">
+                            <div class="activity-number">5</div>
+                            <div class="activity-content">
+                                <div class="activity-name">Atividade 05</div>
+                                
+                                <div class="activity-meta">
+                                    
+                                    
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    
+                </div>
+                
+            </div>
+        </div>
+        
+
+        <!-- Seção: Rotinas -->
+        
+        <div class="report-section">
+            <div class="section-header">
+                <div class="section-icon">📅</div>
+                <h2>Rotinas e Colaboradores</h2>
+            </div>
+            <div class="section-content">
+                
+                <div class="routine-list">
+                    
+                    <div class="routine-card">
+                        <div class="routine-header">
+                            <div class="routine-name">Teste 04</div>
+                            
+                            <div class="routine-schedule">Mensalmente - Dia 15</div>
+                            
+                        </div>
+                        
+                        
+                        <div class="collaborators-list">
+                            
+                            <div class="collaborator-tag">
+                                <span>👤</span>
+                                <span>Fabiano - Gerente Adm/Fin - 4.0h</span>
+                            </div>
+                            
+                            <div class="collaborator-tag">
+                                <span>👤</span>
+                                <span>Fabiano Diretor - 2.0h</span>
+                            </div>
+                            
+                            <div class="collaborator-tag">
+                                <span>👤</span>
+                                <span>Fabiano Gerente Operacional - 2.0h</span>
+                            </div>
+                            
+                        </div>
+                        
+                    </div>
+                    
+                </div>
+                
+            </div>
+        </div>
+        
+
+        <!-- Seção: Indicadores -->
+        
+        <div class="report-section">
+            <div class="section-header">
+                <div class="section-icon">📊</div>
+                <h2>Indicadores de Desempenho</h2>
+            </div>
+            <div class="section-content">
+                
+                <div class="flow-placeholder">
+                    Nenhum indicador cadastrado para este processo.
+                </div>
+                
+            </div>
+        </div>
+        
+    </div>
+</body>
+</html>

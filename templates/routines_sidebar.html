@@ -1,0 +1,82 @@
+{% set nav_groups = [
+    {
+        'title': 'Operações e Rotinas',
+        'items': [
+            {
+                'id': 'routine-activities',
+                'name': 'Central de Atividades',
+                'url': url_for('grv.grv_routine_activities', company_id=company.id),
+                'description': 'Central unificada de atividades'
+            },
+            {
+                'id': 'routine-work-distribution',
+                'name': 'Distribuição de Trabalho',
+                'url': url_for('grv.grv_routine_work_distribution', company_id=company.id),
+                'description': 'Distribuir e balancear carga de trabalho'
+            },
+            {
+                'id': 'routine-capacity',
+                'name': 'Análise de Capacidade',
+                'url': url_for('grv.grv_routine_capacity', company_id=company.id),
+                'description': 'Analisar capacidade e recursos'
+            },
+            {
+                'id': 'routine-incidents',
+                'name': 'Gestão de Incidentes',
+                'url': url_for('grv.grv_routine_incidents', company_id=company.id),
+                'description': 'Registrar e acompanhar incidentes'
+            },
+            {
+                'id': 'routine-efficiency',
+                'name': 'Análise de Eficiência',
+                'url': url_for('grv.grv_routine_efficiency', company_id=company.id),
+                'description': 'Medir e otimizar eficiência'
+            }
+        ]
+    },
+    {
+        'title': 'Voltar',
+        'items': [
+            {
+                'id': 'back-dashboard',
+                'name': '← Dashboard Principal',
+                'url': url_for('grv.grv_company_dashboard', company_id=company.id),
+                'description': 'Voltar para o menu principal'
+            }
+        ]
+    }
+] %}
+
+<aside class="project-sidebar surface-card plan-sidebar">
+    <span class="project-sidebar-title">Operações</span>
+    <nav class="project-nav">
+        {% for group in nav_groups %}
+        <div class="project-nav-group">
+            {% if group.title %}
+            <span class="project-nav-group-title">{{ group.title }}</span>
+            {% endif %}
+            {% for item in group.get('items', []) %}
+            {% set item_id = item.id %}
+            {% set item_url = item.url %}
+            {% set is_active = (active_id is defined and active_id == item_id) %}
+            <a class="project-nav-link{% if is_active %} is-active{% endif %}"
+               href="{{ item_url or '#' }}"
+               {% if item.description %}title="{{ item.description }}"{% endif %}>
+                <span>{{ item.name }}</span>
+            </a>
+            {% endfor %}
+        </div>
+        {% endfor %}
+    </nav>
+    
+    {% if sidebar_meta is defined %}
+    <div class="project-hints plan-sidebar-meta">
+        {{ sidebar_meta | safe }}
+    </div>
+    {% elif company is defined and (company.name or company.legal_name) %}
+    <div class="project-hints plan-sidebar-meta">
+        <span class="summary-eyebrow">Empresa</span>
+        <p><strong>{{ company.name or company.legal_name }}</strong></p>
+    </div>
+    {% endif %}
+</aside>

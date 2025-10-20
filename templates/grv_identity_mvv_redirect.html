@@ -1,0 +1,58 @@
+{% extends "base.html" %}
+{% block title %}GRV | Missão/Visão/Valores{% endblock %}
+{% block body %}{% set active_nav = 'dashboard' %}{{ super() }}{% endblock %}
+{% block content %}
+<div class="project-layout plan-layout" data-sidebar-toggle>
+  {# Sidebar componentizado - atualizado centralmente #}
+  {% include 'identity_sidebar.html' %}
+
+  <div class="project-content plan-content" data-company-id="{{ company.id }}">
+    <div class="surface-card" style="padding: 48px; text-align: center; max-width: 800px; margin: 48px auto;">
+      <div style="font-size: 64px; margin-bottom: 24px;">🎯</div>
+      
+      <h2 style="font-size: 24px; font-weight: 700; color: #0f172a; margin-bottom: 16px;">
+        Missão, Visão e Valores
+      </h2>
+      
+      <p style="font-size: 16px; color: #64748b; margin-bottom: 32px; line-height: 1.6;">
+        A gestão de Missão, Visão e Valores agora está centralizada no cadastro da empresa.<br>
+        Acesse o gerenciamento completo clicando no botão abaixo.
+      </p>
+
+      <div style="display: flex; gap: 12px; justify-content: center;">
+        <a href="/companies/{{ company.id }}?tab=mvv" 
+           class="button button-primary" 
+           style="padding: 16px 32px; font-size: 16px;">
+          <span>⚙️</span> Gerenciar MVV
+        </a>
+        <a href="{{ url_for('grv.grv_company_dashboard', company_id=company.id) }}" 
+           class="button button-ghost">
+          <span>←</span> Voltar ao Dashboard
+        </a>
+      </div>
+
+      <div style="margin-top: 32px; padding: 20px; background: #eff6ff; border-radius: 12px; text-align: left;">
+        <div style="font-weight: 600; color: #1e40af; margin-bottom: 8px;">💡 Nova Estrutura</div>
+        <div style="font-size: 14px; color: #475569; line-height: 1.6;">
+          O cadastro da empresa agora possui abas organizadas para:
+          <ul style="margin: 12px 0 0 20px; padding: 0;">
+            <li>Dados Básicos</li>
+            <li>Missão / Visão / Valores</li>
+            <li>Funções e Cargos</li>
+            <li>Colaboradores</li>
+          </ul>
+          Isso permite que todas as informações sejam gerenciadas em um único lugar e utilizadas por todos os módulos do sistema.
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+  // Auto-redirecionar após 3 segundos (opcional)
+  // setTimeout(() => {
+  //   window.location.href = '/companies/{{ company.id }}?tab=mvv';
+  // }, 3000);
+</script>
+{% endblock %}
+

@@ -1,0 +1,387 @@
+{% extends "base.html" %}
+{% block title %}GRV | Árvore de Indicadores{% endblock %}
+{% block body %}{% set active_nav = 'indicators-tree' %}{{ super() }}{% endblock %}
+
+{% block extra_head %}
+{{ super() }}
+<style>
+  .indicators-shell {
+    display: grid;
+    grid-template-columns: 250px minmax(0, 1fr);
+    gap: 18px;
+    align-items: start;
+  }
+
+  .indicators-main {
+    background: #ffffff;
+    border-radius: 14px;
+    border: 1px solid rgba(15, 23, 42, 0.08);
+    padding: 22px 24px;
+    box-shadow: 0 12px 32px rgba(15, 23, 42, 0.08);
+    display: grid;
+    gap: 20px;
+  }
+
+  .indicators-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: 16px;
+    flex-wrap: wrap;
+  }
+
+  .indicators-header h1 {
+    margin: 0;
+    font-size: 22px;
+    font-weight: 700;
+    color: #0f172a;
+  }
+
+  .indicators-description {
+    color: #64748b;
+    font-size: 13px;
+    margin-top: 6px;
+    max-width: 520px;
+    line-height: 1.5;
+  }
+
+  .indicators-actions {
+    display: flex;
+    gap: 10px;
+    flex-wrap: wrap;
+  }
+
+  .indicators-button {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    padding: 10px 18px;
+    border-radius: 10px;
+    border: none;
+    cursor: pointer;
+    font-weight: 600;
+    font-size: 13px;
+    letter-spacing: 0.04em;
+    transition: transform 0.2s ease, box-shadow 0.2s ease;
+    position: relative;
+    z-index: 10;
+  }
+
+  .indicators-button.primary {
+    background: linear-gradient(135deg, #3b82f6, #2563eb);
+    color: #fff;
+    box-shadow: 0 16px 28px rgba(37, 99, 235, 0.25);
+  }
+
+  .indicators-button.primary:hover {
+    transform: translateY(-2px);
+  }
+
+  .indicators-button.secondary {
+    background: #f1f5f9;
+    color: #475569;
+    border: 1px solid rgba(15, 23, 42, 0.12);
+  }
+
+  .indicators-button.secondary:hover {
+    background: #e2e8f0;
+  }
+
+  .indicators-table-wrapper {
+    overflow-x: auto;
+    border-radius: 12px;
+    border: 1px solid rgba(15, 23, 42, 0.08);
+  }
+
+  .indicators-table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 13px;
+  }
+
+  .indicators-table thead {
+    background: linear-gradient(135deg, #f8fafc, #e2e8f0);
+  }
+
+  .indicators-table th {
+    padding: 14px 16px;
+    text-align: left;
+    font-weight: 600;
+    color: #0f172a;
+    text-transform: uppercase;
+    font-size: 11px;
+    letter-spacing: 0.08em;
+    border-bottom: 2px solid rgba(59, 130, 246, 0.18);
+  }
+
+  .indicators-table td {
+    padding: 14px 16px;
+    border-bottom: 1px solid rgba(15, 23, 42, 0.06);
+    color: #334155;
+  }
+
+  .indicators-table tbody tr:hover {
+    background: rgba(59, 130, 246, 0.04);
+  }
+
+  .indicators-table .actions {
+    display: flex;
+    gap: 8px;
+  }
+
+  .indicators-table .btn-small {
+    padding: 6px 12px;
+    font-size: 11px;
+    border-radius: 6px;
+    border: none;
+    cursor: pointer;
+    font-weight: 600;
+    transition: all 0.2s ease;
+  }
+
+  .indicators-table .btn-edit {
+    background: #3b82f6;
+    color: white;
+  }
+
+  .indicators-table .btn-edit:hover {
+    background: #2563eb;
+  }
+
+  .indicators-table .btn-delete {
+    background: #ef4444;
+    color: white;
+  }
+
+  .indicators-table .btn-delete:hover {
+    background: #dc2626;
+  }
+
+  .form-group {
+    margin-bottom: 18px;
+  }
+
+  .form-group label {
+    display: block;
+    margin-bottom: 8px;
+    font-weight: 600;
+    color: #334155;
+    font-size: 13px;
+  }
+
+  .form-group input,
+  .form-group select,
+  .form-group textarea {
+    width: 100%;
+    padding: 10px 14px;
+    border: 1px solid rgba(15, 23, 42, 0.12);
+    border-radius: 8px;
+    font-size: 13px;
+    font-family: inherit;
+  }
+
+  .form-group textarea {
+    resize: vertical;
+    min-height: 80px;
+  }
+
+  .form-actions {
+    display: flex;
+    gap: 10px;
+    justify-content: flex-end;
+    margin-top: 24px;
+  }
+
+  .empty-state {
+    text-align: center;
+    padding: 48px 24px;
+    color: #64748b;
+  }
+
+  .empty-state svg {
+    width: 64px;
+    height: 64px;
+    margin-bottom: 16px;
+    opacity: 0.4;
+  }
+
+  .code-badge {
+    display: inline-block;
+    padding: 4px 10px;
+    background: linear-gradient(135deg, rgba(59, 130, 246, 0.12), rgba(14, 116, 144, 0.08));
+    border-radius: 6px;
+    font-weight: 600;
+    font-size: 11px;
+    color: #2563eb;
+    letter-spacing: 0.05em;
+  }
+
+  .parent-badge {
+    display: inline-block;
+    padding: 4px 10px;
+    background: #f1f5f9;
+    border-radius: 6px;
+    font-size: 11px;
+    color: #64748b;
+  }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="indicators-shell">
+  <!-- Sidebar -->
+  {% include 'indicators_sidebar.html' %}
+
+  <!-- Main Content -->
+  <div class="indicators-main">
+    <div class="indicators-header">
+      <div>
+        <h1>🌳 Árvore de Indicadores</h1>
+        <div class="indicators-description">
+          Gerencie os grupos e subgrupos hierárquicos de indicadores da empresa
+        </div>
+      </div>
+      <div class="indicators-actions">
+        <button
+          id="btnNovoGrupo"
+          type="button"
+          class="indicators-button primary"
+          onclick="openGroupPopup()">
+          + Novo Grupo
+        </button>
+      </div>
+    </div>
+
+    <!-- Table -->
+    <div class="indicators-table-wrapper">
+      <table class="indicators-table" id="groupsTable">
+        <thead>
+          <tr>
+            <th>Código</th>
+            <th>Nome</th>
+            <th>Grupo Pai</th>
+            <th>Descrição</th>
+            <th style="text-align: center; width: 140px;">Ações</th>
+          </tr>
+        </thead>
+        <tbody id="groupsTableBody">
+          <tr>
+            <td colspan="5">
+              <div class="empty-state">
+                <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 7v10a2 2 0 002 2h14a2 2 0 002-2V9a2 2 0 00-2-2h-6l-2-2H5a2 2 0 00-2 2z" />
+                </svg>
+                <p>Nenhum grupo cadastrado</p>
+              </div>
+            </td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+</div>
+
+
+<script>
+const companyId = {{ company.id if company and company.id else 0 }};
+let groups = [];
+
+document.addEventListener('DOMContentLoaded', () => {
+  loadGroups();
+});
+
+async function loadGroups() {
+  try {
+    const response = await fetch(`/grv/api/company/${companyId}/indicator-groups`);
+    const result = await response.json();
+
+    if (result.success) {
+      groups = result.data;
+      renderGroupsTable();
+    }
+  } catch (error) {
+    console.error('Erro ao carregar grupos:', error);
+    alert('Erro ao carregar grupos de indicadores');
+  }
+}
+
+function renderGroupsTable() {
+  const tbody = document.getElementById('groupsTableBody');
+
+  if (groups.length === 0) {
+    tbody.innerHTML = `
+      <tr>
+        <td colspan="5">
+          <div class="empty-state">
+            <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 7v10a2 2 0 002 2h14a2 2 0 002-2V9a2 2 0 00-2-2h-6l-2-2H5a2 2 0 00-2 2z" />
+            </svg>
+            <p>Nenhum grupo cadastrado</p>
+          </div>
+        </td>
+      </tr>
+    `;
+    return;
+  }
+
+  tbody.innerHTML = groups.map(group => `
+    <tr>
+      <td><span class="code-badge">${group.code}</span></td>
+      <td><strong>${group.name}</strong></td>
+      <td>${group.parent_name ? `<span class="parent-badge">${group.parent_code} - ${group.parent_name}</span>` : '--'}</td>
+      <td>${group.description ? group.description : '--'}</td>
+      <td style="text-align: center;">
+        <div class="actions">
+          <button class="btn-small btn-edit" onclick="openGroupPopup(${group.id})">Editar</button>
+          <button class="btn-small btn-delete" onclick="deleteGroup(${group.id})">Excluir</button>
+        </div>
+      </td>
+    </tr>
+  `).join('');
+}
+
+function openGroupPopup(groupId) {
+  const target = groupId
+    ? `/grv/company/${companyId}/indicator-groups/form/${groupId}`
+    : `/grv/company/${companyId}/indicator-groups/form`;
+
+  const popup = window.open(
+    target,
+    'groupFormPopup',
+    'width=720,height=760,resizable=yes,scrollbars=yes'
+  );
+
+  if (!popup) {
+    alert('Não foi possível abrir a janela. Verifique o bloqueio de pop-ups.');
+  }
+}
+
+async function deleteGroup(id) {
+  if (!confirm('Tem certeza que deseja excluir este grupo?')) {
+    return;
+  }
+
+  try {
+    const response = await fetch(`/grv/api/company/${companyId}/indicator-groups/${id}`, {
+      method: 'DELETE'
+    });
+
+    const result = await response.json();
+
+    if (result.success) {
+      loadGroups();
+      alert('Grupo excluido com sucesso!');
+    } else {
+      alert('Erro: ' + result.message);
+    }
+  } catch (error) {
+    console.error('Erro ao excluir grupo:', error);
+    alert('Erro ao excluir grupo');
+  }
+}
+
+window.openGroupPopup = openGroupPopup;
+window.deleteGroup = deleteGroup;
+</script>
+
+{% endblock %}

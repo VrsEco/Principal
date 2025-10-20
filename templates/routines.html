@@ -1,0 +1,889 @@
+{% extends "base.html" %}
+{% block title %}Gestão de Rotinas{% endblock %}
+{% block body %}
+  {% set active_nav = 'dashboard' %}
+  {{ super() }}
+{% endblock %}
+
+{% block extra_head %}
+  {{ super() }}
+  <style>
+    .routines-page {
+      max-width: 1400px;
+      margin: 0 auto;
+      padding: 32px 0 64px;
+      display: flex;
+      flex-direction: column;
+      gap: 32px;
+    }
+    
+    .routines-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: flex-end;
+      gap: 24px;
+      flex-wrap: wrap;
+    }
+    
+    .routines-heading {
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+    }
+    
+    .routines-heading h1 {
+      margin: 0;
+    }
+    
+    .routines-heading p {
+      margin: 0;
+      color: var(--color-muted);
+      max-width: 640px;
+      font-size: 14px;
+      line-height: 1.6;
+    }
+    
+    .routines-grid {
+      display: grid;
+      gap: 24px;
+      grid-template-columns: repeat(auto-fill, minmax(350px, 1fr));
+    }
+    
+    .routine-card {
+      padding: 24px;
+      border-radius: 16px;
+      background: var(--color-surface, #fff);
+      border: 1px solid var(--color-border);
+      box-shadow: var(--shadow-sm, 0 12px 24px rgba(15, 23, 42, 0.08));
+      display: flex;
+      flex-direction: column;
+      gap: 16px;
+      transition: transform 0.2s ease, box-shadow 0.2s ease;
+    }
+    
+    .routine-card:hover {
+      transform: translateY(-2px);
+      box-shadow: var(--shadow-md, 0 16px 32px rgba(15, 23, 42, 0.12));
+    }
+    
+    .routine-card-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: flex-start;
+      gap: 12px;
+    }
+    
+    .routine-card-title {
+      display: flex;
+      flex-direction: column;
+      gap: 4px;
+      flex: 1;
+    }
+    
+    .routine-card-title h3 {
+      margin: 0;
+      font-size: 18px;
+      font-weight: 600;
+      color: var(--color-text);
+    }
+    
+    .routine-card-description {
+      margin: 0;
+      font-size: 13px;
+      color: var(--color-muted);
+      line-height: 1.5;
+    }
+    
+    .routine-card-actions {
+      display: flex;
+      gap: 8px;
+    }
+    
+    .routine-triggers-list {
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+    }
+    
+    .trigger-item {
+      padding: 12px;
+      background: rgba(58, 241, 174, 0.05);
+      border: 1px solid rgba(58, 241, 174, 0.2);
+      border-radius: 8px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      gap: 12px;
+      font-size: 13px;
+    }
+    
+    .trigger-info {
+      display: flex;
+      flex-direction: column;
+      gap: 4px;
+      flex: 1;
+    }
+    
+    .trigger-type-badge {
+      display: inline-flex;
+      align-items: center;
+      padding: 2px 8px;
+      font-size: 11px;
+      font-weight: 600;
+      letter-spacing: 0.05em;
+      border-radius: 4px;
+      text-transform: uppercase;
+      background: rgba(58, 241, 174, 0.15);
+      color: var(--color-accent);
+      max-width: max-content;
+    }
+    
+    .trigger-details {
+      color: var(--color-text);
+      font-weight: 500;
+    }
+    
+    .trigger-deadline {
+      color: var(--color-muted);
+      font-size: 12px;
+    }
+    
+    .trigger-actions {
+      display: flex;
+      gap: 4px;
+    }
+    
+    .icon-button {
+      padding: 6px;
+      background: transparent;
+      border: none;
+      border-radius: 4px;
+      cursor: pointer;
+      color: var(--color-muted);
+      transition: all 0.2s;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+    
+    .icon-button:hover {
+      background: rgba(58, 241, 174, 0.1);
+      color: var(--color-accent);
+    }
+    
+    .icon-button.danger:hover {
+      background: rgba(239, 68, 68, 0.1);
+      color: #ef4444;
+    }
+    
+    .empty-triggers {
+      padding: 24px;
+      text-align: center;
+      color: var(--color-muted);
+      font-size: 13px;
+      border: 1px dashed var(--color-border);
+      border-radius: 8px;
+    }
+    
+    .modal {
+      display: none;
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      background: rgba(0, 0, 0, 0.7);
+      z-index: 99999 !important;
+      align-items: center;
+      justify-content: center;
+    }
+    
+    .modal.active {
+      display: flex !important;
+    }
+    
+    .modal-content {
+      background: #1a1a1a;
+      border-radius: 16px;
+      padding: 32px;
+      max-width: 600px;
+      width: 90%;
+      max-height: 90vh;
+      overflow-y: auto;
+      box-shadow: 0 24px 48px rgba(0, 0, 0, 0.5);
+      position: relative;
+      z-index: 100000 !important;
+    }
+    
+    .modal-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 24px;
+    }
+    
+    .modal-header h2 {
+      margin: 0;
+      font-size: 24px;
+    }
+    
+    .close-modal {
+      background: none;
+      border: none;
+      font-size: 24px;
+      cursor: pointer;
+      color: var(--color-muted);
+      padding: 0;
+      width: 32px;
+      height: 32px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      border-radius: 4px;
+      transition: all 0.2s;
+    }
+    
+    .close-modal:hover {
+      background: rgba(239, 68, 68, 0.1);
+      color: #ef4444;
+    }
+    
+    .form-group {
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+      margin-bottom: 20px;
+    }
+    
+    .form-group label {
+      font-size: 14px;
+      font-weight: 600;
+      color: var(--color-text);
+    }
+    
+    .form-group input,
+    .form-group select,
+    .form-group textarea {
+      padding: 12px;
+      border: 1px solid var(--color-border);
+      border-radius: 8px;
+      font-size: 14px;
+      background: var(--color-bg);
+      color: var(--color-text);
+      transition: all 0.2s;
+    }
+    
+    .form-group input:focus,
+    .form-group select:focus,
+    .form-group textarea:focus {
+      outline: none;
+      border-color: var(--color-accent);
+      box-shadow: 0 0 0 3px rgba(58, 241, 174, 0.1);
+    }
+    
+    .form-row {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 16px;
+    }
+    
+    .form-actions {
+      display: flex;
+      gap: 12px;
+      justify-content: flex-end;
+      margin-top: 24px;
+    }
+    
+    .trigger-type-selector {
+      display: grid;
+      grid-template-columns: repeat(4, 1fr);
+      gap: 8px;
+      margin-bottom: 16px;
+    }
+    
+    .trigger-type-option {
+      padding: 12px;
+      border: 2px solid var(--color-border);
+      border-radius: 8px;
+      text-align: center;
+      cursor: pointer;
+      transition: all 0.2s;
+      font-weight: 500;
+      font-size: 13px;
+    }
+    
+    .trigger-type-option:hover {
+      border-color: var(--color-accent);
+      background: rgba(58, 241, 174, 0.05);
+    }
+    
+    .trigger-type-option.active {
+      border-color: var(--color-accent);
+      background: rgba(58, 241, 174, 0.1);
+      color: var(--color-accent);
+    }
+    
+    .trigger-value-group {
+      display: none;
+    }
+    
+    .trigger-value-group.active {
+      display: block;
+    }
+  </style>
+  
+  <!-- CSS CRÍTICO DO MODAL - INLINE PARA GARANTIR CARREGAMENTO -->
+  <style>
+    #routineModal, #triggerModal {
+      display: none;
+      position: fixed !important;
+      top: 0 !important;
+      left: 0 !important;
+      right: 0 !important;
+      bottom: 0 !important;
+      width: 100vw !important;
+      height: 100vh !important;
+      background: rgba(0, 0, 0, 0.8) !important;
+      z-index: 999999 !important;
+      align-items: center !important;
+      justify-content: center !important;
+    }
+    
+    #routineModal.active, #triggerModal.active {
+      display: flex !important;
+    }
+    
+    #routineModal .modal-content, #triggerModal .modal-content {
+      background: #1a1a1a !important;
+      border: 2px solid #3af1ae !important;
+      border-radius: 16px !important;
+      padding: 32px !important;
+      max-width: 600px !important;
+      width: 90% !important;
+      max-height: 90vh !important;
+      overflow-y: auto !important;
+      box-shadow: 0 24px 48px rgba(0, 0, 0, 0.9) !important;
+      position: relative !important;
+      z-index: 1000000 !important;
+    }
+  </style>
+{% endblock %}
+
+{% block content %}
+<section class="routines-page">
+  <header class="routines-header">
+    <div class="routines-heading">
+      <span class="section-eyebrow">Gestão da Rotina</span>
+      <h1>Rotinas - {{ company.name }}</h1>
+      <p>Gerencie rotinas recorrentes, configure gatilhos automáticos e acompanhe o cumprimento de prazos.</p>
+    </div>
+    <div style="display: flex; gap: 12px;">
+      <button class="button button-ghost" onclick="alert('Teste: botão clicado!')">Teste Simples</button>
+      <button class="button button-primary" onclick="openRoutineModal()">Nova Rotina</button>
+    </div>
+  </header>
+
+  <div id="routinesContainer" class="routines-grid">
+    <!-- Rotinas serão carregadas aqui -->
+  </div>
+  
+  <!-- Modal para criar/editar rotina -->
+  <div id="routineModal" class="modal">
+    <div class="modal-content">
+    <div class="modal-header">
+      <h2 id="routineModalTitle">Nova Rotina</h2>
+      <button class="close-modal" onclick="closeRoutineModal()">×</button>
+    </div>
+    <form id="routineForm" onsubmit="saveRoutine(event)">
+      <input type="hidden" id="routineId" value="">
+      
+      <div class="form-group">
+        <label for="routineName">Nome da Rotina *</label>
+        <input type="text" id="routineName" placeholder="Ex: Backup diário do sistema" required>
+      </div>
+      
+      <div class="form-group">
+        <label for="routineDescription">Descrição</label>
+        <textarea id="routineDescription" rows="3" placeholder="Descreva os detalhes da rotina..."></textarea>
+      </div>
+      
+      <div class="form-actions">
+        <button type="button" class="button button-ghost" onclick="closeRoutineModal()">Cancelar</button>
+        <button type="submit" class="button button-primary">Salvar Rotina</button>
+      </div>
+    </form>
+  </div>
+</div>
+
+<!-- Modal para criar/editar trigger -->
+<div id="triggerModal" class="modal">
+  <div class="modal-content">
+    <div class="modal-header">
+      <h2 id="triggerModalTitle">Novo Gatilho</h2>
+      <button class="close-modal" onclick="closeTriggerModal()">×</button>
+    </div>
+    <form id="triggerForm" onsubmit="saveTrigger(event)">
+      <input type="hidden" id="triggerRoutineId" value="">
+      <input type="hidden" id="triggerId" value="">
+      
+      <div class="form-group">
+        <label>Tipo de Gatilho *</label>
+        <div class="trigger-type-selector">
+          <div class="trigger-type-option" data-type="daily" onclick="selectTriggerType('daily')">
+            Diário
+          </div>
+          <div class="trigger-type-option" data-type="weekly" onclick="selectTriggerType('weekly')">
+            Semanal
+          </div>
+          <div class="trigger-type-option" data-type="monthly" onclick="selectTriggerType('monthly')">
+            Mensal
+          </div>
+          <div class="trigger-type-option" data-type="yearly" onclick="selectTriggerType('yearly')">
+            Anual
+          </div>
+        </div>
+      </div>
+      
+      <div id="triggerValueDaily" class="trigger-value-group">
+        <div class="form-group">
+          <label for="dailyTime">Horário *</label>
+          <input type="time" id="dailyTime" required>
+        </div>
+      </div>
+      
+      <div id="triggerValueWeekly" class="trigger-value-group">
+        <div class="form-group">
+          <label for="weeklyDay">Dia da Semana *</label>
+          <select id="weeklyDay" required>
+            <option value="">Selecione...</option>
+            <option value="monday">Segunda-feira</option>
+            <option value="tuesday">Terça-feira</option>
+            <option value="wednesday">Quarta-feira</option>
+            <option value="thursday">Quinta-feira</option>
+            <option value="friday">Sexta-feira</option>
+            <option value="saturday">Sábado</option>
+            <option value="sunday">Domingo</option>
+          </select>
+        </div>
+      </div>
+      
+      <div id="triggerValueMonthly" class="trigger-value-group">
+        <div class="form-group">
+          <label for="monthlyDay">Dia do Mês *</label>
+          <select id="monthlyDay" required>
+            <option value="">Selecione...</option>
+            <script>
+              for (let i = 1; i <= 31; i++) {
+                document.write('<option value="' + String(i).padStart(2, '0') + '">Dia ' + i + '</option>');
+              }
+            </script>
+          </select>
+        </div>
+      </div>
+      
+      <div id="triggerValueYearly" class="trigger-value-group">
+        <div class="form-group">
+          <label for="yearlyDate">Data (DD/MM) *</label>
+          <input type="text" id="yearlyDate" placeholder="Ex: 01/03" pattern="\d{2}/\d{2}" required>
+        </div>
+      </div>
+      
+      <div class="form-row">
+        <div class="form-group">
+          <label for="deadlineValue">Prazo *</label>
+          <input type="number" id="deadlineValue" min="1" placeholder="Ex: 24" required>
+        </div>
+        
+        <div class="form-group">
+          <label for="deadlineUnit">Unidade *</label>
+          <select id="deadlineUnit" required>
+            <option value="hours">Horas</option>
+            <option value="days">Dias</option>
+          </select>
+        </div>
+      </div>
+      
+      <div class="form-actions">
+        <button type="button" class="button button-ghost" onclick="closeTriggerModal()">Cancelar</button>
+        <button type="submit" class="button button-primary">Salvar Gatilho</button>
+      </div>
+    </form>
+  </div>
+</div>
+
+</section>
+{% endblock %}
+
+{% block scripts %}
+{{ super() }}
+<script>
+  const companyId = {{ company.id }};
+  let currentRoutineId = null;
+  let currentTriggerType = 'daily';
+  
+  // Load routines on page load
+  document.addEventListener('DOMContentLoaded', function() {
+    console.log('Página carregada - iniciando loadRoutines');
+    console.log('Company ID:', companyId);
+    
+    // Verificar se os modais existem
+    const routineModal = document.getElementById('routineModal');
+    const triggerModal = document.getElementById('triggerModal');
+    console.log('Modal de rotina encontrado:', !!routineModal);
+    console.log('Modal de gatilho encontrado:', !!triggerModal);
+    
+    loadRoutines();
+  });
+  
+  async function loadRoutines() {
+    try {
+      const response = await fetch(`/api/companies/${companyId}/routines`);
+      const data = await response.json();
+      
+      if (data.success) {
+        displayRoutines(data.routines);
+      } else {
+        console.error('Erro ao carregar rotinas:', data.error);
+      }
+    } catch (error) {
+      console.error('Erro ao carregar rotinas:', error);
+    }
+  }
+  
+  async function displayRoutines(routines) {
+    const container = document.getElementById('routinesContainer');
+    
+    if (routines.length === 0) {
+      container.innerHTML = `
+        <div class="empty-triggers" style="grid-column: 1 / -1;">
+          <p>Nenhuma rotina cadastrada. Clique em "Nova Rotina" para começar.</p>
+        </div>
+      `;
+      return;
+    }
+    
+    container.innerHTML = '';
+    
+    for (const routine of routines) {
+      // Load triggers for this routine
+      const triggersResponse = await fetch(`/api/routines/${routine.id}/triggers`);
+      const triggersData = await triggersResponse.json();
+      const triggers = triggersData.success ? triggersData.triggers : [];
+      
+      const card = document.createElement('div');
+      card.className = 'routine-card';
+      card.innerHTML = `
+        <div class="routine-card-header">
+          <div class="routine-card-title">
+            <h3>${routine.name}</h3>
+            ${routine.description ? `<p class="routine-card-description">${routine.description}</p>` : ''}
+          </div>
+          <div class="routine-card-actions">
+            <button class="icon-button" onclick="editRoutine(${routine.id})" title="Editar">
+              ✏️
+            </button>
+            <button class="icon-button danger" onclick="deleteRoutine(${routine.id})" title="Excluir">
+              🗑️
+            </button>
+          </div>
+        </div>
+        
+        <div class="routine-triggers-list">
+          ${triggers.length > 0 ? triggers.map(trigger => `
+            <div class="trigger-item">
+              <div class="trigger-info">
+                <span class="trigger-type-badge">${getTriggerTypeLabel(trigger.trigger_type)}</span>
+                <span class="trigger-details">${formatTriggerValue(trigger.trigger_type, trigger.trigger_value)}</span>
+                <span class="trigger-deadline">Prazo: ${trigger.deadline_value} ${trigger.deadline_unit === 'hours' ? 'horas' : 'dias'}</span>
+              </div>
+              <div class="trigger-actions">
+                <button class="icon-button" onclick="editTrigger(${routine.id}, ${trigger.id})" title="Editar">
+                  ✏️
+                </button>
+                <button class="icon-button danger" onclick="deleteTrigger(${trigger.id})" title="Excluir">
+                  🗑️
+                </button>
+              </div>
+            </div>
+          `).join('') : `
+            <div class="empty-triggers">
+              Nenhum gatilho configurado
+            </div>
+          `}
+        </div>
+        
+        <button class="button button-accent" onclick="openTriggerModal(${routine.id})">
+          Adicionar Gatilho
+        </button>
+      `;
+      
+      container.appendChild(card);
+    }
+  }
+  
+  function getTriggerTypeLabel(type) {
+    const labels = {
+      'daily': 'Diário',
+      'weekly': 'Semanal',
+      'monthly': 'Mensal',
+      'yearly': 'Anual'
+    };
+    return labels[type] || type;
+  }
+  
+  function formatTriggerValue(type, value) {
+    if (type === 'daily') {
+      return `Todos os dias às ${value}`;
+    } else if (type === 'weekly') {
+      const days = {
+        'monday': 'Segunda-feira',
+        'tuesday': 'Terça-feira',
+        'wednesday': 'Quarta-feira',
+        'thursday': 'Quinta-feira',
+        'friday': 'Sexta-feira',
+        'saturday': 'Sábado',
+        'sunday': 'Domingo'
+      };
+      return `Toda ${days[value] || value}`;
+    } else if (type === 'monthly') {
+      return `Todo dia ${value} do mês`;
+    } else if (type === 'yearly') {
+      return `Todo ano em ${value}`;
+    }
+    return value;
+  }
+  
+  // Routine Modal Functions
+  function openRoutineModal() {
+    console.log('🔹 openRoutineModal chamado');
+    try {
+      const modal = document.getElementById('routineModal');
+      console.log('🔹 Modal encontrado:', !!modal);
+      
+      if (!modal) {
+        console.error('❌ Modal routineModal não encontrado!');
+        alert('Erro: Modal não encontrado. Atualize a página.');
+        return;
+      }
+      
+      document.getElementById('routineModalTitle').textContent = 'Nova Rotina';
+      document.getElementById('routineId').value = '';
+      document.getElementById('routineForm').reset();
+      modal.classList.add('active');
+      console.log('✅ Modal aberto com sucesso');
+    } catch (error) {
+      console.error('❌ Erro ao abrir modal:', error);
+      alert('Erro ao abrir modal: ' + error.message);
+    }
+  }
+  
+  function closeRoutineModal() {
+    document.getElementById('routineModal').classList.remove('active');
+  }
+  
+  async function saveRoutine(event) {
+    event.preventDefault();
+    
+    const id = document.getElementById('routineId').value;
+    const name = document.getElementById('routineName').value;
+    const description = document.getElementById('routineDescription').value;
+    
+    const payload = { name, description };
+    
+    try {
+      let response;
+      if (id) {
+        response = await fetch(`/api/routines/${id}`, {
+          method: 'PUT',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(payload)
+        });
+      } else {
+        response = await fetch(`/api/companies/${companyId}/routines`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(payload)
+        });
+      }
+      
+      const data = await response.json();
+      
+      if (data.success) {
+        closeRoutineModal();
+        loadRoutines();
+      } else {
+        alert('Erro ao salvar rotina: ' + data.error);
+      }
+    } catch (error) {
+      alert('Erro ao salvar rotina: ' + error.message);
+    }
+  }
+  
+  async function editRoutine(routineId) {
+    try {
+      const response = await fetch(`/api/routines/${routineId}`);
+      const data = await response.json();
+      
+      if (data.success) {
+        const routine = data.routine;
+        document.getElementById('routineModalTitle').textContent = 'Editar Rotina';
+        document.getElementById('routineId').value = routine.id;
+        document.getElementById('routineName').value = routine.name;
+        document.getElementById('routineDescription').value = routine.description || '';
+        document.getElementById('routineModal').classList.add('active');
+      }
+    } catch (error) {
+      alert('Erro ao carregar rotina: ' + error.message);
+    }
+  }
+  
+  async function deleteRoutine(routineId) {
+    if (!confirm('Tem certeza que deseja excluir esta rotina?')) return;
+    
+    try {
+      const response = await fetch(`/api/routines/${routineId}`, {
+        method: 'DELETE'
+      });
+      
+      const data = await response.json();
+      
+      if (data.success) {
+        loadRoutines();
+      } else {
+        alert('Erro ao excluir rotina: ' + data.error);
+      }
+    } catch (error) {
+      alert('Erro ao excluir rotina: ' + error.message);
+    }
+  }
+  
+  // Trigger Modal Functions
+  function openTriggerModal(routineId) {
+    console.log('openTriggerModal chamado com routineId:', routineId);
+    try {
+      currentRoutineId = routineId;
+      document.getElementById('triggerModalTitle').textContent = 'Novo Gatilho';
+      document.getElementById('triggerRoutineId').value = routineId;
+      document.getElementById('triggerId').value = '';
+      document.getElementById('triggerForm').reset();
+      selectTriggerType('daily');
+      document.getElementById('triggerModal').classList.add('active');
+      console.log('Modal aberto com sucesso');
+    } catch (error) {
+      console.error('Erro ao abrir modal:', error);
+      alert('Erro ao abrir modal: ' + error.message);
+    }
+  }
+  
+  function closeTriggerModal() {
+    document.getElementById('triggerModal').classList.remove('active');
+  }
+  
+  function selectTriggerType(type) {
+    currentTriggerType = type;
+    
+    // Update active state on type selector
+    document.querySelectorAll('.trigger-type-option').forEach(option => {
+      option.classList.toggle('active', option.dataset.type === type);
+    });
+    
+    // Show/hide appropriate value input
+    document.querySelectorAll('.trigger-value-group').forEach(group => {
+      group.classList.remove('active');
+    });
+    document.getElementById(`triggerValue${type.charAt(0).toUpperCase() + type.slice(1)}`).classList.add('active');
+  }
+  
+  async function saveTrigger(event) {
+    event.preventDefault();
+    
+    const routineId = document.getElementById('triggerRoutineId').value;
+    const triggerId = document.getElementById('triggerId').value;
+    const triggerType = currentTriggerType;
+    
+    let triggerValue;
+    if (triggerType === 'daily') {
+      triggerValue = document.getElementById('dailyTime').value;
+    } else if (triggerType === 'weekly') {
+      triggerValue = document.getElementById('weeklyDay').value;
+    } else if (triggerType === 'monthly') {
+      triggerValue = document.getElementById('monthlyDay').value;
+    } else if (triggerType === 'yearly') {
+      triggerValue = document.getElementById('yearlyDate').value;
+    }
+    
+    const deadlineValue = document.getElementById('deadlineValue').value;
+    const deadlineUnit = document.getElementById('deadlineUnit').value;
+    
+    const payload = {
+      trigger_type: triggerType,
+      trigger_value: triggerValue,
+      deadline_value: parseInt(deadlineValue),
+      deadline_unit: deadlineUnit
+    };
+    
+    try {
+      let response;
+      if (triggerId) {
+        response = await fetch(`/api/triggers/${triggerId}`, {
+          method: 'PUT',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(payload)
+        });
+      } else {
+        response = await fetch(`/api/routines/${routineId}/triggers`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(payload)
+        });
+      }
+      
+      const data = await response.json();
+      
+      if (data.success) {
+        closeTriggerModal();
+        loadRoutines();
+      } else {
+        alert('Erro ao salvar gatilho: ' + data.error);
+      }
+    } catch (error) {
+      alert('Erro ao salvar gatilho: ' + error.message);
+    }
+  }
+  
+  async function editTrigger(routineId, triggerId) {
+    // Implementation for editing trigger
+    alert('Funcionalidade de edição de gatilho em desenvolvimento');
+  }
+  
+  async function deleteTrigger(triggerId) {
+    if (!confirm('Tem certeza que deseja excluir este gatilho?')) return;
+    
+    try {
+      const response = await fetch(`/api/triggers/${triggerId}`, {
+        method: 'DELETE'
+      });
+      
+      const data = await response.json();
+      
+      if (data.success) {
+        loadRoutines();
+      } else {
+        alert('Erro ao excluir gatilho: ' + data.error);
+      }
+    } catch (error) {
+      alert('Erro ao excluir gatilho: ' + error.message);
+    }
+  }
+  
+  // Close modals when clicking outside
+  document.getElementById('routineModal').addEventListener('click', function(e) {
+    if (e.target === this) closeRoutineModal();
+  });
+  
+  document.getElementById('triggerModal').addEventListener('click', function(e) {
+    if (e.target === this) closeTriggerModal();
+  });
+</script>
+{% endblock %}
+

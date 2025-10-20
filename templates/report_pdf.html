@@ -1,0 +1,310 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="utf-8" />
+  <title>Relatorio {{ plan.name }}</title>
+  <link rel="icon" type="image/x-icon" href="{{ url_for('static', filename='favicon.ico') }}" />
+  <link rel="shortcut icon" type="image/x-icon" href="{{ url_for('static', filename='favicon.ico') }}" />
+  <style>
+    @page {
+      size: A4 portrait;
+      margin: 30mm 20mm 20mm 30mm; /* ABNT: superior 3cm, lateral 2cm, inferior 2cm, esquerda 3cm */
+      @top-left {
+        content: "Versus Gestão Corporativa";
+        font-size: 9pt;
+        color: #39f2ae;
+      }
+      @top-right {
+        content: "Plano: {{ plan.name }}";
+        font-size: 9pt;
+        color: #1a1a1a;
+      }
+      @bottom-left {
+        content: "Emitido em {{ generated_at }}";
+        font-size: 8pt;
+        color: #666666;
+      }
+      @bottom-right {
+        content: "Pagina " counter(page) " de " counter(pages);
+        font-size: 8pt;
+        color: #666666;
+      }
+    }
+    
+    @media print {
+      @page {
+        size: A4 portrait;
+        margin: 25mm 18mm;
+      }
+      
+      * {
+        -webkit-print-color-adjust: exact;
+        color-adjust: exact;
+      }
+    }
+  </style>
+</head>
+<body class="pdf-body">
+  {% if 'cover' in sections %}
+  <section class="pdf-cover">
+    <div class="pdf-cover-brand">
+      <span class="brand-eyebrow">Versus Gestão Corporativa</span>
+      <h1>{{ plan.name }}</h1>
+      <p>Relatorio consolidado completo</p>
+    </div>
+    <div class="pdf-cover-meta">
+      <p><strong>Cliente:</strong> {{ company.name if company else '' }}</p>
+      <p><strong>Emitido em:</strong> {{ generated_at }}</p>
+      <p><strong>Responsavel:</strong> {{ user_name }}</p>
+    </div>
+  </section>
+
+  <section class="pdf-hero">
+    <article class="pdf-hero-card">
+      <h2>Resumo executivo</h2>
+      <p>Documento confidencial preparado pela Versus Gestão Corporativa para consolidar o andamento do plano estrategico.</p>
+    </article>
+    <article class="pdf-hero-card">
+      <h2>Pilares monitorados</h2>
+      <ul>
+        <li>Participantes e engajamento</li>
+        <li>Direcionadores estrategicos</li>
+        <li>OKRs globais e de area</li>
+        <li>Portfolio de projetos</li>
+      </ul>
+    </article>
+  </section>
+
+  <section class="pdf-index">
+    <h2>Indice</h2>
+    <ol>
+      <li>Introducao</li>
+      <li>Dashboard de indicadores</li>
+      <li>Participantes</li>
+      <li>Dados da organizacao</li>
+      <li>Direcionadores</li>
+      <li>OKRs globais</li>
+      <li>OKRs de area</li>
+      <li>Projetos</li>
+      <li>Conclusao</li>
+    </ol>
+  </section>
+
+  <section class="pdf-section">
+    <h2>Introducao</h2>
+    <p>Lorem ipsum dolor sit amet, consectetur adipiscing elit. Nullam id sem dignissim, rutrum lorem vel, congue ex. Texto placeholder ate integrarmos conteudo oficial Versus Gestão Corporativa.</p>
+  </section>
+  {% endif %}
+
+  {% if 'dashboard' in sections %}
+  <section class="pdf-section">
+    <h2>Dashboard de indicadores</h2>
+    <div class="kpi-grid">
+      <article class="kpi-card">
+        <span class="kpi-label">Participantes ativos</span>
+        <strong class="kpi-value">{{ participants | selectattr('status', 'equalto', 'active') | list | length }}</strong>
+        <span class="kpi-meta">Total cadastrados: {{ participants|length }}</span>
+      </article>
+      <article class="kpi-card">
+        <span class="kpi-label">Direcionadores aprovados</span>
+        <strong class="kpi-value">{{ directionals_session.approvals.selected_partners|length if directionals_session.approvals else 0 }}</strong>
+        <span class="kpi-meta">Catalogo: {{ directionals_session.catalog|length if directionals_session.catalog else 0 }}</span>
+      </article>
+      <article class="kpi-card">
+        <span class="kpi-label">OKRs globais ativos</span>
+        <strong class="kpi-value">{{ okr_global_summary|length }}</strong>
+        <span class="kpi-meta">Ultima revisao: {{ okr_global.maturity_updated_at if okr_global.maturity_updated_at else 'N/A' }}</span>
+      </article>
+      <article class="kpi-card">
+        <span class="kpi-label">Projetos em andamento</span>
+        <strong class="kpi-value">{{ projects_summary | selectattr('status', 'equalto', 'Em andamento') | list | length }}</strong>
+        <span class="kpi-meta">Portifolio total: {{ projects_summary|length }}</span>
+      </article>
+    </div>
+  </section>
+  {% endif %}
+
+  {% if 'participants' in sections %}
+  <section class="pdf-section">
+    <h2>Participantes</h2>
+    <p>Acompanhamento do engajamento dos participantes registrados no plano.</p>
+    <table>
+      <thead>
+        <tr>
+          <th>Nome</th>
+          <th>Cargo</th>
+          <th>Relacao</th>
+          <th>Status</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for participant in participants %}
+        <tr>
+          <td>{{ participant.name }}</td>
+          <td>{{ participant.role }}</td>
+          <td>{{ participant.relation }}</td>
+          <td>{{ participant.status }}</td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </section>
+  {% endif %}
+
+  {% if 'company' in sections %}
+  <section class="pdf-section">
+    <h2>Dados da organizacao</h2>
+    <div class="info-grid">
+      <article class="info-card">
+        <span class="info-label">Nome fantasia</span>
+        <strong>{{ company_data.trade_name }}</strong>
+      </article>
+      <article class="info-card">
+        <span class="info-label">CNPJ</span>
+        <strong>{{ company_data.cnpj }}</strong>
+      </article>
+      <article class="info-card">
+        <span class="info-label">Cobertura fisica</span>
+        <strong>{{ company_data.coverage.physical if company_data.coverage else '-' }}</strong>
+      </article>
+      <article class="info-card">
+        <span class="info-label">Cobertura online</span>
+        <strong>{{ company_data.coverage.online if company_data.coverage else '-' }}</strong>
+      </article>
+    </div>
+    <div class="narrative-cards">
+      <article>
+        <h3>Missao</h3>
+        <p>{{ company_data.mission or 'Nao informado' }}</p>
+      </article>
+      <article>
+        <h3>Visao</h3>
+        <p>{{ company_data.vision or 'Nao informado' }}</p>
+      </article>
+      <article>
+        <h3>Valores</h3>
+        <p>{{ company_data.values or 'Nao informado' }}</p>
+      </article>
+    </div>
+  </section>
+  {% endif %}
+
+  {% if 'directionals' in sections %}
+  <section class="pdf-section">
+    <h2>Direcionadores</h2>
+    <table>
+      <thead>
+        <tr>
+          <th>Direcionador</th>
+          <th>Status</th>
+          <th>Responsavel</th>
+          <th>Atualizado</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for driver in directionals_session.catalog or [] %}
+        <tr>
+          <td>{{ driver.title }}</td>
+          <td>{{ driver.status }}</td>
+          <td>{{ driver.owner }}</td>
+          <td>{{ driver.updated_at }}</td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </section>
+  {% endif %}
+
+  {% if 'okr_global' in sections %}
+  <section class="pdf-section">
+    <h2>OKRs globais</h2>
+    <table>
+      <thead>
+        <tr>
+          <th>Objetivo</th>
+          <th>Tipo</th>
+          <th>Responsavel</th>
+          <th>Prazo</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for okr in okr_global_summary %}
+        <tr>
+          <td>{{ okr.objective }}</td>
+          <td>{{ okr.type }}</td>
+          <td>{{ okr.owner }}</td>
+          <td>{{ okr.deadline }}</td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </section>
+  {% endif %}
+
+  {% if 'okr_area' in sections %}
+  <section class="pdf-section">
+    <h2>OKRs de area</h2>
+    <table>
+      <thead>
+        <tr>
+          <th>Objetivo</th>
+          <th>Area</th>
+          <th>Tipo</th>
+          <th>Responsavel</th>
+          <th>Prazo</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for okr in okr_area_summary %}
+        <tr>
+          <td>{{ okr.objective }}</td>
+          <td>{{ okr.department }}</td>
+          <td>{{ okr.type }}</td>
+          <td>{{ okr.owner }}</td>
+          <td>{{ okr.deadline }}</td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </section>
+  {% endif %}
+
+  {% if 'projects' in sections %}
+  <section class="pdf-section">
+    <h2>Projetos</h2>
+    <table>
+      <thead>
+        <tr>
+          <th>Projeto</th>
+          <th>Responsavel</th>
+          <th>Status</th>
+          <th>Prazo</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for project in projects_summary %}
+        <tr>
+          <td>{{ project.name }}</td>
+          <td>{{ project.owner }}</td>
+          <td>{{ project.status }}</td>
+          <td>{{ project.deadline }}</td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </section>
+  {% endif %}
+
+  {% if 'conclusion' in sections %}
+  <section class="pdf-section">
+    <h2>Conclusao</h2>
+    <p>Texto placeholder com consideracoes finais, riscos e proximos passos do plano estrategico. Ajustar assim que houver conteudo definitivo.</p>
+    <div class="pdf-signature">
+      <span>Assinatura</span>
+      <div class="pdf-signature-line"></div>
+      <span>{{ user_name }}</span>
+    </div>
+  </section>
+  {% endif %}
+</body>
+</html>

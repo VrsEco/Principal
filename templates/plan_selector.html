@@ -1,0 +1,3371 @@
+﻿{% extends "base.html" %}
+{% block title %}Projetos | PEV 2.0{% endblock %}
+{% block body %}
+  {% set active_nav = 'configs' if show_ai_only|default(False) else 'projetos' %}
+  {{ super() }}
+{% endblock %}
+{% block header_actions %}
+  {% if show_ai_only|default(False) %}
+    <div class="header-nav">
+      <a href="{{ url_for('system_configs') }}" class="nav-link">Configurações</a>
+      <span class="nav-link active">IA</span>
+    </div>
+  {% else %}
+    <div class="header-nav">
+      <a href="/main" class="nav-link">Ecossistema</a>
+      <a href="{{ url_for('pev.pev_dashboard') }}" class="nav-link">PEV</a>
+      <a href="{{ url_for('grv.grv_dashboard') }}" class="nav-link">GRV</a>
+    </div>
+  {% endif %}
+  <div class="user-pill">
+    <span class="user-name">{{ user_name | default('Fabiano Ferreira') }}</span>
+  </div>
+  <div class="header-nav">
+    <select id="themeSelect" class="nav-link" style="padding:8px 12px; color: #64748b;">
+      <option value="versus">Tema Versus</option>
+      <option value="alt">Tema Azul/Branco/Amarelo</option>
+    </select>
+  </div>
+{% endblock %}
+{% block content %}
+  {% set companies = companies | default([
+    {
+      'id': 'tia-sonia',
+      'name': 'Alimentos Tia Sonia',
+      'plans': [
+      {'id': 'transformacao-digital-2025', 'name': 'Transformacao Digital 2025'},
+      {'id': 'plano-okr-2025', 'name': 'Plano de OKR 2025'}
+    ]
+    },
+    {
+      'id': 'grupo-versus',
+      'name': 'Grupo Versus',
+      'plans': [
+      {'id': 'expansao-comercial-nordeste', 'name': 'Expansao Comercial Nordeste'}
+    ]
+    },
+    {
+      'id': 'logistica-norte',
+      'name': 'Logistica Norte',
+      'plans': [
+      {'id': 'reestruturacao-operacional', 'name': 'Reestruturacao Operacional'}
+    ]
+    }
+  ]) %}
+  {% set plans = plans | default([
+    {
+      'id': 'transformacao-digital-2025',
+      'name': 'Transformacao Digital 2025',
+      'company': 'Alimentos Tia Sonia',
+      'progress': 68,
+      'owner': 'Marcos Fenecio',
+      'start': '01/05/2025',
+      'end': '30/04/2026',
+      'status': 'success'
+    },
+    {
+      'id': 'expansao-comercial-nordeste',
+      'name': 'Expansao Comercial Nordeste',
+      'company': 'Grupo Versus',
+      'progress': 42,
+      'owner': 'Fabiano Ferreira',
+      'start': '15/04/2025',
+      'end': '31/12/2025',
+      'status': 'warning'
+    },
+    {
+      'id': 'reestruturacao-operacional',
+      'name': 'Reestruturacao Operacional',
+      'company': 'Logistica Norte',
+      'progress': 24,
+      'owner': 'Carlos Pina',
+      'start': '01/06/2025',
+      'end': '31/03/2026',
+      'status': 'danger'
+    }
+  ]) %}
+  {% set highlights = highlights | default({
+    'active_plans': plans | length,
+    'average_progress': 45,
+    'upcoming_reviews': 3,
+    'last_update': '16/09/2025'
+  }) %}
+  {% if not show_ai_only|default(False) %}
+  <div class="page-header">
+    <span class="page-eyebrow">Planejamento estrategico Versus</span>
+    <h1 class="page-title">Bem-vindo, {{ user_name | default('Fabiano Ferreira') }}</h1>
+    <p class="page-subtitle">Uma jornada de evoluã§ã£o continua, na qual planejamento, execuã§ã£o e gestã£o caminham com ritmo coordenado.</p>
+    <div style="margin-top: 16px;">
+      <a href="/main" style="color: var(--color-accent); text-decoration: none; font-size: 14px;">â† Voltar ao Ecossistema Versus</a>
+    </div>
+  </div>
+
+  <section class="surface-card principle-panel">
+    <div class="principle-intro">
+      <h2>Nosso manifesto de planejamento</h2>
+      <p>A qualidade do planejamento nasce da verdade, da transparãªncia e da profundidade com que enxergamos o negã³cio. Cada ciclo fortalece a execuã§ã£o e a capacidade de gerar resultados sustentã¡veis.</p>
+    </div>
+    <div class="principle-grid">
+      <article class="principle-card">
+        <span class="principle-number">01</span>
+        <p>A qualidade do planejamento nasce da verdade, da transparencia e da profundidade com que encaramos a realidade do negocio.</p>
+      </article>
+      <article class="principle-card">
+        <span class="principle-number">02</span>
+        <p>Planejar e executar e um caminho evolutivo: cada ciclo amplia nossa visao e refina nossas entregas.</p>
+      </article>
+      <article class="principle-card">
+        <span class="principle-number">03</span>
+        <p>Quanto mais consistente for a analise do ambiente e dos fatores internos, mais preciso sera o resultado alcancado.</p>
+      </article>
+      <article class="principle-card">
+        <span class="principle-number">04</span>
+        <p>O sucesso floresce do alinhamento entre planejamento, execuã§ã£o e rotina  com revisãµes e recalibraã§ãµes constantes.</p>
+      </article>
+      <article class="principle-card">
+        <span class="principle-number">05</span>
+        <p>Evite pressionar alã©m da capacidade: sustente o ritmo, expanda com seguranã§a e mantenha a cadãªncia adequada.</p>
+      </article>
+      <article class="principle-card">
+        <span class="principle-number">06</span>
+        <p>Quando ainda nã£o hã¡ sustentabilidade, uma fase de aceleraã§ã£o temporã¡ria pode impulsionar o avanã§o sem perder o equilã­brio.</p>
+      </article>
+    </div>
+  </section>
+
+  <section class="surface-card project-hub" id="project-hub" data-companies='{{ companies | tojson | safe }}'>
+    <div class="project-hub-layout">
+      <div class="project-hub-create">
+        <span class="section-eyebrow">Configurar estrutura</span>
+        <h2>Empresas &amp; Planejamentos</h2>
+        <p>Criar novas empresas para centralizar indicadores e, em seguida, adicione o planejamento estrategico. Essa estrutura garante visibilidade total dos objetivos e entregas.</p>
+        <div class="project-hub-actions">
+          <button class="button button-ghost" type="button" id="new-company-btn">Nova empresa</button>
+          <button class="button button-primary" type="button" id="new-plan-btn">Novo planejamento</button>
+        </div>
+        <div class="project-hub-hint">
+          <span>Apos cadastrar, utilize os campos ao lado para acessar rapidamente os planejamentos existentes.</span>
+        </div>
+      </div>
+      <div class="project-hub-selectors">
+        <div class="selector-group">
+          <label class="combo-label" for="company-select">Selecione a empresa</label>
+          <div class="combo-field">
+            <select id="company-select" class="combo-control">
+              <option value="">Escolha uma empresa</option>
+              {% for company in companies %}
+              <option value="{{ company.id }}">{{ company.name }}</option>
+              {% endfor %}
+            </select>
+          </div>
+        </div>
+        <div class="selector-group">
+          <label class="combo-label" for="plan-select">Selecionar planejamento</label>
+          <div class="combo-field">
+            <select id="plan-select" class="combo-control" disabled>
+              <option value="">Selecione uma empresa primeiro</option>
+            </select>
+          </div>
+        </div>
+        <div class="selector-actions">
+          <button id="plan-confirm" class="button button-primary" type="button" disabled>Ir para planejamento</button>
+        </div>
+        <div class="selector-summary surface-tint">
+          <span class="summary-eyebrow">Resumo rapido</span>
+          <p><strong>{{ highlights.active_plans }}</strong> planejamentos ativos estao vinculados as empresas acima. Utilize o menu lateral para navegar pelas secoes do planejamento.</p>
+        </div>
+      </div>
+    </div>
+  </section>
+  {% endif %}
+
+  <!-- Seção Principal IA -->
+  <section class="surface-card ia-section" {% if not show_ai_only|default(False) %}style="display:none;"{% endif %}>
+    <div class="ia-header">
+      <div class="ia-title">
+        <h2>🤖 Inteligência Artificial</h2>
+        <span class="ia-subtitle">Automação estratégica e conectividade inteligente</span>
+      </div>
+    </div>
+    <div class="ia-content">
+      <!-- Subsessão: Agentes de IA -->
+      <div class="ia-subsection" id="agents-subsection">
+        <div class="subsection-header">
+          <div class="subsection-title">
+            <h3>Agentes de IA</h3>
+            <span class="subsection-badge">Automação estratégica</span>
+          </div>
+          <div class="subsection-actions">
+            <button class="button button-primary" type="button" id="agents-new-btn">
+              <span class="button-icon">➕</span>
+              Novo Agente
+            </button>
+            <button class="button button-secondary" type="button" onclick="testAgentsTable()" style="margin-left: 8px;">
+              🧪 Testar
+            </button>
+          </div>
+        </div>
+        <div id="agents-table" class="subsection-content"></div>
+      </div>
+
+      <!-- Subsessão: Integrações/Serviços -->
+      <div class="ia-subsection" id="integrations-subsection">
+        <div class="subsection-header">
+          <div class="subsection-title">
+            <h3>Integrações/Serviços</h3>
+            <span class="subsection-badge">Conectividade externa</span>
+          </div>
+          <div class="subsection-actions">
+            <button class="button button-primary" type="button" id="integrations-new-btn">
+              <span class="button-icon">➕</span>
+              Nova Integração
+            </button>
+          </div>
+        </div>
+        <div id="integrations-table" class="subsection-content"></div>
+      </div>
+    </div>
+  </section>
+
+  <!-- Seção: Status dos Serviços -->
+  <section class="surface-card services-section" {% if not show_ai_only|default(False) %}style="display:none;"{% endif %}>
+    <div class="services-header">
+      <div class="services-title">
+        <h2>📊 Status dos Serviços</h2>
+        <p class="services-subtitle">Monitoramento em tempo real da conectividade e disponibilidade dos serviços</p>
+      </div>
+      <div class="services-actions">
+        <button class="button button-secondary" type="button" onclick="refreshServicesStatus()">
+          <span class="button-icon">🔄</span>
+          Atualizar Status
+        </button>
+      </div>
+    </div>
+    <div class="services-content">
+      <div class="services-grid">
+        <!-- Card de IA -->
+        <div class="service-card">
+          <div class="service-header">
+            <div class="service-icon">🤖</div>
+            <div class="service-info">
+              <h4 class="service-name">Inteligência Artificial</h4>
+              <span class="service-provider" id="ai-provider">OpenAI</span>
+            </div>
+            <div class="service-status" id="ai-status">
+              <span class="status-indicator status-active"></span>
+              <span class="status-text">Ativo</span>
+            </div>
+          </div>
+          <div class="service-details">
+            <div class="service-detail">
+              <span class="detail-label">Provedor:</span>
+              <span class="detail-value" id="ai-provider-detail">OpenAI GPT-3.5</span>
+            </div>
+            <div class="service-detail">
+              <span class="detail-label">Agentes:</span>
+              <span class="detail-value" id="ai-agents-count">4 agentes ativos</span>
+            </div>
+          </div>
+          <div class="service-actions">
+            <button type="button" class="button button-sm button-secondary" onclick="testAIService()">
+              🧪 Testar
+            </button>
+            <button type="button" class="button button-sm button-secondary" onclick="configureAIService()">
+              ⚙️ Configurar
+            </button>
+          </div>
+        </div>
+
+        <!-- Card de Email -->
+        <div class="service-card">
+          <div class="service-header">
+            <div class="service-icon">📧</div>
+            <div class="service-info">
+              <h4 class="service-name">Email</h4>
+              <span class="service-provider" id="email-provider">SMTP</span>
+            </div>
+            <div class="service-status" id="email-status">
+              <span class="status-indicator status-inactive"></span>
+              <span class="status-text">Inativo</span>
+            </div>
+          </div>
+          <div class="service-details">
+            <div class="service-detail">
+              <span class="detail-label">Servidor:</span>
+              <span class="detail-value" id="email-server">smtp.gmail.com</span>
+            </div>
+            <div class="service-detail">
+              <span class="detail-label">Porta:</span>
+              <span class="detail-value" id="email-port">587</span>
+            </div>
+          </div>
+          <div class="service-actions">
+            <button type="button" class="button button-sm button-secondary" onclick="testEmailService()">
+              🧪 Testar
+            </button>
+            <button type="button" class="button button-sm button-secondary" onclick="configureEmailService()">
+              ⚙️ Configurar
+            </button>
+          </div>
+        </div>
+
+        <!-- Card de WhatsApp -->
+        <div class="service-card">
+          <div class="service-header">
+            <div class="service-icon">💬</div>
+            <div class="service-info">
+              <h4 class="service-name">WhatsApp</h4>
+              <span class="service-provider" id="whatsapp-provider">Z-API</span>
+            </div>
+            <div class="service-status" id="whatsapp-status">
+              <span class="status-indicator status-inactive"></span>
+              <span class="status-text">Inativo</span>
+            </div>
+          </div>
+          <div class="service-details">
+            <div class="service-detail">
+              <span class="detail-label">Provedor:</span>
+              <span class="detail-value" id="whatsapp-provider-detail">Z-API</span>
+            </div>
+            <div class="service-detail">
+              <span class="detail-label">Instância:</span>
+              <span class="detail-value" id="whatsapp-instance">Não configurada</span>
+            </div>
+          </div>
+          <div class="service-actions">
+            <button type="button" class="button button-sm button-secondary" onclick="testWhatsAppService()">
+              🧪 Testar
+            </button>
+            <button type="button" class="button button-sm button-secondary" onclick="configureWhatsAppService()">
+              ⚙️ Configurar
+            </button>
+          </div>
+        </div>
+
+        <!-- Card de Banco de Dados -->
+        <div class="service-card">
+          <div class="service-header">
+            <div class="service-icon">🗄️</div>
+            <div class="service-info">
+              <h4 class="service-name">Banco de Dados</h4>
+              <span class="service-provider" id="db-provider">SQLite</span>
+            </div>
+            <div class="service-status" id="db-status">
+              <span class="status-indicator status-active"></span>
+              <span class="status-text">Ativo</span>
+            </div>
+          </div>
+          <div class="service-details">
+            <div class="service-detail">
+              <span class="detail-label">Tipo:</span>
+              <span class="detail-value" id="db-type">SQLite</span>
+            </div>
+            <div class="service-detail">
+              <span class="detail-label">Arquivo:</span>
+              <span class="detail-value" id="db-file">pevapp22.db</span>
+            </div>
+          </div>
+          <div class="service-actions">
+            <button type="button" class="button button-sm button-secondary" onclick="viewDatabaseInfo()">
+              📊 Info
+            </button>
+            <button type="button" class="button button-sm button-secondary" onclick="backupDatabase()">
+              💾 Backup
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  {% if not show_ai_only|default(False) %}
+  <!-- Modal para Nova Empresa -->
+  <div id="company-modal" class="modal" style="display: none;">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h3>Nova Empresa</h3>
+        <span class="modal-close" id="company-modal-close">&times;</span>
+      </div>
+      <form id="company-form">
+        <div class="form-group">
+          <label for="company-name">Nome da Empresa *</label>
+          <input type="text" id="company-name" name="name" required>
+        </div>
+        <div class="form-group">
+          <label for="company-client-code">Código do Cliente *</label>
+          <input type="text" id="company-client-code" name="client_code" 
+                 required maxlength="3" pattern="[A-Za-z0-9]{1,3}" placeholder="Ex: AO, A1, J99"
+                 style="text-transform:uppercase;">
+          <small style="color:var(--color-muted);font-size:11px;display:block;margin-top:4px;">
+            Entre 1 e 3 caracteres (letras ou números) para identificação (usado nos códigos de processos)
+          </small>
+        </div>
+        <div class="form-group">
+          <label for="company-legal-name">Razã£o Social</label>
+          <input type="text" id="company-legal-name" name="legal_name">
+        </div>
+        <div class="form-group">
+          <label for="company-industry">Setor</label>
+          <input type="text" id="company-industry" name="industry">
+        </div>
+        <div class="form-group">
+          <label for="company-size">Porte</label>
+          <select id="company-size" name="size">
+            <option value="">Selecione</option>
+            <option value="micro">Microempresa</option>
+            <option value="pequena">Pequena</option>
+            <option value="media">Mã©dia</option>
+            <option value="grande">Grande</option>
+          </select>
+        </div>
+        <div class="form-group">
+          <label for="company-description">Descriã§ã£o</label>
+          <textarea id="company-description" name="description" rows="3"></textarea>
+        </div>
+        <div class="form-actions">
+          <button type="button" class="button button-ghost" id="company-cancel">Cancelar</button>
+          <button type="submit" class="button button-primary">Criar Empresa</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- Modal para Novo Planejamento -->
+  <div id="plan-modal" class="modal" style="display: none;">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h3>Novo Planejamento</h3>
+        <span class="modal-close" id="plan-modal-close">&times;</span>
+      </div>
+      <form id="plan-form">
+        <div class="form-group">
+          <label for="plan-company">Empresa *</label>
+          <select id="plan-company" name="company_id" required>
+            <option value="">Selecione uma empresa</option>
+            {% for company in companies %}
+            <option value="{{ company.id }}">{{ company.name }}</option>
+            {% endfor %}
+          </select>
+        </div>
+        <div class="form-group">
+          <label for="plan-name">Nome do Planejamento *</label>
+          <input type="text" id="plan-name" name="name" required>
+        </div>
+        <div class="form-group">
+          <label for="plan-description">Descriã§ã£o</label>
+          <textarea id="plan-description" name="description" rows="3"></textarea>
+        </div>
+        <div class="form-group">
+          <label for="plan-start-date">Data de Inã­cio *</label>
+          <input type="date" id="plan-start-date" name="start_date" required>
+        </div>
+        <div class="form-group">
+          <label for="plan-end-date">Data de Fim *</label>
+          <input type="date" id="plan-end-date" name="end_date" required>
+        </div>
+        <div class="form-actions">
+          <button type="button" class="button button-ghost" id="plan-cancel">Cancelar</button>
+          <button type="submit" class="button button-primary">Criar Planejamento</button>
+        </div>
+      </form>
+    </div>
+  </div>
+  {% endif %}
+
+  <!-- Modal para Configuração de IA -->
+  <div id="ai-config-modal" class="modal" style="display: none;">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h3>🤖 Configuração de Inteligência Artificial</h3>
+        <span class="modal-close" id="ai-config-modal-close">&times;</span>
+      </div>
+      <div class="modal-body">
+        <div class="form-group">
+          <label for="ai-provider-select">Provedor de IA:</label>
+          <select id="ai-provider-select" onchange="updateAIForm()">
+            <option value="openai">OpenAI (GPT)</option>
+            <option value="anthropic">Anthropic (Claude)</option>
+            <option value="webhook">Webhook Personalizado</option>
+            <option value="local">Análise Local</option>
+          </select>
+        </div>
+
+        <div id="openai-config" class="provider-config">
+          <div class="form-group">
+            <label for="openai-api-key">API Key da OpenAI:</label>
+            <input type="password" id="openai-api-key" placeholder="sk-..." />
+            <small>Obtenha sua chave em: <a href="https://platform.openai.com/api-keys" target="_blank">platform.openai.com</a></small>
+          </div>
+        </div>
+
+        <div id="anthropic-config" class="provider-config" style="display: none;">
+          <div class="form-group">
+            <label for="anthropic-api-key">API Key da Anthropic:</label>
+            <input type="password" id="anthropic-api-key" placeholder="sk-ant-..." />
+            <small>Obtenha sua chave em: <a href="https://console.anthropic.com/" target="_blank">console.anthropic.com</a></small>
+          </div>
+        </div>
+
+        <div id="webhook-config" class="provider-config" style="display: none;">
+          <div class="form-group">
+            <label for="webhook-url">URL do Webhook:</label>
+            <input type="url" id="webhook-url" placeholder="https://seu-webhook.com/ai" />
+          </div>
+        </div>
+
+        <div id="local-config" class="provider-config" style="display: none;">
+          <div class="info-box">
+            <p>✅ Análise local ativada - não requer configuração adicional</p>
+            <p>O sistema usará análises pré-definidas para demonstração.</p>
+          </div>
+        </div>
+
+        <div class="test-section">
+          <button class="button button-secondary" onclick="testAIConnection()">🧪 Testar Conexão</button>
+          <div id="ai-test-result" class="test-result"></div>
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="button button-secondary" id="ai-config-cancel">Cancelar</button>
+        <button type="button" class="button button-primary" onclick="saveAIConfig()">Salvar Configuração</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Modal para Configuração de Email -->
+  <div id="email-config-modal" class="modal" style="display: none;">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h3>📧 Configuração de Email</h3>
+        <span class="modal-close" id="email-config-modal-close">&times;</span>
+      </div>
+      <div class="modal-body">
+        <div class="form-group">
+          <label for="email-provider-select">Provedor de Email:</label>
+          <select id="email-provider-select" onchange="updateEmailForm()">
+            <option value="smtp">SMTP (Gmail, Outlook, etc.)</option>
+            <option value="webhook">Webhook Personalizado</option>
+            <option value="disabled">Desabilitado</option>
+          </select>
+        </div>
+
+        <div id="smtp-config" class="provider-config">
+          <div class="form-row">
+            <div class="form-group">
+              <label for="mail-server">Servidor SMTP:</label>
+              <input type="text" id="mail-server" placeholder="smtp.gmail.com" />
+            </div>
+            <div class="form-group">
+              <label for="mail-port">Porta:</label>
+              <input type="number" id="mail-port" placeholder="587" />
+            </div>
+          </div>
+          <div class="form-group">
+            <label for="mail-username">Usuário:</label>
+            <input type="email" id="mail-username" placeholder="seu-email@gmail.com" />
+          </div>
+          <div class="form-group">
+            <label for="mail-password">Senha/App Password:</label>
+            <input type="password" id="mail-password" placeholder="Sua senha ou app password" />
+            <small>Para Gmail, use App Password: <a href="https://support.google.com/accounts/answer/185833" target="_blank">Como criar</a></small>
+          </div>
+          <div class="form-group">
+            <label>
+              <input type="checkbox" id="mail-use-tls" checked />
+              Usar TLS
+            </label>
+          </div>
+        </div>
+
+        <div id="email-webhook-config" class="provider-config" style="display: none;">
+          <div class="form-group">
+            <label for="email-webhook-url">URL do Webhook:</label>
+            <input type="url" id="email-webhook-url" placeholder="https://seu-webhook.com/email" />
+          </div>
+        </div>
+
+        <div class="test-section">
+          <button class="button button-secondary" onclick="testEmailConnection()">🧪 Testar Conexão</button>
+          <div id="email-test-result" class="test-result"></div>
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="button button-secondary" id="email-config-cancel">Cancelar</button>
+        <button type="button" class="button button-primary" onclick="saveEmailConfig()">Salvar Configuração</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Modal para Configuração de WhatsApp -->
+  <div id="whatsapp-config-modal" class="modal" style="display: none;">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h3>💬 Configuração de WhatsApp</h3>
+        <span class="modal-close" id="whatsapp-config-modal-close">&times;</span>
+      </div>
+      <div class="modal-body">
+        <div class="form-group">
+          <label for="whatsapp-provider-select">Provedor de WhatsApp:</label>
+          <select id="whatsapp-provider-select" onchange="updateWhatsAppForm()">
+            <option value="z-api">Z-API</option>
+            <option value="twilio">Twilio</option>
+            <option value="webhook">Webhook Personalizado</option>
+            <option value="disabled">Desabilitado</option>
+          </select>
+        </div>
+
+        <div id="z-api-config" class="provider-config">
+          <div class="form-group">
+            <label for="z-api-key">Token Z-API:</label>
+            <input type="password" id="z-api-key" placeholder="Seu token Z-API" />
+          </div>
+          <div class="form-group">
+            <label for="z-instance-id">Instance ID:</label>
+            <input type="text" id="z-instance-id" placeholder="Sua instance ID" />
+          </div>
+          <small>Obtenha suas credenciais em: <a href="https://z-api.io/" target="_blank">z-api.io</a></small>
+        </div>
+
+        <div id="twilio-config" class="provider-config" style="display: none;">
+          <div class="form-group">
+            <label for="twilio-account-sid">Account SID:</label>
+            <input type="text" id="twilio-account-sid" placeholder="AC..." />
+          </div>
+          <div class="form-group">
+            <label for="twilio-auth-token">Auth Token:</label>
+            <input type="password" id="twilio-auth-token" placeholder="Seu auth token" />
+          </div>
+          <div class="form-group">
+            <label for="twilio-whatsapp-number">Número WhatsApp:</label>
+            <input type="text" id="twilio-whatsapp-number" placeholder="+1234567890" />
+          </div>
+          <small>Configure em: <a href="https://console.twilio.com/" target="_blank">console.twilio.com</a></small>
+        </div>
+
+        <div id="whatsapp-webhook-config" class="provider-config" style="display: none;">
+          <div class="form-group">
+            <label for="whatsapp-webhook-url">URL do Webhook:</label>
+            <input type="url" id="whatsapp-webhook-url" placeholder="https://seu-webhook.com/whatsapp" />
+          </div>
+        </div>
+
+        <div class="test-section">
+          <button class="button button-secondary" onclick="testWhatsAppConnection()">🧪 Testar Conexão</button>
+          <div id="whatsapp-test-result" class="test-result"></div>
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="button button-secondary" id="whatsapp-config-cancel">Cancelar</button>
+        <button type="button" class="button button-primary" onclick="saveWhatsAppConfig()">Salvar Configuração</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Modal para Resultado de Teste -->
+  <div id="test-result-modal" class="modal" style="display: none;">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h3 id="test-result-title">🧪 Resultado do Teste</h3>
+        <span class="modal-close" id="test-result-modal-close">&times;</span>
+      </div>
+      <div class="modal-body">
+        <div id="test-result-content" class="test-result-content">
+          <!-- Conteúdo será preenchido dinamicamente -->
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="button button-primary" id="test-result-close">Fechar</button>
+      </div>
+    </div>
+  </div>
+{% endblock %}
+{% block scripts %}
+  {{ super() }}
+    <script>
+
+    document.addEventListener('DOMContentLoaded', () => {
+
+      console.log('Script do dashboard carregado!');
+
+
+
+      const newCompanyBtn = document.getElementById('new-company-btn');
+
+      const companyModal = document.getElementById('company-modal');
+
+      const newPlanBtn = document.getElementById('new-plan-btn');
+
+      const planModal = document.getElementById('plan-modal');
+
+
+
+      console.log('Elementos de modal:', { newCompanyBtn, companyModal, newPlanBtn, planModal });
+
+
+
+      const hub = document.getElementById('project-hub');
+
+      const companySelect = document.getElementById('company-select');
+
+      const planSelect = document.getElementById('plan-select');
+
+      const confirmBtn = document.getElementById('plan-confirm');
+
+
+
+      if (!hub || !companySelect || !planSelect || !confirmBtn) {
+
+        console.warn('Elementos do seletor de planejamento não encontrados.', {
+
+          hub,
+
+          companySelect,
+
+          planSelect,
+
+          confirmBtn
+
+        });
+
+      } else {
+
+        let companiesData = [];
+
+        try {
+
+          companiesData = JSON.parse(hub.getAttribute('data-companies') || '[]');
+
+        } catch (err) {
+
+          console.warn('Nao foi possivel ler os dados das empresas.', err);
+
+        }
+
+
+
+        const planMap = companiesData.reduce((acc, item) => {
+
+          const plans = (item.plans || []).map(plan => ({
+
+            id: plan.id || plan['id'],
+
+            name: plan.name || plan['name']
+
+          }));
+
+          acc[item.id] = plans;
+
+          return acc;
+
+        }, {});
+
+
+
+        companySelect.addEventListener('change', function () {
+
+          const selected = this.value;
+
+          const plans = planMap[selected] || [];
+
+          planSelect.innerHTML = '<option value="">Selecione um planejamento</option>';
+
+          planSelect.disabled = plans.length === 0;
+
+          confirmBtn.disabled = true;
+
+          confirmBtn.dataset.planId = '';
+
+
+
+          if (plans.length === 0) {
+
+            planSelect.innerHTML = '<option value="">Cadastre um planejamento para esta empresa</option>';
+
+            return;
+
+          }
+
+
+
+          plans.forEach(plan => {
+
+            const opt = document.createElement('option');
+
+            opt.value = plan.id;
+
+            opt.textContent = plan.name;
+
+            planSelect.appendChild(opt);
+
+          });
+
+        });
+
+
+
+        planSelect.addEventListener('change', function () {
+
+          const value = this.value;
+
+          confirmBtn.disabled = !value;
+
+          confirmBtn.dataset.planId = value || '';
+
+        });
+
+
+
+        confirmBtn.addEventListener('click', function () {
+
+          const planId = this.dataset.planId;
+
+          if (!planId) {
+
+            return;
+
+          }
+
+          window.location.href = '/plans/' + planId;
+
+        });
+
+      }
+
+
+
+      const showModal = (modal) => {
+        if (!modal) {
+          return;
+        }
+        modal.style.display = 'block';
+        requestAnimationFrame(() => {
+          modal.classList.add('show');
+        });
+      };
+
+      const hideModal = (modal) => {
+        if (!modal) {
+          return;
+        }
+        modal.classList.remove('show');
+        const transition = getComputedStyle(modal).transitionDuration || '';
+        const durations = transition.split(',').map((part) => {
+          const value = parseFloat(part);
+          return Number.isNaN(value) ? 0 : value;
+        });
+        const maxDuration = Math.max(...durations, 0);
+        if (maxDuration > 0) {
+          const handleTransitionEnd = (event) => {
+            if (event.target === modal) {
+              modal.style.display = 'none';
+              modal.removeEventListener('transitionend', handleTransitionEnd);
+            }
+          };
+          modal.addEventListener('transitionend', handleTransitionEnd);
+        } else {
+          modal.style.display = 'none';
+        }
+      };
+
+      if (newCompanyBtn && companyModal) {
+        newCompanyBtn.addEventListener('click', () => {
+          showModal(companyModal);
+        });
+      } else {
+        console.error('Elementos do modal de empresa não encontrados.', { newCompanyBtn, companyModal });
+      }
+
+      if (newPlanBtn && planModal) {
+        newPlanBtn.addEventListener('click', () => {
+          showModal(planModal);
+        });
+      } else {
+        console.error('Elementos do modal de planejamento não encontrados.', { newPlanBtn, planModal });
+      }
+
+      const companyModalClose = document.getElementById('company-modal-close');
+      if (companyModalClose && companyModal) {
+        companyModalClose.addEventListener('click', () => {
+          hideModal(companyModal);
+        });
+      }
+
+      const companyCancel = document.getElementById('company-cancel');
+      if (companyCancel && companyModal) {
+        companyCancel.addEventListener('click', () => {
+          hideModal(companyModal);
+        });
+      }
+
+      const planModalClose = document.getElementById('plan-modal-close');
+      if (planModalClose && planModal) {
+        planModalClose.addEventListener('click', () => {
+          hideModal(planModal);
+        });
+      }
+
+      const planCancel = document.getElementById('plan-cancel');
+      if (planCancel && planModal) {
+        planCancel.addEventListener('click', () => {
+          hideModal(planModal);
+        });
+      }
+
+      // Event listeners para modais de configuração
+      const aiConfigModal = document.getElementById('ai-config-modal');
+      const aiConfigModalClose = document.getElementById('ai-config-modal-close');
+      const aiConfigCancel = document.getElementById('ai-config-cancel');
+
+      if (aiConfigModalClose && aiConfigModal) {
+        aiConfigModalClose.addEventListener('click', () => {
+          hideModal(aiConfigModal);
+        });
+      }
+
+      if (aiConfigCancel && aiConfigModal) {
+        aiConfigCancel.addEventListener('click', () => {
+          hideModal(aiConfigModal);
+        });
+      }
+
+      const emailConfigModal = document.getElementById('email-config-modal');
+      const emailConfigModalClose = document.getElementById('email-config-modal-close');
+      const emailConfigCancel = document.getElementById('email-config-cancel');
+
+      if (emailConfigModalClose && emailConfigModal) {
+        emailConfigModalClose.addEventListener('click', () => {
+          hideModal(emailConfigModal);
+        });
+      }
+
+      if (emailConfigCancel && emailConfigModal) {
+        emailConfigCancel.addEventListener('click', () => {
+          hideModal(emailConfigModal);
+        });
+      }
+
+      const whatsappConfigModal = document.getElementById('whatsapp-config-modal');
+      const whatsappConfigModalClose = document.getElementById('whatsapp-config-modal-close');
+      const whatsappConfigCancel = document.getElementById('whatsapp-config-cancel');
+
+      if (whatsappConfigModalClose && whatsappConfigModal) {
+        whatsappConfigModalClose.addEventListener('click', () => {
+          hideModal(whatsappConfigModal);
+        });
+      }
+
+      if (whatsappConfigCancel && whatsappConfigModal) {
+        whatsappConfigCancel.addEventListener('click', () => {
+          hideModal(whatsappConfigModal);
+        });
+      }
+
+      // Event listeners para modal de resultado de teste
+      const testResultModal = document.getElementById('test-result-modal');
+      const testResultModalClose = document.getElementById('test-result-modal-close');
+      const testResultClose = document.getElementById('test-result-close');
+
+      if (testResultModalClose && testResultModal) {
+        testResultModalClose.addEventListener('click', () => {
+          closeTestResultModal();
+        });
+      }
+
+      if (testResultClose && testResultModal) {
+        testResultClose.addEventListener('click', () => {
+          closeTestResultModal();
+        });
+      }
+
+      window.addEventListener('click', (event) => {
+        if (event.target === companyModal && companyModal) {
+          hideModal(companyModal);
+        }
+        if (event.target === planModal && planModal) {
+          hideModal(planModal);
+        }
+        if (event.target === aiConfigModal && aiConfigModal) {
+          hideModal(aiConfigModal);
+        }
+        if (event.target === emailConfigModal && emailConfigModal) {
+          hideModal(emailConfigModal);
+        }
+        if (event.target === whatsappConfigModal && whatsappConfigModal) {
+          hideModal(whatsappConfigModal);
+        }
+        if (event.target === testResultModal && testResultModal) {
+          closeTestResultModal();
+        }
+      });
+
+      // Inicializar status dos serviços
+      document.addEventListener('DOMContentLoaded', function() {
+        refreshServicesStatus();
+      });
+
+      const companyForm = document.getElementById('company-form');
+      const clientCodeInput = document.getElementById('company-client-code');
+      
+      // Forçar uppercase no código do cliente
+      if (clientCodeInput) {
+        clientCodeInput.addEventListener('input', function() {
+          this.value = this.value.toUpperCase().replace(/[^A-Z0-9]/g, '').substring(0, 3);
+        });
+      }
+
+      if (companyForm) {
+
+        companyForm.addEventListener('submit', async (e) => {
+
+          e.preventDefault();
+
+          const formData = new FormData(companyForm);
+
+          const companyData = Object.fromEntries(formData.entries());
+          const clientCode = (companyData.client_code || '').trim().toUpperCase();
+          companyData.client_code = clientCode;
+
+          if (!/^[A-Z0-9]{1,3}$/.test(clientCode)) {
+            if (window.showMessage) {
+              window.showMessage('O código do cliente deve ter de 1 a 3 caracteres (letras ou números)', 'error');
+            } else {
+              alert('O código do cliente deve ter de 1 a 3 caracteres (letras ou números)');
+            }
+            return;
+          }
+
+
+
+          try {
+
+            const response = await fetch('/api/companies', {
+
+              method: 'POST',
+
+              headers: {
+
+                'Content-Type': 'application/json'
+
+              },
+
+              body: JSON.stringify(companyData)
+
+            });
+
+
+
+            const result = await response.json();
+
+            if (result.success) {
+
+              alert('Empresa criada com sucesso!');
+
+              if (companyModal) {
+
+                hideModal(companyModal);
+
+              }
+
+              companyForm.reset();
+
+              window.location.reload();
+
+            } else {
+
+              alert('Erro ao criar empresa: ' + (result.error || 'Erro desconhecido'));
+
+            }
+
+          } catch (error) {
+
+            alert('Erro ao criar empresa: ' + error.message);
+
+          }
+
+        });
+
+      }
+
+
+
+      const planForm = document.getElementById('plan-form');
+
+      if (planForm) {
+
+        planForm.addEventListener('submit', async (e) => {
+
+          e.preventDefault();
+
+          const formData = new FormData(planForm);
+
+          const planData = Object.fromEntries(formData.entries());
+
+
+
+          try {
+
+            const response = await fetch('/api/plans', {
+
+              method: 'POST',
+
+              headers: {
+
+                'Content-Type': 'application/json'
+
+              },
+
+              body: JSON.stringify(planData)
+
+            });
+
+
+
+            const result = await response.json();
+
+            if (result.success) {
+
+              alert('Planejamento criado com sucesso!');
+
+              if (planModal) {
+
+                hideModal(planModal);
+
+              }
+
+              planForm.reset();
+
+              window.location.reload();
+
+            } else {
+
+              alert('Erro ao criar planejamento: ' + (result.error || 'Erro desconhecido'));
+
+            }
+
+          } catch (error) {
+
+            alert('Erro ao criar planejamento: ' + error.message);
+
+          }
+
+        });
+
+      }
+
+      // ------- Agents Management (global) -------
+      function renderAgentsTable(items) {
+        console.log('renderAgentsTable called with:', items);
+        var container = document.getElementById('agents-table');
+        console.log('Container found:', container);
+        if (!container) {
+          console.error('agents-table container not found!');
+          return;
+        }
+        if (!items || items.length === 0) {
+          console.log('No items, showing empty state');
+          container.innerHTML = '<div class="empty-state"><div class="empty-state-icon">🤖</div><h3 class="empty-state-title">Nenhum agente cadastrado</h3><p class="empty-state-description">Crie um agente para automatizar análises estratégicas</p></div>';
+          return;
+        }
+        console.log('Rendering table with', items.length, 'items');
+        var html = '<table class="table"><thead><tr><th>Nome</th><th>ID</th><th>Página</th><th>Sessão</th><th>Status</th><th>Criado</th><th style="width:140px;">Ações</th></tr></thead><tbody>';
+        items.forEach(function(a){
+          var act = a.activation || {};
+          var createdDate = a.created_at ? new Date(a.created_at).toLocaleDateString('pt-BR') : 'N/A';
+          var statusClass = 'status-' + (a.status || 'inactive');
+          var statusText = (a.status || 'inactive').toUpperCase();
+          
+          html += '<tr>'+
+            '<td><div class="agent-name">'+
+              '<strong>'+ (a.name||'') +'</strong>'+
+              (a.description ? '<br><small class="text-muted">'+a.description+'</small>' : '')+
+            '</div></td>'+
+            '<td><code>'+ (a.id||'') +'</code></td>'+
+            '<td>'+ (act.page_label||act.page||'') +'</td>'+
+            '<td>'+ (act.section_label||act.section||'') +'</td>'+
+            '<td><span class="status-badge '+statusClass+'">'+statusText+'</span></td>'+
+            '<td><small>'+createdDate+'</small></td>'+
+            '<td>'+
+              '<button class="button button-sm button-secondary" data-agent-action="view" data-id="'+a.id+'" title="Visualizar detalhes">👁️</button> '+
+              '<button class="button button-sm button-secondary" data-agent-action="edit" data-id="'+a.id+'" title="Editar agente">✏️</button> '+
+              '<button class="button button-sm button-success" data-agent-action="test" data-id="'+a.id+'" title="Testar agente">🧪</button> '+
+              '<button class="button button-sm button-danger" data-agent-action="delete" data-id="'+a.id+'" title="Excluir agente">🗑️</button>'+
+            '</td>'+
+          '</tr>';
+        });
+        html += '</tbody></table>';
+        container.innerHTML = html;
+      }
+
+      function openAgentViewModal(agentId) {
+        fetch('/api/agents/' + agentId)
+          .then(r => r.json())
+          .then(json => {
+            if (json && json.success) {
+              showAgentDetails(json.agent);
+            } else {
+              alert('Agente não encontrado');
+            }
+          })
+          .catch(() => alert('Erro ao carregar agente'));
+      }
+
+      function showAgentDetails(agent) {
+        var modal = document.getElementById('agentViewModal');
+        if (!modal) {
+          modal = document.createElement('div');
+          modal.id = 'agentViewModal';
+          modal.className = 'modal';
+          modal.style.display = 'none';
+          modal.innerHTML = `
+            <div class="modal-overlay" id="agentViewOverlay"></div>
+            <div class="modal-content modal-large">
+              <div class="modal-header">
+                <h3 class="modal-title">Detalhes do Agente</h3>
+                <button type="button" class="modal-close" id="agentViewClose">×</button>
+              </div>
+              <div class="modal-body" id="agentViewContent">
+                <!-- Content will be populated here -->
+              </div>
+              <div class="modal-footer">
+                <button type="button" class="button button-secondary" id="agentViewCloseBtn">Fechar</button>
+                <button type="button" class="button button-primary" id="agentViewEditBtn">Editar</button>
+              </div>
+            </div>
+          `;
+          document.body.appendChild(modal);
+          
+          // Event listeners
+          document.getElementById('agentViewClose').addEventListener('click', closeAgentViewModal);
+          document.getElementById('agentViewCloseBtn').addEventListener('click', closeAgentViewModal);
+          document.getElementById('agentViewOverlay').addEventListener('click', closeAgentViewModal);
+          document.getElementById('agentViewEditBtn').addEventListener('click', function() {
+            closeAgentViewModal();
+            openAgentModal(agent);
+          });
+        }
+        
+        // Populate content
+        var content = document.getElementById('agentViewContent');
+        var act = agent.activation || {};
+        var input = agent.input_data || {};
+        var fmt = agent.response_format || {};
+        var adv = agent.advanced_settings || {};
+        
+        content.innerHTML = `
+          <div class="agent-details-grid">
+            <div class="detail-section">
+              <h4>Informações Básicas</h4>
+              <div class="detail-item">
+                <span class="detail-label">Nome:</span>
+                <span class="detail-value">${agent.name || 'N/A'}</span>
+              </div>
+              <div class="detail-item">
+                <span class="detail-label">ID:</span>
+                <span class="detail-value">${agent.id || 'N/A'}</span>
+              </div>
+              <div class="detail-item">
+                <span class="detail-label">Descrição:</span>
+                <span class="detail-value">${agent.description || 'N/A'}</span>
+              </div>
+              <div class="detail-item">
+                <span class="detail-label">Versão:</span>
+                <span class="detail-value">${agent.version || 'N/A'}</span>
+              </div>
+              <div class="detail-item">
+                <span class="detail-label">Status:</span>
+                <span class="detail-value status-${agent.status || 'inactive'}">${(agent.status || 'inactive').toUpperCase()}</span>
+              </div>
+            </div>
+            
+            <div class="detail-section">
+              <h4>Ativação</h4>
+              <div class="detail-item">
+                <span class="detail-label">Página:</span>
+                <span class="detail-value">${act.page_label || act.page || 'N/A'}</span>
+              </div>
+              <div class="detail-item">
+                <span class="detail-label">Seção:</span>
+                <span class="detail-value">${act.section_label || act.section || 'N/A'}</span>
+              </div>
+              <div class="detail-item">
+                <span class="detail-label">Texto do Botão:</span>
+                <span class="detail-value">${act.button_text || 'N/A'}</span>
+              </div>
+            </div>
+            
+            <div class="detail-section">
+              <h4>Dados de Entrada</h4>
+              <div class="detail-item">
+                <span class="detail-label">Campos Obrigatórios:</span>
+                <span class="detail-value">${Array.isArray(input.required) && input.required.length > 0 ? input.required.join(', ') : 'Nenhum'}</span>
+              </div>
+              <div class="detail-item">
+                <span class="detail-label">Campos Opcionais:</span>
+                <span class="detail-value">${Array.isArray(input.optional) && input.optional.length > 0 ? input.optional.join(', ') : 'Nenhum'}</span>
+              </div>
+            </div>
+            
+            <div class="detail-section">
+              <h4>Formato de Resposta</h4>
+              <div class="detail-item">
+                <span class="detail-label">Tipo:</span>
+                <span class="detail-value">${fmt.type || 'N/A'}</span>
+              </div>
+              <div class="detail-item">
+                <span class="detail-label">Campo de Saída:</span>
+                <span class="detail-value">${fmt.output_field || 'N/A'}</span>
+              </div>
+              <div class="detail-item">
+                <span class="detail-label">Template:</span>
+                <span class="detail-value template-preview">${fmt.template ? (fmt.template.length > 100 ? fmt.template.substring(0, 100) + '...' : fmt.template) : 'N/A'}</span>
+              </div>
+            </div>
+            
+            <div class="detail-section">
+              <h4>Configurações Avançadas</h4>
+              <div class="detail-item">
+                <span class="detail-label">Timeout:</span>
+                <span class="detail-value">${adv.timeout || 'N/A'}s</span>
+              </div>
+              <div class="detail-item">
+                <span class="detail-label">Tentativas Máximas:</span>
+                <span class="detail-value">${adv.max_retries || 'N/A'}</span>
+              </div>
+              <div class="detail-item">
+                <span class="detail-label">Modo de Execução:</span>
+                <span class="detail-value">${adv.execution_mode || 'N/A'}</span>
+              </div>
+              <div class="detail-item">
+                <span class="detail-label">Cache Habilitado:</span>
+                <span class="detail-value">${adv.cache_enabled ? 'Sim' : 'Não'}</span>
+              </div>
+            </div>
+            
+            <div class="detail-section">
+              <h4>Template do Prompt</h4>
+              <div class="template-content">
+                <pre class="template-code">${agent.prompt_template || 'Nenhum template definido'}</pre>
+              </div>
+            </div>
+            
+            <div class="detail-section">
+              <h4>Informações do Sistema</h4>
+              <div class="detail-item">
+                <span class="detail-label">Criado em:</span>
+                <span class="detail-value">${agent.created_at || 'N/A'}</span>
+              </div>
+              <div class="detail-item">
+                <span class="detail-label">Atualizado em:</span>
+                <span class="detail-value">${agent.updated_at || 'N/A'}</span>
+              </div>
+            </div>
+          </div>
+        `;
+        
+        modal.style.display = 'block';
+        requestAnimationFrame(() => modal.classList.add('show'));
+      }
+
+      function closeAgentViewModal() {
+        var modal = document.getElementById('agentViewModal');
+        if (!modal) return;
+        modal.classList.remove('show');
+        const onEnd = function() {
+          modal.style.display = 'none';
+          modal.removeEventListener('transitionend', onEnd);
+        };
+        modal.addEventListener('transitionend', onEnd);
+      }
+
+      function deleteAgentWithConfirmation(agentId) {
+        fetch('/api/agents/' + agentId)
+          .then(r => r.json())
+          .then(json => {
+            if (json && json.success) {
+              var agent = json.agent;
+              var confirmMessage = `Tem certeza que deseja excluir o agente "${agent.name}"?\n\nEsta ação não pode ser desfeita.`;
+              if (confirm(confirmMessage)) {
+                fetch('/api/agents/' + agentId, {method: 'DELETE'})
+                  .then(r => r.json())
+                  .then(json => {
+                    if (json && json.success) {
+                      alert('Agente excluído com sucesso!');
+                      loadAgents();
+                    } else {
+                      alert('Erro ao excluir agente: ' + (json.error || 'Erro desconhecido'));
+                    }
+                  })
+                  .catch(() => alert('Erro de conexão ao excluir agente'));
+              }
+            } else {
+              alert('Agente não encontrado');
+            }
+          })
+          .catch(() => alert('Erro ao carregar dados do agente'));
+      }
+
+      function testAgentsTable() {
+        console.log('Testing agents table...');
+        var testData = [
+          {
+            id: 'test_agent_1',
+            name: 'Agente de Teste',
+            description: 'Este é um agente de teste',
+            status: 'active',
+            activation: {
+              page: 'company',
+              page_label: 'Dados da Organização',
+              section: 'basic_info',
+              section_label: 'Informações Básicas',
+              button_text: 'Analisar'
+            },
+            created_at: new Date().toISOString()
+          }
+        ];
+        renderAgentsTable(testData);
+      }
+
+      function loadAgents() {
+        console.log('loadAgents called');
+        fetch('/api/agents')
+          .then(r => {
+            console.log('API response status:', r.status);
+            return r.json();
+          })
+          .then(json => {
+            console.log('API response data:', json);
+            renderAgentsTable((json && json.agents) || []);
+          })
+          .catch(error => {
+            console.error('Error loading agents:', error);
+            renderAgentsTable([]);
+          });
+      }
+
+      function openAgentModal(agent) {
+        var modal = document.getElementById('agentGlobalModal');
+        if (!modal) {
+          modal = document.createElement('div');
+          modal.id = 'agentGlobalModal';
+          modal.className = 'modal';
+          modal.style.display = 'none';
+          modal.innerHTML = '<div class="modal-overlay" id="agentGlobalOverlay"></div>'+
+            '<div class="modal-content">'+
+            '  <div class="modal-header">'+
+            '    <h3 class="modal-title" id="agentGlobalTitle">Novo Agente</h3>'+
+            '    <button type="button" class="modal-close" id="agentGlobalClose">×</button>'+
+            '  </div>'+
+            '  <form id="agentGlobalForm" class="modal-body">'+
+            '    <div class="form-row">'+
+            '      <label class="form-field"><span>Nome</span><input type="text" id="g_name" required></label>'+
+            '      <label class="form-field"><span>ID</span><input type="text" id="g_id" required pattern="[a-z0-9_]+"></label>'+
+            '    </div>'+
+            '    <div class="form-row">'+
+            '      <label class="form-field"><span>Página</span><select id="g_page" required><option value="">Selecione</option><option value="company">Dados da Organização</option><option value="participants">Participantes</option><option value="drivers">Direcionadores</option><option value="okr-global">OKRs Globais</option><option value="okr-area">OKRs de Área</option><option value="projects">Projetos</option><option value="reports">Relatórios</option></select></label>'+
+            '      <label class="form-field"><span>Sessão</span><select id="g_section" required><option value="">Selecione</option></select></label>'+
+            '    </div>'+
+            '    <label class="form-field"><span>Botão</span><select id="g_button" required><option value="">Selecione</option></select></label>'+ 
+            '    <div class="form-row">'+
+            '      <label class="form-field"><span>Campos Obrigatórios</span><div id="g_required_fields" class="fields-list"></div><textarea id="g_required" rows="2" style="display:none;"></textarea></label>'+
+            '      <label class="form-field"><span>Campos Opcionais</span><div id="g_optional_fields" class="fields-list"></div><textarea id="g_optional" rows="2" style="display:none;"></textarea></label>'+
+            '    </div>'+
+            '    <label class="form-field"><span>Prompt</span><textarea id="g_prompt" rows="6"></textarea></label>'+
+            '    <div class="form-row">'+
+            '      <label class="form-field"><span>Formato</span><select id="g_format"><option value="markdown">Markdown</option><option value="json">JSON</option><option value="html">HTML</option></select></label>'+
+            '      <label class="form-field"><span>Destino</span><select id="g_output"><option value="ai_insights">Insights da IA</option><option value="consultant_analysis">Análise do Consultor</option></select></label>'+
+            '    </div>'+
+            '    <label class="form-field"><span>Template de Resposta</span><textarea id="g_resp_template" rows="4"></textarea></label>'+
+            '    <div class="form-row">'+
+            '      <label class="form-field"><span>Timeout (s)</span><input type="number" id="g_timeout" value="300" min="30"></label>'+
+            '      <label class="form-field"><span>Tentativas</span><input type="number" id="g_retries" value="3" min="1" max="5"></label>'+
+            '      <label class="form-field"><span>Execução</span><select id="g_exec"><option value="sequential">Sequencial</option><option value="parallel">Paralelo</option></select></label>'+
+            '      <label class="form-field"><span>Cache</span><select id="g_cache"><option value="true">Habilitado</option><option value="false">Desabilitado</option></select></label>'+
+            '    </div>'+
+            '    <div class="form-row"><label class="form-field"><span>Integrações</span><div id="g_integrations" class="fields-list"></div></label></div>'+
+            '  </form>'+
+            '  <div class="modal-footer">'+
+            '    <button type="button" class="button button-secondary" id="g_cancel">Cancelar</button>'+
+            '    <button type="button" class="button button-primary" id="g_save">Salvar</button>'+
+            '  </div>'+
+            '</div>';
+          document.body.appendChild(modal);
+          document.getElementById('agentGlobalOverlay').addEventListener('click', closeAgentGlobal);
+          document.getElementById('agentGlobalClose').addEventListener('click', closeAgentGlobal);
+          document.getElementById('g_cancel').addEventListener('click', closeAgentGlobal);
+        }
+        var isEdit = !!agent;
+        document.getElementById('agentGlobalTitle').textContent = isEdit ? 'Editar Agente' : 'Novo Agente';
+        document.getElementById('g_id').disabled = isEdit;
+        document.getElementById('g_name').value = (agent && agent.name) || '';
+        document.getElementById('g_id').value = (agent && agent.id) || '';
+        var act = (agent && agent.activation) || {};
+        document.getElementById('g_page').value = act.page || '';
+        populateDashboardSectionOptions(act.page||'', act.section||'');
+        // Load available buttons for the selected page/section
+        (function(){
+          var sel = document.getElementById('g_button'); if (!sel) return;
+          var pageVal = act.page || '';
+          var sectionVal = act.section || '';
+          function fillButtons(list){
+            while (sel.firstChild) sel.removeChild(sel.firstChild);
+            var opt0 = document.createElement('option'); opt0.value=''; opt0.textContent='Selecione'; sel.appendChild(opt0);
+            (list||[]).forEach(function(txt){
+              var o = document.createElement('option'); o.value = txt; o.textContent = txt; if ((act.button_text||'')===txt) o.selected = true; sel.appendChild(o);
+            });
+          }
+          if (pageVal) {
+            var url = '/api/agents/available-buttons?page='+encodeURIComponent(pageVal)+'&section='+encodeURIComponent(sectionVal||'');
+            fetch(url).then(r=>r.json()).then(json=> fillButtons((json && json.buttons)||[])).catch(()=> fillButtons([]));
+          } else {
+            fillButtons([]);
+          }
+        })();
+        var input = (agent && agent.input_data) || {};
+        var requiredFields = Array.isArray(input.required) ? input.required : [];
+        var optionalFields = Array.isArray(input.optional) ? input.optional : [];
+        document.getElementById('g_required').value = requiredFields.join(', ');
+        document.getElementById('g_optional').value = optionalFields.join(', ');
+        var fmt = (agent && agent.response_format) || {};
+        document.getElementById('g_format').value = fmt.type || 'markdown';
+        document.getElementById('g_output').value = fmt.output_field || 'ai_insights';
+        document.getElementById('g_resp_template').value = fmt.template || '';
+        var adv = (agent && agent.advanced_settings) || {};
+        document.getElementById('g_timeout').value = adv.timeout || 300;
+        document.getElementById('g_retries').value = adv.max_retries || 3;
+        document.getElementById('g_exec').value = adv.execution_mode || 'sequential';
+        document.getElementById('g_cache').value = adv.cache_enabled ? 'true' : 'false';
+        // carregar campos disponíveis
+        loadAvailableFields(act.page||'', act.section||'', requiredFields, optionalFields);
+        
+        var linked = Array.isArray(agent && agent.integrations) ? agent.integrations.map(i=>i.id) : [];
+        fetch('/api/integrations').then(r=>r.json()).then(json=>{
+          var list = (json && json.integrations)||[];
+          var box = document.getElementById('g_integrations');
+          if (!box) return;
+          box.innerHTML='';
+          list.forEach(function(it){
+            var id = 'gint-'+it.id;
+            var lab = document.createElement('label'); lab.className='field-option';
+            var ck = document.createElement('input'); ck.type='checkbox'; ck.value = it.id; ck.id=id; if (linked.indexOf(it.id)!==-1) ck.checked=true;
+            var sp = document.createElement('span'); sp.textContent = it.name+' ('+it.provider+')';
+            lab.appendChild(ck); lab.appendChild(sp); box.appendChild(lab);
+          });
+        });
+        document.getElementById('g_save').onclick = function(){
+          // sincronizar checkboxes com textareas
+          syncFieldCheckboxes();
+          var payload = {
+            id: document.getElementById('g_id').value.trim(),
+            name: document.getElementById('g_name').value.trim(),
+            page: document.getElementById('g_page').value,
+            section: document.getElementById('g_section').value,
+            button_text: document.getElementById('g_button').value,
+            required_data: document.getElementById('g_required').value,
+            optional_data: document.getElementById('g_optional').value,
+            prompt_template: document.getElementById('g_prompt').value,
+            format_type: document.getElementById('g_format').value,
+            output_field: document.getElementById('g_output').value,
+            response_template: document.getElementById('g_resp_template').value,
+            timeout: parseInt(document.getElementById('g_timeout').value||'300'),
+            max_retries: parseInt(document.getElementById('g_retries').value||'3'),
+            execution_mode: document.getElementById('g_exec').value,
+            cache_enabled: document.getElementById('g_cache').value,
+            status: (agent && agent.status) || 'active',
+            version: (agent && agent.version) || '1.0'
+          };
+          var ints = Array.from(document.querySelectorAll('#g_integrations input[type=checkbox]:checked')).map(i=>i.value);
+          payload.integration_ids = ints;
+          if (!payload.name || !payload.id || !payload.page || !payload.section) { alert('Preencha os campos obrigatórios'); return; }
+          var method = agent ? 'PUT' : 'POST';
+          var url = agent ? ('/api/agents/'+agent.id) : '/api/agents';
+          fetch(url, { method, headers: {'Content-Type':'application/json'}, body: JSON.stringify(payload) })
+            .then(r=>r.json())
+            .then(json=>{ if (json && json.success) { alert('Agente salvo'); closeAgentGlobal(); loadAgents(); } else { alert('Erro ao salvar: '+((json && json.error)||'desconhecido')); }})
+            .catch(()=> alert('Erro ao salvar'));
+        };
+        // posicionar centralizado
+        var content = modal.querySelector('.modal-content');
+        if (content) {
+          content.style.position='fixed';
+          content.style.left = '50%';
+          content.style.top = '50%';
+          content.style.transform = 'translate(-50%, -50%)';
+          content.style.maxWidth = '800px';
+          content.style.width = '90vw';
+          content.style.maxHeight = '90vh';
+          content.style.overflowY = 'auto';
+        }
+        modal.style.display='block';
+        requestAnimationFrame(()=> modal.classList.add('show'));
+      }
+
+      function closeAgentGlobal(){
+        var modal = document.getElementById('agentGlobalModal'); if (!modal) return;
+        modal.classList.remove('show');
+        const onEnd = function(){ modal.style.display='none'; modal.removeEventListener('transitionend', onEnd); };
+        modal.addEventListener('transitionend', onEnd);
+      }
+
+      function populateDashboardSectionOptions(pageValue, selectedValue){
+        var sel = document.getElementById('g_section'); if (!sel) return;
+        while (sel.firstChild) sel.removeChild(sel.firstChild);
+        var opt = document.createElement('option'); opt.value=''; opt.textContent='Selecione'; sel.appendChild(opt);
+        var map = {
+          'company': [{value:'analyses',label:'Análises'},{value:'summary',label:'Resumo Executivo'},{value:'vision',label:'Visão'},{value:'company',label:'Empresa'}],
+          'participants': [{value:'analyses',label:'Análises'},{value:'summary',label:'Resumo Executivo'},{value:'interviews',label:'Entrevistas'}],
+          'drivers': [{value:'analyses',label:'Análises'},{value:'summary',label:'Resumo Executivo'},{value:'market',label:'Mercado'}],
+          'okr-global': [{value:'analyses',label:'Análises'},{value:'summary',label:'Resumo Executivo'}],
+          'okr-area': [{value:'analyses',label:'Análises'},{value:'summary',label:'Resumo Executivo'}],
+          'projects': [{value:'analyses',label:'Análises'},{value:'summary',label:'Resumo Executivo'}],
+          'reports': [{value:'summary',label:'Resumo Executivo'}]
+        };
+        (map[pageValue]||[]).forEach(function(it){ var o=document.createElement('option'); o.value=it.value; o.textContent=it.label; if (selectedValue===it.value) o.selected=true; sel.appendChild(o); });
+        // recarregar campos quando mudar sessão
+        if (pageValue && selectedValue) {
+          loadAvailableFields(pageValue, selectedValue, [], []);
+        }
+      }
+
+      function loadAvailableFields(page, section, selectedRequired, selectedOptional) {
+        if (!page || !section) {
+          document.getElementById('g_required_fields').innerHTML = '<p>Selecione página e sessão</p>';
+          document.getElementById('g_optional_fields').innerHTML = '<p>Selecione página e sessão</p>';
+          return;
+        }
+        
+        fetch('/api/agents/available-fields?page=' + encodeURIComponent(page) + '&section=' + encodeURIComponent(section))
+          .then(r => r.json())
+          .then(json => {
+            var fields = (json && json.fields) || [];
+            renderFieldChecklist('g_required_fields', fields, selectedRequired, 'required');
+            renderFieldChecklist('g_optional_fields', fields, selectedOptional, 'optional');
+          })
+          .catch((error) => {
+            console.error('Error loading fields:', error);
+            document.getElementById('g_required_fields').innerHTML = '<p>Erro ao carregar campos</p>';
+            document.getElementById('g_optional_fields').innerHTML = '<p>Erro ao carregar campos</p>';
+          });
+      }
+
+      function renderFieldChecklist(containerId, fields, selected, type) {
+        var container = document.getElementById(containerId);
+        if (!container) return;
+        
+        if (!fields || fields.length === 0) {
+          container.innerHTML = '<p>Nenhum campo disponível</p>';
+          return;
+        }
+        
+        var html = '';
+        fields.forEach(function(field, index) {
+          // Handle both string fields and object fields with value/label
+          var fieldValue = typeof field === 'string' ? field : field.value;
+          var fieldLabel = typeof field === 'string' ? field : field.label;
+          var checked = selected.indexOf(fieldValue) !== -1 ? 'checked' : '';
+          
+          html += '<label class="field-option">' +
+            '<input type="checkbox" value="' + fieldValue + '" ' + checked + ' data-field-type="' + type + '">' +
+            '<span>' + fieldLabel + '</span>' +
+            '</label>';
+        });
+        
+        container.innerHTML = html;
+      }
+
+      function syncFieldCheckboxes() {
+        var required = Array.from(document.querySelectorAll('#g_required_fields input[type="checkbox"]:checked')).map(cb => cb.value);
+        var optional = Array.from(document.querySelectorAll('#g_optional_fields input[type="checkbox"]:checked')).map(cb => cb.value);
+        document.getElementById('g_required').value = required.join(', ');
+        document.getElementById('g_optional').value = optional.join(', ');
+      }
+
+      var agentsNewBtn = document.getElementById('agents-new-btn');
+      if (agentsNewBtn) agentsNewBtn.addEventListener('click', function(){ openAgentModal(null); });
+      document.addEventListener('change', function(e){ 
+        if (e.target && e.target.id==='g_page') { 
+          populateDashboardSectionOptions(e.target.value, ''); 
+        } else if (e.target && e.target.id==='g_section') {
+          var page = document.getElementById('g_page').value;
+          var section = e.target.value;
+          if (page && section) {
+            loadAvailableFields(page, section, [], []);
+          }
+        }
+      });
+      document.addEventListener('click', function(e){
+        var btn = e.target.closest && e.target.closest('[data-agent-action]');
+        if (!btn) return;
+        var id = btn.getAttribute('data-id');
+        var action = btn.getAttribute('data-agent-action');
+        if (action==='edit') {
+          fetch('/api/agents/'+id).then(r=>r.json()).then(json=>{ if (json && json.success) openAgentModal(json.agent); else alert('Agente não encontrado'); }).catch(()=>alert('Erro ao carregar agente'));
+        } else if (action==='delete') {
+          deleteAgentWithConfirmation(id);
+        } else if (action==='view') {
+          openAgentViewModal(id);
+        } else if (action==='test') {
+          testAgent(id);
+        }
+      });
+
+      // Função para testar agente específico
+      function testAgent(agentId) {
+        showMessage('Testando agente...', 'info');
+        
+        fetch('/api/agents/' + agentId + '/test', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json'
+          }
+        })
+        .then(response => response.json())
+        .then(data => {
+          if (data.success) {
+            showMessage(`✅ Teste bem-sucedido!`, 'success');
+            showTestResultModal('Teste de Agente', data.result.agent_name, data.result, true);
+          } else {
+            showMessage(`❌ Teste falhou: ${data.error}`, 'error');
+            showTestResultModal('Teste de Agente', agentId, { error: data.error }, false);
+          }
+        })
+        .catch(error => {
+          console.error('Erro ao testar agente:', error);
+          showMessage('❌ Erro ao testar agente', 'error');
+          showTestResultModal('Teste de Agente', agentId, { error: error.message }, false);
+        });
+      }
+
+      // Load agents when DOM is ready
+      if (document.readyState === 'loading') {
+        document.addEventListener('DOMContentLoaded', loadAgents);
+      } else {
+        loadAgents();
+      }
+
+      // ------- Integrations Management (global) -------
+      function renderIntegrationsTable(items) {
+        var container = document.getElementById('integrations-table');
+        if (!container) return;
+        if (!items || items.length === 0) {
+          container.innerHTML = '<div class="empty-state"><div class="empty-state-icon">🔌</div><h3 class="empty-state-title">Nenhuma integração cadastrada</h3><p class="empty-state-description">Cadastre sua primeira integração para permitir que os agentes acessem serviços externos</p></div>';
+          return;
+        }
+        var html = '<table class="table"><thead><tr><th>Nome</th><th>Provider</th><th>Tipo</th><th>Auth</th><th>Status</th><th style="width:140px;">Ações</th></tr></thead><tbody>';
+        items.forEach(function(it){
+          var statusClass = 'status-active';
+          var statusText = 'Ativo';
+          // Aqui você pode adicionar lógica para determinar o status real
+          
+          html += '<tr>'+
+            '<td>'+ (it.name||'') +'</td>'+
+            '<td>'+ (it.provider||'') +'</td>'+
+            '<td>'+ (it.type||'') +'</td>'+
+            '<td>'+ (it.auth_type||'') +'</td>'+
+            '<td><span class="status-dot status-' + statusClass + '"></span> ' + statusText + '</td>'+
+            '<td>'+
+              '<button class="button button-sm button-secondary" data-integration-action="view" data-id="'+it.id+'" title="Visualizar">👁️</button> '+
+              '<button class="button button-sm button-secondary" data-integration-action="edit" data-id="'+it.id+'" title="Editar">✏️</button> '+
+              '<button class="button button-sm button-success" data-integration-action="test" data-id="'+it.id+'" title="Testar">🧪</button> '+
+              '<button class="button button-sm button-danger" data-integration-action="delete" data-id="'+it.id+'" title="Excluir">🗑️</button>'+
+            '</td>'+
+          '</tr>';
+        });
+        html += '</tbody></table>';
+        container.innerHTML = html;
+      }
+
+      function loadIntegrations() {
+        fetch('/api/integrations')
+          .then(r=>r.json())
+          .then(json=>{ renderIntegrationsTable((json && json.integrations)||[]); })
+          .catch(()=>{ renderIntegrationsTable([]); });
+      }
+
+      function openIntegrationModal(integration) {
+        var modal = document.getElementById('integrationGlobalModal');
+        if (!modal) {
+          modal = document.createElement('div');
+          modal.id = 'integrationGlobalModal';
+          modal.className = 'modal';
+          modal.style.display = 'none';
+          modal.innerHTML = '<div class="modal-overlay" id="integrationGlobalOverlay"></div>'+
+            '<div class="modal-content">'+
+            '  <div class="modal-header">'+
+            '    <h3 class="modal-title" id="integrationGlobalTitle">Nova Integração</h3>'+
+            '    <button type="button" class="modal-close" id="integrationGlobalClose">×</button>'+
+            '  </div>'+
+            '  <form id="integrationGlobalForm" class="modal-body">'+
+            '    <div class="form-row">'+
+            '      <label class="form-field"><span>ID</span><input type="text" id="i_id" required pattern="[a-z0-9_]+"></label>'+
+            '      <label class="form-field"><span>Nome</span><input type="text" id="i_name" required></label>'+
+            '    </div>'+
+            '    <div class="form-row">'+
+            '      <label class="form-field"><span>Provider</span><input type="text" id="i_provider" placeholder="ex.: google_ads, webhook" required></label>'+
+            '      <label class="form-field"><span>Tipo</span><input type="text" id="i_type" placeholder="ex.: ads, data_source" required></label>'+
+            '    </div>'+
+            '    <div class="form-row">'+
+            '      <label class="form-field"><span>Auth Type</span><select id="i_auth_type"><option value="api_key">API Key</option><option value="oauth2">OAuth2</option><option value="webhook">Webhook</option></select></label>'+
+            '    </div>'+
+            '    <label class="form-field"><span>Config (JSON)</span><textarea id="i_config" rows="6" placeholder="{\n  \"api_key\": \"...\",\n  \"base_url\": \"https://...\"\n}"></textarea></label>'+
+            '  </form>'+
+            '  <div class="modal-footer">'+
+            '    <button type="button" class="button button-secondary" id="i_cancel">Cancelar</button>'+
+            '    <button type="button" class="button button-primary" id="i_save">Salvar</button>'+
+            '  </div>'+
+            '</div>';
+          document.body.appendChild(modal);
+          document.getElementById('integrationGlobalOverlay').addEventListener('click', closeIntegrationGlobal);
+          document.getElementById('integrationGlobalClose').addEventListener('click', closeIntegrationGlobal);
+          document.getElementById('i_cancel').addEventListener('click', closeIntegrationGlobal);
+        }
+        var isEdit = !!integration;
+        document.getElementById('integrationGlobalTitle').textContent = isEdit ? 'Editar Integração' : 'Nova Integração';
+        document.getElementById('i_id').disabled = isEdit;
+        document.getElementById('i_id').value = (integration && integration.id) || '';
+        document.getElementById('i_name').value = (integration && integration.name) || '';
+        document.getElementById('i_provider').value = (integration && integration.provider) || '';
+        document.getElementById('i_type').value = (integration && integration.type) || '';
+        document.getElementById('i_auth_type').value = (integration && integration.auth_type) || 'api_key';
+        document.getElementById('i_config').value = JSON.stringify((integration && integration.config) || {}, null, 2);
+
+        document.getElementById('i_save').onclick = function(){
+          var payload = {
+            id: document.getElementById('i_id').value.trim(),
+            name: document.getElementById('i_name').value.trim(),
+            provider: document.getElementById('i_provider').value.trim(),
+            type: document.getElementById('i_type').value.trim(),
+            auth_type: document.getElementById('i_auth_type').value,
+            config: safeParseJSON(document.getElementById('i_config').value)
+          };
+          if (!payload.id || !payload.name || !payload.provider || !payload.type) { alert('Preencha os campos obrigatórios'); return; }
+          var method = isEdit ? 'PUT' : 'POST';
+          var url = isEdit ? ('/api/integrations/' + payload.id) : '/api/integrations';
+          fetch(url, { method, headers: {'Content-Type':'application/json'}, body: JSON.stringify(payload) })
+            .then(r=>r.json())
+            .then(json=>{ if (json && json.success) { alert('Integração salva'); closeIntegrationGlobal(); loadIntegrations(); } else { alert('Erro ao salvar: '+((json && json.error)||'desconhecido')); }})
+            .catch(()=> alert('Erro ao salvar'));
+        };
+        // posicionar centralizado
+        var content = modal.querySelector('.modal-content');
+        if (content) {
+          content.style.position='fixed';
+          content.style.left = '50%';
+          content.style.top = '50%';
+          content.style.transform = 'translate(-50%, -50%)';
+          content.style.maxWidth = '600px';
+          content.style.width = '90vw';
+          content.style.maxHeight = '90vh';
+          content.style.overflowY = 'auto';
+        }
+        modal.style.display='block';
+        requestAnimationFrame(()=> modal.classList.add('show'));
+      }
+
+      function closeIntegrationGlobal(){
+        var modal = document.getElementById('integrationGlobalModal'); if (!modal) return;
+        modal.classList.remove('show');
+        const onEnd = function(){ modal.style.display='none'; modal.removeEventListener('transitionend', onEnd); };
+        modal.addEventListener('transitionend', onEnd);
+      }
+
+      function safeParseJSON(text) {
+        try { return JSON.parse(text || '{}'); } catch(e) { return {}; }
+      }
+
+      var integrationsNewBtn = document.getElementById('integrations-new-btn');
+      if (integrationsNewBtn) integrationsNewBtn.addEventListener('click', function(){ openIntegrationModal(null); });
+      
+      document.addEventListener('click', function(e){
+        var btn = e.target.closest && e.target.closest('[data-integration-action]');
+        if (!btn) return;
+        var id = btn.getAttribute('data-id');
+        var action = btn.getAttribute('data-integration-action');
+        if (action==='edit') {
+          fetch('/api/integrations/'+id).then(r=>r.json()).then(json=>{ if (json && json.success) openIntegrationModal(json.integration); else alert('Integração não encontrada'); }).catch(()=>alert('Erro ao carregar integração'));
+        } else if (action==='delete') {
+          if (!confirm('Excluir esta integração?')) return;
+          fetch('/api/integrations/'+id, {method:'DELETE'}).then(r=>r.json()).then(json=>{ if (json && json.success) { alert('Integração excluída'); loadIntegrations(); } else { alert('Erro ao excluir'); } }).catch(()=>alert('Erro ao excluir'));
+        } else if (action==='view') {
+          fetch('/api/integrations/'+id).then(r=>r.json()).then(json=>{ if (json && json.success) { const i=json.integration; alert('Integração: '+i.name+'\nProvider: '+i.provider+'\nTipo: '+i.type); } else { alert('Integração não encontrada'); }}).catch(()=>alert('Erro ao carregar'));
+        } else if (action==='test') {
+          testIntegration(id);
+        }
+      });
+
+      loadIntegrations();
+
+      // Função para testar integração específica
+      function testIntegration(integrationId) {
+        showMessage('Testando integração...', 'info');
+        
+        fetch('/api/integrations/' + integrationId + '/test', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json'
+          }
+        })
+        .then(response => response.json())
+        .then(data => {
+          if (data.success) {
+            showMessage(`✅ Teste bem-sucedido!`, 'success');
+            showTestResultModal('Teste de Integração', data.integration.name, data.result, true);
+          } else {
+            showMessage(`❌ Teste falhou: ${data.error}`, 'error');
+            showTestResultModal('Teste de Integração', integrationId, { error: data.error }, false);
+          }
+        })
+        .catch(error => {
+          console.error('Erro ao testar integração:', error);
+          showMessage('❌ Erro ao testar integração', 'error');
+          showTestResultModal('Teste de Integração', integrationId, { error: error.message }, false);
+        });
+      }
+
+      // ------- Services Status Functions -------
+      function refreshServicesStatus() {
+        showMessage('Atualizando status dos serviços...', 'info');
+        
+        fetch('/api/integrations/status')
+          .then(response => response.json())
+          .then(data => {
+            if (data.success) {
+              updateServicesStatus(data.integrations);
+              showMessage('Status dos serviços atualizado!', 'success');
+            } else {
+              showMessage('Erro ao atualizar status', 'error');
+            }
+          })
+          .catch(error => {
+            console.error('Erro ao atualizar status:', error);
+            showMessage('Erro ao atualizar status dos serviços', 'error');
+          });
+      }
+
+      function updateServicesStatus(integrations) {
+        // Atualizar status do AI
+        if (integrations.ai) {
+          const aiStatus = document.getElementById('ai-status');
+          const aiProvider = document.getElementById('ai-provider');
+          const aiProviderDetail = document.getElementById('ai-provider-detail');
+          
+          if (integrations.ai.active) {
+            aiStatus.innerHTML = '<span class="status-indicator status-active"></span><span class="status-text">Ativo</span>';
+          } else {
+            aiStatus.innerHTML = '<span class="status-indicator status-inactive"></span><span class="status-text">Inativo</span>';
+          }
+          
+          aiProvider.textContent = integrations.ai.provider;
+          aiProviderDetail.textContent = `${integrations.ai.provider} GPT-3.5`;
+        }
+        
+        // Atualizar status do Email
+        if (integrations.email) {
+          const emailStatus = document.getElementById('email-status');
+          const emailProvider = document.getElementById('email-provider');
+          
+          if (integrations.email.active) {
+            emailStatus.innerHTML = '<span class="status-indicator status-active"></span><span class="status-text">Ativo</span>';
+          } else {
+            emailStatus.innerHTML = '<span class="status-indicator status-inactive"></span><span class="status-text">Inativo</span>';
+          }
+          
+          emailProvider.textContent = integrations.email.provider;
+        }
+        
+        // Atualizar status do WhatsApp
+        if (integrations.whatsapp) {
+          const whatsappStatus = document.getElementById('whatsapp-status');
+          const whatsappProvider = document.getElementById('whatsapp-provider');
+          
+          if (integrations.whatsapp.active) {
+            whatsappStatus.innerHTML = '<span class="status-indicator status-active"></span><span class="status-text">Ativo</span>';
+          } else {
+            whatsappStatus.innerHTML = '<span class="status-indicator status-inactive"></span><span class="status-text">Inativo</span>';
+          }
+          
+          whatsappProvider.textContent = integrations.whatsapp.provider;
+        }
+        
+        // Atualizar status do Banco de Dados
+        if (integrations.database) {
+          const dbStatus = document.getElementById('db-status');
+          const dbProvider = document.getElementById('db-provider');
+          
+          if (integrations.database.active) {
+            dbStatus.innerHTML = '<span class="status-indicator status-active"></span><span class="status-text">Ativo</span>';
+          } else {
+            dbStatus.innerHTML = '<span class="status-indicator status-inactive"></span><span class="status-text">Inativo</span>';
+          }
+          
+          dbProvider.textContent = integrations.database.provider;
+        }
+      }
+
+      // Funções para gerenciar modal de resultado de teste
+      function showTestResultModal(title, serviceName, result, isSuccess) {
+        const modal = document.getElementById('test-result-modal');
+        const titleElement = document.getElementById('test-result-title');
+        const contentElement = document.getElementById('test-result-content');
+        
+        titleElement.textContent = `🧪 ${title}`;
+        
+        let content = `
+          <div class="test-result-summary ${isSuccess ? 'success' : 'error'}">
+            <strong>${isSuccess ? '✅ Teste Bem-sucedido' : '❌ Teste Falhou'}</strong><br>
+            <span class="test-result-timestamp">Serviço: ${serviceName}</span>
+          </div>
+        `;
+        
+        if (isSuccess) {
+          content += `
+            <div class="test-result-item test-result-success">
+              <strong>Status:</strong> Conectado
+            </div>
+            <div class="test-result-item test-result-info">
+              <strong>Provedor:</strong> ${result.provider || 'N/A'}
+            </div>
+            <div class="test-result-item test-result-info">
+              <strong>Mensagem:</strong> ${result.message || 'Conexão estabelecida com sucesso'}
+            </div>
+          `;
+        } else {
+          content += `
+            <div class="test-result-item test-result-error">
+              <strong>Erro:</strong> ${result.error || result.message || 'Erro desconhecido'}
+            </div>
+          `;
+        }
+        
+        if (result.details) {
+          content += `
+            <div class="test-result-item test-result-info">
+              <strong>Detalhes:</strong> ${JSON.stringify(result.details, null, 2)}
+            </div>
+          `;
+        }
+        
+        contentElement.innerHTML = content;
+        showModal(modal);
+      }
+
+      function closeTestResultModal() {
+        const modal = document.getElementById('test-result-modal');
+        hideModal(modal);
+      }
+
+      // Funções de teste dos serviços
+      function testAIService() {
+        showMessage('Testando serviço de IA...', 'info');
+        
+        fetch('/api/integrations/test/ai', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json'
+          }
+        })
+          .then(response => response.json())
+          .then(data => {
+            if (data.success) {
+              showMessage(`✅ ${data.result.message}`, 'success');
+              showTestResultModal('Teste de IA', 'Inteligência Artificial', data.result, true);
+            } else {
+              showMessage(`❌ ${data.result.error}`, 'error');
+              showTestResultModal('Teste de IA', 'Inteligência Artificial', data.result, false);
+            }
+          })
+          .catch(error => {
+            console.error('Erro ao testar IA:', error);
+            showMessage('❌ Erro ao testar serviço de IA', 'error');
+            showTestResultModal('Teste de IA', 'Inteligência Artificial', { error: error.message }, false);
+          });
+      }
+
+      function testEmailService() {
+        showMessage('Testando serviço de Email...', 'info');
+        
+        fetch('/api/integrations/test/email', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json'
+          }
+        })
+          .then(response => response.json())
+          .then(data => {
+            if (data.success) {
+              showMessage(`✅ ${data.result.message}`, 'success');
+              showTestResultModal('Teste de Email', 'Email', data.result, true);
+            } else {
+              showMessage(`❌ ${data.result.error}`, 'error');
+              showTestResultModal('Teste de Email', 'Email', data.result, false);
+            }
+          })
+          .catch(error => {
+            console.error('Erro ao testar Email:', error);
+            showMessage('❌ Erro ao testar serviço de Email', 'error');
+            showTestResultModal('Teste de Email', 'Email', { error: error.message }, false);
+          });
+      }
+
+      function testWhatsAppService() {
+        showMessage('Testando serviço de WhatsApp...', 'info');
+        
+        fetch('/api/integrations/test/whatsapp', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json'
+          }
+        })
+          .then(response => response.json())
+          .then(data => {
+            if (data.success) {
+              showMessage(`✅ ${data.result.message}`, 'success');
+              showTestResultModal('Teste de WhatsApp', 'WhatsApp', data.result, true);
+            } else {
+              showMessage(`❌ ${data.result.error}`, 'error');
+              showTestResultModal('Teste de WhatsApp', 'WhatsApp', data.result, false);
+            }
+          })
+          .catch(error => {
+            console.error('Erro ao testar WhatsApp:', error);
+            showMessage('❌ Erro ao testar serviço de WhatsApp', 'error');
+            showTestResultModal('Teste de WhatsApp', 'WhatsApp', { error: error.message }, false);
+          });
+      }
+
+      // Funções de configuração
+      function configureAIService() {
+        showModal(document.getElementById('ai-config-modal'));
+        loadCurrentAIConfig();
+      }
+
+      function configureEmailService() {
+        showModal(document.getElementById('email-config-modal'));
+        loadCurrentEmailConfig();
+      }
+
+      function configureWhatsAppService() {
+        showModal(document.getElementById('whatsapp-config-modal'));
+        loadCurrentWhatsAppConfig();
+      }
+
+      // Funções do banco de dados
+      function viewDatabaseInfo() {
+        showMessage('Informações do banco de dados serão implementadas', 'info');
+      }
+
+      // ===== FUNÇÕES DE CONFIGURAÇãO DE SERVIÇOS =====
+
+      // Carregar configurações atuais
+      function loadCurrentAIConfig() {
+        fetch('/api/integrations/status')
+          .then(response => response.json())
+          .then(data => {
+            if (data.success) {
+              const ai = data.integrations.ai;
+              document.getElementById('ai-provider-select').value = ai.provider;
+              updateAIForm();
+            }
+          })
+          .catch(error => console.error('Erro ao carregar configuração de IA:', error));
+      }
+
+      function loadCurrentEmailConfig() {
+        fetch('/api/integrations/status')
+          .then(response => response.json())
+          .then(data => {
+            if (data.success) {
+              const email = data.integrations.email;
+              document.getElementById('email-provider-select').value = email.provider;
+              updateEmailForm();
+            }
+          })
+          .catch(error => console.error('Erro ao carregar configuração de Email:', error));
+      }
+
+      function loadCurrentWhatsAppConfig() {
+        fetch('/api/integrations/status')
+          .then(response => response.json())
+          .then(data => {
+            if (data.success) {
+              const whatsapp = data.integrations.whatsapp;
+              document.getElementById('whatsapp-provider-select').value = whatsapp.provider;
+              updateWhatsAppForm();
+            }
+          })
+          .catch(error => console.error('Erro ao carregar configuração de WhatsApp:', error));
+      }
+
+      // Atualizar formulários baseado no provedor
+      function updateAIForm() {
+        const provider = document.getElementById('ai-provider-select').value;
+        
+        // Esconder todas as configurações
+        document.querySelectorAll('#ai-config-modal .provider-config').forEach(el => {
+          el.style.display = 'none';
+        });
+        
+        // Mostrar configuração selecionada
+        document.getElementById(provider + '-config').style.display = 'block';
+      }
+
+      function updateEmailForm() {
+        const provider = document.getElementById('email-provider-select').value;
+        
+        // Esconder todas as configurações
+        document.querySelectorAll('#email-config-modal .provider-config').forEach(el => {
+          el.style.display = 'none';
+        });
+        
+        // Mostrar configuração selecionada
+        if (provider === 'smtp') {
+          document.getElementById('smtp-config').style.display = 'block';
+        } else if (provider === 'webhook') {
+          document.getElementById('email-webhook-config').style.display = 'block';
+        }
+      }
+
+      function updateWhatsAppForm() {
+        const provider = document.getElementById('whatsapp-provider-select').value;
+        
+        // Esconder todas as configurações
+        document.querySelectorAll('#whatsapp-config-modal .provider-config').forEach(el => {
+          el.style.display = 'none';
+        });
+        
+        // Mostrar configuração selecionada
+        if (provider === 'z-api') {
+          document.getElementById('z-api-config').style.display = 'block';
+        } else if (provider === 'twilio') {
+          document.getElementById('twilio-config').style.display = 'block';
+        } else if (provider === 'webhook') {
+          document.getElementById('whatsapp-webhook-config').style.display = 'block';
+        }
+      }
+
+      // Salvar configurações
+      function saveAIConfig() {
+        const provider = document.getElementById('ai-provider-select').value;
+        const config = { provider: provider };
+
+        if (provider === 'openai') {
+          config.api_key = document.getElementById('openai-api-key').value;
+        } else if (provider === 'anthropic') {
+          config.api_key = document.getElementById('anthropic-api-key').value;
+        } else if (provider === 'webhook') {
+          config.webhook_url = document.getElementById('webhook-url').value;
+        }
+
+        saveConfig('ai', config);
+      }
+
+      function saveEmailConfig() {
+        const provider = document.getElementById('email-provider-select').value;
+        const config = { provider: provider };
+
+        if (provider === 'smtp') {
+          config.server = document.getElementById('mail-server').value;
+          config.port = document.getElementById('mail-port').value;
+          config.username = document.getElementById('mail-username').value;
+          config.password = document.getElementById('mail-password').value;
+          config.use_tls = document.getElementById('mail-use-tls').checked;
+        } else if (provider === 'webhook') {
+          config.webhook_url = document.getElementById('email-webhook-url').value;
+        }
+
+        saveConfig('email', config);
+      }
+
+      function saveWhatsAppConfig() {
+        const provider = document.getElementById('whatsapp-provider-select').value;
+        const config = { provider: provider };
+
+        if (provider === 'z-api') {
+          config.api_key = document.getElementById('z-api-key').value;
+          config.instance_id = document.getElementById('z-instance-id').value;
+        } else if (provider === 'twilio') {
+          config.account_sid = document.getElementById('twilio-account-sid').value;
+          config.auth_token = document.getElementById('twilio-auth-token').value;
+          config.whatsapp_number = document.getElementById('twilio-whatsapp-number').value;
+        } else if (provider === 'webhook') {
+          config.webhook_url = document.getElementById('whatsapp-webhook-url').value;
+        }
+
+        saveConfig('whatsapp', config);
+      }
+
+      // Função genérica para salvar configuração
+      function saveConfig(service, config) {
+        addTestLog(`Salvando configuração ${service}...`, 'info');
+        
+        fetch('/api/integrations/save', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({
+            service: service,
+            config: config
+          })
+        })
+        .then(response => response.json())
+        .then(data => {
+          if (data.success) {
+            addTestLog(`✅ Configuração ${service} salva com sucesso!`, 'success');
+            hideModal(document.getElementById(`${service}-config-modal`));
+            refreshServicesStatus();
+          } else {
+            addTestLog(`❌ Erro ao salvar ${service}: ${data.error}`, 'error');
+          }
+        })
+        .catch(error => {
+          addTestLog(`❌ Erro de conexão: ${error.message}`, 'error');
+        });
+      }
+
+      // Testar conexões
+      function testAIConnection() {
+        addTestLog('Testando conexão de IA...', 'info');
+        
+        fetch('/api/integrations/test/ai', {
+          method: 'POST'
+        })
+        .then(response => response.json())
+        .then(data => {
+          if (data.success) {
+            addTestLog(`✅ Teste de IA bem-sucedido!`, 'success');
+            addTestLog(`Resultado: ${JSON.stringify(data.result)}`, 'info');
+          } else {
+            addTestLog(`❌ Teste de IA falhou: ${data.error}`, 'error');
+          }
+        })
+        .catch(error => {
+          addTestLog(`❌ Erro no teste de IA: ${error.message}`, 'error');
+        });
+      }
+
+      function testEmailConnection() {
+        addTestLog('Testando conexão de Email...', 'info');
+        
+        fetch('/api/integrations/test/email', {
+          method: 'POST'
+        })
+        .then(response => response.json())
+        .then(data => {
+          if (data.success) {
+            addTestLog(`✅ Teste de Email bem-sucedido!`, 'success');
+            addTestLog(`Resultado: ${JSON.stringify(data.result)}`, 'info');
+          } else {
+            addTestLog(`❌ Teste de Email falhou: ${data.error}`, 'error');
+          }
+        })
+        .catch(error => {
+          addTestLog(`❌ Erro no teste de Email: ${error.message}`, 'error');
+        });
+      }
+
+      function testWhatsAppConnection() {
+        addTestLog('Testando conexão de WhatsApp...', 'info');
+        
+        fetch('/api/integrations/test/whatsapp', {
+          method: 'POST'
+        })
+        .then(response => response.json())
+        .then(data => {
+          if (data.success) {
+            addTestLog(`✅ Teste de WhatsApp bem-sucedido!`, 'success');
+            addTestLog(`Resultado: ${JSON.stringify(data.result)}`, 'info');
+          } else {
+            addTestLog(`❌ Teste de WhatsApp falhou: ${data.error}`, 'error');
+          }
+        })
+        .catch(error => {
+          addTestLog(`❌ Erro no teste de WhatsApp: ${error.message}`, 'error');
+        });
+      }
+
+      // Adicionar log de teste
+      function addTestLog(message, type) {
+        const timestamp = new Date().toLocaleTimeString();
+        const logEntry = document.createElement('div');
+        logEntry.className = `log-entry ${type}`;
+        logEntry.textContent = `[${timestamp}] ${message}`;
+        
+        // Adicionar ao resultado de teste mais próximo
+        const testResults = document.querySelectorAll('.test-result');
+        const lastResult = testResults[testResults.length - 1];
+        if (lastResult) {
+          lastResult.appendChild(logEntry);
+          lastResult.scrollTop = lastResult.scrollHeight;
+        }
+      }
+
+      // Atualizar status dos serviços
+      function refreshServicesStatus() {
+        fetch('/api/integrations/status')
+          .then(response => response.json())
+          .then(data => {
+            if (data.success) {
+              updateServicesDisplay(data.integrations);
+            }
+          })
+          .catch(error => console.error('Erro ao atualizar status:', error));
+      }
+
+      function updateServicesDisplay(integrations) {
+        // Atualizar IA
+        const aiStatus = document.getElementById('ai-status');
+        const aiProvider = document.getElementById('ai-provider');
+        const aiProviderDetail = document.getElementById('ai-provider-detail');
+        
+        if (integrations.ai.configured) {
+          aiStatus.innerHTML = '<span class="status-indicator status-active"></span><span class="status-text">Ativo</span>';
+          aiProvider.textContent = integrations.ai.provider;
+          aiProviderDetail.textContent = `${integrations.ai.provider} ${integrations.ai.provider === 'openai' ? 'GPT-3.5' : integrations.ai.provider === 'anthropic' ? 'Claude' : integrations.ai.provider}`;
+        } else {
+          aiStatus.innerHTML = '<span class="status-indicator status-inactive"></span><span class="status-text">Inativo</span>';
+        }
+
+        // Atualizar Email
+        const emailStatus = document.getElementById('email-status');
+        const emailProvider = document.getElementById('email-provider');
+        
+        if (integrations.email.configured) {
+          emailStatus.innerHTML = '<span class="status-indicator status-active"></span><span class="status-text">Ativo</span>';
+          emailProvider.textContent = integrations.email.provider;
+        } else {
+          emailStatus.innerHTML = '<span class="status-indicator status-inactive"></span><span class="status-text">Inativo</span>';
+        }
+
+        // Atualizar WhatsApp
+        const whatsappStatus = document.getElementById('whatsapp-status');
+        const whatsappProvider = document.getElementById('whatsapp-provider');
+        
+        if (integrations.whatsapp.configured) {
+          whatsappStatus.innerHTML = '<span class="status-indicator status-active"></span><span class="status-text">Ativo</span>';
+          whatsappProvider.textContent = integrations.whatsapp.provider;
+        } else {
+          whatsappStatus.innerHTML = '<span class="status-indicator status-inactive"></span><span class="status-text">Inativo</span>';
+        }
+      }
+
+      function backupDatabase() {
+        showMessage('Funcionalidade de backup será implementada', 'info');
+      }
+
+      // Função auxiliar para mostrar mensagens
+      function showMessage(message, type = 'info') {
+        const notification = document.createElement('div');
+        notification.className = `notification notification-${type}`;
+        notification.textContent = message;
+        notification.style.cssText = `
+          position: fixed;
+          top: 20px;
+          right: 20px;
+          padding: 12px 20px;
+          border-radius: 8px;
+          color: white;
+          font-weight: 500;
+          z-index: 1000;
+          max-width: 400px;
+          word-wrap: break-word;
+        `;
+
+        const colors = {
+          success: '#10b981',
+          error: '#ef4444',
+          warning: '#f59e0b',
+          info: '#3b82f6'
+        };
+
+        notification.style.backgroundColor = colors[type] || colors.info;
+        document.body.appendChild(notification);
+
+        setTimeout(() => {
+          if (notification.parentNode) {
+            notification.parentNode.removeChild(notification);
+          }
+        }, 5000);
+      }
+
+      // Carregar status inicial dos serviços
+      refreshServicesStatus();
+
+    });
+
+  </script>
+
+  <style>
+    /* Seção Principal IA - Identidade Visual do App */
+    .ia-section {
+      background: var(--color-surface);
+      border: 1px solid var(--color-border);
+      border-radius: var(--radius-lg);
+      box-shadow: var(--shadow-md);
+      margin-top: 32px;
+      overflow: hidden;
+      transition: all 0.3s ease;
+    }
+
+    .ia-section:hover {
+      transform: translateY(-2px);
+      box-shadow: var(--shadow-lg);
+    }
+
+    /* Header da Seção IA */
+    .ia-header {
+      background: linear-gradient(135deg, 
+        rgba(58, 241, 174, 0.15) 0%, 
+        rgba(230, 198, 63, 0.1) 50%, 
+        rgba(58, 241, 174, 0.1) 100%);
+      border-bottom: 1px solid var(--color-border);
+      padding: 32px;
+      position: relative;
+    }
+
+    .ia-header::before {
+      content: '';
+      position: absolute;
+      top: 0;
+      left: 0;
+      right: 0;
+      height: 2px;
+      background: linear-gradient(90deg, 
+        var(--color-accent) 0%, 
+        var(--color-highlight) 50%, 
+        var(--color-accent) 100%);
+    }
+
+    .ia-title h2 {
+      color: var(--color-text);
+      font-size: 2rem;
+      font-weight: 700;
+      margin: 0 0 8px 0;
+      display: flex;
+      align-items: center;
+      gap: 16px;
+    }
+
+    .ia-subtitle {
+      color: var(--color-muted);
+      font-size: 1rem;
+      font-weight: 400;
+      margin-left: 40px;
+    }
+
+    /* Conteúdo das Subsessões */
+    .ia-content {
+      display: grid;
+      grid-template-columns: 1fr;
+      gap: 24px;
+      padding: 32px;
+    }
+
+    @media (min-width: 768px) {
+      .ia-content {
+        grid-template-columns: 1fr 1fr;
+      }
+    }
+
+    /* Subsessões */
+    .ia-subsection {
+      background: var(--color-surface-alt);
+      border: 1px solid var(--color-border);
+      border-radius: var(--radius-md);
+      overflow: hidden;
+      transition: all 0.3s ease;
+    }
+
+    .ia-subsection:hover {
+      border-color: var(--color-accent);
+      box-shadow: 0 8px 24px rgba(58, 241, 174, 0.1);
+    }
+
+    /* Header das Subsessões */
+    .subsection-header {
+      background: linear-gradient(135deg, 
+        rgba(58, 241, 174, 0.08) 0%, 
+        rgba(58, 241, 174, 0.05) 100%);
+      border-bottom: 1px solid var(--color-border);
+      padding: 20px 24px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+
+    .subsection-title h3 {
+      color: var(--color-text);
+      font-size: 1.25rem;
+      font-weight: 600;
+      margin: 0 0 4px 0;
+    }
+
+    .subsection-badge {
+      background: rgba(58, 241, 174, 0.15);
+      color: var(--color-accent);
+      border: 1px solid rgba(58, 241, 174, 0.3);
+      font-size: 0.75rem;
+      padding: 4px 10px;
+      border-radius: 12px;
+      font-weight: 500;
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+    }
+
+    .subsection-actions .button {
+      background: var(--color-accent);
+      color: var(--color-bg);
+      border: 1px solid var(--color-accent);
+      font-weight: 600;
+    }
+
+    .subsection-actions .button:hover {
+      background: var(--color-accent-strong);
+      transform: translateY(-1px);
+      box-shadow: 0 4px 12px rgba(58, 241, 174, 0.3);
+    }
+
+    /* Conteúdo das Subsessões */
+    .subsection-content {
+      padding: 24px;
+    }
+
+    /* Estados Vazios */
+    .empty-state {
+      text-align: center;
+      padding: 48px 24px;
+      color: var(--color-muted);
+    }
+
+    .empty-state-icon {
+      font-size: 3rem;
+      margin-bottom: 16px;
+      opacity: 0.6;
+    }
+
+    .empty-state-title {
+      font-size: 1.25rem;
+      font-weight: 600;
+      color: var(--color-text);
+      margin-bottom: 8px;
+    }
+
+    .empty-state-description {
+      font-size: 0.875rem;
+      line-height: 1.5;
+      max-width: 400px;
+      margin: 0 auto;
+    }
+
+    /* Tabelas */
+    .subsection-content .table {
+      width: 100%;
+      border-collapse: collapse;
+      margin-top: 16px;
+    }
+
+    .subsection-content .table th {
+      background: var(--color-surface);
+      color: var(--color-muted);
+      font-weight: 600;
+      font-size: 0.75rem;
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+      padding: 12px 16px;
+      text-align: left;
+      border-bottom: 1px solid var(--color-border);
+    }
+
+    .subsection-content .table td {
+      padding: 16px;
+      border-bottom: 1px solid var(--color-border);
+      font-size: 0.875rem;
+      color: var(--color-text);
+    }
+
+    .subsection-content .table tr:hover {
+      background: rgba(58, 241, 174, 0.05);
+    }
+
+    /* Status Dots */
+    .status-dot {
+      display: inline-block;
+      width: 8px;
+      height: 8px;
+      border-radius: 50%;
+      margin-right: 8px;
+    }
+
+    .status-dot.status-active {
+      background: var(--color-accent);
+      box-shadow: 0 0 0 2px rgba(58, 241, 174, 0.3);
+    }
+
+    .status-dot.status-inactive {
+      background: var(--color-danger);
+      box-shadow: 0 0 0 2px rgba(246, 107, 107, 0.3);
+    }
+
+    /* Botões de Ação */
+    .subsection-content .button-sm {
+      padding: 6px 8px;
+      font-size: 0.75rem;
+      border-radius: var(--radius-sm);
+      margin-right: 2px;
+      min-width: 32px;
+      height: 28px;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+    }
+
+    .subsection-content .button-secondary {
+      background: var(--color-surface);
+      color: var(--color-text);
+      border: 1px solid var(--color-border);
+    }
+
+    .subsection-content .button-secondary:hover {
+      background: var(--color-surface-alt);
+      border-color: var(--color-accent);
+      transform: translateY(-1px);
+    }
+
+    .subsection-content .button-danger {
+      background: rgba(246, 107, 107, 0.1);
+      color: var(--color-danger);
+      border: 1px solid rgba(246, 107, 107, 0.3);
+    }
+
+    .subsection-content .button-danger:hover {
+      background: rgba(246, 107, 107, 0.2);
+      transform: translateY(-1px);
+    }
+
+    .subsection-content .button-success {
+      background: rgba(34, 197, 94, 0.1);
+      color: #22c55e;
+      border: 1px solid rgba(34, 197, 94, 0.3);
+    }
+
+    .subsection-content .button-success:hover {
+      background: rgba(34, 197, 94, 0.2);
+      transform: translateY(-1px);
+    }
+
+    /* Campos de Opção */
+    .field-option {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      padding: 8px 12px;
+      margin: 4px 0;
+      border-radius: var(--radius-sm);
+      cursor: pointer;
+      transition: all 0.2s ease;
+      color: var(--color-text);
+    }
+
+    .field-option:hover {
+      background: rgba(58, 241, 174, 0.1);
+    }
+
+    .field-option input[type="checkbox"] {
+      margin: 0;
+      accent-color: var(--color-accent);
+    }
+
+    .field-option span {
+      font-size: 0.875rem;
+      font-weight: 500;
+    }
+
+    .fields-list {
+      max-height: 200px;
+      overflow-y: auto;
+      border: 1px solid var(--color-border);
+      border-radius: var(--radius-sm);
+      padding: 8px;
+      background: var(--color-surface);
+    }
+
+    /* Grid de Serviços */
+    .services-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+      gap: 20px;
+      margin-top: 16px;
+    }
+
+    .service-card {
+      background: var(--color-surface-alt);
+      border: 1px solid var(--color-border);
+      border-radius: var(--radius-md);
+      padding: 20px;
+      transition: all 0.3s ease;
+    }
+
+    .service-card:hover {
+      border-color: var(--color-accent);
+      transform: translateY(-2px);
+      box-shadow: 0 8px 24px rgba(58, 241, 174, 0.1);
+    }
+
+    .service-header {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      margin-bottom: 16px;
+    }
+
+    .service-icon {
+      font-size: 24px;
+      width: 40px;
+      height: 40px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      background: rgba(58, 241, 174, 0.1);
+      border-radius: var(--radius-sm);
+      border: 1px solid rgba(58, 241, 174, 0.2);
+    }
+
+    .service-info {
+      flex: 1;
+    }
+
+    .service-name {
+      font-size: 16px;
+      font-weight: 600;
+      color: var(--color-text);
+      margin: 0 0 4px 0;
+    }
+
+    .service-provider {
+      font-size: 12px;
+      color: var(--color-accent);
+      background: rgba(58, 241, 174, 0.15);
+      padding: 2px 8px;
+      border-radius: 12px;
+      display: inline-block;
+      border: 1px solid rgba(58, 241, 174, 0.3);
+    }
+
+    .service-status {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+    }
+
+    .service-details {
+      margin-bottom: 16px;
+    }
+
+    .service-detail {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: 8px 0;
+      border-bottom: 1px solid var(--color-border);
+    }
+
+    .service-detail:last-child {
+      border-bottom: none;
+    }
+
+    .detail-label {
+      font-size: 12px;
+      color: var(--color-muted);
+      font-weight: 500;
+    }
+
+    .detail-value {
+      font-size: 12px;
+      color: var(--color-text);
+      font-weight: 600;
+    }
+
+    .service-actions {
+      display: flex;
+      gap: 8px;
+      flex-wrap: wrap;
+    }
+
+    /* Responsividade para serviços */
+    @media (max-width: 768px) {
+      .services-grid {
+        grid-template-columns: 1fr;
+      }
+    }
+
+    /* Seção Status dos Serviços - Independente */
+    .services-section {
+      margin-top: 32px;
+      background: var(--color-surface);
+      border: 1px solid var(--color-border);
+      border-radius: var(--radius-lg);
+      box-shadow: var(--shadow-md);
+    }
+
+    .services-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: flex-start;
+      padding: 24px 32px;
+      border-bottom: 1px solid var(--color-border);
+      background: linear-gradient(135deg, rgba(58, 241, 174, 0.05), rgba(58, 241, 174, 0.02));
+    }
+
+    .services-title h2 {
+      font-size: 24px;
+      font-weight: 700;
+      color: var(--color-text);
+      margin: 0 0 8px 0;
+      background: linear-gradient(135deg, var(--color-accent), var(--color-accent-strong));
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      background-clip: text;
+    }
+
+    .services-subtitle {
+      font-size: 14px;
+      color: var(--color-muted);
+      margin: 0;
+      line-height: 1.5;
+    }
+
+    .services-actions {
+      display: flex;
+      gap: 12px;
+      align-items: center;
+    }
+
+    .services-content {
+      padding: 32px;
+    }
+
+    /* Estilos para modais de configuração */
+    .provider-config {
+      margin-top: 15px;
+      padding: 15px;
+      background: #f8f9fa;
+      border-radius: 4px;
+      border-left: 4px solid #3498db;
+    }
+
+    .form-row {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 15px;
+    }
+
+    .test-section {
+      margin-top: 20px;
+      padding-top: 15px;
+      border-top: 1px solid #ecf0f1;
+    }
+
+    .test-result {
+      margin-top: 10px;
+      background: #f8f9fa;
+      border: 1px solid #dee2e6;
+      border-radius: 4px;
+      padding: 10px;
+      min-height: 50px;
+      max-height: 200px;
+      overflow-y: auto;
+      font-family: monospace;
+      font-size: 12px;
+    }
+
+    .log-entry {
+      margin-bottom: 5px;
+      padding: 5px;
+      border-radius: 3px;
+    }
+
+    .log-entry.success {
+      background: #d4edda;
+      color: #155724;
+    }
+
+    .log-entry.error {
+      background: #f8d7da;
+      color: #721c24;
+    }
+
+    .log-entry.info {
+      background: #d1ecf1;
+      color: #0c5460;
+    }
+
+    .info-box {
+      background: #e8f5e8;
+      border: 1px solid #c3e6c3;
+      border-radius: 4px;
+      padding: 15px;
+      color: #2d5a2d;
+    }
+
+    .info-box p {
+      margin: 0 0 10px 0;
+    }
+
+    .info-box p:last-child {
+      margin-bottom: 0;
+    }
+
+    .modal-footer {
+      display: flex;
+      justify-content: flex-end;
+      gap: 10px;
+      padding: 20px;
+      border-top: 1px solid #ecf0f1;
+    }
+
+    .modal-body {
+      padding: 20px;
+    }
+
+    .modal-body .form-group {
+      margin-bottom: 20px;
+    }
+
+    .modal-body .form-group label {
+      display: block;
+      margin-bottom: 5px;
+      font-weight: 600;
+      color: #2c3e50;
+    }
+
+    .modal-body .form-group input,
+    .modal-body .form-group select {
+      width: 100%;
+      padding: 10px;
+      border: 2px solid #ecf0f1;
+      border-radius: 4px;
+      font-size: 14px;
+    }
+
+    .modal-body .form-group input:focus,
+    .modal-body .form-group select:focus {
+      outline: none;
+      border-color: #3498db;
+    }
+
+    .modal-body .form-group small {
+      display: block;
+      margin-top: 5px;
+      color: #7f8c8d;
+      font-size: 12px;
+    }
+
+    .modal-body .form-group small a {
+      color: #3498db;
+    }
+
+    /* Responsividade para seção de serviços */
+    @media (max-width: 768px) {
+      .services-header {
+        flex-direction: column;
+        gap: 16px;
+        align-items: stretch;
+      }
+
+      .form-row {
+        grid-template-columns: 1fr;
+      }
+
+      .services-title h2 {
+        font-size: 20px;
+      }
+
+      .services-content {
+        padding: 20px;
+      }
+    }
+
+    /* Agent Details Modal Styles */
+    .modal-large {
+      max-width: 900px;
+      width: 90vw;
+    }
+
+    .agent-details-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+      gap: 24px;
+      margin-bottom: 20px;
+    }
+
+    .detail-section {
+      background: rgba(15, 23, 42, 0.3);
+      border: 1px solid rgba(148, 163, 184, 0.2);
+      border-radius: 8px;
+      padding: 20px;
+    }
+
+    .detail-section h4 {
+      margin: 0 0 16px 0;
+      color: var(--color-accent, #39f2ae);
+      font-size: 16px;
+      font-weight: 600;
+      border-bottom: 1px solid rgba(148, 163, 184, 0.2);
+      padding-bottom: 8px;
+    }
+
+    .detail-item {
+      display: flex;
+      justify-content: space-between;
+      align-items: flex-start;
+      margin-bottom: 12px;
+      padding-bottom: 8px;
+      border-bottom: 1px solid rgba(148, 163, 184, 0.1);
+    }
+
+    .detail-item:last-child {
+      border-bottom: none;
+      margin-bottom: 0;
+    }
+
+    .detail-label {
+      font-weight: 500;
+      color: var(--color-muted, #9ba5a0);
+      min-width: 120px;
+      margin-right: 16px;
+    }
+
+    .detail-value {
+      color: var(--color-text, #f5f8f6);
+      text-align: right;
+      flex: 1;
+      word-break: break-word;
+    }
+
+    .detail-value.status-active {
+      color: #10b981;
+      font-weight: 600;
+    }
+
+    .detail-value.status-inactive {
+      color: #6b7280;
+      font-weight: 600;
+    }
+
+    .template-content {
+      background: rgba(15, 23, 42, 0.5);
+      border: 1px solid rgba(148, 163, 184, 0.3);
+      border-radius: 6px;
+      padding: 16px;
+      margin-top: 8px;
+      max-height: 200px;
+      overflow-y: auto;
+    }
+
+    .template-code {
+      margin: 0;
+      color: var(--color-text, #f5f8f6);
+      font-family: 'Courier New', monospace;
+      font-size: 12px;
+      line-height: 1.4;
+      white-space: pre-wrap;
+    }
+
+    .template-preview {
+      font-style: italic;
+      color: var(--color-muted, #9ba5a0);
+    }
+
+    /* Agent Table Improvements */
+    .agent-name strong {
+      color: var(--color-text, #f5f8f6);
+      display: block;
+      margin-bottom: 4px;
+    }
+
+    .agent-name small {
+      color: var(--color-muted, #9ba5a0);
+      font-size: 11px;
+    }
+
+    .status-badge {
+      padding: 4px 8px;
+      border-radius: 12px;
+      font-size: 10px;
+      font-weight: 600;
+      text-transform: uppercase;
+    }
+
+    .status-badge.status-active {
+      background: rgba(16, 185, 129, 0.15);
+      color: #10b981;
+    }
+
+    .status-badge.status-inactive {
+      background: rgba(107, 114, 128, 0.15);
+      color: #6b7280;
+    }
+
+    .text-muted {
+      color: var(--color-muted, #9ba5a0) !important;
+    }
+
+    /* Button Improvements */
+    .button[title] {
+      position: relative;
+    }
+
+    .button[title]:hover::after {
+      content: attr(title);
+      position: absolute;
+      bottom: 100%;
+      left: 50%;
+      transform: translateX(-50%);
+      background: rgba(0, 0, 0, 0.8);
+      color: white;
+      padding: 4px 8px;
+      border-radius: 4px;
+      font-size: 12px;
+      white-space: nowrap;
+      z-index: 1000;
+      margin-bottom: 4px;
+    }
+
+    /* Ensure buttons are visible */
+    .button {
+      display: inline-block !important;
+      visibility: visible !important;
+      opacity: 1 !important;
+    }
+
+    /* Debug styles for agents table */
+    #agents-table {
+      min-height: 100px;
+      border: 1px solid rgba(148, 163, 184, 0.2);
+      border-radius: 8px;
+      padding: 16px;
+      background: rgba(15, 23, 42, 0.2);
+    }
+
+    #agents-table table {
+      width: 100%;
+      border-collapse: collapse;
+    }
+
+    #agents-table th,
+    #agents-table td {
+      padding: 8px 12px;
+      text-align: left;
+      border-bottom: 1px solid rgba(148, 163, 184, 0.1);
+    }
+
+    #agents-table th {
+      background: rgba(15, 23, 42, 0.4);
+      font-weight: 600;
+      color: var(--color-accent, #39f2ae);
+    }
+
+    /* Modal Footer */
+    .modal-footer {
+      display: flex;
+      justify-content: flex-end;
+      gap: 12px;
+      padding: 20px;
+      border-top: 1px solid rgba(148, 163, 184, 0.2);
+      background: rgba(15, 23, 42, 0.2);
+    }
+
+    /* Responsive Design */
+    @media (max-width: 768px) {
+      .agent-details-grid {
+        grid-template-columns: 1fr;
+        gap: 16px;
+      }
+      
+      .modal-large {
+        width: 95vw;
+        max-width: none;
+      }
+      
+      .detail-item {
+        flex-direction: column;
+        align-items: flex-start;
+      }
+      
+      .detail-label {
+        margin-bottom: 4px;
+        margin-right: 0;
+      }
+      
+      .detail-value {
+        text-align: left;
+      }
+    }
+
+    /* Modal de Resultado de Teste */
+    .test-result-content {
+      background: #f8f9fa;
+      border: 1px solid #dee2e6;
+      border-radius: 8px;
+      padding: 16px;
+      max-height: 400px;
+      overflow-y: auto;
+      font-family: 'Courier New', monospace;
+      font-size: 13px;
+      line-height: 1.4;
+    }
+
+    .test-result-success {
+      color: #28a745;
+      font-weight: 600;
+    }
+
+    .test-result-error {
+      color: #dc3545;
+      font-weight: 600;
+    }
+
+    .test-result-info {
+      color: #17a2b8;
+    }
+
+    .test-result-warning {
+      color: #ffc107;
+    }
+
+    .test-result-item {
+      margin-bottom: 8px;
+      padding: 4px 0;
+      border-bottom: 1px solid #e9ecef;
+    }
+
+    .test-result-item:last-child {
+      border-bottom: none;
+    }
+
+    .test-result-timestamp {
+      color: #6c757d;
+      font-size: 11px;
+    }
+
+    .test-result-summary {
+      background: #e9ecef;
+      padding: 12px;
+      border-radius: 6px;
+      margin-bottom: 16px;
+      font-weight: 600;
+    }
+
+    .test-result-summary.success {
+      background: #d4edda;
+      color: #155724;
+      border: 1px solid #c3e6cb;
+    }
+
+    .test-result-summary.error {
+      background: #f8d7da;
+      color: #721c24;
+      border: 1px solid #f5c6cb;
+    }
+  </style>
+
+{% endblock %}

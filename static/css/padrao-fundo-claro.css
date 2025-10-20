@@ -1,0 +1,252 @@
+/* 
+PADRÃO "FUNDO CLARO" - REFERÊNCIA RÁPIDA
+========================================
+Para aplicar o padrão "Fundo Claro" em qualquer página:
+
+1. Incluir CSS global no template base
+2. Usar classes padrão (.grv-*)
+3. Aplicar regras específicas com !important
+4. Seguir sempre: FUNDOS CLAROS + FONTES ESCURAS
+*/
+
+/* FUNDOS PADRÃO */
+.fundo-claro {
+  background: linear-gradient(135deg, #ffffff 0%, #f8fafc 100%) !important;
+}
+
+.fundo-card {
+  background: linear-gradient(135deg, #ffffff 0%, #f9fafb 100%) !important;
+}
+
+.fundo-hover {
+  background: linear-gradient(135deg, #f1f5f9 0%, #e2e8f0 100%) !important;
+}
+
+/* FONTES PADRÃO */
+.texto-principal {
+  color: #000000 !important;
+}
+
+.texto-secundario {
+  color: #1e293b !important;
+}
+
+.texto-muted {
+  color: #475569 !important;
+}
+
+.texto-destaque {
+  color: #1e40af !important;
+}
+
+/* BORDAS E SOMBRAS */
+.borda-padrao {
+  border: 1px solid rgba(30, 64, 175, 0.1) !important;
+}
+
+.borda-hover {
+  border: 1px solid rgba(30, 64, 175, 0.2) !important;
+}
+
+.sombra-padrao {
+  box-shadow: 0 4px 12px rgba(30, 64, 175, 0.08) !important;
+}
+
+.sombra-hover {
+  box-shadow: 0 8px 24px rgba(30, 64, 175, 0.12) !important;
+}
+
+/* APLICAÇÃO RÁPIDA EM ELEMENTOS */
+.card-fundo-claro {
+  background: linear-gradient(135deg, #ffffff 0%, #f9fafb 100%) !important;
+  border: 1px solid rgba(30, 64, 175, 0.1) !important;
+  border-radius: 12px !important;
+  box-shadow: 0 4px 12px rgba(30, 64, 175, 0.08) !important;
+  transition: all 0.3s ease !important;
+}
+
+.card-fundo-claro:hover {
+  transform: translateY(-2px) !important;
+  box-shadow: 0 8px 24px rgba(30, 64, 175, 0.12) !important;
+  border-color: rgba(30, 64, 175, 0.2) !important;
+}
+
+.titulo-fundo-claro {
+  color: #000000 !important;
+  font-weight: 600 !important;
+}
+
+.texto-fundo-claro {
+  color: #1e293b !important;
+}
+
+.botao-fundo-claro {
+  background: linear-gradient(135deg, #1e40af, #7c3aed, #dc2626) !important;
+  color: #ffffff !important;
+  border: none !important;
+  border-radius: 8px !important;
+  padding: 8px 16px !important;
+  font-weight: 600 !important;
+  transition: all 0.3s ease !important;
+}
+
+.botao-fundo-claro:hover {
+  transform: translateY(-1px) !important;
+  box-shadow: 0 4px 8px rgba(30, 64, 175, 0.2) !important;
+}
+
+.input-fundo-claro {
+  background: #ffffff !important;
+  color: #000000 !important;
+  border: 1px solid rgba(148, 163, 184, 0.3) !important;
+  border-radius: 8px !important;
+  padding: 10px 12px !important;
+}
+
+.input-fundo-claro:focus {
+  border-color: rgba(30, 64, 175, 0.5) !important;
+  box-shadow: 0 0 0 3px rgba(30, 64, 175, 0.1) !important;
+  outline: none !important;
+}
+
+.modal-fundo-claro {
+  background: linear-gradient(135deg, #ffffff 0%, #f8fafc 100%) !important;
+  border: 1px solid rgba(30, 64, 175, 0.1) !important;
+  box-shadow: 0 16px 48px rgba(30, 64, 175, 0.15) !important;
+  border-radius: 16px !important;
+}
+
+/* BARRAS COLORIDAS PARA IDENTIFICAÇÃO */
+.barra-colorida::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 3px;
+  background: linear-gradient(90deg, #1e40af, #7c3aed, #dc2626);
+  z-index: 1;
+}
+
+/* GARANTIAS FINAIS - FORÇAR CORES ESCURAS */
+* {
+  color: inherit !important;
+}
+
+h1, h2, h3, h4, h5, h6, p, span, div, label, input, select, textarea {
+  color: #000000 !important;
+}
+
+.text-white, .text-light, .text-muted {
+  color: #1e293b !important;
+}
+
+.bg-dark, .bg-primary, .bg-secondary {
+  background: linear-gradient(135deg, #ffffff 0%, #f8fafc 100%) !important;
+  color: #000000 !important;
+}
+
+/* SIDEBAR E NAVEGAÇÃO - PADRÃO FUNDO CLARO */
+.sidebar-fundo-claro {
+  background: linear-gradient(135deg, #ffffff 0%, #f8fafc 100%) !important;
+  border: 1px solid rgba(30, 64, 175, 0.1) !important;
+  box-shadow: 0 8px 24px rgba(30, 64, 175, 0.08) !important;
+  border-radius: 16px !important;
+}
+
+.sidebar-titulo-fundo-claro {
+  color: #1e40af !important;
+  font-weight: 600 !important;
+  font-size: 14px !important;
+  text-transform: uppercase !important;
+  letter-spacing: 0.18em !important;
+}
+
+.sidebar-link-fundo-claro {
+  background: linear-gradient(135deg, #ffffff 0%, #f9fafb 100%) !important;
+  color: #1e293b !important;
+  border: 1px solid rgba(30, 64, 175, 0.1) !important;
+  border-radius: 12px !important;
+  padding: 14px 18px !important;
+  font-weight: 500 !important;
+  font-size: 14px !important;
+  transition: all 0.3s ease !important;
+}
+
+.sidebar-link-fundo-claro:hover {
+  color: #000000 !important;
+  background: linear-gradient(135deg, #f1f5f9 0%, #e2e8f0 100%) !important;
+  border-color: rgba(30, 64, 175, 0.2) !important;
+  box-shadow: 0 4px 12px rgba(30, 64, 175, 0.1) !important;
+  transform: translateY(-1px) !important;
+}
+
+.sidebar-link-fundo-claro.active {
+  color: #000000 !important;
+  background: linear-gradient(135deg, #dbeafe 0%, #bfdbfe 100%) !important;
+  border-color: rgba(30, 64, 175, 0.3) !important;
+  box-shadow: 0 4px 12px rgba(30, 64, 175, 0.15) !important;
+  font-weight: 600 !important;
+}
+
+/* CABEÇALHO - PADRÃO FUNDO CLARO */
+.header-fundo-claro {
+  background: linear-gradient(135deg, #ffffff 0%, #f8fafc 100%) !important;
+  border-bottom: 1px solid rgba(30, 64, 175, 0.1) !important;
+  backdrop-filter: blur(18px) !important;
+  box-shadow: 0 4px 12px rgba(30, 64, 175, 0.08) !important;
+}
+
+.header-nav-fundo-claro {
+  color: #1e293b !important;
+  font-weight: 600 !important;
+  padding: 8px 16px !important;
+  border-radius: 8px !important;
+  transition: all 0.3s ease !important;
+  font-size: 14px !important;
+}
+
+.header-nav-fundo-claro:hover {
+  color: #000000 !important;
+  background: linear-gradient(135deg, #f1f5f9 0%, #e2e8f0 100%) !important;
+  transform: translateY(-2px) !important;
+  box-shadow: 0 4px 8px rgba(30, 64, 175, 0.1) !important;
+}
+
+.header-nav-fundo-claro.active {
+  color: #000000 !important;
+  background: linear-gradient(135deg, #dbeafe 0%, #bfdbfe 100%) !important;
+  font-weight: 700 !important;
+}
+
+.user-pill-fundo-claro {
+  background: linear-gradient(135deg, #ffffff 0%, #f9fafb 100%) !important;
+  border: 1px solid rgba(30, 64, 175, 0.1) !important;
+  border-radius: 20px !important;
+  padding: 8px 16px !important;
+  box-shadow: 0 2px 4px rgba(30, 64, 175, 0.05) !important;
+}
+
+.user-name-fundo-claro {
+  color: #000000 !important;
+  font-weight: 600 !important;
+  font-size: 14px !important;
+}
+
+/* RESPONSIVIDADE */
+@media (max-width: 768px) {
+  .card-fundo-claro {
+    margin: 8px !important;
+    padding: 16px !important;
+  }
+  
+  .botao-fundo-claro {
+    padding: 12px 20px !important;
+    font-size: 14px !important;
+  }
+  
+  .sidebar-fundo-claro {
+    margin: 8px !important;
+    padding: 16px !important;
+  }
+}

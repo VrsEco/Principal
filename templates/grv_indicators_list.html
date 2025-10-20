@@ -1,0 +1,411 @@
+{% extends "base.html" %}
+{% block title %}GRV | Indicadores{% endblock %}
+{% block body %}{% set active_nav = 'indicators-list' %}{{ super() }}{% endblock %}
+
+{% block extra_head %}
+{{ super() }}
+<style>
+  .indicators-shell {
+    display: grid;
+    grid-template-columns: 250px minmax(0, 1fr);
+    gap: 18px;
+    align-items: start;
+  }
+
+  .indicators-main {
+    background: #ffffff;
+    border-radius: 14px;
+    border: 1px solid rgba(15, 23, 42, 0.08);
+    padding: 22px 24px;
+    box-shadow: 0 12px 32px rgba(15, 23, 42, 0.08);
+    display: grid;
+    gap: 20px;
+  }
+
+  .indicators-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: 16px;
+    flex-wrap: wrap;
+  }
+
+  .indicators-header h1 {
+    margin: 0;
+    font-size: 22px;
+    font-weight: 700;
+    color: #0f172a;
+  }
+
+  .indicators-description {
+    color: #64748b;
+    font-size: 13px;
+    margin-top: 6px;
+    max-width: 520px;
+    line-height: 1.5;
+  }
+
+  .indicators-actions {
+    display: flex;
+    gap: 10px;
+    flex-wrap: wrap;
+  }
+
+  .indicators-button {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    padding: 10px 18px;
+    border-radius: 10px;
+    border: none;
+    cursor: pointer;
+    font-weight: 600;
+    font-size: 13px;
+    letter-spacing: 0.04em;
+    transition: transform 0.2s ease, box-shadow 0.2s ease;
+  }
+
+  .indicators-button.primary {
+    background: linear-gradient(135deg, #3b82f6, #2563eb);
+    color: #fff;
+    box-shadow: 0 16px 28px rgba(37, 99, 235, 0.25);
+  }
+
+  .indicators-button.primary:hover {
+    transform: translateY(-2px);
+  }
+
+  .indicators-button.secondary {
+    background: #f1f5f9;
+    color: #475569;
+    border: 1px solid rgba(15, 23, 42, 0.12);
+  }
+
+  .indicators-button.secondary:hover {
+    background: #e2e8f0;
+  }
+
+  .indicators-table-wrapper {
+    overflow-x: auto;
+    border-radius: 12px;
+    border: 1px solid rgba(15, 23, 42, 0.08);
+  }
+
+  .indicators-table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 13px;
+  }
+
+  .indicators-table thead {
+    background: linear-gradient(135deg, #f8fafc, #e2e8f0);
+  }
+
+  .indicators-table th {
+    padding: 14px 16px;
+    text-align: left;
+    font-weight: 600;
+    color: #0f172a;
+    text-transform: uppercase;
+    font-size: 11px;
+    letter-spacing: 0.08em;
+    border-bottom: 2px solid rgba(59, 130, 246, 0.18);
+    white-space: nowrap;
+  }
+
+  .indicators-table td {
+    padding: 14px 16px;
+    border-bottom: 1px solid rgba(15, 23, 42, 0.06);
+    color: #334155;
+  }
+
+  .indicators-table tbody tr:hover {
+    background: rgba(59, 130, 246, 0.04);
+  }
+
+  .indicators-table .actions {
+    display: flex;
+    gap: 8px;
+  }
+
+  .indicators-table .btn-small {
+    padding: 6px 12px;
+    font-size: 11px;
+    border-radius: 6px;
+    border: none;
+    cursor: pointer;
+    font-weight: 600;
+    transition: all 0.2s ease;
+  }
+
+  .indicators-table .btn-edit {
+    background: #3b82f6;
+    color: white;
+  }
+
+  .indicators-table .btn-edit:hover {
+    background: #2563eb;
+  }
+
+  .indicators-table .btn-delete {
+    background: #ef4444;
+    color: white;
+  }
+
+  .indicators-table .btn-delete:hover {
+    background: #dc2626;
+  }
+
+  .form-grid {
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+    gap: 18px;
+  }
+
+  .form-grid.full {
+    grid-template-columns: 1fr;
+  }
+
+  .form-group {
+    margin-bottom: 18px;
+  }
+
+  .form-group label {
+    display: block;
+    margin-bottom: 8px;
+    font-weight: 600;
+    color: #334155;
+    font-size: 13px;
+  }
+
+  .form-group input,
+  .form-group select,
+  .form-group textarea {
+    width: 100%;
+    padding: 10px 14px;
+    border: 1px solid rgba(15, 23, 42, 0.12);
+    border-radius: 8px;
+    font-size: 13px;
+    font-family: inherit;
+  }
+
+  .form-group textarea {
+    resize: vertical;
+    min-height: 80px;
+  }
+
+  .form-actions {
+    display: flex;
+    gap: 10px;
+    justify-content: flex-end;
+    margin-top: 24px;
+  }
+
+  .empty-state {
+    text-align: center;
+    padding: 48px 24px;
+    color: #64748b;
+  }
+
+  .empty-state svg {
+    width: 64px;
+    height: 64px;
+    margin-bottom: 16px;
+    opacity: 0.4;
+  }
+
+  .code-badge {
+    display: inline-block;
+    padding: 4px 10px;
+    background: linear-gradient(135deg, rgba(59, 130, 246, 0.12), rgba(14, 116, 144, 0.08));
+    border-radius: 6px;
+    font-weight: 600;
+    font-size: 11px;
+    color: #2563eb;
+    letter-spacing: 0.05em;
+  }
+
+  .info-badge {
+    display: inline-block;
+    padding: 4px 10px;
+    background: #f1f5f9;
+    border-radius: 6px;
+    font-size: 11px;
+    color: #64748b;
+  }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="indicators-shell">
+  <!-- Sidebar -->
+  {% include 'indicators_sidebar.html' %}
+
+  <!-- Main Content -->
+  <div class="indicators-main">
+    <div class="indicators-header">
+      <div>
+        <h1>📊 Indicadores</h1>
+        <div class="indicators-description">
+          Gerencie os indicadores de desempenho da empresa
+        </div>
+      </div>
+      <div class="indicators-actions">
+        <button class="indicators-button primary" onclick="openIndicatorPopup()">
+          + Novo Indicador
+        </button>
+      </div>
+    </div>
+
+    <!-- Table -->
+    <div class="indicators-table-wrapper">
+      <table class="indicators-table" id="indicatorsTable">
+        <thead>
+          <tr>
+            <th>Código</th>
+            <th>Nome</th>
+            <th>Grupo</th>
+            <th>Unidade</th>
+            <th>Polaridade</th>
+            <th style="text-align: center; width: 140px;">Ações</th>
+          </tr>
+        </thead>
+        <tbody id="indicatorsTableBody">
+          <tr>
+            <td colspan="6">
+              <div class="empty-state">
+                <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" />
+                </svg>
+                <p>Nenhum indicador cadastrado</p>
+              </div>
+            </td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+</div>
+
+<div class="form-group">
+          <label for="indicatorName">Nome do Indicador *</label>
+          <input type="text" id="indicatorName" name="name" required>
+        </div>
+      </div>
+
+      <script>
+const companyId = {{ company.id if company and company.id else 0 }};
+let indicators = [];
+
+document.addEventListener('DOMContentLoaded', () => {
+  loadIndicators();
+});
+
+async function loadIndicators() {
+  try {
+    const response = await fetch(`/grv/api/company/${companyId}/indicators`);
+    const result = await response.json();
+
+    if (result.success) {
+      indicators = result.data;
+      renderIndicatorsTable();
+    }
+  } catch (error) {
+    console.error('Erro ao carregar indicadores:', error);
+    alert('Erro ao carregar indicadores');
+  }
+}
+
+function renderIndicatorsTable() {
+  const tbody = document.getElementById('indicatorsTableBody');
+
+  if (!tbody) {
+    return;
+  }
+
+  if (indicators.length === 0) {
+    tbody.innerHTML = `
+      <tr>
+        <td colspan="6">
+          <div class="empty-state">
+            <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" />
+            </svg>
+            <p>Nenhum indicador cadastrado</p>
+          </div>
+        </td>
+      </tr>
+    `;
+    return;
+  }
+
+  tbody.innerHTML = indicators.map((indicator) => {
+    const polarity = indicator.polarity === 'positive'
+      ? 'Quanto maior melhor'
+      : indicator.polarity === 'negative'
+      ? 'Quanto menor melhor'
+      : '--';
+
+    return `
+      <tr>
+        <td><span class="code-badge">${indicator.code}</span></td>
+        <td><strong>${indicator.name}</strong></td>
+        <td>${indicator.group_name ? `<span class="info-badge">${indicator.group_code}</span>` : '--'}</td>
+        <td>${indicator.unit || '--'}</td>
+        <td>${polarity}</td>
+        <td style="text-align: center;">
+          <div class="actions">
+            <button class="btn-small btn-edit" onclick="openIndicatorPopup(${indicator.id})">Editar</button>
+            <button class="btn-small btn-delete" onclick="deleteIndicator(${indicator.id})">Excluir</button>
+          </div>
+        </td>
+      </tr>
+    `;
+  }).join('');
+}
+
+function openIndicatorPopup(indicatorId) {
+  const target = indicatorId
+    ? `/grv/company/${companyId}/indicators/form/${indicatorId}`
+    : `/grv/company/${companyId}/indicators/form`;
+
+  const popup = window.open(
+    target,
+    'indicatorFormPopup',
+    'width=820,height=840,resizable=yes,scrollbars=yes'
+  );
+
+  if (!popup) {
+    alert('Nao foi possivel abrir a janela. Verifique o bloqueio de pop-ups.');
+  }
+}
+
+async function deleteIndicator(id) {
+  if (!confirm('Tem certeza que deseja excluir este indicador?')) {
+    return;
+  }
+
+  try {
+    const response = await fetch(`/grv/api/company/${companyId}/indicators/${id}`, {
+      method: 'DELETE'
+    });
+
+    const result = await response.json();
+
+    if (result.success) {
+      loadIndicators();
+      alert('Indicador excluido com sucesso!');
+    } else {
+      alert('Erro: ' + result.message);
+    }
+  } catch (error) {
+    console.error('Erro ao excluir indicador:', error);
+    alert('Erro ao excluir indicador');
+  }
+}
+
+window.openIndicatorPopup = openIndicatorPopup;
+window.deleteIndicator = deleteIndicator;
+</script>
+{% endblock %}
+

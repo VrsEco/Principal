@@ -1,0 +1,455 @@
+{% extends "base.html" %}
+{% block title %}Gerenciar Logos - {{ company.name }}{% endblock %}
+
+{% block extra_head %}
+{{ super() }}
+<style>
+  .logos-container {
+    max-width: 1400px;
+    margin: 0 auto;
+    padding: 32px 24px;
+  }
+
+  .page-header {
+    margin-bottom: 40px;
+  }
+
+  .page-header h1 {
+    font-size: 28px;
+    font-weight: 700;
+    color: #0f172a;
+    margin-bottom: 8px;
+  }
+
+  .page-subtitle {
+    font-size: 15px;
+    color: #64748b;
+  }
+
+  .logos-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(400px, 1fr));
+    gap: 28px;
+    margin-bottom: 40px;
+  }
+
+  .logo-card {
+    background: #e6f3ff;
+    border: 2px solid #e2e8f0;
+    border-radius: 16px;
+    padding: 28px;
+    transition: all 0.3s;
+  }
+
+  .logo-card:hover {
+    border-color: #3b82f6;
+    box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1);
+  }
+
+  .logo-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: start;
+    margin-bottom: 20px;
+  }
+
+  .logo-title {
+    font-size: 18px;
+    font-weight: 700;
+    color: #0f172a;
+    margin-bottom: 4px;
+  }
+
+  .logo-specs {
+    font-size: 13px;
+    color: #64748b;
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+  }
+
+  .logo-badge {
+    display: inline-block;
+    padding: 4px 10px;
+    background: #fef3c7;
+    color: #92400e;
+    border-radius: 6px;
+    font-size: 11px;
+    font-weight: 600;
+  }
+
+  .logo-preview {
+    background: #f8fafc;
+    border: 2px dashed #cbd5e1;
+    border-radius: 12px;
+    padding: 24px;
+    min-height: 200px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    margin-bottom: 20px;
+    position: relative;
+  }
+
+  .logo-preview img {
+    max-width: 100%;
+    max-height: 250px;
+    object-fit: contain;
+  }
+
+  .logo-placeholder {
+    text-align: center;
+    color: #94a3b8;
+  }
+
+  .logo-placeholder-icon {
+    font-size: 48px;
+    margin-bottom: 12px;
+    opacity: 0.5;
+  }
+
+  .logo-placeholder-text {
+    font-size: 14px;
+    font-weight: 600;
+  }
+
+  .logo-upload-area {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+  }
+
+  .upload-btn {
+    width: 100%;
+    padding: 12px 20px;
+    background: linear-gradient(135deg, #3b82f6, #2563eb);
+    color: white;
+    border: none;
+    border-radius: 10px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.2s;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+  }
+
+  .upload-btn:hover {
+    background: linear-gradient(135deg, #2563eb, #1d4ed8);
+    transform: translateY(-2px);
+    box-shadow: 0 4px 8px rgba(59, 130, 246, 0.3);
+  }
+
+  .remove-btn {
+    width: 100%;
+    padding: 10px 20px;
+    background: white;
+    color: #ef4444;
+    border: 2px solid #fecaca;
+    border-radius: 10px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.2s;
+  }
+
+  .remove-btn:hover {
+    background: #fef2f2;
+    border-color: #ef4444;
+  }
+
+  .size-hint {
+    background: #eff6ff;
+    border: 1px solid #bfdbfe;
+    border-radius: 8px;
+    padding: 12px 16px;
+    font-size: 13px;
+    color: #1e40af;
+    margin-bottom: 12px;
+  }
+
+  .size-hint strong {
+    display: block;
+    margin-bottom: 4px;
+    color: #1e3a8a;
+  }
+
+  .back-btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    padding: 10px 20px;
+    background: white;
+    color: #0f172a;
+    border: 2px solid #e2e8f0;
+    border-radius: 10px;
+    text-decoration: none;
+    font-weight: 600;
+    transition: all 0.2s;
+  }
+
+  .back-btn:hover {
+    border-color: #3b82f6;
+    color: #3b82f6;
+  }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="logos-container">
+  <div class="page-header">
+    <h1>Gerenciar Logos - {{ company.name or company.legal_name }}</h1>
+    <p class="page-subtitle">
+      Faça upload das diferentes versões da logo da empresa para uso em documentos e relatórios
+    </p>
+  </div>
+
+  <div class="logos-grid">
+    <!-- Logo Quadrada -->
+    <div class="logo-card">
+      <div class="logo-header">
+        <div>
+          <h3 class="logo-title">Logo Quadrada</h3>
+          <div class="logo-specs">
+            <span><strong>Tamanho ideal:</strong> 400 x 400 px</span>
+            <span><strong>Proporção:</strong> 1:1</span>
+            <span><strong>Uso:</strong> Ícones, perfis, redes sociais</span>
+          </div>
+        </div>
+        <span class="logo-badge">1:1</span>
+      </div>
+
+      <div class="logo-preview" id="preview-square">
+        {% if company.logo_square %}
+        <img src="/{{ company.logo_square }}" alt="Logo Quadrada">
+        {% else %}
+        <div class="logo-placeholder">
+          <div class="logo-placeholder-icon">🖼️</div>
+          <div class="logo-placeholder-text">Incluir imagem tipo quadrada</div>
+        </div>
+        {% endif %}
+      </div>
+
+      <div class="logo-upload-area">
+        <div class="size-hint">
+          <strong>📏 Recomendação:</strong>
+          Envie uma imagem de 400x400 pixels (ou proporção 1:1). O sistema ajustará automaticamente.
+        </div>
+        <form id="form-square" enctype="multipart/form-data">
+          <input type="file" id="file-square" accept="image/*" style="display:none">
+          <button type="button" class="upload-btn" onclick="document.getElementById('file-square').click()">
+            <span>📤</span> Fazer Upload
+          </button>
+        </form>
+        {% if company.logo_square %}
+        <button class="remove-btn" onclick="removeLogo('square')">
+          <span>🗑️</span> Remover Logo
+        </button>
+        {% endif %}
+      </div>
+    </div>
+
+    <!-- Logo Vertical -->
+    <div class="logo-card">
+      <div class="logo-header">
+        <div>
+          <h3 class="logo-title">Logo Retangular Vertical</h3>
+          <div class="logo-specs">
+            <span><strong>Tamanho ideal:</strong> 300 x 600 px</span>
+            <span><strong>Proporção:</strong> 1:2</span>
+            <span><strong>Uso:</strong> Documentos em retrato</span>
+          </div>
+        </div>
+        <span class="logo-badge">1:2</span>
+      </div>
+
+      <div class="logo-preview" id="preview-vertical">
+        {% if company.logo_vertical %}
+        <img src="/{{ company.logo_vertical }}" alt="Logo Vertical">
+        {% else %}
+        <div class="logo-placeholder">
+          <div class="logo-placeholder-icon">🖼️</div>
+          <div class="logo-placeholder-text">Incluir imagem tipo vertical</div>
+        </div>
+        {% endif %}
+      </div>
+
+      <div class="logo-upload-area">
+        <div class="size-hint">
+          <strong>📏 Recomendação:</strong>
+          Envie uma imagem de 300x600 pixels (ou proporção 1:2). O sistema ajustará automaticamente.
+        </div>
+        <form id="form-vertical" enctype="multipart/form-data">
+          <input type="file" id="file-vertical" accept="image/*" style="display:none">
+          <button type="button" class="upload-btn" onclick="document.getElementById('file-vertical').click()">
+            <span>📤</span> Fazer Upload
+          </button>
+        </form>
+        {% if company.logo_vertical %}
+        <button class="remove-btn" onclick="removeLogo('vertical')">
+          <span>🗑️</span> Remover Logo
+        </button>
+        {% endif %}
+      </div>
+    </div>
+
+    <!-- Logo Horizontal -->
+    <div class="logo-card">
+      <div class="logo-header">
+        <div>
+          <h3 class="logo-title">Logo Retangular Horizontal</h3>
+          <div class="logo-specs">
+            <span><strong>Tamanho ideal:</strong> 800 x 400 px</span>
+            <span><strong>Proporção:</strong> 2:1</span>
+            <span><strong>Uso:</strong> Cabeçalhos, assinaturas</span>
+          </div>
+        </div>
+        <span class="logo-badge">2:1</span>
+      </div>
+
+      <div class="logo-preview" id="preview-horizontal">
+        {% if company.logo_horizontal %}
+        <img src="/{{ company.logo_horizontal }}" alt="Logo Horizontal">
+        {% else %}
+        <div class="logo-placeholder">
+          <div class="logo-placeholder-icon">🖼️</div>
+          <div class="logo-placeholder-text">Incluir imagem tipo horizontal</div>
+        </div>
+        {% endif %}
+      </div>
+
+      <div class="logo-upload-area">
+        <div class="size-hint">
+          <strong>📏 Recomendação:</strong>
+          Envie uma imagem de 800x400 pixels (ou proporção 2:1). O sistema ajustará automaticamente.
+        </div>
+        <form id="form-horizontal" enctype="multipart/form-data">
+          <input type="file" id="file-horizontal" accept="image/*" style="display:none">
+          <button type="button" class="upload-btn" onclick="document.getElementById('file-horizontal').click()">
+            <span>📤</span> Fazer Upload
+          </button>
+        </form>
+        {% if company.logo_horizontal %}
+        <button class="remove-btn" onclick="removeLogo('horizontal')">
+          <span>🗑️</span> Remover Logo
+        </button>
+        {% endif %}
+      </div>
+    </div>
+
+    <!-- Logo Banner -->
+    <div class="logo-card">
+      <div class="logo-header">
+        <div>
+          <h3 class="logo-title">Logo Banner</h3>
+          <div class="logo-specs">
+            <span><strong>Tamanho ideal:</strong> 1200 x 300 px</span>
+            <span><strong>Proporção:</strong> 4:1</span>
+            <span><strong>Uso:</strong> Topo de documentos e apresentações</span>
+          </div>
+        </div>
+        <span class="logo-badge">4:1</span>
+      </div>
+
+      <div class="logo-preview" id="preview-banner">
+        {% if company.logo_banner %}
+        <img src="/{{ company.logo_banner }}" alt="Logo Banner">
+        {% else %}
+        <div class="logo-placeholder">
+          <div class="logo-placeholder-icon">🖼️</div>
+          <div class="logo-placeholder-text">Incluir imagem tipo banner</div>
+        </div>
+        {% endif %}
+      </div>
+
+      <div class="logo-upload-area">
+        <div class="size-hint">
+          <strong>📏 Recomendação:</strong>
+          Envie uma imagem de 1200x300 pixels (ou proporção 4:1). O sistema ajustará automaticamente.
+        </div>
+        <form id="form-banner" enctype="multipart/form-data">
+          <input type="file" id="file-banner" accept="image/*" style="display:none">
+          <button type="button" class="upload-btn" onclick="document.getElementById('file-banner').click()">
+            <span>📤</span> Fazer Upload
+          </button>
+        </form>
+        {% if company.logo_banner %}
+        <button class="remove-btn" onclick="removeLogo('banner')">
+          <span>🗑️</span> Remover Logo
+        </button>
+        {% endif %}
+      </div>
+    </div>
+  </div>
+
+  <div style="text-align: center; padding-top: 20px; border-top: 1px solid #e2e8f0;">
+    <a href="{{ url_for('grv.grv_company_dashboard', company_id=company.id) }}" class="back-btn">
+      <span>←</span> Voltar ao Dashboard
+    </a>
+  </div>
+</div>
+
+<script>
+  const companyId = {{ company.id }};
+
+  // Upload de logos
+  ['square', 'vertical', 'horizontal', 'banner'].forEach(type => {
+    const fileInput = document.getElementById(`file-${type}`);
+    
+    fileInput.addEventListener('change', async (e) => {
+      const file = e.target.files[0];
+      if (!file) return;
+
+      const formData = new FormData();
+      formData.append('logo', file);
+      formData.append('logo_type', type);
+
+      try {
+        const response = await fetch(`/api/companies/${companyId}/logos`, {
+          method: 'POST',
+          body: formData
+        });
+
+        const result = await response.json();
+
+        if (result.success) {
+          alert('Logo enviado e processado com sucesso!');
+          window.location.reload();
+        } else {
+          alert(`Erro: ${result.message || 'Falha ao fazer upload'}`);
+        }
+      } catch (error) {
+        console.error('Erro no upload:', error);
+        alert('Erro ao fazer upload da logo');
+      }
+    });
+  });
+
+  // Remover logo
+  async function removeLogo(type) {
+    if (!confirm(`Deseja realmente remover esta logo?`)) return;
+
+    try {
+      const response = await fetch(`/api/companies/${companyId}/logos/${type}`, {
+        method: 'DELETE'
+      });
+
+      const result = await response.json();
+
+      if (result.success) {
+        alert('Logo removida com sucesso!');
+        window.location.reload();
+      } else {
+        alert(`Erro: ${result.message || 'Falha ao remover'}`);
+      }
+    } catch (error) {
+      console.error('Erro ao remover:', error);
+      alert('Erro ao remover logo');
+    }
+  }
+</script>
+{% endblock %}
+
+
+
+

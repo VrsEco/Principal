@@ -1,0 +1,440 @@
+{% extends "base.html" %}
+{% block title %}Sistema e Auditoria | Configurações{% endblock %}
+
+{% block body %}
+  {% set active_nav = 'configs' %}
+  {{ super() }}
+{% endblock %}
+
+{% block header_actions %}
+  <div class="header-nav">
+    <a href="{{ url_for('system_configs') }}" class="nav-link">← Configurações</a>
+    <span class="nav-link active">Sistema</span>
+  </div>
+  <div class="user-pill">
+    <span class="user-name">{{ current_user.name if current_user.is_authenticated else 'Usuário' }}</span>
+  </div>
+{% endblock %}
+
+{% block content %}
+<style>
+  .system-container {
+    max-width: 1400px;
+    margin: 0 auto;
+    padding: 2rem;
+  }
+
+  .system-header {
+    margin-bottom: 2rem;
+  }
+
+  .system-header h1 {
+    font-size: 2rem;
+    font-weight: 700;
+    color: #1e293b;
+    margin-bottom: 0.5rem;
+  }
+
+  .system-header p {
+    color: #64748b;
+    font-size: 1rem;
+  }
+
+  .system-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(350px, 1fr));
+    gap: 1.5rem;
+    margin-bottom: 2rem;
+  }
+
+  .system-card {
+    background: white;
+    border-radius: 12px;
+    padding: 1.5rem;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+    transition: all 0.3s ease;
+    cursor: pointer;
+    border: 2px solid transparent;
+  }
+
+  .system-card:hover {
+    transform: translateY(-4px);
+    box-shadow: 0 8px 16px rgba(0,0,0,0.15);
+    border-color: #3b82f6;
+  }
+
+  .card-header {
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+    margin-bottom: 1rem;
+  }
+
+  .card-icon {
+    width: 60px;
+    height: 60px;
+    border-radius: 12px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 2rem;
+    flex-shrink: 0;
+  }
+
+  .card-icon.audit {
+    background: linear-gradient(135deg, #3b82f6 0%, #2563eb 100%);
+  }
+
+  .card-icon.logs {
+    background: linear-gradient(135deg, #8b5cf6 0%, #7c3aed 100%);
+  }
+
+  .card-icon.security {
+    background: linear-gradient(135deg, #ef4444 0%, #dc2626 100%);
+  }
+
+  .card-icon.monitoring {
+    background: linear-gradient(135deg, #10b981 0%, #059669 100%);
+  }
+
+  .card-icon.backup {
+    background: linear-gradient(135deg, #f59e0b 0%, #d97706 100%);
+  }
+
+  .card-icon.settings {
+    background: linear-gradient(135deg, #6366f1 0%, #4f46e5 100%);
+  }
+
+  .card-content h3 {
+    font-size: 1.25rem;
+    font-weight: 600;
+    color: #1e293b;
+    margin-bottom: 0.5rem;
+  }
+
+  .card-content p {
+    color: #64748b;
+    font-size: 0.875rem;
+    line-height: 1.5;
+  }
+
+  .card-stats {
+    display: flex;
+    gap: 1.5rem;
+    margin-top: 1rem;
+    padding-top: 1rem;
+    border-top: 1px solid #e2e8f0;
+  }
+
+  .stat-item {
+    flex: 1;
+  }
+
+  .stat-value {
+    font-size: 1.5rem;
+    font-weight: 700;
+    color: #1e293b;
+    display: block;
+  }
+
+  .stat-label {
+    font-size: 0.75rem;
+    color: #64748b;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+  }
+
+  .card-badge {
+    display: inline-block;
+    padding: 0.25rem 0.75rem;
+    border-radius: 20px;
+    font-size: 0.75rem;
+    font-weight: 600;
+    margin-top: 0.5rem;
+  }
+
+  .badge-active {
+    background: #dcfce7;
+    color: #166534;
+  }
+
+  .badge-warning {
+    background: #fef3c7;
+    color: #92400e;
+  }
+
+  .badge-coming {
+    background: #e0e7ff;
+    color: #3730a3;
+  }
+
+  .progress-bar {
+    height: 8px;
+    background: #e2e8f0;
+    border-radius: 4px;
+    overflow: hidden;
+    margin-top: 0.5rem;
+  }
+
+  .progress-fill {
+    height: 100%;
+    background: linear-gradient(90deg, #3b82f6 0%, #2563eb 100%);
+    transition: width 0.3s ease;
+  }
+
+  .quick-actions {
+    display: flex;
+    gap: 0.75rem;
+    margin-top: 1rem;
+  }
+
+  .action-btn {
+    padding: 0.5rem 1rem;
+    border-radius: 6px;
+    font-size: 0.875rem;
+    font-weight: 500;
+    text-decoration: none;
+    transition: all 0.2s;
+    border: none;
+    cursor: pointer;
+  }
+
+  .action-btn.primary {
+    background: #3b82f6;
+    color: white;
+  }
+
+  .action-btn.primary:hover {
+    background: #2563eb;
+  }
+
+  .action-btn.secondary {
+    background: #f1f5f9;
+    color: #475569;
+  }
+
+  .action-btn.secondary:hover {
+    background: #e2e8f0;
+  }
+</style>
+
+<div class="system-container">
+  <!-- Header -->
+  <div class="system-header">
+    <h1>⚙️ Sistema e Auditoria</h1>
+    <p>Gerencie logs, monitore rotas, configure segurança e mantenha o sistema.</p>
+  </div>
+
+  <!-- Grid de Cards -->
+  <div class="system-grid">
+    
+    <!-- Card 1: Auditoria de Rotas -->
+    <div class="system-card" onclick="window.location.href='/configs/system/audit'">
+      <div class="card-header">
+        <div class="card-icon audit">🔍</div>
+        <div class="card-content">
+          <h3>Auditoria de Rotas</h3>
+          <p>Monitore e gerencie o sistema de logs automáticos em todas as rotas da aplicação.</p>
+          <span class="card-badge badge-active">✅ Ativo</span>
+        </div>
+      </div>
+      
+      <div class="card-stats">
+        <div class="stat-item">
+          <span class="stat-value">{{ audit_summary.total_routes }}</span>
+          <span class="stat-label">Rotas Totais</span>
+        </div>
+        <div class="stat-item">
+          <span class="stat-value">{{ audit_summary.routes_with_logging }}</span>
+          <span class="stat-label">Com Logs</span>
+        </div>
+        <div class="stat-item">
+          <span class="stat-value">{{ audit_summary.coverage_percentage|round(1) }}%</span>
+          <span class="stat-label">Cobertura</span>
+        </div>
+      </div>
+      
+      <div class="progress-bar">
+        <div class="progress-fill" style="width: {{ audit_summary.coverage_percentage }}%"></div>
+      </div>
+      
+      <div class="quick-actions">
+        <a href="/configs/system/audit" class="action-btn primary" onclick="event.stopPropagation()">Ver Detalhes</a>
+        <a href="/logs/" class="action-btn secondary" onclick="event.stopPropagation()">Ver Logs</a>
+      </div>
+    </div>
+
+    <!-- Card 2: Logs de Usuários -->
+    <div class="system-card" onclick="window.location.href='/logs/'">
+      <div class="card-header">
+        <div class="card-icon logs">📋</div>
+        <div class="card-content">
+          <h3>Logs de Usuários</h3>
+          <p>Visualize e analise todos os logs de atividades dos usuários no sistema.</p>
+          <span class="card-badge badge-active">✅ Ativo</span>
+        </div>
+      </div>
+      
+      <div class="card-stats">
+        <div class="stat-item">
+          <span class="stat-value">{{ log_stats.total_logs }}</span>
+          <span class="stat-label">Total de Logs</span>
+        </div>
+        <div class="stat-item">
+          <span class="stat-value">{{ log_stats.actions|length }}</span>
+          <span class="stat-label">Tipos de Ação</span>
+        </div>
+        <div class="stat-item">
+          <span class="stat-value">{{ log_stats.top_users|length }}</span>
+          <span class="stat-label">Usuários Ativos</span>
+        </div>
+      </div>
+      
+      <div class="quick-actions">
+        <a href="/logs/" class="action-btn primary" onclick="event.stopPropagation()">Ver Logs</a>
+        <a href="/logs/export" class="action-btn secondary" onclick="event.stopPropagation()">Exportar CSV</a>
+      </div>
+    </div>
+
+    <!-- Card 3: Segurança e Acesso -->
+    <div class="system-card">
+      <div class="card-header">
+        <div class="card-icon security">🔐</div>
+        <div class="card-content">
+          <h3>Segurança e Acesso</h3>
+          <p>Gerencie permissões, controle de acesso e políticas de segurança do sistema.</p>
+          <span class="card-badge badge-coming">🚀 Em breve</span>
+        </div>
+      </div>
+      
+      <div class="card-stats">
+        <div class="stat-item">
+          <span class="stat-value">-</span>
+          <span class="stat-label">Usuários Ativos</span>
+        </div>
+        <div class="stat-item">
+          <span class="stat-value">-</span>
+          <span class="stat-label">Roles</span>
+        </div>
+        <div class="stat-item">
+          <span class="stat-value">-</span>
+          <span class="stat-label">Permissões</span>
+        </div>
+      </div>
+      
+      <div class="quick-actions">
+        <button class="action-btn secondary" disabled>Em desenvolvimento</button>
+      </div>
+    </div>
+
+    <!-- Card 4: Monitoramento -->
+    <div class="system-card">
+      <div class="card-header">
+        <div class="card-icon monitoring">📊</div>
+        <div class="card-content">
+          <h3>Monitoramento</h3>
+          <p>Monitore performance, uso de recursos e saúde geral do sistema.</p>
+          <span class="card-badge badge-coming">🚀 Em breve</span>
+        </div>
+      </div>
+      
+      <div class="card-stats">
+        <div class="stat-item">
+          <span class="stat-value">-</span>
+          <span class="stat-label">Uptime</span>
+        </div>
+        <div class="stat-item">
+          <span class="stat-value">-</span>
+          <span class="stat-label">CPU</span>
+        </div>
+        <div class="stat-item">
+          <span class="stat-value">-</span>
+          <span class="stat-label">Memória</span>
+        </div>
+      </div>
+      
+      <div class="quick-actions">
+        <button class="action-btn secondary" disabled>Em desenvolvimento</button>
+      </div>
+    </div>
+
+    <!-- Card 5: Backup e Recuperação -->
+    <div class="system-card">
+      <div class="card-header">
+        <div class="card-icon backup">💾</div>
+        <div class="card-content">
+          <h3>Backup e Recuperação</h3>
+          <p>Configure backups automáticos e gerencie pontos de recuperação do sistema.</p>
+          <span class="card-badge badge-coming">🚀 Em breve</span>
+        </div>
+      </div>
+      
+      <div class="card-stats">
+        <div class="stat-item">
+          <span class="stat-value">-</span>
+          <span class="stat-label">Último Backup</span>
+        </div>
+        <div class="stat-item">
+          <span class="stat-value">-</span>
+          <span class="stat-label">Tamanho</span>
+        </div>
+        <div class="stat-item">
+          <span class="stat-value">-</span>
+          <span class="stat-label">Status</span>
+        </div>
+      </div>
+      
+      <div class="quick-actions">
+        <button class="action-btn secondary" disabled>Em desenvolvimento</button>
+      </div>
+    </div>
+
+    <!-- Card 6: Configurações Gerais -->
+    <div class="system-card">
+      <div class="card-header">
+        <div class="card-icon settings">⚙️</div>
+        <div class="card-content">
+          <h3>Configurações Gerais</h3>
+          <p>Ajuste configurações globais, variáveis de ambiente e parâmetros do sistema.</p>
+          <span class="card-badge badge-coming">🚀 Em breve</span>
+        </div>
+      </div>
+      
+      <div class="card-stats">
+        <div class="stat-item">
+          <span class="stat-value">-</span>
+          <span class="stat-label">Configurações</span>
+        </div>
+        <div class="stat-item">
+          <span class="stat-value">-</span>
+          <span class="stat-label">Módulos</span>
+        </div>
+        <div class="stat-item">
+          <span class="stat-value">-</span>
+          <span class="stat-label">Versão</span>
+        </div>
+      </div>
+      
+      <div class="quick-actions">
+        <button class="action-btn secondary" disabled>Em desenvolvimento</button>
+      </div>
+    </div>
+
+  </div>
+</div>
+
+<script>
+  // Animar barras de progresso ao carregar
+  document.addEventListener('DOMContentLoaded', function() {
+    const progressBars = document.querySelectorAll('.progress-fill');
+    progressBars.forEach(bar => {
+      const width = bar.style.width;
+      bar.style.width = '0%';
+      setTimeout(() => {
+        bar.style.width = width;
+      }, 100);
+    });
+  });
+</script>
+{% endblock %}
+

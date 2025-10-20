@@ -1,0 +1,45 @@
+# ========================================
+# BIBLIOTECAS PARA RELATÓRIOS PROFISSIONAIS
+# Sistema: PEVAPP22
+# ========================================
+
+# 1. GERAÇÃO DE PDF PROFISSIONAL (PRINCIPAL)
+# WeasyPrint: Converte HTML/CSS em PDF de alta qualidade
+weasyprint==61.0
+
+# Dependências do WeasyPrint (instaladas automaticamente):
+# - cairocffi
+# - cffi
+# - Pillow
+# - pydyf
+# - pyphen
+# - cssselect2
+# - tinycss2
+
+# 2. VISUALIZAÇÕES E GRÁFICOS PROFISSIONAIS
+plotly==5.18.0              # Gráficos interativos de nível corporativo
+kaleido==0.2.1              # Exportar gráficos Plotly como imagens
+matplotlib==3.8.2           # Gráficos estatísticos tradicionais
+seaborn==0.13.1             # Visualizações estatísticas avançadas
+
+# 3. MANIPULAÇÃO E ANÁLISE DE DADOS
+pandas==2.1.4               # Tabelas, DataFrames e análise de dados
+numpy==1.26.3               # Cálculos numéricos e arrays
+
+# 4. EXPORTAÇÃO EXCEL PROFISSIONAL
+openpyxl==3.1.2             # Ler/escrever Excel (.xlsx)
+xlsxwriter==3.1.9           # Criar Excel com formatação avançada
+
+# 5. TABELAS FORMATADAS
+tabulate==0.9.0             # Tabelas ASCII e formatadas
+
+# 6. UTILITÁRIOS ADICIONAIS
+jinja2==3.1.2               # Templates (já vem com Flask, mas garantir versão)
+python-dateutil==2.8.2      # Manipulação de datas
+
+# ========================================
+# INSTALAÇÃO:
+# pip install -r requirements_relatorios.txt
+# ========================================
+
+

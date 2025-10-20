@@ -1,0 +1,255 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Teste de Modals - Sistema de Rotinas</title>
+    <link rel="icon" type="image/x-icon" href="{{ url_for('static', filename='favicon.ico') }}" />
+    <link rel="shortcut icon" type="image/x-icon" href="{{ url_for('static', filename='favicon.ico') }}" />
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            padding: 20px;
+            background: #1a1a1a;
+            color: #fff;
+        }
+        .button {
+            padding: 10px 20px;
+            margin: 10px;
+            border: none;
+            border-radius: 8px;
+            cursor: pointer;
+            font-size: 14px;
+        }
+        .button-primary {
+            background: #3af1ae;
+            color: #000;
+        }
+        .modal {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.8);
+            z-index: 9999;
+            align-items: center;
+            justify-content: center;
+        }
+        .modal.active {
+            display: flex !important;
+        }
+        .modal-content {
+            background: #2a2a2a;
+            border-radius: 16px;
+            padding: 32px;
+            max-width: 600px;
+            width: 90%;
+        }
+        .form-group {
+            margin-bottom: 20px;
+        }
+        .form-group label {
+            display: block;
+            margin-bottom: 8px;
+            font-weight: 600;
+        }
+        .form-group input, .form-group select {
+            width: 100%;
+            padding: 10px;
+            border: 1px solid #444;
+            border-radius: 4px;
+            background: #1a1a1a;
+            color: #fff;
+        }
+        .close-modal {
+            background: #ef4444;
+            color: white;
+            border: none;
+            padding: 8px 16px;
+            border-radius: 4px;
+            cursor: pointer;
+            float: right;
+        }
+        .status {
+            padding: 20px;
+            margin: 20px 0;
+            background: #2a2a2a;
+            border-radius: 8px;
+        }
+        .status.success {
+            border-left: 4px solid #3af1ae;
+        }
+        .status.error {
+            border-left: 4px solid #ef4444;
+        }
+    </style>
+</head>
+<body>
+    <h1>Teste do Sistema de Modals - Rotinas</h1>
+    
+    <div class="status success">
+        <h3>✅ Status do Sistema</h3>
+        <p>Página de teste carregada. Use os botões abaixo para testar os modals.</p>
+        <p><strong>Company ID:</strong> <span id="companyIdDisplay">1</span></p>
+    </div>
+
+    <div>
+        <button class="button button-primary" onclick="testRoutineModal()">
+            Teste: Abrir Modal de Rotina
+        </button>
+        
+        <button class="button button-primary" onclick="testTriggerModal()">
+            Teste: Abrir Modal de Gatilho
+        </button>
+        
+        <button class="button button-primary" onclick="testAPICall()">
+            Teste: Chamada API
+        </button>
+    </div>
+
+    <div id="logArea" class="status" style="margin-top: 20px; max-height: 400px; overflow-y: auto;">
+        <h3>📋 Console de Logs</h3>
+        <div id="logs"></div>
+    </div>
+
+    <!-- Modal de Rotina -->
+    <div id="routineModal" class="modal">
+        <div class="modal-content">
+            <button class="close-modal" onclick="closeRoutineModal()">Fechar</button>
+            <h2>Modal de Rotina</h2>
+            <form onsubmit="event.preventDefault(); alert('Form enviado!');">
+                <div class="form-group">
+                    <label>Nome da Rotina</label>
+                    <input type="text" placeholder="Digite o nome...">
+                </div>
+                <button type="submit" class="button button-primary">Salvar</button>
+            </form>
+        </div>
+    </div>
+
+    <!-- Modal de Gatilho -->
+    <div id="triggerModal" class="modal">
+        <div class="modal-content">
+            <button class="close-modal" onclick="closeTriggerModal()">Fechar</button>
+            <h2>Modal de Gatilho</h2>
+            <form onsubmit="event.preventDefault(); alert('Form enviado!');">
+                <div class="form-group">
+                    <label>Tipo de Gatilho</label>
+                    <select>
+                        <option>Diário</option>
+                        <option>Semanal</option>
+                        <option>Mensal</option>
+                        <option>Anual</option>
+                    </select>
+                </div>
+                <button type="submit" class="button button-primary">Salvar</button>
+            </form>
+        </div>
+    </div>
+
+    <script>
+        const companyId = 1;
+        let currentRoutineId = null;
+
+        function log(message, type = 'info') {
+            const logsDiv = document.getElementById('logs');
+            const time = new Date().toLocaleTimeString();
+            const color = type === 'error' ? '#ef4444' : type === 'success' ? '#3af1ae' : '#fff';
+            logsDiv.innerHTML += `<p style="color: ${color}; margin: 5px 0;">[${time}] ${message}</p>`;
+            logsDiv.scrollTop = logsDiv.scrollHeight;
+            console.log(message);
+        }
+
+        // Test functions
+        function testRoutineModal() {
+            log('🔹 Tentando abrir modal de rotina...', 'info');
+            try {
+                const modal = document.getElementById('routineModal');
+                if (!modal) {
+                    throw new Error('Modal de rotina não encontrado!');
+                }
+                modal.classList.add('active');
+                log('✅ Modal de rotina aberto com sucesso!', 'success');
+            } catch (error) {
+                log('❌ Erro: ' + error.message, 'error');
+            }
+        }
+
+        function closeRoutineModal() {
+            log('🔹 Fechando modal de rotina...', 'info');
+            document.getElementById('routineModal').classList.remove('active');
+            log('✅ Modal fechado', 'success');
+        }
+
+        function testTriggerModal() {
+            log('🔹 Tentando abrir modal de gatilho...', 'info');
+            try {
+                const modal = document.getElementById('triggerModal');
+                if (!modal) {
+                    throw new Error('Modal de gatilho não encontrado!');
+                }
+                modal.classList.add('active');
+                log('✅ Modal de gatilho aberto com sucesso!', 'success');
+            } catch (error) {
+                log('❌ Erro: ' + error.message, 'error');
+            }
+        }
+
+        function closeTriggerModal() {
+            log('🔹 Fechando modal de gatilho...', 'info');
+            document.getElementById('triggerModal').classList.remove('active');
+            log('✅ Modal fechado', 'success');
+        }
+
+        async function testAPICall() {
+            log('🔹 Testando chamada API para listar rotinas...', 'info');
+            try {
+                log(`🔹 URL: /api/companies/${companyId}/routines`, 'info');
+                const response = await fetch(`/api/companies/${companyId}/routines`);
+                log(`🔹 Status da resposta: ${response.status}`, 'info');
+                
+                const data = await response.json();
+                log(`✅ Dados recebidos: ${JSON.stringify(data)}`, 'success');
+                
+                if (data.success) {
+                    log(`✅ Total de rotinas: ${data.routines.length}`, 'success');
+                } else {
+                    log(`⚠️ API retornou success=false: ${data.error}`, 'error');
+                }
+            } catch (error) {
+                log(`❌ Erro na chamada API: ${error.message}`, 'error');
+            }
+        }
+
+        // Initialize
+        document.addEventListener('DOMContentLoaded', function() {
+            log('🚀 Página de teste carregada', 'success');
+            log(`🔹 Company ID: ${companyId}`, 'info');
+            
+            const routineModal = document.getElementById('routineModal');
+            const triggerModal = document.getElementById('triggerModal');
+            
+            log(`🔹 Modal de rotina encontrado: ${!!routineModal}`, routineModal ? 'success' : 'error');
+            log(`🔹 Modal de gatilho encontrado: ${!!triggerModal}`, triggerModal ? 'success' : 'error');
+        });
+
+        // Click outside to close
+        document.getElementById('routineModal').addEventListener('click', function(e) {
+            if (e.target === this) {
+                closeRoutineModal();
+            }
+        });
+
+        document.getElementById('triggerModal').addEventListener('click', function(e) {
+            if (e.target === this) {
+                closeTriggerModal();
+            }
+        });
+    </script>
+</body>
+</html>
+
+
+

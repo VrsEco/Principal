@@ -1,0 +1,1526 @@
+﻿{% extends "base.html" %}
+{% block title %}OKRs Globais | {{ plan.name }}{% endblock %}
+
+{% block extra_head %}
+<style>
+.icon-okr, .icon-ai, .icon-estruturante, .icon-aceleracao, .icon-geral {
+    display: inline-block;
+    margin-right: 6px;
+    font-size: 1.1em;
+}
+
+.unified-indicator-btn {
+    margin-left: 8px;
+    background: linear-gradient(135deg, #10b981, #059669);
+    border: none;
+    border-radius: 8px;
+    padding: 8px 16px;
+    color: white;
+    font-size: 13px;
+    font-weight: 600;
+    cursor: pointer;
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    transition: all 0.2s ease;
+}
+
+.unified-indicator-btn:hover {
+    background: linear-gradient(135deg, #059669, #047857);
+    transform: translateY(-1px);
+    box-shadow: 0 4px 12px rgba(16, 185, 129, 0.3);
+}
+
+.button-success {
+    background: linear-gradient(135deg, #10b981, #059669);
+    border: none;
+    color: white;
+}
+
+.button-success:hover {
+    background: linear-gradient(135deg, #059669, #047857);
+    transform: translateY(-1px);
+    box-shadow: 0 4px 12px rgba(16, 185, 129, 0.3);
+}
+
+.okr-kpi-header {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    flex-wrap: wrap;
+}
+</style>
+<script src="{{ url_for('static', filename='js/unified-indicator-button.js') }}"></script>
+{% endblock %}
+{% block body %}
+  {% set active_nav = 'projetos' %}
+  {{ super() }}
+{% endblock %}
+{% block content %}
+<div class="project-layout plan-layout okr-layout" data-sidebar-toggle>
+  {% set sidebar_meta %}
+    <span class="summary-eyebrow">Cadência sugerida</span>
+    <p>Revisar OKRs globais a cada 60 dias, alinhando direção e recursos com os direcionadores aprovados.</p>
+  {% endset %}
+  {% include 'plan_sidebar.html' %}
+
+  <section class="project-content okr-content">
+    <!-- Referência aos Direcionadores Consolidados -->
+    <div class="surface-card directional-reference">
+      <div class="card-header">
+        <h3><span class="icon-okr">🎯</span> Direcionadores Consolidados do Plano</h3>
+        <span class="badge">Base para OKRs</span>
+      </div>
+      <div class="card-content">
+        <p class="panel-hint">Os OKRs devem ser derivados dos direcionadores estratégicos aprovados abaixo:</p>
+        
+        {% if directionals_records %}
+        <div class="directionals-grid">
+          {% for directional in directionals_records %}
+          <div class="directional-card">
+            <div class="directional-header">
+              <div class="directional-icon">
+                {% if directional.type == 'Estruturante' %}
+                  🏗️
+                {% elif directional.type == 'Acelerador' %}
+                  ⚡
+                {% else %}
+                  🎯
+                {% endif %}
+              </div>
+              <div class="directional-title-section">
+                <h5 class="directional-title">{{ directional.title or 'Direcionador' }}</h5>
+                <span class="directional-type-badge type-{{ (directional.type or '').lower() }}">
+                  {{ directional.type or 'Geral' }}
+                </span>
+              </div>
+            </div>
+            <p>{{ directional.insight or directional.description or 'Sem descrição' }}</p>
+          </div>
+          {% endfor %}
+        </div>
+        {% else %}
+        <div class="empty-state">
+          <div class="empty-icon">⚠️</div>
+          <h4>Nenhum direcionador consolidado encontrado</h4>
+          <p>Para criar OKRs, é necessário primeiro completar a seção "Direcionadores" e obter aprovação dos direcionadores estratégicos.</p>
+          <div class="empty-hint">
+            <span class="hint-icon">💡</span>
+            <span>Complete a seção anterior para visualizar os direcionadores consolidados</span>
+          </div>
+        </div>
+        {% endif %}
+      </div>
+    </div>
+
+    <!-- Análise Preliminar -->
+    <details class="interview-section surface-card" {% if preliminary_analysis_section_open %}open{% endif %}>
+      <summary class="interview-summary-bar">
+        <div class="interview-summary-text">
+          <span class="section-eyebrow">Análise</span>
+          <h3>Análise Preliminar dos OKRs</h3>
+          <p>Identifique oportunidades de OKRs baseados nos direcionadores estratégicos.</p>
+        </div>
+        <div class="interview-progress">
+          <span class="chip-label">OKRs</span>
+          <span class="interview-count">{{ preliminary_okr_records|length }} análises salvas</span>
+          <div class="section-status-controls">
+            {% if preliminary_analysis_section_open %}
+              <button class="button button-small button-warning" onclick="closePreliminaryAnalysisSection()" title="Concluir análise preliminar">
+                <span>Concluir</span>
+              </button>
+            {% else %}
+              <button class="button button-small button-success" onclick="openPreliminaryAnalysisSection()" title="Reabrir análise preliminar">
+                <span>Reabrir</span>
+              </button>
+            {% endif %}
+          </div>
+        </div>
+      </summary>
+      <div class="interview-content" id="preliminary-analysis-content">
+        {% if not preliminary_analysis_section_open %}
+        <div class="section-closed-notice">
+          <p>🎯 Esta seção foi concluída e não permite mais edições.</p>
+        </div>
+        {% endif %}
+        
+        {% if preliminary_analysis_section_open %}
+        
+        <!-- Botão para Gerar Sugestões da IA -->
+        <div class="ai-suggestions-section">
+          <div class="ai-suggestions-header">
+            <h4><span class="icon-ai">⚙</span> Sugestões da IA</h4>
+            <p>Gere sugestões inteligentes de OKRs baseadas nos direcionadores estratégicos consolidados.</p>
+            <button type="button" class="button button-primary" onclick="generateAISuggestions()" id="ai-suggestions-btn">
+              <span>✨ Gerar Sugestões da IA</span>
+            </button>
+          </div>
+          
+          <!-- Loading state -->
+          <div id="ai-loading" class="ai-loading" style="display: none;">
+            <div class="loading-spinner"></div>
+            <p>Gerando sugestões inteligentes...</p>
+          </div>
+          
+          <!-- AI Suggestions Results -->
+          <div id="ai-suggestions-results" class="ai-suggestions-results" style="display: none;">
+            <h5>💡 Sugestões Geradas pela IA</h5>
+            <div id="ai-suggestions-content"></div>
+            <div class="ai-suggestions-actions">
+              <button type="button" class="button button-secondary" onclick="useAISuggestion()">
+                <span>📝 Usar como Análise</span>
+              </button>
+              <button type="button" class="button button-secondary" onclick="regenerateAISuggestions()">
+                <span>🔄 Regenerar</span>
+              </button>
+            </div>
+          </div>
+        </div>
+        
+        <form class="okr-analysis-form" action="{{ url_for('add_preliminary_okr_record', plan_id=plan.id) }}" method="post">
+          <div class="form-field">
+            <span>Análise de OKR</span>
+            <textarea name="okr_analysis" id="okr-analysis-textarea" placeholder="Descreva a análise preliminar do OKR..." rows="4" required></textarea>
+          </div>
+          <div class="form-actions">
+            <button type="submit" class="button button-primary">Salvar Análise</button>
+          </div>
+        </form>
+        {% endif %}
+        
+        {% if preliminary_okr_records %}
+        <div class="okr-analysis-list">
+          {% for record in preliminary_okr_records %}
+          <div class="okr-analysis-item">
+            <div class="okr-analysis-header">
+              <p>{{ record.analysis }}</p>
+              <div class="okr-analysis-actions">
+                <button type="button" class="button button-small button-secondary" onclick="editPreliminaryOKR('{{ record.id }}')" title="Editar análise">
+                  <span>✏️</span>
+                </button>
+                <button type="button" class="button button-small button-danger" onclick="deletePreliminaryOKR('{{ record.id }}', '{{ record.analysis[:50] }}...')" title="Excluir análise">
+                  <span>🗑️</span>
+                </button>
+              </div>
+            </div>
+            <div class="okr-analysis-meta">
+              <span class="summary-meta">Salvo em: {{ record.created_at.strftime('%d/%m/%Y às %H:%M') }}</span>
+              {% if record.updated_at and record.updated_at != record.created_at %}
+              <span class="summary-meta"> | Atualizado em: {{ record.updated_at.strftime('%d/%m/%Y às %H:%M') }}</span>
+              {% endif %}
+            </div>
+          </div>
+          {% endfor %}
+        </div>
+        {% endif %}
+      </div>
+    </details>
+
+    <!-- Versão Preliminar -->
+    <details class="interview-section surface-card">
+      <summary class="interview-summary-bar">
+        <div class="interview-summary-text">
+          <span class="section-eyebrow">Workshop</span>
+          <h3>Versão Preliminar</h3>
+          <p>Defina os OKRs globais preliminares através de workshop colaborativo.</p>
+        </div>
+        <div class="interview-progress">
+          <span class="chip-label">OKRs</span>
+          <span class="interview-count">{{ workshop_okr_records|length }} OKRs definidos</span>
+          <div class="section-status-controls">
+            {% if workshop_final_section_open %}
+              <button class="button button-small button-warning" onclick="closeWorkshopFinalSection()" title="Concluir versão preliminar">
+                <span>Concluir</span>
+              </button>
+            {% else %}
+              <button class="button button-small button-success" onclick="openWorkshopFinalSection()" title="Reabrir versão preliminar">
+                <span>Reabrir</span>
+              </button>
+            {% endif %}
+          </div>
+        </div>
+      </summary>
+      <div class="interview-content" id="workshop-final-content">
+        {% if not workshop_final_section_open %}
+        <div class="section-closed-notice">
+          <p>🎯 Esta seção foi concluída e não permite mais edições.</p>
+        </div>
+        
+        <!-- Exibir Discussões da Versão Preliminar quando seção fechada -->
+        {% if workshop_discussions %}
+        <div class="workshop-discussions-section">
+          <h4>📝 Discussões da Versão Preliminar</h4>
+          <div class="discussions-content">
+            <p>{{ workshop_discussions }}</p>
+          </div>
+        </div>
+        {% endif %}
+        {% endif %}
+        
+        {% if workshop_final_section_open %}
+        
+        <!-- Campo para Discussões da Versão Preliminar -->
+        <div class="workshop-discussions-section">
+          <h4>📝 Discussões da Versão Preliminar</h4>
+          <form class="workshop-discussions-form" action="{{ url_for('save_workshop_discussions', plan_id=plan.id) }}" method="post">
+            <div class="form-field">
+              <span>Registre as principais discussões e decisões da versão preliminar</span>
+              <textarea name="workshop_discussions" placeholder="Descreva as discussões realizadas durante a definição da versão preliminar, principais pontos levantados, decisões tomadas e consensos alcançados..." rows="8">{{ workshop_discussions or '' }}</textarea>
+            </div>
+            <div class="form-actions">
+              <button type="submit" class="button button-primary">Salvar Discussões</button>
+              {% if workshop_discussions %}
+              <button type="button" class="button button-danger" onclick="deleteWorkshopDiscussions()" title="Excluir discussões">
+                🗑️ Excluir
+              </button>
+              {% endif %}
+            </div>
+          </form>
+        </div>
+        
+        <form class="okr-workshop-form" action="{{ url_for('add_workshop_okr_record', plan_id=plan.id) }}" method="post">
+          <div class="form-field">
+            <span>Direcionador Base</span>
+            <select name="okr_directional" {% if directionals_records %}required{% endif %}>
+              <option value="">Selecione o direcionador estratégico</option>
+              {% for directional in directionals_records %}
+              <option value="{{ directional.id }}">{{ directional.title or 'Direcionador' }} - {{ directional.type or 'Geral' }}</option>
+              {% endfor %}
+            </select>
+            {% if not directionals_records %}
+            <small class="form-hint">⚠️ Nenhum direcionador consolidado encontrado. Complete a seção "Direcionadores" primeiro.</small>
+            {% endif %}
+          </div>
+          <div class="form-field">
+            <span>Objetivo do OKR</span>
+            <input type="text" name="okr_objective" placeholder="Objetivo estratégico preliminar..." required />
+          </div>
+          <div class="form-two-cols">
+            <div class="form-field">
+              <span>Tipo</span>
+              <select name="okr_type" required>
+                <option value="">Selecione o tipo</option>
+                <option value="estruturante">Estruturante</option>
+                <option value="aceleracao">Aceleração</option>
+              </select>
+            </div>
+            <div class="form-field">
+              <span>Responsável</span>
+              <select name="okr_owner_id" id="workshop-okr-owner-select" data-owner-target="workshop-okr-owner-name">
+                <option value="">Selecione o responsável</option>
+                {% for participant in participants_options %}
+                <option value="{{ participant.id }}" data-name="{{ participant.name }}">{{ participant.label }}</option>
+                {% endfor %}
+              </select>
+              <input type="hidden" name="okr_owner" id="workshop-okr-owner-name" value="">
+            </div>
+          </div>
+          <div class="form-field">
+            <span>Prazo</span>
+            <input type="date" name="okr_deadline" />
+          </div>
+          <div class="form-field">
+            <span>Observações</span>
+            <textarea name="okr_observations" placeholder="Observações adicionais..." rows="3"></textarea>
+          </div>
+          
+          <div class="okr-kpi-grid" id="workshop-kr-container" data-participants='{{ participants_options|tojson|safe }}' data-indicators='{{ indicators|tojson|safe }}'>
+            <div class="okr-kpi-header">
+              <button type="button" class="button button-small button-success" onclick="openIndicatorFormFromOKR('workshop-kr-container', '{{ plan.id }}', 'okr-global')" title="Criar indicador completo no formulário">
+                <span>📊 Incluir Indicador</span>
+              </button>
+            </div>
+            <div class="key-results-list" id="workshop-kr-list">
+              <!-- Indicadores will be added dynamically here -->
+            </div>
+          </div>
+          
+          <div class="form-actions">
+            <button type="submit" class="button button-primary">Salvar OKR Preliminar</button>
+          </div>
+        </form>
+        {% endif %}
+        
+        {% if workshop_okr_records %}
+        <div class="okr-search-bar">
+          <div class="search-controls">
+            <input type="text" id="workshop-search" placeholder="Buscar OKRs..." onkeyup="searchOKRs('workshop', this.value)">
+            <button type="button" class="button button-small button-secondary" onclick="clearSearch('workshop')">
+              <span>Limpar</span>
+            </button>
+          </div>
+        </div>
+        <div class="okr-workshop-list" id="workshop-okr-list">
+          {% for record in workshop_okr_records %}
+          <div class="okr-workshop-item">
+            <div class="okr-workshop-header">
+              <h5>{{ record.objective }}</h5>
+              <div class="okr-header-actions">
+                <span class="okr-type-badge {{ record.type }}">{{ record.type_display }}</span>
+                <div class="okr-action-buttons">
+                  <button type="button" class="button button-small button-secondary" onclick="editOKR('workshop', {{ record.id }})" title="Editar OKR">
+                    <span>✏️</span>
+                  </button>
+                  <button type="button" class="button button-small button-info" onclick="duplicateOKR('workshop', '{{ record.id }}')" title="Duplicar OKR">
+                    <span>📋</span>
+                  </button>
+                  <button type="button" class="button button-small button-danger" onclick="deleteOKR('workshop', {{ record.id }}, '{{ record.objective }}')" title="Excluir OKR">
+                    <span>🗑️</span>
+                  </button>
+                </div>
+              </div>
+            </div>
+            <div class="okr-workshop-body">
+              {% if record.directional %}
+              <p><strong>Direcionador Base:</strong> 
+                {% for directional in directionals_records %}
+                  {% if directional.id == record.directional %}
+                    {{ directional.title or 'Direcionador' }} - {{ directional.type or 'Geral' }}
+                  {% endif %}
+                {% endfor %}
+              </p>
+              {% endif %}
+              {% if record.owner %}<p><strong>Responsável:</strong> {{ record.owner }}</p>{% endif %}
+              {% if record.deadline %}<p><strong>Prazo:</strong> {% if record.deadline.strftime is defined %}{{ record.deadline.strftime('%d/%m/%Y') }}{% else %}{{ record.deadline }}{% endif %}</p>{% endif %}
+              {% if record.observations %}<p><strong>Observações:</strong> {{ record.observations }}</p>{% endif %}
+              
+              {% if record.key_results %}
+              <div class="okr-key-results">
+                <p><strong>Indicadores:</strong></p>
+                <ul class="okr-kr-list">
+                  {% for kr in record.key_results %}
+                  <li class="okr-kr-item">
+                    <strong>{{ kr.label }}</strong>
+                    {% if kr.target %}<span class="kr-meta"> - Meta: {{ kr.target }}</span>{% endif %}
+                    {% if kr.deadline %}<span class="kr-meta"> - Prazo: {{ kr.deadline }}</span>{% endif %}
+                    {% if kr.owner %}<span class="kr-meta"> - Responsável: {{ kr.owner }}</span>{% endif %}
+                    {% set indicator_key = (kr.indicator_id|string) if kr.indicator_id is not none else '' %}
+                    {% set indicator_label = kr.indicator_display or indicator_lookup.get(indicator_key) %}
+                    {% if indicator_label %}<span class="kr-meta"> - Indicador: {{ indicator_label }}</span>{% endif %}
+                 </li>
+                 {% endfor %}
+               </ul>
+             </div>
+             {% endif %}
+            </div>
+            <div class="okr-workshop-meta">
+              <span class="summary-meta">Criado em: {{ record.created_at.strftime('%d/%m/%Y às %H:%M') }}</span>
+              {% if record.updated_at and record.updated_at != record.created_at %}
+              <span class="summary-meta"> | Atualizado em: {{ record.updated_at.strftime('%d/%m/%Y às %H:%M') }}</span>
+              {% endif %}
+            </div>
+          </div>
+          {% endfor %}
+        </div>
+        {% endif %}
+      </div>
+    </details>
+
+    <!-- Versão Final e Aprovações -->
+    <details class="interview-section surface-card">
+      <summary class="interview-summary-bar">
+        <div class="interview-summary-text">
+          <span class="section-eyebrow">Aprovação</span>
+          <h3>Versão Final e Aprovações</h3>
+          <p>Cadastre os OKRs globais finais e obtenha aprovação da liderança.</p>
+        </div>
+        <div class="interview-progress">
+          <span class="chip-label">OKRs</span>
+          <span class="interview-count">{{ okr_approvals_records|length }} OKRs aprovados</span>
+          <div class="section-status-controls">
+            {% if okr_approvals_section_open %}
+              <button class="button button-small button-warning" onclick="closeOKRApprovalsSection()" title="Concluir versão final e aprovações">
+                <span>Concluir</span>
+              </button>
+            {% else %}
+              <button class="button button-small button-success" onclick="openOKRApprovalsSection()" title="Reabrir versão final e aprovações">
+                <span>Reabrir</span>
+              </button>
+            {% endif %}
+          </div>
+        </div>
+      </summary>
+      <div class="interview-content" id="okr-approvals-content">
+        {% if not okr_approvals_section_open %}
+        <div class="section-closed-notice">
+          <p>🎯 Esta seção foi concluída e não permite mais edições.</p>
+        </div>
+        
+        <!-- Exibir Discussões da Versão Final quando seção fechada -->
+        {% if approval_discussions %}
+        <div class="approval-discussions-section">
+          <h4>📝 Discussões da Versão Final</h4>
+          <div class="discussions-content">
+            <p>{{ approval_discussions }}</p>
+          </div>
+        </div>
+        {% endif %}
+        {% endif %}
+        
+        {% if okr_approvals_section_open %}
+        
+        <!-- Campo para Discussões da Versão Final -->
+        <div class="approval-discussions-section">
+          <h4>📝 Discussões da Versão Final</h4>
+          <form class="approval-discussions-form" action="{{ url_for('save_approval_discussions', plan_id=plan.id) }}" method="post">
+            <div class="form-field">
+              <span>Registre as discussões e decisões da versão final e aprovações</span>
+              <textarea name="approval_discussions" placeholder="Descreva as discussões realizadas durante a definição da versão final e aprovação dos OKRs, feedback da liderança, ajustes solicitados e decisões finais..." rows="8">{{ approval_discussions or '' }}</textarea>
+            </div>
+            <div class="form-actions">
+              <button type="submit" class="button button-primary">Salvar Discussões</button>
+              {% if approval_discussions %}
+              <button type="button" class="button button-danger" onclick="deleteApprovalDiscussions()" title="Excluir discussões">
+                🗑️ Excluir
+              </button>
+              {% endif %}
+            </div>
+          </form>
+        </div>
+        
+        <form class="okr-approval-form" action="{{ url_for('add_okr_approval_record', plan_id=plan.id) }}" method="post">
+          <div class="form-field">
+            <span>Direcionador Base</span>
+            <select name="okr_directional" {% if directionals_records %}required{% endif %}>
+              <option value="">Selecione o direcionador estratégico</option>
+              {% for directional in directionals_records %}
+              <option value="{{ directional.id }}">{{ directional.title or 'Direcionador' }} - {{ directional.type or 'Geral' }}</option>
+              {% endfor %}
+            </select>
+            {% if not directionals_records %}
+            <small class="form-hint">⚠️ Nenhum direcionador consolidado encontrado. Complete a seção "Direcionadores" primeiro.</small>
+            {% endif %}
+          </div>
+          <div class="form-field">
+            <span>Objetivo do OKR</span>
+            <input type="text" name="okr_objective" placeholder="Objetivo estratégico final..." required />
+          </div>
+          <div class="form-two-cols">
+            <div class="form-field">
+              <span>Tipo</span>
+              <select name="okr_type" required>
+                <option value="">Selecione o tipo</option>
+                <option value="estruturante">Estruturante</option>
+                <option value="aceleracao">Aceleração</option>
+              </select>
+            </div>
+            <div class="form-field">
+              <span>Responsável</span>
+              <select name="okr_owner_id" id="approval-okr-owner-select" data-owner-target="approval-okr-owner-name">
+                <option value="">Selecione o responsável</option>
+                {% for participant in participants_options %}
+                <option value="{{ participant.id }}" data-name="{{ participant.name }}">{{ participant.label }}</option>
+                {% endfor %}
+              </select>
+              <input type="hidden" name="okr_owner" id="approval-okr-owner-name" value="">
+            </div>
+          </div>
+          <div class="form-field">
+            <span>Prazo</span>
+            <input type="date" name="okr_deadline" />
+          </div>
+          <div class="form-field">
+            <span>Observações</span>
+            <textarea name="okr_observations" placeholder="Observações adicionais..." rows="3"></textarea>
+          </div>
+          
+          <div class="okr-kpi-grid" id="approval-kr-container" data-participants='{{ participants_options|tojson|safe }}' data-indicators='{{ indicators|tojson|safe }}'>
+            <div class="okr-kpi-header">
+              <button type="button" class="button button-small button-success" onclick="openIndicatorFormFromOKR('approval-kr-container', '{{ plan.id }}', 'okr-global')" title="Criar indicador completo no formulário">
+                <span>📊 Incluir Indicador</span>
+              </button>
+            </div>
+            <div class="key-results-list" id="approval-kr-list">
+              <!-- Indicadores will be added dynamically here -->
+            </div>
+          </div>
+          
+          <div class="form-actions">
+            <button type="submit" class="button button-primary">Salvar OKR Final</button>
+          </div>
+        </form>
+        {% endif %}
+        
+        {% if okr_approvals_records %}
+        <div class="okr-search-bar">
+          <div class="search-controls">
+            <input type="text" id="approval-search" placeholder="Buscar OKRs..." onkeyup="searchOKRs('approval', this.value)">
+            <button type="button" class="button button-small button-secondary" onclick="clearSearch('approval')">
+              <span>Limpar</span>
+            </button>
+          </div>
+        </div>
+        <div class="okr-approvals-list" id="approval-okr-list">
+          {% for record in okr_approvals_records %}
+          <div class="okr-approval-item">
+            <div class="okr-approval-header">
+              <h5>{{ record.objective }}</h5>
+              <div class="okr-header-actions">
+                <span class="okr-type-badge {{ record.type }}">{{ record.type_display }}</span>
+                <div class="okr-action-buttons">
+                  <button type="button" class="button button-small button-secondary" onclick="editOKR('approval', {{ record.id }})" title="Editar OKR">
+                    <span>✏️</span>
+                  </button>
+                  <button type="button" class="button button-small button-info" onclick="duplicateOKR('approval', '{{ record.id }}')" title="Duplicar OKR">
+                    <span>📋</span>
+                  </button>
+                  <button type="button" class="button button-small button-danger" onclick="deleteOKR('approval', {{ record.id }}, '{{ record.objective }}')" title="Excluir OKR">
+                    <span>🗑️</span>
+                  </button>
+                </div>
+              </div>
+            </div>
+            <div class="okr-approval-body">
+              {% if record.directional %}
+              <p><strong>Direcionador Base:</strong> 
+                {% for directional in directionals_records %}
+                  {% if directional.id == record.directional %}
+                    {{ directional.title or 'Direcionador' }} - {{ directional.type or 'Geral' }}
+                  {% endif %}
+                {% endfor %}
+              </p>
+              {% endif %}
+              {% if record.owner %}<p><strong>Responsável:</strong> {{ record.owner }}</p>{% endif %}
+              {% if record.deadline %}<p><strong>Prazo:</strong> {% if record.deadline.strftime is defined %}{{ record.deadline.strftime('%d/%m/%Y') }}{% else %}{{ record.deadline }}{% endif %}</p>{% endif %}
+              {% if record.observations %}<p><strong>Observações:</strong> {{ record.observations }}</p>{% endif %}
+              
+              {% if record.key_results %}
+              <div class="okr-key-results">
+                <p><strong>Indicadores:</strong></p>
+                <ul class="okr-kr-list">
+                  {% for kr in record.key_results %}
+                  <li class="okr-kr-item">
+                    <strong>{{ kr.label }}</strong>
+                    {% if kr.target %}<span class="kr-meta"> - Meta: {{ kr.target }}</span>{% endif %}
+                    {% if kr.deadline %}<span class="kr-meta"> - Prazo: {{ kr.deadline }}</span>{% endif %}
+                    {% if kr.owner %}<span class="kr-meta"> - Responsável: {{ kr.owner }}</span>{% endif %}
+                    {% set indicator_key = (kr.indicator_id|string) if kr.indicator_id is not none else '' %}
+                    {% set indicator_label = kr.indicator_display or indicator_lookup.get(indicator_key) %}
+                    {% if indicator_label %}<span class="kr-meta"> - Indicador: {{ indicator_label }}</span>{% endif %}
+                 </li>
+                 {% endfor %}
+               </ul>
+             </div>
+             {% endif %}
+            </div>
+            <div class="okr-approval-meta">
+              <span class="summary-meta">Aprovado em: {{ record.created_at.strftime('%d/%m/%Y às %H:%M') }}</span>
+              {% if record.updated_at and record.updated_at != record.created_at %}
+              <span class="summary-meta"> | Atualizado em: {{ record.updated_at.strftime('%d/%m/%Y às %H:%M') }}</span>
+              {% endif %}
+            </div>
+          </div>
+          {% endfor %}
+        </div>
+        {% endif %}
+      </div>
+    </details>
+
+    <!-- Consolidação Final -->
+    <details class="interview-section surface-card" open>
+      <summary class="interview-summary-bar">
+        <div class="interview-summary-text">
+          <span class="section-eyebrow">Consolidação</span>
+          <h3>Consolidação Final - OKRs Globais Consolidados do Plano</h3>
+          <p>Visualize todos os OKRs globais aprovados e consolidados.</p>
+        </div>
+        <div class="interview-progress">
+          <span class="chip-label">OKRs</span>
+          <span class="interview-count">{{ okr_approvals_records|length }} OKRs consolidados</span>
+        </div>
+      </summary>
+      <div class="interview-content">
+        {% if okr_approvals_records %}
+        <div class="directionals-grid okr-consolidated-grid">
+          {% for record in okr_approvals_records %}
+          {% set directional_ref = directionals_lookup.get(record.directional) %}
+          <div class="directional-card okr-consolidated-card">
+            <div class="directional-header">
+              <div class="directional-icon">
+                {% if record.type == 'estruturante' %}
+                  🏗️
+                {% elif record.type == 'aceleracao' %}
+                  <span class="icon-aceleracao">⚡</span>
+                {% else %}
+                  <span class="icon-geral">🎯</span>
+                {% endif %}
+              </div>
+              <div class="directional-title-section">
+                <h5 class="directional-title">{{ record.objective or 'OKR Global' }}</h5>
+                <span class="directional-type-badge type-{{ (record.type or '').lower() }}">
+                  {{ record.type_display or 'OKR' }}
+                </span>
+              </div>
+            </div>
+            {% if directional_ref %}
+            <p><strong>Direcionador base:</strong> {{ directional_ref.title or 'Direcionador' }} - {{ directional_ref.type or 'Geral' }}</p>
+            {% endif %}
+            {% if record.owner %}<p><strong>Responsável:</strong> {{ record.owner }}</p>{% endif %}
+            {% if record.deadline %}<p><strong>Prazo:</strong> {% if record.deadline.strftime is defined %}{{ record.deadline.strftime('%d/%m/%Y') }}{% else %}{{ record.deadline }}{% endif %}</p>{% endif %}
+            {% if record.observations %}<p><strong>Observações:</strong> {{ record.observations }}</p>{% endif %}
+            {% if record.key_results %}
+            <div class="okr-key-results">
+              <p><strong>Indicadores:</strong></p>
+              <ul class="okr-kr-list">
+                {% for kr in record.key_results %}
+                <li class="okr-kr-item">
+                  <strong>{{ kr.label }}</strong>
+                  {% if kr.target %}<span class="kr-meta"> - Meta: {{ kr.target }}</span>{% endif %}
+                  {% if kr.deadline %}<span class="kr-meta"> - Prazo: {{ kr.deadline }}</span>{% endif %}
+                  {% if kr.owner %}<span class="kr-meta"> - Responsável: {{ kr.owner }}</span>{% endif %}
+                  {% set indicator_key = (kr.indicator_id|string) if kr.indicator_id is not none else '' %}
+                  {% set indicator_label = kr.indicator_display or indicator_lookup.get(indicator_key) %}
+                  {% if indicator_label %}<span class="kr-meta"> - Indicador: {{ indicator_label }}</span>{% endif %}
+                </li>
+                {% endfor %}
+              </ul>
+            </div>
+            {% endif %}
+            <div class="directional-meta">
+              {% if record.created_at %}<span class="summary-meta">Criado em: {{ record.created_at.strftime('%d/%m/%Y às %H:%M') }}</span>{% endif %}
+              {% if record.updated_at and record.updated_at != record.created_at %}
+              <span class="summary-meta"> | Atualizado em: {{ record.updated_at.strftime('%d/%m/%Y às %H:%M') }}</span>
+              {% endif %}
+            </div>
+          </div>
+          {% endfor %}
+        </div>
+        {% else %}
+        <div class="empty-state enhanced">
+          <div class="empty-icon">🎯</div>
+          <h4>Nenhum OKR Global Consolidado</h4>
+          <p>Os OKRs globais aparecerão aqui após serem aprovados na seção anterior.</p>
+          <div class="empty-hint">
+            <span class="hint-icon">💡</span>
+            <span>Complete o processo de aprovação para visualizar os OKRs consolidados.</span>
+          </div>
+        </div>
+        {% endif %}
+      </div>
+    </details>
+  </section>
+</div>
+
+<!-- Edit OKR Modal -->
+<div id="edit-okr-modal" class="modal" style="display: none;">
+  <div class="modal-content">
+    <div class="modal-header">
+      <h3 id="edit-modal-title">Editar OKR</h3>
+      <span class="close" onclick="closeEditModal()">&times;</span>
+    </div>
+    <form id="edit-okr-form" method="post">
+      <div class="modal-body">
+        <div class="form-field">
+          <span>Direcionador Base</span>
+          <select id="edit-okr-directional" name="okr_directional" {% if directionals_records %}required{% endif %}>
+            <option value="">Selecione o direcionador estratégico</option>
+            {% for directional in directionals_records %}
+            <option value="{{ directional.id }}">{{ directional.title or 'Direcionador' }} - {{ directional.type or 'Geral' }}</option>
+            {% endfor %}
+          </select>
+        </div>
+        <div class="form-field">
+          <span>Objetivo do OKR</span>
+          <input type="text" id="edit-okr-objective" name="okr_objective" placeholder="Objetivo estratégico..." required />
+        </div>
+        <div class="form-two-cols">
+          <div class="form-field">
+            <span>Tipo</span>
+            <select id="edit-okr-type" name="okr_type" required>
+              <option value="">Selecione o tipo</option>
+              <option value="estruturante">Estruturante</option>
+              <option value="aceleracao">Aceleração</option>
+            </select>
+          </div>
+          <div class="form-field">
+            <span>Responsável</span>
+            <select id="edit-okr-owner-select" name="okr_owner_id" data-owner-target="edit-okr-owner">
+              <option value="">Selecione o responsável</option>
+              {% for participant in participants_options %}
+              <option value="{{ participant.id }}" data-name="{{ participant.name }}">{{ participant.label }}</option>
+              {% endfor %}
+            </select>
+            <input type="hidden" id="edit-okr-owner" name="okr_owner" value="">
+          </div>
+        </div>
+        <div class="form-field">
+          <span>Prazo</span>
+          <input type="date" id="edit-okr-deadline" name="okr_deadline" />
+        </div>
+        <div class="form-field">
+          <span>Observações</span>
+          <textarea id="edit-okr-observations" name="okr_observations" placeholder="Observações adicionais..." rows="3"></textarea>
+        </div>
+        
+        <div class="okr-kpi-grid" id="edit-kr-container" data-participants='{{ participants_options|tojson|safe }}' data-indicators='{{ indicators|tojson|safe }}'>
+          <div class="okr-kpi-header">
+            <button type="button" class="button button-small button-success" onclick="openIndicatorFormFromOKR('edit-kr-container', '{{ plan.id }}', 'okr-global')" title="Criar indicador completo no formulário">
+              <span>📊 Incluir Indicador</span>
+            </button>
+          </div>
+          <div class="key-results-list" id="edit-kr-list">
+            <!-- Indicadores will be added dynamically here -->
+          </div>
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="button button-secondary" onclick="closeEditModal()">Cancelar</button>
+        <button type="submit" class="button button-primary">Salvar Alterações</button>
+      </div>
+    </form>
+  </div>
+</div>
+
+<!-- Edit Preliminary Analysis Modal -->
+<div id="edit-preliminary-modal" class="modal" style="display: none;">
+  <div class="modal-content">
+    <div class="modal-header">
+      <h3>Editar Análise Preliminar</h3>
+      <span class="close" onclick="closePreliminaryModal()">&times;</span>
+    </div>
+    <form id="edit-preliminary-form" method="post">
+      <div class="modal-body">
+        <div class="form-field">
+          <span>Análise de OKR</span>
+          <textarea id="edit-preliminary-analysis" name="okr_analysis" placeholder="Descreva a análise preliminar do OKR..." rows="6" required></textarea>
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="button button-secondary" onclick="closePreliminaryModal()">Cancelar</button>
+        <button type="submit" class="button button-primary">Salvar Alterações</button>
+      </div>
+    </form>
+  </div>
+</div>
+
+<!-- Indicadores Management Script -->
+<script src="{{ url_for('static', filename='js/key-results.js') }}"></script>
+
+<script>
+// Global variables for edit modal
+let currentEditType = '';
+let currentEditId = 0;
+let editManager = null;
+
+// OKR Edit and Delete Functions
+function editOKR(type, id) {
+    currentEditType = type;
+    currentEditId = id;
+    
+    // Fetch OKR data
+    fetch(`/plans/{{ plan.id }}/get-okr-data/${type}/${id}`)
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                populateEditModal(data.okr);
+                showEditModal();
+            } else {
+                alert('Erro ao carregar dados do OKR: ' + data.message);
+            }
+        })
+        .catch(error => {
+            console.error('Error:', error);
+            alert('Erro ao carregar dados do OKR');
+        });
+}
+
+function populateEditModal(okr) {
+    document.getElementById('edit-okr-directional').value = okr.directional || '';
+    document.getElementById('edit-okr-objective').value = okr.objective || '';
+    document.getElementById('edit-okr-type').value = okr.type || '';
+    const ownerHiddenInput = document.getElementById('edit-okr-owner');
+    if (ownerHiddenInput) {
+        ownerHiddenInput.value = okr.owner || '';
+    }
+    const ownerSelect = document.getElementById('edit-okr-owner-select');
+    if (ownerSelect) {
+        ownerSelect.value = okr.owner_id ? String(okr.owner_id) : '';
+        ownerSelect.dispatchEvent(new Event('change'));
+        if (!ownerSelect.value && ownerHiddenInput && okr.owner) {
+            ownerHiddenInput.value = okr.owner;
+        }
+    }
+    document.getElementById('edit-okr-deadline').value = okr.deadline || '';
+    document.getElementById('edit-okr-observations').value = okr.observations || '';
+    
+    // Set form action
+    const form = document.getElementById('edit-okr-form');
+    if (currentEditType === 'workshop') {
+        form.action = `{{ url_for('edit_workshop_okr_record', plan_id=plan.id, record_id=0) }}`.replace('0', currentEditId);
+    } else if (currentEditType === 'approval') {
+        form.action = `{{ url_for('edit_approval_okr_record', plan_id=plan.id, record_id=0) }}`.replace('0', currentEditId);
+    }
+    
+    // Clear and populate Indicadores
+    const editContainer = document.getElementById('edit-kr-container');
+    const editList = document.getElementById('edit-kr-list');
+    editList.innerHTML = '';
+    
+    // Initialize edit manager if not exists
+    if (!editManager) {
+        editManager = new KeyResultsManager('edit-kr-container', {
+            minResults: 0,
+            maxResults: 10,
+            required: false
+        });
+        // Store globally for consistency
+        window.keyResultsManager_edit_kr_container = editManager;
+    }
+    
+    // Add existing Indicadores
+    if (okr.key_results && okr.key_results.length > 0) {
+        editManager.setKeyResults(okr.key_results);
+    } else {
+        // Add one empty Indicador
+        editManager.addKeyResult();
+    }
+}
+
+function showEditModal() {
+    document.getElementById('edit-okr-modal').style.display = 'block';
+    document.body.style.overflow = 'hidden';
+}
+
+function closeEditModal() {
+    document.getElementById('edit-okr-modal').style.display = 'none';
+    document.body.style.overflow = 'auto';
+    currentEditType = '';
+    currentEditId = 0;
+}
+
+// Preliminary Analysis Functions
+function editPreliminaryOKR(recordId) {
+    // Fetch preliminary analysis data
+    fetch(`{{ url_for('get_preliminary_okr_data', plan_id=plan.id, record_id='') }}${recordId}`)
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                // Populate modal
+                document.getElementById('edit-preliminary-analysis').value = data.analysis.analysis;
+                
+                // Set form action
+                document.getElementById('edit-preliminary-form').action = `{{ url_for('edit_preliminary_okr_record', plan_id=plan.id, record_id='') }}${recordId}`;
+                
+                // Show modal
+                showPreliminaryModal();
+            } else {
+                alert('Erro ao carregar dados da análise: ' + data.message);
+            }
+        })
+        .catch(error => {
+            console.error('Error:', error);
+            alert('Erro ao carregar dados da análise');
+        });
+}
+
+function deletePreliminaryOKR(recordId, analysisText) {
+    if (confirm(`Tem certeza que deseja excluir esta análise?\n\n"${analysisText}"`)) {
+        // Create form and submit
+        const form = document.createElement('form');
+        form.method = 'POST';
+        form.action = `{{ url_for('delete_preliminary_okr_record', plan_id=plan.id, record_id='') }}${recordId}`;
+        
+        document.body.appendChild(form);
+        form.submit();
+    }
+}
+
+function showPreliminaryModal() {
+    document.getElementById('edit-preliminary-modal').style.display = 'block';
+    document.body.style.overflow = 'hidden';
+}
+
+function closePreliminaryModal() {
+    document.getElementById('edit-preliminary-modal').style.display = 'none';
+    document.body.style.overflow = 'auto';
+}
+
+function duplicateOKR(type, id) {
+    if (confirm(`Tem certeza que deseja duplicar este OKR?`)) {
+        // Create form and submit
+        const form = document.createElement('form');
+        form.method = 'POST';
+        form.action = `{{ url_for('duplicate_okr_record', plan_id=plan.id, type='workshop', record_id='') }}`.replace('workshop', type).replace('', id);
+        
+        document.body.appendChild(form);
+        form.submit();
+    }
+}
+
+function deleteOKR(type, id, objective) {
+    if (confirm(`Tem certeza que deseja excluir o OKR "${objective}"? Esta ação não pode ser desfeita.`)) {
+        // Create form and submit
+        const form = document.createElement('form');
+        form.method = 'POST';
+        
+        if (type === 'workshop') {
+            form.action = `{{ url_for('delete_workshop_okr_record', plan_id=plan.id, record_id=0) }}`.replace('0', id);
+        } else if (type === 'approval') {
+            form.action = `{{ url_for('delete_approval_okr_record', plan_id=plan.id, record_id=0) }}`.replace('0', id);
+        }
+        
+        document.body.appendChild(form);
+        form.submit();
+    }
+}
+
+// Close modal when clicking outside
+window.onclick = function(event) {
+    const modal = document.getElementById('edit-okr-modal');
+    if (event.target === modal) {
+        closeEditModal();
+    }
+}
+
+// JavaScript functions for OKR Global sections
+function closePreliminaryAnalysisSection() {
+    if (confirm('Tem certeza que deseja concluir a análise preliminar? Esta ação não pode ser desfeita.')) {
+        fetch('{{ url_for("update_okr_preliminary_analysis_section_status", plan_id=plan.id) }}', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({
+                status: 'closed',
+                conclusion_reason: 'Análise preliminar concluída'
+            })
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                location.reload();
+            } else {
+                alert('Erro ao concluir seção: ' + data.message);
+            }
+        })
+        .catch(error => {
+            console.error('Error:', error);
+            alert('Erro ao concluir seção');
+        });
+    }
+}
+
+function openPreliminaryAnalysisSection() {
+    fetch('{{ url_for("update_okr_preliminary_analysis_section_status", plan_id=plan.id) }}', {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+            status: 'open'
+        })
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.success) {
+            location.reload();
+        } else {
+            alert('Erro ao reabrir seção: ' + data.message);
+        }
+    })
+    .catch(error => {
+        console.error('Error:', error);
+        alert('Erro ao reabrir seção');
+    });
+}
+
+function closeWorkshopFinalSection() {
+    if (confirm('Tem certeza que deseja concluir o workshop? Esta ação não pode ser desfeita.')) {
+        fetch('{{ url_for("update_okr_workshop_final_section_status", plan_id=plan.id) }}', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({
+                status: 'closed',
+                conclusion_reason: 'Workshop concluído'
+            })
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                location.reload();
+            } else {
+                alert('Erro ao concluir seção: ' + data.message);
+            }
+        })
+        .catch(error => {
+            console.error('Error:', error);
+            alert('Erro ao concluir seção');
+        });
+    }
+}
+
+function openWorkshopFinalSection() {
+    fetch('{{ url_for("update_okr_workshop_final_section_status", plan_id=plan.id) }}', {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+            status: 'open'
+        })
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.success) {
+            location.reload();
+        } else {
+            alert('Erro ao reabrir seção: ' + data.message);
+        }
+    })
+    .catch(error => {
+        console.error('Error:', error);
+        alert('Erro ao reabrir seção');
+    });
+}
+
+function deleteWorkshopDiscussions() {
+    if (confirm('Tem certeza que deseja excluir as discussões da versão preliminar? Esta ação não pode ser desfeita.')) {
+        fetch('{{ url_for("delete_workshop_discussions", plan_id=plan.id) }}', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/x-www-form-urlencoded',
+            }
+        })
+        .then(response => {
+            if (response.ok) {
+                location.reload();
+            } else {
+                alert('Erro ao excluir discussões');
+            }
+        })
+        .catch(error => {
+            console.error('Error:', error);
+            alert('Erro ao excluir discussões');
+        });
+    }
+}
+
+function deleteApprovalDiscussions() {
+    if (confirm('Tem certeza que deseja excluir as discussões da versão final e aprovações? Esta ação não pode ser desfeita.')) {
+        fetch('{{ url_for("delete_approval_discussions", plan_id=plan.id) }}', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/x-www-form-urlencoded',
+            }
+        })
+        .then(response => {
+            if (response.ok) {
+                location.reload();
+            } else {
+                alert('Erro ao excluir discussões');
+            }
+        })
+        .catch(error => {
+            console.error('Error:', error);
+            alert('Erro ao excluir discussões');
+        });
+    }
+}
+
+function closeOKRApprovalsSection() {
+    if (confirm('Tem certeza que deseja concluir a versão final e aprovações? Esta ação não pode ser desfeita.')) {
+        fetch('{{ url_for("update_okr_approvals_section_status", plan_id=plan.id) }}', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({
+                status: 'closed',
+                conclusion_reason: 'OKRs aprovados'
+            })
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                location.reload();
+            } else {
+                alert('Erro ao concluir versão final e aprovações: ' + data.message);
+            }
+        })
+        .catch(error => {
+            console.error('Error:', error);
+            alert('Erro ao concluir versão final e aprovações');
+        });
+    }
+}
+
+function openOKRApprovalsSection() {
+    fetch('{{ url_for("update_okr_approvals_section_status", plan_id=plan.id) }}', {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+            status: 'open'
+        })
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.success) {
+            location.reload();
+        } else {
+            alert('Erro ao reabrir versão final e aprovações: ' + data.message);
+        }
+    })
+    .catch(error => {
+        console.error('Error:', error);
+        alert('Erro ao reabrir versão final e aprovações');
+    });
+}
+
+// Search functionality
+function searchOKRs(type, query) {
+    const listId = type === 'workshop' ? 'workshop-okr-list' : 'approval-okr-list';
+    const list = document.getElementById(listId);
+    const items = list.querySelectorAll('.okr-workshop-item, .okr-approval-item');
+    
+    if (!query.trim()) {
+        // Show all items
+        items.forEach(item => {
+            item.style.display = 'block';
+        });
+        return;
+    }
+    
+    const queryLower = query.toLowerCase();
+    items.forEach(item => {
+        const objective = item.querySelector('h5').textContent.toLowerCase();
+        const owner = item.querySelector('p') ? item.querySelector('p').textContent.toLowerCase() : '';
+        const observations = item.querySelectorAll('p')[1] ? item.querySelectorAll('p')[1].textContent.toLowerCase() : '';
+        
+        if (objective.includes(queryLower) || owner.includes(queryLower) || observations.includes(queryLower)) {
+            item.style.display = 'block';
+        } else {
+            item.style.display = 'none';
+        }
+    });
+}
+
+function clearSearch(type) {
+    const searchInput = document.getElementById(`${type}-search`);
+    searchInput.value = '';
+    searchOKRs(type, '');
+}
+
+// AI Suggestions functionality
+let currentAISuggestions = '';
+
+function generateAISuggestions() {
+    const btn = document.getElementById('ai-suggestions-btn');
+    const loading = document.getElementById('ai-loading');
+    const results = document.getElementById('ai-suggestions-results');
+    
+    // Show loading state
+    btn.disabled = true;
+    btn.innerHTML = '<span>⏳ Gerando...</span>';
+    loading.style.display = 'block';
+    results.style.display = 'none';
+    
+    // Make API call
+    fetch('{{ url_for("generate_ai_okr_suggestions", plan_id=plan.id) }}', {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json',
+        }
+    })
+    .then(response => response.json())
+    .then(data => {
+        loading.style.display = 'none';
+        
+        if (data.success) {
+            currentAISuggestions = data.suggestions;
+            document.getElementById('ai-suggestions-content').innerHTML = 
+                '<div class="ai-suggestion-text">' + data.suggestions.replace(/\n/g, '<br>') + '</div>';
+            results.style.display = 'block';
+        } else {
+            alert('Erro ao gerar sugestões: ' + data.message);
+        }
+    })
+    .catch(error => {
+        console.error('Error:', error);
+        loading.style.display = 'none';
+        alert('Erro ao gerar sugestões da IA');
+    })
+    .finally(() => {
+        btn.disabled = false;
+        btn.innerHTML = '<span>✨ Gerar Sugestões da IA</span>';
+    });
+}
+
+function useAISuggestion() {
+    if (currentAISuggestions) {
+        document.getElementById('okr-analysis-textarea').value = currentAISuggestions;
+        document.getElementById('ai-suggestions-results').style.display = 'none';
+    }
+}
+
+function regenerateAISuggestions() {
+    generateAISuggestions();
+}
+
+// Function to open indicator form with OKR context
+function openIndicatorFormFromOKR(containerType, planId, pageType) {
+    try {
+        console.log('openIndicatorFormFromOKR called:', {containerType, planId, pageType});
+        
+        // Get company_id from the current URL or context
+        const companyId = {{ plan.company_id if plan and plan.company_id else 'null' }};
+        console.log('Company ID:', companyId);
+        
+        if (!companyId) {
+            alert('Empresa não identificada. Por favor, recarregue a página.');
+            return;
+        }
+        
+        // Check if we're in an edit context with a saved OKR
+        // Use typeof to safely check if variable exists
+        const hasOkrId = (typeof currentEditId !== 'undefined') && currentEditId && currentEditId > 0;
+        console.log('Has OKR ID:', hasOkrId, 'currentEditId:', typeof currentEditId !== 'undefined' ? currentEditId : 'undefined');
+        
+        // If we don't have an OKR ID, we need to save first
+        if (!hasOkrId) {
+            console.log('No OKR ID, showing save modal');
+            showSaveOkrBeforeIndicatorModal(containerType, planId, pageType, companyId);
+            return;
+        }
+        
+        // Build URL with context parameters
+        const params = new URLSearchParams({
+            plan_id: planId,
+            page_type: pageType,
+            okr_id: currentEditId,
+            okr_level: 'global'
+        });
+        
+        const url = `/grv/company/${companyId}/indicators/form?${params.toString()}`;
+        console.log('Opening indicator form:', url);
+        
+        // Open in a new window
+        const width = 800;
+        const height = 900;
+        const left = (screen.width - width) / 2;
+        const top = (screen.height - height) / 2;
+        
+        window.open(
+            url,
+            'indicatorForm',
+            `width=${width},height=${height},left=${left},top=${top},resizable=yes,scrollbars=yes`
+        );
+    } catch (error) {
+        console.error('Error in openIndicatorFormFromOKR:', error);
+        alert('Erro ao abrir formulário de indicadores: ' + error.message);
+    }
+}
+
+// Show modal asking to save OKR before creating indicator
+function showSaveOkrBeforeIndicatorModal(containerType, planId, pageType, companyId) {
+    try {
+        console.log('showSaveOkrBeforeIndicatorModal called');
+        
+        const modalHtml = `
+            <div id="save-okr-before-indicator-modal" class="modal" style="display: block;">
+                <div class="modal-content" style="max-width: 500px;">
+                    <div class="modal-header">
+                        <h3>&#9888;&#65039; Salvar OKR Primeiro</h3>
+                    </div>
+                    <div class="modal-body">
+                        <p style="margin: 16px 0; line-height: 1.6;">
+                            Para adicionar ou associar um indicador, é necessário salvar o OKR primeiro.
+                        </p>
+                        <p style="margin: 16px 0; line-height: 1.6; color: #64748b; font-size: 14px;">
+                            O sistema irá validar os campos obrigatórios, salvar o OKR e então abrir o formulário de indicadores com o Planejamento e OKR já preenchidos.
+                        </p>
+                    </div>
+                    <div class="modal-footer" style="justify-content: center; gap: 12px;">
+                        <button type="button" class="button button-secondary" onclick="closeSaveOkrModal()">Cancelar</button>
+                        <button type="button" class="button button-primary" onclick="saveOkrAndOpenIndicatorForm('${containerType}', '${planId}', '${pageType}', ${companyId})">&#128190; Salvar e Continuar</button>
+                    </div>
+                </div>
+            </div>
+        `;
+        
+        // Remove existing modal if any
+        const existingModal = document.getElementById('save-okr-before-indicator-modal');
+        if (existingModal) {
+            existingModal.remove();
+        }
+        
+        // Add modal to body
+        document.body.insertAdjacentHTML('beforeend', modalHtml);
+        document.body.style.overflow = 'hidden';
+        console.log('Modal added successfully');
+    } catch (error) {
+        console.error('Error in showSaveOkrBeforeIndicatorModal:', error);
+        alert('Erro ao mostrar modal: ' + error.message);
+    }
+}
+
+function closeSaveOkrModal() {
+    const modal = document.getElementById('save-okr-before-indicator-modal');
+    if (modal) {
+        modal.remove();
+        document.body.style.overflow = 'auto';
+    }
+}
+
+async function saveOkrAndOpenIndicatorForm(containerType, planId, pageType, companyId) {
+    // Determine which form we're working with
+    let form;
+    let okrType;
+    
+    if (containerType === 'workshop-kr-container') {
+        form = document.querySelector('.okr-workshop-form');
+        okrType = 'workshop';
+    } else if (containerType === 'approval-kr-container') {
+        form = document.querySelector('.okr-approval-form');
+        okrType = 'approval';
+    } else if (containerType === 'edit-kr-container') {
+        form = document.getElementById('edit-okr-form');
+        okrType = (typeof currentEditType !== 'undefined') ? currentEditType : 'workshop';
+    }
+    
+    if (!form) {
+        alert('Formulário não encontrado. Por favor, recarregue a página.');
+        closeSaveOkrModal();
+        return;
+    }
+    
+    // Validate required fields
+    const objective = form.querySelector('[name="okr_objective"]')?.value?.trim();
+    const type = form.querySelector('[name="okr_type"]')?.value;
+    const directional = form.querySelector('[name="okr_directional"]')?.value;
+    
+    const missingFields = [];
+    if (!objective) missingFields.push('Objetivo do OKR');
+    if (!type) missingFields.push('Tipo');
+    if (!directional) missingFields.push('Direcionador Base');
+    
+    if (missingFields.length > 0) {
+        alert(`⚠️ Por favor, preencha os seguintes campos obrigatórios antes de continuar:\n\n• ${missingFields.join('\n• ')}`);
+        closeSaveOkrModal();
+        return;
+    }
+    
+    // Show loading state
+    const saveButton = document.querySelector('#save-okr-before-indicator-modal .button-primary');
+    if (saveButton) {
+        saveButton.disabled = true;
+        saveButton.innerHTML = '⏳ Salvando...';
+    }
+    
+    try {
+        // Create FormData from the form
+        const formData = new FormData(form);
+        
+        // Save intent to open indicator form after reload
+        sessionStorage.setItem('openIndicatorFormAfterSave', JSON.stringify({
+            planId: planId,
+            pageType: pageType,
+            companyId: companyId,
+            okrObjective: objective,
+            timestamp: Date.now()
+        }));
+        
+        // Submit the form via fetch to get the response
+        const response = await fetch(form.action, {
+            method: 'POST',
+            body: formData
+        });
+        
+        if (!response.ok) {
+            throw new Error('Erro ao salvar OKR');
+        }
+        
+        // Close the modal
+        closeSaveOkrModal();
+        
+        // Reload the page - the intent will be picked up on page load
+        window.location.reload();
+        
+    } catch (error) {
+        console.error('Error saving OKR:', error);
+        alert('❌ Erro ao salvar o OKR. Por favor, tente novamente.');
+        sessionStorage.removeItem('openIndicatorFormAfterSave');
+        closeSaveOkrModal();
+    }
+}
+
+// Check on page load if we should open indicator form
+document.addEventListener('DOMContentLoaded', function() {
+    const intent = sessionStorage.getItem('openIndicatorFormAfterSave');
+    
+    if (intent) {
+        try {
+            const data = JSON.parse(intent);
+            
+            // Check if intent is recent (within last 10 seconds)
+            if (Date.now() - data.timestamp < 10000) {
+                // Clear the intent
+                sessionStorage.removeItem('openIndicatorFormAfterSave');
+                
+                // Find the most recently created OKR with matching objective
+                // Since we just saved it, it should be the first one in the list
+                const okrItems = document.querySelectorAll('.okr-workshop-item, .okr-approval-item');
+                
+                let foundOkrId = null;
+                for (const item of okrItems) {
+                    const objectiveElement = item.querySelector('h5');
+                    if (objectiveElement && objectiveElement.textContent.includes(data.okrObjective)) {
+                        // Try to extract OKR ID from the edit button
+                        const editButton = item.querySelector('[onclick*="editOKR"]');
+                        if (editButton) {
+                            const onclickAttr = editButton.getAttribute('onclick');
+                            const match = onclickAttr.match(/editOKR\('(\w+)',\s*(\d+)\)/);
+                            if (match) {
+                                foundOkrId = match[2];
+                                break;
+                            }
+                        }
+                        break;
+                    }
+                }
+                
+                if (foundOkrId) {
+                    // Build URL with OKR ID
+                    const params = new URLSearchParams({
+                        plan_id: data.planId,
+                        page_type: data.pageType,
+                        okr_id: foundOkrId,
+                        okr_level: 'global'
+                    });
+                    
+                    const url = `/grv/company/${data.companyId}/indicators/form?${params.toString()}`;
+                    
+                    // Show success message and open form
+                    setTimeout(() => {
+                        alert('✅ OKR salvo com sucesso! Abrindo formulário de indicadores...');
+                        
+                        const width = 800;
+                        const height = 900;
+                        const left = (screen.width - width) / 2;
+                        const top = (screen.height - height) / 2;
+                        
+                        window.open(
+                            url,
+                            'indicatorForm',
+                            `width=${width},height=${height},left=${left},top=${top},resizable=yes,scrollbars=yes`
+                        );
+                    }, 500);
+                } else {
+                    // If we couldn't find the OKR ID, just show success message
+                    alert('✅ OKR salvo com sucesso! Para adicionar indicadores, edite o OKR e clique no botão verde "📊 Novo Indicador Completo".');
+                }
+            } else {
+                // Intent expired, remove it
+                sessionStorage.removeItem('openIndicatorFormAfterSave');
+            }
+        } catch (error) {
+            console.error('Error processing indicator form intent:', error);
+            sessionStorage.removeItem('openIndicatorFormAfterSave');
+        }
+    }
+});
+</script>
+{% endblock %}

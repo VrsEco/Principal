@@ -1,0 +1,254 @@
+# Regras do Cursor AI para o Projeto GestaoVersus
+
+## 🎯 Contexto do Projeto
+
+Este é um sistema de gestão empresarial modular construído com:
+- **Backend:** Python 3.9+ + Flask 2.3.3
+- **Database:** PostgreSQL (prod) / SQLite (dev) com SQLAlchemy 2.0.21
+- **Arquitetura:** Modular com Blueprints (PEV, GRV, Meetings)
+- **Frontend:** Jinja2 Templates + JavaScript Vanilla
+
+## 📚 Governança
+
+**IMPORTANTE:** Consultar sempre antes de propor mudanças:
+- `/docs/governance/TECH_STACK.md` - Stack aprovada
+- `/docs/governance/ARCHITECTURE.md` - Arquitetura do sistema
+- `/docs/governance/CODING_STANDARDS.md` - Padrões de código
+- `/docs/governance/DATABASE_STANDARDS.md` - Padrões de banco
+- `/docs/governance/API_STANDARDS.md` - Padrões de API
+- `/docs/governance/FORBIDDEN_PATTERNS.md` - Anti-patterns proibidos
+- `/docs/governance/DECISION_LOG.md` - Decisões arquiteturais
+
+## ✅ Regras Obrigatórias
+
+### 1. Stack Tecnológica
+- ✅ **USAR:** Python, Flask, SQLAlchemy, PostgreSQL, SQLite, bcrypt
+- ❌ **NUNCA SUGERIR:** Django, FastAPI, MongoDB, MySQL, jQuery, TypeScript, GraphQL
+- ⚠️ **Nova dependência?** Justificar e documentar em DECISION_LOG.md
+
+### 2. Código Python
+- ✅ Seguir PEP 8 (com max-line-length=120)
+- ✅ Usar Black para formatação automática
+- ✅ Type hints em funções públicas
+- ✅ Docstrings em funções/classes públicas (formato Google)
+- ✅ snake_case para variáveis/funções, PascalCase para classes
+- ❌ NUNCA usar `eval()`, `exec()`, bare `except:`
+- ❌ NUNCA fazer import circular
+
+### 3. Banco de Dados
+- ✅ Código DEVE funcionar em PostgreSQL E SQLite
+- ✅ Usar `db.Column(db.JSON)` (não JSONB)
+- ✅ Usar soft delete (`is_deleted=True`) ao invés de hard delete
+- ✅ Sempre adicionar: `created_at`, `updated_at`, `is_deleted`
+- ✅ Sempre paginar queries que retornam listas
+- ✅ Usar eager loading para evitar N+1 queries
+- ❌ NUNCA usar tipos específicos PostgreSQL (JSONB, ARRAY, UUID)
+- ❌ NUNCA concatenar strings em SQL (usar ORM ou parâmetros)
+
+### 4. APIs REST
+- ✅ URLs: `/api/resources` (plural, snake_case)
+- ✅ Métodos: GET (listar), POST (criar), PUT (atualizar), DELETE (remover)
+- ✅ Status codes: 200 (OK), 201 (Created), 400 (Bad Request), 401 (Unauthorized), 403 (Forbidden), 404 (Not Found)
+- ✅ Response format: `{"success": bool, "data": ..., "error": ...}`
+- ✅ Sempre usar `@login_required` em rotas protegidas
+- ✅ Sempre usar `@auto_log_crud(entity_type)` em rotas CRUD
+- ❌ NUNCA usar GET para modificar dados
+- ❌ NUNCA expor stack trace ao cliente
+
+### 5. Segurança
+- ❌ **PROIBIDO:** Credenciais hardcoded
+- ❌ **PROIBIDO:** SQL injection (usar ORM)
+- ❌ **PROIBIDO:** Senhas em plain text (usar bcrypt)
+- ❌ **PROIBIDO:** Logar dados sensíveis (senha, token, cartão)
+- ✅ Sempre validar input do usuário
+- ✅ Sempre usar `@login_required` em rotas protegidas
+- ✅ Sempre verificar permissões antes de operações críticas
+
+### 6. Arquitetura
+- ✅ Organização: `models/` → `services/` → `modules/` (blueprints) → `templates/`
+- ✅ Novos módulos: criar em `modules/[nome]/` com blueprint
+- ✅ Lógica de negócio: sempre em `services/`, NUNCA em rotas
+- ✅ Templates: apenas apresentação, NUNCA queries ou lógica
+- ❌ NUNCA lógica de negócio em templates
+- ❌ NUNCA acessar models diretamente de rotas (usar services)
+
+## 🔄 Fluxo de Trabalho
+
+### Quando Criar Nova Feature
+
+1. **Planejar:**
+   - Verificar se stack atual suporta
+   - Consultar FORBIDDEN_PATTERNS.md
+   - Usar template em `/docs/templates/feature_template.md`
+
+2. **Implementar:**
+   - Seguir CODING_STANDARDS.md
+   - Adicionar testes
+   - Adicionar `@auto_log_crud` em rotas CRUD
+
+3. **Validar:**
+   - Rodar `black .` para formatar
+   - Rodar `flake8` para linting
+   - Rodar `pytest` para testes
+   - Verificar se funciona em PostgreSQL e SQLite
+
+4. **Documentar:**
+   - Atualizar README se necessário
+   - Adicionar docstrings
+   - Se decisão arquitetural importante, documentar em DECISION_LOG.md
+
+### Quando Sugerir Código
+
+1. **Analisar contexto:**
+   - Ler arquivos relacionados
+   - Entender padrão existente
+   - Verificar governança
+
+2. **Propor solução:**
+   - Seguir padrões existentes
+   - Incluir validação e error handling
+   - Incluir docstrings
+   - Sugerir testes se relevante
+
+3. **Explicar:**
+   - Por que essa abordagem
+   - Quais alternativas foram consideradas
+   - Trade-offs da solução
+
+## 📋 Templates Disponíveis
+
+- `/docs/templates/feature_template.md` - Nova feature
+- `/docs/templates/bugfix_template.md` - Correção de bug
+- `/docs/templates/module_template.md` - Novo módulo
+
+## 🚫 Anti-Patterns (NUNCA FAZER)
+
+Consultar `/docs/governance/FORBIDDEN_PATTERNS.md` para lista completa.
+
+**Críticos:**
+- ❌ Credenciais hardcoded
+- ❌ SQL injection
+- ❌ Senhas sem hash
+- ❌ Logar dados sensíveis
+- ❌ GET modificando dados
+- ❌ Rotas sem autenticação
+- ❌ Queries sem paginação
+- ❌ Usar `eval()` ou `exec()`
+
+## 🎨 Exemplos de Código Correto
+
+### Rota CRUD Completa
+```python
+from flask import Blueprint, request, jsonify
+from flask_login import login_required, current_user
+from middleware.auto_log_decorator import auto_log_crud
+from models import db, Project
+
+api = Blueprint('projects', __name__, url_prefix='/api')
+
+@api.route('/companies/<int:company_id>/projects', methods=['POST'])
+@login_required
+@auto_log_crud('project')
+def create_project(company_id):
+    """Cria novo projeto."""
+    data = request.get_json()
+    
+    # Validação
+    if not data or 'name' not in data:
+        return jsonify({'success': False, 'error': 'Nome obrigatório'}), 400
+    
+    # Criar
+    project = Project(
+        name=data['name'],
+        description=data.get('description'),
+        company_id=company_id,
+        created_by=current_user.id
+    )
+    
+    db.session.add(project)
+    db.session.commit()
+    
+    return jsonify({'success': True, 'data': project.to_dict()}), 201
+```
+
+### Model com Auditoria
+```python
+from models import db
+from datetime import datetime
+
+class Project(db.Model):
+    """Modelo de Projeto."""
+    
+    __tablename__ = 'projects'
+    
+    # PK
+    id = db.Column(db.Integer, primary_key=True)
+    
+    # Campos
+    name = db.Column(db.String(200), nullable=False)
+    description = db.Column(db.Text)
+    
+    # FK
+    company_id = db.Column(db.Integer, db.ForeignKey('companies.id'), nullable=False)
+    
+    # Auditoria
+    created_at = db.Column(db.DateTime, default=datetime.utcnow, nullable=False)
+    updated_at = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+    is_deleted = db.Column(db.Boolean, default=False, nullable=False)
+    
+    # Relacionamentos
+    company = db.relationship('Company', backref='projects')
+    
+    def to_dict(self):
+        """Serializa para dict."""
+        return {
+            'id': self.id,
+            'name': self.name,
+            'description': self.description,
+            'company_id': self.company_id,
+            'created_at': self.created_at.isoformat() if self.created_at else None
+        }
+```
+
+## 💡 Dicas de Prompt
+
+Quando me perguntar algo, forneça:
+1. **Contexto:** O que você está tentando fazer
+2. **Problema:** Qual erro ou dúvida específica
+3. **Tentativas:** O que já tentou (se aplicável)
+4. **Arquivos:** Mencione arquivos relevantes para eu ler
+
+Exemplo bom:
+> "Preciso criar uma rota para atualizar indicadores. O modelo está em models/indicator.py e já existe uma rota de criação em modules/grv/__init__.py. Como fazer seguindo os padrões do projeto?"
+
+Exemplo ruim:
+> "Como atualizar indicador?"
+
+## 🔍 Como me Usar Melhor
+
+1. **Leia a governança primeiro:** Muitas dúvidas já estão respondidas em `/docs/governance/`
+2. **Seja específico:** Quanto mais contexto, melhor minha resposta
+3. **Peça validação:** "Isso segue os padrões do projeto?"
+4. **Peça explicação:** "Por que fazer assim ao invés de X?"
+5. **Peça alternativas:** "Quais outras formas de resolver isso?"
+
+## 📊 Prioridades
+
+1. **Segurança** - Sempre em primeiro lugar
+2. **Compatibilidade** - Código deve funcionar em PostgreSQL e SQLite
+3. **Padrões** - Seguir governança do projeto
+4. **Performance** - Evitar N+1, paginar, eager loading
+5. **Manutenibilidade** - Código legível e bem documentado
+
+## ✨ Filosofia do Projeto
+
+> "Preferimos código simples, explícito e bem documentado. Evitamos abstrações prematuras e dependências desnecessárias. Cada linha de código deve ter um propósito claro e estar coberta por testes."
+
+---
+
+**Versão:** 1.0  
+**Última atualização:** 18/10/2025  
+**Manter este arquivo atualizado com a governança!**
+
+
+

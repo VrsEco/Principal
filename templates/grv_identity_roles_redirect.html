@@ -1,0 +1,54 @@
+{% extends "base.html" %}
+{% block title %}GRV | Funções e Cargos{% endblock %}
+{% block body %}{% set active_nav = 'dashboard' %}{{ super() }}{% endblock %}
+{% block content %}
+<div class="project-layout plan-layout" data-sidebar-toggle>
+  {# Sidebar componentizado - atualizado centralmente #}
+  {% include 'identity_sidebar.html' %}
+
+  <div class="project-content plan-content" data-company-id="{{ company.id }}">
+    <div class="surface-card" style="padding: 48px; text-align: center; max-width: 800px; margin: 48px auto;">
+      <div style="font-size: 64px; margin-bottom: 24px;">👔</div>
+      
+      <h2 style="font-size: 24px; font-weight: 700; color: #0f172a; margin-bottom: 16px;">
+        Cadastro de Funções e Cargos
+      </h2>
+      
+      <p style="font-size: 16px; color: #64748b; margin-bottom: 32px; line-height: 1.6;">
+        A gestão de Funções e Cargos agora está centralizada no cadastro da empresa.<br>
+        Acesse o gerenciamento completo clicando no botão abaixo.
+      </p>
+
+      <div style="display: flex; gap: 12px; justify-content: center; flex-wrap: wrap;">
+        <a href="/companies/{{ company.id }}?tab=roles" 
+           class="button button-primary" 
+           style="padding: 16px 32px; font-size: 16px;">
+          <span>⚙️</span> Gerenciar Funções
+        </a>
+        <a href="/companies/{{ company.id }}?tab=employees" 
+           class="button button-ghost" 
+           style="padding: 16px 32px; font-size: 16px;">
+          <span>👥</span> Gerenciar Colaboradores
+        </a>
+        <a href="{{ url_for('grv.grv_company_dashboard', company_id=company.id) }}" 
+           class="button button-ghost">
+          <span>←</span> Voltar ao Dashboard
+        </a>
+      </div>
+
+      <div style="margin-top: 32px; padding: 20px; background: #eff6ff; border-radius: 12px; text-align: left;">
+        <div style="font-weight: 600; color: #1e40af; margin-bottom: 8px;">💡 Nova Estrutura</div>
+        <div style="font-size: 14px; color: #475569; line-height: 1.6;">
+          O cadastro da empresa agora possui abas organizadas para:
+          <ul style="margin: 12px 0 0 20px; padding: 0;">
+            <li><strong>Funções e Cargos:</strong> Defina as funções organizacionais</li>
+            <li><strong>Colaboradores:</strong> Cadastre os colaboradores e vincule às funções</li>
+          </ul>
+          Estes dados são compartilhados entre GRV, PEV e todos os outros módulos do sistema.
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}
+

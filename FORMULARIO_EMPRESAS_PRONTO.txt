@@ -1,0 +1,164 @@
+╔═══════════════════════════════════════════════════════════════════════════╗
+║           ✅ FORMULÁRIO DE EMPRESAS - PADRÃO PEV APLICADO                 ║
+╚═══════════════════════════════════════════════════════════════════════════╝
+
+🎨 O QUE FOI FEITO:
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+✅ Template companies.html REESCRITO com padrão PEV
+✅ Usa classes: interview-section, company-form-fields, form-two-cols
+✅ Campo "Código do Cliente" em DESTAQUE (box verde)
+✅ Validação: exatamente 2 letras
+✅ Conversão automática para UPPERCASE
+✅ Remove caracteres inválidos (apenas A-Z)
+✅ Campo obrigatório
+
+═══════════════════════════════════════════════════════════════════════════
+
+📋 ESTRUTURA DO FORMULÁRIO (Padrão PEV):
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+<details class="interview-section surface-card company-form">
+  <summary class="interview-summary-bar">
+    Nova Empresa
+  </summary>
+  
+  <div class="interview-content">
+    <form class="company-form-fields">
+    
+      ┌────────────────────────────────────────────────────┐
+      │ 🔖 Código do Cliente *                             │
+      │                                                    │
+      │        ┌──────────┐                               │
+      │        │    TC    │  ← 2 letras, UPPERCASE        │
+      │        └──────────┘                               │
+      │                                                    │
+      │ ℹ️ Usado para gerar códigos: AO.C.1.2.11          │
+      └────────────────────────────────────────────────────┘
+      
+      Nome fantasia: [________________] *
+      Razão social:  [________________]
+      
+      Setor:         [________________]
+      Porte:         [▼ Selecione    ]
+      
+      Descrição:     [____________________]
+                     [____________________]
+      
+      [Cancelar]  [💾 Salvar Empresa]
+      
+    </form>
+  </div>
+</details>
+
+═══════════════════════════════════════════════════════════════════════════
+
+📝 CAMPOS DO FORMULÁRIO:
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+1. 🔖 Código do Cliente *
+   - Tipo: text
+   - Max: 2 caracteres
+   - Validação: apenas A-Z
+   - Uppercase automático
+   - Obrigatório
+   - Box destacado verde
+
+2. Nome fantasia *
+   - Tipo: text
+   - Obrigatório
+   - Placeholder: "Nome comercial da empresa"
+
+3. Razão social
+   - Tipo: text
+   - Opcional
+
+4. Setor / Indústria
+   - Tipo: text
+   - Opcional
+   - Placeholder: "Ex: Alimentos, Tecnologia"
+
+5. Porte
+   - Tipo: select
+   - Opções: Micro, Pequena, Média, Grande
+   - Opcional
+
+6. Descrição
+   - Tipo: textarea (3 linhas)
+   - Opcional
+
+═══════════════════════════════════════════════════════════════════════════
+
+🔄 AGORA FAÇA ISSO:
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+1. No terminal, pressione: Ctrl+C
+
+2. Digite: S (quando perguntar se deseja finalizar)
+
+3. Execute: inicio
+
+4. Aguarde ver: * Running on http://127.0.0.1:5002
+
+5. Acesse: http://127.0.0.1:5002/companies
+
+6. Clique: ➕ Nova Empresa
+
+═══════════════════════════════════════════════════════════════════════════
+
+🧪 TESTE O FORMULÁRIO:
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+Preencha:
+
+  Código do Cliente: TC
+  Nome fantasia: Test Company
+  Razão social: Test Company Ltda
+  Setor: Tecnologia
+  Porte: Pequena
+  Descrição: Empresa de teste para validar sistema
+
+Clique: 💾 Salvar Empresa
+
+Resultado esperado:
+  ✅ Empresa criada com sucesso!
+
+═══════════════════════════════════════════════════════════════════════════
+
+✨ VISUAL DO CÓDIGO DO CLIENTE:
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+O campo tem:
+  • Box com fundo verde gradiente
+  • Borda verde destacada (2px)
+  • Ícone grande 🔖
+  • Label com * obrigatório
+  • Input centralizado, grande (24px)
+  • Letras espaçadas (letter-spacing)
+  • Dica explicativa com exemplo
+
+Impossível não notar ou esquecer de preencher!
+
+═══════════════════════════════════════════════════════════════════════════
+
+📊 APÓS CRIAR A EMPRESA:
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+Você verá:
+
+  ┌────────────────────────────────┐
+  │  TC   Test Company            │
+  │       ═════                   │ ← Badge com código
+  │  Test Company Ltda            │
+  │  • Tecnologia                 │
+  │  ─────────────────────        │
+  │  [🔗 GRV]                     │
+  └────────────────────────────────┘
+
+Clique no card ou em "GRV" para acessar!
+
+═══════════════════════════════════════════════════════════════════════════
+
+Status: ✅ FORMULÁRIO PRONTO
+Próxima ação: REINICIAR SERVIDOR
+URL: http://127.0.0.1:5002/companies

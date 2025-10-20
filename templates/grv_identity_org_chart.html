@@ -1,0 +1,411 @@
+{% extends "base.html" %}
+{% block title %}GRV | Organograma{% endblock %}
+{% block body %}{% set active_nav = 'dashboard' %}{{ super() }}{% endblock %}
+{% block content %}
+<div id="orgPage" class="project-layout plan-layout" data-sidebar-toggle>
+  {# Sidebar componentizado - atualizado centralmente #}
+  {% include 'identity_sidebar.html' %}
+  <section class="project-content plan-content">
+    <details class="interview-section surface-card company-form" open>
+      <summary class="interview-summary-bar">
+        <div class="interview-summary-text">
+          <span class="section-eyebrow">Identidade Organizacional</span>
+          <h3>Organograma</h3>
+          <p>Hierarquia visual dos cargos da empresa.</p>
+        </div>
+      </summary>
+      <div class="interview-content">
+        <div class="print-toolbar">
+          <button type="button" class="print-button" onclick="window.print()">Imprimir</button>
+        </div>
+        <div class="print-footer" aria-hidden="true">
+          <div class="pf-left">Versus Gestão Corporativa - Todos os direitos Reservados</div>
+          <div class="pf-right">{{ company.name }}</div>
+        </div>
+        <div id="orgContainer" style="padding:0;overflow:auto;background:#fff;min-height:500px;"></div>
+      </div>
+    </details>
+  </section>
+</div>
+
+<style>
+@page {
+  size: A4;
+  margin: 10mm; /* Margens solicitadas: 10mm em todos os lados */
+}
+
+@media print {
+  @page { size: A4; margin: 10mm; }
+  body { margin: 0; }
+  #orgContainer { padding: 10mm !important; }
+}
+
+/* Remover grandes espaçamentos laterais apenas nesta página */
+#orgPage .project-content.plan-content { padding-left: 0; padding-right: 0; }
+#orgPage .interview-section.surface-card { padding-left: 0; padding-right: 0; margin-left: 0; margin-right: 0; }
+#orgPage .interview-content { padding-left: 0; padding-right: 0; }
+
+:root { --bali-blue: #2ea8e6; }
+
+.print-toolbar { display:flex; justify-content:flex-end; gap:8px; margin: 8px 0; }
+.print-button { background:#0f172a; color:#fff; border:none; border-radius:6px; padding:8px 14px; cursor:pointer; font-weight:600; }
+.print-button:hover { filter: brightness(1.05); }
+.hide-on-print { }
+
+/* ID.9 - Configuração de impressão para a página do organograma */
+@media print {
+  .print-toolbar { display:none !important; }
+  .hide-on-print { display:none !important; visibility:hidden !important; }
+  .print-footer { display:flex !important; }
+  @page {
+    size: A4 landscape;
+    margin: 10mm;
+    /* Alguns navegadores ignoram margin boxes; footer fixo abaixo cobre o caso */
+  }
+  /* Reservar espaço para o rodapé impresso */
+  #orgContainer { padding-bottom: 18mm !important; }
+}
+
+/* Footer fixo para impressão (fallback cross-browser) */
+.print-footer { display:none; position: fixed; bottom: 0; left: 0; right: 0; padding: 6mm 10mm; font-size: 9pt; color: #0f172a; }
+.print-footer { box-sizing: border-box; display: none; }
+.print-footer { justify-content: space-between; align-items: center; }
+.print-footer .pf-left { color: #64748b; }
+.print-footer .pf-right { color: #0f172a; font-weight: 600; }
+
+.org-tree { 
+  display: flex; 
+  justify-content: flex-start;
+  padding: 0;
+  text-align: center;
+}
+.org-tree > ul { display: inline-block; }
+.org-tree ul {
+  padding-top: 12px;
+  position: relative;
+  transition: all 0.3s;
+  list-style: none;
+  margin: 0;
+}
+.org-tree li {
+  float: left;
+  text-align: center;
+  list-style-type: none;
+  position: relative;
+  padding: 8px 2px 0 2px;
+  transition: all 0.3s;
+}
+.org-tree li::before, 
+.org-tree li::after {
+  content: '';
+  position: absolute;
+  top: 0;
+  right: 50%;
+  border-top: 2px solid #94A3B8; /* horizontal conecta no topo do filho */
+  width: 50%;
+  height: 14px;
+}
+.org-tree li::after {
+  right: auto;
+  left: 50%;
+  border-left: 2px solid #94A3B8;
+  margin-left: -1px; /* centraliza a linha vertical com largura 2px */
+  /* alinhar exatamente com o ponto do topo do nó filho */
+}
+.org-tree li:only-child::after,
+.org-tree li:only-child::before {
+  display: none;
+}
+.org-tree li:only-child {
+  padding-top: 0;
+}
+.org-tree li:first-child::before,
+.org-tree li:last-child::after {
+  border: 0 none;
+}
+.org-tree li:last-child::before {
+  border-right: 2px solid #94A3B8;
+  border-radius: 0 5px 0 0;
+}
+.org-tree li:first-child::after {
+  border-radius: 5px 0 0 0;
+}
+.org-tree ul ul::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 50%;
+  border-left: 2px solid #94A3B8;
+  margin-left: -1px; /* centraliza a linha vertical com largura 2px */
+  width: 0;
+  height: 14px;
+}
+.org-tree li .org-node {
+  border: 2px solid #94A3B8;
+  padding: 6px 8px;
+  text-decoration: none;
+  color: #111827;
+  font-family: arial, verdana, tahoma;
+  font-size: 11px;
+  display: inline-block;
+  border-radius: 8px;
+  transition: transform 0.25s ease, box-shadow 0.25s ease;
+  width: 38mm;          /* Largura compacta */
+  min-height: 16mm;     /* Altura ainda menor */
+  box-sizing: border-box;
+  box-shadow: 0 3px 10px rgba(0,0,0,.15);
+  word-break: break-word;
+  position: relative; /* para posicionar pontos de conexão */
+}
+.org-node-title { 
+  font-weight: 600; 
+  font-size: 12px; 
+  margin-bottom: 4px;
+  color: #111827;
+  display: -webkit-box;
+  -webkit-line-clamp: 3; /* limitar a 3 linhas */
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+  line-height: 1.25;
+}
+.org-node-count { 
+  font-size: 8px; 
+  color: rgba(17,24,39,.6);
+}
+.org-tree li .org-node:hover {
+  /* evitar deslocamento visual dos conectores ao passar o mouse */
+  box-shadow: 0 5px 15px rgba(0,0,0,.25);
+}
+
+/* Escalas por nível hierárquico: quanto mais alto (nível menor), ligeiramente maior */
+/* Remover escalas por transform (causavam desalinhamento dos conectores). 
+   Usar larguras levemente diferentes para diferenciar hierarquia. */
+.org-tree .level-0 > .org-node { width: 46mm; min-height: 18mm; }
+.org-tree .level-1 > .org-node { width: 42mm; }
+.org-tree .level-2 > .org-node { width: 40mm; }
+.org-tree .level-3 > .org-node { width: 38mm; }
+.org-tree .level-4 > .org-node { width: 36mm; }
+.org-tree .level-5 > .org-node { width: 34mm; }
+
+/* Evitar que o hover sobreponha demais as escalas de nível no desktop */
+@media (hover: hover) {
+  /* sem transform no hover para não deslocar conectores */
+}
+
+/* Pontos de conexão visuais no centro das bordas */
+.org-node .conn { 
+  position: absolute; 
+  width: 4px; 
+  height: 4px; 
+  border-radius: 50%; 
+  background: rgba(100,116,139,0.7); /* #64748b com leve transparência */
+  box-shadow: 0 0 0 1px #ffffff; /* aro sutil para contraste */
+  z-index: 3; /* acima das linhas */
+}
+.org-node .conn-top { top: 0; left: 50%; transform: translate(-50%, -50%); }
+.org-node .conn-bottom { bottom: 0; left: 50%; transform: translate(-50%, 50%); }
+.org-node .conn-left { left: 0; top: 50%; transform: translate(-50%, -50%); }
+.org-node .conn-right { right: 0; top: 50%; transform: translate(50%, -50%); }
+
+/* Wrapper para escala automática para caber na largura disponível */
+.org-scale { transform-origin: top left; display: inline-block; }
+</style>
+
+<!-- d3, d3-flextree (UMD build), e d3-org-chart (UMD build) -->
+<script src="https://cdnjs.cloudflare.com/ajax/libs/d3/7.9.0/d3.min.js" crossorigin="anonymous" referrerpolicy="no-referrer"></script>
+<script src="https://cdn.jsdelivr.net/npm/d3-flextree@2.1.4/build/d3-flextree.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/d3-org-chart@3.2.0/build/d3-org-chart.js"></script>
+
+<script>
+(function(){
+  const container = document.getElementById('orgContainer');
+
+  function tagMenuForPrint(){
+    try {
+      // Tenta encontrar o botão/flutuante "Mostrar menu" e marcá-lo
+      const candidates = Array.from(document.querySelectorAll('button, a, div, span'));
+      candidates.forEach(el => {
+        const txt = (el.textContent || '').trim().toLowerCase();
+        if(txt.includes('mostrar menu') || txt.includes('ocultar menu')){
+          el.classList.add('hide-on-print');
+          // também esconder o contêiner mais próximo se for um wrapper de botão flutuante
+          if(el.parentElement && getComputedStyle(el.parentElement).position === 'fixed'){
+            el.parentElement.classList.add('hide-on-print');
+          }
+        }
+      });
+      // Oculta botões comuns de toggles (somente classes/ids conhecidos, não data-attrs amplos)
+      const extraSelectors = [
+        '.menu-toggle', '.toggle-menu', '.show-menu', '.hide-menu',
+        '.sidebar-toggle', '.sidebar-handle', '#showMenu', '#toggleMenu'
+      ];
+      extraSelectors.forEach(sel => {
+        document.querySelectorAll(sel).forEach(el => el.classList.add('hide-on-print'));
+      });
+    } catch(e) { /* silencioso */ }
+  }
+
+  window.addEventListener('beforeprint', () => {
+    document.documentElement.classList.add('print-mode');
+    tagMenuForPrint();
+  });
+  window.addEventListener('afterprint', () => {
+    document.documentElement.classList.remove('print-mode');
+  });
+
+  function loadScript(src){
+    return new Promise((resolve, reject) => {
+      const s = document.createElement('script');
+      s.src = src;
+      s.onload = () => resolve();
+      s.onerror = () => reject(new Error('Falha ao carregar script: ' + src));
+      document.head.appendChild(s);
+    });
+  }
+
+  function flattenTree(nodes){
+    const out = [];
+    let autoId = 1;
+    function walk(n, parentId){
+      const id = n.id != null ? n.id : (autoId++);
+      out.push({ id, parentId: parentId ?? null, title: n.title || n.name || '', color: n.color });
+      (n.children || []).forEach(c => walk(c, id));
+    }
+    (nodes || []).forEach(n => walk(n, null));
+    return out;
+  }
+
+  async function load(){
+    try{
+      const res = await fetch(`/api/companies/{{ company.id }}/roles/tree`);
+      const json = await res.json();
+      if(!(json && json.success)){
+        container.innerHTML = '<p class="text-muted">Falha ao carregar dados.</p>';
+        return;
+      }
+      const roots = json.data || [];
+      if(!roots.length){
+        container.innerHTML = '<p class="text-muted">Nenhum cargo cadastrado. Adicione cargos em "Cadastro de Funções".</p>';
+        return;
+      }
+
+      const data = flattenTree(roots).map(r => ({ id: r.id, parentId: r.parentId, title: r.title, color: r.color }));
+      container.innerHTML = '';
+
+      let OrgChartCtor = (window.d3OrgChart && window.d3OrgChart.OrgChart) || (window.d3 && (window.d3.OrgChart || window.d3.orgChart)) || window.OrgChart;
+      if(!OrgChartCtor){
+        try {
+          await loadScript('https://cdn.jsdelivr.net/npm/d3-flextree@2.1.4/build/d3-flextree.js');
+          await loadScript('https://cdn.jsdelivr.net/npm/d3-org-chart@3.2.0/build/d3-org-chart.js');
+          OrgChartCtor = (window.d3OrgChart && window.d3OrgChart.OrgChart) || (window.d3 && (window.d3.OrgChart || window.d3.orgChart)) || window.OrgChart;
+        } catch(e) {
+          console.warn('CDN indisponível, usando fallback d3.tree');
+        }
+      }
+
+      if(OrgChartCtor){
+        const chart = new OrgChartCtor()
+          .container(container)
+          .data(data)
+          .nodeWidth(() => 180)
+          .nodeHeight(() => 72)
+          .childrenMargin(() => 40)
+          .compact(false)
+          .nodeContent((d, i, arr, state) => {
+            const bg = d.data.color || 'var(--bali-blue)';
+            const t = (d.data.title || '').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+            return `<div style="width:${state.nodeWidth}px;height:${state.nodeHeight}px;border-radius:8px;border:2px solid #94A3B8;background:${bg};display:flex;align-items:center;justify-content:center;padding:6px;box-sizing:border-box;box-shadow:0 3px 10px rgba(0,0,0,.15);">\n              <div style="font-weight:600;font-size:18px;line-height:1.3;text-align:center;display:-webkit-box;-webkit-line-clamp:3;-webkit-box-orient:vertical;overflow:hidden;color:#0f172a;">${t}</div>\n            </div>`;
+          })
+          .render();
+        const svg = container.querySelector('svg');
+        if(svg){ svg.style.width = '100%'; svg.style.height = 'auto'; }
+      } else {
+        renderWithD3Tree(roots);
+      }
+    }catch(err){
+      console.error('Erro org-chart:', err);
+      container.innerHTML = `<pre class="text-muted" style="white-space:pre-wrap">Erro ao renderizar organograma: ${err && err.message ? err.message : err}</pre>`;
+    }
+  }
+
+  function renderWithD3Tree(roots){
+    try {
+      const nodeWidth = 180, nodeHeight = 72, hGap = 40, vGap = 60;
+      const rootObj = roots.length === 1 ? roots[0] : { title: ' ', children: roots };
+      const root = d3.hierarchy(rootObj, d => d.children || []);
+      const tree = d3.tree().nodeSize([nodeWidth + hGap, nodeHeight + vGap]).separation((a,b) => a.parent === b.parent ? 1 : 1.2);
+      tree(root);
+
+      container.innerHTML = '';
+      const svg = d3.select(container).append('svg').attr('width','100%').attr('height','auto');
+      let x0 = Infinity, x1 = -Infinity, y0 = Infinity, y1 = -Infinity;
+      root.each(d => { x0 = Math.min(x0, d.x); x1 = Math.max(x1, d.x); y0 = Math.min(y0, d.y); y1 = Math.max(y1, d.y); });
+      const width = (x1 - x0) + nodeWidth + hGap*2;
+      const height = (y1 - y0) + nodeHeight + vGap*2;
+      svg.attr('viewBox', `${x0 - (nodeWidth/2 + hGap)} ${y0 - vGap} ${width} ${height}`);
+
+      const g = svg.append('g');
+
+      g.selectAll('path.link')
+        .data(root.links())
+        .enter()
+        .append('path')
+        .attr('class','link')
+        .attr('fill','none')
+        .attr('stroke','#94A3B8')
+        .attr('stroke-width',2)
+        .attr('stroke-linecap','square')
+        .attr('stroke-linejoin','miter')
+        .attr('d', d => {
+          const sx = d.source.x, sy = d.source.y + nodeHeight/2; // bottom center parent
+          const tx = d.target.x, ty = d.target.y - nodeHeight/2; // top center child
+          const my = (sy + ty) / 2; // mid Y for orthogonal step
+          // Step path: down from parent to mid, horizontal to child's X, then down to child
+          return `M${sx},${sy} V${my} H${tx} V${ty}`;
+        });
+
+      const node = g.selectAll('g.node')
+        .data(root.descendants())
+        .enter()
+        .append('g')
+        .attr('class','node')
+        .attr('transform', d => `translate(${d.x - nodeWidth/2}, ${d.y - nodeHeight/2})`);
+
+      node.append('rect')
+        .attr('width', nodeWidth)
+        .attr('height', nodeHeight)
+        .attr('rx', 8)
+        .attr('ry', 8)
+        .attr('fill', d => d.data.color || 'var(--bali-blue)')
+        .attr('stroke', '#94A3B8')
+        .attr('stroke-width', 2);
+
+      node.append('foreignObject')
+        .attr('x', 6)
+        .attr('y', 6)
+        .attr('width', nodeWidth - 12)
+        .attr('height', nodeHeight - 12)
+        .append('xhtml:div')
+        .style('display','flex')
+        .style('align-items','center')
+        .style('justify-content','center')
+        .style('height','100%')
+        .style('text-align','center')
+        .style('font-weight','600')
+        .style('font-size','18px')
+        .style('line-height','1.3')
+        .style('color','#0f172a')
+        .style('overflow','hidden')
+        .style('-webkit-line-clamp','3')
+        .style('-webkit-box-orient','vertical')
+        .html(d => (d.data.title || '').replace(/</g,'&lt;').replace(/>/g,'&gt;'));
+    } catch (e) {
+      console.error('Fallback d3.tree error:', e);
+      container.innerHTML = `<pre class="text-muted" style="white-space:pre-wrap">Erro ao renderizar (fallback): ${e && e.message ? e.message : e}</pre>`;
+    }
+  }
+
+  load();
+})();
+</script>
+{% endblock %}

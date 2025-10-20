@@ -1,0 +1,649 @@
+{% extends "base.html" %}
+{% block title %}GRV | Gestão de Ocorrências{% endblock %}
+{% block body %}{% set active_nav = 'routine-incidents' %}{{ super() }}{% endblock %}
+
+{% block extra_head %}
+{{ super() }}
+<style>
+  .occurrences-shell {
+    display: grid;
+    grid-template-columns: 250px minmax(0, 1fr);
+    gap: 18px;
+    align-items: start;
+  }
+
+  .occurrences-main {
+    background: #ffffff;
+    border-radius: 14px;
+    border: 1px solid rgba(15, 23, 42, 0.08);
+    padding: 22px 24px;
+    box-shadow: 0 12px 32px rgba(15, 23, 42, 0.08);
+    display: grid;
+    gap: 20px;
+  }
+
+  .occurrences-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: 16px;
+    flex-wrap: wrap;
+  }
+
+  .occurrences-header h1 {
+    margin: 0;
+    font-size: 22px;
+    font-weight: 700;
+    color: #0f172a;
+  }
+
+  .occurrences-description {
+    color: #64748b;
+    font-size: 13px;
+    margin-top: 6px;
+    max-width: 520px;
+    line-height: 1.5;
+  }
+
+  .btn-primary {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    padding: 10px 18px;
+    border-radius: 10px;
+    border: none;
+    cursor: pointer;
+    font-weight: 600;
+    font-size: 13px;
+    background: linear-gradient(135deg, #3b82f6, #2563eb);
+    color: #fff;
+    box-shadow: 0 16px 28px rgba(37, 99, 235, 0.25);
+  }
+
+  .filters-section {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
+    gap: 12px;
+    padding: 18px;
+    background: rgba(59, 130, 246, 0.04);
+    border-radius: 12px;
+  }
+
+  .filter-item {
+    display: grid;
+    gap: 6px;
+  }
+
+  .filter-item label {
+    font-size: 11px;
+    text-transform: uppercase;
+    font-weight: 600;
+    color: #475569;
+  }
+
+  .filter-item select,
+  .filter-item input {
+    padding: 8px 12px;
+    border-radius: 8px;
+    border: 1px solid rgba(148, 163, 184, 0.35);
+    font-size: 13px;
+  }
+
+  .table-wrapper {
+    border-radius: 14px;
+    border: 1px solid rgba(15, 23, 42, 0.08);
+    overflow: hidden;
+    background: #f8fafc;
+  }
+
+  table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 13px;
+  }
+
+  thead {
+    background: rgba(15, 23, 42, 0.05);
+    text-transform: uppercase;
+    font-size: 11px;
+    color: #475569;
+  }
+
+  th, td {
+    padding: 12px 16px;
+    text-align: left;
+  }
+
+  tbody tr {
+    background: #ffffff;
+    border-bottom: 1px solid rgba(15, 23, 42, 0.05);
+  }
+
+  tbody tr:hover {
+    background: rgba(59, 130, 246, 0.06);
+  }
+
+  .empty-state {
+    padding: 40px;
+    text-align: center;
+    color: #94a3b8;
+  }
+
+  /* Modal */
+  .modal-backdrop {
+    position: fixed;
+    inset: 0;
+    background: rgba(15, 23, 42, 0.6);
+    display: none;
+    align-items: center;
+    justify-content: center;
+    z-index: 999;
+    padding: 20px;
+  }
+
+  .modal-backdrop.open {
+    display: flex;
+  }
+
+  .modal-content {
+    background: #ffffff;
+    border-radius: 16px;
+    width: min(600px, 100%);
+    max-height: 90vh;
+    overflow-y: auto;
+    padding: 26px;
+    box-shadow: 0 24px 48px rgba(15, 23, 42, 0.25);
+  }
+
+  .modal-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 20px;
+  }
+
+  .modal-header h2 {
+    margin: 0;
+    font-size: 18px;
+    font-weight: 700;
+    color: #0f172a;
+  }
+
+  .modal-close {
+    border: none;
+    background: transparent;
+    font-size: 24px;
+    cursor: pointer;
+    color: #94a3b8;
+    padding: 0;
+  }
+
+  .form-field {
+    margin-bottom: 16px;
+  }
+
+  .form-field label {
+    display: block;
+    font-size: 12px;
+    text-transform: uppercase;
+    font-weight: 600;
+    color: #475569;
+    margin-bottom: 6px;
+  }
+
+  .form-field .required {
+    color: #ef4444;
+  }
+
+  .form-field input,
+  .form-field select,
+  .form-field textarea {
+    width: 100%;
+    padding: 10px 12px;
+    border-radius: 10px;
+    border: 1px solid rgba(148, 163, 184, 0.35);
+    font-size: 13px;
+    font-family: inherit;
+  }
+
+  .form-field textarea {
+    resize: vertical;
+    min-height: 80px;
+  }
+
+  .form-row {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 16px;
+  }
+
+  .modal-footer {
+    display: flex;
+    justify-content: flex-end;
+    gap: 10px;
+    margin-top: 20px;
+  }
+
+  .btn-secondary {
+    padding: 10px 18px;
+    border-radius: 10px;
+    border: none;
+    background: rgba(148, 163, 184, 0.18);
+    color: #475569;
+    font-weight: 600;
+    cursor: pointer;
+    font-size: 13px;
+  }
+
+  .pill {
+    display: inline-flex;
+    padding: 4px 10px;
+    border-radius: 20px;
+    font-size: 11px;
+    font-weight: 600;
+  }
+
+  .pill.positive {
+    background: rgba(16, 185, 129, 0.14);
+    color: #059669;
+  }
+
+  .pill.negative {
+    background: rgba(239, 68, 68, 0.14);
+    color: #dc2626;
+  }
+
+  .link-btn {
+    border: none;
+    background: transparent;
+    color: #2563eb;
+    font-weight: 600;
+    cursor: pointer;
+    font-size: 12px;
+    padding: 0;
+  }
+
+  .link-btn.danger {
+    color: #dc2626;
+  }
+</style>
+{% endblock %}
+
+{% block content %}
+<!-- v3.0 - Modal funcional - Timestamp: 2025-10-11-17:30 -->
+<div class="project-layout plan-layout occurrences-shell" data-sidebar-toggle>
+  {% include 'routines_sidebar.html' %}
+
+  <section class="project-content plan-content occurrences-main">
+    <header class="occurrences-header">
+      <div>
+        <h1>✅ Gestão de Ocorrências - FUNCIONANDO!</h1>
+        <p class="occurrences-description">
+          Registre situações positivas ou negativas relacionadas a colaboradores, processos e projetos.
+        </p>
+      </div>
+      <button class="btn-primary" onclick="openModal()">
+        ➕ Nova Ocorrência
+      </button>
+    </header>
+
+    <section class="filters-section">
+      <div class="filter-item">
+        <label>Tipo</label>
+        <select id="filterType" onchange="applyFilters()">
+          <option value="">Todos</option>
+          <option value="positive">Positivo</option>
+          <option value="negative">Negativo</option>
+        </select>
+      </div>
+      <div class="filter-item">
+        <label>Colaborador</label>
+        <select id="filterEmployee" onchange="applyFilters()">
+          <option value="">Todos</option>
+          {% for emp in employees %}
+          <option value="{{ emp.id }}">{{ emp.name }}</option>
+          {% endfor %}
+        </select>
+      </div>
+      <div class="filter-item">
+        <label>Processo</label>
+        <select id="filterProcess" onchange="applyFilters()">
+          <option value="">Todos</option>
+          {% for proc in processes %}
+          <option value="{{ proc.id }}">{{ proc.code or proc.id }} - {{ proc.name }}</option>
+          {% endfor %}
+        </select>
+      </div>
+      <div class="filter-item">
+        <label>Projeto</label>
+        <select id="filterProject" onchange="applyFilters()">
+          <option value="">Todos</option>
+          {% for proj in projects %}
+          <option value="{{ proj.id }}">{{ proj.code or proj.id }} - {{ proj.name }}</option>
+          {% endfor %}
+        </select>
+      </div>
+      <div class="filter-item">
+        <label>Buscar</label>
+        <input id="searchInput" type="text" placeholder="Digite..." oninput="applyFilters()">
+      </div>
+    </section>
+
+    <div class="table-wrapper">
+      <table>
+        <thead>
+          <tr>
+            <th>Ocorrência</th>
+            <th>Tipo</th>
+            <th>Colaborador</th>
+            <th>Vínculo</th>
+            <th>Pontuação</th>
+            <th>Ações</th>
+          </tr>
+        </thead>
+        <tbody id="tableBody">
+          <tr>
+            <td colspan="6" class="empty-state">
+              Carregando ocorrências...
+            </td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+  </section>
+</div>
+
+<!-- Modal -->
+<div id="modal" class="modal-backdrop">
+  <div class="modal-content">
+    <div class="modal-header">
+      <h2 id="modalTitle">Nova Ocorrência</h2>
+      <button class="modal-close" onclick="closeModal()">×</button>
+    </div>
+    <form id="occurrenceForm">
+      <input type="hidden" id="occurrenceId">
+      
+      <div class="form-field">
+        <label>Colaborador <span class="required">*</span></label>
+        <select id="employeeId" required>
+          <option value="">Selecione um colaborador</option>
+          {% for emp in employees %}
+          <option value="{{ emp.id }}">{{ emp.name }}</option>
+          {% endfor %}
+        </select>
+      </div>
+
+      <div class="form-row">
+        <div class="form-field">
+          <label>Processo</label>
+          <select id="processId">
+            <option value="">Nenhum</option>
+            {% for proc in processes %}
+            <option value="{{ proc.id }}">{{ proc.code or proc.id }} - {{ proc.name }}</option>
+            {% endfor %}
+          </select>
+        </div>
+        <div class="form-field">
+          <label>Projeto</label>
+          <select id="projectId">
+            <option value="">Nenhum</option>
+            {% for proj in projects %}
+            <option value="{{ proj.id }}">{{ proj.code or proj.id }} - {{ proj.name }}</option>
+            {% endfor %}
+          </select>
+        </div>
+      </div>
+
+      <div class="form-field">
+        <label>Título <span class="required">*</span></label>
+        <input type="text" id="title" placeholder="Ex: Excelente atendimento ao cliente" required>
+      </div>
+
+      <div class="form-field">
+        <label>Descrição</label>
+        <textarea id="description" placeholder="Descreva a ocorrência em detalhes..."></textarea>
+      </div>
+
+      <div class="form-row">
+        <div class="form-field">
+          <label>Tipo <span class="required">*</span></label>
+          <select id="type" required>
+            <option value="">Selecione...</option>
+            <option value="positive">✅ Positivo</option>
+            <option value="negative">⚠️ Negativo</option>
+          </select>
+        </div>
+        <div class="form-field">
+          <label>Pontuação</label>
+          <input type="number" id="score" value="0" min="-100" max="100" placeholder="Ex: 10">
+        </div>
+      </div>
+
+      <div class="modal-footer">
+        <button type="button" class="btn-secondary" onclick="closeModal()">Cancelar</button>
+        <button type="submit" class="btn-primary">Salvar Ocorrência</button>
+      </div>
+    </form>
+  </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+{{ super() }}
+<script>
+console.log('🚀 Script de ocorrências carregado!');
+
+const companyId = {{ company.id }};
+let allOccurrences = [];
+let filteredOccurrences = [];
+
+// Modal functions (definidas no escopo global)
+window.openModal = function(occurrence) {
+  console.log('✅ openModal chamado!', occurrence);
+  const modal = document.getElementById('modal');
+  const form = document.getElementById('occurrenceForm');
+  
+  if (!modal) {
+    console.error('❌ Modal não encontrado!');
+    alert('Erro: Modal não encontrado. Recarregue a página.');
+    return;
+  }
+  
+  if (occurrence) {
+    document.getElementById('modalTitle').textContent = 'Editar Ocorrência';
+    document.getElementById('occurrenceId').value = occurrence.id;
+    document.getElementById('employeeId').value = occurrence.employee_id || '';
+    document.getElementById('processId').value = occurrence.process_id || '';
+    document.getElementById('projectId').value = occurrence.project_id || '';
+    document.getElementById('title').value = occurrence.title;
+    document.getElementById('description').value = occurrence.description || '';
+    document.getElementById('type').value = occurrence.type;
+    document.getElementById('score').value = occurrence.score || 0;
+  } else {
+    document.getElementById('modalTitle').textContent = 'Nova Ocorrência';
+    form.reset();
+    document.getElementById('occurrenceId').value = '';
+  }
+  
+  modal.classList.add('open');
+  console.log('✅ Modal aberto!');
+};
+
+window.closeModal = function() {
+  console.log('✅ closeModal chamado!');
+  document.getElementById('modal').classList.remove('open');
+  document.getElementById('occurrenceForm').reset();
+};
+
+// Load occurrences
+async function loadOccurrences() {
+  try {
+    const response = await fetch(`/api/companies/${companyId}/occurrences`);
+    allOccurrences = await response.json();
+    filteredOccurrences = [...allOccurrences];
+    renderTable();
+  } catch (error) {
+    console.error('Erro:', error);
+    document.getElementById('tableBody').innerHTML = '<tr><td colspan="6" class="empty-state">Erro ao carregar ocorrências</td></tr>';
+  }
+}
+
+
+// Render table
+function renderTable() {
+  const tbody = document.getElementById('tableBody');
+  
+  if (!filteredOccurrences.length) {
+    tbody.innerHTML = '<tr><td colspan="6" class="empty-state">Nenhuma ocorrência encontrada</td></tr>';
+    return;
+  }
+
+  tbody.innerHTML = filteredOccurrences.map(occ => {
+    const typeLabel = occ.type === 'positive' ? '✅ Positivo' : '⚠️ Negativo';
+    const link = occ.process_name ? `🔄 ${occ.process_name}` : occ.project_name ? `📊 ${occ.project_name}` : '—';
+    const score = occ.score != null ? (occ.score > 0 ? `+${occ.score}` : occ.score) : '0';
+    
+    return `
+      <tr>
+        <td>
+          <div style="display:grid; gap:4px;">
+            <strong style="color:#0f172a;">${escapeHtml(occ.title)}</strong>
+            ${occ.description ? `<span style="color:#64748b; font-size:12px;">${escapeHtml(occ.description.substring(0, 60))}${occ.description.length > 60 ? '...' : ''}</span>` : ''}
+          </div>
+        </td>
+        <td><span class="pill ${occ.type}">${typeLabel}</span></td>
+        <td>${escapeHtml(occ.employee_name || '—')}</td>
+        <td>${link}</td>
+        <td><strong style="color: ${occ.score >= 0 ? '#059669' : '#dc2626'}">${score}</strong></td>
+        <td>
+          <button class="link-btn" onclick="editOccurrence(${occ.id})">Editar</button>
+          <button class="link-btn danger" onclick="deleteOccurrence(${occ.id})">Excluir</button>
+        </td>
+      </tr>
+    `;
+  }).join('');
+}
+
+window.editOccurrence = function(id) {
+  console.log('✅ editOccurrence chamado!', id);
+  const occ = allOccurrences.find(o => o.id === id);
+  if (occ) window.openModal(occ);
+};
+
+window.deleteOccurrence = async function(id) {
+  console.log('✅ deleteOccurrence chamado!', id);
+  if (!confirm('Deseja realmente excluir esta ocorrência?')) return;
+
+  try {
+    const response = await fetch(`/api/companies/${companyId}/occurrences/${id}`, { method: 'DELETE' });
+    const result = await response.json();
+    
+    if (result.success) {
+      showMessage('Ocorrência excluída com sucesso!', 'success');
+      loadOccurrences();
+    } else {
+      showMessage('Erro: ' + result.message, 'error');
+    }
+  } catch (error) {
+    console.error('❌ Erro:', error);
+    showMessage('Erro ao excluir ocorrência', 'error');
+  }
+};
+
+window.handleSubmit = async function(event) {
+  console.log('✅ handleSubmit chamado!');
+  event.preventDefault();
+
+  const id = document.getElementById('occurrenceId').value;
+  const payload = {
+    employee_id: parseInt(document.getElementById('employeeId').value),
+    process_id: document.getElementById('processId').value ? parseInt(document.getElementById('processId').value) : null,
+    project_id: document.getElementById('projectId').value ? parseInt(document.getElementById('projectId').value) : null,
+    title: document.getElementById('title').value,
+    description: document.getElementById('description').value,
+    type: document.getElementById('type').value,
+    score: parseInt(document.getElementById('score').value) || 0
+  };
+
+  console.log('📤 Enviando:', payload);
+
+  try {
+    const url = id ? `/api/companies/${companyId}/occurrences/${id}` : `/api/companies/${companyId}/occurrences`;
+    const method = id ? 'PUT' : 'POST';
+
+    const response = await fetch(url, {
+      method: method,
+      headers: {'Content-Type': 'application/json'},
+      body: JSON.stringify(payload)
+    });
+
+    const result = await response.json();
+    console.log('📥 Resposta:', result);
+    
+    if (result.success) {
+      showMessage(id ? 'Ocorrência atualizada!' : 'Ocorrência criada!', 'success');
+      window.closeModal();
+      loadOccurrences();
+    } else {
+      showMessage('Erro: ' + result.message, 'error');
+    }
+  } catch (error) {
+    console.error('❌ Erro:', error);
+    showMessage('Erro ao salvar ocorrência', 'error');
+  }
+};
+
+function escapeHtml(text) {
+  if (!text) return '';
+  const div = document.createElement('div');
+  div.textContent = text;
+  return div.innerHTML;
+}
+
+// Apply filters (função global também)
+window.applyFilters = function() {
+  const type = document.getElementById('filterType').value;
+  const employee = document.getElementById('filterEmployee').value;
+  const process = document.getElementById('filterProcess').value;
+  const project = document.getElementById('filterProject').value;
+  const search = document.getElementById('searchInput').value.toLowerCase();
+
+  filteredOccurrences = allOccurrences.filter(occ => {
+    if (type && occ.type !== type) return false;
+    if (employee && occ.employee_id != employee) return false;
+    if (process && occ.process_id != process) return false;
+    if (project && occ.project_id != project) return false;
+    if (search && !occ.title.toLowerCase().includes(search) && 
+        !(occ.description || '').toLowerCase().includes(search)) return false;
+    return true;
+  });
+
+  renderTable();
+};
+
+// Close modal on outside click
+document.getElementById('modal').addEventListener('click', (e) => {
+  if (e.target.id === 'modal') window.closeModal();
+});
+
+// Load on page load
+document.addEventListener('DOMContentLoaded', () => {
+  console.log('✅ DOM carregado!');
+  loadOccurrences();
+  
+  // Adicionar listener ao formulário
+  const form = document.getElementById('occurrenceForm');
+  if (form) {
+    form.addEventListener('submit', window.handleSubmit);
+    console.log('✅ Form listener adicionado!');
+  }
+});
+
+console.log('✅ Script finalizado! Funções disponíveis:', {
+  openModal: typeof window.openModal,
+  closeModal: typeof window.closeModal,
+  editOccurrence: typeof window.editOccurrence,
+  deleteOccurrence: typeof window.deleteOccurrence
+});
+</script>
+{% endblock %}

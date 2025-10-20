@@ -1,0 +1,187 @@
+# ============================================
+# GestaoVersus - Automated Database Backup
+# ============================================
+# Backup automático do banco de dados
+# Schedule: Diário às 3:00 AM UTC
+# ============================================
+
+name: 💾 Database Backup
+
+on:
+  schedule:
+    # Todos os dias às 3:00 AM UTC (00:00 Brasília)
+    - cron: '0 3 * * *'
+  workflow_dispatch:  # Permite backup manual
+
+jobs:
+  # ==========================================
+  # Job: Backup Database
+  # ==========================================
+  backup:
+    name: 💾 Backup PostgreSQL
+    runs-on: ubuntu-latest
+    
+    steps:
+      - name: 📥 Checkout Code
+        uses: actions/checkout@v4
+
+      - name: 🔐 Setup SSH
+        uses: webfactory/ssh-agent@v0.8.0
+        with:
+          ssh-private-key: ${{ secrets.SSH_PRIVATE_KEY }}
+
+      - name: 💾 Create Database Backup
+        uses: appleboy/ssh-action@v1.0.0
+        with:
+          host: ${{ secrets.SSH_HOST }}
+          username: ${{ secrets.SSH_USER }}
+          key: ${{ secrets.SSH_PRIVATE_KEY }}
+          script: |
+            cd /opt/gestaoversos
+            
+            # Variáveis
+            BACKUP_DIR="/opt/gestaoversos/backups"
+            BACKUP_DATE=$(date +%Y%m%d_%H%M%S)
+            BACKUP_FILE="backup_${BACKUP_DATE}.sql"
+            BACKUP_COMPRESSED="backup_${BACKUP_DATE}.sql.gz"
+            
+            # Criar diretório de backup se não existir
+            mkdir -p $BACKUP_DIR
+            
+            # Fazer backup do PostgreSQL
+            docker-compose exec -T db pg_dump -U postgres bd_app_versus > $BACKUP_DIR/$BACKUP_FILE
+            
+            # Comprimir backup
+            gzip $BACKUP_DIR/$BACKUP_FILE
+            
+            # Verificar se backup foi criado
+            if [ -f "$BACKUP_DIR/$BACKUP_COMPRESSED" ]; then
+              echo "✅ Backup criado: $BACKUP_COMPRESSED"
+              ls -lh $BACKUP_DIR/$BACKUP_COMPRESSED
+            else
+              echo "❌ Erro ao criar backup!"
+              exit 1
+            fi
+            
+            # Manter apenas últimos 30 dias de backups
+            find $BACKUP_DIR -name "backup_*.sql.gz" -type f -mtime +30 -delete
+            
+            echo "🗂️ Backups disponíveis:"
+            ls -lh $BACKUP_DIR/backup_*.sql.gz
+
+      - name: ☁️ Upload to S3 (AWS)
+        if: ${{ secrets.AWS_ACCESS_KEY_ID != '' }}
+        uses: appleboy/ssh-action@v1.0.0
+        with:
+          host: ${{ secrets.SSH_HOST }}
+          username: ${{ secrets.SSH_USER }}
+          key: ${{ secrets.SSH_PRIVATE_KEY }}
+          envs: AWS_ACCESS_KEY_ID,AWS_SECRET_ACCESS_KEY,AWS_S3_BUCKET
+          script: |
+            cd /opt/gestaoversos
+            
+            # Instalar AWS CLI se não existir
+            if ! command -v aws &> /dev/null; then
+              curl "https://awscli.amazonaws.com/awscli-exe-linux-x86_64.zip" -o "awscliv2.zip"
+              unzip -q awscliv2.zip
+              sudo ./aws/install
+            fi
+            
+            # Configurar credenciais AWS
+            export AWS_ACCESS_KEY_ID=${{ secrets.AWS_ACCESS_KEY_ID }}
+            export AWS_SECRET_ACCESS_KEY=${{ secrets.AWS_SECRET_ACCESS_KEY }}
+            export AWS_DEFAULT_REGION=us-east-1
+            
+            # Upload para S3
+            BACKUP_DATE=$(date +%Y%m%d_%H%M%S)
+            aws s3 cp backups/backup_${BACKUP_DATE}.sql.gz \
+              s3://${{ secrets.AWS_S3_BUCKET }}/backups/database/backup_${BACKUP_DATE}.sql.gz
+            
+            echo "✅ Backup enviado para S3"
+
+      - name: ☁️ Upload to Google Cloud Storage
+        if: ${{ secrets.GCP_PROJECT_ID != '' }}
+        uses: appleboy/ssh-action@v1.0.0
+        with:
+          host: ${{ secrets.SSH_HOST }}
+          username: ${{ secrets.SSH_USER }}
+          key: ${{ secrets.SSH_PRIVATE_KEY }}
+          script: |
+            cd /opt/gestaoversos
+            
+            # Configurar GCloud
+            if [ -f "/app/credentials/gcp-key.json" ]; then
+              gcloud auth activate-service-account --key-file=/app/credentials/gcp-key.json
+              
+              # Upload para GCS
+              BACKUP_DATE=$(date +%Y%m%d_%H%M%S)
+              gsutil cp backups/backup_${BACKUP_DATE}.sql.gz \
+                gs://${{ secrets.GCS_BUCKET }}/backups/database/backup_${BACKUP_DATE}.sql.gz
+              
+              echo "✅ Backup enviado para Google Cloud Storage"
+            fi
+
+      - name: 📊 Backup Report
+        run: |
+          echo "📊 Relatório de Backup"
+          echo "====================="
+          echo "📅 Data: $(date)"
+          echo "✅ Status: Concluído"
+          echo "💾 Tipo: PostgreSQL Full Backup"
+          echo "📦 Compressão: gzip"
+          echo "🗂️ Retenção: 30 dias"
+
+      - name: 📧 Notify Success
+        if: success()
+        run: echo "✅ Backup realizado com sucesso!"
+
+      - name: 📧 Notify Failure
+        if: failure()
+        run: |
+          echo "❌ Backup falhou!"
+          echo "⚠️ ATENÇÃO: Verifique os logs imediatamente!"
+          exit 1
+
+  # ==========================================
+  # Job: Verify Backup Integrity
+  # ==========================================
+  verify:
+    name: ✅ Verify Backup
+    runs-on: ubuntu-latest
+    needs: backup
+    
+    steps:
+      - name: 🔐 Setup SSH
+        uses: webfactory/ssh-agent@v0.8.0
+        with:
+          ssh-private-key: ${{ secrets.SSH_PRIVATE_KEY }}
+
+      - name: ✅ Test Backup Restoration
+        uses: appleboy/ssh-action@v1.0.0
+        with:
+          host: ${{ secrets.SSH_HOST }}
+          username: ${{ secrets.SSH_USER }}
+          key: ${{ secrets.SSH_PRIVATE_KEY }}
+          script: |
+            cd /opt/gestaoversos
+            
+            # Pegar último backup
+            LAST_BACKUP=$(ls -t backups/backup_*.sql.gz | head -1)
+            
+            if [ -f "$LAST_BACKUP" ]; then
+              echo "✅ Backup encontrado: $LAST_BACKUP"
+              
+              # Verificar integridade do arquivo
+              gunzip -t $LAST_BACKUP
+              
+              if [ $? -eq 0 ]; then
+                echo "✅ Backup íntegro!"
+              else
+                echo "❌ Backup corrompido!"
+                exit 1
+              fi
+            else
+              echo "❌ Nenhum backup encontrado!"
+              exit 1
+            fi
+

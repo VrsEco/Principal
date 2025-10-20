@@ -1,0 +1,221 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="utf-8">
+  <title>{{ 'Editar' if record else 'Novo' }} Registro de Dados</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <link rel="icon" type="image/x-icon" href="{{ url_for('static', filename='favicon.ico') }}" />
+  <link rel="shortcut icon" type="image/x-icon" href="{{ url_for('static', filename='favicon.ico') }}" />
+  <style>
+    body {
+      margin: 0;
+      padding: 24px;
+      font-family: 'Segoe UI', Tahoma, Arial, sans-serif;
+      background: #f8fafc;
+      color: #0f172a;
+    }
+
+    .shell {
+      max-width: 480px;
+      margin: 0 auto;
+      background: #ffffff;
+      border: 1px solid #e2e8f0;
+      border-radius: 16px;
+      padding: 32px;
+      box-shadow: 0 24px 40px rgba(15, 23, 42, 0.08);
+      display: grid;
+      gap: 24px;
+    }
+
+    h1 {
+      margin: 0;
+      font-size: 22px;
+      font-weight: 700;
+    }
+
+    .subtitle {
+      margin: 8px 0 0;
+      font-size: 13px;
+      color: #64748b;
+    }
+
+    .form-group {
+      display: grid;
+      gap: 8px;
+    }
+
+    label {
+      font-weight: 600;
+      font-size: 13px;
+      color: #334155;
+    }
+
+    select,
+    input,
+    textarea {
+      width: 100%;
+      padding: 10px 12px;
+      border-radius: 8px;
+      border: 1px solid rgba(15, 23, 42, 0.16);
+      background: #ffffff;
+      font-size: 14px;
+      font-family: inherit;
+    }
+
+    textarea {
+      resize: vertical;
+      min-height: 96px;
+    }
+
+    .actions {
+      display: flex;
+      justify-content: flex-end;
+      gap: 12px;
+      margin-top: 8px;
+    }
+
+    button {
+      border: none;
+      border-radius: 10px;
+      padding: 12px 22px;
+      font-weight: 600;
+      font-size: 14px;
+      cursor: pointer;
+    }
+
+    .btn-secondary {
+      background: #e2e8f0;
+      color: #475569;
+    }
+
+    .btn-primary {
+      background: linear-gradient(135deg, #3b82f6, #2563eb);
+      color: #ffffff;
+      box-shadow: 0 12px 24px rgba(37, 99, 235, 0.2);
+    }
+  </style>
+</head>
+<body>
+  <div class="shell">
+    <header>
+      <h1>{{ 'Editar Registro de Dados' if record else 'Novo Registro de Dados' }}</h1>
+      <p class="subtitle">
+        Empresa: <strong>{{ company.name if company and company.name else 'N/A' }}</strong>
+      </p>
+    </header>
+
+    <form id="dataForm">
+      <div class="form-group">
+        <label for="goalId">Meta / Indicador *</label>
+        <select id="goalId" name="goal_id" required>
+          <option value="">Selecione</option>
+          {% for goal in goals %}
+            <option value="{{ goal.id }}">{{ goal.goal_code }} - {{ goal.indicator_name }}</option>
+          {% endfor %}
+        </select>
+      </div>
+
+      <div class="form-group">
+        <label for="recordDate">Data do Registro *</label>
+        <input id="recordDate" name="record_date" type="date" required>
+      </div>
+
+      <div class="form-group">
+        <label for="value">Valor *</label>
+        <input id="value" name="value" type="number" step="0.01" required>
+      </div>
+
+      <div class="form-group">
+        <label for="notes">Observacoes</label>
+        <textarea id="notes" name="notes" placeholder="Observacoes relevantes sobre o registro"></textarea>
+      </div>
+
+      <div class="actions">
+        <button type="button" class="btn-secondary" id="cancelButton">Cancelar</button>
+        <button type="submit" class="btn-primary">Salvar Registro</button>
+      </div>
+    </form>
+  </div>
+
+  <script>
+    const companyId = {{ company_id }};
+    const dataRecord = {{ record|tojson|safe if record else 'null' }};
+
+    const form = document.getElementById('dataForm');
+    const goalSelect = document.getElementById('goalId');
+    const recordDateInput = document.getElementById('recordDate');
+    const valueInput = document.getElementById('value');
+    const notesInput = document.getElementById('notes');
+    const cancelButton = document.getElementById('cancelButton');
+
+    document.addEventListener('DOMContentLoaded', () => {
+      if (dataRecord) {
+        populateForm();
+      } else {
+        recordDateInput.value = new Date().toISOString().split('T')[0];
+      }
+    });
+
+    cancelButton.addEventListener('click', () => {
+      window.close();
+    });
+
+    form.addEventListener('submit', async (event) => {
+      event.preventDefault();
+
+      const payload = {
+        goal_id: Number(goalSelect.value),
+        record_date: recordDateInput.value,
+        value: parseFloat(valueInput.value),
+        notes: notesInput.value.trim() || null
+      };
+
+      if (!payload.goal_id || Number.isNaN(payload.value) || !payload.record_date) {
+        alert('Preencha meta, valor e data do registro.');
+        return;
+      }
+
+      const isEdit = Boolean(dataRecord && dataRecord.id);
+      const url = isEdit
+        ? `/grv/api/company/${companyId}/indicator-data/${dataRecord.id}`
+        : `/grv/api/company/${companyId}/indicator-data`;
+      const method = isEdit ? 'PUT' : 'POST';
+
+      try {
+        const response = await fetch(url, {
+          method,
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(payload)
+        });
+
+        const result = await response.json();
+        if (result.success) {
+          alert('Registro salvo com sucesso!');
+          if (window.opener && !window.opener.closed) {
+            window.opener.location.reload();
+          }
+          window.close();
+        } else {
+          alert('Erro: ' + result.message);
+        }
+      } catch (error) {
+        console.error('Erro ao salvar registro:', error);
+        alert('Erro ao salvar registro');
+      }
+    });
+
+    function populateForm() {
+      if (dataRecord.goal_id) {
+        goalSelect.value = String(dataRecord.goal_id);
+      }
+      if (dataRecord.record_date) {
+        recordDateInput.value = dataRecord.record_date;
+      }
+      if (dataRecord.value !== undefined && dataRecord.value !== null) {
+        valueInput.value = dataRecord.value;
+      }
+      notesInput.value = dataRecord.notes || '';
+    }
+  </script>
+</body>
+</html>

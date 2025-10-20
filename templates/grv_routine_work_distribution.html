@@ -1,0 +1,893 @@
+{% extends "base.html" %}
+{% block title %}GRV | Distribuicao do Trabalho{% endblock %}
+{% block body %}{% set active_nav = 'routine-work-distribution' %}{{ super() }}{% endblock %}
+
+{% block extra_head %}
+{{ super() }}
+<style>
+  .distribution-shell {
+    display: grid;
+    grid-template-columns: 250px minmax(0, 1fr);
+    gap: 18px;
+    align-items: start;
+  }
+
+  .distribution-main {
+    background: #ffffff;
+    border-radius: 14px;
+    border: 1px solid rgba(15, 23, 42, 0.08);
+    padding: 22px 24px;
+    box-shadow: 0 12px 32px rgba(15, 23, 42, 0.08);
+    display: grid;
+    gap: 22px;
+  }
+
+  .distribution-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    gap: 16px;
+    flex-wrap: wrap;
+  }
+
+  .distribution-header h1 {
+    margin: 0;
+    font-size: 22px;
+    font-weight: 700;
+    color: #0f172a;
+  }
+
+  .distribution-description {
+    color: #64748b;
+    font-size: 13px;
+    margin-top: 6px;
+    max-width: 600px;
+    line-height: 1.5;
+  }
+
+  .distribution-actions {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+  }
+
+  .action-button {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    padding: 10px 18px;
+    border-radius: 10px;
+    border: 1px solid rgba(37, 99, 235, 0.32);
+    background: rgba(59, 130, 246, 0.12);
+    color: #1d4ed8;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.2s ease;
+  }
+
+  .action-button:hover {
+    background: rgba(59, 130, 246, 0.2);
+    border-color: rgba(37, 99, 235, 0.48);
+  }
+
+  .distribution-stats {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
+    gap: 14px;
+  }
+
+  .stat-card {
+    background: linear-gradient(135deg, rgba(59, 130, 246, 0.12), rgba(14, 165, 233, 0.08));
+    border: 1px solid rgba(59, 130, 246, 0.24);
+    border-radius: 12px;
+    padding: 16px;
+    display: grid;
+    gap: 6px;
+  }
+
+  .stat-card.pending {
+    background: linear-gradient(135deg, rgba(251, 191, 36, 0.12), rgba(217, 119, 6, 0.08));
+    border-color: rgba(217, 119, 6, 0.24);
+  }
+
+  .stat-card.progress {
+    background: linear-gradient(135deg, rgba(129, 140, 248, 0.12), rgba(79, 70, 229, 0.08));
+    border-color: rgba(79, 70, 229, 0.24);
+  }
+
+  .stat-card.completed {
+    background: linear-gradient(135deg, rgba(16, 185, 129, 0.12), rgba(5, 150, 105, 0.08));
+    border-color: rgba(16, 185, 129, 0.24);
+  }
+
+  .stat-card.overdue {
+    background: linear-gradient(135deg, rgba(248, 113, 113, 0.12), rgba(220, 38, 38, 0.08));
+    border-color: rgba(220, 38, 38, 0.24);
+  }
+
+  .stat-label {
+    font-size: 12px;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    color: rgba(15, 23, 42, 0.6);
+    font-weight: 600;
+  }
+
+  .stat-value {
+    font-size: 30px;
+    font-weight: 700;
+    color: #0f172a;
+    line-height: 1.1;
+  }
+
+  .distribution-filters {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: 16px;
+    flex-wrap: wrap;
+  }
+
+  .chip-group {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+  }
+
+  .chip {
+    padding: 8px 18px;
+    border-radius: 999px;
+    border: 1px solid rgba(15, 23, 42, 0.16);
+    background: rgba(15, 23, 42, 0.04);
+    color: #0f172a;
+    font-weight: 600;
+    font-size: 13px;
+    cursor: pointer;
+    transition: all 0.2s ease;
+  }
+
+  .chip:hover {
+    border-color: rgba(59, 130, 246, 0.42);
+  }
+
+  .chip.active {
+    background: rgba(59, 130, 246, 0.1);
+    border-color: rgba(37, 99, 235, 0.45);
+    color: #1d4ed8;
+  }
+
+  .search-field {
+    position: relative;
+    min-width: 220px;
+    flex: 1;
+    max-width: 320px;
+  }
+
+  .search-input {
+    width: 100%;
+    padding: 10px 14px;
+    border-radius: 10px;
+    border: 1px solid rgba(15, 23, 42, 0.16);
+    font-size: 14px;
+    transition: border-color 0.2s ease;
+  }
+
+  .search-input:focus {
+    outline: none;
+    border-color: rgba(37, 99, 235, 0.55);
+    box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.12);
+  }
+
+  .distribution-panels {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr);
+    gap: 18px;
+  }
+
+  .distribution-panel {
+    background: #ffffff;
+    border: 1px solid rgba(15, 23, 42, 0.08);
+    border-radius: 14px;
+    padding: 20px 22px;
+    box-shadow: 0 10px 30px rgba(15, 23, 42, 0.08);
+  }
+
+  .panel-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    gap: 14px;
+    margin-bottom: 18px;
+  }
+
+  .panel-header h2 {
+    margin: 0;
+    font-size: 18px;
+    font-weight: 700;
+    color: #0f172a;
+  }
+
+  .panel-header p {
+    margin: 6px 0 0;
+    font-size: 13px;
+    color: #64748b;
+  }
+
+  .panel-meta {
+    font-size: 12px;
+    font-weight: 600;
+    color: rgba(15, 23, 42, 0.55);
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+  }
+
+  .table-wrapper {
+    width: 100%;
+    overflow: auto;
+  }
+
+  .table-wrapper.is-loading {
+    opacity: 0.45;
+    pointer-events: none;
+  }
+
+  .distribution-table {
+    width: 100%;
+    border-collapse: separate;
+    border-spacing: 0 10px;
+  }
+
+  .distribution-table thead th {
+    text-align: left;
+    font-size: 12px;
+    color: #64748b;
+    padding: 0 12px 6px;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    font-weight: 700;
+  }
+
+  .distribution-table tbody tr {
+    background: rgba(248, 250, 252, 0.9);
+    border-radius: 10px;
+    box-shadow: 0 8px 24px rgba(15, 23, 42, 0.04);
+  }
+
+  .distribution-table tbody td {
+    padding: 16px 12px;
+    font-size: 13px;
+    color: #334155;
+    vertical-align: middle;
+  }
+
+  .distribution-table tbody tr td:first-child {
+    border-top-left-radius: 12px;
+    border-bottom-left-radius: 12px;
+  }
+
+  .distribution-table tbody tr td:last-child {
+    border-top-right-radius: 12px;
+    border-bottom-right-radius: 12px;
+  }
+
+  .distribution-name .routine-name {
+    font-weight: 600;
+    color: #0f172a;
+    margin-bottom: 4px;
+  }
+
+  .routine-description {
+    color: #64748b;
+    font-size: 12px;
+    line-height: 1.4;
+  }
+
+  .distribution-total strong {
+    font-size: 18px;
+    color: #0f172a;
+  }
+
+  .status-pill {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    min-width: 34px;
+    padding: 6px 10px;
+    border-radius: 999px;
+    font-weight: 600;
+    font-size: 12px;
+  }
+
+  .status-pill.pending {
+    background: rgba(217, 119, 6, 0.12);
+    color: #b45309;
+  }
+
+  .status-pill.progress {
+    background: rgba(79, 70, 229, 0.12);
+    color: #4338ca;
+  }
+
+  .status-pill.completed {
+    background: rgba(16, 185, 129, 0.12);
+    color: #0f766e;
+  }
+
+  .status-pill.overdue {
+    background: rgba(220, 38, 38, 0.12);
+    color: #b91c1c;
+  }
+
+  .progress-bar {
+    position: relative;
+    width: 160px;
+    height: 8px;
+    border-radius: 999px;
+    background: rgba(15, 23, 42, 0.08);
+    overflow: hidden;
+    margin-bottom: 6px;
+  }
+
+  .progress-fill {
+    position: absolute;
+    top: 0;
+    left: 0;
+    height: 100%;
+  }
+
+  .progress-fill.completed {
+    background: #10b981;
+  }
+
+  .progress-fill.overdue {
+    background: #ef4444;
+  }
+
+  .progress-meta {
+    display: inline-block;
+    font-size: 12px;
+    color: #64748b;
+  }
+
+  .distribution-deadline {
+    font-weight: 600;
+    color: #1d4ed8;
+  }
+
+  .loading-state,
+  .error-state,
+  .empty-state {
+    padding: 20px;
+    border-radius: 12px;
+    text-align: center;
+    font-size: 13px;
+    margin-bottom: 10px;
+  }
+
+  .loading-state {
+    background: rgba(59, 130, 246, 0.08);
+    color: #1d4ed8;
+  }
+
+  .error-state {
+    background: rgba(248, 113, 113, 0.12);
+    color: #b91c1c;
+  }
+
+  .empty-state {
+    background: rgba(148, 163, 184, 0.08);
+    color: #475569;
+  }
+
+  .upcoming-list {
+    list-style: none;
+    padding: 0;
+    margin: 0;
+    display: grid;
+    gap: 12px;
+  }
+
+  .upcoming-list li {
+    display: grid;
+    gap: 6px;
+    padding: 12px 14px;
+    border-radius: 10px;
+    border: 1px solid rgba(15, 23, 42, 0.08);
+    background: rgba(248, 250, 252, 0.8);
+  }
+
+  .upcoming-title {
+    font-weight: 600;
+    color: #0f172a;
+  }
+
+  .upcoming-meta {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 10px;
+    font-size: 12px;
+    color: #64748b;
+  }
+
+  .upcoming-meta .meta-item {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+  }
+
+  .upcoming-meta .status-pending {
+    color: #b45309;
+  }
+
+  .upcoming-meta .status-in-progress {
+    color: #4338ca;
+  }
+
+  .upcoming-meta .status-completed {
+    color: #0f766e;
+  }
+
+  .upcoming-meta .status-overdue {
+    color: #b91c1c;
+  }
+
+  @media (max-width: 1080px) {
+    .distribution-shell {
+      grid-template-columns: minmax(0, 1fr);
+    }
+
+    .distribution-main {
+      padding: 18px;
+    }
+  }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="project-layout plan-layout distribution-shell" data-sidebar-toggle>
+  {% include 'routines_sidebar.html' %}
+
+  <div class="project-content plan-content distribution-main">
+    <div class="distribution-header">
+      <div>
+        <h1>Mapa de Distribuicao do Trabalho</h1>
+        <p class="distribution-description">
+          Acompanhe como as tarefas geradas pelas rotinas estao distribuidas, identifique gargalos
+          e priorize onde concentrar esforcos.
+        </p>
+      </div>
+      <div class="distribution-actions">
+        <button type="button" class="action-button" id="refreshDistribution">
+          Atualizar dados
+        </button>
+      </div>
+    </div>
+
+    <div class="distribution-stats">
+      <div class="stat-card">
+        <span class="stat-label">Tarefas registradas</span>
+        <span class="stat-value" id="statTotal">0</span>
+      </div>
+      <div class="stat-card pending">
+        <span class="stat-label">Pendentes</span>
+        <span class="stat-value" id="statPending">0</span>
+      </div>
+      <div class="stat-card progress">
+        <span class="stat-label">Em andamento</span>
+        <span class="stat-value" id="statInProgress">0</span>
+      </div>
+      <div class="stat-card completed">
+        <span class="stat-label">Concluidas</span>
+        <span class="stat-value" id="statCompleted">0</span>
+      </div>
+      <div class="stat-card overdue">
+        <span class="stat-label">Atrasadas</span>
+        <span class="stat-value" id="statOverdue">0</span>
+      </div>
+    </div>
+
+    <div class="distribution-filters">
+      <div class="chip-group">
+        <button type="button" class="chip active" data-status="all" data-status-chip>Todas</button>
+        <button type="button" class="chip" data-status="pending" data-status-chip>Pendentes</button>
+        <button type="button" class="chip" data-status="in_progress" data-status-chip>Em andamento</button>
+        <button type="button" class="chip" data-status="completed" data-status-chip>Concluidas</button>
+        <button type="button" class="chip" data-status="overdue" data-status-chip>Atrasadas</button>
+      </div>
+      <div class="search-field">
+        <input type="search" id="searchRoutine" class="search-input" placeholder="Buscar por rotina" />
+      </div>
+    </div>
+
+    <div class="distribution-panels">
+      <section class="distribution-panel">
+        <div class="panel-header">
+          <div>
+            <h2>Distribuicao por rotina</h2>
+            <p>Volume de trabalho consolidado por rotina e status atual.</p>
+          </div>
+          <div class="panel-meta" id="distributionMeta">Nenhum dado carregado</div>
+        </div>
+        <div class="panel-body">
+          <div id="distributionLoading" class="loading-state">Carregando dados...</div>
+          <div id="distributionError" class="error-state" hidden></div>
+          <div id="distributionEmpty" class="empty-state" hidden>
+            <strong>Nenhuma tarefa registrada.</strong>
+            <p>Assim que tarefas forem geradas, a distribuicao aparecerá automaticamente.</p>
+          </div>
+          <div class="table-wrapper" id="distributionTableWrapper" hidden>
+            <table class="distribution-table">
+              <thead>
+                <tr>
+                  <th>Rotina</th>
+                  <th>Total</th>
+                  <th>Pendente</th>
+                  <th>Em andamento</th>
+                  <th>Concluida</th>
+                  <th>Atrasada</th>
+                  <th>Progresso</th>
+                  <th>Proximo prazo</th>
+                </tr>
+              </thead>
+              <tbody id="distributionTableBody"></tbody>
+            </table>
+          </div>
+        </div>
+      </section>
+
+      <section class="distribution-panel">
+        <div class="panel-header">
+          <div>
+            <h2>Proximos prazos criticos</h2>
+            <p>Tarefas com prazo mais proximo para acompanhar de perto.</p>
+          </div>
+        </div>
+        <div class="panel-body">
+          <ul class="upcoming-list" id="upcomingList">
+            <li class="empty">Nenhum dado carregado.</li>
+          </ul>
+        </div>
+      </section>
+    </div>
+  </div>
+</div>
+
+<script>
+  (function () {
+    const companyId = {{ company.id | default(0) }};
+    const routinesUrl = "{{ url_for('api_get_routines', company_id=company.id|default(0)) }}";
+    const tasksUrl = "{{ url_for('api_get_routine_tasks', company_id=company.id|default(0)) }}";
+
+    if (!companyId) {
+      console.warn('Missing company id for work distribution view.');
+      return;
+    }
+
+    const state = {
+      routines: [],
+      tasks: [],
+      distribution: [],
+      filteredDistribution: [],
+      filters: { status: 'all', search: '' },
+      lastUpdated: null
+    };
+
+    const elements = {
+      loading: document.getElementById('distributionLoading'),
+      error: document.getElementById('distributionError'),
+      empty: document.getElementById('distributionEmpty'),
+      tableWrapper: document.getElementById('distributionTableWrapper'),
+      tableBody: document.getElementById('distributionTableBody'),
+      meta: document.getElementById('distributionMeta'),
+      upcomingList: document.getElementById('upcomingList'),
+      stats: {
+        total: document.getElementById('statTotal'),
+        pending: document.getElementById('statPending'),
+        inProgress: document.getElementById('statInProgress'),
+        completed: document.getElementById('statCompleted'),
+        overdue: document.getElementById('statOverdue')
+      }
+    };
+
+    const statusChips = Array.from(document.querySelectorAll('[data-status-chip]'));
+    const searchField = document.getElementById('searchRoutine');
+    const refreshButton = document.getElementById('refreshDistribution');
+
+    refreshButton?.addEventListener('click', () => loadData(true));
+
+    statusChips.forEach((chip) => {
+      chip.addEventListener('click', () => {
+        statusChips.forEach((c) => c.classList.remove('active'));
+        chip.classList.add('active');
+        state.filters.status = chip.dataset.status;
+        applyFilters();
+        renderDistribution();
+      });
+    });
+
+    searchField?.addEventListener('input', (event) => {
+      state.filters.search = event.target.value;
+      applyFilters();
+      renderDistribution();
+    });
+
+    async function loadData(force = false) {
+      toggleLoading(true);
+      clearError();
+
+      try {
+        const [routinesResp, tasksResp] = await Promise.all([
+          fetch(routinesUrl, { cache: force ? 'no-store' : 'default' }),
+          fetch(tasksUrl, { cache: force ? 'no-store' : 'default' })
+        ]);
+
+        const routinesData = await routinesResp.json();
+        const tasksData = await tasksResp.json();
+
+        state.routines = routinesData?.success ? routinesData.routines || [] : [];
+        state.tasks = tasksData?.success ? tasksData.tasks || [] : [];
+        state.lastUpdated = new Date();
+
+        buildDistribution();
+        render();
+      } catch (error) {
+        console.error('Failed to load work distribution data', error);
+        showError('Nao foi possivel carregar os dados de distribuicao.');
+      } finally {
+        toggleLoading(false);
+      }
+    }
+
+    function buildDistribution() {
+      const routineIndex = new Map();
+      state.routines.forEach((routine) => {
+        if (!routine?.id) {
+          return;
+        }
+        routineIndex.set(routine.id, {
+          id: routine.id,
+          name: routine.name || 'Rotina sem nome',
+          description: routine.description || '',
+          total: 0,
+          pending: 0,
+          in_progress: 0,
+          completed: 0,
+          overdue: 0,
+          nextDeadline: null
+        });
+      });
+
+      state.tasks.forEach((task) => {
+        const routineId = task.routine_id;
+        if (!routineIndex.has(routineId)) {
+          routineIndex.set(routineId, {
+            id: routineId,
+            name: `Rotina #${routineId}`,
+            description: '',
+            total: 0,
+            pending: 0,
+            in_progress: 0,
+            completed: 0,
+            overdue: 0,
+            nextDeadline: null
+          });
+        }
+
+        const bucket = routineIndex.get(routineId);
+        bucket.total += 1;
+
+        const statusKey = (task.status || 'pending').toLowerCase();
+        if (statusKey in bucket) {
+          bucket[statusKey] += 1;
+        }
+
+        if (task.deadline_date) {
+          const deadline = new Date(task.deadline_date);
+          if (!Number.isNaN(deadline.getTime())) {
+            if (!bucket.nextDeadline || deadline < bucket.nextDeadline) {
+              bucket.nextDeadline = deadline;
+            }
+          }
+        }
+      });
+
+      state.distribution = Array.from(routineIndex.values()).sort((a, b) => b.total - a.total);
+      applyFilters();
+    }
+
+    function applyFilters() {
+      const term = state.filters.search.trim().toLowerCase();
+      const status = state.filters.status;
+
+      state.filteredDistribution = state.distribution.filter((item) => {
+        const matchesStatus = status === 'all' || (item[status] || 0) > 0;
+        const matchesSearch = !term || item.name.toLowerCase().includes(term);
+        return matchesStatus && matchesSearch;
+      });
+    }
+
+    function render() {
+      renderStats();
+      renderDistribution();
+      renderUpcoming();
+    }
+
+    function renderStats() {
+      const totals = state.tasks.reduce((acc, task) => {
+        const key = (task.status || 'pending').toLowerCase();
+        acc[key] = (acc[key] || 0) + 1;
+        return acc;
+      }, {});
+
+      elements.stats.total.textContent = state.tasks.length;
+      elements.stats.pending.textContent = totals.pending || 0;
+      elements.stats.inProgress.textContent = totals.in_progress || 0;
+      elements.stats.completed.textContent = totals.completed || 0;
+      elements.stats.overdue.textContent = totals.overdue || 0;
+    }
+
+    function renderDistribution() {
+      const body = elements.tableBody;
+      body.innerHTML = '';
+
+      if (state.filteredDistribution.length === 0) {
+        elements.tableWrapper.hidden = true;
+        elements.empty.hidden = false;
+        elements.meta.textContent = 'Nenhuma rotina corresponde aos filtros atuais.';
+        return;
+      }
+
+      elements.tableWrapper.hidden = false;
+      elements.empty.hidden = true;
+
+      const totalRotinas = state.filteredDistribution.length;
+      elements.meta.textContent = `${totalRotinas} rotina${totalRotinas === 1 ? '' : 's'}`;
+
+      const fragment = document.createDocumentFragment();
+
+      state.filteredDistribution.forEach((item) => {
+        const total = item.total || 0;
+        const completion = total > 0 ? Math.round((item.completed / total) * 100) : 0;
+        const overdueShare = total > 0 ? Math.round((item.overdue / total) * 100) : 0;
+        const nextDeadline = item.nextDeadline ? formatDate(item.nextDeadline) : 'Sem prazo';
+        const row = document.createElement('tr');
+        row.innerHTML = `
+          <td class="distribution-name">
+            <div class="routine-name">${escapeHtml(item.name)}</div>
+            ${item.description ? `<div class="routine-description">${escapeHtml(item.description)}</div>` : ''}
+          </td>
+          <td class="distribution-total">
+            <strong>${total}</strong>
+          </td>
+          <td>
+            <div class="status-pill pending">${item.pending || 0}</div>
+          </td>
+          <td>
+            <div class="status-pill progress">${item.in_progress || 0}</div>
+          </td>
+          <td>
+            <div class="status-pill completed">${item.completed || 0}</div>
+          </td>
+          <td>
+            <div class="status-pill overdue">${item.overdue || 0}</div>
+          </td>
+          <td>
+            <div class="progress-bar">
+              <span class="progress-fill completed" style="width: ${completion}%;"></span>
+              ${overdueShare > 0 ? `<span class="progress-fill overdue" style="width: ${overdueShare}%;"></span>` : ''}
+            </div>
+            <span class="progress-meta">${completion}% concluido</span>
+          </td>
+          <td class="distribution-deadline">${nextDeadline}</td>
+        `;
+        fragment.appendChild(row);
+      });
+
+      body.appendChild(fragment);
+    }
+
+    function renderUpcoming() {
+      const list = elements.upcomingList;
+      list.innerHTML = '';
+
+      const tasks = state.tasks
+        .filter((task) => task.deadline_date)
+        .map((task) => ({
+          ...task,
+          deadline: new Date(task.deadline_date)
+        }))
+        .filter((task) => !Number.isNaN(task.deadline.getTime()))
+        .sort((a, b) => a.deadline - b.deadline)
+        .slice(0, 6);
+
+      if (tasks.length === 0) {
+        list.innerHTML = '<li class="empty">Nenhum prazo cadastrado.</li>';
+        return;
+      }
+
+      const routineNameById = state.routines.reduce((acc, routine) => {
+        if (routine?.id) {
+          acc[routine.id] = routine.name || `Rotina #${routine.id}`;
+        }
+        return acc;
+      }, {});
+
+      tasks.forEach((task) => {
+        const li = document.createElement('li');
+        const statusLabel = mapStatus(task.status);
+        li.innerHTML = `
+          <div class="upcoming-title">${escapeHtml(task.title || 'Tarefa sem titulo')}</div>
+          <div class="upcoming-meta">
+            <span class="meta-item">${formatDate(task.deadline)}</span>
+            <span class="meta-item">${escapeHtml(routineNameById[task.routine_id] || `Rotina #${task.routine_id}`)}</span>
+            <span class="meta-item status-${statusLabel.key}">${statusLabel.text}</span>
+          </div>
+        `;
+        list.appendChild(li);
+      });
+    }
+
+    function toggleLoading(isLoading) {
+      if (!elements.loading) {
+        return;
+      }
+      elements.loading.hidden = !isLoading;
+      if (elements.tableWrapper) {
+        elements.tableWrapper.classList.toggle('is-loading', isLoading);
+      }
+    }
+
+    function showError(message) {
+      if (!elements.error) {
+        return;
+      }
+      elements.error.textContent = message;
+      elements.error.hidden = false;
+      if (elements.tableWrapper) {
+        elements.tableWrapper.hidden = true;
+      }
+    }
+
+    function clearError() {
+      if (!elements.error) {
+        return;
+      }
+      elements.error.hidden = true;
+      elements.error.textContent = '';
+    }
+
+    function escapeHtml(value) {
+      if (typeof value !== 'string') {
+        return value ?? '';
+      }
+      const span = document.createElement('span');
+      span.textContent = value;
+      return span.innerHTML;
+    }
+
+    function formatDate(date) {
+      if (!(date instanceof Date)) {
+        return 'Sem data';
+      }
+      return date.toLocaleDateString('pt-BR', {
+        year: 'numeric',
+        month: 'short',
+        day: 'numeric'
+      });
+    }
+
+    function mapStatus(status) {
+      const key = (status || 'pending').toLowerCase();
+      const labels = {
+        pending: { key: 'pending', text: 'Pendente' },
+        in_progress: { key: 'in-progress', text: 'Em andamento' },
+        completed: { key: 'completed', text: 'Concluida' },
+        overdue: { key: 'overdue', text: 'Atrasada' }
+      };
+      return labels[key] || labels.pending;
+    }
+
+    loadData();
+  })();
+</script>
+{% endblock %}

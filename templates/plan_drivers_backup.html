@@ -1,0 +1,4137 @@
+﻿{% extends "base.html" %}
+{% block title %}Direcionadores | {{ plan.name }}{% endblock %}
+{% block body %}
+  {% set active_nav = 'projetos' %}
+  {{ super() }}
+{% endblock %}
+{% block content %}
+<div class="project-layout plan-layout drivers-layout" data-sidebar-toggle>
+  {% set sidebar_meta %}
+    <span class="summary-eyebrow">Maturidade media</span>
+    <p>{{ average_maturity }} / 5. Priorize os itens mais criticos para acelerar o planejamento.</p>
+  {% endset %}
+  {% include 'plan_sidebar.html' %}
+
+  <section class="project-content drivers-content">
+    <details class="interview-section surface-card">
+      <summary class="interview-summary-bar">
+        <div class="interview-summary-text">
+          <span class="section-eyebrow">Entrevistas</span>
+          <h3>Planejamento das conversas e registros</h3>
+          <p>Oriente as conversas, registre relatos e consolide percepcoes em um unico fluxo de trabalho.</p>
+        </div>
+        <div class="interview-progress">
+          <span class="chip-label">Registros</span>
+          <span class="interview-count">{{ interview_records|length }} entrevistas salvas</span>
+          <div class="section-status-controls">
+            {% if interview_section_open %}
+              <button class="button button-small button-warning" onclick="closeInterviewSection()" title="Concluir seção de entrevistas">
+                🔒 Concluir
+              </button>
+            {% else %}
+              <button class="button button-small button-success" onclick="openInterviewSection()" title="Reabrir seção de entrevistas">
+                🔓 Reabrir
+              </button>
+              {% if interview_section_status %}
+                <span class="section-closed-info">
+                  Concluída por {{ interview_section_status.closed_by }} em {{ interview_section_status.closed_at[:10] if interview_section_status.closed_at else 'Data não disponível' }}
+                </span>
+              {% endif %}
+            {% endif %}
+          </div>
+        </div>
+      </summary>
+
+      <div class="interview-content">
+        <section class="interview-panel instructions-panel">
+          <h4>Instruções</h4>
+          <div class="interview-instructions">
+            <div class="instruction-item">
+              <span class="chip-label">Consultor</span>
+              <p>Conduzir conversa franca e aberta, buscando a visao do entrevistado sobre negocio, mercado, colegas, chefia, gestao e clima, sem ultrapassar seu nivel de conhecimento (numeros, etc.).</p>
+            </div>
+            <div class="instruction-item">
+              <span class="chip-label">Entrevistado</span>
+              <p>Etapa para captar percepcoes, expectativas, resistencias e contribuicoes ao planejamento estrategico. Respostas sao confidenciais, uso exclusivo da consultoria, protegidas por sigilo profissional. Nao serao compartilhadas individualmente; apenas em forma consolidada.</p>
+            </div>
+          </div>
+        </section>
+        <div class="interview-grid">
+          <section class="interview-panel form-panel">
+            <h4>Coleta de Informacoes</h4>
+            {% if not interview_section_open %}
+            <div class="section-closed-notice">
+              <p>🔒 Esta seção foi concluída e não permite mais edições.</p>
+            </div>
+            {% endif %}
+            <form class="interview-form-fields" action="{{ url_for('add_interview', plan_id=plan.id) }}" method="post" {% if not interview_section_open %}style="opacity: 0.5; pointer-events: none;"{% endif %}>
+              <label class="form-field">
+                <span>Participante *</span>
+                <select name="participant" required>
+                  <option value="">Selecione um participante</option>
+                  {% for participant in participants %}
+                  <option value="{{ participant.name }}">{{ participant.name }}{% if participant.role %} - {{ participant.role }}{% endif %}</option>
+                  {% endfor %}
+                </select>
+              </label>
+              <label class="form-field">
+                <span>Consultor *</span>
+                <input type="text" name="consultant" placeholder="Nome do consultor" required />
+              </label>
+              <div class="form-two-cols">
+                <label class="form-field">
+                  <span>Data</span>
+                  <input type="date" name="date" />
+                </label>
+                <label class="form-field">
+                  <span>Formato</span>
+                  <select name="format">
+                    <option>Presencial</option>
+                    <option>Online</option>
+                    <option>Telefone</option>
+                  </select>
+                </label>
+              </div>
+              <label class="form-field">
+                <span>Entrevista / principais pontos</span>
+                <textarea name="notes" rows="4" placeholder="Resumo das percepcoes e destaques"></textarea>
+              </label>
+              <div class="form-actions">
+                <button type="submit" class="button button-primary">Registrar entrevista</button>
+                <button type="reset" class="button button-ghost">Limpar</button>
+              </div>
+            </form>
+          </section>
+
+          <section class="interview-panel records-panel">
+            <h4>Entrevistas registradas</h4>
+            <p class="panel-hint">Acompanhe relatos coletados e identifique lacunas de cobertura.</p>
+            <div class="interview-record-list">
+              {% for record in interview_records %}
+              <article class="interview-record-item">
+                <div class="interview-record-meta">
+                  <div class="record-person">
+                    <strong>{{ record.participant }}</strong>
+                    <span class="record-label">Entrevistado</span>
+                  </div>
+                  <div class="record-person">
+                    <strong>{{ record.consultant }}</strong>
+                    <span class="record-label">Consultor</span>
+                  </div>
+                  <span class="record-date">{{ record.date }}</span>
+                  <div class="interview-actions">
+                    <button class="button button-small button-ghost" onclick="editInterview({{ record.id }})" title="Editar entrevista">
+                      ✏️
+                    </button>
+                    <button class="button button-small button-danger" onclick="deleteInterview({{ record.id }})" title="Excluir entrevista">
+                      🗑️
+                    </button>
+                  </div>
+                </div>
+                <p>{{ record.notes }}</p>
+              </article>
+              {% else %}
+              <p class="interview-empty">Nenhum relato registrado ainda.</p>
+              {% endfor %}
+            </div>
+          </section>
+        </div>
+
+        <div class="interview-grid">
+          <section class="interview-panel maturity-panel">
+            <h4>Nivel de maturidade</h4>
+            <p class="panel-hint">Ajuste o indicador com base nas entrevistas consolidadas.</p>
+            <label class="form-field">
+              <span>Resultado consolidado (0 a 5)</span>
+              <input type="number" name="maturity" min="0" max="5" step="0.1" value="{{ interview_maturity_score if interview_maturity_score is not none else '' }}" placeholder="Defina a maturidade" />
+            </label>
+            {% if interview_maturity_updated_at %}
+            <span class="summary-meta">Atualizado em {{ interview_maturity_updated_at }}</span>
+            {% endif %}
+            {% if interview_maturity_suggestion %}
+            <div class="ia-suggestion">
+              <span class="chip-label">Sugestao IA</span>
+              <p>{{ interview_maturity_suggestion }}</p>
+            </div>
+            {% endif %}
+          </section>
+
+          <section class="interview-panel analysis-panel">
+            <h4>Sintese / Analise</h4>
+            <p class="panel-hint">Descreva os principais insights e encaminhamentos das entrevistas.</p>
+            <label class="form-field">
+              <span>Resumo consolidado</span>
+              <textarea name="analysis" rows="6" placeholder="Sintetize percepcoes, alertas e oportunidades">{{ interview_analysis_text or '' }}</textarea>
+            </label>
+            {% if interview_analysis_suggestion %}
+            <div class="ia-suggestion">
+              <span class="chip-label">Sugestao IA</span>
+              <p>{{ interview_analysis_suggestion }}</p>
+            </div>
+            {% endif %}
+          </section>
+        </div>
+
+      </div>
+    </details>
+
+    <details class="interview-section surface-card partners-section">
+      <summary class="interview-summary-bar">
+        <div class="interview-summary-text">
+          <span class="section-eyebrow">Visão dos sócios</span>
+          <h3>Governança e direcionadores da liderança</h3>
+          <p>Mapeie expectativas, responsabilidades e apetite a risco dos sócios para alinhar a estratégia.</p>
+        </div>
+        <div class="interview-progress">
+          <span class="chip-label">Relatos</span>
+          <span class="interview-count">{{ vision_records|length }} relatos salvos</span>
+          <div class="section-status-controls">
+            {% if vision_section_open %}
+              <button class="button button-small button-warning" onclick="closeVisionSection()" title="Concluir seção de visão dos sócios">
+                🔒 Concluir
+              </button>
+            {% else %}
+              <button class="button button-small button-success" onclick="openVisionSection()" title="Reabrir seção de visão dos sócios">
+                🔓 Reabrir
+              </button>
+              {% if vision_section_status %}
+                <span class="section-closed-info">
+                  Concluída por {{ vision_section_status.closed_by }} em {{ vision_section_status.closed_at[:10] if vision_section_status.closed_at else 'Data não disponível' }}
+                </span>
+              {% endif %}
+            {% endif %}
+          </div>
+        </div>
+      </summary>
+
+      <section class="vision-content">
+        <section class="interview-panel instructions-panel vision-instructions">
+          <h4>Instruções</h4>
+          <div class="interview-instructions">
+            <div class="instruction-item">
+              <span class="chip-label">Consultor</span>
+              <p>Sera inserido depois.</p>
+            </div>
+            <div class="instruction-item">
+              <span class="chip-label">Socios</span>
+              <p>Sera inserido depois.</p>
+            </div>
+          </div>
+        </section>
+
+        <div class="vision-columns">
+          <section class="interview-panel form-panel vision-form-panel">
+            <h4>Coleta de Informacoes</h4>
+            {% if not vision_section_open %}
+            <div class="section-closed-notice">
+              <p>🔒 Esta seção foi concluída e não permite mais edições.</p>
+            </div>
+            {% endif %}
+            <form class="interview-form-fields" action="{{ url_for('add_vision_record', plan_id=plan.id) }}" method="post" {% if not vision_section_open %}style="opacity: 0.5; pointer-events: none;"{% endif %}>
+              <label class="form-field">
+                <span>Sócios envolvidos *</span>
+                <input type="text" name="participants" placeholder="Nomes dos sócios envolvidos (separados por vírgula)" required />
+              </label>
+              <label class="form-field">
+                <span>Consultores *</span>
+                <input type="text" name="consultants" placeholder="Nomes dos consultores (separados por vírgula)" required />
+              </label>
+              <label class="form-field">
+                <span>Data</span>
+                <input type="date" name="vision_date" />
+              </label>
+              <label class="form-field">
+                <span>Formato</span>
+                <select name="format">
+                  <option value="">Selecione</option>
+                  <option value="Presencial">Presencial</option>
+                  <option value="Online">Online</option>
+                  <option value="Telefone">Telefone</option>
+                </select>
+              </label>
+              <label class="form-field">
+                <span>Investimento de tempo e recursos</span>
+                <textarea name="time_investment" rows="3" placeholder="Qual sera o investimento de tempo e recursos para o planejamento e gestao estrategicas"></textarea>
+              </label>
+              <label class="form-field">
+                <span>Estilo de gestao predominante</span>
+                <textarea name="management_style" rows="2" placeholder="Centralizada, participativa, hibrida..."></textarea>
+              </label>
+              <label class="form-field">
+                <span>Atividades, responsabilidades e nivel de formalizacao</span>
+                <textarea name="responsibilities" rows="3" placeholder="Descreva atividades, responsabilidades e nivel de formalizacao"></textarea>
+              </label>
+              <label class="form-field">
+                <span>Experiencias, formacoes e capacidades</span>
+                <textarea name="capacities" rows="3" placeholder="Experiencias, formacoes, capacidades e possibilidades"></textarea>
+              </label>
+              <label class="form-field">
+                <span>Modelo de decisão estratégica</span>
+                <textarea name="decision_model" rows="2" placeholder="Consenso, maioria, lideranca principal..."></textarea>
+              </label>
+              <div class="form-two-cols">
+                <label class="form-field">
+                  <span>Aceita investidores / parcerias externas</span>
+                  <select name="investor_profile">
+                    <option value="">Selecione</option>
+                    <option>Sim</option>
+                    <option>Nao</option>
+                    <option>A avaliar</option>
+                  </select>
+                </label>
+                <label class="form-field">
+                  <span>Perfil de risco aceitavel</span>
+                  <select name="risk_profile">
+                    <option value="">Selecione</option>
+                    <option>Conservador</option>
+                    <option>Moderado</option>
+                    <option>Ousado</option>
+                  </select>
+                </label>
+              </div>
+              <label class="form-field">
+                <span>Proposito pessoal / legado desejado</span>
+                <textarea name="purpose" rows="2" placeholder="Descreva proposito e legado desejado"></textarea>
+              </label>
+              <label class="form-field">
+                <span>Objetivos curto / medio / longo prazo</span>
+                <textarea name="goals" rows="3" placeholder="Liste objetivos por horizonte de tempo"></textarea>
+              </label>
+              <label class="form-field">
+                <span>Notas adicionais</span>
+                <textarea name="notes" rows="3" placeholder="Observações e informações complementares"></textarea>
+              </label>
+              <div class="form-actions">
+                <button type="submit" class="button button-primary">Registrar relato</button>
+                <button type="reset" class="button button-ghost">Limpar</button>
+              </div>
+            </form>
+          </section>
+
+
+          <div class="vision-column">
+            <section class="interview-panel vision-records-panel">
+              <h4>Relatos registrados</h4>
+              <p class="panel-hint">Visualize percepcoes consolidadas dos socios.</p>
+              {% if vision_records %}
+              <div class="vision-records-list">
+                {% for record in vision_records %}
+                <details class="vision-record" {% if loop.first %}open{% endif %}>
+                  <summary class="vision-record-summary">
+                    <span class="vision-record-title">{{ record.participants }}</span>
+                    <span class="vision-record-date">{{ record.vision_date }}</span>
+                    <div class="vision-record-actions">
+                      <button class="button button-small button-ghost" onclick="editVisionRecord({{ record.id }})" title="Editar relato">
+                        ✏️
+                      </button>
+                      <button class="button button-small button-danger" onclick="deleteVisionRecord({{ record.id }})" title="Excluir relato">
+                        🗑️
+                      </button>
+                    </div>
+                  </summary>
+                  <div class="vision-record-body">
+                    <div class="vision-record-content">
+                      <div class="vision-record-field">
+                        <span class="chip-label">Sócios envolvidos</span>
+                        <p>{{ record.participants }}</p>
+                      </div>
+                      <div class="vision-record-field">
+                        <span class="chip-label">Consultores</span>
+                        <p>{{ record.consultants }}</p>
+                      </div>
+                      <div class="vision-record-field">
+                        <span class="chip-label">Data</span>
+                        <p>{{ record.vision_date }}</p>
+                      </div>
+                      <div class="vision-record-field">
+                        <span class="chip-label">Formato</span>
+                        <p>{{ record.format }}</p>
+                      </div>
+                      <div class="vision-record-field">
+                        <span class="chip-label">Observações</span>
+                        <p>{{ record.notes }}</p>
+                      </div>
+                    </div>
+                  </div>
+                </details>
+                {% endfor %}
+              </div>
+              {% else %}
+              <p class="interview-empty">Nenhum relato registrado ainda.</p>
+              {% endif %}
+            </section>
+
+            <div class="vision-insights">
+              <section class="vision-card vision-analysis-card">
+                <h4>Sintese / Analise</h4>
+                <p class="panel-hint">Consolide alinhamentos, alertas e proximos passos da visao dos socios.</p>
+                <label class="form-field">
+                  <span>Resumo consolidado</span>
+                  <textarea name="vision_analysis" rows="6" placeholder="Sintetize percepcoes, alertas e oportunidades">{{ vision_analysis_text or '' }}</textarea>
+                </label>
+                {% if vision_analysis_suggestion %}
+                <div class="ia-suggestion">
+                  <span class="chip-label">Sugestao IA</span>
+                  <p>{{ vision_analysis_suggestion }}</p>
+                </div>
+                {% endif %}
+              </section>
+
+              <section class="vision-card vision-maturity-card">
+                <h4>Nível de maturidade</h4>
+                <p class="panel-hint">Defina o nível consolidado de maturidade da governança societária.</p>
+                <label class="form-field">
+                  <span>Resultado consolidado (0 a 5)</span>
+                  <input type="number" name="vision_maturity" min="0" max="5" step="0.1" value="{{ vision_maturity_score if vision_maturity_score is not none else '' }}" placeholder="Defina a maturidade" />
+                </label>
+                {% if vision_maturity_updated_at %}
+                <span class="summary-meta">Atualizado em {{ vision_maturity_updated_at }}</span>
+                {% endif %}
+                {% if vision_maturity_suggestion %}
+                <div class="ia-suggestion">
+                  <span class="chip-label">Sugestao IA</span>
+                  <p>{{ vision_maturity_suggestion }}</p>
+                </div>
+                {% endif %}
+              </section>
+            </div>
+          </div>
+        </div>
+      </section>
+    </details>
+
+    <details class="interview-section surface-card market-section">
+      <summary class="interview-summary-bar">
+        <div class="interview-summary-text">
+          <span class="section-eyebrow">Possibilidades do mercado</span>
+          <h3>Analise do ambiente externo</h3>
+          <p>Considere dados economicos, regulatorios e competitivos para orientar estrategias.</p>
+        </div>
+        <div class="interview-progress">
+          <span class="chip-label">Registro</span>
+          <span class="interview-count">{{ market_records|length }} registro(s) salvo(s)</span>
+          <div class="section-status-controls">
+            {% if market_section_open %}
+              <button class="button button-small button-warning" onclick="closeMarketSection()" title="Concluir seção de possibilidades do mercado">
+                🔒 Concluir
+              </button>
+            {% else %}
+              <button class="button button-small button-success" onclick="openMarketSection()" title="Reabrir seção de possibilidades do mercado">
+                🔓 Reabrir
+              </button>
+              {% if market_section_status %}
+                <span class="section-closed-info">
+                  Concluída por {{ market_section_status.closed_by }} em {{ market_section_status.closed_at[:10] if market_section_status.closed_at else 'Data não disponível' }}
+                </span>
+              {% endif %}
+            {% endif %}
+          </div>
+        </div>
+      </summary>
+
+      <section class="market-content">
+        <section class="interview-panel instructions-panel market-instructions">
+          <h4>Instruções</h4>
+          <div class="interview-instructions">
+            <div class="instruction-item">
+              <span class="chip-label">Consultor</span>
+              <p>Sera inserido depois.</p>
+            </div>
+            <div class="instruction-item">
+              <span class="chip-label">Participantes</span>
+              <p>Sera inserido depois.</p>
+            </div>
+          </div>
+        </section>
+
+        <div class="market-columns">
+          <section class="interview-panel market-form-panel">
+            <h4>Coleta de Informacoes</h4>
+            {% if not market_section_open %}
+            <div class="section-closed-notice">
+              <p>🔒 Esta seção foi concluída e não permite mais edições.</p>
+            </div>
+            {% endif %}
+            <form class="market-form-fields" action="{{ url_for('add_market_record', plan_id=plan.id) }}" method="post" {% if not market_section_open %}style="opacity: 0.5; pointer-events: none;"{% endif %}>
+              <label class="form-field">
+                <span>Participantes *</span>
+                <input type="text" name="market_participants" placeholder="Nomes dos participantes (separados por vírgula)" required />
+              </label>
+              <label class="form-field">
+                <span>Consultores *</span>
+                <input type="text" name="market_consultants" placeholder="Nomes dos consultores (separados por vírgula)" required />
+              </label>
+              <div class="form-two-cols">
+                <label class="form-field">
+                  <span>Data</span>
+                  <input type="date" name="market_date" />
+                </label>
+                <label class="form-field">
+                  <span>Formato</span>
+                  <select name="format">
+                    <option>Presencial</option>
+                    <option>Online</option>
+                    <option>Telefone</option>
+                  </select>
+                </label>
+              </div>
+              <label class="form-field">
+                <span>Economico e politico (mundial, nacional, estadual, municipal)</span>
+                <textarea name="global_context" rows="3" placeholder="Resumo do contexto macroeconomico e regulatorio"></textarea>
+              </label>
+              <label class="form-field">
+                <span>Economico setorial (atual e possiveis)</span>
+                <textarea name="sector_context" rows="3" placeholder="Descreva movimentos do setor"></textarea>
+              </label>
+              <label class="form-field">
+                <span>Tamanho do mercado em numeros</span>
+                <textarea name="market_size" rows="2" placeholder="Potenciais clientes, volume financeiro"></textarea>
+              </label>
+              <label class="form-field">
+                <span>Espaco para aumento de vendas</span>
+                <textarea name="growth_space" rows="2" placeholder="Onde ha espaco para crescer"></textarea>
+              </label>
+              <label class="form-field">
+                <span>Ameacas externas a monitorar</span>
+                <textarea name="threats" rows="2" placeholder="Principais ameacas"></textarea>
+              </label>
+              <label class="form-field">
+                <span>Mudanças de comportamento do consumidor</span>
+                <textarea name="consumer_behavior" rows="2" placeholder="Digitalizacao, sustentabilidade, outros"></textarea>
+              </label>
+              <label class="form-field">
+                <span>Concorrencia direta e benchmarking</span>
+                <textarea name="competition" rows="3" placeholder="Concorrentes atuais e possiveis referenciais"></textarea>
+              </label>
+              <label class="form-field">
+                <span>Observacoes</span>
+                <textarea name="notes" rows="2" placeholder="Observacoes adicionais"></textarea>
+              </label>
+              <div class="form-actions">
+                <button type="submit" class="button button-primary">Salvar informacoes</button>
+                <button type="reset" class="button button-ghost">Limpar</button>
+              </div>
+            </form>
+          </section>
+
+          <div class="market-column">
+            <section class="interview-panel market-summary-panel">
+              <h4>Informacoes registradas</h4>
+              {% if market_records %}
+                {% for record in market_records %}
+                <details class="market-record">
+                  <summary class="market-record-summary">
+                    <span class="market-record-title">{{ record.participants }}</span>
+                    <span class="market-record-date">{{ record.date }}</span>
+                    <div class="market-record-actions">
+                      <button class="button button-small button-ghost" onclick="editMarketRecord({{ record.id }})" title="Editar relato">
+                        ✏️
+                      </button>
+                      <button class="button button-small button-danger" onclick="deleteMarketRecord({{ record.id }})" title="Excluir relato">
+                        🗑️
+                      </button>
+                    </div>
+                  </summary>
+                  <div class="market-record-body">
+                    <div class="market-record-content">
+                      <div class="market-record-field">
+                        <span class="chip-label">Participantes</span>
+                        <p>{{ record.participants }}</p>
+                      </div>
+                      <div class="market-record-field">
+                        <span class="chip-label">Consultores</span>
+                        <p>{{ record.consultants }}</p>
+                      </div>
+                      <div class="market-record-field">
+                        <span class="chip-label">Data</span>
+                        <p>{{ record.date }}</p>
+                      </div>
+                      <div class="market-record-field">
+                        <span class="chip-label">Formato</span>
+                        <p>{{ record.format }}</p>
+                      </div>
+                      <div class="market-record-field">
+                        <span class="chip-label">Contexto economico e politico</span>
+                        <p>{{ record.global_context }}</p>
+                      </div>
+                      <div class="market-record-field">
+                        <span class="chip-label">Economico setorial</span>
+                        <p>{{ record.sector_context }}</p>
+                      </div>
+                      <div class="market-record-field">
+                        <span class="chip-label">Tamanho do mercado</span>
+                        <p>{{ record.market_size }}</p>
+                      </div>
+                      <div class="market-record-field">
+                        <span class="chip-label">Espaco para aumento de vendas</span>
+                        <p>{{ record.growth_space }}</p>
+                      </div>
+                      <div class="market-record-field">
+                        <span class="chip-label">Ameacas externas</span>
+                        <p>{{ record.threats }}</p>
+                      </div>
+                      <div class="market-record-field">
+                        <span class="chip-label">Comportamento do consumidor</span>
+                        <p>{{ record.consumer_behavior }}</p>
+                      </div>
+                      <div class="market-record-field">
+                        <span class="chip-label">Concorrencia e benchmarking</span>
+                        <p>{{ record.competition }}</p>
+                      </div>
+                      <div class="market-record-field">
+                        <span class="chip-label">Observacoes</span>
+                        <p>{{ record.notes }}</p>
+                      </div>
+                    </div>
+                  </div>
+                </details>
+                {% endfor %}
+              {% else %}
+              <p class="interview-empty">Nenhum dado registrado ainda.</p>
+              {% endif %}
+            </section>
+
+            <div class="market-insights">
+              <section class="market-card market-analysis-card">
+                <h4>Sintese / Analise</h4>
+                <p class="panel-hint">Identifique implicacoes estrategicas a partir do mercado avaliado.</p>
+                <label class="form-field">
+                  <span>Resumo consolidado</span>
+                  <textarea name="market_analysis" rows="6" placeholder="Sintetize percepcoes e encaminhamentos" {% if not market_section_open %}disabled{% endif %}>{{ market_analysis_text or '' }}</textarea>
+                </label>
+                {% if market_analysis_suggestion %}
+                <div class="ia-suggestion">
+                  <span class="chip-label">Sugestao IA</span>
+                  <p>{{ market_analysis_suggestion }}</p>
+                </div>
+                {% endif %}
+              </section>
+
+              <section class="market-card market-maturity-card">
+                <h4>Nivel de maturidade</h4>
+                <p class="panel-hint">Avalie a maturidade da analise de mercado.</p>
+                <label class="form-field">
+                  <span>Resultado consolidado (0 a 5)</span>
+                  <input type="number" name="market_maturity" min="0" max="5" step="0.1" value="{{ market_maturity_score if market_maturity_score is not none else '' }}" placeholder="Defina a maturidade" {% if not market_section_open %}disabled{% endif %} />
+                </label>
+                {% if market_maturity_updated_at %}
+                <span class="summary-meta">Atualizado em {{ market_maturity_updated_at }}</span>
+                {% endif %}
+                {% if market_maturity_suggestion %}
+                <div class="ia-suggestion">
+                  <span class="chip-label">Sugestao IA</span>
+                  <p>{{ market_maturity_suggestion }}</p>
+                </div>
+                {% endif %}
+              </section>
+            </div>
+          </div>
+        </div>
+      </section>
+    </details>
+    <details class="interview-section surface-card company-section">
+      <summary class="interview-summary-bar">
+        <div class="interview-summary-text">
+          <span class="section-eyebrow">Possibilidades da empresa</span>
+          <h3>Diagnostico interno consolidado</h3>
+          <p>Analise capacidades internas, rotinas e riscos para alinhar prioridades de execução.</p>
+        </div>
+        <div class="interview-progress">
+          <span class="chip-label">Registro</span>
+          <span class="interview-count">{{ company_records|length }} registro(s) salvo(s)</span>
+          <div class="section-status-controls">
+            {% if company_section_open %}
+              <button class="button button-small button-warning" onclick="closeCompanySection()" title="Concluir seção de possibilidades da empresa">
+                🔒 Concluir
+              </button>
+            {% else %}
+              <button class="button button-small button-success" onclick="openCompanySection()" title="Reabrir seção de possibilidades da empresa">
+                🔓 Reabrir
+              </button>
+              {% if company_section_status %}
+                <span class="section-closed-info">
+                  Concluída por {{ company_section_status.closed_by }} em {{ company_section_status.closed_at[:10] if company_section_status.closed_at else 'Data não disponível' }}
+                </span>
+              {% endif %}
+            {% endif %}
+          </div>
+        </div>
+      </summary>
+
+      <section class="company-content">
+        <section class="interview-panel instructions-panel company-instructions">
+          <h4>Instruções</h4>
+          <div class="interview-instructions">
+            <div class="instruction-item">
+              <span class="chip-label">Consultor</span>
+              <p>Sera inserido depois.</p>
+            </div>
+            <div class="instruction-item">
+              <span class="chip-label">Participantes</span>
+              <p>Sera inserido depois.</p>
+            </div>
+          </div>
+        </section>
+
+        <div class="company-columns">
+          <section class="interview-panel company-form-panel">
+            <h4>Coleta de Informacoes</h4>
+            {% if not company_section_open %}
+            <div class="section-closed-notice">
+              <p>🔒 Esta seção foi concluída e não permite mais edições.</p>
+            </div>
+            {% endif %}
+            <form class="company-form-fields" action="{{ url_for('add_company_record', plan_id=plan.id) }}" method="post" {% if not company_section_open %}style="opacity: 0.5; pointer-events: none;"{% endif %}>
+              <label class="form-field">
+                <span>Participantes *</span>
+                <input type="text" name="company_participants" placeholder="Nomes dos participantes (separados por vírgula)" required />
+              </label>
+              <label class="form-field">
+                <span>Consultores *</span>
+                <input type="text" name="company_consultants" placeholder="Nomes dos consultores (separados por vírgula)" required />
+              </label>
+              <label class="form-field">
+                <span>Data</span>
+                <input type="date" name="company_date" value="{{ company_record.date if company_record else '' }}" />
+              </label>
+
+              <div class="company-fieldset">
+                <span class="chip-label">Analise via BSC</span>
+                <label class="form-field">
+                  <span>Financeira (visao dos socios)</span>
+                  <textarea name="bsc_financial" rows="2" placeholder="Indicadores financeiros, investimentos, retorno">{{ company_record.bsc_financial if company_record else '' }}</textarea>
+                </label>
+                <label class="form-field">
+                  <span>Comercial (mercado x produtos)</span>
+                  <textarea name="bsc_commercial" rows="2" placeholder="Clientes, mix de produtos e estagio da relacao">{{ company_record.bsc_commercial if company_record else '' }}</textarea>
+                </label>
+                <label class="form-field">
+                  <span>Processos de negocios</span>
+                  <textarea name="bsc_process" rows="2" placeholder="Visao da organizacao interna">{{ company_record.bsc_process if company_record else '' }}</textarea>
+                </label>
+                <label class="form-field">
+                  <span>Aprendizado e crescimento</span>
+                  <textarea name="bsc_learning" rows="2" placeholder="Percepcao, motivacao e qualificacao dos colaboradores">{{ company_record.bsc_learning if company_record else '' }}</textarea>
+                </label>
+              </div>
+
+              <div class="company-fieldset">
+                <span class="chip-label">Analise Tri-partite</span>
+                <label class="form-field">
+                  <span>Comercial</span>
+                  <textarea name="tri_commercial" rows="3" placeholder="Produtos, canais, marketing, marca, dependencia de clientes">{{ company_record.tri_commercial if company_record else '' }}</textarea>
+                </label>
+                <label class="form-field">
+                  <span>Adm / Fin</span>
+                  <textarea name="tri_adm_fin" rows="3" placeholder="Gestao, valores, eficiencia de processos, gargalos, parceiros">{{ company_record.tri_adm_fin if company_record else '' }}</textarea>
+                </label>
+                <label class="form-field">
+                  <span>Operacional</span>
+                  <textarea name="tri_operational" rows="3" placeholder="Novos produtos, fornecedores, riscos de insumos">{{ company_record.tri_operational if company_record else '' }}</textarea>
+                </label>
+              </div>
+
+              <div class="form-actions">
+                <button type="submit" class="button button-primary">Salvar informacoes</button>
+                <button type="reset" class="button button-ghost">Limpar</button>
+              </div>
+            </form>
+          </section>
+
+          <div class="company-column">
+            <section class="interview-panel company-summary-panel">
+              <h4>Informacoes registradas</h4>
+              {% if company_records %}
+                {% for record in company_records %}
+                <details class="company-record">
+                  <summary class="company-record-summary">
+                    <span class="company-record-title">{{ record.participants }}</span>
+                    <span class="company-record-date">{{ record.date }}</span>
+                    <div class="company-record-actions">
+                      <button class="button button-small button-ghost" onclick="editCompanyRecord({{ record.id }})" title="Editar relato">
+                        ✏️
+                      </button>
+                      <button class="button button-small button-danger" onclick="deleteCompanyRecord({{ record.id }})" title="Excluir relato">
+                        🗑️
+                      </button>
+                    </div>
+                  </summary>
+                  <div class="company-record-body">
+                    <div class="company-record-content">
+                      <div class="company-record-field">
+                        <span class="chip-label">Participantes</span>
+                        <p>{{ record.participants }}</p>
+                      </div>
+                      <div class="company-record-field">
+                        <span class="chip-label">Consultores</span>
+                        <p>{{ record.consultants }}</p>
+                      </div>
+                      <div class="company-record-field">
+                        <span class="chip-label">Data</span>
+                        <p>{{ record.date }}</p>
+                      </div>
+                      <div class="company-record-field">
+                        <span class="chip-label">BSC Financeira</span>
+                        <p>{{ record.bsc_financial }}</p>
+                      </div>
+                      <div class="company-record-field">
+                        <span class="chip-label">BSC Comercial</span>
+                        <p>{{ record.bsc_commercial }}</p>
+                      </div>
+                      <div class="company-record-field">
+                        <span class="chip-label">BSC Processos</span>
+                        <p>{{ record.bsc_process }}</p>
+                      </div>
+                      <div class="company-record-field">
+                        <span class="chip-label">BSC Aprendizado</span>
+                        <p>{{ record.bsc_learning }}</p>
+                      </div>
+                      <div class="company-record-field">
+                        <span class="chip-label">Tri-partite Comercial</span>
+                        <p>{{ record.tri_commercial }}</p>
+                      </div>
+                      <div class="company-record-field">
+                        <span class="chip-label">Tri-partite Adm/Fin</span>
+                        <p>{{ record.tri_adm_fin }}</p>
+                      </div>
+                      <div class="company-record-field">
+                        <span class="chip-label">Tri-partite Operacional</span>
+                        <p>{{ record.tri_operational }}</p>
+                      </div>
+                      <div class="company-record-field">
+                        <span class="chip-label">Observacoes</span>
+                        <p>{{ record.notes }}</p>
+                      </div>
+                    </div>
+                  </div>
+                </details>
+                {% endfor %}
+              {% else %}
+              <p class="interview-empty">Nenhum dado registrado ainda.</p>
+              {% endif %}
+            </section>
+
+            <div class="company-insights">
+              <section class="company-card company-analysis-card">
+                <h4>Sintese / Analise</h4>
+                <p class="panel-hint">Consolide conclusoes sobre cultura, processos e capacidades internas.</p>
+                <label class="form-field">
+                  <span>Resumo consolidado</span>
+                  <textarea name="company_analysis" rows="6" placeholder="Sintetize percepcoes e encaminhamentos" {% if not company_section_open %}disabled{% endif %}>{{ company_analysis_text or '' }}</textarea>
+                </label>
+                {% if company_analysis_suggestion %}
+                <div class="ia-suggestion">
+                  <span class="chip-label">Sugestao IA</span>
+                  <p>{{ company_analysis_suggestion }}</p>
+                </div>
+                {% endif %}
+              </section>
+
+              <section class="company-card company-maturity-card">
+                <h4>Nivel de maturidade</h4>
+                <p class="panel-hint">Avalie o nivel de maturidade interna.</p>
+                <label class="form-field">
+                  <span>Resultado consolidado (0 a 5)</span>
+                  <input type="number" name="company_maturity" min="0" max="5" step="0.1" value="{{ company_maturity_score if company_maturity_score is not none else '' }}" placeholder="Defina a maturidade" {% if not company_section_open %}disabled{% endif %} />
+                </label>
+                {% if company_maturity_updated_at %}
+                <span class="summary-meta">Atualizado em {{ company_maturity_updated_at }}</span>
+                {% endif %}
+                {% if company_maturity_suggestion %}
+                <div class="ia-suggestion">
+                  <span class="chip-label">Sugestao IA</span>
+                  <p>{{ company_maturity_suggestion }}</p>
+                </div>
+                {% endif %}
+              </section>
+            </div>
+          </div>
+        </div>
+      </section>
+    </details>
+
+    <!-- Subsessão 1: Alinhamentos Encontrados -->
+    <details class="interview-section surface-card alignments-found-section">
+      <summary class="interview-summary-bar">
+        <div class="interview-summary-text">
+          <span class="section-eyebrow">Análise Preliminar</span>
+          <h3>Alinhamentos Encontrados</h3>
+          <p>Identificação e registro dos pontos convergentes entre os participantes.</p>
+        </div>
+        <div class="interview-progress">
+          <span class="chip-label">Alinhamentos</span>
+          <span class="interview-count">{{ alignments_records|length }} relatos salvos</span>
+          <div class="section-status-controls">
+            {% if alignments_found_section_open %}
+              <button class="button button-small button-warning" onclick="closeAlignmentsFoundSection()" title="Concluir seção de alinhamentos">
+                🔒 Concluir
+              </button>
+            {% else %}
+              <button class="button button-small button-success" onclick="openAlignmentsFoundSection()" title="Reabrir seção de alinhamentos">
+                🔓 Reabrir
+              </button>
+              {% if alignments_found_section_status %}
+                <span class="section-closed-info">
+                  Concluída por {{ alignments_found_section_status.closed_by }} em {{ alignments_found_section_status.closed_at[:10] if alignments_found_section_status.closed_at else 'Data não disponível' }}
+                </span>
+              {% endif %}
+            {% endif %}
+          </div>
+        </div>
+      </summary>
+
+    <!-- Subsessão 2: Desalinhamentos Críticos -->
+    <details class="interview-section surface-card misalignments-critical-section">
+      <summary class="interview-summary-bar">
+        <div class="interview-summary-text">
+          <span class="section-eyebrow">Análise Preliminar</span>
+          <h3>Desalinhamentos Críticos</h3>
+          <p>Identificação e registro dos pontos divergentes que exigem intervenção.</p>
+        </div>
+        <div class="interview-progress">
+          <span class="chip-label">Desalinhamentos</span>
+          <span class="interview-count">{{ misalignments_records|length }} relatos salvos</span>
+          <div class="section-status-controls">
+            {% if misalignments_critical_section_open %}
+              <button class="button button-small button-warning" onclick="closeMisalignmentsCriticalSection()" title="Concluir seção de desalinhamentos">
+                🔒 Concluir
+              </button>
+            {% else %}
+              <button class="button button-small button-success" onclick="openMisalignmentsCriticalSection()" title="Reabrir seção de desalinhamentos">
+                🔓 Reabrir
+              </button>
+              {% if misalignments_critical_section_status %}
+                <span class="section-closed-info">
+                  Concluída por {{ misalignments_critical_section_status.closed_by }} em {{ misalignments_critical_section_status.closed_at[:10] if misalignments_critical_section_status.closed_at else 'Data não disponível' }}
+                </span>
+              {% endif %}
+            {% endif %}
+          </div>
+        </div>
+      </summary>
+
+    <!-- Subsessão 3: Análise Preliminar -->
+    <details class="interview-section surface-card preliminary-analysis-section">
+      <summary class="interview-summary-bar">
+        <div class="interview-summary-text">
+          <span class="section-eyebrow">Análise Preliminar</span>
+          <h3>Análise Preliminar</h3>
+          <p>Consolidação da análise do consultor sobre alinhamentos e desalinhamentos.</p>
+        </div>
+        <div class="interview-progress">
+          <span class="chip-label">Análise</span>
+          <span class="interview-count">Parecer do consultor</span>
+          <div class="section-status-controls">
+            {% if preliminary_analysis_section_open %}
+              <button class="button button-small button-warning" onclick="closePreliminaryAnalysisSection()" title="Concluir análise preliminar">
+                🔒 Concluir
+              </button>
+            {% else %}
+              <button class="button button-small button-success" onclick="openPreliminaryAnalysisSection()" title="Reabrir análise preliminar">
+                🔓 Reabrir
+              </button>
+              {% if preliminary_analysis_section_status %}
+                <span class="section-closed-info">
+                  Concluída por {{ preliminary_analysis_section_status.closed_by }} em {{ preliminary_analysis_section_status.closed_at[:10] if preliminary_analysis_section_status.closed_at else 'Data não disponível' }}
+                </span>
+              {% endif %}
+            {% endif %}
+          </div>
+        </div>
+      </summary>
+
+    <!-- Subsessão 4: Workshop / Versão Final das Análises -->
+    <details class="interview-section surface-card workshop-final-analysis-section">
+      <summary class="interview-summary-bar">
+        <div class="interview-summary-text">
+          <span class="section-eyebrow">Workshop</span>
+          <h3>Workshop / Versão Final das Análises</h3>
+          <p>Discussão e ajustes finais das análises com os participantes.</p>
+        </div>
+        <div class="interview-progress">
+          <span class="chip-label">Workshop</span>
+          <span class="interview-count">Ajustes colaborativos</span>
+          <div class="section-status-controls">
+            {% if workshop_final_analysis_section_open %}
+              <button class="button button-small button-warning" onclick="closeWorkshopFinalAnalysisSection()" title="Concluir workshop">
+                🔒 Concluir
+              </button>
+            {% else %}
+              <button class="button button-small button-success" onclick="openWorkshopFinalAnalysisSection()" title="Reabrir workshop">
+                🔓 Reabrir
+              </button>
+              {% if workshop_final_analysis_section_status %}
+                <span class="section-closed-info">
+                  Concluída por {{ workshop_final_analysis_section_status.closed_by }} em {{ workshop_final_analysis_section_status.closed_at[:10] if workshop_final_analysis_section_status.closed_at else 'Data não disponível' }}
+                </span>
+              {% endif %}
+            {% endif %}
+          </div>
+        </div>
+      </summary>
+
+    <!-- Subsessão 5: Cadastro dos Direcionadores e Aprovações -->
+    <details class="interview-section surface-card directionals-approvals-section">
+      <summary class="interview-summary-bar">
+        <div class="interview-summary-text">
+          <span class="section-eyebrow">Finalização</span>
+          <h3>Cadastro dos Direcionadores e Aprovações</h3>
+          <p>Registro final dos direcionadores e processo de aprovação.</p>
+        </div>
+        <div class="interview-progress">
+          <span class="chip-label">Direcionadores</span>
+          <span class="interview-count">{{ directionals_final_records|length }} direcionadores</span>
+          <div class="section-status-controls">
+            {% if directionals_approvals_section_open %}
+              <button class="button button-small button-warning" onclick="closeDirectionalsApprovalsSection()" title="Concluir direcionadores">
+                🔒 Concluir
+              </button>
+            {% else %}
+              <button class="button button-small button-success" onclick="openDirectionalsApprovalsSection()" title="Reabrir direcionadores">
+                🔓 Reabrir
+              </button>
+              {% if directionals_approvals_section_status %}
+                <span class="section-closed-info">
+                  Concluída por {{ directionals_approvals_section_status.closed_by }} em {{ directionals_approvals_section_status.closed_at[:10] if directionals_approvals_section_status.closed_at else 'Data não disponível' }}
+                </span>
+              {% endif %}
+            {% endif %}
+          </div>
+        </div>
+      </summary>
+      <div class="alignments-found-content">
+        <div class="surface-card">
+          <div class="card-header">
+            <h4>Alinhamentos Identificados</h4>
+            <span class="badge">Pontos Convergentes</span>
+          </div>
+          <div class="card-content">
+            <p class="panel-hint">Registre os pontos onde há consenso entre os participantes.</p>
+            
+            {% if alignments_found_section_open %}
+            <form class="alignment-form" action="{{ url_for('add_alignment_record', plan_id=plan.id) }}" method="post">
+              <div class="form-field">
+                <span>Adicionar Alinhamento</span>
+                <input type="text" name="alignment_topic" placeholder="Tópico do alinhamento" required />
+              </div>
+              <div class="form-field">
+                <span>Descrição</span>
+                <textarea name="alignment_description" rows="3" placeholder="Descrição do alinhamento encontrado" required></textarea>
+              </div>
+              <div class="form-two-cols">
+                <div class="form-field">
+                  <span>Nível de Consenso</span>
+                  <select name="alignment_consensus" required>
+                    <option value="">Selecione</option>
+                    <option value="Baixo">Baixo</option>
+                    <option value="Médio">Médio</option>
+                    <option value="Alto">Alto</option>
+                  </select>
+                </div>
+                <div class="form-field">
+                  <span>Prioridade</span>
+                  <select name="alignment_priority" required>
+                    <option value="">Selecione</option>
+                    <option value="Baixa">Baixa</option>
+                    <option value="Média">Média</option>
+                    <option value="Alta">Alta</option>
+                    <option value="Crítica">Crítica</option>
+                  </select>
+                </div>
+              </div>
+              <div class="form-actions">
+                <button type="submit" class="button button-primary">Adicionar Alinhamento</button>
+              </div>
+            </form>
+            {% endif %}
+            {% if alignment_records %}
+            <div class="alignment-records">
+              <span class="chip-label">Relatos registrados ({{ alignment_records|length }})</span>
+              <ul class="alignment-records-list">
+                {% for record in alignment_records %}
+                <li class="alignment-record-item">
+                  <div class="alignment-record-header">
+                    <strong>{{ record.title or record.topic or 'Relato' }}</strong>
+                    {% if alignments_found_section_open %}
+                    <div class="alignment-record-actions">
+                      <button class="button button-small button-ghost" onclick="editAlignmentRecord({{ record.id }})" title="Editar alinhamento">
+                        ✏️
+                      </button>
+                      <button class="button button-small button-danger" onclick="deleteAlignmentRecord({{ record.id }})" title="Excluir alinhamento">
+                        🗑️
+                      </button>
+                    </div>
+                    {% endif %}
+                  </div>
+                  <p>{{ record.insight or record.description or 'Sem descrição' }}</p>
+                  <div class="alignment-record-meta">
+                    {% if record.consensus %}
+                    <span class="chip-label">Consenso: {{ record.consensus }}</span>
+                    {% endif %}
+                    {% if record.priority %}
+                    <span class="chip-label">Prioridade: {{ record.priority }}</span>
+                    {% endif %}
+                    <span class="summary-meta">
+                      {% if record.owner %}{{ record.owner }}{% endif %}{% if record.owner and record.updated_at %} - {% endif %}{% if record.updated_at %}{{ record.updated_at }}{% endif %}
+                    </span>
+                  </div>
+                </li>
+                {% endfor %}
+              </ul>
+            </div>
+            {% else %}
+            <div class="empty-state">
+              <p>📋 Nenhum alinhamento registrado ainda.</p>
+              <p>Use o formulário acima para adicionar os pontos convergentes identificados.</p>
+            </div>
+            {% endif %}
+          </div>
+        </div>
+      </div>
+    </details>
+
+    <!-- Subsessão 2: Desalinhamentos Críticos -->
+    <details class="interview-section surface-card misalignments-critical-section">
+      <summary class="interview-summary-bar">
+        <div class="interview-summary-text">
+          <span class="section-eyebrow">Análise Preliminar</span>
+          <h3>Desalinhamentos Críticos</h3>
+          <p>Identificação e registro dos pontos divergentes que exigem intervenção.</p>
+        </div>
+        <div class="interview-progress">
+          <span class="chip-label">Desalinhamentos</span>
+          <span class="interview-count">{{ misalignments_records|length }} relatos salvos</span>
+          <div class="section-status-controls">
+            {% if misalignments_critical_section_open %}
+              <button class="button button-small button-warning" onclick="closeMisalignmentsCriticalSection()" title="Concluir seção de desalinhamentos">
+                🔒 Concluir
+              </button>
+            {% else %}
+              <button class="button button-small button-success" onclick="openMisalignmentsCriticalSection()" title="Reabrir seção de desalinhamentos">
+                🔓 Reabrir
+              </button>
+              {% if misalignments_critical_section_status %}
+                <span class="section-closed-info">
+                  Concluída por {{ misalignments_critical_section_status.closed_by }} em {{ misalignments_critical_section_status.closed_at[:10] if misalignments_critical_section_status.closed_at else 'Data não disponível' }}
+                </span>
+              {% endif %}
+            {% endif %}
+          </div>
+        </div>
+      </summary>
+      
+      <div class="misalignments-critical-content">
+        <div class="surface-card">
+          <div class="card-header">
+            <h4>Desalinhamentos Críticos</h4>
+            <span class="badge">Pontos Divergentes</span>
+          </div>
+          <div class="card-content">
+            <p class="panel-hint">Registre os pontos onde há divergências que exigem intervenção.</p>
+            
+            {% if misalignments_critical_section_open %}
+            <form class="misalignment-form" action="{{ url_for('add_misalignment_record', plan_id=plan.id) }}" method="post">
+              <div class="form-field">
+                <span>Adicionar Desalinhamento</span>
+                <input type="text" name="misalignment_issue" placeholder="Tópico do desalinhamento" required />
+              </div>
+              <div class="form-field">
+                <span>Descrição</span>
+                <textarea name="misalignment_description" rows="3" placeholder="Descrição do desalinhamento crítico" required></textarea>
+              </div>
+              <div class="form-two-cols">
+                <div class="form-field">
+                  <span>Severidade</span>
+                  <select name="misalignment_severity" required>
+                    <option value="">Selecione</option>
+                    <option value="Baixa">Baixa</option>
+                    <option value="Média">Média</option>
+                    <option value="Alta">Alta</option>
+                    <option value="Crítica">Crítica</option>
+                  </select>
+                </div>
+                <div class="form-field">
+                  <span>Impacto</span>
+                  <select name="misalignment_impact" required>
+                    <option value="">Selecione</option>
+                    <option value="Baixo">Baixo</option>
+                    <option value="Médio">Médio</option>
+                    <option value="Alto">Alto</option>
+                    <option value="Crítico">Crítico</option>
+                  </select>
+                </div>
+              </div>
+              <div class="form-actions">
+                <button type="submit" class="button button-primary">Adicionar Desalinhamento</button>
+              </div>
+            </form>
+            {% endif %}
+            
+            {% if misalignment_records %}
+            <div class="misalignment-records">
+              <span class="chip-label">Relatos registrados ({{ misalignment_records|length }})</span>
+              <ul class="misalignment-records-list">
+                {% for record in misalignment_records %}
+                <li class="alignment-record-item">
+                  <div class="alignment-record-header">
+                    <strong>{{ record.title or record.issue or 'Relato' }}</strong>
+                    {% if misalignments_critical_section_open %}
+                    <div class="alignment-record-actions">
+                      <button class="button button-small button-ghost" onclick="editMisalignmentRecord({{ record.id }})" title="Editar desalinhamento">
+                        ✏️
+                      </button>
+                      <button class="button button-small button-danger" onclick="deleteMisalignmentRecord({{ record.id }})" title="Excluir desalinhamento">
+                        🗑️
+                      </button>
+                    </div>
+                    {% endif %}
+                  </div>
+                  <p>{{ record.insight or record.description or 'Sem descrição' }}</p>
+                  <div class="alignment-record-meta">
+                    {% if record.severity %}
+                    <span class="chip-label">Severidade: {{ record.severity }}</span>
+                    {% endif %}
+                    {% if record.impact %}
+                    <span class="chip-label">Impacto: {{ record.impact }}</span>
+                    {% endif %}
+                    <span class="summary-meta">
+                      {% if record.owner %}{{ record.owner }}{% endif %}{% if record.owner and record.updated_at %} - {% endif %}{% if record.updated_at %}{{ record.updated_at }}{% endif %}
+                    </span>
+                  </div>
+                </li>
+                {% endfor %}
+              </ul>
+            </div>
+            {% else %}
+            <div class="empty-state">
+              <p>📋 Nenhum desalinhamento registrado ainda.</p>
+              <p>Use o formulário acima para adicionar os pontos divergentes identificados.</p>
+            </div>
+            {% endif %}
+          </div>
+        </div>
+      </div>
+    </details>
+
+    <!-- Subsessão 3: Análise Preliminar -->
+    <details class="interview-section surface-card preliminary-analysis-section">
+      <summary class="interview-summary-bar">
+        <div class="interview-summary-text">
+          <span class="section-eyebrow">Análise Preliminar</span>
+          <h3>Análise Preliminar</h3>
+          <p>Consolidação da análise do consultor sobre alinhamentos e desalinhamentos.</p>
+        </div>
+        <div class="interview-progress">
+          <span class="chip-label">Análise</span>
+          <span class="interview-count">Parecer do consultor</span>
+          <div class="section-status-controls">
+            {% if preliminary_analysis_section_open %}
+              <button class="button button-small button-warning" onclick="closePreliminaryAnalysisSection()" title="Concluir análise preliminar">
+                🔒 Concluir
+              </button>
+            {% else %}
+              <button class="button button-small button-success" onclick="openPreliminaryAnalysisSection()" title="Reabrir análise preliminar">
+                🔓 Reabrir
+              </button>
+              {% if preliminary_analysis_section_status %}
+                <span class="section-closed-info">
+                  Concluída por {{ preliminary_analysis_section_status.closed_by }} em {{ preliminary_analysis_section_status.closed_at[:10] if preliminary_analysis_section_status.closed_at else 'Data não disponível' }}
+                </span>
+              {% endif %}
+            {% endif %}
+          </div>
+        </div>
+      </summary>
+      
+      <div class="preliminary-analysis-content">
+        <div class="alignment-grid">
+          <section class="interview-panel alignment-card">
+            <h4>Parecer sobre Alinhamentos</h4>
+            <p class="panel-hint">Análise consolidada dos pontos convergentes.</p>
+            <form action="{{ url_for('save_alignment_consultant_notes', plan_id=plan.id) }}" method="post">
+              <label class="form-field">
+                <span>Parecer do consultor</span>
+                <textarea name="alignment_consultant_notes" rows="5" placeholder="Referende os alinhamentos e destaque reforcos necessarios" {% if not preliminary_analysis_section_open %}disabled{% endif %}>{{ alignment_consultant_notes or '' }}</textarea>
+              </label>
+              {% if preliminary_analysis_section_open %}
+              <div class="form-actions">
+                <button type="submit" class="button button-primary">Salvar Parecer</button>
+              </div>
+              {% endif %}
+            </form>
+          </section>
+          
+          <section class="interview-panel alignment-card">
+            <h4>Parecer sobre Desalinhamentos</h4>
+            <p class="panel-hint">Análise consolidada dos pontos divergentes.</p>
+            <form action="{{ url_for('save_misalignment_consultant_notes', plan_id=plan.id) }}" method="post">
+              <label class="form-field">
+                <span>Parecer do consultor</span>
+                <textarea name="misalignment_consultant_notes" rows="5" placeholder="Analise os desalinhamentos e proponha encaminhamentos" {% if not preliminary_analysis_section_open %}disabled{% endif %}>{{ misalignment_consultant_notes or '' }}</textarea>
+              </label>
+              {% if preliminary_analysis_section_open %}
+              <div class="form-actions">
+                <button type="submit" class="button button-primary">Salvar Parecer</button>
+              </div>
+              {% endif %}
+            </form>
+          </section>
+        </div>
+      </div>
+    </details>
+
+    <!-- Subsessão 4: Workshop / Versão Final das Análises -->
+    <details class="interview-section surface-card workshop-final-analysis-section">
+      <summary class="interview-summary-bar">
+        <div class="interview-summary-text">
+          <span class="section-eyebrow">Workshop</span>
+          <h3>Workshop / Versão Final das Análises</h3>
+          <p>Discussão e ajustes finais das análises com os participantes.</p>
+        </div>
+        <div class="interview-progress">
+          <span class="chip-label">Workshop</span>
+          <span class="interview-count">Ajustes colaborativos</span>
+          <div class="section-status-controls">
+            {% if workshop_final_analysis_section_open %}
+              <button class="button button-small button-warning" onclick="closeWorkshopFinalAnalysisSection()" title="Concluir workshop">
+                🔒 Concluir
+              </button>
+            {% else %}
+              <button class="button button-small button-success" onclick="openWorkshopFinalAnalysisSection()" title="Reabrir workshop">
+                🔓 Reabrir
+              </button>
+              {% if workshop_final_analysis_section_status %}
+                <span class="section-closed-info">
+                  Concluída por {{ workshop_final_analysis_section_status.closed_by }} em {{ workshop_final_analysis_section_status.closed_at[:10] if workshop_final_analysis_section_status.closed_at else 'Data não disponível' }}
+                </span>
+              {% endif %}
+            {% endif %}
+          </div>
+        </div>
+      </summary>
+      
+      <div class="workshop-final-analysis-content">
+        <div class="surface-card">
+          <div class="card-header">
+            <h4>Workshop de Ajustes</h4>
+            <span class="badge">Versão Final</span>
+          </div>
+          <div class="card-content">
+            <p class="panel-hint">Registre os ajustes e consensos finais alcançados no workshop.</p>
+            
+            {% if workshop_final_analysis_section_open %}
+            <form class="workshop-form" action="{{ url_for('add_workshop_adjustment', plan_id=plan.id) }}" method="post">
+              <div class="form-field">
+                <span>Adicionar Ajuste do Workshop</span>
+                <input type="text" name="adjustment_title" placeholder="Título do ajuste" required />
+              </div>
+              <div class="form-field">
+                <span>Descrição do Ajuste</span>
+                <textarea name="adjustment_description" rows="4" placeholder="Descreva o ajuste realizado no workshop" required></textarea>
+              </div>
+              <div class="form-field">
+                <span>Participantes do Workshop</span>
+                <input type="text" name="workshop_participants" placeholder="Nomes dos participantes (separados por vírgula)" />
+              </div>
+              <div class="form-actions">
+                <button type="submit" class="button button-primary">Adicionar Ajuste</button>
+              </div>
+            </form>
+            {% endif %}
+            
+            <div class="workshop-adjustments">
+              <span class="chip-label">Ajustes realizados</span>
+              <div class="empty-state">
+                <p>📋 Ainda não há ajustes registrados.</p>
+                <p>Use o formulário acima para registrar os ajustes realizados no workshop.</p>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </details>
+
+    <!-- Subsessão 5: Cadastro dos Direcionadores e Aprovações -->
+    <details class="interview-section surface-card directionals-approvals-section">
+      <summary class="interview-summary-bar">
+        <div class="interview-summary-text">
+          <span class="section-eyebrow">Finalização</span>
+          <h3>Cadastro dos Direcionadores e Aprovações</h3>
+          <p>Registro final dos direcionadores e processo de aprovação.</p>
+        </div>
+        <div class="interview-progress">
+          <span class="chip-label">Direcionadores</span>
+          <span class="interview-count">{{ directionals_final_records|length }} direcionadores</span>
+          <div class="section-status-controls">
+            {% if directionals_approvals_section_open %}
+              <button class="button button-small button-warning" onclick="closeDirectionalsApprovalsSection()" title="Concluir direcionadores">
+                🔒 Concluir
+              </button>
+            {% else %}
+              <button class="button button-small button-success" onclick="openDirectionalsApprovalsSection()" title="Reabrir direcionadores">
+                🔓 Reabrir
+              </button>
+              {% if directionals_approvals_section_status %}
+                <span class="section-closed-info">
+                  Concluída por {{ directionals_approvals_section_status.closed_by }} em {{ directionals_approvals_section_status.closed_at[:10] if directionals_approvals_section_status.closed_at else 'Data não disponível' }}
+                </span>
+              {% endif %}
+            {% endif %}
+          </div>
+        </div>
+      </summary>
+      
+      <div class="directionals-approvals-content">
+        <div class="alignment-grid">
+          <section class="interview-panel alignment-card">
+            <h4>Cadastro de Direcionadores</h4>
+            <p class="panel-hint">Registre os direcionadores finais baseados nas análises.</p>
+            
+            {% if directionals_approvals_section_open %}
+            <form class="directionals-form" action="{{ url_for('add_directionals_final_record', plan_id=plan.id) }}" method="post">
+              <div class="form-field">
+                <span>Título do Direcionador</span>
+                <input type="text" name="directional_title" placeholder="Título do direcionador" required />
+              </div>
+              <div class="form-field">
+                <span>Descrição</span>
+                <textarea name="directional_description" rows="3" placeholder="Descrição detalhada do direcionador" required></textarea>
+              </div>
+              <div class="form-field">
+                <span>Justificativa</span>
+                <textarea name="directional_justification" rows="3" placeholder="Justificativa baseada nas análises anteriores" required></textarea>
+              </div>
+              <div class="form-field">
+                <span>Responsável</span>
+                <input type="text" name="directional_owner" placeholder="Nome do responsável" />
+              </div>
+              <div class="form-actions">
+                <button type="submit" class="button button-primary">Cadastrar Direcionador</button>
+              </div>
+            </form>
+            {% endif %}
+            
+            {% if directionals_final_records %}
+            <div class="directionals-records">
+              <span class="chip-label">Direcionadores cadastrados ({{ directionals_final_records|length }})</span>
+              <ul class="directionals-records-list">
+                {% for record in directionals_final_records %}
+                <li class="directionals-record-item">
+                  <div class="directionals-record-header">
+                    <strong>{{ record.title or 'Direcionador' }}</strong>
+                    {% if directionals_approvals_section_open %}
+                    <div class="directionals-record-actions">
+                      <button class="button button-small button-ghost" onclick="editDirectionalsFinalRecord({{ record.id }})" title="Editar direcionador">
+                        ✏️
+                      </button>
+                      <button class="button button-small button-danger" onclick="deleteDirectionalsFinalRecord({{ record.id }})" title="Excluir direcionador">
+                        🗑️
+                      </button>
+                    </div>
+                    {% endif %}
+                  </div>
+                  <p>{{ record.description or 'Sem descrição' }}</p>
+                  {% if record.justification %}
+                  <p><strong>Justificativa:</strong> {{ record.justification }}</p>
+                  {% endif %}
+                  <div class="directionals-record-meta">
+                    {% if record.owner %}
+                    <span class="chip-label">Responsável: {{ record.owner }}</span>
+                    {% endif %}
+                    <span class="summary-meta">
+                      {% if record.created_at %}{{ record.created_at[:10] }}{% endif %}
+                    </span>
+                  </div>
+                </li>
+                {% endfor %}
+              </ul>
+            </div>
+            {% else %}
+            <div class="empty-state">
+              <p>📋 Nenhum direcionador cadastrado ainda.</p>
+              <p>Use o formulário acima para cadastrar os direcionadores finais.</p>
+            </div>
+            {% endif %}
+          </section>
+          
+          <section class="interview-panel alignment-card">
+            <h4>Processo de Aprovação</h4>
+            <p class="panel-hint">Registre as aprovações dos direcionadores.</p>
+            
+            {% if directionals_approvals_section_open %}
+            <form class="approvals-form" action="{{ url_for('add_directionals_approval', plan_id=plan.id) }}" method="post">
+              <div class="form-field">
+                <span>Direcionador</span>
+                <select name="directional_id" required>
+                  <option value="">Selecione um direcionador</option>
+                  {% for record in directionals_final_records %}
+                  <option value="{{ record.id }}">{{ record.title or 'Direcionador' }}</option>
+                  {% endfor %}
+                </select>
+              </div>
+              <div class="form-field">
+                <span>Status da Aprovação</span>
+                <select name="approval_status" required>
+                  <option value="">Selecione</option>
+                  <option value="Aprovado">Aprovado</option>
+                  <option value="Rejeitado">Rejeitado</option>
+                  <option value="Pendente">Pendente</option>
+                  <option value="Em Análise">Em Análise</option>
+                </select>
+              </div>
+              <div class="form-field">
+                <span>Observações</span>
+                <textarea name="approval_notes" rows="3" placeholder="Observações sobre a aprovação"></textarea>
+              </div>
+              <div class="form-field">
+                <span>Aprovador</span>
+                <input type="text" name="approver_name" placeholder="Nome do aprovador" />
+              </div>
+              <div class="form-actions">
+                <button type="submit" class="button button-primary">Registrar Aprovação</button>
+              </div>
+            </form>
+            {% endif %}
+            
+            <div class="approvals-records">
+              <span class="chip-label">Aprovações registradas</span>
+              <div class="empty-state">
+                <p>📋 Ainda não há aprovações registradas.</p>
+                <p>Use o formulário acima para registrar as aprovações dos direcionadores.</p>
+              </div>
+            </div>
+          </section>
+        </div>
+      </div>
+    </details>
+
+    <!-- Seção 1: Análise da IA -->
+    <details class="interview-section surface-card directionals-ai-section">
+      <summary class="interview-summary-bar">
+        <div class="interview-summary-text">
+          <span class="section-eyebrow">Fase 1</span>
+          <h3>Análise da IA</h3>
+          <p>Briefing automático com sugestões de direcionadores baseadas nos dados coletados.</p>
+        </div>
+        <div class="interview-progress">
+          <span class="chip-label">IA</span>
+          <span class="interview-count">Análise automática</span>
+          <div class="section-status-controls">
+            {% if directionals_ai_section_open %}
+              <button class="button button-small button-warning" onclick="closeDirectionalsAiSection()" title="Concluir análise da IA">
+                🔒 Concluir
+              </button>
+            {% else %}
+              <button class="button button-small button-success" onclick="openDirectionalsAiSection()" title="Reabrir análise da IA">
+                🔓 Reabrir
+              </button>
+              {% if directionals_ai_section_status %}
+                <span class="section-closed-info">
+                  Concluída por {{ directionals_ai_section_status.closed_by }} em {{ directionals_ai_section_status.closed_at[:10] if directionals_ai_section_status.closed_at else 'Data não disponível' }}
+                </span>
+              {% endif %}
+            {% endif %}
+          </div>
+        </div>
+      </summary>
+
+      <div class="directionals-ai-content">
+        <div class="surface-card">
+          <div class="card-header">
+            <h4>Briefing Automático da IA</h4>
+            <span class="badge">Análise Inteligente</span>
+          </div>
+          <div class="card-content">
+            <div class="ia-analysis">
+              <span class="chip-label">Análise Consolidada</span>
+              <p>{{ directionals_ai_analysis or 'Aguardando análise automática da IA baseada nos dados coletados.' }}</p>
+            </div>
+            <div class="ia-suggestions">
+              <span class="chip-label">Sugestões de Direcionadores</span>
+              <p>{{ directionals_ai_suggestions or 'Aguardando sugestões automatizadas.' }}</p>
+            </div>
+            {% if directionals_ai_section_open %}
+            <div class="form-actions">
+              <button class="button button-primary" onclick="generateAiAnalysis()">Gerar Nova Análise</button>
+            </div>
+            {% endif %}
+          </div>
+        </div>
+      </div>
+    </details>
+
+    <!-- Seção 2: Análise do Consultor -->
+    <details class="interview-section surface-card directionals-consultant-section">
+      <summary class="interview-summary-bar">
+        <div class="interview-summary-text">
+          <span class="section-eyebrow">Fase 2</span>
+          <h3>Análise do Consultor</h3>
+          <p>Revisão e análise das sugestões da IA pelo consultor especialista.</p>
+        </div>
+        <div class="interview-progress">
+          <span class="chip-label">Consultor</span>
+          <span class="interview-count">Análise especializada</span>
+          <div class="section-status-controls">
+            {% if directionals_consultant_section_open %}
+              <button class="button button-small button-warning" onclick="closeDirectionalsConsultantSection()" title="Concluir análise do consultor">
+                🔒 Concluir
+              </button>
+            {% else %}
+              <button class="button button-small button-success" onclick="openDirectionalsConsultantSection()" title="Reabrir análise do consultor">
+                🔓 Reabrir
+              </button>
+              {% if directionals_consultant_section_status %}
+                <span class="section-closed-info">
+                  Concluída por {{ directionals_consultant_section_status.closed_by }} em {{ directionals_consultant_section_status.closed_at[:10] if directionals_consultant_section_status.closed_at else 'Data não disponível' }}
+                </span>
+              {% endif %}
+            {% endif %}
+          </div>
+        </div>
+      </summary>
+
+      <div class="directionals-consultant-content">
+        <form action="{{ url_for('save_directionals_consultant_analysis', plan_id=plan.id) }}" method="post">
+          <div class="surface-card">
+            <div class="card-header">
+              <h4>Análise e Diagnóstico do Consultor</h4>
+              <span class="badge">Especialista</span>
+            </div>
+            <div class="card-content">
+              {% if not directionals_consultant_section_open %}
+              <div class="section-closed-notice">
+                <p>🔒 Esta seção foi concluída e não permite mais edições.</p>
+              </div>
+              {% endif %}
+              <label class="form-field">
+                <span>Análise das Sugestões da IA</span>
+                <textarea name="consultant_ai_analysis" rows="4" placeholder="Analise as sugestões da IA e identifique pontos fortes e fracos" {% if not directionals_consultant_section_open %}disabled{% endif %}>{{ directionals_consultant_ai_analysis or '' }}</textarea>
+              </label>
+              <label class="form-field">
+                <span>Diagnóstico e Recomendações</span>
+                <textarea name="consultant_diagnosis" rows="4" placeholder="Forneça seu diagnóstico e recomendações baseadas na experiência" {% if not directionals_consultant_section_open %}disabled{% endif %}>{{ directionals_consultant_diagnosis or '' }}</textarea>
+              </label>
+              <label class="form-field">
+                <span>Direcionadores Propostos</span>
+                <textarea name="consultant_directionals" rows="5" placeholder="Liste os direcionadores que você propõe baseado na análise" {% if not directionals_consultant_section_open %}disabled{% endif %}>{{ directionals_consultant_directionals or '' }}</textarea>
+              </label>
+              {% if directionals_consultant_section_open %}
+              <div class="form-actions">
+                <button type="submit" class="button button-primary">Salvar Análise</button>
+              </div>
+              {% endif %}
+            </div>
+          </div>
+        </form>
+      </div>
+    </details>
+
+    <!-- Seção 3: Workshop e Ajustes -->
+    <details class="interview-section surface-card directionals-workshop-section">
+      <summary class="interview-summary-bar">
+        <div class="interview-summary-text">
+          <span class="section-eyebrow">Fase 3</span>
+          <h3>Workshop e Ajustes</h3>
+          <p>Análise colaborativa e ajustes dos direcionadores com os participantes.</p>
+        </div>
+        <div class="interview-progress">
+          <span class="chip-label">Workshop</span>
+          <span class="interview-count">{{ directionals_workshop_records|length }} ajustes registrados</span>
+          <div class="section-status-controls">
+            {% if directionals_workshop_section_open %}
+              <button class="button button-small button-warning" onclick="closeDirectionalsWorkshopSection()" title="Concluir workshop">
+                🔒 Concluir
+              </button>
+            {% else %}
+              <button class="button button-small button-success" onclick="openDirectionalsWorkshopSection()" title="Reabrir workshop">
+                🔓 Reabrir
+              </button>
+              {% if directionals_workshop_section_status %}
+                <span class="section-closed-info">
+                  Concluída por {{ directionals_workshop_section_status.closed_by }} em {{ directionals_workshop_section_status.closed_at[:10] if directionals_workshop_section_status.closed_at else 'Data não disponível' }}
+                </span>
+              {% endif %}
+            {% endif %}
+          </div>
+        </div>
+      </summary>
+
+      <div class="directionals-workshop-content">
+        {% if not directionals_workshop_section_open %}
+        <div class="section-closed-notice">
+          <p>🔒 Esta seção foi concluída e não permite mais edições.</p>
+        </div>
+        {% endif %}
+        
+        {% if directionals_workshop_section_open %}
+        <form class="workshop-form" action="{{ url_for('add_directionals_workshop_record', plan_id=plan.id) }}" method="post">
+          <div class="surface-card">
+            <div class="card-header">
+              <h4>Registrar Ajuste do Workshop</h4>
+              <span class="badge">Colaborativo</span>
+            </div>
+            <div class="card-content">
+              <label class="form-field">
+                <span>Direcionador</span>
+                <input type="text" name="directional_title" placeholder="Nome do direcionador" required />
+              </label>
+              <label class="form-field">
+                <span>Descrição</span>
+                <textarea name="directional_description" rows="3" placeholder="Descrição do direcionador" required></textarea>
+              </label>
+              <label class="form-field">
+                <span>Ajustes Realizados</span>
+                <textarea name="workshop_adjustments" rows="3" placeholder="Descreva os ajustes realizados no workshop" required></textarea>
+              </label>
+              <label class="form-field">
+                <span>Participantes</span>
+                <input type="text" name="workshop_participants" placeholder="Participantes do workshop" />
+              </label>
+              <div class="form-actions">
+                <button type="submit" class="button button-primary">Registrar Ajuste</button>
+                <button type="reset" class="button button-ghost">Limpar</button>
+              </div>
+            </div>
+          </div>
+        </form>
+        {% endif %}
+
+        {% if directionals_workshop_records %}
+        <div class="workshop-records">
+          <h4>Ajustes Registrados</h4>
+          {% for record in directionals_workshop_records %}
+          <article class="workshop-record-item">
+            <header class="workshop-record-header">
+              <div class="workshop-record-meta">
+                <strong>{{ record.title or 'Direcionador' }}</strong>
+                {% if record.status %}
+                <span class="chip-label">{{ record.status }}</span>
+                {% endif %}
+              </div>
+              {% if directionals_workshop_section_open %}
+              <div class="workshop-record-actions">
+                <button type="button" class="button button-small button-ghost" onclick="editWorkshopRecord({{ record.id }})" title="Editar registro">
+                  ✏️
+                </button>
+                <button type="button" class="button button-small button-danger" onclick="deleteWorkshopRecord({{ record.id }})" title="Excluir registro">
+                  🗑️
+                </button>
+              </div>
+              {% endif %}
+            </header>
+            <p><strong>Descrição:</strong> {{ record.description or 'Sem descrição' }}</p>
+            {% if record.adjustments %}
+            <p><strong>Ajustes:</strong> {{ record.adjustments }}</p>
+            {% endif %}
+            {% if record.participants %}
+            <p><strong>Participantes:</strong> {{ record.participants }}</p>
+            {% endif %}
+            <div class="workshop-record-footer">
+              <span class="summary-meta">
+                Registrado em {{ record.created_at[:10] if record.created_at else 'Data não disponível' }}
+              </span>
+            </div>
+          </article>
+          {% endfor %}
+        </div>
+        {% else %}
+        <p class="workshop-empty">Nenhum ajuste registrado ainda.</p>
+        {% endif %}
+      </div>
+    </details>
+
+    <!-- Seção 4: Direcionadores Finais -->
+    <details class="interview-section surface-card directionals-final-section">
+      <summary class="interview-summary-bar">
+        <div class="interview-summary-text">
+          <span class="section-eyebrow">Fase 4</span>
+          <h3>Direcionadores Finais</h3>
+          <p>Cadastro dos direcionadores definitivos após validação.</p>
+        </div>
+        <div class="interview-progress">
+          <span class="chip-label">Final</span>
+          <span class="interview-count">{{ directionals_final_records|length }} direcionadores finais</span>
+          <div class="section-status-controls">
+            {% if directionals_final_section_open %}
+              <button class="button button-small button-warning" onclick="closeDirectionalsFinalSection()" title="Concluir direcionadores finais">
+                🔒 Concluir
+              </button>
+            {% else %}
+              <button class="button button-small button-success" onclick="openDirectionalsFinalSection()" title="Reabrir direcionadores finais">
+                🔓 Reabrir
+              </button>
+              {% if directionals_final_section_status %}
+                <span class="section-closed-info">
+                  Concluída por {{ directionals_final_section_status.closed_by }} em {{ directionals_final_section_status.closed_at[:10] if directionals_final_section_status.closed_at else 'Data não disponível' }}
+                </span>
+              {% endif %}
+            {% endif %}
+          </div>
+        </div>
+      </summary>
+
+      <div class="directionals-final-content">
+        {% if not directionals_final_section_open %}
+        <div class="section-closed-notice">
+          <p>🔒 Esta seção foi concluída e não permite mais edições.</p>
+        </div>
+        {% endif %}
+        
+        {% if directionals_final_section_open %}
+        <form class="final-directionals-form" action="{{ url_for('add_directionals_final_record', plan_id=plan.id) }}" method="post">
+          <div class="surface-card">
+            <div class="card-header">
+              <h4>Cadastrar Direcionador Final</h4>
+              <span class="badge">Definitivo</span>
+            </div>
+            <div class="card-content">
+              <label class="form-field">
+                <span>Título</span>
+                <input type="text" name="directional_title" placeholder="Nome do direcionador" required />
+              </label>
+              <label class="form-field">
+                <span>Descrição</span>
+                <textarea name="directional_description" rows="4" placeholder="Descrição completa do direcionador" required></textarea>
+              </label>
+              <label class="form-field">
+                <span>Justificativa</span>
+                <textarea name="directional_justification" rows="3" placeholder="Justificativa para este direcionador" required></textarea>
+              </label>
+              <label class="form-field">
+                <span>Responsável</span>
+                <input type="text" name="directional_owner" placeholder="Responsável pela implementação" />
+              </label>
+              <div class="form-actions">
+                <button type="submit" class="button button-primary">Cadastrar Direcionador</button>
+                <button type="reset" class="button button-ghost">Limpar</button>
+              </div>
+            </div>
+          </div>
+        </form>
+        {% endif %}
+
+        {% if directionals_final_records %}
+        <div class="final-directionals-list">
+          <h4>Direcionadores Finais</h4>
+          {% for record in directionals_final_records %}
+          <article class="final-directional-item">
+            <header class="final-directional-header">
+              <div class="final-directional-meta">
+                <strong>{{ record.title or 'Direcionador' }}</strong>
+                {% if record.status %}
+                <span class="chip-label">{{ record.status }}</span>
+                {% endif %}
+              </div>
+              {% if directionals_final_section_open %}
+              <div class="final-directional-actions">
+                <button type="button" class="button button-small button-ghost" onclick="editFinalDirectionalRecord({{ record.id }})" title="Editar direcionador">
+                  ✏️
+                </button>
+                <button type="button" class="button button-small button-danger" onclick="deleteFinalDirectionalRecord({{ record.id }})" title="Excluir direcionador">
+                  🗑️
+                </button>
+              </div>
+              {% endif %}
+            </header>
+            <p><strong>Descrição:</strong> {{ record.description or 'Sem descrição' }}</p>
+            {% if record.justification %}
+            <p><strong>Justificativa:</strong> {{ record.justification }}</p>
+            {% endif %}
+            {% if record.owner %}
+            <p><strong>Responsável:</strong> {{ record.owner }}</p>
+            {% endif %}
+            <div class="final-directional-footer">
+              <span class="summary-meta">
+                Cadastrado em {{ record.created_at[:10] if record.created_at else 'Data não disponível' }}
+              </span>
+            </div>
+          </article>
+          {% endfor %}
+        </div>
+        {% else %}
+        <p class="final-directionals-empty">Nenhum direcionador final cadastrado ainda.</p>
+        {% endif %}
+      </div>
+    </details>
+
+    <!-- Seção 5: Aprovações -->
+    <details class="interview-section surface-card directionals-approvals-section">
+      <summary class="interview-summary-bar">
+        <div class="interview-summary-text">
+          <span class="section-eyebrow">Fase 5</span>
+          <h3>Aprovações</h3>
+          <p>Registro das aprovações dos direcionadores pelos tomadores de decisão.</p>
+        </div>
+        <div class="interview-progress">
+          <span class="chip-label">Aprovações</span>
+          <span class="interview-count">{{ directionals_approvals|length }} aprovações registradas</span>
+          <div class="section-status-controls">
+            {% if directionals_approvals_section_open %}
+              <button class="button button-small button-warning" onclick="closeDirectionalsApprovalsSection()" title="Concluir aprovações">
+                🔒 Concluir
+              </button>
+            {% else %}
+              <button class="button button-small button-success" onclick="openDirectionalsApprovalsSection()" title="Reabrir aprovações">
+                🔓 Reabrir
+              </button>
+              {% if directionals_approvals_section_status %}
+                <span class="section-closed-info">
+                  Concluída por {{ directionals_approvals_section_status.closed_by }} em {{ directionals_approvals_section_status.closed_at[:10] if directionals_approvals_section_status.closed_at else 'Data não disponível' }}
+                </span>
+              {% endif %}
+            {% endif %}
+          </div>
+        </div>
+      </summary>
+
+      <div class="directionals-approvals-content">
+        {% if not directionals_approvals_section_open %}
+        <div class="section-closed-notice">
+          <p>🔒 Esta seção foi concluída e não permite mais edições.</p>
+        </div>
+        {% endif %}
+        
+        {% if directionals_approvals_section_open %}
+        <form class="approvals-form" action="{{ url_for('add_directionals_approval', plan_id=plan.id) }}" method="post">
+          <div class="surface-card">
+            <div class="card-header">
+              <h4>Registrar Aprovação</h4>
+              <span class="badge">Validação</span>
+            </div>
+            <div class="card-content">
+              <label class="form-field">
+                <span>Direcionador</span>
+                <select name="directional_id" required>
+                  <option value="">Selecione um direcionador</option>
+                  {% for record in directionals_final_records %}
+                  <option value="{{ record.id }}">{{ record.title or 'Direcionador' }}</option>
+                  {% endfor %}
+                </select>
+              </label>
+              <label class="form-field">
+                <span>Status da Aprovação</span>
+                <select name="approval_status" required>
+                  <option value="approved">Aprovado</option>
+                  <option value="rejected">Rejeitado</option>
+                  <option value="pending">Pendente</option>
+                </select>
+              </label>
+              <label class="form-field">
+                <span>Observações</span>
+                <textarea name="approval_notes" rows="3" placeholder="Observações sobre a aprovação"></textarea>
+              </label>
+              <label class="form-field">
+                <span>Aprovado por</span>
+                <input type="text" name="approved_by" placeholder="Nome do aprovador" />
+              </label>
+              <div class="form-actions">
+                <button type="submit" class="button button-primary">Registrar Aprovação</button>
+                <button type="reset" class="button button-ghost">Limpar</button>
+              </div>
+            </div>
+          </div>
+        </form>
+        {% endif %}
+
+        {% if directionals_approvals %}
+        <div class="approvals-list">
+          <h4>Aprovações Registradas</h4>
+          {% for approval in directionals_approvals %}
+          <article class="approval-item">
+            <header class="approval-header">
+              <div class="approval-meta">
+                <strong>{{ approval.directional_title or 'Direcionador' }}</strong>
+                <span class="chip-label {{ approval.status }}">{{ approval.status|title }}</span>
+              </div>
+            </header>
+            {% if approval.notes %}
+            <p><strong>Observações:</strong> {{ approval.notes }}</p>
+            {% endif %}
+            <div class="approval-footer">
+              <span class="summary-meta">
+                {% if approval.approved_by %}
+                Aprovado por {{ approval.approved_by }} em {{ approval.approved_at[:10] if approval.approved_at else 'Data não disponível' }}
+                {% else %}
+                Registrado em {{ approval.created_at[:10] if approval.created_at else 'Data não disponível' }}
+                {% endif %}
+              </span>
+            </div>
+          </article>
+          {% endfor %}
+        </div>
+        {% else %}
+        <p class="approvals-empty">Nenhuma aprovação registrada ainda.</p>
+        {% endif %}
+      </div>
+    </details>
+
+    <!-- Seção Final: Direcionadores Consolidados (Sempre Aberta) -->
+    <div class="surface-card directionals-consolidated-section">
+      <div class="card-header">
+        <h3>🎯 Direcionadores Consolidados do Plano</h3>
+        <span class="badge">Visualização Final</span>
+      </div>
+      <div class="card-content">
+        <p class="panel-hint">Visão consolidada dos direcionadores aprovados para implementação.</p>
+        
+        {% if directionals_final_records %}
+        <div class="consolidated-directionals">
+          {% for record in directionals_final_records %}
+          <article class="consolidated-directional">
+            <header class="consolidated-header">
+              <h4>{{ record.title or 'Direcionador' }}</h4>
+              {% if record.status %}
+              <span class="status-badge {{ record.status }}">{{ record.status|title }}</span>
+              {% endif %}
+            </header>
+            <div class="consolidated-content">
+              <p><strong>Descrição:</strong> {{ record.description or 'Sem descrição' }}</p>
+              {% if record.justification %}
+              <p><strong>Justificativa:</strong> {{ record.justification }}</p>
+              {% endif %}
+              {% if record.owner %}
+              <p><strong>Responsável:</strong> {{ record.owner }}</p>
+              {% endif %}
+            </div>
+            <div class="consolidated-footer">
+              <span class="summary-meta">
+                Cadastrado em {{ record.created_at[:10] if record.created_at else 'Data não disponível' }}
+              </span>
+            </div>
+          </article>
+          {% endfor %}
+        </div>
+        {% else %}
+        <div class="empty-state">
+          <p>📋 Nenhum direcionador final cadastrado ainda.</p>
+          <p>Complete as fases anteriores para visualizar os direcionadores consolidados aqui.</p>
+        </div>
+        {% endif %}
+      </div>
+    </div>
+
+    {% for section in driver_topics %}
+    <div class="surface-card driver-section">
+      <div class="driver-section-header">
+        <div>
+          <span class="section-eyebrow">{{ '%02d' % loop.index }}</span>
+          <h2>{{ section.title }}</h2>
+          {% if section.subtitle %}
+          <p>{{ section.subtitle }}</p>
+          {% endif %}
+        </div>
+        <div class="driver-section-meta">
+          <span class="chip-label">Itens</span>
+          <strong>{{ section['items']|length }}</strong>
+        </div>
+      </div>
+      <div class="driver-items">
+        {% for item in section['items'] %}
+        <details class="driver-item" {% if loop.first %}open{% endif %}>
+          <summary>
+            <div class="driver-summary">
+              <span class="driver-question">{{ item.prompt }}</span>
+              <span class="driver-maturity">Maturidade: {{ item.maturity }}/5</span>
+            </div>
+          </summary>
+          <div class="driver-body">
+            <div class="driver-grid">
+              <div class="driver-block">
+                <span class="chip-label">Informacoes colhidas</span>
+                <p>{{ item.information }}</p>
+              </div>
+              <div class="driver-block">
+                <span class="chip-label">Sintese das analises</span>
+                <p>{{ item.analysis }}</p>
+              </div>
+              <div class="driver-block">
+                <span class="chip-label">Alinhamentos e desalinhamentos</span>
+                <p>{{ item.alignment }}</p>
+              </div>
+              <div class="driver-block">
+                <span class="chip-label">Plano preliminar</span>
+                <p>{{ item.preliminary_plan }}</p>
+              </div>
+              <div class="driver-block">
+                <span class="chip-label">Plano final / correcoes</span>
+                <p>{{ item.final_plan }}</p>
+              </div>
+            </div>
+            <div class="driver-footer">
+              <span class="chip-label">Aprovacoes</span>
+              {% if item.approvals %}
+              <ul>
+                {% for approval in item.approvals %}
+                <li>{{ approval }}</li>
+                {% endfor %}
+              </ul>
+              {% else %}
+              <p>Sem aprovacoes registradas.</p>
+              {% endif %}
+              <button type="button" class="button button-ghost" disabled>Editar (em breve)</button>
+            </div>
+          </div>
+        </details>
+        {% endfor %}
+      </div>
+    </div>
+    {% endfor %}
+  </section>
+</div>
+
+<style>
+.interview-actions {
+    display: flex;
+    gap: 8px;
+    margin-left: auto;
+}
+
+.interview-record-meta {
+    display: flex;
+    align-items: center;
+    gap: 16px;
+    flex-wrap: wrap;
+}
+
+.button-small {
+    padding: 4px 8px;
+    font-size: 12px;
+    min-width: auto;
+}
+
+.button-danger {
+    background-color: #ef4444;
+    color: white;
+    border: 1px solid #ef4444;
+}
+
+.button-danger:hover {
+    background-color: #dc2626;
+    border-color: #dc2626;
+}
+
+.cancel-edit-btn {
+    margin-right: 8px;
+}
+
+.section-status-controls {
+    display: flex;
+    flex-direction: column;
+    align-items: flex-end;
+    gap: 8px;
+}
+
+.section-closed-info {
+    font-size: 11px;
+    color: #666;
+    font-style: italic;
+}
+
+.button-warning {
+    background-color: #f59e0b;
+    color: white;
+    border: 1px solid #f59e0b;
+}
+
+.button-warning:hover {
+    background-color: #d97706;
+    border-color: #d97706;
+}
+
+.button-success {
+    background-color: #10b981;
+    color: white;
+    border: 1px solid #10b981;
+}
+
+.button-success:hover {
+    background-color: #059669;
+    border-color: #059669;
+}
+
+.section-closed-notice {
+    background-color: #fef3c7;
+    border: 1px solid #f59e0b;
+    border-radius: 4px;
+    padding: 12px;
+    margin-bottom: 16px;
+}
+
+.section-closed-notice p {
+    margin: 0;
+    color: #92400e;
+    font-weight: 500;
+}
+
+.vision-record-actions {
+    display: flex;
+    gap: 4px;
+    margin-left: auto;
+}
+
+.vision-record-summary {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+}
+
+.company-record-actions {
+    display: flex;
+    gap: 4px;
+    margin-left: auto;
+}
+
+.company-record-summary {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+}
+
+.alignment-record-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+}
+
+.alignment-record-actions {
+    display: flex;
+    gap: 4px;
+}
+
+.alignment-record-meta {
+    display: flex;
+    gap: 8px;
+    align-items: center;
+    flex-wrap: wrap;
+    margin-top: 8px;
+}
+
+</style>
+
+<script>
+// Funcionalidades de edição e exclusão de entrevistas
+function editInterview(interviewId) {
+    // Buscar dados da entrevista
+    fetch(`/plans/{{ plan.id }}/interviews/${interviewId}`)
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                const interview = data.interview;
+                
+                // Preencher formulário com dados existentes
+                document.querySelector('select[name="participant"]').value = interview.participant_name;
+                document.querySelector('input[name="consultant"]').value = interview.consultant_name;
+                document.querySelector('input[name="date"]').value = interview.interview_date;
+                document.querySelector('select[name="format"]').value = interview.format;
+                document.querySelector('textarea[name="notes"]').value = interview.notes;
+                
+                // Alterar ação do formulário para edição
+                const form = document.querySelector('.interview-form-fields');
+                form.action = `/plans/{{ plan.id }}/interviews/${interviewId}`;
+                form.method = 'PUT';
+                
+                // Adicionar campo hidden para indicar que é edição
+                let hiddenInput = form.querySelector('input[name="interview_id"]');
+                if (!hiddenInput) {
+                    hiddenInput = document.createElement('input');
+                    hiddenInput.type = 'hidden';
+                    hiddenInput.name = 'interview_id';
+                    form.appendChild(hiddenInput);
+                }
+                hiddenInput.value = interviewId;
+                
+                // Alterar texto do botão
+                const submitBtn = form.querySelector('button[type="submit"]');
+                submitBtn.textContent = 'Atualizar entrevista';
+                
+                // Adicionar botão de cancelar se não existir
+                let cancelBtn = form.querySelector('.cancel-edit-btn');
+                if (!cancelBtn) {
+                    cancelBtn = document.createElement('button');
+                    cancelBtn.type = 'button';
+                    cancelBtn.className = 'button button-ghost cancel-edit-btn';
+                    cancelBtn.textContent = 'Cancelar edição';
+                    cancelBtn.onclick = cancelEdit;
+                    
+                    // Inserir antes do botão de submit
+                    submitBtn.parentNode.insertBefore(cancelBtn, submitBtn);
+                }
+                
+                // Scroll para o formulário
+                form.scrollIntoView({ behavior: 'smooth' });
+                
+                // Mostrar mensagem
+                showMessage('Formulário preenchido para edição. Modifique os dados e clique em "Atualizar entrevista".', 'info');
+            } else {
+                showMessage('Erro ao carregar dados da entrevista.', 'error');
+            }
+        })
+        .catch(error => {
+            console.error('Erro:', error);
+            showMessage('Erro ao carregar dados da entrevista.', 'error');
+        });
+}
+
+function cancelEdit() {
+    const form = document.querySelector('.interview-form-fields');
+    
+    // Restaurar ação original do formulário
+    form.action = '{{ url_for("add_interview", plan_id=plan.id) }}';
+    form.method = 'POST';
+    
+    // Remover campo hidden de edição
+    const hiddenInput = form.querySelector('input[name="interview_id"]');
+    if (hiddenInput) {
+        hiddenInput.remove();
+    }
+    
+    // Restaurar texto do botão
+    const submitBtn = form.querySelector('button[type="submit"]');
+    submitBtn.textContent = 'Registrar entrevista';
+    
+    // Remover botão de cancelar
+    const cancelBtn = form.querySelector('.cancel-edit-btn');
+    if (cancelBtn) {
+        cancelBtn.remove();
+    }
+    
+    // Limpar formulário
+    form.reset();
+    
+    showMessage('Edição cancelada. Formulário limpo para nova entrevista.', 'info');
+}
+
+function deleteInterview(interviewId) {
+    if (confirm('Tem certeza que deseja excluir esta entrevista? Esta ação não pode ser desfeita.')) {
+        fetch(`/plans/{{ plan.id }}/interviews/${interviewId}`, {
+            method: 'DELETE',
+            headers: {
+                'Content-Type': 'application/json',
+            }
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                showMessage('Entrevista excluída com sucesso!', 'success');
+                // Recarregar a página para atualizar a lista
+                setTimeout(() => {
+                    window.location.reload();
+                }, 1000);
+            } else {
+                showMessage('Erro ao excluir entrevista: ' + data.error, 'error');
+            }
+        })
+        .catch(error => {
+            console.error('Erro:', error);
+            showMessage('Erro ao excluir entrevista.', 'error');
+        });
+    }
+}
+
+function closeInterviewSection() {
+    const notes = prompt('Motivo da conclusão da seção de entrevistas (opcional):');
+    
+    fetch(`/plans/{{ plan.id }}/sections/interviews/status`, {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+            status: 'closed',
+            closed_by: 'Usuário',
+            notes: notes || ''
+        })
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.success) {
+            showMessage('Seção de entrevistas concluída com sucesso!', 'success');
+            // Recarregar a página para atualizar a interface
+            setTimeout(() => {
+                window.location.reload();
+            }, 1000);
+        } else {
+            showMessage('Erro ao concluir seção: ' + data.error, 'error');
+        }
+    })
+    .catch(error => {
+        console.error('Erro:', error);
+        showMessage('Erro ao concluir seção de entrevistas.', 'error');
+    });
+}
+
+function openInterviewSection() {
+    if (confirm('Tem certeza que deseja reabrir a seção de entrevistas? Isso permitirá novas edições.')) {
+        fetch(`/plans/{{ plan.id }}/sections/interviews/status`, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({
+                status: 'open',
+                closed_by: null,
+                notes: ''
+            })
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                showMessage('Seção de entrevistas reaberta com sucesso!', 'success');
+                // Recarregar a página para atualizar a interface
+                setTimeout(() => {
+                    window.location.reload();
+                }, 1000);
+            } else {
+                showMessage('Erro ao reabrir seção: ' + data.error, 'error');
+            }
+        })
+        .catch(error => {
+            console.error('Erro:', error);
+            showMessage('Erro ao reabrir seção de entrevistas.', 'error');
+        });
+    }
+}
+
+// Funcionalidades de visão dos sócios
+function editVisionRecord(visionId) {
+    fetch(`/plans/{{ plan.id }}/vision-records/${visionId}`)
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                const record = data.vision_record;
+                
+                // Preencher formulário
+                const form = document.querySelector('form[action*="vision-records"]');
+                if (form) {
+                    // Preencher campo de participantes
+                    const participantInput = form.querySelector('input[name="participants"]');
+                    if (participantInput) {
+                        participantInput.value = record.participants || '';
+                    }
+                    
+                    // Preencher campo de consultores
+                    const consultantInput = form.querySelector('input[name="consultants"]');
+                    if (consultantInput) {
+                        consultantInput.value = record.consultants || '';
+                    }
+                    
+                    // Preencher outros campos
+                    form.querySelector('input[name="vision_date"]').value = record.vision_date || '';
+                    form.querySelector('select[name="format"]').value = record.format || '';
+                    form.querySelector('textarea[name="notes"]').value = record.notes || '';
+                    
+                    // Alterar action do formulário para update
+                    form.action = `/plans/{{ plan.id }}/vision-records/${visionId}`;
+                    
+                    // Alterar botão de submit
+                    const submitBtn = form.querySelector('button[type="submit"]');
+                    if (submitBtn) {
+                        submitBtn.textContent = 'Atualizar relato';
+                        submitBtn.onclick = function(e) {
+                            e.preventDefault();
+                            updateVisionRecord(visionId);
+                        };
+                    }
+                    
+                    // Adicionar botão de cancelar
+                    const cancelBtn = document.createElement('button');
+                    cancelBtn.type = 'button';
+                    cancelBtn.className = 'button button-ghost cancel-edit-btn';
+                    cancelBtn.textContent = 'Cancelar';
+                    cancelBtn.onclick = cancelVisionEdit;
+                    
+                    const formActions = form.querySelector('.form-actions');
+                    formActions.insertBefore(cancelBtn, formActions.firstChild);
+                    
+                    showMessage('Formulário preenchido para edição. Modifique os campos desejados.', 'info');
+                }
+            } else {
+                showMessage('Erro ao carregar dados do relato: ' + data.error, 'error');
+            }
+        })
+        .catch(error => {
+            console.error('Erro:', error);
+            showMessage('Erro ao carregar dados do relato.', 'error');
+        });
+}
+
+function updateVisionRecord(visionId) {
+    const form = document.querySelector('form[action*="vision-records"]');
+    if (!form) return;
+    
+    const formData = new FormData(form);
+    const participants = formData.get('participants') || '';
+    const consultants = formData.get('consultants') || '';
+    
+    const data = {
+        participants: participants,
+        consultants: consultants,
+        vision_date: formData.get('vision_date'),
+        format: formData.get('format'),
+        notes: formData.get('notes')
+    };
+    
+    fetch(`/plans/{{ plan.id }}/vision-records/${visionId}`, {
+        method: 'PUT',
+        headers: {
+            'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(data)
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.success) {
+            showMessage('Relato atualizado com sucesso!', 'success');
+            setTimeout(() => {
+                window.location.reload();
+            }, 1000);
+        } else {
+            showMessage('Erro ao atualizar relato: ' + data.error, 'error');
+        }
+    })
+    .catch(error => {
+        console.error('Erro:', error);
+        showMessage('Erro ao atualizar relato.', 'error');
+    });
+}
+
+function deleteVisionRecord(visionId) {
+    if (confirm('Tem certeza que deseja excluir este relato? Esta ação não pode ser desfeita.')) {
+        fetch(`/plans/{{ plan.id }}/vision-records/${visionId}`, {
+            method: 'DELETE'
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                showMessage('Relato excluído com sucesso!', 'success');
+                setTimeout(() => {
+                    window.location.reload();
+                }, 1000);
+            } else {
+                showMessage('Erro ao excluir relato: ' + data.error, 'error');
+            }
+        })
+        .catch(error => {
+            console.error('Erro:', error);
+            showMessage('Erro ao excluir relato.', 'error');
+        });
+    }
+}
+
+function cancelVisionEdit() {
+    const form = document.querySelector('form[action*="vision-records"]');
+    if (form) {
+        // Restaurar action original
+        form.action = '{{ url_for("add_vision_record", plan_id=plan.id) }}';
+        
+        // Limpar formulário
+        form.reset();
+        
+        // Restaurar botão de submit
+        const submitBtn = form.querySelector('button[type="submit"]');
+        if (submitBtn) {
+            submitBtn.textContent = 'Registrar relato';
+            submitBtn.onclick = null;
+        }
+        
+        // Remover botão de cancelar
+        const cancelBtn = form.querySelector('.cancel-edit-btn');
+        if (cancelBtn) {
+            cancelBtn.remove();
+        }
+        
+        showMessage('Edição cancelada.', 'info');
+    }
+}
+
+function closeVisionSection() {
+    const notes = prompt('Motivo da conclusão da seção de visão dos sócios (opcional):');
+    
+    fetch(`/plans/{{ plan.id }}/sections/vision/status`, {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+            status: 'closed',
+            closed_by: 'Usuário',
+            notes: notes || ''
+        })
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.success) {
+            showMessage('Seção de visão dos sócios concluída com sucesso!', 'success');
+            // Recarregar a página para atualizar a interface
+            setTimeout(() => {
+                window.location.reload();
+            }, 1000);
+        } else {
+            showMessage('Erro ao concluir seção: ' + data.error, 'error');
+        }
+    })
+    .catch(error => {
+        console.error('Erro:', error);
+        showMessage('Erro ao concluir seção de visão dos sócios.', 'error');
+    });
+}
+
+function openVisionSection() {
+    if (confirm('Tem certeza que deseja reabrir a seção de visão dos sócios? Isso permitirá novas edições.')) {
+        fetch(`/plans/{{ plan.id }}/sections/vision/status`, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({
+                status: 'open',
+                closed_by: null,
+                notes: ''
+            })
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                showMessage('Seção de visão dos sócios reaberta com sucesso!', 'success');
+                // Recarregar a página para atualizar a interface
+                setTimeout(() => {
+                    window.location.reload();
+                }, 1000);
+            } else {
+                showMessage('Erro ao reabrir seção: ' + data.error, 'error');
+            }
+        })
+        .catch(error => {
+            console.error('Erro:', error);
+            showMessage('Erro ao reabrir seção de visão dos sócios.', 'error');
+        });
+    }
+}
+
+// Market Records Functions
+function editMarketRecord(marketId) {
+    fetch(`/plans/{{ plan.id }}/market-records/${marketId}`)
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                const record = data.market_record;
+                
+                // Preencher formulário
+                const form = document.querySelector('form[action*="market-records"]');
+                if (form) {
+                    // Preencher campo de participantes
+                    const participantInput = form.querySelector('input[name="market_participants"]');
+                    if (participantInput) {
+                        participantInput.value = record.participants || '';
+                    }
+                    
+                    // Preencher campo de consultores
+                    const consultantInput = form.querySelector('input[name="market_consultants"]');
+                    if (consultantInput) {
+                        consultantInput.value = record.consultants || '';
+                    }
+                    
+                    // Preencher outros campos
+                    form.querySelector('input[name="market_date"]').value = record.market_date || '';
+                    form.querySelector('select[name="format"]').value = record.format || '';
+                    form.querySelector('textarea[name="global_context"]').value = record.global_context || '';
+                    form.querySelector('textarea[name="sector_context"]').value = record.sector_context || '';
+                    form.querySelector('textarea[name="market_size"]').value = record.market_size || '';
+                    form.querySelector('textarea[name="growth_space"]').value = record.growth_space || '';
+                    form.querySelector('textarea[name="threats"]').value = record.threats || '';
+                    form.querySelector('textarea[name="consumer_behavior"]').value = record.consumer_behavior || '';
+                    form.querySelector('textarea[name="competition"]').value = record.competition || '';
+                    form.querySelector('textarea[name="notes"]').value = record.notes || '';
+
+                    // Alterar action do formulário para update
+                    form.action = `/plans/{{ plan.id }}/market-records/${marketId}`;        
+
+                    // Alterar botão de submit
+                    const submitBtn = form.querySelector('button[type="submit"]');
+                    if (submitBtn) {
+                        submitBtn.textContent = 'Atualizar relato';
+                        submitBtn.onclick = function(e) {
+                            e.preventDefault();
+                            updateMarketRecord(marketId);
+                        };
+                    }
+
+                    // Adicionar botão de cancelar
+                    const cancelBtn = document.createElement('button');
+                    cancelBtn.type = 'button';
+                    cancelBtn.className = 'button button-ghost cancel-edit-btn';
+                    cancelBtn.textContent = 'Cancelar';
+                    cancelBtn.onclick = cancelMarketEdit;
+                    
+                    const formActions = form.querySelector('.form-actions');
+                    formActions.insertBefore(cancelBtn, formActions.firstChild);
+                    
+                    showMessage('Formulário preenchido para edição. Modifique os campos desejados.', 'info');
+                }
+            } else {
+                showMessage('Erro ao carregar dados do relato: ' + data.error, 'error');
+            }
+        })
+        .catch(error => {
+            console.error('Erro:', error);
+            showMessage('Erro ao carregar dados do relato.', 'error');
+        });
+}
+
+function updateMarketRecord(marketId) {
+    const form = document.querySelector('form[action*="market-records"]');      
+    if (!form) return;
+
+    const formData = new FormData(form);
+    const participants = formData.get('market_participants') || '';
+    const consultants = formData.get('market_consultants') || '';
+
+    const data = {
+        market_participants: participants,
+        market_consultants: consultants,
+        market_date: formData.get('market_date'),
+        format: formData.get('format'),
+        global_context: formData.get('global_context'),
+        sector_context: formData.get('sector_context'),
+        market_size: formData.get('market_size'),
+        growth_space: formData.get('growth_space'),
+        threats: formData.get('threats'),
+        consumer_behavior: formData.get('consumer_behavior'),
+        competition: formData.get('competition'),
+        notes: formData.get('notes')
+    };
+    
+    fetch(`/plans/{{ plan.id }}/market-records/${marketId}`, {
+        method: 'PUT',
+        headers: {
+            'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(data)
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.success) {
+            showMessage('Relato atualizado com sucesso!', 'success');
+            setTimeout(() => {
+                window.location.reload();
+            }, 1000);
+        } else {
+            showMessage('Erro ao atualizar relato: ' + data.error, 'error');    
+        }
+    })
+    .catch(error => {
+        console.error('Erro:', error);
+        showMessage('Erro ao atualizar relato.', 'error');
+    });
+}
+
+function deleteMarketRecord(marketId) {
+    if (confirm('Tem certeza que deseja excluir este relato de possibilidades do mercado?')) {
+        fetch(`/plans/{{ plan.id }}/market-records/${marketId}`, {
+            method: 'DELETE'
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                showMessage('Relato excluído com sucesso!', 'success');
+                setTimeout(() => {
+                    window.location.reload();
+                }, 1000);
+            } else {
+                showMessage('Erro ao excluir relato: ' + data.error, 'error');
+            }
+        })
+        .catch(error => {
+            console.error('Erro:', error);
+            showMessage('Erro ao excluir relato.', 'error');
+        });
+    }
+}
+
+function cancelMarketEdit() {
+    const form = document.querySelector('form[action*="market-records"]');
+    if (form) {
+        // Restaurar action original
+        form.action = '{{ url_for("add_market_record", plan_id=plan.id) }}';
+        
+        // Limpar formulário
+        form.reset();
+        
+        // Restaurar botão de submit
+        const submitBtn = form.querySelector('button[type="submit"]');
+        if (submitBtn) {
+            submitBtn.textContent = 'Salvar informacoes';
+            submitBtn.onclick = null;
+        }
+        
+        // Remover botão de cancelar
+        const cancelBtn = form.querySelector('.cancel-edit-btn');
+        if (cancelBtn) {
+            cancelBtn.remove();
+        }
+        
+        showMessage('Edição cancelada.', 'info');
+    }
+}
+
+function closeMarketSection() {
+    const notes = prompt('Motivo da conclusão da seção de possibilidades do mercado (opcional):');
+    
+    fetch(`/plans/{{ plan.id }}/sections/market/status`, {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+            status: 'closed',
+            closed_by: 'Usuário',
+            notes: notes || ''
+        })
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.success) {
+            showMessage('Seção de possibilidades do mercado concluída com sucesso!', 'success');
+            // Recarregar a página para atualizar a interface
+            setTimeout(() => {
+                window.location.reload();
+            }, 1000);
+        } else {
+            showMessage('Erro ao concluir seção: ' + data.error, 'error');
+        }
+    })
+    .catch(error => {
+        console.error('Erro:', error);
+        showMessage('Erro ao concluir seção de possibilidades do mercado.', 'error');
+    });
+}
+
+function openMarketSection() {
+    if (confirm('Tem certeza que deseja reabrir a seção de possibilidades do mercado? Isso permitirá novas edições.')) {
+        fetch(`/plans/{{ plan.id }}/sections/market/status`, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({
+                status: 'open',
+                closed_by: null,
+                notes: ''
+            })
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                showMessage('Seção de possibilidades do mercado reaberta com sucesso!', 'success');
+                // Recarregar a página para atualizar a interface
+                setTimeout(() => {
+                    window.location.reload();
+                }, 1000);
+            } else {
+                showMessage('Erro ao reabrir seção: ' + data.error, 'error');
+            }
+        })
+        .catch(error => {
+            console.error('Erro:', error);
+            showMessage('Erro ao reabrir seção de possibilidades do mercado.', 'error');
+        });
+    }
+}
+
+// Company Records Functions
+function closeCompanySection() {
+    const notes = prompt('Motivo da conclusão da seção de possibilidades da empresa (opcional):');
+    
+    fetch(`/plans/{{ plan.id }}/sections/company/status`, {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+            status: 'closed',
+            closed_by: 'Usuário',
+            notes: notes || ''
+        })
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.success) {
+            showMessage('Seção de possibilidades da empresa concluída com sucesso!', 'success');
+            // Recarregar a página para atualizar a interface
+            setTimeout(() => {
+                window.location.reload();
+            }, 1000);
+        } else {
+            showMessage('Erro ao concluir seção: ' + data.error, 'error');
+        }
+    })
+    .catch(error => {
+        console.error('Erro:', error);
+        showMessage('Erro ao concluir seção de possibilidades da empresa.', 'error');
+    });
+}
+
+function openCompanySection() {
+    if (confirm('Tem certeza que deseja reabrir a seção de possibilidades da empresa? Isso permitirá novas edições.')) {
+        fetch(`/plans/{{ plan.id }}/sections/company/status`, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({
+                status: 'open',
+                closed_by: null,
+                notes: ''
+            })
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                showMessage('Seção de possibilidades da empresa reaberta com sucesso!', 'success');
+                // Recarregar a página para atualizar a interface
+                setTimeout(() => {
+                    window.location.reload();
+                }, 1000);
+            } else {
+                showMessage('Erro ao reabrir seção: ' + data.error, 'error');
+            }
+        })
+        .catch(error => {
+            console.error('Erro:', error);
+            showMessage('Erro ao reabrir seção de possibilidades da empresa.', 'error');
+        });
+    }
+}
+
+function editCompanyRecord(companyId) {
+    fetch(`/plans/{{ plan.id }}/company-records/${companyId}`)
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                const record = data.company_record;
+                
+                // Preencher formulário
+                const form = document.querySelector('form[action*="company-records"]');
+                if (form) {
+                    // Preencher campos
+                    form.querySelector('input[name="company_participants"]').value = record.participants || '';
+                    form.querySelector('input[name="company_consultants"]').value = record.consultants || '';
+                    form.querySelector('input[name="company_date"]').value = record.company_date || '';
+                    form.querySelector('textarea[name="bsc_financial"]').value = record.bsc_financial || '';
+                    form.querySelector('textarea[name="bsc_commercial"]').value = record.bsc_commercial || '';
+                    form.querySelector('textarea[name="bsc_process"]').value = record.bsc_process || '';
+                    form.querySelector('textarea[name="bsc_learning"]').value = record.bsc_learning || '';
+                    form.querySelector('textarea[name="tri_commercial"]').value = record.tri_commercial || '';
+                    form.querySelector('textarea[name="tri_adm_fin"]').value = record.tri_adm_fin || '';
+                    form.querySelector('textarea[name="tri_operational"]').value = record.tri_operational || '';
+                    form.querySelector('textarea[name="notes"]').value = record.notes || '';
+
+                    // Alterar action do formulário para update
+                    form.action = `/plans/{{ plan.id }}/company-records/${companyId}`;        
+
+                    // Alterar botão de submit
+                    const submitBtn = form.querySelector('button[type="submit"]');
+                    if (submitBtn) {
+                        submitBtn.textContent = 'Atualizar relato';
+                        submitBtn.onclick = function(e) {
+                            e.preventDefault();
+                            updateCompanyRecord(companyId);
+                        };
+                    }
+
+                    // Adicionar botão de cancelar
+                    const cancelBtn = document.createElement('button');
+                    cancelBtn.type = 'button';
+                    cancelBtn.className = 'button button-ghost cancel-edit-btn';
+                    cancelBtn.textContent = 'Cancelar';
+                    cancelBtn.onclick = cancelCompanyEdit;
+                    
+                    const formActions = form.querySelector('.form-actions');
+                    formActions.insertBefore(cancelBtn, formActions.firstChild);
+                    
+                    showMessage('Formulário preenchido para edição. Modifique os campos desejados.', 'info');
+                }
+            } else {
+                showMessage('Erro ao carregar dados do relato: ' + data.error, 'error');
+            }
+        })
+        .catch(error => {
+            console.error('Erro:', error);
+            showMessage('Erro ao carregar dados do relato.', 'error');
+        });
+}
+
+function updateCompanyRecord(companyId) {
+    const form = document.querySelector('form[action*="company-records"]');      
+    if (!form) return;
+
+    const formData = new FormData(form);
+
+    const data = {
+        company_participants: formData.get('company_participants') || '',
+        company_consultants: formData.get('company_consultants') || '',
+        company_date: formData.get('company_date'),
+        bsc_financial: formData.get('bsc_financial'),
+        bsc_commercial: formData.get('bsc_commercial'),
+        bsc_process: formData.get('bsc_process'),
+        bsc_learning: formData.get('bsc_learning'),
+        tri_commercial: formData.get('tri_commercial'),
+        tri_adm_fin: formData.get('tri_adm_fin'),
+        tri_operational: formData.get('tri_operational'),
+        notes: formData.get('notes')
+    };
+    
+    fetch(`/plans/{{ plan.id }}/company-records/${companyId}`, {
+        method: 'PUT',
+        headers: {
+            'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(data)
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.success) {
+            showMessage('Relato atualizado com sucesso!', 'success');
+            setTimeout(() => {
+                window.location.reload();
+            }, 1000);
+        } else {
+            showMessage('Erro ao atualizar relato: ' + data.error, 'error');    
+        }
+    })
+    .catch(error => {
+        console.error('Erro:', error);
+        showMessage('Erro ao atualizar relato.', 'error');
+    });
+}
+
+function deleteCompanyRecord(companyId) {
+    if (confirm('Tem certeza que deseja excluir este relato de possibilidades da empresa?')) {
+        fetch(`/plans/{{ plan.id }}/company-records/${companyId}`, {
+            method: 'DELETE'
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                showMessage('Relato excluído com sucesso!', 'success');
+                setTimeout(() => {
+                    window.location.reload();
+                }, 1000);
+            } else {
+                showMessage('Erro ao excluir relato: ' + data.error, 'error');
+            }
+        })
+        .catch(error => {
+            console.error('Erro:', error);
+            showMessage('Erro ao excluir relato.', 'error');
+        });
+    }
+}
+
+function cancelCompanyEdit() {
+    const form = document.querySelector('form[action*="company-records"]');
+    if (form) {
+        // Restaurar action original
+        form.action = '{{ url_for("add_company_record", plan_id=plan.id) }}';
+        
+        // Limpar formulário
+        form.reset();
+        
+        // Restaurar botão de submit
+        const submitBtn = form.querySelector('button[type="submit"]');
+        if (submitBtn) {
+            submitBtn.textContent = 'Salvar informacoes';
+            submitBtn.onclick = null;
+        }
+        
+        // Remover botão de cancelar
+        const cancelBtn = form.querySelector('.cancel-edit-btn');
+        if (cancelBtn) {
+            cancelBtn.remove();
+        }
+        
+        showMessage('Edição cancelada.', 'info');
+    }
+}
+
+// Alignment Section Functions
+function closeAlignmentSection() {
+    const notes = prompt('Motivo da conclusão da seção de análise preliminar (opcional):');
+    
+    fetch(`/plans/{{ plan.id }}/sections/alignment/status`, {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+            status: 'closed',
+            closed_by: 'Usuário',
+            notes: notes || ''
+        })
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.success) {
+            showMessage('Seção de análise preliminar concluída com sucesso!', 'success');
+            // Recarregar a página para atualizar a interface
+            setTimeout(() => {
+                window.location.reload();
+            }, 1000);
+        } else {
+            showMessage('Erro ao concluir seção: ' + data.error, 'error');
+        }
+    })
+    .catch(error => {
+        console.error('Erro:', error);
+        showMessage('Erro ao concluir seção de análise preliminar.', 'error');
+    });
+}
+
+function openAlignmentSection() {
+    if (confirm('Tem certeza que deseja reabrir a seção de análise preliminar? Isso permitirá novas edições.')) {
+        fetch(`/plans/{{ plan.id }}/sections/alignment/status`, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({
+                status: 'open',
+                closed_by: null,
+                notes: ''
+            })
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                showMessage('Seção de análise preliminar reaberta com sucesso!', 'success');
+                // Recarregar a página para atualizar a interface
+                setTimeout(() => {
+                    window.location.reload();
+                }, 1000);
+            } else {
+                showMessage('Erro ao reabrir seção: ' + data.error, 'error');
+            }
+        })
+        .catch(error => {
+            console.error('Erro:', error);
+            showMessage('Erro ao reabrir seção de análise preliminar.', 'error');
+        });
+    }
+}
+
+// New Alignment Subsections Functions
+
+function closeAlignmentsFoundSection() {
+    const notes = prompt('Motivo da conclusão da seção de alinhamentos (opcional):');
+    
+    fetch(`/plans/{{ plan.id }}/sections/alignments-found/status`, {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+            status: 'closed',
+            closed_by: 'Usuário',
+            notes: notes || ''
+        })
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.success) {
+            showMessage('Seção de alinhamentos concluída com sucesso!', 'success');
+            setTimeout(() => {
+                window.location.reload();
+            }, 1000);
+        } else {
+            showMessage('Erro ao concluir seção: ' + data.error, 'error');
+        }
+    })
+    .catch(error => {
+        console.error('Erro:', error);
+        showMessage('Erro ao concluir seção de alinhamentos.', 'error');
+    });
+}
+
+function openAlignmentsFoundSection() {
+    if (confirm('Tem certeza que deseja reabrir a seção de alinhamentos? Isso permitirá novas edições.')) {
+        fetch(`/plans/{{ plan.id }}/sections/alignments-found/status`, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({
+                status: 'open',
+                closed_by: null,
+                notes: ''
+            })
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                showMessage('Seção de alinhamentos reaberta com sucesso!', 'success');
+                setTimeout(() => {
+                    window.location.reload();
+                }, 1000);
+            } else {
+                showMessage('Erro ao reabrir seção: ' + data.error, 'error');
+            }
+        })
+        .catch(error => {
+            console.error('Erro:', error);
+            showMessage('Erro ao reabrir seção de alinhamentos.', 'error');
+        });
+    }
+}
+
+function closeMisalignmentsCriticalSection() {
+    const notes = prompt('Motivo da conclusão da seção de desalinhamentos (opcional):');
+    
+    fetch(`/plans/{{ plan.id }}/sections/misalignments-critical/status`, {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+            status: 'closed',
+            closed_by: 'Usuário',
+            notes: notes || ''
+        })
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.success) {
+            showMessage('Seção de desalinhamentos concluída com sucesso!', 'success');
+            setTimeout(() => {
+                window.location.reload();
+            }, 1000);
+        } else {
+            showMessage('Erro ao concluir seção: ' + data.error, 'error');
+        }
+    })
+    .catch(error => {
+        console.error('Erro:', error);
+        showMessage('Erro ao concluir seção de desalinhamentos.', 'error');
+    });
+}
+
+function openMisalignmentsCriticalSection() {
+    if (confirm('Tem certeza que deseja reabrir a seção de desalinhamentos? Isso permitirá novas edições.')) {
+        fetch(`/plans/{{ plan.id }}/sections/misalignments-critical/status`, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({
+                status: 'open',
+                closed_by: null,
+                notes: ''
+            })
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                showMessage('Seção de desalinhamentos reaberta com sucesso!', 'success');
+                setTimeout(() => {
+                    window.location.reload();
+                }, 1000);
+            } else {
+                showMessage('Erro ao reabrir seção: ' + data.error, 'error');
+            }
+        })
+        .catch(error => {
+            console.error('Erro:', error);
+            showMessage('Erro ao reabrir seção de desalinhamentos.', 'error');
+        });
+    }
+}
+
+function closePreliminaryAnalysisSection() {
+    const notes = prompt('Motivo da conclusão da análise preliminar (opcional):');
+    
+    fetch(`/plans/{{ plan.id }}/sections/preliminary-analysis/status`, {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+            status: 'closed',
+            closed_by: 'Usuário',
+            notes: notes || ''
+        })
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.success) {
+            showMessage('Análise preliminar concluída com sucesso!', 'success');
+            setTimeout(() => {
+                window.location.reload();
+            }, 1000);
+        } else {
+            showMessage('Erro ao concluir análise: ' + data.error, 'error');
+        }
+    })
+    .catch(error => {
+        console.error('Erro:', error);
+        showMessage('Erro ao concluir análise preliminar.', 'error');
+    });
+}
+
+function openPreliminaryAnalysisSection() {
+    if (confirm('Tem certeza que deseja reabrir a análise preliminar? Isso permitirá novas edições.')) {
+        fetch(`/plans/{{ plan.id }}/sections/preliminary-analysis/status`, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({
+                status: 'open',
+                closed_by: null,
+                notes: ''
+            })
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                showMessage('Análise preliminar reaberta com sucesso!', 'success');
+                setTimeout(() => {
+                    window.location.reload();
+                }, 1000);
+            } else {
+                showMessage('Erro ao reabrir análise: ' + data.error, 'error');
+            }
+        })
+        .catch(error => {
+            console.error('Erro:', error);
+            showMessage('Erro ao reabrir análise preliminar.', 'error');
+        });
+    }
+}
+
+function closeWorkshopFinalAnalysisSection() {
+    const notes = prompt('Motivo da conclusão do workshop (opcional):');
+    
+    fetch(`/plans/{{ plan.id }}/sections/workshop-final-analysis/status`, {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+            status: 'closed',
+            closed_by: 'Usuário',
+            notes: notes || ''
+        })
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.success) {
+            showMessage('Workshop concluído com sucesso!', 'success');
+            setTimeout(() => {
+                window.location.reload();
+            }, 1000);
+        } else {
+            showMessage('Erro ao concluir workshop: ' + data.error, 'error');
+        }
+    })
+    .catch(error => {
+        console.error('Erro:', error);
+        showMessage('Erro ao concluir workshop.', 'error');
+    });
+}
+
+function openWorkshopFinalAnalysisSection() {
+    if (confirm('Tem certeza que deseja reabrir o workshop? Isso permitirá novas edições.')) {
+        fetch(`/plans/{{ plan.id }}/sections/workshop-final-analysis/status`, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({
+                status: 'open',
+                closed_by: null,
+                notes: ''
+            })
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                showMessage('Workshop reaberto com sucesso!', 'success');
+                setTimeout(() => {
+                    window.location.reload();
+                }, 1000);
+            } else {
+                showMessage('Erro ao reabrir workshop: ' + data.error, 'error');
+            }
+        })
+        .catch(error => {
+            console.error('Erro:', error);
+            showMessage('Erro ao reabrir workshop.', 'error');
+        });
+    }
+}
+
+function editAlignmentRecord(alignmentId) {
+    fetch(`/plans/{{ plan.id }}/alignment-records/${alignmentId}`)
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                const record = data.alignment_record;
+                
+                // Preencher formulário
+                const form = document.querySelector('.alignment-form');
+                if (form) {
+                    form.querySelector('input[name="alignment_topic"]').value = record.topic || '';
+                    form.querySelector('textarea[name="alignment_description"]').value = record.description || '';
+                    form.querySelector('select[name="alignment_consensus"]').value = record.consensus || '';
+                    form.querySelector('select[name="alignment_priority"]').value = record.priority || '';
+
+                    // Alterar action do formulário para update
+                    form.action = `/plans/{{ plan.id }}/alignment-records/${alignmentId}`;        
+
+                    // Alterar botão de submit
+                    const submitBtn = form.querySelector('button[type="submit"]');
+                    if (submitBtn) {
+                        submitBtn.textContent = 'Atualizar Alinhamento';
+                        submitBtn.onclick = function(e) {
+                            e.preventDefault();
+                            updateAlignmentRecord(alignmentId);
+                        };
+                    }
+
+                    // Adicionar botão de cancelar
+                    const cancelBtn = document.createElement('button');
+                    cancelBtn.type = 'button';
+                    cancelBtn.className = 'button button-ghost cancel-edit-btn';
+                    cancelBtn.textContent = 'Cancelar';
+                    cancelBtn.onclick = cancelAlignmentEdit;
+                    
+                    const formActions = form.querySelector('.form-actions');
+                    formActions.appendChild(cancelBtn);
+                    
+                    showMessage('Formulário preenchido para edição. Modifique os campos desejados.', 'info');
+                }
+            } else {
+                showMessage('Erro ao carregar dados do alinhamento: ' + data.error, 'error');
+            }
+        })
+        .catch(error => {
+            console.error('Erro:', error);
+            showMessage('Erro ao carregar dados do alinhamento.', 'error');
+        });
+}
+
+function updateAlignmentRecord(alignmentId) {
+    const form = document.querySelector('.alignment-form');      
+    if (!form) return;
+
+    const formData = new FormData(form);
+
+    const data = {
+        topic: formData.get('alignment_topic'),
+        description: formData.get('alignment_description'),
+        consensus: formData.get('alignment_consensus'),
+        priority: formData.get('alignment_priority')
+    };
+    
+    fetch(`/plans/{{ plan.id }}/alignment-records/${alignmentId}`, {
+        method: 'PUT',
+        headers: {
+            'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(data)
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.success) {
+            showMessage('Alinhamento atualizado com sucesso!', 'success');
+            setTimeout(() => {
+                window.location.reload();
+            }, 1000);
+        } else {
+            showMessage('Erro ao atualizar alinhamento: ' + data.error, 'error');    
+        }
+    })
+    .catch(error => {
+        console.error('Erro:', error);
+        showMessage('Erro ao atualizar alinhamento.', 'error');
+    });
+}
+
+function deleteAlignmentRecord(alignmentId) {
+    if (confirm('Tem certeza que deseja excluir este alinhamento?')) {
+        fetch(`/plans/{{ plan.id }}/alignment-records/${alignmentId}`, {
+            method: 'DELETE'
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                showMessage('Alinhamento excluído com sucesso!', 'success');
+                setTimeout(() => {
+                    window.location.reload();
+                }, 1000);
+            } else {
+                showMessage('Erro ao excluir alinhamento: ' + data.error, 'error');
+            }
+        })
+        .catch(error => {
+            console.error('Erro:', error);
+            showMessage('Erro ao excluir alinhamento.', 'error');
+        });
+    }
+}
+
+function cancelAlignmentEdit() {
+    const form = document.querySelector('.alignment-form');
+    if (form) {
+        // Restaurar action original
+        form.action = '{{ url_for("add_alignment_record", plan_id=plan.id) }}';
+        
+        // Limpar formulário
+        form.reset();
+        
+        // Restaurar botão de submit
+        const submitBtn = form.querySelector('button[type="submit"]');
+        if (submitBtn) {
+            submitBtn.textContent = 'Adicionar Alinhamento';
+            submitBtn.onclick = null;
+        }
+        
+        // Remover botão de cancelar
+        const cancelBtn = form.querySelector('.cancel-edit-btn');
+        if (cancelBtn) {
+            cancelBtn.remove();
+        }
+        
+        showMessage('Edição cancelada.', 'info');
+    }
+}
+
+function editMisalignmentRecord(misalignmentId) {
+    fetch(`/plans/{{ plan.id }}/misalignment-records/${misalignmentId}`)
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                const record = data.misalignment_record;
+                
+                // Preencher formulário
+                const form = document.querySelector('.misalignment-form');
+                if (form) {
+                    form.querySelector('input[name="misalignment_issue"]').value = record.issue || '';
+                    form.querySelector('textarea[name="misalignment_description"]').value = record.description || '';
+                    form.querySelector('select[name="misalignment_severity"]').value = record.severity || '';
+                    form.querySelector('select[name="misalignment_impact"]').value = record.impact || '';
+
+                    // Alterar action do formulário para update
+                    form.action = `/plans/{{ plan.id }}/misalignment-records/${misalignmentId}`;        
+
+                    // Alterar botão de submit
+                    const submitBtn = form.querySelector('button[type="submit"]');
+                    if (submitBtn) {
+                        submitBtn.textContent = 'Atualizar Desalinhamento';
+                        submitBtn.onclick = function(e) {
+                            e.preventDefault();
+                            updateMisalignmentRecord(misalignmentId);
+                        };
+                    }
+
+                    // Adicionar botão de cancelar
+                    const cancelBtn = document.createElement('button');
+                    cancelBtn.type = 'button';
+                    cancelBtn.className = 'button button-ghost cancel-edit-btn';
+                    cancelBtn.textContent = 'Cancelar';
+                    cancelBtn.onclick = cancelMisalignmentEdit;
+                    
+                    const formActions = form.querySelector('.form-actions');
+                    formActions.appendChild(cancelBtn);
+                    
+                    showMessage('Formulário preenchido para edição. Modifique os campos desejados.', 'info');
+                }
+            } else {
+                showMessage('Erro ao carregar dados do desalinhamento: ' + data.error, 'error');
+            }
+        })
+        .catch(error => {
+            console.error('Erro:', error);
+            showMessage('Erro ao carregar dados do desalinhamento.', 'error');
+        });
+}
+
+function updateMisalignmentRecord(misalignmentId) {
+    const form = document.querySelector('.misalignment-form');      
+    if (!form) return;
+
+    const formData = new FormData(form);
+
+    const data = {
+        issue: formData.get('misalignment_issue'),
+        description: formData.get('misalignment_description'),
+        severity: formData.get('misalignment_severity'),
+        impact: formData.get('misalignment_impact')
+    };
+    
+    fetch(`/plans/{{ plan.id }}/misalignment-records/${misalignmentId}`, {
+        method: 'PUT',
+        headers: {
+            'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(data)
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.success) {
+            showMessage('Desalinhamento atualizado com sucesso!', 'success');
+            setTimeout(() => {
+                window.location.reload();
+            }, 1000);
+        } else {
+            showMessage('Erro ao atualizar desalinhamento: ' + data.error, 'error');    
+        }
+    })
+    .catch(error => {
+        console.error('Erro:', error);
+        showMessage('Erro ao atualizar desalinhamento.', 'error');
+    });
+}
+
+function deleteMisalignmentRecord(misalignmentId) {
+    if (confirm('Tem certeza que deseja excluir este desalinhamento?')) {
+        fetch(`/plans/{{ plan.id }}/misalignment-records/${misalignmentId}`, {
+            method: 'DELETE'
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                showMessage('Desalinhamento excluído com sucesso!', 'success');
+                setTimeout(() => {
+                    window.location.reload();
+                }, 1000);
+            } else {
+                showMessage('Erro ao excluir desalinhamento: ' + data.error, 'error');
+            }
+        })
+        .catch(error => {
+            console.error('Erro:', error);
+            showMessage('Erro ao excluir desalinhamento.', 'error');
+        });
+    }
+}
+
+function cancelMisalignmentEdit() {
+    const form = document.querySelector('.misalignment-form');
+    if (form) {
+        // Restaurar action original
+        form.action = '{{ url_for("add_misalignment_record", plan_id=plan.id) }}';
+        
+        // Limpar formulário
+        form.reset();
+        
+        // Restaurar botão de submit
+        const submitBtn = form.querySelector('button[type="submit"]');
+        if (submitBtn) {
+            submitBtn.textContent = 'Adicionar Desalinhamento';
+            submitBtn.onclick = null;
+        }
+        
+        // Remover botão de cancelar
+        const cancelBtn = form.querySelector('.cancel-edit-btn');
+        if (cancelBtn) {
+            cancelBtn.remove();
+        }
+        
+        showMessage('Edição cancelada.', 'info');
+    }
+}
+
+// Directionals AI Section Functions
+function closeDirectionalsAiSection() {
+    const notes = prompt('Motivo da conclusão da análise da IA (opcional):');
+    
+    fetch(`/plans/{{ plan.id }}/sections/directionals-ai/status`, {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+            status: 'closed',
+            closed_by: 'Usuário',
+            notes: notes || ''
+        })
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.success) {
+            showMessage('Análise da IA concluída com sucesso!', 'success');
+            setTimeout(() => {
+                window.location.reload();
+            }, 1000);
+        } else {
+            showMessage('Erro ao concluir análise: ' + data.error, 'error');
+        }
+    })
+    .catch(error => {
+        console.error('Erro:', error);
+        showMessage('Erro ao concluir análise da IA.', 'error');
+    });
+}
+
+function openDirectionalsAiSection() {
+    if (confirm('Tem certeza que deseja reabrir a análise da IA? Isso permitirá novas edições.')) {
+        fetch(`/plans/{{ plan.id }}/sections/directionals-ai/status`, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({
+                status: 'open',
+                closed_by: null,
+                notes: ''
+            })
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                showMessage('Análise da IA reaberta com sucesso!', 'success');
+                setTimeout(() => {
+                    window.location.reload();
+                }, 1000);
+            } else {
+                showMessage('Erro ao reabrir análise: ' + data.error, 'error');
+            }
+        })
+        .catch(error => {
+            console.error('Erro:', error);
+            showMessage('Erro ao reabrir análise da IA.', 'error');
+        });
+    }
+}
+
+function generateAiAnalysis() {
+    showMessage('Gerando análise da IA...', 'info');
+    // Aqui seria implementada a chamada para gerar análise via IA
+    setTimeout(() => {
+        showMessage('Análise gerada com sucesso!', 'success');
+    }, 2000);
+}
+
+// Directionals Consultant Section Functions
+function closeDirectionalsConsultantSection() {
+    const notes = prompt('Motivo da conclusão da análise do consultor (opcional):');
+    
+    fetch(`/plans/{{ plan.id }}/sections/directionals-consultant/status`, {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+            status: 'closed',
+            closed_by: 'Usuário',
+            notes: notes || ''
+        })
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.success) {
+            showMessage('Análise do consultor concluída com sucesso!', 'success');
+            setTimeout(() => {
+                window.location.reload();
+            }, 1000);
+        } else {
+            showMessage('Erro ao concluir análise: ' + data.error, 'error');
+        }
+    })
+    .catch(error => {
+        console.error('Erro:', error);
+        showMessage('Erro ao concluir análise do consultor.', 'error');
+    });
+}
+
+function openDirectionalsConsultantSection() {
+    if (confirm('Tem certeza que deseja reabrir a análise do consultor? Isso permitirá novas edições.')) {
+        fetch(`/plans/{{ plan.id }}/sections/directionals-consultant/status`, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({
+                status: 'open',
+                closed_by: null,
+                notes: ''
+            })
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                showMessage('Análise do consultor reaberta com sucesso!', 'success');
+                setTimeout(() => {
+                    window.location.reload();
+                }, 1000);
+            } else {
+                showMessage('Erro ao reabrir análise: ' + data.error, 'error');
+            }
+        })
+        .catch(error => {
+            console.error('Erro:', error);
+            showMessage('Erro ao reabrir análise do consultor.', 'error');
+        });
+    }
+}
+
+// Directionals Workshop Section Functions
+function closeDirectionalsWorkshopSection() {
+    const notes = prompt('Motivo da conclusão do workshop (opcional):');
+    
+    fetch(`/plans/{{ plan.id }}/sections/directionals-workshop/status`, {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+            status: 'closed',
+            closed_by: 'Usuário',
+            notes: notes || ''
+        })
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.success) {
+            showMessage('Workshop concluído com sucesso!', 'success');
+            setTimeout(() => {
+                window.location.reload();
+            }, 1000);
+        } else {
+            showMessage('Erro ao concluir workshop: ' + data.error, 'error');
+        }
+    })
+    .catch(error => {
+        console.error('Erro:', error);
+        showMessage('Erro ao concluir workshop.', 'error');
+    });
+}
+
+function openDirectionalsWorkshopSection() {
+    if (confirm('Tem certeza que deseja reabrir o workshop? Isso permitirá novas edições.')) {
+        fetch(`/plans/{{ plan.id }}/sections/directionals-workshop/status`, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({
+                status: 'open',
+                closed_by: null,
+                notes: ''
+            })
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                showMessage('Workshop reaberto com sucesso!', 'success');
+                setTimeout(() => {
+                    window.location.reload();
+                }, 1000);
+            } else {
+                showMessage('Erro ao reabrir workshop: ' + data.error, 'error');
+            }
+        })
+        .catch(error => {
+            console.error('Erro:', error);
+            showMessage('Erro ao reabrir workshop.', 'error');
+        });
+    }
+}
+
+// Directionals Final Section Functions
+function closeDirectionalsFinalSection() {
+    const notes = prompt('Motivo da conclusão dos direcionadores finais (opcional):');
+    
+    fetch(`/plans/{{ plan.id }}/sections/directionals-final/status`, {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+            status: 'closed',
+            closed_by: 'Usuário',
+            notes: notes || ''
+        })
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.success) {
+            showMessage('Direcionadores finais concluídos com sucesso!', 'success');
+            setTimeout(() => {
+                window.location.reload();
+            }, 1000);
+        } else {
+            showMessage('Erro ao concluir direcionadores: ' + data.error, 'error');
+        }
+    })
+    .catch(error => {
+        console.error('Erro:', error);
+        showMessage('Erro ao concluir direcionadores finais.', 'error');
+    });
+}
+
+function openDirectionalsFinalSection() {
+    if (confirm('Tem certeza que deseja reabrir os direcionadores finais? Isso permitirá novas edições.')) {
+        fetch(`/plans/{{ plan.id }}/sections/directionals-final/status`, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({
+                status: 'open',
+                closed_by: null,
+                notes: ''
+            })
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                showMessage('Direcionadores finais reabertos com sucesso!', 'success');
+                setTimeout(() => {
+                    window.location.reload();
+                }, 1000);
+            } else {
+                showMessage('Erro ao reabrir direcionadores: ' + data.error, 'error');
+            }
+        })
+        .catch(error => {
+            console.error('Erro:', error);
+            showMessage('Erro ao reabrir direcionadores finais.', 'error');
+        });
+    }
+}
+
+// Directionals Approvals Section Functions
+function closeDirectionalsApprovalsSection() {
+    const notes = prompt('Motivo da conclusão das aprovações (opcional):');
+    
+    fetch(`/plans/{{ plan.id }}/sections/directionals-approvals/status`, {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+            status: 'closed',
+            closed_by: 'Usuário',
+            notes: notes || ''
+        })
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.success) {
+            showMessage('Aprovações concluídas com sucesso!', 'success');
+            setTimeout(() => {
+                window.location.reload();
+            }, 1000);
+        } else {
+            showMessage('Erro ao concluir aprovações: ' + data.error, 'error');
+        }
+    })
+    .catch(error => {
+        console.error('Erro:', error);
+        showMessage('Erro ao concluir aprovações.', 'error');
+    });
+}
+
+function openDirectionalsApprovalsSection() {
+    if (confirm('Tem certeza que deseja reabrir as aprovações? Isso permitirá novas edições.')) {
+        fetch(`/plans/{{ plan.id }}/sections/directionals-approvals/status`, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({
+                status: 'open',
+                closed_by: null,
+                notes: ''
+            })
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                showMessage('Aprovações reabertas com sucesso!', 'success');
+                setTimeout(() => {
+                    window.location.reload();
+                }, 1000);
+            } else {
+                showMessage('Erro ao reabrir aprovações: ' + data.error, 'error');
+            }
+        })
+        .catch(error => {
+            console.error('Erro:', error);
+            showMessage('Erro ao reabrir aprovações.', 'error');
+        });
+    }
+}
+
+function editDirectionalRecord(directionalId) {
+    fetch(`/plans/{{ plan.id }}/directional-records/${directionalId}`)
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                const record = data.directional_record;
+                
+                // Preencher formulário
+                const form = document.querySelector('.directionals-catalog-form');
+                if (form) {
+                    form.querySelector('input[name="directional_title"]').value = record.title || '';
+                    form.querySelector('textarea[name="directional_description"]').value = record.description || '';
+
+                    // Alterar action do formulário para update
+                    form.action = `/plans/{{ plan.id }}/directional-records/${directionalId}`;        
+
+                    // Alterar botão de submit
+                    const submitBtn = form.querySelector('button[type="submit"]');
+                    if (submitBtn) {
+                        submitBtn.textContent = 'Atualizar Direcionador';
+                        submitBtn.onclick = function(e) {
+                            e.preventDefault();
+                            updateDirectionalRecord(directionalId);
+                        };
+                    }
+
+                    // Adicionar botão de cancelar
+                    const cancelBtn = document.createElement('button');
+                    cancelBtn.type = 'button';
+                    cancelBtn.className = 'button button-ghost cancel-edit-btn';
+                    cancelBtn.textContent = 'Cancelar';
+                    cancelBtn.onclick = cancelDirectionalEdit;
+                    
+                    const formActions = form.querySelector('.form-actions');
+                    formActions.appendChild(cancelBtn);
+                    
+                    showMessage('Formulário preenchido para edição. Modifique os campos desejados.', 'info');
+                }
+            } else {
+                showMessage('Erro ao carregar dados do direcionador: ' + data.error, 'error');
+            }
+        })
+        .catch(error => {
+            console.error('Erro:', error);
+            showMessage('Erro ao carregar dados do direcionador.', 'error');
+        });
+}
+
+function updateDirectionalRecord(directionalId) {
+    const form = document.querySelector('.directionals-catalog-form');      
+    if (!form) return;
+
+    const formData = new FormData(form);
+
+    const data = {
+        title: formData.get('directional_title'),
+        description: formData.get('directional_description')
+    };
+    
+    fetch(`/plans/{{ plan.id }}/directional-records/${directionalId}`, {
+        method: 'PUT',
+        headers: {
+            'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(data)
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.success) {
+            showMessage('Direcionador atualizado com sucesso!', 'success');
+            setTimeout(() => {
+                window.location.reload();
+            }, 1000);
+        } else {
+            showMessage('Erro ao atualizar direcionador: ' + data.error, 'error');    
+        }
+    })
+    .catch(error => {
+        console.error('Erro:', error);
+        showMessage('Erro ao atualizar direcionador.', 'error');
+    });
+}
+
+function deleteDirectionalRecord(directionalId) {
+    if (confirm('Tem certeza que deseja excluir este direcionador?')) {
+        fetch(`/plans/{{ plan.id }}/directional-records/${directionalId}`, {
+            method: 'DELETE'
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                showMessage('Direcionador excluído com sucesso!', 'success');
+                setTimeout(() => {
+                    window.location.reload();
+                }, 1000);
+            } else {
+                showMessage('Erro ao excluir direcionador: ' + data.error, 'error');
+            }
+        })
+        .catch(error => {
+            console.error('Erro:', error);
+            showMessage('Erro ao excluir direcionador.', 'error');
+        });
+    }
+}
+
+function cancelDirectionalEdit() {
+    const form = document.querySelector('.directionals-catalog-form');
+    if (form) {
+        // Restaurar action original
+        form.action = '{{ url_for("add_directional_record", plan_id=plan.id) }}';
+        
+        // Limpar formulário
+        form.reset();
+        
+        // Restaurar botão de submit
+        const submitBtn = form.querySelector('button[type="submit"]');
+        if (submitBtn) {
+            submitBtn.textContent = 'Salvar direcionador';
+            submitBtn.onclick = null;
+        }
+        
+        // Remover botão de cancelar
+        const cancelBtn = form.querySelector('.cancel-edit-btn');
+        if (cancelBtn) {
+            cancelBtn.remove();
+        }
+        
+        showMessage('Edição cancelada.', 'info');
+    }
+}
+
+
+// Funcionalidade para mostrar informações do participante selecionado
+document.addEventListener('DOMContentLoaded', function() {
+    const participantSelect = document.querySelector('select[name="participant"]');
+    const participantInfo = document.createElement('div');
+    participantInfo.className = 'participant-info';
+    participantInfo.style.marginTop = '8px';
+    participantInfo.style.fontSize = '0.9em';
+    participantInfo.style.color = '#666';
+    
+    // Adicionar o elemento de informação após o select
+    participantSelect.parentNode.appendChild(participantInfo);
+    
+    // Dados dos participantes (passados do backend)
+    const participants = {{ participants | tojson }};
+    
+    participantSelect.addEventListener('change', function() {
+        const selectedName = this.value;
+        const participant = participants.find(p => p.name === selectedName);
+        
+        if (participant) {
+            let info = participant.name;
+            if (participant.role) info += ` - ${participant.role}`;
+            if (participant.relation) info += ` (${participant.relation})`;
+            if (participant.email) info += ` - ${participant.email}`;
+            
+            participantInfo.textContent = info;
+            participantInfo.style.display = 'block';
+        } else {
+            participantInfo.style.display = 'none';
+        }
+    });
+});
+</script>
+
+{% endblock %}
+
+

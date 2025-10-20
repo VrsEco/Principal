@@ -1,0 +1,692 @@
+{% extends "base.html" %}
+{% block title %}GRV | Modelagem / Desenho{% endblock %}
+{% block body %}{% set active_nav = 'dashboard' %}{{ super() }}{% endblock %}
+
+{% block extra_head %}
+{{ super() }}
+<style>
+  .app-main {
+    padding-bottom: 80px;
+    background: linear-gradient(135deg, #ffffff 0%, #f8fafc 100%) !important;
+    color: #000000 !important;
+  }
+
+  .modeling-container {
+    margin-top: 16px;
+    padding: 24px;
+    background: linear-gradient(135deg, #ffffff 0%, #f9fafb 100%) !important;
+    border: 1px solid rgba(30, 64, 175, 0.12) !important;
+    border-radius: 16px !important;
+    box-shadow: 0 8px 24px rgba(30, 64, 175, 0.08) !important;
+  }
+
+  .modeling-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    gap: 16px;
+  }
+
+  .modeling-eyebrow {
+    display: inline-block;
+    font-size: 12px;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+    color: #1e40af !important;
+  }
+
+  .modeling-title {
+    margin: 4px 0 0 0;
+    font-size: 22px;
+    font-weight: 700;
+    color: #0f172a !important;
+  }
+
+  .modeling-description {
+    margin-top: 8px;
+    max-width: 640px;
+    color: #1e293b !important;
+    line-height: 1.6;
+  }
+
+  .modeling-actions {
+    display: flex;
+    gap: 8px;
+    flex-wrap: wrap;
+  }
+
+  .kanban-feedback {
+    margin-top: 12px;
+    margin-bottom: 12px;
+    padding: 10px 16px;
+    border-radius: 10px;
+    font-size: 12px;
+    font-weight: 600;
+    color: #1e40af !important;
+    background: linear-gradient(135deg, rgba(219, 234, 254, 0.8) 0%, rgba(191, 219, 254, 0.6) 100%) !important;
+    border: 1px solid rgba(30, 64, 175, 0.16) !important;
+    box-shadow: 0 4px 12px rgba(30, 64, 175, 0.08) !important;
+  }
+
+  .kanban-feedback[data-variant="error"] {
+    color: #dc2626 !important;
+    background: linear-gradient(135deg, rgba(254, 226, 226, 0.9) 0%, rgba(254, 202, 202, 0.75) 100%) !important;
+    border-color: rgba(220, 38, 38, 0.24) !important;
+  }
+
+  .filters-toggle {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-top: 12px;
+    margin-bottom: 8px;
+  }
+
+  .filters-toggle-title {
+    font-weight: 600;
+    font-size: 13px;
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+    color: #1e293b !important;
+  }
+
+  .filters-panel {
+    margin-top: 8px;
+    margin-bottom: 16px;
+    padding: 16px;
+    background: linear-gradient(135deg, #ffffff 0%, #f8fafc 100%) !important;
+    border: 1px solid rgba(30, 64, 175, 0.12) !important;
+    border-radius: 14px !important;
+    box-shadow: 0 6px 18px rgba(30, 64, 175, 0.08) !important;
+  }
+
+  .filters-panel .form-two-cols {
+    gap: 18px;
+  }
+
+  .filters-actions {
+    display: flex;
+    justify-content: flex-end;
+    gap: 8px;
+    margin-top: 12px;
+  }
+
+  .kanban-board-wrapper {
+    overflow-x: auto;
+    padding: 16px;
+    margin-top: 12px;
+    border-radius: 16px;
+    background: linear-gradient(135deg, #ffffff 0%, #f8fafc 100%) !important;
+    border: 1px solid rgba(30, 64, 175, 0.12) !important;
+    box-shadow: 0 8px 24px rgba(30, 64, 175, 0.08) !important;
+  }
+
+  .kanban-board {
+    display: grid;
+    gap: 16px;
+    align-items: flex-start;
+    grid-auto-flow: column;
+    grid-auto-columns: minmax(220px, 240px);
+  }
+
+  .kanban-column {
+    background: linear-gradient(135deg, #ffffff 0%, #f9fafb 100%) !important;
+    border-radius: 16px !important;
+    border: 1px solid rgba(30, 64, 175, 0.12) !important;
+    display: flex;
+    flex-direction: column;
+    min-height: 240px;
+    transition: border-color 0.3s ease, box-shadow 0.3s ease, transform 0.3s ease;
+    box-shadow: 0 10px 24px rgba(30, 64, 175, 0.08) !important;
+  }
+
+  .kanban-column[data-dropping="true"] {
+    border-color: rgba(30, 64, 175, 0.45) !important;
+    box-shadow: 0 0 0 3px rgba(30, 64, 175, 0.18) !important;
+  }
+
+  .kanban-column-header {
+    padding: 16px 18px;
+    border-bottom: 1px solid rgba(30, 64, 175, 0.12) !important;
+    display: flex;
+    justify-content: space-between;
+    gap: 12px;
+  }
+
+  .kanban-column-title {
+    font-size: 13px;
+    font-weight: 700;
+    color: #1e40af !important;
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+  }
+
+  .kanban-column-count {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    padding: 4px 12px;
+    border-radius: 999px;
+    font-size: 12px;
+    font-weight: 600;
+    color: #1e40af !important;
+    background: linear-gradient(135deg, rgba(219, 234, 254, 0.8) 0%, rgba(191, 219, 254, 0.6) 100%) !important;
+    border: 1px solid rgba(30, 64, 175, 0.2) !important;
+    min-width: 40px;
+  }
+
+  .kanban-column-body {
+    flex: 1;
+    padding: 16px 18px;
+    display: flex;
+    flex-direction: column;
+    gap: 14px;
+  }
+
+  .kanban-empty-placeholder {
+    padding: 20px 16px;
+    border: 1px dashed rgba(148, 163, 184, 0.45) !important;
+    border-radius: 12px;
+    font-size: 12px;
+    color: #475569 !important;
+    text-align: center;
+    background: linear-gradient(135deg, #f8fafc 0%, #e2e8f0 100%) !important;
+  }
+
+  .kanban-card {
+    background: linear-gradient(135deg, #ffffff 0%, #f9fafb 100%) !important;
+    border-radius: 12px !important;
+    border: 1px solid rgba(30, 64, 175, 0.12) !important;
+    padding: 14px 16px;
+    box-shadow: 0 8px 18px rgba(30, 64, 175, 0.08) !important;
+    cursor: grab;
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+    transition: box-shadow 0.3s ease, transform 0.3s ease, border-color 0.3s ease;
+  }
+
+  .kanban-card:hover {
+    box-shadow: 0 16px 32px rgba(30, 64, 175, 0.18) !important;
+    border-color: rgba(30, 64, 175, 0.28) !important;
+    transform: translateY(-2px);
+  }
+
+  .kanban-card.dragging {
+    opacity: 0.85;
+    transform: scale(0.98);
+    box-shadow: 0 18px 36px rgba(15, 23, 42, 0.18) !important;
+  }
+
+  .kanban-card-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 10px;
+  }
+
+  .kanban-card-code {
+    font-size: 11px;
+    font-weight: 600;
+    color: #1e293b !important;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+  }
+
+  .kanban-card-open {
+    border: none;
+    background: linear-gradient(135deg, rgba(148, 163, 184, 0.25) 0%, rgba(100, 116, 139, 0.15) 100%) !important;
+    border-radius: 8px !important;
+    font-size: 11px;
+    font-weight: 600;
+    color: #1e40af !important;
+    cursor: pointer;
+    padding: 4px 10px !important;
+    transition: all 0.3s ease;
+  }
+
+  .kanban-card-open:hover {
+    background: linear-gradient(135deg, rgba(191, 219, 254, 0.9) 0%, rgba(147, 197, 253, 0.7) 100%) !important;
+    color: #0f172a !important;
+  }
+
+  .kanban-card-title {
+    font-size: 14px;
+    font-weight: 600;
+    color: #0f172a !important;
+    line-height: 1.4;
+  }
+
+  .kanban-board-wrapper::-webkit-scrollbar {
+    height: 8px;
+  }
+
+  .kanban-board-wrapper::-webkit-scrollbar-thumb {
+    background: rgba(148, 163, 184, 0.6);
+    border-radius: 999px;
+  }
+
+  @media (min-width: 1280px) {
+    .kanban-board {
+      grid-auto-columns: minmax(240px, 260px);
+    }
+  }
+
+  @media (max-width: 1024px) {
+    .modeling-header {
+      flex-direction: column;
+    }
+
+    .kanban-board {
+      grid-auto-columns: minmax(240px, 1fr);
+    }
+  }
+
+  @media (max-width: 768px) {
+    .modeling-container {
+      padding: 18px;
+    }
+
+    .kanban-board {
+      grid-auto-columns: minmax(220px, 1fr);
+    }
+  }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="project-layout plan-layout" data-sidebar-toggle>
+  {# Sidebar focado em processos #}
+  {% set active_id = 'process-modeling' %}
+  {% include 'processes_sidebar.html' %}
+
+  <section class="project-content plan-content" data-company-id="{{ company.id }}">
+    <div class="surface-card modeling-container">
+      <div class="card-header modeling-header">
+        <div>
+          <span class="section-eyebrow modeling-eyebrow">Gestão de Processos</span>
+          <h3 class="modeling-title">Modelagem / Desenho de Processos</h3>
+          <p class="modeling-description">
+            Acompanhe a evolução dos processos cadastrados na arquitetura e organize o pipeline de modelagem por estágio.
+          </p>
+        </div>
+        <div class="modeling-actions">
+          <a class="button button-ghost" href="{{ url_for('grv.grv_process_map', company_id=company.id) }}#processes">Ir para Arquitetura</a>
+        </div>
+      </div>
+
+      <div class="kanban-feedback" data-feedback hidden></div>
+
+      <div class="filters-toggle">
+        <span class="filters-toggle-title">Filtros</span>
+        <button id="toggleModelFilters" type="button" class="button button-ghost">Ocultar filtros</button>
+      </div>
+      <div id="modelFilters" class="company-form-fields filters-panel">
+        <div class="form-two-cols">
+          <label class="form-field">
+            <span>Buscar</span>
+            <input id="filterModelQuery" placeholder="Código ou nome" />
+          </label>
+          <label class="form-field">
+            <span>Macroprocesso</span>
+            <select id="filterModelMacro">
+              <option value="">Todos</option>
+            </select>
+          </label>
+        </div>
+        <div class="form-two-cols">
+          <label class="form-field">
+            <span>Responsável</span>
+            <select id="filterModelResponsible">
+              <option value="">Todos</option>
+            </select>
+          </label>
+          <label class="form-field">
+            <span>Desempenho</span>
+            <select id="filterModelPerformance">
+              <option value="">Todos</option>
+              <option value="critical">Crítico</option>
+              <option value="below">Abaixo</option>
+              <option value="satisfactory">Satisfatório</option>
+            </select>
+          </label>
+        </div>
+        <div class="filters-actions">
+          <button id="btnClearModelFilters" type="button" class="button button-ghost">Limpar filtros</button>
+        </div>
+      </div>
+
+      <div class="kanban-board-wrapper" data-kanban-board data-company-id="{{ company.id }}" data-stage-config='{{ stages|tojson }}'>
+        <div class="kanban-board">
+          {% for stage in stages %}
+          {% set stage_processes = process_groups.get(stage.slug, []) %}
+          <div class="kanban-column" data-kanban-column data-stage="{{ stage.slug }}">
+            <div class="kanban-column-header">
+              <div>
+                <div class="kanban-column-title">{{ stage.title }}</div>
+              </div>
+              <span class="kanban-column-count" data-column-count>{{ stage_processes|length }}</span>
+            </div>
+            <div class="kanban-column-body" data-dropzone>
+              <div class="kanban-empty-placeholder" data-empty-placeholder{% if stage_processes|length > 0 %} hidden{% endif %}>
+                Nenhum processo neste estágio.
+              </div>
+              {% for process in stage_processes %}
+              <article class="kanban-card" draggable="true" data-kanban-card data-process-id="{{ process.id }}" data-stage="{{ process.kanban_stage }}" data-macro-id="{{ process.macro_id }}" data-responsible="{{ process.responsible or '' }}" data-performance="{{ process.performance_level or '' }}" data-detail-url="{{ url_for('grv.grv_process_detail', company_id=company.id, process_id=process.id) }}">
+                <div class="kanban-card-header">
+                  <span class="kanban-card-code">{{ process.code or 'Sem código' }}</span>
+                  <button type="button" class="kanban-card-open" data-action="open-card">Abrir</button>
+                </div>
+                <div class="kanban-card-title">{{ process.name }}</div>
+              </article>
+              {% endfor %}
+            </div>
+          </div>
+          {% endfor %}
+        </div>
+      </div>
+    </div>
+  </section>
+</div>
+
+<script>
+document.addEventListener('DOMContentLoaded', () => {
+  const boardWrapper = document.querySelector('[data-kanban-board]');
+  if (!boardWrapper) {
+    return;
+  }
+
+  const companyId = boardWrapper.dataset.companyId;
+  const stageConfig = (() => {
+    try {
+      return JSON.parse(boardWrapper.dataset.stageConfig || '[]');
+    } catch (err) {
+      console.error('Erro ao interpretar os estágios do Kanban', err);
+      return [];
+    }
+  })();
+  const stageNames = stageConfig.reduce((acc, stage) => {
+    acc[stage.slug] = stage.title;
+    return acc;
+  }, {});
+
+  const feedback = document.querySelector('[data-feedback]');
+  const filterBar = document.getElementById('modelFilters');
+  const toggleFilters = document.getElementById('toggleModelFilters');
+  const filterQuery = document.getElementById('filterModelQuery');
+  const filterMacro = document.getElementById('filterModelMacro');
+  const filterResponsible = document.getElementById('filterModelResponsible');
+  const filterPerformance = document.getElementById('filterModelPerformance');
+  const btnClear = document.getElementById('btnClearModelFilters');
+  const COLLAPSE_KEY = `grv:modelFilters:collapsed:${companyId}`;
+  const FILTERS_KEY = `grv:modelFilters:${companyId}`;
+  const notify = (message, variant = 'info') => {
+    if (!feedback) {
+      if (variant === 'error') {
+        console.error(message);
+      } else {
+        console.log(message);
+      }
+      return;
+    }
+    feedback.textContent = message;
+    feedback.dataset.variant = variant;
+    feedback.hidden = false;
+    if (feedback._timeout) {
+      clearTimeout(feedback._timeout);
+    }
+    feedback._timeout = setTimeout(() => {
+      feedback.hidden = true;
+    }, 3200);
+  };
+
+  // Populate selects for filters
+  (async () => {
+    try {
+      // Macroprocessos
+      const resM = await fetch(`/api/companies/${companyId}/macro-processes`);
+      const jsM = await resM.json();
+      if (jsM && jsM.success && filterMacro) {
+        const current = filterMacro.value;
+        const opts = ['<option value="">Todos</option>'].concat((jsM.data||[]).map(m => {
+          const t = m.code ? `${m.code} - ${m.name?.toUpperCase?.()||m.name}` : (m.name||'');
+          return `<option value="${m.id}">${t}</option>`;
+        }));
+        filterMacro.innerHTML = opts.join('');
+        if (current) filterMacro.value = current;
+      }
+      // Responsáveis
+      const resE = await fetch(`/api/companies/${companyId}/employees`);
+      const jsE = await resE.json();
+      if (jsE && jsE.success && filterResponsible) {
+        const names = Array.from(new Set((jsE.employees||[])
+          .filter(e => (e.status === 'active' || e.status == null))
+          .map(e => e.name)
+          .filter(Boolean)));
+        const current = filterResponsible.value;
+        const opts = ['<option value="">Todos</option>'].concat(names.map(n => `<option value="${n}">${n}</option>`));
+        filterResponsible.innerHTML = opts.join('');
+        if (current) filterResponsible.value = current;
+      }
+    } catch(_e) {}
+  })();
+
+  function saveFilters(){
+    const payload = {
+      q: filterQuery ? filterQuery.value.trim() : '',
+      macro_id: filterMacro ? filterMacro.value : '',
+      responsible: filterResponsible ? filterResponsible.value : '',
+      performance: filterPerformance ? filterPerformance.value : ''
+    };
+    try { localStorage.setItem(FILTERS_KEY, JSON.stringify(payload)); } catch(_e) {}
+  }
+
+  function loadFilters(){
+    try {
+      const saved = JSON.parse(localStorage.getItem(FILTERS_KEY) || '{}');
+      if (filterQuery) filterQuery.value = saved.q || '';
+      if (filterMacro) filterMacro.value = saved.macro_id || '';
+      if (filterResponsible) filterResponsible.value = saved.responsible || '';
+      if (filterPerformance) filterPerformance.value = saved.performance || '';
+    } catch(_e) {}
+  }
+
+  function applyFilters(){
+    const q = (filterQuery ? filterQuery.value.trim().toLowerCase() : '');
+    const macroId = filterMacro ? filterMacro.value : '';
+    const responsible = filterResponsible ? filterResponsible.value : '';
+    const performance = filterPerformance ? filterPerformance.value : '';
+
+    const columns = boardWrapper.querySelectorAll('[data-kanban-column]');
+    columns.forEach(column => {
+      const dropzone = column.querySelector('[data-dropzone]');
+      const cards = dropzone ? dropzone.querySelectorAll('[data-kanban-card]') : [];
+      let visibleCount = 0;
+      cards.forEach(card => {
+        const code = (card.querySelector('.kanban-card-code')?.textContent || '').toLowerCase();
+        const title = (card.querySelector('.kanban-card-title')?.textContent || '').toLowerCase();
+        const pid = card.getAttribute('data-process-id');
+        const cardMacroId = card.getAttribute('data-macro-id') || '';
+        const cardResp = card.getAttribute('data-responsible') || '';
+        const cardPerf = card.getAttribute('data-performance') || '';
+        let passes = true;
+        if (q) passes = passes && (code.includes(q) || title.includes(q));
+        if (macroId) passes = passes && String(cardMacroId) === String(macroId);
+        if (performance) passes = passes && String(cardPerf) === String(performance);
+        if (responsible) passes = passes && String(cardResp) === String(responsible);
+        if (passes) {
+          card.style.display = '';
+          visibleCount++;
+        } else {
+          card.style.display = 'none';
+        }
+      });
+      const countEl = column.querySelector('[data-column-count]');
+      if (countEl) countEl.textContent = visibleCount;
+      const placeholder = column.querySelector('[data-empty-placeholder]');
+      if (placeholder) placeholder.hidden = visibleCount > 0;
+    });
+  }
+
+  function updateCollapseUI(){
+    const collapsed = localStorage.getItem(COLLAPSE_KEY) === '1';
+    if (filterBar) filterBar.style.display = collapsed ? 'none' : '';
+    if (toggleFilters) toggleFilters.textContent = collapsed ? 'Mostrar filtros' : 'Ocultar filtros';
+  }
+  if (toggleFilters){
+    toggleFilters.addEventListener('click', () => {
+      const collapsed = localStorage.getItem(COLLAPSE_KEY) === '1';
+      localStorage.setItem(COLLAPSE_KEY, collapsed ? '0' : '1');
+      updateCollapseUI();
+    });
+  }
+  updateCollapseUI();
+  loadFilters();
+  applyFilters();
+
+  if (filterQuery) filterQuery.addEventListener('input', () => { saveFilters(); applyFilters(); });
+  if (filterMacro) filterMacro.addEventListener('change', () => { saveFilters(); applyFilters(); });
+  if (filterResponsible) filterResponsible.addEventListener('change', () => { saveFilters(); applyFilters(); });
+  if (filterPerformance) filterPerformance.addEventListener('change', () => { saveFilters(); applyFilters(); });
+  if (btnClear) btnClear.addEventListener('click', () => {
+    if (filterQuery) filterQuery.value = '';
+    if (filterMacro) filterMacro.value = '';
+    if (filterResponsible) filterResponsible.value = '';
+    if (filterPerformance) filterPerformance.value = '';
+    saveFilters();
+    applyFilters();
+  });
+
+  const updateColumnState = (column) => {
+    const dropzone = column.querySelector('[data-dropzone]');
+    const cards = dropzone ? dropzone.querySelectorAll('[data-kanban-card]') : [];
+    const countEl = column.querySelector('[data-column-count]');
+    const placeholder = dropzone ? dropzone.querySelector('[data-empty-placeholder]') : null;
+    if (countEl) {
+      countEl.textContent = cards.length;
+    }
+    if (placeholder) {
+      placeholder.hidden = cards.length > 0;
+    }
+  };
+
+  let draggedCard = null;
+  let originColumn = null;
+
+  const columns = boardWrapper.querySelectorAll('[data-kanban-column]');
+  columns.forEach((column) => {
+    updateColumnState(column);
+
+    column.addEventListener('dragover', (event) => {
+      event.preventDefault();
+      column.setAttribute('data-dropping', 'true');
+    });
+
+    column.addEventListener('dragleave', () => {
+      column.removeAttribute('data-dropping');
+    });
+
+    column.addEventListener('drop', async (event) => {
+      event.preventDefault();
+      column.removeAttribute('data-dropping');
+      if (!draggedCard) {
+        return;
+      }
+
+      const targetStage = column.dataset.stage;
+      const currentStage = draggedCard.dataset.stage;
+      const destinationDropzone = column.querySelector('[data-dropzone]');
+
+      if (!destinationDropzone) {
+        draggedCard = null;
+        originColumn = null;
+        return;
+      }
+
+      if (targetStage === currentStage && originColumn === column) {
+        draggedCard = null;
+        originColumn = null;
+        return;
+      }
+
+      const processId = draggedCard.dataset.processId;
+      const previousColumn = originColumn;
+      destinationDropzone.appendChild(draggedCard);
+      updateColumnState(column);
+      if (previousColumn && previousColumn !== column) {
+        updateColumnState(previousColumn);
+      }
+
+      try {
+        const response = await fetch(`/api/companies/${companyId}/processes/${processId}/stage`, {
+          method: 'PATCH',
+          headers: {
+            'Content-Type': 'application/json'
+          },
+          body: JSON.stringify({ stage: targetStage })
+        });
+        const payload = await response.json();
+        if (!response.ok || !payload.success) {
+          throw new Error(payload.error || 'update_failed');
+        }
+        draggedCard.dataset.stage = payload.stage;
+        notify(`Processo movido para ${stageNames[targetStage] || targetStage}.`, 'info');
+      } catch (err) {
+        if (previousColumn) {
+          const previousDropzone = previousColumn.querySelector('[data-dropzone]');
+          if (previousDropzone) {
+            previousDropzone.appendChild(draggedCard);
+            updateColumnState(previousColumn);
+          }
+        }
+        updateColumnState(column);
+        notify('Não foi possível atualizar o estágio. Tente novamente.', 'error');
+      } finally {
+        draggedCard = null;
+        originColumn = null;
+      }
+    });
+  });
+
+  const cards = boardWrapper.querySelectorAll('[data-kanban-card]');
+  cards.forEach((card) => {
+    card.addEventListener('dragstart', () => {
+      draggedCard = card;
+      originColumn = card.closest('[data-kanban-column]');
+      requestAnimationFrame(() => card.classList.add('dragging'));
+    });
+
+    card.addEventListener('dragend', () => {
+      card.classList.remove('dragging');
+      if (originColumn) {
+        updateColumnState(originColumn);
+      }
+      draggedCard = null;
+      originColumn = null;
+    });
+
+    const openButton = card.querySelector('[data-action="open-card"]');
+    if (openButton) {
+      openButton.addEventListener('click', (event) => {
+        event.preventDefault();
+        event.stopPropagation();
+        window.location.href = card.dataset.detailUrl;
+      });
+    }
+
+    card.addEventListener('click', (event) => {
+      const isButton = event.target.closest('[data-action="open-card"]');
+      if (isButton) {
+        return;
+      }
+      // Ignore click if it was part of a drag operation
+      if (card.classList.contains('dragging')) {
+        return;
+      }
+      window.location.href = card.dataset.detailUrl;
+    });
+  });
+});
+</script>
+{% endblock %}

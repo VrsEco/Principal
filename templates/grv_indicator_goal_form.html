@@ -1,0 +1,716 @@
+﻿<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="utf-8">
+  <title>{{ 'Editar' if goal else 'Nova' }} Meta de Indicador</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <link rel="icon" type="image/x-icon" href="{{ url_for('static', filename='favicon.ico') }}" />
+  <link rel="shortcut icon" type="image/x-icon" href="{{ url_for('static', filename='favicon.ico') }}" />
+  <style>
+    body {
+      margin: 0;
+      padding: 24px;
+      font-family: 'Segoe UI', Tahoma, Arial, sans-serif;
+      background: #f8fafc;
+      color: #0f172a;
+    }
+
+    .shell {
+      max-width: 540px;
+      margin: 0 auto;
+      background: #ffffff;
+      border: 1px solid #e2e8f0;
+      border-radius: 16px;
+      padding: 28px;
+      box-shadow: 0 24px 40px rgba(15, 23, 42, 0.08);
+      display: grid;
+      gap: 18px;
+    }
+
+    h1 {
+      margin: 0;
+      font-size: 22px;
+      font-weight: 700;
+    }
+
+    .subtitle {
+      margin: 8px 0 0;
+      font-size: 13px;
+      color: #64748b;
+    }
+
+    .form-group {
+      display: grid;
+      gap: 6px;
+    }
+
+    .section {
+      display: grid;
+      gap: 12px;
+      padding: 14px;
+      background: #f8fafc;
+      border: 1px solid rgba(15, 23, 42, 0.08);
+      border-radius: 12px;
+    }
+
+    .section-title {
+      margin: 0;
+      font-size: 14px;
+      font-weight: 700;
+      text-transform: uppercase;
+      color: #0f172a;
+      letter-spacing: 0.06em;
+    }
+
+    .form-grid {
+      display: grid;
+      gap: 12px;
+    }
+
+    .form-grid.two-columns {
+      grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+    }
+
+    label {
+      font-weight: 600;
+      font-size: 13px;
+      color: #334155;
+    }
+
+    select,
+    input,
+    textarea {
+      width: 100%;
+      padding: 10px 12px;
+      border-radius: 8px;
+      border: 1px solid rgba(15, 23, 42, 0.16);
+      background: #ffffff;
+      font-size: 14px;
+      font-family: inherit;
+    }
+
+    textarea {
+      resize: vertical;
+      min-height: 96px;
+    }
+
+    .input-hint {
+      font-size: 12px;
+      color: #64748b;
+      line-height: 1.4;
+    }
+
+    .type-section {
+      display: grid;
+      gap: 12px;
+    }
+
+    .type-section.hidden {
+      display: none;
+    }
+
+    .actions {
+      display: flex;
+      justify-content: flex-end;
+      gap: 12px;
+      margin-top: 8px;
+    }
+
+    button {
+      border: none;
+      border-radius: 10px;
+      padding: 12px 22px;
+      font-weight: 600;
+      font-size: 14px;
+      cursor: pointer;
+    }
+
+    .btn-secondary {
+      background: #e2e8f0;
+      color: #475569;
+    }
+
+    .btn-primary {
+      background: linear-gradient(135deg, #3b82f6, #2563eb);
+      color: #ffffff;
+      box-shadow: 0 12px 24px rgba(37, 99, 235, 0.2);
+    }
+  </style>
+</head>
+<body>
+  <div class="shell">
+    <header>
+      <h1>{{ 'Editar Meta de Indicador' if goal else 'Nova Meta de Indicador' }}</h1>
+      <p class="subtitle">
+        Empresa: <strong>{{ company.name if company and company.name else 'N/A' }}</strong>
+        {% if goal and goal.code %}
+          <br><span>Codigo atual: {{ goal.code }}</span>
+        {% endif %}
+      </p>
+    </header>
+
+    <form id="goalForm">
+      <div class="section">
+        <h2 class="section-title">1. Dados da meta</h2>
+        <div class="form-grid two-columns">
+          <div class="form-group">
+            <label for="indicatorId">Indicador *</label>
+            <select id="indicatorId" name="indicator_id" required>
+              <option value="">Selecione</option>
+              {% for indicator in indicators %}
+                <option value="{{ indicator.id }}">{{ indicator.code }} - {{ indicator.name }}</option>
+              {% endfor %}
+            </select>
+          </div>
+          <div class="form-group">
+            <label for="goalType">Formato da meta *</label>
+            <select id="goalType" name="goal_type" required>
+              <option value="single">Meta unica</option>
+              <option value="daily">Meta diaria</option>
+              <option value="weekly">Meta semanal</option>
+              <option value="monthly">Meta mensal</option>
+              <option value="quarterly">Meta trimestral</option>
+              <option value="biannual">Meta semestral</option>
+              <option value="annual">Meta anual</option>
+            </select>
+            <span class="input-hint" id="goalTypeHint">Escolha como esta meta sera acompanhada.</span>
+          </div>
+        </div>
+      </div>
+
+      <div class="section">
+        <h2 class="section-title">2. Configuracao por tipo</h2>
+        <div class="form-grid two-columns">
+          <div class="form-group">
+            <label id="goalValueLabel" for="goalValue">Valor alvo *</label>
+            <input id="goalValue" name="goal_value" type="number" step="0.01" required>
+            <span class="input-hint" id="goalValueHint">Informe o valor que deseja alcancar.</span>
+          </div>
+          <div class="form-group" id="evaluationBasisGroup">
+            <label for="evaluationBasis">Forma de avaliacao</label>
+            <select id="evaluationBasis" name="evaluation_basis">
+              <option value="sum">Somar valores do periodo</option>
+              <option value="average">Media do periodo</option>
+              <option value="latest">Usar ultimo valor registrado</option>
+              <option value="value">Valor pontual</option>
+            </select>
+            <span class="input-hint">Define como os registros serao comparados com a meta.</span>
+          </div>
+        </div>
+
+        <div class="type-section" data-type-section="single">
+          <div class="form-group">
+            <label for="singleDeadline">Prazo para atingir *</label>
+            <input id="singleDeadline" type="date" placeholder="dd/mm/aaaa">
+          </div>
+          <span class="input-hint">Clique no campo e selecione a data usando o calendario.</span>
+        </div>
+
+        <div class="type-section hidden" data-type-section="daily">
+          <div class="form-grid two-columns">
+            <div class="form-group">
+              <label for="dailyStart">Data inicial *</label>
+              <input id="dailyStart" type="date" placeholder="dd/mm/aaaa">
+            </div>
+            <div class="form-group">
+              <label for="dailyEnd">Data final *</label>
+              <input id="dailyEnd" type="date" placeholder="dd/mm/aaaa">
+            </div>
+          </div>
+          <span class="input-hint">Clique no campo e selecione a data usando o calendario.</span>
+        </div>
+
+        <div class="type-section hidden" data-type-section="weekly">
+          <div class="form-grid two-columns">
+            <div class="form-group">
+              <label for="weeklyStart">Data inicial *</label>
+              <input id="weeklyStart" type="date" placeholder="dd/mm/aaaa">
+            </div>
+            <div class="form-group">
+              <label for="weeklyEnd">Data final *</label>
+              <input id="weeklyEnd" type="date" placeholder="dd/mm/aaaa">
+            </div>
+          </div>
+          <span class="input-hint">Clique no campo e selecione a data usando o calendario.</span>
+        </div>
+
+        <div class="type-section hidden" data-type-section="monthly">
+          <div class="form-grid two-columns">
+            <div class="form-group">
+              <label for="monthlyStart">Mes/Ano inicial *</label>
+              <input id="monthlyStart" type="month" placeholder="Ex: Janeiro 2025">
+            </div>
+            <div class="form-group">
+              <label for="monthlyEnd">Mes/Ano final *</label>
+              <input id="monthlyEnd" type="month" placeholder="Ex: Dezembro 2025">
+            </div>
+          </div>
+          <span class="input-hint">Clique no campo e selecione mes e ano usando o calendario.</span>
+        </div>
+
+        <div class="type-section hidden" data-type-section="quarterly">
+          <div class="form-grid two-columns">
+            <div class="form-group">
+              <label for="quarterlyStart">Mes/Ano inicial *</label>
+              <input id="quarterlyStart" type="month" placeholder="Ex: Janeiro 2025">
+            </div>
+            <div class="form-group">
+              <label for="quarterlyEnd">Mes/Ano final *</label>
+              <input id="quarterlyEnd" type="month" placeholder="Ex: Dezembro 2025">
+            </div>
+          </div>
+          <span class="input-hint">Clique no campo e selecione mes e ano usando o calendario.</span>
+        </div>
+
+        <div class="type-section hidden" data-type-section="biannual">
+          <div class="form-grid two-columns">
+            <div class="form-group">
+              <label for="biannualStart">Mes/Ano inicial *</label>
+              <input id="biannualStart" type="month" placeholder="Ex: Janeiro 2025">
+            </div>
+            <div class="form-group">
+              <label for="biannualEnd">Mes/Ano final *</label>
+              <input id="biannualEnd" type="month" placeholder="Ex: Junho 2025">
+            </div>
+          </div>
+          <span class="input-hint">Clique no campo e selecione mes e ano usando o calendario.</span>
+        </div>
+
+        <div class="type-section hidden" data-type-section="annual">
+          <div class="form-grid two-columns">
+            <div class="form-group">
+              <label for="annualStart">Ano inicial *</label>
+              <input id="annualStart" type="number" min="2020" max="2050" step="1" placeholder="2025">
+            </div>
+            <div class="form-group">
+              <label for="annualEnd">Ano final *</label>
+              <input id="annualEnd" type="number" min="2020" max="2050" step="1" placeholder="2025">
+            </div>
+          </div>
+          <span class="input-hint">Defina o intervalo de anos para acompanhamento anual.</span>
+        </div>
+      </div>
+
+      <div class="section">
+        <h2 class="section-title">3. Acompanhamento e responsabilidades</h2>
+        <div class="form-grid two-columns">
+          <div class="form-group">
+            <label for="responsibleId">Responsavel</label>
+            <select id="responsibleId" name="responsible_id">
+              <option value="">Selecione</option>
+              {% for employee in employees %}
+                <option value="{{ employee.id }}">{{ employee.name }}</option>
+              {% endfor %}
+            </select>
+          </div>
+          <div class="form-group">
+            <label for="status">Status</label>
+            <select id="status" name="status">
+              <option value="active">Em andamento</option>
+              <option value="achieved">Atingida</option>
+              <option value="delayed">Atrasada</option>
+              <option value="cancelled">Cancelada</option>
+            </select>
+          </div>
+        </div>
+        <div class="form-group">
+          <label for="notes">Observacoes</label>
+          <textarea id="notes" name="notes" placeholder="Contexto, premissas ou acoes de acompanhamento"></textarea>
+        </div>
+      </div>
+
+      <div class="actions">
+        <button type="button" class="btn-secondary" id="cancelButton">Cancelar</button>
+        <button type="submit" class="btn-primary">Salvar Meta</button>
+      </div>
+    </form>
+  </div>
+
+    <script>
+    const companyId = {{ company_id }};
+    const goalData = {{ goal|tojson|safe if goal else 'null' }};
+
+    const form = document.getElementById('goalForm');
+    const indicatorSelect = document.getElementById('indicatorId');
+    const goalTypeSelect = document.getElementById('goalType');
+    const goalValueInput = document.getElementById('goalValue');
+    const goalValueLabel = document.getElementById('goalValueLabel');
+    const goalValueHint = document.getElementById('goalValueHint');
+    const goalTypeHint = document.getElementById('goalTypeHint');
+    const evaluationBasisSelect = document.getElementById('evaluationBasis');
+    const evaluationBasisGroup = document.getElementById('evaluationBasisGroup');
+    const responsibleSelect = document.getElementById('responsibleId');
+    const statusSelect = document.getElementById('status');
+    const notesInput = document.getElementById('notes');
+    const cancelButton = document.getElementById('cancelButton');
+
+    const monthlyStartInput = document.getElementById('monthlyStart');
+    const monthlyEndInput = document.getElementById('monthlyEnd');
+    const dailyStartInput = document.getElementById('dailyStart');
+    const dailyEndInput = document.getElementById('dailyEnd');
+    const weeklyStartInput = document.getElementById('weeklyStart');
+    const weeklyEndInput = document.getElementById('weeklyEnd');
+    const quarterlyStartInput = document.getElementById('quarterlyStart');
+    const quarterlyEndInput = document.getElementById('quarterlyEnd');
+    const biannualStartInput = document.getElementById('biannualStart');
+    const biannualEndInput = document.getElementById('biannualEnd');
+    const annualStartInput = document.getElementById('annualStart');
+    const annualEndInput = document.getElementById('annualEnd');
+    const singleDeadlineInput = document.getElementById('singleDeadline');
+    const typeSections = document.querySelectorAll('[data-type-section]');
+
+    const TYPE_CONFIG = {
+      single: {
+        label: 'Valor alvo unico *',
+        hint: 'Informe o valor final a ser atingido ate o prazo escolhido.',
+        typeHint: 'Use este formato para metas pontuais (ex.: reserva financeira).',
+        placeholder: 'Ex.: 300000'
+      },
+      daily: {
+        label: 'Valor alvo diario *',
+        hint: 'Informe o valor esperado por dia no intervalo selecionado.',
+        typeHint: 'Use este formato para metas de rotina diaria (ex.: consumo medio).',
+        placeholder: 'Ex.: 200'
+      },
+      weekly: {
+        label: 'Valor alvo semanal *',
+        hint: 'Informe o valor esperado por semana no periodo.',
+        typeHint: 'Use este formato para metas semanais (ex.: vendas por semana).',
+        placeholder: 'Ex.: 1500'
+      },
+      monthly: {
+        label: 'Valor alvo mensal *',
+        hint: 'Informe o valor previsto para cada mes do periodo.',
+        typeHint: 'Use este formato para metas recorrentes por mes (ex.: faturamento mensal).',
+        placeholder: 'Ex.: 300000'
+      },
+      quarterly: {
+        label: 'Valor alvo trimestral *',
+        hint: 'Informe o valor esperado a cada trimestre.',
+        typeHint: 'Use este formato para metas trimestrais (ex.: crescimento por trimestre).',
+        placeholder: 'Ex.: 900000'
+      },
+      biannual: {
+        label: 'Valor alvo semestral *',
+        hint: 'Informe o valor esperado a cada semestre.',
+        typeHint: 'Use este formato para metas semestrais (ex.: resultado semestral).',
+        placeholder: 'Ex.: 1800000'
+      },
+      annual: {
+        label: 'Valor alvo anual *',
+        hint: 'Informe o valor esperado por ano.',
+        typeHint: 'Use este formato para metas anuais (ex.: faturamento anual).',
+        placeholder: 'Ex.: 3600000'
+      }
+    };
+
+    const DEFAULT_EVALUATION = {
+      single: 'value',
+      daily: 'average',
+      weekly: 'sum',
+      monthly: 'sum',
+      quarterly: 'sum',
+      biannual: 'sum',
+      annual: 'sum'
+    };
+
+    document.addEventListener('DOMContentLoaded', () => {
+      const initialType = goalData && goalData.goal_type ? goalData.goal_type : 'single';
+      goalTypeSelect.value = initialType;
+      if (goalData) {
+        populateForm(goalData);
+      } else {
+        updateTypeSection(initialType);
+        evaluationBasisSelect.value = DEFAULT_EVALUATION[initialType];
+      }
+    });
+
+    goalTypeSelect.addEventListener('change', () => {
+      const type = goalTypeSelect.value || 'single';
+      updateTypeSection(type);
+    });
+
+    cancelButton.addEventListener('click', () => window.close());
+
+    form.addEventListener('submit', async (event) => {
+      event.preventDefault();
+
+      const indicatorId = Number(indicatorSelect.value);
+      const goalType = goalTypeSelect.value || 'single';
+      const goalValue = parseFloat(goalValueInput.value);
+
+      if (!indicatorId || Number.isNaN(goalValue)) {
+        alert('Preencha o indicador e um valor valido para a meta.');
+        return;
+      }
+
+      let periodStart = null;
+      let periodEnd = null;
+      let goalDate = null;
+
+      console.log('Tipo de meta:', goalType);
+      
+      if (goalType === 'single') {
+        goalDate = singleDeadlineInput.value;
+        if (!goalDate) {
+          alert('⚠️ Selecione o prazo para atingir a meta unica.\n\nClique no campo e escolha a data no calendario.');
+          return;
+        }
+      } else if (goalType === 'daily') {
+        const startValue = dailyStartInput.value;
+        const endValue = dailyEndInput.value;
+        if (!startValue || !endValue) {
+          alert('⚠️ Selecione as datas inicial e final da meta diaria.\n\nClique nos campos e escolha a data no calendario.');
+          return;
+        }
+        if (new Date(startValue) > new Date(endValue)) {
+          alert('⚠️ A data final deve ser igual ou posterior a data inicial.');
+          return;
+        }
+        periodStart = startValue;
+        periodEnd = endValue;
+        goalDate = periodEnd;
+      } else if (goalType === 'weekly') {
+        const startValue = weeklyStartInput.value;
+        const endValue = weeklyEndInput.value;
+        if (!startValue || !endValue) {
+          alert('⚠️ Selecione as datas inicial e final da meta semanal.\n\nClique nos campos e escolha a data no calendario.');
+          return;
+        }
+        if (new Date(startValue) > new Date(endValue)) {
+          alert('⚠️ A data final deve ser igual ou posterior a data inicial.');
+          return;
+        }
+        periodStart = startValue;
+        periodEnd = endValue;
+        goalDate = periodEnd;
+      } else if (goalType === 'monthly') {
+        const startValue = monthlyStartInput.value;
+        const endValue = monthlyEndInput.value;
+        if (!startValue || !endValue) {
+          alert('⚠️ Selecione o mes/ano inicial e final da meta mensal.\n\nClique nos campos e escolha o mes e ano no calendario.');
+          return;
+        }
+        periodStart = monthToStartDate(startValue);
+        periodEnd = monthToEndDate(endValue);
+        if (!periodStart || !periodEnd) {
+          console.error('Erro de conversao:', {startValue, endValue, periodStart, periodEnd});
+          alert('⚠️ Erro ao processar o periodo.\n\nPor favor, use o seletor de mes/ano (calendario) em ambos os campos.');
+          return;
+        }
+        if (new Date(periodStart) > new Date(periodEnd)) {
+          alert('⚠️ O mes final deve ser igual ou posterior ao mes inicial.');
+          return;
+        }
+        goalDate = periodEnd;
+      } else if (goalType === 'quarterly') {
+        const startValue = quarterlyStartInput.value;
+        const endValue = quarterlyEndInput.value;
+        if (!startValue || !endValue) {
+          alert('⚠️ Selecione o mes/ano inicial e final da meta trimestral.\n\nClique nos campos e escolha o mes e ano no calendario.');
+          return;
+        }
+        periodStart = monthToStartDate(startValue);
+        periodEnd = monthToEndDate(endValue);
+        if (!periodStart || !periodEnd) {
+          console.error('Erro de conversao:', {startValue, endValue, periodStart, periodEnd});
+          alert('⚠️ Erro ao processar o periodo.\n\nPor favor, use o seletor de mes/ano (calendario) em ambos os campos.');
+          return;
+        }
+        if (new Date(periodStart) > new Date(periodEnd)) {
+          alert('⚠️ O mes final deve ser igual ou posterior ao mes inicial.');
+          return;
+        }
+        goalDate = periodEnd;
+      } else if (goalType === 'biannual') {
+        const startValue = biannualStartInput.value;
+        const endValue = biannualEndInput.value;
+        if (!startValue || !endValue) {
+          alert('⚠️ Selecione o mes/ano inicial e final da meta semestral.\n\nClique nos campos e escolha o mes e ano no calendario.');
+          return;
+        }
+        periodStart = monthToStartDate(startValue);
+        periodEnd = monthToEndDate(endValue);
+        if (!periodStart || !periodEnd) {
+          console.error('Erro de conversao:', {startValue, endValue, periodStart, periodEnd});
+          alert('⚠️ Erro ao processar o periodo.\n\nPor favor, use o seletor de mes/ano (calendario) em ambos os campos.');
+          return;
+        }
+        if (new Date(periodStart) > new Date(periodEnd)) {
+          alert('⚠️ O mes final deve ser igual ou posterior ao mes inicial.');
+          return;
+        }
+        goalDate = periodEnd;
+      } else if (goalType === 'annual') {
+        const startYear = parseInt(annualStartInput.value);
+        const endYear = parseInt(annualEndInput.value);
+        if (!startYear || !endYear) {
+          alert('⚠️ Informe o ano inicial e final da meta anual.\n\nDigite o ano nos campos (ex: 2025).');
+          return;
+        }
+        if (endYear < startYear) {
+          alert('⚠️ O ano final deve ser igual ou posterior ao ano inicial.');
+          return;
+        }
+        periodStart = `${startYear}-01-01`;
+        periodEnd = `${endYear}-12-31`;
+        goalDate = periodEnd;
+      }
+      
+      console.log('Periodo processado:', {periodStart, periodEnd, goalDate});
+
+      const evaluationBasis = goalType === 'single'
+        ? 'value'
+        : (evaluationBasisSelect.value || DEFAULT_EVALUATION[goalType] || 'sum');
+
+      const payload = {
+        indicator_id: indicatorId,
+        goal_type: goalType,
+        goal_value: goalValue,
+        period_start: periodStart,
+        period_end: periodEnd,
+        goal_date: goalDate,
+        evaluation_basis: evaluationBasis,
+        responsible_id: responsibleSelect.value ? Number(responsibleSelect.value) : null,
+        status: statusSelect.value || 'active',
+        notes: notesInput.value.trim() || null
+      };
+
+      const isEdit = Boolean(goalData && goalData.id);
+      const url = isEdit
+        ? `/grv/api/company/${companyId}/indicator-goals/${goalData.id}`
+        : `/grv/api/company/${companyId}/indicator-goals`;
+      const method = isEdit ? 'PUT' : 'POST';
+
+      try {
+        const response = await fetch(url, {
+          method,
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(payload)
+        });
+
+        const result = await response.json();
+        if (result.success) {
+          alert('✅ Meta salva com sucesso!');
+          if (window.opener && !window.opener.closed) {
+            window.opener.location.reload();
+          }
+          window.close();
+        } else {
+          alert('❌ Erro ao salvar meta:\n\n' + (result.message || 'Erro desconhecido'));
+        }
+      } catch (error) {
+        console.error('Erro ao salvar meta:', error);
+        alert('❌ Erro ao salvar meta:\n\n' + error.message);
+      }
+    });
+
+    function populateForm(data) {
+      const type = data.goal_type || 'single';
+      goalTypeSelect.value = type;
+
+      if (data.indicator_id) {
+        indicatorSelect.value = String(data.indicator_id);
+      }
+      if (data.goal_value !== undefined && data.goal_value !== null) {
+        goalValueInput.value = data.goal_value;
+      }
+      if (data.evaluation_basis) {
+        evaluationBasisSelect.value = data.evaluation_basis;
+      }
+
+      if (type === 'single') {
+        singleDeadlineInput.value = data.goal_date || '';
+      } else if (type === 'daily') {
+        dailyStartInput.value = data.period_start || '';
+        dailyEndInput.value = data.period_end || '';
+      } else if (type === 'weekly') {
+        weeklyStartInput.value = data.period_start || '';
+        weeklyEndInput.value = data.period_end || '';
+      } else if (type === 'monthly') {
+        monthlyStartInput.value = toMonthValue(data.period_start);
+        monthlyEndInput.value = toMonthValue(data.period_end);
+      } else if (type === 'quarterly') {
+        quarterlyStartInput.value = toMonthValue(data.period_start);
+        quarterlyEndInput.value = toMonthValue(data.period_end);
+      } else if (type === 'biannual') {
+        biannualStartInput.value = toMonthValue(data.period_start);
+        biannualEndInput.value = toMonthValue(data.period_end);
+      } else if (type === 'annual') {
+        if (data.period_start) {
+          annualStartInput.value = data.period_start.substring(0, 4);
+        }
+        if (data.period_end) {
+          annualEndInput.value = data.period_end.substring(0, 4);
+        }
+      }
+
+      if (data.responsible_id) {
+        responsibleSelect.value = String(data.responsible_id);
+      }
+      if (data.status) {
+        statusSelect.value = data.status;
+      }
+      notesInput.value = data.notes || '';
+
+      updateTypeSection(type);
+    }
+
+    function updateTypeSection(type) {
+      typeSections.forEach((section) => {
+        if (section.dataset.typeSection === type) {
+          section.classList.remove('hidden');
+        } else {
+          section.classList.add('hidden');
+        }
+      });
+
+      const config = TYPE_CONFIG[type] || TYPE_CONFIG.single;
+      goalValueLabel.textContent = config.label;
+      goalValueHint.textContent = config.hint;
+      goalTypeHint.textContent = config.typeHint;
+      goalValueInput.placeholder = config.placeholder || '';
+
+      if (type === 'single') {
+        evaluationBasisGroup.classList.add('hidden');
+        evaluationBasisSelect.value = 'value';
+      } else {
+        evaluationBasisGroup.classList.remove('hidden');
+        if (!evaluationBasisSelect.value) {
+          evaluationBasisSelect.value = DEFAULT_EVALUATION[type] || 'sum';
+        }
+      }
+    }
+
+    function monthToStartDate(value) {
+      if (!value || !/^\d{4}-\d{2}$/.test(value)) {
+        return null;
+      }
+      return `${value}-01`;
+    }
+
+    function monthToEndDate(value) {
+      if (!value || !/^\d{4}-\d{2}$/.test(value)) {
+        return null;
+      }
+      const [yearStr, monthStr] = value.split('-');
+      const year = Number(yearStr);
+      const month = Number(monthStr);
+      if (!Number.isFinite(year) || !Number.isFinite(month)) {
+        return null;
+      }
+      const lastDay = new Date(year, month, 0).getDate();
+      return `${value}-${String(lastDay).padStart(2, '0')}`;
+    }
+
+    function toMonthValue(dateStr) {
+      if (!dateStr || !/^\d{4}-\d{2}-\d{2}$/.test(dateStr)) {
+        return '';
+      }
+      return dateStr.substring(0, 7);
+    }
+  </script>
+</body>
+</html>
+
+

@@ -1,0 +1,803 @@
+{% extends "base.html" %}
+{% block title %}GRV | Mapa de Processos{% endblock %}
+{% block body %}{% set active_nav = 'dashboard' %}{{ super() }}{% endblock %}
+
+{% block extra_head %}
+{{ super() }}
+<style>
+  /* Força a visualização do mapa a ocupar toda a largura da tela */
+  body {
+    overflow-x: hidden;
+  }
+  
+  .app-main {
+    padding: 40px 20px 64px !important;
+  }
+  
+  /* Remove limites de largura e ajusta o layout para largura total */
+  .project-layout.plan-layout {
+    max-width: 100% !important;
+    width: 100% !important;
+    grid-template-columns: 280px 1fr !important;
+    gap: 16px !important;
+  }
+  
+  .project-content.plan-content {
+    max-width: 100% !important;
+    width: 100% !important;
+  }
+  
+  .project-sidebar {
+    max-width: 280px;
+  }
+  
+  /* Garante que o container do mapa tenha largura total */
+  #processMapContainer {
+    width: 100% !important;
+    max-width: 100% !important;
+    background: #ffffff !important;
+  }
+  
+  /* Garante que os blocos de área tenham fundo branco */
+  .print-area-block {
+    background: #ffffff !important;
+  }
+  
+  /* Ajusta o card do mapa para usar toda a largura */
+  .surface-card {
+    max-width: 100% !important;
+    width: 100% !important;
+  }
+  
+  /* Ajusta os tabs e painéis */
+  div[data-panel="visual"] {
+    max-width: 100% !important;
+    width: 100% !important;
+  }
+  
+  /* Estilo da barra de rolagem para o container de macroprocessos */
+  #macrosContainer::-webkit-scrollbar {
+    width: 8px;
+  }
+  
+  #macrosContainer::-webkit-scrollbar-track {
+    background: rgba(148, 163, 184, 0.1);
+    border-radius: 4px;
+  }
+  
+  #macrosContainer::-webkit-scrollbar-thumb {
+    background: rgba(58, 241, 174, 0.3);
+    border-radius: 4px;
+  }
+  
+  #macrosContainer::-webkit-scrollbar-thumb:hover {
+    background: rgba(58, 241, 174, 0.5);
+  }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="project-layout plan-layout" data-sidebar-toggle>
+  {# Sidebar focado em processos #}
+  {% set active_id = 'process-map' %}
+  {% include 'processes_sidebar.html' %}
+  
+  <section class="project-content plan-content" data-company-id="{{ company.id }}">
+    <div style="display:flex;gap:8px;margin-bottom:12px;">
+      <button class="button" data-tab="visual">🗺️ Visualizar Mapa</button>
+      <button class="button button-ghost" data-tab="areas">Áreas</button>
+      <button class="button button-ghost" data-tab="macros">Macroprocessos</button>
+      <button class="button button-ghost" data-tab="processes">Processos</button>
+    </div>
+
+    <!-- Tab: Visual do Mapa -->
+    <div data-panel="visual" class="surface-card" style="padding:20px;">
+      <div class="card-header" style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:16px;">
+        <div style="flex:1;">
+          <h3>{{ company.name }} - Mapa de Processos</h3>
+          <div style="display:flex;gap:20px;margin-top:8px;font-size:12px;color:var(--color-muted);flex-wrap:wrap;">
+            <div><strong>Versão:</strong> 1.0</div>
+            <div><strong>Criado em:</strong> {{ company.created_at[:10] if company.created_at else 'N/A' }}</div>
+            <div><strong>Atualizado em:</strong> <span id="mapLastUpdate">{{ company.created_at[:10] if company.created_at else 'N/A' }}</span></div>
+            <div><strong>Impresso em:</strong> <span id="printDate"></span></div>
+          </div>
+        </div>
+        <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap;">
+          <button id="btnViewMap" class="button button-primary" style="font-size:12px;">👁️ Visualizar</button>
+          <button id="btnExportPdf" class="button button-ghost" style="font-size:12px;">📝 Exportar PDF</button>
+          <div style="width:1px;height:24px;background:var(--color-border);margin:0 4px;"></div>
+          <button id="btnViewMapV2" class="button button-primary" style="font-size:12px;background:#10b981;border-color:#10b981;">👁️ Visualizar MP-2</button>
+          <button id="btnExportPdfV2" class="button button-ghost" style="font-size:12px;">📄 Exportar PDF MP-2</button>
+        </div>
+      </div>
+      
+      <div id="processMapContainer" style="overflow:auto;min-height:500px;"></div>
+    </div>
+
+    <!-- Tab: Áreas -->
+    <div data-panel="areas" class="surface-card" style="display:none;padding:20px;">
+      <h3>Áreas</h3>
+      <form id="areaForm" class="company-form-fields" style="margin-top:12px;">
+        <input type="hidden" name="id"/>
+        
+        {% if not company.client_code %}
+        <div style="background:rgba(239,68,68,0.08);border:1px solid rgba(239,68,68,0.3);border-radius:8px;padding:12px;margin-bottom:16px;">
+          <div style="font-size:13px;color:#ef4444;margin-bottom:4px;font-weight:600;">⚠️ Código do Cliente Não Configurado</div>
+          <div style="font-size:12px;color:var(--color-muted);">
+            Configure o código do cliente (ex: AO, VSA) na página de edição da empresa para gerar códigos automáticos.
+          </div>
+          <a href="/companies/{{ company.id }}/edit" class="button button-ghost" style="margin-top:8px;font-size:12px;">
+            Configurar Código do Cliente
+          </a>
+        </div>
+        {% else %}
+        <div style="background:rgba(58,241,174,0.08);border:1px solid rgba(58,241,174,0.2);border-radius:8px;padding:12px;margin-bottom:16px;">
+          <div style="font-size:13px;color:var(--color-accent);margin-bottom:4px;">🤖 Código Automático</div>
+          <div style="font-size:12px;color:var(--color-muted);">
+            O código será gerado automaticamente no formato: <strong style="color:var(--color-text);">{CÓDIGO_CLIENTE}.C.{SEQUÊNCIA}</strong>
+          </div>
+          <div id="areaCodePreview" style="font-size:14px;font-weight:600;color:var(--color-accent);margin-top:6px;font-family:monospace;">
+            {{ company.client_code }}.C.? (ex: {{ company.client_code }}.C.1)
+          </div>
+        </div>
+        {% endif %}
+        
+        <div class="form-two-cols">
+          <label class="form-field">
+            <span>Sequência *</span>
+            <input name="code" type="number" min="1" required placeholder="Ex: 1, 2, 3..."/>
+            <span class="field-hint">Número usado na geração do código (ex: 1 gera AO.C.1)</span>
+          </label>
+          <label class="form-field">
+            <span>Cor</span>
+            <input name="color" type="color" value="#a78bfa"/>
+          </label>
+        </div>
+        <label class="form-field"><span>Nome da Área *</span><input name="name" required placeholder="Ex: Gerencial, Comercial, Operações..."/></label>
+        <label class="form-field"><span>Descrição</span><textarea name="description" rows="2" placeholder="Descreva o escopo desta área"></textarea></label>
+        <div style="display:flex;gap:8px;justify-content:flex-end;">
+          <button type="reset" class="button button-ghost">Limpar</button>
+          <button type="submit" class="button button-primary">Salvar Área</button>
+        </div>
+      </form>
+      <div id="areasList" style="margin-top:16px;"></div>
+    </div>
+
+    <!-- Tab: Macroprocessos -->
+    <div data-panel="macros" class="surface-card" style="display:none;padding:20px;">
+      <h3>Macroprocessos</h3>
+      <form id="macroForm" class="company-form-fields" style="margin-top:12px;">
+        <input type="hidden" name="id"/>
+        
+        <label class="form-field">
+          <span>Área *</span>
+          <select name="area_id" id="macroAreaSelect" required>
+            <option value="">Selecione uma área</option>
+            {% for area in areas %}
+            <option value="{{ area.id }}">{% if area.code %}{{ area.code }} - {% endif %}{{ area.name }}</option>
+            {% endfor %}
+          </select>
+          {% if not areas %}
+          <span class="field-hint" style="color:var(--color-danger);">
+            ⚠️ Você precisa cadastrar áreas primeiro na aba "Áreas".
+          </span>
+          {% endif %}
+        </label>
+        
+        <div style="background:rgba(58,241,174,0.08);border:1px solid rgba(58,241,174,0.2);border-radius:8px;padding:12px;margin-bottom:16px;">
+          <div style="font-size:13px;color:var(--color-accent);margin-bottom:4px;">🤖 Código Automático</div>
+          <div style="font-size:12px;color:var(--color-muted);">
+            O código será gerado automaticamente no formato: <strong style="color:var(--color-text);">{CÓDIGO_CLIENTE}.C.{ÁREA}.{SEQUÊNCIA}</strong>
+          </div>
+          <div id="macroCodePreview" style="font-size:14px;font-weight:600;color:var(--color-accent);margin-top:6px;font-family:monospace;">
+            {% if company.client_code %}{{ company.client_code }}.C.??.?{% else %}Configure o código do cliente primeiro{% endif %}
+          </div>
+        </div>
+        
+        <div class="form-two-cols">
+          <label class="form-field">
+            <span>Sequência *</span>
+            <input name="order_index" type="number" min="1" required placeholder="Ex: 1, 2, 3..."/>
+            <span class="field-hint">Número usado na geração do código e ordenação</span>
+          </label>
+          <label class="form-field">
+            <span>Dono do Processo *</span>
+            <input name="owner" required placeholder="Nome do responsável"/>
+            <span class="field-hint">Principal responsável por este macroprocesso</span>
+          </label>
+        </div>
+        
+        <label class="form-field">
+          <span>Nome do Macroprocesso *</span>
+          <input name="name" required placeholder="Ex: Gestão Comercial, Gestão Financeira..."/>
+        </label>
+        
+        <label class="form-field">
+          <span>Descrição</span>
+          <textarea name="description" rows="3" placeholder="Descreva o objetivo e escopo deste macroprocesso"></textarea>
+        </label>
+        
+        <div style="display:flex;gap:8px;justify-content:flex-end;">
+          <button type="reset" class="button button-ghost">Limpar</button>
+          <button type="submit" class="button button-primary">Salvar Macroprocesso</button>
+        </div>
+      </form>
+      <div id="macrosContainer" style="margin-top:16px;border:1px solid rgba(148,163,184,.2);border-radius:8px;padding:12px;background:var(--color-surface);position:relative;">
+        <!-- Indicador de scroll quando há muitos itens -->
+        <div id="scrollIndicator" style="position:absolute;top:8px;right:8px;background:rgba(58,241,174,0.1);color:var(--color-accent);padding:4px 8px;border-radius:4px;font-size:11px;font-weight:600;display:none;z-index:10;">
+          📜 Use a rolagem para ver mais itens
+        </div>
+      </div>
+    </div>
+
+    <!-- Tab: Processos -->
+    <div data-panel="processes" class="surface-card" style="display:none;padding:20px;">
+      <h3>Processos</h3>
+      <form id="processForm" class="company-form-fields" style="margin-top:12px;">
+        <input type="hidden" name="id"/>
+        
+        <label class="form-field">
+          <span>Macroprocesso *</span>
+          <select name="macro_id" id="processMacroSelect" required>
+            <option value="">Selecione um macroprocesso</option>
+          </select>
+          {% if not macros %}
+          <span class="field-hint" style="color:var(--color-danger);">
+            ⚠️ Você precisa cadastrar macroprocessos primeiro na aba "Macroprocessos".
+          </span>
+          {% endif %}
+        </label>
+        
+        <div style="background:rgba(58,241,174,0.08);border:1px solid rgba(58,241,174,0.2);border-radius:8px;padding:12px;margin-bottom:16px;">
+          <div style="font-size:13px;color:var(--color-accent);margin-bottom:4px;">🤖 Código Automático</div>
+          <div style="font-size:12px;color:var(--color-muted);">
+            O código será gerado automaticamente no formato: <strong style="color:var(--color-text);">{CÓDIGO_MACRO}.{SEQUÊNCIA}</strong>
+          </div>
+          <div id="processCodePreview" style="font-size:14px;font-weight:600;color:var(--color-accent);margin-top:6px;font-family:monospace;">
+            Selecione um macroprocesso
+          </div>
+        </div>
+        
+        <div class="form-two-cols">
+          <label class="form-field">
+            <span>Sequência *</span>
+            <input name="order_index" type="number" min="1" required placeholder="Ex: 1, 2, 3..."/>
+            <span class="field-hint">Número usado na geração do código</span>
+          </label>
+          <label class="form-field">
+            <span>Responsável</span>
+            <select name="responsible" id="processResponsibleSelect">
+              <option value="">Selecione um colaborador</option>
+            </select>
+            <span class="field-hint">Responsável pelo processo (cadastrado em Colaboradores)</span>
+          </label>
+        </div>
+        
+        <label class="form-field">
+          <span>Nome do Processo *</span>
+          <input name="name" required placeholder="Ex: Contas a Pagar, Atendimento ao Cliente..."/>
+        </label>
+        
+        <label class="form-field">
+          <span>Nível de Desempenho</span>
+          <select name="performance_level">
+            <option value="">Fora de Escopo</option>
+            <option value="critical">Desemp. Crítico (Vermelho)</option>
+            <option value="below">Desemp. Abaixo (Amarelo)</option>
+            <option value="satisfactory">Desemp. Satisfatório (Verde)</option>
+          </select>
+          <span class="field-hint">O nível de estruturação é definido automaticamente pela posição no Kanban</span>
+        </label>
+        
+        <label class="form-field">
+          <span>Descrição</span>
+          <textarea name="description" rows="3" placeholder="Descreva o objetivo e escopo deste processo"></textarea>
+        </label>
+        
+        <div style="display:flex;gap:8px;justify-content:flex-end;">
+          <button type="reset" class="button button-ghost">Limpar</button>
+          <button type="submit" class="button button-primary">Salvar Processo</button>
+        </div>
+      </form>
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-top:16px;margin-bottom:6px;">
+        <div style="font-weight:600;color:var(--color-text);">Filtros</div>
+        <button id="toggleProcessFilters" type="button" class="button button-ghost">Ocultar filtros</button>
+      </div>
+      <div id="processFilters" class="company-form-fields" style="margin-top:16px;margin-bottom:8px;background:rgba(148,163,184,.08);border:1px solid rgba(148,163,184,.25);border-radius:8px;padding:12px;">
+        <div class="form-two-cols">
+          <label class="form-field">
+            <span>Buscar</span>
+            <input id="filterProcessQuery" placeholder="Código ou nome" />
+          </label>
+          <label class="form-field">
+            <span>Macroprocesso</span>
+            <select id="filterProcessMacro">
+              <option value="">Todos</option>
+            </select>
+          </label>
+        </div>
+        <div class="form-two-cols">
+          <label class="form-field">
+            <span>Responsável</span>
+            <select id="filterProcessResponsible">
+              <option value="">Todos</option>
+            </select>
+          </label>
+          <label class="form-field">
+            <span>Desempenho</span>
+            <select id="filterProcessPerformance">
+              <option value="">Todos</option>
+              <option value="critical">Crítico</option>
+              <option value="below">Abaixo</option>
+              <option value="satisfactory">Satisfatório</option>
+            </select>
+          </label>
+        </div>
+        <div style="display:flex;gap:8px;justify-content:flex-end;">
+          <button id="btnClearProcessFilters" type="button" class="button button-ghost">Limpar filtros</button>
+        </div>
+      </div>
+      <div id="processesList" style="margin-top:16px;"></div>
+    </div>
+  </section>
+</div>
+
+<!-- Modal Visualizador de Impressão -->
+<div id="mapViewerModal" class="map-viewer-modal" style="display:none;">
+  <div class="map-viewer-overlay"></div>
+  <div class="map-viewer-container">
+    <!-- Toolbar -->
+    <div class="map-viewer-toolbar">
+      <div style="display:flex;align-items:center;gap:12px;">
+        <h3 style="margin:0;font-size:16px;color:var(--color-text);">Visualizador de Impressão</h3>
+        <div style="font-size:12px;color:var(--color-muted);">Use os controles de zoom para ajustar o tamanho</div>
+      </div>
+      <div style="display:flex;gap:8px;align-items:center;">
+        <button id="btnZoomOut" class="button button-ghost" title="Diminuir zoom">🔍−</button>
+        <span id="zoomLevel" style="font-size:12px;color:var(--color-muted);min-width:50px;text-align:center;">100%</span>
+        <button id="btnZoomIn" class="button button-ghost" title="Aumentar zoom">🔍+</button>
+        <button id="btnZoomReset" class="button button-ghost" title="Resetar zoom">⟲</button>
+        <button id="btnZoomFit" class="button button-ghost" title="Ajustar à tela">⤢</button>
+        <div style="width:1px;height:24px;background:var(--color-border);margin:0 8px;"></div>
+        <button id="btnPrintFromViewer" class="button button-primary">🖨️ Imprimir</button>
+        <button id="btnCloseViewer" class="button button-ghost">✕ Fechar</button>
+      </div>
+    </div>
+    
+    <!-- Conteúdo com zoom -->
+    <div class="map-viewer-content">
+      <div id="mapViewerInner" class="map-viewer-inner">
+        <!-- Conteúdo do mapa será clonado aqui -->
+      </div>
+    </div>
+  </div>
+</div>
+
+<style>
+.field-hint {
+  display: block;
+  font-size: 11px;
+  color: var(--color-muted, #94a3b8);
+  margin-top: 4px;
+}
+
+/* Modal Visualizador */
+.map-viewer-modal {
+  position: fixed;
+  inset: 0;
+  z-index: 9999;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.map-viewer-overlay {
+  position: absolute;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.95);
+  backdrop-filter: blur(4px);
+}
+
+.map-viewer-container {
+  position: relative;
+  width: 100%;
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+  background: var(--color-bg);
+}
+
+.map-viewer-toolbar {
+  position: relative;
+  z-index: 10;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 16px 24px;
+  background: var(--color-surface);
+  border-bottom: 1px solid var(--color-border);
+}
+
+.map-viewer-content {
+  flex: 1;
+  overflow: auto;
+  background: #1a1a1a;
+  padding: 20px;
+}
+
+.map-viewer-inner {
+  background: white;
+  padding: 40px;
+  border-radius: 8px;
+  box-shadow: 0 20px 60px rgba(0,0,0,0.5);
+  margin: 0 auto;
+  max-width: 100%;
+  width: 100%;
+  min-height: auto;
+  transition: all 0.3s ease;
+  color: #111827;
+}
+
+.print-page-header-global {
+  display: none;
+}
+
+.print-page-header-visible {
+  position: relative;
+  margin-bottom: 24px;
+  padding-bottom: 12px;
+  border-bottom: 1px solid rgba(15, 23, 42, 0.08);
+  background: #ffffff;
+}
+
+.print-header-content {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.print-header-title {
+  margin: 0;
+  font-size: 1.5em;
+  color: #111827;
+}
+
+.print-header-meta {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 20px;
+  font-size: 0.9em;
+  color: #6b7280;
+}
+
+.print-header-meta strong {
+  color: #111827;
+}
+
+.print-header-title-row {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 16px;
+}
+
+.print-page-counter {
+  display: none;
+  font-size: 0.75em;
+  color: #6b7280;
+  font-weight: 500;
+  white-space: nowrap;
+}
+
+.map-viewer-inner * {
+  color: inherit;
+}
+
+.map-viewer-inner.orientation-landscape {
+  max-width: 100%;
+  width: 100%;
+  min-height: auto;
+}
+
+/* Controle de zoom via font-size */
+.map-viewer-inner {
+  font-size: 100%;
+}
+
+.map-viewer-inner.zoom-level-30 { font-size: 50%; }
+.map-viewer-inner.zoom-level-40 { font-size: 60%; }
+.map-viewer-inner.zoom-level-50 { font-size: 70%; }
+.map-viewer-inner.zoom-level-60 { font-size: 75%; }
+.map-viewer-inner.zoom-level-70 { font-size: 80%; }
+.map-viewer-inner.zoom-level-80 { font-size: 85%; }
+.map-viewer-inner.zoom-level-90 { font-size: 90%; }
+.map-viewer-inner.zoom-level-100 { font-size: 100%; }
+.map-viewer-inner.zoom-level-110 { font-size: 105%; }
+.map-viewer-inner.zoom-level-120 { font-size: 110%; }
+.map-viewer-inner.zoom-level-130 { font-size: 115%; }
+.map-viewer-inner.zoom-level-140 { font-size: 120%; }
+.map-viewer-inner.zoom-level-150 { font-size: 125%; }
+.map-viewer-inner.zoom-level-160 { font-size: 130%; }
+.map-viewer-inner.zoom-level-170 { font-size: 135%; }
+.map-viewer-inner.zoom-level-180 { font-size: 140%; }
+.map-viewer-inner.zoom-level-190 { font-size: 145%; }
+.map-viewer-inner.zoom-level-200 { font-size: 150%; }
+
+/* Controle de colunas baseado em zoom e orientação */
+/* O grid usa auto-fit para ajustar automaticamente as colunas */
+/* Mas podemos forçar larguras mínimas diferentes baseado no zoom */
+
+/* Retrato - Zoom pequeno (< 70%): colunas menores (mais colunas) */
+.map-viewer-inner.orientation-portrait.zoom-small .process-grid {
+  grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)) !important;
+}
+
+/* Retrato - Zoom médio (70%-130%): colunas normais */
+.map-viewer-inner.orientation-portrait.zoom-medium .process-grid {
+  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)) !important;
+}
+
+/* Retrato - Zoom grande (> 130%): colunas maiores (menos colunas) */
+.map-viewer-inner.orientation-portrait.zoom-large .process-grid {
+  grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)) !important;
+}
+
+/* Paisagem - colunas menores para aproveitar largura */
+.map-viewer-inner.orientation-landscape .process-grid {
+  grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)) !important;
+}
+
+/* Quebra de página inteligente */
+.print-area-block {
+  page-break-inside: avoid;
+  break-inside: avoid;
+}
+
+.print-macro-block {
+  page-break-inside: avoid;
+  break-inside: avoid;
+}
+
+.print-process-card {
+  page-break-inside: avoid;
+  break-inside: avoid;
+}
+
+.print-page-header {
+  page-break-after: avoid;
+  break-after: avoid;
+}
+
+/* ESTILOS DE IMPRESSÃO */
+@media print {
+  :root {
+    color-scheme: light;
+  }
+
+  html, body {
+    width: 100%;
+    min-height: 100%;
+    margin: 0 !important;
+    padding: 0 !important;
+    background: #ffffff !important;
+    color: #0f172a !important;
+    -webkit-print-color-adjust: exact !important;
+    print-color-adjust: exact !important;
+  }
+
+  body > *:not(#mapViewerModal) {
+    display: none !important;
+  }
+
+  #mapViewerModal {
+    display: block !important;
+    position: static !important;
+    width: 100% !important;
+    height: auto !important;
+    background: #ffffff !important;
+  }
+
+  .map-viewer-overlay,
+  .map-viewer-toolbar {
+    display: none !important;
+  }
+
+  .map-viewer-container,
+  .map-viewer-content,
+  .map-viewer-inner {
+    position: static !important;
+    width: 100% !important;
+    max-width: none !important;
+    height: auto !important;
+    background: #ffffff !important;
+  }
+
+  .map-viewer-content {
+    padding: 0 !important;
+    overflow: visible !important;
+  }
+
+  .map-viewer-inner {
+    box-shadow: none !important;
+    border-radius: 0 !important;
+    margin: 0 !important;
+    padding: 0 !important;
+    color: #0f172a !important;
+  }
+  
+  /* Summary Cards na impressão */
+  .summary-section {
+    display: flex !important;
+    flex-wrap: wrap !important;
+    gap: 12px !important;
+    margin-bottom: 16px !important;
+    page-break-after: avoid;
+  }
+  
+  .summary-card {
+    border: 1px solid rgba(148, 163, 184, 0.35) !important;
+    border-radius: 8px !important;
+    padding: 12px 16px !important;
+    min-width: 140px !important;
+    background: #f8fafc !important;
+    page-break-inside: avoid;
+  }
+
+  .print-page-header-visible {
+    display: none !important;
+  }
+
+  .print-page-header-global {
+    display: block !important;
+    position: running(print-header);
+    margin: 0 !important;
+    padding: 0 0 12px 0 !important;
+    border-bottom: 1px solid #cbd5f5 !important;
+    background: #ffffff !important;
+    color: #111827 !important;
+    page-break-after: avoid;
+    page-break-inside: avoid;
+  }
+
+  .print-header-meta {
+    color: #475569 !important;
+  }
+
+  .print-page-counter {
+    display: block !important;
+    font-size: 10pt !important;
+    color: #475569 !important;
+  }
+
+  .print-page-counter::after {
+    content: "Página " counter(page) " de " counter(pages);
+  }
+
+  .print-area-block {
+    page-break-inside: auto;
+    margin: 16px 0 20px 0 !important;
+    background: #ffffff !important;
+    box-shadow: none !important;
+  }
+
+  .print-area-header {
+    display: flex !important;
+    align-items: center;
+    justify-content: space-between;
+    gap: 16px;
+    padding: 14px 18px !important;
+    border-radius: 10px !important;
+    color: #0f172a !important;
+    page-break-after: avoid;
+  }
+
+  .print-area-header > div:first-child {
+    font-weight: 600 !important;
+    font-size: 15px !important;
+    color: #0f172a !important;
+    text-transform: uppercase !important;
+  }
+
+  .print-area-header > div:last-child {
+    color: #475569 !important;
+    font-size: 10px !important;
+  }
+
+  .print-macro-block {
+    page-break-inside: auto;
+    width: 100% !important;
+    border-collapse: collapse !important;
+    background: #ffffff !important;
+    border: 1px solid #e2e8f0 !important;
+  }
+
+  .print-macro-block thead {
+    display: table-header-group;
+  }
+
+  .print-macro-block thead th {
+    background: #f1f5f9 !important;
+    color: #0f172a !important;
+    border-bottom: 1px solid #e2e8f0 !important;
+  }
+
+  .print-process-card {
+    page-break-inside: avoid !important;
+    break-inside: avoid !important;
+    box-shadow: none !important;
+    background: #ffffff !important;
+    border: 1px solid rgba(148, 163, 184, 0.4) !important;
+    border-radius: 10px !important;
+    padding: 12px !important;
+  }
+  
+  .process-title {
+    font-weight: 600 !important;
+    font-size: 12px !important;
+    color: #0f172a !important;
+  }
+  
+  .process-meta {
+    font-size: 10px !important;
+    color: #475569 !important;
+  }
+  
+  .process-description {
+    font-size: 9.8px !important;
+    color: #334155 !important;
+    line-height: 1.4 !important;
+  }
+  
+  .badge-group {
+    display: flex !important;
+    flex-direction: column !important;
+    gap: 4px !important;
+  }
+  
+  .badge {
+    display: inline-flex !important;
+    align-items: center !important;
+    gap: 6px !important;
+    border-radius: 6px !important;
+    padding: 4px 6px !important;
+    font-size: 9.5px !important;
+    font-weight: 600 !important;
+    line-height: 1.1 !important;
+  }
+  
+  .badge-label {
+    text-transform: uppercase !important;
+    font-weight: 500 !important;
+    color: #475569 !important;
+    letter-spacing: 0.03em !important;
+  }
+  
+  .badge-value {
+    font-weight: 600 !important;
+  }
+
+  .process-grid {
+    display: grid !important;
+    grid-template-columns: repeat(auto-fit, minmax(210px, 1fr)) !important;
+    gap: 12px !important;
+    margin-top: 8px !important;
+  }
+
+  * {
+    box-shadow: none !important;
+    text-shadow: none !important;
+  } 
+}
+
+@page {
+  size: A4;
+  margin: 16mm 14mm 18mm 14mm;
+  @top-center {
+    content: element(print-header);
+  }
+}
+
+</style>
+
+<script src="{{ url_for('static', filename='js/grv-process-map.js') }}"></script>
+{% endblock %}

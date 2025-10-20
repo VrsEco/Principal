@@ -1,0 +1,165 @@
+version: '3.8'
+
+# ============================================
+# GestaoVersus - Docker Compose DESENVOLVIMENTO
+# ============================================
+# Ambiente local com hot-reload e debug
+# ============================================
+
+services:
+  # ==========================================
+  # PostgreSQL Database (Dev)
+  # ==========================================
+  db_dev:
+    image: postgres:15-alpine
+    container_name: gestaoversos_db_dev
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: ${DEV_POSTGRES_DB:-bd_app_versus_dev}
+      POSTGRES_USER: ${DEV_POSTGRES_USER:-postgres}
+      POSTGRES_PASSWORD: ${DEV_POSTGRES_PASSWORD:-dev_password}
+      POSTGRES_INITDB_ARGS: "--encoding=UTF8 --locale=pt_BR.UTF-8"
+    volumes:
+      - postgres_data_dev:/var/lib/postgresql/data
+      - ./backups:/backups
+    ports:
+      - "5433:5432"  # Porta diferente para não conflitar
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${DEV_POSTGRES_USER:-postgres}"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    networks:
+      - gestaoversos_network_dev
+
+  # ==========================================
+  # Redis Cache (Dev)
+  # ==========================================
+  redis_dev:
+    image: redis:7-alpine
+    container_name: gestaoversos_redis_dev
+    restart: unless-stopped
+    command: redis-server --appendonly yes
+    volumes:
+      - redis_data_dev:/data
+    ports:
+      - "6380:6379"  # Porta diferente
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 3s
+      retries: 5
+    networks:
+      - gestaoversos_network_dev
+
+  # ==========================================
+  # Flask Application (Dev)
+  # ==========================================
+  app_dev:
+    build:
+      context: .
+      dockerfile: Dockerfile.dev
+    container_name: gestaoversos_app_dev
+    restart: unless-stopped
+    environment:
+      # Flask
+      FLASK_APP: app_pev.py
+      FLASK_ENV: development
+      FLASK_DEBUG: 1
+      SECRET_KEY: dev-secret-key-not-for-production
+      
+      # Database
+      DATABASE_URL: postgresql://${DEV_POSTGRES_USER:-postgres}:${DEV_POSTGRES_PASSWORD:-dev_password}@db_dev:5432/${DEV_POSTGRES_DB:-bd_app_versus_dev}
+      
+      # Redis
+      REDIS_URL: redis://redis_dev:6379/0
+      CELERY_BROKER_URL: redis://redis_dev:6379/0
+      CELERY_RESULT_BACKEND: redis://redis_dev:6379/1
+      
+      # Debug
+      WERKZEUG_DEBUG_PIN: off
+    volumes:
+      # Hot-reload: código atualiza automaticamente
+      - .:/app
+      - /app/__pycache__  # Excluir cache
+      - /app/.pytest_cache
+    ports:
+      - "5003:5002"  # Porta diferente
+    depends_on:
+      db_dev:
+        condition: service_healthy
+      redis_dev:
+        condition: service_healthy
+    command: python app_pev.py
+    networks:
+      - gestaoversos_network_dev
+
+  # ==========================================
+  # Celery Worker (Dev)
+  # ==========================================
+  celery_worker_dev:
+    build:
+      context: .
+      dockerfile: Dockerfile.dev
+    container_name: gestaoversos_celery_dev
+    restart: unless-stopped
+    command: celery -A app_pev.celery worker --loglevel=debug --concurrency=2
+    environment:
+      FLASK_APP: app_pev.py
+      FLASK_ENV: development
+      DATABASE_URL: postgresql://${DEV_POSTGRES_USER:-postgres}:${DEV_POSTGRES_PASSWORD:-dev_password}@db_dev:5432/${DEV_POSTGRES_DB:-bd_app_versus_dev}
+      REDIS_URL: redis://redis_dev:6379/0
+      CELERY_BROKER_URL: redis://redis_dev:6379/0
+      CELERY_RESULT_BACKEND: redis://redis_dev:6379/1
+    volumes:
+      - .:/app
+    depends_on:
+      - redis_dev
+      - db_dev
+    networks:
+      - gestaoversos_network_dev
+
+  # ==========================================
+  # Adminer (Database Management)
+  # ==========================================
+  adminer:
+    image: adminer:latest
+    container_name: gestaoversos_adminer_dev
+    restart: unless-stopped
+    ports:
+      - "8080:8080"
+    environment:
+      ADMINER_DEFAULT_SERVER: db_dev
+    depends_on:
+      - db_dev
+    networks:
+      - gestaoversos_network_dev
+
+  # ==========================================
+  # MailHog (Email Testing)
+  # ==========================================
+  mailhog:
+    image: mailhog/mailhog:latest
+    container_name: gestaoversos_mailhog_dev
+    restart: unless-stopped
+    ports:
+      - "8025:8025"  # Web UI
+      - "1025:1025"  # SMTP
+    networks:
+      - gestaoversos_network_dev
+
+# ==========================================
+# Volumes Persistentes (Dev)
+# ==========================================
+volumes:
+  postgres_data_dev:
+    driver: local
+  redis_data_dev:
+    driver: local
+
+# ==========================================
+# Network (Dev)
+# ==========================================
+networks:
+  gestaoversos_network_dev:
+    driver: bridge

@@ -1,0 +1,264 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Ecossistema Versus - Gestão Corporativa</title>
+    <link rel="icon" type="image/x-icon" href="{{ url_for('static', filename='favicon.ico') }}" />
+    <link rel="shortcut icon" type="image/x-icon" href="{{ url_for('static', filename='favicon.ico') }}" />
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --color-bg: #050505;
+            --color-surface: #101412;
+            --color-surface-alt: #161b18;
+            --color-border: #1f2622;
+            --color-text: #f5f8f6;
+            --color-muted: #9ba5a0;
+            --color-accent: #39f2ae;
+            --color-accent-strong: #3af1ae;
+            --color-highlight: #e6c63f;
+            --color-danger: #f66b6b;
+            --shadow-lg: 0 24px 48px rgba(0, 0, 0, 0.35);
+            --shadow-md: 0 16px 32px rgba(0, 0, 0, 0.28);
+            --radius-lg: 20px;
+            --radius-md: 14px;
+            --radius-sm: 10px;
+            --font-family: "Poppins", -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+        }
+
+        * {
+            box-sizing: border-box;
+        }
+
+        body {
+            margin: 0;
+            font-family: var(--font-family);
+            background: radial-gradient(circle at top right, rgba(58, 241, 174, 0.08), transparent 55%),
+                radial-gradient(circle at 20% 20%, rgba(230, 198, 63, 0.06), transparent 60%),
+                linear-gradient(160deg, #030303, #0c0f0e 55%, #030303);
+            color: var(--color-text);
+            min-height: 100vh;
+        }
+
+        .ecosystem-container {
+            max-width: 1400px;
+            margin: 0 auto;
+            padding: 48px 24px;
+        }
+
+        .ecosystem-header {
+            text-align: center;
+            margin-bottom: 64px;
+        }
+
+        .ecosystem-title {
+            font-size: 48px;
+            font-weight: 700;
+            margin: 0 0 16px 0;
+            background: linear-gradient(135deg, var(--color-accent), var(--color-highlight));
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+        }
+
+        .ecosystem-subtitle {
+            font-size: 20px;
+            color: var(--color-muted);
+            margin: 0;
+        }
+
+        .modules-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+            gap: 16px;
+            margin-bottom: 24px;
+        }
+
+        .module-card {
+            background: linear-gradient(145deg, rgba(16, 20, 18, 0.9), rgba(8, 10, 9, 0.95));
+            border: 1px solid rgba(58, 241, 174, 0.2);
+            border-radius: var(--radius-lg);
+            padding: 32px;
+            text-decoration: none;
+            color: inherit;
+            transition: all 0.3s ease;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .module-card::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: linear-gradient(135deg, rgba(58, 241, 174, 0.1), transparent);
+            opacity: 0;
+            transition: opacity 0.3s ease;
+        }
+
+        .module-card:hover::before {
+            opacity: 1;
+        }
+
+        .module-card:hover {
+            transform: translateY(-8px);
+            border-color: rgba(58, 241, 174, 0.4);
+            box-shadow: var(--shadow-lg);
+        }
+
+        .module-icon {
+            width: 64px;
+            height: 64px;
+            border-radius: var(--radius-md);
+            background: linear-gradient(135deg, var(--color-accent), var(--color-accent-strong));
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 28px;
+            font-weight: 700;
+            margin-bottom: 20px;
+            color: var(--color-bg);
+        }
+
+        .module-title {
+            font-size: 24px;
+            font-weight: 600;
+            margin: 0 0 12px 0;
+        }
+
+        .module-description {
+            color: var(--color-muted);
+            line-height: 1.6;
+            margin: 0 0 20px 0;
+        }
+
+        .module-status {
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            padding: 6px 12px;
+            border-radius: 999px;
+            font-size: 12px;
+            font-weight: 500;
+            text-transform: uppercase;
+            letter-spacing: 0.1em;
+        }
+
+        .status-active {
+            background: rgba(58, 241, 174, 0.2);
+            border: 1px solid rgba(58, 241, 174, 0.4);
+            color: var(--color-accent);
+        }
+
+        .status-coming-soon {
+            background: rgba(230, 198, 63, 0.2);
+            border: 1px solid rgba(230, 198, 63, 0.4);
+            color: var(--color-highlight);
+        }
+
+        .ecosystem-footer {
+            text-align: center;
+            padding: 48px 0;
+            border-top: 1px solid rgba(58, 241, 174, 0.2);
+        }
+
+        .footer-text {
+            color: var(--color-muted);
+            margin: 0;
+        }
+
+        .coming-soon {
+            opacity: 0.7;
+            cursor: not-allowed;
+        }
+
+        .coming-soon:hover {
+            transform: none;
+        }
+
+
+        @media (max-width: 768px) {
+            .ecosystem-container {
+                padding: 24px 16px;
+            }
+
+            .ecosystem-title {
+                font-size: 36px;
+            }
+
+            .modules-grid {
+                grid-template-columns: 1fr;
+                gap: 24px;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="ecosystem-container">
+        <header class="ecosystem-header">
+            <h1 class="ecosystem-title">Ecossistema Versus</h1>
+            <p class="ecosystem-subtitle">Plataforma completa de gestão corporativa</p>
+        </header>
+
+        <div class="modules-grid">
+            <!-- PEV - Planejamento Estratégico Versus -->
+            <a href="{{ url_for('pev.pev_dashboard') }}" class="module-card">
+                <div class="module-icon">PEV</div>
+                <h2 class="module-title">Planejamento Estratégico</h2>
+                <p class="module-description">Desenvolva e gerencie planos estratégicos com OKRs, direcionadores e projetos.</p>
+                <div class="module-status status-active">✓ Ativo</div>
+            </a>
+
+            <!-- GRV - Gerenciamento da Rotina Versus -->
+            <a href="{{ url_for('grv.grv_dashboard') }}" class="module-card">
+                <div class="module-icon">GRV</div>
+                <h2 class="module-title">Gerenciamento da Rotina</h2>
+                <p class="module-description">Organize processos operacionais, gerencie projetos e acompanhe a rotina.</p>
+                <div class="module-status status-active">✓ Ativo</div>
+            </a>
+
+            <!-- Empresas - Cadastro Unificado -->
+            <a href="/companies" class="module-card">
+                <div class="module-icon">🏢</div>
+                <h2 class="module-title">Empresas</h2>
+                <p class="module-description">Cadastro unificado por abas: Geral, PEV e GRV.</p>
+                <div class="module-status status-active">✓ Ativo</div>
+            </a>
+
+            <!-- GEV - Gestão Estratégica Versus (em breve) -->
+            <div class="module-card coming-soon" aria-label="Gestão Estratégica (em breve)">
+                <div class="module-icon">GEV</div>
+                <h2 class="module-title">Gestão Estratégica</h2>
+                <p class="module-description">Dashboards, métricas de performance e relatórios executivos.</p>
+                <div class="module-status status-coming-soon">⏳ Em breve</div>
+            </div>
+
+            <!-- GFV - Gestão Financeira Versus (em breve) -->
+            <div class="module-card coming-soon" aria-label="Gestão Financeira (em breve)">
+                <div class="module-icon">GFV</div>
+                <h2 class="module-title">Gestão Financeira</h2>
+                <p class="module-description">Orçamentos, fluxo de caixa, custos e indicadores financeiros.</p>
+                <div class="module-status status-coming-soon">⏳ Em breve</div>
+            </div>
+
+            <!-- CFG - Configurações -->
+            <a href="/configs" class="module-card">
+                <div class="module-icon">CFG</div>
+                <h2 class="module-title">Configurações</h2>
+                <p class="module-description">Central de configurações do sistema, relatórios e padrões globais.</p>
+                <div class="module-status status-active">✓ Ativo</div>
+            </a>
+        </div>
+
+
+        <footer class="ecosystem-footer">
+            <p class="footer-text">© 2025 Versus Gestão Corporativa - Transformando organizações através da gestão estratégica</p>
+        </footer>
+    </div>
+</body>
+</html>

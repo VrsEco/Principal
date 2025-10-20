@@ -1,0 +1,1264 @@
+{% extends "base.html" %}
+{% block title %}Participantes | {{ plan.name }}{% endblock %}
+{% block body %}
+  {% set active_nav = 'projetos' %}
+  {{ super() }}
+{% endblock %}
+{% block content %}
+<div class="project-layout plan-layout participants-layout" data-sidebar-toggle>
+  {% set sidebar_meta %}
+    <span class="summary-eyebrow">Participantes do Planejamento</span>
+    <p>{{ total_participants }} de {{ total_employees }} colaboradores selecionados para participar.</p>
+    <div class="plan-engagement-card">
+      <span class="chip-label">Taxa de Participação</span>
+      <span class="chip-value">{{ ((total_participants / total_employees * 100) if total_employees > 0 else 0) | round(1) }}%</span>
+      <span class="chip-meta">{{ total_participants }} participantes</span>
+    </div>
+  {% endset %}
+  {% include 'plan_sidebar.html' %}
+
+  <section class="project-content participants-content">
+    <!-- Header with Status Controls -->
+    <div class="surface-card">
+      <div class="card-header">
+        <div>
+          <h2>Selecionar Participantes do Planejamento</h2>
+          <p>Marque os colaboradores que irão participar deste planejamento estratégico.</p>
+        </div>
+        <div class="section-status-controls">
+          <!-- Botão Concluir -->
+          <button class="button button-small button-warning" onclick="closeParticipantsSection()" 
+                  title="Concluir seção de participantes" 
+                  {% if not participants_section_open %}style="display: none;"{% endif %}>
+            🔒 Concluir Seção
+          </button>
+          
+          <!-- Botão Reabrir -->
+          <button class="button button-small button-success" onclick="openParticipantsSection()" 
+                  title="Reabrir seção de participantes" 
+                  {% if participants_section_open %}style="display: none;"{% endif %}>
+            🔓 Reabrir Seção
+          </button>
+          
+          <!-- Informações de fechamento -->
+          {% if participants_section_status %}
+            <span class="section-closed-info" {% if participants_section_open %}style="display: none;"{% endif %}>
+              Concluída por {{ participants_section_status.closed_by }} em {{ participants_section_status.closed_at[:10] if participants_section_status.closed_at else 'Data não disponível' }}
+            </span>
+          {% endif %}
+        </div>
+      </div>
+
+      {% if not participants_section_open %}
+      <div class="section-closed-notice">
+        <p>🔒 Esta seção foi concluída e não permite mais edições.</p>
+      </div>
+      {% endif %}
+
+      <div class="card-content" {% if not participants_section_open %}style="opacity: 0.5; pointer-events: none;"{% endif %}>
+        
+        {% if total_employees == 0 %}
+        <div class="empty-state">
+          <div class="empty-state-icon">👥</div>
+          <h3>Nenhum colaborador cadastrado</h3>
+          <p>Para adicionar participantes ao planejamento, primeiro você precisa cadastrar colaboradores na empresa.</p>
+          <a href="{{ url_for('company_details', company_id=company.id) }}" class="button button-primary">
+            Cadastrar Colaboradores
+          </a>
+        </div>
+        {% else %}
+        
+        <!-- Statistics Summary -->
+        <div class="participants-summary">
+          <div class="stat-card">
+            <span class="stat-number">{{ total_employees }}</span>
+            <span class="stat-label">Colaboradores Cadastrados</span>
+          </div>
+          <div class="stat-card stat-card-primary">
+            <span class="stat-number">{{ total_participants }}</span>
+            <span class="stat-label">Participantes Selecionados</span>
+          </div>
+          <div class="stat-card">
+            <span class="stat-number">{{ total_employees - total_participants }}</span>
+            <span class="stat-label">Não Selecionados</span>
+          </div>
+        </div>
+
+        <!-- Search and Filter -->
+        <div class="table-controls">
+          <div class="search-box">
+            <input type="text" id="searchEmployee" placeholder="🔍 Buscar colaborador..." onkeyup="filterEmployees()">
+          </div>
+          <div class="filter-chips">
+            <button class="filter-chip active" onclick="filterByStatus('all')">Todos ({{ total_employees }})</button>
+            <button class="filter-chip" onclick="filterByStatus('participants')">Participantes ({{ total_participants }})</button>
+            <button class="filter-chip" onclick="filterByStatus('non-participants')">Não Participantes ({{ total_employees - total_participants }})</button>
+          </div>
+        </div>
+
+        <!-- Employees List -->
+        <table class="participant-table" id="employeesTable">
+          <thead>
+            <tr>
+              <th width="60">
+                <input type="checkbox" id="selectAll" onchange="toggleAllParticipants()" title="Selecionar/Desselecionar todos">
+              </th>
+              <th>Nome</th>
+              <th>Cargo/Função</th>
+              <th>Departamento</th>
+              <th>Contato</th>
+              <th width="100">Status</th>
+              <th width="180">Ações</th>
+            </tr>
+          </thead>
+          <tbody>
+            {% for employee in employees %}
+            <tr class="employee-row" 
+                data-employee-id="{{ employee.id }}" 
+                data-is-participant="{{ 'true' if employee.is_participant else 'false' }}"
+                data-name="{{ employee.name | lower }}"
+                data-role="{{ (employee.role_name or '') | lower }}"
+                data-department="{{ (employee.department or '') | lower }}">
+              <td>
+                <input type="checkbox" 
+                       class="participant-checkbox" 
+                       data-employee-id="{{ employee.id }}"
+                       {% if employee.is_participant %}checked{% endif %}
+                       onchange="toggleParticipation({{ employee.id }}, this)"
+                       title="Marcar como participante">
+              </td>
+              <td>
+                <strong>{{ employee.name }}</strong>
+                {% if employee.email %}
+                <span class="table-meta">{{ employee.email }}</span>
+                {% endif %}
+              </td>
+              <td>{{ employee.role_name or '-' }}</td>
+              <td>{{ employee.department or '-' }}</td>
+              <td>
+                {% if employee.phone %}
+                  <span class="table-meta">📱 {{ employee.phone }}</span>
+                {% else %}
+                  <span class="table-meta text-muted">-</span>
+                {% endif %}
+              </td>
+              <td>
+                <span class="status-pill participant-status {{ 'is-active' if employee.is_participant else 'is-inactive' }}">
+                  {{ '✓ Participa' if employee.is_participant else 'Não selecionado' }}
+                </span>
+              </td>
+              <td>
+                {% if employee.is_participant %}
+                <div class="action-buttons">
+                  <button type="button" class="button-icon" onclick="sendMessage({{ employee.id }}, 'email')" title="Enviar E-mail">
+                    📧
+                  </button>
+                  <button type="button" class="button-icon" onclick="sendMessage({{ employee.id }}, 'whatsapp')" title="Enviar WhatsApp">
+                    📱
+                  </button>
+                </div>
+                {% else %}
+                <span class="text-muted">-</span>
+                {% endif %}
+              </td>
+            </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+        {% endif %}
+      </div>
+    </div>
+
+    <!-- Configuração de Mensagens -->
+    <div class="surface-card">
+      <div class="card-header collapsible-header" onclick="toggleSection('messages')">
+        <h3>📧 Configuração de Mensagens</h3>
+        <span class="badge">Personalização</span>
+        <span class="collapse-icon">▼</span>
+      </div>
+      <div class="card-content" id="messages-content" style="display: none;">
+        <div class="message-config-content">
+          <p>Personalize as mensagens que serão enviadas para os participantes selecionados.</p>
+          <div class="message-config-actions">
+            <button type="button" class="button button-ghost" onclick="editMessageTemplate('email')">
+              📧 Editar Template de E-mail
+            </button>
+            <button type="button" class="button button-ghost" onclick="editMessageTemplate('whatsapp')">
+              📱 Editar Template de WhatsApp
+            </button>
+          </div>
+          <div class="help-note">
+            <strong>Variáveis disponíveis:</strong>
+            <ul>
+              <li><code>{{'{{'}}name{{'}}'}}</code> - Nome do participante</li>
+              <li><code>{{'{{'}}role{{'}}'}}</code> - Cargo do participante</li>
+              <li><code>{{'{{'}}plan_name{{'}}'}}</code> - Nome do planejamento</li>
+            </ul>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Help Card -->
+    <div class="surface-card">
+      <div class="card-header collapsible-header" onclick="toggleSection('help')">
+        <h3>💡 Como Funciona</h3>
+        <span class="collapse-icon">▼</span>
+      </div>
+      <div class="card-content" id="help-content" style="display: none;">
+        <div class="help-content">
+          <h4>Selecionando Participantes</h4>
+          <ul>
+            <li><strong>Marque a caixa</strong> ao lado do nome do colaborador para incluí-lo no planejamento</li>
+            <li><strong>Desmarque a caixa</strong> para remover o colaborador do planejamento</li>
+            <li>Use o <strong>checkbox do cabeçalho</strong> para selecionar/desselecionar todos de uma vez</li>
+            <li>Use a <strong>busca</strong> para encontrar colaboradores específicos</li>
+            <li>Use os <strong>filtros</strong> para ver apenas participantes ou não participantes</li>
+          </ul>
+          
+          <h4>Gerenciando Colaboradores</h4>
+          <p>Os colaboradores são cadastrados na <strong>página de gerenciamento da empresa</strong>. Para adicionar, editar ou remover colaboradores, acesse:</p>
+          <a href="{{ url_for('company_details', company_id=company.id) }}" class="button button-ghost">
+            ⚙️ Gerenciar Empresa
+          </a>
+          
+          <h4>Concluindo a Seção</h4>
+          <p>Quando terminar de selecionar os participantes, clique em <strong>"🔒 Concluir Seção"</strong> para bloquear esta etapa. Você pode reabrir a qualquer momento se precisar fazer alterações.</p>
+        </div>
+      </div>
+    </div>
+  </section>
+</div>
+
+<!-- Modal para visualizar e enviar mensagem -->
+<div id="messageModal" class="modal" style="display: none;">
+  <div class="modal-content">
+    <div class="modal-header">
+      <h3 id="messageModalTitle">Enviar Mensagem</h3>
+      <button type="button" class="modal-close" onclick="closeMessageModal()">&times;</button>
+    </div>
+    <div class="modal-body">
+      <div class="message-preview">
+        <div class="message-info">
+          <h4 id="participantName"></h4>
+          <p id="participantContact"></p>
+        </div>
+        
+        <div class="message-content">
+          <div class="message-subject" id="messageSubject" style="display: none;">
+            <label>Assunto:</label>
+            <div class="message-text" id="subjectText"></div>
+          </div>
+          
+          <div class="message-body">
+            <label>Mensagem:</label>
+            <div class="message-text" id="messageText"></div>
+          </div>
+        </div>
+        
+        <div class="message-actions">
+          <button type="button" class="button button-primary" onclick="copyMessage()">
+            📋 Copiar Mensagem
+          </button>
+          <button type="button" class="button button-primary" onclick="openEmailApp()" id="emailAppBtn" style="display: none;">
+            📧 Abrir E-mail
+          </button>
+          <button type="button" class="button button-primary" onclick="openWhatsAppApp()" id="whatsappAppBtn" style="display: none;">
+            📱 Abrir WhatsApp
+          </button>
+          <button type="button" class="button button-ghost" onclick="closeMessageModal()">
+            Fechar
+          </button>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Modal para edição de templates de mensagens -->
+<div id="editMessageModal" class="modal" style="display: none;">
+  <div class="modal-content">
+    <div class="modal-header">
+      <h3 id="editMessageModalTitle">Editar Template de Mensagem</h3>
+      <button type="button" class="modal-close" onclick="closeEditMessageModal()">&times;</button>
+    </div>
+    <div class="modal-body">
+      <form id="editMessageForm">
+        <input type="hidden" id="editMessageType" />
+        
+        <div class="form-field" id="subjectField" style="display: none;">
+          <span>Assunto</span>
+          <input type="text" id="editMessageSubject" placeholder="Digite o assunto do e-mail" />
+        </div>
+        
+        <div class="form-field">
+          <span>Conteúdo da Mensagem</span>
+          <textarea id="editMessageContent" rows="10" placeholder="Digite o conteúdo da mensagem..."></textarea>
+          <small class="form-hint">
+            Use as variáveis: <code>{{'{{'}}name{{'}}'}}</code>, <code>{{'{{'}}role{{'}}'}}</code>, <code>{{'{{'}}plan_name{{'}}'}}</code>
+          </small>
+        </div>
+        
+        <div class="form-actions">
+          <button type="submit" class="button button-primary">Salvar Template</button>
+          <button type="button" class="button button-ghost" onclick="closeEditMessageModal()">Cancelar</button>
+        </div>
+      </form>
+    </div>
+  </div>
+</div>
+
+<style>
+.participants-summary {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+  gap: 1rem;
+  margin-bottom: 2rem;
+}
+
+.stat-card {
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  padding: 1.5rem;
+  border-radius: 12px;
+  text-align: center;
+  color: white;
+}
+
+.stat-card-primary {
+  background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%);
+}
+
+.stat-number {
+  display: block;
+  font-size: 2.5rem;
+  font-weight: bold;
+  margin-bottom: 0.5rem;
+}
+
+.stat-label {
+  display: block;
+  font-size: 0.875rem;
+  opacity: 0.9;
+}
+
+.table-controls {
+  display: flex;
+  gap: 1rem;
+  margin-bottom: 1.5rem;
+  align-items: center;
+  flex-wrap: wrap;
+}
+
+.search-box {
+  flex: 1;
+  min-width: 250px;
+}
+
+.search-box input {
+  width: 100%;
+  padding: 0.75rem 1rem;
+  border: 1px solid #e5e7eb;
+  border-radius: 8px;
+  font-size: 0.9375rem;
+}
+
+.filter-chips {
+  display: flex;
+  gap: 0.5rem;
+  flex-wrap: wrap;
+}
+
+.filter-chip {
+  padding: 0.5rem 1rem;
+  border: 1px solid #e5e7eb;
+  background: white;
+  border-radius: 20px;
+  cursor: pointer;
+  font-size: 0.875rem;
+  transition: all 0.2s;
+}
+
+.filter-chip:hover {
+  border-color: #667eea;
+  color: #667eea;
+}
+
+.filter-chip.active {
+  background: #667eea;
+  color: white;
+  border-color: #667eea;
+}
+
+.participant-table {
+  width: 100%;
+  border-collapse: collapse;
+}
+
+.participant-table th {
+  background: #f9fafb;
+  padding: 1rem;
+  text-align: left;
+  font-weight: 600;
+  font-size: 0.875rem;
+  color: #6b7280;
+  border-bottom: 2px solid #e5e7eb;
+}
+
+.participant-table td {
+  padding: 1rem;
+  border-bottom: 1px solid #f3f4f6;
+  vertical-align: middle;
+}
+
+.participant-table tbody tr:hover {
+  background: #f9fafb;
+}
+
+.participant-checkbox {
+  width: 20px;
+  height: 20px;
+  cursor: pointer;
+}
+
+.participant-status {
+  font-size: 0.8125rem;
+  padding: 0.375rem 0.75rem;
+}
+
+.table-meta {
+  display: block;
+  font-size: 0.8125rem;
+  color: #6b7280;
+  margin-top: 0.25rem;
+}
+
+.text-muted {
+  color: #9ca3af;
+}
+
+.empty-state {
+  text-align: center;
+  padding: 4rem 2rem;
+}
+
+.empty-state-icon {
+  font-size: 4rem;
+  margin-bottom: 1rem;
+}
+
+.empty-state h3 {
+  margin-bottom: 0.5rem;
+  color: #1f2937;
+}
+
+.empty-state p {
+  color: #6b7280;
+  margin-bottom: 2rem;
+}
+
+.section-closed-notice {
+  background: #fef3c7;
+  border: 1px solid #fbbf24;
+  border-radius: 8px;
+  padding: 1rem;
+  margin-bottom: 1rem;
+  text-align: center;
+}
+
+.section-closed-notice p {
+  margin: 0;
+  color: #92400e;
+  font-weight: 500;
+}
+
+.help-content h4 {
+  margin-top: 1.5rem;
+  margin-bottom: 0.75rem;
+  color: #1f2937;
+}
+
+.help-content h4:first-child {
+  margin-top: 0;
+}
+
+.help-content ul {
+  margin-left: 1.5rem;
+  margin-bottom: 1rem;
+}
+
+.help-content li {
+  margin-bottom: 0.5rem;
+  color: #4b5563;
+}
+
+.help-content p {
+  color: #6b7280;
+  line-height: 1.6;
+  margin-bottom: 1rem;
+}
+
+.section-status-controls {
+  display: flex;
+  gap: 0.75rem;
+  align-items: center;
+}
+
+.section-closed-info {
+  font-size: 0.875rem;
+  color: #6b7280;
+  font-style: italic;
+}
+
+.action-buttons {
+  display: flex;
+  gap: 0.5rem;
+  justify-content: center;
+}
+
+.button-icon {
+  background: none;
+  border: 1px solid #e5e7eb;
+  border-radius: 6px;
+  padding: 0.5rem;
+  font-size: 1.25rem;
+  cursor: pointer;
+  transition: all 0.2s;
+  line-height: 1;
+}
+
+.button-icon:hover {
+  background: #f3f4f6;
+  border-color: #667eea;
+  transform: scale(1.1);
+}
+
+.message-config-content {
+  padding: 1rem 0;
+}
+
+.message-config-actions {
+  display: flex;
+  gap: 1rem;
+  margin-top: 1rem;
+  flex-wrap: wrap;
+}
+
+.help-note {
+  margin-top: 1.5rem;
+  padding: 1rem;
+  background: #f0f9ff;
+  border-left: 3px solid #3b82f6;
+  border-radius: 4px;
+}
+
+.help-note ul {
+  margin: 0.5rem 0 0 1.5rem;
+}
+
+.help-note code {
+  background: #dbeafe;
+  padding: 0.125rem 0.375rem;
+  border-radius: 3px;
+  font-family: monospace;
+  font-size: 0.875rem;
+}
+
+/* Modal Styles */
+.modal {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background: rgba(0, 0, 0, 0.5);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 9999;
+  opacity: 0;
+  transition: opacity 0.3s;
+}
+
+.modal.show {
+  opacity: 1;
+}
+
+.modal-content {
+  background: white;
+  border-radius: 12px;
+  box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1);
+  max-width: 600px;
+  width: 90%;
+  max-height: 90vh;
+  overflow: auto;
+}
+
+.modal-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 1.5rem;
+  border-bottom: 1px solid #e5e7eb;
+}
+
+.modal-header h3 {
+  margin: 0;
+  font-size: 1.25rem;
+  color: #1f2937;
+}
+
+.modal-close {
+  background: none;
+  border: none;
+  font-size: 1.5rem;
+  cursor: pointer;
+  color: #6b7280;
+  padding: 0;
+  width: 30px;
+  height: 30px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 4px;
+  transition: all 0.2s;
+}
+
+.modal-close:hover {
+  background: #f3f4f6;
+  color: #1f2937;
+}
+
+.modal-body {
+  padding: 1.5rem;
+}
+
+.message-preview {
+  display: flex;
+  flex-direction: column;
+  gap: 1.5rem;
+}
+
+.message-info h4 {
+  margin: 0 0 0.5rem 0;
+  font-size: 1.125rem;
+  color: #1f2937;
+}
+
+.message-info p {
+  margin: 0;
+  color: #6b7280;
+  font-size: 0.875rem;
+}
+
+.message-content {
+  background: #f9fafb;
+  padding: 1rem;
+  border-radius: 8px;
+  border: 1px solid #e5e7eb;
+}
+
+.message-content label {
+  font-weight: 600;
+  color: #4b5563;
+  font-size: 0.875rem;
+  display: block;
+  margin-bottom: 0.5rem;
+}
+
+.message-text {
+  background: white;
+  padding: 1rem;
+  border-radius: 6px;
+  border: 1px solid #e5e7eb;
+  white-space: pre-wrap;
+  font-size: 0.9375rem;
+  line-height: 1.6;
+  color: #1f2937;
+}
+
+.message-subject {
+  margin-bottom: 1rem;
+}
+
+.message-actions {
+  display: flex;
+  gap: 0.75rem;
+  flex-wrap: wrap;
+}
+
+.form-field {
+  margin-bottom: 1.5rem;
+}
+
+.form-field span {
+  display: block;
+  font-weight: 600;
+  color: #374151;
+  margin-bottom: 0.5rem;
+}
+
+.form-field input,
+.form-field textarea {
+  width: 100%;
+  padding: 0.75rem;
+  border: 1px solid #d1d5db;
+  border-radius: 6px;
+  font-size: 0.9375rem;
+  font-family: inherit;
+  transition: border-color 0.2s;
+}
+
+.form-field input:focus,
+.form-field textarea:focus {
+  outline: none;
+  border-color: #667eea;
+  box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
+}
+
+.form-field textarea {
+  resize: vertical;
+  min-height: 150px;
+}
+
+.form-hint {
+  display: block;
+  color: #6b7280;
+  font-size: 0.8125rem;
+  margin-top: 0.5rem;
+}
+
+.form-actions {
+  display: flex;
+  gap: 0.75rem;
+  margin-top: 1.5rem;
+}
+</style>
+
+<script>
+// Toggle individual participation
+function toggleParticipation(employeeId, checkbox) {
+  const isChecked = checkbox.checked;
+  
+  fetch(`/plans/{{ plan.id }}/participants/toggle/${employeeId}`, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+    }
+  })
+  .then(response => response.json())
+  .then(data => {
+    if (data.success) {
+      // Update UI
+      const row = checkbox.closest('tr');
+      row.setAttribute('data-is-participant', isChecked ? 'true' : 'false');
+      
+      const statusPill = row.querySelector('.participant-status');
+      const actionsCell = row.cells[row.cells.length - 1]; // Last cell (actions)
+      
+      if (isChecked) {
+        statusPill.textContent = '✓ Participa';
+        statusPill.classList.remove('is-inactive');
+        statusPill.classList.add('is-active');
+        
+        // Show action buttons
+        const employeeId = row.getAttribute('data-employee-id');
+        actionsCell.innerHTML = `
+          <div class="action-buttons">
+            <button type="button" class="button-icon" onclick="sendMessage(${employeeId}, 'email')" title="Enviar E-mail">
+              📧
+            </button>
+            <button type="button" class="button-icon" onclick="sendMessage(${employeeId}, 'whatsapp')" title="Enviar WhatsApp">
+              📱
+            </button>
+          </div>
+        `;
+      } else {
+        statusPill.textContent = 'Não selecionado';
+        statusPill.classList.remove('is-active');
+        statusPill.classList.add('is-inactive');
+        
+        // Hide action buttons
+        actionsCell.innerHTML = '<span class="text-muted">-</span>';
+      }
+      
+      // Update counters
+      updateCounters();
+      
+      // Show success message
+      showMessage(data.message, 'success');
+    } else {
+      // Revert checkbox
+      checkbox.checked = !isChecked;
+      showMessage(data.error || 'Erro ao atualizar participação', 'error');
+    }
+  })
+  .catch(error => {
+    console.error('Error:', error);
+    checkbox.checked = !isChecked;
+    showMessage('Erro ao atualizar participação', 'error');
+  });
+}
+
+// Toggle all participants
+function toggleAllParticipants() {
+  const selectAllCheckbox = document.getElementById('selectAll');
+  const checkboxes = document.querySelectorAll('.participant-checkbox:not([style*="display: none"])');
+  const isChecked = selectAllCheckbox.checked;
+  
+  checkboxes.forEach(checkbox => {
+    if (checkbox.checked !== isChecked) {
+      checkbox.checked = isChecked;
+      const employeeId = checkbox.getAttribute('data-employee-id');
+      toggleParticipation(parseInt(employeeId), checkbox);
+    }
+  });
+}
+
+// Filter employees by search
+function filterEmployees() {
+  const searchInput = document.getElementById('searchEmployee');
+  const filter = searchInput.value.toLowerCase();
+  const rows = document.querySelectorAll('.employee-row');
+  
+  rows.forEach(row => {
+    const name = row.getAttribute('data-name') || '';
+    const role = row.getAttribute('data-role') || '';
+    const department = row.getAttribute('data-department') || '';
+    
+    const matches = name.includes(filter) || role.includes(filter) || department.includes(filter);
+    row.style.display = matches ? '' : 'none';
+  });
+}
+
+// Filter by participation status
+let currentFilter = 'all';
+
+function filterByStatus(status) {
+  currentFilter = status;
+  const rows = document.querySelectorAll('.employee-row');
+  
+  // Update filter chips
+  document.querySelectorAll('.filter-chip').forEach(chip => {
+    chip.classList.remove('active');
+  });
+  event.target.classList.add('active');
+  
+  rows.forEach(row => {
+    const isParticipant = row.getAttribute('data-is-participant') === 'true';
+    let show = false;
+    
+    if (status === 'all') {
+      show = true;
+    } else if (status === 'participants') {
+      show = isParticipant;
+    } else if (status === 'non-participants') {
+      show = !isParticipant;
+    }
+    
+    row.style.display = show ? '' : 'none';
+  });
+}
+
+// Update counters
+function updateCounters() {
+  const total = document.querySelectorAll('.employee-row').length;
+  const participants = document.querySelectorAll('.employee-row[data-is-participant="true"]').length;
+  const nonParticipants = total - participants;
+  
+  // Update stats
+  document.querySelectorAll('.stat-number')[0].textContent = total;
+  document.querySelectorAll('.stat-number')[1].textContent = participants;
+  document.querySelectorAll('.stat-number')[2].textContent = nonParticipants;
+  
+  // Update filter chips
+  const filterChips = document.querySelectorAll('.filter-chip');
+  filterChips[0].textContent = `Todos (${total})`;
+  filterChips[1].textContent = `Participantes (${participants})`;
+  filterChips[2].textContent = `Não Participantes (${nonParticipants})`;
+  
+  // Update sidebar
+  const participationRate = total > 0 ? (participants / total * 100).toFixed(1) : 0;
+  const chipValue = document.querySelector('.chip-value');
+  if (chipValue) {
+    chipValue.textContent = `${participationRate}%`;
+  }
+  const chipMeta = document.querySelector('.chip-meta');
+  if (chipMeta) {
+    chipMeta.textContent = `${participants} participantes`;
+  }
+}
+
+// Toggle collapsible sections
+function toggleSection(sectionId) {
+  const content = document.getElementById(sectionId + '-content');
+  const icon = event.currentTarget.querySelector('.collapse-icon');
+  
+  if (content.style.display === 'none') {
+    content.style.display = 'block';
+    icon.textContent = '▼';
+  } else {
+    content.style.display = 'none';
+    icon.textContent = '▶';
+  }
+}
+
+// Close participants section
+function closeParticipantsSection() {
+  const notes = prompt('Motivo da conclusão da seção de participantes (opcional):');
+  
+  fetch(`/plans/{{ plan.id }}/sections/participants/status`, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+    },
+    body: JSON.stringify({
+      status: 'closed',
+      closed_by: 'Usuário',
+      notes: notes || ''
+    })
+  })
+  .then(response => response.json())
+  .then(data => {
+    if (data.success) {
+      showMessage('Seção de participantes concluída com sucesso!', 'success');
+      setTimeout(() => window.location.reload(), 1000);
+    } else {
+      showMessage('Erro ao concluir seção: ' + data.error, 'error');
+    }
+  })
+  .catch(error => {
+    console.error('Erro:', error);
+    showMessage('Erro ao concluir seção de participantes.', 'error');
+  });
+}
+
+// Open participants section
+function openParticipantsSection() {
+  if (confirm('Tem certeza que deseja reabrir a seção de participantes? Isso permitirá novas edições.')) {
+    fetch(`/plans/{{ plan.id }}/sections/participants/status`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({
+        status: 'open',
+        closed_by: null,
+        notes: ''
+      })
+    })
+    .then(response => response.json())
+    .then(data => {
+      if (data.success) {
+        showMessage('Seção de participantes reaberta com sucesso!', 'success');
+        setTimeout(() => window.location.reload(), 1000);
+      } else {
+        showMessage('Erro ao reabrir seção: ' + data.error, 'error');
+      }
+    })
+    .catch(error => {
+      console.error('Erro:', error);
+      showMessage('Erro ao reabrir seção de participantes.', 'error');
+    });
+  }
+}
+
+// Show message (you may need to implement this based on your notification system)
+function showMessage(message, type) {
+  // Simple alert for now - you can replace with a toast notification
+  if (type === 'success') {
+    console.log('✓', message);
+  } else {
+    console.error('✗', message);
+  }
+  alert(message);
+}
+
+// ===============================
+// MESSAGE MANAGEMENT FUNCTIONS
+// ===============================
+
+let currentMessage = null;
+let currentEmployeeForMessage = null;
+
+// Send message to participant
+function sendMessage(employeeId, messageType) {
+  // Find participant ID for this employee
+  const employees = {{ employees | tojson }};
+  const employee = employees.find(e => e.id === employeeId);
+  
+  if (!employee || !employee.is_participant) {
+    showMessage('Este colaborador não é participante do planejamento', 'error');
+    return;
+  }
+  
+  // Find participant by employee_id
+  // We need to call API to get participant ID
+  currentEmployeeForMessage = employee;
+  
+  // For now, we'll fetch from participants that have this employee_id
+  fetch(`/plans/{{ plan.id }}/participants`)
+    .then(response => response.text())
+    .then(() => {
+      // Get participant ID - we need to modify API to return this
+      // For now, we'll construct the message directly with employee data
+      showMessagePreview(employee, messageType);
+    })
+    .catch(error => {
+      console.error('Error:', error);
+      showMessage('Erro ao carregar dados do participante', 'error');
+    });
+}
+
+function showMessagePreview(employee, messageType) {
+  // Call API to get message template with employee data
+  fetch(`/api/participants/message-preview`, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+    },
+    body: JSON.stringify({
+      plan_id: {{ plan.id }},
+      employee_id: employee.id,
+      message_type: messageType
+    })
+  })
+  .then(response => response.json())
+  .then(data => {
+    if (data.success) {
+      currentMessage = data.message;
+      currentMessage.employee = employee;
+      currentMessage.message_type = messageType;
+      displayMessageModal(messageType);
+    } else {
+      // If no template exists, create default message
+      createDefaultMessage(employee, messageType);
+    }
+  })
+  .catch(error => {
+    console.error('Error:', error);
+    createDefaultMessage(employee, messageType);
+  });
+}
+
+function createDefaultMessage(employee, messageType) {
+  const planName = "{{ plan.name }}";
+  
+  if (messageType === 'email') {
+    currentMessage = {
+      subject: `Convite para Planejamento Estratégico - ${planName}`,
+      content: `Olá ${employee.name},\n\nVocê foi selecionado(a) para participar do planejamento estratégico "${planName}".\n\nContamos com sua presença e contribuição!\n\nAtenciosamente,\nEquipe de Planejamento`,
+      employee: employee,
+      message_type: 'email'
+    };
+  } else {
+    currentMessage = {
+      subject: '',
+      content: `Olá *${employee.name}*!\n\nVocê foi selecionado(a) para participar do planejamento estratégico *${planName}*.\n\nContamos com você! 🚀`,
+      employee: employee,
+      message_type: 'whatsapp'
+    };
+  }
+  
+  displayMessageModal(messageType);
+}
+
+function displayMessageModal(messageType) {
+  const modal = document.getElementById('messageModal');
+  const title = document.getElementById('messageModalTitle');
+  const participantName = document.getElementById('participantName');
+  const participantContact = document.getElementById('participantContact');
+  const subjectDiv = document.getElementById('messageSubject');
+  const subjectText = document.getElementById('subjectText');
+  const messageText = document.getElementById('messageText');
+  const emailBtn = document.getElementById('emailAppBtn');
+  const whatsappBtn = document.getElementById('whatsappAppBtn');
+  
+  // Configure title and participant info
+  title.textContent = `Enviar ${messageType === 'email' ? 'E-mail' : 'WhatsApp'}`;
+  participantName.textContent = currentMessage.employee.name;
+  
+  if (messageType === 'email') {
+    participantContact.textContent = currentMessage.employee.email || 'E-mail não informado';
+    subjectDiv.style.display = 'block';
+    subjectText.textContent = currentMessage.subject;
+    emailBtn.style.display = 'inline-block';
+    whatsappBtn.style.display = 'none';
+  } else {
+    participantContact.textContent = currentMessage.employee.phone || 'Telefone não informado';
+    subjectDiv.style.display = 'none';
+    emailBtn.style.display = 'none';
+    whatsappBtn.style.display = 'inline-block';
+  }
+  
+  messageText.textContent = currentMessage.content;
+  
+  // Show modal
+  modal.style.display = 'flex';
+  setTimeout(() => {
+    modal.classList.add('show');
+  }, 10);
+}
+
+function closeMessageModal() {
+  const modal = document.getElementById('messageModal');
+  modal.classList.remove('show');
+  setTimeout(() => {
+    modal.style.display = 'none';
+    currentMessage = null;
+    currentEmployeeForMessage = null;
+  }, 300);
+}
+
+function copyMessage() {
+  let textToCopy = '';
+  
+  if (currentMessage.message_type === 'email') {
+    textToCopy = `Assunto: ${currentMessage.subject}\n\n${currentMessage.content}`;
+  } else {
+    textToCopy = currentMessage.content;
+  }
+  
+  navigator.clipboard.writeText(textToCopy).then(() => {
+    showMessage('Mensagem copiada para a área de transferência!', 'success');
+  }).catch(err => {
+    console.error('Erro ao copiar:', err);
+    showMessage('Erro ao copiar mensagem', 'error');
+  });
+}
+
+function openEmailApp() {
+  if (currentMessage.employee.email) {
+    const subject = encodeURIComponent(currentMessage.subject);
+    const body = encodeURIComponent(currentMessage.content);
+    const mailtoLink = `mailto:${currentMessage.employee.email}?subject=${subject}&body=${body}`;
+    window.open(mailtoLink);
+  } else {
+    showMessage('E-mail do colaborador não informado', 'error');
+  }
+}
+
+function openWhatsAppApp() {
+  if (currentMessage.employee.phone) {
+    const phone = currentMessage.employee.phone.replace(/\D/g, '');
+    const message = encodeURIComponent(currentMessage.content);
+    const whatsappLink = `https://wa.me/55${phone}?text=${message}`;
+    window.open(whatsappLink, '_blank');
+  } else {
+    showMessage('Telefone do colaborador não informado', 'error');
+  }
+}
+
+// Edit message template
+function editMessageTemplate(messageType) {
+  fetch(`/plans/{{ plan.id }}/messages/${messageType}`)
+    .then(response => response.json())
+    .then(data => {
+      if (data.success) {
+        showEditMessageModal(messageType, data.template);
+      } else {
+        // Create default template
+        showEditMessageModal(messageType, {
+          subject: '',
+          content: ''
+        });
+      }
+    })
+    .catch(error => {
+      console.error('Error:', error);
+      showEditMessageModal(messageType, {
+        subject: '',
+        content: ''
+      });
+    });
+}
+
+function showEditMessageModal(messageType, template) {
+  const modal = document.getElementById('editMessageModal');
+  const title = document.getElementById('editMessageModalTitle');
+  const messageTypeInput = document.getElementById('editMessageType');
+  const subjectField = document.getElementById('subjectField');
+  const subjectInput = document.getElementById('editMessageSubject');
+  const contentInput = document.getElementById('editMessageContent');
+  
+  title.textContent = `Editar Template de ${messageType === 'email' ? 'E-mail' : 'WhatsApp'}`;
+  messageTypeInput.value = messageType;
+  
+  if (messageType === 'email') {
+    subjectField.style.display = 'block';
+    subjectInput.value = template.subject || 'Convite para Planejamento Estratégico - {{plan_name}}';
+  } else {
+    subjectField.style.display = 'none';
+  }
+  
+  contentInput.value = template.content || `Olá {{name}}!\n\nVocê foi selecionado(a) para participar do planejamento estratégico.\n\nContamos com você!`;
+  
+  modal.style.display = 'flex';
+  setTimeout(() => {
+    modal.classList.add('show');
+  }, 10);
+}
+
+function closeEditMessageModal() {
+  const modal = document.getElementById('editMessageModal');
+  modal.classList.remove('show');
+  setTimeout(() => {
+    modal.style.display = 'none';
+    document.getElementById('editMessageForm').reset();
+  }, 300);
+}
+
+// Submit message template form
+document.getElementById('editMessageForm').addEventListener('submit', function(e) {
+  e.preventDefault();
+  
+  const messageType = document.getElementById('editMessageType').value;
+  const subject = document.getElementById('editMessageSubject').value;
+  const content = document.getElementById('editMessageContent').value;
+  
+  fetch(`/plans/{{ plan.id }}/messages/${messageType}`, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+    },
+    body: JSON.stringify({
+      subject: subject,
+      content: content
+    })
+  })
+  .then(response => response.json())
+  .then(data => {
+    if (data.success) {
+      closeEditMessageModal();
+      showMessage('Template de mensagem salvo com sucesso!', 'success');
+    } else {
+      showMessage('Erro ao salvar template: ' + data.error, 'error');
+    }
+  })
+  .catch(error => {
+    console.error('Error:', error);
+    showMessage('Erro ao salvar template de mensagem', 'error');
+  });
+});
+
+// Close modals when clicking outside
+window.onclick = function(event) {
+  const messageModal = document.getElementById('messageModal');
+  const editMessageModal = document.getElementById('editMessageModal');
+  
+  if (event.target === messageModal) {
+    closeMessageModal();
+  }
+  if (event.target === editMessageModal) {
+    closeEditMessageModal();
+  }
+}
+
+// Close modals with ESC key
+document.addEventListener('keydown', function(event) {
+  if (event.key === 'Escape') {
+    closeMessageModal();
+    closeEditMessageModal();
+  }
+});
+</script>
+{% endblock %}

@@ -1,0 +1,4121 @@
+{% extends "base.html" %}
+{% block title %}GRV | Detalhe do Processo{% endblock %}
+{% block body %}{% set active_nav = 'dashboard' %}{{ super() }}{% endblock %}
+
+{% block extra_head %}
+{{ super() }}
+<style>
+  .process-detail-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    gap: 24px;
+  }
+
+  .process-detail-header h3 {
+    margin-bottom: 4px;
+  }
+
+  .process-stage-info {
+    margin-top: 12px;
+    display: flex;
+    align-items: flex-start;
+    gap: 12px;
+    flex-wrap: wrap;
+  }
+
+  .stage-badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    padding: 6px 14px;
+    border-radius: 999px;
+    font-size: 12px;
+    font-weight: 600;
+    letter-spacing: .04em;
+  }
+
+  .stage-description {
+    font-size: 12px;
+    color: var(--color-muted, #6b7280);
+    max-width: 420px;
+    line-height: 1.5;
+  }
+
+  .process-detail-summary {
+    margin: 28px 0 32px;
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+    gap: 16px;
+  }
+
+  .process-detail-summary .summary-card {
+    background: var(--color-surface-alt, #f8fafc);
+    border: 1px solid rgba(15, 23, 42, 0.08);
+    border-radius: 14px;
+    padding: 16px 18px;
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+  }
+
+  .summary-card .label {
+    font-size: 12px;
+    color: var(--color-muted, #6b7280);
+    text-transform: uppercase;
+    letter-spacing: .06em;
+  }
+
+  .summary-card .value {
+    font-size: 15px;
+    font-weight: 600;
+    color: #fef08a;
+  }
+
+  .detail-tabs {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+    margin-bottom: 18px;
+  }
+
+  .detail-tabs button {
+    border: 1px solid rgba(15, 23, 42, 0.12);
+    background: #ffffff;
+    padding: 8px 18px;
+    border-radius: 999px;
+    font-size: 13px;
+    font-weight: 600;
+    color: var(--color-heading, #0f172a);
+    cursor: pointer;
+    transition: all 0.2s ease;
+  }
+
+  .detail-tabs button:hover {
+    border-color: var(--color-primary, #2563eb);
+    color: var(--color-primary, #2563eb);
+  }
+
+  .detail-tabs button.active {
+    background: var(--color-primary, #2563eb);
+    border-color: var(--color-primary, #2563eb);
+    color: #ffffff;
+  }
+
+  .detail-panel {
+    display: none;
+    border: 1px solid rgba(15, 23, 42, 0.08);
+    border-radius: 16px;
+    padding: 22px 24px;
+    background: #ffffff;
+  }
+
+  .detail-panel.active {
+    display: block;
+  }
+
+  .detail-panel h4 {
+    margin-bottom: 12px;
+  }
+
+  .detail-panel p {
+    color: var(--color-muted, #6b7280);
+    margin-bottom: 16px;
+  }
+
+  .process-steps {
+    display: grid;
+    gap: 12px;
+  }
+
+  .process-step {
+    padding: 14px 18px;
+    border-radius: 12px;
+    border: 1px solid rgba(15, 23, 42, 0.08);
+    background: var(--color-surface-alt, #f8fafc);
+  }
+
+  .process-step .step-title {
+    font-weight: 600;
+    color: var(--color-heading, #0f172a);
+    margin-bottom: 4px;
+  }
+
+  .process-step .step-meta {
+    font-size: 12px;
+    color: var(--color-muted, #6b7280);
+  }
+
+  .indicator-table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 13px;
+  }
+
+  .indicator-table thead th {
+    text-align: left;
+    padding: 10px 12px;
+    border-bottom: 1px solid rgba(15, 23, 42, 0.12);
+    font-size: 12px;
+    color: var(--color-muted, #6b7280);
+    text-transform: uppercase;
+    letter-spacing: .06em;
+  }
+
+  .indicator-table tbody td {
+    padding: 10px 12px;
+    border-bottom: 1px solid rgba(15, 23, 42, 0.06);
+  }
+
+  .indicator-panel-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    flex-wrap: wrap;
+    gap: 16px;
+  }
+
+  .indicator-panel-actions {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 10px;
+  }
+
+  .indicator-panel-actions a,
+  .indicator-panel-actions button {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    padding: 10px 18px;
+    border-radius: 8px;
+    font-size: 13px;
+    font-weight: 600;
+    border: none;
+    cursor: pointer;
+    text-decoration: none;
+    transition: transform 0.2s ease, box-shadow 0.2s ease;
+  }
+
+  .indicator-panel-actions a {
+    background: #2563eb;
+    color: #ffffff;
+    box-shadow: 0 12px 22px rgba(37, 99, 235, 0.25);
+  }
+
+  .indicator-panel-actions button {
+    background: #f1f5f9;
+    color: #1f2937;
+    border: 1px solid rgba(15, 23, 42, 0.12);
+  }
+
+  .indicator-panel-actions a:hover,
+  .indicator-panel-actions button:hover {
+    transform: translateY(-1px);
+  }
+
+  .indicator-cards {
+    display: grid;
+    gap: 16px;
+    margin-top: 24px;
+  }
+
+  .indicator-card {
+    border: 1px solid rgba(15, 23, 42, 0.08);
+    border-radius: 14px;
+    background: rgba(248, 250, 252, 0.9);
+    padding: 18px 20px;
+    display: grid;
+    gap: 14px;
+  }
+
+  .indicator-card-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: baseline;
+    gap: 12px;
+    flex-wrap: wrap;
+  }
+
+  .indicator-card-header h5 {
+    margin: 0;
+    font-size: 16px;
+    font-weight: 700;
+    color: #0f172a;
+  }
+
+  .indicator-code-badge {
+    display: inline-flex;
+    align-items: center;
+    padding: 4px 10px;
+    border-radius: 999px;
+    font-size: 11px;
+    font-weight: 600;
+    letter-spacing: 0.06em;
+    background: #1d4ed8;
+    color: #ffffff;
+  }
+
+  .indicator-tag {
+    display: inline-flex;
+    align-items: center;
+    padding: 4px 10px;
+    border-radius: 999px;
+    background: #e0f2fe;
+    color: #0c4a6e;
+    font-size: 11px;
+    font-weight: 600;
+    letter-spacing: 0.04em;
+  }
+
+  .indicator-meta-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+    gap: 12px;
+  }
+
+  .indicator-meta-item {
+    display: grid;
+    gap: 6px;
+  }
+
+  .indicator-meta-item .label {
+    font-size: 11px;
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+    color: #94a3b8;
+  }
+
+  .indicator-meta-item .value {
+    font-size: 13px;
+    color: #334155;
+    font-weight: 600;
+  }
+
+  .indicator-collaborators {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+  }
+
+  .indicator-collaborators span {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    padding: 4px 8px;
+    border-radius: 999px;
+    background: #f8fafc;
+    border: 1px solid rgba(15, 23, 42, 0.08);
+    font-size: 12px;
+    color: #1f2937;
+  }
+
+  .indicator-goals {
+    margin-top: 6px;
+    border-top: 1px dashed rgba(15, 23, 42, 0.12);
+    padding-top: 12px;
+    display: grid;
+    gap: 10px;
+  }
+
+  .indicator-goal {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 12px;
+    align-items: center;
+    font-size: 13px;
+    color: #334155;
+  }
+
+  .indicator-goal .goal-value {
+    font-weight: 700;
+    color: #0f172a;
+  }
+
+  .indicator-goal .goal-type {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    padding: 4px 10px;
+    border-radius: 999px;
+    background: #e0f2fe;
+    color: #1d4ed8;
+    font-size: 11px;
+    font-weight: 600;
+    letter-spacing: 0.05em;
+    text-transform: uppercase;
+  }
+
+  .indicator-goal .goal-evaluation {
+    font-size: 12px;
+    color: #475569;
+  }
+
+  .indicator-goal .goal-date {
+    font-size: 12px;
+    color: #64748b;
+  }
+
+  .indicator-goal .goal-responsible {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    padding: 4px 8px;
+    border-radius: 999px;
+    background: #ede9fe;
+    color: #4c1d95;
+    font-size: 12px;
+    font-weight: 600;
+  }
+
+  .indicator-goal .goal-status {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    padding: 4px 8px;
+    border-radius: 999px;
+    background: #dcfce7;
+    color: #065f46;
+    font-size: 12px;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+  }
+
+  .indicator-goal.goal-more {
+    font-style: italic;
+    color: #64748b;
+  }
+
+  .indicator-notes {
+    margin-top: 8px;
+    font-size: 12px;
+    color: #475569;
+    background: #f1f5f9;
+    padding: 10px 12px;
+    border-radius: 8px;
+    border: 1px solid rgba(15, 23, 42, 0.08);
+  }
+
+  .indicator-empty-state {
+    padding: 24px;
+    border: 2px dashed rgba(59, 130, 246, 0.25);
+    border-radius: 12px;
+    text-align: center;
+    color: #475569;
+    background: rgba(59, 130, 246, 0.08);
+    font-size: 13px;
+  }
+
+  .indicator-card-actions {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 10px;
+    margin-top: 6px;
+  }
+
+  .indicator-card-actions button {
+    padding: 8px 16px;
+    border-radius: 8px;
+    border: 1px solid rgba(15, 23, 42, 0.15);
+    background: #ffffff;
+    color: #1f2937;
+    font-size: 12px;
+    font-weight: 600;
+    cursor: pointer;
+  }
+
+  .indicator-card-actions button:hover {
+    background: #f8fafc;
+  }
+
+  .routine-grid {
+    display: grid;
+    gap: 12px;
+  }
+
+  .routine-item {
+    border: 1px solid rgba(15, 23, 42, 0.08);
+    border-radius: 12px;
+    padding: 14px 18px;
+  }
+
+  .routine-item .title {
+    font-weight: 600;
+    margin-bottom: 4px;
+  }
+
+  .routine-item .meta {
+    font-size: 12px;
+    color: var(--color-muted, #6b7280);
+  }
+
+  .notes-area {
+    border: 1px dashed rgba(15, 23, 42, 0.2);
+    border-radius: 12px;
+    padding: 18px;
+    min-height: 140px;
+    background: rgba(248, 250, 252, 0.6);
+  }
+
+  .notes-area p {
+    margin: 0;
+  }
+
+  .flow-upload-area {
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
+  }
+
+  .flow-upload-actions {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 12px;
+    align-items: center;
+  }
+
+  .flow-upload-actions label {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    padding: 8px 18px;
+    border-radius: 999px;
+    border: 1px dashed rgba(15, 23, 42, 0.18);
+    background: rgba(248, 250, 252, 0.35);
+    color: var(--color-heading, #0f172a);
+    font-size: 13px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.2s ease;
+  }
+
+  .flow-upload-actions label:hover {
+    border-color: rgba(37, 99, 235, 0.45);
+    background: rgba(227, 242, 255, 0.6);
+    color: var(--color-primary, #2563eb);
+  }
+
+  .flow-upload-actions .flow-actions {
+    display: inline-flex;
+    gap: 10px;
+    flex-wrap: wrap;
+  }
+
+  .flow-upload-actions button.flow-secondary {
+    border: 1px solid rgba(15, 23, 42, 0.12);
+    background: #ffffff;
+    color: var(--color-heading, #0f172a);
+    border-radius: 999px;
+    padding: 8px 16px;
+    font-weight: 600;
+    font-size: 13px;
+    cursor: pointer;
+    transition: all 0.2s ease;
+  }
+
+  .flow-upload-actions button.flow-secondary:hover {
+    border-color: rgba(220, 38, 38, 0.6);
+    color: #dc2626;
+  }
+
+  .flow-feedback {
+    font-size: 12px;
+    font-weight: 600;
+    color: var(--color-primary, #2563eb);
+  }
+
+  .flow-feedback[data-variant="error"] {
+    color: #dc2626;
+  }
+
+  .flow-preview {
+    border: 1px solid rgba(15, 23, 42, 0.12);
+    border-radius: 16px;
+    background: var(--color-surface-alt, #f8fafc);
+    padding: 16px;
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
+  }
+
+  .flow-preview-frame {
+    border-radius: 12px;
+    overflow: hidden;
+    background: #ffffff;
+    min-height: 240px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+
+  .flow-preview-frame img {
+    max-width: 100%;
+    max-height: 320px;
+    object-fit: contain;
+  }
+
+  .flow-preview-frame iframe,
+  .flow-preview-frame object {
+    width: 100%;
+    min-height: 320px;
+    border: none;
+  }
+
+  .flow-preview-placeholder {
+    text-align: center;
+    padding: 40px;
+    border: 1px dashed rgba(15, 23, 42, 0.18);
+    border-radius: 16px;
+    background: rgba(248, 250, 252, 0.45);
+  }
+
+  .flow-preview-placeholder h5 {
+    margin-bottom: 8px;
+    font-size: 15px;
+    font-weight: 600;
+  }
+
+  .flow-modal {
+    position: fixed;
+    inset: 0;
+    background: rgba(15, 23, 42, 0.92);
+    display: none;
+    align-items: stretch;
+    justify-content: center;
+    z-index: 2000;
+    padding: 0;
+  }
+
+  .flow-modal[data-open="true"] {
+    display: flex;
+  }
+
+  .flow-modal-content {
+    position: relative;
+    width: 100%;
+    height: 100%;
+    max-width: none;
+    max-height: none;
+    background: #0b1120;
+    border-radius: 0;
+    padding: 24px;
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
+  }
+
+  .flow-modal-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    color: #e2e8f0;
+  }
+
+  .flow-modal-close {
+    border: none;
+    background: rgba(15, 23, 42, 0.4);
+    color: #e2e8f0;
+    border-radius: 999px;
+    width: 44px;
+    height: 44px;
+    font-size: 22px;
+    cursor: pointer;
+    transition: background 0.2s ease;
+  }
+
+  .flow-modal-close:hover {
+    background: rgba(30, 41, 59, 0.8);
+  }
+
+  .flow-modal-body {
+    flex: 1;
+    overflow: hidden;
+    display: flex;
+    align-items: stretch;
+    justify-content: center;
+    border-radius: 12px;
+    background: #0b1120;
+  }
+
+  .flow-modal-body iframe,
+  .flow-modal-body object {
+    width: 100%;
+    height: 100%;
+    border: none;
+  }
+
+  .flow-modal-body img {
+    max-width: 100%;
+    max-height: 100%;
+    object-fit: contain;
+  }
+
+  .pop-manager {
+    display: flex;
+    flex-direction: column;
+    gap: 20px;
+  }
+
+  .pop-create-form {
+    display: grid;
+    grid-template-columns: 120px minmax(0, 1fr) 140px 160px;
+    gap: 12px;
+    align-items: end;
+  }
+
+  .pop-code-group {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+  }
+
+  .pop-field-label {
+    font-size: 12px;
+    text-transform: uppercase;
+    letter-spacing: .05em;
+    color: var(--color-muted, #6b7280);
+    font-weight: 600;
+  }
+
+  .pop-code-input {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    font-weight: 600;
+  }
+
+  .pop-code-separator {
+    color: var(--color-muted, #6b7280);
+    font-weight: 600;
+    font-size: 13px;
+  }
+
+  .pop-code-base {
+    background: rgba(37, 99, 235, 0.08);
+    border: 1px solid rgba(37, 99, 235, 0.18);
+    border-radius: 8px;
+    padding: 6px 8px;
+    font-size: 12px;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    max-width: 100%;
+  }
+
+  .pop-code-input input {
+    width: 42px;
+    border: 1px solid rgba(15, 23, 42, 0.18);
+    border-radius: 8px;
+    padding: 8px 4px;
+    font-size: 14px;
+    text-align: center;
+    font-weight: 600;
+    letter-spacing: .08em;
+  }
+
+  .pop-create-form input,
+  .pop-create-form select {
+    width: 100%;
+    border: 1px solid rgba(15, 23, 42, 0.16);
+    border-radius: 10px;
+    padding: 10px 12px;
+    font-size: 13px;
+  }
+
+  .pop-create-form button {
+    border: none;
+    border-radius: 10px;
+    padding: 10px 16px;
+    background: var(--color-primary, #2563eb);
+    color: #fff;
+    font-weight: 600;
+    cursor: pointer;
+    transition: background 0.2s ease;
+  }
+
+  .pop-create-form button:hover {
+    background: #1d4ed8;
+  }
+
+  .pop-feedback {
+    font-size: 12px;
+    font-weight: 600;
+    color: var(--color-primary, #2563eb);
+  }
+
+  .pop-feedback[data-variant="error"] {
+    color: #dc2626;
+  }
+
+  .pop-empty {
+    padding: 32px;
+    border: 1px dashed rgba(15, 23, 42, 0.16);
+    border-radius: 16px;
+    text-align: center;
+    background: rgba(248, 250, 252, 0.45);
+    color: var(--color-muted, #6b7280);
+    font-size: 13px;
+  }
+
+  .pop-activities {
+    display: grid;
+    gap: 16px;
+  }
+
+  .activity-card {
+    border: 1px solid rgba(15, 23, 42, 0.12);
+    border-radius: 16px;
+    padding: 18px;
+    background: #ffffff;
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
+    transition: all 0.3s ease;
+  }
+
+  .activity-card.collapsed {
+    padding: 12px 18px;
+    background: rgba(248, 250, 252, 0.5);
+  }
+
+  .activity-card.collapsed .activity-entries {
+    display: none;
+  }
+
+  .activity-card.collapsed .activity-card-header {
+    gap: 8px;
+  }
+
+  .activity-card.collapsed .activity-card-meta label {
+    display: none;
+  }
+
+  .activity-card.collapsed .activity-card-meta {
+    gap: 0;
+  }
+
+  .activity-card.collapsed .activity-actions button:not([data-action="toggle-collapse"]) {
+    display: none;
+  }
+
+  .activity-card-header {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 12px;
+    justify-content: space-between;
+    align-items: flex-end;
+  }
+
+  .activity-card-meta {
+    display: grid;
+    gap: 8px;
+  }
+
+  .activity-card-meta label {
+    font-size: 12px;
+    text-transform: uppercase;
+    letter-spacing: .05em;
+    color: var(--color-muted, #6b7280);
+  }
+
+  .activity-card-meta .activity-code {
+    padding: 8px 12px;
+    background: rgba(37, 99, 235, 0.08);
+    border: 1px solid rgba(37, 99, 235, 0.2);
+    border-radius: 8px;
+    font-family: monospace;
+    font-size: 13px;
+    font-weight: 600;
+    color: var(--color-primary, #2563eb);
+    letter-spacing: 0.05em;
+  }
+
+  .activity-card-meta input {
+    border: 1px solid rgba(15, 23, 42, 0.16);
+    border-radius: 10px;
+    padding: 8px 12px;
+    font-size: 14px;
+    min-width: 220px;
+  }
+
+  .activity-card-meta select {
+    border: 1px solid rgba(15, 23, 42, 0.16);
+    border-radius: 10px;
+    padding: 8px 10px;
+    font-size: 13px;
+    width: 160px;
+  }
+
+  .activity-actions {
+    display: inline-flex;
+    gap: 10px;
+    flex-wrap: wrap;
+  }
+
+  .activity-actions button {
+    border-radius: 10px;
+    padding: 8px 14px;
+    font-size: 13px;
+    font-weight: 600;
+    cursor: pointer;
+    border: 1px solid rgba(15, 23, 42, 0.12);
+    background: #ffffff;
+    transition: all 0.2s ease;
+  }
+
+  .activity-actions button[data-action="delete-activity"] {
+    border-color: rgba(220, 38, 38, 0.36);
+    color: #dc2626;
+  }
+
+  .activity-actions button[data-action="delete-activity"]:hover {
+    background: rgba(254, 226, 226, 0.6);
+  }
+
+  .activity-actions button[type="submit"] {
+    background: var(--color-primary, #2563eb);
+    color: #fff;
+    border-color: transparent;
+  }
+
+  .activity-actions button[type="submit"]:hover {
+    background: #1d4ed8;
+  }
+
+  .activity-actions button[data-action="toggle-collapse"] {
+    background: linear-gradient(135deg, #ffd700 0%, #ffa500 100%);
+    border: 2px solid #2563eb;
+    color: #1e40af;
+    min-width: 36px;
+    padding: 8px 10px;
+    font-weight: 700;
+    box-shadow: 0 2px 4px rgba(37, 99, 235, 0.2);
+  }
+
+  .activity-actions button[data-action="toggle-collapse"]:hover {
+    background: linear-gradient(135deg, #ffed4e 0%, #ffb347 100%);
+    border-color: #1d4ed8;
+    box-shadow: 0 4px 8px rgba(37, 99, 235, 0.3);
+    transform: translateY(-1px);
+  }
+
+  .activity-card.collapsed .activity-actions button[data-action="toggle-collapse"] {
+    background: linear-gradient(135deg, #3b82f6 0%, #2563eb 100%);
+    border: 2px solid #ffd700;
+    color: #ffd700;
+  }
+
+  .activity-card.collapsed .activity-actions button[data-action="toggle-collapse"]:hover {
+    background: linear-gradient(135deg, #60a5fa 0%, #3b82f6 100%);
+    border-color: #ffa500;
+  }
+
+  .activity-card.collapsed .activity-code {
+    display: inline-flex;
+    align-items: center;
+    font-size: 12px;
+  }
+
+  .activity-card.collapsed .activity-card-meta input {
+    font-size: 13px;
+    padding: 4px 8px;
+    min-width: unset;
+    border: none;
+    background: transparent;
+  }
+
+  .activity-entries {
+    display: grid;
+    gap: 10px;
+  }
+
+  .activity-entry {
+    border: 1px solid rgba(15, 23, 42, 0.1);
+    border-radius: 14px;
+    background: rgba(248, 250, 252, 0.78);
+    padding: 12px 14px;
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+  }
+
+  .activity-entry[data-mode="edit"] {
+    background: rgba(37, 99, 235, 0.06);
+  }
+
+  .activity-entry-view {
+    display: grid;
+    gap: 10px;
+  }
+
+  .activity-entry-view .entry-body {
+    display: grid;
+    gap: 10px;
+  }
+
+  .activity-entry-view .entry-image-view {
+    border: 1px solid rgba(15, 23, 42, 0.1);
+    border-radius: 12px;
+    background: #ffffff;
+    padding: 10px;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    overflow: hidden;
+  }
+
+  .activity-entry-view .entry-image-view img {
+    max-width: 100%;
+    height: auto;
+    border-radius: 8px;
+  }
+
+  .activity-entry-view .entry-text-view {
+    line-height: 1.6;
+    color: var(--color-heading, #0f172a);
+  }
+
+  .activity-entry .activity-entry-controls {
+    display: inline-flex;
+    gap: 10px;
+    flex-wrap: wrap;
+  }
+
+  .activity-entry .activity-entry-controls button {
+    border-radius: 10px;
+    padding: 6px 14px;
+    font-size: 12px;
+    font-weight: 600;
+    cursor: pointer;
+    border: 1px solid rgba(15, 23, 42, 0.12);
+    background: #ffffff;
+    transition: all 0.2s ease;
+  }
+
+  .activity-entry .activity-entry-controls button[data-action="edit-entry"] {
+    background: var(--color-primary, #2563eb);
+    border-color: transparent;
+    color: #ffffff;
+  }
+
+  .activity-entry .activity-entry-controls button[data-action="delete-entry"] {
+    border-color: rgba(220, 38, 38, 0.36);
+    color: #dc2626;
+  }
+
+  .activity-entry-form {
+    border: 1px solid rgba(15, 23, 42, 0.12);
+    border-radius: 14px;
+    padding: 14px;
+    background: rgba(248, 250, 252, 0.65);
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+    transition: all 0.3s ease;
+  }
+
+  .activity-entry-form[data-view-mode="true"] {
+    background: rgba(248, 250, 252, 0.35);
+    border-style: solid;
+  }
+
+  .activity-entry-form[data-view-mode="true"] textarea {
+    background: #ffffff;
+    border-color: rgba(15, 23, 42, 0.08);
+    cursor: default;
+    color: var(--color-heading, #0f172a);
+    transition: all 0.3s ease;
+  }
+
+  .activity-entry-form[data-view-mode="true"] .entry-image-preview {
+    border-color: rgba(15, 23, 42, 0.08);
+    transition: all 0.3s ease;
+  }
+
+  .activity-entry-form[data-view-mode="false"] {
+    background: rgba(37, 99, 235, 0.04);
+    border-color: rgba(37, 99, 235, 0.2);
+    border-width: 2px;
+  }
+
+  .activity-entry-form[data-view-mode="false"] textarea {
+    border-color: rgba(37, 99, 235, 0.25);
+    background: #ffffff;
+    transition: all 0.3s ease;
+  }
+
+  .activity-entry-form[data-view-mode="false"] .entry-image-preview {
+    border-color: rgba(37, 99, 235, 0.25);
+    transition: all 0.3s ease;
+  }
+
+  .activity-edit-form {
+    transition: all 0.3s ease;
+  }
+
+  .activity-edit-form[data-view-mode="true"] {
+    background: rgba(248, 250, 252, 0.25);
+  }
+
+  .activity-edit-form[data-view-mode="true"] input,
+  .activity-edit-form[data-view-mode="true"] select {
+    background: rgba(248, 250, 252, 0.5);
+    border-color: rgba(15, 23, 42, 0.08);
+    cursor: default;
+    color: var(--color-heading, #0f172a);
+    transition: all 0.3s ease;
+    pointer-events: none;
+  }
+
+  .activity-edit-form[data-view-mode="false"] {
+    background: rgba(37, 99, 235, 0.03);
+    border-bottom: 2px solid rgba(37, 99, 235, 0.2);
+    padding-bottom: 18px;
+  }
+
+  .activity-edit-form[data-view-mode="false"] input,
+  .activity-edit-form[data-view-mode="false"] select {
+    border-color: rgba(37, 99, 235, 0.25);
+    background: #ffffff;
+    transition: all 0.3s ease;
+    pointer-events: auto;
+  }
+
+  .activity-actions button[data-action="toggle-edit-activity"] {
+    background: var(--color-primary, #2563eb);
+    border-color: transparent;
+    color: #ffffff;
+    transition: all 0.2s ease;
+  }
+
+  .activity-actions button[data-action="toggle-edit-activity"]:hover {
+    background: #1d4ed8;
+  }
+
+  .activity-actions button[data-action="toggle-edit-activity"][data-edit-mode="true"] {
+    background: #ef4444;
+  }
+
+  .activity-actions button[data-action="toggle-edit-activity"][data-edit-mode="true"]:hover {
+    background: #dc2626;
+  }
+
+  .entry-controls button[data-action="toggle-edit"] {
+    background: var(--color-primary, #2563eb);
+    border-color: transparent;
+    color: #ffffff;
+    transition: all 0.2s ease;
+  }
+
+  .entry-controls button[data-action="toggle-edit"]:hover {
+    background: #1d4ed8;
+  }
+
+  .entry-controls button[data-action="toggle-edit"][data-edit-mode="true"] {
+    background: #ef4444;
+  }
+
+  .entry-controls button[data-action="toggle-edit"][data-edit-mode="true"]:hover {
+    background: #dc2626;
+  }
+
+  .activity-entry-form textarea {
+    min-height: 100px;
+    border: 1px solid rgba(15, 23, 42, 0.16);
+    border-radius: 0 12px 12px 0;
+    padding: 10px 12px;
+    font-size: 13px;
+    resize: vertical;
+    width: 100%;
+    flex: 1;
+  }
+
+  .entry-preview.dual .entry-text {
+    display: flex;
+    flex-direction: column;
+  }
+
+  .entry-preview.dual .entry-text textarea {
+    border-radius: 0 12px 12px 0;
+    min-height: 200px;
+    height: 100%;
+  }
+
+  .entry-preview {
+    display: flex;
+    gap: 12px;
+    align-items: stretch;
+    flex-wrap: wrap;
+  }
+
+  .entry-preview.dual {
+    display: flex;
+    gap: 0;
+    position: relative;
+  }
+
+  .entry-preview.single {
+    display: block;
+  }
+
+  .entry-preview.single .entry-image-preview,
+  .entry-preview.single .resize-divider {
+    display: none !important;
+  }
+
+  .entry-preview.single .entry-text {
+    width: 100%;
+  }
+
+  .entry-text {
+    flex: 1;
+    display: flex;
+    max-width: 100%;
+    min-width: 0;
+  }
+
+  .entry-preview.dual .entry-image-preview {
+    height: auto;
+    min-height: 200px;
+    max-height: 600px;
+    resize: vertical;
+    overflow: auto;
+  }
+
+  .entry-image-preview {
+    border: 1px solid rgba(15, 23, 42, 0.12);
+    border-radius: 12px 0 0 12px;
+    background: #ffffff;
+    min-height: 160px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    overflow: auto;
+    min-width: 180px;
+    width: 260px;
+    flex-shrink: 0;
+    position: relative;
+  }
+
+  .entry-image-preview img {
+    max-width: 100%;
+    max-height: 100%;
+    object-fit: contain;
+  }
+
+  .resize-divider {
+    width: 12px;
+    background: linear-gradient(90deg, rgba(15, 23, 42, 0.08) 0%, rgba(15, 23, 42, 0.12) 50%, rgba(15, 23, 42, 0.08) 100%);
+    cursor: col-resize;
+    position: relative;
+    flex-shrink: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: background 0.2s ease;
+  }
+
+  .resize-divider:hover {
+    background: linear-gradient(90deg, rgba(37, 99, 235, 0.15) 0%, rgba(37, 99, 235, 0.25) 50%, rgba(37, 99, 235, 0.15) 100%);
+  }
+
+  .resize-divider::after {
+    content: '⋮';
+    color: rgba(15, 23, 42, 0.3);
+    font-size: 18px;
+    font-weight: bold;
+    letter-spacing: -2px;
+  }
+
+  .resize-divider:hover::after {
+    color: rgba(37, 99, 235, 0.6);
+  }
+
+  .entry-controls {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 10px;
+    align-items: center;
+  }
+
+  .entry-controls label {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    padding: 6px 12px;
+    border-radius: 10px;
+    border: 1px dashed rgba(15, 23, 42, 0.2);
+    cursor: pointer;
+    font-size: 12px;
+    font-weight: 600;
+    background: rgba(248, 250, 252, 0.5);
+  }
+
+  .entry-controls button {
+    border-radius: 10px;
+    padding: 6px 12px;
+    font-size: 12px;
+    font-weight: 600;
+    cursor: pointer;
+    border: 1px solid rgba(15, 23, 42, 0.12);
+    background: #ffffff;
+    transition: all 0.2s ease;
+  }
+
+  .entry-controls button[data-action="remove-image"],
+  .entry-controls button[data-action="delete-entry"] {
+    border-color: rgba(220, 38, 38, 0.36);
+    color: #dc2626;
+  }
+
+  .entry-controls button[type="submit"] {
+    background: var(--color-primary, #2563eb);
+    border-color: transparent;
+    color: #ffffff;
+  }
+
+  .activity-entry-form small {
+    font-size: 11px;
+    color: var(--color-muted, #6b7280);
+  }
+
+  .add-entry-section {
+    margin-top: 15px;
+    padding: 15px;
+    background: rgba(58, 241, 174, 0.02);
+    border-radius: 8px;
+  }
+
+  .button-add-entry {
+    width: 100%;
+    padding: 12px 20px;
+    background: var(--color-accent, #39f2ae);
+    color: var(--color-bg, #0f172a);
+    border: none;
+    border-radius: 6px;
+    font-size: 14px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.2s ease;
+  }
+
+  .button-add-entry:hover {
+    background: #2dd494;
+    transform: translateY(-1px);
+    box-shadow: 0 4px 8px rgba(58, 241, 174, 0.2);
+  }
+
+  .activity-entry-form[data-mode="create"] {
+    background: rgba(58, 241, 174, 0.04);
+    border: 2px dashed rgba(58, 241, 174, 0.3);
+    margin-top: 15px;
+    border-radius: 8px;
+    padding: 15px;
+  }
+
+  .form-step-layout {
+    margin-bottom: 12px;
+    padding: 10px;
+    background: rgba(255, 255, 255, 0.5);
+    border-radius: 6px;
+  }
+
+  .form-step-layout label {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    font-size: 13px;
+    font-weight: 600;
+  }
+
+  .form-step-layout select {
+    flex: 1;
+    padding: 8px 12px;
+    border: 1px solid rgba(15, 23, 42, 0.16);
+    border-radius: 4px;
+    font-size: 13px;
+  }
+
+  .activity-entry-form[data-mode="create"] textarea {
+    min-height: 120px;
+    border-color: rgba(58, 241, 174, 0.2);
+  }
+
+  .activity-entry-form[data-mode="create"] .entry-controls label {
+    background: rgba(58, 241, 174, 0.08);
+    border-color: rgba(58, 241, 174, 0.3);
+    color: var(--color-heading, #0f172a);
+  }
+
+  .activity-entry-form[data-mode="create"] .entry-controls label:hover {
+    background: rgba(58, 241, 174, 0.15);
+  }
+
+  .button-primary {
+    background: var(--color-accent, #39f2ae);
+    color: var(--color-bg, #0f172a);
+    border: none;
+    padding: 10px 20px;
+    border-radius: 6px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.2s ease;
+  }
+
+  .button-primary:hover {
+    background: #2dd494;
+  }
+
+  .button-secondary {
+    background: #fff;
+    color: #ef4444;
+    border: 1px solid #ef4444;
+    padding: 10px 20px;
+    border-radius: 6px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.2s ease;
+  }
+
+  .button-secondary:hover {
+    background: rgba(239, 68, 68, 0.1);
+  }
+
+  .report-modal {
+    position: fixed;
+    inset: 0;
+    background: rgba(15, 23, 42, 0.85);
+    display: none;
+    align-items: center;
+    justify-content: center;
+    z-index: 2000;
+    padding: 24px;
+  }
+
+  .report-modal[data-open="true"] {
+    display: flex;
+  }
+
+  .report-modal-content {
+    background: var(--color-surface, #1e293b);
+    border-radius: 16px;
+    padding: 32px;
+    max-width: 500px;
+    width: 100%;
+    box-shadow: 0 20px 40px rgba(0, 0, 0, 0.4);
+  }
+
+  .report-modal-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 24px;
+  }
+
+  .report-modal-header h3 {
+    margin: 0;
+    color: var(--color-heading, #f1f5f9);
+  }
+
+  .report-modal-close {
+    border: none;
+    background: transparent;
+    color: var(--color-muted, #94a3b8);
+    font-size: 24px;
+    cursor: pointer;
+    padding: 4px 8px;
+    transition: color 0.2s ease;
+  }
+
+  .report-modal-close:hover {
+    color: var(--color-heading, #f1f5f9);
+  }
+
+  .report-sections {
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
+    margin-bottom: 24px;
+  }
+
+  .report-section-item {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 16px;
+    border: 2px solid rgba(15, 23, 42, 0.3);
+    border-radius: 12px;
+    cursor: pointer;
+    transition: all 0.2s ease;
+  }
+
+  .report-section-item:hover {
+    border-color: var(--color-accent, #39f2ae);
+    background: rgba(58, 241, 174, 0.05);
+  }
+
+  .report-section-item input[type="checkbox"] {
+    width: 20px;
+    height: 20px;
+    cursor: pointer;
+    accent-color: var(--color-accent, #39f2ae);
+  }
+
+  .report-section-label {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+    cursor: pointer;
+  }
+
+  .report-section-label strong {
+    color: var(--color-heading, #f1f5f9);
+    font-size: 15px;
+  }
+
+  .report-section-label small {
+    color: var(--color-muted, #94a3b8);
+    font-size: 12px;
+  }
+
+  .report-modal-actions {
+    display: flex;
+    gap: 12px;
+    justify-content: flex-end;
+  }
+
+  .report-feedback {
+    margin-top: 16px;
+    padding: 12px;
+    border-radius: 8px;
+    font-size: 13px;
+    text-align: center;
+    display: none;
+  }
+
+  .report-feedback.show {
+    display: block;
+  }
+
+  .report-feedback.error {
+    background: rgba(239, 68, 68, 0.1);
+    color: #fca5a5;
+    border: 1px solid rgba(239, 68, 68, 0.3);
+  }
+
+  .report-feedback.success {
+    background: rgba(34, 197, 94, 0.1);
+    color: #86efac;
+    border: 1px solid rgba(34, 197, 94, 0.3);
+  }
+
+  @media (max-width: 1024px) {
+    .pop-create-form {
+      grid-template-columns: 110px minmax(0, 1fr) 130px 150px;
+      gap: 10px;
+    }
+  }
+
+  @media (max-width: 768px) {
+    .process-detail-header {
+      flex-direction: column;
+    }
+
+    .pop-create-form {
+      grid-template-columns: 1fr;
+      align-items: stretch;
+      gap: 12px;
+    }
+
+    .pop-code-group {
+      max-width: 200px;
+    }
+
+    .entry-preview.dual {
+      grid-template-columns: 1fr;
+    }
+
+    .activity-card-meta input {
+      min-width: 0;
+    }
+  }
+
+  /* Routine Management Styles */
+  .routine-management {
+    margin-top: 16px;
+  }
+
+  .schedules-list {
+    margin-bottom: 16px;
+    min-height: 60px;
+  }
+
+  .schedule-item {
+    background: #fff;
+    border: 1px solid #e2e8f0;
+    border-radius: 8px;
+    padding: 16px;
+    margin-bottom: 12px;
+    display: grid;
+    grid-template-columns: 1fr auto;
+    gap: 16px;
+    align-items: start;
+  }
+
+  .schedule-item:last-child {
+    margin-bottom: 0;
+  }
+
+  .schedule-content {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 16px;
+  }
+
+  .schedule-trigger, .schedule-deadline {
+    background: #f8fafc;
+    border: 1px solid #e2e8f0;
+    border-radius: 6px;
+    padding: 12px;
+  }
+
+  .schedule-trigger h6, .schedule-deadline h6 {
+    margin: 0 0 8px 0;
+    font-size: 12px;
+    font-weight: 600;
+    color: #475569;
+  }
+
+  .schedule-trigger .trigger-type {
+    font-weight: 600;
+    color: #2563eb;
+    text-transform: capitalize;
+  }
+
+  .schedule-trigger .trigger-value {
+    color: #64748b;
+    font-family: monospace;
+    font-size: 12px;
+  }
+
+  .schedule-deadline .deadline-value {
+    font-weight: 600;
+    color: #059669;
+  }
+
+  .schedule-deadline .deadline-unit {
+    color: #64748b;
+    text-transform: capitalize;
+  }
+
+  .schedule-actions {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+  }
+
+  .schedule-actions button {
+    padding: 6px 12px;
+    font-size: 12px;
+    border: none;
+    border-radius: 4px;
+    cursor: pointer;
+  }
+
+  .edit-btn {
+    background: #f1f5f9;
+    color: #475569;
+  }
+
+  .edit-btn:hover {
+    background: #e2e8f0;
+  }
+
+  .delete-btn {
+    background: #fef2f2;
+    color: #dc2626;
+  }
+
+  .delete-btn:hover {
+    background: #fee2e2;
+  }
+
+  .schedule-form {
+    background: #fff;
+    border: 2px solid #2563eb;
+    border-radius: 8px;
+    padding: 16px;
+    margin-bottom: 12px;
+  }
+
+  .schedule-form h6 {
+    margin: 0 0 12px 0;
+    font-size: 14px;
+    font-weight: 600;
+    color: #2563eb;
+  }
+
+  .form-row {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 12px;
+    margin-bottom: 12px;
+  }
+
+  .form-row:last-child {
+    margin-bottom: 0;
+  }
+
+  .form-row.full {
+    grid-template-columns: 1fr;
+  }
+
+  .schedule-form select,
+  .schedule-form input {
+    padding: 8px 12px;
+    border: 1px solid #d1d5db;
+    border-radius: 4px;
+    font-size: 13px;
+  }
+
+  .schedule-form .form-actions {
+    display: flex;
+    gap: 8px;
+    margin-top: 12px;
+  }
+
+  .schedule-form .form-actions button {
+    padding: 8px 16px;
+    font-size: 13px;
+    border: none;
+    border-radius: 4px;
+    cursor: pointer;
+  }
+
+  .save-btn {
+    background: #2563eb;
+    color: white;
+  }
+
+  .save-btn:hover {
+    background: #1d4ed8;
+  }
+
+  .cancel-btn {
+    background: #f1f5f9;
+    color: #475569;
+  }
+
+  .cancel-btn:hover {
+    background: #e2e8f0;
+  }
+  
+  /* Quill Editor Styles */
+  #notes-toolbar {
+    background: #f8fafc;
+    border: 1px solid #e5e7eb;
+    border-bottom: none;
+    border-radius: 8px 8px 0 0;
+    padding: 8px;
+  }
+  
+  .ql-container {
+    font-family: inherit;
+    font-size: 14px;
+  }
+  
+  .ql-editor {
+    min-height: 300px;
+    max-height: 600px;
+    overflow-y: auto;
+  }
+  
+  .ql-editor.ql-blank::before {
+    color: #9ca3af;
+    font-style: normal;
+    content: 'Digite suas observações aqui... Você pode formatar texto, inserir links, imagens e vídeos.';
+  }
+</style>
+
+<!-- Quill.js CSS -->
+<link href="https://cdn.quilljs.com/1.3.6/quill.snow.css" rel="stylesheet">
+<!-- Quill.js JS -->
+<script src="https://cdn.quilljs.com/1.3.6/quill.js"></script>
+
+{% endblock %}
+
+{% block content %}
+<div class="project-layout plan-layout" data-sidebar-toggle data-process-id="{{ process.id }}">
+  {# Sidebar componentizado - atualizado centralmente #}
+  {% include 'processes_sidebar.html' %}
+
+  <section class="project-content plan-content" data-company-id="{{ company.id }}">
+    <div class="surface-card" style="margin-top:16px;padding:26px;">
+      <div class="process-detail-header">
+        <div>
+          <span class="section-eyebrow">Processo</span>
+          <h3>{{ process.code or 'Sem código' }} {{ process.name }}</h3>
+          <div class="process-stage-info">
+            <span class="stage-badge" style="background: {{ stage_badge.bg }}; color: {{ stage_badge.fg }};">
+              {{ stage_info.title }}
+            </span>
+            <p class="stage-description">{{ stage_info.description }}</p>
+          </div>
+        </div>
+        <div style="display:flex;gap:8px;flex-wrap:wrap;">
+          <button type="button" class="button button-primary" data-action="generate-report">📄 Gerar Relatório</button>
+          <a class="button button-ghost" href="{{ url_for('grv.grv_process_modeling', company_id=company.id) }}">Voltar ao Kanban</a>
+        </div>
+      </div>
+
+      <div class="process-detail-summary">
+        <div class="summary-card">
+          <span class="label">Responsável</span>
+          <span class="value">{{ process.responsible or 'Definir responsável' }}</span>
+        </div>
+        <div class="summary-card">
+          <span class="label">Macroprocesso</span>
+          <span class="value">
+            {% if macro %}
+              {{ macro.code or '' }} {{ macro.name }}
+            {% else %}
+              Associar macroprocesso
+            {% endif %}
+          </span>
+        </div>
+        <div class="summary-card">
+          <span class="label">Estruturação</span>
+          <span class="value">{{ process.structuring_label }}</span>
+        </div>
+        <div class="summary-card">
+          <span class="label">Performance</span>
+          <span class="value">{{ process.performance_label }}</span>
+        </div>
+      </div>
+
+      <div class="detail-tabs" data-detail-tabs>
+        {% for tab in detail_tabs %}
+        <button type="button" data-tab-button data-target="{{ tab.slug }}">{{ tab.label }}</button>
+        {% endfor %}
+      </div>
+
+      <div class="detail-panels">
+        <div class="detail-panel" data-detail-panel="flow" data-flow-section data-endpoint="{{ url_for('api_process_flow_document', company_id=company.id, process_id=process.id) }}">
+          <h4>Fluxo do Processo</h4>
+          <div class="flow-upload-area">
+            <p>Importe um fluxo em PDF ou imagem (PNG, JPG, SVG, WEBP). O arquivo ficará disponível para visualização rápida e em tela cheia.</p>
+
+            <div class="flow-upload-actions">
+              <form data-flow-upload-form>
+                <label>
+                  <span>+</span>
+                  <span>Enviar novo fluxo</span>
+                  <input type="file" accept=".pdf,image/*" name="file" data-flow-input hidden />
+                </label>
+              </form>
+              <div class="flow-actions">
+                <button type="button" class="flow-secondary" data-flow-preview-button disabled>Visualizar em tela cheia</button>
+                <button type="button" class="flow-secondary" data-flow-remove-button disabled>Remover fluxo</button>
+              </div>
+            </div>
+
+            <div class="flow-feedback" data-flow-feedback hidden></div>
+
+            {% set flow_document = process.flow_document %}
+            {% set flow_url = flow_document and url_for('serve_uploaded_file', filename=flow_document) %}
+            {% set flow_ext = flow_document and flow_document.rsplit('.', 1)[1].lower() %}
+            {% set flow_is_pdf = flow_ext == 'pdf' %}
+
+            <div class="flow-preview" data-flow-preview {% if not flow_document %}hidden{% endif %} data-preview-type="{{ 'pdf' if flow_is_pdf else 'image' }}" data-preview-url="{{ flow_url or '' }}">
+              <div class="flow-preview-frame" data-flow-frame>
+                {% if flow_document %}
+                  {% if flow_is_pdf %}
+                  <iframe src="{{ flow_url }}#toolbar=0&navpanes=0&scrollbar=0"></iframe>
+                  {% else %}
+                  <img src="{{ flow_url }}" alt="Fluxo do processo" />
+                  {% endif %}
+                {% endif %}
+              </div>
+              <div>
+                <strong>Arquivo atual:</strong>
+                <span data-flow-filename>{{ flow_document.split('/')[-1] if flow_document else '' }}</span>
+              </div>
+            </div>
+
+            <div class="flow-preview-placeholder" data-flow-placeholder {% if flow_document %}hidden{% endif %}>
+              <h5>Fluxo ainda não importado</h5>
+              <p>Envie um arquivo para visualizar e compartilhar o desenho do processo.</p>
+            </div>
+          </div>
+        </div>
+
+        {% set process_code = process.code or ('PROC-' ~ (process.id or '')) %}
+        {% set activities_endpoint = url_for('api_process_activities', company_id=company.id, process_id=process.id) %}
+        {% set activity_detail_template = url_for('api_process_activity_detail', company_id=company.id, process_id=process.id, activity_id=0) %}
+        {% set entry_create_template = url_for('api_create_process_activity_entry', company_id=company.id, process_id=process.id, activity_id=0) %}
+        {% set entry_detail_template = url_for('api_process_activity_entry_detail', company_id=company.id, process_id=process.id, activity_id=0, entry_id=0) %}
+        <div class="detail-panel" data-detail-panel="pop"
+             data-pop-manager
+             data-activities-endpoint="{{ activities_endpoint }}"
+             data-activity-detail-template="{{ activity_detail_template.replace('/0', '/{id}') }}"
+             data-entry-create-template="{{ entry_create_template.replace('/0/entries', '/{id}/entries') }}"
+             data-entry-detail-template="{{ entry_detail_template.replace('/0/entries/0', '/{activity_id}/entries/{entry_id}') }}"
+             data-process-code="{{ process_code }}">
+          <div class="pop-manager">
+            <div>
+              <h4>Procedimento Operacional Padrão (POP)</h4>
+              <p>Cadastre atividades que exigem instruções detalhadas, combinando texto e imagens ilustrativas.</p>
+            </div>
+            <form class="pop-create-form" data-pop-create-form>
+              <div class="pop-code-group">
+                <label class="pop-field-label">Código</label>
+                <div class="pop-code-input">
+                  <span class="pop-code-base" data-pop-code-base>{{ process_code }}</span>
+                  <span class="pop-code-separator">.</span>
+                  <input type="text" name="suffix" maxlength="2" pattern="\d{2}" placeholder="00" required />
+                </div>
+              </div>
+              <div>
+                <label class="pop-field-label">Nome</label>
+                <input type="text" name="name" placeholder="Nome da atividade" required />
+              </div>
+              <button type="submit">Adicionar atividade</button>
+            </form>
+            <div class="pop-feedback" data-pop-feedback hidden></div>
+            <div class="pop-empty" data-pop-empty>Cadastre atividades para documentar o passo a passo do POP.</div>
+            <div class="pop-activities" data-pop-list></div>
+          </div>
+        </div>
+
+        <div class="detail-panel" data-detail-panel="indicators">
+          <div class="indicator-panel-header">
+            <div>
+              <h4>Indicadores do Processo</h4>
+              <p>Monitore os indicadores associados a este processo, acompanhe metas, responsáveis e fontes de dados.</p>
+            </div>
+            <div class="indicator-panel-actions">
+              <a href="{{ url_for('grv.grv_indicators_list', company_id=company.id) }}" rel="noopener">
+                Gerenciar Indicadores
+              </a>
+              <button type="button" data-open-indicator-form>
+                Novo Indicador
+              </button>
+            </div>
+          </div>
+
+          <div id="processIndicatorsContainer" class="indicator-cards">
+            <div class="indicator-empty-state">
+              Carregando indicadores do processo...
+            </div>
+          </div>
+        </div>
+
+        <div class="detail-panel" data-detail-panel="routine">
+          <h4>Disparos e Prazos de Execução</h4>
+          <p>Configure gatilhos de disparo e prazos para execução das rotinas deste processo.</p>
+          
+          <div style="margin-top: 20px;">
+            <a href="{{ url_for('routines_management', company_id=company.id) }}" class="button button-primary" style="display: inline-block; padding: 12px 24px; background: #3182ce; color: white; text-decoration: none; border-radius: 6px; font-weight: 500;">
+              ⚙️ Gerenciar Rotinas da Empresa
+            </a>
+          </div>
+          
+          <!-- Rotinas Associadas a Este Processo -->
+          <div id="process-routines-list" style="margin-top: 32px;">
+            <h4 style="font-size: 16px; font-weight: 600; color: #0f172a; margin-bottom: 16px; display: flex; align-items: center; gap: 8px;">
+              <span>📅</span> Rotinas deste Processo
+            </h4>
+            <div id="routinesContainer">
+              <div style="text-align: center; padding: 24px; color: #9ca3af;">
+                Carregando rotinas...
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div class="detail-panel" data-detail-panel="notes">
+          <h4>Observações e Anexos</h4>
+          <p>Centralize observações, ajustes pendentes e registros importantes do processo.</p>
+          
+          <!-- Editor de Texto Rico Quill.js -->
+          <div id="notes-toolbar">
+            <span class="ql-formats">
+              <select class="ql-header">
+                <option value="1">Título 1</option>
+                <option value="2">Título 2</option>
+                <option value="3">Título 3</option>
+                <option selected>Normal</option>
+              </select>
+            </span>
+            <span class="ql-formats">
+              <button class="ql-bold"></button>
+              <button class="ql-italic"></button>
+              <button class="ql-underline"></button>
+              <button class="ql-strike"></button>
+            </span>
+            <span class="ql-formats">
+              <select class="ql-color"></select>
+              <select class="ql-background"></select>
+            </span>
+            <span class="ql-formats">
+              <button class="ql-list" value="ordered"></button>
+              <button class="ql-list" value="bullet"></button>
+              <button class="ql-indent" value="-1"></button>
+              <button class="ql-indent" value="+1"></button>
+            </span>
+            <span class="ql-formats">
+              <button class="ql-link"></button>
+              <button class="ql-image"></button>
+              <button class="ql-video"></button>
+            </span>
+            <span class="ql-formats">
+              <button class="ql-clean"></button>
+            </span>
+          </div>
+          <div id="notes-editor" style="min-height: 300px; background: white; border: 1px solid #e5e7eb; border-radius: 8px;"></div>
+          
+          <div style="margin-top: 16px; display: flex; gap: 12px; justify-content: flex-end;">
+            <button id="save-notes-btn" class="button button-primary" style="padding: 10px 24px; background: #2563eb; color: white; border: none; border-radius: 8px; font-weight: 600; cursor: pointer;">
+              💾 Salvar Observações
+            </button>
+            <div id="notes-save-status" style="display: none; padding: 10px 16px; border-radius: 8px; font-size: 14px; font-weight: 500;"></div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+</div>
+
+<div class="flow-modal" data-flow-modal>
+  <div class="flow-modal-content">
+    <div class="flow-modal-header">
+      <h4>Fluxo do Processo</h4>
+      <button type="button" class="flow-modal-close" data-flow-modal-close>&times;</button>
+    </div>
+    <div class="flow-modal-body" data-flow-modal-body></div>
+  </div>
+</div>
+
+<div class="report-modal" data-report-modal>
+  <div class="report-modal-content">
+    <div class="report-modal-header">
+      <h3>📄 Gerar Relatório do Processo</h3>
+      <button type="button" class="report-modal-close" data-report-modal-close>&times;</button>
+    </div>
+    
+    <p style="color: var(--color-muted); margin-bottom: 20px; font-size: 14px;">
+      Configure o modelo de página e selecione as seções que deseja incluir no relatório:
+    </p>
+
+    <form class="report-sections" data-report-form>
+      <!-- Seletor de Padrão de Relatório -->
+      <div style="margin-bottom: 20px; padding: 16px; background: #f0f9ff; border: 1px solid #0ea5e9; border-radius: 8px;">
+        <label style="display: block; font-weight: 600; margin-bottom: 8px; font-size: 13px; color: #0f172a;">
+          🎯 Padrão de Relatório
+        </label>
+        <select id="report-pattern-selector" name="pattern_id" style="width: 100%; padding: 8px 12px; border: 1px solid #0ea5e9; border-radius: 6px; font-size: 14px; background: white;">
+          <option value="">Personalizado (escolher seções manualmente)</option>
+          {% for pattern in report_patterns %}
+            <option value="{{ pattern.id }}">{{ pattern.name }} - {{ pattern.description }}</option>
+          {% endfor %}
+        </select>
+        <small style="display: block; margin-top: 4px; font-size: 11px; color: #0369a1;">
+          Selecione um padrão pré-configurado ou escolha "Personalizado" para definir manualmente
+        </small>
+      </div>
+
+      <!-- Seletor de Modelo de Página -->
+      <div style="margin-bottom: 24px; padding: 16px; background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 8px;">
+        <label style="display: block; font-weight: 600; margin-bottom: 8px; font-size: 13px; color: #0f172a;">
+          📄 Modelo de Página
+        </label>
+        <select id="report-model-selector" name="model_id" style="width: 100%; padding: 8px 12px; border: 1px solid #d1d5db; border-radius: 6px; font-size: 14px; background: white;">
+          <option value="">Configuração Padrão (sem modelo)</option>
+          {% for model in report_models %}
+            <option value="{{ model.id }}">{{ model.name }} ({{ model.code }})</option>
+          {% endfor %}
+        </select>
+        <small style="display: block; margin-top: 4px; font-size: 11px; color: #6b7280;">
+          Selecione um modelo salvo para aplicar margens, cabeçalho e rodapé personalizados
+        </small>
+      </div>
+      <!-- Seções do Relatório -->
+      <label style="display: block; font-weight: 600; margin-bottom: 12px; font-size: 13px; color: #0f172a;">
+        📋 Seções do Relatório
+      </label>
+      
+      <label class="report-section-item">
+        <input type="checkbox" name="sections" value="flow" checked />
+        <div class="report-section-label">
+          <strong>🔄 Fluxo do Processo</strong>
+          <small>Diagrama visual do fluxo do processo</small>
+        </div>
+      </label>
+
+      <label class="report-section-item">
+        <input type="checkbox" name="sections" value="pop" checked />
+        <div class="report-section-label">
+          <strong>📋 POP - Procedimento Operacional</strong>
+          <small>Atividades e etapas detalhadas</small>
+        </div>
+      </label>
+
+      <label class="report-section-item">
+        <input type="checkbox" name="sections" value="indicators" />
+        <div class="report-section-label">
+          <strong>📊 Indicadores</strong>
+          <small>Métricas e indicadores de desempenho</small>
+        </div>
+      </label>
+
+      <label class="report-section-item">
+        <input type="checkbox" name="sections" value="routine" checked />
+        <div class="report-section-label">
+          <strong>📅 Rotinas e Colaboradores</strong>
+          <small>Rotinas do processo com colaboradores e horas</small>
+        </div>
+      </label>
+    </form>
+
+    <div class="report-modal-actions">
+      <button type="button" class="button button-ghost" data-report-modal-close>Cancelar</button>
+      <button type="button" class="button button-primary" data-report-generate>
+        📄 Gerar PDF
+      </button>
+    </div>
+
+    <div class="report-feedback" data-report-feedback></div>
+  </div>
+</div>
+
+<script>
+// Carregar rotinas do processo
+async function loadProcessRoutines() {
+  const companyId = {{ company.id }};
+  const processId = {{ process.id }};
+  const container = document.getElementById('routinesContainer');
+  
+  console.log(`Iniciando carregamento de rotinas para processo ${processId}...`);
+  
+  try {
+    // Usar nova API que já traz colaboradores
+    const apiUrl = `/api/processes/${processId}/routines-with-collaborators`;
+    console.log(`Chamando API: ${apiUrl}`);
+    const response = await fetch(apiUrl);
+    const result = await response.json();
+    
+    if (result.success) {
+      const processRoutines = result.routines;
+      
+      if (processRoutines.length === 0) {
+        container.innerHTML = `
+          <div style="background: #fef3c7; border: 2px dashed #f59e0b; border-radius: 12px; padding: 24px; text-align: center;">
+            <div style="font-size: 32px; margin-bottom: 12px;">📅</div>
+            <div style="font-weight: 600; color: #92400e; margin-bottom: 8px;">Nenhuma rotina cadastrada para este processo</div>
+            <div style="font-size: 13px; color: #92400e;">
+              Clique em "Gerenciar Rotinas da Empresa" acima para cadastrar agendamentos e prazos
+            </div>
+          </div>
+        `;
+        return;
+      }
+      
+      // Renderizar tabela de rotinas com colaboradores
+      const scheduleTypeLabels = {
+        'daily': 'Diário',
+        'weekly': 'Semanal',
+        'monthly': 'Mensal',
+        'quarterly': 'Trimestral',
+        'yearly': 'Anual',
+        'specific': 'Data Específica'
+      };
+      
+      container.innerHTML = `
+        <div style="display: flex; flex-direction: column; gap: 16px;">
+          ${processRoutines.map(routine => `
+            <div style="background: white; border: 2px solid #e5e7eb; border-radius: 12px; overflow: hidden; box-shadow: 0 2px 4px rgba(0,0,0,0.06);">
+              <!-- Header da Rotina -->
+              <div style="background: #f8fafc; padding: 16px; border-bottom: 2px solid #e5e7eb; display: flex; justify-content: space-between; align-items: center;">
+                <div>
+                  <h3 style="font-size: 16px; font-weight: 700; color: #0f172a; margin: 0 0 6px 0;">${routine.name}</h3>
+                  ${routine.description ? `<p style="font-size: 13px; color: #6b7280; margin: 0;">${routine.description}</p>` : ''}
+                </div>
+                <div style="display: flex; gap: 8px;">
+                  <a href="/companies/${companyId}/routines/${routine.id}" 
+                     class="button button-ghost button-sm" 
+                     style="font-size: 12px; padding: 6px 12px;"
+                     title="Gerenciar Rotina">
+                    ⚙️ Gerenciar
+                  </a>
+                </div>
+              </div>
+              
+              <!-- Informações da Rotina -->
+              <div style="padding: 16px; display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 16px; border-bottom: 1px solid #e5e7eb;">
+                <div>
+                  <div style="font-size: 11px; font-weight: 600; color: #6b7280; text-transform: uppercase; margin-bottom: 6px;">Agendamento</div>
+                  <div style="display: inline-flex; align-items: center; gap: 6px; padding: 6px 12px; background: #eff6ff; border: 1px solid #bfdbfe; border-radius: 8px; font-size: 12px; font-weight: 600; color: #1e40af;">
+                    <span>🔔</span>
+                    <span>${scheduleTypeLabels[routine.schedule_type] || routine.schedule_type}</span>
+                  </div>
+                  ${routine.schedule_value ? `<div style="font-size: 12px; color: #6b7280; margin-top: 6px;">${routine.schedule_value}</div>` : ''}
+                </div>
+                
+                <div>
+                  <div style="font-size: 11px; font-weight: 600; color: #6b7280; text-transform: uppercase; margin-bottom: 6px;">Prazo</div>
+                  ${routine.deadline_days > 0 || routine.deadline_hours > 0 ? `
+                    <div style="display: flex; gap: 8px; flex-wrap: wrap;">
+                      ${routine.deadline_days > 0 ? `
+                        <div style="display: inline-flex; align-items: center; gap: 6px; padding: 6px 12px; background: #fef3c7; border: 1px solid #fde68a; border-radius: 8px; font-size: 12px; font-weight: 600; color: #92400e;">
+                          <span>📅</span>
+                          <span>${routine.deadline_days} dias</span>
+                        </div>
+                      ` : ''}
+                      ${routine.deadline_hours > 0 ? `
+                        <div style="display: inline-flex; align-items: center; gap: 6px; padding: 6px 12px; background: #fef3c7; border: 1px solid #fde68a; border-radius: 8px; font-size: 12px; font-weight: 600; color: #92400e;">
+                          <span>⏱️</span>
+                          <span>${routine.deadline_hours} horas</span>
+                        </div>
+                      ` : ''}
+                    </div>
+                  ` : '<span style="color: #9ca3af; font-size: 13px;">Sem prazo definido</span>'}
+                </div>
+                
+                <div>
+                  <div style="font-size: 11px; font-weight: 600; color: #6b7280; text-transform: uppercase; margin-bottom: 6px;">Total de Horas</div>
+                  <div style="display: inline-flex; align-items: center; gap: 6px; padding: 6px 12px; background: #dbeafe; border: 1px solid #93c5fd; border-radius: 8px; font-size: 14px; font-weight: 700; color: #1e40af;">
+                    <span>⏰</span>
+                    <span>${routine.total_hours || 0}h</span>
+                  </div>
+                </div>
+              </div>
+              
+              <!-- Colaboradores -->
+              ${routine.collaborators && routine.collaborators.length > 0 ? `
+                <div style="padding: 16px;">
+                  <div style="font-size: 13px; font-weight: 600; color: #374151; margin-bottom: 12px; text-transform: uppercase; letter-spacing: 0.05em;">
+                    <span>👥</span> Colaboradores (${routine.collaborators.length})
+                  </div>
+                  <table style="width: 100%; border-collapse: collapse;">
+                    <thead style="background: #f8fafc;">
+                      <tr>
+                        <th style="padding: 10px 12px; text-align: left; font-size: 11px; font-weight: 600; color: #6b7280; text-transform: uppercase;">Colaborador</th>
+                        <th style="padding: 10px 12px; text-align: center; font-size: 11px; font-weight: 600; color: #6b7280; text-transform: uppercase; width: 120px;">Horas Úteis</th>
+                        <th style="padding: 10px 12px; text-align: left; font-size: 11px; font-weight: 600; color: #6b7280; text-transform: uppercase;">Observações</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      ${routine.collaborators.map(collab => `
+                        <tr style="border-bottom: 1px solid #f1f5f9;">
+                          <td style="padding: 10px 12px;">
+                            <div style="font-weight: 500; color: #0f172a;">${collab.employee_name}</div>
+                            ${collab.employee_email ? `<div style="font-size: 11px; color: #9ca3af;">${collab.employee_email}</div>` : ''}
+                          </td>
+                          <td style="padding: 10px 12px; text-align: center;">
+                            <span style="background: #dbeafe; color: #1e40af; padding: 4px 10px; border-radius: 6px; font-weight: 600; font-size: 13px;">
+                              ${collab.hours_used}h
+                            </span>
+                          </td>
+                          <td style="padding: 10px 12px; font-size: 13px; color: #475569;">
+                            ${collab.notes || '-'}
+                          </td>
+                        </tr>
+                      `).join('')}
+                    </tbody>
+                  </table>
+                </div>
+              ` : `
+                <div style="padding: 20px; text-align: center; color: #9ca3af; font-size: 13px; background: #f9fafb;">
+                  Nenhum colaborador vinculado a esta rotina
+                </div>
+              `}
+            </div>
+          `).join('')}
+        </div>
+        
+        <div style="margin-top: 20px; padding: 14px 18px; background: #eff6ff; border-radius: 10px; font-size: 13px; color: #1e40af;">
+          <strong>💡 Dica:</strong> Para gerenciar rotinas e colaboradores, clique em "⚙️ Gerenciar" ou acesse "Gerenciar Rotinas da Empresa" acima.
+        </div>
+      `;
+    }
+  } catch (error) {
+    console.error('Erro ao carregar rotinas:', error);
+    container.innerHTML = `
+      <div style="background: #fef2f2; border: 2px solid #fecaca; border-radius: 12px; padding: 20px; text-align: center; color: #991b1b;">
+        ❌ Erro ao carregar rotinas
+      </div>
+    `;
+  }
+}
+
+let isLoadingIndicators = false;
+let indicatorsLoadedOnce = false;
+let shouldReloadIndicatorsOnFocus = false;
+
+async function loadProcessIndicators(forceReload = false) {
+  const container = document.getElementById('processIndicatorsContainer');
+  if (!container) {
+    return;
+  }
+
+  if (isLoadingIndicators) {
+    return;
+  }
+
+  if (!forceReload && indicatorsLoadedOnce) {
+    return;
+  }
+
+  isLoadingIndicators = true;
+
+  if (!forceReload) {
+    container.innerHTML = `
+      <div class="indicator-empty-state">
+        Carregando indicadores do processo...
+      </div>
+    `;
+  }
+
+  const companyId = {{ company.id }};
+  const processId = {{ process.id }};
+
+  try {
+    const response = await fetch(`/grv/api/company/${companyId}/processes/${processId}/indicators`);
+    const result = await response.json();
+
+    if (!result.success) {
+      throw new Error(result.message || 'Falha ao carregar indicadores');
+    }
+
+    const indicators = Array.isArray(result.data) ? result.data : [];
+
+    if (indicators.length === 0) {
+      container.innerHTML = `
+        <div class="indicator-empty-state">
+          Nenhum indicador está vinculado a este processo ainda. Clique em "Novo Indicador" para iniciar o acompanhamento.
+        </div>
+      `;
+      indicatorsLoadedOnce = true;
+      shouldReloadIndicatorsOnFocus = false;
+      return;
+    }
+
+    container.innerHTML = indicators.map(renderIndicatorCard).join('');
+    shouldReloadIndicatorsOnFocus = false;
+    indicatorsLoadedOnce = true;
+  } catch (error) {
+    console.error('Erro ao carregar indicadores do processo:', error);
+    container.innerHTML = `
+      <div class="indicator-empty-state">
+        Não foi possível carregar os indicadores. Tente novamente ou atualize a página.
+      </div>
+    `;
+  } finally {
+    isLoadingIndicators = false;
+  }
+}
+
+function renderIndicatorCard(indicator) {
+  const code = escapeHtml(indicator.code || '--');
+  const name = escapeHtml(indicator.name || 'Indicador sem nome');
+  const groupName = indicator.group_name ? escapeHtml(indicator.group_name) : null;
+  const groupBadge = groupName ? `<span class="indicator-tag">${groupName}</span>` : '';
+  const unit = escapeHtml(indicator.unit || '--');
+  const dataSource = escapeHtml(indicator.data_source || '--');
+  const formula = escapeHtml(indicator.formula || '--');
+  const polarity = escapeHtml(formatPolarity(indicator.polarity));
+
+  const collaborators = Array.isArray(indicator.collaborators) && indicator.collaborators.length
+    ? `
+      <div class="indicator-collaborators">
+        ${indicator.collaborators.map((collaborator) => `<span>${escapeHtml(collaborator.name || 'Sem nome')}</span>`).join('')}
+      </div>
+    `
+    : '<span class="value">--</span>';
+
+  const goals = Array.isArray(indicator.goals) && indicator.goals.length
+    ? `
+      <div class="indicator-goals">
+        ${indicator.goals.slice(0, 3).map(renderIndicatorGoal).join('')}
+        ${indicator.goals.length > 3 ? '<div class="indicator-goal goal-more">... metas adicionais no cadastro do indicador.</div>' : ''}
+      </div>
+    `
+    : `
+      <div class="indicator-goals">
+        <div class="indicator-goal">
+          Nenhuma meta cadastrada para este indicador ainda.
+        </div>
+      </div>
+    `;
+
+  const notes = indicator.notes
+    ? `<div class="indicator-notes">${formatIndicatorNotes(indicator.notes)}</div>`
+    : '';
+
+  return `
+    <div class="indicator-card" data-indicator-id="${indicator.id}">
+      <div class="indicator-card-header">
+        <div style="display:flex; align-items:center; flex-wrap:wrap; gap:10px;">
+          <span class="indicator-code-badge">${code}</span>
+          <h5>${name}</h5>
+        </div>
+        ${groupBadge}
+      </div>
+
+      <div class="indicator-meta-grid">
+        <div class="indicator-meta-item">
+          <span class="label">Unidade</span>
+          <span class="value">${unit}</span>
+        </div>
+        <div class="indicator-meta-item">
+          <span class="label">Polaridade</span>
+          <span class="value">${polarity}</span>
+        </div>
+        <div class="indicator-meta-item">
+          <span class="label">Fonte de dados</span>
+          <span class="value">${dataSource}</span>
+        </div>
+        <div class="indicator-meta-item">
+          <span class="label">Fórmula</span>
+          <span class="value">${formula}</span>
+        </div>
+        <div class="indicator-meta-item">
+          <span class="label">Colaboradores</span>
+          ${collaborators}
+        </div>
+      </div>
+
+      ${goals}
+      ${notes}
+
+      <div class="indicator-card-actions">
+        <button type="button" data-indicator-edit="${indicator.id}">
+          Editar indicador
+        </button>
+      </div>
+    </div>
+  `;
+}
+
+function renderIndicatorGoal(goal) {
+  const value = formatGoalValueDisplay(goal);
+  const period = formatGoalPeriod(goal);
+  const evaluation = formatGoalEvaluation(goal);
+  const typeLabel = PROCESS_GOAL_TYPE_LABELS[goal.goal_type] || PROCESS_GOAL_TYPE_LABELS.single;
+  const responsible = goal.responsible_name ? `<span class="goal-responsible">${escapeHtml(goal.responsible_name)}</span>` : '';
+  const statusText = formatGoalStatus(goal.status);
+  const status = statusText ? `<span class="goal-status">${escapeHtml(statusText)}</span>` : '';
+
+  return `
+    <div class="indicator-goal">
+      <span class="goal-type">${escapeHtml(typeLabel)}</span>
+      ${value ? `<span class="goal-value">${escapeHtml(value)}</span>` : ''}
+      ${evaluation ? `<span class="goal-evaluation">${escapeHtml(evaluation)}</span>` : ''}
+      ${period ? `<span class="goal-date">${escapeHtml(period)}</span>` : ''}
+      ${responsible}
+      ${status}
+    </div>
+  `;
+}
+
+const PROCESS_GOAL_TYPE_LABELS = {
+  single: 'Meta unica',
+  monthly: 'Meta mensal',
+  daily: 'Meta diaria'
+};
+
+const PROCESS_GOAL_VALUE_SUFFIX = {
+  single: '',
+  monthly: 'por mes',
+  daily: 'por dia'
+};
+
+const PROCESS_GOAL_STATUS_LABELS = {
+  active: 'Em andamento',
+  achieved: 'Atingida',
+  delayed: 'Atrasada',
+  cancelled: 'Cancelada',
+  completed: 'Atingida'
+};
+
+const PROCESS_GOAL_EVALUATION_LABELS = {
+  value: 'Comparacao pontual',
+  sum: 'Somar periodo',
+  average: 'Media no periodo',
+  latest: 'Ultimo valor'
+};
+
+function formatGoalValueDisplay(goal) {
+  const value = goal.goal_value;
+  if (value === null || value === undefined || value === '') {
+    return '';
+  }
+  const numeric = Number(value);
+  let formatted = String(value);
+  if (!Number.isNaN(numeric)) {
+    try {
+      formatted = numeric.toLocaleString('pt-BR');
+    } catch (error) {
+      formatted = numeric.toString();
+    }
+  }
+  const suffix = PROCESS_GOAL_VALUE_SUFFIX[goal.goal_type] || PROCESS_GOAL_VALUE_SUFFIX.single;
+  return suffix ? `${formatted} ${suffix}` : formatted;
+}
+
+function formatGoalPeriod(goal) {
+  const type = goal.goal_type || 'single';
+  if (type === 'single') {
+    return goal.goal_date ? `Ate ${formatGoalDate(goal.goal_date)}` : '';
+  }
+  const start = type === 'monthly' ? formatGoalMonth(goal.period_start) : formatGoalDate(goal.period_start);
+  const end = type === 'monthly' ? formatGoalMonth(goal.period_end) : formatGoalDate(goal.period_end);
+
+  if (start && end) {
+    return `${start} - ${end}`;
+  }
+  if (start) {
+    return `A partir de ${start}`;
+  }
+  if (end) {
+    return `Ate ${end}`;
+  }
+  return '';
+}
+
+function formatGoalEvaluation(goal) {
+  const key = goal.evaluation_basis || (goal.goal_type === 'single' ? 'value' : 'sum');
+  return PROCESS_GOAL_EVALUATION_LABELS[key] || '';
+}
+
+function formatGoalDate(dateStr) {
+  if (!dateStr) {
+    return '';
+  }
+  if (/^\d{4}-\d{2}-\d{2}$/.test(dateStr)) {
+    const [year, month, day] = dateStr.split('-');
+    return `${day}/${month}/${year}`;
+  }
+  return String(dateStr);
+}
+
+function formatGoalMonth(dateStr) {
+  if (!dateStr || !/^\d{4}-\d{2}-\d{2}$/.test(dateStr)) {
+    return '';
+  }
+  const [year, month] = dateStr.split('-');
+  return `${month}/${year}`;
+}
+
+function formatGoalStatus(status) {
+  if (!status) {
+    return '';
+  }
+  return PROCESS_GOAL_STATUS_LABELS[status] || status;
+}
+
+function formatPolarity(polarity) {
+  if (!polarity) {
+    return '--';
+  }
+  const map = {
+    'positive': 'Quanto maior melhor',
+    'negative': 'Quanto menor melhor'
+  };
+  return map[polarity] || polarity;
+}
+
+function escapeHtml(value) {
+  if (value === null || value === undefined) {
+    return '';
+  }
+  return String(value)
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
+    .replace(/'/g, '&#39;');
+}
+
+function formatIndicatorNotes(notes) {
+  if (!notes) {
+    return '';
+  }
+  const escaped = escapeHtml(notes);
+  return escaped.replace(/\r?\n/g, '<br>');
+}
+
+function openIndicatorForm(indicatorId) {
+  const companyId = {{ company.id }};
+  const processId = {{ process.id }};
+  const baseUrl = indicatorId
+    ? `/grv/company/${companyId}/indicators/form/${indicatorId}`
+    : `/grv/company/${companyId}/indicators/form`;
+  const targetUrl = indicatorId ? baseUrl : `${baseUrl}?process_id=${processId}`;
+
+  const popup = window.open(
+    targetUrl,
+    'indicatorFormPopup',
+    'width=820,height=840,resizable=yes,scrollbars=yes'
+  );
+
+  if (!popup) {
+    alert('Não foi possível abrir a janela. Verifique o bloqueio de pop-ups.');
+    return;
+  }
+
+  shouldReloadIndicatorsOnFocus = true;
+  indicatorsLoadedOnce = false;
+  popup.focus();
+}
+
+document.addEventListener('DOMContentLoaded', () => {
+  const tabContainer = document.querySelector('[data-detail-tabs]');
+  if (!tabContainer) {
+    return;
+  }
+  
+  const buttons = tabContainer.querySelectorAll('[data-tab-button]');
+  const panels = document.querySelectorAll('[data-detail-panel]');
+
+  const activate = (target) => {
+    buttons.forEach((button) => {
+      button.classList.toggle('active', button.dataset.target === target);
+    });
+    panels.forEach((panel) => {
+      panel.classList.toggle('active', panel.dataset.detailPanel === target);
+    });
+  };
+
+  buttons.forEach((button) => {
+    button.addEventListener('click', () => {
+      activate(button.dataset.target);
+    });
+  });
+
+  if (buttons.length) {
+    activate(buttons[0].dataset.target);
+  }
+
+  const indicatorsPanel = document.querySelector('[data-detail-panel="indicators"]');
+  if (indicatorsPanel) {
+    const observer = new MutationObserver((mutations) => {
+      mutations.forEach((mutation) => {
+        if (mutation.type === 'attributes' && mutation.attributeName === 'class') {
+          if (indicatorsPanel.classList.contains('active')) {
+            loadProcessIndicators();
+          }
+        }
+      });
+    });
+    observer.observe(indicatorsPanel, { attributes: true });
+
+    if (indicatorsPanel.classList.contains('active')) {
+      loadProcessIndicators();
+    }
+  }
+
+  const indicatorsContainer = document.getElementById('processIndicatorsContainer');
+  if (indicatorsContainer) {
+    indicatorsContainer.addEventListener('click', (event) => {
+      const editButton = event.target.closest('[data-indicator-edit]');
+      if (editButton) {
+        const indicatorId = Number(editButton.dataset.indicatorEdit);
+        if (indicatorId) {
+          openIndicatorForm(indicatorId);
+        }
+      }
+    });
+  }
+
+  const createIndicatorButton = document.querySelector('[data-open-indicator-form]');
+  if (createIndicatorButton) {
+    createIndicatorButton.addEventListener('click', () => {
+      openIndicatorForm();
+    });
+  }
+
+  window.addEventListener('focus', () => {
+    if (!shouldReloadIndicatorsOnFocus) {
+      return;
+    }
+    if (indicatorsPanel && indicatorsPanel.classList.contains('active')) {
+      shouldReloadIndicatorsOnFocus = false;
+      loadProcessIndicators(true);
+    }
+  });
+
+  const flowSection = document.querySelector('[data-flow-section]');
+  if (flowSection) {
+
+  const fileInput = flowSection.querySelector('[data-flow-input]');
+  const feedback = flowSection.querySelector('[data-flow-feedback]');
+  const preview = flowSection.querySelector('[data-flow-preview]');
+  const placeholder = flowSection.querySelector('[data-flow-placeholder]');
+  const frame = flowSection.querySelector('[data-flow-frame]');
+  const fileNameLabel = flowSection.querySelector('[data-flow-filename]');
+  const previewButton = flowSection.querySelector('[data-flow-preview-button]');
+  const removeButton = flowSection.querySelector('[data-flow-remove-button]');
+  const endpoint = flowSection.dataset.endpoint;
+  const modal = document.querySelector('[data-flow-modal]');
+  const modalBody = modal ? modal.querySelector('[data-flow-modal-body]') : null;
+  const modalClose = modal ? modal.querySelector('[data-flow-modal-close]') : null;
+
+  const setFeedback = (message, variant = 'info') => {
+    if (!feedback) {
+      return;
+    }
+    if (!message) {
+      feedback.hidden = true;
+      return;
+    }
+    feedback.textContent = message;
+    feedback.dataset.variant = variant;
+    feedback.hidden = false;
+  };
+
+  const syncButtons = (hasDocument) => {
+    if (previewButton) {
+      previewButton.disabled = !hasDocument;
+    }
+    if (removeButton) {
+      removeButton.disabled = !hasDocument;
+    }
+  };
+
+  const renderPreview = (type, url, filename) => {
+    if (!frame || !preview || !placeholder) {
+      return;
+    }
+
+    frame.innerHTML = '';
+
+    if (url) {
+      preview.hidden = false;
+      placeholder.hidden = true;
+      preview.dataset.previewType = type || 'image';
+      preview.dataset.previewUrl = url;
+
+      if (type === 'pdf') {
+        const iframe = document.createElement('iframe');
+        iframe.src = `${url}#toolbar=0&navpanes=0&scrollbar=0`;
+        frame.appendChild(iframe);
+      } else {
+        const img = document.createElement('img');
+        img.src = url;
+        img.alt = 'Fluxo do processo';
+        frame.appendChild(img);
+      }
+    } else {
+      preview.hidden = true;
+      placeholder.hidden = false;
+      delete preview.dataset.previewType;
+      delete preview.dataset.previewUrl;
+    }
+
+    if (fileNameLabel) {
+      fileNameLabel.textContent = filename || '';
+    }
+
+    syncButtons(Boolean(url));
+  };
+
+  const openModal = () => {
+    if (!modal || !modalBody || !preview || preview.hidden) {
+      return;
+    }
+    const type = preview.dataset.previewType;
+    const url = preview.dataset.previewUrl;
+    if (!type || !url) {
+      return;
+    }
+
+    modalBody.innerHTML = '';
+
+    if (type === 'pdf') {
+      const iframe = document.createElement('iframe');
+      iframe.src = url;
+      modalBody.appendChild(iframe);
+    } else {
+      const img = document.createElement('img');
+      img.src = url;
+      img.alt = 'Fluxo do processo';
+      modalBody.appendChild(img);
+    }
+
+    modal.dataset.open = 'true';
+  };
+
+  const closeModal = () => {
+    if (!modal) {
+      return;
+    }
+    modal.dataset.open = 'false';
+    if (modalBody) {
+      modalBody.innerHTML = '';
+    }
+  };
+
+  if (previewButton) {
+    previewButton.addEventListener('click', openModal);
+  }
+  if (modalClose) {
+    modalClose.addEventListener('click', closeModal);
+  }
+  if (modal) {
+    modal.addEventListener('click', (event) => {
+      if (event.target === modal) {
+        closeModal();
+      }
+    });
+  }
+  document.addEventListener('keydown', (event) => {
+    if (event.key === 'Escape' && modal && modal.dataset.open === 'true') {
+      closeModal();
+    }
+  });
+
+  const uploadFlow = async (file) => {
+    if (!endpoint) {
+      return;
+    }
+
+    setFeedback('Enviando fluxo...', 'info');
+
+    const formData = new FormData();
+    formData.append('file', file);
+
+    try {
+      const response = await fetch(endpoint, {
+        method: 'POST',
+        body: formData
+      });
+      const payload = await response.json();
+      if (!response.ok || !payload.success) {
+        throw new Error(payload.error || 'upload_failed');
+      }
+      renderPreview(payload.preview_type, payload.url, payload.flow_document ? payload.flow_document.split('/').pop() : '');
+      setFeedback('Fluxo atualizado com sucesso.', 'info');
+    } catch (error) {
+      console.error('Upload error', error);
+      setFeedback('Não foi possível enviar o arquivo. Verifique o formato e tente novamente.', 'error');
+    } finally {
+      if (fileInput) {
+        fileInput.value = '';
+      }
+    }
+  };
+
+  if (fileInput) {
+    fileInput.addEventListener('change', () => {
+      const file = fileInput.files && fileInput.files[0];
+      if (!file) {
+        return;
+      }
+      uploadFlow(file);
+    });
+  }
+
+  if (removeButton) {
+    removeButton.addEventListener('click', async () => {
+      if (!endpoint) {
+        return;
+      }
+      const confirmRemoval = window.confirm('Remover o fluxo atual?');
+      if (!confirmRemoval) {
+        return;
+      }
+      try {
+        const response = await fetch(endpoint, { method: 'DELETE' });
+        const payload = await response.json();
+        if (!response.ok || !payload.success) {
+          throw new Error(payload.error || 'delete_failed');
+        }
+        renderPreview(null, null, null);
+        setFeedback('Fluxo removido.', 'info');
+      } catch (error) {
+        console.error('Delete flow error', error);
+        setFeedback('Não foi possível remover o fluxo. Tente novamente.', 'error');
+      }
+    });
+  }
+
+  const initialUrl = preview && !preview.hidden ? preview.dataset.previewUrl : null;
+  const initialType = preview && !preview.hidden ? preview.dataset.previewType : null;
+  const initialName = fileNameLabel ? fileNameLabel.textContent.trim() : '';
+  renderPreview(initialType, initialUrl, initialName);
+  }
+  const popManager = document.querySelector('[data-pop-manager]');
+  if (popManager) {
+    const activitiesEndpoint = popManager.dataset.activitiesEndpoint;
+    const activityDetailTemplate = popManager.dataset.activityDetailTemplate || '';
+    const entryCreateTemplate = popManager.dataset.entryCreateTemplate || '';
+    const entryDetailTemplate = popManager.dataset.entryDetailTemplate || '';
+    const listEl = popManager.querySelector('[data-pop-list]');
+    const emptyEl = popManager.querySelector('[data-pop-empty]');
+    const feedbackEl = popManager.querySelector('[data-pop-feedback]');
+    const createForm = popManager.querySelector('[data-pop-create-form]');
+
+    const escapeHtml = (value) => {
+      if (value === null || value === undefined) {
+        return '';
+      }
+      return String(value)
+        .replace(/&/g, '&amp;')
+        .replace(/</g, '&lt;')
+        .replace(/>/g, '&gt;')
+        .replace(/"/g, '&quot;')
+        .replace(/'/g, '&#39;');
+    };
+
+    const formatActivityEndpoint = (activityId) => activityDetailTemplate.replace('{id}', activityId);
+    const formatEntryCreateEndpoint = (activityId) => entryCreateTemplate.replace('{id}', activityId);
+    const formatEntryDetailEndpoint = (activityId, entryId) => entryDetailTemplate
+      .replace('{activity_id}', activityId)
+      .replace('{entry_id}', entryId);
+
+    const setPopFeedback = (message, variant = 'info') => {
+      if (!feedbackEl) {
+        return;
+      }
+      if (!message) {
+        feedbackEl.hidden = true;
+        return;
+      }
+      feedbackEl.textContent = message;
+      feedbackEl.dataset.variant = variant;
+      feedbackEl.hidden = false;
+      clearTimeout(setPopFeedback.timer);
+      setPopFeedback.timer = setTimeout(() => {
+        feedbackEl.hidden = true;
+      }, 3200);
+    };
+
+    const state = { activities: [] };
+
+    const buildEntryHtml = (activity, entry) => {
+      const hasImage = Boolean(entry.image_url);
+      const entryLayout = entry.layout || 'single'; // Padrão: somente texto
+      const layoutDual = entryLayout === 'dual';
+      const previewClass = layoutDual ? 'entry-preview dual' : 'entry-preview single';
+      
+      const imageWidth = entry.image_width || 280;
+      const imageBlock = layoutDual
+        ? `<div class="entry-image-preview" data-image-preview data-resizable-image style="width: ${imageWidth}px;">${hasImage ? `<img src="${entry.image_url}" alt="Imagem da atividade">` : '<span>Inclua uma imagem ilustrativa.</span>'}</div><div class="resize-divider" data-resize-divider></div>`
+        : '';
+      const extraImage = !layoutDual && hasImage
+        ? `<div class="entry-image-preview" data-image-preview><img src="${entry.image_url}" alt="Imagem da atividade"></div>`
+        : '';
+      return `
+        <form class="activity-entry-form" data-entry-form data-activity-id="${activity.id}" data-entry-id="${entry.id}" data-view-mode="true">
+          <div class="${previewClass}" data-resizable-container>
+            ${imageBlock}
+            <div class="entry-text">
+              <textarea name="text_content" placeholder="Detalhamento do passo" readonly>${escapeHtml(entry.text_content || '')}</textarea>
+            </div>
+          </div>
+          ${extraImage}
+          <div class="entry-controls">
+            <label data-upload-label style="display: none;">
+              <span>📤 Enviar imagem</span>
+              <input type="file" name="image" accept="image/*" hidden disabled />
+            </label>
+            <button type="button" data-action="remove-image" ${hasImage ? '' : 'disabled'} style="display: none;">🗑️ Remover imagem</button>
+            <label style="display: none;" data-layout-label>
+              <span>Layout:</span>
+              <select name="layout" disabled>
+                <option value="dual" ${entryLayout === 'dual' ? 'selected' : ''}>Texto + imagem</option>
+                <option value="single" ${entryLayout === 'single' ? 'selected' : ''}>Somente texto</option>
+              </select>
+            </label>
+            <button type="button" data-action="toggle-edit" data-edit-mode="false">✏️ Editar</button>
+            <button type="submit" style="display: none;">💾 Salvar</button>
+            <button type="button" data-action="delete-entry">🗑️ Excluir</button>
+          </div>
+          <input type="hidden" name="remove_image" value="" />
+          <input type="hidden" name="order_index" value="${entry.order_index || ''}" />
+          <input type="hidden" name="image_width" value="${entry.image_width || 280}" data-image-width-input />
+          <small data-view-hint>Clique em "Editar" para modificar esta etapa.</small>
+          <small data-edit-hint style="display: none;">Atualize o texto, imagem ou layout. Arraste o divisor para ajustar o tamanho.</small>
+        </form>
+      `;
+    };
+
+    const buildCreateEntryForm = (activity) => {
+      return `
+        <div class="add-entry-section" data-add-entry-section>
+          <button type="button" class="button-add-entry" data-action="show-create-form">➕ Adicionar Etapa</button>
+          <form class="activity-entry-form" data-mode="create" data-entry-create-form data-activity-id="${activity.id}" style="display: none;">
+            <div class="form-step-layout">
+              <label>
+                <span>Layout da etapa:</span>
+                <select name="layout" data-layout-selector>
+                  <option value="dual">Texto + imagem (lado a lado)</option>
+                  <option value="single">Somente texto</option>
+                </select>
+              </label>
+            </div>
+            <div class="entry-preview dual" data-resizable-container data-entry-preview-container>
+              <div class="entry-image-preview" data-image-preview data-resizable-image style="width: 280px;">
+                <span>Adicione uma imagem para ilustrar o passo.</span>
+              </div>
+              <div class="resize-divider" data-resize-divider></div>
+              <div class="entry-text">
+                <textarea name="text_content" placeholder="Descreva o passo da atividade" required></textarea>
+              </div>
+            </div>
+            <div class="entry-controls">
+              <label>
+                <span>📤 Adicionar imagem</span>
+                <input type="file" name="image" accept="image/*" hidden />
+              </label>
+              <button type="submit" class="button-primary">💾 Salvar Etapa</button>
+              <button type="button" data-action="cancel-create-form" class="button-secondary">❌ Cancelar</button>
+            </div>
+            <input type="hidden" name="image_width" value="280" data-image-width-input />
+            <small>Escolha o layout e preencha os dados da etapa. Arraste o divisor para ajustar o tamanho.</small>
+          </form>
+        </div>
+      `;
+    };
+
+    const buildActivityCard = (activity) => {
+      const card = document.createElement('div');
+      card.className = 'activity-card';
+      card.dataset.activityId = activity.id;
+      const entries = (activity.entries || []).map((entry) => buildEntryHtml(activity, entry)).join('');
+      card.innerHTML = `
+        <form class="activity-card-header activity-edit-form" data-activity-edit-form data-activity-id="${activity.id}" data-view-mode="true">
+          <div class="activity-card-meta">
+            <label>Código</label>
+            <div class="activity-code">${escapeHtml(activity.code || '')}</div>
+          </div>
+          <div class="activity-card-meta">
+            <label>Nome</label>
+            <input type="text" name="name" value="${escapeHtml(activity.name || '')}" required readonly />
+          </div>
+          <div class="activity-actions">
+            <button type="button" data-action="toggle-collapse" title="Recolher/Expandir">▼</button>
+            <button type="button" data-action="toggle-edit-activity" data-edit-mode="false">✏️ Editar</button>
+            <button type="submit" style="display: none;">💾 Salvar</button>
+            <button type="button" data-action="delete-activity">🗑️ Excluir</button>
+          </div>
+        </form>
+        <div class="activity-entries">
+          ${entries}
+          ${buildCreateEntryForm(activity)}
+        </div>
+      `;
+      return card;
+    };
+
+    // Funções para gerenciar estado de collapse das atividades
+    const getCollapseState = () => {
+      try {
+        // Usar a URL atual para identificar o processo de forma única
+        const processKey = window.location.pathname;
+        const saved = localStorage.getItem(`pop-collapse-state-${processKey}`);
+        return saved ? JSON.parse(saved) : {};
+      } catch {
+        return {};
+      }
+    };
+
+    const saveCollapseState = (activityId, isCollapsed) => {
+      try {
+        const processKey = window.location.pathname;
+        const state = getCollapseState();
+        state[activityId] = isCollapsed;
+        localStorage.setItem(`pop-collapse-state-${processKey}`, JSON.stringify(state));
+      } catch (error) {
+        console.error('Erro ao salvar estado de collapse:', error);
+      }
+    };
+
+    const toggleActivityCollapse = (activityId) => {
+      const card = popManager.querySelector(`[data-activity-id="${activityId}"]`);
+      if (!card) return;
+      
+      const isCollapsed = card.classList.toggle('collapsed');
+      const collapseBtn = card.querySelector('[data-action="toggle-collapse"]');
+      
+      if (collapseBtn) {
+        collapseBtn.textContent = isCollapsed ? '▶' : '▼';
+        collapseBtn.title = isCollapsed ? 'Expandir' : 'Recolher';
+      }
+      
+      saveCollapseState(activityId, isCollapsed);
+    };
+
+    const restoreCollapseStates = () => {
+      const collapseStates = getCollapseState();
+      Object.keys(collapseStates).forEach(activityId => {
+        if (collapseStates[activityId]) {
+          const card = popManager.querySelector(`[data-activity-id="${activityId}"]`);
+          if (card) {
+            card.classList.add('collapsed');
+            const collapseBtn = card.querySelector('[data-action="toggle-collapse"]');
+            if (collapseBtn) {
+              collapseBtn.textContent = '▶';
+              collapseBtn.title = 'Expandir';
+            }
+          }
+        }
+      });
+    };
+
+    const renderActivities = (activities) => {
+      state.activities = activities || [];
+      if (listEl) {
+        listEl.innerHTML = '';
+      }
+      if (!state.activities.length) {
+        if (emptyEl) {
+          emptyEl.hidden = false;
+        }
+        return;
+      }
+      if (emptyEl) {
+        emptyEl.hidden = true;
+      }
+      state.activities.forEach((activity) => {
+        const card = buildActivityCard(activity);
+        if (listEl) {
+          listEl.appendChild(card);
+        }
+      });
+      
+      // Restaurar estados de collapse
+      restoreCollapseStates();
+      
+      // Adicionar event listeners para inputs de imagem
+      attachImageInputListeners();
+      
+      // Aplicar larguras salvas às imagens
+      applyImageWidths();
+      
+      // Inicializar divisores de redimensionamento
+      initResizeDividers();
+    };
+
+    const applyImageWidths = () => {
+      const forms = popManager.querySelectorAll('[data-entry-form]');
+      forms.forEach(form => {
+        const widthInput = form.querySelector('[data-image-width-input]');
+        const imagePreview = form.querySelector('[data-resizable-image]');
+        
+        if (widthInput && imagePreview) {
+          const savedWidth = parseInt(widthInput.value) || 280;
+          imagePreview.style.width = `${savedWidth}px`;
+        }
+      });
+    };
+
+    const attachImageInputListeners = () => {
+      // Para formulários de criação de etapas
+      const createForms = popManager.querySelectorAll('[data-entry-create-form]');
+      createForms.forEach(form => {
+        const fileInput = form.querySelector('input[type="file"][name="image"]');
+        const imagePreview = form.querySelector('[data-image-preview]');
+        
+        if (fileInput && imagePreview) {
+          // Remove listener anterior se existir
+          const newFileInput = fileInput.cloneNode(true);
+          fileInput.parentNode.replaceChild(newFileInput, fileInput);
+          
+          newFileInput.addEventListener('change', function() {
+            const file = this.files && this.files[0];
+            if (file && imagePreview) {
+              // Mostrar preview
+              const reader = new FileReader();
+              reader.onload = (e) => {
+                imagePreview.innerHTML = `<img src="${e.target.result}" alt="Preview" style="max-width: 100%; max-height: 200px;">`;
+              };
+              reader.readAsDataURL(file);
+            }
+          });
+        }
+      });
+
+      // Para formulários de edição de etapas
+      const editForms = popManager.querySelectorAll('[data-entry-form]');
+      editForms.forEach(form => {
+        const fileInput = form.querySelector('input[type="file"][name="image"]');
+        const imagePreview = form.querySelector('[data-image-preview]');
+        const removeImageBtn = form.querySelector('[data-action="remove-image"]');
+        
+        if (fileInput && imagePreview) {
+          // Remove listener anterior se existir
+          const newFileInput = fileInput.cloneNode(true);
+          fileInput.parentNode.replaceChild(newFileInput, fileInput);
+          
+          newFileInput.addEventListener('change', function() {
+            const file = this.files && this.files[0];
+            if (file && imagePreview) {
+              // Mostrar preview
+              const reader = new FileReader();
+              reader.onload = (e) => {
+                imagePreview.innerHTML = `<img src="${e.target.result}" alt="Preview" style="max-width: 100%; max-height: 100%;">`;
+                if (removeImageBtn) {
+                  removeImageBtn.disabled = false;
+                }
+                const removeInput = form.querySelector('input[name="remove_image"]');
+                if (removeInput) {
+                  removeInput.value = '';
+                }
+              };
+              reader.readAsDataURL(file);
+            }
+          });
+        }
+      });
+    };
+
+    // Função para inicializar os divisores de redimensionamento
+    const initResizeDividers = () => {
+      const containers = popManager.querySelectorAll('[data-resizable-container]');
+      
+      containers.forEach(container => {
+        const divider = container.querySelector('[data-resize-divider]');
+        const resizableImage = container.querySelector('[data-resizable-image]');
+        const widthInput = container.closest('form')?.querySelector('[data-image-width-input]');
+        
+        if (!divider || !resizableImage) return;
+        
+        // Remove event listeners antigos
+        const newDivider = divider.cloneNode(true);
+        divider.parentNode.replaceChild(newDivider, divider);
+        
+        let isResizing = false;
+        let startX = 0;
+        let startWidth = 0;
+        
+        newDivider.addEventListener('mousedown', (e) => {
+          e.preventDefault();
+          isResizing = true;
+          startX = e.clientX;
+          startWidth = parseInt(window.getComputedStyle(resizableImage).width, 10);
+          
+          document.body.style.cursor = 'col-resize';
+          document.body.style.userSelect = 'none';
+        });
+        
+        document.addEventListener('mousemove', (e) => {
+          if (!isResizing) return;
+          
+          const diff = e.clientX - startX;
+          const newWidth = Math.max(150, Math.min(600, startWidth + diff));
+          
+          resizableImage.style.width = `${newWidth}px`;
+          
+          if (widthInput) {
+            widthInput.value = newWidth;
+          }
+        });
+        
+        document.addEventListener('mouseup', () => {
+          if (isResizing) {
+            isResizing = false;
+            document.body.style.cursor = '';
+            document.body.style.userSelect = '';
+          }
+        });
+      });
+    };
+
+    const fetchActivities = async () => {
+      if (!activitiesEndpoint) {
+        return;
+      }
+      try {
+        const response = await fetch(activitiesEndpoint);
+        const payload = await response.json();
+        if (!response.ok || !payload.success) {
+          throw new Error(payload.error || 'fetch_failed');
+        }
+        renderActivities(payload.data || []);
+      } catch (error) {
+        console.error('Erro ao carregar atividades', error);
+        setPopFeedback('Não foi possível carregar as atividades do POP.', 'error');
+      }
+    };
+
+    if (createForm) {
+      createForm.addEventListener('submit', async (event) => {
+        event.preventDefault();
+        if (!activitiesEndpoint) {
+          return;
+        }
+        const formData = new FormData(createForm);
+        const name = (formData.get('name') || '').trim();
+        const suffix = (formData.get('suffix') || '').trim();
+        if (!name) {
+          setPopFeedback('Informe o nome da atividade.', 'error');
+          return;
+        }
+        if (!suffix) {
+          setPopFeedback('Informe o número da atividade (2 dígitos).', 'error');
+          return;
+        }
+        if (!/^\d{2}$/.test(suffix)) {
+          setPopFeedback('O número da atividade deve ter exatamente 2 dígitos (ex: 01, 02, 10).', 'error');
+          return;
+        }
+        try {
+          const response = await fetch(activitiesEndpoint, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ name, suffix })
+          });
+          const payload = await response.json();
+          if (!response.ok || !payload.success) {
+            if (payload.error === 'duplicate_suffix') {
+              setPopFeedback('Já existe uma atividade com este número. Use outro número.', 'error');
+            } else {
+              throw new Error(payload.error || 'create_failed');
+            }
+            return;
+          }
+          createForm.reset();
+          const layoutSelect = createForm.querySelector('select[name="layout"]');
+          if (layoutSelect) {
+            layoutSelect.value = 'single';
+          }
+          setPopFeedback('Atividade adicionada ao POP.', 'info');
+          await fetchActivities();
+        } catch (error) {
+          console.error('Erro ao criar atividade', error);
+          setPopFeedback('Não foi possível criar a atividade.', 'error');
+        }
+      });
+    }
+
+    popManager.addEventListener('submit', async (event) => {
+      const form = event.target;
+      if (!(form instanceof HTMLFormElement)) {
+        return;
+      }
+      if (form.matches('[data-activity-edit-form]')) {
+        event.preventDefault();
+        const activityId = form.dataset.activityId;
+        if (!activityId) {
+          return;
+        }
+        const formData = new FormData(form);
+        const name = (formData.get('name') || '').trim();
+        if (!name) {
+          setPopFeedback('Informe o nome da atividade.', 'error');
+          return;
+        }
+        try {
+          const response = await fetch(formatActivityEndpoint(activityId), {
+            method: 'PUT',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ name })
+          });
+          const payload = await response.json();
+          if (!response.ok || !payload.success) {
+            throw new Error(payload.error || 'update_failed');
+          }
+          setPopFeedback('Atividade atualizada com sucesso.', 'info');
+          await fetchActivities();
+          // Após salvar, as atividades serão recarregadas e voltarão ao modo de visualização
+        } catch (error) {
+          console.error('Erro ao atualizar atividade', error);
+          setPopFeedback('Não foi possível atualizar a atividade.', 'error');
+        }
+        return;
+      }
+
+      if (form.matches('[data-entry-create-form]')) {
+        event.preventDefault();
+        const activityId = form.dataset.activityId;
+        if (!activityId) {
+          return;
+        }
+        const formData = new FormData(form);
+        
+        // Debug: mostrar conteúdo do FormData
+        console.log('FormData sendo enviado:');
+        for (let pair of formData.entries()) {
+          if (pair[1] instanceof File) {
+            console.log(`  ${pair[0]}: [File] ${pair[1].name} (${pair[1].size} bytes)`);
+          } else {
+            console.log(`  ${pair[0]}: ${pair[1]}`);
+          }
+        }
+        
+        try {
+          const response = await fetch(formatEntryCreateEndpoint(activityId), {
+            method: 'POST',
+            body: formData
+          });
+          const payload = await response.json();
+          if (!response.ok || !payload.success) {
+            console.error('Erro da API:', payload.error);
+            throw new Error(payload.error || 'create_failed');
+          }
+          form.reset();
+          form.style.display = 'none';
+          
+          // Limpar preview da imagem
+          const imagePreview = form.querySelector('[data-image-preview]');
+          if (imagePreview) {
+            imagePreview.innerHTML = '<span>Adicione uma imagem para ilustrar o passo.</span>';
+          }
+          
+          // Resetar largura
+          const widthInput = form.querySelector('[data-image-width-input]');
+          if (widthInput) {
+            widthInput.value = '280';
+          }
+          const imagePreviewEl = form.querySelector('[data-resizable-image]');
+          if (imagePreviewEl) {
+            imagePreviewEl.style.width = '280px';
+          }
+          
+          // Mostrar botão de adicionar novamente
+          const section = form.closest('[data-add-entry-section]');
+          if (section) {
+            const addButton = section.querySelector('[data-action="show-create-form"]');
+            if (addButton) {
+              addButton.style.display = '';
+            }
+          }
+          
+          setPopFeedback('✅ Etapa adicionada com sucesso!', 'info');
+          await fetchActivities();
+        } catch (error) {
+          console.error('Erro ao adicionar etapa:', error);
+          setPopFeedback(`Não foi possível adicionar a etapa. Erro: ${error.message}`, 'error');
+        }
+        return;
+      }
+
+      if (form.matches('[data-entry-form]')) {
+        event.preventDefault();
+        const activityId = form.dataset.activityId;
+        const entryId = form.dataset.entryId;
+        if (!activityId || !entryId) {
+          return;
+        }
+        const formData = new FormData(form);
+        try {
+          const response = await fetch(formatEntryDetailEndpoint(activityId, entryId), {
+            method: 'PUT',
+            body: formData
+          });
+          const payload = await response.json();
+          if (!response.ok || !payload.success) {
+            throw new Error(payload.error || 'update_failed');
+          }
+          const removeInput = form.querySelector('input[name="remove_image"]');
+          if (removeInput) {
+            removeInput.value = '';
+          }
+          setPopFeedback('Etapa atualizada com sucesso.', 'info');
+          await fetchActivities();
+          // Após salvar, as atividades serão recarregadas e voltarão ao modo de visualização
+        } catch (error) {
+          console.error('Erro ao atualizar etapa', error);
+          setPopFeedback('Não foi possível atualizar a etapa.', 'error');
+        }
+      }
+    });
+
+    // Event listener para mudança de layout (criar e editar)
+    popManager.addEventListener('change', (event) => {
+      const layoutSelector = event.target;
+      if (layoutSelector.name !== 'layout') return;
+      
+      // Buscar tanto formulário de criar quanto de editar
+      const form = layoutSelector.closest('[data-entry-create-form]') || layoutSelector.closest('[data-entry-form]');
+      if (!form) return;
+      
+      const layout = layoutSelector.value;
+      const previewContainer = form.querySelector('[data-resizable-container]');
+      const imagePreview = form.querySelector('[data-image-preview]');
+      const resizeDivider = form.querySelector('[data-resize-divider]');
+      
+      if (!previewContainer) return;
+      
+      if (layout === 'dual') {
+        // Layout lado a lado com redimensionamento
+        previewContainer.classList.add('dual');
+        previewContainer.classList.remove('single');
+        if (imagePreview) {
+          imagePreview.style.display = '';
+          // Se já tem largura definida, manter, senão usar 280px
+          const currentWidth = imagePreview.style.width;
+          if (!currentWidth || currentWidth === '0px') {
+            imagePreview.style.width = '280px';
+          }
+        }
+        if (resizeDivider) resizeDivider.style.display = '';
+        
+        // Reinicializar divisores para este formulário
+        setTimeout(() => {
+          initResizeDividers();
+        }, 100);
+      } else {
+        // Layout somente texto (sem imagem)
+        previewContainer.classList.remove('dual');
+        previewContainer.classList.add('single');
+        if (imagePreview) imagePreview.style.display = 'none';
+        if (resizeDivider) resizeDivider.style.display = 'none';
+      }
+    });
+
+    popManager.addEventListener('click', async (event) => {
+      const actionButton = event.target.closest('[data-action]');
+      if (!actionButton) {
+        return;
+      }
+      const action = actionButton.dataset.action;
+      
+      if (action === 'toggle-collapse') {
+        const card = actionButton.closest('[data-activity-id]');
+        if (card) {
+          const activityId = card.dataset.activityId;
+          toggleActivityCollapse(activityId);
+        }
+        return;
+      }
+      
+      if (action === 'show-create-form') {
+        const section = actionButton.closest('[data-add-entry-section]');
+        if (!section) return;
+        
+        const form = section.querySelector('[data-entry-create-form]');
+        const button = section.querySelector('[data-action="show-create-form"]');
+        
+        if (form && button) {
+          form.style.display = '';
+          button.style.display = 'none';
+          
+          // Inicializar o divisor de redimensionamento para este formulário
+          setTimeout(() => {
+            initResizeDividers();
+          }, 100);
+        }
+        return;
+      }
+      
+      if (action === 'cancel-create-form') {
+        const form = actionButton.closest('[data-entry-create-form]');
+        const section = actionButton.closest('[data-add-entry-section]');
+        if (!form || !section) return;
+        
+        const confirmCancel = confirm('Descartar dados não salvos?');
+        if (!confirmCancel) return;
+        
+        form.reset();
+        form.style.display = 'none';
+        
+        const imagePreview = form.querySelector('[data-image-preview]');
+        if (imagePreview) {
+          imagePreview.innerHTML = '<span>Adicione uma imagem para ilustrar o passo.</span>';
+        }
+        const widthInput = form.querySelector('[data-image-width-input]');
+        if (widthInput) {
+          widthInput.value = '280';
+        }
+        const imagePreviewEl = form.querySelector('[data-resizable-image]');
+        if (imagePreviewEl) {
+          imagePreviewEl.style.width = '280px';
+        }
+        
+        const button = section.querySelector('[data-action="show-create-form"]');
+        if (button) {
+          button.style.display = '';
+        }
+        return;
+      }
+      
+      if (action === 'toggle-edit-activity') {
+        const form = actionButton.closest('[data-activity-edit-form]');
+        if (!form) return;
+        
+        const isViewMode = form.dataset.viewMode === 'true';
+        const nameInput = form.querySelector('input[name="name"]');
+        const layoutSelect = form.querySelector('select[name="layout"]');
+        const saveBtn = form.querySelector('button[type="submit"]');
+        const editBtn = actionButton;
+        
+        if (isViewMode) {
+          // Ativar modo de edição
+          form.dataset.viewMode = 'false';
+          if (nameInput) {
+            nameInput.removeAttribute('readonly');
+            nameInput.focus();
+          }
+          if (layoutSelect) layoutSelect.removeAttribute('disabled');
+          if (saveBtn) saveBtn.style.display = '';
+          if (editBtn) {
+            editBtn.innerHTML = '❌ Cancelar';
+            editBtn.dataset.editMode = 'true';
+          }
+        } else {
+          // Cancelar edição - voltar ao modo de visualização (sem salvar)
+          const confirmCancel = confirm('Descartar alterações não salvas da atividade?');
+          if (!confirmCancel) return;
+          
+          form.dataset.viewMode = 'true';
+          if (nameInput) nameInput.setAttribute('readonly', 'readonly');
+          if (layoutSelect) layoutSelect.setAttribute('disabled', 'disabled');
+          if (saveBtn) saveBtn.style.display = 'none';
+          if (editBtn) {
+            editBtn.innerHTML = '✏️ Editar';
+            editBtn.dataset.editMode = 'false';
+          }
+          
+          // Recarregar para descartar alterações
+          fetchActivities();
+        }
+        return;
+      }
+      
+      if (action === 'toggle-edit') {
+        const form = actionButton.closest('[data-entry-form]');
+        if (!form) return;
+        
+        const isViewMode = form.dataset.viewMode === 'true';
+        const textarea = form.querySelector('textarea[name="text_content"]');
+        const fileInput = form.querySelector('input[type="file"]');
+        const uploadLabel = form.querySelector('[data-upload-label]');
+        const removeImageBtn = form.querySelector('[data-action="remove-image"]');
+        const layoutLabel = form.querySelector('[data-layout-label]');
+        const layoutSelect = form.querySelector('select[name="layout"]');
+        const saveBtn = form.querySelector('button[type="submit"]');
+        const editBtn = actionButton;
+        const viewHint = form.querySelector('[data-view-hint]');
+        const editHint = form.querySelector('[data-edit-hint]');
+        const hasImage = removeImageBtn && !removeImageBtn.disabled;
+        
+        if (isViewMode) {
+          // Ativar modo de edição
+          form.dataset.viewMode = 'false';
+          if (textarea) {
+            textarea.removeAttribute('readonly');
+            textarea.focus();
+          }
+          if (fileInput) fileInput.removeAttribute('disabled');
+          if (uploadLabel) uploadLabel.style.display = '';
+          if (removeImageBtn && hasImage) removeImageBtn.style.display = '';
+          if (layoutLabel) layoutLabel.style.display = '';
+          if (layoutSelect) layoutSelect.removeAttribute('disabled');
+          if (saveBtn) saveBtn.style.display = '';
+          if (editBtn) {
+            editBtn.innerHTML = '❌ Cancelar';
+            editBtn.dataset.editMode = 'true';
+            editBtn.style.background = '#ef4444';
+            editBtn.style.borderColor = 'transparent';
+          }
+          if (viewHint) viewHint.style.display = 'none';
+          if (editHint) editHint.style.display = '';
+          
+          // Garantir que o layout visual corresponde ao layout salvo
+          if (layoutSelect) {
+            const currentLayout = layoutSelect.value;
+            const previewContainer = form.querySelector('[data-resizable-container]');
+            const imagePreview = form.querySelector('[data-image-preview]');
+            const resizeDivider = form.querySelector('[data-resize-divider]');
+            
+            if (previewContainer) {
+              if (currentLayout === 'dual') {
+                previewContainer.classList.add('dual');
+                previewContainer.classList.remove('single');
+                if (imagePreview) imagePreview.style.display = '';
+                if (resizeDivider) resizeDivider.style.display = '';
+              } else {
+                previewContainer.classList.remove('dual');
+                previewContainer.classList.add('single');
+                if (imagePreview) imagePreview.style.display = 'none';
+                if (resizeDivider) resizeDivider.style.display = 'none';
+              }
+            }
+          }
+          
+          // Reinicializar divisores de redimensionamento
+          setTimeout(() => {
+            initResizeDividers();
+          }, 100);
+        } else {
+          // Cancelar edição - voltar ao modo de visualização (sem salvar)
+          const confirmCancel = confirm('Descartar alterações não salvas?');
+          if (!confirmCancel) return;
+          
+          form.dataset.viewMode = 'true';
+          if (textarea) textarea.setAttribute('readonly', 'readonly');
+          if (fileInput) fileInput.setAttribute('disabled', 'disabled');
+          if (uploadLabel) uploadLabel.style.display = 'none';
+          if (removeImageBtn) removeImageBtn.style.display = 'none';
+          if (layoutLabel) layoutLabel.style.display = 'none';
+          if (layoutSelect) layoutSelect.setAttribute('disabled', 'disabled');
+          if (saveBtn) saveBtn.style.display = 'none';
+          if (editBtn) {
+            editBtn.innerHTML = '✏️ Editar';
+            editBtn.dataset.editMode = 'false';
+            editBtn.style.background = '';
+            editBtn.style.borderColor = '';
+          }
+          if (viewHint) viewHint.style.display = '';
+          if (editHint) editHint.style.display = 'none';
+          
+          // Recarregar para descartar alterações
+          fetchActivities();
+        }
+        return;
+      }
+      
+      if (action === 'delete-activity') {
+        const card = actionButton.closest('[data-activity-id]');
+        const activityId = card && card.dataset.activityId;
+        if (!activityId) {
+          return;
+        }
+        const confirmed = window.confirm('Remover esta atividade e todas as etapas associadas?');
+        if (!confirmed) {
+          return;
+        }
+        try {
+          const response = await fetch(formatActivityEndpoint(activityId), { method: 'DELETE' });
+          const payload = await response.json();
+          if (!response.ok || !payload.success) {
+            throw new Error(payload.error || 'delete_failed');
+          }
+          setPopFeedback('Atividade removida.', 'info');
+          await fetchActivities();
+        } catch (error) {
+          console.error('Erro ao remover atividade', error);
+          setPopFeedback('Não foi possível remover a atividade.', 'error');
+        }
+        return;
+      }
+
+      if (action === 'delete-entry') {
+        const form = actionButton.closest('[data-entry-form]');
+        if (!form) {
+          return;
+        }
+        const activityId = form.dataset.activityId;
+        const entryId = form.dataset.entryId;
+        if (!activityId || !entryId) {
+          return;
+        }
+        const confirmed = window.confirm('Remover esta etapa do POP?');
+        if (!confirmed) {
+          return;
+        }
+        try {
+          const response = await fetch(formatEntryDetailEndpoint(activityId, entryId), { method: 'DELETE' });
+          const payload = await response.json();
+          if (!response.ok || !payload.success) {
+            throw new Error(payload.error || 'delete_failed');
+          }
+          setPopFeedback('Etapa removida.', 'info');
+          await fetchActivities();
+        } catch (error) {
+          console.error('Erro ao remover etapa', error);
+          setPopFeedback('Não foi possível remover a etapa.', 'error');
+        }
+        return;
+      }
+
+      if (action === 'remove-image') {
+        const form = actionButton.closest('[data-entry-form]');
+        if (!form) {
+          return;
+        }
+        const removeInput = form.querySelector('input[name="remove_image"]');
+        if (removeInput) {
+          removeInput.value = '1';
+        }
+        actionButton.disabled = true;
+        const preview = form.querySelector('[data-image-preview]');
+        if (preview) {
+          preview.innerHTML = '<span>Imagem será removida após salvar.</span>';
+        }
+      }
+    });
+
+    fetchActivities();
+  }
+
+  // Funcionalidade de redimensionamento com divisor arrastável
+  const initResizableDividers = () => {
+    document.addEventListener('mousedown', (e) => {
+      const divider = e.target.closest('[data-resize-divider]');
+      if (!divider) return;
+
+      e.preventDefault();
+      const container = divider.closest('[data-resizable-container]');
+      const imagePreview = container.querySelector('[data-resizable-image]');
+      const form = container.closest('form');
+      const widthInput = form ? form.querySelector('[data-image-width-input]') : null;
+      
+      if (!container || !imagePreview) return;
+
+      const containerRect = container.getBoundingClientRect();
+      const startX = e.clientX;
+      const startWidth = imagePreview.offsetWidth;
+
+      const minWidth = 180;
+      const maxWidth = containerRect.width - 200; // deixa pelo menos 200px para o texto
+
+      const onMouseMove = (e) => {
+        const deltaX = e.clientX - startX;
+        let newWidth = startWidth + deltaX;
+
+        // Limita a largura
+        newWidth = Math.max(minWidth, Math.min(newWidth, maxWidth));
+
+        imagePreview.style.width = `${newWidth}px`;
+        
+        // Atualiza o campo hidden com a nova largura
+        if (widthInput) {
+          widthInput.value = Math.round(newWidth);
+        }
+      };
+
+      const onMouseUp = () => {
+        document.removeEventListener('mousemove', onMouseMove);
+        document.removeEventListener('mouseup', onMouseUp);
+        document.body.style.userSelect = '';
+        document.body.style.cursor = '';
+        
+        // Log da largura final
+        if (widthInput) {
+          console.log('Nova largura da imagem:', widthInput.value + 'px');
+        }
+      };
+
+      document.body.style.userSelect = 'none';
+      document.body.style.cursor = 'col-resize';
+      document.addEventListener('mousemove', onMouseMove);
+      document.addEventListener('mouseup', onMouseUp);
+    });
+  };
+
+  // Inicializar após carregar as atividades
+  initResizableDividers();
+
+  // Report Modal Management
+  const reportModal = document.querySelector('[data-report-modal]');
+  const reportModalClose = document.querySelectorAll('[data-report-modal-close]');
+  const reportGenerateBtn = document.querySelector('[data-report-generate]');
+  const reportFeedback = document.querySelector('[data-report-feedback]');
+  const generateReportBtn = document.querySelector('[data-action="generate-report"]');
+
+  const openReportModal = () => {
+    if (reportModal) {
+      reportModal.dataset.open = 'true';
+    }
+  };
+
+  const closeReportModal = () => {
+    if (reportModal) {
+      reportModal.dataset.open = 'false';
+    }
+  };
+
+  if (generateReportBtn) {
+    generateReportBtn.addEventListener('click', openReportModal);
+  }
+
+  reportModalClose.forEach(btn => {
+    btn.addEventListener('click', closeReportModal);
+  });
+
+  if (reportModal) {
+    reportModal.addEventListener('click', (e) => {
+      if (e.target === reportModal) {
+        closeReportModal();
+      }
+    });
+  }
+
+  document.addEventListener('keydown', (e) => {
+    if (e.key === 'Escape' && reportModal && reportModal.dataset.open === 'true') {
+      closeReportModal();
+    }
+  });
+
+  // Aplicar padrão automaticamente quando selecionado
+  const patternSelector = document.getElementById('report-pattern-selector');
+  if (patternSelector) {
+    patternSelector.addEventListener('change', function() {
+      const patternId = this.value;
+      if (patternId) {
+        // Buscar configuração do padrão
+        const patterns = {{ report_patterns | tojson }};
+        const selectedPattern = patterns.find(p => p.id == patternId);
+        
+        if (selectedPattern) {
+          // Desmarcar todas as seções primeiro
+          const checkboxes = document.querySelectorAll('[name="sections"]');
+          checkboxes.forEach(cb => cb.checked = false);
+          
+          // Marcar seções do padrão
+          const sectionsConfig = JSON.parse(selectedPattern.sections_config);
+          sectionsConfig.sections.forEach(section => {
+            const checkbox = document.querySelector(`[name="sections"][value="${section.id}"]`);
+            if (checkbox) {
+              checkbox.checked = true;
+            }
+          });
+          
+          // Desabilitar checkboxes das seções obrigatórias
+          sectionsConfig.sections.forEach(section => {
+            if (section.required) {
+              const checkbox = document.querySelector(`[name="sections"][value="${section.id}"]`);
+              if (checkbox) {
+                checkbox.disabled = true;
+                checkbox.parentElement.style.opacity = '0.7';
+              }
+            }
+          });
+        }
+      } else {
+        // Reabilitar todos os checkboxes quando voltar para "Personalizado"
+        const checkboxes = document.querySelectorAll('[name="sections"]');
+        checkboxes.forEach(cb => {
+          cb.disabled = false;
+          cb.parentElement.style.opacity = '1';
+        });
+      }
+    });
+  }
+
+  if (reportGenerateBtn) {
+    reportGenerateBtn.addEventListener('click', async () => {
+      const checkboxes = document.querySelectorAll('[name="sections"]:checked');
+      const sections = Array.from(checkboxes).map(cb => cb.value);
+
+      if (sections.length === 0) {
+        if (reportFeedback) {
+          reportFeedback.textContent = 'Selecione pelo menos uma seção para o relatório.';
+          reportFeedback.className = 'report-feedback error show';
+          setTimeout(() => {
+            reportFeedback.className = 'report-feedback';
+          }, 3000);
+        }
+        return;
+      }
+
+      try {
+        if (reportFeedback) {
+          reportFeedback.textContent = 'Gerando relatório...';
+          reportFeedback.className = 'report-feedback success show';
+        }
+
+        const companyId = document.querySelector('[data-company-id]').dataset.companyId;
+        const processId = {{ process.id }};
+        
+        // Capturar o padrão selecionado
+        const patternSelector = document.getElementById('report-pattern-selector');
+        const patternId = patternSelector ? patternSelector.value : '';
+        
+        // Capturar o modelo selecionado
+        const modelSelector = document.getElementById('report-model-selector');
+        const modelId = modelSelector ? modelSelector.value : '';
+        
+        const params = new URLSearchParams();
+        sections.forEach(section => params.append('sections', section));
+        
+        // Adicionar pattern_id se foi selecionado
+        if (patternId) {
+          params.append('pattern', patternId);
+        }
+        
+        // Adicionar model_id se foi selecionado
+        if (modelId) {
+          params.append('model', modelId);
+        }
+
+        const url = `/api/companies/${companyId}/processes/${processId}/report?${params.toString()}`;
+        
+        // Abrir em nova aba
+        window.open(url, '_blank');
+
+        if (reportFeedback) {
+          reportFeedback.textContent = 'Relatório gerado com sucesso!';
+          reportFeedback.className = 'report-feedback success show';
+        }
+
+        setTimeout(() => {
+          closeReportModal();
+          if (reportFeedback) {
+            reportFeedback.className = 'report-feedback';
+          }
+        }, 1500);
+
+      } catch (error) {
+        console.error('Erro ao gerar relatório:', error);
+        if (reportFeedback) {
+          reportFeedback.textContent = 'Erro ao gerar relatório. Tente novamente.';
+          reportFeedback.className = 'report-feedback error show';
+        }
+      }
+    });
+  }
+
+  // Load routines when routine panel is shown
+  const routinePanel = document.querySelector('[data-detail-panel="routine"]');
+  if (routinePanel) {
+    const observer = new MutationObserver(function(mutations) {
+      mutations.forEach(function(mutation) {
+        if (mutation.type === 'attributes' && mutation.attributeName === 'class') {
+          if (routinePanel.classList.contains('active')) {
+            console.log('Aba de rotina ativada, carregando rotinas...');
+            loadProcessRoutines();
+          }
+        }
+      });
+    });
+    observer.observe(routinePanel, { attributes: true });
+    
+    // Se a aba já estiver ativa na carga da página, carregar imediatamente
+    if (routinePanel.classList.contains('active')) {
+      console.log('Aba de rotina já ativa, carregando rotinas...');
+      loadProcessRoutines();
+    }
+  }
+
+  // ============================================
+  // Quill Rich Text Editor for Notes
+  // ============================================
+  const notesPanel = document.querySelector('[data-detail-panel="notes"]');
+  if (notesPanel) {
+    let quillEditor = null;
+    let isLoadingNotes = false;
+    let isSavingNotes = false;
+
+    // Inicializar o editor quando a aba de notas for ativada
+    const initQuillEditor = () => {
+      if (quillEditor) return; // Já foi inicializado
+
+      const toolbarOptions = [
+        [{ 'header': [1, 2, 3, false] }],
+        ['bold', 'italic', 'underline', 'strike'],
+        [{ 'color': [] }, { 'background': [] }],
+        [{ 'list': 'ordered'}, { 'list': 'bullet' }],
+        [{ 'indent': '-1'}, { 'indent': '+1' }],
+        ['link', 'image', 'video'],
+        ['clean']
+      ];
+
+      quillEditor = new Quill('#notes-editor', {
+        modules: {
+          toolbar: '#notes-toolbar'
+        },
+        theme: 'snow',
+        placeholder: 'Digite suas observações aqui...'
+      });
+
+      // Carregar notas existentes
+      loadNotes();
+
+      // Configurar botão de salvar
+      const saveBtn = document.getElementById('save-notes-btn');
+      const statusDiv = document.getElementById('notes-save-status');
+
+      if (saveBtn) {
+        saveBtn.addEventListener('click', async () => {
+          if (isSavingNotes) return;
+
+          isSavingNotes = true;
+          saveBtn.disabled = true;
+          saveBtn.textContent = '💾 Salvando...';
+
+          try {
+            const content = quillEditor.root.innerHTML;
+            const processId = document.querySelector('[data-process-id]').dataset.processId;
+            const companyId = document.querySelector('[data-company-id]').dataset.companyId;
+
+            const response = await fetch(`/api/companies/${companyId}/processes/${processId}/notes`, {
+              method: 'PUT',
+              headers: {
+                'Content-Type': 'application/json'
+              },
+              body: JSON.stringify({ notes: content })
+            });
+
+            const result = await response.json();
+
+            if (result.success) {
+              statusDiv.textContent = '✅ Salvo com sucesso!';
+              statusDiv.style.display = 'block';
+              statusDiv.style.background = '#d1fae5';
+              statusDiv.style.color = '#065f46';
+              statusDiv.style.border = '1px solid #6ee7b7';
+            } else {
+              throw new Error(result.error || 'Erro ao salvar');
+            }
+          } catch (error) {
+            console.error('Erro ao salvar notas:', error);
+            statusDiv.textContent = '❌ Erro ao salvar. Tente novamente.';
+            statusDiv.style.display = 'block';
+            statusDiv.style.background = '#fee2e2';
+            statusDiv.style.color = '#991b1b';
+            statusDiv.style.border = '1px solid #fecaca';
+          } finally {
+            isSavingNotes = false;
+            saveBtn.disabled = false;
+            saveBtn.textContent = '💾 Salvar Observações';
+
+            setTimeout(() => {
+              statusDiv.style.display = 'none';
+            }, 3000);
+          }
+        });
+      }
+    };
+
+    // Carregar notas do servidor
+    const loadNotes = async () => {
+      if (isLoadingNotes || !quillEditor) return;
+
+      isLoadingNotes = true;
+
+      try {
+        const processId = document.querySelector('[data-process-id]').dataset.processId;
+        const companyId = document.querySelector('[data-company-id]').dataset.companyId;
+
+        const response = await fetch(`/api/companies/${companyId}/processes/${processId}/notes`);
+        const result = await response.json();
+
+        if (result.success && result.notes) {
+          quillEditor.root.innerHTML = result.notes;
+        }
+      } catch (error) {
+        console.error('Erro ao carregar notas:', error);
+      } finally {
+        isLoadingNotes = false;
+      }
+    };
+
+    // Observer para detectar quando a aba de notas é ativada
+    const notesObserver = new MutationObserver(function(mutations) {
+      mutations.forEach(function(mutation) {
+        if (mutation.type === 'attributes' && mutation.attributeName === 'class') {
+          if (notesPanel.classList.contains('active')) {
+            console.log('Aba de notas ativada, inicializando editor...');
+            initQuillEditor();
+          }
+        }
+      });
+    });
+    notesObserver.observe(notesPanel, { attributes: true });
+
+    // Se a aba já estiver ativa na carga da página, inicializar imediatamente
+    if (notesPanel.classList.contains('active')) {
+      console.log('Aba de notas já ativa, inicializando editor...');
+      initQuillEditor();
+    }
+  }
+
+});
+</script>
+{% endblock %}

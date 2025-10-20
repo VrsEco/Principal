@@ -1,0 +1,453 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Relatório do Processo - {{ process.name }}</title>
+  <link rel="icon" type="image/x-icon" href="{{ url_for('static', filename='favicon.ico') }}" />
+  <link rel="shortcut icon" type="image/x-icon" href="{{ url_for('static', filename='favicon.ico') }}" />
+  <style>
+    @page {
+      size: A4;
+      margin: 15mm 15mm 20mm 15mm;
+      
+      @top-right {
+        content: "Página " counter(page) " de " counter(pages);
+        font-size: 9pt;
+        color: #666;
+      }
+      
+      @bottom-center {
+        content: "Impresso em: {{ print_date }}";
+        font-size: 8pt;
+        color: #999;
+      }
+    }
+
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+
+    body {
+      font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+      font-size: 10pt;
+      line-height: 1.6;
+      color: #333;
+      background: #fff;
+    }
+
+    .report-header {
+      border-bottom: 3px solid #2563eb;
+      padding-bottom: 15px;
+      margin-bottom: 30px;
+    }
+
+    .report-header h1 {
+      font-size: 18pt;
+      color: #1e293b;
+      margin-bottom: 5px;
+    }
+
+    .report-header .process-code {
+      font-size: 14pt;
+      color: #2563eb;
+      font-weight: 600;
+      font-family: 'Courier New', monospace;
+    }
+
+    .report-header .metadata {
+      display: flex;
+      justify-content: space-between;
+      margin-top: 10px;
+      font-size: 9pt;
+      color: #666;
+    }
+
+    .section {
+      page-break-inside: avoid;
+      margin-bottom: 30px;
+    }
+
+    .section-title {
+      font-size: 14pt;
+      font-weight: 600;
+      color: #1e293b;
+      border-bottom: 2px solid #e2e8f0;
+      padding-bottom: 8px;
+      margin-bottom: 15px;
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+
+    .section-title .icon {
+      font-size: 18pt;
+    }
+
+    /* Flow Section */
+    .flow-diagram {
+      width: 100%;
+      max-width: 100%;
+      margin: 20px 0;
+      page-break-inside: avoid;
+    }
+
+    .flow-diagram img {
+      width: 100%;
+      height: auto;
+      border: 1px solid #e2e8f0;
+      border-radius: 8px;
+    }
+
+    .flow-pdf-container {
+      width: 100%;
+      margin: 20px 0;
+      page-break-inside: avoid;
+    }
+
+    .flow-pdf-container iframe {
+      display: block;
+      background: #fff;
+    }
+
+    .flow-placeholder {
+      padding: 40px;
+      text-align: center;
+      background: #f8fafc;
+      border: 2px dashed #cbd5e1;
+      border-radius: 8px;
+      color: #64748b;
+    }
+
+    @media print {
+      .flow-pdf-container iframe {
+        height: 1000px;
+        page-break-inside: avoid;
+      }
+    }
+
+    /* POP Section */
+    .activity {
+      margin-bottom: 25px;
+      page-break-inside: avoid;
+    }
+
+    .activity-header {
+      background: #f1f5f9;
+      padding: 12px 15px;
+      border-left: 4px solid #2563eb;
+      margin-bottom: 15px;
+    }
+
+    .activity-header .activity-code {
+      font-family: 'Courier New', monospace;
+      font-weight: 600;
+      color: #2563eb;
+      font-size: 11pt;
+    }
+
+    .activity-header .activity-name {
+      font-size: 12pt;
+      font-weight: 600;
+      color: #1e293b;
+      margin-top: 5px;
+    }
+
+    .activity-header .activity-layout {
+      font-size: 9pt;
+      color: #64748b;
+      margin-top: 5px;
+    }
+
+    .entry {
+      margin-bottom: 20px;
+      border: 1px solid #e2e8f0;
+      border-radius: 8px;
+      overflow: hidden;
+      page-break-inside: avoid;
+    }
+
+    .entry-number {
+      background: #2563eb;
+      color: #fff;
+      padding: 8px 12px;
+      font-weight: 600;
+      font-size: 10pt;
+    }
+
+    .entry-content {
+      padding: 15px;
+    }
+
+    .entry-content.dual {
+      display: grid;
+      grid-template-columns: 300px 1fr;
+      gap: 15px;
+      align-items: start;
+    }
+
+    .entry-image {
+      width: 100%;
+      border: 1px solid #e2e8f0;
+      border-radius: 6px;
+    }
+
+    .entry-text {
+      line-height: 1.7;
+      color: #334155;
+    }
+
+    .entry-content.single .entry-image {
+      max-width: 400px;
+      margin-bottom: 15px;
+    }
+
+    /* Indicators Section */
+    .indicators-table {
+      width: 100%;
+      border-collapse: collapse;
+      margin: 15px 0;
+    }
+
+    .indicators-table th {
+      background: #f1f5f9;
+      padding: 10px;
+      text-align: left;
+      font-size: 10pt;
+      font-weight: 600;
+      color: #1e293b;
+      border-bottom: 2px solid #cbd5e1;
+    }
+
+    .indicators-table td {
+      padding: 10px;
+      border-bottom: 1px solid #e2e8f0;
+      font-size: 9pt;
+    }
+
+    .indicators-table tr:last-child td {
+      border-bottom: none;
+    }
+
+    /* Routine Section */
+    .routine-item {
+      background: #f8fafc;
+      padding: 15px;
+      border-left: 4px solid #10b981;
+      margin-bottom: 15px;
+      border-radius: 4px;
+      page-break-inside: avoid;
+    }
+
+    .routine-item .title {
+      font-weight: 600;
+      font-size: 11pt;
+      color: #1e293b;
+      margin-bottom: 8px;
+    }
+
+    .routine-item .meta {
+      font-size: 9pt;
+      color: #64748b;
+      margin-bottom: 8px;
+    }
+
+    .routine-item .description {
+      font-size: 9pt;
+      line-height: 1.6;
+      color: #475569;
+    }
+
+    /* Page breaks */
+    .page-break {
+      page-break-after: always;
+    }
+
+    /* Utility */
+    .text-muted {
+      color: #64748b;
+    }
+
+    .text-small {
+      font-size: 9pt;
+    }
+
+    .mt-1 { margin-top: 10px; }
+    .mt-2 { margin-top: 20px; }
+    .mb-1 { margin-bottom: 10px; }
+    .mb-2 { margin-bottom: 20px; }
+  </style>
+</head>
+<body>
+  <!-- Header -->
+  <div class="report-header">
+    <div class="process-code">{{ process.code or 'SEM CÓDIGO' }}</div>
+    <h1>{{ process.name }}</h1>
+    <div class="metadata">
+      <span><strong>Processo:</strong> {{ process.code or 'N/A' }}</span>
+      <span><strong>Responsável:</strong> {{ process.responsible or 'Não definido' }}</span>
+      <span><strong>Gerado em:</strong> {{ print_date }}</span>
+    </div>
+  </div>
+
+  <!-- Flow Section -->
+  {% if 'flow' in sections %}
+  <div class="section">
+    <h2 class="section-title">
+      <span class="icon">🔄</span>
+      Fluxo do Processo
+    </h2>
+    
+    {% if process.flow_document %}
+    <div class="flow-diagram">
+      {% set flow_path = process.flow_document %}
+      {# Extrai apenas o nome do arquivo se tiver caminho completo #}
+      {% set filename = flow_path.replace('\\', '/').split('/')[-1] %}
+      {# Pega a extensão (tudo após o último ponto) #}
+      {% set flow_ext = filename.split('.')[-1].lower() if '.' in filename else '' %}
+      
+      {% if flow_ext in ['png', 'jpg', 'jpeg', 'svg', 'webp', 'gif'] %}
+      <img src="{{ request.url_root.rstrip('/') }}/uploads/{{ flow_path }}" alt="Fluxo do Processo" />
+      {% elif flow_ext == 'pdf' %}
+      <div class="flow-pdf-container">
+        <iframe src="{{ request.url_root.rstrip('/') }}/uploads/{{ flow_path }}#toolbar=0&navpanes=0&scrollbar=0&view=FitH" 
+                frameborder="0" 
+                style="width: 100%; height: 800px; border: 1px solid #e2e8f0; border-radius: 8px;">
+        </iframe>
+        <p class="text-small text-muted" style="margin-top: 10px; text-align: center;">
+          <strong>Arquivo:</strong> {{ filename }}
+        </p>
+      </div>
+      {% else %}
+      <div class="flow-placeholder">
+        <p><strong>Formato não identificado</strong></p>
+        <p class="text-small">Arquivo: {{ filename }}</p>
+        <p class="text-small">Extensão detectada: "{{ flow_ext }}"</p>
+        <p class="text-small">Use imagens (PNG, JPG, SVG) para melhor visualização no relatório.</p>
+      </div>
+      {% endif %}
+    </div>
+    {% else %}
+    <div class="flow-placeholder">
+      <p><strong>Fluxo não disponível</strong></p>
+      <p class="text-small">Nenhum diagrama de fluxo foi importado para este processo.</p>
+    </div>
+    {% endif %}
+  </div>
+  {% endif %}
+
+  <!-- POP Section -->
+  {% if 'pop' in sections %}
+  <div class="section page-break">
+    <h2 class="section-title">
+      <span class="icon">📋</span>
+      POP - Procedimento Operacional Padrão
+    </h2>
+
+    {% if activities and activities|length > 0 %}
+      {% for activity in activities %}
+      <div class="activity">
+        <div class="activity-header">
+          <div class="activity-code">{{ activity.code or 'SEM CÓDIGO' }}</div>
+          <div class="activity-name">{{ activity.name }}</div>
+          <div class="activity-layout">Layout: {{ 'Texto + Imagem' if activity.layout == 'dual' else 'Somente Texto' }}</div>
+        </div>
+
+        {% if activity.entries and activity.entries|length > 0 %}
+          {% for entry in activity.entries %}
+          <div class="entry">
+            <div class="entry-number">Passo {{ loop.index }}</div>
+            <div class="entry-content {{ 'dual' if activity.layout == 'dual' else 'single' }}">
+              {% if entry.image_url %}
+              <div>
+                <img src="{{ request.url_root.rstrip('/') }}{{ entry.image_url }}" alt="Imagem do passo {{ loop.index }}" class="entry-image" />
+              </div>
+              {% endif %}
+              <div class="entry-text">
+                {{ entry.text_content or 'Sem descrição' }}
+              </div>
+            </div>
+          </div>
+          {% endfor %}
+        {% else %}
+        <p class="text-muted text-small">Nenhuma etapa cadastrada para esta atividade.</p>
+        {% endif %}
+      </div>
+      {% endfor %}
+    {% else %}
+    <p class="text-muted">Nenhuma atividade cadastrada no POP.</p>
+    {% endif %}
+  </div>
+  {% endif %}
+
+  <!-- Indicators Section -->
+  {% if 'indicators' in sections %}
+  <div class="section page-break">
+    <h2 class="section-title">
+      <span class="icon">📊</span>
+      Indicadores do Processo
+    </h2>
+
+    <table class="indicators-table">
+      <thead>
+        <tr>
+          <th>Indicador</th>
+          <th>Meta</th>
+          <th>Responsável</th>
+          <th>Periodicidade</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td>SLA de atendimento</td>
+          <td>95% em até 24h</td>
+          <td>{{ process.responsible or 'Equipe' }}</td>
+          <td>Semanal</td>
+        </tr>
+        <tr>
+          <td>Taxa de retrabalho</td>
+          <td>&lt; 3%</td>
+          <td>Qualidade</td>
+          <td>Mensal</td>
+        </tr>
+        <tr>
+          <td colspan="4" class="text-muted text-small" style="text-align: center; padding: 20px;">
+            <em>Seção em desenvolvimento - Indicadores serão personalizados conforme necessidade do processo</em>
+          </td>
+        </tr>
+      </tbody>
+    </table>
+  </div>
+  {% endif %}
+
+  <!-- Routine Section -->
+  {% if 'routine' in sections %}
+  <div class="section">
+    <h2 class="section-title">
+      <span class="icon">📅</span>
+      Rotina de Acompanhamento
+    </h2>
+
+    <div class="routine-item">
+      <div class="title">Reunião de status</div>
+      <div class="meta">Periodicidade: Quinzenal • Dono: {{ process.responsible or 'Process Owner' }}</div>
+      <div class="description">Alinhar indicadores, riscos e próximos passos com a equipe.</div>
+    </div>
+
+    <div class="routine-item">
+      <div class="title">Auditoria de conformidade</div>
+      <div class="meta">Periodicidade: Trimestral • Dono: Compliance</div>
+      <div class="description">Verificar aderência aos POPs e oportunidades de melhoria.</div>
+    </div>
+
+    <p class="text-muted text-small mt-2">
+      <em>Seção em desenvolvimento - Rotinas serão personalizadas conforme necessidade do processo</em>
+    </p>
+  </div>
+  {% endif %}
+
+</body>
+</html>
+

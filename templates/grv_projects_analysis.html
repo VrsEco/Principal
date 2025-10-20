@@ -1,0 +1,936 @@
+{% extends "base.html" %}
+{% block title %}GRV | Análise de Projetos{% endblock %}
+{% block body %}{% set active_nav = 'project-analysis' %}{{ super() }}{% endblock %}
+
+{% block extra_head %}
+{{ super() }}
+<style>
+  .analysis-header-card {
+    background: linear-gradient(135deg, #1e40af 0%, #7c3aed 50%, #dc2626 100%);
+    color: white;
+    border-radius: 16px;
+    padding: 24px 28px;
+    margin-bottom: 24px;
+    box-shadow: 0 20px 40px rgba(30, 64, 175, 0.3);
+    border: 2px solid rgba(255, 255, 255, 0.1);
+  }
+
+  .analysis-header-card h1 {
+    margin: 0 0 8px 0;
+    font-size: 24px;
+    font-weight: 700;
+  }
+
+  .analysis-header-meta {
+    display: flex;
+    gap: 20px;
+    flex-wrap: wrap;
+    margin-top: 12px;
+    font-size: 13px;
+    opacity: 0.95;
+  }
+
+  .analysis-header-meta span {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+  }
+
+  /* Filtro Colapsável */
+  .filter-section {
+    background: #ffffff;
+    border: 1px solid #e5e7eb;
+    border-radius: 16px;
+    margin-bottom: 24px;
+    overflow: hidden;
+    transition: all 0.3s ease;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.06);
+  }
+
+  .filter-header {
+    padding: 16px 20px;
+    background: #f9fafb;
+    border-bottom: 1px solid #e5e7eb;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    cursor: pointer;
+    transition: background 0.2s ease;
+  }
+
+  .filter-header:hover {
+    background: #f3f4f6;
+  }
+
+  .filter-header.active {
+    background: #e5e7eb;
+  }
+
+  .filter-title {
+    font-size: 16px;
+    font-weight: 600;
+    color: #000000 !important;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+
+  .filter-title span {
+    color: #000000 !important;
+  }
+
+  .filter-toggle {
+    font-size: 14px;
+    color: #374151;
+    font-weight: 600;
+    transition: transform 0.3s ease;
+  }
+
+  .filter-header.active .filter-toggle {
+    transform: rotate(180deg);
+    color: #111827;
+  }
+
+  .filter-content {
+    padding: 20px;
+    display: none;
+    background: #ffffff;
+  }
+
+  .filter-content.open {
+    display: block;
+  }
+
+  .filter-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+    gap: 16px;
+    margin-bottom: 20px;
+  }
+
+  .filter-field {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+  }
+
+  .filter-field label {
+    font-size: 12px;
+    font-weight: 600;
+    color: #0f172a;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+  }
+
+  .filter-field input,
+  .filter-field select {
+    border: 1px solid #d1d5db;
+    border-radius: 8px;
+    padding: 10px 12px;
+    font-size: 14px;
+    color: #0f172a;
+    background: #ffffff;
+    transition: border-color 0.2s ease, box-shadow 0.2s ease;
+  }
+
+  .filter-field input::placeholder {
+    color: #6b7280;
+  }
+
+  .filter-field select option {
+    color: #0f172a;
+    background: #ffffff;
+  }
+
+  .filter-field input:focus,
+  .filter-field select:focus {
+    outline: none;
+    border-color: #3b82f6;
+    box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
+  }
+
+  .filter-actions {
+    display: flex;
+    gap: 12px;
+    justify-content: flex-end;
+    padding-top: 16px;
+    border-top: 1px solid #e5e7eb;
+  }
+
+  .btn-filter {
+    padding: 10px 20px;
+    border-radius: 8px;
+    border: none;
+    font-size: 14px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.2s ease;
+  }
+
+  .btn-filter.secondary {
+    background: #f3f4f6;
+    color: #374151;
+    border: 1px solid #d1d5db;
+  }
+
+  .btn-filter.secondary:hover {
+    background: #e5e7eb;
+    color: #111827;
+  }
+
+  .btn-filter.primary {
+    background: #3b82f6;
+    color: #ffffff;
+    border: 1px solid #2563eb;
+  }
+
+  .btn-filter.primary:hover {
+    background: #2563eb;
+  }
+
+  /* Kanban Board - Igual ao template de gerenciamento */
+  .kanban-board-wrapper {
+    overflow-x: auto;
+    padding-bottom: 16px;
+  }
+
+  .kanban-board {
+    display: grid;
+    gap: 14px;
+    align-items: start;
+    grid-auto-flow: column;
+    grid-auto-columns: minmax(260px, 280px);
+  }
+
+  .kanban-column {
+    background: #f8fafc;
+    border-radius: 16px;
+    border: 1px solid rgba(15, 23, 42, 0.12);
+    display: flex;
+    flex-direction: column;
+    min-height: 280px;
+    transition: border-color 0.2s ease, box-shadow 0.2s ease;
+  }
+
+  /* Cores específicas para cada coluna do Kanban */
+  .kanban-column[data-stage="inbox"] {
+    background: linear-gradient(135deg, #f1f5f9 0%, #e2e8f0 100%);
+    border-color: #94a3b8;
+  }
+
+  .kanban-column[data-stage="waiting"] {
+    background: linear-gradient(135deg, #fef3c7 0%, #fde68a 100%);
+    border-color: #fbbf24;
+  }
+
+  .kanban-column[data-stage="executing"] {
+    background: linear-gradient(135deg, #dbeafe 0%, #bfdbfe 100%);
+    border-color: #3b82f6;
+  }
+
+  .kanban-column[data-stage="pending"] {
+    background: linear-gradient(135deg, #fed7aa 0%, #fdba74 100%);
+    border-color: #f59e0b;
+  }
+
+  .kanban-column[data-stage="suspended"] {
+    background: linear-gradient(135deg, #fecaca 0%, #fca5a5 100%);
+    border-color: #ef4444;
+  }
+
+  .kanban-column[data-stage="completed"] {
+    background: linear-gradient(135deg, #d1fae5 0%, #a7f3d0 100%);
+    border-color: #10b981;
+  }
+
+  .kanban-column[data-dropping="true"] {
+    border-color: #2563eb;
+    box-shadow: 0 0 0 2px rgba(37, 99, 235, 0.18);
+  }
+
+  .kanban-column-header {
+    padding: 16px;
+    border-bottom: 1px solid rgba(15, 23, 42, 0.08);
+    display: flex;
+    justify-content: space-between;
+    gap: 12px;
+  }
+
+  .kanban-column-title {
+    font-size: 14px;
+    font-weight: 600;
+    color: #0f172a;
+    text-transform: uppercase;
+    letter-spacing: .04em;
+  }
+
+  .kanban-column-count {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    padding: 4px 10px;
+    border-radius: 999px;
+    font-size: 12px;
+    font-weight: 600;
+    color: #1e293b;
+    background: rgba(255, 255, 255, 0.8);
+    min-width: 36px;
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+    border: 1px solid rgba(0, 0, 0, 0.05);
+  }
+
+  .kanban-column-body {
+    flex: 1;
+    padding: 14px;
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+  }
+
+  .kanban-empty-placeholder {
+    padding: 20px 16px;
+    border: 1px dashed rgba(15, 23, 42, 0.18);
+    border-radius: 12px;
+    font-size: 12px;
+    color: #1e293b;
+    text-align: center;
+    background: rgba(248, 250, 252, 0.6);
+  }
+
+  .kanban-card {
+    background: #ffffff;
+    border-radius: 12px;
+    border: 1px solid rgba(15, 23, 42, 0.08);
+    padding: 14px 16px;
+    box-shadow: 0 6px 16px rgba(15, 23, 42, 0.06);
+    cursor: grab;
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+    transition: box-shadow 0.2s ease, transform 0.2s ease, border-color 0.2s ease;
+    position: relative;
+    overflow: hidden;
+  }
+
+  /* Cores específicas para cards baseadas no estágio */
+  .kanban-card[data-stage="inbox"] {
+    background: linear-gradient(135deg, #ffffff 0%, #f8fafc 100%);
+    border-left: 4px solid #94a3b8;
+  }
+
+  .kanban-card[data-stage="waiting"] {
+    background: linear-gradient(135deg, #ffffff 0%, #fefce8 100%);
+    border-left: 4px solid #fbbf24;
+  }
+
+  .kanban-card[data-stage="executing"] {
+    background: linear-gradient(135deg, #ffffff 0%, #eff6ff 100%);
+    border-left: 4px solid #3b82f6;
+  }
+
+  .kanban-card[data-stage="pending"] {
+    background: linear-gradient(135deg, #ffffff 0%, #fffbeb 100%);
+    border-left: 4px solid #f59e0b;
+  }
+
+  .kanban-card[data-stage="suspended"] {
+    background: linear-gradient(135deg, #ffffff 0%, #fef2f2 100%);
+    border-left: 4px solid #ef4444;
+  }
+
+  .kanban-card[data-stage="completed"] {
+    background: linear-gradient(135deg, #ffffff 0%, #f0fdf4 100%);
+    border-left: 4px solid #10b981;
+  }
+
+  .kanban-card:hover {
+    box-shadow: 0 12px 28px rgba(15, 23, 42, 0.12);
+    border-color: rgba(37, 99, 235, 0.35);
+  }
+
+  .kanban-card.dragging {
+    opacity: 0.75;
+    transform: scale(0.98);
+    box-shadow: 0 14px 32px rgba(15, 23, 42, 0.18);
+    cursor: grabbing;
+  }
+
+  .kanban-card-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 10px;
+  }
+
+  .kanban-card-code {
+    font-size: 11px;
+    font-weight: 600;
+    color: #2563eb;
+    letter-spacing: .06em;
+    text-transform: uppercase;
+  }
+
+  .kanban-card-project {
+    font-size: 10px;
+    font-weight: 600;
+    color: #8b5cf6;
+    background: rgba(139, 92, 246, 0.1);
+    padding: 2px 6px;
+    border-radius: 4px;
+    text-transform: uppercase;
+    letter-spacing: .05em;
+  }
+
+  .kanban-card-title {
+    font-size: 14px;
+    font-weight: 600;
+    color: #0f172a;
+    line-height: 1.4;
+  }
+
+  .kanban-card-meta {
+    font-size: 12px;
+    color: #1e293b;
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+  }
+
+  /* Botão de Voltar */
+  .btn-back {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    padding: 10px 18px;
+    background: rgba(148, 163, 184, 0.16);
+    color: #1e293b;
+    border: none;
+    border-radius: 12px;
+    font-size: 13px;
+    font-weight: 600;
+    cursor: pointer;
+    text-decoration: none;
+    margin-bottom: 20px;
+    transition: all 0.2s ease;
+  }
+
+  .btn-back:hover {
+    background: rgba(148, 163, 184, 0.25);
+    transform: translateY(-1px);
+  }
+
+  .no-activities {
+    text-align: center;
+    padding: 40px 20px;
+    color: #6b7280;
+  }
+
+  .no-activities-icon {
+    font-size: 48px;
+    margin-bottom: 16px;
+    opacity: 0.5;
+  }
+
+  .no-activities h3 {
+    margin: 0 0 8px 0;
+    font-size: 18px;
+    color: #374151;
+  }
+
+  .no-activities p {
+    margin: 0;
+    font-size: 14px;
+  }
+
+  /* Responsividade */
+  @media (max-width: 768px) {
+    .filter-grid {
+      grid-template-columns: 1fr;
+    }
+    
+    .analysis-header-meta {
+      flex-direction: column;
+      gap: 8px;
+    }
+  }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="project-layout plan-layout" data-sidebar-toggle>
+  {% include 'projects_sidebar.html' %}
+
+  <section class="project-content plan-content">
+    <div class="analysis-header-card">
+      <h1>Análise de Projetos</h1>
+      <p style="margin:0;font-size:14px;opacity:0.9;">Visão consolidada de todas as atividades de todos os projetos</p>
+      <div class="analysis-header-meta">
+        <span><strong>Empresa:</strong> {{ company.name or company.legal_name }}</span>
+        <span><strong>Total de Projetos:</strong> {{ projects|length }}</span>
+        <span><strong>Total de Atividades:</strong> <span id="totalActivities">0</span></span>
+        <span><strong>Última Atualização:</strong> <span id="currentDateTime"></span></span>
+      </div>
+    </div>
+
+    <div class="surface-card" style="padding:24px;">
+      <a href="{{ url_for('grv.grv_projects_projects', company_id=company.id) }}" class="btn-back">← Voltar para Projetos</a>
+
+      <!-- Filtro Colapsável -->
+      <div class="filter-section">
+        <div class="filter-header" id="filterHeader">
+          <div class="filter-title">
+            <span>🔍</span>
+            <span>Filtros de Atividades</span>
+          </div>
+          <span class="filter-toggle" id="filterToggle">▼</span>
+        </div>
+        <div class="filter-content" id="filterContent">
+          <div class="filter-grid">
+            <div class="filter-field">
+              <label for="filterSearch">Buscar Atividade</label>
+              <input type="text" id="filterSearch" placeholder="Descrição da atividade...">
+            </div>
+            <div class="filter-field">
+              <label for="filterProject">Projeto</label>
+              <select id="filterProject">
+                <option value="">Todos os projetos</option>
+                {% for project in projects %}
+                <option value="{{ project.id }}">{{ project.title }} ({{ project.code }})</option>
+                {% endfor %}
+              </select>
+            </div>
+            <div class="filter-field">
+              <label for="filterPortfolio">Portfólio</label>
+              <select id="filterPortfolio">
+                <option value="">Todos os portfólios</option>
+                {% set unique_portfolios = [] %}
+                {% for project in projects %}
+                  {% if project.plan_name and project.plan_name not in unique_portfolios %}
+                    {% set _ = unique_portfolios.append(project.plan_name) %}
+                    <option value="{{ project.plan_name }}">{{ project.plan_name }}</option>
+                  {% endif %}
+                {% endfor %}
+              </select>
+            </div>
+            <div class="filter-field">
+              <label for="filterResponsible">Responsável</label>
+              <select id="filterResponsible">
+                <option value="">Todos os responsáveis</option>
+                {% set unique_responsibles = [] %}
+                {% for project in projects %}
+                  {% if project.responsible_name and project.responsible_name not in unique_responsibles %}
+                    {% set _ = unique_responsibles.append(project.responsible_name) %}
+                    <option value="{{ project.responsible_name }}">{{ project.responsible_name }}</option>
+                  {% endif %}
+                {% endfor %}
+              </select>
+            </div>
+            <div class="filter-field">
+              <label for="filterStatus">Status</label>
+              <select id="filterStatus">
+                <option value="">Todos os status</option>
+                <option value="inbox">Caixa de Entrada</option>
+                <option value="waiting">Aguardando</option>
+                <option value="executing">Executando</option>
+                <option value="pending">Pendências</option>
+                <option value="suspended">Suspensos</option>
+                <option value="completed">Concluídos</option>
+              </select>
+            </div>
+            <div class="filter-field">
+              <label for="filterDeadline">Prazo</label>
+              <select id="filterDeadline">
+                <option value="">Todos os prazos</option>
+                <option value="overdue">Atrasados</option>
+                <option value="today">Hoje</option>
+                <option value="this_week">Esta semana</option>
+                <option value="next_week">Próxima semana</option>
+                <option value="no_deadline">Sem prazo</option>
+              </select>
+            </div>
+          </div>
+          <div class="filter-actions">
+            <button type="button" class="btn-filter secondary" id="clearFilters">Limpar Filtros</button>
+            <button type="button" class="btn-filter primary" id="applyFilters">Aplicar Filtros</button>
+          </div>
+        </div>
+      </div>
+
+      <!-- Kanban Board -->
+      <div class="kanban-board-wrapper" id="kanbanBoard" data-company-id="{{ company.id }}">
+        <div class="kanban-board">
+          {% for stage in stages %}
+          <div class="kanban-column" data-kanban-column data-stage="{{ stage.slug }}">
+            <div class="kanban-column-header">
+              <div>
+                <div class="kanban-column-title" style="color:{{ stage.color }};">{{ stage.title }}</div>
+              </div>
+              <span class="kanban-column-count" data-column-count>0</span>
+            </div>
+            <div class="kanban-column-body" data-dropzone>
+              <div class="kanban-empty-placeholder" data-empty-placeholder>
+                Nenhuma atividade neste estágio.
+              </div>
+            </div>
+          </div>
+          {% endfor %}
+        </div>
+      </div>
+
+      <!-- Mensagem quando não há atividades -->
+      <div class="no-activities" id="noActivitiesMessage" style="display: none;">
+        <div class="no-activities-icon">📋</div>
+        <h3>Nenhuma Atividade Encontrada</h3>
+        <p>Não há atividades cadastradas nos projetos ou que correspondam aos filtros aplicados.</p>
+      </div>
+    </div>
+  </section>
+</div>
+{% endblock %}
+
+{% block scripts %}
+{{ super() }}
+<script>
+(function() {
+  const companyId = {{ company.id }};
+  const projects = {{ projects | tojson }};
+  
+  // Definir estágios do Kanban
+  const stages = [
+    {'slug': 'inbox', 'title': 'Caixa de Entrada', 'color': '#94a3b8'},
+    {'slug': 'waiting', 'title': 'Aguardando', 'color': '#fbbf24'},
+    {'slug': 'executing', 'title': 'Executando', 'color': '#3b82f6'},
+    {'slug': 'pending', 'title': 'Pendências', 'color': '#f59e0b'},
+    {'slug': 'suspended', 'title': 'Suspensos', 'color': '#ef4444'},
+    {'slug': 'completed', 'title': 'Concluídos', 'color': '#10b981'}
+  ];
+
+  // Atualizar data e hora
+  function updateDateTime() {
+    const now = new Date();
+    const dateTimeElement = document.getElementById('currentDateTime');
+    if (dateTimeElement) {
+      dateTimeElement.textContent = now.toLocaleString('pt-BR', {
+        day: '2-digit',
+        month: '2-digit',
+        year: 'numeric',
+        hour: '2-digit',
+        minute: '2-digit'
+      });
+    }
+  }
+
+  // Atualizar imediatamente e a cada minuto
+  updateDateTime();
+  setInterval(updateDateTime, 60000);
+
+  // Elementos do DOM
+  const kanbanBoard = document.getElementById('kanbanBoard');
+  const filterHeader = document.getElementById('filterHeader');
+  const filterContent = document.getElementById('filterContent');
+  const filterToggle = document.getElementById('filterToggle');
+  const clearFiltersBtn = document.getElementById('clearFilters');
+  const applyFiltersBtn = document.getElementById('applyFilters');
+  const noActivitiesMessage = document.getElementById('noActivitiesMessage');
+  const totalActivitiesElement = document.getElementById('totalActivities');
+
+  // Elementos do filtro
+  const filterElements = {
+    search: document.getElementById('filterSearch'),
+    project: document.getElementById('filterProject'),
+    portfolio: document.getElementById('filterPortfolio'),
+    responsible: document.getElementById('filterResponsible'),
+    status: document.getElementById('filterStatus'),
+    deadline: document.getElementById('filterDeadline')
+  };
+
+  let allActivities = [];
+  let filteredActivities = [];
+
+  // Toggle do filtro
+  filterHeader.addEventListener('click', () => {
+    const isOpen = filterContent.classList.contains('open');
+    
+    if (isOpen) {
+      filterContent.classList.remove('open');
+      filterHeader.classList.remove('active');
+      filterToggle.textContent = '▼';
+    } else {
+      filterContent.classList.add('open');
+      filterHeader.classList.add('active');
+      filterToggle.textContent = '▲';
+    }
+  });
+
+  // Carregar todas as atividades dos projetos
+  function loadAllActivities() {
+    allActivities = [];
+    
+    projects.forEach(project => {
+      if (project.activities && Array.isArray(project.activities)) {
+        project.activities.forEach(activity => {
+          // Garantir que a atividade tenha um estágio
+          if (!activity.stage) {
+            activity.stage = 'inbox';
+          }
+          
+          allActivities.push({
+            ...activity,
+            project_id: project.id,
+            project_title: project.title,
+            project_code: project.code,
+            project_portfolio: project.plan_name,
+            project_responsible: project.responsible_name
+          });
+        });
+      }
+    });
+
+    if (totalActivitiesElement) {
+      totalActivitiesElement.textContent = allActivities.length;
+    }
+    filteredActivities = [...allActivities];
+    renderKanban();
+  }
+
+  // Renderizar Kanban
+  function renderKanban() {
+    if (!kanbanBoard) {
+      console.error('Kanban board element not found');
+      return;
+    }
+
+    // Limpar todas as colunas
+    stages.forEach(stage => {
+      const column = kanbanBoard.querySelector(`[data-stage="${stage.slug}"]`);
+      if (!column) return;
+
+      const dropzone = column.querySelector('[data-dropzone]');
+      if (!dropzone) return;
+
+      // Remover cards existentes
+      dropzone.querySelectorAll('[data-activity-card]').forEach(card => card.remove());
+    });
+
+    // Agrupar atividades por estágio
+    const activityGroups = {};
+    stages.forEach(stage => {
+      activityGroups[stage.slug] = filteredActivities.filter(a => a.stage === stage.slug);
+    });
+
+    // Renderizar cada coluna
+    stages.forEach(stage => {
+      const column = kanbanBoard.querySelector(`[data-stage="${stage.slug}"]`);
+      if (!column) return;
+
+      const dropzone = column.querySelector('[data-dropzone]');
+      if (!dropzone) return;
+
+      // Adicionar atividades
+      const stageActivities = activityGroups[stage.slug] || [];
+      stageActivities.forEach(activity => {
+        const card = createActivityCard(activity);
+        dropzone.appendChild(card);
+      });
+
+      updateColumnState(column);
+    });
+
+    // Mostrar/ocultar mensagem de "nenhuma atividade"
+    const totalFiltered = filteredActivities.length;
+    if (noActivitiesMessage && kanbanBoard) {
+      if (totalFiltered === 0 && allActivities.length > 0) {
+        noActivitiesMessage.style.display = 'block';
+        kanbanBoard.style.display = 'none';
+      } else {
+        noActivitiesMessage.style.display = 'none';
+        kanbanBoard.style.display = 'block';
+      }
+    }
+  }
+
+  // Criar card de atividade
+  function createActivityCard(activity) {
+    const card = document.createElement('article');
+    card.className = 'kanban-card';
+    card.dataset.activityCard = '';
+    card.dataset.activityId = activity.id;
+    card.dataset.stage = activity.stage;
+
+    const deadline = activity.when ? new Date(activity.when).toLocaleDateString('pt-BR') : '-';
+    const budget = activity.amount ? `R$ ${parseFloat(activity.amount).toLocaleString('pt-BR', {minimumFractionDigits: 2})}` : '-';
+
+    card.innerHTML = `
+      <div class="kanban-card-header">
+        <span class="kanban-card-code">${activity.code || '-'}</span>
+        <span class="kanban-card-project">${activity.project_code || 'N/A'}</span>
+      </div>
+      <div class="kanban-card-title">${activity.what || 'Sem descrição'}</div>
+      <div class="kanban-card-meta">
+        <span><strong>Projeto:</strong> ${activity.project_title || 'Sem projeto'}</span>
+        ${activity.who ? `<span><strong>Responsável:</strong> ${activity.who}</span>` : ''}
+        <span><strong>Prazo:</strong> ${deadline}</span>
+        ${activity.amount ? `<span><strong>Orçamento:</strong> ${budget}</span>` : ''}
+      </div>
+    `;
+
+    return card;
+  }
+
+  // Atualizar estado da coluna
+  function updateColumnState(column) {
+    const dropzone = column.querySelector('[data-dropzone]');
+    const cards = dropzone ? dropzone.querySelectorAll('[data-activity-card]') : [];
+    const countEl = column.querySelector('[data-column-count]');
+    const placeholder = dropzone ? dropzone.querySelector('[data-empty-placeholder]') : null;
+    
+    if (countEl) {
+      countEl.textContent = cards.length;
+    }
+    if (placeholder) {
+      placeholder.hidden = cards.length > 0;
+    }
+  }
+
+  // Aplicar filtros
+  function applyFilters() {
+    const filters = {
+      search: filterElements.search.value.toLowerCase().trim(),
+      project: filterElements.project.value,
+      portfolio: filterElements.portfolio.value,
+      responsible: filterElements.responsible.value,
+      status: filterElements.status.value,
+      deadline: filterElements.deadline.value
+    };
+
+    filteredActivities = allActivities.filter(activity => {
+      // Filtro de busca
+      if (filters.search) {
+        const searchText = activity.what ? activity.what.toLowerCase() : '';
+        if (!searchText.includes(filters.search)) {
+          return false;
+        }
+      }
+
+      // Filtro de projeto
+      if (filters.project && activity.project_id != filters.project) {
+        return false;
+      }
+
+      // Filtro de portfólio
+      if (filters.portfolio && activity.project_portfolio !== filters.portfolio) {
+        return false;
+      }
+
+      // Filtro de responsável
+      if (filters.responsible && activity.who !== filters.responsible) {
+        return false;
+      }
+
+      // Filtro de status
+      if (filters.status && activity.stage !== filters.status) {
+        return false;
+      }
+
+      // Filtro de prazo
+      if (filters.deadline) {
+        const deadline = activity.when ? new Date(activity.when) : null;
+        const today = new Date();
+        today.setHours(0, 0, 0, 0);
+
+        if (filters.deadline === 'overdue' && (!deadline || deadline >= today)) {
+          return false;
+        }
+        if (filters.deadline === 'today' && (!deadline || !isSameDay(deadline, today))) {
+          return false;
+        }
+        if (filters.deadline === 'this_week' && (!deadline || !isThisWeek(deadline))) {
+          return false;
+        }
+        if (filters.deadline === 'next_week' && (!deadline || !isNextWeek(deadline))) {
+          return false;
+        }
+        if (filters.deadline === 'no_deadline' && deadline) {
+          return false;
+        }
+      }
+
+      return true;
+    });
+
+    renderKanban();
+  }
+
+  // Funções auxiliares para filtros de data
+  function isSameDay(date1, date2) {
+    return date1.getFullYear() === date2.getFullYear() &&
+           date1.getMonth() === date2.getMonth() &&
+           date1.getDate() === date2.getDate();
+  }
+
+  function isThisWeek(date) {
+    const today = new Date();
+    const startOfWeek = new Date(today);
+    startOfWeek.setDate(today.getDate() - today.getDay());
+    startOfWeek.setHours(0, 0, 0, 0);
+    
+    const endOfWeek = new Date(startOfWeek);
+    endOfWeek.setDate(startOfWeek.getDate() + 6);
+    endOfWeek.setHours(23, 59, 59, 999);
+    
+    return date >= startOfWeek && date <= endOfWeek;
+  }
+
+  function isNextWeek(date) {
+    const today = new Date();
+    const nextWeekStart = new Date(today);
+    nextWeekStart.setDate(today.getDate() + (7 - today.getDay()));
+    nextWeekStart.setHours(0, 0, 0, 0);
+    
+    const nextWeekEnd = new Date(nextWeekStart);
+    nextWeekEnd.setDate(nextWeekStart.getDate() + 6);
+    nextWeekEnd.setHours(23, 59, 59, 999);
+    
+    return date >= nextWeekStart && date <= nextWeekEnd;
+  }
+
+  // Limpar filtros
+  function clearFilters() {
+    Object.values(filterElements).forEach(element => {
+      element.value = '';
+    });
+
+    filteredActivities = [...allActivities];
+    renderKanban();
+  }
+
+  // Event listeners
+  applyFiltersBtn.addEventListener('click', applyFilters);
+  clearFiltersBtn.addEventListener('click', clearFilters);
+
+  // Aplicar filtros em tempo real para busca
+  filterElements.search.addEventListener('input', applyFilters);
+
+  // Aplicar filtros quando Enter for pressionado
+  Object.values(filterElements).forEach(element => {
+    element.addEventListener('keypress', (e) => {
+      if (e.key === 'Enter') {
+        applyFilters();
+      }
+    });
+  });
+
+  // Inicializar quando o DOM estiver pronto
+  function init() {
+    console.log('Initializing Projects Analysis...');
+    loadAllActivities();
+  }
+
+  if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', init);
+  } else {
+    init();
+  }
+})();
+</script>
+{% endblock %}

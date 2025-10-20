@@ -1,0 +1,21 @@
+{
+  "id": "company_analysis",
+  "name": "Análise da Organização (Teste)",
+  "description": "Gera análise priorizada da organização com base em dados internos.",
+  "version": "1.0",
+  "status": "active",
+  "page": "company",
+  "section": "analyses",
+  "button_text": "Gerar análise de IA da organização",
+  "required_data": "trade_name, cnpj, cnaes, financials, financial_total_revenue, financial_total_margin",
+  "optional_data": "mission, vision, values, coverage_physical, coverage_online, experience_total, experience_segment",
+  "prompt_template": "Como consultor estratégico, analise os dados da organização a seguir e produza insights práticos e priorizados.\n\nDados da Empresa:\n- Nome: {trade_name}\n- CNPJ: {cnpj}\n- Segmento: {segment}\n- Localização: {city}/{state}\n- Cobertura: Física={coverage_physical}, Online={coverage_online}\n- Experiência: Total={experience_total}, No Segmento={experience_segment}\n- Missão: {mission}\n- Visão: {vision}\n- Valores: {values}\n\nDados Financeiros (consolidados):\n- Receita Total: {financial_total_revenue}\n- Margem Média: {financial_total_margin}\n\nOrientações:\n1) Traga 3 a 5 oportunidades priorizadas (curto prazo e estruturantes).\n2) Evidencie riscos e alavancas.\n3) Conecte com direcionadores estratégicos disponíveis quando possível.\n4) Formate em tópicos objetivos e mensuráveis.",
+  "format_type": "markdown",
+  "output_field": "ai_insights",
+  "response_template": "# ANÁLISE DA ORGANIZAÇÃO — {trade_name}\n\n## Oportunidades Priorizadas\n- [Prioridade Alta] ...\n- [Prioridade Média] ...\n\n## Riscos e Mitigações\n- Risco: ... | Mitigação: ...\n\n## Recomendações de Próximos Passos\n- ...\n\n_Base de dados: organização, finanças consolidadas._",
+  "timeout": 120,
+  "max_retries": 2,
+  "execution_mode": "sequential",
+  "cache_enabled": "true",
+  "integration_ids": ["webhook"]
+}

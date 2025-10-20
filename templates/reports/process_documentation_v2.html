@@ -1,0 +1,757 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>POP - {{ process.code or 'PROCESSO' }} - {{ process.name }}</title>
+  <link rel="icon" type="image/x-icon" href="{{ url_for('static', filename='favicon.ico') }}" />
+  <link rel="shortcut icon" type="image/x-icon" href="{{ url_for('static', filename='favicon.ico') }}" />
+  <style>
+    {% if report_model %}
+    @page {
+      size: {{ report_model.paper_size }};
+      {% if report_model.orientation == 'Paisagem' %}
+      size: {{ report_model.paper_size }} landscape;
+      {% endif %}
+      margin: {{ report_model.margins.top }}mm {{ report_model.margins.right }}mm {{ report_model.margins.bottom }}mm {{ report_model.margins.left }}mm;
+    }
+    {% else %}
+    @page {
+      size: A4;
+      margin: 30mm 15mm 15mm 15mm;
+    }
+    {% endif %}
+
+    @page {
+      @top-center {
+        content: element(report-header);
+      }
+    }
+
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+
+    body {
+      font-family: Arial, Helvetica, sans-serif;
+      font-size: 10pt;
+      line-height: 1.6;
+      color: #333;
+      background: #fff;
+      padding-bottom: 20mm; /* Reserve space for footer in the on-screen view */
+    }
+
+    /* Header */
+    .report-header {
+      position: running(report-header);
+      border-bottom: 2px solid #333;
+      padding: 6mm 0 4mm 0;
+      margin: 0;
+      background: #fff;
+      box-sizing: border-box;
+      display: flex;
+      flex-direction: column;
+      justify-content: center;
+      {% if report_model %}
+      height: {{ report_model.header.height }}mm;
+      {% else %}
+      height: 30mm;
+      {% endif %}
+    }
+
+    .report-content {
+      margin-top: 0;
+    }
+
+    .header-title {
+      font-size: 10pt;
+      font-weight: bold;
+      color: #333;
+      margin-bottom: 6px;
+      text-align: center;
+    }
+
+    .header-grid {
+      display: grid;
+      grid-template-columns: 75px 1fr 1fr;
+      gap: 12px;
+      align-items: start;
+    }
+
+    .header-logo {
+      text-align: center;
+      border: 1px solid #ccc;
+      padding: 6px;
+      height: 55px;
+      display: flex;
+      align-items: flex-end;
+      justify-content: center;
+      font-size: 7pt;
+      color: #999;
+    }
+
+    .header-column {
+      display: flex;
+      flex-direction: column;
+      gap: 2px;
+      font-size: 8pt;
+    }
+
+    .header-column .main-info {
+      font-weight: 600;
+      color: #000;
+      font-size: 8.5pt;
+      margin-bottom: 1px;
+    }
+
+    .header-column .info-line {
+      display: flex;
+      gap: 4px;
+      line-height: 1.3;
+    }
+
+    .header-column .info-line strong {
+      font-weight: 600;
+      min-width: 45px;
+    }
+
+    .header-column .info-line span {
+      color: #555;
+    }
+
+    .report-footer {
+      margin-top: 40px;
+      height: 10mm;
+      border-top: 1px solid #d1d5db;
+      font-size: 8.5pt;
+      color: #666;
+      background: #fff;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+
+    .report-footer .footer-line {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      flex-wrap: wrap;
+      gap: 12px;
+      width: 100%;
+    }
+
+    .report-footer strong {
+      color: #333;
+    }
+
+    @media print {
+      body {
+        margin: 0;
+        padding-bottom: 0;
+        padding-top: 0;
+      }
+
+      .report-footer {
+        position: fixed;
+        bottom: 0;
+        left: 0;
+        right: 0;
+        padding-left: 15mm;
+        padding-right: 15mm;
+        margin-top: 0;
+        height: 10mm;
+      }
+
+      .report-content {
+        padding-bottom: 12mm; /* avoid overlap with footer when printing */
+      }
+    }
+
+
+
+    /* Section Title */
+    .section-title {
+      font-size: 10pt;
+      font-weight: 600;
+      color: #444;
+      margin: 15px 0 12px 0;
+      padding-bottom: 5px;
+      border-bottom: 1px solid #ccc;
+      page-break-after: avoid;
+      page-break-inside: avoid;
+    }
+
+    .section-title:first-of-type {
+      margin-top: 0;
+    }
+
+    /* Flow Container */
+    .flow-container {
+      margin: 10px 0 15px 0;
+      page-break-inside: avoid;
+    }
+
+    .flow-content {
+      padding: 10px;
+      background: #fafafa;
+      border: 1px solid #ddd;
+      border-radius: 3px;
+      text-align: center;
+    }
+
+    .flow-content img {
+      max-width: 100%;
+      height: auto;
+      border: 1px solid #ccc;
+    }
+
+    .flow-content iframe {
+      width: 100%;
+      height: 500px;
+      border: 1px solid #ccc;
+      display: block;
+    }
+
+    /* Activity Block */
+    .activity-block {
+      margin-bottom: 22px;
+      border: 1px solid #d5d5d5;
+      border-radius: 2px;
+      overflow: hidden;
+      box-shadow: 0 1px 2px rgba(0,0,0,0.04);
+    }
+
+    .activity-block:first-of-type {
+      margin-top: 0;
+    }
+
+    .activity-block:last-of-type {
+      margin-bottom: 15px;
+    }
+
+    .activity-header {
+      background: #f5f5f5;
+      padding: 7px 15px;
+      border-left: 3px solid #666;
+      border-bottom: 1px solid #ddd;
+    }
+
+    .activity-code {
+      font-size: 8.5pt;
+      font-weight: 600;
+      color: #666;
+      font-family: 'Courier New', monospace;
+    }
+
+    .activity-name {
+      font-size: 10pt;
+      font-weight: 600;
+      color: #000;
+      margin-top: 2px;
+    }
+
+    /* Step */
+    .step {
+      padding: 10px 15px;
+      background: #fafafa;
+      border-bottom: 1px solid #e5e5e5;
+      page-break-inside: avoid;
+      break-inside: avoid;
+    }
+
+    .step:last-of-type {
+      border-bottom: none;
+    }
+
+    .step-header {
+      font-weight: 600;
+      font-size: 8.5pt;
+      color: #777;
+      margin-bottom: 8px;
+      padding-bottom: 4px;
+      border-bottom: 1px solid #e5e5e5;
+    }
+
+    .step-content {
+      display: grid;
+      gap: 12px;
+      align-items: start;
+    }
+    
+    /* Layout dual: lado a lado com largura customizada */
+    .step-content[style*="grid-template-columns"] {
+      display: grid;
+      gap: 12px;
+      align-items: start;
+    }
+
+    .step-content.no-image {
+      grid-template-columns: 1fr;
+    }
+
+    .step-image {
+      background: #fff;
+      padding: 6px;
+      border: 1px solid #e0e0e0;
+      border-radius: 2px;
+      text-align: center;
+      height: fit-content;
+    }
+
+    .step-image img {
+      max-width: 100%;
+      height: auto;
+      max-height: 300px;
+      object-fit: contain;
+      display: block;
+      width: 100%;
+    }
+
+    .step-text {
+      font-size: 9pt;
+      line-height: 1.65;
+      color: #333;
+      text-align: justify;
+      min-width: 0; /* Permite que o texto se ajuste ao espaço disponível */
+    }
+
+    /* Garantir que o layout dual funcione bem na impressão */
+    @media print {
+      .step-content[style*="grid-template-columns"] {
+        display: grid !important;
+        gap: 12px;
+        align-items: start;
+      }
+      
+      .step-image {
+        break-inside: avoid;
+      }
+      
+      .step-text {
+        break-inside: avoid;
+      }
+    }
+
+    /* Indicators Table */
+    .indicators-table {
+      width: 100%;
+      border-collapse: collapse;
+      margin: 15px 0;
+      font-size: 9pt;
+    }
+
+    .indicators-table th,
+    .indicators-table td {
+      border: 1px solid #ddd;
+      padding: 8px 10px;
+      text-align: left;
+    }
+
+    .indicators-table th {
+      background: #f0f0f0;
+      font-weight: 600;
+      color: #333;
+    }
+
+    /* Routine Items */
+    .routine-item {
+      background: #fafafa;
+      border-left: 3px solid #888;
+      padding: 12px 15px;
+      margin-bottom: 12px;
+    }
+
+    .routine-item .title {
+      font-weight: 600;
+      font-size: 10pt;
+      color: #333;
+      margin-bottom: 5px;
+    }
+
+    .routine-item .meta {
+      font-size: 8.5pt;
+      color: #666;
+      margin-bottom: 8px;
+    }
+
+    .routine-item .description {
+      font-size: 9pt;
+      line-height: 1.6;
+      color: #555;
+    }
+
+
+    /* Evitar quebra de página no meio das etapas */
+    @media print {
+      .step {
+        page-break-inside: avoid !important;
+        break-inside: avoid !important;
+        orphans: 3;
+        widows: 3;
+      }
+      
+      /* Permitir quebra antes de nova atividade se necessário */
+      .activity-block {
+        page-break-inside: auto;
+        break-inside: auto;
+      }
+      
+      /* Evitar quebra no meio do conteúdo da etapa */
+      .step-content {
+        page-break-inside: avoid;
+        break-inside: avoid;
+      }
+    }
+
+    /* Routine Schedules */
+    .routine-schedules {
+      margin: 15px 0;
+    }
+
+    .routine-schedule-item {
+      background: #fafafa;
+      border: 1px solid #e5e5e5;
+      border-radius: 6px;
+      padding: 12px;
+      margin-bottom: 10px;
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 16px;
+    }
+
+    .routine-schedule-item:last-child {
+      margin-bottom: 0;
+    }
+
+    .schedule-trigger, .schedule-deadline {
+      font-size: 8.5pt;
+    }
+
+    .schedule-trigger strong {
+      color: #2563eb;
+      font-weight: 600;
+    }
+
+    .schedule-deadline strong {
+      color: #059669;
+      font-weight: 600;
+    }
+
+    .routine-empty {
+      text-align: center;
+      padding: 20px;
+      color: #999;
+      font-style: italic;
+      background: #f9f9f9;
+      border: 1px dashed #ddd;
+      border-radius: 4px;
+    }
+
+    /* Utilities */
+    .text-muted {
+      color: #999;
+    }
+
+    /* Print adjustments */
+    @media print {
+      body {
+        print-color-adjust: exact;
+        -webkit-print-color-adjust: exact;
+      }
+      
+      .flow-content iframe {
+        height: 500px;
+      }
+    }
+  </style>
+</head>
+<body data-process-code="{{ process.code or '' }}" data-process-name="{{ process.name or '' }}">
+  <!-- Header -->
+  <div class="report-header">
+    <div class="header-title">Book do Processo: {{ process.code or '' }}{% if process.code %} - {% endif %}{{ process.name }}</div>
+    <div class="header-grid">
+      <div class="header-logo">
+        LOGO
+      </div>
+      <div class="header-column">
+        <div class="info-line">
+          <strong>Versão:</strong>
+          <span>1.0</span>
+        </div>
+        <div class="info-line">
+          <strong>Gerado em:</strong>
+          <span>{{ print_date }}</span>
+        </div>
+        <div class="info-line" style="margin-top: 8px;">
+          <strong>Página:</strong>
+          <span id="header-pagination">01 de 01</span>
+        </div>
+      </div>
+      <div class="header-column">
+        <div class="info-line" style="margin-bottom: 3px;">
+          <strong>Empresa:</strong>
+          <span>{{ company.name if company else 'N/A' }}</span>
+        </div>
+        <div class="info-line">
+          <strong>Macroprocesso:</strong>
+          <span>{{ macro.code if macro else 'N/A' }}{% if macro and macro.name %} - {{ macro.name }}{% endif %}</span>
+        </div>
+        <div class="info-line">
+          <strong>Dono do Processo:</strong>
+          <span>{{ macro.owner if macro and macro.owner else 'Não definido' }}</span>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <main class="report-content">
+  <!-- Flow Section -->
+  {% if 'flow' in sections and process.flow_document %}
+  <h2 class="section-title">Fluxo do Processo</h2>
+  <div class="flow-container">
+    <div class="flow-content">
+      {% set flow_path = process.flow_document %}
+      {% set filename = flow_path.replace('\\', '/').split('/')[-1] %}
+      {% set flow_ext = filename.split('.')[-1].lower() if '.' in filename else '' %}
+      
+      {% if flow_ext in ['png', 'jpg', 'jpeg', 'svg', 'webp', 'gif'] %}
+      <img src="{{ request.url_root.rstrip('/') }}/uploads/{{ flow_path }}" alt="Fluxo do Processo" />
+      {% elif flow_ext == 'pdf' %}
+      <iframe src="{{ request.url_root.rstrip('/') }}/uploads/{{ flow_path }}#toolbar=0&navpanes=0&scrollbar=0&view=FitH"></iframe>
+      {% endif %}
+    </div>
+  </div>
+  {% endif %}
+
+  <!-- POP Activities -->
+  {% if 'pop' in sections %}
+  <h2 class="section-title" style="margin-top: 10px;">Atividades e Procedimentos</h2>
+
+  {% if activities and activities|length > 0 %}
+    {% for activity in activities %}
+    <div class="activity-block">
+      <div class="activity-header">
+        <div class="activity-code">{{ activity.code or 'SEM CÓDIGO' }}</div>
+        <div class="activity-name">{{ activity.name }}</div>
+      </div>
+
+      {% if activity.entries and activity.entries|length > 0 %}
+        {% for entry in activity.entries %}
+        <div class="step">
+          <div class="step-header">Passo {{ loop.index }}</div>
+          {% if entry.image_url and entry.layout == 'dual' %}
+          {% set img_width = entry.image_width or 280 %}
+          <div class="step-content" style="grid-template-columns: {{ img_width }}px 1fr;">
+            <div class="step-image">
+              <img src="{{ entry.image_url }}" alt="Passo {{ loop.index }}" onerror="console.error('Erro ao carregar imagem:', this.src); this.parentElement.innerHTML='<p style=\'color:#999;font-size:8pt;\'>Imagem não disponível</p>';" />
+            </div>
+            <div class="step-text">
+              {{ entry.text_content or 'Sem descrição' }}
+            </div>
+          </div>
+          {% else %}
+          <div class="step-content no-image">
+            {% if entry.image_url %}
+            <div class="step-image" style="max-width: 400px; margin: 0 auto 10px;">
+              <img src="{{ entry.image_url }}" alt="Passo {{ loop.index }}" onerror="console.error('Erro ao carregar imagem:', this.src); this.parentElement.innerHTML='<p style=\'color:#999;font-size:8pt;\'>Imagem não disponível<br>URL: {{ entry.image_url }}</p>';" />
+            </div>
+            {% endif %}
+            <div class="step-text">
+              {{ entry.text_content or 'Sem descrição' }}
+            </div>
+          </div>
+          {% endif %}
+        </div>
+        {% endfor %}
+      {% endif %}
+    </div>
+    {% endfor %}
+  {% else %}
+  <p class="text-muted" style="text-align: center; padding: 20px;">Nenhuma atividade cadastrada no POP.</p>
+  {% endif %}
+  {% endif %}
+
+  <!-- Indicators Section -->
+  {% if 'indicators' in sections %}
+  <h2 class="section-title">Indicadores do Processo</h2>
+  
+  <table class="indicators-table">
+    <thead>
+      <tr>
+        <th style="width: 30%;">Indicador</th>
+        <th style="width: 20%;">Meta</th>
+        <th style="width: 25%;">Responsável</th>
+        <th style="width: 25%;">Periodicidade</th>
+      </tr>
+    </thead>
+    <tbody>
+      <tr>
+        <td>SLA de atendimento</td>
+        <td>95% em até 24h</td>
+        <td>{{ macro.owner if macro and macro.owner else 'Equipe' }}</td>
+        <td>Semanal</td>
+      </tr>
+      <tr>
+        <td>Taxa de retrabalho</td>
+        <td>&lt; 3%</td>
+        <td>Qualidade</td>
+        <td>Mensal</td>
+      </tr>
+    </tbody>
+  </table>
+  {% endif %}
+
+  <!-- Routine Section -->
+  {% if 'routine' in sections %}
+  <h2 class="section-title">📅 Rotinas e Colaboradores</h2>
+
+  {% if routines_with_collaborators %}
+  <div class="routine-schedules">
+    {% for routine in routines_with_collaborators %}
+    <div class="routine-schedule-item" style="page-break-inside: avoid; margin-bottom: 20px; border: 1px solid #ddd; padding: 15px; border-radius: 8px;">
+      <div style="margin-bottom: 12px; padding-bottom: 8px; border-bottom: 2px solid #e5e7eb;">
+        <h3 style="font-size: 12pt; font-weight: bold; color: #1e3a8a; margin-bottom: 4px;">{{ routine.name }}</h3>
+        {% if routine.description %}
+        <p style="font-size: 9pt; color: #666; margin-top: 4px;">{{ routine.description }}</p>
+        {% endif %}
+      </div>
+      
+      <div style="display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 12px; margin-bottom: 12px; font-size: 9pt;">
+        <div>
+          <strong style="color: #4b5563;">Agendamento:</strong><br>
+          <span style="color: #1e40af;">
+            {% if routine.schedule_type == 'daily' %}Diário
+            {% elif routine.schedule_type == 'weekly' %}Semanal
+            {% elif routine.schedule_type == 'monthly' %}Mensal
+            {% elif routine.schedule_type == 'quarterly' %}Trimestral
+            {% elif routine.schedule_type == 'yearly' %}Anual
+            {% elif routine.schedule_type == 'specific' %}Data Específica
+            {% else %}{{ routine.schedule_type }}
+            {% endif %}
+          </span>
+          {% if routine.schedule_value %}
+          <br><span style="color: #6b7280; font-size: 8pt;">{{ routine.schedule_value }}</span>
+          {% endif %}
+        </div>
+        
+        <div>
+          <strong style="color: #4b5563;">Prazo:</strong><br>
+          {% if routine.deadline_days or routine.deadline_hours %}
+            <span style="color: #92400e;">
+              {% if routine.deadline_days %}{{ routine.deadline_days }} dias{% endif %}
+              {% if routine.deadline_days and routine.deadline_hours %} + {% endif %}
+              {% if routine.deadline_hours %}{{ routine.deadline_hours }}h{% endif %}
+            </span>
+          {% else %}
+            <span style="color: #9ca3af;">Não definido</span>
+          {% endif %}
+        </div>
+        
+        <div>
+          <strong style="color: #4b5563;">Total de Horas:</strong><br>
+          <span style="color: #1e40af; font-weight: bold;">{{ routine.total_hours or 0 }}h</span>
+        </div>
+      </div>
+      
+      {% if routine.collaborators %}
+      <div style="margin-top: 12px; padding-top: 12px; border-top: 1px solid #e5e7eb;">
+        <strong style="font-size: 10pt; color: #374151; display: block; margin-bottom: 8px;">👥 Colaboradores ({{ routine.collaborators|length }})</strong>
+        <table style="width: 100%; border-collapse: collapse; font-size: 9pt;">
+          <thead>
+            <tr style="background: #f3f4f6;">
+              <th style="padding: 6px; text-align: left; border: 1px solid #d1d5db; font-weight: 600;">Colaborador</th>
+              <th style="padding: 6px; text-align: center; border: 1px solid #d1d5db; font-weight: 600; width: 100px;">Horas Úteis</th>
+              <th style="padding: 6px; text-align: left; border: 1px solid #d1d5db; font-weight: 600;">Observações</th>
+            </tr>
+          </thead>
+          <tbody>
+            {% for collab in routine.collaborators %}
+            <tr>
+              <td style="padding: 6px; border: 1px solid #d1d5db;">
+                <strong>{{ collab.employee_name }}</strong>
+                {% if collab.employee_email %}
+                <br><span style="font-size: 8pt; color: #6b7280;">{{ collab.employee_email }}</span>
+                {% endif %}
+              </td>
+              <td style="padding: 6px; text-align: center; border: 1px solid #d1d5db;">
+                <strong style="color: #1e40af;">{{ collab.hours_used }}h</strong>
+              </td>
+              <td style="padding: 6px; border: 1px solid #d1d5db; color: #4b5563;">
+                {{ collab.notes or '-' }}
+              </td>
+            </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+      {% else %}
+      <div style="margin-top: 12px; padding: 12px; background: #f9fafb; border-radius: 6px; text-align: center; font-size: 9pt; color: #9ca3af;">
+        Nenhum colaborador vinculado a esta rotina
+      </div>
+      {% endif %}
+    </div>
+    {% endfor %}
+  </div>
+  {% else %}
+  <div class="routine-empty">
+    <p>Nenhuma rotina cadastrada para este processo.</p>
+  </div>
+  {% endif %}
+  {% endif %}
+  </main>
+
+  <footer class="report-footer">
+    <div class="footer-line">
+      <span><strong>PEVAPP22 - Sistema de Gestão Empresarial</strong></span>
+      <span>Documento gerado automaticamente em {{ print_date }}</span>
+    </div>
+  </footer>
+
+  <script>
+    // Script para paginação no cabeçalho
+    (function() {
+      'use strict';
+      
+      function formatPageNumber(num) {
+        return num.toString().padStart(2, '0');
+      }
+      
+      function getCurrentPage() {
+        const scrollTop = window.pageYOffset || document.documentElement.scrollTop;
+        const pageHeight = window.innerHeight;
+        return Math.max(1, Math.floor(scrollTop / pageHeight) + 1);
+      }
+      
+      function getTotalPages() {
+        const pageHeight = window.innerHeight;
+        const documentHeight = document.body.scrollHeight;
+        return Math.max(1, Math.ceil(documentHeight / pageHeight));
+      }
+      
+      function updateHeaderPagination() {
+        const paginationEl = document.getElementById('header-pagination');
+        if (!paginationEl) return;
+        
+        const currentPage = getCurrentPage();
+        const totalPages = getTotalPages();
+        
+        paginationEl.textContent = `${formatPageNumber(currentPage)} de ${formatPageNumber(totalPages)}`;
+      }
+      
+      // Inicializar paginação no cabeçalho
+      window.addEventListener('load', function() {
+        updateHeaderPagination();
+      });
+      
+      // Atualizar paginação no scroll
+      window.addEventListener('scroll', updateHeaderPagination);
+      
+      // Atualizar paginação no resize
+      window.addEventListener('resize', updateHeaderPagination);
+    })();
+  </script>
+
+</body>
+</html>

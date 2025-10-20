@@ -1,0 +1,821 @@
+﻿{% extends "base.html" %}
+{% block title %}Projetos | {{ plan.name }}{% endblock %}
+
+{% block extra_head %}
+<style>
+.icon-ai, .icon-consultant, .icon-estruturante, .icon-aceleracao, .icon-geral {
+    display: inline-block;
+    margin-right: 4px;
+    font-size: 1.1em;
+}
+.status-planned, .status-progress, .status-completed, .status-hold {
+    display: inline-block;
+    margin-right: 4px;
+}
+
+.unified-indicator-btn {
+    margin-left: 8px;
+    background: linear-gradient(135deg, #10b981, #059669);
+    border: none;
+    border-radius: 8px;
+    padding: 8px 16px;
+    color: white;
+    font-size: 13px;
+    font-weight: 600;
+    cursor: pointer;
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    transition: all 0.2s ease;
+}
+
+.unified-indicator-btn:hover {
+    background: linear-gradient(135deg, #059669, #047857);
+    transform: translateY(-1px);
+    box-shadow: 0 4px 12px rgba(16, 185, 129, 0.3);
+}
+</style>
+<script src="{{ url_for('static', filename='js/unified-indicator-button.js') }}"></script>
+{% endblock %}
+{% block body %}
+  {% set active_nav = 'projetos' %}
+  {{ super() }}
+{% endblock %}
+{% block content %}
+<div class="project-layout plan-layout" data-sidebar-toggle>
+  {% set sidebar_meta %}
+    <span class="summary-eyebrow">Governança sugerida</span>
+    <p>Rodar comitê quinzenal para revisar status, riscos e impacto dos projetos frente aos OKRs.</p>
+  {% endset %}
+  {% include 'plan_sidebar.html' %}
+
+  <section class="project-content projects-content">
+    <!-- Seção de Análise -->
+    <details class="interview-section surface-card projects-analysis-section" {% if projects_analysis_section_open %}open{% endif %}>
+      <summary class="interview-summary-bar">
+        <div class="interview-summary-text">
+          <span class="section-eyebrow">Análise</span>
+          <h3>Análise de Projetos Estratégicos</h3>
+          <p>Análise de IA e parecer do consultor sobre os projetos estratégicos e sua viabilidade.</p>
+        </div>
+        <div class="interview-actions">
+          {% if projects_analysis_section_open %}
+          <button class="button button-ghost" onclick="concludeProjectsAnalysisSection()">
+            <span class="button-icon">✅</span>
+            Concluir
+          </button>
+          {% else %}
+          <button class="button button-ghost" onclick="reopenProjectsAnalysisSection()">
+            <span class="button-icon">🔄</span>
+            Reabrir
+          </button>
+          {% endif %}
+        </div>
+      </summary>
+      <div class="interview-content">
+        <div class="analysis-grid">
+          <!-- AI Analysis -->
+          <div class="surface-card">
+            <div class="card-header">
+              <h4><span class="icon-ai">⚙</span> Análise de IA</h4>
+              <span class="badge">Inteligência Artificial</span>
+            </div>
+            <div class="card-content">
+              <p class="panel-hint">Análise automática baseada nos projetos cadastrados e OKRs de área.</p>
+              {% if projects_analysis_section_open %}
+              <form action="{{ url_for('save_projects_analysis', plan_id=plan.id) }}" method="post">
+                <div class="form-field">
+                  <span>Análise da IA</span>
+                  <textarea name="ai_analysis" rows="8" placeholder="A IA analisará automaticamente os projetos cadastrados, suas atividades, recursos, prazos e alinhamento com os OKRs de área...">{{ projects_ai_analysis }}</textarea>
+                </div>
+                <div class="form-actions">
+                  <button type="submit" class="button button-primary">Salvar Análise</button>
+                </div>
+              </form>
+              {% else %}
+              <div class="analysis-display">
+                {% if projects_ai_analysis %}
+                <div class="analysis-content">
+                  {{ projects_ai_analysis|nl2br }}
+                </div>
+                {% else %}
+                <div class="analysis-placeholder">
+                  <p>Nenhuma análise de IA disponível.</p>
+                </div>
+                {% endif %}
+              </div>
+              {% endif %}
+            </div>
+          </div>
+
+          <!-- Consultant Analysis -->
+          <div class="surface-card">
+            <div class="card-header">
+              <h4><span class="icon-consultant">✎</span> Análise do Consultor</h4>
+              <span class="badge">Análise Humana</span>
+            </div>
+            <div class="card-content">
+              <p class="panel-hint">Análise e parecer do consultor sobre os projetos estratégicos.</p>
+              {% if projects_analysis_section_open %}
+              <form action="{{ url_for('save_projects_analysis', plan_id=plan.id) }}" method="post">
+                <div class="form-field">
+                  <span>Parecer do Consultor</span>
+                  <textarea name="consultant_analysis" rows="8" placeholder="Análise do consultor sobre a viabilidade, riscos, recursos e alinhamento estratégico dos projetos...">{{ projects_consultant_analysis }}</textarea>
+                </div>
+                <div class="form-actions">
+                  <button type="submit" class="button button-primary">Salvar Análise</button>
+                </div>
+              </form>
+              {% else %}
+              <div class="analysis-display">
+                {% if projects_consultant_analysis %}
+                <div class="analysis-content">
+                  {{ projects_consultant_analysis|nl2br }}
+                </div>
+                {% else %}
+                <div class="analysis-placeholder">
+                  <p>Nenhuma análise do consultor disponível.</p>
+                </div>
+                {% endif %}
+              </div>
+              {% endif %}
+            </div>
+          </div>
+        </div>
+      </div>
+    </details>
+
+    <details class="interview-section surface-card projects-overview" {% if projects_section_open %}open{% endif %}>
+      <summary class="interview-summary-bar">
+        <div class="interview-summary-text">
+          <span class="section-eyebrow">Execução</span>
+          <h3>Projetos estrategicos em andamento</h3>
+          <p>Consolide iniciativas que viabilizam os OKRs de area, alinhando entregas, responsaveis e investimentos.</p>
+        </div>
+        <div class="interview-progress alignment-progress">
+          <div>
+            <span class="chip-label">Total</span>
+            <span class="interview-count">{{ project_summary.total }} projetos</span>
+          </div>
+          {% for status, count in project_summary.status.items() %}
+          <div>
+            <span class="chip-label">{{ status }}</span>
+            <span class="interview-count">{{ count }}</span>
+          </div>
+          {% endfor %}
+        </div>
+        <div class="interview-actions">
+          {% if projects_section_open %}
+          <button class="button button-ghost" onclick="concludeProjectsSection()">
+            <span class="button-icon">✅</span>
+            Concluir
+          </button>
+          {% else %}
+          <button class="button button-ghost" onclick="reopenProjectsSection()">
+            <span class="button-icon">🔄</span>
+            Reabrir
+          </button>
+          {% endif %}
+        </div>
+      </summary>
+      <div class="interview-content">
+        <section class="interview-panel instructions-panel project-instructions">
+          <h4>Instruções</h4>
+          <div class="interview-instructions">
+            <div class="instruction-item">
+              <span class="chip-label">Consultoria</span>
+              <p>{{ instructions_consultant or 'Mapeie iniciativas que habilitam OKRs, estimando recursos, riscos e governança.' }}</p>
+            </div>
+            <div class="instruction-item">
+              <span class="chip-label">Liderança</span>
+              <p>{{ instructions_leadership or 'Patrocine decisão rápida, destrave impedimentos e integre as áreas envolvidas.' }}</p>
+            </div>
+          </div>
+        </section>
+
+        <section class="interview-panel project-form-panel">
+          {% if editing_project %}
+          <h4>Editar Projeto: {{ editing_project.title }}</h4>
+          <form class="project-form" action="/plans/{{ plan.id }}/projects/{{ editing_project.id }}" method="post">
+          {% else %}
+          <h4>Cadastro de novos projetos</h4>
+          <form class="project-form" action="/plans/{{ plan.id }}/projects" method="post">
+          {% endif %}
+            <div class="form-two-cols">
+              <label class="form-field">
+                <span>Nome do projeto *</span>
+                <input type="text" name="title" placeholder="Identifique o projeto" value="{{ editing_project.title if editing_project else '' }}" required />
+              </label>
+              <label class="form-field">
+                <span>Responsável</span>
+                <select name="owner">
+                  <option value="">Selecione um responsável</option>
+                  {% for employee in employees %}
+                    {% if employee.status == 'active' %}
+                      <option value="{{ employee.name }}" {% if editing_project and editing_project.owner == employee.name %}selected{% endif %}>
+                        {{ employee.name }}{% if employee.department %} - {{ employee.department }}{% endif %}
+                      </option>
+                    {% endif %}
+                  {% endfor %}
+                </select>
+              </label>
+            </div>
+            
+            <label class="form-field">
+              <span>OKR de Área Associado</span>
+              <select name="okr_area_ref">
+                <option value="">Selecione um OKR de área (opcional)</option>
+                {% for okr in area_okrs %}
+                <option value="{{ okr.id }}" {% if editing_project and editing_project.okr_area_ref == okr.id %}selected{% endif %}>{{ okr.title }} - {{ okr.area }}</option>
+                {% endfor %}
+              </select>
+            </label>
+            <label class="form-field">
+              <span>Descrição</span>
+              <textarea name="description" placeholder="Descreva o projeto, seus objetivos e entregas" rows="3">{{ editing_project.description if editing_project else '' }}</textarea>
+            </label>
+            <div class="form-two-cols">
+              <label class="form-field">
+                <span>Data de início</span>
+                <input type="date" name="start_date" value="{{ editing_project.start_date if editing_project else '' }}" />
+              </label>
+              <label class="form-field">
+                <span>Data de fim</span>
+                <input type="date" name="end_date" value="{{ editing_project.end_date if editing_project else '' }}" />
+              </label>
+            </div>
+            <label class="form-field">
+              <span>Prioridade</span>
+              <select name="priority">
+                <option value="low" {% if editing_project and editing_project.priority == 'low' %}selected{% endif %}>Baixa</option>
+                <option value="medium" {% if editing_project and editing_project.priority == 'medium' %}selected{% elif not editing_project %}selected{% endif %}>Média</option>
+                <option value="high" {% if editing_project and editing_project.priority == 'high' %}selected{% endif %}>Alta</option>
+                <option value="critical" {% if editing_project and editing_project.priority == 'critical' %}selected{% endif %}>Crítica</option>
+              </select>
+            </label>
+            
+            <!-- Seção de Controle de Atividades -->
+            <div class="activities-section">
+              <h5>Controle de Atividades</h5>
+              <div id="activities-container">
+                {% if editing_project and editing_project.activities_list %}
+                  {% for activity in editing_project.activities_list %}
+                  <div class="activity-item">
+                    <div class="activity-header">
+                      <span class="activity-number">Atividade {{ loop.index }}</span>
+                      <button type="button" class="button button-ghost remove-activity" onclick="removeActivity(this)" {% if editing_project.activities_list|length <= 1 %}style="display: none;"{% endif %}>🗑️ Remover</button>
+                    </div>
+                    <div class="activity-grid">
+                      <label class="form-field">
+                        <span>O Que *</span>
+                        <input type="text" name="activity_what_{{ loop.index0 }}" placeholder="Descreva a atividade" value="{{ activity.what }}" required />
+                      </label>
+                      <label class="form-field">
+                        <span>Quem (Equipe)</span>
+                        <select name="activity_who_{{ loop.index0 }}">
+                          <option value="">Selecione um responsável</option>
+                          {% for employee in employees %}
+                            {% if employee.status == 'active' %}
+                              <option value="{{ employee.name }}" {% if activity.who == employee.name %}selected{% endif %}>
+                                {{ employee.name }}{% if employee.department %} - {{ employee.department }}{% endif %}
+                              </option>
+                            {% endif %}
+                          {% endfor %}
+                        </select>
+                      </label>
+                      <label class="form-field">
+                        <span>Quando (Prazo)</span>
+                        <input type="date" name="activity_when_{{ loop.index0 }}" value="{{ activity.when }}" />
+                      </label>
+                      <label class="form-field">
+                        <span>Quanto (Orçamento)</span>
+                        <input type="text" name="activity_amount_{{ loop.index0 }}" placeholder="Ex: R$ 10.000" value="{{ activity.amount }}" />
+                      </label>
+                      <label class="form-field">
+                        <span>Como (Detalhes da Execução)</span>
+                        <textarea name="activity_how_{{ loop.index0 }}" placeholder="Como será executada a atividade" rows="2">{{ activity.how }}</textarea>
+                      </label>
+                      <label class="form-field">
+                        <span>Observações</span>
+                        <textarea name="activity_observations_{{ loop.index0 }}" placeholder="Observações adicionais" rows="2">{{ activity.observations }}</textarea>
+                      </label>
+                      <label class="form-field">
+                        <span>Data de Conclusão</span>
+                        <input type="date" name="activity_completion_date_{{ loop.index0 }}" value="{{ activity.completion_date }}" />
+                      </label>
+                    </div>
+                  </div>
+                  {% endfor %}
+                {% else %}
+                  <!-- Atividade inicial para novos projetos -->
+                  <div class="activity-item">
+                    <div class="activity-header">
+                      <span class="activity-number">Atividade 1</span>
+                      <button type="button" class="button button-ghost remove-activity" onclick="removeActivity(this)" style="display: none;">🗑️ Remover</button>
+                    </div>
+                    <div class="activity-grid">
+                      <label class="form-field">
+                        <span>O Que *</span>
+                        <input type="text" name="activity_what_0" placeholder="Descreva a atividade" required />
+                      </label>
+                      <label class="form-field">
+                        <span>Quem (Equipe)</span>
+                        <select name="activity_who_0">
+                          <option value="">Selecione um responsável</option>
+                          {% for employee in employees %}
+                            {% if employee.status == 'active' %}
+                              <option value="{{ employee.name }}">
+                                {{ employee.name }}{% if employee.department %} - {{ employee.department }}{% endif %}
+                              </option>
+                            {% endif %}
+                          {% endfor %}
+                        </select>
+                      </label>
+                      <label class="form-field">
+                        <span>Quando (Prazo)</span>
+                        <input type="date" name="activity_when_0" />
+                      </label>
+                      <label class="form-field">
+                        <span>Quanto (Orçamento)</span>
+                        <input type="text" name="activity_amount_0" placeholder="Ex: R$ 10.000" />
+                      </label>
+                      <label class="form-field">
+                        <span>Como (Detalhes da Execução)</span>
+                        <textarea name="activity_how_0" placeholder="Como será executada a atividade" rows="2"></textarea>
+                      </label>
+                      <label class="form-field">
+                        <span>Observações</span>
+                        <textarea name="activity_observations_0" placeholder="Observações adicionais" rows="2"></textarea>
+                      </label>
+                      <label class="form-field">
+                        <span>Data de Conclusão</span>
+                        <input type="date" name="activity_completion_date_0" />
+                      </label>
+                    </div>
+                  </div>
+                {% endif %}
+              </div>
+              <button type="button" class="button button-ghost" onclick="addActivity()">➕ Adicionar Atividade</button>
+            </div>
+            
+            <div class="form-actions">
+              <button type="submit" class="button button-primary">
+                {% if editing_project %}Atualizar projeto{% else %}Salvar projeto{% endif %}
+              </button>
+              <button type="reset" class="button button-ghost">Limpar</button>
+              {% if editing_project %}
+              <a href="{{ url_for('plan_projects', plan_id=plan.id) }}" class="button button-ghost">Cancelar</a>
+              {% endif %}
+            </div>
+          </form>
+        </section>
+
+      </div>
+    </details>
+
+    <details class="interview-section surface-card project-records-card" open>
+      <summary class="interview-summary-bar">
+        <div class="interview-summary-text">
+          <span class="section-eyebrow">Portifolio</span>
+          <h3>Projetos cadastrados</h3>
+          <p>Acompanhe o portifolio com responsabilidades, prazos e plano detalhado.</p>
+        </div>
+        <div class="interview-progress">
+          <span class="chip-label">Projetos ativos</span>
+          <span class="interview-count">{{ project_summary.total }}</span>
+        </div>
+      </summary>
+      <div class="project-records-content">
+        {% if projects %}
+        <div class="project-record-list">
+          {% for project in projects %}
+          <div class="project-record-item" data-project-id="{{ project.id }}">
+            <div class="project-record-header">
+              <div>
+                <span class="section-eyebrow">PROJETO</span>
+                <h5>{{ project.title }}</h5>
+                {% if project.description %}
+                <p class="project-description">{{ project.description }}</p>
+                {% endif %}
+                {% if project.okr_area_ref %}
+                <div class="project-okr-ref">
+                  <span class="okr-ref-label">OKR de Área:</span>
+                  <span class="okr-ref-value">
+                    {% for okr in area_okrs %}
+                      {% if okr.id == project.okr_area_ref %}
+                        {{ okr.title }} - {{ okr.area }}
+                      {% endif %}
+                    {% endfor %}
+                  </span>
+                </div>
+                {% endif %}
+              </div>
+              <div class="project-record-meta">
+                {% if project.status %}
+                <span class="project-status-chip project-status-{{ project.status }}">
+                  {% if project.status == 'planned' %}<span class="status-planned">📋</span> Planejado
+                  {% elif project.status == 'in_progress' %}<span class="status-progress">🚀</span> Em andamento
+                  {% elif project.status == 'completed' %}<span class="status-completed">✅</span> Concluído
+                  {% elif project.status == 'on_hold' %}<span class="status-hold">⏸</span> Pausado
+                  {% elif project.status == 'cancelled' %}❌ Cancelado
+                  {% else %}{{ project.status }}
+                  {% endif %}
+                </span>
+                {% endif %}
+                
+                {% if project.priority %}
+                <span class="project-priority-chip project-priority-{{ project.priority }}">
+                  {% if project.priority == 'low' %}🔵 Baixa
+                  {% elif project.priority == 'medium' %}🟡 Média
+                  {% elif project.priority == 'high' %}🟠 Alta
+                  {% elif project.priority == 'critical' %}🔴 Crítica
+                  {% else %}{{ project.priority }}
+                  {% endif %}
+                </span>
+                {% endif %}
+                
+                <div class="project-actions">
+                  <a href="{{ url_for('edit_project', plan_id=plan.id, project_id=project.id) }}" class="button button-ghost">✏️ Editar</a>
+                  <form method="post" action="{{ url_for('delete_project', plan_id=plan.id, project_id=project.id) }}" style="display: inline;" onsubmit="return confirm('Tem certeza que deseja excluir este projeto?');">
+                    <button type="submit" class="button button-ghost button-danger">🗑️ Excluir</button>
+                  </form>
+                </div>
+              </div>
+            </div>
+            
+            <div class="project-record-body">
+              <div class="project-details">
+                {% if project.owner %}
+                <div class="project-detail">
+                  <span class="detail-label">Responsável:</span>
+                  <span class="detail-value">{{ project.owner }}</span>
+                </div>
+                {% endif %}
+                
+                {% if project.start_date_display %}
+                <div class="project-detail">
+                  <span class="detail-label">Data de início:</span>
+                  <span class="detail-value">{{ project.start_date_display }}</span>
+                </div>
+                {% endif %}
+                
+                {% if project.end_date_display %}
+                <div class="project-detail">
+                  <span class="detail-label">Data de fim:</span>
+                  <span class="detail-value">{{ project.end_date_display }}</span>
+                </div>
+                {% endif %}
+                
+                {% if project.created_at_display %}
+                <div class="project-detail">
+                  <span class="detail-label">Criado em:</span>
+                  <span class="detail-value">{{ project.created_at_display }}</span>
+                </div>
+                {% endif %}
+              </div>
+              
+              <!-- Exibição das Atividades -->
+              {% if project.activities_list %}
+              <div class="project-activities">
+                <h6>Atividades do Projeto</h6>
+                <div class="activities-list">
+                  {% for activity in project.activities_list %}
+                  <div class="activity-display-item">
+                    <div class="activity-display-header">
+                      <span class="activity-what">{{ activity.what }}</span>
+                      <span class="activity-status activity-status-{{ activity.status }}">
+                        {% if activity.status == 'pending' %}⏳ Pendente
+                        {% elif activity.status == 'on_time' %}✅ Em dia
+                        {% elif activity.status == 'delayed' %}⚠️ Atrasado
+                        {% elif activity.status == 'completed' %}🎉 Concluído
+                        {% else %}{{ activity.status }}
+                        {% endif %}
+                      </span>
+                    </div>
+                    <div class="activity-display-details">
+                      {% if activity.who %}
+                      <span class="activity-detail"><strong>Quem:</strong> {{ activity.who }}</span>
+                      {% endif %}
+                      {% if activity.when %}
+                      <span class="activity-detail"><strong>Prazo:</strong> {{ activity.when }}</span>
+                      {% endif %}
+                      {% if activity.amount %}
+                      <span class="activity-detail"><strong>Orçamento:</strong> {{ activity.amount }}</span>
+                      {% endif %}
+                      {% if activity.completion_date %}
+                      <span class="activity-detail"><strong>Concluído em:</strong> {{ activity.completion_date }}</span>
+                      {% endif %}
+                    </div>
+                    {% if activity.how %}
+                    <div class="activity-how">
+                      <strong>Como:</strong> {{ activity.how }}
+                    </div>
+                    {% endif %}
+                    {% if activity.observations %}
+                    <div class="activity-observations">
+                      <strong>Observações:</strong> {{ activity.observations }}
+                    </div>
+                    {% endif %}
+                  </div>
+                  {% endfor %}
+                </div>
+              </div>
+              {% endif %}
+            </div>
+          </div>
+          {% endfor %}
+        </div>
+        {% else %}
+        <div class="project-empty-state">
+          <div class="empty-state-icon">📋</div>
+          <h4>Nenhum projeto cadastrado</h4>
+          <p>Comece criando seu primeiro projeto usando o formulário acima.</p>
+        </div>
+        {% endif %}
+      </div>
+    </details>
+    
+    <!-- Exibição quando a seção está fechada -->
+    {% if not projects_section_open %}
+    <div class="projects-closed-display">
+      <div class="closed-section-header">
+        <h4>Projetos Estratégicos - Seção Concluída</h4>
+        {% if projects_section_status and projects_section_status.get('closed_by') %}
+        <p class="closed-by-info">
+          Concluído por: {{ projects_section_status.closed_by }}
+          {% if projects_section_status.get('closed_at') %}
+          em {{ projects_section_status.closed_at.strftime('%d/%m/%Y às %H:%M') if projects_section_status.closed_at.strftime is defined else projects_section_status.closed_at }}
+          {% endif %}
+        </p>
+        {% endif %}
+      </div>
+      
+      {% if projects %}
+      <div class="projects-summary-closed">
+        <div class="summary-stats">
+          <div class="stat-item">
+            <span class="stat-number">{{ project_summary.total }}</span>
+            <span class="stat-label">Total de Projetos</span>
+          </div>
+          {% for status, count in project_summary.status.items() %}
+          <div class="stat-item">
+            <span class="stat-number">{{ count }}</span>
+            <span class="stat-label">{{ status }}</span>
+          </div>
+          {% endfor %}
+        </div>
+        
+        <div class="projects-list-closed">
+          {% for project in projects %}
+          <div class="project-summary-item">
+            <div class="project-summary-header">
+              <h5>{{ project.title }}</h5>
+              <span class="project-status-chip project-status-{{ project.status }}">
+                {% if project.status == 'planned' %}📋 Planejado
+                {% elif project.status == 'in_progress' %}🚀 Em andamento
+                {% elif project.status == 'completed' %}✅ Concluído
+                {% elif project.status == 'on_hold' %}⏸️ Pausado
+                {% elif project.status == 'cancelled' %}❌ Cancelado
+                {% else %}{{ project.status }}
+                {% endif %}
+              </span>
+            </div>
+            {% if project.description %}
+            <p class="project-summary-description">{{ project.description }}</p>
+            {% endif %}
+            {% if project.owner %}
+            <p class="project-summary-owner"><strong>Responsável:</strong> {{ project.owner }}</p>
+            {% endif %}
+            {% if project.activities_list %}
+            <div class="project-activities-summary">
+              <strong>Atividades:</strong> {{ project.activities_list|length }} atividade(s)
+              {% for activity in project.activities_list[:2] %}
+              <div class="activity-summary">
+                • {{ activity.what }}
+                <span class="activity-status-mini activity-status-{{ activity.status }}">
+                  {% if activity.status == 'pending' %}⏳
+                  {% elif activity.status == 'on_time' %}✅
+                  {% elif activity.status == 'delayed' %}⚠️
+                  {% elif activity.status == 'completed' %}🎉
+                  {% endif %}
+                </span>
+              </div>
+              {% endfor %}
+              {% if project.activities_list|length > 2 %}
+              <div class="more-activities">... e mais {{ project.activities_list|length - 2 }} atividade(s)</div>
+              {% endif %}
+            </div>
+            {% endif %}
+          </div>
+          {% endfor %}
+        </div>
+      </div>
+      {% else %}
+      <div class="no-projects-message">
+        <p>Nenhum projeto foi cadastrado nesta seção.</p>
+      </div>
+      {% endif %}
+    </div>
+    {% endif %}
+  </details>
+  </section>
+</div>
+
+<script>
+let activityCount = {% if editing_project and editing_project.activities_list %}{{ editing_project.activities_list|length }}{% else %}1{% endif %};
+
+function addActivity() {
+    const container = document.getElementById('activities-container');
+    const activityItem = document.createElement('div');
+    activityItem.className = 'activity-item';
+    activityItem.innerHTML = `
+        <div class="activity-header">
+            <span class="activity-number">Atividade ${activityCount + 1}</span>
+            <button type="button" class="button button-ghost remove-activity" onclick="removeActivity(this)">🗑️ Remover</button>
+        </div>
+        <div class="activity-grid">
+            <label class="form-field">
+                <span>O Que *</span>
+                <input type="text" name="activity_what_${activityCount}" placeholder="Descreva a atividade" required />
+            </label>
+            <label class="form-field">
+                <span>Quem (Equipe)</span>
+                <select name="activity_who_${activityCount}">
+                    <option value="">Selecione um responsável</option>
+                    {% for employee in employees %}
+                        {% if employee.status == 'active' %}
+                        <option value="{{ employee.name }}">{{ employee.name }}{% if employee.department %} - {{ employee.department }}{% endif %}</option>
+                        {% endif %}
+                    {% endfor %}
+                </select>
+            </label>
+            <label class="form-field">
+                <span>Quando (Prazo)</span>
+                <input type="date" name="activity_when_${activityCount}" />
+            </label>
+            <label class="form-field">
+                <span>Quanto (Orçamento)</span>
+                <input type="text" name="activity_amount_${activityCount}" placeholder="Ex: R$ 10.000" />
+            </label>
+            <label class="form-field">
+                <span>Como (Detalhes da Execução)</span>
+                <textarea name="activity_how_${activityCount}" placeholder="Como será executada a atividade" rows="2"></textarea>
+            </label>
+            <label class="form-field">
+                <span>Observações</span>
+                <textarea name="activity_observations_${activityCount}" placeholder="Observações adicionais" rows="2"></textarea>
+            </label>
+            <label class="form-field">
+                <span>Data de Conclusão</span>
+                <input type="date" name="activity_completion_date_${activityCount}" />
+            </label>
+        </div>
+    `;
+    
+    container.appendChild(activityItem);
+    activityCount++;
+    
+    // Mostrar botão de remover na primeira atividade se há mais de uma
+    updateRemoveButtons();
+}
+
+function removeActivity(button) {
+    const activityItem = button.closest('.activity-item');
+    activityItem.remove();
+    updateRemoveButtons();
+    updateActivityNumbers();
+}
+
+function updateRemoveButtons() {
+    const activities = document.querySelectorAll('.activity-item');
+    activities.forEach((activity, index) => {
+        const removeButton = activity.querySelector('.remove-activity');
+        if (activities.length > 1) {
+            removeButton.style.display = 'inline-block';
+        } else {
+            removeButton.style.display = 'none';
+        }
+    });
+}
+
+function updateActivityNumbers() {
+    const activities = document.querySelectorAll('.activity-item');
+    activities.forEach((activity, index) => {
+        const numberSpan = activity.querySelector('.activity-number');
+        numberSpan.textContent = `Atividade ${index + 1}`;
+    });
+}
+
+// Inicializar
+document.addEventListener('DOMContentLoaded', function() {
+    updateRemoveButtons();
+});
+
+// Funções para controle da seção de projetos
+function concludeProjectsSection() {
+    const reason = prompt('Motivo da conclusão da seção de projetos (opcional):');
+    if (reason === null) return; // Usuário cancelou
+    
+    fetch(`/plans/{{ plan.id }}/projects-section-status`, {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+            status: 'closed',
+            conclusion_reason: reason || ''
+        })
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.success) {
+            location.reload();
+        } else {
+            alert('Erro ao concluir seção: ' + (data.message || 'Erro desconhecido'));
+        }
+    })
+    .catch(error => {
+        console.error('Erro:', error);
+        alert('Erro ao concluir seção');
+    });
+}
+
+function reopenProjectsSection() {
+    fetch(`/plans/{{ plan.id }}/projects-section-status`, {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+            status: 'open'
+        })
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.success) {
+            location.reload();
+        } else {
+            alert('Erro ao reabrir seção: ' + (data.message || 'Erro desconhecido'));
+        }
+    })
+    .catch(error => {
+        console.error('Erro:', error);
+        alert('Erro ao reabrir seção');
+    });
+}
+
+// Funções para controle da seção de análise de projetos
+function concludeProjectsAnalysisSection() {
+    const reason = prompt('Motivo da conclusão da seção de análise de projetos (opcional):');
+    if (reason === null) return; // Usuário cancelou
+    
+    fetch(`/plans/{{ plan.id }}/projects-analysis-section-status`, {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+            status: 'closed',
+            conclusion_reason: reason || ''
+        })
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.success) {
+            location.reload();
+        } else {
+            alert('Erro ao concluir seção: ' + (data.message || 'Erro desconhecido'));
+        }
+    })
+    .catch(error => {
+        console.error('Erro:', error);
+        alert('Erro ao concluir seção');
+    });
+}
+
+function reopenProjectsAnalysisSection() {
+    fetch(`/plans/{{ plan.id }}/projects-analysis-section-status`, {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+            status: 'open'
+        })
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.success) {
+            location.reload();
+        } else {
+            alert('Erro ao reabrir seção: ' + (data.message || 'Erro desconhecido'));
+        }
+    })
+    .catch(error => {
+        console.error('Erro:', error);
+        alert('Erro ao reabrir seção');
+    });
+}
+</script>
+
+{% endblock %}

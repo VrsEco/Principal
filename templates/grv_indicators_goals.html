@@ -1,0 +1,618 @@
+﻿{% extends "base.html" %}
+{% block title %}GRV | Metas de Indicadores{% endblock %}
+{% block body %}{% set active_nav = 'indicators-goals' %}{{ super() }}{% endblock %}
+
+{% block extra_head %}
+{{ super() }}
+<style>
+  .indicators-shell {
+    display: grid;
+    grid-template-columns: 250px minmax(0, 1fr);
+    gap: 18px;
+    align-items: start;
+  }
+
+  .indicators-main {
+    background: #ffffff;
+    border-radius: 14px;
+    border: 1px solid rgba(15, 23, 42, 0.08);
+    padding: 22px 24px;
+    box-shadow: 0 12px 32px rgba(15, 23, 42, 0.08);
+    display: grid;
+    gap: 20px;
+  }
+
+  .indicators-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: 16px;
+    flex-wrap: wrap;
+  }
+
+  .indicators-header h1 {
+    margin: 0;
+    font-size: 22px;
+    font-weight: 700;
+    color: #0f172a;
+  }
+
+  .indicators-description {
+    color: #64748b;
+    font-size: 13px;
+    margin-top: 6px;
+    max-width: 520px;
+    line-height: 1.5;
+  }
+
+  .indicators-actions {
+    display: flex;
+    gap: 10px;
+    flex-wrap: wrap;
+  }
+
+  .indicators-button {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    padding: 10px 18px;
+    border-radius: 10px;
+    border: none;
+    cursor: pointer;
+    font-weight: 600;
+    font-size: 13px;
+    letter-spacing: 0.04em;
+    transition: transform 0.2s ease, box-shadow 0.2s ease;
+  }
+
+  .indicators-button.primary {
+    background: linear-gradient(135deg, #3b82f6, #2563eb);
+    color: #fff;
+    box-shadow: 0 16px 28px rgba(37, 99, 235, 0.25);
+  }
+
+  .indicators-button.primary:hover {
+    transform: translateY(-2px);
+  }
+
+  .indicators-button.secondary {
+    background: #f1f5f9;
+    color: #475569;
+    border: 1px solid rgba(15, 23, 42, 0.12);
+  }
+
+  .indicators-button.secondary:hover {
+    background: #e2e8f0;
+  }
+
+  .indicators-table-wrapper {
+    overflow-x: auto;
+    border-radius: 12px;
+    border: 1px solid rgba(15, 23, 42, 0.08);
+  }
+
+  .indicators-table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 13px;
+  }
+
+  .indicators-table thead {
+    background: linear-gradient(135deg, #f8fafc, #e2e8f0);
+  }
+
+  .indicators-table th {
+    padding: 14px 16px;
+    text-align: left;
+    font-weight: 600;
+    color: #0f172a;
+    text-transform: uppercase;
+    font-size: 11px;
+    letter-spacing: 0.08em;
+    border-bottom: 2px solid rgba(59, 130, 246, 0.18);
+    white-space: nowrap;
+  }
+
+  .indicators-table td {
+    padding: 14px 16px;
+    border-bottom: 1px solid rgba(15, 23, 42, 0.06);
+    color: #334155;
+  }
+
+  .indicators-table tbody tr:hover {
+    background: rgba(59, 130, 246, 0.04);
+  }
+
+  .indicators-table .actions {
+    display: flex;
+    gap: 8px;
+  }
+
+  .indicators-table .btn-small {
+    padding: 6px 12px;
+    font-size: 11px;
+    border-radius: 6px;
+    border: none;
+    cursor: pointer;
+    font-weight: 600;
+    transition: all 0.2s ease;
+  }
+
+  .indicators-table .btn-edit {
+    background: #3b82f6;
+    color: white;
+  }
+
+  .indicators-table .btn-edit:hover {
+    background: #2563eb;
+  }
+
+  .indicators-table .btn-delete {
+    background: #ef4444;
+    color: white;
+  }
+
+  .indicators-table .btn-delete:hover {
+    background: #dc2626;
+  }
+
+  .form-group {
+    margin-bottom: 18px;
+  }
+
+  .form-group label {
+    display: block;
+    margin-bottom: 8px;
+    font-weight: 600;
+    color: #334155;
+    font-size: 13px;
+  }
+
+  .form-group input,
+  .form-group select,
+  .form-group textarea {
+    width: 100%;
+    padding: 10px 14px;
+    border: 1px solid rgba(15, 23, 42, 0.12);
+    border-radius: 8px;
+    font-size: 13px;
+    font-family: inherit;
+  }
+
+  .form-group textarea {
+    resize: vertical;
+    min-height: 80px;
+  }
+
+  .form-actions {
+    display: flex;
+    gap: 10px;
+    justify-content: flex-end;
+    margin-top: 24px;
+  }
+
+  .empty-state {
+    text-align: center;
+    padding: 48px 24px;
+    color: #64748b;
+  }
+
+  .empty-state svg {
+    width: 64px;
+    height: 64px;
+    margin-bottom: 16px;
+    opacity: 0.4;
+  }
+
+  .code-badge {
+    display: inline-block;
+    padding: 4px 10px;
+    background: linear-gradient(135deg, rgba(59, 130, 246, 0.12), rgba(14, 116, 144, 0.08));
+    border-radius: 6px;
+    font-weight: 600;
+    font-size: 11px;
+    color: #2563eb;
+    letter-spacing: 0.05em;
+  }
+
+  .status-badge {
+    display: inline-block;
+    padding: 4px 10px;
+    border-radius: 6px;
+    font-size: 11px;
+    font-weight: 600;
+  }
+
+  .status-badge.active {
+    background: #dcfce7;
+    color: #047857;
+  }
+
+  .status-badge.achieved {
+    background: #dbeafe;
+    color: #1d4ed8;
+  }
+
+  .status-badge.delayed {
+    background: #fef3c7;
+    color: #b45309;
+  }
+
+  .status-badge.cancelled {
+    background: #fee2e2;
+    color: #dc2626;
+  }
+
+  .type-badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    padding: 4px 12px;
+    border-radius: 999px;
+    font-size: 11px;
+    font-weight: 600;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+    color: #1d4ed8;
+    background: rgba(59, 130, 246, 0.12);
+  }
+
+  .meta-text {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+  }
+
+  .meta-text .value {
+    font-weight: 600;
+    color: #0f172a;
+  }
+
+  .meta-text .detail {
+    font-size: 12px;
+    color: #64748b;
+  }
+
+  .period-text {
+    font-weight: 600;
+    color: #0f172a;
+  }
+
+  .period-text span {
+    display: block;
+    font-size: 12px;
+    font-weight: 400;
+    color: #64748b;
+  }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="indicators-shell">
+  <!-- Sidebar -->
+  {% include 'indicators_sidebar.html' %}
+
+  <!-- Main Content -->
+  <div class="indicators-main">
+    <div class="indicators-header">
+      <div>
+        <h1>🎯 Metas de Indicadores</h1>
+        <div class="indicators-description">
+          Defina e acompanhe as metas para cada indicador
+        </div>
+      </div>
+      <div class="indicators-actions">
+        <button class="indicators-button primary" onclick="openGoalPopup()">
+          + Nova Meta
+        </button>
+      </div>
+    </div>
+
+    <!-- Table -->
+    <div class="indicators-table-wrapper">
+      <table class="indicators-table" id="goalsTable">
+        <thead>
+          <tr>
+            <th>Codigo</th>
+            <th>Indicador</th>
+            <th>Tipo</th>
+            <th>Meta</th>
+            <th>Periodo</th>
+            <th>Responsavel</th>
+            <th>Status</th>
+            <th style="text-align: center; width: 140px;">Acoes</th>
+          </tr>
+        </thead>
+        <tbody id="goalsTableBody">
+          <tr>
+            <td colspan="8">
+              <div class="empty-state">
+                <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4M7.835 4.697a3.42 3.42 0 001.946-.806 3.42 3.42 0 014.438 0 3.42 3.42 0 001.946.806 3.42 3.42 0 013.138 3.138 3.42 3.42 0 00.806 1.946 3.42 3.42 0 010 4.438 3.42 3.42 0 00-.806 1.946 3.42 3.42 0 01-3.138 3.138 3.42 3.42 0 00-1.946.806 3.42 3.42 0 01-4.438 0 3.42 3.42 0 00-1.946-.806 3.42 3.42 0 01-3.138-3.138 3.42 3.42 0 00-.806-1.946 3.42 3.42 0 010-4.438 3.42 3.42 0 00.806-1.946 3.42 3.42 0 013.138-3.138z" />
+                </svg>
+                <p>Nenhuma meta cadastrada</p>
+              </div>
+            </td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+</div>
+
+<script>
+const companyId = {{ company.id if company and company.id else 0 }};
+let goals = [];
+
+const GOAL_TYPE_LABELS = {
+  single: 'Meta unica',
+  daily: 'Meta diaria',
+  weekly: 'Meta semanal',
+  monthly: 'Meta mensal',
+  quarterly: 'Meta trimestral',
+  biannual: 'Meta semestral',
+  annual: 'Meta anual'
+};
+
+const GOAL_VALUE_SUFFIX = {
+  single: '',
+  daily: 'por dia',
+  weekly: 'por semana',
+  monthly: 'por mes',
+  quarterly: 'por trimestre',
+  biannual: 'por semestre',
+  annual: 'por ano'
+};
+
+const EVALUATION_LABELS = {
+  value: 'Comparacao pontual',
+  sum: 'Somar periodo',
+  average: 'Media no periodo',
+  latest: 'Ultimo valor'
+};
+
+const STATUS_MAP = {
+  active: { text: 'Em andamento', css: 'active' },
+  achieved: { text: 'Atingida', css: 'achieved' },
+  delayed: { text: 'Atrasada', css: 'delayed' },
+  cancelled: { text: 'Cancelada', css: 'cancelled' },
+  completed: { text: 'Atingida', css: 'achieved' }
+};
+
+document.addEventListener('DOMContentLoaded', () => {
+  loadGoals();
+});
+
+async function loadGoals() {
+  try {
+    const response = await fetch(`/grv/api/company/${companyId}/indicator-goals`);
+    
+    if (!response.ok) {
+      throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+    }
+    
+    const result = await response.json();
+
+    if (result.success) {
+      goals = result.data || [];
+      renderGoalsTable();
+    } else {
+      console.error('Erro ao carregar metas:', result.message);
+      alert('❌ Erro ao carregar metas de indicadores:\n\n' + (result.message || 'Erro desconhecido'));
+    }
+  } catch (error) {
+    console.error('Erro ao carregar metas:', error);
+    alert('❌ Erro ao carregar metas de indicadores:\n\n' + error.message);
+  }
+}
+
+function renderGoalsTable() {
+  const tbody = document.getElementById('goalsTableBody');
+  if (!tbody) {
+    return;
+  }
+
+  if (goals.length === 0) {
+    tbody.innerHTML = `
+      <tr>
+        <td colspan="8">
+          <div class="empty-state">
+            <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8c1.657 0 3-1.343 3-3s-1.343-3-3-3-3 1.343-3 3 1.343 3 3 3zm0 4c-3.866 0-7 3.134-7 7a1 1 0 001 1h12a1 1 0 001-1c0-3.866-3.134-7-7-7z" />
+            </svg>
+            <p>Nenhuma meta cadastrada</p>
+          </div>
+        </td>
+      </tr>
+    `;
+    return;
+  }
+
+  tbody.innerHTML = goals.map((goal) => {
+    const type = goal.goal_type || 'single';
+    const statusInfo = STATUS_MAP[goal.status] || STATUS_MAP.active;
+    const metaValue = formatGoalValue(goal);
+    const evaluationText = formatEvaluation(goal);
+    const periodInfo = formatPeriod(goal);
+    const responsible = goal.responsible_name || '--';
+    const indicatorCode = goal.indicator_code ? goal.indicator_code : '--';
+    const typeLabel = GOAL_TYPE_LABELS[type] || GOAL_TYPE_LABELS.single;
+
+    return `
+      <tr>
+        <td><span class="code-badge">${goal.code}</span></td>
+        <td><strong>${goal.indicator_name}</strong><br><small style="color:#64748b">${indicatorCode}</small></td>
+        <td><span class="type-badge">${typeLabel}</span></td>
+        <td>
+          <div class="meta-text">
+            <span class="value">${metaValue}</span>
+            <span class="detail">${evaluationText}</span>
+          </div>
+        </td>
+        <td>
+          <div class="meta-text">
+            <span class="value">${periodInfo.range}</span>
+            ${periodInfo.detail ? `<span class="detail">${periodInfo.detail}</span>` : ''}
+          </div>
+        </td>
+        <td>${responsible}</td>
+        <td><span class="status-badge ${statusInfo.css}">${statusInfo.text}</span></td>
+        <td style="text-align: center;">
+          <div class="actions">
+            <button class="btn-small btn-edit" onclick="openGoalPopup(${goal.id})">Editar</button>
+            <button class="btn-small btn-delete" onclick="deleteGoal(${goal.id})">Excluir</button>
+          </div>
+        </td>
+      </tr>
+    `;
+  }).join('');
+}
+
+function formatGoalValue(goal) {
+  const value = goal.goal_value;
+  if (value === null || value === undefined || value === '') {
+    return '--';
+  }
+  const numeric = Number(value);
+  let formatted = String(value);
+  if (Number.isFinite(numeric)) {
+    formatted = formatNumber(numeric);
+  }
+  const suffix = GOAL_VALUE_SUFFIX[goal.goal_type] || GOAL_VALUE_SUFFIX.single;
+  return suffix ? `${formatted} ${suffix}` : formatted;
+}
+
+function formatEvaluation(goal) {
+  const key = goal.evaluation_basis || (goal.goal_type === 'single' ? 'value' : 'sum');
+  return EVALUATION_LABELS[key] || 'Comparacao pontual';
+}
+
+function formatPeriod(goal) {
+  const type = goal.goal_type || 'single';
+  if (type === 'single') {
+    const deadline = goal.goal_date ? formatDate(goal.goal_date) : null;
+    return {
+      range: deadline ? `Ate ${deadline}` : '--',
+      detail: ''
+    };
+  }
+  
+  // Tipos que usam mês/ano: monthly, quarterly, biannual
+  const usesMonth = ['monthly', 'quarterly', 'biannual'].includes(type);
+  
+  // Tipo anual usa apenas ano
+  if (type === 'annual') {
+    const startYear = goal.period_start ? goal.period_start.substring(0, 4) : null;
+    const endYear = goal.period_end ? goal.period_end.substring(0, 4) : null;
+    let range = '--';
+    if (startYear && endYear) {
+      range = startYear === endYear ? startYear : `${startYear} - ${endYear}`;
+    } else if (startYear) {
+      range = `A partir de ${startYear}`;
+    } else if (endYear) {
+      range = `Ate ${endYear}`;
+    }
+    return { range, detail: '' };
+  }
+  
+  const start = usesMonth ? formatMonth(goal.period_start) : formatDate(goal.period_start);
+  const end = usesMonth ? formatMonth(goal.period_end) : formatDate(goal.period_end);
+
+  let range = '--';
+  if (start && end) {
+    range = `${start} - ${end}`;
+  } else if (start) {
+    range = `A partir de ${start}`;
+  } else if (end) {
+    range = `Ate ${end}`;
+  }
+
+  const deadline = goal.goal_date ? formatDate(goal.goal_date) : null;
+
+  return {
+    range,
+    detail: deadline ? `Revisao ate ${deadline}` : ''
+  };
+}
+
+function formatDate(isoDate) {
+  if (!isoDate) {
+    return '';
+  }
+  try {
+    const date = new Date(`${isoDate}T00:00:00`);
+    if (Number.isNaN(date.getTime())) {
+      return '';
+    }
+    return date.toLocaleDateString('pt-BR');
+  } catch (error) {
+    return '';
+  }
+}
+
+function formatMonth(isoDate) {
+  if (!isoDate || !/^\d{4}-\d{2}-\d{2}$/.test(isoDate)) {
+    return '';
+  }
+  const [year, month] = isoDate.split('-');
+  return `${month}/${year}`;
+}
+
+function formatNumber(value) {
+  try {
+    return new Intl.NumberFormat('pt-BR', {
+      minimumFractionDigits: 0,
+      maximumFractionDigits: 2
+    }).format(value);
+  } catch (error) {
+    return String(value);
+  }
+}
+
+function openGoalPopup(goalId) {
+  const target = goalId
+    ? `/grv/company/${companyId}/indicator-goals/form/${goalId}`
+    : `/grv/company/${companyId}/indicator-goals/form`;
+
+  const popup = window.open(
+    target,
+    'indicatorGoalFormPopup',
+    'width=760,height=780,resizable=yes,scrollbars=yes'
+  );
+
+  if (!popup) {
+    alert('Nao foi possivel abrir a janela. Verifique o bloqueio de pop-ups.');
+  }
+}
+
+async function deleteGoal(id) {
+  if (!confirm('Tem certeza que deseja excluir esta meta?')) {
+    return;
+  }
+
+  try {
+    const response = await fetch(`/grv/api/company/${companyId}/indicator-goals/${id}`, {
+      method: 'DELETE'
+    });
+
+    const result = await response.json();
+
+    if (result.success) {
+      loadGoals();
+      alert('Meta excluida com sucesso!');
+    } else {
+      alert('Erro: ' + result.message);
+    }
+  } catch (error) {
+    console.error('Erro ao excluir meta:', error);
+    alert('Erro ao excluir meta');
+  }
+}
+
+window.openGoalPopup = openGoalPopup;
+window.deleteGoal = deleteGoal;
+</script>
+{% endblock %}
+
+
+

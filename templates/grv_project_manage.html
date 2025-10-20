@@ -1,0 +1,2194 @@
+{% extends "base.html" %}
+{% block title %}GRV | Gerenciar Projeto{% endblock %}
+{% block body %}{% set active_nav = 'project-projects' %}{{ super() }}{% endblock %}
+
+{% block extra_head %}
+{{ super() }}
+<script src="https://cdn.ckeditor.com/ckeditor5/39.0.1/classic/ckeditor.js"></script>
+<link rel="stylesheet" href="{{ url_for('static', filename='css/grv-color-pattern.css') }}">
+<style>
+  .app-main {
+    padding-bottom: 80px;
+    background: linear-gradient(135deg, #ffffff 0%, #f8fafc 100%) !important;
+  }
+
+  /* HEADER DO PROJETO - FUNDO CLARO COM FONTE ESCURA */
+  .project-header-card {
+    background: linear-gradient(135deg, #ffffff 0%, #f8fafc 100%) !important;
+    color: #000000 !important;
+    border: 1px solid rgba(30, 64, 175, 0.1) !important;
+    border-radius: 16px !important;
+    padding: 24px 28px !important;
+    margin-bottom: 24px !important;
+    box-shadow: 0 8px 24px rgba(30, 64, 175, 0.08) !important;
+    position: relative !important;
+    overflow: hidden !important;
+  }
+
+  .project-header-card::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    height: 4px;
+    background: linear-gradient(90deg, #1e40af, #7c3aed, #dc2626);
+  }
+
+  .project-header-card h1 {
+    margin: 0 0 8px 0 !important;
+    font-size: 24px !important;
+    font-weight: 700 !important;
+    color: #000000 !important;
+  }
+
+  .project-header-meta {
+    display: flex !important;
+    gap: 20px !important;
+    flex-wrap: wrap !important;
+    margin-top: 12px !important;
+    font-size: 13px !important;
+    color: #1e293b !important;
+  }
+
+  .project-header-meta span {
+    display: inline-flex !important;
+    align-items: center !important;
+    gap: 6px !important;
+    color: #1e293b !important;
+  }
+
+  .kanban-board-wrapper {
+    overflow-x: auto;
+    padding-bottom: 16px;
+  }
+
+  .kanban-board {
+    display: grid;
+    gap: 14px;
+    align-items: start;
+    grid-auto-flow: column;
+    grid-auto-columns: minmax(260px, 280px);
+    background: linear-gradient(135deg, #ffffff 0%, #f8fafc 100%) !important;
+    border-radius: 16px !important;
+    border: 1px solid rgba(30, 64, 175, 0.1) !important;
+    box-shadow: 0 8px 24px rgba(30, 64, 175, 0.08) !important;
+    padding: 16px !important;
+  }
+
+  .kanban-column {
+    background: linear-gradient(135deg, #ffffff 0%, #f9fafb 100%) !important;
+    border: 1px solid rgba(30, 64, 175, 0.1) !important;
+    border-radius: 16px !important;
+    display: flex !important;
+    flex-direction: column !important;
+    min-height: 280px !important;
+    transition: all 0.3s ease !important;
+    position: relative !important;
+    overflow: hidden !important;
+  }
+
+  .kanban-column:hover {
+    box-shadow: 0 8px 24px rgba(30, 64, 175, 0.12) !important;
+    border-color: rgba(30, 64, 175, 0.2) !important;
+  }
+
+  /* Cores específicas para cada coluna do Kanban - FUNDOS CLAROS */
+  .kanban-column[data-stage="inbox"] {
+    background: linear-gradient(135deg, #ffffff 0%, #f8fafc 100%) !important;
+    border-color: rgba(148, 163, 184, 0.3) !important;
+  }
+
+  .kanban-column[data-stage="inbox"]::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    height: 3px;
+    background: linear-gradient(90deg, #94a3b8, #64748b);
+  }
+
+  .kanban-column[data-stage="waiting"] {
+    background: linear-gradient(135deg, #ffffff 0%, #fefce8 100%) !important;
+    border-color: rgba(251, 191, 36, 0.3) !important;
+  }
+
+  .kanban-column[data-stage="waiting"]::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    height: 3px;
+    background: linear-gradient(90deg, #fbbf24, #f59e0b);
+  }
+
+  .kanban-column[data-stage="executing"] {
+    background: linear-gradient(135deg, #ffffff 0%, #eff6ff 100%) !important;
+    border-color: rgba(59, 130, 246, 0.3) !important;
+  }
+
+  .kanban-column[data-stage="executing"]::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    height: 3px;
+    background: linear-gradient(90deg, #3b82f6, #2563eb);
+  }
+
+  .kanban-column[data-stage="pending"] {
+    background: linear-gradient(135deg, #ffffff 0%, #fef3c7 100%) !important;
+    border-color: rgba(245, 158, 11, 0.3) !important;
+  }
+
+  .kanban-column[data-stage="pending"]::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    height: 3px;
+    background: linear-gradient(90deg, #f59e0b, #d97706);
+  }
+
+  .kanban-column[data-stage="suspended"] {
+    background: linear-gradient(135deg, #ffffff 0%, #fef2f2 100%) !important;
+    border-color: rgba(239, 68, 68, 0.3) !important;
+  }
+
+  .kanban-column[data-stage="suspended"]::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    height: 3px;
+    background: linear-gradient(90deg, #ef4444, #dc2626);
+  }
+
+  .kanban-column[data-stage="completed"] {
+    background: linear-gradient(135deg, #ffffff 0%, #f0fdf4 100%) !important;
+    border-color: rgba(16, 185, 129, 0.3) !important;
+  }
+
+  .kanban-column[data-stage="completed"]::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    height: 3px;
+    background: linear-gradient(90deg, #10b981, #059669);
+  }
+
+  .kanban-column[data-dropping="true"] {
+    border-color: rgba(30, 64, 175, 0.5) !important;
+    box-shadow: 0 0 0 2px rgba(30, 64, 175, 0.2) !important;
+  }
+
+  .kanban-column-header {
+    padding: 16px !important;
+    border-bottom: 1px solid rgba(30, 64, 175, 0.1) !important;
+    display: flex !important;
+    justify-content: space-between !important;
+    gap: 12px !important;
+  }
+
+  .kanban-column-title {
+    font-size: 14px !important;
+    font-weight: 600 !important;
+    color: #000000 !important;
+    text-transform: uppercase !important;
+    letter-spacing: .04em !important;
+  }
+
+  .kanban-column-count {
+    display: inline-flex !important;
+    align-items: center !important;
+    justify-content: center !important;
+    padding: 4px 10px !important;
+    border-radius: 999px !important;
+    font-size: 12px !important;
+    font-weight: 600 !important;
+    color: #1e40af !important;
+    background: linear-gradient(135deg, rgba(30, 64, 175, 0.1), rgba(30, 64, 175, 0.05)) !important;
+    min-width: 36px !important;
+    box-shadow: 0 2px 4px rgba(30, 64, 175, 0.1) !important;
+    border: 1px solid rgba(30, 64, 175, 0.2) !important;
+  }
+
+  .kanban-column-body {
+    flex: 1;
+    padding: 14px;
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+  }
+
+  .kanban-empty-placeholder {
+    padding: 20px 16px;
+    border: 1px dashed rgba(15, 23, 42, 0.18);
+    border-radius: 12px;
+    font-size: 12px;
+    color: #1e293b;
+    text-align: center;
+    background: rgba(248, 250, 252, 0.6);
+  }
+
+  .kanban-card {
+    background: #ffffff;
+    border-radius: 12px;
+    border: 1px solid rgba(15, 23, 42, 0.08);
+    padding: 14px 16px;
+    box-shadow: 0 6px 16px rgba(15, 23, 42, 0.06);
+    cursor: grab;
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+    transition: box-shadow 0.2s ease, transform 0.2s ease, border-color 0.2s ease;
+    position: relative;
+    overflow: hidden;
+  }
+
+  /* Cores específicas para cards baseadas no estágio */
+  .kanban-card[data-stage="inbox"] {
+    background: linear-gradient(135deg, #ffffff 0%, #f8fafc 100%);
+    border-left: 4px solid #94a3b8;
+  }
+
+  .kanban-card[data-stage="waiting"] {
+    background: linear-gradient(135deg, #ffffff 0%, #fefce8 100%);
+    border-left: 4px solid #fbbf24;
+  }
+
+  .kanban-card[data-stage="executing"] {
+    background: linear-gradient(135deg, #ffffff 0%, #eff6ff 100%);
+    border-left: 4px solid #3b82f6;
+  }
+
+  .kanban-card[data-stage="pending"] {
+    background: linear-gradient(135deg, #ffffff 0%, #fffbeb 100%);
+    border-left: 4px solid #f59e0b;
+  }
+
+  .kanban-card[data-stage="suspended"] {
+    background: linear-gradient(135deg, #ffffff 0%, #fef2f2 100%);
+    border-left: 4px solid #ef4444;
+  }
+
+  .kanban-card[data-stage="completed"] {
+    background: linear-gradient(135deg, #ffffff 0%, #f0fdf4 100%);
+    border-left: 4px solid #10b981;
+  }
+
+  .kanban-card:hover {
+    box-shadow: 0 12px 28px rgba(15, 23, 42, 0.12);
+    border-color: rgba(37, 99, 235, 0.35);
+  }
+
+  .kanban-card.dragging {
+    opacity: 0.75;
+    transform: scale(0.98);
+    box-shadow: 0 14px 32px rgba(15, 23, 42, 0.18);
+    cursor: grabbing;
+  }
+
+  .kanban-card-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 10px;
+  }
+
+  .kanban-card-code {
+    font-size: 11px;
+    font-weight: 600;
+    color: #2563eb;
+    letter-spacing: .06em;
+    text-transform: uppercase;
+  }
+
+  .kanban-card-actions {
+    display: flex;
+    gap: 8px;
+  }
+
+  .kanban-card-btn {
+    border: none;
+    background: transparent;
+    font-size: 11px;
+    font-weight: 600;
+    color: #2563eb;
+    cursor: pointer;
+    padding: 4px 8px;
+    border-radius: 6px;
+    transition: all 0.2s ease;
+  }
+
+  .kanban-card-btn:hover {
+    background: rgba(37, 99, 235, 0.1);
+    transform: translateY(-1px);
+  }
+
+  .kanban-card-btn.danger {
+    color: #dc2626;
+  }
+
+  .kanban-card-btn.danger:hover {
+    background: rgba(220, 38, 38, 0.1);
+    color: #b91c1c;
+  }
+
+  .kanban-card-btn.transfer {
+    color: #8b5cf6;
+  }
+
+  .kanban-card-btn.transfer:hover {
+    background: rgba(139, 92, 246, 0.1);
+    color: #7c3aed;
+  }
+
+  .selected-activity-info {
+    background: #f8fafc;
+    border: 1px solid #e2e8f0;
+    border-radius: 8px;
+    padding: 12px;
+    margin-top: 4px;
+  }
+
+  .selected-activity-info .activity-code {
+    font-weight: 600;
+    color: #8b5cf6;
+    font-size: 13px;
+  }
+
+  .selected-activity-info .activity-title {
+    font-weight: 600;
+    color: #0f172a;
+    margin: 4px 0;
+  }
+
+  .selected-activity-info .activity-meta {
+    font-size: 12px;
+    color: #64748b;
+  }
+
+  .transfer-history-section {
+    margin-top: 20px;
+    padding-top: 16px;
+    border-top: 1px solid #e2e8f0;
+  }
+
+  .transfer-history-section h4 {
+    margin: 0 0 12px 0;
+    font-size: 14px;
+    font-weight: 600;
+    color: #000000;
+  }
+
+  .transfer-history-list {
+    max-height: 200px;
+    overflow-y: auto;
+    background: #f8fafc;
+    border: 1px solid #e2e8f0;
+    border-radius: 8px;
+    padding: 8px;
+  }
+
+  .transfer-history-item {
+    background: white;
+    border: 1px solid #e2e8f0;
+    border-radius: 6px;
+    padding: 10px;
+    margin-bottom: 8px;
+    font-size: 12px;
+  }
+
+  .transfer-history-item:last-child {
+    margin-bottom: 0;
+  }
+
+  .transfer-history-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 4px;
+  }
+
+  .transfer-history-date {
+    color: #000000;
+    font-size: 11px;
+  }
+
+  .transfer-history-codes {
+    color: #8b5cf6;
+    font-weight: 600;
+    font-size: 11px;
+  }
+
+  .transfer-history-note {
+    color: #000000;
+    font-style: italic;
+    margin-top: 4px;
+  }
+
+  .transfer-history-note:empty {
+    display: none;
+  }
+
+  /* Corrigir cores do modal de transferência */
+  .transfer-form .field label {
+    color: #000000;
+    font-weight: 600;
+  }
+
+  .transfer-form .field input,
+  .transfer-form .field select,
+  .transfer-form .field textarea {
+    color: #000000;
+  }
+
+  .transfer-form .field input::placeholder,
+  .transfer-form .field textarea::placeholder {
+    color: #6b7280;
+  }
+
+  .kanban-card-title {
+    font-size: 14px;
+    font-weight: 600;
+    color: #0f172a;
+    line-height: 1.4;
+  }
+
+  .kanban-card-meta {
+    font-size: 12px;
+    color: #1e293b;
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+  }
+
+  .activity-modal-backdrop {
+    position: fixed;
+    inset: 0;
+    background: rgba(15, 23, 42, 0.7);
+    display: none;
+    align-items: center;
+    justify-content: center;
+    padding: 20px;
+    z-index: 999;
+  }
+
+  .activity-modal-backdrop.open {
+    display: flex;
+  }
+
+  .activity-modal {
+    background: linear-gradient(135deg, #ffffff 0%, #f8fafc 100%);
+    border-radius: 18px;
+    width: min(1440px, 100%);
+    max-height: 90vh;
+    overflow-y: auto;
+    padding: 28px;
+    box-shadow: 0 28px 56px rgba(15, 23, 42, 0.35);
+    display: grid;
+    gap: 18px;
+    border: 1px solid rgba(30, 64, 175, 0.1);
+  }
+
+  .activity-modal header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+  }
+
+  .activity-modal header h2 {
+    margin: 0;
+    font-size: 20px;
+    font-weight: 700;
+    color: #0f172a;
+  }
+
+  .activity-modal header button {
+    border: none;
+    background: transparent;
+    font-size: 28px;
+    line-height: 1;
+    cursor: pointer;
+    color: #1e293b;
+  }
+
+  .activity-form {
+    display: grid;
+    gap: 16px;
+  }
+
+  .form-two-cols {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 16px;
+  }
+
+  @media (max-width: 768px) {
+    .form-two-cols {
+      grid-template-columns: 1fr;
+    }
+  }
+
+  .activity-form .field {
+    display: grid;
+    gap: 6px;
+  }
+
+  .activity-form label {
+    font-size: 12px;
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+    font-weight: 600;
+    color: #1e293b;
+  }
+
+  .activity-form input,
+  .activity-form select,
+  .activity-form textarea {
+    border-radius: 12px;
+    border: 1px solid rgba(148, 163, 184, 0.35);
+    padding: 10px 12px;
+    font-size: 13px;
+    font-family: inherit;
+    color: #1e293b;
+    transition: border 0.2s ease, box-shadow 0.2s ease;
+    background-color: #ffffff;
+  }
+
+  .activity-form select {
+    cursor: pointer;
+  }
+
+  .activity-form select option {
+    padding: 8px;
+    color: #1e293b;
+  }
+
+  .activity-form textarea {
+    resize: vertical;
+    min-height: 80px;
+  }
+
+  .activity-form input:focus,
+  .activity-form select:focus,
+  .activity-form textarea:focus {
+    outline: none;
+    border-color: #2563eb;
+    box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.18);
+  }
+
+  .activity-form footer {
+    display: flex;
+    justify-content: flex-end;
+    gap: 12px;
+    margin-top: 8px;
+  }
+
+  .activity-form footer button {
+    border: none;
+    border-radius: 12px;
+    padding: 10px 20px;
+    font-size: 13px;
+    font-weight: 600;
+    cursor: pointer;
+  }
+
+  .activity-form footer .secondary {
+    background: rgba(148, 163, 184, 0.16);
+    color: #1e293b;
+  }
+
+  .activity-form footer .primary {
+    background: linear-gradient(135deg, #2563eb, #1d4ed8);
+    color: white;
+  }
+
+  .top-actions {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 20px;
+    flex-wrap: wrap;
+    gap: 12px;
+  }
+
+  .btn-new-activity {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    padding: 12px 20px;
+    background: linear-gradient(135deg, #1e40af, #7c3aed, #dc2626);
+    color: white;
+    border: none;
+    border-radius: 12px;
+    font-size: 14px;
+    font-weight: 600;
+    cursor: pointer;
+    box-shadow: 0 16px 28px rgba(30, 64, 175, 0.3);
+    transition: all 0.3s ease;
+    position: relative;
+    overflow: hidden;
+  }
+
+  .btn-new-activity::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: -100%;
+    width: 100%;
+    height: 100%;
+    background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.2), transparent);
+    transition: left 0.5s ease;
+  }
+
+  .btn-new-activity:hover::before {
+    left: 100%;
+  }
+
+  .btn-new-activity:hover {
+    transform: translateY(-2px);
+  }
+
+  .btn-back {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    padding: 10px 18px;
+    background: rgba(148, 163, 184, 0.16);
+    color: #1e293b;
+    border: none;
+    border-radius: 12px;
+    font-size: 13px;
+    font-weight: 600;
+    cursor: pointer;
+    text-decoration: none;
+  }
+
+  /* Log/Diário */
+  .log-section {
+    margin-top: 20px;
+    padding-top: 20px;
+    border-top: 1px solid rgba(148, 163, 184, 0.25);
+  }
+
+  .log-section h4 {
+    margin: 0 0 12px 0;
+    font-size: 13px;
+    font-weight: 600;
+    color: #1e293b;
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+  }
+
+  .log-entries {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    max-height: 200px;
+    overflow-y: auto;
+  }
+
+  .log-entry {
+    background: #f8fafc;
+    border-left: 3px solid #3b82f6;
+    padding: 10px 12px;
+    border-radius: 8px;
+    font-size: 12px;
+    transition: all 0.2s ease;
+  }
+
+  /* Cores específicas para tipos de log */
+  .log-entry.completion {
+    background: linear-gradient(135deg, #f0fdf4 0%, #dcfce7 100%);
+    border-left-color: #10b981;
+    box-shadow: 0 2px 4px rgba(16, 185, 129, 0.1);
+  }
+
+  .log-entry.cancellation {
+    background: linear-gradient(135deg, #fef2f2 0%, #fee2e2 100%);
+    border-left-color: #ef4444;
+    box-shadow: 0 2px 4px rgba(239, 68, 68, 0.1);
+  }
+
+  .log-entry.transfer {
+    background: linear-gradient(135deg, #faf5ff 0%, #f3e8ff 100%);
+    border-left-color: #8b5cf6;
+    box-shadow: 0 2px 4px rgba(139, 92, 246, 0.1);
+  }
+
+  .log-entry-header {
+    display: flex;
+    justify-content: space-between;
+    margin-bottom: 6px;
+    font-weight: 600;
+    color: #0f172a;
+  }
+
+  .log-entry-date {
+    color: #1e293b;
+    font-size: 11px;
+  }
+
+  .log-entry-text {
+    color: #1e293b;
+    line-height: 1.5;
+  }
+
+
+  .btn-add-log {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    padding: 8px 14px;
+    background: rgba(37, 99, 235, 0.1);
+    color: #2563eb;
+    border: 1px solid rgba(37, 99, 235, 0.3);
+    border-radius: 8px;
+    font-size: 12px;
+    font-weight: 600;
+    cursor: pointer;
+    margin-top: 8px;
+  }
+
+  /* Popup de confirmação */
+  .confirmation-popup-backdrop {
+    position: fixed;
+    inset: 0;
+    background: rgba(15, 23, 42, 0.75);
+    display: none;
+    align-items: center;
+    justify-content: center;
+    z-index: 1000;
+  }
+
+  .confirmation-popup-backdrop.open {
+    display: flex;
+  }
+
+  .confirmation-popup {
+    background: linear-gradient(135deg, #ffffff 0%, #fefce8 100%);
+    border-radius: 16px;
+    padding: 24px;
+    width: min(420px, 90%);
+    box-shadow: 0 24px 48px rgba(15, 23, 42, 0.35);
+    border: 1px solid rgba(251, 191, 36, 0.2);
+  }
+
+  .confirmation-popup h3 {
+    margin: 0 0 16px 0;
+    font-size: 18px;
+    color: #0f172a;
+  }
+
+  .confirmation-popup .field {
+    margin-bottom: 16px;
+  }
+
+  .confirmation-popup label {
+    display: block;
+    font-size: 12px;
+    font-weight: 600;
+    color: #1e293b;
+    margin-bottom: 6px;
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+  }
+
+  .confirmation-popup input,
+  .confirmation-popup textarea {
+    width: 100%;
+    border-radius: 8px;
+    border: 1px solid rgba(148, 163, 184, 0.35);
+    padding: 10px 12px;
+    font-size: 13px;
+    font-family: inherit;
+    color: #1e293b;
+  }
+
+  .confirmation-popup textarea {
+    resize: vertical;
+    min-height: 70px;
+  }
+
+  .confirmation-popup-actions {
+    display: flex;
+    justify-content: flex-end;
+    gap: 10px;
+    margin-top: 18px;
+  }
+
+  .confirmation-popup-actions button {
+    padding: 10px 18px;
+    border-radius: 10px;
+    border: none;
+    font-size: 13px;
+    font-weight: 600;
+    cursor: pointer;
+  }
+
+  .confirmation-popup-actions .secondary {
+    background: rgba(148, 163, 184, 0.16);
+    color: #1e293b;
+  }
+
+  .confirmation-popup-actions .primary {
+    background: linear-gradient(135deg, #2563eb, #1d4ed8);
+    color: white;
+  }
+
+  /* Sobrescrever regras globais do main.css para garantir cores escuras */
+  .project-content,
+  .project-content *,
+  .surface-card,
+  .surface-card *,
+  .kanban-card,
+  .kanban-card *,
+  .activity-modal,
+  .activity-modal *,
+  .confirmation-popup,
+  .confirmation-popup * {
+    color: #1e293b !important;
+  }
+
+  .kanban-card h3,
+  .kanban-card strong,
+  .activity-modal h2,
+  .activity-modal strong,
+  .confirmation-popup h3,
+  .confirmation-popup strong {
+    color: #0f172a !important;
+  }
+
+  /* Estilos para o editor de texto rico */
+  .rich-text-editor {
+    min-height: 300px;
+  }
+
+  .ck-editor__editable {
+    min-height: 300px !important;
+    max-height: 400px !important;
+    font-family: -apple-system, BlinkMacSystemFont, San Francisco, Segoe UI, Roboto, Helvetica Neue, sans-serif !important;
+    font-size: 14px !important;
+    line-height: 1.5 !important;
+    border-radius: 0 0 12px 12px !important;
+    border: 1px solid rgba(148, 163, 184, 0.35) !important;
+    border-top: none !important;
+  }
+
+  .ck.ck-editor {
+    border-radius: 12px !important;
+  }
+
+  .ck.ck-toolbar {
+    border-radius: 12px 12px 0 0 !important;
+    border: 1px solid rgba(148, 163, 184, 0.35) !important;
+    border-bottom: none !important;
+    background: #f8fafc !important;
+  }
+
+  .ck.ck-editor__main > .ck-editor__editable {
+    border-radius: 0 0 12px 12px !important;
+  }
+
+  .ck.ck-editor__main > .ck-editor__editable:focus {
+    border-color: #2563eb !important;
+    box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.18) !important;
+  }
+
+  .ck.ck-button {
+    color: #1e293b !important;
+  }
+
+  .ck.ck-button:hover {
+    color: #2563eb !important;
+  }
+
+  .ck.ck-button.ck-on {
+    color: #2563eb !important;
+  }
+
+  .ck.ck-dropdown__panel {
+    border-radius: 8px !important;
+    border: 1px solid rgba(148, 163, 184, 0.35) !important;
+  }
+
+  /* Melhorar o fundo do card principal */
+  .surface-card {
+    background: linear-gradient(135deg, #ffffff 0%, #f8fafc 100%);
+    border: 1px solid rgba(30, 64, 175, 0.1);
+    box-shadow: 0 8px 24px rgba(30, 64, 175, 0.08);
+  }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="project-layout plan-layout" data-sidebar-toggle>
+  {% include 'projects_sidebar.html' %}
+
+  <section class="project-content plan-content">
+    <div class="project-header-card">
+      <h1>{{ project.title }}</h1>
+      <p style="margin:0;font-size:14px;opacity:0.9;">{{ project.description or 'Sem descrição' }}</p>
+      <div class="project-header-meta">
+        <span><strong>Código:</strong> {{ project.code or '-' }}</span>
+        <span><strong>Responsável:</strong> {{ project.responsible_name or 'Não definido' }}</span>
+        <span><strong>Portfólio:</strong> {{ project.plan_name or 'Sem vínculo' }}</span>
+        <span><strong>Prazo:</strong> 
+          {{ project.start_date if project.start_date else '-' }} – 
+          {{ project.end_date if project.end_date else '-' }}
+        </span>
+      </div>
+    </div>
+
+    <div class="surface-card" style="padding:24px;">
+      <div class="top-actions">
+        <a href="{{ url_for('grv.grv_projects_projects', company_id=company.id) }}" class="btn-back">← Voltar para Projetos</a>
+        <button type="button" id="btnNewActivity" class="btn-new-activity">➕ Nova Atividade</button>
+      </div>
+
+      <div class="kanban-feedback" id="feedback" hidden></div>
+
+      <div class="kanban-board-wrapper" id="kanbanBoard" data-project-id="{{ project.id }}" data-company-id="{{ company.id }}">
+        <div class="kanban-board">
+          {% for stage in stages %}
+          <div class="kanban-column" data-kanban-column data-stage="{{ stage.slug }}">
+            <div class="kanban-column-header">
+              <div>
+                <div class="kanban-column-title" style="color:{{ stage.color }};">{{ stage.title }}</div>
+              </div>
+              <span class="kanban-column-count" data-column-count>0</span>
+            </div>
+            <div class="kanban-column-body" data-dropzone>
+              <div class="kanban-empty-placeholder" data-empty-placeholder>
+                Nenhuma atividade neste estágio.
+              </div>
+            </div>
+          </div>
+          {% endfor %}
+        </div>
+      </div>
+    </div>
+  </section>
+</div>
+
+<!-- Modal de Atividade -->
+<div id="activityModal" class="activity-modal-backdrop" role="dialog" aria-hidden="true">
+  <div class="activity-modal">
+    <header>
+      <h2 id="activityModalTitle">Nova Atividade</h2>
+      <button type="button" id="closeActivityModal" aria-label="Fechar">×</button>
+    </header>
+    <form id="activityForm" class="activity-form">
+      <input type="hidden" id="activityId">
+      
+      <!-- Campos em duas colunas -->
+      <div class="form-two-cols">
+        <div class="field">
+          <label for="activityWhat">O quê? (Descrição da Atividade) *</label>
+          <input type="text" id="activityWhat" placeholder="Ex: Definir escopo do projeto" required>
+        </div>
+        <div class="field">
+          <label for="activityWho">Quem? (Responsável)</label>
+          <select id="activityWho">
+            <option value="">Selecione um responsável</option>
+          </select>
+        </div>
+        <div class="field">
+          <label for="activityWhen">Quando? (Prazo)</label>
+          <input type="date" id="activityWhen">
+        </div>
+        <div class="field">
+          <label for="activityAmount">Orçamento (R$)</label>
+          <input type="number" id="activityAmount" step="0.01" min="0" placeholder="0.00">
+        </div>
+      </div>
+      
+      <!-- Campo Como em linha completa -->
+      <div class="field">
+        <label for="activityHow">Como? (Método/Processo)</label>
+        <textarea id="activityHow" placeholder="Descreva como será executada"></textarea>
+      </div>
+      
+      <!-- Campo Observações com editor rico -->
+      <div class="field">
+        <label for="activityObservations">Observações</label>
+        <textarea id="activityObservations" class="rich-text-editor" placeholder="Informações adicionais"></textarea>
+      </div>
+
+      <!-- Seção de Log/Diário -->
+      <div class="log-section" id="logSection" style="display:none;">
+        <h4>📝 Registro de Diário</h4>
+        <div class="log-entries" id="logEntries">
+          <div style="text-align:center;color:#94a3b8;font-size:12px;">Nenhum registro ainda</div>
+        </div>
+        <button type="button" class="btn-add-log" id="btnAddLog">➕ Adicionar Registro</button>
+      </div>
+
+      <footer>
+        <button type="button" class="secondary" id="cancelActivityModal">Cancelar</button>
+        <button type="submit" class="primary">Salvar Atividade</button>
+      </footer>
+    </form>
+  </div>
+</div>
+
+<!-- Popup de Log/Diário -->
+<div id="logPopup" class="confirmation-popup-backdrop" role="dialog" aria-hidden="true">
+  <div class="confirmation-popup">
+    <h3>➕ Adicionar Registro</h3>
+    <div class="field">
+      <label>Descrição do Registro</label>
+      <textarea id="logText" placeholder="Descreva o que foi feito ou observado..." rows="3"></textarea>
+    </div>
+    <div class="confirmation-popup-actions">
+      <button type="button" class="secondary" id="cancelLogPopup">Cancelar</button>
+      <button type="button" class="primary" id="confirmLogPopup">Adicionar</button>
+    </div>
+  </div>
+</div>
+
+<!-- Popup de Confirmação de Conclusão -->
+<div id="completionPopup" class="confirmation-popup-backdrop" role="dialog" aria-hidden="true">
+  <div class="confirmation-popup">
+    <h3>✅ Confirmar Conclusão</h3>
+    <p style="margin:0 0 16px 0;color:#64748b;font-size:13px;">Confirme a data de conclusão desta atividade:</p>
+    <div class="field">
+      <label>Data de Conclusão</label>
+      <input type="date" id="completionDate">
+    </div>
+    <div class="field">
+      <label>Observação (Opcional)</label>
+      <textarea id="completionNote" placeholder="Comentários sobre a conclusão..." rows="2"></textarea>
+    </div>
+    <div class="confirmation-popup-actions">
+      <button type="button" class="secondary" id="cancelCompletionPopup">Cancelar</button>
+      <button type="button" class="primary" id="confirmCompletionPopup">Confirmar Conclusão</button>
+    </div>
+  </div>
+</div>
+
+<!-- Popup de Cancelamento de Conclusão -->
+<div id="cancellationPopup" class="confirmation-popup-backdrop" role="dialog" aria-hidden="true">
+  <div class="confirmation-popup">
+    <h3>↩️ Cancelar Conclusão</h3>
+    <p style="margin:0 0 16px 0;color:#64748b;font-size:13px;">Confirme o cancelamento da conclusão desta atividade:</p>
+    <div class="field">
+      <label>Data do Cancelamento</label>
+      <input type="date" id="cancellationDate">
+    </div>
+    <div class="field">
+      <label>Motivo (Opcional)</label>
+      <textarea id="cancellationNote" placeholder="Por que está revertendo a conclusão?" rows="2"></textarea>
+    </div>
+    <div class="confirmation-popup-actions">
+      <button type="button" class="secondary" id="cancelCancellationPopup">Voltar</button>
+      <button type="button" class="primary" id="confirmCancellationPopup">Confirmar Cancelamento</button>
+    </div>
+  </div>
+</div>
+
+<!-- Modal de Transferência de Atividade -->
+<div id="transferModal" class="activity-modal-backdrop" role="dialog" aria-hidden="true">
+  <div class="activity-modal">
+    <header>
+      <h2>🔄 Transferir Atividade</h2>
+      <button type="button" id="closeTransferModal" aria-label="Fechar">×</button>
+    </header>
+    <div class="transfer-form">
+      <div class="field">
+        <label>Atividade Selecionada</label>
+        <div id="selectedActivityInfo" class="selected-activity-info">
+          <!-- Será preenchido dinamicamente -->
+        </div>
+      </div>
+      <div class="field">
+        <label for="targetProjectSelect">Projeto de Destino *</label>
+        <select id="targetProjectSelect" required>
+          <option value="">Selecione um projeto...</option>
+          <!-- Será preenchido dinamicamente -->
+        </select>
+      </div>
+      <div class="field">
+        <label for="transferNote">Observação (Opcional)</label>
+        <textarea id="transferNote" placeholder="Motivo da transferência..." rows="3"></textarea>
+      </div>
+      
+      <!-- Seção de Histórico de Transferências -->
+      <div class="transfer-history-section" id="transferHistorySection" style="display:none;">
+        <h4>📋 Histórico de Transferências</h4>
+        <div class="transfer-history-list" id="transferHistoryList">
+          <div style="text-align:center;color:#94a3b8;font-size:12px;">Carregando histórico...</div>
+        </div>
+      </div>
+      <footer>
+        <button type="button" class="secondary" id="cancelTransferModal">Cancelar</button>
+        <button type="button" class="primary" id="confirmTransferModal">Transferir Atividade</button>
+      </footer>
+    </div>
+  </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+{{ super() }}
+<script>
+(function() {
+  const companyId = {{ company.id }};
+  const projectId = {{ project.id }};
+  const projectCode = '{{ project.code }}';
+
+  const kanbanBoard = document.getElementById('kanbanBoard');
+  const feedback = document.getElementById('feedback');
+  const btnNew = document.getElementById('btnNewActivity');
+
+  const modalBackdrop = document.getElementById('activityModal');
+  const modalTitle = document.getElementById('activityModalTitle');
+  const form = document.getElementById('activityForm');
+  const btnCancel = document.getElementById('cancelActivityModal');
+  const btnClose = document.getElementById('closeActivityModal');
+
+  const fieldId = document.getElementById('activityId');
+  const fieldWhat = document.getElementById('activityWhat');
+  const fieldWho = document.getElementById('activityWho');
+  const fieldWhen = document.getElementById('activityWhen');
+  const fieldHow = document.getElementById('activityHow');
+  const fieldAmount = document.getElementById('activityAmount');
+  const fieldObservations = document.getElementById('activityObservations');
+
+  // Log/Diary elements
+  const logSection = document.getElementById('logSection');
+  const logEntries = document.getElementById('logEntries');
+  const btnAddLog = document.getElementById('btnAddLog');
+  
+  const logPopup = document.getElementById('logPopup');
+  const logText = document.getElementById('logText');
+  const btnCancelLog = document.getElementById('cancelLogPopup');
+  const btnConfirmLog = document.getElementById('confirmLogPopup');
+
+  const completionPopup = document.getElementById('completionPopup');
+  const completionDate = document.getElementById('completionDate');
+  const completionNote = document.getElementById('completionNote');
+  const btnCancelCompletion = document.getElementById('cancelCompletionPopup');
+  const btnConfirmCompletion = document.getElementById('confirmCompletionPopup');
+
+  const cancellationPopup = document.getElementById('cancellationPopup');
+  const cancellationDate = document.getElementById('cancellationDate');
+  const cancellationNote = document.getElementById('cancellationNote');
+  const btnCancelCancellation = document.getElementById('cancelCancellationPopup');
+  const btnConfirmCancellation = document.getElementById('confirmCancellationPopup');
+
+  // Transfer modal elements
+  const transferModal = document.getElementById('transferModal');
+  const selectedActivityInfo = document.getElementById('selectedActivityInfo');
+  const targetProjectSelect = document.getElementById('targetProjectSelect');
+  const transferNote = document.getElementById('transferNote');
+  const btnCancelTransfer = document.getElementById('cancelTransferModal');
+  const btnConfirmTransfer = document.getElementById('confirmTransferModal');
+  const btnCloseTransfer = document.getElementById('closeTransferModal');
+  const transferHistorySection = document.getElementById('transferHistorySection');
+  const transferHistoryList = document.getElementById('transferHistoryList');
+
+  let activities = [];
+  let draggedCard = null;
+  let originColumn = null;
+  let currentActivity = null;  // Para rastrear atividade sendo editada
+  let pendingMoveData = null;  // Para drag and drop com confirmação
+  let activityToTransfer = null;  // Para rastrear atividade sendo transferida
+
+  const stages = {{ stages | tojson }};
+
+  function notify(message, variant = 'info') {
+    if (!feedback) {
+      console.log(message);
+      return;
+    }
+    feedback.textContent = message;
+    feedback.dataset.variant = variant;
+    feedback.hidden = false;
+    if (feedback._timeout) {
+      clearTimeout(feedback._timeout);
+    }
+    feedback._timeout = setTimeout(() => {
+      feedback.hidden = true;
+    }, 3500);
+  }
+
+  // ===== LOG/DIARY FUNCTIONS =====
+  
+  function renderLogs(logs) {
+    if (!logs || !logs.length) {
+      logEntries.innerHTML = '<div style="text-align:center;color:#94a3b8;font-size:12px;">Nenhum registro ainda</div>';
+      return;
+    }
+
+    logEntries.innerHTML = logs.map(log => {
+      const date = new Date(log.timestamp);
+      const dateStr = date.toLocaleString('pt-BR');
+      
+      let typeClass = '';
+      let icon = '📝';
+      let typeLabel = 'Registro';
+      
+      if (log.type === 'completion') {
+        typeClass = 'completion';
+        icon = '✅';
+        typeLabel = 'Conclusão';
+      } else if (log.type === 'cancellation') {
+        typeClass = 'cancellation';
+        icon = '↩️';
+        typeLabel = 'Cancelamento';
+      } else if (log.type === 'transfer') {
+        typeClass = 'transfer';
+        icon = '🔄';
+        typeLabel = 'Transferência';
+      }
+      
+      let logContent = `<div class="log-entry-text">${log.text}</div>`;
+      
+      // Add additional info for transfer logs
+      if (log.type === 'transfer') {
+        logContent += `
+          <div style="font-size: 11px; color: #6b7280; margin-top: 4px;">
+            <strong>Código:</strong> ${log.old_code} → ${log.new_code} | 
+            <strong>Usuário:</strong> ${log.user_name || 'Usuário'}
+          </div>
+        `;
+        if (log.note) {
+          logContent += `<div style="font-size: 11px; color: #6b7280; margin-top: 2px; font-style: italic;">"${log.note}"</div>`;
+        }
+      }
+      
+      return `
+        <div class="log-entry ${typeClass}">
+          <div class="log-entry-header">
+            <span>${icon} ${typeLabel}</span>
+            <span class="log-entry-date">${dateStr}</span>
+          </div>
+          ${logContent}
+        </div>
+      `;
+    }).reverse().join('');  // Mais recente primeiro
+  }
+
+  function openLogPopup() {
+    logText.value = '';
+    logPopup.classList.add('open');
+    logPopup.setAttribute('aria-hidden', 'false');
+    logText.focus();
+  }
+
+  function closeLogPopup() {
+    logPopup.classList.remove('open');
+    logPopup.setAttribute('aria-hidden', 'true');
+    logText.value = '';
+  }
+
+  function addLogEntry() {
+    const text = logText.value.trim();
+    if (!text) {
+      notify('Digite uma descrição para o registro.', 'error');
+      return;
+    }
+
+    if (!currentActivity || !currentActivity.logs) {
+      currentActivity.logs = [];
+    }
+
+    const logEntry = {
+      timestamp: new Date().toISOString(),
+      text: text,
+      type: 'manual'
+    };
+
+    currentActivity.logs.push(logEntry);
+    renderLogs(currentActivity.logs);
+    closeLogPopup();
+    notify('Registro adicionado.', 'info');
+  }
+
+  function openCompletionPopup(activityId, targetStage, dropzone, previousColumn) {
+    const today = new Date().toISOString().split('T')[0];
+    completionDate.value = today;
+    completionNote.value = '';
+    
+    pendingMoveData = { activityId, targetStage, dropzone, previousColumn };
+    
+    completionPopup.classList.add('open');
+    completionPopup.setAttribute('aria-hidden', 'false');
+    completionDate.focus();
+  }
+
+  function closeCompletionPopup(revert = false) {
+    completionPopup.classList.remove('open');
+    completionPopup.setAttribute('aria-hidden', 'true');
+    
+    if (revert && pendingMoveData) {
+      // Reverter movimento
+      const { previousColumn } = pendingMoveData;
+      if (previousColumn && draggedCard) {
+        const previousDropzone = previousColumn.querySelector('[data-dropzone]');
+        if (previousDropzone) {
+          previousDropzone.appendChild(draggedCard);
+          updateColumnState(previousColumn);
+        }
+      }
+    }
+    
+    pendingMoveData = null;
+    draggedCard = null;
+    originColumn = null;
+  }
+
+  async function confirmCompletion() {
+    if (!pendingMoveData) return;
+
+    const date = completionDate.value;
+    const note = completionNote.value.trim();
+    const { activityId, targetStage, dropzone, previousColumn } = pendingMoveData;
+
+    if (!date) {
+      notify('Informe a data de conclusão.', 'error');
+      return;
+    }
+
+    try {
+      // Salvar log de conclusão
+      const activity = activities.find(a => a.id == activityId);
+      if (activity) {
+        if (!activity.logs) activity.logs = [];
+        
+        activity.logs.push({
+          timestamp: new Date().toISOString(),
+          text: note || `Atividade concluída em ${new Date(date).toLocaleDateString('pt-BR')}`,
+          type: 'completion',
+          date: date
+        });
+      }
+
+      // Atualizar no servidor
+      const response = await fetch(`/api/companies/${companyId}/projects/${projectId}/activities/${activityId}/stage`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ 
+          stage: targetStage,
+          completion_date: date,
+          logs: activity ? activity.logs : []
+        })
+      });
+
+      const data = await response.json();
+      
+      if (!response.ok || !data.success) {
+        throw new Error(data.message || 'Erro ao concluir atividade');
+      }
+
+      if (activity) {
+        activity.stage = targetStage;
+        activity.completion_date = date;
+      }
+
+      const stageName = stages.find(s => s.slug === targetStage)?.title || targetStage;
+      notify(`Atividade concluída em ${new Date(date).toLocaleDateString('pt-BR')}.`, 'info');
+      
+      if (dropzone && previousColumn) {
+        updateColumnState(dropzone.closest('[data-kanban-column]'));
+        updateColumnState(previousColumn);
+      }
+
+      closeCompletionPopup(false);
+    } catch (error) {
+      notify(error.message, 'error');
+      closeCompletionPopup(true);
+    }
+  }
+
+  function openCancellationPopup(activityId, targetStage, dropzone, previousColumn) {
+    const today = new Date().toISOString().split('T')[0];
+    cancellationDate.value = today;
+    cancellationNote.value = '';
+    
+    pendingMoveData = { activityId, targetStage, dropzone, previousColumn };
+    
+    cancellationPopup.classList.add('open');
+    cancellationPopup.setAttribute('aria-hidden', 'false');
+    cancellationDate.focus();
+  }
+
+  function closeCancellationPopup(revert = false) {
+    cancellationPopup.classList.remove('open');
+    cancellationPopup.setAttribute('aria-hidden', 'true');
+    
+    if (revert && pendingMoveData) {
+      // Reverter movimento
+      const { previousColumn } = pendingMoveData;
+      if (previousColumn && draggedCard) {
+        const previousDropzone = previousColumn.querySelector('[data-dropzone]');
+        if (previousDropzone) {
+          previousDropzone.appendChild(draggedCard);
+          updateColumnState(previousColumn);
+        }
+      }
+    }
+    
+    pendingMoveData = null;
+    draggedCard = null;
+    originColumn = null;
+  }
+
+  async function confirmCancellation() {
+    if (!pendingMoveData) return;
+
+    const date = cancellationDate.value;
+    const note = cancellationNote.value.trim();
+    const { activityId, targetStage, dropzone, previousColumn } = pendingMoveData;
+
+    if (!date) {
+      notify('Informe a data do cancelamento.', 'error');
+      return;
+    }
+
+    try {
+      // Salvar log de cancelamento
+      const activity = activities.find(a => a.id == activityId);
+      if (activity) {
+        if (!activity.logs) activity.logs = [];
+        
+        activity.logs.push({
+          timestamp: new Date().toISOString(),
+          text: note || `Conclusão cancelada em ${new Date(date).toLocaleDateString('pt-BR')}`,
+          type: 'cancellation',
+          date: date
+        });
+        
+        // Remover data de conclusão
+        activity.completion_date = null;
+      }
+
+      // Atualizar no servidor
+      const response = await fetch(`/api/companies/${companyId}/projects/${projectId}/activities/${activityId}/stage`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ 
+          stage: targetStage,
+          completion_date: null,
+          logs: activity ? activity.logs : []
+        })
+      });
+
+      const data = await response.json();
+      
+      if (!response.ok || !data.success) {
+        throw new Error(data.message || 'Erro ao cancelar conclusão');
+      }
+
+      if (activity) {
+        activity.stage = targetStage;
+      }
+
+      const stageName = stages.find(s => s.slug === targetStage)?.title || targetStage;
+      notify(`Conclusão cancelada. Atividade movida para ${stageName}.`, 'info');
+      
+      if (dropzone && previousColumn) {
+        updateColumnState(dropzone.closest('[data-kanban-column]'));
+        updateColumnState(previousColumn);
+      }
+
+      closeCancellationPopup(false);
+    } catch (error) {
+      notify(error.message, 'error');
+      closeCancellationPopup(true);
+    }
+  }
+
+
+  // ===== TRANSFER FUNCTIONS =====
+  
+  async function loadProjectsForTransfer() {
+    try {
+      const response = await fetch(`/api/companies/${companyId}/projects`);
+      const data = await response.json();
+      
+      if (!response.ok || !data.success) {
+        throw new Error(data.message || 'Erro ao carregar projetos');
+      }
+      
+      // Clear existing options
+      targetProjectSelect.innerHTML = '<option value="">Selecione um projeto...</option>';
+      
+      // Add projects (exclude current project)
+      data.projects.forEach(project => {
+        if (project.id !== projectId) {
+          const option = document.createElement('option');
+          option.value = project.id;
+          option.textContent = `${project.title || project.name || 'Sem nome'} (${project.code})`;
+          targetProjectSelect.appendChild(option);
+        }
+      });
+      
+    } catch (error) {
+      notify(error.message, 'error');
+    }
+  }
+  
+  function openTransferModal(activity) {
+    activityToTransfer = activity;
+    
+    // Show activity info
+    selectedActivityInfo.innerHTML = `
+      <div class="activity-code">${activity.code || '-'}</div>
+      <div class="activity-title">${activity.what || 'Sem descrição'}</div>
+      <div class="activity-meta">
+        ${activity.who ? `Responsável: ${activity.who}` : ''}
+        ${activity.when ? ` | Prazo: ${activity.when}` : ''}
+      </div>
+    `;
+    
+    // Reset form
+    targetProjectSelect.value = '';
+    transferNote.value = '';
+    
+    // Load projects
+    loadProjectsForTransfer();
+    
+    // Load transfer history
+    loadTransferHistory(activity);
+    
+    // Show modal
+    transferModal.classList.add('open');
+    transferModal.setAttribute('aria-hidden', 'false');
+  }
+  
+  function closeTransferModal() {
+    transferModal.classList.remove('open');
+    transferModal.setAttribute('aria-hidden', 'true');
+    activityToTransfer = null;
+  }
+  
+  function loadTransferHistory(activity) {
+    const transferHistory = activity.transfer_history || [];
+    
+    if (transferHistory.length === 0) {
+      transferHistoryList.innerHTML = '<div style="text-align:center;color:#94a3b8;font-size:12px;">Nenhuma transferência realizada</div>';
+      transferHistorySection.style.display = 'none';
+      return;
+    }
+    
+    // Show history section
+    transferHistorySection.style.display = 'block';
+    
+    // Use transfer history data directly (names are already included)
+    const historyWithNames = transferHistory.map(transfer => ({
+      ...transfer,
+      from_project_name: transfer.from_project_name || `Projeto ${transfer.from_project_id}`,
+      to_project_name: transfer.to_project_name || `Projeto ${transfer.to_project_id}`,
+      user_name: transfer.user_name || 'Usuário'
+    }));
+    
+    // Sort by timestamp (most recent first)
+    historyWithNames.sort((a, b) => new Date(b.timestamp) - new Date(a.timestamp));
+    
+    // Render history
+    transferHistoryList.innerHTML = historyWithNames.map(transfer => {
+      const date = new Date(transfer.timestamp);
+      const formattedDate = date.toLocaleDateString('pt-BR', {
+        day: '2-digit',
+        month: '2-digit',
+        year: 'numeric',
+        hour: '2-digit',
+        minute: '2-digit'
+      });
+      
+      return `
+        <div class="transfer-history-item">
+          <div class="transfer-history-header">
+            <span class="transfer-history-date">${formattedDate}</span>
+            <span class="transfer-history-codes">${transfer.old_code} → ${transfer.new_code}</span>
+          </div>
+          <div style="font-size: 11px; color: #6b7280; margin-bottom: 4px;">
+            <strong>Usuário:</strong> ${transfer.user_name || 'Usuário'} | 
+            <strong>De:</strong> ${transfer.from_project_name} → 
+            <strong>Para:</strong> ${transfer.to_project_name}
+          </div>
+          ${transfer.note ? `<div class="transfer-history-note">"${transfer.note}"</div>` : ''}
+        </div>
+      `;
+    }).join('');
+  }
+  
+  async function confirmTransfer() {
+    if (!activityToTransfer) {
+      notify('Nenhuma atividade selecionada', 'error');
+      return;
+    }
+    
+    const targetProjectId = targetProjectSelect.value;
+    if (!targetProjectId) {
+      notify('Selecione um projeto de destino', 'error');
+      return;
+    }
+    
+    try {
+      const response = await fetch(`/api/companies/${companyId}/projects/${projectId}/activities/${activityToTransfer.id}/transfer`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          target_project_id: parseInt(targetProjectId),
+          note: transferNote.value
+        })
+      });
+      
+      const data = await response.json();
+      
+      if (!response.ok || !data.success) {
+        throw new Error(data.message || 'Erro ao transferir atividade');
+      }
+      
+      notify(data.message, 'success');
+      closeTransferModal();
+      await loadActivities();
+      
+    } catch (error) {
+      notify(error.message, 'error');
+    }
+  }
+
+  function updateColumnState(column) {
+    const dropzone = column.querySelector('[data-dropzone]');
+    const cards = dropzone ? dropzone.querySelectorAll('[data-activity-card]') : [];
+    const countEl = column.querySelector('[data-column-count]');
+    const placeholder = dropzone ? dropzone.querySelector('[data-empty-placeholder]') : null;
+    
+    if (countEl) {
+      countEl.textContent = cards.length;
+    }
+    if (placeholder) {
+      placeholder.hidden = cards.length > 0;
+    }
+  }
+
+  function renderKanban() {
+    // Group activities by stage
+    const activityGroups = {};
+    stages.forEach(stage => {
+      activityGroups[stage.slug] = activities.filter(a => a.stage === stage.slug);
+    });
+
+    // Render each column
+    stages.forEach(stage => {
+      const column = kanbanBoard.querySelector(`[data-stage="${stage.slug}"]`);
+      if (!column) return;
+
+      const dropzone = column.querySelector('[data-dropzone]');
+      if (!dropzone) return;
+
+      // Clear existing cards
+      dropzone.querySelectorAll('[data-activity-card]').forEach(card => card.remove());
+
+      // Add activities
+      const stageActivities = activityGroups[stage.slug] || [];
+      stageActivities.forEach(activity => {
+        const card = createActivityCard(activity);
+        dropzone.appendChild(card);
+      });
+
+      updateColumnState(column);
+    });
+  }
+
+  function createActivityCard(activity) {
+    const card = document.createElement('article');
+    card.className = 'kanban-card';
+    card.draggable = true;
+    card.dataset.activityCard = '';
+    card.dataset.activityId = activity.id;
+    card.dataset.stage = activity.stage;
+
+    const deadline = activity.when ? new Date(activity.when).toLocaleDateString('pt-BR') : '-';
+    const budget = activity.amount ? `R$ ${parseFloat(activity.amount).toLocaleString('pt-BR', {minimumFractionDigits: 2})}` : '-';
+
+    card.innerHTML = `
+      <div class="kanban-card-header">
+        <span class="kanban-card-code">${activity.code || '-'}</span>
+        <div class="kanban-card-actions">
+          <button type="button" class="kanban-card-btn" data-action="edit">Editar</button>
+          <button type="button" class="kanban-card-btn transfer" data-action="transfer">Transferir</button>
+          <button type="button" class="kanban-card-btn danger" data-action="delete">Excluir</button>
+        </div>
+      </div>
+      <div class="kanban-card-title">${activity.what || 'Sem descrição'}</div>
+      <div class="kanban-card-meta">
+        ${activity.who ? `<span><strong>Responsável:</strong> ${activity.who}</span>` : ''}
+        <span><strong>Prazo:</strong> ${deadline}</span>
+        <span><strong>Orçamento:</strong> ${budget}</span>
+      </div>
+    `;
+
+    // Drag events
+    card.addEventListener('dragstart', () => {
+      draggedCard = card;
+      originColumn = card.closest('[data-kanban-column]');
+      requestAnimationFrame(() => card.classList.add('dragging'));
+    });
+
+    card.addEventListener('dragend', () => {
+      card.classList.remove('dragging');
+      draggedCard = null;
+      originColumn = null;
+    });
+
+    // Button events
+    card.querySelector('[data-action="edit"]').addEventListener('click', (e) => {
+      e.stopPropagation();
+      openActivityModal(activity);
+    });
+
+    card.querySelector('[data-action="transfer"]').addEventListener('click', (e) => {
+      e.stopPropagation();
+      openTransferModal(activity);
+    });
+
+    card.querySelector('[data-action="delete"]').addEventListener('click', async (e) => {
+      e.stopPropagation();
+      if (!confirm(`Confirmar exclusão da atividade "${activity.what}"?`)) return;
+      
+      try {
+        const response = await fetch(`/api/companies/${companyId}/projects/${projectId}/activities/${activity.id}`, {
+          method: 'DELETE'
+        });
+        const data = await response.json();
+        
+        if (!response.ok || !data.success) {
+          throw new Error(data.message || 'Erro ao excluir');
+        }
+        
+        notify(data.message || 'Atividade excluída.', 'info');
+        await loadActivities();
+      } catch (error) {
+        notify(error.message, 'error');
+      }
+    });
+
+    return card;
+  }
+
+  async function loadActivities() {
+    try {
+      const response = await fetch(`/api/companies/${companyId}/projects/${projectId}/activities`);
+      const data = await response.json();
+      
+      if (!response.ok || !data.success) {
+        throw new Error(data.message || 'Erro ao carregar atividades');
+      }
+      
+      activities = data.activities || [];
+      renderKanban();
+    } catch (error) {
+      notify(error.message, 'error');
+    }
+  }
+
+
+  // Setup drag and drop
+  const columns = kanbanBoard.querySelectorAll('[data-kanban-column]');
+  columns.forEach((column) => {
+    column.addEventListener('dragover', (event) => {
+      event.preventDefault();
+      column.setAttribute('data-dropping', 'true');
+    });
+
+    column.addEventListener('dragleave', () => {
+      column.removeAttribute('data-dropping');
+    });
+
+    column.addEventListener('drop', async (event) => {
+      event.preventDefault();
+      column.removeAttribute('data-dropping');
+      
+      if (!draggedCard) return;
+
+      const targetStage = column.dataset.stage;
+      const activityId = parseInt(draggedCard.dataset.activityId);
+      const currentStage = draggedCard.dataset.stage;
+      const previousColumn = originColumn;
+
+      if (targetStage === currentStage) {
+        draggedCard = null;
+        originColumn = null;
+        return;
+      }
+
+      // Move card visually (temporarily)
+      const dropzone = column.querySelector('[data-dropzone]');
+      if (dropzone) {
+        dropzone.appendChild(draggedCard);
+        draggedCard.dataset.stage = targetStage;
+        updateColumnState(column);
+        if (previousColumn && previousColumn !== column) {
+          updateColumnState(previousColumn);
+        }
+      }
+
+      // Check if moving TO "completed" or FROM "completed"
+      const movingToCompleted = targetStage === 'completed' && currentStage !== 'completed';
+      const movingFromCompleted = targetStage !== 'completed' && currentStage === 'completed';
+
+      if (movingToCompleted) {
+        // Abrir popup de confirmação de conclusão
+        openCompletionPopup(activityId, targetStage, dropzone, previousColumn);
+        return;
+      }
+
+      if (movingFromCompleted) {
+        // Abrir popup de cancelamento de conclusão
+        openCancellationPopup(activityId, targetStage, dropzone, previousColumn);
+        return;
+      }
+
+      // Normal movement (not to/from completed)
+      try {
+        const response = await fetch(`/api/companies/${companyId}/projects/${projectId}/activities/${activityId}/stage`, {
+          method: 'PATCH',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ stage: targetStage })
+        });
+
+        const data = await response.json();
+        
+        if (!response.ok || !data.success) {
+          throw new Error(data.message || 'Erro ao mover atividade');
+        }
+        
+        // Update local data
+        const activity = activities.find(a => a.id == activityId);
+        if (activity) {
+          activity.stage = targetStage;
+        }
+        
+        const stageName = stages.find(s => s.slug === targetStage)?.title || targetStage;
+        notify(`Atividade movida para ${stageName}.`, 'info');
+      } catch (error) {
+        // Revert on error
+        if (previousColumn) {
+          const previousDropzone = previousColumn.querySelector('[data-dropzone]');
+          if (previousDropzone) {
+            previousDropzone.appendChild(draggedCard);
+            draggedCard.dataset.stage = currentStage;
+            updateColumnState(previousColumn);
+          }
+        }
+        updateColumnState(column);
+        notify(error.message, 'error');
+      } finally {
+        draggedCard = null;
+        originColumn = null;
+      }
+    });
+  });
+
+  // Event listeners - Activity Modal
+  btnNew.addEventListener('click', () => openActivityModal());
+  btnCancel.addEventListener('click', closeActivityModal);
+  btnClose.addEventListener('click', closeActivityModal);
+  modalBackdrop.addEventListener('click', (event) => {
+    if (event.target === modalBackdrop) closeActivityModal();
+  });
+  form.addEventListener('submit', submitActivity);
+
+  // Event listeners - Log Popup
+  btnAddLog.addEventListener('click', openLogPopup);
+  btnCancelLog.addEventListener('click', closeLogPopup);
+  btnConfirmLog.addEventListener('click', addLogEntry);
+  logPopup.addEventListener('click', (event) => {
+    if (event.target === logPopup) closeLogPopup();
+  });
+
+  // Event listeners - Completion Popup
+  btnCancelCompletion.addEventListener('click', () => closeCompletionPopup(true));
+  btnConfirmCompletion.addEventListener('click', confirmCompletion);
+  completionPopup.addEventListener('click', (event) => {
+    if (event.target === completionPopup) closeCompletionPopup(true);
+  });
+
+  // Event listeners - Cancellation Popup
+  btnCancelCancellation.addEventListener('click', () => closeCancellationPopup(true));
+  btnConfirmCancellation.addEventListener('click', confirmCancellation);
+  cancellationPopup.addEventListener('click', (event) => {
+    if (event.target === cancellationPopup) closeCancellationPopup(true);
+  });
+
+  // Event listeners - Transfer Modal
+  btnCancelTransfer.addEventListener('click', closeTransferModal);
+  btnConfirmTransfer.addEventListener('click', confirmTransfer);
+  btnCloseTransfer.addEventListener('click', closeTransferModal);
+  transferModal.addEventListener('click', (event) => {
+    if (event.target === transferModal) closeTransferModal();
+  });
+
+  // ===== EMPLOYEES FUNCTIONS =====
+  
+  let employees = [];
+
+  async function loadEmployees() {
+    try {
+      const response = await fetch(`/api/companies/${companyId}/employees`);
+      const data = await response.json();
+      
+      if (data.success) {
+        employees = data.employees || [];
+        populateEmployeeSelect();
+      } else {
+        console.error('Erro ao carregar colaboradores:', data.message);
+      }
+    } catch (error) {
+      console.error('Erro ao carregar colaboradores:', error);
+    }
+  }
+
+  function populateEmployeeSelect() {
+    const select = document.getElementById('activityWho');
+    if (!select) return;
+
+    // Limpar opções existentes (exceto a primeira)
+    select.innerHTML = '<option value="">Selecione um responsável</option>';
+
+    // Adicionar colaboradores ativos
+    employees.forEach(employee => {
+      if (employee.status === 'active') {
+        const option = document.createElement('option');
+        option.value = employee.name;
+        option.textContent = employee.name;
+        
+        // Adicionar informações adicionais se disponíveis
+        if (employee.department) {
+          option.textContent += ` - ${employee.department}`;
+        }
+        if (employee.role_name) {
+          option.textContent += ` (${employee.role_name})`;
+        }
+        
+        select.appendChild(option);
+      }
+    });
+  }
+
+  // ===== RICH TEXT EDITOR FUNCTIONS =====
+  
+  let ckEditorInstance = null;
+  let isEditorInitializing = false;
+
+  function initializeRichTextEditor() {
+    // Evitar múltiplas inicializações simultâneas
+    if (isEditorInitializing) return;
+    isEditorInitializing = true;
+
+    // Destruir instância anterior se existir
+    destroyRichTextEditor();
+
+    // Aguardar um pouco para garantir que o DOM está pronto
+    setTimeout(() => {
+      try {
+        // Verificar se o elemento existe
+        const editorElement = document.getElementById('activityObservations');
+        if (!editorElement) {
+          isEditorInitializing = false;
+          return;
+        }
+
+        // Criar o editor CKEditor
+        ClassicEditor
+          .create(editorElement, {
+            toolbar: {
+              items: [
+                'heading', '|',
+                'bold', 'italic', 'underline', 'strikethrough', '|',
+                'fontSize', 'fontColor', 'fontBackgroundColor', '|',
+                'bulletedList', 'numberedList', '|',
+                'alignment', '|',
+                'link', 'insertImage', '|',
+                'undo', 'redo'
+              ]
+            },
+            language: 'pt-br',
+            placeholder: 'Informações adicionais...'
+          })
+          .then(editor => {
+            ckEditorInstance = editor;
+            
+            // Sincronizar com o campo original quando o modal abrir
+            if (currentActivity && currentActivity.observations) {
+              editor.setData(currentActivity.observations);
+            }
+
+            isEditorInitializing = false;
+          })
+          .catch(error => {
+            console.error('Erro ao inicializar CKEditor:', error);
+            isEditorInitializing = false;
+          });
+      } catch (error) {
+        console.error('Erro ao inicializar editor:', error);
+        isEditorInitializing = false;
+      }
+    }, 50);
+  }
+
+  function destroyRichTextEditor() {
+    try {
+      if (ckEditorInstance) {
+        // Destruir a instância do CKEditor
+        ckEditorInstance.destroy();
+        ckEditorInstance = null;
+      }
+
+      // Limpar completamente o elemento
+      const editorElement = document.getElementById('activityObservations');
+      if (editorElement) {
+        // Restaurar como textarea simples
+        editorElement.outerHTML = '<textarea id="activityObservations" class="rich-text-editor" placeholder="Informações adicionais"></textarea>';
+      }
+    } catch (error) {
+      console.error('Erro ao destruir editor:', error);
+    }
+  }
+
+  function getRichTextContent() {
+    if (ckEditorInstance) {
+      return ckEditorInstance.getData();
+    }
+    return document.getElementById('activityObservations').value;
+  }
+
+  function setRichTextContent(content) {
+    if (ckEditorInstance) {
+      ckEditorInstance.setData(content || '');
+    } else {
+      document.getElementById('activityObservations').value = content || '';
+    }
+  }
+
+  // ===== MODIFIED FUNCTIONS =====
+
+  function openActivityModal(activity) {
+    // Primeiro destruir qualquer editor existente
+    destroyRichTextEditor();
+    
+    modalBackdrop.classList.add('open');
+    modalBackdrop.setAttribute('aria-hidden', 'false');
+
+    currentActivity = activity;
+
+    if (activity) {
+      modalTitle.textContent = 'Editar Atividade';
+      fieldId.value = activity.id;
+      fieldWhat.value = activity.what || '';
+      fieldWhen.value = activity.when || '';
+      fieldHow.value = activity.how || '';
+      fieldAmount.value = activity.amount || '';
+      
+      // Mostrar logs se existirem
+      if (activity.logs && activity.logs.length > 0) {
+        logSection.style.display = 'block';
+        renderLogs(activity.logs);
+      } else {
+        logSection.style.display = 'block';
+        renderLogs([]);
+      }
+    } else {
+      modalTitle.textContent = 'Nova Atividade';
+      fieldId.value = '';
+      form.reset();
+      logSection.style.display = 'none';
+      currentActivity = { logs: [] };
+    }
+
+    // Carregar colaboradores e inicializar editor
+    loadEmployees().then(() => {
+      // Aguardar o modal estar completamente aberto antes de inicializar o editor
+      setTimeout(() => {
+        initializeRichTextEditor();
+        if (activity && activity.observations) {
+          setTimeout(() => {
+            setRichTextContent(activity.observations);
+          }, 100);
+        }
+        
+        // Definir o responsável selecionado após carregar os colaboradores
+        if (activity && activity.who) {
+          fieldWho.value = activity.who;
+        }
+      }, 200);
+    });
+
+    fieldWhat.focus();
+  }
+
+  function closeActivityModal() {
+    // Destruir o editor antes de fechar o modal
+    destroyRichTextEditor();
+    
+    modalBackdrop.classList.remove('open');
+    modalBackdrop.setAttribute('aria-hidden', 'true');
+    form.reset();
+    fieldId.value = '';
+  }
+
+  async function submitActivity(event) {
+    event.preventDefault();
+
+    const what = fieldWhat.value.trim();
+    if (!what) {
+      notify('Informe a descrição da atividade.', 'error');
+      return;
+    }
+
+    const payload = {
+      what,
+      who: fieldWho.value.trim() || null,
+      when: fieldWhen.value || null,
+      how: fieldHow.value.trim() || null,
+      amount: fieldAmount.value || null,
+      observations: getRichTextContent() || null,
+      logs: currentActivity && currentActivity.logs ? currentActivity.logs : []
+    };
+
+    try {
+      const isEdit = Boolean(fieldId.value);
+      const url = isEdit
+        ? `/api/companies/${companyId}/projects/${projectId}/activities/${fieldId.value}`
+        : `/api/companies/${companyId}/projects/${projectId}/activities`;
+      const method = isEdit ? 'PUT' : 'POST';
+
+      const response = await fetch(url, {
+        method,
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(payload)
+      });
+
+      const data = await response.json();
+      
+      if (!response.ok || !data.success) {
+        throw new Error(data.message || 'Erro ao salvar');
+      }
+      
+      notify(data.message || 'Atividade salva com sucesso.', 'info');
+      closeActivityModal();
+      await loadActivities();
+    } catch (error) {
+      notify(error.message, 'error');
+    }
+  }
+
+  // Initial load
+  loadActivities();
+})();
+</script>
+{% endblock %}

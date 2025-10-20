@@ -1,0 +1,265 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="utf-8">
+  <title>{{ 'Editar' if group else 'Novo' }} Grupo de Indicadores</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <link rel="icon" type="image/x-icon" href="{{ url_for('static', filename='favicon.ico') }}" />
+  <link rel="shortcut icon" type="image/x-icon" href="{{ url_for('static', filename='favicon.ico') }}" />
+  <style>
+    :root {
+      color-scheme: light;
+    }
+
+    body {
+      margin: 0;
+      padding: 24px;
+      font-family: "Segoe UI", Tahoma, Arial, sans-serif;
+      background: #f8fafc;
+      color: #0f172a;
+    }
+
+    .shell {
+      max-width: 520px;
+      margin: 0 auto;
+      background: #ffffff;
+      border-radius: 16px;
+      border: 1px solid #e2e8f0;
+      padding: 32px;
+      box-shadow: 0 20px 40px rgba(15, 23, 42, 0.08);
+      display: grid;
+      gap: 24px;
+    }
+
+    h1 {
+      margin: 0;
+      font-size: 22px;
+      font-weight: 700;
+    }
+
+    .subtitle {
+      margin: 8px 0 0;
+      font-size: 13px;
+      color: #64748b;
+      line-height: 1.45;
+    }
+
+    .form-group {
+      display: grid;
+      gap: 8px;
+    }
+
+    label {
+      font-weight: 600;
+      font-size: 13px;
+      color: #334155;
+    }
+
+    select,
+    input,
+    textarea {
+      width: 100%;
+      padding: 10px 14px;
+      border-radius: 8px;
+      border: 1px solid rgba(15, 23, 42, 0.16);
+      font-size: 14px;
+      background: #fff;
+    }
+
+    textarea {
+      resize: vertical;
+      min-height: 90px;
+    }
+
+    .info-badge {
+      font-size: 12px;
+      display: inline-block;
+      padding: 4px 10px;
+      border-radius: 999px;
+      background: rgba(37, 99, 235, 0.12);
+      color: #1d4ed8;
+      font-weight: 600;
+    }
+
+    .actions {
+      display: flex;
+      justify-content: flex-end;
+      gap: 12px;
+      margin-top: 12px;
+    }
+
+    button {
+      cursor: pointer;
+      border-radius: 10px;
+      border: none;
+      padding: 12px 24px;
+      font-weight: 600;
+      font-size: 14px;
+    }
+
+    .btn-secondary {
+      background: #e2e8f0;
+      color: #475569;
+    }
+
+    .btn-secondary:hover {
+      background: #cbd5f5;
+    }
+
+    .btn-primary {
+      background: linear-gradient(135deg, #3b82f6, #2563eb);
+      color: #fff;
+      box-shadow: 0 12px 24px rgba(37, 99, 235, 0.2);
+    }
+
+    .btn-primary:hover {
+      transform: translateY(-1px);
+    }
+
+    .helper {
+      font-size: 12px;
+      color: #64748b;
+    }
+  </style>
+</head>
+<body>
+  <div class="shell">
+    <header>
+      <h1>{{ 'Editar Grupo de Indicadores' if group else 'Novo Grupo de Indicadores' }}</h1>
+      <p class="subtitle">
+        Empresa: <strong>{{ company.name if company and company.name else 'N/A' }}</strong>
+        {% if group and group.code %}
+          <br><span class="info-badge">Código: {{ group.code }}</span>
+        {% endif %}
+      </p>
+    </header>
+
+    <form id="groupForm">
+      <div class="form-group">
+        <label for="parentId">Grupo/Subgrupo Pai</label>
+        <select id="parentId" name="parent_id">
+          <option value="">Nenhum (Grupo Raiz)</option>
+        </select>
+        <span class="helper">Escolha para criar um subgrupo dentro de um grupo existente.</span>
+      </div>
+
+      <div class="form-group">
+        <label for="groupName">Nome *</label>
+        <input type="text" id="groupName" name="name" maxlength="120" required>
+      </div>
+
+      <div class="form-group">
+        <label for="groupDescription">Descrição</label>
+        <textarea id="groupDescription" name="description" maxlength="500"></textarea>
+      </div>
+
+      <div class="actions">
+        <button type="button" class="btn-secondary" id="cancelButton">Cancelar</button>
+        <button type="submit" class="btn-primary">Salvar</button>
+      </div>
+    </form>
+  </div>
+
+  <script>
+    const companyId = {{ company_id }};
+    const groupData = {{ group|tojson|safe if group else 'null' }};
+
+    const form = document.getElementById('groupForm');
+    const parentSelect = document.getElementById('parentId');
+    const nameInput = document.getElementById('groupName');
+    const descriptionInput = document.getElementById('groupDescription');
+    const cancelButton = document.getElementById('cancelButton');
+
+    document.addEventListener('DOMContentLoaded', () => {
+      loadParentOptions().then(() => {
+        if (groupData) {
+          populateForm();
+        }
+      });
+    });
+
+    cancelButton.addEventListener('click', () => {
+      window.close();
+    });
+
+    form.addEventListener('submit', async (event) => {
+      event.preventDefault();
+
+      const name = nameInput.value.trim();
+      if (!name) {
+        alert('Informe o nome do grupo.');
+        nameInput.focus();
+        return;
+      }
+
+      const payload = {
+        parent_id: parentSelect.value ? Number(parentSelect.value) : null,
+        name: name,
+        description: descriptionInput.value.trim() || null
+      };
+
+      const isEdit = Boolean(groupData && groupData.id);
+      const url = isEdit
+        ? `/grv/api/company/${companyId}/indicator-groups/${groupData.id}`
+        : `/grv/api/company/${companyId}/indicator-groups`;
+      const method = isEdit ? 'PUT' : 'POST';
+
+      try {
+        const response = await fetch(url, {
+          method,
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(payload)
+        });
+
+        const result = await response.json();
+        if (result.success) {
+          alert('Grupo salvo com sucesso!');
+          if (window.opener && !window.opener.closed) {
+            window.opener.location.reload();
+          }
+          window.close();
+        } else {
+          alert('Erro: ' + result.message);
+        }
+      } catch (error) {
+        console.error('Erro ao salvar grupo:', error);
+        alert('Erro ao salvar grupo');
+      }
+    });
+
+    async function loadParentOptions() {
+      try {
+        const response = await fetch(`/grv/api/company/${companyId}/indicator-groups`);
+        const result = await response.json();
+
+        if (!result.success) {
+          throw new Error(result.message || 'Falha ao carregar grupos');
+        }
+
+        const currentId = groupData ? groupData.id : null;
+        result.data.forEach(group => {
+          if (currentId && group.id === currentId) {
+            return;
+          }
+          const option = document.createElement('option');
+          option.value = group.id;
+          option.textContent = `${group.code} - ${group.name}`;
+          parentSelect.appendChild(option);
+        });
+
+        if (groupData && groupData.parent_id) {
+          parentSelect.value = groupData.parent_id;
+        }
+      } catch (error) {
+        console.error('Erro ao carregar grupos pai:', error);
+        alert('Erro ao carregar grupos existentes.');
+      }
+    }
+
+    function populateForm() {
+      nameInput.value = groupData.name || '';
+      descriptionInput.value = groupData.description || '';
+    }
+  </script>
+</body>
+</html>

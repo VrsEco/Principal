@@ -1,0 +1,340 @@
+{% extends "base.html" %}
+{% block title %}{% if form_mode == 'edit' %}Editar Empresa{% else %}Nova Empresa{% endif %}{% endblock %}
+{% block body %}
+  {% set active_nav = 'dashboard' %}
+  {{ super() }}
+{% endblock %}
+
+{% block extra_head %}
+  {{ super() }}
+  <style>
+    .company-form-page {
+      max-width: 960px;
+      margin: 0 auto;
+      padding: 32px 0 64px;
+      display: flex;
+      flex-direction: column;
+      gap: 32px;
+    }
+    .company-form-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: flex-end;
+      gap: 24px;
+      flex-wrap: wrap;
+    }
+    .company-form-header h1 {
+      margin: 0;
+    }
+    .company-form-header p {
+      margin: 8px 0 0 0;
+      color: var(--color-muted);
+      max-width: 520px;
+      font-size: 14px;
+      line-height: 1.6;
+    }
+    .company-form-card {
+      padding: 36px;
+      border-radius: 20px;
+      background: #e6f3ff;
+      border: 1px solid var(--color-border);
+      box-shadow: var(--shadow-md, 0 16px 32px rgba(15, 23, 42, 0.08));
+      display: flex;
+      flex-direction: column;
+      gap: 28px;
+    }
+    .company-form-highlight {
+      background: linear-gradient(135deg, rgba(58, 241, 174, 0.12), rgba(58, 241, 174, 0.04));
+      border: 1px solid rgba(58, 241, 174, 0.28);
+      border-radius: 14px;
+      padding: 24px;
+    }
+    .company-form-highlight label {
+      display: block;
+      margin: 0;
+    }
+    .company-form-highlight .field-title {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      font-size: 18px;
+      font-weight: 600;
+      margin-bottom: 16px;
+    }
+    .company-form-highlight input {
+      font-size: 24px;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.28em;
+      text-align: center;
+      border: 2px solid var(--color-accent);
+      background: #ffffff;
+      color: #111827;
+      padding: 16px;
+    }
+    .company-form-grid {
+      display: grid;
+      gap: 20px;
+      grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+    }
+    .company-form-actions {
+      display: flex;
+      justify-content: flex-end;
+      gap: 12px;
+      padding-top: 24px;
+      border-top: 1px solid var(--color-border);
+    }
+    .company-form-card .form-field input,
+    .company-form-card .form-field select,
+    .company-form-card .form-field textarea {
+      background: #ffffff;
+      color: #111827;
+      border: 1px solid rgba(17, 24, 39, 0.12);
+    }
+    .company-form-card .form-field textarea {
+      min-height: 120px;
+      resize: vertical;
+    }
+    @media (max-width: 640px) {
+      .company-form-card {
+        padding: 24px;
+      }
+      .company-form-highlight .field-title {
+        flex-direction: column;
+        align-items: flex-start;
+      }
+      .company-form-actions {
+        flex-direction: column;
+        align-items: stretch;
+      }
+      .company-form-actions .button {
+        width: 100%;
+        text-align: center;
+      }
+    }
+  </style>
+{% endblock %}
+
+{% block content %}
+<section class="company-form-page">
+  <header class="company-form-header">
+    <div>
+      <span class="section-eyebrow">Cadastro de empresa</span>
+      <h1>{% if form_mode == 'edit' %}Editar empresa{% else %}Nova empresa{% endif %}</h1>
+      <p>Preencha os dados principais da organizacao. Essas informacoes serao utilizadas em relatorios, cadastros e geracao automatica dos codigos de processos.</p>
+    </div>
+    <a href="{{ url_for('companies_page') }}" class="button button-ghost">Voltar para lista</a>
+  </header>
+
+  <form id="companyForm" class="company-form-card">
+    <input type="hidden" id="companyId" name="id" value="{{ company_data.id if company_data else '' }}">
+
+    <div class="company-form-highlight">
+      <label class="form-field">
+        <span class="field-title">
+          <span>Codigo do cliente</span>
+          <span style="color: var(--color-danger); font-size: 18px;">*</span>
+        </span>
+        <input type="text"
+               id="clientCode"
+               name="client_code"
+               required
+               maxlength="3"
+               pattern="[A-Za-z0-9]{1,3}"
+               placeholder="Ex: AO, V1, J99"
+               value="{{ company_data.client_code if company_data else '' }}">
+        <span style="display: block; margin-top: 14px; font-size: 13px; color: var(--color-accent); line-height: 1.6;">
+          Este codigo de 1 a 3 caracteres sera usado para gerar automaticamente identificadores de areas, macroprocessos e processos.
+        </span>
+      </label>
+    </div>
+
+    <div class="company-form-grid">
+      <label class="form-field">
+        <span class="form-label-highlight">Nome fantasia</span>
+        <span style="color: var(--color-danger);">*</span>
+        <input type="text"
+               id="companyName"
+               name="name"
+               required
+               placeholder="Nome comercial da empresa"
+               value="{{ company_data.name if company_data else '' }}">
+      </label>
+      <label class="form-field">
+        <span>Razao social</span>
+        <input type="text"
+               id="companyLegalName"
+               name="legal_name"
+               placeholder="Razao social completa"
+               value="{{ company_data.legal_name if company_data else '' }}">
+      </label>
+    </div>
+
+    <div class="company-form-grid">
+      <label class="form-field">
+        <span>Setor / Industria</span>
+        <input type="text"
+               id="companyIndustry"
+               name="industry"
+               placeholder="Ex: Alimentos, Tecnologia, Consultoria"
+               value="{{ company_data.industry if company_data else '' }}">
+      </label>
+      <label class="form-field">
+        <span>Porte</span>
+        <select id="companySize" name="size">
+          <option value="">Selecione o porte</option>
+          <option value="micro" {% if company_data and company_data.size == 'micro' %}selected{% endif %}>Microempresa</option>
+          <option value="pequena" {% if company_data and company_data.size == 'pequena' %}selected{% endif %}>Pequena</option>
+          <option value="media" {% if company_data and company_data.size == 'media' %}selected{% endif %}>Media</option>
+          <option value="grande" {% if company_data and company_data.size == 'grande' %}selected{% endif %}>Grande</option>
+        </select>
+      </label>
+    </div>
+
+    <label class="form-field">
+      <span>Descricao</span>
+      <textarea id="companyDescription"
+                name="description"
+                rows="4"
+                placeholder="Breve descricao da empresa, principais atividades, produtos ou diferenciais.">{{ company_data.description if company_data else '' }}</textarea>
+    </label>
+
+    <!-- Informação sobre Logos -->
+    {% if form_mode == 'edit' and company_data %}
+    <div style="background: #eff6ff; border: 2px solid #3b82f6; border-radius: 14px; padding: 20px;">
+      <div style="display: flex; align-items: start; gap: 16px;">
+        <div style="font-size: 32px;">🎨</div>
+        <div style="flex: 1;">
+          <h3 style="margin: 0 0 8px 0; font-size: 16px; font-weight: 700; color: #1e40af;">
+            Logomarcas da Empresa
+          </h3>
+          <p style="margin: 0 0 16px 0; font-size: 14px; color: #1e40af;">
+            Faça upload das logos da empresa em diferentes formatos (quadrada, vertical, horizontal, banner) para uso em documentos e relatórios.
+          </p>
+          <a href="/companies/{{ company_data.id }}/logos" class="button button-primary" style="display: inline-flex; align-items: center; gap: 8px;">
+            <span>🎨</span> Gerenciar Logos
+          </a>
+        </div>
+      </div>
+    </div>
+    {% elif form_mode == 'create' %}
+    <div style="background: #fef3c7; border: 2px solid #f59e0b; border-radius: 14px; padding: 20px;">
+      <div style="display: flex; align-items: start; gap: 16px;">
+        <div style="font-size: 32px;">💡</div>
+        <div>
+          <h3 style="margin: 0 0 8px 0; font-size: 16px; font-weight: 700; color: #92400e;">
+            Dica: Logos da Empresa
+          </h3>
+          <p style="margin: 0; font-size: 14px; color: #92400e;">
+            Após cadastrar a empresa, você poderá fazer upload das logomarcas (quadrada, vertical, horizontal, banner) para uso em documentos e relatórios.
+          </p>
+        </div>
+      </div>
+    </div>
+    {% endif %}
+
+    <div class="company-form-actions">
+      <a href="{{ url_for('companies_page') }}" class="button button-ghost">Cancelar</a>
+      <button type="submit" class="button button-primary">{% if form_mode == 'edit' %}Atualizar empresa{% else %}Cadastrar empresa{% endif %}</button>
+    </div>
+  </form>
+</section>
+{% endblock %}
+
+{% block scripts %}
+{{ super() }}
+<script>
+  document.addEventListener('DOMContentLoaded', function () {
+    const form = document.getElementById('companyForm');
+    const clientCodeInput = document.getElementById('clientCode');
+
+    if (clientCodeInput) {
+      clientCodeInput.addEventListener('input', function () {
+        this.value = this.value
+          .toUpperCase()
+          .replace(/[^A-Z0-9]/g, '')
+          .substring(0, 3);
+      });
+    }
+
+    if (form) {
+      form.addEventListener('submit', async function (event) {
+        event.preventDefault();
+
+        const companyId = document.getElementById('companyId').value.trim();
+        const clientCodeField = document.getElementById('clientCode');
+        const clientCode = clientCodeField.value.trim().toUpperCase();
+        const nameValue = document.getElementById('companyName').value.trim();
+
+        if (!/^[A-Z0-9]{1,3}$/.test(clientCode)) {
+          if (window.showMessage) {
+            window.showMessage('O codigo do cliente deve ter de 1 a 3 caracteres (letras ou numeros).', 'error');
+          } else {
+            alert('O codigo do cliente deve ter de 1 a 3 caracteres (letras ou numeros).');
+          }
+          clientCodeField.focus();
+          return;
+        }
+
+        if (!nameValue) {
+          if (window.showMessage) {
+            window.showMessage('Informe o nome fantasia da empresa.', 'error');
+          } else {
+            alert('Informe o nome fantasia da empresa.');
+          }
+          return;
+        }
+
+        const payload = {
+          name: nameValue,
+          client_code: clientCode,
+          legal_name: document.getElementById('companyLegalName').value.trim() || null,
+          industry: document.getElementById('companyIndustry').value.trim() || null,
+          size: document.getElementById('companySize').value || null,
+          description: document.getElementById('companyDescription').value.trim() || null
+        };
+
+        const url = companyId ? `/api/companies/${companyId}` : '/api/companies';
+
+        try {
+          const response = await fetch(url, {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json'
+            },
+            body: JSON.stringify(payload)
+          });
+
+          const json = await response.json();
+
+          if (json && json.success) {
+            const message = companyId ? 'Empresa atualizada com sucesso!' : 'Empresa criada com sucesso!';
+            if (window.showMessage) {
+              window.showMessage(message, 'success');
+            } else {
+              alert(message);
+            }
+            setTimeout(() => {
+              window.location.href = '/companies';
+            }, 600);
+          } else {
+            const errorMsg = (json && json.error) ? json.error : 'Erro ao salvar empresa';
+            if (window.showMessage) {
+              window.showMessage(errorMsg, 'error');
+            } else {
+              alert(errorMsg);
+            }
+          }
+        } catch (error) {
+          console.error('Erro ao salvar empresa:', error);
+          if (window.showMessage) {
+            window.showMessage('Erro ao salvar empresa', 'error');
+          } else {
+            alert('Erro ao salvar empresa');
+          }
+        }
+      });
+    }
+  });
+</script>
+{% endblock %}

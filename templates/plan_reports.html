@@ -1,0 +1,344 @@
+{% extends "base.html" %}
+
+{% block title %}Relatórios - {{ plan.name }}{% endblock %}
+
+{% block extra_head %}
+<style>
+.icon-report, .icon-slides {
+    display: inline-block;
+    margin-right: 8px;
+    font-size: 1.2em;
+    color: var(--color-accent);
+}
+</style>
+{% endblock %}
+
+{% block body %}
+{{ super() }}
+{% endblock %}
+
+{% block content %}
+<div class="project-layout plan-layout" data-sidebar-toggle>
+  {% set sidebar_meta %}
+    <div class="reports-hints">
+      <span class="summary-eyebrow">Relatórios</span>
+      <p>Gere relatórios formais e slides de apresentação para entrega ao cliente.</p>
+    </div>
+  {% endset %}
+  {% include 'plan_sidebar.html' %}
+
+  <section class="project-content reports-content">
+    <div class="reports-header">
+      <h1>Relatórios do Plano Estratégico</h1>
+      <p>Gere relatórios profissionais para entrega formal ao cliente</p>
+    </div>
+
+    <div class="reports-options">
+      <div class="report-option-card">
+        <div class="report-option-header">
+          <h3><span class="icon-report">📄</span> Relatório Formal</h3>
+          <span class="report-format-badge">Retrato</span>
+        </div>
+        <div class="report-option-content">
+          <p>Relatório completo em formato retrato para entrega formal ao cliente.</p>
+          <ul class="report-features">
+            <li>✅ Capa profissional</li>
+            <li>✅ Introdução e contexto</li>
+            <li>✅ Índice detalhado</li>
+            <li>✅ Relatórios de todas as seções</li>
+            <li>✅ Conclusão e termo de entrega</li>
+          </ul>
+          <div class="report-actions">
+            <a href="{{ url_for('generate_formal_report', plan_id=plan.id) }}" target="_blank" class="button button-primary">
+              <span class="button-icon">📄</span>
+              Gerar Relatório Formal
+            </a>
+          </div>
+        </div>
+      </div>
+
+      <div class="report-option-card">
+        <div class="report-option-header">
+          <h3><span class="icon-slides">📊</span> Slides de Apresentação</h3>
+          <span class="report-format-badge">Paisagem</span>
+        </div>
+        <div class="report-option-content">
+          <p>Slides para apresentação ou relatório resumido para o cliente.</p>
+          <ul class="report-features">
+            <li>✅ Slides profissionais</li>
+            <li>✅ Resumo executivo</li>
+            <li>✅ Principais resultados</li>
+            <li>✅ Gráficos e visualizações</li>
+            <li>✅ Pronto para apresentação</li>
+          </ul>
+          <div class="report-actions">
+            <a href="{{ url_for('generate_presentation_slides', plan_id=plan.id) }}" target="_blank" class="button button-primary">
+              <span class="button-icon">📊</span>
+              Gerar Slides
+            </a>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="reports-summary">
+      <h3>Resumo dos Dados Disponíveis</h3>
+      <div class="summary-grid">
+        <div class="summary-item">
+          <span class="summary-label">Direcionadores</span>
+          <span class="summary-value">
+            {% if sections_data.directionals.ai_analysis or sections_data.directionals.consultant_analysis %}
+              ✅ Dados disponíveis
+            {% else %}
+              ⚠️ Sem dados
+            {% endif %}
+          </span>
+        </div>
+        <div class="summary-item">
+          <span class="summary-label">OKRs Globais</span>
+          <span class="summary-value">
+            {% if sections_data.okr_global.workshop or sections_data.okr_global.approvals %}
+              ✅ {{ (sections_data.okr_global.workshop|length + sections_data.okr_global.approvals|length) }} OKRs
+            {% else %}
+              ⚠️ Sem dados
+            {% endif %}
+          </span>
+        </div>
+        <div class="summary-item">
+          <span class="summary-label">OKRs de Área</span>
+          <span class="summary-value">
+            {% if sections_data.okr_area.workshop or sections_data.okr_area.final %}
+              ✅ Dados disponíveis
+            {% else %}
+              ⚠️ Sem dados
+            {% endif %}
+          </span>
+        </div>
+        <div class="summary-item">
+          <span class="summary-label">Projetos</span>
+          <span class="summary-value">
+            {% if sections_data.projects.projects %}
+              ✅ {{ sections_data.projects.projects|length }} projetos
+            {% else %}
+              ⚠️ Sem dados
+            {% endif %}
+          </span>
+        </div>
+      </div>
+    </div>
+
+    <div class="reports-instructions">
+      <h3>Instruções de Uso</h3>
+      <div class="instructions-grid">
+        <div class="instruction-item">
+          <h4><span class="icon-report">📄</span> Relatório Formal</h4>
+          <p>Use o relatório formal para entrega oficial ao cliente. Inclui todas as seções do planejamento com análise detalhada e conclusões.</p>
+        </div>
+        <div class="instruction-item">
+          <h4><span class="icon-slides">📊</span> Slides de Apresentação</h4>
+          <p>Use os slides para apresentações executivas ou como relatório resumido. Ideal para reuniões e comunicação visual.</p>
+        </div>
+      </div>
+    </div>
+  </section>
+</div>
+
+<style>
+.reports-layout {
+  display: grid;
+  grid-template-columns: 280px 1fr;
+  gap: 24px;
+  min-height: 100vh;
+  padding: 24px;
+}
+
+  .reports-hints {
+    padding: 16px;
+    background: rgba(255, 255, 255, 0.05);
+    border-radius: var(--radius-md);
+    border: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.reports-content {
+  display: flex;
+  flex-direction: column;
+  gap: 24px;
+}
+
+.reports-header {
+  text-align: center;
+  padding: 32px 0;
+}
+
+.reports-header h1 {
+  font-size: 32px;
+  font-weight: 700;
+  color: var(--color-text);
+  margin: 0 0 8px;
+}
+
+.reports-header p {
+  font-size: 16px;
+  color: var(--color-text-muted);
+  margin: 0;
+}
+
+.reports-options {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 24px;
+}
+
+.report-option-card {
+  background: rgba(10, 16, 14, 0.6);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: var(--radius-lg);
+  padding: 24px;
+  transition: all 0.2s ease;
+}
+
+.report-option-card:hover {
+  border-color: var(--color-accent);
+  transform: translateY(-2px);
+}
+
+.report-option-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 16px;
+}
+
+.report-option-header h3 {
+  font-size: 20px;
+  font-weight: 600;
+  color: var(--color-text);
+  margin: 0;
+}
+
+.report-format-badge {
+  background: var(--color-accent);
+  color: white;
+  padding: 4px 12px;
+  border-radius: var(--radius-sm);
+  font-size: 12px;
+  font-weight: 500;
+}
+
+.report-option-content p {
+  color: var(--color-text-muted);
+  margin: 0 0 16px;
+  line-height: 1.5;
+}
+
+.report-features {
+  list-style: none;
+  padding: 0;
+  margin: 0 0 24px;
+}
+
+.report-features li {
+  padding: 4px 0;
+  color: var(--color-text-muted);
+  font-size: 14px;
+}
+
+.report-actions {
+  display: flex;
+  gap: 12px;
+}
+
+.reports-summary {
+  background: rgba(10, 16, 14, 0.6);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: var(--radius-lg);
+  padding: 24px;
+}
+
+.reports-summary h3 {
+  font-size: 18px;
+  font-weight: 600;
+  color: var(--color-text);
+  margin: 0 0 16px;
+}
+
+.summary-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+  gap: 16px;
+}
+
+.summary-item {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 12px 16px;
+  background: rgba(255, 255, 255, 0.05);
+  border-radius: var(--radius-md);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.summary-label {
+  font-weight: 500;
+  color: var(--color-text);
+}
+
+.summary-value {
+  font-size: 14px;
+  color: var(--color-text-muted);
+}
+
+.reports-instructions {
+  background: rgba(10, 16, 14, 0.6);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: var(--radius-lg);
+  padding: 24px;
+}
+
+.reports-instructions h3 {
+  font-size: 18px;
+  font-weight: 600;
+  color: var(--color-text);
+  margin: 0 0 16px;
+}
+
+.instructions-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 24px;
+}
+
+.instruction-item h4 {
+  font-size: 16px;
+  font-weight: 600;
+  color: var(--color-text);
+  margin: 0 0 8px;
+}
+
+.instruction-item p {
+  color: var(--color-text-muted);
+  margin: 0;
+  line-height: 1.5;
+}
+
+@media (max-width: 768px) {
+  .reports-layout {
+    grid-template-columns: 1fr;
+    gap: 16px;
+    padding: 16px;
+  }
+  
+  .reports-options {
+    grid-template-columns: 1fr;
+  }
+  
+  .instructions-grid {
+    grid-template-columns: 1fr;
+  }
+  
+  .summary-grid {
+    grid-template-columns: 1fr;
+  }
+}
+</style>
+{% endblock %}

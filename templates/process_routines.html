@@ -1,0 +1,502 @@
+{% extends "base.html" %}
+{% block title %}Rotina dos Processos - {{ company.name }}{% endblock %}
+{% block body %}{% set active_nav = 'dashboard' %}{{ super() }}{% endblock %}
+
+{% block extra_head %}
+{{ super() }}
+<style>
+  .routines-container {
+    max-width: 1600px;
+    margin: 0 auto;
+    padding: 32px 24px;
+  }
+
+  .page-header {
+    margin-bottom: 16px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 16px;
+    flex-wrap: wrap;
+  }
+
+  .page-header h1 {
+    font-size: 28px;
+    font-weight: 700;
+    color: #0f172a;
+  }
+
+.quick-actions {
+    display: flex;
+    justify-content: flex-end;
+    gap: 8px;
+    flex-shrink: 0;
+  }
+
+  .quick-actions .create-routine-button {
+    padding: 8px 16px;
+    border-radius: 999px;
+    font-size: 13px;
+    font-weight: 600;
+  }
+
+  .quick-actions .create-routine-button span {
+    font-size: 15px;
+  }
+  
+  /* Checkboxes de dias da semana */
+  .weekday-checkbox-label {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    cursor: pointer;
+    background: #f8fafc;
+    padding: 8px 16px;
+    border-radius: 8px;
+    border: 2px solid #e5e7eb;
+    transition: all 0.2s;
+  }
+  
+  .weekday-checkbox-label:hover {
+    background: #eff6ff;
+    border-color: #3b82f6;
+  }
+  
+  .weekday-checkbox-label input:checked + span {
+    color: #1e40af;
+    font-weight: 600;
+  }
+  
+  .weekday-checkbox-label:has(input:checked) {
+    background: #dbeafe;
+    border-color: #3b82f6;
+    box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
+  }
+
+  /* Form de Cadastro */
+  .routine-form-card {
+    background: white;
+    border: 2px solid #3b82f6;
+    border-radius: 16px;
+    padding: 28px;
+    margin-bottom: 32px;
+  }
+
+  .form-title {
+    font-size: 18px;
+    font-weight: 700;
+    color: #0f172a;
+    margin-bottom: 20px;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+  }
+
+  .form-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+    gap: 20px;
+    margin-bottom: 20px;
+  }
+
+  .form-group {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+  }
+
+  .form-label {
+    font-size: 13px;
+    font-weight: 600;
+    color: #374151;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+  }
+
+  .form-input,
+  .form-select,
+  .form-textarea {
+    padding: 12px 16px;
+    border: 2px solid #e5e7eb;
+    border-radius: 10px;
+    font-size: 14px;
+    transition: all 0.2s;
+    font-family: inherit;
+  }
+
+  .form-input:focus,
+  .form-select:focus,
+  .form-textarea:focus {
+    outline: none;
+    border-color: #3b82f6;
+    box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
+  }
+
+  .form-textarea {
+    resize: vertical;
+    min-height: 80px;
+  }
+
+  .form-hint {
+    font-size: 12px;
+    color: #6b7280;
+    font-style: italic;
+  }
+
+  .form-actions {
+    display: flex;
+    gap: 12px;
+    justify-content: flex-end;
+  }
+
+  .btn {
+    padding: 12px 24px;
+    border-radius: 10px;
+    font-weight: 600;
+    font-size: 14px;
+    cursor: pointer;
+    transition: all 0.2s;
+    border: none;
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+  }
+
+  .btn-primary {
+    background: linear-gradient(135deg, #3b82f6, #2563eb);
+    color: white;
+  }
+
+  .btn-primary:hover {
+    background: linear-gradient(135deg, #2563eb, #1d4ed8);
+    transform: translateY(-2px);
+    box-shadow: 0 4px 8px rgba(59, 130, 246, 0.3);
+  }
+
+  .btn-secondary {
+    background: white;
+    color: #374151;
+    border: 2px solid #e5e7eb;
+  }
+
+  .btn-secondary:hover {
+    border-color: #3b82f6;
+    color: #3b82f6;
+  }
+
+  /* Lista de Rotinas */
+  .routines-table-container {
+    background: white;
+    border-radius: 16px;
+    padding: 24px;
+    box-shadow: 0 2px 4px rgba(15, 23, 42, 0.06);
+  }
+
+  .table-header {
+    font-size: 18px;
+    font-weight: 700;
+    color: #0f172a;
+    margin-bottom: 20px;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+  }
+
+  .routines-table {
+    width: 100%;
+    border-collapse: collapse;
+  }
+
+  .routines-table thead {
+    background: #f8fafc;
+    border-bottom: 2px solid #e5e7eb;
+  }
+
+  .routines-table th {
+    padding: 14px 16px;
+    text-align: left;
+    font-size: 12px;
+    font-weight: 700;
+    color: #374151;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+  }
+
+  .routines-table td {
+    padding: 16px;
+    border-bottom: 1px solid #f1f5f9;
+    color: #1f2937;
+  }
+
+  .routines-table tbody tr:hover {
+    background: #f8fafc;
+  }
+
+  .routine-name {
+    font-weight: 600;
+    color: #0f172a;
+  }
+
+  .routine-process {
+    font-size: 13px;
+    color: #6b7280;
+  }
+
+  .schedule-badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    padding: 6px 12px;
+    background: #eff6ff;
+    border: 1px solid #bfdbfe;
+    border-radius: 8px;
+    font-size: 12px;
+    font-weight: 600;
+    color: #1e40af;
+  }
+
+  .deadline-badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    padding: 6px 12px;
+    background: #fef3c7;
+    border: 1px solid #fde68a;
+    border-radius: 8px;
+    font-size: 12px;
+    font-weight: 600;
+    color: #92400e;
+  }
+
+  .action-buttons {
+    display: flex;
+    gap: 8px;
+  }
+
+  .btn-icon {
+    padding: 8px 12px;
+    border: 1px solid #e5e7eb;
+    background: white;
+    border-radius: 8px;
+    cursor: pointer;
+    transition: all 0.2s;
+    font-size: 16px;
+  }
+
+  .btn-icon:hover {
+    border-color: #3b82f6;
+    background: #eff6ff;
+  }
+
+  .btn-icon.delete:hover {
+    border-color: #ef4444;
+    background: #fef2f2;
+  }
+
+  .empty-state {
+    text-align: center;
+    padding: 60px 24px;
+    color: #9ca3af;
+  }
+
+  .empty-state-icon {
+    font-size: 64px;
+    margin-bottom: 16px;
+    opacity: 0.5;
+  }
+
+  .empty-state-text {
+    font-size: 16px;
+    font-weight: 600;
+    margin-bottom: 8px;
+  }
+
+  .empty-state-hint {
+    font-size: 14px;
+    color: #9ca3af;
+  }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="project-layout plan-layout" data-sidebar-toggle>
+  {# Sidebar componentizado - atualizado centralmente #}
+  {% include 'processes_sidebar.html' %}
+
+  <main class="project-main">
+    <div class="project-content plan-content">
+      <div class="page-header">
+        <h1>📅 Rotina dos Processos</h1>
+        <div class="quick-actions">
+          <a href="/companies/{{ company.id }}/routines/new" class="btn btn-primary create-routine-button" style="text-decoration: none;">
+            <span>➕</span>
+            Criar Nova Rotina
+          </a>
+        </div>
+      </div>
+
+
+
+      <!-- Lista de Rotinas -->
+      <div class="routines-table-container">
+        <h2 class="table-header">
+          <span>📋</span> Rotinas Cadastradas
+        </h2>
+
+        <div id="routinesTableWrapper">
+          <!-- Carregado via JavaScript -->
+        </div>
+      </div>
+    </div>
+
+<script>
+  const companyId = {{ company.id }};
+  
+  // Carregar rotinas
+  async function loadRoutines() {
+    try {
+      const response = await fetch(`/api/companies/${companyId}/process-routines`);
+      const result = await response.json();
+
+      if (result.success && result.routines) {
+        renderRoutinesTable(result.routines);
+      }
+    } catch (error) {
+      console.error('Erro ao carregar rotinas:', error);
+    }
+  }
+
+  // Renderizar tabela
+  function renderRoutinesTable(routines) {
+    const wrapper = document.getElementById('routinesTableWrapper');
+
+    if (routines.length === 0) {
+      wrapper.innerHTML = `
+        <div class="empty-state">
+          <div class="empty-state-icon">📅</div>
+          <div class="empty-state-text">Nenhuma rotina cadastrada</div>
+          <div class="empty-state-hint">Use o formulário acima para criar a primeira rotina</div>
+        </div>
+      `;
+      return;
+    }
+
+    const scheduleTypeLabels = {
+      'daily': 'Diário',
+      'weekly': 'Semanal',
+      'monthly': 'Mensal',
+      'quarterly': 'Trimestral',
+      'yearly': 'Anual',
+      'specific': 'Data Específica'
+    };
+
+    wrapper.innerHTML = `
+      <table class="routines-table">
+        <thead>
+          <tr>
+            <th>Nome da Rotina</th>
+            <th>Processo</th>
+            <th>Agendamento</th>
+            <th>Prazo</th>
+            <th>Ações</th>
+          </tr>
+        </thead>
+        <tbody>
+          ${routines.map(routine => `
+            <tr>
+              <td>
+                <div class="routine-name">${routine.name}</div>
+                ${routine.description ? `<div class="routine-process">${routine.description}</div>` : ''}
+              </td>
+              <td>
+                <span class="routine-process">${routine.process_name || 'Não vinculado'}</span>
+              </td>
+              <td>
+                <div class="schedule-badge">
+                  <span>🔔</span>
+                  <span>${scheduleTypeLabels[routine.schedule_type] || routine.schedule_type || 'Não definido'}</span>
+                </div>
+                ${routine.schedule_value ? `<div style="font-size: 12px; color: #6b7280; margin-top: 4px;">${routine.schedule_value}</div>` : ''}
+              </td>
+              <td>
+                ${routine.deadline_days > 0 || routine.deadline_hours > 0 ? `
+                  <div style="display: flex; flex-direction: column; gap: 4px;">
+                    ${routine.deadline_days > 0 ? `
+                      <div class="deadline-badge">
+                        <span>📅</span>
+                        <span>${routine.deadline_days} dias</span>
+                      </div>
+                    ` : ''}
+                    ${routine.deadline_hours > 0 ? `
+                      <div class="deadline-badge">
+                        <span>⏱️</span>
+                        <span>${routine.deadline_hours} horas</span>
+                      </div>
+                    ` : ''}
+                  </div>
+                ` : '<span style="color: #9ca3af;">Sem prazo</span>'}
+              </td>
+              <td>
+                <div class="action-buttons">
+                  ${routine.process_id ? `
+                    <a href="/grv/company/${companyId}/process/modeling/${routine.process_id}" 
+                       class="btn-icon" 
+                       title="Ir para Modelagem do Processo" 
+                       style="text-decoration: none;">
+                      🎨
+                    </a>
+                  ` : ''}
+                  <a href="/companies/${companyId}/routines/${routine.id}" 
+                     class="btn-icon" 
+                     title="Gerenciar Rotina" 
+                     style="text-decoration: none;">
+                    ⚙️
+                  </a>
+                  <button class="btn-icon delete" 
+                          onclick="deleteRoutine(${routine.id})" 
+                          title="Excluir">
+                    🗑️
+                  </button>
+                </div>
+              </td>
+            </tr>
+          `).join('')}
+        </tbody>
+      </table>
+    `;
+  }
+
+  // Deletar rotina
+  async function deleteRoutine(id) {
+    if (!confirm('Deseja realmente excluir esta rotina?')) return;
+
+    try {
+      const response = await fetch(`/api/companies/${companyId}/process-routines/${id}`, {
+        method: 'DELETE'
+      });
+
+      const result = await response.json();
+
+      if (result.success) {
+        alert('Rotina excluída com sucesso!');
+        await loadRoutines();
+      } else {
+        alert(`Erro: ${result.message || 'Falha ao excluir'}`);
+      }
+    } catch (error) {
+      console.error('Erro:', error);
+      alert('Erro ao excluir rotina');
+    }
+  }
+
+  // Carregar ao iniciar
+  loadRoutines();
+</script>
+    </div>
+  </main>
+</div>
+{% endblock %}
+
+
+
+

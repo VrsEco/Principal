@@ -1,0 +1,82 @@
+{% set nav_groups = [
+    {
+        'title': 'Gestão de Processos',
+        'items': [
+            {
+                'id': 'process-map',
+                'name': 'Mapa de Processos',
+                'url': url_for('grv.grv_process_map', company_id=company.id),
+                'description': 'Visualizar arquitetura de processos'
+            },
+            {
+                'id': 'process-modeling',
+                'name': 'Modelagem de Processos',
+                'url': url_for('grv.grv_process_modeling', company_id=company.id),
+                'description': 'Desenhar e modelar processos'
+            },
+            {
+                'id': 'process-instances',
+                'name': 'Instâncias de Processos',
+                'url': url_for('grv.grv_process_instances', company_id=company.id),
+                'description': 'Disparar e acompanhar execuções'
+            },
+            {
+                'id': 'process-analysis',
+                'name': 'Análise de Processos',
+                'url': url_for('grv.grv_process_analysis', company_id=company.id),
+                'description': 'Analisar performance dos processos'
+            },
+            {
+                'id': 'process-routines',
+                'name': 'Rotinas de Processos',
+                'url': url_for('routines_management', company_id=company.id),
+                'description': 'Gerenciar rotinas operacionais'
+            }
+        ]
+    },
+    {
+        'title': 'Voltar',
+        'items': [
+            {
+                'id': 'back-dashboard',
+                'name': '← Dashboard Principal',
+                'url': url_for('grv.grv_company_dashboard', company_id=company.id),
+                'description': 'Voltar para o menu principal'
+            }
+        ]
+    }
+] %}
+
+<aside class="project-sidebar surface-card plan-sidebar">
+    <span class="project-sidebar-title">Processos</span>
+    <nav class="project-nav">
+        {% for group in nav_groups %}
+        <div class="project-nav-group">
+            {% if group.title %}
+            <span class="project-nav-group-title">{{ group.title }}</span>
+            {% endif %}
+            {% for item in group.get('items', []) %}
+            {% set item_id = item.id %}
+            {% set item_url = item.url %}
+            {% set is_active = (active_id is defined and active_id == item_id) %}
+            <a class="project-nav-link{% if is_active %} is-active{% endif %}"
+               href="{{ item_url or '#' }}"
+               {% if item.description %}title="{{ item.description }}"{% endif %}>
+                <span>{{ item.name }}</span>
+            </a>
+            {% endfor %}
+        </div>
+        {% endfor %}
+    </nav>
+    
+    {% if sidebar_meta is defined %}
+    <div class="project-hints plan-sidebar-meta">
+        {{ sidebar_meta | safe }}
+    </div>
+    {% elif company is defined and (company.name or company.legal_name) %}
+    <div class="project-hints plan-sidebar-meta">
+        <span class="summary-eyebrow">Empresa</span>
+        <p><strong>{{ company.name or company.legal_name }}</strong></p>
+    </div>
+    {% endif %}
+</aside>

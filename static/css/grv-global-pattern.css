@@ -1,0 +1,490 @@
+/* 
+PADRÃO GRV GLOBAL - FUNDOS CLAROS + FONTES ESCURAS
+==================================================
+Este arquivo garante que TODAS as páginas sigam o padrão:
+- Fundos: Sempre claros (branco → cinza muito claro)
+- Fontes: Sempre escuras (preto ou azul muito escuro)
+- Contraste mínimo: 4.5:1
+- Uso de !important para garantir precedência
+*/
+
+/* RESET E GARANTIAS GLOBAIS */
+* {
+  box-sizing: border-box;
+}
+
+/* FUNDOS PRINCIPAIS - SEMPRE CLAROS */
+.app-main,
+.project-content,
+.plan-content,
+.surface-card,
+.card,
+.panel,
+.modal,
+.popup {
+  background: linear-gradient(135deg, #ffffff 0%, #f8fafc 100%) !important;
+  color: #000000 !important;
+}
+
+/* TODOS OS TEXTOS - SEMPRE ESCUROS */
+h1, h2, h3, h4, h5, h6,
+.title, .heading, .header,
+.card-title, .panel-title, .modal-title,
+.section-title, .page-title {
+  color: #000000 !important;
+  font-weight: 600 !important;
+}
+
+p, span, div, label, .text, .content,
+.description, .subtitle, .meta {
+  color: #1e293b !important;
+}
+
+.text-muted, .muted, .secondary {
+  color: #475569 !important;
+}
+
+/* BORDAS E SOMBRAS - SEMPRE CLARAS */
+.surface-card,
+.card,
+.panel,
+.modal,
+.popup,
+.kanban-column,
+.meeting-card,
+.project-card {
+  border: 1px solid rgba(30, 64, 175, 0.1) !important;
+  box-shadow: 0 4px 12px rgba(30, 64, 175, 0.08) !important;
+  border-radius: 12px !important;
+}
+
+.surface-card:hover,
+.card:hover,
+.panel:hover,
+.kanban-column:hover,
+.meeting-card:hover,
+.project-card:hover {
+  box-shadow: 0 8px 24px rgba(30, 64, 175, 0.12) !important;
+  border-color: rgba(30, 64, 175, 0.2) !important;
+  transform: translateY(-2px) !important;
+  transition: all 0.3s ease !important;
+}
+
+/* INPUTS E FORMULÁRIOS - SEMPRE CLAROS */
+input, select, textarea,
+.form-control, .form-input,
+.filter-field input,
+.filter-field select {
+  background: #ffffff !important;
+  color: #000000 !important;
+  border: 1px solid rgba(148, 163, 184, 0.3) !important;
+  border-radius: 8px !important;
+  padding: 10px 12px !important;
+}
+
+input:focus, select:focus, textarea:focus,
+.form-control:focus, .form-input:focus {
+  border-color: rgba(30, 64, 175, 0.5) !important;
+  box-shadow: 0 0 0 3px rgba(30, 64, 175, 0.1) !important;
+  outline: none !important;
+}
+
+select option {
+  background: #ffffff !important;
+  color: #000000 !important;
+}
+
+/* LABELS - SEMPRE ESCUROS */
+label, .label, .form-label,
+.filter-field label {
+  color: #000000 !important;
+  font-weight: 600 !important;
+}
+
+/* BOTÕES - PADRÃO CONSISTENTE */
+.btn, .button, button,
+.btn-primary, .button-primary,
+.btn-new-activity, .btn-new-meeting {
+  background: linear-gradient(135deg, #1e40af, #7c3aed, #dc2626) !important;
+  color: #ffffff !important;
+  border: none !important;
+  border-radius: 8px !important;
+  padding: 8px 16px !important;
+  font-weight: 600 !important;
+  transition: all 0.3s ease !important;
+  position: relative !important;
+  overflow: hidden !important;
+}
+
+.btn:hover, .button:hover, button:hover {
+  transform: translateY(-1px) !important;
+  box-shadow: 0 4px 8px rgba(30, 64, 175, 0.2) !important;
+}
+
+.btn-secondary, .button-secondary, .button-ghost {
+  background: linear-gradient(135deg, rgba(148, 163, 184, 0.2), rgba(100, 116, 139, 0.15)) !important;
+  color: #000000 !important;
+  border: 1px solid rgba(148, 163, 184, 0.3) !important;
+}
+
+.btn-secondary:hover, .button-secondary:hover, .button-ghost:hover {
+  background: linear-gradient(135deg, rgba(148, 163, 184, 0.3), rgba(100, 116, 139, 0.25)) !important;
+  transform: translateY(-1px) !important;
+  box-shadow: 0 4px 8px rgba(148, 163, 184, 0.2) !important;
+}
+
+/* CARDS DE ATIVIDADES E PROJETOS */
+.kanban-card, .activity-card, .meeting-card, .project-card {
+  background: linear-gradient(135deg, #ffffff 0%, #f9fafb 100%) !important;
+  border: 1px solid rgba(30, 64, 175, 0.1) !important;
+  border-radius: 12px !important;
+  padding: 16px !important;
+  margin-bottom: 12px !important;
+  box-shadow: 0 4px 12px rgba(30, 64, 175, 0.08) !important;
+  transition: all 0.3s ease !important;
+}
+
+.kanban-card:hover, .activity-card:hover, .meeting-card:hover, .project-card:hover {
+  box-shadow: 0 8px 24px rgba(30, 64, 175, 0.12) !important;
+  border-color: rgba(30, 64, 175, 0.2) !important;
+  transform: translateY(-2px) !important;
+}
+
+.kanban-card-title, .activity-title, .meeting-title, .project-title {
+  color: #000000 !important;
+  font-weight: 600 !important;
+  margin-bottom: 8px !important;
+}
+
+.kanban-card-meta, .activity-meta, .meeting-meta, .project-meta {
+  color: #1e293b !important;
+  font-size: 12px !important;
+}
+
+/* BADGES E STATUS - SEMPRE ESCUROS */
+.badge, .status, .tag,
+.project-status, .meeting-status, .activity-status {
+  background: linear-gradient(135deg, #f1f5f9 0%, #e2e8f0 100%) !important;
+  color: #000000 !important;
+  border: 1px solid rgba(148, 163, 184, 0.3) !important;
+  border-radius: 6px !important;
+  padding: 4px 8px !important;
+  font-size: 12px !important;
+  font-weight: 600 !important;
+}
+
+/* NAVEGAÇÃO E SIDEBAR - PADRÃO FUNDO CLARO */
+.project-sidebar, .plan-sidebar {
+  background: linear-gradient(135deg, #ffffff 0%, #f8fafc 100%) !important;
+  border: 1px solid rgba(30, 64, 175, 0.1) !important;
+  box-shadow: 0 8px 24px rgba(30, 64, 175, 0.08) !important;
+  border-radius: 16px !important;
+}
+
+.project-sidebar-title {
+  color: #1e40af !important;
+  font-weight: 600 !important;
+  font-size: 14px !important;
+  text-transform: uppercase !important;
+  letter-spacing: 0.18em !important;
+}
+
+.project-nav-link {
+  background: linear-gradient(135deg, #ffffff 0%, #f9fafb 100%) !important;
+  color: #1e293b !important;
+  border: 1px solid rgba(30, 64, 175, 0.1) !important;
+  border-radius: 12px !important;
+  padding: 14px 18px !important;
+  font-weight: 500 !important;
+  font-size: 14px !important;
+  transition: all 0.3s ease !important;
+  text-align: left !important;
+  min-height: 48px !important;
+  display: flex !important;
+  align-items: center !important;
+}
+
+.project-nav-link:hover,
+.project-nav-link:focus {
+  color: #000000 !important;
+  background: linear-gradient(135deg, #f1f5f9 0%, #e2e8f0 100%) !important;
+  border-color: rgba(30, 64, 175, 0.2) !important;
+  box-shadow: 0 4px 12px rgba(30, 64, 175, 0.1) !important;
+  transform: translateY(-1px) !important;
+}
+
+.project-nav-link.is-active {
+  color: #000000 !important;
+  background: linear-gradient(135deg, #dbeafe 0%, #bfdbfe 100%) !important;
+  border-color: rgba(30, 64, 175, 0.3) !important;
+  box-shadow: 0 4px 12px rgba(30, 64, 175, 0.15) !important;
+  font-weight: 600 !important;
+}
+
+.project-nav-shortcut {
+  color: #1e40af !important;
+  font-size: 12px !important;
+  letter-spacing: 0.08em !important;
+  font-weight: 500 !important;
+}
+
+.project-hints, .plan-sidebar-meta {
+  color: #1e293b !important;
+  font-size: 12px !important;
+}
+
+.project-hints p, .plan-sidebar-meta p {
+  color: #1e293b !important;
+}
+
+.summary-eyebrow {
+  color: #1e40af !important;
+  font-weight: 600 !important;
+}
+
+/* CABEÇALHO - PADRÃO FUNDO CLARO */
+.app-header {
+  background: linear-gradient(135deg, #ffffff 0%, #f8fafc 100%) !important;
+  border-bottom: 1px solid rgba(30, 64, 175, 0.1) !important;
+  backdrop-filter: blur(18px) !important;
+  box-shadow: 0 4px 12px rgba(30, 64, 175, 0.08) !important;
+}
+
+.header-nav .nav-link {
+  color: #1e293b !important;
+  font-weight: 600 !important;
+  padding: 8px 16px !important;
+  border-radius: 8px !important;
+  transition: all 0.3s ease !important;
+  font-size: 14px !important;
+}
+
+.header-nav .nav-link:hover {
+  color: #000000 !important;
+  background: linear-gradient(135deg, #f1f5f9 0%, #e2e8f0 100%) !important;
+  transform: translateY(-2px) !important;
+  box-shadow: 0 4px 8px rgba(30, 64, 175, 0.1) !important;
+}
+
+.header-nav .nav-link.active {
+  color: #000000 !important;
+  background: linear-gradient(135deg, #dbeafe 0%, #bfdbfe 100%) !important;
+  font-weight: 700 !important;
+}
+
+.user-pill {
+  background: linear-gradient(135deg, #ffffff 0%, #f9fafb 100%) !important;
+  border: 1px solid rgba(30, 64, 175, 0.1) !important;
+  border-radius: 20px !important;
+  padding: 8px 16px !important;
+  box-shadow: 0 2px 4px rgba(30, 64, 175, 0.05) !important;
+}
+
+.user-name {
+  color: #000000 !important;
+  font-weight: 600 !important;
+  font-size: 14px !important;
+}
+
+/* SELECT DE TEMA */
+#themeSelect {
+  background: #ffffff !important;
+  color: #000000 !important;
+  border: 1px solid rgba(30, 64, 175, 0.2) !important;
+  border-radius: 8px !important;
+  padding: 8px 12px !important;
+  font-size: 14px !important;
+  font-weight: 500 !important;
+}
+
+#themeSelect option {
+  background: #ffffff !important;
+  color: #000000 !important;
+}
+
+/* NAVEGAÇÃO GERAL */
+.nav-item, .sidebar-item, .menu-item {
+  color: #1e293b !important;
+  transition: all 0.3s ease !important;
+}
+
+.nav-item:hover, .sidebar-item:hover, .menu-item:hover {
+  color: #000000 !important;
+  background: linear-gradient(135deg, #f1f5f9 0%, #e2e8f0 100%) !important;
+}
+
+.nav-item.active, .sidebar-item.active, .menu-item.active {
+  color: #000000 !important;
+  background: linear-gradient(135deg, #dbeafe 0%, #bfdbfe 100%) !important;
+  font-weight: 600 !important;
+}
+
+/* TABELAS */
+table, .table {
+  background: #ffffff !important;
+  border: 1px solid rgba(30, 64, 175, 0.1) !important;
+}
+
+th, .table-header {
+  background: linear-gradient(135deg, #f8fafc 0%, #f1f5f9 100%) !important;
+  color: #000000 !important;
+  font-weight: 600 !important;
+  border-bottom: 1px solid rgba(30, 64, 175, 0.1) !important;
+}
+
+td, .table-cell {
+  background: #ffffff !important;
+  color: #1e293b !important;
+  border-bottom: 1px solid rgba(30, 64, 175, 0.05) !important;
+}
+
+tr:hover td, .table-row:hover .table-cell {
+  background: linear-gradient(135deg, #f8fafc 0%, #f1f5f9 100%) !important;
+}
+
+/* MODAIS E POPUPS */
+.modal, .popup, .confirmation-popup, .activity-modal, .project-modal {
+  background: linear-gradient(135deg, #ffffff 0%, #f8fafc 100%) !important;
+  border: 1px solid rgba(30, 64, 175, 0.1) !important;
+  box-shadow: 0 16px 48px rgba(30, 64, 175, 0.15) !important;
+  border-radius: 16px !important;
+}
+
+.modal-title, .popup-title {
+  color: #000000 !important;
+  font-weight: 700 !important;
+}
+
+.modal-content, .popup-content {
+  color: #1e293b !important;
+}
+
+/* LOGS E ATIVIDADES */
+.log-entry, .activity-log, .timeline-item {
+  background: linear-gradient(135deg, #ffffff 0%, #f9fafb 100%) !important;
+  border: 1px solid rgba(30, 64, 175, 0.1) !important;
+  border-radius: 8px !important;
+  padding: 12px 16px !important;
+  margin-bottom: 8px !important;
+  box-shadow: 0 2px 4px rgba(30, 64, 175, 0.05) !important;
+}
+
+.log-entry-title, .activity-log-title {
+  color: #000000 !important;
+  font-weight: 600 !important;
+}
+
+.log-entry-meta, .activity-log-meta {
+  color: #1e293b !important;
+  font-size: 12px !important;
+}
+
+/* FILTROS E BUSCA */
+.filter-section, .search-section {
+  background: linear-gradient(135deg, #ffffff 0%, #f8fafc 100%) !important;
+  border: 1px solid rgba(30, 64, 175, 0.1) !important;
+  border-radius: 12px !important;
+  padding: 16px !important;
+  box-shadow: 0 4px 12px rgba(30, 64, 175, 0.08) !important;
+}
+
+.filter-title, .search-title {
+  color: #000000 !important;
+  font-weight: 600 !important;
+  font-size: 16px !important;
+}
+
+/* DASHBOARD E RESUMOS */
+.summary-card, .dashboard-card, .stats-card {
+  background: linear-gradient(135deg, #ffffff 0%, #f9fafb 100%) !important;
+  border: 1px solid rgba(30, 64, 175, 0.1) !important;
+  border-radius: 16px !important;
+  padding: 24px !important;
+  box-shadow: 0 8px 24px rgba(30, 64, 175, 0.08) !important;
+  transition: all 0.3s ease !important;
+  position: relative !important;
+  overflow: hidden !important;
+}
+
+.summary-card::before, .dashboard-card::before, .stats-card::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 3px;
+  background: linear-gradient(90deg, #1e40af, #7c3aed, #dc2626);
+}
+
+.summary-card:hover, .dashboard-card:hover, .stats-card:hover {
+  transform: translateY(-4px) !important;
+  box-shadow: 0 16px 32px rgba(30, 64, 175, 0.15) !important;
+  border-color: rgba(30, 64, 175, 0.2) !important;
+}
+
+.summary-label, .dashboard-label, .stats-label {
+  color: #1e40af !important;
+  font-weight: 600 !important;
+  font-size: 12px !important;
+  text-transform: uppercase !important;
+  letter-spacing: 0.05em !important;
+}
+
+.summary-value, .dashboard-value, .stats-value {
+  color: #000000 !important;
+  font-weight: 700 !important;
+  font-size: 28px !important;
+}
+
+.summary-description, .dashboard-description, .stats-description {
+  color: #1e293b !important;
+  font-size: 12px !important;
+  line-height: 1.5 !important;
+}
+
+/* LINKS E ÂNCORAS */
+a, .link {
+  color: #1e40af !important;
+  text-decoration: none !important;
+  transition: all 0.3s ease !important;
+}
+
+a:hover, .link:hover {
+  color: #000000 !important;
+  text-decoration: underline !important;
+}
+
+/* RESPONSIVIDADE */
+@media (max-width: 768px) {
+  .surface-card, .card, .panel {
+    margin: 8px !important;
+    padding: 16px !important;
+  }
+  
+  .btn, .button {
+    padding: 12px 20px !important;
+    font-size: 14px !important;
+  }
+  
+  .summary-value, .dashboard-value, .stats-value {
+    font-size: 24px !important;
+  }
+}
+
+/* GARANTIAS FINAIS - FORÇAR CORES ESCURAS */
+* {
+  color: inherit !important;
+}
+
+h1, h2, h3, h4, h5, h6, p, span, div, label, input, select, textarea {
+  color: #000000 !important;
+}
+
+.text-white, .text-light, .text-muted {
+  color: #1e293b !important;
+}
+
+.bg-dark, .bg-primary, .bg-secondary {
+  background: linear-gradient(135deg, #ffffff 0%, #f8fafc 100%) !important;
+  color: #000000 !important;
+}

@@ -1,0 +1,988 @@
+{% extends "base.html" %}
+{% block title %}GRV | Gestão de Atividades / Calendário{% endblock %}
+{% block body %}{% set active_nav = 'routine-activities' %}{{ super() }}{% endblock %}
+
+{% block extra_head %}
+{{ super() }}
+<!-- FullCalendar CSS -->
+<link href='https://cdn.jsdelivr.net/npm/fullcalendar@6.1.10/main.min.css' rel='stylesheet' />
+<style>
+  .activities-shell {
+    display: grid;
+    grid-template-columns: 250px minmax(0, 1fr);
+    gap: 18px;
+    align-items: start;
+  }
+
+  .activities-main {
+    background: #ffffff;
+    border-radius: 14px;
+    border: 1px solid rgba(15, 23, 42, 0.08);
+    padding: 22px 24px;
+    box-shadow: 0 12px 32px rgba(15, 23, 42, 0.08);
+    display: grid;
+    gap: 20px;
+  }
+
+  .activities-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    gap: 16px;
+  }
+
+  .activities-header h1 {
+    margin: 0;
+    font-size: 22px;
+    font-weight: 700;
+    color: #0f172a;
+  }
+
+  .activities-description {
+    color: #64748b;
+    font-size: 13px;
+    margin-top: 6px;
+    max-width: 600px;
+    line-height: 1.5;
+  }
+
+  .tabs {
+    display: flex;
+    gap: 8px;
+    border-bottom: 2px solid rgba(15, 23, 42, 0.1);
+    padding-bottom: 0;
+  }
+
+  .tab {
+    padding: 12px 24px;
+    border: none;
+    background: none;
+    font-size: 14px;
+    font-weight: 600;
+    color: #64748b;
+    cursor: pointer;
+    position: relative;
+    transition: all 0.2s ease;
+    border-radius: 8px 8px 0 0;
+  }
+
+  .tab:hover {
+    color: #3b82f6;
+    background: rgba(59, 130, 246, 0.05);
+  }
+
+  .tab.active {
+    color: #3b82f6;
+    background: rgba(59, 130, 246, 0.1);
+  }
+
+  .tab.active::after {
+    content: '';
+    position: absolute;
+    bottom: -2px;
+    left: 0;
+    right: 0;
+    height: 2px;
+    background: #3b82f6;
+  }
+
+  .tab-content {
+    display: none;
+  }
+
+  .tab-content.active {
+    display: block;
+  }
+
+  .filters-section {
+    background: rgba(255, 255, 255, 0.5);
+    backdrop-filter: blur(10px);
+    border: 1px solid rgba(15, 23, 42, 0.08);
+    border-radius: 16px;
+    padding: 0;
+    margin-bottom: 24px;
+    overflow: hidden;
+  }
+
+  .filters-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 16px 20px;
+    cursor: pointer;
+    user-select: none;
+    border-bottom: 1px solid rgba(15, 23, 42, 0.08);
+    transition: background 0.2s;
+  }
+
+  .filters-header:hover {
+    background: rgba(255, 255, 255, 0.5);
+  }
+
+  .filters-header h3 {
+    margin: 0;
+    font-size: 14px;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+    color: #475569;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+
+  .filters-toggle {
+    font-size: 20px;
+    transition: transform 0.3s ease;
+    color: #64748b;
+  }
+
+  .filters-toggle.collapsed {
+    transform: rotate(-90deg);
+  }
+
+  .filters-content {
+    padding: 20px;
+    max-height: 1000px;
+    overflow: hidden;
+    transition: max-height 0.3s ease, padding 0.3s ease;
+  }
+
+  .filters-content.collapsed {
+    max-height: 0;
+    padding: 0 20px;
+  }
+
+  .filters-row {
+    display: flex;
+    gap: 12px;
+    flex-wrap: wrap;
+  }
+
+  .filter-group {
+    flex: 1;
+    min-width: 200px;
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+  }
+
+  .filter-group label {
+    font-size: 11px;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+    color: #64748b;
+  }
+
+  .filter-group select,
+  .filter-group input {
+    padding: 8px 12px;
+    border-radius: 8px;
+    border: 1px solid rgba(15, 23, 42, 0.1);
+    font-size: 13px;
+    background: #fff;
+  }
+
+  .filter-group select[multiple] {
+    min-height: 80px;
+    padding: 4px;
+  }
+
+  .filter-group select[multiple] option {
+    padding: 6px 10px;
+    border-radius: 4px;
+    margin: 2px 0;
+  }
+
+  .filter-group select[multiple] option:checked {
+    background: linear-gradient(135deg, #3b82f6, #2563eb);
+    color: #fff;
+    font-weight: 600;
+  }
+
+  .filter-hint {
+    font-size: 10px;
+    color: #94a3b8;
+    font-style: italic;
+    margin-top: 2px;
+  }
+
+  .activity-list {
+    display: grid;
+    gap: 12px;
+  }
+
+  .activity-card {
+    border-radius: 10px;
+    border: 1px solid rgba(15, 23, 42, 0.08);
+    background: #fff;
+    padding: 16px 18px;
+    display: grid;
+    gap: 12px;
+    transition: all 0.2s ease;
+    cursor: pointer;
+  }
+
+  .activity-card:hover {
+    border-color: rgba(59, 130, 246, 0.3);
+    box-shadow: 0 4px 12px rgba(59, 130, 246, 0.12);
+    transform: translateY(-1px);
+  }
+
+  .activity-card-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    gap: 12px;
+  }
+
+  .activity-card-title {
+    flex: 1;
+  }
+
+  .activity-code {
+    font-size: 11px;
+    font-weight: 600;
+    color: #3b82f6;
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+  }
+
+  .activity-name {
+    font-size: 15px;
+    font-weight: 700;
+    color: #0f172a;
+    margin: 4px 0;
+  }
+
+  .activity-origin {
+    font-size: 12px;
+    color: #64748b;
+  }
+
+  .activity-badges {
+    display: flex;
+    gap: 6px;
+    align-items: center;
+    flex-wrap: wrap;
+  }
+
+  .badge {
+    padding: 4px 10px;
+    border-radius: 8px;
+    font-size: 11px;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+  }
+
+  .badge.type-project { background: #dbeafe; color: #1e40af; }
+  .badge.type-process { background: #fef3c7; color: #b45309; }
+  
+  .badge.status-pending { background: #e2e8f0; color: #475569; }
+  .badge.status-in_progress, .badge.stage-executing { background: #dbeafe; color: #1e40af; }
+  .badge.status-waiting, .badge.stage-waiting { background: #fef3c7; color: #b45309; }
+  .badge.status-completed, .badge.stage-completed { background: #d1fae5; color: #065f46; }
+
+  .activity-card-body {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+    gap: 12px;
+  }
+
+  .activity-field {
+    display: grid;
+    gap: 4px;
+  }
+
+  .activity-field-label {
+    font-size: 11px;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+    color: #94a3b8;
+  }
+
+  .activity-field-value {
+    font-size: 13px;
+    color: #0f172a;
+    font-weight: 500;
+  }
+
+  #calendar {
+    padding: 20px;
+    min-height: 600px;
+  }
+
+  .fc-event {
+    border: none !important;
+    padding: 4px 8px;
+    border-radius: 6px;
+    font-size: 12px;
+    font-weight: 600;
+  }
+
+  .fc-event.type-project {
+    background: #3b82f6 !important;
+  }
+
+  .fc-event.type-process {
+    background: #f59e0b !important;
+  }
+
+  .stats-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+    gap: 12px;
+  }
+
+  .stat-card {
+    padding: 14px 16px;
+    border-radius: 10px;
+    background: linear-gradient(135deg, rgba(59, 130, 246, 0.1), rgba(14, 116, 144, 0.08));
+    border: 1px solid rgba(59, 130, 246, 0.18);
+  }
+
+  .stat-label {
+    font-size: 11px;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+    color: #64748b;
+    margin-bottom: 6px;
+  }
+
+  .stat-value {
+    font-size: 24px;
+    font-weight: 700;
+    color: #0f172a;
+  }
+
+  .empty-state {
+    text-align: center;
+    padding: 60px 20px;
+    color: #94a3b8;
+  }
+
+  .empty-state h3 {
+    font-size: 18px;
+    font-weight: 600;
+    color: #64748b;
+    margin-bottom: 8px;
+  }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="project-layout plan-layout activities-shell" data-sidebar-toggle>
+  <!-- Sidebar -->
+  {% include 'routines_sidebar.html' %}
+
+  <!-- Main Content -->
+  <div class="project-content plan-content activities-main">
+    <!-- Header -->
+    <div class="activities-header">
+      <div>
+        <h1>Gestão de Atividades / Calendário</h1>
+        <p class="activities-description">
+          Visualização consolidada de todas as atividades: projetos e processos. 
+          Gerencie prazos, responsáveis e acompanhe o progresso em lista ou calendário.
+        </p>
+      </div>
+    </div>
+
+    <!-- Stats -->
+    <div class="stats-grid" id="statsGrid">
+      <div class="stat-card">
+        <div class="stat-label">Total de Atividades</div>
+        <div class="stat-value" id="statTotal">0</div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-label">Projetos</div>
+        <div class="stat-value" id="statProjects">0</div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-label">Processos</div>
+        <div class="stat-value" id="statProcesses">0</div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-label">Em Andamento</div>
+        <div class="stat-value" id="statInProgress">0</div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-label">Vencendo Hoje</div>
+        <div class="stat-value" id="statDueToday">0</div>
+      </div>
+    </div>
+
+    <!-- Tabs -->
+    <div class="tabs">
+      <button class="tab active" onclick="switchTab('list')">📋 Lista</button>
+      <button class="tab" onclick="switchTab('calendar')">📅 Calendário</button>
+    </div>
+
+    <!-- Filters -->
+    <div class="filters-section">
+      <div class="filters-header" onclick="toggleFilters()">
+        <h3>
+          <span>🔍</span>
+          <span>Filtros Avançados</span>
+          <span id="activeFiltersCount" style="display: none; font-size: 11px; background: linear-gradient(135deg, #3b82f6, #2563eb); color: #fff; padding: 2px 8px; border-radius: 12px; font-weight: 700;"></span>
+        </h3>
+        <span class="filters-toggle" id="filtersToggle">▼</span>
+      </div>
+      <div class="filters-content" id="filtersContent">
+        <div class="filters-row">
+        <div class="filter-group">
+          <label>Tipo</label>
+          <select id="filterType" multiple>
+            <option value="project_activity">Atividades de Projetos</option>
+            <option value="process_instance">Instâncias de Processos</option>
+          </select>
+          <div class="filter-hint">Ctrl+Clique para múltipla seleção</div>
+        </div>
+        <div class="filter-group">
+          <label>Status/Estágio</label>
+          <select id="filterStatus" multiple>
+            <option value="pending">Pendente</option>
+            <option value="in_progress">Em Andamento</option>
+            <option value="executing">Executando</option>
+            <option value="waiting">Aguardando</option>
+            <option value="completed">Concluído</option>
+            <option value="inbox">Caixa de Entrada</option>
+            <option value="suspended">Suspenso</option>
+          </select>
+          <div class="filter-hint">Ctrl+Clique para múltipla seleção</div>
+        </div>
+        <div class="filter-group">
+          <label>Pessoa</label>
+          <select id="filterPerson" multiple>
+            {% for emp in employees %}
+            <option value="{{ emp.id }}">{{ emp.name }}</option>
+            {% endfor %}
+          </select>
+          <div class="filter-hint">Ctrl+Clique para múltipla seleção</div>
+        </div>
+      </div>
+      <div class="filters-row">
+        <div class="filter-group">
+          <label>Projeto</label>
+          <select id="filterProject" multiple>
+            {% for proj in projects %}
+            <option value="{{ proj.id }}">{{ proj.code or proj.id }} - {{ proj.name }}</option>
+            {% endfor %}
+          </select>
+          <div class="filter-hint">Ctrl+Clique para múltipla seleção</div>
+        </div>
+        <div class="filter-group">
+          <label>Processo</label>
+          <select id="filterProcess" multiple>
+            {% for proc in processes %}
+            <option value="{{ proc.id }}">{{ proc.code or proc.id }} - {{ proc.name }}</option>
+            {% endfor %}
+          </select>
+          <div class="filter-hint">Ctrl+Clique para múltipla seleção</div>
+        </div>
+        <div class="filter-group">
+          <label>Buscar</label>
+          <input type="text" id="searchInput" placeholder="Buscar por título...">
+          <button onclick="clearAllFilters()" style="margin-top: 4px; padding: 6px 12px; border-radius: 6px; border: 1px solid rgba(15, 23, 42, 0.15); background: #fff; font-size: 12px; font-weight: 600; cursor: pointer;">
+            Limpar Filtros
+          </button>
+        </div>
+      </div>
+      </div>
+    </div>
+
+    <!-- List Tab -->
+    <div class="tab-content active" id="listTab">
+      <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 20px;">
+        <!-- Process Instances Column -->
+        <div style="background: linear-gradient(135deg, rgba(245, 158, 11, 0.08), rgba(251, 191, 36, 0.05)); padding: 18px; border-radius: 12px; border: 1px solid rgba(245, 158, 11, 0.15);">
+          <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px; padding-bottom: 12px; border-bottom: 2px solid rgba(245, 158, 11, 0.2);">
+            <h2 style="margin: 0; font-size: 18px; font-weight: 700; color: #0f172a;">
+              📋 Instâncias de Processos
+            </h2>
+            <div style="font-size: 14px; font-weight: 600; color: #b45309;">
+              <span id="processCount">0</span> itens
+            </div>
+          </div>
+          <div class="activity-list" id="processInstancesList">
+            <!-- Populated by JavaScript -->
+          </div>
+        </div>
+        
+        <!-- Project Activities Column -->
+        <div style="background: linear-gradient(135deg, rgba(59, 130, 246, 0.08), rgba(37, 99, 235, 0.05)); padding: 18px; border-radius: 12px; border: 1px solid rgba(59, 130, 246, 0.15);">
+          <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px; padding-bottom: 12px; border-bottom: 2px solid rgba(59, 130, 246, 0.2);">
+            <h2 style="margin: 0; font-size: 18px; font-weight: 700; color: #0f172a;">
+              🎯 Atividades de Projetos
+            </h2>
+            <div style="font-size: 14px; font-weight: 600; color: #1e40af;">
+              <span id="projectCount">0</span> itens
+            </div>
+          </div>
+          <div class="activity-list" id="projectActivitiesList">
+            <!-- Populated by JavaScript -->
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Calendar Tab -->
+    <div class="tab-content" id="calendarTab">
+      <div id="calendar"></div>
+    </div>
+  </div>
+</div>
+
+<!-- FullCalendar JS -->
+<script src='https://cdn.jsdelivr.net/npm/fullcalendar@6.1.10/index.global.min.js'></script>
+
+<script>
+const companyId = {{ company.id }};
+let allActivities = [];
+let filteredActivities = [];
+let calendar = null;
+
+document.addEventListener('DOMContentLoaded', async () => {
+  await loadActivities();
+  initCalendar();
+  setupFilters();
+  updateStats();
+});
+
+async function loadActivities() {
+  try {
+    const response = await fetch(`/api/companies/${companyId}/unified-activities`);
+    if (!response.ok) throw new Error('Erro ao carregar atividades');
+    
+    allActivities = await response.json();
+    filteredActivities = allActivities;
+    renderList();
+    updateCalendar();
+    
+    console.log(`${allActivities.length} atividades carregadas`);
+  } catch (error) {
+    console.error('Erro ao carregar atividades:', error);
+    showEmptyState();
+  }
+}
+
+function setupFilters() {
+  document.getElementById('filterType').addEventListener('change', applyFilters);
+  document.getElementById('filterStatus').addEventListener('change', applyFilters);
+  document.getElementById('filterPerson').addEventListener('change', applyFilters);
+  document.getElementById('filterProject').addEventListener('change', applyFilters);
+  document.getElementById('filterProcess').addEventListener('change', applyFilters);
+  document.getElementById('searchInput').addEventListener('input', applyFilters);
+  
+  // Restore filters collapsed state from localStorage
+  const isCollapsed = localStorage.getItem('filtersCollapsed') === 'true';
+  if (isCollapsed) {
+    document.getElementById('filtersContent').classList.add('collapsed');
+    document.getElementById('filtersToggle').classList.add('collapsed');
+  }
+  
+  updateActiveFiltersCount();
+}
+
+function applyFilters() {
+  // Get selected values from multi-selects
+  const types = Array.from(document.getElementById('filterType').selectedOptions).map(o => o.value);
+  const statuses = Array.from(document.getElementById('filterStatus').selectedOptions).map(o => o.value);
+  const persons = Array.from(document.getElementById('filterPerson').selectedOptions).map(o => o.value);
+  const projects = Array.from(document.getElementById('filterProject').selectedOptions).map(o => parseInt(o.value));
+  const processes = Array.from(document.getElementById('filterProcess').selectedOptions).map(o => parseInt(o.value));
+  const search = document.getElementById('searchInput').value.toLowerCase();
+  
+  filteredActivities = allActivities.filter(activity => {
+    // Filter by type (if any selected)
+    if (types.length > 0 && !types.includes(activity.type)) return false;
+    
+    // Filter by status/stage (if any selected)
+    if (statuses.length > 0) {
+      const activityStatus = activity.status || activity.stage || '';
+      if (!statuses.includes(activityStatus)) return false;
+    }
+    
+    // Filter by person (if any selected) - responsible or executor
+    if (persons.length > 0) {
+      const personIds = persons.map(p => parseInt(p));
+      const isResponsible = personIds.includes(activity.responsible_id);
+      const isExecutor = activity.executors && activity.executors.some(e => {
+        // Try to match by name
+        return persons.some(p => {
+          const emp = {{ employees | tojson | safe }}.find(emp => emp.id == p);
+          return emp && e.includes(emp.name);
+        });
+      });
+      if (!isResponsible && !isExecutor) return false;
+    }
+    
+    // Filter by project (if any selected)
+    if (projects.length > 0 && !projects.includes(activity.project_id)) return false;
+    
+    // Filter by process (if any selected)
+    if (processes.length > 0 && !processes.includes(activity.process_id)) return false;
+    
+    // Filter by search
+    if (search && !activity.title.toLowerCase().includes(search)) return false;
+    
+    return true;
+  });
+  
+  renderList();
+  updateCalendar();
+  updateStats();
+  updateActiveFiltersCount();
+}
+
+function clearAllFilters() {
+  // Clear all multi-selects
+  document.getElementById('filterType').selectedIndex = -1;
+  document.getElementById('filterStatus').selectedIndex = -1;
+  document.getElementById('filterPerson').selectedIndex = -1;
+  document.getElementById('filterProject').selectedIndex = -1;
+  document.getElementById('filterProcess').selectedIndex = -1;
+  document.getElementById('searchInput').value = '';
+  
+  applyFilters();
+}
+
+function toggleFilters() {
+  const content = document.getElementById('filtersContent');
+  const toggle = document.getElementById('filtersToggle');
+  
+  content.classList.toggle('collapsed');
+  toggle.classList.toggle('collapsed');
+  
+  // Save state to localStorage
+  const isCollapsed = content.classList.contains('collapsed');
+  localStorage.setItem('filtersCollapsed', isCollapsed);
+}
+
+function updateActiveFiltersCount() {
+  const types = document.getElementById('filterType').selectedOptions.length;
+  const statuses = document.getElementById('filterStatus').selectedOptions.length;
+  const persons = document.getElementById('filterPerson').selectedOptions.length;
+  const projects = document.getElementById('filterProject').selectedOptions.length;
+  const processes = document.getElementById('filterProcess').selectedOptions.length;
+  const search = document.getElementById('searchInput').value.trim();
+  
+  const total = types + statuses + persons + projects + processes + (search ? 1 : 0);
+  
+  const badge = document.getElementById('activeFiltersCount');
+  if (total > 0) {
+    badge.textContent = total;
+    badge.style.display = 'inline-block';
+  } else {
+    badge.style.display = 'none';
+  }
+}
+
+function renderList() {
+  // Separate activities by type
+  const processInstances = filteredActivities.filter(a => a.type === 'process_instance');
+  const projectActivities = filteredActivities.filter(a => a.type === 'project_activity');
+  
+  // Update counts
+  document.getElementById('processCount').textContent = processInstances.length;
+  document.getElementById('projectCount').textContent = projectActivities.length;
+  
+  // Render process instances
+  const processList = document.getElementById('processInstancesList');
+  if (processInstances.length === 0) {
+    processList.innerHTML = '<div class="empty-state"><p style="font-size: 14px;">Nenhuma instância de processo</p></div>';
+  } else {
+    processList.innerHTML = processInstances.map(activity => renderActivityCard(activity)).join('');
+  }
+  
+  // Render project activities
+  const projectList = document.getElementById('projectActivitiesList');
+  if (projectActivities.length === 0) {
+    projectList.innerHTML = '<div class="empty-state"><p style="font-size: 14px;">Nenhuma atividade de projeto</p></div>';
+  } else {
+    projectList.innerHTML = projectActivities.map(activity => renderActivityCard(activity)).join('');
+  }
+}
+
+function renderActivityCard(activity) {
+  const isProject = activity.type === 'project_activity';
+  const typeLabel = isProject ? 'Projeto' : 'Processo';
+  const typeBadge = isProject ? 'type-project' : 'type-process';
+  
+  const statusLabel = getStatusLabel(activity);
+  const statusBadge = getStatusBadge(activity);
+  
+  const origin = isProject ? 
+    `🎯 ${activity.project_code} - ${activity.project_name}` :
+    `📋 ${activity.process_code} - ${activity.process_name}`;
+  
+  const dueDateFormatted = activity.due_date ? 
+    formatDate(activity.due_date) : 'Sem prazo';
+  
+  const responsible = activity.responsible || 'Não definido';
+  const executors = activity.executors && activity.executors.length > 0 ?
+    activity.executors.join(', ') : 'Não definido';
+  
+  return `
+    <div class="activity-card" onclick="openActivity('${activity.id}', '${activity.type}')">
+      <div class="activity-card-header">
+        <div class="activity-card-title">
+          ${activity.code ? `<div class="activity-code">${activity.code}</div>` : ''}
+          <h3 class="activity-name">${activity.title}</h3>
+          <div class="activity-origin">${origin}</div>
+        </div>
+        <div class="activity-badges">
+          <span class="badge ${statusBadge}">${statusLabel}</span>
+        </div>
+      </div>
+      
+      <div class="activity-card-body">
+        <div class="activity-field">
+          <div class="activity-field-label">Prazo</div>
+          <div class="activity-field-value">⏱️ ${dueDateFormatted}</div>
+        </div>
+        ${!isProject && activity.estimated_hours ? `
+        <div class="activity-field">
+          <div class="activity-field-label">Horas</div>
+          <div class="activity-field-value">${activity.actual_hours || 0}h / ${activity.estimated_hours}h</div>
+        </div>
+        ` : ''}
+        <div class="activity-field">
+          <div class="activity-field-label">${isProject ? 'Responsável' : 'Executores'}</div>
+          <div class="activity-field-value">👥 ${isProject ? responsible : executors}</div>
+        </div>
+      </div>
+    </div>
+  `;
+}
+
+function showEmptyState() {
+  document.getElementById('processInstancesList').innerHTML = `
+    <div class="empty-state">
+      <p style="font-size: 14px;">Nenhuma instância de processo</p>
+    </div>
+  `;
+  document.getElementById('projectActivitiesList').innerHTML = `
+    <div class="empty-state">
+      <p style="font-size: 14px;">Nenhuma atividade de projeto</p>
+    </div>
+  `;
+  document.getElementById('processCount').textContent = '0';
+  document.getElementById('projectCount').textContent = '0';
+}
+
+function getStatusLabel(activity) {
+  if (activity.type === 'project_activity') {
+    const stages = {
+      'inbox': 'Caixa de Entrada',
+      'waiting': 'Aguardando',
+      'executing': 'Executando',
+      'pending': 'Pendências',
+      'suspended': 'Suspenso',
+      'completed': 'Concluído'
+    };
+    return stages[activity.stage] || activity.stage;
+  } else {
+    const statuses = {
+      'pending': 'Pendente',
+      'in_progress': 'Em Andamento',
+      'waiting': 'Aguardando',
+      'completed': 'Concluído',
+      'cancelled': 'Cancelado'
+    };
+    return statuses[activity.status] || activity.status;
+  }
+}
+
+function getStatusBadge(activity) {
+  if (activity.type === 'project_activity') {
+    return `stage-${activity.stage}`;
+  } else {
+    return `status-${activity.status}`;
+  }
+}
+
+function formatDate(dateString) {
+  if (!dateString) return '';
+  try {
+    const date = new Date(dateString);
+    return date.toLocaleDateString('pt-BR', {
+      day: '2-digit',
+      month: '2-digit',
+      year: 'numeric'
+    });
+  } catch {
+    return dateString;
+  }
+}
+
+function updateStats() {
+  const total = filteredActivities.length;
+  const projects = filteredActivities.filter(a => a.type === 'project_activity').length;
+  const processes = filteredActivities.filter(a => a.type === 'process_instance').length;
+  const inProgress = filteredActivities.filter(a => 
+    a.status === 'in_progress' || a.stage === 'executing'
+  ).length;
+  
+  const today = new Date().toISOString().split('T')[0];
+  const dueToday = filteredActivities.filter(a => {
+    if (!a.due_date) return false;
+    const dueDate = new Date(a.due_date).toISOString().split('T')[0];
+    return dueDate === today;
+  }).length;
+  
+  document.getElementById('statTotal').textContent = total;
+  document.getElementById('statProjects').textContent = projects;
+  document.getElementById('statProcesses').textContent = processes;
+  document.getElementById('statInProgress').textContent = inProgress;
+  document.getElementById('statDueToday').textContent = dueToday;
+}
+
+function initCalendar() {
+  const calendarEl = document.getElementById('calendar');
+  
+  calendar = new FullCalendar.Calendar(calendarEl, {
+    initialView: 'dayGridMonth',
+    locale: 'pt-br',
+    headerToolbar: {
+      left: 'prev,next today',
+      center: 'title',
+      right: 'dayGridMonth,timeGridWeek,timeGridDay,listWeek'
+    },
+    buttonText: {
+      today: 'Hoje',
+      month: 'Mês',
+      week: 'Semana',
+      day: 'Dia',
+      list: 'Lista'
+    },
+    events: [],
+    eventClick: function(info) {
+      const activity = filteredActivities.find(a => a.id === info.event.id);
+      if (activity) {
+        openActivity(activity.id, activity.type);
+      }
+    },
+    height: 'auto'
+  });
+  
+  calendar.render();
+}
+
+function updateCalendar() {
+  if (!calendar) return;
+  
+  const events = filteredActivities
+    .filter(a => a.due_date)
+    .map(activity => {
+      const isProject = activity.type === 'project_activity';
+      
+      return {
+        id: activity.id,
+        title: `${activity.code ? activity.code + ' - ' : ''}${activity.title}`,
+        start: activity.due_date,
+        className: isProject ? 'type-project' : 'type-process',
+        extendedProps: {
+          type: activity.type,
+          status: activity.status || activity.stage
+        }
+      };
+    });
+  
+  calendar.removeAllEvents();
+  calendar.addEventSource(events);
+}
+
+function switchTab(tabName) {
+  // Update tab buttons
+  document.querySelectorAll('.tab').forEach(tab => {
+    tab.classList.remove('active');
+  });
+  event.target.classList.add('active');
+  
+  // Update tab content
+  document.querySelectorAll('.tab-content').forEach(content => {
+    content.classList.remove('active');
+  });
+  
+  if (tabName === 'list') {
+    document.getElementById('listTab').classList.add('active');
+  } else if (tabName === 'calendar') {
+    document.getElementById('calendarTab').classList.add('active');
+    // Force calendar resize
+    setTimeout(() => {
+      if (calendar) calendar.updateSize();
+    }, 100);
+  }
+}
+
+function openActivity(id, type) {
+  // Store current state for return
+  const currentTab = document.querySelector('.tab.active').textContent.includes('Lista') ? 'list' : 'calendar';
+  const filters = {
+    type: document.getElementById('filterType').value,
+    status: document.getElementById('filterStatus').value,
+    person: document.getElementById('filterPerson').value,
+    project: document.getElementById('filterProject').value,
+    process: document.getElementById('filterProcess').value,
+    search: document.getElementById('searchInput').value
+  };
+  
+  sessionStorage.setItem('activityViewState', JSON.stringify({
+    tab: currentTab,
+    filters: filters
+  }));
+  
+  if (type === 'project_activity') {
+    // Extract project_id and activity_id from id (format: project-{projectId}-{activityId})
+    const parts = id.split('-');
+    const projectId = parts[1];
+    window.location.href = `/grv/company/${companyId}/projects/${projectId}/manage`;
+  } else if (type === 'process_instance') {
+    // Extract instance_id from id (format: process-{instanceId})
+    const parts = id.split('-');
+    const instanceId = parts[1];
+    window.location.href = `/grv/company/${companyId}/process/instances/${instanceId}/manage`;
+  }
+}
+
+// Restore state on page load
+window.addEventListener('DOMContentLoaded', () => {
+  const savedState = sessionStorage.getItem('activityViewState');
+  if (savedState) {
+    try {
+      const state = JSON.parse(savedState);
+      
+      // Restore tab
+      if (state.tab === 'calendar') {
+        setTimeout(() => switchTab('calendar'), 500);
+      }
+      
+      // Restore filters
+      if (state.filters) {
+        Object.keys(state.filters).forEach(key => {
+          const element = document.getElementById(`filter${key.charAt(0).toUpperCase() + key.slice(1)}`) ||
+                          document.getElementById(`${key}Input`);
+          if (element && state.filters[key]) {
+            element.value = state.filters[key];
+          }
+        });
+        
+        // Apply filters after restoring
+        setTimeout(() => applyFilters(), 300);
+      }
+      
+      // Clear stored state
+      sessionStorage.removeItem('activityViewState');
+    } catch (e) {
+      console.error('Error restoring state:', e);
+    }
+  }
+});
+</script>
+{% endblock %}
+

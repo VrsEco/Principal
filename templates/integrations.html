@@ -1,0 +1,1273 @@
+{% extends "base.html" %}
+{% block title %}Integrações e Serviços | PEV 2.0{% endblock %}
+{% block body %}
+  {% set active_nav = 'integrations' %}
+  {{ super() }}
+{% endblock %}
+{% block header_actions %}
+  <div class="header-nav">
+    <a href="/main" class="nav-link">Ecossistema</a>
+    <a href="{{ url_for('pev.pev_dashboard') }}" class="nav-link">PEV</a>
+    <a href="{{ url_for('grv.grv_dashboard') }}" class="nav-link">GRV</a>
+  </div>
+  <div class="user-pill">
+    <span class="user-name">{{ user_name | default('Administrador') }}</span>
+  </div>
+  <div class="header-nav">
+    <select id="themeSelect" class="nav-link" style="padding:8px 12px; color: #64748b;">
+      <option value="versus">Tema Versus</option>
+      <option value="alt">Tema Azul/Branco/Amarelo</option>
+    </select>
+  </div>
+{% endblock %}
+{% block content %}
+<div class="integrations-page">
+  <div class="page-header">
+    <h1>🔧 Integrações e Serviços</h1>
+    <p>Configure e gerencie as integrações externas do sistema</p>
+  </div>
+
+  <!-- Status das Integrações -->
+  <div class="integrations-status">
+    <h2>📊 Status das Integrações</h2>
+    <div class="status-grid" id="integrations-status">
+      <div class="status-card">
+        <div class="status-icon">🤖</div>
+        <div class="status-info">
+          <h3>Inteligência Artificial</h3>
+          <span class="status-badge" id="ai-status">Verificando...</span>
+        </div>
+      </div>
+      <div class="status-card">
+        <div class="status-icon">📧</div>
+        <div class="status-info">
+          <h3>Email</h3>
+          <span class="status-badge" id="email-status">Verificando...</span>
+        </div>
+      </div>
+      <div class="status-card">
+        <div class="status-icon">💬</div>
+        <div class="status-info">
+          <h3>WhatsApp</h3>
+          <span class="status-badge" id="whatsapp-status">Verificando...</span>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Configurações de IA -->
+  <div class="integration-section">
+    <div class="section-header">
+      <h2>🤖 Inteligência Artificial</h2>
+      <button class="btn btn-secondary" onclick="testIntegration('ai')">Testar Conexão</button>
+    </div>
+    
+    <div class="config-form">
+      <div class="form-group">
+        <label for="ai-provider">Provedor de IA:</label>
+        <select id="ai-provider" onchange="updateAIForm()">
+          <option value="openai">OpenAI (GPT)</option>
+          <option value="anthropic">Anthropic (Claude)</option>
+          <option value="webhook">Webhook Personalizado</option>
+          <option value="local">Análise Local</option>
+        </select>
+      </div>
+
+      <div id="openai-config" class="provider-config">
+        <div class="form-group">
+          <label for="openai-api-key">API Key da OpenAI:</label>
+          <input type="password" id="openai-api-key" placeholder="sk-..." />
+          <small>Obtenha sua chave em: <a href="https://platform.openai.com/api-keys" target="_blank">platform.openai.com</a></small>
+        </div>
+        <div class="form-row">
+          <div class="form-group">
+            <label for="openai-model">Modelo:</label>
+            <input type="text" id="openai-model" placeholder="gpt-4o-mini" />
+          </div>
+          <div class="form-group">
+            <label for="openai-base-url">Base URL:</label>
+            <input type="url" id="openai-base-url" placeholder="https://api.openai.com/v1" />
+          </div>
+        </div>
+        <div class="form-row">
+          <div class="form-group">
+            <label for="openai-temperature">Temperature:</label>
+            <input type="number" id="openai-temperature" min="0" max="2" step="0.1" placeholder="0.7" />
+          </div>
+          <div class="form-group">
+            <label for="openai-max-tokens">Max Tokens:</label>
+            <input type="number" id="openai-max-tokens" min="1" step="1" placeholder="2000" />
+          </div>
+          <div class="form-group">
+            <label for="openai-timeout">Timeout (s):</label>
+            <input type="number" id="openai-timeout" min="10" step="10" placeholder="120" />
+          </div>
+        </div>
+      </div>
+
+      <div id="anthropic-config" class="provider-config" style="display: none;">
+        <div class="form-group">
+          <label for="anthropic-api-key">API Key da Anthropic:</label>
+          <input type="password" id="anthropic-api-key" placeholder="sk-ant-..." />
+          <small>Obtenha sua chave em: <a href="https://console.anthropic.com/" target="_blank">console.anthropic.com</a></small>
+        </div>
+        <div class="form-row">
+          <div class="form-group">
+            <label for="anthropic-model">Modelo:</label>
+            <input type="text" id="anthropic-model" placeholder="claude-3-sonnet-20240229" />
+          </div>
+          <div class="form-group">
+            <label for="anthropic-timeout">Timeout (s):</label>
+            <input type="number" id="anthropic-timeout" min="10" step="10" placeholder="120" />
+          </div>
+          <div class="form-group">
+            <label for="anthropic-max-tokens">Max Tokens:</label>
+            <input type="number" id="anthropic-max-tokens" min="1" step="1" placeholder="2000" />
+          </div>
+        </div>
+      </div>
+
+      <div id="webhook-config" class="provider-config" style="display: none;">
+        <div class="form-group">
+          <label for="webhook-url">URL do Webhook:</label>
+          <input type="url" id="webhook-url" placeholder="https://seu-webhook.com/ai" />
+        </div>
+        <div class="form-row">
+          <div class="form-group">
+            <label for="webhook-headers">Headers (JSON):</label>
+            <input type="text" id="webhook-headers" placeholder='{"Authorization":"Bearer ..."}' />
+          </div>
+          <div class="form-group">
+            <label for="webhook-model">Modelo (opcional):</label>
+            <input type="text" id="webhook-model" placeholder="custom" />
+          </div>
+          <div class="form-group">
+            <label for="webhook-timeout">Timeout (s):</label>
+            <input type="number" id="webhook-timeout" min="10" step="10" placeholder="120" />
+          </div>
+        </div>
+      </div>
+
+      <div id="local-config" class="provider-config" style="display: none;">
+        <div class="info-box">
+          <p>✅ Análise local ativada - não requer configuração adicional</p>
+          <p>O sistema usará análises pré-definidas para demonstração.</p>
+        </div>
+      </div>
+
+      <button class="btn btn-primary" onclick="saveAIConfig()">Salvar Configuração</button>
+    </div>
+  </div>
+
+  <!-- Configurações de Email -->
+  <div class="integration-section">
+    <div class="section-header">
+      <h2>📧 Email</h2>
+      <button class="btn btn-secondary" onclick="testIntegration('email')">Testar Conexão</button>
+    </div>
+    
+    <div class="config-form">
+      <div class="form-group">
+        <label for="email-provider">Provedor de Email:</label>
+        <select id="email-provider" onchange="updateEmailForm()">
+          <option value="smtp">SMTP (Gmail, Outlook, etc.)</option>
+          <option value="webhook">Webhook Personalizado</option>
+          <option value="disabled">Desabilitado</option>
+        </select>
+      </div>
+
+      <div id="smtp-config" class="provider-config">
+        <div class="form-row">
+          <div class="form-group">
+            <label for="mail-server">Servidor SMTP:</label>
+            <input type="text" id="mail-server" placeholder="smtp.gmail.com" />
+          </div>
+          <div class="form-group">
+            <label for="mail-port">Porta:</label>
+            <input type="number" id="mail-port" placeholder="587" />
+          </div>
+        </div>
+        <div class="form-group">
+          <label for="mail-username">Usuário:</label>
+          <input type="email" id="mail-username" placeholder="seu-email@gmail.com" />
+        </div>
+        <div class="form-group">
+          <label for="mail-password">Senha/App Password:</label>
+          <input type="password" id="mail-password" placeholder="Sua senha ou app password" />
+          <small>Para Gmail, use App Password: <a href="https://support.google.com/accounts/answer/185833" target="_blank">Como criar</a></small>
+        </div>
+        <div class="form-group">
+          <label>
+            <input type="checkbox" id="mail-use-tls" checked />
+            Usar TLS
+          </label>
+        </div>
+      </div>
+
+      <div id="email-webhook-config" class="provider-config" style="display: none;">
+        <div class="form-group">
+          <label for="email-webhook-url">URL do Webhook:</label>
+          <input type="url" id="email-webhook-url" placeholder="https://seu-webhook.com/email" />
+        </div>
+      </div>
+
+      <button class="btn btn-primary" onclick="saveEmailConfig()">Salvar Configuração</button>
+    </div>
+  </div>
+
+  <!-- Configurações de WhatsApp -->
+  <div class="integration-section">
+    <div class="section-header">
+      <h2>💬 WhatsApp</h2>
+      <button class="btn btn-secondary" onclick="testIntegration('whatsapp')">Testar Conexão</button>
+    </div>
+    
+    <div class="config-form">
+      <div class="form-group">
+        <label for="whatsapp-provider">Provedor de WhatsApp:</label>
+        <select id="whatsapp-provider" onchange="updateWhatsAppForm()">
+          <option value="z-api">Z-API</option>
+          <option value="twilio">Twilio</option>
+          <option value="webhook">Webhook Personalizado</option>
+          <option value="disabled">Desabilitado</option>
+        </select>
+      </div>
+
+      <div id="z-api-config" class="provider-config">
+        <div class="form-group">
+          <label for="z-api-key">Token Z-API:</label>
+          <input type="password" id="z-api-key" placeholder="Seu token Z-API" />
+        </div>
+        <div class="form-group">
+          <label for="z-instance-id">Instance ID:</label>
+          <input type="text" id="z-instance-id" placeholder="Sua instance ID" />
+        </div>
+        <small>Obtenha suas credenciais em: <a href="https://z-api.io/" target="_blank">z-api.io</a></small>
+      </div>
+
+      <div id="twilio-config" class="provider-config" style="display: none;">
+        <div class="form-group">
+          <label for="twilio-account-sid">Account SID:</label>
+          <input type="text" id="twilio-account-sid" placeholder="AC..." />
+        </div>
+        <div class="form-group">
+          <label for="twilio-auth-token">Auth Token:</label>
+          <input type="password" id="twilio-auth-token" placeholder="Seu auth token" />
+        </div>
+        <div class="form-group">
+          <label for="twilio-whatsapp-number">Número WhatsApp:</label>
+          <input type="text" id="twilio-whatsapp-number" placeholder="+1234567890" />
+        </div>
+        <small>Configure em: <a href="https://console.twilio.com/" target="_blank">console.twilio.com</a></small>
+      </div>
+
+      <div id="whatsapp-webhook-config" class="provider-config" style="display: none;">
+        <div class="form-group">
+          <label for="whatsapp-webhook-url">URL do Webhook:</label>
+          <input type="url" id="whatsapp-webhook-url" placeholder="https://seu-webhook.com/whatsapp" />
+        </div>
+      </div>
+
+      <button class="btn btn-primary" onclick="saveWhatsAppConfig()">Salvar Configuração</button>
+    </div>
+  </div>
+
+  <!-- Serviços Cadastrados -->
+  <div class="integration-section">
+    <div class="section-header">
+      <h2>🔧 Serviços Cadastrados</h2>
+      <button class="btn btn-primary" onclick="refreshServices()">Atualizar Lista</button>
+    </div>
+    
+    <div class="services-list" id="services-list">
+      <div class="loading">Carregando serviços...</div>
+    </div>
+  </div>
+
+  <!-- Agentes Cadastrados -->
+  <div class="integration-section">
+    <div class="section-header">
+      <h2>🤖 Agentes Cadastrados</h2>
+      <button class="btn btn-primary" onclick="refreshAgents()">Atualizar Lista</button>
+    </div>
+    
+    <div class="agents-list" id="agents-list">
+      <div class="loading">Carregando agentes...</div>
+    </div>
+  </div>
+
+  <!-- Logs de Teste -->
+  <div class="integration-section">
+    <h2>📋 Logs de Teste</h2>
+    <div class="test-logs" id="test-logs">
+      <p class="no-logs">Nenhum teste executado ainda.</p>
+    </div>
+  </div>
+</div>
+
+<!-- Modal para resultados de teste -->
+<div id="testModal" class="test-modal">
+  <div class="test-modal-content">
+    <div class="test-modal-header">
+      <h3 class="test-modal-title" id="testModalTitle">Resultado do Teste</h3>
+      <button class="test-modal-close" onclick="closeTestModal()">&times;</button>
+    </div>
+    <div class="test-modal-body" id="testModalBody">
+      <!-- Conteúdo será preenchido dinamicamente -->
+    </div>
+  </div>
+</div>
+
+<style>
+.integrations-page {
+  max-width: 1200px;
+  margin: 0 auto;
+  padding: 20px;
+}
+
+.page-header {
+  text-align: center;
+  margin-bottom: 40px;
+}
+
+.page-header h1 {
+  color: #2c3e50;
+  margin-bottom: 10px;
+}
+
+.integrations-status {
+  margin-bottom: 40px;
+}
+
+.status-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+  gap: 20px;
+  margin-top: 20px;
+}
+
+.status-card {
+  background: white;
+  border-radius: 8px;
+  padding: 20px;
+  box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+  display: flex;
+  align-items: center;
+  gap: 15px;
+}
+
+.status-icon {
+  font-size: 2em;
+}
+
+.status-info h3 {
+  margin: 0 0 5px 0;
+  color: #2c3e50;
+}
+
+.status-badge {
+  padding: 4px 8px;
+  border-radius: 4px;
+  font-size: 0.8em;
+  font-weight: bold;
+}
+
+.status-badge.connected {
+  background: #d4edda;
+  color: #155724;
+}
+
+.status-badge.disconnected {
+  background: #f8d7da;
+  color: #721c24;
+}
+
+.status-badge.checking {
+  background: #fff3cd;
+  color: #856404;
+}
+
+.integration-section {
+  background: white;
+  border-radius: 8px;
+  padding: 30px;
+  margin-bottom: 30px;
+  box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+}
+
+.section-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 25px;
+  padding-bottom: 15px;
+  border-bottom: 2px solid #ecf0f1;
+}
+
+.section-header h2 {
+  margin: 0;
+  color: #2c3e50;
+}
+
+.config-form {
+  max-width: 600px;
+}
+
+.form-group {
+  margin-bottom: 20px;
+}
+
+.form-row {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 15px;
+}
+
+.form-group label {
+  display: block;
+  margin-bottom: 5px;
+  font-weight: 600;
+  color: #2c3e50;
+}
+
+.form-group input,
+.form-group select {
+  width: 100%;
+  padding: 10px;
+  border: 2px solid #ecf0f1;
+  border-radius: 4px;
+  font-size: 14px;
+}
+
+.form-group input:focus,
+.form-group select:focus {
+  outline: none;
+  border-color: #3498db;
+}
+
+.form-group small {
+  display: block;
+  margin-top: 5px;
+  color: #7f8c8d;
+  font-size: 12px;
+}
+
+.form-group small a {
+  color: #3498db;
+}
+
+.info-box {
+  background: #e8f5e8;
+  border: 1px solid #c3e6c3;
+  border-radius: 4px;
+  padding: 15px;
+  color: #2d5a2d;
+}
+
+.btn {
+  padding: 10px 20px;
+  border: none;
+  border-radius: 4px;
+  cursor: pointer;
+  font-size: 14px;
+  font-weight: 600;
+  text-decoration: none;
+  display: inline-block;
+  transition: all 0.3s;
+}
+
+.btn-primary {
+  background: #3498db;
+  color: white;
+}
+
+.btn-primary:hover {
+  background: #2980b9;
+}
+
+.btn-secondary {
+  background: #95a5a6;
+  color: white;
+}
+
+.btn-secondary:hover {
+  background: #7f8c8d;
+}
+
+.test-logs {
+  background: #f8f9fa;
+  border: 1px solid #dee2e6;
+  border-radius: 4px;
+  padding: 15px;
+  min-height: 100px;
+  font-family: monospace;
+  font-size: 12px;
+}
+
+.no-logs {
+  color: #6c757d;
+  font-style: italic;
+}
+
+.log-entry {
+  margin-bottom: 5px;
+  padding: 5px;
+  border-radius: 3px;
+}
+
+.log-entry.success {
+  background: #d4edda;
+  color: #155724;
+}
+
+.log-entry.error {
+  background: #f8d7da;
+  color: #721c24;
+}
+
+.log-entry.info {
+  background: #d1ecf1;
+  color: #0c5460;
+}
+
+.provider-config {
+  margin-top: 15px;
+  padding: 15px;
+  background: #f8f9fa;
+  border-radius: 4px;
+  border-left: 4px solid #3498db;
+}
+
+.services-list, .agents-list {
+  margin-top: 20px;
+}
+
+.loading {
+  text-align: center;
+  padding: 20px;
+  color: #7f8c8d;
+  font-style: italic;
+}
+
+.service-item, .agent-item {
+  background: white;
+  border: 1px solid #dee2e6;
+  border-radius: 8px;
+  padding: 20px;
+  margin-bottom: 15px;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  transition: box-shadow 0.3s;
+}
+
+.service-item:hover, .agent-item:hover {
+  box-shadow: 0 4px 8px rgba(0,0,0,0.1);
+}
+
+.service-info, .agent-info {
+  flex: 1;
+}
+
+.service-name, .agent-name {
+  font-size: 1.2em;
+  font-weight: 600;
+  color: #2c3e50;
+  margin-bottom: 5px;
+}
+
+.service-type, .agent-type {
+  color: #7f8c8d;
+  font-size: 0.9em;
+  margin-bottom: 5px;
+}
+
+.service-status, .agent-status {
+  display: inline-block;
+  padding: 2px 8px;
+  border-radius: 12px;
+  font-size: 0.8em;
+  font-weight: 600;
+}
+
+.service-status.active, .agent-status.active {
+  background: #d4edda;
+  color: #155724;
+}
+
+.service-status.inactive, .agent-status.inactive {
+  background: #f8d7da;
+  color: #721c24;
+}
+
+.service-actions, .agent-actions {
+  display: flex;
+  gap: 8px;
+}
+
+.action-btn {
+  padding: 6px 12px;
+  border: none;
+  border-radius: 4px;
+  cursor: pointer;
+  font-size: 0.9em;
+  font-weight: 600;
+  text-decoration: none;
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  transition: all 0.3s;
+}
+
+.btn-view {
+  background: #17a2b8;
+  color: white;
+}
+
+.btn-view:hover {
+  background: #138496;
+}
+
+.btn-edit {
+  background: #ffc107;
+  color: #212529;
+}
+
+.btn-edit:hover {
+  background: #e0a800;
+}
+
+.btn-delete {
+  background: #dc3545;
+  color: white;
+}
+
+.btn-delete:hover {
+  background: #c82333;
+}
+
+.btn-test {
+  background: #28a745;
+  color: white;
+}
+
+.btn-test:hover {
+  background: #218838;
+}
+
+.no-items {
+  text-align: center;
+  padding: 40px;
+  color: #7f8c8d;
+  font-style: italic;
+}
+
+/* Modal para resultados de teste */
+.test-modal {
+  display: none;
+  position: fixed;
+  z-index: 1000;
+  left: 0;
+  top: 0;
+  width: 100%;
+  height: 100%;
+  background-color: rgba(0,0,0,0.5);
+}
+
+.test-modal-content {
+  background-color: white;
+  margin: 5% auto;
+  padding: 0;
+  border-radius: 8px;
+  width: 90%;
+  max-width: 600px;
+  box-shadow: 0 4px 20px rgba(0,0,0,0.3);
+}
+
+.test-modal-header {
+  padding: 20px;
+  border-bottom: 1px solid #dee2e6;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.test-modal-title {
+  margin: 0;
+  color: #2c3e50;
+}
+
+.test-modal-close {
+  color: #aaa;
+  font-size: 28px;
+  font-weight: bold;
+  cursor: pointer;
+  border: none;
+  background: none;
+}
+
+.test-modal-close:hover {
+  color: #000;
+}
+
+.test-modal-body {
+  padding: 20px;
+}
+
+.test-result {
+  padding: 15px;
+  border-radius: 4px;
+  margin-bottom: 15px;
+}
+
+.test-result.success {
+  background: #d4edda;
+  border: 1px solid #c3e6cb;
+  color: #155724;
+}
+
+.test-result.error {
+  background: #f8d7da;
+  border: 1px solid #f5c6cb;
+  color: #721c24;
+}
+
+.test-result.info {
+  background: #d1ecf1;
+  border: 1px solid #bee5eb;
+  color: #0c5460;
+}
+
+.test-details {
+  font-family: monospace;
+  font-size: 0.9em;
+  background: #f8f9fa;
+  padding: 10px;
+  border-radius: 4px;
+  border: 1px solid #dee2e6;
+  white-space: pre-wrap;
+  max-height: 200px;
+  overflow-y: auto;
+}
+</style>
+
+<script>
+// Carregar configurações atuais
+document.addEventListener('DOMContentLoaded', function() {
+  loadCurrentConfig();
+  checkIntegrationsStatus();
+  refreshServices();
+  refreshAgents();
+});
+
+function loadCurrentConfig() {
+  // Carregar configurações do .env via API
+  fetch('/api/integrations/status')
+    .then(response => {
+      if (!response.ok) {
+        throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+      }
+      return response.json();
+    })
+    .then(data => {
+      if (data.success) {
+        updateStatusDisplay(data.integrations);
+      } else {
+        console.error('Erro na API:', data.error);
+        addLog(`⚠️ Erro ao carregar status: ${data.error}`, 'error');
+      }
+    })
+    .catch(error => {
+      console.error('Erro ao carregar configurações:', error);
+      addLog(`⚠️ Erro de conexão ao carregar status: ${error.message}`, 'error');
+    });
+}
+
+function updateStatusDisplay(integrations) {
+  // Atualizar status da IA
+  const aiStatus = document.getElementById('ai-status');
+  if (integrations.ai && integrations.ai.configured) {
+    aiStatus.textContent = 'Conectado';
+    aiStatus.className = 'status-badge connected';
+  } else {
+    aiStatus.textContent = 'Desconectado';
+    aiStatus.className = 'status-badge disconnected';
+  }
+
+  // Atualizar status do Email
+  const emailStatus = document.getElementById('email-status');
+  if (integrations.email && integrations.email.configured) {
+    emailStatus.textContent = 'Conectado';
+    emailStatus.className = 'status-badge connected';
+  } else {
+    emailStatus.textContent = 'Desconectado';
+    emailStatus.className = 'status-badge disconnected';
+  }
+
+  // Atualizar status do WhatsApp
+  const whatsappStatus = document.getElementById('whatsapp-status');
+  if (integrations.whatsapp && integrations.whatsapp.configured) {
+    whatsappStatus.textContent = 'Conectado';
+    whatsappStatus.className = 'status-badge connected';
+  } else {
+    whatsappStatus.textContent = 'Desconectado';
+    whatsappStatus.className = 'status-badge disconnected';
+  }
+}
+
+function checkIntegrationsStatus() {
+  fetch('/api/integrations/status')
+    .then(response => {
+      if (!response.ok) {
+        throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+      }
+      return response.json();
+    })
+    .then(data => {
+      if (data.success) {
+        updateStatusDisplay(data.integrations);
+      } else {
+        console.error('Erro na API:', data.error);
+      }
+    })
+    .catch(error => {
+      console.error('Erro ao verificar status:', error);
+    });
+}
+
+function updateAIForm() {
+  const provider = document.getElementById('ai-provider').value;
+  
+  // Esconder todas as configurações
+  document.querySelectorAll('.provider-config').forEach(el => {
+    if (el.id.includes('openai') || el.id.includes('anthropic') || el.id.includes('webhook') || el.id.includes('local')) {
+      el.style.display = 'none';
+    }
+  });
+  
+  // Mostrar configuração selecionada
+  if (provider === 'openai') {
+    document.getElementById('openai-config').style.display = 'block';
+  } else if (provider === 'anthropic') {
+    document.getElementById('anthropic-config').style.display = 'block';
+  } else if (provider === 'webhook') {
+    document.getElementById('webhook-config').style.display = 'block';
+  } else if (provider === 'local') {
+    document.getElementById('local-config').style.display = 'block';
+  }
+}
+
+function updateEmailForm() {
+  const provider = document.getElementById('email-provider').value;
+  
+  // Esconder todas as configurações
+  document.querySelectorAll('.provider-config').forEach(el => {
+    if (el.id.includes('email') || el.id.includes('smtp')) {
+      el.style.display = 'none';
+    }
+  });
+  
+  // Mostrar configuração selecionada
+  if (provider === 'smtp') {
+    document.getElementById('smtp-config').style.display = 'block';
+  } else if (provider === 'webhook') {
+    document.getElementById('email-webhook-config').style.display = 'block';
+  }
+}
+
+function updateWhatsAppForm() {
+  const provider = document.getElementById('whatsapp-provider').value;
+  
+  // Esconder todas as configurações
+  document.querySelectorAll('.provider-config').forEach(el => {
+    if (el.id.includes('whatsapp') || el.id.includes('z-api') || el.id.includes('twilio')) {
+      el.style.display = 'none';
+    }
+  });
+  
+  // Mostrar configuração selecionada
+  if (provider === 'z-api') {
+    document.getElementById('z-api-config').style.display = 'block';
+  } else if (provider === 'twilio') {
+    document.getElementById('twilio-config').style.display = 'block';
+  } else if (provider === 'webhook') {
+    document.getElementById('whatsapp-webhook-config').style.display = 'block';
+  }
+}
+
+function saveAIConfig() {
+  const provider = document.getElementById('ai-provider').value;
+  const config = {
+    provider: provider
+  };
+
+  if (provider === 'openai') {
+    config.api_key = document.getElementById('openai-api-key').value;
+    config.model = document.getElementById('openai-model').value || 'gpt-3.5-turbo';
+    config.base_url = document.getElementById('openai-base-url').value || 'https://api.openai.com/v1';
+    const t = document.getElementById('openai-temperature').value; if (t) config.temperature = parseFloat(t);
+    const mt = document.getElementById('openai-max-tokens').value; if (mt) config.max_tokens = parseInt(mt);
+    const to = document.getElementById('openai-timeout').value; if (to) config.timeout = parseInt(to);
+  } else if (provider === 'anthropic') {
+    config.api_key = document.getElementById('anthropic-api-key').value;
+    config.model = document.getElementById('anthropic-model').value || 'claude-3-sonnet-20240229';
+    const mt = document.getElementById('anthropic-max-tokens').value; if (mt) config.max_tokens = parseInt(mt);
+    const to = document.getElementById('anthropic-timeout').value; if (to) config.timeout = parseInt(to);
+  } else if (provider === 'webhook') {
+    config.url = document.getElementById('webhook-url').value;
+    try { const hdr = document.getElementById('webhook-headers').value; if (hdr) config.headers = JSON.parse(hdr); } catch(e) {}
+    config.model = document.getElementById('webhook-model').value || 'custom';
+    const to = document.getElementById('webhook-timeout').value; if (to) config.timeout = parseInt(to);
+  }
+
+  saveConfig('ai', config);
+}
+
+function saveEmailConfig() {
+  const provider = document.getElementById('email-provider').value;
+  const config = {
+    provider: provider
+  };
+
+  if (provider === 'smtp') {
+    config.server = document.getElementById('mail-server').value;
+    config.port = document.getElementById('mail-port').value;
+    config.username = document.getElementById('mail-username').value;
+    config.password = document.getElementById('mail-password').value;
+    config.use_tls = document.getElementById('mail-use-tls').checked;
+  } else if (provider === 'webhook') {
+    config.webhook_url = document.getElementById('email-webhook-url').value;
+  }
+
+  saveConfig('email', config);
+}
+
+function saveWhatsAppConfig() {
+  const provider = document.getElementById('whatsapp-provider').value;
+  const config = {
+    provider: provider
+  };
+
+  if (provider === 'z-api') {
+    config.api_key = document.getElementById('z-api-key').value;
+    config.instance_id = document.getElementById('z-instance-id').value;
+  } else if (provider === 'twilio') {
+    config.account_sid = document.getElementById('twilio-account-sid').value;
+    config.auth_token = document.getElementById('twilio-auth-token').value;
+    config.whatsapp_number = document.getElementById('twilio-whatsapp-number').value;
+  } else if (provider === 'webhook') {
+    config.webhook_url = document.getElementById('whatsapp-webhook-url').value;
+  }
+
+  saveConfig('whatsapp', config);
+}
+
+function saveConfig(service, config) {
+  addLog(`Salvando configuração ${service}...`, 'info');
+  
+  // Criar integração no banco de dados
+  const integrationData = {
+    id: service + '_integration',
+    name: `Integração ${service.charAt(0).toUpperCase() + service.slice(1)}`,
+    provider: config.provider || service,
+    type: service,
+    auth_type: config.provider || 'api_key',
+    config: config
+  };
+  
+  fetch('/api/integrations', {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+    },
+    body: JSON.stringify(integrationData)
+  })
+  .then(response => response.json())
+  .then(data => {
+    if (data.success) {
+      addLog(`✅ Configuração ${service} salva com sucesso!`, 'success');
+      checkIntegrationsStatus();
+    } else {
+      addLog(`❌ Erro ao salvar ${service}: ${data.error}`, 'error');
+    }
+  })
+  .catch(error => {
+    addLog(`❌ Erro de conexão: ${error.message}`, 'error');
+  });
+}
+
+function testIntegration(service) {
+  addLog(`Testando ${service}...`, 'info');
+  
+  fetch(`/api/integrations/test/${service}`, {
+    method: 'POST'
+  })
+  .then(response => {
+    if (!response.ok) {
+      throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+    }
+    return response.json();
+  })
+  .then(data => {
+    if (data.success) {
+      addLog(`✅ Teste ${service} bem-sucedido!`, 'success');
+      if (data.result) {
+        addLog(`Resultado: ${JSON.stringify(data.result)}`, 'info');
+      }
+    } else {
+      addLog(`❌ Teste ${service} falhou: ${data.error}`, 'error');
+    }
+  })
+  .catch(error => {
+    addLog(`❌ Erro no teste ${service}: ${error.message}`, 'error');
+  });
+}
+
+function addLog(message, type) {
+  const logsContainer = document.getElementById('test-logs');
+  const noLogs = logsContainer.querySelector('.no-logs');
+  
+  if (noLogs) {
+    noLogs.remove();
+  }
+  
+  const logEntry = document.createElement('div');
+  logEntry.className = `log-entry ${type}`;
+  logEntry.textContent = `[${new Date().toLocaleTimeString()}] ${message}`;
+  
+  logsContainer.appendChild(logEntry);
+  logsContainer.scrollTop = logsContainer.scrollHeight;
+}
+
+// Funções para gerenciar serviços
+function refreshServices() {
+  const container = document.getElementById('services-list');
+  container.innerHTML = '<div class="loading">Carregando serviços...</div>';
+  
+  fetch('/api/integrations')
+    .then(response => response.json())
+    .then(data => {
+      if (data.success) {
+        displayServices(data.integrations);
+      } else {
+        container.innerHTML = '<div class="no-items">Erro ao carregar serviços: ' + data.error + '</div>';
+      }
+    })
+    .catch(error => {
+      container.innerHTML = '<div class="no-items">Erro de conexão: ' + error.message + '</div>';
+    });
+}
+
+function displayServices(services) {
+  const container = document.getElementById('services-list');
+  
+  if (!services || services.length === 0) {
+    container.innerHTML = '<div class="no-items">Nenhum serviço cadastrado.</div>';
+    return;
+  }
+  
+  container.innerHTML = services.map(service => `
+    <div class="service-item">
+      <div class="service-info">
+        <div class="service-name">${service.name || service.id}</div>
+        <div class="service-type">${service.type || 'Serviço'} - ${service.provider || 'N/A'}</div>
+        <span class="service-status ${service.status === 'active' ? 'active' : 'inactive'}">
+          ${service.status === 'active' ? 'Ativo' : 'Inativo'}
+        </span>
+      </div>
+      <div class="service-actions">
+        <button class="action-btn btn-view" onclick="viewService('${service.id}')" title="Visualizar">
+          👁️ Visualizar
+        </button>
+        <button class="action-btn btn-edit" onclick="editService('${service.id}')" title="Editar">
+          ✏️ Editar
+        </button>
+        <button class="action-btn btn-test" onclick="testService('${service.id}', '${service.name || service.id}')" title="Testar Conexão">
+          🔧 Testar
+        </button>
+        <button class="action-btn btn-delete" onclick="deleteService('${service.id}')" title="Excluir">
+          🗑️ Excluir
+        </button>
+      </div>
+    </div>
+  `).join('');
+}
+
+// Funções para gerenciar agentes
+function refreshAgents() {
+  const container = document.getElementById('agents-list');
+  container.innerHTML = '<div class="loading">Carregando agentes...</div>';
+  
+  fetch('/api/agents')
+    .then(response => response.json())
+    .then(data => {
+      if (data.success) {
+        displayAgents(data.agents);
+      } else {
+        container.innerHTML = '<div class="no-items">Erro ao carregar agentes: ' + data.error + '</div>';
+      }
+    })
+    .catch(error => {
+      container.innerHTML = '<div class="no-items">Erro de conexão: ' + error.message + '</div>';
+    });
+}
+
+function displayAgents(agents) {
+  const container = document.getElementById('agents-list');
+  
+  if (!agents || agents.length === 0) {
+    container.innerHTML = '<div class="no-items">Nenhum agente cadastrado.</div>';
+    return;
+  }
+  
+  container.innerHTML = agents.map(agent => `
+    <div class="agent-item">
+      <div class="agent-info">
+        <div class="agent-name">${agent.name}</div>
+        <div class="agent-type">${agent.description || 'Agente de IA'} - ${agent.page || 'N/A'}</div>
+        <span class="agent-status ${agent.status === 'active' ? 'active' : 'inactive'}">
+          ${agent.status === 'active' ? 'Ativo' : 'Inativo'}
+        </span>
+      </div>
+      <div class="agent-actions">
+        <button class="action-btn btn-view" onclick="viewAgent('${agent.id}')" title="Visualizar">
+          👁️ Visualizar
+        </button>
+        <button class="action-btn btn-edit" onclick="editAgent('${agent.id}')" title="Editar">
+          ✏️ Editar
+        </button>
+        <button class="action-btn btn-test" onclick="testAgent('${agent.id}', '${agent.name}')" title="Testar Agente">
+          🤖 Testar
+        </button>
+        <button class="action-btn btn-delete" onclick="deleteAgent('${agent.id}')" title="Excluir">
+          🗑️ Excluir
+        </button>
+      </div>
+    </div>
+  `).join('');
+}
+
+// Função para testar serviço individual
+function testService(serviceId, serviceName) {
+  addLog(`Testando serviço: ${serviceName}...`, 'info');
+  
+  fetch(`/api/integrations/${serviceId}/test`, {
+    method: 'POST'
+  })
+  .then(response => response.json())
+  .then(data => {
+    if (data.success) {
+      addLog(`✅ Teste ${serviceName} bem-sucedido!`, 'success');
+      showTestModal('Teste de Serviço', serviceName, data.result, true);
+    } else {
+      addLog(`❌ Teste ${serviceName} falhou: ${data.error}`, 'error');
+      showTestModal('Teste de Serviço', serviceName, data.error, false);
+    }
+  })
+  .catch(error => {
+    addLog(`❌ Erro no teste ${serviceName}: ${error.message}`, 'error');
+    showTestModal('Teste de Serviço', serviceName, error.message, false);
+  });
+}
+
+// Função para testar agente individual
+function testAgent(agentId, agentName) {
+  addLog(`Testando agente: ${agentName}...`, 'info');
+  
+  fetch(`/api/agents/${agentId}/test`, {
+    method: 'POST'
+  })
+  .then(response => response.json())
+  .then(data => {
+    if (data.success) {
+      addLog(`✅ Teste ${agentName} bem-sucedido!`, 'success');
+      showTestModal('Teste de Agente', agentName, data.result, true);
+    } else {
+      addLog(`❌ Teste ${agentName} falhou: ${data.error}`, 'error');
+      showTestModal('Teste de Agente', agentName, data.error, false);
+    }
+  })
+  .catch(error => {
+    addLog(`❌ Erro no teste ${agentName}: ${error.message}`, 'error');
+    showTestModal('Teste de Agente', agentName, error.message, false);
+  });
+}
+
+// Função para exibir modal de resultado de teste
+function showTestModal(title, itemName, result, success) {
+  const modal = document.getElementById('testModal');
+  const modalTitle = document.getElementById('testModalTitle');
+  const modalBody = document.getElementById('testModalBody');
+  
+  modalTitle.textContent = `${title} - ${itemName}`;
+  
+  const resultClass = success ? 'success' : 'error';
+  const resultIcon = success ? '✅' : '❌';
+  const resultText = success ? 'Sucesso' : 'Erro';
+  
+  let resultContent = '';
+  if (typeof result === 'object') {
+    resultContent = JSON.stringify(result, null, 2);
+  } else {
+    resultContent = result;
+  }
+  
+  modalBody.innerHTML = `
+    <div class="test-result ${resultClass}">
+      ${resultIcon} <strong>${resultText}</strong>
+    </div>
+    <div class="test-details">${resultContent}</div>
+  `;
+  
+  modal.style.display = 'block';
+}
+
+// Função para fechar modal
+function closeTestModal() {
+  document.getElementById('testModal').style.display = 'none';
+}
+
+// Fechar modal ao clicar fora dele
+window.onclick = function(event) {
+  const modal = document.getElementById('testModal');
+  if (event.target === modal) {
+    modal.style.display = 'none';
+  }
+}
+
+// Funções placeholder para outras ações
+function viewService(serviceId) {
+  addLog(`Visualizando serviço: ${serviceId}`, 'info');
+  // Implementar visualização
+}
+
+function editService(serviceId) {
+  addLog(`Editando serviço: ${serviceId}`, 'info');
+  // Implementar edição
+}
+
+function deleteService(serviceId) {
+  if (confirm('Tem certeza que deseja excluir este serviço?')) {
+    addLog(`Excluindo serviço: ${serviceId}`, 'info');
+    // Implementar exclusão
+  }
+}
+
+function viewAgent(agentId) {
+  addLog(`Visualizando agente: ${agentId}`, 'info');
+  // Implementar visualização
+}
+
+function editAgent(agentId) {
+  addLog(`Editando agente: ${agentId}`, 'info');
+  // Implementar edição
+}
+
+function deleteAgent(agentId) {
+  if (confirm('Tem certeza que deseja excluir este agente?')) {
+    addLog(`Excluindo agente: ${agentId}`, 'info');
+    // Implementar exclusão
+  }
+}
+</script>
+{% endblock %}

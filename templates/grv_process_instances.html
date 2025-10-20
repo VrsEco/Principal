@@ -1,0 +1,855 @@
+{% extends "base.html" %}
+{% block title %}GRV | Instâncias de Processos{% endblock %}
+{% block body %}{% set active_nav = 'process-instances' %}{{ super() }}{% endblock %}
+
+{% block extra_head %}
+{{ super() }}
+<style>
+  .instances-shell {
+    display: grid;
+    grid-template-columns: 250px minmax(0, 1fr);
+    gap: 18px;
+    align-items: start;
+  }
+
+  .instances-main {
+    background: #ffffff;
+    border-radius: 14px;
+    border: 1px solid rgba(15, 23, 42, 0.08);
+    padding: 22px 24px;
+    box-shadow: 0 12px 32px rgba(15, 23, 42, 0.08);
+    display: grid;
+    gap: 20px;
+  }
+
+  .instances-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    gap: 16px;
+    flex-wrap: wrap;
+  }
+
+  .instances-header h1 {
+    margin: 0;
+    font-size: 22px;
+    font-weight: 700;
+    color: #0f172a;
+  }
+
+  .instances-description {
+    color: #64748b;
+    font-size: 13px;
+    margin-top: 6px;
+    max-width: 600px;
+    line-height: 1.5;
+  }
+
+  .instances-actions {
+    display: flex;
+    gap: 10px;
+    flex-wrap: wrap;
+  }
+
+  .btn-trigger {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    padding: 10px 18px;
+    border-radius: 10px;
+    border: none;
+    cursor: pointer;
+    font-weight: 600;
+    font-size: 13px;
+    letter-spacing: 0.04em;
+    transition: transform 0.2s ease, box-shadow 0.2s ease;
+    background: linear-gradient(135deg, #3b82f6, #2563eb);
+    color: #fff;
+    box-shadow: 0 16px 28px rgba(37, 99, 235, 0.25);
+  }
+
+  .btn-trigger:hover {
+    transform: translateY(-2px);
+  }
+
+  .instances-filters {
+    display: flex;
+    gap: 12px;
+    flex-wrap: wrap;
+    padding: 16px;
+    background: #f8fafc;
+    border-radius: 10px;
+    border: 1px solid rgba(15, 23, 42, 0.08);
+  }
+
+  .filter-group {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+  }
+
+  .filter-group label {
+    font-size: 11px;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+    color: #64748b;
+  }
+
+  .filter-group select,
+  .filter-group input {
+    padding: 8px 12px;
+    border-radius: 8px;
+    border: 1px solid rgba(15, 23, 42, 0.1);
+    font-size: 13px;
+    background: #fff;
+  }
+
+  .instances-grid {
+    display: grid;
+    gap: 14px;
+  }
+
+  .instance-card {
+    border-radius: 12px;
+    border: 1px solid rgba(15, 23, 42, 0.08);
+    background: #fff;
+    padding: 18px 20px;
+    display: grid;
+    gap: 14px;
+    transition: all 0.2s ease;
+    cursor: pointer;
+  }
+
+  .instance-card:hover {
+    border-color: rgba(59, 130, 246, 0.3);
+    box-shadow: 0 8px 20px rgba(59, 130, 246, 0.12);
+    transform: translateY(-2px);
+  }
+
+  .instance-card-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    gap: 12px;
+  }
+
+  .instance-card-title {
+    flex: 1;
+    display: grid;
+    gap: 4px;
+  }
+
+  .instance-code {
+    font-size: 11px;
+    font-weight: 600;
+    color: #3b82f6;
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+  }
+
+  .instance-name {
+    font-size: 16px;
+    font-weight: 700;
+    color: #0f172a;
+    margin: 0;
+  }
+
+  .instance-process {
+    font-size: 12px;
+    color: #64748b;
+    margin-top: 2px;
+  }
+
+  .instance-badges {
+    display: flex;
+    gap: 6px;
+    align-items: center;
+  }
+
+  .badge {
+    padding: 4px 10px;
+    border-radius: 8px;
+    font-size: 11px;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+  }
+
+  .badge.status-pending { background: #e2e8f0; color: #475569; }
+  .badge.status-in_progress { background: #dbeafe; color: #1e40af; }
+  .badge.status-waiting { background: #fef3c7; color: #b45309; }
+  .badge.status-completed { background: #d1fae5; color: #065f46; }
+  .badge.status-cancelled { background: #fee2e2; color: #991b1b; }
+
+  .badge.priority-low { background: #f1f5f9; color: #64748b; }
+  .badge.priority-normal { background: #dbeafe; color: #2563eb; }
+  .badge.priority-high { background: #fed7aa; color: #c2410c; }
+  .badge.priority-urgent { background: #fecaca; color: #991b1b; }
+
+  .instance-card-body {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+    gap: 12px;
+  }
+
+  .instance-field {
+    display: grid;
+    gap: 4px;
+  }
+
+  .instance-field-label {
+    font-size: 11px;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+    color: #94a3b8;
+  }
+
+  .instance-field-value {
+    font-size: 13px;
+    color: #0f172a;
+    font-weight: 500;
+  }
+
+  .instance-card-footer {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding-top: 12px;
+    border-top: 1px solid rgba(15, 23, 42, 0.06);
+  }
+
+  .instance-collaborators {
+    display: flex;
+    gap: 6px;
+    align-items: center;
+    font-size: 12px;
+    color: #64748b;
+  }
+
+  .instance-actions {
+    display: flex;
+    gap: 8px;
+  }
+
+  .btn-instance-action {
+    padding: 6px 12px;
+    border-radius: 6px;
+    border: 1px solid rgba(15, 23, 42, 0.1);
+    background: #fff;
+    font-size: 12px;
+    font-weight: 600;
+    color: #475569;
+    cursor: pointer;
+    transition: all 0.2s ease;
+  }
+
+  .btn-instance-action:hover {
+    background: #f8fafc;
+    border-color: rgba(59, 130, 246, 0.3);
+    color: #3b82f6;
+  }
+
+  /* Modal styles */
+  .modal-overlay {
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: rgba(0, 0, 0, 0.5);
+    display: none;
+    justify-content: center;
+    align-items: center;
+    z-index: 1000;
+    animation: fadeIn 0.2s ease;
+  }
+
+  .modal-overlay.active {
+    display: flex;
+  }
+
+  .modal-content {
+    background: #fff;
+    border-radius: 16px;
+    padding: 28px 32px;
+    max-width: 600px;
+    width: 90%;
+    max-height: 90vh;
+    overflow-y: auto;
+    box-shadow: 0 20px 50px rgba(0, 0, 0, 0.3);
+    animation: slideUp 0.3s ease;
+  }
+
+  @keyframes fadeIn {
+    from { opacity: 0; }
+    to { opacity: 1; }
+  }
+
+  @keyframes slideUp {
+    from {
+      opacity: 0;
+      transform: translateY(20px);
+    }
+    to {
+      opacity: 1;
+      transform: translateY(0);
+    }
+  }
+
+  .modal-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 20px;
+    padding-bottom: 16px;
+    border-bottom: 1px solid rgba(15, 23, 42, 0.1);
+  }
+
+  .modal-header h2 {
+    margin: 0;
+    font-size: 20px;
+    font-weight: 700;
+    color: #0f172a;
+  }
+
+  .modal-close {
+    border: none;
+    background: none;
+    font-size: 24px;
+    color: #94a3b8;
+    cursor: pointer;
+    padding: 0;
+    width: 32px;
+    height: 32px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: 8px;
+    transition: all 0.2s ease;
+  }
+
+  .modal-close:hover {
+    background: #f1f5f9;
+    color: #475569;
+  }
+
+  .modal-form {
+    display: grid;
+    gap: 18px;
+  }
+
+  .field {
+    display: grid;
+    gap: 8px;
+  }
+
+  .field label {
+    font-size: 12px;
+    font-weight: 600;
+    color: #475569;
+  }
+
+  .field label span {
+    color: #ef4444;
+  }
+
+  .field select,
+  .field input,
+  .field textarea {
+    padding: 10px 14px;
+    border-radius: 8px;
+    border: 1px solid rgba(15, 23, 42, 0.15);
+    font-size: 14px;
+    font-family: inherit;
+    transition: all 0.2s ease;
+  }
+
+  .field select:focus,
+  .field input:focus,
+  .field textarea:focus {
+    outline: none;
+    border-color: #3b82f6;
+    box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
+  }
+
+  .field textarea {
+    resize: vertical;
+    min-height: 80px;
+  }
+
+  .modal-footer {
+    display: flex;
+    justify-content: flex-end;
+    gap: 10px;
+    margin-top: 24px;
+    padding-top: 20px;
+    border-top: 1px solid rgba(15, 23, 42, 0.1);
+  }
+
+  .btn-modal {
+    padding: 10px 20px;
+    border-radius: 8px;
+    border: none;
+    font-size: 14px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.2s ease;
+  }
+
+  .btn-modal.cancel {
+    background: #f1f5f9;
+    color: #475569;
+  }
+
+  .btn-modal.cancel:hover {
+    background: #e2e8f0;
+  }
+
+  .btn-modal.submit {
+    background: linear-gradient(135deg, #3b82f6, #2563eb);
+    color: #fff;
+    box-shadow: 0 4px 12px rgba(37, 99, 235, 0.3);
+  }
+
+  .btn-modal.submit:hover {
+    transform: translateY(-1px);
+    box-shadow: 0 6px 16px rgba(37, 99, 235, 0.4);
+  }
+
+  .empty-state {
+    text-align: center;
+    padding: 60px 20px;
+    color: #94a3b8;
+  }
+
+  .empty-state svg {
+    width: 80px;
+    height: 80px;
+    margin-bottom: 20px;
+    opacity: 0.5;
+  }
+
+  .empty-state h3 {
+    font-size: 18px;
+    font-weight: 600;
+    color: #64748b;
+    margin-bottom: 8px;
+  }
+
+  .empty-state p {
+    font-size: 14px;
+    margin-bottom: 20px;
+  }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="project-layout plan-layout instances-shell" data-sidebar-toggle>
+  <!-- Sidebar focado em processos -->
+  {% set active_id = 'process-instances' %}
+  {% include 'processes_sidebar.html' %}
+
+  <!-- Main Content -->
+  <div class="project-content plan-content instances-main">
+    <!-- Header -->
+    <div class="instances-header">
+      <div>
+        <h1>Instâncias de Processos</h1>
+        <p class="instances-description">
+          Gerencie as execuções dos processos. Cada instância representa uma execução específica de um processo, 
+          seja disparada automaticamente por rotinas ou manualmente.
+        </p>
+      </div>
+      <div class="instances-actions">
+        <button class="btn-trigger" onclick="openTriggerModal()">
+          <span>⚡</span>
+          <span>Disparar Processo</span>
+        </button>
+      </div>
+    </div>
+
+    <!-- Filters -->
+    <div class="instances-filters">
+      <div class="filter-group">
+        <label>Status</label>
+        <select id="filterStatus">
+          <option value="">Todos</option>
+          {% for status in status_options %}
+          <option value="{{ status.value }}">{{ status.label }}</option>
+          {% endfor %}
+        </select>
+      </div>
+      <div class="filter-group">
+        <label>Prioridade</label>
+        <select id="filterPriority">
+          <option value="">Todas</option>
+          {% for priority in priority_options %}
+          <option value="{{ priority.value }}">{{ priority.label }}</option>
+          {% endfor %}
+        </select>
+      </div>
+      <div class="filter-group">
+        <label>Processo</label>
+        <select id="filterProcess">
+          <option value="">Todos</option>
+        </select>
+      </div>
+      <div class="filter-group">
+        <label>Buscar</label>
+        <input type="text" id="searchInput" placeholder="Buscar por título...">
+      </div>
+    </div>
+
+    <!-- Instances Grid -->
+    <div class="instances-grid" id="instancesGrid">
+      <!-- Will be populated by JavaScript -->
+    </div>
+  </div>
+</div>
+
+<!-- Trigger Modal -->
+<div class="modal-overlay" id="triggerModal">
+  <div class="modal-content">
+    <div class="modal-header">
+      <h2>Disparar Processo</h2>
+      <button class="modal-close" onclick="closeTriggerModal()">&times;</button>
+    </div>
+    <form class="modal-form" id="triggerForm">
+      <div class="field">
+        <label>Processo <span>*</span></label>
+        <select id="triggerProcess" required>
+          <option value="">Selecione um processo</option>
+        </select>
+      </div>
+      <div class="field">
+        <label>Título da Instância <span>*</span></label>
+        <input type="text" id="triggerTitle" placeholder="Ex: Calcular Impostos - Janeiro/2025" required>
+      </div>
+      <div class="field">
+        <label>Data/Hora de Vencimento <span>*</span></label>
+        <input type="datetime-local" id="triggerDueDate" required>
+      </div>
+      <div class="field">
+        <label>Prioridade</label>
+        <select id="triggerPriority">
+          {% for priority in priority_options %}
+          <option value="{{ priority.value }}" {% if priority.value == 'normal' %}selected{% endif %}>
+            {{ priority.label }}
+          </option>
+          {% endfor %}
+        </select>
+      </div>
+      <div class="field">
+        <label>Descrição</label>
+        <textarea id="triggerDescription" placeholder="Observações sobre esta execução..."></textarea>
+      </div>
+      <div id="collaboratorsInfo" style="display: none; padding: 14px; background: #f8fafc; border-radius: 8px; font-size: 13px; color: #475569;">
+        <strong>Colaboradores:</strong>
+        <div id="collaboratorsList" style="margin-top: 8px;"></div>
+      </div>
+    </form>
+    <div class="modal-footer">
+      <button class="btn-modal cancel" onclick="closeTriggerModal()">Cancelar</button>
+      <button class="btn-modal submit" onclick="submitTrigger()">Disparar</button>
+    </div>
+  </div>
+</div>
+
+<script>
+const companyId = {{ company.id }};
+let allInstances = [];
+let allProcesses = [];
+
+// Load initial data
+document.addEventListener('DOMContentLoaded', async () => {
+  await loadProcesses();
+  await loadInstances();
+  
+  // Set default due date (tomorrow at 17:00)
+  const tomorrow = new Date();
+  tomorrow.setDate(tomorrow.getDate() + 1);
+  tomorrow.setHours(17, 0, 0, 0);
+  document.getElementById('triggerDueDate').value = tomorrow.toISOString().slice(0, 16);
+  
+  // Setup filters
+  document.getElementById('filterStatus').addEventListener('change', filterInstances);
+  document.getElementById('filterPriority').addEventListener('change', filterInstances);
+  document.getElementById('filterProcess').addEventListener('change', filterInstances);
+  document.getElementById('searchInput').addEventListener('input', filterInstances);
+  
+  // Setup process select change to show collaborators
+  document.getElementById('triggerProcess').addEventListener('change', showProcessCollaborators);
+});
+
+async function loadProcesses() {
+  try {
+    const response = await fetch(`/api/companies/${companyId}/processes`);
+    if (!response.ok) throw new Error('Erro ao carregar processos');
+    
+    const result = await response.json();
+    allProcesses = result.data || result || [];
+    
+    // Populate selects
+    const triggerSelect = document.getElementById('triggerProcess');
+    const filterSelect = document.getElementById('filterProcess');
+    
+    allProcesses.forEach(process => {
+      const code = process.code || process.id;
+      const displayName = `${code} - ${process.name}`;
+      const option1 = new Option(displayName, process.id);
+      const option2 = new Option(displayName, process.id);
+      triggerSelect.add(option1);
+      filterSelect.add(option2);
+    });
+    
+    console.log(`${allProcesses.length} processos carregados`);
+  } catch (error) {
+    console.error('Erro ao carregar processos:', error);
+    alert('Erro ao carregar lista de processos. Verifique o console.');
+  }
+}
+
+async function loadInstances() {
+  try {
+    const response = await fetch(`/api/companies/${companyId}/process-instances`);
+    if (!response.ok) throw new Error('Erro ao carregar instâncias');
+    
+    allInstances = await response.json();
+    renderInstances(allInstances);
+  } catch (error) {
+    console.error('Erro ao carregar instâncias:', error);
+    showEmptyState();
+  }
+}
+
+async function showProcessCollaborators() {
+  const processId = document.getElementById('triggerProcess').value;
+  const infoDiv = document.getElementById('collaboratorsInfo');
+  const listDiv = document.getElementById('collaboratorsList');
+  
+  if (!processId) {
+    infoDiv.style.display = 'none';
+    return;
+  }
+  
+  try {
+    // Get routine associated with process
+    const response = await fetch(`/api/companies/${companyId}/processes/${processId}/routine-collaborators`);
+    if (response.ok) {
+      const data = await response.json();
+      if (data.collaborators && data.collaborators.length > 0) {
+        listDiv.innerHTML = data.collaborators.map(c => 
+          `<div style="margin: 4px 0;">• ${c.name} (${c.hours}h)</div>`
+        ).join('');
+        infoDiv.style.display = 'block';
+      } else {
+        infoDiv.style.display = 'none';
+      }
+    }
+  } catch (error) {
+    console.error('Erro ao buscar colaboradores:', error);
+    infoDiv.style.display = 'none';
+  }
+}
+
+function renderInstances(instances) {
+  const grid = document.getElementById('instancesGrid');
+  
+  if (!instances || instances.length === 0) {
+    showEmptyState();
+    return;
+  }
+  
+  grid.innerHTML = instances.map(instance => {
+    const process = allProcesses.find(p => p.id === instance.process_id);
+    const processName = process ? process.name : 'Processo Desconhecido';
+    
+    const statusLabel = getStatusLabel(instance.status);
+    const priorityLabel = getPriorityLabel(instance.priority);
+    
+    const dueDateFormatted = instance.due_date ? 
+      new Date(instance.due_date).toLocaleString('pt-BR', {
+        day: '2-digit',
+        month: '2-digit',
+        year: 'numeric',
+        hour: '2-digit',
+        minute: '2-digit'
+      }) : 'Não definido';
+    
+    const collaborators = instance.assigned_collaborators ? 
+      JSON.parse(instance.assigned_collaborators) : [];
+    
+    return `
+      <div class="instance-card" onclick="openInstance(${instance.id})">
+        <div class="instance-card-header">
+          <div class="instance-card-title">
+            ${instance.instance_code ? `<div class="instance-code">${instance.instance_code}</div>` : ''}
+            <h3 class="instance-name">${instance.title}</h3>
+            <div class="instance-process">📋 ${processName}</div>
+          </div>
+          <div class="instance-badges">
+            <span class="badge status-${instance.status}">${statusLabel}</span>
+            ${instance.priority ? `<span class="badge priority-${instance.priority}">${priorityLabel}</span>` : ''}
+          </div>
+        </div>
+        
+        <div class="instance-card-body">
+          <div class="instance-field">
+            <div class="instance-field-label">Vencimento</div>
+            <div class="instance-field-value">⏱️ ${dueDateFormatted}</div>
+          </div>
+          ${instance.started_at ? `
+          <div class="instance-field">
+            <div class="instance-field-label">Iniciado em</div>
+            <div class="instance-field-value">${new Date(instance.started_at).toLocaleString('pt-BR')}</div>
+          </div>
+          ` : ''}
+          ${instance.estimated_hours ? `
+          <div class="instance-field">
+            <div class="instance-field-label">Estimativa</div>
+            <div class="instance-field-value">${instance.estimated_hours}h</div>
+          </div>
+          ` : ''}
+          ${collaborators.length > 0 ? `
+          <div class="instance-field">
+            <div class="instance-field-label">Colaboradores</div>
+            <div class="instance-field-value">👥 ${collaborators.length}</div>
+          </div>
+          ` : ''}
+        </div>
+        
+        <div class="instance-card-footer">
+          <div class="instance-collaborators">
+            ${instance.trigger_type === 'automatic' ? '🤖 Automático' : '👤 Manual'}
+          </div>
+          <div class="instance-actions" onclick="event.stopPropagation()">
+            <button class="btn-instance-action" onclick="startInstance(${instance.id})">
+              ${instance.status === 'pending' ? 'Iniciar' : instance.status === 'completed' ? 'Ver Detalhes' : 'Gerenciar'}
+            </button>
+          </div>
+        </div>
+      </div>
+    `;
+  }).join('');
+}
+
+function showEmptyState() {
+  const grid = document.getElementById('instancesGrid');
+  grid.innerHTML = `
+    <div class="empty-state">
+      <svg fill="none" stroke="currentColor" viewBox="0 0 24 24">
+        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" 
+          d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2"/>
+      </svg>
+      <h3>Nenhuma instância encontrada</h3>
+      <p>Clique em "Disparar Processo" para criar uma nova execução</p>
+    </div>
+  `;
+}
+
+function getStatusLabel(status) {
+  const map = {
+    'pending': 'Pendente',
+    'in_progress': 'Em Andamento',
+    'waiting': 'Aguardando',
+    'completed': 'Concluído',
+    'cancelled': 'Cancelado'
+  };
+  return map[status] || status;
+}
+
+function getPriorityLabel(priority) {
+  const map = {
+    'low': 'Baixa',
+    'normal': 'Normal',
+    'high': 'Alta',
+    'urgent': 'Urgente'
+  };
+  return map[priority] || priority;
+}
+
+function filterInstances() {
+  const status = document.getElementById('filterStatus').value;
+  const priority = document.getElementById('filterPriority').value;
+  const processId = document.getElementById('filterProcess').value;
+  const search = document.getElementById('searchInput').value.toLowerCase();
+  
+  let filtered = allInstances.filter(instance => {
+    if (status && instance.status !== status) return false;
+    if (priority && instance.priority !== priority) return false;
+    if (processId && instance.process_id !== parseInt(processId)) return false;
+    if (search && !instance.title.toLowerCase().includes(search)) return false;
+    return true;
+  });
+  
+  renderInstances(filtered);
+}
+
+function openTriggerModal() {
+  document.getElementById('triggerModal').classList.add('active');
+}
+
+function closeTriggerModal() {
+  document.getElementById('triggerModal').classList.remove('active');
+  document.getElementById('triggerForm').reset();
+  document.getElementById('collaboratorsInfo').style.display = 'none';
+  
+  // Reset default due date
+  const tomorrow = new Date();
+  tomorrow.setDate(tomorrow.getDate() + 1);
+  tomorrow.setHours(17, 0, 0, 0);
+  document.getElementById('triggerDueDate').value = tomorrow.toISOString().slice(0, 16);
+}
+
+async function submitTrigger() {
+  const processId = document.getElementById('triggerProcess').value;
+  const title = document.getElementById('triggerTitle').value;
+  const dueDate = document.getElementById('triggerDueDate').value;
+  const priority = document.getElementById('triggerPriority').value;
+  const description = document.getElementById('triggerDescription').value;
+  
+  if (!processId || !title || !dueDate) {
+    alert('Por favor, preencha todos os campos obrigatórios');
+    return;
+  }
+  
+  try {
+    const response = await fetch(`/api/companies/${companyId}/process-instances`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        process_id: parseInt(processId),
+        title,
+        due_date: dueDate,
+        priority,
+        description,
+        trigger_type: 'manual'
+      })
+    });
+    
+    if (!response.ok) throw new Error('Erro ao disparar processo');
+    
+    const newInstance = await response.json();
+    allInstances.unshift(newInstance);
+    renderInstances(allInstances);
+    closeTriggerModal();
+    
+    alert('Processo disparado com sucesso!');
+  } catch (error) {
+    console.error('Erro ao disparar processo:', error);
+    alert('Erro ao disparar processo. Tente novamente.');
+  }
+}
+
+async function startInstance(instanceId) {
+  window.location.href = `/grv/company/${companyId}/process/instances/${instanceId}/manage`;
+}
+
+async function openInstance(instanceId) {
+  window.location.href = `/grv/company/${companyId}/process/instances/${instanceId}/manage`;
+}
+</script>
+{% endblock %}
+

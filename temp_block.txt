@@ -1,0 +1,314 @@
+﻿# ============ COMPANY PROJECTS APIS ============
+def _serialize_company_project(row: sqlite3.Row) -> Dict[str, Any]:
+    import json as _json
+
+    activities_raw = row['activities']
+    activities = []
+    if activities_raw:
+        try:
+            activities = _json.loads(activities_raw)
+            if not isinstance(activities, list):
+                activities = []
+        except Exception:
+            activities = []
+
+    delayed_markers = {'delayed', 'late', 'overdue', 'atrasado', 'atrasada'}
+    delayed = sum(1 for activity in activities if str(activity.get('status', '')).lower() in delayed_markers)
+
+    return {
+        'id': row['id'],
+        'company_id': row['company_id'],
+        'plan_id': row['plan_id'],
+        'plan_name': row['plan_name'],
+        'title': row['title'],
+        'description': row['description'],
+        'status': row['status'],
+        'priority': row['priority'],
+        'owner': row['owner'],
+        'start_date': row['start_date'],
+        'end_date': row['end_date'],
+        'okr_area_ref': row['okr_area_ref'],
+        'activities': activities,
+        'activities_count': len(activities),
+        'delayed_activities': delayed,
+        'notes': row['notes'],
+        'created_at': row['created_at'],
+        'updated_at': row['updated_at']
+    }
+
+
+@app.route("/api/companies/<int:company_id>/projects", methods=['GET', 'POST'])
+def api_company_projects(company_id: int):
+    if request.method == 'GET':
+        try:
+            conn = _open_portfolio_connection()
+            cursor = conn.cursor()
+            cursor.execute(
+                """
+                SELECT
+                    p.id,
+                    p.company_id,
+                    p.plan_id,
+                    pl.name AS plan_name,
+                    p.title,
+                    p.description,
+                    p.status,
+                    p.priority,
+                    p.owner,
+                    p.start_date,
+                    p.end_date,
+                    p.okr_area_ref,
+                    p.activities,
+                    p.notes,
+                    p.created_at,
+                    p.updated_at
+                FROM company_projects p
+                LEFT JOIN plans pl ON pl.id = p.plan_id
+                WHERE p.company_id = ?
+                ORDER BY LOWER(p.title)
+                """,
+                (company_id,)
+            )
+            rows = cursor.fetchall()
+            conn.close()
+            return jsonify({'success': True, 'projects': [_serialize_company_project(row) for row in rows]})
+        except Exception as exc:
+            print(f"Erro ao buscar projetos: {exc}")
+            return jsonify({'success': False, 'message': 'Erro ao listar projetos.'}), 500
+
+    payload = request.get_json(silent=True) or {}
+    title = (payload.get('title') or '').strip()
+    if not title:
+        return jsonify({'success': False, 'message': 'Título do projeto é obrigatório.'}), 400
+
+    plan_id = payload.get('plan_id')
+    owner = (payload.get('owner') or '').strip() or None
+    status = (payload.get('status') or 'planned').strip() or 'planned'
+    priority = (payload.get('priority') or '').strip() or None
+    description = (payload.get('description') or '').strip() or None
+    okr_area_ref = (payload.get('okr_area_ref') or '').strip() or None
+    notes = (payload.get('notes') or '').strip() or None
+    start_date = payload.get('start_date') or None
+    end_date = payload.get('end_date') or None
+
+    activities_json = None
+    activities_payload = payload.get('activities')
+    if activities_payload:
+        try:
+            activities_json = json.dumps(activities_payload)
+        except Exception:
+            return jsonify({'success': False, 'message': 'Formato de atividades inválido.'}), 400
+
+    try:
+        conn = _open_portfolio_connection()
+        cursor = conn.cursor()
+
+        plan_id_value = None
+        if plan_id:
+            cursor.execute('SELECT company_id FROM plans WHERE id = ?', (plan_id,))
+            plan_row = cursor.fetchone()
+            if not plan_row or plan_row['company_id'] != company_id:
+                conn.close()
+                return jsonify({'success': False, 'message': 'Planejamento inválido para esta empresa.'}), 400
+            plan_id_value = int(plan_id)
+
+        cursor.execute(
+            """
+            INSERT INTO company_projects (
+                company_id, plan_id, title, description, status, priority,
+                owner, start_date, end_date, okr_area_ref, activities, notes
+            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+            """,
+            (
+                company_id,
+                plan_id_value,
+                title,
+                description,
+                status,
+                priority,
+                owner,
+                start_date,
+                end_date,
+                okr_area_ref,
+                activities_json,
+                notes
+            )
+        )
+        new_id = cursor.lastrowid
+        conn.commit()
+
+        cursor.execute(
+            """
+            SELECT
+                p.id,
+                p.company_id,
+                p.plan_id,
+                pl.name AS plan_name,
+                p.title,
+                p.description,
+                p.status,
+                p.priority,
+                p.owner,
+                p.start_date,
+                p.end_date,
+                p.okr_area_ref,
+                p.activities,
+                p.notes,
+                p.created_at,
+                p.updated_at
+            FROM company_projects p
+            LEFT JOIN plans pl ON pl.id = p.plan_id
+            WHERE p.company_id = ? AND p.id = ?
+            """,
+            (company_id, new_id)
+        )
+        created_row = cursor.fetchone()
+        conn.close()
+
+        return jsonify({
+            'success': True,
+            'message': 'Projeto criado com sucesso.',
+            'project': _serialize_company_project(created_row)
+        }), 201
+    except Exception as exc:
+        print(f"Erro ao criar projeto: {exc}")
+        return jsonify({'success': False, 'message': 'Erro ao criar projeto.'}), 500
+
+
+@app.route("/api/companies/<int:company_id>/projects/<int:project_id>", methods=['PUT', 'DELETE'])
+def api_company_project(company_id: int, project_id: int):
+    if request.method == 'DELETE':
+        try:
+            conn = _open_portfolio_connection()
+            cursor = conn.cursor()
+            cursor.execute(
+                "SELECT 1 FROM company_projects WHERE company_id = ? AND id = ?",
+                (company_id, project_id)
+            )
+            if cursor.fetchone() is None:
+                conn.close()
+                return jsonify({'success': False, 'message': 'Projeto não encontrado.'}), 404
+
+            cursor.execute(
+                "DELETE FROM company_projects WHERE company_id = ? AND id = ?",
+                (company_id, project_id)
+            )
+            conn.commit()
+            conn.close()
+            return jsonify({'success': True, 'message': 'Projeto excluído com sucesso.'})
+        except Exception as exc:
+            print(f"Erro ao excluir projeto: {exc}")
+            return jsonify({'success': False, 'message': 'Erro ao excluir projeto.'}), 500
+
+    payload = request.get_json(silent=True) or {}
+    title = (payload.get('title') or '').strip()
+    if not title:
+        return jsonify({'success': False, 'message': 'Título do projeto é obrigatório.'}), 400
+
+    plan_id = payload.get('plan_id')
+    owner = (payload.get('owner') or '').strip() or None
+    status = (payload.get('status') or 'planned').strip() or 'planned'
+    priority = (payload.get('priority') or '').strip() or None
+    description = (payload.get('description') or '').strip() or None
+    okr_area_ref = (payload.get('okr_area_ref') or '').strip() or None
+    notes = (payload.get('notes') or '').strip() or None
+    start_date = payload.get('start_date') or None
+    end_date = payload.get('end_date') or None
+
+    activities_json = None
+    activities_payload = payload.get('activities')
+    if activities_payload:
+        try:
+            activities_json = json.dumps(activities_payload)
+        except Exception:
+            return jsonify({'success': False, 'message': 'Formato de atividades inválido.'}), 400
+
+    try:
+        conn = _open_portfolio_connection()
+        cursor = conn.cursor()
+        cursor.execute(
+            "SELECT 1 FROM company_projects WHERE company_id = ? AND id = ?",
+            (company_id, project_id)
+        )
+        if cursor.fetchone() is None:
+            conn.close()
+            return jsonify({'success': False, 'message': 'Projeto não encontrado.'}), 404
+
+        plan_id_value = None
+        if plan_id:
+            cursor.execute('SELECT company_id FROM plans WHERE id = ?', (plan_id,))
+            plan_row = cursor.fetchone()
+            if not plan_row or plan_row['company_id'] != company_id:
+                conn.close()
+                return jsonify({'success': False, 'message': 'Planejamento inválido para esta empresa.'}), 400
+            plan_id_value = int(plan_id)
+
+        cursor.execute(
+            """
+            UPDATE company_projects
+            SET plan_id = ?, title = ?, description = ?, status = ?, priority = ?,
+                owner = ?, start_date = ?, end_date = ?, okr_area_ref = ?,
+                activities = ?, notes = ?, updated_at = CURRENT_TIMESTAMP
+            WHERE company_id = ? AND id = ?
+            """,
+            (
+                plan_id_value,
+                title,
+                description,
+                status,
+                priority,
+                owner,
+                start_date,
+                end_date,
+                okr_area_ref,
+                activities_json,
+                notes,
+                company_id,
+                project_id
+            )
+        )
+        conn.commit()
+
+        cursor.execute(
+            """
+            SELECT
+                p.id,
+                p.company_id,
+                p.plan_id,
+                pl.name AS plan_name,
+                p.title,
+                p.description,
+                p.status,
+                p.priority,
+                p.owner,
+                p.start_date,
+                p.end_date,
+                p.okr_area_ref,
+                p.activities,
+                p.notes,
+                p.created_at,
+                p.updated_at
+            FROM company_projects p
+            LEFT JOIN plans pl ON pl.id = p.plan_id
+            WHERE p.company_id = ? AND p.id = ?
+            """,
+            (company_id, project_id)
+        )
+        updated_row = cursor.fetchone()
+        conn.close()
+
+        return jsonify({
+            'success': True,
+            'message': 'Projeto atualizado com sucesso.',
+            'project': _serialize_company_project(updated_row)
+        })
+    except Exception as exc:
+        print(f"Erro ao atualizar projeto: {exc}")
+        return jsonify({'success': False, 'message': 'Erro ao atualizar projeto.'}), 500
+
+
+@app.route("/api/plans/<int:plan_id>/projects", methods=['GET'])
+def api_plan_projects(plan_id: int):
+    try:
+        conn = _open_plotfolio_connection()
+'

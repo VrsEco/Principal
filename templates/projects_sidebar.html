@@ -1,0 +1,70 @@
+{% set nav_groups = [
+    {
+        'title': 'Gestão de Projetos',
+        'items': [
+            {
+                'id': 'project-portfolios',
+                'name': 'Portfólios de Projetos',
+                'url': url_for('grv.grv_projects_portfolios', company_id=company.id),
+                'description': 'Organizar projetos em portfólios'
+            },
+            {
+                'id': 'project-projects',
+                'name': 'Projetos',
+                'url': url_for('grv.grv_projects_projects', company_id=company.id),
+                'description': 'Gerenciar projetos e atividades'
+            },
+            {
+                'id': 'project-analysis',
+                'name': 'Análise de Projetos',
+                'url': url_for('grv.grv_projects_analysis', company_id=company.id),
+                'description': 'Análises de performance de projetos'
+            }
+        ]
+    },
+    {
+        'title': 'Voltar',
+        'items': [
+            {
+                'id': 'back-dashboard',
+                'name': '← Dashboard Principal',
+                'url': url_for('grv.grv_company_dashboard', company_id=company.id),
+                'description': 'Voltar para o menu principal'
+            }
+        ]
+    }
+] %}
+
+<aside class="project-sidebar surface-card plan-sidebar">
+    <span class="project-sidebar-title">Projetos</span>
+    <nav class="project-nav">
+        {% for group in nav_groups %}
+        <div class="project-nav-group">
+            {% if group.title %}
+            <span class="project-nav-group-title">{{ group.title }}</span>
+            {% endif %}
+            {% for item in group.get('items', []) %}
+            {% set item_id = item.id %}
+            {% set item_url = item.url %}
+            {% set is_active = (active_id is defined and active_id == item_id) %}
+            <a class="project-nav-link{% if is_active %} is-active{% endif %}"
+               href="{{ item_url or '#' }}"
+               {% if item.description %}title="{{ item.description }}"{% endif %}>
+                <span>{{ item.name }}</span>
+            </a>
+            {% endfor %}
+        </div>
+        {% endfor %}
+    </nav>
+    
+    {% if sidebar_meta is defined %}
+    <div class="project-hints plan-sidebar-meta">
+        {{ sidebar_meta | safe }}
+    </div>
+    {% elif company is defined and (company.name or company.legal_name) %}
+    <div class="project-hints plan-sidebar-meta">
+        <span class="summary-eyebrow">Empresa</span>
+        <p><strong>{{ company.name or company.legal_name }}</strong></p>
+    </div>
+    {% endif %}
+</aside>

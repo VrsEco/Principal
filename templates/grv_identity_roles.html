@@ -1,0 +1,172 @@
+{% extends "base.html" %}
+{% block title %}GRV | Cadastro de Funções{% endblock %}
+{% block body %}{% set active_nav = 'dashboard' %}{{ super() }}{% endblock %}
+{% block content %}
+<div class="project-layout plan-layout" data-sidebar-toggle>
+  {% set sidebar_meta %}
+    <span class="summary-eyebrow">Empresa</span>
+    <p><strong>{{ company.name }}</strong></p>
+  {% endset %}
+  {% include 'identity_sidebar.html' %}
+  <section class="project-content plan-content">
+    <details class="interview-section surface-card company-form" open>
+      <summary class="interview-summary-bar">
+        <div class="interview-summary-text">
+          <span class="section-eyebrow">Identidade Organizacional</span>
+          <h3>Cadastro de Funções</h3>
+          <p>Estruture cargos, subordinação e dimensionamento de equipe.</p>
+        </div>
+      </summary>
+      <div class="interview-content">
+        <form id="roleForm" class="company-form-fields">
+          <input type="hidden" name="id" />
+          <div class="form-two-cols">
+            <label class="form-field">
+              <span>Cargo</span>
+              <input name="title" required />
+            </label>
+            <label class="form-field">
+              <span>Superior (para organograma)</span>
+              <select name="parent_role_id" id="parentRoleSelect"><option value="">Sem superior</option></select>
+            </label>
+          </div>
+          <div class="form-two-cols">
+            <label class="form-field">
+              <span>Departamento/Área</span>
+              <input name="department" placeholder="Ex: Financeiro, Comercial" />
+            </label>
+            <label class="form-field">
+              <span>Cor do box (organograma)</span>
+              <input name="color" type="color" value="#c084fc" />
+            </label>
+          </div>
+          <div class="form-two-cols">
+            <label class="form-field">
+              <span>Quantidade de Colaboradores Prevista</span>
+              <input name="headcount_planned" type="number" min="0" />
+            </label>
+            <label class="form-field">
+              <span>Carga Horária Semanal</span>
+              <input name="weekly_hours" type="number" min="0" />
+            </label>
+          </div>
+          <label class="form-field">
+            <span>Observações</span>
+            <textarea name="notes" rows="3"></textarea>
+          </label>
+          <div style="display:flex;gap:8px;justify-content:flex-end;">
+            <button type="reset" class="button button-ghost">Limpar</button>
+            <button type="submit" class="button button-primary">Salvar Função</button>
+          </div>
+        </form>
+
+        <div class="surface-sub" style="padding:0;margin-top:12px;">
+          <table class="financial-editor-table" style="width:100%;border-collapse:collapse;">
+            <thead>
+              <tr>
+                <th style="text-align:left;">Cargo</th>
+                <th style="text-align:left;">Subordinado a</th>
+                <th style="text-align:right;">Qtd. Prevista</th>
+                <th style="text-align:right;">Horas/semana</th>
+                <th style="width:120px;"></th>
+              </tr>
+            </thead>
+            <tbody id="rolesTbody"></tbody>
+          </table>
+        </div>
+      </div>
+    </details>
+    <script>
+    (function(){
+      const tbody = document.getElementById('rolesTbody');
+      const form = document.getElementById('roleForm');
+      async function populateParents(list){
+        const sel = document.getElementById('parentRoleSelect');
+        if(!sel) return;
+        const current = sel.value;
+        sel.innerHTML = '<option value="">Sem superior</option>';
+        (list||[]).forEach(r => {
+          const opt = document.createElement('option');
+          opt.value = r.id; opt.textContent = r.title;
+          sel.appendChild(opt);
+        });
+        if(current){ sel.value = current; }
+      }
+
+      async function load(){
+        const res = await fetch(`/api/companies/{{ company.id }}/roles`);
+        const json = await res.json();
+        if(!(json && json.success)) { window.showMessage('Falha ao carregar funções','error'); return; }
+        tbody.innerHTML = '';
+        const list = (json.data||[]);
+        populateParents(list);
+        list.forEach(r => {
+          const tr = document.createElement('tr');
+          tr.innerHTML = `
+            <td style="padding:8px;border-bottom:1px solid rgba(148,163,184,.15);">${r.title||''}</td>
+            <td style="padding:8px;border-bottom:1px solid rgba(148,163,184,.15);">${r.reports_to||''}</td>
+            <td style="padding:8px;border-bottom:1px solid rgba(148,163,184,.15);text-align:right;">${r.headcount_planned||0}</td>
+            <td style="padding:8px;border-bottom:1px solid rgba(148,163,184,.15);text-align:right;">${r.weekly_hours||0}</td>
+            <td style="padding:8px;border-bottom:1px solid rgba(148,163,184,.15);text-align:right;">
+              <button data-edit="${r.id}" class="button button-ghost">Editar</button>
+              <button data-del="${r.id}" class="button button-ghost">Excluir</button>
+            </td>
+          `;
+          tbody.appendChild(tr);
+        });
+      }
+      if(form){
+        form.addEventListener('submit', async (e) => {
+          e.preventDefault();
+          const payload = {
+            title: form.title.value,
+            parent_role_id: form.parent_role_id.value || null,
+            department: form.department.value,
+            color: form.color.value,
+            headcount_planned: parseInt(form.headcount_planned.value||'0',10),
+            weekly_hours: parseInt(form.weekly_hours.value||'0',10),
+            notes: form.notes.value
+          };
+          const id = form.id.value;
+          const url = id ? `/api/companies/{{ company.id }}/roles/${id}` : `/api/companies/{{ company.id }}/roles`;
+          const method = id ? 'PUT' : 'POST';
+          const res = await fetch(url, { method, headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload) });
+          const json = await res.json();
+          if(json && json.success){ window.showMessage('Função salva','success'); form.reset(); load(); }
+          else { window.showMessage('Falha ao salvar','error'); }
+        });
+      }
+      tbody.addEventListener('click', async (e) => {
+        const btn = e.target.closest('button');
+        if(!btn) return;
+        const editId = btn.getAttribute('data-edit');
+        const delId = btn.getAttribute('data-del');
+        if(editId){
+          const res = await fetch(`/api/companies/{{ company.id }}/roles`);
+          const json = await res.json();
+          const r = (json.data||[]).find(x => x.id == editId);
+          if(r){
+            form.id.value = r.id;
+            form.title.value = r.title || '';
+            form.parent_role_id.value = r.parent_role_id || '';
+            form.department.value = r.department || '';
+            form.color.value = r.color || '#c084fc';
+            form.headcount_planned.value = r.headcount_planned || 0;
+            form.weekly_hours.value = r.weekly_hours || 0;
+            form.notes.value = r.notes || '';
+            window.showMessage('Carregado para edição','info');
+          }
+        } else if(delId){
+          if(!confirm('Excluir esta função?')) return;
+          const res = await fetch(`/api/companies/{{ company.id }}/roles/${delId}`, { method: 'DELETE' });
+          const json = await res.json();
+          if(json && json.success){ window.showMessage('Função excluída','success'); load(); }
+          else { window.showMessage('Falha ao excluir','error'); }
+        }
+      });
+      load();
+    })();
+    </script>
+  </section>
+</div>
+{% endblock %}

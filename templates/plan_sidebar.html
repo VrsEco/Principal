@@ -1,0 +1,35 @@
+{% set nav_items = sidebar_navigation if sidebar_navigation is defined else navigation %}
+<aside class="project-sidebar surface-card plan-sidebar">
+  <span class="project-sidebar-title">{{ sidebar_title | default('Fluxo do planejamento') }}</span>
+  <nav class="project-nav">
+    {% for item in nav_items or [] %}
+      {% set item_name = item.name or item.label %}
+      {% set item_url = item.url or item.href or '#' %}
+      {% set item_shortcut = item.shortcut | default('', true) %}
+      {% set link_title = item.description | default('', true) %}
+      {% if item_shortcut %}
+        {% if link_title %}
+          {% set link_title = link_title ~ ' · ' %}
+        {% endif %}
+        {% set link_title = link_title ~ 'Atalho: ' ~ item_shortcut %}
+      {% endif %}
+      {% set is_active = (item.active is defined and item.active) or (active_id is defined and active_id == (item.id if item.id is defined else None)) %}
+      <a
+        class="project-nav-link{% if is_active %} is-active{% endif %}"
+        href="{{ item_url }}"
+        {% if item_shortcut %}data-shortcut="{{ item_shortcut }}"{% endif %}
+        {% if link_title %}title="{{ link_title }}"{% endif %}
+      >
+        <span>{{ item_name }}</span>
+        {% if item_shortcut %}
+          <span class="project-nav-shortcut">{{ item_shortcut }}</span>
+        {% endif %}
+      </a>
+    {% endfor %}
+  </nav>
+  {% if sidebar_meta is defined %}
+    <div class="project-hints plan-sidebar-meta">
+      {{ sidebar_meta | safe }}
+    </div>
+  {% endif %}
+</aside>

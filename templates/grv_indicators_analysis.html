@@ -1,0 +1,1045 @@
+{% extends "base.html" %}
+{% block title %}GRV | Análises de Indicadores{% endblock %}
+{% block body %}{% set active_nav = 'indicators-analysis' %}{{ super() }}{% endblock %}
+
+{% block extra_head %}
+{{ super() }}
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/chartjs-adapter-date-fns@3.0.0/dist/chartjs-adapter-date-fns.bundle.min.js"></script>
+<style>
+  .indicators-shell {
+    display: grid;
+    grid-template-columns: 250px minmax(0, 1fr);
+    gap: 18px;
+    align-items: start;
+  }
+
+  .indicators-main {
+    background: #ffffff;
+    border-radius: 14px;
+    border: 1px solid rgba(15, 23, 42, 0.08);
+    padding: 22px 24px;
+    box-shadow: 0 12px 32px rgba(15, 23, 42, 0.08);
+    display: grid;
+    gap: 20px;
+  }
+
+  .indicators-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: 16px;
+    flex-wrap: wrap;
+  }
+
+  .indicators-header h1 {
+    margin: 0;
+    font-size: 22px;
+    font-weight: 700;
+    color: #0f172a;
+  }
+
+  .indicators-description {
+    color: #64748b;
+    font-size: 13px;
+    margin-top: 6px;
+    max-width: 620px;
+    line-height: 1.5;
+  }
+
+  .analysis-section {
+    background: white;
+    border-radius: 12px;
+    border: 1px solid rgba(15, 23, 42, 0.08);
+    padding: 20px;
+  }
+
+  .section-title {
+    font-size: 16px;
+    font-weight: 700;
+    color: #0f172a;
+    margin-bottom: 16px;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    cursor: pointer;
+    user-select: none;
+    padding: 8px;
+    margin: -8px -8px 16px -8px;
+    border-radius: 8px;
+    transition: background 0.2s ease;
+  }
+
+  .section-title:hover {
+    background: rgba(59, 130, 246, 0.05);
+  }
+
+  .section-title .collapse-icon {
+    margin-left: auto;
+    font-size: 18px;
+    transition: transform 0.3s ease;
+  }
+
+  .section-title.collapsed .collapse-icon {
+    transform: rotate(-90deg);
+  }
+
+  .section-content {
+    max-height: 3000px;
+    overflow: hidden;
+    transition: max-height 0.4s ease, opacity 0.3s ease;
+    opacity: 1;
+  }
+
+  .section-content.collapsed {
+    max-height: 0;
+    opacity: 0;
+  }
+
+  .indicator-selector {
+    display: grid;
+    gap: 16px;
+  }
+
+  .indicator-item {
+    background: linear-gradient(135deg, #f8fafc, #e2e8f0);
+    border-radius: 10px;
+    border: 2px solid transparent;
+    padding: 16px;
+    cursor: pointer;
+    transition: all 0.2s ease;
+  }
+
+  .indicator-item:hover {
+    border-color: #3b82f6;
+    transform: translateY(-2px);
+    box-shadow: 0 8px 16px rgba(59, 130, 246, 0.15);
+  }
+
+  .indicator-item.selected {
+    border-color: #3b82f6;
+    background: linear-gradient(135deg, #dbeafe, #bfdbfe);
+  }
+
+  .indicator-item-header {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    margin-bottom: 12px;
+  }
+
+  .indicator-checkbox {
+    width: 20px;
+    height: 20px;
+    cursor: pointer;
+  }
+
+  .indicator-info {
+    flex: 1;
+  }
+
+  .indicator-code {
+    font-size: 11px;
+    font-weight: 600;
+    color: #3b82f6;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+  }
+
+  .indicator-name {
+    font-size: 14px;
+    font-weight: 600;
+    color: #0f172a;
+    margin-top: 2px;
+  }
+
+  .goals-list {
+    margin-top: 12px;
+    padding-left: 32px;
+    display: none;
+  }
+
+  .indicator-item.selected .goals-list {
+    display: block;
+  }
+
+  .goal-item {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 8px;
+    background: white;
+    border-radius: 6px;
+    margin-bottom: 6px;
+    border: 1px solid rgba(15, 23, 42, 0.08);
+  }
+
+  .goal-checkbox {
+    width: 16px;
+    height: 16px;
+    cursor: pointer;
+  }
+
+  .goal-info {
+    flex: 1;
+    font-size: 12px;
+    color: #475569;
+  }
+
+  .goal-value {
+    font-weight: 600;
+    color: #0f172a;
+  }
+
+  .period-filters {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+    gap: 12px;
+  }
+
+  .filter-group {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+  }
+
+  .filter-group label {
+    font-size: 11px;
+    font-weight: 600;
+    color: #475569;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+  }
+
+  .filter-group input,
+  .filter-group select {
+    padding: 10px 12px;
+    border: 1px solid rgba(15, 23, 42, 0.12);
+    border-radius: 8px;
+    font-size: 13px;
+    background: white;
+  }
+
+  .indicators-button {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    padding: 12px 24px;
+    border-radius: 10px;
+    border: none;
+    cursor: pointer;
+    font-weight: 600;
+    font-size: 13px;
+    letter-spacing: 0.04em;
+    transition: transform 0.2s ease, box-shadow 0.2s ease;
+  }
+
+  .indicators-button.primary {
+    background: linear-gradient(135deg, #3b82f6, #2563eb);
+    color: #fff;
+    box-shadow: 0 16px 28px rgba(37, 99, 235, 0.25);
+  }
+
+  .indicators-button.primary:hover {
+    transform: translateY(-2px);
+  }
+
+  .indicators-button.secondary {
+    background: linear-gradient(135deg, #64748b, #475569);
+    color: #fff;
+  }
+
+  .button-group {
+    display: flex;
+    gap: 12px;
+    justify-content: flex-end;
+  }
+
+  .chart-container {
+    background: white;
+    border-radius: 12px;
+    border: 1px solid rgba(15, 23, 42, 0.08);
+    padding: 24px;
+  }
+
+  .chart-container h3 {
+    margin: 0 0 20px 0;
+    font-size: 16px;
+    font-weight: 700;
+    color: #0f172a;
+  }
+
+  .chart-wrapper {
+    position: relative;
+    height: 400px;
+  }
+
+  .comparison-table {
+    width: 100%;
+    border-collapse: collapse;
+    margin-top: 20px;
+  }
+
+  .comparison-table th,
+  .comparison-table td {
+    padding: 12px;
+    text-align: left;
+    border-bottom: 1px solid rgba(15, 23, 42, 0.08);
+  }
+
+  .comparison-table th {
+    background: linear-gradient(135deg, #f8fafc, #e2e8f0);
+    font-size: 11px;
+    font-weight: 600;
+    color: #475569;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+  }
+
+  .comparison-table td {
+    font-size: 13px;
+    color: #0f172a;
+  }
+
+  .stat-badge {
+    display: inline-block;
+    padding: 4px 10px;
+    border-radius: 6px;
+    font-size: 12px;
+    font-weight: 600;
+  }
+
+  .stat-badge.positive {
+    background: #dcfce7;
+    color: #047857;
+  }
+
+  .stat-badge.negative {
+    background: #fee2e2;
+    color: #dc2626;
+  }
+
+  .stat-badge.neutral {
+    background: #f1f5f9;
+    color: #64748b;
+  }
+
+  .empty-state {
+    text-align: center;
+    padding: 48px 24px;
+    color: #64748b;
+  }
+
+  .empty-state svg {
+    width: 64px;
+    height: 64px;
+    margin-bottom: 16px;
+    opacity: 0.4;
+  }
+
+  .empty-state h3 {
+    margin: 0 0 8px 0;
+    font-size: 16px;
+    font-weight: 600;
+  }
+
+  .empty-state p {
+    margin: 0;
+    font-size: 13px;
+  }
+
+  .color-indicator {
+    display: inline-block;
+    width: 16px;
+    height: 16px;
+    border-radius: 4px;
+    margin-right: 8px;
+    vertical-align: middle;
+  }
+
+  .alert-box {
+    background: linear-gradient(135deg, #fef3c7, #fde68a);
+    border: 1px solid #f59e0b;
+    border-radius: 10px;
+    padding: 16px;
+    margin-bottom: 20px;
+  }
+
+  .alert-box strong {
+    color: #b45309;
+    font-size: 13px;
+  }
+
+  .alert-box p {
+    margin: 8px 0 0 0;
+    color: #78350f;
+    font-size: 12px;
+    line-height: 1.5;
+  }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="indicators-shell">
+  <!-- Sidebar -->
+  {% include 'indicators_sidebar.html' %}
+
+  <!-- Main Content -->
+  <div class="indicators-main">
+    <div class="indicators-header">
+      <div>
+        <h1>📊 Análises Comparativas de Indicadores</h1>
+        <div class="indicators-description">
+          Selecione múltiplos indicadores e metas para comparar desempenho ao longo do tempo
+        </div>
+      </div>
+    </div>
+
+    <!-- Alert Box -->
+    <div class="alert-box">
+      <strong>💡 Como usar esta análise:</strong>
+      <p>
+        1. Selecione um ou mais indicadores na lista abaixo<br>
+        2. Para cada indicador selecionado, escolha as metas que deseja comparar<br>
+        3. Defina o período de análise (opcional)<br>
+        4. Clique em "Gerar Análise Comparativa" para visualizar os gráficos
+      </p>
+    </div>
+
+    <!-- Indicator Selection -->
+    <div class="analysis-section">
+      <div class="section-title" onclick="toggleSection('indicatorsSection')">
+        🎯 Seleção de Indicadores e Metas
+        <span class="collapse-icon">▼</span>
+      </div>
+      <div id="indicatorsSection" class="section-content">
+        <div id="indicatorsList" class="indicator-selector">
+          <!-- Indicators will be loaded here -->
+        </div>
+      </div>
+    </div>
+
+    <!-- Period Filters -->
+    <div class="analysis-section">
+      <div class="section-title" onclick="toggleSection('periodSection')">
+        📅 Período de Análise
+        <span class="collapse-icon">▼</span>
+      </div>
+      <div id="periodSection" class="section-content">
+        <div class="period-filters">
+          <div class="filter-group">
+            <label>Data Início</label>
+            <input type="date" id="periodStart" />
+          </div>
+          <div class="filter-group">
+            <label>Data Fim</label>
+            <input type="date" id="periodEnd" />
+          </div>
+          <div class="filter-group">
+            <label>Visualização</label>
+            <select id="viewMode">
+              <option value="all">Todos os Pontos</option>
+              <option value="monthly">Agregado por Mês</option>
+              <option value="quarterly">Agregado por Trimestre</option>
+            </select>
+          </div>
+        </div>
+
+        <div class="button-group" style="margin-top: 16px;">
+          <button class="indicators-button secondary" onclick="clearSelection()">
+            Limpar Seleção
+          </button>
+          <button class="indicators-button primary" onclick="generateAnalysis()">
+            Gerar Análise Comparativa
+          </button>
+        </div>
+      </div>
+    </div>
+
+    <!-- Chart Container -->
+    <div class="chart-container" id="chartContainer" style="display: none;">
+      <h3>📈 Evolução Comparativa</h3>
+      <div class="chart-wrapper">
+        <canvas id="comparisonChart"></canvas>
+      </div>
+    </div>
+
+    <!-- Comparison Table -->
+    <div class="analysis-section" id="comparisonTableContainer" style="display: none;">
+      <div class="section-title">
+        📋 Estatísticas Comparativas
+      </div>
+      <table class="comparison-table" id="comparisonTable">
+        <thead>
+          <tr>
+            <th>Indicador / Meta</th>
+            <th>Valor da Meta</th>
+            <th>Média Realizada</th>
+            <th>Última Medição</th>
+            <th>Total Medições</th>
+            <th>Performance</th>
+          </tr>
+        </thead>
+        <tbody id="comparisonTableBody">
+          <!-- Stats will be loaded here -->
+        </tbody>
+      </table>
+    </div>
+
+    <!-- Empty State -->
+    <div class="empty-state" id="emptyState">
+      <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" />
+      </svg>
+      <h3>Selecione indicadores para análise</h3>
+      <p>Escolha um ou mais indicadores acima e suas respectivas metas para iniciar a análise comparativa</p>
+    </div>
+  </div>
+</div>
+
+<script>
+const companyId = {{ company.id }};
+let indicators = [];
+let goals = [];
+let dataRecords = [];
+let chart = null;
+
+const CHART_COLORS = [
+  '#3b82f6', '#10b981', '#f59e0b', '#8b5cf6', '#ef4444', 
+  '#06b6d4', '#84cc16', '#f97316', '#ec4899', '#14b8a6'
+];
+
+const GOAL_TYPE_LABELS = {
+  single: 'Meta Única',
+  daily: 'Meta Diária',
+  weekly: 'Meta Semanal',
+  monthly: 'Meta Mensal',
+  quarterly: 'Meta Trimestral',
+  biannual: 'Meta Semestral',
+  annual: 'Meta Anual'
+};
+
+const EVALUATION_LABELS = {
+  value: 'Valor Pontual',
+  sum: 'Soma do Período',
+  average: 'Média do Período',
+  latest: 'Último Valor'
+};
+
+// Toggle section collapse/expand
+function toggleSection(sectionId) {
+  const section = document.getElementById(sectionId);
+  const titleElement = section.previousElementSibling;
+  
+  section.classList.toggle('collapsed');
+  titleElement.classList.toggle('collapsed');
+}
+
+// Load data on page load
+document.addEventListener('DOMContentLoaded', () => {
+  loadIndicators();
+  loadGoals();
+  loadDataRecords();
+  
+  // Set default period (last 12 months)
+  const today = new Date();
+  const lastYear = new Date(today.getFullYear() - 1, today.getMonth(), today.getDate());
+  document.getElementById('periodEnd').valueAsDate = today;
+  document.getElementById('periodStart').valueAsDate = lastYear;
+});
+
+async function loadIndicators() {
+  try {
+    const response = await fetch(`/grv/api/company/${companyId}/indicators`);
+    const result = await response.json();
+    
+    if (result.success) {
+      indicators = result.data;
+      renderIndicatorsList();
+    }
+  } catch (error) {
+    console.error('Erro ao carregar indicadores:', error);
+  }
+}
+
+async function loadGoals() {
+  try {
+    const response = await fetch(`/grv/api/company/${companyId}/indicator-goals`);
+    const result = await response.json();
+    
+    if (result.success) {
+      goals = result.data;
+      renderIndicatorsList();
+    }
+  } catch (error) {
+    console.error('Erro ao carregar metas:', error);
+  }
+}
+
+async function loadDataRecords() {
+  try {
+    const response = await fetch(`/grv/api/company/${companyId}/indicator-data`);
+    const result = await response.json();
+    
+    if (result.success) {
+      dataRecords = result.data;
+    }
+  } catch (error) {
+    console.error('Erro ao carregar registros:', error);
+  }
+}
+
+function renderIndicatorsList() {
+  const container = document.getElementById('indicatorsList');
+  
+  if (indicators.length === 0) {
+    container.innerHTML = '<div class="empty-state"><p>Nenhum indicador cadastrado</p></div>';
+    return;
+  }
+  
+  container.innerHTML = indicators.map(ind => {
+    const indicatorGoals = goals.filter(g => g.indicator_id === ind.id);
+    
+    return `
+      <div class="indicator-item" id="indicator-${ind.id}">
+        <div class="indicator-item-header">
+          <input 
+            type="checkbox" 
+            class="indicator-checkbox" 
+            id="check-ind-${ind.id}"
+            onchange="toggleIndicator(${ind.id})"
+          />
+          <div class="indicator-info">
+            <div class="indicator-code">${ind.code || ''}</div>
+            <div class="indicator-name">${ind.name}</div>
+          </div>
+        </div>
+        
+        ${indicatorGoals.length > 0 ? `
+          <div class="goals-list">
+            ${indicatorGoals.map(goal => `
+              <div class="goal-item">
+                <input 
+                  type="checkbox" 
+                  class="goal-checkbox" 
+                  id="check-goal-${goal.id}"
+                  data-indicator-id="${ind.id}"
+                  data-goal-id="${goal.id}"
+                />
+                <div class="goal-info">
+                  <strong>${goal.code}</strong> - 
+                  ${GOAL_TYPE_LABELS[goal.goal_type] || 'Meta'}: 
+                  <span class="goal-value">${formatNumber(goal.goal_value)}</span>
+                  ${goal.period_start && goal.period_end ? 
+                    `<br><small>Período: ${formatDate(goal.period_start)} a ${formatDate(goal.period_end)}</small>` : 
+                    `<br><small>Prazo: ${formatDate(goal.goal_date)}</small>`
+                  }
+                </div>
+              </div>
+            `).join('')}
+          </div>
+        ` : '<div class="goals-list"><small style="color: #94a3b8;">Nenhuma meta cadastrada</small></div>'}
+      </div>
+    `;
+  }).join('');
+}
+
+function toggleIndicator(indicatorId) {
+  const checkbox = document.getElementById(`check-ind-${indicatorId}`);
+  const item = document.getElementById(`indicator-${indicatorId}`);
+  
+  if (checkbox.checked) {
+    item.classList.add('selected');
+  } else {
+    item.classList.remove('selected');
+    // Uncheck all goals for this indicator
+    const goalCheckboxes = item.querySelectorAll('.goal-checkbox');
+    goalCheckboxes.forEach(cb => cb.checked = false);
+  }
+}
+
+function clearSelection() {
+  // Uncheck all indicators
+  document.querySelectorAll('.indicator-checkbox').forEach(cb => {
+    cb.checked = false;
+  });
+  
+  // Uncheck all goals
+  document.querySelectorAll('.goal-checkbox').forEach(cb => {
+    cb.checked = false;
+  });
+  
+  // Remove selected class
+  document.querySelectorAll('.indicator-item').forEach(item => {
+    item.classList.remove('selected');
+  });
+  
+  // Hide chart and table
+  document.getElementById('chartContainer').style.display = 'none';
+  document.getElementById('comparisonTableContainer').style.display = 'none';
+  document.getElementById('emptyState').style.display = 'block';
+}
+
+function generateAnalysis() {
+  // Get selected goals
+  const selectedGoals = Array.from(document.querySelectorAll('.goal-checkbox:checked')).map(cb => ({
+    indicatorId: parseInt(cb.dataset.indicatorId),
+    goalId: parseInt(cb.dataset.goalId)
+  }));
+  
+  if (selectedGoals.length === 0) {
+    alert('Selecione pelo menos uma meta para análise');
+    return;
+  }
+  
+  // Get period filters
+  const periodStart = document.getElementById('periodStart').value;
+  const periodEnd = document.getElementById('periodEnd').value;
+  const viewMode = document.getElementById('viewMode').value;
+  
+  // Filter and prepare data
+  const chartData = prepareChartData(selectedGoals, periodStart, periodEnd, viewMode);
+  const statsData = calculateStats(selectedGoals, periodStart, periodEnd);
+  
+  // Render chart
+  renderComparisonChart(chartData);
+  
+  // Render comparison table
+  renderComparisonTable(statsData);
+  
+  // Show results
+  document.getElementById('chartContainer').style.display = 'block';
+  document.getElementById('comparisonTableContainer').style.display = 'block';
+  document.getElementById('emptyState').style.display = 'none';
+  
+  // Collapse the filter sections after generating analysis
+  setTimeout(() => {
+    const indicatorsSection = document.getElementById('indicatorsSection');
+    const periodSection = document.getElementById('periodSection');
+    
+    if (!indicatorsSection.classList.contains('collapsed')) {
+      toggleSection('indicatorsSection');
+    }
+    if (!periodSection.classList.contains('collapsed')) {
+      toggleSection('periodSection');
+    }
+  }, 300);
+}
+
+function prepareChartData(selectedGoals, periodStart, periodEnd, viewMode) {
+  const datasets = [];
+  const allLabels = new Set();
+  
+  selectedGoals.forEach((selection, index) => {
+    const goal = goals.find(g => g.id === selection.goalId);
+    const indicator = indicators.find(i => i.id === selection.indicatorId);
+    
+    if (!goal || !indicator) return;
+    
+    // Filter data for this goal
+    let goalData = dataRecords.filter(d => d.goal_id === goal.id);
+    
+    // Apply period filter
+    if (periodStart) {
+      goalData = goalData.filter(d => d.record_date >= periodStart);
+    }
+    if (periodEnd) {
+      goalData = goalData.filter(d => d.record_date <= periodEnd);
+    }
+    
+    // Sort by date
+    goalData.sort((a, b) => new Date(a.record_date) - new Date(b.record_date));
+    
+    // Aggregate if needed
+    if (viewMode === 'monthly' || viewMode === 'quarterly') {
+      goalData = aggregateData(goalData, viewMode, goal.evaluation_basis);
+    }
+    
+    // Create dataset
+    const color = CHART_COLORS[index % CHART_COLORS.length];
+    const label = `${indicator.code} - ${goal.code}`;
+    
+    const dataPoints = goalData.map(d => {
+      const formattedDate = formatDate(d.record_date);
+      allLabels.add(formattedDate);
+      return formattedDate;
+    });
+    
+    const dataValues = goalData.map(d => d.value);
+    
+    datasets.push({
+      label: label,
+      data: dataValues,
+      borderColor: color,
+      backgroundColor: color + '20',
+      borderWidth: 2,
+      tension: 0.4,
+      fill: false,
+      pointRadius: 4,
+      pointHoverRadius: 6,
+      spanGaps: true
+    });
+    
+    // Add goal line if it's a single goal type
+    if (goal.goal_type === 'single' || goal.evaluation_basis === 'value') {
+      datasets.push({
+        label: `Meta: ${label}`,
+        data: Array(dataValues.length).fill(goal.goal_value),
+        borderColor: color,
+        backgroundColor: 'transparent',
+        borderWidth: 1.5,
+        borderDash: [5, 5],
+        pointRadius: 0,
+        fill: false
+      });
+    }
+  });
+  
+  return {
+    labels: Array.from(allLabels).sort((a, b) => {
+      const dateA = a.split('/').reverse().join('-');
+      const dateB = b.split('/').reverse().join('-');
+      return dateA.localeCompare(dateB);
+    }),
+    datasets: datasets
+  };
+}
+
+function aggregateData(data, mode, evaluationBasis) {
+  const grouped = {};
+  const basis = evaluationBasis || 'sum';
+  
+  data.forEach(record => {
+    const date = new Date(record.record_date);
+    let key;
+    
+    if (mode === 'monthly') {
+      key = `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}`;
+    } else if (mode === 'quarterly') {
+      const quarter = Math.floor(date.getMonth() / 3) + 1;
+      key = `${date.getFullYear()}-Q${quarter}`;
+    }
+    
+    if (!grouped[key]) {
+      grouped[key] = { values: [], date: key };
+    }
+    grouped[key].values.push(record.value);
+  });
+  
+  // Calculate aggregated values
+  return Object.values(grouped).map(group => {
+    let value;
+    
+    switch (basis) {
+      case 'sum':
+        value = group.values.reduce((a, b) => a + b, 0);
+        break;
+      case 'average':
+        value = group.values.reduce((a, b) => a + b, 0) / group.values.length;
+        break;
+      case 'latest':
+        value = group.values[group.values.length - 1];
+        break;
+      default:
+        value = group.values[group.values.length - 1];
+    }
+    
+    return {
+      record_date: group.date,
+      value: value
+    };
+  });
+}
+
+function calculateStats(selectedGoals, periodStart, periodEnd) {
+  return selectedGoals.map(selection => {
+    const goal = goals.find(g => g.id === selection.goalId);
+    const indicator = indicators.find(i => i.id === selection.indicatorId);
+    
+    if (!goal || !indicator) return null;
+    
+    // Filter data
+    let goalData = dataRecords.filter(d => d.goal_id === goal.id);
+    
+    if (periodStart) {
+      goalData = goalData.filter(d => d.record_date >= periodStart);
+    }
+    if (periodEnd) {
+      goalData = goalData.filter(d => d.record_date <= periodEnd);
+    }
+    
+    const values = goalData.map(d => d.value);
+    const average = values.length > 0 ? values.reduce((a, b) => a + b, 0) / values.length : 0;
+    const latest = values.length > 0 ? values[values.length - 1] : 0;
+    const count = values.length;
+    
+    // Calculate performance (only for single goals or value-based)
+    let performance = null;
+    if (goal.goal_type === 'single' || goal.evaluation_basis === 'value') {
+      const polarity = indicator.polarity || 'higher'; // higher is better or lower is better
+      if (polarity === 'higher') {
+        performance = latest >= goal.goal_value ? 'positive' : 'negative';
+      } else {
+        performance = latest <= goal.goal_value ? 'positive' : 'negative';
+      }
+    }
+    
+    return {
+      indicator: indicator,
+      goal: goal,
+      average: average,
+      latest: latest,
+      count: count,
+      performance: performance
+    };
+  }).filter(s => s !== null);
+}
+
+function renderComparisonChart(chartData) {
+  const ctx = document.getElementById('comparisonChart');
+  
+  if (chart) {
+    chart.destroy();
+  }
+  
+  if (chartData.datasets.length === 0) {
+    return;
+  }
+  
+  chart = new Chart(ctx, {
+    type: 'line',
+    data: {
+      labels: chartData.labels,
+      datasets: chartData.datasets
+    },
+    options: {
+      responsive: true,
+      maintainAspectRatio: false,
+      plugins: {
+        legend: {
+          display: true,
+          position: 'top',
+          labels: {
+            boxWidth: 12,
+            padding: 10,
+            font: {
+              size: 11
+            }
+          }
+        },
+        tooltip: {
+          mode: 'index',
+          intersect: false,
+          callbacks: {
+            label: function(context) {
+              let label = context.dataset.label || '';
+              if (label) {
+                label += ': ';
+              }
+              if (context.parsed.y !== null) {
+                label += formatNumber(context.parsed.y);
+              }
+              return label;
+            }
+          }
+        }
+      },
+      scales: {
+        x: {
+          title: {
+            display: true,
+            text: 'Período',
+            font: {
+              size: 12,
+              weight: 'bold'
+            }
+          },
+          ticks: {
+            maxRotation: 45,
+            minRotation: 45,
+            font: {
+              size: 10
+            }
+          }
+        },
+        y: {
+          beginAtZero: true,
+          title: {
+            display: true,
+            text: 'Valor',
+            font: {
+              size: 12,
+              weight: 'bold'
+            }
+          },
+          ticks: {
+            font: {
+              size: 11
+            },
+            callback: function(value) {
+              return formatNumber(value);
+            }
+          }
+        }
+      },
+      interaction: {
+        mode: 'index',
+        intersect: false
+      }
+    }
+  });
+}
+
+function renderComparisonTable(statsData) {
+  const tbody = document.getElementById('comparisonTableBody');
+  
+  tbody.innerHTML = statsData.map((stat, index) => {
+    const color = CHART_COLORS[index % CHART_COLORS.length];
+    let performanceBadge = '';
+    
+    if (stat.performance) {
+      const badgeClass = stat.performance === 'positive' ? 'positive' : 'negative';
+      const badgeText = stat.performance === 'positive' ? '✓ Atingiu' : '✗ Não Atingiu';
+      performanceBadge = `<span class="stat-badge ${badgeClass}">${badgeText}</span>`;
+    } else {
+      performanceBadge = '<span class="stat-badge neutral">—</span>';
+    }
+    
+    return `
+      <tr>
+        <td>
+          <span class="color-indicator" style="background: ${color};"></span>
+          <strong>${stat.indicator.code}</strong><br>
+          <small>${stat.goal.code} - ${GOAL_TYPE_LABELS[stat.goal.goal_type]}</small>
+        </td>
+        <td><strong>${formatNumber(stat.goal.goal_value)}</strong></td>
+        <td>${formatNumber(stat.average)}</td>
+        <td>${formatNumber(stat.latest)}</td>
+        <td>${stat.count}</td>
+        <td>${performanceBadge}</td>
+      </tr>
+    `;
+  }).join('');
+}
+
+function formatNumber(value) {
+  if (value === null || value === undefined || value === '') {
+    return '—';
+  }
+  const num = Number(value);
+  if (!Number.isFinite(num)) {
+    return String(value);
+  }
+  return new Intl.NumberFormat('pt-BR', {
+    minimumFractionDigits: 0,
+    maximumFractionDigits: 2
+  }).format(num);
+}
+
+function formatDate(dateStr) {
+  if (!dateStr) return '—';
+  const date = new Date(dateStr + 'T00:00:00');
+  return date.toLocaleDateString('pt-BR');
+}
+</script>
+{% endblock %}

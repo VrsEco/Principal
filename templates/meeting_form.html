@@ -1,0 +1,518 @@
+{% extends "base.html" %}
+
+{% block title %}{{ 'Nova Reunião' if action == 'new' else 'Editar Reunião' }} - {{ company.name or company.legal_name }}{% endblock %}
+
+{% block extra_head %}
+{{ super() }}
+<style>
+  /* Melhorar o fundo do container principal */
+  .project-content {
+    background: linear-gradient(135deg, #ffffff 0%, #f8fafc 100%);
+  }
+
+  /* Seções do formulário melhoradas */
+  .form-section {
+    background: linear-gradient(135deg, #ffffff 0%, #f8fafc 100%);
+    border: 1px solid rgba(30, 64, 175, 0.1);
+    box-shadow: 0 8px 24px rgba(30, 64, 175, 0.08);
+    transition: all 0.3s ease;
+  }
+
+  .form-section:hover {
+    box-shadow: 0 12px 32px rgba(30, 64, 175, 0.12);
+  }
+
+  /* Campos de formulário melhorados */
+  .form-input, .form-textarea {
+    border: 1px solid rgba(30, 64, 175, 0.2);
+    background: #ffffff;
+    transition: all 0.2s ease;
+  }
+
+  .form-input:focus, .form-textarea:focus {
+    border-color: #1e40af;
+    box-shadow: 0 0 0 3px rgba(30, 64, 175, 0.1);
+    outline: none;
+  }
+
+  /* Botões melhorados */
+  .btn-primary {
+    background: linear-gradient(135deg, #1e40af, #7c3aed, #dc2626);
+    color: white;
+    box-shadow: 0 16px 28px rgba(30, 64, 175, 0.3);
+    position: relative;
+    overflow: hidden;
+    transition: all 0.3s ease;
+  }
+
+  .btn-primary::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: -100%;
+    width: 100%;
+    height: 100%;
+    background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.2), transparent);
+    transition: left 0.5s ease;
+  }
+
+  .btn-primary:hover::before {
+    left: 100%;
+  }
+
+  .btn-secondary {
+    background: linear-gradient(135deg, rgba(148, 163, 184, 0.2), rgba(100, 116, 139, 0.15));
+    color: #1e293b;
+    border: 1px solid rgba(148, 163, 184, 0.3);
+    transition: all 0.2s ease;
+  }
+
+  .btn-secondary:hover {
+    background: linear-gradient(135deg, rgba(148, 163, 184, 0.3), rgba(100, 116, 139, 0.25));
+    transform: translateY(-1px);
+    box-shadow: 0 4px 8px rgba(148, 163, 184, 0.2);
+  }
+
+  .btn-danger {
+    background: linear-gradient(135deg, #dc2626, #b91c1c);
+    color: white;
+    border: none;
+    transition: all 0.2s ease;
+  }
+
+  .btn-danger:hover {
+    background: linear-gradient(135deg, #b91c1c, #991b1b);
+    transform: translateY(-1px);
+    box-shadow: 0 4px 8px rgba(220, 38, 38, 0.3);
+  }
+
+  /* Grupos de input melhorados */
+  .input-group {
+    background: linear-gradient(135deg, rgba(248, 250, 252, 0.8), rgba(241, 245, 249, 0.6));
+    border: 1px solid rgba(30, 64, 175, 0.1);
+    border-radius: 8px;
+    transition: all 0.2s ease;
+  }
+
+  .input-group:hover {
+    background: linear-gradient(135deg, rgba(248, 250, 252, 1), rgba(241, 245, 249, 0.8));
+    border-color: rgba(30, 64, 175, 0.2);
+    transform: translateY(-1px);
+    box-shadow: 0 4px 8px rgba(30, 64, 175, 0.1);
+  }
+
+  /* Itens de discussão e atividade melhorados */
+  .discussion-item, .activity-item {
+    background: linear-gradient(135deg, rgba(248, 250, 252, 0.8), rgba(241, 245, 249, 0.6));
+    border: 1px solid rgba(30, 64, 175, 0.1);
+    transition: all 0.2s ease;
+  }
+
+  .discussion-item:hover, .activity-item:hover {
+    background: linear-gradient(135deg, rgba(248, 250, 252, 1), rgba(241, 245, 249, 0.8));
+    border-color: rgba(30, 64, 175, 0.2);
+    transform: translateY(-1px);
+    box-shadow: 0 4px 8px rgba(30, 64, 175, 0.1);
+  }
+
+  /* Ações do formulário melhoradas */
+  .form-actions {
+    background: linear-gradient(135deg, rgba(248, 250, 252, 0.8), rgba(241, 245, 249, 0.6));
+    border-top: 2px solid rgba(30, 64, 175, 0.1);
+  }
+
+  /* Sobrescrever regras globais para garantir cores escuras */
+  .project-content,
+  .project-content *,
+  .form-section,
+  .form-section *,
+  .form-input,
+  .form-textarea,
+  .input-group,
+  .discussion-item,
+  .activity-item {
+    color: #1e293b !important;
+  }
+
+  .form-section h2,
+  .form-section h3,
+  .form-section strong,
+  .form-label {
+    color: #0f172a !important;
+  }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="project-layout">
+    {% include 'meetings_sidebar.html' %}
+    
+    <main class="project-content">
+        <header class="project-header">
+            <div class="project-header-top">
+                <div class="project-breadcrumb">
+                    <a href="{{ url_for('dashboard') }}">Dashboard</a>
+                    <span class="breadcrumb-separator">›</span>
+                    <a href="{{ url_for('grv.grv_company_dashboard', company_id=company.id) }}">{{ company.name or company.legal_name }}</a>
+                    <span class="breadcrumb-separator">›</span>
+                    <a href="{{ url_for('meetings.meetings_list', company_id=company.id) }}">Reuniões</a>
+                    <span class="breadcrumb-separator">›</span>
+                    <span>{{ 'Nova Reunião' if action == 'new' else 'Editar' }}</span>
+                </div>
+            </div>
+            
+            <div class="project-header-main">
+                <h1 class="project-title">
+                    <span class="project-icon">📅</span>
+                    {{ 'Nova Reunião' if action == 'new' else 'Editar Reunião' }}
+                </h1>
+            </div>
+        </header>
+
+        <div class="project-body">
+            <form method="POST" class="meeting-form">
+                <!-- Informações Básicas -->
+                <section class="form-section surface-card" style="padding: 1.5rem; border-radius: 8px; margin-bottom: 1.5rem;">
+                    <h2 class="section-title" style="margin-bottom: 1.5rem;">Informações da Reunião</h2>
+                    
+                    <div class="form-group">
+                        <label for="title" class="form-label">Título da Reunião *</label>
+                        <input type="text" 
+                               id="title" 
+                               name="title" 
+                               class="form-input" 
+                               value="{{ meeting.title if meeting else '' }}" 
+                               required 
+                               placeholder="Ex: Planejamento Estratégico Q4">
+                    </div>
+
+                    <div class="form-row" style="display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 1rem;">
+                        <div class="form-group">
+                            <label for="scheduled_date" class="form-label">Data</label>
+                            <input type="date" 
+                                   id="scheduled_date" 
+                                   name="scheduled_date" 
+                                   class="form-input" 
+                                   value="{{ meeting.scheduled_date if meeting else '' }}">
+                        </div>
+
+                        <div class="form-group">
+                            <label for="scheduled_time" class="form-label">Horário</label>
+                            <input type="time" 
+                                   id="scheduled_time" 
+                                   name="scheduled_time" 
+                                   class="form-input" 
+                                   value="{{ meeting.scheduled_time if meeting else '' }}">
+                        </div>
+
+                        <div class="form-group">
+                            <label for="owner" class="form-label">Responsável</label>
+                            <input type="text" 
+                                   id="owner" 
+                                   name="owner" 
+                                   class="form-input" 
+                                   value="{{ meeting.owner if meeting else '' }}" 
+                                   placeholder="Nome do responsável">
+                        </div>
+                    </div>
+
+                    <div class="form-group">
+                        <label for="invite_notes" class="form-label">Observações do Convite</label>
+                        <textarea id="invite_notes" 
+                                  name="invite_notes" 
+                                  class="form-textarea" 
+                                  rows="3" 
+                                  placeholder="Informações adicionais sobre o convite...">{{ meeting.invite_notes if meeting else '' }}</textarea>
+                    </div>
+                </section>
+
+                <!-- Convidados -->
+                <section class="form-section surface-card" style="padding: 1.5rem; border-radius: 8px; margin-bottom: 1.5rem;">
+                    <h2 class="section-title" style="margin-bottom: 1rem;">Convidados</h2>
+                    <p style="color: var(--text-secondary); margin-bottom: 1.5rem;">Pessoas que receberão o convite para a reunião.</p>
+                    
+                    <div class="form-group">
+                        <label class="form-label">Convidados Internos (Colaboradores)</label>
+                        <div id="guests-internal-list" style="margin-bottom: 0.5rem;">
+                            {% if meeting and meeting.guests and meeting.guests.internal %}
+                                {% for guest in meeting.guests.internal %}
+                                <div class="input-group" style="display: flex; gap: 0.5rem; margin-bottom: 0.5rem;">
+                                    <input type="text" name="guests_internal[]" class="form-input" value="{{ guest }}" placeholder="Nome do colaborador">
+                                    <button type="button" class="btn btn-sm btn-danger remove-item">✕</button>
+                                </div>
+                                {% endfor %}
+                            {% endif %}
+                        </div>
+                        <button type="button" class="btn btn-sm btn-secondary" onclick="addGuestInternal()">+ Adicionar Interno</button>
+                    </div>
+
+                    <div class="form-group">
+                        <label class="form-label">Convidados Externos</label>
+                        <div id="guests-external-list" style="margin-bottom: 0.5rem;">
+                            {% if meeting and meeting.guests and meeting.guests.external %}
+                                {% for guest in meeting.guests.external %}
+                                <div class="input-group" style="display: flex; gap: 0.5rem; margin-bottom: 0.5rem;">
+                                    <input type="text" name="guests_external[]" class="form-input" value="{{ guest }}" placeholder="Nome do convidado externo">
+                                    <button type="button" class="btn btn-sm btn-danger remove-item">✕</button>
+                                </div>
+                                {% endfor %}
+                            {% endif %}
+                        </div>
+                        <button type="button" class="btn btn-sm btn-secondary" onclick="addGuestExternal()">+ Adicionar Externo</button>
+                    </div>
+                </section>
+
+                <!-- Pauta -->
+                <section class="form-section surface-card" style="padding: 1.5rem; border-radius: 8px; margin-bottom: 1.5rem;">
+                    <h2 class="section-title" style="margin-bottom: 1rem;">Pauta</h2>
+                    <p style="color: var(--text-secondary); margin-bottom: 1.5rem;">Tópicos que serão discutidos na reunião.</p>
+                    
+                    <div id="agenda-list" style="margin-bottom: 0.5rem;">
+                        {% if meeting and meeting.agenda %}
+                            {% for item in meeting.agenda %}
+                            <div class="input-group" style="display: flex; gap: 0.5rem; margin-bottom: 0.5rem;">
+                                <input type="text" name="agenda[]" class="form-input" value="{{ item }}" placeholder="Tópico da pauta">
+                                <button type="button" class="btn btn-sm btn-danger remove-item">✕</button>
+                            </div>
+                            {% endfor %}
+                        {% endif %}
+                    </div>
+                    <button type="button" class="btn btn-sm btn-secondary" onclick="addAgendaItem()">+ Adicionar Tópico</button>
+                </section>
+
+                {% if action == 'edit' %}
+                <!-- Participantes (apenas na edição) -->
+                <section class="form-section surface-card" style="padding: 1.5rem; border-radius: 8px; margin-bottom: 1.5rem;">
+                    <h2 class="section-title" style="margin-bottom: 1rem;">Participantes</h2>
+                    <p style="color: var(--text-secondary); margin-bottom: 1.5rem;">Quem efetivamente participou da reunião.</p>
+                    
+                    <div class="form-group">
+                        <label class="form-label">Participantes Internos</label>
+                        <div id="participants-internal-list" style="margin-bottom: 0.5rem;">
+                            {% if meeting.participants and meeting.participants.internal %}
+                                {% for participant in meeting.participants.internal %}
+                                <div class="input-group" style="display: flex; gap: 0.5rem; margin-bottom: 0.5rem;">
+                                    <input type="text" name="participants_internal[]" class="form-input" value="{{ participant }}">
+                                    <button type="button" class="btn btn-sm btn-danger remove-item">✕</button>
+                                </div>
+                                {% endfor %}
+                            {% endif %}
+                        </div>
+                        <button type="button" class="btn btn-sm btn-secondary" onclick="addParticipantInternal()">+ Adicionar</button>
+                    </div>
+
+                    <div class="form-group">
+                        <label class="form-label">Participantes Externos</label>
+                        <div id="participants-external-list" style="margin-bottom: 0.5rem;">
+                            {% if meeting.participants and meeting.participants.external %}
+                                {% for participant in meeting.participants.external %}
+                                <div class="input-group" style="display: flex; gap: 0.5rem; margin-bottom: 0.5rem;">
+                                    <input type="text" name="participants_external[]" class="form-input" value="{{ participant }}">
+                                    <button type="button" class="btn btn-sm btn-danger remove-item">✕</button>
+                                </div>
+                                {% endfor %}
+                            {% endif %}
+                        </div>
+                        <button type="button" class="btn btn-sm btn-secondary" onclick="addParticipantExternal()">+ Adicionar</button>
+                    </div>
+                </section>
+
+                <!-- Notas da Reunião -->
+                <section class="form-section surface-card" style="padding: 1.5rem; border-radius: 8px; margin-bottom: 1.5rem;">
+                    <h2 class="section-title" style="margin-bottom: 1rem;">Notas da Reunião</h2>
+                    <div class="form-group">
+                        <label for="meeting_notes" class="form-label">Observações Gerais</label>
+                        <textarea id="meeting_notes" 
+                                  name="meeting_notes" 
+                                  class="form-textarea" 
+                                  rows="4" 
+                                  placeholder="Anotações gerais da reunião...">{{ meeting.meeting_notes if meeting else '' }}</textarea>
+                    </div>
+                </section>
+
+                <!-- Discussões -->
+                <section class="form-section surface-card" style="padding: 1.5rem; border-radius: 8px; margin-bottom: 1.5rem;">
+                    <h2 class="section-title" style="margin-bottom: 1rem;">Discussões e Definições</h2>
+                    <p style="color: var(--text-secondary); margin-bottom: 1.5rem;">Pontos discutidos e decisões tomadas.</p>
+                    
+                    <div id="discussions-list" style="margin-bottom: 0.5rem;">
+                        {% if meeting and meeting.discussions %}
+                            {% for discussion in meeting.discussions %}
+                            <div class="discussion-item" style="border: 1px solid var(--border-color); padding: 1rem; border-radius: 4px; margin-bottom: 0.5rem;">
+                                <div style="display: flex; justify-content: space-between; margin-bottom: 0.5rem;">
+                                    <input type="text" name="discussion_topic[]" class="form-input" value="{{ discussion.topic }}" placeholder="Tópico discutido" style="flex: 1;">
+                                    <button type="button" class="btn btn-sm btn-danger remove-item" style="margin-left: 0.5rem;">✕</button>
+                                </div>
+                                <textarea name="discussion_text[]" class="form-textarea" rows="2" placeholder="Descrição da discussão e definições...">{{ discussion.text }}</textarea>
+                            </div>
+                            {% endfor %}
+                        {% endif %}
+                    </div>
+                    <button type="button" class="btn btn-sm btn-secondary" onclick="addDiscussion()">+ Adicionar Discussão</button>
+                </section>
+
+                <!-- Atividades -->
+                <section class="form-section surface-card" style="padding: 1.5rem; border-radius: 8px; margin-bottom: 1.5rem;">
+                    <h2 class="section-title" style="margin-bottom: 1rem;">Atividades Criadas</h2>
+                    <p style="color: var(--text-secondary); margin-bottom: 1.5rem;">Ações e tarefas definidas na reunião.</p>
+                    
+                    <div id="activities-list" style="margin-bottom: 0.5rem;">
+                        {% if meeting and meeting.activities %}
+                            {% for activity in meeting.activities %}
+                            <div class="activity-item" style="border: 1px solid var(--border-color); padding: 1rem; border-radius: 4px; margin-bottom: 0.5rem;">
+                                <div style="display: grid; grid-template-columns: 2fr 1fr 1fr auto; gap: 0.5rem; align-items: start; margin-bottom: 0.5rem;">
+                                    <input type="text" name="activity_title[]" class="form-input" value="{{ activity.title }}" placeholder="Título da atividade">
+                                    <input type="text" name="activity_responsible[]" class="form-input" value="{{ activity.responsible }}" placeholder="Responsável">
+                                    <input type="date" name="activity_deadline[]" class="form-input" value="{{ activity.deadline }}">
+                                    <button type="button" class="btn btn-sm btn-danger remove-item">✕</button>
+                                </div>
+                                <div style="display: grid; grid-template-columns: 3fr 1fr; gap: 0.5rem; margin-bottom: 0.5rem;">
+                                    <div>
+                                        <label class="form-label" style="font-size: 0.875rem; color: var(--text-secondary); margin-bottom: 0.25rem;">Como (Detalhes da Execução)</label>
+                                        <textarea name="activity_how[]" class="form-textarea" rows="3" placeholder="Como será executada a atividade">{{ activity.how if activity.how else '' }}</textarea>
+                                    </div>
+                                    <div>
+                                        <label class="form-label" style="font-size: 0.875rem; color: var(--text-secondary); margin-bottom: 0.25rem;">Projeto</label>
+                                        <select name="activity_project[]" class="form-input">
+                                            <option value="">Padrão</option>
+                                        </select>
+                                    </div>
+                                </div>
+                            </div>
+                            {% endfor %}
+                        {% endif %}
+                    </div>
+                    <button type="button" class="btn btn-sm btn-secondary" onclick="addActivity()">+ Adicionar Atividade</button>
+                </section>
+                {% endif %}
+
+                <!-- Ações do Formulário -->
+                <div class="form-actions" style="display: flex; gap: 1rem; justify-content: flex-end; padding-top: 1.5rem; border-top: 1px solid var(--border-color);">
+                    <a href="{{ url_for('meetings.meetings_list', company_id=company.id) }}" class="btn btn-secondary">Cancelar</a>
+                    <button type="submit" class="btn btn-primary">{{ 'Criar Reunião' if action == 'new' else 'Salvar Alterações' }}</button>
+                </div>
+            </form>
+        </div>
+    </main>
+</div>
+
+<script>
+// Função para remover itens
+document.addEventListener('click', function(e) {
+    if (e.target.classList.contains('remove-item')) {
+        e.target.closest('.input-group, .discussion-item, .activity-item').remove();
+    }
+});
+
+// Adicionar convidado interno
+function addGuestInternal() {
+    const list = document.getElementById('guests-internal-list');
+    const div = document.createElement('div');
+    div.className = 'input-group';
+    div.style.cssText = 'display: flex; gap: 0.5rem; margin-bottom: 0.5rem;';
+    div.innerHTML = `
+        <input type="text" name="guests_internal[]" class="form-input" placeholder="Nome do colaborador">
+        <button type="button" class="btn btn-sm btn-danger remove-item">✕</button>
+    `;
+    list.appendChild(div);
+}
+
+// Adicionar convidado externo
+function addGuestExternal() {
+    const list = document.getElementById('guests-external-list');
+    const div = document.createElement('div');
+    div.className = 'input-group';
+    div.style.cssText = 'display: flex; gap: 0.5rem; margin-bottom: 0.5rem;';
+    div.innerHTML = `
+        <input type="text" name="guests_external[]" class="form-input" placeholder="Nome do convidado externo">
+        <button type="button" class="btn btn-sm btn-danger remove-item">✕</button>
+    `;
+    list.appendChild(div);
+}
+
+// Adicionar item da pauta
+function addAgendaItem() {
+    const list = document.getElementById('agenda-list');
+    const div = document.createElement('div');
+    div.className = 'input-group';
+    div.style.cssText = 'display: flex; gap: 0.5rem; margin-bottom: 0.5rem;';
+    div.innerHTML = `
+        <input type="text" name="agenda[]" class="form-input" placeholder="Tópico da pauta">
+        <button type="button" class="btn btn-sm btn-danger remove-item">✕</button>
+    `;
+    list.appendChild(div);
+}
+
+// Adicionar participante interno
+function addParticipantInternal() {
+    const list = document.getElementById('participants-internal-list');
+    const div = document.createElement('div');
+    div.className = 'input-group';
+    div.style.cssText = 'display: flex; gap: 0.5rem; margin-bottom: 0.5rem;';
+    div.innerHTML = `
+        <input type="text" name="participants_internal[]" class="form-input" placeholder="Nome do participante">
+        <button type="button" class="btn btn-sm btn-danger remove-item">✕</button>
+    `;
+    list.appendChild(div);
+}
+
+// Adicionar participante externo
+function addParticipantExternal() {
+    const list = document.getElementById('participants-external-list');
+    const div = document.createElement('div');
+    div.className = 'input-group';
+    div.style.cssText = 'display: flex; gap: 0.5rem; margin-bottom: 0.5rem;';
+    div.innerHTML = `
+        <input type="text" name="participants_external[]" class="form-input" placeholder="Nome do participante">
+        <button type="button" class="btn btn-sm btn-danger remove-item">✕</button>
+    `;
+    list.appendChild(div);
+}
+
+// Adicionar discussão
+function addDiscussion() {
+    const list = document.getElementById('discussions-list');
+    const div = document.createElement('div');
+    div.className = 'discussion-item';
+    div.style.cssText = 'border: 1px solid var(--border-color); padding: 1rem; border-radius: 4px; margin-bottom: 0.5rem;';
+    div.innerHTML = `
+        <div style="display: flex; justify-content: space-between; margin-bottom: 0.5rem;">
+            <input type="text" name="discussion_topic[]" class="form-input" placeholder="Tópico discutido" style="flex: 1;">
+            <button type="button" class="btn btn-sm btn-danger remove-item" style="margin-left: 0.5rem;">✕</button>
+        </div>
+        <textarea name="discussion_text[]" class="form-textarea" rows="2" placeholder="Descrição da discussão e definições..."></textarea>
+    `;
+    list.appendChild(div);
+}
+
+// Adicionar atividade
+function addActivity() {
+    const list = document.getElementById('activities-list');
+    const div = document.createElement('div');
+    div.className = 'activity-item';
+    div.style.cssText = 'border: 1px solid var(--border-color); padding: 1rem; border-radius: 4px; margin-bottom: 0.5rem;';
+    div.innerHTML = `
+        <div style="display: grid; grid-template-columns: 2fr 1fr 1fr auto; gap: 0.5rem; align-items: start; margin-bottom: 0.5rem;">
+            <input type="text" name="activity_title[]" class="form-input" placeholder="Título da atividade">
+            <input type="text" name="activity_responsible[]" class="form-input" placeholder="Responsável">
+            <input type="date" name="activity_deadline[]" class="form-input">
+            <button type="button" class="btn btn-sm btn-danger remove-item">✕</button>
+        </div>
+        <div style="display: grid; grid-template-columns: 3fr 1fr; gap: 0.5rem; margin-bottom: 0.5rem;">
+            <div>
+                <label class="form-label" style="font-size: 0.875rem; color: var(--text-secondary); margin-bottom: 0.25rem;">Como (Detalhes da Execução)</label>
+                <textarea name="activity_how[]" class="form-textarea" rows="3" placeholder="Como será executada a atividade"></textarea>
+            </div>
+            <div>
+                <label class="form-label" style="font-size: 0.875rem; color: var(--text-secondary); margin-bottom: 0.25rem;">Projeto</label>
+                <select name="activity_project[]" class="form-input">
+                    <option value="">Padrão</option>
+                </select>
+            </div>
+        </div>
+    `;
+    list.appendChild(div);
+}
+</script>
+{% endblock %}
+

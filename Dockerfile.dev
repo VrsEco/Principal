@@ -1,0 +1,52 @@
+# ============================================
+# GestaoVersus - Dockerfile Desenvolvimento
+# ============================================
+# Imagem otimizada para desenvolvimento local
+# Com hot-reload e ferramentas de debug
+# ============================================
+
+FROM python:3.9-slim
+
+# Metadata
+LABEL maintainer="GestaoVersus Team"
+LABEL version="1.0-dev"
+LABEL description="GestaoVersus - Ambiente de Desenvolvimento"
+
+# Configurar variáveis de ambiente
+ENV PYTHONUNBUFFERED=1 \
+    PYTHONDONTWRITEBYTECODE=1 \
+    FLASK_ENV=development \
+    FLASK_DEBUG=1
+
+# Instalar dependências do sistema + ferramentas dev
+RUN apt-get update && apt-get install -y --no-install-recommends \
+    gcc \
+    g++ \
+    libpq-dev \
+    postgresql-client \
+    curl \
+    vim \
+    git \
+    && rm -rf /var/lib/apt/lists/*
+
+# Criar diretório de trabalho
+WORKDIR /app
+
+# Copiar requirements
+COPY requirements.txt .
+
+# Instalar dependências Python + ferramentas dev
+RUN pip install --upgrade pip && \
+    pip install -r requirements.txt && \
+    pip install pytest pytest-flask black flake8 ipython ipdb
+
+# Expor porta
+EXPOSE 5002
+
+# Health check
+HEALTHCHECK --interval=30s --timeout=10s --start-period=40s --retries=3 \
+    CMD curl -f http://localhost:5002/health || exit 1
+
+# Comando de inicialização (dev server com hot-reload)
+CMD ["python", "app_pev.py"]
+

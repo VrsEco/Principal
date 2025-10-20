@@ -1,0 +1,578 @@
+{% extends "base.html" %}
+
+{% block title %}Configurações de Relatórios{% endblock %}
+
+{% block extra_head %}
+<style>
+  .report-settings-shell {
+    display: grid;
+    gap: 20px;
+  }
+
+  .settings-header {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+  }
+
+  .settings-title {
+    font-size: 18px;
+    font-weight: 600;
+    color: #0f172a;
+  }
+
+  .settings-subtitle {
+    font-size: 12px;
+    color: #64748b;
+    max-width: 720px;
+  }
+
+  .settings-grid {
+    display: grid;
+    gap: 20px;
+  }
+
+  .settings-grid-primary {
+    grid-template-columns: 1fr;
+    align-items: stretch;
+  }
+
+  @media (min-width: 960px) {
+    .settings-grid-primary {
+      grid-template-columns: 2fr 1fr;
+    }
+  }
+
+  @media (min-width: 1200px) {
+    .settings-grid-primary {
+      grid-template-columns: 2fr 1fr;
+    }
+  }
+
+  .settings-card {
+    background: #ffffff;
+    border: 1px solid #e2e8f0;
+    border-radius: 16px;
+    padding: 16px;
+    display: grid;
+    gap: 12px;
+    box-shadow: 0 20px 40px rgba(15, 23, 42, 0.08);
+  }
+
+  .structure-card {
+    gap: 10px;
+    padding: 14px;
+    height: 100%;
+    font-size: 12px;
+    line-height: 1.4;
+  }
+
+  .structure-card h2 {
+    font-size: 14px;
+  }
+
+  .structure-card .subsection-title {
+    font-size: 11px;
+  }
+
+  .structure-card .field-group {
+    gap: 8px;
+  }
+
+  .structure-card .field-row {
+    gap: 6px;
+  }
+
+  .structure-card .field-input input,
+  .structure-card .field-input select,
+  .structure-card .field-input textarea {
+    padding: 6px 8px;
+    font-size: 12px;
+    border-radius: 6px;
+  }
+
+  .structure-card .field-input textarea {
+    min-height: 40px;
+  }
+
+  .settings-card h2 {
+    margin: 0;
+    font-size: 15px;
+    font-weight: 600;
+    color: #0f172a;
+  }
+
+  .settings-card p {
+    margin: 0;
+    color: #475569;
+    font-size: 11px;
+    line-height: 1.35;
+  }
+
+  .field-group {
+    display: grid;
+    gap: 12px;
+  }
+
+  .field-row {
+    display: grid;
+    gap: 8px;
+  }
+
+  @media (min-width: 720px) {
+    .field-row {
+      grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
+    }
+  }
+
+  label.field-label {
+    font-size: 10px;
+    font-weight: 600;
+    color: #334155;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+  }
+
+  .field-input {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+  }
+
+  .field-input input,
+  .field-input select,
+  .field-input textarea {
+    width: 100%;
+    border: 1px solid #cbd5f5;
+    border-radius: 8px;
+    padding: 6px 10px;
+    font-size: 12px;
+    color: #1e293b;
+    background: #f8fafc;
+    transition: border-color 0.2s ease;
+  }
+
+  .field-input input:focus,
+  .field-input select:focus,
+  .field-input textarea:focus {
+    outline: none;
+    border-color: #38bdf8;
+    background: #ffffff;
+    box-shadow: 0 0 0 3px rgba(56, 189, 248, 0.15);
+  }
+
+  .preview-card {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+    height: 100%;
+    padding: 12px;
+  }
+
+  .preview-canvas-container {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    padding: 20px;
+    min-height: 200px;
+  }
+
+  .preview-canvas {
+    background: repeating-linear-gradient(
+      0deg,
+      rgba(148, 163, 184, 0.08),
+      rgba(148, 163, 184, 0.08) 6px,
+      transparent 6px,
+      transparent 12px
+    );
+    border: 1px dashed #cbd5e1;
+    border-radius: 12px;
+    object-fit: contain;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+  }
+
+  .preset-list {
+    display: grid;
+    gap: 16px;
+  }
+
+  .preset-card {
+    border: 1px solid #cbd5e1;
+    border-radius: 14px;
+    padding: 14px;
+    background: #ffffff;
+    display: grid;
+    gap: 10px;
+  }
+
+  .preset-card-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: 8px;
+  }
+
+  .preset-name {
+    font-size: 14px;
+    font-weight: 600;
+    color: #0f172a;
+  }
+
+  .preset-meta {
+    display: flex;
+    gap: 10px;
+    flex-wrap: wrap;
+  }
+
+  .preset-meta span {
+    font-size: 11px;
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+    padding: 4px 8px;
+    border-radius: 999px;
+    border: 1px solid #cbd5e1;
+    background: #f8fafc;
+    color: #475569;
+  }
+
+  .preset-actions {
+    display: flex;
+    gap: 8px;
+  }
+
+  .btn-link {
+    border: 1px solid #38bdf8;
+    color: #0e7490;
+    padding: 6px 12px;
+    border-radius: 999px;
+    font-size: 13px;
+    font-weight: 600;
+    text-decoration: none;
+    transition: background 0.2s ease, color 0.2s ease;
+  }
+
+  .btn-link:hover {
+    background: #0e7490;
+    color: #ffffff;
+  }
+
+  .helper-text {
+    font-size: 10px;
+    color: #94a3b8;
+  }
+
+  .settings-subsection {
+    border-top: 1px solid #e2e8f0;
+    padding-top: 18px;
+    margin-top: 12px;
+  }
+
+  .settings-subsection:first-of-type {
+    border-top: none;
+    padding-top: 0;
+    margin-top: 0;
+  }
+
+  .subsection-title {
+    font-size: 15px;
+    font-weight: 600;
+    color: #0f172a;
+    margin: 0 0 12px 0;
+  }
+
+  .placeholder-card {
+    display: grid;
+    gap: 16px;
+  }
+
+  .placeholder-section {
+    background: #f8fafc;
+    border-radius: 12px;
+    padding: 12px;
+    border: 1px solid #e2e8f0;
+    display: grid;
+    gap: 8px;
+  }
+
+  .placeholder-section h3 {
+    margin: 0;
+    font-size: 15px;
+    color: #0f172a;
+  }
+
+  .placeholder-section p {
+    margin: 0;
+    font-size: 13px;
+    color: #475569;
+    line-height: 1.6;
+  }
+
+  .placeholder-table {
+    border-collapse: collapse;
+    width: 100%;
+    font-size: 12px;
+  }
+
+  .placeholder-table th,
+  .placeholder-table td {
+    border: 1px solid #cbd5e1;
+    padding: 5px 6px;
+    text-align: left;
+  }
+
+  .placeholder-chart {
+    height: 100px;
+    background: linear-gradient(135deg, rgba(59, 130, 246, 0.12), rgba(99, 102, 241, 0.08));
+    border: 1px dashed #94a3b8;
+    border-radius: 12px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: #475569;
+    font-size: 12px;
+  }
+
+  .action-buttons {
+    display: flex;
+    gap: 8px;
+    flex-wrap: wrap;
+  }
+
+  .btn-secondary {
+    border: 1px solid #0ea5e9;
+    border-radius: 10px;
+    padding: 6px 12px;
+    background: #0ea5e9;
+    color: #fff;
+    font-weight: 600;
+    font-size: 11px;
+    text-decoration: none;
+    cursor: pointer;
+    transition: transform 0.2s ease;
+  }
+
+  .btn-secondary:hover {
+    transform: translateY(-2px);
+  }
+
+  .btn-ghost {
+    border: 1px solid #94a3b8;
+    border-radius: 10px;
+    padding: 6px 12px;
+    background: transparent;
+    color: #475569;
+    font-weight: 600;
+    font-size: 11px;
+    cursor: pointer;
+    text-decoration: none;
+    transition: background 0.2s ease, color 0.2s ease;
+  }
+
+  .btn-ghost:hover {
+    background: #e2e8f0;
+    color: #0f172a;
+  }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="report-settings-shell">
+  <header class="settings-header">
+    <div>
+      <h1 class="settings-title">Configurações de Relatórios</h1>
+      <p class="settings-subtitle">
+        Defina margens, cabeçalho, rodapé e papeis padrão para os relatórios do ecossistema. Esses parâmetros
+        serão usados pelos geradores automáticos e pelos assistentes de IA para manter o padrão visual.
+      </p>
+    </div>
+    <div class="preset-actions" style="display: flex; gap: 8px;">
+      <button type="button" class="btn-link" id="save-model-btn-top" style="border-color:#22c55e; color:#166534;">💾 Salvar modelo</button>
+      <button type="button" class="btn-link" id="clear-fields-btn-top" style="border-color:#ef4444; color:#991b1b;">🗑️ Limpar campos</button>
+    </div>
+  </header>
+
+  <section class="settings-grid settings-grid-primary">
+    <div class="settings-card structure-card">
+      <div>
+        <h2>Estrutura da página</h2>
+        <p>Configure margens, cabeçalho e rodapé que serão aplicados em todos os relatórios vinculados a este modelo.</p>
+      </div>
+
+      <div class="settings-subsection">
+        <h3 class="subsection-title">Identificação do modelo</h3>
+        <div class="field-group">
+          <div class="field-row">
+            <div class="field-input">
+              <label class="field-label" for="preset_name_inline">Nome do modelo</label>
+              <input id="preset_name_inline" type="text" placeholder="Ex.: Relatório Executivo A4">
+            </div>
+            <div class="field-input">
+              <label class="field-label" for="preset_code">Código</label>
+              <input id="preset_code" type="text" readonly disabled style="background: #f1f5f9; cursor: not-allowed;" placeholder="Gerado automaticamente">
+            </div>
+          </div>
+          <div class="field-input">
+            <label class="field-label" for="preset_description_inline">Descrição</label>
+            <input id="preset_description_inline" type="text" placeholder="Descrição resumida do uso">
+          </div>
+        </div>
+      </div>
+
+      <div class="settings-subsection">
+        <h3 class="subsection-title">Parâmetros de página</h3>
+        <div class="field-group">
+          <div class="field-row">
+            <div class="field-input">
+              <label class="field-label" for="paper_size">Tamanho do papel</label>
+              <select id="paper_size" name="paper_size">
+                <option>A4</option>
+                <option>Carta</option>
+                <option>Ofício</option>
+              </select>
+            </div>
+            <div class="field-input">
+              <label class="field-label" for="orientation">Orientação</label>
+              <select id="orientation" name="orientation">
+                <option>Retrato</option>
+                <option>Paisagem</option>
+              </select>
+            </div>
+          </div>
+          <div class="field-row">
+            <div class="field-input">
+              <label class="field-label" for="margin_top">Margem superior (mm)</label>
+              <input id="margin_top" type="number" min="0" step="1" value="20">
+            </div>
+            <div class="field-input">
+              <label class="field-label" for="margin_bottom">Margem inferior (mm)</label>
+              <input id="margin_bottom" type="number" min="0" step="1" value="15">
+            </div>
+          </div>
+          <div class="field-row">
+            <div class="field-input">
+              <label class="field-label" for="margin_left">Margem esquerda (mm)</label>
+              <input id="margin_left" type="number" min="0" step="1" value="20">
+            </div>
+            <div class="field-input">
+              <label class="field-label" for="margin_right">Margem direita (mm)</label>
+              <input id="margin_right" type="number" min="0" step="1" value="15">
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div class="settings-subsection">
+        <h3 class="subsection-title">Configuração do cabeçalho</h3>
+        <div class="field-group">
+          <div class="field-row">
+            <div class="field-input">
+              <label class="field-label" for="header_height">Altura (mm)</label>
+              <input id="header_height" type="number" min="0" step="1" value="25">
+            </div>
+            <div class="field-input">
+              <label class="field-label" for="header_rows">Linhas</label>
+              <input id="header_rows" type="number" min="1" step="1" value="2">
+            </div>
+            <div class="field-input">
+              <label class="field-label" for="header_columns">Colunas</label>
+              <input id="header_columns" type="number" min="1" step="1" value="3">
+            </div>
+          </div>
+          <div class="field-input">
+            <label class="field-label" for="header_content">Conteúdo (markdown leve)</label>
+            <textarea id="header_content" rows="3" placeholder="Ex.: ## {{ '{{ company.name }}' }} | **{{ '{{ report.title }}' }}** | {{ '{{ date }}' }}"></textarea>
+            <div class="helper-text" style="font-size: 10px; margin-top: 4px; color: #64748b;">
+              Variáveis: {{ '{{ company.name }}' }}, {{ '{{ report.title }}' }}, {{ '{{ date }}' }}, {{ '{{ time }}' }}, {{ '{{ year }}' }}<br>
+              Markdown: **negrito**, *itálico*, ## Título, [link](url)
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div class="settings-subsection">
+        <h3 class="subsection-title">Configuração do rodapé</h3>
+        <div class="field-group">
+          <div class="field-row">
+            <div class="field-input">
+              <label class="field-label" for="footer_height">Altura (mm)</label>
+              <input id="footer_height" type="number" min="0" step="1" value="12">
+            </div>
+            <div class="field-input">
+              <label class="field-label" for="footer_rows">Linhas</label>
+              <input id="footer_rows" type="number" min="1" step="1" value="1">
+            </div>
+            <div class="field-input">
+              <label class="field-label" for="footer_columns">Colunas</label>
+              <input id="footer_columns" type="number" min="1" step="1" value="2">
+            </div>
+          </div>
+          <div class="field-input">
+          <label class="field-label" for="footer_content">Conteúdo (markdown leve)</label>
+          <textarea id="footer_content" rows="3" placeholder="Ex.: © {{ '{{ year }}' }} **{{ '{{ system }}' }}** | Página {{ '{{ page }}' }} de {{ '{{ pages }}' }}"></textarea>
+          <div class="helper-text" style="font-size: 10px; margin-top: 4px; color: #64748b;">
+            Variáveis: {{ '{{ system }}' }}, {{ '{{ page }}' }}, {{ '{{ pages }}' }}, {{ '{{ year }}' }}, {{ '{{ datetime }}' }}<br>
+            Markdown: **negrito**, *itálico*, ## Título, [link](url)
+          </div>
+        </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="settings-card preview-card">
+      <div>
+        <h2>Pré-visualização</h2>
+        <p class="helper-text">Esquema simplificado para validar margens, cabeçalho e rodapé.</p>
+      </div>
+      <div class="preview-canvas-container">
+        <canvas class="preview-canvas" id="pagePreview"></canvas>
+      </div>
+    </div>
+  </section>
+
+
+  <section class="settings-card preset-list" aria-label="Modelos cadastrados">
+    <div>
+      <h2>Modelos disponíveis</h2>
+      <p class="helper-text">Aplique ou edite um modelo para padronizar os relatórios das equipes.</p>
+    </div>
+    {% if page_styles %}
+      {% for style in page_styles %}
+        <article class="preset-card">
+          <div class="preset-card-header">
+            <span class="preset-name">{{ style.name }}</span>
+            <div class="preset-actions">
+              <a class="btn-link apply-model-btn" href="#" data-model-id="{{style.id}}">Aplicar</a>
+              <a class="btn-link edit-model-btn" href="#" data-model-id="{{style.id}}">Editar</a>
+              <a class="btn-link delete-model-btn" href="#" data-model-id="{{style.id}}" style="border-color:#ef4444; color:#991b1b;">Excluir</a>
+            </div>
+          </div>
+          <p>{{ style.description }}</p>
+          <div class="preset-meta">
+            <span><strong>{{ style.code }}</strong></span>
+            <span>{{ style.paper_size }} • {{ style.orientation }}</span>
+            <span>Margens: {{ style.margins.top }} / {{ style.margins.right }} / {{ style.margins.bottom }} / {{ style.margins.left }} mm</span>
+            <span>Cabeçalho: {{ style.header_height }} mm</span>
+            <span>Rodapé: {{ style.footer_height }} mm</span>
+          </div>
+          <div class="helper-text">
+            Seções sugeridas: {{ style.sections|join(', ') }}
+          </div>
+          <div class="model-report-actions" style="margin-top: 15px; padding-top: 15px; border-top: 1px solid #e2e8f0;">
+            <div class="action-buttons">
+              <button type="button" class="btn-secondary model-preview-btn" data-model-id="{{style.id}}">🖨️ Visualizar impressão</button>
+              <button type="button" class="btn-ghost model-generate-btn" data-model-id="{{style.id}}">📄 Gerar PDF</button>
+            </div>
+          </div>
+        </article>
+      {% endfor %}
+    {% else %}
+      <p class="helper-text">Nenhum modelo cadastrado ainda. Salve o primeiro acima.</p>
+    {% endif %}
+  </section>
+
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script src="{{ url_for('static', filename='js/report_settings.js') }}"></script>
+{% endblock %}
