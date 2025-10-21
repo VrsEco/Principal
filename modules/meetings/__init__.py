@@ -35,7 +35,7 @@ def meetings_manage(company_id):
         cursor.execute('''
             SELECT id, name, email, whatsapp 
             FROM employees 
-            WHERE company_id = ? 
+            WHERE company_id = %s 
             ORDER BY name
         ''', (company_id,))
         employees = [dict(row) for row in cursor.fetchall()]
@@ -44,7 +44,7 @@ def meetings_manage(company_id):
         cursor.execute('''
             SELECT id, title, description, usage_count
             FROM meeting_agenda_items
-            WHERE company_id = ?
+            WHERE company_id = %s
             ORDER BY usage_count DESC, title
         ''', (company_id,))
         agenda_items = [dict(row) for row in cursor.fetchall()]
@@ -106,7 +106,7 @@ def meeting_edit(company_id, meeting_id):
         cursor.execute('''
             SELECT id, name, email, whatsapp 
             FROM employees 
-            WHERE company_id = ? 
+            WHERE company_id = %s 
             ORDER BY name
         ''', (company_id,))
         employees = [dict(row) for row in cursor.fetchall()]
@@ -115,7 +115,7 @@ def meeting_edit(company_id, meeting_id):
         cursor.execute('''
             SELECT id, title, description, usage_count
             FROM meeting_agenda_items
-            WHERE company_id = ?
+            WHERE company_id = %s
             ORDER BY usage_count DESC, title
         ''', (company_id,))
         agenda_items = [dict(row) for row in cursor.fetchall()]
@@ -501,7 +501,7 @@ PARTICIPANTES:
         cursor = conn.cursor()
         
         # Buscar o JSON de atividades do projeto
-        cursor.execute('SELECT code, activities FROM company_projects WHERE id = ?', (meeting['project_id'],))
+        cursor.execute('SELECT code, activities FROM company_projects WHERE id = %s', (meeting['project_id'],))
         row = cursor.fetchone()
 
         project_code = row['code'] if row else None
@@ -571,13 +571,13 @@ PARTICIPANTES:
         
         # Atualizar projeto
         cursor.execute(
-            'UPDATE company_projects SET activities = ? WHERE id = ?',
+            'UPDATE company_projects SET activities = %s WHERE id = %s',
             (json.dumps(project_activities, ensure_ascii=False), meeting['project_id'])
         )
         
         # Atualizar status da reunião
         cursor.execute(
-            "UPDATE meetings SET status = 'completed' WHERE id = ?",
+            "UPDATE meetings SET status = 'completed' WHERE id = %s",
             (meeting_id,)
         )
         
@@ -626,7 +626,7 @@ def api_sync_meeting_activities(meeting_id):
         # PostgreSQL retorna Row objects por padrão
         cursor = conn.cursor()
 
-        cursor.execute('SELECT code, activities FROM company_projects WHERE id = ?', (meeting['project_id'],))
+        cursor.execute('SELECT code, activities FROM company_projects WHERE id = %s', (meeting['project_id'],))
         row = cursor.fetchone()
 
         project_activities = []
@@ -692,7 +692,7 @@ def api_sync_meeting_activities(meeting_id):
         project_activities, _, _ = normalize_project_activities(project_activities, project_code)
 
         cursor.execute(
-            'UPDATE company_projects SET activities = ? WHERE id = ?',
+            'UPDATE company_projects SET activities = %s WHERE id = %s',
             (json.dumps(project_activities, ensure_ascii=False), meeting['project_id'])
         )
 
@@ -739,7 +739,7 @@ def api_check_meeting_sync(meeting_id):
         meeting_activities = meeting.get('activities', [])
         
         # Buscar atividades do projeto
-        cursor.execute('SELECT code, activities FROM company_projects WHERE id = ?', (meeting['project_id'],))
+        cursor.execute('SELECT code, activities FROM company_projects WHERE id = %s', (meeting['project_id'],))
         row = cursor.fetchone()
         
         project_activities = []
@@ -801,7 +801,7 @@ def api_remove_activity_from_project(meeting_id):
         cursor = conn.cursor()
         
         # Buscar atividades do projeto
-        cursor.execute('SELECT code, activities FROM company_projects WHERE id = ?', (meeting['project_id'],))
+        cursor.execute('SELECT code, activities FROM company_projects WHERE id = %s', (meeting['project_id'],))
         row = cursor.fetchone()
         
         project_activities = []
@@ -827,7 +827,7 @@ def api_remove_activity_from_project(meeting_id):
 
         # Atualizar projeto
         cursor.execute(
-            'UPDATE company_projects SET activities = ? WHERE id = ?',
+            'UPDATE company_projects SET activities = %s WHERE id = %s',
             (json.dumps(project_activities, ensure_ascii=False), meeting['project_id'])
         )
         
@@ -920,7 +920,7 @@ def api_save_agenda_item(company_id):
         
         cursor.execute('''
             INSERT INTO meeting_agenda_items (company_id, title, description, usage_count)
-            VALUES (?, ?, ?, 0)
+            VALUES (%s, %s, %s, 0)
         ''', (company_id, data.get('title'), data.get('description', '')))
         
         item_id = cursor.lastrowid
@@ -999,7 +999,7 @@ def api_use_agenda_item(item_id):
         cursor.execute('''
             UPDATE meeting_agenda_items 
             SET usage_count = usage_count + 1 
-            WHERE id = ?
+            WHERE id = %s
         ''', (item_id,))
         
         conn.commit()

@@ -1,13 +1,14 @@
 ﻿from flask import Blueprint, render_template, abort, url_for, make_response, request, jsonify, redirect
 from datetime import datetime
 import re
+from typing import Optional
 from config_database import get_db
 from middleware.auto_log_decorator import auto_log_crud
 
 grv_bp = Blueprint('grv', __name__, url_prefix='/grv')
 
 
-def normalize_indicator_code(code: str | None) -> str | None:
+def normalize_indicator_code(code: Optional[str]) -> Optional[str]:
     if not code:
         return code
     return code.replace('.IND.', '.')
@@ -232,17 +233,17 @@ def grv_dashboard():
             conn = pg_connect()
             cursor = conn.cursor()
             
-            cursor.execute("SELECT COUNT(*) FROM processes WHERE company_id = ?", (company['id'],))
+            cursor.execute("SELECT COUNT(*) FROM processes WHERE company_id = %s", (company['id'],))
             result = cursor.fetchone()
             if result:
                 process_count = result[0]
             
-            cursor.execute("SELECT COUNT(*) FROM process_areas WHERE company_id = ?", (company['id'],))
+            cursor.execute("SELECT COUNT(*) FROM process_areas WHERE company_id = %s", (company['id'],))
             result = cursor.fetchone()
             if result:
                 areas_count = result[0]
             
-            cursor.execute("SELECT COUNT(*) FROM company_projects WHERE company_id = ?", (company['id'],))
+            cursor.execute("SELECT COUNT(*) FROM company_projects WHERE company_id = %s", (company['id'],))
             result = cursor.fetchone()
             if result:
                 projects_count = result[0]
@@ -924,7 +925,7 @@ def grv_routine_activities(company_id: int):
     ensure_indicator_goals_schema(conn)
     
     # Get all employees for filters
-    cursor.execute('SELECT id, name FROM employees WHERE company_id = ? ORDER BY name', (company_id,))
+    cursor.execute('SELECT id, name FROM employees WHERE company_id = %s ORDER BY name', (company_id,))
     employees = [dict(row) for row in cursor.fetchall()]
     
     # Get all processes for filters
@@ -932,7 +933,7 @@ def grv_routine_activities(company_id: int):
         '''
         SELECT id, code, name
         FROM processes
-        WHERE company_id = ?
+        WHERE company_id = %s
         ORDER BY 
             CASE WHEN code IS NULL OR TRIM(code) = '' THEN 1 ELSE 0 END,
             code,
@@ -943,7 +944,7 @@ def grv_routine_activities(company_id: int):
     processes = [dict(row) for row in cursor.fetchall()]
     
     # Get all projects for filters
-    cursor.execute('SELECT id, code, title as name FROM company_projects WHERE company_id = ? ORDER BY title', (company_id,))
+    cursor.execute('SELECT id, code, title as name FROM company_projects WHERE company_id = %s ORDER BY title', (company_id,))
     projects = [dict(row) for row in cursor.fetchall()]
     
     conn.close()
@@ -972,7 +973,7 @@ def grv_routine_incidents(company_id: int):
     cursor = conn.cursor()
     
     # Get employees
-    cursor.execute('SELECT id, name FROM employees WHERE company_id = ? ORDER BY name', (company_id,))
+    cursor.execute('SELECT id, name FROM employees WHERE company_id = %s ORDER BY name', (company_id,))
     employees = [dict(row) for row in cursor.fetchall()]
     
     # Get processes
@@ -980,7 +981,7 @@ def grv_routine_incidents(company_id: int):
         '''
         SELECT id, code, name
         FROM processes
-        WHERE company_id = ?
+        WHERE company_id = %s
         ORDER BY 
             CASE WHEN code IS NULL OR TRIM(code) = '' THEN 1 ELSE 0 END,
             code,
@@ -991,7 +992,7 @@ def grv_routine_incidents(company_id: int):
     processes = [dict(row) for row in cursor.fetchall()]
     
     # Get projects
-    cursor.execute('SELECT id, code, title as name FROM company_projects WHERE company_id = ? ORDER BY title', (company_id,))
+    cursor.execute('SELECT id, code, title as name FROM company_projects WHERE company_id = %s ORDER BY title', (company_id,))
     projects = [dict(row) for row in cursor.fetchall()]
     
     conn.close()
@@ -1037,7 +1038,7 @@ def grv_projects_projects(company_id: int):
         # PostgreSQL retorna Row objects por padrão
         cursor = conn.cursor()
         cursor.execute(
-            "SELECT id, code, name FROM portfolios WHERE company_id = ? ORDER BY LOWER(name)",
+            "SELECT id, code, name FROM portfolios WHERE company_id = %s ORDER BY LOWER(name)",
             (company_id,)
         )
         for row in cursor.fetchall():
@@ -1099,7 +1100,7 @@ def grv_project_manage(company_id: int, project_id: int):
         LEFT JOIN portfolios pf ON pf.id = p.plan_id AND p.plan_type = 'GRV'
         LEFT JOIN plans pl ON pl.id = p.plan_id AND p.plan_type = 'PEV'
         LEFT JOIN employees e ON e.id = p.responsible_id
-        WHERE p.company_id = ? AND p.id = ?
+        WHERE p.company_id = %s AND p.id = %s
         """,
         (company_id, project_id)
     )
@@ -1160,7 +1161,7 @@ def grv_projects_analysis(company_id: int):
         LEFT JOIN portfolios pf ON pf.id = p.plan_id AND p.plan_type = 'GRV'
         LEFT JOIN plans pl ON pl.id = p.plan_id AND p.plan_type = 'PEV'
         LEFT JOIN employees e ON e.id = p.responsible_id
-        WHERE p.company_id = ?
+        WHERE p.company_id = %s
         ORDER BY p.created_at DESC
         """,
         (company_id,)
@@ -1269,7 +1270,7 @@ def grv_process_instance_manage(company_id: int, instance_id: int):
             p.code AS process_code
         FROM process_instances pi
         LEFT JOIN processes p ON p.id = pi.process_id
-        WHERE pi.company_id = ? AND pi.id = ?
+        WHERE pi.company_id = %s AND pi.id = %s
         """,
         (company_id, instance_id)
     )
@@ -1311,7 +1312,7 @@ def grv_indicators_tree(company_id: int):
 
 @grv_bp.route('/company/<int:company_id>/indicator-groups/form', defaults={'group_id': None})
 @grv_bp.route('/company/<int:company_id>/indicator-groups/form/<int:group_id>')
-def grv_indicator_group_form(company_id: int, group_id: int | None = None):
+def grv_indicator_group_form(company_id: int, group_id: Optional[int] = None):
     """FormulÃ¡rio em popup para criar ou editar grupos de indicadores."""
     db = get_db()
     company = db.get_company(company_id) or {}
@@ -1325,7 +1326,7 @@ def grv_indicator_group_form(company_id: int, group_id: int | None = None):
         cursor.execute("""
             SELECT *
             FROM indicator_groups
-            WHERE id = ? AND company_id = ?
+            WHERE id = %s AND company_id = %s
         """, (group_id, company_id))
         row = cursor.fetchone()
         conn.close()
@@ -1353,15 +1354,15 @@ def grv_indicators_list(company_id: int):
     cursor = conn.cursor()
     
     # Get processes
-    cursor.execute('SELECT id, code, name FROM processes WHERE company_id = ? ORDER BY name', (company_id,))
+    cursor.execute('SELECT id, code, name FROM processes WHERE company_id = %s ORDER BY name', (company_id,))
     processes = [dict(row) for row in cursor.fetchall()]
     
     # Get projects
-    cursor.execute('SELECT id, code, title as name FROM company_projects WHERE company_id = ? ORDER BY title', (company_id,))
+    cursor.execute('SELECT id, code, title as name FROM company_projects WHERE company_id = %s ORDER BY title', (company_id,))
     projects = [dict(row) for row in cursor.fetchall()]
     
     # Get employees
-    cursor.execute('SELECT id, name FROM employees WHERE company_id = ? ORDER BY name', (company_id,))
+    cursor.execute('SELECT id, name FROM employees WHERE company_id = %s ORDER BY name', (company_id,))
     employees = [dict(row) for row in cursor.fetchall()]
     
     conn.close()
@@ -1379,7 +1380,7 @@ def grv_indicators_list(company_id: int):
 
 @grv_bp.route('/company/<int:company_id>/indicators/form', defaults={'indicator_id': None})
 @grv_bp.route('/company/<int:company_id>/indicators/form/<int:indicator_id>')
-def grv_indicator_form(company_id: int, indicator_id: int | None = None):
+def grv_indicator_form(company_id: int, indicator_id: Optional[int] = None):
     """FormulÃ¡rio pop-up para criaÃ§Ã£o/ediÃ§Ã£o de indicadores"""
     from database.postgres_helper import connect as pg_connect
     db = get_db()
@@ -1399,14 +1400,14 @@ def grv_indicator_form(company_id: int, indicator_id: int | None = None):
     # PostgreSQL retorna Row objects por padrão
     cursor = conn.cursor()
 
-    cursor.execute('SELECT id, code, name FROM indicator_groups WHERE company_id = ? ORDER BY code', (company_id,))
+    cursor.execute('SELECT id, code, name FROM indicator_groups WHERE company_id = %s ORDER BY code', (company_id,))
     groups = [dict(row) for row in cursor.fetchall()]
 
     cursor.execute(
         '''
         SELECT id, code, name
         FROM processes
-        WHERE company_id = ?
+        WHERE company_id = %s
         ORDER BY 
             CASE WHEN code IS NULL OR TRIM(code) = '' THEN 1 ELSE 0 END,
             code,
@@ -1416,10 +1417,10 @@ def grv_indicator_form(company_id: int, indicator_id: int | None = None):
     )
     processes = [dict(row) for row in cursor.fetchall()]
 
-    cursor.execute('SELECT id, code, title as name FROM company_projects WHERE company_id = ? ORDER BY title', (company_id,))
+    cursor.execute('SELECT id, code, title as name FROM company_projects WHERE company_id = %s ORDER BY title', (company_id,))
     projects = [dict(row) for row in cursor.fetchall()]
 
-    cursor.execute('SELECT id, name FROM employees WHERE company_id = ? ORDER BY name', (company_id,))
+    cursor.execute('SELECT id, name FROM employees WHERE company_id = %s ORDER BY name', (company_id,))
     employees = [dict(row) for row in cursor.fetchall()]
 
     # Buscar planejamentos da empresa
@@ -1431,7 +1432,7 @@ def grv_indicator_form(company_id: int, indicator_id: int | None = None):
         cursor.execute("""
             SELECT *
             FROM indicators
-            WHERE id = ? AND company_id = ?
+            WHERE id = %s AND company_id = %s
         """, (indicator_id, company_id))
         row = cursor.fetchone()
         if row:
@@ -1466,7 +1467,7 @@ def grv_indicators_goals(company_id: int):
     # PostgreSQL retorna Row objects por padrão
     cursor = conn.cursor()
     
-    cursor.execute('SELECT id, name FROM employees WHERE company_id = ? ORDER BY name', (company_id,))
+    cursor.execute('SELECT id, name FROM employees WHERE company_id = %s ORDER BY name', (company_id,))
     employees = [dict(row) for row in cursor.fetchall()]
     
     conn.close()
@@ -1482,7 +1483,7 @@ def grv_indicators_goals(company_id: int):
 
 @grv_bp.route('/company/<int:company_id>/indicator-goals/form', defaults={'goal_id': None})
 @grv_bp.route('/company/<int:company_id>/indicator-goals/form/<int:goal_id>')
-def grv_indicator_goal_form(company_id: int, goal_id: int | None = None):
+def grv_indicator_goal_form(company_id: int, goal_id: Optional[int] = None):
     """FormulÃ¡rio pop-up para metas de indicadores"""
     from database.postgres_helper import connect as pg_connect
     db = get_db()
@@ -1495,12 +1496,12 @@ def grv_indicator_goal_form(company_id: int, goal_id: int | None = None):
     cursor.execute("""
         SELECT id, code, name
         FROM indicators
-        WHERE company_id = ?
+        WHERE company_id = %s
         ORDER BY name
     """, (company_id,))
     indicators = [dict(row) for row in cursor.fetchall()]
 
-    cursor.execute('SELECT id, name FROM employees WHERE company_id = ? ORDER BY name', (company_id,))
+    cursor.execute('SELECT id, name FROM employees WHERE company_id = %s ORDER BY name', (company_id,))
     employees = [dict(row) for row in cursor.fetchall()]
 
     goal = None
@@ -1508,7 +1509,7 @@ def grv_indicator_goal_form(company_id: int, goal_id: int | None = None):
         cursor.execute("""
             SELECT *
             FROM indicator_goals
-            WHERE id = ? AND company_id = ?
+            WHERE id = %s AND company_id = %s
         """, (goal_id, company_id))
         row = cursor.fetchone()
         if row:
@@ -1541,7 +1542,7 @@ def grv_indicators_data(company_id: int):
 
 @grv_bp.route('/company/<int:company_id>/indicator-data/form', defaults={'record_id': None})
 @grv_bp.route('/company/<int:company_id>/indicator-data/form/<int:record_id>')
-def grv_indicator_data_form(company_id: int, record_id: int | None = None):
+def grv_indicator_data_form(company_id: int, record_id: Optional[int] = None):
     """FormulÃ¡rio pop-up para registros de dados"""
     from database.postgres_helper import connect as pg_connect
     db = get_db()
@@ -1558,7 +1559,7 @@ def grv_indicator_data_form(company_id: int, record_id: int | None = None):
             i.name as indicator_name
         FROM indicator_goals g
         INNER JOIN indicators i ON g.indicator_id = i.id
-        WHERE g.company_id = ?
+        WHERE g.company_id = %s
         ORDER BY i.name
     """, (company_id,))
     goals = [dict(row) for row in cursor.fetchall()]
@@ -1568,7 +1569,7 @@ def grv_indicator_data_form(company_id: int, record_id: int | None = None):
         cursor.execute("""
             SELECT *
             FROM indicator_data
-            WHERE id = ? AND company_id = ?
+            WHERE id = %s AND company_id = %s
         """, (record_id, company_id))
         row = cursor.fetchone()
         if row:
@@ -1616,7 +1617,7 @@ def api_get_plan_okrs(plan_id: int):
         cursor.execute("""
             SELECT id, objective, type as okr_type, owner, 'global' as okr_level, department
             FROM okr_global_records 
-            WHERE plan_id = ? AND stage = 'approval'
+            WHERE plan_id = %s AND stage = 'approval'
             ORDER BY objective
         """, (plan_id,))
         
@@ -1626,7 +1627,7 @@ def api_get_plan_okrs(plan_id: int):
         cursor.execute("""
             SELECT id, objective, type as okr_type, owner, 'area' as okr_level, department
             FROM okr_area_records 
-            WHERE plan_id = ? AND stage = 'final'
+            WHERE plan_id = %s AND stage = 'final'
             ORDER BY objective
         """, (plan_id,))
         
@@ -1666,7 +1667,7 @@ def api_get_indicator_groups(company_id: int):
             p.code as parent_code
         FROM indicator_groups g
         LEFT JOIN indicator_groups p ON g.parent_id = p.id
-        WHERE g.company_id = ?
+        WHERE g.company_id = %s
         ORDER BY g.code
     """, (company_id,))
     
@@ -1687,7 +1688,7 @@ def api_get_indicator_group(company_id: int, group_id: int):
     
     cursor.execute("""
         SELECT * FROM indicator_groups 
-        WHERE id = ? AND company_id = ?
+        WHERE id = %s AND company_id = %s
     """, (group_id, company_id))
     
     group = cursor.fetchone()
@@ -1716,7 +1717,7 @@ def api_create_indicator_group(company_id: int):
     try:
         # Gerar cÃ³digo automÃ¡tico
         cursor.execute("""
-            SELECT client_code FROM companies WHERE id = ?
+            SELECT client_code FROM companies WHERE id = %s
         """, (company_id,))
         company_row = cursor.fetchone()
         company_code = 'AA'
@@ -1729,21 +1730,21 @@ def api_create_indicator_group(company_id: int):
         parent_id = data.get('parent_id')
         if parent_id:
             cursor.execute("""
-                SELECT code FROM indicator_groups WHERE id = ?
+                SELECT code FROM indicator_groups WHERE id = %s
             """, (parent_id,))
             parent_row = cursor.fetchone()
             parent_code = parent_row[0] if parent_row else ''
             
             cursor.execute("""
                 SELECT COUNT(*) FROM indicator_groups 
-                WHERE company_id = ? AND parent_id = ?
+                WHERE company_id = %s AND parent_id = %s
             """, (company_id, parent_id))
             count = cursor.fetchone()[0]
             code = f"{parent_code}.{count + 1}"
         else:
             cursor.execute("""
                 SELECT COUNT(*) FROM indicator_groups 
-                WHERE company_id = ? AND parent_id IS NULL
+                WHERE company_id = %s AND parent_id IS NULL
             """, (company_id,))
             count = cursor.fetchone()[0]
             code = f"{company_code}.I.{count + 1}"
@@ -1751,7 +1752,7 @@ def api_create_indicator_group(company_id: int):
         cursor.execute("""
             INSERT INTO indicator_groups 
             (company_id, parent_id, code, name, description)
-            VALUES (?, ?, ?, ?, ?)
+            VALUES (%s, %s, ?, ?, ?)
         """, (
             company_id,
             parent_id,
@@ -1763,7 +1764,7 @@ def api_create_indicator_group(company_id: int):
         conn.commit()
         group_id = cursor.lastrowid
         
-        cursor.execute("SELECT * FROM indicator_groups WHERE id = ?", (group_id,))
+        cursor.execute("SELECT * FROM indicator_groups WHERE id = %s", (group_id,))
         row = cursor.fetchone()
         conn.close()
         
@@ -1795,8 +1796,8 @@ def api_update_indicator_group(company_id: int, group_id: int):
     try:
         cursor.execute("""
             UPDATE indicator_groups 
-            SET name = ?, description = ?, updated_at = CURRENT_TIMESTAMP
-            WHERE id = ? AND company_id = ?
+            SET name = %s, description = %s, updated_at = CURRENT_TIMESTAMP
+            WHERE id = %s AND company_id = %s
         """, (
             data.get('name'),
             data.get('description'),
@@ -1806,7 +1807,7 @@ def api_update_indicator_group(company_id: int, group_id: int):
         
         conn.commit()
         
-        cursor.execute("SELECT * FROM indicator_groups WHERE id = ?", (group_id,))
+        cursor.execute("SELECT * FROM indicator_groups WHERE id = %s", (group_id,))
         row = cursor.fetchone()
         conn.close()
         
@@ -1834,7 +1835,7 @@ def api_delete_indicator_group(company_id: int, group_id: int):
     try:
         # Verificar se tem indicadores associados
         cursor.execute("""
-            SELECT COUNT(*) FROM indicators WHERE group_id = ?
+            SELECT COUNT(*) FROM indicators WHERE group_id = %s
         """, (group_id,))
         count = cursor.fetchone()[0]
         
@@ -1847,7 +1848,7 @@ def api_delete_indicator_group(company_id: int, group_id: int):
         
         cursor.execute("""
             DELETE FROM indicator_groups 
-            WHERE id = ? AND company_id = ?
+            WHERE id = %s AND company_id = %s
         """, (group_id, company_id))
         
         conn.commit()
@@ -1885,7 +1886,7 @@ def api_get_indicators(company_id: int):
         LEFT JOIN indicator_groups g ON i.group_id = g.id
         LEFT JOIN processes p ON i.process_id = p.id
         LEFT JOIN company_projects pr ON i.project_id = pr.id
-        WHERE i.company_id = ?
+        WHERE i.company_id = %s
         ORDER BY i.code
     """, (company_id,))
     
@@ -1912,7 +1913,7 @@ def api_get_indicator(company_id: int, indicator_id: int):
     
     cursor.execute("""
         SELECT * FROM indicators 
-        WHERE id = ? AND company_id = ?
+        WHERE id = %s AND company_id = %s
     """, (indicator_id, company_id))
     
     row = cursor.fetchone()
@@ -1944,7 +1945,7 @@ def api_get_process_indicators(company_id: int, process_id: int):
             g.name as group_name
         FROM indicators i
         LEFT JOIN indicator_groups g ON i.group_id = g.id
-        WHERE i.company_id = ? AND i.process_id = ?
+        WHERE i.company_id = %s AND i.process_id = %s
         ORDER BY i.code
     """, (company_id, process_id))
 
@@ -1992,12 +1993,12 @@ def api_get_process_indicators(company_id: int, process_id: int):
                     collaborator_ids = []
 
             if collaborator_ids:
-                placeholders = ",".join("?" * len(collaborator_ids))
+                placeholders = ",".join("%s" * len(collaborator_ids))
                 cursor.execute(
                     f"""
                         SELECT id, name, email 
                         FROM employees 
-                        WHERE company_id = ? AND id IN ({placeholders})
+                        WHERE company_id = %s AND id IN ({placeholders})
                         ORDER BY name
                     """,
                     (company_id, *collaborator_ids)
@@ -2021,7 +2022,7 @@ def api_get_process_indicators(company_id: int, process_id: int):
                 e.name as responsible_name
             FROM indicator_goals g
             LEFT JOIN employees e ON g.responsible_id = e.id
-            WHERE g.company_id = ? AND g.indicator_id = ?
+            WHERE g.company_id = %s AND g.indicator_id = %s
             ORDER BY COALESCE(g.period_end, g.goal_date) DESC, g.created_at DESC
         """, (company_id, indicator['id']))
 
@@ -2054,20 +2055,20 @@ def api_create_indicator(company_id: int):
         group_id = data.get('group_id')
         if group_id:
             cursor.execute("""
-                SELECT code FROM indicator_groups WHERE id = ?
+                SELECT code FROM indicator_groups WHERE id = %s
             """, (group_id,))
             group_row = cursor.fetchone()
             group_code = group_row[0] if group_row else ''
             
             cursor.execute("""
                 SELECT COUNT(*) FROM indicators 
-                WHERE company_id = ? AND group_id = ?
+                WHERE company_id = %s AND group_id = %s
             """, (company_id, group_id))
             count = cursor.fetchone()[0]
             code = f"{group_code}.{count + 1:03d}"
         else:
             cursor.execute("""
-                SELECT client_code FROM companies WHERE id = ?
+                SELECT client_code FROM companies WHERE id = %s
             """, (company_id,))
             company_row = cursor.fetchone()
             company_code = 'AA'
@@ -2078,7 +2079,7 @@ def api_create_indicator(company_id: int):
             
             cursor.execute("""
                 SELECT COUNT(*) FROM indicators 
-                WHERE company_id = ? AND group_id IS NULL
+                WHERE company_id = %s AND group_id IS NULL
             """, (company_id,))
             count = cursor.fetchone()[0]
             code = f"{company_code}.{count + 1:03d}"
@@ -2114,7 +2115,7 @@ def api_create_indicator(company_id: int):
              department_id, collaborators, unit, formula, polarity, 
              data_source, notes, okr_reference, okr_reference_label,
              plan_id, okr_id, okr_level)
-            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+            VALUES (%s, %s, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
         """, (
             company_id,
             group_id,
@@ -2139,7 +2140,7 @@ def api_create_indicator(company_id: int):
         conn.commit()
         indicator_id = cursor.lastrowid
         
-        cursor.execute("SELECT * FROM indicators WHERE id = ?", (indicator_id,))
+        cursor.execute("SELECT * FROM indicators WHERE id = %s", (indicator_id,))
         row = cursor.fetchone()
         conn.close()
 
@@ -2190,12 +2191,12 @@ def api_update_indicator(company_id: int, indicator_id: int):
 
         cursor.execute("""
             UPDATE indicators 
-            SET group_id = ?, name = ?, process_id = ?, project_id = ?,
-                department_id = ?, collaborators = ?, unit = ?, formula = ?,
+            SET group_id = %s, name = %s, process_id = %s, project_id = %s,
+                department_id = %s, collaborators = ?, unit = ?, formula = ?,
                 polarity = ?, data_source = ?, notes = ?,
-                plan_id = ?, okr_id = ?, okr_level = ?, okr_reference = ?,
+                plan_id = %s, okr_id = %s, okr_level = ?, okr_reference = ?,
                 updated_at = CURRENT_TIMESTAMP
-            WHERE id = ? AND company_id = ?
+            WHERE id = %s AND company_id = %s
         """, (
             data.get('group_id'),
             data.get('name'),
@@ -2218,7 +2219,7 @@ def api_update_indicator(company_id: int, indicator_id: int):
         
         conn.commit()
         
-        cursor.execute("SELECT * FROM indicators WHERE id = ?", (indicator_id,))
+        cursor.execute("SELECT * FROM indicators WHERE id = %s", (indicator_id,))
         row = cursor.fetchone()
         conn.close()
 
@@ -2245,7 +2246,7 @@ def api_delete_indicator(company_id: int, indicator_id: int):
     try:
         # Verificar se tem metas associadas
         cursor.execute("""
-            SELECT COUNT(*) FROM indicator_goals WHERE indicator_id = ?
+            SELECT COUNT(*) FROM indicator_goals WHERE indicator_id = %s
         """, (indicator_id,))
         count = cursor.fetchone()[0]
         
@@ -2258,7 +2259,7 @@ def api_delete_indicator(company_id: int, indicator_id: int):
         
         cursor.execute("""
             DELETE FROM indicators 
-            WHERE id = ? AND company_id = ?
+            WHERE id = %s AND company_id = %s
         """, (indicator_id, company_id))
         
         conn.commit()
@@ -2293,7 +2294,7 @@ def api_get_indicator_goals(company_id: int):
             FROM indicator_goals g
             INNER JOIN indicators i ON g.indicator_id = i.id
             LEFT JOIN employees e ON g.responsible_id = e.id
-            WHERE g.company_id = ?
+            WHERE g.company_id = %s
             ORDER BY g.code
         """, (company_id,))
         
@@ -2323,7 +2324,7 @@ def api_get_indicator_goal(company_id: int, goal_id: int):
     
     cursor.execute("""
         SELECT * FROM indicator_goals 
-        WHERE id = ? AND company_id = ?
+        WHERE id = %s AND company_id = %s
     """, (goal_id, company_id))
     
     goal = cursor.fetchone()
@@ -2352,7 +2353,7 @@ def api_create_indicator_goal(company_id: int):
     try:
         # Gerar codigo automatico (4 digitos)
         cursor.execute("""
-            SELECT COUNT(*) FROM indicator_goals WHERE company_id = ?
+            SELECT COUNT(*) FROM indicator_goals WHERE company_id = %s
         """, (company_id,))
         count = cursor.fetchone()[0]
         code = f"META-{count + 1:04d}"
@@ -2420,7 +2421,7 @@ def api_create_indicator_goal(company_id: int):
             INSERT INTO indicator_goals 
             (company_id, indicator_id, code, goal_type, goal_value, period_start, period_end, goal_date, 
              evaluation_basis, responsible_id, status, notes)
-            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+            VALUES (%s, %s, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
         """, (
             company_id,
             indicator_id,
@@ -2439,7 +2440,7 @@ def api_create_indicator_goal(company_id: int):
         conn.commit()
         goal_id = cursor.lastrowid
 
-        cursor.execute("SELECT * FROM indicator_goals WHERE id = ?", (goal_id,))
+        cursor.execute("SELECT * FROM indicator_goals WHERE id = %s", (goal_id,))
         row = cursor.fetchone()
         conn.close()
 
@@ -2467,7 +2468,7 @@ def api_update_indicator_goal(company_id: int, goal_id: int):
     ensure_indicator_goals_schema(conn)
 
     try:
-        cursor.execute("SELECT id FROM indicator_goals WHERE id = ? AND company_id = ?", (goal_id, company_id))
+        cursor.execute("SELECT id FROM indicator_goals WHERE id = %s AND company_id = %s", (goal_id, company_id))
         if not cursor.fetchone():
             raise ValueError('Meta nao encontrada para atualizacao.')
 
@@ -2532,9 +2533,9 @@ def api_update_indicator_goal(company_id: int, goal_id: int):
 
         cursor.execute("""
             UPDATE indicator_goals 
-            SET indicator_id = ?, goal_type = ?, goal_value = ?, period_start = ?, period_end = ?, goal_date = ?,
-                evaluation_basis = ?, responsible_id = ?, status = ?, notes = ?, updated_at = CURRENT_TIMESTAMP
-            WHERE id = ? AND company_id = ?
+            SET indicator_id = %s, goal_type = %s, goal_value = ?, period_start = ?, period_end = ?, goal_date = ?,
+                evaluation_basis = ?, responsible_id = %s, status = ?, notes = ?, updated_at = CURRENT_TIMESTAMP
+            WHERE id = %s AND company_id = %s
         """, (
             indicator_id,
             goal_type,
@@ -2552,7 +2553,7 @@ def api_update_indicator_goal(company_id: int, goal_id: int):
 
         conn.commit()
 
-        cursor.execute("SELECT * FROM indicator_goals WHERE id = ?", (goal_id,))
+        cursor.execute("SELECT * FROM indicator_goals WHERE id = %s", (goal_id,))
         row = cursor.fetchone()
         conn.close()
 
@@ -2578,7 +2579,7 @@ def api_delete_indicator_goal(company_id: int, goal_id: int):
     try:
         # Verificar se tem registros de dados associados
         cursor.execute("""
-            SELECT COUNT(*) FROM indicator_data WHERE goal_id = ?
+            SELECT COUNT(*) FROM indicator_data WHERE goal_id = %s
         """, (goal_id,))
         count = cursor.fetchone()[0]
         
@@ -2591,7 +2592,7 @@ def api_delete_indicator_goal(company_id: int, goal_id: int):
         
         cursor.execute("""
             DELETE FROM indicator_goals 
-            WHERE id = ? AND company_id = ?
+            WHERE id = %s AND company_id = %s
         """, (goal_id, company_id))
         
         conn.commit()
@@ -2624,7 +2625,7 @@ def api_get_indicator_data(company_id: int):
         FROM indicator_data d
         INNER JOIN indicator_goals g ON d.goal_id = g.id
         INNER JOIN indicators i ON g.indicator_id = i.id
-        WHERE d.company_id = ?
+        WHERE d.company_id = %s
         ORDER BY d.record_date DESC
     """, (company_id,))
     
@@ -2649,7 +2650,7 @@ def api_get_indicator_data_record(company_id: int, data_id: int):
     
     cursor.execute("""
         SELECT * FROM indicator_data 
-        WHERE id = ? AND company_id = ?
+        WHERE id = %s AND company_id = %s
     """, (data_id, company_id))
     
     data_record = cursor.fetchone()
@@ -2678,7 +2679,7 @@ def api_create_indicator_data(company_id: int):
         cursor.execute("""
             INSERT INTO indicator_data 
             (company_id, goal_id, record_date, value, notes)
-            VALUES (?, ?, ?, ?, ?)
+            VALUES (%s, %s, ?, ?, ?)
         """, (
             company_id,
             data.get('goal_id'),
@@ -2690,7 +2691,7 @@ def api_create_indicator_data(company_id: int):
         conn.commit()
         data_id = cursor.lastrowid
         
-        cursor.execute("SELECT * FROM indicator_data WHERE id = ?", (data_id,))
+        cursor.execute("SELECT * FROM indicator_data WHERE id = %s", (data_id,))
         row = cursor.fetchone()
         conn.close()
 
@@ -2718,9 +2719,9 @@ def api_update_indicator_data(company_id: int, data_id: int):
     try:
         cursor.execute("""
             UPDATE indicator_data 
-            SET goal_id = ?, record_date = ?, value = ?, notes = ?,
+            SET goal_id = %s, record_date = %s, value = ?, notes = ?,
                 updated_at = CURRENT_TIMESTAMP
-            WHERE id = ? AND company_id = ?
+            WHERE id = %s AND company_id = %s
         """, (
             data.get('goal_id'),
             data.get('record_date'),
@@ -2732,7 +2733,7 @@ def api_update_indicator_data(company_id: int, data_id: int):
         
         conn.commit()
         
-        cursor.execute("SELECT * FROM indicator_data WHERE id = ?", (data_id,))
+        cursor.execute("SELECT * FROM indicator_data WHERE id = %s", (data_id,))
         row = cursor.fetchone()
         conn.close()
 
@@ -2757,7 +2758,7 @@ def api_delete_indicator_data(company_id: int, data_id: int):
     try:
         cursor.execute("""
             DELETE FROM indicator_data 
-            WHERE id = ? AND company_id = ?
+            WHERE id = %s AND company_id = %s
         """, (data_id, company_id))
         
         conn.commit()

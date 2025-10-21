@@ -1,0 +1,362 @@
+{% extends "base.html" %}
+{% block title %}GRV | Capacidade de Rotinas{% endblock %}
+{% block body %}{% set active_nav = 'routine-capacity' %}{{ super() }}{% endblock %}
+
+{% block extra_head %}
+{{ super() }}
+<style>
+  .capacity-shell {
+    display: grid;
+    grid-template-columns: 250px minmax(0, 1fr);
+    gap: 18px;
+    align-items: start;
+  }
+
+  .capacity-main {
+    background: #ffffff;
+    border-radius: 14px;
+    border: 1px solid rgba(15, 23, 42, 0.08);
+    padding: 22px 24px;
+    box-shadow: 0 12px 32px rgba(15, 23, 42, 0.08);
+    display: grid;
+    gap: 22px;
+  }
+
+  .capacity-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    gap: 16px;
+    flex-wrap: wrap;
+  }
+
+  .capacity-header h1 {
+    margin: 0;
+    font-size: 22px;
+    font-weight: 700;
+    color: #0f172a;
+  }
+
+  .capacity-description {
+    color: #64748b;
+    font-size: 13px;
+    margin-top: 6px;
+    max-width: 600px;
+    line-height: 1.5;
+  }
+
+  .capacity-actions {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+  }
+
+  .btn-capacity {
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    color: white;
+    border: none;
+    padding: 10px 18px;
+    border-radius: 8px;
+    font-size: 13px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+  }
+
+  .btn-capacity:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 8px 16px rgba(102, 126, 234, 0.4);
+  }
+
+  .capacity-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
+    gap: 18px;
+  }
+
+  .capacity-card {
+    background: #f8fafc;
+    border: 1px solid rgba(15, 23, 42, 0.06);
+    border-radius: 12px;
+    padding: 18px;
+    transition: all 0.2s ease;
+  }
+
+  .capacity-card:hover {
+    border-color: #667eea;
+    box-shadow: 0 4px 12px rgba(102, 126, 234, 0.15);
+  }
+
+  .capacity-card-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    margin-bottom: 14px;
+  }
+
+  .capacity-card-title {
+    font-size: 15px;
+    font-weight: 600;
+    color: #0f172a;
+    margin: 0;
+  }
+
+  .capacity-badge {
+    font-size: 11px;
+    font-weight: 600;
+    padding: 4px 10px;
+    border-radius: 6px;
+    text-transform: uppercase;
+  }
+
+  .capacity-badge.available {
+    background: #d1fae5;
+    color: #065f46;
+  }
+
+  .capacity-badge.busy {
+    background: #fef3c7;
+    color: #92400e;
+  }
+
+  .capacity-badge.overloaded {
+    background: #fee2e2;
+    color: #991b1b;
+  }
+
+  .capacity-stats {
+    display: grid;
+    gap: 10px;
+  }
+
+  .capacity-stat {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    font-size: 13px;
+  }
+
+  .capacity-stat-label {
+    color: #64748b;
+  }
+
+  .capacity-stat-value {
+    font-weight: 600;
+    color: #0f172a;
+  }
+
+  .capacity-progress {
+    width: 100%;
+    height: 8px;
+    background: #e2e8f0;
+    border-radius: 4px;
+    overflow: hidden;
+    margin-top: 10px;
+  }
+
+  .capacity-progress-bar {
+    height: 100%;
+    background: linear-gradient(90deg, #667eea 0%, #764ba2 100%);
+    transition: width 0.3s ease;
+  }
+
+  .capacity-progress-bar.warning {
+    background: linear-gradient(90deg, #f59e0b 0%, #d97706 100%);
+  }
+
+  .capacity-progress-bar.danger {
+    background: linear-gradient(90deg, #ef4444 0%, #dc2626 100%);
+  }
+
+  .empty-state {
+    text-align: center;
+    padding: 60px 20px;
+    color: #64748b;
+  }
+
+  .empty-state-icon {
+    font-size: 64px;
+    margin-bottom: 16px;
+    opacity: 0.3;
+  }
+
+  .empty-state-title {
+    font-size: 18px;
+    font-weight: 600;
+    color: #0f172a;
+    margin-bottom: 8px;
+  }
+
+  .empty-state-description {
+    font-size: 14px;
+    color: #64748b;
+  }
+
+  @media (max-width: 768px) {
+    .capacity-shell {
+      grid-template-columns: 1fr;
+    }
+  }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="capacity-shell">
+  <!-- Sidebar -->
+  {% include 'grv_sidebar.html' %}
+
+  <!-- Main Content -->
+  <div class="capacity-main">
+    <!-- Header -->
+    <div class="capacity-header">
+      <div>
+        <h1>📊 Capacidade de Rotinas</h1>
+        <p class="capacity-description">
+          Visualize a capacidade e carga de trabalho dos colaboradores envolvidos nas rotinas de processos.
+        </p>
+      </div>
+      <div class="capacity-actions">
+        <button class="btn-capacity" onclick="refreshCapacity()">
+          🔄 Atualizar
+        </button>
+      </div>
+    </div>
+
+    <!-- Capacity Grid -->
+    <div id="capacity-container">
+      <!-- Empty State -->
+      <div class="empty-state">
+        <div class="empty-state-icon">⏳</div>
+        <div class="empty-state-title">Carregando dados de capacidade...</div>
+        <div class="empty-state-description">
+          Analisando a capacidade dos colaboradores em rotinas ativas.
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+// Company ID from Flask
+const COMPANY_ID = {{ company.id }};
+
+// Load capacity data on page load
+document.addEventListener('DOMContentLoaded', function() {
+  loadCapacityData();
+});
+
+function loadCapacityData() {
+  const container = document.getElementById('capacity-container');
+  
+  // TODO: Implementar chamada à API para buscar dados de capacidade
+  // Por enquanto, mostrar mensagem de "em desenvolvimento"
+  
+  container.innerHTML = `
+    <div class="empty-state">
+      <div class="empty-state-icon">🚧</div>
+      <div class="empty-state-title">Funcionalidade em Desenvolvimento</div>
+      <div class="empty-state-description">
+        A análise de capacidade de rotinas estará disponível em breve.<br>
+        Esta tela mostrará a carga de trabalho e disponibilidade de cada colaborador.
+      </div>
+    </div>
+  `;
+  
+  /* Estrutura futura dos dados:
+  const mockData = [
+    {
+      name: 'João Silva',
+      totalHours: 40,
+      usedHours: 32,
+      routines: 5,
+      status: 'busy' // available, busy, overloaded
+    },
+    // ... mais colaboradores
+  ];
+  
+  Renderizar cards com:
+  - Nome do colaborador
+  - Total de horas disponíveis
+  - Horas já alocadas em rotinas
+  - Número de rotinas participando
+  - Barra de progresso visual
+  - Badge de status (disponível/ocupado/sobrecarregado)
+  */
+}
+
+function refreshCapacity() {
+  loadCapacityData();
+}
+
+function renderCapacityCards(data) {
+  const container = document.getElementById('capacity-container');
+  
+  if (!data || data.length === 0) {
+    container.innerHTML = `
+      <div class="empty-state">
+        <div class="empty-state-icon">📭</div>
+        <div class="empty-state-title">Nenhum Colaborador Encontrado</div>
+        <div class="empty-state-description">
+          Não há colaboradores com rotinas ativas no momento.
+        </div>
+      </div>
+    `;
+    return;
+  }
+  
+  const cardsHTML = data.map(collab => {
+    const percentage = (collab.usedHours / collab.totalHours) * 100;
+    let progressClass = '';
+    let statusBadge = '';
+    
+    if (percentage < 70) {
+      progressClass = '';
+      statusBadge = 'available';
+    } else if (percentage < 100) {
+      progressClass = 'warning';
+      statusBadge = 'busy';
+    } else {
+      progressClass = 'danger';
+      statusBadge = 'overloaded';
+    }
+    
+    return `
+      <div class="capacity-card">
+        <div class="capacity-card-header">
+          <h3 class="capacity-card-title">${collab.name}</h3>
+          <span class="capacity-badge ${statusBadge}">
+            ${statusBadge === 'available' ? 'Disponível' : 
+              statusBadge === 'busy' ? 'Ocupado' : 'Sobrecarregado'}
+          </span>
+        </div>
+        <div class="capacity-stats">
+          <div class="capacity-stat">
+            <span class="capacity-stat-label">Horas Semanais:</span>
+            <span class="capacity-stat-value">${collab.totalHours}h</span>
+          </div>
+          <div class="capacity-stat">
+            <span class="capacity-stat-label">Horas Alocadas:</span>
+            <span class="capacity-stat-value">${collab.usedHours}h</span>
+          </div>
+          <div class="capacity-stat">
+            <span class="capacity-stat-label">Rotinas Ativas:</span>
+            <span class="capacity-stat-value">${collab.routines}</span>
+          </div>
+        </div>
+        <div class="capacity-progress">
+          <div class="capacity-progress-bar ${progressClass}" 
+               style="width: ${Math.min(percentage, 100)}%">
+          </div>
+        </div>
+      </div>
+    `;
+  }).join('');
+  
+  container.innerHTML = `<div class="capacity-grid">${cardsHTML}</div>`;
+}
+</script>
+{% endblock %}
+

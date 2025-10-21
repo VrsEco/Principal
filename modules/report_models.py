@@ -45,7 +45,7 @@ class ReportModelsManager:
             conn = self._get_connection()
             cursor = conn.cursor()
             
-            cursor.execute("SELECT * FROM report_models WHERE id = ?", (model_id,))
+            cursor.execute("SELECT * FROM report_models WHERE id = %s", (model_id,))
             row = cursor.fetchone()
             
             dict_row = _to_dict(cursor, row)
@@ -111,7 +111,7 @@ class ReportModelsManager:
                 (name, description, paper_size, orientation, margin_top, margin_right, 
                  margin_bottom, margin_left, header_height, header_rows, header_columns, 
                  header_content, footer_height, footer_rows, footer_columns, footer_content, created_by)
-                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                VALUES (%s, %s, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
             """, insert_data)
             
             model_id = cursor.lastrowid
@@ -155,12 +155,12 @@ class ReportModelsManager:
             
             cursor.execute("""
                 UPDATE report_models SET 
-                name = ?, description = ?, paper_size = ?, orientation = ?, 
+                name = %s, description = %s, paper_size = ?, orientation = ?, 
                 margin_top = ?, margin_right = ?, margin_bottom = ?, margin_left = ?,
                 header_height = ?, header_rows = ?, header_columns = ?, header_content = ?,
                 footer_height = ?, footer_rows = ?, footer_columns = ?, footer_content = ?,
                 updated_at = CURRENT_TIMESTAMP
-                WHERE id = ?
+                WHERE id = %s
             """, update_data)
             
             conn.commit()
@@ -180,7 +180,7 @@ class ReportModelsManager:
             conn = self._get_connection()
             cursor = conn.cursor()
             
-            cursor.execute("DELETE FROM report_models WHERE id = ?", (model_id,))
+            cursor.execute("DELETE FROM report_models WHERE id = %s", (model_id,))
             
             conn.commit()
             conn.close()
