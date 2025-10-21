@@ -67,12 +67,15 @@
 
 **Regra:** Preferir ReportLab. Playwright apenas para layouts HTML complexos.
 
-### Background Jobs
+### Background Jobs & Scheduling
 
 | Tecnologia | Versão | Uso | Status |
 |------------|--------|-----|--------|
-| **Celery** | 5.3.1 | Tarefas assíncronas | ✅ Aprovado |
-| **Redis** | 4.6.0 | Message broker para Celery | ✅ Aprovado |
+| **APScheduler** | 3.10.4 | Tarefas agendadas (cron-like) | ✅ Obrigatório |
+| **Celery** | 5.3.1 | Tarefas assíncronas (opcional) | ⚠️ Não configurado |
+| **Redis** | 4.6.0 | Cache e message broker | ✅ Aprovado |
+
+**Nota:** APScheduler é usado para rotinas diárias/semanais. Celery permanece instalado para uso futuro se necessário.
 
 ### Integrações
 
@@ -89,6 +92,22 @@
 | **pytest-flask** | 1.2.0 | Testes Flask | ✅ Obrigatório |
 | **black** | 23.7.0 | Formatação de código | ✅ Obrigatório |
 | **flake8** | 6.0.0 | Linting | ✅ Obrigatório |
+
+### Virtualização & Deploy
+
+| Tecnologia | Versão | Uso | Status |
+|------------|--------|-----|--------|
+| **Docker** | 20.10+ | Containerização | ✅ Obrigatório |
+| **Docker Compose** | 2.0+ | Orquestração local | ✅ Obrigatório |
+| **PostgreSQL (Docker)** | 18-alpine | Banco em container | ✅ Aprovado |
+| **Redis (Docker)** | 7-alpine | Cache em container | ✅ Aprovado |
+| **Adminer (Docker)** | latest | Gerenciador de banco web | ✅ Dev only |
+| **MailHog (Docker)** | latest | Teste de e-mails | ✅ Dev only |
+
+**Ambiente de Desenvolvimento:**
+- `docker-compose.dev.yml` para ambiente local
+- Volumes para hot-reload
+- PostgreSQL local via `host.docker.internal` (dados preservados)
 
 ---
 
@@ -250,6 +269,9 @@ pip show [package]
 | Data | Mudança | Motivo |
 |------|---------|--------|
 | 18/10/2025 | Criação inicial | Documentar stack atual |
+| 20/10/2025 | Adicionado APScheduler 3.10.4 | Tarefas agendadas automáticas para rotinas |
+| 20/10/2025 | Adicionada seção Virtualização & Deploy | Documentar ambiente Docker |
+| 20/10/2025 | PostgreSQL atualizado para v18-alpine | Compatibilidade com versão local |
 
 ---
 

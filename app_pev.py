@@ -11,6 +11,7 @@ from config import Config
 from datetime import datetime, date
 from flask import request, jsonify
 from flask_login import current_user, login_required
+from functools import wraps
 import os
 try:
     from dateutil import parser as _date_parser
@@ -35,6 +36,20 @@ app.secret_key = 'dev-secret-key-change-in-production'
 # Configure encoding for proper UTF-8 handling
 app.config['JSON_AS_ASCII'] = False
 app.config['JSONIFY_PRETTYPRINT_REGULAR'] = True
+
+# Decorador customizado para APIs que retorna JSON ao invés de redirect
+def api_login_required(f):
+    """Decorador para rotas API que retorna JSON 401 ao invés de redirecionar"""
+    @wraps(f)
+    def decorated_function(*args, **kwargs):
+        if not current_user.is_authenticated:
+            return jsonify({
+                'success': False,
+                'error': 'Não autenticado. Faça login novamente.',
+                'code': 'AUTHENTICATION_REQUIRED'
+            }), 401
+        return f(*args, **kwargs)
+    return decorated_function
 
 # Custom Jinja2 filter for parsing JSON
 @app.template_filter('from_json')
@@ -468,7 +483,7 @@ def _load_company_indicators(company_id: int) -> List[Dict[str, Any]]:
             """
             SELECT id, code, name
             FROM indicators
-            WHERE company_id = ?
+            WHERE company_id = %s
             ORDER BY LOWER(COALESCE(code, '') || ' ' || name)
             """,
             (company_id,)
@@ -1414,7 +1429,7 @@ def api_upload_company_logo(company_id: int):
         field_name = f'logo_{logo_type}'
         conn = pg_connect()
         cursor = conn.cursor()
-        cursor.execute(f"UPDATE companies SET {field_name} = ? WHERE id = ?", (logo_path, company_id))
+        cursor.execute(f"UPDATE companies SET {field_name} = %s WHERE id = %s", (logo_path, company_id))
         conn.commit()
         conn.close()
         
@@ -1457,7 +1472,7 @@ def api_delete_company_logo(company_id: int, logo_type: str):
         # Atualizar banco de dados
         conn = pg_connect()
         cursor = conn.cursor()
-        cursor.execute(f"UPDATE companies SET {field_name} = NULL WHERE id = ?", (company_id,))
+        cursor.execute(f"UPDATE companies SET {field_name} = NULL WHERE id = %s", (company_id,))
         conn.commit()
         conn.close()
         
@@ -1546,7 +1561,7 @@ def api_update_company_economic(company_id: int):
         
         cursor.execute('''
             UPDATE companies SET
-                cnpj = ?,
+                cnpj = %s,
                 city = ?,
                 state = ?,
                 cnaes = ?,
@@ -1554,7 +1569,7 @@ def api_update_company_economic(company_id: int):
                 coverage_online = ?,
                 experience_total = ?,
                 experience_segment = ?
-            WHERE id = ?
+            WHERE id = %s
         ''', (
             payload.get('cnpj'),
             payload.get('city'),
@@ -1613,7 +1628,7 @@ def api_create_company():
 
 
 @app.route("/api/plans", methods=['POST'])
-@login_required
+@api_login_required
 def api_create_plan():
     """Create new strategic plan"""
     try:
@@ -1742,8 +1757,8 @@ def api_update_company_profile(company_id: int):
         cursor = conn.cursor()
         cursor.execute('''
             UPDATE companies SET
-                name = ?, client_code = ?, legal_name = ?, industry = ?, size = ?, description = ?
-            WHERE id = ?
+                name = %s, client_code = ?, legal_name = ?, industry = ?, size = ?, description = ?
+            WHERE id = %s
         ''', (
             payload.get('name'),
             client_code,
@@ -1934,7 +1949,7 @@ def api_workforce_analysis(company_id: int):
         cursor.execute('''
             SELECT id, name, email, department, role_id, weekly_hours
             FROM employees
-            WHERE company_id = ? AND status = 'active'
+            WHERE company_id = %s AND status = 'active'
             ORDER BY name
         ''', (company_id,))
         
@@ -1949,7 +1964,7 @@ def api_workforce_analysis(company_id: int):
             # Get role title if exists
             role_title = ''
             if emp_row['role_id']:
-                cursor.execute('SELECT title FROM roles WHERE id = ?', (emp_row['role_id'],))
+                cursor.execute('SELECT title FROM roles WHERE id = %s', (emp_row['role_id'],))
                 role_row = cursor.fetchone()
                 if role_row:
                     role_title = role_row['title']
@@ -1963,7 +1978,7 @@ def api_workforce_analysis(company_id: int):
                 FROM routine_collaborators rc
                 JOIN routines r ON rc.routine_id = r.id
                 LEFT JOIN processes p ON r.process_id = p.id
-                WHERE rc.employee_id = ? AND r.company_id = ? AND r.is_active = 1
+                WHERE rc.employee_id = %s AND r.company_id = %s AND r.is_active = 1
             ''', (employee_id, company_id))
             
             routines = []
@@ -2079,7 +2094,7 @@ def api_update_client_code(company_id: int):
 
         conn = db._get_connection()
         cursor = conn.cursor()
-        cursor.execute('UPDATE companies SET client_code = ? WHERE id = ?', (client_code, company_id))
+        cursor.execute('UPDATE companies SET client_code = %s WHERE id = %s', (client_code, company_id))
         conn.commit()
         conn.close()
 
@@ -2686,7 +2701,7 @@ def api_list_process_instances(company_id: int):
         cursor.execute(
             """
             SELECT * FROM process_instances 
-            WHERE company_id = ?
+            WHERE company_id = %s
             ORDER BY created_at DESC
             """,
             (company_id,)
@@ -2742,7 +2757,7 @@ def api_create_process_instance(company_id: int):
             """
             SELECT COUNT(*) as count 
             FROM process_instances 
-            WHERE company_id = ? AND process_id = ?
+            WHERE company_id = %s AND process_id = %s
             """,
             (company_id, process_id)
         )
@@ -2761,7 +2776,7 @@ def api_create_process_instance(company_id: int):
                 """
                 SELECT id, assigned_roles 
                 FROM routines 
-                WHERE company_id = ? AND process_id = ?
+                WHERE company_id = %s AND process_id = %s
                 LIMIT 1
                 """,
                 (company_id, process_id)
@@ -2780,7 +2795,7 @@ def api_create_process_instance(company_id: int):
                         hours = float(role_data.get('hours', 0))
                         
                         if employee_id:
-                            cursor.execute('SELECT name FROM employees WHERE id = ?', (employee_id,))
+                            cursor.execute('SELECT name FROM employees WHERE id = %s', (employee_id,))
                             emp_row = cursor.fetchone()
                             if emp_row:
                                 assigned_collaborators.append({
@@ -2800,7 +2815,8 @@ def api_create_process_instance(company_id: int):
                 title, description, status, priority, due_date,
                 assigned_collaborators, estimated_hours, trigger_type,
                 created_at
-            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+            ) VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
+            RETURNING id
             """,
             (
                 company_id, process_id, routine_id, instance_code,
@@ -2810,11 +2826,11 @@ def api_create_process_instance(company_id: int):
             )
         )
         
-        instance_id = cursor.lastrowid
+        instance_id = cursor.fetchone()[0]
         conn.commit()
         
         # Get created instance
-        cursor.execute('SELECT * FROM process_instances WHERE id = ?', (instance_id,))
+        cursor.execute('SELECT * FROM process_instances WHERE id = %s', (instance_id,))
         instance_row = cursor.fetchone()
         conn.close()
         
@@ -2844,7 +2860,7 @@ def api_get_process_routine_collaborators(company_id: int, process_id: int):
             """
             SELECT id, assigned_roles 
             FROM routines 
-            WHERE company_id = ? AND process_id = ?
+            WHERE company_id = %s AND process_id = %s
             LIMIT 1
             """,
             (company_id, process_id)
@@ -2865,7 +2881,7 @@ def api_get_process_routine_collaborators(company_id: int, process_id: int):
             hours = float(role_data.get('hours', 0))
             
             if employee_id:
-                cursor.execute('SELECT name FROM employees WHERE id = ?', (employee_id,))
+                cursor.execute('SELECT name FROM employees WHERE id = %s', (employee_id,))
                 emp_row = cursor.fetchone()
                 if emp_row:
                     collaborators.append({
@@ -2897,7 +2913,7 @@ def api_update_process_instance(company_id: int, instance_id: int):
         
         # Verify instance exists and belongs to company
         cursor.execute(
-            'SELECT * FROM process_instances WHERE id = ? AND company_id = ?',
+            'SELECT * FROM process_instances WHERE id = %s AND company_id = %s',
             (instance_id, company_id)
         )
         instance = cursor.fetchone()
@@ -2942,12 +2958,12 @@ def api_update_process_instance(company_id: int, instance_id: int):
             params.append(datetime.now().isoformat())
             params.append(instance_id)
             
-            sql = f"UPDATE process_instances SET {', '.join(updates)} WHERE id = ?"
+            sql = f"UPDATE process_instances SET {', '.join(updates)} WHERE id = %s"
             cursor.execute(sql, params)
             conn.commit()
         
         # Get updated instance
-        cursor.execute('SELECT * FROM process_instances WHERE id = ?', (instance_id,))
+        cursor.execute('SELECT * FROM process_instances WHERE id = %s', (instance_id,))
         updated_instance = cursor.fetchone()
         conn.close()
         
@@ -2985,7 +3001,7 @@ def api_get_unified_activities(company_id: int):
                 e.name as responsible_name
             FROM company_projects cp
             LEFT JOIN employees e ON e.id = cp.responsible_id
-            WHERE cp.company_id = ?
+            WHERE cp.company_id = %s
             """,
             (company_id,)
         )
@@ -3037,7 +3053,7 @@ def api_get_unified_activities(company_id: int):
                 p.name as process_name
             FROM process_instances pi
             LEFT JOIN processes p ON p.id = pi.process_id
-            WHERE pi.company_id = ?
+            WHERE pi.company_id = %s
             """,
             (company_id,)
         )
@@ -3121,7 +3137,7 @@ def api_company_occurrences(company_id: int):
                 LEFT JOIN employees e ON o.employee_id = e.id
                 LEFT JOIN processes p ON o.process_id = p.id
                 LEFT JOIN company_projects cp ON o.project_id = cp.id
-                WHERE o.company_id = ?
+                WHERE o.company_id = %s
                 ORDER BY o.created_at DESC
             ''', (company_id,))
             
@@ -3180,10 +3196,11 @@ def api_company_occurrences(company_id: int):
         cursor.execute('''
             INSERT INTO occurrences 
             (company_id, employee_id, process_id, project_id, title, description, type, score)
-            VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+            VALUES (%s, %s, %s, %s, %s, %s, %s, %s)
+            RETURNING id
         ''', (company_id, employee_id, process_id, project_id, title, description, occ_type, score))
         
-        occurrence_id = cursor.lastrowid
+        occurrence_id = cursor.fetchone()[0]
         conn.commit()
         conn.close()
         
@@ -3228,9 +3245,9 @@ def api_company_occurrence(company_id: int, occurrence_id: int):
             
             cursor.execute('''
                 UPDATE occurrences
-                SET employee_id = ?, process_id = ?, project_id = ?, title = ?, 
+                SET employee_id = %s, process_id = %s, project_id = %s, title = ?, 
                     description = ?, type = ?, score = ?
-                WHERE id = ? AND company_id = ?
+                WHERE id = %s AND company_id = %s
             ''', (employee_id, process_id, project_id, title, description, occ_type, score, occurrence_id, company_id))
             
             conn.commit()
@@ -3248,7 +3265,7 @@ def api_company_occurrence(company_id: int, occurrence_id: int):
         conn = _open_portfolio_connection()
         cursor = conn.cursor()
         
-        cursor.execute('DELETE FROM occurrences WHERE id = ? AND company_id = ?', (occurrence_id, company_id))
+        cursor.execute('DELETE FROM occurrences WHERE id = %s AND company_id = %s', (occurrence_id, company_id))
         
         conn.commit()
         conn.close()
@@ -3278,7 +3295,7 @@ def api_company_efficiency_collaborators(company_id: int):
         cursor = conn.cursor()
         
         # Get all employees
-        cursor.execute('SELECT id, name FROM employees WHERE company_id = ? ORDER BY name', (company_id,))
+        cursor.execute('SELECT id, name FROM employees WHERE company_id = %s ORDER BY name', (company_id,))
         employees = [dict(row) for row in cursor.fetchall()]
         
         today = date.today()
@@ -3303,7 +3320,7 @@ def api_company_efficiency_collaborators(company_id: int):
                 """
                 SELECT cp.id as project_id, cp.activities
                 FROM company_projects cp
-                WHERE cp.company_id = ? AND cp.responsible_id = ?
+                WHERE cp.company_id = %s AND cp.responsible_id = %s
                 """,
                 (company_id, employee_id)
             )
@@ -3352,7 +3369,7 @@ def api_company_efficiency_collaborators(company_id: int):
                 """
                 SELECT pi.id, pi.status, pi.due_date, pi.assigned_collaborators, pi.completed_at
                 FROM process_instances pi
-                WHERE pi.company_id = ?
+                WHERE pi.company_id = %s
                 """,
                 (company_id,)
             )
@@ -3413,7 +3430,7 @@ def api_company_efficiency_collaborators(company_id: int):
                 """
                 SELECT type, score
                 FROM occurrences
-                WHERE company_id = ? AND employee_id = ?
+                WHERE company_id = %s AND employee_id = %s
                 """,
                 (company_id, employee_id)
             )
@@ -3745,7 +3762,7 @@ def routines_management(company_id: int):
     from database.postgres_helper import connect as pg_connect
     conn = pg_connect()
     cursor = conn.cursor()
-    cursor.execute("SELECT id, code, name FROM processes WHERE company_id = ? ORDER BY code", (company_id,))
+    cursor.execute("SELECT id, code, name FROM processes WHERE company_id = %s ORDER BY code", (company_id,))
     processes = [{'id': row[0], 'code': row[1], 'name': row[2]} for row in cursor.fetchall()]
     conn.close()
     
@@ -3771,7 +3788,7 @@ def routine_details(company_id: int, routine_id):
     cursor = conn.cursor()
     
     # Buscar todos os processos para o select
-    cursor.execute("SELECT id, code, name FROM processes WHERE company_id = ? ORDER BY code", (company_id,))
+    cursor.execute("SELECT id, code, name FROM processes WHERE company_id = %s ORDER BY code", (company_id,))
     processes = [{'id': row[0], 'code': row[1], 'name': row[2]} for row in cursor.fetchall()]
     
     # Se routine_id = 'new', criar nova rotina
@@ -3800,7 +3817,7 @@ def routine_details(company_id: int, routine_id):
         SELECT r.*, p.code as process_code, p.name as process_name
         FROM routines r
         LEFT JOIN processes p ON r.process_id = p.id
-        WHERE r.id = ? AND r.company_id = ?
+        WHERE r.id = %s AND r.company_id = %s
     """, (int(routine_id), company_id))
     
     routine_row = cursor.fetchone()
@@ -3835,7 +3852,7 @@ def api_get_process_routines(company_id: int):
                    p.code as process_code, p.name as process_name
             FROM routines r
             LEFT JOIN processes p ON r.process_id = p.id
-            WHERE r.company_id = ?
+            WHERE r.company_id = %s
             ORDER BY r.created_at DESC
         """, (company_id,))
         
@@ -3882,6 +3899,7 @@ def api_create_process_routine(company_id: int):
             return jsonify({'success': False, 'message': 'Tipo de agendamento é obrigatório'}), 400
         
         from database.postgres_helper import connect as pg_connect
+        from datetime import datetime as dt
         conn = pg_connect()
         cursor = conn.cursor()
         
@@ -3890,7 +3908,8 @@ def api_create_process_routine(company_id: int):
                 company_id, name, description, process_id,
                 schedule_type, schedule_value, deadline_days, deadline_hours, deadline_date,
                 is_active, created_at, updated_at
-            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, 1, datetime('now'), datetime('now'))
+            ) VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
+            RETURNING id
         """, (
             company_id,
             name,
@@ -3900,10 +3919,13 @@ def api_create_process_routine(company_id: int):
             data.get('schedule_value'),
             data.get('deadline_days', 0),
             data.get('deadline_hours', 0),
-            data.get('deadline_date')
+            data.get('deadline_date'),
+            1,  # is_active (INTEGER: 1=ativo, 0=inativo)
+            dt.utcnow(),  # created_at
+            dt.utcnow()   # updated_at
         ))
         
-        routine_id = cursor.lastrowid
+        routine_id = cursor.fetchone()[0]
         conn.commit()
         conn.close()
         
@@ -3925,13 +3947,13 @@ def api_delete_process_routine(company_id: int, routine_id: int):
         cursor = conn.cursor()
         
         # Verificar se pertence à empresa
-        cursor.execute("SELECT id FROM routines WHERE id = ? AND company_id = ?", (routine_id, company_id))
+        cursor.execute("SELECT id FROM routines WHERE id = %s AND company_id = %s", (routine_id, company_id))
         if not cursor.fetchone():
             conn.close()
             return jsonify({'success': False, 'message': 'Rotina não encontrada'}), 404
         
         # Deletar
-        cursor.execute("DELETE FROM routines WHERE id = ?", (routine_id,))
+        cursor.execute("DELETE FROM routines WHERE id = %s", (routine_id,))
         conn.commit()
         conn.close()
         
@@ -3949,26 +3971,27 @@ def api_update_process_routine(company_id: int, routine_id: int):
         data = request.get_json(silent=True) or {}
         
         from database.postgres_helper import connect as pg_connect
+        from datetime import datetime as dt
         conn = pg_connect()
         cursor = conn.cursor()
         
         # Verificar se pertence à empresa
-        cursor.execute("SELECT id FROM routines WHERE id = ? AND company_id = ?", (routine_id, company_id))
+        cursor.execute("SELECT id FROM routines WHERE id = %s AND company_id = %s", (routine_id, company_id))
         if not cursor.fetchone():
             conn.close()
             return jsonify({'success': False, 'message': 'Rotina não encontrada'}), 404
         
         cursor.execute("""
             UPDATE routines SET
-                name = ?,
-                description = ?,
-                process_id = ?,
-                schedule_type = ?,
-                schedule_value = ?,
-                deadline_days = ?,
-                deadline_hours = ?,
-                updated_at = datetime('now')
-            WHERE id = ? AND company_id = ?
+                name = %s,
+                description = %s,
+                process_id = %s,
+                schedule_type = %s,
+                schedule_value = %s,
+                deadline_days = %s,
+                deadline_hours = %s,
+                updated_at = %s
+            WHERE id = %s AND company_id = %s
         """, (
             data.get('name'),
             data.get('description', ''),
@@ -3977,6 +4000,7 @@ def api_update_process_routine(company_id: int, routine_id: int):
             data.get('schedule_value'),
             data.get('deadline_days', 0),
             data.get('deadline_hours', 0),
+            dt.utcnow(),  # updated_at
             routine_id,
             company_id
         ))
@@ -4005,7 +4029,7 @@ def api_get_process_routines_with_collaborators(process_id: int):
             SELECT r.id, r.name, r.description, r.schedule_type, r.schedule_value,
                    r.deadline_days, r.deadline_hours, r.deadline_date
             FROM routines r
-            WHERE r.process_id = ?
+            WHERE r.process_id = %s
             ORDER BY r.created_at DESC
         """, (process_id,))
         
@@ -4019,7 +4043,7 @@ def api_get_process_routines_with_collaborators(process_id: int):
                 SELECT rc.*, e.name as employee_name, e.email as employee_email
                 FROM routine_collaborators rc
                 JOIN employees e ON rc.employee_id = e.id
-                WHERE rc.routine_id = ?
+                WHERE rc.routine_id = %s
                 ORDER BY e.name
             ''', (routine_id,))
             
@@ -4055,7 +4079,7 @@ def api_get_routine_collaborators(routine_id: int):
             SELECT rc.*, e.name as employee_name, e.email as employee_email
             FROM routine_collaborators rc
             JOIN employees e ON rc.employee_id = e.id
-            WHERE rc.routine_id = ?
+            WHERE rc.routine_id = %s
             ORDER BY e.name
         ''', (routine_id,))
         
@@ -4081,7 +4105,8 @@ def api_add_routine_collaborator(routine_id: int):
         
         cursor.execute('''
             INSERT INTO routine_collaborators (routine_id, employee_id, hours_used, notes)
-            VALUES (?, ?, ?, ?)
+            VALUES (%s, %s, %s, %s)
+            RETURNING id
         ''', (
             routine_id,
             data.get('employee_id'),
@@ -4089,8 +4114,8 @@ def api_add_routine_collaborator(routine_id: int):
             data.get('notes', '')
         ))
         
+        collaborator_id = cursor.fetchone()[0]
         conn.commit()
-        collaborator_id = cursor.lastrowid
         conn.close()
         
         return jsonify({'success': True, 'id': collaborator_id, 'message': 'Colaborador adicionado com sucesso'}), 201
@@ -4112,8 +4137,8 @@ def api_update_routine_collaborator(routine_id: int, collaborator_id: int):
         
         cursor.execute('''
             UPDATE routine_collaborators
-            SET employee_id = ?, hours_used = ?, notes = ?, updated_at = CURRENT_TIMESTAMP
-            WHERE id = ? AND routine_id = ?
+            SET employee_id = %s, hours_used = ?, notes = ?, updated_at = CURRENT_TIMESTAMP
+            WHERE id = %s AND routine_id = %s
         ''', (
             data.get('employee_id'),
             data.get('hours_used'),
@@ -4140,7 +4165,7 @@ def api_delete_routine_collaborator(routine_id: int, collaborator_id: int):
         conn = pg_connect()
         cursor = conn.cursor()
         
-        cursor.execute('DELETE FROM routine_collaborators WHERE id = ? AND routine_id = ?', 
+        cursor.execute('DELETE FROM routine_collaborators WHERE id = %s AND routine_id = %s', 
                       (collaborator_id, routine_id))
         
         conn.commit()
@@ -5461,7 +5486,7 @@ def plan_okr_area(plan_id: str):
         
         cursor.execute("""
             SELECT * FROM okr_area_records 
-            WHERE plan_id = ? AND stage = 'workshop'
+            WHERE plan_id = %s AND stage = 'workshop'
             ORDER BY created_at
         """, (plan_id,))
         
@@ -5553,7 +5578,7 @@ def plan_okr_area(plan_id: str):
         
         cursor.execute("""
             SELECT * FROM okr_area_records 
-            WHERE plan_id = ? AND stage = 'approval'
+            WHERE plan_id = %s AND stage = 'approval'
             ORDER BY created_at
         """, (plan_id,))
         
@@ -8006,7 +8031,7 @@ def add_area_okr_record(plan_id: str):
                 INSERT INTO okr_area_records 
                 (plan_id, stage, objective, okr_type, type_display, department, 
                  owner_id, owner, deadline, observations)
-                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
             """, (
                 plan_id, 'workshop', new_okr['objective'], new_okr['type'],
                 new_okr['type_display'], new_okr['area'], 
@@ -8120,7 +8145,7 @@ def add_final_area_okr_record(plan_id: str):
                 INSERT INTO okr_area_records 
                 (plan_id, stage, objective, okr_type, type_display, department, 
                  owner_id, owner, deadline, observations)
-                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
             """, (
                 plan_id, 'approval', new_okr['objective'], new_okr['type'],
                 new_okr['type_display'], new_okr['area'], 
@@ -8679,7 +8704,7 @@ def run_custom_agent(agent_id):
 def _portfolio_exists(cursor, company_id: int, portfolio_id: int) -> bool:
     """Check if a portfolio exists for the given company and portfolio ID."""
     cursor.execute(
-        "SELECT 1 FROM portfolios WHERE company_id = ? AND id = ?",
+        "SELECT 1 FROM portfolios WHERE company_id = %s AND id = %s",
         (company_id, portfolio_id)
     )
     return cursor.fetchone() is not None
@@ -8724,7 +8749,7 @@ def api_company_portfolios(company_id: int):
                 FROM portfolios p
                 LEFT JOIN employees e ON e.id = p.responsible_id
                 LEFT JOIN company_projects proj ON proj.plan_id = p.id
-                WHERE p.company_id = ?
+                WHERE p.company_id = %s
                 GROUP BY p.id, p.company_id, p.code, p.name, p.responsible_id, 
                          e.name, p.notes, p.created_at, p.updated_at
                 ORDER BY LOWER(p.name)
@@ -8775,7 +8800,7 @@ def api_company_portfolios(company_id: int):
         cursor.execute(
             """
             SELECT 1 FROM portfolios
-            WHERE company_id = ? AND LOWER(code) = LOWER(?)
+            WHERE company_id = %s AND LOWER(code) = LOWER(?)
             """,
             (company_id, code)
         )
@@ -8789,7 +8814,8 @@ def api_company_portfolios(company_id: int):
         cursor.execute(
             """
             INSERT INTO portfolios (company_id, code, name, responsible_id, notes)
-            VALUES (?, ?, ?, ?, ?)
+            VALUES (%s, %s, %s, %s, %s)
+            RETURNING id
             """,
             (
                 company_id,
@@ -8799,7 +8825,7 @@ def api_company_portfolios(company_id: int):
                 notes
             )
         )
-        new_id = cursor.lastrowid
+        new_id = cursor.fetchone()[0]
         conn.commit()
 
         cursor.execute(
@@ -8817,7 +8843,7 @@ def api_company_portfolios(company_id: int):
                 0 AS project_count
             FROM portfolios p
             LEFT JOIN employees e ON e.id = p.responsible_id
-            WHERE p.company_id = ? AND p.id = ?
+            WHERE p.company_id = %s AND p.id = %s
             """,
             (company_id, new_id)
         )
@@ -8848,7 +8874,7 @@ def api_portfolio(company_id: int, portfolio_id: int):
             # Verificar se há projetos associados ao portfólio
             # Considerar apenas projetos do tipo GRV (portfólios GRV)
             cursor.execute(
-                "SELECT COUNT(*) FROM company_projects WHERE plan_id = ? AND (plan_type = 'GRV' OR plan_type IS NULL)",
+                "SELECT COUNT(*) FROM company_projects WHERE plan_id = %s AND (plan_type = 'GRV' OR plan_type IS NULL)",
                 (portfolio_id,)
             )
             project_count = cursor.fetchone()[0]
@@ -8861,7 +8887,7 @@ def api_portfolio(company_id: int, portfolio_id: int):
                 }), 409
 
             cursor.execute(
-                "DELETE FROM portfolios WHERE company_id = ? AND id = ?",
+                "DELETE FROM portfolios WHERE company_id = %s AND id = %s",
                 (company_id, portfolio_id)
             )
             conn.commit()
@@ -8893,7 +8919,7 @@ def api_portfolio(company_id: int, portfolio_id: int):
         cursor.execute(
             """
             SELECT 1 FROM portfolios
-            WHERE company_id = ? AND LOWER(code) = LOWER(?) AND id <> ?
+            WHERE company_id = %s AND LOWER(code) = LOWER(?) AND id <> ?
             """,
             (company_id, code, portfolio_id)
         )
@@ -8907,8 +8933,8 @@ def api_portfolio(company_id: int, portfolio_id: int):
         cursor.execute(
             """
             UPDATE portfolios
-            SET code = ?, name = ?, responsible_id = ?, notes = ?, updated_at = CURRENT_TIMESTAMP
-            WHERE company_id = ? AND id = ?
+            SET code = %s, name = ?, responsible_id = %s, notes = ?, updated_at = CURRENT_TIMESTAMP
+            WHERE company_id = %s AND id = %s
             """,
             (
                 code,
@@ -8936,7 +8962,7 @@ def api_portfolio(company_id: int, portfolio_id: int):
                 0 AS project_count
             FROM portfolios p
             LEFT JOIN employees e ON e.id = p.responsible_id
-            WHERE p.company_id = ? AND p.id = ?
+            WHERE p.company_id = %s AND p.id = %s
             """,
             (company_id, portfolio_id)
         )
@@ -9079,7 +9105,7 @@ def _derive_activity_schedule(
 
 def _compute_next_project_code(cursor, company_id: int) -> Dict[str, Any]:
     """Generate a unique project code and sequence for the given company."""
-    cursor.execute('SELECT client_code FROM companies WHERE id = ?', (company_id,))
+    cursor.execute('SELECT client_code FROM companies WHERE id = %s', (company_id,))
     company_row = cursor.fetchone()
     company_code = _sanitize_company_code(company_row['client_code'] if company_row else None, company_id)
 
@@ -9089,7 +9115,7 @@ def _compute_next_project_code(cursor, company_id: int) -> Dict[str, Any]:
             COALESCE(MAX(code_sequence), 0) AS max_seq,
             COUNT(*) AS total_projects
         FROM company_projects
-        WHERE company_id = ?
+        WHERE company_id = %s
         ''',
         (company_id,)
     )
@@ -9198,7 +9224,7 @@ def _generate_project_code(cursor, company_id: int) -> tuple:
     Example: ('AB.J.12', 12)
     """
     # Get company client_code
-    cursor.execute('SELECT client_code FROM companies WHERE id = ?', (company_id,))
+    cursor.execute('SELECT client_code FROM companies WHERE id = %s', (company_id,))
     company_row = cursor.fetchone()
     if not company_row or not company_row['client_code']:
         return (None, None)
@@ -9207,7 +9233,7 @@ def _generate_project_code(cursor, company_id: int) -> tuple:
     
     # Get next sequence number for this company's projects
     cursor.execute(
-        'SELECT MAX(code_sequence) as max_seq FROM company_projects WHERE company_id = ?',
+        'SELECT MAX(code_sequence) as max_seq FROM company_projects WHERE company_id = %s',
         (company_id,)
     )
     result = cursor.fetchone()
@@ -9260,7 +9286,7 @@ def api_company_projects(company_id: int):
                 LEFT JOIN portfolios pf ON pf.id = p.plan_id AND p.plan_type = 'GRV'
                 LEFT JOIN plans pl ON pl.id = p.plan_id AND p.plan_type = 'PEV'
                 LEFT JOIN employees e ON e.id = p.responsible_id
-                WHERE p.company_id = ?
+                WHERE p.company_id = %s
                 ORDER BY LOWER(p.title)
                 """,
                 (company_id,)
@@ -9305,7 +9331,7 @@ def api_company_projects(company_id: int):
         plan_id_value = None
         if plan_id:
             # Verificar se é um plan PEV ou portfolio GRV
-            cursor.execute('SELECT company_id FROM plans WHERE id = ?', (plan_id,))
+            cursor.execute('SELECT company_id FROM plans WHERE id = %s', (plan_id,))
             plan_row = cursor.fetchone()
             
             if plan_row and plan_row['company_id'] == company_id:
@@ -9313,7 +9339,7 @@ def api_company_projects(company_id: int):
                 plan_id_value = int(plan_id)
             else:
                 # Verificar se é um portfolio GRV
-                cursor.execute('SELECT company_id FROM portfolios WHERE id = ?', (plan_id,))
+                cursor.execute('SELECT company_id FROM portfolios WHERE id = %s', (plan_id,))
                 portfolio_row = cursor.fetchone()
                 
                 if portfolio_row and portfolio_row['company_id'] == company_id:
@@ -9333,7 +9359,8 @@ def api_company_projects(company_id: int):
                 responsible_id, start_date, end_date, 
                 okr_reference, indicator_reference, activities, notes,
                 code, code_sequence
-            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+            ) VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
+            RETURNING id
             """,
             (
                 company_id,
@@ -9353,7 +9380,7 @@ def api_company_projects(company_id: int):
                 code_sequence
             )
         )
-        new_id = cursor.lastrowid
+        new_id = cursor.fetchone()[0]
         conn.commit()
 
         cursor.execute(
@@ -9391,7 +9418,7 @@ def api_company_projects(company_id: int):
             LEFT JOIN portfolios pf ON pf.id = p.plan_id AND p.plan_type = 'GRV'
             LEFT JOIN plans pl ON pl.id = p.plan_id AND p.plan_type = 'PEV'
             LEFT JOIN employees e ON e.id = p.responsible_id
-            WHERE p.company_id = ? AND p.id = ?
+            WHERE p.company_id = %s AND p.id = %s
             """,
             (company_id, new_id)
         )
@@ -9417,7 +9444,7 @@ def api_company_project(company_id: int, project_id: int):
             conn = _open_portfolio_connection()
             cursor = conn.cursor()
             cursor.execute(
-                "SELECT 1 FROM company_projects WHERE company_id = ? AND id = ?",
+                "SELECT 1 FROM company_projects WHERE company_id = %s AND id = %s",
                 (company_id, project_id)
             )
             if cursor.fetchone() is None:
@@ -9425,7 +9452,7 @@ def api_company_project(company_id: int, project_id: int):
                 return jsonify({'success': False, 'message': 'Projeto não encontrado.'}), 404
 
             cursor.execute(
-                "DELETE FROM company_projects WHERE company_id = ? AND id = ?",
+                "DELETE FROM company_projects WHERE company_id = %s AND id = %s",
                 (company_id, project_id)
             )
             conn.commit()
@@ -9465,7 +9492,7 @@ def api_company_project(company_id: int, project_id: int):
         conn = _open_portfolio_connection()
         cursor = conn.cursor()
         cursor.execute(
-            "SELECT 1 FROM company_projects WHERE company_id = ? AND id = ?",
+            "SELECT 1 FROM company_projects WHERE company_id = %s AND id = %s",
             (company_id, project_id)
         )
         if cursor.fetchone() is None:
@@ -9475,7 +9502,7 @@ def api_company_project(company_id: int, project_id: int):
         plan_id_value = None
         if plan_id:
             # Verificar se é um plan PEV ou portfolio GRV
-            cursor.execute('SELECT company_id FROM plans WHERE id = ?', (plan_id,))
+            cursor.execute('SELECT company_id FROM plans WHERE id = %s', (plan_id,))
             plan_row = cursor.fetchone()
             
             if plan_row and plan_row['company_id'] == company_id:
@@ -9485,7 +9512,7 @@ def api_company_project(company_id: int, project_id: int):
                     plan_type = 'PEV'
             else:
                 # Verificar se é um portfolio GRV
-                cursor.execute('SELECT company_id FROM portfolios WHERE id = ?', (plan_id,))
+                cursor.execute('SELECT company_id FROM portfolios WHERE id = %s', (plan_id,))
                 portfolio_row = cursor.fetchone()
                 
                 if portfolio_row and portfolio_row['company_id'] == company_id:
@@ -9500,11 +9527,11 @@ def api_company_project(company_id: int, project_id: int):
         cursor.execute(
             """
             UPDATE company_projects
-            SET plan_id = ?, plan_type = ?, title = ?, description = ?, priority = ?,
-                responsible_id = ?, start_date = ?, end_date = ?,
+            SET plan_id = %s, plan_type = ?, title = ?, description = ?, priority = ?,
+                responsible_id = %s, start_date = ?, end_date = ?,
                 okr_reference = ?, indicator_reference = ?,
                 activities = ?, notes = ?, updated_at = CURRENT_TIMESTAMP
-            WHERE company_id = ? AND id = ?
+            WHERE company_id = %s AND id = %s
             """,
             (
                 plan_id_value,
@@ -9560,7 +9587,7 @@ def api_company_project(company_id: int, project_id: int):
             LEFT JOIN portfolios pf ON pf.id = p.plan_id AND p.plan_type = 'GRV'
             LEFT JOIN plans pl ON pl.id = p.plan_id AND p.plan_type = 'PEV'
             LEFT JOIN employees e ON e.id = p.responsible_id
-            WHERE p.company_id = ? AND p.id = ?
+            WHERE p.company_id = %s AND p.id = %s
             """,
             (company_id, project_id)
         )
@@ -9583,7 +9610,7 @@ def _generate_activity_code(cursor, company_id: int, project_id: int) -> tuple:
     Example: ('AA.J.12.01', 1)
     """
     # Get project code
-    cursor.execute('SELECT code FROM company_projects WHERE id = ?', (project_id,))
+    cursor.execute('SELECT code FROM company_projects WHERE id = %s', (project_id,))
     project_row = cursor.fetchone()
     if not project_row or not project_row['code']:
         return (None, None)
@@ -9591,7 +9618,7 @@ def _generate_activity_code(cursor, company_id: int, project_id: int) -> tuple:
     project_code = project_row['code']
     
     # Get existing activities to find max sequence
-    cursor.execute('SELECT activities FROM company_projects WHERE id = ?', (project_id,))
+    cursor.execute('SELECT activities FROM company_projects WHERE id = %s', (project_id,))
     result = cursor.fetchone()
     activities_json = result['activities'] if result else None
     
@@ -9629,7 +9656,7 @@ def api_project_activities(company_id: int, project_id: int):
             cursor = conn.cursor()
 
             cursor.execute(
-                "SELECT activities, code FROM company_projects WHERE company_id = ? AND id = ?",
+                "SELECT activities, code FROM company_projects WHERE company_id = %s AND id = %s",
                 (company_id, project_id)
             )
             row = cursor.fetchone()
@@ -9654,7 +9681,7 @@ def api_project_activities(company_id: int, project_id: int):
 
             if changed:
                 cursor.execute(
-                    "UPDATE company_projects SET activities = ?, updated_at = CURRENT_TIMESTAMP WHERE company_id = ? AND id = ?",
+                    "UPDATE company_projects SET activities = %s, updated_at = CURRENT_TIMESTAMP WHERE company_id = %s AND id = %s",
                     (json.dumps(activities, ensure_ascii=False), company_id, project_id)
                 )
                 conn.commit()
@@ -9679,7 +9706,7 @@ def api_project_activities(company_id: int, project_id: int):
         cursor = conn.cursor()
 
         cursor.execute(
-            "SELECT activities, code FROM company_projects WHERE company_id = ? AND id = ?",
+            "SELECT activities, code FROM company_projects WHERE company_id = %s AND id = %s",
             (company_id, project_id)
         )
         row = cursor.fetchone()
@@ -9725,7 +9752,7 @@ def api_project_activities(company_id: int, project_id: int):
         activities, _, _ = normalize_project_activities(activities, project_code)
 
         cursor.execute(
-            "UPDATE company_projects SET activities = ?, updated_at = CURRENT_TIMESTAMP WHERE company_id = ? AND id = ?",
+            "UPDATE company_projects SET activities = %s, updated_at = CURRENT_TIMESTAMP WHERE company_id = %s AND id = %s",
             (json.dumps(activities, ensure_ascii=False), company_id, project_id)
         )
         conn.commit()
@@ -9754,7 +9781,7 @@ def api_project_activity(company_id: int, project_id: int, activity_id: int):
             cursor = conn.cursor()
             
             cursor.execute(
-                "SELECT activities, code FROM company_projects WHERE company_id = ? AND id = ?",
+                "SELECT activities, code FROM company_projects WHERE company_id = %s AND id = %s",
                 (company_id, project_id)
             )
             row = cursor.fetchone()
@@ -9783,7 +9810,7 @@ def api_project_activity(company_id: int, project_id: int, activity_id: int):
             # Save back
             import json
             cursor.execute(
-                "UPDATE company_projects SET activities = ?, updated_at = CURRENT_TIMESTAMP WHERE company_id = ? AND id = ?",
+                "UPDATE company_projects SET activities = %s, updated_at = CURRENT_TIMESTAMP WHERE company_id = %s AND id = %s",
                 (json.dumps(activities, ensure_ascii=False), company_id, project_id)
             )
             conn.commit()
@@ -9806,7 +9833,7 @@ def api_project_activity(company_id: int, project_id: int, activity_id: int):
         cursor = conn.cursor()
         
         cursor.execute(
-            "SELECT activities, code FROM company_projects WHERE company_id = ? AND id = ?",
+            "SELECT activities, code FROM company_projects WHERE company_id = %s AND id = %s",
             (company_id, project_id)
         )
         row = cursor.fetchone()
@@ -9851,7 +9878,7 @@ def api_project_activity(company_id: int, project_id: int, activity_id: int):
         activities, _, _ = normalize_project_activities(activities, project_code)
 
         cursor.execute(
-            "UPDATE company_projects SET activities = ?, updated_at = CURRENT_TIMESTAMP WHERE company_id = ? AND id = ?",
+            "UPDATE company_projects SET activities = %s, updated_at = CURRENT_TIMESTAMP WHERE company_id = %s AND id = %s",
             (json.dumps(activities, ensure_ascii=False), company_id, project_id)
         )
         conn.commit()
@@ -9877,7 +9904,7 @@ def api_project_activity_stage(company_id: int, project_id: int, activity_id: in
         cursor = conn.cursor()
         
         cursor.execute(
-            "SELECT activities, code FROM company_projects WHERE company_id = ? AND id = ?",
+            "SELECT activities, code FROM company_projects WHERE company_id = %s AND id = %s",
             (company_id, project_id)
         )
         row = cursor.fetchone()
@@ -9932,7 +9959,7 @@ def api_project_activity_stage(company_id: int, project_id: int, activity_id: in
         activities, _, _ = normalize_project_activities(activities, project_code)
 
         cursor.execute(
-            "UPDATE company_projects SET activities = ?, updated_at = CURRENT_TIMESTAMP WHERE company_id = ? AND id = ?",
+            "UPDATE company_projects SET activities = %s, updated_at = CURRENT_TIMESTAMP WHERE company_id = %s AND id = %s",
             (json.dumps(activities, ensure_ascii=False), company_id, project_id)
         )
         conn.commit()
@@ -9962,7 +9989,7 @@ def api_transfer_activity(company_id: int, project_id: int, activity_id: int):
         
         # Get source project activities
         cursor.execute(
-            "SELECT activities, code FROM company_projects WHERE company_id = ? AND id = ?",
+            "SELECT activities, code FROM company_projects WHERE company_id = %s AND id = %s",
             (company_id, project_id)
         )
         source_row = cursor.fetchone()
@@ -9973,7 +10000,7 @@ def api_transfer_activity(company_id: int, project_id: int, activity_id: int):
         
         # Get target project activities
         cursor.execute(
-            "SELECT activities, code FROM company_projects WHERE company_id = ? AND id = ?",
+            "SELECT activities, code FROM company_projects WHERE company_id = %s AND id = %s",
             (company_id, target_project_id)
         )
         target_row = cursor.fetchone()
@@ -10080,12 +10107,12 @@ def api_transfer_activity(company_id: int, project_id: int, activity_id: int):
         
         # Save both projects
         cursor.execute(
-            "UPDATE company_projects SET activities = ?, updated_at = CURRENT_TIMESTAMP WHERE company_id = ? AND id = ?",
+            "UPDATE company_projects SET activities = %s, updated_at = CURRENT_TIMESTAMP WHERE company_id = %s AND id = %s",
             (json.dumps(source_activities, ensure_ascii=False), company_id, project_id)
         )
         
         cursor.execute(
-            "UPDATE company_projects SET activities = ?, updated_at = CURRENT_TIMESTAMP WHERE company_id = ? AND id = ?",
+            "UPDATE company_projects SET activities = %s, updated_at = CURRENT_TIMESTAMP WHERE company_id = %s AND id = %s",
             (json.dumps(target_activities, ensure_ascii=False), company_id, target_project_id)
         )
         
@@ -10121,7 +10148,7 @@ def api_get_project_info(company_id: int, project_id: int):
                 p.title AS name,
                 p.code
             FROM company_projects p
-            WHERE p.company_id = ? AND p.id = ?
+            WHERE p.company_id = %s AND p.id = %s
             """,
             (company_id, project_id)
         )
@@ -10184,7 +10211,7 @@ def api_plan_projects(plan_id: int):
                 p.updated_at
             FROM company_projects p
             LEFT JOIN plans pl ON pl.id = p.plan_id
-            WHERE p.plan_id = ?
+            WHERE p.plan_id = %s
             ORDER BY LOWER(p.title)
             """,
             (plan_id,)
@@ -10233,8 +10260,25 @@ if __name__ == "__main__":
         print("   - Set DB_TYPE environment variable (sqlite, postgresql)")
         print("   - Configure connection parameters")
         
+        # Inicializar Scheduler para tarefas agendadas
+        print("\n🔧 Inicializando Scheduler de Tarefas...")
+        try:
+            from services.scheduler_service import initialize_scheduler, shutdown_scheduler
+            import atexit
+            
+            # Iniciar scheduler
+            initialize_scheduler()
+            
+            # Registrar shutdown do scheduler ao fechar a aplicação
+            atexit.register(shutdown_scheduler)
+            
+            print("✅ Scheduler ativo - Rotinas serão executadas automaticamente!")
+        except Exception as e:
+            print(f"⚠️ Aviso: Scheduler não pôde ser iniciado: {e}")
+            print("   Rotinas devem ser executadas manualmente via routine_scheduler.py")
+        
         print("\nIniciando servidor...")
-        app.run(debug=True, host='127.0.0.1', port=5002, use_reloader=False)
+        app.run(debug=True, host='0.0.0.0', port=5002, use_reloader=False)
     except Exception as e:
         print(f">> ERRO AO INICIAR SERVIDOR: {e}")
         import traceback

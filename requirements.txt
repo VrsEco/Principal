@@ -26,7 +26,8 @@ marshmallow-sqlalchemy==0.29.0
 reportlab==4.0.4
 playwright==1.55.0
 
-# Background Tasks
+# Background Tasks & Scheduling
+APScheduler==3.10.4
 celery==5.3.1
 redis==4.6.0
 

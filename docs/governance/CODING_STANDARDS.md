@@ -602,6 +602,133 @@ projects = Project.query.filter_by(active=True).filter(Project.start_date >= dat
 
 ---
 
+## ⏰ Tarefas Agendadas (APScheduler)
+
+### Padrões para Jobs
+
+```python
+# ✅ BOM
+def process_daily_backups():
+    """
+    Processa backups diários.
+    
+    Executado automaticamente às 03:00 todos os dias.
+    """
+    logger.info("Iniciando backup diário...")
+    try:
+        # Lógica do backup
+        pass
+    except Exception as e:
+        logger.error(f"Erro no backup: {e}")
+        # Notificar admin
+
+# ❌ RUIM
+def backup():  # Nome genérico
+    print("backup")  # Usar logger, não print
+    # Sem tratamento de erro
+```
+
+### Adicionar Novo Job
+
+**Localização:** `services/scheduler_service.py` → função `setup_routine_jobs()`
+
+```python
+def setup_routine_jobs():
+    # Jobs existentes...
+    
+    # Adicionar novo job
+    scheduler_service.add_job(
+        func=nome_da_funcao,
+        trigger='cron',
+        job_id='identificador_unico',
+        hour=3,  # Horário
+        minute=0,
+        name='Nome Descritivo para Logs'
+    )
+```
+
+### Regras de Jobs
+
+- ✅ **Sempre** usar `try/except` em funções de jobs
+- ✅ **Sempre** usar `logger` (nunca `print`)
+- ✅ **Sempre** usar IDs únicos e descritivos
+- ✅ **Sempre** adicionar docstring com horário de execução
+- ❌ **Nunca** fazer operações bloqueantes longas (>5min)
+- ❌ **Nunca** usar `use_reloader=True` com scheduler
+
+### Tipos de Triggers
+
+```python
+# Diário (horário específico)
+trigger='cron', hour=0, minute=1
+
+# A cada X minutos
+trigger='interval', minutes=30
+
+# Semanal (segunda-feira às 09:00)
+trigger='cron', day_of_week='mon', hour=9, minute=0
+
+# Mensal (dia 1 às 00:00)
+trigger='cron', day=1, hour=0, minute=0
+
+# Data específica
+trigger='date', run_date='2025-12-31 23:59:00'
+```
+
+---
+
+## 🐳 Docker
+
+### Padrões de Dockerfile
+
+```dockerfile
+# ✅ BOM - Multi-stage, otimizado
+FROM python:3.9-slim AS base
+WORKDIR /app
+COPY requirements.txt .
+RUN pip install --no-cache-dir -r requirements.txt
+
+# ❌ RUIM - Tudo em uma camada
+FROM python:3.9
+RUN apt-get update && apt-get install everything
+COPY . .
+```
+
+### Docker Compose
+
+```yaml
+# ✅ BOM
+services:
+  app:
+    build: .
+    environment:
+      DATABASE_URL: ${DATABASE_URL}
+    volumes:
+      - .:/app  # Hot-reload
+    depends_on:
+      db:
+        condition: service_healthy
+
+# ❌ RUIM
+services:
+  app:
+    image: myapp
+    environment:
+      DB_PASS: senha123  # Hardcoded!
+```
+
+### Regras Docker
+
+- ✅ **Sempre** usar `.dockerignore`
+- ✅ **Sempre** usar health checks
+- ✅ **Sempre** usar volumes nomeados para dados
+- ✅ **Sempre** usar variáveis de ambiente
+- ❌ **Nunca** hardcode credenciais
+- ❌ **Nunca** usar `latest` em produção
+- ❌ **Nunca** rodar como root em produção
+
+---
+
 ## 🧰 Ferramentas
 
 ### Black (Formatação Automática)
