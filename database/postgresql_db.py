@@ -9,7 +9,7 @@ from .base import DatabaseInterface
 from .postgres_helper import connect as pg_connect
 
 class PostgreSQLDatabase(DatabaseInterface):
-    """PostgreSQL database implementation usando pg8000"""
+    """PostgreSQL database implementation usando psycopg2"""
     
     def __init__(self, host: str = 'localhost', port: int = 5432, 
                  database: str = 'pevapp22', user: str = 'postgres', 
