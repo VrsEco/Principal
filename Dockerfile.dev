@@ -18,7 +18,7 @@ ENV PYTHONUNBUFFERED=1 \
     FLASK_ENV=development \
     FLASK_DEBUG=1
 
-# Instalar dependências do sistema + ferramentas dev
+# Instalar dependências do sistema + ferramentas dev + Playwright dependencies
 RUN apt-get update && apt-get install -y --no-install-recommends \
     gcc \
     g++ \
@@ -27,6 +27,24 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     curl \
     vim \
     git \
+    # Playwright browser dependencies
+    libnss3 \
+    libnspr4 \
+    libatk1.0-0 \
+    libatk-bridge2.0-0 \
+    libcups2 \
+    libdrm2 \
+    libdbus-1-3 \
+    libxkbcommon0 \
+    libxcomposite1 \
+    libxdamage1 \
+    libxfixes3 \
+    libxrandr2 \
+    libgbm1 \
+    libpango-1.0-0 \
+    libcairo2 \
+    libasound2 \
+    libatspi2.0-0 \
     && rm -rf /var/lib/apt/lists/*
 
 # Criar diretório de trabalho
@@ -39,6 +57,9 @@ COPY requirements.txt .
 RUN pip install --upgrade pip && \
     pip install -r requirements.txt && \
     pip install pytest pytest-flask black flake8 ipython ipdb
+
+# Instalar browsers do Playwright
+RUN playwright install --with-deps chromium
 
 # Expor porta
 EXPOSE 5002

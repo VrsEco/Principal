@@ -12,7 +12,7 @@ services:
   # ==========================================
   db_dev:
     image: postgres:18-alpine
-    container_name: gestaoversus_db_dev
+    container_name: gestaoversos_db_dev
     restart: unless-stopped
     environment:
       POSTGRES_DB: ${DEV_POSTGRES_DB:-bd_app_versus_dev}
@@ -30,14 +30,14 @@ services:
       timeout: 5s
       retries: 5
     networks:
-      - gestaoversus_network_dev
+      - gestaoversos_network_dev
 
   # ==========================================
   # Redis Cache (Dev)
   # ==========================================
   redis_dev:
     image: redis:7-alpine
-    container_name: gestaoversus_redis_dev
+    container_name: gestaoversos_redis_dev
     restart: unless-stopped
     command: redis-server --appendonly yes
     volumes:
@@ -50,7 +50,7 @@ services:
       timeout: 3s
       retries: 5
     networks:
-      - gestaoversus_network_dev
+      - gestaoversos_network_dev
 
   # ==========================================
   # Flask Application (Dev)
@@ -59,7 +59,7 @@ services:
     build:
       context: .
       dockerfile: Dockerfile.dev
-    container_name: gestaoversus_app_dev
+    container_name: gestaoversos_app_dev
     restart: unless-stopped
     environment:
       # Flask
@@ -68,8 +68,8 @@ services:
       FLASK_DEBUG: 1
       SECRET_KEY: dev-secret-key-not-for-production
       
-      # Database (conectando ao PostgreSQL do container Docker)
-      DATABASE_URL: postgresql://postgres:dev_password@db_dev:5432/bd_app_versus_dev
+      # Database (conectando ao PostgreSQL local da máquina host)
+      DATABASE_URL: postgresql://postgres:*Paraiso1978@host.docker.internal:5432/bd_app_versus
       
       # Redis
       REDIS_URL: redis://redis_dev:6379/0
@@ -88,11 +88,12 @@ services:
     depends_on:
       redis_dev:
         condition: service_healthy
-      db_dev:
-        condition: service_healthy
+    # Comentado pois estamos usando PostgreSQL local
+    #  db_dev:
+    #    condition: service_healthy
     command: python app_pev.py
     networks:
-      - gestaoversus_network_dev
+      - gestaoversos_network_dev
 
   # ==========================================
   # Celery Worker (Dev) - DESABILITADO
@@ -103,7 +104,7 @@ services:
   #   build:
   #     context: .
   #     dockerfile: Dockerfile.dev
-  #   container_name: gestaoversus_celery_dev
+  #   container_name: gestaoversos_celery_dev
   #   restart: unless-stopped
   #   command: celery -A app_pev.celery worker --loglevel=debug --concurrency=2
   #   environment:
@@ -125,7 +126,7 @@ services:
   # ==========================================
   adminer:
     image: adminer:latest
-    container_name: gestaoversus_adminer_dev
+    container_name: gestaoversos_adminer_dev
     restart: unless-stopped
     ports:
       - "8080:8080"
@@ -134,20 +135,20 @@ services:
     depends_on:
       - db_dev
     networks:
-      - gestaoversus_network_dev
+      - gestaoversos_network_dev
 
   # ==========================================
   # MailHog (Email Testing)
   # ==========================================
   mailhog:
     image: mailhog/mailhog:latest
-    container_name: gestaoversus_mailhog_dev
+    container_name: gestaoversos_mailhog_dev
     restart: unless-stopped
     ports:
       - "8025:8025"  # Web UI
       - "1025:1025"  # SMTP
     networks:
-      - gestaoversus_network_dev
+      - gestaoversos_network_dev
 
 # ==========================================
 # Volumes Persistentes (Dev)
@@ -162,5 +163,5 @@ volumes:
 # Network (Dev)
 # ==========================================
 networks:
-  gestaoversus_network_dev:
+  gestaoversos_network_dev:
     driver: bridge
