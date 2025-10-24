@@ -239,6 +239,45 @@ class AuthService:
         return query.order_by(User.name).all()
     
     @staticmethod
+    def update_user_status(user_id, is_active):
+        """
+        Update user active status
+        
+        Args:
+            user_id (int): User ID
+            is_active (bool): New active status
+        
+        Returns:
+            bool: True if updated successfully, False if user not found
+        """
+        try:
+            user = User.query.get(user_id)
+            if not user:
+                return False
+            
+            old_status = user.is_active
+            user.is_active = is_active
+            user.updated_at = datetime.utcnow()
+            
+            db.session.commit()
+            
+            # Log status change
+            log_service.log_update(
+                entity_type='user',
+                entity_id=user.id,
+                entity_name=user.name,
+                old_values={'is_active': old_status},
+                new_values={'is_active': is_active},
+                description=f"Status do usuário {user.name} alterado para {'ativo' if is_active else 'inativo'}"
+            )
+            
+            return True
+            
+        except Exception as e:
+            db.session.rollback()
+            raise e
+    
+    @staticmethod
     def create_admin_user():
         """
         Create default admin user if it doesn't exist

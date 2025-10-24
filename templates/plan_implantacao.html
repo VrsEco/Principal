@@ -1,0 +1,633 @@
+﻿{% extends "base.html" %}
+{% block title %}Implantacao do Negocio | PEV 2.0{% endblock %}
+{% block body %}
+  {{ super() }}
+{% endblock %}
+
+{% block header_actions %}
+  <div class="header-nav">
+    <a href="/main" class="nav-link">Ecossistema</a>
+    <a href="{{ url_for('pev.pev_dashboard') }}" class="nav-link active">PEV</a>
+    <a href="{{ url_for('grv.grv_dashboard') }}" class="nav-link">GRV</a>
+  </div>
+  <div class="user-pill">
+    <span class="user-name">{{ user_name | default('Fabiano Ferreira') }}</span>
+  </div>
+  <div class="header-nav">
+    <select id="themeSelect" class="nav-link" style="padding: 8px 12px; color: #64748b;">
+      <option value="versus">Tema Versus</option>
+      <option value="alt">Tema Azul/Branco/Amarelo</option>
+    </select>
+  </div>
+{% endblock %}
+
+{% block content %}
+  <style>
+    body {
+      background: linear-gradient(135deg, #f8fafc 0%, #f1f5f9 50%, #e2e8f0 100%) !important;
+      color: #0f172a !important;
+    }
+
+    .plan-layout.plan-implantacao {
+      min-height: calc(100vh - 88px);
+      background: transparent;
+    }
+
+    .phase-view {
+      display: none;
+    }
+
+    .phase-view.is-active {
+      display: flex;
+      flex-direction: column;
+      gap: 32px;
+    }
+
+    .implantation-hero.surface-card {
+      padding: 32px;
+      border-radius: 24px;
+      background: rgba(255, 255, 255, 0.95);
+      border: 1px solid rgba(148, 163, 184, 0.25);
+      box-shadow: 0 20px 45px rgba(15, 23, 42, 0.08);
+      backdrop-filter: blur(12px);
+    }
+
+    .implantation-hero .page-eyebrow {
+      text-transform: uppercase;
+      letter-spacing: 0.12em;
+      font-size: 12px;
+      color: rgba(15, 23, 42, 0.6);
+      display: block;
+      margin-bottom: 8px;
+    }
+
+    .implantation-hero h1 {
+      margin: 0;
+      font-size: 32px;
+      font-weight: 700;
+      color: #0f172a;
+    }
+
+    .implantation-hero p {
+      font-size: 16px;
+      color: #475569;
+      max-width: 720px;
+      margin-top: 12px;
+      line-height: 1.6;
+    }
+
+    .implantation-meta {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 12px;
+      margin-top: 24px;
+    }
+
+    .implantation-meta span {
+      font-size: 13px;
+      color: #475569;
+      padding: 8px 16px;
+      border-radius: 999px;
+      background: rgba(148, 163, 184, 0.18);
+    }
+
+    .implantation-summary {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(210px, 1fr));
+      gap: 16px;
+    }
+
+    .summary-card {
+      background: rgba(255, 255, 255, 0.9);
+      border-radius: 18px;
+      border: 1px solid rgba(148, 163, 184, 0.25);
+      padding: 20px;
+      box-shadow: 0 16px 30px rgba(15, 23, 42, 0.07);
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+    }
+
+    .summary-card h3 {
+      margin: 0;
+      font-size: 12px;
+      letter-spacing: 0.1em;
+      text-transform: uppercase;
+      color: #64748b;
+    }
+
+    .summary-card strong {
+      font-size: 20px;
+      color: #0f172a;
+    }
+
+    .summary-card p {
+      margin: 0;
+      color: #475569;
+      font-size: 14px;
+      line-height: 1.5;
+    }
+
+    .phase-status-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+      gap: 16px;
+    }
+
+    .phase-status-item {
+      background: rgba(255, 255, 255, 0.92);
+      border: 1px solid rgba(148, 163, 184, 0.25);
+      border-radius: 18px;
+      padding: 18px;
+      box-shadow: 0 16px 35px rgba(15, 23, 42, 0.08);
+      display: flex;
+      flex-direction: column;
+      gap: 12px;
+    }
+
+    .phase-status-head {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      gap: 12px;
+    }
+
+    .phase-status-name {
+      font-size: 15px;
+      color: #0f172a;
+      font-weight: 600;
+    }
+
+    .phase-status-chip {
+      padding: 6px 12px;
+      border-radius: 999px;
+      font-size: 12px;
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+      font-weight: 600;
+      background: rgba(148, 163, 184, 0.2);
+      color: #475569;
+    }
+
+    .phase-status-chip.status-concluida {
+      background: rgba(34, 197, 94, 0.14);
+      color: #15803d;
+    }
+
+    .phase-status-chip.status-em_desenvolvimento {
+      background: rgba(59, 130, 246, 0.14);
+      color: #1d4ed8;
+    }
+
+    .phase-status-chip.status-sem_registros {
+      background: rgba(248, 113, 113, 0.18);
+      color: #b91c1c;
+    }
+
+    .phase-status-actions {
+      display: flex;
+      justify-content: flex-start;
+      gap: 8px;
+    }
+
+    .phase-view-details {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+      gap: 16px;
+    }
+
+    .phase-section {
+      background: rgba(248, 250, 252, 0.95);
+      border-radius: 16px;
+      border: 1px solid rgba(148, 163, 184, 0.18);
+      padding: 18px;
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+    }
+
+    .phase-section h3 {
+      margin: 0;
+      font-size: 16px;
+      color: #0f172a;
+    }
+
+    .phase-section p {
+      margin: 0;
+      font-size: 14px;
+      color: #475569;
+      line-height: 1.5;
+    }
+
+    .phase-section ul {
+      margin: 0;
+      padding-left: 18px;
+      font-size: 13px;
+      color: #475569;
+      line-height: 1.5;
+    }
+
+    .phase-deliverables {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 10px;
+    }
+
+    .phase-deliverables span,
+    .phase-deliverables a {
+      display: inline-flex;
+      align-items: center;
+      padding: 7px 14px;
+      border-radius: 999px;
+      background: rgba(59, 130, 246, 0.12);
+      border: 1px solid rgba(59, 130, 246, 0.28);
+      color: #1d4ed8;
+      font-size: 13px;
+      text-decoration: none;
+      transition: transform 0.2s ease, box-shadow 0.2s ease;
+    }
+
+    .phase-deliverables a:hover {
+      transform: translateY(-1px);
+      box-shadow: 0 12px 24px rgba(59, 130, 246, 0.2);
+    }
+
+    .phase-header span {
+      font-size: 12px;
+      letter-spacing: 0.14em;
+      text-transform: uppercase;
+      color: #64748b;
+    }
+
+    .phase-header h2 {
+      margin: 6px 0 10px;
+      font-size: 26px;
+      color: #0f172a;
+    }
+
+    .phase-header p {
+      margin: 0;
+      color: #475569;
+      font-size: 16px;
+      line-height: 1.6;
+    }
+
+    .phase-pulse {
+      border-left: 4px solid #22c55e;
+      background: rgba(34, 197, 94, 0.12);
+      padding: 16px 20px;
+      border-radius: 12px;
+      color: #166534;
+      font-size: 15px;
+      line-height: 1.6;
+    }
+
+    .phase-actions {
+      display: flex;
+      gap: 12px;
+      margin-top: 8px;
+    }
+
+    .plan-sidebar-card {
+      background: rgba(255, 255, 255, 0.08);
+      border: 1px solid rgba(255, 255, 255, 0.2);
+      border-radius: 16px;
+      padding: 18px;
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+      font-size: 13px;
+      color: #f8fafc;
+    }
+
+    .plan-sidebar-card strong {
+      color: #ffffff;
+    }
+
+    .plan-sidebar-meta-title {
+      text-transform: uppercase;
+      letter-spacing: 0.08em;
+      font-size: 11px;
+      color: rgba(226, 232, 240, 0.75);
+    }
+
+    .plan-sidebar-meta-text {
+      margin: 0;
+      color: #f8fafc;
+    }
+    .plan-sidebar-card .button {
+      background: rgba(255, 255, 255, 0.18);
+      color: #f8fafc;
+      width: 100%;
+      text-align: center;
+      border: 1px solid rgba(255, 255, 255, 0.3);
+    }
+
+    .plan-sidebar-card .button:hover {
+      background: rgba(255, 255, 255, 0.28);
+      color: #0f172a;
+    }
+
+
+    @media (max-width: 1024px) {
+      .plan-layout.plan-implantacao {
+        grid-template-columns: 1fr;
+      }
+
+      .project-sidebar {
+        position: relative;
+        top: 0;
+      }
+    }
+  </style>
+
+  <div class="project-layout plan-layout plan-implantacao" data-sidebar-toggle>
+    {% set nav = namespace(items=[{'id': 'dashboard', 'name': 'Dashboard', 'url': '#phase-dashboard'}]) %}
+    {% set delivery_nav = namespace(item=None) %}
+    {% for phase in macro_phases %}
+      {% if phase.id == 'delivery' %}
+        {% set delivery_nav.item = {'id': phase.id, 'name': phase.title, 'url': '#phase-' ~ phase.id} %}
+      {% elif phase.id == 'alignment' %}
+        {# Link direto para página de canvas de expectativas #}
+        {% set nav.items = nav.items + [{'id': phase.id, 'name': phase.title, 'url': url_for('pev.implantacao_canvas_expectativas', plan_id=plan.id)}] %}
+      {% elif phase.id == 'execution' %}
+        {# Link direto para página de estruturas #}
+        {% set nav.items = nav.items + [{'id': phase.id, 'name': phase.title, 'url': url_for('pev.implantacao_estruturas', plan_id=plan.id)}] %}
+      {% else %}
+        {% set nav.items = nav.items + [{'id': phase.id, 'name': phase.title, 'url': '#phase-' ~ phase.id}] %}
+      {% endif %}
+    {% endfor %}
+    {% set nav.items = nav.items + [
+      {'id': 'modelagem-financeira', 'name': 'Modelagem Financeira', 'url': url_for('pev.implantacao_modelagem_financeira', plan_id=plan.id)}
+    ] %}
+    {% if delivery_nav.item %}
+      {% set nav.items = nav.items + [delivery_nav.item] %}
+    {% endif %}
+    {% set sidebar_navigation = nav.items %}
+    {% set sidebar_title = 'Fluxo da implantacao' %}
+    {% set active_id = 'dashboard' %}
+    {% set sidebar_meta %}
+      <div class="plan-sidebar-card">
+        <span class="plan-sidebar-meta-title">Plano ativo</span>
+        <p class="plan-sidebar-meta-text"><strong>{{ plan.plan_name }}</strong></p>
+        <p class="plan-sidebar-meta-text">{{ plan.company_name }}</p>
+        <p class="plan-sidebar-meta-text">Status: {{ plan.status }}</p>
+        <p class="plan-sidebar-meta-text">Ultima alteracao: {{ plan.last_update }}</p>
+        {% set project_href = plan.project_link or url_for('grv.grv_dashboard') %}
+        <a class="button button-ghost" style="margin-top:8px;" href="{{ project_href }}" target="_blank">
+          Abrir projeto no GRV
+        </a>
+      </div>
+    {% endset %}
+    {% include 'plan_sidebar.html' %}
+
+    <section class="project-content plan-content">
+      <div class="phase-view is-active" id="phase-dashboard" data-phase="dashboard">
+        <div class="implantation-hero surface-card">
+          <span class="page-eyebrow">PEV - Implantacao do Negocio</span>
+          <h1>{{ plan.plan_name }}</h1>
+          <p>
+            Visao consolidada da jornada de implantacao, organizada em macro fases
+            para orientar consultor e socios desde o alinhamento inicial ate a entrega
+            do projeto executivo.
+          </p>
+        </div>
+
+        <div class="implantation-summary">
+          <article class="summary-card">
+            <h3>Evolucao geral</h3>
+            <strong>{{ dashboard.total_status | default('0 fases concluidas') }}</strong>
+            <p>{{ dashboard.progress_message | default('Atualize as fases para acompanhar a implantacao.') }}</p>
+          </article>
+          <article class="summary-card">
+            <h3>Proxima prioridade</h3>
+            <strong>{{ dashboard.next_focus | default('Sem registros') }}</strong>
+            <p>{{ dashboard.next_focus_details | default('Nenhuma acao prioritaria definida.') }}</p>
+          </article>
+          <article class="summary-card">
+            <h3>Observacoes gerais</h3>
+            <strong>{{ dashboard.general_note | default('Aguardando alinhamento') }}</strong>
+            <p>{{ dashboard.general_details | default('Use o botao de conclusao para registrar avancos por fase.') }}</p>
+          </article>
+        </div>
+
+        <div class="phase-status-grid" id="phase-status-grid">
+          {% for phase in macro_phases %}
+            <div class="phase-status-item" data-phase-indicator="{{ phase.id }}">
+              <div class="phase-status-head">
+                <span class="phase-status-name">{{ loop.index }}. {{ phase.title }}</span>
+                <span class="phase-status-chip status-{{ phase.status }}">{{ phase.status.replace('_', ' ') }}</span>
+              </div>
+              <div class="phase-status-actions">
+                <button class="button button-ghost phase-open" data-phase="{{ phase.id }}">Abrir fase</button>
+              </div>
+            </div>
+          {% endfor %}
+        </div>
+      </div>
+
+      {% for phase in macro_phases %}
+        <section
+          class="phase-view"
+          id="phase-{{ phase.id }}"
+          data-phase="{{ phase.id }}"
+          data-phase-status="{{ phase.status }}"
+        >
+          <header class="phase-header">
+            <span>Fase {{ "%02d" | format(loop.index) }}</span>
+            <h2>{{ phase.title }}</h2>
+            <p>{{ phase.tagline }}</p>
+          </header>
+
+          <div class="phase-pulse">{{ phase.pulse }}</div>
+
+          <div class="phase-actions">
+            <button class="button button-primary phase-complete-button" data-phase="{{ phase.id }}">
+              Marcar como concluida
+            </button>
+            <button class="button button-ghost phase-back-button" data-phase="{{ phase.id }}">
+              Voltar ao dashboard
+            </button>
+          </div>
+
+          <div class="phase-view-details">
+            {% for section in phase.sections %}
+              <div class="phase-section">
+                <h3>{{ section.title }}</h3>
+                <p>{{ section.description }}</p>
+                {% if section.highlights %}
+                  <ul>
+                    {% for highlight in section.highlights %}
+                      <li>{{ highlight }}</li>
+                    {% endfor %}
+                  </ul>
+                {% endif %}
+              </div>
+            {% endfor %}
+          </div>
+
+          <div class="phase-deliverables">
+            {% for item in phase.deliverables %}
+              {% set label = item.label if item is mapping else item %}
+              {% set endpoint = item.endpoint if item is mapping else None %}
+              {% set direct_url = item.url if item is mapping else None %}
+              {% if endpoint %}
+                {% set href = url_for(endpoint, plan_id=plan.plan_id) %}
+              {% elif direct_url %}
+                {% set href = direct_url %}
+              {% else %}
+                {% set href = None %}
+              {% endif %}
+              {% if href %}
+                <a class="phase-deliverable-link" href="{{ href }}">{{ label }}</a>
+              {% else %}
+                <span>{{ label }}</span>
+              {% endif %}
+            {% endfor %}
+          </div>
+        </section>
+      {% endfor %}
+    </section>
+  </div>
+
+  <script type="application/json" id="implantation-data">
+    {{ macro_phases | tojson }}
+  </script>
+{% endblock %}
+
+{% block scripts %}
+  {{ super() }}
+  <script>
+    (function () {
+      const sidebar = document.querySelector('.project-sidebar');
+      const navLinks = document.querySelectorAll('.project-nav-link');
+      const phaseViews = document.querySelectorAll('.phase-view');
+      const statusGridItems = document.querySelectorAll('[data-phase-indicator]');
+      const completeButtons = document.querySelectorAll('.phase-complete-button');
+      const openButtons = document.querySelectorAll('.phase-open');
+      const backButtons = document.querySelectorAll('.phase-back-button');
+      const dataElement = document.getElementById('implantation-data');
+
+      const phaseData = dataElement ? JSON.parse(dataElement.textContent) : [];
+      const statusState = {};
+      phaseData.forEach((phase) => {
+        statusState[phase.id] = phase.status || 'sem_registros';
+      });
+
+      const statusLabels = {
+        concluida: 'Concluida',
+        em_desenvolvimento: 'Em desenvolvimento',
+        sem_registros: 'Sem registros'
+      };
+
+      const dashboardId = 'dashboard';
+
+      function updateStatusIndicators() {
+        statusGridItems.forEach((item) => {
+          const phaseId = item.getAttribute('data-phase-indicator');
+          const chip = item.querySelector('.phase-status-chip');
+          const status = statusState[phaseId] || 'sem_registros';
+          chip.textContent = statusLabels[status] || status;
+          chip.className = 'phase-status-chip status-' + status;
+        });
+
+        phaseViews.forEach((view) => {
+          const phaseId = view.getAttribute('data-phase');
+          if (phaseId === dashboardId) {
+            return;
+          }
+          const status = statusState[phaseId] || 'sem_registros';
+          view.setAttribute('data-phase-status', status);
+          const button = view.querySelector('.phase-complete-button');
+          if (button) {
+            if (status === 'concluida') {
+              button.textContent = 'Reabrir fase';
+              button.classList.remove('button-primary');
+              button.classList.add('button-ghost');
+            } else {
+              button.textContent = 'Marcar como concluida';
+              button.classList.add('button-primary');
+              button.classList.remove('button-ghost');
+            }
+          }
+        });
+      }
+
+      function setActivePhase(targetId) {
+        const targetHash = '#phase-' + targetId;
+        navLinks.forEach((link) => {
+          const href = link.getAttribute('href') || '';
+          const linkId = href.startsWith('#phase-') ? href.replace('#phase-', '') : href.replace('#', '');
+          const isActive = linkId === targetId;
+          link.classList.toggle('is-active', isActive);
+        });
+
+        phaseViews.forEach((view) => {
+          const phaseId = view.getAttribute('data-phase');
+          view.classList.toggle('is-active', phaseId === targetId);
+        });
+
+        if (targetId !== dashboardId) {
+          const targetView = document.querySelector('#phase-' + targetId);
+          if (targetView) {
+            targetView.scrollIntoView({ behavior: 'smooth', block: 'start' });
+          }
+        }
+      }
+
+      if (sidebar) {
+        sidebar.addEventListener('click', (event) => {
+          const link = event.target.closest('.project-nav-link');
+          if (!link || !sidebar.contains(link)) {
+            return;
+          }
+          const href = link.getAttribute('href') || '';
+          if (!href.startsWith('#phase-')) {
+            return;
+          }
+          event.preventDefault();
+          const targetId = href.slice('#phase-'.length);
+          setActivePhase(targetId);
+        });
+      } else {
+        navLinks.forEach((link) => {
+          link.addEventListener('click', (event) => {
+            const href = link.getAttribute('href') || '';
+            if (!href.startsWith('#phase-')) {
+              return;
+            }
+            event.preventDefault();
+            const targetId = href.slice('#phase-'.length);
+            setActivePhase(targetId);
+          });
+        });
+      }
+
+      openButtons.forEach((button) => {
+        button.addEventListener('click', () => {
+          const targetId = button.getAttribute('data-phase');
+          setActivePhase(targetId);
+        });
+      });
+
+      backButtons.forEach((button) => {
+        button.addEventListener('click', (event) => {
+          event.preventDefault();
+          setActivePhase(dashboardId);
+        });
+      });
+
+      completeButtons.forEach((button) => {
+        button.addEventListener('click', () => {
+          const phaseId = button.getAttribute('data-phase');
+          const current = statusState[phaseId] || 'sem_registros';
+          statusState[phaseId] = current === 'concluida' ? 'em_desenvolvimento' : 'concluida';
+          updateStatusIndicators();
+        });
+      });
+
+      updateStatusIndicators();
+      setActivePhase(dashboardId);
+    })();
+  </script>
+{% endblock %}

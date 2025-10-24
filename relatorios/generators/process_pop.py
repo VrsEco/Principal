@@ -885,13 +885,19 @@ class ProcessPOPReport(BaseReportGenerator):
         return activities
     
     def _fetch_routines(self, process_id):
-        """Busca rotinas com colaboradores"""
+        """Busca rotinas com colaboradores usando o backend ativo (PostgreSQL ou fallback para SQLite)."""
+        conn = cursor = None
         try:
-            conn = sqlite3.connect('instance/pevapp22.db')
-            conn.row_factory = sqlite3.Row
-            cursor = conn.cursor()
-            
-            # Buscar rotinas
+            try:
+                from database.postgres_helper import connect as pg_connect
+                conn = pg_connect()
+                cursor = conn.cursor()
+            except Exception as pg_error:
+                print(f"ProcessPOPReport: fallback para SQLite ao buscar rotinas ({pg_error})")
+                conn = sqlite3.connect('instance/pevapp22.db')
+                conn.row_factory = sqlite3.Row
+                cursor = conn.cursor()
+
             cursor.execute("""
                 SELECT r.id, r.name, r.description, r.schedule_type, r.schedule_value,
                        r.deadline_days, r.deadline_hours, r.deadline_date
@@ -899,13 +905,14 @@ class ProcessPOPReport(BaseReportGenerator):
                 WHERE r.process_id = ?
                 ORDER BY r.created_at DESC
             """, (process_id,))
-            
+
             routines = []
             for routine_row in cursor.fetchall():
                 routine = dict(routine_row)
-                routine_id = routine['id']
-                
-                # Buscar colaboradores
+                routine_id = routine.get('id')
+                if not routine_id:
+                    continue
+
                 cursor.execute("""
                     SELECT rc.*, e.name as employee_name, e.email as employee_email
                     FROM routine_collaborators rc
@@ -913,60 +920,96 @@ class ProcessPOPReport(BaseReportGenerator):
                     WHERE rc.routine_id = ?
                     ORDER BY e.name
                 """, (routine_id,))
-                
-                routine['collaborators'] = [dict(row) for row in cursor.fetchall()]
-                routine['total_hours'] = sum(c.get('hours_used', 0) for c in routine['collaborators'])
-                
+
+                collaborators = []
+                for row in cursor.fetchall():
+                    collaborator = dict(row)
+                    hours_value = collaborator.get('hours_used') or 0
+                    try:
+                        hours_value = float(hours_value)
+                    except (TypeError, ValueError):
+                        hours_value = 0.0
+                    collaborator['hours_used'] = hours_value
+                    collaborators.append(collaborator)
+
+                total_hours = sum(collab.get('hours_used', 0.0) for collab in collaborators)
+                routine['collaborators'] = collaborators
+                routine['total_hours'] = total_hours
                 routines.append(routine)
-            
-            conn.close()
+
             return routines
-            
         except Exception as e:
             print(f"Erro ao buscar rotinas: {e}")
             return []
+        finally:
+            try:
+                if cursor:
+                    cursor.close()
+            except Exception:
+                pass
+            if conn:
+                conn.close()
     
     def _fetch_indicators(self, process_id):
-        """Busca indicadores do processo"""
+        """Busca indicadores do processo usando o backend ativo (PostgreSQL ou fallback para SQLite)."""
+        conn = cursor = None
         try:
-            conn = sqlite3.connect('instance/pevapp22.db')
-            conn.row_factory = sqlite3.Row
-            cursor = conn.cursor()
-            
-            # Buscar indicadores
+            try:
+                from database.postgres_helper import connect as pg_connect
+                conn = pg_connect()
+                cursor = conn.cursor()
+            except Exception as pg_error:
+                print(f"ProcessPOPReport: fallback para SQLite ao buscar indicadores ({pg_error})")
+                conn = sqlite3.connect('instance/pevapp22.db')
+                conn.row_factory = sqlite3.Row
+                cursor = conn.cursor()
+
             cursor.execute("""
                 SELECT 
-                    i.id, i.code, i.name, i.unit, i.formula, 
+                    i.id, i.company_id, i.code, i.name, i.unit, i.formula, 
                     i.polarity, i.data_source, i.notes
                 FROM indicators i
                 WHERE i.process_id = ?
                 ORDER BY i.code
             """, (process_id,))
-            
-            indicators = [dict(row) for row in cursor.fetchall()]
-            
-            # Buscar metas de cada indicador
-            for indicator in indicators:
-                cursor.execute("""
+
+            indicators = []
+            for row in cursor.fetchall():
+                indicator = dict(row)
+                indicator_id = indicator.get('id')
+                company_id = indicator.get('company_id')
+                if not indicator_id:
+                    continue
+
+                params = [indicator_id]
+                goal_filter = """
                     SELECT goal_value, goal_date, status
                     FROM indicator_goals
-                    WHERE indicator_id = ? AND company_id = (SELECT company_id FROM indicators WHERE id = ?)
-                    ORDER BY goal_date DESC
-                    LIMIT 1
-                """, (indicator['id'], indicator['id']))
-                
+                    WHERE indicator_id = ?
+                """
+                if company_id:
+                    goal_filter += " AND company_id = ?"
+                    params.append(company_id)
+                goal_filter += " ORDER BY goal_date DESC LIMIT 1"
+
+                cursor.execute(goal_filter, tuple(params))
                 goal_row = cursor.fetchone()
-                if goal_row:
-                    indicator['latest_goal'] = dict(goal_row)
-                else:
-                    indicator['latest_goal'] = None
-            
-            conn.close()
+                indicator['latest_goal'] = dict(goal_row) if goal_row else None
+
+                indicators.append(indicator)
+
             return indicators
-            
         except Exception as e:
             print(f"Erro ao buscar indicadores: {e}")
             return []
+        finally:
+            try:
+                if cursor:
+                    cursor.close()
+            except Exception:
+                pass
+            if conn:
+                conn.close()
     
     def _resolve_image_for_inline(self, image_path):
         """

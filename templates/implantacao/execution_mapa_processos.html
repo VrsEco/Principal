@@ -1,0 +1,156 @@
+{% extends "base.html" %}
+{% block title %}Mapa de Processos Operacionais | Implantacao{% endblock %}
+{% block body %}{{ super() }}{% endblock %}
+
+{% block header_actions %}
+  <div class="header-nav">
+    <a href="/main" class="nav-link">Ecossistema</a>
+    <a href="{{ url_for('pev.pev_dashboard') }}" class="nav-link active">PEV</a>
+    <a href="{{ url_for('grv.grv_dashboard') }}" class="nav-link">GRV</a>
+  </div>
+  <div class="user-pill">
+    <span class="user-name">{{ user_name | default('Fabiano Ferreira') }}</span>
+  </div>
+  <div class="header-nav">
+    <select id="themeSelect" class="nav-link" style="padding:8px 12px; color:#64748b;">
+      <option value="versus">Tema Versus</option>
+      <option value="alt">Tema Azul/Branco/Amarelo</option>
+    </select>
+  </div>
+{% endblock %}
+
+{% block content %}
+  <style>
+    body {
+      background: linear-gradient(135deg, #f8fafc 0%, #e2e8f0 100%) !important;
+      color: #0f172a !important;
+    }
+
+    .process-wrapper {
+      padding: 32px;
+      display: flex;
+      flex-direction: column;
+      gap: 24px;
+    }
+
+    .process-card {
+      background: rgba(255, 255, 255, 0.94);
+      border: 1px solid rgba(148, 163, 184, 0.2);
+      border-radius: 24px;
+      box-shadow: 0 18px 40px rgba(15, 23, 42, 0.1);
+      backdrop-filter: blur(12px);
+      padding: 32px;
+    }
+
+    .process-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+      gap: 18px;
+    }
+
+    .process-box {
+      background: rgba(248, 250, 252, 0.92);
+      border: 1px solid rgba(148, 163, 184, 0.22);
+      border-radius: 18px;
+      padding: 20px;
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+      color: #475569;
+      font-size: 14px;
+    }
+
+    .process-box h2 {
+      margin: 0;
+      font-size: 18px;
+      color: #0f172a;
+    }
+
+    .process-box strong {
+      font-size: 12px;
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+      color: #1d4ed8;
+    }
+
+    .process-box ul {
+      margin: 0;
+      padding-left: 18px;
+      line-height: 1.6;
+    }
+
+    .capacity-card {
+      background: rgba(34, 197, 94, 0.12);
+      border: 1px solid rgba(34, 197, 94, 0.28);
+      border-radius: 18px;
+      padding: 24px;
+      color: #166534;
+      font-size: 14px;
+      display: grid;
+      gap: 14px;
+    }
+
+    @media (max-width: 768px) {
+      .process-wrapper {
+        padding: 20px;
+      }
+      .process-card {
+        padding: 24px;
+      }
+    }
+  </style>
+
+  <section class="process-wrapper">
+    <article class="process-card">
+      <h1>Mapa de processos e capacidade operacional</h1>
+      <p style="margin:12px 0 0; color:#475569; line-height:1.6;">
+        Visao consolidada dos processos-chave, etapas macro e indicadores para garantir excelencia operacional
+        durante a implantacao e rotina da Padaria Horizonte.
+      </p>
+    </article>
+
+    <article class="process-card process-grid">
+      {% for processo in processos %}
+        <div class="process-box">
+          <h2>{{ processo.nome }}</h2>
+          <span>{{ processo.objetivo }}</span>
+          <strong>Macro etapas</strong>
+          <ul>
+            {% for etapa in processo.macro_etapas %}
+              <li>{{ etapa }}</li>
+            {% endfor %}
+          </ul>
+          <strong>Indicadores</strong>
+          <ul>
+            {% for indicador in processo.indicadores %}
+              <li>{{ indicador }}</li>
+            {% endfor %}
+          </ul>
+        </div>
+      {% endfor %}
+    </article>
+
+    <article class="process-card capacity-card">
+      <div>
+        <strong style="display:block; font-size:12px; letter-spacing:0.08em;">Linha de producao</strong>
+        <span>{{ capacidade.linha_producao }}</span>
+      </div>
+      <div>
+        <strong style="display:block; font-size:12px; letter-spacing:0.08em;">Turnos previstos</strong>
+        <ul style="margin:8px 0 0; padding-left:18px;">
+          {% for item in capacidade.turnos %}
+            <li>{{ item }}</li>
+          {% endfor %}
+        </ul>
+      </div>
+      <div>
+        <strong style="display:block; font-size:12px; letter-spacing:0.08em;">Planejamento para picos</strong>
+        <ul style="margin:8px 0 0; padding-left:18px;">
+          {% for item in capacidade.planejamento_picos %}
+            <li>{{ item }}</li>
+          {% endfor %}
+        </ul>
+      </div>
+    </article>
+  </section>
+{% endblock %}

@@ -1046,18 +1046,52 @@ def grv_projects_projects(company_id: int):
                 'id': row['id'],
                 'code': row['code'],
                 'name': row['name'],
-                'origin': 'GRV'
+                'origin': 'GRV Portfolio'
             })
         conn.close()
     except Exception as e:
-        print(f"Erro ao buscar portfÃ³lios GRV: {e}")
+        print(f"Erro ao buscar portfólios GRV: {e}")
+    
+    # Get company projects (projetos criados)
+    company_projects = []
+    try:
+        conn = pg_connect()
+        cursor = conn.cursor()
+        cursor.execute(
+            """
+            SELECT p.id, p.title, p.code, p.plan_id, p.plan_type,
+                   CASE 
+                       WHEN p.plan_type = 'PEV' THEN pl.name
+                       ELSE NULL
+                   END as plan_name
+            FROM company_projects p
+            LEFT JOIN plans pl ON pl.id = p.plan_id AND p.plan_type = 'PEV'
+            WHERE p.company_id = %s
+            ORDER BY p.created_at DESC
+            """,
+            (company_id,)
+        )
+        for row in cursor.fetchall():
+            row_dict = dict(row)
+            company_projects.append({
+                'id': row_dict.get('id'),
+                'code': row_dict.get('code'),
+                'name': row_dict.get('title'),
+                'origin': 'Projeto',
+                'plan_name': row_dict.get('plan_name')
+            })
+        conn.close()
+    except Exception as e:
+        print(f"Erro ao buscar company_projects: {e}")
+        import traceback
+        traceback.print_exc()
     
     # Mark PEV plans with origin
     for plan in pev_plans:
-        plan['origin'] = 'PEV'
+        plan['origin'] = 'PEV Plan'
     
-    # Combine both lists
-    all_plans = pev_plans + grv_portfolios
+    # Combine all lists
+    all_plans = pev_plans + grv_portfolios + company_projects
     
     return render_template(
         'grv_projects_projects.html',

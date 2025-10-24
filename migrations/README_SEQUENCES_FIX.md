@@ -172,3 +172,5 @@ ALTER SEQUENCE routine_collaborators_id_seq OWNED BY routine_collaborators.id;
 **Status:** ✅ Aplicado em DEV | ⏳ Pendente em PROD
 
 
+
+

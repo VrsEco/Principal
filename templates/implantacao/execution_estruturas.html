@@ -1,0 +1,701 @@
+{% extends "base.html" %}
+{% block title %}Estruturas por Area | Implantacao{% endblock %}
+{% block body %}{{ super() }}{% endblock %}
+
+{% block header_actions %}
+  <div class="header-nav">
+    <a href="/main" class="nav-link">Ecossistema</a>
+    <a href="{{ url_for('pev.pev_dashboard') }}" class="nav-link active">PEV</a>
+    <a href="{{ url_for('grv.grv_dashboard') }}" class="nav-link">GRV</a>
+  </div>
+  <div class="user-pill">
+    <span class="user-name">{{ user_name | default('Fabiano Ferreira') }}</span>
+  </div>
+  <div class="header-nav">
+    <select id="themeSelect" class="nav-link" style="padding:8px 12px; color:#64748b;">
+      <option value="versus">Tema Versus</option>
+      <option value="alt">Tema Azul/Branco/Amarelo</option>
+    </select>
+  </div>
+{% endblock %}
+
+{% block content %}
+  <style>
+    body {
+      background: linear-gradient(135deg, #f8fafc 0%, #e2e8f0 100%) !important;
+      color: #0f172a !important;
+    }
+
+    .structure-wrapper {
+      padding: 32px;
+      display: flex;
+      flex-direction: column;
+      gap: 24px;
+    }
+
+    .structure-card {
+      background: rgba(255, 255, 255, 0.94);
+      border: 1px solid rgba(148, 163, 184, 0.2);
+      border-radius: 24px;
+      box-shadow: 0 18px 40px rgba(15, 23, 42, 0.1);
+      backdrop-filter: blur(12px);
+      padding: 32px;
+    }
+
+    .area-tabs {
+      display: flex;
+      gap: 12px;
+      flex-wrap: wrap;
+    }
+
+    .area-button {
+      background: rgba(15, 23, 42, 0.06);
+      border: 1px solid rgba(148, 163, 184, 0.3);
+      border-radius: 14px;
+      padding: 10px 18px;
+      font-size: 14px;
+      color: #334155;
+      cursor: pointer;
+      transition: all 0.2s ease;
+    }
+
+    .area-button.is-active {
+      background: rgba(59, 130, 246, 0.16);
+      border-color: rgba(59, 130, 246, 0.4);
+      color: #1d4ed8;
+    }
+
+    .blocks-wrapper {
+      display: none;
+      flex-direction: column;
+      gap: 24px;
+    }
+
+    .blocks-wrapper.is-active {
+      display: flex;
+    }
+
+    .block-card {
+      background: rgba(248, 250, 252, 0.92);
+      border: 1px solid rgba(148, 163, 184, 0.22);
+      border-radius: 18px;
+      padding: 24px;
+    }
+
+    .block-card h2 {
+      margin: 0 0 12px;
+      font-size: 20px;
+      color: #0f172a;
+    }
+
+    table.structure-table {
+      width: 100%;
+      border-collapse: collapse;
+      font-size: 13px;
+      color: #475569;
+    }
+
+    table.structure-table th,
+    table.structure-table td {
+      border: 1px solid rgba(148, 163, 184, 0.28);
+      padding: 10px 12px;
+      vertical-align: top;
+    }
+
+    table.structure-table thead tr {
+      background: rgba(59, 130, 246, 0.12);
+    }
+
+    table.structure-table th {
+      text-transform: uppercase;
+      letter-spacing: 0.08em;
+      font-size: 11px;
+      color: #1d4ed8;
+    }
+
+    table.structure-table td strong {
+      color: #334155;
+      font-weight: 600;
+    }
+
+    .structure-installments {
+      background: rgba(15, 23, 42, 0.03);
+    }
+
+    .installments-wrapper {
+      display: flex;
+      flex-direction: column;
+      gap: 12px;
+    }
+
+    .installments-wrapper strong {
+      font-size: 13px;
+      color: #1d4ed8;
+      text-transform: uppercase;
+      letter-spacing: 0.08em;
+    }
+
+    table.installments-table {
+      width: 100%;
+      border-collapse: collapse;
+      font-size: 12px;
+      color: #475569;
+    }
+
+    table.installments-table th,
+    table.installments-table td {
+      border: 1px solid rgba(148, 163, 184, 0.24);
+      padding: 8px 10px;
+      text-align: left;
+    }
+
+    table.installments-table thead tr {
+      background: rgba(148, 163, 184, 0.18);
+    }
+
+    .table-note {
+      font-size: 12px;
+      color: #64748b;
+      margin-top: 12px;
+    }
+
+    @media (max-width: 992px) {
+      table.structure-table {
+        display: block;
+        overflow-x: auto;
+      }
+    }
+
+    @media (max-width: 768px) {
+      .structure-wrapper {
+        padding: 20px;
+      }
+      .structure-card {
+        padding: 24px;
+      }
+    }
+  </style>
+
+  <section class="structure-wrapper">
+    <article class="structure-card">
+      <div style="display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 12px;">
+        <div>
+          <h1 style="margin:0 0 8px;">Estruturas por area</h1>
+          <p style="margin:0 0 12px; color:#475569; line-height:1.6;">
+            Visualize as iniciativas de estruturacao por area, bloco estruturante e status. Cada item gera uma
+            atividade no projeto humano e alimenta o fluxo de caixa conforme valores, repeticoes e disponibilizacao.
+          </p>
+          <button class="button button-secondary" onclick="window.history.back()" style="margin-top: 8px;">← Voltar</button>
+        </div>
+        <button type="button" class="button button-primary" onclick="openStructureModal()" style="white-space: nowrap;">
+          + Nova Estrutura
+        </button>
+      </div>
+    </article>
+
+    <article class="structure-card">
+      <div class="area-tabs">
+        {% for area in estruturas %}
+          <button
+            class="area-button {% if loop.first %}is-active{% endif %}"
+            type="button"
+            data-area-target="{{ area.id }}"
+          >
+            {{ area.nome }}
+          </button>
+        {% endfor %}
+        {% if not estruturas %}
+          <p style="color: #64748b; font-style: italic;">Nenhuma área cadastrada ainda. Clique em "Nova Estrutura" para começar.</p>
+        {% endif %}
+      </div>
+
+      {% for area in estruturas %}
+        <div class="blocks-wrapper {% if loop.first %}is-active{% endif %}" data-area-section="{{ area.id }}">
+          {% for bloco in area.blocos %}
+            <div class="block-card">
+              <h2>{{ bloco.nome }}</h2>
+              <table class="structure-table">
+                <thead>
+          <tr>
+            <th>Tipo</th>
+            <th>Descricao</th>
+            <th>Valor</th>
+            <th>Repeticao</th>
+            <th>Forma de pagamento</th>
+            <th>Data aquisicao / contratacao</th>
+            <th>Fornecedor</th>
+            <th>Disponibilizacao</th>
+            <th>Observacoes</th>
+            <th>Status</th>
+            <th style="width: 100px;">Ações</th>
+          </tr>
+        </thead>
+        <tbody>
+                  {% if bloco.itens %}
+                    {% for item in bloco.itens %}
+                      <tr>
+                      <td><strong>{{ item.tipo }}</strong></td>
+                      <td>{{ item.descricao }}</td>
+                      <td>{{ item.valor }}</td>
+                      <td>{{ item.repeticao }}</td>
+                      <td>{{ item.forma_pagamento }}</td>
+                      <td>{{ item.data_aquisicao }}</td>
+                      <td>{{ item.fornecedor }}</td>
+                      <td>{{ item.data_disponibilizacao }}</td>
+                      <td>{{ item.observacoes }}</td>
+                      <td>{{ item.status }}</td>
+                      <td>
+                        <button type="button" class="button button-small" onclick="editStructure({{ item.id }})" style="padding: 4px 8px; font-size: 12px; margin-right: 4px;">Editar</button>
+                        <button type="button" class="button button-danger button-small" onclick="deleteStructure({{ item.id }})" style="padding: 4px 8px; font-size: 12px;">Excluir</button>
+                      </td>
+                    </tr>
+                    {% if item.parcelas %}
+                      <tr class="structure-installments">
+                        <td colspan="11">
+                          <div class="installments-wrapper">
+                            <strong>Parcelas / Ocorrencias de pagamento</strong>
+                            <table class="installments-table">
+                              <thead>
+                                <tr>
+                                  <th>#</th>
+                                  <th>Valor</th>
+                                  <th>Vencimento</th>
+                                  <th>Tipo</th>
+                                </tr>
+                              </thead>
+                              <tbody>
+                                {% for parcela in item.parcelas %}
+                                  <tr>
+                                    <td>{{ parcela.numero }}</td>
+                                    <td>{{ parcela.valor }}</td>
+                                    <td>{{ parcela.vencimento }}</td>
+                                    <td>{{ parcela.tipo }}</td>
+                                  </tr>
+                                {% endfor %}
+                              </tbody>
+                            </table>
+                          </div>
+                        </td>
+                      </tr>
+                    {% endif %}
+                  {% endfor %}
+                {% else %}
+                  <tr>
+                    <td colspan="11">Nenhum item registrado para este bloco.</td>
+                  </tr>
+                {% endif %}
+                </tbody>
+              </table>
+              <p class="table-note">
+                Itens deste bloco geram tarefas no projeto <strong>{{ area.nome }}</strong> com o titulo correspondente
+                e alimentam o fluxo de caixa de acordo com as parcelas definidas.
+              </p>
+            </div>
+          {% endfor %}
+        </div>
+      {% endfor %}
+    </article>
+  </section>
+
+  <!-- Modal para Criar/Editar Estrutura -->
+  <div id="structure-modal" class="modal" style="display: none;">
+    <div class="modal-content" style="max-width: 900px;">
+      <div class="modal-header">
+        <h3 id="modal-title">Nova Estrutura</h3>
+        <span class="modal-close" onclick="closeStructureModal()">&times;</span>
+      </div>
+      
+      <form id="structure-form" style="padding: 24px;">
+        <input type="hidden" id="structure-id" value="">
+        <input type="hidden" id="plan-id" value="{{ request.args.get('plan_id') or plan.id }}">
+        
+        <!-- Área e Bloco -->
+        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 16px; margin-bottom: 16px;">
+          <div class="form-group">
+            <label for="structure-area">Área *</label>
+            <select id="structure-area" required>
+              <option value="">Selecione...</option>
+              <option value="comercial">Estruturação Comercial</option>
+              <option value="operacional">Estruturação Operacional</option>
+              <option value="adm_fin">Estruturação Adm / Fin</option>
+            </select>
+          </div>
+          
+          <div class="form-group">
+            <label for="structure-block">Bloco *</label>
+            <select id="structure-block" required>
+              <option value="">Selecione...</option>
+              <option value="processos">Processos</option>
+              <option value="instalacoes">Instalações</option>
+              <option value="maquinas_equipamentos">Máquinas e Equipamentos</option>
+              <option value="pessoas">Pessoas</option>
+              <option value="insumos">Insumos</option>
+              <option value="material_consumo">Material de Uso e Consumo / Outros</option>
+            </select>
+          </div>
+        </div>
+        
+        <!-- Tipo e Descrição -->
+        <div style="display: grid; grid-template-columns: 1fr 2fr; gap: 16px; margin-bottom: 16px;">
+          <div class="form-group">
+            <label for="structure-type">Tipo *</label>
+            <select id="structure-type" required>
+              <option value="">Selecione...</option>
+              <option value="Aquisição">Aquisição</option>
+              <option value="Contratação">Contratação</option>
+            </select>
+          </div>
+          
+          <div class="form-group">
+            <label for="structure-description">Descrição *</label>
+            <input type="text" id="structure-description" placeholder="Descrição do item" required>
+          </div>
+        </div>
+        
+        <!-- Valor e Repetição -->
+        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 16px; margin-bottom: 16px;">
+          <div class="form-group">
+            <label for="structure-value">Valor</label>
+            <input type="number" id="structure-value" placeholder="0.00" step="0.01" min="0">
+          </div>
+          
+          <div class="form-group">
+            <label for="structure-repetition">Repetição</label>
+            <select id="structure-repetition">
+              <option value="">Selecione...</option>
+              <option value="Única">Única</option>
+              <option value="Parcelada">Parcelada</option>
+              <option value="Mensal">Mensal</option>
+              <option value="Trimestral">Trimestral</option>
+              <option value="Semestral">Semestral</option>
+              <option value="Anual">Anual</option>
+            </select>
+          </div>
+        </div>
+        
+        <!-- Data Aquisição, Fornecedor, Disponibilização -->
+        <div style="display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 16px; margin-bottom: 16px;">
+          <div class="form-group">
+            <label for="structure-acquisition">Data Aquisição</label>
+            <input type="date" id="structure-acquisition">
+          </div>
+          
+          <div class="form-group">
+            <label for="structure-supplier">Fornecedor</label>
+            <input type="text" id="structure-supplier" placeholder="Nome do fornecedor">
+          </div>
+          
+          <div class="form-group">
+            <label for="structure-availability">Disponibilização</label>
+            <input type="date" id="structure-availability">
+          </div>
+        </div>
+        
+        <!-- Observações e Status -->
+        <div style="display: grid; grid-template-columns: 2fr 1fr; gap: 16px; margin-bottom: 16px;">
+          <div class="form-group">
+            <label for="structure-observations">Observações</label>
+            <textarea id="structure-observations" rows="2" placeholder="Observações adicionais"></textarea>
+          </div>
+          
+          <div class="form-group">
+            <label for="structure-status">Status</label>
+            <select id="structure-status">
+              <option value="pending">Pendente</option>
+              <option value="in_progress">Em andamento</option>
+              <option value="completed">Concluído</option>
+              <option value="cancelled">Cancelado</option>
+            </select>
+          </div>
+        </div>
+        
+        <!-- Seção de Parcelas -->
+        <div style="border-top: 2px solid rgba(148, 163, 184, 0.2); padding-top: 16px; margin-top: 16px;">
+          <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px;">
+            <h4 style="margin: 0; color: #1d4ed8;">Parcelas / Ocorrências de Pagamento</h4>
+            <button type="button" class="button button-secondary" onclick="addInstallment()">+ Adicionar Parcela</button>
+          </div>
+          
+          <div id="installments-container" style="display: flex; flex-direction: column; gap: 8px;">
+            <!-- Parcelas serão adicionadas aqui dinamicamente -->
+          </div>
+        </div>
+        
+        <div class="form-actions" style="margin-top: 24px;">
+          <button type="button" class="button button-secondary" onclick="closeStructureModal()">Cancelar</button>
+          <button type="submit" class="button button-primary">Salvar</button>
+        </div>
+      </form>
+    </div>
+  </div>
+{% endblock %}
+
+{% block scripts %}
+  {{ super() }}
+  <script>
+    (function () {
+      const areaButtons = Array.from(document.querySelectorAll('.area-button'));
+      const areaSections = Array.from(document.querySelectorAll('[data-area-section]'));
+
+      function toggleArea(targetId) {
+        areaButtons.forEach((button) => {
+          const isActive = button.getAttribute('data-area-target') === targetId;
+          button.classList.toggle('is-active', isActive);
+        });
+
+        areaSections.forEach((section) => {
+          const isActive = section.getAttribute('data-area-section') === targetId;
+          section.classList.toggle('is-active', isActive);
+        });
+      }
+
+      areaButtons.forEach((button) => {
+        button.addEventListener('click', () => {
+          toggleArea(button.getAttribute('data-area-target'));
+        });
+      });
+    })();
+
+    // ========== Gerenciamento de Estruturas ==========
+    
+    let installmentCounter = 0;
+    const planId = document.getElementById('plan-id').value;
+
+    function openStructureModal(structureData = null) {
+      const modal = document.getElementById('structure-modal');
+      const form = document.getElementById('structure-form');
+      const titleEl = document.getElementById('modal-title');
+      
+      // Reset form
+      form.reset();
+      document.getElementById('structure-id').value = '';
+      document.getElementById('installments-container').innerHTML = '';
+      installmentCounter = 0;
+      
+      if (structureData) {
+        // Modo edição
+        titleEl.textContent = 'Editar Estrutura';
+        document.getElementById('structure-id').value = structureData.id;
+        document.getElementById('structure-area').value = structureData.area;
+        document.getElementById('structure-block').value = structureData.block;
+        document.getElementById('structure-type').value = structureData.item_type || '';
+        document.getElementById('structure-description').value = structureData.description || '';
+        // Converter valor de volta para número (remover R$ e vírgulas)
+        const valueStr = structureData.value || '';
+        const valueNum = valueStr.replace(/[^\d,.-]/g, '').replace(',', '.');
+        document.getElementById('structure-value').value = valueNum;
+        document.getElementById('structure-repetition').value = structureData.repetition || '';
+        document.getElementById('structure-acquisition').value = structureData.acquisition_info || '';
+        document.getElementById('structure-supplier').value = structureData.supplier || '';
+        document.getElementById('structure-availability').value = structureData.availability_info || '';
+        document.getElementById('structure-observations').value = structureData.observations || '';
+        document.getElementById('structure-status').value = structureData.status || 'pending';
+        
+        // Adicionar parcelas existentes
+        if (structureData.installments && structureData.installments.length > 0) {
+          structureData.installments.forEach(inst => {
+            addInstallment(inst);
+          });
+        }
+      } else {
+        // Modo criação
+        titleEl.textContent = 'Nova Estrutura';
+      }
+      
+      modal.style.display = 'block';
+      setTimeout(() => modal.classList.add('show'), 10);
+    }
+
+    function closeStructureModal() {
+      const modal = document.getElementById('structure-modal');
+      modal.classList.remove('show');
+      setTimeout(() => modal.style.display = 'none', 300);
+    }
+
+    function addInstallment(data = null) {
+      installmentCounter++;
+      const container = document.getElementById('installments-container');
+      
+      const installmentDiv = document.createElement('div');
+      installmentDiv.className = 'installment-row';
+      installmentDiv.dataset.index = installmentCounter;
+      installmentDiv.style.cssText = 'display: grid; grid-template-columns: 80px 1fr 1fr 1fr 60px; gap: 8px; align-items: center; padding: 8px; background: rgba(248, 250, 252, 0.8); border: 1px solid rgba(148, 163, 184, 0.2); border-radius: 8px;';
+      
+      installmentDiv.innerHTML = `
+        <input type="text" placeholder="#" value="${data ? data.installment_number || '' : ''}" 
+               class="installment-number" style="padding: 6px; font-size: 13px;">
+        <input type="number" placeholder="0.00" value="${data ? data.amount || '' : ''}" step="0.01" min="0"
+               class="installment-amount" style="padding: 6px; font-size: 13px;">
+        <input type="date" value="${data ? data.due_info || '' : ''}" 
+               class="installment-due" style="padding: 6px; font-size: 13px;">
+        <select class="installment-type" style="padding: 6px; font-size: 13px;">
+          <option value="">Tipo...</option>
+          <option value="Entrada" ${data && data.installment_type === 'Entrada' ? 'selected' : ''}>Entrada</option>
+          <option value="Mensalidade" ${data && data.installment_type === 'Mensalidade' ? 'selected' : ''}>Mensalidade</option>
+          <option value="Parcela" ${data && data.installment_type === 'Parcela' ? 'selected' : ''}>Parcela</option>
+          <option value="Pagamento único" ${data && data.installment_type === 'Pagamento único' ? 'selected' : ''}>Pagamento único</option>
+        </select>
+        <button type="button" onclick="removeInstallment(${installmentCounter})" 
+                style="padding: 6px; background: #ef4444; color: white; border: none; border-radius: 4px; cursor: pointer; font-size: 12px;">X</button>
+      `;
+      
+      container.appendChild(installmentDiv);
+    }
+
+    function removeInstallment(index) {
+      const element = document.querySelector(`.installment-row[data-index="${index}"]`);
+      if (element) {
+        element.remove();
+      }
+    }
+
+    async function editStructure(structureId) {
+      try {
+        // Buscar dados da estrutura
+        const response = await fetch(`/pev/api/implantacao/${planId}/structures/${structureId}`);
+        const result = await response.json();
+        
+        if (result.success) {
+          openStructureModal(result.data);
+        } else {
+          showMessage('Erro ao carregar estrutura', 'error');
+        }
+      } catch (error) {
+        console.error('Error loading structure:', error);
+        showMessage('Erro ao carregar estrutura', 'error');
+      }
+    }
+
+    async function deleteStructure(structureId) {
+      if (!confirm('Tem certeza que deseja excluir esta estrutura?')) {
+        return;
+      }
+      
+      try {
+        const response = await fetch(`/pev/api/implantacao/${planId}/structures/${structureId}`, {
+          method: 'DELETE'
+        });
+        
+        const result = await response.json();
+        
+        if (result.success) {
+          showMessage('Estrutura excluída com sucesso!', 'success');
+          setTimeout(() => window.location.reload(), 1000);
+        } else {
+          showMessage('Erro ao excluir estrutura: ' + result.error, 'error');
+        }
+      } catch (error) {
+        console.error('Error deleting structure:', error);
+        showMessage('Erro ao excluir estrutura', 'error');
+      }
+    }
+
+    // Submit do formulário
+    document.getElementById('structure-form').addEventListener('submit', async (e) => {
+      e.preventDefault();
+      console.log('📝 Form submitted');
+      
+      const structureId = document.getElementById('structure-id').value;
+      const isEdit = !!structureId;
+      console.log('📝 Mode:', isEdit ? 'EDIT' : 'CREATE', '| ID:', structureId);
+      
+      // Coletar parcelas
+      const installmentRows = document.querySelectorAll('.installment-row');
+      const installments = Array.from(installmentRows).map(row => ({
+        installment_number: row.querySelector('.installment-number').value,
+        amount: row.querySelector('.installment-amount').value,
+        due_info: row.querySelector('.installment-due').value,
+        installment_type: row.querySelector('.installment-type').value
+      }));
+      
+      // Formatar valor para string monetária
+      const valueNum = document.getElementById('structure-value').value;
+      const valueFormatted = valueNum ? `R$ ${parseFloat(valueNum).toFixed(2).replace('.', ',')}` : '';
+      
+      // Determinar forma de pagamento baseado nas parcelas
+      let paymentForm = 'A definir';
+      if (installments.length > 0) {
+        paymentForm = 'Conforme parcelas';
+      } else if (document.getElementById('structure-repetition').value === 'Única') {
+        paymentForm = 'À vista';
+      }
+      
+      const data = {
+        area: document.getElementById('structure-area').value,
+        block: document.getElementById('structure-block').value,
+        item_type: document.getElementById('structure-type').value,
+        description: document.getElementById('structure-description').value,
+        value: valueFormatted,
+        repetition: document.getElementById('structure-repetition').value,
+        payment_form: paymentForm,
+        acquisition_info: document.getElementById('structure-acquisition').value,
+        supplier: document.getElementById('structure-supplier').value,
+        availability_info: document.getElementById('structure-availability').value,
+        observations: document.getElementById('structure-observations').value,
+        status: document.getElementById('structure-status').value,
+        installments: installments
+      };
+      
+      console.log('📦 Data to send:', data);
+      console.log('🔑 planId:', planId);
+      
+      if (!planId) {
+        console.error('❌ ERROR: planId is missing!');
+        showMessage('Erro: plan_id não encontrado. Recarregue a página.', 'error');
+        return;
+      }
+      
+      try {
+        const url = isEdit 
+          ? `/pev/api/implantacao/${planId}/structures/${structureId}`
+          : `/pev/api/implantacao/${planId}/structures`;
+        
+        const method = isEdit ? 'PUT' : 'POST';
+        
+        console.log('🚀 Sending request:', method, url);
+        
+        const response = await fetch(url, {
+          method: method,
+          headers: {
+            'Content-Type': 'application/json'
+          },
+          body: JSON.stringify(data)
+        });
+        
+        console.log('📡 Response status:', response.status);
+        
+        const result = await response.json();
+        console.log('📥 Response data:', result);
+        
+        if (result.success) {
+          showMessage(isEdit ? 'Estrutura atualizada com sucesso!' : 'Estrutura criada com sucesso!', 'success');
+          closeStructureModal();
+          setTimeout(() => window.location.reload(), 1000);
+        } else {
+          showMessage('Erro ao salvar estrutura: ' + result.error, 'error');
+        }
+      } catch (error) {
+        console.error('Error saving structure:', error);
+        showMessage('Erro ao salvar estrutura', 'error');
+      }
+    });
+
+    function showMessage(message, type = 'info') {
+      // Usar a função global se existir e não for esta mesma função
+      if (typeof window.showMessage === 'function' && window.showMessage !== showMessage) {
+        window.showMessage(message, type);
+      } else {
+        // Fallback para alert
+        alert(message);
+      }
+    }
+
+    // Expor funções globalmente
+    window.openStructureModal = openStructureModal;
+    window.closeStructureModal = closeStructureModal;
+    window.addInstallment = addInstallment;
+    window.removeInstallment = removeInstallment;
+    window.editStructure = editStructure;
+    window.deleteStructure = deleteStructure;
+  </script>
+{% endblock %}

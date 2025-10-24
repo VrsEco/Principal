@@ -2,7 +2,7 @@
 /* Baseado no design da página GRV Process Analysis */
 
 html, body { 
-  background: #eff6ff; 
+  background: #f8fafc; 
   color: #0f172a; 
 }
 
@@ -27,33 +27,33 @@ html, body {
   color: #f8fafc;
 }
 
-/* Main - área de conteúdo principal com fundo azul claro (consistente com GRV) */
+/* Main - área de conteúdo principal com fundo claro clean */
 .app-main,
 .project-content,
 .plan-content,
 .grv-dashboard {
-  background: #eff6ff !important; /* azul claro */
+  background: #f8fafc !important; /* cinza muito claro */
 }
 
-/* Cards brancos sobre fundo azul - consistente com GRV */
+/* Cards brancos sobre fundo claro - clean e minimalista */
 .surface-card { 
   background: #ffffff !important; 
-  border: 1px solid rgba(15, 23, 42, 0.08);
-  box-shadow: 0 10px 32px rgba(15, 23, 42, 0.08);
-  border-radius: 14px;
+  border: 1px solid #e2e8f0;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
+  border-radius: 12px;
 }
 
 .surface-sub { 
   background: #f8fafc !important;
-  border: 1px solid rgba(15, 23, 42, 0.08);
+  border: 1px solid #e2e8f0;
 }
 
-/* Botões - padrão consistente */
+/* Botões - padrão clean e minimalista */
 .button { 
   background: #f8fafc; 
-  color: #0f172a; 
-  border: 1px solid rgba(15, 23, 42, 0.08);
-  border-radius: 999px;
+  color: #475569; 
+  border: 1px solid #e2e8f0;
+  border-radius: 8px;
   padding: 8px 14px;
   font-size: 13px;
   font-weight: 600;
@@ -62,13 +62,14 @@ html, body {
 
 .button-ghost { 
   background: #f8fafc; 
-  color: #0f172a; 
-  border: 1px solid rgba(15, 23, 42, 0.08);
+  color: #475569; 
+  border: 1px solid #e2e8f0;
 }
 
 .button:hover, .button-ghost:hover { 
-  border-color: rgba(15, 23, 42, 0.2);
-  background: #ffffff;
+  border-color: #cbd5e1;
+  background: #f1f5f9;
+  color: #334155;
 }
 
 .button-secondary {
@@ -90,26 +91,26 @@ html, body {
 }
 
 .button-primary {
-  background: #2563eb;
+  background: #3b82f6;
   color: #ffffff;
   border: none;
-  box-shadow: 0 2px 8px rgba(37, 99, 235, 0.25);
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
 }
 
 .button-primary:hover {
-  background: #1d4ed8;
-  box-shadow: 0 4px 12px rgba(37, 99, 235, 0.35);
+  background: #2563eb;
+  box-shadow: 0 4px 8px rgba(59, 130, 246, 0.25);
 }
 
 .avatar { background: rgba(37, 99, 235, 0.12); color: #2563eb; }
 .project-nav-link:hover { background: rgba(37,99,235,.12); }
 
-/* Badges e chips com acento azul */
+/* Badges e chips - clean e minimalista */
 .badge { 
-  border-color: rgba(37, 99, 235, 0.25); 
-  color: #0f172a; /* high-contrast text on light badge */
-  background: #e0ecff; /* increase contrast against white cards */
-  border-radius: 999px;
+  border-color: #e2e8f0; 
+  color: #475569; 
+  background: #f8fafc; 
+  border-radius: 6px;
   padding: 4px 8px;
   font-size: 11px;
   font-weight: 600;
@@ -134,11 +135,11 @@ html, body {
   color: #fbbf24 !important;
 }
 
-/* Campos de formulário com boa legibilidade */
+/* Campos de formulário - clean e minimalista */
 input, select, textarea { 
   background: #ffffff; 
   color: #0f172a; 
-  border: 1px solid rgba(15, 23, 42, 0.08);
+  border: 1px solid #e2e8f0;
   border-radius: 8px;
   padding: 8px 12px;
   font-size: 13px;
@@ -146,8 +147,8 @@ input, select, textarea {
 
 input:focus, select:focus, textarea:focus {
   outline: none;
-  border-color: #2563eb;
-  box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.1);
+  border-color: #94a3b8;
+  box-shadow: 0 0 0 3px rgba(148, 163, 184, 0.1);
 }
 
 input::placeholder, textarea::placeholder { color: #94a3b8; }
@@ -160,10 +161,10 @@ input::placeholder, textarea::placeholder { color: #94a3b8; }
   --companies-card-title-color: #0f172a;
 }
 
-/* Ajustes específicos para a página de direcionadores (tema claro) */
+/* Ajustes específicos para a página de direcionadores (tema claro clean) */
 .drivers-layout,
 .drivers-layout .drivers-content {
-  background: #eff6ff !important;
+  background: #f8fafc !important;
   color: #0f172a !important;
 }
 
@@ -192,8 +193,8 @@ input::placeholder, textarea::placeholder { color: #94a3b8; }
 .drivers-layout .drivers-content .locked-section-info,
 .drivers-layout .drivers-content .consolidated-main-card {
   background: #ffffff !important;
-  border: 1px solid rgba(15, 23, 42, 0.08) !important;
-  box-shadow: none !important;
+  border: 1px solid #e2e8f0 !important;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05) !important;
 }
 
 .drivers-layout .drivers-content .driver-block {
@@ -221,7 +222,7 @@ input::placeholder, textarea::placeholder { color: #94a3b8; }
 .drivers-layout .drivers-content select {
   background: #ffffff !important;
   color: #0f172a !important;
-  border: 1px solid rgba(15, 23, 42, 0.12) !important;
+  border: 1px solid #e2e8f0 !important;
 }
 
 .drivers-layout .drivers-content input::placeholder,
@@ -231,14 +232,16 @@ input::placeholder, textarea::placeholder { color: #94a3b8; }
 
 .drivers-layout .drivers-content .button,
 .drivers-layout .drivers-content .button-ghost {
-  color: #0f172a !important;
-  background: #e2e8f0 !important;
-  border-color: rgba(148, 163, 184, 0.6) !important;
+  color: #475569 !important;
+  background: #f8fafc !important;
+  border-color: #e2e8f0 !important;
 }
 
 .drivers-layout .drivers-content .button:hover,
 .drivers-layout .drivers-content .button-ghost:hover {
-  background: #cbd5f5 !important;
+  background: #f1f5f9 !important;
+  border-color: #cbd5e1 !important;
+  color: #334155 !important;
 }
 
 .drivers-layout .drivers-content .button-primary,
@@ -291,7 +294,7 @@ input::placeholder, textarea::placeholder { color: #94a3b8; }
 
 .section-eyebrow,
 .page-eyebrow {
-  color: #2563eb !important; /* azul */
+  color: #64748b !important; /* cinza médio */
   font-size: 12px;
   text-transform: uppercase;
   letter-spacing: 0.08em;
@@ -307,16 +310,16 @@ input::placeholder, textarea::placeholder { color: #94a3b8; }
   line-height: 1.5;
 }
 
-/* Cards brancos sobre fundo azul claro - estilo GRV */
+/* Cards brancos - clean e minimalista */
 .summary-card,
 .activities-panel,
 .quick-link-card,
 .activity-item,
 .stat-card {
   background: #ffffff !important;
-  border: 1px solid rgba(15, 23, 42, 0.08);
-  box-shadow: 0 10px 32px rgba(15, 23, 42, 0.08);
-  border-radius: 14px;
+  border: 1px solid #e2e8f0;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
+  border-radius: 12px;
 }
 
 /* Textos em cards brancos */
@@ -337,9 +340,9 @@ input::placeholder, textarea::placeholder { color: #94a3b8; }
 .okr-approval-item,
 .okr-consolidated-card {
   background: #ffffff !important;
-  border: 1px solid rgba(15, 23, 42, 0.08) !important;
-  box-shadow: 0 10px 24px rgba(15, 23, 42, 0.08) !important;
-  border-radius: 14px !important;
+  border: 1px solid #e2e8f0 !important;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05) !important;
+  border-radius: 12px !important;
   color: #0f172a !important;
 }
 

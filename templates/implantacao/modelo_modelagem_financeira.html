@@ -1,0 +1,1395 @@
+{% extends "base.html" %}
+{% block title %}Modelagem Financeira | Implantacao{% endblock %}
+{% block body %}{{ super() }}{% endblock %}
+
+{% block header_actions %}
+  <div class="header-nav">
+    <a href="/main" class="nav-link">Ecossistema</a>
+    <a href="{{ url_for('pev.pev_dashboard') }}" class="nav-link active">PEV</a>
+    <a href="{{ url_for('grv.grv_dashboard') }}" class="nav-link">GRV</a>
+  </div>
+  <div class="user-pill">
+    <span class="user-name">{{ user_name | default('Fabiano Ferreira') }}</span>
+  </div>
+  <div class="header-nav">
+    <select id="themeSelect" class="nav-link" style="padding:8px 12px; color:#64748b;">
+      <option value="versus">Tema Versus</option>
+      <option value="alt">Tema Azul/Branco/Amarelo</option>
+    </select>
+  </div>
+{% endblock %}
+
+{% block content %}
+  <style>
+    body {
+      background: linear-gradient(135deg, #f8fafc 0%, #e2e8f0 100%) !important;
+      color: #0f172a !important;
+    }
+
+    .finance-wrapper {
+      padding: 32px;
+      display: flex;
+      flex-direction: column;
+      gap: 24px;
+    }
+
+    .finance-card {
+      background: rgba(255, 255, 255, 0.94);
+      border: 1px solid rgba(148, 163, 184, 0.2);
+      border-radius: 24px;
+      box-shadow: 0 18px 40px rgba(15, 23, 42, 0.1);
+      backdrop-filter: blur(12px);
+      padding: 32px;
+    }
+
+    .finance-card h1,
+    .finance-card h2 {
+      margin: 0 0 16px;
+      color: #0f172a;
+    }
+
+    .section-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 20px;
+    }
+
+    .btn-add {
+      background: #3b82f6;
+      color: white;
+      border: none;
+      padding: 8px 16px;
+      border-radius: 8px;
+      cursor: pointer;
+      font-size: 14px;
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      transition: all 0.2s;
+    }
+
+    .btn-add:hover {
+      background: #2563eb;
+      transform: translateY(-2px);
+    }
+
+    .btn-icon {
+      background: none;
+      border: none;
+      cursor: pointer;
+      padding: 4px 8px;
+      border-radius: 4px;
+      color: #64748b;
+      transition: all 0.2s;
+    }
+
+    .btn-icon:hover {
+      background: rgba(59, 130, 246, 0.1);
+      color: #3b82f6;
+    }
+
+    .btn-icon.delete:hover {
+      background: rgba(239, 68, 68, 0.1);
+      color: #ef4444;
+    }
+
+    table.finance-table {
+      width: 100%;
+      border-collapse: collapse;
+      font-size: 13px;
+      color: #475569;
+    }
+
+    table.finance-table th,
+    table.finance-table td {
+      border: 1px solid rgba(148, 163, 184, 0.28);
+      padding: 12px 14px;
+      vertical-align: top;
+      text-align: left;
+    }
+
+    table.finance-table thead tr {
+      background: rgba(59, 130, 246, 0.12);
+    }
+
+    table.finance-table th {
+      text-transform: uppercase;
+      letter-spacing: 0.08em;
+      font-size: 11px;
+      color: #1d4ed8;
+    }
+
+    .grid-two {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+      gap: 16px;
+    }
+
+    .info-box {
+      background: rgba(248, 250, 252, 0.92);
+      border: 1px solid rgba(148, 163, 184, 0.22);
+      border-radius: 16px;
+      padding: 16px;
+      font-size: 13px;
+      color: #475569;
+    }
+
+    .analysis-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+      gap: 16px;
+    }
+
+    .analysis-card {
+      background: rgba(34, 197, 94, 0.12);
+      border: 1px solid rgba(34, 197, 94, 0.28);
+      border-radius: 16px;
+      padding: 18px;
+      color: #166534;
+      font-size: 14px;
+      display: flex;
+      flex-direction: column;
+      gap: 6px;
+      position: relative;
+    }
+
+    .section-note {
+      font-size: 12px;
+      color: #64748b;
+      margin-top: 12px;
+    }
+
+    /* Modal Styles - Padrão PFPN (Centralizado no Topo) */
+    .modal {
+      display: none;
+      position: fixed;
+      z-index: 999999 !important;
+      left: 0;
+      top: 0;
+      width: 100%;
+      height: 100%;
+      background: rgba(0, 0, 0, 0.7);
+      backdrop-filter: blur(4px);
+      opacity: 0;
+      transition: opacity 0.3s ease;
+      pointer-events: none;
+    }
+
+    .modal.show {
+      display: block;
+      opacity: 1;
+      pointer-events: auto;
+    }
+
+    .modal-content {
+      position: absolute;
+      top: 80px;
+      left: 50%;
+      transform: translateX(-50%);
+      background: white;
+      border-radius: 16px;
+      max-width: 700px;
+      width: 90%;
+      max-height: calc(100vh - 120px);
+      overflow-y: auto;
+      box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+      z-index: 1000000 !important;
+    }
+
+    .modal-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: 20px 24px;
+      border-bottom: 1px solid rgba(148, 163, 184, 0.2);
+      border-radius: 16px 16px 0 0;
+      background: rgba(248, 250, 252, 0.5);
+    }
+
+    .modal-header h3 {
+      margin: 0;
+      color: #0f172a;
+      font-size: 20px;
+      font-weight: 600;
+    }
+
+    .modal-body {
+      padding: 24px;
+    }
+
+    .btn-close {
+      background: none;
+      border: none;
+      font-size: 24px;
+      cursor: pointer;
+      color: #64748b;
+      padding: 0;
+      width: 32px;
+      height: 32px;
+      border-radius: 8px;
+      transition: all 0.2s;
+    }
+
+    .btn-close:hover {
+      background: rgba(148, 163, 184, 0.1);
+      color: #0f172a;
+    }
+
+    .form-group {
+      margin-bottom: 20px;
+    }
+
+    .form-group label {
+      display: block;
+      margin-bottom: 8px;
+      font-weight: 500;
+      color: #0f172a;
+      font-size: 14px;
+    }
+
+    .form-group input,
+    .form-group textarea,
+    .form-group select {
+      width: 100%;
+      padding: 10px 14px;
+      border: 1px solid #cbd5e1;
+      border-radius: 8px;
+      font-size: 14px;
+      font-family: inherit;
+      transition: all 0.2s;
+    }
+
+    .form-group input:focus,
+    .form-group textarea:focus,
+    .form-group select:focus {
+      outline: none;
+      border-color: #3b82f6;
+      box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
+    }
+
+    .form-group textarea {
+      min-height: 80px;
+      resize: vertical;
+    }
+
+    .modal-footer {
+      display: flex;
+      gap: 12px;
+      justify-content: flex-end;
+      margin-top: 24px;
+    }
+
+    .btn {
+      padding: 10px 20px;
+      border: none;
+      border-radius: 8px;
+      cursor: pointer;
+      font-size: 14px;
+      font-weight: 500;
+      transition: all 0.2s;
+    }
+
+    .btn-primary {
+      background: #3b82f6;
+      color: white;
+    }
+
+    .btn-primary:hover {
+      background: #2563eb;
+    }
+
+    .btn-secondary {
+      background: #e2e8f0;
+      color: #475569;
+    }
+
+    .btn-secondary:hover {
+      background: #cbd5e1;
+    }
+
+    @media (max-width: 768px) {
+      .finance-wrapper {
+        padding: 20px;
+      }
+
+      .finance-card {
+        padding: 24px;
+      }
+
+      table.finance-table {
+        display: block;
+        overflow-x: auto;
+      }
+    }
+  </style>
+
+  <section class="finance-wrapper">
+    <!-- Header -->
+    <article class="finance-card">
+      <h1>Modelagem financeira do planejamento</h1>
+      <p style="margin:12px 0 0; color:#475569; line-height:1.6;">
+        Premissas e demonstrativos base para conectar estrutura operacional, investimentos e retorno dos sócios.
+        Gerencie os dados financeiros do seu planejamento de forma interativa.
+      </p>
+      <div style="margin-top: 20px;">
+        <button class="btn btn-secondary" onclick="window.history.back()">← Voltar</button>
+      </div>
+    </article>
+
+    <!-- PREMISSAS -->
+    <article class="finance-card" id="premissas-section">
+      <div class="section-header">
+        <h2>Premissas</h2>
+        <button class="btn-add" onclick="openPremiseModal()">
+          <span>+</span>
+          <span>Adicionar Premissa</span>
+        </button>
+      </div>
+      <table class="finance-table">
+        <thead>
+          <tr>
+            <th>Descrição</th>
+            <th>Sugestão do sistema</th>
+            <th>Valor ajustado</th>
+            <th>Observações</th>
+            <th>Memória de cálculo</th>
+            <th style="width: 100px;">Ações</th>
+          </tr>
+        </thead>
+        <tbody id="premises-tbody">
+          {% for item in premissas %}
+            <tr data-id="{{ item.id }}">
+              <td>{{ item.indicador }}</td>
+              <td>{{ item.sugestao }}</td>
+              <td>{{ item.ajustado }}</td>
+              <td>{{ item.observacoes }}</td>
+              <td>{{ item.memoria }}</td>
+              <td>
+                <button class="btn-icon" onclick="editPremise({{ item.id }})" title="Editar">✏️</button>
+                <button class="btn-icon delete" onclick="deletePremise({{ item.id }})" title="Deletar">🗑️</button>
+              </td>
+            </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+      <p class="section-note">
+        * Ajuste valores e insira comentários conforme necessário.
+      </p>
+    </article>
+
+    <!-- INVESTIMENTO E FONTES -->
+    <article class="finance-card">
+      <h2>Investimento e fontes</h2>
+      <div class="grid-two">
+        <!-- Investimentos -->
+        <div id="investments-section">
+          <div class="section-header" style="margin-bottom: 12px;">
+            <h3 style="margin:0;">Investimento</h3>
+            <button class="btn-add" onclick="openInvestmentModal()" style="padding: 6px 12px; font-size: 13px;">
+              <span>+</span>
+            </button>
+          </div>
+          <table class="finance-table">
+            <thead>
+              <tr>
+                <th>Descrição</th>
+                <th>Valor</th>
+                <th style="width: 80px;">Ações</th>
+              </tr>
+            </thead>
+            <tbody id="investments-tbody">
+              {% for item in investimento.investimento %}
+                <tr data-id="{{ item.id }}">
+                  <td>{{ item.descricao }}</td>
+                  <td>{{ item.valor }}</td>
+                  <td>
+                    <button class="btn-icon" onclick="editInvestment({{ item.id }})" title="Editar">✏️</button>
+                    <button class="btn-icon delete" onclick="deleteInvestment({{ item.id }})" title="Deletar">🗑️</button>
+                  </td>
+                </tr>
+              {% endfor %}
+            </tbody>
+          </table>
+        </div>
+
+        <!-- Fontes -->
+        <div id="sources-section">
+          <div class="section-header" style="margin-bottom: 12px;">
+            <h3 style="margin:0;">Fontes</h3>
+            <button class="btn-add" onclick="openSourceModal()" style="padding: 6px 12px; font-size: 13px;">
+              <span>+</span>
+            </button>
+          </div>
+          <table class="finance-table">
+            <thead>
+              <tr>
+                <th>Categoria</th>
+                <th>Descrição</th>
+                <th>Valor</th>
+                <th>Disponibilidade</th>
+                <th style="width: 80px;">Ações</th>
+              </tr>
+            </thead>
+            <tbody id="sources-tbody">
+              {% for item in investimento.fontes %}
+                <tr data-id="{{ item.id }}">
+                  <td>{{ item.categoria }}</td>
+                  <td>{{ item.descricao }}</td>
+                  <td>{{ item.valor }}</td>
+                  <td>{{ item.disponibilidade }}</td>
+                  <td>
+                    <button class="btn-icon" onclick="editSource({{ item.id }})" title="Editar">✏️</button>
+                    <button class="btn-icon delete" onclick="deleteSource({{ item.id }})" title="Deletar">🗑️</button>
+                  </td>
+                </tr>
+              {% endfor %}
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </article>
+
+    <!-- CUSTOS VARIÁVEIS E REGRAS DE DESTINAÇÃO -->
+    <article class="finance-card">
+      <h2>Custos Variáveis e Destinação</h2>
+      <div class="grid-two">
+        <!-- Custos Variáveis -->
+        <div id="variable-costs-section">
+          <div class="section-header" style="margin-bottom: 12px;">
+            <h3 style="margin:0;">Custos e despesas variáveis</h3>
+            <button class="btn-add" onclick="openVariableCostModal()" style="padding: 6px 12px; font-size: 13px;">
+              <span>+</span>
+            </button>
+          </div>
+          <table class="finance-table">
+            <thead>
+              <tr>
+                <th>Descrição</th>
+                <th>% sobre faturamento</th>
+                <th style="width: 80px;">Ações</th>
+              </tr>
+            </thead>
+            <tbody id="variable-costs-tbody">
+              {% for item in fluxo_negocio.variaveis %}
+                <tr data-id="{{ item.id }}">
+                  <td>{{ item.descricao }}</td>
+                  <td>{{ item.percentual }}</td>
+                  <td>
+                    <button class="btn-icon" onclick="editVariableCost({{ item.id }})" title="Editar">✏️</button>
+                    <button class="btn-icon delete" onclick="deleteVariableCost({{ item.id }})" title="Deletar">🗑️</button>
+                  </td>
+                </tr>
+              {% endfor %}
+            </tbody>
+          </table>
+        </div>
+
+        <!-- Regras de Destinação -->
+        <div id="result-rules-section">
+          <div class="section-header" style="margin-bottom: 12px;">
+            <h3 style="margin:0;">Destinação de resultados</h3>
+            <button class="btn-add" onclick="openResultRuleModal()" style="padding: 6px 12px; font-size: 13px;">
+              <span>+</span>
+            </button>
+          </div>
+          <table class="finance-table">
+            <thead>
+              <tr>
+                <th>Descrição</th>
+                <th>% sobre resultado operativo</th>
+                <th>Periodicidade</th>
+                <th style="width: 80px;">Ações</th>
+              </tr>
+            </thead>
+            <tbody id="result-rules-tbody">
+              {% for item in fluxo_negocio.destinacao_regras %}
+                <tr data-id="{{ item.id }}">
+                  <td>{{ item.descricao }}</td>
+                  <td>{{ item.percentual }}</td>
+                  <td>{{ item.periodicidade }}</td>
+                  <td>
+                    <button class="btn-icon" onclick="editResultRule({{ item.id }})" title="Editar">✏️</button>
+                    <button class="btn-icon delete" onclick="deleteResultRule({{ item.id }})" title="Deletar">🗑️</button>
+                  </td>
+                </tr>
+              {% endfor %}
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </article>
+
+    <!-- MÉTRICAS -->
+    <article class="finance-card">
+      <div class="section-header">
+        <h2>Análise de Viabilidade</h2>
+        <button class="btn-add" onclick="openMetricsModal()">
+          <span>✏️</span>
+          <span>Editar Métricas</span>
+        </button>
+      </div>
+      <div class="analysis-grid" id="metrics-section">
+        <div class="analysis-card">
+          <strong>Payback</strong>
+          <span id="metric-payback">{{ fluxo_investidor.analises.payback or 'Não definido' }}</span>
+        </div>
+        <div class="analysis-card">
+          <strong>TIR 5 anos</strong>
+          <span id="metric-tir">{{ fluxo_investidor.analises.tir_5_anos or 'Não definido' }}</span>
+        </div>
+        <div class="analysis-card" style="grid-column: span 2;">
+          <strong>Comentários</strong>
+          <span id="metric-notes">{{ fluxo_investidor.analises.comentarios or 'Sem comentários' }}</span>
+        </div>
+      </div>
+    </article>
+
+    <!-- FLUXO DE CAIXA DO NEGÓCIO (Read-only) -->
+    <article class="finance-card">
+      <h2>Fluxo de caixa do negócio</h2>
+      <p class="section-note" style="margin-top: 0;">
+        * Esta seção é calculada automaticamente com base nos dados inseridos acima.
+      </p>
+      <table class="finance-table">
+        <thead>
+          <tr>
+            <th>Período</th>
+            <th>Receita</th>
+            <th>Variáveis</th>
+            <th>Margem de contribuição</th>
+            <th>Fixos</th>
+            <th>Resultado operacional</th>
+            <th>Destinação de resultados</th>
+            <th>Resultado do período</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for linha in fluxo_negocio.periodos %}
+            <tr>
+              <td>{{ linha.periodo }}</td>
+              <td>{{ linha.receita }}</td>
+              <td>{{ linha.variaveis }}</td>
+              <td>{{ linha.margem_contribuicao }}</td>
+              <td>{{ linha.fixos }}</td>
+              <td>{{ linha.resultado_operacional }}</td>
+              <td>
+                <ul style="margin:0; padding-left:18px;">
+                  {% for destino in linha.destinacao %}
+                    <li>{{ destino.descricao }} – {{ destino.valor }}</li>
+                  {% endfor %}
+                </ul>
+              </td>
+              <td>{{ linha.resultado_periodo }}</td>
+            </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </article>
+
+    <!-- FLUXO DE CAIXA DO INVESTIDOR (Read-only) -->
+    <article class="finance-card">
+      <h2>Fluxo de caixa do investidor</h2>
+      <p class="section-note" style="margin-top: 0;">
+        * Esta seção é calculada automaticamente com base nos dados inseridos acima.
+      </p>
+      <table class="finance-table">
+        <thead>
+          <tr>
+            <th>Período</th>
+            <th>Aporte / Investimento</th>
+            <th>Distribuição de lucros</th>
+            <th>Saldo do período</th>
+            <th>Saldo acumulado</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for linha in fluxo_investidor.periodos %}
+            <tr>
+              <td>{{ linha.periodo }}</td>
+              <td>{{ linha.aporte }}</td>
+              <td>{{ linha.distribuicao }}</td>
+              <td>{{ linha.saldo }}</td>
+              <td>{{ linha.acumulado }}</td>
+            </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </article>
+  </section>
+
+  <!-- MODALS -->
+  
+  <!-- Modal Premissa -->
+  <div class="modal" id="premiseModal">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h3 id="premiseModalTitle">Adicionar Premissa</h3>
+        <button class="btn-close" onclick="closePremiseModal()">×</button>
+      </div>
+      <div class="modal-body">
+        <form id="premiseForm">
+          <input type="hidden" id="premiseId">
+          <div class="form-group">
+            <label for="premiseDescription">Descrição *</label>
+            <input type="text" id="premiseDescription" required>
+          </div>
+          <div class="form-group">
+            <label for="premiseSuggestion">Sugestão do sistema</label>
+            <input type="text" id="premiseSuggestion">
+          </div>
+          <div class="form-group">
+            <label for="premiseAdjusted">Valor ajustado</label>
+            <input type="text" id="premiseAdjusted">
+          </div>
+          <div class="form-group">
+            <label for="premiseObservations">Observações</label>
+            <textarea id="premiseObservations"></textarea>
+          </div>
+          <div class="form-group">
+            <label for="premiseMemory">Memória de cálculo</label>
+            <textarea id="premiseMemory"></textarea>
+          </div>
+          <div class="modal-footer">
+            <button type="button" class="btn btn-secondary" onclick="closePremiseModal()">Cancelar</button>
+            <button type="submit" class="btn btn-primary">Salvar</button>
+          </div>
+        </form>
+      </div>
+    </div>
+  </div>
+
+  <!-- Modal Investimento -->
+  <div class="modal" id="investmentModal">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h3 id="investmentModalTitle">Adicionar Investimento</h3>
+        <button class="btn-close" onclick="closeInvestmentModal()">×</button>
+      </div>
+      <form id="investmentForm">
+        <input type="hidden" id="investmentId">
+        <div class="form-group">
+          <label for="investmentDescription">Descrição *</label>
+          <input type="text" id="investmentDescription" required>
+        </div>
+        <div class="form-group">
+          <label for="investmentAmount">Valor</label>
+          <input type="text" id="investmentAmount">
+        </div>
+        <div class="modal-footer">
+          <button type="button" class="btn btn-secondary" onclick="closeInvestmentModal()">Cancelar</button>
+          <button type="submit" class="btn btn-primary">Salvar</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- Modal Fonte -->
+  <div class="modal" id="sourceModal">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h3 id="sourceModalTitle">Adicionar Fonte</h3>
+        <button class="btn-close" onclick="closeSourceModal()">×</button>
+      </div>
+      <form id="sourceForm">
+        <input type="hidden" id="sourceId">
+        <div class="form-group">
+          <label for="sourceCategory">Categoria</label>
+          <input type="text" id="sourceCategory">
+        </div>
+        <div class="form-group">
+          <label for="sourceDescription">Descrição *</label>
+          <input type="text" id="sourceDescription" required>
+        </div>
+        <div class="form-group">
+          <label for="sourceAmount">Valor</label>
+          <input type="text" id="sourceAmount">
+        </div>
+        <div class="form-group">
+          <label for="sourceAvailability">Disponibilidade</label>
+          <input type="text" id="sourceAvailability">
+        </div>
+        <div class="modal-footer">
+          <button type="button" class="btn btn-secondary" onclick="closeSourceModal()">Cancelar</button>
+          <button type="submit" class="btn btn-primary">Salvar</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- Modal Custo Variável -->
+  <div class="modal" id="variableCostModal">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h3 id="variableCostModalTitle">Adicionar Custo Variável</h3>
+        <button class="btn-close" onclick="closeVariableCostModal()">×</button>
+      </div>
+      <form id="variableCostForm">
+        <input type="hidden" id="variableCostId">
+        <div class="form-group">
+          <label for="variableCostDescription">Descrição *</label>
+          <input type="text" id="variableCostDescription" required>
+        </div>
+        <div class="form-group">
+          <label for="variableCostPercentage">Percentual</label>
+          <input type="text" id="variableCostPercentage" placeholder="Ex: 15%">
+        </div>
+        <div class="modal-footer">
+          <button type="button" class="btn btn-secondary" onclick="closeVariableCostModal()">Cancelar</button>
+          <button type="submit" class="btn btn-primary">Salvar</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- Modal Regra de Destinação -->
+  <div class="modal" id="resultRuleModal">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h3 id="resultRuleModalTitle">Adicionar Regra de Destinação</h3>
+        <button class="btn-close" onclick="closeResultRuleModal()">×</button>
+      </div>
+      <form id="resultRuleForm">
+        <input type="hidden" id="resultRuleId">
+        <div class="form-group">
+          <label for="resultRuleDescription">Descrição *</label>
+          <input type="text" id="resultRuleDescription" required>
+        </div>
+        <div class="form-group">
+          <label for="resultRulePercentage">Percentual</label>
+          <input type="text" id="resultRulePercentage" placeholder="Ex: 30%">
+        </div>
+        <div class="form-group">
+          <label for="resultRulePeriodicity">Periodicidade</label>
+          <input type="text" id="resultRulePeriodicity" placeholder="Ex: Mensal, Trimestral">
+        </div>
+        <div class="modal-footer">
+          <button type="button" class="btn btn-secondary" onclick="closeResultRuleModal()">Cancelar</button>
+          <button type="submit" class="btn btn-primary">Salvar</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- Modal Métricas -->
+  <div class="modal" id="metricsModal">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h3>Editar Métricas</h3>
+        <button class="btn-close" onclick="closeMetricsModal()">×</button>
+      </div>
+      <form id="metricsForm">
+        <div class="form-group">
+          <label for="metricPayback">Payback</label>
+          <input type="text" id="metricPayback" placeholder="Ex: 18 meses">
+        </div>
+        <div class="form-group">
+          <label for="metricTir">TIR 5 anos</label>
+          <input type="text" id="metricTir" placeholder="Ex: 24%">
+        </div>
+        <div class="form-group">
+          <label for="metricNotes">Comentários</label>
+          <textarea id="metricNotes" rows="4"></textarea>
+        </div>
+        <div class="modal-footer">
+          <button type="button" class="btn btn-secondary" onclick="closeMetricsModal()">Cancelar</button>
+          <button type="submit" class="btn btn-primary">Salvar</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <script>
+    // Debug: Log para verificar se o script está carregando
+    console.log('🔵 Script de Modelagem Financeira carregado!');
+    
+    // Global variables
+    const urlParams = new URLSearchParams(window.location.search);
+    const planId = urlParams.get('plan_id');
+    
+    console.log('🔵 plan_id:', planId);
+    
+    // Parse data with safety checks
+    let premisesData = {{ premissas | tojson | safe }};
+    let investmentsData = {{ investimento.investimento | tojson | safe }};
+    let sourcesData = {{ investimento.fontes | tojson | safe }};
+    let variableCostsData = {{ fluxo_negocio.variaveis | tojson | safe }};
+    let resultRulesData = {{ fluxo_negocio.destinacao_regras | tojson | safe }};
+    let metricsData = {{ fluxo_investidor.analises | tojson | safe }};
+    
+    console.log('🔵 Dados carregados:', {
+      premissas: premisesData.length,
+      investimentos: investmentsData.length,
+      fontes: sourcesData.length,
+      custos: variableCostsData.length,
+      regras: resultRulesData.length
+    });
+
+    // ==================== PREMISSAS ====================
+    function openPremiseModal(premiseId = null) {
+      console.log('🟢 openPremiseModal chamado! premiseId:', premiseId);
+      
+      const modal = document.getElementById('premiseModal');
+      const form = document.getElementById('premiseForm');
+      const title = document.getElementById('premiseModalTitle');
+      
+      console.log('🟢 Modal encontrado:', modal ? 'SIM' : 'NÃO');
+      
+      if (!modal) {
+        console.error('❌ Modal não encontrado! Abortando.');
+        return;
+      }
+      
+      if (premiseId) {
+        const premise = premisesData.find(p => p.id === premiseId);
+        if (premise) {
+          title.textContent = 'Editar Premissa';
+          document.getElementById('premiseId').value = premise.id;
+          document.getElementById('premiseDescription').value = premise.indicador || '';
+          document.getElementById('premiseSuggestion').value = premise.sugestao || '';
+          document.getElementById('premiseAdjusted').value = premise.ajustado || '';
+          document.getElementById('premiseObservations').value = premise.observacoes || '';
+          document.getElementById('premiseMemory').value = premise.memoria || '';
+        }
+      } else {
+        title.textContent = 'Adicionar Premissa';
+        form.reset();
+      }
+      
+      // Padrão PFPN: display block + classe show
+      modal.style.display = 'block';
+      setTimeout(() => modal.classList.add('show'), 10);
+      console.log('🟢 Modal aberto com padrão PFPN');
+    }
+
+    function closePremiseModal() {
+      const modal = document.getElementById('premiseModal');
+      if (modal) {
+        modal.classList.remove('show');
+        setTimeout(() => modal.style.display = 'none', 300);
+      }
+      document.getElementById('premiseForm').reset();
+    }
+
+    document.getElementById('premiseForm').addEventListener('submit', async (e) => {
+      e.preventDefault();
+      
+      const premiseId = document.getElementById('premiseId').value;
+      const data = {
+        description: document.getElementById('premiseDescription').value,
+        suggestion: document.getElementById('premiseSuggestion').value,
+        adjusted: document.getElementById('premiseAdjusted').value,
+        observations: document.getElementById('premiseObservations').value,
+        memory: document.getElementById('premiseMemory').value
+      };
+
+      console.log('📤 Enviando dados:', data);
+      console.log('📤 URL:', `/pev/api/implantacao/${planId}/finance/premises`);
+
+      try {
+        let response;
+        if (premiseId) {
+          console.log('📝 Modo: EDITAR (PUT)');
+          response = await fetch(`/pev/api/implantacao/${planId}/finance/premises/${premiseId}`, {
+            method: 'PUT',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(data)
+          });
+        } else {
+          console.log('📝 Modo: CRIAR (POST)');
+          response = await fetch(`/pev/api/implantacao/${planId}/finance/premises`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(data)
+          });
+        }
+
+        console.log('📥 Response status:', response.status);
+        const responseData = await response.json();
+        console.log('📥 Response data:', responseData);
+
+        if (response.ok) {
+          alert('Premissa salva com sucesso!');
+          closePremiseModal();
+          location.reload();
+        } else {
+          console.error('❌ Erro do servidor:', responseData);
+          alert(`Erro ao salvar premissa: ${responseData.error || 'Erro desconhecido'}`);
+        }
+      } catch (error) {
+        console.error('❌ Erro na requisição:', error);
+        alert(`Erro ao salvar premissa: ${error.message}`);
+      }
+    });
+
+    function editPremise(id) {
+      openPremiseModal(id);
+    }
+
+    async function deletePremise(id) {
+      if (!confirm('Tem certeza que deseja deletar esta premissa?')) return;
+
+      try {
+        const response = await fetch(`/pev/api/implantacao/${planId}/finance/premises/${id}`, {
+          method: 'DELETE'
+        });
+
+        if (response.ok) {
+          alert('Premissa deletada com sucesso!');
+          location.reload();
+        } else {
+          alert('Erro ao deletar premissa');
+        }
+      } catch (error) {
+        console.error('Error:', error);
+        alert('Erro ao deletar premissa');
+      }
+    }
+
+    // ==================== INVESTIMENTOS ====================
+    function openInvestmentModal(investmentId = null) {
+      const modal = document.getElementById('investmentModal');
+      const form = document.getElementById('investmentForm');
+      const title = document.getElementById('investmentModalTitle');
+      
+      if (investmentId) {
+        const investment = investmentsData.find(i => i.id === investmentId);
+        if (investment) {
+          title.textContent = 'Editar Investimento';
+          document.getElementById('investmentId').value = investment.id;
+          document.getElementById('investmentDescription').value = investment.descricao || '';
+          document.getElementById('investmentAmount').value = investment.valor || '';
+        }
+      } else {
+        title.textContent = 'Adicionar Investimento';
+        form.reset();
+      }
+      
+      // Padrão PFPN
+      modal.style.display = 'block';
+      setTimeout(() => modal.classList.add('show'), 10);
+    }
+
+    function closeInvestmentModal() {
+      const modal = document.getElementById('investmentModal');
+      if (modal) {
+        modal.classList.remove('show');
+        setTimeout(() => modal.style.display = 'none', 300);
+      }
+      document.getElementById('investmentForm').reset();
+    }
+
+    document.getElementById('investmentForm').addEventListener('submit', async (e) => {
+      e.preventDefault();
+      
+      const investmentId = document.getElementById('investmentId').value;
+      const data = {
+        description: document.getElementById('investmentDescription').value,
+        amount: document.getElementById('investmentAmount').value
+      };
+
+      try {
+        let response;
+        if (investmentId) {
+          response = await fetch(`/pev/api/implantacao/${planId}/finance/investments/${investmentId}`, {
+            method: 'PUT',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(data)
+          });
+        } else {
+          response = await fetch(`/pev/api/implantacao/${planId}/finance/investments`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(data)
+          });
+        }
+
+        if (response.ok) {
+          alert('Investimento salvo com sucesso!');
+          closeInvestmentModal();
+          location.reload();
+        } else {
+          alert('Erro ao salvar investimento');
+        }
+      } catch (error) {
+        console.error('Error:', error);
+        alert('Erro ao salvar investimento');
+      }
+    });
+
+    function editInvestment(id) {
+      openInvestmentModal(id);
+    }
+
+    async function deleteInvestment(id) {
+      if (!confirm('Tem certeza que deseja deletar este investimento?')) return;
+
+      try {
+        const response = await fetch(`/pev/api/implantacao/${planId}/finance/investments/${id}`, {
+          method: 'DELETE'
+        });
+
+        if (response.ok) {
+          alert('Investimento deletado com sucesso!');
+          location.reload();
+        } else {
+          alert('Erro ao deletar investimento');
+        }
+      } catch (error) {
+        console.error('Error:', error);
+        alert('Erro ao deletar investimento');
+      }
+    }
+
+    // ==================== FONTES ====================
+    function openSourceModal(sourceId = null) {
+      const modal = document.getElementById('sourceModal');
+      const form = document.getElementById('sourceForm');
+      const title = document.getElementById('sourceModalTitle');
+      
+      if (sourceId) {
+        const source = sourcesData.find(s => s.id === sourceId);
+        if (source) {
+          title.textContent = 'Editar Fonte';
+          document.getElementById('sourceId').value = source.id;
+          document.getElementById('sourceCategory').value = source.categoria || '';
+          document.getElementById('sourceDescription').value = source.descricao || '';
+          document.getElementById('sourceAmount').value = source.valor || '';
+          document.getElementById('sourceAvailability').value = source.disponibilidade || '';
+        }
+      } else {
+        title.textContent = 'Adicionar Fonte';
+        form.reset();
+      }
+      
+      // Padrão PFPN
+      modal.style.display = 'block';
+      setTimeout(() => modal.classList.add('show'), 10);
+    }
+
+    function closeSourceModal() {
+      const modal = document.getElementById('sourceModal');
+      if (modal) {
+        modal.classList.remove('show');
+        setTimeout(() => modal.style.display = 'none', 300);
+      }
+      document.getElementById('sourceForm').reset();
+    }
+
+    document.getElementById('sourceForm').addEventListener('submit', async (e) => {
+      e.preventDefault();
+      
+      const sourceId = document.getElementById('sourceId').value;
+      const data = {
+        category: document.getElementById('sourceCategory').value,
+        description: document.getElementById('sourceDescription').value,
+        amount: document.getElementById('sourceAmount').value,
+        availability: document.getElementById('sourceAvailability').value
+      };
+
+      try {
+        let response;
+        if (sourceId) {
+          response = await fetch(`/pev/api/implantacao/${planId}/finance/sources/${sourceId}`, {
+            method: 'PUT',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(data)
+          });
+        } else {
+          response = await fetch(`/pev/api/implantacao/${planId}/finance/sources`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(data)
+          });
+        }
+
+        if (response.ok) {
+          alert('Fonte salva com sucesso!');
+          closeSourceModal();
+          location.reload();
+        } else {
+          alert('Erro ao salvar fonte');
+        }
+      } catch (error) {
+        console.error('Error:', error);
+        alert('Erro ao salvar fonte');
+      }
+    });
+
+    function editSource(id) {
+      openSourceModal(id);
+    }
+
+    async function deleteSource(id) {
+      if (!confirm('Tem certeza que deseja deletar esta fonte?')) return;
+
+      try {
+        const response = await fetch(`/pev/api/implantacao/${planId}/finance/sources/${id}`, {
+          method: 'DELETE'
+        });
+
+        if (response.ok) {
+          alert('Fonte deletada com sucesso!');
+          location.reload();
+        } else {
+          alert('Erro ao deletar fonte');
+        }
+      } catch (error) {
+        console.error('Error:', error);
+        alert('Erro ao deletar fonte');
+      }
+    }
+
+    // ==================== CUSTOS VARIÁVEIS ====================
+    function openVariableCostModal(costId = null) {
+      const modal = document.getElementById('variableCostModal');
+      const form = document.getElementById('variableCostForm');
+      const title = document.getElementById('variableCostModalTitle');
+      
+      if (costId) {
+        const cost = variableCostsData.find(c => c.id === costId);
+        if (cost) {
+          title.textContent = 'Editar Custo Variável';
+          document.getElementById('variableCostId').value = cost.id;
+          document.getElementById('variableCostDescription').value = cost.descricao || '';
+          document.getElementById('variableCostPercentage').value = cost.percentual || '';
+        }
+      } else {
+        title.textContent = 'Adicionar Custo Variável';
+        form.reset();
+      }
+      
+      // Padrão PFPN
+      modal.style.display = 'block';
+      setTimeout(() => modal.classList.add('show'), 10);
+    }
+
+    function closeVariableCostModal() {
+      const modal = document.getElementById('variableCostModal');
+      if (modal) {
+        modal.classList.remove('show');
+        setTimeout(() => modal.style.display = 'none', 300);
+      }
+      document.getElementById('variableCostForm').reset();
+    }
+
+    document.getElementById('variableCostForm').addEventListener('submit', async (e) => {
+      e.preventDefault();
+      
+      const costId = document.getElementById('variableCostId').value;
+      const data = {
+        description: document.getElementById('variableCostDescription').value,
+        percentage: document.getElementById('variableCostPercentage').value
+      };
+
+      try {
+        let response;
+        if (costId) {
+          response = await fetch(`/pev/api/implantacao/${planId}/finance/variable_costs/${costId}`, {
+            method: 'PUT',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(data)
+          });
+        } else {
+          response = await fetch(`/pev/api/implantacao/${planId}/finance/variable_costs`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(data)
+          });
+        }
+
+        if (response.ok) {
+          alert('Custo variável salvo com sucesso!');
+          closeVariableCostModal();
+          location.reload();
+        } else {
+          alert('Erro ao salvar custo variável');
+        }
+      } catch (error) {
+        console.error('Error:', error);
+        alert('Erro ao salvar custo variável');
+      }
+    });
+
+    function editVariableCost(id) {
+      openVariableCostModal(id);
+    }
+
+    async function deleteVariableCost(id) {
+      if (!confirm('Tem certeza que deseja deletar este custo variável?')) return;
+
+      try {
+        const response = await fetch(`/pev/api/implantacao/${planId}/finance/variable_costs/${id}`, {
+          method: 'DELETE'
+        });
+
+        if (response.ok) {
+          alert('Custo variável deletado com sucesso!');
+          location.reload();
+        } else {
+          alert('Erro ao deletar custo variável');
+        }
+      } catch (error) {
+        console.error('Error:', error);
+        alert('Erro ao deletar custo variável');
+      }
+    }
+
+    // ==================== REGRAS DE DESTINAÇÃO ====================
+    function openResultRuleModal(ruleId = null) {
+      const modal = document.getElementById('resultRuleModal');
+      const form = document.getElementById('resultRuleForm');
+      const title = document.getElementById('resultRuleModalTitle');
+      
+      if (ruleId) {
+        const rule = resultRulesData.find(r => r.id === ruleId);
+        if (rule) {
+          title.textContent = 'Editar Regra de Destinação';
+          document.getElementById('resultRuleId').value = rule.id;
+          document.getElementById('resultRuleDescription').value = rule.descricao || '';
+          document.getElementById('resultRulePercentage').value = rule.percentual || '';
+          document.getElementById('resultRulePeriodicity').value = rule.periodicidade || '';
+        }
+      } else {
+        title.textContent = 'Adicionar Regra de Destinação';
+        form.reset();
+      }
+      
+      // Padrão PFPN
+      modal.style.display = 'block';
+      setTimeout(() => modal.classList.add('show'), 10);
+    }
+
+    function closeResultRuleModal() {
+      const modal = document.getElementById('resultRuleModal');
+      if (modal) {
+        modal.classList.remove('show');
+        setTimeout(() => modal.style.display = 'none', 300);
+      }
+      document.getElementById('resultRuleForm').reset();
+    }
+
+    document.getElementById('resultRuleForm').addEventListener('submit', async (e) => {
+      e.preventDefault();
+      
+      const ruleId = document.getElementById('resultRuleId').value;
+      const data = {
+        description: document.getElementById('resultRuleDescription').value,
+        percentage: document.getElementById('resultRulePercentage').value,
+        periodicity: document.getElementById('resultRulePeriodicity').value
+      };
+
+      try {
+        let response;
+        if (ruleId) {
+          response = await fetch(`/pev/api/implantacao/${planId}/finance/result_rules/${ruleId}`, {
+            method: 'PUT',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(data)
+          });
+        } else {
+          response = await fetch(`/pev/api/implantacao/${planId}/finance/result_rules`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(data)
+          });
+        }
+
+        if (response.ok) {
+          alert('Regra de destinação salva com sucesso!');
+          closeResultRuleModal();
+          location.reload();
+        } else {
+          alert('Erro ao salvar regra de destinação');
+        }
+      } catch (error) {
+        console.error('Error:', error);
+        alert('Erro ao salvar regra de destinação');
+      }
+    });
+
+    function editResultRule(id) {
+      openResultRuleModal(id);
+    }
+
+    async function deleteResultRule(id) {
+      if (!confirm('Tem certeza que deseja deletar esta regra de destinação?')) return;
+
+      try {
+        const response = await fetch(`/pev/api/implantacao/${planId}/finance/result_rules/${id}`, {
+          method: 'DELETE'
+        });
+
+        if (response.ok) {
+          alert('Regra de destinação deletada com sucesso!');
+          location.reload();
+        } else {
+          alert('Erro ao deletar regra de destinação');
+        }
+      } catch (error) {
+        console.error('Error:', error);
+        alert('Erro ao deletar regra de destinação');
+      }
+    }
+
+    // ==================== MÉTRICAS ====================
+    function openMetricsModal() {
+      const modal = document.getElementById('metricsModal');
+      
+      document.getElementById('metricPayback').value = metricsData.payback || '';
+      document.getElementById('metricTir').value = metricsData.tir_5_anos || '';
+      document.getElementById('metricNotes').value = metricsData.comentarios || '';
+      
+      // Padrão PFPN
+      modal.style.display = 'block';
+      setTimeout(() => modal.classList.add('show'), 10);
+    }
+
+    function closeMetricsModal() {
+      const modal = document.getElementById('metricsModal');
+      if (modal) {
+        modal.classList.remove('show');
+        setTimeout(() => modal.style.display = 'none', 300);
+      }
+      document.getElementById('metricsForm').reset();
+    }
+
+    document.getElementById('metricsForm').addEventListener('submit', async (e) => {
+      e.preventDefault();
+      
+      const data = {
+        payback: document.getElementById('metricPayback').value,
+        tir: document.getElementById('metricTir').value,
+        notes: document.getElementById('metricNotes').value
+      };
+
+      try {
+        const response = await fetch(`/pev/api/implantacao/${planId}/finance/metrics`, {
+          method: 'PUT',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(data)
+        });
+
+        if (response.ok) {
+          alert('Métricas atualizadas com sucesso!');
+          closeMetricsModal();
+          location.reload();
+        } else {
+          alert('Erro ao atualizar métricas');
+        }
+      } catch (error) {
+        console.error('Error:', error);
+        alert('Erro ao atualizar métricas');
+      }
+    });
+
+    // Close modals on outside click
+    document.querySelectorAll('.modal').forEach(modal => {
+      modal.addEventListener('click', (e) => {
+        if (e.target === modal) {
+          modal.classList.remove('active');
+        }
+      });
+    });
+  </script>
+{% endblock %}

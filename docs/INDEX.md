@@ -55,6 +55,10 @@ docs/
 │   ├── bugfix_template.md           ← Template de correção
 │   └── module_template.md           ← Template de novo módulo
 │
+├── patterns/                         ← Padrões reutilizáveis
+│   ├── PFPN_PADRAO_FORMULARIO.md    ← Padrão de formulário (visualização/edição)
+│   └── PFPN_QUICK_START.md          ← Guia rápido PFPN (10 min)
+│
 ├── workflows/                        ← Processos de trabalho
 │   ├── DEVELOPMENT_WORKFLOW.md      ← Git flow, commits, PRs
 │   └── DEPLOYMENT_CHECKLIST.md      ← Checklist de deploy
@@ -105,6 +109,13 @@ docs/
 | [bugfix_template.md](templates/bugfix_template.md) | Documentar correção de bug | Ao corrigir bug |
 | [module_template.md](templates/module_template.md) | Documentar novo módulo | Ao criar módulo |
 
+### 🎨 Padrões de Desenvolvimento
+
+| Padrão | Para Que | Quando Usar |
+|--------|----------|-------------|
+| [PFPN](patterns/PFPN_PADRAO_FORMULARIO.md) | Formulário com modo visualização/edição | Criar formulários editáveis |
+| [PFPN Quick Start](patterns/PFPN_QUICK_START.md) | Implementação rápida do PFPN | Aplicar padrão em ~10 min |
+
 ### 📖 Guias Práticos
 
 | Guia | Para Que | Quando Usar |
@@ -138,6 +149,9 @@ docs/
 
 ### "Por que escolhemos Flask ao invés de Django?"
 → [DECISION_LOG.md](governance/DECISION_LOG.md)
+
+### "Como criar formulário com modo visualização/edição?"
+→ [PFPN Quick Start](patterns/PFPN_QUICK_START.md)
 
 ---
 
@@ -333,14 +347,15 @@ flask db downgrade
 
 ## 📈 Estatísticas
 
-**Total de Documentos:** 11  
-**Última Atualização:** 18/10/2025  
-**Versão:** 1.0
+**Total de Documentos:** 14  
+**Última Atualização:** 23/10/2025  
+**Versão:** 1.1
 
 ### Documentos por Categoria
 
-- **Governança:** 6 documentos
+- **Governança:** 7 documentos
 - **Templates:** 3 documentos
+- **Padrões:** 2 documentos (PFPN)
 - **Workflows:** 2 documentos
 - **Configuração:** 1 arquivo (.cursorrules)
 - **Testes:** 1 arquivo (test_code_standards.py)
@@ -357,7 +372,9 @@ flask db downgrade
 | DATABASE_STANDARDS.md | ✅ Ativo | 18/10/2025 |
 | API_STANDARDS.md | ✅ Ativo | 18/10/2025 |
 | FORBIDDEN_PATTERNS.md | ✅ Ativo | 18/10/2025 |
-| DECISION_LOG.md | ✅ Ativo | 18/10/2025 |
+| DECISION_LOG.md | ✅ Ativo | 23/10/2025 |
+| PFPN_PADRAO_FORMULARIO.md | ✅ Ativo | 23/10/2025 |
+| PFPN_QUICK_START.md | ✅ Ativo | 23/10/2025 |
 | DEVELOPMENT_WORKFLOW.md | ✅ Ativo | 18/10/2025 |
 | DEPLOYMENT_CHECKLIST.md | ✅ Ativo | 18/10/2025 |
 | .cursorrules | ✅ Ativo | 18/10/2025 |

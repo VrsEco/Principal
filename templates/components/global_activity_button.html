@@ -1,0 +1,547 @@
+<!-- Modal de Atividades Global - v3.0 com Detecção de Contexto -->
+
+<!-- Modal de Adicionar Atividade Global -->
+<div id="global-activity-modal" class="modal global-modal" style="display: none;">
+  <div class="modal-content modal-fundo-claro" style="max-width: 700px;">
+    <div class="modal-header" style="background: linear-gradient(135deg, #ffffff 0%, #f9fafb 100%) !important;">
+      <h3 style="color: #000000 !important; font-size: 20px; font-weight: 600;">
+        ✅ Adicionar Atividade
+      </h3>
+      <span class="modal-close" onclick="closeGlobalActivityModal()">&times;</span>
+    </div>
+    
+    <form id="global-activity-form" style="padding: 24px; background: linear-gradient(135deg, #ffffff 0%, #f8fafc 100%) !important;">
+      <!-- Projeto (Detectado automaticamente) -->
+      <div class="form-group">
+        <label for="activity-project" style="color: #000000 !important; font-weight: 600;">
+          📁 Projeto *
+          <span id="project-context-badge" style="display: none; margin-left: 8px; font-size: 11px; padding: 2px 8px; background: #10b981; color: white; border-radius: 4px; font-weight: 500;">✓ Detectado</span>
+        </label>
+        <select id="activity-project" required class="input-fundo-claro" style="cursor: pointer;">
+          <option value="">🔍 Carregando projetos...</option>
+        </select>
+        <small id="project-help-text" style="color: #64748b; font-size: 12px; margin-top: 4px; display: block;">
+          Selecione o projeto para vincular esta atividade.
+        </small>
+      </div>
+      
+      <!-- O Que -->
+      <div class="form-group">
+        <label for="activity-what" style="color: #000000 !important; font-weight: 600;">O que fazer? *</label>
+        <textarea id="activity-what" required class="input-fundo-claro" rows="3" placeholder="Descreva o que precisa ser feito..."></textarea>
+      </div>
+      
+      <!-- Quem -->
+      <div class="form-group">
+        <label for="activity-who" style="color: #000000 !important; font-weight: 600;">Quem é o responsável?</label>
+        <input type="text" id="activity-who" class="input-fundo-claro" placeholder="Nome do responsável">
+      </div>
+      
+      <!-- Quando -->
+      <div class="form-group">
+        <label for="activity-when" style="color: #000000 !important; font-weight: 600;">Quando (prazo)?</label>
+        <input type="date" id="activity-when" class="input-fundo-claro">
+      </div>
+      
+      <!-- Como -->
+      <div class="form-group">
+        <label for="activity-how" style="color: #000000 !important; font-weight: 600;">Como executar?</label>
+        <textarea id="activity-how" class="input-fundo-claro" rows="3" placeholder="Descreva como a atividade deve ser executada..."></textarea>
+      </div>
+      
+      <!-- Observações -->
+      <div class="form-group">
+        <label for="activity-obs" style="color: #000000 !important; font-weight: 600;">Observações</label>
+        <textarea id="activity-obs" class="input-fundo-claro" rows="2" placeholder="Observações adicionais..."></textarea>
+      </div>
+      
+      <div class="form-actions" style="margin-top: 24px;">
+        <button type="button" class="button button-secondary" onclick="closeGlobalActivityModal()">Cancelar</button>
+        <button type="submit" class="button button-primary botao-fundo-claro">Adicionar Atividade</button>
+      </div>
+    </form>
+  </div>
+</div>
+
+<style>
+  /* Botão Flutuante - Posicionamento Forçado */
+  #global-activity-btn.global-activity-fab,
+  button#global-activity-btn.global-activity-fab {
+    position: fixed !important;
+    top: 20px !important;
+    right: 20px !important;
+    bottom: auto !important;
+    left: auto !important;
+    background: linear-gradient(135deg, #1e40af, #7c3aed);
+    color: white;
+    border: none;
+    border-radius: 12px;
+    padding: 12px 20px;
+    font-size: 14px;
+    font-weight: 600;
+    cursor: pointer;
+    box-shadow: 0 8px 24px rgba(30, 64, 175, 0.3);
+    z-index: 9999 !important;
+    display: flex;
+    align-items: center;
+    transition: all 0.3s ease;
+  }
+  
+  .global-activity-fab:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 12px 32px rgba(30, 64, 175, 0.4);
+  }
+  
+  .global-activity-fab:active {
+    transform: translateY(0px);
+  }
+  
+  /* Modal Global */
+  .global-modal {
+    z-index: 10000 !important;
+  }
+  
+  .global-modal .modal-content {
+    animation: slideUp 0.3s ease;
+  }
+  
+  @keyframes slideUp {
+    from {
+      opacity: 0;
+      transform: translate(-50%, -45%);
+    }
+    to {
+      opacity: 1;
+      transform: translate(-50%, -50%);
+    }
+  }
+  
+  /* Estilos para o form de atividade */
+  .input-fundo-claro {
+    background: white !important;
+    color: #000000 !important;
+    border: 1px solid rgba(30, 64, 175, 0.2) !important;
+    padding: 10px 12px;
+    border-radius: 8px;
+    width: 100%;
+    font-size: 14px;
+  }
+  
+  .input-fundo-claro:focus {
+    outline: none;
+    border-color: #3b82f6 !important;
+    box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
+  }
+  
+  .botao-fundo-claro {
+    background: linear-gradient(135deg, #1e40af, #7c3aed) !important;
+    color: white !important;
+    font-weight: 600 !important;
+  }
+  
+  .botao-fundo-claro:hover {
+    transform: translateY(-1px);
+    box-shadow: 0 6px 16px rgba(30, 64, 175, 0.3);
+  }
+</style>
+
+<script>
+  // ========== Global Activities Modal ==========
+  
+  async function openGlobalActivityModal() {
+    // Resetar formulário
+    document.getElementById('global-activity-form').reset();
+    
+    // Pegar contexto da página atual
+    const currentPath = window.location.pathname;
+    const currentSearch = window.location.search;
+    
+    // Armazenar contexto no form (será usado ao enviar)
+    document.getElementById('global-activity-form').dataset.contextPage = currentPath;
+    document.getElementById('global-activity-form').dataset.contextSearch = currentSearch;
+    
+    // Detectar company_id e plan_id de MÚLTIPLAS fontes
+    const urlParams = new URLSearchParams(currentSearch);
+    let companyId = urlParams.get('company_id');
+    let planId = urlParams.get('plan_id');
+    let portfolioId = urlParams.get('portfolio_id');
+    
+    // PRIORIDADE 1: Tentar extrair do path
+    if (!companyId) {
+      // Formato: /company/123/... ou /meetings/company/123
+      const companyMatch = currentPath.match(/\/company\/(\d+)/);
+      if (companyMatch) companyId = companyMatch[1];
+    }
+    
+    // PRIORIDADE 2: Tentar pegar de variáveis globais JavaScript
+    if (!companyId && typeof window.companyId !== 'undefined') {
+      companyId = window.companyId;
+      console.log('Company ID encontrado em window.companyId:', companyId);
+    }
+    
+    if (!companyId && typeof window.company !== 'undefined' && window.company && window.company.id) {
+      companyId = window.company.id;
+      console.log('Company ID encontrado em window.company.id:', companyId);
+    }
+    
+    // PRIORIDADE 3: Tentar pegar de data-attributes
+    if (!companyId) {
+      const elementWithCompany = document.querySelector('[data-company-id]');
+      if (elementWithCompany) {
+        companyId = elementWithCompany.dataset.companyId;
+        console.log('Company ID encontrado em data-company-id:', companyId);
+      }
+    }
+    
+    // PRIORIDADE 4: Para páginas de planejamento, buscar company_id do plano
+    if (!companyId && planId) {
+      console.log('Buscando company_id do plano:', planId);
+      try {
+        const planResponse = await fetch(`/api/plans/${planId}`);
+        const planData = await planResponse.json();
+        if (planData.success && planData.data && planData.data.company_id) {
+          companyId = planData.data.company_id;
+          console.log('Company ID encontrado do plano:', companyId);
+        }
+      } catch (e) {
+        console.error('Erro ao buscar company_id do plano:', e);
+      }
+    }
+    
+    // Tentar extrair plan_id do path (PEV)
+    if (!planId) {
+      // Formato: /plans/abc123 ou /plans/123
+      const planMatch = currentPath.match(/\/plans\/([^/?]+)/);
+      if (planMatch) planId = planMatch[1];
+    }
+    
+    // Tentar pegar plan_id de variável global
+    if (!planId && typeof window.planId !== 'undefined') {
+      planId = window.planId;
+      console.log('Plan ID encontrado em window.planId:', planId);
+    }
+    
+    // Tentar extrair portfolio_id do path (GRV)
+    if (!portfolioId) {
+      // Formato: /portfolios/123 ou /portfolio/123
+      const portfolioMatch = currentPath.match(/\/portfolios?\/(\d+)/);
+      if (portfolioMatch) portfolioId = portfolioMatch[1];
+    }
+    
+    // Tentar pegar portfolio_id de variável global
+    if (!portfolioId && typeof window.portfolioId !== 'undefined') {
+      portfolioId = window.portfolioId;
+      console.log('Portfolio ID encontrado em window.portfolioId:', portfolioId);
+    }
+    
+    console.log('Contexto detectado:', { companyId, planId, portfolioId, currentPath });
+    
+    // Carregar projetos disponíveis
+    // Se temos portfolioId mas não planId, usar portfolioId como identificador
+    const contextId = planId || portfolioId;
+    await loadProjectsForActivity(companyId, contextId);
+    
+    // Abrir modal
+    const modal = document.getElementById('global-activity-modal');
+    if (modal) {
+      modal.style.display = 'block';
+      setTimeout(() => modal.classList.add('show'), 10);
+    }
+  }
+  
+  async function loadProjectsForActivity(companyId, currentPlanId) {
+    const projectSelect = document.getElementById('activity-project');
+    const contextBadge = document.getElementById('project-context-badge');
+    
+    // Limpar select
+    projectSelect.innerHTML = '<option value="">Carregando projetos...</option>';
+    
+    if (!companyId) {
+      projectSelect.innerHTML = '<option value="">⚠️ Empresa não detectada - acesse via página do planejamento</option>';
+      return;
+    }
+    
+    try {
+      // Buscar todos os projetos da empresa
+      const response = await fetch(`/api/companies/${companyId}/projects`);
+      const data = await response.json();
+      
+      if (!data.success || !data.projects || data.projects.length === 0) {
+        projectSelect.innerHTML = '<option value="">Nenhum projeto disponível</option>';
+        return;
+      }
+      
+      // Limpar select
+      projectSelect.innerHTML = '';
+      
+      // Detectar projeto vinculado ao plan_id atual
+      let detectedProjectId = null;
+      
+      if (currentPlanId) {
+        const detectedProject = data.projects.find(p => p.plan_id == currentPlanId);
+        if (detectedProject) {
+          detectedProjectId = detectedProject.id;
+        }
+      }
+      
+      // Adicionar opção vazia
+      const emptyOption = document.createElement('option');
+      emptyOption.value = '';
+      emptyOption.textContent = 'Selecione um projeto...';
+      projectSelect.appendChild(emptyOption);
+      
+      // Adicionar todos os projetos
+      data.projects.forEach(project => {
+        const option = document.createElement('option');
+        option.value = project.id;
+        
+        // Mostrar origem (PEV/GRV) e nome do planejamento
+        const origin = project.plan_type || '';
+        const planName = project.plan_name || '';
+        
+        let label = project.title;
+        if (origin && planName) {
+          label = `${project.title} (${origin}: ${planName})`;
+        } else if (planName) {
+          label = `${project.title} (${planName})`;
+        }
+        
+        option.textContent = label;
+        option.dataset.companyId = project.company_id;
+        option.dataset.planId = project.plan_id || '';
+        
+        projectSelect.appendChild(option);
+      });
+      
+      // Pré-selecionar projeto detectado
+      if (detectedProjectId) {
+        projectSelect.value = detectedProjectId;
+        contextBadge.style.display = 'inline';
+        contextBadge.textContent = '✓ Detectado';
+        
+        // Atualizar descrição
+        const helpText = projectSelect.parentElement.querySelector('small');
+        if (helpText) {
+          helpText.textContent = `✓ Projeto detectado automaticamente da página atual. Você pode alterá-lo se necessário.`;
+          helpText.style.color = '#10b981';
+        }
+      } else {
+        contextBadge.style.display = 'none';
+        
+        // Atualizar descrição
+        const helpText = projectSelect.parentElement.querySelector('small');
+        if (helpText) {
+          helpText.textContent = 'Selecione o projeto para esta atividade.';
+          helpText.style.color = '#64748b';
+        }
+      }
+      
+    } catch (error) {
+      console.error('Erro ao carregar projetos:', error);
+      projectSelect.innerHTML = '<option value="">Erro ao carregar projetos</option>';
+    }
+  }
+  
+  function closeGlobalActivityModal() {
+    const modal = document.getElementById('global-activity-modal');
+    if (modal) {
+      modal.classList.remove('show');
+      setTimeout(() => modal.style.display = 'none', 300);
+    }
+  }
+  
+  // Handler do formulário
+  document.getElementById('global-activity-form').addEventListener('submit', async (e) => {
+    e.preventDefault();
+    
+    const form = e.target;
+    const contextPage = form.dataset.contextPage || window.location.pathname;
+    
+    // Pegar projeto selecionado
+    const projectSelect = document.getElementById('activity-project');
+    const projectId = projectSelect.value;
+    
+    if (!projectId) {
+      showGlobalMessage('❌ Por favor, selecione um projeto para a atividade.', 'error');
+      projectSelect.focus();
+      return;
+    }
+    
+    // Pegar company_id do projeto selecionado
+    const selectedOption = projectSelect.options[projectSelect.selectedIndex];
+    const companyId = selectedOption.dataset.companyId;
+    
+    if (!companyId) {
+      showGlobalMessage('❌ Erro: Não foi possível identificar a empresa.', 'error');
+      return;
+    }
+    
+    try {
+      // Preparar dados no formato GRV
+      const activityData = {
+        what: document.getElementById('activity-what').value,
+        who: document.getElementById('activity-who').value,
+        when: document.getElementById('activity-when').value,
+        how: document.getElementById('activity-how').value,
+        observations: document.getElementById('activity-obs').value,
+        amount: null,
+        logs: []
+      };
+      
+      // Adicionar atividade ao projeto GRV
+      const response = await fetch(`/api/companies/${companyId}/projects/${projectId}/activities`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(activityData)
+      });
+      
+      const result = await response.json();
+      
+      if (result.success) {
+        showGlobalMessage('✅ Atividade adicionada ao projeto com sucesso!', 'success');
+        closeGlobalActivityModal();
+        
+        // Recarregar página se estiver no Kanban
+        if (contextPage.includes('/projects/') && contextPage.includes('/manage')) {
+          setTimeout(() => window.location.reload(), 1000);
+        }
+      } else {
+        showGlobalMessage('❌ Erro ao adicionar atividade: ' + result.message, 'error');
+      }
+    } catch (error) {
+      console.error(error);
+      showGlobalMessage('❌ Erro ao adicionar atividade', 'error');
+    }
+  });
+  
+  function showGlobalMessage(message, type = 'info') {
+    const notification = document.createElement('div');
+    notification.style.cssText = `
+      position: fixed;
+      top: 20px;
+      right: 20px;
+      padding: 16px 24px;
+      border-radius: 8px;
+      color: white;
+      font-weight: 600;
+      z-index: 10001;
+      max-width: 400px;
+      box-shadow: 0 8px 24px rgba(0,0,0,0.3);
+      animation: slideIn 0.3s ease;
+    `;
+    
+    const colors = {
+      success: '#10b981',
+      error: '#ef4444',
+      warning: '#f59e0b',
+      info: '#3b82f6'
+    };
+    
+    notification.style.backgroundColor = colors[type] || colors.info;
+    notification.textContent = message;
+    document.body.appendChild(notification);
+    
+    setTimeout(() => {
+      if (notification.parentNode) {
+        notification.style.animation = 'slideOut 0.3s ease';
+        setTimeout(() => notification.parentNode.removeChild(notification), 300);
+      }
+    }, 5000);
+  }
+  
+  // Ajuste de posicionamento do botão baseado na existência do botão de menu
+  function adjustActivityButtonPosition() {
+    const activityBtn = document.getElementById('global-activity-btn');
+    const menuToggle = document.querySelector('.project-sidebar-toggle');
+    
+    if (activityBtn) {
+      // Garantir que o botão está sempre no canto superior direito (com !important via setProperty)
+      activityBtn.style.setProperty('position', 'fixed', 'important');
+      activityBtn.style.setProperty('right', '20px', 'important');
+      activityBtn.style.setProperty('bottom', 'auto', 'important');
+      activityBtn.style.setProperty('left', 'auto', 'important');
+      activityBtn.style.setProperty('z-index', '9999', 'important');
+      
+      if (menuToggle) {
+        // Se existe botão de menu, posicionar abaixo dele
+        activityBtn.style.setProperty('top', '80px', 'important');
+        console.log('✅ Botão de atividade posicionado abaixo do menu (top: 80px)');
+      } else {
+        // Se não existe, posicionar no topo
+        activityBtn.style.setProperty('top', '20px', 'important');
+        console.log('✅ Botão de atividade posicionado no topo (top: 20px)');
+      }
+    }
+  }
+  
+  // Usar MutationObserver para detectar quando o botão de menu é criado
+  function setupActivityButtonPositioning() {
+    // Ajustar posição imediatamente
+    adjustActivityButtonPosition();
+    
+    // Observar mudanças no DOM para detectar quando o botão de menu é criado
+    const observer = new MutationObserver(function(mutations) {
+      mutations.forEach(function(mutation) {
+        if (mutation.addedNodes.length > 0) {
+          mutation.addedNodes.forEach(function(node) {
+            if (node.nodeType === 1) { // Element node
+              if (node.classList && node.classList.contains('project-sidebar-toggle-wrapper')) {
+                adjustActivityButtonPosition();
+              } else if (node.querySelector && node.querySelector('.project-sidebar-toggle-wrapper')) {
+                adjustActivityButtonPosition();
+              }
+            }
+          });
+        }
+      });
+    });
+    
+    // Observar todo o corpo do documento
+    observer.observe(document.body, {
+      childList: true,
+      subtree: true
+    });
+    
+    // Também executar após delays variados para garantir
+    setTimeout(adjustActivityButtonPosition, 100);
+    setTimeout(adjustActivityButtonPosition, 300);
+    setTimeout(adjustActivityButtonPosition, 500);
+  }
+  
+  // Executar ao carregar
+  console.log('🔧 Global Activity Button v2.0 - Inicializando posicionamento...');
+  if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', setupActivityButtonPositioning);
+  } else {
+    setupActivityButtonPositioning();
+  }
+  console.log('🔧 Configuração de posicionamento concluída');
+  
+  // Animações
+  const globalStyles = document.createElement('style');
+  globalStyles.textContent = `
+    @keyframes slideIn {
+      from {
+        opacity: 0;
+        transform: translateX(100px);
+      }
+      to {
+        opacity: 1;
+        transform: translateX(0);
+      }
+    }
+    
+    @keyframes slideOut {
+      from {
+        opacity: 1;
+        transform: translateX(0);
+      }
+      to {
+        opacity: 0;
+        transform: translateX(100px);
+      }
+    }
+  `;
+  document.head.appendChild(globalStyles);
+</script>
+

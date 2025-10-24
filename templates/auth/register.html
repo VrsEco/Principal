@@ -1,0 +1,427 @@
+{% extends "base.html" %}
+
+{% block title %}Cadastrar Usuário - Sistema Versus{% endblock %}
+
+{% block styles %}
+{{ super() }}
+<style>
+    .register-container {
+        max-width: 600px;
+        margin: 2rem auto;
+        padding: 0 1rem;
+    }
+
+    .page-header {
+        text-align: center;
+        margin-bottom: 2rem;
+        padding-bottom: 1rem;
+        border-bottom: 2px solid #e0e0e0;
+    }
+
+    .page-header h1 {
+        color: #2c3e50;
+        font-size: 2rem;
+        margin-bottom: 0.5rem;
+    }
+
+    .page-header p {
+        color: #7f8c8d;
+        margin: 0;
+    }
+
+    .register-card {
+        background: white;
+        border-radius: 12px;
+        box-shadow: 0 2px 12px rgba(0, 0, 0, 0.1);
+        padding: 2rem;
+    }
+
+    .form-group {
+        margin-bottom: 1.5rem;
+    }
+
+    .form-group label {
+        display: block;
+        margin-bottom: 0.5rem;
+        color: #2c3e50;
+        font-weight: 600;
+    }
+
+    .form-group label .required {
+        color: #e74c3c;
+        margin-left: 0.25rem;
+    }
+
+    .form-control {
+        width: 100%;
+        padding: 0.75rem 1rem;
+        border: 2px solid #e0e0e0;
+        border-radius: 8px;
+        font-size: 1rem;
+        transition: border-color 0.2s;
+    }
+
+    .form-control:focus {
+        outline: none;
+        border-color: #667eea;
+    }
+
+    .form-control.error {
+        border-color: #e74c3c;
+    }
+
+    .form-text {
+        display: block;
+        margin-top: 0.25rem;
+        font-size: 0.875rem;
+        color: #7f8c8d;
+    }
+
+    .form-text.error {
+        color: #e74c3c;
+    }
+
+    .form-actions {
+        display: flex;
+        gap: 1rem;
+        margin-top: 2rem;
+    }
+
+    .btn {
+        flex: 1;
+        padding: 0.75rem 1.5rem;
+        border: none;
+        border-radius: 8px;
+        font-size: 1rem;
+        font-weight: 600;
+        cursor: pointer;
+        transition: all 0.2s;
+        text-decoration: none;
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        gap: 0.5rem;
+    }
+
+    .btn-primary {
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        color: white;
+    }
+
+    .btn-primary:hover:not(:disabled) {
+        transform: translateY(-2px);
+        box-shadow: 0 4px 12px rgba(102, 126, 234, 0.4);
+    }
+
+    .btn-primary:disabled {
+        opacity: 0.6;
+        cursor: not-allowed;
+    }
+
+    .btn-secondary {
+        background: #95a5a6;
+        color: white;
+    }
+
+    .btn-secondary:hover {
+        background: #7f8c8d;
+        color: white;
+        text-decoration: none;
+    }
+
+    .alert {
+        padding: 1rem;
+        border-radius: 8px;
+        margin-bottom: 1.5rem;
+        display: none;
+    }
+
+    .alert-success {
+        background-color: #d4edda;
+        border: 1px solid #c3e6cb;
+        color: #155724;
+    }
+
+    .alert-danger {
+        background-color: #f8d7da;
+        border: 1px solid #f5c6cb;
+        color: #721c24;
+    }
+
+    .password-strength {
+        margin-top: 0.5rem;
+        height: 4px;
+        background-color: #e0e0e0;
+        border-radius: 2px;
+        overflow: hidden;
+        display: none;
+    }
+
+    .password-strength-bar {
+        height: 100%;
+        transition: all 0.3s;
+    }
+
+    .password-strength.weak .password-strength-bar {
+        width: 33%;
+        background-color: #e74c3c;
+    }
+
+    .password-strength.medium .password-strength-bar {
+        width: 66%;
+        background-color: #f39c12;
+    }
+
+    .password-strength.strong .password-strength-bar {
+        width: 100%;
+        background-color: #2ecc71;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="register-container">
+    <div class="page-header">
+        <h1>👤 Cadastrar Novo Usuário</h1>
+        <p>Preencha os dados abaixo para criar um novo usuário no sistema</p>
+    </div>
+
+    <div class="register-card">
+        <div id="alert" class="alert"></div>
+
+        <form id="registerForm">
+            <div class="form-group">
+                <label for="name">
+                    Nome Completo
+                    <span class="required">*</span>
+                </label>
+                <input 
+                    type="text" 
+                    class="form-control" 
+                    id="name" 
+                    name="name" 
+                    required
+                    placeholder="Digite o nome completo"
+                >
+                <small class="form-text">Nome que será exibido no sistema</small>
+            </div>
+
+            <div class="form-group">
+                <label for="email">
+                    Email
+                    <span class="required">*</span>
+                </label>
+                <input 
+                    type="email" 
+                    class="form-control" 
+                    id="email" 
+                    name="email" 
+                    required
+                    placeholder="usuario@exemplo.com"
+                >
+                <small class="form-text">Email será usado para login</small>
+            </div>
+
+            <div class="form-group">
+                <label for="password">
+                    Senha
+                    <span class="required">*</span>
+                </label>
+                <input 
+                    type="password" 
+                    class="form-control" 
+                    id="password" 
+                    name="password" 
+                    required
+                    placeholder="Digite uma senha segura"
+                    minlength="6"
+                >
+                <div class="password-strength" id="passwordStrength">
+                    <div class="password-strength-bar"></div>
+                </div>
+                <small class="form-text">Mínimo de 6 caracteres</small>
+            </div>
+
+            <div class="form-group">
+                <label for="confirm_password">
+                    Confirmar Senha
+                    <span class="required">*</span>
+                </label>
+                <input 
+                    type="password" 
+                    class="form-control" 
+                    id="confirm_password" 
+                    name="confirm_password" 
+                    required
+                    placeholder="Digite a senha novamente"
+                    minlength="6"
+                >
+                <small class="form-text" id="confirmPasswordText">Digite a senha novamente</small>
+            </div>
+
+            <div class="form-group">
+                <label for="role">
+                    Perfil de Acesso
+                    <span class="required">*</span>
+                </label>
+                <select class="form-control" id="role" name="role" required>
+                    <option value="consultant" selected>Consultor</option>
+                    <option value="client">Cliente</option>
+                    <option value="admin">Administrador</option>
+                </select>
+                <small class="form-text">
+                    <strong>Consultor:</strong> Acesso completo ao sistema<br>
+                    <strong>Cliente:</strong> Acesso limitado às empresas vinculadas<br>
+                    <strong>Administrador:</strong> Acesso total incluindo configurações
+                </small>
+            </div>
+
+            <div class="form-actions">
+                <a href="{{ url_for('auth.list_users_page') }}" class="btn btn-secondary">
+                    <i class="fas fa-arrow-left"></i> Cancelar
+                </a>
+                <button type="submit" class="btn btn-primary" id="submitBtn">
+                    <i class="fas fa-save"></i> Cadastrar Usuário
+                </button>
+            </div>
+        </form>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+{{ super() }}
+<script>
+const form = document.getElementById('registerForm');
+const submitBtn = document.getElementById('submitBtn');
+const alertDiv = document.getElementById('alert');
+const passwordInput = document.getElementById('password');
+const confirmPasswordInput = document.getElementById('confirm_password');
+const confirmPasswordText = document.getElementById('confirmPasswordText');
+const passwordStrength = document.getElementById('passwordStrength');
+
+// Password strength indicator
+passwordInput.addEventListener('input', function() {
+    const password = this.value;
+    
+    if (password.length === 0) {
+        passwordStrength.style.display = 'none';
+        return;
+    }
+    
+    passwordStrength.style.display = 'block';
+    
+    let strength = 0;
+    if (password.length >= 6) strength++;
+    if (password.length >= 10) strength++;
+    if (/[a-z]/.test(password) && /[A-Z]/.test(password)) strength++;
+    if (/[0-9]/.test(password)) strength++;
+    if (/[^a-zA-Z0-9]/.test(password)) strength++;
+    
+    passwordStrength.className = 'password-strength';
+    if (strength <= 2) {
+        passwordStrength.classList.add('weak');
+    } else if (strength <= 3) {
+        passwordStrength.classList.add('medium');
+    } else {
+        passwordStrength.classList.add('strong');
+    }
+});
+
+// Confirm password validation
+confirmPasswordInput.addEventListener('input', function() {
+    if (this.value.length === 0) {
+        confirmPasswordText.className = 'form-text';
+        confirmPasswordText.textContent = 'Digite a senha novamente';
+        this.classList.remove('error');
+        return;
+    }
+    
+    if (this.value !== passwordInput.value) {
+        confirmPasswordText.className = 'form-text error';
+        confirmPasswordText.textContent = '❌ As senhas não coincidem';
+        this.classList.add('error');
+    } else {
+        confirmPasswordText.className = 'form-text';
+        confirmPasswordText.textContent = '✓ As senhas coincidem';
+        confirmPasswordText.style.color = '#2ecc71';
+        this.classList.remove('error');
+    }
+});
+
+// Form submission
+form.addEventListener('submit', async function(e) {
+    e.preventDefault();
+    
+    const name = document.getElementById('name').value.trim();
+    const email = document.getElementById('email').value.trim();
+    const password = passwordInput.value;
+    const confirmPassword = confirmPasswordInput.value;
+    const role = document.getElementById('role').value;
+    
+    // Validation
+    if (!name || !email || !password || !role) {
+        showAlert('Por favor, preencha todos os campos obrigatórios', 'danger');
+        return;
+    }
+    
+    if (password.length < 6) {
+        showAlert('A senha deve ter pelo menos 6 caracteres', 'danger');
+        return;
+    }
+    
+    if (password !== confirmPassword) {
+        showAlert('As senhas não coincidem', 'danger');
+        return;
+    }
+    
+    // Submit
+    submitBtn.disabled = true;
+    submitBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Cadastrando...';
+    
+    try {
+        const response = await fetch('/auth/register', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify({
+                name: name,
+                email: email,
+                password: password,
+                role: role
+            })
+        });
+        
+        const data = await response.json();
+        
+        if (data.success) {
+            showAlert('Usuário cadastrado com sucesso! Redirecionando...', 'success');
+            setTimeout(() => {
+                window.location.href = '{{ url_for("auth.list_users_page") }}';
+            }, 1500);
+        } else {
+            showAlert(data.message || 'Erro ao cadastrar usuário', 'danger');
+            submitBtn.disabled = false;
+            submitBtn.innerHTML = '<i class="fas fa-save"></i> Cadastrar Usuário';
+        }
+    } catch (error) {
+        console.error('Erro:', error);
+        showAlert('Erro ao cadastrar usuário. Tente novamente.', 'danger');
+        submitBtn.disabled = false;
+        submitBtn.innerHTML = '<i class="fas fa-save"></i> Cadastrar Usuário';
+    }
+});
+
+function showAlert(message, type) {
+    alertDiv.className = `alert alert-${type}`;
+    alertDiv.textContent = message;
+    alertDiv.style.display = 'block';
+    
+    // Scroll to top to show alert
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+}
+</script>
+{% endblock %}
+
+

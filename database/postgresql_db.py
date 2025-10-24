@@ -3,6 +3,7 @@ PostgreSQL database implementation
 """
 
 from datetime import datetime, date, time
+import json
 import re
 from typing import List, Dict, Any, Optional, Tuple
 from .base import DatabaseInterface
@@ -75,6 +76,19 @@ class PostgreSQLDatabase(DatabaseInterface):
             return value.isoformat(sep=' ', timespec='seconds')
         return value
 
+    def _load_json(self, value: Any, default=None):
+        """Safely parse JSON fields stored in the database"""
+        if value is None:
+            return default if default is not None else []
+        if isinstance(value, (dict, list)):
+            return value
+        if isinstance(value, str):
+            try:
+                return json.loads(value)
+            except (json.JSONDecodeError, TypeError, ValueError):
+                return default if default is not None else []
+        return default if default is not None else []
+
     
     def init_database(self) -> bool:
         """Initialize database and create tables"""
@@ -104,6 +118,7 @@ class PostgreSQLDatabase(DatabaseInterface):
                     start_date DATE,
                     end_date DATE,
                     year INTEGER,
+                    plan_mode VARCHAR(32) DEFAULT 'evolucao',
                     status VARCHAR(50) DEFAULT 'active',
                     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
                     FOREIGN KEY (company_id) REFERENCES companies (id)
@@ -541,6 +556,264 @@ class PostgreSQLDatabase(DatabaseInterface):
                     cache_enabled BOOLEAN DEFAULT TRUE,
                     created_at TEXT NOT NULL,
                     updated_at TEXT NOT NULL
+                )
+            ''')
+            
+            # Implantacao PEV tables
+            cursor.execute('''
+                CREATE TABLE IF NOT EXISTS plan_alignment_members (
+                    id SERIAL PRIMARY KEY,
+                    plan_id INTEGER NOT NULL REFERENCES plans (id) ON DELETE CASCADE,
+                    name VARCHAR(255) NOT NULL,
+                    role VARCHAR(255),
+                    motivation TEXT,
+                    commitment TEXT,
+                    risk TEXT,
+                    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+                )
+            ''')
+
+            cursor.execute('''
+                CREATE TABLE IF NOT EXISTS plan_alignment_agenda (
+                    id SERIAL PRIMARY KEY,
+                    plan_id INTEGER NOT NULL REFERENCES plans (id) ON DELETE CASCADE,
+                    action_title TEXT,
+                    owner_name TEXT,
+                    schedule_info TEXT,
+                    execution_info TEXT,
+                    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+                )
+            ''')
+
+            cursor.execute('''
+                CREATE TABLE IF NOT EXISTS plan_alignment_principles (
+                    id SERIAL PRIMARY KEY,
+                    plan_id INTEGER NOT NULL REFERENCES plans (id) ON DELETE CASCADE,
+                    principle TEXT NOT NULL,
+                    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+                )
+            ''')
+
+            cursor.execute('''
+                CREATE TABLE IF NOT EXISTS plan_alignment_overview (
+                    plan_id INTEGER PRIMARY KEY REFERENCES plans (id) ON DELETE CASCADE,
+                    shared_vision TEXT,
+                    financial_goals TEXT,
+                    decision_criteria JSONB DEFAULT '[]'::jsonb,
+                    notes TEXT,
+                    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+                )
+            ''')
+
+            cursor.execute('''
+                CREATE TABLE IF NOT EXISTS plan_alignment_project (
+                    plan_id INTEGER PRIMARY KEY REFERENCES plans (id) ON DELETE CASCADE,
+                    project_name TEXT,
+                    description TEXT,
+                    observations JSONB DEFAULT '[]'::jsonb,
+                    grv_project_id INTEGER,
+                    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+                )
+            ''')
+
+            cursor.execute('''
+                CREATE TABLE IF NOT EXISTS plan_implantation_dashboard (
+                    plan_id INTEGER PRIMARY KEY REFERENCES plans (id) ON DELETE CASCADE,
+                    hero_message TEXT,
+                    progress_message TEXT,
+                    general_note TEXT,
+                    general_details TEXT,
+                    next_focus TEXT,
+                    next_focus_details TEXT,
+                    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+                )
+            ''')
+
+            cursor.execute('''
+                CREATE TABLE IF NOT EXISTS plan_implantation_phases (
+                    id SERIAL PRIMARY KEY,
+                    plan_id INTEGER NOT NULL REFERENCES plans (id) ON DELETE CASCADE,
+                    phase_key VARCHAR(50) NOT NULL,
+                    title TEXT,
+                    status VARCHAR(32) DEFAULT 'sem_registros',
+                    tagline TEXT,
+                    pulse TEXT,
+                    sections JSONB DEFAULT '[]'::jsonb,
+                    deliverables JSONB DEFAULT '[]'::jsonb,
+                    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                    UNIQUE(plan_id, phase_key)
+                )
+            ''')
+
+            cursor.execute('''
+                CREATE TABLE IF NOT EXISTS plan_implantation_checkpoints (
+                    id SERIAL PRIMARY KEY,
+                    plan_id INTEGER NOT NULL REFERENCES plans (id) ON DELETE CASCADE,
+                    title TEXT NOT NULL,
+                    status VARCHAR(32) DEFAULT 'upcoming',
+                    date_label TEXT,
+                    sort_order INTEGER DEFAULT 0,
+                    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+                )
+            ''')
+
+            cursor.execute('''
+                CREATE TABLE IF NOT EXISTS plan_segments (
+                    id SERIAL PRIMARY KEY,
+                    plan_id INTEGER NOT NULL REFERENCES plans (id) ON DELETE CASCADE,
+                    name VARCHAR(255) NOT NULL,
+                    description TEXT,
+                    audiences JSONB,
+                    differentials JSONB,
+                    evidences JSONB,
+                    personas JSONB,
+                    competitors_matrix JSONB,
+                    strategy JSONB,
+                    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+                )
+            ''')
+
+            cursor.execute('''
+                CREATE TABLE IF NOT EXISTS plan_structures (
+                    id SERIAL PRIMARY KEY,
+                    plan_id INTEGER NOT NULL REFERENCES plans (id) ON DELETE CASCADE,
+                    area VARCHAR(120),
+                    block VARCHAR(120),
+                    item_type VARCHAR(50),
+                    description TEXT,
+                    value TEXT,
+                    repetition TEXT,
+                    payment_form TEXT,
+                    acquisition_info TEXT,
+                    availability_info TEXT,
+                    supplier TEXT,
+                    observations TEXT,
+                    status TEXT,
+                    sort_order INTEGER DEFAULT 0,
+                    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+                )
+            ''')
+
+            cursor.execute('''
+                CREATE TABLE IF NOT EXISTS plan_structure_installments (
+                    id SERIAL PRIMARY KEY,
+                    structure_id INTEGER NOT NULL REFERENCES plan_structures (id) ON DELETE CASCADE,
+                    installment_number TEXT,
+                    amount TEXT,
+                    due_info TEXT,
+                    installment_type TEXT,
+                    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+                )
+            ''')
+
+            cursor.execute('''
+                CREATE TABLE IF NOT EXISTS plan_finance_premises (
+                    id SERIAL PRIMARY KEY,
+                    plan_id INTEGER NOT NULL REFERENCES plans (id) ON DELETE CASCADE,
+                    description TEXT NOT NULL,
+                    suggestion TEXT,
+                    adjusted TEXT,
+                    observations TEXT,
+                    memory TEXT,
+                    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+                )
+            ''')
+
+            cursor.execute('''
+                CREATE TABLE IF NOT EXISTS plan_finance_investments (
+                    id SERIAL PRIMARY KEY,
+                    plan_id INTEGER NOT NULL REFERENCES plans (id) ON DELETE CASCADE,
+                    description TEXT NOT NULL,
+                    amount TEXT,
+                    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+                )
+            ''')
+
+            cursor.execute('''
+                CREATE TABLE IF NOT EXISTS plan_finance_sources (
+                    id SERIAL PRIMARY KEY,
+                    plan_id INTEGER NOT NULL REFERENCES plans (id) ON DELETE CASCADE,
+                    category TEXT,
+                    description TEXT NOT NULL,
+                    amount TEXT,
+                    availability TEXT,
+                    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+                )
+            ''')
+
+            cursor.execute('''
+                CREATE TABLE IF NOT EXISTS plan_finance_business_periods (
+                    id SERIAL PRIMARY KEY,
+                    plan_id INTEGER NOT NULL REFERENCES plans (id) ON DELETE CASCADE,
+                    period_label TEXT NOT NULL,
+                    revenue TEXT,
+                    variables TEXT,
+                    contribution_margin TEXT,
+                    fixed_costs TEXT,
+                    operating_result TEXT,
+                    result_period TEXT,
+                    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+                )
+            ''')
+
+            cursor.execute('''
+                CREATE TABLE IF NOT EXISTS plan_finance_business_distribution (
+                    id SERIAL PRIMARY KEY,
+                    period_id INTEGER NOT NULL REFERENCES plan_finance_business_periods (id) ON DELETE CASCADE,
+                    description TEXT NOT NULL,
+                    amount TEXT,
+                    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+                )
+            ''')
+
+            cursor.execute('''
+                CREATE TABLE IF NOT EXISTS plan_finance_variable_costs (
+                    id SERIAL PRIMARY KEY,
+                    plan_id INTEGER NOT NULL REFERENCES plans (id) ON DELETE CASCADE,
+                    description TEXT NOT NULL,
+                    percentage TEXT,
+                    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+                )
+            ''')
+
+            cursor.execute('''
+                CREATE TABLE IF NOT EXISTS plan_finance_result_rules (
+                    id SERIAL PRIMARY KEY,
+                    plan_id INTEGER NOT NULL REFERENCES plans (id) ON DELETE CASCADE,
+                    description TEXT NOT NULL,
+                    percentage TEXT,
+                    periodicity TEXT,
+                    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+                )
+            ''')
+
+            cursor.execute('''
+                CREATE TABLE IF NOT EXISTS plan_finance_investor_periods (
+                    id SERIAL PRIMARY KEY,
+                    plan_id INTEGER NOT NULL REFERENCES plans (id) ON DELETE CASCADE,
+                    period_label TEXT NOT NULL,
+                    contribution TEXT,
+                    distribution TEXT,
+                    balance TEXT,
+                    cumulative TEXT,
+                    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+                )
+            ''')
+
+            cursor.execute('''
+                CREATE TABLE IF NOT EXISTS plan_finance_metrics (
+                    id SERIAL PRIMARY KEY,
+                    plan_id INTEGER NOT NULL REFERENCES plans (id) ON DELETE CASCADE,
+                    payback TEXT,
+                    tir TEXT,
+                    notes TEXT,
+                    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                    UNIQUE(plan_id)
                 )
             ''')
             
@@ -1515,8 +1788,8 @@ class PostgreSQLDatabase(DatabaseInterface):
             cursor = conn.cursor()
             
             cursor.execute('''
-                INSERT INTO plans (company_id, name, description, start_date, end_date, status)
-                VALUES (%s, %s, %s, %s, %s, %s)
+                INSERT INTO plans (company_id, name, description, start_date, end_date, status, plan_mode)
+                VALUES (%s, %s, %s, %s, %s, %s, %s)
                 RETURNING id
             ''', (
                 plan_data.get('company_id'),
@@ -1524,7 +1797,8 @@ class PostgreSQLDatabase(DatabaseInterface):
                 plan_data.get('description'),
                 plan_data.get('start_date'),
                 plan_data.get('end_date'),
-                plan_data.get('status', 'active')
+                plan_data.get('status', 'active'),
+                plan_data.get('plan_mode', 'evolucao')
             ))
             
             plan_id = cursor.fetchone()[0]
@@ -2903,6 +3177,1021 @@ class PostgreSQLDatabase(DatabaseInterface):
             return False
         finally:
             conn.close()
+
+    # Implantation (new venture) operations
+    def get_implantation_dashboard(self, plan_id: int) -> Optional[Dict[str, Any]]:
+        """Get implantation dashboard summary for a plan"""
+        try:
+            conn = self._get_connection()
+            cursor = conn.cursor()
+            cursor.execute('''
+                SELECT plan_id, hero_message, progress_message, general_note, general_details,
+                       next_focus, next_focus_details, updated_at
+                FROM plan_implantation_dashboard
+                WHERE plan_id = %s
+            ''', (plan_id,))
+            row = cursor.fetchone()
+            conn.close()
+            if row:
+                data = dict(row)
+                return {
+                    'plan_id': data.get('plan_id'),
+                    'hero_message': data.get('hero_message'),
+                    'progress_message': data.get('progress_message'),
+                    'general_note': data.get('general_note'),
+                    'general_details': data.get('general_details'),
+                    'next_focus': data.get('next_focus'),
+                    'next_focus_details': data.get('next_focus_details'),
+                    'updated_at': data.get('updated_at')
+                }
+            return None
+        except Exception as exc:
+            print(f"Error getting implantation dashboard: {exc}")
+            return None
+
+    def list_implantation_phases(self, plan_id: int) -> List[Dict[str, Any]]:
+        """List implantation macro phases for a plan"""
+        try:
+            conn = self._get_connection()
+            cursor = conn.cursor()
+            cursor.execute('''
+                SELECT id, plan_id, phase_key, title, status, tagline, pulse, sections, deliverables
+                FROM plan_implantation_phases
+                WHERE plan_id = %s
+                ORDER BY CASE phase_key
+                    WHEN 'alignment' THEN 1
+                    WHEN 'model' THEN 2
+                    WHEN 'execution' THEN 3
+                    WHEN 'delivery' THEN 4
+                    ELSE 5
+                END, id
+            ''', (plan_id,))
+            rows = cursor.fetchall()
+            conn.close()
+            phases: List[Dict[str, Any]] = []
+            for row in rows:
+                data = dict(row)
+                phases.append({
+                    'id': data.get('phase_key') or data.get('id'),
+                    'record_id': data.get('id'),
+                    'phase_key': data.get('phase_key'),
+                    'title': data.get('title'),
+                    'status': data.get('status') or 'sem_registros',
+                    'tagline': data.get('tagline'),
+                    'pulse': data.get('pulse'),
+                    'sections': self._load_json(data.get('sections'), []),
+                    'deliverables': self._load_json(data.get('deliverables'), [])
+                })
+            return phases
+        except Exception as exc:
+            print(f"Error listing implantation phases: {exc}")
+            return []
+
+    def list_implantation_checkpoints(self, plan_id: int) -> List[Dict[str, Any]]:
+        """List checkpoints for an implantation plan"""
+        try:
+            conn = self._get_connection()
+            cursor = conn.cursor()
+            cursor.execute('''
+                SELECT id, plan_id, title, status, date_label, sort_order
+                FROM plan_implantation_checkpoints
+                WHERE plan_id = %s
+                ORDER BY sort_order, created_at
+            ''', (plan_id,))
+            rows = cursor.fetchall()
+            conn.close()
+            checkpoints: List[Dict[str, Any]] = []
+            for row in rows:
+                data = dict(row)
+                checkpoints.append({
+                    'id': data.get('id'),
+                    'title': data.get('title'),
+                    'status': data.get('status') or 'upcoming',
+                    'date': data.get('date_label'),
+                    'sort_order': data.get('sort_order', 0)
+                })
+            return checkpoints
+        except Exception as exc:
+            print(f"Error listing implantation checkpoints: {exc}")
+            return []
+
+    def list_alignment_members(self, plan_id: int) -> List[Dict[str, Any]]:
+        """List alignment canvas members"""
+        try:
+            conn = self._get_connection()
+            cursor = conn.cursor()
+            cursor.execute('''
+                SELECT id, name, role, motivation, commitment, risk
+                FROM plan_alignment_members
+                WHERE plan_id = %s
+                ORDER BY created_at, id
+            ''', (plan_id,))
+            rows = cursor.fetchall()
+            conn.close()
+            members: List[Dict[str, Any]] = []
+            for row in rows:
+                data = dict(row)
+                members.append({
+                    'id': data.get('id'),
+                    'name': data.get('name'),
+                    'role': data.get('role'),
+                    'motivation': data.get('motivation'),
+                    'commitment': data.get('commitment'),
+                    'risk': data.get('risk')
+                })
+            return members
+        except Exception as exc:
+            print(f"Error listing alignment members: {exc}")
+            return []
+
+    def get_alignment_overview(self, plan_id: int) -> Optional[Dict[str, Any]]:
+        """Get alignment overview data"""
+        try:
+            conn = self._get_connection()
+            cursor = conn.cursor()
+            cursor.execute('''
+                SELECT shared_vision, financial_goals, decision_criteria, notes
+                FROM plan_alignment_overview
+                WHERE plan_id = %s
+            ''', (plan_id,))
+            row = cursor.fetchone()
+            conn.close()
+            if row:
+                data = dict(row)
+                return {
+                    'shared_vision': data.get('shared_vision'),
+                    'financial_goals': data.get('financial_goals'),
+                    'decision_criteria': self._load_json(data.get('decision_criteria'), []),
+                    'notes': data.get('notes')
+                }
+            return None
+        except Exception as exc:
+            print(f"Error getting alignment overview: {exc}")
+            return None
+
+    def list_alignment_principles(self, plan_id: int) -> List[Dict[str, Any]]:
+        """List alignment principles"""
+        try:
+            conn = self._get_connection()
+            cursor = conn.cursor()
+            cursor.execute('''
+                SELECT id, principle
+                FROM plan_alignment_principles
+                WHERE plan_id = %s
+                ORDER BY created_at, id
+            ''', (plan_id,))
+            rows = cursor.fetchall()
+            conn.close()
+            return [dict(row) for row in rows]
+        except Exception as exc:
+            print(f"Error listing alignment principles: {exc}")
+            return []
+
+    def list_alignment_agenda(self, plan_id: int) -> List[Dict[str, Any]]:
+        """List alignment agenda items"""
+        try:
+            conn = self._get_connection()
+            cursor = conn.cursor()
+            cursor.execute('''
+                SELECT id, action_title, owner_name, schedule_info, execution_info
+                FROM plan_alignment_agenda
+                WHERE plan_id = %s
+                ORDER BY created_at, id
+            ''', (plan_id,))
+            rows = cursor.fetchall()
+            conn.close()
+            return [dict(row) for row in rows]
+        except Exception as exc:
+            print(f"Error listing alignment agenda items: {exc}")
+            return []
+
+    def get_alignment_project(self, plan_id: int) -> Optional[Dict[str, Any]]:
+        """Get linked alignment project info"""
+        try:
+            conn = self._get_connection()
+            cursor = conn.cursor()
+            cursor.execute('''
+                SELECT plan_id, project_name, description, observations, grv_project_id
+                FROM plan_alignment_project
+                WHERE plan_id = %s
+            ''', (plan_id,))
+            row = cursor.fetchone()
+            conn.close()
+            if row:
+                data = dict(row)
+                return {
+                    'plan_id': data.get('plan_id'),
+                    'project_name': data.get('project_name'),
+                    'description': data.get('description'),
+                    'observations': self._load_json(data.get('observations'), []),
+                    'grv_project_id': data.get('grv_project_id')
+                }
+            return None
+        except Exception as exc:
+            print(f"Error getting alignment project info: {exc}")
+            return None
+
+    def list_plan_segments(self, plan_id: int) -> List[Dict[str, Any]]:
+        """List business segments for a plan"""
+        try:
+            conn = self._get_connection()
+            cursor = conn.cursor()
+            cursor.execute('''
+                SELECT id, name, description, audiences, differentials, evidences, personas,
+                       competitors_matrix, strategy
+                FROM plan_segments
+                WHERE plan_id = %s
+                ORDER BY created_at, id
+            ''', (plan_id,))
+            rows = cursor.fetchall()
+            conn.close()
+            segments: List[Dict[str, Any]] = []
+            for row in rows:
+                data = dict(row)
+                segments.append({
+                    'id': data.get('id'),
+                    'name': data.get('name'),
+                    'description': data.get('description'),
+                    'audiences': self._load_json(data.get('audiences'), []),
+                    'differentials': self._load_json(data.get('differentials'), []),
+                    'evidences': self._load_json(data.get('evidences'), []),
+                    'personas': self._load_json(data.get('personas'), []),
+                    'competitors_matrix': self._load_json(data.get('competitors_matrix'), []),
+                    'strategy': self._load_json(data.get('strategy'), {})
+                })
+            return segments
+        except Exception as exc:
+            print(f"Error listing plan segments: {exc}")
+            return []
+
+    def create_plan_segment(self, plan_id: int, data: Dict[str, Any]) -> int:
+        """Create a new segment for a plan"""
+        try:
+            conn = self._get_connection()
+            cursor = conn.cursor()
+            cursor.execute('''
+                INSERT INTO plan_segments 
+                (plan_id, name, description, audiences, differentials, evidences, personas, competitors_matrix, strategy)
+                VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s)
+                RETURNING id
+            ''', (
+                plan_id,
+                data.get('name', ''),
+                data.get('description', ''),
+                json.dumps(data.get('audiences', [])),
+                json.dumps(data.get('differentials', [])),
+                json.dumps(data.get('evidences', [])),
+                json.dumps(data.get('personas', [])),
+                json.dumps(data.get('competitors_matrix', [])),
+                json.dumps(data.get('strategy', {}))
+            ))
+            segment_id = cursor.fetchone()[0]
+            conn.commit()
+            conn.close()
+            return segment_id
+        except Exception as exc:
+            print(f"Error creating plan segment: {exc}")
+            return 0
+
+    def update_plan_segment(self, segment_id: int, plan_id: int, data: Dict[str, Any]) -> bool:
+        """Update a segment"""
+        try:
+            conn = self._get_connection()
+            cursor = conn.cursor()
+            cursor.execute('''
+                UPDATE plan_segments
+                SET name = %s, description = %s, audiences = %s, differentials = %s,
+                    evidences = %s, personas = %s, competitors_matrix = %s, strategy = %s
+                WHERE id = %s AND plan_id = %s
+            ''', (
+                data.get('name', ''),
+                data.get('description', ''),
+                json.dumps(data.get('audiences', [])),
+                json.dumps(data.get('differentials', [])),
+                json.dumps(data.get('evidences', [])),
+                json.dumps(data.get('personas', [])),
+                json.dumps(data.get('competitors_matrix', [])),
+                json.dumps(data.get('strategy', {})),
+                segment_id,
+                plan_id
+            ))
+            conn.commit()
+            conn.close()
+            return True
+        except Exception as exc:
+            print(f"Error updating plan segment: {exc}")
+            return False
+
+    def delete_plan_segment(self, segment_id: int, plan_id: int) -> bool:
+        """Delete a segment"""
+        try:
+            conn = self._get_connection()
+            cursor = conn.cursor()
+            cursor.execute('DELETE FROM plan_segments WHERE id = %s AND plan_id = %s', (segment_id, plan_id))
+            conn.commit()
+            conn.close()
+            return True
+        except Exception as exc:
+            print(f"Error deleting plan segment: {exc}")
+            return False
+
+    def list_plan_structures(self, plan_id: int) -> List[Dict[str, Any]]:
+        """List structure items grouped by area/block"""
+        try:
+            conn = self._get_connection()
+            cursor = conn.cursor()
+            cursor.execute('''
+                SELECT id, area, block, item_type, description, value, repetition,
+                       payment_form, acquisition_info, availability_info, supplier,
+                       observations, status, sort_order
+                FROM plan_structures
+                WHERE plan_id = %s
+                ORDER BY area, block, sort_order, id
+            ''', (plan_id,))
+            rows = cursor.fetchall()
+            conn.close()
+            return [dict(row) for row in rows]
+        except Exception as exc:
+            print(f"Error listing plan structures: {exc}")
+            return []
+
+    def list_plan_structure_installments(self, plan_id: int) -> List[Dict[str, Any]]:
+        """List installments for structure items"""
+        try:
+            conn = self._get_connection()
+            cursor = conn.cursor()
+            cursor.execute('''
+                SELECT i.id, i.structure_id, i.installment_number, i.amount, i.due_info, i.installment_type
+                FROM plan_structure_installments i
+                JOIN plan_structures s ON s.id = i.structure_id
+                WHERE s.plan_id = %s
+                ORDER BY s.area, s.block, i.id
+            ''', (plan_id,))
+            rows = cursor.fetchall()
+            conn.close()
+            return [dict(row) for row in rows]
+        except Exception as exc:
+            print(f"Error listing plan structure installments: {exc}")
+            return []
+
+    def create_plan_structure(self, plan_id: int, data: Dict[str, Any]) -> int:
+        """Create a new structure item for a plan"""
+        try:
+            print(f"\n[DB] create_plan_structure called:")
+            print(f"  plan_id={plan_id}")
+            print(f"  data={data}")
+            
+            conn = self._get_connection()
+            cursor = conn.cursor()
+            
+            print(f"[DB] Executing INSERT...")
+            
+            cursor.execute('''
+                INSERT INTO plan_structures (
+                    plan_id, area, block, item_type, description, value, repetition,
+                    payment_form, acquisition_info, availability_info, supplier,
+                    observations, status, sort_order
+                ) VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
+                RETURNING id
+            ''', (
+                plan_id,
+                data.get('area'),
+                data.get('block'),
+                data.get('item_type'),
+                data.get('description'),
+                data.get('value'),
+                data.get('repetition'),
+                data.get('payment_form'),
+                data.get('acquisition_info'),
+                data.get('availability_info'),
+                data.get('supplier'),
+                data.get('observations'),
+                data.get('status', 'pending'),
+                data.get('sort_order', 0)
+            ))
+            
+            structure_id = cursor.fetchone()[0]
+            print(f"[DB] Structure created with ID: {structure_id}")
+            
+            conn.commit()
+            conn.close()
+            
+            print(f"[DB] Transaction committed successfully")
+            return structure_id
+            
+        except Exception as exc:
+            import traceback
+            print(f"\n[DB ERROR] Exception in create_plan_structure:")
+            print(f"  Exception: {exc}")
+            print(f"  Type: {type(exc).__name__}")
+            print(f"  Traceback:\n{traceback.format_exc()}")
+            return 0
+
+    def update_plan_structure(self, structure_id: int, plan_id: int, data: Dict[str, Any]) -> bool:
+        """Update a structure item"""
+        try:
+            conn = self._get_connection()
+            cursor = conn.cursor()
+            cursor.execute('''
+                UPDATE plan_structures SET
+                    area = %s, block = %s, item_type = %s, description = %s,
+                    value = %s, repetition = %s, payment_form = %s,
+                    acquisition_info = %s, availability_info = %s, supplier = %s,
+                    observations = %s, status = %s, sort_order = %s
+                WHERE id = %s AND plan_id = %s
+            ''', (
+                data.get('area'),
+                data.get('block'),
+                data.get('item_type'),
+                data.get('description'),
+                data.get('value'),
+                data.get('repetition'),
+                data.get('payment_form'),
+                data.get('acquisition_info'),
+                data.get('availability_info'),
+                data.get('supplier'),
+                data.get('observations'),
+                data.get('status', 'pending'),
+                data.get('sort_order', 0),
+                structure_id,
+                plan_id
+            ))
+            conn.commit()
+            conn.close()
+            return True
+        except Exception as exc:
+            print(f"Error updating plan structure: {exc}")
+            return False
+
+    def delete_plan_structure(self, structure_id: int, plan_id: int) -> bool:
+        """Delete a structure item and its installments"""
+        try:
+            conn = self._get_connection()
+            cursor = conn.cursor()
+            # Installments são deletadas automaticamente por CASCADE
+            cursor.execute('DELETE FROM plan_structures WHERE id = %s AND plan_id = %s', (structure_id, plan_id))
+            conn.commit()
+            conn.close()
+            return True
+        except Exception as exc:
+            print(f"Error deleting plan structure: {exc}")
+            return False
+
+    def create_plan_structure_installment(self, structure_id: int, data: Dict[str, Any]) -> int:
+        """Create a new installment for a structure item"""
+        try:
+            conn = self._get_connection()
+            cursor = conn.cursor()
+            cursor.execute('''
+                INSERT INTO plan_structure_installments (
+                    structure_id, installment_number, amount, due_info, installment_type
+                ) VALUES (%s, %s, %s, %s, %s)
+                RETURNING id
+            ''', (
+                structure_id,
+                data.get('installment_number'),
+                data.get('amount'),
+                data.get('due_info'),
+                data.get('installment_type')
+            ))
+            installment_id = cursor.fetchone()[0]
+            conn.commit()
+            conn.close()
+            return installment_id
+        except Exception as exc:
+            print(f"Error creating plan structure installment: {exc}")
+            return 0
+
+    def delete_plan_structure_installments(self, structure_id: int) -> bool:
+        """Delete all installments for a structure item"""
+        try:
+            conn = self._get_connection()
+            cursor = conn.cursor()
+            cursor.execute('DELETE FROM plan_structure_installments WHERE structure_id = %s', (structure_id,))
+            conn.commit()
+            conn.close()
+            return True
+        except Exception as exc:
+            print(f"Error deleting plan structure installments: {exc}")
+            return False
+
+    def list_plan_finance_premises(self, plan_id: int) -> List[Dict[str, Any]]:
+        """List financial premises"""
+        try:
+            conn = self._get_connection()
+            cursor = conn.cursor()
+            cursor.execute('''
+                SELECT id, description, suggestion, adjusted, observations, memory
+                FROM plan_finance_premises
+                WHERE plan_id = %s
+                ORDER BY id
+            ''', (plan_id,))
+            rows = cursor.fetchall()
+            conn.close()
+            return [dict(row) for row in rows]
+        except Exception as exc:
+            print(f"Error listing financial premises: {exc}")
+            return []
+
+    def list_plan_finance_investments(self, plan_id: int) -> List[Dict[str, Any]]:
+        """List investment items"""
+        try:
+            conn = self._get_connection()
+            cursor = conn.cursor()
+            cursor.execute('''
+                SELECT id, description, amount
+                FROM plan_finance_investments
+                WHERE plan_id = %s
+                ORDER BY id
+            ''', (plan_id,))
+            rows = cursor.fetchall()
+            conn.close()
+            return [dict(row) for row in rows]
+        except Exception as exc:
+            print(f"Error listing financial investments: {exc}")
+            return []
+
+    def list_plan_finance_sources(self, plan_id: int) -> List[Dict[str, Any]]:
+        """List funding sources"""
+        try:
+            conn = self._get_connection()
+            cursor = conn.cursor()
+            cursor.execute('''
+                SELECT id, category, description, amount, availability
+                FROM plan_finance_sources
+                WHERE plan_id = %s
+                ORDER BY id
+            ''', (plan_id,))
+            rows = cursor.fetchall()
+            conn.close()
+            return [dict(row) for row in rows]
+        except Exception as exc:
+            print(f"Error listing financial sources: {exc}")
+            return []
+
+    def list_plan_finance_business_periods(self, plan_id: int) -> List[Dict[str, Any]]:
+        """List business cash-flow periods"""
+        try:
+            conn = self._get_connection()
+            cursor = conn.cursor()
+            cursor.execute('''
+                SELECT id, period_label, revenue, variables, contribution_margin,
+                       fixed_costs, operating_result, result_period
+                FROM plan_finance_business_periods
+                WHERE plan_id = %s
+                ORDER BY id
+            ''', (plan_id,))
+            rows = cursor.fetchall()
+            conn.close()
+            return [dict(row) for row in rows]
+        except Exception as exc:
+            print(f"Error listing business periods: {exc}")
+            return []
+
+    def list_plan_finance_business_distribution(self, plan_id: int) -> List[Dict[str, Any]]:
+        """List distribution entries for business cash-flow periods"""
+        try:
+            conn = self._get_connection()
+            cursor = conn.cursor()
+            cursor.execute('''
+                SELECT d.id, d.period_id, d.description, d.amount
+                FROM plan_finance_business_distribution d
+                JOIN plan_finance_business_periods p ON p.id = d.period_id
+                WHERE p.plan_id = %s
+                ORDER BY d.period_id, d.id
+            ''', (plan_id,))
+            rows = cursor.fetchall()
+            conn.close()
+            return [dict(row) for row in rows]
+        except Exception as exc:
+            print(f"Error listing business distribution entries: {exc}")
+            return []
+
+    def list_plan_finance_variable_costs(self, plan_id: int) -> List[Dict[str, Any]]:
+        """List variable cost items"""
+        try:
+            conn = self._get_connection()
+            cursor = conn.cursor()
+            cursor.execute('''
+                SELECT id, description, percentage
+                FROM plan_finance_variable_costs
+                WHERE plan_id = %s
+                ORDER BY id
+            ''', (plan_id,))
+            rows = cursor.fetchall()
+            conn.close()
+            return [dict(row) for row in rows]
+        except Exception as exc:
+            print(f"Error listing variable costs: {exc}")
+            return []
+
+    def list_plan_finance_result_rules(self, plan_id: int) -> List[Dict[str, Any]]:
+        """List result destination rules"""
+        try:
+            conn = self._get_connection()
+            cursor = conn.cursor()
+            cursor.execute('''
+                SELECT id, description, percentage, periodicity
+                FROM plan_finance_result_rules
+                WHERE plan_id = %s
+                ORDER BY id
+            ''', (plan_id,))
+            rows = cursor.fetchall()
+            conn.close()
+            return [dict(row) for row in rows]
+        except Exception as exc:
+            print(f"Error listing result rules: {exc}")
+            return []
+
+    def list_plan_finance_investor_periods(self, plan_id: int) -> List[Dict[str, Any]]:
+        """List investor cash-flow periods"""
+        try:
+            conn = self._get_connection()
+            cursor = conn.cursor()
+            cursor.execute('''
+                SELECT id, period_label, contribution, distribution, balance, cumulative
+                FROM plan_finance_investor_periods
+                WHERE plan_id = %s
+                ORDER BY id
+            ''', (plan_id,))
+            rows = cursor.fetchall()
+            conn.close()
+            return [dict(row) for row in rows]
+        except Exception as exc:
+            print(f"Error listing investor periods: {exc}")
+            return []
+
+    def get_plan_finance_metrics(self, plan_id: int) -> Optional[Dict[str, Any]]:
+        """Get aggregated financial metrics"""
+        try:
+            conn = self._get_connection()
+            cursor = conn.cursor()
+            cursor.execute('''
+                SELECT payback, tir, notes
+                FROM plan_finance_metrics
+                WHERE plan_id = %s
+            ''', (plan_id,))
+            row = cursor.fetchone()
+            conn.close()
+            if row:
+                return dict(row)
+            return None
+        except Exception as exc:
+            print(f"Error getting finance metrics: {exc}")
+            return None
+
+    # CRUD operations for financial model
+    def create_plan_finance_premise(self, plan_id: int, data: Dict[str, Any]) -> int:
+        """Create a financial premise"""
+        try:
+            conn = self._get_connection()
+            cursor = conn.cursor()
+            cursor.execute('''
+                INSERT INTO plan_finance_premises (plan_id, description, suggestion, adjusted, observations, memory)
+                VALUES (%s, %s, %s, %s, %s, %s)
+                RETURNING id
+            ''', (
+                plan_id,
+                data.get('description', ''),
+                data.get('suggestion', ''),
+                data.get('adjusted', ''),
+                data.get('observations', ''),
+                data.get('memory', '')
+            ))
+            premise_id = cursor.fetchone()['id']
+            conn.commit()
+            conn.close()
+            return premise_id
+        except Exception as exc:
+            print(f"Error creating premise: {exc}")
+            return 0
+
+    def update_plan_finance_premise(self, premise_id: int, plan_id: int, data: Dict[str, Any]) -> bool:
+        """Update a financial premise"""
+        try:
+            conn = self._get_connection()
+            cursor = conn.cursor()
+            cursor.execute('''
+                UPDATE plan_finance_premises
+                SET description = %s, suggestion = %s, adjusted = %s, observations = %s, memory = %s
+                WHERE id = %s AND plan_id = %s
+            ''', (
+                data.get('description', ''),
+                data.get('suggestion', ''),
+                data.get('adjusted', ''),
+                data.get('observations', ''),
+                data.get('memory', ''),
+                premise_id,
+                plan_id
+            ))
+            conn.commit()
+            conn.close()
+            return True
+        except Exception as exc:
+            print(f"Error updating premise: {exc}")
+            return False
+
+    def delete_plan_finance_premise(self, premise_id: int, plan_id: int) -> bool:
+        """Delete a financial premise"""
+        try:
+            conn = self._get_connection()
+            cursor = conn.cursor()
+            cursor.execute('''
+                DELETE FROM plan_finance_premises
+                WHERE id = %s AND plan_id = %s
+            ''', (premise_id, plan_id))
+            conn.commit()
+            conn.close()
+            return True
+        except Exception as exc:
+            print(f"Error deleting premise: {exc}")
+            return False
+
+    def create_plan_finance_investment(self, plan_id: int, data: Dict[str, Any]) -> int:
+        """Create an investment item"""
+        try:
+            conn = self._get_connection()
+            cursor = conn.cursor()
+            cursor.execute('''
+                INSERT INTO plan_finance_investments (plan_id, description, amount)
+                VALUES (%s, %s, %s)
+                RETURNING id
+            ''', (
+                plan_id,
+                data.get('description', ''),
+                data.get('amount', '')
+            ))
+            investment_id = cursor.fetchone()['id']
+            conn.commit()
+            conn.close()
+            return investment_id
+        except Exception as exc:
+            print(f"Error creating investment: {exc}")
+            return 0
+
+    def update_plan_finance_investment(self, investment_id: int, plan_id: int, data: Dict[str, Any]) -> bool:
+        """Update an investment item"""
+        try:
+            conn = self._get_connection()
+            cursor = conn.cursor()
+            cursor.execute('''
+                UPDATE plan_finance_investments
+                SET description = %s, amount = %s
+                WHERE id = %s AND plan_id = %s
+            ''', (
+                data.get('description', ''),
+                data.get('amount', ''),
+                investment_id,
+                plan_id
+            ))
+            conn.commit()
+            conn.close()
+            return True
+        except Exception as exc:
+            print(f"Error updating investment: {exc}")
+            return False
+
+    def delete_plan_finance_investment(self, investment_id: int, plan_id: int) -> bool:
+        """Delete an investment item"""
+        try:
+            conn = self._get_connection()
+            cursor = conn.cursor()
+            cursor.execute('''
+                DELETE FROM plan_finance_investments
+                WHERE id = %s AND plan_id = %s
+            ''', (investment_id, plan_id))
+            conn.commit()
+            conn.close()
+            return True
+        except Exception as exc:
+            print(f"Error deleting investment: {exc}")
+            return False
+
+    def create_plan_finance_source(self, plan_id: int, data: Dict[str, Any]) -> int:
+        """Create a funding source"""
+        try:
+            conn = self._get_connection()
+            cursor = conn.cursor()
+            cursor.execute('''
+                INSERT INTO plan_finance_sources (plan_id, category, description, amount, availability)
+                VALUES (%s, %s, %s, %s, %s)
+                RETURNING id
+            ''', (
+                plan_id,
+                data.get('category', ''),
+                data.get('description', ''),
+                data.get('amount', ''),
+                data.get('availability', '')
+            ))
+            source_id = cursor.fetchone()['id']
+            conn.commit()
+            conn.close()
+            return source_id
+        except Exception as exc:
+            print(f"Error creating source: {exc}")
+            return 0
+
+    def update_plan_finance_source(self, source_id: int, plan_id: int, data: Dict[str, Any]) -> bool:
+        """Update a funding source"""
+        try:
+            conn = self._get_connection()
+            cursor = conn.cursor()
+            cursor.execute('''
+                UPDATE plan_finance_sources
+                SET category = %s, description = %s, amount = %s, availability = %s
+                WHERE id = %s AND plan_id = %s
+            ''', (
+                data.get('category', ''),
+                data.get('description', ''),
+                data.get('amount', ''),
+                data.get('availability', ''),
+                source_id,
+                plan_id
+            ))
+            conn.commit()
+            conn.close()
+            return True
+        except Exception as exc:
+            print(f"Error updating source: {exc}")
+            return False
+
+    def delete_plan_finance_source(self, source_id: int, plan_id: int) -> bool:
+        """Delete a funding source"""
+        try:
+            conn = self._get_connection()
+            cursor = conn.cursor()
+            cursor.execute('''
+                DELETE FROM plan_finance_sources
+                WHERE id = %s AND plan_id = %s
+            ''', (source_id, plan_id))
+            conn.commit()
+            conn.close()
+            return True
+        except Exception as exc:
+            print(f"Error deleting source: {exc}")
+            return False
+
+    def create_plan_finance_variable_cost(self, plan_id: int, data: Dict[str, Any]) -> int:
+        """Create a variable cost"""
+        try:
+            conn = self._get_connection()
+            cursor = conn.cursor()
+            cursor.execute('''
+                INSERT INTO plan_finance_variable_costs (plan_id, description, percentage)
+                VALUES (%s, %s, %s)
+                RETURNING id
+            ''', (
+                plan_id,
+                data.get('description', ''),
+                data.get('percentage', '')
+            ))
+            cost_id = cursor.fetchone()['id']
+            conn.commit()
+            conn.close()
+            return cost_id
+        except Exception as exc:
+            print(f"Error creating variable cost: {exc}")
+            return 0
+
+    def update_plan_finance_variable_cost(self, cost_id: int, plan_id: int, data: Dict[str, Any]) -> bool:
+        """Update a variable cost"""
+        try:
+            conn = self._get_connection()
+            cursor = conn.cursor()
+            cursor.execute('''
+                UPDATE plan_finance_variable_costs
+                SET description = %s, percentage = %s
+                WHERE id = %s AND plan_id = %s
+            ''', (
+                data.get('description', ''),
+                data.get('percentage', ''),
+                cost_id,
+                plan_id
+            ))
+            conn.commit()
+            conn.close()
+            return True
+        except Exception as exc:
+            print(f"Error updating variable cost: {exc}")
+            return False
+
+    def delete_plan_finance_variable_cost(self, cost_id: int, plan_id: int) -> bool:
+        """Delete a variable cost"""
+        try:
+            conn = self._get_connection()
+            cursor = conn.cursor()
+            cursor.execute('''
+                DELETE FROM plan_finance_variable_costs
+                WHERE id = %s AND plan_id = %s
+            ''', (cost_id, plan_id))
+            conn.commit()
+            conn.close()
+            return True
+        except Exception as exc:
+            print(f"Error deleting variable cost: {exc}")
+            return False
+
+    def create_plan_finance_result_rule(self, plan_id: int, data: Dict[str, Any]) -> int:
+        """Create a result distribution rule"""
+        try:
+            conn = self._get_connection()
+            cursor = conn.cursor()
+            cursor.execute('''
+                INSERT INTO plan_finance_result_rules (plan_id, description, percentage, periodicity)
+                VALUES (%s, %s, %s, %s)
+                RETURNING id
+            ''', (
+                plan_id,
+                data.get('description', ''),
+                data.get('percentage', ''),
+                data.get('periodicity', '')
+            ))
+            rule_id = cursor.fetchone()['id']
+            conn.commit()
+            conn.close()
+            return rule_id
+        except Exception as exc:
+            print(f"Error creating result rule: {exc}")
+            return 0
+
+    def update_plan_finance_result_rule(self, rule_id: int, plan_id: int, data: Dict[str, Any]) -> bool:
+        """Update a result distribution rule"""
+        try:
+            conn = self._get_connection()
+            cursor = conn.cursor()
+            cursor.execute('''
+                UPDATE plan_finance_result_rules
+                SET description = %s, percentage = %s, periodicity = %s
+                WHERE id = %s AND plan_id = %s
+            ''', (
+                data.get('description', ''),
+                data.get('percentage', ''),
+                data.get('periodicity', ''),
+                rule_id,
+                plan_id
+            ))
+            conn.commit()
+            conn.close()
+            return True
+        except Exception as exc:
+            print(f"Error updating result rule: {exc}")
+            return False
+
+    def delete_plan_finance_result_rule(self, rule_id: int, plan_id: int) -> bool:
+        """Delete a result distribution rule"""
+        try:
+            conn = self._get_connection()
+            cursor = conn.cursor()
+            cursor.execute('''
+                DELETE FROM plan_finance_result_rules
+                WHERE id = %s AND plan_id = %s
+            ''', (rule_id, plan_id))
+            conn.commit()
+            conn.close()
+            return True
+        except Exception as exc:
+            print(f"Error deleting result rule: {exc}")
+            return False
+
+    def update_plan_finance_metrics(self, plan_id: int, data: Dict[str, Any]) -> bool:
+        """Update or create financial metrics (payback, TIR, notes)"""
+        try:
+            conn = self._get_connection()
+            cursor = conn.cursor()
+            # Verificar se já existe
+            cursor.execute('SELECT id FROM plan_finance_metrics WHERE plan_id = %s', (plan_id,))
+            existing = cursor.fetchone()
+            
+            if existing:
+                # Update
+                cursor.execute('''
+                    UPDATE plan_finance_metrics
+                    SET payback = %s, tir = %s, notes = %s
+                    WHERE plan_id = %s
+                ''', (
+                    data.get('payback', ''),
+                    data.get('tir', ''),
+                    data.get('notes', ''),
+                    plan_id
+                ))
+            else:
+                # Insert
+                cursor.execute('''
+                    INSERT INTO plan_finance_metrics (plan_id, payback, tir, notes)
+                    VALUES (%s, %s, %s, %s)
+                ''', (
+                    plan_id,
+                    data.get('payback', ''),
+                    data.get('tir', ''),
+                    data.get('notes', '')
+                ))
+            
+            conn.commit()
+            conn.close()
+            return True
+        except Exception as exc:
+            print(f"Error updating metrics: {exc}")
+            return False
 
     # AI Agents configuration operations
     def get_ai_agents(self) -> List[Dict[str, Any]]:

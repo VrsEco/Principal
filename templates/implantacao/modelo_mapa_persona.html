@@ -1,0 +1,868 @@
+{% extends "base.html" %}
+{% block title %}Mapa de Personas | Implantacao{% endblock %}
+{% block body %}{{ super() }}{% endblock %}
+
+{% block header_actions %}
+  <div class="header-nav">
+    <a href="/main" class="nav-link">Ecossistema</a>
+    <a href="{{ url_for('pev.pev_dashboard') }}" class="nav-link active">PEV</a>
+    <a href="{{ url_for('grv.grv_dashboard') }}" class="nav-link">GRV</a>
+  </div>
+  <div class="user-pill">
+    <span class="user-name">{{ user_name | default('Fabiano Ferreira') }}</span>
+  </div>
+  <div class="header-nav">
+    <select id="themeSelect" class="nav-link" style="padding:8px 12px; color:#64748b;">
+      <option value="versus">Tema Versus</option>
+      <option value="alt">Tema Azul/Branco/Amarelo</option>
+    </select>
+  </div>
+{% endblock %}
+
+{% block content %}
+  <style>
+    body {
+      background: linear-gradient(135deg, #f8fafc 0%, #e2e8f0 100%) !important;
+      color: #0f172a !important;
+    }
+
+    .persona-wrapper {
+      padding: 32px;
+      display: flex;
+      flex-direction: column;
+      gap: 28px;
+    }
+
+    .persona-card {
+      background: rgba(255, 255, 255, 0.94);
+      border: 1px solid rgba(148, 163, 184, 0.2);
+      border-radius: 24px;
+      box-shadow: 0 18px 40px rgba(15, 23, 42, 0.1);
+      backdrop-filter: blur(12px);
+      padding: 32px;
+      position: relative;
+    }
+
+    .segment-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: flex-start;
+      margin-bottom: 20px;
+    }
+
+    .btn {
+      padding: 10px 20px;
+      border: none;
+      border-radius: 12px;
+      font-size: 14px;
+      font-weight: 600;
+      cursor: pointer;
+      transition: all 0.2s;
+    }
+
+    .btn-primary {
+      background: linear-gradient(135deg, #3b82f6 0%, #2563eb 100%);
+      color: white;
+    }
+
+    .btn-primary:hover {
+      background: linear-gradient(135deg, #2563eb 0%, #1d4ed8 100%);
+      box-shadow: 0 4px 12px rgba(37, 99, 235, 0.4);
+    }
+
+    .btn-secondary {
+      background: rgba(100, 116, 139, 0.1);
+      color: #475569;
+      border: 1px solid rgba(100, 116, 139, 0.2);
+    }
+
+    .btn-small {
+      padding: 6px 12px;
+      font-size: 12px;
+    }
+
+    .persona-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+      gap: 18px;
+    }
+
+    .persona-box {
+      background: rgba(248, 250, 252, 0.92);
+      border: 1px solid rgba(148, 163, 184, 0.22);
+      border-radius: 18px;
+      padding: 20px;
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+      position: relative;
+    }
+
+    .persona-box h2 {
+      margin: 0;
+      font-size: 18px;
+      color: #0f172a;
+    }
+
+    .persona-actions {
+      position: absolute;
+      top: 16px;
+      right: 16px;
+      display: flex;
+      gap: 4px;
+    }
+
+    .btn-icon {
+      background: rgba(255, 255, 255, 0.8);
+      border: 1px solid rgba(148, 163, 184, 0.3);
+      width: 32px;
+      height: 32px;
+      border-radius: 8px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      cursor: pointer;
+      font-size: 14px;
+      transition: all 0.2s;
+    }
+
+    .btn-icon:hover {
+      background: white;
+      box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+    }
+
+    .persona-box span {
+      font-size: 13px;
+      color: #475569;
+    }
+
+    .persona-box strong {
+      font-size: 13px;
+      color: #1d4ed8;
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+      margin-top: 8px;
+    }
+
+    .persona-box ul {
+      margin: 0;
+      padding-left: 18px;
+      font-size: 14px;
+      color: #475569;
+      line-height: 1.6;
+    }
+
+    .journey-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+      gap: 16px;
+    }
+
+    .journey-card {
+      background: rgba(59, 130, 246, 0.12);
+      border: 1px solid rgba(59, 130, 246, 0.28);
+      border-radius: 16px;
+      padding: 18px;
+      color: #1d4ed8;
+      font-size: 14px;
+    }
+
+    /* Modal Styles - Padrão PFPN */
+    .modal {
+      position: fixed;
+      z-index: 999999 !important;
+      left: 0;
+      top: 0;
+      width: 100%;
+      height: 100%;
+      background-color: rgba(0, 0, 0, 0.7);
+      backdrop-filter: blur(4px);
+      opacity: 0;
+      transition: opacity 0.3s ease;
+      pointer-events: none;
+    }
+
+    .modal.show {
+      opacity: 1;
+      pointer-events: auto;
+    }
+
+    .modal-content {
+      position: absolute;
+      top: 80px;
+      left: 50%;
+      transform: translateX(-50%);
+      max-width: 600px;
+      width: 90%;
+      max-height: calc(100vh - 120px);
+      overflow-y: auto;
+      border-radius: 16px;
+      background: white;
+      box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+    }
+
+    .modal-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: 20px 24px;
+      border-bottom: 1px solid rgba(148, 163, 184, 0.2);
+      border-radius: 16px 16px 0 0;
+      background: rgba(248, 250, 252, 0.5);
+    }
+
+    .modal-header h2 {
+      margin: 0;
+      font-size: 20px;
+      font-weight: 600;
+      color: #0f172a;
+    }
+
+    .close {
+      font-size: 24px;
+      font-weight: bold;
+      cursor: pointer;
+      color: #475569;
+      line-height: 1;
+      transition: color 0.2s;
+    }
+
+    .close:hover {
+      color: #0f172a;
+    }
+
+    .modal-body {
+      padding: 24px;
+    }
+
+    .form-group {
+      margin-bottom: 18px;
+    }
+
+    .form-group label {
+      display: block;
+      margin-bottom: 6px;
+      font-weight: 600;
+      color: #1e293b;
+      font-size: 13px;
+    }
+
+    .form-group input,
+    .form-group textarea {
+      width: 100%;
+      padding: 10px 14px;
+      border: 1px solid rgba(148, 163, 184, 0.3);
+      border-radius: 8px;
+      font-size: 14px;
+      font-family: inherit;
+      transition: all 0.2s;
+      background: white;
+    }
+
+    .form-group input:focus,
+    .form-group textarea:focus {
+      outline: none;
+      border-color: #3b82f6;
+      box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
+    }
+
+    .form-group textarea {
+      min-height: 80px;
+      resize: vertical;
+    }
+
+    textarea.readonly-field,
+    input.readonly-field {
+      background: #f1f5f9 !important;
+      cursor: not-allowed;
+      color: #475569 !important;
+    }
+
+    .form-actions {
+      display: flex;
+      gap: 12px;
+      justify-content: flex-end;
+      margin-top: 24px;
+    }
+
+    .tag-input-container {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
+      padding: 8px;
+      border: 1px solid rgba(148, 163, 184, 0.3);
+      border-radius: 12px;
+      min-height: 44px;
+    }
+
+    .tag {
+      background: #e0f2fe;
+      color: #0369a1;
+      padding: 4px 12px;
+      border-radius: 8px;
+      font-size: 13px;
+      display: flex;
+      align-items: center;
+      gap: 6px;
+    }
+
+    .tag-remove {
+      cursor: pointer;
+      font-weight: bold;
+    }
+
+    .tag-input {
+      border: none;
+      outline: none;
+      flex: 1;
+      min-width: 120px;
+      font-size: 14px;
+      padding: 4px;
+    }
+
+    @media (max-width: 768px) {
+      .persona-wrapper {
+        padding: 20px;
+      }
+      .persona-card {
+        padding: 24px;
+      }
+    }
+  </style>
+
+  <section class="persona-wrapper">
+    <article class="persona-card">
+      <h1>Mapa de personas e jornadas</h1>
+      <p style="margin:12px 0 0; color:#475569; line-height:1.6;">
+        Personas e jornadas organizadas por segmento de negócio. Utilize este mapa para direcionar campanhas,
+        ofertas e experiências tanto no varejo boutique quanto em eventos corporativos.
+      </p>
+      <div style="margin-top: 20px;">
+        <button class="btn btn-secondary" onclick="window.history.back()">← Voltar</button>
+      </div>
+    </article>
+
+    {% for segmento in segmentos %}
+      <article class="persona-card" data-segment-id="{{ segmento.id }}">
+        <div class="segment-header">
+          <div>
+            <h2 style="margin:0 0 10px;">{{ segmento.nome }}</h2>
+            <p style="margin:0; color:#475569;">{{ segmento.persona_descricao }}</p>
+          </div>
+          <button class="btn btn-primary btn-small" onclick="openAddPersonaModal({{ segmento.id }})">+ Persona</button>
+        </div>
+
+        <div class="persona-grid" id="personas-{{ segmento.id }}">
+          {% for persona in segmento.personas %}
+            <div class="persona-box" data-persona-index="{{ loop.index0 }}">
+              <div class="persona-actions">
+                <button class="btn-icon" onclick="editPersona({{ segmento.id }}, {{ loop.index0 }})" title="Editar">✏️</button>
+                <button class="btn-icon" onclick="deletePersona({{ segmento.id }}, {{ loop.index0 }})" title="Deletar">🗑️</button>
+              </div>
+              
+              <h2>{{ persona.nome }}</h2>
+              <span>{{ persona.idade }} &middot; {{ persona.perfil }}</span>
+              <strong>Objetivos</strong>
+              <ul>
+                {% for item in persona.objetivos %}
+                  <li>{{ item }}</li>
+                {% endfor %}
+              </ul>
+              <strong>Desafios</strong>
+              <ul>
+                {% for item in persona.desafios %}
+                  <li>{{ item }}</li>
+                {% endfor %}
+              </ul>
+              <strong>Jornada</strong>
+              <ul>
+                {% for etapa in persona.jornada %}
+                  <li>{{ etapa }}</li>
+                {% endfor %}
+              </ul>
+            </div>
+          {% endfor %}
+        </div>
+
+        {% if segmento.gatilhos %}
+        <div class="persona-card" style="margin-top:24px; padding:24px;">
+          <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px;">
+            <h3 style="margin:0; color:#0f172a;">Gatilhos por etapa</h3>
+            <button class="btn btn-secondary btn-small" onclick="editGatilhos({{ segmento.id }})">Editar Gatilhos</button>
+          </div>
+          <div class="journey-grid">
+            {% for etapa, itens in segmento.gatilhos.items() %}
+              <div class="journey-card">
+                <strong style="display:block; font-size:12px; letter-spacing:0.1em;">{{ etapa }}</strong>
+                <ul style="margin:8px 0 0; padding-left:16px; color:#1e3a8a;">
+                  {% for item in itens %}
+                    <li>{{ item }}</li>
+                  {% endfor %}
+                </ul>
+              </div>
+            {% endfor %}
+          </div>
+        </div>
+        {% else %}
+        <div style="margin-top:20px; text-align: center;">
+          <button class="btn btn-secondary" onclick="editGatilhos({{ segmento.id }})">Adicionar Gatilhos</button>
+        </div>
+        {% endif %}
+      </article>
+    {% endfor %}
+  </section>
+
+  <!-- Modal Add/Edit Persona -->
+  <div id="personaModal" class="modal">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h2 id="modalTitle">Adicionar Persona</h2>
+        <span class="close" onclick="closePersonaModal()">&times;</span>
+      </div>
+      
+      <div class="modal-body">
+        <form id="personaForm">
+        <div class="form-group">
+          <label>Nome *</label>
+          <input type="text" id="personaName" required>
+        </div>
+
+        <div class="form-group">
+          <label>Idade</label>
+          <input type="text" id="personaAge">
+        </div>
+
+        <div class="form-group">
+          <label>Perfil</label>
+          <textarea id="personaProfile"></textarea>
+        </div>
+
+        <div class="form-group">
+          <label>Objetivos (pressione Enter para adicionar)</label>
+          <div class="tag-input-container" id="goalsContainer">
+            <input type="text" class="tag-input" id="goalsInput" placeholder="Digite e pressione Enter">
+          </div>
+        </div>
+
+        <div class="form-group">
+          <label>Desafios (pressione Enter)</label>
+          <div class="tag-input-container" id="challengesContainer">
+            <input type="text" class="tag-input" id="challengesInput" placeholder="Digite e pressione Enter">
+          </div>
+        </div>
+
+        <div class="form-group">
+          <label>Jornada (pressione Enter)</label>
+          <div class="tag-input-container" id="journeyContainer">
+            <input type="text" class="tag-input" id="journeyInput" placeholder="Digite e pressione Enter">
+          </div>
+        </div>
+
+          <div class="form-actions">
+            <button type="button" class="btn btn-secondary" onclick="closePersonaModal()">Cancelar</button>
+            <button type="submit" class="btn btn-primary">Salvar</button>
+          </div>
+        </form>
+      </div>
+    </div>
+  </div>
+
+  <!-- Modal Edit Gatilhos -->
+  <div id="gatilhosModal" class="modal">
+    <div class="modal-content" style="max-width: 800px;">
+      <div class="modal-header">
+        <h2>Editar Gatilhos da Jornada</h2>
+        <span class="close" onclick="closeGatilhosModal()">&times;</span>
+      </div>
+      
+      <div class="modal-body">
+        <p style="margin-bottom: 20px; color: #475569; font-size: 14px;">
+          Defina os gatilhos que ativam cada etapa da jornada do cliente. Use Enter para adicionar novos itens.
+        </p>
+        
+        <div id="gatilhosContainer" style="display: flex; flex-direction: column; gap: 16px;">
+          <!-- Etapas serão adicionadas aqui dinamicamente -->
+        </div>
+        
+        <div style="margin-top: 20px;">
+          <button type="button" class="btn btn-secondary btn-small" onclick="adicionarNovaEtapa()">+ Nova Etapa</button>
+        </div>
+        
+        <div class="form-actions" style="margin-top: 24px;">
+          <button type="button" class="btn btn-secondary" onclick="closeGatilhosModal()">Cancelar</button>
+          <button type="button" class="btn btn-primary" onclick="salvarGatilhos()">Salvar</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    const PLAN_ID = {{ plan_id if plan_id else 1 }};
+    let segmentsData = {{ segmentos | tojson | safe }};
+    let currentSegmentId = null;
+    let currentPersonaIndex = null;
+
+    // Tag input functionality
+    function setupTagInput(inputId, containerId) {
+      const input = document.getElementById(inputId);
+      const container = document.getElementById(containerId);
+      
+      input.addEventListener('keydown', function(e) {
+        if (e.key === 'Enter') {
+          e.preventDefault();
+          const value = this.value.trim();
+          if (value) {
+            addTag(container, value);
+            this.value = '';
+          }
+        }
+      });
+    }
+
+    function addTag(container, text) {
+      const tag = document.createElement('span');
+      tag.className = 'tag';
+      tag.innerHTML = `${text} <span class="tag-remove" onclick="this.parentElement.remove()">×</span>`;
+      const input = container.querySelector('.tag-input');
+      container.insertBefore(tag, input);
+    }
+
+    function getTagsFromContainer(containerId) {
+      const container = document.getElementById(containerId);
+      const tags = container.querySelectorAll('.tag');
+      return Array.from(tags).map(tag => tag.textContent.replace('×', '').trim());
+    }
+
+    function clearTags(containerId) {
+      const container = document.getElementById(containerId);
+      const tags = container.querySelectorAll('.tag');
+      tags.forEach(tag => tag.remove());
+    }
+
+    function loadTagsToContainer(containerId, values) {
+      clearTags(containerId);
+      const container = document.getElementById(containerId);
+      values.forEach(value => addTag(container, value));
+    }
+
+    // Modal functions
+    function openAddPersonaModal(segmentId) {
+      const modal = document.getElementById('personaModal');
+      
+      document.getElementById('modalTitle').textContent = 'Adicionar Persona';
+      document.getElementById('personaForm').reset();
+      clearTags('goalsContainer');
+      clearTags('challengesContainer');
+      clearTags('journeyContainer');
+      currentSegmentId = segmentId;
+      currentPersonaIndex = null;
+      
+      // Padrão PFPN: display block + classe show para animação
+      modal.style.display = 'block';
+      setTimeout(() => modal.classList.add('show'), 10);
+    }
+
+    function closePersonaModal() {
+      const modal = document.getElementById('personaModal');
+      if (modal) {
+        modal.classList.remove('show');
+        setTimeout(() => modal.style.display = 'none', 300);
+      }
+    }
+
+    function editPersona(segmentId, personaIndex) {
+      const segment = segmentsData.find(s => s.id === segmentId);
+      const persona = segment.personas[personaIndex];
+      
+      document.getElementById('modalTitle').textContent = 'Editar Persona';
+      document.getElementById('personaName').value = persona.nome || '';
+      document.getElementById('personaAge').value = persona.idade || '';
+      document.getElementById('personaProfile').value = persona.perfil || '';
+      
+      loadTagsToContainer('goalsContainer', persona.objetivos || []);
+      loadTagsToContainer('challengesContainer', persona.desafios || []);
+      loadTagsToContainer('journeyContainer', persona.jornada || []);
+      
+      currentSegmentId = segmentId;
+      currentPersonaIndex = personaIndex;
+      
+      // Padrão PFPN
+      const modal = document.getElementById('personaModal');
+      modal.style.display = 'block';
+      setTimeout(() => modal.classList.add('show'), 10);
+    }
+
+    async function deletePersona(segmentId, personaIndex) {
+      if (!confirm('Tem certeza que deseja deletar esta persona?')) return;
+      
+      const segment = segmentsData.find(s => s.id === segmentId);
+      const updatedPersonas = segment.personas.filter((_, idx) => idx !== personaIndex);
+      
+      const data = {
+        name: segment.nome,
+        description: segment.persona_descricao,
+        personas: updatedPersonas,
+        strategy: {
+          journey_triggers: segment.gatilhos || {}
+        }
+      };
+      
+      try {
+        const response = await fetch(`/pev/api/implantacao/${PLAN_ID}/segments/${segmentId}`, {
+          method: 'PUT',
+          headers: {'Content-Type': 'application/json'},
+          body: JSON.stringify(data)
+        });
+        
+        const result = await response.json();
+        
+        if (result.success) {
+          location.reload();
+        } else {
+          alert('Erro ao deletar persona: ' + (result.error || 'Erro desconhecido'));
+        }
+      } catch (error) {
+        console.error('Error:', error);
+        alert('Erro ao deletar persona');
+      }
+    }
+
+    // Form submission
+    document.getElementById('personaForm').addEventListener('submit', async function(e) {
+      e.preventDefault();
+      
+      const segment = segmentsData.find(s => s.id === currentSegmentId);
+      let personas = [...(segment.personas || [])];
+      
+      const personaData = {
+        nome: document.getElementById('personaName').value,
+        idade: document.getElementById('personaAge').value,
+        perfil: document.getElementById('personaProfile').value,
+        objetivos: getTagsFromContainer('goalsContainer'),
+        desafios: getTagsFromContainer('challengesContainer'),
+        jornada: getTagsFromContainer('journeyContainer')
+      };
+      
+      if (currentPersonaIndex !== null) {
+        personas[currentPersonaIndex] = personaData;
+      } else {
+        personas.push(personaData);
+      }
+      
+      const data = {
+        name: segment.nome,
+        description: segment.persona_descricao,
+        personas: personas,
+        strategy: {
+          journey_triggers: segment.gatilhos || {}
+        }
+      };
+      
+      try {
+        const response = await fetch(`/pev/api/implantacao/${PLAN_ID}/segments/${currentSegmentId}`, {
+          method: 'PUT',
+          headers: {'Content-Type': 'application/json'},
+          body: JSON.stringify(data)
+        });
+        
+        const result = await response.json();
+        
+        if (result.success) {
+          location.reload();
+        } else {
+          alert('Erro ao salvar persona: ' + (result.error || 'Erro desconhecido'));
+        }
+      } catch (error) {
+        console.error('Error:', error);
+        alert('Erro ao salvar persona');
+      }
+    });
+
+    // Gatilhos Modal
+    let currentGatilhosSegmentId = null;
+    let currentGatilhos = {};
+    let etapaCounter = 0;
+
+    function editGatilhos(segmentId) {
+      const modal = document.getElementById('gatilhosModal');
+      const segment = segmentsData.find(s => s.id === segmentId);
+      
+      currentGatilhosSegmentId = segmentId;
+      currentGatilhos = segment.gatilhos || {};
+      etapaCounter = 0;
+      
+      // Limpar container
+      const container = document.getElementById('gatilhosContainer');
+      container.innerHTML = '';
+      
+      // Carregar etapas existentes
+      if (Object.keys(currentGatilhos).length > 0) {
+        Object.entries(currentGatilhos).forEach(([etapa, itens]) => {
+          adicionarEtapaComDados(etapa, itens);
+        });
+      } else {
+        // Adicionar etapas padrão se não houver nenhuma
+        adicionarEtapaComDados('Descoberta', []);
+        adicionarEtapaComDados('Consideração', []);
+        adicionarEtapaComDados('Compra', []);
+        adicionarEtapaComDados('Fidelização', []);
+      }
+      
+      // Padrão PFPN
+      modal.style.display = 'block';
+      setTimeout(() => modal.classList.add('show'), 10);
+    }
+
+    function closeGatilhosModal() {
+      const modal = document.getElementById('gatilhosModal');
+      if (modal) {
+        modal.classList.remove('show');
+        setTimeout(() => modal.style.display = 'none', 300);
+      }
+    }
+
+    function adicionarNovaEtapa() {
+      adicionarEtapaComDados('Nova Etapa', []);
+    }
+
+    function adicionarEtapaComDados(nomeEtapa, itens) {
+      const container = document.getElementById('gatilhosContainer');
+      const etapaId = `etapa-${etapaCounter++}`;
+      
+      const etapaDiv = document.createElement('div');
+      etapaDiv.className = 'gatilho-etapa';
+      etapaDiv.id = etapaId;
+      etapaDiv.style.cssText = `
+        background: rgba(248, 250, 252, 0.9);
+        border: 1px solid rgba(148, 163, 184, 0.2);
+        border-radius: 12px;
+        padding: 16px;
+      `;
+      
+      etapaDiv.innerHTML = `
+        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px;">
+          <input type="text" class="etapa-nome" value="${nomeEtapa}" 
+                 style="font-weight: 600; font-size: 14px; border: 1px solid rgba(148, 163, 184, 0.3); 
+                        border-radius: 6px; padding: 6px 10px; width: 200px;">
+          <button type="button" class="btn-icon" onclick="removerEtapa('${etapaId}')" 
+                  style="background: rgba(239, 68, 68, 0.1); color: #dc2626; border: 1px solid rgba(239, 68, 68, 0.3); 
+                         padding: 6px 10px; border-radius: 6px; cursor: pointer;">
+            🗑️ Remover
+          </button>
+        </div>
+        <div class="tag-input-container" id="${etapaId}-container">
+          <input type="text" class="tag-input" id="${etapaId}-input" 
+                 placeholder="Digite um gatilho e pressione Enter">
+        </div>
+      `;
+      
+      container.appendChild(etapaDiv);
+      
+      // Setup tag input para esta etapa
+      setupTagInput(`${etapaId}-input`, `${etapaId}-container`);
+      
+      // Carregar itens existentes
+      if (itens && itens.length > 0) {
+        const etapaContainer = document.getElementById(`${etapaId}-container`);
+        itens.forEach(item => addTag(etapaContainer, item));
+      }
+    }
+
+    function removerEtapa(etapaId) {
+      if (!confirm('Tem certeza que deseja remover esta etapa?')) return;
+      const etapa = document.getElementById(etapaId);
+      if (etapa) etapa.remove();
+    }
+
+    async function salvarGatilhos() {
+      const container = document.getElementById('gatilhosContainer');
+      const etapas = container.querySelectorAll('.gatilho-etapa');
+      
+      const gatilhosData = {};
+      
+      etapas.forEach(etapaDiv => {
+        const nomeEtapa = etapaDiv.querySelector('.etapa-nome').value.trim();
+        if (!nomeEtapa) return;
+        
+        const etapaId = etapaDiv.id;
+        const tagContainer = document.getElementById(`${etapaId}-container`);
+        const tags = tagContainer.querySelectorAll('.tag');
+        const itens = Array.from(tags).map(tag => tag.textContent.replace('×', '').trim());
+        
+        if (itens.length > 0) {
+          gatilhosData[nomeEtapa] = itens;
+        }
+      });
+      
+      const segment = segmentsData.find(s => s.id === currentGatilhosSegmentId);
+      
+      const data = {
+        name: segment.nome,
+        description: segment.persona_descricao,
+        personas: segment.personas || [],
+        strategy: {
+          journey_triggers: gatilhosData
+        }
+      };
+      
+      try {
+        const response = await fetch(`/pev/api/implantacao/${PLAN_ID}/segments/${currentGatilhosSegmentId}`, {
+          method: 'PUT',
+          headers: {'Content-Type': 'application/json'},
+          body: JSON.stringify(data)
+        });
+        
+        const result = await response.json();
+        
+        if (result.success) {
+          location.reload();
+        } else {
+          alert('Erro ao salvar gatilhos: ' + (result.error || 'Erro desconhecido'));
+        }
+      } catch (error) {
+        console.error('Error:', error);
+        alert('Erro ao salvar gatilhos');
+      }
+    }
+
+    // Close modals on outside click (padrão PFPN)
+    window.onclick = function(event) {
+      const personaModal = document.getElementById('personaModal');
+      const gatilhosModal = document.getElementById('gatilhosModal');
+      
+      if (event.target === personaModal) {
+        closePersonaModal();
+      }
+      if (event.target === gatilhosModal) {
+        closeGatilhosModal();
+      }
+    };
+
+    // Initialize tag inputs when DOM is ready
+    document.addEventListener('DOMContentLoaded', function() {
+      setupTagInput('goalsInput', 'goalsContainer');
+      setupTagInput('challengesInput', 'challengesContainer');
+      setupTagInput('journeyInput', 'journeyContainer');
+    });
+
+    // CSS adicional para etapas de gatilhos
+    const style = document.createElement('style');
+    style.textContent = `
+      .gatilho-etapa {
+        transition: all 0.2s ease;
+      }
+      
+      .gatilho-etapa:hover {
+        background: rgba(248, 250, 252, 1) !important;
+        box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
+      }
+      
+      .etapa-nome:focus {
+        outline: none;
+        border-color: #3b82f6 !important;
+        box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1) !important;
+      }
+    `;
+    document.head.appendChild(style);
+  </script>
+{% endblock %}

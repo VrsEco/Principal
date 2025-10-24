@@ -1,0 +1,699 @@
+{% extends "base.html" %}
+{% block title %}Matriz de Diferenciais | Implantacao{% endblock %}
+{% block body %}{{ super() }}{% endblock %}
+
+{% block header_actions %}
+  <div class="header-nav">
+    <a href="/main" class="nav-link">Ecossistema</a>
+    <a href="{{ url_for('pev.pev_dashboard') }}" class="nav-link active">PEV</a>
+    <a href="{{ url_for('grv.grv_dashboard') }}" class="nav-link">GRV</a>
+  </div>
+  <div class="user-pill">
+    <span class="user-name">{{ user_name | default('Fabiano Ferreira') }}</span>
+  </div>
+  <div class="header-nav">
+    <select id="themeSelect" class="nav-link" style="padding:8px 12px; color:#64748b;">
+      <option value="versus">Tema Versus</option>
+      <option value="alt">Tema Azul/Branco/Amarelo</option>
+    </select>
+  </div>
+{% endblock %}
+
+{% block content %}
+  <style>
+    body {
+      background: linear-gradient(135deg, #f8fafc 0%, #e2e8f0 100%) !important;
+      color: #0f172a !important;
+    }
+
+    .matrix-wrapper {
+      padding: 32px;
+      display: flex;
+      flex-direction: column;
+      gap: 24px;
+    }
+
+    .matrix-card {
+      background: rgba(255, 255, 255, 0.94);
+      border: 1px solid rgba(148, 163, 184, 0.2);
+      border-radius: 24px;
+      box-shadow: 0 18px 40px rgba(15, 23, 42, 0.1);
+      backdrop-filter: blur(12px);
+      padding: 32px;
+      position: relative;
+    }
+
+    .matrix-card h1 {
+      margin: 0 0 16px;
+      color: #0f172a;
+    }
+
+    .segment-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: flex-start;
+      margin-bottom: 18px;
+    }
+
+    .segment-header h2 {
+      margin: 0;
+      font-size: 24px;
+      color: #0f172a;
+    }
+
+    .btn {
+      padding: 10px 20px;
+      border: none;
+      border-radius: 12px;
+      font-size: 14px;
+      font-weight: 600;
+      cursor: pointer;
+      transition: all 0.2s;
+    }
+
+    .btn-primary {
+      background: linear-gradient(135deg, #3b82f6 0%, #2563eb 100%);
+      color: white;
+    }
+
+    .btn-primary:hover {
+      background: linear-gradient(135deg, #2563eb 0%, #1d4ed8 100%);
+      box-shadow: 0 4px 12px rgba(37, 99, 235, 0.4);
+    }
+
+    .btn-secondary {
+      background: rgba(100, 116, 139, 0.1);
+      color: #475569;
+      border: 1px solid rgba(100, 116, 139, 0.2);
+    }
+
+    .btn-small {
+      padding: 6px 12px;
+      font-size: 12px;
+    }
+
+    table.matrix-table {
+      width: 100%;
+      border-collapse: collapse;
+      font-size: 14px;
+      margin-bottom: 24px;
+    }
+
+    table.matrix-table th,
+    table.matrix-table td {
+      border: 1px solid rgba(148, 163, 184, 0.3);
+      padding: 12px 14px;
+      text-align: left;
+      vertical-align: top;
+    }
+
+    table.matrix-table thead tr {
+      background: rgba(59, 130, 246, 0.12);
+    }
+
+    table.matrix-table th {
+      text-transform: uppercase;
+      letter-spacing: 0.08em;
+      color: #1d4ed8;
+      font-size: 12px;
+    }
+
+    table.matrix-table tbody tr:hover {
+      background: rgba(248, 250, 252, 0.5);
+    }
+
+    .row-actions {
+      display: flex;
+      gap: 4px;
+    }
+
+    .btn-icon {
+      background: transparent;
+      border: none;
+      cursor: pointer;
+      font-size: 14px;
+      padding: 4px;
+      opacity: 0.6;
+      transition: opacity 0.2s;
+    }
+
+    .btn-icon:hover {
+      opacity: 1;
+    }
+
+    .next-steps {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+      gap: 16px;
+    }
+
+    .step-card {
+      background: rgba(248, 250, 252, 0.92);
+      border: 1px solid rgba(148, 163, 184, 0.22);
+      border-radius: 16px;
+      padding: 18px;
+      color: #475569;
+      font-size: 14px;
+    }
+
+    /* Modal Styles - Padrão PFPN */
+    .modal {
+      position: fixed;
+      z-index: 999999 !important;
+      left: 0;
+      top: 0;
+      width: 100%;
+      height: 100%;
+      background-color: rgba(0, 0, 0, 0.7);
+      backdrop-filter: blur(4px);
+      opacity: 0;
+      transition: opacity 0.3s ease;
+      pointer-events: none;
+    }
+
+    .modal.show {
+      opacity: 1;
+      pointer-events: auto;
+    }
+
+    .modal-content {
+      position: absolute;
+      top: 80px;
+      left: 50%;
+      transform: translateX(-50%);
+      max-width: 900px;
+      width: 90%;
+      max-height: calc(100vh - 120px);
+      overflow-y: auto;
+      border-radius: 16px;
+      background: white;
+      box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+    }
+
+    .modal-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: 20px 24px;
+      border-bottom: 1px solid rgba(148, 163, 184, 0.2);
+      border-radius: 16px 16px 0 0;
+      background: rgba(248, 250, 252, 0.5);
+    }
+
+    .modal-header h2 {
+      margin: 0;
+      font-size: 20px;
+      font-weight: 600;
+      color: #0f172a;
+    }
+
+    .close {
+      font-size: 24px;
+      font-weight: bold;
+      cursor: pointer;
+      color: #475569;
+      line-height: 1;
+      transition: color 0.2s;
+    }
+
+    .close:hover {
+      color: #0f172a;
+    }
+
+    .modal-body {
+      padding: 24px;
+    }
+
+    .form-group {
+      margin-bottom: 20px;
+    }
+
+    .form-group label {
+      display: block;
+      margin-bottom: 8px;
+      font-weight: 600;
+      color: #1e293b;
+      font-size: 14px;
+    }
+
+    .form-group input,
+    .form-group textarea {
+      width: 100%;
+      padding: 12px 16px;
+      border: 1px solid rgba(148, 163, 184, 0.3);
+      border-radius: 12px;
+      font-size: 14px;
+      font-family: inherit;
+    }
+
+    .form-group input:focus,
+    .form-group textarea:focus {
+      outline: none;
+      border-color: #3b82f6;
+      box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
+    }
+
+    .form-group textarea {
+      min-height: 80px;
+      resize: vertical;
+    }
+
+    .form-actions {
+      display: flex;
+      gap: 12px;
+      justify-content: flex-end;
+      margin-top: 24px;
+    }
+
+    .tag-input-container {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
+      padding: 8px;
+      border: 1px solid rgba(148, 163, 184, 0.3);
+      border-radius: 12px;
+      min-height: 44px;
+    }
+
+    .tag {
+      background: #e0f2fe;
+      color: #0369a1;
+      padding: 4px 12px;
+      border-radius: 8px;
+      font-size: 13px;
+      display: flex;
+      align-items: center;
+      gap: 6px;
+    }
+
+    .tag-remove {
+      cursor: pointer;
+      font-weight: bold;
+    }
+
+    .tag-input {
+      border: none;
+      outline: none;
+      flex: 1;
+      min-width: 120px;
+      font-size: 14px;
+      padding: 4px;
+    }
+
+    @media (max-width: 768px) {
+      .matrix-wrapper {
+        padding: 20px;
+      }
+      .matrix-card {
+        padding: 24px;
+      }
+      table.matrix-table {
+        display: block;
+        overflow-x: auto;
+      }
+    }
+  </style>
+
+  <section class="matrix-wrapper">
+    <article class="matrix-card">
+      <h1>Matriz de diferenciais competitivos</h1>
+      <p style="margin:12px 0 0; color:#475569; line-height:1.6;">
+        Comparativo direto para cada segmento de negócio, destacando como a empresa
+        entrega valor superior frente aos concorrentes e quais alavancas precisam de reforço.
+      </p>
+      <div style="margin-top: 20px;">
+        <button class="btn btn-secondary" onclick="window.history.back()">← Voltar</button>
+      </div>
+    </article>
+
+    {% for segmento in segmentos %}
+      <article class="matrix-card" data-segment-id="{{ segmento.id }}">
+        <div class="segment-header">
+          <div>
+            <h2>{{ segmento.nome }}</h2>
+            <p style="margin:8px 0 0; color:#475569;">{{ segmento.descricao }}</p>
+          </div>
+          <div style="display: flex; gap: 8px;">
+            <button class="btn btn-secondary btn-small" onclick="editPositioning({{ segmento.id }})">Editar Estratégia</button>
+            <button class="btn btn-primary btn-small" onclick="openAddCompetitorModal({{ segmento.id }})">+ Critério</button>
+          </div>
+        </div>
+
+        <table class="matrix-table">
+          <thead>
+            <tr>
+              <th style="width: 20%;">Critério</th>
+              <th style="width: 18%;">Nossa Empresa</th>
+              <th style="width: 18%;">Concorrente A</th>
+              <th style="width: 18%;">Concorrente B</th>
+              <th style="width: 20%;">Observação</th>
+              <th style="width: 6%;">Ações</th>
+            </tr>
+          </thead>
+          <tbody>
+            {% for linha in segmento.matriz %}
+              <tr data-row-index="{{ loop.index0 }}">
+                <td>{{ linha.criterio }}</td>
+                <td>{{ linha.padaria_horizonte }}</td>
+                <td>{{ linha.concorrente_a }}</td>
+                <td>{{ linha.concorrente_b }}</td>
+                <td>{{ linha.observacao }}</td>
+                <td>
+                  <div class="row-actions">
+                    <button class="btn-icon" onclick="editCompetitorRow({{ segmento.id }}, {{ loop.index0 }})" title="Editar">✏️</button>
+                    <button class="btn-icon" onclick="deleteCompetitorRow({{ segmento.id }}, {{ loop.index0 }})" title="Deletar">🗑️</button>
+                  </div>
+                </td>
+              </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+
+        <h3 style="margin:0 0 12px; color:#0f172a;">Direcionamentos estratégicos</h3>
+        <p style="margin:0 0 18px; color:#475569;">{{ segmento.estrategia.posicionamento }}</p>
+        <div class="step-card" style="background:rgba(59,130,246,0.12); border-color:rgba(59,130,246,0.3); color:#1d4ed8;">
+          <strong style="display:block; font-size:13px; letter-spacing:0.08em;">Promessa central</strong>
+          <span>{{ segmento.estrategia.promessa }}</span>
+        </div>
+        <div class="next-steps" style="margin-top:18px;">
+          {% for passo in segmento.estrategia.proximos_passos %}
+            <div class="step-card">- {{ passo }}</div>
+          {% endfor %}
+        </div>
+      </article>
+    {% endfor %}
+  </section>
+
+  <!-- Modal Add/Edit Competitor Row -->
+  <div id="competitorModal" class="modal">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h2 id="modalTitle">Adicionar Critério</h2>
+        <span class="close" onclick="closeCompetitorModal()">&times;</span>
+      </div>
+      
+      <div class="modal-body">
+        <form id="competitorForm">
+        <div class="form-group">
+          <label>Critério *</label>
+          <input type="text" id="criterio" required>
+        </div>
+
+        <div class="form-group">
+          <label>Nossa Empresa</label>
+          <input type="text" id="nossa_empresa">
+        </div>
+
+        <div class="form-group">
+          <label>Concorrente A</label>
+          <input type="text" id="concorrente_a">
+        </div>
+
+        <div class="form-group">
+          <label>Concorrente B</label>
+          <input type="text" id="concorrente_b">
+        </div>
+
+        <div class="form-group">
+          <label>Observação</label>
+          <textarea id="observacao"></textarea>
+        </div>
+
+          <div class="form-actions">
+            <button type="button" class="btn btn-secondary" onclick="closeCompetitorModal()">Cancelar</button>
+            <button type="submit" class="btn btn-primary">Salvar</button>
+          </div>
+        </form>
+      </div>
+    </div>
+  </div>
+
+  <!-- Modal Edit Positioning -->
+  <div id="positioningModal" class="modal">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h2>Editar Estratégia e Posicionamento</h2>
+        <span class="close" onclick="closePositioningModal()">&times;</span>
+      </div>
+      
+      <div class="modal-body">
+        <form id="positioningForm">
+        <div class="form-group">
+          <label>Posicionamento</label>
+          <textarea id="posicionamento"></textarea>
+        </div>
+
+        <div class="form-group">
+          <label>Promessa Central</label>
+          <textarea id="promessa"></textarea>
+        </div>
+
+        <div class="form-group">
+          <label>Próximos Passos (pressione Enter para adicionar)</label>
+          <div class="tag-input-container" id="stepsContainer">
+            <input type="text" class="tag-input" id="stepsInput" placeholder="Digite e pressione Enter">
+          </div>
+        </div>
+
+          <div class="form-actions">
+            <button type="button" class="btn btn-secondary" onclick="closePositioningModal()">Cancelar</button>
+            <button type="submit" class="btn btn-primary">Salvar</button>
+          </div>
+        </form>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    const PLAN_ID = {{ plan_id if plan_id else 1 }};
+    let segmentsData = {{ segmentos | tojson | safe }};
+    let currentSegmentId = null;
+    let currentRowIndex = null;
+
+    // Tag input for steps
+    function setupTagInput(inputId, containerId) {
+      const input = document.getElementById(inputId);
+      const container = document.getElementById(containerId);
+      
+      input.addEventListener('keydown', function(e) {
+        if (e.key === 'Enter') {
+          e.preventDefault();
+          const value = this.value.trim();
+          if (value) {
+            addTag(container, value);
+            this.value = '';
+          }
+        }
+      });
+    }
+
+    function addTag(container, text) {
+      const tag = document.createElement('span');
+      tag.className = 'tag';
+      tag.innerHTML = `${text} <span class="tag-remove" onclick="this.parentElement.remove()">×</span>`;
+      const input = container.querySelector('.tag-input');
+      container.insertBefore(tag, input);
+    }
+
+    function getTagsFromContainer(containerId) {
+      const container = document.getElementById(containerId);
+      const tags = container.querySelectorAll('.tag');
+      return Array.from(tags).map(tag => tag.textContent.replace('×', '').trim());
+    }
+
+    function clearTags(containerId) {
+      const container = document.getElementById(containerId);
+      const tags = container.querySelectorAll('.tag');
+      tags.forEach(tag => tag.remove());
+    }
+
+    function loadTagsToContainer(containerId, values) {
+      clearTags(containerId);
+      const container = document.getElementById(containerId);
+      values.forEach(value => addTag(container, value));
+    }
+
+    // Competitor Modal
+    function openAddCompetitorModal(segmentId) {
+      const modal = document.getElementById('competitorModal');
+      
+      document.getElementById('modalTitle').textContent = 'Adicionar Critério';
+      document.getElementById('competitorForm').reset();
+      currentSegmentId = segmentId;
+      currentRowIndex = null;
+      
+      // Padrão PFPN
+      modal.style.display = 'block';
+      setTimeout(() => modal.classList.add('show'), 10);
+    }
+
+    function closeCompetitorModal() {
+      const modal = document.getElementById('competitorModal');
+      if (modal) {
+        modal.classList.remove('show');
+        setTimeout(() => modal.style.display = 'none', 300);
+      }
+    }
+
+    function editCompetitorRow(segmentId, rowIndex) {
+      const segment = segmentsData.find(s => s.id === segmentId);
+      const row = segment.matriz[rowIndex];
+      
+      document.getElementById('modalTitle').textContent = 'Editar Critério';
+      document.getElementById('criterio').value = row.criterio || '';
+      document.getElementById('nossa_empresa').value = row.padaria_horizonte || '';
+      document.getElementById('concorrente_a').value = row.concorrente_a || '';
+      document.getElementById('concorrente_b').value = row.concorrente_b || '';
+      document.getElementById('observacao').value = row.observacao || '';
+      
+      currentSegmentId = segmentId;
+      currentRowIndex = rowIndex;
+      
+      // Padrão PFPN
+      const modal = document.getElementById('competitorModal');
+      modal.style.display = 'block';
+      setTimeout(() => modal.classList.add('show'), 10);
+    }
+
+    async function deleteCompetitorRow(segmentId, rowIndex) {
+      if (!confirm('Tem certeza que deseja deletar este critério?')) return;
+      
+      const segment = segmentsData.find(s => s.id === segmentId);
+      const updatedMatrix = segment.matriz.filter((_, idx) => idx !== rowIndex);
+      
+      await updateSegmentMatrix(segmentId, updatedMatrix);
+    }
+
+    document.getElementById('competitorForm').addEventListener('submit', async function(e) {
+      e.preventDefault();
+      
+      const segment = segmentsData.find(s => s.id === currentSegmentId);
+      let matriz = [...(segment.matriz || [])];
+      
+      const rowData = {
+        criterio: document.getElementById('criterio').value,
+        padaria_horizonte: document.getElementById('nossa_empresa').value,
+        concorrente_a: document.getElementById('concorrente_a').value,
+        concorrente_b: document.getElementById('concorrente_b').value,
+        observacao: document.getElementById('observacao').value
+      };
+      
+      if (currentRowIndex !== null) {
+        matriz[currentRowIndex] = rowData;
+      } else {
+        matriz.push(rowData);
+      }
+      
+      await updateSegmentMatrix(currentSegmentId, matriz);
+    });
+
+    async function updateSegmentMatrix(segmentId, matriz) {
+      const segment = segmentsData.find(s => s.id === segmentId);
+      
+      const data = {
+        name: segment.nome,
+        description: segment.descricao,
+        competitors_matrix: matriz,
+        strategy: {
+          positioning: segment.estrategia
+        }
+      };
+      
+      try {
+        const response = await fetch(`/pev/api/implantacao/${PLAN_ID}/segments/${segmentId}`, {
+          method: 'PUT',
+          headers: {'Content-Type': 'application/json'},
+          body: JSON.stringify(data)
+        });
+        
+        const result = await response.json();
+        
+        if (result.success) {
+          location.reload();
+        } else {
+          alert('Erro ao salvar: ' + (result.error || 'Erro desconhecido'));
+        }
+      } catch (error) {
+        console.error('Error:', error);
+        alert('Erro ao salvar');
+      }
+    }
+
+    // Positioning Modal
+    function editPositioning(segmentId) {
+      const modal = document.getElementById('positioningModal');
+      const segment = segmentsData.find(s => s.id === segmentId);
+      
+      document.getElementById('posicionamento').value = segment.estrategia?.posicionamento || '';
+      document.getElementById('promessa').value = segment.estrategia?.promessa || '';
+      loadTagsToContainer('stepsContainer', segment.estrategia?.proximos_passos || []);
+      
+      currentSegmentId = segmentId;
+      
+      // Padrão PFPN
+      modal.style.display = 'block';
+      setTimeout(() => modal.classList.add('show'), 10);
+    }
+
+    function closePositioningModal() {
+      const modal = document.getElementById('positioningModal');
+      if (modal) {
+        modal.classList.remove('show');
+        setTimeout(() => modal.style.display = 'none', 300);
+      }
+    }
+
+    document.getElementById('positioningForm').addEventListener('submit', async function(e) {
+      e.preventDefault();
+      
+      const segment = segmentsData.find(s => s.id === currentSegmentId);
+      
+      const data = {
+        name: segment.nome,
+        description: segment.descricao,
+        competitors_matrix: segment.matriz || [],
+        strategy: {
+          positioning: {
+            narrative: document.getElementById('posicionamento').value,
+            promise: document.getElementById('promessa').value,
+            next_steps: getTagsFromContainer('stepsContainer')
+          }
+        }
+      };
+      
+      try {
+        const response = await fetch(`/pev/api/implantacao/${PLAN_ID}/segments/${currentSegmentId}`, {
+          method: 'PUT',
+          headers: {'Content-Type': 'application/json'},
+          body: JSON.stringify(data)
+        });
+        
+        const result = await response.json();
+        
+        if (result.success) {
+          location.reload();
+        } else {
+          alert('Erro ao salvar: ' + (result.error || 'Erro desconhecido'));
+        }
+      } catch (error) {
+        console.error('Error:', error);
+        alert('Erro ao salvar estratégia');
+      }
+    });
+
+    // Close modals on outside click
+    window.onclick = function(event) {
+      if (event.target === document.getElementById('competitorModal')) {
+        closeCompetitorModal();
+      }
+      if (event.target === document.getElementById('positioningModal')) {
+        closePositioningModal();
+      }
+    };
+
+    // Initialize tag inputs when DOM is ready
+    document.addEventListener('DOMContentLoaded', function() {
+      setupTagInput('stepsInput', 'stepsContainer');
+    });
+  </script>
+{% endblock %}

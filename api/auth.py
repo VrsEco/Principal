@@ -217,10 +217,20 @@ def change_password():
             'message': f'Erro ao alterar senha: {str(e)}'
         }), 500
 
+@auth_bp.route('/users/page', methods=['GET'])
+@login_required
+def list_users_page():
+    """User management page (admin only)"""
+    if not current_user or current_user.role != 'admin':
+        flash('Acesso negado. Apenas administradores podem gerenciar usuários.', 'error')
+        return redirect(url_for('main'))
+    
+    return render_template('auth/users.html')
+
 @auth_bp.route('/users', methods=['GET'])
 @login_required
 def list_users():
-    """List all users (admin only)"""
+    """List all users API (admin only)"""
     if not current_user or current_user.role != 'admin':
         return jsonify({
             'success': False,
@@ -240,6 +250,42 @@ def list_users():
         return jsonify({
             'success': False,
             'message': f'Erro ao listar usuários: {str(e)}'
+        }), 500
+
+@auth_bp.route('/users/<int:user_id>/status', methods=['PUT'])
+@login_required
+def toggle_user_status(user_id):
+    """Toggle user active status (admin only)"""
+    if not current_user or current_user.role != 'admin':
+        return jsonify({
+            'success': False,
+            'message': 'Acesso negado'
+        }), 403
+    
+    try:
+        data = request.get_json() if request.is_json else request.form
+        is_active = data.get('is_active', True)
+        
+        if isinstance(is_active, str):
+            is_active = is_active.lower() in ['true', '1', 'yes', 'on']
+        
+        success = auth_service.update_user_status(user_id, is_active)
+        
+        if success:
+            return jsonify({
+                'success': True,
+                'message': f'Usuário {"ativado" if is_active else "desativado"} com sucesso'
+            })
+        else:
+            return jsonify({
+                'success': False,
+                'message': 'Usuário não encontrado'
+            }), 404
+            
+    except Exception as e:
+        return jsonify({
+            'success': False,
+            'message': f'Erro ao atualizar status: {str(e)}'
         }), 500
 
 @auth_bp.route('/current-user', methods=['GET'])

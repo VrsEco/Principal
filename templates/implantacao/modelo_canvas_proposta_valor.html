@@ -1,0 +1,683 @@
+{% extends "base.html" %}
+{% block title %}Canvas de Proposta de Valor | Implantacao{% endblock %}
+{% block body %}{{ super() }}{% endblock %}
+
+{% block header_actions %}
+  <div class="header-nav">
+    <a href="/main" class="nav-link">Ecossistema</a>
+    <a href="{{ url_for('pev.pev_dashboard') }}" class="nav-link active">PEV</a>
+    <a href="{{ url_for('grv.grv_dashboard') }}" class="nav-link">GRV</a>
+  </div>
+  <div class="user-pill">
+    <span class="user-name">{{ user_name | default('Fabiano Ferreira') }}</span>
+  </div>
+  <div class="header-nav">
+    <select id="themeSelect" class="nav-link" style="padding:8px 12px; color:#64748b;">
+      <option value="versus">Tema Versus</option>
+      <option value="alt">Tema Azul/Branco/Amarelo</option>
+    </select>
+  </div>
+{% endblock %}
+
+{% block content %}
+  <style>
+    body {
+      background: linear-gradient(135deg, #f8fafc 0%, #e2e8f0 100%) !important;
+      color: #0f172a !important;
+    }
+
+    .canvas-wrapper {
+      padding: 32px;
+      display: flex;
+      flex-direction: column;
+      gap: 28px;
+    }
+
+    .canvas-card {
+      background: rgba(255, 255, 255, 0.94);
+      border: 1px solid rgba(148, 163, 184, 0.2);
+      border-radius: 24px;
+      box-shadow: 0 18px 40px rgba(15, 23, 42, 0.1);
+      backdrop-filter: blur(12px);
+      padding: 32px;
+      position: relative;
+    }
+
+    .canvas-card h1 {
+      margin: 0 0 16px;
+      color: #0f172a;
+    }
+
+    .segment-card {
+      position: relative;
+    }
+
+    .segment-card h2 {
+      margin: 0;
+      font-size: 24px;
+      color: #0f172a;
+    }
+
+    .segment-actions {
+      position: absolute;
+      top: 24px;
+      right: 24px;
+      display: flex;
+      gap: 8px;
+    }
+
+    .btn {
+      padding: 10px 20px;
+      border: none;
+      border-radius: 12px;
+      font-size: 14px;
+      font-weight: 600;
+      cursor: pointer;
+      transition: all 0.2s;
+    }
+
+    .btn-primary {
+      background: linear-gradient(135deg, #3b82f6 0%, #2563eb 100%);
+      color: white;
+    }
+
+    .btn-primary:hover {
+      background: linear-gradient(135deg, #2563eb 0%, #1d4ed8 100%);
+      box-shadow: 0 4px 12px rgba(37, 99, 235, 0.4);
+    }
+
+    .btn-secondary {
+      background: rgba(100, 116, 139, 0.1);
+      color: #475569;
+      border: 1px solid rgba(100, 116, 139, 0.2);
+    }
+
+    .btn-secondary:hover {
+      background: rgba(100, 116, 139, 0.2);
+    }
+
+    .btn-icon {
+      padding: 8px 12px;
+      font-size: 16px;
+    }
+
+    .grid-two {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+      gap: 20px;
+    }
+
+    .list-box {
+      background: rgba(248, 250, 252, 0.92);
+      border: 1px solid rgba(148, 163, 184, 0.22);
+      border-radius: 18px;
+      padding: 20px;
+    }
+
+    .list-box h3 {
+      margin: 0 0 12px;
+      font-size: 16px;
+      text-transform: uppercase;
+      letter-spacing: 0.08em;
+      color: #1d4ed8;
+    }
+
+    .list-box ul {
+      margin: 0;
+      padding-left: 20px;
+      color: #475569;
+      line-height: 1.5;
+      font-size: 14px;
+    }
+
+    /* Modal Styles - Padrão PFPN */
+    .modal {
+      position: fixed;
+      z-index: 999999 !important;
+      left: 0;
+      top: 0;
+      width: 100%;
+      height: 100%;
+      background-color: rgba(0, 0, 0, 0.7);
+      backdrop-filter: blur(4px);
+      opacity: 0;
+      transition: opacity 0.3s ease;
+      pointer-events: none;
+    }
+
+    .modal.show {
+      opacity: 1;
+      pointer-events: auto;
+    }
+
+    .modal-content {
+      position: absolute;
+      top: 80px;
+      left: 50%;
+      transform: translateX(-50%);
+      max-width: 700px;
+      width: 90%;
+      max-height: calc(100vh - 120px);
+      overflow-y: auto;
+      border-radius: 16px;
+      background: white;
+      box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+    }
+
+    .modal-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: 20px 24px;
+      border-bottom: 1px solid rgba(148, 163, 184, 0.2);
+      border-radius: 16px 16px 0 0;
+      background: rgba(248, 250, 252, 0.5);
+    }
+
+    .modal-header h2 {
+      margin: 0;
+      font-size: 20px;
+      font-weight: 600;
+      color: #0f172a;
+    }
+
+    .close {
+      font-size: 24px;
+      font-weight: bold;
+      cursor: pointer;
+      color: #475569;
+      line-height: 1;
+      transition: color 0.2s;
+    }
+
+    .close:hover {
+      color: #0f172a;
+    }
+
+    .modal-body {
+      padding: 24px;
+    }
+
+    .form-group {
+      margin-bottom: 18px;
+    }
+
+    .form-group label {
+      display: block;
+      margin-bottom: 6px;
+      font-weight: 600;
+      color: #1e293b;
+      font-size: 13px;
+    }
+
+    .form-group input,
+    .form-group textarea {
+      width: 100%;
+      padding: 10px 14px;
+      border: 1px solid rgba(148, 163, 184, 0.3);
+      border-radius: 8px;
+      font-size: 14px;
+      font-family: inherit;
+      transition: all 0.2s;
+      background: white;
+    }
+
+    .form-group input:focus,
+    .form-group textarea:focus {
+      outline: none;
+      border-color: #3b82f6;
+      box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
+    }
+
+    .form-group textarea {
+      min-height: 80px;
+      resize: vertical;
+    }
+
+    textarea.readonly-field,
+    input.readonly-field {
+      background: #f1f5f9 !important;
+      cursor: not-allowed;
+      color: #475569 !important;
+    }
+
+    .form-actions {
+      display: flex;
+      gap: 12px;
+      justify-content: flex-end;
+      margin-top: 24px;
+    }
+
+    .tag-input-container {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
+      padding: 8px;
+      border: 1px solid rgba(148, 163, 184, 0.3);
+      border-radius: 12px;
+      min-height: 44px;
+    }
+
+    .tag {
+      background: #e0f2fe;
+      color: #0369a1;
+      padding: 4px 12px;
+      border-radius: 8px;
+      font-size: 13px;
+      display: flex;
+      align-items: center;
+      gap: 6px;
+    }
+
+    .tag-remove {
+      cursor: pointer;
+      font-weight: bold;
+    }
+
+    .tag-input {
+      border: none;
+      outline: none;
+      flex: 1;
+      min-width: 120px;
+      font-size: 14px;
+      padding: 4px;
+    }
+
+    @media (max-width: 768px) {
+      .canvas-wrapper {
+        padding: 20px;
+      }
+      .canvas-card {
+        padding: 24px;
+      }
+      .segment-actions {
+        position: static;
+        margin-top: 16px;
+      }
+    }
+  </style>
+
+  <section class="canvas-wrapper">
+    <article class="canvas-card">
+      <h1>Canvas de proposta de valor</h1>
+      <p style="margin-bottom: 20px;">
+        Visão executiva da oferta para cada segmento de negócio, conectando
+        quem atendemos, problemas resolvidos, solução e diferenças competitivas que sustentam o modelo.
+      </p>
+      <div style="display: flex; gap: 12px; align-items: center;">
+        <button class="btn btn-secondary" onclick="window.history.back()">← Voltar</button>
+        <button class="btn btn-primary" onclick="openAddSegmentModal()">+ Adicionar Segmento</button>
+      </div>
+    </article>
+
+    <div id="segments-container">
+      {% for segmento in segmentos %}
+        <article class="canvas-card segment-card" data-segment-id="{{ loop.index0 }}">
+          <div class="segment-actions">
+            <button class="btn btn-icon btn-secondary" onclick="editSegment({{ loop.index0 }})" title="Editar">✏️</button>
+            <button class="btn btn-icon btn-secondary" onclick="deleteSegment({{ loop.index0 }})" title="Deletar">🗑️</button>
+          </div>
+          
+          <h2>{{ segmento.nome }}</h2>
+          <p style="margin:8px 0 24px; color:#475569;">{{ segmento.descricao }}</p>
+
+          <div class="grid-two">
+            <div class="list-box">
+              <h3>Segmentos atendidos</h3>
+              <ul>
+                {% for item in segmento.proposta.segmentos %}
+                  <li>{{ item }}</li>
+                {% endfor %}
+              </ul>
+            </div>
+            <div class="list-box">
+              <h3>Problemas observados</h3>
+              <ul>
+                {% for item in segmento.proposta.problemas %}
+                  <li>{{ item }}</li>
+                {% endfor %}
+              </ul>
+            </div>
+            <div class="list-box">
+              <h3>Nossa solução</h3>
+              <p style="margin:0; color:#475569; line-height:1.6;">{{ segmento.proposta.solucao }}</p>
+            </div>
+            <div class="list-box">
+              <h3>Diferenciais</h3>
+              <ul>
+                {% for item in segmento.proposta.diferenciais %}
+                  <li>{{ item }}</li>
+                {% endfor %}
+              </ul>
+            </div>
+            <div class="list-box">
+              <h3>Evidências</h3>
+              <ul>
+                {% for item in segmento.proposta.provas %}
+                  <li>{{ item }}</li>
+                {% endfor %}
+              </ul>
+            </div>
+          </div>
+
+          <div class="grid-two" style="margin-top:24px;">
+            <div class="list-box">
+              <h3>Fontes de receita</h3>
+              <ul>
+                {% for item in segmento.monetizacao.fontes_receita %}
+                  <li>{{ item }}</li>
+                {% endfor %}
+              </ul>
+            </div>
+            <div class="list-box">
+              <h3>Estrutura de custos</h3>
+              <ul>
+                {% for item in segmento.monetizacao.estrutura_custos %}
+                  <li>{{ item }}</li>
+                {% endfor %}
+              </ul>
+            </div>
+            <div class="list-box">
+              <h3>Parcerias chave</h3>
+              <ul>
+                {% for item in segmento.monetizacao.parcerias_chave %}
+                  <li>{{ item }}</li>
+                {% endfor %}
+              </ul>
+            </div>
+          </div>
+        </article>
+      {% endfor %}
+    </div>
+  </section>
+
+  <!-- Modal Add/Edit Segment -->
+  <div id="segmentModal" class="modal">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h2 id="modalTitle">Adicionar Segmento</h2>
+        <span class="close" onclick="closeSegmentModal()">&times;</span>
+      </div>
+      
+      <div class="modal-body">
+        <form id="segmentForm">
+        <div class="form-group">
+          <label>Nome do Segmento *</label>
+          <input type="text" id="segmentName" required>
+        </div>
+
+        <div class="form-group">
+          <label>Descrição</label>
+          <textarea id="segmentDescription"></textarea>
+        </div>
+
+        <div class="form-group">
+          <label>Segmentos Atendidos (pressione Enter para adicionar)</label>
+          <div class="tag-input-container" id="audiencesContainer">
+            <input type="text" class="tag-input" id="audiencesInput" placeholder="Digite e pressione Enter">
+          </div>
+        </div>
+
+        <div class="form-group">
+          <label>Problemas Observados (pressione Enter)</label>
+          <div class="tag-input-container" id="problemsContainer">
+            <input type="text" class="tag-input" id="problemsInput" placeholder="Digite e pressione Enter">
+          </div>
+        </div>
+
+        <div class="form-group">
+          <label>Nossa Solução</label>
+          <textarea id="solutionText"></textarea>
+        </div>
+
+        <div class="form-group">
+          <label>Diferenciais (pressione Enter)</label>
+          <div class="tag-input-container" id="differentialsContainer">
+            <input type="text" class="tag-input" id="differentialsInput" placeholder="Digite e pressione Enter">
+          </div>
+        </div>
+
+        <div class="form-group">
+          <label>Evidências (pressione Enter)</label>
+          <div class="tag-input-container" id="evidencesContainer">
+            <input type="text" class="tag-input" id="evidencesInput" placeholder="Digite e pressione Enter">
+          </div>
+        </div>
+
+        <div class="form-group">
+          <label>Fontes de Receita (pressione Enter)</label>
+          <div class="tag-input-container" id="revenueContainer">
+            <input type="text" class="tag-input" id="revenueInput" placeholder="Digite e pressione Enter">
+          </div>
+        </div>
+
+        <div class="form-group">
+          <label>Estrutura de Custos (pressione Enter)</label>
+          <div class="tag-input-container" id="costsContainer">
+            <input type="text" class="tag-input" id="costsInput" placeholder="Digite e pressione Enter">
+          </div>
+        </div>
+
+        <div class="form-group">
+          <label>Parcerias Chave (pressione Enter)</label>
+          <div class="tag-input-container" id="partnersContainer">
+            <input type="text" class="tag-input" id="partnersInput" placeholder="Digite e pressione Enter">
+          </div>
+        </div>
+
+          <div class="form-actions">
+            <button type="button" class="btn btn-secondary" onclick="closeSegmentModal()">Cancelar</button>
+            <button type="submit" class="btn btn-primary">Salvar</button>
+          </div>
+        </form>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    const PLAN_ID = {{ plan_id if plan_id else 1 }};
+    let currentSegmentId = null;
+    let segmentsData = {{ segmentos | tojson | safe }};
+    
+    // Tag input functionality
+    function setupTagInput(inputId, containerId) {
+      const input = document.getElementById(inputId);
+      const container = document.getElementById(containerId);
+      
+      if (!input || !container) return;
+      
+      input.addEventListener('keydown', function(e) {
+        if (e.key === 'Enter') {
+          e.preventDefault();
+          const value = this.value.trim();
+          if (value) {
+            addTag(container, value, inputId);
+            this.value = '';
+          }
+        }
+      });
+    }
+
+    function addTag(container, text, inputId) {
+      const tag = document.createElement('span');
+      tag.className = 'tag';
+      tag.innerHTML = `${text} <span class="tag-remove" onclick="this.parentElement.remove()">×</span>`;
+      const input = container.querySelector('.tag-input');
+      container.insertBefore(tag, input);
+    }
+
+    function getTagsFromContainer(containerId) {
+      const container = document.getElementById(containerId);
+      const tags = container.querySelectorAll('.tag');
+      return Array.from(tags).map(tag => tag.textContent.replace('×', '').trim());
+    }
+
+    function clearTags(containerId) {
+      const container = document.getElementById(containerId);
+      const tags = container.querySelectorAll('.tag');
+      tags.forEach(tag => tag.remove());
+    }
+
+    function loadTagsToContainer(containerId, values) {
+      clearTags(containerId);
+      const container = document.getElementById(containerId);
+      values.forEach(value => {
+        const inputId = container.querySelector('.tag-input').id;
+        addTag(container, value, inputId);
+      });
+    }
+
+    // Modal functions - Padrão PFPN
+    function openAddSegmentModal() {
+      const modal = document.getElementById('segmentModal');
+      const modalTitle = document.getElementById('modalTitle');
+      const form = document.getElementById('segmentForm');
+      
+      if (!modal) return;
+      
+      if (modalTitle) modalTitle.textContent = 'Adicionar Segmento';
+      if (form) form.reset();
+      clearAllTags();
+      currentSegmentId = null;
+      
+      // Padrão PFPN: display block + classe show para animação
+      modal.style.display = 'block';
+      setTimeout(() => modal.classList.add('show'), 10);
+    }
+
+    function closeSegmentModal() {
+      const modal = document.getElementById('segmentModal');
+      if (modal) {
+        modal.classList.remove('show');
+        setTimeout(() => modal.style.display = 'none', 300);
+      }
+    }
+
+    function clearAllTags() {
+      clearTags('audiencesContainer');
+      clearTags('problemsContainer');
+      clearTags('differentialsContainer');
+      clearTags('evidencesContainer');
+      clearTags('revenueContainer');
+      clearTags('costsContainer');
+      clearTags('partnersContainer');
+    }
+
+    function editSegment(index) {
+      const segment = segmentsData[index];
+      const modal = document.getElementById('segmentModal');
+      
+      document.getElementById('modalTitle').textContent = 'Editar Segmento';
+      document.getElementById('segmentName').value = segment.nome || '';
+      document.getElementById('segmentDescription').value = segment.descricao || '';
+      document.getElementById('solutionText').value = segment.proposta?.solucao || '';
+      
+      loadTagsToContainer('audiencesContainer', segment.proposta?.segmentos || []);
+      loadTagsToContainer('problemsContainer', segment.proposta?.problemas || []);
+      loadTagsToContainer('differentialsContainer', segment.proposta?.diferenciais || []);
+      loadTagsToContainer('evidencesContainer', segment.proposta?.provas || []);
+      loadTagsToContainer('revenueContainer', segment.monetizacao?.fontes_receita || []);
+      loadTagsToContainer('costsContainer', segment.monetizacao?.estrutura_custos || []);
+      loadTagsToContainer('partnersContainer', segment.monetizacao?.parcerias_chave || []);
+      
+      currentSegmentId = index;
+      modal.style.display = 'block';
+      setTimeout(() => modal.classList.add('show'), 10);
+    }
+
+    async function deleteSegment(index) {
+      if (!confirm('Tem certeza que deseja deletar este segmento?')) return;
+      
+      const segment = segmentsData[index];
+      
+      try {
+        const response = await fetch(`/pev/api/implantacao/${PLAN_ID}/segments/${segment.id}`, {
+          method: 'DELETE',
+          headers: {'Content-Type': 'application/json'}
+        });
+        
+        const result = await response.json();
+        
+        if (result.success) {
+          location.reload();
+        } else {
+          alert('Erro ao deletar segmento: ' + (result.error || 'Erro desconhecido'));
+        }
+      } catch (error) {
+        console.error('Error:', error);
+        alert('Erro ao deletar segmento');
+      }
+    }
+
+    // Form submission
+    document.getElementById('segmentForm').addEventListener('submit', async function(e) {
+      e.preventDefault();
+      
+      const data = {
+        name: document.getElementById('segmentName').value,
+        description: document.getElementById('segmentDescription').value,
+        audiences: getTagsFromContainer('audiencesContainer'),
+        differentials: getTagsFromContainer('differentialsContainer'),
+        evidences: getTagsFromContainer('evidencesContainer'),
+        strategy: {
+          value_proposition: {
+            problems: getTagsFromContainer('problemsContainer'),
+            solution: document.getElementById('solutionText').value
+          },
+          monetization: {
+            revenue_streams: getTagsFromContainer('revenueContainer'),
+            cost_structure: getTagsFromContainer('costsContainer'),
+            key_partners: getTagsFromContainer('partnersContainer')
+          }
+        }
+      };
+      
+      try {
+        let url = `/pev/api/implantacao/${PLAN_ID}/segments`;
+        let method = 'POST';
+        
+        if (currentSegmentId !== null) {
+          const segment = segmentsData[currentSegmentId];
+          url += `/${segment.id}`;
+          method = 'PUT';
+        }
+        
+        const response = await fetch(url, {
+          method: method,
+          headers: {'Content-Type': 'application/json'},
+          body: JSON.stringify(data)
+        });
+        
+        const result = await response.json();
+        
+        if (result.success) {
+          location.reload();
+        } else {
+          alert('Erro ao salvar segmento: ' + (result.error || 'Erro desconhecido'));
+        }
+      } catch (error) {
+        console.error('Error:', error);
+        alert('Erro ao salvar segmento');
+      }
+    });
+
+    // Close modal on outside click (padrão PFPN)
+    window.onclick = function(event) {
+      const modal = document.getElementById('segmentModal');
+      if (event.target === modal) {
+        closeSegmentModal();
+      }
+    };
+
+    // Initialize tag inputs when DOM is ready
+    document.addEventListener('DOMContentLoaded', function() {
+      setupTagInput('audiencesInput', 'audiencesContainer');
+      setupTagInput('problemsInput', 'problemsContainer');
+      setupTagInput('differentialsInput', 'differentialsContainer');
+      setupTagInput('evidencesInput', 'evidencesContainer');
+      setupTagInput('revenueInput', 'revenueContainer');
+      setupTagInput('costsInput', 'costsContainer');
+      setupTagInput('partnersInput', 'partnersContainer');
+    });
+  </script>
+{% endblock %}

@@ -1,0 +1,130 @@
+{% extends "base.html" %}
+{% block title %}Plano de Investimento | Implantacao{% endblock %}
+{% block body %}{{ super() }}{% endblock %}
+
+{% block header_actions %}
+  <div class="header-nav">
+    <a href="/main" class="nav-link">Ecossistema</a>
+    <a href="{{ url_for('pev.pev_dashboard') }}" class="nav-link active">PEV</a>
+    <a href="{{ url_for('grv.grv_dashboard') }}" class="nav-link">GRV</a>
+  </div>
+  <div class="user-pill">
+    <span class="user-name">{{ user_name | default('Fabiano Ferreira') }}</span>
+  </div>
+  <div class="header-nav">
+    <select id="themeSelect" class="nav-link" style="padding:8px 12px; color:#64748b;">
+      <option value="versus">Tema Versus</option>
+      <option value="alt">Tema Azul/Branco/Amarelo</option>
+    </select>
+  </div>
+{% endblock %}
+
+{% block content %}
+  <style>
+    body {
+      background: linear-gradient(135deg, #f8fafc 0%, #e2e8f0 100%) !important;
+      color: #0f172a !important;
+    }
+
+    .investment-wrapper {
+      padding: 32px;
+      display: flex;
+      flex-direction: column;
+      gap: 24px;
+    }
+
+    .investment-card {
+      background: rgba(255, 255, 255, 0.94);
+      border: 1px solid rgba(148, 163, 184, 0.2);
+      border-radius: 24px;
+      box-shadow: 0 18px 40px rgba(15, 23, 42, 0.1);
+      backdrop-filter: blur(12px);
+      padding: 32px;
+    }
+
+    .phase-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+      gap: 18px;
+    }
+
+    .phase-card {
+      background: rgba(248, 250, 252, 0.92);
+      border: 1px solid rgba(148, 163, 184, 0.22);
+      border-radius: 18px;
+      padding: 20px;
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+      color: #475569;
+      font-size: 14px;
+    }
+
+    .phase-card h2 {
+      margin: 0;
+      font-size: 18px;
+      color: #0f172a;
+    }
+
+    .phase-card ul {
+      margin: 0;
+      padding-left: 18px;
+      line-height: 1.6;
+    }
+
+    .funding-card {
+      background: rgba(59, 130, 246, 0.12);
+      border: 1px solid rgba(59, 130, 246, 0.28);
+      border-radius: 16px;
+      padding: 20px;
+      display: grid;
+      gap: 10px;
+      color: #1d4ed8;
+    }
+
+    @media (max-width: 768px) {
+      .investment-wrapper {
+        padding: 20px;
+      }
+      .investment-card {
+        padding: 24px;
+      }
+    }
+  </style>
+
+  <section class="investment-wrapper">
+    <article class="investment-card">
+      <h1>Plano de investimento faseado</h1>
+      <p style="margin:12px 0 0; color:#475569; line-height:1.6;">
+        Cronograma de aportes e principais itens de investimento para sustentar a implantacao,
+        a expansao das experiencias e a segunda unidade.
+      </p>
+    </article>
+
+    <article class="investment-card phase-grid">
+      {% for fase in fases %}
+        <div class="phase-card">
+          <h2>{{ fase.nome }}</h2>
+          <span>Periodo: {{ fase.periodo }}</span>
+          <span>Foco: {{ fase.foco }}</span>
+          <strong style="color:#1d4ed8;">Aporte previsto: {{ fase.aporte }}</strong>
+          <ul>
+            {% for item in fase.principais_itens %}
+              <li>{{ item }}</li>
+            {% endfor %}
+          </ul>
+        </div>
+      {% endfor %}
+    </article>
+
+    <article class="investment-card">
+      <h2 style="margin:0 0 16px;">Fontes de financiamento</h2>
+      <div class="funding-card">
+        <span><strong>Recursos proprios:</strong> {{ fontes.recursos_proprios }}</span>
+        <span><strong>Linha de credito:</strong> {{ fontes.linha_credito }}</span>
+        <span><strong>Investidores:</strong> {{ fontes.investidores }}</span>
+        <span><strong>Incentivos:</strong> {{ fontes.incentivos }}</span>
+      </div>
+    </article>
+  </section>
+{% endblock %}

@@ -103,11 +103,14 @@ try:
     from modules.pev import pev_bp
     from modules.grv import grv_bp
     from modules.meetings import meetings_bp
+    from modules.my_work import my_work_bp
     app.register_blueprint(pev_bp)
     app.register_blueprint(grv_bp)
     app.register_blueprint(meetings_bp)
+    app.register_blueprint(my_work_bp)
+    print("✅ My Work module registered at /my-work")
 except Exception as _bp_err:
-    print("Aviso: Blueprints PEV/GRV/Meetings não registrados:", _bp_err)
+    print("Aviso: Blueprints PEV/GRV/Meetings/MyWork não registrados:", _bp_err)
     # Expor detalhe no log para facilitar diagnóstico
     try:
         import traceback as _tb
@@ -1686,6 +1689,12 @@ def api_create_plan():
         # Get optional description
         description = (payload.get('description') or '').strip() or None
         
+        # Get plan mode (type of planning)
+        plan_mode = (payload.get('plan_mode') or '').strip() or 'evolucao'
+        # Validate plan_mode
+        if plan_mode not in ['evolucao', 'implantacao']:
+            plan_mode = 'evolucao'
+        
         # Get year from start_date
         year = start_date.year
         
@@ -1697,7 +1706,8 @@ def api_create_plan():
             'start_date': start_date.isoformat(),
             'end_date': end_date.isoformat(),
             'year': year,
-            'status': 'draft'
+            'status': 'draft',
+            'plan_mode': plan_mode
         }
         
         new_plan_id = db.create_plan(plan_data)
@@ -1705,9 +1715,57 @@ def api_create_plan():
         if not new_plan_id:
             return jsonify({'success': False, 'error': 'Erro ao criar planejamento no banco de dados'}), 500
         
+        # Criar projeto vinculado no GRV automaticamente
+        project_created = False
+        project_id = None
+        
+        print(f"🔍 DEBUG: Iniciando criação de projeto GRV para plan_id={new_plan_id}")
+        print(f"🔍 DEBUG: company_id={company_id}, plan_mode={plan_mode}")
+        
+        try:
+            project_data = {
+                'title': f"{name} (Projeto)",
+                'description': description or f"Projeto vinculado ao planejamento {name}",
+                'status': 'planned',
+                'priority': 'medium',
+                'owner': None,
+                'start_date': start_date.isoformat(),
+                'end_date': end_date.isoformat(),
+                'notes': f"Projeto criado automaticamente ao criar o planejamento em {datetime.now().strftime('%d/%m/%Y %H:%M')}"
+            }
+            
+            print(f"🔍 DEBUG: project_data preparado: {project_data}")
+            
+            # Criar projeto usando o método do database
+            print(f"🔍 DEBUG: Chamando db.create_company_project...")
+            project_id = db.create_company_project(company_id, project_data)
+            print(f"🔍 DEBUG: create_company_project retornou: {project_id}")
+            
+            if project_id:
+                # Vincular projeto ao plan
+                print(f"🔍 DEBUG: Vinculando projeto {project_id} ao plan {new_plan_id}...")
+                conn = db._get_connection()
+                cursor = conn.cursor()
+                cursor.execute(
+                    "UPDATE company_projects SET plan_id = %s, plan_type = %s WHERE id = %s",
+                    (new_plan_id, 'PEV', project_id)
+                )
+                conn.commit()
+                conn.close()
+                project_created = True
+                print(f"✅ Projeto GRV criado automaticamente: ID {project_id} para plan {new_plan_id}")
+            else:
+                print(f"❌ create_company_project retornou None!")
+        except Exception as project_err:
+            print(f"❌ ERRO ao criar projeto GRV: {project_err}")
+            import traceback
+            traceback.print_exc()
+            # Não falhar a criação do plano por causa disso
+        
         return jsonify({
             'success': True,
             'id': new_plan_id,
+            'project_id': project_id if project_created else None,
             'data': {
                 'id': new_plan_id,
                 'name': name,
@@ -1715,7 +1773,8 @@ def api_create_plan():
                 'start_date': start_date.isoformat(),
                 'end_date': end_date.isoformat(),
                 'year': year,
-                'status': 'draft'
+                'status': 'draft',
+                'project_created': project_created
             }
         }), 201
         
@@ -1724,6 +1783,50 @@ def api_create_plan():
         import traceback
         traceback.print_exc()
         return jsonify({'success': False, 'error': str(_err)}), 500
+
+
+@app.route("/api/plans/<int:plan_id>", methods=['GET'])
+def api_get_plan(plan_id: int):
+    """Get plan basic information including company_id"""
+    try:
+        # Get plan data from database using db layer
+        conn = db._get_connection()
+        cursor = conn.cursor()
+        cursor.execute("""
+            SELECT id, company_id, name, description, start_date, end_date, 
+                   year, status, plan_mode, created_at
+            FROM plans 
+            WHERE id = %s
+        """, (plan_id,))
+        
+        plan_row = cursor.fetchone()
+        conn.close()
+        
+        if not plan_row:
+            return jsonify({'success': False, 'error': 'Planejamento não encontrado'}), 404
+        
+        # Convert row to dict
+        plan_dict = dict(plan_row)
+        
+        # Convert dates to ISO format (if they are date/datetime objects)
+        from datetime import date, datetime
+        if plan_dict.get('start_date') and isinstance(plan_dict['start_date'], (date, datetime)):
+            plan_dict['start_date'] = plan_dict['start_date'].isoformat()
+        if plan_dict.get('end_date') and isinstance(plan_dict['end_date'], (date, datetime)):
+            plan_dict['end_date'] = plan_dict['end_date'].isoformat()
+        if plan_dict.get('created_at') and isinstance(plan_dict['created_at'], (date, datetime)):
+            plan_dict['created_at'] = plan_dict['created_at'].isoformat()
+        
+        return jsonify({
+            'success': True,
+            'data': plan_dict
+        }), 200
+        
+    except Exception as err:
+        print(f"❌ Error getting plan {plan_id}: {err}")
+        import traceback
+        traceback.print_exc()
+        return jsonify({'success': False, 'error': str(err)}), 500
 
 
 @app.route("/api/companies/<int:company_id>", methods=['GET'])
@@ -9251,46 +9354,95 @@ def api_company_projects(company_id: int):
         try:
             conn = _open_portfolio_connection()
             cursor = conn.cursor()
-            cursor.execute(
-                """
-                SELECT
-                    p.id,
-                    p.company_id,
-                    p.plan_id,
-                    p.plan_type,
-                    CASE 
-                        WHEN p.plan_type = 'GRV' THEN pf.name
-                        WHEN p.plan_type = 'PEV' THEN pl.name
-                        ELSE COALESCE(pf.name, pl.name)
-                    END AS plan_name,
-                    p.plan_type AS plan_origin,
-                    p.title,
-                    p.description,
-                    p.status,
-                    p.priority,
-                    p.owner,
-                    p.responsible_id,
-                    e.name AS responsible_name,
-                    p.start_date,
-                    p.end_date,
-                    p.okr_area_ref,
-                    p.okr_reference,
-                    p.indicator_reference,
-                    p.activities,
-                    p.notes,
-                    p.code,
-                    p.code_sequence,
-                    p.created_at,
-                    p.updated_at
-                FROM company_projects p
-                LEFT JOIN portfolios pf ON pf.id = p.plan_id AND p.plan_type = 'GRV'
-                LEFT JOIN plans pl ON pl.id = p.plan_id AND p.plan_type = 'PEV'
-                LEFT JOIN employees e ON e.id = p.responsible_id
-                WHERE p.company_id = %s
-                ORDER BY LOWER(p.title)
-                """,
-                (company_id,)
-            )
+            
+            # Filtro opcional por plan_id
+            plan_id_filter = request.args.get('plan_id')
+            
+            if plan_id_filter:
+                # Filtrar por plan_id específico
+                cursor.execute(
+                    """
+                    SELECT
+                        p.id,
+                        p.company_id,
+                        p.plan_id,
+                        p.plan_type,
+                        CASE 
+                            WHEN p.plan_type = 'GRV' THEN pf.name
+                            WHEN p.plan_type = 'PEV' THEN pl.name
+                            ELSE COALESCE(pf.name, pl.name)
+                        END AS plan_name,
+                        p.plan_type AS plan_origin,
+                        p.title,
+                        p.description,
+                        p.status,
+                        p.priority,
+                        p.owner,
+                        p.responsible_id,
+                        e.name AS responsible_name,
+                        p.start_date,
+                        p.end_date,
+                        p.okr_area_ref,
+                        p.okr_reference,
+                        p.indicator_reference,
+                        p.activities,
+                        p.notes,
+                        p.code,
+                        p.code_sequence,
+                        p.created_at,
+                        p.updated_at
+                    FROM company_projects p
+                    LEFT JOIN portfolios pf ON pf.id = p.plan_id AND p.plan_type = 'GRV'
+                    LEFT JOIN plans pl ON pl.id = p.plan_id AND p.plan_type = 'PEV'
+                    LEFT JOIN employees e ON e.id = p.responsible_id
+                    WHERE p.company_id = %s AND p.plan_id = %s
+                    ORDER BY LOWER(p.title)
+                    """,
+                    (company_id, int(plan_id_filter))
+                )
+            else:
+                # Listar todos os projetos da empresa
+                cursor.execute(
+                    """
+                    SELECT
+                        p.id,
+                        p.company_id,
+                        p.plan_id,
+                        p.plan_type,
+                        CASE 
+                            WHEN p.plan_type = 'GRV' THEN pf.name
+                            WHEN p.plan_type = 'PEV' THEN pl.name
+                            ELSE COALESCE(pf.name, pl.name)
+                        END AS plan_name,
+                        p.plan_type AS plan_origin,
+                        p.title,
+                        p.description,
+                        p.status,
+                        p.priority,
+                        p.owner,
+                        p.responsible_id,
+                        e.name AS responsible_name,
+                        p.start_date,
+                        p.end_date,
+                        p.okr_area_ref,
+                        p.okr_reference,
+                        p.indicator_reference,
+                        p.activities,
+                        p.notes,
+                        p.code,
+                        p.code_sequence,
+                        p.created_at,
+                        p.updated_at
+                    FROM company_projects p
+                    LEFT JOIN portfolios pf ON pf.id = p.plan_id AND p.plan_type = 'GRV'
+                    LEFT JOIN plans pl ON pl.id = p.plan_id AND p.plan_type = 'PEV'
+                    LEFT JOIN employees e ON e.id = p.responsible_id
+                    WHERE p.company_id = %s
+                    ORDER BY LOWER(p.title)
+                    """,
+                    (company_id,)
+                )
+            
             rows = cursor.fetchall()
             conn.close()
             return jsonify({'success': True, 'projects': [_serialize_company_project(row) for row in rows]})
@@ -10233,6 +10385,14 @@ def api_plan_projects(plan_id: int):
 
 
 # User logs system routes are handled by blueprints
+
+# ========================================
+# MY WORK - Rota temporária REMOVIDA
+# ========================================
+# Agora usando blueprint: modules.my_work
+# Acesse: /my-work/
+
+
 if __name__ == "__main__":
     try:
         # Print database configuration

@@ -432,40 +432,51 @@
 
   <!-- Modal para Novo Planejamento -->
   <div id="plan-modal" class="modal" style="display: none;">
-    <div class="modal-content">
-      <div class="modal-header">
-        <h3>Novo Planejamento</h3>
-        <span class="modal-close" id="plan-modal-close">&times;</span>
+    <div class="modal-content modal-fundo-claro">
+      <div class="modal-header" style="background: linear-gradient(135deg, #ffffff 0%, #f9fafb 100%) !important; border-bottom: 1px solid rgba(30, 64, 175, 0.1) !important;">
+        <h3 style="color: #000000 !important; font-weight: 600 !important;">Novo Planejamento</h3>
+        <span class="modal-close" id="plan-modal-close" style="color: #475569 !important;">&times;</span>
       </div>
-      <form id="plan-form">
+      <form id="plan-form" style="background: linear-gradient(135deg, #ffffff 0%, #f8fafc 100%) !important;">
         <div class="form-group">
-          <label for="plan-company">Empresa *</label>
-          <select id="plan-company" name="company_id" required>
-            <option value="">Selecione uma empresa</option>
+          <label for="plan-company" style="color: #000000 !important; font-weight: 600 !important;">Empresa *</label>
+          <select id="plan-company" name="company_id" required class="input-fundo-claro" style="color: #000000 !important;">
+            <option value="" style="color: #000000 !important;">Selecione uma empresa</option>
             {% for company in companies %}
-            <option value="{{ company.id }}">{{ company.name }}</option>
+            <option value="{{ company.id }}" style="color: #000000 !important;">{{ company.name }}</option>
             {% endfor %}
           </select>
         </div>
         <div class="form-group">
-          <label for="plan-name">Nome do Planejamento *</label>
-          <input type="text" id="plan-name" name="name" required>
+          <label for="plan-type" style="color: #000000 !important; font-weight: 600 !important;">Tipo de Planejamento *</label>
+          <select id="plan-type" name="plan_mode" required class="input-fundo-claro" style="margin-bottom: 8px; color: #000000 !important;">
+            <option value="" style="color: #000000 !important;">Selecione o tipo</option>
+            <option value="evolucao" style="color: #000000 !important;">Planejamento de Evolução (Clássico)</option>
+            <option value="implantacao" style="color: #000000 !important;">Planejamento de Implantação (Novo Negócio)</option>
+          </select>
+          <div id="plan-type-description" style="font-size: 12px; color: #475569 !important; padding: 12px; background: linear-gradient(135deg, #f1f5f9 0%, #e2e8f0 100%) !important; border: 1px solid rgba(30, 64, 175, 0.1) !important; border-radius: 8px; display: none;">
+            <!-- Descrição será preenchida dinamicamente -->
+          </div>
         </div>
         <div class="form-group">
-          <label for="plan-description">Descriã§ã£o</label>
-          <textarea id="plan-description" name="description" rows="3"></textarea>
+          <label for="plan-name" style="color: #000000 !important; font-weight: 600 !important;">Nome do Planejamento *</label>
+          <input type="text" id="plan-name" name="name" required class="input-fundo-claro">
         </div>
         <div class="form-group">
-          <label for="plan-start-date">Data de Inã­cio *</label>
-          <input type="date" id="plan-start-date" name="start_date" required>
+          <label for="plan-description" style="color: #000000 !important; font-weight: 600 !important;">Descrição</label>
+          <textarea id="plan-description" name="description" rows="3" class="input-fundo-claro"></textarea>
         </div>
         <div class="form-group">
-          <label for="plan-end-date">Data de Fim *</label>
-          <input type="date" id="plan-end-date" name="end_date" required>
+          <label for="plan-start-date" style="color: #000000 !important; font-weight: 600 !important;">Data de Início *</label>
+          <input type="date" id="plan-start-date" name="start_date" required class="input-fundo-claro">
+        </div>
+        <div class="form-group">
+          <label for="plan-end-date" style="color: #000000 !important; font-weight: 600 !important;">Data de Fim *</label>
+          <input type="date" id="plan-end-date" name="end_date" required class="input-fundo-claro">
         </div>
         <div class="form-actions">
-          <button type="button" class="button button-ghost" id="plan-cancel">Cancelar</button>
-          <button type="submit" class="button button-primary">Criar Planejamento</button>
+          <button type="button" class="button button-ghost" id="plan-cancel" style="background: linear-gradient(135deg, #f1f5f9 0%, #e2e8f0 100%) !important; color: #1e293b !important; border: 1px solid rgba(30, 64, 175, 0.2) !important;">Cancelar</button>
+          <button type="submit" class="button button-primary botao-fundo-claro">Criar Planejamento</button>
         </div>
       </form>
     </div>
@@ -749,7 +760,9 @@
 
             id: plan.id || plan['id'],
 
-            name: plan.name || plan['name']
+            name: plan.name || plan['name'],
+
+            plan_mode: plan.plan_mode || plan['plan_mode'] || 'evolucao'
 
           }));
 
@@ -793,7 +806,11 @@
 
             opt.value = plan.id;
 
-            opt.textContent = plan.name;
+            // Adicionar indicador visual do tipo de planejamento
+            const planType = plan.plan_mode === 'implantacao' ? '🚀 Novo Negócio' : '📊 Clássico';
+            opt.textContent = `(${planType}) ${plan.name}`;
+
+            opt.dataset.planMode = plan.plan_mode || 'evolucao';
 
             planSelect.appendChild(opt);
 
@@ -807,9 +824,15 @@
 
           const value = this.value;
 
+          const selectedOption = this.options[this.selectedIndex];
+
+          const planMode = selectedOption ? selectedOption.dataset.planMode : 'evolucao';
+
           confirmBtn.disabled = !value;
 
           confirmBtn.dataset.planId = value || '';
+
+          confirmBtn.dataset.planMode = planMode || 'evolucao';
 
         });
 
@@ -819,13 +842,20 @@
 
           const planId = this.dataset.planId;
 
+          const planMode = this.dataset.planMode || 'evolucao';
+
           if (!planId) {
 
             return;
 
           }
 
-          window.location.href = '/plans/' + planId;
+          // Redirecionar baseado no tipo de planejamento
+          if (planMode === 'implantacao') {
+            window.location.href = '/pev/implantacao?plan_id=' + planId;
+          } else {
+            window.location.href = '/plans/' + planId;
+          }
 
         });
 
@@ -1088,6 +1118,38 @@
 
 
 
+      // Listener para mudança de tipo de planejamento
+      const planTypeSelect = document.getElementById('plan-type');
+      const planTypeDescription = document.getElementById('plan-type-description');
+
+      if (planTypeSelect && planTypeDescription) {
+        planTypeSelect.addEventListener('change', function() {
+          const selectedType = this.value;
+          
+          if (selectedType === 'evolucao') {
+            planTypeDescription.style.display = 'block';
+            planTypeDescription.innerHTML = `
+              <strong style="color: #1e40af !important;">📊 Planejamento de Evolução (Clássico)</strong><br>
+              <span style="color: #1e293b !important;">
+                Interface completa com Dashboard, Participantes, Direcionadores, OKRs Globais, OKRs de Área, Projetos e Relatórios. 
+                Ideal para empresas que já estão operando e querem evoluir estrategicamente.
+              </span>
+            `;
+          } else if (selectedType === 'implantacao') {
+            planTypeDescription.style.display = 'block';
+            planTypeDescription.innerHTML = `
+              <strong style="color: #7c3aed !important;">🚀 Planejamento de Implantação (Novo Negócio)</strong><br>
+              <span style="color: #1e293b !important;">
+                Interface moderna com fases de: Alinhamento, Modelo & Mercado, Estruturas de Execução e Entrega. 
+                Ideal para novos negócios, startups ou projetos de expansão que precisam estruturar do zero.
+              </span>
+            `;
+          } else {
+            planTypeDescription.style.display = 'none';
+          }
+        });
+      }
+
       const planForm = document.getElementById('plan-form');
 
       if (planForm) {
@@ -1100,7 +1162,11 @@
 
           const planData = Object.fromEntries(formData.entries());
 
-
+          // Validar tipo de planejamento
+          if (!planData.plan_mode) {
+            alert('Por favor, selecione o tipo de planejamento');
+            return;
+          }
 
           try {
 
@@ -1124,6 +1190,9 @@
 
             if (result.success) {
 
+              const planId = result.id;
+              const planMode = planData.plan_mode;
+
               alert('Planejamento criado com sucesso!');
 
               if (planModal) {
@@ -1134,7 +1203,14 @@
 
               planForm.reset();
 
-              window.location.reload();
+              // Redirecionar para a interface correta baseado no tipo
+              if (planMode === 'implantacao') {
+                // Interface nova de implantação
+                window.location.href = `/pev/implantacao?plan_id=${planId}`;
+              } else {
+                // Interface clássica de evolução
+                window.location.href = `/plans/${planId}`;
+              }
 
             } else {
 

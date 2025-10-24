@@ -1,0 +1,1044 @@
+{% extends "base.html" %}
+{% block title %}Projetos | PEV 2.0{% endblock %}
+{% block body %}
+  {% set active_nav = 'configs' if show_ai_only|default(False) else 'projetos' %}
+  {{ super() }}
+{% endblock %}
+{% block header_actions %}
+  {% if show_ai_only|default(False) %}
+    <div class="header-nav">
+      <a href="{{ url_for('system_configs') }}" class="nav-link">Configurações</a>
+      <span class="nav-link active">IA</span>
+    </div>
+  {% else %}
+    <div class="header-nav">
+      <a href="/main" class="nav-link">Ecossistema</a>
+      <a href="{{ url_for('pev.pev_dashboard') }}" class="nav-link">PEV</a>
+      <a href="{{ url_for('grv.grv_dashboard') }}" class="nav-link">GRV</a>
+    </div>
+  {% endif %}
+  <div class="user-pill">
+    <span class="user-name">{{ user_name | default('Fabiano Ferreira') }}</span>
+  </div>
+  <!-- Seletor de tema removido - mantido apenas tema Azul/Branco/Amarelo -->
+  <!-- Código de temas mantido para futuras implementações -->
+{% endblock %}
+{% block content %}
+  {% set companies = companies | default([]) %}
+  {% set highlights = highlights | default({}) %}
+  {% if not show_ai_only|default(False) %}
+
+  <!-- Layout Compacto em Grid -->
+  <div class="dashboard-compact-container">
+    
+    <!-- Coluna Esquerda: Header + Manifesto -->
+    <div class="dashboard-left-column">
+      <div class="page-header-compact">
+        <span class="page-eyebrow-compact">Planejamento Estratégico Versus</span>
+        <h1 class="page-title-compact">Bem-vindo, {{ user_name | default('Fabiano Ferreira') }}</h1>
+        <p class="page-subtitle-compact">Planejamento, execução e gestão com ritmo coordenado.</p>
+      </div>
+
+      <section class="surface-card-compact principle-panel-compact">
+        <div class="principle-intro-compact">
+          <h2>Nosso Manifesto</h2>
+          <p>Qualidade nasce da verdade e transparência com que enxergamos o negócio.</p>
+        </div>
+        <div class="principle-grid-compact">
+          <article class="principle-card-compact">
+            <span class="principle-number-compact">01</span>
+            <p>A qualidade do planejamento nasce da verdade e transparência.</p>
+          </article>
+          <article class="principle-card-compact">
+            <span class="principle-number-compact">02</span>
+            <p>Planejar e executar é um caminho evolutivo contínuo.</p>
+          </article>
+          <article class="principle-card-compact">
+            <span class="principle-number-compact">03</span>
+            <p>Consistência na análise gera precisão no resultado.</p>
+          </article>
+          <article class="principle-card-compact">
+            <span class="principle-number-compact">04</span>
+            <p>Sucesso floresce do alinhamento e revisões constantes.</p>
+          </article>
+          <article class="principle-card-compact">
+            <span class="principle-number-compact">05</span>
+            <p>Sustente o ritmo, expanda com segurança.</p>
+          </article>
+          <article class="principle-card-compact">
+            <span class="principle-number-compact">06</span>
+            <p>Fases temporárias de aceleração sem perder equilíbrio.</p>
+          </article>
+        </div>
+      </section>
+    </div>
+
+    <!-- Coluna Direita: Hub de Projetos -->
+    <div class="dashboard-right-column">
+      <section class="surface-card-compact project-hub-compact" id="project-hub" data-companies='{{ companies | tojson | safe }}'>
+        <div class="project-hub-header-compact">
+          <h2>Empresas & Planejamentos</h2>
+          <div class="project-hub-actions-compact">
+            <button class="button-compact button-ghost-compact" type="button" id="new-company-btn">+ Empresa</button>
+            <button class="button-compact button-primary-compact" type="button" id="new-plan-btn">+ Planejamento</button>
+          </div>
+        </div>
+        
+        <div class="project-selectors-compact">
+          <div class="selector-group-compact">
+            <label class="combo-label-compact" for="company-select">Empresa</label>
+            <select id="company-select" class="combo-control-compact">
+              <option value="">Escolha uma empresa</option>
+              {% for company in companies %}
+              <option value="{{ company.id }}">{{ company.name }}</option>
+              {% endfor %}
+            </select>
+          </div>
+          <div class="selector-group-compact">
+            <label class="combo-label-compact" for="plan-select">Planejamento</label>
+            <select id="plan-select" class="combo-control-compact" disabled>
+              <option value="">Selecione empresa primeiro</option>
+            </select>
+          </div>
+          <button id="plan-confirm" class="button-compact button-primary-compact button-full-compact" type="button" disabled>Ir para Planejamento</button>
+        </div>
+
+        <div class="project-summary-compact">
+          <div class="summary-stat-compact">
+            <span class="stat-value-compact">{{ highlights.active_plans | default('3') }}</span>
+            <span class="stat-label-compact">Planejamentos Ativos</span>
+          </div>
+          <div class="summary-stat-compact">
+            <span class="stat-value-compact">{{ highlights.average_progress | default('45') }}%</span>
+            <span class="stat-label-compact">Progresso Médio</span>
+          </div>
+          <div class="summary-stat-compact">
+            <span class="stat-value-compact">{{ highlights.upcoming_reviews | default('3') }}</span>
+            <span class="stat-label-compact">Reviews Próximas</span>
+          </div>
+        </div>
+      </section>
+    </div>
+  </div>
+  {% endif %}
+
+  <!-- Modal de Nova Empresa -->
+  <div id="company-modal" class="modal-compact">
+    <div class="modal-content-compact">
+      <div class="modal-header-compact">
+        <h2>Nova Empresa</h2>
+        <span class="modal-close-compact" id="company-modal-close">&times;</span>
+      </div>
+      <form id="company-form-compact">
+        <div class="form-group-compact">
+          <label>Nome da Empresa</label>
+          <input type="text" id="company-name" name="name" required class="input-compact" />
+        </div>
+        <div class="form-group-compact">
+          <label>Código (1-3 caracteres)</label>
+          <input type="text" id="company-code" name="code" maxlength="3" required class="input-compact" />
+          <small>Para identificação em códigos de processos</small>
+        </div>
+        <div class="modal-footer-compact">
+          <button type="button" class="button-compact button-ghost-compact" id="company-cancel">Cancelar</button>
+          <button type="submit" class="button-compact button-primary-compact">Salvar</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- Modal de Novo Planejamento - Formato PFPN -->
+  <div id="plan-modal" class="modal-compact">
+    <div class="modal-content-compact modal-pfpn">
+      <div class="modal-header-compact modal-header-pfpn">
+        <h2>Novo Planejamento</h2>
+        <span class="modal-close-compact" id="plan-modal-close">&times;</span>
+      </div>
+      <form id="plan-form-compact">
+        <div class="form-group-compact">
+          <label>Empresa *</label>
+          <select id="plan-company" name="company_id" required class="input-compact input-pfpn">
+            <option value="">Selecione uma empresa</option>
+            {% for company in companies %}
+            <option value="{{ company.id }}">{{ company.name }}</option>
+            {% endfor %}
+          </select>
+        </div>
+        <div class="form-group-compact">
+          <label>Tipo de Planejamento *</label>
+          <select id="plan-type" name="plan_mode" required class="input-compact input-pfpn">
+            <option value="">Selecione o tipo</option>
+            <option value="evolucao">Planejamento de Evolução (Clássico)</option>
+            <option value="implantacao">Planejamento de Implantação (Novo Negócio)</option>
+          </select>
+          <div id="plan-type-description" class="plan-type-description-pfpn" style="display: none;">
+            <!-- Descrição será preenchida dinamicamente -->
+          </div>
+        </div>
+        <div class="form-group-compact">
+          <label>Nome do Planejamento *</label>
+          <input type="text" id="plan-name" name="name" required class="input-compact input-pfpn" placeholder="Ex: Expansão 2025" />
+        </div>
+        <div class="form-group-compact">
+          <label>Descrição</label>
+          <textarea id="plan-description" name="description" rows="3" class="input-compact input-pfpn" placeholder="Descreva os objetivos principais deste planejamento..."></textarea>
+        </div>
+        <div class="form-group-compact">
+          <label>Data de Início *</label>
+          <input type="date" id="plan-start-date" name="start_date" required class="input-compact input-pfpn" />
+        </div>
+        <div class="form-group-compact">
+          <label>Data de Fim *</label>
+          <input type="date" id="plan-end-date" name="end_date" required class="input-compact input-pfpn" />
+        </div>
+        <div class="modal-footer-compact">
+          <button type="button" class="button-compact button-ghost-compact button-pfpn-ghost" id="plan-cancel">Cancelar</button>
+          <button type="submit" class="button-compact button-primary-compact button-pfpn-primary">Criar Planejamento</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <script>
+    document.addEventListener('DOMContentLoaded', function() {
+      // Recuperar companies do data attribute
+      const projectHub = document.getElementById('project-hub');
+      const companiesData = projectHub ? JSON.parse(projectHub.dataset.companies || '[]') : [];
+      
+      // Seletores
+      const companySelect = document.getElementById('company-select');
+      const planSelect = document.getElementById('plan-select');
+      const planConfirm = document.getElementById('plan-confirm');
+      
+      // Modal de Empresa
+      const companyModal = document.getElementById('company-modal');
+      const newCompanyBtn = document.getElementById('new-company-btn');
+      const companyClose = document.getElementById('company-modal-close');
+      const companyCancel = document.getElementById('company-cancel');
+      const companyForm = document.getElementById('company-form-compact');
+      
+      // Modal de Planejamento
+      const planModal = document.getElementById('plan-modal');
+      const newPlanBtn = document.getElementById('new-plan-btn');
+      const planClose = document.getElementById('plan-modal-close');
+      const planCancel = document.getElementById('plan-cancel');
+      const planForm = document.getElementById('plan-form-compact');
+      
+      // Abrir modais
+      if (newCompanyBtn) {
+        newCompanyBtn.onclick = () => companyModal.style.display = 'flex';
+      }
+      if (newPlanBtn) {
+        newPlanBtn.onclick = () => planModal.style.display = 'flex';
+      }
+      
+      // Fechar modais
+      if (companyClose) companyClose.onclick = () => companyModal.style.display = 'none';
+      if (companyCancel) companyCancel.onclick = () => companyModal.style.display = 'none';
+      if (planClose) planClose.onclick = () => planModal.style.display = 'none';
+      if (planCancel) planCancel.onclick = () => planModal.style.display = 'none';
+      
+      // Fechar ao clicar fora
+      window.onclick = function(event) {
+        if (event.target == companyModal) companyModal.style.display = 'none';
+        if (event.target == planModal) planModal.style.display = 'none';
+      }
+      
+      // Form de empresa
+      if (companyForm) {
+        companyForm.onsubmit = function(e) {
+          e.preventDefault();
+          const formData = new FormData(this);
+          const data = Object.fromEntries(formData.entries());
+          
+          fetch('/api/companies', {
+            method: 'POST',
+            headers: {'Content-Type': 'application/json'},
+            body: JSON.stringify(data)
+          })
+          .then(response => response.json())
+          .then(result => {
+            if (result.success) {
+              window.showMessage('Empresa criada com sucesso!', 'success');
+              companyModal.style.display = 'none';
+              location.reload();
+            } else {
+              window.showMessage('Erro: ' + (result.error || 'Erro desconhecido'), 'error');
+            }
+          })
+          .catch(error => {
+            window.showMessage('Erro ao criar empresa: ' + error.message, 'error');
+          });
+        };
+      }
+      
+      // Descrição dinâmica do tipo de planejamento
+      const planTypeSelect = document.getElementById('plan-type');
+      const planTypeDescription = document.getElementById('plan-type-description');
+      
+      if (planTypeSelect && planTypeDescription) {
+        planTypeSelect.addEventListener('change', function() {
+          const selectedType = this.value;
+          if (selectedType === 'evolucao') {
+            planTypeDescription.innerHTML = `
+              <strong>Planejamento de Evolução</strong><br>
+              Ideal para empresas já estabelecidas que buscam crescimento sustentável, 
+              melhoria contínua e expansão de mercado. Foca em otimização de processos, 
+              inovação incremental e fortalecimento de posicionamento.
+            `;
+            planTypeDescription.style.display = 'block';
+          } else if (selectedType === 'implantacao') {
+            planTypeDescription.innerHTML = `
+              <strong>Planejamento de Implantação</strong><br>
+              Voltado para novos negócios ou novos produtos/serviços. Estrutura a estratégia 
+              de entrada no mercado, definição de proposta de valor, modelagem financeira e 
+              construção das bases operacionais e comerciais.
+            `;
+            planTypeDescription.style.display = 'block';
+          } else {
+            planTypeDescription.style.display = 'none';
+          }
+        });
+      }
+      
+      // Form de planejamento
+      if (planForm) {
+        planForm.onsubmit = function(e) {
+          e.preventDefault();
+          const formData = new FormData(this);
+          const data = Object.fromEntries(formData.entries());
+          
+          // Validar datas
+          if (!data.start_date || !data.end_date) {
+            window.showMessage('Por favor, preencha as datas de início e fim.', 'error');
+            return;
+          }
+          
+          fetch('/api/plans', {
+            method: 'POST',
+            headers: {'Content-Type': 'application/json'},
+            body: JSON.stringify(data)
+          })
+          .then(response => response.json())
+          .then(result => {
+            if (result.success) {
+              window.showMessage('Planejamento criado com sucesso!', 'success');
+              planModal.style.display = 'none';
+              location.reload();
+            } else {
+              window.showMessage('Erro: ' + (result.error || 'Erro desconhecido'), 'error');
+            }
+          })
+          .catch(error => {
+            window.showMessage('Erro ao criar planejamento: ' + error.message, 'error');
+          });
+        };
+      }
+      
+      // Lógica de seleção
+      if (companySelect && planSelect && planConfirm) {
+        companySelect.addEventListener('change', function() {
+          const selectedCompanyId = this.value;
+          planSelect.innerHTML = '<option value="">Selecione um planejamento</option>';
+          planSelect.disabled = true;
+          planConfirm.disabled = true;
+          
+          if (selectedCompanyId) {
+            const company = companiesData.find(c => String(c.id) === String(selectedCompanyId));
+            if (company && company.plans && company.plans.length > 0) {
+              company.plans.forEach(plan => {
+                const option = document.createElement('option');
+                option.value = plan.id;
+                option.textContent = plan.name;
+                planSelect.appendChild(option);
+              });
+              planSelect.disabled = false;
+            }
+          }
+        });
+        
+        planSelect.addEventListener('change', function() {
+          planConfirm.disabled = !this.value;
+        });
+        
+        planConfirm.addEventListener('click', function() {
+          const selectedPlanId = planSelect.value;
+          if (selectedPlanId) {
+            window.location.href = `/pev/implantacao?plan_id=${selectedPlanId}`;
+          }
+        });
+      }
+    });
+  </script>
+
+  <style>
+    /* Reset e Container Principal - Estilo GRV */
+    .dashboard-compact-container {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 24px;
+      padding: 24px;
+      max-height: calc(100vh - 80px);
+      overflow: hidden;
+      background: linear-gradient(135deg, #ffffff 0%, #f8fafc 100%);
+    }
+
+    /* Colunas */
+    .dashboard-left-column,
+    .dashboard-right-column {
+      display: flex;
+      flex-direction: column;
+      gap: 16px;
+      overflow: hidden;
+    }
+
+    /* Header Compacto - Estilo GRV */
+    .page-header-compact {
+      padding: 20px 24px;
+      background: linear-gradient(135deg, #ffffff 0%, #f8fafc 100%);
+      border-radius: 16px;
+      border: 1px solid rgba(30, 64, 175, 0.1);
+      box-shadow: 0 8px 24px rgba(30, 64, 175, 0.08);
+      position: relative;
+      overflow: hidden;
+    }
+
+    .page-header-compact::before {
+      content: '';
+      position: absolute;
+      top: 0;
+      left: 0;
+      right: 0;
+      height: 3px;
+      background: linear-gradient(90deg, #1e40af, #7c3aed, #dc2626);
+    }
+
+    .page-eyebrow-compact {
+      font-size: 12px;
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+      color: #1e40af;
+      display: block;
+      margin-bottom: 6px;
+    }
+
+    .page-title-compact {
+      font-size: 22px;
+      font-weight: 700;
+      color: #0f172a;
+      margin: 0 0 6px 0;
+    }
+
+    .page-subtitle-compact {
+      font-size: 13px;
+      color: #475569;
+      margin: 0;
+      line-height: 1.4;
+    }
+
+    /* Manifesto Compacto - Estilo GRV */
+    .surface-card-compact {
+      background: linear-gradient(135deg, #ffffff 0%, #f8fafc 100%);
+      border: 1px solid rgba(30, 64, 175, 0.1);
+      border-radius: 16px;
+      box-shadow: 0 8px 24px rgba(30, 64, 175, 0.08);
+      position: relative;
+      overflow: hidden;
+    }
+
+    .surface-card-compact::before {
+      content: '';
+      position: absolute;
+      top: 0;
+      left: 0;
+      right: 0;
+      height: 3px;
+      background: linear-gradient(90deg, #1e40af, #7c3aed, #dc2626);
+    }
+
+    .principle-panel-compact {
+      padding: 24px;
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      overflow: hidden;
+      background: transparent;
+    }
+
+    .principle-intro-compact {
+      margin-bottom: 12px;
+    }
+
+    .principle-intro-compact h2 {
+      font-size: 16px;
+      font-weight: 700;
+      color: #1e293b;
+      margin: 0 0 6px 0;
+    }
+
+    .principle-intro-compact p {
+      font-size: 12px;
+      color: #475569;
+      margin: 0;
+      line-height: 1.4;
+    }
+
+    .principle-grid-compact {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 10px;
+      flex: 1;
+      overflow-y: auto;
+    }
+
+    .principle-card-compact {
+      background: linear-gradient(135deg, #ffffff 0%, #f8fafc 100%);
+      border: 1px solid rgba(30, 64, 175, 0.1);
+      border-radius: 12px;
+      padding: 16px;
+      position: relative;
+      transition: all 0.3s ease;
+      overflow: hidden;
+    }
+
+    .principle-card-compact::before {
+      content: '';
+      position: absolute;
+      top: 0;
+      left: 0;
+      bottom: 0;
+      width: 4px;
+      background: linear-gradient(180deg, #1e40af, #7c3aed, #dc2626);
+      opacity: 0.7;
+    }
+
+    .principle-card-compact:hover {
+      background: linear-gradient(135deg, #eff6ff 0%, #dbeafe 100%);
+      border-color: rgba(30, 64, 175, 0.3);
+      transform: translateY(-2px);
+      box-shadow: 0 8px 16px rgba(30, 64, 175, 0.15);
+    }
+
+    .principle-number-compact {
+      position: absolute;
+      top: 12px;
+      right: 12px;
+      font-size: 11px;
+      font-weight: 700;
+      color: #1e40af;
+      background: linear-gradient(135deg, #dbeafe, #eff6ff);
+      width: 28px;
+      height: 28px;
+      border-radius: 50%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      box-shadow: 0 2px 8px rgba(30, 64, 175, 0.15);
+    }
+
+    .principle-card-compact p {
+      font-size: 11px;
+      line-height: 1.5;
+      color: #0f172a;
+      margin: 0;
+      padding-right: 28px;
+    }
+
+    /* Hub de Projetos Compacto - Estilo GRV */
+    .project-hub-compact {
+      padding: 24px;
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      overflow: hidden;
+      background: linear-gradient(135deg, #ffffff 0%, #f8fafc 100%);
+      border: 1px solid rgba(30, 64, 175, 0.1);
+      border-radius: 16px;
+      box-shadow: 0 8px 24px rgba(30, 64, 175, 0.08);
+      position: relative;
+    }
+
+    .project-hub-compact::before {
+      content: '';
+      position: absolute;
+      top: 0;
+      left: 0;
+      right: 0;
+      height: 3px;
+      background: linear-gradient(90deg, #1e40af, #7c3aed, #dc2626);
+    }
+
+    .project-hub-header-compact {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 20px;
+      padding-bottom: 0;
+      border-bottom: none;
+    }
+
+    .project-hub-header-compact h2 {
+      font-size: 16px;
+      font-weight: 700;
+      color: #1e293b;
+      margin: 0;
+    }
+
+    .project-hub-actions-compact {
+      display: flex;
+      gap: 8px;
+    }
+
+    /* Seletores Compactos */
+    .project-selectors-compact {
+      display: flex;
+      flex-direction: column;
+      gap: 12px;
+      margin-bottom: 16px;
+    }
+
+    .selector-group-compact {
+      display: flex;
+      flex-direction: column;
+      gap: 6px;
+    }
+
+    .combo-label-compact {
+      font-size: 12px;
+      font-weight: 600;
+      color: #334155;
+    }
+
+    .combo-control-compact {
+      padding: 10px 12px;
+      border: 1px solid #e2e8f0;
+      border-radius: 8px;
+      font-size: 13px;
+      color: #0f172a;
+      background: #ffffff;
+      transition: all 0.2s;
+    }
+
+    .combo-control-compact:focus {
+      outline: none;
+      border-color: #94a3b8;
+      box-shadow: 0 0 0 3px rgba(148, 163, 184, 0.1);
+    }
+
+    .combo-control-compact:disabled {
+      opacity: 0.5;
+      cursor: not-allowed;
+    }
+
+    /* Resumo - Estilo GRV */
+    .project-summary-compact {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 16px;
+      padding: 20px;
+      background: linear-gradient(135deg, #ffffff 0%, #f8fafc 100%);
+      border-radius: 12px;
+      border: 1px solid rgba(30, 64, 175, 0.1);
+      margin-top: 16px;
+    }
+
+    .summary-stat-compact {
+      text-align: center;
+      padding: 16px;
+      background: linear-gradient(135deg, #eff6ff 0%, #dbeafe 100%);
+      border-radius: 12px;
+      transition: all 0.3s ease;
+    }
+
+    .summary-stat-compact:hover {
+      transform: translateY(-4px);
+      box-shadow: 0 8px 16px rgba(30, 64, 175, 0.15);
+    }
+
+    .stat-value-compact {
+      display: block;
+      font-size: 28px;
+      font-weight: 700;
+      color: #0f172a;
+      line-height: 1;
+      margin-bottom: 8px;
+    }
+
+    .stat-label-compact {
+      display: block;
+      font-size: 12px;
+      color: #1e40af;
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+    }
+
+    /* Botões Compactos */
+    .button-compact {
+      padding: 8px 14px;
+      border-radius: 8px;
+      font-size: 12px;
+      font-weight: 600;
+      cursor: pointer;
+      transition: all 0.2s;
+      border: 1px solid;
+    }
+
+    .button-primary-compact {
+      background: linear-gradient(135deg, #1e40af, #7c3aed);
+      color: #ffffff;
+      border: none;
+      box-shadow: 0 4px 12px rgba(30, 64, 175, 0.25);
+      position: relative;
+      overflow: hidden;
+    }
+
+    .button-primary-compact::before {
+      content: '';
+      position: absolute;
+      top: 0;
+      left: -100%;
+      width: 100%;
+      height: 100%;
+      background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.2), transparent);
+      transition: left 0.5s ease;
+    }
+
+    .button-primary-compact:hover:not(:disabled)::before {
+      left: 100%;
+    }
+
+    .button-primary-compact:hover:not(:disabled) {
+      transform: translateY(-2px);
+      box-shadow: 0 8px 20px rgba(30, 64, 175, 0.35);
+    }
+
+    .button-ghost-compact {
+      background: linear-gradient(135deg, rgba(148, 163, 184, 0.2), rgba(100, 116, 139, 0.15));
+      color: #1e293b;
+      border: 1px solid rgba(148, 163, 184, 0.3);
+    }
+
+    .button-ghost-compact:hover {
+      background: linear-gradient(135deg, rgba(148, 163, 184, 0.3), rgba(100, 116, 139, 0.25));
+      transform: translateY(-1px);
+      box-shadow: 0 4px 8px rgba(148, 163, 184, 0.2);
+      color: #1e293b;
+    }
+
+    .button-full-compact {
+      width: 100%;
+    }
+
+    .button-compact:disabled {
+      opacity: 0.5;
+      cursor: not-allowed;
+    }
+
+    /* Modais */
+    .modal-compact {
+      display: none;
+      position: fixed;
+      z-index: 1000;
+      left: 0;
+      top: 0;
+      width: 100%;
+      height: 100%;
+      background-color: rgba(0, 0, 0, 0.6);
+      align-items: center;
+      justify-content: center;
+    }
+
+    .modal-content-compact {
+      background: linear-gradient(135deg, #ffffff 0%, #f8fafc 100%);
+      border-radius: 12px;
+      width: 90%;
+      max-width: 500px;
+      box-shadow: 0 24px 48px rgba(30, 64, 175, 0.25);
+    }
+
+    .modal-header-compact {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: 20px 24px;
+      border-bottom: 1px solid #e2e8f0;
+    }
+
+    .modal-header-compact h2 {
+      font-size: 18px;
+      font-weight: 700;
+      color: #0f172a;
+      margin: 0;
+    }
+
+    .modal-close-compact {
+      font-size: 28px;
+      font-weight: 300;
+      color: #64748b;
+      cursor: pointer;
+      line-height: 1;
+      transition: color 0.2s;
+    }
+
+    .modal-close-compact:hover {
+      color: #1e293b;
+    }
+
+    .form-group-compact {
+      padding: 0 24px;
+      margin: 16px 0;
+    }
+
+    .form-group-compact label {
+      display: block;
+      font-size: 13px;
+      font-weight: 600;
+      color: #334155;
+      margin-bottom: 6px;
+    }
+
+    .form-group-compact small {
+      display: block;
+      font-size: 11px;
+      color: #475569;
+      margin-top: 4px;
+    }
+
+    .input-compact {
+      width: 100%;
+      padding: 10px 12px;
+      border: 1px solid #e2e8f0;
+      border-radius: 8px;
+      font-size: 13px;
+      color: #0f172a;
+      background: #ffffff;
+      transition: all 0.2s;
+    }
+
+    .input-compact:focus {
+      outline: none;
+      border-color: #94a3b8;
+      box-shadow: 0 0 0 3px rgba(148, 163, 184, 0.1);
+    }
+
+    .modal-footer-compact {
+      display: flex;
+      justify-content: flex-end;
+      gap: 10px;
+      padding: 16px 24px 20px;
+      border-top: 1px solid #e2e8f0;
+      margin-top: 16px;
+    }
+
+    /* Responsivo */
+    @media (max-width: 1024px) {
+      .dashboard-compact-container {
+        grid-template-columns: 1fr;
+        max-height: none;
+        overflow: visible;
+      }
+      
+      .principle-grid-compact {
+        grid-template-columns: 1fr;
+        overflow-y: visible;
+      }
+    }
+
+    /* ========================================
+       TEMA ESCURO (Versus) - Override quando ativo
+       ======================================== */
+    
+    /* Aplicar quando o tema Versus estiver ativo */
+    body:has(#themeStylesheet[href=""]) .page-header-compact,
+    body:not(:has(#themeStylesheet[href*="theme-alt"])) .page-header-compact {
+      background: linear-gradient(135deg, #e2e8f0 0%, #f1f5f9 100%) !important;
+      border: 1px solid rgba(58, 241, 174, 0.2) !important;
+    }
+
+    body:has(#themeStylesheet[href=""]) .page-eyebrow-compact,
+    body:not(:has(#themeStylesheet[href*="theme-alt"])) .page-eyebrow-compact {
+      color: #1e40af !important;
+    }
+
+    body:has(#themeStylesheet[href=""]) .surface-card-compact,
+    body:has(#themeStylesheet[href=""]) .principle-panel-compact,
+    body:has(#themeStylesheet[href=""]) .project-hub-compact,
+    body:not(:has(#themeStylesheet[href*="theme-alt"])) .surface-card-compact,
+    body:not(:has(#themeStylesheet[href*="theme-alt"])) .principle-panel-compact,
+    body:not(:has(#themeStylesheet[href*="theme-alt"])) .project-hub-compact {
+      background: linear-gradient(135deg, #e2e8f0 0%, #f1f5f9 100%) !important;
+    }
+
+    body:has(#themeStylesheet[href=""]) .principle-card-compact,
+    body:not(:has(#themeStylesheet[href*="theme-alt"])) .principle-card-compact {
+      background: linear-gradient(135deg, #f8fafc 0%, #ffffff 100%) !important;
+      border: 1px solid rgba(148, 163, 184, 0.3) !important;
+    }
+
+    body:has(#themeStylesheet[href=""]) .principle-number-compact,
+    body:not(:has(#themeStylesheet[href*="theme-alt"])) .principle-number-compact {
+      color: #1e40af !important;
+      background: rgba(59, 130, 246, 0.15) !important;
+    }
+
+    body:has(#themeStylesheet[href=""]) .principle-card-compact p,
+    body:has(#themeStylesheet[href=""]) .page-title-compact,
+    body:has(#themeStylesheet[href=""]) .combo-label-compact,
+    body:not(:has(#themeStylesheet[href*="theme-alt"])) .principle-card-compact p,
+    body:not(:has(#themeStylesheet[href*="theme-alt"])) .page-title-compact,
+    body:not(:has(#themeStylesheet[href*="theme-alt"])) .combo-label-compact {
+      color: #0f172a !important;
+    }
+
+    body:has(#themeStylesheet[href=""]) .button-primary-compact,
+    body:not(:has(#themeStylesheet[href*="theme-alt"])) .button-primary-compact {
+      background: linear-gradient(135deg, #60a5fa, #3b82f6) !important;
+      color: #ffffff !important;
+    }
+
+    body:has(#themeStylesheet[href=""]) .button-ghost-compact,
+    body:not(:has(#themeStylesheet[href*="theme-alt"])) .button-ghost-compact {
+      background: linear-gradient(135deg, #dbeafe, #bfdbfe) !important;
+      color: #1e40af !important;
+      border-color: rgba(59, 130, 246, 0.4) !important;
+    }
+
+    body:has(#themeStylesheet[href=""]) .project-summary-compact,
+    body:not(:has(#themeStylesheet[href*="theme-alt"])) .project-summary-compact {
+      background: linear-gradient(135deg, #e2e8f0 0%, #f1f5f9 100%) !important;
+      border: 1px solid rgba(148, 163, 184, 0.3) !important;
+    }
+
+    body:has(#themeStylesheet[href=""]) .stat-value-compact,
+    body:not(:has(#themeStylesheet[href*="theme-alt"])) .stat-value-compact {
+      color: #1e40af !important;
+    }
+    
+    body:has(#themeStylesheet[href=""]) .dashboard-compact-container,
+    body:not(:has(#themeStylesheet[href*="theme-alt"])) .dashboard-compact-container {
+      background: linear-gradient(135deg, #f8fafc 0%, #f1f5f9 100%) !important;
+    }
+
+    /* ========================================
+       FORMATO PFPN (Planejamento Fundo Plano Novo)
+       Fundo Claro para Modais - Sempre Ativo
+       ======================================== */
+    
+    .modal-pfpn {
+      background: linear-gradient(135deg, #ffffff 0%, #f8fafc 100%) !important;
+      box-shadow: 0 24px 48px rgba(30, 64, 175, 0.25) !important;
+    }
+
+    .modal-header-pfpn {
+      background: linear-gradient(135deg, #ffffff 0%, #f9fafb 100%) !important;
+      border-bottom: 1px solid rgba(30, 64, 175, 0.1) !important;
+    }
+
+    .modal-header-pfpn h2 {
+      color: #000000 !important;
+      font-weight: 600 !important;
+    }
+
+    .modal-content-compact.modal-pfpn {
+      background: linear-gradient(135deg, #ffffff 0%, #f8fafc 100%) !important;
+    }
+
+    .input-pfpn {
+      background: #ffffff !important;
+      border: 1px solid rgba(30, 64, 175, 0.2) !important;
+      color: #000000 !important;
+      transition: all 0.2s ease;
+    }
+
+    .input-pfpn:focus {
+      border-color: #3b82f6 !important;
+      box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.15) !important;
+      outline: none;
+    }
+
+    .input-pfpn option {
+      color: #000000 !important;
+      background: #ffffff !important;
+    }
+
+    .form-group-compact label {
+      color: #000000 !important;
+      font-weight: 600 !important;
+    }
+
+    .plan-type-description-pfpn {
+      font-size: 12px;
+      color: #475569 !important;
+      padding: 12px;
+      margin-top: 8px;
+      background: linear-gradient(135deg, #f1f5f9 0%, #e2e8f0 100%) !important;
+      border: 1px solid rgba(30, 64, 175, 0.1) !important;
+      border-radius: 8px;
+      line-height: 1.5;
+    }
+
+    .plan-type-description-pfpn strong {
+      color: #1e40af !important;
+      display: block;
+      margin-bottom: 6px;
+    }
+
+    .button-pfpn-primary {
+      background: linear-gradient(135deg, #3b82f6 0%, #2563eb 100%) !important;
+      color: #ffffff !important;
+      border-color: #3b82f6 !important;
+      font-weight: 600 !important;
+    }
+
+    .button-pfpn-primary:hover:not(:disabled) {
+      background: linear-gradient(135deg, #2563eb 0%, #1d4ed8 100%) !important;
+      box-shadow: 0 4px 12px rgba(59, 130, 246, 0.4) !important;
+    }
+
+    .button-pfpn-ghost {
+      background: linear-gradient(135deg, #f1f5f9 0%, #e2e8f0 100%) !important;
+      color: #1e293b !important;
+      border: 1px solid rgba(30, 64, 175, 0.2) !important;
+    }
+
+    .button-pfpn-ghost:hover {
+      background: linear-gradient(135deg, #e2e8f0 0%, #cbd5e1 100%) !important;
+      border-color: #3b82f6 !important;
+    }
+
+    /* Textarea específico */
+    textarea.input-pfpn {
+      resize: vertical;
+      min-height: 80px;
+      font-family: inherit;
+      padding: 10px 12px;
+    }
+
+    /* Placeholder styling */
+    .input-pfpn::placeholder {
+      color: #94a3b8 !important;
+      opacity: 1;
+    }
+
+    .input-pfpn::-webkit-input-placeholder {
+      color: #94a3b8 !important;
+    }
+
+    .input-pfpn::-moz-placeholder {
+      color: #94a3b8 !important;
+    }
+
+    /* Date inputs específicos */
+    input[type="date"].input-pfpn {
+      cursor: pointer;
+    }
+
+    input[type="date"].input-pfpn::-webkit-calendar-picker-indicator {
+      cursor: pointer;
+      filter: brightness(0) saturate(100%) invert(27%) sepia(51%) saturate(2878%) hue-rotate(206deg) brightness(97%) contrast(97%);
+    }
+  </style>
+{% endblock %}
+

@@ -1,0 +1,38 @@
+========================================
+  ATALHO DIRETO PARA CADASTRAR USUÁRIO
+========================================
+
+Enquanto não resolve o problema do botão,
+use este link direto:
+
+http://127.0.0.1:5003/auth/register
+
+Este link funciona SEMPRE e leva direto
+para o formulário de cadastro de usuário.
+
+========================================
+IMPORTANTE:
+========================================
+
+1. Faça login PRIMEIRO em:
+   http://127.0.0.1:5003/login
+   
+   Email: admin@versus.com.br
+   Senha: 123456
+
+2. DEPOIS acesse o link acima
+
+3. Cadastre o novo usuário
+
+========================================
+PARA RESOLVER O PROBLEMA DO BOTÃO:
+========================================
+
+1. Na página de usuários, pressione F12
+2. Vá em Console
+3. Cole os códigos do arquivo:
+   TESTE_CONSOLE_NAVEGADOR.md
+
+========================================
+
+

@@ -516,13 +516,6 @@
               <label for="filterResponsible">Responsável</label>
               <select id="filterResponsible">
                 <option value="">Todos os responsáveis</option>
-                {% set unique_responsibles = [] %}
-                {% for project in projects %}
-                  {% if project.responsible_name and project.responsible_name not in unique_responsibles %}
-                    {% set _ = unique_responsibles.append(project.responsible_name) %}
-                    <option value="{{ project.responsible_name }}">{{ project.responsible_name }}</option>
-                  {% endif %}
-                {% endfor %}
               </select>
             </div>
             <div class="filter-field">
@@ -647,6 +640,38 @@
   let allActivities = [];
   let filteredActivities = [];
 
+  function populateResponsibleFilter() {
+    const responsibleSelect = filterElements.responsible;
+    if (!responsibleSelect) {
+      return;
+    }
+
+    const previousValue = responsibleSelect.value;
+
+    Array.from(responsibleSelect.options)
+      .filter(option => option.value !== '')
+      .forEach(option => option.remove());
+
+    const responsibles = Array.from(new Set(
+      allActivities
+        .map(activity => (activity.who || '').trim())
+        .filter(Boolean)
+    )).sort((a, b) => a.localeCompare(b, 'pt-BR'));
+
+    responsibles.forEach(name => {
+      const option = document.createElement('option');
+      option.value = name;
+      option.textContent = name;
+      responsibleSelect.appendChild(option);
+    });
+
+    if (previousValue && responsibles.includes(previousValue)) {
+      responsibleSelect.value = previousValue;
+    } else {
+      responsibleSelect.value = '';
+    }
+  }
+
   // Toggle do filtro
   filterHeader.addEventListener('click', () => {
     const isOpen = filterContent.classList.contains('open');
@@ -690,7 +715,8 @@
       totalActivitiesElement.textContent = allActivities.length;
     }
     filteredActivities = [...allActivities];
-    renderKanban();
+    populateResponsibleFilter();
+    applyFilters();
   }
 
   // Renderizar Kanban

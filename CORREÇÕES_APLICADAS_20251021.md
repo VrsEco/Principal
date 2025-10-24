@@ -312,3 +312,5 @@ docker-compose -f docker-compose.dev.yml logs -f db_dev
 **Status Geral:** ✅ Todas as correções aplicadas com sucesso em DEV
 
 
+
+

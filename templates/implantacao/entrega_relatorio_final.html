@@ -1,0 +1,619 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <meta http-equiv="X-UA-Compatible" content="IE=edge">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Relatorio Final de Implantacao</title>
+  <style>
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+
+    body {
+      background: #e9edf5;
+      color: #0f172a;
+      font-family: "Segoe UI", "Inter", Arial, sans-serif;
+      line-height: 1.6;
+      padding: 32px 16px 64px;
+    }
+
+    .model7-report {
+      max-width: 1020px;
+      margin: 0 auto;
+    }
+
+    .page {
+      position: relative;
+      background: #ffffff;
+      border-radius: 28px;
+      border: 1px solid rgba(15, 23, 42, 0.08);
+      box-shadow: 0 34px 70px rgba(15, 23, 42, 0.16);
+      margin-bottom: 42px;
+      overflow: hidden;
+      padding: 48mm 58px;
+      page-break-after: always;
+      width: 100%;
+    }
+
+    .page:last-child {
+      page-break-after: auto;
+    }
+
+    .page.landscape {
+      padding: 35mm 48px;
+    }
+
+    @page portrait {
+      size: A4 portrait;
+      margin: 18mm 16mm 22mm;
+    }
+
+    @page landscapePage {
+      size: A4 landscape;
+      margin: 18mm 22mm 18mm;
+    }
+
+    .page.portrait {
+      page: portrait;
+    }
+
+    .page.landscape {
+      page: landscapePage;
+    }
+
+    .cover-page {
+      background: linear-gradient(135deg, #132b6c 0%, #2645a3 55%, #3a55c8 100%);
+      color: #ffffff;
+      padding: 95px 82px;
+    }
+
+    .cover-page::after {
+      content: "";
+      position: absolute;
+      right: -70px;
+      bottom: -62px;
+      width: 260px;
+      height: 260px;
+      background: rgba(255, 255, 255, 0.12);
+      border-radius: 50%;
+      filter: blur(0.4px);
+    }
+
+    .cover-page h1 {
+      font-size: 46px;
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+      margin-bottom: 24px;
+    }
+
+    .cover-page h2 {
+      font-size: 28px;
+      font-weight: 500;
+      opacity: 0.9;
+      margin-bottom: 46px;
+    }
+
+    .cover-meta-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+      gap: 18px;
+      position: relative;
+      z-index: 1;
+    }
+
+    .cover-meta-card {
+      background: rgba(255, 255, 255, 0.12);
+      padding: 20px;
+      border-radius: 18px;
+      backdrop-filter: blur(6px);
+    }
+
+    .cover-meta-card span {
+      display: block;
+      font-size: 12px;
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+      opacity: 0.65;
+    }
+
+    .cover-meta-card strong {
+      display: block;
+      margin-top: 8px;
+      font-size: 18px;
+    }
+
+    .section-header span {
+      display: inline-block;
+      font-size: 12px;
+      letter-spacing: 0.18em;
+      text-transform: uppercase;
+      color: #3b82f6;
+    }
+
+    .section-header h3 {
+      font-size: 30px;
+      font-weight: 700;
+      margin-top: 6px;
+      color: #0f172a;
+    }
+
+    .section-body {
+      margin-top: 26px;
+    }
+
+    .model7-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+      gap: 22px;
+    }
+
+    .model7-card {
+      background: rgba(248, 250, 252, 0.92);
+      border-radius: 20px;
+      border: 1px solid rgba(148, 163, 184, 0.24);
+      padding: 22px;
+      box-shadow: 0 20px 35px rgba(15, 23, 42, 0.07);
+      color: #475569;
+      display: flex;
+      flex-direction: column;
+      gap: 12px;
+      page-break-inside: avoid;
+    }
+
+    .model7-card h4 {
+      margin: 0;
+      font-size: 19px;
+      color: #0f172a;
+    }
+
+    .model7-card ul {
+      margin: 0;
+      padding-left: 18px;
+      font-size: 14px;
+      line-height: 1.6;
+    }
+
+    table.model7-table {
+      width: 100%;
+      border-collapse: collapse;
+      margin-top: 16px;
+      color: #394867;
+      font-size: 13px;
+      box-shadow: 0 18px 30px rgba(15, 23, 42, 0.05);
+      page-break-inside: avoid;
+    }
+
+    table.model7-table thead tr {
+      background: rgba(59, 130, 246, 0.18);
+    }
+
+    table.model7-table th,
+    table.model7-table td {
+      border: 1px solid rgba(148, 163, 184, 0.26);
+      padding: 12px 14px;
+      text-align: left;
+      vertical-align: top;
+    }
+
+    table.model7-table th {
+      text-transform: uppercase;
+      letter-spacing: 0.12em;
+      font-size: 11px;
+      color: #1d4ed8;
+    }
+
+    .highlight-box {
+      margin-top: 22px;
+      background: rgba(34, 197, 94, 0.12);
+      border: 1px solid rgba(34, 197, 94, 0.28);
+      border-radius: 16px;
+      padding: 22px;
+      color: #166534;
+      font-size: 14px;
+      page-break-inside: avoid;
+    }
+
+    .two-column {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+      gap: 20px;
+      margin-top: 18px;
+    }
+
+    .subsection {
+      margin-top: 26px;
+      page-break-inside: avoid;
+    }
+
+    .subsection h4 {
+      font-size: 16px;
+      text-transform: uppercase;
+      letter-spacing: 0.08em;
+      color: #1d4ed8;
+      margin-bottom: 12px;
+    }
+
+    .footer-page {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: 32mm 58px;
+      font-size: 13px;
+      background: #0f172a;
+      color: rgba(255, 255, 255, 0.85);
+    }
+
+    @media print {
+      body {
+        background: #ffffff !important;
+        padding: 0;
+      }
+
+      .model7-report {
+        max-width: 100%;
+        margin: 0;
+      }
+
+      .page {
+        border-radius: 0;
+        border: none;
+        box-shadow: none;
+        margin: 0;
+        width: auto;
+        padding: 20mm 20mm 24mm;
+      }
+
+      .page.landscape {
+        padding: 18mm 18mm 20mm;
+      }
+
+      .cover-page,
+      .footer-page {
+        -webkit-print-color-adjust: exact;
+        print-color-adjust: exact;
+      }
+
+      .cover-page {
+        padding: 60mm 35mm 50mm;
+      }
+    }
+  </style>
+</head>
+<body>
+  <article class="model7-report">
+    <!-- Capa -->
+    <section class="page portrait cover-page">
+      <div style="position: relative; z-index: 1;">
+        <h1>Relatorio Final de Implantacao</h1>
+        <h2>{{ plan.plan_name }}</h2>
+        <div class="cover-meta-grid">
+          <div class="cover-meta-card">
+            <span>Empresa</span>
+            <strong>{{ plan.company_name }}</strong>
+          </div>
+          <div class="cover-meta-card">
+            <span>Consultor</span>
+            <strong>{{ plan.consultant }}</strong>
+          </div>
+          <div class="cover-meta-card">
+            <span>Patrocinador</span>
+            <strong>{{ plan.sponsor }}</strong>
+          </div>
+          <div class="cover-meta-card">
+            <span>Ultima atualizacao</span>
+            <strong>{{ plan.last_update }}</strong>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- Alinhamento estrategico -->
+    <section class="page portrait">
+      <div class="section-header">
+        <span>01</span>
+        <h3>Alinhamento estrategico</h3>
+      </div>
+      <div class="section-body">
+        <div class="model7-grid">
+          {% for socio in alinhamento.socios %}
+            <div class="model7-card">
+              <h4>{{ socio.nome }}</h4>
+              <ul>
+                <li><strong>Papel:</strong> {{ socio.papel }}</li>
+                <li><strong>Motivacao:</strong> {{ socio.motivacao }}</li>
+                <li><strong>Compromisso:</strong> {{ socio.compromisso }}</li>
+                <li><strong>Tolerancia a risco:</strong> {{ socio.risco }}</li>
+              </ul>
+            </div>
+          {% endfor %}
+        </div>
+
+        <div class="subsection" style="margin-top: 28px;">
+          <h4>Agenda do planejamento</h4>
+          <table class="model7-table">
+            <thead>
+              <tr>
+                <th>O que</th>
+                <th>Quem</th>
+                <th>Quando</th>
+                <th>Como</th>
+              </tr>
+            </thead>
+            <tbody>
+              {% for item in alinhamento.agenda %}
+                <tr>
+                  <td>{{ item.oque }}</td>
+                  <td>{{ item.quem }}</td>
+                  <td>{{ item.quando }}</td>
+                  <td>{{ item.como }}</td>
+                </tr>
+              {% endfor %}
+            </tbody>
+          </table>
+        </div>
+
+        <div class="highlight-box">
+          <strong>Principios orientadores</strong>
+          <ul style="margin: 12px 0 0 18px;">
+            {% for principio in alinhamento.principios %}
+              <li>{{ principio }}</li>
+            {% endfor %}
+          </ul>
+        </div>
+      </div>
+    </section>
+
+    <!-- Modelo & Mercado -->
+    <section class="page portrait">
+      <div class="section-header">
+        <span>02</span>
+        <h3>Modelo & Mercado</h3>
+      </div>
+      <div class="section-body">
+        {% for segmento in segmentos %}
+          <div class="model7-card" style="margin-bottom: 24px;">
+            <h4>{{ segmento.nome }}</h4>
+            <div class="two-column">
+              <div>
+                <strong>Publico-alvo</strong>
+                <ul>
+                  {% for item in segmento.proposta.publico %}
+                    <li>{{ item }}</li>
+                  {% endfor %}
+                </ul>
+              </div>
+              <div>
+                <strong>Diferenciais</strong>
+                <ul>
+                  {% for item in segmento.proposta.diferenciais %}
+                    <li>{{ item }}</li>
+                  {% endfor %}
+                </ul>
+              </div>
+              <div>
+                <strong>Evidencias</strong>
+                <ul>
+                  {% for item in segmento.proposta.comprobacoes %}
+                    <li>{{ item }}</li>
+                  {% endfor %}
+                </ul>
+              </div>
+              <div>
+                <strong>Personas chave</strong>
+                <ul>
+                  {% for persona in segmento.personas %}
+                    <li><strong>{{ persona.nome }}:</strong> {{ persona.perfil }}</li>
+                  {% endfor %}
+                </ul>
+              </div>
+            </div>
+          </div>
+        {% endfor %}
+      </div>
+    </section>
+
+    <!-- Estruturas de execucao -->
+    <section class="page portrait">
+      <div class="section-header">
+        <span>03</span>
+        <h3>Estruturas de execucao</h3>
+      </div>
+      <div class="section-body">
+        <div class="model7-grid">
+          {% for area in estruturas %}
+            <div class="model7-card">
+              <h4>{{ area.area }}</h4>
+              <ul>
+                {% for bloco in area.resumo %}
+                  <li>
+                    <strong>{{ bloco.escopo }}:</strong>
+                    <ul style="margin-top:4px;">
+                      {% for ponto in bloco.pontos %}
+                        <li>{{ ponto }}</li>
+                      {% endfor %}
+                    </ul>
+                  </li>
+                {% endfor %}
+              </ul>
+            </div>
+          {% endfor %}
+        </div>
+      </div>
+    </section>
+
+    <!-- Modelagem financeira (paisagem) -->
+    <section class="page landscape">
+      <div class="section-header">
+        <span>04</span>
+        <h3>Modelagem financeira</h3>
+      </div>
+      <div class="section-body">
+        <div class="subsection">
+          <h4>Premissas</h4>
+          <table class="model7-table">
+            <thead>
+              <tr>
+                <th>Descricao</th>
+                <th>Sugestao</th>
+                <th>Ajustado</th>
+                <th>Observacoes</th>
+                <th>Memoria de calculo</th>
+              </tr>
+            </thead>
+            <tbody>
+          {% for item in financeiro.premissas or [] %}
+            <tr>
+              <td>{{ item.indicador }}</td>
+              <td>{{ item.sugestao }}</td>
+              <td>{{ item.ajustado }}</td>
+              <td>{{ item.observacoes }}</td>
+              <td>{{ item.memoria }}</td>
+            </tr>
+              {% endfor %}
+            </tbody>
+          </table>
+        </div>
+
+        <div class="two-column">
+          <div class="model7-card">
+            <h4>Investimentos</h4>
+            <ul>
+              {% for item in financeiro.investimento.investimento or [] %}
+                <li><strong>{{ item.descricao }}:</strong> {{ item.valor }}</li>
+              {% endfor %}
+            </ul>
+          </div>
+          <div class="model7-card">
+            <h4>Fontes</h4>
+            <ul>
+              {% for item in financeiro.investimento.fontes or [] %}
+                <li><strong>{{ item.categoria }} - {{ item.descricao }}:</strong> {{ item.valor }}{% if item.disponibilidade %} (disp.: {{ item.disponibilidade }}){% endif %}</li>
+              {% endfor %}
+            </ul>
+          </div>
+        </div>
+
+        <div class="subsection">
+          <h4>Fluxo de caixa do negocio</h4>
+          <table class="model7-table">
+            <thead>
+              <tr>
+                <th>Periodo</th>
+                <th>Receita</th>
+                <th>Variaveis</th>
+                <th>Margem contrib.</th>
+                <th>Fixos</th>
+                <th>Resultado operativo</th>
+                <th>Destinacao</th>
+                <th>Resultado periodo</th>
+              </tr>
+            </thead>
+            <tbody>
+              {% for linha in financeiro.fluxo_negocio.periodos or [] %}
+                <tr>
+                  <td>{{ linha.periodo }}</td>
+                  <td>{{ linha.receita }}</td>
+                  <td>{{ linha.variaveis }}</td>
+                  <td>{{ linha.margem_contribuicao }}</td>
+                  <td>{{ linha.fixos }}</td>
+                  <td>{{ linha.resultado_operacional }}</td>
+                  <td>
+                    <ul style="margin:0; padding-left:16px;">
+                      {% for destino in linha.destinacao %}
+                        <li>{{ destino.descricao }} - {{ destino.valor }}</li>
+                      {% endfor %}
+                    </ul>
+                  </td>
+                  <td>{{ linha.resultado_periodo }}</td>
+                </tr>
+              {% endfor %}
+            </tbody>
+          </table>
+
+          <div class="two-column">
+            <table class="model7-table">
+              <thead>
+                <tr>
+                  <th>Custos e despesas variaveis</th>
+                  <th>% sobre faturamento</th>
+                </tr>
+              </thead>
+              <tbody>
+              {% for item in financeiro.fluxo_negocio.variaveis or [] %}
+                  <tr>
+                    <td>{{ item.descricao }}</td>
+                    <td>{{ item.percentual }}</td>
+                  </tr>
+                {% endfor %}
+              </tbody>
+            </table>
+
+            <table class="model7-table">
+              <thead>
+                <tr>
+                  <th>Destinacao de resultados</th>
+                  <th>% resultado operativo</th>
+                  <th>Periodicidade</th>
+                </tr>
+              </thead>
+              <tbody>
+                {% for item in financeiro.fluxo_negocio.destinacao_regras or [] %}
+                  <tr>
+                    <td>{{ item.descricao }}</td>
+                    <td>{{ item.percentual }}</td>
+                    <td>{{ item.periodicidade }}</td>
+                  </tr>
+                {% endfor %}
+              </tbody>
+            </table>
+          </div>
+        </div>
+
+        <div class="subsection">
+          <h4>Fluxo de caixa do investidor</h4>
+          <table class="model7-table">
+            <thead>
+              <tr>
+                <th>Periodo</th>
+                <th>Aporte</th>
+                <th>Distribuicao</th>
+                <th>Saldo periodo</th>
+                <th>Saldo acumulado</th>
+              </tr>
+            </thead>
+            <tbody>
+              {% for linha in financeiro.fluxo_investidor.periodos or [] %}
+                <tr>
+                  <td>{{ linha.periodo }}</td>
+                  <td>{{ linha.aporte }}</td>
+                  <td>{{ linha.distribuicao }}</td>
+                  <td>{{ linha.saldo }}</td>
+                  <td>{{ linha.acumulado }}</td>
+                </tr>
+              {% endfor %}
+            </tbody>
+          </table>
+
+          <div class="highlight-box" style="margin-top: 18px;">
+            <strong>Analises</strong>
+            <ul style="margin:12px 0 0 18px;">
+              {% set analises = financeiro.fluxo_investidor.analises or {} %}
+              <li>Payback: {{ analises.payback | default('-', true) }}</li>
+              <li>TIR 5 anos: {{ analises.tir | default('-', true) }}</li>
+            </ul>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- Rodape -->
+    <section class="page portrait footer-page" style="page-break-after: auto;">
+      <span>Versus Gestao Corporativa - Todos os Direitos Reservados - Emitido em: {{ issued_at }}</span>
+      <span>Consultor responsavel: {{ plan.consultant }}</span>
+    </section>
+  </article>
+</body>
+</html>

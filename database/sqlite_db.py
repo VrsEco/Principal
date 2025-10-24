@@ -52,6 +52,94 @@ class SQLiteDatabase(DatabaseInterface):
             "Corrija aquele ponto do código para usar PostgreSQL.\n"
         )
 
+
+    def _raise_implantation_disabled(self):
+        raise RuntimeError("Funcionalidades de implantacao estao disponiveis apenas no backend PostgreSQL.")
+
+    def get_implantation_dashboard(self, plan_id: int):
+        self._raise_implantation_disabled()
+
+    def list_implantation_phases(self, plan_id: int):
+        self._raise_implantation_disabled()
+
+    def list_implantation_checkpoints(self, plan_id: int):
+        self._raise_implantation_disabled()
+
+    def list_alignment_members(self, plan_id: int):
+        self._raise_implantation_disabled()
+
+    def get_alignment_overview(self, plan_id: int):
+        self._raise_implantation_disabled()
+
+    def list_alignment_principles(self, plan_id: int):
+        self._raise_implantation_disabled()
+
+    def list_alignment_agenda(self, plan_id: int):
+        self._raise_implantation_disabled()
+
+    def get_alignment_project(self, plan_id: int):
+        self._raise_implantation_disabled()
+
+    def list_plan_segments(self, plan_id: int):
+        self._raise_implantation_disabled()
+
+    def create_plan_segment(self, plan_id: int, data: Dict[str, Any]) -> int:
+        self._raise_implantation_disabled()
+
+    def update_plan_segment(self, segment_id: int, plan_id: int, data: Dict[str, Any]) -> bool:
+        self._raise_implantation_disabled()
+
+    def delete_plan_segment(self, segment_id: int, plan_id: int) -> bool:
+        self._raise_implantation_disabled()
+
+    def list_plan_structures(self, plan_id: int):
+        self._raise_implantation_disabled()
+
+    def list_plan_structure_installments(self, plan_id: int):
+        self._raise_implantation_disabled()
+
+    def create_plan_structure(self, plan_id: int, data: Dict[str, Any]) -> int:
+        self._raise_implantation_disabled()
+
+    def update_plan_structure(self, structure_id: int, plan_id: int, data: Dict[str, Any]) -> bool:
+        self._raise_implantation_disabled()
+
+    def delete_plan_structure(self, structure_id: int, plan_id: int) -> bool:
+        self._raise_implantation_disabled()
+
+    def create_plan_structure_installment(self, structure_id: int, data: Dict[str, Any]) -> int:
+        self._raise_implantation_disabled()
+
+    def delete_plan_structure_installments(self, structure_id: int) -> bool:
+        self._raise_implantation_disabled()
+
+    def list_plan_finance_premises(self, plan_id: int):
+        self._raise_implantation_disabled()
+
+    def list_plan_finance_investments(self, plan_id: int):
+        self._raise_implantation_disabled()
+
+    def list_plan_finance_sources(self, plan_id: int):
+        self._raise_implantation_disabled()
+
+    def list_plan_finance_business_periods(self, plan_id: int):
+        self._raise_implantation_disabled()
+
+    def list_plan_finance_business_distribution(self, plan_id: int):
+        self._raise_implantation_disabled()
+
+    def list_plan_finance_variable_costs(self, plan_id: int):
+        self._raise_implantation_disabled()
+
+    def list_plan_finance_result_rules(self, plan_id: int):
+        self._raise_implantation_disabled()
+
+    def list_plan_finance_investor_periods(self, plan_id: int):
+        self._raise_implantation_disabled()
+
+    def get_plan_finance_metrics(self, plan_id: int):
+        self._raise_implantation_disabled()
+
     def _normalize_client_code(self, code: Optional[str]) -> Optional[str]:
         """Normalize client code to up to 3 alphanumeric characters or None"""
         if not code:
@@ -3821,16 +3909,27 @@ class SQLiteDatabase(DatabaseInterface):
             conn = self._get_connection()
             cursor = conn.cursor()
             
+            # Check if plan_mode column exists, if not, create it
+            try:
+                cursor.execute("PRAGMA table_info(plans)")
+                columns = {row[1] for row in cursor.fetchall()}
+                if 'plan_mode' not in columns:
+                    cursor.execute('ALTER TABLE plans ADD COLUMN plan_mode TEXT DEFAULT "evolucao"')
+                    conn.commit()
+            except Exception as col_error:
+                print(f"Warning: Could not check/add plan_mode column: {col_error}")
+            
             cursor.execute('''
-                INSERT INTO plans (company_id, name, description, start_date, end_date, status)
-                VALUES (?, ?, ?, ?, ?, ?)
+                INSERT INTO plans (company_id, name, description, start_date, end_date, status, plan_mode)
+                VALUES (?, ?, ?, ?, ?, ?, ?)
             ''', (
                 plan_data.get('company_id'),
                 plan_data.get('name'),
                 plan_data.get('description'),
                 plan_data.get('start_date'),
                 plan_data.get('end_date'),
-                plan_data.get('status', 'active')
+                plan_data.get('status', 'active'),
+                plan_data.get('plan_mode', 'evolucao')
             ))
             
             plan_id = cursor.lastrowid

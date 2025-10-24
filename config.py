@@ -52,6 +52,8 @@ class Config:
 class DevelopmentConfig(Config):
     """Development configuration"""
     DEBUG = True
+    TEMPLATES_AUTO_RELOAD = True  # Recarregar templates automaticamente
+    SEND_FILE_MAX_AGE_DEFAULT = 0  # Sem cache de arquivos estáticos
     # IMPORTANTE: PostgreSQL como padrão (conforme APP30 migrado)
     SQLALCHEMY_DATABASE_URI = os.environ.get('DEV_DATABASE_URL') or 'postgresql://postgres:*Paraiso1978@localhost:5432/bd_app_versus'
 

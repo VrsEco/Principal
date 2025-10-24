@@ -515,6 +515,228 @@ class DatabaseInterface(ABC):
         """Delete employee"""
         pass
 
+    # Implantation (new venture) operations
+    @abstractmethod
+    def get_implantation_dashboard(self, plan_id: int) -> Optional[Dict[str, Any]]:
+        """Get implantation dashboard summary for a plan"""
+        pass
+
+    @abstractmethod
+    def list_implantation_phases(self, plan_id: int) -> List[Dict[str, Any]]:
+        """List implantation macro phases for a plan"""
+        pass
+
+    @abstractmethod
+    def list_implantation_checkpoints(self, plan_id: int) -> List[Dict[str, Any]]:
+        """List roadmap checkpoints for the implantation plan"""
+        pass
+
+    @abstractmethod
+    def list_alignment_members(self, plan_id: int) -> List[Dict[str, Any]]:
+        """List alignment canvas members for the plan"""
+        pass
+
+    @abstractmethod
+    def get_alignment_overview(self, plan_id: int) -> Optional[Dict[str, Any]]:
+        """Get consolidated alignment overview information"""
+        pass
+
+    @abstractmethod
+    def list_alignment_principles(self, plan_id: int) -> List[Dict[str, Any]]:
+        """List decision principles captured during alignment"""
+        pass
+
+    @abstractmethod
+    def list_alignment_agenda(self, plan_id: int) -> List[Dict[str, Any]]:
+        """List alignment agenda items (what, who, when, how)"""
+        pass
+
+    @abstractmethod
+    def get_alignment_project(self, plan_id: int) -> Optional[Dict[str, Any]]:
+        """Get metadata about the linked alignment project"""
+        pass
+
+    @abstractmethod
+    def list_plan_segments(self, plan_id: int) -> List[Dict[str, Any]]:
+        """List business segments configured for the implantation plan"""
+        pass
+
+    @abstractmethod
+    def create_plan_segment(self, plan_id: int, data: Dict[str, Any]) -> int:
+        """Create a new segment for a plan"""
+        pass
+
+    @abstractmethod
+    def update_plan_segment(self, segment_id: int, plan_id: int, data: Dict[str, Any]) -> bool:
+        """Update a segment"""
+        pass
+
+    @abstractmethod
+    def delete_plan_segment(self, segment_id: int, plan_id: int) -> bool:
+        """Delete a segment"""
+        pass
+
+    @abstractmethod
+    def list_plan_structures(self, plan_id: int) -> List[Dict[str, Any]]:
+        """List structure items grouped by area/block for the plan"""
+        pass
+
+    @abstractmethod
+    def list_plan_structure_installments(self, plan_id: int) -> List[Dict[str, Any]]:
+        """List installments associated with structure items for the plan"""
+        pass
+
+    @abstractmethod
+    def create_plan_structure(self, plan_id: int, data: Dict[str, Any]) -> int:
+        """Create a new structure item for a plan"""
+        pass
+
+    @abstractmethod
+    def update_plan_structure(self, structure_id: int, plan_id: int, data: Dict[str, Any]) -> bool:
+        """Update a structure item"""
+        pass
+
+    @abstractmethod
+    def delete_plan_structure(self, structure_id: int, plan_id: int) -> bool:
+        """Delete a structure item and its installments"""
+        pass
+
+    @abstractmethod
+    def create_plan_structure_installment(self, structure_id: int, data: Dict[str, Any]) -> int:
+        """Create a new installment for a structure item"""
+        pass
+
+    @abstractmethod
+    def delete_plan_structure_installments(self, structure_id: int) -> bool:
+        """Delete all installments for a structure item"""
+        pass
+
+    @abstractmethod
+    def list_plan_finance_premises(self, plan_id: int) -> List[Dict[str, Any]]:
+        """List financial premises registered for the plan"""
+        pass
+
+    @abstractmethod
+    def list_plan_finance_investments(self, plan_id: int) -> List[Dict[str, Any]]:
+        """List investment breakdown items"""
+        pass
+
+    @abstractmethod
+    def list_plan_finance_sources(self, plan_id: int) -> List[Dict[str, Any]]:
+        """List funding sources registered for the plan"""
+        pass
+
+    @abstractmethod
+    def list_plan_finance_business_periods(self, plan_id: int) -> List[Dict[str, Any]]:
+        """List projected business cash-flow periods"""
+        pass
+
+    @abstractmethod
+    def list_plan_finance_business_distribution(self, plan_id: int) -> List[Dict[str, Any]]:
+        """List distribution entries for business cash-flow periods"""
+        pass
+
+    @abstractmethod
+    def list_plan_finance_variable_costs(self, plan_id: int) -> List[Dict[str, Any]]:
+        """List variable costs configured for the plan"""
+        pass
+
+    @abstractmethod
+    def list_plan_finance_result_rules(self, plan_id: int) -> List[Dict[str, Any]]:
+        """List result destination rules (profit allocation)"""
+        pass
+
+    @abstractmethod
+    def list_plan_finance_investor_periods(self, plan_id: int) -> List[Dict[str, Any]]:
+        """List investor cash-flow periods"""
+        pass
+
+    @abstractmethod
+    def get_plan_finance_metrics(self, plan_id: int) -> Optional[Dict[str, Any]]:
+        """Get aggregated financial metrics such as payback and IRR"""
+        pass
+
+    # CRUD operations for financial model
+    @abstractmethod
+    def create_plan_finance_premise(self, plan_id: int, data: Dict[str, Any]) -> int:
+        """Create a financial premise"""
+        pass
+
+    @abstractmethod
+    def update_plan_finance_premise(self, premise_id: int, plan_id: int, data: Dict[str, Any]) -> bool:
+        """Update a financial premise"""
+        pass
+
+    @abstractmethod
+    def delete_plan_finance_premise(self, premise_id: int, plan_id: int) -> bool:
+        """Delete a financial premise"""
+        pass
+
+    @abstractmethod
+    def create_plan_finance_investment(self, plan_id: int, data: Dict[str, Any]) -> int:
+        """Create an investment item"""
+        pass
+
+    @abstractmethod
+    def update_plan_finance_investment(self, investment_id: int, plan_id: int, data: Dict[str, Any]) -> bool:
+        """Update an investment item"""
+        pass
+
+    @abstractmethod
+    def delete_plan_finance_investment(self, investment_id: int, plan_id: int) -> bool:
+        """Delete an investment item"""
+        pass
+
+    @abstractmethod
+    def create_plan_finance_source(self, plan_id: int, data: Dict[str, Any]) -> int:
+        """Create a funding source"""
+        pass
+
+    @abstractmethod
+    def update_plan_finance_source(self, source_id: int, plan_id: int, data: Dict[str, Any]) -> bool:
+        """Update a funding source"""
+        pass
+
+    @abstractmethod
+    def delete_plan_finance_source(self, source_id: int, plan_id: int) -> bool:
+        """Delete a funding source"""
+        pass
+
+    @abstractmethod
+    def create_plan_finance_variable_cost(self, plan_id: int, data: Dict[str, Any]) -> int:
+        """Create a variable cost"""
+        pass
+
+    @abstractmethod
+    def update_plan_finance_variable_cost(self, cost_id: int, plan_id: int, data: Dict[str, Any]) -> bool:
+        """Update a variable cost"""
+        pass
+
+    @abstractmethod
+    def delete_plan_finance_variable_cost(self, cost_id: int, plan_id: int) -> bool:
+        """Delete a variable cost"""
+        pass
+
+    @abstractmethod
+    def create_plan_finance_result_rule(self, plan_id: int, data: Dict[str, Any]) -> int:
+        """Create a result distribution rule"""
+        pass
+
+    @abstractmethod
+    def update_plan_finance_result_rule(self, rule_id: int, plan_id: int, data: Dict[str, Any]) -> bool:
+        """Update a result distribution rule"""
+        pass
+
+    @abstractmethod
+    def delete_plan_finance_result_rule(self, rule_id: int, plan_id: int) -> bool:
+        """Delete a result distribution rule"""
+        pass
+
+    @abstractmethod
+    def update_plan_finance_metrics(self, plan_id: int, data: Dict[str, Any]) -> bool:
+        """Update or create financial metrics (payback, TIR, notes)"""
+        pass
+
     # AI Agents configuration operations
     @abstractmethod
     def get_ai_agents(self) -> List[Dict[str, Any]]:

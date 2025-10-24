@@ -358,7 +358,7 @@
     </article>
 
     <!-- Card 7: Usuários e Perfis -->
-    <article class="config-card" onclick="window.location.href='/companies'">
+    <article class="config-card" onclick="window.location.href='{{ url_for('auth.list_users_page') }}'">
       <div class="config-card-header">
         <div class="config-card-icon users">👥</div>
         <div class="config-card-content">
@@ -369,7 +369,7 @@
       <div class="config-card-status">
         <span class="config-status-badge status-active">✓ Ativo</span>
         <div class="config-actions">
-          <a href="/companies" class="config-action-btn" onclick="event.stopPropagation();">Gerenciar</a>
+          <a href="{{ url_for('auth.list_users_page') }}" class="config-action-btn" onclick="event.stopPropagation();">Gerenciar</a>
         </div>
       </div>
     </article>
