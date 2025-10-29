@@ -1,6 +1,6 @@
 # 🗄️ Padrões de Banco de Dados
 
-**Última Atualização:** 18/10/2025  
+**Última Atualização:** 28/10/2025  
 **Versão:** 1.0  
 **Status:** ✅ Obrigatório
 
@@ -13,6 +13,17 @@
 3. **Performance** - Indexar campos consultados frequentemente
 4. **Integridade** - Usar constraints e foreign keys
 5. **Documentação** - Migrations devem ser claras
+
+---
+
+## 🏗️ Infraestrutura Oficial (28/10/2025)
+
+- **Instância primária:** PostgreSQL 18 instalado no host Windows (serviço corporativo oficial)  
+- **Acesso por containers:** utilizar `host.docker.internal:5432` com as credenciais definidas em `.env`
+- **Scripts oficiais:** `scripts/backup/run_pg_backup.ps1` gera `pg_dump` e comprime o resultado em `backups/`
+- **Agendamento:** tarefa `GestaoVersus_Postgres_Backup` (Windows Task Scheduler) executa os backups às 12h, 18h e 22h
+- **Restauração:** usar os scripts em `scripts/backup/` apontando para a instância do host
+- **Monitoramento:** verificar `backups/postgres_backup.log` para acompanhar sucesso ou falhas diárias
 
 ---
 

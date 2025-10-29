@@ -12,6 +12,12 @@ from .postgres_helper import connect as pg_connect
 class PostgreSQLDatabase(DatabaseInterface):
     """PostgreSQL database implementation usando psycopg2"""
     
+    # Classe mantém flags para evitar verificações repetidas de schema
+    _plans_schema_checked = False
+    _investment_contributions_schema_checked = False
+    _structure_installments_schema_checked = False
+    _metrics_schema_checked = False
+    
     def __init__(self, host: str = 'localhost', port: int = 5432, 
                  database: str = 'pevapp22', user: str = 'postgres', 
                  password: str = 'password'):
@@ -27,6 +33,114 @@ class PostgreSQLDatabase(DatabaseInterface):
     def _get_connection(self):
         """Get database connection usando postgres_helper"""
         return pg_connect()
+
+    def _get_existing_columns(self, cursor, table_name: str) -> set:
+        """Retorna o conjunto de colunas existentes para a tabela informada"""
+        cursor.execute("""
+            SELECT column_name
+            FROM information_schema.columns
+            WHERE table_schema = 'public' AND table_name = %s
+        """, (table_name,))
+        return {row[0] for row in cursor.fetchall()}
+
+    def _ensure_plans_schema(self, cursor) -> None:
+        """
+        Garante que a tabela plans possua as colunas esperadas pelas rotinas
+        mais recentes (plan_mode, updated_at). Executado apenas uma vez.
+        """
+        if PostgreSQLDatabase._plans_schema_checked:
+            return
+
+        try:
+            cursor.execute("""
+                SELECT column_name 
+                FROM information_schema.columns 
+                WHERE table_schema = 'public' AND table_name = 'plans'
+            """)
+            columns = {row[0] for row in cursor.fetchall()}
+
+            if 'plan_mode' not in columns:
+                cursor.execute(
+                    "ALTER TABLE plans ADD COLUMN plan_mode VARCHAR(32) DEFAULT 'evolucao'"
+                )
+            if 'updated_at' not in columns:
+                cursor.execute(
+                    "ALTER TABLE plans ADD COLUMN updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP"
+                )
+
+            PostgreSQLDatabase._plans_schema_checked = True
+        except Exception as exc:
+            print(f"Error ensuring plans schema: {exc}")
+            raise
+
+    def _ensure_investment_contributions_schema(self, cursor) -> bool:
+        """Garante que a tabela de aportes tenha as colunas mais recentes.
+        Retorna True se alguma alteração foi aplicada."""
+        if PostgreSQLDatabase._investment_contributions_schema_checked:
+            return False
+        try:
+            columns = self._get_existing_columns(cursor, 'plan_finance_investment_contributions')
+
+            altered = False
+            if 'description' not in columns:
+                cursor.execute("ALTER TABLE plan_finance_investment_contributions ADD COLUMN description VARCHAR(255)")
+                altered = True
+            if 'system_suggestion' not in columns:
+                cursor.execute("ALTER TABLE plan_finance_investment_contributions ADD COLUMN system_suggestion DECIMAL(15,2)")
+                altered = True
+            if 'adjusted_value' not in columns:
+                cursor.execute("ALTER TABLE plan_finance_investment_contributions ADD COLUMN adjusted_value DECIMAL(15,2)")
+                altered = True
+            if 'calculation_memo' not in columns:
+                cursor.execute("ALTER TABLE plan_finance_investment_contributions ADD COLUMN calculation_memo TEXT")
+                altered = True
+
+            PostgreSQLDatabase._investment_contributions_schema_checked = True
+            return altered
+        except Exception as exc:
+            print(f"Error ensuring investment contributions schema: {exc}")
+            raise
+
+    def _ensure_structure_installments_schema(self, cursor) -> bool:
+        """Ensure plan_structure_installments table has latest columns.
+        Returns True if an ALTER was executed."""
+        if PostgreSQLDatabase._structure_installments_schema_checked:
+            return False
+        try:
+            columns = self._get_existing_columns(cursor, 'plan_structure_installments')
+            altered = False
+
+            if 'classification' not in columns:
+                cursor.execute("ALTER TABLE plan_structure_installments ADD COLUMN classification TEXT")
+                altered = True
+            if 'repetition' not in columns:
+                cursor.execute("ALTER TABLE plan_structure_installments ADD COLUMN repetition TEXT")
+                altered = True
+
+            PostgreSQLDatabase._structure_installments_schema_checked = True
+            return altered
+        except Exception as exc:
+            print(f"Error ensuring structure installments schema: {exc}")
+            raise
+
+    def _ensure_plan_finance_metrics_schema(self, cursor) -> bool:
+        """Garantir que plan_finance_metrics tenha as colunas mais recentes."""
+        if PostgreSQLDatabase._metrics_schema_checked:
+            return False
+        try:
+            columns = self._get_existing_columns(cursor, 'plan_finance_metrics')
+            altered = False
+            if 'opportunity_cost' not in columns:
+                cursor.execute("ALTER TABLE plan_finance_metrics ADD COLUMN opportunity_cost TEXT")
+                altered = True
+            if 'tir_horizon_years' not in columns:
+                cursor.execute("ALTER TABLE plan_finance_metrics ADD COLUMN tir_horizon_years INTEGER")
+                altered = True
+            PostgreSQLDatabase._metrics_schema_checked = True
+            return altered
+        except Exception as exc:
+            print(f"Error ensuring plan_finance_metrics schema: {exc}")
+            raise
 
     def _convert_params(self, sql, params):
         """Converte SQL e parâmetros de %s para :param_N"""
@@ -700,6 +814,19 @@ class PostgreSQLDatabase(DatabaseInterface):
             ''')
 
             cursor.execute('''
+                CREATE TABLE IF NOT EXISTS plan_structure_capacities (
+                    id SERIAL PRIMARY KEY,
+                    plan_id INTEGER NOT NULL REFERENCES plans (id) ON DELETE CASCADE,
+                    area VARCHAR(120) NOT NULL,
+                    revenue_capacity TEXT,
+                    observations TEXT,
+                    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                    UNIQUE(plan_id, area)
+                )
+            ''')
+
+            cursor.execute('''
                 CREATE TABLE IF NOT EXISTS plan_structure_installments (
                     id SERIAL PRIMARY KEY,
                     structure_id INTEGER NOT NULL REFERENCES plan_structures (id) ON DELETE CASCADE,
@@ -707,6 +834,8 @@ class PostgreSQLDatabase(DatabaseInterface):
                     amount TEXT,
                     due_info TEXT,
                     installment_type TEXT,
+                    classification TEXT,
+                    repetition TEXT,
                     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
                 )
             ''')
@@ -730,8 +859,28 @@ class PostgreSQLDatabase(DatabaseInterface):
                     plan_id INTEGER NOT NULL REFERENCES plans (id) ON DELETE CASCADE,
                     description TEXT NOT NULL,
                     amount TEXT,
+                    investment_group TEXT,
+                    category TEXT,
+                    contribution_date TEXT,
+                    notes TEXT,
                     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
                 )
+            ''')
+            cursor.execute('''
+                ALTER TABLE plan_finance_investments
+                ADD COLUMN IF NOT EXISTS investment_group TEXT
+            ''')
+            cursor.execute('''
+                ALTER TABLE plan_finance_investments
+                ADD COLUMN IF NOT EXISTS category TEXT
+            ''')
+            cursor.execute('''
+                ALTER TABLE plan_finance_investments
+                ADD COLUMN IF NOT EXISTS contribution_date TEXT
+            ''')
+            cursor.execute('''
+                ALTER TABLE plan_finance_investments
+                ADD COLUMN IF NOT EXISTS notes TEXT
             ''')
 
             cursor.execute('''
@@ -742,8 +891,18 @@ class PostgreSQLDatabase(DatabaseInterface):
                     description TEXT NOT NULL,
                     amount TEXT,
                     availability TEXT,
+                    contribution_date TEXT,
+                    notes TEXT,
                     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
                 )
+            ''')
+            cursor.execute('''
+                ALTER TABLE plan_finance_sources
+                ADD COLUMN IF NOT EXISTS contribution_date TEXT
+            ''')
+            cursor.execute('''
+                ALTER TABLE plan_finance_sources
+                ADD COLUMN IF NOT EXISTS notes TEXT
             ''')
 
             cursor.execute('''
@@ -754,11 +913,21 @@ class PostgreSQLDatabase(DatabaseInterface):
                     revenue TEXT,
                     variables TEXT,
                     contribution_margin TEXT,
+                    variable_expenses TEXT,
                     fixed_costs TEXT,
+                    fixed_expenses TEXT,
                     operating_result TEXT,
                     result_period TEXT,
                     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
                 )
+            ''')
+            cursor.execute('''
+                ALTER TABLE plan_finance_business_periods
+                ADD COLUMN IF NOT EXISTS variable_expenses TEXT
+            ''')
+            cursor.execute('''
+                ALTER TABLE plan_finance_business_periods
+                ADD COLUMN IF NOT EXISTS fixed_expenses TEXT
             ''')
 
             cursor.execute('''
@@ -812,8 +981,77 @@ class PostgreSQLDatabase(DatabaseInterface):
                     payback TEXT,
                     tir TEXT,
                     notes TEXT,
+                    opportunity_cost TEXT,
+                    tir_horizon_years INTEGER,
                     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
                     UNIQUE(plan_id)
+                )
+            ''')
+            cursor.execute('ALTER TABLE plan_finance_metrics ADD COLUMN IF NOT EXISTS opportunity_cost TEXT')
+            cursor.execute('ALTER TABLE plan_finance_metrics ADD COLUMN IF NOT EXISTS tir_horizon_years INTEGER')
+
+            # Tabela para percentual de distribuição de lucros (único por plan)
+            cursor.execute('''
+                CREATE TABLE IF NOT EXISTS plan_finance_profit_distribution (
+                    id SERIAL PRIMARY KEY,
+                    plan_id INTEGER NOT NULL REFERENCES plans (id) ON DELETE CASCADE,
+                    percentage TEXT,
+                    notes TEXT,
+                    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                    UNIQUE(plan_id)
+                )
+            ''')
+            
+            # Migração: Adicionar campo start_date se não existir
+            cursor.execute("ALTER TABLE plan_finance_profit_distribution ADD COLUMN IF NOT EXISTS start_date DATE")
+
+            # Tabelas para investimentos com datas
+            cursor.execute('''
+                CREATE TABLE IF NOT EXISTS plan_finance_investment_categories (
+                    id SERIAL PRIMARY KEY,
+                    plan_id INTEGER NOT NULL REFERENCES plans (id) ON DELETE CASCADE,
+                    category_type VARCHAR(50),
+                    category_name VARCHAR(100),
+                    display_order INTEGER,
+                    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+                )
+            ''')
+
+            cursor.execute('''
+                CREATE TABLE IF NOT EXISTS plan_finance_investment_items (
+                    id SERIAL PRIMARY KEY,
+                    category_id INTEGER REFERENCES plan_finance_investment_categories(id) ON DELETE CASCADE,
+                    item_name VARCHAR(100),
+                    display_order INTEGER,
+                    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+                )
+            ''')
+
+            cursor.execute('''
+                CREATE TABLE IF NOT EXISTS plan_finance_investment_contributions (
+                    id SERIAL PRIMARY KEY,
+                    item_id INTEGER REFERENCES plan_finance_investment_items(id) ON DELETE CASCADE,
+                    contribution_date DATE NOT NULL,
+                    amount DECIMAL(15,2) NOT NULL,
+                    description VARCHAR(255),
+                    system_suggestion DECIMAL(15,2),
+                    adjusted_value DECIMAL(15,2),
+                    calculation_memo TEXT,
+                    notes TEXT,
+                    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+                )
+            ''')
+
+            cursor.execute('''
+                CREATE TABLE IF NOT EXISTS plan_finance_funding_sources (
+                    id SERIAL PRIMARY KEY,
+                    plan_id INTEGER REFERENCES plans(id) ON DELETE CASCADE,
+                    source_type VARCHAR(100),
+                    contribution_date DATE NOT NULL,
+                    amount DECIMAL(15,2) NOT NULL,
+                    notes TEXT,
+                    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
                 )
             ''')
             
@@ -1786,6 +2024,9 @@ class PostgreSQLDatabase(DatabaseInterface):
         try:
             conn = self._get_connection()
             cursor = conn.cursor()
+
+            # Garantir que as colunas esperadas existam antes do INSERT
+            self._ensure_plans_schema(cursor)
             
             cursor.execute('''
                 INSERT INTO plans (company_id, name, description, start_date, end_date, status, plan_mode)
@@ -3520,8 +3761,11 @@ class PostgreSQLDatabase(DatabaseInterface):
         try:
             conn = self._get_connection()
             cursor = conn.cursor()
+            if self._ensure_structure_installments_schema(cursor):
+                conn.commit()
             cursor.execute('''
-                SELECT i.id, i.structure_id, i.installment_number, i.amount, i.due_info, i.installment_type
+                SELECT i.id, i.structure_id, i.installment_number, i.amount, i.due_info, 
+                       i.installment_type, i.classification, i.repetition
                 FROM plan_structure_installments i
                 JOIN plan_structures s ON s.id = i.structure_id
                 WHERE s.plan_id = %s
@@ -3532,6 +3776,27 @@ class PostgreSQLDatabase(DatabaseInterface):
             return [dict(row) for row in rows]
         except Exception as exc:
             print(f"Error listing plan structure installments: {exc}")
+            return []
+
+    def list_plan_structure_capacities(self, plan_id: int) -> List[Dict[str, Any]]:
+        """List revenue capacity entries for structure areas"""
+        try:
+            conn = self._get_connection()
+            cursor = conn.cursor()
+            cursor.execute(
+                '''
+                SELECT id, area, revenue_capacity, observations
+                FROM plan_structure_capacities
+                WHERE plan_id = %s
+                ORDER BY area
+                ''',
+                (plan_id,),
+            )
+            rows = cursor.fetchall()
+            conn.close()
+            return [dict(row) for row in rows]
+        except Exception as exc:
+            print(f"Error listing plan structure capacities: {exc}")
             return []
 
     def create_plan_structure(self, plan_id: int, data: Dict[str, Any]) -> int:
@@ -3637,22 +3902,102 @@ class PostgreSQLDatabase(DatabaseInterface):
             print(f"Error deleting plan structure: {exc}")
             return False
 
+    def create_plan_structure_capacity(self, plan_id: int, data: Dict[str, Any]) -> int:
+        """Create or update a revenue capacity entry for a structure area"""
+        try:
+            conn = self._get_connection()
+            cursor = conn.cursor()
+            cursor.execute(
+                '''
+                INSERT INTO plan_structure_capacities (plan_id, area, revenue_capacity, observations)
+                VALUES (%s, %s, %s, %s)
+                ON CONFLICT (plan_id, area) DO UPDATE
+                    SET revenue_capacity = EXCLUDED.revenue_capacity,
+                        observations = EXCLUDED.observations,
+                        updated_at = CURRENT_TIMESTAMP
+                RETURNING id
+                ''',
+                (
+                    plan_id,
+                    data.get('area'),
+                    data.get('revenue_capacity'),
+                    data.get('observations'),
+                ),
+            )
+            capacity_id = cursor.fetchone()[0]
+            conn.commit()
+            conn.close()
+            return capacity_id
+        except Exception as exc:
+            print(f"Error creating plan structure capacity: {exc}")
+            return 0
+
+    def update_plan_structure_capacity(self, capacity_id: int, plan_id: int, data: Dict[str, Any]) -> bool:
+        """Update a revenue capacity entry for a structure area"""
+        try:
+            conn = self._get_connection()
+            cursor = conn.cursor()
+            cursor.execute(
+                '''
+                UPDATE plan_structure_capacities
+                   SET area = %s,
+                       revenue_capacity = %s,
+                       observations = %s,
+                       updated_at = CURRENT_TIMESTAMP
+                 WHERE id = %s AND plan_id = %s
+                ''',
+                (
+                    data.get('area'),
+                    data.get('revenue_capacity'),
+                    data.get('observations'),
+                    capacity_id,
+                    plan_id,
+                ),
+            )
+            conn.commit()
+            conn.close()
+            return cursor.rowcount > 0
+        except Exception as exc:
+            print(f"Error updating plan structure capacity: {exc}")
+            return False
+
+    def delete_plan_structure_capacity(self, capacity_id: int, plan_id: int) -> bool:
+        """Delete a revenue capacity entry for a structure area"""
+        try:
+            conn = self._get_connection()
+            cursor = conn.cursor()
+            cursor.execute(
+                'DELETE FROM plan_structure_capacities WHERE id = %s AND plan_id = %s',
+                (capacity_id, plan_id),
+            )
+            conn.commit()
+            conn.close()
+            return cursor.rowcount > 0
+        except Exception as exc:
+            print(f"Error deleting plan structure capacity: {exc}")
+            return False
+
     def create_plan_structure_installment(self, structure_id: int, data: Dict[str, Any]) -> int:
         """Create a new installment for a structure item"""
         try:
             conn = self._get_connection()
             cursor = conn.cursor()
+            if self._ensure_structure_installments_schema(cursor):
+                conn.commit()
             cursor.execute('''
                 INSERT INTO plan_structure_installments (
-                    structure_id, installment_number, amount, due_info, installment_type
-                ) VALUES (%s, %s, %s, %s, %s)
+                    structure_id, installment_number, amount, due_info, installment_type, 
+                    classification, repetition
+                ) VALUES (%s, %s, %s, %s, %s, %s, %s)
                 RETURNING id
             ''', (
                 structure_id,
                 data.get('installment_number'),
                 data.get('amount'),
                 data.get('due_info'),
-                data.get('installment_type')
+                data.get('installment_type'),
+                data.get('classification'),
+                data.get('repetition')
             ))
             installment_id = cursor.fetchone()[0]
             conn.commit()
@@ -3667,6 +4012,8 @@ class PostgreSQLDatabase(DatabaseInterface):
         try:
             conn = self._get_connection()
             cursor = conn.cursor()
+            if self._ensure_structure_installments_schema(cursor):
+                conn.commit()
             cursor.execute('DELETE FROM plan_structure_installments WHERE structure_id = %s', (structure_id,))
             conn.commit()
             conn.close()
@@ -3694,12 +4041,12 @@ class PostgreSQLDatabase(DatabaseInterface):
             return []
 
     def list_plan_finance_investments(self, plan_id: int) -> List[Dict[str, Any]]:
-        """List investment items"""
+        """List investment items with grouping and schedule metadata"""
         try:
             conn = self._get_connection()
             cursor = conn.cursor()
             cursor.execute('''
-                SELECT id, description, amount
+                SELECT id, description, amount, investment_group, category, contribution_date, notes
                 FROM plan_finance_investments
                 WHERE plan_id = %s
                 ORDER BY id
@@ -3712,12 +4059,12 @@ class PostgreSQLDatabase(DatabaseInterface):
             return []
 
     def list_plan_finance_sources(self, plan_id: int) -> List[Dict[str, Any]]:
-        """List funding sources"""
+        """List funding sources with contribution details"""
         try:
             conn = self._get_connection()
             cursor = conn.cursor()
             cursor.execute('''
-                SELECT id, category, description, amount, availability
+                SELECT id, category, description, amount, availability, contribution_date, notes
                 FROM plan_finance_sources
                 WHERE plan_id = %s
                 ORDER BY id
@@ -3735,8 +4082,16 @@ class PostgreSQLDatabase(DatabaseInterface):
             conn = self._get_connection()
             cursor = conn.cursor()
             cursor.execute('''
-                SELECT id, period_label, revenue, variables, contribution_margin,
-                       fixed_costs, operating_result, result_period
+                SELECT id,
+                       period_label,
+                       revenue,
+                       variables,
+                       contribution_margin,
+                       variable_expenses,
+                       fixed_costs,
+                       fixed_expenses,
+                       operating_result,
+                       result_period
                 FROM plan_finance_business_periods
                 WHERE plan_id = %s
                 ORDER BY id
@@ -3826,8 +4181,12 @@ class PostgreSQLDatabase(DatabaseInterface):
         try:
             conn = self._get_connection()
             cursor = conn.cursor()
+            altered = self._ensure_plan_finance_metrics_schema(cursor)
+            if altered:
+                conn.commit()
+                cursor = conn.cursor()
             cursor.execute('''
-                SELECT payback, tir, notes
+                SELECT payback, tir, notes, opportunity_cost, tir_horizon_years
                 FROM plan_finance_metrics
                 WHERE plan_id = %s
             ''', (plan_id,))
@@ -3905,130 +4264,6 @@ class PostgreSQLDatabase(DatabaseInterface):
             return True
         except Exception as exc:
             print(f"Error deleting premise: {exc}")
-            return False
-
-    def create_plan_finance_investment(self, plan_id: int, data: Dict[str, Any]) -> int:
-        """Create an investment item"""
-        try:
-            conn = self._get_connection()
-            cursor = conn.cursor()
-            cursor.execute('''
-                INSERT INTO plan_finance_investments (plan_id, description, amount)
-                VALUES (%s, %s, %s)
-                RETURNING id
-            ''', (
-                plan_id,
-                data.get('description', ''),
-                data.get('amount', '')
-            ))
-            investment_id = cursor.fetchone()['id']
-            conn.commit()
-            conn.close()
-            return investment_id
-        except Exception as exc:
-            print(f"Error creating investment: {exc}")
-            return 0
-
-    def update_plan_finance_investment(self, investment_id: int, plan_id: int, data: Dict[str, Any]) -> bool:
-        """Update an investment item"""
-        try:
-            conn = self._get_connection()
-            cursor = conn.cursor()
-            cursor.execute('''
-                UPDATE plan_finance_investments
-                SET description = %s, amount = %s
-                WHERE id = %s AND plan_id = %s
-            ''', (
-                data.get('description', ''),
-                data.get('amount', ''),
-                investment_id,
-                plan_id
-            ))
-            conn.commit()
-            conn.close()
-            return True
-        except Exception as exc:
-            print(f"Error updating investment: {exc}")
-            return False
-
-    def delete_plan_finance_investment(self, investment_id: int, plan_id: int) -> bool:
-        """Delete an investment item"""
-        try:
-            conn = self._get_connection()
-            cursor = conn.cursor()
-            cursor.execute('''
-                DELETE FROM plan_finance_investments
-                WHERE id = %s AND plan_id = %s
-            ''', (investment_id, plan_id))
-            conn.commit()
-            conn.close()
-            return True
-        except Exception as exc:
-            print(f"Error deleting investment: {exc}")
-            return False
-
-    def create_plan_finance_source(self, plan_id: int, data: Dict[str, Any]) -> int:
-        """Create a funding source"""
-        try:
-            conn = self._get_connection()
-            cursor = conn.cursor()
-            cursor.execute('''
-                INSERT INTO plan_finance_sources (plan_id, category, description, amount, availability)
-                VALUES (%s, %s, %s, %s, %s)
-                RETURNING id
-            ''', (
-                plan_id,
-                data.get('category', ''),
-                data.get('description', ''),
-                data.get('amount', ''),
-                data.get('availability', '')
-            ))
-            source_id = cursor.fetchone()['id']
-            conn.commit()
-            conn.close()
-            return source_id
-        except Exception as exc:
-            print(f"Error creating source: {exc}")
-            return 0
-
-    def update_plan_finance_source(self, source_id: int, plan_id: int, data: Dict[str, Any]) -> bool:
-        """Update a funding source"""
-        try:
-            conn = self._get_connection()
-            cursor = conn.cursor()
-            cursor.execute('''
-                UPDATE plan_finance_sources
-                SET category = %s, description = %s, amount = %s, availability = %s
-                WHERE id = %s AND plan_id = %s
-            ''', (
-                data.get('category', ''),
-                data.get('description', ''),
-                data.get('amount', ''),
-                data.get('availability', ''),
-                source_id,
-                plan_id
-            ))
-            conn.commit()
-            conn.close()
-            return True
-        except Exception as exc:
-            print(f"Error updating source: {exc}")
-            return False
-
-    def delete_plan_finance_source(self, source_id: int, plan_id: int) -> bool:
-        """Delete a funding source"""
-        try:
-            conn = self._get_connection()
-            cursor = conn.cursor()
-            cursor.execute('''
-                DELETE FROM plan_finance_sources
-                WHERE id = %s AND plan_id = %s
-            ''', (source_id, plan_id))
-            conn.commit()
-            conn.close()
-            return True
-        except Exception as exc:
-            print(f"Error deleting source: {exc}")
             return False
 
     def create_plan_finance_variable_cost(self, plan_id: int, data: Dict[str, Any]) -> int:
@@ -4158,6 +4393,20 @@ class PostgreSQLDatabase(DatabaseInterface):
         try:
             conn = self._get_connection()
             cursor = conn.cursor()
+            altered = self._ensure_plan_finance_metrics_schema(cursor)
+            if altered:
+                conn.commit()
+                cursor = conn.cursor()
+            opportunity_cost = data.get('opportunity_cost')
+            if opportunity_cost is None or str(opportunity_cost).strip() == '':
+                opportunity_cost = '1%'
+            tir_horizon_raw = data.get('tir_horizon_years')
+            try:
+                tir_horizon_years = int(tir_horizon_raw) if tir_horizon_raw not in (None, '') else None
+            except (TypeError, ValueError):
+                tir_horizon_years = None
+            if tir_horizon_years is None:
+                tir_horizon_years = 5
             # Verificar se já existe
             cursor.execute('SELECT id FROM plan_finance_metrics WHERE plan_id = %s', (plan_id,))
             existing = cursor.fetchone()
@@ -4166,24 +4415,29 @@ class PostgreSQLDatabase(DatabaseInterface):
                 # Update
                 cursor.execute('''
                     UPDATE plan_finance_metrics
-                    SET payback = %s, tir = %s, notes = %s
+                    SET payback = %s, tir = %s, notes = %s,
+                        opportunity_cost = %s, tir_horizon_years = %s
                     WHERE plan_id = %s
                 ''', (
                     data.get('payback', ''),
                     data.get('tir', ''),
                     data.get('notes', ''),
+                    opportunity_cost,
+                    tir_horizon_years,
                     plan_id
                 ))
             else:
                 # Insert
                 cursor.execute('''
-                    INSERT INTO plan_finance_metrics (plan_id, payback, tir, notes)
-                    VALUES (%s, %s, %s, %s)
+                    INSERT INTO plan_finance_metrics (plan_id, payback, tir, notes, opportunity_cost, tir_horizon_years)
+                    VALUES (%s, %s, %s, %s, %s, %s)
                 ''', (
                     plan_id,
                     data.get('payback', ''),
                     data.get('tir', ''),
-                    data.get('notes', '')
+                    data.get('notes', ''),
+                    opportunity_cost,
+                    tir_horizon_years
                 ))
             
             conn.commit()
@@ -4191,6 +4445,334 @@ class PostgreSQLDatabase(DatabaseInterface):
             return True
         except Exception as exc:
             print(f"Error updating metrics: {exc}")
+            return False
+
+    def get_plan_profit_distribution(self, plan_id: int) -> Dict[str, Any]:
+        """Get profit distribution percentage for a plan"""
+        try:
+            conn = self._get_connection()
+            cursor = conn.cursor()
+            cursor.execute('''
+                SELECT percentage, start_date, notes
+                FROM plan_finance_profit_distribution
+                WHERE plan_id = %s
+            ''', (plan_id,))
+            row = cursor.fetchone()
+            conn.close()
+            
+            if row:
+                return {
+                    'percentage': row['percentage'] or '',
+                    'start_date': row['start_date'].strftime('%Y-%m-%d') if row['start_date'] else '',
+                    'notes': row['notes'] or ''
+                }
+            return {'percentage': '', 'start_date': '', 'notes': ''}
+        except Exception as exc:
+            print(f"Error getting profit distribution: {exc}")
+            return {'percentage': '', 'start_date': '', 'notes': ''}
+
+    def update_plan_profit_distribution(self, plan_id: int, data: Dict[str, Any]) -> bool:
+        """Update or create profit distribution percentage"""
+        try:
+            conn = self._get_connection()
+            cursor = conn.cursor()
+            # Verificar se já existe
+            cursor.execute('SELECT id FROM plan_finance_profit_distribution WHERE plan_id = %s', (plan_id,))
+            existing = cursor.fetchone()
+            
+            # Converter start_date para None se vazio
+            start_date = data.get('start_date', '')
+            start_date = start_date if start_date else None
+            
+            if existing:
+                # Update
+                cursor.execute('''
+                    UPDATE plan_finance_profit_distribution
+                    SET percentage = %s, start_date = %s, notes = %s, updated_at = CURRENT_TIMESTAMP
+                    WHERE plan_id = %s
+                ''', (
+                    data.get('percentage', ''),
+                    start_date,
+                    data.get('notes', ''),
+                    plan_id
+                ))
+            else:
+                # Insert
+                cursor.execute('''
+                    INSERT INTO plan_finance_profit_distribution (plan_id, percentage, start_date, notes)
+                    VALUES (%s, %s, %s, %s)
+                ''', (
+                    plan_id,
+                    data.get('percentage', ''),
+                    start_date,
+                    data.get('notes', '')
+                ))
+            
+            conn.commit()
+            conn.close()
+            return True
+        except Exception as exc:
+            print(f"Error updating profit distribution: {exc}")
+            return False
+
+    # Investment contributions operations (new structure)
+    def get_plan_investment_categories(self, plan_id: int) -> List[Dict[str, Any]]:
+        """Get investment categories (Capital de Giro, Imobilizado)"""
+        try:
+            conn = self._get_connection()
+            cursor = conn.cursor()
+            cursor.execute('''
+                SELECT id, category_type, category_name, display_order
+                FROM plan_finance_investment_categories
+                WHERE plan_id = %s
+                ORDER BY display_order
+            ''', (plan_id,))
+            categories: List[Dict[str, Any]] = []
+            for row in cursor.fetchall():
+                categories.append({
+                    'id': row[0],
+                    'category_type': row[1],
+                    'category_name': row[2],
+                    'display_order': row[3]
+                })
+            conn.close()
+            return categories
+        except Exception as exc:
+            print(f"Error getting investment categories: {exc}")
+            return []
+
+    def get_plan_investment_items(self, category_id: int) -> List[Dict[str, Any]]:
+        """Get investment items for a category"""
+        try:
+            conn = self._get_connection()
+            cursor = conn.cursor()
+            cursor.execute('''
+                SELECT id, item_name, display_order
+                FROM plan_finance_investment_items
+                WHERE category_id = %s
+                ORDER BY display_order
+            ''', (category_id,))
+            items: List[Dict[str, Any]] = []
+            for row in cursor.fetchall():
+                items.append({
+                    'id': row[0],
+                    'item_name': row[1],
+                    'display_order': row[2]
+                })
+            conn.close()
+            return items
+        except Exception as exc:
+            print(f"Error getting investment items: {exc}")
+            return []
+
+    def list_plan_investment_contributions(self, item_id: int) -> List[Dict[str, Any]]:
+        """List investment contributions for an item"""
+        try:
+            conn = self._get_connection()
+            cursor = conn.cursor()
+            if self._ensure_investment_contributions_schema(cursor):
+                conn.commit()
+            cursor.execute('''
+                SELECT id, contribution_date, amount, description, system_suggestion, 
+                       adjusted_value, calculation_memo, notes
+                FROM plan_finance_investment_contributions
+                WHERE item_id = %s
+                ORDER BY contribution_date
+            ''', (item_id,))
+            contributions: List[Dict[str, Any]] = []
+            for row in cursor.fetchall():
+                contributions.append({
+                    'id': row[0],
+                    'contribution_date': row[1].isoformat() if row[1] else None,
+                    'amount': float(row[2]) if row[2] else 0.0,
+                    'description': row[3],
+                    'system_suggestion': float(row[4]) if row[4] else None,
+                    'adjusted_value': float(row[5]) if row[5] else None,
+                    'calculation_memo': row[6],
+                    'notes': row[7]
+                })
+            conn.close()
+            return contributions
+        except Exception as exc:
+            print(f"Error listing investment contributions: {exc}")
+            return []
+
+    def create_plan_investment_contribution(self, item_id: int, data: Dict[str, Any]) -> int:
+        """Create an investment contribution (aporte)"""
+        try:
+            conn = self._get_connection()
+            cursor = conn.cursor()
+            if self._ensure_investment_contributions_schema(cursor):
+                conn.commit()
+            cursor.execute('''
+                INSERT INTO plan_finance_investment_contributions 
+                (item_id, contribution_date, amount, description, system_suggestion, 
+                 adjusted_value, calculation_memo, notes)
+                VALUES (%s, %s, %s, %s, %s, %s, %s, %s)
+                RETURNING id
+            ''', (
+                item_id,
+                data.get('contribution_date'),
+                data.get('amount'),
+                data.get('description'),
+                data.get('system_suggestion'),
+                data.get('adjusted_value'),
+                data.get('calculation_memo'),
+                data.get('notes')
+            ))
+            contribution_id = cursor.fetchone()[0]
+            conn.commit()
+            conn.close()
+            return contribution_id
+        except Exception as exc:
+            print(f"Error creating investment contribution: {exc}")
+            return 0
+
+    def update_plan_investment_contribution(self, contribution_id: int, data: Dict[str, Any]) -> bool:
+        """Update an investment contribution"""
+        try:
+            conn = self._get_connection()
+            cursor = conn.cursor()
+            if self._ensure_investment_contributions_schema(cursor):
+                conn.commit()
+            cursor.execute('''
+                UPDATE plan_finance_investment_contributions SET
+                    contribution_date = %s,
+                    amount = %s,
+                    description = %s,
+                    system_suggestion = %s,
+                    adjusted_value = %s,
+                    calculation_memo = %s,
+                    notes = %s
+                WHERE id = %s
+            ''', (
+                data.get('contribution_date'),
+                data.get('amount'),
+                data.get('description'),
+                data.get('system_suggestion'),
+                data.get('adjusted_value'),
+                data.get('calculation_memo'),
+                data.get('notes'),
+                contribution_id
+            ))
+            conn.commit()
+            conn.close()
+            return cursor.rowcount > 0
+        except Exception as exc:
+            print(f"Error updating investment contribution: {exc}")
+            return False
+
+    def delete_plan_investment_contribution(self, contribution_id: int) -> bool:
+        """Delete an investment contribution"""
+        try:
+            conn = self._get_connection()
+            cursor = conn.cursor()
+            if self._ensure_investment_contributions_schema(cursor):
+                conn.commit()
+            cursor.execute(
+                'DELETE FROM plan_finance_investment_contributions WHERE id = %s',
+                (contribution_id,)
+            )
+            conn.commit()
+            conn.close()
+            return cursor.rowcount > 0
+        except Exception as exc:
+            print(f"Error deleting investment contribution: {exc}")
+            return False
+
+    # Funding sources operations (new structure)
+    def list_plan_funding_sources(self, plan_id: int) -> List[Dict[str, Any]]:
+        """List funding sources (Fornecedores, Empréstimos, Sócios)"""
+        try:
+            conn = self._get_connection()
+            cursor = conn.cursor()
+            cursor.execute('''
+                SELECT id, source_type, contribution_date, amount, notes
+                FROM plan_finance_funding_sources
+                WHERE plan_id = %s
+                ORDER BY contribution_date
+            ''', (plan_id,))
+            sources: List[Dict[str, Any]] = []
+            for row in cursor.fetchall():
+                sources.append({
+                    'id': row[0],
+                    'source_type': row[1],
+                    'contribution_date': row[2].isoformat() if row[2] else None,
+                    'amount': float(row[3]) if row[3] else 0.0,
+                    'notes': row[4]
+                })
+            conn.close()
+            return sources
+        except Exception as exc:
+            print(f"Error listing funding sources: {exc}")
+            return []
+
+    def create_plan_funding_source(self, plan_id: int, data: Dict[str, Any]) -> int:
+        """Create a funding source"""
+        try:
+            conn = self._get_connection()
+            cursor = conn.cursor()
+            cursor.execute('''
+                INSERT INTO plan_finance_funding_sources
+                (plan_id, source_type, contribution_date, amount, notes)
+                VALUES (%s, %s, %s, %s, %s)
+                RETURNING id
+            ''', (
+                plan_id,
+                data.get('source_type'),
+                data.get('contribution_date'),
+                data.get('amount'),
+                data.get('notes')
+            ))
+            source_id = cursor.fetchone()[0]
+            conn.commit()
+            conn.close()
+            return source_id
+        except Exception as exc:
+            print(f"Error creating funding source: {exc}")
+            return 0
+
+    def update_plan_funding_source(self, source_id: int, plan_id: int, data: Dict[str, Any]) -> bool:
+        """Update a funding source"""
+        try:
+            conn = self._get_connection()
+            cursor = conn.cursor()
+            cursor.execute('''
+                UPDATE plan_finance_funding_sources SET
+                    source_type = %s,
+                    contribution_date = %s,
+                    amount = %s,
+                    notes = %s
+                WHERE id = %s AND plan_id = %s
+            ''', (
+                data.get('source_type'),
+                data.get('contribution_date'),
+                data.get('amount'),
+                data.get('notes'),
+                source_id,
+                plan_id
+            ))
+            conn.commit()
+            conn.close()
+            return cursor.rowcount > 0
+        except Exception as exc:
+            print(f"Error updating funding source: {exc}")
+            return False
+
+    def delete_plan_funding_source(self, source_id: int, plan_id: int) -> bool:
+        """Delete a funding source"""
+        try:
+            conn = self._get_connection()
+            cursor = conn.cursor()
+            cursor.execute(
+                'DELETE FROM plan_finance_funding_sources WHERE id = %s AND plan_id = %s',
+                (source_id, plan_id)
+            )
+            conn.commit()
+            conn.close()
+            return cursor.rowcount > 0
+        except Exception as exc:
+            print(f"Error deleting funding source: {exc}")
             return False
 
     # AI Agents configuration operations
@@ -6295,6 +6877,11 @@ def list_integrations():
         print(f"Error listing integrations: {e}")
         return []
 
+
+# ============================================================
+# HELPER FUNCTIONS (moved from inside class)
+# ============================================================
+
 def get_integration(integration_id):
     try:
         ensure_integrations_tables()
@@ -6318,6 +6905,7 @@ def get_integration(integration_id):
         print(f"Error getting integration: {e}")
         return None
 
+
 def create_integration(item):
     try:
         ensure_integrations_tables()
@@ -6336,6 +6924,7 @@ def create_integration(item):
     except Exception as e:
         print(f"Error creating integration: {e}")
         return False
+
 
 def update_integration(integration_id, item):
     try:
@@ -6356,6 +6945,7 @@ def update_integration(integration_id, item):
         print(f"Error updating integration: {e}")
         return False
 
+
 def delete_integration(integration_id):
     try:
         ensure_integrations_tables()
@@ -6369,6 +6959,7 @@ def delete_integration(integration_id):
     except Exception as e:
         print(f"Error deleting integration: {e}")
         return False
+
 
 def set_agent_integrations(agent_id, integration_ids):
     try:
@@ -6384,6 +6975,7 @@ def set_agent_integrations(agent_id, integration_ids):
     except Exception as e:
         print(f"Error setting agent integrations: {e}")
         return False
+
 
 def get_agent_integrations(agent_id):
     try:
@@ -6565,6 +7157,5 @@ def get_agent_integrations(agent_id):
         finally:
             if conn:
                 conn.close()
-    
     # Company creation
 

@@ -16,7 +16,11 @@ from modules.pev.implantation_data import (
     load_segments,
     load_structures,
     summarize_structures_for_report,
+    calculate_investment_summary_by_block,
+    aggregate_structure_investments,
+    serialize_structure_investment_summary,
 )
+from modules.pev import products_service
 
 pev_bp = Blueprint('pev', __name__, url_prefix='/pev')
 
@@ -216,20 +220,179 @@ def implantacao_matriz_diferenciais():
         segmentos=segmentos,
     )
 
+@pev_bp.route('/implantacao/modelo/produtos')
+def implantacao_produtos():
+    """
+    Página de cadastro e gerenciamento de produtos.
+    """
+    plan_id = _resolve_plan_id()
+    db = get_db()
+    plan = build_plan_context(db, plan_id)
+    
+    return render_template(
+        "implantacao/modelo_produtos.html",
+        user_name=plan.get("consultant", "Consultor responsavel"),
+        plan_id=plan_id,
+        plan=plan,
+    )
+
+
 @pev_bp.route('/implantacao/modelo/modelagem-financeira')
 def implantacao_modelagem_financeira():
     plan_id = _resolve_plan_id()
     db = get_db()
     plan = build_plan_context(db, plan_id)
     financeiro = load_financial_model(db, plan_id)
+    estruturas = load_structures(db, plan_id)
+    resumo_investimentos = calculate_investment_summary_by_block(estruturas)
+
+    estrutura_investimentos_payload = aggregate_structure_investments(estruturas)
+    investimentos_estruturas = serialize_structure_investment_summary(
+        estrutura_investimentos_payload.get("categories", {})
+    )
+
+    products = products_service.fetch_products(plan_id)
+    products_totals = products_service.calculate_totals(products)
+    
+    # DEBUG: Log dos totais de produtos
+    print(f"\n{'='*80}")
+    print(f"🔍 DEBUG - MODELAGEM FINANCEIRA - plan_id={plan_id}")
+    print(f"{'='*80}")
+    print(f"📦 Produtos encontrados: {len(products)}")
+    print(f"💰 Products Totals: {products_totals}")
+    print(f"{'='*80}\n")
+
+    resumo_totais = next(
+        (
+            item
+            for item in resumo_investimentos
+            if item.get("is_total") or (item.get("bloco") or "").strip().upper() == "TOTAL"
+        ),
+        {},
+    )
+    custos_fixos_mensal = float(resumo_totais.get("custos_fixos_mensal") or 0)
+    despesas_fixas_mensal = float(resumo_totais.get("despesas_fixas_mensal") or 0)
+    fixed_costs_summary = {
+        "custos_fixos_mensal": custos_fixos_mensal,
+        "despesas_fixas_mensal": despesas_fixas_mensal,
+        "total_gastos_mensal": float(
+            resumo_totais.get("total_gastos_mensal") or custos_fixos_mensal + despesas_fixas_mensal
+        ),
+    }
+    
+    # DEBUG: Log dos custos fixos
+    print(f"🏗️ Fixed Costs Summary: {fixed_costs_summary}")
+    print(f"📊 Resumo Totais Raw: {resumo_totais}")
+    print(f"{'='*80}\n")
+
     return render_template(
         "implantacao/modelo_modelagem_financeira.html",
         user_name=plan.get("consultant", "Consultor responsavel"),
+        plan_id=plan_id,
         premissas=financeiro.get("premissas", []),
         investimento=financeiro.get("investimento", {}),
         fluxo_negocio=financeiro.get("fluxo_negocio", {}),
         fluxo_investidor=financeiro.get("fluxo_investidor", {}),
+        resumo_investimentos=resumo_investimentos,
+        investimentos_estruturas=investimentos_estruturas,
+        products_totals=products_totals,
+        fixed_costs_summary=fixed_costs_summary,
     )
+
+
+@pev_bp.route('/api/implantacao/<int:plan_id>/products', methods=['GET'])
+def get_products(plan_id: int):
+    """
+    Lista produtos do planejamento e devolve os totais calculados.
+    """
+    try:
+        products = products_service.fetch_products(plan_id)
+        totals = products_service.calculate_totals(products)
+        
+        # DEBUG
+        print(f"\n🌐 API GET /products - plan_id={plan_id}")
+        print(f"   📦 Produtos: {len(products)}")
+        print(f"   💰 Totals: {totals}\n")
+        
+        return jsonify({'success': True, 'products': products, 'totals': totals}), 200
+    except Exception as exc:
+        print(f"[products] Error fetching products for plan {plan_id}: {exc}")
+        return jsonify({'success': False, 'error': 'Erro ao carregar produtos'}), 500
+
+
+@pev_bp.route('/api/implantacao/<int:plan_id>/products/totals', methods=['GET'])
+def get_products_totals(plan_id: int):
+    """
+    Calcula apenas os totalizados de produtos (faturamento, custos, etc).
+    """
+    try:
+        products = products_service.fetch_products(plan_id)
+        totals = products_service.calculate_totals(products)
+        return jsonify({'success': True, 'totals': totals}), 200
+    except Exception as exc:
+        print(f"[products] Error calculating totals for plan {plan_id}: {exc}")
+        return jsonify({'success': False, 'error': 'Erro ao calcular totalizados'}), 500
+
+
+@pev_bp.route('/api/implantacao/<int:plan_id>/products', methods=['POST'])
+def create_product(plan_id: int):
+    """Cria novo produto."""
+    try:
+        data = request.get_json() or {}
+        product = products_service.create_product(plan_id, data)
+        return jsonify({'success': True, 'product': product}), 201
+    except products_service.ProductValidationError as exc:
+        return jsonify({'success': False, 'error': str(exc)}), 400
+    except Exception as exc:
+        print(f"[products] Error creating product for plan {plan_id}: {exc}")
+        import traceback
+        traceback.print_exc()
+        return jsonify({'success': False, 'error': 'Erro ao criar produto'}), 500
+
+
+@pev_bp.route('/api/implantacao/<int:plan_id>/products/<int:product_id>', methods=['GET'])
+def get_product(plan_id: int, product_id: int):
+    """Retorna um produto específico."""
+    try:
+        product = products_service.fetch_product(plan_id, product_id)
+        return jsonify({'success': True, 'product': product}), 200
+    except products_service.ProductNotFoundError as exc:
+        return jsonify({'success': False, 'error': str(exc)}), 404
+    except Exception as exc:
+        print(f"[products] Error fetching product {product_id} for plan {plan_id}: {exc}")
+        return jsonify({'success': False, 'error': 'Erro ao buscar produto'}), 500
+
+
+@pev_bp.route('/api/implantacao/<int:plan_id>/products/<int:product_id>', methods=['PUT'])
+def update_product(plan_id: int, product_id: int):
+    """Atualiza produto existente."""
+    try:
+        data = request.get_json() or {}
+        product = products_service.update_product(plan_id, product_id, data)
+        return jsonify({'success': True, 'product': product}), 200
+    except products_service.ProductNotFoundError as exc:
+        return jsonify({'success': False, 'error': str(exc)}), 404
+    except products_service.ProductValidationError as exc:
+        return jsonify({'success': False, 'error': str(exc)}), 400
+    except Exception as exc:
+        print(f"[products] Error updating product {product_id} for plan {plan_id}: {exc}")
+        import traceback
+        traceback.print_exc()
+        return jsonify({'success': False, 'error': 'Erro ao atualizar produto'}), 500
+
+
+@pev_bp.route('/api/implantacao/<int:plan_id>/products/<int:product_id>', methods=['DELETE'])
+def delete_product(plan_id: int, product_id: int):
+    """Remove produto (soft delete)."""
+    try:
+        products_service.soft_delete_product(plan_id, product_id)
+        return jsonify({'success': True}), 200
+    except products_service.ProductNotFoundError as exc:
+        return jsonify({'success': False, 'error': str(exc)}), 404
+    except Exception as exc:
+        print(f"[products] Error deleting product {product_id} for plan {plan_id}: {exc}")
+        return jsonify({'success': False, 'error': 'Erro ao deletar produto'}), 500
+
 
 @pev_bp.route('/implantacao/executivo/playbook-comercial')
 def implantacao_playbook_comercial():
@@ -1030,6 +1193,54 @@ def delete_structure(plan_id: int, structure_id: int):
     except Exception as e:
         print(f"Error deleting structure: {e}")
         return jsonify({'success': False, 'error': str(e)}), 500
+
+
+@pev_bp.route('/api/implantacao/<int:plan_id>/structures/fixed-costs-summary', methods=['GET'])
+def get_fixed_costs_summary(plan_id: int):
+    """
+    Retorna o resumo de custos e despesas fixas das estruturas.
+    """
+    try:
+        from config_database import get_db
+        from modules.pev.implantation_data import load_structures, calculate_investment_summary_by_block
+        
+        db = get_db()
+        estruturas = load_structures(db, plan_id)
+        resumo_investimentos = calculate_investment_summary_by_block(estruturas)
+        
+        # Buscar linha de totais
+        resumo_totais = next(
+            (
+                item
+                for item in resumo_investimentos
+                if item.get("is_total") or (item.get("bloco") or "").strip().upper() == "TOTAL"
+            ),
+            {},
+        )
+        
+        custos_fixos_mensal = float(resumo_totais.get("custos_fixos_mensal") or 0)
+        despesas_fixas_mensal = float(resumo_totais.get("despesas_fixas_mensal") or 0)
+        
+        fixed_costs_summary = {
+            "custos_fixos_mensal": custos_fixos_mensal,
+            "despesas_fixas_mensal": despesas_fixas_mensal,
+            "total_gastos_mensal": float(
+                resumo_totais.get("total_gastos_mensal") or custos_fixos_mensal + despesas_fixas_mensal
+            ),
+        }
+        
+        # DEBUG
+        print(f"\n🌐 API GET /structures/fixed-costs-summary - plan_id={plan_id}")
+        print(f"   🏗️ Estruturas: {len(estruturas)}")
+        print(f"   💵 Fixed Costs: {fixed_costs_summary}\n")
+        
+        return jsonify({'success': True, 'data': fixed_costs_summary}), 200
+        
+    except Exception as exc:
+        print(f"[structures] Error calculating fixed costs summary for plan {plan_id}: {exc}")
+        import traceback
+        traceback.print_exc()
+        return jsonify({'success': False, 'error': 'Erro ao calcular resumo de custos fixos'}), 500
 
 
 # ==================== FINANCIAL MODEL APIS ====================

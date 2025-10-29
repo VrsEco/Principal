@@ -5,7 +5,10 @@ for templates and reports.
 
 from __future__ import annotations
 
+import re
+import unicodedata
 from datetime import date, datetime
+from decimal import Decimal, InvalidOperation
 from typing import Any, Dict, List, Optional, Tuple
 
 # Order in which macro phases should appear
@@ -42,6 +45,7 @@ DEFAULT_DELIVERABLES: Dict[str, List[Dict[str, str]]] = {
         {"label": "Canvas de proposta de valor", "endpoint": "pev.implantacao_canvas_proposta_valor"},
         {"label": "Mapa de persona e jornada", "endpoint": "pev.implantacao_mapa_persona"},
         {"label": "Matriz de diferenciais", "endpoint": "pev.implantacao_matriz_diferenciais"},
+        {"label": "Produtos e Margens", "endpoint": "pev.implantacao_produtos"},
     ],
     "execution": [
         {"label": "Estruturas por área", "endpoint": "pev.implantacao_estruturas"},
@@ -64,19 +68,211 @@ AREA_LABELS = {
 AREA_ORDER = ["Estruturação Comercial", "Estruturação Operacional", "Estruturação Adm / Fin"]
 
 BLOCK_LABELS = {
-    "processos": "Processos",
-    "process": "Processos",
+    "pessoas": "Pessoas",
+    "imoveis": "Imóveis",
+    "imóveis": "Imóveis",
     "instalacoes": "Instalações",
     "instalações": "Instalações",
     "maquinas_equipamentos": "Máquinas e Equipamentos",
     "maquinas": "Máquinas e Equipamentos",
     "equipamentos": "Máquinas e Equipamentos",
-    "pessoas": "Pessoas",
-    "insumos": "Insumos",
-    "material_consumo": "Material de Uso e Consumo / Outros",
-    "material_uso_consumo": "Material de Uso e Consumo / Outros",
-    "outros": "Material de Uso e Consumo / Outros",
-    "material_de_uso_e_consumo": "Material de Uso e Consumo / Outros",
+    "moveis_utensilios": "Móveis e Utensílios",
+    "móveis_utensílios": "Móveis e Utensílios",
+    "moveis": "Móveis e Utensílios",
+    "móveis": "Móveis e Utensílios",
+    "utensilios": "Móveis e Utensílios",
+    "utensílios": "Móveis e Utensílios",
+    "ti_comunicacao": "TI e Comunicação",
+    "ti_e_comunicação": "TI e Comunicação",
+    "ti": "TI e Comunicação",
+    "comunicacao": "TI e Comunicação",
+    "comunicação": "TI e Comunicação",
+    "outros": "Outros",
+}
+
+STRUCTURE_BLOCK_CATEGORY_MAP = {
+    "instalacoes": "instalacoes",
+    "instalacao": "instalacoes",
+    "imoveis": "instalacoes",
+    "imovel": "instalacoes",
+    "maquinas": "maquinas_equipamentos",
+    "maquina": "maquinas_equipamentos",
+    "equipamentos": "maquinas_equipamentos",
+    "maquinas_equipamentos": "maquinas_equipamentos",
+    "moveis": "outros",
+    "moveis_utensilios": "outros",
+    "moveis_e_utensilios": "outros",
+    "utensilios": "outros",
+    "utensilio": "outros",
+    "ti": "outros",
+    "ti_comunicacao": "outros",
+    "ti_e_comunicacao": "outros",
+    "comunicacao": "outros",
+    "outros": "outros",
+    "pessoas": "outros",
+}
+
+STRUCTURE_INVESTMENT_BLOCK_SLUGS = {
+    "imoveis",
+    "instalacoes",
+    "maquinas",
+    "maquinas_equipamentos",
+    "equipamentos",
+    "moveis",
+    "moveis_utensilios",
+    "moveis_e_utensilios",
+    "utensilios",
+    "utensilio",
+    "ti",
+    "ti_comunicacao",
+    "ti_e_comunicacao",
+    "comunicacao",
+}
+
+STRUCTURE_PEOPLE_BLOCK_SLUGS = {"pessoas"}
+
+STRUCTURE_RECURRING_KEYWORDS = {
+    "mensal",
+    "mensalidade",
+    "mensalmente",
+    "assinatura",
+    "salario",
+    "folha",
+    "folha de pagamento",
+    "manutencao",
+    "manutencao mensal",
+    "locacao",
+    "locacao mensal",
+    "aluguel",
+    "servico",
+    "servico recorrente",
+    "servicos",
+    "honorarios",
+    "contabilidade",
+    "juridico",
+}
+
+
+MONTH_NAMES_FULL = [
+    "Janeiro",
+    "Fevereiro",
+    "Mar\u00e7o",
+    "Abril",
+    "Maio",
+    "Junho",
+    "Julho",
+    "Agosto",
+    "Setembro",
+    "Outubro",
+    "Novembro",
+    "Dezembro",
+]
+
+MONTH_NAMES_SHORT = [
+    "Jan",
+    "Fev",
+    "Mar",
+    "Abr",
+    "Mai",
+    "Jun",
+    "Jul",
+    "Ago",
+    "Set",
+    "Out",
+    "Nov",
+    "Dez",
+]
+
+MONTH_NAME_ALIASES = {
+    "jan": 1,
+    "janeiro": 1,
+    "fev": 2,
+    "fevereiro": 2,
+    "mar": 3,
+    "marco": 3,
+    "abr": 4,
+    "abril": 4,
+    "mai": 5,
+    "maio": 5,
+    "jun": 6,
+    "junho": 6,
+    "jul": 7,
+    "julho": 7,
+    "ago": 8,
+    "agosto": 8,
+    "set": 9,
+    "setembro": 9,
+    "out": 10,
+    "outubro": 10,
+    "nov": 11,
+    "novembro": 11,
+    "dez": 12,
+    "dezembro": 12,
+    "sep": 9,
+    "sept": 9,
+    "dec": 12,
+    "december": 12,
+}
+
+INVESTMENT_GROUP_LABELS = {
+    "capital_giro": "Capital de Giro",
+    "imobilizado": "Imobilizado",
+}
+
+INVESTMENT_CATEGORY_TO_GROUP = {
+    "caixa": "capital_giro",
+    "recebiveis": "capital_giro",
+    "estoques": "capital_giro",
+    "instalacoes": "imobilizado",
+    "maquinas_equipamentos": "imobilizado",
+    "outros": "imobilizado",
+}
+
+INVESTMENT_CATEGORY_LABELS = {
+    "caixa": "Caixa",
+    "recebiveis": "Receb\u00edveis",
+    "estoques": "Estoques",
+    "instalacoes": "Instala\u00e7\u00f5es",
+    "maquinas_equipamentos": "M\u00e1quinas e Equipamentos",
+    "outros": "Outros Investimentos",
+}
+
+INVESTMENT_CATEGORY_ORDER = {
+    "capital_giro": ["caixa", "recebiveis", "estoques"],
+    "imobilizado": ["instalacoes", "maquinas_equipamentos", "outros"],
+}
+
+INVESTMENT_CATEGORY_ALIASES = {
+    "estoque": "estoques",
+    "estoque_inicial": "estoques",
+    "recebivel": "recebiveis",
+    "contas_a_receber": "recebiveis",
+    "maquinas": "maquinas_equipamentos",
+    "equipamentos": "maquinas_equipamentos",
+    "maquinas_e_equipamentos": "maquinas_equipamentos",
+    "instalacao": "instalacoes",
+    "obras": "instalacoes",
+    "outros_investimentos": "outros",
+}
+
+SOURCE_TYPE_LABELS = {
+    "fornecedores": "Fornecedores",
+    "emprestimos_financiamentos": "Empr\u00e9stimos e Financiamentos",
+    "socios": "S\u00f3cios",
+}
+
+SOURCE_TYPE_ORDER = ["fornecedores", "emprestimos_financiamentos", "socios"]
+
+SOURCE_TYPE_ALIASES = {
+    "fornecedor": "fornecedores",
+    "forn": "fornecedores",
+    "emprestimos": "emprestimos_financiamentos",
+    "emprestimo": "emprestimos_financiamentos",
+    "financiamento": "emprestimos_financiamentos",
+    "financiamentos": "emprestimos_financiamentos",
+    "socios": "socios",
+    "socio": "socios",
+    "aporte_socios": "socios",
 }
 
 
@@ -102,6 +298,538 @@ def _ensure_dict(value: Any, default: Optional[Dict[str, Any]] = None) -> Dict[s
     if isinstance(value, dict):
         return value
     return dict(default or {})
+
+
+def _parse_decimal(value: Any) -> Optional[Decimal]:
+    if value is None:
+        return None
+    if isinstance(value, Decimal):
+        return value
+    if isinstance(value, (int, float)):
+        try:
+            return Decimal(str(value))
+        except InvalidOperation:
+            return None
+    if isinstance(value, str):
+        cleaned = re.sub(r'[^0-9,.\-]', '', value.strip())
+        if not cleaned:
+            return None
+        if ',' in cleaned and '.' in cleaned:
+            cleaned = cleaned.replace('.', '').replace(',', '.')
+        elif ',' in cleaned:
+            cleaned = cleaned.replace('.', '').replace(',', '.')
+        else:
+            cleaned = cleaned.replace(',', '')
+        try:
+            return Decimal(cleaned)
+        except InvalidOperation:
+            return None
+    return None
+
+
+def _format_currency_br(value: Any) -> str:
+    decimal_value = _parse_decimal(value)
+    if decimal_value is None:
+        return ""
+    quantized = decimal_value.quantize(Decimal("0.01"))
+    formatted = f"{quantized:,.2f}".replace(",", "_").replace(".", ",").replace("_", ".")
+    return f"R$ {formatted}"
+
+
+def _format_number_br(value: Any) -> str:
+    decimal_value = _parse_decimal(value)
+    if decimal_value is None:
+        return ""
+    if decimal_value == decimal_value.to_integral():
+        formatted = f"{int(decimal_value):,}".replace(",", ".")
+        return formatted
+    quantized = decimal_value.quantize(Decimal("0.01"))
+    formatted = f"{quantized:,.2f}".replace(",", "_").replace(".", ",").replace("_", ".")
+    return formatted
+
+
+def _format_percentage_br(value: Any) -> str:
+    decimal_value = _parse_decimal(value)
+    if decimal_value is None:
+        return ""
+    quantized = decimal_value.quantize(Decimal("0.01"))
+    formatted = f"{quantized:,.2f}".replace(",", "_").replace(".", ",").replace("_", ".")
+    return f"{formatted}%"
+
+
+def _compute_value_percent(
+    value_decimal: Optional[Decimal],
+    percent_decimal: Optional[Decimal],
+    base_decimal: Optional[Decimal],
+) -> Tuple[Optional[Decimal], Optional[Decimal]]:
+    if value_decimal is None and percent_decimal is not None and base_decimal is not None:
+        value_decimal = (base_decimal * percent_decimal) / Decimal("100")
+    if (
+        percent_decimal is None
+        and value_decimal is not None
+        and base_decimal not in (None, Decimal("0"))
+    ):
+        percent_decimal = (value_decimal / base_decimal) * Decimal("100")
+    return value_decimal, percent_decimal
+
+
+def _strip_accents(value: Any) -> str:
+    if value is None:
+        return ""
+    if not isinstance(value, str):
+        value = str(value)
+    normalized = unicodedata.normalize("NFD", value)
+    return "".join(ch for ch in normalized if unicodedata.category(ch) != "Mn")
+
+
+def _slugify_key(value: Any) -> str:
+    if value is None:
+        return ""
+    cleaned = _strip_accents(value).lower()
+    cleaned = re.sub(r'[^a-z0-9]+', '_', cleaned)
+    return cleaned.strip('_')
+
+
+def _normalize_ascii_lower(value: Any) -> str:
+    if value is None:
+        return ""
+    normalized = unicodedata.normalize("NFKD", str(value))
+    ascii_text = normalized.encode("ASCII", "ignore").decode("ASCII")
+    return ascii_text.lower().strip()
+
+
+def _map_block_to_structure_category(block_name: Any) -> str:
+    slug = _slugify_key(block_name)
+    if not slug:
+        return "outros"
+    mapped = STRUCTURE_BLOCK_CATEGORY_MAP.get(slug)
+    if mapped:
+        return mapped
+    # Try removing connector variations such as "_e_"
+    normalized = slug.replace("_e_", "_").replace("__", "_")
+    return STRUCTURE_BLOCK_CATEGORY_MAP.get(normalized, "outros")
+
+
+def _classify_structure_installment(block_name: str, installment: Dict[str, Any]) -> Dict[str, Any]:
+    block_slug = _slugify_key(block_name)
+    classificacao_raw = (installment.get("classificacao") or installment.get("classification") or "").strip()
+    repeticao_raw = (installment.get("repeticao") or installment.get("repetition") or "").strip()
+    tipo_raw = installment.get("tipo") or installment.get("installment_type") or ""
+
+    classificacao_norm = _normalize_ascii_lower(classificacao_raw)
+    repeticao_norm = _normalize_ascii_lower(repeticao_raw)
+    tipo_norm = _normalize_ascii_lower(tipo_raw)
+
+    if not classificacao_norm:
+        if block_slug in STRUCTURE_PEOPLE_BLOCK_SLUGS or tipo_norm in STRUCTURE_RECURRING_KEYWORDS:
+            classificacao_raw = "Despesa Fixa"
+            classificacao_norm = "despesa fixa"
+        elif block_slug in STRUCTURE_INVESTMENT_BLOCK_SLUGS:
+            classificacao_raw = "Investimento"
+            classificacao_norm = "investimento"
+        else:
+            classificacao_raw = "Investimento"
+            classificacao_norm = "investimento"
+
+    if not repeticao_norm:
+        if (
+            tipo_norm in STRUCTURE_RECURRING_KEYWORDS
+            or classificacao_norm in {"despesa fixa", "custo fixo"}
+        ):
+            repeticao_raw = "Mensal"
+            repeticao_norm = "mensal"
+        elif classificacao_norm == "investimento":
+            repeticao_raw = "Unica"
+            repeticao_norm = "unica"
+
+    category_slug = _map_block_to_structure_category(block_name)
+    group_slug = INVESTMENT_CATEGORY_TO_GROUP.get(category_slug, "imobilizado")
+
+    return {
+        "classificacao": classificacao_raw,
+        "classificacao_norm": classificacao_norm,
+        "repeticao": repeticao_raw,
+        "repeticao_norm": repeticao_norm,
+        "category": category_slug,
+        "group": group_slug,
+    }
+
+
+def _normalize_investment_category(value: Any) -> str:
+    slug = _slugify_key(value)
+    if slug in INVESTMENT_CATEGORY_TO_GROUP:
+        return slug
+    alias = INVESTMENT_CATEGORY_ALIASES.get(slug)
+    if alias:
+        return alias
+    return slug
+
+
+def _normalize_investment_group(value: Any, fallback_category: Optional[str] = None) -> str:
+    slug = _slugify_key(value)
+    if slug in INVESTMENT_GROUP_LABELS:
+        return slug
+    if fallback_category:
+        fallback_category = _normalize_investment_category(fallback_category)
+        mapped = INVESTMENT_CATEGORY_TO_GROUP.get(fallback_category)
+        if mapped:
+            return mapped
+    if slug:
+        return slug
+    if fallback_category:
+        return INVESTMENT_CATEGORY_TO_GROUP.get(fallback_category, "")
+    return ""
+
+
+def _normalize_source_type(value: Any) -> str:
+    slug = _slugify_key(value)
+    if slug in SOURCE_TYPE_LABELS:
+        return slug
+    alias = SOURCE_TYPE_ALIASES.get(slug)
+    if alias:
+        return alias
+    return slug
+
+
+def _parse_month_from_label(label: Any) -> Optional[Tuple[int, int]]:
+    if label is None:
+        return None
+    if isinstance(label, datetime):
+        return label.year, label.month
+    if isinstance(label, date):
+        return label.year, label.month
+    text = _strip_accents(label).lower()
+    if not text:
+        return None
+    tokens = re.split(r'[^a-z0-9]+', text)
+    tokens = [token for token in tokens if token]
+    if not tokens:
+        return None
+    year: Optional[int] = None
+    month: Optional[int] = None
+    for token in tokens:
+        if len(token) == 4 and token.isdigit():
+            year = int(token)
+            break
+    if year is None:
+        return None
+    for token in tokens:
+        if token == str(year):
+            continue
+        if token.isdigit() and len(token) <= 2:
+            candidate = int(token)
+            if 1 <= candidate <= 12:
+                month = candidate
+                break
+        normalized_month = MONTH_NAME_ALIASES.get(token)
+        if normalized_month:
+            month = normalized_month
+            break
+    if month is None:
+        for idx, token in enumerate(tokens):
+            if token == str(year) and idx > 0:
+                previous = tokens[idx - 1]
+                if previous.isdigit() and len(previous) <= 2:
+                    candidate = int(previous)
+                    if 1 <= candidate <= 12:
+                        month = candidate
+                        break
+                normalized_month = MONTH_NAME_ALIASES.get(previous)
+                if normalized_month:
+                    month = normalized_month
+                    break
+    if month and year:
+        return year, month
+    return None
+
+
+def _coerce_date(value: Any) -> Optional[date]:
+    if isinstance(value, datetime):
+        return value.date()
+    if isinstance(value, date):
+        return value
+    if value is None:
+        return None
+    text = str(value).strip()
+    if not text:
+        return None
+    for fmt in ("%Y-%m-%d", "%d/%m/%Y", "%d-%m-%Y", "%Y/%m/%d", "%d.%m.%Y"):
+        try:
+            return datetime.strptime(text, fmt).date()
+        except ValueError:
+            continue
+    month_tuple = _parse_month_from_label(text)
+    if month_tuple:
+        year, month = month_tuple
+        try:
+            return date(year, month, 1)
+        except ValueError:
+            return None
+    return None
+
+
+def _month_tuple_from_value(value: Any) -> Optional[Tuple[int, int]]:
+    if isinstance(value, datetime):
+        return value.year, value.month
+    if isinstance(value, date):
+        return value.year, value.month
+    if value is None:
+        return None
+    coerced = _coerce_date(value)
+    if coerced:
+        return coerced.year, coerced.month
+    return _parse_month_from_label(value)
+
+
+def _month_key_from_tuple(month_tuple: Tuple[int, int]) -> str:
+    year, month = month_tuple
+    return f"{year:04d}-{month:02d}"
+
+
+def _format_month_full(month_tuple: Tuple[int, int]) -> str:
+    year, month = month_tuple
+    if 1 <= month <= 12:
+        return f"{MONTH_NAMES_FULL[month - 1]}/{year}"
+    return f"{month:02d}/{year}"
+
+
+def _format_month_short(month_tuple: Tuple[int, int]) -> str:
+    year, month = month_tuple
+    if 1 <= month <= 12:
+        return f"{MONTH_NAMES_SHORT[month - 1]}/{year}"
+    return f"{month:02d}/{year}"
+
+
+def _build_fallback_key(label: str, prefix: str = "periodo") -> str:
+    slug = _slugify_key(label)
+    if not slug:
+        slug = prefix
+    return f"{prefix}::{slug}"
+
+
+def _format_currency_cell(amount: Optional[Decimal]) -> str:
+    if amount is None:
+        return "-"
+    return _format_currency_br(amount)
+
+
+def _accumulate_decimal(target: Dict[str, Decimal], key: str, amount: Optional[Decimal]) -> None:
+    if amount is None:
+        return
+    target[key] = target.get(key, Decimal("0")) + amount
+
+
+def _build_month_columns(
+    month_tuples: List[Tuple[int, int]],
+    fallback_labels: List[Dict[str, str]],
+) -> List[Dict[str, Any]]:
+    unique_months = sorted({tuple(item) for item in month_tuples if item})
+    columns: List[Dict[str, Any]] = [
+        {
+            "key": _month_key_from_tuple(month_tuple),
+            "year": month_tuple[0],
+            "month": month_tuple[1],
+            "label_full": _format_month_full(month_tuple),
+            "label_short": _format_month_short(month_tuple),
+            "is_fallback": False,
+        }
+        for month_tuple in unique_months
+    ]
+    seen_fallback = set()
+    for entry in fallback_labels:
+        label = entry.get("label") or ""
+        key = entry.get("key") or _build_fallback_key(label, prefix="periodo")
+        if key in seen_fallback:
+            continue
+        seen_fallback.add(key)
+        columns.append(
+            {
+                "key": key,
+                "label_full": label or key,
+                "label_short": label or key,
+                "is_fallback": True,
+            }
+        )
+    return columns
+
+
+def _build_matrix_line(
+    description: str,
+    values_map: Dict[str, Decimal],
+    columns: List[Dict[str, Any]],
+    total_strategy: str = "sum",
+) -> Dict[str, Any]:
+    column_outputs: List[str] = []
+    total_decimal = Decimal("0")
+    last_value: Optional[Decimal] = None
+    for column in columns:
+        key = column["key"]
+        amount = values_map.get(key)
+        column_outputs.append(_format_currency_cell(amount))
+        if amount is None:
+            continue
+        if total_strategy == "last":
+            last_value = amount
+        else:
+            total_decimal += amount
+    total_amount: Optional[Decimal]
+    if total_strategy == "last":
+        total_amount = last_value
+    else:
+        total_amount = total_decimal
+    total_display = _format_currency_cell(total_amount)
+    return {
+        "descricao": description,
+        "valores": column_outputs,
+        "total": total_display,
+        "total_decimal": float(total_amount) if total_amount is not None else None,
+    }
+
+
+def _prepare_investment_dataset(investments: List[Dict[str, Any]]) -> Dict[str, Any]:
+    entries: List[Dict[str, Any]] = []
+    month_tuples: List[Tuple[int, int]] = []
+    fallback_labels: List[Dict[str, str]] = []
+    per_group_category: Dict[str, Dict[str, Dict[str, Any]]] = {}
+    totals_per_month: Dict[str, Decimal] = {}
+    totals_por_grupo: Dict[str, Decimal] = {}
+    grand_total = Decimal("0")
+
+    for raw in investments:
+        category_slug = _normalize_investment_category(raw.get("category"))
+        group_slug = _normalize_investment_group(raw.get("investment_group"), category_slug)
+        group_label = INVESTMENT_GROUP_LABELS.get(group_slug, raw.get("investment_group") or group_slug or "Outros")
+        category_label = INVESTMENT_CATEGORY_LABELS.get(category_slug, raw.get("category") or category_slug or "Outros")
+        contribution_raw = raw.get("contribution_date")
+        contribution_date = _coerce_date(contribution_raw)
+        month_tuple = _month_tuple_from_value(contribution_date or contribution_raw)
+        month_key = _month_key_from_tuple(month_tuple) if month_tuple else None
+        amount_decimal = _parse_decimal(raw.get("amount"))
+
+        entry = {
+            "id": raw.get("id"),
+            "descricao": raw.get("description"),
+            "valor": _format_currency_br(raw.get("amount")),
+            "valor_decimal": float(amount_decimal) if amount_decimal is not None else None,
+            "grupo": group_slug,
+            "grupo_label": group_label,
+            "categoria": category_slug,
+            "categoria_label": category_label,
+            "data_aporte": _format_date(contribution_date) if contribution_date else "",
+            "data_aporte_iso": contribution_date.isoformat() if contribution_date else "",
+            "observacoes": raw.get("notes") or "",
+            "mes_chave": month_key or "",
+        }
+        entries.append(entry)
+
+        if month_tuple:
+            month_tuples.append(month_tuple)
+        else:
+            if contribution_raw:
+                label = str(contribution_raw)
+                fallback_key = _build_fallback_key(label, prefix="aporte")
+                fallback_labels.append({"label": label, "key": fallback_key})
+                month_key = fallback_key
+
+        if amount_decimal is None:
+            continue
+        grand_total += amount_decimal
+        totals_por_grupo[group_slug] = totals_por_grupo.get(group_slug, Decimal("0")) + amount_decimal
+        if month_key:
+            _accumulate_decimal(totals_per_month, month_key, amount_decimal)
+
+        group_entry = per_group_category.setdefault(group_slug, {})
+        category_entry = group_entry.setdefault(
+            category_slug,
+            {
+                "total": Decimal("0"),
+                "per_month": {},
+            },
+        )
+        category_entry["total"] = category_entry["total"] + amount_decimal
+        if month_key:
+            _accumulate_decimal(category_entry["per_month"], month_key, amount_decimal)
+
+    return {
+        "entries": entries,
+        "month_tuples": month_tuples,
+        "fallback_labels": fallback_labels,
+        "per_group_category": per_group_category,
+        "totals_per_month": totals_per_month,
+        "totals_por_grupo": totals_por_grupo,
+        "grand_total": grand_total,
+    }
+
+
+def _prepare_sources_dataset(sources: List[Dict[str, Any]]) -> Dict[str, Any]:
+    entries: List[Dict[str, Any]] = []
+    month_tuples: List[Tuple[int, int]] = []
+    fallback_labels: List[Dict[str, str]] = []
+    per_type_map: Dict[str, Dict[str, Any]] = {}
+    totals_per_month: Dict[str, Decimal] = {}
+    totals_por_tipo: Dict[str, Decimal] = {}
+    grand_total = Decimal("0")
+
+    for raw in sources:
+        tipo_slug = _normalize_source_type(raw.get("category"))
+        tipo_label = SOURCE_TYPE_LABELS.get(tipo_slug, raw.get("category") or tipo_slug or "Outros")
+        contribution_raw = raw.get("contribution_date")
+        contribution_date = _coerce_date(contribution_raw)
+        month_tuple = _month_tuple_from_value(contribution_date or contribution_raw)
+        month_key = _month_key_from_tuple(month_tuple) if month_tuple else None
+        amount_decimal = _parse_decimal(raw.get("amount"))
+
+        entry = {
+            "id": raw.get("id"),
+            "tipo": tipo_slug,
+            "tipo_label": tipo_label,
+            "descricao": raw.get("description"),
+            "valor": _format_currency_br(raw.get("amount")),
+            "valor_decimal": float(amount_decimal) if amount_decimal is not None else None,
+            "disponibilidade": raw.get("availability") or "",
+            "data_aporte": _format_date(contribution_date) if contribution_date else "",
+            "data_aporte_iso": contribution_date.isoformat() if contribution_date else "",
+            "observacoes": raw.get("notes") or "",
+            "mes_chave": month_key or "",
+        }
+        entries.append(entry)
+
+        if month_tuple:
+            month_tuples.append(month_tuple)
+        else:
+            if contribution_raw:
+                label = str(contribution_raw)
+                fallback_key = _build_fallback_key(label, prefix="fonte")
+                fallback_labels.append({"label": label, "key": fallback_key})
+                month_key = fallback_key
+
+        if amount_decimal is None:
+            continue
+        grand_total += amount_decimal
+        totals_por_tipo[tipo_slug] = totals_por_tipo.get(tipo_slug, Decimal("0")) + amount_decimal
+        if month_key:
+            _accumulate_decimal(totals_per_month, month_key, amount_decimal)
+
+        tipo_entry = per_type_map.setdefault(
+            tipo_slug,
+            {
+                "total": Decimal("0"),
+                "per_month": {},
+            },
+        )
+        tipo_entry["total"] = tipo_entry["total"] + amount_decimal
+        if month_key:
+            _accumulate_decimal(tipo_entry["per_month"], month_key, amount_decimal)
+
+    return {
+        "entries": entries,
+        "month_tuples": month_tuples,
+        "fallback_labels": fallback_labels,
+        "per_tipo": per_type_map,
+        "totals_per_month": totals_per_month,
+        "totals_por_tipo": totals_por_tipo,
+        "grand_total": grand_total,
+    }
 
 
 def _normalize_sections(sections: Any, fallback: Optional[List[Dict[str, Any]]] = None) -> List[Dict[str, Any]]:
@@ -438,10 +1166,540 @@ def build_persona_segments(segments: List[Dict[str, Any]]) -> List[Dict[str, Any
     return persona_segments
 
 
+def _prepare_segment_products(raw_products: List[Any]) -> Tuple[List[Dict[str, Any]], Dict[str, Any]]:
+    prepared: List[Dict[str, Any]] = []
+    total_units = Decimal("0")
+    total_revenue = Decimal("0")
+    total_cost_value = Decimal("0")
+    total_expense_value = Decimal("0")
+    total_margin_value = Decimal("0")
+    total_goal_units = Decimal("0")
+
+    units_has_data = False
+    revenue_has_data = False
+    cost_has_data = False
+    expense_has_data = False
+    margin_has_data = False
+    goal_units_has_data = False
+
+    goal_percent_sum = Decimal("0")
+    goal_percent_weight = Decimal("0")
+
+    def _extract_decimal_from(source: Any, keys: List[str]) -> Optional[Decimal]:
+        if not isinstance(source, dict):
+            return None
+        for key in keys:
+            if key not in source:
+                continue
+            decimal_candidate = _parse_decimal(source.get(key))
+            if decimal_candidate is not None:
+                return decimal_candidate
+        return None
+
+    def _extract_text_from(source: Any, keys: List[str]) -> Optional[str]:
+        if not isinstance(source, dict):
+            return None
+        for key in keys:
+            if key not in source:
+                continue
+            value = source.get(key)
+            if isinstance(value, str):
+                cleaned = value.strip()
+                if cleaned:
+                    return cleaned
+            elif value is not None:
+                cleaned = str(value).strip()
+                if cleaned:
+                    return cleaned
+        return None
+
+    for product in raw_products:
+        if not isinstance(product, dict):
+            continue
+
+        nome_produto = product.get("name") or product.get("nome") or "Produto"
+
+        sale_price_raw = (
+            product.get("sale_price")
+            or product.get("preco_venda")
+            or product.get("price")
+            or {}
+        )
+        price_value = None
+        price_notes = None
+        if isinstance(sale_price_raw, dict):
+            price_value = _extract_decimal_from(
+                sale_price_raw, ["valor", "value", "amount", "price"]
+            )
+            price_notes = _extract_text_from(
+                sale_price_raw, ["observacoes", "observacao", "obs", "notes"]
+            )
+        else:
+            price_value = _parse_decimal(sale_price_raw)
+        if price_value is None:
+            price_value = _parse_decimal(
+                product.get("sale_price_value")
+                or product.get("preco_venda_valor")
+                or product.get("precoVendaValor")
+            )
+        if price_notes is None:
+            price_notes = _extract_text_from(
+                product,
+                [
+                    "preco_venda_observacoes",
+                    "sale_price_notes",
+                    "preco_venda_obs",
+                    "sale_price_obs",
+                ],
+            )
+
+        cost_raw = (
+            product.get("variable_costs")
+            or product.get("custos_variaveis")
+            or product.get("custosVariaveis")
+            or {}
+        )
+        cost_value = None
+        cost_percent = None
+        cost_notes = None
+        if isinstance(cost_raw, dict):
+            cost_value = _extract_decimal_from(cost_raw, ["valor", "value", "amount"])
+            cost_percent = _extract_decimal_from(
+                cost_raw, ["percentual", "percent", "percentage"]
+            )
+            cost_notes = _extract_text_from(
+                cost_raw, ["observacoes", "observacao", "obs", "notes"]
+            )
+        else:
+            cost_value = _parse_decimal(cost_raw)
+        if cost_value is None:
+            cost_value = _parse_decimal(
+                product.get("custos_variaveis_valor")
+                or product.get("variable_costs_value")
+                or product.get("custosVariaveisValor")
+            )
+        if cost_percent is None:
+            cost_percent = _parse_decimal(
+                product.get("custos_variaveis_percentual")
+                or product.get("variable_costs_percent")
+                or product.get("custosVariaveisPercentual")
+            )
+        if cost_notes is None:
+            cost_notes = _extract_text_from(
+                product,
+                [
+                    "custos_variaveis_observacoes",
+                    "variable_costs_notes",
+                    "custosVariaveisObs",
+                ],
+            )
+        cost_value, cost_percent = _compute_value_percent(cost_value, cost_percent, price_value)
+
+        expense_raw = (
+            product.get("variable_expenses")
+            or product.get("despesas_variaveis")
+            or product.get("despesasVariaveis")
+            or {}
+        )
+        expense_value = None
+        expense_percent = None
+        expense_notes = None
+        if isinstance(expense_raw, dict):
+            expense_value = _extract_decimal_from(
+                expense_raw, ["valor", "value", "amount"]
+            )
+            expense_percent = _extract_decimal_from(
+                expense_raw, ["percentual", "percent", "percentage"]
+            )
+            expense_notes = _extract_text_from(
+                expense_raw, ["observacoes", "observacao", "obs", "notes"]
+            )
+        else:
+            expense_value = _parse_decimal(expense_raw)
+        if expense_value is None:
+            expense_value = _parse_decimal(
+                product.get("despesas_variaveis_valor")
+                or product.get("variable_expenses_value")
+                or product.get("despesasVariaveisValor")
+            )
+        if expense_percent is None:
+            expense_percent = _parse_decimal(
+                product.get("despesas_variaveis_percentual")
+                or product.get("variable_expenses_percent")
+                or product.get("despesasVariaveisPercentual")
+            )
+        if expense_notes is None:
+            expense_notes = _extract_text_from(
+                product,
+                [
+                    "despesas_variaveis_observacoes",
+                    "variable_expenses_notes",
+                    "despesasVariaveisObs",
+                ],
+            )
+        expense_value, expense_percent = _compute_value_percent(
+            expense_value, expense_percent, price_value
+        )
+
+        margin_raw = (
+            product.get("contribution_margin")
+            or product.get("margem_contribuicao")
+            or {}
+        )
+        margin_value = None
+        margin_percent = None
+        margin_notes = None
+        if isinstance(margin_raw, dict):
+            margin_value = _extract_decimal_from(margin_raw, ["valor", "value", "amount"])
+            margin_percent = _extract_decimal_from(
+                margin_raw, ["percentual", "percent", "percentage"]
+            )
+            margin_notes = _extract_text_from(
+                margin_raw, ["observacoes", "observacao", "obs", "notes"]
+            )
+        else:
+            margin_value = _parse_decimal(margin_raw)
+        if margin_value is None:
+            margin_value = _parse_decimal(
+                product.get("margem_contribuicao_valor")
+                or product.get("contribution_margin_value")
+                or product.get("margemContribuicaoValor")
+            )
+        if margin_percent is None:
+            margin_percent = _parse_decimal(
+                product.get("margem_contribuicao_percentual")
+                or product.get("contribution_margin_percent")
+                or product.get("margemContribuicaoPercentual")
+            )
+        if margin_notes is None:
+            margin_notes = _extract_text_from(
+                product,
+                [
+                    "margem_contribuicao_observacoes",
+                    "contribution_margin_notes",
+                    "margemContribuicaoObs",
+                ],
+            )
+        margin_value, margin_percent = _compute_value_percent(
+            margin_value, margin_percent, price_value
+        )
+        if margin_value is None and price_value is not None:
+            subtotal = Decimal("0")
+            if cost_value is not None:
+                subtotal += cost_value
+            if expense_value is not None:
+                subtotal += expense_value
+            margin_value = price_value - subtotal
+        if (
+            margin_percent is None
+            and margin_value is not None
+            and price_value not in (None, Decimal("0"))
+        ):
+            margin_percent = (margin_value / price_value) * Decimal("100")
+
+        market_raw = (
+            product.get("market_size")
+            or product.get("mercado")
+            or product.get("market")
+            or {}
+        )
+        market_units = None
+        market_revenue = None
+        market_notes = None
+        if isinstance(market_raw, dict):
+            market_units = _extract_decimal_from(
+                market_raw, ["unidades_mensais", "monthly_units", "units"]
+            )
+            market_revenue = _extract_decimal_from(
+                market_raw, ["faturamento_mensal", "monthly_revenue", "revenue"]
+            )
+            market_notes = _extract_text_from(
+                market_raw, ["observacoes", "observacao", "obs", "notes"]
+            )
+        else:
+            market_units = _parse_decimal(market_raw)
+        if market_units is None:
+            market_units = _parse_decimal(
+                product.get("mercado_unidades_mensais")
+                or product.get("market_monthly_units")
+                or product.get("monthly_units")
+            )
+        if market_revenue is None:
+            market_revenue = _parse_decimal(
+                product.get("mercado_faturamento_mensal")
+                or product.get("market_monthly_revenue")
+                or product.get("monthly_revenue")
+            )
+        if market_notes is None:
+            market_notes = _extract_text_from(
+                product,
+                [
+                    "mercado_observacoes",
+                    "market_size_notes",
+                    "mercadoObs",
+                ],
+            )
+        if market_revenue is None and market_units is not None and price_value is not None:
+            market_revenue = price_value * market_units
+
+        share_raw = (
+            product.get("marketing_share_goal")
+            or product.get("market_share_goal")
+            or product.get("meta_market_share")
+            or {}
+        )
+        share_units = None
+        share_percent = None
+        share_notes = None
+        if isinstance(share_raw, dict):
+            share_units = _extract_decimal_from(
+                share_raw, ["unidades_mensais", "monthly_units", "units"]
+            )
+            share_percent = _extract_decimal_from(
+                share_raw, ["percentual", "percent", "percentage", "market_share"]
+            )
+            share_notes = _extract_text_from(
+                share_raw, ["observacoes", "observacao", "obs", "notes"]
+            )
+        else:
+            share_units = _parse_decimal(share_raw)
+        if share_units is None:
+            share_units = _parse_decimal(
+                product.get("meta_market_share_unidades_mensais")
+                or product.get("market_share_monthly_units")
+            )
+        if share_percent is None:
+            share_percent = _parse_decimal(
+                product.get("meta_market_share_percentual")
+                or product.get("market_share_percent")
+            )
+        if share_notes is None:
+            share_notes = _extract_text_from(
+                product,
+                [
+                    "meta_market_share_observacoes",
+                    "market_share_notes",
+                    "metaMarketShareObs",
+                ],
+            )
+        if share_units is None and share_percent is not None and market_units not in (
+            None,
+            Decimal("0"),
+        ):
+            share_units = (share_percent / Decimal("100")) * market_units
+        if share_percent is None and share_units is not None and market_units not in (
+            None,
+            Decimal("0"),
+        ):
+            share_percent = (share_units / market_units) * Decimal("100")
+
+        product_notes = _extract_text_from(product, ["observacoes", "notes"])
+
+        cost_monthly_value = None
+        if cost_value is not None and market_units is not None:
+            cost_monthly_value = cost_value * market_units
+            cost_has_data = True
+        expense_monthly_value = None
+        if expense_value is not None and market_units is not None:
+            expense_monthly_value = expense_value * market_units
+            expense_has_data = True
+        margin_monthly_value = None
+        if margin_value is not None and market_units is not None:
+            margin_monthly_value = margin_value * market_units
+            margin_has_data = True
+
+        if market_units is not None:
+            total_units += market_units
+            units_has_data = True
+        if market_revenue is not None:
+            total_revenue += market_revenue
+            revenue_has_data = True
+        if cost_monthly_value is not None:
+            total_cost_value += cost_monthly_value
+        if expense_monthly_value is not None:
+            total_expense_value += expense_monthly_value
+        if margin_monthly_value is not None:
+            total_margin_value += margin_monthly_value
+        if share_units is not None:
+            total_goal_units += share_units
+            goal_units_has_data = True
+        if share_percent is not None:
+            if market_units is not None and market_units > 0:
+                goal_percent_sum += share_percent * market_units
+                goal_percent_weight += market_units
+            else:
+                goal_percent_sum += share_percent
+                goal_percent_weight += Decimal("1")
+
+        prepared.append(
+            {
+                "nome": nome_produto,
+                "observacoes": product_notes,
+                "preco_venda": {
+                    "valor": price_value,
+                    "valor_formatado": _format_currency_br(price_value),
+                    "observacoes": price_notes,
+                },
+                "custos_variaveis": {
+                    "valor": cost_value,
+                    "valor_formatado": _format_currency_br(cost_value),
+                    "percentual": cost_percent,
+                    "percentual_formatado": _format_percentage_br(cost_percent),
+                    "total_mensal": cost_monthly_value,
+                    "total_mensal_formatado": _format_currency_br(cost_monthly_value),
+                    "observacoes": cost_notes,
+                },
+                "despesas_variaveis": {
+                    "valor": expense_value,
+                    "valor_formatado": _format_currency_br(expense_value),
+                    "percentual": expense_percent,
+                    "percentual_formatado": _format_percentage_br(expense_percent),
+                    "total_mensal": expense_monthly_value,
+                    "total_mensal_formatado": _format_currency_br(
+                        expense_monthly_value
+                    ),
+                    "observacoes": expense_notes,
+                },
+                "margem_contribuicao": {
+                    "valor": margin_value,
+                    "valor_formatado": _format_currency_br(margin_value),
+                    "percentual": margin_percent,
+                    "percentual_formatado": _format_percentage_br(margin_percent),
+                    "total_mensal": margin_monthly_value,
+                    "total_mensal_formatado": _format_currency_br(
+                        margin_monthly_value
+                    ),
+                    "observacoes": margin_notes,
+                },
+                "mercado": {
+                    "unidades_mensais": market_units,
+                    "unidades_mensais_formatado": _format_number_br(market_units),
+                    "faturamento_mensal": market_revenue,
+                    "faturamento_mensal_formatado": _format_currency_br(
+                        market_revenue
+                    ),
+                    "observacoes": market_notes,
+                },
+                "meta_market_share": {
+                    "unidades_mensais": share_units,
+                    "unidades_mensais_formatado": _format_number_br(share_units),
+                    "percentual": share_percent,
+                    "percentual_formatado": _format_percentage_br(share_percent),
+                    "observacoes": share_notes,
+                },
+            }
+        )
+
+    totals_units_value: Optional[Decimal] = total_units if units_has_data else None
+    totals_revenue_value: Optional[Decimal] = total_revenue if revenue_has_data else None
+    totals_cost_value: Optional[Decimal] = total_cost_value if cost_has_data else None
+    totals_expense_value: Optional[Decimal] = total_expense_value if expense_has_data else None
+    totals_margin_value: Optional[Decimal] = total_margin_value if margin_has_data else None
+    totals_goal_units_value: Optional[Decimal] = (
+        total_goal_units if goal_units_has_data else None
+    )
+
+    if totals_margin_value is None and revenue_has_data:
+        inferred_margin = total_revenue
+        if cost_has_data:
+            inferred_margin -= total_cost_value
+        if expense_has_data:
+            inferred_margin -= total_expense_value
+        totals_margin_value = inferred_margin
+        margin_has_data = True
+
+    cost_percent_total: Optional[Decimal] = None
+    if (
+        totals_revenue_value not in (None, Decimal("0"))
+        and totals_cost_value is not None
+    ):
+        cost_percent_total = (totals_cost_value / totals_revenue_value) * Decimal("100")
+
+    expense_percent_total: Optional[Decimal] = None
+    if (
+        totals_revenue_value not in (None, Decimal("0"))
+        and totals_expense_value is not None
+    ):
+        expense_percent_total = (
+            totals_expense_value / totals_revenue_value
+        ) * Decimal("100")
+
+    margin_percent_total: Optional[Decimal] = None
+    if (
+        totals_revenue_value not in (None, Decimal("0"))
+        and totals_margin_value is not None
+    ):
+        margin_percent_total = (
+            totals_margin_value / totals_revenue_value
+        ) * Decimal("100")
+
+    goal_percent_total: Optional[Decimal] = None
+    if (
+        totals_goal_units_value is not None
+        and totals_units_value not in (None, Decimal("0"))
+    ):
+        goal_percent_total = (
+            totals_goal_units_value / totals_units_value
+        ) * Decimal("100")
+    elif goal_percent_weight not in (None, Decimal("0")):
+        goal_percent_total = goal_percent_sum / goal_percent_weight
+
+    totals = {
+        "produtos_registrados": len(prepared),
+        "unidades_mensais": {
+            "valor": totals_units_value,
+            "valor_formatado": _format_number_br(totals_units_value),
+        },
+        "faturamento_mensal": {
+            "valor": totals_revenue_value,
+            "valor_formatado": _format_currency_br(totals_revenue_value),
+        },
+        "custos_variaveis": {
+            "valor": totals_cost_value,
+            "valor_formatado": _format_currency_br(totals_cost_value),
+            "percentual": cost_percent_total,
+            "percentual_formatado": _format_percentage_br(cost_percent_total),
+        },
+        "despesas_variaveis": {
+            "valor": totals_expense_value,
+            "valor_formatado": _format_currency_br(totals_expense_value),
+            "percentual": expense_percent_total,
+            "percentual_formatado": _format_percentage_br(expense_percent_total),
+        },
+        "margem_contribuicao": {
+            "valor": totals_margin_value,
+            "valor_formatado": _format_currency_br(totals_margin_value),
+            "percentual": margin_percent_total,
+            "percentual_formatado": _format_percentage_br(margin_percent_total),
+        },
+        "meta_market_share": {
+            "unidades_mensais": {
+                "valor": totals_goal_units_value,
+                "valor_formatado": _format_number_br(totals_goal_units_value),
+            },
+            "percentual": goal_percent_total,
+            "percentual_formatado": _format_percentage_br(goal_percent_total),
+        },
+    }
+
+    return prepared, totals
+
+
 def build_competitive_segments(segments: List[Dict[str, Any]]) -> List[Dict[str, Any]]:
     comp_segments: List[Dict[str, Any]] = []
     for segment in segments:
         positioning = segment.get("positioning") or {}
+        raw_products_source = segment.get("strategy") or {}
+        raw_products = []
+        if isinstance(raw_products_source, dict):
+            raw_products = _ensure_list(
+                raw_products_source.get("products")
+                or raw_products_source.get("produtos")
+                or []
+            )
+        if not raw_products:
+            raw_products = _ensure_list(segment.get("products"))
+        prepared_products, products_totals = _prepare_segment_products(raw_products)
         comp_segments.append(
             {
                 "id": segment.get("id"),
@@ -459,6 +1717,8 @@ def build_competitive_segments(segments: List[Dict[str, Any]]) -> List[Dict[str,
                     "comprobacoes": segment.get("evidences") or [],
                 },
                 "personas": segment.get("personas") or [],
+                "produtos": prepared_products,
+                "produtos_totais": products_totals,
             }
         )
     return comp_segments
@@ -467,6 +1727,7 @@ def build_competitive_segments(segments: List[Dict[str, Any]]) -> List[Dict[str,
 def load_structures(db, plan_id: int) -> List[Dict[str, Any]]:
     rows = db.list_plan_structures(plan_id)
     installments = db.list_plan_structure_installments(plan_id)
+    capacities = db.list_plan_structure_capacities(plan_id)
 
     installments_map: Dict[int, List[Dict[str, Any]]] = {}
     for inst in installments:
@@ -477,6 +1738,8 @@ def load_structures(db, plan_id: int) -> List[Dict[str, Any]]:
                 "valor": inst.get("amount"),
                 "vencimento": inst.get("due_info"),
                 "tipo": inst.get("installment_type"),
+                "classificacao": inst.get("classification"),
+                "repeticao": inst.get("repetition"),
             }
         )
 
@@ -492,6 +1755,7 @@ def load_structures(db, plan_id: int) -> List[Dict[str, Any]]:
             area_name,
             {
                 "id": area_key_raw or area_name.lower().replace(" ", "_"),
+                "codigo": area_key_raw or area_name.lower().replace(" ", "_"),
                 "nome": area_name,
                 "blocos": {},
             },
@@ -526,6 +1790,40 @@ def load_structures(db, plan_id: int) -> List[Dict[str, Any]]:
             }
         )
 
+    for cap in capacities:
+        area_key_raw = (cap.get("area") or "").lower()
+        area_name = AREA_LABELS.get(area_key_raw, cap.get("area") or "Outros")
+        area_entry = area_map.get(area_name)
+        if not area_entry:
+            area_entry = {
+                "id": area_key_raw or area_name.lower().replace(" ", "_"),
+                "codigo": area_key_raw or area_name.lower().replace(" ", "_"),
+                "nome": area_name,
+                "blocos": {},
+            }
+            area_map[area_name] = area_entry
+        raw_capacity = cap.get("revenue_capacity")
+        area_entry["capacidade"] = raw_capacity
+        area_entry["capacidade_formatada"] = _format_currency_br(raw_capacity)
+        area_entry["capacidade_observacoes"] = cap.get("observations")
+        area_entry["capacidade_id"] = cap.get("id")
+        decimal_value = _parse_decimal(raw_capacity)
+        area_entry["capacidade_valor_decimal"] = float(decimal_value) if decimal_value is not None else None
+        if area_key_raw:
+            area_entry["codigo"] = area_key_raw
+            area_entry["id"] = area_key_raw
+
+    # Garante que as principais areas aparecam mesmo sem itens cadastrados
+    for default_area_key in ("comercial", "operacional", "adm_fin"):
+        area_name = AREA_LABELS.get(default_area_key)
+        if area_name and area_name not in area_map:
+            area_map[area_name] = {
+                "id": default_area_key,
+                "codigo": default_area_key,
+                "nome": area_name,
+                "blocos": {},
+            }
+
     ordered_areas: List[Dict[str, Any]] = []
     for area_name in AREA_ORDER:
         if area_name in area_map:
@@ -541,10 +1839,285 @@ def load_structures(db, plan_id: int) -> List[Dict[str, Any]]:
     return ordered_areas
 
 
+def calculate_investment_summary_by_block(structures: List[Dict[str, Any]]) -> List[Dict[str, Any]]:
+    """
+    Calcula resumo de investimentos agrupados por bloco estruturante.
+    
+    Usa as classificações das parcelas para categorizar:
+    - Investimentos (classificação = "Investimento")
+    - Custos Fixos Mensais/Anuais (classificação = "Custo Fixo")
+    - Despesas Fixas Mensais/Anuais (classificação = "Despesa Fixa")
+    """
+    from decimal import Decimal
+    
+    # Inicializar totais por bloco
+    blocos_totais: Dict[str, Dict[str, Decimal]] = {}
+    
+    # Lista de blocos na ordem desejada
+    blocos_ordem = [
+        "Pessoas",
+        "Imóveis",
+        "Instalações",
+        "Máquinas e Equipamentos",
+        "Móveis e Utensílios",
+        "TI e Comunicação",
+        "Outros",
+    ]
+    
+    for area in structures:
+        for bloco in area.get("blocos", []):
+            bloco_nome = bloco.get("nome", "Outros")
+            
+            if bloco_nome not in blocos_totais:
+                blocos_totais[bloco_nome] = {
+                    "investimentos": Decimal("0"),
+                    "custos_fixos_mensal": Decimal("0"),
+                    "despesas_fixas_mensal": Decimal("0"),
+                    "custos_fixos_anual": Decimal("0"),
+                    "despesas_fixas_anual": Decimal("0"),
+                }
+            
+            for item in bloco.get("itens", []):
+                parcelas = item.get("parcelas", [])
+                
+                # Processar cada parcela individualmente
+                for parcela in parcelas:
+                    valor_str = parcela.get("valor", "")
+                    valor = _parse_decimal(valor_str) or Decimal("0")
+                    classification = _classify_structure_installment(bloco_nome, parcela)
+                    classificacao_norm = classification["classificacao_norm"]
+                    repeticao = classification["repeticao_norm"]
+
+                    # Classificar baseado na classificação da parcela
+                    if classificacao_norm == "investimento":
+                        # Investimentos (independente da repetição)
+                        blocos_totais[bloco_nome]["investimentos"] += valor
+                    
+                    elif classificacao_norm == "custo fixo":
+                        # Custos Fixos
+                        if repeticao == "mensal":
+                            blocos_totais[bloco_nome]["custos_fixos_mensal"] += valor
+                        elif repeticao == "anual":
+                            blocos_totais[bloco_nome]["custos_fixos_anual"] += valor
+                        elif repeticao == "trimestral":
+                            # Converter trimestral para mensal (divide por 3)
+                            blocos_totais[bloco_nome]["custos_fixos_mensal"] += valor / Decimal("3")
+                        elif repeticao == "semestral":
+                            # Converter semestral para mensal (divide por 6)
+                            blocos_totais[bloco_nome]["custos_fixos_mensal"] += valor / Decimal("6")
+                        elif repeticao in ["unica", ""]:
+                            # Se for única ou sem repetição, não conta como recorrente
+                            pass
+                    
+                    elif classificacao_norm == "despesa fixa":
+                        # Despesas Fixas
+                        if repeticao == "mensal":
+                            blocos_totais[bloco_nome]["despesas_fixas_mensal"] += valor
+                        elif repeticao == "anual":
+                            blocos_totais[bloco_nome]["despesas_fixas_anual"] += valor
+                        elif repeticao == "trimestral":
+                            # Converter trimestral para mensal (divide por 3)
+                            blocos_totais[bloco_nome]["despesas_fixas_mensal"] += valor / Decimal("3")
+                        elif repeticao == "semestral":
+                            # Converter semestral para mensal (divide por 6)
+                            blocos_totais[bloco_nome]["despesas_fixas_mensal"] += valor / Decimal("6")
+                        elif repeticao in ["unica", ""]:
+                            # Se for única ou sem repetição, não conta como recorrente
+                            pass
+    
+    # Preparar lista de resultados ordenada
+    resultado = []
+    
+    # Primeiro, adicionar blocos na ordem especificada
+    for bloco_nome in blocos_ordem:
+        if bloco_nome in blocos_totais:
+            totais = blocos_totais[bloco_nome]
+            
+            # Calcular totais
+            total_gastos_mensal = totais["custos_fixos_mensal"] + totais["despesas_fixas_mensal"]
+            total_gastos_anual = (
+                totais["custos_fixos_anual"] + 
+                totais["despesas_fixas_anual"] +
+                (total_gastos_mensal * Decimal("12"))
+            )
+            
+            resultado.append({
+                "bloco": bloco_nome,
+                "investimentos": totais["investimentos"],
+                "investimentos_formatado": _format_currency_br(totais["investimentos"]),
+                "custos_fixos_mensal": totais["custos_fixos_mensal"],
+                "custos_fixos_mensal_formatado": _format_currency_br(totais["custos_fixos_mensal"]),
+                "despesas_fixas_mensal": totais["despesas_fixas_mensal"],
+                "despesas_fixas_mensal_formatado": _format_currency_br(totais["despesas_fixas_mensal"]),
+                "total_gastos_mensal": total_gastos_mensal,
+                "total_gastos_mensal_formatado": _format_currency_br(total_gastos_mensal),
+                "custos_fixos_anual": totais["custos_fixos_anual"],
+                "custos_fixos_anual_formatado": _format_currency_br(totais["custos_fixos_anual"]),
+                "despesas_fixas_anual": totais["despesas_fixas_anual"],
+                "despesas_fixas_anual_formatado": _format_currency_br(totais["despesas_fixas_anual"]),
+                "total_gastos_anual": total_gastos_anual,
+                "total_gastos_anual_formatado": _format_currency_br(total_gastos_anual),
+            })
+            blocos_totais.pop(bloco_nome)
+    
+    # Adicionar blocos restantes (se houver)
+    for bloco_nome, totais in sorted(blocos_totais.items()):
+        total_gastos_mensal = totais["custos_fixos_mensal"] + totais["despesas_fixas_mensal"]
+        total_gastos_anual = (
+            totais["custos_fixos_anual"] + 
+            totais["despesas_fixas_anual"] +
+            (total_gastos_mensal * Decimal("12"))
+        )
+        
+        resultado.append({
+            "bloco": bloco_nome,
+            "investimentos": totais["investimentos"],
+            "investimentos_formatado": _format_currency_br(totais["investimentos"]),
+            "custos_fixos_mensal": totais["custos_fixos_mensal"],
+            "custos_fixos_mensal_formatado": _format_currency_br(totais["custos_fixos_mensal"]),
+            "despesas_fixas_mensal": totais["despesas_fixas_mensal"],
+            "despesas_fixas_mensal_formatado": _format_currency_br(totais["despesas_fixas_mensal"]),
+            "total_gastos_mensal": total_gastos_mensal,
+            "total_gastos_mensal_formatado": _format_currency_br(total_gastos_mensal),
+            "custos_fixos_anual": totais["custos_fixos_anual"],
+            "custos_fixos_anual_formatado": _format_currency_br(totais["custos_fixos_anual"]),
+            "despesas_fixas_anual": totais["despesas_fixas_anual"],
+            "despesas_fixas_anual_formatado": _format_currency_br(totais["despesas_fixas_anual"]),
+            "total_gastos_anual": total_gastos_anual,
+            "total_gastos_anual_formatado": _format_currency_br(total_gastos_anual),
+        })
+    
+    # Adicionar linha de totais
+    total_investimentos = sum(r["investimentos"] for r in resultado)
+    total_custos_mensal = sum(r["custos_fixos_mensal"] for r in resultado)
+    total_despesas_mensal = sum(r["despesas_fixas_mensal"] for r in resultado)
+    total_gastos_mensal = total_custos_mensal + total_despesas_mensal
+    total_custos_anual = sum(r["custos_fixos_anual"] for r in resultado)
+    total_despesas_anual = sum(r["despesas_fixas_anual"] for r in resultado)
+    # Soma os totais anuais já calculados de cada bloco (que já incluem mensais × 12)
+    total_gastos_anual = sum(r["total_gastos_anual"] for r in resultado)
+    
+    resultado.append({
+        "bloco": "TOTAL",
+        "investimentos": total_investimentos,
+        "investimentos_formatado": _format_currency_br(total_investimentos),
+        "custos_fixos_mensal": total_custos_mensal,
+        "custos_fixos_mensal_formatado": _format_currency_br(total_custos_mensal),
+        "despesas_fixas_mensal": total_despesas_mensal,
+        "despesas_fixas_mensal_formatado": _format_currency_br(total_despesas_mensal),
+        "total_gastos_mensal": total_gastos_mensal,
+        "total_gastos_mensal_formatado": _format_currency_br(total_gastos_mensal),
+        "custos_fixos_anual": total_custos_anual,
+        "custos_fixos_anual_formatado": _format_currency_br(total_custos_anual),
+        "despesas_fixas_anual": total_despesas_anual,
+        "despesas_fixas_anual_formatado": _format_currency_br(total_despesas_anual),
+        "total_gastos_anual": total_gastos_anual,
+        "total_gastos_anual_formatado": _format_currency_br(total_gastos_anual),
+        "is_total": True,
+    })
+    
+    return resultado
+
+
+def aggregate_structure_investments(structures: List[Dict[str, Any]]) -> Dict[str, Any]:
+    from decimal import Decimal
+
+    categories_summary: Dict[str, Dict[str, Any]] = {
+        "instalacoes": {"total": Decimal("0"), "per_month": {}},
+        "maquinas": {"total": Decimal("0"), "per_month": {}},
+        "outros": {"total": Decimal("0"), "per_month": {}},
+    }
+    per_month_total: Dict[str, Decimal] = {}
+    entries: List[Dict[str, Any]] = []
+
+    for area in structures:
+        area_nome = area.get("nome") or "Area"
+        for bloco in area.get("blocos", []):
+            bloco_nome = bloco.get("nome", "Outros")
+            for item in bloco.get("itens", []):
+                parcelas = item.get("parcelas", [])
+                item_desc = item.get("descricao") or "Item"
+                item_id = item.get("id")
+
+                for idx, parcela in enumerate(parcelas, 1):
+                    classificacao = _classify_structure_installment(bloco_nome, parcela)
+                    if classificacao["classificacao_norm"] != "investimento":
+                        continue
+
+                    valor_decimal = _parse_decimal(parcela.get("valor"))
+                    if not valor_decimal or valor_decimal <= 0:
+                        continue
+
+                    category_slug = classificacao["category"]
+                    template_key = "maquinas" if category_slug == "maquinas_equipamentos" else category_slug
+                    if template_key not in categories_summary:
+                        categories_summary[template_key] = {"total": Decimal("0"), "per_month": {}}
+
+                    categories_summary[template_key]["total"] += valor_decimal
+
+                    due_info = parcela.get("vencimento") or parcela.get("due_info")
+                    month_tuple = _month_tuple_from_value(due_info)
+                    contribution_date = None
+                    if month_tuple:
+                        contribution_date = date(month_tuple[0], month_tuple[1], 1)
+                        month_key = _month_key_from_tuple(month_tuple)
+                        _accumulate_decimal(categories_summary[template_key]["per_month"], month_key, valor_decimal)
+                        _accumulate_decimal(per_month_total, month_key, valor_decimal)
+                    else:
+                        contribution_date = due_info
+
+                    parcela_numero = parcela.get("numero") or idx
+                    description = f"{bloco_nome} - {item_desc} (Parcela {parcela_numero})"
+
+                    entries.append(
+                        {
+                            "id": f"struct::{item_id or 'item'}::{parcela_numero}",
+                            "description": description,
+                            "amount": valor_decimal,
+                            "investment_group": classificacao["group"],
+                            "category": category_slug,
+                            "contribution_date": contribution_date,
+                            "notes": f"Estruturas de Execucao - {area_nome} - {bloco_nome}",
+                            "source": "structures",
+                        }
+                    )
+
+    grand_total = sum(summary["total"] for summary in categories_summary.values())
+
+    return {
+        "entries": entries,
+        "categories": categories_summary,
+        "per_month_total": per_month_total,
+        "grand_total": grand_total,
+    }
+
+
+def serialize_structure_investment_summary(categories_summary: Dict[str, Dict[str, Any]]) -> Dict[str, Dict[str, Any]]:
+    serialized: Dict[str, Dict[str, Any]] = {}
+    for key, data in categories_summary.items():
+        total_decimal = data.get("total")
+        per_month = data.get("per_month", {})
+        total_float = float(total_decimal) if total_decimal is not None else 0.0
+        formatted_total = _format_currency_br(total_decimal) if total_decimal is not None else _format_currency_br(0)
+        serialized[key] = {
+            "total": total_float,
+            "total_formatado": formatted_total or _format_currency_br(0),
+            "por_mes": {month: float(amount) for month, amount in per_month.items()},
+        }
+    return serialized
+
+
 def summarize_structures_for_report(structures: List[Dict[str, Any]]) -> List[Dict[str, Any]]:
     summary: List[Dict[str, Any]] = []
     for area in structures:
-        area_summary = {"area": area.get("nome"), "resumo": []}
+        area_summary = {
+            "area": area.get("nome"),
+            "codigo": area.get("codigo"),
+            "capacidade": area.get("capacidade"),
+            "capacidade_formatada": area.get("capacidade_formatada"),
+            "capacidade_observacoes": area.get("capacidade_observacoes"),
+            "resumo": [],
+        }
         for bloco in area.get("blocos", []):
             pontos = [item.get("descricao") for item in bloco.get("itens", []) if item.get("descricao")]
             if not pontos:
@@ -564,6 +2137,20 @@ def load_financial_model(db, plan_id: int) -> Dict[str, Any]:
     result_rules = db.list_plan_finance_result_rules(plan_id)
     investor_periods = db.list_plan_finance_investor_periods(plan_id)
     metrics = db.get_plan_finance_metrics(plan_id) or {}
+    opportunity_cost = metrics.get("opportunity_cost")
+    if not opportunity_cost or str(opportunity_cost).strip() == "":
+        opportunity_cost = "1%"
+    tir_horizon_raw = metrics.get("tir_horizon_years")
+    try:
+        tir_horizon_years = int(tir_horizon_raw) if tir_horizon_raw not in (None, "") else None
+    except (TypeError, ValueError):
+        tir_horizon_years = None
+    if tir_horizon_years not in (2, 3, 5):
+        tir_horizon_years = 5
+    metrics["opportunity_cost"] = opportunity_cost
+    metrics["tir_horizon_years"] = tir_horizon_years
+    profit_distribution = db.get_plan_profit_distribution(plan_id) or {}
+    structure_capacities = db.list_plan_structure_capacities(plan_id)
 
     distribution_map: Dict[int, List[Dict[str, Any]]] = {}
     for item in distribution:
@@ -575,32 +2162,487 @@ def load_financial_model(db, plan_id: int) -> Dict[str, Any]:
             }
         )
 
-    business_periods_prepared = []
-    for period in business_periods:
+    structures_full = load_structures(db, plan_id)
+    structure_investments_payload = aggregate_structure_investments(structures_full)
+    investments_combined = list(investments) + structure_investments_payload["entries"]
+    investment_dataset = _prepare_investment_dataset(investments_combined)
+    structure_investments_serialized = serialize_structure_investment_summary(
+        structure_investments_payload["categories"]
+    )
+    sources_dataset = _prepare_sources_dataset(sources)
+
+    business_periods_prepared: List[Dict[str, Any]] = []
+    business_month_tuples: List[Tuple[int, int]] = []
+    business_fallback_labels: List[Dict[str, str]] = []
+    business_fallback_seen: set[str] = set()
+    business_line_maps: Dict[str, Dict[str, Decimal]] = {
+        "receita": {},
+        "custos_variaveis": {},
+        "despesas_variaveis": {},
+        "margem_contribuicao": {},
+        "custos_fixos": {},
+        "despesas_fixas": {},
+        "resultado_operacional": {},
+        "destinacao": {},
+        "resultado_periodo": {},
+    }
+
+    for index, period in enumerate(business_periods):
         pid = period.get("id")
+        period_label = period.get("period_label") or ""
+        month_tuple = _month_tuple_from_value(period_label)
+        if month_tuple:
+            business_month_tuples.append(month_tuple)
+            period_key = _month_key_from_tuple(month_tuple)
+            period_label_short = _format_month_short(month_tuple)
+            period_label_full = _format_month_full(month_tuple)
+        else:
+            label_display = period_label or f"Per\u00edodo {index + 1}"
+            period_key = _build_fallback_key(label_display, prefix="negocio")
+            if period_key not in business_fallback_seen:
+                business_fallback_labels.append({"label": label_display, "key": period_key})
+                business_fallback_seen.add(period_key)
+            period_label_short = label_display
+            period_label_full = label_display
+
+        receita_decimal = _parse_decimal(period.get("revenue"))
+        variaveis_decimal = _parse_decimal(period.get("variables"))
+        margem_decimal = _parse_decimal(period.get("contribution_margin"))
+        fixos_decimal = _parse_decimal(period.get("fixed_costs"))
+        despesas_variaveis_decimal = _parse_decimal(period.get("variable_expenses"))
+        despesas_fixas_decimal = _parse_decimal(period.get("fixed_expenses"))
+        resultado_operacional_decimal = _parse_decimal(period.get("operating_result"))
+        resultado_periodo_decimal = _parse_decimal(period.get("result_period"))
+
+        if receita_decimal is not None:
+            business_line_maps["receita"][period_key] = receita_decimal
+        if variaveis_decimal is not None:
+            business_line_maps["custos_variaveis"][period_key] = variaveis_decimal
+        if despesas_variaveis_decimal is not None:
+            business_line_maps["despesas_variaveis"][period_key] = despesas_variaveis_decimal
+        if margem_decimal is not None:
+            business_line_maps["margem_contribuicao"][period_key] = margem_decimal
+        if fixos_decimal is not None:
+            business_line_maps["custos_fixos"][period_key] = fixos_decimal
+        if despesas_fixas_decimal is not None:
+            business_line_maps["despesas_fixas"][period_key] = despesas_fixas_decimal
+        if resultado_operacional_decimal is not None:
+            business_line_maps["resultado_operacional"][period_key] = resultado_operacional_decimal
+        if resultado_periodo_decimal is not None:
+            business_line_maps["resultado_periodo"][period_key] = resultado_periodo_decimal
+
+        destinacao_itens = distribution_map.get(pid, [])
+        destinacao_total_decimal = Decimal("0")
+        destinacao_tem_valor = False
+        for destino in destinacao_itens:
+            destino_decimal = _parse_decimal(destino.get("valor"))
+            if destino_decimal is not None:
+                destinacao_total_decimal += destino_decimal
+                destinacao_tem_valor = True
+        if destinacao_tem_valor:
+            business_line_maps["destinacao"][period_key] = destinacao_total_decimal
+            destinacao_total_str = _format_currency_br(destinacao_total_decimal)
+        else:
+            destinacao_total_str = ""
+
         business_periods_prepared.append(
             {
-                "periodo": period.get("period_label"),
+                "periodo": period_label,
+                "periodo_completo": period_label_full,
+                "periodo_curto": period_label_short,
+                "periodo_chave": period_key,
                 "receita": period.get("revenue"),
                 "variaveis": period.get("variables"),
                 "margem_contribuicao": period.get("contribution_margin"),
                 "fixos": period.get("fixed_costs"),
+                "despesas_variaveis": period.get("variable_expenses"),
+                "despesas_fixas": period.get("fixed_expenses"),
                 "resultado_operacional": period.get("operating_result"),
-                "destinacao": distribution_map.get(pid, []),
+                "destinacao": destinacao_itens,
+                "destinacao_total": destinacao_total_str,
                 "resultado_periodo": period.get("result_period"),
             }
         )
 
-    investor_periods_prepared = [
-        {
-            "periodo": item.get("period_label"),
-            "aporte": item.get("contribution"),
-            "distribuicao": item.get("distribution"),
-            "saldo": item.get("balance"),
-            "acumulado": item.get("cumulative"),
+    investor_periods_prepared: List[Dict[str, Any]] = []
+    investor_month_tuples: List[Tuple[int, int]] = []
+    investor_fallback_labels: List[Dict[str, str]] = []
+    investor_fallback_seen: set[str] = set()
+    investor_line_maps: Dict[str, Dict[str, Decimal]] = {
+        "aportes": {},
+        "distribuicoes": {},
+        "resultado_liquido": {},
+        "saldo_acumulado": {},
+    }
+
+    for index, item in enumerate(investor_periods):
+        period_label = item.get("period_label") or ""
+        month_tuple = _month_tuple_from_value(period_label)
+        if month_tuple:
+            investor_month_tuples.append(month_tuple)
+            period_key = _month_key_from_tuple(month_tuple)
+            period_label_short = _format_month_short(month_tuple)
+        else:
+            label_display = period_label or f"Per\u00edodo {index + 1}"
+            period_key = _build_fallback_key(label_display, prefix="investidor")
+            if period_key not in investor_fallback_seen:
+                investor_fallback_labels.append({"label": label_display, "key": period_key})
+                investor_fallback_seen.add(period_key)
+            period_label_short = label_display
+
+        aporte_decimal = _parse_decimal(item.get("contribution"))
+        distribuicao_decimal = _parse_decimal(item.get("distribution"))
+        saldo_decimal = _parse_decimal(item.get("balance"))
+        acumulado_decimal = _parse_decimal(item.get("cumulative"))
+
+        if aporte_decimal is not None:
+            investor_line_maps["aportes"][period_key] = aporte_decimal
+        if distribuicao_decimal is not None:
+            investor_line_maps["distribuicoes"][period_key] = distribuicao_decimal
+        if saldo_decimal is not None:
+            investor_line_maps["resultado_liquido"][period_key] = saldo_decimal
+        if acumulado_decimal is not None:
+            investor_line_maps["saldo_acumulado"][period_key] = acumulado_decimal
+
+        investor_periods_prepared.append(
+            {
+                "periodo": period_label,
+                "periodo_curto": period_label_short,
+                "periodo_chave": period_key,
+                "aporte": item.get("contribution"),
+                "distribuicao": item.get("distribution"),
+                "saldo": item.get("balance"),
+                "acumulado": item.get("cumulative"),
+            }
+        )
+
+    investment_columns = _build_month_columns(
+        investment_dataset["month_tuples"],
+        investment_dataset["fallback_labels"],
+    )
+    investment_matrix_rows: List[Dict[str, Any]] = []
+    totals_per_column: Dict[str, Decimal] = {column["key"]: Decimal("0") for column in investment_columns}
+    group_data = investment_dataset["per_group_category"]
+
+    for group in ["capital_giro", "imobilizado"]:
+        group_label = INVESTMENT_GROUP_LABELS.get(group, group.replace("_", " ").title())
+        investment_matrix_rows.append(
+            {
+                "descricao": group_label,
+                "tipo": "grupo",
+                "grupo": group,
+            }
+        )
+        category_order = INVESTMENT_CATEGORY_ORDER.get(group, [])
+        seen_categories = set(category_order)
+        for category in category_order:
+            category_info = group_data.get(group, {}).get(
+                category,
+                {
+                    "per_month": {},
+                    "total": Decimal("0"),
+                },
+            )
+            per_month_map: Dict[str, Decimal] = category_info.get("per_month", {})
+            values_map = {column["key"]: per_month_map.get(column["key"]) for column in investment_columns}
+            line = _build_matrix_line(
+                INVESTMENT_CATEGORY_LABELS.get(category, category.replace("_", " ").title()),
+                values_map,
+                investment_columns,
+            )
+            line.update({"tipo": "categoria", "grupo": group, "categoria": category})
+            investment_matrix_rows.append(line)
+            for column in investment_columns:
+                value_decimal = per_month_map.get(column["key"])
+                if value_decimal is not None:
+                    _accumulate_decimal(totals_per_column, column["key"], value_decimal)
+        for category, category_info in group_data.get(group, {}).items():
+            if category in seen_categories:
+                continue
+            per_month_map = category_info.get("per_month", {})
+            values_map = {column["key"]: per_month_map.get(column["key"]) for column in investment_columns}
+            line = _build_matrix_line(
+                INVESTMENT_CATEGORY_LABELS.get(category, category.replace("_", " ").title()),
+                values_map,
+                investment_columns,
+            )
+            line.update({"tipo": "categoria_extra", "grupo": group, "categoria": category})
+            investment_matrix_rows.append(line)
+            for column in investment_columns:
+                value_decimal = per_month_map.get(column["key"])
+                if value_decimal is not None:
+                    _accumulate_decimal(totals_per_column, column["key"], value_decimal)
+
+    total_line_map = {column["key"]: totals_per_column.get(column["key"]) for column in investment_columns}
+    investment_total_row = _build_matrix_line("Total Geral", total_line_map, investment_columns)
+    investment_total_row.update({"tipo": "total"})
+
+    investment_matrix = {
+        "columns": investment_columns,
+        "column_labels_full": [column["label_full"] for column in investment_columns],
+        "column_labels_short": [column["label_short"] for column in investment_columns],
+        "rows": investment_matrix_rows,
+        "total": investment_total_row,
+    }
+
+    investment_summary_por_grupo = {
+        group: {
+            "label": INVESTMENT_GROUP_LABELS.get(group, group.replace("_", " ").title()),
+            "total": _format_currency_br(total),
         }
-        for item in investor_periods
+        for group, total in investment_dataset["totals_por_grupo"].items()
+    }
+    fontes_summary_por_tipo = {
+        tipo: {
+            "label": SOURCE_TYPE_LABELS.get(tipo, tipo.replace("_", " ").title()),
+            "total": _format_currency_br(total),
+        }
+        for tipo, total in sources_dataset["totals_por_tipo"].items()
+    }
+    necessidade_total_decimal = investment_dataset["grand_total"] if investment_dataset["entries"] else None
+    fontes_total_decimal = sources_dataset["grand_total"] if sources_dataset["entries"] else None
+    necessidade_total_str = _format_currency_br(necessidade_total_decimal) if necessidade_total_decimal is not None else ""
+    fontes_total_str = _format_currency_br(fontes_total_decimal) if fontes_total_decimal is not None else ""
+
+    combined_month_tuples = (
+        investment_dataset["month_tuples"]
+        + sources_dataset["month_tuples"]
+        + business_month_tuples
+        + investor_month_tuples
+    )
+    combined_fallback_labels = (
+        investment_dataset["fallback_labels"]
+        + sources_dataset["fallback_labels"]
+        + business_fallback_labels
+        + investor_fallback_labels
+    )
+    fluxo_columns = _build_month_columns(combined_month_tuples, combined_fallback_labels)
+
+    fontes_rows: List[Dict[str, Any]] = []
+    per_tipo_map = sources_dataset["per_tipo"]
+    for tipo_slug in SOURCE_TYPE_ORDER:
+        tipo_info = per_tipo_map.get(
+            tipo_slug,
+            {
+                "per_month": {},
+            },
+        )
+        per_month_map = tipo_info.get("per_month", {})
+        values_map = {column["key"]: per_month_map.get(column["key"]) for column in fluxo_columns}
+        line = _build_matrix_line(
+            SOURCE_TYPE_LABELS.get(tipo_slug, tipo_slug.replace("_", " ").title()),
+            values_map,
+            fluxo_columns,
+        )
+        line.update({"slug": tipo_slug})
+        fontes_rows.append(line)
+    for tipo_slug, tipo_info in per_tipo_map.items():
+        if tipo_slug in SOURCE_TYPE_ORDER:
+            continue
+        per_month_map = tipo_info.get("per_month", {})
+        values_map = {column["key"]: per_month_map.get(column["key"]) for column in fluxo_columns}
+        line = _build_matrix_line(
+            SOURCE_TYPE_LABELS.get(tipo_slug, tipo_slug.replace("_", " ").title()),
+            values_map,
+            fluxo_columns,
+        )
+        line.update({"slug": tipo_slug})
+        fontes_rows.append(line)
+
+    aplicacao_rows: List[Dict[str, Any]] = []
+    capital_giro_map = group_data.get("capital_giro", {})
+    for categoria_slug in ["caixa", "estoques", "recebiveis"]:
+        categoria_info = capital_giro_map.get(
+            categoria_slug,
+            {
+                "per_month": {},
+            },
+        )
+        per_month_map = categoria_info.get("per_month", {})
+        values_map = {column["key"]: per_month_map.get(column["key"]) for column in fluxo_columns}
+        line = _build_matrix_line(
+            INVESTMENT_CATEGORY_LABELS.get(categoria_slug, categoria_slug.replace("_", " ").title()),
+            values_map,
+            fluxo_columns,
+        )
+        line.update({"grupo": "capital_giro", "categoria": categoria_slug})
+        aplicacao_rows.append(line)
+
+    ativo_map: Dict[str, Decimal] = {}
+    for categoria_slug in INVESTMENT_CATEGORY_ORDER.get("imobilizado", []):
+        categoria_info = group_data.get("imobilizado", {}).get(
+            categoria_slug,
+            {
+                "per_month": {},
+            },
+        )
+        per_month_map = categoria_info.get("per_month", {})
+        for key, amount in per_month_map.items():
+            _accumulate_decimal(ativo_map, key, amount)
+    ativo_values_map = {column["key"]: ativo_map.get(column["key"]) for column in fluxo_columns}
+    ativo_line = _build_matrix_line("Ativo Imobilizado", ativo_values_map, fluxo_columns)
+    ativo_line.update({"grupo": "imobilizado", "categoria": "ativo_imobilizado"})
+    aplicacao_rows.append(ativo_line)
+
+    negocio_rows: List[Dict[str, Any]] = []
+    negocio_order = [
+        ("receita", "Receita"),
+        ("custos_variaveis", "Custos Vari\u00e1veis"),
+        ("despesas_variaveis", "Despesas Vari\u00e1veis"),
+        ("margem_contribuicao", "Margem de Contribui\u00e7\u00e3o"),
+        ("custos_fixos", "Custos Fixos"),
+        ("despesas_fixas", "Despesas Fixas"),
+        ("resultado_operacional", "Resultado Operacional"),
+        ("destinacao", "Destina\u00e7\u00e3o de Resultados"),
+        ("resultado_periodo", "Resultado do Per\u00edodo"),
     ]
+    for slug, label in negocio_order:
+        valores_map = business_line_maps.get(slug, {})
+        mapped_values = {column["key"]: valores_map.get(column["key"]) for column in fluxo_columns}
+        line = _build_matrix_line(label, mapped_values, fluxo_columns)
+        line.update({"slug": slug})
+        negocio_rows.append(line)
+
+    investidor_rows: List[Dict[str, Any]] = []
+    investidor_order = [
+        ("aportes", "Aporte dos S\u00f3cios no M\u00eas", "sum"),
+        ("distribuicoes", "Distribui\u00e7\u00e3o Recebida no M\u00eas", "sum"),
+        ("resultado_liquido", "Resultado L\u00edquido Acumulado no M\u00eas", "sum"),
+        ("saldo_acumulado", "Saldo Acumulado", "last"),
+    ]
+    for slug, label, strategy in investidor_order:
+        valores_map = investor_line_maps.get(slug, {})
+        mapped_values = {column["key"]: valores_map.get(column["key"]) for column in fluxo_columns}
+        line = _build_matrix_line(label, mapped_values, fluxo_columns, total_strategy=strategy)
+        line.update({"slug": slug})
+        investidor_rows.append(line)
+
+    fluxo_financeiro = {
+        "columns": fluxo_columns,
+        "column_labels_full": [column["label_full"] for column in fluxo_columns],
+        "column_labels_short": [column["label_short"] for column in fluxo_columns],
+        "sections": [
+            {"titulo": "Fontes de Recursos", "slug": "fontes", "linhas": fontes_rows},
+            {
+                "titulo": "Montagem / Aplica\u00e7\u00e3o do Investimento",
+                "slug": "aplicacao",
+                "linhas": aplicacao_rows,
+            },
+            {"titulo": "Resultado do Neg\u00f3cio", "slug": "negocio", "linhas": negocio_rows},
+            {
+                "titulo": "Fluxo de Caixa dos S\u00f3cios / Investidores",
+                "slug": "investidores",
+                "linhas": investidor_rows,
+            },
+        ],
+    }
+
+    capacities_prepared: List[Dict[str, Any]] = []
+    total_capacity_decimal = Decimal("0")
+    capacity_count = 0
+    bottleneck: Optional[Dict[str, Any]] = None
+
+    for item in structure_capacities:
+        area_code = (item.get("area") or "").lower()
+        area_name = AREA_LABELS.get(area_code, item.get("area") or "Outros")
+        decimal_value = _parse_decimal(item.get("revenue_capacity"))
+
+        if decimal_value is not None:
+            capacity_count += 1
+            total_capacity_decimal += decimal_value
+            if not bottleneck or decimal_value < bottleneck["valor_decimal"]:
+                bottleneck = {
+                    "area": area_name,
+                    "area_codigo": area_code,
+                    "valor_decimal": decimal_value,
+                }
+
+        capacities_prepared.append(
+            {
+                "id": item.get("id"),
+                "area_codigo": area_code,
+                "area": area_name,
+                "valor": item.get("revenue_capacity"),
+                "valor_formatado": _format_currency_br(item.get("revenue_capacity")),
+                "valor_decimal": float(decimal_value) if decimal_value is not None else None,
+                "observacoes": item.get("observations"),
+            }
+        )
+
+    total_decimal_final = total_capacity_decimal if capacity_count > 0 else None
+    resumo_capacidades = {
+        "total_decimal": float(total_decimal_final) if total_decimal_final is not None else None,
+        "total_formatado": _format_currency_br(total_decimal_final) if total_decimal_final is not None else "",
+        "gargalo_area": bottleneck["area"] if bottleneck else "",
+        "gargalo_area_codigo": bottleneck["area_codigo"] if bottleneck else "",
+        "gargalo_valor_decimal": float(bottleneck["valor_decimal"]) if bottleneck else None,
+        "gargalo_valor_formatado": _format_currency_br(bottleneck["valor_decimal"]) if bottleneck else "",
+    }
+
+    investimento_section = {
+        "investimento": investment_dataset["entries"],
+        "fontes": sources_dataset["entries"],
+        "matriz": investment_matrix,
+        "resumo": {
+            "necessidade_total": necessidade_total_str,
+            "fontes_total": fontes_total_str,
+            "por_grupo": investment_summary_por_grupo,
+            "por_tipo": fontes_summary_por_tipo,
+        },
+        "estruturas_automaticas": {
+            "categorias": structure_investments_serialized,
+            "total_decimal": float(structure_investments_payload["grand_total"])
+            if structure_investments_payload["grand_total"] is not None
+            else 0.0,
+            "total_formatado": _format_currency_br(structure_investments_payload["grand_total"])
+            if structure_investments_payload["grand_total"] is not None
+            else _format_currency_br(0),
+            "por_mes_total": {
+                month: float(amount) for month, amount in structure_investments_payload["per_month_total"].items()
+            },
+        },
+    }
+
+    fluxo_negocio_payload = {
+        "periodos": business_periods_prepared,
+        "variaveis": [
+            {
+                "id": item.get("id"),
+                "descricao": item.get("description"),
+                "percentual": item.get("percentage"),
+            }
+            for item in variable_costs
+        ],
+        "distribuicao_lucros": {
+            "percentual": profit_distribution.get("percentage", ""),
+            "start_date": profit_distribution.get("start_date", ""),
+            "observacoes": profit_distribution.get("notes", ""),
+        },
+        "destinacao_regras": [
+            {
+                "id": item.get("id"),
+                "descricao": item.get("description"),
+                "percentual": item.get("percentage"),
+                "periodicidade": item.get("periodicity"),
+            }
+            for item in result_rules
+        ],
+    }
+
+    tir_value = metrics.get("tir")
+    tir_label = f"TIR {metrics['tir_horizon_years']} anos" if metrics.get("tir_horizon_years") else "TIR"
+    fluxo_investidor_payload = {
+        "periodos": investor_periods_prepared,
+        "analises": {
+            "payback": metrics.get("payback"),
+            "tir": tir_value,
+            "tir_label": tir_label,
+            "tir_horizon_years": metrics.get("tir_horizon_years"),
+            "opportunity_cost": metrics.get("opportunity_cost"),
+            "comentarios": metrics.get("notes") or "",
+            "tir_5_anos": tir_value if metrics.get("tir_horizon_years") == 5 else "",
+        },
+    }
 
     return {
         "premissas": [
@@ -614,54 +2656,12 @@ def load_financial_model(db, plan_id: int) -> Dict[str, Any]:
             }
             for item in premises
         ],
-        "investimento": {
-            "investimento": [
-                {
-                    "id": item.get("id"),
-                    "descricao": item.get("description"),
-                    "valor": item.get("amount")
-                }
-                for item in investments
-            ],
-            "fontes": [
-                {
-                    "id": item.get("id"),
-                    "categoria": item.get("category"),
-                    "descricao": item.get("description"),
-                    "valor": item.get("amount"),
-                    "disponibilidade": item.get("availability"),
-                }
-                for item in sources
-            ],
-        },
-        "fluxo_negocio": {
-            "periodos": business_periods_prepared,
-            "variaveis": [
-                {
-                    "id": item.get("id"),
-                    "descricao": item.get("description"),
-                    "percentual": item.get("percentage")
-                }
-                for item in variable_costs
-            ],
-            "destinacao_regras": [
-                {
-                    "id": item.get("id"),
-                    "descricao": item.get("description"),
-                    "percentual": item.get("percentage"),
-                    "periodicidade": item.get("periodicity"),
-                }
-                for item in result_rules
-            ],
-        },
-        "fluxo_investidor": {
-            "periodos": investor_periods_prepared,
-            "analises": {
-                "payback": metrics.get("payback"),
-                "tir_5_anos": metrics.get("tir"),
-                "comentarios": metrics.get("notes") or "",
-            },
-        },
+        "capacidades": capacities_prepared,
+        "resumo_capacidades": resumo_capacidades,
+        "investimento": investimento_section,
+        "fluxo_negocio": fluxo_negocio_payload,
+        "fluxo_investidor": fluxo_investidor_payload,
+        "fluxo_financeiro": fluxo_financeiro,
     }
 
 

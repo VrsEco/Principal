@@ -1,0 +1,62 @@
+═══════════════════════════════════════════════════════
+  SOLUÇÃO RÁPIDA - ERRO "Item não encontrado"
+═══════════════════════════════════════════════════════
+
+CAUSA: Faltam dados nas tabelas de investimento (categorias e itens)
+
+──────────────────────────────────────────────────────
+
+🐳 PARA DOCKER (seu caso):
+
+Execute estes comandos em sequência:
+
+# 1. Criar/verificar tabelas
+docker exec app31 python -c "from config_database import get_db; import sys; sys.path.insert(0, '.'); db = get_db(); conn = db._get_connection(); cur = conn.cursor(); cur.execute(open('migrations/create_investment_contributions.sql', 'r', encoding='utf-8').read()); conn.commit(); conn.close(); print('✅ Tabelas OK')"
+
+# 2. Aplicar migration
+docker exec app31 python -c "from config_database import get_db; db = get_db(); conn = db._get_connection(); cur = conn.cursor(); cur.execute(open('migrations/20251028_update_investment_contributions.sql', 'r', encoding='utf-8').read()); conn.commit(); conn.close(); print('✅ Migration OK')"
+
+# 3. Popular dados (IMPORTANTE!)
+docker exec app31 python scripts/seed_investment_items.py
+
+# 4. Reiniciar
+docker-compose restart
+
+──────────────────────────────────────────────────────
+
+💻 PARA WINDOWS LOCAL (sem Docker):
+
+Execute:
+APLICAR_INVESTIMENTOS_ATUALIZACAO.bat
+
+──────────────────────────────────────────────────────
+
+✅ COMO VERIFICAR SE FUNCIONOU:
+
+1. Recarregue a página no navegador (F5)
+2. Abra o Console (F12)
+3. Deve aparecer:
+   ✅ Categories loaded: Array [ {…}, {…} ]
+
+Se aparecer isso, está funcionando!
+
+──────────────────────────────────────────────────────
+
+🔍 SE AINDA DER ERRO:
+
+Verifique no PostgreSQL:
+
+docker exec -it app31 psql -U [seu_usuario] -d [seu_banco] -c "SELECT COUNT(*) FROM plan_finance_investment_categories;"
+
+Deve retornar um número > 0
+
+──────────────────────────────────────────────────────
+
+📞 AJUDA ADICIONAL:
+
+Se precisar de mais detalhes, veja:
+- CORRIGIR_ERRO_INVESTIMENTOS.md
+- ATUALIZACAO_INVESTIMENTOS_28102025.md
+
+═══════════════════════════════════════════════════════
+

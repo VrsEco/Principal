@@ -2,7 +2,7 @@
 
 {% block title %}Gerenciar Usuários - Sistema Versus{% endblock %}
 
-{% block styles %}
+{% block extra_head %}
 {{ super() }}
 <style>
     .users-container {
@@ -26,26 +26,57 @@
         font-size: 2rem;
     }
 
+    .page-header-left {
+        display: flex;
+        flex-direction: column;
+        align-items: flex-start;
+        gap: 0.75rem;
+    }
+
     .btn-primary {
-        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-        color: white;
-        padding: 0.75rem 1.5rem;
-        border: none;
-        border-radius: 8px;
-        cursor: pointer;
-        font-weight: 600;
-        text-decoration: none;
-        display: inline-flex;
-        align-items: center;
-        gap: 0.5rem;
-        transition: transform 0.2s, box-shadow 0.2s;
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%) !important;
+        color: white !important;
+        padding: 0.75rem 1.5rem !important;
+        border: none !important;
+        border-radius: 8px !important;
+        cursor: pointer !important;
+        font-weight: 600 !important;
+        text-decoration: none !important;
+        display: inline-flex !important;
+        align-items: center !important;
+        gap: 0.5rem !important;
+        transition: transform 0.2s, box-shadow 0.2s !important;
+        box-shadow: 0 4px 12px rgba(102, 126, 234, 0.3) !important;
     }
 
     .btn-primary:hover {
-        transform: translateY(-2px);
-        box-shadow: 0 4px 12px rgba(102, 126, 234, 0.4);
-        color: white;
-        text-decoration: none;
+        transform: translateY(-2px) !important;
+        box-shadow: 0 6px 20px rgba(102, 126, 234, 0.5) !important;
+        color: white !important;
+        text-decoration: none !important;
+    }
+
+    .btn-back-config {
+        background: rgba(44, 62, 80, 0.08) !important;
+        color: #2c3e50 !important;
+        padding: 0.55rem 1.25rem !important;
+        border-radius: 8px !important;
+        border: 1px solid rgba(44, 62, 80, 0.2) !important;
+        display: inline-flex !important;
+        align-items: center !important;
+        gap: 0.5rem !important;
+        font-weight: 600 !important;
+        text-decoration: none !important;
+        transition: all 0.2s !important;
+        box-shadow: 0 4px 12px rgba(44, 62, 80, 0.08) !important;
+    }
+
+    .btn-back-config:hover {
+        background: rgba(44, 62, 80, 0.16) !important;
+        color: #2c3e50 !important;
+        text-decoration: none !important;
+        transform: translateY(-1px);
+        box-shadow: 0 6px 16px rgba(44, 62, 80, 0.18) !important;
     }
 
     .users-table {
@@ -156,10 +187,145 @@
         background-color: #27ae60;
     }
 
+    .btn-warning {
+        background-color: #f39c12;
+        color: white;
+    }
+
+    .btn-warning:hover {
+        background-color: #e67e22;
+    }
+
+    .btn-secondary {
+        background-color: #95a5a6;
+        color: white;
+    }
+
+    .btn-secondary:hover {
+        background-color: #7f8c8d;
+    }
+
     .empty-state {
         text-align: center;
         padding: 3rem;
         color: #7f8c8d;
+    }
+
+    /* Modal Styles */
+    .users-container .modal {
+        display: none;
+        position: fixed;
+        z-index: 1000;
+        left: 0;
+        top: 0;
+        width: 100%;
+        height: 100%;
+        background-color: rgba(0, 0, 0, 0.5);
+        opacity: 0;
+    }
+
+    .users-container .modal.active {
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        opacity: 1;
+        animation: fadeIn 0.3s;
+    }
+
+    .users-container .modal-content {
+        background: white;
+        border-radius: 12px;
+        padding: 2rem;
+        max-width: 500px;
+        width: 90%;
+        max-height: 80vh;
+        overflow-y: auto;
+        animation: slideUp 0.3s;
+        box-shadow: 0 10px 40px rgba(0, 0, 0, 0.3);
+    }
+
+    .users-container .modal-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        margin-bottom: 1.5rem;
+        padding-bottom: 1rem;
+        border-bottom: 2px solid #e0e0e0;
+    }
+
+    .users-container .modal-header h2 {
+        margin: 0;
+        color: #2c3e50;
+        font-size: 1.5rem;
+    }
+
+    .users-container .modal-close {
+        background: none;
+        border: none;
+        font-size: 1.5rem;
+        cursor: pointer;
+        color: #7f8c8d;
+        padding: 0;
+        width: 30px;
+        height: 30px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        border-radius: 50%;
+        transition: all 0.2s;
+    }
+
+    .users-container .modal-close:hover {
+        background-color: #f0f0f0;
+        color: #2c3e50;
+    }
+
+    .form-group {
+        margin-bottom: 1.5rem;
+    }
+
+    .form-group label {
+        display: block;
+        margin-bottom: 0.5rem;
+        color: #2c3e50;
+        font-weight: 600;
+    }
+
+    .form-control {
+        width: 100%;
+        padding: 0.75rem;
+        border: 2px solid #e0e0e0;
+        border-radius: 8px;
+        font-size: 1rem;
+        transition: border-color 0.2s;
+        box-sizing: border-box;
+    }
+
+    .form-control:focus {
+        outline: none;
+        border-color: #667eea;
+    }
+
+    .users-container .modal-actions {
+        display: flex;
+        gap: 1rem;
+        margin-top: 2rem;
+    }
+
+    @keyframes fadeIn {
+        from { opacity: 0; }
+        to { opacity: 1; }
+    }
+
+    @keyframes slideUp {
+        from {
+            opacity: 0;
+            transform: translateY(20px);
+        }
+        to {
+            opacity: 1;
+            transform: translateY(0);
+        }
     }
 
     .empty-state i {
@@ -183,7 +349,12 @@
 {% block content %}
 <div class="users-container">
     <div class="page-header">
-        <h1>👥 Gerenciar Usuários</h1>
+        <div class="page-header-left">
+            <h1>👥 Gerenciar Usuários</h1>
+            <a href="{{ url_for('system_configs') }}" class="btn-back-config">
+                <i class="fas fa-arrow-left"></i> Voltar às Configurações
+            </a>
+        </div>
         <a href="{{ url_for('auth.register') }}" class="btn-primary">
             <i class="fas fa-plus"></i> Novo Usuário
         </a>
@@ -214,29 +385,122 @@
             </table>
         </div>
     </div>
+    
+    <!-- Modal de Edição -->
+    <div id="editModal" class="modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h2>✏️ Editar Usuário</h2>
+                <button class="modal-close" onclick="closeEditModal()">&times;</button>
+            </div>
+            <form id="editForm">
+                <input type="hidden" id="edit_user_id">
+                
+                <div class="form-group">
+                    <label for="edit_name">Nome Completo</label>
+                    <input type="text" class="form-control" id="edit_name" required>
+                </div>
+                
+                <div class="form-group">
+                    <label for="edit_email">Email</label>
+                    <input type="email" class="form-control" id="edit_email" disabled>
+                </div>
+                
+                <div class="form-group">
+                    <label for="edit_role">Perfil de Acesso</label>
+                    <select class="form-control" id="edit_role" required>
+                        <option value="consultant">Consultor</option>
+                        <option value="client">Cliente</option>
+                        <option value="admin">Administrador</option>
+                    </select>
+                </div>
+                
+                <div class="form-group">
+                    <label for="edit_is_active">Status</label>
+                    <select class="form-control" id="edit_is_active" required>
+                        <option value="true">Ativo</option>
+                        <option value="false">Inativo</option>
+                    </select>
+                </div>
+                
+                <div class="modal-actions">
+                    <button type="button" class="btn-sm btn-secondary" onclick="closeEditModal()" style="flex: 1;">
+                        Cancelar
+                    </button>
+                    <button type="submit" class="btn-sm btn-primary" style="flex: 1;">
+                        <i class="fas fa-save"></i> Salvar
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
 </div>
+
 {% endblock %}
 
 {% block scripts %}
 {{ super() }}
 <script>
+// Debug: Log para verificar se o script está carregando
+console.log('✅ Script de usuários carregado');
+
 document.addEventListener('DOMContentLoaded', function() {
+    console.log('✅ DOM carregado, iniciando loadUsers()');
     loadUsers();
 });
 
 async function loadUsers() {
     try {
+        console.log('📡 Fazendo fetch para /auth/users...');
         const response = await fetch('/auth/users');
+        console.log('📡 Response recebido:', response.status, response.url);
+        
+        // Se retornou 401 ou redirecionamento para login, redirecionar
+        if (response.status === 401 || response.redirected || !response.ok) {
+            console.warn('⚠️ Não autenticado ou erro:', response.status);
+            if (response.url && response.url.includes('/login')) {
+                console.log('🔄 Redirecionando para login...');
+                window.location.href = '/login';
+                return;
+            }
+        }
+        
+        // Verificar se a resposta é JSON
+        const contentType = response.headers.get('content-type');
+        console.log('📝 Content-Type:', contentType);
+        if (!contentType || !contentType.includes('application/json')) {
+            // Provavelmente foi redirecionado para login (HTML)
+            console.warn('⚠️ Resposta não é JSON, redirecionando para login');
+            window.location.href = '/login';
+            return;
+        }
+        
+        console.log('📦 Parseando JSON...');
         const data = await response.json();
+        console.log('📦 Dados recebidos:', data);
 
         if (data.success) {
+            console.log('✅ Sucesso! Exibindo', data.users.length, 'usuários');
             displayUsers(data.users);
         } else {
-            showError(data.message);
+            console.error('❌ Erro na resposta:', data.message);
+            // Se erro de autenticação, redirecionar
+            if (response.status === 403 || data.message.includes('Acesso negado')) {
+                alert('Você não tem permissão para acessar esta página.');
+                window.location.href = '/main';
+            } else {
+                showError(data.message);
+            }
         }
     } catch (error) {
-        console.error('Erro ao carregar usuários:', error);
-        showError('Erro ao carregar usuários. Tente novamente.');
+        console.error('❌ Erro ao carregar usuários:', error);
+        // Se erro de parsing JSON, provavelmente é HTML de login
+        if (error.message && error.message.includes('JSON')) {
+            console.log('🔄 Erro de JSON, redirecionando para login');
+            window.location.href = '/login';
+        } else {
+            showError('Erro ao carregar usuários. Tente novamente.');
+        }
     }
 }
 
@@ -277,14 +541,20 @@ function displayUsers(users) {
             <td>${formatDate(user.created_at)}</td>
             <td>
                 <div class="user-actions">
+                    <button class="btn-sm btn-info" onclick="openEditModal(${user.id})" title="Editar usuário">
+                        <i class="fas fa-edit"></i> Editar
+                    </button>
                     ${user.is_active ? 
-                        `<button class="btn-sm btn-danger" onclick="toggleUserStatus(${user.id}, false)">
+                        `<button class="btn-sm btn-warning" onclick="toggleUserStatus(${user.id}, false)" title="Desativar usuário">
                             <i class="fas fa-ban"></i> Desativar
                         </button>` : 
-                        `<button class="btn-sm btn-success" onclick="toggleUserStatus(${user.id}, true)">
+                        `<button class="btn-sm btn-success" onclick="toggleUserStatus(${user.id}, true)" title="Ativar usuário">
                             <i class="fas fa-check"></i> Ativar
                         </button>`
                     }
+                    <button class="btn-sm btn-danger" onclick="deleteUser(${user.id})" title="Excluir usuário">
+                        <i class="fas fa-trash"></i> Excluir
+                    </button>
                 </div>
             </td>
         </tr>
@@ -364,7 +634,129 @@ function showError(message) {
         </tr>
     `;
 }
+
+// Modal functions
+async function openEditModal(userId) {
+    try {
+        const response = await fetch(`/auth/users/${userId}`);
+        const data = await response.json();
+        
+        if (data.success) {
+            const user = data.user;
+            document.getElementById('edit_user_id').value = user.id;
+            document.getElementById('edit_name').value = user.name;
+            document.getElementById('edit_email').value = user.email;
+            document.getElementById('edit_role').value = user.role;
+            document.getElementById('edit_is_active').value = user.is_active ? 'true' : 'false';
+            
+            const modal = document.getElementById('editModal');
+            modal.classList.add('active', 'show');
+        } else {
+            alert(data.message || 'Erro ao carregar usuário');
+        }
+    } catch (error) {
+        console.error('Erro:', error);
+        alert('Erro ao carregar usuário. Tente novamente.');
+    }
+}
+
+function closeEditModal() {
+    const modal = document.getElementById('editModal');
+    modal.classList.remove('active', 'show');
+}
+
+// Close modal on background click
+document.addEventListener('DOMContentLoaded', function() {
+    const modal = document.getElementById('editModal');
+    if (modal) {
+        modal.addEventListener('click', function(e) {
+            if (e.target === modal) {
+                closeEditModal();
+            }
+        });
+    }
+});
+
+// Handle edit form submission
+document.addEventListener('DOMContentLoaded', function() {
+    const editForm = document.getElementById('editForm');
+    if (editForm) {
+        editForm.addEventListener('submit', async function(e) {
+            e.preventDefault();
+            
+            const userId = document.getElementById('edit_user_id').value;
+            const name = document.getElementById('edit_name').value.trim();
+            const role = document.getElementById('edit_role').value;
+            const isActive = document.getElementById('edit_is_active').value === 'true';
+            
+            if (!name) {
+                alert('Por favor, preencha o nome do usuário');
+                return;
+            }
+            
+            try {
+                const response = await fetch(`/auth/users/${userId}`, {
+                    method: 'PUT',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({
+                        name: name,
+                        role: role,
+                        is_active: isActive
+                    })
+                });
+                
+                const data = await response.json();
+                
+                if (data.success) {
+                    if (window.showMessage) {
+                        window.showMessage('Usuário atualizado com sucesso!', 'success');
+                    } else {
+                        alert('Usuário atualizado com sucesso!');
+                    }
+                    closeEditModal();
+                    loadUsers(); // Recarrega a lista
+                } else {
+                    alert(data.message || 'Erro ao atualizar usuário');
+                }
+            } catch (error) {
+                console.error('Erro:', error);
+                alert('Erro ao atualizar usuário. Tente novamente.');
+            }
+        });
+    }
+});
+
+async function deleteUser(userId) {
+    if (!confirm('Tem certeza que deseja excluir este usuário?\n\nEsta ação irá desativar permanentemente o usuário.')) {
+        return;
+    }
+    
+    try {
+        const response = await fetch(`/auth/users/${userId}`, {
+            method: 'DELETE',
+            headers: {
+                'Content-Type': 'application/json'
+            }
+        });
+        
+        const data = await response.json();
+        
+        if (data.success) {
+            if (window.showMessage) {
+                window.showMessage('Usuário excluído com sucesso!', 'success');
+            } else {
+                alert('Usuário excluído com sucesso!');
+            }
+            loadUsers(); // Recarrega a lista
+        } else {
+            alert(data.message || 'Erro ao excluir usuário');
+        }
+    } catch (error) {
+        console.error('Erro:', error);
+        alert('Erro ao excluir usuário. Tente novamente.');
+    }
+}
 </script>
 {% endblock %}
-
-

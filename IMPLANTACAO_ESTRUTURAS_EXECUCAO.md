@@ -144,12 +144,13 @@ created_at           TIMESTAMP
 3. **Estruturação Adm / Fin** (`adm_fin`)
 
 ### **Blocos:**
-1. **Processos** (`processos`)
-2. **Instalações** (`instalacoes`)
-3. **Máquinas e Equipamentos** (`maquinas_equipamentos`)
-4. **Pessoas** (`pessoas`)
-5. **Insumos** (`insumos`)
-6. **Material de Uso e Consumo / Outros** (`material_consumo`)
+1. **Pessoas** (`pessoas`)
+2. **Imóveis** (`imoveis`)
+3. **Instalações** (`instalacoes`)
+4. **Máquinas e Equipamentos** (`maquinas_equipamentos`)
+5. **Móveis e Utensílios** (`moveis_utensilios`)
+6. **TI e Comunicação** (`ti_comunicacao`)
+7. **Outros** (`outros`)
 
 ---
 
@@ -158,13 +159,13 @@ created_at           TIMESTAMP
 **Arquivo:** `add_example_structures.py`
 
 Exemplos incluídos:
-- ✅ Sistema de CRM (Comercial - Processos) com 3 parcelas
+- ✅ Sistema de CRM (Comercial - TI e Comunicação) com 3 parcelas
 - ✅ Gerente Comercial (Comercial - Pessoas)
-- ✅ Notebooks (Operacional - Máquinas) com pagamento único
-- ✅ Escritório (Operacional - Instalações)
-- ✅ ERP Financeiro (Adm/Fin - Processos) com 5 parcelas
+- ✅ Notebooks (Operacional - Máquinas e Equipamentos) com pagamento único
+- ✅ Escritório (Operacional - Imóveis)
+- ✅ ERP Financeiro (Adm/Fin - TI e Comunicação) com 5 parcelas
 - ✅ Contador PJ (Adm/Fin - Pessoas)
-- ✅ Material de escritório (Operacional - Insumos)
+- ✅ Mesas e Cadeiras (Operacional - Móveis e Utensílios)
 
 **Como usar:**
 ```bash

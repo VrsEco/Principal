@@ -1,7 +1,7 @@
 # 📋 Decision Log - Decisões Arquiteturais
 
 **Projeto:** GestaoVersus  
-**Última atualização:** 23/10/2025
+**Última atualização:** 28/10/2025
 
 ---
 
@@ -107,11 +107,44 @@ Cada decisão deve conter:
 
 ### **#008 - Docker para Desenvolvimento e Produção**
 
-**Data:** [Data anterior]  
+**Data:** 20/10/2025  
 **Contexto:** Consistência entre ambientes dev/prod  
 **Decisão:** Docker Compose para orquestração de serviços  
 **Alternativas:** Instalação local, Vagrant  
 **Consequências:** +Consistência, +Isolamento, -Curva aprendizado  
+**Status:** ✅ Ativa
+
+---
+
+### **#009 - Containers conectando ao PostgreSQL nativo do Windows**
+
+**Data:** 28/10/2025  
+**Contexto:** PostgreSQL 18 passou a operar instalado no host Windows, evitando duplicidade de dados entre containers e ambiente local  
+**Decisão:** Remover o serviço `db` do `docker-compose.yml` e configurar `app`, `celery_worker`, `celery_beat` e `nginx` para usar `host.docker.internal` com as credenciais oficiais (`.env`)  
+**Alternativas:** Manter PostgreSQL em container dedicado, usar serviço gerenciado na nuvem  
+**Consequências:** +Simplicidade operacional, +Reuso da instância corporativa, -Dependência de disponibilidade do host  
+**Status:** ✅ Ativa
+
+---
+
+### **#010 - Backups automatizados via Windows Task Scheduler**
+
+**Data:** 28/10/2025  
+**Contexto:** Garantir cópias consistentes do banco corporativo sem depender dos containers  
+**Decisão:** Script `scripts/backup/run_pg_backup.ps1` executado às 12h, 18h e 22h via tarefa agendada `GestaoVersus_Postgres_Backup`  
+**Alternativas:** Cron dentro do container, jobs no PostgreSQL, execuções manuais  
+**Consequências:** +Confiabilidade, +Centralização dos artefatos em `backups/`, -Depende de usuário logado para Task Scheduler interativo  
+**Status:** ✅ Ativa
+
+---
+
+### **#011 - Publicação automática diária no GitHub**
+
+**Data:** 28/10/2025  
+**Contexto:** Reduzir risco de alterações locais ficarem fora do repositório oficial  
+**Decisão:** Script `scripts/deploy/auto_git_push.ps1` executado diariamente às 18h pela tarefa `GestaoVersus_GitHub_Publish`  
+**Alternativas:** Lembretes manuais, hooks externos  
+**Consequências:** +Governança do versionamento, +Rastreabilidade de mudanças, -Exige credenciais Git configuradas no host  
 **Status:** ✅ Ativa
 
 ---

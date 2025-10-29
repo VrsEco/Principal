@@ -1,0 +1,149 @@
+================================================================================
+📍 ONDE ENCONTRAR: Produtos e Margens
+================================================================================
+
+ATUALIZADO: 27/10/2025
+LOCALIZAÇÃO: Página de Implantação → Fase "Modelo & Mercado"
+
+================================================================================
+🎯 PASSO A PASSO (3 Cliques)
+================================================================================
+
+PASSO 1: Acesse a página de implantação
+────────────────────────────────────────
+No navegador:
+    http://localhost:5003/pev/implantacao?plan_id=8
+
+(Substitua 8 pelo ID do seu planejamento)
+
+
+PASSO 2: Role até "Modelo & Mercado" (Fase 02)
+────────────────────────────────────────────────
+Procure na página a seção:
+
+    ┌─────────────────────────────────────────┐
+    │  Fase 02                                │
+    │  Modelo & Mercado                       │
+    │  ──────────────────────────────────     │
+    │                                         │
+    │  Botões:                                │
+    │  ○ Canvas de proposta de valor          │
+    │  ○ Mapa de persona e jornada            │
+    │  ○ Matriz de diferenciais               │
+    │  ○ Produtos e Margens  ← ESTE BOTÃO!    │
+    └─────────────────────────────────────────┘
+
+
+PASSO 3: Clique em "Produtos e Margens"
+─────────────────────────────────────────
+É um botão azul, igual aos outros da fase
+
+
+PASSO 4: Cadastre produtos!
+─────────────────────────────
+Clique em "➕ Novo Produto" e comece a usar
+
+================================================================================
+🔍 VISUAL DA PÁGINA
+================================================================================
+
+A página http://localhost:5003/pev/implantacao?plan_id=8 mostra:
+
+    Dashboard da Implantação
+    ↓
+    Fase 01 - Alinhamento Estratégico
+    • Canvas de expectativas dos sócios
+    ↓
+    Fase 02 - Modelo & Mercado
+    • Canvas de proposta de valor
+    • Mapa de persona e jornada
+    • Matriz de diferenciais
+    • Produtos e Margens  ← AQUI ESTÁ!
+    ↓
+    Fase 03 - Estruturas de Execução
+    • Estruturas por área
+    ↓
+    Modelagem Financeira
+    ↓
+    Relatório Final
+
+================================================================================
+🆘 NÃO ESTÁ VENDO O BOTÃO?
+================================================================================
+
+Possíveis causas:
+
+1. Container não reiniciou
+   Solução: docker-compose -f docker-compose.dev.yml restart app_dev
+
+2. Cache do navegador
+   Solução: Pressione Ctrl+F5 para recarregar sem cache
+
+3. Planejamento não tem ID
+   Solução: Certifique-se que está usando ?plan_id=NUMERO na URL
+
+================================================================================
+✅ SOBRE O "ERRO" DE CARREGAMENTO
+================================================================================
+
+A mensagem "Erro ao carregar produtos" NÃO é um erro real!
+
+Acontece quando:
+   • A tabela está vazia (sem produtos cadastrados)
+   • É o comportamento esperado no primeiro acesso
+
+Vai desaparecer quando:
+   • Você cadastrar o primeiro produto
+   • A lista ficará vazia mas sem mensagem de erro
+
+================================================================================
+🎯 TESTE COMPLETO
+================================================================================
+
+Execute este teste:
+
+1. Acesse: http://localhost:5003/pev/implantacao?plan_id=8
+2. Role a página
+3. Veja a Fase 02 - Modelo & Mercado
+4. Veja 4 botões azuis
+5. O último é "Produtos e Margens"
+6. Clique nele
+
+Se não ver o botão:
+   • Pressione Ctrl+F5 (reload sem cache)
+   • Verifique se container está UP: docker ps
+
+================================================================================
+📋 COMO DESCOBRIR SEU plan_id
+================================================================================
+
+Se não sabe qual é seu plan_id:
+
+Método 1: Dashboard PEV
+   1. Acesse: http://localhost:5003/pev/dashboard
+   2. Veja a lista de planejamentos
+   3. Clique em "Visualizar Implantação"
+   4. Olhe a URL que abriu
+   5. Pegue o número após "plan_id="
+
+Método 2: Banco de dados
+   docker exec gestaoversus_db_dev psql -U postgres -d bd_app_versus_dev -c "SELECT id, name FROM plans;"
+
+================================================================================
+✅ RESUMO
+================================================================================
+
+Onde está:  Botão na Fase "Modelo & Mercado"
+Página:     http://localhost:5003/pev/implantacao?plan_id=X
+Nome:       "Produtos e Margens"
+Junto com:  Canvas, Mapa Persona, Matriz Diferenciais
+
+Como chegar:
+   1. Acessar página de implantação
+   2. Rolar até Fase 02
+   3. Clicar no botão "Produtos e Margens"
+
+================================================================================
+
+
+

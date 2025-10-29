@@ -42,6 +42,55 @@
       padding: 32px;
     }
 
+    .capacity-summary {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 16px;
+      margin-top: 18px;
+    }
+
+    .capacity-chip {
+      background: rgba(148, 163, 184, 0.08);
+      border: 1px dashed rgba(148, 163, 184, 0.45);
+      border-radius: 12px;
+      padding: 12px 16px;
+      min-width: 190px;
+      display: flex;
+      flex-direction: column;
+      gap: 6px;
+      color: #64748b;
+    }
+
+    .capacity-chip span {
+      font-size: 11px;
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+      color: rgba(100, 116, 139, 0.85);
+    }
+
+    .capacity-chip strong {
+      font-size: 16px;
+      font-weight: 500;
+      color: #475569;
+    }
+
+    .capacity-chip.capacity-chip--complementary {
+      background: transparent;
+      border-color: rgba(148, 163, 184, 0.3);
+      border-style: dotted;
+      color: #94a3b8;
+    }
+
+    .capacity-chip.capacity-chip--complementary span {
+      color: rgba(148, 163, 184, 0.8);
+    }
+
+    .capacity-chip.capacity-chip--complementary strong {
+      font-size: 15px;
+      font-weight: 500;
+      color: #64748b;
+    }
+
     .area-tabs {
       display: flex;
       gap: 12px;
@@ -159,6 +208,25 @@
       margin-top: 12px;
     }
 
+    .capacity-table td:last-child {
+      text-align: right;
+    }
+
+    .link-button {
+      background: none;
+      border: none;
+      color: #ef4444;
+      cursor: pointer;
+      font-size: 13px;
+      padding: 0;
+      margin-left: 12px;
+      text-decoration: underline;
+    }
+
+    .link-button:hover {
+      color: #b91c1c;
+    }
+
     @media (max-width: 992px) {
       table.structure-table {
         display: block;
@@ -190,6 +258,64 @@
         <button type="button" class="button button-primary" onclick="openStructureModal()" style="white-space: nowrap;">
           + Nova Estrutura
         </button>
+      </div>
+    </article>
+
+    <article class="structure-card">
+      <div style="display:flex; justify-content: space-between; align-items: flex-start; gap: 16px; margin-bottom: 18px;">
+        <div>
+          <h2 style="margin:0 0 8px;">Capacidade de faturamento por estrutura</h2>
+          <p style="margin:0; color:#475569; line-height:1.6;">
+            Registre quanto de faturamento cada macroestrutura suporta. Esses limites alimentam a modelagem financeira
+            e destacam gargalos operacionais.
+          </p>
+        </div>
+        <button type="button" class="button button-secondary" onclick="openCapacityModal()" style="white-space: nowrap;">
+          Registrar capacidade
+        </button>
+      </div>
+
+      <table class="structure-table capacity-table">
+        <thead>
+          <tr>
+            <th style="width:28%;">Area</th>
+            <th style="width:22%;">Faturamento suportado</th>
+            <th>Observacoes</th>
+            <th style="width:22%;">Acoes</th>
+          </tr>
+        </thead>
+        <tbody>
+        {% for area in estruturas %}
+          <tr
+            data-capacity-row
+            data-area-code="{{ area.codigo }}"
+            data-area-name="{{ area.nome }}"
+            data-capacity-id="{{ area.capacidade_id|default('', true) }}"
+            data-capacity-value="{{ area.capacidade|default('', true) }}"
+            data-capacity-notes="{{ area.capacidade_observacoes|default('', true)|e }}">
+            <td>{{ area.nome }}</td>
+            <td><span class="capacity-display">-</span></td>
+            <td><span class="capacity-notes">-</span></td>
+            <td style="white-space: nowrap;">
+              <button type="button" class="button button-secondary" onclick="openCapacityModal(this)">
+                {{ 'Editar' if area.capacidade else 'Registrar' }}
+              </button>
+              {% if area.capacidade_id %}
+                <button type="button" class="link-button" onclick="deleteCapacity({{ area.capacidade_id }})">
+                  Remover
+                </button>
+              {% endif %}
+            </td>
+          </tr>
+        {% endfor %}
+        </tbody>
+      </table>
+
+      <div class="capacity-summary">
+        <div class="capacity-chip capacity-chip--complementary" aria-live="polite">
+          <span>Gargalo atual</span>
+          <strong id="capacity-bottleneck">-</strong>
+        </div>
       </div>
     </article>
 
@@ -260,6 +386,8 @@
                                   <th>#</th>
                                   <th>Valor</th>
                                   <th>Vencimento</th>
+                                  <th>Classificação</th>
+                                  <th>Repetição</th>
                                   <th>Tipo</th>
                                 </tr>
                               </thead>
@@ -269,7 +397,19 @@
                                     <td>{{ parcela.numero }}</td>
                                     <td>{{ parcela.valor }}</td>
                                     <td>{{ parcela.vencimento }}</td>
-                                    <td>{{ parcela.tipo }}</td>
+                                    <td>
+                                      {% if parcela.classificacao %}
+                                        <span style="padding: 2px 8px; border-radius: 4px; font-size: 11px; font-weight: 600; 
+                                          {% if parcela.classificacao == 'Investimento' %}background: #dbeafe; color: #1e40af;
+                                          {% elif parcela.classificacao == 'Custo Fixo' %}background: #fef3c7; color: #92400e;
+                                          {% elif parcela.classificacao == 'Despesa Fixa' %}background: #fce7f3; color: #9f1239;
+                                          {% endif %}">
+                                          {{ parcela.classificacao }}
+                                        </span>
+                                      {% else %}-{% endif %}
+                                    </td>
+                                    <td>{{ parcela.repeticao or '-' }}</td>
+                                    <td>{{ parcela.tipo or '-' }}</td>
                                   </tr>
                                 {% endfor %}
                               </tbody>
@@ -325,12 +465,13 @@
             <label for="structure-block">Bloco *</label>
             <select id="structure-block" required>
               <option value="">Selecione...</option>
-              <option value="processos">Processos</option>
+              <option value="pessoas">Pessoas</option>
+              <option value="imoveis">Imóveis</option>
               <option value="instalacoes">Instalações</option>
               <option value="maquinas_equipamentos">Máquinas e Equipamentos</option>
-              <option value="pessoas">Pessoas</option>
-              <option value="insumos">Insumos</option>
-              <option value="material_consumo">Material de Uso e Consumo / Outros</option>
+              <option value="moveis_utensilios">Móveis e Utensílios</option>
+              <option value="ti_comunicacao">TI e Comunicação</option>
+              <option value="outros">Outros</option>
             </select>
           </div>
         </div>
@@ -352,24 +493,14 @@
           </div>
         </div>
         
-        <!-- Valor e Repetição -->
-        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 16px; margin-bottom: 16px;">
+        <!-- Valor -->
+        <div style="margin-bottom: 16px;">
           <div class="form-group">
-            <label for="structure-value">Valor</label>
+            <label for="structure-value">Valor Total (referência)</label>
             <input type="number" id="structure-value" placeholder="0.00" step="0.01" min="0">
-          </div>
-          
-          <div class="form-group">
-            <label for="structure-repetition">Repetição</label>
-            <select id="structure-repetition">
-              <option value="">Selecione...</option>
-              <option value="Única">Única</option>
-              <option value="Parcelada">Parcelada</option>
-              <option value="Mensal">Mensal</option>
-              <option value="Trimestral">Trimestral</option>
-              <option value="Semestral">Semestral</option>
-              <option value="Anual">Anual</option>
-            </select>
+            <small style="color: #64748b; font-size: 12px; display: block; margin-top: 4px;">
+              Valor de referência. Os valores das parcelas serão usados para cálculos financeiros.
+            </small>
           </div>
         </div>
         
@@ -391,21 +522,11 @@
           </div>
         </div>
         
-        <!-- Observações e Status -->
-        <div style="display: grid; grid-template-columns: 2fr 1fr; gap: 16px; margin-bottom: 16px;">
+        <!-- Observações -->
+        <div style="margin-bottom: 16px;">
           <div class="form-group">
             <label for="structure-observations">Observações</label>
             <textarea id="structure-observations" rows="2" placeholder="Observações adicionais"></textarea>
-          </div>
-          
-          <div class="form-group">
-            <label for="structure-status">Status</label>
-            <select id="structure-status">
-              <option value="pending">Pendente</option>
-              <option value="in_progress">Em andamento</option>
-              <option value="completed">Concluído</option>
-              <option value="cancelled">Cancelado</option>
-            </select>
           </div>
         </div>
         
@@ -419,11 +540,63 @@
           <div id="installments-container" style="display: flex; flex-direction: column; gap: 8px;">
             <!-- Parcelas serão adicionadas aqui dinamicamente -->
           </div>
+          
+          <div style="margin-top: 16px; padding: 12px; background: rgba(59, 130, 246, 0.08); border-radius: 8px; display: flex; justify-content: space-between; align-items: center;">
+            <p style="margin: 0; font-size: 13px; color: #64748b;">
+              ℹ️ Adicione todas as parcelas e clique em "Salvar Parcelas" para registrar
+            </p>
+            <button type="button" class="button button-secondary" onclick="saveInstallments()" id="btn-save-installments">
+              Salvar Parcelas
+            </button>
+          </div>
         </div>
         
         <div class="form-actions" style="margin-top: 24px;">
           <button type="button" class="button button-secondary" onclick="closeStructureModal()">Cancelar</button>
-          <button type="submit" class="button button-primary">Salvar</button>
+          <button type="button" class="button button-primary" onclick="saveStructureOnly()">Salvar Estrutura</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- Modal de Capacidade de Faturamento -->
+  <div id="capacity-modal" class="modal" style="display: none;">
+    <div class="modal-content" style="max-width: 520px;">
+      <div class="modal-header">
+        <h3 id="capacity-modal-title">Registrar capacidade</h3>
+        <span class="modal-close" onclick="closeCapacityModal()">&times;</span>
+      </div>
+
+      <form id="capacity-form" style="padding: 24px;">
+        <input type="hidden" id="capacity-id" value="">
+
+        <div class="form-group">
+          <label for="capacity-area">Area *</label>
+          <select id="capacity-area" required>
+            <option value="">Selecione...</option>
+            <option value="comercial">Estruturacao Comercial</option>
+            <option value="operacional">Estruturacao Operacional</option>
+            <option value="adm_fin">Estruturacao Adm / Fin</option>
+            <option value="outros">Outros</option>
+          </select>
+        </div>
+
+        <div class="form-group">
+          <label for="capacity-value">Faturamento suportado *</label>
+          <input type="number" id="capacity-value" placeholder="0.00" step="0.01" min="0" required>
+        </div>
+
+        <div class="form-group">
+          <label for="capacity-notes">Observacoes</label>
+          <textarea id="capacity-notes" rows="3" placeholder="Detalhes sobre limites e premissas"></textarea>
+        </div>
+
+        <div class="form-actions" style="display:flex; justify-content: space-between; align-items: center; gap: 12px;">
+          <button type="button" id="capacity-delete" class="link-button" style="display:none;">Remover capacidade</button>
+          <div style="display:flex; gap: 12px;">
+            <button type="button" class="button button-secondary" onclick="closeCapacityModal()">Cancelar</button>
+            <button type="submit" class="button button-primary">Salvar</button>
+          </div>
         </div>
       </form>
     </div>
@@ -484,12 +657,10 @@
         const valueStr = structureData.value || '';
         const valueNum = valueStr.replace(/[^\d,.-]/g, '').replace(',', '.');
         document.getElementById('structure-value').value = valueNum;
-        document.getElementById('structure-repetition').value = structureData.repetition || '';
         document.getElementById('structure-acquisition').value = structureData.acquisition_info || '';
         document.getElementById('structure-supplier').value = structureData.supplier || '';
         document.getElementById('structure-availability').value = structureData.availability_info || '';
         document.getElementById('structure-observations').value = structureData.observations || '';
-        document.getElementById('structure-status').value = structureData.status || 'pending';
         
         // Adicionar parcelas existentes
         if (structureData.installments && structureData.installments.length > 0) {
@@ -516,19 +687,38 @@
       installmentCounter++;
       const container = document.getElementById('installments-container');
       
+      // Debug: log data recebida
+      if (data) {
+        console.log('📝 addInstallment - data recebida:', data);
+      }
+      
       const installmentDiv = document.createElement('div');
       installmentDiv.className = 'installment-row';
       installmentDiv.dataset.index = installmentCounter;
-      installmentDiv.style.cssText = 'display: grid; grid-template-columns: 80px 1fr 1fr 1fr 60px; gap: 8px; align-items: center; padding: 8px; background: rgba(248, 250, 252, 0.8); border: 1px solid rgba(148, 163, 184, 0.2); border-radius: 8px;';
+      installmentDiv.style.cssText = 'display: grid; grid-template-columns: 70px 100px 110px 130px 130px 100px 50px; gap: 6px; align-items: center; padding: 10px; background: rgba(248, 250, 252, 0.8); border: 1px solid rgba(148, 163, 184, 0.2); border-radius: 8px; margin-bottom: 8px;';
       
       installmentDiv.innerHTML = `
         <input type="text" placeholder="#" value="${data ? data.installment_number || '' : ''}" 
-               class="installment-number" style="padding: 6px; font-size: 13px;">
-        <input type="number" placeholder="0.00" value="${data ? data.amount || '' : ''}" step="0.01" min="0"
-               class="installment-amount" style="padding: 6px; font-size: 13px;">
+               class="installment-number" style="padding: 6px; font-size: 12px;" title="Número da parcela">
+        <input type="number" placeholder="Valor" value="${data ? data.amount || '' : ''}" step="0.01" min="0"
+               class="installment-amount" style="padding: 6px; font-size: 12px;" title="Valor da parcela">
         <input type="date" value="${data ? data.due_info || '' : ''}" 
-               class="installment-due" style="padding: 6px; font-size: 13px;">
-        <select class="installment-type" style="padding: 6px; font-size: 13px;">
+               class="installment-due" style="padding: 6px; font-size: 12px;" title="Data de vencimento">
+        <select class="installment-classification" style="padding: 6px; font-size: 12px;" title="Classificação contábil">
+          <option value="">Classificação...</option>
+          <option value="Investimento" ${data && data.classification === 'Investimento' ? 'selected' : ''}>Investimento</option>
+          <option value="Custo Fixo" ${data && data.classification === 'Custo Fixo' ? 'selected' : ''}>Custo Fixo</option>
+          <option value="Despesa Fixa" ${data && data.classification === 'Despesa Fixa' ? 'selected' : ''}>Despesa Fixa</option>
+        </select>
+        <select class="installment-repetition" style="padding: 6px; font-size: 12px;" title="Repetição">
+          <option value="">Repetição...</option>
+          <option value="Única" ${data && data.repetition === 'Única' ? 'selected' : ''}>Única</option>
+          <option value="Mensal" ${data && data.repetition === 'Mensal' ? 'selected' : ''}>Mensal</option>
+          <option value="Trimestral" ${data && data.repetition === 'Trimestral' ? 'selected' : ''}>Trimestral</option>
+          <option value="Semestral" ${data && data.repetition === 'Semestral' ? 'selected' : ''}>Semestral</option>
+          <option value="Anual" ${data && data.repetition === 'Anual' ? 'selected' : ''}>Anual</option>
+        </select>
+        <select class="installment-type" style="padding: 6px; font-size: 12px;" title="Tipo de parcela">
           <option value="">Tipo...</option>
           <option value="Entrada" ${data && data.installment_type === 'Entrada' ? 'selected' : ''}>Entrada</option>
           <option value="Mensalidade" ${data && data.installment_type === 'Mensalidade' ? 'selected' : ''}>Mensalidade</option>
@@ -536,7 +726,7 @@
           <option value="Pagamento único" ${data && data.installment_type === 'Pagamento único' ? 'selected' : ''}>Pagamento único</option>
         </select>
         <button type="button" onclick="removeInstallment(${installmentCounter})" 
-                style="padding: 6px; background: #ef4444; color: white; border: none; border-radius: 4px; cursor: pointer; font-size: 12px;">X</button>
+                style="padding: 6px; background: #ef4444; color: white; border: none; border-radius: 4px; cursor: pointer; font-size: 12px;" title="Remover parcela">X</button>
       `;
       
       container.appendChild(installmentDiv);
@@ -590,33 +780,21 @@
       }
     }
 
-    // Submit do formulário
-    document.getElementById('structure-form').addEventListener('submit', async (e) => {
-      e.preventDefault();
-      console.log('📝 Form submitted');
+    // Salvar apenas a estrutura (sem parcelas)
+    async function saveStructureOnly() {
+      console.log('📝 Salvando apenas estrutura...');
       
       const structureId = document.getElementById('structure-id').value;
       const isEdit = !!structureId;
       console.log('📝 Mode:', isEdit ? 'EDIT' : 'CREATE', '| ID:', structureId);
       
-      // Coletar parcelas
-      const installmentRows = document.querySelectorAll('.installment-row');
-      const installments = Array.from(installmentRows).map(row => ({
-        installment_number: row.querySelector('.installment-number').value,
-        amount: row.querySelector('.installment-amount').value,
-        due_info: row.querySelector('.installment-due').value,
-        installment_type: row.querySelector('.installment-type').value
-      }));
-      
       // Formatar valor para string monetária
       const valueNum = document.getElementById('structure-value').value;
       const valueFormatted = valueNum ? `R$ ${parseFloat(valueNum).toFixed(2).replace('.', ',')}` : '';
       
-      // Determinar forma de pagamento baseado nas parcelas
+      // Determinar forma de pagamento
       let paymentForm = 'A definir';
-      if (installments.length > 0) {
-        paymentForm = 'Conforme parcelas';
-      } else if (document.getElementById('structure-repetition').value === 'Única') {
+      if (valueFormatted) {
         paymentForm = 'À vista';
       }
       
@@ -626,21 +804,19 @@
         item_type: document.getElementById('structure-type').value,
         description: document.getElementById('structure-description').value,
         value: valueFormatted,
-        repetition: document.getElementById('structure-repetition').value,
+        repetition: '',
         payment_form: paymentForm,
         acquisition_info: document.getElementById('structure-acquisition').value,
         supplier: document.getElementById('structure-supplier').value,
         availability_info: document.getElementById('structure-availability').value,
         observations: document.getElementById('structure-observations').value,
-        status: document.getElementById('structure-status').value,
-        installments: installments
+        status: 'active',
+        installments: []  // Parcelas serão salvas separadamente
       };
       
       console.log('📦 Data to send:', data);
-      console.log('🔑 planId:', planId);
       
       if (!planId) {
-        console.error('❌ ERROR: planId is missing!');
         showMessage('Erro: plan_id não encontrado. Recarregue a página.', 'error');
         return;
       }
@@ -651,26 +827,26 @@
           : `/pev/api/implantacao/${planId}/structures`;
         
         const method = isEdit ? 'PUT' : 'POST';
-        
-        console.log('🚀 Sending request:', method, url);
-        
         const response = await fetch(url, {
           method: method,
-          headers: {
-            'Content-Type': 'application/json'
-          },
+          headers: {'Content-Type': 'application/json'},
           body: JSON.stringify(data)
         });
         
-        console.log('📡 Response status:', response.status);
-        
         const result = await response.json();
-        console.log('📥 Response data:', result);
         
         if (result.success) {
-          showMessage(isEdit ? 'Estrutura atualizada com sucesso!' : 'Estrutura criada com sucesso!', 'success');
-          closeStructureModal();
-          setTimeout(() => window.location.reload(), 1000);
+          const newStructureId = result.id || structureId;
+          document.getElementById('structure-id').value = newStructureId;
+          showMessage(isEdit ? 'Estrutura atualizada!' : 'Estrutura criada! Adicione as parcelas.', 'success');
+          
+          // Mudar botão de salvar parcelas para "Salvar Parcelas"
+          updateInstallmentButtonLabel();
+
+          if (isEdit) {
+            closeStructureModal();
+            setTimeout(() => window.location.reload(), 800);
+          }
         } else {
           showMessage('Erro ao salvar estrutura: ' + result.error, 'error');
         }
@@ -678,8 +854,280 @@
         console.error('Error saving structure:', error);
         showMessage('Erro ao salvar estrutura', 'error');
       }
+    }
+
+    // Salvar parcelas da estrutura
+    async function saveInstallments() {
+      const structureId = document.getElementById('structure-id').value;
+      
+      if (!structureId) {
+        showMessage('Erro: Você precisa salvar a estrutura primeiro!', 'error');
+        return;
+      }
+      
+      console.log('📦 Salvando parcelas...');
+      
+      // Coletar parcelas
+      const installmentRows = document.querySelectorAll('.installment-row');
+      const installments = Array.from(installmentRows).map(row => ({
+        installment_number: row.querySelector('.installment-number').value,
+        amount: row.querySelector('.installment-amount').value,
+        due_info: row.querySelector('.installment-due').value,
+        classification: row.querySelector('.installment-classification').value,
+        repetition: row.querySelector('.installment-repetition').value,
+        installment_type: row.querySelector('.installment-type').value
+      }));
+      
+      console.log('📦 Parcelas a salvar:', installments);
+      
+      try {
+        // Deletar parcelas antigas
+        const deleteResponse = await fetch(`/pev/api/implantacao/${planId}/structures/${structureId}/installments`, {
+          method: 'DELETE'
+        });
+        if (!deleteResponse.ok) {
+          const deleteError = await deleteResponse.json().catch(() => ({}));
+          throw new Error(deleteError.error || 'Falha ao limpar parcelas anteriores');
+        }
+        
+        // Criar novas parcelas
+        for (const inst of installments) {
+          const createResponse = await fetch(`/pev/api/implantacao/${planId}/structures/${structureId}/installments`, {
+            method: 'POST',
+            headers: {'Content-Type': 'application/json'},
+            body: JSON.stringify(inst)
+          });
+
+          if (!createResponse.ok) {
+            const errorData = await createResponse.json().catch(() => ({}));
+            throw new Error(errorData.error || 'Falha ao criar uma das parcelas');
+          }
+        }
+        
+        showMessage('Parcelas salvas com sucesso!', 'success');
+        
+        // Fechar modal e recarregar estrutura para refletir dados atualizados
+        closeStructureModal();
+        setTimeout(() => window.location.reload(), 800);
+      } catch (error) {
+        console.error('Error saving installments:', error);
+        showMessage('Erro ao salvar parcelas', 'error');
+      }
+    }
+
+    function updateInstallmentButtonLabel() {
+      const btn = document.getElementById('btn-save-installments');
+      const structureId = document.getElementById('structure-id').value;
+      if (structureId && btn) {
+        btn.textContent = 'Salvar Parcelas';
+        btn.style.background = '#22c55e';
+      }
+    }
+
+
+
+    // ========== Capacidade de faturamento por area ==========
+    function parseCapacityValue(rawValue) {
+      if (!rawValue && rawValue !== 0) {
+        return null;
+      }
+      const cleaned = rawValue.toString().replace(/[^0-9,.-]/g, '').replace(/\./g, '').replace(',', '.');
+      const value = parseFloat(cleaned);
+      return Number.isFinite(value) ? value : null;
+    }
+
+    function formatCurrencyBRL(value) {
+      if (value === null || value === undefined || Number.isNaN(value)) {
+        return '-';
+      }
+      try {
+        return value.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
+      } catch (error) {
+        return `R$ ${Number(value).toFixed(2)}`;
+      }
+    }
+
+    function renderCapacitySummary() {
+      const rows = Array.from(document.querySelectorAll('[data-capacity-row]'));
+      let bottleneck = { value: Infinity, area: '' };
+
+      rows.forEach((row) => {
+        const raw = row.dataset.capacityValue || '';
+        const value = parseCapacityValue(raw);
+        const displayEl = row.querySelector('.capacity-display');
+        const notesEl = row.querySelector('.capacity-notes');
+
+        displayEl.textContent = value !== null ? formatCurrencyBRL(value) : '-';
+
+        const notes = row.dataset.capacityNotes || '';
+        notesEl.textContent = notes ? notes : '-';
+
+        if (value !== null && value < bottleneck.value) {
+          bottleneck = { value, area: row.dataset.areaName || '' };
+        }
+      });
+
+      const bottleneckEl = document.getElementById('capacity-bottleneck');
+
+      if (bottleneckEl) {
+        if (bottleneck.value === Infinity) {
+          bottleneckEl.textContent = '-';
+        } else {
+          const label = bottleneck.area ? ` (${bottleneck.area})` : '';
+          bottleneckEl.textContent = `${formatCurrencyBRL(bottleneck.value)}${label}`;
+        }
+      }
+    }
+
+    function openCapacityModal(trigger = null) {
+      const modal = document.getElementById('capacity-modal');
+      const form = document.getElementById('capacity-form');
+      const titleEl = document.getElementById('capacity-modal-title');
+      const idInput = document.getElementById('capacity-id');
+      const areaSelect = document.getElementById('capacity-area');
+      const valueInput = document.getElementById('capacity-value');
+      const notesInput = document.getElementById('capacity-notes');
+      const deleteBtn = document.getElementById('capacity-delete');
+
+      form.reset();
+      idInput.value = '';
+      deleteBtn.style.display = 'none';
+      deleteBtn.dataset.capacityId = '';
+
+      let dataset = null;
+      if (trigger && typeof trigger.closest === 'function') {
+        const row = trigger.closest('[data-capacity-row]');
+        if (row) {
+          dataset = row.dataset;
+        }
+      }
+
+      if (dataset) {
+        titleEl.textContent = dataset.capacityId ? 'Editar capacidade' : 'Registrar capacidade';
+        idInput.value = dataset.capacityId || '';
+        areaSelect.value = dataset.areaCode || '';
+        valueInput.value = dataset.capacityValue ? dataset.capacityValue.replace(',', '.') : '';
+        notesInput.value = dataset.capacityNotes || '';
+        if (dataset.capacityId) {
+          deleteBtn.style.display = 'inline-flex';
+          deleteBtn.dataset.capacityId = dataset.capacityId;
+        }
+      } else {
+        titleEl.textContent = 'Registrar capacidade';
+        areaSelect.value = '';
+        valueInput.value = '';
+        notesInput.value = '';
+      }
+
+      modal.style.display = 'block';
+      setTimeout(() => modal.classList.add('show'), 10);
+    }
+
+    function closeCapacityModal() {
+      const modal = document.getElementById('capacity-modal');
+      if (!modal) {
+        return;
+      }
+      modal.classList.remove('show');
+      setTimeout(() => {
+        modal.style.display = 'none';
+        const form = document.getElementById('capacity-form');
+        form.reset();
+        document.getElementById('capacity-id').value = '';
+        const deleteBtn = document.getElementById('capacity-delete');
+        deleteBtn.style.display = 'none';
+        deleteBtn.dataset.capacityId = '';
+      }, 300);
+    }
+
+    document.getElementById('capacity-form').addEventListener('submit', async (e) => {
+      e.preventDefault();
+
+      const idInput = document.getElementById('capacity-id');
+      const areaSelect = document.getElementById('capacity-area');
+      const valueInput = document.getElementById('capacity-value');
+      const notesInput = document.getElementById('capacity-notes');
+
+      const capacityId = idInput.value;
+      const area = areaSelect.value;
+      const rawValue = valueInput.value;
+      const numericValue = parseCapacityValue(rawValue);
+
+      if (!area || numericValue === null) {
+        showMessage('Preencha a area e informe um valor valido.', 'error');
+        return;
+      }
+
+      const data = {
+        area,
+        revenue_capacity: numericValue.toFixed(2),
+        observations: notesInput.value || ''
+      };
+
+      const url = capacityId
+        ? `/pev/api/implantacao/${planId}/structures/capacities/${capacityId}`
+        : `/pev/api/implantacao/${planId}/structures/capacities`;
+      const method = capacityId ? 'PUT' : 'POST';
+
+      try {
+        const response = await fetch(url, {
+          method,
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(data)
+        });
+
+        const result = await response.json();
+        if (result.success) {
+          showMessage('Capacidade salva com sucesso!', 'success');
+          closeCapacityModal();
+          setTimeout(() => window.location.reload(), 800);
+        } else {
+          showMessage(result.error || 'Erro ao salvar capacidade.', 'error');
+        }
+      } catch (error) {
+        console.error('Erro ao salvar capacidade:', error);
+        showMessage('Erro ao salvar capacidade', 'error');
+      }
     });
 
+    async function deleteCapacity(capacityId) {
+      if (!capacityId) {
+        return;
+      }
+      if (!confirm('Remover esta capacidade?')) {
+        return;
+      }
+
+      try {
+        const response = await fetch(`/pev/api/implantacao/${planId}/structures/capacities/${capacityId}`, {
+          method: 'DELETE'
+        });
+        const result = await response.json();
+        if (result.success) {
+          showMessage('Capacidade removida.', 'success');
+          closeCapacityModal();
+          setTimeout(() => window.location.reload(), 700);
+        } else {
+          showMessage(result.error || 'Erro ao remover capacidade.', 'error');
+        }
+      } catch (error) {
+        console.error('Erro ao remover capacidade:', error);
+        showMessage('Erro ao remover capacidade', 'error');
+      }
+    }
+
+    const capacityDeleteButton = document.getElementById('capacity-delete');
+    if (capacityDeleteButton) {
+      capacityDeleteButton.addEventListener('click', () => {
+        const capacityId = capacityDeleteButton.dataset.capacityId;
+        deleteCapacity(capacityId);
+      });
+    }
+
+    renderCapacitySummary();
+    window.openCapacityModal = openCapacityModal;
+    window.closeCapacityModal = closeCapacityModal;
+    window.deleteCapacity = deleteCapacity;
     function showMessage(message, type = 'info') {
       // Usar a função global se existir e não for esta mesma função
       if (typeof window.showMessage === 'function' && window.showMessage !== showMessage) {

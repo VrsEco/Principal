@@ -5,7 +5,7 @@ Handles user authentication, session management, and user creation
 
 from datetime import datetime
 from werkzeug.security import generate_password_hash, check_password_hash
-from flask_login import login_user, logout_user, login_required
+from flask_login import login_user, logout_user, login_required, current_user
 from models.user import User
 from models import db
 from services.log_service import log_service

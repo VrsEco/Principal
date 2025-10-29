@@ -612,6 +612,26 @@ class DatabaseInterface(ABC):
         pass
 
     @abstractmethod
+    def list_plan_structure_capacities(self, plan_id: int) -> List[Dict[str, Any]]:
+        """List revenue capacity entries for structure areas"""
+        pass
+
+    @abstractmethod
+    def create_plan_structure_capacity(self, plan_id: int, data: Dict[str, Any]) -> int:
+        """Create a revenue capacity entry for a structure area"""
+        pass
+
+    @abstractmethod
+    def update_plan_structure_capacity(self, capacity_id: int, plan_id: int, data: Dict[str, Any]) -> bool:
+        """Update a revenue capacity entry for a structure area"""
+        pass
+
+    @abstractmethod
+    def delete_plan_structure_capacity(self, capacity_id: int, plan_id: int) -> bool:
+        """Delete a revenue capacity entry for a structure area"""
+        pass
+
+    @abstractmethod
     def list_plan_finance_premises(self, plan_id: int) -> List[Dict[str, Any]]:
         """List financial premises registered for the plan"""
         pass
@@ -673,36 +693,6 @@ class DatabaseInterface(ABC):
         pass
 
     @abstractmethod
-    def create_plan_finance_investment(self, plan_id: int, data: Dict[str, Any]) -> int:
-        """Create an investment item"""
-        pass
-
-    @abstractmethod
-    def update_plan_finance_investment(self, investment_id: int, plan_id: int, data: Dict[str, Any]) -> bool:
-        """Update an investment item"""
-        pass
-
-    @abstractmethod
-    def delete_plan_finance_investment(self, investment_id: int, plan_id: int) -> bool:
-        """Delete an investment item"""
-        pass
-
-    @abstractmethod
-    def create_plan_finance_source(self, plan_id: int, data: Dict[str, Any]) -> int:
-        """Create a funding source"""
-        pass
-
-    @abstractmethod
-    def update_plan_finance_source(self, source_id: int, plan_id: int, data: Dict[str, Any]) -> bool:
-        """Update a funding source"""
-        pass
-
-    @abstractmethod
-    def delete_plan_finance_source(self, source_id: int, plan_id: int) -> bool:
-        """Delete a funding source"""
-        pass
-
-    @abstractmethod
     def create_plan_finance_variable_cost(self, plan_id: int, data: Dict[str, Any]) -> int:
         """Create a variable cost"""
         pass
@@ -735,6 +725,63 @@ class DatabaseInterface(ABC):
     @abstractmethod
     def update_plan_finance_metrics(self, plan_id: int, data: Dict[str, Any]) -> bool:
         """Update or create financial metrics (payback, TIR, notes)"""
+        pass
+
+    @abstractmethod
+    def get_plan_profit_distribution(self, plan_id: int) -> Dict[str, Any]:
+        """Get profit distribution percentage for a plan"""
+        pass
+
+    @abstractmethod
+    def update_plan_profit_distribution(self, plan_id: int, data: Dict[str, Any]) -> bool:
+        """Update or create profit distribution percentage"""
+        pass
+
+    # Investment contributions operations (new structure)
+    # ⚠️ FIXME RESOLVIDO: Substituindo `pass` por `raise NotImplementedError()`
+    # para forçar uso da implementação da classe filha
+    def get_plan_investment_categories(self, plan_id: int) -> List[Dict[str, Any]]:
+        """Get investment categories (Capital de Giro, Imobilizado)"""
+        raise NotImplementedError("Este método deve ser implementado na classe filha")
+
+    def get_plan_investment_items(self, category_id: int) -> List[Dict[str, Any]]:
+        """Get investment items for a category"""
+        raise NotImplementedError("Este método deve ser implementado na classe filha")
+
+    def list_plan_investment_contributions(self, item_id: int) -> List[Dict[str, Any]]:
+        """List investment contributions for an item"""
+        raise NotImplementedError("Este método deve ser implementado na classe filha")
+
+    def create_plan_investment_contribution(self, item_id: int, data: Dict[str, Any]) -> int:
+        """Create an investment contribution (aporte)"""
+        raise NotImplementedError("Este método deve ser implementado na classe filha")
+
+    def update_plan_investment_contribution(self, contribution_id: int, data: Dict[str, Any]) -> bool:
+        """Update an investment contribution"""
+        raise NotImplementedError("Este método deve ser implementado na classe filha")
+
+    def delete_plan_investment_contribution(self, contribution_id: int) -> bool:
+        """Delete an investment contribution"""
+        raise NotImplementedError("Este método deve ser implementado na classe filha")
+
+    @abstractmethod
+    def list_plan_funding_sources(self, plan_id: int) -> List[Dict[str, Any]]:
+        """List funding sources (Fornecedores, Empréstimos, Sócios)"""
+        pass
+
+    @abstractmethod
+    def create_plan_funding_source(self, plan_id: int, data: Dict[str, Any]) -> int:
+        """Create a funding source"""
+        pass
+
+    @abstractmethod
+    def update_plan_funding_source(self, source_id: int, plan_id: int, data: Dict[str, Any]) -> bool:
+        """Update a funding source"""
+        pass
+
+    @abstractmethod
+    def delete_plan_funding_source(self, source_id: int, plan_id: int) -> bool:
+        """Delete a funding source"""
         pass
 
     # AI Agents configuration operations

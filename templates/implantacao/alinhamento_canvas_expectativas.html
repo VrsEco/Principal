@@ -308,7 +308,9 @@
         da implantação do negócio.
       </p>
       <div class="form-actions" style="justify-content: flex-start; margin-top: 20px;">
-        <button class="button button-secondary" onclick="window.history.back()">← Voltar</button>
+        <a href="{{ url_for('pev.pev_implantacao_overview', plan_id=plan_id) }}" class="button button-secondary" style="text-decoration: none; display: inline-block;">
+          ← Voltar para Implantação
+        </a>
       </div>
     </header>
 

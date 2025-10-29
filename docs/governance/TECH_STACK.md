@@ -1,6 +1,6 @@
 # 🛠️ Stack Tecnológica Oficial
 
-**Última Atualização:** 18/10/2025  
+**Última Atualização:** 28/10/2025  
 **Versão:** 1.0  
 **Status:** ✅ Ativo
 
@@ -72,10 +72,11 @@
 | Tecnologia | Versão | Uso | Status |
 |------------|--------|-----|--------|
 | **APScheduler** | 3.10.4 | Tarefas agendadas (cron-like) | ✅ Obrigatório |
+| **Windows Task Scheduler** | n/a | Backups do PostgreSQL e `git push` diário | ✅ Obrigatório |
 | **Celery** | 5.3.1 | Tarefas assíncronas (opcional) | ⚠️ Não configurado |
 | **Redis** | 4.6.0 | Cache e message broker | ✅ Aprovado |
 
-**Nota:** APScheduler é usado para rotinas diárias/semanais. Celery permanece instalado para uso futuro se necessário.
+**Nota:** APScheduler cobre rotinas internas da aplicação. Tarefas operacionais (backup e publicação Git) rodam via Windows Task Scheduler. Celery permanece instalado para uso futuro se necessário.
 
 ### Integrações
 
@@ -99,15 +100,16 @@
 |------------|--------|-----|--------|
 | **Docker** | 20.10+ | Containerização | ✅ Obrigatório |
 | **Docker Compose** | 2.0+ | Orquestração local | ✅ Obrigatório |
-| **PostgreSQL (Docker)** | 18-alpine | Banco em container | ✅ Aprovado |
+| **PostgreSQL (Windows Host)** | 18 | Banco principal compartilhado pelo host | ✅ Obrigatório |
+| **PostgreSQL (Docker)** | 18-alpine | Uso emergencial / restauração pontual | ⚠️ Suporte legado |
 | **Redis (Docker)** | 7-alpine | Cache em container | ✅ Aprovado |
 | **Adminer (Docker)** | latest | Gerenciador de banco web | ✅ Dev only |
 | **MailHog (Docker)** | latest | Teste de e-mails | ✅ Dev only |
 
 **Ambiente de Desenvolvimento:**
-- `docker-compose.dev.yml` para ambiente local
-- Volumes para hot-reload
-- PostgreSQL local via `host.docker.internal` (dados preservados)
+- `docker-compose.yml` orquestra app, Celery, Redis e Nginx conectando ao PostgreSQL do host (`host.docker.internal`)
+- Backups automáticos gerados em `backups/` via `scripts/backup/run_pg_backup.ps1` (12h/18h/22h)
+- Publicação diária no GitHub às 18h com `scripts/deploy/auto_git_push.ps1` (requer credenciais configuradas)
 
 ---
 
@@ -272,6 +274,7 @@ pip show [package]
 | 20/10/2025 | Adicionado APScheduler 3.10.4 | Tarefas agendadas automáticas para rotinas |
 | 20/10/2025 | Adicionada seção Virtualização & Deploy | Documentar ambiente Docker |
 | 20/10/2025 | PostgreSQL atualizado para v18-alpine | Compatibilidade com versão local |
+| 28/10/2025 | Orquestração usando PostgreSQL do host + automações de backup/push | Alinhar infraestrutura ao banco corporativo |
 
 ---
 

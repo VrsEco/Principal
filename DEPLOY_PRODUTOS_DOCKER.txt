@@ -1,0 +1,228 @@
+================================================================================
+🐳 DEPLOY - Sistema de Cadastro de Produtos (Docker)
+================================================================================
+
+Data: 27/10/2025
+Ambiente: Docker Development (porta 5003)
+Status: PRONTO PARA USO
+
+================================================================================
+⚡ INSTALAÇÃO RÁPIDA (1 COMANDO)
+================================================================================
+
+Execute no terminal:
+
+    SETUP_PRODUTOS_DOCKER.bat
+
+Este comando faz tudo automaticamente:
+✅ Copia migration para o container
+✅ Cria tabela plan_products no PostgreSQL
+✅ Valida se foi criada corretamente
+✅ Mostra instruções de uso
+
+================================================================================
+🚀 ACESSO AO SISTEMA
+================================================================================
+
+1. Abra o navegador:
+   http://localhost:5003/pev/dashboard
+
+2. Selecione:
+   → Empresa
+   → Planejamento
+   → Clique em "Visualizar Implantação"
+
+3. No menu lateral, clique:
+   → "📦 Cadastro de Produtos"
+
+4. Cadastre produtos:
+   → Clique "➕ Novo Produto"
+   → Preencha os campos
+   → Observe cálculos automáticos
+   → Salve!
+
+================================================================================
+📋 CAMPOS DO PRODUTO
+================================================================================
+
+a) PREÇO DE VENDA
+   - Valor (R$) *obrigatório
+   - Observações
+
+b) CUSTOS VARIÁVEIS
+   - % ou R$ (um dos dois)
+   - Observações
+   - Sistema converte % → R$ automaticamente
+
+c) DESPESAS VARIÁVEIS
+   - % ou R$ (um dos dois)
+   - Observações
+   - Sistema converte % → R$ automaticamente
+
+MARGEM DE CONTRIBUIÇÃO (CALCULADO AUTOMATICAMENTE)
+   - % e R$ → Calculados pelo sistema
+   - Observações
+   Fórmula: MCU = Preço - Custos - Despesas
+
+d) TAMANHO DO MERCADO
+   - Unidades mensais
+   - Faturamento mensal → Calculado (unidades × preço)
+   - Observações
+
+e) ALVO DE MARKET SHARE
+   - Meta em unidades mensais
+   - Meta em % do mercado
+   - Observações de estratégia
+
+================================================================================
+🔧 CONTAINERS DOCKER
+================================================================================
+
+Verifique os containers:
+
+    docker ps
+
+Deve mostrar:
+✅ gestaoversus_app_dev      (porta 5003) - healthy
+✅ gestaoversus_db_dev       (porta 5433) - healthy
+✅ gestaoversus_redis_dev    (porta 6380) - healthy
+
+Se algum estiver "unhealthy", reinicie:
+
+    docker-compose -f docker-compose.dev.yml restart app_dev
+
+================================================================================
+🧮 CÁLCULOS AUTOMÁTICOS
+================================================================================
+
+1. MARGEM DE CONTRIBUIÇÃO UNITÁRIA
+   MCU (R$) = Preço - Custos - Despesas
+   MCU (%)  = (MCU R$ / Preço) × 100
+
+   Exemplo:
+   Preço: R$ 100,00
+   Custos: R$ 30,00
+   Despesas: R$ 20,00
+   → MCU: R$ 50,00 (50%)
+
+2. FATURAMENTO DO MERCADO
+   Faturamento = Unidades × Preço
+
+   Exemplo:
+   Mercado: 10.000 un/mês
+   Preço: R$ 100,00
+   → Faturamento: R$ 1.000.000,00
+
+3. CONVERSÃO % → R$
+   Ao digitar percentual, converte automaticamente para valor
+
+   Exemplo:
+   Preço: R$ 100,00
+   Custos: 30%
+   → Sistema calcula: R$ 30,00
+
+================================================================================
+🎯 EXEMPLO PRÁTICO
+================================================================================
+
+PRODUTO: Café Expresso Premium
+
+Digite:
+- Nome: Café Expresso Premium
+- Preço: 8.00
+- Custos %: 35
+- Despesas %: 15
+- Mercado (unidades): 50000
+- Market Share Goal %: 10
+
+Sistema calcula automaticamente:
+✅ Custos R$: 2.80
+✅ Despesas R$: 1.20
+✅ MCU: 50% (R$ 4,00)
+✅ Faturamento Mercado: R$ 400.000,00
+✅ Meta Unidades: 5.000/mês
+
+================================================================================
+🆘 PROBLEMAS COMUNS
+================================================================================
+
+PROBLEMA: Tabela não existe
+SOLUÇÃO: Execute SETUP_PRODUTOS_DOCKER.bat
+
+PROBLEMA: Container unhealthy
+SOLUÇÃO: docker-compose -f docker-compose.dev.yml restart app_dev
+
+PROBLEMA: Porta 5003 não responde
+SOLUÇÃO: docker ps (verificar se está UP)
+         docker logs gestaoversus_app_dev (ver erros)
+
+PROBLEMA: Erro "plan_id é obrigatório"
+SOLUÇÃO: Acesse via menu lateral do PEV (não via URL direta)
+
+================================================================================
+📊 COMANDOS ÚTEIS DOCKER
+================================================================================
+
+Ver logs da aplicação:
+    docker logs gestaoversus_app_dev --tail 50
+
+Ver logs em tempo real:
+    docker logs -f gestaoversus_app_dev
+
+Reiniciar aplicação:
+    docker-compose -f docker-compose.dev.yml restart app_dev
+
+Acessar banco de dados:
+    docker exec -it gestaoversus_db_dev psql -U postgres -d bd_app_versus_dev
+
+Verificar produtos cadastrados:
+    docker exec gestaoversus_db_dev psql -U postgres -d bd_app_versus_dev -c "SELECT COUNT(*) FROM plan_products;"
+
+Ver estrutura da tabela:
+    docker exec gestaoversus_db_dev psql -U postgres -d bd_app_versus_dev -c "\d plan_products"
+
+================================================================================
+✅ CHECKLIST DE VALIDAÇÃO
+================================================================================
+
+Antes de usar, verifique:
+
+[ ] Container gestaoversus_app_dev está "healthy"
+[ ] Container gestaoversus_db_dev está "healthy"
+[ ] Tabela plan_products existe no banco
+[ ] Porta 5003 está acessível
+[ ] Consegue fazer login no sistema
+[ ] Menu lateral mostra "📦 Cadastro de Produtos"
+
+================================================================================
+📚 DOCUMENTAÇÃO COMPLETA
+================================================================================
+
+Guia completo:
+    CADASTRO_PRODUTOS_IMPLEMENTADO.md
+
+Como acessar:
+    COMO_ACESSAR_PRODUTOS.md
+
+Referência rápida:
+    GUIA_RAPIDO_PRODUTOS.md
+
+Resumo final:
+    RESUMO_FINAL_CADASTRO_PRODUTOS.md
+
+================================================================================
+🎉 PRONTO PARA USO!
+================================================================================
+
+Execute agora:
+
+    SETUP_PRODUTOS_DOCKER.bat
+
+Depois acesse:
+
+    http://localhost:5003/pev/dashboard
+
+E comece a cadastrar seus produtos! 🚀
+
+================================================================================
+

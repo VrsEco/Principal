@@ -35,12 +35,37 @@
 
     .phase-view {
       display: none;
+      position: relative;
     }
 
     .phase-view.is-active {
       display: flex;
       flex-direction: column;
       gap: 32px;
+    }
+
+    .phase-header {
+      display: flex;
+      flex-direction: column;
+      gap: 12px;
+    }
+
+    .phase-header-top {
+      display: flex;
+      align-items: flex-start;
+      gap: 16px;
+    }
+
+    .phase-header-info {
+      display: flex;
+      flex-direction: column;
+      gap: 4px;
+    }
+
+    .phase-header-actions {
+      margin-left: auto;
+      display: flex;
+      gap: 12px;
     }
 
     .implantation-hero.surface-card {
@@ -150,6 +175,46 @@
       justify-content: space-between;
       align-items: center;
       gap: 12px;
+    }
+
+    .phase-status-name {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      background: none;
+      border: none;
+      padding: 0;
+      font: inherit;
+      font-weight: 600;
+      color: #0f172a;
+      cursor: pointer;
+      text-align: left;
+    }
+
+    .phase-status-index {
+      color: #2563eb;
+      font-weight: 600;
+    }
+
+    .phase-status-name:hover {
+      color: #2563eb;
+    }
+
+    .phase-status-name:focus {
+      outline: none;
+    }
+
+    .phase-status-name:focus-visible {
+      color: #2563eb;
+      outline: 2px solid #2563eb;
+      outline-offset: 2px;
+    }
+
+    .phase-status-description {
+      margin: 4px 0 0;
+      color: #475569;
+      font-size: 14px;
+      line-height: 1.5;
     }
 
     .phase-status-name {
@@ -282,10 +347,21 @@
       line-height: 1.6;
     }
 
-    .phase-actions {
-      display: flex;
-      gap: 12px;
-      margin-top: 8px;
+    @media (max-width: 768px) {
+      .phase-header-top {
+        flex-direction: column;
+        align-items: flex-start;
+      }
+
+      .phase-header-actions {
+        width: 100%;
+        flex-wrap: wrap;
+        gap: 8px;
+      }
+
+      .phase-header-actions .button {
+        width: 100%;
+      }
     }
 
     .plan-sidebar-card {
@@ -351,8 +427,8 @@
         {# Link direto para página de canvas de expectativas #}
         {% set nav.items = nav.items + [{'id': phase.id, 'name': phase.title, 'url': url_for('pev.implantacao_canvas_expectativas', plan_id=plan.id)}] %}
       {% elif phase.id == 'execution' %}
-        {# Link direto para página de estruturas #}
-        {% set nav.items = nav.items + [{'id': phase.id, 'name': phase.title, 'url': url_for('pev.implantacao_estruturas', plan_id=plan.id)}] %}
+        {# Link para página de introdução de estruturas #}
+        {% set nav.items = nav.items + [{'id': phase.id, 'name': phase.title, 'url': url_for('pev.implantacao_executivo_intro', plan_id=plan.id)}] %}
       {% else %}
         {% set nav.items = nav.items + [{'id': phase.id, 'name': phase.title, 'url': '#phase-' ~ phase.id}] %}
       {% endif %}
@@ -415,12 +491,15 @@
           {% for phase in macro_phases %}
             <div class="phase-status-item" data-phase-indicator="{{ phase.id }}">
               <div class="phase-status-head">
-                <span class="phase-status-name">{{ loop.index }}. {{ phase.title }}</span>
+                <button type="button" class="phase-status-name phase-open" data-phase="{{ phase.id }}">
+                  <span class="phase-status-index">{{ loop.index }}.</span>
+                  {{ phase.title }}
+                </button>
                 <span class="phase-status-chip status-{{ phase.status }}">{{ phase.status.replace('_', ' ') }}</span>
               </div>
-              <div class="phase-status-actions">
-                <button class="button button-ghost phase-open" data-phase="{{ phase.id }}">Abrir fase</button>
-              </div>
+              {% if phase.tagline %}
+                <p class="phase-status-description">{{ phase.tagline }}</p>
+              {% endif %}
             </div>
           {% endfor %}
         </div>
@@ -432,25 +511,28 @@
           id="phase-{{ phase.id }}"
           data-phase="{{ phase.id }}"
           data-phase-status="{{ phase.status }}"
-        >
-          <header class="phase-header">
-            <span>Fase {{ "%02d" | format(loop.index) }}</span>
-            <h2>{{ phase.title }}</h2>
-            <p>{{ phase.tagline }}</p>
-          </header>
+          >
+            <header class="phase-header">
+              <div class="phase-header-top">
+                <div class="phase-header-info">
+                  <span>Fase {{ "%02d" | format(loop.index) }}</span>
+                  <h2>{{ phase.title }}</h2>
+                </div>
+                <div class="phase-header-actions">
+                  <button class="button button-primary phase-complete-button" data-phase="{{ phase.id }}">
+                    Fechar fase
+                  </button>
+                  <button class="button button-ghost phase-back-button" data-phase="{{ phase.id }}">
+                    Voltar ao dashboard
+                  </button>
+                </div>
+              </div>
+              <p>{{ phase.tagline }}</p>
+            </header>
 
-          <div class="phase-pulse">{{ phase.pulse }}</div>
+            <div class="phase-pulse">{{ phase.pulse }}</div>
 
-          <div class="phase-actions">
-            <button class="button button-primary phase-complete-button" data-phase="{{ phase.id }}">
-              Marcar como concluida
-            </button>
-            <button class="button button-ghost phase-back-button" data-phase="{{ phase.id }}">
-              Voltar ao dashboard
-            </button>
-          </div>
-
-          <div class="phase-view-details">
+            <div class="phase-view-details">
             {% for section in phase.sections %}
               <div class="phase-section">
                 <h3>{{ section.title }}</h3>
@@ -539,18 +621,18 @@
           const status = statusState[phaseId] || 'sem_registros';
           view.setAttribute('data-phase-status', status);
           const button = view.querySelector('.phase-complete-button');
-          if (button) {
-            if (status === 'concluida') {
-              button.textContent = 'Reabrir fase';
-              button.classList.remove('button-primary');
-              button.classList.add('button-ghost');
-            } else {
-              button.textContent = 'Marcar como concluida';
-              button.classList.add('button-primary');
-              button.classList.remove('button-ghost');
-            }
+        if (button) {
+          if (status === 'concluida') {
+            button.textContent = 'Reabrir fase';
+            button.classList.remove('button-primary');
+            button.classList.add('button-ghost');
+          } else {
+            button.textContent = 'Fechar fase';
+            button.classList.add('button-primary');
+            button.classList.remove('button-ghost');
           }
-        });
+        }
+      });
       }
 
       function setActivePhase(targetId) {

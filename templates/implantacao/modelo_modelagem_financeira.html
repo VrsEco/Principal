@@ -1,4 +1,4 @@
-{% extends "base.html" %}
+﻿{% extends "base.html" %}
 {% block title %}Modelagem Financeira | Implantacao{% endblock %}
 {% block body %}{{ super() }}{% endblock %}
 
@@ -160,7 +160,7 @@
       margin-top: 12px;
     }
 
-    /* Modal Styles - Padrão PFPN (Centralizado no Topo) */
+    /* Modal Styles - PadrÃ£o PFPN (Centralizado no Topo) */
     .modal {
       display: none;
       position: fixed;
@@ -308,6 +308,17 @@
       background: #cbd5e1;
     }
 
+    /* Estilos para tabela de investimentos com scroll */
+    #spreadsheet-tbody-fixed tr,
+    #spreadsheet-tbody tr {
+      height: 44px;
+    }
+    
+    #spreadsheet-tbody-fixed td,
+    #spreadsheet-tbody td {
+      vertical-align: middle;
+    }
+
     @media (max-width: 768px) {
       .finance-wrapper {
         padding: 20px;
@@ -329,239 +340,444 @@
     <article class="finance-card">
       <h1>Modelagem financeira do planejamento</h1>
       <p style="margin:12px 0 0; color:#475569; line-height:1.6;">
-        Premissas e demonstrativos base para conectar estrutura operacional, investimentos e retorno dos sócios.
+        Demonstrativos base para conectar estrutura operacional, investimentos e retorno dos sÃ³cios.
         Gerencie os dados financeiros do seu planejamento de forma interativa.
       </p>
       <div style="margin-top: 20px;">
-        <button class="btn btn-secondary" onclick="window.history.back()">← Voltar</button>
+        <button class="btn btn-secondary" onclick="window.history.back()">â† Voltar</button>
       </div>
     </article>
 
-    <!-- PREMISSAS -->
-    <article class="finance-card" id="premissas-section">
+    <!-- INVESTIMENTOS -->
+    <article class="finance-card">
       <div class="section-header">
-        <h2>Premissas</h2>
-        <button class="btn-add" onclick="openPremiseModal()">
+        <h2>Investimentos</h2>
+        <button class="btn-add" onclick="openCapitalGiroModal()">
           <span>+</span>
-          <span>Adicionar Premissa</span>
+          <span>Cadastrar Investimento em Capital de Giro</span>
         </button>
       </div>
-      <table class="finance-table">
-        <thead>
-          <tr>
-            <th>Descrição</th>
-            <th>Sugestão do sistema</th>
-            <th>Valor ajustado</th>
-            <th>Observações</th>
-            <th>Memória de cálculo</th>
-            <th style="width: 100px;">Ações</th>
-          </tr>
-        </thead>
-        <tbody id="premises-tbody">
-          {% for item in premissas %}
-            <tr data-id="{{ item.id }}">
-              <td>{{ item.indicador }}</td>
-              <td>{{ item.sugestao }}</td>
-              <td>{{ item.ajustado }}</td>
-              <td>{{ item.observacoes }}</td>
-              <td>{{ item.memoria }}</td>
-              <td>
-                <button class="btn-icon" onclick="editPremise({{ item.id }})" title="Editar">✏️</button>
-                <button class="btn-icon delete" onclick="deletePremise({{ item.id }})" title="Deletar">🗑️</button>
+      
+      <div style="display: flex; border: 1px solid rgba(148, 163, 184, 0.28); border-radius: 8px; overflow: hidden;">
+        <!-- Colunas fixas (Categoria, Item, Total) -->
+        <div style="flex-shrink: 0; background: white;">
+          <table class="finance-table" style="border: none; margin: 0;">
+            <thead>
+              <tr>
+                <th style="border-left: none; border-top: none;">Categoria</th>
+                <th style="border-top: none;">Item</th>
+                <th style="border-top: none; border-right: none;">Total</th>
+              </tr>
+              <tr style="height: 44px;">
+                <th colspan="3" style="border-left: none; border-right: none; visibility: hidden;"></th>
+              </tr>
+            </thead>
+            <tbody id="spreadsheet-tbody-fixed">
+              <!-- Linhas fixas serÃ£o preenchidas via JavaScript -->
+            </tbody>
+          </table>
+        </div>
+        
+        <!-- Ãrea com scroll horizontal (apenas perÃ­odos) -->
+        <div style="overflow-x: auto; flex-grow: 1;">
+          <table class="finance-table" id="investments-spreadsheet" style="border: none; margin: 0; width: auto;">
+            <thead>
+              <tr id="month-totals-row">
+                <!-- Totais por mÃªs serÃ£o preenchidos via JavaScript -->
+              </tr>
+              <tr id="month-headers">
+                <!-- Headers dos meses serÃ£o preenchidos via JavaScript -->
+              </tr>
+            </thead>
+            <tbody id="spreadsheet-tbody">
+              <!-- Valores por perÃ­odo serÃ£o preenchidos via JavaScript -->
+            </tbody>
+          </table>
+        </div>
+      </div>
+      
+      <div style="margin-top: 12px; padding: 12px; background: rgba(34, 197, 94, 0.08); border-radius: 8px; border-left: 3px solid #22c55e;">
+        <p style="margin: 0; font-size: 12px; color: #166534; line-height: 1.5;">
+          <strong>â„¹ï¸ Valores AutomÃ¡ticos:</strong> Os valores de Imobilizado sÃ£o calculados automaticamente com base nos dados cadastrados em 
+          <a href="{{ url_for('pev.implantacao_executivo_intro', plan_id=plan_id) }}" style="color: #059669; text-decoration: underline; font-weight: 600;">Estruturas de ExecuÃ§Ã£o â†’ Resumo de Investimentos</a>.
+        </p>
+      </div>
+      
+      <!-- Tabela de Investimentos em Capital de Giro Cadastrados -->
+      <div style="margin-top: 24px;">
+        <h3 style="margin:0 0 16px; color:#0f172a; font-size:16px;">Investimentos em Capital de Giro Cadastrados</h3>
+        <table class="finance-table">
+          <thead>
+            <tr>
+              <th>Tipo</th>
+              <th>Data</th>
+              <th>DescriÃ§Ã£o</th>
+              <th>Valor</th>
+              <th>ObservaÃ§Ãµes</th>
+              <th style="width: 80px;">AÃ§Ãµes</th>
+            </tr>
+          </thead>
+          <tbody id="capital-giro-contributions-tbody">
+            <tr>
+              <td colspan="6" style="text-align: center; padding: 24px; color: #64748b;">
+                Carregando investimentos...
               </td>
             </tr>
-          {% endfor %}
-        </tbody>
-      </table>
-      <p class="section-note">
-        * Ajuste valores e insira comentários conforme necessário.
-      </p>
-    </article>
-
-    <!-- INVESTIMENTO E FONTES -->
-    <article class="finance-card">
-      <h2>Investimento e fontes</h2>
-      <div class="grid-two">
-        <!-- Investimentos -->
-        <div id="investments-section">
-          <div class="section-header" style="margin-bottom: 12px;">
-            <h3 style="margin:0;">Investimento</h3>
-            <button class="btn-add" onclick="openInvestmentModal()" style="padding: 6px 12px; font-size: 13px;">
-              <span>+</span>
-            </button>
-          </div>
-          <table class="finance-table">
-            <thead>
-              <tr>
-                <th>Descrição</th>
-                <th>Valor</th>
-                <th style="width: 80px;">Ações</th>
-              </tr>
-            </thead>
-            <tbody id="investments-tbody">
-              {% for item in investimento.investimento %}
-                <tr data-id="{{ item.id }}">
-                  <td>{{ item.descricao }}</td>
-                  <td>{{ item.valor }}</td>
-                  <td>
-                    <button class="btn-icon" onclick="editInvestment({{ item.id }})" title="Editar">✏️</button>
-                    <button class="btn-icon delete" onclick="deleteInvestment({{ item.id }})" title="Deletar">🗑️</button>
-                  </td>
-                </tr>
-              {% endfor %}
-            </tbody>
-          </table>
-        </div>
-
-        <!-- Fontes -->
-        <div id="sources-section">
-          <div class="section-header" style="margin-bottom: 12px;">
-            <h3 style="margin:0;">Fontes</h3>
-            <button class="btn-add" onclick="openSourceModal()" style="padding: 6px 12px; font-size: 13px;">
-              <span>+</span>
-            </button>
-          </div>
-          <table class="finance-table">
-            <thead>
-              <tr>
-                <th>Categoria</th>
-                <th>Descrição</th>
-                <th>Valor</th>
-                <th>Disponibilidade</th>
-                <th style="width: 80px;">Ações</th>
-              </tr>
-            </thead>
-            <tbody id="sources-tbody">
-              {% for item in investimento.fontes %}
-                <tr data-id="{{ item.id }}">
-                  <td>{{ item.categoria }}</td>
-                  <td>{{ item.descricao }}</td>
-                  <td>{{ item.valor }}</td>
-                  <td>{{ item.disponibilidade }}</td>
-                  <td>
-                    <button class="btn-icon" onclick="editSource({{ item.id }})" title="Editar">✏️</button>
-                    <button class="btn-icon delete" onclick="deleteSource({{ item.id }})" title="Deletar">🗑️</button>
-                  </td>
-                </tr>
-              {% endfor %}
-            </tbody>
-          </table>
-        </div>
+          </tbody>
+        </table>
       </div>
     </article>
 
-    <!-- CUSTOS VARIÁVEIS E REGRAS DE DESTINAÇÃO -->
+    <!-- MARGEM DE CONTRIBUIÃ‡ÃƒO E DESTINAÃ‡ÃƒO DE RESULTADOS -->
     <article class="finance-card">
-      <h2>Custos Variáveis e Destinação</h2>
+      <h2>Resultados</h2>
       <div class="grid-two">
-        <!-- Custos Variáveis -->
+        <!-- Margem de ContribuiÃ§Ã£o -->
         <div id="variable-costs-section">
           <div class="section-header" style="margin-bottom: 12px;">
-            <h3 style="margin:0;">Custos e despesas variáveis</h3>
-            <button class="btn-add" onclick="openVariableCostModal()" style="padding: 6px 12px; font-size: 13px;">
-              <span>+</span>
-            </button>
+            <h3 style="margin:0;">Margem de ContribuiÃ§Ã£o</h3>
+            <a href="/pev/implantacao/modelo/produtos?plan_id={{ plan_id }}" 
+               class="btn-add" 
+               style="padding: 6px 12px; font-size: 13px; text-decoration: none; display: inline-flex; align-items: center; gap: 4px;"
+               title="Gerenciar produtos">
+              <span>ðŸ“¦</span>
+              <span style="font-size: 11px;">Gerenciar Produtos</span>
+            </a>
           </div>
+          
+          <!-- Card de Totalizados de Produtos e Margens -->
+          <div id="products-summary-card" style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); border-radius: 12px; padding: 16px; margin-bottom: 16px; color: white;">
+            <div style="font-size: 12px; font-weight: 500; opacity: 0.9; margin-bottom: 12px;">
+              ðŸ“Š Totalizados de Modelo e Mercado â†’ Produtos e Margens
+            </div>
+            
+            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 12px;">
+              <!-- Faturamento -->
+              <div style="background: rgba(255, 255, 255, 0.15); border-radius: 8px; padding: 12px;">
+                <div style="font-size: 11px; opacity: 0.9; margin-bottom: 4px;">Faturamento</div>
+                <div style="font-size: 18px; font-weight: 700;" id="products-revenue-value">R$ 0,00</div>
+                <div style="font-size: 12px; opacity: 0.8; margin-top: 2px;" id="products-revenue-percent">100%</div>
+              </div>
+              
+              <!-- Custos VariÃ¡veis -->
+              <div style="background: rgba(255, 255, 255, 0.15); border-radius: 8px; padding: 12px;">
+                <div style="font-size: 11px; opacity: 0.9; margin-bottom: 4px;">Custos VariÃ¡veis</div>
+                <div style="font-size: 18px; font-weight: 700;" id="products-costs-value">R$ 0,00</div>
+                <div style="font-size: 12px; opacity: 0.8; margin-top: 2px;" id="products-costs-percent">0%</div>
+              </div>
+              
+              <!-- Despesas VariÃ¡veis -->
+              <div style="background: rgba(255, 255, 255, 0.15); border-radius: 8px; padding: 12px;">
+                <div style="font-size: 11px; opacity: 0.9; margin-bottom: 4px;">Despesas VariÃ¡veis</div>
+                <div style="font-size: 18px; font-weight: 700;" id="products-expenses-value">R$ 0,00</div>
+                <div style="font-size: 12px; opacity: 0.8; margin-top: 2px;" id="products-expenses-percent">0%</div>
+              </div>
+              
+              <!-- Margem de ContribuiÃ§Ã£o -->
+              <div style="background: rgba(255, 255, 255, 0.25); border-radius: 8px; padding: 12px; border: 2px solid rgba(255, 255, 255, 0.3);">
+                <div style="font-size: 11px; opacity: 0.9; margin-bottom: 4px;">ðŸ’° Margem de ContribuiÃ§Ã£o</div>
+                <div style="font-size: 18px; font-weight: 700;" id="products-margin-value">R$ 0,00</div>
+                <div style="font-size: 12px; opacity: 0.8; margin-top: 2px;" id="products-margin-percent">0%</div>
+              </div>
+            </div>
+            
+            <div style="margin-top: 12px; font-size: 11px; opacity: 0.8; text-align: center;">
+              â„¹ï¸ Valores calculados com base nas metas de market share dos produtos cadastrados
+            </div>
+          </div>
+          
+          <!-- Tabela de Produtos -->
+          <div style="background: rgba(59, 130, 246, 0.05); border: 1px solid rgba(59, 130, 246, 0.2); border-radius: 8px; padding: 12px; margin-bottom: 12px;">
+            <div style="display: flex; align-items: center; gap: 8px; font-size: 12px; color: #475569;">
+              <span>ðŸ“¦</span>
+              <span>Produtos cadastrados em <strong>Modelo & Mercado â†’ Produtos e Margens</strong></span>
+            </div>
+          </div>
+          
           <table class="finance-table">
             <thead>
               <tr>
-                <th>Descrição</th>
-                <th>% sobre faturamento</th>
-                <th style="width: 80px;">Ações</th>
+                <th>Produto</th>
+                <th>PreÃ§o Venda</th>
+                <th>Custos Var. (%)</th>
+                <th>Despesas Var. (%)</th>
+                <th>MCU (%)</th>
+                <th>Meta Market Share</th>
               </tr>
             </thead>
-            <tbody id="variable-costs-tbody">
-              {% for item in fluxo_negocio.variaveis %}
-                <tr data-id="{{ item.id }}">
-                  <td>{{ item.descricao }}</td>
-                  <td>{{ item.percentual }}</td>
-                  <td>
-                    <button class="btn-icon" onclick="editVariableCost({{ item.id }})" title="Editar">✏️</button>
-                    <button class="btn-icon delete" onclick="deleteVariableCost({{ item.id }})" title="Deletar">🗑️</button>
-                  </td>
-                </tr>
-              {% endfor %}
+            <tbody id="products-list-tbody">
+              <tr>
+                <td colspan="6" style="text-align: center; padding: 24px; color: #64748b;">
+                  <div style="font-size: 48px; margin-bottom: 8px;">ðŸ“¦</div>
+                  <div style="font-size: 14px;">Nenhum produto cadastrado</div>
+                  <div style="font-size: 12px; margin-top: 4px;">Clique em "Gerenciar Produtos" para cadastrar</div>
+                </td>
+              </tr>
             </tbody>
           </table>
         </div>
 
-        <!-- Regras de Destinação -->
-        <div id="result-rules-section">
+        <!-- Resultados -->
+        <div id="results-section">
           <div class="section-header" style="margin-bottom: 12px;">
-            <h3 style="margin:0;">Destinação de resultados</h3>
-            <button class="btn-add" onclick="openResultRuleModal()" style="padding: 6px 12px; font-size: 13px;">
-              <span>+</span>
-            </button>
+            <h3 style="margin:0;">Resultados</h3>
+            <a href="/pev/implantacao/executivo/estruturas?plan_id={{ plan_id }}" 
+               class="btn-add" 
+               style="padding: 6px 12px; font-size: 13px; text-decoration: none; display: inline-flex; align-items: center; gap: 4px;"
+               title="Gerenciar estruturas">
+              <span>ðŸ—ï¸</span>
+              <span style="font-size: 11px;">Gerenciar Estruturas</span>
+            </a>
           </div>
-          <table class="finance-table">
-            <thead>
-              <tr>
-                <th>Descrição</th>
-                <th>% sobre resultado operativo</th>
-                <th>Periodicidade</th>
-                <th style="width: 80px;">Ações</th>
-              </tr>
-            </thead>
-            <tbody id="result-rules-tbody">
-              {% for item in fluxo_negocio.destinacao_regras %}
-                <tr data-id="{{ item.id }}">
-                  <td>{{ item.descricao }}</td>
-                  <td>{{ item.percentual }}</td>
-                  <td>{{ item.periodicidade }}</td>
-                  <td>
-                    <button class="btn-icon" onclick="editResultRule({{ item.id }})" title="Editar">✏️</button>
-                    <button class="btn-icon delete" onclick="deleteResultRule({{ item.id }})" title="Deletar">🗑️</button>
-                  </td>
-                </tr>
-              {% endfor %}
-            </tbody>
-          </table>
+          
+          <!-- Card de Custos e Despesas Fixas -->
+          <div id="fixed-costs-summary-card" style="background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%); border-radius: 12px; padding: 16px; margin-bottom: 16px; color: white;">
+            <div style="font-size: 12px; font-weight: 500; opacity: 0.9; margin-bottom: 12px;">
+              ðŸ—ï¸ Custos e Despesas Fixas de Estruturas de ExecuÃ§Ã£o
+            </div>
+            
+            <div style="display: grid; grid-template-columns: 1fr; gap: 12px;">
+              <!-- Custos Fixos -->
+              <div style="background: rgba(255, 255, 255, 0.15); border-radius: 8px; padding: 12px;">
+                <div style="font-size: 11px; opacity: 0.9; margin-bottom: 4px;">Custos Fixos</div>
+                <div style="font-size: 18px; font-weight: 700;" id="fixed-costs-value">R$ 0,00</div>
+                <div style="font-size: 11px; opacity: 0.7; margin-top: 2px;">Estrutura Operacional</div>
+              </div>
+              
+              <!-- Despesas Fixas -->
+              <div style="background: rgba(255, 255, 255, 0.15); border-radius: 8px; padding: 12px;">
+                <div style="font-size: 11px; opacity: 0.9; margin-bottom: 4px;">Despesas Fixas</div>
+                <div style="font-size: 18px; font-weight: 700;" id="fixed-expenses-value">R$ 0,00</div>
+                <div style="font-size: 11px; opacity: 0.7; margin-top: 2px;">Estrutura Comercial e Adm/Fin</div>
+              </div>
+              
+              <!-- Resultado Operacional -->
+              <div style="background: rgba(255, 255, 255, 0.25); border-radius: 8px; padding: 12px; border: 2px solid rgba(255, 255, 255, 0.3);">
+                <div style="font-size: 11px; opacity: 0.9; margin-bottom: 4px;">ðŸ’Ž Resultado Operacional</div>
+                <div style="font-size: 18px; font-weight: 700;" id="operational-result-value">R$ 0,00</div>
+                <div style="font-size: 11px; opacity: 0.8; margin-top: 2px;">= Margem - Custos Fixos - Despesas Fixas</div>
+              </div>
+            </div>
+            
+            <div style="margin-top: 12px; font-size: 11px; opacity: 0.8; text-align: center;">
+              â„¹ï¸ Valores baseados nas estruturas cadastradas em ImplantaÃ§Ã£o â†’ Estruturas de ExecuÃ§Ã£o
+            </div>
+          </div>
+          
+          <!-- Info sobre Estruturas -->
+          <div style="background: rgba(245, 87, 108, 0.05); border: 1px solid rgba(245, 87, 108, 0.2); border-radius: 8px; padding: 12px; margin-bottom: 12px;">
+            <div style="display: flex; align-items: center; gap: 8px; font-size: 12px; color: #475569;">
+              <span>ðŸ—ï¸</span>
+              <span>Dados vindos de <strong>ImplantaÃ§Ã£o â†’ Estruturas de ExecuÃ§Ã£o</strong></span>
+            </div>
+          </div>
         </div>
       </div>
     </article>
 
-    <!-- MÉTRICAS -->
+    <!-- DistribuiÃ§Ã£o de Lucros e Outras DestinaÃ§Ãµes de Resultados -->
+    <article class="finance-card">
+      <h2>DistribuiÃ§Ã£o de Lucros e Outras DestinaÃ§Ãµes de Resultados</h2>
+      <div style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 20px;">
+        <!-- Card 1: DistribuiÃ§Ã£o de Lucros -->
+        <div style="background: linear-gradient(135deg, #a8edea 0%, #fed6e3 100%); border-radius: 12px; padding: 20px; color: #0f172a;">
+          <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px;">
+            <h3 style="margin: 0; font-size: 16px; font-weight: 600;">ðŸ’° DistribuiÃ§Ã£o de Lucros</h3>
+            <button class="btn-icon" onclick="openProfitDistributionModal()" title="Editar" style="background: rgba(255, 255, 255, 0.5);">âœï¸</button>
+          </div>
+          <div style="font-size: 13px; margin-bottom: 4px;">
+            <span style="font-weight: 500; color: #64748b;">% sobre resultado operacional:</span>
+          </div>
+          <div style="font-size: 28px; font-weight: 700; color: #0f172a;" id="profit-distribution-percentage-display">
+            {{ fluxo_negocio.distribuicao_lucros.percentual or '-' }}
+          </div>
+          <div style="font-size: 13px; margin-top: 8px; margin-bottom: 4px;">
+            <span style="font-weight: 500; color: #64748b;">Valor estimado:</span>
+          </div>
+          <div style="font-size: 20px; font-weight: 600; color: #0f172a;" id="profit-distribution-value-display">
+            R$ 0,00
+          </div>
+          {% if fluxo_negocio.distribuicao_lucros.start_date %}
+            <div style="margin-top: 12px; padding-top: 12px; border-top: 1px solid rgba(15, 23, 42, 0.1);">
+              <div style="font-size: 12px; color: #64748b; margin-bottom: 4px;">
+                <strong>ðŸ“… InÃ­cio do pagamento:</strong>
+              </div>
+              <div style="font-size: 14px; color: #0f172a; font-weight: 600;" id="profit-distribution-start-date-display">
+                {{ fluxo_negocio.distribuicao_lucros.start_date | format_date_br if fluxo_negocio.distribuicao_lucros.start_date else '-' }}
+              </div>
+            </div>
+          {% endif %}
+          {% if fluxo_negocio.distribuicao_lucros.observacoes %}
+            <div style="margin-top: 12px; font-size: 12px; color: #64748b; font-style: italic; padding-top: 12px; border-top: 1px solid rgba(15, 23, 42, 0.1);">
+              {{ fluxo_negocio.distribuicao_lucros.observacoes }}
+            </div>
+          {% endif %}
+        </div>
+
+        <!-- Card 2: Outras DestinaÃ§Ãµes -->
+        <div style="background: linear-gradient(135deg, #ffecd2 0%, #fcb69f 100%); border-radius: 12px; padding: 20px; color: #0f172a;">
+          <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px;">
+            <h3 style="margin: 0; font-size: 16px; font-weight: 600;">ðŸ“Š Outras DestinaÃ§Ãµes</h3>
+            <button class="btn-add" onclick="openResultRuleModal()" style="padding: 6px 12px; font-size: 12px; background: rgba(255, 255, 255, 0.8); color: #0f172a;">
+              <span>+</span>
+            </button>
+          </div>
+          <div style="font-size: 13px; margin-bottom: 4px; color: #64748b;">
+            <span>Total de destinaÃ§Ãµes (%):</span>
+          </div>
+          <div style="font-size: 28px; font-weight: 700; color: #0f172a;" id="other-destinations-total">
+            0%
+          </div>
+          <div style="font-size: 13px; margin-top: 8px; margin-bottom: 4px; color: #64748b;">
+            <span>Valor estimado:</span>
+          </div>
+          <div style="font-size: 20px; font-weight: 600; color: #0f172a;" id="other-destinations-value-display">
+            R$ 0,00
+          </div>
+          <div style="margin-top: 12px; max-height: 80px; overflow-y: auto;">
+            <div id="other-destinations-list" style="font-size: 12px; color: #64748b;">
+              {% if fluxo_negocio.destinacao_regras %}
+                {% for item in fluxo_negocio.destinacao_regras %}
+                  <div style="padding: 4px 0; border-bottom: 1px solid rgba(15, 23, 42, 0.05);">
+                    <strong>{{ item.descricao }}:</strong> {{ item.percentual }}
+                  </div>
+                {% endfor %}
+              {% else %}
+                <div style="padding: 12px; text-align: center; color: #94a3b8;">Nenhuma destinaÃ§Ã£o cadastrada</div>
+              {% endif %}
+            </div>
+          </div>
+        </div>
+
+        <!-- Card 3: Resultado Final do PerÃ­odo -->
+        <div style="background: linear-gradient(135deg, #84fab0 0%, #8fd3f4 100%); border-radius: 12px; padding: 20px; color: #0f172a; border: 3px solid rgba(16, 185, 129, 0.3);">
+          <div style="margin-bottom: 12px;">
+            <h3 style="margin: 0; font-size: 16px; font-weight: 600;">ðŸŽ¯ Resultado Final do PerÃ­odo</h3>
+          </div>
+          <div style="font-size: 13px; margin-bottom: 4px; color: #64748b;">
+            <span>Valor apÃ³s todas as destinaÃ§Ãµes:</span>
+          </div>
+          <div style="font-size: 32px; font-weight: 800; color: #059669;" id="final-result-value">
+            R$ 0,00
+          </div>
+          <div style="font-size: 13px; margin-top: 8px; margin-bottom: 4px; color: #64748b;">
+            <span>% sobre resultado operacional:</span>
+          </div>
+          <div style="font-size: 20px; font-weight: 600; color: #059669;" id="final-result-percentage">
+            0%
+          </div>
+          <div style="margin-top: 12px; font-size: 11px; color: #64748b; padding-top: 12px; border-top: 1px solid rgba(15, 23, 42, 0.1);">
+            = Resultado Operacional - DistribuiÃ§Ã£o de Lucros - Outras DestinaÃ§Ãµes
+          </div>
+        </div>
+      </div>
+
+      <!-- Tabela de Outras DestinaÃ§Ãµes (expandida) -->
+      <div style="margin-top: 24px;">
+        <div class="section-header" style="margin-bottom: 12px;">
+          <h4 style="margin:0; font-size: 14px; color: #64748b;">Detalhamento de Outras DestinaÃ§Ãµes</h4>
+          <button class="btn-add" onclick="openResultRuleModal()" style="padding: 6px 12px; font-size: 13px;">
+            <span>+ Adicionar DestinaÃ§Ã£o</span>
+          </button>
+        </div>
+        <table class="finance-table">
+          <thead>
+            <tr>
+              <th>DescriÃ§Ã£o</th>
+              <th>% sobre resultado operacional</th>
+              <th style="width: 80px;">AÃ§Ãµes</th>
+            </tr>
+          </thead>
+          <tbody id="result-rules-tbody">
+            {% for item in fluxo_negocio.destinacao_regras %}
+              <tr data-id="{{ item.id }}">
+                <td>{{ item.descricao }}</td>
+                <td>{{ item.percentual }}</td>
+                <td>
+                  <button class="btn-icon" onclick="editResultRule({{ item.id }})" title="Editar">âœï¸</button>
+                  <button class="btn-icon delete" onclick="deleteResultRule({{ item.id }})" title="Deletar">ðŸ—‘ï¸</button>
+                </td>
+              </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+    </article>
+
+    <!-- FONTES DE RECURSOS -->
     <article class="finance-card">
       <div class="section-header">
-        <h2>Análise de Viabilidade</h2>
-        <button class="btn-add" onclick="openMetricsModal()">
-          <span>✏️</span>
-          <span>Editar Métricas</span>
+        <h2>Fontes de Recursos</h2>
+        <button class="btn-add" onclick="openFundingSourceModal()">
+          <span>+</span>
+          <span>Adicionar Fonte</span>
         </button>
       </div>
-      <div class="analysis-grid" id="metrics-section">
-        <div class="analysis-card">
-          <strong>Payback</strong>
-          <span id="metric-payback">{{ fluxo_investidor.analises.payback or 'Não definido' }}</span>
-        </div>
-        <div class="analysis-card">
-          <strong>TIR 5 anos</strong>
-          <span id="metric-tir">{{ fluxo_investidor.analises.tir_5_anos or 'Não definido' }}</span>
-        </div>
-        <div class="analysis-card" style="grid-column: span 2;">
-          <strong>Comentários</strong>
-          <span id="metric-notes">{{ fluxo_investidor.analises.comentarios or 'Sem comentários' }}</span>
-        </div>
+      
+      <table class="finance-table">
+        <thead>
+          <tr>
+            <th>Tipo</th>
+            <th>Data</th>
+            <th>Valor</th>
+            <th>ObservaÃ§Ãµes</th>
+            <th style="width: 80px;">AÃ§Ãµes</th>
+          </tr>
+        </thead>
+        <tbody id="funding-sources-tbody">
+          <!-- SerÃ¡ preenchido via JavaScript -->
+        </tbody>
+      </table>
+    </article>
+
+    <!-- FLUXO DE CAIXA DO INVESTIMENTO -->
+    <article class="finance-card">
+      <h2>Fluxo de Caixa do Investimento</h2>
+      <p class="section-note" style="margin-top: 0;">
+        * Resumo mensal dos investimentos planejados com base nos valores cadastrados.
+      </p>
+      <div style="overflow-x: auto;">
+        <table class="finance-table" id="investment-cashflow-table">
+          <thead>
+            <tr>
+              <th>PerÃ­odo</th>
+              <th>Capital de Giro</th>
+              <th>Imobilizado</th>
+              <th>Total Investimentos</th>
+              <th>Fontes de Recursos</th>
+              <th>Saldo do PerÃ­odo</th>
+              <th>Saldo Acumulado</th>
+            </tr>
+          </thead>
+          <tbody id="investment-cashflow-tbody">
+            <!-- SerÃ¡ preenchido via JavaScript -->
+            <tr>
+              <td colspan="7" style="text-align: center; color: #64748b; padding: 24px;">
+                Aguardando dados de investimento...
+              </td>
+            </tr>
+          </tbody>
+        </table>
       </div>
     </article>
 
-    <!-- FLUXO DE CAIXA DO NEGÓCIO (Read-only) -->
+    <!-- FLUXO DE CAIXA DO NEGÃ“CIO (Read-only) -->
     <article class="finance-card">
-      <h2>Fluxo de caixa do negócio</h2>
+      <h2>Fluxo de caixa do negÃ³cio</h2>
       <p class="section-note" style="margin-top: 0;">
-        * Esta seção é calculada automaticamente com base nos dados inseridos acima.
+        * Esta seÃ§Ã£o Ã© calculada automaticamente com base nos dados inseridos acima.
       </p>
       <table class="finance-table">
         <thead>
           <tr>
-            <th>Período</th>
+            <th>PerÃ­odo</th>
             <th>Receita</th>
-            <th>Variáveis</th>
-            <th>Margem de contribuição</th>
+            <th>VariÃ¡veis</th>
+            <th>Margem de contribuiÃ§Ã£o</th>
             <th>Fixos</th>
             <th>Resultado operacional</th>
-            <th>Destinação de resultados</th>
-            <th>Resultado do período</th>
+            <th>DestinaÃ§Ã£o de resultados</th>
+            <th>Resultado do perÃ­odo</th>
           </tr>
         </thead>
         <tbody>
@@ -576,7 +792,7 @@
               <td>
                 <ul style="margin:0; padding-left:18px;">
                   {% for destino in linha.destinacao %}
-                    <li>{{ destino.descricao }} – {{ destino.valor }}</li>
+                    <li>{{ destino.descricao }} â€“ {{ destino.valor }}</li>
                   {% endfor %}
                 </ul>
               </td>
@@ -591,15 +807,15 @@
     <article class="finance-card">
       <h2>Fluxo de caixa do investidor</h2>
       <p class="section-note" style="margin-top: 0;">
-        * Esta seção é calculada automaticamente com base nos dados inseridos acima.
+        * Esta seÃ§Ã£o Ã© calculada automaticamente com base nos dados inseridos acima.
       </p>
       <table class="finance-table">
         <thead>
           <tr>
-            <th>Período</th>
+            <th>PerÃ­odo</th>
             <th>Aporte / Investimento</th>
-            <th>Distribuição de lucros</th>
-            <th>Saldo do período</th>
+            <th>DistribuiÃ§Ã£o de lucros</th>
+            <th>Saldo do perÃ­odo</th>
             <th>Saldo acumulado</th>
           </tr>
         </thead>
@@ -616,118 +832,46 @@
         </tbody>
       </table>
     </article>
+
+    <!-- ANÃLISE DE VIABILIDADE -->
+    <article class="finance-card">
+      <div class="section-header">
+        <h2>AnÃ¡lise de Viabilidade</h2>
+        <button class="btn-add" onclick="openMetricsModal()">
+          <span>âœï¸</span>
+          <span>Editar MÃ©tricas</span>
+        </button>
+      </div>
+      <div class="analysis-grid" id="metrics-section">
+        <div class="analysis-card">
+          <strong>Payback</strong>
+          <span id="metric-payback">{{ fluxo_investidor.analises.payback or 'Não definido' }}</span>
+        </div>
+        <div class="analysis-card">
+          <strong>Custo de oportunidade</strong>
+          <span id="metric-opportunity-cost">{{ fluxo_investidor.analises.opportunity_cost or '1%' }}</span>
+          <small style="display: block; margin-top: 4px; color: #64748b;">Taxa de atratividade do investidor</small>
+        </div>
+        <div class="analysis-card">
+          <strong>{{ fluxo_investidor.analises.tir_label or 'TIR 5 anos' }}</strong>
+          <span id="metric-tir">{{ fluxo_investidor.analises.tir or 'Não definido' }}</span>
+          <small style="display: block; margin-top: 4px; color: #64748b;">Horizonte: {{ fluxo_investidor.analises.tir_horizon_years or 5 }} anos</small>
+        </div>
+        <div class="analysis-card" style="grid-column: span 3;">
+          <strong>Comentários</strong>
+          <span id="metric-notes">{{ fluxo_investidor.analises.comentarios or 'Sem comentários' }}</span>
+        </div>
+      </div>
+    </article>
   </section>
 
-  <!-- MODALS -->
-  
-  <!-- Modal Premissa -->
-  <div class="modal" id="premiseModal">
-    <div class="modal-content">
-      <div class="modal-header">
-        <h3 id="premiseModalTitle">Adicionar Premissa</h3>
-        <button class="btn-close" onclick="closePremiseModal()">×</button>
-      </div>
-      <div class="modal-body">
-        <form id="premiseForm">
-          <input type="hidden" id="premiseId">
-          <div class="form-group">
-            <label for="premiseDescription">Descrição *</label>
-            <input type="text" id="premiseDescription" required>
-          </div>
-          <div class="form-group">
-            <label for="premiseSuggestion">Sugestão do sistema</label>
-            <input type="text" id="premiseSuggestion">
-          </div>
-          <div class="form-group">
-            <label for="premiseAdjusted">Valor ajustado</label>
-            <input type="text" id="premiseAdjusted">
-          </div>
-          <div class="form-group">
-            <label for="premiseObservations">Observações</label>
-            <textarea id="premiseObservations"></textarea>
-          </div>
-          <div class="form-group">
-            <label for="premiseMemory">Memória de cálculo</label>
-            <textarea id="premiseMemory"></textarea>
-          </div>
-          <div class="modal-footer">
-            <button type="button" class="btn btn-secondary" onclick="closePremiseModal()">Cancelar</button>
-            <button type="submit" class="btn btn-primary">Salvar</button>
-          </div>
-        </form>
-      </div>
-    </div>
-  </div>
-
-  <!-- Modal Investimento -->
-  <div class="modal" id="investmentModal">
-    <div class="modal-content">
-      <div class="modal-header">
-        <h3 id="investmentModalTitle">Adicionar Investimento</h3>
-        <button class="btn-close" onclick="closeInvestmentModal()">×</button>
-      </div>
-      <form id="investmentForm">
-        <input type="hidden" id="investmentId">
-        <div class="form-group">
-          <label for="investmentDescription">Descrição *</label>
-          <input type="text" id="investmentDescription" required>
-        </div>
-        <div class="form-group">
-          <label for="investmentAmount">Valor</label>
-          <input type="text" id="investmentAmount">
-        </div>
-        <div class="modal-footer">
-          <button type="button" class="btn btn-secondary" onclick="closeInvestmentModal()">Cancelar</button>
-          <button type="submit" class="btn btn-primary">Salvar</button>
-        </div>
-      </form>
-    </div>
-  </div>
-
-  <!-- Modal Fonte -->
-  <div class="modal" id="sourceModal">
-    <div class="modal-content">
-      <div class="modal-header">
-        <h3 id="sourceModalTitle">Adicionar Fonte</h3>
-        <button class="btn-close" onclick="closeSourceModal()">×</button>
-      </div>
-      <form id="sourceForm">
-        <input type="hidden" id="sourceId">
-        <div class="form-group">
-          <label for="sourceCategory">Categoria</label>
-          <input type="text" id="sourceCategory">
-        </div>
-        <div class="form-group">
-          <label for="sourceDescription">Descrição *</label>
-          <input type="text" id="sourceDescription" required>
-        </div>
-        <div class="form-group">
-          <label for="sourceAmount">Valor</label>
-          <input type="text" id="sourceAmount">
-        </div>
-        <div class="form-group">
-          <label for="sourceAvailability">Disponibilidade</label>
-          <input type="text" id="sourceAvailability">
-        </div>
-        <div class="modal-footer">
-          <button type="button" class="btn btn-secondary" onclick="closeSourceModal()">Cancelar</button>
-          <button type="submit" class="btn btn-primary">Salvar</button>
-        </div>
-      </form>
-    </div>
-  </div>
-
-  <!-- Modal Custo Variável -->
-  <div class="modal" id="variableCostModal">
-    <div class="modal-content">
-      <div class="modal-header">
-        <h3 id="variableCostModalTitle">Adicionar Custo Variável</h3>
-        <button class="btn-close" onclick="closeVariableCostModal()">×</button>
+        <h3 id="variableCostModalTitle">Adicionar Custo VariÃ¡vel</h3>
+        <button class="btn-close" onclick="closeVariableCostModal()">Ã—</button>
       </div>
       <form id="variableCostForm">
         <input type="hidden" id="variableCostId">
         <div class="form-group">
-          <label for="variableCostDescription">Descrição *</label>
+          <label for="variableCostDescription">DescriÃ§Ã£o *</label>
           <input type="text" id="variableCostDescription" required>
         </div>
         <div class="form-group">
@@ -742,26 +886,22 @@
     </div>
   </div>
 
-  <!-- Modal Regra de Destinação -->
+  <!-- Modal Outras DestinaÃ§Ãµes -->
   <div class="modal" id="resultRuleModal">
     <div class="modal-content">
       <div class="modal-header">
-        <h3 id="resultRuleModalTitle">Adicionar Regra de Destinação</h3>
-        <button class="btn-close" onclick="closeResultRuleModal()">×</button>
+        <h3 id="resultRuleModalTitle">Adicionar Outra DestinaÃ§Ã£o</h3>
+        <button class="btn-close" onclick="closeResultRuleModal()">Ã—</button>
       </div>
       <form id="resultRuleForm">
         <input type="hidden" id="resultRuleId">
         <div class="form-group">
-          <label for="resultRuleDescription">Descrição *</label>
-          <input type="text" id="resultRuleDescription" required>
+          <label for="resultRuleDescription">DescriÃ§Ã£o *</label>
+          <input type="text" id="resultRuleDescription" required placeholder="Ex: Reserva de ContingÃªncia, Fundo de Investimento">
         </div>
         <div class="form-group">
-          <label for="resultRulePercentage">Percentual</label>
-          <input type="text" id="resultRulePercentage" placeholder="Ex: 30%">
-        </div>
-        <div class="form-group">
-          <label for="resultRulePeriodicity">Periodicidade</label>
-          <input type="text" id="resultRulePeriodicity" placeholder="Ex: Mensal, Trimestral">
+          <label for="resultRulePercentage">% sobre resultado operacional *</label>
+          <input type="text" id="resultRulePercentage" required placeholder="Ex: 15%">
         </div>
         <div class="modal-footer">
           <button type="button" class="btn btn-secondary" onclick="closeResultRuleModal()">Cancelar</button>
@@ -771,12 +911,41 @@
     </div>
   </div>
 
-  <!-- Modal Métricas -->
+  <!-- Modal DistribuiÃ§Ã£o de Lucros -->
+  <div class="modal" id="profitDistributionModal">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h3>Editar DistribuiÃ§Ã£o de Lucros</h3>
+        <button class="btn-close" onclick="closeProfitDistributionModal()">Ã—</button>
+      </div>
+      <form id="profitDistributionForm">
+        <div class="form-group">
+          <label for="profitDistributionPercentage">% sobre resultado operacional *</label>
+          <input type="text" id="profitDistributionPercentage" required placeholder="Ex: 40%">
+        </div>
+        <div class="form-group">
+          <label for="profitDistributionStartDate">Data de inÃ­cio do pagamento *</label>
+          <input type="date" id="profitDistributionStartDate" required>
+          <small style="display: block; margin-top: 4px; color: #64748b;">Data a partir da qual a distribuiÃ§Ã£o de lucros comeÃ§arÃ¡ a ser paga</small>
+        </div>
+        <div class="form-group">
+          <label for="profitDistributionNotes">ObservaÃ§Ãµes</label>
+          <textarea id="profitDistributionNotes" rows="3" placeholder="Ex: DistribuiÃ§Ã£o mensal aos sÃ³cios"></textarea>
+        </div>
+        <div class="modal-footer">
+          <button type="button" class="btn btn-secondary" onclick="closeProfitDistributionModal()">Cancelar</button>
+          <button type="submit" class="btn btn-primary">Salvar</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- Modal MǸtricas -->
   <div class="modal" id="metricsModal">
     <div class="modal-content">
       <div class="modal-header">
-        <h3>Editar Métricas</h3>
-        <button class="btn-close" onclick="closeMetricsModal()">×</button>
+        <h3>Editar MǸtricas</h3>
+        <button class="btn-close" onclick="closeMetricsModal()">�-</button>
       </div>
       <form id="metricsForm">
         <div class="form-group">
@@ -784,11 +953,24 @@
           <input type="text" id="metricPayback" placeholder="Ex: 18 meses">
         </div>
         <div class="form-group">
-          <label for="metricTir">TIR 5 anos</label>
+          <label for="metricOpportunityCost">Custo de oportunidade do investidor</label>
+          <input type="text" id="metricOpportunityCost" placeholder="Ex: 1% a.a.">
+          <small style="display: block; margin-top: 4px; color: #64748b;">Informe a taxa m�nima de atratividade utilizada como refer�ncia</small>
+        </div>
+        <div class="form-group">
+          <label for="metricTirHorizon">Prazo da TIR</label>
+          <select id="metricTirHorizon">
+            <option value="2">2 anos</option>
+            <option value="3">3 anos</option>
+            <option value="5">5 anos</option>
+          </select>
+        </div>
+        <div class="form-group">
+          <label for="metricTir">TIR calculada</label>
           <input type="text" id="metricTir" placeholder="Ex: 24%">
         </div>
         <div class="form-group">
-          <label for="metricNotes">Comentários</label>
+          <label for="metricNotes">Comentǭrios</label>
           <textarea id="metricNotes" rows="4"></textarea>
         </div>
         <div class="modal-footer">
@@ -798,349 +980,710 @@
       </form>
     </div>
   </div>
+            <option value="">Selecione...</option>
+            <option value="Caixa">Caixa</option>
+            <option value="RecebÃ­veis">RecebÃ­veis</option>
+            <option value="Estoques">Estoques</option>
+          </select>
+        </div>
+        <div class="form-group">
+          <label for="capitalGiroDate">Data *</label>
+          <input type="date" id="capitalGiroDate" required>
+        </div>
+        <div class="form-group">
+          <label for="capitalGiroDescription">DescriÃ§Ã£o</label>
+          <input type="text" id="capitalGiroDescription" placeholder="DescriÃ§Ã£o do investimento">
+        </div>
+        <div class="form-group">
+          <label for="capitalGiroAmount">Valor *</label>
+          <input type="number" id="capitalGiroAmount" step="0.01" min="0" required placeholder="0.00">
+        </div>
+        <div class="form-group">
+          <label for="capitalGiroNotes">ObservaÃ§Ãµes</label>
+          <textarea id="capitalGiroNotes" rows="2" placeholder="ObservaÃ§Ãµes adicionais"></textarea>
+        </div>
+        <div class="form-group">
+          <label for="capitalGiroCalculationMemo">MemÃ³ria de cÃ¡lculo</label>
+          <textarea id="capitalGiroCalculationMemo" rows="3" placeholder="Detalhes do cÃ¡lculo"></textarea>
+        </div>
+        <div class="modal-footer">
+          <button type="button" class="btn btn-secondary" onclick="closeCapitalGiroModal()">Cancelar</button>
+          <button type="submit" class="btn btn-primary">Salvar</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- Modal Fonte de Recursos -->
+  <div class="modal" id="fundingSourceModal">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h3 id="fundingSourceModalTitle">Adicionar Fonte de Recursos</h3>
+        <button class="btn-close" onclick="closeFundingSourceModal()">Ã—</button>
+      </div>
+      <form id="fundingSourceForm">
+        <input type="hidden" id="fundingSourceId">
+        <div class="form-group">
+          <label for="fundingSourceType">Tipo *</label>
+          <select id="fundingSourceType" required>
+            <option value="">Selecione...</option>
+            <option value="Fornecedores">Fornecedores</option>
+            <option value="EmprÃ©stimos e Financiamentos">EmprÃ©stimos e Financiamentos</option>
+            <option value="Aporte dos SÃ³cios">Aporte dos SÃ³cios</option>
+          </select>
+        </div>
+        <div class="form-group">
+          <label for="fundingSourceDate">Data do Aporte *</label>
+          <input type="date" id="fundingSourceDate" required>
+        </div>
+        <div class="form-group">
+          <label for="fundingSourceAmount">Valor *</label>
+          <input type="number" id="fundingSourceAmount" step="0.01" min="0" required>
+        </div>
+        <div class="form-group">
+          <label for="fundingSourceNotes">ObservaÃ§Ãµes</label>
+          <textarea id="fundingSourceNotes" rows="3"></textarea>
+        </div>
+        <div class="modal-footer">
+          <button type="button" class="btn btn-secondary" onclick="closeFundingSourceModal()">Cancelar</button>
+          <button type="submit" class="btn btn-primary">Salvar</button>
+        </div>
+      </form>
+    </div>
+  </div>
 
   <script>
-    // Debug: Log para verificar se o script está carregando
-    console.log('🔵 Script de Modelagem Financeira carregado!');
+    // Debug: Log para verificar se o script estÃ¡ carregando
+    console.log('ðŸ”µ Script de Modelagem Financeira carregado!');
     
     // Global variables
     const urlParams = new URLSearchParams(window.location.search);
     const planId = urlParams.get('plan_id');
     
-    console.log('🔵 plan_id:', planId);
+    console.log('ðŸ”µ plan_id:', planId);
+    
+    const initialProductsTotals = {{ products_totals | tojson | safe }} || {};
+    const initialFixedCostsSummary = {{ fixed_costs_summary | tojson | safe }} || {};
+    
+    // DEBUG: Log dados iniciais do backend
+    console.log('📊 [BACKEND] initialProductsTotals:', initialProductsTotals);
+    console.log('🏗️ [BACKEND] initialFixedCostsSummary:', initialFixedCostsSummary);
     
     // Parse data with safety checks
-    let premisesData = {{ premissas | tojson | safe }};
-    let investmentsData = {{ investimento.investimento | tojson | safe }};
-    let sourcesData = {{ investimento.fontes | tojson | safe }};
     let variableCostsData = {{ fluxo_negocio.variaveis | tojson | safe }};
     let resultRulesData = {{ fluxo_negocio.destinacao_regras | tojson | safe }};
     let metricsData = {{ fluxo_investidor.analises | tojson | safe }};
+    if (!metricsData || typeof metricsData !== 'object') {
+      metricsData = {};
+    }
+    if (!metricsData.opportunity_cost || metricsData.opportunity_cost === '') {
+      metricsData.opportunity_cost = '1%';
+    }
+    let tirHorizonYears = parseInt(metricsData.tir_horizon_years, 10);
+    if (![2, 3, 5].includes(tirHorizonYears)) {
+      tirHorizonYears = 5;
+    }
+    metricsData.tir_horizon_years = tirHorizonYears;
+    if (typeof metricsData.tir !== 'string') {
+      metricsData.tir = metricsData.tir ? String(metricsData.tir) : '';
+    }
+    if (typeof metricsData.payback !== 'string') {
+      metricsData.payback = metricsData.payback ? String(metricsData.payback) : '';
+    }
+    if (typeof metricsData.comentarios !== 'string') {
+      metricsData.comentarios = metricsData.comentarios ? String(metricsData.comentarios) : '';
+    }
+    let profitDistributionData = {{ fluxo_negocio.distribuicao_lucros | tojson | safe }};
     
-    console.log('🔵 Dados carregados:', {
-      premissas: premisesData.length,
-      investimentos: investmentsData.length,
-      fontes: sourcesData.length,
+    // Dados de investimentos vindos das estruturas
+    let investimentosEstruturasData = {{ investimentos_estruturas | tojson | safe }};
+    
+    console.log('ðŸ”µ Dados carregados:', {
       custos: variableCostsData.length,
-      regras: resultRulesData.length
+      regras: resultRulesData.length,
+      distribuicao_lucros: profitDistributionData,
+      investimentos_estruturas: investimentosEstruturasData
     });
+    
+    // ==================== PRODUTOS E TOTALIZADOS ====================
+    let productsData = [];
+    
+    async function loadProducts() {
+      console.log('ðŸŸ¢ Carregando produtos...');
+      
+      try {
+        const response = await fetch(`/pev/api/implantacao/${planId}/products`);
+        const result = await response.json();
+        
+        if (result.success && result.products) {
+          productsData = Array.isArray(result.products) ? result.products : [];
+          renderProductsTable();
+          console.log('Produtos carregados:', productsData.length);
 
-    // ==================== PREMISSAS ====================
-    function openPremiseModal(premiseId = null) {
-      console.log('🟢 openPremiseModal chamado! premiseId:', premiseId);
+          const totalsFromApi = result.totals && typeof result.totals === 'object'
+            ? normalizeProductsTotals(result.totals)
+            : calculateTotalsFromProducts(productsData);
+
+          renderProductsTotals(totalsFromApi);
+          await loadFixedCostsSummary();
+        } else {
+          console.error('Erro ao carregar produtos:', result.error);
+          const fallbackTotals = calculateTotalsFromProducts(productsData);
+          renderProductsTotals(fallbackTotals);
+          await loadFixedCostsSummary();
+        }
+      } catch (error) {
+        console.error('Erro ao buscar produtos:', error);
+        const fallbackTotals = calculateTotalsFromProducts(productsData);
+        renderProductsTotals(fallbackTotals);
+        await loadFixedCostsSummary();
+      }
+    }
+    
+    function renderProductsTable() {
+      const tbody = document.getElementById('products-list-tbody');
       
-      const modal = document.getElementById('premiseModal');
-      const form = document.getElementById('premiseForm');
-      const title = document.getElementById('premiseModalTitle');
-      
-      console.log('🟢 Modal encontrado:', modal ? 'SIM' : 'NÃO');
-      
-      if (!modal) {
-        console.error('❌ Modal não encontrado! Abortando.');
+      if (!productsData || productsData.length === 0) {
+        tbody.innerHTML = `
+          <tr>
+            <td colspan="6" style="text-align: center; padding: 24px; color: #64748b;">
+              <div style="font-size: 48px; margin-bottom: 8px;">ðŸ“¦</div>
+              <div style="font-size: 14px;">Nenhum produto cadastrado</div>
+              <div style="font-size: 12px; margin-top: 4px;">Clique em "Gerenciar Produtos" para cadastrar</div>
+            </td>
+          </tr>
+        `;
         return;
       }
       
-      if (premiseId) {
-        const premise = premisesData.find(p => p.id === premiseId);
-        if (premise) {
-          title.textContent = 'Editar Premissa';
-          document.getElementById('premiseId').value = premise.id;
-          document.getElementById('premiseDescription').value = premise.indicador || '';
-          document.getElementById('premiseSuggestion').value = premise.sugestao || '';
-          document.getElementById('premiseAdjusted').value = premise.ajustado || '';
-          document.getElementById('premiseObservations').value = premise.observacoes || '';
-          document.getElementById('premiseMemory').value = premise.memoria || '';
-        }
-      } else {
-        title.textContent = 'Adicionar Premissa';
-        form.reset();
-      }
+      let html = '';
+      productsData.forEach(product => {
+        const marketShareUnits = product.market_share_goal_monthly_units || 0;
+        const marketSharePercent = product.market_share_goal_percent || 0;
+        
+        html += `
+          <tr>
+            <td>
+              <strong>${product.name || 'Sem nome'}</strong>
+              ${product.description ? `<br><small style="color: #64748b;">${product.description}</small>` : ''}
+            </td>
+            <td>R$ ${formatNumber(product.sale_price || 0)}</td>
+            <td>${formatNumber(product.variable_costs_percent || 0)}%</td>
+            <td>${formatNumber(product.variable_expenses_percent || 0)}%</td>
+            <td><strong style="color: #059669;">${formatNumber(product.unit_contribution_margin_percent || 0)}%</strong></td>
+            <td>${formatNumber(marketShareUnits)} un (${formatNumber(marketSharePercent)}%)</td>
+          </tr>
+        `;
+      });
       
-      // Padrão PFPN: display block + classe show
-      modal.style.display = 'block';
-      setTimeout(() => modal.classList.add('show'), 10);
-      console.log('🟢 Modal aberto com padrão PFPN');
+      tbody.innerHTML = html;
+    }
+    
+    function renderProductsTotals(totals) {
+      console.log('🎨 [RENDER] renderProductsTotals chamada com:', totals);
+      
+      const normalizedTotals = normalizeProductsTotals(totals);
+      console.log('🔄 [RENDER] Totals normalizados:', normalizedTotals);
+      
+      if (!normalizedTotals || typeof normalizedTotals !== 'object') {
+        console.warn('⚠️ [RENDER] normalizedTotals inválido ou não é objeto');
+        return;
+      }
+
+      const formatPercent = (value) => `${Number(value ?? 0).toFixed(1)}%`;
+
+      const faturamento = normalizedTotals.faturamento || {};
+      console.log('💰 [RENDER] Faturamento a renderizar:', faturamento);
+      
+      document.getElementById('products-revenue-value').textContent =
+        formatCurrency(Number(faturamento.valor ?? 0));
+      document.getElementById('products-revenue-percent').textContent =
+        formatPercent(faturamento.percentual);
+
+      const custos = normalizedTotals.custos_variaveis || {};
+      document.getElementById('products-costs-value').textContent =
+        formatCurrency(Number(custos.valor ?? 0));
+      document.getElementById('products-costs-percent').textContent =
+        formatPercent(custos.percentual);
+
+      const despesas = normalizedTotals.despesas_variaveis || {};
+      document.getElementById('products-expenses-value').textContent =
+        formatCurrency(Number(despesas.valor ?? 0));
+      document.getElementById('products-expenses-percent').textContent =
+        formatPercent(despesas.percentual);
+
+      const margem = normalizedTotals.margem_contribuicao || {};
+      document.getElementById('products-margin-value').textContent =
+        formatCurrency(Number(margem.valor ?? 0));
+      document.getElementById('products-margin-percent').textContent =
+        formatPercent(margem.percentual);
+
+      window.margemContribuicaoValor = Number(margem.valor ?? 0);
+      window.currentProductsTotals = normalizedTotals;
+
+      if (typeof window.resultadoOperacionalValor === 'number') {
+        calculateFinalResults();
+      }
     }
 
-    function closePremiseModal() {
-      const modal = document.getElementById('premiseModal');
-      if (modal) {
-        modal.classList.remove('show');
-        setTimeout(() => modal.style.display = 'none', 300);
+    function renderFixedCostsSummary(data) {
+      if (!data || typeof data !== 'object') {
+        return;
       }
-      document.getElementById('premiseForm').reset();
+
+      const custosFixos = Number(data.custos_fixos_mensal ?? data.custos_fixos ?? 0);
+      const despesasFixas = Number(data.despesas_fixas_mensal ?? data.despesas_fixas ?? 0);
+
+      document.getElementById('fixed-costs-value').textContent =
+        formatCurrency(custosFixos);
+      document.getElementById('fixed-expenses-value').textContent =
+        formatCurrency(despesasFixas);
+
+      const margemContribuicao = Number(window.margemContribuicaoValor || 0);
+      const resultadoOperacional = margemContribuicao - custosFixos - despesasFixas;
+
+      document.getElementById('operational-result-value').textContent =
+        formatCurrency(resultadoOperacional);
+
+      window.resultadoOperacionalValor = resultadoOperacional;
+
+      calculateFinalResults();
     }
 
-    document.getElementById('premiseForm').addEventListener('submit', async (e) => {
-      e.preventDefault();
+    async function loadProductsTotals() {
+      console.log('Carregando totalizados de produtos...');
       
-      const premiseId = document.getElementById('premiseId').value;
-      const data = {
-        description: document.getElementById('premiseDescription').value,
-        suggestion: document.getElementById('premiseSuggestion').value,
-        adjusted: document.getElementById('premiseAdjusted').value,
-        observations: document.getElementById('premiseObservations').value,
-        memory: document.getElementById('premiseMemory').value
-      };
+      const fallbackTotals = calculateTotalsFromProducts(productsData);
+      renderProductsTotals(fallbackTotals);
 
-      console.log('📤 Enviando dados:', data);
-      console.log('📤 URL:', `/pev/api/implantacao/${planId}/finance/premises`);
+      let totalsResolved = false;
 
       try {
-        let response;
-        if (premiseId) {
-          console.log('📝 Modo: EDITAR (PUT)');
-          response = await fetch(`/pev/api/implantacao/${planId}/finance/premises/${premiseId}`, {
-            method: 'PUT',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify(data)
-          });
+        const response = await fetch(`/pev/api/implantacao/${planId}/products/totals`);
+        const result = await response.json();
+        
+        if (result.success && result.totals) {
+          renderProductsTotals(normalizeProductsTotals(result.totals));
+          console.log('Totalizados carregados:', result.totals);
+          totalsResolved = true;
         } else {
-          console.log('📝 Modo: CRIAR (POST)');
-          response = await fetch(`/pev/api/implantacao/${planId}/finance/premises`, {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify(data)
-          });
-        }
-
-        console.log('📥 Response status:', response.status);
-        const responseData = await response.json();
-        console.log('📥 Response data:', responseData);
-
-        if (response.ok) {
-          alert('Premissa salva com sucesso!');
-          closePremiseModal();
-          location.reload();
-        } else {
-          console.error('❌ Erro do servidor:', responseData);
-          alert(`Erro ao salvar premissa: ${responseData.error || 'Erro desconhecido'}`);
+          console.error('Erro ao carregar totalizados:', result.error);
         }
       } catch (error) {
-        console.error('❌ Erro na requisição:', error);
-        alert(`Erro ao salvar premissa: ${error.message}`);
+        console.error('Erro ao buscar totalizados:', error);
+      } finally {
+        if (!totalsResolved) {
+          renderProductsTotals(fallbackTotals);
+        }
+        await loadFixedCostsSummary();
       }
-    });
-
-    function editPremise(id) {
-      openPremiseModal(id);
     }
 
-    async function deletePremise(id) {
-      if (!confirm('Tem certeza que deseja deletar esta premissa?')) return;
-
+    async function loadFixedCostsSummary() {
+      console.log('�YY� Carregando custos e despesas fixas...');
+      
       try {
-        const response = await fetch(`/pev/api/implantacao/${planId}/finance/premises/${id}`, {
-          method: 'DELETE'
+        const response = await fetch(`/pev/api/implantacao/${planId}/structures/fixed-costs-summary`);
+        const result = await response.json();
+        
+        if (result.success && result.data) {
+          renderFixedCostsSummary(result.data);
+          console.log('�o. Custos fixos carregados:', result.data);
+        } else {
+          console.error('�?O Erro ao carregar custos fixos:', result.error);
+        }
+      } catch (error) {
+        console.error('�?O Erro ao buscar custos fixos:', error);
+      }
+    }
+
+    function calculateFinalResults() {
+      console.log('ðŸŸ¢ Calculando resultados finais...');
+      
+      const resultadoOperacional = window.resultadoOperacionalValor || 0;
+      
+      // Obter percentual de distribuiÃ§Ã£o de lucros
+      const profitDistributionElement = document.getElementById('profit-distribution-percentage-display');
+      const profitDistributionText = profitDistributionElement ? profitDistributionElement.textContent.trim() : '-';
+      
+      let profitDistributionPercent = 0;
+      if (profitDistributionText && profitDistributionText !== '-') {
+        // Extrair nÃºmero do texto (ex: "30%" -> 30)
+        const match = profitDistributionText.match(/(\d+(?:\.\d+)?)/);
+        if (match) {
+          profitDistributionPercent = parseFloat(match[1]);
+        }
+      }
+      
+      // Calcular valor de distribuiÃ§Ã£o de lucros
+      const profitDistributionValue = (resultadoOperacional * profitDistributionPercent) / 100;
+      
+      // Atualizar valor de distribuiÃ§Ã£o de lucros no card
+      const profitDistributionValueElement = document.getElementById('profit-distribution-value-display');
+      if (profitDistributionValueElement) {
+        profitDistributionValueElement.textContent = formatCurrency(profitDistributionValue);
+      }
+      
+      // Calcular total de outras destinaÃ§Ãµes
+      let otherDestinationsPercent = 0;
+      const resultRulesTbody = document.getElementById('result-rules-tbody');
+      if (resultRulesTbody) {
+        const rows = resultRulesTbody.querySelectorAll('tr[data-id]');
+        rows.forEach(row => {
+          const percentCell = row.cells[1]; // Segunda coluna (percentual)
+          if (percentCell) {
+            const percentText = percentCell.textContent.trim();
+            const match = percentText.match(/(\d+(?:\.\d+)?)/);
+            if (match) {
+              otherDestinationsPercent += parseFloat(match[1]);
+            }
+          }
         });
-
-        if (response.ok) {
-          alert('Premissa deletada com sucesso!');
-          location.reload();
-        } else {
-          alert('Erro ao deletar premissa');
-        }
-      } catch (error) {
-        console.error('Error:', error);
-        alert('Erro ao deletar premissa');
       }
-    }
-
-    // ==================== INVESTIMENTOS ====================
-    function openInvestmentModal(investmentId = null) {
-      const modal = document.getElementById('investmentModal');
-      const form = document.getElementById('investmentForm');
-      const title = document.getElementById('investmentModalTitle');
       
-      if (investmentId) {
-        const investment = investmentsData.find(i => i.id === investmentId);
-        if (investment) {
-          title.textContent = 'Editar Investimento';
-          document.getElementById('investmentId').value = investment.id;
-          document.getElementById('investmentDescription').value = investment.descricao || '';
-          document.getElementById('investmentAmount').value = investment.valor || '';
+      // Atualizar total de outras destinaÃ§Ãµes (percentual)
+      const otherDestinationsTotalElement = document.getElementById('other-destinations-total');
+      if (otherDestinationsTotalElement) {
+        otherDestinationsTotalElement.textContent = `${otherDestinationsPercent.toFixed(1)}%`;
+      }
+      
+      // Calcular valor de outras destinaÃ§Ãµes
+      const otherDestinationsValue = (resultadoOperacional * otherDestinationsPercent) / 100;
+      
+      // Atualizar valor de outras destinaÃ§Ãµes no card
+      const otherDestinationsValueElement = document.getElementById('other-destinations-value-display');
+      if (otherDestinationsValueElement) {
+        otherDestinationsValueElement.textContent = formatCurrency(otherDestinationsValue);
+      }
+      
+      // Calcular resultado final
+      const finalResult = resultadoOperacional - profitDistributionValue - otherDestinationsValue;
+      
+      // Calcular percentual do resultado final sobre resultado operacional
+      let finalResultPercent = 0;
+      if (resultadoOperacional !== 0) {
+        finalResultPercent = (finalResult / resultadoOperacional) * 100;
+      }
+      
+      // Atualizar resultado final (valor)
+      const finalResultElement = document.getElementById('final-result-value');
+      if (finalResultElement) {
+        finalResultElement.textContent = formatCurrency(finalResult);
+        
+        // Adicionar classe de cor baseada no resultado
+        if (finalResult < 0) {
+          finalResultElement.style.color = '#dc2626'; // vermelho
+        } else {
+          finalResultElement.style.color = '#059669'; // verde
         }
+      }
+      
+      // Atualizar resultado final (percentual)
+      const finalResultPercentElement = document.getElementById('final-result-percentage');
+      if (finalResultPercentElement) {
+        finalResultPercentElement.textContent = `${finalResultPercent.toFixed(1)}%`;
+        
+        // Adicionar classe de cor baseada no resultado
+        if (finalResult < 0) {
+          finalResultPercentElement.style.color = '#dc2626'; // vermelho
+        } else {
+          finalResultPercentElement.style.color = '#059669'; // verde
+        }
+      }
+      
+      console.log('âœ… Resultados finais calculados:');
+      console.log('   - Resultado Operacional:', resultadoOperacional);
+      console.log('   - DistribuiÃ§Ã£o de Lucros:', profitDistributionPercent + '%', profitDistributionValue);
+      console.log('   - Outras DestinaÃ§Ãµes:', otherDestinationsPercent + '%', otherDestinationsValue);
+      console.log('   - Resultado Final:', finalResultPercent.toFixed(1) + '%', finalResult);
+    }
+    
+    // Helper para formatar nÃºmeros
+    function formatNumber(value) {
+      if (value === null || value === undefined) return '0,00';
+      return new Intl.NumberFormat('pt-BR', {
+        minimumFractionDigits: 2,
+        maximumFractionDigits: 2
+      }).format(value);
+    }
+    
+    // Helper para formatar moeda
+    function formatCurrency(value) {
+      return new Intl.NumberFormat('pt-BR', {
+        style: 'currency',
+        currency: 'BRL'
+      }).format(value);
+    }
+    
+    const ensureNumber = (value) => {
+      if (value === null || value === undefined) return 0;
+      if (typeof value === 'number') {
+        return Number.isFinite(value) ? value : 0;
+      }
+
+      let sanitized = String(value).trim();
+      if (!sanitized) return 0;
+
+      sanitized = sanitized.replace(/[R$%\s]/g, '');
+
+      const commaCount = (sanitized.match(/,/g) || []).length;
+      const dotCount = (sanitized.match(/\./g) || []).length;
+
+      if (commaCount && dotCount) {
+        sanitized = sanitized.replace(/\./g, '').replace(',', '.');
+      } else if (commaCount === 1 && dotCount === 0) {
+        sanitized = sanitized.replace(',', '.');
       } else {
-        title.textContent = 'Adicionar Investimento';
-        form.reset();
+        sanitized = sanitized.replace(/,/g, '');
       }
-      
-      // Padrão PFPN
-      modal.style.display = 'block';
-      setTimeout(() => modal.classList.add('show'), 10);
-    }
 
-    function closeInvestmentModal() {
-      const modal = document.getElementById('investmentModal');
-      if (modal) {
-        modal.classList.remove('show');
-        setTimeout(() => modal.style.display = 'none', 300);
+      const parsed = Number(sanitized);
+      return Number.isFinite(parsed) ? parsed : 0;
+    };
+
+    function calculateTotalsFromProducts(products) {
+      if (!Array.isArray(products) || products.length === 0) {
+        return {
+          count: 0,
+          market_revenue: 0,
+          average_margin_percent: 0,
+          share_goal_units: 0,
+          faturamento: { valor: 0, percentual: 0 },
+          custos_variaveis: { valor: 0, percentual: 0 },
+          despesas_variaveis: { valor: 0, percentual: 0 },
+          margem_contribuicao: { valor: 0, percentual: 0 },
+          meta_market_share: { unidades: 0, percentual: 0 }
+        };
       }
-      document.getElementById('investmentForm').reset();
-    }
 
-    document.getElementById('investmentForm').addEventListener('submit', async (e) => {
-      e.preventDefault();
-      
-      const investmentId = document.getElementById('investmentId').value;
-      const data = {
-        description: document.getElementById('investmentDescription').value,
-        amount: document.getElementById('investmentAmount').value
+      let totalMarketRevenue = 0;
+      let totalUnitsGoal = 0;
+      let totalRevenueGoal = 0;
+      let totalCostValue = 0;
+      let totalExpenseValue = 0;
+      let totalMarginValue = 0;
+      let marginPercentSum = 0;
+      let sharePercentWeighted = 0;
+      let shareWeight = 0;
+
+      products.forEach((item) => {
+        const marketRevenue = ensureNumber(item.market_size_monthly_revenue);
+        totalMarketRevenue += marketRevenue;
+
+        let sharePercent = ensureNumber(item.market_share_goal_percent);
+        const marketUnits = ensureNumber(item.market_size_monthly_units);
+        let unitsGoal = ensureNumber(item.market_share_goal_monthly_units);
+
+        if (!unitsGoal && sharePercent > 0 && marketUnits > 0) {
+          unitsGoal = (sharePercent / 100) * marketUnits;
+        }
+        totalUnitsGoal += unitsGoal;
+
+        const salePrice = ensureNumber(item.sale_price);
+        const revenueGoal = salePrice * unitsGoal;
+        totalRevenueGoal += revenueGoal;
+
+        let costPercent = ensureNumber(item.variable_costs_percent);
+        let costUnit = ensureNumber(item.variable_costs_value);
+        if (!costUnit && costPercent && salePrice) {
+          costUnit = (salePrice * costPercent) / 100;
+        }
+
+        let expensePercent = ensureNumber(item.variable_expenses_percent);
+        let expenseUnit = ensureNumber(item.variable_expenses_value);
+        if (!expenseUnit && expensePercent && salePrice) {
+          expenseUnit = (salePrice * expensePercent) / 100;
+        }
+
+        let marginPercent = ensureNumber(item.unit_contribution_margin_percent);
+        let marginUnit = ensureNumber(item.unit_contribution_margin_value);
+        if (!marginUnit && salePrice) {
+          marginUnit = salePrice - costUnit - expenseUnit;
+        }
+        if (!marginPercent && salePrice) {
+          marginPercent = salePrice ? (marginUnit / salePrice) * 100 : 0;
+        }
+
+        const costTotal = costUnit * unitsGoal;
+        const expenseTotal = expenseUnit * unitsGoal;
+        let marginTotal = marginUnit * unitsGoal;
+        if (!marginTotal && revenueGoal > 0) {
+          marginTotal = revenueGoal - costTotal - expenseTotal;
+        }
+
+        totalCostValue += costTotal;
+        totalExpenseValue += expenseTotal;
+        totalMarginValue += marginTotal;
+        marginPercentSum += marginPercent;
+
+        if (sharePercent > 0) {
+          if (marketUnits > 0) {
+            sharePercentWeighted += sharePercent * marketUnits;
+            shareWeight += marketUnits;
+          } else {
+            sharePercentWeighted += sharePercent;
+            shareWeight += 1;
+          }
+        }
+      });
+
+      const percent = (part, whole) => (whole > 0 ? (part / whole) * 100 : 0);
+      const averageMargin = products.length ? marginPercentSum / products.length : 0;
+      const sharePercentOverall = shareWeight > 0 ? sharePercentWeighted / shareWeight : 0;
+
+      return {
+        count: products.length,
+        market_revenue: totalMarketRevenue,
+        average_margin_percent: averageMargin,
+        share_goal_units: totalUnitsGoal,
+        faturamento: {
+          valor: totalRevenueGoal,
+          percentual: totalRevenueGoal > 0 ? 100 : 0,
+        },
+        custos_variaveis: {
+          valor: totalCostValue,
+          percentual: percent(totalCostValue, totalRevenueGoal),
+        },
+        despesas_variaveis: {
+          valor: totalExpenseValue,
+          percentual: percent(totalExpenseValue, totalRevenueGoal),
+        },
+        margem_contribuicao: {
+          valor: totalMarginValue,
+          percentual: percent(totalMarginValue, totalRevenueGoal),
+        },
+        meta_market_share: {
+          unidades: totalUnitsGoal,
+          percentual: sharePercentOverall,
+        },
       };
-
-      try {
-        let response;
-        if (investmentId) {
-          response = await fetch(`/pev/api/implantacao/${planId}/finance/investments/${investmentId}`, {
-            method: 'PUT',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify(data)
-          });
-        } else {
-          response = await fetch(`/pev/api/implantacao/${planId}/finance/investments`, {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify(data)
-          });
-        }
-
-        if (response.ok) {
-          alert('Investimento salvo com sucesso!');
-          closeInvestmentModal();
-          location.reload();
-        } else {
-          alert('Erro ao salvar investimento');
-        }
-      } catch (error) {
-        console.error('Error:', error);
-        alert('Erro ao salvar investimento');
-      }
-    });
-
-    function editInvestment(id) {
-      openInvestmentModal(id);
     }
 
-    async function deleteInvestment(id) {
-      if (!confirm('Tem certeza que deseja deletar este investimento?')) return;
+    function normalizeProductsTotals(rawTotals) {
+      const ensureBucket = (bucket) => ({
+        valor: ensureNumber(bucket?.valor),
+        percentual: ensureNumber(bucket?.percentual),
+      });
 
-      try {
-        const response = await fetch(`/pev/api/implantacao/${planId}/finance/investments/${id}`, {
-          method: 'DELETE'
-        });
-
-        if (response.ok) {
-          alert('Investimento deletado com sucesso!');
-          location.reload();
-        } else {
-          alert('Erro ao deletar investimento');
-        }
-      } catch (error) {
-        console.error('Error:', error);
-        alert('Erro ao deletar investimento');
+      if (rawTotals && typeof rawTotals === 'object' && rawTotals.faturamento) {
+        return {
+          count: ensureNumber(rawTotals.count ?? productsData.length),
+          market_revenue: ensureNumber(rawTotals.market_revenue),
+          average_margin_percent: ensureNumber(rawTotals.average_margin_percent),
+          share_goal_units: ensureNumber(rawTotals.share_goal_units),
+          faturamento: ensureBucket(rawTotals.faturamento),
+          custos_variaveis: ensureBucket(rawTotals.custos_variaveis),
+          despesas_variaveis: ensureBucket(rawTotals.despesas_variaveis),
+          margem_contribuicao: ensureBucket(rawTotals.margem_contribuicao),
+          meta_market_share: {
+            unidades: ensureNumber(
+              rawTotals.meta_market_share?.unidades ?? rawTotals.share_goal_units
+            ),
+            percentual: ensureNumber(
+              rawTotals.meta_market_share?.percentual ??
+              rawTotals.share_goal_percent ??
+              rawTotals.share_percent
+            ),
+          },
+        };
       }
+
+      if (rawTotals && typeof rawTotals === 'object') {
+        const fallback = calculateTotalsFromProducts(productsData);
+        const revenue = ensureNumber(
+          rawTotals.revenue ??
+          rawTotals.revenue_total ??
+          rawTotals.market_revenue ??
+          fallback.faturamento.valor
+        );
+        const costs = ensureNumber(
+          rawTotals.cost ??
+          rawTotals.costs ??
+          rawTotals.total_cost ??
+          rawTotals.custos_variaveis_valor ??
+          fallback.custos_variaveis.valor
+        );
+        const expenses = ensureNumber(
+          rawTotals.expense ??
+          rawTotals.expenses ??
+          rawTotals.total_expense ??
+          rawTotals.despesas_variaveis_valor ??
+          fallback.despesas_variaveis.valor
+        );
+        const margin = ensureNumber(
+          rawTotals.margin ??
+          rawTotals.margem ??
+          rawTotals.margem_contribuicao_valor ??
+          (revenue - costs - expenses)
+        );
+        const percent = (part, whole) => (whole > 0 ? (part / whole) * 100 : 0);
+
+        return {
+          count: ensureNumber(rawTotals.count ?? fallback.count),
+          market_revenue: ensureNumber(rawTotals.market_revenue ?? fallback.market_revenue),
+          average_margin_percent: ensureNumber(
+            rawTotals.average_margin_percent ?? fallback.average_margin_percent
+          ),
+          share_goal_units: ensureNumber(rawTotals.share_goal_units ?? fallback.share_goal_units),
+          faturamento: {
+            valor: revenue,
+            percentual: revenue > 0 ? 100 : 0,
+          },
+          custos_variaveis: {
+            valor: costs,
+            percentual: percent(costs, revenue),
+          },
+          despesas_variaveis: {
+            valor: expenses,
+            percentual: percent(expenses, revenue),
+          },
+          margem_contribuicao: {
+            valor: margin,
+            percentual: percent(margin, revenue),
+          },
+          meta_market_share: {
+            unidades: ensureNumber(
+              rawTotals.share_goal_units ?? fallback.meta_market_share.unidades
+            ),
+            percentual: ensureNumber(
+              rawTotals.share_goal_percent ??
+              rawTotals.share_percent ??
+              fallback.meta_market_share.percentual
+            ),
+          },
+        };
+      }
+
+      return calculateTotalsFromProducts(productsData);
     }
 
-    // ==================== FONTES ====================
-    function openSourceModal(sourceId = null) {
-      const modal = document.getElementById('sourceModal');
-      const form = document.getElementById('sourceForm');
-      const title = document.getElementById('sourceModalTitle');
-      
-      if (sourceId) {
-        const source = sourcesData.find(s => s.id === sourceId);
-        if (source) {
-          title.textContent = 'Editar Fonte';
-          document.getElementById('sourceId').value = source.id;
-          document.getElementById('sourceCategory').value = source.categoria || '';
-          document.getElementById('sourceDescription').value = source.descricao || '';
-          document.getElementById('sourceAmount').value = source.valor || '';
-          document.getElementById('sourceAvailability').value = source.disponibilidade || '';
-        }
-      } else {
-        title.textContent = 'Adicionar Fonte';
-        form.reset();
-      }
-      
-      // Padrão PFPN
-      modal.style.display = 'block';
-      setTimeout(() => modal.classList.add('show'), 10);
+    console.log('🚀 [INIT] Iniciando renderização...');
+    console.log('🔍 [INIT] Has initialProductsTotals?', !!initialProductsTotals, 'Keys:', Object.keys(initialProductsTotals).length);
+    console.log('🔍 [INIT] Has initialFixedCostsSummary?', !!initialFixedCostsSummary, 'Keys:', Object.keys(initialFixedCostsSummary).length);
+    
+    if (initialProductsTotals && Object.keys(initialProductsTotals).length) {
+      console.log('✅ [INIT] Renderizando products totals iniciais...');
+      renderProductsTotals(initialProductsTotals);
+    } else {
+      console.warn('⚠️ [INIT] initialProductsTotals vazio, pulando renderização inicial');
     }
 
-    function closeSourceModal() {
-      const modal = document.getElementById('sourceModal');
-      if (modal) {
-        modal.classList.remove('show');
-        setTimeout(() => modal.style.display = 'none', 300);
-      }
-      document.getElementById('sourceForm').reset();
+    if (initialFixedCostsSummary && Object.keys(initialFixedCostsSummary).length) {
+      console.log('✅ [INIT] Renderizando fixed costs summary iniciais...');
+      renderFixedCostsSummary(initialFixedCostsSummary);
+    } else {
+      console.warn('⚠️ [INIT] initialFixedCostsSummary vazio, pulando renderização inicial');
     }
 
-    document.getElementById('sourceForm').addEventListener('submit', async (e) => {
-      e.preventDefault();
-      
-      const sourceId = document.getElementById('sourceId').value;
-      const data = {
-        category: document.getElementById('sourceCategory').value,
-        description: document.getElementById('sourceDescription').value,
-        amount: document.getElementById('sourceAmount').value,
-        availability: document.getElementById('sourceAvailability').value
-      };
-
-      try {
-        let response;
-        if (sourceId) {
-          response = await fetch(`/pev/api/implantacao/${planId}/finance/sources/${sourceId}`, {
-            method: 'PUT',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify(data)
-          });
-        } else {
-          response = await fetch(`/pev/api/implantacao/${planId}/finance/sources`, {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify(data)
-          });
-        }
-
-        if (response.ok) {
-          alert('Fonte salva com sucesso!');
-          closeSourceModal();
-          location.reload();
-        } else {
-          alert('Erro ao salvar fonte');
-        }
-      } catch (error) {
-        console.error('Error:', error);
-        alert('Erro ao salvar fonte');
-      }
-    });
-
-    function editSource(id) {
-      openSourceModal(id);
+    // Carregar produtos e totalizados ao iniciar
+    if (planId) {
+      console.log('🌐 [INIT] Carregando dados via AJAX...');
+      loadProducts();
+    } else {
+      console.error('❌ [INIT] plan_id não encontrado!');
     }
 
-    async function deleteSource(id) {
-      if (!confirm('Tem certeza que deseja deletar esta fonte?')) return;
-
-      try {
-        const response = await fetch(`/pev/api/implantacao/${planId}/finance/sources/${id}`, {
-          method: 'DELETE'
-        });
-
-        if (response.ok) {
-          alert('Fonte deletada com sucesso!');
-          location.reload();
-        } else {
-          alert('Erro ao deletar fonte');
-        }
-      } catch (error) {
-        console.error('Error:', error);
-        alert('Erro ao deletar fonte');
-      }
-    }
-
-    // ==================== CUSTOS VARIÁVEIS ====================
+    // ==================== CUSTOS VARIÃVEIS ====================
     function openVariableCostModal(costId = null) {
       const modal = document.getElementById('variableCostModal');
       const form = document.getElementById('variableCostForm');
@@ -1149,17 +1692,17 @@
       if (costId) {
         const cost = variableCostsData.find(c => c.id === costId);
         if (cost) {
-          title.textContent = 'Editar Custo Variável';
+          title.textContent = 'Editar Custo VariÃ¡vel';
           document.getElementById('variableCostId').value = cost.id;
           document.getElementById('variableCostDescription').value = cost.descricao || '';
           document.getElementById('variableCostPercentage').value = cost.percentual || '';
         }
       } else {
-        title.textContent = 'Adicionar Custo Variável';
+        title.textContent = 'Adicionar Custo VariÃ¡vel';
         form.reset();
       }
       
-      // Padrão PFPN
+      // PadrÃ£o PFPN
       modal.style.display = 'block';
       setTimeout(() => modal.classList.add('show'), 10);
     }
@@ -1199,15 +1742,15 @@
         }
 
         if (response.ok) {
-          alert('Custo variável salvo com sucesso!');
+          alert('Custo variÃ¡vel salvo com sucesso!');
           closeVariableCostModal();
           location.reload();
         } else {
-          alert('Erro ao salvar custo variável');
+          alert('Erro ao salvar custo variÃ¡vel');
         }
       } catch (error) {
         console.error('Error:', error);
-        alert('Erro ao salvar custo variável');
+        alert('Erro ao salvar custo variÃ¡vel');
       }
     });
 
@@ -1216,7 +1759,7 @@
     }
 
     async function deleteVariableCost(id) {
-      if (!confirm('Tem certeza que deseja deletar este custo variável?')) return;
+      if (!confirm('Tem certeza que deseja deletar este custo variÃ¡vel?')) return;
 
       try {
         const response = await fetch(`/pev/api/implantacao/${planId}/finance/variable_costs/${id}`, {
@@ -1224,18 +1767,18 @@
         });
 
         if (response.ok) {
-          alert('Custo variável deletado com sucesso!');
+          alert('Custo variÃ¡vel deletado com sucesso!');
           location.reload();
         } else {
-          alert('Erro ao deletar custo variável');
+          alert('Erro ao deletar custo variÃ¡vel');
         }
       } catch (error) {
         console.error('Error:', error);
-        alert('Erro ao deletar custo variável');
+        alert('Erro ao deletar custo variÃ¡vel');
       }
     }
 
-    // ==================== REGRAS DE DESTINAÇÃO ====================
+    // ==================== OUTRAS DESTINAÃ‡Ã•ES ====================
     function openResultRuleModal(ruleId = null) {
       const modal = document.getElementById('resultRuleModal');
       const form = document.getElementById('resultRuleForm');
@@ -1244,18 +1787,17 @@
       if (ruleId) {
         const rule = resultRulesData.find(r => r.id === ruleId);
         if (rule) {
-          title.textContent = 'Editar Regra de Destinação';
+          title.textContent = 'Editar Outra DestinaÃ§Ã£o';
           document.getElementById('resultRuleId').value = rule.id;
           document.getElementById('resultRuleDescription').value = rule.descricao || '';
           document.getElementById('resultRulePercentage').value = rule.percentual || '';
-          document.getElementById('resultRulePeriodicity').value = rule.periodicidade || '';
         }
       } else {
-        title.textContent = 'Adicionar Regra de Destinação';
+        title.textContent = 'Adicionar Outra DestinaÃ§Ã£o';
         form.reset();
       }
       
-      // Padrão PFPN
+      // PadrÃ£o PFPN
       modal.style.display = 'block';
       setTimeout(() => modal.classList.add('show'), 10);
     }
@@ -1276,7 +1818,7 @@
       const data = {
         description: document.getElementById('resultRuleDescription').value,
         percentage: document.getElementById('resultRulePercentage').value,
-        periodicity: document.getElementById('resultRulePeriodicity').value
+        periodicity: ''  // NÃ£o usamos mais periodicidade
       };
 
       try {
@@ -1296,15 +1838,15 @@
         }
 
         if (response.ok) {
-          alert('Regra de destinação salva com sucesso!');
+          alert('DestinaÃ§Ã£o salva com sucesso!');
           closeResultRuleModal();
           location.reload();
         } else {
-          alert('Erro ao salvar regra de destinação');
+          alert('Erro ao salvar destinaÃ§Ã£o');
         }
       } catch (error) {
         console.error('Error:', error);
-        alert('Erro ao salvar regra de destinação');
+        alert('Erro ao salvar destinaÃ§Ã£o');
       }
     });
 
@@ -1313,7 +1855,7 @@
     }
 
     async function deleteResultRule(id) {
-      if (!confirm('Tem certeza que deseja deletar esta regra de destinação?')) return;
+      if (!confirm('Tem certeza que deseja deletar esta destinaÃ§Ã£o?')) return;
 
       try {
         const response = await fetch(`/pev/api/implantacao/${planId}/finance/result_rules/${id}`, {
@@ -1321,26 +1863,83 @@
         });
 
         if (response.ok) {
-          alert('Regra de destinação deletada com sucesso!');
+          alert('DestinaÃ§Ã£o deletada com sucesso!');
           location.reload();
         } else {
-          alert('Erro ao deletar regra de destinação');
+          alert('Erro ao deletar destinaÃ§Ã£o');
         }
       } catch (error) {
         console.error('Error:', error);
-        alert('Erro ao deletar regra de destinação');
+        alert('Erro ao deletar destinaÃ§Ã£o');
       }
     }
 
-    // ==================== MÉTRICAS ====================
+    // ==================== DISTRIBUIÃ‡ÃƒO DE LUCROS ====================
+    function openProfitDistributionModal() {
+      const modal = document.getElementById('profitDistributionModal');
+      
+      document.getElementById('profitDistributionPercentage').value = profitDistributionData.percentual || '';
+      document.getElementById('profitDistributionStartDate').value = profitDistributionData.start_date || '';
+      document.getElementById('profitDistributionNotes').value = profitDistributionData.observacoes || '';
+      
+      // PadrÃ£o PFPN
+      modal.style.display = 'block';
+      setTimeout(() => modal.classList.add('show'), 10);
+    }
+
+    function closeProfitDistributionModal() {
+      const modal = document.getElementById('profitDistributionModal');
+      if (modal) {
+        modal.classList.remove('show');
+        setTimeout(() => modal.style.display = 'none', 300);
+      }
+      document.getElementById('profitDistributionForm').reset();
+    }
+
+    document.getElementById('profitDistributionForm').addEventListener('submit', async (e) => {
+      e.preventDefault();
+      
+      const data = {
+        percentage: document.getElementById('profitDistributionPercentage').value,
+        start_date: document.getElementById('profitDistributionStartDate').value,
+        notes: document.getElementById('profitDistributionNotes').value
+      };
+
+      try {
+        const response = await fetch(`/pev/api/implantacao/${planId}/finance/profit_distribution`, {
+          method: 'PUT',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(data)
+        });
+
+        if (response.ok) {
+          alert('DistribuiÃ§Ã£o de lucros atualizada com sucesso!');
+          closeProfitDistributionModal();
+          location.reload();
+        } else {
+          alert('Erro ao atualizar distribuiÃ§Ã£o de lucros');
+        }
+      } catch (error) {
+        console.error('Error:', error);
+        alert('Erro ao atualizar distribuiÃ§Ã£o de lucros');
+      }
+    });
+
+    // ==================== MÃ‰TRICAS ====================
     function openMetricsModal() {
       const modal = document.getElementById('metricsModal');
       
       document.getElementById('metricPayback').value = metricsData.payback || '';
-      document.getElementById('metricTir').value = metricsData.tir_5_anos || '';
+      document.getElementById('metricOpportunityCost').value = metricsData.opportunity_cost || '1%';
+      const tirHorizonField = document.getElementById('metricTirHorizon');
+      const horizonValue = metricsData.tir_horizon_years ? String(metricsData.tir_horizon_years) : '5';
+      if (tirHorizonField) {
+        tirHorizonField.value = ['2', '3', '5'].includes(horizonValue) ? horizonValue : '5';
+      }
+      document.getElementById('metricTir').value = metricsData.tir || '';
       document.getElementById('metricNotes').value = metricsData.comentarios || '';
       
-      // Padrão PFPN
+      // PadrÃ£o PFPN
       modal.style.display = 'block';
       setTimeout(() => modal.classList.add('show'), 10);
     }
@@ -1357,10 +1956,16 @@
     document.getElementById('metricsForm').addEventListener('submit', async (e) => {
       e.preventDefault();
       
+      const opportunityField = document.getElementById('metricOpportunityCost');
+      const horizonField = document.getElementById('metricTirHorizon');
+      const selectedHorizon = horizonField ? parseInt(horizonField.value, 10) : 5;
+      const normalizedHorizon = [2, 3, 5].includes(selectedHorizon) ? selectedHorizon : 5;
       const data = {
         payback: document.getElementById('metricPayback').value,
         tir: document.getElementById('metricTir').value,
-        notes: document.getElementById('metricNotes').value
+        notes: document.getElementById('metricNotes').value,
+        opportunity_cost: opportunityField ? opportunityField.value : '',
+        tir_horizon_years: normalizedHorizon
       };
 
       try {
@@ -1371,17 +1976,724 @@
         });
 
         if (response.ok) {
-          alert('Métricas atualizadas com sucesso!');
+          alert('MÃ©tricas atualizadas com sucesso!');
           closeMetricsModal();
           location.reload();
         } else {
-          alert('Erro ao atualizar métricas');
+          alert('Erro ao atualizar mÃ©tricas');
         }
       } catch (error) {
         console.error('Error:', error);
-        alert('Erro ao atualizar métricas');
+        alert('Erro ao atualizar mÃ©tricas');
       }
     });
+
+    // ==================== INVESTIMENTO EM CAPITAL DE GIRO ====================
+    function openCapitalGiroModal(contributionId = null) {
+      const modal = document.getElementById('capitalGiroModal');
+      const form = document.getElementById('capitalGiroForm');
+      const title = document.getElementById('capitalGiroModalTitle');
+      
+      if (contributionId) {
+        title.textContent = 'Editar Investimento em Capital de Giro';
+        document.getElementById('capitalGiroId').value = contributionId;
+        // Aqui carregarÃ­amos os dados existentes se necessÃ¡rio
+      } else {
+        title.textContent = 'Cadastrar Investimento em Capital de Giro';
+        form.reset();
+      }
+      
+      modal.style.display = 'block';
+      setTimeout(() => modal.classList.add('show'), 10);
+    }
+
+    function closeCapitalGiroModal() {
+      const modal = document.getElementById('capitalGiroModal');
+      if (modal) {
+        modal.classList.remove('show');
+        setTimeout(() => modal.style.display = 'none', 300);
+      }
+      document.getElementById('capitalGiroForm').reset();
+    }
+
+    document.getElementById('capitalGiroForm').addEventListener('submit', async (e) => {
+      e.preventDefault();
+      
+      const contributionId = document.getElementById('capitalGiroId').value;
+      const type = document.getElementById('capitalGiroType').value;
+      const amount = parseFloat(document.getElementById('capitalGiroAmount').value);
+      
+      console.log('ðŸ”µ Salvando investimento:', { type, amount });
+      
+      // Mapear tipo para item_id
+      const typeToItemId = {
+        'Caixa': 1,
+        'RecebÃ­veis': 2,
+        'Estoques': 3
+      };
+      
+      const itemId = typeToItemId[type];
+      if (!itemId) {
+        alert('Tipo de investimento invÃ¡lido');
+        return;
+      }
+      
+      const data = {
+        item_id: itemId,
+        contribution_date: document.getElementById('capitalGiroDate').value,
+        description: document.getElementById('capitalGiroDescription').value,
+        adjusted_value: amount,
+        amount: amount,
+        calculation_memo: document.getElementById('capitalGiroCalculationMemo').value,
+        notes: document.getElementById('capitalGiroNotes').value
+      };
+
+      console.log('ðŸ”µ Dados a serem enviados:', data);
+
+      try {
+        let response;
+        if (contributionId) {
+          console.log('ðŸ”µ Atualizando investimento ID:', contributionId);
+          response = await fetch(`/pev/api/implantacao/${planId}/finance/investment/contributions/${contributionId}`, {
+            method: 'PUT',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(data)
+          });
+        } else {
+          console.log('ðŸ”µ Criando novo investimento');
+          response = await fetch(`/pev/api/implantacao/${planId}/finance/investment/contributions`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(data)
+          });
+        }
+
+        const result = await response.json();
+        console.log('ðŸ”µ Resposta da API:', result);
+
+        if (response.ok && result.success) {
+          console.log('âœ… Investimento salvo com sucesso!');
+          alert('Investimento cadastrado com sucesso!');
+          closeCapitalGiroModal();
+          loadInvestmentData();
+          loadCapitalGiroContributions();
+        } else {
+          console.error('âŒ Erro ao salvar:', result);
+          alert('Erro ao cadastrar investimento: ' + (result.error || 'Erro desconhecido'));
+        }
+      } catch (error) {
+        console.error('âŒ Exception:', error);
+        alert('Erro ao cadastrar investimento: ' + error.message);
+      }
+    });
+
+    // ==================== INVESTMENT CONTRIBUTIONS ====================
+    // Armazenar itens carregados (usado apenas para cache interno)
+    let investmentItemsCache = [];
+    
+    // Carregar e exibir investimentos em capital de giro
+    async function loadCapitalGiroContributions() {
+      try {
+        console.log('ðŸ”„ Carregando investimentos de capital de giro...');
+        
+        const tbody = document.getElementById('capital-giro-contributions-tbody');
+        tbody.innerHTML = '<tr><td colspan="6" style="text-align: center; padding: 24px; color: #64748b;">Carregando...</td></tr>';
+        
+        // Mapear item_id para nome
+        const itemIdToName = {
+          1: 'Caixa',
+          2: 'RecebÃ­veis',
+          3: 'Estoques'
+        };
+        
+        // Buscar contribuiÃ§Ãµes de todos os itens de capital de giro (IDs 1, 2, 3)
+        const allContributions = [];
+        
+        for (const itemId of [1, 2, 3]) {
+          try {
+            const response = await fetch(`/pev/api/implantacao/${planId}/finance/investment/contributions?item_id=${itemId}`);
+            const result = await response.json();
+            
+            console.log(`ðŸ“¦ ContribuiÃ§Ãµes do item ${itemId}:`, result);
+            
+            if (result.success && result.data && result.data.length > 0) {
+              result.data.forEach(contrib => {
+                allContributions.push({
+                  ...contrib,
+                  type_name: itemIdToName[itemId],
+                  item_id: itemId
+                });
+              });
+            }
+          } catch (error) {
+            console.error(`âŒ Erro ao carregar contribuiÃ§Ãµes do item ${itemId}:`, error);
+          }
+        }
+        
+        console.log('ðŸ“Š Total de contribuiÃ§Ãµes encontradas:', allContributions.length);
+        console.log('ðŸ“Š ContribuiÃ§Ãµes:', allContributions);
+        
+        tbody.innerHTML = '';
+        
+        if (allContributions.length === 0) {
+          tbody.innerHTML = `
+            <tr>
+              <td colspan="6" style="text-align: center; padding: 24px; color: #64748b;">
+                <div style="font-size: 48px; margin-bottom: 8px;">ðŸ’¼</div>
+                <div style="font-size: 14px;">Nenhum investimento cadastrado</div>
+                <div style="font-size: 12px; margin-top: 4px;">Clique em "Cadastrar Investimento em Capital de Giro" para adicionar</div>
+              </td>
+            </tr>
+          `;
+          return;
+        }
+        
+        // Ordenar por data (mais recentes primeiro)
+        allContributions.sort((a, b) => new Date(b.contribution_date) - new Date(a.contribution_date));
+        
+        allContributions.forEach(contrib => {
+          const row = document.createElement('tr');
+          const date = new Date(contrib.contribution_date);
+          const formattedDate = date.toLocaleDateString('pt-BR');
+          const amount = parseFloat(contrib.amount || 0);
+          
+          row.innerHTML = `
+            <td><strong>${contrib.type_name}</strong></td>
+            <td>${formattedDate}</td>
+            <td>${contrib.description || '-'}</td>
+            <td style="font-weight: 600; color: #059669;">R$ ${amount.toLocaleString('pt-BR', {minimumFractionDigits: 2})}</td>
+            <td>${contrib.notes || '-'}</td>
+            <td>
+              <button class="btn-icon delete" onclick="deleteCapitalGiroContribution(${contrib.id})" title="Deletar">ðŸ—‘ï¸</button>
+            </td>
+          `;
+          tbody.appendChild(row);
+        });
+        
+        console.log('âœ… Tabela de investimentos atualizada');
+        
+      } catch (error) {
+        console.error('âŒ Erro ao carregar investimentos:', error);
+        const tbody = document.getElementById('capital-giro-contributions-tbody');
+        tbody.innerHTML = `
+          <tr>
+            <td colspan="6" style="text-align: center; padding: 24px; color: #ef4444;">
+              Erro ao carregar investimentos
+            </td>
+          </tr>
+        `;
+      }
+    }
+    
+    async function deleteCapitalGiroContribution(contributionId) {
+      if (!confirm('Tem certeza que deseja deletar este investimento?')) return;
+      
+      try {
+        const response = await fetch(`/pev/api/implantacao/${planId}/finance/investment/contributions/${contributionId}`, {
+          method: 'DELETE'
+        });
+        
+        if (response.ok) {
+          alert('Investimento deletado com sucesso!');
+          loadCapitalGiroContributions();
+          loadInvestmentData();
+        } else {
+          alert('Erro ao deletar investimento');
+        }
+      } catch (error) {
+        console.error('Error:', error);
+        alert('Erro ao deletar investimento');
+      }
+    }
+
+    // ==================== FUNDING SOURCES ====================
+    function openFundingSourceModal(sourceId = null) {
+      const modal = document.getElementById('fundingSourceModal');
+      const form = document.getElementById('fundingSourceForm');
+      const title = document.getElementById('fundingSourceModalTitle');
+      
+      if (sourceId) {
+        title.textContent = 'Editar Fonte de Recursos';
+        document.getElementById('fundingSourceId').value = sourceId;
+      } else {
+        title.textContent = 'Adicionar Fonte de Recursos';
+        form.reset();
+      }
+      
+      modal.style.display = 'block';
+      setTimeout(() => modal.classList.add('show'), 10);
+    }
+
+    function closeFundingSourceModal() {
+      const modal = document.getElementById('fundingSourceModal');
+      if (modal) {
+        modal.classList.remove('show');
+        setTimeout(() => modal.style.display = 'none', 300);
+      }
+      document.getElementById('fundingSourceForm').reset();
+    }
+
+    document.getElementById('fundingSourceForm').addEventListener('submit', async (e) => {
+      e.preventDefault();
+      
+      const sourceId = document.getElementById('fundingSourceId').value;
+      const data = {
+        source_type: document.getElementById('fundingSourceType').value,
+        contribution_date: document.getElementById('fundingSourceDate').value,
+        amount: parseFloat(document.getElementById('fundingSourceAmount').value),
+        notes: document.getElementById('fundingSourceNotes').value
+      };
+
+      try {
+        let response;
+        if (sourceId) {
+          response = await fetch(`/pev/api/implantacao/${planId}/finance/funding_sources/${sourceId}`, {
+            method: 'PUT',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(data)
+          });
+        } else {
+          response = await fetch(`/pev/api/implantacao/${planId}/finance/funding_sources`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(data)
+          });
+        }
+
+        if (response.ok) {
+          alert('Fonte de recursos salva com sucesso!');
+          closeFundingSourceModal();
+          loadFundingSources();
+        } else {
+          alert('Erro ao salvar fonte de recursos');
+        }
+      } catch (error) {
+        console.error('Error:', error);
+        alert('Erro ao salvar fonte de recursos');
+      }
+    });
+
+    async function loadFundingSources() {
+      try {
+        const response = await fetch(`/pev/api/implantacao/${planId}/finance/funding_sources`);
+        const result = await response.json();
+        
+        if (result.success) {
+          const tbody = document.getElementById('funding-sources-tbody');
+          tbody.innerHTML = '';
+          
+          result.data.forEach(source => {
+            const row = document.createElement('tr');
+            row.innerHTML = `
+              <td>${source.source_type}</td>
+              <td>${source.contribution_date}</td>
+              <td>R$ ${source.amount.toLocaleString('pt-BR', {minimumFractionDigits: 2})}</td>
+              <td>${source.notes || '-'}</td>
+              <td>
+                <button class="btn-icon" onclick="editFundingSource(${source.id})" title="Editar">âœï¸</button>
+                <button class="btn-icon delete" onclick="deleteFundingSource(${source.id})" title="Deletar">ðŸ—‘ï¸</button>
+              </td>
+            `;
+            tbody.appendChild(row);
+          });
+        }
+      } catch (error) {
+        console.error('Error loading funding sources:', error);
+      }
+    }
+
+    async function deleteFundingSource(sourceId) {
+      if (!confirm('Tem certeza que deseja deletar esta fonte de recursos?')) return;
+
+      try {
+        const response = await fetch(`/pev/api/implantacao/${planId}/finance/funding_sources/${sourceId}`, {
+          method: 'DELETE'
+        });
+
+        if (response.ok) {
+          alert('Fonte de recursos deletada com sucesso!');
+          loadFundingSources();
+        } else {
+          alert('Erro ao deletar fonte de recursos');
+        }
+      } catch (error) {
+        console.error('Error:', error);
+        alert('Erro ao deletar fonte de recursos');
+      }
+    }
+
+    function editFundingSource(sourceId) {
+      openFundingSourceModal(sourceId);
+    }
+
+    async function loadInvestmentData() {
+      try {
+        console.log('ðŸ”„ Loading investment data...');
+        
+        // Criar estrutura de categorias e itens manualmente
+        const categories = [
+          {
+            id: 1,
+            category_name: 'Capital de Giro',
+            category_type: 'capital_giro'
+          },
+          {
+            id: 2,
+            category_name: 'Imobilizado',
+            category_type: 'imobilizado'
+          }
+        ];
+        
+        const items = [
+          // Capital de Giro
+          { id: 1, item_name: 'Caixa', category_id: 1 },
+          { id: 2, item_name: 'RecebÃ­veis', category_id: 1 },
+          { id: 3, item_name: 'Estoques', category_id: 1 },
+          // Imobilizado
+          { id: 4, item_name: 'InstalaÃ§Ãµes', category_id: 2 },
+          { id: 5, item_name: 'MÃ¡quinas e Equipamentos', category_id: 2 },
+          { id: 6, item_name: 'Outros Investimentos', category_id: 2 }
+        ];
+        
+        console.log('âœ… Categories and items structure created');
+        console.log('ðŸ—ï¸ Investimentos das Estruturas:', investimentosEstruturasData);
+        
+        // Atualizar totais por item
+        const itemTotals = {};
+        const itemsByMonth = {};
+        
+        // Limpar cache de itens
+        investmentItemsCache = [];
+        
+        // Para cada item, buscar suas contribuiÃ§Ãµes
+        for (const item of items) {
+          const category = categories.find(c => c.id === item.category_id);
+          
+          // Adicionar item ao cache
+          investmentItemsCache.push({
+            id: item.id,
+            item_name: item.item_name,
+            category_name: category.category_name,
+            category_id: category.id
+          });
+          
+          // Se for item de Imobilizado, usar valores das estruturas
+          if (item.category_id === 2) {
+            let estruturaData = null;
+            
+            // Mapear itens para dados de estruturas
+            if (item.item_name === 'InstalaÃ§Ãµes' && investimentosEstruturasData.instalacoes) {
+              estruturaData = investimentosEstruturasData.instalacoes;
+            } else if (item.item_name === 'MÃ¡quinas e Equipamentos' && investimentosEstruturasData.maquinas) {
+              estruturaData = investimentosEstruturasData.maquinas;
+            } else if (item.item_name === 'Outros Investimentos' && investimentosEstruturasData.outros) {
+              estruturaData = investimentosEstruturasData.outros;
+            }
+            
+            if (estruturaData && estruturaData.total > 0) {
+              const estruturaTotal = parseFloat(estruturaData.total) || 0;
+              itemTotals[item.id] = estruturaTotal;
+              
+              // Usar dados por mÃªs das parcelas
+              const porMes = estruturaData.por_mes || {};
+              itemsByMonth[item.id] = porMes;
+              
+              console.log(`  ðŸ—ï¸ Estruturas - ${item.item_name}: R$ ${estruturaTotal.toLocaleString('pt-BR', {minimumFractionDigits: 2})}`);
+              console.log(`     DistribuiÃ§Ã£o mensal:`, porMes);
+            }
+          }
+          
+          try {
+            // Buscar contribuiÃ§Ãµes deste item (Capital de Giro)
+            const contribResponse = await fetch(`/pev/api/implantacao/${planId}/finance/investment/contributions?item_id=${item.id}`);
+            const contribResult = await contribResponse.json();
+            
+            console.log(`ðŸ“¦ Item ${item.item_name} (ID: ${item.id}):`, contribResult);
+            
+            if (contribResult.success && contribResult.data && contribResult.data.length > 0) {
+              let total = 0;
+              const monthlyData = {};
+              
+              contribResult.data.forEach(contrib => {
+                const amount = parseFloat(contrib.amount || 0);
+                total += amount;
+                
+                // Agrupar por mÃªs
+                const date = new Date(contrib.contribution_date);
+                const monthKey = `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}`;
+                
+                if (!monthlyData[monthKey]) {
+                  monthlyData[monthKey] = 0;
+                }
+                monthlyData[monthKey] += amount;
+              });
+              
+              itemTotals[item.id] = total;
+              itemsByMonth[item.id] = monthlyData;
+              
+              console.log(`  ðŸ’° Total: R$ ${total.toLocaleString('pt-BR', {minimumFractionDigits: 2})}`);
+            } else {
+              console.log(`  â„¹ï¸ Sem contribuiÃ§Ãµes`);
+            }
+          } catch (error) {
+            console.error(`âŒ Erro ao buscar contribuiÃ§Ãµes do item ${item.item_name}:`, error);
+          }
+        }
+        
+        console.log('ðŸ“Š Totais por item:', itemTotals);
+        console.log('ðŸ“Š Dados mensais:', itemsByMonth);
+        
+        // Renderizar planilha por perÃ­odo
+        renderInvestmentSpreadsheet(categories, itemsByMonth, itemTotals);
+        
+        // Renderizar fluxo de caixa do investimento
+        renderInvestmentCashflow(categories, itemsByMonth, itemTotals);
+        
+        console.log('âœ… Investment data loaded successfully');
+        console.log(`ðŸ“¦ Investment items cached: ${investmentItemsCache.length}`, investmentItemsCache);
+        
+      } catch (error) {
+        console.error('âŒ Error loading investment data:', error);
+      }
+    }
+    
+    async function renderInvestmentSpreadsheet(categories, itemsByMonth, itemTotals) {
+      try {
+        console.log('ðŸŽ¨ Renderizando planilha de investimentos...');
+        console.log('ðŸ“‹ Categories:', categories);
+        console.log('ðŸ“‹ Items cache:', investmentItemsCache);
+        console.log('ðŸ“‹ Items by month:', itemsByMonth);
+        console.log('ðŸ“‹ Item totals:', itemTotals);
+        
+        // Gerar prÃ³ximos 12 meses
+        const months = [];
+        const today = new Date();
+        for (let i = 0; i < 12; i++) {
+          const date = new Date(today.getFullYear(), today.getMonth() + i, 1);
+          months.push({
+            key: `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}`,
+            label: date.toLocaleDateString('pt-BR', { month: 'short', year: 'numeric' })
+          });
+        }
+        
+        // Calcular totais por mÃªs
+        const monthlyTotals = {};
+        months.forEach(m => monthlyTotals[m.key] = 0);
+        
+        // Array para armazenar dados das linhas
+        const rowsData = [];
+        
+        // Usar os itens do cache ao invÃ©s de buscar via API
+        for (const item of investmentItemsCache) {
+          const category = categories.find(c => c.id === item.category_id);
+          const monthlyData = itemsByMonth[item.id] || {};
+          // Usar itemTotals se disponÃ­vel (para investimentos de estruturas), senÃ£o calcular da monthlyData
+          const total = itemTotals[item.id] || Object.values(monthlyData).reduce((sum, val) => sum + val, 0);
+          
+          // Somar aos totais mensais
+          months.forEach(month => {
+            const value = monthlyData[month.key] || 0;
+            monthlyTotals[month.key] += value;
+          });
+          
+          rowsData.push({
+            category: category ? category.category_name : 'Outros',
+            item: item.item_name,
+            total: total,
+            monthlyData: monthlyData
+          });
+          
+          console.log(`  ðŸ“Š ${item.item_name}: Total R$ ${total.toLocaleString('pt-BR', {minimumFractionDigits: 2})}`);
+        }
+        
+        // Renderizar headers dos meses
+        const headerRow = document.getElementById('month-headers');
+        headerRow.innerHTML = months.map(m => `<th style="min-width: 120px;">${m.label}</th>`).join('');
+        
+        // Renderizar linha de totais por mÃªs (serÃ¡ preenchida depois do loop com totalGeral)
+        const totalRow = document.getElementById('month-totals-row');
+        // Temporariamente vazio, serÃ¡ preenchido apÃ³s calcular totalGeral
+        
+        // Renderizar colunas fixas (Categoria, Item, Total)
+        const tbodyFixed = document.getElementById('spreadsheet-tbody-fixed');
+        tbodyFixed.innerHTML = '';
+        
+        // Renderizar valores por perÃ­odo
+        const tbody = document.getElementById('spreadsheet-tbody');
+        tbody.innerHTML = '';
+        
+        // Calcular total geral
+        let totalGeral = 0;
+        
+        rowsData.forEach(rowData => {
+          // Verificar se Ã© linha de Imobilizado para aplicar cor verde claro
+          const isImobilizado = rowData.category === 'Imobilizado';
+          const bgColor = isImobilizado ? 'background: rgba(34, 197, 94, 0.08);' : '';
+          
+          // Somar ao total geral
+          totalGeral += rowData.total;
+          
+          // Linha fixa
+          const rowFixed = document.createElement('tr');
+          rowFixed.innerHTML = `
+            <td style="border-left: none; ${bgColor}">${rowData.category}</td>
+            <td style="${bgColor}">${rowData.item}</td>
+            <td style="border-right: none; ${bgColor}"><strong>R$ ${rowData.total.toLocaleString('pt-BR', {minimumFractionDigits: 2})}</strong></td>
+          `;
+          tbodyFixed.appendChild(rowFixed);
+          
+          // Linha com valores por perÃ­odo
+          const row = document.createElement('tr');
+          row.innerHTML = months.map(month => {
+            const value = rowData.monthlyData[month.key] || 0;
+            const displayValue = value > 0 ? `R$ ${value.toLocaleString('pt-BR', {minimumFractionDigits: 2})}` : '-';
+            return `<td style="min-width: 120px; ${bgColor}">${displayValue}</td>`;
+          }).join('');
+          tbody.appendChild(row);
+        });
+        
+        // Preencher a linha de totais mensais
+        totalRow.innerHTML = months.map(m => {
+          const total = monthlyTotals[m.key];
+          const displayTotal = total > 0 ? `R$ ${total.toLocaleString('pt-BR', {minimumFractionDigits: 2})}` : '-';
+          return `<th style="background: rgba(34, 197, 94, 0.15); font-weight: 700; color: #166534; min-width: 120px;">${displayTotal}</th>`;
+        }).join('');
+        
+        // Adicionar total geral na parte fixa da tabela (na linha do thead que estÃ¡ invisÃ­vel)
+        const fixedTable = document.getElementById('spreadsheet-tbody-fixed').closest('table');
+        const fixedThead = fixedTable.querySelector('thead');
+        const totalRowFixed = fixedThead.querySelectorAll('tr')[1]; // Segunda linha do thead
+        
+        if (totalRowFixed) {
+          totalRowFixed.style.visibility = 'visible';
+          totalRowFixed.innerHTML = `
+            <th style="border-left: none; background: rgba(34, 197, 94, 0.15); font-weight: 700; color: #166534;"></th>
+            <th style="background: rgba(34, 197, 94, 0.15); font-weight: 700; color: #166534;"></th>
+            <th style="border-right: none; background: rgba(34, 197, 94, 0.15); font-weight: 700; color: #166534; font-size: 15px;">
+              R$ ${totalGeral.toLocaleString('pt-BR', {minimumFractionDigits: 2})}
+            </th>
+          `;
+        }
+        
+        console.log(`ðŸ’° Total Geral de Investimentos: R$ ${totalGeral.toLocaleString('pt-BR', {minimumFractionDigits: 2})}`);
+        
+      } catch (error) {
+        console.error('Error rendering spreadsheet:', error);
+      }
+    }
+
+    async function renderInvestmentCashflow(categories, itemsByMonth, itemTotals) {
+      try {
+        // Buscar fontes de recursos
+        const fundingResponse = await fetch(`/pev/api/implantacao/${planId}/finance/funding_sources`);
+        const fundingResult = await fundingResponse.json();
+        
+        const fundingSources = fundingResult.success ? fundingResult.data : [];
+        
+        // Gerar prÃ³ximos 12 meses
+        const months = [];
+        const today = new Date();
+        for (let i = 0; i < 12; i++) {
+          const date = new Date(today.getFullYear(), today.getMonth() + i, 1);
+          months.push({
+            key: `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}`,
+            label: date.toLocaleDateString('pt-BR', { month: 'short', year: 'numeric' })
+          });
+        }
+        
+        // Processar dados por mÃªs
+        const cashflowData = months.map(month => {
+          let capitalGiro = 0;
+          let imobilizado = 0;
+          let funding = 0;
+          
+          // Calcular investimentos por categoria
+          for (const category of categories) {
+            for (const itemId in itemsByMonth) {
+              const item = investmentItemsCache.find(i => i.id == itemId);
+              if (item && item.category_id === category.id) {
+                const monthlyData = itemsByMonth[itemId];
+                const value = monthlyData[month.key] || 0;
+                
+                if (category.category_type === 'capital_giro') {
+                  capitalGiro += value;
+                } else if (category.category_type === 'imobilizado') {
+                  imobilizado += value;
+                }
+              }
+            }
+          }
+          
+          // Calcular fontes de recursos para este mÃªs
+          fundingSources.forEach(source => {
+            const date = new Date(source.contribution_date);
+            const monthKey = `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}`;
+            if (monthKey === month.key) {
+              funding += parseFloat(source.amount || 0);
+            }
+          });
+          
+          const totalInvestments = capitalGiro + imobilizado;
+          const netBalance = funding - totalInvestments;
+          
+          return {
+            period: month.label,
+            capitalGiro,
+            imobilizado,
+            totalInvestments,
+            funding,
+            netBalance
+          };
+        });
+        
+        // Calcular saldo acumulado
+        let accumulatedBalance = 0;
+        cashflowData.forEach(row => {
+          accumulatedBalance += row.netBalance;
+          row.accumulatedBalance = accumulatedBalance;
+        });
+        
+        // Renderizar tabela
+        const tbody = document.getElementById('investment-cashflow-tbody');
+        tbody.innerHTML = '';
+        
+        cashflowData.forEach(row => {
+          const tr = document.createElement('tr');
+          
+          const formatCurrency = (value) => {
+            const formatted = Math.abs(value).toLocaleString('pt-BR', {minimumFractionDigits: 2});
+            const sign = value < 0 ? '-' : '';
+            return `${sign}R$ ${formatted}`;
+          };
+          
+          const getValueStyle = (value) => {
+            if (value < 0) return 'color: #ef4444;'; // red
+            if (value > 0) return 'color: #22c55e;'; // green
+            return '';
+          };
+          
+          tr.innerHTML = `
+            <td><strong>${row.period}</strong></td>
+            <td>${formatCurrency(row.capitalGiro)}</td>
+            <td>${formatCurrency(row.imobilizado)}</td>
+            <td><strong>${formatCurrency(row.totalInvestments)}</strong></td>
+            <td style="${getValueStyle(row.funding)}">${formatCurrency(row.funding)}</td>
+            <td style="${getValueStyle(row.netBalance)}"><strong>${formatCurrency(row.netBalance)}</strong></td>
+            <td style="${getValueStyle(row.accumulatedBalance)}; font-weight: 700;"><strong>${formatCurrency(row.accumulatedBalance)}</strong></td>
+          `;
+          
+          tbody.appendChild(tr);
+        });
+        
+      } catch (error) {
+        console.error('âŒ Error rendering investment cashflow:', error);
+      }
+    }
+
+    // Carregar dados ao inicializar
+    loadFundingSources();
+    loadInvestmentData();
+    loadCapitalGiroContributions();
 
     // Close modals on outside click
     document.querySelectorAll('.modal').forEach(modal => {
@@ -1393,3 +2705,6 @@
     });
   </script>
 {% endblock %}
+
+
+

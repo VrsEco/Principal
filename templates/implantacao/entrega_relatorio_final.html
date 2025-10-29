@@ -142,12 +142,157 @@
 
     .section-body {
       margin-top: 26px;
+      display: flex;
+      flex-direction: column;
+      gap: 24px;
+    }
+
+    .narrative-intro {
+      font-size: 16px;
+      color: #1e293b;
+      line-height: 1.8;
+      margin-bottom: 18px;
+    }
+
+    .story-block {
+      background: rgba(148, 163, 184, 0.12);
+      border-radius: 18px;
+      border: 1px solid rgba(148, 163, 184, 0.25);
+      padding: 22px 26px;
+      display: flex;
+      flex-direction: column;
+      gap: 12px;
+    }
+
+    .story-block h4 {
+      margin: 0;
+      font-size: 20px;
+      color: #0f172a;
+    }
+
+    .story-block h5 {
+      margin: 0;
+      font-size: 16px;
+      color: #1e40af;
+      text-transform: uppercase;
+      letter-spacing: 0.08em;
+    }
+
+    .story-block p {
+      margin: 0;
+      font-size: 15px;
+      color: #334155;
+      line-height: 1.7;
+    }
+
+    .story-columns {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+      gap: 18px;
+    }
+
+    .story-list {
+      margin: 6px 0 0 18px;
+      padding: 0;
+      color: #334155;
+    }
+
+    .story-list li {
+      margin-bottom: 6px;
+      line-height: 1.6;
+    }
+
+    .story-note {
+      font-size: 14px;
+      color: #475569;
+      background: rgba(148, 163, 184, 0.2);
+      padding: 12px 16px;
+      border-radius: 12px;
+      line-height: 1.6;
+    }
+
+    .story-table-note {
+      font-size: 13px;
+      color: #64748b;
+      margin-top: 8px;
+    }
+
+    .consultant-opinion-block {
+      background: linear-gradient(135deg, rgba(59, 130, 246, 0.12), rgba(14, 116, 144, 0.12));
+      border: 1px solid rgba(59, 130, 246, 0.35);
+      border-radius: 20px;
+      padding: 26px;
+      display: flex;
+      flex-direction: column;
+      gap: 16px;
+    }
+
+    .consultant-opinion-block h4 {
+      margin: 0;
+      font-size: 22px;
+      color: #0f172a;
+    }
+
+    .consultant-opinion-block p {
+      margin: 0;
+      font-size: 16px;
+      color: #1e293b;
+      line-height: 1.8;
+    }
+
+    .consultant-opinion-block ul {
+      margin: 0 0 0 22px;
+      color: #1e293b;
+      line-height: 1.7;
     }
 
     .model7-grid {
       display: grid;
       grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
       gap: 22px;
+    }
+
+    .result-summary-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+      gap: 16px;
+      margin-top: 16px;
+    }
+
+    .result-card {
+      background: rgba(15, 23, 42, 0.03);
+      border: 1px solid rgba(148, 163, 184, 0.3);
+      border-radius: 16px;
+      padding: 16px;
+      display: flex;
+      flex-direction: column;
+      gap: 6px;
+    }
+
+    .result-card .label {
+      font-size: 12px;
+      letter-spacing: 0.04em;
+      text-transform: uppercase;
+      color: #475569;
+    }
+
+    .result-card .value {
+      font-size: 18px;
+      font-weight: 700;
+      color: #0f172a;
+    }
+
+    .result-card .note {
+      font-size: 12px;
+      color: #64748b;
+    }
+
+    .result-card.positive .value {
+      color: #047857;
+    }
+
+    .result-card.negative .value {
+      color: #dc2626;
     }
 
     .model7-card {
@@ -283,6 +428,28 @@
   </style>
 </head>
 <body>
+{% macro format_currency_br(value) -%}
+  {%- if value is not none -%}
+    {%- set numeric = value|float -%}
+    {%- set sign = '-' if numeric < 0 else '' -%}
+    {%- set absolute = numeric|abs -%}
+    {%- set formatted = '{:,.2f}'.format(absolute).replace(',', '_').replace('.', ',').replace('_', '.') -%}
+    {{ sign }}R$ {{ formatted }}
+  {%- else -%}
+    R$ 0,00
+  {%- endif -%}
+{%- endmacro %}
+
+{% macro format_percent_br(value) -%}
+  {%- if value is not none -%}
+    {%- set numeric = value|float -%}
+    {%- set text = ('%.2f' % numeric).rstrip('0').rstrip('.') -%}
+    {{ text }}%
+  {%- else -%}
+    0%
+  {%- endif -%}
+{%- endmacro %}
+
   <article class="model7-report">
     <!-- Capa -->
     <section class="page portrait cover-page">
@@ -317,52 +484,114 @@
         <h3>Alinhamento estrategico</h3>
       </div>
       <div class="section-body">
-        <div class="model7-grid">
-          {% for socio in alinhamento.socios %}
-            <div class="model7-card">
-              <h4>{{ socio.nome }}</h4>
-              <ul>
-                <li><strong>Papel:</strong> {{ socio.papel }}</li>
-                <li><strong>Motivacao:</strong> {{ socio.motivacao }}</li>
-                <li><strong>Compromisso:</strong> {{ socio.compromisso }}</li>
-                <li><strong>Tolerancia a risco:</strong> {{ socio.risco }}</li>
-              </ul>
-            </div>
-          {% endfor %}
-        </div>
-
-        <div class="subsection" style="margin-top: 28px;">
-          <h4>Agenda do planejamento</h4>
-          <table class="model7-table">
-            <thead>
-              <tr>
-                <th>O que</th>
-                <th>Quem</th>
-                <th>Quando</th>
-                <th>Como</th>
-              </tr>
-            </thead>
-            <tbody>
-              {% for item in alinhamento.agenda %}
-                <tr>
-                  <td>{{ item.oque }}</td>
-                  <td>{{ item.quem }}</td>
-                  <td>{{ item.quando }}</td>
-                  <td>{{ item.como }}</td>
-                </tr>
+        {% set visao = alinhamento.visao %}
+        {% set metas = alinhamento.metas %}
+        {% if visao %}
+          {% if visao is string %}
+            <p class="narrative-intro">
+              Consolidamos a visão compartilhada do negócio em torno de "{{ visao }}", estabelecendo a referência para todas as decisões de implantação.
+            </p>
+          {% elif visao is iterable %}
+            <p class="narrative-intro">
+              A visão compartilhada do negócio foi traduzida nos seguintes elementos centrais:
+            </p>
+            <ul class="story-list">
+              {% for item in visao %}
+                <li>{{ item }}</li>
               {% endfor %}
-            </tbody>
-          </table>
+            </ul>
+          {% else %}
+            <p class="narrative-intro">
+              Consolidamos a visão compartilhada do negócio em torno de {{ visao }}, estabelecendo a referência para todas as decisões de implantação.
+            </p>
+          {% endif %}
+        {% endif %}
+
+        {% if metas %}
+          <div class="story-block">
+            <h4>Metas financeiras priorizadas</h4>
+            {% if metas is string %}
+              <p>{{ metas }}</p>
+            {% elif metas is mapping %}
+              <div class="story-columns">
+                {% for chave, valor in metas.items() %}
+                  <div>
+                    <h5>{{ chave }}</h5>
+                    <p>{{ valor }}</p>
+                  </div>
+                {% endfor %}
+              </div>
+            {% elif metas is iterable %}
+              <ul class="story-list">
+                {% for meta in metas %}
+                  <li>{{ meta }}</li>
+                {% endfor %}
+              </ul>
+            {% else %}
+              <p>{{ metas }}</p>
+            {% endif %}
+          </div>
+        {% endif %}
+
+        <div class="story-block">
+          <h4>Equipe decisora</h4>
+          <div class="story-columns">
+            {% for socio in alinhamento.socios or [] %}
+              <div>
+                <h5>{{ socio.nome }}</h5>
+                <ul class="story-list">
+                  {% if socio.papel %}<li><strong>Papel:</strong> {{ socio.papel }}</li>{% endif %}
+                  {% if socio.motivacao %}<li><strong>Motivacao:</strong> {{ socio.motivacao }}</li>{% endif %}
+                  {% if socio.compromisso %}<li><strong>Compromisso:</strong> {{ socio.compromisso }}</li>{% endif %}
+                  {% if socio.risco %}<li><strong>Tolerancia a risco:</strong> {{ socio.risco }}</li>{% endif %}
+                </ul>
+              </div>
+            {% else %}
+              <p class="story-note">
+                Ainda nao registramos os socios com papel definido nesta etapa. O registro pode ser feito no modulo de alinhamento.
+              </p>
+            {% endfor %}
+          </div>
         </div>
 
-        <div class="highlight-box">
-          <strong>Principios orientadores</strong>
-          <ul style="margin: 12px 0 0 18px;">
-            {% for principio in alinhamento.principios %}
-              <li>{{ principio }}</li>
-            {% endfor %}
-          </ul>
-        </div>
+        {% if alinhamento.principios %}
+          <div class="story-block">
+            <h4>Principios orientadores</h4>
+            <ul class="story-list">
+              {% for principio in alinhamento.principios %}
+                <li>{{ principio }}</li>
+              {% endfor %}
+            </ul>
+          </div>
+        {% endif %}
+
+        {% set agenda = alinhamento.agenda or [] %}
+        {% if agenda %}
+          <div class="story-block">
+            <h4>Agenda de convergencia</h4>
+            <p>A agenda resume os compromissos que sustentam a implantacao e garantem ritmo de execucao.</p>
+            <table class="model7-table">
+              <thead>
+                <tr>
+                  <th>O que</th>
+                  <th>Quem</th>
+                  <th>Quando</th>
+                  <th>Como</th>
+                </tr>
+              </thead>
+              <tbody>
+                {% for item in agenda %}
+                  <tr>
+                    <td>{{ item.oque }}</td>
+                    <td>{{ item.quem }}</td>
+                    <td>{{ item.quando }}</td>
+                    <td>{{ item.como }}</td>
+                  </tr>
+                {% endfor %}
+              </tbody>
+            </table>
+          </div>
+        {% endif %}
       </div>
     </section>
 
@@ -410,6 +639,119 @@
                 </ul>
               </div>
             </div>
+
+            {% if segmento.produtos %}
+              <div style="margin-top: 20px;">
+                <h5 style="font-size: 16px; font-weight: 600; margin-bottom: 12px;">Portfolio de produtos</h5>
+                <table class="model7-table" style="font-size: 12.5px;">
+                  <thead>
+                    <tr>
+                      <th>Produto</th>
+                      <th>Preco de venda</th>
+                      <th>Custos variaveis</th>
+                      <th>Despesas variaveis</th>
+                      <th>Margem contrib. unit.</th>
+                      <th>Mercado</th>
+                      <th>Meta market share</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {% for produto in segmento.produtos %}
+                      <tr>
+                        <td style="min-width: 140px;">
+                          <div style="font-weight: 600; color: #0f172a;">{{ produto.nome }}</div>
+                          {% if produto.observacoes %}
+                            <div style="font-size: 12px; color: #64748b; margin-top: 4px;">{{ produto.observacoes }}</div>
+                          {% endif %}
+                        </td>
+                        <td>
+                          <div><strong>Valor:</strong> {{ produto.preco_venda.valor_formatado or '-' }}</div>
+                          {% if produto.preco_venda.observacoes %}
+                            <div style="font-size: 12px; color: #64748b; margin-top: 4px;">{{ produto.preco_venda.observacoes }}</div>
+                          {% endif %}
+                        </td>
+                        <td>
+                          <div><strong>%:</strong> {{ produto.custos_variaveis.percentual_formatado or '-' }}</div>
+                          <div><strong>Unit.:</strong> {{ produto.custos_variaveis.valor_formatado or '-' }}</div>
+                          {% if produto.custos_variaveis.total_mensal_formatado %}
+                            <div><strong>Mensal:</strong> {{ produto.custos_variaveis.total_mensal_formatado }}</div>
+                          {% endif %}
+                          {% if produto.custos_variaveis.observacoes %}
+                            <div style="font-size: 12px; color: #64748b; margin-top: 4px;">{{ produto.custos_variaveis.observacoes }}</div>
+                          {% endif %}
+                        </td>
+                        <td>
+                          <div><strong>%:</strong> {{ produto.despesas_variaveis.percentual_formatado or '-' }}</div>
+                          <div><strong>Unit.:</strong> {{ produto.despesas_variaveis.valor_formatado or '-' }}</div>
+                          {% if produto.despesas_variaveis.total_mensal_formatado %}
+                            <div><strong>Mensal:</strong> {{ produto.despesas_variaveis.total_mensal_formatado }}</div>
+                          {% endif %}
+                          {% if produto.despesas_variaveis.observacoes %}
+                            <div style="font-size: 12px; color: #64748b; margin-top: 4px;">{{ produto.despesas_variaveis.observacoes }}</div>
+                          {% endif %}
+                        </td>
+                        <td>
+                          <div><strong>%:</strong> {{ produto.margem_contribuicao.percentual_formatado or '-' }}</div>
+                          <div><strong>Unit.:</strong> {{ produto.margem_contribuicao.valor_formatado or '-' }}</div>
+                          {% if produto.margem_contribuicao.total_mensal_formatado %}
+                            <div><strong>Mensal:</strong> {{ produto.margem_contribuicao.total_mensal_formatado }}</div>
+                          {% endif %}
+                          {% if produto.margem_contribuicao.observacoes %}
+                            <div style="font-size: 12px; color: #64748b; margin-top: 4px;">{{ produto.margem_contribuicao.observacoes }}</div>
+                          {% endif %}
+                        </td>
+                        <td>
+                          <div><strong>Unid./mês:</strong> {{ produto.mercado.unidades_mensais_formatado or '-' }}</div>
+                          <div><strong>Faturamento:</strong> {{ produto.mercado.faturamento_mensal_formatado or '-' }}</div>
+                          {% if produto.mercado.observacoes %}
+                            <div style="font-size: 12px; color: #64748b; margin-top: 4px;">{{ produto.mercado.observacoes }}</div>
+                          {% endif %}
+                        </td>
+                        <td>
+                          <div><strong>Unid./mês:</strong> {{ produto.meta_market_share.unidades_mensais_formatado or '-' }}</div>
+                          <div><strong>%:</strong> {{ produto.meta_market_share.percentual_formatado or '-' }}</div>
+                          {% if produto.meta_market_share.observacoes %}
+                            <div style="font-size: 12px; color: #64748b; margin-top: 4px;">{{ produto.meta_market_share.observacoes }}</div>
+                          {% endif %}
+                        </td>
+                      </tr>
+                    {% endfor %}
+                  </tbody>
+                </table>
+              </div>
+            {% endif %}
+
+            {% set totais = segmento.produtos_totais %}
+            {% if totais.produtos_registrados %}
+              <div class="highlight-box" style="margin-top: 18px;">
+                <strong>Totais consolidados</strong>
+                <ul style="margin: 12px 0 0 18px;">
+                  <li>Produtos cadastrados: {{ totais.produtos_registrados }}</li>
+                  {% if totais.faturamento_mensal.valor_formatado %}
+                    <li>Faturamento mensal estimado: {{ totais.faturamento_mensal.valor_formatado }}</li>
+                  {% endif %}
+                  {% if totais.unidades_mensais.valor_formatado %}
+                    <li>Unidades mensais estimadas: {{ totais.unidades_mensais.valor_formatado }}</li>
+                  {% endif %}
+                  {% set custos = totais.custos_variaveis %}
+                  {% if custos.valor_formatado or custos.percentual_formatado %}
+                    <li>Custos variaveis: {% if custos.percentual_formatado %}{{ custos.percentual_formatado }}{% endif %}{% if custos.valor_formatado %}{% if custos.percentual_formatado %} | {% endif %}{{ custos.valor_formatado }}{% endif %}</li>
+                  {% endif %}
+                  {% set despesas = totais.despesas_variaveis %}
+                  {% if despesas.valor_formatado or despesas.percentual_formatado %}
+                    <li>Despesas variaveis: {% if despesas.percentual_formatado %}{{ despesas.percentual_formatado }}{% endif %}{% if despesas.valor_formatado %}{% if despesas.percentual_formatado %} | {% endif %}{{ despesas.valor_formatado }}{% endif %}</li>
+                  {% endif %}
+                  {% set margem = totais.margem_contribuicao %}
+                  {% if margem.valor_formatado or margem.percentual_formatado %}
+                    <li>Margem de contribuicao total: {% if margem.percentual_formatado %}{{ margem.percentual_formatado }}{% endif %}{% if margem.valor_formatado %}{% if margem.percentual_formatado %} | {% endif %}{{ margem.valor_formatado }}{% endif %}</li>
+                  {% endif %}
+                  {% set share = totais.meta_market_share %}
+                  {% if share.unidades_mensais.valor_formatado or share.percentual_formatado %}
+                    <li>Meta de market share: {% if share.unidades_mensais.valor_formatado %}{{ share.unidades_mensais.valor_formatado }} un{% endif %}{% if share.percentual_formatado %}{% if share.unidades_mensais.valor_formatado %} | {% endif %}{{ share.percentual_formatado }}{% endif %}</li>
+                  {% endif %}
+                </ul>
+              </div>
+            {% endif %}
           </div>
         {% endfor %}
       </div>
@@ -426,6 +768,12 @@
           {% for area in estruturas %}
             <div class="model7-card">
               <h4>{{ area.area }}</h4>
+              {% if area.capacidade_formatada or area.capacidade %}
+                <p style="font-size:13px; color:#1d4ed8; margin: 0 0 8px;">
+                  Capacidade suportada: {{ area.capacidade_formatada or area.capacidade }}
+                  {% if area.capacidade_observacoes %}<br><span style="color:#64748b;">{{ area.capacidade_observacoes }}</span>{% endif %}
+                </p>
+              {% endif %}
               <ul>
                 {% for bloco in area.resumo %}
                   <li>
@@ -494,6 +842,130 @@
               {% endfor %}
             </ul>
           </div>
+        </div>
+
+        <div class="subsection">
+          <h4>Capacidade operacional suportada</h4>
+          <table class="model7-table">
+            <thead>
+              <tr>
+                <th>Area</th>
+                <th>Faturamento suportado</th>
+                <th>Observacoes</th>
+              </tr>
+            </thead>
+            <tbody>
+              {% if financeiro.capacidades %}
+                {% for item in financeiro.capacidades %}
+                  <tr>
+                    <td>{{ item.area }}</td>
+                    <td>{{ item.valor_formatado or item.valor or '-' }}</td>
+                    <td>{{ item.observacoes or '-' }}</td>
+                  </tr>
+                {% endfor %}
+              {% else %}
+                <tr>
+                  <td colspan="3">Nenhuma capacidade registrada</td>
+                </tr>
+              {% endif %}
+            </tbody>
+          </table>
+
+          <div class="highlight-box" style="margin-top: 16px;">
+            <strong>Resumo</strong>
+            <ul style="margin: 12px 0 0 18px;">
+              <li>Total suportado: {{ financeiro.resumo_capacidades.total_formatado or '-' }}</li>
+              <li>Gargalo: {% if financeiro.resumo_capacidades.gargalo_valor_formatado %}{{ financeiro.resumo_capacidades.gargalo_valor_formatado }}{% if financeiro.resumo_capacidades.gargalo_area %} ({{ financeiro.resumo_capacidades.gargalo_area }}){% endif %}{% else %}-{% endif %}</li>
+            </ul>
+          </div>
+        </div>
+
+        <div class="subsection">
+          <h4>Resultados</h4>
+          {% set fluxo_financeiro = financeiro.fluxo_financeiro or {} %}
+          {% set sections = fluxo_financeiro.sections or [] %}
+          {% set negocio_section = (sections | selectattr('slug', 'equalto', 'negocio') | list | first) %}
+          {% set negocio_linhas = negocio_section.linhas if negocio_section else [] %}
+          {% if negocio_linhas %}
+            {% set linha_receita = (negocio_linhas | selectattr('slug', 'equalto', 'receita') | list | first) %}
+            {% set linha_custos_variaveis = (negocio_linhas | selectattr('slug', 'equalto', 'custos_variaveis') | list | first) %}
+            {% set linha_despesas_variaveis = (negocio_linhas | selectattr('slug', 'equalto', 'despesas_variaveis') | list | first) %}
+            {% set linha_margem = (negocio_linhas | selectattr('slug', 'equalto', 'margem_contribuicao') | list | first) %}
+            {% set linha_custos_fixos = (negocio_linhas | selectattr('slug', 'equalto', 'custos_fixos') | list | first) %}
+            {% set linha_despesas_fixas = (negocio_linhas | selectattr('slug', 'equalto', 'despesas_fixas') | list | first) %}
+            {% set linha_resultado_operacional = (negocio_linhas | selectattr('slug', 'equalto', 'resultado_operacional') | list | first) %}
+            {% set linha_destinacao = (negocio_linhas | selectattr('slug', 'equalto', 'destinacao') | list | first) %}
+            {% set linha_resultado_periodo = (negocio_linhas | selectattr('slug', 'equalto', 'resultado_periodo') | list | first) %}
+            {% set resultado_operacional_decimal = linha_resultado_operacional.total_decimal if linha_resultado_operacional and linha_resultado_operacional.total_decimal is not none else 0 %}
+            {% set distrib_raw = (financeiro.fluxo_negocio.distribuicao_lucros.percentual or '').strip() %}
+            {% set distrib_clean = distrib_raw|replace('%', '')|replace(',', '.') %}
+            {% set distrib_percent = distrib_clean|float if distrib_clean else 0 %}
+            {% set distrib_valor = resultado_operacional_decimal * distrib_percent / 100 %}
+            {% set outras_regras = financeiro.fluxo_negocio.destinacao_regras or [] %}
+            {% set outros = namespace(percent=0.0) %}
+            {% for regra in outras_regras %}
+              {% set regra_raw = (regra.percentual or '').strip() %}
+              {% set regra_clean = regra_raw|replace('%', '')|replace(',', '.') %}
+              {% if regra_clean %}
+                {% set outros.percent = outros.percent + (regra_clean|float) %}
+              {% endif %}
+            {% endfor %}
+            {% set outros_percent = outros.percent %}
+            {% set outros_valor = resultado_operacional_decimal * outros_percent / 100 %}
+            {% set destinacao_total_decimal = linha_destinacao.total_decimal if linha_destinacao and linha_destinacao.total_decimal is not none else (distrib_valor + outros_valor) %}
+            {% set resultado_periodo_decimal = linha_resultado_periodo.total_decimal if linha_resultado_periodo and linha_resultado_periodo.total_decimal is not none else (resultado_operacional_decimal - destinacao_total_decimal) %}
+            {% set resultado_final_class = 'positive' if resultado_periodo_decimal >= 0 else 'negative' %}
+            <div class="result-summary-grid">
+              <div class="result-card">
+                <span class="label">Faturamento total</span>
+                <span class="value">{{ linha_receita.total if linha_receita else 'R$ 0,00' }}</span>
+                <span class="note">Soma dos períodos planejados</span>
+              </div>
+              <div class="result-card">
+                <span class="label">Custos variáveis</span>
+                <span class="value">{{ linha_custos_variaveis.total if linha_custos_variaveis else 'R$ 0,00' }}</span>
+              </div>
+              <div class="result-card">
+                <span class="label">Despesas variáveis</span>
+                <span class="value">{{ linha_despesas_variaveis.total if linha_despesas_variaveis else 'R$ 0,00' }}</span>
+              </div>
+              <div class="result-card">
+                <span class="label">Margem de contribuição</span>
+                <span class="value">{{ linha_margem.total if linha_margem else 'R$ 0,00' }}</span>
+              </div>
+            </div>
+            <div class="result-summary-grid">
+              <div class="result-card">
+                <span class="label">Custos fixos</span>
+                <span class="value">{{ linha_custos_fixos.total if linha_custos_fixos else 'R$ 0,00' }}</span>
+              </div>
+              <div class="result-card">
+                <span class="label">Despesas fixas</span>
+                <span class="value">{{ linha_despesas_fixas.total if linha_despesas_fixas else 'R$ 0,00' }}</span>
+              </div>
+              <div class="result-card">
+                <span class="label">Resultado operacional</span>
+                <span class="value">{{ linha_resultado_operacional.total if linha_resultado_operacional else 'R$ 0,00' }}</span>
+              </div>
+              <div class="result-card">
+                <span class="label">Destinações de resultados</span>
+                <span class="value">{{ format_currency_br(destinacao_total_decimal) }}</span>
+                <span class="note">
+                  Distribuição: {{ format_percent_br(distrib_percent) }}
+                  {% if outros_percent %}
+                    • Outras: {{ format_percent_br(outros_percent) }}
+                  {% endif %}
+                </span>
+              </div>
+              <div class="result-card {{ resultado_final_class }}">
+                <span class="label">Resultado final após destinações</span>
+                <span class="value">{{ format_currency_br(resultado_periodo_decimal) }}</span>
+                <span class="note">Resultado operacional - destinações</span>
+              </div>
+            </div>
+          {% else %}
+            <p style="margin: 12px 0 0; color: #64748b;">Sem dados de resultados cadastrados.</p>
+          {% endif %}
         </div>
 
         <div class="subsection">
@@ -601,8 +1073,10 @@
             <strong>Analises</strong>
             <ul style="margin:12px 0 0 18px;">
               {% set analises = financeiro.fluxo_investidor.analises or {} %}
+              {% set tir_label = analises.tir_label or ('TIR ' ~ (analises.tir_horizon_years or 5) ~ ' anos') %}
               <li>Payback: {{ analises.payback | default('-', true) }}</li>
-              <li>TIR 5 anos: {{ analises.tir | default('-', true) }}</li>
+              <li>Custo de oportunidade: {{ analises.opportunity_cost | default('1%', true) }}</li>
+              <li>{{ tir_label }}: {{ analises.tir | default('-', true) }}</li>
             </ul>
           </div>
         </div>

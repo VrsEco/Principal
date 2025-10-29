@@ -6,6 +6,7 @@ SQLite está DESATIVADO para forçar uso do PostgreSQL
 
 from .base import DatabaseInterface
 from .sqlite_db import SQLiteDatabase  # Mantido apenas para compatibilidade histórica
+from .postgresql_db import PostgreSQLDatabase  # Importar no topo para evitar problemas de cache
 
 def get_database(db_type='postgresql', **kwargs):  # ⚠️ Padrão mudou para PostgreSQL
     """
@@ -40,7 +41,6 @@ def get_database(db_type='postgresql', **kwargs):  # ⚠️ Padrão mudou para P
             "  instance/pevapp22.db.DESATIVADO (renomeie para .db temporariamente)\n"
         )
     elif db_type == 'postgresql':
-        from .postgresql_db import PostgreSQLDatabase
         return PostgreSQLDatabase(**kwargs)
     else:
         raise ValueError(

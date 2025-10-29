@@ -29,9 +29,35 @@ from werkzeug.utils import secure_filename
 from database.sqlite_db import ensure_integrations_tables, list_integrations, get_integration, create_integration, update_integration, delete_integration, set_agent_integrations, get_agent_integrations
 from utils.project_activity_utils import normalize_project_activities
 
+try:
+    from celery import Celery
+except ImportError:
+    Celery = None
+
 # Initialize Flask app
 app = Flask(__name__, template_folder="templates", static_folder="static")
 app.secret_key = 'dev-secret-key-change-in-production'
+
+def make_celery(flask_app):
+    """Create Celery instance bound to the Flask app context."""
+    if Celery is None:
+        raise RuntimeError("Celery dependency is not installed.")
+
+    broker_url = flask_app.config.get('CELERY_BROKER_URL')
+    result_backend = flask_app.config.get('CELERY_RESULT_BACKEND')
+
+    celery_app = Celery(flask_app.import_name, broker=broker_url, backend=result_backend)
+    celery_app.conf.update(flask_app.config)
+
+    class FlaskContextTask(celery_app.Task):
+        abstract = True
+
+        def __call__(self, *args, **kwargs):
+            with flask_app.app_context():
+                return super().__call__(*args, **kwargs)
+
+    celery_app.Task = FlaskContextTask
+    return celery_app
 
 # Configure encoding for proper UTF-8 handling
 app.config['JSON_AS_ASCII'] = False
@@ -75,6 +101,17 @@ def from_json_filter(json_string):
 
 # Load configuration
 app.config.from_object(Config)
+
+if Celery is not None:
+    try:
+        celery = make_celery(app)
+        print("Celery inicializado com sucesso.")
+    except Exception as celery_init_error:
+        print(f"Aviso: Celery não pôde ser inicializado: {celery_init_error}")
+        celery = Celery(app.import_name, broker="memory://", backend="cache+memory://")
+        celery.conf.update(task_always_eager=True)
+else:
+    celery = None
 
 # Initialize Flask-Login
 from flask_login import LoginManager
@@ -744,17 +781,20 @@ def login():
             }), 500
 
 @app.route("/main")
+@login_required
 def main():
     """Ecossistema Versus - Página principal"""
     return render_template("ecosystem.html")
 
 
 @app.route("/integrations")
+@login_required
 def integrations():
     """Página de Integrações e Serviços"""
     return render_template("integrations.html")
 
 @app.route("/configs")
+@login_required
 def system_configs():
     """Página de Configurações do Sistema"""
     return render_template("configurations.html")
@@ -809,6 +849,7 @@ def system_configs_audit():
     return render_template('configs_system_audit.html')
 
 @app.route("/configs/ai")
+@login_required
 def system_configs_ai():
     """Central de Inteligência Artificial dentro das configurações"""
     db = get_db()
@@ -854,6 +895,7 @@ def system_configs_ai():
 # ========================================
 
 @app.route("/settings/reports")
+@login_required
 def settings_reports():
     """Página de configurações de relatórios"""
     try:
@@ -946,6 +988,7 @@ def settings_reports():
 # ========================================
 
 @app.route("/api/reports/preview", methods=['POST'])
+@login_required
 def api_report_preview():
     """Gera preview de relatório com base no modelo e dados fictícios"""
     try:
@@ -970,6 +1013,7 @@ def api_report_preview():
         }), 500
 
 @app.route("/api/reports/generate", methods=['POST'])
+@login_required
 def api_report_generate():
     """Gera PDF do relatório com base no modelo e dados fictícios"""
     try:
@@ -998,6 +1042,7 @@ def api_report_generate():
         }), 500
 
 @app.route("/api/reports/download/<filename>")
+@login_required
 def api_report_download(filename):
     """Download de arquivo de relatório gerado"""
     try:
@@ -1007,6 +1052,7 @@ def api_report_download(filename):
         abort(404)
 
 @app.route("/api/reports/models", methods=['POST'])
+@login_required
 def api_save_report_model():
     """Salva um novo modelo de relatório"""
     try:
@@ -1028,6 +1074,7 @@ def api_save_report_model():
         }), 500
 
 @app.route("/api/reports/models/<int:model_id>", methods=['GET'])
+@login_required
 def api_get_report_model(model_id):
     """Busca um modelo de relatório pelo ID"""
     try:
@@ -1081,6 +1128,7 @@ def api_get_report_model(model_id):
         }), 500
 
 @app.route("/api/reports/models/<int:model_id>", methods=['PUT'])
+@login_required
 def api_update_report_model(model_id):
     """Atualiza um modelo de relatório existente"""
     try:
@@ -1109,6 +1157,7 @@ def api_update_report_model(model_id):
         }), 500
 
 @app.route("/api/reports/models/<int:model_id>/conflicts", methods=['GET'])
+@login_required
 def api_check_model_conflicts(model_id):
     """Verifica conflitos de um modelo (relatórios associados)"""
     try:
@@ -1129,6 +1178,7 @@ def api_check_model_conflicts(model_id):
         }), 500
 
 @app.route("/api/reports/models/<int:model_id>", methods=['DELETE'])
+@login_required
 def api_delete_report_model(model_id):
     """Exclui um modelo de relatório"""
     try:
@@ -1157,12 +1207,14 @@ def api_delete_report_model(model_id):
 # ============================================================================
 
 @app.route("/report-templates")
+@login_required
 def report_templates_manager():
     """Página de gerenciamento de templates de relatórios"""
     return render_template('report_templates_manager.html')
 
 
 @app.route("/api/report-templates", methods=['GET'])
+@login_required
 def api_get_report_templates():
     """Lista todos os templates de relatórios"""
     try:
@@ -1180,6 +1232,7 @@ def api_get_report_templates():
 
 
 @app.route("/api/report-templates", methods=['POST'])
+@login_required
 def api_create_report_template():
     """Cria um novo template de relatório"""
     try:
@@ -1217,6 +1270,7 @@ def api_create_report_template():
 
 
 @app.route("/api/report-templates/<int:template_id>", methods=['GET'])
+@login_required
 def api_get_report_template(template_id):
     """Busca um template específico"""
     try:
@@ -1237,6 +1291,7 @@ def api_get_report_template(template_id):
 
 
 @app.route("/api/report-templates/<int:template_id>", methods=['PUT'])
+@login_required
 def api_update_report_template(template_id):
     """Atualiza um template existente"""
     try:
@@ -1265,6 +1320,7 @@ def api_update_report_template(template_id):
 
 
 @app.route("/api/report-templates/<int:template_id>", methods=['DELETE'])
+@login_required
 def api_delete_report_template(template_id):
     """Exclui um template"""
     try:
@@ -1289,6 +1345,7 @@ def api_delete_report_template(template_id):
 
 
 @app.route("/api/report-templates/<int:template_id>/generate", methods=['POST'])
+@login_required
 def api_generate_report_from_template(template_id):
     """Gera um relatório usando um template específico"""
     try:
@@ -1323,6 +1380,7 @@ def api_generate_report_from_template(template_id):
 
 
 @app.route("/api/report-templates/by-type/<report_type>", methods=['GET'])
+@login_required
 def api_get_templates_by_type(report_type):
     """Lista templates por tipo de relatório"""
     try:
@@ -1340,6 +1398,7 @@ def api_get_templates_by_type(report_type):
 
 
 @app.route("/api/reports/models", methods=['GET'])
+@login_required
 def api_get_report_models():
     """Lista todas as configurações de página"""
     try:
@@ -1357,17 +1416,20 @@ def api_get_report_models():
 
 
 @app.route("/companies")
+@login_required
 def companies_page():
     """Lista de empresas"""
     companies = db.get_companies()
     return render_template("companies.html", companies=companies)
 
 @app.route("/companies/new")
+@login_required
 def companies_new():
     """Formulário de nova empresa"""
     return render_template("company_form.html", form_mode='create', company_data=None)
 
 @app.route("/companies/<int:company_id>")
+@login_required
 def company_details(company_id: int):
     """Página de detalhes e gerenciamento completo da empresa com abas"""
     company_data = db.get_company(company_id)
@@ -1376,6 +1438,7 @@ def company_details(company_id: int):
     return render_template("company_details.html", company=company_data)
 
 @app.route("/companies/<int:company_id>/edit")
+@login_required
 def companies_edit(company_id: int):
     """Formulário de editar empresa (mantido para compatibilidade)"""
     company_data = db.get_company(company_id)
@@ -1384,6 +1447,7 @@ def companies_edit(company_id: int):
     return render_template("company_form.html", form_mode='edit', company_data=company_data)
 
 @app.route("/companies/<int:company_id>/logos")
+@login_required
 def company_logos_manager(company_id: int):
     """Página de gerenciamento de logos da empresa"""
     from utils.logo_processor import get_all_logo_configs
@@ -1401,6 +1465,7 @@ def company_logos_manager(company_id: int):
     )
 
 @app.route("/api/companies/<int:company_id>/logos", methods=['POST'])
+@login_required
 def api_upload_company_logo(company_id: int):
     """Upload de logo da empresa"""
     from utils.logo_processor import resize_and_save_logo, init_logo_folders
@@ -1450,6 +1515,7 @@ def api_upload_company_logo(company_id: int):
         return jsonify({'success': False, 'error': 'Erro ao processar logo'}), 500
 
 @app.route("/api/companies/<int:company_id>/logos/<logo_type>", methods=['DELETE'])
+@login_required
 def api_delete_company_logo(company_id: int, logo_type: str):
     """Deletar logo da empresa"""
     from utils.logo_processor import delete_logo
@@ -1486,12 +1552,14 @@ def api_delete_company_logo(company_id: int, logo_type: str):
         return jsonify({'success': False, 'error': 'Erro ao deletar logo'}), 500
 
 @app.route("/dashboard")
+@login_required
 def dashboard():
     # Preserve legacy route: redirect to PEV module dashboard
     return redirect("/pev/dashboard")
 
 
 @app.route("/api/plans/<int:plan_id>/company-data", methods=['GET'])
+@login_required
 def api_get_company_data(plan_id: int):
     """Return minimal company data (mission, vision, values) for a plan"""
     try:
@@ -1510,6 +1578,7 @@ def api_get_company_data(plan_id: int):
 
 
 @app.route("/api/plans/<int:plan_id>/company-data", methods=['POST'])
+@login_required
 def api_update_company_data(plan_id: int):
     """Update company data fields (mission, vision, values)"""
     try:
@@ -1528,6 +1597,7 @@ def api_update_company_data(plan_id: int):
 
 
 @app.route("/api/companies/<int:company_id>/mvv", methods=['GET'])
+@login_required
 def api_get_company_mvv(company_id: int):
     try:
         company = db.get_company(company_id)
@@ -1543,6 +1613,7 @@ def api_get_company_mvv(company_id: int):
 
 
 @app.route("/api/companies/<int:company_id>/mvv", methods=['POST'])
+@login_required
 def api_update_company_mvv(company_id: int):
     try:
         payload = request.get_json(silent=True) or {}
@@ -1554,6 +1625,7 @@ def api_update_company_mvv(company_id: int):
         return jsonify({'success': False, 'error': str(_err)}), 500
 
 @app.route("/api/companies/<int:company_id>/economic", methods=['POST'])
+@login_required
 def api_update_company_economic(company_id: int):
     """Update company economic data"""
     try:
@@ -1595,6 +1667,7 @@ def api_update_company_economic(company_id: int):
 
 
 @app.route("/api/companies", methods=['POST'])
+@login_required
 def api_create_company():
     """Create new company"""
     try:
@@ -1786,6 +1859,7 @@ def api_create_plan():
 
 
 @app.route("/api/plans/<int:plan_id>", methods=['GET'])
+@login_required
 def api_get_plan(plan_id: int):
     """Get plan basic information including company_id"""
     try:
@@ -1830,6 +1904,7 @@ def api_get_plan(plan_id: int):
 
 
 @app.route("/api/companies/<int:company_id>", methods=['GET'])
+@login_required
 def api_get_company_profile(company_id: int):
     try:
         profile = db.get_company_profile(company_id)
@@ -1841,6 +1916,7 @@ def api_get_company_profile(company_id: int):
 
 
 @app.route("/api/companies/<int:company_id>", methods=['POST'])
+@login_required
 def api_update_company_profile(company_id: int):
     """Update company basic information"""
     try:
@@ -1880,6 +1956,7 @@ def api_update_company_profile(company_id: int):
 
 
 @app.route("/api/companies/<int:company_id>", methods=['DELETE'])
+@login_required
 def api_delete_company(company_id: int):
     """Delete company"""
     try:
@@ -1985,6 +2062,7 @@ def api_gerar_relatorio_projetos(company_id: int):
 
 
 @app.route("/api/companies/<int:company_id>/employees", methods=['GET', 'POST'])
+@login_required
 def api_company_employees(company_id: int):
     """List or create employees for a company"""
     if request.method == 'GET':
@@ -2010,6 +2088,7 @@ def api_company_employees(company_id: int):
 
 
 @app.route("/api/companies/<int:company_id>/employees/<int:employee_id>", methods=['PUT', 'DELETE'])
+@login_required
 def api_company_employee(company_id: int, employee_id: int):
     """Update or delete an employee"""
     if request.method == 'DELETE':
@@ -2038,6 +2117,7 @@ def api_company_employee(company_id: int, employee_id: int):
 
 
 @app.route("/api/companies/<int:company_id>/workforce-analysis", methods=['GET'])
+@login_required
 def api_workforce_analysis(company_id: int):
     """Get workforce analysis - hours used and capacity for all employees"""
     try:
@@ -10391,6 +10471,32 @@ def api_plan_projects(plan_id: int):
 # ========================================
 # Agora usando blueprint: modules.my_work
 # Acesse: /my-work/
+
+# ========================================
+# Health Check Endpoint
+# ========================================
+@app.route('/health', methods=['GET'])
+def health_check():
+    """
+    Health check endpoint for Docker health monitoring
+    Returns 200 OK if application is running and database is accessible
+    """
+    try:
+        # Verificar conexão com banco de dados
+        with models_db.engine.connect() as conn:
+            conn.execute(models_db.text('SELECT 1'))
+        
+        return jsonify({
+            'status': 'healthy',
+            'database': 'connected',
+            'application': 'running'
+        }), 200
+    except Exception as e:
+        return jsonify({
+            'status': 'unhealthy',
+            'error': str(e),
+            'database': 'disconnected'
+        }), 503
 
 
 if __name__ == "__main__":

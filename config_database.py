@@ -72,9 +72,21 @@ class DatabaseConfig:
 # Global database configuration
 db_config = DatabaseConfig()
 
+_DB_INITIALIZED = False
+
 def get_db():
     """Get database instance"""
-    return db_config.get_database_instance()
+    global _DB_INITIALIZED
+    db_instance = db_config.get_database_instance()
+    if not _DB_INITIALIZED:
+        init_fn = getattr(db_instance, "init_database", None)
+        if callable(init_fn):
+            try:
+                init_fn()
+                _DB_INITIALIZED = True
+            except Exception as exc:
+                print(f"[DB INIT] Aviso: falha ao executar init_database(): {exc}")
+    return db_instance
 
 def switch_database(db_type: str, **kwargs):
     """Switch database type"""

@@ -113,6 +113,18 @@ class SQLiteDatabase(DatabaseInterface):
     def delete_plan_structure_installments(self, structure_id: int) -> bool:
         self._raise_implantation_disabled()
 
+    def list_plan_structure_capacities(self, plan_id: int):
+        self._raise_implantation_disabled()
+
+    def create_plan_structure_capacity(self, plan_id: int, data):
+        self._raise_implantation_disabled()
+
+    def update_plan_structure_capacity(self, capacity_id: int, plan_id: int, data):
+        self._raise_implantation_disabled()
+
+    def delete_plan_structure_capacity(self, capacity_id: int, plan_id: int):
+        self._raise_implantation_disabled()
+
     def list_plan_finance_premises(self, plan_id: int):
         self._raise_implantation_disabled()
 
@@ -5130,6 +5142,118 @@ class SQLiteDatabase(DatabaseInterface):
             return True
         except Exception as e:
             print(f"Error deleting directional record: {e}")
+            return False
+
+    # Investment contributions operations (new structure)
+    def get_plan_investment_categories(self, plan_id: int) -> List[Dict[str, Any]]:
+        """Get investment categories (Capital de Giro, Imobilizado)"""
+        # TODO: Implementar quando houver tabela de categorias de investimento
+        return []
+
+    def get_plan_investment_items(self, category_id: int) -> List[Dict[str, Any]]:
+        """Get investment items for a category"""
+        # TODO: Implementar quando houver tabela de itens de investimento
+        return []
+
+    def list_plan_investment_contributions(self, item_id: int) -> List[Dict[str, Any]]:
+        """List investment contributions for an item"""
+        # TODO: Implementar quando houver tabela de contribuições de investimento
+        return []
+
+    def create_plan_investment_contribution(self, item_id: int, data: Dict[str, Any]) -> int:
+        """Create an investment contribution (aporte)"""
+        # TODO: Implementar quando houver tabela de contribuições de investimento
+        return 0
+
+    def update_plan_investment_contribution(self, contribution_id: int, data: Dict[str, Any]) -> bool:
+        """Update an investment contribution"""
+        # TODO: Implementar quando houver tabela de contribuições de investimento
+        return True
+
+    def delete_plan_investment_contribution(self, contribution_id: int) -> bool:
+        """Delete an investment contribution"""
+        # TODO: Implementar quando houver tabela de contribuições de investimento
+        return True
+
+    def list_plan_funding_sources(self, plan_id: int) -> List[Dict[str, Any]]:
+        """List funding sources (Fornecedores, Empréstimos, Sócios)"""
+        try:
+            conn = self._get_connection()
+            cursor = conn.cursor()
+            cursor.execute('''
+                SELECT id, plan_id, source_type, source_name, amount, notes, created_at
+                FROM plan_finance_sources
+                WHERE plan_id = ?
+                ORDER BY created_at DESC
+            ''', (plan_id,))
+            rows = cursor.fetchall()
+            conn.close()
+            return [dict(row) for row in rows]
+        except Exception as e:
+            print(f"Error listing funding sources: {e}")
+            return []
+
+    def create_plan_funding_source(self, plan_id: int, data: Dict[str, Any]) -> int:
+        """Create a funding source"""
+        try:
+            conn = self._get_connection()
+            cursor = conn.cursor()
+            cursor.execute('''
+                INSERT INTO plan_finance_sources (plan_id, source_type, source_name, amount, notes, created_at)
+                VALUES (?, ?, ?, ?, ?, CURRENT_TIMESTAMP)
+            ''', (
+                plan_id,
+                data.get('source_type', ''),
+                data.get('source_name', ''),
+                data.get('amount', 0),
+                data.get('notes', '')
+            ))
+            new_id = cursor.lastrowid
+            conn.commit()
+            conn.close()
+            return new_id
+        except Exception as e:
+            print(f"Error creating funding source: {e}")
+            return 0
+
+    def update_plan_funding_source(self, source_id: int, plan_id: int, data: Dict[str, Any]) -> bool:
+        """Update a funding source"""
+        try:
+            conn = self._get_connection()
+            cursor = conn.cursor()
+            cursor.execute('''
+                UPDATE plan_finance_sources
+                SET source_type = ?, source_name = ?, amount = ?, notes = ?
+                WHERE id = ? AND plan_id = ?
+            ''', (
+                data.get('source_type', ''),
+                data.get('source_name', ''),
+                data.get('amount', 0),
+                data.get('notes', ''),
+                source_id,
+                plan_id
+            ))
+            conn.commit()
+            conn.close()
+            return True
+        except Exception as e:
+            print(f"Error updating funding source: {e}")
+            return False
+
+    def delete_plan_funding_source(self, source_id: int, plan_id: int) -> bool:
+        """Delete a funding source"""
+        try:
+            conn = self._get_connection()
+            cursor = conn.cursor()
+            cursor.execute('''
+                DELETE FROM plan_finance_sources
+                WHERE id = ? AND plan_id = ?
+            ''', (source_id, plan_id))
+            conn.commit()
+            conn.close()
+            return True
+        except Exception as e:
+            print(f"Error deleting funding source: {e}")
             return False
 
     # AI Agents configuration operations

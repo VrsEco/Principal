@@ -22,5 +22,6 @@ def init_app(app):
     from . import driver_topic, okr_global
     from . import okr_area, project, ai_agent, user_log
     from . import team, activity_work_log, activity_comment
+    from . import product
     
     return db, login_manager, migrate

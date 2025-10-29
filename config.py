@@ -13,7 +13,13 @@ class Config:
     
     # Authentication
     LOGIN_DISABLED = os.environ.get('LOGIN_DISABLED', 'False').lower() == 'true'
-    REMEMBER_COOKIE_DURATION = timedelta(days=30)
+    REMEMBER_COOKIE_DURATION = timedelta(days=7)  # Reduzido de 30 para 7 dias por segurança
+    
+    # Session Configuration (Segurança)
+    SESSION_COOKIE_SECURE = os.environ.get('SESSION_COOKIE_SECURE', 'False').lower() == 'true'  # True em produção com HTTPS
+    SESSION_COOKIE_HTTPONLY = True  # Previne acesso via JavaScript (XSS protection)
+    SESSION_COOKIE_SAMESITE = 'Lax'  # Proteção contra CSRF
+    PERMANENT_SESSION_LIFETIME = timedelta(hours=24)  # Sessão expira em 24h se não marcar "lembrar-me"
     
     # Email Configuration
     MAIL_SERVER = os.environ.get('MAIL_SERVER')

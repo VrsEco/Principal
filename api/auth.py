@@ -56,13 +56,19 @@ def login():
                 'message': f'Erro no login: {str(e)}'
             }), 500
 
-@auth_bp.route('/logout', methods=['POST'])
+@auth_bp.route('/logout', methods=['GET', 'POST'])
 @login_required
 def logout():
     """Logout user"""
     try:
         auth_service.logout_user_session()
         
+        # Se for GET (via navegador), redireciona para login
+        if request.method == 'GET':
+            flash('Logout realizado com sucesso', 'success')
+            return redirect(url_for('login'))
+        
+        # Se for POST (via API), retorna JSON
         return jsonify({
             'success': True,
             'message': 'Logout realizado com sucesso',
@@ -70,6 +76,10 @@ def logout():
         })
         
     except Exception as e:
+        if request.method == 'GET':
+            flash(f'Erro no logout: {str(e)}', 'error')
+            return redirect(url_for('login'))
+        
         return jsonify({
             'success': False,
             'message': f'Erro no logout: {str(e)}'
@@ -302,4 +312,133 @@ def get_current_user():
         return jsonify({
             'success': False,
             'message': f'Erro ao obter usuário: {str(e)}'
+        }), 500
+
+@auth_bp.route('/users/<int:user_id>', methods=['GET'])
+@login_required
+def get_user(user_id):
+    """Get user by ID (admin only)"""
+    if not current_user or current_user.role != 'admin':
+        return jsonify({
+            'success': False,
+            'message': 'Acesso negado'
+        }), 403
+    
+    try:
+        user = auth_service.get_user_by_id(user_id)
+        
+        if not user:
+            return jsonify({
+                'success': False,
+                'message': 'Usuário não encontrado'
+            }), 404
+        
+        return jsonify({
+            'success': True,
+            'user': user.to_dict()
+        })
+        
+    except Exception as e:
+        return jsonify({
+            'success': False,
+            'message': f'Erro ao obter usuário: {str(e)}'
+        }), 500
+
+@auth_bp.route('/users/<int:user_id>', methods=['PUT'])
+@login_required
+def update_user(user_id):
+    """Update user (admin only)"""
+    if not current_user or current_user.role != 'admin':
+        return jsonify({
+            'success': False,
+            'message': 'Acesso negado'
+        }), 403
+    
+    try:
+        user = auth_service.get_user_by_id(user_id)
+        
+        if not user:
+            return jsonify({
+                'success': False,
+                'message': 'Usuário não encontrado'
+            }), 404
+        
+        data = request.get_json() if request.is_json else request.form
+        
+        name = data.get('name', '').strip()
+        role = data.get('role', '').strip()
+        is_active = data.get('is_active')
+        
+        if is_active is not None and isinstance(is_active, str):
+            is_active = is_active.lower() in ['true', '1', 'yes', 'on']
+        
+        success = auth_service.update_user_profile(
+            user,
+            name=name if name else None,
+            role=role if role else None,
+            is_active=is_active
+        )
+        
+        if success:
+            return jsonify({
+                'success': True,
+                'message': 'Usuário atualizado com sucesso',
+                'user': user.to_dict()
+            })
+        else:
+            return jsonify({
+                'success': False,
+                'message': 'Falha ao atualizar usuário'
+            }), 400
+            
+    except Exception as e:
+        return jsonify({
+            'success': False,
+            'message': f'Erro ao atualizar usuário: {str(e)}'
+        }), 500
+
+@auth_bp.route('/users/<int:user_id>', methods=['DELETE'])
+@login_required
+def delete_user(user_id):
+    """Delete user (admin only) - Soft delete"""
+    if not current_user or current_user.role != 'admin':
+        return jsonify({
+            'success': False,
+            'message': 'Acesso negado'
+        }), 403
+    
+    try:
+        # Não permitir que o admin delete a si mesmo
+        if user_id == current_user.id:
+            return jsonify({
+                'success': False,
+                'message': 'Você não pode excluir sua própria conta'
+            }), 400
+        
+        user = auth_service.get_user_by_id(user_id)
+        
+        if not user:
+            return jsonify({
+                'success': False,
+                'message': 'Usuário não encontrado'
+            }), 404
+        
+        # Soft delete - apenas desativa o usuário
+        success = auth_service.update_user_status(user_id, False)
+        
+        if success:
+            return jsonify({
+                'success': True,
+                'message': 'Usuário excluído com sucesso'
+            })
+        else:
+            return jsonify({
+                'success': False,
+                'message': 'Falha ao excluir usuário'
+            }), 400
+            
+    except Exception as e:
+        return jsonify({
+            'success': False,
+            'message': f'Erro ao excluir usuário: {str(e)}'
         }), 500
