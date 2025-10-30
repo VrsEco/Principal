@@ -6,7 +6,7 @@ class DriverTopic(db.Model):
     __tablename__ = 'driver_topics'
     
     id = db.Column(db.Integer, primary_key=True)
-    plan_id = db.Column(db.String(100), db.ForeignKey('plans.id'), nullable=False)
+    plan_id = db.Column(db.Integer, db.ForeignKey('plans.id'), nullable=False)
     topic_type = db.Column(db.String(50), nullable=False)  # interviews, vision-socios, market, company
     title = db.Column(db.String(200), nullable=False)
     subtitle = db.Column(db.String(300))

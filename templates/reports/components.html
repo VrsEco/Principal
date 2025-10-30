@@ -1,0 +1,477 @@
+{# 
+  components.html - Componentes Reutilizáveis para Relatórios
+  Sistema GestaoVersus
+  Versão: 1.0
+  Data: 30/10/2025
+  
+  Uso:
+  {% from "reports/components.html" import section_header, story_card %}
+#}
+
+{# ========================================
+   FORMATADORES DE DADOS
+   ======================================== #}
+
+{# Formatar moeda brasileira #}
+{% macro format_currency(value) -%}
+  {%- if value is not none -%}
+    {%- set numeric = value|float -%}
+    {%- set sign = '-' if numeric < 0 else '' -%}
+    {%- set absolute = numeric|abs -%}
+    {%- set formatted = '{:,.2f}'.format(absolute).replace(',', '_').replace('.', ',').replace('_', '.') -%}
+    {{ sign }}R$ {{ formatted }}
+  {%- else -%}
+    R$ 0,00
+  {%- endif -%}
+{%- endmacro %}
+
+{# Formatar porcentagem #}
+{% macro format_percent(value) -%}
+  {%- if value is not none -%}
+    {%- set numeric = value|float -%}
+    {%- set text = ('%.2f' % numeric).rstrip('0').rstrip('.') -%}
+    {{ text }}%
+  {%- else -%}
+    0%
+  {%- endif -%}
+{%- endmacro %}
+
+{# Formatar data #}
+{% macro format_date(value, format='%d/%m/%Y') -%}
+  {%- if value -%}
+    {%- if value is string -%}
+      {{ value }}
+    {%- else -%}
+      {{ value.strftime(format) }}
+    {%- endif -%}
+  {%- else -%}
+    -
+  {%- endif -%}
+{%- endmacro %}
+
+{# Formatar número com separador de milhar #}
+{% macro format_number(value, decimals=0) -%}
+  {%- if value is not none -%}
+    {%- set numeric = value|float -%}
+    {%- if decimals > 0 -%}
+      {%- set formatted = ('{:,.%df' % decimals).format(numeric).replace(',', '_').replace('.', ',').replace('_', '.') -%}
+    {%- else -%}
+      {%- set formatted = '{:,.0f}'.format(numeric).replace(',', '.') -%}
+    {%- endif -%}
+    {{ formatted }}
+  {%- else -%}
+    0
+  {%- endif -%}
+{%- endmacro %}
+
+
+{# ========================================
+   CABEÇALHO DE SEÇÃO
+   ======================================== #}
+
+{% macro section_header(number, title, subtitle="") %}
+<div class="section-header">
+  <span>{{ number }}</span>
+  <h3>{{ title }}</h3>
+  {% if subtitle %}
+    <p class="section-subtitle">{{ subtitle }}</p>
+  {% endif %}
+</div>
+{% endmacro %}
+
+
+{# ========================================
+   CARD/BLOCO DE HISTÓRIA
+   ======================================== #}
+
+{% macro story_card(title="", content=none, type="default") %}
+<div class="story-block story-block-{{ type }}">
+  {% if title %}
+    <h4>{{ title }}</h4>
+  {% endif %}
+  
+  {% if content is string %}
+    <p>{{ content }}</p>
+  {% elif content is mapping %}
+    <div class="story-columns">
+      {% for key, value in content.items() %}
+        <div>
+          <h5>{{ key }}</h5>
+          <p>{{ value }}</p>
+        </div>
+      {% endfor %}
+    </div>
+  {% elif content is iterable %}
+    <ul class="story-list">
+      {% for item in content %}
+        <li>{{ item }}</li>
+      {% endfor %}
+    </ul>
+  {% elif content %}
+    <p>{{ content }}</p>
+  {% endif %}
+  
+  {{ caller() if caller }}
+</div>
+{% endmacro %}
+
+
+{# ========================================
+   TABELA PADRÃO
+   ======================================== #}
+
+{% macro data_table(headers, rows, caption="", hover=true) %}
+<table class="model7-table{% if hover %} table-hover{% endif %}">
+  {% if caption %}
+    <caption>{{ caption }}</caption>
+  {% endif %}
+  <thead>
+    <tr>
+      {% for header in headers %}
+        <th>{{ header }}</th>
+      {% endfor %}
+    </tr>
+  </thead>
+  <tbody>
+    {% if rows %}
+      {% for row in rows %}
+        <tr>
+          {% for cell in row %}
+            <td>{{ cell }}</td>
+          {% endfor %}
+        </tr>
+      {% endfor %}
+    {% else %}
+      <tr>
+        <td colspan="{{ headers|length }}" style="text-align: center; color: #94a3b8;">
+          Nenhum dado disponível
+        </td>
+      </tr>
+    {% endif %}
+  </tbody>
+</table>
+{% endmacro %}
+
+
+{# ========================================
+   TABELA PERSONALIZADA (com callback)
+   ======================================== #}
+
+{% macro custom_table(headers, rows, caption="") %}
+<table class="model7-table">
+  {% if caption %}
+    <caption>{{ caption }}</caption>
+  {% endif %}
+  <thead>
+    <tr>
+      {% for header in headers %}
+        <th>{{ header }}</th>
+      {% endfor %}
+    </tr>
+  </thead>
+  <tbody>
+    {% if rows %}
+      {{ caller(rows) }}
+    {% else %}
+      <tr>
+        <td colspan="{{ headers|length }}" style="text-align: center; color: #94a3b8;">
+          Nenhum dado disponível
+        </td>
+      </tr>
+    {% endif %}
+  </tbody>
+</table>
+{% endmacro %}
+
+
+{# ========================================
+   CARD DE RESULTADO/MÉTRICA
+   ======================================== #}
+
+{% macro result_card(label, value, note="", status="neutral") %}
+<div class="result-card result-card-{{ status }}">
+  <span class="label">{{ label }}</span>
+  <span class="value">{{ value }}</span>
+  {% if note %}
+    <span class="note">{{ note }}</span>
+  {% endif %}
+</div>
+{% endmacro %}
+
+
+{# ========================================
+   GRID DE RESULTADOS
+   ======================================== #}
+
+{% macro result_grid(items, min_width="220px") %}
+<div class="result-summary-grid" style="grid-template-columns: repeat(auto-fit, minmax({{ min_width }}, 1fr));">
+  {% for item in items %}
+    {{ result_card(
+        item.label,
+        item.value,
+        item.note|default(""),
+        item.status|default("neutral")
+    ) }}
+  {% endfor %}
+</div>
+{% endmacro %}
+
+
+{# ========================================
+   BOX DE DESTAQUE
+   ======================================== #}
+
+{% macro highlight_box(type="success", title="") %}
+<div class="highlight-box highlight-box-{{ type }}">
+  {% if title %}
+    <strong>{{ title }}</strong>
+  {% endif %}
+  {{ caller() }}
+</div>
+{% endmacro %}
+
+
+{# ========================================
+   CARD MODELO 7
+   ======================================== #}
+
+{% macro model7_card(title="", subtitle="") %}
+<div class="model7-card">
+  {% if title %}
+    <h4>{{ title }}</h4>
+  {% endif %}
+  {% if subtitle %}
+    <p style="font-size: 13px; color: #64748b; margin: 0 0 8px;">{{ subtitle }}</p>
+  {% endif %}
+  {{ caller() }}
+</div>
+{% endmacro %}
+
+
+{# ========================================
+   GRID RESPONSIVO
+   ======================================== #}
+
+{% macro responsive_grid(min_width="260px") %}
+<div class="model7-grid" style="grid-template-columns: repeat(auto-fit, minmax({{ min_width }}, 1fr));">
+  {{ caller() }}
+</div>
+{% endmacro %}
+
+
+{# ========================================
+   DUAS COLUNAS
+   ======================================== #}
+
+{% macro two_column(min_width="300px") %}
+<div class="two-column" style="grid-template-columns: repeat(auto-fit, minmax({{ min_width }}, 1fr));">
+  {{ caller() }}
+</div>
+{% endmacro %}
+
+
+{# ========================================
+   TRÊS COLUNAS
+   ======================================== #}
+
+{% macro three_column(min_width="220px") %}
+<div class="three-column" style="grid-template-columns: repeat(auto-fit, minmax({{ min_width }}, 1fr));">
+  {{ caller() }}
+</div>
+{% endmacro %}
+
+
+{# ========================================
+   OPINIÃO DO CONSULTOR
+   ======================================== #}
+
+{% macro consultant_opinion(title="Opinião do Consultor") %}
+<div class="consultant-opinion-block">
+  <h4>{{ title }}</h4>
+  {{ caller() }}
+</div>
+{% endmacro %}
+
+
+{# ========================================
+   SUBSEÇÃO
+   ======================================== #}
+
+{% macro subsection(title) %}
+<div class="subsection">
+  <h4>{{ title }}</h4>
+  {{ caller() }}
+</div>
+{% endmacro %}
+
+
+{# ========================================
+   LISTA DE ITENS COM ÍCONE
+   ======================================== #}
+
+{% macro icon_list(items, icon="•") %}
+<ul class="story-list">
+  {% for item in items %}
+    <li>{{ item }}</li>
+  {% endfor %}
+</ul>
+{% endmacro %}
+
+
+{# ========================================
+   CAPA META CARDS
+   ======================================== #}
+
+{% macro cover_meta_grid(items) %}
+<div class="cover-meta-grid">
+  {% for item in items %}
+    <div class="cover-meta-card">
+      <span>{{ item.label }}</span>
+      <strong>{{ item.value }}</strong>
+    </div>
+  {% endfor %}
+</div>
+{% endmacro %}
+
+
+{# ========================================
+   BADGE DE STATUS
+   ======================================== #}
+
+{% macro status_badge(text, type="default") %}
+<span class="badge badge-{{ type }}" style="
+  display: inline-block;
+  padding: 4px 12px;
+  border-radius: 12px;
+  font-size: 11px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  {% if type == 'success' %}
+    background: #d1fae5;
+    color: #065f46;
+  {% elif type == 'danger' %}
+    background: #fee2e2;
+    color: #991b1b;
+  {% elif type == 'warning' %}
+    background: #fef3c7;
+    color: #92400e;
+  {% elif type == 'info' %}
+    background: #dbeafe;
+    color: #1e40af;
+  {% else %}
+    background: #e2e8f0;
+    color: #475569;
+  {% endif %}
+">{{ text }}</span>
+{% endmacro %}
+
+
+{# ========================================
+   SEÇÃO VAZIA / SEM DADOS
+   ======================================== #}
+
+{% macro empty_state(message="Nenhum dado disponível") %}
+<div class="story-note" style="text-align: center; padding: 32px;">
+  <p style="margin: 0;">{{ message }}</p>
+</div>
+{% endmacro %}
+
+
+{# ========================================
+   LOADING SKELETON
+   ======================================== #}
+
+{% macro skeleton_card() %}
+<div class="model7-card" style="background: linear-gradient(90deg, #f1f5f9 25%, #e2e8f0 50%, #f1f5f9 75%); background-size: 200% 100%; animation: shimmer 1.5s infinite;">
+  <div style="height: 20px; width: 60%; background: #cbd5e1; border-radius: 4px; margin-bottom: 12px;"></div>
+  <div style="height: 14px; width: 100%; background: #cbd5e1; border-radius: 4px; margin-bottom: 6px;"></div>
+  <div style="height: 14px; width: 80%; background: #cbd5e1; border-radius: 4px;"></div>
+</div>
+{% endmacro %}
+
+
+{# ========================================
+   DIVIDER / SEPARADOR
+   ======================================== #}
+
+{% macro divider(text="") %}
+{% if text %}
+  <div style="display: flex; align-items: center; gap: 16px; margin: 32px 0;">
+    <div style="flex: 1; height: 1px; background: #cbd5e1;"></div>
+    <span style="color: #64748b; font-size: 13px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.05em;">{{ text }}</span>
+    <div style="flex: 1; height: 1px; background: #cbd5e1;"></div>
+  </div>
+{% else %}
+  <div style="height: 1px; background: #cbd5e1; margin: 24px 0;"></div>
+{% endif %}
+{% endmacro %}
+
+
+{# ========================================
+   TIMELINE / LINHA DO TEMPO
+   ======================================== #}
+
+{% macro timeline(items) %}
+<div style="position: relative; padding-left: 32px;">
+  <div style="position: absolute; left: 8px; top: 0; bottom: 0; width: 2px; background: #cbd5e1;"></div>
+  {% for item in items %}
+    <div style="position: relative; margin-bottom: 24px;">
+      <div style="position: absolute; left: -28px; width: 16px; height: 16px; border-radius: 50%; background: #3b82f6; border: 3px solid #fff;"></div>
+      <div>
+        {% if item.date %}
+          <span style="font-size: 12px; color: #64748b; font-weight: 600;">{{ item.date }}</span>
+        {% endif %}
+        <h5 style="margin: 4px 0; font-size: 15px; color: #0f172a;">{{ item.title }}</h5>
+        {% if item.description %}
+          <p style="margin: 4px 0; font-size: 13px; color: #475569;">{{ item.description }}</p>
+        {% endif %}
+      </div>
+    </div>
+  {% endfor %}
+</div>
+{% endmacro %}
+
+
+{# ========================================
+   PROGRESS BAR / BARRA DE PROGRESSO
+   ======================================== #}
+
+{% macro progress_bar(value, max=100, label="", show_percentage=true) %}
+<div style="margin: 12px 0;">
+  {% if label %}
+    <div style="display: flex; justify-content: space-between; margin-bottom: 6px;">
+      <span style="font-size: 13px; color: #475569;">{{ label }}</span>
+      {% if show_percentage %}
+        <span style="font-size: 13px; font-weight: 600; color: #0f172a;">{{ (value / max * 100)|int }}%</span>
+      {% endif %}
+    </div>
+  {% endif %}
+  <div style="width: 100%; height: 8px; background: #e2e8f0; border-radius: 4px; overflow: hidden;">
+    <div style="width: {{ (value / max * 100)|int }}%; height: 100%; background: linear-gradient(90deg, #3b82f6, #60a5fa); transition: width 0.3s ease;"></div>
+  </div>
+</div>
+{% endmacro %}
+
+
+{# ========================================
+   INFO TOOLTIP / DICA
+   ======================================== #}
+
+{% macro info_tooltip(text) %}
+<span class="info-tooltip" style="
+  display: inline-block;
+  width: 16px;
+  height: 16px;
+  line-height: 16px;
+  text-align: center;
+  background: #3b82f6;
+  color: #fff;
+  border-radius: 50%;
+  font-size: 11px;
+  font-weight: 700;
+  cursor: help;
+  margin-left: 4px;
+" title="{{ text }}">i</span>
+{% endmacro %}
+

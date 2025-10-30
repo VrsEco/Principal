@@ -1,0 +1,100 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <meta http-equiv="X-UA-Compatible" content="IE=edge">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  {% block report_title %}Relatório{% endblock %}
+  <title>{% block page_title %}{{ self.report_title() }} - GestaoVersus{% endblock %}</title>
+  
+  {# CSS Global de Relatórios #}
+  <link rel="stylesheet" href="{{ url_for('static', filename='css/reports.css') }}">
+  
+  {# CSS Adicional (override em templates filhos) #}
+  {% block extra_css %}{% endblock %}
+  
+  {# Metadados para Impressão #}
+  <meta name="description" content="{% block meta_description %}Relatório gerado pelo sistema GestaoVersus{% endblock %}">
+  <meta name="author" content="{% block meta_author %}Versus Gestão Corporativa{% endblock %}">
+  
+  <style>
+    /* Animação de shimmer para loading */
+    @keyframes shimmer {
+      0% { background-position: -200% 0; }
+      100% { background-position: 200% 0; }
+    }
+  </style>
+</head>
+
+<body class="report-view">
+  <article class="model7-report">
+    
+    {# CAPA #}
+    {% block cover_page %}
+    <section class="page portrait cover-page">
+      <div style="position: relative; z-index: 1;">
+        <h1>{% block report_title_cover %}{{ self.report_title() }}{% endblock %}</h1>
+        <h2>{% block report_subtitle %}{% endblock %}</h2>
+        
+        {% block cover_meta %}
+          {# Metadados da capa (empresa, consultor, data, etc) #}
+        {% endblock %}
+        
+        {% block cover %}
+          {# Conteúdo adicional da capa #}
+        {% endblock %}
+      </div>
+    </section>
+    {% endblock %}
+    
+    {# CONTEÚDO PRINCIPAL #}
+    {% block content %}
+      {# Seções do relatório vão aqui #}
+      <section class="page portrait">
+        <div class="section-header">
+          <span>01</span>
+          <h3>Seção Exemplo</h3>
+        </div>
+        <div class="section-body">
+          <p class="narrative-intro">
+            Este é um template base. Estenda-o e sobrescreva o bloco 'content' com suas seções.
+          </p>
+        </div>
+      </section>
+    {% endblock %}
+    
+    {# RODAPÉ #}
+    {% block footer_page %}
+    <section class="page portrait footer-page" style="page-break-after: auto;">
+      {% block footer %}
+        <span>Versus Gestão Corporativa - Todos os Direitos Reservados - Emitido em: {% block footer_date %}{{ issued_at|default('31/10/2025') }}{% endblock %}</span>
+        <span>{% block footer_right %}Consultor responsável: {{ consultant|default('Consultor') }}{% endblock %}</span>
+      {% endblock %}
+    </section>
+    {% endblock %}
+    
+  </article>
+  
+  {# JavaScript Adicional (se necessário) #}
+  {% block extra_js %}{% endblock %}
+  
+  {# Script de Impressão #}
+  <script>
+    // Auto-print se houver parâmetro na URL
+    const urlParams = new URLSearchParams(window.location.search);
+    if (urlParams.get('print') === 'true') {
+      window.print();
+    }
+    
+    // Atalho de teclado para impressão
+    document.addEventListener('keydown', function(e) {
+      if (e.ctrlKey && e.key === 'p') {
+        e.preventDefault();
+        window.print();
+      }
+    });
+  </script>
+</body>
+</html>
+
+

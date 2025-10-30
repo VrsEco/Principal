@@ -1,6 +1,8 @@
 {% set nav_items = sidebar_navigation if sidebar_navigation is defined else navigation %}
 <aside class="project-sidebar surface-card plan-sidebar">
-  <span class="project-sidebar-title">{{ sidebar_title | default('Fluxo do planejamento') }}</span>
+  {% if sidebar_title is defined and sidebar_title %}
+  <span class="project-sidebar-title">{{ sidebar_title }}</span>
+  {% endif %}
   <nav class="project-nav">
     {% for item in nav_items or [] %}
       {% set item_name = item.name or item.label %}

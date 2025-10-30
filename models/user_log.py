@@ -29,7 +29,7 @@ class UserLog(db.Model):
     # Additional info
     description = db.Column(db.Text)  # Human readable description
     company_id = db.Column(db.Integer, db.ForeignKey('companies.id'))  # Related company if applicable
-    plan_id = db.Column(db.String(100), db.ForeignKey('plans.id'))  # Related plan if applicable
+    plan_id = db.Column(db.Integer, db.ForeignKey('plans.id'))  # Related plan if applicable
     
     # Timestamps
     created_at = db.Column(db.DateTime, default=datetime.utcnow, nullable=False)

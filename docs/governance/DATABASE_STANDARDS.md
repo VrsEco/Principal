@@ -25,6 +25,12 @@
 - **Restauração:** usar os scripts em `scripts/backup/` apontando para a instância do host
 - **Monitoramento:** verificar `backups/postgres_backup.log` para acompanhar sucesso ou falhas diárias
 
+### Helpers de conexão (APP30)
+
+- Sempre que montar `SQLALCHEMY_DATABASE_URI`, `create_engine` ou `psycopg2.connect`, reutilize `utils/env_helpers.normalize_database_url()` e `normalize_docker_host()`.
+- Isso garante que ambientes fora de Docker traduzam `host.docker.internal` → `localhost`, evitando `UnicodeDecodeError` e timeouts em desenvolvimento Windows.
+- Novos scripts/services **devem** importar esses helpers; acessos diretos ao `.env` sem normalização estão proibidos.
+
 ---
 
 ## 🏗️ Estrutura de Tabelas

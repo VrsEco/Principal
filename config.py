@@ -1,6 +1,9 @@
 import os
 from datetime import timedelta
 from dotenv import load_dotenv
+from urllib.parse import quote_plus
+
+from utils.env_helpers import normalize_database_url
 
 load_dotenv()
 
@@ -8,7 +11,10 @@ class Config:
     """Base configuration class"""
     SECRET_KEY = os.environ.get('SECRET_KEY') or 'dev-secret-key-change-in-production'
     # IMPORTANTE: PostgreSQL como padrão (conforme APP30 migrado)
-    SQLALCHEMY_DATABASE_URI = os.environ.get('DATABASE_URL') or 'postgresql://postgres:*Paraiso1978@localhost:5432/bd_app_versus'
+    # ✅ FIX: URL encoding na senha para evitar problemas com caracteres especiais (*)
+    _default_password = quote_plus('*Paraiso1978')
+    _env_database_url = normalize_database_url(os.environ.get('DATABASE_URL'))
+    SQLALCHEMY_DATABASE_URI = _env_database_url or f'postgresql://postgres:{_default_password}@localhost:5432/bd_app_versus'
     SQLALCHEMY_TRACK_MODIFICATIONS = False
     
     # Authentication
@@ -61,12 +67,16 @@ class DevelopmentConfig(Config):
     TEMPLATES_AUTO_RELOAD = True  # Recarregar templates automaticamente
     SEND_FILE_MAX_AGE_DEFAULT = 0  # Sem cache de arquivos estáticos
     # IMPORTANTE: PostgreSQL como padrão (conforme APP30 migrado)
-    SQLALCHEMY_DATABASE_URI = os.environ.get('DEV_DATABASE_URL') or 'postgresql://postgres:*Paraiso1978@localhost:5432/bd_app_versus'
+    # ✅ FIX: URL encoding na senha para evitar problemas com caracteres especiais (*)
+    _dev_password = quote_plus('*Paraiso1978')
+    _dev_database_url = normalize_database_url(os.environ.get('DEV_DATABASE_URL'))
+    SQLALCHEMY_DATABASE_URI = _dev_database_url or f'postgresql://postgres:{_dev_password}@localhost:5432/bd_app_versus'
 
 class ProductionConfig(Config):
     """Production configuration"""
     DEBUG = False
-    SQLALCHEMY_DATABASE_URI = os.environ.get('DATABASE_URL') or 'postgresql://user:password@localhost/bd_app_versus'
+    _prod_database_url = normalize_database_url(os.environ.get('DATABASE_URL'))
+    SQLALCHEMY_DATABASE_URI = _prod_database_url or 'postgresql://user:password@localhost/bd_app_versus'
 
 class TestingConfig(Config):
     """Testing configuration"""

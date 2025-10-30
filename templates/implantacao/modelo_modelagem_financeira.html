@@ -340,7 +340,7 @@
     <article class="finance-card">
       <h1>Modelagem financeira do planejamento</h1>
       <p style="margin:12px 0 0; color:#475569; line-height:1.6;">
-        Demonstrativos base para conectar estrutura operacional, investimentos e retorno dos sÃ³cios.
+        Demonstrativos base para conectar estrutura operacional, investimentos e retorno dos sócios.
         Gerencie os dados financeiros do seu planejamento de forma interativa.
       </p>
       <div style="margin-top: 20px;">
@@ -348,15 +348,53 @@
       </div>
     </article>
 
-    <!-- INVESTIMENTOS -->
+    <!-- ==================== INVESTIMENTOS (RECONSTRUÍDO) ==================== -->
     <article class="finance-card">
       <div class="section-header">
-        <h2>Investimentos</h2>
+        <h2>💼 Investimentos</h2>
         <button class="btn-add" onclick="openCapitalGiroModal()">
           <span>+</span>
-          <span>Cadastrar Investimento em Capital de Giro</span>
+          <span>Novo Investimento em Capital de Giro</span>
         </button>
       </div>
+      
+      <!-- Card de Resumo -->
+      <div style="background: linear-gradient(135deg, #8b5cf6 0%, #6366f1 100%); border-radius: 12px; padding: 20px; color: white; margin-bottom: 24px;">
+        <div style="font-size: 13px; font-weight: 500; opacity: 0.9; margin-bottom: 16px;">
+          📊 Investimentos Totais das Estruturas
+        </div>
+        
+        <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 12px;">
+          <div style="background: rgba(255, 255, 255, 0.15); border-radius: 8px; padding: 12px;">
+            <div style="font-size: 11px; opacity: 0.9; margin-bottom: 4px;">Caixa</div>
+            <div style="font-size: 18px; font-weight: 700;" id="invest-caixa-value">R$ 0,00</div>
+          </div>
+          <div style="background: rgba(255, 255, 255, 0.15); border-radius: 8px; padding: 12px;">
+            <div style="font-size: 11px; opacity: 0.9; margin-bottom: 4px;">Estoques</div>
+            <div style="font-size: 18px; font-weight: 700;" id="invest-estoques-value">R$ 0,00</div>
+          </div>
+          <div style="background: rgba(255, 255, 255, 0.15); border-radius: 8px; padding: 12px;">
+            <div style="font-size: 11px; opacity: 0.9; margin-bottom: 4px;">Instalações</div>
+            <div style="font-size: 18px; font-weight: 700;" id="invest-instalacoes-value">R$ 0,00</div>
+          </div>
+          <div style="background: rgba(255, 255, 255, 0.15); border-radius: 8px; padding: 12px;">
+            <div style="font-size: 11px; opacity: 0.9; margin-bottom: 4px;">Máquinas e Equipamentos</div>
+            <div style="font-size: 16px; font-weight: 700;" id="invest-maquinas-value">R$ 0,00</div>
+          </div>
+          <div style="background: rgba(255, 255, 255, 0.25); border-radius: 8px; padding: 12px; border: 2px solid rgba(255, 255, 255, 0.3);">
+            <div style="font-size: 11px; opacity: 0.9; margin-bottom: 4px;">💰 Total de Investimentos</div>
+            <div style="font-size: 18px; font-weight: 700;" id="invest-total-value">R$ 0,00</div>
+          </div>
+        </div>
+        
+        <div style="font-size: 11px; opacity: 0.8; margin-top: 12px; padding-top: 12px; border-top: 1px solid rgba(255, 255, 255, 0.2);">
+          ℹ️ Valores calculados com base nas estruturas cadastradas
+        </div>
+      </div>
+      
+      <!-- Planilha: Distribuição por Período -->
+      <div style="margin-top: 24px;">
+        <h3 style="margin: 0 0 16px; color: #0f172a; font-size: 16px;">📈 Distribuição por Período</h3>
       
       <div style="display: flex; border: 1px solid rgba(148, 163, 184, 0.28); border-radius: 8px; overflow: hidden;">
         <!-- Colunas fixas (Categoria, Item, Total) -->
@@ -373,24 +411,24 @@
               </tr>
             </thead>
             <tbody id="spreadsheet-tbody-fixed">
-              <!-- Linhas fixas serÃ£o preenchidas via JavaScript -->
+              <!-- Linhas fixas serão preenchidas via JavaScript -->
             </tbody>
           </table>
         </div>
         
-        <!-- Ãrea com scroll horizontal (apenas perÃ­odos) -->
+        <!-- Ãrea com scroll horizontal (apenas períodos) -->
         <div style="overflow-x: auto; flex-grow: 1;">
           <table class="finance-table" id="investments-spreadsheet" style="border: none; margin: 0; width: auto;">
             <thead>
               <tr id="month-totals-row">
-                <!-- Totais por mÃªs serÃ£o preenchidos via JavaScript -->
+                <!-- Totais por mês serão preenchidos via JavaScript -->
               </tr>
               <tr id="month-headers">
-                <!-- Headers dos meses serÃ£o preenchidos via JavaScript -->
+                <!-- Headers dos meses serão preenchidos via JavaScript -->
               </tr>
             </thead>
             <tbody id="spreadsheet-tbody">
-              <!-- Valores por perÃ­odo serÃ£o preenchidos via JavaScript -->
+              <!-- Valores por período serão preenchidos via JavaScript -->
             </tbody>
           </table>
         </div>
@@ -398,8 +436,8 @@
       
       <div style="margin-top: 12px; padding: 12px; background: rgba(34, 197, 94, 0.08); border-radius: 8px; border-left: 3px solid #22c55e;">
         <p style="margin: 0; font-size: 12px; color: #166534; line-height: 1.5;">
-          <strong>â„¹ï¸ Valores AutomÃ¡ticos:</strong> Os valores de Imobilizado sÃ£o calculados automaticamente com base nos dados cadastrados em 
-          <a href="{{ url_for('pev.implantacao_executivo_intro', plan_id=plan_id) }}" style="color: #059669; text-decoration: underline; font-weight: 600;">Estruturas de ExecuÃ§Ã£o â†’ Resumo de Investimentos</a>.
+          <strong>ℹ️ Valores Automáticos:</strong> Os valores de Imobilizado são calculados automaticamente com base nos dados cadastrados em 
+          <a href="{{ url_for('pev.implantacao_estruturas', plan_id=plan_id) }}" style="color: #059669; text-decoration: underline; font-weight: 600;">Estruturas de Execução → Resumo de Investimentos</a>.
         </p>
       </div>
       
@@ -411,10 +449,10 @@
             <tr>
               <th>Tipo</th>
               <th>Data</th>
-              <th>DescriÃ§Ã£o</th>
+              <th>Descrição</th>
               <th>Valor</th>
-              <th>ObservaÃ§Ãµes</th>
-              <th style="width: 80px;">AÃ§Ãµes</th>
+              <th>Observações</th>
+              <th style="width: 80px;">Ações</th>
             </tr>
           </thead>
           <tbody id="capital-giro-contributions-tbody">
@@ -432,10 +470,10 @@
     <article class="finance-card">
       <h2>Resultados</h2>
       <div class="grid-two">
-        <!-- Margem de ContribuiÃ§Ã£o -->
+        <!-- Margem de Contribuição -->
         <div id="variable-costs-section">
           <div class="section-header" style="margin-bottom: 12px;">
-            <h3 style="margin:0;">Margem de ContribuiÃ§Ã£o</h3>
+            <h3 style="margin:0;">Margem de Contribuição</h3>
             <a href="/pev/implantacao/modelo/produtos?plan_id={{ plan_id }}" 
                class="btn-add" 
                style="padding: 6px 12px; font-size: 13px; text-decoration: none; display: inline-flex; align-items: center; gap: 4px;"
@@ -448,7 +486,7 @@
           <!-- Card de Totalizados de Produtos e Margens -->
           <div id="products-summary-card" style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); border-radius: 12px; padding: 16px; margin-bottom: 16px; color: white;">
             <div style="font-size: 12px; font-weight: 500; opacity: 0.9; margin-bottom: 12px;">
-              ðŸ“Š Totalizados de Modelo e Mercado â†’ Produtos e Margens
+              📊 Totalizados de Modelo e Mercado → Produtos e Margens
             </div>
             
             <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 12px;">
@@ -473,16 +511,16 @@
                 <div style="font-size: 12px; opacity: 0.8; margin-top: 2px;" id="products-expenses-percent">0%</div>
               </div>
               
-              <!-- Margem de ContribuiÃ§Ã£o -->
+              <!-- Margem de Contribuição -->
               <div style="background: rgba(255, 255, 255, 0.25); border-radius: 8px; padding: 12px; border: 2px solid rgba(255, 255, 255, 0.3);">
-                <div style="font-size: 11px; opacity: 0.9; margin-bottom: 4px;">ðŸ’° Margem de ContribuiÃ§Ã£o</div>
+                <div style="font-size: 11px; opacity: 0.9; margin-bottom: 4px;">💰 Margem de Contribuição</div>
                 <div style="font-size: 18px; font-weight: 700;" id="products-margin-value">R$ 0,00</div>
                 <div style="font-size: 12px; opacity: 0.8; margin-top: 2px;" id="products-margin-percent">0%</div>
               </div>
             </div>
             
             <div style="margin-top: 12px; font-size: 11px; opacity: 0.8; text-align: center;">
-              â„¹ï¸ Valores calculados com base nas metas de market share dos produtos cadastrados
+              ℹ️ Valores calculados com base nas metas de market share dos produtos cadastrados
             </div>
           </div>
           
@@ -490,7 +528,7 @@
           <div style="background: rgba(59, 130, 246, 0.05); border: 1px solid rgba(59, 130, 246, 0.2); border-radius: 8px; padding: 12px; margin-bottom: 12px;">
             <div style="display: flex; align-items: center; gap: 8px; font-size: 12px; color: #475569;">
               <span>ðŸ“¦</span>
-              <span>Produtos cadastrados em <strong>Modelo & Mercado â†’ Produtos e Margens</strong></span>
+              <span>Produtos cadastrados em <strong>Modelo & Mercado → Produtos e Margens</strong></span>
             </div>
           </div>
           
@@ -533,7 +571,7 @@
           <!-- Card de Custos e Despesas Fixas -->
           <div id="fixed-costs-summary-card" style="background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%); border-radius: 12px; padding: 16px; margin-bottom: 16px; color: white;">
             <div style="font-size: 12px; font-weight: 500; opacity: 0.9; margin-bottom: 12px;">
-              ðŸ—ï¸ Custos e Despesas Fixas de Estruturas de ExecuÃ§Ã£o
+              ðŸ—ï¸ Custos e Despesas Fixas de Estruturas de Execução
             </div>
             
             <div style="display: grid; grid-template-columns: 1fr; gap: 12px;">
@@ -560,7 +598,7 @@
             </div>
             
             <div style="margin-top: 12px; font-size: 11px; opacity: 0.8; text-align: center;">
-              â„¹ï¸ Valores baseados nas estruturas cadastradas em ImplantaÃ§Ã£o â†’ Estruturas de ExecuÃ§Ã£o
+              ℹ️ Valores baseados nas estruturas cadastradas em Implantação → Estruturas de Execução
             </div>
           </div>
           
@@ -568,21 +606,21 @@
           <div style="background: rgba(245, 87, 108, 0.05); border: 1px solid rgba(245, 87, 108, 0.2); border-radius: 8px; padding: 12px; margin-bottom: 12px;">
             <div style="display: flex; align-items: center; gap: 8px; font-size: 12px; color: #475569;">
               <span>ðŸ—ï¸</span>
-              <span>Dados vindos de <strong>ImplantaÃ§Ã£o â†’ Estruturas de ExecuÃ§Ã£o</strong></span>
+              <span>Dados vindos de <strong>Implantação → Estruturas de Execução</strong></span>
             </div>
           </div>
         </div>
       </div>
     </article>
 
-    <!-- DistribuiÃ§Ã£o de Lucros e Outras DestinaÃ§Ãµes de Resultados -->
+    <!-- Distribuição de Lucros e Outras Destinações de Resultados -->
     <article class="finance-card">
-      <h2>DistribuiÃ§Ã£o de Lucros e Outras DestinaÃ§Ãµes de Resultados</h2>
+      <h2>Distribuição de Lucros e Outras Destinações de Resultados</h2>
       <div style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 20px;">
-        <!-- Card 1: DistribuiÃ§Ã£o de Lucros -->
+        <!-- Card 1: Distribuição de Lucros -->
         <div style="background: linear-gradient(135deg, #a8edea 0%, #fed6e3 100%); border-radius: 12px; padding: 20px; color: #0f172a;">
           <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px;">
-            <h3 style="margin: 0; font-size: 16px; font-weight: 600;">ðŸ’° DistribuiÃ§Ã£o de Lucros</h3>
+            <h3 style="margin: 0; font-size: 16px; font-weight: 600;">💰 Distribuição de Lucros</h3>
             <button class="btn-icon" onclick="openProfitDistributionModal()" title="Editar" style="background: rgba(255, 255, 255, 0.5);">âœï¸</button>
           </div>
           <div style="font-size: 13px; margin-bottom: 4px;">
@@ -614,10 +652,10 @@
           {% endif %}
         </div>
 
-        <!-- Card 2: Outras DestinaÃ§Ãµes -->
+        <!-- Card 2: Outras Destinações -->
         <div style="background: linear-gradient(135deg, #ffecd2 0%, #fcb69f 100%); border-radius: 12px; padding: 20px; color: #0f172a;">
           <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px;">
-            <h3 style="margin: 0; font-size: 16px; font-weight: 600;">ðŸ“Š Outras DestinaÃ§Ãµes</h3>
+            <h3 style="margin: 0; font-size: 16px; font-weight: 600;">📊 Outras Destinações</h3>
             <button class="btn-add" onclick="openResultRuleModal()" style="padding: 6px 12px; font-size: 12px; background: rgba(255, 255, 255, 0.8); color: #0f172a;">
               <span>+</span>
             </button>
@@ -649,10 +687,10 @@
           </div>
         </div>
 
-        <!-- Card 3: Resultado Final do PerÃ­odo -->
+        <!-- Card 3: Resultado Final do Período -->
         <div style="background: linear-gradient(135deg, #84fab0 0%, #8fd3f4 100%); border-radius: 12px; padding: 20px; color: #0f172a; border: 3px solid rgba(16, 185, 129, 0.3);">
           <div style="margin-bottom: 12px;">
-            <h3 style="margin: 0; font-size: 16px; font-weight: 600;">ðŸŽ¯ Resultado Final do PerÃ­odo</h3>
+            <h3 style="margin: 0; font-size: 16px; font-weight: 600;">🎯 Resultado Final do Período</h3>
           </div>
           <div style="font-size: 13px; margin-bottom: 4px; color: #64748b;">
             <span>Valor apÃ³s todas as destinaÃ§Ãµes:</span>
@@ -667,15 +705,15 @@
             0%
           </div>
           <div style="margin-top: 12px; font-size: 11px; color: #64748b; padding-top: 12px; border-top: 1px solid rgba(15, 23, 42, 0.1);">
-            = Resultado Operacional - DistribuiÃ§Ã£o de Lucros - Outras DestinaÃ§Ãµes
+            = Resultado Operacional - Distribuição de Lucros - Outras Destinações
           </div>
         </div>
       </div>
 
-      <!-- Tabela de Outras DestinaÃ§Ãµes (expandida) -->
+      <!-- Tabela de Outras Destinações (expandida) -->
       <div style="margin-top: 24px;">
         <div class="section-header" style="margin-bottom: 12px;">
-          <h4 style="margin:0; font-size: 14px; color: #64748b;">Detalhamento de Outras DestinaÃ§Ãµes</h4>
+          <h4 style="margin:0; font-size: 14px; color: #64748b;">Detalhamento de Outras Destinações</h4>
           <button class="btn-add" onclick="openResultRuleModal()" style="padding: 6px 12px; font-size: 13px;">
             <span>+ Adicionar DestinaÃ§Ã£o</span>
           </button>
@@ -683,9 +721,9 @@
         <table class="finance-table">
           <thead>
             <tr>
-              <th>DescriÃ§Ã£o</th>
+              <th>Descrição</th>
               <th>% sobre resultado operacional</th>
-              <th style="width: 80px;">AÃ§Ãµes</th>
+              <th style="width: 80px;">Ações</th>
             </tr>
           </thead>
           <tbody id="result-rules-tbody">
@@ -720,8 +758,8 @@
             <th>Tipo</th>
             <th>Data</th>
             <th>Valor</th>
-            <th>ObservaÃ§Ãµes</th>
-            <th style="width: 80px;">AÃ§Ãµes</th>
+            <th>Observações</th>
+            <th style="width: 80px;">Ações</th>
           </tr>
         </thead>
         <tbody id="funding-sources-tbody">
@@ -740,12 +778,12 @@
         <table class="finance-table" id="investment-cashflow-table">
           <thead>
             <tr>
-              <th>PerÃ­odo</th>
+              <th>Período</th>
               <th>Capital de Giro</th>
               <th>Imobilizado</th>
               <th>Total Investimentos</th>
               <th>Fontes de Recursos</th>
-              <th>Saldo do PerÃ­odo</th>
+              <th>Saldo do Período</th>
               <th>Saldo Acumulado</th>
             </tr>
           </thead>
@@ -763,21 +801,21 @@
 
     <!-- FLUXO DE CAIXA DO NEGÃ“CIO (Read-only) -->
     <article class="finance-card">
-      <h2>Fluxo de caixa do negÃ³cio</h2>
+      <h2>Fluxo de caixa do negócio</h2>
       <p class="section-note" style="margin-top: 0;">
         * Esta seÃ§Ã£o Ã© calculada automaticamente com base nos dados inseridos acima.
       </p>
       <table class="finance-table">
         <thead>
           <tr>
-            <th>PerÃ­odo</th>
+            <th>Período</th>
             <th>Receita</th>
             <th>VariÃ¡veis</th>
             <th>Margem de contribuiÃ§Ã£o</th>
             <th>Fixos</th>
             <th>Resultado operacional</th>
             <th>DestinaÃ§Ã£o de resultados</th>
-            <th>Resultado do perÃ­odo</th>
+            <th>Resultado do período</th>
           </tr>
         </thead>
         <tbody>
@@ -812,10 +850,10 @@
       <table class="finance-table">
         <thead>
           <tr>
-            <th>PerÃ­odo</th>
+            <th>Período</th>
             <th>Aporte / Investimento</th>
             <th>DistribuiÃ§Ã£o de lucros</th>
-            <th>Saldo do perÃ­odo</th>
+            <th>Saldo do período</th>
             <th>Saldo acumulado</th>
           </tr>
         </thead>
@@ -836,7 +874,7 @@
     <!-- ANÃLISE DE VIABILIDADE -->
     <article class="finance-card">
       <div class="section-header">
-        <h2>AnÃ¡lise de Viabilidade</h2>
+        <h2>Análise de Viabilidade</h2>
         <button class="btn-add" onclick="openMetricsModal()">
           <span>âœï¸</span>
           <span>Editar MÃ©tricas</span>
@@ -865,13 +903,13 @@
     </article>
   </section>
 
-        <h3 id="variableCostModalTitle">Adicionar Custo VariÃ¡vel</h3>
-        <button class="btn-close" onclick="closeVariableCostModal()">Ã—</button>
+        <h3 id="variableCostModalTitle">Adicionar Custo Variável</h3>
+        <button class="btn-close" onclick="closeVariableCostModal()">×</button>
       </div>
       <form id="variableCostForm">
         <input type="hidden" id="variableCostId">
         <div class="form-group">
-          <label for="variableCostDescription">DescriÃ§Ã£o *</label>
+          <label for="variableCostDescription">Descrição *</label>
           <input type="text" id="variableCostDescription" required>
         </div>
         <div class="form-group">
@@ -886,17 +924,17 @@
     </div>
   </div>
 
-  <!-- Modal Outras DestinaÃ§Ãµes -->
+  <!-- Modal Outras Destinações -->
   <div class="modal" id="resultRuleModal">
     <div class="modal-content">
       <div class="modal-header">
         <h3 id="resultRuleModalTitle">Adicionar Outra DestinaÃ§Ã£o</h3>
-        <button class="btn-close" onclick="closeResultRuleModal()">Ã—</button>
+        <button class="btn-close" onclick="closeResultRuleModal()">×</button>
       </div>
       <form id="resultRuleForm">
         <input type="hidden" id="resultRuleId">
         <div class="form-group">
-          <label for="resultRuleDescription">DescriÃ§Ã£o *</label>
+          <label for="resultRuleDescription">Descrição *</label>
           <input type="text" id="resultRuleDescription" required placeholder="Ex: Reserva de ContingÃªncia, Fundo de Investimento">
         </div>
         <div class="form-group">
@@ -911,12 +949,12 @@
     </div>
   </div>
 
-  <!-- Modal DistribuiÃ§Ã£o de Lucros -->
+  <!-- Modal Distribuição de Lucros -->
   <div class="modal" id="profitDistributionModal">
     <div class="modal-content">
       <div class="modal-header">
-        <h3>Editar DistribuiÃ§Ã£o de Lucros</h3>
-        <button class="btn-close" onclick="closeProfitDistributionModal()">Ã—</button>
+        <h3>Editar Distribuição de Lucros</h3>
+        <button class="btn-close" onclick="closeProfitDistributionModal()">×</button>
       </div>
       <form id="profitDistributionForm">
         <div class="form-group">
@@ -926,11 +964,11 @@
         <div class="form-group">
           <label for="profitDistributionStartDate">Data de inÃ­cio do pagamento *</label>
           <input type="date" id="profitDistributionStartDate" required>
-          <small style="display: block; margin-top: 4px; color: #64748b;">Data a partir da qual a distribuiÃ§Ã£o de lucros comeÃ§arÃ¡ a ser paga</small>
+          <small style="display: block; margin-top: 4px; color: #64748b;">Data a partir da qual a distribuição de lucros começará a ser paga</small>
         </div>
         <div class="form-group">
-          <label for="profitDistributionNotes">ObservaÃ§Ãµes</label>
-          <textarea id="profitDistributionNotes" rows="3" placeholder="Ex: DistribuiÃ§Ã£o mensal aos sÃ³cios"></textarea>
+          <label for="profitDistributionNotes">Observações</label>
+          <textarea id="profitDistributionNotes" rows="3" placeholder="Ex: DistribuiÃ§Ã£o mensal aos sócios"></textarea>
         </div>
         <div class="modal-footer">
           <button type="button" class="btn btn-secondary" onclick="closeProfitDistributionModal()">Cancelar</button>
@@ -940,11 +978,11 @@
     </div>
   </div>
 
-  <!-- Modal MǸtricas -->
+  <!-- Modal Métricas -->
   <div class="modal" id="metricsModal">
     <div class="modal-content">
       <div class="modal-header">
-        <h3>Editar MǸtricas</h3>
+        <h3>Editar Métricas</h3>
         <button class="btn-close" onclick="closeMetricsModal()">�-</button>
       </div>
       <form id="metricsForm">
@@ -982,7 +1020,7 @@
   </div>
             <option value="">Selecione...</option>
             <option value="Caixa">Caixa</option>
-            <option value="RecebÃ­veis">RecebÃ­veis</option>
+            <option value="Recebíveis">Recebíveis</option>
             <option value="Estoques">Estoques</option>
           </select>
         </div>
@@ -991,20 +1029,20 @@
           <input type="date" id="capitalGiroDate" required>
         </div>
         <div class="form-group">
-          <label for="capitalGiroDescription">DescriÃ§Ã£o</label>
-          <input type="text" id="capitalGiroDescription" placeholder="DescriÃ§Ã£o do investimento">
+          <label for="capitalGiroDescription">Descrição</label>
+          <input type="text" id="capitalGiroDescription" placeholder="Descrição do investimento">
         </div>
         <div class="form-group">
           <label for="capitalGiroAmount">Valor *</label>
           <input type="number" id="capitalGiroAmount" step="0.01" min="0" required placeholder="0.00">
         </div>
         <div class="form-group">
-          <label for="capitalGiroNotes">ObservaÃ§Ãµes</label>
-          <textarea id="capitalGiroNotes" rows="2" placeholder="ObservaÃ§Ãµes adicionais"></textarea>
+          <label for="capitalGiroNotes">Observações</label>
+          <textarea id="capitalGiroNotes" rows="2" placeholder="Observações adicionais"></textarea>
         </div>
         <div class="form-group">
-          <label for="capitalGiroCalculationMemo">MemÃ³ria de cÃ¡lculo</label>
-          <textarea id="capitalGiroCalculationMemo" rows="3" placeholder="Detalhes do cÃ¡lculo"></textarea>
+          <label for="capitalGiroCalculationMemo">Memória de cálculo</label>
+          <textarea id="capitalGiroCalculationMemo" rows="3" placeholder="Detalhes do cálculo"></textarea>
         </div>
         <div class="modal-footer">
           <button type="button" class="btn btn-secondary" onclick="closeCapitalGiroModal()">Cancelar</button>
@@ -1019,7 +1057,7 @@
     <div class="modal-content">
       <div class="modal-header">
         <h3 id="fundingSourceModalTitle">Adicionar Fonte de Recursos</h3>
-        <button class="btn-close" onclick="closeFundingSourceModal()">Ã—</button>
+        <button class="btn-close" onclick="closeFundingSourceModal()">×</button>
       </div>
       <form id="fundingSourceForm">
         <input type="hidden" id="fundingSourceId">
@@ -1028,8 +1066,8 @@
           <select id="fundingSourceType" required>
             <option value="">Selecione...</option>
             <option value="Fornecedores">Fornecedores</option>
-            <option value="EmprÃ©stimos e Financiamentos">EmprÃ©stimos e Financiamentos</option>
-            <option value="Aporte dos SÃ³cios">Aporte dos SÃ³cios</option>
+            <option value="Empréstimos e Financiamentos">Empréstimos e Financiamentos</option>
+            <option value="Aporte dos Sócios">Aporte dos Sócios</option>
           </select>
         </div>
         <div class="form-group">
@@ -1041,7 +1079,7 @@
           <input type="number" id="fundingSourceAmount" step="0.01" min="0" required>
         </div>
         <div class="form-group">
-          <label for="fundingSourceNotes">ObservaÃ§Ãµes</label>
+          <label for="fundingSourceNotes">Observações</label>
           <textarea id="fundingSourceNotes" rows="3"></textarea>
         </div>
         <div class="modal-footer">
@@ -1054,13 +1092,13 @@
 
   <script>
     // Debug: Log para verificar se o script estÃ¡ carregando
-    console.log('ðŸ”µ Script de Modelagem Financeira carregado!');
+    console.log('[DEBUG] Script de Modelagem Financeira carregado!');
     
     // Global variables
     const urlParams = new URLSearchParams(window.location.search);
     const planId = urlParams.get('plan_id');
     
-    console.log('ðŸ”µ plan_id:', planId);
+    console.log('[DEBUG] plan_id:', planId);
     
     const initialProductsTotals = {{ products_totals | tojson | safe }} || {};
     const initialFixedCostsSummary = {{ fixed_costs_summary | tojson | safe }} || {};
@@ -1098,7 +1136,7 @@
     // Dados de investimentos vindos das estruturas
     let investimentosEstruturasData = {{ investimentos_estruturas | tojson | safe }};
     
-    console.log('ðŸ”µ Dados carregados:', {
+    console.log('[DEBUG] Dados carregados:', {
       custos: variableCostsData.length,
       regras: resultRulesData.length,
       distribuicao_lucros: profitDistributionData,
@@ -1109,7 +1147,7 @@
     let productsData = [];
     
     async function loadProducts() {
-      console.log('ðŸŸ¢ Carregando produtos...');
+      console.log('[PRODUCTS] Carregando produtos...');
       
       try {
         const response = await fetch(`/pev/api/implantacao/${planId}/products`);
@@ -1186,7 +1224,7 @@
       console.log('🔄 [RENDER] Totals normalizados:', normalizedTotals);
       
       if (!normalizedTotals || typeof normalizedTotals !== 'object') {
-        console.warn('⚠️ [RENDER] normalizedTotals inválido ou não é objeto');
+        console.warn('[WARN] [RENDER] normalizedTotals inválido ou não é objeto');
         return;
       }
 
@@ -1280,7 +1318,7 @@
     }
 
     async function loadFixedCostsSummary() {
-      console.log('�YY� Carregando custos e despesas fixas...');
+      console.log('[LOAD] Carregando custos e despesas fixas...');
       
       try {
         const response = await fetch(`/pev/api/implantacao/${planId}/structures/fixed-costs-summary`);
@@ -1288,21 +1326,21 @@
         
         if (result.success && result.data) {
           renderFixedCostsSummary(result.data);
-          console.log('�o. Custos fixos carregados:', result.data);
+          console.log('[OK] Custos fixos carregados:', result.data);
         } else {
-          console.error('�?O Erro ao carregar custos fixos:', result.error);
+          console.error('[ERROR] Erro ao carregar custos fixos:', result.error);
         }
       } catch (error) {
-        console.error('�?O Erro ao buscar custos fixos:', error);
+        console.error('[ERROR] Erro ao buscar custos fixos:', error);
       }
     }
 
     function calculateFinalResults() {
-      console.log('ðŸŸ¢ Calculando resultados finais...');
+      console.log('[CALC] Calculando resultados finais...');
       
       const resultadoOperacional = window.resultadoOperacionalValor || 0;
       
-      // Obter percentual de distribuiÃ§Ã£o de lucros
+      // Obter percentual de distribuição de lucros
       const profitDistributionElement = document.getElementById('profit-distribution-percentage-display');
       const profitDistributionText = profitDistributionElement ? profitDistributionElement.textContent.trim() : '-';
       
@@ -1315,10 +1353,10 @@
         }
       }
       
-      // Calcular valor de distribuiÃ§Ã£o de lucros
+      // Calcular valor de distribuição de lucros
       const profitDistributionValue = (resultadoOperacional * profitDistributionPercent) / 100;
       
-      // Atualizar valor de distribuiÃ§Ã£o de lucros no card
+      // Atualizar valor de distribuição de lucros no card
       const profitDistributionValueElement = document.getElementById('profit-distribution-value-display');
       if (profitDistributionValueElement) {
         profitDistributionValueElement.textContent = formatCurrency(profitDistributionValue);
@@ -1391,10 +1429,10 @@
         }
       }
       
-      console.log('âœ… Resultados finais calculados:');
+      console.log('[OK] Resultados finais calculados:');
       console.log('   - Resultado Operacional:', resultadoOperacional);
-      console.log('   - DistribuiÃ§Ã£o de Lucros:', profitDistributionPercent + '%', profitDistributionValue);
-      console.log('   - Outras DestinaÃ§Ãµes:', otherDestinationsPercent + '%', otherDestinationsValue);
+      console.log('   - Distribuição de Lucros:', profitDistributionPercent + '%', profitDistributionValue);
+      console.log('   - Outras Destinações:', otherDestinationsPercent + '%', otherDestinationsValue);
       console.log('   - Resultado Final:', finalResultPercent.toFixed(1) + '%', finalResult);
     }
     
@@ -1665,14 +1703,14 @@
       console.log('✅ [INIT] Renderizando products totals iniciais...');
       renderProductsTotals(initialProductsTotals);
     } else {
-      console.warn('⚠️ [INIT] initialProductsTotals vazio, pulando renderização inicial');
+      console.warn('[WARN] [INIT] initialProductsTotals vazio, pulando renderização inicial');
     }
 
     if (initialFixedCostsSummary && Object.keys(initialFixedCostsSummary).length) {
       console.log('✅ [INIT] Renderizando fixed costs summary iniciais...');
       renderFixedCostsSummary(initialFixedCostsSummary);
     } else {
-      console.warn('⚠️ [INIT] initialFixedCostsSummary vazio, pulando renderização inicial');
+      console.warn('[WARN] [INIT] initialFixedCostsSummary vazio, pulando renderização inicial');
     }
 
     // Carregar produtos e totalizados ao iniciar
@@ -1692,13 +1730,13 @@
       if (costId) {
         const cost = variableCostsData.find(c => c.id === costId);
         if (cost) {
-          title.textContent = 'Editar Custo VariÃ¡vel';
+          title.textContent = 'Editar Custo Variável';
           document.getElementById('variableCostId').value = cost.id;
           document.getElementById('variableCostDescription').value = cost.descricao || '';
           document.getElementById('variableCostPercentage').value = cost.percentual || '';
         }
       } else {
-        title.textContent = 'Adicionar Custo VariÃ¡vel';
+        title.textContent = 'Adicionar Custo Variável';
         form.reset();
       }
       
@@ -1917,11 +1955,11 @@
           closeProfitDistributionModal();
           location.reload();
         } else {
-          alert('Erro ao atualizar distribuiÃ§Ã£o de lucros');
+          alert('Erro ao atualizar distribuição de lucros');
         }
       } catch (error) {
         console.error('Error:', error);
-        alert('Erro ao atualizar distribuiÃ§Ã£o de lucros');
+        alert('Erro ao atualizar distribuição de lucros');
       }
     });
 
@@ -2023,12 +2061,12 @@
       const type = document.getElementById('capitalGiroType').value;
       const amount = parseFloat(document.getElementById('capitalGiroAmount').value);
       
-      console.log('ðŸ”µ Salvando investimento:', { type, amount });
+      console.log('[DEBUG] Salvando investimento:', { type, amount });
       
       // Mapear tipo para item_id
       const typeToItemId = {
         'Caixa': 1,
-        'RecebÃ­veis': 2,
+        'Recebíveis': 2,
         'Estoques': 3
       };
       
@@ -2048,19 +2086,19 @@
         notes: document.getElementById('capitalGiroNotes').value
       };
 
-      console.log('ðŸ”µ Dados a serem enviados:', data);
+      console.log('[DEBUG] Dados a serem enviados:', data);
 
       try {
         let response;
         if (contributionId) {
-          console.log('ðŸ”µ Atualizando investimento ID:', contributionId);
+          console.log('[DEBUG] Atualizando investimento ID:', contributionId);
           response = await fetch(`/pev/api/implantacao/${planId}/finance/investment/contributions/${contributionId}`, {
             method: 'PUT',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify(data)
           });
         } else {
-          console.log('ðŸ”µ Criando novo investimento');
+          console.log('[DEBUG] Criando novo investimento');
           response = await fetch(`/pev/api/implantacao/${planId}/finance/investment/contributions`, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
@@ -2069,10 +2107,10 @@
         }
 
         const result = await response.json();
-        console.log('ðŸ”µ Resposta da API:', result);
+        console.log('[DEBUG] Resposta da API:', result);
 
         if (response.ok && result.success) {
-          console.log('âœ… Investimento salvo com sucesso!');
+          console.log('[OK] Investimento salvo com sucesso!');
           alert('Investimento cadastrado com sucesso!');
           closeCapitalGiroModal();
           loadInvestmentData();
@@ -2094,7 +2132,7 @@
     // Carregar e exibir investimentos em capital de giro
     async function loadCapitalGiroContributions() {
       try {
-        console.log('ðŸ”„ Carregando investimentos de capital de giro...');
+        console.log('[LOAD] Carregando investimentos de capital de giro...');
         
         const tbody = document.getElementById('capital-giro-contributions-tbody');
         tbody.innerHTML = '<tr><td colspan="6" style="text-align: center; padding: 24px; color: #64748b;">Carregando...</td></tr>';
@@ -2102,7 +2140,7 @@
         // Mapear item_id para nome
         const itemIdToName = {
           1: 'Caixa',
-          2: 'RecebÃ­veis',
+          2: 'Recebíveis',
           3: 'Estoques'
         };
         
@@ -2114,7 +2152,7 @@
             const response = await fetch(`/pev/api/implantacao/${planId}/finance/investment/contributions?item_id=${itemId}`);
             const result = await response.json();
             
-            console.log(`ðŸ“¦ ContribuiÃ§Ãµes do item ${itemId}:`, result);
+            console.log(`[ITEMS] Contribuições do item ${itemId}:`, result);
             
             if (result.success && result.data && result.data.length > 0) {
               result.data.forEach(contrib => {
@@ -2130,8 +2168,8 @@
           }
         }
         
-        console.log('ðŸ“Š Total de contribuiÃ§Ãµes encontradas:', allContributions.length);
-        console.log('ðŸ“Š ContribuiÃ§Ãµes:', allContributions);
+        console.log('📊 Total de contribuiÃ§Ãµes encontradas:', allContributions.length);
+        console.log('📊 Contribuições:', allContributions);
         
         tbody.innerHTML = '';
         
@@ -2170,7 +2208,7 @@
           tbody.appendChild(row);
         });
         
-        console.log('âœ… Tabela de investimentos atualizada');
+        console.log('[OK] Tabela de investimentos atualizada');
         
       } catch (error) {
         console.error('âŒ Erro ao carregar investimentos:', error);
@@ -2328,7 +2366,7 @@
 
     async function loadInvestmentData() {
       try {
-        console.log('ðŸ”„ Loading investment data...');
+        console.log('[LOAD] Loading investment data...');
         
         // Criar estrutura de categorias e itens manualmente
         const categories = [
@@ -2347,15 +2385,15 @@
         const items = [
           // Capital de Giro
           { id: 1, item_name: 'Caixa', category_id: 1 },
-          { id: 2, item_name: 'RecebÃ­veis', category_id: 1 },
+          { id: 2, item_name: 'Recebíveis', category_id: 1 },
           { id: 3, item_name: 'Estoques', category_id: 1 },
           // Imobilizado
-          { id: 4, item_name: 'InstalaÃ§Ãµes', category_id: 2 },
-          { id: 5, item_name: 'MÃ¡quinas e Equipamentos', category_id: 2 },
+          { id: 4, item_name: 'Instalações', category_id: 2 },
+          { id: 5, item_name: 'Máquinas e Equipamentos', category_id: 2 },
           { id: 6, item_name: 'Outros Investimentos', category_id: 2 }
         ];
         
-        console.log('âœ… Categories and items structure created');
+        console.log('[OK] Categories and items structure created');
         console.log('ðŸ—ï¸ Investimentos das Estruturas:', investimentosEstruturasData);
         
         // Atualizar totais por item
@@ -2382,9 +2420,9 @@
             let estruturaData = null;
             
             // Mapear itens para dados de estruturas
-            if (item.item_name === 'InstalaÃ§Ãµes' && investimentosEstruturasData.instalacoes) {
+            if (item.item_name === 'Instalações' && investimentosEstruturasData.instalacoes) {
               estruturaData = investimentosEstruturasData.instalacoes;
-            } else if (item.item_name === 'MÃ¡quinas e Equipamentos' && investimentosEstruturasData.maquinas) {
+            } else if (item.item_name === 'Máquinas e Equipamentos' && investimentosEstruturasData.maquinas) {
               estruturaData = investimentosEstruturasData.maquinas;
             } else if (item.item_name === 'Outros Investimentos' && investimentosEstruturasData.outros) {
               estruturaData = investimentosEstruturasData.outros;
@@ -2394,7 +2432,7 @@
               const estruturaTotal = parseFloat(estruturaData.total) || 0;
               itemTotals[item.id] = estruturaTotal;
               
-              // Usar dados por mÃªs das parcelas
+              // Usar dados por mês das parcelas
               const porMes = estruturaData.por_mes || {};
               itemsByMonth[item.id] = porMes;
               
@@ -2408,7 +2446,7 @@
             const contribResponse = await fetch(`/pev/api/implantacao/${planId}/finance/investment/contributions?item_id=${item.id}`);
             const contribResult = await contribResponse.json();
             
-            console.log(`ðŸ“¦ Item ${item.item_name} (ID: ${item.id}):`, contribResult);
+            console.log(`[ITEMS] Item ${item.item_name} (ID: ${item.id}):`, contribResult);
             
             if (contribResult.success && contribResult.data && contribResult.data.length > 0) {
               let total = 0;
@@ -2418,7 +2456,7 @@
                 const amount = parseFloat(contrib.amount || 0);
                 total += amount;
                 
-                // Agrupar por mÃªs
+                // Agrupar por mês
                 const date = new Date(contrib.contribution_date);
                 const monthKey = `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}`;
                 
@@ -2431,26 +2469,26 @@
               itemTotals[item.id] = total;
               itemsByMonth[item.id] = monthlyData;
               
-              console.log(`  ðŸ’° Total: R$ ${total.toLocaleString('pt-BR', {minimumFractionDigits: 2})}`);
+              console.log(`  💰 Total: R$ ${total.toLocaleString('pt-BR', {minimumFractionDigits: 2})}`);
             } else {
-              console.log(`  â„¹ï¸ Sem contribuiÃ§Ãµes`);
+              console.log(`  ℹ️ Sem contribuiÃ§Ãµes`);
             }
           } catch (error) {
             console.error(`âŒ Erro ao buscar contribuiÃ§Ãµes do item ${item.item_name}:`, error);
           }
         }
         
-        console.log('ðŸ“Š Totais por item:', itemTotals);
-        console.log('ðŸ“Š Dados mensais:', itemsByMonth);
+        console.log('📊 Totais por item:', itemTotals);
+        console.log('📊 Dados mensais:', itemsByMonth);
         
-        // Renderizar planilha por perÃ­odo
+        // Renderizar planilha por período
         renderInvestmentSpreadsheet(categories, itemsByMonth, itemTotals);
         
         // Renderizar fluxo de caixa do investimento
         renderInvestmentCashflow(categories, itemsByMonth, itemTotals);
         
-        console.log('âœ… Investment data loaded successfully');
-        console.log(`ðŸ“¦ Investment items cached: ${investmentItemsCache.length}`, investmentItemsCache);
+        console.log('[OK] Investment data loaded successfully');
+        console.log(`[ITEMS] Investment items cached: ${investmentItemsCache.length}`, investmentItemsCache);
         
       } catch (error) {
         console.error('âŒ Error loading investment data:', error);
@@ -2476,7 +2514,7 @@
           });
         }
         
-        // Calcular totais por mÃªs
+        // Calcular totais por mês
         const monthlyTotals = {};
         months.forEach(m => monthlyTotals[m.key] = 0);
         
@@ -2503,14 +2541,14 @@
             monthlyData: monthlyData
           });
           
-          console.log(`  ðŸ“Š ${item.item_name}: Total R$ ${total.toLocaleString('pt-BR', {minimumFractionDigits: 2})}`);
+          console.log(`  📊 ${item.item_name}: Total R$ ${total.toLocaleString('pt-BR', {minimumFractionDigits: 2})}`);
         }
         
         // Renderizar headers dos meses
         const headerRow = document.getElementById('month-headers');
         headerRow.innerHTML = months.map(m => `<th style="min-width: 120px;">${m.label}</th>`).join('');
         
-        // Renderizar linha de totais por mÃªs (serÃ¡ preenchida depois do loop com totalGeral)
+        // Renderizar linha de totais por mês (serÃ¡ preenchida depois do loop com totalGeral)
         const totalRow = document.getElementById('month-totals-row');
         // Temporariamente vazio, serÃ¡ preenchido apÃ³s calcular totalGeral
         
@@ -2518,7 +2556,7 @@
         const tbodyFixed = document.getElementById('spreadsheet-tbody-fixed');
         tbodyFixed.innerHTML = '';
         
-        // Renderizar valores por perÃ­odo
+        // Renderizar valores por período
         const tbody = document.getElementById('spreadsheet-tbody');
         tbody.innerHTML = '';
         
@@ -2542,7 +2580,7 @@
           `;
           tbodyFixed.appendChild(rowFixed);
           
-          // Linha com valores por perÃ­odo
+          // Linha com valores por período
           const row = document.createElement('tr');
           row.innerHTML = months.map(month => {
             const value = rowData.monthlyData[month.key] || 0;
@@ -2575,7 +2613,7 @@
           `;
         }
         
-        console.log(`ðŸ’° Total Geral de Investimentos: R$ ${totalGeral.toLocaleString('pt-BR', {minimumFractionDigits: 2})}`);
+        console.log(`💰 Total Geral de Investimentos: R$ ${totalGeral.toLocaleString('pt-BR', {minimumFractionDigits: 2})}`);
         
       } catch (error) {
         console.error('Error rendering spreadsheet:', error);
@@ -2601,7 +2639,7 @@
           });
         }
         
-        // Processar dados por mÃªs
+        // Processar dados por mês
         const cashflowData = months.map(month => {
           let capitalGiro = 0;
           let imobilizado = 0;
@@ -2624,7 +2662,7 @@
             }
           }
           
-          // Calcular fontes de recursos para este mÃªs
+          // Calcular fontes de recursos para este mês
           fundingSources.forEach(source => {
             const date = new Date(source.contribution_date);
             const monthKey = `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}`;
@@ -2690,10 +2728,145 @@
       }
     }
 
+    // ==================== NOVA FUNÇÃO SIMPLIFICADA DE INVESTIMENTOS ====================
+    function renderInvestmentsSimple() {
+      console.log('[INVEST] Renderizando investimentos (versão simplificada)...');
+      console.log('[INVEST] Dados:', investimentosEstruturasData);
+      
+      const formatCurrency = (value) => {
+        return new Intl.NumberFormat('pt-BR', {
+          style: 'currency',
+          currency: 'BRL',
+          minimumFractionDigits: 2
+        }).format(value || 0);
+      };
+      
+      // Definir blocos e mapeamento
+      const blocos = [
+        { nome: 'Caixa', key: 'caixa', elementId: 'invest-caixa-value' },
+        { nome: 'Estoques', key: 'estoques', elementId: 'invest-estoques-value' },
+        { nome: 'Instalações', key: 'instalacoes', elementId: 'invest-instalacoes-value' },
+        { nome: 'Máquinas e Equipamentos', key: 'maquinas', elementId: 'invest-maquinas-value' }
+      ];
+      
+      // Calcular total e renderizar cards
+      let totalGeral = 0;
+      const dadosBlocos = [];
+      const todosMeses = new Set();
+      
+      blocos.forEach(bloco => {
+        const dados = investimentosEstruturasData[bloco.key] || {total: 0, por_mes: {}};
+        const total = parseFloat(dados.total) || 0;
+        const porMes = dados.por_mes || {};
+        
+        totalGeral += total;
+        dadosBlocos.push({
+          nome: bloco.nome,
+          total: total,
+          porMes: porMes
+        });
+        
+        // Atualizar card individual
+        const el = document.getElementById(bloco.elementId);
+        if (el) el.textContent = formatCurrency(total);
+        
+        // Coletar meses
+        Object.keys(porMes).forEach(mes => todosMeses.add(mes));
+      });
+      
+      // Atualizar total
+      const elTotal = document.getElementById('invest-total-value');
+      if (elTotal) elTotal.textContent = formatCurrency(totalGeral);
+      
+      // Ordenar meses
+      const mesesOrdenados = Array.from(todosMeses).sort();
+      
+      console.log('[INVEST] Total:', totalGeral);
+      console.log('[INVEST] Meses:', mesesOrdenados);
+      
+      // Renderizar planilha - IDS ANTIGOS (spreadsheet-tbody-fixed, month-headers, spreadsheet-tbody)
+      const tbodyFixed = document.getElementById('spreadsheet-tbody-fixed');
+      const headerRow = document.getElementById('month-headers');
+      const tbody = document.getElementById('spreadsheet-tbody');
+      
+      if (!tbodyFixed || !headerRow || !tbody) {
+        console.warn('[INVEST] Elementos da planilha não encontrados');
+        return;
+      }
+      
+      // Headers dos meses
+      if (mesesOrdenados.length === 0) {
+        headerRow.innerHTML = '<th style="min-width: 200px;">Sem dados mensais</th>';
+      } else {
+        headerRow.innerHTML = mesesOrdenados.map(mes => {
+          const [ano, mesNum] = mes.split('-');
+          const data = new Date(parseInt(ano), parseInt(mesNum) - 1, 1);
+          const mesAbrev = data.toLocaleDateString('pt-BR', { month: 'short', year: '2-digit' });
+          return `<th style="min-width: 100px; text-align: right;">${mesAbrev}</th>`;
+        }).join('');
+      }
+      
+      // Linha de TOTAL
+      let htmlFixed = '<tr style="background: rgba(59, 130, 246, 0.08); font-weight: 600;">';
+      htmlFixed += '<td colspan="2"><strong>TOTAL</strong></td>';
+      htmlFixed += `<td style="text-align: right; color: #2563eb;"><strong>${formatCurrency(totalGeral)}</strong></td>';
+      htmlFixed += '</tr>';
+      
+      let htmlMonths = '<tr style="background: rgba(59, 130, 246, 0.08);">';
+      if (mesesOrdenados.length === 0) {
+        htmlMonths += '<td style="text-align: center;">-</td>';
+      } else {
+        mesesOrdenados.forEach(mes => {
+          const totalMes = dadosBlocos.reduce((sum, bloco) => sum + (parseFloat(bloco.porMes[mes]) || 0), 0);
+          htmlMonths += `<td style="text-align: right; font-weight: 600;">${totalMes > 0 ? formatCurrency(totalMes) : '-'}</td>`;
+        });
+      }
+      htmlMonths += '</tr>';
+      
+      // Linhas de cada bloco
+      dadosBlocos.forEach(bloco => {
+        if (bloco.total <= 0) return;
+        
+        htmlFixed += '<tr>';
+        htmlFixed += '<td colspan="2">' + bloco.nome + '</td>';
+        htmlFixed += `<td style="text-align: right; font-weight: 600; color: #059669;">${formatCurrency(bloco.total)}</td>`;
+        htmlFixed += '</tr>';
+        
+        htmlMonths += '<tr>';
+        if (mesesOrdenados.length === 0) {
+          htmlMonths += '<td style="text-align: center;">-</td>';
+        } else {
+          mesesOrdenados.forEach(mes => {
+            const valor = parseFloat(bloco.porMes[mes]) || 0;
+            htmlMonths += `<td style="text-align: right;">${valor > 0 ? formatCurrency(valor) : '-'}</td>`;
+          });
+        }
+        htmlMonths += '</tr>';
+      });
+      
+      // Atualizar tabelas
+      tbodyFixed.innerHTML = htmlFixed;
+      tbody.innerHTML = htmlMonths;
+      
+      console.log('[OK] Planilha de investimentos renderizada!');
+    }
+    
     // Carregar dados ao inicializar
-    loadFundingSources();
-    loadInvestmentData();
-    loadCapitalGiroContributions();
+    // DESABILITADO: APIs não existem, usar dados do backend
+    // loadFundingSources();
+    // loadCapitalGiroContributions();
+    
+    // NOVA VERSÃO SIMPLIFICADA - usar dados do backend diretamente
+    console.log('[INIT] Verificando investimentosEstruturasData:', investimentosEstruturasData);
+    console.log('[INIT] Tipo:', typeof investimentosEstruturasData);
+    console.log('[INIT] É objeto?', investimentosEstruturasData && typeof investimentosEstruturasData === 'object');
+    
+    if (investimentosEstruturasData && typeof investimentosEstruturasData === 'object') {
+      console.log('[INIT] Chamando renderInvestmentsSimple...');
+      renderInvestmentsSimple();
+    } else {
+      console.error('[INIT] investimentosEstruturasData não disponível ou inválido!');
+    }
 
     // Close modals on outside click
     document.querySelectorAll('.modal').forEach(modal => {

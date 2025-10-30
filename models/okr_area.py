@@ -6,7 +6,7 @@ class OKRArea(db.Model):
     __tablename__ = 'okrs_area'
     
     id = db.Column(db.Integer, primary_key=True)
-    plan_id = db.Column(db.String(100), db.ForeignKey('plans.id'), nullable=False)
+    plan_id = db.Column(db.Integer, db.ForeignKey('plans.id'), nullable=False)
     objective = db.Column(db.Text, nullable=False)
     linked_okr_ids = db.Column(db.JSON)  # List of global OKR IDs
     type = db.Column(db.String(20), nullable=False)  # estruturante, aceleracao

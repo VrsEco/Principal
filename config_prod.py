@@ -6,6 +6,8 @@ Seguindo TECH_STACK.md e CODING_STANDARDS.md
 import os
 from datetime import timedelta
 
+from utils.env_helpers import normalize_database_url
+
 
 class ProductionConfig:
     """Configuração para ambiente de produção."""
@@ -21,10 +23,11 @@ class ProductionConfig:
         raise ValueError("SECRET_KEY não definida em produção!")
     
     # ===== BANCO DE DADOS =====
-    SQLALCHEMY_DATABASE_URI = os.getenv('DATABASE_URL')
-    if not SQLALCHEMY_DATABASE_URI:
+    _prod_database_url = normalize_database_url(os.getenv('DATABASE_URL'))
+    if not _prod_database_url:
         raise ValueError("DATABASE_URL não definida em produção!")
-    
+    SQLALCHEMY_DATABASE_URI = _prod_database_url
+
     SQLALCHEMY_TRACK_MODIFICATIONS = False
     SQLALCHEMY_ECHO = False
     SQLALCHEMY_ENGINE_OPTIONS = {

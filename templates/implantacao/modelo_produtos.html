@@ -252,24 +252,63 @@
 
   function submitForm(evt) {
     evt.preventDefault();
+    
+    // Validação no frontend
+    if (!els.name.value.trim()) {
+      alert('ERRO: Nome do produto é obrigatório!');
+      els.name.focus();
+      return;
+    }
+    
+    const priceValue = parse(els.price.value);
+    if (priceValue <= 0) {
+      alert('ERRO: Preço deve ser maior que zero!');
+      els.price.focus();
+      return;
+    }
+    
     const payload = buildPayload();
     const endpoint = state.editing ? `${API}/${state.editing}` : API;
     const method = state.editing ? 'PUT' : 'POST';
+    
+    // LOG: Payload sendo enviado
+    console.log('=== SUBMITTING PRODUCT ===');
+    console.log('Endpoint:', endpoint);
+    console.log('Method:', method);
+    console.log('Payload:', payload);
+    
     fetch(endpoint, {
       method,
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(payload),
     })
-      .then(res => res.json().then(body => ({ ok: res.ok, status: res.status, body })))
+      .then(res => {
+        console.log('Response status:', res.status);
+        console.log('Response ok:', res.ok);
+        return res.json().then(body => {
+          console.log('Response body:', body);
+          return { ok: res.ok, status: res.status, body };
+        });
+      })
       .then(({ ok, status, body }) => {
-        if (status === 400) throw new Error(body.error || 'Dados invÃ¡lidos.');
-        if (!ok || !body.success) throw new Error(body.error || 'Erro ao salvar produto.');
+        if (status === 400) {
+          console.error('Validation error:', body.error);
+          throw new Error(body.error || 'Dados invÃ¡lidos.');
+        }
+        if (!ok || !body.success) {
+          console.error('Server error:', body.error);
+          throw new Error(body.error || 'Erro ao salvar produto.');
+        }
+        console.log('Product saved successfully:', body);
         return loadProducts();
       })
       .then(closeForm)
       .catch(err => {
-        console.error(err);
-        alert(err.message || 'NÃ£o foi possÃ­vel salvar o produto.');
+        console.error('=== ERROR SAVING PRODUCT ===');
+        console.error('Error type:', err.constructor.name);
+        console.error('Error message:', err.message);
+        console.error('Error stack:', err.stack);
+        alert('ERRO: ' + (err.message || 'NÃ£o foi possÃ­vel salvar o produto.'));
       });
   }
 
@@ -328,9 +367,11 @@
     state.lock = true;
     const price = parse(els.price.value);
     if (document.activeElement === els.costValue) {
-      els.costPercent.value = price > 0 ? fmt((parse(els.costValue.value) / price) * 100) : '';
+      const calcPercent = price > 0 ? (parse(els.costValue.value) / price) * 100 : 0;
+      els.costPercent.value = calcPercent > 0 ? calcPercent.toFixed(2) : '';
     } else {
-      els.costValue.value = price > 0 ? fmt((price * parse(els.costPercent.value)) / 100) : '';
+      const calcValue = price > 0 ? (price * parse(els.costPercent.value)) / 100 : 0;
+      els.costValue.value = calcValue > 0 ? calcValue.toFixed(2) : '';
     }
     state.lock = false;
   }
@@ -340,9 +381,11 @@
     state.lock = true;
     const price = parse(els.price.value);
     if (document.activeElement === els.expValue) {
-      els.expPercent.value = price > 0 ? fmt((parse(els.expValue.value) / price) * 100) : '';
+      const calcPercent = price > 0 ? (parse(els.expValue.value) / price) * 100 : 0;
+      els.expPercent.value = calcPercent > 0 ? calcPercent.toFixed(2) : '';
     } else {
-      els.expValue.value = price > 0 ? fmt((price * parse(els.expPercent.value)) / 100) : '';
+      const calcValue = price > 0 ? (price * parse(els.expPercent.value)) / 100 : 0;
+      els.expValue.value = calcValue > 0 ? calcValue.toFixed(2) : '';
     }
     state.lock = false;
   }
@@ -357,30 +400,47 @@
     const marketRevenue = price * marketUnits;
     const shareUnits = parse(els.shareUnits.value);
     const sharePercent = marketUnits > 0 ? (shareUnits / marketUnits) * 100 : parse(els.sharePercent.value);
-    els.marginValue.value = fmt(marginValue);
-    els.marginPercent.value = fmt(marginPercent);
-    els.marketRevenue.value = fmt(marketRevenue);
+    els.marginValue.value = marginValue.toFixed(2);
+    els.marginPercent.value = marginPercent.toFixed(2);
+    els.marketRevenue.value = marketRevenue.toFixed(2);
     if (document.activeElement !== els.sharePercent) {
-      els.sharePercent.value = sharePercent ? fmt(sharePercent) : '';
+      els.sharePercent.value = sharePercent ? sharePercent.toFixed(2) : '';
     }
   }
 
   function parse(value) {
     if (typeof value === 'number') return Number.isFinite(value) ? value : 0;
+    
     let normalized = String(value || '').trim();
     if (!normalized) return 0;
+    
+    // Remove espaços
     normalized = normalized.replace(/\s+/g, '');
-    normalized = normalized.replace(/\.(?=\d{3}(?:[^\d]|$))/g, '');
+    
+    // Se tem vírgula, assume formato brasileiro (1.234,56 ou 1234,56)
     if (normalized.includes(',')) {
+      // Remove pontos (separador de milhares) e troca vírgula por ponto
       normalized = normalized.replace(/\./g, '').replace(',', '.');
-    } else {
-      const dotMatches = normalized.match(/\./g);
-      if (dotMatches && dotMatches.length > 1) {
-        const parts = normalized.split('.');
-        const decimal = parts.pop();
-        normalized = parts.join('') + '.' + decimal;
+    }
+    // Se não tem vírgula mas tem múltiplos pontos, assume formato brasileiro sem vírgula (1.234)
+    else {
+      const dotCount = (normalized.match(/\./g) || []).length;
+      if (dotCount > 1) {
+        // Remove todos os pontos (são separadores de milhares)
+        normalized = normalized.replace(/\./g, '');
+      }
+      // Se tem apenas um ponto, verifica se é separador de milhares ou decimal
+      else if (dotCount === 1) {
+        const dotIndex = normalized.indexOf('.');
+        const afterDot = normalized.length - dotIndex - 1;
+        // Se tem 3 dígitos após o ponto, provavelmente é separador de milhares
+        if (afterDot === 3 && normalized.length > 4) {
+          normalized = normalized.replace('.', '');
+        }
+        // Caso contrário, mantém como decimal
       }
     }
+    
     const number = Number(normalized);
     return Number.isFinite(number) ? number : 0;
   }
@@ -395,7 +455,14 @@
     if (field.tagName === 'TEXTAREA' || field.type === 'text') {
       field.value = value ? String(value) : '';
     } else {
-      field.value = value === null || value === undefined ? '' : fmt(value);
+      // Para campos numéricos, não usar formatação pt-BR (vírgula)
+      // Usar ponto como separador decimal (padrão internacional)
+      if (value === null || value === undefined || value === '') {
+        field.value = '';
+      } else {
+        const num = typeof value === 'number' ? value : parse(value);
+        field.value = num.toFixed(2);
+      }
     }
   }
 

@@ -6,23 +6,32 @@ Substitui conexões diretas ao SQLite
 """
 
 from sqlalchemy import create_engine, text
+from urllib.parse import quote_plus
+
+from utils.env_helpers import normalize_database_url, normalize_docker_host
 import os
 
 # Configurações do PostgreSQL
 # Priorizar DATABASE_URL do ambiente (já vem com psycopg2)
-DATABASE_URL = os.environ.get('DATABASE_URL')
+DATABASE_URL = normalize_database_url(os.environ.get('DATABASE_URL'))
 
 # Se DATABASE_URL não existir, construir a partir de variáveis individuais
 if not DATABASE_URL:
-    PG_HOST = os.environ.get('POSTGRES_HOST', 'localhost')
+    PG_HOST = normalize_docker_host(os.environ.get('POSTGRES_HOST', 'localhost'))
     PG_PORT = int(os.environ.get('POSTGRES_PORT', 5432))
     PG_DB = os.environ.get('POSTGRES_DB', 'bd_app_versus')
     PG_USER = os.environ.get('POSTGRES_USER', 'postgres')
     PG_PASSWORD = os.environ.get('POSTGRES_PASSWORD', '*Paraiso1978')
-    DATABASE_URL = f'postgresql+psycopg2://{PG_USER}:{PG_PASSWORD}@{PG_HOST}:{PG_PORT}/{PG_DB}'
-elif not DATABASE_URL.startswith('postgresql+psycopg2'):
-    # Se DATABASE_URL existe mas não tem o driver, adicionar
-    DATABASE_URL = DATABASE_URL.replace('postgresql://', 'postgresql+psycopg2://')
+    
+    # ✅ FIX: Encode password para evitar problemas com caracteres especiais (*, @, #, etc)
+    PG_PASSWORD_ENCODED = quote_plus(PG_PASSWORD)
+    
+    DATABASE_URL = f'postgresql+psycopg2://{PG_USER}:{PG_PASSWORD_ENCODED}@{PG_HOST}:{PG_PORT}/{PG_DB}'
+else:
+    if not DATABASE_URL.startswith('postgresql+psycopg2'):
+        # Se DATABASE_URL existe mas não tem o driver, adicionar
+        DATABASE_URL = DATABASE_URL.replace('postgresql://', 'postgresql+psycopg2://')
+    DATABASE_URL = normalize_database_url(DATABASE_URL)
 
 # Engine global
 _engine = None
@@ -289,4 +298,3 @@ class PostgresCursor:
 def connect():
     """Função compatível com sqlite3.connect()"""
     return PostgresConnection()
-

@@ -5,7 +5,6 @@ Modelo de dados para produtos no Modelo & Mercado
 
 from datetime import datetime
 from models import db
-from sqlalchemy import Column, Integer, String, Text, Numeric, Boolean, ForeignKey, DateTime
 
 
 class Product(db.Model):
@@ -19,46 +18,46 @@ class Product(db.Model):
     __tablename__ = 'plan_products'
     
     # Primary Key
-    id = Column(Integer, primary_key=True)
-    plan_id = Column(Integer, ForeignKey('plans.id', ondelete='CASCADE'), nullable=False)
+    id = db.Column(db.Integer, primary_key=True)
+    plan_id = db.Column(db.Integer, db.ForeignKey('plans.id', ondelete='CASCADE'), nullable=False)
     
     # Identificação do Produto
-    name = Column(String(200), nullable=False)
-    description = Column(Text)
+    name = db.Column(db.String(200), nullable=False)
+    description = db.Column(db.Text)
     
     # a) Preço de Venda
-    sale_price = Column(Numeric(15, 2), nullable=False, default=0.00)
-    sale_price_notes = Column(Text)
+    sale_price = db.Column(db.Numeric(15, 2), nullable=False, default=0.00)
+    sale_price_notes = db.Column(db.Text)
     
     # b) Custos Variáveis
-    variable_costs_percent = Column(Numeric(5, 2), default=0.00)
-    variable_costs_value = Column(Numeric(15, 2), default=0.00)
-    variable_costs_notes = Column(Text)
+    variable_costs_percent = db.Column(db.Numeric(5, 2), default=0.00)
+    variable_costs_value = db.Column(db.Numeric(15, 2), default=0.00)
+    variable_costs_notes = db.Column(db.Text)
     
     # c) Despesas Variáveis
-    variable_expenses_percent = Column(Numeric(5, 2), default=0.00)
-    variable_expenses_value = Column(Numeric(15, 2), default=0.00)
-    variable_expenses_notes = Column(Text)
+    variable_expenses_percent = db.Column(db.Numeric(5, 2), default=0.00)
+    variable_expenses_value = db.Column(db.Numeric(15, 2), default=0.00)
+    variable_expenses_notes = db.Column(db.Text)
     
     # Margem de Contribuição Unitária (CALCULADO)
-    unit_contribution_margin_percent = Column(Numeric(5, 2), default=0.00)
-    unit_contribution_margin_value = Column(Numeric(15, 2), default=0.00)
-    unit_contribution_margin_notes = Column(Text)
+    unit_contribution_margin_percent = db.Column(db.Numeric(5, 2), default=0.00)
+    unit_contribution_margin_value = db.Column(db.Numeric(15, 2), default=0.00)
+    unit_contribution_margin_notes = db.Column(db.Text)
     
     # d) Tamanho do Mercado
-    market_size_monthly_units = Column(Numeric(15, 2), default=0.00)
-    market_size_monthly_revenue = Column(Numeric(15, 2), default=0.00)  # CALCULADO
-    market_size_notes = Column(Text)
+    market_size_monthly_units = db.Column(db.Numeric(15, 2), default=0.00)
+    market_size_monthly_revenue = db.Column(db.Numeric(15, 2), default=0.00)  # CALCULADO
+    market_size_notes = db.Column(db.Text)
     
     # e) Alvo de Marketing Share
-    market_share_goal_monthly_units = Column(Numeric(15, 2), default=0.00)
-    market_share_goal_percent = Column(Numeric(5, 2), default=0.00)
-    market_share_goal_notes = Column(Text)
+    market_share_goal_monthly_units = db.Column(db.Numeric(15, 2), default=0.00)
+    market_share_goal_percent = db.Column(db.Numeric(5, 2), default=0.00)
+    market_share_goal_notes = db.Column(db.Text)
     
     # Auditoria
-    created_at = Column(DateTime, default=datetime.utcnow, nullable=False)
-    updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow, nullable=False)
-    is_deleted = Column(Boolean, default=False, nullable=False)
+    created_at = db.Column(db.DateTime, default=datetime.utcnow, nullable=False)
+    updated_at = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow, nullable=False)
+    is_deleted = db.Column(db.Boolean, default=False, nullable=False)
     
     # Relacionamentos
     def __repr__(self):

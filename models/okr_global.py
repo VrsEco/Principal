@@ -6,7 +6,7 @@ class OKRGlobal(db.Model):
     __tablename__ = 'okrs_global'
     
     id = db.Column(db.Integer, primary_key=True)
-    plan_id = db.Column(db.String(100), db.ForeignKey('plans.id'), nullable=False)
+    plan_id = db.Column(db.Integer, db.ForeignKey('plans.id'), nullable=False)
     objective = db.Column(db.Text, nullable=False)
     type = db.Column(db.String(20), nullable=False)  # estruturante, aceleracao
     owner = db.Column(db.String(200))

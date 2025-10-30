@@ -5,7 +5,7 @@ class Plan(db.Model):
     """Strategic planning model"""
     __tablename__ = 'plans'
     
-    id = db.Column(db.String(100), primary_key=True)  # e.g., "transformacao-digital-2025"
+    id = db.Column(db.Integer, primary_key=True, autoincrement=True)
     name = db.Column(db.String(200), nullable=False)
     company_id = db.Column(db.Integer, db.ForeignKey('companies.id'), nullable=False)
     sponsor_id = db.Column(db.Integer, db.ForeignKey('users.id'))

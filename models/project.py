@@ -6,7 +6,7 @@ class Project(db.Model):
     __tablename__ = 'projects'
     
     id = db.Column(db.Integer, primary_key=True)
-    plan_id = db.Column(db.String(100), db.ForeignKey('plans.id'), nullable=False)
+    plan_id = db.Column(db.Integer, db.ForeignKey('plans.id'), nullable=False)
     name = db.Column(db.String(200), nullable=False)
     okr_links = db.Column(db.JSON)  # List of OKR IDs
     kpis = db.Column(db.JSON)  # List of KPI names

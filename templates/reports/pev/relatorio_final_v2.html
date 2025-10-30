@@ -1,0 +1,417 @@
+{# 
+  Relatório Final de Implantação PEV - Versão 2.0
+  Usando padrões e componentes reutilizáveis
+  Sistema GestaoVersus
+#}
+
+{% extends "reports/base_report.html" %}
+{% from "reports/components.html" import 
+  section_header, 
+  story_card, 
+  data_table, 
+  custom_table,
+  result_card, 
+  result_grid,
+  highlight_box,
+  model7_card,
+  responsive_grid,
+  two_column,
+  subsection,
+  cover_meta_grid,
+  format_currency,
+  format_percent,
+  format_date
+%}
+
+{# METADADOS #}
+{% block page_title %}Relatório Final de Implantação - {{ plan.plan_name }} - GestaoVersus{% endblock %}
+{% block meta_description %}Relatório final de implantação do PEV para {{ plan.company_name }}{% endblock %}
+
+{# CAPA #}
+{% block report_title_cover %}Relatório Final de Implantação{% endblock %}
+{% block report_subtitle %}{{ plan.plan_name }}{% endblock %}
+
+{% block cover_meta %}
+  {{ cover_meta_grid([
+    {"label": "Empresa", "value": plan.company_name},
+    {"label": "Consultor", "value": plan.consultant},
+    {"label": "Patrocinador", "value": plan.sponsor|default("N/A")},
+    {"label": "Última atualização", "value": plan.last_update}
+  ]) }}
+{% endblock %}
+
+{# CONTEÚDO #}
+{% block content %}
+
+{# ========================================
+   SEÇÃO 1: ALINHAMENTO ESTRATÉGICO
+   ======================================== #}
+<section class="page portrait">
+  {{ section_header("01", "Alinhamento Estratégico") }}
+  
+  <div class="section-body">
+    {# Visão Compartilhada #}
+    {% set visao = alinhamento.visao %}
+    {% if visao %}
+      {% if visao is string %}
+        <p class="narrative-intro">
+          Consolidamos a visão compartilhada do negócio em torno de "{{ visao }}", estabelecendo a referência para todas as decisões de implantação.
+        </p>
+      {% elif visao is iterable %}
+        <p class="narrative-intro">
+          A visão compartilhada do negócio foi traduzida nos seguintes elementos centrais:
+        </p>
+        <ul class="story-list">
+          {% for item in visao %}
+            <li>{{ item }}</li>
+          {% endfor %}
+        </ul>
+      {% endif %}
+    {% endif %}
+
+    {# Metas Financeiras #}
+    {% if alinhamento.metas %}
+      {{ story_card("Metas Financeiras Priorizadas", alinhamento.metas) }}
+    {% endif %}
+
+    {# Equipe Decisora #}
+    {% call story_card("Equipe Decisora") %}
+      {% if alinhamento.socios %}
+        <div class="story-columns">
+          {% for socio in alinhamento.socios %}
+            <div>
+              <h5>{{ socio.nome }}</h5>
+              <ul class="story-list">
+                {% if socio.papel %}<li><strong>Papel:</strong> {{ socio.papel }}</li>{% endif %}
+                {% if socio.motivacao %}<li><strong>Motivação:</strong> {{ socio.motivacao }}</li>{% endif %}
+                {% if socio.compromisso %}<li><strong>Compromisso:</strong> {{ socio.compromisso }}</li>{% endif %}
+                {% if socio.risco %}<li><strong>Tolerância a risco:</strong> {{ socio.risco }}</li>{% endif %}
+              </ul>
+            </div>
+          {% endfor %}
+        </div>
+      {% else %}
+        <p class="story-note">
+          Ainda não registramos os sócios com papel definido nesta etapa. O registro pode ser feito no módulo de alinhamento.
+        </p>
+      {% endif %}
+    {% endcall %}
+
+    {# Princípios Orientadores #}
+    {% if alinhamento.principios %}
+      {{ story_card("Princípios Orientadores", alinhamento.principios) }}
+    {% endif %}
+
+    {# Agenda de Convergência #}
+    {% if alinhamento.agenda %}
+      {% call story_card("Agenda de Convergência") %}
+        <p>A agenda resume os compromissos que sustentam a implantação e garantem ritmo de execução.</p>
+        {{ data_table(
+          ["O que", "Quem", "Quando", "Como"],
+          [[item.oque, item.quem, item.quando, item.como] for item in alinhamento.agenda]
+        ) }}
+      {% endcall %}
+    {% endif %}
+  </div>
+</section>
+
+
+{# ========================================
+   SEÇÃO 2: MODELO & MERCADO
+   ======================================== #}
+<section class="page portrait">
+  {{ section_header("02", "Modelo & Mercado") }}
+  
+  <div class="section-body">
+    {% for segmento in segmentos %}
+      {% call model7_card(segmento.nome) %}
+        {# Proposta de Valor #}
+        {% call two_column() %}
+          <div>
+            <strong>Público-alvo</strong>
+            <ul>
+              {% for item in segmento.proposta.publico %}
+                <li>{{ item }}</li>
+              {% endfor %}
+            </ul>
+          </div>
+          <div>
+            <strong>Diferenciais</strong>
+            <ul>
+              {% for item in segmento.proposta.diferenciais %}
+                <li>{{ item }}</li>
+              {% endfor %}
+            </ul>
+          </div>
+          <div>
+            <strong>Evidências</strong>
+            <ul>
+              {% for item in segmento.proposta.comprobacoes %}
+                <li>{{ item }}</li>
+              {% endfor %}
+            </ul>
+          </div>
+          <div>
+            <strong>Personas chave</strong>
+            <ul>
+              {% for persona in segmento.personas %}
+                <li><strong>{{ persona.nome }}:</strong> {{ persona.perfil }}</li>
+              {% endfor %}
+            </ul>
+          </div>
+        {% endcall %}
+
+        {# Portfolio de Produtos #}
+        {% if segmento.produtos %}
+          <div style="margin-top: 20px;">
+            <h5 style="font-size: 16px; font-weight: 600; margin-bottom: 12px;">Portfolio de produtos</h5>
+            {% call custom_table(
+              ["Produto", "Preço de venda", "Custos variáveis", "Despesas variáveis", "Margem contrib. unit.", "Mercado", "Meta market share"]
+            , segmento.produtos) %}
+              {% for produto in segmento.produtos %}
+                <tr>
+                  <td style="min-width: 140px;">
+                    <div style="font-weight: 600; color: #0f172a;">{{ produto.nome }}</div>
+                    {% if produto.observacoes %}
+                      <div style="font-size: 12px; color: #64748b; margin-top: 4px;">{{ produto.observacoes }}</div>
+                    {% endif %}
+                  </td>
+                  <td>
+                    <div><strong>Valor:</strong> {{ produto.preco_venda.valor_formatado or '-' }}</div>
+                    {% if produto.preco_venda.observacoes %}
+                      <div style="font-size: 12px; color: #64748b; margin-top: 4px;">{{ produto.preco_venda.observacoes }}</div>
+                    {% endif %}
+                  </td>
+                  <td>
+                    <div><strong>%:</strong> {{ produto.custos_variaveis.percentual_formatado or '-' }}</div>
+                    <div><strong>Unit.:</strong> {{ produto.custos_variaveis.valor_formatado or '-' }}</div>
+                    {% if produto.custos_variaveis.total_mensal_formatado %}
+                      <div><strong>Mensal:</strong> {{ produto.custos_variaveis.total_mensal_formatado }}</div>
+                    {% endif %}
+                  </td>
+                  <td>
+                    <div><strong>%:</strong> {{ produto.despesas_variaveis.percentual_formatado or '-' }}</div>
+                    <div><strong>Unit.:</strong> {{ produto.despesas_variaveis.valor_formatado or '-' }}</div>
+                    {% if produto.despesas_variaveis.total_mensal_formatado %}
+                      <div><strong>Mensal:</strong> {{ produto.despesas_variaveis.total_mensal_formatado }}</div>
+                    {% endif %}
+                  </td>
+                  <td>
+                    <div><strong>%:</strong> {{ produto.margem_contribuicao.percentual_formatado or '-' }}</div>
+                    <div><strong>Unit.:</strong> {{ produto.margem_contribuicao.valor_formatado or '-' }}</div>
+                    {% if produto.margem_contribuicao.total_mensal_formatado %}
+                      <div><strong>Mensal:</strong> {{ produto.margem_contribuicao.total_mensal_formatado }}</div>
+                    {% endif %}
+                  </td>
+                  <td>
+                    <div><strong>Unid./mês:</strong> {{ produto.mercado.unidades_mensais_formatado or '-' }}</div>
+                    <div><strong>Faturamento:</strong> {{ produto.mercado.faturamento_mensal_formatado or '-' }}</div>
+                  </td>
+                  <td>
+                    <div><strong>Unid./mês:</strong> {{ produto.meta_market_share.unidades_mensais_formatado or '-' }}</div>
+                    <div><strong>%:</strong> {{ produto.meta_market_share.percentual_formatado or '-' }}</div>
+                  </td>
+                </tr>
+              {% endfor %}
+            {% endcall %}
+          </div>
+        {% endif %}
+
+        {# Totais Consolidados #}
+        {% set totais = segmento.produtos_totais %}
+        {% if totais.produtos_registrados %}
+          {% call highlight_box("success", "Totais consolidados") %}
+            <ul style="margin: 12px 0 0 18px;">
+              <li>Produtos cadastrados: {{ totais.produtos_registrados }}</li>
+              {% if totais.faturamento_mensal.valor_formatado %}
+                <li>Faturamento mensal estimado: {{ totais.faturamento_mensal.valor_formatado }}</li>
+              {% endif %}
+              {% if totais.margem_contribuicao.valor_formatado or totais.margem_contribuicao.percentual_formatado %}
+                <li>Margem de contribuição total: 
+                  {% if totais.margem_contribuicao.percentual_formatado %}{{ totais.margem_contribuicao.percentual_formatado }}{% endif %}
+                  {% if totais.margem_contribuicao.valor_formatado %}{% if totais.margem_contribuicao.percentual_formatado %} | {% endif %}{{ totais.margem_contribuicao.valor_formatado }}{% endif %}
+                </li>
+              {% endif %}
+            </ul>
+          {% endcall %}
+        {% endif %}
+      {% endcall %}
+    {% endfor %}
+  </div>
+</section>
+
+
+{# ========================================
+   SEÇÃO 3: ESTRUTURAS DE EXECUÇÃO
+   ======================================== #}
+<section class="page portrait">
+  {{ section_header("03", "Estruturas de Execução") }}
+  
+  <div class="section-body">
+    {% call responsive_grid() %}
+      {% for area in estruturas %}
+        {% call model7_card(area.area) %}
+          {% if area.capacidade_formatada or area.capacidade %}
+            <p style="font-size:13px; color:#1d4ed8; margin: 0 0 8px;">
+              Capacidade suportada: {{ area.capacidade_formatada or area.capacidade }}
+              {% if area.capacidade_observacoes %}<br><span style="color:#64748b;">{{ area.capacidade_observacoes }}</span>{% endif %}
+            </p>
+          {% endif %}
+          <ul>
+            {% for bloco in area.resumo %}
+              <li>
+                <strong>{{ bloco.escopo }}:</strong>
+                <ul style="margin-top:4px;">
+                  {% for ponto in bloco.pontos %}
+                    <li>{{ ponto }}</li>
+                  {% endfor %}
+                </ul>
+              </li>
+            {% endfor %}
+          </ul>
+        {% endcall %}
+      {% endfor %}
+    {% endcall %}
+  </div>
+</section>
+
+
+{# ========================================
+   SEÇÃO 4: MODELAGEM FINANCEIRA (PAISAGEM)
+   ======================================== #}
+<section class="page landscape">
+  {{ section_header("04", "Modelagem Financeira") }}
+  
+  <div class="section-body">
+    {# Premissas #}
+    {% call subsection("Premissas") %}
+      {{ data_table(
+        ["Descrição", "Sugestão", "Ajustado", "Observações", "Memória de cálculo"],
+        [[item.indicador, item.sugestao, item.ajustado, item.observacoes, item.memoria] for item in financeiro.premissas or []]
+      ) }}
+    {% endcall %}
+
+    {# Investimentos e Fontes #}
+    {% call two_column() %}
+      {% call model7_card("Investimentos") %}
+        <ul>
+          {% for item in financeiro.investimento.investimento or [] %}
+            <li><strong>{{ item.descricao }}:</strong> {{ item.valor }}</li>
+          {% endfor %}
+        </ul>
+      {% endcall %}
+      
+      {% call model7_card("Fontes") %}
+        <ul>
+          {% for item in financeiro.investimento.fontes or [] %}
+            <li><strong>{{ item.categoria }} - {{ item.descricao }}:</strong> {{ item.valor }}
+              {% if item.disponibilidade %} (disp.: {{ item.disponibilidade }}){% endif %}
+            </li>
+          {% endfor %}
+        </ul>
+      {% endcall %}
+    {% endcall %}
+
+    {# Capacidade Operacional #}
+    {% call subsection("Capacidade Operacional Suportada") %}
+      {% call custom_table(["Área", "Faturamento suportado", "Observações"], financeiro.capacidades or []) %}
+        {% if financeiro.capacidades %}
+          {% for item in financeiro.capacidades %}
+            <tr>
+              <td>{{ item.area }}</td>
+              <td>{{ item.valor_formatado or item.valor or '-' }}</td>
+              <td>{{ item.observacoes or '-' }}</td>
+            </tr>
+          {% endfor %}
+        {% else %}
+          <tr>
+            <td colspan="3">Nenhuma capacidade registrada</td>
+          </tr>
+        {% endif %}
+      {% endcall %}
+
+      {% call highlight_box("success", "Resumo") %}
+        <ul style="margin: 12px 0 0 18px;">
+          <li>Total suportado: {{ financeiro.resumo_capacidades.total_formatado or '-' }}</li>
+          <li>Gargalo: 
+            {% if financeiro.resumo_capacidades.gargalo_valor_formatado %}
+              {{ financeiro.resumo_capacidades.gargalo_valor_formatado }}
+              {% if financeiro.resumo_capacidades.gargalo_area %} ({{ financeiro.resumo_capacidades.gargalo_area }}){% endif %}
+            {% else %}-{% endif %}
+          </li>
+        </ul>
+      {% endcall %}
+    {% endcall %}
+
+    {# Resultados #}
+    {% call subsection("Resultados") %}
+      {% set fluxo_financeiro = financeiro.fluxo_financeiro or {} %}
+      {% set sections = fluxo_financeiro.sections or [] %}
+      {% set negocio_section = (sections | selectattr('slug', 'equalto', 'negocio') | list | first) %}
+      {% set negocio_linhas = negocio_section.linhas if negocio_section else [] %}
+      
+      {% if negocio_linhas %}
+        {% set linha_receita = (negocio_linhas | selectattr('slug', 'equalto', 'receita') | list | first) %}
+        {% set linha_custos_variaveis = (negocio_linhas | selectattr('slug', 'equalto', 'custos_variaveis') | list | first) %}
+        {% set linha_despesas_variaveis = (negocio_linhas | selectattr('slug', 'equalto', 'despesas_variaveis') | list | first) %}
+        {% set linha_margem = (negocio_linhas | selectattr('slug', 'equalto', 'margem_contribuicao') | list | first) %}
+        {% set linha_custos_fixos = (negocio_linhas | selectattr('slug', 'equalto', 'custos_fixos') | list | first) %}
+        {% set linha_despesas_fixas = (negocio_linhas | selectattr('slug', 'equalto', 'despesas_fixas') | list | first) %}
+        {% set linha_resultado_operacional = (negocio_linhas | selectattr('slug', 'equalto', 'resultado_operacional') | list | first) %}
+        {% set linha_destinacao = (negocio_linhas | selectattr('slug', 'equalto', 'destinacao') | list | first) %}
+        {% set linha_resultado_periodo = (negocio_linhas | selectattr('slug', 'equalto', 'resultado_periodo') | list | first) %}
+        
+        {# Cálculos #}
+        {% set resultado_operacional_decimal = linha_resultado_operacional.total_decimal if linha_resultado_operacional and linha_resultado_operacional.total_decimal is not none else 0 %}
+        {% set destinacao_total_decimal = linha_destinacao.total_decimal if linha_destinacao and linha_destinacao.total_decimal is not none else 0 %}
+        {% set resultado_periodo_decimal = linha_resultado_periodo.total_decimal if linha_resultado_periodo and linha_resultado_periodo.total_decimal is not none else (resultado_operacional_decimal - destinacao_total_decimal) %}
+        {% set resultado_final_class = 'positive' if resultado_periodo_decimal >= 0 else 'negative' %}
+        
+        {# Grid de Resultados #}
+        {{ result_grid([
+          {"label": "Faturamento total", "value": linha_receita.total if linha_receita else 'R$ 0,00', "note": "Soma dos períodos planejados"},
+          {"label": "Custos variáveis", "value": linha_custos_variaveis.total if linha_custos_variaveis else 'R$ 0,00'},
+          {"label": "Despesas variáveis", "value": linha_despesas_variaveis.total if linha_despesas_variaveis else 'R$ 0,00'},
+          {"label": "Margem de contribuição", "value": linha_margem.total if linha_margem else 'R$ 0,00'}
+        ]) }}
+        
+        {{ result_grid([
+          {"label": "Custos fixos", "value": linha_custos_fixos.total if linha_custos_fixos else 'R$ 0,00'},
+          {"label": "Despesas fixas", "value": linha_despesas_fixas.total if linha_despesas_fixas else 'R$ 0,00'},
+          {"label": "Resultado operacional", "value": linha_resultado_operacional.total if linha_resultado_operacional else 'R$ 0,00'},
+          {"label": "Destinações de resultados", "value": format_currency(destinacao_total_decimal)},
+          {"label": "Resultado final após destinações", "value": format_currency(resultado_periodo_decimal), "note": "Resultado operacional - destinações", "status": resultado_final_class}
+        ]) }}
+      {% else %}
+        <p style="margin: 12px 0 0; color: #64748b;">Sem dados de resultados cadastrados.</p>
+      {% endif %}
+    {% endcall %}
+
+    {# Fluxo de Caixa do Investidor #}
+    {% call subsection("Fluxo de Caixa do Investidor") %}
+      {{ data_table(
+        ["Período", "Aporte", "Distribuição", "Saldo período", "Saldo acumulado"],
+        [[linha.periodo, linha.aporte, linha.distribuicao, linha.saldo, linha.acumulado] for linha in financeiro.fluxo_investidor.periodos or []]
+      ) }}
+
+      {% call highlight_box("info", "Análises") %}
+        {% set analises = financeiro.fluxo_investidor.analises or {} %}
+        {% set tir_label = analises.tir_label or ('TIR ' ~ (analises.tir_horizon_years or 5) ~ ' anos') %}
+        <ul style="margin:12px 0 0 18px;">
+          <li>Payback: {{ analises.payback | default('-', true) }}</li>
+          <li>Custo de oportunidade: {{ analises.opportunity_cost | default('1%', true) }}</li>
+          <li>{{ tir_label }}: {{ analises.tir | default('-', true) }}</li>
+        </ul>
+      {% endcall %}
+    {% endcall %}
+  </div>
+</section>
+
+{% endblock %}
+
+{# RODAPÉ CUSTOMIZADO #}
+{% block footer %}
+  <span>Versus Gestão Corporativa - Todos os Direitos Reservados - Emitido em: {{ issued_at }}</span>
+  <span>Consultor responsável: {{ plan.consultant }}</span>
+{% endblock %}
+

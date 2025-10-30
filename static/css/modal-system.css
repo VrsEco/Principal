@@ -1,0 +1,144 @@
+/**
+ * Sistema Centralizado de Modais - CSS Global
+ * GestaoVersus
+ * 
+ * IMPORTANTE: Este arquivo define estilos que SEMPRE funcionam
+ * Não adicione !important desnecessariamente - o sistema JS já garante prioridade
+ */
+
+/* Modal Container */
+.modal-system {
+  display: none;
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  z-index: 25000; /* Padrão do sistema - modais sempre acima de tudo exceto alerts */
+  align-items: center;
+  justify-content: center;
+  background: rgba(0, 0, 0, 0.6);
+  backdrop-filter: blur(4px);
+  -webkit-backdrop-filter: blur(4px);
+}
+
+/* Estado aberto */
+.modal-system.modal-open {
+  display: flex !important;
+}
+
+/* Animações */
+.modal-system.modal-opening {
+  animation: fadeIn 0.3s ease;
+}
+
+.modal-system.modal-closing {
+  animation: fadeOut 0.3s ease;
+}
+
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+@keyframes fadeOut {
+  from {
+    opacity: 1;
+  }
+  to {
+    opacity: 0;
+  }
+}
+
+/* Conteúdo do Modal */
+.modal-content-system {
+  position: relative;
+  background: white;
+  border-radius: 16px;
+  padding: 32px;
+  max-width: 600px;
+  width: 90%;
+  max-height: 90vh;
+  overflow-y: auto;
+  box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+  animation: slideUp 0.3s ease;
+}
+
+@keyframes slideUp {
+  from {
+    transform: translateY(30px);
+    opacity: 0;
+  }
+  to {
+    transform: translateY(0);
+    opacity: 1;
+  }
+}
+
+/* Botão de fechar */
+.modal-close-system {
+  position: absolute;
+  top: 16px;
+  right: 16px;
+  background: none;
+  border: none;
+  font-size: 32px;
+  line-height: 1;
+  color: #94a3b8;
+  cursor: pointer;
+  padding: 0;
+  width: 40px;
+  height: 40px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 8px;
+  transition: all 0.2s;
+}
+
+.modal-close-system:hover {
+  background: #f1f5f9;
+  color: #64748b;
+}
+
+.modal-close-system:active {
+  background: #e2e8f0;
+}
+
+/* Body do modal */
+.modal-body-system {
+  margin-top: 8px;
+}
+
+/* Responsivo */
+@media (max-width: 768px) {
+  .modal-content-system {
+    width: 95%;
+    padding: 24px;
+    max-height: 95vh;
+  }
+}
+
+/* Scroll customizado */
+.modal-content-system::-webkit-scrollbar {
+  width: 8px;
+}
+
+.modal-content-system::-webkit-scrollbar-track {
+  background: #f1f5f9;
+  border-radius: 4px;
+}
+
+.modal-content-system::-webkit-scrollbar-thumb {
+  background: #cbd5e1;
+  border-radius: 4px;
+}
+
+.modal-content-system::-webkit-scrollbar-thumb:hover {
+  background: #94a3b8;
+}
+

@@ -1,0 +1,7 @@
+{
+  "tests/governance/test_code_standards.py::TestForbiddenPatterns::test_no_hardcoded_credentials": true,
+  "tests/governance/test_code_standards.py::TestForbiddenPatterns::test_no_print_statements": true,
+  "tests/governance/test_code_standards.py::TestForbiddenPatterns::test_no_bare_except": true,
+  "tests/governance/test_code_standards.py::TestForbiddenPatterns::test_no_sql_string_concatenation": true,
+  "tests/governance/test_code_standards.py::TestSecurityStandards::test_no_password_in_logs": true
+}

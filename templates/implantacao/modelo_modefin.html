@@ -1,0 +1,2985 @@
+{% extends "base.html" %}
+{% block title %}ModeFin - Modelagem Financeira | Implantação{% endblock %}
+{% block body %}{% set active_nav = 'pev' %}{{ super() }}{% endblock %}
+
+{% block content %}
+<div class="project-layout plan-layout" data-sidebar-toggle>
+  
+  {# Sidebar de Implantação #}
+  {% set active_id = 'modefin' %}
+  
+  <section class="project-content plan-content">
+
+<style>
+  /* Layout Padrão GRV */
+  .app-main {
+    padding: 40px 20px 64px !important;
+    background: linear-gradient(135deg, #ffffff 0%, #f7f7f9 50%, #f1f2f4 100%) !important;
+    color: #0f172a !important;
+    overflow-x: hidden !important;
+  }
+  
+  .project-layout.plan-layout {
+    max-width: 100% !important;
+    width: 100% !important;
+    grid-template-columns: 1fr !important;
+    gap: 0 !important;
+  }
+  
+  .project-content.plan-content {
+    max-width: 1120px !important;
+    width: 100% !important;
+    margin-left: 0 !important;
+    margin-right: auto !important;
+    transform: scale(0.9);
+    transform-origin: top left;
+    /* Compensa a redução para manter a largura visual e evitar sobra */
+    width: calc(100% / 0.9) !important;
+    max-width: calc(1120px / 0.9) !important;
+  }
+  
+  /* Cards adaptados ao padrão GRV */
+  .modefin-section {
+    margin-bottom: 24px;
+    padding: 16px;
+    border-radius: 12px;
+    background: linear-gradient(180deg, #f6f7f9 0%, #f1f2f4 100%);
+    border: 1px solid #e5e7eb;
+  }
+  
+  .surface-card {
+    background: #ffffff;
+    border: 1px solid #e5e7eb;
+    border-radius: 12px;
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+  }
+  
+  .modefin-card {
+    background: #ffffff;
+    border: 1px solid #e5e7eb;
+    border-radius: 12px;
+    padding: 24px;
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+    margin-bottom: 20px;
+  }
+  
+  .modefin-card h2 {
+    margin: 0 0 20px;
+    font-size: 20px;
+    font-weight: 600;
+    color: #0f172a;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+  
+  /* Card com destaque/gradiente para resumos */
+  .modefin-card-highlight {
+    background: #ffffff;
+    border: 1px solid rgba(148, 163, 184, 0.2);
+    color: #0f172a;
+  }
+  
+  .modefin-card-highlight h2,
+  .modefin-card-highlight h3 {
+    color: #0f172a;
+  }
+  
+  .modefin-card h3 {
+    margin: 0 0 16px;
+    font-size: 16px;
+    font-weight: 600;
+    color: #0f172a;
+  }
+  
+  /* Grid de valores */
+  .values-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+    gap: 12px;
+    margin-bottom: 16px;
+  }
+  
+  .value-box {
+    background: linear-gradient(180deg, #f8fafc 0%, #f1f5f9 100%);
+    border: 1px solid #e5e7eb;
+    border-radius: 12px;
+    padding: 16px;
+    transition: box-shadow 0.2s, transform 0.2s, background 0.2s;
+    box-shadow: 0 1px 2px rgba(15, 23, 42, 0.04);
+  }
+  
+  .value-box:hover {
+    background: linear-gradient(180deg, #ffffff 0%, #f6f7f9 100%);
+    box-shadow: 0 3px 8px rgba(15, 23, 42, 0.08);
+  }
+  
+  .value-box.highlighted {
+    background: linear-gradient(180deg, #eef2ff 0%, #e2e8f0 100%);
+    border: 1px solid #c7d2fe;
+    box-shadow: 0 2px 10px rgba(79, 70, 229, 0.08);
+  }
+  
+  .value-label {
+    font-size: 12px;
+    opacity: 0.9;
+    margin-bottom: 6px;
+  }
+  
+  .value-amount {
+    font-size: 24px;
+    font-weight: 700;
+    margin-bottom: 4px;
+  }
+  
+  .value-percent {
+    font-size: 13px;
+    opacity: 0.85;
+  }
+  
+  /* Botões Padrão GRV/PEV */
+  .button {
+    padding: 10px 20px;
+    border-radius: 8px;
+    border: 1px solid #cbd5e1;
+    font-size: 14px;
+    font-weight: 500;
+    cursor: pointer;
+    transition: all 0.2s;
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    background: #ffffff;
+    color: #0f172a;
+    position: relative;
+    overflow: hidden;
+  }
+  
+  .button:hover {
+    background: #f8fafc;
+  }
+  
+  .button::before,
+  .button::after {
+    content: '';
+    position: absolute;
+    top: 0;
+    bottom: 0;
+    width: 3px;
+    pointer-events: none;
+  }
+  
+  .button::before {
+    left: 0;
+    background: linear-gradient(180deg, #a78bfa 0%, #22d3ee 50%, #60a5fa 100%);
+    opacity: 0.6;
+  }
+  
+  .button::after {
+    right: 0;
+    background: linear-gradient(180deg, #60a5fa 0%, #22d3ee 50%, #a78bfa 100%);
+    opacity: 0.6;
+  }
+  
+  .button-ghost {
+    background: transparent;
+    border: 1px solid rgba(148, 163, 184, 0.3);
+    color: #475569;
+  }
+  
+  .button-ghost:hover {
+    background: rgba(148, 163, 184, 0.1);
+  }
+  
+  .button-primary {
+    background: #ffffff;
+    color: #0f172a;
+    border-color: #94a3b8;
+  }
+  
+  .button-primary:hover {
+    background: #f8fafc;
+  }
+  
+  .button-secondary {
+    background: #ffffff;
+    color: #0f172a;
+    border-color: #cbd5e1;
+  }
+  
+  .button-secondary:hover {
+    background: #f8fafc;
+  }
+  
+  /* Tabelas */
+  .modefin-table {
+    width: 100%;
+    border-collapse: collapse;
+    background: white;
+    border-radius: 8px;
+    border: 1px solid #e5e7eb;
+    overflow: hidden;
+    margin-top: 16px;
+  }
+  
+  .modefin-table thead {
+    background: #e5e7eb !important; /* títulos */
+  }
+  
+  .modefin-table th {
+    padding: 12px;
+    text-align: left;
+    font-size: 12px;
+    font-weight: 600;
+    color: #475569;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    border-bottom: 1px solid #e5e7eb;
+    background: #e5e7eb !important; /* garante cor nos th mesmo com inline no thead */
+    border-right: 1px solid #e5e7eb;
+  }
+  
+  .modefin-table td {
+    padding: 12px;
+    color: #1e293b;
+    font-size: 14px;
+    border-top: 1px solid #e5e7eb;
+    border-right: 1px solid #e5e7eb; /* linhas verticais (grade) */
+  }
+  .modefin-table th:last-child,
+  .modefin-table td:last-child { border-right: none; }
+
+  /* Subtítulos: linhas especiais no corpo */
+  .modefin-table tbody tr.subheader > td,
+  .modefin-table tbody tr.subheader > th,
+  .modefin-table tbody tr.section-subtitle > td,
+  .modefin-table tbody tr.section-subtitle > th {
+    background: #f1f5f9;
+    font-weight: 600;
+  }
+
+  /* Zebra striping nos dados */
+  .modefin-table tbody tr:nth-child(odd) { background: #ffffff; }
+  .modefin-table tbody tr:nth-child(even) { background: #f8fafc; }
+  
+  .modefin-table tbody tr:hover {
+    background: #f8fafc;
+  }
+  
+  /* Planilha de investimentos (layout especial) */
+  .investment-sheet {
+    display: flex;
+    gap: 0;
+    overflow: hidden;
+    border-radius: 12px;
+    background: white;
+    margin-top: 16px;
+  }
+  
+  .sheet-fixed {
+    flex-shrink: 0;
+    min-width: 250px;
+    border-right: 2px solid #e2e8f0;
+  }
+  
+  .sheet-scrollable {
+    flex: 1;
+    overflow-x: auto;
+    overflow-y: hidden;
+  }
+  
+  .sheet-row {
+    display: flex;
+    border-bottom: 1px solid #e2e8f0;
+    min-height: 44px;
+    align-items: center;
+  }
+  
+  .sheet-row:first-child {
+    background: #f8fafc;
+    font-weight: 600;
+    color: #475569;
+  }
+  
+  .sheet-row.total-row {
+    background: #fef3c7;
+    font-weight: 700;
+  }
+  
+  .sheet-cell {
+    padding: 12px;
+    font-size: 14px;
+    color: #1e293b;
+    white-space: nowrap;
+  }
+  
+  .sheet-cell-header {
+    min-width: 120px;
+    text-align: center;
+    font-weight: 600;
+    color: #475569;
+    font-size: 12px;
+    text-transform: uppercase;
+  }
+  
+  /* Modals */
+  .modal {
+    display: none;
+    position: fixed;
+    z-index: 25000; /* Padrão do sistema - modais sempre acima de botões flutuantes (10000-19999) */
+    left: 0;
+    top: 0;
+    width: 100%;
+    height: 100%;
+    background: rgba(0, 0, 0, 0.6);
+    backdrop-filter: blur(4px);
+  }
+  
+  .modal.active {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+  
+  .modal-content {
+    background: white;
+    border-radius: 16px;
+    padding: 32px;
+    max-width: 600px;
+    width: 90%;
+    max-height: 90vh;
+    overflow-y: auto;
+    box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+    position: relative;
+  }
+  
+  .modal-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 24px;
+  }
+  
+  .modal-header h3 {
+    margin: 0;
+    font-size: 20px;
+    color: #0f172a;
+  }
+  
+  .modal-close {
+    background: none;
+    border: none;
+    font-size: 28px;
+    color: #94a3b8;
+    cursor: pointer;
+    line-height: 1;
+    padding: 0;
+    width: 32px;
+    height: 32px;
+  }
+  
+  .modal-close:hover {
+    color: #64748b;
+  }
+  
+  .form-group {
+    margin-bottom: 20px;
+  }
+  
+  .form-group label {
+    display: block;
+    margin-bottom: 6px;
+    font-size: 14px;
+    font-weight: 500;
+    color: #334155;
+  }
+  
+  .form-group input,
+  .form-group select,
+  .form-group textarea {
+    width: 100%;
+    padding: 10px 12px;
+    border: 1px solid #cbd5e1;
+    border-radius: 8px;
+    font-size: 14px;
+    color: #1e293b;
+    transition: all 0.2s;
+    box-sizing: border-box;
+  }
+  
+  .form-group input:focus,
+  .form-group select:focus,
+  .form-group textarea:focus {
+    outline: none;
+    border-color: #3b82f6;
+    box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
+  }
+  
+  .form-group textarea {
+    min-height: 100px;
+    resize: vertical;
+  }
+  
+  .modal-actions {
+    display: flex;
+    gap: 12px;
+    justify-content: flex-end;
+    margin-top: 24px;
+  }
+  
+  /* Alert/Info boxes */
+  .info-box {
+    padding: 12px 16px;
+    border-radius: 8px;
+    font-size: 13px;
+    line-height: 1.5;
+    margin-top: 16px;
+  }
+  
+  .info-box.info {
+    background: rgba(59, 130, 246, 0.1);
+    color: #1e40af;
+    border-left: 3px solid #3b82f6;
+  }
+  
+  .info-box.success {
+    background: rgba(34, 197, 94, 0.1);
+    color: #166534;
+    border-left: 3px solid #22c55e;
+  }
+  
+  .info-box.warning {
+    background: rgba(245, 158, 11, 0.1);
+    color: #92400e;
+    border-left: 3px solid #f59e0b;
+  }
+  
+  /* Action buttons in tables */
+  .action-btn {
+    padding: 6px 10px;
+    border: none;
+    border-radius: 6px;
+    font-size: 12px;
+    cursor: pointer;
+    transition: all 0.2s;
+  }
+  
+  .action-btn.edit {
+    background: #dbeafe;
+    color: #1e40af;
+  }
+  
+  .action-btn.edit:hover {
+    background: #bfdbfe;
+  }
+  
+  .action-btn.delete {
+    background: #fee2e2;
+    color: #991b1b;
+  }
+  
+  .action-btn.delete:hover {
+    background: #fecaca;
+  }
+</style>
+
+<!-- Header -->
+<div class="surface-card" style="padding: 24px; margin-bottom: 20px;">
+  <h1 style="margin: 0 0 8px; font-size: 28px; color: #0f172a; font-weight: 600;">
+    💰 ModeFin - Modelagem Financeira
+  </h1>
+  <p style="margin: 0; color: #64748b; font-size: 14px;">
+    Plano: <strong style="color: #0f172a;">{{ plan.name }}</strong>
+  </p>
+  <div style="margin-top: 12px;">
+    <a href="{{ url_for('pev.pev_implantacao_overview', plan_id=plan_id) }}" class="button button-ghost" style="font-size: 13px; padding: 8px 16px;">
+      ← Voltar para Implantação
+    </a>
+  </div>
+</div>
+
+<!-- Seções -->
+<div id="secao-resultados" class="modefin-section"></div>
+<div id="secao-investimentos" class="modefin-section"></div>
+<div id="secao-fontes" class="modefin-section"></div>
+<div id="secao-distribuicao" class="modefin-section"></div>
+<div id="secao-fluxo-investimento" class="modefin-section"></div>
+<div id="secao-fluxo-negocio" class="modefin-section"></div>
+<div id="secao-fluxo-investidor" class="modefin-section"></div>
+<div id="secao-analise" class="modefin-section"></div>
+
+  </section>
+</div>
+
+<!-- ========== MODALS ========== -->
+<div class="modal" id="capitalGiroModal"></div>
+<div class="modal" id="fundingSourceModal"></div>
+<div class="modal" id="profitDistributionModal"></div>
+<div class="modal" id="resultRuleModal"></div>
+<div class="modal" id="executiveSummaryModal"></div>
+
+<script>
+  // =========================================
+  // DADOS DO BACKEND
+  // =========================================
+  const planId = {{ plan_id }};
+  const productsTotals = {{ products_totals | tojson | safe }};
+  const fixedCostsSummary = {{ fixed_costs_summary | tojson | safe }};
+  const investimentosEstruturas = {{ investimentos_estruturas | tojson | safe }};
+  const capitalGiroItems = {{ capital_giro_items | tojson | safe }};
+  const fundingSources = {{ funding_sources | tojson | safe }};
+  const profitDistribution = {{ profit_distribution | tojson | safe }};
+  const resultRules = {{ result_rules | tojson | safe }};
+  const executiveSummary = {{ executive_summary | tojson | safe }};
+  const parcelasEstruturas = {{ parcelas_estruturas | tojson | safe }};
+  const financeiro = {{ financeiro | tojson | safe }};
+  
+  // =========================================
+  // UTILIDADES
+  // =========================================
+  
+  function formatCurrency(value) {
+    if (!value) return 'R$ 0,00';
+    return new Intl.NumberFormat('pt-BR', {
+      style: 'currency',
+      currency: 'BRL'
+    }).format(value);
+  }
+  
+  function formatPercent(value) {
+    if (!value) return '0%';
+    return `${parseFloat(value).toFixed(1)}%`;
+  }
+  
+  function formatDate(dateStr) {
+    if (!dateStr) return '-';
+    const date = new Date(dateStr);
+    return date.toLocaleDateString('pt-BR');
+  }
+  
+  async function apiCall(url, method = 'GET', data = null) {
+    try {
+      const options = {
+        method,
+        headers: {
+          'Content-Type': 'application/json'
+        }
+      };
+      
+      if (data && method !== 'GET') {
+        options.body = JSON.stringify(data);
+      }
+      
+      const response = await fetch(url, options);
+      const result = await response.json();
+      
+      if (!result.success) {
+        throw new Error(result.error || 'Erro na requisição');
+      }
+      
+      return result;
+    } catch (error) {
+      console.error('[API Error]', error);
+      alert('Erro: ' + error.message);
+      throw error;
+    }
+  }
+  
+  // =========================================
+  // SEÇÃO 1: RESULTADOS
+  // =========================================
+  
+  function renderResultados() {
+    const faturamento = productsTotals?.faturamento?.valor || 0;
+    const custosVariaveis = productsTotals?.custos_variaveis?.valor || 0;
+    const despesasVariaveis = productsTotals?.despesas_variaveis?.valor || 0;
+    const margemContribuicao = productsTotals?.margem_contribuicao?.valor || 0;
+    
+    const custosFixos = fixedCostsSummary?.custos_fixos_mensal || 0;
+    const despesasFixas = fixedCostsSummary?.despesas_fixas_mensal || 0;
+    const resultadoOperacional = margemContribuicao - custosFixos - despesasFixas;
+    
+    const html = `
+      <div class="modefin-card">
+        <h2>📊 Resultados</h2>
+        
+        <!-- Card de Destaque com Gradiente para Resumo -->
+        <div class="modefin-card-highlight" style="border-radius: 12px; padding: 20px; margin-bottom: 20px;"
+>
+        
+        <h3>Margem de Contribuição</h3>
+        <div class="values-grid">
+          <div class="value-box">
+            <div class="value-label">Faturamento</div>
+            <div class="value-amount">${formatCurrency(faturamento)}</div>
+            <div class="value-percent">${formatPercent(productsTotals?.faturamento?.percentual)}</div>
+          </div>
+          <div class="value-box">
+            <div class="value-label">Custos Variáveis</div>
+            <div class="value-amount">${formatCurrency(custosVariaveis)}</div>
+            <div class="value-percent">${formatPercent(productsTotals?.custos_variaveis?.percentual)}</div>
+          </div>
+          <div class="value-box">
+            <div class="value-label">Despesas Variáveis</div>
+            <div class="value-amount">${formatCurrency(despesasVariaveis)}</div>
+            <div class="value-percent">${formatPercent(productsTotals?.despesas_variaveis?.percentual)}</div>
+          </div>
+          <div class="value-box highlighted">
+            <div class="value-label">💰 Margem de Contribuição</div>
+            <div class="value-amount">${formatCurrency(margemContribuicao)}</div>
+            <div class="value-percent">${formatPercent(productsTotals?.margem_contribuicao?.percentual)}</div>
+          </div>
+        </div>
+        
+        <h3 style="margin-top: 24px;">Custos e Despesas Fixas</h3>
+        <div class="values-grid">
+          <div class="value-box">
+            <div class="value-label">Custos Fixos</div>
+            <div class="value-amount">${formatCurrency(custosFixos)}</div>
+          </div>
+          <div class="value-box">
+            <div class="value-label">Despesas Fixas</div>
+            <div class="value-amount">${formatCurrency(despesasFixas)}</div>
+          </div>
+          <div class="value-box highlighted">
+            <div class="value-label">💎 Resultado Operacional</div>
+            <div class="value-amount">${formatCurrency(resultadoOperacional)}</div>
+          </div>
+        </div>
+        
+        </div>
+        
+        <div class="info-box info">
+          ℹ️ <strong>Valores automáticos:</strong> Calculados com base em 
+          <a href="/pev/implantacao/modelo/produtos?plan_id=${planId}" style="color: #3b82f6; text-decoration: underline;">Produtos</a> e 
+          <a href="/pev/implantacao/executivo/estruturas?plan_id=${planId}" style="color: #3b82f6; text-decoration: underline;">Estruturas</a>.
+        </div>
+      </div>
+    `;
+    
+    document.getElementById('secao-resultados').innerHTML = html;
+  }
+  
+  // =========================================
+  // SEÇÃO 2: INVESTIMENTOS
+  // =========================================
+  
+  function renderInvestimentos() {
+    // Calcular totais por bloco
+    const totais = {
+      caixa: 0,
+      recebiveis: 0,
+      estoques: 0,
+      instalacoes: 0,
+      maquinas: 0,
+      moveis: 0,
+      ti: 0,
+      outros: 0
+    };
+    
+    // Capital de Giro
+    capitalGiroItems.forEach(item => {
+      const tipo = item.item_type?.toLowerCase() || '';
+      if (tipo === 'caixa') totais.caixa += parseFloat(item.amount || 0);
+      else if (tipo === 'recebiveis') totais.recebiveis += parseFloat(item.amount || 0);
+      else if (tipo === 'estoques') totais.estoques += parseFloat(item.amount || 0);
+    });
+    
+    // Imobilizado (das estruturas)
+    if (investimentosEstruturas.instalacoes) {
+      totais.instalacoes = parseFloat(investimentosEstruturas.instalacoes.total || 0);
+    }
+    if (investimentosEstruturas.maquinas) {
+      totais.maquinas = parseFloat(investimentosEstruturas.maquinas.total || 0);
+    }
+    if (investimentosEstruturas.moveis) {
+      totais.moveis = parseFloat(investimentosEstruturas.moveis.total || 0);
+    }
+    if (investimentosEstruturas.ti) {
+      totais.ti = parseFloat(investimentosEstruturas.ti.total || 0);
+    }
+    if (investimentosEstruturas.outros_investimentos) {
+      totais.outros = parseFloat(investimentosEstruturas.outros_investimentos.total || 0);
+    }
+    
+    const totalGeral = Object.values(totais).reduce((sum, val) => sum + val, 0);
+    
+    const html = `
+      <div class="modefin-card">
+        <h2>💼 Investimentos</h2>
+        
+        <!-- Cards de Resumo -->
+        <div class="values-grid">
+          <div class="value-box highlighted">
+            <div class="value-label">💰 Total Investimentos</div>
+            <div class="value-amount">${formatCurrency(totalGeral)}</div>
+          </div>
+          <div class="value-box">
+            <div class="value-label">Capital de Giro</div>
+            <div class="value-amount">${formatCurrency(totais.caixa + totais.recebiveis + totais.estoques)}</div>
+          </div>
+          <div class="value-box">
+            <div class="value-label">Imobilizado</div>
+            <div class="value-amount">${formatCurrency(totais.instalacoes + totais.maquinas + totais.moveis + totais.ti + totais.outros)}</div>
+          </div>
+        </div>
+        
+        <div style="margin-top: 24px; display: flex; justify-content: space-between; align-items: center;">
+          <h3>Investimentos por Bloco</h3>
+          <button class="button" onclick="openCapitalGiroModal()">
+            + Capital de Giro
+          </button>
+        </div>
+        
+        <!-- Tabela Simples (Resumo) -->
+        <table class="modefin-table">
+          <thead>
+            <tr>
+              <th>Bloco</th>
+              <th style="text-align: right;">Total</th>
+              <th>Origem</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td><strong>Caixa</strong></td>
+              <td style="text-align: right;"><strong>${formatCurrency(totais.caixa)}</strong></td>
+              <td><span style="background: #dbeafe; color: #1e40af; padding: 4px 8px; border-radius: 4px; font-size: 12px;">Capital de Giro</span></td>
+            </tr>
+            <tr>
+              <td><strong>Recebíveis</strong></td>
+              <td style="text-align: right;"><strong>${formatCurrency(totais.recebiveis)}</strong></td>
+              <td><span style="background: #dbeafe; color: #1e40af; padding: 4px 8px; border-radius: 4px; font-size: 12px;">Capital de Giro</span></td>
+            </tr>
+            <tr>
+              <td><strong>Estoques</strong></td>
+              <td style="text-align: right;"><strong>${formatCurrency(totais.estoques)}</strong></td>
+              <td><span style="background: #dbeafe; color: #1e40af; padding: 4px 8px; border-radius: 4px; font-size: 12px;">Capital de Giro</span></td>
+            </tr>
+            ${totais.instalacoes > 0 ? `
+            <tr>
+              <td><strong>Instalações</strong></td>
+              <td style="text-align: right;"><strong>${formatCurrency(totais.instalacoes)}</strong></td>
+              <td><span style="background: #fef3c7; color: #92400e; padding: 4px 8px; border-radius: 4px; font-size: 12px;">Estruturas</span></td>
+            </tr>
+            ` : ''}
+            ${totais.maquinas > 0 ? `
+            <tr>
+              <td><strong>Máquinas</strong></td>
+              <td style="text-align: right;"><strong>${formatCurrency(totais.maquinas)}</strong></td>
+              <td><span style="background: #fef3c7; color: #92400e; padding: 4px 8px; border-radius: 4px; font-size: 12px;">Estruturas</span></td>
+            </tr>
+            ` : ''}
+            ${totais.moveis > 0 ? `
+            <tr>
+              <td><strong>Móveis</strong></td>
+              <td style="text-align: right;"><strong>${formatCurrency(totais.moveis)}</strong></td>
+              <td><span style="background: #fef3c7; color: #92400e; padding: 4px 8px; border-radius: 4px; font-size: 12px;">Estruturas</span></td>
+            </tr>
+            ` : ''}
+            ${totais.ti > 0 ? `
+            <tr>
+              <td><strong>TI</strong></td>
+              <td style="text-align: right;"><strong>${formatCurrency(totais.ti)}</strong></td>
+              <td><span style="background: #fef3c7; color: #92400e; padding: 4px 8px; border-radius: 4px; font-size: 12px;">Estruturas</span></td>
+            </tr>
+            ` : ''}
+            ${totais.outros > 0 ? `
+            <tr>
+              <td><strong>Outros</strong></td>
+              <td style="text-align: right;"><strong>${formatCurrency(totais.outros)}</strong></td>
+              <td><span style="background: #fef3c7; color: #92400e; padding: 4px 8px; border-radius: 4px; font-size: 12px;">Estruturas</span></td>
+            </tr>
+            ` : ''}
+          </tbody>
+        </table>
+        
+        <div class="info-box info" style="margin-top: 16px;">
+          ℹ️ <strong>Imobilizado:</strong> Valores calculados automaticamente com base em 
+          <a href="/pev/implantacao/executivo/estruturas?plan_id=${planId}" style="color: inherit; text-decoration: underline;">Estruturas de Execução</a>.
+        </div>
+        
+        <!-- PLANILHA ESPECIAL: Blocos x Meses -->
+        <h3 style="margin-top: 32px;">Investimentos por Bloco e Período</h3>
+        ${renderInvestmentSheet()}
+        
+        <!-- Tabela de Capital de Giro Cadastrado -->
+        <h3 style="margin-top: 32px;">Investimentos em Capital de Giro (Detalhamento)</h3>
+        <table class="modefin-table">
+          <thead>
+            <tr>
+              <th>Tipo</th>
+              <th>Data</th>
+              <th>Descrição</th>
+              <th style="text-align: right;">Valor</th>
+              <th style="width: 120px; text-align: center;">Ações</th>
+            </tr>
+          </thead>
+          <tbody id="capital-giro-tbody">
+            ${renderCapitalGiroRows()}
+          </tbody>
+        </table>
+      </div>
+    `;
+    
+    document.getElementById('secao-investimentos').innerHTML = html;
+  }
+  
+  // Renderizar planilha especial Bloco x Mês
+  function renderInvestmentSheet() {
+    // Coletar todos os meses únicos (de capital de giro e estruturas)
+    const monthsSet = new Set();
+    
+    // Meses do capital de giro
+    capitalGiroItems.forEach(item => {
+      if (item.contribution_date) {
+        const date = item.contribution_date.substring(0, 7); // YYYY-MM
+        monthsSet.add(date);
+      }
+    });
+    
+    // Meses das estruturas
+    Object.values(investimentosEstruturas).forEach(categoria => {
+      if (categoria.por_mes) {
+        Object.keys(categoria.por_mes).forEach(mes => monthsSet.add(mes));
+      }
+    });
+    
+    // Ordenar meses
+    const months = Array.from(monthsSet).sort();
+    
+    // Se não houver meses, adicionar placeholder
+    if (months.length === 0) {
+      months.push('2026-05', '2026-06', '2026-07');
+    }
+    
+    // Calcular valores por bloco e mês
+    const blocosData = calcularBlocosMeses(months);
+    
+    return `
+      <div class="investment-sheet">
+        <!-- Parte Fixa: Blocos + Total -->
+        <div class="sheet-fixed">
+          <div class="sheet-row" style="background: #f8fafc; font-weight: 600;">
+            <div class="sheet-cell" style="flex: 1; padding: 12px; font-size: 13px; color: #475569;">Bloco</div>
+            <div class="sheet-cell" style="width: 140px; text-align: right; padding: 12px; font-size: 13px; color: #475569;">Total</div>
+          </div>
+          ${blocosData.map(bloco => `
+            <div class="sheet-row ${bloco.isTotal ? 'total-row' : ''}" style="${bloco.isSubtotal ? 'background: #f1f5f9; font-weight: 600;' : ''}">
+              <div class="sheet-cell" style="flex: 1; padding: 12px; ${bloco.indent ? 'padding-left: 32px;' : ''}">${bloco.nome}</div>
+              <div class="sheet-cell" style="width: 140px; text-align: right; padding: 12px; font-weight: ${bloco.isTotal || bloco.isSubtotal ? '700' : '400'};">${formatCurrency(bloco.total)}</div>
+            </div>
+          `).join('')}
+        </div>
+        
+        <!-- Parte Scrollável: Meses -->
+        <div class="sheet-scrollable">
+          <div class="sheet-row" style="background: #f8fafc; font-weight: 600; min-width: ${months.length * 120}px;">
+            ${months.map(mes => `
+              <div class="sheet-cell-header">${formatMonthLabel(mes)}</div>
+            `).join('')}
+          </div>
+          ${blocosData.map(bloco => `
+            <div class="sheet-row ${bloco.isTotal ? 'total-row' : ''}" style="min-width: ${months.length * 120}px; ${bloco.isSubtotal ? 'background: #f1f5f9;' : ''}">
+              ${months.map(mes => {
+                const valor = bloco.porMes[mes] || 0;
+                return `<div class="sheet-cell" style="min-width: 120px; text-align: right; padding: 12px;">${valor > 0 ? formatCurrency(valor) : '-'}</div>`;
+              }).join('')}
+            </div>
+          `).join('')}
+        </div>
+      </div>
+    `;
+  }
+  
+  function calcularBlocosMeses(months) {
+    const blocos = [];
+    
+    // Criar estrutura de dados por bloco
+    const dados = {
+      caixa: { total: 0, porMes: {} },
+      recebiveis: { total: 0, porMes: {} },
+      estoques: { total: 0, porMes: {} },
+      instalacoes: { total: 0, porMes: {} },
+      maquinas: { total: 0, porMes: {} },
+      moveis: { total: 0, porMes: {} },
+      ti: { total: 0, porMes: {} },
+      outros: { total: 0, porMes: {} }
+    };
+    
+    // Preencher Capital de Giro
+    capitalGiroItems.forEach(item => {
+      const tipo = item.item_type?.toLowerCase();
+      const mes = item.contribution_date?.substring(0, 7);
+      const valor = parseFloat(item.amount || 0);
+      
+      if (dados[tipo]) {
+        dados[tipo].total += valor;
+        dados[tipo].porMes[mes] = (dados[tipo].porMes[mes] || 0) + valor;
+      }
+    });
+    
+    // Preencher Imobilizado
+    if (investimentosEstruturas.instalacoes) {
+      dados.instalacoes.total = parseFloat(investimentosEstruturas.instalacoes.total || 0);
+      dados.instalacoes.porMes = investimentosEstruturas.instalacoes.por_mes || {};
+    }
+    if (investimentosEstruturas.maquinas) {
+      dados.maquinas.total = parseFloat(investimentosEstruturas.maquinas.total || 0);
+      dados.maquinas.porMes = investimentosEstruturas.maquinas.por_mes || {};
+    }
+    if (investimentosEstruturas.moveis) {
+      dados.moveis.total = parseFloat(investimentosEstruturas.moveis.total || 0);
+      dados.moveis.porMes = investimentosEstruturas.moveis.por_mes || {};
+    }
+    if (investimentosEstruturas.ti) {
+      dados.ti.total = parseFloat(investimentosEstruturas.ti.total || 0);
+      dados.ti.porMes = investimentosEstruturas.ti.por_mes || {};
+    }
+    if (investimentosEstruturas.outros_investimentos) {
+      dados.outros.total = parseFloat(investimentosEstruturas.outros_investimentos.total || 0);
+      dados.outros.porMes = investimentosEstruturas.outros_investimentos.por_mes || {};
+    }
+    
+    // Calcular subtotais
+    const subtotalCapitalGiro = dados.caixa.total + dados.recebiveis.total + dados.estoques.total;
+    const subtotalImobilizado = dados.instalacoes.total + dados.maquinas.total + dados.moveis.total + dados.ti.total + dados.outros.total;
+    const totalGeral = subtotalCapitalGiro + subtotalImobilizado;
+    
+    // Subtotal Capital Giro por mês
+    const capitalGiroPorMes = {};
+    months.forEach(mes => {
+      capitalGiroPorMes[mes] = (dados.caixa.porMes[mes] || 0) + (dados.recebiveis.porMes[mes] || 0) + (dados.estoques.porMes[mes] || 0);
+    });
+    
+    // Subtotal Imobilizado por mês
+    const imobilizadoPorMes = {};
+    months.forEach(mes => {
+      imobilizadoPorMes[mes] = (dados.instalacoes.porMes[mes] || 0) + (dados.maquinas.porMes[mes] || 0) + 
+                                (dados.moveis.porMes[mes] || 0) + (dados.ti.porMes[mes] || 0) + (dados.outros.porMes[mes] || 0);
+    });
+    
+    // Total Geral por mês
+    const totalPorMes = {};
+    months.forEach(mes => {
+      totalPorMes[mes] = (capitalGiroPorMes[mes] || 0) + (imobilizadoPorMes[mes] || 0);
+    });
+    
+    // Montar estrutura de blocos
+    blocos.push({ nome: 'TOTAL', total: totalGeral, porMes: totalPorMes, isTotal: true });
+    
+    // Capital de Giro
+    blocos.push({ nome: 'Capital de Giro', total: subtotalCapitalGiro, porMes: capitalGiroPorMes, isSubtotal: true });
+    blocos.push({ nome: 'Caixa', total: dados.caixa.total, porMes: dados.caixa.porMes, indent: true });
+    blocos.push({ nome: 'Recebíveis', total: dados.recebiveis.total, porMes: dados.recebiveis.porMes, indent: true });
+    blocos.push({ nome: 'Estoques', total: dados.estoques.total, porMes: dados.estoques.porMes, indent: true });
+    
+    // Imobilizado (só adicionar se houver valores)
+    if (subtotalImobilizado > 0) {
+      blocos.push({ nome: 'Imobilizado', total: subtotalImobilizado, porMes: imobilizadoPorMes, isSubtotal: true });
+      if (dados.instalacoes.total > 0) blocos.push({ nome: 'Instalações', total: dados.instalacoes.total, porMes: dados.instalacoes.porMes, indent: true });
+      if (dados.maquinas.total > 0) blocos.push({ nome: 'Máquinas', total: dados.maquinas.total, porMes: dados.maquinas.porMes, indent: true });
+      if (dados.moveis.total > 0) blocos.push({ nome: 'Móveis', total: dados.moveis.total, porMes: dados.moveis.porMes, indent: true });
+      if (dados.ti.total > 0) blocos.push({ nome: 'TI', total: dados.ti.total, porMes: dados.ti.porMes, indent: true });
+      if (dados.outros.total > 0) blocos.push({ nome: 'Outros', total: dados.outros.total, porMes: dados.outros.porMes, indent: true });
+    }
+    
+    return blocos;
+  }
+  
+  function formatMonthLabel(mesISO) {
+    if (!mesISO) return '-';
+    const [ano, mes] = mesISO.split('-');
+    const meses = ['Jan', 'Fev', 'Mar', 'Abr', 'Mai', 'Jun', 'Jul', 'Ago', 'Set', 'Out', 'Nov', 'Dez'];
+    return `${meses[parseInt(mes) - 1]}/${ano}`;
+  }
+  
+  function gerarSequenciaMeses(primeiroMesISO) {
+    const meses = [];
+    const [anoInicio, mesInicio] = primeiroMesISO.split('-').map(Number);
+    
+    let ano = anoInicio;
+    let mes = mesInicio;
+    
+    // 12 meses iniciais
+    for (let i = 0; i < 12; i++) {
+      meses.push(`${ano}-${String(mes).padStart(2, '0')}`);
+      mes++;
+      if (mes > 12) {
+        mes = 1;
+        ano++;
+      }
+    }
+    
+    // Restante do ano após o 12º mês (se não completou o ano)
+    while (mes !== 1) {
+      meses.push(`${ano}-${String(mes).padStart(2, '0')}`);
+      mes++;
+      if (mes > 12) {
+        mes = 1;
+        ano++;
+      }
+    }
+    
+    // + 4 anos (48 meses)
+    for (let i = 0; i < 48; i++) {
+      meses.push(`${ano}-${String(mes).padStart(2, '0')}`);
+      mes++;
+      if (mes > 12) {
+        mes = 1;
+        ano++;
+      }
+    }
+    
+    return meses;
+  }
+  
+  function renderCapitalGiroRows() {
+    if (!capitalGiroItems || capitalGiroItems.length === 0) {
+      return `
+        <tr>
+          <td colspan="5" style="text-align: center; padding: 24px; color: #64748b;">
+            Nenhum investimento cadastrado. Clique em "+ Capital de Giro" para adicionar.
+          </td>
+        </tr>
+      `;
+    }
+    
+    const tipoLabels = {
+      'caixa': 'Caixa',
+      'recebiveis': 'Recebíveis',
+      'estoques': 'Estoques'
+    };
+    
+    return capitalGiroItems.map(item => `
+      <tr>
+        <td>${tipoLabels[item.item_type] || item.item_type}</td>
+        <td>${formatDate(item.contribution_date)}</td>
+        <td>${item.description || '-'}</td>
+        <td style="text-align: right;"><strong>${formatCurrency(item.amount)}</strong></td>
+        <td style="text-align: center;">
+          <button class="action-btn edit" onclick="editCapitalGiro(${item.id})" title="Editar">
+            ✏️
+          </button>
+          <button class="action-btn delete" onclick="deleteCapitalGiro(${item.id})" title="Deletar">
+            🗑️
+          </button>
+        </td>
+      </tr>
+    `).join('');
+  }
+  
+  // CRUD Capital de Giro
+  let editingCapitalGiroId = null;
+  
+  function openCapitalGiroModal(itemId = null) {
+    console.log('[Modal] Abrindo modal de Capital de Giro, itemId:', itemId);
+    editingCapitalGiroId = itemId;
+    
+    let itemData = null;
+    if (itemId) {
+      itemData = capitalGiroItems.find(i => i.id === itemId);
+      console.log('[Modal] Dados do item:', itemData);
+    }
+    
+    const modalHTML = `
+      <div class="modal-content">
+        <div class="modal-header">
+          <h3>${itemId ? 'Editar' : 'Novo'} Investimento em Capital de Giro</h3>
+          <button class="modal-close" onclick="closeCapitalGiroModal()">×</button>
+        </div>
+        
+        <div class="form-group">
+          <label>Tipo *</label>
+          <select id="cg-tipo" required>
+            <option value="">Selecione...</option>
+            <option value="caixa" ${itemData?.item_type === 'caixa' ? 'selected' : ''}>Caixa</option>
+            <option value="recebiveis" ${itemData?.item_type === 'recebiveis' ? 'selected' : ''}>Recebíveis</option>
+            <option value="estoques" ${itemData?.item_type === 'estoques' ? 'selected' : ''}>Estoques</option>
+          </select>
+        </div>
+        
+        <div class="form-group">
+          <label>Data do Aporte *</label>
+          <input type="date" id="cg-data" value="${itemData?.contribution_date || ''}" required>
+        </div>
+        
+        <div class="form-group">
+          <label>Valor (R$) *</label>
+          <input type="number" id="cg-valor" step="0.01" min="0" value="${itemData?.amount || ''}" required>
+        </div>
+        
+        <div class="form-group">
+          <label>Descrição</label>
+          <textarea id="cg-descricao" rows="3">${itemData?.description || ''}</textarea>
+        </div>
+        
+        <div class="form-group">
+          <label>Observações</label>
+          <textarea id="cg-obs" rows="3">${itemData?.notes || ''}</textarea>
+        </div>
+        
+        <div class="modal-actions">
+          <button class="button button-ghost" onclick="closeCapitalGiroModal()">
+            Cancelar
+          </button>
+          <button class="button button-primary" onclick="saveCapitalGiro()">
+            Salvar
+          </button>
+        </div>
+      </div>
+    `;
+    
+    const modalElement = document.getElementById('capitalGiroModal');
+    console.log('[Modal] Elemento do modal:', modalElement);
+    
+    if (!modalElement) {
+      console.error('[Modal] ERRO: Modal capitalGiroModal não encontrado no DOM!');
+      alert('Erro: Modal não encontrado. Recarregue a página.');
+      return;
+    }
+    
+    modalElement.innerHTML = modalHTML;
+    
+    // IMPORTANTE: Remover classe 'modal' que força display:none e opacity:0
+    modalElement.className = '';
+    
+    // FORÇA estilos via cssText (mais forte que classes CSS)
+    modalElement.style.cssText = `
+      display: flex !important;
+      opacity: 1 !important;
+      visibility: visible !important;
+      position: fixed !important;
+      z-index: 25000 !important;
+      top: 0 !important;
+      left: 0 !important;
+      width: 100vw !important;
+      height: 100vh !important;
+      background-color: rgba(0, 0, 0, 0.6) !important;
+      backdrop-filter: blur(4px) !important;
+      align-items: center !important;
+      justify-content: center !important;
+    `;
+    
+    // FORÇA estilos do modal-content
+    const modalContent = modalElement.querySelector('.modal-content');
+    if (modalContent) {
+      modalContent.style.cssText = `
+        background: white !important;
+        color: #000000 !important;
+        padding: 32px !important;
+        border-radius: 16px !important;
+        max-width: 600px !important;
+        width: 90% !important;
+        max-height: 90vh !important;
+        overflow-y: auto !important;
+        box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3) !important;
+        position: relative !important;
+        display: block !important;
+        opacity: 1 !important;
+      `;
+    }
+    
+    console.log('[Modal] Modal aberto com sucesso!');
+  }
+  
+  function closeCapitalGiroModal() {
+    console.log('[Modal] Fechando modal');
+    const modalElement = document.getElementById('capitalGiroModal');
+    if (modalElement) {
+      // Forçar display none
+      modalElement.style.cssText = 'display: none !important;';
+      modalElement.className = 'modal'; // Restaurar classe
+    }
+    editingCapitalGiroId = null;
+  }
+  
+  async function saveCapitalGiro() {
+    const tipo = document.getElementById('cg-tipo').value;
+    const data = document.getElementById('cg-data').value;
+    const valor = document.getElementById('cg-valor').value;
+    const descricao = document.getElementById('cg-descricao').value;
+    const obs = document.getElementById('cg-obs').value;
+    
+    if (!tipo || !data || !valor) {
+      alert('Preencha os campos obrigatórios');
+      return;
+    }
+    
+    try {
+      const payload = {
+        item_type: tipo,
+        contribution_date: data,
+        amount: parseFloat(valor),
+        description: descricao,
+        notes: obs
+      };
+      
+      if (editingCapitalGiroId) {
+        // Update
+        await apiCall(`/pev/api/implantacao/${planId}/finance/capital-giro/${editingCapitalGiroId}`, 'PUT', payload);
+      } else {
+        // Create
+        await apiCall(`/pev/api/implantacao/${planId}/finance/capital-giro`, 'POST', payload);
+      }
+      
+      // Reload data
+      await reloadCapitalGiro();
+      closeCapitalGiroModal();
+      renderInvestimentos();
+      
+    } catch (error) {
+      console.error('Erro ao salvar:', error);
+    }
+  }
+  
+  function editCapitalGiro(itemId) {
+    openCapitalGiroModal(itemId);
+  }
+  
+  async function deleteCapitalGiro(itemId) {
+    if (!confirm('Tem certeza que deseja deletar este investimento?')) return;
+    
+    try {
+      await apiCall(`/pev/api/implantacao/${planId}/finance/capital-giro/${itemId}`, 'DELETE');
+      await reloadCapitalGiro();
+      renderInvestimentos();
+    } catch (error) {
+      console.error('Erro ao deletar:', error);
+    }
+  }
+  
+  async function reloadCapitalGiro() {
+    try {
+      const result = await apiCall(`/pev/api/implantacao/${planId}/finance/capital-giro`, 'GET');
+      capitalGiroItems.length = 0;
+      capitalGiroItems.push(...(result.data || []));
+    } catch (error) {
+      console.error('Erro ao recarregar capital de giro:', error);
+    }
+  }
+  
+  // =========================================
+  // SEÇÃO 3: FONTES DE RECURSOS
+  // =========================================
+  
+  function renderFontes() {
+    // Calcular totais por tipo
+    const totaisPorTipo = {};
+    let totalGeral = 0;
+    
+    fundingSources.forEach(source => {
+      const tipo = source.category || 'Outros';
+      const valor = parseFloat(source.amount || 0);
+      totaisPorTipo[tipo] = (totaisPorTipo[tipo] || 0) + valor;
+      totalGeral += valor;
+    });
+    
+    const html = `
+      <div class="modefin-card">
+        <h2>💼 Fontes de Recursos</h2>
+        
+        <!-- Cards de Resumo -->
+        <div class="values-grid">
+          <div class="value-box highlighted">
+            <div class="value-label">💰 Total Fontes</div>
+            <div class="value-amount">${formatCurrency(totalGeral)}</div>
+          </div>
+          ${Object.entries(totaisPorTipo).map(([tipo, valor]) => `
+            <div class="value-box">
+              <div class="value-label">${tipo}</div>
+              <div class="value-amount">${formatCurrency(valor)}</div>
+            </div>
+          `).join('')}
+        </div>
+        
+        <div style="margin-top: 24px; display: flex; justify-content: space-between; align-items: center;">
+          <h3>Fontes Cadastradas</h3>
+          <button class="button" onclick="openFundingSourceModal()">
+            + Nova Fonte
+          </button>
+        </div>
+        
+        <table class="modefin-table">
+          <thead>
+            <tr>
+              <th>Tipo</th>
+              <th>Descrição</th>
+              <th>Data</th>
+              <th style="text-align: right;">Valor</th>
+              <th style="width: 120px; text-align: center;">Ações</th>
+            </tr>
+          </thead>
+          <tbody>
+            ${renderFundingSourcesRows()}
+          </tbody>
+        </table>
+      </div>
+    `;
+    
+    document.getElementById('secao-fontes').innerHTML = html;
+  }
+  
+  function renderFundingSourcesRows() {
+    if (!fundingSources || fundingSources.length === 0) {
+      return `
+        <tr>
+          <td colspan="5" style="text-align: center; padding: 24px; color: #64748b;">
+            Nenhuma fonte cadastrada. Clique em "+ Nova Fonte" para adicionar.
+          </td>
+        </tr>
+      `;
+    }
+    
+    return fundingSources.map(source => `
+      <tr>
+        <td><strong>${source.category || '-'}</strong></td>
+        <td>${source.description || '-'}</td>
+        <td>${formatDate(source.contribution_date)}</td>
+        <td style="text-align: right;"><strong>${formatCurrency(parseFloat(source.amount || 0))}</strong></td>
+        <td style="text-align: center;">
+          <button class="action-btn edit" onclick="editFundingSource(${source.id})" title="Editar">
+            ✏️
+          </button>
+          <button class="action-btn delete" onclick="deleteFundingSource(${source.id})" title="Deletar">
+            🗑️
+          </button>
+        </td>
+      </tr>
+    `).join('');
+  }
+  
+  // CRUD Fontes de Recursos
+  let editingFundingSourceId = null;
+  
+  function openFundingSourceModal(sourceId = null) {
+    console.log('[Modal] Abrindo modal de Fonte de Recursos, sourceId:', sourceId);
+    editingFundingSourceId = sourceId;
+    
+    let sourceData = null;
+    if (sourceId) {
+      sourceData = fundingSources.find(s => s.id === sourceId);
+    }
+    
+    const modalHTML = `
+      <div class="modal-content">
+        <div class="modal-header">
+          <h3>${sourceId ? 'Editar' : 'Nova'} Fonte de Recursos</h3>
+          <button class="modal-close" onclick="closeFundingSourceModal()">×</button>
+        </div>
+        
+        <div class="form-group">
+          <label>Tipo *</label>
+          <select id="fs-tipo" required>
+            <option value="">Selecione...</option>
+            <option value="Capital Próprio" ${sourceData?.category === 'Capital Próprio' ? 'selected' : ''}>Capital Próprio</option>
+            <option value="Empréstimos e Financiamentos" ${sourceData?.category === 'Empréstimos e Financiamentos' ? 'selected' : ''}>Empréstimos e Financiamentos</option>
+            <option value="Fornecedores" ${sourceData?.category === 'Fornecedores' ? 'selected' : ''}>Fornecedores</option>
+            <option value="Outros" ${sourceData?.category === 'Outros' ? 'selected' : ''}>Outros</option>
+          </select>
+        </div>
+        
+        <div class="form-group">
+          <label>Descrição *</label>
+          <input type="text" id="fs-descricao" value="${sourceData?.description || ''}" required>
+        </div>
+        
+        <div class="form-group">
+          <label>Data do Aporte</label>
+          <input type="date" id="fs-data" value="${sourceData?.contribution_date || ''}">
+        </div>
+        
+        <div class="form-group">
+          <label>Valor (R$) *</label>
+          <input type="number" id="fs-valor" step="0.01" min="0" value="${sourceData?.amount || ''}" required>
+        </div>
+        
+        <div class="form-group">
+          <label>Observações</label>
+          <textarea id="fs-obs" rows="3">${sourceData?.notes || ''}</textarea>
+        </div>
+        
+        <div class="modal-actions">
+          <button class="button button-ghost" onclick="closeFundingSourceModal()">
+            Cancelar
+          </button>
+          <button class="button button-primary" onclick="saveFundingSource()">
+            Salvar
+          </button>
+        </div>
+      </div>
+    `;
+    
+    const modalElement = document.getElementById('fundingSourceModal');
+    if (!modalElement) {
+      console.error('[Modal] Erro: fundingSourceModal não encontrado');
+      return;
+    }
+    
+    modalElement.innerHTML = modalHTML;
+    modalElement.className = '';
+    modalElement.style.cssText = `
+      display: flex !important;
+      opacity: 1 !important;
+      visibility: visible !important;
+      position: fixed !important;
+      z-index: 25000 !important;
+      top: 0 !important;
+      left: 0 !important;
+      width: 100vw !important;
+      height: 100vh !important;
+      background-color: rgba(0, 0, 0, 0.6) !important;
+      align-items: center !important;
+      justify-content: center !important;
+    `;
+    
+    const modalContent = modalElement.querySelector('.modal-content');
+    if (modalContent) {
+      modalContent.style.cssText = `
+        background: white !important;
+        color: #000000 !important;
+        padding: 32px !important;
+        border-radius: 16px !important;
+        max-width: 600px !important;
+        width: 90% !important;
+        box-shadow: 0 20px 60px rgba(0,0,0,0.3) !important;
+      `;
+    }
+  }
+  
+  function closeFundingSourceModal() {
+    const modalElement = document.getElementById('fundingSourceModal');
+    if (modalElement) {
+      modalElement.style.cssText = 'display: none !important;';
+      modalElement.className = 'modal';
+    }
+    editingFundingSourceId = null;
+  }
+  
+  async function saveFundingSource() {
+    const tipo = document.getElementById('fs-tipo').value;
+    const descricao = document.getElementById('fs-descricao').value;
+    const data = document.getElementById('fs-data').value;
+    const valor = document.getElementById('fs-valor').value;
+    const obs = document.getElementById('fs-obs').value;
+    
+    if (!tipo || !descricao || !valor) {
+      alert('Preencha os campos obrigatórios');
+      return;
+    }
+    
+    try {
+      const payload = {
+        category: tipo,
+        description: descricao,
+        contribution_date: data,
+        amount: valor,
+        notes: obs
+      };
+      
+      if (editingFundingSourceId) {
+        await apiCall(`/pev/api/implantacao/${planId}/finance/sources/${editingFundingSourceId}`, 'PUT', payload);
+      } else {
+        await apiCall(`/pev/api/implantacao/${planId}/finance/sources`, 'POST', payload);
+      }
+      
+      await reloadFundingSources();
+      closeFundingSourceModal();
+      renderFontes();
+      
+    } catch (error) {
+      console.error('Erro ao salvar fonte:', error);
+    }
+  }
+  
+  function editFundingSource(sourceId) {
+    openFundingSourceModal(sourceId);
+  }
+  
+  async function deleteFundingSource(sourceId) {
+    if (!confirm('Tem certeza que deseja deletar esta fonte de recursos?')) return;
+    
+    try {
+      await apiCall(`/pev/api/implantacao/${planId}/finance/sources/${sourceId}`, 'DELETE');
+      await reloadFundingSources();
+      renderFontes();
+    } catch (error) {
+      console.error('Erro ao deletar fonte:', error);
+    }
+  }
+  
+  async function reloadFundingSources() {
+    try {
+      const result = await apiCall(`/pev/api/implantacao/${planId}/finance/funding_sources`, 'GET');
+      fundingSources.length = 0;
+      fundingSources.push(...(result.data || []));
+    } catch (error) {
+      console.error('Erro ao recarregar fontes:', error);
+    }
+  }
+  
+  // =========================================
+  // SEÇÃO 4: DISTRIBUIÇÃO DE LUCROS
+  // =========================================
+  
+  function renderDistribuicao() {
+    // Calcular Resultado Operacional
+    const margemContribuicao = productsTotals?.margem_contribuicao?.valor || 0;
+    const custosFixos = fixedCostsSummary?.custos_fixos_mensal || 0;
+    const despesasFixas = fixedCostsSummary?.despesas_fixas_mensal || 0;
+    const resultadoOperacional = margemContribuicao - custosFixos - despesasFixas;
+    
+    // Distribuição de Lucros (%)
+    const percDistribuicao = profitDistribution && profitDistribution.length > 0 
+      ? parseFloat(profitDistribution[0].percentage || profitDistribution[0].profit_distribution_percent || 0) 
+      : 0;
+    const valorDistribuicao = resultadoOperacional * (percDistribuicao / 100);
+    
+    // Outras Destinações - CORREÇÃO: Se resultado negativo, só aplicar FIXAS
+    const outrasDestinacoes = resultRules.reduce((sum, rule) => {
+      if (rule.rule_type === 'percentage') {
+        // Só aplicar % se resultado POSITIVO
+        if (resultadoOperacional > 0) {
+          return sum + (resultadoOperacional * (parseFloat(rule.value || 0) / 100));
+        } else {
+          return sum; // Não aplica % em prejuízo
+        }
+      } else {
+        return sum + parseFloat(rule.value || 0);
+      }
+    }, 0);
+    
+    // Distribuição só se resultado POSITIVO
+    const valorDistribuicaoReal = resultadoOperacional > 0 ? valorDistribuicao : 0;
+    
+    const resultadoFinal = resultadoOperacional - valorDistribuicaoReal - outrasDestinacoes;
+    
+    const html = `
+      <div class="modefin-card">
+        <h2>💰 Distribuição de Lucros e Destinações</h2>
+        
+        <div class="values-grid">
+          <div class="value-box">
+            <div class="value-label">Resultado Operacional</div>
+            <div class="value-amount">${formatCurrency(resultadoOperacional)}</div>
+          </div>
+          <div class="value-box" style="cursor: pointer;" onclick="openProfitDistributionModal()" title="Clique para editar">
+            <div class="value-label">Distribuição de Lucros (${percDistribuicao}%) ✏️</div>
+            <div class="value-amount">${formatCurrency(valorDistribuicaoReal)}</div>
+            <div class="value-percent" style="font-size: 11px;">${resultadoOperacional > 0 ? 'Clique para editar %' : 'Não aplicável (resultado negativo)'}</div>
+          </div>
+          <div class="value-box">
+            <div class="value-label">Outras Destinações</div>
+            <div class="value-amount">${formatCurrency(outrasDestinacoes)}</div>
+          </div>
+          <div class="value-box highlighted">
+            <div class="value-label">💎 Resultado Final</div>
+            <div class="value-amount">${formatCurrency(resultadoFinal)}</div>
+          </div>
+        </div>
+        
+        <div style="margin-top: 24px; display: flex; justify-content: space-between; align-items: center;">
+          <h3>Outras Destinações de Resultado</h3>
+          <button class="button" onclick="openResultRuleModal()">
+            + Nova Destinação
+          </button>
+        </div>
+        <p style="font-size: 13px; opacity: 0.9; margin-bottom: 12px;">
+          Regras que reduzem o resultado (reservas, fundos, investimentos adicionais, etc)
+        </p>
+        
+        <table class="modefin-table">
+          <thead>
+            <tr>
+              <th>Descrição</th>
+              <th>Tipo</th>
+              <th style="text-align: right;">Valor/% </th>
+              <th style="text-align: right;">Impacto</th>
+              <th style="width: 120px; text-align: center;">Ações</th>
+            </tr>
+          </thead>
+          <tbody>
+            ${renderResultRulesRows()}
+          </tbody>
+        </table>
+        
+        <!-- Resultado do Período -->
+        <h3 style="margin-top: 32px;">Resultado do Período</h3>
+        <div class="values-grid" style="grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));">
+          <div class="value-box highlighted">
+            <div class="value-label">💰 Resultado do Período</div>
+            <div class="value-amount" style="font-size: 28px;">${formatCurrency(resultadoFinal)}</div>
+            <div class="value-percent" style="font-size: 12px;">Valor que permanece no caixa do negócio</div>
+          </div>
+        </div>
+        
+        <div class="info-box success" style="margin-top: 16px;">
+          ✅ <strong>Resultado do Período:</strong> Este é o valor que efetivamente fica no caixa do negócio 
+          após distribuir lucros e aplicar outras destinações.
+        </div>
+      </div>
+    `;
+    
+    document.getElementById('secao-distribuicao').innerHTML = html;
+  }
+  
+  function renderResultRulesRows() {
+    if (!resultRules || resultRules.length === 0) {
+      return `
+        <tr>
+          <td colspan="4" style="text-align: center; padding: 24px; color: #64748b;">
+            Nenhuma destinação cadastrada.
+          </td>
+        </tr>
+      `;
+    }
+    
+    const resultadoOperacional = (productsTotals?.margem_contribuicao?.valor || 0) - 
+                                  (fixedCostsSummary?.custos_fixos_mensal || 0) - 
+                                  (fixedCostsSummary?.despesas_fixas_mensal || 0);
+    
+    return resultRules.map(rule => {
+      let impacto = 0;
+      let valorTexto = '';
+      
+      if (rule.rule_type === 'percentage') {
+        impacto = resultadoOperacional * (parseFloat(rule.value || 0) / 100);
+        valorTexto = `${parseFloat(rule.value || 0).toFixed(1)}%`;
+      } else {
+        impacto = parseFloat(rule.value || 0);
+        valorTexto = formatCurrency(impacto);
+      }
+      
+      return `
+        <tr>
+          <td>${rule.description || '-'}</td>
+          <td><span style="background: #e0f2fe; color: #075985; padding: 4px 8px; border-radius: 4px; font-size: 12px;">${rule.rule_type === 'percentage' ? 'Percentual' : 'Valor Fixo'}</span></td>
+          <td style="text-align: right;">${valorTexto}</td>
+          <td style="text-align: right;"><strong>${formatCurrency(impacto)}</strong></td>
+          <td style="text-align: center;">
+            <button class="action-btn edit" onclick="editResultRule(${rule.id})" title="Editar">
+              ✏️
+            </button>
+            <button class="action-btn delete" onclick="deleteResultRule(${rule.id})" title="Deletar">
+              🗑️
+            </button>
+          </td>
+        </tr>
+      `;
+    }).join('');
+  }
+  
+  // CRUD de Outras Destinações (Result Rules)
+  let editingResultRuleId = null;
+  
+  function openResultRuleModal(ruleId = null) {
+    console.log('[Modal] Abrindo modal de Destinação, ruleId:', ruleId);
+    editingResultRuleId = ruleId;
+    
+    let ruleData = null;
+    if (ruleId) {
+      ruleData = resultRules.find(r => r.id === ruleId);
+    }
+    
+    const modalHTML = `
+      <div class="modal-content">
+        <div class="modal-header">
+          <h3>${ruleId ? 'Editar' : 'Nova'} Destinação de Resultado</h3>
+          <button class="modal-close" onclick="closeResultRuleModal()">×</button>
+        </div>
+        
+        <div class="info-box info" style="margin-bottom: 20px;">
+          ℹ️ <strong>Destinação:</strong> Define valores que serão deduzidos do Resultado Operacional
+          (ex: Reserva de Contingência, Fundo de Expansão, etc)
+        </div>
+        
+        <div class="form-group">
+          <label>Descrição *</label>
+          <input type="text" id="rr-descricao" value="${ruleData?.description || ''}" required
+                 placeholder="Ex: Reserva de Contingência">
+        </div>
+        
+        <div class="form-group">
+          <label>Tipo *</label>
+          <select id="rr-tipo" required onchange="toggleResultRuleType()">
+            <option value="">Selecione...</option>
+            <option value="percentage" ${ruleData?.rule_type === 'percentage' ? 'selected' : ''}>Percentual do Resultado</option>
+            <option value="fixed" ${ruleData?.rule_type === 'fixed' ? 'selected' : ''}>Valor Fixo</option>
+          </select>
+        </div>
+        
+        <div class="form-group" id="rr-percent-group" style="display: ${ruleData?.rule_type === 'percentage' || !ruleData ? 'block' : 'none'};">
+          <label>Percentual (%)</label>
+          <input type="number" id="rr-percent" step="0.1" min="0" max="100" value="${ruleData?.rule_type === 'percentage' ? ruleData.value : ''}">
+          <small style="color: #64748b; font-size: 12px;">Percentual do Resultado Operacional</small>
+        </div>
+        
+        <div class="form-group" id="rr-fixed-group" style="display: ${ruleData?.rule_type === 'fixed' ? 'block' : 'none'};">
+          <label>Valor Fixo (R$)</label>
+          <input type="number" id="rr-fixed" step="0.01" min="0" value="${ruleData?.rule_type === 'fixed' ? ruleData.value : ''}">
+          <small style="color: #64748b; font-size: 12px;">Valor fixo mensal</small>
+        </div>
+        
+        <div class="form-group">
+          <label>Data de Início</label>
+          <input type="date" id="rr-start-date" value="${ruleData?.start_date || ''}">
+          <small style="color: #64748b; font-size: 12px;">A destinação só será aplicada a partir desta data</small>
+        </div>
+        
+        <div class="form-group">
+          <label>Observações</label>
+          <textarea id="rr-obs" rows="3">${ruleData?.notes || ''}</textarea>
+        </div>
+        
+        <div class="modal-actions">
+          <button class="button button-ghost" onclick="closeResultRuleModal()">
+            Cancelar
+          </button>
+          <button class="button button-primary" onclick="saveResultRule()">
+            Salvar
+          </button>
+        </div>
+      </div>
+    `;
+    
+    const modalElement = document.getElementById('resultRuleModal');
+    if (!modalElement) return;
+    
+    modalElement.innerHTML = modalHTML;
+    modalElement.className = '';
+    modalElement.style.cssText = `
+      display: flex !important;
+      opacity: 1 !important;
+      position: fixed !important;
+      z-index: 25000 !important;
+      top: 0 !important;
+      left: 0 !important;
+      width: 100vw !important;
+      height: 100vh !important;
+      background-color: rgba(0, 0, 0, 0.6) !important;
+      align-items: center !important;
+      justify-content: center !important;
+    `;
+    
+    const modalContent = modalElement.querySelector('.modal-content');
+    if (modalContent) {
+      modalContent.style.cssText = `
+        background: white !important;
+        color: #000000 !important;
+        padding: 32px !important;
+        border-radius: 16px !important;
+        max-width: 600px !important;
+        width: 90% !important;
+      `;
+    }
+  }
+  
+  function closeResultRuleModal() {
+    const modalElement = document.getElementById('resultRuleModal');
+    if (modalElement) {
+      modalElement.style.cssText = 'display: none !important;';
+      modalElement.className = 'modal';
+    }
+    editingResultRuleId = null;
+  }
+  
+  function toggleResultRuleType() {
+    const tipo = document.getElementById('rr-tipo').value;
+    const percentGroup = document.getElementById('rr-percent-group');
+    const fixedGroup = document.getElementById('rr-fixed-group');
+    
+    if (tipo === 'percentage') {
+      percentGroup.style.display = 'block';
+      fixedGroup.style.display = 'none';
+    } else if (tipo === 'fixed') {
+      percentGroup.style.display = 'none';
+      fixedGroup.style.display = 'block';
+    }
+  }
+  
+  async function saveResultRule() {
+    const descricao = document.getElementById('rr-descricao').value;
+    const tipo = document.getElementById('rr-tipo').value;
+    const percent = document.getElementById('rr-percent').value;
+    const fixed = document.getElementById('rr-fixed').value;
+    const startDate = document.getElementById('rr-start-date').value;
+    const obs = document.getElementById('rr-obs').value;
+    
+    if (!descricao || !tipo) {
+      alert('Preencha os campos obrigatórios');
+      return;
+    }
+    
+    const valor = tipo === 'percentage' ? percent : fixed;
+    
+    if (!valor) {
+      alert('Informe o valor ou percentual');
+      return;
+    }
+    
+    try {
+      const payload = {
+        description: descricao,
+        rule_type: tipo,
+        value: parseFloat(valor),
+        start_date: startDate,
+        notes: obs
+      };
+      
+      if (editingResultRuleId) {
+        await apiCall(`/pev/api/implantacao/${planId}/finance/result_rules/${editingResultRuleId}`, 'PUT', payload);
+      } else {
+        await apiCall(`/pev/api/implantacao/${planId}/finance/result_rules`, 'POST', payload);
+      }
+      
+      await reloadResultRules();
+      closeResultRuleModal();
+      renderDistribuicao();
+      
+    } catch (error) {
+      console.error('Erro ao salvar destinação:', error);
+    }
+  }
+  
+  function editResultRule(ruleId) {
+    openResultRuleModal(ruleId);
+  }
+  
+  async function deleteResultRule(ruleId) {
+    if (!confirm('Tem certeza que deseja deletar esta destinação?')) return;
+    
+    try {
+      await apiCall(`/pev/api/implantacao/${planId}/finance/result_rules/${ruleId}`, 'DELETE');
+      await reloadResultRules();
+      renderDistribuicao();
+    } catch (error) {
+      console.error('Erro ao deletar destinação:', error);
+    }
+  }
+  
+  async function reloadResultRules() {
+    try {
+      // Recarregar destinações via página inteira (force reload)
+      console.log('[Result Rules] Recarregando página para atualizar destinações...');
+      window.location.reload();
+    } catch (error) {
+      console.error('Erro ao recarregar destinações:', error);
+    }
+  }
+  
+  // =========================================
+  // SEÇÃO 5: FLUXO DE CAIXA DO INVESTIMENTO
+  // =========================================
+  
+  function renderFluxoInvestimento() {
+    // Calcular fluxo mês a mês
+    const fluxoData = calcularFluxoInvestimento();
+    
+    const html = `
+      <div class="modefin-card">
+        <h2>📊 Fluxo de Caixa do Investimento</h2>
+        <p style="font-size: 14px; opacity: 0.9; margin-bottom: 20px;">
+          Análise do fluxo de caixa relacionado aos investimentos e fontes de recursos
+        </p>
+        
+        <div style="overflow-x: auto;">
+          <table class="modefin-table">
+            <thead>
+              <tr>
+                <th style="min-width: 100px;">Período</th>
+                <th style="min-width: 130px; text-align: right;">Capital de Giro</th>
+                <th style="min-width: 130px; text-align: right;">Imobilizado</th>
+                <th style="min-width: 150px; text-align: right;">Total Investimentos</th>
+                <th style="min-width: 150px; text-align: right;">Fontes de Recursos</th>
+                <th style="min-width: 140px; text-align: right;">Saldo do Período</th>
+                <th style="min-width: 140px; text-align: right;">Saldo Acumulado</th>
+              </tr>
+            </thead>
+            <tbody>
+              ${renderFluxoInvestimentoRows(fluxoData)}
+            </tbody>
+            <tfoot style="background: #f8fafc; font-weight: 700;">
+              <tr>
+                <td><strong>TOTAL</strong></td>
+                <td style="text-align: right;">${formatCurrency(fluxoData.totais.capitalGiro)}</td>
+                <td style="text-align: right;">${formatCurrency(fluxoData.totais.imobilizado)}</td>
+                <td style="text-align: right;">${formatCurrency(fluxoData.totais.investimentos)}</td>
+                <td style="text-align: right;">${formatCurrency(fluxoData.totais.fontes)}</td>
+                <td style="text-align: right;">${formatCurrency(fluxoData.totais.saldoPeriodo)}</td>
+                <td style="text-align: right;">${formatCurrency(fluxoData.saldoFinal)}</td>
+              </tr>
+            </tfoot>
+          </table>
+        </div>
+        
+        <div class="info-box ${fluxoData.saldoFinal >= 0 ? 'success' : 'warning'}" style="margin-top: 16px;">
+          ${fluxoData.saldoFinal >= 0 
+            ? '✅ <strong>Saldo Positivo:</strong> As fontes de recursos são suficientes para cobrir os investimentos.'
+            : '⚠️ <strong>Saldo Negativo:</strong> Os investimentos excedem as fontes. Considere aumentar o capital ou reduzir investimentos.'
+          }
+        </div>
+      </div>
+    `;
+    
+    document.getElementById('secao-fluxo-investimento').innerHTML = html;
+  }
+  
+  function calcularFluxoInvestimento() {
+    // Coletar todos os meses
+    const mesesSet = new Set();
+    
+    // Meses de Capital de Giro
+    capitalGiroItems.forEach(item => {
+      if (item.contribution_date) {
+        mesesSet.add(item.contribution_date.substring(0, 7));
+      }
+    });
+    
+    // Meses de Imobilizado
+    Object.values(investimentosEstruturas).forEach(categoria => {
+      if (categoria.por_mes) {
+        Object.keys(categoria.por_mes).forEach(mes => mesesSet.add(mes));
+      }
+    });
+    
+    // Meses de Fontes
+    fundingSources.forEach(source => {
+      if (source.contribution_date) {
+        const mes = source.contribution_date.substring(0, 7);
+        mesesSet.add(mes);
+      }
+    });
+    
+    const meses = Array.from(mesesSet).sort();
+    
+    // Calcular valores por mês
+    const fluxoPorMes = {};
+    let saldoAcumulado = 0;
+    
+    const totais = {
+      capitalGiro: 0,
+      imobilizado: 0,
+      investimentos: 0,
+      fontes: 0,
+      saldoPeriodo: 0
+    };
+    
+    meses.forEach(mes => {
+      const mesData = {
+        mes: mes,
+        capitalGiro: 0,
+        imobilizado: 0,
+        investimentos: 0,
+        fontes: 0,
+        saldoPeriodo: 0,
+        saldoAcumulado: 0
+      };
+      
+      // Capital de Giro
+      capitalGiroItems.forEach(item => {
+        if (item.contribution_date && item.contribution_date.substring(0, 7) === mes) {
+          mesData.capitalGiro += parseFloat(item.amount || 0);
+        }
+      });
+      
+      // Imobilizado
+      Object.values(investimentosEstruturas).forEach(categoria => {
+        if (categoria.por_mes && categoria.por_mes[mes]) {
+          mesData.imobilizado += parseFloat(categoria.por_mes[mes] || 0);
+        }
+      });
+      
+      // Fontes de Recursos
+      fundingSources.forEach(source => {
+        if (source.contribution_date && source.contribution_date.substring(0, 7) === mes) {
+          mesData.fontes += parseFloat(source.amount || 0);
+        }
+      });
+      
+      // Totais
+      mesData.investimentos = mesData.capitalGiro + mesData.imobilizado;
+      mesData.saldoPeriodo = mesData.fontes - mesData.investimentos;
+      saldoAcumulado += mesData.saldoPeriodo;
+      mesData.saldoAcumulado = saldoAcumulado;
+      
+      // Acumular totais gerais
+      totais.capitalGiro += mesData.capitalGiro;
+      totais.imobilizado += mesData.imobilizado;
+      totais.investimentos += mesData.investimentos;
+      totais.fontes += mesData.fontes;
+      totais.saldoPeriodo += mesData.saldoPeriodo;
+      
+      fluxoPorMes[mes] = mesData;
+    });
+    
+    return {
+      meses: meses,
+      fluxoPorMes: fluxoPorMes,
+      totais: totais,
+      saldoFinal: saldoAcumulado
+    };
+  }
+  
+  function renderFluxoInvestimentoRows(fluxoData) {
+    if (fluxoData.meses.length === 0) {
+      return `
+        <tr>
+          <td colspan="7" style="text-align: center; padding: 24px; color: #64748b;">
+            Nenhum movimento de investimento ou fonte cadastrado ainda.
+          </td>
+        </tr>
+      `;
+    }
+    
+    return fluxoData.meses.map(mes => {
+      const data = fluxoData.fluxoPorMes[mes];
+      const saldoPositivo = data.saldoPeriodo >= 0;
+      const saldoAcumPositivo = data.saldoAcumulado >= 0;
+      
+      return `
+        <tr>
+          <td><strong>${formatMonthLabel(mes)}</strong></td>
+          <td style="text-align: right;">${data.capitalGiro > 0 ? formatCurrency(data.capitalGiro) : '-'}</td>
+          <td style="text-align: right;">${data.imobilizado > 0 ? formatCurrency(data.imobilizado) : '-'}</td>
+          <td style="text-align: right;"><strong>${formatCurrency(data.investimentos)}</strong></td>
+          <td style="text-align: right; color: #059669;"><strong>${data.fontes > 0 ? formatCurrency(data.fontes) : '-'}</strong></td>
+          <td style="text-align: right; color: ${saldoPositivo ? '#059669' : '#dc2626'};">
+            <strong>${formatCurrency(data.saldoPeriodo)}</strong>
+          </td>
+          <td style="text-align: right; color: ${saldoAcumPositivo ? '#059669' : '#dc2626'};">
+            <strong>${formatCurrency(data.saldoAcumulado)}</strong>
+          </td>
+        </tr>
+      `;
+    }).join('');
+  }
+  
+  // =========================================
+  // SEÇÃO 6: FLUXO DE CAIXA DO NEGÓCIO
+  // =========================================
+  
+  function renderFluxoNegocio() {
+    const fluxoData = calcularFluxoNegocio();
+    
+    const html = `
+      <div class="modefin-card">
+        <h2>💹 Fluxo de Caixa do Negócio</h2>
+        <p style="font-size: 14px; opacity: 0.9; margin-bottom: 20px;">
+          Projeção do fluxo de caixa operacional do negócio
+        </p>
+        
+        <div style="overflow-x: auto; max-height: 600px; overflow-y: auto; border-radius: 8px;">
+          <table class="modefin-table" style="position: relative;">
+            <thead style="position: sticky; top: 0; background: #f8fafc; z-index: 10;">
+              <tr>
+                <th style="min-width: 100px; position: sticky; top: 0; background: #f8fafc;">Período</th>
+                <th style="min-width: 130px; text-align: right;">Receita</th>
+                <th style="min-width: 130px; text-align: right;">Variáveis</th>
+                <th style="min-width: 150px; text-align: right;">Margem Contribuição</th>
+                <th style="min-width: 130px; text-align: right;">Fixos</th>
+                <th style="min-width: 160px; text-align: right;">Resultado Operacional</th>
+                <th style="min-width: 150px; text-align: right;">Destinação Resultados</th>
+                <th style="min-width: 140px; text-align: right;">Resultado do Período</th>
+                <th style="min-width: 140px; text-align: right; background: #fef3c7;">Resultado Acumulado</th>
+                <th style="min-width: 150px; text-align: right; background: #dbeafe;">Saldo Acum. Investimentos</th>
+                <th style="min-width: 140px; text-align: right; background: #dcfce7;">Saldo Acum. Total</th>
+              </tr>
+            </thead>
+            <tbody>
+              ${renderFluxoNegocioRows(fluxoData)}
+            </tbody>
+          </table>
+        </div>
+        
+        <div class="info-box info" style="margin-top: 16px;">
+          ℹ️ <strong>Valores Mensais:</strong> 
+          Receita de ${formatCurrency(productsTotals?.faturamento?.valor || 0)} baseada no faturamento cadastrado em Produtos.
+          Destinações percentuais só aplicam quando resultado é positivo.
+          Custos/Despesas fixas consideram as datas de vencimento das parcelas cadastradas em Estruturas.
+        </div>
+      </div>
+    `;
+    
+    document.getElementById('secao-fluxo-negocio').innerHTML = html;
+  }
+  
+  function calcularFluxoNegocio() {
+    // Gerar sequência de meses: 12 meses + restante do ano + 4 anos
+    const fluxoInv = calcularFluxoInvestimento();
+    
+    // Pegar primeiro mês com movimento ou usar default
+    let primeiroMes = fluxoInv.meses.length > 0 ? fluxoInv.meses[0] : '2026-05';
+    
+    // Gerar meses
+    const meses = gerarSequenciaMeses(primeiroMes);
+    
+    // CORREÇÃO: O faturamento JÁ É MENSAL (não precisa dividir!)
+    // productsTotals.faturamento.valor = R$ 1.200.000 MENSAL
+    const receitaMensal = productsTotals?.faturamento?.valor || 0;
+    const custoVariavelMensal = productsTotals?.custos_variaveis?.valor || 0;
+    const despesaVariavelMensal = productsTotals?.despesas_variaveis?.valor || 0;
+    const margemMensal = receitaMensal - custoVariavelMensal - despesaVariavelMensal;
+    
+    console.log('[Fluxo Negócio] Receita mensal:', receitaMensal);
+    console.log('[Fluxo Negócio] Margem mensal:', margemMensal);
+    
+    const custoFixoMensal = fixedCostsSummary?.custos_fixos_mensal || 0;
+    const despesaFixaMensal = fixedCostsSummary?.despesas_fixas_mensal || 0;
+    const fixosMensal = custoFixoMensal + despesaFixaMensal;
+    
+    const resultadoOpMensal = margemMensal - fixosMensal;
+    
+    // Distribuição e destinações
+    const percDistribuicao = profitDistribution && profitDistribution.length > 0 
+      ? parseFloat(profitDistribution[0].percentage || profitDistribution[0].profit_distribution_percent || 0) 
+      : 0;
+    const distribuicaoMensal = resultadoOpMensal * (percDistribuicao / 100);
+    
+    // CORREÇÃO: Se resultado negativo, só aplicar destinações FIXAS (não percentuais)
+    const outrasDestMensal = resultRules.reduce((sum, rule) => {
+      if (rule.rule_type === 'percentage') {
+        // Só aplicar % se resultado for POSITIVO
+        if (resultadoOpMensal > 0) {
+          return sum + (resultadoOpMensal * (parseFloat(rule.value || 0) / 100));
+        } else {
+          return sum; // Não aplica percentual em resultado negativo
+        }
+      } else {
+        // Valor fixo: sempre aplica
+        return sum + parseFloat(rule.value || 0);
+      }
+    }, 0);
+    
+    // Distribuição de lucros: só aplicar se resultado POSITIVO
+    const distribuicaoMensalReal = resultadoOpMensal > 0 ? distribuicaoMensal : 0;
+    
+    const destinacaoTotalMensal = distribuicaoMensalReal + outrasDestMensal;
+    const resultadoPeriodoMensal = resultadoOpMensal - destinacaoTotalMensal;
+    
+    const fluxoPorMes = {};
+    let resultadoAcumulado = 0;
+    
+    meses.forEach(mes => {
+      // Calcular destinações DESTE MÊS considerando data de início
+      const mesDate = new Date(mes + '-01');
+      
+      // Distribuição de lucros: verificar data de início
+      let distribuicaoMesAtual = 0;
+      if (resultadoOpMensal > 0 && profitDistribution.length > 0) {
+        const profitStartDate = profitDistribution[0]?.start_date;
+        if (!profitStartDate || mesDate >= new Date(profitStartDate)) {
+          distribuicaoMesAtual = distribuicaoMensalReal;
+        }
+      }
+      
+      // Outras destinações: verificar data de início de cada uma
+      const outrasDestMesAtual = resultRules.reduce((sum, rule) => {
+        // Verificar data de início
+        if (rule.start_date) {
+          if (mesDate < new Date(rule.start_date)) {
+            return sum; // Ainda não começou
+          }
+        }
+        
+        if (rule.rule_type === 'percentage') {
+          if (resultadoOpMensal > 0) {
+            return sum + (resultadoOpMensal * (parseFloat(rule.value || 0) / 100));
+          }
+        } else {
+          return sum + parseFloat(rule.value || 0);
+        }
+        return sum;
+      }, 0);
+      
+      const destinacaoTotal = distribuicaoMesAtual + outrasDestMesAtual;
+      const resultadoPeriodo = resultadoOpMensal - destinacaoTotal;
+      resultadoAcumulado += resultadoPeriodo;
+      
+      fluxoPorMes[mes] = {
+        mes: mes,
+        receita: receitaMensal,
+        variaveis: custoVariavelMensal + despesaVariavelMensal,
+        margem: margemMensal,
+        fixos: fixosMensal,
+        resultadoOp: resultadoOpMensal,
+        destinacoes: destinacaoTotal,
+        resultadoPeriodo: resultadoPeriodo,
+        resultadoAcumulado: resultadoAcumulado,
+        saldoInvestimentos: fluxoInv.fluxoPorMes[mes]?.saldoAcumulado || 0,
+        saldoTotal: resultadoAcumulado + (fluxoInv.fluxoPorMes[mes]?.saldoAcumulado || 0)
+      };
+    });
+    
+    return {
+      meses: meses,
+      fluxoPorMes: fluxoPorMes
+    };
+  }
+  
+  function renderFluxoNegocioRows(fluxoData) {
+    if (fluxoData.meses.length === 0) {
+      return `
+        <tr>
+          <td colspan="11" style="text-align: center; padding: 24px; color: #64748b;">
+            Nenhum período cadastrado.
+          </td>
+        </tr>
+      `;
+    }
+    
+    return fluxoData.meses.map(mes => {
+      const data = fluxoData.fluxoPorMes[mes];
+      
+      return `
+        <tr>
+          <td><strong>${formatMonthLabel(mes)}</strong></td>
+          <td style="text-align: right; color: #059669;">${formatCurrency(data.receita)}</td>
+          <td style="text-align: right; color: #dc2626;">${formatCurrency(data.variaveis)}</td>
+          <td style="text-align: right;"><strong>${formatCurrency(data.margem)}</strong></td>
+          <td style="text-align: right; color: #dc2626;">${formatCurrency(data.fixos)}</td>
+          <td style="text-align: right;"><strong>${formatCurrency(data.resultadoOp)}</strong></td>
+          <td style="text-align: right; color: #dc2626;">${formatCurrency(data.destinacoes)}</td>
+          <td style="text-align: right; color: ${data.resultadoPeriodo >= 0 ? '#059669' : '#dc2626'};">
+            <strong>${formatCurrency(data.resultadoPeriodo)}</strong>
+          </td>
+          <td style="text-align: right; background: #fef3c7; color: ${data.resultadoAcumulado >= 0 ? '#166534' : '#991b1b'};">
+            <strong>${formatCurrency(data.resultadoAcumulado)}</strong>
+          </td>
+          <td style="text-align: right; background: #dbeafe; color: ${data.saldoInvestimentos >= 0 ? '#166534' : '#991b1b'};">
+            <strong>${formatCurrency(data.saldoInvestimentos)}</strong>
+          </td>
+          <td style="text-align: right; background: #dcfce7; color: ${data.saldoTotal >= 0 ? '#166534' : '#991b1b'};">
+            <strong>${formatCurrency(data.saldoTotal)}</strong>
+          </td>
+        </tr>
+      `;
+    }).join('');
+  }
+  
+  // =========================================
+  // SEÇÃO 7: FLUXO DE CAIXA DO INVESTIDOR
+  // =========================================
+  
+  function renderFluxoInvestidor() {
+    const fluxoData = calcularFluxoInvestidor();
+    
+    const html = `
+      <div class="modefin-card">
+        <h2>💎 Fluxo de Caixa do Investidor</h2>
+        <p style="font-size: 14px; opacity: 0.9; margin-bottom: 20px;">
+          Visão do investidor: aportes, investimentos, retornos e distribuições
+        </p>
+        
+        <div style="overflow-x: auto; max-height: 600px; overflow-y: auto; border-radius: 8px;">
+          <table class="modefin-table">
+            <thead style="position: sticky; top: 0; background: #f8fafc; z-index: 10;">
+              <tr>
+                <th style="min-width: 100px; position: sticky; top: 0; background: #f8fafc;">Período</th>
+                <th style="min-width: 150px; text-align: right;">Aporte / Investimento</th>
+                <th style="min-width: 160px; text-align: right;">Distribuição de Lucros</th>
+                <th style="min-width: 140px; text-align: right;">Saldo do Período</th>
+                <th style="min-width: 140px; text-align: right;">Saldo Acumulado</th>
+              </tr>
+            </thead>
+            <tbody>
+              ${renderFluxoInvestidorRows(fluxoData)}
+            </tbody>
+            <tfoot style="position: sticky; bottom: 0; background: #f8fafc; font-weight: 700; box-shadow: 0 -2px 4px rgba(0,0,0,0.1);">
+              <tr>
+                <td><strong>TOTAL</strong></td>
+                <td style="text-align: right;">${formatCurrency(fluxoData.totais.aportes)}</td>
+                <td style="text-align: right;">${formatCurrency(fluxoData.totais.distribuicao)}</td>
+                <td style="text-align: right;">${formatCurrency(fluxoData.totais.saldoPeriodo)}</td>
+                <td style="text-align: right; color: ${fluxoData.saldoFinal >= 0 ? '#059669' : '#dc2626'};">
+                  <strong>${formatCurrency(fluxoData.saldoFinal)}</strong>
+                </td>
+              </tr>
+            </tfoot>
+          </table>
+        </div>
+        
+        <div class="info-box ${fluxoData.saldoFinal >= 0 ? 'success' : 'info'}" style="margin-top: 16px;">
+          ${fluxoData.saldoFinal >= 0 
+            ? '✅ <strong>Retorno Positivo:</strong> O investidor está recuperando o capital investido.'
+            : 'ℹ️ <strong>Em Recuperação:</strong> O investidor ainda está na fase de aporte. O retorno virá dos lucros futuros.'
+          }
+        </div>
+      </div>
+    `;
+    
+    document.getElementById('secao-fluxo-investidor').innerHTML = html;
+  }
+  
+  function calcularFluxoInvestidor() {
+    // Combinar fluxos de investimento e negócio
+    const fluxoInv = calcularFluxoInvestimento();
+    const fluxoNeg = calcularFluxoNegocio();
+    
+    // Unir todos os meses
+    const mesesSet = new Set([...fluxoInv.meses, ...fluxoNeg.meses]);
+    const meses = Array.from(mesesSet).sort();
+    
+    const fluxoPorMes = {};
+    let saldoAcumulado = 0;
+    
+    const totais = {
+      aportes: 0,
+      distribuicao: 0,
+      saldoPeriodo: 0
+    };
+    
+    // Distribuição mensal
+    const percDistribuicao = profitDistribution && profitDistribution.length > 0 
+      ? parseFloat(profitDistribution[0].percentage || profitDistribution[0].profit_distribution_percent || 0) 
+      : 0;
+    
+    meses.forEach(mes => {
+      const mesData = {
+        mes: mes,
+        aportes: 0,
+        distribuicao: 0,
+        saldoPeriodo: 0,
+        saldoAcumulado: 0
+      };
+      
+      // Aportes/Investimentos (negativo - saída de caixa)
+      const invMes = fluxoInv.fluxoPorMes[mes];
+      if (invMes) {
+        mesData.aportes = -(invMes.investimentos || 0); // Negativo (saída)
+      }
+      
+      // Fontes de Recursos (positivo - entrada de caixa)
+      if (invMes && invMes.fontes > 0) {
+        mesData.aportes += invMes.fontes; // Positivo (entrada)
+      }
+      
+      // Distribuição de Lucros (positivo - recebimento)
+      const negMes = fluxoNeg.fluxoPorMes[mes];
+      if (negMes && negMes.resultadoOp > 0) {
+        mesData.distribuicao = negMes.resultadoOp * (percDistribuicao / 100);
+      }
+      
+      // Saldo do período
+      mesData.saldoPeriodo = mesData.aportes + mesData.distribuicao;
+      saldoAcumulado += mesData.saldoPeriodo;
+      mesData.saldoAcumulado = saldoAcumulado;
+      
+      // Totais
+      totais.aportes += mesData.aportes;
+      totais.distribuicao += mesData.distribuicao;
+      totais.saldoPeriodo += mesData.saldoPeriodo;
+      
+      fluxoPorMes[mes] = mesData;
+    });
+    
+    return {
+      meses: meses,
+      fluxoPorMes: fluxoPorMes,
+      totais: totais,
+      saldoFinal: saldoAcumulado
+    };
+  }
+  
+  function renderFluxoInvestidorRows(fluxoData) {
+    if (fluxoData.meses.length === 0) {
+      return `
+        <tr>
+          <td colspan="5" style="text-align: center; padding: 24px; color: #64748b;">
+            Nenhum período com movimentação.
+          </td>
+        </tr>
+      `;
+    }
+    
+    return fluxoData.meses.map(mes => {
+      const data = fluxoData.fluxoPorMes[mes];
+      
+      return `
+        <tr>
+          <td><strong>${formatMonthLabel(mes)}</strong></td>
+          <td style="text-align: right; color: ${data.aportes >= 0 ? '#059669' : '#dc2626'};">
+            <strong>${formatCurrency(data.aportes)}</strong>
+          </td>
+          <td style="text-align: right; color: #059669;">
+            ${data.distribuicao > 0 ? formatCurrency(data.distribuicao) : '-'}
+          </td>
+          <td style="text-align: right; color: ${data.saldoPeriodo >= 0 ? '#059669' : '#dc2626'};">
+            <strong>${formatCurrency(data.saldoPeriodo)}</strong>
+          </td>
+          <td style="text-align: right; color: ${data.saldoAcumulado >= 0 ? '#059669' : '#dc2626'};">
+            <strong>${formatCurrency(data.saldoAcumulado)}</strong>
+          </td>
+        </tr>
+      `;
+    }).join('');
+  }
+  
+  // =========================================
+  // SEÇÃO 8: ANÁLISE DE VIABILIDADE
+  // =========================================
+  
+  function renderAnalise() {
+    // Parâmetros de análise (buscar do financeiro ou usar defaults)
+    const financeiroDados = typeof financeiro !== 'undefined' ? financeiro : {};
+    const periodoAnalise = financeiroDados?.fluxo_investidor?.analises?.periodo_meses || 60; // Default: 60 meses (5 anos)
+    const custoOportunidade = financeiroDados?.investimento?.custo_oportunidade || 12; // Default: 12% ao ano
+    
+    // Cálculos
+    const totalInvestimentos = Object.values(calcularTotaisInvestimentos()).reduce((sum, val) => sum + val, 0);
+    const resultadoOperacional = (productsTotals?.margem_contribuicao?.valor || 0) - 
+                                  (fixedCostsSummary?.custos_fixos_mensal || 0) - 
+                                  (fixedCostsSummary?.despesas_fixas_mensal || 0);
+    
+    // Payback (meses)
+    const payback = resultadoOperacional > 0 ? (totalInvestimentos / resultadoOperacional) : 0;
+    
+    // ROI (baseado no período de análise)
+    const resultadoPeriodo = resultadoOperacional * periodoAnalise;
+    const roi = totalInvestimentos > 0 ? ((resultadoPeriodo / totalInvestimentos) * 100) : 0;
+    
+    // VPL simplificado (placeholder - fórmula complexa)
+    const vpl = calcularVPLSimplificado(totalInvestimentos, resultadoOperacional, periodoAnalise, custoOportunidade);
+    
+    // TIR (placeholder - fórmula iterativa complexa)
+    const tir = payback > 0 ? ((1 / payback) * 100) : 0; // Aproximação grosseira
+    
+    const html = `
+      <div class="modefin-card">
+        <h2>📈 Análise de Viabilidade</h2>
+        
+        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px;">
+          <h3 style="margin: 0;">Métricas Calculadas</h3>
+          <button class="button button-ghost" onclick="openAnalysisConfigModal()" title="Configurar parâmetros">
+            ⚙️ Configurar Análise
+          </button>
+        </div>
+        
+        <div class="info-box info" style="margin-bottom: 16px;">
+          📊 <strong>Parâmetros:</strong> 
+          Período de análise: <strong>${periodoAnalise} meses</strong> | 
+          Custo de oportunidade: <strong>${custoOportunidade}% ao ano</strong>
+          <span style="opacity: 0.8; font-size: 11px;"> (clique em "Configurar" para alterar)</span>
+        </div>
+        
+        <div class="values-grid">
+          <div class="value-box">
+            <div class="value-label">Payback</div>
+            <div class="value-amount">${payback > 0 ? payback.toFixed(1) + ' meses' : '-'}</div>
+            <div class="value-percent" style="font-size: 11px;">Tempo para recuperar investimento</div>
+          </div>
+          <div class="value-box">
+            <div class="value-label">ROI (${periodoAnalise} meses)</div>
+            <div class="value-amount">${roi > 0 ? roi.toFixed(1) + '%' : '-'}</div>
+            <div class="value-percent" style="font-size: 11px;">Retorno sobre investimento</div>
+          </div>
+          <div class="value-box">
+            <div class="value-label">TIR (estimativa)</div>
+            <div class="value-amount">${tir > 0 ? tir.toFixed(1) + '% a.a.' : '-'}</div>
+            <div class="value-percent" style="font-size: 11px;">Taxa Interna de Retorno (aproximação)</div>
+          </div>
+          <div class="value-box">
+            <div class="value-label">VPL (estimativa)</div>
+            <div class="value-amount">${vpl !== 0 ? formatCurrency(vpl) : '-'}</div>
+            <div class="value-percent" style="font-size: 11px;">Valor Presente Líquido (${custoOportunidade}% a.a.)</div>
+          </div>
+        </div>
+        
+        <h3 style="margin-top: 32px;">Resumo Executivo</h3>
+        <p style="font-size: 13px; opacity: 0.9; margin-bottom: 12px;">
+          Texto editável que será incluído no relatório final
+        </p>
+        
+        <div id="executive-summary-display" style="background: rgba(255,255,255,0.15); padding: 16px; border-radius: 8px; min-height: 100px; margin-top: 12px; white-space: pre-wrap;">
+          ${executiveSummary || 'Nenhum resumo executivo cadastrado. Clique em "Editar" para adicionar.'}
+        </div>
+        
+        <button class="button" onclick="openExecutiveSummaryModal()" style="margin-top: 12px;">
+          ✏️ Editar Resumo Executivo
+        </button>
+      </div>
+    `;
+    
+    document.getElementById('secao-analise').innerHTML = html;
+  }
+  
+  function calcularTotaisInvestimentos() {
+    const totais = { caixa: 0, recebiveis: 0, estoques: 0, instalacoes: 0, maquinas: 0, moveis: 0, ti: 0, outros: 0 };
+    
+    capitalGiroItems.forEach(item => {
+      const tipo = item.item_type?.toLowerCase();
+      if (totais[tipo] !== undefined) {
+        totais[tipo] += parseFloat(item.amount || 0);
+      }
+    });
+    
+    if (investimentosEstruturas.instalacoes) totais.instalacoes = parseFloat(investimentosEstruturas.instalacoes.total || 0);
+    if (investimentosEstruturas.maquinas) totais.maquinas = parseFloat(investimentosEstruturas.maquinas.total || 0);
+    if (investimentosEstruturas.moveis) totais.moveis = parseFloat(investimentosEstruturas.moveis.total || 0);
+    if (investimentosEstruturas.ti) totais.ti = parseFloat(investimentosEstruturas.ti.total || 0);
+    if (investimentosEstruturas.outros_investimentos) totais.outros = parseFloat(investimentosEstruturas.outros_investimentos.total || 0);
+    
+    return totais;
+  }
+  
+  // Modal de Distribuição de Lucros
+  function openProfitDistributionModal() {
+    const percAtual = profitDistribution && profitDistribution.length > 0 
+      ? parseFloat(profitDistribution[0].percentage || profitDistribution[0].profit_distribution_percent || 0) 
+      : 0;
+    
+    const modalHTML = `
+      <div class="modal-content">
+        <div class="modal-header">
+          <h3>Configurar Distribuição de Lucros</h3>
+          <button class="modal-close" onclick="closeProfitDistributionModal()">×</button>
+        </div>
+        
+        <div class="info-box info" style="margin-bottom: 20px;">
+          ℹ️ <strong>Distribuição de Lucros:</strong> Define o percentual do Resultado Operacional 
+          que será distribuído aos sócios/acionistas.
+        </div>
+        
+        <div class="form-group">
+          <label>Percentual de Distribuição (%)</label>
+          <input type="number" id="pd-percent" step="0.1" min="0" max="100" value="${percAtual}" required>
+          <small style="color: #64748b; font-size: 12px;">
+            Ex: 30% significa que 30% do Resultado Operacional será distribuído como lucros
+          </small>
+        </div>
+        
+        <div class="form-group">
+          <label>Data de Início</label>
+          <input type="date" id="pd-data" value="${profitDistribution[0]?.start_date || ''}">
+        </div>
+        
+        <div class="form-group">
+          <label>Observações</label>
+          <textarea id="pd-obs" rows="3">${profitDistribution[0]?.notes || ''}</textarea>
+        </div>
+        
+        <div class="modal-actions">
+          <button class="button button-ghost" onclick="closeProfitDistributionModal()">
+            Cancelar
+          </button>
+          <button class="button button-primary" onclick="saveProfitDistribution()">
+            Salvar
+          </button>
+        </div>
+      </div>
+    `;
+    
+    const modalElement = document.getElementById('profitDistributionModal');
+    if (!modalElement) return;
+    
+    modalElement.innerHTML = modalHTML;
+    modalElement.className = '';
+    modalElement.style.cssText = `
+      display: flex !important;
+      opacity: 1 !important;
+      position: fixed !important;
+      z-index: 25000 !important;
+      top: 0 !important;
+      left: 0 !important;
+      width: 100vw !important;
+      height: 100vh !important;
+      background-color: rgba(0, 0, 0, 0.6) !important;
+      align-items: center !important;
+      justify-content: center !important;
+    `;
+    
+    const modalContent = modalElement.querySelector('.modal-content');
+    if (modalContent) {
+      modalContent.style.cssText = `
+        background: white !important;
+        color: #000000 !important;
+        padding: 32px !important;
+        border-radius: 16px !important;
+        max-width: 600px !important;
+        width: 90% !important;
+      `;
+    }
+  }
+  
+  function closeProfitDistributionModal() {
+    const modalElement = document.getElementById('profitDistributionModal');
+    if (modalElement) {
+      modalElement.style.cssText = 'display: none !important;';
+      modalElement.className = 'modal';
+    }
+  }
+  
+  async function saveProfitDistribution() {
+    const percent = document.getElementById('pd-percent').value;
+    const data = document.getElementById('pd-data').value;
+    const obs = document.getElementById('pd-obs').value;
+    
+    if (!percent) {
+      alert('Informe o percentual de distribuição');
+      return;
+    }
+    
+    try {
+      const payload = {
+        profit_distribution_percent: parseFloat(percent),
+        start_date: data,
+        notes: obs
+      };
+      
+      // API para atualizar distribuição
+      await apiCall(`/pev/api/implantacao/${planId}/finance/profit-distribution`, 'PUT', payload);
+      
+      // Atualizar dados locais
+      if (profitDistribution.length === 0) {
+        profitDistribution.push(payload);
+      } else {
+        profitDistribution[0] = { ...profitDistribution[0], ...payload };
+      }
+      
+      closeProfitDistributionModal();
+      renderDistribuicao();
+      
+      alert('Distribuição de lucros salva com sucesso!');
+      
+    } catch (error) {
+      console.error('Erro ao salvar distribuição:', error);
+    }
+  }
+  
+  // Modal de Resumo Executivo
+  function openExecutiveSummaryModal() {
+    const modalHTML = `
+      <div class="modal-content">
+        <div class="modal-header">
+          <h3>Editar Resumo Executivo</h3>
+          <button class="modal-close" onclick="closeExecutiveSummaryModal()">×</button>
+        </div>
+        
+        <div class="form-group">
+          <label>Resumo Executivo</label>
+          <textarea id="es-texto" rows="10" style="font-family: Arial, sans-serif;">${executiveSummary || ''}</textarea>
+          <small style="color: #64748b; font-size: 12px;">Este texto será incluído no relatório final de planejamento.</small>
+        </div>
+        
+        <div class="modal-actions">
+          <button class="button button-ghost" onclick="closeExecutiveSummaryModal()">
+            Cancelar
+          </button>
+          <button class="button button-primary" onclick="saveExecutiveSummary()">
+            Salvar
+          </button>
+        </div>
+      </div>
+    `;
+    
+    const modalElement = document.getElementById('executiveSummaryModal');
+    if (!modalElement) return;
+    
+    modalElement.innerHTML = modalHTML;
+    modalElement.className = '';
+    modalElement.style.cssText = `
+      display: flex !important;
+      opacity: 1 !important;
+      position: fixed !important;
+      z-index: 25000 !important;
+      top: 0 !important;
+      left: 0 !important;
+      width: 100vw !important;
+      height: 100vh !important;
+      background-color: rgba(0, 0, 0, 0.6) !important;
+      align-items: center !important;
+      justify-content: center !important;
+    `;
+    
+    const modalContent = modalElement.querySelector('.modal-content');
+    if (modalContent) {
+      modalContent.style.cssText = `
+        background: white !important;
+        color: #000000 !important;
+        padding: 32px !important;
+        border-radius: 16px !important;
+        max-width: 700px !important;
+        width: 90% !important;
+      `;
+    }
+  }
+  
+  function closeExecutiveSummaryModal() {
+    const modalElement = document.getElementById('executiveSummaryModal');
+    if (modalElement) {
+      modalElement.style.cssText = 'display: none !important;';
+      modalElement.className = 'modal';
+    }
+  }
+  
+  async function saveExecutiveSummary() {
+    const texto = document.getElementById('es-texto').value;
+    
+    try {
+      await apiCall(`/pev/api/implantacao/${planId}/finance/executive-summary`, 'PUT', {
+        executive_summary: texto
+      });
+      
+      // Atualizar variável global
+      executiveSummary = texto;
+      
+      closeExecutiveSummaryModal();
+      renderAnalise();
+      
+      alert('Resumo executivo salvo com sucesso!');
+      
+    } catch (error) {
+      console.error('Erro ao salvar resumo:', error);
+    }
+  }
+  
+  // Cálculo de VPL simplificado
+  function calcularVPLSimplificado(investimentoInicial, fluxoMensal, periodoMeses, taxaAnual) {
+    if (fluxoMensal <= 0 || investimentoInicial <= 0) return 0;
+    
+    // Converter taxa anual para mensal
+    const taxaMensal = Math.pow(1 + (taxaAnual / 100), 1/12) - 1;
+    
+    let vpl = -investimentoInicial; // Investimento inicial (negativo)
+    
+    // Somar fluxos descontados
+    for (let mes = 1; mes <= periodoMeses; mes++) {
+      const valorPresente = fluxoMensal / Math.pow(1 + taxaMensal, mes);
+      vpl += valorPresente;
+    }
+    
+    return vpl;
+  }
+  
+  // Modal de Configuração da Análise
+  function openAnalysisConfigModal() {
+    const financeiroDados = typeof financeiro !== 'undefined' ? financeiro : {};
+    const periodoAtual = financeiroDados?.fluxo_investidor?.analises?.periodo_meses || 60;
+    const custoAtual = financeiroDados?.investimento?.custo_oportunidade || 12;
+    
+    const modalHTML = `
+      <div class="modal-content">
+        <div class="modal-header">
+          <h3>⚙️ Configurar Parâmetros da Análise</h3>
+          <button class="modal-close" onclick="closeAnalysisConfigModal()">×</button>
+        </div>
+        
+        <div class="info-box info" style="margin-bottom: 20px;">
+          ℹ️ <strong>Parâmetros:</strong> Estes valores influenciam os cálculos de ROI, VPL e TIR.
+        </div>
+        
+        <div class="form-group">
+          <label>Período de Análise (meses)</label>
+          <input type="number" id="ac-periodo" min="12" max="120" step="1" value="${periodoAtual}" required>
+          <small style="color: #64748b; font-size: 12px;">
+            Quantos meses considerar na análise (ex: 60 meses = 5 anos)
+          </small>
+        </div>
+        
+        <div class="form-group">
+          <label>Custo de Oportunidade (% ao ano)</label>
+          <input type="number" id="ac-custo" min="0" max="100" step="0.1" value="${custoAtual}" required>
+          <small style="color: #64748b; font-size: 12px;">
+            Taxa de retorno alternativa (ex: 12% = poupança/CDI, 20% = investimento de risco)
+          </small>
+        </div>
+        
+        <div class="info-box warning" style="margin-top: 16px;">
+          ⚠️ <strong>Importante:</strong> O custo de oportunidade é usado para calcular o VPL.
+          Quanto maior a taxa, mais "exigente" é a análise.
+        </div>
+        
+        <div class="modal-actions">
+          <button class="button button-ghost" onclick="closeAnalysisConfigModal()">
+            Cancelar
+          </button>
+          <button class="button button-primary" onclick="saveAnalysisConfig()">
+            Salvar e Recalcular
+          </button>
+        </div>
+      </div>
+    `;
+    
+    const modalElement = document.getElementById('executiveSummaryModal'); // Reusar modal
+    if (!modalElement) return;
+    
+    modalElement.innerHTML = modalHTML;
+    modalElement.className = '';
+    modalElement.style.cssText = `
+      display: flex !important;
+      opacity: 1 !important;
+      position: fixed !important;
+      z-index: 25000 !important;
+      top: 0 !important;
+      left: 0 !important;
+      width: 100vw !important;
+      height: 100vh !important;
+      background-color: rgba(0, 0, 0, 0.6) !important;
+      align-items: center !important;
+      justify-content: center !important;
+    `;
+    
+    const modalContent = modalElement.querySelector('.modal-content');
+    if (modalContent) {
+      modalContent.style.cssText = `
+        background: white !important;
+        color: #000000 !important;
+        padding: 32px !important;
+        border-radius: 16px !important;
+        max-width: 600px !important;
+        width: 90% !important;
+      `;
+    }
+  }
+  
+  function closeAnalysisConfigModal() {
+    const modalElement = document.getElementById('executiveSummaryModal');
+    if (modalElement) {
+      modalElement.style.cssText = 'display: none !important;';
+      modalElement.className = 'modal';
+    }
+  }
+  
+  async function saveAnalysisConfig() {
+    const periodo = document.getElementById('ac-periodo').value;
+    const custo = document.getElementById('ac-custo').value;
+    
+    if (!periodo || !custo) {
+      alert('Preencha todos os campos');
+      return;
+    }
+    
+    try {
+      const payload = {
+        periodo_analise_meses: parseInt(periodo),
+        custo_oportunidade_anual: parseFloat(custo)
+      };
+      
+      // Salvar via API de métricas
+      await apiCall(`/pev/api/implantacao/${planId}/finance/metrics`, 'PUT', payload);
+      
+      // Atualizar variável global (se existir)
+      if (typeof financeiro !== 'undefined') {
+        if (!financeiro.fluxo_investidor) financeiro.fluxo_investidor = {};
+        if (!financeiro.fluxo_investidor.analises) financeiro.fluxo_investidor.analises = {};
+        financeiro.fluxo_investidor.analises.periodo_meses = parseInt(periodo);
+        
+        if (!financeiro.investimento) financeiro.investimento = {};
+        financeiro.investimento.custo_oportunidade = parseFloat(custo);
+      }
+      
+      closeAnalysisConfigModal();
+      renderAnalise();
+      
+      alert('Parâmetros salvos! Métricas recalculadas.');
+      
+    } catch (error) {
+      console.error('Erro ao salvar configuração:', error);
+    }
+  }
+  
+  // =========================================
+  // EXPOR FUNÇÕES NO ESCOPO GLOBAL
+  // =========================================
+  
+  // Tornar funções acessíveis via onclick
+  
+  // Capital de Giro
+  window.openCapitalGiroModal = openCapitalGiroModal;
+  window.closeCapitalGiroModal = closeCapitalGiroModal;
+  window.saveCapitalGiro = saveCapitalGiro;
+  window.editCapitalGiro = editCapitalGiro;
+  window.deleteCapitalGiro = deleteCapitalGiro;
+  
+  // Fontes de Recursos
+  window.openFundingSourceModal = openFundingSourceModal;
+  window.closeFundingSourceModal = closeFundingSourceModal;
+  window.saveFundingSource = saveFundingSource;
+  window.editFundingSource = editFundingSource;
+  window.deleteFundingSource = deleteFundingSource;
+  
+  // Distribuição de Lucros
+  window.openProfitDistributionModal = openProfitDistributionModal;
+  window.closeProfitDistributionModal = closeProfitDistributionModal;
+  window.saveProfitDistribution = saveProfitDistribution;
+  
+  // Outras Destinações (Result Rules)
+  window.openResultRuleModal = openResultRuleModal;
+  window.closeResultRuleModal = closeResultRuleModal;
+  window.saveResultRule = saveResultRule;
+  window.editResultRule = editResultRule;
+  window.deleteResultRule = deleteResultRule;
+  window.toggleResultRuleType = toggleResultRuleType;
+  
+  // Resumo Executivo
+  window.openExecutiveSummaryModal = openExecutiveSummaryModal;
+  window.closeExecutiveSummaryModal = closeExecutiveSummaryModal;
+  window.saveExecutiveSummary = saveExecutiveSummary;
+  
+  // Configuração de Análise
+  window.openAnalysisConfigModal = openAnalysisConfigModal;
+  window.closeAnalysisConfigModal = closeAnalysisConfigModal;
+  window.saveAnalysisConfig = saveAnalysisConfig;
+  
+  // =========================================
+  // INICIALIZAÇÃO
+  // =========================================
+  
+  console.log('[ModeFin] Iniciando...');
+  console.log('Plan ID:', planId);
+  console.log('Products Totals:', productsTotals);
+  console.log('Fixed Costs:', fixedCostsSummary);
+  console.log('Capital Giro Items:', capitalGiroItems);
+  
+  // Renderizar todas as seções com tratamento de erro
+  try {
+    renderResultados();
+    console.log('[ModeFin] Seção 1 OK');
+  } catch (e) { console.error('[ModeFin] Erro na Seção 1:', e); }
+  
+  try {
+    renderInvestimentos();
+    console.log('[ModeFin] Seção 2 OK');
+  } catch (e) { console.error('[ModeFin] Erro na Seção 2:', e); }
+  
+  try {
+    renderFontes();
+    console.log('[ModeFin] Seção 3 OK');
+  } catch (e) { console.error('[ModeFin] Erro na Seção 3:', e); }
+  
+  try {
+    renderDistribuicao();
+    console.log('[ModeFin] Seção 4 OK');
+  } catch (e) { console.error('[ModeFin] Erro na Seção 4:', e); }
+  
+  try {
+    renderFluxoInvestimento();
+    console.log('[ModeFin] Seção 5 OK');
+  } catch (e) { console.error('[ModeFin] Erro na Seção 5:', e); }
+  
+  try {
+    renderFluxoNegocio();
+    console.log('[ModeFin] Seção 6 OK');
+  } catch (e) { console.error('[ModeFin] Erro na Seção 6:', e); }
+  
+  try {
+    renderFluxoInvestidor();
+    console.log('[ModeFin] Seção 7 OK');
+  } catch (e) { console.error('[ModeFin] Erro na Seção 7:', e); }
+  
+  try {
+    renderAnalise();
+    console.log('[ModeFin] Seção 8 OK');
+  } catch (e) { console.error('[ModeFin] Erro na Seção 8:', e); }
+  
+  console.log('[ModeFin] Renderização completa!');
+  console.log('[ModeFin] Funções expostas no window:', {
+    openCapitalGiroModal: typeof window.openCapitalGiroModal,
+    closeCapitalGiroModal: typeof window.closeCapitalGiroModal,
+    saveCapitalGiro: typeof window.saveCapitalGiro,
+    editCapitalGiro: typeof window.editCapitalGiro,
+    deleteCapitalGiro: typeof window.deleteCapitalGiro
+  });
+</script>
+
+{% endblock %}
+

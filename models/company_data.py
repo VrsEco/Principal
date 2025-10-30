@@ -6,7 +6,7 @@ class CompanyData(db.Model):
     __tablename__ = 'company_data'
     
     id = db.Column(db.Integer, primary_key=True)
-    plan_id = db.Column(db.String(100), db.ForeignKey('plans.id'), nullable=False)
+    plan_id = db.Column(db.Integer, db.ForeignKey('plans.id'), nullable=False)
     trade_name = db.Column(db.String(200))
     legal_name = db.Column(db.String(200))
     cnpj = db.Column(db.String(18))

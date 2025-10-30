@@ -428,12 +428,13 @@
         {% set nav.items = nav.items + [{'id': phase.id, 'name': phase.title, 'url': url_for('pev.implantacao_canvas_expectativas', plan_id=plan.id)}] %}
       {% elif phase.id == 'execution' %}
         {# Link para página de introdução de estruturas #}
-        {% set nav.items = nav.items + [{'id': phase.id, 'name': phase.title, 'url': url_for('pev.implantacao_executivo_intro', plan_id=plan.id)}] %}
+        {% set nav.items = nav.items + [{'id': phase.id, 'name': phase.title, 'url': url_for('pev.implantacao_estruturas', plan_id=plan.id)}] %}
       {% else %}
         {% set nav.items = nav.items + [{'id': phase.id, 'name': phase.title, 'url': '#phase-' ~ phase.id}] %}
       {% endif %}
     {% endfor %}
     {% set nav.items = nav.items + [
+      {'id': 'modefin', 'name': 'Mod. Financeira', 'url': url_for('pev.implantacao_modefin', plan_id=plan.id)},
       {'id': 'modelagem-financeira', 'name': 'Modelagem Financeira', 'url': url_for('pev.implantacao_modelagem_financeira', plan_id=plan.id)}
     ] %}
     {% if delivery_nav.item %}

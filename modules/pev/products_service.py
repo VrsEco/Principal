@@ -6,10 +6,18 @@ from datetime import datetime
 from decimal import Decimal, InvalidOperation, ROUND_HALF_UP
 from typing import Any, Dict, Iterable, List, Optional
 
-from sqlalchemy import inspect
-
 from models import db
 from models.product import Product
+# Importar dependências ORM para garantir que as tabelas relacionadas estejam registradas
+from models import company as _company  # noqa: F401
+from models import participant as _participant  # noqa: F401
+from models import company_data as _company_data  # noqa: F401
+from models import driver_topic as _driver_topic  # noqa: F401
+from models import okr_global as _okr_global  # noqa: F401
+from models import okr_area as _okr_area  # noqa: F401
+from models import project as _project  # noqa: F401
+from models.plan import Plan  # noqa: F401
+from sqlalchemy import text
 
 TWOPLACES = Decimal("0.01")
 
@@ -23,10 +31,10 @@ class ProductNotFoundError(ValueError):
 
 
 def ensure_products_table() -> None:
-    """Ensure plan_products exists before running any queries."""
-    inspector = inspect(db.engine)
-    if Product.__tablename__ not in inspector.get_table_names():
-        Product.__table__.create(bind=db.engine, checkfirst=True)
+    """Ensure plan_products exists before running any queries (noop)."""
+    # A tabela é criada via migrations. Evitamos auto-criação aqui porque o metadata
+    # pode não ter carregado dependências (tabela plans), o que dispara exceptions.
+    return
 
 
 def fetch_products(plan_id: int) -> List[Dict[str, Any]]:
@@ -59,6 +67,13 @@ def fetch_product(plan_id: int, product_id: int) -> Dict[str, Any]:
 def create_product(plan_id: int, payload: Dict[str, Any]) -> Dict[str, Any]:
     """Create a new product for a plan."""
     ensure_products_table()
+
+    plan_exists = db.session.execute(
+        text("SELECT 1 FROM plans WHERE id = :plan_id LIMIT 1"),
+        {"plan_id": plan_id},
+    ).first()
+    if not plan_exists:
+        raise ProductValidationError("Plano informado não existe.")
 
     product = Product()
     _assign_product_fields(product, plan_id, payload)

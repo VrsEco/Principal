@@ -69,8 +69,12 @@ governance/
 ├── TECH_STACK.md           ← Stack aprovada + versões
 ├── ARCHITECTURE.md         ← Arquitetura do sistema
 ├── CODING_STANDARDS.md     ← Padrões Python
+├── ORM_STANDARDS.md        ← Padrões ORM / SQLAlchemy ✨ NOVO
 ├── DATABASE_STANDARDS.md   ← Padrões de DB
 ├── API_STANDARDS.md        ← Padrões REST
+├── REPORT_STANDARDS.md     ← Padrões de Relatórios ⭐ NOVO
+├── FRONTEND_STANDARDS.md   ← Padrões de Frontend
+├── MODAL_STANDARDS.md      ← Padrões de Modals
 ├── FORBIDDEN_PATTERNS.md   ← Anti-patterns (NUNCA fazer)
 └── DECISION_LOG.md         ← ADR (decisões)
 ```
@@ -116,15 +120,19 @@ tests/governance/          ← Testes automatizados de padrões
    - Aprenda nosso estilo de código
    - Veja exemplos práticos
 
-4. **[FORBIDDEN_PATTERNS.md](FORBIDDEN_PATTERNS.md)** (15 min)
+4. **[ORM_STANDARDS.md](ORM_STANDARDS.md)** (15 min) ✨ NOVO
+   - Boas práticas para importar models e evitar erros do mapper
+   - Checklist para services que usam SQLAlchemy
+
+5. **[FORBIDDEN_PATTERNS.md](FORBIDDEN_PATTERNS.md)** (15 min)
    - **CRÍTICO:** O que NUNCA fazer
    - Evite problemas de segurança
 
-5. **[../workflows/DEVELOPMENT_WORKFLOW.md](../workflows/DEVELOPMENT_WORKFLOW.md)** (20 min)
+6. **[../workflows/DEVELOPMENT_WORKFLOW.md](../workflows/DEVELOPMENT_WORKFLOW.md)** (20 min)
    - Aprenda nosso Git flow
    - Veja como fazer PRs
 
-**Tempo total:** ~2 horas
+**Tempo total:** ~2h15
 
 ### Para Criar Nova Feature
 
@@ -133,9 +141,10 @@ tests/governance/          ← Testes automatizados de padrões
 2. Consulte TECH_STACK.md (tecnologia permitida?)
 3. Consulte API_STANDARDS.md (se criar API)
 4. Consulte DATABASE_STANDARDS.md (se alterar DB)
-5. Siga CODING_STANDARDS.md (ao escrever código)
-6. Evite FORBIDDEN_PATTERNS.md
-7. Siga ../workflows/DEVELOPMENT_WORKFLOW.md (PR)
+5. Consulte ORM_STANDARDS.md (se tocar em SQLAlchemy / services de dados)
+6. Siga CODING_STANDARDS.md (ao escrever código)
+7. Evite FORBIDDEN_PATTERNS.md
+8. Siga ../workflows/DEVELOPMENT_WORKFLOW.md (PR)
 ```
 
 ### Para Corrigir Bug
@@ -143,14 +152,30 @@ tests/governance/          ← Testes automatizados de padrões
 ```
 1. Use ../templates/bugfix_template.md
 2. Consulte FORBIDDEN_PATTERNS.md (causa provável?)
-3. Siga CODING_STANDARDS.md (correção)
-4. Siga ../workflows/DEVELOPMENT_WORKFLOW.md (PR)
+3. Consulte ORM_STANDARDS.md (se envolver models / SQLAlchemy)
+4. Siga CODING_STANDARDS.md (correção)
+5. Siga ../workflows/DEVELOPMENT_WORKFLOW.md (PR)
 ```
 
 ### Para Fazer Deploy
 
 ```
 1. OBRIGATÓRIO: ../workflows/DEPLOYMENT_CHECKLIST.md
+```
+
+### Para Criar Relatórios ⭐ NOVO
+
+```
+1. Consulte REPORT_STANDARDS.md (padrões completos)
+2. Use templates/reports/base_report.html (template base)
+3. Use templates/reports/components.html (componentes reutilizáveis)
+4. Use static/css/reports.css (estilos padrão)
+5. Fluxo rápido:
+   a) Crie o builder de dados (backend)
+   b) Crie a rota Flask
+   c) Estenda base_report.html
+   d) Use macros de components.html
+   e) Teste em tela e impressão
 ```
 
 ### Para Adicionar Tecnologia
@@ -243,13 +268,13 @@ pytest tests/governance/test_code_standards.py -v
 ## 📊 Estatísticas
 
 ### Documentos Criados
-- **Governança:** 7 documentos
+- **Governança:** 11 documentos (+ REPORT_STANDARDS.md, FRONTEND_STANDARDS.md, MODAL_STANDARDS.md)
 - **Templates:** 3 documentos
 - **Workflows:** 2 documentos
 - **Configuração:** 1 arquivo (.cursorrules)
 - **Testes:** 1 suite (test_code_standards.py)
 
-**Total:** 14 arquivos
+**Total:** 18 arquivos
 
 ### Cobertura
 
@@ -260,6 +285,9 @@ pytest tests/governance/test_code_standards.py -v
 | Código Python | ✅ 100% |
 | Banco de Dados | ✅ 100% |
 | APIs REST | ✅ 100% |
+| Relatórios | ✅ 100% ⭐ NOVO |
+| Frontend | ✅ 100% |
+| Modals | ✅ 100% |
 | Segurança | ✅ 100% |
 | Git Flow | ✅ 100% |
 | Deploy | ✅ 100% |

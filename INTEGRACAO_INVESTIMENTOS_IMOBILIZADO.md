@@ -201,7 +201,7 @@ if (investimentosEstruturasData) {
 <div style="margin-top: 12px; padding: 12px; background: rgba(34, 197, 94, 0.08); border-radius: 8px; border-left: 3px solid #22c55e;">
   <p style="margin: 0; font-size: 12px; color: #166534; line-height: 1.5;">
     <strong>ℹ️ Valores Automáticos:</strong> Os valores de Imobilizado são calculados automaticamente com base nos dados cadastrados em 
-    <a href="{{ url_for('pev.implantacao_executivo_intro', plan_id=plan_id) }}" style="color: #059669; text-decoration: underline; font-weight: 600;">Estruturas de Execução → Resumo de Investimentos</a>.
+    <a href="{{ url_for('pev.implantacao_estruturas', plan_id=plan_id) }}" style="color: #059669; text-decoration: underline; font-weight: 600;">Estruturas de Execução → Resumo de Investimentos</a>.
   </p>
 </div>
 ```

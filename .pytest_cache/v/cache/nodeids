@@ -1,0 +1,14 @@
+[
+  "tests/governance/test_code_standards.py::TestAPIStandards::test_routes_use_login_required",
+  "tests/governance/test_code_standards.py::TestCodingStandards::test_class_naming_convention",
+  "tests/governance/test_code_standards.py::TestCodingStandards::test_imports_organization",
+  "tests/governance/test_code_standards.py::TestCodingStandards::test_no_commented_code",
+  "tests/governance/test_code_standards.py::TestDatabaseStandards::test_models_have_audit_fields",
+  "tests/governance/test_code_standards.py::TestDatabaseStandards::test_no_postgresql_specific_types",
+  "tests/governance/test_code_standards.py::TestForbiddenPatterns::test_no_bare_except",
+  "tests/governance/test_code_standards.py::TestForbiddenPatterns::test_no_hardcoded_credentials",
+  "tests/governance/test_code_standards.py::TestForbiddenPatterns::test_no_print_statements",
+  "tests/governance/test_code_standards.py::TestForbiddenPatterns::test_no_sql_string_concatenation",
+  "tests/governance/test_code_standards.py::TestSecurityStandards::test_no_eval_or_exec",
+  "tests/governance/test_code_standards.py::TestSecurityStandards::test_no_password_in_logs"
+]

@@ -6,6 +6,8 @@ Seguindo TECH_STACK.md e CODING_STANDARDS.md
 import os
 from datetime import timedelta
 
+from utils.env_helpers import normalize_database_url
+
 
 class DevelopmentConfig:
     """Configuração para ambiente de desenvolvimento."""
@@ -20,7 +22,10 @@ class DevelopmentConfig:
     
     # ===== BANCO DE DADOS =====
     # APP30: Sempre usar PostgreSQL (migração completa concluída)
-    SQLALCHEMY_DATABASE_URI = os.getenv('DATABASE_URL', 'postgresql://postgres:*Paraiso1978@localhost:5432/bd_app_versus')
+    _current_database_url = normalize_database_url(os.getenv('DATABASE_URL'))
+    if not _current_database_url:
+        _current_database_url = normalize_database_url(os.getenv('DEV_DATABASE_URL'))
+    SQLALCHEMY_DATABASE_URI = _current_database_url or 'postgresql://postgres:*Paraiso1978@localhost:5432/bd_app_versus'
     SQLALCHEMY_TRACK_MODIFICATIONS = False
     SQLALCHEMY_ECHO = True  # Ver queries no console
     SQLALCHEMY_ENGINE_OPTIONS = {

@@ -535,6 +535,8 @@ def view_project(project_id):
 
 ## 🗃️ SQLAlchemy
 
+> Para diretrizes completas de metadata, importação de models e rotina de serviços, consulte também **[ORM_STANDARDS.md](ORM_STANDARDS.md)**.
+
 ### Models
 
 ```python
@@ -804,6 +806,5 @@ pytest tests/test_auth.py
 ---
 
 **Dúvidas?** Consulte o time ou abra uma discussão no repositório.
-
 
 

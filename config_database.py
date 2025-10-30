@@ -6,6 +6,7 @@ SQLite está DESATIVADO propositalmente
 
 import os
 from database import get_database, DEFAULT_CONFIG
+from utils.env_helpers import normalize_docker_host
 
 class DatabaseConfig:
     """
@@ -42,8 +43,9 @@ class DatabaseConfig:
             # ⚠️ Este código nunca deve ser executado (bloqueio no __init__)
             raise RuntimeError("SQLite está desativado!")
         elif self.db_type == 'postgresql':
+            host = normalize_docker_host(os.environ.get('POSTGRES_HOST', 'localhost'))
             return {
-                'host': os.environ.get('POSTGRES_HOST', 'localhost'),
+                'host': host,
                 'port': int(os.environ.get('POSTGRES_PORT', 5432)),
                 'database': os.environ.get('POSTGRES_DB', 'bd_app_versus'),
                 'user': os.environ.get('POSTGRES_USER', 'postgres'),

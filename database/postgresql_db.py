@@ -904,6 +904,71 @@ class PostgreSQLDatabase(DatabaseInterface):
                 ALTER TABLE plan_finance_sources
                 ADD COLUMN IF NOT EXISTS notes TEXT
             ''')
+            
+            # ModeFin: Tabela de Capital de Giro
+            cursor.execute('''
+                CREATE TABLE IF NOT EXISTS plan_finance_capital_giro (
+                    id SERIAL PRIMARY KEY,
+                    plan_id INTEGER NOT NULL REFERENCES plans(id) ON DELETE CASCADE,
+                    item_type VARCHAR(50) NOT NULL,
+                    contribution_date DATE NOT NULL,
+                    amount NUMERIC(15, 2) NOT NULL DEFAULT 0,
+                    description TEXT,
+                    notes TEXT,
+                    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                    is_deleted BOOLEAN DEFAULT FALSE
+                )
+            ''')
+            cursor.execute('''
+                CREATE INDEX IF NOT EXISTS idx_capital_giro_plan_id 
+                ON plan_finance_capital_giro(plan_id)
+            ''')
+            
+            # ModeFin: Colunas para análise de viabilidade
+            cursor.execute('''
+                ALTER TABLE plan_finance_metrics 
+                ADD COLUMN IF NOT EXISTS executive_summary TEXT
+            ''')
+            cursor.execute('''
+                ALTER TABLE plan_finance_metrics 
+                ADD COLUMN IF NOT EXISTS periodo_analise_meses INTEGER
+            ''')
+            cursor.execute('''
+                ALTER TABLE plan_finance_metrics 
+                ADD COLUMN IF NOT EXISTS custo_oportunidade_anual NUMERIC(5,2)
+            ''')
+            
+            # ModeFin: Tabelas de Ramp-up de Vendas
+            cursor.execute('''
+                CREATE TABLE IF NOT EXISTS plan_product_monthly_growth (
+                    id SERIAL PRIMARY KEY,
+                    plan_id INTEGER NOT NULL REFERENCES plans(id) ON DELETE CASCADE,
+                    product_id INTEGER,
+                    month_offset INTEGER NOT NULL,
+                    percentage_of_goal NUMERIC(5, 2) NOT NULL DEFAULT 100.00,
+                    notes TEXT,
+                    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+                )
+            ''')
+            cursor.execute('''
+                CREATE INDEX IF NOT EXISTS idx_monthly_growth_plan_id 
+                ON plan_product_monthly_growth(plan_id)
+            ''')
+            
+            cursor.execute('''
+                CREATE TABLE IF NOT EXISTS plan_sales_rampup_config (
+                    id SERIAL PRIMARY KEY,
+                    plan_id INTEGER NOT NULL REFERENCES plans(id) ON DELETE CASCADE,
+                    start_month INTEGER NOT NULL DEFAULT 5,
+                    start_year INTEGER NOT NULL DEFAULT 2026,
+                    ramp_duration_months INTEGER NOT NULL DEFAULT 6,
+                    curve_type VARCHAR(20) DEFAULT 'linear',
+                    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+                )
+            ''')
 
             cursor.execute('''
                 CREATE TABLE IF NOT EXISTS plan_finance_business_periods (
@@ -959,6 +1024,24 @@ class PostgreSQLDatabase(DatabaseInterface):
                     periodicity TEXT,
                     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
                 )
+            ''')
+            
+            # ModeFin: Adicionar campos rule_type, value, notes e start_date
+            cursor.execute('''
+                ALTER TABLE plan_finance_result_rules 
+                ADD COLUMN IF NOT EXISTS rule_type VARCHAR(20)
+            ''')
+            cursor.execute('''
+                ALTER TABLE plan_finance_result_rules 
+                ADD COLUMN IF NOT EXISTS value NUMERIC(15,2)
+            ''')
+            cursor.execute('''
+                ALTER TABLE plan_finance_result_rules 
+                ADD COLUMN IF NOT EXISTS notes TEXT
+            ''')
+            cursor.execute('''
+                ALTER TABLE plan_finance_result_rules 
+                ADD COLUMN IF NOT EXISTS start_date DATE
             ''')
 
             cursor.execute('''
@@ -4075,6 +4158,352 @@ class PostgreSQLDatabase(DatabaseInterface):
         except Exception as exc:
             print(f"Error listing financial sources: {exc}")
             return []
+    
+    # =============================================
+    # Capital de Giro (ModeFin)
+    # =============================================
+    
+    def list_plan_capital_giro(self, plan_id: int) -> List[Dict[str, Any]]:
+        """List capital de giro items (caixa, recebiveis, estoques)"""
+        try:
+            conn = self._get_connection()
+            cursor = conn.cursor()
+            cursor.execute('''
+                SELECT id, plan_id, item_type, contribution_date, amount, description, notes, 
+                       created_at, updated_at, is_deleted
+                FROM plan_finance_capital_giro
+                WHERE plan_id = %s AND is_deleted = FALSE
+                ORDER BY contribution_date, id
+            ''', (plan_id,))
+            rows = cursor.fetchall()
+            conn.close()
+            result = []
+            for row in rows:
+                item = dict(row)
+                # Formatar data para ISO string
+                if item.get('contribution_date'):
+                    item['contribution_date'] = self._format_date_value(item['contribution_date'])
+                if item.get('created_at'):
+                    item['created_at'] = self._format_datetime_value(item['created_at'])
+                if item.get('updated_at'):
+                    item['updated_at'] = self._format_datetime_value(item['updated_at'])
+                # Converter Decimal para float
+                if item.get('amount'):
+                    item['amount'] = float(item['amount'])
+                result.append(item)
+            return result
+        except Exception as exc:
+            print(f"[DB] Error listing capital giro: {exc}")
+            return []
+    
+    def add_plan_capital_giro(self, plan_id: int, item_type: str, contribution_date: str, 
+                               amount: float, description: str = None, notes: str = None) -> Optional[int]:
+        """Add capital de giro item"""
+        try:
+            conn = self._get_connection()
+            cursor = conn.cursor()
+            cursor.execute('''
+                INSERT INTO plan_finance_capital_giro 
+                (plan_id, item_type, contribution_date, amount, description, notes, created_at, updated_at)
+                VALUES (%s, %s, %s, %s, %s, %s, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)
+                RETURNING id
+            ''', (plan_id, item_type, contribution_date, amount, description, notes))
+            new_id = cursor.fetchone()[0]
+            conn.commit()
+            conn.close()
+            print(f"[DB] Capital giro item {new_id} created successfully")
+            return new_id
+        except Exception as exc:
+            print(f"[DB] Error adding capital giro: {exc}")
+            if conn:
+                conn.rollback()
+                conn.close()
+            return None
+    
+    def update_plan_capital_giro(self, item_id: int, item_type: str = None, contribution_date: str = None,
+                                  amount: float = None, description: str = None, notes: str = None) -> bool:
+        """Update capital de giro item"""
+        try:
+            conn = self._get_connection()
+            cursor = conn.cursor()
+            
+            # Build dynamic UPDATE
+            updates = []
+            params = []
+            
+            if item_type is not None:
+                updates.append("item_type = %s")
+                params.append(item_type)
+            if contribution_date is not None:
+                updates.append("contribution_date = %s")
+                params.append(contribution_date)
+            if amount is not None:
+                updates.append("amount = %s")
+                params.append(amount)
+            if description is not None:
+                updates.append("description = %s")
+                params.append(description)
+            if notes is not None:
+                updates.append("notes = %s")
+                params.append(notes)
+            
+            if not updates:
+                print("[DB] No fields to update for capital giro")
+                conn.close()
+                return False
+            
+            updates.append("updated_at = CURRENT_TIMESTAMP")
+            params.append(item_id)
+            
+            query = f"UPDATE plan_finance_capital_giro SET {', '.join(updates)} WHERE id = %s"
+            cursor.execute(query, tuple(params))
+            conn.commit()
+            conn.close()
+            print(f"[DB] Capital giro item {item_id} updated successfully")
+            return True
+        except Exception as exc:
+            print(f"[DB] Error updating capital giro: {exc}")
+            if conn:
+                conn.rollback()
+                conn.close()
+            return False
+    
+    def delete_plan_capital_giro(self, item_id: int) -> bool:
+        """Soft delete capital de giro item"""
+        try:
+            conn = self._get_connection()
+            cursor = conn.cursor()
+            cursor.execute('''
+                UPDATE plan_finance_capital_giro 
+                SET is_deleted = TRUE, updated_at = CURRENT_TIMESTAMP
+                WHERE id = %s
+            ''', (item_id,))
+            conn.commit()
+            conn.close()
+            print(f"[DB] Capital giro item {item_id} deleted successfully")
+            return True
+        except Exception as exc:
+            print(f"[DB] Error deleting capital giro: {exc}")
+            if conn:
+                conn.rollback()
+                conn.close()
+            return False
+    
+    # =============================================
+    # Fontes de Recursos - CRUD Completo (ModeFin)
+    # =============================================
+    
+    def add_plan_finance_source(self, plan_id: int, category: str, description: str,
+                                 amount: str, availability: str = None, 
+                                 contribution_date: str = None, notes: str = None) -> Optional[int]:
+        """Add funding source"""
+        try:
+            conn = self._get_connection()
+            cursor = conn.cursor()
+            cursor.execute('''
+                INSERT INTO plan_finance_sources 
+                (plan_id, category, description, amount, availability, contribution_date, notes, created_at)
+                VALUES (%s, %s, %s, %s, %s, %s, %s, CURRENT_TIMESTAMP)
+                RETURNING id
+            ''', (plan_id, category, description, amount, availability, contribution_date, notes))
+            new_id = cursor.fetchone()[0]
+            conn.commit()
+            conn.close()
+            print(f"[DB] Finance source {new_id} created successfully")
+            return new_id
+        except Exception as exc:
+            print(f"[DB] Error adding finance source: {exc}")
+            if conn:
+                conn.rollback()
+                conn.close()
+            return None
+    
+    def update_plan_finance_source(self, source_id: int, category: str = None, description: str = None,
+                                    amount: str = None, availability: str = None,
+                                    contribution_date: str = None, notes: str = None) -> bool:
+        """Update funding source"""
+        try:
+            conn = self._get_connection()
+            cursor = conn.cursor()
+            
+            # Build dynamic UPDATE
+            updates = []
+            params = []
+            
+            if category is not None:
+                updates.append("category = %s")
+                params.append(category)
+            if description is not None:
+                updates.append("description = %s")
+                params.append(description)
+            if amount is not None:
+                updates.append("amount = %s")
+                params.append(amount)
+            if availability is not None:
+                updates.append("availability = %s")
+                params.append(availability)
+            if contribution_date is not None:
+                updates.append("contribution_date = %s")
+                params.append(contribution_date)
+            if notes is not None:
+                updates.append("notes = %s")
+                params.append(notes)
+            
+            if not updates:
+                print("[DB] No fields to update for finance source")
+                conn.close()
+                return False
+            
+            params.append(source_id)
+            
+            query = f"UPDATE plan_finance_sources SET {', '.join(updates)} WHERE id = %s"
+            cursor.execute(query, tuple(params))
+            conn.commit()
+            conn.close()
+            print(f"[DB] Finance source {source_id} updated successfully")
+            return True
+        except Exception as exc:
+            print(f"[DB] Error updating finance source: {exc}")
+            if conn:
+                conn.rollback()
+                conn.close()
+            return False
+    
+    def delete_plan_finance_source(self, source_id: int) -> bool:
+        """Delete funding source (hard delete)"""
+        try:
+            conn = self._get_connection()
+            cursor = conn.cursor()
+            cursor.execute('DELETE FROM plan_finance_sources WHERE id = %s', (source_id,))
+            conn.commit()
+            conn.close()
+            print(f"[DB] Finance source {source_id} deleted successfully")
+            return True
+        except Exception as exc:
+            print(f"[DB] Error deleting finance source: {exc}")
+            if conn:
+                conn.rollback()
+                conn.close()
+            return False
+    
+    # =============================================
+    # Resumo Executivo (ModeFin)
+    # =============================================
+    
+    def update_executive_summary(self, plan_id: int, executive_summary: str) -> bool:
+        """Update executive summary in plan_finance_metrics"""
+        try:
+            conn = self._get_connection()
+            cursor = conn.cursor()
+            
+            # Verificar se já existe registro
+            cursor.execute('SELECT id FROM plan_finance_metrics WHERE plan_id = %s', (plan_id,))
+            row = cursor.fetchone()
+            
+            if row:
+                # Update
+                cursor.execute('''
+                    UPDATE plan_finance_metrics 
+                    SET executive_summary = %s
+                    WHERE plan_id = %s
+                ''', (executive_summary, plan_id))
+            else:
+                # Insert
+                cursor.execute('''
+                    INSERT INTO plan_finance_metrics (plan_id, executive_summary)
+                    VALUES (%s, %s)
+                ''', (plan_id, executive_summary))
+            
+            conn.commit()
+            conn.close()
+            print(f"[DB] Executive summary updated for plan {plan_id}")
+            return True
+        except Exception as exc:
+            print(f"[DB] Error updating executive summary: {exc}")
+            if conn:
+                conn.rollback()
+                conn.close()
+            return False
+    
+    def get_executive_summary(self, plan_id: int) -> Optional[str]:
+        """Get executive summary from plan_finance_metrics"""
+        try:
+            conn = self._get_connection()
+            cursor = conn.cursor()
+            cursor.execute('''
+                SELECT executive_summary 
+                FROM plan_finance_metrics 
+                WHERE plan_id = %s
+            ''', (plan_id,))
+            row = cursor.fetchone()
+            conn.close()
+            if row:
+                return row[0]
+            return None
+        except Exception as exc:
+            print(f"[DB] Error getting executive summary: {exc}")
+            return None
+    
+    # =============================================
+    # Distribuição de Lucros (ModeFin)
+    # =============================================
+    
+    def update_profit_distribution(self, plan_id: int, percentage: float, start_date: str = None, notes: str = None) -> bool:
+        """Update profit distribution percentage"""
+        try:
+            conn = self._get_connection()
+            cursor = conn.cursor()
+            
+            # Verificar se já existe
+            cursor.execute('SELECT id FROM plan_finance_profit_distribution WHERE plan_id = %s', (plan_id,))
+            row = cursor.fetchone()
+            
+            if row:
+                # Update
+                cursor.execute('''
+                    UPDATE plan_finance_profit_distribution 
+                    SET percentage = %s, start_date = %s, notes = %s
+                    WHERE plan_id = %s
+                ''', (str(percentage), start_date, notes, plan_id))
+            else:
+                # Insert
+                cursor.execute('''
+                    INSERT INTO plan_finance_profit_distribution (plan_id, percentage, start_date, notes)
+                    VALUES (%s, %s, %s, %s)
+                ''', (plan_id, str(percentage), start_date, notes))
+            
+            conn.commit()
+            conn.close()
+            print(f"[DB] Profit distribution updated for plan {plan_id}: {percentage}%")
+            return True
+        except Exception as exc:
+            print(f"[DB] Error updating profit distribution: {exc}")
+            if conn:
+                conn.rollback()
+                conn.close()
+            return False
+    
+    def get_profit_distribution(self, plan_id: int) -> Optional[Dict[str, Any]]:
+        """Get profit distribution for a plan"""
+        try:
+            conn = self._get_connection()
+            cursor = conn.cursor()
+            cursor.execute('''
+                SELECT id, plan_id, percentage, start_date, notes
+                FROM plan_finance_profit_distribution
+                WHERE plan_id = %s
+            ''', (plan_id,))
+            row = cursor.fetchone()
+            conn.close()
+            if row:
+                result = dict(row)
+                if result.get('start_date'):
+                    result['start_date'] = self._format_date_value(result['start_date'])
+                return result
+            return None
+        except Exception as exc:
+            print(f"[DB] Error getting profit distribution: {exc}")
+            return None
 
     def list_plan_finance_business_periods(self, plan_id: int) -> List[Dict[str, Any]]:
         """List business cash-flow periods"""
@@ -4146,16 +4575,26 @@ class PostgreSQLDatabase(DatabaseInterface):
             conn = self._get_connection()
             cursor = conn.cursor()
             cursor.execute('''
-                SELECT id, description, percentage, periodicity
+                SELECT id, description, rule_type, value, notes, start_date, percentage, periodicity
                 FROM plan_finance_result_rules
                 WHERE plan_id = %s
                 ORDER BY id
             ''', (plan_id,))
             rows = cursor.fetchall()
             conn.close()
-            return [dict(row) for row in rows]
+            result = []
+            for row in rows:
+                item = dict(row)
+                # Converter Decimal para float
+                if item.get('value'):
+                    item['value'] = float(item['value'])
+                # Converter data para ISO string
+                if item.get('start_date'):
+                    item['start_date'] = self._format_date_value(item['start_date'])
+                result.append(item)
+            return result
         except Exception as exc:
-            print(f"Error listing result rules: {exc}")
+            print(f"[DB] Error listing result rules: {exc}")
             return []
 
     def list_plan_finance_investor_periods(self, plan_id: int) -> List[Dict[str, Any]]:
@@ -4331,22 +4770,38 @@ class PostgreSQLDatabase(DatabaseInterface):
         try:
             conn = self._get_connection()
             cursor = conn.cursor()
+            
+            # Suporta novo formato (rule_type, value, notes, start_date) e formato antigo
+            rule_type = data.get('rule_type', 'percentage')
+            value = data.get('value', data.get('percentage', ''))
+            notes = data.get('notes', '')
+            start_date = data.get('start_date')
+            
             cursor.execute('''
-                INSERT INTO plan_finance_result_rules (plan_id, description, percentage, periodicity)
-                VALUES (%s, %s, %s, %s)
+                INSERT INTO plan_finance_result_rules 
+                (plan_id, description, rule_type, value, notes, start_date, percentage, periodicity)
+                VALUES (%s, %s, %s, %s, %s, %s, %s, %s)
                 RETURNING id
             ''', (
                 plan_id,
                 data.get('description', ''),
-                data.get('percentage', ''),
+                rule_type,
+                value,
+                notes,
+                start_date,
+                data.get('percentage', ''),  # Compatibilidade com formato antigo
                 data.get('periodicity', '')
             ))
             rule_id = cursor.fetchone()['id']
             conn.commit()
             conn.close()
+            print(f"[DB] Result rule {rule_id} created successfully")
             return rule_id
         except Exception as exc:
-            print(f"Error creating result rule: {exc}")
+            print(f"[DB] Error creating result rule: {exc}")
+            if conn:
+                conn.rollback()
+                conn.close()
             return 0
 
     def update_plan_finance_result_rule(self, rule_id: int, plan_id: int, data: Dict[str, Any]) -> bool:
@@ -4354,14 +4809,26 @@ class PostgreSQLDatabase(DatabaseInterface):
         try:
             conn = self._get_connection()
             cursor = conn.cursor()
+            
+            # Suporta novo formato (rule_type, value, notes, start_date) e antigo
+            rule_type = data.get('rule_type', 'percentage')
+            value = data.get('value', data.get('percentage', ''))
+            notes = data.get('notes', '')
+            start_date = data.get('start_date')
+            
             cursor.execute('''
                 UPDATE plan_finance_result_rules
-                SET description = %s, percentage = %s, periodicity = %s
+                SET description = %s, rule_type = %s, value = %s, notes = %s, start_date = %s,
+                    percentage = %s, periodicity = %s
                 WHERE id = %s AND plan_id = %s
             ''', (
                 data.get('description', ''),
-                data.get('percentage', ''),
-                data.get('periodicity', ''),
+                rule_type,
+                value,
+                notes,
+                start_date,
+                data.get('percentage', ''),  # Compatibilidade
+                data.get('periodicity', ''),  # Compatibilidade
                 rule_id,
                 plan_id
             ))
@@ -4411,14 +4878,49 @@ class PostgreSQLDatabase(DatabaseInterface):
             cursor.execute('SELECT id FROM plan_finance_metrics WHERE plan_id = %s', (plan_id,))
             existing = cursor.fetchone()
             
+            # Novos campos (ModeFin)
+            periodo_analise = data.get('periodo_analise_meses')
+            custo_oportunidade = data.get('custo_oportunidade_anual')
+            
             if existing:
                 # Update
-                cursor.execute('''
-                    UPDATE plan_finance_metrics
-                    SET payback = %s, tir = %s, notes = %s,
-                        opportunity_cost = %s, tir_horizon_years = %s
-                    WHERE plan_id = %s
-                ''', (
+                updates = []
+                params = []
+                
+                if 'payback' in data:
+                    updates.append('payback = %s')
+                    params.append(data.get('payback'))
+                if 'tir' in data:
+                    updates.append('tir = %s')
+                    params.append(data.get('tir'))
+                if 'notes' in data:
+                    updates.append('notes = %s')
+                    params.append(data.get('notes'))
+                if opportunity_cost:
+                    updates.append('opportunity_cost = %s')
+                    params.append(opportunity_cost)
+                if tir_horizon_years:
+                    updates.append('tir_horizon_years = %s')
+                    params.append(tir_horizon_years)
+                if periodo_analise:
+                    updates.append('periodo_analise_meses = %s')
+                    params.append(periodo_analise)
+                if custo_oportunidade is not None:
+                    updates.append('custo_oportunidade_anual = %s')
+                    params.append(custo_oportunidade)
+                
+                if updates:
+                    params.append(plan_id)
+                    query = f"UPDATE plan_finance_metrics SET {', '.join(updates)} WHERE plan_id = %s"
+                    cursor.execute(query, tuple(params))
+                else:
+                    # Fallback para compatibilidade
+                    cursor.execute('''
+                        UPDATE plan_finance_metrics
+                        SET payback = %s, tir = %s, notes = %s,
+                            opportunity_cost = %s, tir_horizon_years = %s
+                        WHERE plan_id = %s
+                    ''', (
                     data.get('payback', ''),
                     data.get('tir', ''),
                     data.get('notes', ''),
