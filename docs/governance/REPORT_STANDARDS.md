@@ -173,13 +173,27 @@ font-family: "Segoe UI", "Inter", Arial, sans-serif;
 --spacing-2xl: 48px;
 
 /* Margens de Página */
---page-margin-top: 48mm;     /* Retrato */
---page-margin-right: 58px;
---page-margin-bottom: 48mm;
---page-margin-left: 58px;
+--page-margin-top: 5mm;      /* Retrato */
+--page-margin-right: 5mm;
+--page-margin-bottom: 5mm;
+--page-margin-left: 5mm;
 
---page-margin-top-landscape: 35mm;  /* Paisagem */
---page-margin-right-landscape: 48px;
+--page-margin-top-landscape: 5mm;   /* Paisagem */
+--page-margin-right-landscape: 5mm;
+```
+
+> **Largura padrão**: o contêiner raiz (`.model7-report`) deve ter `width: 794px` (equivalente a 210 mm) para que a visualização em tela reflita a página A4 retrato. Use `max-width` com o mesmo valor e centralize com `margin: 0 auto`.
+
+```css
+@page portrait {
+  size: A4 portrait;
+  margin: 5mm;
+}
+
+@page landscapePage {
+  size: A4 landscape;
+  margin: 5mm;
+}
 ```
 
 ### Componentes Base
@@ -190,23 +204,50 @@ font-family: "Segoe UI", "Inter", Arial, sans-serif;
 .page {
   position: relative;
   background: #ffffff;
-  border-radius: 28px;
-  border: 1px solid rgba(15, 23, 42, 0.08);
-  box-shadow: 0 34px 70px rgba(15, 23, 42, 0.16);
-  margin-bottom: 42px;
+  border-radius: 0;
+  border: none;
+  box-shadow: none;
+  margin: 0 auto 32px;
+  width: 100%;
   page-break-after: always;
 }
 
 .page.portrait {
-  padding: 48mm 58px;
+  padding: var(--page-margin-top) var(--page-margin-right)
+           var(--page-margin-bottom) var(--page-margin-left);
+  min-height: calc(297mm - 10mm);
   page: portrait;
 }
 
 .page.landscape {
-  padding: 35mm 48px;
+  padding: var(--page-margin-top-landscape) var(--page-margin-right-landscape);
+  min-height: calc(210mm - 10mm);
   page: landscapePage;
 }
+
+@media screen {
+  .page::before {
+    content: "";
+    position: absolute;
+    inset: 0;
+    border: 1px solid rgba(15, 23, 42, 0.25);
+    pointer-events: none;
+  }
+
+  .page::after {
+    content: "";
+    position: absolute;
+    top: var(--page-margin-top);
+    right: var(--page-margin-right);
+    bottom: var(--page-margin-bottom);
+    left: var(--page-margin-left);
+    border: 1px dashed rgba(37, 99, 235, 0.45);
+    pointer-events: none;
+  }
+}
 ```
+
+> **Governança**: toda página deve apresentar, no modo HTML, exatamente o mesmo enquadramento da impressão/PDF. Os contornos (linha externa) e as margens tracejadas são exibidos apenas em tela para facilitar ajustes, mas não aparecem no resultado impresso. Qualquer alteração nas variáveis de margem ou na largura/altura mínimas deve ser feita pensando em ambos os contextos.
 
 #### 2. Cabeçalho de Seção
 

@@ -53,8 +53,10 @@
 {% macro format_number(value, decimals=0) -%}
   {%- if value is not none -%}
     {%- set numeric = value|float -%}
-    {%- if decimals > 0 -%}
-      {%- set formatted = ('{:,.%df' % decimals).format(numeric).replace(',', '_').replace('.', ',').replace('_', '.') -%}
+    {%- if decimals == 2 -%}
+      {%- set formatted = '{:,.2f}'.format(numeric).replace(',', '_').replace('.', ',').replace('_', '.') -%}
+    {%- elif decimals == 1 -%}
+      {%- set formatted = '{:,.1f}'.format(numeric).replace(',', '_').replace('.', ',').replace('_', '.') -%}
     {%- else -%}
       {%- set formatted = '{:,.0f}'.format(numeric).replace(',', '.') -%}
     {%- endif -%}

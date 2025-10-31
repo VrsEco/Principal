@@ -9,7 +9,7 @@ import re
 import unicodedata
 from datetime import date, datetime
 from decimal import Decimal, InvalidOperation
-from typing import Any, Dict, List, Optional, Tuple
+from typing import Any, Dict, Iterable, List, Optional, Tuple
 
 # Order in which macro phases should appear
 PHASE_ORDER = ["alignment", "model", "execution", "delivery"]
@@ -53,6 +53,21 @@ DEFAULT_DELIVERABLES: Dict[str, List[Dict[str, str]]] = {
     "delivery": [
         {"label": "Relatório final", "endpoint": "pev.implantacao_relatorio_final"},
     ],
+}
+
+MONTH_LABELS_PT: Dict[int, str] = {
+    1: "Jan",
+    2: "Fev",
+    3: "Mar",
+    4: "Abr",
+    5: "Mai",
+    6: "Jun",
+    7: "Jul",
+    8: "Ago",
+    9: "Set",
+    10: "Out",
+    11: "Nov",
+    12: "Dez",
 }
 
 AREA_LABELS = {
@@ -901,6 +916,7 @@ def build_plan_context(db, plan_id: int) -> Dict[str, Any]:
         "sponsor": plan_record.get("sponsor") or "Patrocinador",
         "last_update": _format_date(last_update_reference),
         "next_checkpoint": dashboard_record.get("next_focus") or "Checkpoint a definir",
+        "plan_mode": (plan_record.get("plan_mode") or "evolucao").lower(),
         "project_link": None,
     }
 
@@ -2105,6 +2121,672 @@ def serialize_structure_investment_summary(categories_summary: Dict[str, Dict[st
             "por_mes": {month: float(amount) for month, amount in per_month.items()},
         }
     return serialized
+
+
+def _normalize_month_reference(value: Any) -> Tuple[str, Optional[datetime], str]:
+    """Normalize different date formats into a YYYY-MM key + human label."""
+    if value is None or (isinstance(value, str) and value.strip() == ""):
+        return ("__sem_data__", None, "Sem data")
+
+    text = str(value).strip()
+    if not text:
+        return ("__sem_data__", None, "Sem data")
+
+    cleaned = text.replace("/", "-")
+    candidates = [text]
+    if cleaned not in candidates:
+        candidates.append(cleaned)
+    if len(cleaned) >= 7 and cleaned[4] == "-":
+        base = cleaned[:7]
+        if base not in candidates:
+            candidates.append(base)
+        base_iso = f"{base}-01"
+        if base_iso not in candidates:
+            candidates.append(base_iso)
+
+    parsed: Optional[datetime] = None
+    for candidate in candidates:
+        for fmt in ("%Y-%m-%d", "%Y-%m", "%d-%m-%Y", "%d/%m/%Y"):
+            try:
+                parsed_candidate = datetime.strptime(candidate, fmt)
+                parsed = parsed_candidate.replace(day=1)
+                break
+            except ValueError:
+                continue
+        if parsed:
+            break
+
+    if parsed:
+        month_key = parsed.strftime("%Y-%m")
+        label = f"{MONTH_LABELS_PT.get(parsed.month, parsed.strftime('%b'))}/{parsed.year}"
+        return (month_key, parsed, label)
+
+    fallback_key = cleaned[:7] if len(cleaned) >= 7 and cleaned[4] == "-" else cleaned
+    if not fallback_key:
+        fallback_key = "__sem_data__"
+    label = "Sem data" if fallback_key == "__sem_data__" else text
+    return (fallback_key, None, label)
+
+
+def _safe_float(value: Any) -> float:
+    try:
+        return float(value)
+    except (TypeError, ValueError):
+        return 0.0
+
+
+def build_modefin_business_flow(
+    products: List[Dict[str, Any]],
+    products_totals: Dict[str, Any],
+    fixed_cost_entries: List[Dict[str, Any]],
+    profit_distribution: List[Dict[str, Any]],
+    result_rules: List[Dict[str, Any]],
+    num_months: int = 60
+) -> Dict[str, Any]:
+    """Build business cash flow with ramp-up, fixed costs timeline, and profit distribution."""
+    from decimal import Decimal
+    
+    # Construir dataset de ramp-up
+    base_revenue = 0.0
+    base_cost = 0.0
+    base_expense = 0.0
+    ramp_entries_combined = []
+    
+    for product in products:
+        summary = product.get("ramp_up_summary") or {}
+        base_revenue += _safe_float(summary.get("base_revenue", 0))
+        base_cost += _safe_float(summary.get("base_cost", 0))
+        base_expense += _safe_float(summary.get("base_expense", 0))
+        
+        entries = product.get("ramp_up_entries") or []
+        for entry in entries:
+            month = entry.get("month") or entry.get("reference_month")
+            if month:
+                ramp_entries_combined.append({
+                    "month": month,
+                    "percentage": _safe_float(entry.get("percentage", 100))
+                })
+    
+    # Se não há ramp-up, usar totais dos produtos
+    if base_revenue == 0:
+        margem = products_totals.get("margem_contribuicao", {})
+        base_revenue = _safe_float(margem.get("valor", 0))
+        custos_var = products_totals.get("custos_variaveis", {})
+        base_cost = _safe_float(custos_var.get("valor", 0))
+        despesas_var = products_totals.get("despesas_variaveis", {})
+        base_expense = _safe_float(despesas_var.get("valor", 0))
+        base_revenue = base_revenue + base_cost + base_expense  # Reconstituir receita
+    
+    # Determinar mês inicial (sempre começar em janeiro para relatório)
+    start_month = "2026-01"
+    
+    # Gerar sequência de meses
+    meses = _generate_month_sequence(start_month, num_months)
+    
+    # Construir fluxo mês a mês
+    rows = []
+    
+    # Distribuição de lucros
+    dist_percent = 0.0
+    dist_start_month = None
+    if profit_distribution:
+        dist_percent = _safe_float(profit_distribution[0].get("percentage", 0))
+        dist_start_month = profit_distribution[0].get("start_date")
+    
+    for mes in meses:
+        # Receita com ramp-up
+        ramp_pct = _get_ramp_percentage(mes, ramp_entries_combined) / 100.0
+        receita = base_revenue * ramp_pct
+        custo_var = base_cost * ramp_pct
+        despesa_var = base_expense * ramp_pct
+        margem = receita - custo_var - despesa_var
+        
+        # Custos fixos por data
+        custo_fixo = _get_fixed_cost_for_month(mes, fixed_cost_entries, "custo")
+        despesa_fixa = _get_fixed_cost_for_month(mes, fixed_cost_entries, "despesa")
+        
+        resultado_op = margem - custo_fixo - despesa_fixa
+        
+        # Distribuições (só se resultado positivo e após data de início)
+        distribuicao = 0.0
+        if resultado_op > 0:
+            if dist_start_month:
+                if mes >= dist_start_month:
+                    distribuicao = resultado_op * (dist_percent / 100.0)
+            else:
+                distribuicao = resultado_op * (dist_percent / 100.0)
+            
+            # Outras destinações
+            for rule in result_rules:
+                rule_start = rule.get("start_date")
+                if rule_start and mes < rule_start:
+                    continue
+                rule_pct = _safe_float(rule.get("percentage", 0))
+                distribuicao += resultado_op * (rule_pct / 100.0)
+        
+        resultado_periodo = resultado_op - distribuicao
+        
+        rows.append({
+            "periodo": _format_month_label(mes),
+            "receita": receita,
+            "custo_variavel": custo_var,
+            "despesa_variavel": despesa_var,
+            "margem": margem,
+            "custo_fixo": custo_fixo,
+            "despesa_fixa": despesa_fixa,
+            "fixos_total": custo_fixo + despesa_fixa,
+            "resultado_operacional": resultado_op,
+            "distribuicao": distribuicao,
+            "resultado_periodo": resultado_periodo
+        })
+    
+    # Condensar fluxo para formato compacto
+    print(f"[DEBUG] Business Flow - Total de linhas antes de condensar: {len(rows)}")
+    
+    value_fields = ["receita", "custo_variavel", "despesa_variavel", "margem", 
+                    "custo_fixo", "despesa_fixa", "fixos_total", 
+                    "resultado_operacional", "distribuicao", "resultado_periodo"]
+    condensed_rows = condense_cash_flow_rows(rows, value_fields)
+    
+    print(f"[DEBUG] Business Flow - Total de linhas após condensar: {len(condensed_rows)}")
+    if condensed_rows:
+        print(f"[DEBUG] Primeiros 3 períodos: {[r['periodo'] for r in condensed_rows[:3]]}")
+        print(f"[DEBUG] Últimos 3 períodos: {[r['periodo'] for r in condensed_rows[-3:]]}")
+    
+    return {
+        "rows": condensed_rows,
+        "rows_full": rows,  # Retornar também dados completos para investor_flow
+        "has_rows": bool(condensed_rows)
+    }
+
+
+def _get_ramp_percentage(month: str, ramp_entries: List[Dict[str, Any]]) -> float:
+    """Get ramp-up percentage for a given month."""
+    if not ramp_entries:
+        return 100.0
+    
+    # Ordenar por mês
+    sorted_entries = sorted(ramp_entries, key=lambda e: e["month"])
+    
+    # Se antes do primeiro mês, retorna 0
+    if month < sorted_entries[0]["month"]:
+        return 0.0
+    
+    # Procurar percentual exato ou interpolar
+    for entry in sorted_entries:
+        if month == entry["month"]:
+            return entry["percentage"]
+        if month < entry["month"]:
+            break
+    
+    # Se passou do último, retorna 100%
+    return 100.0
+
+
+def _get_fixed_cost_for_month(month: str, fixed_cost_entries: List[Dict[str, Any]], cost_type: str) -> float:
+    """Get fixed cost/expense for a given month."""
+    total = 0.0
+    for entry in fixed_cost_entries:
+        if entry.get("type") != cost_type:
+            continue
+        start_month = entry.get("start_month")
+        if start_month and month >= start_month:
+            total += _safe_float(entry.get("monthly_value", 0))
+    return total
+
+
+def _format_month_label(month_key: str) -> str:
+    """Format month key (YYYY-MM) to label (Mmm/YYYY)."""
+    try:
+        year, month_num = month_key.split("-")
+        month_num = int(month_num)
+        return f"{MONTH_LABELS_PT.get(month_num, 'Jan')}/{year}"
+    except (ValueError, AttributeError):
+        return month_key
+
+
+def _generate_month_sequence(start_month: str, num_months: int) -> List[str]:
+    """Generate sequence of month keys (YYYY-MM) starting from start_month."""
+    try:
+        year, month = map(int, start_month.split("-"))
+    except (ValueError, AttributeError):
+        year, month = 2026, 1
+    
+    months = []
+    for _ in range(num_months):
+        months.append(f"{year:04d}-{month:02d}")
+        month += 1
+        if month > 12:
+            month = 1
+            year += 1
+    
+    return months
+
+
+def condense_cash_flow_rows(rows: List[Dict[str, Any]], value_fields: List[str]) -> List[Dict[str, Any]]:
+    """
+    Condensa fluxo de caixa para formato compacto:
+    - 12 primeiros meses (detalhado)
+    - 13º mês até fim do ano (agregado)
+    - Anos seguintes (agregado por ano)
+    
+    value_fields: lista de campos numéricos para somar na agregação
+    """
+    if not rows:
+        return []
+    
+    print(f"[DEBUG condense] Condensando {len(rows)} linhas...")
+    
+    condensed = []
+    
+    # Primeiros 12 meses (detalhado)
+    for i in range(min(12, len(rows))):
+        condensed.append(rows[i].copy())
+    
+    if len(rows) <= 12:
+        print(f"[DEBUG condense] Menos de 12 linhas, retornando {len(condensed)}")
+        return condensed
+    
+    # Agrupar restante por ano usando dicionário
+    anos_agregados = {}
+    
+    for i in range(12, len(rows)):
+        row = rows[i]
+        periodo = row.get("periodo", "")
+        
+        # Extrair ano do período (formato: "Mmm/YYYY" ou "YYYY-MM")
+        try:
+            if "/" in periodo:
+                year = int(periodo.split("/")[-1])
+            else:
+                year = int(periodo.split("-")[0])
+        except (ValueError, IndexError, AttributeError):
+            print(f"[DEBUG condense] Ignorando período inválido: {periodo}")
+            continue
+        
+        # Criar agregado do ano se não existir
+        if year not in anos_agregados:
+            anos_agregados[year] = {
+                "periodo": f"Ano {year}",
+                **{field: 0.0 for field in value_fields}
+            }
+        
+        # Somar valores ao agregado do ano
+        for field in value_fields:
+            anos_agregados[year][field] += _safe_float(row.get(field, 0))
+    
+    # Adicionar anos na ordem
+    for year in sorted(anos_agregados.keys()):
+        condensed.append(anos_agregados[year])
+    
+    print(f"[DEBUG condense] Anos encontrados: {sorted(anos_agregados.keys())}")
+    print(f"[DEBUG condense] Total de linhas condensadas: {len(condensed)}")
+    
+    return condensed
+
+
+def build_modefin_investor_flow(
+    investment_flow: Dict[str, Any],
+    business_flow: Dict[str, Any],
+    profit_distribution: List[Dict[str, Any]]
+) -> Dict[str, Any]:
+    """Build investor cash flow combining investments and profit distributions."""
+    
+    # Pegar TODOS os meses do business_flow (usar rows_full para não pegar condensado)
+    business_rows = business_flow.get("rows_full") or business_flow.get("rows", [])
+    print(f"[DEBUG] Investor Flow - business_rows recebidos: {len(business_rows)}")
+    if not business_rows:
+        return {"rows": [], "has_rows": False}
+    
+    # Criar mapa de aportes por período
+    aportes_map = {}
+    for row in investment_flow.get("rows", []):
+        periodo = row.get("period_label", "")
+        fontes = row.get("fontes", 0.0)
+        if periodo:
+            aportes_map[periodo] = fontes
+    
+    # Construir fluxo completo (todos os meses do business_flow)
+    rows = []
+    saldo_acumulado = 0.0
+    
+    for bus_row in business_rows:
+        periodo = bus_row.get("periodo", "")
+        
+        # Buscar aporte deste período (se houver)
+        aporte = aportes_map.get(periodo, 0.0)
+        
+        # Distribuição vem do business_flow
+        distribuicao = bus_row.get("distribuicao", 0.0)
+        
+        # Saldo do período (perspectiva do investidor: recebe - coloca)
+        saldo_periodo = distribuicao - aporte
+        saldo_acumulado += saldo_periodo
+        
+        rows.append({
+            "periodo": periodo,
+            "aporte": aporte,
+            "distribuicao": distribuicao,
+            "saldo_periodo": saldo_periodo,
+            "saldo_acumulado": saldo_acumulado
+        })
+    
+    # Condensar fluxo para formato compacto
+    print(f"[DEBUG] Investor Flow - Total de linhas antes de condensar: {len(rows)}")
+    
+    condensed = []
+    
+    # Primeiros 12 meses (detalhado)
+    for i in range(min(12, len(rows))):
+        condensed.append(rows[i].copy())
+    
+    print(f"[DEBUG] Adicionados primeiros 12 meses. Total condensed: {len(condensed)}")
+    
+    if len(rows) > 12:
+        # Agrupar restante por ano
+        anos_agregados = {}
+        
+        for i in range(12, len(rows)):
+            row = rows[i]
+            periodo = row.get("periodo", "")
+            
+            # Extrair ano
+            try:
+                if "/" in periodo:
+                    year = int(periodo.split("/")[-1])
+                else:
+                    year = int(periodo.split("-")[0])
+            except (ValueError, IndexError, AttributeError):
+                print(f"[DEBUG] Não conseguiu extrair ano de: {periodo}")
+                continue
+            
+            # Criar ou atualizar agregado do ano
+            if year not in anos_agregados:
+                anos_agregados[year] = {
+                    "periodo": f"Ano {year}",
+                    "aporte": 0.0,
+                    "distribuicao": 0.0,
+                    "saldo_periodo": 0.0,
+                    "saldo_acumulado": 0.0,
+                    "ultimo_saldo": 0.0
+                }
+            
+            # Acumular valores do ano
+            anos_agregados[year]["aporte"] += row.get("aporte", 0.0)
+            anos_agregados[year]["distribuicao"] += row.get("distribuicao", 0.0)
+            anos_agregados[year]["saldo_periodo"] += row.get("saldo_periodo", 0.0)
+            # Guardar o último saldo acumulado deste ano
+            anos_agregados[year]["ultimo_saldo"] = row.get("saldo_acumulado", 0.0)
+        
+        # Adicionar anos na ordem
+        for year in sorted(anos_agregados.keys()):
+            year_data = anos_agregados[year]
+            year_data["saldo_acumulado"] = year_data["ultimo_saldo"]
+            condensed.append({
+                "periodo": year_data["periodo"],
+                "aporte": year_data["aporte"],
+                "distribuicao": year_data["distribuicao"],
+                "saldo_periodo": year_data["saldo_periodo"],
+                "saldo_acumulado": year_data["saldo_acumulado"]
+            })
+        
+        print(f"[DEBUG] Anos agregados: {sorted(anos_agregados.keys())}")
+        print(f"[DEBUG] Total de linhas condensadas: {len(condensed)}")
+    
+    return {
+        "rows": condensed,
+        "has_rows": bool(condensed)
+    }
+
+
+def build_modefin_investment_flow(
+    capital_giro_items: Optional[Iterable[Dict[str, Any]]],
+    investimentos_estruturas: Optional[Dict[str, Dict[str, Any]]],
+    funding_sources: Optional[Iterable[Dict[str, Any]]],
+) -> Dict[str, Any]:
+    """Aggregate cash flow for investments (capital de giro + imobilizado vs fontes)."""
+    entries: Dict[str, Dict[str, Any]] = {}
+
+    def ensure_entry(key: str, dt: Optional[datetime], label: str) -> Dict[str, Any]:
+        entry = entries.get(key)
+        if entry is None:
+            entry = {
+                "key": key,
+                "date": dt,
+                "label": label or key or "Sem data",
+                "capital_giro": 0.0,
+                "imobilizado": 0.0,
+                "fontes": 0.0,
+            }
+            entries[key] = entry
+        else:
+            if entry.get("date") is None and dt is not None:
+                entry["date"] = dt
+            if entry.get("label") in (entry.get("key"), "Sem data") and label:
+                entry["label"] = label
+        return entry
+
+    for item in capital_giro_items or []:
+        amount = _safe_float((item or {}).get("amount"))
+        if not amount:
+            continue
+        key, dt, label = _normalize_month_reference((item or {}).get("contribution_date"))
+        entry = ensure_entry(key, dt, label)
+        entry["capital_giro"] += amount
+
+    for categoria in (investimentos_estruturas or {}).values():
+        por_mes = (categoria or {}).get("por_mes") or {}
+        for month_key, value in por_mes.items():
+            amount = _safe_float(value)
+            if not amount:
+                continue
+            key, dt, label = _normalize_month_reference(month_key)
+            entry = ensure_entry(key, dt, label)
+            entry["imobilizado"] += amount
+
+    for source in funding_sources or []:
+        amount = _safe_float((source or {}).get("amount"))
+        if not amount:
+            continue
+        key, dt, label = _normalize_month_reference((source or {}).get("contribution_date"))
+        entry = ensure_entry(key, dt, label)
+        entry["fontes"] += amount
+
+    sorted_entries = sorted(
+        entries.values(),
+        key=lambda entry: (
+            entry.get("date") is None,
+            entry.get("date") or datetime.max,
+            entry.get("label"),
+        ),
+    )
+
+    rows: List[Dict[str, Any]] = []
+    totals = {
+        "capital_giro": 0.0,
+        "imobilizado": 0.0,
+        "investimentos": 0.0,
+        "fontes": 0.0,
+        "saldo_periodo": 0.0,
+    }
+    saldo_acumulado = 0.0
+
+    for entry in sorted_entries:
+        capital = entry.get("capital_giro", 0.0)
+        imobilizado = entry.get("imobilizado", 0.0)
+        fontes = entry.get("fontes", 0.0)
+        investimentos = capital + imobilizado
+        saldo_periodo = fontes - investimentos
+        saldo_acumulado += saldo_periodo
+
+        rows.append(
+            {
+                "period_label": entry.get("label"),
+                "capital_giro": capital,
+                "imobilizado": imobilizado,
+                "investimentos": investimentos,
+                "fontes": fontes,
+                "saldo_periodo": saldo_periodo,
+                "saldo_acumulado": saldo_acumulado,
+            }
+        )
+
+        totals["capital_giro"] += capital
+        totals["imobilizado"] += imobilizado
+        totals["investimentos"] += investimentos
+        totals["fontes"] += fontes
+        totals["saldo_periodo"] += saldo_periodo
+
+    # Condensar fluxo para formato compacto (se houver muitas linhas)
+    condensed_rows = rows
+    if len(rows) > 12:
+        value_fields = ["capital_giro", "imobilizado", "investimentos", "fontes", "saldo_periodo"]
+        # Para investment flow, precisamos lógica especial para saldo_acumulado
+        condensed = []
+        
+        # Primeiros 12 registros (detalhado)
+        for i in range(min(12, len(rows))):
+            condensed.append(rows[i].copy())
+        
+        # Agrupar restante por ano
+        current_year = None
+        year_aggregate = None
+        last_saldo_acumulado = condensed[-1]["saldo_acumulado"] if condensed else 0.0
+        
+        for i in range(12, len(rows)):
+            row = rows[i]
+            periodo = row.get("period_label", "")
+            
+            # Extrair ano
+            try:
+                if "/" in periodo:
+                    year = int(periodo.split("/")[-1])
+                else:
+                    year = int(periodo.split("-")[0])
+            except (ValueError, IndexError, AttributeError):
+                continue
+            
+            if current_year is None:
+                current_year = year
+                year_aggregate = {
+                    "period_label": f"Ano {year}",
+                    **{field: 0.0 for field in value_fields},
+                    "saldo_acumulado": 0.0
+                }
+            
+            if year != current_year:
+                year_aggregate["saldo_acumulado"] = last_saldo_acumulado
+                condensed.append(year_aggregate)
+                
+                current_year = year
+                year_aggregate = {
+                    "period_label": f"Ano {year}",
+                    **{field: 0.0 for field in value_fields},
+                    "saldo_acumulado": 0.0
+                }
+            
+            # Somar valores
+            for field in value_fields:
+                year_aggregate[field] += _safe_float(row.get(field, 0))
+            last_saldo_acumulado = row.get("saldo_acumulado", last_saldo_acumulado)
+        
+        # Adicionar último ano
+        if year_aggregate:
+            year_aggregate["saldo_acumulado"] = last_saldo_acumulado
+            condensed.append(year_aggregate)
+        
+        condensed_rows = condensed
+
+    return {
+        "rows": condensed_rows,
+        "totals": totals,
+        "saldo_final": saldo_acumulado,
+        "has_rows": bool(condensed_rows),
+    }
+
+
+def _parse_percentage_value(value: Any, default: float = 0.0) -> float:
+    if value is None:
+        return default
+    if isinstance(value, (int, float)):
+        return float(value)
+    text = str(value).strip()
+    if not text:
+        return default
+    normalized = text.replace("%", "").replace(",", ".")
+    try:
+        return float(normalized)
+    except (TypeError, ValueError):
+        return default
+
+
+def calculate_modefin_analysis_metrics(
+    products_totals: Optional[Dict[str, Any]],
+    fixed_costs_summary: Optional[Dict[str, Any]],
+    investment_flow: Optional[Dict[str, Any]],
+    financeiro: Optional[Dict[str, Any]],
+) -> Dict[str, Any]:
+    """Approximate ModeFin analytic indicators (payback, ROI, VPL, etc.)."""
+    products_totals = products_totals or {}
+    fixed_costs_summary = fixed_costs_summary or {}
+    investment_flow = investment_flow or {}
+    financeiro = financeiro or {}
+
+    margem_data = products_totals.get("margem_contribuicao") or {}
+    margem_valor = _safe_float(margem_data.get("valor"))
+
+    custos_fixos = _safe_float(fixed_costs_summary.get("custos_fixos_mensal"))
+    despesas_fixas = _safe_float(fixed_costs_summary.get("despesas_fixas_mensal"))
+
+    resultado_operacional = margem_valor - custos_fixos - despesas_fixas
+
+    totals = investment_flow.get("totals") or {}
+    total_investimentos = _safe_float(totals.get("investimentos"))
+
+    fluxo_analises = (financeiro.get("fluxo_investidor") or {}).get("analises") or {}
+    periodo_meses = fluxo_analises.get("periodo_meses") or fluxo_analises.get("periodo") or 60
+    try:
+        periodo_meses = int(periodo_meses)
+    except (TypeError, ValueError):
+        periodo_meses = 60
+    if periodo_meses <= 0:
+        periodo_meses = 60
+
+    custo_oportunidade = fluxo_analises.get("opportunity_cost")
+    if custo_oportunidade is None:
+        custo_oportunidade = (financeiro.get("investimento") or {}).get("custo_oportunidade")
+    custo_oportunidade_percent = _parse_percentage_value(custo_oportunidade, default=1.0)
+
+    payback = None
+    if resultado_operacional > 0 and total_investimentos > 0:
+        payback = total_investimentos / resultado_operacional
+
+    roi_percent = None
+    if total_investimentos > 0 and resultado_operacional != 0:
+        roi_percent = (resultado_operacional * periodo_meses / total_investimentos) * 100
+
+    tir_percent = None
+    if payback and payback > 0:
+        tir_percent = (1 / payback) * 100
+
+    vpl = 0.0
+    if resultado_operacional > 0 and total_investimentos > 0:
+        taxa_mensal = (1 + (custo_oportunidade_percent / 100.0)) ** (1 / 12) - 1
+        vpl = -total_investimentos
+        for mes in range(1, periodo_meses + 1):
+            valor_presente = resultado_operacional / ((1 + taxa_mensal) ** mes)
+            vpl += valor_presente
+
+    return {
+        "resultado_operacional": resultado_operacional,
+        "total_investimentos": total_investimentos,
+        "periodo_meses": periodo_meses,
+        "custo_oportunidade_percent": custo_oportunidade_percent,
+        "payback_meses": payback,
+        "roi_percent": roi_percent,
+        "tir_percent": tir_percent,
+        "vpl": vpl,
+    }
 
 
 def summarize_structures_for_report(structures: List[Dict[str, Any]]) -> List[Dict[str, Any]]:

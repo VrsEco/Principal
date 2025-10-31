@@ -40,6 +40,22 @@
   .field textarea{min-height:90px;resize:vertical;}
   .field input:focus,.field textarea:focus{outline:none;border-color:#2563eb;box-shadow:0 0 0 3px rgba(37,99,235,.18);}
   .readonly{background:rgba(226,232,240,.5);}
+  .ramp-section{margin-top:18px;border-top:1px solid rgba(148,163,184,.2);padding-top:18px;display:flex;flex-direction:column;gap:14px;}
+  .ramp-header{display:flex;justify-content:space-between;align-items:flex-end;gap:16px;}
+  .ramp-header h3{margin:0;font-size:16px;font-weight:600;color:#0f172a;}
+  .ramp-help{font-size:12px;color:#64748b;line-height:1.5;margin:0;}
+  .ramp-controls{display:flex;gap:16px;flex-wrap:wrap;align-items:flex-end;}
+  .ramp-controls .field{min-width:200px;}
+  .ramp-table{width:100%;border-collapse:collapse;border-radius:12px;overflow:hidden;border:1px solid rgba(148,163,184,.2);}
+  .ramp-table th,.ramp-table td{padding:10px 12px;border-bottom:1px solid rgba(148,163,184,.12);text-align:left;font-size:13px;color:#1f2937;background:#fff;}
+  .ramp-table th{text-transform:uppercase;font-size:11px;letter-spacing:.05em;background:rgba(148,163,184,.16);color:#475569;}
+  .ramp-table td input{width:100%;border-radius:8px;border:1px solid rgba(148,163,184,.4);padding:7px 10px;font-size:13px;}
+  .ramp-table td input:focus{outline:none;border-color:#2563eb;box-shadow:0 0 0 3px rgba(37,99,235,.18);}
+  .ramp-empty{padding:18px;border-radius:12px;background:rgba(148,163,184,.12);text-align:center;color:#64748b;font-size:13px;}
+  .ramp-actions{display:flex;gap:8px;align-items:center;justify-content:flex-start;}
+  .ramp-table .action-cell{width:80px;text-align:right;}
+  .ramp-table .action-cell button{width:100%;}
+  .ramp-percentage{max-width:120px;}
   @media (max-width:780px){.head{flex-direction:column;}}
 </style>
 
@@ -58,7 +74,7 @@
   <section class="summary">
     <div><span class="label">Produtos</span><span class="value" id="summaryCount">0</span></div>
     <div><span class="label">Faturamento</span><span class="value" id="summaryRevenue">R$ 0,00</span></div>
-    <div><span class="label">Margem mÃ©dia</span><span class="value" id="summaryMargin">0,00%</span></div>
+    <div><span class="label">Margem media</span><span class="value" id="summaryMargin">0,00%</span></div>
     <div><span class="label">Meta share</span><span class="value" id="summaryShare">0 un</span></div>
   </section>
 
@@ -68,7 +84,7 @@
     <table id="productsTable" hidden>
       <thead>
         <tr>
-          <th>Produto</th><th>PreÃ§o</th><th>Custos</th><th>Despesas</th><th>Margem %</th><th>Mercado</th><th>Share</th><th>AÃ§Ãµes</th>
+          <th>Produto</th><th>Preco</th><th>Custos</th><th>Despesas</th><th>Margem %</th><th>Mercado</th><th>Share</th><th>Acoes</th>
         </tr>
       </thead>
       <tbody id="productsBody"></tbody>
@@ -82,9 +98,9 @@
       <input type="hidden" id="productId">
       <div class="grid">
         <div class="field"><label for="fieldName">Nome *</label><input id="fieldName" name="name" required></div>
-        <div class="field"><label for="fieldPrice">PreÃ§o (R$) *</label><input id="fieldPrice" name="sale_price" type="number" step="0.01" min="0" required></div>
-        <div class="field"><label for="fieldDescription">DescriÃ§Ã£o</label><textarea id="fieldDescription" name="description"></textarea></div>
-        <div class="field"><label for="fieldPriceNotes">Obs. preÃ§o</label><textarea id="fieldPriceNotes" name="sale_price_notes"></textarea></div>
+        <div class="field"><label for="fieldPrice">Preco (R$) *</label><input id="fieldPrice" name="sale_price" type="number" step="0.01" min="0" required></div>
+        <div class="field"><label for="fieldDescription">DescricA£o</label><textarea id="fieldDescription" name="description"></textarea></div>
+        <div class="field"><label for="fieldPriceNotes">Obs. preco</label><textarea id="fieldPriceNotes" name="sale_price_notes"></textarea></div>
         <div class="field"><label for="fieldCostPercent">Custos (%)</label><input id="fieldCostPercent" name="variable_costs_percent" type="number" step="0.01"></div>
         <div class="field"><label for="fieldCostValue">Custos (R$)</label><input id="fieldCostValue" name="variable_costs_value" type="number" step="0.01"></div>
         <div class="field"><label for="fieldCostNotes">Obs. custos</label><textarea id="fieldCostNotes" name="variable_costs_notes"></textarea></div>
@@ -100,6 +116,32 @@
         <div class="field"><label for="fieldShareUnits">Share (un)</label><input id="fieldShareUnits" name="market_share_goal_monthly_units" type="number" step="0.01"></div>
         <div class="field"><label for="fieldSharePercent">Share (%)</label><input id="fieldSharePercent" name="market_share_goal_percent" type="number" step="0.01"></div>
         <div class="field"><label for="fieldShareNotes">Obs. share</label><textarea id="fieldShareNotes" name="market_share_goal_notes"></textarea></div>
+      </div>
+      <div class="ramp-section">
+        <div class="ramp-header">
+          <h3>Ramp-up de faturamento</h3>
+          <p class="ramp-help">Cadastre os percentuais planejados mes a mes ate atingir 100% da meta mensal.</p>
+        </div>
+        <div class="ramp-controls">
+          <div class="field">
+            <label for="fieldRampStart">Inicio do faturamento</label>
+            <input id="fieldRampStart" type="month">
+          </div>
+          <div class="ramp-actions">
+            <button type="button" class="btn btn-secondary" id="btnRampAdd">Adicionar mes</button>
+          </div>
+        </div>
+        <div id="rampEmpty" class="ramp-empty">Nenhum mes cadastrado. Informe o inicio e adicione os percentuais.</div>
+        <table class="ramp-table" id="rampTable" hidden>
+          <thead>
+            <tr>
+              <th>Mes</th>
+              <th>% da meta</th>
+              <th class="action-cell">Acoes</th>
+            </tr>
+          </thead>
+          <tbody></tbody>
+        </table>
       </div>
     </div>
     <div class="dialog-footer">
@@ -121,7 +163,7 @@
 
   const PLAN_ID = {{ plan_id | int }};
   const API = `/pev/api/implantacao/${PLAN_ID}/products`;
-  const state = { items: [], editing: null, lock: false };
+  const state = { items: [], editing: null, lock: false, rampEntries: [] };
   const els = {
     table: document.getElementById('productsTable'),
     body: document.getElementById('productsBody'),
@@ -153,6 +195,11 @@
     shareUnits: document.getElementById('fieldShareUnits'),
     sharePercent: document.getElementById('fieldSharePercent'),
     shareNotes: document.getElementById('fieldShareNotes'),
+    rampStart: document.getElementById('fieldRampStart'),
+    rampAdd: document.getElementById('btnRampAdd'),
+    rampTable: document.getElementById('rampTable'),
+    rampBody: document.querySelector('#rampTable tbody'),
+    rampEmpty: document.getElementById('rampEmpty'),
   };
 
   function init() {
@@ -162,6 +209,11 @@
     els.dialog.querySelectorAll('[data-close]').forEach(btn => btn.addEventListener('click', closeForm));
     els.body.addEventListener('click', handleTableClick);
     [els.price, els.costPercent, els.costValue, els.expPercent, els.expValue, els.marketUnits, els.shareUnits].forEach((input) => input.addEventListener('input', handleDerivedChanges));
+    els.rampAdd.addEventListener('click', handleRampAdd);
+    els.rampBody.addEventListener('input', handleRampTableInput);
+    els.rampBody.addEventListener('click', handleRampTableClick);
+    els.rampStart.addEventListener('change', handleRampStartChange);
+    renderRamp();
     loadProducts();
   }
 
@@ -238,6 +290,23 @@
       setField(els.marginValue, 0);
       setField(els.marketRevenue, 0);
     }
+
+    if (product && Array.isArray(product.ramp_up_entries)) {
+      state.rampEntries = product.ramp_up_entries
+        .map(entry => ({
+          month: normalizeMonthKey(entry.month || entry.reference_month || ''),
+          percentage: clampPercentage(entry.percentage),
+        }))
+        .filter(entry => entry.month);
+      state.rampEntries.sort((a, b) => a.month.localeCompare(b.month));
+      const inferredStart = (product.ramp_up_summary && product.ramp_up_summary.start_month) || (state.rampEntries[0] ? state.rampEntries[0].month : '');
+      els.rampStart.value = normalizeMonthKey(inferredStart);
+    } else {
+      state.rampEntries = [];
+      els.rampStart.value = '';
+    }
+    renderRamp();
+
     if (typeof els.dialog.showModal === 'function') els.dialog.showModal(); else els.dialog.setAttribute('open','open');
     document.body.classList.add('modal-open');
     els.name.focus();
@@ -246,6 +315,9 @@
   function closeForm() {
     state.editing = null;
     els.form.reset();
+    state.rampEntries = [];
+    els.rampStart.value = '';
+    renderRamp();
     if (els.dialog.open) els.dialog.close(); else els.dialog.removeAttribute('open');
     document.body.classList.remove('modal-open');
   }
@@ -253,16 +325,16 @@
   function submitForm(evt) {
     evt.preventDefault();
     
-    // Validação no frontend
+    // Validacao no frontend
     if (!els.name.value.trim()) {
-      alert('ERRO: Nome do produto é obrigatório!');
+      alert('ERRO: Nome do produto e obrigatorio!');
       els.name.focus();
       return;
     }
     
     const priceValue = parse(els.price.value);
     if (priceValue <= 0) {
-      alert('ERRO: Preço deve ser maior que zero!');
+      alert('ERRO: Preco deve ser maior que zero!');
       els.price.focus();
       return;
     }
@@ -293,7 +365,7 @@
       .then(({ ok, status, body }) => {
         if (status === 400) {
           console.error('Validation error:', body.error);
-          throw new Error(body.error || 'Dados invÃ¡lidos.');
+          throw new Error(body.error || 'Dados invA¡lidos.');
         }
         if (!ok || !body.success) {
           console.error('Server error:', body.error);
@@ -308,11 +380,19 @@
         console.error('Error type:', err.constructor.name);
         console.error('Error message:', err.message);
         console.error('Error stack:', err.stack);
-        alert('ERRO: ' + (err.message || 'NÃ£o foi possÃ­vel salvar o produto.'));
+        alert('ERRO: ' + (err.message || 'NA£o foi possA­vel salvar o produto.'));
       });
   }
 
   function buildPayload() {
+    const rampPayload = state.rampEntries
+      .filter(entry => entry.month)
+      .map(entry => ({
+        month: entry.month,
+        percentage: clampPercentage(entry.percentage),
+      }))
+      .sort((a, b) => a.month.localeCompare(b.month));
+
     return {
       name: els.name.value.trim(),
       description: els.description.value.trim(),
@@ -330,7 +410,147 @@
       market_share_goal_monthly_units: parse(els.shareUnits.value),
       market_share_goal_percent: parse(els.sharePercent.value),
       market_share_goal_notes: els.shareNotes.value.trim(),
+      ramp_up_entries: rampPayload,
     };
+  }
+
+  function renderRamp() {
+    if (!els.rampTable) return;
+    if (!state.rampEntries.length) {
+      els.rampTable.hidden = true;
+      els.rampEmpty.hidden = false;
+      els.rampBody.innerHTML = '';
+      return;
+    }
+
+    els.rampTable.hidden = false;
+    els.rampEmpty.hidden = true;
+    els.rampBody.innerHTML = state.rampEntries
+      .map((entry, index) => `
+        <tr data-index="${index}" data-month="${entry.month || ''}">
+          <td><input type="month" class="ramp-month" value="${entry.month || ''}"></td>
+          <td><input type="number" class="ramp-percentage" min="0" max="100" step="1" value="${formatRampPercent(entry.percentage)}"></td>
+          <td class="action-cell"><button type="button" class="table-btn delete" data-action="ramp-remove" data-index="${index}">Remover</button></td>
+        </tr>
+      `)
+      .join('');
+  }
+
+  function handleRampAdd() {
+    const nextMonth = computeNextRampMonth();
+    if (!nextMonth) {
+      alert('Defina o mes de inicio do faturamento antes de adicionar itens.');
+      els.rampStart.focus();
+      return;
+    }
+
+    if (state.rampEntries.some(entry => entry.month === nextMonth)) {
+      alert('Este mes ja esta cadastrado na tabela.');
+      return;
+    }
+
+    const lastPercent = state.rampEntries.length
+      ? clampPercentage(state.rampEntries[state.rampEntries.length - 1].percentage)
+      : 100;
+
+    state.rampEntries.push({ month: nextMonth, percentage: lastPercent });
+    state.rampEntries.sort((a, b) => (a.month || '').localeCompare(b.month || ''));
+    renderRamp();
+    requestAnimationFrame(() => {
+      const focusTarget = els.rampBody.querySelector(`tr[data-month="${nextMonth}"] .ramp-percentage`);
+      if (focusTarget) focusTarget.focus();
+    });
+  }
+
+  function handleRampTableInput(evt) {
+    const row = evt.target.closest('tr[data-index]');
+    if (!row) return;
+    const index = Number(row.dataset.index);
+    if (!Number.isFinite(index) || !state.rampEntries[index]) return;
+
+    if (evt.target.classList.contains('ramp-month')) {
+      const normalized = normalizeMonthKey(evt.target.value);
+      state.rampEntries[index].month = normalized;
+      state.rampEntries.sort((a, b) => (a.month || '').localeCompare(b.month || ''));
+      renderRamp();
+      requestAnimationFrame(() => {
+        const selector = normalized ? `tr[data-month="${normalized}"] .ramp-month` : `tr[data-index="${index}"] .ramp-month`;
+        const monthInput = els.rampBody.querySelector(selector);
+        if (monthInput) monthInput.focus();
+      });
+    } else if (evt.target.classList.contains('ramp-percentage')) {
+      const value = clampPercentage(evt.target.value);
+      state.rampEntries[index].percentage = value;
+      evt.target.value = formatRampPercent(value);
+    }
+  }
+
+  function handleRampTableClick(evt) {
+    const button = evt.target.closest('[data-action="ramp-remove"]');
+    if (!button) return;
+    const index = Number(button.dataset.index);
+    if (!Number.isFinite(index)) return;
+    state.rampEntries.splice(index, 1);
+    renderRamp();
+  }
+
+  function handleRampStartChange(evt) {
+    const normalized = normalizeMonthKey(evt.target.value);
+    evt.target.value = normalized;
+  }
+
+  function computeNextRampMonth() {
+    const startMonth = normalizeMonthKey(els.rampStart.value);
+    els.rampStart.value = startMonth;
+    if (!state.rampEntries.length) {
+      return startMonth || '';
+    }
+    const last = state.rampEntries[state.rampEntries.length - 1];
+    const candidate = incrementMonth(last.month);
+    return candidate || startMonth;
+  }
+
+  function incrementMonth(monthValue) {
+    const normalized = normalizeMonthKey(monthValue);
+    if (!normalized) return '';
+    const [yearStr, monthStr] = normalized.split('-');
+    const year = Number(yearStr);
+    const month = Number(monthStr);
+    if (!Number.isFinite(year) || !Number.isFinite(month)) return '';
+    let nextMonth = month + 1;
+    let nextYear = year;
+    if (nextMonth > 12) {
+      nextMonth = 1;
+      nextYear += 1;
+    }
+    return `${String(nextYear).padStart(4, '0')}-${String(nextMonth).padStart(2, '0')}`;
+  }
+
+  function normalizeMonthKey(value) {
+    if (value === null || value === undefined) return '';
+    const trimmed = String(value).trim();
+    if (!trimmed) return '';
+    const iso = trimmed.match(/^(\d{4})-(\d{2})$/);
+    if (iso) return `${iso[1]}-${iso[2]}`;
+    const isoDay = trimmed.match(/^(\d{4})-(\d{2})-(\d{2})$/);
+    if (isoDay) return `${isoDay[1]}-${isoDay[2]}`;
+    const slash = trimmed.match(/^(\d{2})\/(\d{4})$/);
+    if (slash) return `${slash[2]}-${slash[1]}`;
+    return trimmed;
+  }
+
+  function clampPercentage(value) {
+    const number = parse(typeof value === 'number' ? value : String(value));
+    const limited = Math.min(100, Math.max(0, number));
+    return Number.isFinite(limited) ? Number(limited.toFixed(2)) : 0;
+  }
+
+  function formatRampPercent(value) {
+    const num = clampPercentage(value);
+    const fixed = num.toFixed(2);
+    if (fixed.endsWith('.00')) return String(Math.round(num));
+    if (fixed.endsWith('0')) return fixed.slice(0, -1);
+    return fixed;
   }
 
   function handleTableClick(evt) {
@@ -351,7 +571,7 @@
         })
         .catch(err => {
           console.error(err);
-          alert(err.message || 'NÃ£o foi possÃ­vel excluir o produto.');
+          alert(err.message || 'NA£o foi possA­vel excluir o produto.');
         });
     }
   }
@@ -414,30 +634,30 @@
     let normalized = String(value || '').trim();
     if (!normalized) return 0;
     
-    // Remove espaços
+    // Remove espacos
     normalized = normalized.replace(/\s+/g, '');
     
-    // Se tem vírgula, assume formato brasileiro (1.234,56 ou 1234,56)
+    // Se tem virgula, assume formato brasileiro (1.234,56 ou 1234,56)
     if (normalized.includes(',')) {
-      // Remove pontos (separador de milhares) e troca vírgula por ponto
+      // Remove pontos (separador de milhares) e troca virgula por ponto
       normalized = normalized.replace(/\./g, '').replace(',', '.');
     }
-    // Se não tem vírgula mas tem múltiplos pontos, assume formato brasileiro sem vírgula (1.234)
+    // Se nao tem virgula mas tem multiplos pontos, assume formato brasileiro sem virgula (1.234)
     else {
       const dotCount = (normalized.match(/\./g) || []).length;
       if (dotCount > 1) {
-        // Remove todos os pontos (são separadores de milhares)
+        // Remove todos os pontos (sao separadores de milhares)
         normalized = normalized.replace(/\./g, '');
       }
-      // Se tem apenas um ponto, verifica se é separador de milhares ou decimal
+      // Se tem apenas um ponto, verifica se e separador de milhares ou decimal
       else if (dotCount === 1) {
         const dotIndex = normalized.indexOf('.');
         const afterDot = normalized.length - dotIndex - 1;
-        // Se tem 3 dígitos após o ponto, provavelmente é separador de milhares
+        // Se tem 3 digitos apos o ponto, provavelmente e separador de milhares
         if (afterDot === 3 && normalized.length > 4) {
           normalized = normalized.replace('.', '');
         }
-        // Caso contrário, mantém como decimal
+        // Caso contrario, mantem como decimal
       }
     }
     
@@ -455,8 +675,8 @@
     if (field.tagName === 'TEXTAREA' || field.type === 'text') {
       field.value = value ? String(value) : '';
     } else {
-      // Para campos numéricos, não usar formatação pt-BR (vírgula)
-      // Usar ponto como separador decimal (padrão internacional)
+      // Para campos numericos, nao usar formatacao pt-BR (virgula)
+      // Usar ponto como separador decimal (padrao internacional)
       if (value === null || value === undefined || value === '') {
         field.value = '';
       } else {

@@ -145,7 +145,7 @@ try:
     app.register_blueprint(grv_bp)
     app.register_blueprint(meetings_bp)
     app.register_blueprint(my_work_bp)
-    print("✅ My Work module registered at /my-work")
+    print("[OK] My Work module registered at /my-work")
 except Exception as _bp_err:
     print("Aviso: Blueprints PEV/GRV/Meetings/MyWork não registrados:", _bp_err)
     # Expor detalhe no log para facilitar diagnóstico
@@ -1628,42 +1628,55 @@ def api_update_company_mvv(company_id: int):
 @login_required
 def api_update_company_economic(company_id: int):
     """Update company economic data"""
+    conn = None
     try:
         payload = request.get_json(silent=True) or {}
-        
+
+        def _clean(value):
+            if value is None:
+                return None
+            if isinstance(value, str):
+                value = value.strip()
+                return value or None
+            return value
+
         conn = pg_connect()
         cursor = conn.cursor()
-        
+
         cursor.execute('''
             UPDATE companies SET
                 cnpj = %s,
-                city = ?,
-                state = ?,
-                cnaes = ?,
-                coverage_physical = ?,
-                coverage_online = ?,
-                experience_total = ?,
-                experience_segment = ?
+                city = %s,
+                state = %s,
+                cnaes = %s,
+                coverage_physical = %s,
+                coverage_online = %s,
+                experience_total = %s,
+                experience_segment = %s
             WHERE id = %s
         ''', (
-            payload.get('cnpj'),
-            payload.get('city'),
-            payload.get('state'),
-            payload.get('cnaes'),
-            payload.get('coverage_physical'),
-            payload.get('coverage_online'),
-            payload.get('experience_total'),
-            payload.get('experience_segment'),
+            _clean(payload.get('cnpj')),
+            _clean(payload.get('city')),
+            _clean(payload.get('state')),
+            _clean(payload.get('cnaes')),
+            _clean(payload.get('coverage_physical')),
+            _clean(payload.get('coverage_online')),
+            _clean(payload.get('experience_total')),
+            _clean(payload.get('experience_segment')),
             company_id
         ))
-        
+
         conn.commit()
-        conn.close()
-        
+
         return jsonify({'success': True})
     except Exception as _err:
+        if conn:
+            conn.rollback()
         print(f"Error updating economic data: {_err}")
         return jsonify({'success': False, 'error': str(_err)}), 500
+    finally:
+        if conn:
+            conn.close()
 
 
 @app.route("/api/companies", methods=['POST'])
@@ -1826,11 +1839,11 @@ def api_create_plan():
                 conn.commit()
                 conn.close()
                 project_created = True
-                print(f"✅ Projeto GRV criado automaticamente: ID {project_id} para plan {new_plan_id}")
+                print(f"[OK] Projeto GRV criado automaticamente: ID {project_id} para plan {new_plan_id}")
             else:
-                print(f"❌ create_company_project retornou None!")
+                print(f"[ERRO] create_company_project retornou None!")
         except Exception as project_err:
-            print(f"❌ ERRO ao criar projeto GRV: {project_err}")
+            print(f"[ERRO] ERRO ao criar projeto GRV: {project_err}")
             import traceback
             traceback.print_exc()
             # Não falhar a criação do plano por causa disso
@@ -1919,8 +1932,21 @@ def api_get_company_profile(company_id: int):
 @login_required
 def api_update_company_profile(company_id: int):
     """Update company basic information"""
+    conn = None
     try:
         payload = request.get_json(silent=True) or {}
+
+        def _clean(value):
+            if value is None:
+                return None
+            if isinstance(value, str):
+                value = value.strip()
+                return value or None
+            return value
+
+        name = _clean(payload.get('name'))
+        if not name:
+            return jsonify({'success': False, 'error': 'Nome da empresa é obrigatório'}), 400
 
         raw_client_code = payload.get('client_code')
         if raw_client_code is not None:
@@ -1936,23 +1962,33 @@ def api_update_company_profile(company_id: int):
         cursor = conn.cursor()
         cursor.execute('''
             UPDATE companies SET
-                name = %s, client_code = ?, legal_name = ?, industry = ?, size = ?, description = ?
+                name = %s,
+                client_code = %s,
+                legal_name = %s,
+                industry = %s,
+                size = %s,
+                description = %s
             WHERE id = %s
         ''', (
-            payload.get('name'),
+            name,
             client_code,
-            payload.get('legal_name'),
-            payload.get('industry'),
-            payload.get('size'),
-            payload.get('description'),
+            _clean(payload.get('legal_name')),
+            _clean(payload.get('industry')),
+            _clean(payload.get('size')),
+            _clean(payload.get('description')),
             company_id
         ))
         conn.commit()
-        conn.close()
 
         return jsonify({'success': True})
     except Exception as _err:
+        if conn:
+            conn.rollback()
         print(f"Error updating company: {_err}")
+        return jsonify({'success': False, 'error': str(_err)}), 500
+    finally:
+        if conn:
+            conn.close()
 
 
 @app.route("/api/companies/<int:company_id>", methods=['DELETE'])
@@ -10508,7 +10544,7 @@ if __name__ == "__main__":
         print("\nAPP29 - Sistema de Gestão Versus Starting...")
         print("Database abstraction layer active")
         print("Sistema de relatórios implementado")
-        print("Server running at: http://127.0.0.1:5002")
+        print("Server running at: http://127.0.0.1:5003")
         print("Available operations:")
         print("   - View and edit company data")
         print("   - Manage participants")
@@ -10527,7 +10563,7 @@ if __name__ == "__main__":
         print("   - Configure connection parameters")
         
         # Inicializar Scheduler para tarefas agendadas
-        print("\n🔧 Inicializando Scheduler de Tarefas...")
+        print("\n[SCHEDULER] Inicializando Scheduler de Tarefas...")
         try:
             from services.scheduler_service import initialize_scheduler, shutdown_scheduler
             import atexit
@@ -10538,13 +10574,13 @@ if __name__ == "__main__":
             # Registrar shutdown do scheduler ao fechar a aplicação
             atexit.register(shutdown_scheduler)
             
-            print("✅ Scheduler ativo - Rotinas serão executadas automaticamente!")
+            print("[OK] Scheduler ativo - Rotinas serao executadas automaticamente!")
         except Exception as e:
-            print(f"⚠️ Aviso: Scheduler não pôde ser iniciado: {e}")
+            print(f"[AVISO] Scheduler nao pode ser iniciado: {e}")
             print("   Rotinas devem ser executadas manualmente via routine_scheduler.py")
         
         print("\nIniciando servidor...")
-        app.run(debug=True, host='0.0.0.0', port=5002, use_reloader=False)
+        app.run(debug=True, host='0.0.0.0', port=5003, use_reloader=False)
     except Exception as e:
         print(f">> ERRO AO INICIAR SERVIDOR: {e}")
         import traceback

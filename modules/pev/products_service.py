@@ -2,12 +2,13 @@
 
 from __future__ import annotations
 
-from datetime import datetime
+from datetime import datetime, date
 from decimal import Decimal, InvalidOperation, ROUND_HALF_UP
 from typing import Any, Dict, Iterable, List, Optional
 
 from models import db
 from models.product import Product
+from models.product_rampup import ProductRampUpEntry
 # Importar dependências ORM para garantir que as tabelas relacionadas estejam registradas
 from models import company as _company  # noqa: F401
 from models import participant as _participant  # noqa: F401
@@ -20,6 +21,7 @@ from models.plan import Plan  # noqa: F401
 from sqlalchemy import text
 
 TWOPLACES = Decimal("0.01")
+HUNDRED = Decimal("100")
 
 
 class ProductValidationError(ValueError):
@@ -59,7 +61,7 @@ def fetch_product(plan_id: int, product_id: int) -> Dict[str, Any]:
     ).first()
 
     if not product:
-        raise ProductNotFoundError("Produto não encontrado.")
+        raise ProductNotFoundError("Produto nao encontrado.")
 
     return serialize_product(product)
 
@@ -68,18 +70,27 @@ def create_product(plan_id: int, payload: Dict[str, Any]) -> Dict[str, Any]:
     """Create a new product for a plan."""
     ensure_products_table()
 
+    ramp_payload = _extract_ramp_payload(payload)
+
     plan_exists = db.session.execute(
         text("SELECT 1 FROM plans WHERE id = :plan_id LIMIT 1"),
         {"plan_id": plan_id},
     ).first()
     if not plan_exists:
-        raise ProductValidationError("Plano informado não existe.")
+        raise ProductValidationError("Plano informado nao existe.")
 
     product = Product()
     _assign_product_fields(product, plan_id, payload)
 
     db.session.add(product)
+    db.session.flush()
+
+    ramp_entries = _normalize_ramp_entries(ramp_payload, default_to_empty=True)
+    if ramp_entries is not None:
+        _replace_rampup_entries(plan_id, product.id, ramp_entries)
+
     db.session.commit()
+    db.session.refresh(product)
     return serialize_product(product)
 
 
@@ -94,10 +105,18 @@ def update_product(plan_id: int, product_id: int, payload: Dict[str, Any]) -> Di
     ).first()
 
     if not product:
-        raise ProductNotFoundError("Produto não encontrado.")
+        raise ProductNotFoundError('Produto nao encontrado.')
+
+    ramp_payload = _extract_ramp_payload(payload)
 
     _assign_product_fields(product, plan_id, payload)
+
+    ramp_entries = _normalize_ramp_entries(ramp_payload, default_to_empty=False)
+    if ramp_entries is not None:
+        _replace_rampup_entries(plan_id, product.id, ramp_entries)
+
     db.session.commit()
+    db.session.refresh(product)
     return serialize_product(product)
 
 
@@ -112,7 +131,7 @@ def soft_delete_product(plan_id: int, product_id: int) -> None:
     ).first()
 
     if not product:
-        raise ProductNotFoundError("Produto não encontrado.")
+        raise ProductNotFoundError("Produto nao encontrado.")
 
     product.is_deleted = True
     product.updated_at = datetime.utcnow()
@@ -395,6 +414,27 @@ def _build_clean_product_data(plan_id: int, payload: Dict[str, Any]) -> Dict[str
 
 def serialize_product(product: Product) -> Dict[str, Any]:
     """Return a JSON-serializable representation of a product."""
+    ramp_entries = _serialize_ramp_entries(product.id)
+
+    sale_price_decimal = _decimal_from_value(product.sale_price)
+    units_goal_decimal = _decimal_from_value(product.market_share_goal_monthly_units)
+    cost_unit_decimal = _decimal_from_value(product.variable_costs_value)
+    expense_unit_decimal = _decimal_from_value(product.variable_expenses_value)
+
+    cost_base_decimal = _quantize(cost_unit_decimal * units_goal_decimal)
+    expense_base_decimal = _quantize(expense_unit_decimal * units_goal_decimal)
+    revenue_base_decimal = _quantize(sale_price_decimal * units_goal_decimal)
+    margin_base_decimal = _quantize(revenue_base_decimal - cost_base_decimal - expense_base_decimal)
+
+    ramp_summary = {
+        "base_units": _float_from_decimal(units_goal_decimal),
+        "base_revenue": _float_from_decimal(revenue_base_decimal),
+        "base_cost": _float_from_decimal(cost_base_decimal),
+        "base_expense": _float_from_decimal(expense_base_decimal),
+        "base_margin": _float_from_decimal(margin_base_decimal),
+        "start_month": ramp_entries[0]["month"] if ramp_entries else None,
+    }
+
     return {
         "id": product.id,
         "plan_id": product.plan_id,
@@ -419,7 +459,192 @@ def serialize_product(product: Product) -> Dict[str, Any]:
         "market_share_goal_notes": product.market_share_goal_notes,
         "created_at": product.created_at.isoformat() if product.created_at else None,
         "updated_at": product.updated_at.isoformat() if product.updated_at else None,
+        "ramp_up_entries": ramp_entries,
+        "ramp_up_summary": ramp_summary,
     }
+
+
+def _extract_ramp_payload(payload: Dict[str, Any]) -> Optional[Any]:
+    """Return ramp-up payload structure if present in request."""
+    for key in ("ramp_up_entries", "ramp_up", "rampEntries", "ramp_entries", "rampUp"):
+        if key in payload:
+            return payload.get(key)
+    return None
+
+
+def _normalize_ramp_entries(
+    entries: Any,
+    *,
+    default_to_empty: bool,
+) -> Optional[List[Dict[str, Any]]]:
+    """Validate and normalize incoming ramp-up entries."""
+    if entries is None:
+        return [] if default_to_empty else None
+
+    if isinstance(entries, dict):
+        for candidate in ("entries", "items", "schedule", "meses", "months"):
+            if candidate in entries:
+                entries = entries.get(candidate)
+                break
+
+    if isinstance(entries, (list, tuple, set)):
+        source = list(entries)
+    else:
+        raise ProductValidationError("Formato de dados de ramp-up invalido.")
+
+    normalized: List[Dict[str, Any]] = []
+    seen_months: set[str] = set()
+    for raw in source:
+        if raw is None:
+            continue
+        if not isinstance(raw, dict):
+            raise ProductValidationError("Entrada de ramp-up invalida.")
+
+        month_value = (
+            raw.get("month")
+            or raw.get("reference_month")
+            or raw.get("mes")
+            or raw.get("month_key")
+        )
+        if not month_value:
+            raise ProductValidationError("Mês do ramp-up é obrigatório.")
+
+        reference_month = _parse_month_identifier(month_value)
+        month_key = reference_month.strftime("%Y-%m")
+        if month_key in seen_months:
+            raise ProductValidationError(f"Mês {month_key} duplicado no ramp-up.")
+        seen_months.add(month_key)
+
+        percent_value = (
+            raw.get("percentage")
+            or raw.get("percent")
+            or raw.get("valor")
+            or raw.get("value")
+        )
+        if percent_value is None:
+            raise ProductValidationError(f"Percentual do mês {month_key} é obrigatório.")
+
+        try:
+            percent_decimal = _quantize(Decimal(str(percent_value)))
+        except (InvalidOperation, ValueError):
+            raise ProductValidationError(f"Percentual inválido no mês {month_key}.")
+
+        if percent_decimal < Decimal("0") or percent_decimal > HUNDRED:
+            raise ProductValidationError(
+                f"Percentual do mês {month_key} deve estar entre 0 e 100."
+            )
+
+        notes_text = _normalize_text(
+            raw.get("notes") or raw.get("observacoes") or raw.get("obs"), allow_blank=True
+        )
+
+        normalized.append(
+            {
+                "reference_month": reference_month,
+                "month_key": month_key,
+                "percentage": percent_decimal,
+                "notes": notes_text,
+            }
+        )
+
+    normalized.sort(key=lambda item: item["reference_month"])
+    return normalized
+
+
+def _replace_rampup_entries(plan_id: int, product_id: int, entries: List[Dict[str, Any]]) -> None:
+    """Replace ramp-up entries for product with provided list."""
+    db.session.query(ProductRampUpEntry).filter_by(product_id=product_id).delete(
+        synchronize_session=False
+    )
+    for entry in entries:
+        db.session.add(
+            ProductRampUpEntry(
+                plan_id=plan_id,
+                product_id=product_id,
+                reference_month=entry["reference_month"],
+                percentage=entry["percentage"],
+                notes=entry.get("notes") or None,
+            )
+        )
+
+
+def _serialize_ramp_entries(product_id: int) -> List[Dict[str, Any]]:
+    """Serialize ramp-up entries for API responses."""
+    entries = (
+        ProductRampUpEntry.query.filter_by(product_id=product_id)
+        .order_by(ProductRampUpEntry.reference_month.asc())
+        .all()
+    )
+    serialized: List[Dict[str, Any]] = []
+    for entry in entries:
+        month_key = _format_month_key(entry.reference_month)
+        serialized.append(
+            {
+                "id": entry.id,
+                "month": month_key,
+                "month_label": _format_month_label(entry.reference_month),
+                "percentage": _float_from_decimal(_quantize(Decimal(entry.percentage or 0))),
+                "notes": entry.notes or "",
+            }
+        )
+    return serialized
+
+
+def _parse_month_identifier(value: Any) -> date:
+    """Parse several month formats into first-day-of-month date."""
+    if isinstance(value, date):
+        return value.replace(day=1)
+    if isinstance(value, datetime):
+        base = value.date()
+        return date(base.year, base.month, 1)
+    if isinstance(value, (tuple, list)) and len(value) >= 2:
+        year, month = int(value[0]), int(value[1])
+        return date(year, month, 1)
+
+    if isinstance(value, str):
+        cleaned = value.strip()
+        if not cleaned:
+            raise ProductValidationError("Mês do ramp-up é obrigatório.")
+        for fmt in ("%Y-%m-%d", "%Y-%m", "%m/%Y", "%Y/%m"):
+            try:
+                parsed = datetime.strptime(cleaned, fmt)
+                return date(parsed.year, parsed.month, 1)
+            except ValueError:
+                continue
+    raise ProductValidationError("Formato de mês do ramp-up inválido.")
+
+
+def _format_month_key(value: Optional[date]) -> Optional[str]:
+    if not value:
+        return None
+    return value.strftime("%Y-%m")
+
+
+def _format_month_label(value: Optional[date]) -> Optional[str]:
+    if not value:
+        return None
+    return value.strftime("%m/%Y")
+
+
+def _decimal_from_value(value: Any) -> Decimal:
+    if isinstance(value, Decimal):
+        return _quantize(value)
+    if value is None:
+        return Decimal("0.00")
+    try:
+        return _quantize(Decimal(str(_to_float(value))))
+    except (InvalidOperation, ValueError):
+        return Decimal("0.00")
+
+
+def _float_from_decimal(value: Decimal) -> float:
+    normalized = _quantize(value)
+    if normalized == Decimal("-0.00"):
+        normalized = Decimal("0.00")
+    result = float(normalized)
+    if result == -0.0:
+        return 0.0
+    return result
 
 
 def _parse_decimal(value: Any, *, allow_zero: bool, field: str = "") -> Decimal:

@@ -69,12 +69,12 @@
   --spacing-2xl: 48px;
   
   /* Margens de Página */
-  --page-margin-top: 48mm;
-  --page-margin-right: 58px;
-  --page-margin-bottom: 48mm;
-  --page-margin-left: 58px;
-  --page-margin-top-landscape: 35mm;
-  --page-margin-right-landscape: 48px;
+  --page-margin-top: 5mm;
+  --page-margin-right: 5mm;
+  --page-margin-bottom: 5mm;
+  --page-margin-left: 5mm;
+  --page-margin-top-landscape: 5mm;
+  --page-margin-right-landscape: 5mm;
   
   /* Border Radius */
   --radius-sm: 12px;
@@ -101,16 +101,17 @@
 }
 
 .model7-report {
-  max-width: 1020px;
+  width: 794px;
+  max-width: 794px;
   margin: 0 auto;
 }
 
 body.report-view {
-  background: var(--color-background-muted);
+  background: var(--color-background);
   color: var(--color-text-primary);
   font-family: var(--font-family-base);
   line-height: var(--line-height-normal);
-  padding: 32px 16px 64px;
+  padding: 0;
 }
 
 
@@ -121,13 +122,36 @@ body.report-view {
 .page {
   position: relative;
   background: var(--color-background);
-  border-radius: var(--radius-2xl);
-  border: 1px solid rgba(15, 23, 42, 0.08);
-  box-shadow: var(--shadow-lg);
-  margin-bottom: 42px;
+  border-radius: 0;
+  border: none;
+  box-shadow: none;
+  margin: 0 auto 32px;
+  width: 100%;
   overflow: hidden;
   page-break-after: always;
-  width: 100%;
+}
+
+@media screen {
+  .page::before {
+    content: "";
+    position: absolute;
+    inset: 0;
+    border: 1px solid rgba(15, 23, 42, 0.25);
+    pointer-events: none;
+    z-index: 1;
+  }
+
+  .page::after {
+    content: "";
+    position: absolute;
+    top: var(--page-margin-top);
+    right: var(--page-margin-right);
+    bottom: var(--page-margin-bottom);
+    left: var(--page-margin-left);
+    border: 1px dashed rgba(37, 99, 235, 0.45);
+    pointer-events: none;
+    z-index: 1;
+  }
 }
 
 .page:last-child {
@@ -136,22 +160,24 @@ body.report-view {
 
 .page.portrait {
   padding: var(--page-margin-top) var(--page-margin-right) var(--page-margin-bottom) var(--page-margin-left);
+  min-height: calc(297mm - 10mm);
   page: portrait;
 }
 
 .page.landscape {
   padding: var(--page-margin-top-landscape) var(--page-margin-right-landscape);
+  min-height: calc(210mm - 10mm);
   page: landscapePage;
 }
 
 @page portrait {
   size: A4 portrait;
-  margin: 18mm 16mm 22mm;
+  margin: 5mm;
 }
 
 @page landscapePage {
   size: A4 landscape;
-  margin: 18mm 22mm 18mm;
+  margin: 5mm;
 }
 
 
@@ -686,11 +712,11 @@ table.model7-table tbody tr:hover {
     box-shadow: none;
     margin: 0;
     width: auto;
-    padding: 20mm 20mm 24mm;
+    padding: var(--page-margin-top) var(--page-margin-right) var(--page-margin-bottom) var(--page-margin-left);
   }
 
   .page.landscape {
-    padding: 18mm 18mm 20mm;
+    padding: var(--page-margin-top-landscape) var(--page-margin-right-landscape);
   }
 
   .cover-page,

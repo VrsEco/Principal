@@ -1,6 +1,7 @@
-from flask import Blueprint, render_template, url_for, request, jsonify
+from flask import Blueprint, render_template, url_for, request, jsonify, redirect
 from datetime import datetime
 import json
+from typing import Any, Dict, List
 from config_database import get_db
 from modules.pev.implantation_data import (
     build_final_report_payload,
@@ -19,10 +20,67 @@ from modules.pev.implantation_data import (
     calculate_investment_summary_by_block,
     aggregate_structure_investments,
     serialize_structure_investment_summary,
+    build_modefin_investment_flow,
+    build_modefin_business_flow,
+    build_modefin_investor_flow,
+    _classify_structure_installment,
+    _month_key_from_tuple,
+    _month_tuple_from_value,
+    _parse_decimal,
 )
 from modules.pev import products_service
 
 pev_bp = Blueprint('pev', __name__, url_prefix='/pev')
+
+
+def _calcular_tir_newton(fluxos: List[float]) -> float:
+    """
+    Calcula TIR usando método de Newton-Raphson
+    Retorna taxa mensal (ou None se não convergir)
+    """
+    if not fluxos:
+        return None
+    
+    # Verificar se há fluxos negativos e positivos
+    tem_negativo = any(f < 0 for f in fluxos)
+    tem_positivo = any(f > 0 for f in fluxos)
+    
+    if not (tem_negativo and tem_positivo):
+        return None
+    
+    # Newton-Raphson
+    taxa = 0.10  # Chute inicial: 10% ao mês
+    max_iter = 100
+    precisao = 0.0001
+    
+    for _ in range(max_iter):
+        vpl = 0.0
+        derivada = 0.0
+        
+        for periodo, fluxo in enumerate(fluxos, start=1):
+            vpl += fluxo / ((1 + taxa) ** periodo)
+            derivada -= (periodo * fluxo) / ((1 + taxa) ** (periodo + 1))
+        
+        # Se VPL próximo de zero, encontramos a TIR
+        if abs(vpl) < precisao:
+            return taxa
+        
+        # Evitar divisão por zero
+        if abs(derivada) < 0.000001:
+            return None
+        
+        # Newton-Raphson
+        nova_taxa = taxa - vpl / derivada
+        
+        # Limitar taxa entre -50% e 200% ao mês
+        if nova_taxa < -0.5:
+            nova_taxa = -0.5
+        if nova_taxa > 2.0:
+            nova_taxa = 2.0
+        
+        taxa = nova_taxa
+    
+    return taxa
 
 
 def _resolve_plan_id():
@@ -137,8 +195,14 @@ def pev_implantacao_overview():
     db = get_db()
     payload = build_overview_payload(db, plan_id)
     plan = payload["plan"]
+
+    plan_mode = (plan.get("plan_mode") or "evolucao").lower()
+    if plan_mode != "implantacao":
+        print(f"ℹ️ Plano {plan_id} com plan_mode='{plan_mode}' redirecionado para interface clássica.")
+        return redirect(url_for("plan_dashboard", plan_id=plan_id))
+
     project_info = load_alignment_project(db, plan_id)
-    
+
     # Link direto para o projeto GRV criado para este planejamento
     if plan.get("company_id"):
         # Buscar projeto vinculado a este plan
@@ -387,7 +451,102 @@ def implantacao_modefin():
     
     # Parcelas das estruturas (para cálculo por data de vencimento)
     parcelas_estruturas = db.list_plan_structure_installments(plan_id)
-    
+
+    def _safe_float(value: Any) -> float:
+        if value in (None, "", 0):
+            return 0.0
+        if isinstance(value, (int, float)):
+            return float(value)
+        text_value = str(value).strip().replace(',', '.')
+        try:
+            return float(text_value)
+        except ValueError:
+            return 0.0
+
+    fixed_cost_entries: List[Dict[str, Any]] = []
+    for area in estruturas:
+        for bloco in area.get("blocos", []):
+            bloco_nome = bloco.get("nome") or ""
+            for item in bloco.get("itens", []):
+                acquisition_info = item.get("data_aquisicao")
+                structure_id = item.get("id")
+                for parcela in item.get("parcelas", []):
+                    classification = _classify_structure_installment(bloco_nome, parcela)
+                    class_norm = classification.get("classificacao_norm")
+                    if class_norm not in {"custo fixo", "despesa fixa"}:
+                        continue
+                    repeticao_norm = classification.get("repeticao_norm")
+                    if repeticao_norm not in {"mensal", "trimestral", "semestral"}:
+                        continue
+                    valor_decimal = _parse_decimal(parcela.get("valor"))
+                    if valor_decimal is None:
+                        continue
+                    valor_float = float(valor_decimal)
+                    if valor_float <= 0:
+                        continue
+                    if repeticao_norm == "trimestral":
+                        valor_float /= 3.0
+                    elif repeticao_norm == "semestral":
+                        valor_float /= 6.0
+
+                    start_tuple = None
+                    if acquisition_info:
+                        start_tuple = _month_tuple_from_value(acquisition_info)
+                    if not start_tuple:
+                        start_tuple = _month_tuple_from_value(parcela.get("vencimento") or parcela.get("due_info"))
+                    if not start_tuple:
+                        continue
+
+                    start_month = _month_key_from_tuple(start_tuple)
+                    fixed_cost_entries.append(
+                        {
+                            "structure_id": structure_id,
+                            "type": "custo" if class_norm == "custo fixo" else "despesa",
+                            "monthly_value": valor_float,
+                            "start_month": start_month,
+                            "installment_number": parcela.get("numero"),
+                        }
+                    )
+
+    modefin_ramp: List[Dict[str, Any]] = []
+    for product_data in products:
+        summary = product_data.get("ramp_up_summary") or {}
+        base_revenue = _safe_float(summary.get("base_revenue"))
+        base_cost = _safe_float(summary.get("base_cost"))
+        base_expense = _safe_float(summary.get("base_expense"))
+        base_margin = _safe_float(summary.get("base_margin"))
+        if base_margin == 0 and (base_revenue or base_cost or base_expense):
+            base_margin = base_revenue - base_cost - base_expense
+
+        ramp_entries = product_data.get("ramp_up_entries") or []
+        normalized_entries: List[Dict[str, Any]] = []
+        for entry in ramp_entries:
+            month_value = entry.get("month") or entry.get("reference_month")
+            month_tuple = _month_tuple_from_value(month_value) if month_value else None
+            if not month_tuple:
+                continue
+            month_key = _month_key_from_tuple(month_tuple)
+            percentage_raw = entry.get("percentage") or entry.get("percent") or entry.get("value")
+            percentage = _safe_float(percentage_raw)
+            if percentage < 0:
+                percentage = 0.0
+            if percentage > 100:
+                percentage = 100.0
+            normalized_entries.append({"month": month_key, "percentage": percentage})
+
+        normalized_entries.sort(key=lambda item: item["month"])
+        modefin_ramp.append(
+            {
+                "base_revenue": base_revenue,
+                "base_cost": base_cost,
+                "base_expense": base_expense,
+                "base_margin": base_margin,
+                "entries": normalized_entries,
+                "ramp_up_entries": normalized_entries,  # Compatibilidade com frontend
+                "ramp_up_summary": summary,  # Incluir summary completo
+            }
+        )
+
     # DEBUG
     print("\n" + "="*80)
     print(f"[ModeFin] plan_id={plan_id}")
@@ -414,6 +573,8 @@ def implantacao_modefin():
         executive_summary=executive_summary,
         financeiro=financeiro,
         parcelas_estruturas=parcelas_estruturas,
+        fixed_cost_entries=fixed_cost_entries,
+        modefin_ramp=modefin_ramp,
     )
 
 
@@ -853,11 +1014,249 @@ def implantacao_relatorio_final():
     plan = build_plan_context(db, plan_id)
     canvas_data = load_alignment_canvas(db, plan_id)
     agenda_project = load_alignment_project(db, plan_id)
+    agenda_data = load_alignment_agenda(db, plan_id)
+    projeto_atividades = agenda_data.get('atividades', [])
+    
+    print(f"\n[DEBUG] Atividades carregadas: {len(projeto_atividades)}")
+    if projeto_atividades:
+        print(f"[DEBUG] Primeira atividade: {projeto_atividades[0]}")
     principles = db.list_alignment_principles(plan_id)
     segments = load_segments(db, plan_id)
     competitive_segments = build_competitive_segments(segments)
     estruturas = load_structures(db, plan_id)
     financeiro = load_financial_model(db, plan_id)
+    
+    # ===== DADOS DA MODEFIN =====
+    # Produtos e margens
+    products = products_service.fetch_products(plan_id)
+    products_totals = products_service.calculate_totals(products)
+    
+    # Investimentos das estruturas
+    resumo_investimentos = calculate_investment_summary_by_block(estruturas)
+    estrutura_investimentos_payload = aggregate_structure_investments(estruturas)
+    investimentos_estruturas = serialize_structure_investment_summary(
+        estrutura_investimentos_payload.get("categories", {})
+    )
+    
+    # Extrair resumo de custos fixos do resumo_investimentos
+    resumo_totais = next(
+        (item for item in resumo_investimentos 
+         if item.get("is_total") or (item.get("bloco") or "").strip().upper() == "TOTAL"),
+        {}
+    )
+    
+    fixed_costs_dict = {
+        "custos_fixos_mensal": float(resumo_totais.get("custos_fixos_mensal") or 0),
+        "despesas_fixas_mensal": float(resumo_totais.get("despesas_fixas_mensal") or 0),
+        "total_gastos_mensal": float(resumo_totais.get("total_gastos_mensal") or 0),
+    }
+    
+    # Capital de giro
+    capital_giro_items = db.list_plan_capital_giro(plan_id) if hasattr(db, 'list_plan_capital_giro') else []
+    
+    # Fontes de recursos
+    funding_sources = db.list_plan_finance_sources(plan_id)
+    
+    # Distribuição de lucros e destinações
+    profit_distribution_data = db.get_profit_distribution(plan_id) if hasattr(db, 'get_profit_distribution') else None
+    profit_distribution = [profit_distribution_data] if profit_distribution_data else []
+    result_rules = db.list_plan_finance_result_rules(plan_id)
+    
+    # Resumo executivo
+    executive_summary = db.get_executive_summary(plan_id) if hasattr(db, 'get_executive_summary') else None
+    
+    # Preparar métricas de análise a partir dos fluxos reais da ModeFin
+    analysis_metrics = {
+        'total_investimentos': 0.0,
+        'resultado_operacional': 0.0,
+        'periodo_meses': 60,
+        'custo_oportunidade_percent': 12.0,
+        'payback_meses': None,
+        'payback_inicio': None,
+        'payback_fim': None,
+        'roi_percent': None,
+        'tir_percent': None,
+        'vpl': None,
+    }
+    
+    # Construir fixed_cost_entries (custos fixos por data)
+    def _safe_float_local(value):
+        if value in (None, "", 0):
+            return 0.0
+        if isinstance(value, (int, float)):
+            return float(value)
+        try:
+            return float(str(value).strip().replace(',', '.'))
+        except (ValueError, TypeError):
+            return 0.0
+    
+    fixed_cost_entries = []
+    for area in estruturas:
+        for bloco in area.get("blocos", []):
+            bloco_nome = bloco.get("nome") or ""
+            for item in bloco.get("itens", []):
+                acquisition_info = item.get("data_aquisicao")
+                structure_id = item.get("id")
+                for parcela in item.get("parcelas", []):
+                    classification = _classify_structure_installment(bloco_nome, parcela)
+                    class_norm = classification.get("classificacao_norm")
+                    if class_norm not in {"custo fixo", "despesa fixa"}:
+                        continue
+                    repeticao_norm = classification.get("repeticao_norm")
+                    if repeticao_norm not in {"mensal", "trimestral", "semestral"}:
+                        continue
+                    valor_decimal = _parse_decimal(parcela.get("valor"))
+                    if valor_decimal is None:
+                        continue
+                    valor_float = float(valor_decimal)
+                    if valor_float <= 0:
+                        continue
+                    if repeticao_norm == "trimestral":
+                        valor_float /= 3.0
+                    elif repeticao_norm == "semestral":
+                        valor_float /= 6.0
+                    
+                    start_tuple = None
+                    if acquisition_info:
+                        start_tuple = _month_tuple_from_value(acquisition_info)
+                    if not start_tuple:
+                        start_tuple = _month_tuple_from_value(parcela.get("vencimento") or parcela.get("due_info"))
+                    if not start_tuple:
+                        continue
+                    
+                    start_month = _month_key_from_tuple(start_tuple)
+                    fixed_cost_entries.append({
+                        "structure_id": structure_id,
+                        "type": "custo" if class_norm == "custo fixo" else "despesa",
+                        "monthly_value": valor_float,
+                        "start_month": start_month,
+                        "installment_number": parcela.get("numero"),
+                    })
+    
+    # Construir Fluxo de Investimento usando função específica
+    investment_flow = build_modefin_investment_flow(
+        capital_giro_items,
+        investimentos_estruturas,
+        funding_sources
+    )
+    
+    # Construir Fluxo de Caixa do Negócio com dados corretos da ModeFin
+    business_flow = build_modefin_business_flow(
+        products,
+        products_totals,
+        fixed_cost_entries,
+        profit_distribution,
+        result_rules,
+        num_months=60
+    )
+    
+    # Construir Fluxo de Caixa do Investidor (combina investment_flow + business_flow)
+    investor_flow = build_modefin_investor_flow(
+        investment_flow,
+        business_flow,
+        profit_distribution
+    )
+    
+    # Calcular métricas de análise a partir dos fluxos reais
+    # Investimento total
+    analysis_metrics['total_investimentos'] = investment_flow.get('totals', {}).get('investimentos', 0.0)
+    
+    # Resultado operacional (média dos primeiros 12 meses após ramp-up completo)
+    business_rows_full = business_flow.get('rows_full', [])
+    if business_rows_full and len(business_rows_full) >= 12:
+        # Pegar últimos meses com ramp-up em 100%
+        resultados_estabilizados = [r.get('resultado_operacional', 0) for r in business_rows_full[-12:]]
+        analysis_metrics['resultado_operacional'] = sum(resultados_estabilizados) / len(resultados_estabilizados)
+    
+    # Calcular métricas financeiras a partir do investor_flow
+    # Precisamos dos dados COMPLETOS (não condensados) para cálculos precisos
+    
+    # Reconstruir investor_flow completo para cálculos
+    # Vou processar business_rows_full diretamente
+    total_aportes = 0.0
+    total_distribuicoes = 0.0
+    fluxos_mensais = []  # Para VPL e TIR
+    
+    payback_meses = None
+    payback_inicio = None
+    payback_fim = None
+    primeiro_aporte_idx = None
+    saldo_acum = 0.0
+    
+    # Criar mapa de aportes por período
+    aportes_map = {}
+    for row in investment_flow.get("rows", []):
+        periodo = row.get("period_label", "")
+        fontes = row.get("fontes", 0.0)
+        if periodo and fontes > 0:
+            aportes_map[periodo] = fontes
+    
+    # Processar cada mês
+    for idx, bus_row in enumerate(business_rows_full):
+        periodo = bus_row.get("periodo", "")
+        aporte = aportes_map.get(periodo, 0.0)
+        distribuicao = bus_row.get("distribuicao", 0.0)
+        
+        # Fluxo do investidor: distribuição - aporte
+        fluxo = distribuicao - aporte
+        fluxos_mensais.append(fluxo)
+        
+        # Acumular totais
+        total_aportes += aporte
+        total_distribuicoes += distribuicao
+        
+        # Calcular saldo acumulado
+        saldo_acum += fluxo
+        
+        # Detectar pay-back
+        if aporte > 0 and primeiro_aporte_idx is None:
+            primeiro_aporte_idx = idx
+            payback_inicio = periodo
+        
+        if primeiro_aporte_idx is not None and payback_fim is None and saldo_acum >= 0:
+            payback_meses = (idx - primeiro_aporte_idx) + 1
+            payback_fim = periodo
+    
+    # Calcular ROI
+    roi_percent = None
+    if total_aportes > 0:
+        roi_percent = (total_distribuicoes / total_aportes) * 100
+    
+    # Calcular VPL
+    vpl = 0.0
+    taxa_anual = 12.0  # 12% a.a.
+    taxa_mensal = ((1 + (taxa_anual / 100)) ** (1/12)) - 1
+    
+    for mes, fluxo in enumerate(fluxos_mensais, start=1):
+        valor_presente = fluxo / ((1 + taxa_mensal) ** mes)
+        vpl += valor_presente
+    
+    # Calcular TIR usando Newton-Raphson
+    tir_percent = None
+    if total_aportes > 0 and total_distribuicoes > 0:
+        tir_mensal = _calcular_tir_newton(fluxos_mensais)
+        if tir_mensal is not None:
+            # Converter para taxa anual
+            tir_percent = ((1 + tir_mensal) ** 12 - 1) * 100
+    
+    # Atualizar analysis_metrics
+    analysis_metrics['payback_meses'] = payback_meses
+    analysis_metrics['payback_inicio'] = payback_inicio
+    analysis_metrics['payback_fim'] = payback_fim
+    analysis_metrics['roi_percent'] = roi_percent
+    analysis_metrics['tir_percent'] = tir_percent
+    analysis_metrics['vpl'] = vpl
+    
+    print(f"\n[DEBUG] Métricas Calculadas:")
+    print(f"  Total Aportes: {total_aportes:,.2f}")
+    print(f"  Total Distribuições: {total_distribuicoes:,.2f}")
+    print(f"  Pay-back: {payback_meses} meses ({payback_inicio} a {payback_fim})")
+    print(f"  ROI: {roi_percent:.2f}%" if roi_percent else "  ROI: None")
+    print(f"  TIR: {tir_percent:.2f}% a.a." if tir_percent else "  TIR: None")
+    print(f"  VPL: {vpl:,.2f}")
+    
+    # ===== FIM DADOS MODEFIN =====
+    
     report_payload = build_final_report_payload(
         plan,
         canvas_data,
@@ -867,6 +1266,11 @@ def implantacao_relatorio_final():
         summarize_structures_for_report(estruturas),
         financeiro,
     )
+    # Adicionar investment_flow ao financeiro para o template
+    financeiro_completo = report_payload.get("financeiro", {})
+    if investment_flow:
+        financeiro_completo['investimento'] = investment_flow
+    
     return render_template(
         "implantacao/entrega_relatorio_final.html",
         user_name=plan.get("consultant", "Consultor responsavel"),
@@ -874,9 +1278,25 @@ def implantacao_relatorio_final():
         alinhamento=report_payload.get("alinhamento"),
         segmentos=report_payload.get("segmentos"),
         estruturas=report_payload.get("estruturas"),
-        financeiro=report_payload.get("financeiro"),
+        financeiro=financeiro_completo,
         projeto=agenda_project,
+        projeto_atividades=projeto_atividades,
         issued_at=report_payload.get("issued_at"),
+        # Dados da ModeFin
+        modefin_products=products,
+        modefin_products_totals=products_totals,
+        modefin_fixed_costs=fixed_costs_dict,
+        modefin_investimentos_resumo=resumo_investimentos,
+        modefin_capital_giro=capital_giro_items,
+        modefin_funding_sources=funding_sources,
+        modefin_profit_distribution=profit_distribution,
+        modefin_result_rules=result_rules,
+        modefin_executive_summary=executive_summary,
+        modefin_investment_flow=investment_flow,
+        modefin_business_flow=business_flow,
+        modefin_investor_flow=investor_flow,
+        investment_flow=investment_flow,
+        analysis_metrics=analysis_metrics,
     )
 
 

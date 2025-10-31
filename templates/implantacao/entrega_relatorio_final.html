@@ -20,7 +20,8 @@
   status_badge,
   format_currency,
   format_percent,
-  format_date
+  format_date,
+  format_number
 %}
 
 {% block page_title %}Relatorio Final de Implantacao - {{ plan.plan_name }} - GestaoVersus{% endblock %}
@@ -500,14 +501,75 @@
 </section>
 
 {# ---------------------------------------------------------
-   05. Modelagem Financeira e Indicadores
+   05. ModeFin - Modelagem Financeira
    --------------------------------------------------------- #}
 <section class="page landscape">
-  {{ section_header("05", "Modelagem Financeira & Indicadores") }}
-  
+  {{ section_header("05", "ModeFin - Modelagem Financeira") }}
+
+  {% set products_totals = modefin_products_totals or {} %}
+  {% set fixed_costs = modefin_fixed_costs or {} %}
+  {% set investment_flow = modefin_investment_flow or {} %}
+  {% set investment_totals = investment_flow.get('totals', {}) %}
+  {% set analysis_metrics_data = analysis_metrics or {} %}
+
   <div class="section-body">
-    {% call subsection("Premissas") %}
+    {% call subsection("Resultados") %}
+      {% set faturamento_meta = products_totals.get('faturamento', {}) %}
+      {% set margem_totais = products_totals.get('margem_contribuicao', {}) %}
+      {% set custos_variaveis = products_totals.get('custos_variaveis', {}) %}
+      {% set despesas_variaveis = products_totals.get('despesas_variaveis', {}) %}
+
+      {% call responsive_grid("240px") %}
+        {% call model7_card("Produtos cadastrados") %}
+          <p style="font-size:32px; font-weight:700; margin:0;">{{ products_totals.get('count', 0) }}</p>
+          <p class="story-note">Produtos com pricing e margens configurados no ModeFin.</p>
+        {% endcall %}
+
+        {% call model7_card("Faturamento alvo") %}
+          <p style="font-size:24px; font-weight:600; margin:0;">{{ format_currency(faturamento_meta.get('valor', 0)) }}</p>
+          <p class="story-note">Receita mensal projetada considerando metas de market share.</p>
+        {% endcall %}
+
+        {% call model7_card("Margem de contribuição média") %}
+          <p style="font-size:24px; font-weight:600; margin:0;">{{ format_currency(margem_totais.get('valor', 0)) }}</p>
+          <p class="story-note">Equivalente a {{ format_percent(margem_totais.get('percentual', 0)) }} do faturamento projetado.</p>
+        {% endcall %}
+
+        {% call model7_card("Gastos fixos mensais") %}
+          <p style="font-size:24px; font-weight:600; margin:0;">{{ format_currency(fixed_costs.get('total_gastos_mensal', 0)) }}</p>
+          <p class="story-note">Custos + despesas fixas consolidados das estruturas.</p>
+        {% endcall %}
+      {% endcall %}
+
+      {{ result_grid([
+        {"label": "Faturamento mensal", "value": format_currency(faturamento_meta.get('valor', 0)), "note": format_percent(faturamento_meta.get('percentual', 0)) ~ " da meta"},
+        {"label": "Custos variaveis", "value": format_currency(custos_variaveis.get('valor', 0)), "note": format_percent(custos_variaveis.get('percentual', 0))},
+        {"label": "Despesas variaveis", "value": format_currency(despesas_variaveis.get('valor', 0)), "note": format_percent(despesas_variaveis.get('percentual', 0))},
+        {"label": "Margem de contribuicao", "value": format_currency(margem_totais.get('valor', 0)), "note": format_percent(margem_totais.get('percentual', 0))}
+      ]) }}
+
+      {% if modefin_products %}
+        <h4 class="report-subtitle">Produtos e margens</h4>
+        {% call(rows) custom_table(
+          ["Produto", "Preco venda", "Margem unitaria", "Meta market share", "Unidades meta"],
+          modefin_products
+        ) %}
+          {% for product in rows %}
+            <tr>
+              <td>{{ product.name }}</td>
+              <td>{{ format_currency(product.sale_price) }}</td>
+              <td>{{ format_percent(product.unit_contribution_margin_percent) }}</td>
+              <td>{{ format_percent(product.market_share_goal_percent) }}</td>
+              <td>{{ format_number(product.market_share_goal_monthly_units, 0) }}</td>
+            </tr>
+          {% endfor %}
+        {% endcall %}
+      {% else %}
+        <p class="story-note">Nenhum produto cadastrado no ModeFin.</p>
+      {% endif %}
+
       {% if financeiro.premissas %}
+        <h4 class="report-subtitle">Premissas principais</h4>
         {% call(rows) custom_table(
           ["Descricao", "Sugestao", "Ajustado", "Observacoes", "Memoria de calculo"],
           financeiro.premissas
@@ -523,140 +585,375 @@
           {% endfor %}
         {% endcall %}
       {% else %}
-        <p class="story-note">Nao ha premissas cadastradas.</p>
+        <p class="story-note">Nenhuma premissa financeira cadastrada.</p>
       {% endif %}
     {% endcall %}
 
-    {% call two_column() %}
-      {% call model7_card("Investimentos") %}
-        {% if financeiro.investimento.investimento %}
-          <ul class="story-list">
-            {% for item in financeiro.investimento.investimento %}
-              <li><strong>{{ item.descricao }}:</strong> {{ item.valor }}</li>
-            {% endfor %}
-          </ul>
-        {% else %}
-          <p class="story-note">Sem investimentos cadastrados.</p>
-        {% endif %}
-      {% endcall %}
-      
-      {% call model7_card("Fontes") %}
-        {% if financeiro.investimento.fontes %}
-          <ul class="story-list">
-            {% for item in financeiro.investimento.fontes %}
-              <li>
-                <strong>{{ item.categoria }} - {{ item.descricao }}:</strong> {{ item.valor }}
-                {% if item.disponibilidade %} (disp.: {{ item.disponibilidade }}){% endif %}
-              </li>
-            {% endfor %}
-          </ul>
-        {% else %}
-          <p class="story-note">Fontes de recurso nao cadastradas.</p>
-        {% endif %}
-      {% endcall %}
-    {% endcall %}
+    {% call subsection("Investimentos") %}
+      {% set capital_total = investment_totals.get('capital_giro', 0) %}
+      {% set imobilizado_total = investment_totals.get('imobilizado', 0) %}
+      {% set investimento_total = investment_totals.get('investimentos', 0) %}
+      {{ result_grid([
+        {"label": "Capital de giro planejado", "value": format_currency(capital_total)},
+        {"label": "Imobilizado (estruturas)", "value": format_currency(imobilizado_total)},
+        {"label": "Total investido", "value": format_currency(investimento_total)}
+      ]) }}
 
-    {% call subsection("Capacidade operacional suportada") %}
-      {% call(rows) custom_table(["Area", "Faturamento suportado", "Observacoes"], financeiro.capacidades or []) %}
-        {% if rows %}
+      {% if modefin_investimentos_resumo %}
+        <h4 class="report-subtitle">Investimentos por bloco estrutural</h4>
+        {% call(rows) custom_table(
+          ["Bloco", "Investimentos", "Custos fixos (mensal)", "Despesas fixas (mensal)", "Total mensal"],
+          modefin_investimentos_resumo
+        ) %}
           {% for item in rows %}
             <tr>
-              <td>{{ item.area }}</td>
-              <td>{{ item.valor_formatado or item.valor or "-" }}</td>
-              <td>{{ item.observacoes or "-" }}</td>
-            </tr>
-          {% endfor %}
-        {% else %}
-          <tr>
-            <td colspan="3">Nenhuma capacidade registrada</td>
-          </tr>
-        {% endif %}
-      {% endcall %}
-
-      {% call highlight_box("success", "Resumo") %}
-        <ul style="margin: 12px 0 0 18px;">
-          <li>Total suportado: {{ financeiro.resumo_capacidades.total_formatado or "-" }}</li>
-          <li>Gargalo:
-            {% if financeiro.resumo_capacidades.gargalo_valor_formatado %}
-              {{ financeiro.resumo_capacidades.gargalo_valor_formatado }}
-              {% if financeiro.resumo_capacidades.gargalo_area %} ({{ financeiro.resumo_capacidades.gargalo_area }}){% endif %}
-            {% else %}-{% endif %}
-          </li>
-        </ul>
-      {% endcall %}
-    {% endcall %}
-
-    {% call subsection("Resultado do negocio") %}
-      {% set fluxo_financeiro = financeiro.fluxo_financeiro or {} %}
-      {% set sections = fluxo_financeiro.sections or [] %}
-      {% set negocio_section = (sections | selectattr('slug', 'equalto', 'negocio') | list | first) %}
-      {% set negocio_linhas = negocio_section.linhas if negocio_section else [] %}
-
-      {% if negocio_linhas %}
-        {% set linha_receita = (negocio_linhas | selectattr('slug', 'equalto', 'receita') | list | first) %}
-        {% set linha_custos_variaveis = (negocio_linhas | selectattr('slug', 'equalto', 'custos_variaveis') | list | first) %}
-        {% set linha_despesas_variaveis = (negocio_linhas | selectattr('slug', 'equalto', 'despesas_variaveis') | list | first) %}
-        {% set linha_margem = (negocio_linhas | selectattr('slug', 'equalto', 'margem_contribuicao') | list | first) %}
-        {% set linha_custos_fixos = (negocio_linhas | selectattr('slug', 'equalto', 'custos_fixos') | list | first) %}
-        {% set linha_despesas_fixas = (negocio_linhas | selectattr('slug', 'equalto', 'despesas_fixas') | list | first) %}
-        {% set linha_resultado_operacional = (negocio_linhas | selectattr('slug', 'equalto', 'resultado_operacional') | list | first) %}
-        {% set linha_destinacao = (negocio_linhas | selectattr('slug', 'equalto', 'destinacao') | list | first) %}
-        {% set linha_resultado_periodo = (negocio_linhas | selectattr('slug', 'equalto', 'resultado_periodo') | list | first) %}
-
-        {% set resultado_operacional_decimal = linha_resultado_operacional.total_decimal if linha_resultado_operacional and linha_resultado_operacional.total_decimal is not none else 0 %}
-        {% set destinacao_total_decimal = linha_destinacao.total_decimal if linha_destinacao and linha_destinacao.total_decimal is not none else 0 %}
-        {% set resultado_periodo_decimal = linha_resultado_periodo.total_decimal if linha_resultado_periodo and linha_resultado_periodo.total_decimal is not none else (resultado_operacional_decimal - destinacao_total_decimal) %}
-        {% set resultado_final_class = 'positive' if resultado_periodo_decimal >= 0 else 'negative' %}
-
-        {{ result_grid([
-          {"label": "Faturamento total", "value": linha_receita.total if linha_receita else "R$ 0,00", "note": "Soma dos periodos planejados"},
-          {"label": "Custos variaveis", "value": linha_custos_variaveis.total if linha_custos_variaveis else "R$ 0,00"},
-          {"label": "Despesas variaveis", "value": linha_despesas_variaveis.total if linha_despesas_variaveis else "R$ 0,00"},
-          {"label": "Margem de contribuicao", "value": linha_margem.total if linha_margem else "R$ 0,00"}
-        ]) }}
-
-        {{ result_grid([
-          {"label": "Custos fixos", "value": linha_custos_fixos.total if linha_custos_fixos else "R$ 0,00"},
-          {"label": "Despesas fixas", "value": linha_despesas_fixas.total if linha_despesas_fixas else "R$ 0,00"},
-          {"label": "Resultado operacional", "value": linha_resultado_operacional.total if linha_resultado_operacional else "R$ 0,00"},
-          {"label": "Destinacoes de resultados", "value": format_currency(destinacao_total_decimal)},
-          {"label": "Resultado final apos destinacoes", "value": format_currency(resultado_periodo_decimal), "note": "Resultado operacional - destinacoes", "status": resultado_final_class}
-        ]) }}
-      {% else %}
-        <p class="story-note">Sem dados de resultados cadastrados.</p>
-      {% endif %}
-    {% endcall %}
-
-    {% call subsection("Fluxo de caixa do investidor") %}
-      {% if financeiro.fluxo_investidor.periodos %}
-        {% call(rows) custom_table(
-          ["Periodo", "Aporte", "Distribuicao", "Saldo periodo", "Saldo acumulado"],
-          financeiro.fluxo_investidor.periodos
-        ) %}
-          {% for linha in rows %}
-            <tr>
-              <td>{{ linha.periodo }}</td>
-              <td>{{ linha.aporte }}</td>
-              <td>{{ linha.distribuicao }}</td>
-              <td>{{ linha.saldo }}</td>
-              <td>{{ linha.acumulado }}</td>
+              <td>{{ item.bloco }}</td>
+              <td>{{ item.investimentos_formatado or format_currency(item.investimentos or 0) }}</td>
+              <td>{{ item.custos_fixos_mensal_formatado or format_currency(item.custos_fixos_mensal or 0) }}</td>
+              <td>{{ item.despesas_fixas_mensal_formatado or format_currency(item.despesas_fixas_mensal or 0) }}</td>
+              <td>{{ item.total_gastos_mensal_formatado or format_currency(item.total_gastos_mensal or 0) }}</td>
             </tr>
           {% endfor %}
         {% endcall %}
       {% else %}
-        <p class="story-note">Sem dados de fluxo do investidor registrados.</p>
+        <p class="story-note">Sem investimentos imobilizados registrados.</p>
       {% endif %}
 
-      {% call highlight_box("info", "Analises") %}
-        {% set analises = financeiro.fluxo_investidor.analises or {} %}
-        {% set tir_label = analises.tir_label or ('TIR ' ~ (analises.tir_horizon_years or 5) ~ ' anos') %}
+      {% if modefin_capital_giro %}
+        <h4 class="report-subtitle">Capital de giro planejado</h4>
+        {% call(rows) custom_table(["Tipo", "Descricao", "Data", "Valor"], modefin_capital_giro) %}
+          {% for item in rows %}
+            {% set tipo = (item.item_type or "") | replace("_", " ") | title %}
+            <tr>
+              <td>{{ tipo or "Item" }}</td>
+              <td>{{ item.description or "-" }}</td>
+              <td>{{ item.contribution_date or "-" }}</td>
+              <td>{{ format_currency(item.amount or 0) }}</td>
+            </tr>
+          {% endfor %}
+        {% endcall %}
+
+        {% set cg_totals = namespace(caixa=0.0, recebiveis=0.0, estoques=0.0, total=0.0) %}
+        {% for item in modefin_capital_giro %}
+          {% set valor = (item.amount or 0) | float %}
+          {% set cg_totals.total = cg_totals.total + valor %}
+          {% set tipo = (item.item_type or "") | lower %}
+          {% if tipo == 'caixa' %}
+            {% set cg_totals.caixa = cg_totals.caixa + valor %}
+          {% elif tipo == 'recebiveis' %}
+            {% set cg_totals.recebiveis = cg_totals.recebiveis + valor %}
+          {% elif tipo == 'estoques' %}
+            {% set cg_totals.estoques = cg_totals.estoques + valor %}
+          {% endif %}
+        {% endfor %}
+
+        {% call highlight_box("info", "Totais por categoria") %}
+          <ul style="margin:12px 0 0 18px;">
+            <li>Caixa: {{ format_currency(cg_totals.caixa) }}</li>
+            <li>Recebiveis: {{ format_currency(cg_totals.recebiveis) }}</li>
+            <li>Estoques: {{ format_currency(cg_totals.estoques) }}</li>
+            <li><strong>Total planejado:</strong> {{ format_currency(cg_totals.total) }}</li>
+          </ul>
+        {% endcall %}
+      {% else %}
+        <p class="story-note">Capital de giro ainda nao planejado.</p>
+      {% endif %}
+    {% endcall %}
+
+    {% call subsection("Fontes de Recursos") %}
+      {% if modefin_funding_sources %}
+        {% set total_fontes = investment_totals.get('fontes', 0) %}
+        {% if total_fontes %}
+          {{ result_grid([
+            {"label": "Total de recursos cadastrados", "value": format_currency(total_fontes)}
+          ]) }}
+        {% endif %}
+
+        {% call(rows) custom_table(
+          ["Tipo", "Categoria", "Valor", "Disponibilidade", "Observacoes"],
+          modefin_funding_sources
+        ) %}
+          {% for fonte in rows %}
+            <tr>
+              <td>{{ fonte.source_type or "-" }}</td>
+              <td>{{ fonte.source_category or "-" }}</td>
+              <td>{{ fonte.amount_formatted or format_currency(fonte.amount or 0) }}</td>
+              <td>{{ fonte.contribution_date or "-" }}</td>
+              <td>{{ fonte.notes or "-" }}</td>
+            </tr>
+          {% endfor %}
+        {% endcall %}
+      {% else %}
+        <p class="story-note">Nenhuma fonte de recurso cadastrada.</p>
+      {% endif %}
+    {% endcall %}
+
+    {% call subsection("Distribuicao de Lucros e Destinacoes") %}
+      <h4 class="report-subtitle">Distribuicao de lucros</h4>
+      {% if modefin_profit_distribution %}
+        {% call(rows) custom_table(
+          ["Percentual", "Inicio", "Observacoes"],
+          modefin_profit_distribution
+        ) %}
+          {% for item in rows %}
+            <tr>
+              <td>{{ format_percent(item.percentage or 0) }}</td>
+              <td>{{ item.start_date or "-" }}</td>
+              <td>{{ item.notes or "-" }}</td>
+            </tr>
+          {% endfor %}
+        {% endcall %}
+      {% else %}
+        <p class="story-note">Distribuicao de lucros nao definida.</p>
+      {% endif %}
+
+      <h4 class="report-subtitle">Outras destinacoes</h4>
+      {% if modefin_result_rules %}
+        {% call(rows) custom_table(
+          ["Descricao", "Percentual", "Inicio", "Observacoes"],
+          modefin_result_rules
+        ) %}
+          {% for regra in rows %}
+            <tr>
+              <td>{{ regra.description or "-" }}</td>
+              <td>{{ format_percent(regra.percentage or 0) }}</td>
+              <td>{{ regra.start_date or "-" }}</td>
+              <td>{{ regra.notes or "-" }}</td>
+            </tr>
+          {% endfor %}
+        {% endcall %}
+      {% else %}
+        <p class="story-note">Sem destinacoes adicionais cadastradas.</p>
+      {% endif %}
+    {% endcall %}
+
+    {% call subsection("Fluxo de Caixa do Investimento") %}
+      {% if investment_flow.has_rows %}
+        {% call(rows) custom_table(
+          ["Periodo", "Cap. Giro", "Imobilizado", "Total Invest.", "Fontes", "Saldo Periodo", "Saldo Acum."],
+          investment_flow.rows
+        ) %}
+          {% for row in rows %}
+            {% set saldo_periodo = row.saldo_periodo or 0 %}
+            {% set saldo_acumulado = row.saldo_acumulado or 0 %}
+            {% set capital = row.capital_giro or 0 %}
+            {% set imobilizado = row.imobilizado or 0 %}
+            {% set investimentos = row.investimentos or 0 %}
+            {% set fontes = row.fontes or 0 %}
+            <tr>
+              <td>{{ row.period_label or "-" }}</td>
+              <td style="text-align:right; font-size:11px;">{{ "-" if capital == 0 else format_number(capital, 2) }}</td>
+              <td style="text-align:right; font-size:11px;">{{ "-" if imobilizado == 0 else format_number(imobilizado, 2) }}</td>
+              <td style="text-align:right; font-size:11px;"><strong>{{ format_number(investimentos, 2) }}</strong></td>
+              <td style="text-align:right; font-size:11px; color:#059669;">{{ "-" if fontes == 0 else format_number(fontes, 2) }}</td>
+              <td style="text-align:right; font-size:11px; {% if saldo_periodo < 0 %}color:#dc2626;{% else %}color:#047857;{% endif %}"><strong>{{ format_number(saldo_periodo, 2) }}</strong></td>
+              <td style="text-align:right; font-size:11px; {% if saldo_acumulado < 0 %}color:#dc2626;{% else %}color:#047857;{% endif %}"><strong>{{ format_number(saldo_acumulado, 2) }}</strong></td>
+            </tr>
+          {% endfor %}
+          <tr style="font-weight:700; border-top:2px solid #cbd5e1;">
+            <td><strong>Total</strong></td>
+            <td style="text-align:right; font-size:11px;"><strong>{{ format_number(investment_totals.get('capital_giro', 0), 2) }}</strong></td>
+            <td style="text-align:right; font-size:11px;"><strong>{{ format_number(investment_totals.get('imobilizado', 0), 2) }}</strong></td>
+            <td style="text-align:right; font-size:11px;"><strong>{{ format_number(investment_totals.get('investimentos', 0), 2) }}</strong></td>
+            <td style="text-align:right; font-size:11px;"><strong>{{ format_number(investment_totals.get('fontes', 0), 2) }}</strong></td>
+            <td style="text-align:right; font-size:11px;"><strong>{{ format_number(investment_totals.get('saldo_periodo', 0), 2) }}</strong></td>
+            <td style="text-align:right; font-size:11px;"><strong>{{ format_number(investment_flow.get('saldo_final', 0), 2) }}</strong></td>
+          </tr>
+        {% endcall %}
+
+        {% set saldo_final = investment_flow.get('saldo_final', 0) %}
+        {% if saldo_final >= 0 %}
+          {% call highlight_box("success", "Saldo positivo") %}
+            <p>As fontes de recursos cadastradas cobrem o investimento total previsto, com saldo acumulado de {{ format_currency(saldo_final) }}.</p>
+          {% endcall %}
+        {% else %}
+          {% call highlight_box("warning", "Saldo negativo") %}
+            <p>Os investimentos excedem os recursos cadastrados em {{ format_currency(saldo_final | abs) }}. Avalie reforço de capital ou ajustes no plano.</p>
+          {% endcall %}
+        {% endif %}
+      {% else %}
+        <p class="story-note">Nenhum movimento de investimento ou fonte cadastrado.</p>
+      {% endif %}
+    {% endcall %}
+
+    {% call subsection("Fluxo de Caixa do Negocio") %}
+      {% if modefin_business_flow and modefin_business_flow.has_rows %}
+        {% call(rows) custom_table(
+          ["Periodo", "Receita", "Var.", "Margem", "Fixos", "Result. Op.", "Destin.", "Result. Per."],
+          modefin_business_flow.rows
+        ) %}
+          {% for row in rows %}
+            {% set resultado_op = row.resultado_operacional or 0 %}
+            {% set resultado_periodo = row.resultado_periodo or 0 %}
+            <tr>
+              <td>{{ row.periodo or "-" }}</td>
+              <td style="text-align:right; font-size:11px;">{{ format_number(row.receita or 0, 2) }}</td>
+              <td style="text-align:right; font-size:11px;">{{ format_number((row.custo_variavel or 0) + (row.despesa_variavel or 0), 2) }}</td>
+              <td style="text-align:right; font-size:11px;">{{ format_number(row.margem or 0, 2) }}</td>
+              <td style="text-align:right; font-size:11px;">{{ format_number(row.fixos_total or 0, 2) }}</td>
+              <td style="text-align:right; font-size:11px; {% if resultado_op < 0 %}color:#dc2626;{% else %}color:#047857;{% endif %}">{{ format_number(resultado_op, 2) }}</td>
+              <td style="text-align:right; font-size:11px;">{{ format_number(row.distribuicao or 0, 2) }}</td>
+              <td style="text-align:right; font-size:11px; {% if resultado_periodo < 0 %}color:#dc2626;{% else %}color:#047857;{% endif %}"><strong>{{ format_number(resultado_periodo, 2) }}</strong></td>
+            </tr>
+          {% endfor %}
+        {% endcall %}
+      {% else %}
+        <p class="story-note">Sem periodos de fluxo do negocio cadastrados.</p>
+      {% endif %}
+    {% endcall %}
+
+    {% call subsection("Fluxo de Caixa do Investidor") %}
+      {% if modefin_investor_flow and modefin_investor_flow.has_rows %}
+        {% call(rows) custom_table(
+          ["Periodo", "Aporte", "Distribuicao", "Saldo Periodo", "Saldo Acum."],
+          modefin_investor_flow.rows
+        ) %}
+          {% for row in rows %}
+            {% set saldo_periodo = row.saldo_periodo or 0 %}
+            {% set saldo_acumulado = row.saldo_acumulado or 0 %}
+            {% set aporte = row.aporte or 0 %}
+            {% set distribuicao = row.distribuicao or 0 %}
+            <tr>
+              <td>{{ row.periodo or "-" }}</td>
+              <td style="text-align:right; font-size:11px;">{{ "-" if aporte == 0 else format_number(aporte, 2) }}</td>
+              <td style="text-align:right; font-size:11px; color:#059669;">{{ "-" if distribuicao == 0 else format_number(distribuicao, 2) }}</td>
+              <td style="text-align:right; font-size:11px; {% if saldo_periodo < 0 %}color:#dc2626;{% else %}color:#047857;{% endif %}"><strong>{{ format_number(saldo_periodo, 2) }}</strong></td>
+              <td style="text-align:right; font-size:11px; {% if saldo_acumulado < 0 %}color:#dc2626;{% else %}color:#047857;{% endif %}"><strong>{{ format_number(saldo_acumulado, 2) }}</strong></td>
+            </tr>
+          {% endfor %}
+          <tr style="font-weight:700; border-top:2px solid #cbd5e1;">
+            <td><strong>Total</strong></td>
+            <td style="text-align:right; font-size:11px;"><strong>{{ format_number(modefin_investor_flow.rows | sum(attribute='aporte'), 2) }}</strong></td>
+            <td style="text-align:right; font-size:11px;"><strong>{{ format_number(modefin_investor_flow.rows | sum(attribute='distribuicao'), 2) }}</strong></td>
+            <td style="text-align:right; font-size:11px;">-</td>
+            <td style="text-align:right; font-size:11px;">-</td>
+          </tr>
+        {% endcall %}
+      {% else %}
+        <p class="story-note">Sem dados de fluxo do investidor registrados.</p>
+      {% endif %}
+    {% endcall %}
+
+    {% call subsection("Analise de Viabilidade") %}
+      {% set investimento_total = analysis_metrics_data.get('total_investimentos', 0) %}
+      {% set resultado_operacional = analysis_metrics_data.get('resultado_operacional', 0) %}
+      {% set periodo_analise = analysis_metrics_data.get('periodo_meses', 0) %}
+      {% set custo_oportunidade = analysis_metrics_data.get('custo_oportunidade_percent', 0) %}
+      {{ result_grid([
+        {"label": "Investimento total", "value": format_currency(investimento_total)},
+        {"label": "Resultado operacional mensal", "value": format_currency(resultado_operacional)},
+        {"label": "Periodo de analise", "value": (periodo_analise | int) ~ " meses"},
+        {"label": "Custo de oportunidade", "value": format_percent(custo_oportunidade)}
+      ]) }}
+
+      {% set payback = analysis_metrics_data.get('payback_meses') %}
+      {% set payback_inicio = analysis_metrics_data.get('payback_inicio') %}
+      {% set payback_fim = analysis_metrics_data.get('payback_fim') %}
+      {% set roi = analysis_metrics_data.get('roi_percent') %}
+      {% set tir = analysis_metrics_data.get('tir_percent') %}
+      {% set vpl = analysis_metrics_data.get('vpl') %}
+      
+      {% if payback and payback_inicio and payback_fim %}
+        {% set payback_display = '%.0f meses (%s a %s)' % (payback, payback_inicio, payback_fim) %}
+      {% elif payback and payback_inicio %}
+        {% set payback_display = '%.0f meses (início: %s, ainda não recuperado)' % (payback, payback_inicio) %}
+      {% elif payback %}
+        {% set payback_display = '%.1f meses' % payback %}
+      {% else %}
+        {% set payback_display = "-" %}
+      {% endif %}
+      
+      {{ result_grid([
+        {"label": "Payback", "value": payback_display},
+        {"label": "ROI", "value": roi and format_percent(roi) or "-"},
+        {"label": "TIR", "value": tir and ('%.1f%% a.a.' % tir) or "-"},
+        {"label": "VPL", "value": (vpl and vpl != 0) and format_currency(vpl) or "-"}
+      ]) }}
+
+      {% call highlight_box("info", "Parametros considerados") %}
         <ul style="margin:12px 0 0 18px;">
-          <li>Payback: {{ analises.payback | default('-', true) }}</li>
-          <li>Custo de oportunidade: {{ analises.opportunity_cost | default('1%', true) }}</li>
-          <li>{{ tir_label }}: {{ analises.tir | default('-', true) }}</li>
+          <li>Periodo de analise: {{ periodo_analise | int }} meses</li>
+          <li>Custo de oportunidade: {{ format_percent(custo_oportunidade) }} ao ano</li>
+        </ul>
+      {% endcall %}
+
+      {% if modefin_executive_summary %}
+        {% call highlight_box("info", "Resumo executivo ModeFin") %}
+          <p>{{ modefin_executive_summary }}</p>
+        {% endcall %}
+      {% else %}
+        <p class="story-note">Nenhum resumo executivo cadastrado.</p>
+      {% endif %}
+    {% endcall %}
+  </div>
+</section>
+{# ---------------------------------------------------------
+   06. Projeto vinculado e atividades
+   --------------------------------------------------------- #}
+<section class="page portrait">
+  {{ section_header("06", "Projeto Vinculado & Atividades") }}
+
+  <div class="section-body">
+    {% call responsive_grid("260px") %}
+      {% set projeto_titulo = plan.plan_name or "PEV - Planejamento | Agenda do Planejamento" %}
+      {% call model7_card("Projeto vinculado", projeto_titulo) %}
+        {% if projeto and projeto.nome %}
+          <p>
+            <strong>O Projeto associado a este planejamento:</strong><br>
+            {{ projeto.nome }}
+          </p>
+        {% endif %}
+        {% if projeto and projeto.codigo %}
+          <p><strong>Codigo:</strong> {{ projeto.codigo }}</p>
+        {% endif %}
+        {% if projeto.descricao %}
+          <p>{{ projeto.descricao }}</p>
+        {% endif %}
+        {% if projeto.observacoes %}
+          <ul class="story-list compact">
+            {% for obs in projeto.observacoes %}
+              <li>{{ obs }}</li>
+            {% endfor %}
+          </ul>
+        {% else %}
+          <p class="story-note">Sem observacoes adicionais registradas.</p>
+        {% endif %}
+        {% if plan.company_id and projeto.grv_project_id %}
+          <p class="story-note">
+            Kanban ativo:
+            <a class="report-link" href="{{ url_for('grv.grv_project_manage', company_id=plan.company_id, project_id=projeto.grv_project_id) }}" target="_blank" rel="noopener">
+              GRV &rsaquo; Projeto {{ projeto.grv_project_id }}
+            </a>
+          </p>
+        {% endif %}
+      {% endcall %}
+
+      {% call model7_card("Resumo operacional") %}
+        <ul class="story-list compact">
+          <li><strong>Status do plano:</strong> {{ plan.status }}</li>
+          <li><strong>Consultor responsavel:</strong> {{ plan.consultant }}</li>
+          <li><strong>Proximo checkpoint:</strong> {{ plan.next_checkpoint }}</li>
+          <li><strong>Total de atividades:</strong> {{ projeto_atividades|length }}</li>
         </ul>
       {% endcall %}
     {% endcall %}
+
+    {% if projeto_atividades %}
+      {% call subsection("Agenda completa de atividades") %}
+        {% call(rows) custom_table(["O que", "Quem", "Quando", "Como"], projeto_atividades) %}
+          {% for item in rows %}
+            <tr>
+              <td>{{ item.oque }}</td>
+              <td>{{ item.quem }}</td>
+              <td>{{ item.quando }}</td>
+              <td>{{ item.como }}</td>
+            </tr>
+          {% endfor %}
+        {% endcall %}
+      {% endcall %}
+    {% else %}
+      <p class="story-note">Nenhuma atividade foi cadastrada na agenda deste projeto.</p>
+    {% endif %}
   </div>
 </section>
 

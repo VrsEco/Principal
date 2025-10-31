@@ -971,6 +971,28 @@ class PostgreSQLDatabase(DatabaseInterface):
             ''')
 
             cursor.execute('''
+                CREATE TABLE IF NOT EXISTS plan_product_rampup_entries (
+                    id SERIAL PRIMARY KEY,
+                    plan_id INTEGER NOT NULL REFERENCES plans(id) ON DELETE CASCADE,
+                    product_id INTEGER NOT NULL REFERENCES plan_products(id) ON DELETE CASCADE,
+                    reference_month DATE NOT NULL,
+                    percentage NUMERIC(6, 2) NOT NULL DEFAULT 100.00,
+                    notes TEXT,
+                    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                    UNIQUE(product_id, reference_month)
+                )
+            ''')
+            cursor.execute('''
+                CREATE INDEX IF NOT EXISTS idx_rampup_entries_plan_month
+                ON plan_product_rampup_entries(plan_id, reference_month)
+            ''')
+            cursor.execute('''
+                CREATE INDEX IF NOT EXISTS idx_rampup_entries_product
+                ON plan_product_rampup_entries(product_id)
+            ''')
+
+            cursor.execute('''
                 CREATE TABLE IF NOT EXISTS plan_finance_business_periods (
                     id SERIAL PRIMARY KEY,
                     plan_id INTEGER NOT NULL REFERENCES plans (id) ON DELETE CASCADE,

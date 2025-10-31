@@ -64,14 +64,7 @@
     {% endblock %}
     
     {# RODAPÉ #}
-    {% block footer_page %}
-    <section class="page portrait footer-page" style="page-break-after: auto;">
-      {% block footer %}
-        <span>Versus Gestão Corporativa - Todos os Direitos Reservados - Emitido em: {% block footer_date %}{{ issued_at|default('31/10/2025') }}{% endblock %}</span>
-        <span>{% block footer_right %}Consultor responsável: {{ consultant|default('Consultor') }}{% endblock %}</span>
-      {% endblock %}
-    </section>
-    {% endblock %}
+    {% block footer_page %}{% endblock %}
     
   </article>
   

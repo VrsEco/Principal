@@ -1,0 +1,127 @@
+{% extends "reports/base_report.html" %}
+{% from "reports/components.html" import section_header, model7_card, responsive_grid, highlight_box, custom_table %}
+
+{% block page_title %}Relatorio de Implantacao - Alinhamento Estrategico{% endblock %}
+
+{% block cover_page %}{% endblock %}
+
+{% block content %}
+  <section class="page portrait">
+    {{ section_header("02", "Alinhamento Estrategico") }}
+
+    <div class="section-body">
+      <p class="narrative-intro">
+        Consolidamos a base de governanca do plano com a visao compartilhada, metas financeiras e principios que guiam todas as decisoes antes da execucao.
+      </p>
+
+      {% call responsive_grid("260px") %}
+        {% call model7_card("Visao Compartilhada") %}
+          {% set visao = alinhamento.visao %}
+          {% if visao %}
+            {% if visao is string %}
+              <p>{{ visao }}</p>
+            {% elif visao is iterable %}
+              <ul class="story-list">
+                {% for item in visao if item %}
+                  <li>{{ item }}</li>
+                {% endfor %}
+              </ul>
+            {% else %}
+              <p>{{ visao }}</p>
+            {% endif %}
+          {% else %}
+            <p class="story-note">Nenhum registro de visao compartilhada.</p>
+          {% endif %}
+        {% endcall %}
+
+        {% call model7_card("Metas Financeiras") %}
+          {% set metas = alinhamento.metas %}
+          {% if metas %}
+            {% if metas is string %}
+              <p>{{ metas }}</p>
+            {% elif metas is iterable %}
+              <ul class="story-list">
+                {% for meta in metas if meta %}
+                  <li>{{ meta }}</li>
+                {% endfor %}
+              </ul>
+            {% else %}
+              <p>{{ metas }}</p>
+            {% endif %}
+          {% else %}
+            <p class="story-note">Metas ainda nao foram definidas no canvas.</p>
+          {% endif %}
+        {% endcall %}
+
+        {% call model7_card("Principios Orientadores") %}
+          {% if alinhamento.principios %}
+            <ul class="story-list">
+              {% for principio in alinhamento.principios %}
+                <li>{{ principio }}</li>
+              {% endfor %}
+            </ul>
+          {% else %}
+            <p class="story-note">Nenhum principio registrado.</p>
+          {% endif %}
+        {% endcall %}
+      {% endcall %}
+    </div>
+  </section>
+
+  <section class="page portrait">
+    {{ section_header("02.1", "Equipe Decisora") }}
+
+    <div class="section-body">
+      {% if alinhamento.socios %}
+        {% call responsive_grid("240px") %}
+          {% for socio in alinhamento.socios %}
+            {% call model7_card(socio.nome or "Socio") %}
+              <ul class="story-list">
+                {% if socio.papel %}<li><strong>Papel:</strong> {{ socio.papel }}</li>{% endif %}
+                {% if socio.motivacao %}<li><strong>Motivacao:</strong> {{ socio.motivacao }}</li>{% endif %}
+                {% if socio.compromisso %}<li><strong>Compromisso:</strong> {{ socio.compromisso }}</li>{% endif %}
+                {% if socio.risco %}<li><strong>Risco:</strong> {{ socio.risco }}</li>{% endif %}
+                {% if socio.apoio %}<li><strong>Apoio:</strong> {{ socio.apoio }}</li>{% endif %}
+              </ul>
+            {% endcall %}
+          {% endfor %}
+        {% endcall %}
+      {% else %}
+        <p class="story-note">
+          Ainda nao identificamos socios decisores no canvas de alinhamento. Cadastre-os para compor esta secao.
+        </p>
+      {% endif %}
+    </div>
+  </section>
+
+  <section class="page portrait">
+    {{ section_header("02.2", "Agenda de Convergencia") }}
+
+    <div class="section-body">
+      {% if alinhamento.agenda %}
+        {% call(rows) custom_table(["O que", "Quem", "Quando", "Como"], alinhamento.agenda) %}
+          {% for item in rows %}
+            <tr>
+              <td>{{ item.oque }}</td>
+              <td>{{ item.quem }}</td>
+              <td>{{ item.quando }}</td>
+              <td>{{ item.como }}</td>
+            </tr>
+          {% endfor %}
+        {% endcall %}
+
+        {% call highlight_box("success", "Resumo de atividades") %}
+          <p>Total de atividades planejadas: <strong>{{ alinhamento.agenda|length }}</strong></p>
+        {% endcall %}
+
+        {% call highlight_box("info", "Governanca recomendada") %}
+          <p>Recomenda-se revisar a agenda quinzenalmente para ajustar prioridades e responsaveis.</p>
+        {% endcall %}
+      {% else %}
+        <p class="story-note">
+          A agenda de convergencia ainda nao foi registrada. Utilize o modulo de alinhamento para incluir atividades.
+        </p>
+      {% endif %}
+    </div>
+  </section>
+{% endblock %}

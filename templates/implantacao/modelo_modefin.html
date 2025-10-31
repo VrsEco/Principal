@@ -1,24 +1,24 @@
 {% extends "base.html" %}
-{% block title %}ModeFin - Modelagem Financeira | Implantação{% endblock %}
+{% block title %}ModeFin - Modelagem Financeira | Implantacao{% endblock %}
 {% block body %}{% set active_nav = 'pev' %}{{ super() }}{% endblock %}
 
 {% block content %}
 <div class="project-layout plan-layout" data-sidebar-toggle>
   
-  {# Sidebar de Implantação #}
+  {# Sidebar de Implantacao #}
   {% set active_id = 'modefin' %}
   
   <section class="project-content plan-content">
 
 <style>
-  /* Layout Padrão GRV */
+  /* Layout Padrao GRV */
   .app-main {
     padding: 40px 20px 64px !important;
     background: linear-gradient(135deg, #ffffff 0%, #f7f7f9 50%, #f1f2f4 100%) !important;
     color: #0f172a !important;
     overflow-x: hidden !important;
   }
-  
+
   .project-layout.plan-layout {
     max-width: 100% !important;
     width: 100% !important;
@@ -33,12 +33,12 @@
     margin-right: auto !important;
     transform: scale(0.9);
     transform-origin: top left;
-    /* Compensa a redução para manter a largura visual e evitar sobra */
+    /* Compensa a reducao para manter a largura visual e evitar sobra */
     width: calc(100% / 0.9) !important;
     max-width: calc(1120px / 0.9) !important;
   }
   
-  /* Cards adaptados ao padrão GRV */
+  /* Cards adaptados ao padrao GRV */
   .modefin-section {
     margin-bottom: 24px;
     padding: 16px;
@@ -137,7 +137,7 @@
     opacity: 0.85;
   }
   
-  /* Botões Padrão GRV/PEV */
+  /* Botoes Padrao GRV/PEV */
   .button {
     padding: 10px 20px;
     border-radius: 8px;
@@ -223,7 +223,7 @@
   }
   
   .modefin-table thead {
-    background: #e5e7eb !important; /* títulos */
+    background: #e5e7eb !important; /* titulos */
   }
   
   .modefin-table th {
@@ -249,7 +249,7 @@
   .modefin-table th:last-child,
   .modefin-table td:last-child { border-right: none; }
 
-  /* Subtítulos: linhas especiais no corpo */
+  /* Subtitulos: linhas especiais no corpo */
   .modefin-table tbody tr.subheader > td,
   .modefin-table tbody tr.subheader > th,
   .modefin-table tbody tr.section-subtitle > td,
@@ -326,7 +326,7 @@
   .modal {
     display: none;
     position: fixed;
-    z-index: 25000; /* Padrão do sistema - modais sempre acima de botões flutuantes (10000-19999) */
+    z-index: 25000; /* Padrao do sistema - modais sempre acima de botoes flutuantes (10000-19999) */
     left: 0;
     top: 0;
     width: 100%;
@@ -486,19 +486,19 @@
 <!-- Header -->
 <div class="surface-card" style="padding: 24px; margin-bottom: 20px;">
   <h1 style="margin: 0 0 8px; font-size: 28px; color: #0f172a; font-weight: 600;">
-    💰 ModeFin - Modelagem Financeira
+     ModeFin - Modelagem Financeira
   </h1>
   <p style="margin: 0; color: #64748b; font-size: 14px;">
     Plano: <strong style="color: #0f172a;">{{ plan.name }}</strong>
   </p>
   <div style="margin-top: 12px;">
     <a href="{{ url_for('pev.pev_implantacao_overview', plan_id=plan_id) }}" class="button button-ghost" style="font-size: 13px; padding: 8px 16px;">
-      ← Voltar para Implantação
+       Voltar para Implantacao
     </a>
   </div>
 </div>
 
-<!-- Seções -->
+<!-- Secoes -->
 <div id="secao-resultados" class="modefin-section"></div>
 <div id="secao-investimentos" class="modefin-section"></div>
 <div id="secao-fontes" class="modefin-section"></div>
@@ -532,7 +532,29 @@
   const resultRules = {{ result_rules | tojson | safe }};
   const executiveSummary = {{ executive_summary | tojson | safe }};
   const parcelasEstruturas = {{ parcelas_estruturas | tojson | safe }};
+  const fixedCostEntries = {{ fixed_cost_entries | tojson | safe }};
+  const rampProducts = {{ modefin_ramp | tojson | safe }};
   const financeiro = {{ financeiro | tojson | safe }};
+  const businessPrecalc = (() => {
+    const map = {};
+    const periodos = financeiro?.fluxo_negocio?.periodos || [];
+    periodos.forEach(periodo => {
+      const key =
+        normalizeMonthKey(periodo?.periodo_chave) ||
+        normalizeMonthKey(periodo?.periodo) ||
+        normalizeMonthKey(periodo?.periodo_curto);
+      if (!key) {
+        return;
+      }
+      map[key] = {
+        revenue: parseNumeric(periodo?.receita),
+        cost: parseNumeric(periodo?.variaveis),
+        expense: parseNumeric(periodo?.despesas_variaveis),
+        margin: parseNumeric(periodo?.margem_contribuicao),
+      };
+    });
+    return map;
+  })();
   
   // =========================================
   // UTILIDADES
@@ -556,6 +578,466 @@
     const date = new Date(dateStr);
     return date.toLocaleDateString('pt-BR');
   }
+
+  function parseNumeric(value) {
+    if (value === null || value === undefined) {
+      return null;
+    }
+    if (typeof value === 'number') {
+      return Number.isFinite(value) ? value : null;
+    }
+    const text = String(value).trim();
+    if (!text) {
+      return null;
+    }
+    const normalized = text
+      .replace(/R\$/gi, '')
+      .replace(/\s+/g, '')
+      .replace(/\./g, '')
+      .replace(',', '.');
+    const result = Number(normalized);
+    return Number.isFinite(result) ? result : null;
+  }
+
+  function formatMonthLabel(monthKey) {
+    const normalized = normalizeMonthKey(monthKey);
+    if (!normalized) {
+      return '-';
+    }
+    const date = new Date(`${normalized}-01T00:00:00`);
+    if (Number.isNaN(date.getTime())) {
+      return normalized;
+    }
+    return date.toLocaleDateString('pt-BR', { month: 'short', year: 'numeric' }).replace('.', '');
+  }
+
+  function formatMonthYear(monthKey) {
+    const normalized = normalizeMonthKey(monthKey);
+    if (!normalized) {
+      return '-';
+    }
+    const date = new Date(`${normalized}-01T00:00:00`);
+    if (Number.isNaN(date.getTime())) {
+      return normalized;
+    }
+    const monthName = date.toLocaleDateString('pt-BR', { month: 'long' });
+    const year = date.getFullYear();
+    return `${monthName.charAt(0).toUpperCase() + monthName.slice(1)}/${year}`;
+  }
+
+  function buildFixedCostsTimeline(meses) {
+    const timeline = {};
+    meses.forEach(mes => {
+      timeline[mes] = { custo: 0, despesa: 0 };
+    });
+
+    if (!Array.isArray(fixedCostEntries)) {
+      return timeline;
+    }
+
+    fixedCostEntries.forEach(entry => {
+      if (!entry) {
+        return;
+      }
+      const startMonth = entry.start_month || entry.startMonth;
+      if (!startMonth) {
+        return;
+      }
+      const tipo = entry.type === 'despesa' ? 'despesa' : 'custo';
+      const rawValue = entry.monthly_value ?? entry.monthlyValue ?? 0;
+      const monthlyValue = Number(rawValue);
+      if (!Number.isFinite(monthlyValue) || monthlyValue <= 0) {
+        return;
+      }
+      meses.forEach(mes => {
+        if (mes >= startMonth) {
+          if (!timeline[mes]) {
+            timeline[mes] = { custo: 0, despesa: 0 };
+          }
+          timeline[mes][tipo] += monthlyValue;
+        }
+      });
+    });
+
+    return timeline;
+  }
+  function nextMonthKey(monthKey) {
+    const normalized = normalizeMonthKey(monthKey);
+    if (!normalized) {
+      return null;
+    }
+    const [yearStr, monthStr] = normalized.split('-');
+    let year = Number(yearStr);
+    let month = Number(monthStr);
+    if (!Number.isInteger(year) || !Number.isInteger(month)) {
+      return null;
+    }
+    month += 1;
+    if (month > 12) {
+      month = 1;
+      year += 1;
+    }
+    return year + '-' + String(month).padStart(2, '0');
+  }
+
+  function monthDiff(startKey, endKey) {
+    const start = normalizeMonthKey(startKey);
+    const end = normalizeMonthKey(endKey);
+    if (!start || !end) {
+      return 0;
+    }
+    const [startYear, startMonth] = start.split('-').map(Number);
+    const [endYear, endMonth] = end.split('-').map(Number);
+    return (endYear - startYear) * 12 + (endMonth - startMonth);
+  }
+
+  function gerarSequenciaMeses(primeiroMes) {
+    const mesesSet = new Set();
+
+    const primeiraReferencia =
+      normalizeMonthKey(primeiroMes) ||
+      normalizeMonthKey(rampDataset?.startMonth) ||
+      normalizeMonthKey((new Date()).toISOString().slice(0, 7));
+
+    if (primeiraReferencia) {
+      mesesSet.add(primeiraReferencia);
+    }
+
+    function coletarMes(valor) {
+      const key = normalizeMonthKey(valor);
+      if (key) {
+        mesesSet.add(key);
+      }
+    }
+
+    (rampDataset?.products || []).forEach(item => {
+      (item.entries || []).forEach(entry => coletarMes(entry.month));
+    });
+
+    (fixedCostEntries || []).forEach(entry => coletarMes(entry?.start_month || entry?.startMonth));
+
+    (parcelasEstruturas || []).forEach(parcela => {
+      coletarMes(parcela?.due_info || parcela?.vencimento || parcela?.month || parcela?.reference_month);
+    });
+
+    (capitalGiroItems || []).forEach(item => coletarMes(item?.contribution_date));
+
+    (fundingSources || []).forEach(fonte => coletarMes(fonte?.contribution_date || fonte?.availability || fonte?.date));
+
+    (profitDistribution || []).forEach(dist => coletarMes(dist?.start_date));
+
+    (resultRules || []).forEach(regra => coletarMes(regra?.start_date));
+
+    const valoresOrdenados = Array.from(mesesSet).filter(Boolean).sort();
+    const inicio = valoresOrdenados.length ? valoresOrdenados[0] : primeiraReferencia;
+    const ultimo = valoresOrdenados.length ? valoresOrdenados[valoresOrdenados.length - 1] : inicio;
+
+    let horizonte = monthDiff(inicio, ultimo) + 12;
+    if (!Number.isFinite(horizonte) || horizonte < 0) {
+      horizonte = 0;
+    }
+    const tamanhoDesejado = Math.max(horizonte, 60);
+
+    const mesesSequencia = [];
+    let atual = inicio;
+    for (let index = 0; index <= tamanhoDesejado; index += 1) {
+      const chave = normalizeMonthKey(atual);
+      if (chave) {
+        mesesSequencia.push(chave);
+      }
+      const proximo = nextMonthKey(atual);
+      if (!proximo) {
+        break;
+      }
+      atual = proximo;
+    }
+
+    return mesesSequencia;
+  }
+
+  function normalizeMonthKey(value) {
+    if (value === null || value === undefined) {
+      return '';
+    }
+    const text = String(value).trim();
+    if (!text) {
+      return '';
+    }
+    if (/^\d{4}-\d{2}$/.test(text)) {
+      return text;
+    }
+    if (/^\d{4}-\d{2}-\d{2}$/.test(text)) {
+      return text.slice(0, 7);
+    }
+    const match = text.match(/^(\d{2})\/(\d{4})$/);
+    if (match) {
+      return `${match[2]}-${match[1]}`;
+    }
+    return '';
+  }
+
+  function clampRampPercentage(value) {
+    if (value === null || value === undefined) {
+      return 0;
+    }
+    const numberValue = typeof value === 'number'
+      ? value
+      : Number(String(value).trim().replace(',', '.'));
+    if (!Number.isFinite(numberValue)) {
+      return 0;
+    }
+    if (numberValue < 0) {
+      return 0;
+    }
+    if (numberValue > 100) {
+      return 100;
+    }
+    return numberValue;
+  }
+
+  function resolveRampPercentage(entries, monthKey) {
+    if (!entries || entries.length === 0) {
+      return 100;
+    }
+    if (!monthKey) {
+      return 0;
+    }
+    const firstMonth = entries[0].month;
+    if (monthKey < firstMonth) {
+      return 0;
+    }
+    let current = entries[0].percentage;
+    for (let index = 0; index < entries.length; index += 1) {
+      const entry = entries[index];
+      if (entry.month <= monthKey) {
+        current = entry.percentage;
+      } else {
+        break;
+      }
+    }
+    const lastMonth = entries[entries.length - 1].month;
+    if (monthKey > lastMonth) {
+      return 100;
+    }
+    return clampRampPercentage(current);
+  }
+
+  function buildRampDataset(products, totals) {
+    const dataset = {
+      base: { revenue: 0, cost: 0, expense: 0, margin: 0 },
+      products: [],
+      cache: {},
+      startMonth: null,
+    };
+
+    const items = Array.isArray(products) ? products : [];
+
+    items.forEach(item => {
+      const summary = item && item.ramp_up_summary ? item.ramp_up_summary : {};
+      const baseRevenue = Number(summary.base_revenue || 0);
+      const baseCost = Number(summary.base_cost || 0);
+      const baseExpense = Number(summary.base_expense || 0);
+      let baseMargin = Number(summary.base_margin || 0);
+      if (!baseMargin && baseRevenue) {
+        baseMargin = baseRevenue - baseCost - baseExpense;
+      }
+
+      dataset.base.revenue += baseRevenue;
+      dataset.base.cost += baseCost;
+      dataset.base.expense += baseExpense;
+      dataset.base.margin += baseMargin;
+
+      const rawEntries = Array.isArray(item?.ramp_up_entries)
+        ? item.ramp_up_entries
+        : [];
+      const normalizedEntries = [];
+
+      rawEntries.forEach(entry => {
+        const monthKey = normalizeMonthKey(entry && (entry.month || entry.reference_month));
+        if (!monthKey) {
+          return;
+        }
+        const percentage = clampRampPercentage(entry && (entry.percentage ?? entry.percent ?? entry.value));
+        normalizedEntries.push({ month: monthKey, percentage });
+      });
+
+      normalizedEntries.sort((a, b) => a.month.localeCompare(b.month));
+      if (normalizedEntries.length) {
+        const firstMonth = normalizedEntries[0].month;
+        if (!dataset.startMonth || firstMonth < dataset.startMonth) {
+          dataset.startMonth = firstMonth;
+        }
+      }
+
+      dataset.products.push({
+        base: {
+          revenue: baseRevenue,
+          cost: baseCost,
+          expense: baseExpense,
+          margin: baseMargin,
+        },
+        entries: normalizedEntries,
+      });
+    });
+
+    if (!dataset.base.revenue && totals && totals.faturamento && totals.faturamento.valor) {
+      dataset.base.revenue = Number(totals.faturamento.valor) || 0;
+    }
+    if (!dataset.base.cost && totals && totals.custos_variaveis && totals.custos_variaveis.valor) {
+      dataset.base.cost = Number(totals.custos_variaveis.valor) || 0;
+    }
+    if (!dataset.base.expense && totals && totals.despesas_variaveis && totals.despesas_variaveis.valor) {
+      dataset.base.expense = Number(totals.despesas_variaveis.valor) || 0;
+    }
+    if (!dataset.base.margin) {
+      dataset.base.margin = dataset.base.revenue - dataset.base.cost - dataset.base.expense;
+    }
+
+    return dataset;
+  }
+
+  function getRampMetrics(monthKey) {
+    const key = normalizeMonthKey(monthKey);
+    if (!key) {
+      return { revenue: 0, cost: 0, expense: 0, margin: 0 };
+    }
+
+    if (rampDataset.cache[key]) {
+      return rampDataset.cache[key];
+    }
+
+    if (!rampDataset.products.length) {
+      const fallbackRevenue = rampDataset.base.revenue || Number(productsTotals?.faturamento?.valor || 0);
+      const fallbackCost = rampDataset.base.cost || Number(productsTotals?.custos_variaveis?.valor || 0);
+      const fallbackExpense = rampDataset.base.expense || Number(productsTotals?.despesas_variaveis?.valor || 0);
+      const fallbackMargin = fallbackRevenue - fallbackCost - fallbackExpense;
+      const cached = {
+        revenue: fallbackRevenue,
+        cost: fallbackCost,
+        expense: fallbackExpense,
+        margin: fallbackMargin,
+      };
+      rampDataset.cache[key] = cached;
+      return cached;
+    }
+
+    if (rampDataset.startMonth && key < rampDataset.startMonth) {
+      const zeroMetrics = { revenue: 0, cost: 0, expense: 0, margin: 0 };
+      rampDataset.cache[key] = zeroMetrics;
+      return zeroMetrics;
+    }
+
+    let revenue = 0;
+    let cost = 0;
+    let expense = 0;
+    let percentageWeightedSum = 0;
+    let percentageWeight = 0;
+
+    const hasRampEntries = rampDataset.products.some(product => (product.entries || []).length > 0);
+
+    rampDataset.products.forEach(item => {
+      const entries = item.entries || [];
+      const percentage = resolveRampPercentage(entries, key) / 100;
+      const base = item.base || {};
+      const baseRevenue = Number(base.revenue || 0);
+      const baseCost = Number(base.cost || 0);
+      const baseExpense = Number(base.expense || 0);
+      revenue += baseRevenue * percentage;
+      cost += baseCost * percentage;
+      expense += baseExpense * percentage;
+
+      const weight = baseRevenue || baseCost || baseExpense ? Math.max(baseRevenue, baseCost, baseExpense, 1) : 1;
+      percentageWeightedSum += percentage * weight;
+      percentageWeight += weight;
+    });
+
+    let effectivePercentage;
+    if (percentageWeight > 0) {
+      effectivePercentage = percentageWeightedSum / percentageWeight;
+    } else if (rampDataset.startMonth) {
+      effectivePercentage = key >= rampDataset.startMonth ? 1 : 0;
+    } else {
+      effectivePercentage = 1;
+    }
+    if (effectivePercentage < 0) effectivePercentage = 0;
+    if (effectivePercentage > 1) effectivePercentage = 1;
+
+    const fallbackRevenueBase = rampDataset.base.revenue || Number(productsTotals?.faturamento?.valor || 0);
+    const fallbackCostBase = rampDataset.base.cost || Number(productsTotals?.custos_variaveis?.valor || 0);
+    const fallbackExpenseBase = rampDataset.base.expense || Number(productsTotals?.despesas_variaveis?.valor || 0);
+
+    if (hasRampEntries && rampDataset.startMonth && key < rampDataset.startMonth) {
+      revenue = 0;
+      cost = 0;
+      expense = 0;
+    } else {
+      if (revenue <= 0 && fallbackRevenueBase > 0) {
+        revenue = fallbackRevenueBase * effectivePercentage;
+      }
+      if (cost <= 0 && fallbackCostBase > 0) {
+        cost = fallbackCostBase * effectivePercentage;
+      }
+      if (expense <= 0 && fallbackExpenseBase > 0) {
+        expense = fallbackExpenseBase * effectivePercentage;
+      }
+    }
+
+    let margin;
+    if (!hasRampEntries) {
+      const precomputed = businessPrecalc[key] || null;
+      if (precomputed) {
+        if (precomputed.revenue !== null) {
+          revenue = precomputed.revenue;
+        }
+        if (precomputed.cost !== null) {
+          cost = precomputed.cost;
+        }
+        if (precomputed.expense !== null) {
+          expense = precomputed.expense;
+        }
+        if (precomputed.margin !== null) {
+          margin = precomputed.margin;
+        }
+      }
+    }
+
+    if (margin === undefined) {
+      margin = revenue - cost - expense;
+    }
+
+    const metrics = { revenue, cost, expense, margin };
+    rampDataset.cache[key] = metrics;
+    return metrics;
+  }
+  function logStub(functionName) {
+    console.warn(`${functionName} ainda nao foi implementada neste modo de visualizacao.`);
+  }
+
+  function openCapitalGiroModal() { logStub('openCapitalGiroModal'); }
+  function closeCapitalGiroModal() { logStub('closeCapitalGiroModal'); }
+  function saveCapitalGiro() { logStub('saveCapitalGiro'); }
+  function editCapitalGiro() { logStub('editCapitalGiro'); }
+  function deleteCapitalGiro() { logStub('deleteCapitalGiro'); }
+
+  function openFundingSourceModal() { logStub('openFundingSourceModal'); }
+  function closeFundingSourceModal() { logStub('closeFundingSourceModal'); }
+  function saveFundingSource() { logStub('saveFundingSource'); }
+  function editFundingSource() { logStub('editFundingSource'); }
+  function deleteFundingSource() { logStub('deleteFundingSource'); }
+
+  function openProfitDistributionModal() { logStub('openProfitDistributionModal'); }
+  function closeProfitDistributionModal() { logStub('closeProfitDistributionModal'); }
+  function saveProfitDistribution() { logStub('saveProfitDistribution'); }
+
+  function openResultRuleModal() { logStub('openResultRuleModal'); }
+  function closeResultRuleModal() { logStub('closeResultRuleModal'); }
+  function saveResultRule() { logStub('saveResultRule'); }
+  function editResultRule() { logStub('editResultRule'); }
+  function deleteResultRule() { logStub('deleteResultRule'); }
+
+  function toggleResultRuleType() { logStub('toggleResultRuleType'); }
+  const rampDataset = buildRampDataset(rampProducts || [], productsTotals || {});
+
   
   async function apiCall(url, method = 'GET', data = null) {
     try {
@@ -574,7 +1056,7 @@
       const result = await response.json();
       
       if (!result.success) {
-        throw new Error(result.error || 'Erro na requisição');
+        throw new Error(result.error || 'Erro na requisicao');
       }
       
       return result;
@@ -586,7 +1068,7 @@
   }
   
   // =========================================
-  // SEÇÃO 1: RESULTADOS
+  // SEO 1: RESULTADOS
   // =========================================
   
   function renderResultados() {
@@ -601,13 +1083,13 @@
     
     const html = `
       <div class="modefin-card">
-        <h2>📊 Resultados</h2>
+        <h2> Resultados</h2>
         
         <!-- Card de Destaque com Gradiente para Resumo -->
         <div class="modefin-card-highlight" style="border-radius: 12px; padding: 20px; margin-bottom: 20px;"
 >
         
-        <h3>Margem de Contribuição</h3>
+        <h3>Margem de Contribuicao</h3>
         <div class="values-grid">
           <div class="value-box">
             <div class="value-label">Faturamento</div>
@@ -615,17 +1097,17 @@
             <div class="value-percent">${formatPercent(productsTotals?.faturamento?.percentual)}</div>
           </div>
           <div class="value-box">
-            <div class="value-label">Custos Variáveis</div>
+            <div class="value-label">Custos Variaveis</div>
             <div class="value-amount">${formatCurrency(custosVariaveis)}</div>
             <div class="value-percent">${formatPercent(productsTotals?.custos_variaveis?.percentual)}</div>
           </div>
           <div class="value-box">
-            <div class="value-label">Despesas Variáveis</div>
+            <div class="value-label">Despesas Variaveis</div>
             <div class="value-amount">${formatCurrency(despesasVariaveis)}</div>
             <div class="value-percent">${formatPercent(productsTotals?.despesas_variaveis?.percentual)}</div>
           </div>
           <div class="value-box highlighted">
-            <div class="value-label">💰 Margem de Contribuição</div>
+            <div class="value-label"> Margem de Contribuicao</div>
             <div class="value-amount">${formatCurrency(margemContribuicao)}</div>
             <div class="value-percent">${formatPercent(productsTotals?.margem_contribuicao?.percentual)}</div>
           </div>
@@ -642,7 +1124,7 @@
             <div class="value-amount">${formatCurrency(despesasFixas)}</div>
           </div>
           <div class="value-box highlighted">
-            <div class="value-label">💎 Resultado Operacional</div>
+            <div class="value-label"> Resultado Operacional</div>
             <div class="value-amount">${formatCurrency(resultadoOperacional)}</div>
           </div>
         </div>
@@ -650,7 +1132,7 @@
         </div>
         
         <div class="info-box info">
-          ℹ️ <strong>Valores automáticos:</strong> Calculados com base em 
+           <strong>Valores automaticos:</strong> Calculados com base em 
           <a href="/pev/implantacao/modelo/produtos?plan_id=${planId}" style="color: #3b82f6; text-decoration: underline;">Produtos</a> e 
           <a href="/pev/implantacao/executivo/estruturas?plan_id=${planId}" style="color: #3b82f6; text-decoration: underline;">Estruturas</a>.
         </div>
@@ -661,11 +1143,10 @@
   }
   
   // =========================================
-  // SEÇÃO 2: INVESTIMENTOS
+  // SEO 2: INVESTIMENTOS
   // =========================================
   
   function renderInvestimentos() {
-    // Calcular totais por bloco
     const totais = {
       caixa: 0,
       recebiveis: 0,
@@ -676,62 +1157,100 @@
       ti: 0,
       outros: 0
     };
-    
-    // Capital de Giro
-    capitalGiroItems.forEach(item => {
-      const tipo = item.item_type?.toLowerCase() || '';
-      if (tipo === 'caixa') totais.caixa += parseFloat(item.amount || 0);
-      else if (tipo === 'recebiveis') totais.recebiveis += parseFloat(item.amount || 0);
-      else if (tipo === 'estoques') totais.estoques += parseFloat(item.amount || 0);
+  
+    (capitalGiroItems || []).forEach(item => {
+      const tipo = (item.item_type || '').toLowerCase();
+      const valor = parseFloat(item.amount || 0);
+      if (!Number.isFinite(valor) || !tipo) return;
+      if (totais[tipo] !== undefined) {
+        totais[tipo] += valor;
+      }
     });
-    
-    // Imobilizado (das estruturas)
-    if (investimentosEstruturas.instalacoes) {
-      totais.instalacoes = parseFloat(investimentosEstruturas.instalacoes.total || 0);
+  
+    if (investimentosEstruturas) {
+      const mapaEstruturas = {
+        instalacoes: investimentosEstruturas.instalacoes,
+        maquinas: investimentosEstruturas.maquinas,
+        moveis: investimentosEstruturas.moveis,
+        ti: investimentosEstruturas.ti,
+        outros: investimentosEstruturas.outros_investimentos
+      };
+      Object.entries(mapaEstruturas).forEach(([chave, dados]) => {
+        const total = parseFloat(dados?.total || 0);
+        if (Number.isFinite(total)) {
+          totais[chave] += total;
+        }
+      });
     }
-    if (investimentosEstruturas.maquinas) {
-      totais.maquinas = parseFloat(investimentosEstruturas.maquinas.total || 0);
-    }
-    if (investimentosEstruturas.moveis) {
-      totais.moveis = parseFloat(investimentosEstruturas.moveis.total || 0);
-    }
-    if (investimentosEstruturas.ti) {
-      totais.ti = parseFloat(investimentosEstruturas.ti.total || 0);
-    }
-    if (investimentosEstruturas.outros_investimentos) {
-      totais.outros = parseFloat(investimentosEstruturas.outros_investimentos.total || 0);
-    }
-    
-    const totalGeral = Object.values(totais).reduce((sum, val) => sum + val, 0);
-    
+  
+    const totalCapitalGiro = totais.caixa + totais.recebiveis + totais.estoques;
+    const totalImobilizado = totais.instalacoes + totais.maquinas + totais.moveis + totais.ti + totais.outros;
+    const totalGeral = totalCapitalGiro + totalImobilizado;
+  
+    const capitalLabels = { caixa: 'Caixa', recebiveis: 'Recebiveis', estoques: 'Estoques' };
+    const capitalDetalhes = (capitalGiroItems || [])
+      .map(item => {
+        const tipo = capitalLabels[item.item_type?.toLowerCase()] || 'Outro';
+        const descricao = (item.description || '').trim() || '-';
+        const data = formatDate(item.contribution_date);
+        const valor = formatCurrency(parseFloat(item.amount || 0));
+        const id = item.id || '';
+        return `
+          <tr>
+            <td>${tipo}</td>
+            <td>${descricao}</td>
+            <td>${data}</td>
+            <td style="text-align: right;">${valor}</td>
+            <td style="text-align: center;">
+              <button class="action-btn edit" onclick="editCapitalGiro('${id}')">Editar</button>
+              <button class="action-btn delete" onclick="deleteCapitalGiro('${id}')">Excluir</button>
+            </td>
+          </tr>
+        `;
+      })
+      .join('');
+  
+    const imobilizadoDetalhes = Object.entries(investimentosEstruturas || {})
+      .map(([slug, dados]) => {
+        const total = parseFloat(dados?.total || 0);
+        if (!Number.isFinite(total) || total <= 0) {
+          return '';
+        }
+        const nome = dados?.label || dados?.nome || slug.replace(/_/g, ' ');
+        return `
+          <tr>
+            <td>${nome}</td>
+            <td style="text-align: right;">${formatCurrency(total)}</td>
+          </tr>
+        `;
+      })
+      .filter(Boolean)
+      .join('');
+  
     const html = `
       <div class="modefin-card">
-        <h2>💼 Investimentos</h2>
-        
-        <!-- Cards de Resumo -->
+        <h2>Investimentos</h2>
+  
         <div class="values-grid">
           <div class="value-box highlighted">
-            <div class="value-label">💰 Total Investimentos</div>
+            <div class="value-label">Total Investimentos</div>
             <div class="value-amount">${formatCurrency(totalGeral)}</div>
           </div>
           <div class="value-box">
             <div class="value-label">Capital de Giro</div>
-            <div class="value-amount">${formatCurrency(totais.caixa + totais.recebiveis + totais.estoques)}</div>
+            <div class="value-amount">${formatCurrency(totalCapitalGiro)}</div>
           </div>
           <div class="value-box">
             <div class="value-label">Imobilizado</div>
-            <div class="value-amount">${formatCurrency(totais.instalacoes + totais.maquinas + totais.moveis + totais.ti + totais.outros)}</div>
+            <div class="value-amount">${formatCurrency(totalImobilizado)}</div>
           </div>
         </div>
-        
+  
         <div style="margin-top: 24px; display: flex; justify-content: space-between; align-items: center;">
-          <h3>Investimentos por Bloco</h3>
-          <button class="button" onclick="openCapitalGiroModal()">
-            + Capital de Giro
-          </button>
+          <h3 style="margin: 0;">Investimentos por Bloco</h3>
+          <button class="button" onclick="openCapitalGiroModal()">+ Capital de Giro</button>
         </div>
-        
-        <!-- Tabela Simples (Resumo) -->
+  
         <table class="modefin-table">
           <thead>
             <tr>
@@ -743,1465 +1262,549 @@
           <tbody>
             <tr>
               <td><strong>Caixa</strong></td>
-              <td style="text-align: right;"><strong>${formatCurrency(totais.caixa)}</strong></td>
+              <td style="text-align: right;">${formatCurrency(totais.caixa)}</td>
               <td><span style="background: #dbeafe; color: #1e40af; padding: 4px 8px; border-radius: 4px; font-size: 12px;">Capital de Giro</span></td>
             </tr>
             <tr>
-              <td><strong>Recebíveis</strong></td>
-              <td style="text-align: right;"><strong>${formatCurrency(totais.recebiveis)}</strong></td>
+              <td><strong>Recebiveis</strong></td>
+              <td style="text-align: right;">${formatCurrency(totais.recebiveis)}</td>
               <td><span style="background: #dbeafe; color: #1e40af; padding: 4px 8px; border-radius: 4px; font-size: 12px;">Capital de Giro</span></td>
             </tr>
             <tr>
               <td><strong>Estoques</strong></td>
-              <td style="text-align: right;"><strong>${formatCurrency(totais.estoques)}</strong></td>
+              <td style="text-align: right;">${formatCurrency(totais.estoques)}</td>
               <td><span style="background: #dbeafe; color: #1e40af; padding: 4px 8px; border-radius: 4px; font-size: 12px;">Capital de Giro</span></td>
             </tr>
             ${totais.instalacoes > 0 ? `
-            <tr>
-              <td><strong>Instalações</strong></td>
-              <td style="text-align: right;"><strong>${formatCurrency(totais.instalacoes)}</strong></td>
-              <td><span style="background: #fef3c7; color: #92400e; padding: 4px 8px; border-radius: 4px; font-size: 12px;">Estruturas</span></td>
-            </tr>
+              <tr>
+                <td><strong>Instalacoes</strong></td>
+                <td style="text-align: right;">${formatCurrency(totais.instalacoes)}</td>
+                <td><span style="background: #fef3c7; color: #92400e; padding: 4px 8px; border-radius: 4px; font-size: 12px;">Estruturas</span></td>
+              </tr>
             ` : ''}
             ${totais.maquinas > 0 ? `
-            <tr>
-              <td><strong>Máquinas</strong></td>
-              <td style="text-align: right;"><strong>${formatCurrency(totais.maquinas)}</strong></td>
-              <td><span style="background: #fef3c7; color: #92400e; padding: 4px 8px; border-radius: 4px; font-size: 12px;">Estruturas</span></td>
-            </tr>
+              <tr>
+                <td><strong>Maquinas</strong></td>
+                <td style="text-align: right;">${formatCurrency(totais.maquinas)}</td>
+                <td><span style="background: #fef3c7; color: #92400e; padding: 4px 8px; border-radius: 4px; font-size: 12px;">Estruturas</span></td>
+              </tr>
             ` : ''}
             ${totais.moveis > 0 ? `
-            <tr>
-              <td><strong>Móveis</strong></td>
-              <td style="text-align: right;"><strong>${formatCurrency(totais.moveis)}</strong></td>
-              <td><span style="background: #fef3c7; color: #92400e; padding: 4px 8px; border-radius: 4px; font-size: 12px;">Estruturas</span></td>
-            </tr>
+              <tr>
+                <td><strong>Moveis</strong></td>
+                <td style="text-align: right;">${formatCurrency(totais.moveis)}</td>
+                <td><span style="background: #fef3c7; color: #92400e; padding: 4px 8px; border-radius: 4px; font-size: 12px;">Estruturas</span></td>
+              </tr>
             ` : ''}
             ${totais.ti > 0 ? `
-            <tr>
-              <td><strong>TI</strong></td>
-              <td style="text-align: right;"><strong>${formatCurrency(totais.ti)}</strong></td>
-              <td><span style="background: #fef3c7; color: #92400e; padding: 4px 8px; border-radius: 4px; font-size: 12px;">Estruturas</span></td>
-            </tr>
+              <tr>
+                <td><strong>TI</strong></td>
+                <td style="text-align: right;">${formatCurrency(totais.ti)}</td>
+                <td><span style="background: #fef3c7; color: #92400e; padding: 4px 8px; border-radius: 4px; font-size: 12px;">Estruturas</span></td>
+              </tr>
             ` : ''}
             ${totais.outros > 0 ? `
-            <tr>
-              <td><strong>Outros</strong></td>
-              <td style="text-align: right;"><strong>${formatCurrency(totais.outros)}</strong></td>
-              <td><span style="background: #fef3c7; color: #92400e; padding: 4px 8px; border-radius: 4px; font-size: 12px;">Estruturas</span></td>
-            </tr>
+              <tr>
+                <td><strong>Outros</strong></td>
+                <td style="text-align: right;">${formatCurrency(totais.outros)}</td>
+                <td><span style="background: #fef3c7; color: #92400e; padding: 4px 8px; border-radius: 4px; font-size: 12px;">Estruturas</span></td>
+              </tr>
             ` : ''}
           </tbody>
         </table>
-        
-        <div class="info-box info" style="margin-top: 16px;">
-          ℹ️ <strong>Imobilizado:</strong> Valores calculados automaticamente com base em 
-          <a href="/pev/implantacao/executivo/estruturas?plan_id=${planId}" style="color: inherit; text-decoration: underline;">Estruturas de Execução</a>.
+  
+        <div style="margin-top: 32px;">
+          <h3 style="margin-bottom: 12px;">Capital de Giro Detalhado</h3>
+          <table class="modefin-table">
+            <thead>
+              <tr>
+                <th>Tipo</th>
+                <th>Descricao</th>
+                <th>Data</th>
+                <th style="text-align: right;">Valor</th>
+                <th style="text-align: center;">Acoes</th>
+              </tr>
+            </thead>
+            <tbody>
+              ${capitalDetalhes || `
+                <tr>
+                  <td colspan="5" style="text-align: center; padding: 16px; color: #64748b;">
+                    Nenhum investimento de capital de giro cadastrado.
+                  </td>
+                </tr>
+              `}
+            </tbody>
+          </table>
         </div>
-        
-        <!-- PLANILHA ESPECIAL: Blocos x Meses -->
-        <h3 style="margin-top: 32px;">Investimentos por Bloco e Período</h3>
-        ${renderInvestmentSheet()}
-        
-        <!-- Tabela de Capital de Giro Cadastrado -->
-        <h3 style="margin-top: 32px;">Investimentos em Capital de Giro (Detalhamento)</h3>
-        <table class="modefin-table">
-          <thead>
-            <tr>
-              <th>Tipo</th>
-              <th>Data</th>
-              <th>Descrição</th>
-              <th style="text-align: right;">Valor</th>
-              <th style="width: 120px; text-align: center;">Ações</th>
-            </tr>
-          </thead>
-          <tbody id="capital-giro-tbody">
-            ${renderCapitalGiroRows()}
-          </tbody>
-        </table>
-      </div>
+  
+        <div style="margin-top: 32px;">
+          <h3 style="margin-bottom: 12px;">Imobilizado por Categoria</h3>
+          <table class="modefin-table">
+            <thead>
+              <tr>
+                <th>Categoria</th>
+                <th style="text-align: right;">Total</th>
+              </tr>
+            </thead>
+            <tbody>
+              ${imobilizadoDetalhes || `
+                <tr>
+                  <td colspan="2" style="text-align: center; padding: 16px; color: #64748b;">
+                    Nenhum investimento em imobilizado registrado.
+                  </td>
+                </tr>
+              `}
+            </tbody>
+          </table>
+        </div>
+    </div>
     `;
-    
+  
     document.getElementById('secao-investimentos').innerHTML = html;
   }
-  
-  // Renderizar planilha especial Bloco x Mês
-  function renderInvestmentSheet() {
-    // Coletar todos os meses únicos (de capital de giro e estruturas)
-    const monthsSet = new Set();
-    
-    // Meses do capital de giro
-    capitalGiroItems.forEach(item => {
-      if (item.contribution_date) {
-        const date = item.contribution_date.substring(0, 7); // YYYY-MM
-        monthsSet.add(date);
-      }
-    });
-    
-    // Meses das estruturas
-    Object.values(investimentosEstruturas).forEach(categoria => {
-      if (categoria.por_mes) {
-        Object.keys(categoria.por_mes).forEach(mes => monthsSet.add(mes));
-      }
-    });
-    
-    // Ordenar meses
-    const months = Array.from(monthsSet).sort();
-    
-    // Se não houver meses, adicionar placeholder
-    if (months.length === 0) {
-      months.push('2026-05', '2026-06', '2026-07');
-    }
-    
-    // Calcular valores por bloco e mês
-    const blocosData = calcularBlocosMeses(months);
-    
-    return `
-      <div class="investment-sheet">
-        <!-- Parte Fixa: Blocos + Total -->
-        <div class="sheet-fixed">
-          <div class="sheet-row" style="background: #f8fafc; font-weight: 600;">
-            <div class="sheet-cell" style="flex: 1; padding: 12px; font-size: 13px; color: #475569;">Bloco</div>
-            <div class="sheet-cell" style="width: 140px; text-align: right; padding: 12px; font-size: 13px; color: #475569;">Total</div>
-          </div>
-          ${blocosData.map(bloco => `
-            <div class="sheet-row ${bloco.isTotal ? 'total-row' : ''}" style="${bloco.isSubtotal ? 'background: #f1f5f9; font-weight: 600;' : ''}">
-              <div class="sheet-cell" style="flex: 1; padding: 12px; ${bloco.indent ? 'padding-left: 32px;' : ''}">${bloco.nome}</div>
-              <div class="sheet-cell" style="width: 140px; text-align: right; padding: 12px; font-weight: ${bloco.isTotal || bloco.isSubtotal ? '700' : '400'};">${formatCurrency(bloco.total)}</div>
-            </div>
-          `).join('')}
-        </div>
-        
-        <!-- Parte Scrollável: Meses -->
-        <div class="sheet-scrollable">
-          <div class="sheet-row" style="background: #f8fafc; font-weight: 600; min-width: ${months.length * 120}px;">
-            ${months.map(mes => `
-              <div class="sheet-cell-header">${formatMonthLabel(mes)}</div>
-            `).join('')}
-          </div>
-          ${blocosData.map(bloco => `
-            <div class="sheet-row ${bloco.isTotal ? 'total-row' : ''}" style="min-width: ${months.length * 120}px; ${bloco.isSubtotal ? 'background: #f1f5f9;' : ''}">
-              ${months.map(mes => {
-                const valor = bloco.porMes[mes] || 0;
-                return `<div class="sheet-cell" style="min-width: 120px; text-align: right; padding: 12px;">${valor > 0 ? formatCurrency(valor) : '-'}</div>`;
-              }).join('')}
-            </div>
-          `).join('')}
-        </div>
-      </div>
-    `;
-  }
-  
-  function calcularBlocosMeses(months) {
-    const blocos = [];
-    
-    // Criar estrutura de dados por bloco
-    const dados = {
-      caixa: { total: 0, porMes: {} },
-      recebiveis: { total: 0, porMes: {} },
-      estoques: { total: 0, porMes: {} },
-      instalacoes: { total: 0, porMes: {} },
-      maquinas: { total: 0, porMes: {} },
-      moveis: { total: 0, porMes: {} },
-      ti: { total: 0, porMes: {} },
-      outros: { total: 0, porMes: {} }
-    };
-    
-    // Preencher Capital de Giro
-    capitalGiroItems.forEach(item => {
-      const tipo = item.item_type?.toLowerCase();
-      const mes = item.contribution_date?.substring(0, 7);
-      const valor = parseFloat(item.amount || 0);
-      
-      if (dados[tipo]) {
-        dados[tipo].total += valor;
-        dados[tipo].porMes[mes] = (dados[tipo].porMes[mes] || 0) + valor;
-      }
-    });
-    
-    // Preencher Imobilizado
-    if (investimentosEstruturas.instalacoes) {
-      dados.instalacoes.total = parseFloat(investimentosEstruturas.instalacoes.total || 0);
-      dados.instalacoes.porMes = investimentosEstruturas.instalacoes.por_mes || {};
-    }
-    if (investimentosEstruturas.maquinas) {
-      dados.maquinas.total = parseFloat(investimentosEstruturas.maquinas.total || 0);
-      dados.maquinas.porMes = investimentosEstruturas.maquinas.por_mes || {};
-    }
-    if (investimentosEstruturas.moveis) {
-      dados.moveis.total = parseFloat(investimentosEstruturas.moveis.total || 0);
-      dados.moveis.porMes = investimentosEstruturas.moveis.por_mes || {};
-    }
-    if (investimentosEstruturas.ti) {
-      dados.ti.total = parseFloat(investimentosEstruturas.ti.total || 0);
-      dados.ti.porMes = investimentosEstruturas.ti.por_mes || {};
-    }
-    if (investimentosEstruturas.outros_investimentos) {
-      dados.outros.total = parseFloat(investimentosEstruturas.outros_investimentos.total || 0);
-      dados.outros.porMes = investimentosEstruturas.outros_investimentos.por_mes || {};
-    }
-    
-    // Calcular subtotais
-    const subtotalCapitalGiro = dados.caixa.total + dados.recebiveis.total + dados.estoques.total;
-    const subtotalImobilizado = dados.instalacoes.total + dados.maquinas.total + dados.moveis.total + dados.ti.total + dados.outros.total;
-    const totalGeral = subtotalCapitalGiro + subtotalImobilizado;
-    
-    // Subtotal Capital Giro por mês
-    const capitalGiroPorMes = {};
-    months.forEach(mes => {
-      capitalGiroPorMes[mes] = (dados.caixa.porMes[mes] || 0) + (dados.recebiveis.porMes[mes] || 0) + (dados.estoques.porMes[mes] || 0);
-    });
-    
-    // Subtotal Imobilizado por mês
-    const imobilizadoPorMes = {};
-    months.forEach(mes => {
-      imobilizadoPorMes[mes] = (dados.instalacoes.porMes[mes] || 0) + (dados.maquinas.porMes[mes] || 0) + 
-                                (dados.moveis.porMes[mes] || 0) + (dados.ti.porMes[mes] || 0) + (dados.outros.porMes[mes] || 0);
-    });
-    
-    // Total Geral por mês
-    const totalPorMes = {};
-    months.forEach(mes => {
-      totalPorMes[mes] = (capitalGiroPorMes[mes] || 0) + (imobilizadoPorMes[mes] || 0);
-    });
-    
-    // Montar estrutura de blocos
-    blocos.push({ nome: 'TOTAL', total: totalGeral, porMes: totalPorMes, isTotal: true });
-    
-    // Capital de Giro
-    blocos.push({ nome: 'Capital de Giro', total: subtotalCapitalGiro, porMes: capitalGiroPorMes, isSubtotal: true });
-    blocos.push({ nome: 'Caixa', total: dados.caixa.total, porMes: dados.caixa.porMes, indent: true });
-    blocos.push({ nome: 'Recebíveis', total: dados.recebiveis.total, porMes: dados.recebiveis.porMes, indent: true });
-    blocos.push({ nome: 'Estoques', total: dados.estoques.total, porMes: dados.estoques.porMes, indent: true });
-    
-    // Imobilizado (só adicionar se houver valores)
-    if (subtotalImobilizado > 0) {
-      blocos.push({ nome: 'Imobilizado', total: subtotalImobilizado, porMes: imobilizadoPorMes, isSubtotal: true });
-      if (dados.instalacoes.total > 0) blocos.push({ nome: 'Instalações', total: dados.instalacoes.total, porMes: dados.instalacoes.porMes, indent: true });
-      if (dados.maquinas.total > 0) blocos.push({ nome: 'Máquinas', total: dados.maquinas.total, porMes: dados.maquinas.porMes, indent: true });
-      if (dados.moveis.total > 0) blocos.push({ nome: 'Móveis', total: dados.moveis.total, porMes: dados.moveis.porMes, indent: true });
-      if (dados.ti.total > 0) blocos.push({ nome: 'TI', total: dados.ti.total, porMes: dados.ti.porMes, indent: true });
-      if (dados.outros.total > 0) blocos.push({ nome: 'Outros', total: dados.outros.total, porMes: dados.outros.porMes, indent: true });
-    }
-    
-    return blocos;
-  }
-  
-  function formatMonthLabel(mesISO) {
-    if (!mesISO) return '-';
-    const [ano, mes] = mesISO.split('-');
-    const meses = ['Jan', 'Fev', 'Mar', 'Abr', 'Mai', 'Jun', 'Jul', 'Ago', 'Set', 'Out', 'Nov', 'Dez'];
-    return `${meses[parseInt(mes) - 1]}/${ano}`;
-  }
-  
-  function gerarSequenciaMeses(primeiroMesISO) {
-    const meses = [];
-    const [anoInicio, mesInicio] = primeiroMesISO.split('-').map(Number);
-    
-    let ano = anoInicio;
-    let mes = mesInicio;
-    
-    // 12 meses iniciais
-    for (let i = 0; i < 12; i++) {
-      meses.push(`${ano}-${String(mes).padStart(2, '0')}`);
-      mes++;
-      if (mes > 12) {
-        mes = 1;
-        ano++;
-      }
-    }
-    
-    // Restante do ano após o 12º mês (se não completou o ano)
-    while (mes !== 1) {
-      meses.push(`${ano}-${String(mes).padStart(2, '0')}`);
-      mes++;
-      if (mes > 12) {
-        mes = 1;
-        ano++;
-      }
-    }
-    
-    // + 4 anos (48 meses)
-    for (let i = 0; i < 48; i++) {
-      meses.push(`${ano}-${String(mes).padStart(2, '0')}`);
-      mes++;
-      if (mes > 12) {
-        mes = 1;
-        ano++;
-      }
-    }
-    
-    return meses;
-  }
-  
-  function renderCapitalGiroRows() {
-    if (!capitalGiroItems || capitalGiroItems.length === 0) {
-      return `
-        <tr>
-          <td colspan="5" style="text-align: center; padding: 24px; color: #64748b;">
-            Nenhum investimento cadastrado. Clique em "+ Capital de Giro" para adicionar.
-          </td>
-        </tr>
-      `;
-    }
-    
-    const tipoLabels = {
-      'caixa': 'Caixa',
-      'recebiveis': 'Recebíveis',
-      'estoques': 'Estoques'
-    };
-    
-    return capitalGiroItems.map(item => `
-      <tr>
-        <td>${tipoLabels[item.item_type] || item.item_type}</td>
-        <td>${formatDate(item.contribution_date)}</td>
-        <td>${item.description || '-'}</td>
-        <td style="text-align: right;"><strong>${formatCurrency(item.amount)}</strong></td>
-        <td style="text-align: center;">
-          <button class="action-btn edit" onclick="editCapitalGiro(${item.id})" title="Editar">
-            ✏️
-          </button>
-          <button class="action-btn delete" onclick="deleteCapitalGiro(${item.id})" title="Deletar">
-            🗑️
-          </button>
-        </td>
-      </tr>
-    `).join('');
-  }
-  
-  // CRUD Capital de Giro
-  let editingCapitalGiroId = null;
-  
-  function openCapitalGiroModal(itemId = null) {
-    console.log('[Modal] Abrindo modal de Capital de Giro, itemId:', itemId);
-    editingCapitalGiroId = itemId;
-    
-    let itemData = null;
-    if (itemId) {
-      itemData = capitalGiroItems.find(i => i.id === itemId);
-      console.log('[Modal] Dados do item:', itemData);
-    }
-    
-    const modalHTML = `
-      <div class="modal-content">
-        <div class="modal-header">
-          <h3>${itemId ? 'Editar' : 'Novo'} Investimento em Capital de Giro</h3>
-          <button class="modal-close" onclick="closeCapitalGiroModal()">×</button>
-        </div>
-        
-        <div class="form-group">
-          <label>Tipo *</label>
-          <select id="cg-tipo" required>
-            <option value="">Selecione...</option>
-            <option value="caixa" ${itemData?.item_type === 'caixa' ? 'selected' : ''}>Caixa</option>
-            <option value="recebiveis" ${itemData?.item_type === 'recebiveis' ? 'selected' : ''}>Recebíveis</option>
-            <option value="estoques" ${itemData?.item_type === 'estoques' ? 'selected' : ''}>Estoques</option>
-          </select>
-        </div>
-        
-        <div class="form-group">
-          <label>Data do Aporte *</label>
-          <input type="date" id="cg-data" value="${itemData?.contribution_date || ''}" required>
-        </div>
-        
-        <div class="form-group">
-          <label>Valor (R$) *</label>
-          <input type="number" id="cg-valor" step="0.01" min="0" value="${itemData?.amount || ''}" required>
-        </div>
-        
-        <div class="form-group">
-          <label>Descrição</label>
-          <textarea id="cg-descricao" rows="3">${itemData?.description || ''}</textarea>
-        </div>
-        
-        <div class="form-group">
-          <label>Observações</label>
-          <textarea id="cg-obs" rows="3">${itemData?.notes || ''}</textarea>
-        </div>
-        
-        <div class="modal-actions">
-          <button class="button button-ghost" onclick="closeCapitalGiroModal()">
-            Cancelar
-          </button>
-          <button class="button button-primary" onclick="saveCapitalGiro()">
-            Salvar
-          </button>
-        </div>
-      </div>
-    `;
-    
-    const modalElement = document.getElementById('capitalGiroModal');
-    console.log('[Modal] Elemento do modal:', modalElement);
-    
-    if (!modalElement) {
-      console.error('[Modal] ERRO: Modal capitalGiroModal não encontrado no DOM!');
-      alert('Erro: Modal não encontrado. Recarregue a página.');
-      return;
-    }
-    
-    modalElement.innerHTML = modalHTML;
-    
-    // IMPORTANTE: Remover classe 'modal' que força display:none e opacity:0
-    modalElement.className = '';
-    
-    // FORÇA estilos via cssText (mais forte que classes CSS)
-    modalElement.style.cssText = `
-      display: flex !important;
-      opacity: 1 !important;
-      visibility: visible !important;
-      position: fixed !important;
-      z-index: 25000 !important;
-      top: 0 !important;
-      left: 0 !important;
-      width: 100vw !important;
-      height: 100vh !important;
-      background-color: rgba(0, 0, 0, 0.6) !important;
-      backdrop-filter: blur(4px) !important;
-      align-items: center !important;
-      justify-content: center !important;
-    `;
-    
-    // FORÇA estilos do modal-content
-    const modalContent = modalElement.querySelector('.modal-content');
-    if (modalContent) {
-      modalContent.style.cssText = `
-        background: white !important;
-        color: #000000 !important;
-        padding: 32px !important;
-        border-radius: 16px !important;
-        max-width: 600px !important;
-        width: 90% !important;
-        max-height: 90vh !important;
-        overflow-y: auto !important;
-        box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3) !important;
-        position: relative !important;
-        display: block !important;
-        opacity: 1 !important;
-      `;
-    }
-    
-    console.log('[Modal] Modal aberto com sucesso!');
-  }
-  
-  function closeCapitalGiroModal() {
-    console.log('[Modal] Fechando modal');
-    const modalElement = document.getElementById('capitalGiroModal');
-    if (modalElement) {
-      // Forçar display none
-      modalElement.style.cssText = 'display: none !important;';
-      modalElement.className = 'modal'; // Restaurar classe
-    }
-    editingCapitalGiroId = null;
-  }
-  
-  async function saveCapitalGiro() {
-    const tipo = document.getElementById('cg-tipo').value;
-    const data = document.getElementById('cg-data').value;
-    const valor = document.getElementById('cg-valor').value;
-    const descricao = document.getElementById('cg-descricao').value;
-    const obs = document.getElementById('cg-obs').value;
-    
-    if (!tipo || !data || !valor) {
-      alert('Preencha os campos obrigatórios');
-      return;
-    }
-    
-    try {
-      const payload = {
-        item_type: tipo,
-        contribution_date: data,
-        amount: parseFloat(valor),
-        description: descricao,
-        notes: obs
-      };
-      
-      if (editingCapitalGiroId) {
-        // Update
-        await apiCall(`/pev/api/implantacao/${planId}/finance/capital-giro/${editingCapitalGiroId}`, 'PUT', payload);
-      } else {
-        // Create
-        await apiCall(`/pev/api/implantacao/${planId}/finance/capital-giro`, 'POST', payload);
-      }
-      
-      // Reload data
-      await reloadCapitalGiro();
-      closeCapitalGiroModal();
-      renderInvestimentos();
-      
-    } catch (error) {
-      console.error('Erro ao salvar:', error);
-    }
-  }
-  
-  function editCapitalGiro(itemId) {
-    openCapitalGiroModal(itemId);
-  }
-  
-  async function deleteCapitalGiro(itemId) {
-    if (!confirm('Tem certeza que deseja deletar este investimento?')) return;
-    
-    try {
-      await apiCall(`/pev/api/implantacao/${planId}/finance/capital-giro/${itemId}`, 'DELETE');
-      await reloadCapitalGiro();
-      renderInvestimentos();
-    } catch (error) {
-      console.error('Erro ao deletar:', error);
-    }
-  }
-  
-  async function reloadCapitalGiro() {
-    try {
-      const result = await apiCall(`/pev/api/implantacao/${planId}/finance/capital-giro`, 'GET');
-      capitalGiroItems.length = 0;
-      capitalGiroItems.push(...(result.data || []));
-    } catch (error) {
-      console.error('Erro ao recarregar capital de giro:', error);
-    }
-  }
-  
-  // =========================================
-  // SEÇÃO 3: FONTES DE RECURSOS
-  // =========================================
-  
+
   function renderFontes() {
-    // Calcular totais por tipo
-    const totaisPorTipo = {};
-    let totalGeral = 0;
-    
-    fundingSources.forEach(source => {
-      const tipo = source.category || 'Outros';
-      const valor = parseFloat(source.amount || 0);
-      totaisPorTipo[tipo] = (totaisPorTipo[tipo] || 0) + valor;
-      totalGeral += valor;
-    });
-    
-    const html = `
-      <div class="modefin-card">
-        <h2>💼 Fontes de Recursos</h2>
-        
-        <!-- Cards de Resumo -->
-        <div class="values-grid">
-          <div class="value-box highlighted">
-            <div class="value-label">💰 Total Fontes</div>
-            <div class="value-amount">${formatCurrency(totalGeral)}</div>
-          </div>
-          ${Object.entries(totaisPorTipo).map(([tipo, valor]) => `
-            <div class="value-box">
-              <div class="value-label">${tipo}</div>
-              <div class="value-amount">${formatCurrency(valor)}</div>
-            </div>
-          `).join('')}
-        </div>
-        
-        <div style="margin-top: 24px; display: flex; justify-content: space-between; align-items: center;">
-          <h3>Fontes Cadastradas</h3>
-          <button class="button" onclick="openFundingSourceModal()">
-            + Nova Fonte
-          </button>
-        </div>
-        
-        <table class="modefin-table">
-          <thead>
-            <tr>
-              <th>Tipo</th>
-              <th>Descrição</th>
-              <th>Data</th>
-              <th style="text-align: right;">Valor</th>
-              <th style="width: 120px; text-align: center;">Ações</th>
-            </tr>
-          </thead>
-          <tbody>
-            ${renderFundingSourcesRows()}
-          </tbody>
-        </table>
+    const fontes = Array.isArray(fundingSources) ? fundingSources : [];
+    const categoriaLabels = {
+      capital_proprio: 'Capital Proprio',
+      capital: 'Capital Proprio',
+      aporte: 'Aporte',
+      emprestimos: 'Emprestimos',
+      emprestimo: 'Emprestimos',
+      fornecedores: 'Fornecedores',
+      investidores: 'Investidores',
+      investors: 'Investidores',
+      outros: 'Outros'
+    };
+
+    const totais = fontes.reduce((acc, fonte) => {
+      const categoriaNorm = (fonte.category || 'outros').toLowerCase();
+      const valor = parseFloat(fonte.amount || 0);
+      if (!Number.isFinite(valor)) {
+        return acc;
+      }
+      acc.total += valor;
+      if (!acc.categorias[categoriaNorm]) {
+        acc.categorias[categoriaNorm] = 0;
+      }
+      acc.categorias[categoriaNorm] += valor;
+      return acc;
+    }, { total: 0, categorias: {} });
+
+    const cards = Object.entries(totais.categorias).map(([categoria, valor]) => `
+      <div class="value-box">
+        <div class="value-label">${categoriaLabels[categoria] || categoria}</div>
+        <div class="value-amount">${formatCurrency(valor)}</div>
       </div>
-    `;
-    
-    document.getElementById('secao-fontes').innerHTML = html;
-  }
-  
-  function renderFundingSourcesRows() {
-    if (!fundingSources || fundingSources.length === 0) {
-      return `
-        <tr>
-          <td colspan="5" style="text-align: center; padding: 24px; color: #64748b;">
-            Nenhuma fonte cadastrada. Clique em "+ Nova Fonte" para adicionar.
-          </td>
-        </tr>
-      `;
-    }
-    
-    return fundingSources.map(source => `
-      <tr>
-        <td><strong>${source.category || '-'}</strong></td>
-        <td>${source.description || '-'}</td>
-        <td>${formatDate(source.contribution_date)}</td>
-        <td style="text-align: right;"><strong>${formatCurrency(parseFloat(source.amount || 0))}</strong></td>
-        <td style="text-align: center;">
-          <button class="action-btn edit" onclick="editFundingSource(${source.id})" title="Editar">
-            ✏️
-          </button>
-          <button class="action-btn delete" onclick="deleteFundingSource(${source.id})" title="Deletar">
-            🗑️
-          </button>
-        </td>
-      </tr>
     `).join('');
-  }
-  
-  // CRUD Fontes de Recursos
-  let editingFundingSourceId = null;
-  
-  function openFundingSourceModal(sourceId = null) {
-    console.log('[Modal] Abrindo modal de Fonte de Recursos, sourceId:', sourceId);
-    editingFundingSourceId = sourceId;
-    
-    let sourceData = null;
-    if (sourceId) {
-      sourceData = fundingSources.find(s => s.id === sourceId);
-    }
-    
-    const modalHTML = `
-      <div class="modal-content">
-        <div class="modal-header">
-          <h3>${sourceId ? 'Editar' : 'Nova'} Fonte de Recursos</h3>
-          <button class="modal-close" onclick="closeFundingSourceModal()">×</button>
-        </div>
-        
-        <div class="form-group">
-          <label>Tipo *</label>
-          <select id="fs-tipo" required>
-            <option value="">Selecione...</option>
-            <option value="Capital Próprio" ${sourceData?.category === 'Capital Próprio' ? 'selected' : ''}>Capital Próprio</option>
-            <option value="Empréstimos e Financiamentos" ${sourceData?.category === 'Empréstimos e Financiamentos' ? 'selected' : ''}>Empréstimos e Financiamentos</option>
-            <option value="Fornecedores" ${sourceData?.category === 'Fornecedores' ? 'selected' : ''}>Fornecedores</option>
-            <option value="Outros" ${sourceData?.category === 'Outros' ? 'selected' : ''}>Outros</option>
-          </select>
-        </div>
-        
-        <div class="form-group">
-          <label>Descrição *</label>
-          <input type="text" id="fs-descricao" value="${sourceData?.description || ''}" required>
-        </div>
-        
-        <div class="form-group">
-          <label>Data do Aporte</label>
-          <input type="date" id="fs-data" value="${sourceData?.contribution_date || ''}">
-        </div>
-        
-        <div class="form-group">
-          <label>Valor (R$) *</label>
-          <input type="number" id="fs-valor" step="0.01" min="0" value="${sourceData?.amount || ''}" required>
-        </div>
-        
-        <div class="form-group">
-          <label>Observações</label>
-          <textarea id="fs-obs" rows="3">${sourceData?.notes || ''}</textarea>
-        </div>
-        
-        <div class="modal-actions">
-          <button class="button button-ghost" onclick="closeFundingSourceModal()">
-            Cancelar
-          </button>
-          <button class="button button-primary" onclick="saveFundingSource()">
-            Salvar
-          </button>
-        </div>
-      </div>
-    `;
-    
-    const modalElement = document.getElementById('fundingSourceModal');
-    if (!modalElement) {
-      console.error('[Modal] Erro: fundingSourceModal não encontrado');
-      return;
-    }
-    
-    modalElement.innerHTML = modalHTML;
-    modalElement.className = '';
-    modalElement.style.cssText = `
-      display: flex !important;
-      opacity: 1 !important;
-      visibility: visible !important;
-      position: fixed !important;
-      z-index: 25000 !important;
-      top: 0 !important;
-      left: 0 !important;
-      width: 100vw !important;
-      height: 100vh !important;
-      background-color: rgba(0, 0, 0, 0.6) !important;
-      align-items: center !important;
-      justify-content: center !important;
-    `;
-    
-    const modalContent = modalElement.querySelector('.modal-content');
-    if (modalContent) {
-      modalContent.style.cssText = `
-        background: white !important;
-        color: #000000 !important;
-        padding: 32px !important;
-        border-radius: 16px !important;
-        max-width: 600px !important;
-        width: 90% !important;
-        box-shadow: 0 20px 60px rgba(0,0,0,0.3) !important;
-      `;
-    }
-  }
-  
-  function closeFundingSourceModal() {
-    const modalElement = document.getElementById('fundingSourceModal');
-    if (modalElement) {
-      modalElement.style.cssText = 'display: none !important;';
-      modalElement.className = 'modal';
-    }
-    editingFundingSourceId = null;
-  }
-  
-  async function saveFundingSource() {
-    const tipo = document.getElementById('fs-tipo').value;
-    const descricao = document.getElementById('fs-descricao').value;
-    const data = document.getElementById('fs-data').value;
-    const valor = document.getElementById('fs-valor').value;
-    const obs = document.getElementById('fs-obs').value;
-    
-    if (!tipo || !descricao || !valor) {
-      alert('Preencha os campos obrigatórios');
-      return;
-    }
-    
-    try {
-      const payload = {
-        category: tipo,
-        description: descricao,
-        contribution_date: data,
-        amount: valor,
-        notes: obs
-      };
-      
-      if (editingFundingSourceId) {
-        await apiCall(`/pev/api/implantacao/${planId}/finance/sources/${editingFundingSourceId}`, 'PUT', payload);
-      } else {
-        await apiCall(`/pev/api/implantacao/${planId}/finance/sources`, 'POST', payload);
-      }
-      
-      await reloadFundingSources();
-      closeFundingSourceModal();
-      renderFontes();
-      
-    } catch (error) {
-      console.error('Erro ao salvar fonte:', error);
-    }
-  }
-  
-  function editFundingSource(sourceId) {
-    openFundingSourceModal(sourceId);
-  }
-  
-  async function deleteFundingSource(sourceId) {
-    if (!confirm('Tem certeza que deseja deletar esta fonte de recursos?')) return;
-    
-    try {
-      await apiCall(`/pev/api/implantacao/${planId}/finance/sources/${sourceId}`, 'DELETE');
-      await reloadFundingSources();
-      renderFontes();
-    } catch (error) {
-      console.error('Erro ao deletar fonte:', error);
-    }
-  }
-  
-  async function reloadFundingSources() {
-    try {
-      const result = await apiCall(`/pev/api/implantacao/${planId}/finance/funding_sources`, 'GET');
-      fundingSources.length = 0;
-      fundingSources.push(...(result.data || []));
-    } catch (error) {
-      console.error('Erro ao recarregar fontes:', error);
-    }
-  }
-  
-  // =========================================
-  // SEÇÃO 4: DISTRIBUIÇÃO DE LUCROS
-  // =========================================
-  
-  function renderDistribuicao() {
-    // Calcular Resultado Operacional
-    const margemContribuicao = productsTotals?.margem_contribuicao?.valor || 0;
-    const custosFixos = fixedCostsSummary?.custos_fixos_mensal || 0;
-    const despesasFixas = fixedCostsSummary?.despesas_fixas_mensal || 0;
-    const resultadoOperacional = margemContribuicao - custosFixos - despesasFixas;
-    
-    // Distribuição de Lucros (%)
-    const percDistribuicao = profitDistribution && profitDistribution.length > 0 
-      ? parseFloat(profitDistribution[0].percentage || profitDistribution[0].profit_distribution_percent || 0) 
-      : 0;
-    const valorDistribuicao = resultadoOperacional * (percDistribuicao / 100);
-    
-    // Outras Destinações - CORREÇÃO: Se resultado negativo, só aplicar FIXAS
-    const outrasDestinacoes = resultRules.reduce((sum, rule) => {
-      if (rule.rule_type === 'percentage') {
-        // Só aplicar % se resultado POSITIVO
-        if (resultadoOperacional > 0) {
-          return sum + (resultadoOperacional * (parseFloat(rule.value || 0) / 100));
-        } else {
-          return sum; // Não aplica % em prejuízo
-        }
-      } else {
-        return sum + parseFloat(rule.value || 0);
-      }
-    }, 0);
-    
-    // Distribuição só se resultado POSITIVO
-    const valorDistribuicaoReal = resultadoOperacional > 0 ? valorDistribuicao : 0;
-    
-    const resultadoFinal = resultadoOperacional - valorDistribuicaoReal - outrasDestinacoes;
-    
-    const html = `
-      <div class="modefin-card">
-        <h2>💰 Distribuição de Lucros e Destinações</h2>
-        
-        <div class="values-grid">
-          <div class="value-box">
-            <div class="value-label">Resultado Operacional</div>
-            <div class="value-amount">${formatCurrency(resultadoOperacional)}</div>
-          </div>
-          <div class="value-box" style="cursor: pointer;" onclick="openProfitDistributionModal()" title="Clique para editar">
-            <div class="value-label">Distribuição de Lucros (${percDistribuicao}%) ✏️</div>
-            <div class="value-amount">${formatCurrency(valorDistribuicaoReal)}</div>
-            <div class="value-percent" style="font-size: 11px;">${resultadoOperacional > 0 ? 'Clique para editar %' : 'Não aplicável (resultado negativo)'}</div>
-          </div>
-          <div class="value-box">
-            <div class="value-label">Outras Destinações</div>
-            <div class="value-amount">${formatCurrency(outrasDestinacoes)}</div>
-          </div>
-          <div class="value-box highlighted">
-            <div class="value-label">💎 Resultado Final</div>
-            <div class="value-amount">${formatCurrency(resultadoFinal)}</div>
-          </div>
-        </div>
-        
-        <div style="margin-top: 24px; display: flex; justify-content: space-between; align-items: center;">
-          <h3>Outras Destinações de Resultado</h3>
-          <button class="button" onclick="openResultRuleModal()">
-            + Nova Destinação
-          </button>
-        </div>
-        <p style="font-size: 13px; opacity: 0.9; margin-bottom: 12px;">
-          Regras que reduzem o resultado (reservas, fundos, investimentos adicionais, etc)
-        </p>
-        
-        <table class="modefin-table">
-          <thead>
-            <tr>
-              <th>Descrição</th>
-              <th>Tipo</th>
-              <th style="text-align: right;">Valor/% </th>
-              <th style="text-align: right;">Impacto</th>
-              <th style="width: 120px; text-align: center;">Ações</th>
-            </tr>
-          </thead>
-          <tbody>
-            ${renderResultRulesRows()}
-          </tbody>
-        </table>
-        
-        <!-- Resultado do Período -->
-        <h3 style="margin-top: 32px;">Resultado do Período</h3>
-        <div class="values-grid" style="grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));">
-          <div class="value-box highlighted">
-            <div class="value-label">💰 Resultado do Período</div>
-            <div class="value-amount" style="font-size: 28px;">${formatCurrency(resultadoFinal)}</div>
-            <div class="value-percent" style="font-size: 12px;">Valor que permanece no caixa do negócio</div>
-          </div>
-        </div>
-        
-        <div class="info-box success" style="margin-top: 16px;">
-          ✅ <strong>Resultado do Período:</strong> Este é o valor que efetivamente fica no caixa do negócio 
-          após distribuir lucros e aplicar outras destinações.
-        </div>
-      </div>
-    `;
-    
-    document.getElementById('secao-distribuicao').innerHTML = html;
-  }
-  
-  function renderResultRulesRows() {
-    if (!resultRules || resultRules.length === 0) {
+
+    const linhas = fontes.map(fonte => {
+      const categoria = (fonte.category || 'outros').toLowerCase();
+      const descricao = (fonte.description || '').trim() || '-';
+      const disponibilidade = formatDate(fonte.availability || fonte.contribution_date);
+      const valor = formatCurrency(parseFloat(fonte.amount || 0));
+      const id = fonte.id || '';
       return `
         <tr>
-          <td colspan="4" style="text-align: center; padding: 24px; color: #64748b;">
-            Nenhuma destinação cadastrada.
-          </td>
-        </tr>
-      `;
-    }
-    
-    const resultadoOperacional = (productsTotals?.margem_contribuicao?.valor || 0) - 
-                                  (fixedCostsSummary?.custos_fixos_mensal || 0) - 
-                                  (fixedCostsSummary?.despesas_fixas_mensal || 0);
-    
-    return resultRules.map(rule => {
-      let impacto = 0;
-      let valorTexto = '';
-      
-      if (rule.rule_type === 'percentage') {
-        impacto = resultadoOperacional * (parseFloat(rule.value || 0) / 100);
-        valorTexto = `${parseFloat(rule.value || 0).toFixed(1)}%`;
-      } else {
-        impacto = parseFloat(rule.value || 0);
-        valorTexto = formatCurrency(impacto);
-      }
-      
-      return `
-        <tr>
-          <td>${rule.description || '-'}</td>
-          <td><span style="background: #e0f2fe; color: #075985; padding: 4px 8px; border-radius: 4px; font-size: 12px;">${rule.rule_type === 'percentage' ? 'Percentual' : 'Valor Fixo'}</span></td>
-          <td style="text-align: right;">${valorTexto}</td>
-          <td style="text-align: right;"><strong>${formatCurrency(impacto)}</strong></td>
+          <td>${categoriaLabels[categoria] || categoria}</td>
+          <td>${descricao}</td>
+          <td>${disponibilidade}</td>
+          <td style="text-align: right;">${valor}</td>
           <td style="text-align: center;">
-            <button class="action-btn edit" onclick="editResultRule(${rule.id})" title="Editar">
-              ✏️
-            </button>
-            <button class="action-btn delete" onclick="deleteResultRule(${rule.id})" title="Deletar">
-              🗑️
-            </button>
+            <button class="action-btn edit" onclick="editFundingSource('${id}')">Editar</button>
+            <button class="action-btn delete" onclick="deleteFundingSource('${id}')">Excluir</button>
           </td>
         </tr>
       `;
     }).join('');
+
+    const html = `
+      <div class="modefin-card">
+        <h2>Fontes de Recursos</h2>
+
+        <div class="values-grid">
+          <div class="value-box highlighted">
+            <div class="value-label">Total de Recursos</div>
+            <div class="value-amount">${formatCurrency(totais.total)}</div>
+          </div>
+          ${cards || `
+            <div class="value-box">
+              <div class="value-label">Sem categorias</div>
+              <div class="value-amount">R$ 0,00</div>
+            </div>
+          `}
+        </div>
+
+        <div style="margin-top: 24px; display: flex; justify-content: space-between; align-items: center;">
+          <h3 style="margin: 0;">Fontes cadastradas</h3>
+          <button class="button" onclick="openFundingSourceModal()">+ Nova Fonte</button>
+        </div>
+
+        <table class="modefin-table">
+          <thead>
+            <tr>
+              <th>Categoria</th>
+              <th>Descricao</th>
+              <th>Disponibilidade</th>
+              <th style="text-align: right;">Valor</th>
+              <th style="text-align: center;">Acoes</th>
+            </tr>
+          </thead>
+          <tbody>
+            ${linhas || `
+              <tr>
+                <td colspan="5" style="text-align: center; padding: 16px; color: #64748b;">
+                  Nenhuma fonte cadastrada ate o momento.
+                </td>
+              </tr>
+            `}
+          </tbody>
+        </table>
+      </div>
+    `;
+
+    document.getElementById('secao-fontes').innerHTML = html;
   }
-  
-  // CRUD de Outras Destinações (Result Rules)
-  let editingResultRuleId = null;
-  
-  function openResultRuleModal(ruleId = null) {
-    console.log('[Modal] Abrindo modal de Destinação, ruleId:', ruleId);
-    editingResultRuleId = ruleId;
-    
-    let ruleData = null;
-    if (ruleId) {
-      ruleData = resultRules.find(r => r.id === ruleId);
-    }
-    
-    const modalHTML = `
-      <div class="modal-content">
-        <div class="modal-header">
-          <h3>${ruleId ? 'Editar' : 'Nova'} Destinação de Resultado</h3>
-          <button class="modal-close" onclick="closeResultRuleModal()">×</button>
+
+  function renderDistribuicao() {
+    const percDistribuicao = profitDistribution && profitDistribution.length > 0
+      ? parseFloat(profitDistribution[0].percentage || profitDistribution[0].profit_distribution_percent || profitDistribution[0].value || 0)
+      : 0;
+    const inicioDistribuicao = profitDistribution && profitDistribution.length > 0
+      ? formatDate(profitDistribution[0].start_date)
+      : '-';
+
+    const totaisDestinacoes = (resultRules || []).reduce((acc, regra) => {
+      if (!regra) {
+        return acc;
+      }
+      if ((regra.rule_type || '').toLowerCase() === 'percentage') {
+        const perc = parseFloat(regra.percentage ?? regra.value ?? 0);
+        if (Number.isFinite(perc)) {
+          acc.percentual += perc;
+        }
+      } else {
+        const valor = parseFloat(regra.value ?? 0);
+        if (Number.isFinite(valor)) {
+          acc.fixo += valor;
+        }
+      }
+      return acc;
+    }, { percentual: 0, fixo: 0 });
+
+    const linhas = (resultRules || []).map(regra => {
+      const id = regra.id || '';
+      const tipo = (regra.rule_type || '').toLowerCase() === 'percentage' ? 'Percentual' : 'Valor Fixo';
+      const valor = (regra.rule_type || '').toLowerCase() === 'percentage'
+        ? formatPercent(regra.percentage ?? regra.value ?? 0)
+        : formatCurrency(regra.value || 0);
+      const inicio = regra.start_date ? formatDate(regra.start_date) : '-';
+      const periodicidade = (regra.periodicity || '').trim() || '-';
+      const descricao = (regra.description || '').trim() || '-';
+      const observacoes = (regra.notes || '').trim() || '-';
+      return `
+        <tr>
+          <td>${descricao}</td>
+          <td>${tipo}</td>
+          <td style="text-align: right;">${valor}</td>
+          <td>${inicio}</td>
+          <td>${periodicidade}</td>
+          <td>${observacoes}</td>
+          <td style="text-align: center;">
+            <button class="action-btn edit" onclick="editResultRule('${id}')">Editar</button>
+            <button class="action-btn delete" onclick="deleteResultRule('${id}')">Excluir</button>
+          </td>
+        </tr>
+      `;
+    }).join('');
+
+    const html = `
+      <div class="modefin-card">
+        <h2>Distribuicao de Resultados</h2>
+        <p style="font-size: 14px; opacity: 0.85; margin-bottom: 18px;">
+          Configure como o resultado operacional sera distribuido entre lucros e outras destinacoes estrategicas.
+        </p>
+
+        <div class="values-grid">
+          <div class="value-box">
+            <div class="value-label">Distribuicao de Lucros (%)</div>
+            <div class="value-amount">${formatPercent(percDistribuicao)}</div>
+            <div class="value-percent" style="font-size: 11px;">Inicio ${inicioDistribuicao}</div>
+          </div>
+          <div class="value-box">
+            <div class="value-label">Outras destinacoes (%)</div>
+            <div class="value-amount">${totaisDestinacoes.percentual.toFixed(1)}%</div>
+            <div class="value-percent" style="font-size: 11px;">Regras percentuais cadastradas</div>
+          </div>
+          <div class="value-box">
+            <div class="value-label">Destinacoes fixas mensais</div>
+            <div class="value-amount">${formatCurrency(totaisDestinacoes.fixo)}</div>
+            <div class="value-percent" style="font-size: 11px;">Valores fixos aplicados por periodo</div>
+          </div>
         </div>
-        
-        <div class="info-box info" style="margin-bottom: 20px;">
-          ℹ️ <strong>Destinação:</strong> Define valores que serão deduzidos do Resultado Operacional
-          (ex: Reserva de Contingência, Fundo de Expansão, etc)
+
+        <div style="margin-top: 24px; display: flex; justify-content: space-between; flex-wrap: wrap; gap: 12px;">
+          <button class="button button-ghost" onclick="openProfitDistributionModal()">Configurar distribuicao de lucros</button>
+          <button class="button" onclick="openResultRuleModal()">+ Nova destinacao</button>
         </div>
-        
-        <div class="form-group">
-          <label>Descrição *</label>
-          <input type="text" id="rr-descricao" value="${ruleData?.description || ''}" required
-                 placeholder="Ex: Reserva de Contingência">
-        </div>
-        
-        <div class="form-group">
-          <label>Tipo *</label>
-          <select id="rr-tipo" required onchange="toggleResultRuleType()">
-            <option value="">Selecione...</option>
-            <option value="percentage" ${ruleData?.rule_type === 'percentage' ? 'selected' : ''}>Percentual do Resultado</option>
-            <option value="fixed" ${ruleData?.rule_type === 'fixed' ? 'selected' : ''}>Valor Fixo</option>
-          </select>
-        </div>
-        
-        <div class="form-group" id="rr-percent-group" style="display: ${ruleData?.rule_type === 'percentage' || !ruleData ? 'block' : 'none'};">
-          <label>Percentual (%)</label>
-          <input type="number" id="rr-percent" step="0.1" min="0" max="100" value="${ruleData?.rule_type === 'percentage' ? ruleData.value : ''}">
-          <small style="color: #64748b; font-size: 12px;">Percentual do Resultado Operacional</small>
-        </div>
-        
-        <div class="form-group" id="rr-fixed-group" style="display: ${ruleData?.rule_type === 'fixed' ? 'block' : 'none'};">
-          <label>Valor Fixo (R$)</label>
-          <input type="number" id="rr-fixed" step="0.01" min="0" value="${ruleData?.rule_type === 'fixed' ? ruleData.value : ''}">
-          <small style="color: #64748b; font-size: 12px;">Valor fixo mensal</small>
-        </div>
-        
-        <div class="form-group">
-          <label>Data de Início</label>
-          <input type="date" id="rr-start-date" value="${ruleData?.start_date || ''}">
-          <small style="color: #64748b; font-size: 12px;">A destinação só será aplicada a partir desta data</small>
-        </div>
-        
-        <div class="form-group">
-          <label>Observações</label>
-          <textarea id="rr-obs" rows="3">${ruleData?.notes || ''}</textarea>
-        </div>
-        
-        <div class="modal-actions">
-          <button class="button button-ghost" onclick="closeResultRuleModal()">
-            Cancelar
-          </button>
-          <button class="button button-primary" onclick="saveResultRule()">
-            Salvar
-          </button>
+
+        <table class="modefin-table" style="margin-top: 20px;">
+          <thead>
+            <tr>
+              <th>Descricao</th>
+              <th>Tipo</th>
+              <th style="text-align: right;">Valor / Percentual</th>
+              <th>Inicio</th>
+              <th>Periodicidade</th>
+              <th>Observacoes</th>
+              <th style="text-align: center;">Acoes</th>
+            </tr>
+          </thead>
+          <tbody>
+            ${linhas || `
+              <tr>
+                <td colspan="7" style="text-align: center; padding: 16px; color: #64748b;">
+                  Nenhuma destinacao adicional cadastrada.
+                </td>
+              </tr>
+            `}
+          </tbody>
+        </table>
+
+        <div class="info-box info" style="margin-top: 16px;">
+          Defina percentuais para aplicar sobre o resultado operacional positivo ou valores fixos para provisionamentos recorrentes.
         </div>
       </div>
     `;
-    
-    const modalElement = document.getElementById('resultRuleModal');
-    if (!modalElement) return;
-    
-    modalElement.innerHTML = modalHTML;
-    modalElement.className = '';
-    modalElement.style.cssText = `
-      display: flex !important;
-      opacity: 1 !important;
-      position: fixed !important;
-      z-index: 25000 !important;
-      top: 0 !important;
-      left: 0 !important;
-      width: 100vw !important;
-      height: 100vh !important;
-      background-color: rgba(0, 0, 0, 0.6) !important;
-      align-items: center !important;
-      justify-content: center !important;
-    `;
-    
-    const modalContent = modalElement.querySelector('.modal-content');
-    if (modalContent) {
-      modalContent.style.cssText = `
-        background: white !important;
-        color: #000000 !important;
-        padding: 32px !important;
-        border-radius: 16px !important;
-        max-width: 600px !important;
-        width: 90% !important;
-      `;
-    }
+
+    document.getElementById('secao-distribuicao').innerHTML = html;
   }
-  
-  function closeResultRuleModal() {
-    const modalElement = document.getElementById('resultRuleModal');
-    if (modalElement) {
-      modalElement.style.cssText = 'display: none !important;';
-      modalElement.className = 'modal';
-    }
-    editingResultRuleId = null;
-  }
-  
-  function toggleResultRuleType() {
-    const tipo = document.getElementById('rr-tipo').value;
-    const percentGroup = document.getElementById('rr-percent-group');
-    const fixedGroup = document.getElementById('rr-fixed-group');
-    
-    if (tipo === 'percentage') {
-      percentGroup.style.display = 'block';
-      fixedGroup.style.display = 'none';
-    } else if (tipo === 'fixed') {
-      percentGroup.style.display = 'none';
-      fixedGroup.style.display = 'block';
-    }
-  }
-  
-  async function saveResultRule() {
-    const descricao = document.getElementById('rr-descricao').value;
-    const tipo = document.getElementById('rr-tipo').value;
-    const percent = document.getElementById('rr-percent').value;
-    const fixed = document.getElementById('rr-fixed').value;
-    const startDate = document.getElementById('rr-start-date').value;
-    const obs = document.getElementById('rr-obs').value;
-    
-    if (!descricao || !tipo) {
-      alert('Preencha os campos obrigatórios');
-      return;
-    }
-    
-    const valor = tipo === 'percentage' ? percent : fixed;
-    
-    if (!valor) {
-      alert('Informe o valor ou percentual');
-      return;
-    }
-    
-    try {
-      const payload = {
-        description: descricao,
-        rule_type: tipo,
-        value: parseFloat(valor),
-        start_date: startDate,
-        notes: obs
-      };
-      
-      if (editingResultRuleId) {
-        await apiCall(`/pev/api/implantacao/${planId}/finance/result_rules/${editingResultRuleId}`, 'PUT', payload);
-      } else {
-        await apiCall(`/pev/api/implantacao/${planId}/finance/result_rules`, 'POST', payload);
+
+  function calcularFluxoInvestimento() {
+    const timeline = {};
+    const mesesSet = new Set();
+
+    function registrar(mesBruto, campo, valor) {
+      const chave = normalizeMonthKey(mesBruto);
+      if (!chave) {
+        return;
       }
-      
-      await reloadResultRules();
-      closeResultRuleModal();
-      renderDistribuicao();
-      
-    } catch (error) {
-      console.error('Erro ao salvar destinação:', error);
+      const numero = parseFloat(valor || 0);
+      if (!Number.isFinite(numero) || numero === 0) {
+        return;
+      }
+      if (!timeline[chave]) {
+        timeline[chave] = { investimentos: 0, fontes: 0 };
+      }
+      timeline[chave][campo] += numero;
+      mesesSet.add(chave);
     }
+
+    (capitalGiroItems || []).forEach(item => {
+      registrar(item.contribution_date, 'investimentos', item.amount);
+    });
+
+    (parcelasEstruturas || []).forEach(parcela => {
+      const valor = parcela.valor || parcela.amount || parcela.total || parcela.valor_parcela;
+      const data = parcela.due_info || parcela.vencimento || parcela.month || parcela.reference_month;
+      registrar(data, 'investimentos', valor);
+    });
+
+    (fundingSources || []).forEach(fonte => {
+      registrar(fonte.contribution_date || fonte.availability || fonte.date, 'fontes', fonte.amount);
+    });
+
+    const meses = Array.from(mesesSet).sort();
+    let saldoAcumulado = 0;
+
+    const fluxoPorMes = {};
+    meses.forEach(mes => {
+      const investimento = timeline[mes]?.investimentos || 0;
+      const fonte = timeline[mes]?.fontes || 0;
+      const saldoPeriodo = fonte - investimento;
+      saldoAcumulado += saldoPeriodo;
+      fluxoPorMes[mes] = {
+        mes,
+        investimentos: investimento,
+        fontes: fonte,
+        saldoPeriodo,
+        saldoAcumulado
+      };
+    });
+
+    const totais = meses.reduce((acc, mes) => {
+      const dados = fluxoPorMes[mes];
+      acc.investimentos += dados.investimentos;
+      acc.fontes += dados.fontes;
+      acc.saldoPeriodo += dados.saldoPeriodo;
+      return acc;
+    }, { investimentos: 0, fontes: 0, saldoPeriodo: 0 });
+
+    return {
+      meses,
+      fluxoPorMes,
+      totais,
+      saldoFinal: saldoAcumulado
+    };
   }
-  
-  function editResultRule(ruleId) {
-    openResultRuleModal(ruleId);
-  }
-  
-  async function deleteResultRule(ruleId) {
-    if (!confirm('Tem certeza que deseja deletar esta destinação?')) return;
-    
-    try {
-      await apiCall(`/pev/api/implantacao/${planId}/finance/result_rules/${ruleId}`, 'DELETE');
-      await reloadResultRules();
-      renderDistribuicao();
-    } catch (error) {
-      console.error('Erro ao deletar destinação:', error);
-    }
-  }
-  
-  async function reloadResultRules() {
-    try {
-      // Recarregar destinações via página inteira (force reload)
-      console.log('[Result Rules] Recarregando página para atualizar destinações...');
-      window.location.reload();
-    } catch (error) {
-      console.error('Erro ao recarregar destinações:', error);
-    }
-  }
-  
-  // =========================================
-  // SEÇÃO 5: FLUXO DE CAIXA DO INVESTIMENTO
-  // =========================================
-  
+
   function renderFluxoInvestimento() {
-    // Calcular fluxo mês a mês
     const fluxoData = calcularFluxoInvestimento();
-    
+
     const html = `
       <div class="modefin-card">
-        <h2>📊 Fluxo de Caixa do Investimento</h2>
-        <p style="font-size: 14px; opacity: 0.9; margin-bottom: 20px;">
-          Análise do fluxo de caixa relacionado aos investimentos e fontes de recursos
+        <h2>Fluxo de Caixa do Investimento</h2>
+        <p style="font-size: 14px; opacity: 0.85; margin-bottom: 18px;">
+          Acompanhe os desembolsos planejados e as fontes de financiamento ao longo do tempo.
         </p>
-        
+
         <div style="overflow-x: auto;">
           <table class="modefin-table">
             <thead>
               <tr>
-                <th style="min-width: 100px;">Período</th>
-                <th style="min-width: 130px; text-align: right;">Capital de Giro</th>
-                <th style="min-width: 130px; text-align: right;">Imobilizado</th>
-                <th style="min-width: 150px; text-align: right;">Total Investimentos</th>
+                <th style="min-width: 120px;">Periodo</th>
+                <th style="min-width: 150px; text-align: right;">Investimentos</th>
                 <th style="min-width: 150px; text-align: right;">Fontes de Recursos</th>
-                <th style="min-width: 140px; text-align: right;">Saldo do Período</th>
-                <th style="min-width: 140px; text-align: right;">Saldo Acumulado</th>
+                <th style="min-width: 150px; text-align: right;">Saldo do Periodo</th>
+                <th style="min-width: 150px; text-align: right;">Saldo Acumulado</th>
               </tr>
             </thead>
             <tbody>
               ${renderFluxoInvestimentoRows(fluxoData)}
             </tbody>
-            <tfoot style="background: #f8fafc; font-weight: 700;">
+            <tfoot>
               <tr>
                 <td><strong>TOTAL</strong></td>
-                <td style="text-align: right;">${formatCurrency(fluxoData.totais.capitalGiro)}</td>
-                <td style="text-align: right;">${formatCurrency(fluxoData.totais.imobilizado)}</td>
                 <td style="text-align: right;">${formatCurrency(fluxoData.totais.investimentos)}</td>
                 <td style="text-align: right;">${formatCurrency(fluxoData.totais.fontes)}</td>
                 <td style="text-align: right;">${formatCurrency(fluxoData.totais.saldoPeriodo)}</td>
-                <td style="text-align: right;">${formatCurrency(fluxoData.saldoFinal)}</td>
+                <td style="text-align: right; color: ${fluxoData.saldoFinal >= 0 ? '#059669' : '#dc2626'};">
+                  <strong>${formatCurrency(fluxoData.saldoFinal)}</strong>
+                </td>
               </tr>
             </tfoot>
           </table>
         </div>
-        
-        <div class="info-box ${fluxoData.saldoFinal >= 0 ? 'success' : 'warning'}" style="margin-top: 16px;">
-          ${fluxoData.saldoFinal >= 0 
-            ? '✅ <strong>Saldo Positivo:</strong> As fontes de recursos são suficientes para cobrir os investimentos.'
-            : '⚠️ <strong>Saldo Negativo:</strong> Os investimentos excedem as fontes. Considere aumentar o capital ou reduzir investimentos.'
-          }
+
+        <div class="info-box info" style="margin-top: 16px;">
+          Use esta visao para verificar se as fontes de financiamento cobrem os desembolsos de capital planejados.
         </div>
       </div>
     `;
-    
+
     document.getElementById('secao-fluxo-investimento').innerHTML = html;
   }
-  
-  function calcularFluxoInvestimento() {
-    // Coletar todos os meses
-    const mesesSet = new Set();
-    
-    // Meses de Capital de Giro
-    capitalGiroItems.forEach(item => {
-      if (item.contribution_date) {
-        mesesSet.add(item.contribution_date.substring(0, 7));
-      }
-    });
-    
-    // Meses de Imobilizado
-    Object.values(investimentosEstruturas).forEach(categoria => {
-      if (categoria.por_mes) {
-        Object.keys(categoria.por_mes).forEach(mes => mesesSet.add(mes));
-      }
-    });
-    
-    // Meses de Fontes
-    fundingSources.forEach(source => {
-      if (source.contribution_date) {
-        const mes = source.contribution_date.substring(0, 7);
-        mesesSet.add(mes);
-      }
-    });
-    
-    const meses = Array.from(mesesSet).sort();
-    
-    // Calcular valores por mês
-    const fluxoPorMes = {};
-    let saldoAcumulado = 0;
-    
-    const totais = {
-      capitalGiro: 0,
-      imobilizado: 0,
-      investimentos: 0,
-      fontes: 0,
-      saldoPeriodo: 0
-    };
-    
-    meses.forEach(mes => {
-      const mesData = {
-        mes: mes,
-        capitalGiro: 0,
-        imobilizado: 0,
-        investimentos: 0,
-        fontes: 0,
-        saldoPeriodo: 0,
-        saldoAcumulado: 0
-      };
-      
-      // Capital de Giro
-      capitalGiroItems.forEach(item => {
-        if (item.contribution_date && item.contribution_date.substring(0, 7) === mes) {
-          mesData.capitalGiro += parseFloat(item.amount || 0);
-        }
-      });
-      
-      // Imobilizado
-      Object.values(investimentosEstruturas).forEach(categoria => {
-        if (categoria.por_mes && categoria.por_mes[mes]) {
-          mesData.imobilizado += parseFloat(categoria.por_mes[mes] || 0);
-        }
-      });
-      
-      // Fontes de Recursos
-      fundingSources.forEach(source => {
-        if (source.contribution_date && source.contribution_date.substring(0, 7) === mes) {
-          mesData.fontes += parseFloat(source.amount || 0);
-        }
-      });
-      
-      // Totais
-      mesData.investimentos = mesData.capitalGiro + mesData.imobilizado;
-      mesData.saldoPeriodo = mesData.fontes - mesData.investimentos;
-      saldoAcumulado += mesData.saldoPeriodo;
-      mesData.saldoAcumulado = saldoAcumulado;
-      
-      // Acumular totais gerais
-      totais.capitalGiro += mesData.capitalGiro;
-      totais.imobilizado += mesData.imobilizado;
-      totais.investimentos += mesData.investimentos;
-      totais.fontes += mesData.fontes;
-      totais.saldoPeriodo += mesData.saldoPeriodo;
-      
-      fluxoPorMes[mes] = mesData;
-    });
-    
-    return {
-      meses: meses,
-      fluxoPorMes: fluxoPorMes,
-      totais: totais,
-      saldoFinal: saldoAcumulado
-    };
-  }
-  
+
   function renderFluxoInvestimentoRows(fluxoData) {
-    if (fluxoData.meses.length === 0) {
+    if (!fluxoData.meses.length) {
       return `
         <tr>
-          <td colspan="7" style="text-align: center; padding: 24px; color: #64748b;">
-            Nenhum movimento de investimento ou fonte cadastrado ainda.
+          <td colspan="5" style="text-align: center; padding: 16px; color: #64748b;">
+            Nenhum investimento planejado registrado.
           </td>
         </tr>
       `;
     }
-    
+
     return fluxoData.meses.map(mes => {
-      const data = fluxoData.fluxoPorMes[mes];
-      const saldoPositivo = data.saldoPeriodo >= 0;
-      const saldoAcumPositivo = data.saldoAcumulado >= 0;
-      
+      const dados = fluxoData.fluxoPorMes[mes];
       return `
         <tr>
           <td><strong>${formatMonthLabel(mes)}</strong></td>
-          <td style="text-align: right;">${data.capitalGiro > 0 ? formatCurrency(data.capitalGiro) : '-'}</td>
-          <td style="text-align: right;">${data.imobilizado > 0 ? formatCurrency(data.imobilizado) : '-'}</td>
-          <td style="text-align: right;"><strong>${formatCurrency(data.investimentos)}</strong></td>
-          <td style="text-align: right; color: #059669;"><strong>${data.fontes > 0 ? formatCurrency(data.fontes) : '-'}</strong></td>
-          <td style="text-align: right; color: ${saldoPositivo ? '#059669' : '#dc2626'};">
-            <strong>${formatCurrency(data.saldoPeriodo)}</strong>
+          <td style="text-align: right; color: #dc2626;">${formatCurrency(dados.investimentos)}</td>
+          <td style="text-align: right; color: #059669;">${formatCurrency(dados.fontes)}</td>
+          <td style="text-align: right; color: ${dados.saldoPeriodo >= 0 ? '#059669' : '#dc2626'};">
+            ${formatCurrency(dados.saldoPeriodo)}
           </td>
-          <td style="text-align: right; color: ${saldoAcumPositivo ? '#059669' : '#dc2626'};">
-            <strong>${formatCurrency(data.saldoAcumulado)}</strong>
+          <td style="text-align: right; color: ${dados.saldoAcumulado >= 0 ? '#059669' : '#dc2626'};">
+            ${formatCurrency(dados.saldoAcumulado)}
           </td>
         </tr>
       `;
     }).join('');
   }
   
-  // =========================================
-  // SEÇÃO 6: FLUXO DE CAIXA DO NEGÓCIO
-  // =========================================
-  
-  function renderFluxoNegocio() {
-    const fluxoData = calcularFluxoNegocio();
-    
-    const html = `
-      <div class="modefin-card">
-        <h2>💹 Fluxo de Caixa do Negócio</h2>
-        <p style="font-size: 14px; opacity: 0.9; margin-bottom: 20px;">
-          Projeção do fluxo de caixa operacional do negócio
-        </p>
-        
-        <div style="overflow-x: auto; max-height: 600px; overflow-y: auto; border-radius: 8px;">
-          <table class="modefin-table" style="position: relative;">
-            <thead style="position: sticky; top: 0; background: #f8fafc; z-index: 10;">
-              <tr>
-                <th style="min-width: 100px; position: sticky; top: 0; background: #f8fafc;">Período</th>
-                <th style="min-width: 130px; text-align: right;">Receita</th>
-                <th style="min-width: 130px; text-align: right;">Variáveis</th>
-                <th style="min-width: 150px; text-align: right;">Margem Contribuição</th>
-                <th style="min-width: 130px; text-align: right;">Fixos</th>
-                <th style="min-width: 160px; text-align: right;">Resultado Operacional</th>
-                <th style="min-width: 150px; text-align: right;">Destinação Resultados</th>
-                <th style="min-width: 140px; text-align: right;">Resultado do Período</th>
-                <th style="min-width: 140px; text-align: right; background: #fef3c7;">Resultado Acumulado</th>
-                <th style="min-width: 150px; text-align: right; background: #dbeafe;">Saldo Acum. Investimentos</th>
-                <th style="min-width: 140px; text-align: right; background: #dcfce7;">Saldo Acum. Total</th>
-              </tr>
-            </thead>
-            <tbody>
-              ${renderFluxoNegocioRows(fluxoData)}
-            </tbody>
-          </table>
-        </div>
-        
-        <div class="info-box info" style="margin-top: 16px;">
-          ℹ️ <strong>Valores Mensais:</strong> 
-          Receita de ${formatCurrency(productsTotals?.faturamento?.valor || 0)} baseada no faturamento cadastrado em Produtos.
-          Destinações percentuais só aplicam quando resultado é positivo.
-          Custos/Despesas fixas consideram as datas de vencimento das parcelas cadastradas em Estruturas.
-        </div>
-      </div>
-    `;
-    
-    document.getElementById('secao-fluxo-negocio').innerHTML = html;
-  }
-  
   function calcularFluxoNegocio() {
-    // Gerar sequência de meses: 12 meses + restante do ano + 4 anos
     const fluxoInv = calcularFluxoInvestimento();
-    
-    // Pegar primeiro mês com movimento ou usar default
+
     let primeiroMes = fluxoInv.meses.length > 0 ? fluxoInv.meses[0] : '2026-05';
-    
-    // Gerar meses
     const meses = gerarSequenciaMeses(primeiroMes);
-    
-    // CORREÇÃO: O faturamento JÁ É MENSAL (não precisa dividir!)
-    // productsTotals.faturamento.valor = R$ 1.200.000 MENSAL
-    const receitaMensal = productsTotals?.faturamento?.valor || 0;
-    const custoVariavelMensal = productsTotals?.custos_variaveis?.valor || 0;
-    const despesaVariavelMensal = productsTotals?.despesas_variaveis?.valor || 0;
-    const margemMensal = receitaMensal - custoVariavelMensal - despesaVariavelMensal;
-    
-    console.log('[Fluxo Negócio] Receita mensal:', receitaMensal);
-    console.log('[Fluxo Negócio] Margem mensal:', margemMensal);
-    
-    const custoFixoMensal = fixedCostsSummary?.custos_fixos_mensal || 0;
-    const despesaFixaMensal = fixedCostsSummary?.despesas_fixas_mensal || 0;
-    const fixosMensal = custoFixoMensal + despesaFixaMensal;
-    
-    const resultadoOpMensal = margemMensal - fixosMensal;
-    
-    // Distribuição e destinações
-    const percDistribuicao = profitDistribution && profitDistribution.length > 0 
-      ? parseFloat(profitDistribution[0].percentage || profitDistribution[0].profit_distribution_percent || 0) 
+
+    const percDistribuicao = profitDistribution && profitDistribution.length > 0
+      ? parseFloat(profitDistribution[0].percentage || profitDistribution[0].profit_distribution_percent || 0)
       : 0;
-    const distribuicaoMensal = resultadoOpMensal * (percDistribuicao / 100);
-    
-    // CORREÇÃO: Se resultado negativo, só aplicar destinações FIXAS (não percentuais)
-    const outrasDestMensal = resultRules.reduce((sum, rule) => {
-      if (rule.rule_type === 'percentage') {
-        // Só aplicar % se resultado for POSITIVO
-        if (resultadoOpMensal > 0) {
-          return sum + (resultadoOpMensal * (parseFloat(rule.value || 0) / 100));
-        } else {
-          return sum; // Não aplica percentual em resultado negativo
-        }
-      } else {
-        // Valor fixo: sempre aplica
-        return sum + parseFloat(rule.value || 0);
-      }
-    }, 0);
-    
-    // Distribuição de lucros: só aplicar se resultado POSITIVO
-    const distribuicaoMensalReal = resultadoOpMensal > 0 ? distribuicaoMensal : 0;
-    
-    const destinacaoTotalMensal = distribuicaoMensalReal + outrasDestMensal;
-    const resultadoPeriodoMensal = resultadoOpMensal - destinacaoTotalMensal;
-    
+
+    const hasDetailedFixedCosts = Array.isArray(fixedCostEntries) && fixedCostEntries.length > 0;
+    const fixedCostsTimeline = hasDetailedFixedCosts ? buildFixedCostsTimeline(meses) : {};
+    const fallbackCustosFixos = fixedCostsSummary?.custos_fixos_mensal || 0;
+    const fallbackDespesasFixas = fixedCostsSummary?.despesas_fixas_mensal || 0;
+
     const fluxoPorMes = {};
     let resultadoAcumulado = 0;
-    
+
     meses.forEach(mes => {
-      // Calcular destinações DESTE MÊS considerando data de início
+      const metrics = getRampMetrics(mes);
+      const receitaMes = metrics.revenue;
+      const custoVariavelMes = metrics.cost;
+      const despesaVariavelMes = metrics.expense;
+      const margemMes = metrics.margin !== undefined ? metrics.margin : (receitaMes - custoVariavelMes - despesaVariavelMes);
+
+      const custosFixosMes = hasDetailedFixedCosts
+        ? (fixedCostsTimeline[mes]?.custo || 0)
+        : fallbackCustosFixos;
+      const despesasFixasMes = hasDetailedFixedCosts
+        ? (fixedCostsTimeline[mes]?.despesa || 0)
+        : fallbackDespesasFixas;
+      const fixosMes = custosFixosMes + despesasFixasMes;
+
+      const resultadoOpMes = margemMes - fixosMes;
+
       const mesDate = new Date(mes + '-01');
-      
-      // Distribuição de lucros: verificar data de início
       let distribuicaoMesAtual = 0;
-      if (resultadoOpMensal > 0 && profitDistribution.length > 0) {
+      if (resultadoOpMes > 0 && profitDistribution.length > 0) {
         const profitStartDate = profitDistribution[0]?.start_date;
         if (!profitStartDate || mesDate >= new Date(profitStartDate)) {
-          distribuicaoMesAtual = distribuicaoMensalReal;
+          distribuicaoMesAtual = resultadoOpMes * (percDistribuicao / 100);
         }
       }
-      
-      // Outras destinações: verificar data de início de cada uma
-      const outrasDestMesAtual = resultRules.reduce((sum, rule) => {
-        // Verificar data de início
+
+      const outrasDestMesAtual = (resultRules || []).reduce((sum, rule) => {
+        if (!rule) {
+          return sum;
+        }
+
         if (rule.start_date) {
-          if (mesDate < new Date(rule.start_date)) {
-            return sum; // Ainda não começou
+          const inicioRegra = new Date(rule.start_date);
+          if (mesDate < inicioRegra) {
+            return sum;
           }
         }
-        
+
         if (rule.rule_type === 'percentage') {
-          if (resultadoOpMensal > 0) {
-            return sum + (resultadoOpMensal * (parseFloat(rule.value || 0) / 100));
+          if (resultadoOpMes > 0) {
+            const perc = parseFloat(rule.value ?? rule.percentage ?? 0) / 100;
+            if (Number.isFinite(perc) && perc > 0) {
+              return sum + (resultadoOpMes * perc);
+            }
           }
-        } else {
-          return sum + parseFloat(rule.value || 0);
+          return sum;
         }
-        return sum;
+
+        const valor = parseFloat(rule.value ?? 0);
+        return sum + (Number.isFinite(valor) ? valor : 0);
       }, 0);
-      
+
       const destinacaoTotal = distribuicaoMesAtual + outrasDestMesAtual;
-      const resultadoPeriodo = resultadoOpMensal - destinacaoTotal;
+      const resultadoPeriodo = resultadoOpMes - destinacaoTotal;
       resultadoAcumulado += resultadoPeriodo;
-      
+
       fluxoPorMes[mes] = {
         mes: mes,
-        receita: receitaMensal,
-        variaveis: custoVariavelMensal + despesaVariavelMensal,
-        margem: margemMensal,
-        fixos: fixosMensal,
-        resultadoOp: resultadoOpMensal,
+        receita: receitaMes,
+        variaveis: custoVariavelMes + despesaVariavelMes,
+        margem: margemMes,
+        fixos: fixosMes,
+        resultadoOp: resultadoOpMes,
         destinacoes: destinacaoTotal,
         resultadoPeriodo: resultadoPeriodo,
         resultadoAcumulado: resultadoAcumulado,
@@ -2209,19 +1812,112 @@
         saldoTotal: resultadoAcumulado + (fluxoInv.fluxoPorMes[mes]?.saldoAcumulado || 0)
       };
     });
-    
+
     return {
       meses: meses,
       fluxoPorMes: fluxoPorMes
     };
   }
-  
+
+  function renderFluxoNegocio() {
+    const fluxoData = calcularFluxoNegocio();
+
+    const totais = fluxoData.meses.reduce((acc, mes, index) => {
+      const dados = fluxoData.fluxoPorMes[mes];
+      acc.receita += dados.receita;
+      acc.variaveis += dados.variaveis;
+      acc.margem += dados.margem;
+      acc.fixos += dados.fixos;
+      acc.resultadoOp += dados.resultadoOp;
+      acc.destinacoes += dados.destinacoes;
+      acc.resultadoPeriodo += dados.resultadoPeriodo;
+      if (index === fluxoData.meses.length - 1) {
+        acc.resultadoAcumulado = dados.resultadoAcumulado;
+        acc.saldoInvestimentos = dados.saldoInvestimentos;
+        acc.saldoTotal = dados.saldoTotal;
+      }
+      return acc;
+    }, {
+      receita: 0,
+      variaveis: 0,
+      margem: 0,
+      fixos: 0,
+      resultadoOp: 0,
+      destinacoes: 0,
+      resultadoPeriodo: 0,
+      resultadoAcumulado: 0,
+      saldoInvestimentos: 0,
+      saldoTotal: 0
+    });
+
+    const html = `
+      <div class="modefin-card">
+        <h2>Fluxo de Caixa do Negocio</h2>
+        <p style="font-size: 14px; opacity: 0.85; margin-bottom: 18px;">
+          Resultado operacional mensal considerando receitas projetadas (ramp-up), custos variaveis e fixos configurados.
+        </p>
+
+        <div style="overflow-x: auto; max-height: 600px;">
+          <table class="modefin-table">
+            <thead>
+              <tr>
+                <th style="min-width: 120px;">Periodo</th>
+                <th style="min-width: 140px; text-align: right;">Receita</th>
+                <th style="min-width: 140px; text-align: right;">Variaveis</th>
+                <th style="min-width: 140px; text-align: right;">Margem de Contribuicao</th>
+                <th style="min-width: 140px; text-align: right;">Fixos</th>
+                <th style="min-width: 150px; text-align: right;">Resultado Operacional</th>
+                <th style="min-width: 150px; text-align: right;">Destinacoes</th>
+                <th style="min-width: 150px; text-align: right;">Resultado do Periodo</th>
+                <th style="min-width: 150px; text-align: right;">Resultado Acumulado</th>
+                <th style="min-width: 150px; text-align: right;">Saldo Investimentos</th>
+                <th style="min-width: 150px; text-align: right;">Saldo Total</th>
+              </tr>
+            </thead>
+            <tbody>
+              ${renderFluxoNegocioRows(fluxoData)}
+            </tbody>
+            <tfoot>
+              <tr>
+                <td><strong>TOTAL</strong></td>
+                <td style="text-align: right;">${formatCurrency(totais.receita)}</td>
+                <td style="text-align: right;">${formatCurrency(totais.variaveis)}</td>
+                <td style="text-align: right;">${formatCurrency(totais.margem)}</td>
+                <td style="text-align: right;">${formatCurrency(totais.fixos)}</td>
+                <td style="text-align: right;">${formatCurrency(totais.resultadoOp)}</td>
+                <td style="text-align: right;">${formatCurrency(totais.destinacoes)}</td>
+                <td style="text-align: right; color: ${totais.resultadoPeriodo >= 0 ? '#059669' : '#dc2626'};">
+                  ${formatCurrency(totais.resultadoPeriodo)}
+                </td>
+                <td style="text-align: right; color: ${totais.resultadoAcumulado >= 0 ? '#059669' : '#dc2626'};">
+                  ${formatCurrency(totais.resultadoAcumulado)}
+                </td>
+                <td style="text-align: right; color: ${totais.saldoInvestimentos >= 0 ? '#059669' : '#dc2626'};">
+                  ${formatCurrency(totais.saldoInvestimentos)}
+                </td>
+                <td style="text-align: right; color: ${totais.saldoTotal >= 0 ? '#059669' : '#dc2626'};">
+                  ${formatCurrency(totais.saldoTotal)}
+                </td>
+              </tr>
+            </tfoot>
+          </table>
+        </div>
+
+        <div class="info-box info" style="margin-top: 16px;">
+          Receita segue o ramp-up configurado em Produtos. Custos fixos respeitam as datas de aquisicao e contratacao definidas nas Estruturas de Execucao e destinacoes somente sao aplicadas quando ha resultado operacional positivo.
+        </div>
+      </div>
+    `;
+
+    document.getElementById('secao-fluxo-negocio').innerHTML = html;
+  }
+
   function renderFluxoNegocioRows(fluxoData) {
     if (fluxoData.meses.length === 0) {
       return `
         <tr>
           <td colspan="11" style="text-align: center; padding: 24px; color: #64748b;">
-            Nenhum período cadastrado.
+            Nenhum periodo cadastrado.
           </td>
         </tr>
       `;
@@ -2257,7 +1953,7 @@
   }
   
   // =========================================
-  // SEÇÃO 7: FLUXO DE CAIXA DO INVESTIDOR
+  // SEO 7: FLUXO DE CAIXA DO INVESTIDOR
   // =========================================
   
   function renderFluxoInvestidor() {
@@ -2265,19 +1961,19 @@
     
     const html = `
       <div class="modefin-card">
-        <h2>💎 Fluxo de Caixa do Investidor</h2>
+        <h2> Fluxo de Caixa do Investidor</h2>
         <p style="font-size: 14px; opacity: 0.9; margin-bottom: 20px;">
-          Visão do investidor: aportes, investimentos, retornos e distribuições
+          Visao do investidor: aportes, investimentos, retornos e distribuicoes
         </p>
         
         <div style="overflow-x: auto; max-height: 600px; overflow-y: auto; border-radius: 8px;">
           <table class="modefin-table">
             <thead style="position: sticky; top: 0; background: #f8fafc; z-index: 10;">
               <tr>
-                <th style="min-width: 100px; position: sticky; top: 0; background: #f8fafc;">Período</th>
+                <th style="min-width: 100px; position: sticky; top: 0; background: #f8fafc;">Periodo</th>
                 <th style="min-width: 150px; text-align: right;">Aporte / Investimento</th>
-                <th style="min-width: 160px; text-align: right;">Distribuição de Lucros</th>
-                <th style="min-width: 140px; text-align: right;">Saldo do Período</th>
+                <th style="min-width: 160px; text-align: right;">Distribuicao de Lucros</th>
+                <th style="min-width: 140px; text-align: right;">Saldo do Periodo</th>
                 <th style="min-width: 140px; text-align: right;">Saldo Acumulado</th>
               </tr>
             </thead>
@@ -2289,10 +1985,8 @@
                 <td><strong>TOTAL</strong></td>
                 <td style="text-align: right;">${formatCurrency(fluxoData.totais.aportes)}</td>
                 <td style="text-align: right;">${formatCurrency(fluxoData.totais.distribuicao)}</td>
-                <td style="text-align: right;">${formatCurrency(fluxoData.totais.saldoPeriodo)}</td>
-                <td style="text-align: right; color: ${fluxoData.saldoFinal >= 0 ? '#059669' : '#dc2626'};">
-                  <strong>${formatCurrency(fluxoData.saldoFinal)}</strong>
-                </td>
+                <td style="text-align: right;">-</td>
+                <td style="text-align: right;">-</td>
               </tr>
             </tfoot>
           </table>
@@ -2300,8 +1994,8 @@
         
         <div class="info-box ${fluxoData.saldoFinal >= 0 ? 'success' : 'info'}" style="margin-top: 16px;">
           ${fluxoData.saldoFinal >= 0 
-            ? '✅ <strong>Retorno Positivo:</strong> O investidor está recuperando o capital investido.'
-            : 'ℹ️ <strong>Em Recuperação:</strong> O investidor ainda está na fase de aporte. O retorno virá dos lucros futuros.'
+            ? ' <strong>Retorno Positivo:</strong> O investidor esta recuperando o capital investido.'
+            : ' <strong>Em Recuperacao:</strong> O investidor ainda esta na fase de aporte. O retorno vira dos lucros futuros.'
           }
         </div>
       </div>
@@ -2311,7 +2005,7 @@
   }
   
   function calcularFluxoInvestidor() {
-    // Combinar fluxos de investimento e negócio
+    // Combinar fluxos de investimento e negocio
     const fluxoInv = calcularFluxoInvestimento();
     const fluxoNeg = calcularFluxoNegocio();
     
@@ -2328,7 +2022,7 @@
       saldoPeriodo: 0
     };
     
-    // Distribuição mensal
+    // Distribuicao mensal
     const percDistribuicao = profitDistribution && profitDistribution.length > 0 
       ? parseFloat(profitDistribution[0].percentage || profitDistribution[0].profit_distribution_percent || 0) 
       : 0;
@@ -2342,25 +2036,28 @@
         saldoAcumulado: 0
       };
       
-      // Aportes/Investimentos (negativo - saída de caixa)
+      // Aportes/Investimentos = Fontes de Recursos (capital aportado)
       const invMes = fluxoInv.fluxoPorMes[mes];
-      if (invMes) {
-        mesData.aportes = -(invMes.investimentos || 0); // Negativo (saída)
-      }
-      
-      // Fontes de Recursos (positivo - entrada de caixa)
       if (invMes && invMes.fontes > 0) {
-        mesData.aportes += invMes.fontes; // Positivo (entrada)
+        mesData.aportes = invMes.fontes; // Fontes de Recursos
       }
       
-      // Distribuição de Lucros (positivo - recebimento)
+      // Distribuicao de Lucros (positivo - recebimento)
       const negMes = fluxoNeg.fluxoPorMes[mes];
       if (negMes && negMes.resultadoOp > 0) {
-        mesData.distribuicao = negMes.resultadoOp * (percDistribuicao / 100);
+        // Verificar data de inicio da distribuicao de lucros
+        const mesDate = new Date(mes + '-01');
+        const profitStartDate = profitDistribution && profitDistribution.length > 0 
+          ? profitDistribution[0]?.start_date 
+          : null;
+        
+        if (!profitStartDate || mesDate >= new Date(profitStartDate)) {
+          mesData.distribuicao = negMes.resultadoOp * (percDistribuicao / 100);
+        }
       }
       
-      // Saldo do período
-      mesData.saldoPeriodo = mesData.aportes + mesData.distribuicao;
+      // Saldo do periodo (perspectiva do investidor: recebe - coloca)
+      mesData.saldoPeriodo = mesData.distribuicao - mesData.aportes;
       saldoAcumulado += mesData.saldoPeriodo;
       mesData.saldoAcumulado = saldoAcumulado;
       
@@ -2385,7 +2082,7 @@
       return `
         <tr>
           <td colspan="5" style="text-align: center; padding: 24px; color: #64748b;">
-            Nenhum período com movimentação.
+            Nenhum periodo com movimentacao.
           </td>
         </tr>
       `;
@@ -2415,48 +2112,166 @@
   }
   
   // =========================================
-  // SEÇÃO 8: ANÁLISE DE VIABILIDADE
+  // SEO 8: ANALISE DE VIABILIDADE
   // =========================================
   
+  function calcularMetricasFinanceiras(fluxoInvestidor, periodoAnalise, taxaAnualCustoOportunidade) {
+    // Extrair fluxos de caixa (aportes e distribuicoes)
+    const fluxos = [];
+    const mesesLimitados = fluxoInvestidor.meses.slice(0, periodoAnalise);
+    
+    mesesLimitados.forEach(mes => {
+      const dados = fluxoInvestidor.fluxoPorMes[mes];
+      // Fluxo do investidor: negativo = aporte (saída), positivo = distribuição (entrada)
+      const fluxo = dados.distribuicao - dados.aportes;
+      fluxos.push(fluxo);
+    });
+    
+    if (fluxos.length === 0) {
+      return { roi: 0, vpl: 0, tir: 0 };
+    }
+    
+    // Calcular totais
+    const totalAportes = fluxos.reduce((sum, f) => f < 0 ? sum + Math.abs(f) : sum, 0);
+    const totalDistribuicoes = fluxos.reduce((sum, f) => f > 0 ? sum + f : sum, 0);
+    
+    // ROI = (Retorno Total / Investimento Total) * 100
+    const roi = totalAportes > 0 ? ((totalDistribuicoes / totalAportes) * 100) : 0;
+    
+    // VPL = Soma dos fluxos descontados
+    const taxaMensal = Math.pow(1 + (taxaAnualCustoOportunidade / 100), 1/12) - 1;
+    let vpl = 0;
+    
+    fluxos.forEach((fluxo, index) => {
+      const periodo = index + 1;
+      const valorPresente = fluxo / Math.pow(1 + taxaMensal, periodo);
+      vpl += valorPresente;
+    });
+    
+    // TIR = Taxa que zera o VPL (método de Newton-Raphson simplificado)
+    let tir = 0;
+    
+    // Só calcular TIR se houver aportes e distribuições
+    if (totalAportes > 0 && totalDistribuicoes > 0) {
+      tir = calcularTIR(fluxos);
+    }
+    
+    return { roi, vpl, tir };
+  }
+  
+  function calcularTIR(fluxos) {
+    // Método de Newton-Raphson para encontrar a taxa que zera o VPL
+    // Começar com um chute inicial de 10% ao mês
+    let taxa = 0.10;
+    const maxIteracoes = 100;
+    const precisao = 0.0001;
+    
+    for (let i = 0; i < maxIteracoes; i++) {
+      let vpl = 0;
+      let derivada = 0;
+      
+      fluxos.forEach((fluxo, index) => {
+        const periodo = index + 1;
+        vpl += fluxo / Math.pow(1 + taxa, periodo);
+        derivada -= (periodo * fluxo) / Math.pow(1 + taxa, periodo + 1);
+      });
+      
+      // Se VPL está próximo de zero, encontramos a TIR
+      if (Math.abs(vpl) < precisao) {
+        break;
+      }
+      
+      // Evitar divisão por zero
+      if (Math.abs(derivada) < 0.000001) {
+        break;
+      }
+      
+      // Newton-Raphson: x_novo = x_velho - f(x) / f'(x)
+      taxa = taxa - vpl / derivada;
+      
+      // Limitar taxa entre -50% e 200% ao mês (valores razoáveis)
+      if (taxa < -0.5) taxa = -0.5;
+      if (taxa > 2.0) taxa = 2.0;
+    }
+    
+    // Converter para taxa anual equivalente
+    const tirAnual = (Math.pow(1 + taxa, 12) - 1) * 100;
+    
+    return tirAnual;
+  }
+  
   function renderAnalise() {
-    // Parâmetros de análise (buscar do financeiro ou usar defaults)
+    // Parametros de analise (buscar do financeiro ou usar defaults)
     const financeiroDados = typeof financeiro !== 'undefined' ? financeiro : {};
     const periodoAnalise = financeiroDados?.fluxo_investidor?.analises?.periodo_meses || 60; // Default: 60 meses (5 anos)
     const custoOportunidade = financeiroDados?.investimento?.custo_oportunidade || 12; // Default: 12% ao ano
     
-    // Cálculos
+    // Calcular Fluxo de Caixa do Investidor para metricas precisas
+    const fluxoInvestidor = calcularFluxoInvestidor();
+    
+    // Calculos
     const totalInvestimentos = Object.values(calcularTotaisInvestimentos()).reduce((sum, val) => sum + val, 0);
     const resultadoOperacional = (productsTotals?.margem_contribuicao?.valor || 0) - 
                                   (fixedCostsSummary?.custos_fixos_mensal || 0) - 
                                   (fixedCostsSummary?.despesas_fixas_mensal || 0);
     
-    // Payback (meses)
-    const payback = resultadoOperacional > 0 ? (totalInvestimentos / resultadoOperacional) : 0;
+    // Payback (meses) - usando fluxo real do investidor
+    let payback = 0;
+    let paybackMes = null;
+    let paybackMesInicio = null;
+    let indiceInicio = -1;
     
-    // ROI (baseado no período de análise)
-    const resultadoPeriodo = resultadoOperacional * periodoAnalise;
-    const roi = totalInvestimentos > 0 ? ((resultadoPeriodo / totalInvestimentos) * 100) : 0;
+    if (fluxoInvestidor.meses.length > 0) {
+      // Encontrar primeiro mes com aporte (inicio do investimento)
+      for (let i = 0; i < fluxoInvestidor.meses.length; i++) {
+        const mes = fluxoInvestidor.meses[i];
+        const dados = fluxoInvestidor.fluxoPorMes[mes];
+        if (dados.aportes > 0) {
+          paybackMesInicio = mes;
+          indiceInicio = i;
+          break;
+        }
+      }
+      
+      // Encontrar mes onde saldo acumulado fica positivo ou zero
+      if (indiceInicio >= 0) {
+        for (let i = indiceInicio; i < fluxoInvestidor.meses.length; i++) {
+          const mes = fluxoInvestidor.meses[i];
+          const dados = fluxoInvestidor.fluxoPorMes[mes];
+          if (dados.saldoAcumulado >= 0) {
+            paybackMes = mes;
+            payback = (i - indiceInicio) + 1; // Numero de meses desde o primeiro aporte
+            break;
+          }
+        }
+        
+        // Se tem inicio mas nao recuperou ainda, calcular meses ate o ultimo periodo
+        if (!paybackMes) {
+          payback = (fluxoInvestidor.meses.length - indiceInicio);
+        }
+      }
+    }
     
-    // VPL simplificado (placeholder - fórmula complexa)
-    const vpl = calcularVPLSimplificado(totalInvestimentos, resultadoOperacional, periodoAnalise, custoOportunidade);
-    
-    // TIR (placeholder - fórmula iterativa complexa)
-    const tir = payback > 0 ? ((1 / payback) * 100) : 0; // Aproximação grosseira
+    // Calcular metricas usando fluxo real do investidor
+    const metricas = calcularMetricasFinanceiras(fluxoInvestidor, periodoAnalise, custoOportunidade);
+    const roi = metricas.roi;
+    const vpl = metricas.vpl;
+    const tir = metricas.tir;
     
     const html = `
       <div class="modefin-card">
-        <h2>📈 Análise de Viabilidade</h2>
+        <h2> Analise de Viabilidade</h2>
         
         <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px;">
-          <h3 style="margin: 0;">Métricas Calculadas</h3>
-          <button class="button button-ghost" onclick="openAnalysisConfigModal()" title="Configurar parâmetros">
-            ⚙️ Configurar Análise
+          <h3 style="margin: 0;">Metricas Calculadas</h3>
+          <button class="button button-ghost" onclick="openAnalysisConfigModal()" title="Configurar parametros">
+             Configurar Analise
           </button>
         </div>
         
         <div class="info-box info" style="margin-bottom: 16px;">
-          📊 <strong>Parâmetros:</strong> 
-          Período de análise: <strong>${periodoAnalise} meses</strong> | 
+           <strong>Parametros:</strong> 
+          Periodo de analise: <strong>${periodoAnalise} meses</strong> | 
           Custo de oportunidade: <strong>${custoOportunidade}% ao ano</strong>
           <span style="opacity: 0.8; font-size: 11px;"> (clique em "Configurar" para alterar)</span>
         </div>
@@ -2464,8 +2279,15 @@
         <div class="values-grid">
           <div class="value-box">
             <div class="value-label">Payback</div>
-            <div class="value-amount">${payback > 0 ? payback.toFixed(1) + ' meses' : '-'}</div>
-            <div class="value-percent" style="font-size: 11px;">Tempo para recuperar investimento</div>
+            <div class="value-amount">${payback > 0 ? Math.ceil(payback) + ' meses' : '-'}</div>
+            <div class="value-percent" style="font-size: 11px;">
+              ${paybackMesInicio && paybackMes 
+                ? `${formatMonthYear(paybackMesInicio)} a ${formatMonthYear(paybackMes)}`
+                : paybackMesInicio && !paybackMes
+                  ? `Inicio: ${formatMonthYear(paybackMesInicio)} (ainda não recuperado)`
+                  : 'Tempo para recuperar investimento'
+              }
+            </div>
           </div>
           <div class="value-box">
             <div class="value-label">ROI (${periodoAnalise} meses)</div>
@@ -2473,20 +2295,20 @@
             <div class="value-percent" style="font-size: 11px;">Retorno sobre investimento</div>
           </div>
           <div class="value-box">
-            <div class="value-label">TIR (estimativa)</div>
+            <div class="value-label">TIR</div>
             <div class="value-amount">${tir > 0 ? tir.toFixed(1) + '% a.a.' : '-'}</div>
-            <div class="value-percent" style="font-size: 11px;">Taxa Interna de Retorno (aproximação)</div>
+            <div class="value-percent" style="font-size: 11px;">Taxa Interna de Retorno</div>
           </div>
           <div class="value-box">
-            <div class="value-label">VPL (estimativa)</div>
+            <div class="value-label">VPL</div>
             <div class="value-amount">${vpl !== 0 ? formatCurrency(vpl) : '-'}</div>
-            <div class="value-percent" style="font-size: 11px;">Valor Presente Líquido (${custoOportunidade}% a.a.)</div>
+            <div class="value-percent" style="font-size: 11px;">Valor Presente Liquido (${custoOportunidade}% a.a.)</div>
           </div>
         </div>
         
         <h3 style="margin-top: 32px;">Resumo Executivo</h3>
         <p style="font-size: 13px; opacity: 0.9; margin-bottom: 12px;">
-          Texto editável que será incluído no relatório final
+          Texto editavel que sera incluido no relatorio final
         </p>
         
         <div id="executive-summary-display" style="background: rgba(255,255,255,0.15); padding: 16px; border-radius: 8px; min-height: 100px; margin-top: 12px; white-space: pre-wrap;">
@@ -2494,7 +2316,7 @@
         </div>
         
         <button class="button" onclick="openExecutiveSummaryModal()" style="margin-top: 12px;">
-          ✏️ Editar Resumo Executivo
+           Editar Resumo Executivo
         </button>
       </div>
     `;
@@ -2520,8 +2342,250 @@
     
     return totais;
   }
-  
-  // Modal de Distribuição de Lucros
+
+  function openResultRuleModal(ruleId = null) {
+    const modalElement = document.getElementById('resultRuleModal');
+    if (!modalElement) {
+      return;
+    }
+
+    const regras = Array.isArray(resultRules) ? resultRules : [];
+    const regraAtual = regra => String(regra?.id) === String(ruleId);
+    const dadosRegra = regraAtual ? regras.find(regraAtual) : null;
+    const tipoInicial = (dadosRegra?.rule_type || 'percentage').toLowerCase() === 'fixed' ? 'fixed' : 'percentage';
+
+    modalElement.dataset.editingId = ruleId ? String(ruleId) : '';
+    modalElement.dataset.ruleType = tipoInicial;
+
+    const modalHTML = `
+      <div class="modal-content">
+        <div class="modal-header">
+          <h3>${ruleId ? 'Editar Destinacao' : 'Nova Destinacao'}</h3>
+          <button class="modal-close" onclick="closeResultRuleModal()"></button>
+        </div>
+
+        <div class="form-group">
+          <label>Descricao</label>
+          <input type="text" id="rr-description" value="${dadosRegra?.description || ''}" placeholder="Ex: Reserva de contingencia" required>
+        </div>
+
+        <div class="form-group">
+          <label>Tipo de Regra</label>
+          <div id="rr-type-toggle" style="display: flex; gap: 8px;">
+            <button type="button" class="button button-ghost" data-rule-type="percentage" onclick="toggleResultRuleType('percentage')">Percentual</button>
+            <button type="button" class="button button-ghost" data-rule-type="fixed" onclick="toggleResultRuleType('fixed')">Valor Fixo</button>
+          </div>
+        </div>
+
+        <div class="form-group" data-field="percentage">
+          <label>Percentual (%)</label>
+          <input type="number" id="rr-percentage" min="0" max="100" step="0.1" value="${dadosRegra?.percentage ?? dadosRegra?.value ?? ''}" placeholder="Ex: 10">
+          <small style="font-size: 12px; color: #64748b;">Sera aplicado sobre o resultado operacional positivo.</small>
+        </div>
+
+        <div class="form-group" data-field="value">
+          <label>Valor Fixo (R$)</label>
+          <input type="number" id="rr-value" min="0" step="0.01" value="${dadosRegra?.value ?? ''}" placeholder="Ex: 5000,00">
+          <small style="font-size: 12px; color: #64748b;">Valor mensal fixo a ser provisionado.</small>
+        </div>
+
+        <div class="form-group">
+          <label>Data de Inicio</label>
+          <input type="date" id="rr-start-date" value="${dadosRegra?.start_date || ''}">
+        </div>
+
+        <div class="form-group">
+          <label>Periodicidade</label>
+          <input type="text" id="rr-periodicity" value="${dadosRegra?.periodicity || ''}" placeholder="Ex: mensal, trimestral">
+        </div>
+
+        <div class="form-group">
+          <label>Observacoes</label>
+          <textarea id="rr-notes" rows="3" placeholder="Detalhes adicionais">${dadosRegra?.notes || ''}</textarea>
+        </div>
+
+        <div class="modal-actions">
+          <button class="button button-ghost" onclick="closeResultRuleModal()">Cancelar</button>
+          <button class="button button-primary" onclick="saveResultRule()">${ruleId ? 'Atualizar' : 'Salvar'}</button>
+        </div>
+      </div>
+    `;
+
+    modalElement.innerHTML = modalHTML;
+    modalElement.className = '';
+    modalElement.style.cssText = `
+      display: flex !important;
+      opacity: 1 !important;
+      position: fixed !important;
+      z-index: 25000 !important;
+      top: 0 !important;
+      left: 0 !important;
+      width: 100vw !important;
+      height: 100vh !important;
+      background-color: rgba(0, 0, 0, 0.6) !important;
+      align-items: center !important;
+      justify-content: center !important;
+    `;
+
+    const modalContent = modalElement.querySelector('.modal-content');
+    if (modalContent) {
+      modalContent.style.cssText = `
+        background: white !important;
+        color: #000000 !important;
+        padding: 32px !important;
+        border-radius: 16px !important;
+        max-width: 720px !important;
+        width: 90% !important;
+      `;
+    }
+
+    toggleResultRuleType(tipoInicial, { skipDatasetUpdate: true });
+  }
+
+  function closeResultRuleModal() {
+    const modalElement = document.getElementById('resultRuleModal');
+    if (!modalElement) {
+      return;
+    }
+    modalElement.style.cssText = 'display: none !important;';
+    modalElement.className = 'modal';
+    modalElement.innerHTML = '';
+  }
+
+  function toggleResultRuleType(tipo, options = {}) {
+    const modalElement = document.getElementById('resultRuleModal');
+    if (!modalElement) {
+      return;
+    }
+
+    if (!options.skipDatasetUpdate) {
+      modalElement.dataset.ruleType = tipo;
+    }
+
+    const botoes = modalElement.querySelectorAll('#rr-type-toggle [data-rule-type]');
+    botoes.forEach(botao => {
+      const ativo = botao.dataset.ruleType === tipo;
+      botao.classList.toggle('active', ativo);
+      botao.classList.toggle('button-primary', ativo);
+    });
+
+    const campoPercentual = modalElement.querySelector('[data-field="percentage"]');
+    const campoValor = modalElement.querySelector('[data-field="value"]');
+    if (campoPercentual) {
+      campoPercentual.style.display = tipo === 'percentage' ? 'block' : 'none';
+    }
+    if (campoValor) {
+      campoValor.style.display = tipo === 'fixed' ? 'block' : 'none';
+    }
+  }
+
+  async function saveResultRule() {
+    const modalElement = document.getElementById('resultRuleModal');
+    if (!modalElement) {
+      return;
+    }
+
+    const descricao = document.getElementById('rr-description').value.trim();
+    if (!descricao) {
+      alert('Informe a descricao da destinacao.');
+      return;
+    }
+
+    const tipo = modalElement.dataset.ruleType || 'percentage';
+    const percentualInput = document.getElementById('rr-percentage');
+    const valorInput = document.getElementById('rr-value');
+    const inicio = document.getElementById('rr-start-date').value || null;
+    const periodicidade = document.getElementById('rr-periodicity').value || null;
+    const observacoes = document.getElementById('rr-notes').value || null;
+
+    let payload = {
+      description: descricao,
+      rule_type: tipo,
+      start_date: inicio,
+      periodicity: periodicidade,
+      notes: observacoes
+    };
+
+    if (tipo === 'percentage') {
+      const percentual = parseFloat(percentualInput?.value || 0);
+      if (!Number.isFinite(percentual) || percentual < 0 || percentual > 100) {
+        alert('Informe um percentual valido entre 0 e 100.');
+        return;
+      }
+      payload.percentage = percentual;
+      payload.value = null;
+    } else {
+      const valor = parseFloat(valorInput?.value || 0);
+      if (!Number.isFinite(valor) || valor < 0) {
+        alert('Informe um valor fixo valido.');
+        return;
+      }
+      payload.value = valor;
+      payload.percentage = null;
+    }
+
+    const regraId = modalElement.dataset.editingId;
+
+    try {
+      if (regraId) {
+        await apiCall(`/pev/api/implantacao/${planId}/finance/result_rules/${regraId}`, 'PUT', payload);
+        const regras = Array.isArray(resultRules) ? resultRules : [];
+        const indice = regras.findIndex(regra => String(regra.id) === String(regraId));
+        if (indice >= 0) {
+          regras[indice] = { ...regras[indice], ...payload, id: regras[indice].id };
+        }
+        alert('Destinacao atualizada com sucesso!');
+      } else {
+        const resposta = await apiCall(`/pev/api/implantacao/${planId}/finance/result_rules`, 'POST', payload);
+        const novoId = resposta?.id;
+        if (Array.isArray(resultRules)) {
+          resultRules.push({ ...payload, id: novoId || Date.now() });
+        }
+        alert('Destinacao cadastrada com sucesso!');
+      }
+
+      closeResultRuleModal();
+      renderDistribuicao();
+      renderFluxoNegocio();
+      renderFluxoInvestidor();
+    } catch (error) {
+      console.error('Erro ao salvar destinacao:', error);
+    }
+  }
+
+  function editResultRule(ruleId) {
+    if (ruleId === undefined || ruleId === null) {
+      return;
+    }
+    openResultRuleModal(ruleId);
+  }
+
+  async function deleteResultRule(ruleId) {
+    if (ruleId === undefined || ruleId === null) {
+      return;
+    }
+
+    if (!confirm('Deseja realmente excluir esta destinacao?')) {
+      return;
+    }
+
+    try {
+      await apiCall(`/pev/api/implantacao/${planId}/finance/result_rules/${ruleId}`, 'DELETE');
+      const regras = Array.isArray(resultRules) ? resultRules : [];
+      const indice = regras.findIndex(regra => String(regra.id) === String(ruleId));
+      if (indice >= 0) {
+        regras.splice(indice, 1);
+      }
+      alert('Destinacao removida com sucesso!');
+      renderDistribuicao();
+      renderFluxoNegocio();
+      renderFluxoInvestidor();
+    } catch (error) {
+      console.error('Erro ao deletar destinacao:', error);
+    }
+  }
+
+  // Modal de Distribuicao de Lucros
   function openProfitDistributionModal() {
     const percAtual = profitDistribution && profitDistribution.length > 0 
       ? parseFloat(profitDistribution[0].percentage || profitDistribution[0].profit_distribution_percent || 0) 
@@ -2530,30 +2594,30 @@
     const modalHTML = `
       <div class="modal-content">
         <div class="modal-header">
-          <h3>Configurar Distribuição de Lucros</h3>
-          <button class="modal-close" onclick="closeProfitDistributionModal()">×</button>
+          <h3>Configurar Distribuicao de Lucros</h3>
+          <button class="modal-close" onclick="closeProfitDistributionModal()"></button>
         </div>
         
         <div class="info-box info" style="margin-bottom: 20px;">
-          ℹ️ <strong>Distribuição de Lucros:</strong> Define o percentual do Resultado Operacional 
-          que será distribuído aos sócios/acionistas.
+           <strong>Distribuicao de Lucros:</strong> Define o percentual do Resultado Operacional 
+          que sera distribuido aos socios/acionistas.
         </div>
         
         <div class="form-group">
-          <label>Percentual de Distribuição (%)</label>
+          <label>Percentual de Distribuicao (%)</label>
           <input type="number" id="pd-percent" step="0.1" min="0" max="100" value="${percAtual}" required>
           <small style="color: #64748b; font-size: 12px;">
-            Ex: 30% significa que 30% do Resultado Operacional será distribuído como lucros
+            Ex: 30% significa que 30% do Resultado Operacional sera distribuido como lucros
           </small>
         </div>
         
         <div class="form-group">
-          <label>Data de Início</label>
+          <label>Data de Inicio</label>
           <input type="date" id="pd-data" value="${profitDistribution[0]?.start_date || ''}">
         </div>
         
         <div class="form-group">
-          <label>Observações</label>
+          <label>Observacoes</label>
           <textarea id="pd-obs" rows="3">${profitDistribution[0]?.notes || ''}</textarea>
         </div>
         
@@ -2614,7 +2678,7 @@
     const obs = document.getElementById('pd-obs').value;
     
     if (!percent) {
-      alert('Informe o percentual de distribuição');
+      alert('Informe o percentual de distribuicao');
       return;
     }
     
@@ -2625,7 +2689,7 @@
         notes: obs
       };
       
-      // API para atualizar distribuição
+      // API para atualizar distribuicao
       await apiCall(`/pev/api/implantacao/${planId}/finance/profit-distribution`, 'PUT', payload);
       
       // Atualizar dados locais
@@ -2638,26 +2702,37 @@
       closeProfitDistributionModal();
       renderDistribuicao();
       
-      alert('Distribuição de lucros salva com sucesso!');
+      alert('Distribuicao de lucros salva com sucesso!');
       
     } catch (error) {
-      console.error('Erro ao salvar distribuição:', error);
+      console.error('Erro ao salvar distribuicao:', error);
     }
   }
   
   // Modal de Resumo Executivo
   function openExecutiveSummaryModal() {
+    // Pegar o valor atual do display
+    const displayElement = document.getElementById('executive-summary-display');
+    let textoAtual = executiveSummary || '';
+    
+    if (displayElement) {
+      const displayText = displayElement.textContent || '';
+      if (displayText && displayText !== 'Nenhum resumo executivo cadastrado. Clique em "Editar" para adicionar.') {
+        textoAtual = displayText;
+      }
+    }
+    
     const modalHTML = `
       <div class="modal-content">
         <div class="modal-header">
           <h3>Editar Resumo Executivo</h3>
-          <button class="modal-close" onclick="closeExecutiveSummaryModal()">×</button>
+          <button class="modal-close" onclick="closeExecutiveSummaryModal()"></button>
         </div>
         
         <div class="form-group">
           <label>Resumo Executivo</label>
-          <textarea id="es-texto" rows="10" style="font-family: Arial, sans-serif;">${executiveSummary || ''}</textarea>
-          <small style="color: #64748b; font-size: 12px;">Este texto será incluído no relatório final de planejamento.</small>
+          <textarea id="es-texto" rows="10" style="font-family: Arial, sans-serif;">${textoAtual}</textarea>
+          <small style="color: #64748b; font-size: 12px;">Este texto sera incluido no relatorio final de planejamento.</small>
         </div>
         
         <div class="modal-actions">
@@ -2719,20 +2794,23 @@
         executive_summary: texto
       });
       
-      // Atualizar variável global
-      executiveSummary = texto;
-      
       closeExecutiveSummaryModal();
-      renderAnalise();
+      
+      // Atualizar display diretamente
+      const displayElement = document.getElementById('executive-summary-display');
+      if (displayElement) {
+        displayElement.textContent = texto || 'Nenhum resumo executivo cadastrado. Clique em "Editar" para adicionar.';
+      }
       
       alert('Resumo executivo salvo com sucesso!');
       
     } catch (error) {
       console.error('Erro ao salvar resumo:', error);
+      alert('Erro ao salvar resumo executivo. Verifique o console para detalhes.');
     }
   }
   
-  // Cálculo de VPL simplificado
+  // Calculo de VPL simplificado
   function calcularVPLSimplificado(investimentoInicial, fluxoMensal, periodoMeses, taxaAnual) {
     if (fluxoMensal <= 0 || investimentoInicial <= 0) return 0;
     
@@ -2750,7 +2828,7 @@
     return vpl;
   }
   
-  // Modal de Configuração da Análise
+  // Modal de Configuracao da Analise
   function openAnalysisConfigModal() {
     const financeiroDados = typeof financeiro !== 'undefined' ? financeiro : {};
     const periodoAtual = financeiroDados?.fluxo_investidor?.analises?.periodo_meses || 60;
@@ -2759,19 +2837,19 @@
     const modalHTML = `
       <div class="modal-content">
         <div class="modal-header">
-          <h3>⚙️ Configurar Parâmetros da Análise</h3>
-          <button class="modal-close" onclick="closeAnalysisConfigModal()">×</button>
+          <h3> Configurar Parametros da Analise</h3>
+          <button class="modal-close" onclick="closeAnalysisConfigModal()"></button>
         </div>
         
         <div class="info-box info" style="margin-bottom: 20px;">
-          ℹ️ <strong>Parâmetros:</strong> Estes valores influenciam os cálculos de ROI, VPL e TIR.
+           <strong>Parametros:</strong> Estes valores influenciam os calculos de ROI, VPL e TIR.
         </div>
         
         <div class="form-group">
-          <label>Período de Análise (meses)</label>
+          <label>Periodo de Analise (meses)</label>
           <input type="number" id="ac-periodo" min="12" max="120" step="1" value="${periodoAtual}" required>
           <small style="color: #64748b; font-size: 12px;">
-            Quantos meses considerar na análise (ex: 60 meses = 5 anos)
+            Quantos meses considerar na analise (ex: 60 meses = 5 anos)
           </small>
         </div>
         
@@ -2779,13 +2857,13 @@
           <label>Custo de Oportunidade (% ao ano)</label>
           <input type="number" id="ac-custo" min="0" max="100" step="0.1" value="${custoAtual}" required>
           <small style="color: #64748b; font-size: 12px;">
-            Taxa de retorno alternativa (ex: 12% = poupança/CDI, 20% = investimento de risco)
+            Taxa de retorno alternativa (ex: 12% = poupanca/CDI, 20% = investimento de risco)
           </small>
         </div>
         
         <div class="info-box warning" style="margin-top: 16px;">
-          ⚠️ <strong>Importante:</strong> O custo de oportunidade é usado para calcular o VPL.
-          Quanto maior a taxa, mais "exigente" é a análise.
+           <strong>Importante:</strong> O custo de oportunidade e usado para calcular o VPL.
+          Quanto maior a taxa, mais "exigente" e a analise.
         </div>
         
         <div class="modal-actions">
@@ -2854,10 +2932,10 @@
         custo_oportunidade_anual: parseFloat(custo)
       };
       
-      // Salvar via API de métricas
+      // Salvar via API de metricas
       await apiCall(`/pev/api/implantacao/${planId}/finance/metrics`, 'PUT', payload);
       
-      // Atualizar variável global (se existir)
+      // Atualizar variavel global (se existir)
       if (typeof financeiro !== 'undefined') {
         if (!financeiro.fluxo_investidor) financeiro.fluxo_investidor = {};
         if (!financeiro.fluxo_investidor.analises) financeiro.fluxo_investidor.analises = {};
@@ -2870,18 +2948,18 @@
       closeAnalysisConfigModal();
       renderAnalise();
       
-      alert('Parâmetros salvos! Métricas recalculadas.');
+      alert('Parametros salvos! Metricas recalculadas.');
       
     } catch (error) {
-      console.error('Erro ao salvar configuração:', error);
+      console.error('Erro ao salvar configuracao:', error);
     }
   }
   
   // =========================================
-  // EXPOR FUNÇÕES NO ESCOPO GLOBAL
+  // EXPOR FUNES NO ESCOPO GLOBAL
   // =========================================
   
-  // Tornar funções acessíveis via onclick
+  // Tornar funcoes acessiveis via onclick
   
   // Capital de Giro
   window.openCapitalGiroModal = openCapitalGiroModal;
@@ -2897,12 +2975,12 @@
   window.editFundingSource = editFundingSource;
   window.deleteFundingSource = deleteFundingSource;
   
-  // Distribuição de Lucros
+  // Distribuicao de Lucros
   window.openProfitDistributionModal = openProfitDistributionModal;
   window.closeProfitDistributionModal = closeProfitDistributionModal;
   window.saveProfitDistribution = saveProfitDistribution;
   
-  // Outras Destinações (Result Rules)
+  // Outras Destinacoes (Result Rules)
   window.openResultRuleModal = openResultRuleModal;
   window.closeResultRuleModal = closeResultRuleModal;
   window.saveResultRule = saveResultRule;
@@ -2915,13 +2993,13 @@
   window.closeExecutiveSummaryModal = closeExecutiveSummaryModal;
   window.saveExecutiveSummary = saveExecutiveSummary;
   
-  // Configuração de Análise
+  // Configuracao de Analise
   window.openAnalysisConfigModal = openAnalysisConfigModal;
   window.closeAnalysisConfigModal = closeAnalysisConfigModal;
   window.saveAnalysisConfig = saveAnalysisConfig;
   
   // =========================================
-  // INICIALIZAÇÃO
+  // INICIALIZAO
   // =========================================
   
   console.log('[ModeFin] Iniciando...');
@@ -2929,50 +3007,51 @@
   console.log('Products Totals:', productsTotals);
   console.log('Fixed Costs:', fixedCostsSummary);
   console.log('Capital Giro Items:', capitalGiroItems);
+  console.log('Ramp Products:', rampProducts);
   
-  // Renderizar todas as seções com tratamento de erro
+  // Renderizar todas as secoes com tratamento de erro
   try {
     renderResultados();
-    console.log('[ModeFin] Seção 1 OK');
-  } catch (e) { console.error('[ModeFin] Erro na Seção 1:', e); }
+    console.log('[ModeFin] Secao 1 OK');
+  } catch (e) { console.error('[ModeFin] Erro na Secao 1:', e); }
   
   try {
     renderInvestimentos();
-    console.log('[ModeFin] Seção 2 OK');
-  } catch (e) { console.error('[ModeFin] Erro na Seção 2:', e); }
+    console.log('[ModeFin] Secao 2 OK');
+  } catch (e) { console.error('[ModeFin] Erro na Secao 2:', e); }
   
   try {
     renderFontes();
-    console.log('[ModeFin] Seção 3 OK');
-  } catch (e) { console.error('[ModeFin] Erro na Seção 3:', e); }
+    console.log('[ModeFin] Secao 3 OK');
+  } catch (e) { console.error('[ModeFin] Erro na Secao 3:', e); }
   
   try {
     renderDistribuicao();
-    console.log('[ModeFin] Seção 4 OK');
-  } catch (e) { console.error('[ModeFin] Erro na Seção 4:', e); }
+    console.log('[ModeFin] Secao 4 OK');
+  } catch (e) { console.error('[ModeFin] Erro na Secao 4:', e); }
   
   try {
     renderFluxoInvestimento();
-    console.log('[ModeFin] Seção 5 OK');
-  } catch (e) { console.error('[ModeFin] Erro na Seção 5:', e); }
+    console.log('[ModeFin] Secao 5 OK');
+  } catch (e) { console.error('[ModeFin] Erro na Secao 5:', e); }
   
   try {
     renderFluxoNegocio();
-    console.log('[ModeFin] Seção 6 OK');
-  } catch (e) { console.error('[ModeFin] Erro na Seção 6:', e); }
+    console.log('[ModeFin] Secao 6 OK');
+  } catch (e) { console.error('[ModeFin] Erro na Secao 6:', e); }
   
   try {
     renderFluxoInvestidor();
-    console.log('[ModeFin] Seção 7 OK');
-  } catch (e) { console.error('[ModeFin] Erro na Seção 7:', e); }
+    console.log('[ModeFin] Secao 7 OK');
+  } catch (e) { console.error('[ModeFin] Erro na Secao 7:', e); }
   
   try {
     renderAnalise();
-    console.log('[ModeFin] Seção 8 OK');
-  } catch (e) { console.error('[ModeFin] Erro na Seção 8:', e); }
+    console.log('[ModeFin] Secao 8 OK');
+  } catch (e) { console.error('[ModeFin] Erro na Secao 8:', e); }
   
-  console.log('[ModeFin] Renderização completa!');
-  console.log('[ModeFin] Funções expostas no window:', {
+  console.log('[ModeFin] Renderizacao completa!');
+  console.log('[ModeFin] Funcoes expostas no window:', {
     openCapitalGiroModal: typeof window.openCapitalGiroModal,
     closeCapitalGiroModal: typeof window.closeCapitalGiroModal,
     saveCapitalGiro: typeof window.saveCapitalGiro,
@@ -2982,4 +3061,5 @@
 </script>
 
 {% endblock %}
+
 

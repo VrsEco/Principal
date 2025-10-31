@@ -434,8 +434,7 @@
       {% endif %}
     {% endfor %}
     {% set nav.items = nav.items + [
-      {'id': 'modefin', 'name': 'Mod. Financeira', 'url': url_for('pev.implantacao_modefin', plan_id=plan.id)},
-      {'id': 'modelagem-financeira', 'name': 'Modelagem Financeira', 'url': url_for('pev.implantacao_modelagem_financeira', plan_id=plan.id)}
+      {'id': 'modefin', 'name': 'Mod. Financeira', 'url': url_for('pev.implantacao_modefin', plan_id=plan.id)}
     ] %}
     {% if delivery_nav.item %}
       {% set nav.items = nav.items + [delivery_nav.item] %}
