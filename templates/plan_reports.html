@@ -28,8 +28,13 @@
   {% include 'plan_sidebar.html' %}
 
   <section class="project-content reports-content">
+    {% set plan_mode = (plan.plan_mode or 'evolucao') %}
+    {% set is_implantacao = plan_mode == 'implantacao' %}
+    {% set plan_type_title = 'Planejamento de Implantacao' if is_implantacao else 'Plano Estrategico' %}
+    {% set plan_type_badge = 'Novo Negocio' if is_implantacao else 'Classico' %}
     <div class="reports-header">
-      <h1>Relatórios do Plano Estratégico</h1>
+      <span class="plan-type-chip{% if is_implantacao %} is-implantacao{% else %} is-evolucao{% endif %}">{{ plan_type_badge }}</span>
+      <h1>Relatorios do {{ plan_type_title }}</h1>
       <p>Gere relatórios profissionais para entrega formal ao cliente</p>
     </div>
 
@@ -168,6 +173,29 @@
 .reports-header {
   text-align: center;
   padding: 32px 0;
+}
+
+.plan-type-chip {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 6px 16px;
+  border-radius: 999px;
+  font-size: 12px;
+  font-weight: 600;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  margin-bottom: 12px;
+}
+
+.plan-type-chip.is-evolucao {
+  background: rgba(37, 99, 235, 0.18);
+  color: #2563eb;
+}
+
+.plan-type-chip.is-implantacao {
+  background: rgba(124, 58, 237, 0.18);
+  color: #7c3aed;
 }
 
 .reports-header h1 {

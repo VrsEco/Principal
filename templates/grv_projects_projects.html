@@ -904,7 +904,13 @@
             <a class="project-action" href="/grv/company/${companyId}/projects/${project.id}/manage" style="text-decoration:none;">📋 Gerenciar</a>
             <button class="project-action" type="button" data-action="edit" data-id="${project.id}">Editar</button>
             <button class="project-action danger" type="button" data-action="remove" data-id="${project.id}">Excluir</button>
-            ${project.plan_id && project.plan_origin === 'PEV' ? `<a class="project-action" href="/plans/${project.plan_id}/projects" target="_blank">Abrir no planejamento</a>` : ''}
+            ${project.plan_id && project.plan_origin === 'PEV' ? (() => {
+              const planMode = (project.plan_mode || 'evolucao').toLowerCase();
+              const url = planMode === 'implantacao' 
+                ? `/pev/implantacao?plan_id=${project.plan_id}`
+                : `/plans/${project.plan_id}/projects`;
+              return `<a class="project-action" href="${url}" target="_blank">Abrir no planejamento</a>`;
+            })() : ''}
           </div>
         </article>`;
     }).join('');

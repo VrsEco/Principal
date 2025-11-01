@@ -397,7 +397,8 @@ def _plan_for(plan_id):
         'year': plan_data['year'],
         'status': plan_data['status'],
         'company': plan_data['company_name'],
-        'company_id': plan_data['company_id']
+        'company_id': plan_data['company_id'],
+        'plan_mode': (plan_data.get('plan_mode') or 'evolucao').lower()
     }
     
     company = {
@@ -4418,6 +4419,13 @@ def test_routines_modal():
 def plan_dashboard(plan_id: str):
     """Plan dashboard - main dashboard for a specific plan"""
     plan, company = _plan_for(plan_id)
+    
+    # Verificar se é planejamento de implantação e redirecionar
+    plan_mode = (plan.get('plan_mode') or 'evolucao').lower()
+    if plan_mode == 'implantacao':
+        from flask import redirect, url_for
+        return redirect(url_for('pev.pev_implantacao_overview', plan_id=plan_id))
+    
     navigation = _navigation(plan_id, "dashboard")
 
     # Core datasets used across the dashboard
@@ -5920,6 +5928,13 @@ def plan_projects(plan_id: str):
     """Projects page"""
     try:
         plan, company = _plan_for(plan_id)
+        
+        # Verificar se é planejamento de implantação e redirecionar
+        plan_mode = (plan.get('plan_mode') or 'evolucao').lower()
+        if plan_mode == 'implantacao':
+            from flask import redirect, url_for
+            return redirect(url_for('pev.pev_implantacao_overview', plan_id=plan_id))
+        
         navigation = _navigation(plan_id, "projects")
         indicator_sidebar_nav = _indicator_navigation(company.get('id'))
         
@@ -9401,6 +9416,28 @@ def _serialize_company_project(row) -> Dict[str, Any]:
     
     # Plan origin
     plan_origin = row['plan_origin'] if 'plan_origin' in row.keys() else None
+    
+    # Plan mode - buscar do plano se o projeto está vinculado a um plano PEV
+    plan_mode = 'evolucao'  # default
+    plan_id = row.get('plan_id')
+    
+    if plan_origin == 'PEV' and plan_id:
+        # Se está vinculado a um plano PEV, buscar plan_mode do plano
+        try:
+            # Primeiro tentar pegar da query (pode ser None se LEFT JOIN não encontrou)
+            plan_mode_value = row.get('plan_mode')
+            
+            if plan_mode_value:
+                plan_mode = str(plan_mode_value).lower()
+            else:
+                # Se não veio na query (None), buscar diretamente do banco
+                db_instance = get_db()
+                plan_data = db_instance.get_plan_with_company(int(plan_id))
+                if plan_data:
+                    plan_mode = (plan_data.get('plan_mode') or 'evolucao').lower()
+        except Exception as e:
+            # Em caso de erro, usar evolução como padrão
+            plan_mode = 'evolucao'
 
     return {
         'id': row['id'],
@@ -9408,6 +9445,7 @@ def _serialize_company_project(row) -> Dict[str, Any]:
         'plan_id': row['plan_id'],
         'plan_name': row['plan_name'],
         'plan_origin': plan_origin,
+        'plan_mode': plan_mode,
         'title': row['title'],
         'name': row['title'],  # Adicionar campo name para compatibilidade
         'description': row['description'],
@@ -9489,6 +9527,7 @@ def api_company_projects(company_id: int):
                             ELSE COALESCE(pf.name, pl.name)
                         END AS plan_name,
                         p.plan_type AS plan_origin,
+                        pl.plan_mode,
                         p.title,
                         p.description,
                         p.status,
@@ -9531,6 +9570,7 @@ def api_company_projects(company_id: int):
                             ELSE COALESCE(pf.name, pl.name)
                         END AS plan_name,
                         p.plan_type AS plan_origin,
+                        pl.plan_mode,
                         p.title,
                         p.description,
                         p.status,

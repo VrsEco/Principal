@@ -1077,6 +1077,13 @@ def load_alignment_canvas(db, plan_id: int) -> Dict[str, Any]:
 
 
 def load_alignment_project(db, plan_id: int) -> Dict[str, Any]:
+    """
+    Carrega informações do projeto de alinhamento
+    Busca projeto GRV vinculado através do plan_id
+    """
+    import json
+    from database.postgres_helper import connect as pg_connect
+    
     project = db.get_alignment_project(plan_id) or {}
     observacoes = project.get("observations") or []
     if isinstance(observacoes, dict):
@@ -1084,11 +1091,59 @@ def load_alignment_project(db, plan_id: int) -> Dict[str, Any]:
     if not isinstance(observacoes, list):
         observacoes = [observacoes] if observacoes else []
 
+    nome = project.get("project_name") or "PEV - Planejamento | Agenda do Planejamento"
+    descricao = project.get("description")
+    codigo = None
+    atividades_grv = []
+    grv_project_id = None
+    company_id = None
+    
+    # Buscar projeto GRV vinculado (onde plan_id = este plan_id e plan_type = 'PEV')
+    try:
+        conn = pg_connect()
+        cursor = conn.cursor()
+        cursor.execute('''
+            SELECT id, code, title, description, activities, company_id
+            FROM company_projects
+            WHERE plan_id = %s AND plan_type = 'PEV'
+            LIMIT 1
+        ''', (plan_id,))
+        
+        grv_row = cursor.fetchone()
+        conn.close()
+        
+        if grv_row:
+            grv_project = dict(grv_row)
+            grv_project_id = grv_project.get('id')
+            company_id = grv_project.get('company_id')
+            codigo = grv_project.get('code')
+            nome = grv_project.get('title') or nome
+            descricao = grv_project.get('description') or descricao
+            
+            # Buscar atividades do projeto GRV
+            activities_json = grv_project.get('activities')
+            if activities_json:
+                if isinstance(activities_json, str):
+                    try:
+                        atividades_grv = json.loads(activities_json)
+                    except:
+                        atividades_grv = []
+                elif isinstance(activities_json, list):
+                    atividades_grv = activities_json
+                    
+    except Exception as e:
+        print(f"[load_alignment_project] Erro ao buscar projeto GRV para plan_id {plan_id}: {e}")
+        import traceback
+        traceback.print_exc()
+
     return {
-        "nome": project.get("project_name") or "PEV - Planejamento | Agenda do Planejamento",
-        "descricao": project.get("description"),
+        "nome": nome,
+        "codigo": codigo,
+        "descricao": descricao,
         "observacoes": observacoes,
-        "grv_project_id": project.get("grv_project_id"),
+        "grv_project_id": grv_project_id,
+        "company_id": company_id,
+        "atividades_grv": atividades_grv,
     }
 
 

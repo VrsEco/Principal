@@ -1,5 +1,5 @@
 {#
-  Relatorio Final de Implantacao - GestaoVersus
+  Análise de Viabilidade - GestaoVersus
   Estruturado conforme REPORT_STANDARDS.md
   Integra projeto vinculado, agenda e governanca financeira
 #}
@@ -24,7 +24,7 @@
   format_number
 %}
 
-{% block page_title %}Relatorio Final de Implantacao - {{ plan.plan_name }} - GestaoVersus{% endblock %}
+{% block page_title %}Análise de Viabilidade - {{ plan.plan_name }} - GestaoVersus{% endblock %}
 {% block meta_description %}Relatorio final do plano {{ plan.plan_name }} para {{ plan.company_name }}, consolidando alinhamento, modelo, estruturas e viabilidade financeira.{% endblock %}
 
 {% block extra_css %}
@@ -127,6 +127,25 @@
     .section-body .report-link:hover {
       text-decoration: underline;
     }
+
+    /* Forçar todas as páginas para retrato na impressão */
+    @media print {
+      @page {
+        size: A4 portrait !important;
+        margin: 5mm;
+      }
+
+      .page {
+        page: portrait !important;
+      }
+
+      /* Garantir que não haja páginas landscape */
+      .page.landscape {
+        page: portrait !important;
+        padding: 5mm !important;
+        min-height: calc(297mm - 10mm) !important;
+      }
+    }
   </style>
 {% endblock %}
 
@@ -138,44 +157,52 @@
         <span>Plano {{ plan.plan_id }}</span>
         <span>Emitido {{ issued_at }}</span>
       </div>
-      <p class="cover-tagline">Book de Processos • Implantacao estrategica</p>
-      <h1>Relatorio Final de Implantacao</h1>
+      <h1>Análise de Viabilidade</h1>
       <h2>{{ plan.plan_name }}</h2>
 
       {{ cover_meta_grid([
         {"label": "Empresa", "value": plan.company_name},
-        {"label": "Consultor", "value": plan.consultant},
-        {"label": "Patrocinador", "value": plan.sponsor|default("N/A")},
+        {"label": "Consultor", "value": "Fabiano Ferreira"},
+        {"label": "Patrocinador", "value": "Antonio Carlos e Tom"},
         {"label": "Ultima atualizacao", "value": plan.last_update}
       ]) }}
 
-      <div class="cover-detail-grid" style="margin-top: 36px;">
-        <div>
+      {# Layout em duas colunas: Projeto à esquerda, Versus à direita #}
+      <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 40px; margin-top: 36px; position: relative; z-index: 1;">
+        {# Coluna Esquerda - Projeto #}
+        <div style="text-align: left;">
           <h3>{{ projeto.nome }}</h3>
           {% if projeto.descricao %}
             <p>{{ projeto.descricao }}</p>
           {% else %}
             <p>Projeto vinculado ao plano de implantacao para acompanhamento tatico no GRV.</p>
           {% endif %}
+          
+          {% set agenda_preview = (alinhamento.agenda or [])[:3] %}
+          {% if agenda_preview %}
+            <div class="cover-upcoming" style="margin-top: 24px;">
+              <h4>Proximos marcos</h4>
+              <ul>
+                {% for item in agenda_preview %}
+                  <li>
+                    <strong>{{ item.quando or "Em definicao" }}</strong>
+                    {{ item.oque }}
+                    {% if item.quem %}
+                      <br><span style="opacity:0.75;">Responsavel: {{ item.quem }}</span>
+                    {% endif %}
+                  </li>
+                {% endfor %}
+              </ul>
+            </div>
+          {% endif %}
         </div>
-
-        {% set agenda_preview = (alinhamento.agenda or [])[:3] %}
-        {% if agenda_preview %}
-          <div class="cover-upcoming">
-            <h4>Proximos marcos</h4>
-            <ul>
-              {% for item in agenda_preview %}
-                <li>
-                  <strong>{{ item.quando or "Em definicao" }}</strong>
-                  {{ item.oque }}
-                  {% if item.quem %}
-                    <br><span style="opacity:0.75;">Responsavel: {{ item.quem }}</span>
-                  {% endif %}
-                </li>
-              {% endfor %}
-            </ul>
-          </div>
-        {% endif %}
+        
+        {# Coluna Direita - Versus #}
+        <div style="text-align: right; display: flex; flex-direction: column; justify-content: flex-end;">
+          <p style="margin: 0; font-size: 14px; color: rgba(255, 255, 255, 0.9); font-weight: 600; letter-spacing: 0.02em; line-height: 1.4;">Versus Gestão Corporativa</p>
+          <p style="margin: 0; font-size: 11px; color: rgba(255, 255, 255, 0.7); line-height: 1.4;">Todos os direitos reservados</p>
+          <p style="margin: 0; font-size: 11px; color: rgba(255, 255, 255, 0.8); line-height: 1.4;">www.gestaoversus.com.br</p>
+        </div>
       </div>
     </div>
   </section>
@@ -190,13 +217,11 @@
   {{ section_header("01", "Resumo Executivo & Projeto Vinculado", "Panorama geral do plano, do projeto associado no GRV e da cadencia de implantacao") }}
   <div class="section-body">
     {% call responsive_grid("260px") %}
-      {% call model7_card("Planejamento PEV", plan.plan_name) %}
+      {% call model7_card("Planejamento", plan.plan_name) %}
         <div style="margin-bottom: 12px;">{{ status_badge(plan.status, "info") }}</div>
         <ul class="story-list compact">
-          <li><strong>Versao:</strong> {{ plan.version }}</li>
           <li><strong>Ultima atualizacao:</strong> {{ plan.last_update }}</li>
-          <li><strong>Proximo checkpoint:</strong> {{ plan.next_checkpoint }}</li>
-          <li><strong>Consultor responsavel:</strong> {{ plan.consultant }}</li>
+          <li><strong>Consultor responsavel:</strong> Fabiano Ferreira</li>
         </ul>
       {% endcall %}
 
@@ -230,7 +255,6 @@
         <ul class="story-list compact">
           <li><strong>Segmentos mapeados:</strong> {{ segmentos|length }}</li>
           <li><strong>Estruturas priorizadas:</strong> {{ estruturas|length }}</li>
-          <li><strong>Premissas financeiras:</strong> {{ financeiro.premissas|length }}</li>
           <li><strong>Capacidades avaliadas:</strong> {{ financeiro.capacidades|length }}</li>
         </ul>
         <p class="story-note">Documento emitido em {{ issued_at }}.</p>
@@ -503,7 +527,7 @@
 {# ---------------------------------------------------------
    05. ModeFin - Modelagem Financeira
    --------------------------------------------------------- #}
-<section class="page landscape">
+<section class="page portrait">
   {{ section_header("05", "ModeFin - Modelagem Financeira") }}
 
   {% set products_totals = modefin_products_totals or {} %}
@@ -895,7 +919,7 @@
 
   <div class="section-body">
     {% call responsive_grid("260px") %}
-      {% set projeto_titulo = plan.plan_name or "PEV - Planejamento | Agenda do Planejamento" %}
+      {% set projeto_titulo = plan.plan_name or "Planejamento | Agenda do Planejamento" %}
       {% call model7_card("Projeto vinculado", projeto_titulo) %}
         {% if projeto and projeto.nome %}
           <p>
@@ -918,11 +942,11 @@
         {% else %}
           <p class="story-note">Sem observacoes adicionais registradas.</p>
         {% endif %}
-        {% if plan.company_id and projeto.grv_project_id %}
+        {% if projeto.company_id and projeto.grv_project_id %}
           <p class="story-note">
             Kanban ativo:
-            <a class="report-link" href="{{ url_for('grv.grv_project_manage', company_id=plan.company_id, project_id=projeto.grv_project_id) }}" target="_blank" rel="noopener">
-              GRV &rsaquo; Projeto {{ projeto.grv_project_id }}
+            <a class="report-link" href="{{ url_for('grv.grv_project_manage', company_id=projeto.company_id, project_id=projeto.grv_project_id) }}" target="_blank" rel="noopener">
+              GRV &rsaquo; Projeto {{ projeto.codigo or projeto.grv_project_id }}
             </a>
           </p>
         {% endif %}
@@ -931,15 +955,22 @@
       {% call model7_card("Resumo operacional") %}
         <ul class="story-list compact">
           <li><strong>Status do plano:</strong> {{ plan.status }}</li>
-          <li><strong>Consultor responsavel:</strong> {{ plan.consultant }}</li>
-          <li><strong>Proximo checkpoint:</strong> {{ plan.next_checkpoint }}</li>
-          <li><strong>Total de atividades:</strong> {{ projeto_atividades|length }}</li>
+          <li><strong>Consultor responsavel:</strong> Fabiano Ferreira</li>
+          <li><strong>Atividades agenda PEV:</strong> {{ projeto_atividades|length }}</li>
+          {% if projeto and projeto.atividades_grv %}
+            <li><strong>Atividades projeto GRV:</strong> {{ projeto.atividades_grv|length }}</li>
+            {% set total_atividades = projeto_atividades|length + projeto.atividades_grv|length %}
+            <li><strong>Total de atividades:</strong> {{ total_atividades }}</li>
+          {% else %}
+            <li><strong>Total de atividades:</strong> {{ projeto_atividades|length }}</li>
+          {% endif %}
         </ul>
       {% endcall %}
     {% endcall %}
 
+    {# Exibir atividades da agenda do PEV #}
     {% if projeto_atividades %}
-      {% call subsection("Agenda completa de atividades") %}
+      {% call subsection("Agenda de atividades do PEV") %}
         {% call(rows) custom_table(["O que", "Quem", "Quando", "Como"], projeto_atividades) %}
           {% for item in rows %}
             <tr>
@@ -951,8 +982,42 @@
           {% endfor %}
         {% endcall %}
       {% endcall %}
-    {% else %}
-      <p class="story-note">Nenhuma atividade foi cadastrada na agenda deste projeto.</p>
+    {% endif %}
+    
+    {# Exibir atividades do projeto GRV vinculado #}
+    {% if projeto and projeto.atividades_grv %}
+      {% call subsection("Atividades do Projeto GRV") %}
+        {% call(rows) custom_table(["Código", "O que", "Quem", "Quando", "Como", "Status"], projeto.atividades_grv) %}
+          {% for atividade in rows %}
+            <tr>
+              <td>{{ atividade.code or "-" }}</td>
+              <td>{{ atividade.what or "-" }}</td>
+              <td>{{ atividade.who or "-" }}</td>
+              <td>{{ atividade.when or "-" }}</td>
+              <td>{{ atividade.how or "-" }}</td>
+              <td>
+                {% if atividade.status == 'completed' %}
+                  Concluído
+                {% elif atividade.status == 'executing' %}
+                  Executando
+                {% elif atividade.status == 'waiting' %}
+                  Aguardando
+                {% elif atividade.status == 'pending' %}
+                  Pendência
+                {% elif atividade.status == 'suspended' %}
+                  Suspenso
+                {% else %}
+                  {{ atividade.status or "Inbox" }}
+                {% endif %}
+              </td>
+            </tr>
+          {% endfor %}
+        {% endcall %}
+      {% endcall %}
+    {% endif %}
+    
+    {% if not projeto_atividades and (not projeto or not projeto.atividades_grv) %}
+      <p class="story-note">Nenhuma atividade foi cadastrada neste projeto.</p>
     {% endif %}
   </div>
 </section>
@@ -961,5 +1026,5 @@
 
 {% block footer %}
   <span>Versus Gestao Corporativa - Todos os Direitos Reservados - Emitido em: {{ issued_at }}</span>
-  <span>Consultor responsavel: {{ plan.consultant }}</span>
+  <span>Consultor responsavel: Fabiano Ferreira</span>
 {% endblock %}
