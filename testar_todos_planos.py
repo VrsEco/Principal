@@ -46,3 +46,4 @@ for plan_id, tipo_esperado, nome in planos_testar:
 print("\n" + "="*80)
 
 
+
