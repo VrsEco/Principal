@@ -2763,12 +2763,14 @@ def api_create_process_activity_entry(company_id: int, process_id: int, activity
     text_content = (request.form.get('text_content') or '').strip()
     image_file = request.files.get('image')
     image_width = request.form.get('image_width')
+    layout = request.form.get('layout', 'dual')  # ADICIONADO
 
     print(f"\n{'='*60}")
     print(f"DEBUG - CREATE ENTRY para activity_id={activity_id}")
     print(f"  text_content: '{text_content[:50]}...' ({len(text_content)} chars)")
     print(f"  image_file: {image_file.filename if image_file else 'None'}")
     print(f"  image_width: {image_width}")
+    print(f"  layout: {layout}")  # ADICIONADO
     print(f"{'='*60}\n")
 
     if not text_content and not image_file:
@@ -2800,13 +2802,14 @@ def api_create_process_activity_entry(company_id: int, process_id: int, activity
         print(f"WARN - Erro ao converter image_width '{image_width}': {e}, usando 280")
         width_val = 280
 
-    print(f"Criando entry no banco: text_len={len(text_content)}, image_path={image_path}, width={width_val}")
+    print(f"Criando entry no banco: text_len={len(text_content)}, image_path={image_path}, width={width_val}, layout={layout}")
 
     try:
         new_id = db.create_process_activity_entry(activity_id, {
             'text_content': text_content,
             'image_path': image_path,
-            'image_width': width_val
+            'image_width': width_val,
+            'layout': layout  # ADICIONADO
         })
     except Exception as db_err:
         print(f"ERROR - Exceção no create_process_activity_entry: {db_err}")
@@ -3730,12 +3733,215 @@ def api_generate_process_report(company_id: int, process_id: int):
         print(f">> ERRO ao gerar relatório: {e}")
         import traceback
         traceback.print_exc()
+        error_trace = traceback.format_exc()
         
-        return jsonify({
-            'success': False,
-            'error': str(e),
-            'message': 'Erro ao gerar relatório. Verifique os logs do servidor.'
-        }), 500
+        # Retornar HTML formatado para exibir o erro de forma amigável
+        error_html = f"""
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Erro ao Gerar Relatório</title>
+    <style>
+        body {{
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            padding: 15px 10px;
+            margin: 0;
+            min-height: 100vh;
+            display: flex;
+            align-items: center;
+        }}
+        .error-container {{
+            max-width: 700px;
+            margin: 0 auto;
+            background: white;
+            border-radius: 12px;
+            box-shadow: 0 10px 40px rgba(0, 0, 0, 0.3);
+            overflow: hidden;
+        }}
+        .error-header {{
+            background: linear-gradient(135deg, #ef4444 0%, #dc2626 100%);
+            color: white;
+            padding: 20px;
+            text-align: center;
+        }}
+        .error-header h1 {{
+            margin: 0 0 8px 0;
+            font-size: 22px;
+            font-weight: 700;
+        }}
+        .error-header p {{
+            margin: 0;
+            opacity: 0.9;
+            font-size: 13px;
+        }}
+        .error-body {{
+            padding: 20px;
+        }}
+        .error-message {{
+            background: #fef2f2;
+            border-left: 4px solid #ef4444;
+            padding: 15px;
+            border-radius: 6px;
+            margin-bottom: 15px;
+        }}
+        .error-message h2 {{
+            margin: 0 0 8px 0;
+            color: #991b1b;
+            font-size: 15px;
+        }}
+        .error-message code {{
+            background: #fee2e2;
+            padding: 2px 4px;
+            border-radius: 3px;
+            color: #7f1d1d;
+            font-family: 'Courier New', monospace;
+            font-size: 12px;
+        }}
+        .error-details {{
+            background: #f9fafb;
+            border: 1px solid #e5e7eb;
+            border-radius: 6px;
+            padding: 15px;
+            margin-bottom: 15px;
+        }}
+        .error-details h3 {{
+            margin: 0 0 10px 0;
+            color: #374151;
+            font-size: 14px;
+            display: flex;
+            align-items: center;
+            gap: 6px;
+        }}
+        .error-details pre {{
+            background: #1f2937;
+            color: #f3f4f6;
+            padding: 12px;
+            border-radius: 5px;
+            overflow-x: auto;
+            font-size: 11px;
+            line-height: 1.4;
+            margin: 0;
+            max-height: 300px;
+            overflow-y: auto;
+        }}
+        .actions {{
+            display: flex;
+            gap: 10px;
+            flex-wrap: wrap;
+        }}
+        .button {{
+            padding: 10px 20px;
+            border-radius: 6px;
+            font-weight: 600;
+            text-decoration: none;
+            display: inline-block;
+            transition: all 0.2s;
+            border: none;
+            cursor: pointer;
+            font-size: 13px;
+        }}
+        .button-primary {{
+            background: #3b82f6;
+            color: white;
+        }}
+        .button-primary:hover {{
+            background: #2563eb;
+            transform: translateY(-1px);
+            box-shadow: 0 3px 10px rgba(59, 130, 246, 0.4);
+        }}
+        .button-secondary {{
+            background: #f3f4f6;
+            color: #374151;
+        }}
+        .button-secondary:hover {{
+            background: #e5e7eb;
+        }}
+        .icon {{
+            font-size: 36px;
+            margin-bottom: 8px;
+        }}
+        .toggle-trace {{
+            cursor: pointer;
+            color: #3b82f6;
+            text-decoration: underline;
+            background: none;
+            border: none;
+            padding: 0;
+            font-size: 12px;
+        }}
+        .toggle-trace:hover {{
+            color: #2563eb;
+        }}
+        #traceDetails {{
+            display: none;
+            margin-top: 10px;
+        }}
+        #traceDetails.show {{
+            display: block;
+        }}
+    </style>
+</head>
+<body>
+    <div class="error-container">
+        <div class="error-header">
+            <div class="icon">⚠️</div>
+            <h1>Erro ao Gerar Relatório</h1>
+            <p>Ocorreu um problema durante a geração do relatório do processo</p>
+        </div>
+        
+        <div class="error-body">
+            <div class="error-message">
+                <h2>Mensagem do Erro:</h2>
+                <code>{str(e)}</code>
+            </div>
+            
+            <div class="error-details">
+                <h3>
+                    <span>🔍</span>
+                    <span>Detalhes Técnicos</span>
+                </h3>
+                <p style="margin-bottom: 10px; color: #6b7280;">
+                    <button class="toggle-trace" onclick="toggleTrace()">▶ Mostrar stack trace completo</button>
+                </p>
+                <div id="traceDetails">
+                    <pre>{error_trace}</pre>
+                </div>
+            </div>
+            
+            <div class="actions">
+                <button class="button button-primary" onclick="window.history.back()">
+                    ← Voltar para o Processo
+                </button>
+                <button class="button button-secondary" onclick="window.location.reload()">
+                    🔄 Tentar Novamente
+                </button>
+            </div>
+        </div>
+    </div>
+    
+    <script>
+        function toggleTrace() {{
+            const details = document.getElementById('traceDetails');
+            const button = document.querySelector('.toggle-trace');
+            if (details.classList.contains('show')) {{
+                details.classList.remove('show');
+                button.textContent = '▶ Mostrar stack trace completo';
+            }} else {{
+                details.classList.add('show');
+                button.textContent = '▼ Ocultar stack trace';
+            }}
+        }}
+    </script>
+</body>
+</html>
+        """
+        
+        response = app.make_response(error_html)
+        response.headers['Content-Type'] = 'text/html; charset=utf-8'
+        return response, 500
 
 
 @app.route("/__routes")
@@ -10620,6 +10826,7 @@ if __name__ == "__main__":
             print("   Rotinas devem ser executadas manualmente via routine_scheduler.py")
         
         print("\nIniciando servidor...")
+        # Reload trigger
         app.run(debug=True, host='0.0.0.0', port=5003, use_reloader=False)
     except Exception as e:
         print(f">> ERRO AO INICIAR SERVIDOR: {e}")

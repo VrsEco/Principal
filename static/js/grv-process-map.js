@@ -1193,31 +1193,13 @@
   
   if(btnPrintFromViewer){
     btnPrintFromViewer.addEventListener('click', () => {
-      // Atualizar data de impressão
-      const now = new Date();
-      const dateStr = now.toLocaleDateString('pt-BR');
-      const timeStr = now.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' });
-      const impressaoTexto = `${dateStr} às ${timeStr}`;
-      
-      // Atualizar no cabeçalho original
-      const printDate = document.getElementById('printDate');
-      if(printDate){
-        printDate.textContent = impressaoTexto;
+      // Abrir versão para impressão em nova aba
+      if(Number.isNaN(companyId)) return;
+      const url = `/grv/company/${companyId}/process/map/print`;
+      const opened = window.open(url, '_blank', 'noopener');
+      if(!opened && window.showMessage){
+        window.showMessage('Não foi possível abrir a página de impressão. Verifique o bloqueador de pop-ups.', 'error');
       }
-      
-      // Atualizar no viewer
-      const viewerPrintDate = document.getElementById('viewerPrintDate');
-      if(viewerPrintDate){
-        viewerPrintDate.textContent = impressaoTexto;
-      }
-      
-      const viewerPrintDatePrint = document.getElementById('viewerPrintDatePrint');
-      if(viewerPrintDatePrint){
-        viewerPrintDatePrint.textContent = impressaoTexto;
-      }
-      
-      // Imprimir
-      setTimeout(() => window.print(), 100);
     });
   }
   
@@ -1238,23 +1220,13 @@
   const btnPrintMap = document.getElementById('btnPrintMap');
   if(btnPrintMap){
     btnPrintMap.addEventListener('click', () => {
-      // Atualizar data de impressao antes de imprimir
-      const now = new Date();
-      const dateStr = now.toLocaleDateString('pt-BR');
-      const timeStr = now.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' });
-
-      const printDate = document.getElementById('printDate');
-      if(printDate){
-        printDate.textContent = `${dateStr} às ${timeStr}`;
+      // Abrir versão para impressão em nova aba
+      if(Number.isNaN(companyId)) return;
+      const url = `/grv/company/${companyId}/process/map/print`;
+      const opened = window.open(url, '_blank', 'noopener');
+      if(!opened && window.showMessage){
+        window.showMessage('Não foi possível abrir a página de impressão. Verifique o bloqueador de pop-ups.', 'error');
       }
-
-      const viewerPrintDatePrint = document.getElementById('viewerPrintDatePrint');
-      if(viewerPrintDatePrint){
-        viewerPrintDatePrint.textContent = `${dateStr} às ${timeStr}`;
-      }
-
-      // Imprimir
-      setTimeout(() => window.print(), 100);
     });
   }
   

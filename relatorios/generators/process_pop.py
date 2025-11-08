@@ -27,7 +27,6 @@ with open('relatorio.html', 'w', encoding='utf-8') as f:
 
 import sys
 import os
-import sqlite3
 import base64
 import mimetypes
 from pathlib import Path
@@ -77,8 +76,8 @@ class ProcessPOPReport(BaseReportGenerator):
         # Obter margens do modelo
         margin_top = 5  # Padrão
         margin_bottom = 5  # Padrão
-        margin_left = 20  # Padrão
-        margin_right = 15  # Padrão
+        margin_left = 5  # Padrão - Reduzido para 5mm
+        margin_right = 5  # Padrão - Reduzido para 5mm
         
         if self.report_model:
             margins = self.report_model.get('margins', {})
@@ -232,6 +231,9 @@ class ProcessPOPReport(BaseReportGenerator):
             background: linear-gradient(180deg, rgba(226, 232, 240, 0.35) 0%, rgba(248, 250, 252, 0.9) 100%);
             border: 1px solid rgba(148, 163, 184, 0.35);
             border-radius: 12px;
+            clear: both;
+            position: relative;
+            overflow: visible;
             box-shadow: 0 4px 12px -8px rgba(15, 23, 42, 0.3);
             /* PERMITE quebra de página dentro da seção - FORÇA com !important */
             page-break-inside: auto !important;
@@ -443,6 +445,10 @@ class ProcessPOPReport(BaseReportGenerator):
             width: 100%;
             border-collapse: collapse;
             font-size: 9.5pt;
+            display: table;
+            clear: both;
+            margin-top: 8mm;
+            position: relative;
             /* A tabela pode quebrar entre linhas se necessário */
             page-break-inside: auto !important;
             break-inside: auto !important;
@@ -575,23 +581,27 @@ class ProcessPOPReport(BaseReportGenerator):
         }}
 
         .flow-figure {{
-            margin: 0;
-            display: flex;
-            flex-direction: column;
-            align-items: center;
-            gap: 2.5mm;
+            margin: 0 0 8mm 0;
+            display: block;
+            clear: both;
             padding: 12px;
             border-radius: 10px;
             border: 1px dashed rgba(148, 163, 184, 0.6);
             background: rgba(226, 232, 240, 0.35);
+            text-align: center;
             /* NÃO quebra - mantém figura inteira */
             page-break-inside: avoid !important;
             break-inside: avoid !important;
+            page-break-after: auto !important;
+            overflow: visible;
         }}
 
         .flow-figure-image {{
             max-width: 100%;
+            width: 100%;
             height: auto;
+            display: block;
+            margin: 0 auto;
             border-radius: 10px;
             border: 1px solid rgba(148, 163, 184, 0.4);
             box-shadow: 0 4px 8px -4px rgba(15, 23, 42, 0.4);
@@ -771,6 +781,148 @@ class ProcessPOPReport(BaseReportGenerator):
         
         /* Customizações específicas */
         {self.get_custom_styles()}
+        
+        /* =============================================
+           REGRAS DE IMPRESSÃO (CTRL+P)
+           ============================================= */
+        @media print {{
+            /* Garantir margens de 5mm nas laterais para impressão */
+            @page {{
+                margin: {margin_top}mm 5mm {margin_bottom}mm 5mm;
+                size: A4 portrait;
+            }}
+            
+            /* FORÇAR ESCALA 100% - Sem zoom adicional */
+            html {{
+                -webkit-text-size-adjust: 100% !important;
+                -moz-text-size-adjust: 100% !important;
+                -ms-text-size-adjust: 100% !important;
+                text-size-adjust: 100% !important;
+            }}
+            
+            /* Aplicar escala normal 1:1 */
+            body {{
+                margin: 0;
+                padding: 0;
+                transform: scale(1) !important;
+                transform-origin: top left !important;
+                width: 100% !important;
+                height: auto !important;
+            }}
+
+            /* Evitar transformações adicionais nos elementos filhos */
+            body > * {{
+                transform: none !important;
+            }}
+
+            /* Forçar largura total de contêineres principais */
+            html, body, .report-content, .report-section, .section-content {{
+                width: 100% !important;
+                max-width: 100% !important;
+                min-width: 100% !important;
+                box-sizing: border-box !important;
+            }}
+            
+            /* Garantir que elementos internos respeitem a largura */
+            .report-section > * {{
+                max-width: 100% !important;
+                box-sizing: border-box !important;
+            }}
+            
+            /* Controlar imagens para não distorcer */
+            img {{
+                max-width: 100% !important;
+                height: auto !important;
+                page-break-inside: avoid;
+                display: block;
+                float: none !important;
+            }}
+            
+            /* Tabelas e elementos estruturais */
+            table {{
+                page-break-inside: avoid;
+                width: 100% !important;
+                clear: both !important;
+                margin-top: 5mm !important;
+            }}
+            
+            /* Tabela de rotinas - garantir espaçamento */
+            .routines-table {{
+                page-break-before: auto;
+                clear: both !important;
+                margin-top: 10mm !important;
+            }}
+            
+            /* Evitar quebras inadequadas */
+            .report-section {{
+                page-break-inside: avoid;
+                clear: both !important;
+                position: relative !important;
+                float: none !important;
+            }}
+            
+            h1, h2, h3, h4, h5, h6 {{
+                page-break-after: avoid;
+            }}
+            
+            /* Garantir que listas não quebrem inadequadamente */
+            ul, ol {{
+                page-break-inside: avoid;
+            }}
+
+            /* Texto: evitar colunas muito estreitas e quebras por caractere */
+            p, li, dd, dt, td, th {{
+                white-space: normal !important;
+                word-break: normal !important;
+                overflow-wrap: anywhere;
+            }}
+            
+            /* Elementos de fluxo (diagramas) */
+            .flow-section {{
+                page-break-inside: avoid;
+                page-break-after: auto;
+            }}
+            
+            .flow-figure {{
+                page-break-inside: avoid;
+                page-break-after: auto;
+                margin-bottom: 10mm !important;
+                clear: both !important;
+            }}
+            
+            .flow-section img,
+            .flow-figure-image {{
+                max-width: 100% !important;
+                height: auto !important;
+                display: block !important;
+                float: none !important;
+                clear: both !important;
+            }}
+            
+            /* Ajustar iframes/embeds (como planilhas do Google) */
+            iframe, embed, object {{
+                max-width: 100% !important;
+                height: auto !important;
+                page-break-inside: avoid;
+            }}
+            
+            /* Garantir que o texto não seja cortado */
+            * {{
+                overflow: visible !important;
+            }}
+            
+            /* Remover sombras e efeitos desnecessários na impressão */
+            * {{
+                box-shadow: none !important;
+                text-shadow: none !important;
+            }}
+            
+            /* Garantir contraste adequado */
+            * {{
+                color-adjust: exact !important;
+                -webkit-print-color-adjust: exact !important;
+            }}
+        }}
         """
         
         # Montar HTML
@@ -825,11 +977,20 @@ class ProcessPOPReport(BaseReportGenerator):
     # ====================================
     
     def get_report_title(self):
-        """Retorna o titulo do relatorio"""
+        """Retorna o titulo do relatorio no formato: Código - Nome"""
         process = self.data.get('process', {})
-        parts = [value for value in (process.get('code'), process.get('name')) if value]
-        suffix = ' '.join(parts) if parts else 'Processo'
-        return f"Relatório de POP - {suffix}"
+        code = process.get('code', '').strip()
+        name = process.get('name', '').strip()
+        
+        # Formato: AB.C.2.3.1 - VENDAS - POSTOS
+        if code and name:
+            return f"{code} - {name}"
+        elif code:
+            return code
+        elif name:
+            return name
+        else:
+            return "Processo"
     
     def fetch_data(self, **kwargs):
         """
@@ -885,45 +1046,63 @@ class ProcessPOPReport(BaseReportGenerator):
         return activities
     
     def _fetch_routines(self, process_id):
-        """Busca rotinas com colaboradores usando o backend ativo (PostgreSQL ou fallback para SQLite)."""
-        conn = cursor = None
+        """
+        Busca rotinas com colaboradores usando o backend ativo (PostgreSQL).
+        
+        ⚠️ APP30: Usa APENAS PostgreSQL (SQLite foi desativado)
+        """
         try:
-            try:
-                from database.postgres_helper import connect as pg_connect
-                conn = pg_connect()
-                cursor = conn.cursor()
-            except Exception as pg_error:
-                print(f"ProcessPOPReport: fallback para SQLite ao buscar rotinas ({pg_error})")
-                conn = sqlite3.connect('instance/pevapp22.db')
-                conn.row_factory = sqlite3.Row
-                cursor = conn.cursor()
-
-            cursor.execute("""
-                SELECT r.id, r.name, r.description, r.schedule_type, r.schedule_value,
-                       r.deadline_days, r.deadline_hours, r.deadline_date
-                FROM routines r
-                WHERE r.process_id = ?
-                ORDER BY r.created_at DESC
-            """, (process_id,))
-
+            db = get_db()  # Usa o sistema de database configurado
+            
+            # Usar os métodos do database wrapper ao invés de queries diretas
+            # Isso garante compatibilidade e evita problemas de conexão
             routines = []
-            for routine_row in cursor.fetchall():
-                routine = dict(routine_row)
+            
+            # Buscar rotinas do processo (assumindo que existe método no database.py)
+            # Se não existir, vamos criar queries SQLAlchemy adequadas
+            from database.postgres_helper import execute_query
+            
+            # Query para rotinas (usando parametrização SQLAlchemy)
+            routines_raw = execute_query(
+                "SELECT id, name, description, schedule_type, schedule_value, "
+                "deadline_days, deadline_hours, deadline_date "
+                "FROM routines "
+                "WHERE process_id = :process_id "
+                "ORDER BY created_at DESC",
+                {"process_id": process_id}
+            )
+            
+            for routine_row in routines_raw:
+                # Converter Row para dict de forma segura
+                try:
+                    routine = dict(routine_row._mapping) if hasattr(routine_row, '_mapping') else dict(routine_row)
+                except Exception as e:
+                    print(f"⚠️ Erro ao converter routine_row: {e}")
+                    continue
+                
                 routine_id = routine.get('id')
                 if not routine_id:
                     continue
-
-                cursor.execute("""
-                    SELECT rc.*, e.name as employee_name, e.email as employee_email
-                    FROM routine_collaborators rc
-                    LEFT JOIN employees e ON rc.employee_id = e.id
-                    WHERE rc.routine_id = ?
-                    ORDER BY e.name
-                """, (routine_id,))
-
+                
+                # Query para colaboradores (usando parametrização SQLAlchemy)
+                collaborators_raw = execute_query(
+                    "SELECT rc.*, e.name as employee_name, e.email as employee_email "
+                    "FROM routine_collaborators rc "
+                    "LEFT JOIN employees e ON rc.employee_id = e.id "
+                    "WHERE rc.routine_id = :routine_id "
+                    "ORDER BY e.name",
+                    {"routine_id": routine_id}
+                )
+                
                 collaborators = []
-                for row in cursor.fetchall():
-                    collaborator = dict(row)
+                for row in collaborators_raw:
+                    # Converter Row para dict de forma segura
+                    try:
+                        collaborator = dict(row._mapping) if hasattr(row, '_mapping') else dict(row)
+                    except Exception as e:
+                        print(f"⚠️ Erro ao converter collaborator row: {e}")
+                        continue
+                    
                     hours_value = collaborator.get('hours_used') or 0
                     try:
                         hours_value = float(hours_value)
@@ -931,85 +1110,91 @@ class ProcessPOPReport(BaseReportGenerator):
                         hours_value = 0.0
                     collaborator['hours_used'] = hours_value
                     collaborators.append(collaborator)
-
+                
                 total_hours = sum(collab.get('hours_used', 0.0) for collab in collaborators)
                 routine['collaborators'] = collaborators
                 routine['total_hours'] = total_hours
                 routines.append(routine)
-
+            
             return routines
+            
         except Exception as e:
-            print(f"Erro ao buscar rotinas: {e}")
-            return []
-        finally:
-            try:
-                if cursor:
-                    cursor.close()
-            except Exception:
-                pass
-            if conn:
-                conn.close()
+            print(f"❌ ERRO ao buscar rotinas: {e}")
+            import traceback
+            traceback.print_exc()
+            # Propagar o erro para que seja exibido na página de erro
+            raise
     
     def _fetch_indicators(self, process_id):
-        """Busca indicadores do processo usando o backend ativo (PostgreSQL ou fallback para SQLite)."""
-        conn = cursor = None
+        """
+        Busca indicadores do processo usando o backend ativo (PostgreSQL).
+        
+        ⚠️ APP30: Usa APENAS PostgreSQL (SQLite foi desativado)
+        """
         try:
-            try:
-                from database.postgres_helper import connect as pg_connect
-                conn = pg_connect()
-                cursor = conn.cursor()
-            except Exception as pg_error:
-                print(f"ProcessPOPReport: fallback para SQLite ao buscar indicadores ({pg_error})")
-                conn = sqlite3.connect('instance/pevapp22.db')
-                conn.row_factory = sqlite3.Row
-                cursor = conn.cursor()
-
-            cursor.execute("""
-                SELECT 
-                    i.id, i.company_id, i.code, i.name, i.unit, i.formula, 
-                    i.polarity, i.data_source, i.notes
-                FROM indicators i
-                WHERE i.process_id = ?
-                ORDER BY i.code
-            """, (process_id,))
-
+            db = get_db()  # Usa o sistema de database configurado
+            
+            # Usar os métodos do database wrapper ao invés de queries diretas
+            from database.postgres_helper import execute_query, execute_fetchone
+            
+            # Query para indicadores (usando parametrização SQLAlchemy)
+            indicators_raw = execute_query(
+                "SELECT id, company_id, code, name, unit, formula, "
+                "polarity, data_source, notes "
+                "FROM indicators "
+                "WHERE process_id = :process_id "
+                "ORDER BY code",
+                {"process_id": process_id}
+            )
+            
             indicators = []
-            for row in cursor.fetchall():
-                indicator = dict(row)
+            for row in indicators_raw:
+                # Converter Row para dict de forma segura
+                try:
+                    indicator = dict(row._mapping) if hasattr(row, '_mapping') else dict(row)
+                except Exception as e:
+                    print(f"⚠️ Erro ao converter indicator row: {e}")
+                    continue
+                
                 indicator_id = indicator.get('id')
                 company_id = indicator.get('company_id')
                 if not indicator_id:
                     continue
-
-                params = [indicator_id]
-                goal_filter = """
-                    SELECT goal_value, goal_date, status
-                    FROM indicator_goals
-                    WHERE indicator_id = ?
-                """
+                
+                # Query para meta mais recente (usando parametrização SQLAlchemy)
+                goal_params = {"indicator_id": indicator_id}
+                goal_filter = (
+                    "SELECT goal_value, goal_date, status "
+                    "FROM indicator_goals "
+                    "WHERE indicator_id = :indicator_id "
+                )
                 if company_id:
-                    goal_filter += " AND company_id = ?"
-                    params.append(company_id)
-                goal_filter += " ORDER BY goal_date DESC LIMIT 1"
-
-                cursor.execute(goal_filter, tuple(params))
-                goal_row = cursor.fetchone()
-                indicator['latest_goal'] = dict(goal_row) if goal_row else None
-
+                    goal_filter += "AND company_id = :company_id "
+                    goal_params["company_id"] = company_id
+                goal_filter += "ORDER BY goal_date DESC LIMIT 1"
+                
+                goal_row = execute_fetchone(goal_filter, goal_params)
+                
+                # Converter goal_row para dict de forma segura
+                if goal_row:
+                    try:
+                        indicator['latest_goal'] = dict(goal_row._mapping) if hasattr(goal_row, '_mapping') else dict(goal_row)
+                    except Exception as e:
+                        print(f"⚠️ Erro ao converter goal_row: {e}")
+                        indicator['latest_goal'] = None
+                else:
+                    indicator['latest_goal'] = None
+                
                 indicators.append(indicator)
-
+            
             return indicators
+            
         except Exception as e:
-            print(f"Erro ao buscar indicadores: {e}")
-            return []
-        finally:
-            try:
-                if cursor:
-                    cursor.close()
-            except Exception:
-                pass
-            if conn:
-                conn.close()
+            print(f"❌ ERRO ao buscar indicadores: {e}")
+            import traceback
+            traceback.print_exc()
+            # Propagar o erro para que seja exibido na página de erro
+            raise
     
     def _resolve_image_for_inline(self, image_path):
         """
@@ -1153,7 +1338,8 @@ class ProcessPOPReport(BaseReportGenerator):
         process = self.data.get('process', {})
         flow_document = (process.get('flow_document') or '').strip()
 
-        def _build_public_url(document_path: str) -> str | None:
+        def _build_public_url(document_path: str):
+            """Retorna URL pública do documento ou None"""
             if not document_path:
                 return None
 
@@ -1174,7 +1360,8 @@ class ProcessPOPReport(BaseReportGenerator):
 
             return f"/uploads/{document_path.lstrip('/')}"
 
-        def _resolve_image_source(document_path: str) -> tuple[str | None, str | None]:
+        def _resolve_image_source(document_path: str):
+            """Retorna tupla (tipo, source) onde tipo pode ser 'image' ou 'file' e source é a URL ou None"""
             if not document_path:
                 return (None, None)
 

@@ -7,6 +7,7 @@ from middleware.auto_log_decorator import auto_log_crud
 
 grv_bp = Blueprint('grv', __name__, url_prefix='/grv')
 
+print(">>> MÓDULO GRV CARREGADO - VERSÃO COM API ROUTES <<<")
 
 def normalize_indicator_code(code: Optional[str]) -> Optional[str]:
     if not code:
@@ -396,6 +397,230 @@ def grv_process_map(company_id: int):
     )
 
 
+@grv_bp.route('/company/<int:company_id>/process/map/print')
+def grv_process_map_print(company_id: int):
+    """Print-friendly version of the process map"""
+    db = get_db()
+    company = db.get_company(company_id)
+    if not company:
+        abort(404)
+
+    map_data = db.get_process_map(company_id) or {}
+    raw_areas = map_data.get('areas', [])
+
+    structuring_levels = {
+        '': {'label': 'Fora de Escopo', 'color': '#94a3b8'},
+        'in_progress': {'label': 'Map | Impl | Estabn', 'color': '#f59e0b'},
+        'stabilized': {'label': 'Estabilizado', 'color': '#10b981'},
+        'initiated': {'label': 'Map | Impl | Estabn', 'color': '#f59e0b'},
+        'structured': {'label': 'Estabilizado', 'color': '#10b981'}
+    }
+    performance_levels = {
+        '': {'label': 'Fora de Escopo', 'color': '#94a3b8'},
+        'critical': {'label': 'Crítico', 'color': '#ef4444'},
+        'below': {'label': 'Abaixo', 'color': '#f59e0b'},
+        'satisfactory': {'label': 'Satisfatório', 'color': '#10b981'},
+        'initiated': {'label': 'Abaixo', 'color': '#f59e0b'},
+        'structured': {'label': 'Satisfatório', 'color': '#10b981'}
+    }
+
+    def _normalize_hex(value: str, default: str = '#1d4ed8') -> str:
+        if not value:
+            return default
+        value = value.strip()
+        if not value.startswith('#'):
+            value = f'#{value}'
+        if len(value) == 4:
+            value = f"#{''.join(ch * 2 for ch in value[1:])}"
+        return value.lower() if len(value) == 7 else default
+
+    def _mix_with_white(color_hex: str, factor: float = 0.75) -> str:
+        base = _normalize_hex(color_hex)
+        r = int(base[1:3], 16)
+        g = int(base[3:5], 16)
+        b = int(base[5:7], 16)
+        def _blend(channel: int) -> int:
+            return max(0, min(255, int(channel + (255 - channel) * factor)))
+        return '#{0:02x}{1:02x}{2:02x}'.format(_blend(r), _blend(g), _blend(b))
+
+    areas = []
+    total_macros = 0
+    total_processes = 0
+
+    for area in raw_areas:
+        macros = area.get('macros') or []
+        area_color = _normalize_hex(area.get('color'))
+        area_entry = {
+            'display_name': f"{area.get('code')} - {area.get('name').upper()}" if area.get('code') else (area.get('name') or 'Área'),
+            'color': area_color,
+            'color_soft': _mix_with_white(area_color, 0.82),
+            'macros': [],
+            'macro_count': len(macros),
+            'process_count': 0
+        }
+
+        for macro in macros:
+            processes = macro.get('processes') or []
+            macro_entry = {
+                'display_name': f"{macro.get('code')} - {macro.get('name').upper()}" if macro.get('code') else (macro.get('name') or 'Macroprocesso'),
+                'owner': macro.get('owner'),
+                'processes': []
+            }
+
+            for proc in processes:
+                struct_info = structuring_levels.get(proc.get('structuring_level') or '', structuring_levels[''])
+                perf_info = performance_levels.get(proc.get('performance_level') or '', performance_levels[''])
+                macro_entry['processes'].append({
+                    'display_name': f"{proc.get('code')} - {proc.get('name').upper()}" if proc.get('code') else (proc.get('name') or 'Processo'),
+                    'responsible': proc.get('responsible'),
+                    'description': proc.get('description'),
+                    'structuring': {
+                        'label': struct_info['label'],
+                        'color': struct_info['color'],
+                        'background': _mix_with_white(struct_info['color'], 0.88)
+                    },
+                    'performance': {
+                        'label': perf_info['label'],
+                        'color': perf_info['color'],
+                        'background': _mix_with_white(perf_info['color'], 0.88)
+                    }
+                })
+
+            macro_entry['process_total'] = len(macro_entry['processes'])
+            area_entry['process_count'] += macro_entry['process_total']
+            area_entry['macros'].append(macro_entry)
+
+        total_macros += area_entry['macro_count']
+        total_processes += area_entry['process_count']
+        areas.append(area_entry)
+
+    generated_at = datetime.now()
+
+    return render_template(
+        'pdf/grv_process_map_print.html',
+        company=company,
+        areas=areas,
+        totals={
+            'areas': len(areas),
+            'macros': total_macros,
+            'processes': total_processes
+        },
+        generated_at=generated_at
+    )
+
+
+@grv_bp.route('/company/<int:company_id>/process/map/pdf/debug')
+def grv_process_map_pdf_debug(company_id: int):
+    """Debug: View HTML before PDF conversion"""
+    db = get_db()
+    company = db.get_company(company_id)
+    if not company:
+        abort(404)
+
+    map_data = db.get_process_map(company_id) or {}
+    raw_areas = map_data.get('areas', [])
+
+    structuring_levels = {
+        '': {'label': 'Fora de Escopo', 'color': '#94a3b8'},
+        'in_progress': {'label': 'Map | Impl | Estabn', 'color': '#f59e0b'},
+        'stabilized': {'label': 'Estabilizado', 'color': '#10b981'},
+        'initiated': {'label': 'Map | Impl | Estabn', 'color': '#f59e0b'},
+        'structured': {'label': 'Estabilizado', 'color': '#10b981'}
+    }
+    performance_levels = {
+        '': {'label': 'Fora de Escopo', 'color': '#94a3b8'},
+        'critical': {'label': 'Crítico', 'color': '#ef4444'},
+        'below': {'label': 'Abaixo', 'color': '#f59e0b'},
+        'satisfactory': {'label': 'Satisfatório', 'color': '#10b981'},
+        'initiated': {'label': 'Abaixo', 'color': '#f59e0b'},
+        'structured': {'label': 'Satisfatório', 'color': '#10b981'}
+    }
+
+    def _normalize_hex(value: str, default: str = '#1d4ed8') -> str:
+        if not value:
+            return default
+        value = value.strip()
+        if not value.startswith('#'):
+            value = f'#{value}'
+        if len(value) == 4:
+            value = f"#{''.join(ch * 2 for ch in value[1:])}"
+        return value.lower() if len(value) == 7 else default
+
+    def _mix_with_white(color_hex: str, factor: float = 0.75) -> str:
+        base = _normalize_hex(color_hex)
+        r = int(base[1:3], 16)
+        g = int(base[3:5], 16)
+        b = int(base[5:7], 16)
+        def _blend(channel: int) -> int:
+            return max(0, min(255, int(channel + (255 - channel) * factor)))
+        return '#{0:02x}{1:02x}{2:02x}'.format(_blend(r), _blend(g), _blend(b))
+
+    areas = []
+    total_macros = 0
+    total_processes = 0
+
+    for area in raw_areas:
+        macros = area.get('macros') or []
+        area_color = _normalize_hex(area.get('color'))
+        area_entry = {
+            'display_name': f"{area.get('code')} - {area.get('name').upper()}" if area.get('code') else (area.get('name') or 'Área'),
+            'color': area_color,
+            'color_soft': _mix_with_white(area_color, 0.82),
+            'macros': [],
+            'macro_count': len(macros),
+            'process_count': 0
+        }
+
+        for macro in macros:
+            processes = macro.get('processes') or []
+            macro_entry = {
+                'display_name': f"{macro.get('code')} - {macro.get('name').upper()}" if macro.get('code') else (macro.get('name') or 'Macroprocesso'),
+                'owner': macro.get('owner'),
+                'processes': []
+            }
+
+            for proc in processes:
+                struct_info = structuring_levels.get(proc.get('structuring_level') or '', structuring_levels[''])
+                perf_info = performance_levels.get(proc.get('performance_level') or '', performance_levels[''])
+                macro_entry['processes'].append({
+                    'display_name': f"{proc.get('code')} - {proc.get('name').upper()}" if proc.get('code') else (proc.get('name') or 'Processo'),
+                    'responsible': proc.get('responsible'),
+                    'description': proc.get('description'),
+                    'structuring': {
+                        'label': struct_info['label'],
+                        'color': struct_info['color'],
+                        'background': _mix_with_white(struct_info['color'], 0.88)
+                    },
+                    'performance': {
+                        'label': perf_info['label'],
+                        'color': perf_info['color'],
+                        'background': _mix_with_white(perf_info['color'], 0.88)
+                    }
+                })
+
+            macro_entry['process_total'] = len(macro_entry['processes'])
+            area_entry['process_count'] += macro_entry['process_total']
+            area_entry['macros'].append(macro_entry)
+
+        total_macros += area_entry['macro_count']
+        total_processes += area_entry['process_count']
+        areas.append(area_entry)
+
+    generated_at = datetime.now()
+
+    return render_template(
+        'pdf/grv_process_map_embed.html',
+        company=company,
+        areas=areas,
+        totals={
+            'areas': len(areas),
+            'macros': total_macros,
+            'processes': total_processes
+        },
+        generated_at=generated_at
+    )
+
+
 @grv_bp.route('/company/<int:company_id>/process/map/pdf')
 def grv_process_map_pdf(company_id: int):
     db = get_db()
@@ -415,11 +640,11 @@ def grv_process_map_pdf(company_id: int):
     }
     performance_levels = {
         '': {'label': 'Fora de Escopo', 'color': '#94a3b8'},
-        'critical': {'label': 'CrÃ­tico', 'color': '#ef4444'},
+        'critical': {'label': 'Crítico', 'color': '#ef4444'},
         'below': {'label': 'Abaixo', 'color': '#f59e0b'},
-        'satisfactory': {'label': 'SatisfatÃ³rio', 'color': '#10b981'},
+        'satisfactory': {'label': 'Satisfatório', 'color': '#10b981'},
         'initiated': {'label': 'Abaixo', 'color': '#f59e0b'},
-        'structured': {'label': 'SatisfatÃ³rio', 'color': '#10b981'}
+        'structured': {'label': 'Satisfatório', 'color': '#10b981'}
     }
 
     def _normalize_hex(value: str, default: str = '#1d4ed8') -> str:
@@ -532,7 +757,7 @@ def grv_process_map_pdf(company_id: int):
     try:
         from playwright.sync_api import sync_playwright
     except ImportError:
-        abort(500, description="DependÃªncia 'playwright' nÃ£o encontrada. Execute: pip install playwright && playwright install chromium")
+        abort(500, description="Dependência 'playwright' não encontrada. Execute: pip install playwright && playwright install chromium")
 
     def _build_pdf(html: str) -> bytes:
         with sync_playwright() as p:
@@ -566,13 +791,134 @@ def grv_process_map_pdf(company_id: int):
     return response
 
 
-@grv_bp.route('/company/<int:company_id>/process/map/pdf2')
-def grv_process_map_pdf2(company_id: int):
-    """Generate Process Map PDF - Version 2 (Landscape, Table Format)"""
+@grv_bp.route('/company/<int:company_id>/process/map/pdf2/test')
+def grv_process_map_pdf2_test(company_id: int):
+    """Simple test endpoint"""
+    from flask import jsonify
+    return jsonify({"status": "OK", "message": "Test endpoint working", "company_id": company_id})
+
+
+@grv_bp.route('/company/<int:company_id>/process/map/pdf2/debug')
+def grv_process_map_pdf2_debug(company_id: int):
+    """Debug: View HTML before PDF conversion"""
+    from datetime import datetime
+    from flask import render_template
+    
     db = get_db()
     company = db.get_company(company_id)
     if not company:
         abort(404)
+    
+    map_data = db.get_process_map(company_id) or {}
+    raw_areas = map_data.get('areas', [])
+    
+    structuring_levels = {
+        '': {'label': 'Fora de Escopo', 'color': '#94a3b8'},
+        'in_progress': {'label': 'Map | Impl | Estabn', 'color': '#f59e0b'},
+        'stabilized': {'label': 'Estabilizado', 'color': '#10b981'},
+        'initiated': {'label': 'Map | Impl | Estabn', 'color': '#f59e0b'},
+        'structured': {'label': 'Estabilizado', 'color': '#10b981'}
+    }
+    performance_levels = {
+        '': {'label': 'Fora de Escopo', 'color': '#94a3b8'},
+        'critical': {'label': 'Crítico', 'color': '#ef4444'},
+        'below': {'label': 'Abaixo do esperado', 'color': '#f97316'},
+        'initiated': {'label': 'Ajustando', 'color': '#f59e0b'},
+        'structured': {'label': 'Satisfatório', 'color': '#10b981'}
+    }
+    
+    def _normalize_hex(color: str) -> str:
+        if not color or not isinstance(color, str):
+            return '#94a3b8'
+        if color.startswith('#'):
+            return color
+        return f'#{color}'
+    
+    def _mix_with_white(color_hex: str, factor: float = 0.75) -> str:
+        base = _normalize_hex(color_hex)
+        r = int(base[1:3], 16)
+        g = int(base[3:5], 16)
+        b = int(base[5:7], 16)
+        def _blend(channel: int) -> int:
+            return max(0, min(255, int(channel + (255 - channel) * factor)))
+        return '#{0:02x}{1:02x}{2:02x}'.format(_blend(r), _blend(g), _blend(b))
+    
+    areas = []
+    total_macros = 0
+    total_processes = 0
+    
+    for area in raw_areas:
+        macros = area.get('macros') or []
+        area_color = _normalize_hex(area.get('color'))
+        area_entry = {
+            'display_name': f"{area.get('code')} - {area.get('name').upper()}" if area.get('code') else (area.get('name') or 'Área'),
+            'color': area_color,
+            'color_soft': _mix_with_white(area_color, 0.82),
+            'macros': [],
+            'macro_count': len(macros),
+            'process_count': 0
+        }
+        
+        for macro in macros:
+            processes = macro.get('processes') or []
+            macro_entry = {
+                'display_name': f"{macro.get('code')} - {macro.get('name').upper()}" if macro.get('code') else (macro.get('name') or 'Macroprocesso'),
+                'owner': macro.get('owner'),
+                'processes': []
+            }
+            
+            for proc in processes:
+                struct_info = structuring_levels.get(proc.get('structuring_level') or '', structuring_levels[''])
+                perf_info = performance_levels.get(proc.get('performance_level') or '', performance_levels[''])
+                macro_entry['processes'].append({
+                    'display_name': f"{proc.get('code')} - {proc.get('name').upper()}" if proc.get('code') else (proc.get('name') or 'Processo'),
+                    'responsible': proc.get('responsible'),
+                    'description': proc.get('description'),
+                    'structuring': {
+                        'label': struct_info['label'],
+                        'color': struct_info['color'],
+                        'background': _mix_with_white(struct_info['color'], 0.88)
+                    },
+                    'performance': {
+                        'label': perf_info['label'],
+                        'color': perf_info['color'],
+                        'background': _mix_with_white(perf_info['color'], 0.88)
+                    }
+                })
+            
+            macro_entry['process_total'] = len(macro_entry['processes'])
+            area_entry['process_count'] += macro_entry['process_total']
+            area_entry['macros'].append(macro_entry)
+        
+        total_macros += area_entry['macro_count']
+        total_processes += area_entry['process_count']
+        areas.append(area_entry)
+    
+    generated_at = datetime.now()
+    
+    return render_template(
+        'pdf/grv_process_map_v2.html',
+        company=company,
+        areas=areas,
+        totals={
+            'areas': len(areas),
+            'macros': total_macros,
+            'processes': total_processes
+        },
+        generated_at=generated_at
+    )
+
+
+@grv_bp.route('/company/<int:company_id>/process/map/pdf2')
+def grv_process_map_pdf2(company_id: int):
+    """Generate Process Map PDF - Version 2 (Landscape, Table Format)"""
+    print(f"DEBUG: Rota /pdf2 chamada para company_id={company_id}")
+    db = get_db()
+    company = db.get_company(company_id)
+    if not company:
+        print("DEBUG: Empresa não encontrada!")
+        abort(404)
+    print(f"DEBUG: Empresa encontrada: {company.get('name')}")
 
     map_data = db.get_process_map(company_id) or {}
     raw_areas = map_data.get('areas', [])
@@ -586,11 +932,11 @@ def grv_process_map_pdf2(company_id: int):
     }
     performance_levels = {
         '': {'label': 'Fora de Escopo', 'color': '#94a3b8'},
-        'critical': {'label': 'CrÃ­tico', 'color': '#ef4444'},
+        'critical': {'label': 'Crítico', 'color': '#ef4444'},
         'below': {'label': 'Abaixo', 'color': '#f59e0b'},
-        'satisfactory': {'label': 'SatisfatÃ³rio', 'color': '#10b981'},
+        'satisfactory': {'label': 'Satisfatório', 'color': '#10b981'},
         'initiated': {'label': 'Abaixo', 'color': '#f59e0b'},
-        'structured': {'label': 'SatisfatÃ³rio', 'color': '#10b981'}
+        'structured': {'label': 'Satisfatório', 'color': '#10b981'}
     }
 
     def _normalize_hex(value: str, default: str = '#1d4ed8') -> str:
@@ -687,7 +1033,7 @@ def grv_process_map_pdf2(company_id: int):
         "</style>"
         f"<div class='pdf-header'>"
         f"<span class='title'>{company.get('name') or 'Empresa'}</span>"
-        "<span class='page'>PÃ¡g. <span class='pageNumber'></span> de <span class='totalPages'></span></span>"
+        "<span class='page'>Pág. <span class='pageNumber'></span> de <span class='totalPages'></span></span>"
         "</div>"
     )
 
@@ -699,36 +1045,52 @@ def grv_process_map_pdf2(company_id: int):
         "</style>"
         f"<div class='pdf-footer'>"
         f"<span>{company.get('name') or 'Empresa'}</span>"
-        f"<span>Gerado em {generated_at.strftime('%d/%m/%Y Ã s %H:%M')}</span>"
+        f"<span>Gerado em {generated_at.strftime('%d/%m/%Y às %H:%M')}</span>"
         "</div>"
     )
 
+    print("DEBUG: Iniciando geração de PDF...")
+    
     try:
         from playwright.sync_api import sync_playwright
-    except ImportError:
-        abort(500, description="DependÃªncia 'playwright' nÃ£o encontrada. Execute: pip install playwright && playwright install chromium")
+        print("DEBUG: Playwright importado com sucesso")
+    except ImportError as e:
+        print(f"DEBUG: Erro ao importar Playwright: {str(e)}")
+        abort(500, description="Dependência 'playwright' não encontrada. Execute: pip install playwright && playwright install chromium")
 
     def _build_pdf(html: str) -> bytes:
-        with sync_playwright() as p:
-            browser = p.chromium.launch(headless=True, args=['--no-sandbox'])
-            try:
-                page = browser.new_page()
-                page.set_viewport_size({"width": 794, "height": 1123})
-                page.set_content(html, wait_until="networkidle")
-                page.emulate_media(media="print")
-                pdf = page.pdf(
-                    format="A4",
-                    landscape=False,
-                    print_background=True,
-                    display_header_footer=True,
-                    header_template=header_template,
-                    footer_template=footer_template,
-                    prefer_css_page_size=True,
-                    margin={"top": "8mm", "bottom": "8mm", "left": "6mm", "right": "6mm"}
-                )
-            finally:
-                browser.close()
-        return pdf
+        try:
+            print("DEBUG: Iniciando sync_playwright...")
+            with sync_playwright() as p:
+                print("DEBUG: Lançando navegador...")
+                browser = p.chromium.launch(headless=True, args=['--no-sandbox'])
+                try:
+                    print("DEBUG: Criando nova página...")
+                    page = browser.new_page()
+                    page.set_viewport_size({"width": 794, "height": 1123})
+                    print("DEBUG: Definindo conteúdo HTML...")
+                    page.set_content(html, wait_until="networkidle")
+                    page.emulate_media(media="print")
+                    print("DEBUG: Gerando PDF...")
+                    pdf = page.pdf(
+                        format="A4",
+                        landscape=False,
+                        print_background=True,
+                        display_header_footer=True,
+                        header_template=header_template,
+                        footer_template=footer_template,
+                        prefer_css_page_size=True,
+                        margin={"top": "8mm", "bottom": "8mm", "left": "6mm", "right": "6mm"}
+                    )
+                    print("DEBUG: PDF gerado com sucesso!")
+                finally:
+                    browser.close()
+            return pdf
+        except Exception as e:
+            print(f"ERRO CRÍTICO ao gerar PDF: {str(e)}")
+            import traceback
+            traceback.print_exc()
+            abort(500, description=f"Erro ao gerar PDF: {str(e)}")
 
     pdf_bytes = _build_pdf(html_content)
 
@@ -886,6 +1248,295 @@ def grv_process_detail(company_id: int, process_id: int):
         report_models=report_models,
         report_patterns=report_patterns
     )
+
+
+# API Routes for POP Activities Management
+# Padrão de URL: /api/companies/<company_id>/processes/<process_id>/activities/...
+@grv_bp.route('/api/companies/<int:company_id>/processes/<int:process_id>/activities', methods=['GET', 'POST'])
+def api_process_activities(company_id: int, process_id: int):
+    """List or create POP activities for a process"""
+    from flask import jsonify, request
+    db = get_db()
+    
+    # Verificar se o processo existe e pertence à empresa
+    process = db.get_process(process_id)
+    if not process or process.get('company_id') != company_id:
+        return jsonify({'success': False, 'error': 'Process not found'}), 404
+    
+    if request.method == 'GET':
+        # Buscar atividades do POP usando método do banco
+        activities = db.list_process_activities(process_id) or []
+        return jsonify({'success': True, 'data': activities})
+    
+    elif request.method == 'POST':
+        # Criar nova atividade
+        data = request.json or {}
+        name = (data.get('name') or '').strip()
+        suffix = (data.get('suffix') or '').strip()
+        
+        if not name:
+            return jsonify({'success': False, 'error': 'Activity name is required'}), 400
+        
+        if not suffix:
+            return jsonify({'success': False, 'error': 'Activity suffix is required'}), 400
+        
+        # Criar atividade no banco
+        activity_data = {
+            'name': name,
+            'code_suffix': suffix,
+            'suffix': suffix,
+            'layout': 'single'
+        }
+        
+        new_id = db.create_process_activity(process_id, activity_data)
+        
+        if new_id:
+            # Buscar a atividade criada
+            new_activity = db.get_process_activity(new_id)
+            if new_activity:
+                new_activity['entries'] = []
+            return jsonify({'success': True, 'data': new_activity})
+        else:
+            return jsonify({'success': False, 'error': 'Failed to save activity'}), 500
+
+
+@grv_bp.route('/api/companies/<int:company_id>/processes/<int:process_id>/activities/<int:activity_id>', methods=['GET', 'PUT', 'DELETE'])
+def api_process_activity_detail(company_id: int, process_id: int, activity_id: int):
+    """Get, update or delete a POP activity"""
+    from flask import jsonify, request
+    db = get_db()
+    
+    # Verificar se o processo existe e pertence à empresa
+    process = db.get_process(process_id)
+    if not process or process.get('company_id') != company_id:
+        return jsonify({'success': False, 'error': 'Process not found'}), 404
+    
+    # Buscar a atividade
+    activity = db.get_process_activity(activity_id)
+    if not activity:
+        return jsonify({'success': False, 'error': 'Activity not found'}), 404
+    
+    if request.method == 'GET':
+        return jsonify({'success': True, 'data': activity})
+    
+    elif request.method == 'DELETE':
+        # Remover atividade
+        success = db.delete_process_activity(activity_id)
+        return jsonify({'success': success})
+    
+    elif request.method == 'PUT':
+        # Atualizar atividade
+        data = request.json or {}
+        name = (data.get('name') or '').strip()
+        
+        if not name:
+            return jsonify({'success': False, 'error': 'Activity name is required'}), 400
+        
+        update_data = {'name': name}
+        success = db.update_process_activity(activity_id, update_data)
+        
+        return jsonify({'success': success})
+
+
+@grv_bp.route('/api/companies/<int:company_id>/processes/<int:process_id>/activities/<int:activity_id>/entries', methods=['POST'])
+def api_create_process_activity_entry(company_id: int, process_id: int, activity_id: int):
+    """Create a new entry (step) for a POP activity"""
+    from flask import jsonify, request
+    from datetime import datetime as dt
+    import os
+    import uuid
+    
+    # Log em arquivo para debug
+    with open('debug_api.log', 'a', encoding='utf-8') as f:
+        f.write(f"\n=== {dt.now()} - FUNÇÃO CHAMADA! company_id={company_id}, process_id={process_id}, activity_id={activity_id} ===\n")
+    print(f"=== FUNÇÃO CHAMADA! company_id={company_id}, process_id={process_id}, activity_id={activity_id} ===")
+    
+    db = get_db()
+    
+    print(f"DEBUG: Recebendo requisição para criar etapa - company_id={company_id}, process_id={process_id}, activity_id={activity_id}")
+    
+    # Verificar se o processo existe e pertence à empresa
+    process = db.get_process(process_id)
+    if not process or process.get('company_id') != company_id:
+        print(f"DEBUG: Processo não encontrado ou não pertence à empresa")
+        return jsonify({'success': False, 'error': 'Process not found'}), 404
+    
+    print(f"DEBUG: Processo encontrado: {process.get('name')}")
+    
+    # Verificar se a atividade existe
+    activity = db.get_process_activity(activity_id)
+    if not activity:
+        print(f"DEBUG: Atividade {activity_id} não encontrada!")
+        return jsonify({'success': False, 'error': 'Activity not found'}), 404
+    
+    print(f"DEBUG: Atividade encontrada: {activity.get('name')}")
+    
+    # Processar dados do formulário
+    form_data = request.form
+    file = request.files.get('image')
+    
+    layout = form_data.get('layout', 'single')
+    text_content = (form_data.get('text_content') or '').strip()
+    image_width = form_data.get('image_width', '280')
+    
+    print(f"DEBUG: Dados recebidos - layout={layout}, text_content={text_content[:50] if text_content else 'VAZIO'}, image_width={image_width}")
+    
+    if not text_content:
+        print(f"DEBUG: Texto vazio!")
+        return jsonify({'success': False, 'error': 'Text content is required'}), 400
+    
+    # Processar imagem se fornecida
+    image_path = None
+    if file and file.filename:
+        print(f"DEBUG: Processando imagem: {file.filename}")
+        # Criar diretório de uploads se não existir
+        upload_dir = os.path.join('static', 'uploads', 'pop')
+        os.makedirs(upload_dir, exist_ok=True)
+        
+        # Gerar nome único para o arquivo
+        file_ext = os.path.splitext(file.filename)[1]
+        timestamp = dt.now().strftime('%Y%m%d%H%M%S')
+        unique_name = f"pop-{process_id}-{activity_id}-{timestamp}-{uuid.uuid4().hex[:8]}{file_ext}"
+        
+        # Salvar arquivo
+        file_path = os.path.join(upload_dir, unique_name)
+        file.save(file_path)
+        
+        # URL relativa para o arquivo
+        image_path = f"uploads/pop/{unique_name}"
+        print(f"DEBUG: Imagem salva em: {image_path}")
+    else:
+        print(f"DEBUG: Nenhuma imagem fornecida")
+    
+    # Criar nova etapa
+    entry_data = {
+        'layout': layout,
+        'text_content': text_content,
+        'image_path': image_path,
+        'image_width': int(image_width) if image_width else 280
+    }
+    
+    print(f"DEBUG: Criando nova etapa: {entry_data}")
+    
+    # Salvar no banco
+    print(f"DEBUG: Salvando no banco...")
+    try:
+        new_id = db.create_process_activity_entry(activity_id, entry_data)
+        print(f"DEBUG: Método retornou new_id={new_id}")
+        
+        if new_id:
+            print(f"DEBUG: Etapa salva com sucesso! ID: {new_id}")
+            # Buscar a etapa criada
+            new_entry = db.get_process_activity_entry(new_id)
+            print(f"DEBUG: Etapa buscada: {new_entry}")
+            
+            if new_entry:
+                return jsonify({'success': True, 'data': new_entry})
+            else:
+                print(f"DEBUG: Falha ao buscar etapa criada!")
+                return jsonify({'success': False, 'error': 'Entry created but not found', 'message': 'Falha ao buscar no banco'}), 500
+        else:
+            print(f"DEBUG: Falha ao salvar etapa! new_id é None")
+            return jsonify({'success': False, 'error': 'create_failed', 'message': 'Falha ao criar no banco'}), 500
+    except Exception as e:
+        print(f"DEBUG: EXCEÇÃO ao salvar: {e}")
+        import traceback
+        traceback.print_exc()
+        return jsonify({'success': False, 'error': 'exception', 'message': str(e)}), 500
+
+
+@grv_bp.route('/api/companies/<int:company_id>/processes/<int:process_id>/activities/<int:activity_id>/entries/<int:entry_id>', methods=['GET', 'PUT', 'DELETE'])
+def api_process_activity_entry_detail(company_id: int, process_id: int, activity_id: int, entry_id: int):
+    """Get, update or delete a POP entry"""
+    from flask import jsonify, request
+    import os
+    import uuid
+    from datetime import datetime
+    db = get_db()
+    
+    # Verificar se o processo existe e pertence à empresa
+    process = db.get_process(process_id)
+    if not process or process.get('company_id') != company_id:
+        return jsonify({'success': False, 'error': 'Process not found'}), 404
+    
+    # Buscar a etapa
+    entry = db.get_process_activity_entry(entry_id)
+    if not entry:
+        return jsonify({'success': False, 'error': 'Entry not found'}), 404
+    
+    if request.method == 'GET':
+        return jsonify({'success': True, 'data': entry})
+    
+    elif request.method == 'DELETE':
+        # Remover etapa e sua imagem se existir
+        if entry.get('image_path'):
+            image_path = os.path.join('static', entry['image_path'])
+            if os.path.exists(image_path):
+                try:
+                    os.remove(image_path)
+                except:
+                    pass
+        
+        success = db.delete_process_activity_entry(entry_id)
+        return jsonify({'success': success})
+    
+    elif request.method == 'PUT':
+        # Atualizar etapa
+        form_data = request.form
+        file = request.files.get('image')
+        remove_image = form_data.get('remove_image') == 'true'
+        
+        layout = form_data.get('layout', 'single')
+        text_content = (form_data.get('text_content') or '').strip()
+        image_width = form_data.get('image_width', '280')
+        
+        if not text_content:
+            return jsonify({'success': False, 'error': 'Text content is required'}), 400
+        
+        # Preparar dados para atualização
+        update_data = {
+            'layout': layout,
+            'text_content': text_content,
+            'image_width': int(image_width) if image_width else 280,
+            'image_path': entry.get('image_path')  # Manter imagem atual por padrão
+        }
+        
+        # Processar remoção de imagem
+        if remove_image and entry.get('image_path'):
+            image_path = os.path.join('static', entry['image_path'])
+            if os.path.exists(image_path):
+                try:
+                    os.remove(image_path)
+                except:
+                    pass
+            update_data['image_path'] = None
+        
+        # Processar nova imagem
+        if file and file.filename:
+            # Remover imagem antiga se existir
+            if entry.get('image_path'):
+                old_image_path = os.path.join('static', entry['image_path'])
+                if os.path.exists(old_image_path):
+                    try:
+                        os.remove(old_image_path)
+                    except:
+                        pass
+            
+            # Salvar nova imagem
+            upload_dir = os.path.join('static', 'uploads', 'pop')
+            os.makedirs(upload_dir, exist_ok=True)
+            
+            file_ext = os.path.splitext(file.filename)[1]
+            timestamp = datetime.now().strftime('%Y%m%d%H%M%S')
+            unique_name = f"pop-{process_id}-{activity_id}-{timestamp}-{uuid.uuid4().hex[:8]}{file_ext}"
+            
+            file_path = os.path.join(upload_dir, unique_name)
+            file.save(file_path)
+            
+            update_data['image_path'] = f"uploads/pop/{unique_name}"
+        
+        success = db.update_process_activity_entry(entry_id, update_data)
+        return jsonify({'success': success})
 
 
 @grv_bp.route('/company/<int:company_id>/process/analysis')

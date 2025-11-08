@@ -6632,6 +6632,7 @@ class PostgreSQLDatabase(DatabaseInterface):
                 '''
                 INSERT INTO process_activity_entries (activity_id, order_index, text_content, image_path, image_width, layout)
                 VALUES (%s, %s, %s, %s, %s, %s)
+                RETURNING id
                 ''',
                 (
                     activity_id,
@@ -6642,7 +6643,8 @@ class PostgreSQLDatabase(DatabaseInterface):
                     entry.get('layout', 'dual')
                 )
             )
-            new_id = cursor.lastrowid
+            row = cursor.fetchone()
+            new_id = row['id'] if row else None
             conn.commit()
             conn.close()
             return new_id

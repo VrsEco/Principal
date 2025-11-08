@@ -1398,9 +1398,9 @@
 
   .report-modal-content {
     background: var(--color-surface, #1e293b);
-    border-radius: 16px;
-    padding: 32px;
-    max-width: 500px;
+    border-radius: 14px;
+    padding: 24px;
+    max-width: 420px;
     width: 100%;
     box-shadow: 0 20px 40px rgba(0, 0, 0, 0.4);
   }
@@ -1409,19 +1409,20 @@
     display: flex;
     justify-content: space-between;
     align-items: center;
-    margin-bottom: 24px;
+    margin-bottom: 18px;
   }
 
   .report-modal-header h3 {
     margin: 0;
     color: var(--color-heading, #f1f5f9);
+    font-size: 20px;
   }
 
   .report-modal-close {
     border: none;
     background: transparent;
     color: var(--color-muted, #94a3b8);
-    font-size: 24px;
+    font-size: 22px;
     cursor: pointer;
     padding: 4px 8px;
     transition: color 0.2s ease;
@@ -1434,17 +1435,17 @@
   .report-sections {
     display: flex;
     flex-direction: column;
-    gap: 16px;
-    margin-bottom: 24px;
+    gap: 12px;
+    margin-bottom: 20px;
   }
 
   .report-section-item {
     display: flex;
     align-items: center;
-    gap: 12px;
-    padding: 16px;
+    gap: 10px;
+    padding: 12px;
     border: 2px solid rgba(15, 23, 42, 0.3);
-    border-radius: 12px;
+    border-radius: 10px;
     cursor: pointer;
     transition: all 0.2s ease;
   }
@@ -1455,8 +1456,8 @@
   }
 
   .report-section-item input[type="checkbox"] {
-    width: 20px;
-    height: 20px;
+    width: 18px;
+    height: 18px;
     cursor: pointer;
     accent-color: var(--color-accent, #39f2ae);
   }
@@ -1465,13 +1466,13 @@
     flex: 1;
     display: flex;
     flex-direction: column;
-    gap: 4px;
+    gap: 3px;
     cursor: pointer;
   }
 
   .report-section-label strong {
     color: var(--color-heading, #f1f5f9);
-    font-size: 15px;
+    font-size: 14px;
   }
 
   .report-section-label small {
@@ -2004,42 +2005,11 @@
       <button type="button" class="report-modal-close" data-report-modal-close>&times;</button>
     </div>
     
-    <p style="color: var(--color-muted); margin-bottom: 20px; font-size: 14px;">
-      Configure o modelo de página e selecione as seções que deseja incluir no relatório:
+    <p style="color: var(--color-muted); margin-bottom: 16px; font-size: 13px;">
+      Selecione as seções que deseja incluir no relatório:
     </p>
 
     <form class="report-sections" data-report-form>
-      <!-- Seletor de Padrão de Relatório -->
-      <div style="margin-bottom: 20px; padding: 16px; background: #f0f9ff; border: 1px solid #0ea5e9; border-radius: 8px;">
-        <label style="display: block; font-weight: 600; margin-bottom: 8px; font-size: 13px; color: #0f172a;">
-          🎯 Padrão de Relatório
-        </label>
-        <select id="report-pattern-selector" name="pattern_id" style="width: 100%; padding: 8px 12px; border: 1px solid #0ea5e9; border-radius: 6px; font-size: 14px; background: white;">
-          <option value="">Personalizado (escolher seções manualmente)</option>
-          {% for pattern in report_patterns %}
-            <option value="{{ pattern.id }}">{{ pattern.name }} - {{ pattern.description }}</option>
-          {% endfor %}
-        </select>
-        <small style="display: block; margin-top: 4px; font-size: 11px; color: #0369a1;">
-          Selecione um padrão pré-configurado ou escolha "Personalizado" para definir manualmente
-        </small>
-      </div>
-
-      <!-- Seletor de Modelo de Página -->
-      <div style="margin-bottom: 24px; padding: 16px; background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 8px;">
-        <label style="display: block; font-weight: 600; margin-bottom: 8px; font-size: 13px; color: #0f172a;">
-          📄 Modelo de Página
-        </label>
-        <select id="report-model-selector" name="model_id" style="width: 100%; padding: 8px 12px; border: 1px solid #d1d5db; border-radius: 6px; font-size: 14px; background: white;">
-          <option value="">Configuração Padrão (sem modelo)</option>
-          {% for model in report_models %}
-            <option value="{{ model.id }}">{{ model.name }} ({{ model.code }})</option>
-          {% endfor %}
-        </select>
-        <small style="display: block; margin-top: 4px; font-size: 11px; color: #6b7280;">
-          Selecione um modelo salvo para aplicar margens, cabeçalho e rodapé personalizados
-        </small>
-      </div>
       <!-- Seções do Relatório -->
       <label style="display: block; font-weight: 600; margin-bottom: 12px; font-size: 13px; color: #0f172a;">
         📋 Seções do Relatório
@@ -3842,52 +3812,6 @@ document.addEventListener('DOMContentLoaded', () => {
     }
   });
 
-  // Aplicar padrão automaticamente quando selecionado
-  const patternSelector = document.getElementById('report-pattern-selector');
-  if (patternSelector) {
-    patternSelector.addEventListener('change', function() {
-      const patternId = this.value;
-      if (patternId) {
-        // Buscar configuração do padrão
-        const patterns = {{ report_patterns | tojson }};
-        const selectedPattern = patterns.find(p => p.id == patternId);
-        
-        if (selectedPattern) {
-          // Desmarcar todas as seções primeiro
-          const checkboxes = document.querySelectorAll('[name="sections"]');
-          checkboxes.forEach(cb => cb.checked = false);
-          
-          // Marcar seções do padrão
-          const sectionsConfig = JSON.parse(selectedPattern.sections_config);
-          sectionsConfig.sections.forEach(section => {
-            const checkbox = document.querySelector(`[name="sections"][value="${section.id}"]`);
-            if (checkbox) {
-              checkbox.checked = true;
-            }
-          });
-          
-          // Desabilitar checkboxes das seções obrigatórias
-          sectionsConfig.sections.forEach(section => {
-            if (section.required) {
-              const checkbox = document.querySelector(`[name="sections"][value="${section.id}"]`);
-              if (checkbox) {
-                checkbox.disabled = true;
-                checkbox.parentElement.style.opacity = '0.7';
-              }
-            }
-          });
-        }
-      } else {
-        // Reabilitar todos os checkboxes quando voltar para "Personalizado"
-        const checkboxes = document.querySelectorAll('[name="sections"]');
-        checkboxes.forEach(cb => {
-          cb.disabled = false;
-          cb.parentElement.style.opacity = '1';
-        });
-      }
-    });
-  }
-
   if (reportGenerateBtn) {
     reportGenerateBtn.addEventListener('click', async () => {
       const checkboxes = document.querySelectorAll('[name="sections"]:checked');
@@ -3913,26 +3837,14 @@ document.addEventListener('DOMContentLoaded', () => {
         const companyId = document.querySelector('[data-company-id]').dataset.companyId;
         const processId = {{ process.id }};
         
-        // Capturar o padrão selecionado
-        const patternSelector = document.getElementById('report-pattern-selector');
-        const patternId = patternSelector ? patternSelector.value : '';
-        
-        // Capturar o modelo selecionado
-        const modelSelector = document.getElementById('report-model-selector');
-        const modelId = modelSelector ? modelSelector.value : '';
+        // Modelo fixo: Model_7
+        const modelId = 7;
         
         const params = new URLSearchParams();
         sections.forEach(section => params.append('sections', section));
         
-        // Adicionar pattern_id se foi selecionado
-        if (patternId) {
-          params.append('pattern', patternId);
-        }
-        
-        // Adicionar model_id se foi selecionado
-        if (modelId) {
-          params.append('model', modelId);
-        }
+        // Sempre incluir model_id = 7
+        params.append('model', modelId);
 
         const url = `/api/companies/${companyId}/processes/${processId}/report?${params.toString()}`;
         
