@@ -1,0 +1,8 @@
+{
+  "status": "commited",
+  "type": "frontend",
+  "scope": "codebase",
+  "localEndpoint": "http://localhost:5003",
+  "loginUser": "admin@versus.com.br",
+  "loginPassword": "123456"
+}

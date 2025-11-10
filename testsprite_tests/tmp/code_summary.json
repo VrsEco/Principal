@@ -1,0 +1,112 @@
+{
+  "tech_stack": [
+    "Python 3.9+",
+    "Flask 2.3.3",
+    "SQLAlchemy 2.x",
+    "PostgreSQL",
+    "SQLite",
+    "Jinja2",
+    "JavaScript (Vanilla)",
+    "Celery",
+    "Playwright",
+    "Redis (opcional)"
+  ],
+  "features": [
+    {
+      "name": "Authentication and User Management",
+      "description": "Flask-Login based authentication with admin-managed user lifecycle, profile updates, password changes, and session control.",
+      "files": [
+        "api/auth.py",
+        "services/auth_service.py",
+        "models/user.py",
+        "templates/auth/login.html",
+        "templates/auth/users.html"
+      ]
+    },
+    {
+      "name": "Audit Logging and Route Monitoring",
+      "description": "Automatic CRUD logging via decorators, route coverage auditing, and user action history retrieval APIs.",
+      "files": [
+        "middleware/auto_log_decorator.py",
+        "middleware/audit_middleware.py",
+        "services/log_service.py",
+        "api/logs.py",
+        "api/route_audit.py"
+      ]
+    },
+    {
+      "name": "Plan Management (PEV)",
+      "description": "Planning module that orchestrates plans, implantation dashboards, and shared utilities for company plans.",
+      "files": [
+        "modules/pev/__init__.py",
+        "templates/implantacao/index.html",
+        "database/postgres_helper.py",
+        "utils/project_activity_utils.py"
+      ]
+    },
+    {
+      "name": "ModeFin Financial Modeling",
+      "description": "Comprehensive financial modeling page with eight sections, CRUD operations, 60-month cash flow projections, and viability analysis.",
+      "files": [
+        "templates/implantacao/modelo_modefin.html",
+        "static/js/modal-system.js",
+        "static/css/modal-system.css",
+        "MODEFIN_IMPLEMENTACAO_COMPLETA_FINAL.md",
+        "docs/governance/MODAL_STANDARDS.md"
+      ]
+    },
+    {
+      "name": "GRV Results Management",
+      "description": "Blueprint managing portfolios, indicators, processes, and dashboards for company results with Playwright exports.",
+      "files": [
+        "modules/grv/__init__.py",
+        "templates/grv_dashboard.html",
+        "templates/routine_dashboard.html",
+        "check_indicators.py",
+        "compare_meeting_tables.py"
+      ]
+    },
+    {
+      "name": "Meetings Module",
+      "description": "Scheduling and managing meetings, agendas, and reports with template-driven exports.",
+      "files": [
+        "modules/meetings/__init__.py",
+        "templates/meetings/index.html",
+        "templates/meetings/meeting_detail.html",
+        "services/meeting_service.py"
+      ]
+    },
+    {
+      "name": "My Work Task Management",
+      "description": "Personal productivity module for tracking activities, workloads, and calendar entries tied to plans.",
+      "files": [
+        "modules/my_work/__init__.py",
+        "templates/my_work/dashboard.html",
+        "templates/my_work/tasks.html",
+        "services/my_work_service.py"
+      ]
+    },
+    {
+      "name": "Infrastructure and Configuration",
+      "description": "Environment configuration, database abstraction layer, Celery integration, and deployment scripts.",
+      "files": [
+        "config.py",
+        "config_dev.py",
+        "config_database.py",
+        "app_pev.py",
+        "Dockerfile"
+      ]
+    },
+    {
+      "name": "AI and Integration Services",
+      "description": "AI helper services and integration scripts that extend automation capabilities and background tasks.",
+      "files": [
+        "services/ai_service.py",
+        "integrate_logs_system.py",
+        "configure_integrations.py",
+        "tests/governance/test_code_standards.py"
+      ]
+    }
+  ]
+}
+
