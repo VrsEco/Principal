@@ -1,13 +1,67 @@
-﻿from flask import Blueprint, render_template, abort, url_for, make_response, request, jsonify, redirect
+from flask import Blueprint, render_template, abort, url_for, make_response, request, jsonify, redirect
 from datetime import datetime
 import re
-from typing import Optional
+import subprocess
+import sys
+import threading
+from typing import Any, Optional
 from config_database import get_db
 from middleware.auto_log_decorator import auto_log_crud
 
 grv_bp = Blueprint('grv', __name__, url_prefix='/grv')
 
 print(">>> MÓDULO GRV CARREGADO - VERSÃO COM API ROUTES <<<")
+
+_playwright_install_lock = threading.Lock()
+_playwright_chromium_ready = False
+
+
+def _ensure_playwright_browser_installed(browser_name: str = 'chromium') -> None:
+    """
+    Garantir que o navegador necessário do Playwright esteja disponível.
+
+    Executa `python -m playwright install <browser>` uma única vez por processo.
+    Levanta RuntimeError se a instalação falhar.
+    """
+    global _playwright_chromium_ready
+    if _playwright_chromium_ready:
+        return
+
+    with _playwright_install_lock:
+        if _playwright_chromium_ready:
+            return
+
+        install_cmd = [sys.executable, '-m', 'playwright', 'install', browser_name]
+        try:
+            completed = subprocess.run(
+                install_cmd,
+                check=True,
+                capture_output=True,
+                text=True
+            )
+            stdout = completed.stdout.strip()
+            if stdout:
+                print(f"Playwright install output: {stdout}")
+        except subprocess.CalledProcessError as exc:
+            stderr = (exc.stderr or '').strip()
+            stdout = (exc.stdout or '').strip()
+            error_message = stderr or stdout or str(exc)
+            raise RuntimeError(
+                f"Falha ao instalar navegador Playwright '{browser_name}': {error_message}"
+            ) from exc
+
+        _playwright_chromium_ready = True
+
+
+def _should_attempt_playwright_install(error: Exception) -> bool:
+    """Detecta mensagens típicas de ausência do executável Playwright."""
+    message = str(error) if error else ''
+    triggers = (
+        "Executable doesn't exist",
+        "Please run the following command to download new browsers",
+        'browserType.launch'
+    )
+    return any(trigger in message for trigger in triggers)
 
 def normalize_indicator_code(code: Optional[str]) -> Optional[str]:
     if not code:
@@ -443,6 +497,55 @@ def grv_process_map_print(company_id: int):
             return max(0, min(255, int(channel + (255 - channel) * factor)))
         return '#{0:02x}{1:02x}{2:02x}'.format(_blend(r), _blend(g), _blend(b))
 
+    def _accent_text_color(color_hex: str) -> str:
+        color = _normalize_hex(color_hex)
+        if color in {'#f59e0b', '#fbbf24'}:
+            return '#b45309'
+        return color
+
+    def _parse_datetime(value: Any) -> Optional[datetime]:
+        if not value:
+            return None
+        if isinstance(value, datetime):
+            return value
+        if isinstance(value, str):
+            cleaned = value.strip()
+            if not cleaned:
+                return None
+            if cleaned.endswith('Z'):
+                cleaned = cleaned[:-1] + '+00:00'
+            try:
+                return datetime.fromisoformat(cleaned)
+            except ValueError:
+                pass
+            for fmt in ('%Y-%m-%d %H:%M:%S.%f', '%Y-%m-%d %H:%M:%S', '%Y-%m-%d'):
+                try:
+                    return datetime.strptime(cleaned, fmt)
+                except ValueError:
+                    continue
+        return None
+
+    def _format_datetime(value: Optional[datetime], with_time: bool = True) -> Optional[str]:
+        if not value:
+            return None
+        fmt = '%d/%m/%Y %H:%M' if with_time else '%d/%m/%Y'
+        return value.strftime(fmt)
+
+    def _clean_text(value: Any, fallback: str = '') -> str:
+        if isinstance(value, str):
+            cleaned = value.strip()
+            if cleaned:
+                return cleaned
+        return fallback
+
+    def _format_display_name(code: Any, name: Any, fallback: str) -> str:
+        safe_name = _clean_text(name, fallback)
+        safe_code = _clean_text(code)
+        name_part = safe_name.upper() if safe_name else fallback.upper()
+        if safe_code:
+            return f"{safe_code.upper()} - {name_part}"
+        return name_part
+
     areas = []
     total_macros = 0
     total_processes = 0
@@ -451,9 +554,10 @@ def grv_process_map_print(company_id: int):
         macros = area.get('macros') or []
         area_color = _normalize_hex(area.get('color'))
         area_entry = {
-            'display_name': f"{area.get('code')} - {area.get('name').upper()}" if area.get('code') else (area.get('name') or 'Área'),
+            'display_name': _format_display_name(area.get('code'), area.get('name'), 'Área'),
             'color': area_color,
             'color_soft': _mix_with_white(area_color, 0.82),
+            'color_accent': _mix_with_white(area_color, 0.68),
             'macros': [],
             'macro_count': len(macros),
             'process_count': 0
@@ -462,7 +566,7 @@ def grv_process_map_print(company_id: int):
         for macro in macros:
             processes = macro.get('processes') or []
             macro_entry = {
-                'display_name': f"{macro.get('code')} - {macro.get('name').upper()}" if macro.get('code') else (macro.get('name') or 'Macroprocesso'),
+                'display_name': _format_display_name(macro.get('code'), macro.get('name'), 'Macroprocesso'),
                 'owner': macro.get('owner'),
                 'processes': []
             }
@@ -470,19 +574,23 @@ def grv_process_map_print(company_id: int):
             for proc in processes:
                 struct_info = structuring_levels.get(proc.get('structuring_level') or '', structuring_levels[''])
                 perf_info = performance_levels.get(proc.get('performance_level') or '', performance_levels[''])
+                struct_color = _normalize_hex(struct_info['color'])
+                perf_color = _normalize_hex(perf_info['color'])
                 macro_entry['processes'].append({
-                    'display_name': f"{proc.get('code')} - {proc.get('name').upper()}" if proc.get('code') else (proc.get('name') or 'Processo'),
+                    'display_name': _format_display_name(proc.get('code'), proc.get('name'), 'Processo'),
                     'responsible': proc.get('responsible'),
                     'description': proc.get('description'),
                     'structuring': {
                         'label': struct_info['label'],
-                        'color': struct_info['color'],
-                        'background': _mix_with_white(struct_info['color'], 0.88)
+                        'color': struct_color,
+                        'text_color': _accent_text_color(struct_color),
+                        'background': _mix_with_white(struct_color, 0.88)
                     },
                     'performance': {
                         'label': perf_info['label'],
-                        'color': perf_info['color'],
-                        'background': _mix_with_white(perf_info['color'], 0.88)
+                        'color': perf_color,
+                        'text_color': _accent_text_color(perf_color),
+                        'background': _mix_with_white(perf_color, 0.88)
                     }
                 })
 
@@ -495,6 +603,14 @@ def grv_process_map_print(company_id: int):
         areas.append(area_entry)
 
     generated_at = datetime.now()
+    company_created_at = _parse_datetime(company.get('created_at'))
+    header_meta = {
+        'company_name': company.get('name'),
+        'version': map_data.get('version') or '1.0',
+        'created_at': _format_datetime(company_created_at, with_time=False),
+        'updated_at': _format_datetime(generated_at, with_time=False),
+        'printed_at': _format_datetime(generated_at, with_time=True)
+    }
 
     return render_template(
         'pdf/grv_process_map_print.html',
@@ -505,7 +621,8 @@ def grv_process_map_print(company_id: int):
             'macros': total_macros,
             'processes': total_processes
         },
-        generated_at=generated_at
+        generated_at=generated_at,
+        header_meta=header_meta
     )
 
 
@@ -574,7 +691,7 @@ def grv_process_map_pdf_debug(company_id: int):
         for macro in macros:
             processes = macro.get('processes') or []
             macro_entry = {
-                'display_name': f"{macro.get('code')} - {macro.get('name').upper()}" if macro.get('code') else (macro.get('name') or 'Macroprocesso'),
+                'display_name': _format_display_name(macro.get('code'), macro.get('name'), 'Macroprocesso'),
                 'owner': macro.get('owner'),
                 'processes': []
             }
@@ -583,7 +700,7 @@ def grv_process_map_pdf_debug(company_id: int):
                 struct_info = structuring_levels.get(proc.get('structuring_level') or '', structuring_levels[''])
                 perf_info = performance_levels.get(proc.get('performance_level') or '', performance_levels[''])
                 macro_entry['processes'].append({
-                    'display_name': f"{proc.get('code')} - {proc.get('name').upper()}" if proc.get('code') else (proc.get('name') or 'Processo'),
+                    'display_name': _format_display_name(proc.get('code'), proc.get('name'), 'Processo'),
                     'responsible': proc.get('responsible'),
                     'description': proc.get('description'),
                     'structuring': {
@@ -666,6 +783,23 @@ def grv_process_map_pdf(company_id: int):
             return max(0, min(255, int(channel + (255 - channel) * factor)))
         return '#{0:02x}{1:02x}{2:02x}'.format(_blend(r), _blend(g), _blend(b))
 
+    def _clean_text(value: Any, fallback: str = '') -> str:
+        """Return stripped text or fallback."""
+        if isinstance(value, str):
+            cleaned = value.strip()
+            if cleaned:
+                return cleaned
+        return fallback
+
+    def _format_display_name(code: Any, name: Any, fallback: str) -> str:
+        """Format display name as 'CODE - NAME' guarding against missing values."""
+        safe_name = _clean_text(name, fallback)
+        safe_code = _clean_text(code)
+        name_part = safe_name.upper() if safe_name else fallback.upper()
+        if safe_code:
+            return f"{safe_code.upper()} - {name_part}"
+        return name_part
+
     areas = []
     total_macros = 0
     total_processes = 0
@@ -674,7 +808,7 @@ def grv_process_map_pdf(company_id: int):
         macros = area.get('macros') or []
         area_color = _normalize_hex(area.get('color'))
         area_entry = {
-            'display_name': f"{area.get('code')} - {area.get('name').upper()}" if area.get('code') else (area.get('name') or 'Ãrea'),
+            'display_name': _format_display_name(area.get('code'), area.get('name'), 'Área'),
             'color': area_color,
             'color_soft': _mix_with_white(area_color, 0.82),
             'macros': [],
@@ -733,16 +867,9 @@ def grv_process_map_pdf(company_id: int):
 
     header_template = (
         "<style>"
-        ".pdf-header{width:100%;font-family:'Segoe UI','Inter',Arial,sans-serif;font-size:9pt;"
-        "color:#0f172a;display:flex;justify-content:space-between;align-items:center;"
-        "padding:0 12mm 12px 12mm;border-bottom:1px solid rgba(15,23,42,0.12);background:#ffffff;}"
-        ".pdf-header .title{font-weight:600;}"
-        ".pdf-header .page{font-size:8.5pt;color:#475569;}"
+        ".pdf-header{width:100%;height:8px;font-size:0;}"
         "</style>"
-        f"<div class='pdf-header'>"
-        f"<span class='title'>Mapa de Processos - {company.get('name') or 'Empresa'}</span>"
-        "<span class='page'>Pagina <span class='pageNumber'></span> de <span class='totalPages'></span></span>"
-        "</div>"
+        "<div class='pdf-header'></div>"
     )
 
     footer_template = (
@@ -760,27 +887,48 @@ def grv_process_map_pdf(company_id: int):
         abort(500, description="Dependência 'playwright' não encontrada. Execute: pip install playwright && playwright install chromium")
 
     def _build_pdf(html: str) -> bytes:
-        with sync_playwright() as p:
-            browser = p.chromium.launch(headless=True, args=['--no-sandbox'])
+        last_error: Optional[Exception] = None
+        for attempt in range(2):
             try:
-                page = browser.new_page()
-                page.set_viewport_size({"width": 1240, "height": 1754})
-                page.set_content(html, wait_until="networkidle")
-                page.emulate_media(media="print")
-                pdf = page.pdf(
-                    format="A4",
-                    print_background=True,
-                    display_header_footer=True,
-                    header_template=header_template,
-                    footer_template=footer_template,
-                    prefer_css_page_size=True,
-                    margin={"top": "15mm", "bottom": "20mm", "left": "12mm", "right": "12mm"}
-                )
-            finally:
-                browser.close()
-        return pdf
+                with sync_playwright() as p:
+                    browser = p.chromium.launch(headless=True, args=['--no-sandbox'])
+                    try:
+                        page = browser.new_page()
+                        page.set_viewport_size({"width": 1240, "height": 1754})
+                        page.set_content(html, wait_until="networkidle")
+                        page.emulate_media(media="print")
+                        pdf = page.pdf(
+                            format="A4",
+                            print_background=True,
+                            display_header_footer=True,
+                            header_template=header_template,
+                            footer_template=footer_template,
+                            prefer_css_page_size=True,
+                            margin={"top": "15mm", "bottom": "20mm", "left": "12mm", "right": "12mm"}
+                        )
+                    finally:
+                        browser.close()
+                return pdf
+            except Exception as exc:
+                last_error = exc
+                if attempt == 0 and _should_attempt_playwright_install(exc):
+                    try:
+                        _ensure_playwright_browser_installed('chromium')
+                        continue
+                    except Exception as install_error:
+                        print(f"Erro ao instalar navegador Playwright: {install_error}")
+                        last_error = install_error
+                break
 
-    pdf_bytes = _build_pdf(html_content)
+        if last_error:
+            raise last_error
+        raise RuntimeError("Falha desconhecida ao gerar PDF via Playwright")
+
+    try:
+        pdf_bytes = _build_pdf(html_content)
+    except Exception as pdf_error:
+        print(f"ERRO Playwright ao gerar PDF: {pdf_error}")
+        abort(500, description=f"Erro ao gerar PDF: {pdf_error}")
 
     safe_name = re.sub(r'[^a-z0-9_-]+', '-', (company.get('name') or 'empresa').lower()).strip('-') or 'empresa'
     filename = f"mapa-processos-{safe_name}.pdf"
@@ -958,6 +1106,23 @@ def grv_process_map_pdf2(company_id: int):
             return max(0, min(255, int(channel + (255 - channel) * factor)))
         return '#{0:02x}{1:02x}{2:02x}'.format(_blend(r), _blend(g), _blend(b))
 
+    def _clean_text(value: Any, fallback: str = '') -> str:
+        """Return stripped text or fallback."""
+        if isinstance(value, str):
+            cleaned = value.strip()
+            if cleaned:
+                return cleaned
+        return fallback
+
+    def _format_display_name(code: Any, name: Any, fallback: str) -> str:
+        """Format display name as 'CODE - NAME' guarding against missing values."""
+        safe_name = _clean_text(name, fallback)
+        safe_code = _clean_text(code)
+        name_part = safe_name.upper() if safe_name else fallback.upper()
+        if safe_code:
+            return f"{safe_code.upper()} - {name_part}"
+        return name_part
+
     areas = []
     total_macros = 0
     total_processes = 0
@@ -966,7 +1131,7 @@ def grv_process_map_pdf2(company_id: int):
         macros = area.get('macros') or []
         area_color = _normalize_hex(area.get('color'))
         area_entry = {
-            'display_name': f"{area.get('code')} - {area.get('name').upper()}" if area.get('code') else (area.get('name') or 'Ãrea'),
+            'display_name': _format_display_name(area.get('code'), area.get('name'), 'Área'),
             'color': area_color,
             'color_soft': _mix_with_white(area_color, 0.82),
             'macros': [],
@@ -977,7 +1142,7 @@ def grv_process_map_pdf2(company_id: int):
         for macro in macros:
             processes = macro.get('processes') or []
             macro_entry = {
-                'display_name': f"{macro.get('code')} - {macro.get('name').upper()}" if macro.get('code') else (macro.get('name') or 'Macroprocesso'),
+                'display_name': _format_display_name(macro.get('code'), macro.get('name'), 'Macroprocesso'),
                 'owner': macro.get('owner'),
                 'processes': []
             }
@@ -986,7 +1151,7 @@ def grv_process_map_pdf2(company_id: int):
                 struct_info = structuring_levels.get(proc.get('structuring_level') or '', structuring_levels[''])
                 perf_info = performance_levels.get(proc.get('performance_level') or '', performance_levels[''])
                 macro_entry['processes'].append({
-                    'display_name': f"{proc.get('code')} - {proc.get('name').upper()}" if proc.get('code') else (proc.get('name') or 'Processo'),
+                    'display_name': _format_display_name(proc.get('code'), proc.get('name'), 'Processo'),
                     'responsible': proc.get('responsible'),
                     'description': proc.get('description'),
                     'structuring': {
@@ -1025,16 +1190,9 @@ def grv_process_map_pdf2(company_id: int):
 
     header_template = (
         "<style>"
-        ".pdf-header{width:100%;font-family:'Calibri','Segoe UI','Inter',Arial,sans-serif;font-size:8pt;"
-        "color:#1e293b;display:flex;justify-content:space-between;align-items:center;"
-        "padding:0 10mm 8px 10mm;border-bottom:2px solid #1e40af;background:#ffffff;}"
-        ".pdf-header .title{font-weight:700;color:#1e40af;}"
-        ".pdf-header .page{font-size:7.5pt;color:#475569;}"
+        ".pdf-header{width:100%;height:8px;font-size:0;}"
         "</style>"
-        f"<div class='pdf-header'>"
-        f"<span class='title'>{company.get('name') or 'Empresa'}</span>"
-        "<span class='page'>Pág. <span class='pageNumber'></span> de <span class='totalPages'></span></span>"
-        "</div>"
+        "<div class='pdf-header'></div>"
     )
 
     footer_template = (
@@ -1044,7 +1202,7 @@ def grv_process_map_pdf2(company_id: int):
         "padding:6px 10mm 0 10mm;border-top:1px solid #e2e8f0;background:#ffffff;}"
         "</style>"
         f"<div class='pdf-footer'>"
-        f"<span>{company.get('name') or 'Empresa'}</span>"
+        "<span>Versus Gestão Corporativa - Todos os direitos reservados.</span>"
         f"<span>Gerado em {generated_at.strftime('%d/%m/%Y às %H:%M')}</span>"
         "</div>"
     )
@@ -1059,40 +1217,60 @@ def grv_process_map_pdf2(company_id: int):
         abort(500, description="Dependência 'playwright' não encontrada. Execute: pip install playwright && playwright install chromium")
 
     def _build_pdf(html: str) -> bytes:
-        try:
-            print("DEBUG: Iniciando sync_playwright...")
-            with sync_playwright() as p:
-                print("DEBUG: Lançando navegador...")
-                browser = p.chromium.launch(headless=True, args=['--no-sandbox'])
-                try:
-                    print("DEBUG: Criando nova página...")
-                    page = browser.new_page()
-                    page.set_viewport_size({"width": 794, "height": 1123})
-                    print("DEBUG: Definindo conteúdo HTML...")
-                    page.set_content(html, wait_until="networkidle")
-                    page.emulate_media(media="print")
-                    print("DEBUG: Gerando PDF...")
-                    pdf = page.pdf(
-                        format="A4",
-                        landscape=False,
-                        print_background=True,
-                        display_header_footer=True,
-                        header_template=header_template,
-                        footer_template=footer_template,
-                        prefer_css_page_size=True,
-                        margin={"top": "8mm", "bottom": "8mm", "left": "6mm", "right": "6mm"}
-                    )
-                    print("DEBUG: PDF gerado com sucesso!")
-                finally:
-                    browser.close()
-            return pdf
-        except Exception as e:
-            print(f"ERRO CRÍTICO ao gerar PDF: {str(e)}")
-            import traceback
-            traceback.print_exc()
-            abort(500, description=f"Erro ao gerar PDF: {str(e)}")
+        last_error: Optional[Exception] = None
+        for attempt in range(2):
+            try:
+                print("DEBUG: Iniciando sync_playwright...")
+                with sync_playwright() as p:
+                    print("DEBUG: Lançando navegador...")
+                    browser = p.chromium.launch(headless=True, args=['--no-sandbox'])
+                    try:
+                        print("DEBUG: Criando nova página...")
+                        page = browser.new_page()
+                        page.set_viewport_size({"width": 1123, "height": 794})
+                        print("DEBUG: Definindo conteúdo HTML...")
+                        page.set_content(html, wait_until="networkidle")
+                        page.emulate_media(media="print")
+                        print("DEBUG: Gerando PDF...")
+                        pdf = page.pdf(
+                            format="A4",
+                            landscape=True,
+                            print_background=True,
+                            display_header_footer=True,
+                            header_template=header_template,
+                            footer_template=footer_template,
+                            prefer_css_page_size=True,
+                            margin={"top": "8mm", "bottom": "8mm", "left": "6mm", "right": "6mm"}
+                        )
+                        print("DEBUG: PDF gerado com sucesso!")
+                    finally:
+                        browser.close()
+                return pdf
+            except Exception as exc:
+                last_error = exc
+                print(f"ERRO ao gerar PDF (tentativa {attempt + 1}): {exc}")
+                if attempt == 0 and _should_attempt_playwright_install(exc):
+                    try:
+                        print("DEBUG: Tentando instalar navegador Playwright ausente...")
+                        _ensure_playwright_browser_installed('chromium')
+                        print("DEBUG: Instalação Playwright concluída, repetindo tentativa...")
+                        continue
+                    except Exception as install_error:
+                        print(f"ERRO ao instalar navegador Playwright: {install_error}")
+                        last_error = install_error
+                break
 
-    pdf_bytes = _build_pdf(html_content)
+        if last_error:
+            raise last_error
+        raise RuntimeError("Falha desconhecida ao gerar PDF via Playwright")
+
+    try:
+        pdf_bytes = _build_pdf(html_content)
+    except Exception as critical_error:
+        print(f"ERRO CRÍTICO ao gerar PDF: {critical_error}")
+        import traceback
+        traceback.print_exc()
+        abort(500, description=f"Erro ao gerar PDF: {critical_error}")
 
     safe_name = re.sub(r'[^a-z0-9_-]+', '-', (company.get('name') or 'empresa').lower()).strip('-') or 'empresa'
     filename = f"mapa-processos-v2-{safe_name}.pdf"
@@ -3454,4 +3632,3 @@ def api_delete_indicator_data(company_id: int, data_id: int):
         conn.rollback()
         conn.close()
         return jsonify({'success': False, 'message': str(e)}), 400
-

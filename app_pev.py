@@ -25,6 +25,7 @@ from decimal import Decimal, InvalidOperation, ROUND_HALF_UP
 from typing import Optional, List, Dict, Any, Tuple
 from services.ai_service import ai_service
 from models import db as models_db
+from werkzeug.routing import BuildError
 from werkzeug.utils import secure_filename
 from database.sqlite_db import ensure_integrations_tables, list_integrations, get_integration, create_integration, update_integration, delete_integration, set_agent_integrations, get_agent_integrations
 from utils.project_activity_utils import normalize_project_activities
@@ -785,7 +786,19 @@ def login():
 @login_required
 def main():
     """Ecossistema Versus - Página principal"""
-    return render_template("ecosystem.html")
+    module_links = {}
+    module_endpoints = {
+        'pev': 'pev.pev_dashboard',
+        'grv': 'grv.grv_dashboard',
+    }
+
+    for key, endpoint in module_endpoints.items():
+        try:
+            module_links[key] = url_for(endpoint)
+        except BuildError as exc:
+            print(f"[WARN] Endpoint indisponivel '{endpoint}': {exc}")
+
+    return render_template("ecosystem.html", module_links=module_links)
 
 
 @app.route("/integrations")

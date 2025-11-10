@@ -484,7 +484,7 @@
 </style>
 
 <!-- Header -->
-<div class="surface-card" style="padding: 24px; margin-bottom: 20px;">
+<div class="surface-card" style="padding: 24px; margin-bottom: 20px;" {{ ui_attrs.get('1', '')|safe }}>
   <h1 style="margin: 0 0 8px; font-size: 28px; color: #0f172a; font-weight: 600;">
      ModeFin - Modelagem Financeira
   </h1>
@@ -492,21 +492,21 @@
     Plano: <strong style="color: #0f172a;">{{ plan.name }}</strong>
   </p>
   <div style="margin-top: 12px;">
-    <a href="{{ url_for('pev.pev_implantacao_overview', plan_id=plan_id) }}" class="button button-ghost" style="font-size: 13px; padding: 8px 16px;">
+    <a href="{{ url_for('pev.pev_implantacao_overview', plan_id=plan_id) }}" class="button button-ghost" style="font-size: 13px; padding: 8px 16px;" {{ ui_attrs.get('2', '')|safe }}>
       ← Voltar para Implantacao
     </a>
   </div>
 </div>
 
 <!-- Secoes -->
-<div id="secao-resultados" class="modefin-section"></div>
-<div id="secao-investimentos" class="modefin-section"></div>
-<div id="secao-fontes" class="modefin-section"></div>
-<div id="secao-distribuicao" class="modefin-section"></div>
-<div id="secao-fluxo-investimento" class="modefin-section"></div>
-<div id="secao-fluxo-negocio" class="modefin-section"></div>
-<div id="secao-fluxo-investidor" class="modefin-section"></div>
-<div id="secao-analise" class="modefin-section"></div>
+<div id="secao-resultados" class="modefin-section" {{ ui_attrs.get('10', '')|safe }}></div>
+<div id="secao-investimentos" class="modefin-section" {{ ui_attrs.get('20', '')|safe }}></div>
+<div id="secao-fontes" class="modefin-section" {{ ui_attrs.get('30', '')|safe }}></div>
+<div id="secao-distribuicao" class="modefin-section" {{ ui_attrs.get('40', '')|safe }}></div>
+<div id="secao-fluxo-investimento" class="modefin-section" {{ ui_attrs.get('50', '')|safe }}></div>
+<div id="secao-fluxo-negocio" class="modefin-section" {{ ui_attrs.get('60', '')|safe }}></div>
+<div id="secao-fluxo-investidor" class="modefin-section" {{ ui_attrs.get('70', '')|safe }}></div>
+<div id="secao-analise" class="modefin-section" {{ ui_attrs.get('80', '')|safe }}></div>
 
   </section>
 </div>
@@ -523,6 +523,8 @@
   // DADOS DO BACKEND
   // =========================================
   const planId = {{ plan_id }};
+  const uiScreenCode = {{ ui_screen_code }};
+  const uiCatalog = {{ ui_catalog_payload | tojson | safe }};
   const productsTotals = {{ products_totals | tojson | safe }};
   const fixedCostsSummary = {{ fixed_costs_summary | tojson | safe }};
   const investimentosEstruturas = {{ investimentos_estruturas | tojson | safe }};
@@ -556,6 +558,38 @@
     return map;
   })();
   
+  // =========================================
+  // UI Catalog Helpers
+  // =========================================
+  function escapeAttr(value) {
+    return String(value)
+      .replace(/&/g, '&amp;')
+      .replace(/"/g, '&quot;')
+      .replace(/'/g, '&#39;')
+      .replace(/</g, '&lt;')
+      .replace(/>/g, '&gt;');
+  }
+
+  function uiAttr(objectCode, fallbackUiCode) {
+    const key = String(objectCode);
+    const entry = uiCatalog && uiCatalog[key];
+    if (!entry) {
+      const fallback = fallbackUiCode || `${uiScreenCode}-${key}`;
+      return `data-ui-code="${escapeAttr(fallback)}"`;
+    }
+    const attrs = [`data-ui-code="${escapeAttr(entry.ui_code)}"`];
+    if (entry.name) {
+      attrs.push(`data-ui-name="${escapeAttr(entry.name)}"`);
+    }
+    if (entry.object_type) {
+      attrs.push(`data-ui-type="${escapeAttr(entry.object_type)}"`);
+    }
+    if (entry.route) {
+      attrs.push(`data-ui-route="${escapeAttr(entry.route)}"`);
+    }
+    return attrs.join(' ');
+  }
+
   // =========================================
   // UTILIDADES
   // =========================================
@@ -1082,7 +1116,7 @@
     const resultadoOperacional = margemContribuicao - custosFixos - despesasFixas;
     
     const html = `
-      <div class="modefin-card">
+      <div class="modefin-card" ${uiAttr('11')}>
         <h2> Resultados</h2>
         
         <!-- Card de Destaque com Gradiente para Resumo -->
@@ -1228,7 +1262,7 @@
       .join('');
   
     const html = `
-      <div class="modefin-card">
+      <div class="modefin-card" ${uiAttr('20')}>
         <h2>Investimentos</h2>
   
         <div class="values-grid">
@@ -1248,7 +1282,7 @@
   
         <div style="margin-top: 24px; display: flex; justify-content: space-between; align-items: center;">
           <h3 style="margin: 0;">Investimentos por Bloco</h3>
-          <button class="button" onclick="openCapitalGiroModal()">+ Capital de Giro</button>
+          <button class="button" ${uiAttr('21')} onclick="openCapitalGiroModal()">+ Capital de Giro</button>
         </div>
   
         <table class="modefin-table">
@@ -1419,7 +1453,7 @@
     }).join('');
 
     const html = `
-      <div class="modefin-card">
+      <div class="modefin-card" ${uiAttr('30')}>
         <h2>Fontes de Recursos</h2>
 
         <div class="values-grid">
@@ -1437,7 +1471,7 @@
 
         <div style="margin-top: 24px; display: flex; justify-content: space-between; align-items: center;">
           <h3 style="margin: 0;">Fontes cadastradas</h3>
-          <button class="button" onclick="openFundingSourceModal()">+ Nova Fonte</button>
+          <button class="button" ${uiAttr('31')} onclick="openFundingSourceModal()">+ Nova Fonte</button>
         </div>
 
         <table class="modefin-table">
@@ -1519,7 +1553,7 @@
     }).join('');
 
     const html = `
-      <div class="modefin-card">
+      <div class="modefin-card" ${uiAttr('40')}>
         <h2>Distribuicao de Resultados</h2>
         <p style="font-size: 14px; opacity: 0.85; margin-bottom: 18px;">
           Configure como o resultado operacional sera distribuido entre lucros e outras destinacoes estrategicas.
@@ -1544,7 +1578,7 @@
         </div>
 
         <div style="margin-top: 24px; display: flex; justify-content: space-between; flex-wrap: wrap; gap: 12px;">
-          <button class="button button-ghost" onclick="openProfitDistributionModal()">Configurar distribuicao de lucros</button>
+          <button class="button button-ghost" ${uiAttr('41')} onclick="openProfitDistributionModal()">Configurar distribuicao de lucros</button>
           <button class="button" onclick="openResultRuleModal()">+ Nova destinacao</button>
         </div>
 
@@ -1652,7 +1686,7 @@
     const fluxoData = calcularFluxoInvestimento();
 
     const html = `
-      <div class="modefin-card">
+      <div class="modefin-card" ${uiAttr('50')}>
         <h2>Fluxo de Caixa do Investimento</h2>
         <p style="font-size: 14px; opacity: 0.85; margin-bottom: 18px;">
           Acompanhe os desembolsos planejados e as fontes de financiamento ao longo do tempo.
@@ -1851,7 +1885,7 @@
     });
 
     const html = `
-      <div class="modefin-card">
+      <div class="modefin-card" ${uiAttr('60')}>
         <h2>Fluxo de Caixa do Negocio</h2>
         <p style="font-size: 14px; opacity: 0.85; margin-bottom: 18px;">
           Resultado operacional mensal considerando receitas projetadas (ramp-up), custos variaveis e fixos configurados.
@@ -1960,7 +1994,7 @@
     const fluxoData = calcularFluxoInvestidor();
     
     const html = `
-      <div class="modefin-card">
+      <div class="modefin-card" ${uiAttr('70')}>
         <h2> Fluxo de Caixa do Investidor</h2>
         <p style="font-size: 14px; opacity: 0.9; margin-bottom: 20px;">
           Visao do investidor: aportes, investimentos, retornos e distribuicoes
@@ -2259,7 +2293,7 @@
     const tir = metricas.tir;
     
     const html = `
-      <div class="modefin-card">
+      <div class="modefin-card" ${uiAttr('80')}>
         <h2> Analise de Viabilidade</h2>
         
         <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px;">

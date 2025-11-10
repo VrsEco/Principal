@@ -4,9 +4,12 @@
   <meta charset="utf-8" />
   <title>Mapa de Processos - {{ company.name }}</title>
   <style>
-    /* Estilos para tela */
     :root {
       color-scheme: light;
+      --page-margin-top: 5mm;
+      --page-margin-right: 5mm;
+      --page-margin-bottom: 5mm;
+      --page-margin-left: 5mm;
     }
 
     * {
@@ -15,251 +18,460 @@
 
     body {
       margin: 0;
-      font-family: "Segoe UI", "Inter", Arial, sans-serif;
+      font-family: "Inter", "Segoe UI", Arial, sans-serif;
       font-size: 11px;
-      line-height: 1.45;
-      background: #f8fafc;
+      line-height: 1.5;
+      background: #e2e8f0;
       color: #0f172a;
+      -webkit-font-smoothing: antialiased;
+      padding: 0 0 24px;
+    }
+
+    h1, h2, h3, h4 {
+      margin: 0;
+      font-weight: 600;
+      color: inherit;
     }
 
     .screen-only {
-      display: block;
+      display: inline;
     }
 
-    .print-only {
-      display: none;
-    }
-
-    .no-print {
-      padding: 20px;
-      background: #ffffff;
-      border-bottom: 1px solid #e2e8f0;
-      display: flex;
-      justify-content: space-between;
-      align-items: center;
+    .screen-toolbar {
       position: sticky;
       top: 0;
-      z-index: 100;
-      box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+      z-index: 10;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 16px;
+      padding: 18px 28px;
+      background: rgba(15, 23, 42, 0.95);
+      color: #f8fafc;
+      box-shadow: 0 10px 28px rgba(15, 23, 42, 0.22);
+      backdrop-filter: blur(4px);
     }
 
-    .no-print h1 {
-      margin: 0;
+    .screen-toolbar-title {
       font-size: 18px;
+      font-weight: 600;
+      letter-spacing: 0.01em;
+    }
+
+    .screen-toolbar button {
+      background: #22c55e;
+      border: 1px solid rgba(34, 197, 94, 0.7);
+      color: #022c22;
+      font-weight: 600;
+      font-size: 13px;
+      letter-spacing: 0.01em;
+      padding: 10px 20px;
+      border-radius: 999px;
+      cursor: pointer;
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      transition: transform 0.15s ease, box-shadow 0.15s ease;
+    }
+
+    .screen-toolbar button:hover {
+      transform: translateY(-1px);
+      box-shadow: 0 10px 25px rgba(34, 197, 94, 0.35);
+    }
+
+    .page {
+      position: relative;
+      background: #ffffff;
+      border-radius: 0;
+      border: none;
+      box-shadow: none;
+      margin: 24px auto;
+      width: 794px;
+      page-break-after: always;
+    }
+
+    .page.portrait {
+      padding: var(--page-margin-top) var(--page-margin-right) var(--page-margin-bottom) var(--page-margin-left);
+      min-height: calc(297mm - 10mm);
+      page: portrait;
+    }
+
+    .page:last-of-type {
+      page-break-after: auto;
+    }
+
+    .page-content {
+      display: flex;
+      flex-direction: column;
+      gap: 22px;
+    }
+
+    @media screen {
+      .page::before {
+        content: "";
+        position: absolute;
+        inset: 0;
+        border: 1px solid rgba(15, 23, 42, 0.18);
+        pointer-events: none;
+      }
+
+      .page::after {
+        content: "";
+        position: absolute;
+        top: var(--page-margin-top);
+        right: var(--page-margin-right);
+        bottom: var(--page-margin-bottom);
+        left: var(--page-margin-left);
+        border: 1px dashed rgba(37, 99, 235, 0.45);
+        pointer-events: none;
+      }
+    }
+
+    .print-header-visible,
+    .print-header-running {
+      display: block;
+      border-bottom: none;
+      padding-bottom: 0;
+      margin-bottom: 12px;
+    }
+
+    .print-header-content {
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+    }
+
+    .print-header-title-row {
+      display: flex;
+      justify-content: center;
+    }
+
+    .print-header-title {
+      font-size: 22px;
+      text-transform: uppercase;
+      letter-spacing: 0.12em;
+      color: #0f172a;
+      font-weight: 700;
+      padding: 14px 24px;
+      border-radius: 14px;
+      border: 1px solid rgba(148, 163, 184, 0.4);
+      background: linear-gradient(135deg, rgba(148, 163, 184, 0.18), rgba(226, 232, 240, 0.6));
+      text-align: center;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+    }
+
+    .print-header-meta {
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      gap: 28px;
+      font-size: 11px;
+      color: #475569;
+      text-transform: uppercase;
+      letter-spacing: 0.08em;
+      flex-wrap: wrap;
+    }
+
+    .print-header-meta div {
+      flex: 0 0 auto;
+      min-width: auto;
+      text-align: center;
+    }
+
+    .print-header-meta strong {
       font-weight: 600;
       color: #0f172a;
     }
 
-    .no-print button {
-      background: #2563eb;
-      color: #ffffff;
-      border: none;
-      padding: 10px 24px;
-      border-radius: 8px;
-      font-size: 14px;
+    .summary-section {
+      display: flex;
+      flex-wrap: wrap;
+      justify-content: space-between;
+      gap: 12px;
+      margin-top: 6px;
+    }
+
+    .summary-card {
+      flex: 1 1 0;
+      min-width: 180px;
+      border-radius: 12px;
+      padding: 10px 16px;
+      border: 1px solid rgba(148, 163, 184, 0.4);
+      background: linear-gradient(135deg, rgba(226, 232, 240, 0.4), rgba(248, 250, 252, 0.9));
+      box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.6);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 12px;
+      text-transform: uppercase;
+      letter-spacing: 0.12em;
+      font-size: 11px;
+      color: #475569;
+    }
+
+    .summary-card-label {
+      font-size: 11px;
+      letter-spacing: 0.12em;
       font-weight: 600;
-      cursor: pointer;
-      transition: background 0.2s;
     }
 
-    .no-print button:hover {
-      background: #1d4ed8;
+    .summary-card-value {
+      font-size: 18px;
+      font-weight: 600;
+      color: #0f172a;
+      letter-spacing: -0.015em;
     }
 
-    .main {
-      padding: 24px;
-      max-width: 1200px;
-      margin: 0 auto;
-      background: #ffffff;
-      min-height: calc(100vh - 80px);
+    .summary-card span {
+      display: inline;
     }
 
-    .header {
-      margin-bottom: 24px;
-      padding-bottom: 16px;
-      border-bottom: 2px solid #e2e8f0;
+    .empty-state {
+      padding: 28px;
+      border-radius: 16px;
+      border: 2px dashed rgba(148, 163, 184, 0.4);
+      background: rgba(241, 245, 249, 0.6);
+      text-align: center;
+      color: #64748b;
+      font-size: 12px;
+      letter-spacing: 0.01em;
     }
 
-    .header h2 {
-      margin: 0 0 8px 0;
-      font-size: 24px;
+    .print-area-block {
+      display: flex;
+      flex-direction: column;
+      gap: 18px;
+      page-break-inside: avoid;
+      break-inside: avoid-page;
+    }
+
+    .print-area-header {
+      padding: 18px 22px;
+      border-radius: 14px;
+      border: 1px solid rgba(15, 23, 42, 0.12);
+      background: linear-gradient(135deg, rgba(255, 255, 255, 0.95), rgba(241, 245, 249, 0.86));
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      gap: 16px;
+    }
+
+    .print-area-title {
+      font-size: 16px;
+      text-transform: uppercase;
+      letter-spacing: 0.08em;
       font-weight: 700;
       color: #0f172a;
     }
 
-    .header .meta {
-      font-size: 12px;
-      color: #64748b;
-    }
-
-    .summary {
-      display: flex;
-      flex-wrap: wrap;
-      gap: 12px;
-      margin-bottom: 24px;
-    }
-
-    .summary-card {
-      border: 1px solid rgba(148, 163, 184, 0.35);
-      border-radius: 8px;
-      padding: 12px 16px;
-      min-width: 160px;
-      background: #f8fafc;
-    }
-
-    .summary-card-title {
-      font-size: 10px;
+    .print-area-meta {
+      font-size: 11px;
+      color: #334155;
       letter-spacing: 0.04em;
-      text-transform: uppercase;
-      color: #64748b;
-      margin-bottom: 4px;
     }
 
-    .summary-card-value {
-      font-weight: 600;
-      font-size: 16px;
-      color: #0f172a;
-    }
-
-    .area-block {
-      margin: 24px 0;
+    .print-macro-block {
+      display: flex;
+      flex-direction: column;
+      gap: 12px;
+      padding: 16px 18px 20px;
+      border-radius: 14px;
+      border: 1px solid rgba(148, 163, 184, 0.28);
+      background: rgba(248, 250, 252, 0.9);
       page-break-inside: avoid;
-      break-inside: avoid;
+      break-inside: avoid-page;
     }
 
-    .area-header {
-      border-radius: 10px;
-      padding: 16px 20px;
-      color: #0f172a;
-      background: linear-gradient(135deg, rgba(15, 23, 42, 0.08), rgba(15, 23, 42, 0.02));
-      border: 1px solid rgba(15, 23, 42, 0.08);
-      margin-bottom: 16px;
+    .print-macro-header {
+      display: flex;
+      flex-direction: column;
+      gap: 6px;
     }
 
-    .area-title {
-      font-size: 16px;
-      font-weight: 600;
-      margin: 0 0 4px 0;
-      text-transform: uppercase;
-    }
-
-    .area-meta {
-      font-size: 11px;
-      color: #475569;
-    }
-
-    .macro-block {
-      margin: 20px 0 20px 16px;
-      page-break-inside: avoid;
-      break-inside: avoid;
-    }
-
-    .macro-title {
-      font-weight: 600;
+    .print-macro-title {
       font-size: 14px;
+      letter-spacing: 0.04em;
+      font-weight: 600;
       color: #0f172a;
-      margin: 0 0 4px 0;
     }
 
-    .macro-owner {
-      margin: 0 0 12px 0;
+    .print-macro-owner {
       font-size: 11px;
-      color: #475569;
+      color: #1e3a8a;
+      letter-spacing: 0.02em;
     }
 
-    .macro-empty,
-    .area-empty {
-      border: 1px dashed rgba(148, 163, 184, 0.5);
-      border-radius: 8px;
-      padding: 12px;
+    .macro-empty {
       font-size: 11px;
       color: #64748b;
-      background: #f8fafc;
-      margin: 12px 0;
+      padding: 12px 0 2px;
     }
 
     .process-grid {
       display: grid;
-      grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
-      gap: 12px;
-      margin: 12px 0;
+      grid-template-columns: repeat(3, minmax(0, 1fr));
+      gap: 16px;
     }
 
     .process-card {
-      border: 1px solid rgba(148, 163, 184, 0.4);
-      border-radius: 10px;
-      padding: 14px;
+      border-radius: 12px;
+      border: 1px solid rgba(148, 163, 184, 0.38);
       background: #ffffff;
-      box-shadow: 0 1px 3px rgba(0,0,0,0.05);
+      padding: 14px 16px;
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+      box-shadow: 0 6px 16px rgba(15, 23, 42, 0.08);
       page-break-inside: avoid;
       break-inside: avoid;
+      min-height: 136px;
     }
 
     .process-title {
-      font-weight: 600;
       font-size: 13px;
+      font-weight: 700;
+      letter-spacing: 0.03em;
       color: #0f172a;
-      margin: 0 0 8px 0;
     }
 
     .process-meta {
       font-size: 11px;
-      color: #475569;
-      margin-bottom: 8px;
-    }
-
-    .process-description {
-      font-size: 11px;
-      color: #334155;
-      line-height: 1.5;
-      margin-top: 8px;
-      word-break: break-word;
+      color: #1e3a8a;
+      letter-spacing: 0.02em;
     }
 
     .badge-group {
       display: flex;
-      flex-direction: column;
-      gap: 6px;
-      margin-top: 8px;
+      flex-direction: row;
+      align-items: center;
+      gap: 8px;
+      flex-wrap: wrap;
     }
 
     .badge {
       display: inline-flex;
       align-items: center;
       gap: 6px;
-      border-radius: 6px;
       padding: 5px 8px;
+      border-radius: 8px;
       font-size: 10px;
       font-weight: 600;
-      background: rgba(15, 23, 42, 0.05);
-      color: #0f172a;
-      line-height: 1.1;
+      letter-spacing: 0.03em;
+      white-space: nowrap;
     }
 
     .badge-label {
       text-transform: uppercase;
       font-weight: 500;
       color: #475569;
-      letter-spacing: 0.03em;
     }
 
     .badge-value {
-      font-weight: 600;
+      font-weight: 700;
     }
 
-    /* Estilos específicos para impressão */
+    .process-description {
+      font-size: 10.5px;
+      color: #334155;
+      line-height: 1.5;
+      letter-spacing: 0.01em;
+      word-break: break-word;
+    }
+
+    .print-legal {
+      font-size: 10px;
+      color: #475569;
+      letter-spacing: 0.04em;
+      text-transform: uppercase;
+      white-space: nowrap;
+    }
+
+    .print-footer-visible {
+      margin-top: 16px;
+      padding-top: 12px;
+      border-top: 1px solid rgba(148, 163, 184, 0.35);
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      gap: 16px;
+    }
+
+    .print-footer {
+      display: none;
+      padding-top: 10px;
+      border-top: 1px solid rgba(148, 163, 184, 0.25);
+      margin-top: 20px;
+      text-align: right;
+    }
+
+    .footer-grid {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      gap: 16px;
+      width: 100%;
+    }
+
+    .footer-col {
+      flex: 1;
+      font-size: 10px;
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+      color: #475569;
+    }
+
+    .footer-col:first-child {
+      text-align: left;
+    }
+
+    .footer-col:last-child {
+      text-align: right;
+    }
+
+    .footer-print-date {
+      font-weight: 600;
+      color: #0f172a;
+    }
+
+    .print-only {
+      display: none;
+    }
+
     @media print {
       @page {
-        size: A4;
-        margin: 15mm 12mm 20mm 12mm;
+        size: A4 portrait;
+        margin: 5mm;
+        @bottom-right {
+          content: element(print-footer);
+        }
       }
 
       body {
         background: #ffffff;
         font-size: 10px;
+        -webkit-print-color-adjust: exact !important;
+        print-color-adjust: exact !important;
+        padding: 0;
+      }
+
+      .screen-toolbar {
+        display: none !important;
       }
 
       .screen-only {
+        display: none !important;
+      }
+
+      .page {
+        margin: 0;
+        width: auto;
+        max-width: none;
+        page: portrait;
+      }
+
+      .print-header-visible {
         display: none !important;
       }
 
@@ -267,197 +479,182 @@
         display: block !important;
       }
 
-      .no-print {
-        display: none !important;
+      .print-header-running {
+        padding: 0 0 10px 0;
+        margin: 0 0 16px 0;
+        position: running(page-header);
       }
 
-      .main {
-        padding: 0;
-        max-width: none;
-        margin: 0;
-      }
-
-      .header {
-        margin-bottom: 16px;
-        padding-bottom: 12px;
-      }
-
-      .header h2 {
-        font-size: 20px;
-      }
-
-      .summary {
-        margin-bottom: 20px;
+      .print-header-meta {
+        gap: 6px 12px;
       }
 
       .summary-card {
         padding: 10px 14px;
-        min-width: 140px;
-      }
-
-      .area-block {
-        margin: 16px 0 20px 0;
-      }
-
-      .area-header {
-        padding: 14px 18px;
-        margin-bottom: 12px;
-      }
-
-      .area-title {
-        font-size: 15px;
-      }
-
-      .macro-block {
-        margin: 16px 0 16px 12px;
-      }
-
-      .macro-title {
-        font-size: 13px;
-      }
-
-      .process-grid {
-        grid-template-columns: repeat(auto-fill, minmax(210px, 1fr));
-        gap: 10px;
-      }
-
-      .process-card {
-        padding: 12px;
+        min-width: 150px;
         box-shadow: none;
       }
 
-      .process-title {
-        font-size: 12px;
+      .print-footer-visible {
+        display: none !important;
+      }
+
+      .print-footer {
+        display: block !important;
+        position: running(print-footer);
+        margin: 20px 0 0 0;
+        padding: 6px 0 0 0;
+      }
+
+      .print-footer .footer-print-date {
+        color: #0f172a;
+        font-weight: 600;
+      }
+
+      .print-area-block,
+      .print-macro-block {
+        page-break-inside: avoid !important;
+        break-inside: avoid-page !important;
+      }
+
+      .process-grid {
+        grid-template-columns: repeat(3, minmax(0, 1fr));
+        gap: 12px;
+      }
+
+      .process-card {
+        box-shadow: none;
+        border-radius: 10px;
+        padding: 12px 13px;
       }
 
       .badge {
         padding: 4px 6px;
+        border-radius: 6px;
         font-size: 9.5px;
-      }
-
-      .break-avoid {
-        page-break-inside: avoid;
-        break-inside: avoid;
-      }
-
-      /* Cabeçalho e rodapé da página */
-      .print-header {
-        position: running(header);
-        width: 100%;
-        text-align: center;
-        font-size: 9pt;
-        color: #0f172a;
-        padding-bottom: 8px;
-        border-bottom: 1px solid #e2e8f0;
-      }
-
-      .print-footer {
-        position: running(footer);
-        width: 100%;
-        text-align: right;
-        font-size: 8.5pt;
-        color: #475569;
-        padding-top: 6px;
-        border-top: 1px solid #e2e8f0;
+        white-space: nowrap;
       }
     }
   </style>
 </head>
 <body>
-  <div class="no-print">
-    <h1>Mapa de Processos - {{ company.name }}</h1>
-    <button onclick="window.print()" id="btnPrint">🖨️ Imprimir</button>
+  <div class="screen-toolbar">
+    <div class="screen-toolbar-title">Mapa de Processos - {{ company.name }}</div>
+    <button type="button" onclick="window.print()" id="btnPrint">🖨️ Imprimir agora</button>
   </div>
 
-  <main class="main">
-    <div class="header">
-      <h2>Mapa de Processos</h2>
-      <div class="meta">
-        <strong>Empresa:</strong> {{ company.name }}<br>
-        <strong>Gerado em:</strong> {{ generated_at.strftime('%d/%m/%Y %H:%M') }}
-      </div>
-    </div>
-
-    <section class="summary">
-      <div class="summary-card">
-        <div class="summary-card-title">Áreas</div>
-        <div class="summary-card-value">{{ totals.areas }}</div>
-      </div>
-      <div class="summary-card">
-        <div class="summary-card-title">Macroprocessos</div>
-        <div class="summary-card-value">{{ totals.macros }}</div>
-      </div>
-      <div class="summary-card">
-        <div class="summary-card-title">Processos</div>
-        <div class="summary-card-value">{{ totals.processes }}</div>
-      </div>
-    </section>
-
-    {% if not areas %}
-      <div class="area-empty">Nenhum processo foi mapeado para esta empresa.</div>
-    {% else %}
-      {% for area in areas %}
-        <section class="area-block break-avoid">
-          <div class="area-header" style="background: linear-gradient(135deg, {{ area.color_soft }}, rgba(255,255,255,0.92)); border: 1px solid {{ area.color_soft }};">
-            <div class="area-title">{{ area.display_name }}</div>
-            <div class="area-meta">{{ area.macro_count }} macroprocesso(s) • {{ area.process_count }} processo(s)</div>
+  <div class="page portrait">
+    <div class="page-content">
+      <section class="print-header-running print-only">
+        <div class="print-header-content">
+          <div class="print-header-title-row">
+            <h2 class="print-header-title">Mapa de Processos - {{ header_meta.company_name or company.name }}</h2>
           </div>
+          <div class="print-header-meta">
+            <div><strong>Versão:</strong> {{ header_meta.version }}</div>
+            <div><strong>Criado em:</strong> {{ header_meta.created_at or 'N/A' }}</div>
+            <div><strong>Atualizado em:</strong> {{ header_meta.updated_at or 'N/A' }}</div>
+          </div>
+        </div>
+      </section>
 
-          {% if not area.macros %}
-            <div class="area-empty">Nenhum macroprocesso cadastrado para esta área.</div>
-          {% else %}
-            {% for macro in area.macros %}
-              <div class="macro-block break-avoid">
-                <div class="macro-title">{{ macro.display_name }}</div>
-                {% if macro.owner %}
-                  <div class="macro-owner">Responsável: {{ macro.owner }}</div>
-                {% endif %}
+      <section class="print-header-visible">
+        <div class="print-header-content">
+          <div class="print-header-title-row">
+            <h2 class="print-header-title">Mapa de Processos - {{ header_meta.company_name or company.name }}</h2>
+          </div>
+          <div class="print-header-meta">
+            <div><strong>Versão:</strong> {{ header_meta.version }}</div>
+            <div><strong>Criado em:</strong> {{ header_meta.created_at or 'N/A' }}</div>
+            <div><strong>Atualizado em:</strong> {{ header_meta.updated_at or 'N/A' }}</div>
+          </div>
+        </div>
+      </section>
 
-                {% if not macro.processes %}
-                  <div class="macro-empty">Nenhum processo cadastrado neste macroprocesso.</div>
-                {% else %}
-                  <div class="process-grid">
-                    {% for proc in macro.processes %}
-                      <div class="process-card break-avoid">
-                        <div class="process-title">{{ proc.display_name }}</div>
-                        {% if proc.responsible %}
-                          <div class="process-meta">Responsável: {{ proc.responsible }}</div>
-                        {% endif %}
-                        <div class="badge-group">
-                          <div class="badge" style="background: {{ proc.structuring.background }}; color: {{ proc.structuring.color }};">
-                            <span class="badge-label">Estruturação</span>
-                            <span class="badge-value">{{ proc.structuring.label }}</span>
-                          </div>
-                          <div class="badge" style="background: {{ proc.performance.background }}; color: {{ proc.performance.color }};">
-                            <span class="badge-label">Desempenho</span>
-                            <span class="badge-value">{{ proc.performance.label }}</span>
-                          </div>
-                        </div>
-                        {% if proc.description %}
-                          <div class="process-description">{{ proc.description }}</div>
-                        {% endif %}
-                      </div>
-                    {% endfor %}
+      <section class="summary-section">
+        <div class="summary-card">
+          <span class="summary-card-label">Áreas</span>
+          <span class="summary-card-value">{{ totals.areas }}</span>
+        </div>
+        <div class="summary-card">
+          <span class="summary-card-label">Macroprocessos</span>
+          <span class="summary-card-value">{{ totals.macros }}</span>
+        </div>
+        <div class="summary-card">
+          <span class="summary-card-label">Processos</span>
+          <span class="summary-card-value">{{ totals.processes }}</span>
+        </div>
+      </section>
+
+      {% if not areas %}
+        <div class="empty-state">Nenhum processo foi mapeado para esta empresa até o momento.</div>
+      {% else %}
+        {% for area in areas %}
+          <section class="print-area-block">
+            <div class="print-area-header" style="border-color: {{ area.color_soft }}; background: linear-gradient(135deg, {{ area.color_soft }}, rgba(255, 255, 255, 0.94));">
+              <div class="print-area-title">{{ area.display_name }}</div>
+              <div class="print-area-meta">{{ area.macro_count }} macroprocesso(s) • {{ area.process_count }} processo(s)</div>
+            </div>
+
+            {% if not area.macros %}
+              <div class="empty-state" style="margin-top:4px;">Nenhum macroprocesso cadastrado para esta área.</div>
+            {% else %}
+              {% for macro in area.macros %}
+                <div class="print-macro-block">
+                  <div class="print-macro-header">
+                    <div class="print-macro-title">{{ macro.display_name }}</div>
+                    {% if macro.owner %}
+                    <div class="print-macro-owner">Dono do Processo: {{ macro.owner }}</div>
+                    {% endif %}
                   </div>
-                {% endif %}
-              </div>
-            {% endfor %}
-          {% endif %}
-        </section>
-      {% endfor %}
-    {% endif %}
-  </main>
 
-  <script>
-    // Auto-abrir diálogo de impressão após página carregar (opcional)
-    // window.addEventListener('load', function() {
-    //   setTimeout(function() {
-    //     window.print();
-    //   }, 500);
-    // });
-  </script>
+                  {% if not macro.processes %}
+                    <div class="macro-empty">Nenhum processo cadastrado neste macroprocesso.</div>
+                  {% else %}
+                    <div class="process-grid">
+                      {% for proc in macro.processes %}
+                        <div class="process-card">
+                          <div class="process-title">{{ proc.display_name }}</div>
+                          {% if proc.responsible %}
+                            <div class="process-meta">Dono do Processo: {{ proc.responsible }}</div>
+                          {% endif %}
+                          <div class="badge-group">
+                            <div class="badge" style="background: {{ proc.structuring.background }}; color: {{ proc.structuring.text_color }};">
+                              <span class="badge-label">Estruturação</span>
+                              <span class="badge-value">{{ proc.structuring.label }}</span>
+                            </div>
+                            <div class="badge" style="background: {{ proc.performance.background }}; color: {{ proc.performance.text_color }};">
+                              <span class="badge-label">Desempenho</span>
+                              <span class="badge-value">{{ proc.performance.label }}</span>
+                            </div>
+                          </div>
+                          {% if proc.description %}
+                            <div class="process-description">{{ proc.description }}</div>
+                          {% endif %}
+                        </div>
+                      {% endfor %}
+                    </div>
+                  {% endif %}
+                </div>
+              {% endfor %}
+            {% endif %}
+          </section>
+        {% endfor %}
+      {% endif %}
+      <section class="print-footer-visible">
+        <div class="footer-grid">
+          <div class="footer-col">Impresso em: <span class="footer-print-date">{{ header_meta.printed_at }}</span></div>
+          <div class="footer-col footer-brand">Versus Gestão Corporativa - Todos os direitos reservados.</div>
+        </div>
+      </section>
+
+      <section class="print-footer print-only">
+        <div class="footer-grid">
+          <div class="footer-col">Impresso em: <span class="footer-print-date">{{ header_meta.printed_at }}</span></div>
+          <div class="footer-col footer-brand">Versus Gestão Corporativa - Todos os direitos reservados.</div>
+        </div>
+      </section>
+    </div>
+  </div>
 </body>
 </html>
-
-
-

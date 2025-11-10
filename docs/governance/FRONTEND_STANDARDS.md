@@ -206,6 +206,14 @@ function formatCurrency(value) {
 }
 ```
 
+## 🆔 Identificação Tela-Objeto (UI Catalog)
+
+- Cada elemento relevante deve expor `data-ui-code` seguindo o formato `{tela}-{objeto}` (ex.: `314-21`).
+- Utilize os helpers disponíveis (`ui_attrs` no Jinja e `uiAttr()` no JavaScript) para garantir alinhamento com a tabela `ui_catalog`.
+- Sempre registrar novos códigos na tabela `ui_catalog` (modelo `models/ui_catalog.py`) e documentar `name`, `description` e `route`.
+- Manter consistência: seções principais recebem códigos terminando em `0`, ações em botões terminam em `1+`.
+- Evitar hardcode: se o helper não encontrar o código, revise a migration/seed antes de publicar.
+
 **Percentuais:**
 ```javascript
 function formatPercent(value) {

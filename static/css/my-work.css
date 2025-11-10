@@ -2894,6 +2894,81 @@ body {
 }
 
 /* ========================================
+   Loading Placeholders & Utility
+   ======================================== */
+
+.activity-placeholder {
+  display: none;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 0.75rem;
+  width: 100%;
+  padding: 3rem 0;
+  color: var(--color-text-tertiary);
+}
+
+.placeholder-spinner {
+  width: 32px;
+  height: 32px;
+  border: 3px solid var(--color-primary-light);
+  border-top-color: var(--color-primary);
+  border-radius: 50%;
+  animation: spinner-rotate 0.8s linear infinite;
+}
+
+@keyframes spinner-rotate {
+  from {
+    transform: rotate(0deg);
+  }
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+.text-muted {
+  color: var(--color-text-tertiary);
+}
+
+.text-error {
+  color: var(--color-danger);
+  text-align: center;
+}
+
+.company-overview__loader,
+.team-overview__loader {
+  display: none;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 0.75rem;
+  padding: 2rem;
+  color: var(--color-text-tertiary);
+}
+
+.company-overview__body,
+#teamOverviewBody {
+  display: grid;
+  gap: 1.5rem;
+}
+
+.company-overview__body {
+  grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+}
+
+#teamOverviewBody {
+  grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+}
+
+.activity-details {
+  margin-top: 0.5rem;
+  padding-left: 1.25rem;
+  color: var(--color-text-secondary);
+  font-size: 0.875rem;
+  line-height: 1.4;
+}
+
+/* ========================================
    Print Styles
    ======================================== */
 

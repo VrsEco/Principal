@@ -154,95 +154,34 @@ function initializeFilters() {
   
   filterTabs.forEach(tab => {
     tab.addEventListener('click', function() {
-      // Remove active class from all tabs
       filterTabs.forEach(t => t.classList.remove('filter-tab--active'));
-      
-      // Add active class to clicked tab
       this.classList.add('filter-tab--active');
-      
-      // Get filter value
-      const filter = this.dataset.filter;
-      state.currentFilter = filter;
-      
-      // Apply filter
-      applyFilters();
+      state.currentFilter = this.dataset.filter || 'all';
+      renderActivities();
+      updateFilterCountBadges();
     });
   });
 }
 
-function applyFilters() {
-  const activitiesList = document.getElementById('activitiesList');
-  const emptyState = document.getElementById('emptyState');
-  const activities = activitiesList.querySelectorAll('.activity-item');
-  
-  let visibleCount = 0;
-  
-  activities.forEach(activity => {
-    const filters = activity.dataset.filter || '';
-    const matchesFilter = state.currentFilter === 'all' || filters.includes(state.currentFilter);
-    const matchesSearch = matchesSearchQuery(activity);
-    
-    if (matchesFilter && matchesSearch) {
-      activity.style.display = '';
-      visibleCount++;
-    } else {
-      activity.style.display = 'none';
-    }
-  });
-  
-  // Show/hide empty state
-  if (visibleCount === 0) {
-    activitiesList.style.display = 'none';
-    emptyState.style.display = 'block';
-  } else {
-    activitiesList.style.display = '';
-    emptyState.style.display = 'none';
-  }
-}
-
-// ========================================
-// Busca
-// ========================================
-
 function initializeSearch() {
   const searchInput = document.getElementById('searchInput');
+  if (!searchInput) return;
   
   searchInput.addEventListener('input', function() {
-    state.searchQuery = this.value.toLowerCase();
-    applyFilters();
+    state.searchQuery = (this.value || '').toLowerCase();
+    renderActivities();
   });
 }
-
-function matchesSearchQuery(activity) {
-  if (!state.searchQuery) return true;
-  
-  const title = activity.querySelector('.activity-item__title')?.textContent.toLowerCase() || '';
-  const description = activity.querySelector('.activity-item__description')?.textContent.toLowerCase() || '';
-  
-  return title.includes(state.searchQuery) || description.includes(state.searchQuery);
-}
-
-// ========================================
-// Troca de Visualização
-// ========================================
 
 function initializeViewSwitcher() {
   const viewButtons = document.querySelectorAll('.view-btn');
   
   viewButtons.forEach(btn => {
     btn.addEventListener('click', function() {
-      // Remove active class from all buttons
       viewButtons.forEach(b => b.classList.remove('view-btn--active'));
-      
-      // Add active class to clicked button
       this.classList.add('view-btn--active');
-      
-      // Get view type
-      const view = this.dataset.view;
-      state.currentView = view;
-      
-      // Apply view
-      applyView(view);
+      state.currentView = this.dataset.view || 'list';
+      applyView(state.currentView);
     });
   });
 }
@@ -250,115 +189,22 @@ function initializeViewSwitcher() {
 function applyView(view) {
   const activitiesList = document.getElementById('activitiesList');
   
+  if (!activitiesList) return;
+  
   if (view === 'kanban') {
-    // TODO: Implementar visualização Kanban
     window.showMessage('Visualização Kanban em desenvolvimento', 'info');
   } else {
-    // Lista (padrão)
     activitiesList.style.display = 'flex';
   }
 }
 
-// ========================================
-// Ordenação
-// ========================================
-
 function initializeSorting() {
   const sortSelect = document.getElementById('sortSelect');
+  if (!sortSelect) return;
   
   sortSelect.addEventListener('change', function() {
-    state.sortBy = this.value;
-    sortActivities();
-  });
-}
-
-function sortActivities() {
-  const activitiesList = document.getElementById('activitiesList');
-  const activities = Array.from(activitiesList.querySelectorAll('.activity-item'));
-  
-  activities.sort((a, b) => {
-    switch (state.sortBy) {
-      case 'priority':
-        return comparePriority(a, b);
-      case 'status':
-        return compareStatus(a, b);
-      case 'recent':
-        return -1; // Mais recentes primeiro (ordem inversa do DOM)
-      case 'deadline':
-      default:
-        return compareDeadline(a, b);
-    }
-  });
-  
-  // Reordenar no DOM
-  activities.forEach(activity => activitiesList.appendChild(activity));
-}
-
-function comparePriority(a, b) {
-  const priorityOrder = { high: 3, medium: 2, low: 1 };
-  const aPriority = a.classList.contains('activity-item--high') ? 'high' : 
-                    a.classList.contains('activity-item--medium') ? 'medium' : 'low';
-  const bPriority = b.classList.contains('activity-item--high') ? 'high' : 
-                    b.classList.contains('activity-item--medium') ? 'medium' : 'low';
-  
-  return (priorityOrder[bPriority] || 0) - (priorityOrder[aPriority] || 0);
-}
-
-function compareStatus(a, b) {
-  const statusIndicatorA = a.querySelector('.status-indicator');
-  const statusIndicatorB = b.querySelector('.status-indicator');
-  
-  const statusOrder = { 'overdue': 4, 'pending': 3, 'progress': 2, 'completed': 1 };
-  
-  const getStatus = (indicator) => {
-    if (indicator.classList.contains('status-indicator--overdue')) return 'overdue';
-    if (indicator.classList.contains('status-indicator--pending')) return 'pending';
-    if (indicator.classList.contains('status-indicator--progress')) return 'progress';
-    return 'completed';
-  };
-  
-  return (statusOrder[getStatus(statusIndicatorA)] || 0) - (statusOrder[getStatus(statusIndicatorB)] || 0);
-}
-
-function compareDeadline(a, b) {
-  // Atividades atrasadas primeiro
-  if (a.classList.contains('activity-item--overdue') && !b.classList.contains('activity-item--overdue')) {
-    return -1;
-  }
-  if (!a.classList.contains('activity-item--overdue') && b.classList.contains('activity-item--overdue')) {
-    return 1;
-  }
-  return 0;
-}
-
-// ========================================
-// Ações das Atividades
-// ========================================
-
-function initializeActivityActions() {
-  // Delegar eventos para ações
-  document.addEventListener('click', function(e) {
-    const btn = e.target.closest('.action-btn');
-    if (!btn) return;
-    
-    const activity = btn.closest('.activity-item');
-    const activityId = activity?.dataset.activityId;
-    const activityTitle = activity?.querySelector('.activity-item__title')?.textContent;
-    
-    // Identificar tipo de ação
-    if (btn.classList.contains('action-btn--start') || btn.classList.contains('action-btn--continue')) {
-      handleStartActivity(activityId, activityTitle, activity);
-    } else if (btn.classList.contains('action-btn--pause')) {
-      handlePauseActivity(activityId, activityTitle, activity);
-    } else if (btn.classList.contains('action-btn--view')) {
-      handleViewActivity(activityId, activity);
-    } else if (btn.classList.contains('action-btn--approve')) {
-      handleApproveActivity(activityId, activityTitle);
-    } else if (btn.classList.contains('action-btn--reject')) {
-      handleRejectActivity(activityId, activityTitle);
-    } else if (btn.classList.contains('action-btn--urgent')) {
-      handleUrgentActivity(activityId, activityTitle, activity);
-    }
+    state.sortBy = this.value || 'deadline';
+    renderActivities();
   });
 }
 
@@ -502,43 +348,587 @@ async function loadActivitiesData() {
   try {
     console.log('Carregando dados para scope:', state.currentScope);
     
-    // Chamar API real com scope
-    const response = await fetch(`/my-work/api/activities?scope=${state.currentScope}`);
+    setActivitiesLoading(true);
+    
+    const params = new URLSearchParams({
+      scope: state.currentScope
+    });
+    
+    const response = await fetch(`/my-work/api/activities?${params.toString()}`);
     const data = await response.json();
     
-    if (data.success) {
-      state.activities = data.data;
-      // renderActivities(data.data); // TODO: Implementar renderização dinâmica
-      updateStats(data.stats);
-      // updatePerformanceScore(data.performance); // TODO: Implementar
-      updateViewTabCounts(data);
-      
-      console.log(`✅ Carregados ${data.data.length} atividades para scope: ${state.currentScope}`);
-    } else {
+    if (!response.ok || !data.success) {
       throw new Error(data.error || 'Erro ao carregar atividades');
     }
     
+    state.activities = Array.isArray(data.data) ? data.data : [];
+    
+    updateStats(data.stats);
+    updateViewTabCounts(data);
+    updateFilterCountBadges();
+    updateTimeTracking(calculateTimeFromActivities(state.activities));
+    renderActivities();
+    
+    if (state.currentScope === 'team') {
+      state.teamData = null;
+      loadTeamOverview();
+    } else if (state.currentScope === 'company') {
+      state.companyData = null;
+      loadCompanyOverview();
+    }
+    
+    console.log(`✅ Carregados ${state.activities.length} registros para scope: ${state.currentScope}`);
   } catch (error) {
     console.error('Erro ao carregar atividades:', error);
-    window.showMessage('Erro ao carregar atividades', 'error');
-    
-    // Fallback: Usar contadores mock
-    const mockCounts = {
-      me: 17,
-      team: 45,
-      company: 180
-    };
-    updateViewTabCounts({ counts: mockCounts });
+    window.showMessage(error.message || 'Erro ao carregar atividades', 'error');
+    state.activities = [];
+    updateStats({ pending: 0, in_progress: 0, overdue: 0, completed: 0 });
+    updateFilterCountBadges();
+    renderActivities();
+  } finally {
+    setActivitiesLoading(false);
   }
 }
 
-function renderActivities(activities) {
+function renderActivities() {
   const activitiesList = document.getElementById('activitiesList');
+  const emptyState = document.getElementById('emptyState');
+  if (!activitiesList || !emptyState) return;
   
-  // TODO: Renderizar atividades dinamicamente
-  // Por enquanto, estamos usando HTML estático
+  const loader = activitiesList.querySelector('.activity-placeholder');
+  if (loader) {
+    loader.style.display = 'none';
+  }
   
-  console.log('Renderizando', activities.length, 'atividades');
+  const filteredActivities = getFilteredActivities();
+  
+  activitiesList.querySelectorAll('.activity-item').forEach(item => item.remove());
+  
+  if (!filteredActivities.length) {
+    activitiesList.style.display = 'none';
+    emptyState.style.display = 'flex';
+    updateFilterCountBadges();
+    return;
+  }
+  
+  activitiesList.style.display = 'flex';
+  emptyState.style.display = 'none';
+  
+  const fragment = document.createDocumentFragment();
+  filteredActivities.forEach(activity => {
+    fragment.appendChild(createActivityElement(activity));
+  });
+  
+  activitiesList.appendChild(fragment);
+  updateFilterCountBadges();
+  animateOnScroll();
+}
+
+function setActivitiesLoading(isLoading) {
+  const activitiesList = document.getElementById('activitiesList');
+  const loader = activitiesList?.querySelector('.activity-placeholder');
+  if (!activitiesList || !loader) return;
+  
+  if (isLoading) {
+    activitiesList.dataset.state = 'loading';
+    loader.style.display = 'flex';
+  } else {
+    activitiesList.dataset.state = 'loaded';
+    loader.style.display = 'none';
+  }
+}
+
+function getFilteredActivities() {
+  let activities = Array.from(state.activities || []);
+  
+  if (state.currentFilter && state.currentFilter !== 'all') {
+    activities = activities.filter(activity => {
+      const tags = activity.filter_tags || [];
+      return tags.includes(state.currentFilter);
+    });
+  }
+  
+  if (state.searchQuery) {
+    const query = state.searchQuery;
+    activities = activities.filter(activity => {
+      const haystack = [
+        activity.title,
+        activity.description,
+        activity.plan_name,
+        activity.company_name
+      ].join(' ').toLowerCase();
+      return haystack.includes(query);
+    });
+  }
+  
+  activities.sort((a, b) => {
+    switch (state.sortBy) {
+      case 'priority':
+        return (b.priority_order || 0) - (a.priority_order || 0);
+      case 'status':
+        return (a.status_order || 99) - (b.status_order || 99);
+      case 'recent':
+        return (b.updated_sort_key || 0) - (a.updated_sort_key || 0);
+      case 'deadline':
+      default:
+        return (a.deadline_sort_key || 9999999) - (b.deadline_sort_key || 9999999);
+    }
+  });
+  
+  return activities;
+}
+
+function createActivityElement(activity) {
+  const wrapper = document.createElement('div');
+  const typeClass = activity.type === 'process' ? 'activity-item--process' : 'activity-item--project';
+  const priorityClass = getPriorityClass(activity.priority);
+  const overdueClass = activity.is_overdue ? 'activity-item--overdue' : '';
+  
+  wrapper.className = `activity-item ${typeClass} ${priorityClass} ${overdueClass}`.trim();
+  wrapper.dataset.activityId = activity.id;
+  wrapper.dataset.type = activity.type;
+  wrapper.dataset.estimatedHours = activity.estimated_hours || 0;
+  wrapper.dataset.workedHours = activity.worked_hours || 0;
+  wrapper.dataset.status = activity.status || '';
+  wrapper.dataset.priority = activity.priority || '';
+  wrapper.dataset.deadline = activity.deadline || '';
+  wrapper.dataset.deadlineLabel = activity.deadline_label || '';
+  wrapper.dataset.assignmentLabel = activity.assignment?.label || '';
+  wrapper.dataset.companyName = activity.company_name || '';
+  wrapper.dataset.planName = activity.plan_name || '';
+  wrapper.dataset.title = activity.title || '';
+  wrapper.dataset.description = activity.description || '';
+  
+  const statusIndicatorClass = getStatusIndicatorClass(activity);
+  const assignmentLabel = activity.assignment?.label || '';
+  const metaBadge = assignmentLabel ? `<span class="activity-role">${assignmentLabel}</span>` : '';
+  const typeLabel = activity.type === 'process' ? 'PROCESSO' : 'PROJETO';
+  const priorityLabel = getPriorityLabel(activity.priority);
+  const deadlineInfo = formatDeadline(activity);
+  const secondaryInfo = formatSecondaryInfo(activity);
+  const progressBar = renderProgressBar(activity);
+  
+  wrapper.innerHTML = `
+    <div class="activity-item__status">
+      <div class="status-indicator ${statusIndicatorClass}"></div>
+    </div>
+    <div class="activity-item__content">
+      <div class="activity-item__header">
+        <div class="activity-item__type">
+          <span class="type-badge type-badge--${activity.type}">${typeLabel}</span>
+          ${priorityLabel}
+          ${activity.is_overdue ? '<span class="overdue-badge">⚠️ Atrasada</span>' : ''}
+        </div>
+        <div class="activity-item__meta">
+          ${metaBadge}
+        </div>
+      </div>
+      <h3 class="activity-item__title">${activity.title || 'Atividade sem título'}</h3>
+      ${activity.description ? `<p class="activity-item__description">${activity.description}</p>` : ''}
+      ${progressBar}
+      <div class="activity-item__footer">
+        <div class="activity-item__info">
+          <span class="info-item info-item--deadline ${activity.is_overdue ? 'info-item--overdue' : ''}">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <rect x="3" y="4" width="18" height="18" rx="2" ry="2"></rect>
+              <line x1="16" y1="2" x2="16" y2="6"></line>
+              <line x1="8" y1="2" x2="8" y2="6"></line>
+              <line x1="3" y1="10" x2="21" y2="10"></line>
+            </svg>
+            ${deadlineInfo}
+          </span>
+          ${secondaryInfo}
+        </div>
+        <div class="activity-item__actions">
+          <button class="action-btn action-btn--add-hours" title="Adicionar Horas" data-action="add-hours">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <circle cx="12" cy="12" r="10"></circle>
+              <polyline points="12 6 12 12 16 14"></polyline>
+            </svg>
+            + Horas
+          </button>
+          <button class="action-btn action-btn--comment" title="Adicionar Comentário" data-action="add-comment">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"></path>
+            </svg>
+            Comentar
+          </button>
+          <button class="action-btn action-btn--complete" title="Finalizar" data-action="complete">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <polyline points="20 6 9 17 4 12"></polyline>
+            </svg>
+            Finalizar
+          </button>
+        </div>
+      </div>
+    </div>
+  `;
+  
+  return wrapper;
+}
+
+function getPriorityClass(priority) {
+  const normalized = (priority || 'normal').toLowerCase();
+  if (normalized === 'urgent' || normalized === 'high') return 'activity-item--high';
+  if (normalized === 'medium' || normalized === 'normal') return 'activity-item--medium';
+  return 'activity-item--low';
+}
+
+function getPriorityLabel(priority) {
+  const normalized = (priority || 'normal').toLowerCase();
+  const labels = {
+    urgent: 'Urgente',
+    high: 'Alta Prioridade',
+    medium: 'Média Prioridade',
+    normal: 'Prioridade Normal',
+    low: 'Baixa Prioridade'
+  };
+  return `<span class="priority-badge priority-badge--${normalized}">${labels[normalized] || 'Prioridade'}</span>`;
+}
+
+function getStatusIndicatorClass(activity) {
+  const status = (activity.status || '').toLowerCase();
+  if (activity.is_overdue && status !== 'completed') return 'status-indicator--overdue';
+  if (status === 'in_progress' || status === 'executing' || status === 'ongoing') return 'status-indicator--progress';
+  if (status === 'completed') return 'status-indicator--completed';
+  return 'status-indicator--pending';
+}
+
+function formatDeadline(activity) {
+  if (activity.deadline_label) {
+    return activity.deadline_label;
+  }
+  if (!activity.deadline) {
+    return 'Sem prazo definido';
+  }
+  return new Date(activity.deadline).toLocaleDateString('pt-BR');
+}
+
+function formatSecondaryInfo(activity) {
+  const infoItems = [];
+  
+  if (activity.type === 'project' && activity.plan_name) {
+    infoItems.push(`
+      <span class="info-item info-item--project">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"></path>
+        </svg>
+        ${activity.plan_name}
+      </span>
+    `);
+  }
+  
+  if (activity.type === 'process' && activity.instance_code) {
+    infoItems.push(`
+      <span class="info-item info-item--process">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <polyline points="22 12 18 12 15 21 9 3 6 12 2 12"></polyline>
+        </svg>
+        ${activity.instance_code}
+      </span>
+    `);
+  }
+  
+  if (activity.estimated_hours) {
+    infoItems.push(`
+      <span class="info-item info-item--time">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <circle cx="12" cy="12" r="10"></circle>
+          <polyline points="12 6 12 12 16 14"></polyline>
+        </svg>
+        ${formatHours(activity.estimated_hours)} estimadas
+      </span>
+    `);
+  }
+  
+  return infoItems.join('');
+}
+
+function renderProgressBar(activity) {
+  if (!activity.progress_percent) return '';
+  return `
+    <div class="activity-progress">
+      <div class="progress-bar">
+        <div class="progress-bar__fill" style="width: ${activity.progress_percent}%;"></div>
+      </div>
+      <span class="progress-label">${activity.progress_percent}% concluído</span>
+    </div>
+  `;
+}
+
+function formatHours(value) {
+  const hours = parseFloat(value || 0);
+  if (!hours) return '0h';
+  return `${hours.toLocaleString('pt-BR', { maximumFractionDigits: 2 })}h`;
+}
+
+function updateFilterCountBadges() {
+  const counters = document.querySelectorAll('[data-filter-count]');
+  if (!counters.length) return;
+  
+  const counts = {
+    all: state.activities.length,
+    today: 0,
+    week: 0,
+    overdue: 0
+  };
+  
+  state.activities.forEach(activity => {
+    const tags = activity.filter_tags || [];
+    if (tags.includes('today')) counts.today += 1;
+    if (tags.includes('week')) counts.week += 1;
+    if (tags.includes('overdue')) counts.overdue += 1;
+  });
+  
+  counters.forEach(counter => {
+    const key = counter.dataset.filterCount;
+    if (key && counts[key] !== undefined) {
+      counter.textContent = counts[key];
+    }
+  });
+}
+
+async function loadTeamOverview() {
+  if (state.teamData) {
+    renderTeamOverview(state.teamData);
+    return;
+  }
+  
+  const loader = document.getElementById('teamOverviewLoader');
+  const body = document.getElementById('teamOverviewBody');
+  if (!loader || !body) return;
+  
+  loader.style.display = 'flex';
+  body.style.display = 'none';
+  
+  try {
+    const response = await fetch('/my-work/api/team-overview');
+    const data = await response.json();
+    
+    if (!response.ok || !data.success) {
+      throw new Error(data.error || 'Erro ao carregar visão da equipe');
+    }
+    
+    state.teamData = data.data || {};
+    renderTeamOverview(state.teamData);
+  } catch (error) {
+    console.error('Erro ao carregar Team Overview:', error);
+    loader.innerHTML = `<p class="text-error">${error.message || 'Não foi possível carregar os dados da equipe.'}</p>`;
+  }
+}
+
+function renderTeamOverview(data) {
+  const loader = document.getElementById('teamOverviewLoader');
+  const body = document.getElementById('teamOverviewBody');
+  if (!loader || !body) return;
+  
+  loader.style.display = 'none';
+  body.style.display = data && Object.keys(data).length ? 'grid' : 'none';
+  
+  if (!data || !Object.keys(data).length) {
+    loader.innerHTML = '<p>Sem dados para exibir.</p>';
+    loader.style.display = 'flex';
+    return;
+  }
+  
+  body.innerHTML = `
+    <div class="team-card">
+      <h3>📊 Distribuição de Carga</h3>
+      <div class="team-members-list">
+        ${renderTeamMembers(data.members)}
+      </div>
+    </div>
+    <div class="team-card">
+      <h3>⚠️ Alertas</h3>
+      <div class="team-alerts">
+        ${renderTeamAlerts(data.alerts)}
+      </div>
+    </div>
+    <div class="team-card">
+      <h3>📈 Performance</h3>
+      <div class="team-performance-compact">
+        ${renderTeamPerformance(data.performance)}
+      </div>
+    </div>
+  `;
+}
+
+function renderTeamMembers(members = []) {
+  if (!members.length) {
+    return '<p class="text-muted">Nenhum membro encontrado.</p>';
+  }
+  
+  return members.map(member => `
+    <div class="team-member-item">
+      <div class="member-info">
+        <span class="member-name">${member.name || 'Colaborador'}</span>
+        <span class="member-role">${member.role || ''}</span>
+      </div>
+      <div class="member-load">
+        <div class="load-bar">
+          <div class="load-bar-fill ${member.utilization_percent >= 90 ? 'load-bar-fill--warning' : ''}" style="width: ${Math.min(member.utilization_percent || 0, 100)}%"></div>
+        </div>
+        <span class="load-percentage ${member.utilization_percent >= 90 ? 'load-percentage--warning' : ''}">
+          ${member.utilization_percent || 0}%
+        </span>
+      </div>
+      <span class="member-hours">${formatHours(member.allocated)} / ${formatHours(member.capacity)}</span>
+    </div>
+  `).join('');
+}
+
+function renderTeamAlerts(alerts = []) {
+  if (!alerts.length) {
+    return '<p class="text-muted">Nenhum alerta no momento.</p>';
+  }
+  
+  return alerts.map(alert => `
+    <div class="team-alert team-alert--${alert.severity || 'info'}">
+      <span class="alert-icon">${alert.type === 'overload' ? '⚠️' : alert.type === 'available' ? '✅' : 'ℹ️'}</span>
+      <div class="alert-content">
+        <strong>${alert.message}</strong>
+        <p>${alert.details || ''}</p>
+      </div>
+    </div>
+  `).join('');
+}
+
+function renderTeamPerformance(performance = {}) {
+  const metrics = [
+    { label: 'Score', value: performance.avg_score },
+    { label: 'No Prazo', value: performance.completion_rate ? `${performance.completion_rate}%` : '--' },
+    { label: 'Utilização', value: performance.capacity_utilization ? `${performance.capacity_utilization}%` : '--' }
+  ];
+  
+  return metrics.map(metric => `
+    <div class="perf-item">
+      <div class="perf-value">${metric.value !== undefined ? metric.value : '--'}</div>
+      <div class="perf-label">${metric.label}</div>
+    </div>
+  `).join('');
+}
+
+async function loadCompanyOverview() {
+  if (state.companyData) {
+    renderCompanyOverview(state.companyData);
+    return;
+  }
+  
+  const loader = document.getElementById('companyOverviewLoader');
+  const body = document.getElementById('companyOverviewBody');
+  if (!loader || !body) return;
+  
+  loader.style.display = 'flex';
+  body.style.display = 'none';
+  
+  try {
+    const response = await fetch('/my-work/api/company-overview');
+    const data = await response.json();
+    
+    if (!response.ok || !data.success) {
+      throw new Error(data.error || 'Erro ao carregar visão da empresa');
+    }
+    
+    state.companyData = data.data || {};
+    renderCompanyOverview(state.companyData);
+  } catch (error) {
+    console.error('Erro ao carregar Company Overview:', error);
+    loader.innerHTML = `<p class="text-error">${error.message || 'Não foi possível carregar a visão da empresa.'}</p>`;
+  }
+}
+
+function renderCompanyOverview(data) {
+  const loader = document.getElementById('companyOverviewLoader');
+  const body = document.getElementById('companyOverviewBody');
+  if (!loader || !body) return;
+  
+  loader.style.display = 'none';
+  body.style.display = data && Object.keys(data).length ? 'grid' : 'none';
+  
+  if (!data || !Object.keys(data).length) {
+    loader.innerHTML = '<p>Sem dados para exibir.</p>';
+    loader.style.display = 'flex';
+    return;
+  }
+  
+  body.innerHTML = `
+    <div class="company-card company-card--summary">
+      <h3>📌 Indicadores Principais</h3>
+      <div class="executive-stats">
+        ${renderCompanySummary(data.summary)}
+      </div>
+    </div>
+    <div class="company-card company-card--large">
+      <h3>🗺️ Mapa de Calor por Equipe</h3>
+      <div class="heatmap-grid">
+        ${renderCompanyHeatmap(data.heatmap)}
+      </div>
+    </div>
+    <div class="company-card">
+      <h3>🏆 Ranking de Performance</h3>
+      <div class="ranking-list">
+        ${renderCompanyRanking(data.ranking)}
+      </div>
+    </div>
+  `;
+}
+
+function renderCompanySummary(summary = {}) {
+  const metrics = [
+    { label: 'Equipes Ativas', value: summary.active_teams },
+    { label: 'Colaboradores', value: summary.total_employees },
+    { label: 'Capacidade Média', value: summary.avg_capacity_utilization ? `${summary.avg_capacity_utilization}%` : '--' },
+    { label: 'Atividades Abertas', value: summary.total_activities }
+  ];
+  
+  return metrics.map(metric => `
+    <div class="exec-stat">
+      <div class="exec-stat-value">${metric.value !== undefined ? metric.value : '--'}</div>
+      <div class="exec-stat-label">${metric.label}</div>
+    </div>
+  `).join('');
+}
+
+function renderCompanyHeatmap(heatmap = []) {
+  if (!heatmap.length) {
+    return '<p class="text-muted">Nenhuma equipe disponível.</p>';
+  }
+  
+  return heatmap.map(item => `
+    <div class="heatmap-item heatmap-item--${item.status || 'medium'}">
+      <div class="heatmap-header">
+        <span class="heatmap-name">${item.team_name}</span>
+        <span class="heatmap-people">${item.employee_count || 0} pessoas</span>
+      </div>
+      <div class="heatmap-bar">
+        <div class="heatmap-fill" style="width: ${Math.min(item.utilization_percent || 0, 100)}%"></div>
+      </div>
+      <div class="heatmap-stats">
+        <span class="heatmap-count">${item.activities_count || 0} atividades</span>
+        <span class="heatmap-load">${item.utilization_percent || 0}% ocupação</span>
+      </div>
+    </div>
+  `).join('');
+}
+
+function renderCompanyRanking(ranking = []) {
+  if (!ranking.length) {
+    return '<p class="text-muted">Sem ranking disponível.</p>';
+  }
+  
+  return ranking.map(item => `
+    <div class="ranking-item">
+      <div class="ranking-position">${item.rank || '-'}</div>
+      <div class="ranking-info">
+        <span class="ranking-name">${item.team_name || 'Equipe'}</span>
+        <div class="ranking-metrics">
+          <span class="metric-chip metric-chip--score">Score: ${item.score || '--'}</span>
+          <span class="metric-chip metric-chip--completion">${item.completion_rate !== undefined ? `${item.completion_rate}%` : '--'} no prazo</span>
+        </div>
+      </div>
+      <div class="ranking-score">${item.score || '--'}</div>
+    </div>
+  `).join('');
 }
 
 function updateStats(stats) {
@@ -804,7 +1194,7 @@ document.addEventListener('keydown', function(e) {
     if (searchInput.value) {
       searchInput.value = '';
       state.searchQuery = '';
-      applyFilters();
+      renderActivities();
     }
   }
 });
@@ -882,9 +1272,29 @@ function populateActivityInfo(modalId, activity) {
   
   if (!infoDiv || !activity) return;
   
+  const details = [];
+  
+  if (activity.assignment_label) {
+    details.push(`<li>${activity.assignment_label}</li>`);
+  }
+  if (activity.plan_name) {
+    details.push(`<li>Plano: ${activity.plan_name}</li>`);
+  }
+  if (activity.company_name) {
+    details.push(`<li>Empresa: ${activity.company_name}</li>`);
+  }
+  if (activity.deadline_label || activity.deadline) {
+    const deadlineText = activity.deadline_label || new Date(activity.deadline).toLocaleDateString('pt-BR');
+    details.push(`<li>Prazo: ${deadlineText}</li>`);
+  }
+  if (activity.description) {
+    details.push(`<li>${activity.description}</li>`);
+  }
+  
   infoDiv.innerHTML = `
     <h4>${activity.title}</h4>
     <p>${activity.type === 'project' ? '📁 Atividade de Projeto' : '⚙️ Instância de Processo'}</p>
+    ${details.length ? `<ul class="activity-details">${details.join('')}</ul>` : ''}
   `;
 }
 
@@ -894,9 +1304,9 @@ function updateHoursSummary() {
   const estimatedHours = currentActivity?.estimated_hours || 0;
   const totalAfter = currentHours + newHours;
   
-  document.getElementById('currentHours').textContent = `${currentHours}h`;
-  document.getElementById('estimatedHours').textContent = `${estimatedHours}h`;
-  document.getElementById('totalHoursAfter').textContent = `${totalAfter}h`;
+  document.getElementById('currentHours').textContent = formatHours(currentHours);
+  document.getElementById('estimatedHours').textContent = formatHours(estimatedHours);
+  document.getElementById('totalHoursAfter').textContent = formatHours(totalAfter);
   
   // Destacar se ultrapassar estimativa
   const totalAfterEl = document.getElementById('totalHoursAfter');
@@ -1049,17 +1459,36 @@ function initializeActivityActions() {
     if (!btn) return;
     
     const activity = btn.closest('.activity-item');
-    const activityId = activity?.dataset.activityId;
-    const activityTitle = activity?.querySelector('.activity-item__title')?.textContent;
-    const activityType = activity?.dataset.type;
+    if (!activity) return;
+    
+    const activityIdRaw = activity.dataset.activityId;
+    const activityId = activityIdRaw ? parseInt(activityIdRaw, 10) : null;
+    const activityTitle = activity.dataset.title || activity.querySelector('.activity-item__title')?.textContent || '';
+    const activityType = activity.dataset.type || 'project';
+    const workedHours = parseFloat(activity.dataset.workedHours || '0');
+    const estimatedHours = parseFloat(activity.dataset.estimatedHours || '0');
+    const deadline = activity.dataset.deadline || '';
+    const deadlineLabel = activity.dataset.deadlineLabel || '';
+    const assignmentLabel = activity.dataset.assignmentLabel || '';
+    const status = activity.dataset.status || '';
+    const companyName = activity.dataset.companyName || '';
+    const planName = activity.dataset.planName || '';
+    const description = activity.dataset.description || '';
     
     // Montar objeto de atividade
     const activityData = {
       id: activityId,
       title: activityTitle,
       type: activityType,
-      worked_hours: 0, // TODO: buscar do backend
-      estimated_hours: 8 // TODO: buscar do backend
+      worked_hours: workedHours,
+      estimated_hours: estimatedHours,
+      deadline,
+      deadline_label: deadlineLabel,
+      assignment_label: assignmentLabel,
+      status,
+      company_name: companyName,
+      plan_name: planName,
+      description
     };
     
     // Identificar ação pelo data-action

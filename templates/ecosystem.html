@@ -1,9 +1,9 @@
-<!DOCTYPE html>
+﻿<!DOCTYPE html>
 <html lang="pt-BR">
 <head>
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Ecossistema Versus - Gestão Corporativa</title>
+    <title>Ecossistema Versus - GestÃ£o Corporativa</title>
     <link rel="icon" type="image/x-icon" href="{{ url_for('static', filename='favicon.ico') }}" />
     <link rel="shortcut icon" type="image/x-icon" href="{{ url_for('static', filename='favicon.ico') }}" />
     <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -107,6 +107,11 @@
             box-shadow: var(--shadow-lg);
         }
 
+        .module-card[aria-disabled="true"] {
+            cursor: not-allowed;
+            pointer-events: none;
+        }
+
         .module-icon {
             width: 64px;
             height: 64px;
@@ -195,65 +200,85 @@
     </style>
 </head>
 <body>
+    {% set module_links = module_links if module_links is defined else {} %}
+    {% set pev_link = module_links.get('pev') %}
+    {% set grv_link = module_links.get('grv') %}
     <div class="ecosystem-container">
         <header class="ecosystem-header">
             <h1 class="ecosystem-title">Ecossistema Versus</h1>
-            <p class="ecosystem-subtitle">Plataforma completa de gestão corporativa</p>
+            <p class="ecosystem-subtitle">Plataforma completa de gestÃ£o corporativa</p>
         </header>
 
         <div class="modules-grid">
-            <!-- PEV - Planejamento Estratégico Versus -->
-            <a href="{{ url_for('pev.pev_dashboard') }}" class="module-card">
+            <!-- PEV - Planejamento Estrategico Versus -->
+            {% if pev_link %}
+            <a href="{{ pev_link }}" class="module-card">
                 <div class="module-icon">PEV</div>
-                <h2 class="module-title">Planejamento Estratégico</h2>
-                <p class="module-description">Desenvolva e gerencie planos estratégicos com OKRs, direcionadores e projetos.</p>
-                <div class="module-status status-active">✓ Ativo</div>
+                <h2 class="module-title">Planejamento Estrategico</h2>
+                <p class="module-description">Desenvolva e gerencie planos estrategicos com OKRs, direcionadores e projetos.</p>
+                <div class="module-status status-active">Ativo</div>
             </a>
+            {% else %}
+            <div class="module-card coming-soon" aria-disabled="true">
+                <div class="module-icon">PEV</div>
+                <h2 class="module-title">Planejamento Estrategico</h2>
+                <p class="module-description">Modulo indisponivel neste ambiente. Verifique dependencias do blueprint PEV.</p>
+                <div class="module-status status-coming-soon">Indisponivel</div>
+            </div>
+            {% endif %}
 
             <!-- GRV - Gerenciamento da Rotina Versus -->
-            <a href="{{ url_for('grv.grv_dashboard') }}" class="module-card">
+            {% if grv_link %}
+            <a href="{{ grv_link }}" class="module-card">
                 <div class="module-icon">GRV</div>
                 <h2 class="module-title">Gerenciamento da Rotina</h2>
                 <p class="module-description">Organize processos operacionais, gerencie projetos e acompanhe a rotina.</p>
-                <div class="module-status status-active">✓ Ativo</div>
+                <div class="module-status status-active">Ativo</div>
             </a>
-
+            {% else %}
+            <div class="module-card coming-soon" aria-disabled="true">
+                <div class="module-icon">GRV</div>
+                <h2 class="module-title">Gerenciamento da Rotina</h2>
+                <p class="module-description">Modulo indisponivel neste ambiente. Verifique dependencias do blueprint GRV.</p>
+                <div class="module-status status-coming-soon">Indisponivel</div>
+            </div>
+            {% endif %}
             <!-- Empresas - Cadastro Unificado -->
             <a href="/companies" class="module-card">
-                <div class="module-icon">🏢</div>
+                <div class="module-icon">ðŸ¢</div>
                 <h2 class="module-title">Empresas</h2>
                 <p class="module-description">Cadastro unificado por abas: Geral, PEV e GRV.</p>
-                <div class="module-status status-active">✓ Ativo</div>
+                <div class="module-status status-active">âœ“ Ativo</div>
             </a>
 
-            <!-- GEV - Gestão Estratégica Versus (em breve) -->
-            <div class="module-card coming-soon" aria-label="Gestão Estratégica (em breve)">
+            <!-- GEV - GestÃ£o EstratÃ©gica Versus (em breve) -->
+            <div class="module-card coming-soon" aria-label="GestÃ£o EstratÃ©gica (em breve)">
                 <div class="module-icon">GEV</div>
-                <h2 class="module-title">Gestão Estratégica</h2>
-                <p class="module-description">Dashboards, métricas de performance e relatórios executivos.</p>
-                <div class="module-status status-coming-soon">⏳ Em breve</div>
+                <h2 class="module-title">GestÃ£o EstratÃ©gica</h2>
+                <p class="module-description">Dashboards, mÃ©tricas de performance e relatÃ³rios executivos.</p>
+                <div class="module-status status-coming-soon">â³ Em breve</div>
             </div>
 
-            <!-- GFV - Gestão Financeira Versus (em breve) -->
-            <div class="module-card coming-soon" aria-label="Gestão Financeira (em breve)">
+            <!-- GFV - GestÃ£o Financeira Versus (em breve) -->
+            <div class="module-card coming-soon" aria-label="GestÃ£o Financeira (em breve)">
                 <div class="module-icon">GFV</div>
-                <h2 class="module-title">Gestão Financeira</h2>
-                <p class="module-description">Orçamentos, fluxo de caixa, custos e indicadores financeiros.</p>
-                <div class="module-status status-coming-soon">⏳ Em breve</div>
+                <h2 class="module-title">GestÃ£o Financeira</h2>
+                <p class="module-description">OrÃ§amentos, fluxo de caixa, custos e indicadores financeiros.</p>
+                <div class="module-status status-coming-soon">â³ Em breve</div>
             </div>
 
-            <!-- CFG - Configurações -->
+            <!-- CFG - ConfiguraÃ§Ãµes -->
             <a href="/configs" class="module-card">
                 <div class="module-icon">CFG</div>
-                <h2 class="module-title">Configurações</h2>
-                <p class="module-description">Central de configurações do sistema, relatórios e padrões globais.</p>
-                <div class="module-status status-active">✓ Ativo</div>
+                <h2 class="module-title">ConfiguraÃ§Ãµes</h2>
+                <p class="module-description">Central de configuraÃ§Ãµes do sistema, relatÃ³rios e padrÃµes globais.</p>
+                <div class="module-status status-active">âœ“ Ativo</div>
             </a>
         </div>
 
 
         <footer class="ecosystem-footer">
-            <p class="footer-text">© 2025 Versus Gestão Corporativa - Transformando organizações através da gestão estratégica</p>
+            <p class="footer-text">Â© 2025 Versus GestÃ£o Corporativa - Transformando organizaÃ§Ãµes atravÃ©s da gestÃ£o estratÃ©gica</p>
         </footer>
     </div>
 </body>

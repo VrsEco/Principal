@@ -111,6 +111,13 @@
 - Backups automáticos gerados em `backups/` via `scripts/backup/run_pg_backup.ps1` (12h/18h/22h)
 - Publicação diária no GitHub às 18h com `scripts/deploy/auto_git_push.ps1` (requer credenciais configuradas)
 
+### Checklist de Alterações Relacionadas a Infraestrutura
+
+- [ ] Avaliar se a mudança impacta Dockerfiles, `docker-compose.yml`, variáveis de ambiente ou serviços auxiliares executados em containers.
+- [ ] Atualizar os arquivos de Docker e exemplos de configuração (`.env.example`, scripts) sempre que houver novas dependências, portas ou integrações.
+- [ ] Executar `docker compose up --build` (ou comando equivalente) para validar o stack containerizado antes de concluir a tarefa.
+- [ ] Documentar no PR/commit como a validação em Docker foi realizada; ausência desta evidência bloqueia a revisão.
+
 ---
 
 ## 🚫 Tecnologias Proibidas

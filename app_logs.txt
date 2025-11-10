@@ -1,0 +1,200 @@
+gestaoversus_app_prod  |   File "/app/app_pev.py", line 140, in <module>
+gestaoversus_app_prod  |     from modules.pev import pev_bp
+gestaoversus_app_prod  |   File "/app/modules/pev/__init__.py", line 32, in <module>
+gestaoversus_app_prod  |     from services.ui_catalog_service import (
+gestaoversus_app_prod  | ModuleNotFoundError: No module named 'services.ui_catalog_service'
+gestaoversus_app_prod  | Traceback (most recent call last):
+gestaoversus_app_prod  |   File "/app/app_pev.py", line 140, in <module>
+gestaoversus_app_prod  |     from modules.pev import pev_bp
+gestaoversus_app_prod  |   File "/app/modules/pev/__init__.py", line 32, in <module>
+gestaoversus_app_prod  |     from services.ui_catalog_service import (
+gestaoversus_app_prod  | ModuleNotFoundError: No module named 'services.ui_catalog_service'
+gestaoversus_app_prod  | Traceback (most recent call last):
+gestaoversus_app_prod  |   File "/app/app_pev.py", line 140, in <module>
+gestaoversus_app_prod  |     from modules.pev import pev_bp
+gestaoversus_app_prod  |   File "/app/modules/pev/__init__.py", line 32, in <module>
+gestaoversus_app_prod  |     from services.ui_catalog_service import (
+gestaoversus_app_prod  | ModuleNotFoundError: No module named 'services.ui_catalog_service'
+gestaoversus_app_prod  | Sistema de logs de usuários integrado com sucesso!
+gestaoversus_app_prod  | Sistema de auditoria de rotas integrado com sucesso!
+gestaoversus_app_prod  | Sistema de logs de usuários integrado com sucesso!
+gestaoversus_app_prod  | Sistema de auditoria de rotas integrado com sucesso!
+gestaoversus_app_prod  | Sistema de logs de usuários integrado com sucesso!
+gestaoversus_app_prod  | Sistema de auditoria de rotas integrado com sucesso!
+gestaoversus_app_prod  | Aviso: Blueprints PEV/GRV/Meetings/MyWork não registrados: No module named 'services.ui_catalog_service'
+gestaoversus_app_prod  | Traceback (most recent call last):
+gestaoversus_app_prod  |   File "/app/app_pev.py", line 140, in <module>
+gestaoversus_app_prod  |     from modules.pev import pev_bp
+gestaoversus_app_prod  |   File "/app/modules/pev/__init__.py", line 32, in <module>
+gestaoversus_app_prod  |     from services.ui_catalog_service import (
+gestaoversus_app_prod  | ModuleNotFoundError: No module named 'services.ui_catalog_service'
+gestaoversus_app_prod  | Sistema de logs de usuários integrado com sucesso!
+gestaoversus_app_prod  | Sistema de auditoria de rotas integrado com sucesso!
+gestaoversus_app_prod  | 127.0.0.1 - - [08/Nov/2025:13:26:08 +0000] "GET /health HTTP/1.1" 200 81 "-" "curl/8.14.1"
+gestaoversus_app_prod  | 172.19.0.1 - - [08/Nov/2025:13:26:09 +0000] "GET /grv/company/14/process/map/pdf2 HTTP/1.1" 404 207 "-" "Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:144.0) Gecko/20100101 Firefox/144.0"
+gestaoversus_app_prod  | 172.19.0.1 - - [08/Nov/2025:13:26:11 +0000] "GET /grv/company/14/process/map/pdf2 HTTP/1.1" 404 207 "-" "Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:144.0) Gecko/20100101 Firefox/144.0"
+gestaoversus_app_prod  | 172.19.0.1 - - [08/Nov/2025:13:26:14 +0000] "GET /grv/company/14/process/map/pdf2 HTTP/1.1" 404 207 "http://127.0.0.1:5003/grv/company/14/process/map" "Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:144.0) Gecko/20100101 Firefox/144.0"
+gestaoversus_app_prod  | 172.19.0.1 - - [08/Nov/2025:13:26:26 +0000] "GET /grv/company/14/process/map HTTP/1.1" 404 207 "-" "Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:144.0) Gecko/20100101 Firefox/144.0"
+gestaoversus_app_prod  | 172.19.0.1 - - [08/Nov/2025:13:26:28 +0000] "GET /grv/company/14/process/map/pdf2 HTTP/1.1" 404 207 "http://127.0.0.1:5003/grv/company/14/process/map" "Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:144.0) Gecko/20100101 Firefox/144.0"
+gestaoversus_app_prod  | 127.0.0.1 - - [08/Nov/2025:13:26:39 +0000] "GET /health HTTP/1.1" 200 81 "-" "curl/8.14.1"
+gestaoversus_app_prod  | 127.0.0.1 - - [08/Nov/2025:13:27:09 +0000] "GET /health HTTP/1.1" 200 81 "-" "curl/8.14.1"
+gestaoversus_app_prod  | 172.19.0.1 - - [08/Nov/2025:13:27:28 +0000] "GET /pev/dashboard HTTP/1.1" 404 207 "http://127.0.0.1:5003/grv/company/14/process/map" "Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:144.0) Gecko/20100101 Firefox/144.0"
+gestaoversus_app_prod  | [2025-11-08 13:27:36 +0000] [1] [INFO] Handling signal: term
+gestaoversus_app_prod  | [2025-11-08 13:27:36 +0000] [7] [INFO] Worker exiting (pid: 7)
+gestaoversus_app_prod  | [2025-11-08 13:27:36 +0000] [9] [INFO] Worker exiting (pid: 9)
+gestaoversus_app_prod  | [2025-11-08 13:27:36 +0000] [10] [INFO] Worker exiting (pid: 10)
+gestaoversus_app_prod  | [2025-11-08 13:27:36 +0000] [8] [INFO] Worker exiting (pid: 8)
+gestaoversus_app_prod  | [2025-11-08 13:27:51 +0000] [1] [INFO] Starting gunicorn 21.2.0
+gestaoversus_app_prod  | [2025-11-08 13:27:51 +0000] [1] [INFO] Listening at: http://0.0.0.0:5002 (1)
+gestaoversus_app_prod  | [2025-11-08 13:27:51 +0000] [1] [INFO] Using worker: gthread
+gestaoversus_app_prod  | [2025-11-08 13:27:51 +0000] [7] [INFO] Booting worker with pid: 7
+gestaoversus_app_prod  | [2025-11-08 13:27:51 +0000] [8] [INFO] Booting worker with pid: 8
+gestaoversus_app_prod  | [2025-11-08 13:27:51 +0000] [9] [INFO] Booting worker with pid: 9
+gestaoversus_app_prod  | [2025-11-08 13:27:51 +0000] [10] [INFO] Booting worker with pid: 10
+gestaoversus_app_prod  | Celery inicializado com sucesso.Celery inicializado com sucesso.
+gestaoversus_app_prod  | 
+gestaoversus_app_prod  | Celery inicializado com sucesso.
+gestaoversus_app_prod  | Celery inicializado com sucesso.
+gestaoversus_app_prod  | Aviso: Blueprints PEV/GRV/Meetings/MyWork não registrados: No module named 'services.ui_catalog_service'
+gestaoversus_app_prod  | Aviso: Blueprints PEV/GRV/Meetings/MyWork não registrados: No module named 'services.ui_catalog_service'
+gestaoversus_app_prod  | Aviso: Blueprints PEV/GRV/Meetings/MyWork não registrados: No module named 'services.ui_catalog_service'
+gestaoversus_app_prod  | Aviso: Blueprints PEV/GRV/Meetings/MyWork não registrados: No module named 'services.ui_catalog_service'
+gestaoversus_app_prod  | Traceback (most recent call last):
+gestaoversus_app_prod  |   File "/app/app_pev.py", line 140, in <module>
+gestaoversus_app_prod  |     from modules.pev import pev_bp
+gestaoversus_app_prod  |   File "/app/modules/pev/__init__.py", line 32, in <module>
+gestaoversus_app_prod  |     from services.ui_catalog_service import (
+gestaoversus_app_prod  | ModuleNotFoundError: No module named 'services.ui_catalog_service'
+gestaoversus_app_prod  | Traceback (most recent call last):
+gestaoversus_app_prod  |   File "/app/app_pev.py", line 140, in <module>
+gestaoversus_app_prod  |     from modules.pev import pev_bp
+gestaoversus_app_prod  |   File "/app/modules/pev/__init__.py", line 32, in <module>
+gestaoversus_app_prod  |     from services.ui_catalog_service import (
+gestaoversus_app_prod  | ModuleNotFoundError: No module named 'services.ui_catalog_service'
+gestaoversus_app_prod  | Traceback (most recent call last):
+gestaoversus_app_prod  |   File "/app/app_pev.py", line 140, in <module>
+gestaoversus_app_prod  |     from modules.pev import pev_bp
+gestaoversus_app_prod  |   File "/app/modules/pev/__init__.py", line 32, in <module>
+gestaoversus_app_prod  |     from services.ui_catalog_service import (
+gestaoversus_app_prod  | ModuleNotFoundError: No module named 'services.ui_catalog_service'
+gestaoversus_app_prod  | Traceback (most recent call last):
+gestaoversus_app_prod  |   File "/app/app_pev.py", line 140, in <module>
+gestaoversus_app_prod  |     from modules.pev import pev_bp
+gestaoversus_app_prod  |   File "/app/modules/pev/__init__.py", line 32, in <module>
+gestaoversus_app_prod  |     from services.ui_catalog_service import (
+gestaoversus_app_prod  | ModuleNotFoundError: No module named 'services.ui_catalog_service'
+gestaoversus_app_prod  | Sistema de logs de usuários integrado com sucesso!
+gestaoversus_app_prod  | Sistema de auditoria de rotas integrado com sucesso!
+gestaoversus_app_prod  | Sistema de logs de usuários integrado com sucesso!
+gestaoversus_app_prod  | Sistema de auditoria de rotas integrado com sucesso!
+gestaoversus_app_prod  | Sistema de logs de usuários integrado com sucesso!
+gestaoversus_app_prod  | Sistema de auditoria de rotas integrado com sucesso!
+gestaoversus_app_prod  | Sistema de logs de usuários integrado com sucesso!
+gestaoversus_app_prod  | Sistema de auditoria de rotas integrado com sucesso!
+gestaoversus_app_prod  | 127.0.0.1 - - [08/Nov/2025:13:27:55 +0000] "GET /health HTTP/1.1" 200 81 "-" "curl/8.14.1"
+gestaoversus_app_prod  | 172.19.0.1 - - [08/Nov/2025:13:28:04 +0000] "GET /pev/implantacao/modelo/modefin HTTP/1.1" 404 207 "-" "Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:144.0) Gecko/20100101 Firefox/144.0"
+gestaoversus_app_prod  | 172.19.0.1 - - [08/Nov/2025:13:28:14 +0000] "GET /grv/dashboard HTTP/1.1" 404 207 "http://127.0.0.1:5003/grv/company/14/process/map" "Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:144.0) Gecko/20100101 Firefox/144.0"
+gestaoversus_app_prod  | 172.19.0.1 - - [08/Nov/2025:13:28:23 +0000] "GET / HTTP/1.1" 302 199 "-" "Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:144.0) Gecko/20100101 Firefox/144.0"
+gestaoversus_app_prod  | 172.19.0.1 - - [08/Nov/2025:13:28:23 +0000] "GET /login HTTP/1.1" 302 197 "-" "Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:144.0) Gecko/20100101 Firefox/144.0"
+gestaoversus_app_prod  | [2025-11-08 13:28:23 +0000] [8] [ERROR] Error handling request /main
+gestaoversus_app_prod  | Traceback (most recent call last):
+gestaoversus_app_prod  |   File "/usr/local/lib/python3.9/site-packages/gunicorn/workers/gthread.py", line 282, in handle
+gestaoversus_app_prod  |     keepalive = self.handle_request(req, conn)
+gestaoversus_app_prod  |   File "/usr/local/lib/python3.9/site-packages/gunicorn/workers/gthread.py", line 334, in handle_request
+gestaoversus_app_prod  |     respiter = self.wsgi(environ, resp.start_response)
+gestaoversus_app_prod  |   File "/usr/local/lib/python3.9/site-packages/flask/app.py", line 2213, in __call__
+gestaoversus_app_prod  | 172.19.0.1 - - [08/Nov/2025:13:28:23 +0000] "GET /main HTTP/1.1" 500 0 "-" "-"
+gestaoversus_app_prod  |     return self.wsgi_app(environ, start_response)
+gestaoversus_app_prod  |   File "/usr/local/lib/python3.9/site-packages/flask/app.py", line 2193, in wsgi_app
+gestaoversus_app_prod  |     response = self.handle_exception(e)
+gestaoversus_app_prod  |   File "/usr/local/lib/python3.9/site-packages/flask/app.py", line 2190, in wsgi_app
+gestaoversus_app_prod  |     response = self.full_dispatch_request()
+gestaoversus_app_prod  |   File "/usr/local/lib/python3.9/site-packages/flask/app.py", line 1486, in full_dispatch_request
+gestaoversus_app_prod  |     rv = self.handle_user_exception(e)
+gestaoversus_app_prod  |   File "/usr/local/lib/python3.9/site-packages/flask/app.py", line 1484, in full_dispatch_request
+gestaoversus_app_prod  |     rv = self.dispatch_request()
+gestaoversus_app_prod  |   File "/usr/local/lib/python3.9/site-packages/flask/app.py", line 1469, in dispatch_request
+gestaoversus_app_prod  |     return self.ensure_sync(self.view_functions[rule.endpoint])(**view_args)
+gestaoversus_app_prod  |   File "/usr/local/lib/python3.9/site-packages/flask_login/utils.py", line 290, in decorated_view
+gestaoversus_app_prod  |     return current_app.ensure_sync(func)(*args, **kwargs)
+gestaoversus_app_prod  |   File "/app/app_pev.py", line 788, in main
+gestaoversus_app_prod  |     return render_template("ecosystem.html")
+gestaoversus_app_prod  |   File "/usr/local/lib/python3.9/site-packages/flask/templating.py", line 151, in render_template
+gestaoversus_app_prod  |     return _render(app, template, context)
+gestaoversus_app_prod  |   File "/usr/local/lib/python3.9/site-packages/flask/templating.py", line 132, in _render
+gestaoversus_app_prod  |     rv = template.render(context)
+gestaoversus_app_prod  |   File "/usr/local/lib/python3.9/site-packages/jinja2/environment.py", line 1295, in render
+gestaoversus_app_prod  |     self.environment.handle_exception()
+gestaoversus_app_prod  |   File "/usr/local/lib/python3.9/site-packages/jinja2/environment.py", line 942, in handle_exception
+gestaoversus_app_prod  |     raise rewrite_traceback_stack(source=source)
+gestaoversus_app_prod  |   File "/app/templates/ecosystem.html", line 206, in top-level template code
+gestaoversus_app_prod  |     <a href="{{ url_for('pev.pev_dashboard') }}" class="module-card">
+gestaoversus_app_prod  |   File "/usr/local/lib/python3.9/site-packages/flask/app.py", line 1697, in url_for
+gestaoversus_app_prod  |     return self.handle_url_build_error(error, endpoint, values)
+gestaoversus_app_prod  |   File "/usr/local/lib/python3.9/site-packages/flask/app.py", line 1686, in url_for
+gestaoversus_app_prod  |     rv = url_adapter.build(  # type: ignore[union-attr]
+gestaoversus_app_prod  |   File "/usr/local/lib/python3.9/site-packages/werkzeug/routing/map.py", line 950, in build
+gestaoversus_app_prod  |     raise BuildError(endpoint, values, method, self)
+gestaoversus_app_prod  | werkzeug.routing.exceptions.BuildError: Could not build url for endpoint 'pev.pev_dashboard'. Did you mean 'plan_dashboard' instead?
+gestaoversus_app_prod  | 127.0.0.1 - - [08/Nov/2025:13:28:26 +0000] "GET /health HTTP/1.1" 200 81 "-" "curl/8.14.1"
+gestaoversus_app_prod  | 172.19.0.1 - - [08/Nov/2025:13:28:48 +0000] "GET /grv/company/14/process/map/print HTTP/1.1" 404 207 "-" "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Cursor/2.0.69 Chrome/138.0.7204.251 Electron/37.7.0 Safari/537.36"
+gestaoversus_app_prod  | 172.19.0.1 - - [08/Nov/2025:13:28:55 +0000] "GET / HTTP/1.1" 302 199 "-" "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Cursor/2.0.69 Chrome/138.0.7204.251 Electron/37.7.0 Safari/537.36"
+gestaoversus_app_prod  | 172.19.0.1 - - [08/Nov/2025:13:28:55 +0000] "GET /login HTTP/1.1" 200 43100 "-" "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Cursor/2.0.69 Chrome/138.0.7204.251 Electron/37.7.0 Safari/537.36"
+gestaoversus_app_prod  | 172.19.0.1 - - [08/Nov/2025:13:28:55 +0000] "GET /static/css/grv-global-pattern.css HTTP/1.1" 304 0 "http://127.0.0.1:5003/login" "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Cursor/2.0.69 Chrome/138.0.7204.251 Electron/37.7.0 Safari/537.36"
+gestaoversus_app_prod  | 172.19.0.1 - - [08/Nov/2025:13:28:55 +0000] "GET /static/css/main.css HTTP/1.1" 304 0 "http://127.0.0.1:5003/login" "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Cursor/2.0.69 Chrome/138.0.7204.251 Electron/37.7.0 Safari/537.36"
+gestaoversus_app_prod  | 172.19.0.1 - - [08/Nov/2025:13:28:55 +0000] "GET /static/img/versus-logo.png HTTP/1.1" 304 0 "http://127.0.0.1:5003/login" "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Cursor/2.0.69 Chrome/138.0.7204.251 Electron/37.7.0 Safari/537.36"
+gestaoversus_app_prod  | 172.19.0.1 - - [08/Nov/2025:13:28:55 +0000] "GET /static/css/theme-alt.css HTTP/1.1" 304 0 "http://127.0.0.1:5003/login" "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Cursor/2.0.69 Chrome/138.0.7204.251 Electron/37.7.0 Safari/537.36"
+gestaoversus_app_prod  | 127.0.0.1 - - [08/Nov/2025:13:28:56 +0000] "GET /health HTTP/1.1" 200 81 "-" "curl/8.14.1"
+gestaoversus_app_prod  | [2025-11-08 13:29:15,966] ERROR in log_service: Failed to create log entry: (psycopg2.errors.NotNullViolation) ERRO:  o valor nulo na coluna "id" da relação "user_logs" viola a restrição de não-nulo
+gestaoversus_app_prod  | DETAIL:  Registro que falhou contém (null, 2, admin@versus.com.br, Administrador, LOGIN, user, 2, Administrador, null, null, 172.19.0.1, Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KH..., login, POST, Login bem-sucedido, null, null, 2025-11-08 13:29:15.944036).
+gestaoversus_app_prod  | 
+gestaoversus_app_prod  | [SQL: INSERT INTO user_logs (user_id, user_email, user_name, action, entity_type, entity_id, entity_name, old_values, new_values, ip_address, user_agent, endpoint, method, description, company_id, plan_id, created_at) VALUES (%(user_id)s, %(user_email)s, %(user_name)s, %(action)s, %(entity_type)s, %(entity_id)s, %(entity_name)s, %(old_values)s, %(new_values)s, %(ip_address)s, %(user_agent)s, %(endpoint)s, %(method)s, %(description)s, %(company_id)s, %(plan_id)s, %(created_at)s) RETURNING user_logs.id]
+gestaoversus_app_prod  | [parameters: {'user_id': 2, 'user_email': 'admin@versus.com.br', 'user_name': 'Administrador', 'action': 'LOGIN', 'entity_type': 'user', 'entity_id': '2', 'entity_name': 'Administrador', 'old_values': None, 'new_values': None, 'ip_address': '172.19.0.1', 'user_agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Cursor/2.0.69 Chrome/138.0.7204.251 Electron/37.7.0 Safari/537.36', 'endpoint': 'login', 'method': 'POST', 'description': 'Login bem-sucedido', 'company_id': None, 'plan_id': None, 'created_at': datetime.datetime(2025, 11, 8, 13, 29, 15, 944036)}]
+gestaoversus_app_prod  | (Background on this error at: https://sqlalche.me/e/20/gkpj)
+gestaoversus_app_prod  | 172.19.0.1 - - [08/Nov/2025:13:29:15 +0000] "POST /login HTTP/1.1" 200 309 "http://127.0.0.1:5003/login" "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Cursor/2.0.69 Chrome/138.0.7204.251 Electron/37.7.0 Safari/537.36"
+gestaoversus_app_prod  | [2025-11-08 13:29:16 +0000] [7] [ERROR] Error handling request /main
+gestaoversus_app_prod  | Traceback (most recent call last):
+gestaoversus_app_prod  |   File "/usr/local/lib/python3.9/site-packages/gunicorn/workers/gthread.py", line 282, in handle
+gestaoversus_app_prod  |     keepalive = self.handle_request(req, conn)
+gestaoversus_app_prod  |   File "/usr/local/lib/python3.9/site-packages/gunicorn/workers/gthread.py", line 334, in handle_request
+gestaoversus_app_prod  |     respiter = self.wsgi(environ, resp.start_response)
+gestaoversus_app_prod  |   File "/usr/local/lib/python3.9/site-packages/flask/app.py", line 2213, in __call__
+gestaoversus_app_prod  |     return self.wsgi_app(environ, start_response)
+gestaoversus_app_prod  |   File "/usr/local/lib/python3.9/site-packages/flask/app.py", line 2193, in wsgi_app
+gestaoversus_app_prod  |     response = self.handle_exception(e)
+gestaoversus_app_prod  |   File "/usr/local/lib/python3.9/site-packages/flask/app.py", line 2190, in wsgi_app
+gestaoversus_app_prod  |     response = self.full_dispatch_request()
+gestaoversus_app_prod  |   File "/usr/local/lib/python3.9/site-packages/flask/app.py", line 1486, in full_dispatch_request
+gestaoversus_app_prod  |     rv = self.handle_user_exception(e)
+gestaoversus_app_prod  |   File "/usr/local/lib/python3.9/site-packages/flask/app.py", line 1484, in full_dispatch_request
+gestaoversus_app_prod  |     rv = self.dispatch_request()
+gestaoversus_app_prod  |   File "/usr/local/lib/python3.9/site-packages/flask/app.py", line 1469, in dispatch_request
+gestaoversus_app_prod  |     return self.ensure_sync(self.view_functions[rule.endpoint])(**view_args)
+gestaoversus_app_prod  |   File "/usr/local/lib/python3.9/site-packages/flask_login/utils.py", line 290, in decorated_view
+gestaoversus_app_prod  |     return current_app.ensure_sync(func)(*args, **kwargs)
+gestaoversus_app_prod  |   File "/app/app_pev.py", line 788, in main
+gestaoversus_app_prod  |     return render_template("ecosystem.html")
+gestaoversus_app_prod  |   File "/usr/local/lib/python3.9/site-packages/flask/templating.py", line 151, in render_template
+gestaoversus_app_prod  |     return _render(app, template, context)
+gestaoversus_app_prod  |   File "/usr/local/lib/python3.9/site-packages/flask/templating.py", line 132, in _render
+gestaoversus_app_prod  |     rv = template.render(context)
+gestaoversus_app_prod  |   File "/usr/local/lib/python3.9/site-packages/jinja2/environment.py", line 1295, in render
+gestaoversus_app_prod  |     self.environment.handle_exception()
+gestaoversus_app_prod  |   File "/usr/local/lib/python3.9/site-packages/jinja2/environment.py", line 942, in handle_exception
+gestaoversus_app_prod  |     raise rewrite_traceback_stack(source=source)
+gestaoversus_app_prod  |   File "/app/templates/ecosystem.html", line 206, in top-level template code
+gestaoversus_app_prod  |     <a href="{{ url_for('pev.pev_dashboard') }}" class="module-card">
+gestaoversus_app_prod  |   File "/usr/local/lib/python3.9/site-packages/flask/app.py", line 1697, in url_for
+gestaoversus_app_prod  |     return self.handle_url_build_error(error, endpoint, values)
+gestaoversus_app_prod  |   File "/usr/local/lib/python3.9/site-packages/flask/app.py", line 1686, in url_for
+gestaoversus_app_prod  |     rv = url_adapter.build(  # type: ignore[union-attr]
+gestaoversus_app_prod  |   File "/usr/local/lib/python3.9/site-packages/werkzeug/routing/map.py", line 950, in build
+gestaoversus_app_prod  |     raise BuildError(endpoint, values, method, self)
+gestaoversus_app_prod  | werkzeug.routing.exceptions.BuildError: Could not build url for endpoint 'pev.pev_dashboard'. Did you mean 'plan_dashboard' instead?
+gestaoversus_app_prod  | 172.19.0.1 - - [08/Nov/2025:13:29:16 +0000] "GET /main HTTP/1.1" 500 0 "-" "-"
+gestaoversus_app_prod  | 127.0.0.1 - - [08/Nov/2025:13:29:26 +0000] "GET /health HTTP/1.1" 200 81 "-" "curl/8.14.1"
+gestaoversus_app_prod  | 127.0.0.1 - - [08/Nov/2025:13:29:56 +0000] "GET /health HTTP/1.1" 200 81 "-" "curl/8.14.1"
+gestaoversus_app_prod  | 127.0.0.1 - - [08/Nov/2025:13:30:26 +0000] "GET /health HTTP/1.1" 200 81 "-" "curl/8.14.1"
+gestaoversus_app_prod  | 127.0.0.1 - - [08/Nov/2025:13:30:56 +0000] "GET /health HTTP/1.1" 200 81 "-" "curl/8.14.1"
+gestaoversus_app_prod  | 127.0.0.1 - - [08/Nov/2025:13:31:26 +0000] "GET /health HTTP/1.1" 200 81 "-" "curl/8.14.1"
+gestaoversus_app_prod  | 127.0.0.1 - - [08/Nov/2025:13:31:56 +0000] "GET /health HTTP/1.1" 200 81 "-" "curl/8.14.1"

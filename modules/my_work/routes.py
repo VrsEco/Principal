@@ -52,6 +52,12 @@ def get_activities():
         # Mapear user para employee
         employee_id = get_employee_from_user(current_user.id)
         
+        if employee_id is None:
+            return jsonify({
+                'success': False,
+                'error': 'Usuário não vinculado a um colaborador. Solicite ao administrador para concluir o cadastro.'
+            }), 404
+        
         # Parâmetros
         scope = request.args.get('scope', 'me')
         filters = {

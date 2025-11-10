@@ -3,8 +3,10 @@ Service para My Work - Lógica de negócio
 Gerencia atividades pessoais, de equipe e da empresa
 """
 from datetime import datetime, timedelta, date
-from typing import List, Dict, Any, Optional
-from sqlalchemy import or_, and_, func
+from decimal import Decimal
+from typing import List, Dict, Any, Optional, Sequence
+import json
+
 from database.postgres_helper import connect as pg_connect
 
 
@@ -73,7 +75,7 @@ def get_employee_from_user(user_id: int) -> Optional[int]:
         return None
 
 
-def get_user_activities(employee_id: int, scope: str = 'me', filters: Dict = None) -> List[Dict]:
+def get_user_activities(employee_id: Optional[int], scope: str = 'me', filters: Dict = None) -> List[Dict]:
     """
     Retorna atividades conforme escopo
     
@@ -85,6 +87,9 @@ def get_user_activities(employee_id: int, scope: str = 'me', filters: Dict = Non
     Returns:
         Lista de atividades (projetos + processos)
     """
+    if employee_id is None:
+        return []
+    
     filters = filters or {}
     
     conn = pg_connect()
@@ -111,163 +116,34 @@ def get_user_activities(employee_id: int, scope: str = 'me', filters: Dict = Non
 def _get_my_activities(cursor, employee_id: int, filters: Dict) -> List[Dict]:
     """Busca atividades pessoais do colaborador"""
     
-    # Construir filtros WHERE
-    where_clauses = []
-    params = {'employee_id': employee_id}
+    project_rows = _fetch_projects_for_employee(cursor, employee_id)
+    process_rows = _fetch_processes_for_employee(cursor, employee_id)
     
-    filter_type = filters.get('filter', 'all')
-    if filter_type == 'today':
-        where_clauses.append("end_date = CURRENT_DATE")
-    elif filter_type == 'week':
-        where_clauses.append("end_date BETWEEN CURRENT_DATE AND CURRENT_DATE + INTERVAL '7 days'")
-    elif filter_type == 'overdue':
-        where_clauses.append("end_date < CURRENT_DATE AND status != 'completed'")
+    activities = [_serialize_project_activity(row, employee_id) for row in project_rows]
+    activities.extend(_serialize_process_activity(row, employee_id) for row in process_rows)
     
-    # Busca
-    search = filters.get('search', '')
+    activities = _apply_filters(activities, filters)
+    activities = _apply_sort(activities, filters.get('sort', 'deadline'))
     
-    # Construir WHERE adicional
-    where_sql = ""
-    if where_clauses:
-        where_sql = " AND " + " AND ".join(where_clauses)
-    
-    if search:
-        if where_sql:
-            where_sql += " AND (title ILIKE %s OR description ILIKE %s)"
-        else:
-            where_sql = " AND (title ILIKE %s OR description ILIKE %s)"
-    
-    # Query de projetos
-    query_sql = """
-        SELECT 
-            'project' as type,
-            id,
-            title,
-            description,
-            status,
-            priority,
-            responsible_id,
-            executor_id,
-            end_date as deadline,
-            estimated_hours,
-            worked_hours,
-            created_at,
-            updated_at
-        FROM company_projects
-        WHERE (responsible_id = %s OR executor_id = %s)
-    """ + where_sql
-    
-    query_params = [employee_id, employee_id]
-    if search:
-        query_params.extend([f'%{search}%', f'%{search}%'])
-    
-    cursor.execute(query_sql, tuple(query_params))
-    
-    projects = [dict(row) for row in cursor.fetchall()]
-    
-    # Query de processos (simplificada por enquanto)
-    # TODO: Melhorar query de processos com JSON
-    try:
-        cursor.execute("""
-            SELECT 
-                'process' as type,
-                id,
-                title,
-                description,
-                status,
-                priority,
-                NULL as responsible_id,
-                NULL as executor_id,
-                due_date as deadline,
-                estimated_hours,
-                actual_hours as worked_hours,
-                created_at,
-                updated_at
-            FROM process_instances
-            WHERE status != 'completed'
-            LIMIT 50
-        """)
-    except:
-        # Se falhar, retornar lista vazia de processos
-        processes = []
-    else:
-        processes = [dict(row) for row in cursor.fetchall()]
-    
-    # Combinar e ordenar
-    all_activities = projects + processes
-    
-    # Ordenação
-    sort_by = filters.get('sort', 'deadline')
-    if sort_by == 'priority':
-        all_activities.sort(key=lambda x: _priority_order(x.get('priority')), reverse=True)
-    elif sort_by == 'status':
-        all_activities.sort(key=lambda x: _status_order(x.get('status')))
-    else:  # deadline
-        all_activities.sort(key=lambda x: x.get('deadline') or '9999-12-31')
-    
-    return all_activities
+    return activities
 
 
 def _get_team_activities(cursor, employee_id: int, filters: Dict) -> List[Dict]:
     """Busca atividades da equipe do colaborador"""
-    
-    # Buscar equipe do employee
-    cursor.execute("""
-        SELECT team_id
-        FROM team_members
-        WHERE employee_id = %s
-        LIMIT 1
-    """, (employee_id,))
-    
-    team_row = cursor.fetchone()
-    if not team_row:
-        return []
-    
-    team_id = team_row[0]
-    
-    # Buscar IDs dos membros da equipe
-    cursor.execute("""
-        SELECT employee_id
-        FROM team_members
-        WHERE team_id = %s
-    """, (team_id,))
-    
-    member_ids = [row[0] for row in cursor.fetchall()]
-    
+    member_ids = _fetch_team_member_ids(cursor, employee_id)
     if not member_ids:
         return []
     
-    # Buscar atividades de todos os membros
-    placeholders = ','.join(['%s'] * len(member_ids))
+    project_rows = _fetch_projects_for_members(cursor, member_ids)
+    process_rows = _fetch_processes_for_members(cursor, member_ids)
     
-    # Projetos da equipe
-    cursor.execute(f"""
-        SELECT 
-            'project' as type,
-            cp.id,
-            cp.title,
-            cp.description,
-            cp.status,
-            cp.priority,
-            cp.responsible_id,
-            cp.executor_id,
-            cp.end_date as deadline,
-            cp.estimated_hours,
-            cp.worked_hours,
-            e.name as assigned_to_name,
-            cp.created_at,
-            cp.updated_at
-        FROM company_projects cp
-        LEFT JOIN employees e ON e.id = COALESCE(cp.executor_id, cp.responsible_id)
-        WHERE (cp.responsible_id IN ({placeholders}) OR cp.executor_id IN ({placeholders}))
-    """, member_ids + member_ids)
+    activities = [_serialize_project_activity(row, employee_id, member_ids=member_ids) for row in project_rows]
+    activities.extend(_serialize_process_activity(row, employee_id, member_ids=member_ids) for row in process_rows)
     
-    projects = [dict(row) for row in cursor.fetchall()]
+    activities = _apply_filters(activities, filters)
+    activities = _apply_sort(activities, filters.get('sort', 'deadline'))
     
-    # TODO: Buscar processos da equipe
-    # (mais complexo pois assigned_collaborators é JSON)
-    
-    return projects
+    return activities
 
 
 def _get_company_activities(cursor, employee_id: int, filters: Dict) -> List[Dict]:
@@ -277,49 +153,37 @@ def _get_company_activities(cursor, employee_id: int, filters: Dict) -> List[Dic
     if not _can_view_company(cursor, employee_id):
         raise PermissionError("Usuário sem permissão para visualizar atividades da empresa")
     
-    # Buscar company_id do employee
-    cursor.execute("SELECT company_id FROM employees WHERE id = %s", (employee_id,))
-    company_row = cursor.fetchone()
-    
-    if not company_row:
+    company_id = _fetch_employee_company_id(cursor, employee_id)
+    if company_id is None:
         return []
     
-    company_id = company_row[0]
+    project_rows = _fetch_company_projects(cursor, company_id)
+    process_rows = _fetch_company_processes(cursor, company_id)
     
-    # Buscar todas as atividades da empresa
-    cursor.execute("""
-        SELECT 
-            'project' as type,
-            cp.id,
-            cp.title,
-            cp.description,
-            cp.status,
-            cp.priority,
-            cp.responsible_id,
-            cp.executor_id,
-            cp.end_date as deadline,
-            cp.estimated_hours,
-            cp.worked_hours,
-            e.name as assigned_to_name,
-            cp.created_at,
-            cp.updated_at
-        FROM company_projects cp
-        LEFT JOIN employees e ON e.id = COALESCE(cp.executor_id, cp.responsible_id)
-        WHERE cp.company_id = %s
-    """, (company_id,))
+    activities = [_serialize_project_activity(row, employee_id) for row in project_rows]
+    activities.extend(_serialize_process_activity(row, employee_id) for row in process_rows)
     
-    projects = [dict(row) for row in cursor.fetchall()]
+    activities = _apply_filters(activities, filters)
+    activities = _apply_sort(activities, filters.get('sort', 'deadline'))
     
-    return projects
+    return activities
 
 
-def get_user_stats(employee_id: int, scope: str = 'me') -> Dict:
+def get_user_stats(employee_id: Optional[int], scope: str = 'me') -> Dict:
     """
     Retorna estatísticas conforme escopo
     
     Returns:
         Dict com contadores
     """
+    if employee_id is None:
+        return {
+            'pending': 0,
+            'in_progress': 0,
+            'overdue': 0,
+            'completed': 0
+        }
+    
     conn = pg_connect()
     cursor = conn.cursor()
     
@@ -343,80 +207,43 @@ def get_user_stats(employee_id: int, scope: str = 'me') -> Dict:
 
 def _get_my_stats(cursor, employee_id: int) -> Dict:
     """Estatísticas pessoais"""
-    
-    cursor.execute("""
-        SELECT 
-            status,
-            COUNT(*) as count
-        FROM (
-            SELECT status FROM company_projects
-            WHERE (responsible_id = %s OR executor_id = %s)
-            UNION ALL
-            SELECT status FROM process_instances
-            WHERE assigned_collaborators::text LIKE %s
-        ) combined
-        GROUP BY status
-    """, (employee_id, employee_id, f'%"employee_id": {employee_id}%'))
-    
-    status_counts = {row[0]: row[1] for row in cursor.fetchall()}
-    
-    return {
-        'pending': status_counts.get('pending', 0) + status_counts.get('planned', 0),
-        'in_progress': status_counts.get('in_progress', 0) + status_counts.get('executing', 0),
-        'overdue': 0,  # TODO: Calcular atrasadas
-        'completed': status_counts.get('completed', 0)
-    }
+    activities = _get_my_activities(cursor, employee_id, filters={})
+    return _calculate_stats_from_activities(activities)
 
 
 def _get_team_stats(cursor, employee_id: int) -> Dict:
     """Estatísticas da equipe"""
-    # TODO: Implementar
-    return {
-        'pending': 45,
-        'in_progress': 12,
-        'overdue': 8,
-        'completed': 320
-    }
+    activities = _get_team_activities(cursor, employee_id, filters={})
+    return _calculate_stats_from_activities(activities)
 
 
 def _get_company_stats(cursor, employee_id: int) -> Dict:
     """Estatísticas da empresa"""
-    # TODO: Implementar
-    return {
-        'pending': 180,
-        'in_progress': 65,
-        'overdue': 23,
-        'completed': 1500
-    }
+    activities = _get_company_activities(cursor, employee_id, filters={})
+    return _calculate_stats_from_activities(activities)
 
 
-def count_activities_by_scope(employee_id: int) -> Dict:
+def count_activities_by_scope(employee_id: Optional[int]) -> Dict:
     """
     Conta atividades em cada escopo para os contadores das abas
     
     Returns:
         {'me': 17, 'team': 45, 'company': 180}
     """
+    if employee_id is None:
+        return {
+            'me': 0,
+            'team': 0,
+            'company': 0
+        }
+    
     conn = pg_connect()
     cursor = conn.cursor()
     
     try:
-        # Minhas atividades
-        cursor.execute("""
-            SELECT COUNT(*) FROM (
-                SELECT id FROM company_projects
-                WHERE (responsible_id = %s OR executor_id = %s) AND status != 'completed'
-                UNION ALL
-                SELECT id FROM process_instances
-                WHERE assigned_collaborators::text LIKE %s AND status != 'completed'
-            ) combined
-        """, (employee_id, employee_id, f'%"employee_id": {employee_id}%'))
-        
-        count_me = cursor.fetchone()[0]
-        
-        # TODO: Contar equipe e empresa
-        count_team = 0
-        count_company = 0
+        count_me = _count_my_activities(cursor, employee_id)
+        count_team = _count_team_activities(cursor, employee_id)
+        count_company = _count_company_activities(cursor, employee_id)
         
         conn.close()
         
@@ -429,6 +256,598 @@ def count_activities_by_scope(employee_id: int) -> Dict:
     except Exception as e:
         conn.close()
         raise e
+
+
+def _fetch_projects_for_employee(cursor, employee_id: int):
+    """Busca projetos onde o colaborador é responsável ou executor."""
+    cursor.execute("""
+        SELECT 
+            cp.id,
+            cp.company_id,
+            cp.plan_id,
+            cp.title,
+            cp.description,
+            COALESCE(cp.status, 'planned') AS status,
+            LOWER(COALESCE(cp.priority, 'normal')) AS priority,
+            cp.responsible_id,
+            cp.executor_id,
+            resp.name AS responsible_name,
+            exec.name AS executor_name,
+            cp.start_date,
+            cp.end_date AS deadline_date,
+            cp.estimated_hours,
+            cp.worked_hours,
+            cp.created_at,
+            cp.updated_at,
+            pl.name AS plan_name,
+            co.name AS company_name
+        FROM company_projects cp
+        LEFT JOIN employees resp ON resp.id = cp.responsible_id
+        LEFT JOIN employees exec ON exec.id = cp.executor_id
+        LEFT JOIN plans pl ON pl.id = cp.plan_id
+        LEFT JOIN companies co ON co.id = cp.company_id
+        WHERE (cp.responsible_id = %s OR cp.executor_id = %s)
+    """, (employee_id, employee_id))
+    
+    return cursor.fetchall()
+
+
+def _fetch_company_projects(cursor, company_id: int):
+    """Busca todos os projetos da empresa."""
+    cursor.execute("""
+        SELECT 
+            cp.id,
+            cp.company_id,
+            cp.plan_id,
+            cp.title,
+            cp.description,
+            COALESCE(cp.status, 'planned') AS status,
+            LOWER(COALESCE(cp.priority, 'normal')) AS priority,
+            cp.responsible_id,
+            cp.executor_id,
+            resp.name AS responsible_name,
+            exec.name AS executor_name,
+            cp.start_date,
+            cp.end_date AS deadline_date,
+            cp.estimated_hours,
+            cp.worked_hours,
+            cp.created_at,
+            cp.updated_at,
+            pl.name AS plan_name,
+            co.name AS company_name
+        FROM company_projects cp
+        LEFT JOIN employees resp ON resp.id = cp.responsible_id
+        LEFT JOIN employees exec ON exec.id = cp.executor_id
+        LEFT JOIN plans pl ON pl.id = cp.plan_id
+        LEFT JOIN companies co ON co.id = cp.company_id
+        WHERE cp.company_id = %s
+    """, (company_id,))
+    
+    return cursor.fetchall()
+
+
+def _fetch_projects_for_members(cursor, member_ids: Sequence[int]):
+    """Busca projetos atribuídos a membros de equipe."""
+    if not member_ids:
+        return []
+    
+    placeholders = ','.join(['%s'] * len(member_ids))
+    cursor.execute(f"""
+        SELECT 
+            cp.id,
+            cp.company_id,
+            cp.plan_id,
+            cp.title,
+            cp.description,
+            COALESCE(cp.status, 'planned') AS status,
+            LOWER(COALESCE(cp.priority, 'normal')) AS priority,
+            cp.responsible_id,
+            cp.executor_id,
+            resp.name AS responsible_name,
+            exec.name AS executor_name,
+            cp.start_date,
+            cp.end_date AS deadline_date,
+            cp.estimated_hours,
+            cp.worked_hours,
+            cp.created_at,
+            cp.updated_at,
+            pl.name AS plan_name,
+            co.name AS company_name
+        FROM company_projects cp
+        LEFT JOIN employees resp ON resp.id = cp.responsible_id
+        LEFT JOIN employees exec ON exec.id = cp.executor_id
+        LEFT JOIN plans pl ON pl.id = cp.plan_id
+        LEFT JOIN companies co ON co.id = cp.company_id
+        WHERE (cp.responsible_id IN ({placeholders}) OR cp.executor_id IN ({placeholders}))
+    """, tuple(member_ids) + tuple(member_ids))
+    
+    return cursor.fetchall()
+
+
+def _fetch_company_processes(cursor, company_id: int):
+    """Busca instâncias de processos da empresa."""
+    cursor.execute("""
+        SELECT 
+            pi.id,
+            pi.company_id,
+            pi.process_id,
+            pi.title,
+            pi.description,
+            COALESCE(pi.status, 'pending') AS status,
+            LOWER(COALESCE(pi.priority, 'normal')) AS priority,
+            pi.due_date AS deadline_date,
+            pi.estimated_hours,
+            COALESCE(pi.worked_hours, pi.actual_hours) AS worked_hours,
+            pi.created_at,
+            pi.updated_at,
+            pi.assigned_collaborators,
+            pi.instance_code,
+            pi.trigger_type
+        FROM process_instances pi
+        WHERE pi.company_id = %s
+    """, (company_id,))
+    
+    return cursor.fetchall()
+
+
+def _fetch_processes_for_employee(cursor, employee_id: int):
+    """Busca processos onde o colaborador está designado."""
+    company_id = _fetch_employee_company_id(cursor, employee_id)
+    if company_id is None:
+        return []
+    
+    rows = _fetch_company_processes(cursor, company_id)
+    return [row for row in rows if _is_employee_in_process(row, {employee_id})]
+
+
+def _fetch_processes_for_members(cursor, member_ids: Sequence[int]):
+    """Busca processos associados aos membros de uma equipe."""
+    if not member_ids:
+        return []
+    
+    company_ids = _fetch_companies_for_members(cursor, member_ids)
+    if not company_ids:
+        return []
+    
+    member_set = set(member_ids)
+    
+    processes = []
+    for company_id in company_ids:
+        rows = _fetch_company_processes(cursor, company_id)
+        processes.extend(row for row in rows if _is_employee_in_process(row, member_set))
+    
+    return processes
+
+
+def _serialize_project_activity(row, employee_id: int, member_ids: Optional[Sequence[int]] = None) -> Dict:
+    """Serializa projeto."""
+    data = dict(row)
+    deadline = _coerce_date(data.get('deadline_date'))
+    created_dt = _coerce_datetime(data.get('created_at'))
+    updated_dt = _coerce_datetime(data.get('updated_at'))
+    estimated_hours = _safe_float(data.get('estimated_hours'))
+    worked_hours = _safe_float(data.get('worked_hours'))
+    
+    flags = _deadline_flags(deadline, data.get('status'))
+    assignment = _resolve_assignment(
+        employee_id,
+        data.get('responsible_id'),
+        data.get('executor_id'),
+        member_ids
+    )
+    
+    return {
+        'id': data.get('id'),
+        'type': 'project',
+        'title': data.get('title'),
+        'description': data.get('description'),
+        'status': (data.get('status') or 'planned').lower(),
+        'priority': (data.get('priority') or 'normal').lower(),
+        'priority_order': _priority_order((data.get('priority') or 'normal').lower()),
+        'status_order': _status_order((data.get('status') or 'planned').lower()),
+        'deadline': deadline.isoformat() if deadline else None,
+        'deadline_label': _deadline_label(deadline, data.get('status')),
+        'start_date': _date_to_iso(_coerce_date(data.get('start_date'))),
+        'is_overdue': flags['is_overdue'],
+        'is_today': flags['is_today'],
+        'is_this_week': flags['is_this_week'],
+        'filter_tags': _build_filter_tags(flags, data.get('status')),
+        'estimated_hours': estimated_hours,
+        'worked_hours': worked_hours,
+        'progress_percent': _calc_progress(estimated_hours, worked_hours),
+        'responsible_id': data.get('responsible_id'),
+        'responsible_name': data.get('responsible_name'),
+        'executor_id': data.get('executor_id'),
+        'executor_name': data.get('executor_name'),
+        'assignment': assignment,
+        'company_id': data.get('company_id'),
+        'company_name': data.get('company_name'),
+        'plan_id': data.get('plan_id'),
+        'plan_name': data.get('plan_name'),
+        'created_at': _datetime_to_iso(created_dt),
+        'updated_at': _datetime_to_iso(updated_dt),
+        'deadline_sort_key': _deadline_sort_key(deadline),
+        'created_sort_key': _datetime_sort_key(created_dt),
+        'updated_sort_key': _datetime_sort_key(updated_dt)
+    }
+
+
+def _serialize_process_activity(row, employee_id: int, member_ids: Optional[Sequence[int]] = None) -> Dict:
+    """Serializa instância de processo."""
+    data = dict(row)
+    deadline = _coerce_date(data.get('deadline_date'))
+    created_dt = _coerce_datetime(data.get('created_at'))
+    updated_dt = _coerce_datetime(data.get('updated_at'))
+    estimated_hours = _safe_float(data.get('estimated_hours'))
+    worked_hours = _safe_float(data.get('worked_hours'))
+    
+    flags = _deadline_flags(deadline, data.get('status'))
+    collaborators = _parse_collaborators(data.get('assigned_collaborators'))
+    assignment = _resolve_process_assignment(employee_id, collaborators, member_ids)
+    
+    return {
+        'id': data.get('id'),
+        'type': 'process',
+        'title': data.get('title'),
+        'description': data.get('description'),
+        'status': (data.get('status') or 'pending').lower(),
+        'priority': (data.get('priority') or 'normal').lower(),
+        'priority_order': _priority_order((data.get('priority') or 'normal').lower()),
+        'status_order': _status_order((data.get('status') or 'pending').lower()),
+        'deadline': deadline.isoformat() if deadline else None,
+        'deadline_label': _deadline_label(deadline, data.get('status')),
+        'is_overdue': flags['is_overdue'],
+        'is_today': flags['is_today'],
+        'is_this_week': flags['is_this_week'],
+        'filter_tags': _build_filter_tags(flags, data.get('status')),
+        'estimated_hours': estimated_hours,
+        'worked_hours': worked_hours,
+        'progress_percent': _calc_progress(estimated_hours, worked_hours),
+        'assignment': assignment,
+        'company_id': data.get('company_id'),
+        'created_at': _datetime_to_iso(created_dt),
+        'updated_at': _datetime_to_iso(updated_dt),
+        'deadline_sort_key': _deadline_sort_key(deadline),
+        'created_sort_key': _datetime_sort_key(created_dt),
+        'updated_sort_key': _datetime_sort_key(updated_dt),
+        'instance_code': data.get('instance_code'),
+        'trigger_type': data.get('trigger_type'),
+        'collaborators': collaborators
+    }
+
+
+def _apply_filters(activities: List[Dict], filters: Dict) -> List[Dict]:
+    """Aplica filtros e busca."""
+    if not activities:
+        return []
+    
+    filter_type = (filters.get('filter') or 'all').lower()
+    search_term = (filters.get('search') or '').strip().lower()
+    
+    filtered = activities
+    
+    if filter_type != 'all':
+        filtered = [
+            activity for activity in filtered
+            if filter_type in activity.get('filter_tags', [])
+        ]
+    
+    if search_term:
+        filtered = [
+            activity for activity in filtered
+            if search_term in ' '.join(filter(None, [
+                activity.get('title', '').lower(),
+                activity.get('description', '').lower(),
+                activity.get('plan_name', '').lower(),
+                activity.get('company_name', '').lower()
+            ]))
+        ]
+    
+    return filtered
+
+
+def _apply_sort(activities: List[Dict], sort_by: str) -> List[Dict]:
+    """Ordena atividades."""
+    sort_by = (sort_by or 'deadline').lower()
+    
+    if sort_by == 'priority':
+        key_fn = lambda activity: (
+            -activity.get('priority_order', 0),
+            activity.get('deadline_sort_key', 9999999)
+        )
+    elif sort_by == 'status':
+        key_fn = lambda activity: activity.get('status_order', 99)
+    elif sort_by == 'recent':
+        key_fn = lambda activity: -activity.get('updated_sort_key', activity.get('created_sort_key', 0))
+    else:
+        key_fn = lambda activity: (
+            activity.get('deadline_sort_key', 9999999),
+            -activity.get('priority_order', 0)
+        )
+    
+    return sorted(activities, key=key_fn)
+
+
+def _calculate_stats_from_activities(activities: List[Dict]) -> Dict:
+    """Gera contadores de status."""
+    stats = {
+        'pending': 0,
+        'in_progress': 0,
+        'overdue': 0,
+        'completed': 0
+    }
+    
+    for activity in activities:
+        status = (activity.get('status') or '').lower()
+        if status in ('completed', 'done'):
+            stats['completed'] += 1
+        elif status in ('in_progress', 'executing', 'ongoing'):
+            stats['in_progress'] += 1
+        else:
+            stats['pending'] += 1
+        
+        if activity.get('is_overdue') and status != 'completed':
+            stats['overdue'] += 1
+    
+    return stats
+
+
+def _count_my_activities(cursor, employee_id: int) -> int:
+    """Conta atividades pessoais."""
+    return len(_fetch_projects_for_employee(cursor, employee_id)) + len(_fetch_processes_for_employee(cursor, employee_id))
+
+
+def _count_team_activities(cursor, employee_id: int) -> int:
+    """Conta atividades da equipe."""
+    member_ids = _fetch_team_member_ids(cursor, employee_id)
+    if not member_ids:
+        return 0
+    
+    return len(_fetch_projects_for_members(cursor, member_ids)) + len(_fetch_processes_for_members(cursor, member_ids))
+
+
+def _count_company_activities(cursor, employee_id: int) -> int:
+    """Conta atividades da empresa."""
+    company_id = _fetch_employee_company_id(cursor, employee_id)
+    if company_id is None:
+        return 0
+    
+    return len(_fetch_company_projects(cursor, company_id)) + len(_fetch_company_processes(cursor, company_id))
+
+
+def _fetch_team_member_ids(cursor, employee_id: int) -> List[int]:
+    """Retorna IDs dos membros da equipe."""
+    cursor.execute("""
+        SELECT team_id
+        FROM team_members
+        WHERE employee_id = %s
+        LIMIT 1
+    """, (employee_id,))
+    
+    row = cursor.fetchone()
+    if not row:
+        return []
+    
+    team_id = row[0]
+    
+    cursor.execute("""
+        SELECT employee_id
+        FROM team_members
+        WHERE team_id = %s
+    """, (team_id,))
+    
+    return [member_row[0] for member_row in cursor.fetchall()]
+
+
+def _fetch_employee_company_id(cursor, employee_id: int) -> Optional[int]:
+    """Obtém company_id do colaborador."""
+    cursor.execute("SELECT company_id FROM employees WHERE id = %s", (employee_id,))
+    row = cursor.fetchone()
+    return row[0] if row else None
+
+
+def _fetch_companies_for_members(cursor, member_ids: Sequence[int]) -> List[int]:
+    """Obtém empresas vinculadas aos membros."""
+    placeholders = ','.join(['%s'] * len(member_ids))
+    cursor.execute(f"""
+        SELECT DISTINCT company_id
+        FROM employees
+        WHERE id IN ({placeholders})
+    """, tuple(member_ids))
+    
+    return [row[0] for row in cursor.fetchall()]
+
+
+def _is_employee_in_process(row, member_ids: set) -> bool:
+    """Verifica se algum membro está associado a um processo."""
+    collaborators = _parse_collaborators(row.get('assigned_collaborators'))
+    collaborator_ids = {collab.get('id') for collab in collaborators if collab.get('id') is not None}
+    return bool(member_ids & collaborator_ids)
+
+
+def _parse_collaborators(raw_value) -> List[Dict]:
+    """Converte campo de colaboradores em lista."""
+    if not raw_value:
+        return []
+    
+    if isinstance(raw_value, list):
+        return raw_value
+    
+    if isinstance(raw_value, str):
+        try:
+            return json.loads(raw_value)
+        except json.JSONDecodeError:
+            return []
+    
+    return []
+
+
+def _resolve_assignment(employee_id: int, responsible_id: Optional[int], executor_id: Optional[int], member_ids: Optional[Sequence[int]]) -> Dict:
+    """Determina o papel do colaborador em um projeto."""
+    assignment = {'type': None, 'label': None}
+    
+    if employee_id and executor_id == employee_id:
+        assignment.update({'type': 'executor', 'label': '⚙️ Executor'})
+    elif employee_id and responsible_id == employee_id:
+        assignment.update({'type': 'responsible', 'label': '👤 Responsável'})
+    elif member_ids and (responsible_id in member_ids or executor_id in member_ids):
+        assignment.update({'type': 'team', 'label': '👥 Equipe'})
+    
+    return assignment
+
+
+def _resolve_process_assignment(employee_id: int, collaborators: List[Dict], member_ids: Optional[Sequence[int]]) -> Dict:
+    """Determina o papel do colaborador em um processo."""
+    collaborator_ids = {collab.get('id') for collab in collaborators if collab.get('id') is not None}
+    assignment = {'type': None, 'label': None}
+    
+    if employee_id in collaborator_ids:
+        assignment.update({'type': 'assigned', 'label': '⚙️ Executor'})
+    elif member_ids and collaborator_ids.intersection(member_ids):
+        assignment.update({'type': 'team', 'label': '👥 Equipe'})
+    
+    return assignment
+
+
+def _deadline_flags(deadline: Optional[date], status: Optional[str]) -> Dict[str, bool]:
+    """Calcula flags de prazo."""
+    today = date.today()
+    flags = {'is_today': False, 'is_overdue': False, 'is_this_week': False}
+    
+    if not deadline:
+        return flags
+    
+    delta = (deadline - today).days
+    status = (status or '').lower()
+    
+    flags['is_today'] = delta == 0
+    flags['is_overdue'] = delta < 0 and status != 'completed'
+    flags['is_this_week'] = 0 <= delta <= 7
+    
+    return flags
+
+
+def _build_filter_tags(flags: Dict[str, bool], status: Optional[str]) -> List[str]:
+    """Lista tags de filtro."""
+    tags = ['all']
+    if flags.get('is_today'):
+        tags.append('today')
+    if flags.get('is_this_week'):
+        tags.append('week')
+    if flags.get('is_overdue'):
+        tags.append('overdue')
+    
+    status = (status or '').lower()
+    if status and status not in tags:
+        tags.append(status)
+    
+    return tags
+
+
+def _deadline_label(deadline: Optional[date], status: Optional[str]) -> Optional[str]:
+    """Texto amigável de prazo."""
+    if not deadline:
+        return None
+    
+    today = date.today()
+    delta = (deadline - today).days
+    
+    if delta == 0:
+        return 'Hoje'
+    if delta == 1:
+        return 'Amanhã'
+    if delta == -1:
+        return 'Ontem'
+    if delta > 1:
+        return f'Em {delta} dias'
+    
+    status = (status or '').lower()
+    if status == 'completed':
+        return f'Concluído há {-delta} dias'
+    
+    return f'Atrasado {abs(delta)} dias'
+
+
+def _calc_progress(estimated: float, worked: float) -> int:
+    """Calcula percentual de progresso."""
+    if not estimated:
+        return 0
+    progress = (worked / estimated) * 100
+    return max(0, min(int(round(progress)), 100))
+
+
+def _safe_float(value: Any) -> float:
+    """Converte valores em float."""
+    if value is None:
+        return 0.0
+    if isinstance(value, (int, float)):
+        return float(value)
+    if isinstance(value, Decimal):
+        return float(value)
+    try:
+        return float(value)
+    except (TypeError, ValueError):
+        return 0.0
+
+
+def _coerce_date(value: Any) -> Optional[date]:
+    """Converte valor em date."""
+    if value is None:
+        return None
+    if isinstance(value, date) and not isinstance(value, datetime):
+        return value
+    if isinstance(value, datetime):
+        return value.date()
+    if isinstance(value, str):
+        for fmt in ("%Y-%m-%d", "%Y-%m-%d %H:%M:%S", "%d/%m/%Y"):
+            try:
+                return datetime.strptime(value, fmt).date()
+            except ValueError:
+                continue
+    return None
+
+
+def _coerce_datetime(value: Any) -> Optional[datetime]:
+    """Converte valor em datetime."""
+    if value is None:
+        return None
+    if isinstance(value, datetime):
+        return value
+    if isinstance(value, date):
+        return datetime.combine(value, datetime.min.time())
+    if isinstance(value, str):
+        for fmt in ("%Y-%m-%d %H:%M:%S", "%Y-%m-%dT%H:%M:%S", "%Y-%m-%d"):
+            try:
+                return datetime.strptime(value, fmt)
+            except ValueError:
+                continue
+    return None
+
+
+def _datetime_to_iso(value: Optional[datetime]) -> Optional[str]:
+    """Formata datetime em ISO8601."""
+    if not value:
+        return None
+    return value.isoformat()
+
+
+def _date_to_iso(value: Optional[date]) -> Optional[str]:
+    """Formata date em ISO."""
+    if not value:
+        return None
+    return value.isoformat()
+
+
+def _deadline_sort_key(deadline: Optional[date]) -> int:
+    """Chave de ordenação por prazo."""
+    return deadline.toordinal() if deadline else 9999999
+
+
+def _datetime_sort_key(value: Optional[datetime]) -> int:
+    """Chave de ordenação por data/hora."""
+    if not value:
+        return 0
+    return int(value.timestamp())
 
 
 def _can_view_company(cursor, employee_id: int) -> bool:

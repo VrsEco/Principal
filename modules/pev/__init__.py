@@ -29,6 +29,12 @@ from modules.pev.implantation_data import (
     _parse_decimal,
 )
 from modules.pev import products_service
+from services.ui_catalog_service import (
+    get_screen_attr_map,
+    serialize_screen_catalog,
+)
+
+MODEFIN_SCREEN_CODE = 314
 
 pev_bp = Blueprint('pev', __name__, url_prefix='/pev')
 
@@ -558,6 +564,9 @@ def implantacao_modefin():
     print(f"Parcelas Estruturas: {len(parcelas_estruturas)}")
     print("="*80 + "\n")
     
+    ui_attrs = get_screen_attr_map(MODEFIN_SCREEN_CODE)
+    ui_catalog_payload = serialize_screen_catalog(MODEFIN_SCREEN_CODE)
+    
     return render_template(
         "implantacao/modelo_modefin.html",
         user_name=plan.get("consultant", "Consultor responsavel"),
@@ -575,6 +584,9 @@ def implantacao_modefin():
         parcelas_estruturas=parcelas_estruturas,
         fixed_cost_entries=fixed_cost_entries,
         modefin_ramp=modefin_ramp,
+        ui_screen_code=MODEFIN_SCREEN_CODE,
+        ui_attrs=ui_attrs,
+        ui_catalog_payload=ui_catalog_payload,
     )
 
 

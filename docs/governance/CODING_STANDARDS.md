@@ -780,6 +780,7 @@ pytest tests/test_auth.py
 - [ ] Código formatado com Black
 - [ ] Sem erros de Flake8
 - [ ] Testes passando
+- [ ] Alterações que impactam infraestrutura validadas no stack Docker (ver checklist em `docs/governance/TECH_STACK.md`)
 - [ ] Docstrings em funções públicas
 - [ ] Type hints em funções complexas
 - [ ] Sem código comentado

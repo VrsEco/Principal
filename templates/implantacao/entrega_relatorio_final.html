@@ -128,6 +128,41 @@
       text-decoration: underline;
     }
 
+    /* Ajustes para layout mais compacto em todas as páginas */
+    .model7-report .page {
+      margin-bottom: 18px;
+      page-break-after: auto;
+      min-height: auto;
+    }
+
+    .model7-report .page.portrait {
+      padding-top: 8mm;
+      padding-bottom: 8mm;
+      min-height: auto;
+    }
+
+    .model7-report .section-header {
+      margin-bottom: 12px;
+    }
+
+    .model7-report .section-body {
+      margin-top: 12px;
+      gap: 14px;
+    }
+
+    .model7-report .model7-card,
+    .model7-report .story-block,
+    .model7-report .highlight-box {
+      padding: 16px 18px;
+      gap: 10px;
+    }
+
+    .model7-report .model7-grid,
+    .model7-report .result-summary-grid,
+    .model7-report .responsive-grid {
+      gap: 16px;
+    }
+
     /* Forçar todas as páginas para retrato na impressão */
     @media print {
       @page {
@@ -155,7 +190,6 @@
       <div class="cover-ribbon">
         <span>{{ plan.status }}</span>
         <span>Plano {{ plan.plan_id }}</span>
-        <span>Emitido {{ issued_at }}</span>
       </div>
       <h1>Análise de Viabilidade</h1>
       <h2>{{ plan.plan_name }}</h2>
@@ -257,7 +291,6 @@
           <li><strong>Estruturas priorizadas:</strong> {{ estruturas|length }}</li>
           <li><strong>Capacidades avaliadas:</strong> {{ financeiro.capacidades|length }}</li>
         </ul>
-        <p class="story-note">Documento emitido em {{ issued_at }}.</p>
       {% endcall %}
     {% endcall %}
 

@@ -237,7 +237,7 @@
           // Formato padrão: CÓDIGO - NOME
           const displayText = m.code ? `${escapeHtml(m.code)} - ${escapeHtml(m.name.toUpperCase())}` : escapeHtml(m.name);
           
-          const owner = m.owner ? `<div style="color:#1e3a8a;font-size:12px;margin-top:4px;">👤 Dono: <span style=\"color:#1e3a8a;font-weight:600;\">${escapeHtml(m.owner)}</span></div>` : '';
+          const owner = m.owner ? `<div style="color:#1e3a8a;font-size:12px;margin-top:4px;">👤 Dono do Processo: <span style=\"color:#1e3a8a;font-weight:600;\">${escapeHtml(m.owner)}</span></div>` : '';
           const description = m.description ? `<div style="color:var(--color-muted);font-size:12px;margin-top:4px;">${escapeHtml(m.description)}</div>` : '';
           
           div.innerHTML = `
@@ -461,7 +461,7 @@
         const macroDisplay = macro.code ? `${escapeHtml(macro.code)} - ${escapeHtml((macro.name||'').toUpperCase())}` : escapeHtml(macro.name||'');
         macroTag = `<span style="display:inline-block;padding:2px 8px;background:${areaColor}15;color:${areaColor};border:1px solid ${areaColor}40;border-radius:6px;font-size:10px;font-weight:600;margin-right:8px;">${macroDisplay}</span>`;
       }
-      const responsibleHtml = p.responsible ? `<div style="color:#1e3a8a;font-size:12px;margin-top:4px;">👤 Responsável: <span style=\"color:#1e3a8a;font-weight:600;\">${escapeHtml(p.responsible)}</span></div>` : '';
+      const responsibleHtml = p.responsible ? `<div style="color:#1e3a8a;font-size:12px;margin-top:4px;">👤 Dono do Processo: <span style=\"color:#1e3a8a;font-weight:600;\">${escapeHtml(p.responsible)}</span></div>` : '';
       const description = p.description ? `<div style="color:#1e3a8a;font-size:12px;margin-top:4px;">${escapeHtml(p.description)}</div>` : '';
       div.innerHTML = `
         <div style="flex:1;">
@@ -781,22 +781,13 @@
       });
     });
     
-    let html = '<div style="display:flex;flex-direction:column;gap:24px;color:#0f172a;">';
+    let html = '<div style="display:flex;flex-direction:column;gap:22px;color:#0f172a;">';
     
     // Seção de Resumo (Summary Cards)
-    html += `<section class="summary-section" style="display:flex;flex-wrap:wrap;gap:12px;margin-bottom:8px;">`;
-    html += `<div class="summary-card" style="border:1px solid rgba(148,163,184,0.35);border-radius:8px;padding:12px 16px;min-width:140px;background:#f8fafc;">`;
-    html += `<div style="font-size:10px;letter-spacing:0.04em;text-transform:uppercase;color:#64748b;margin-bottom:4px;">Áreas</div>`;
-    html += `<div style="font-weight:600;font-size:16px;color:#0f172a;">${areas.length}</div>`;
-    html += `</div>`;
-    html += `<div class="summary-card" style="border:1px solid rgba(148,163,184,0.35);border-radius:8px;padding:12px 16px;min-width:140px;background:#f8fafc;">`;
-    html += `<div style="font-size:10px;letter-spacing:0.04em;text-transform:uppercase;color:#64748b;margin-bottom:4px;">Macroprocessos</div>`;
-    html += `<div style="font-weight:600;font-size:16px;color:#0f172a;">${totalMacros}</div>`;
-    html += `</div>`;
-    html += `<div class="summary-card" style="border:1px solid rgba(148,163,184,0.35);border-radius:8px;padding:12px 16px;min-width:140px;background:#f8fafc;">`;
-    html += `<div style="font-size:10px;letter-spacing:0.04em;text-transform:uppercase;color:#64748b;margin-bottom:4px;">Processos</div>`;
-    html += `<div style="font-weight:600;font-size:16px;color:#0f172a;">${totalProcessos}</div>`;
-    html += `</div>`;
+    html += `<section class="summary-section">`;
+    html += `<div class="summary-card"><span class="summary-card-label">Áreas</span><span class="summary-card-value">${areas.length}</span></div>`;
+    html += `<div class="summary-card"><span class="summary-card-label">Macroprocessos</span><span class="summary-card-value">${totalMacros}</span></div>`;
+    html += `<div class="summary-card"><span class="summary-card-label">Processos</span><span class="summary-card-value">${totalProcessos}</span></div>`;
     html += `</section>`;
     
     areas.forEach((area, areaIdx) => {
@@ -839,7 +830,7 @@
           // Cabeçalho do Macroprocesso
           html += `<div class="macro-title" style="font-weight:600;font-size:13px;color:#000000;margin:0 0 2px 0;">${macroDisplay}</div>`;
           if (macro.owner) {
-            html += `<div class="macro-owner" style="margin:2px 0 10px;font-size:10px;color:#1e3a8a;">Responsável: ${macro.owner}</div>`;
+            html += `<div class="macro-owner" style="margin:2px 0 10px;font-size:10px;color:#1e3a8a;">Dono do Processo: ${macro.owner}</div>`;
           }
           
           // Processos do Macroprocesso
@@ -872,19 +863,19 @@
               html += `<div class="process-title" style="font-weight:600;font-size:12px;color:#000000;margin:0;line-height:1.3;">${procDisplay}</div>`;
               
               if(proc.responsible){
-                html += `<div class="process-meta" style="font-size:10px;color:#1e3a8a;">Responsável: ${proc.responsible}</div>`;
+                html += `<div class="process-meta" style="font-size:10px;color:#1e3a8a;">Dono do Processo: ${proc.responsible}</div>`;
               }
               
-              html += `<div class="badge-group" style="display:flex;flex-direction:column;gap:4px;">`;
+              html += `<div class="badge-group" style="display:flex;flex-direction:row;align-items:center;gap:8px;flex-wrap:wrap;">`;
               const darkYellow = '#b45309';
               const sTextColor = (sLevel.color === '#f59e0b') ? darkYellow : sLevel.color;
               const pTextColor = (pLevel.color === '#f59e0b') ? darkYellow : pLevel.color;
 
-              html += `<div class="badge" style="display:inline-flex;align-items:center;gap:6px;border-radius:6px;padding:4px 6px;font-size:9.5px;font-weight:600;background:${sLevelBg};color:${sTextColor};line-height:1.1;">`;
+              html += `<div class="badge" style="display:inline-flex;align-items:center;gap:6px;border-radius:6px;padding:4px 6px;font-size:9.5px;font-weight:600;background:${sLevelBg};color:${sTextColor};line-height:1.1;white-space:nowrap;">`;
               html += `<span class="badge-label" style="text-transform:uppercase;font-weight:500;color:#475569;letter-spacing:0.03em;">Estruturação</span>`;
               html += `<span class="badge-value" style="font-weight:600;">${sLevel.label}</span>`;
               html += `</div>`;
-              html += `<div class="badge" style="display:inline-flex;align-items:center;gap:6px;border-radius:6px;padding:4px 6px;font-size:9.5px;font-weight:600;background:${pLevelBg};color:${pTextColor};line-height:1.1;">`;
+              html += `<div class="badge" style="display:inline-flex;align-items:center;gap:6px;border-radius:6px;padding:4px 6px;font-size:9.5px;font-weight:600;background:${pLevelBg};color:${pTextColor};line-height:1.1;white-space:nowrap;">`;
               html += `<span class="badge-label" style="text-transform:uppercase;font-weight:500;color:#475569;letter-spacing:0.03em;">Desempenho</span>`;
               html += `<span class="badge-value" style="font-weight:600;">${pLevel.label}</span>`;
               html += `</div>`;
@@ -930,9 +921,9 @@
   const mapViewerModal = document.getElementById('mapViewerModal');
   const mapViewerInner = document.getElementById('mapViewerInner');
   const btnViewMap = document.getElementById('btnViewMap');
-  const btnExportPdf = document.getElementById('btnExportPdf');
+  const btnExportPdf = null;
   const btnViewMapV2 = document.getElementById('btnViewMapV2');
-  const btnExportPdfV2 = document.getElementById('btnExportPdfV2');
+  const btnExportPdfV2 = null;
   const btnCloseViewer = document.getElementById('btnCloseViewer');
   const btnZoomIn = document.getElementById('btnZoomIn');
   const btnZoomOut = document.getElementById('btnZoomOut');
@@ -1000,7 +991,6 @@
         <div class='print-header-content'>
           <div class='print-header-title-row'>
             <h2 class='print-header-title'>${companyName}</h2>
-            <span class='print-page-counter' aria-hidden='true'></span>
           </div>
           <div class='print-header-meta'>
             <div><strong>Versao:</strong> ${versao}</div>
@@ -1013,8 +1003,10 @@
 
       const runningHeader = `<div class='print-page-header-global'>${buildHeader('viewerPrintDatePrint')}</div>`;
       const visibleHeader = `<div class='print-page-header-visible'>${buildHeader('viewerPrintDate')}</div>`;
+      const visibleFooter = `<div class='print-footer-visible'><span class='print-legal'>Versus Gestão Corporativa - Todos os direitos reservados.</span></div>`;
+      const runningFooter = `<div class='print-footer print-only'><span class='print-legal'>Versus Gestão Corporativa - Todos os direitos reservados.</span></div>`;
 
-      mapViewerInner.innerHTML = `${runningHeader}${visibleHeader}${mapContainer.innerHTML}`;
+      mapViewerInner.innerHTML = `${runningHeader}${visibleHeader}${mapContainer.innerHTML}${visibleFooter}${runningFooter}`;
     }
 
     // Resetar zoom para 100% e 3 colunas (padrao)
@@ -1105,17 +1097,6 @@
     btnViewMap.addEventListener('click', openViewer);
   }
 
-  if(btnExportPdf){
-    btnExportPdf.addEventListener('click', () => {
-      if(Number.isNaN(companyId)) return;
-      const url = `/grv/company/${companyId}/process/map/pdf`;
-      const opened = window.open(url, '_blank', 'noopener');
-      if(!opened && window.showMessage){
-        window.showMessage('Não foi possível abrir o PDF. Verifique o bloqueador de pop-ups.', 'error');
-      }
-    });
-  }
-
   // MP-2 Buttons
   if(btnViewMapV2){
     btnViewMapV2.addEventListener('click', () => {
@@ -1128,33 +1109,14 @@
     });
   }
 
-  if(btnExportPdfV2){
-    btnExportPdfV2.addEventListener('click', () => {
+  if(btnViewMapV2){
+    btnViewMapV2.addEventListener('click', () => {
       if(Number.isNaN(companyId)) return;
       const url = `/grv/company/${companyId}/process/map/pdf2`;
-      // Força download em vez de visualização
-      fetch(url)
-        .then(response => response.blob())
-        .then(blob => {
-          const url = window.URL.createObjectURL(blob);
-          const a = document.createElement('a');
-          a.style.display = 'none';
-          a.href = url;
-          a.download = `mapa-processos-v2-${Date.now()}.pdf`;
-          document.body.appendChild(a);
-          a.click();
-          window.URL.revokeObjectURL(url);
-          document.body.removeChild(a);
-          if(window.showMessage){
-            window.showMessage('PDF MP-2 exportado com sucesso!', 'success');
-          }
-        })
-        .catch(err => {
-          console.error('Erro ao exportar PDF MP-2:', err);
-          if(window.showMessage){
-            window.showMessage('Erro ao exportar PDF MP-2. Tente novamente.', 'error');
-          }
-        });
+      const opened = window.open(url, '_blank', 'noopener');
+      if(!opened && window.showMessage){
+        window.showMessage('Não foi possível abrir o PDF MP-2. Verifique o bloqueador de pop-ups.', 'error');
+      }
     });
   }
   
