@@ -1,31 +1,21 @@
-version: '3.8'
-
-# ============================================
-# GestaoVersus - Docker Compose produção
-# ============================================
-# Serviços da aplicação conectando ao PostgreSQL nativo do Windows
-# ============================================
-
 services:
   # ==========================================
   # Redis Cache & Queue
   # ==========================================
   redis:
     image: redis:7-alpine
-    container_name: gestaoversus_redis_prod
+    container_name: app31_redis_prod
     restart: always
     command: redis-server --appendonly yes --requirepass ${REDIS_PASSWORD}
     volumes:
-      - redis_data:/data
-    ports:
-      - "6379:6379"
+      - app31_redis_data:/data
     healthcheck:
       test: ["CMD", "redis-cli", "-a", "${REDIS_PASSWORD}", "ping"]
       interval: 10s
       timeout: 3s
       retries: 5
     networks:
-      - gestaoversus_network
+      - app31_network
 
   # ==========================================
   # Flask Application
@@ -34,7 +24,7 @@ services:
     build:
       context: .
       dockerfile: Dockerfile
-    container_name: gestaoversus_app_prod
+    container_name: app31_app_prod
     restart: always
     environment:
       # Flask
@@ -85,7 +75,7 @@ services:
       retries: 3
       start_period: 40s
     networks:
-      - gestaoversus_network
+      - app31_network
 
   # ==========================================
   # Celery Worker (Background Tasks)
@@ -94,7 +84,7 @@ services:
     build:
       context: .
       dockerfile: Dockerfile
-    container_name: gestaoversus_celery_prod
+    container_name: app31_celery_prod
     restart: always
     command: celery -A app_pev.celery worker --loglevel=info --concurrency=4
     environment:
@@ -118,7 +108,7 @@ services:
       app:
         condition: service_started
     networks:
-      - gestaoversus_network
+      - app31_network
 
   # ==========================================
   # Celery Beat (Scheduled Tasks)
@@ -127,7 +117,7 @@ services:
     build:
       context: .
       dockerfile: Dockerfile
-    container_name: gestaoversus_celery_beat_prod
+    container_name: app31_celery_beat_prod
     restart: always
     command: celery -A app_pev.celery beat --loglevel=info
     environment:
@@ -147,7 +137,7 @@ services:
       redis:
         condition: service_healthy
     networks:
-      - gestaoversus_network
+      - app31_network
 
   # ==========================================
   # Nginx Reverse Proxy
@@ -156,7 +146,7 @@ services:
     build:
       context: ./nginx
       dockerfile: Dockerfile
-    container_name: gestaoversus_nginx_prod
+    container_name: app31_nginx_prod
     restart: always
     ports:
       - "80:80"
@@ -171,18 +161,12 @@ services:
       app:
         condition: service_started
     networks:
-      - gestaoversus_network
+      - app31_network
 
-# ==========================================
-# Volumes Persistentes
-# ==========================================
 volumes:
-  redis_data:
+  app31_redis_data:
     driver: local
 
-# ==========================================
-# Network
-# ==========================================
 networks:
-  gestaoversus_network:
+  app31_network:
     driver: bridge

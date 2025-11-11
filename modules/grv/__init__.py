@@ -1231,6 +1231,69 @@ def grv_process_map_pdf2(company_id: int):
                         print("DEBUG: Definindo conteúdo HTML...")
                         page.set_content(html, wait_until="networkidle")
                         page.emulate_media(media="print")
+
+                        def _apply_single_page_scale() -> None:
+                            """Ajusta dinamicamente o zoom para caber em uma página."""
+                            try:
+                                page.wait_for_timeout(180)
+                                print("DEBUG: Calculando escala dinâmica para caber em uma única página...")
+                                page.evaluate(
+                                    """
+                                    () => {
+                                        const html = document.documentElement;
+                                        const body = document.body;
+                                        if (!html || !body) {
+                                            return;
+                                        }
+
+                                        const target = document.querySelector('.page-wrapper') || body;
+                                        const availableWidth = html.clientWidth || window.innerWidth;
+                                        const availableHeight = html.clientHeight || window.innerHeight;
+                                        const rect = target.getBoundingClientRect();
+                                        const contentWidth = Math.max(
+                                            rect.width,
+                                            target.scrollWidth,
+                                            body.scrollWidth,
+                                            html.scrollWidth
+                                        );
+                                        const contentHeight = Math.max(
+                                            rect.height,
+                                            target.scrollHeight,
+                                            body.scrollHeight,
+                                            html.scrollHeight
+                                        );
+
+                                        const scaleX = availableWidth / (contentWidth || 1);
+                                        const scaleY = availableHeight / (contentHeight || 1);
+                                        const scale = Math.min(scaleX, scaleY, 1);
+
+                                        body.setAttribute(
+                                            'data-pdf-scale-debug',
+                                            JSON.stringify({
+                                                availableWidth,
+                                                availableHeight,
+                                                contentWidth,
+                                                contentHeight,
+                                                scale
+                                            })
+                                        );
+
+                                        if (Number.isFinite(scale) && scale > 0 && scale < 1) {
+                                            html.style.zoom = String(scale);
+                                            body.style.zoom = String(scale);
+                                        }
+
+                                        html.style.overflow = 'hidden';
+                                        body.style.overflow = 'hidden';
+                                    }
+                                    """
+                                )
+                                print("DEBUG: Escala dinâmica aplicada com sucesso.")
+                            except Exception as scale_error:
+                                print(f"AVISO: Falha ao ajustar escala dinâmica: {scale_error}")
+
+                        _apply_single_page_scale()
+
                         print("DEBUG: Gerando PDF...")
                         pdf = page.pdf(
                             format="A4",

@@ -2,110 +2,467 @@
   "tech_stack": [
     "Python 3.9+",
     "Flask 2.3.3",
-    "SQLAlchemy 2.x",
+    "SQLAlchemy 2.0",
     "PostgreSQL",
     "SQLite",
     "Jinja2",
-    "JavaScript (Vanilla)",
+    "Vanilla JavaScript",
     "Celery",
-    "Playwright",
     "Redis (opcional)"
   ],
   "features": [
     {
-      "name": "Authentication and User Management",
-      "description": "Flask-Login based authentication with admin-managed user lifecycle, profile updates, password changes, and session control.",
+      "name": "Authentication API",
+      "description": "Endpoints para autenticação, encerramento de sessão, registro e gestão de perfil protegidos por Flask-Login.",
       "files": [
         "api/auth.py",
         "services/auth_service.py",
         "models/user.py",
-        "templates/auth/login.html",
-        "templates/auth/users.html"
-      ]
+        "templates/auth/login.html"
+      ],
+      "api_doc": {
+        "openapi": "3.0.0",
+        "info": {
+          "title": "Authentication API",
+          "version": "1.0.0"
+        },
+        "paths": {
+          "/auth/login": {
+            "post": {
+              "summary": "Autentica usuário",
+              "requestBody": {
+                "required": true,
+                "content": {
+                  "application/json": {
+                    "schema": {
+                      "type": "object",
+                      "properties": {
+                        "email": {
+                          "type": "string",
+                          "format": "email"
+                        },
+                        "password": {
+                          "type": "string",
+                          "format": "password"
+                        },
+                        "remember": {
+                          "type": "boolean"
+                        }
+                      },
+                      "required": [
+                        "email",
+                        "password"
+                      ]
+                    }
+                  }
+                }
+              },
+              "responses": {
+                "200": {
+                  "description": "Login realizado",
+                  "content": {
+                    "application/json": {
+                      "schema": {
+                        "type": "object",
+                        "properties": {
+                          "success": {
+                            "type": "boolean"
+                          },
+                          "message": {
+                            "type": "string"
+                          },
+                          "user": {
+                            "type": "object"
+                          }
+                        }
+                      }
+                    }
+                  }
+                },
+                "400": {
+                  "description": "Dados inválidos"
+                },
+                "401": {
+                  "description": "Credenciais incorretas"
+                }
+              }
+            }
+          },
+          "/auth/logout": {
+            "post": {
+              "summary": "Encerra sessão",
+              "responses": {
+                "200": {
+                  "description": "Logout realizado"
+                },
+                "500": {
+                  "description": "Erro interno"
+                }
+              },
+              "security": [
+                {
+                  "sessionAuth": []
+                }
+              ]
+            }
+          },
+          "/auth/register": {
+            "post": {
+              "summary": "Cria usuário",
+              "responses": {
+                "200": {
+                  "description": "Usuário criado"
+                },
+                "400": {
+                  "description": "Dados inválidos"
+                },
+                "403": {
+                  "description": "Acesso negado"
+                }
+              },
+              "security": [
+                {
+                  "sessionAuth": []
+                }
+              ]
+            }
+          },
+          "/auth/change-password": {
+            "post": {
+              "summary": "Atualiza senha",
+              "responses": {
+                "200": {
+                  "description": "Senha atualizada"
+                },
+                "400": {
+                  "description": "Validação falhou"
+                },
+                "401": {
+                  "description": "Não autenticado"
+                }
+              },
+              "security": [
+                {
+                  "sessionAuth": []
+                }
+              ]
+            }
+          }
+        },
+        "components": {
+          "securitySchemes": {
+            "sessionAuth": {
+              "type": "apiKey",
+              "in": "cookie",
+              "name": "session"
+            }
+          }
+        }
+      }
     },
     {
-      "name": "Audit Logging and Route Monitoring",
-      "description": "Automatic CRUD logging via decorators, route coverage auditing, and user action history retrieval APIs.",
+      "name": "User Logs API",
+      "description": "Consultas, estatísticas e exportação de logs de usuários com paginação obrigatória e escopos seguros.",
       "files": [
-        "middleware/auto_log_decorator.py",
-        "middleware/audit_middleware.py",
-        "services/log_service.py",
         "api/logs.py",
-        "api/route_audit.py"
-      ]
+        "services/log_service.py",
+        "models/log_entry.py",
+        "templates/logs/dashboard.html"
+      ],
+      "api_doc": {
+        "openapi": "3.0.0",
+        "info": {
+          "title": "User Logs API",
+          "version": "1.0.0"
+        },
+        "paths": {
+          "/logs/": {
+            "get": {
+              "summary": "Lista logs com filtros",
+              "parameters": [
+                {
+                  "name": "entity_type",
+                  "in": "query",
+                  "schema": {
+                    "type": "string"
+                  }
+                },
+                {
+                  "name": "action",
+                  "in": "query",
+                  "schema": {
+                    "type": "string"
+                  }
+                },
+                {
+                  "name": "user_id",
+                  "in": "query",
+                  "schema": {
+                    "type": "integer"
+                  }
+                },
+                {
+                  "name": "company_id",
+                  "in": "query",
+                  "schema": {
+                    "type": "integer"
+                  }
+                },
+                {
+                  "name": "limit",
+                  "in": "query",
+                  "schema": {
+                    "type": "integer",
+                    "default": 50
+                  }
+                },
+                {
+                  "name": "offset",
+                  "in": "query",
+                  "schema": {
+                    "type": "integer",
+                    "default": 0
+                  }
+                }
+              ],
+              "responses": {
+                "200": {
+                  "description": "Lista de logs",
+                  "content": {
+                    "application/json": {
+                      "schema": {
+                        "type": "object",
+                        "properties": {
+                          "success": {
+                            "type": "boolean"
+                          },
+                          "logs": {
+                            "type": "array",
+                            "items": {
+                              "type": "object"
+                            }
+                          },
+                          "pagination": {
+                            "type": "object"
+                          }
+                        }
+                      }
+                    }
+                  }
+                },
+                "500": {
+                  "description": "Erro interno"
+                }
+              },
+              "security": [
+                {
+                  "sessionAuth": []
+                }
+              ]
+            }
+          },
+          "/logs/stats": {
+            "get": {
+              "summary": "Estatísticas de logs",
+              "parameters": [
+                {
+                  "name": "company_id",
+                  "in": "query",
+                  "schema": {
+                    "type": "integer"
+                  }
+                },
+                {
+                  "name": "days",
+                  "in": "query",
+                  "schema": {
+                    "type": "integer",
+                    "default": 30
+                  }
+                }
+              ],
+              "responses": {
+                "200": {
+                  "description": "Estatísticas retornadas"
+                },
+                "500": {
+                  "description": "Erro interno"
+                }
+              },
+              "security": [
+                {
+                  "sessionAuth": []
+                }
+              ]
+            }
+          },
+          "/logs/entity-activity/{entity_type}/{entity_id}": {
+            "get": {
+              "summary": "Atividade por entidade",
+              "parameters": [
+                {
+                  "name": "entity_type",
+                  "in": "path",
+                  "required": true,
+                  "schema": {
+                    "type": "string"
+                  }
+                },
+                {
+                  "name": "entity_id",
+                  "in": "path",
+                  "required": true,
+                  "schema": {
+                    "type": "string"
+                  }
+                }
+              ],
+              "responses": {
+                "200": {
+                  "description": "Logs da entidade"
+                },
+                "404": {
+                  "description": "Entidade não encontrada"
+                },
+                "500": {
+                  "description": "Erro interno"
+                }
+              },
+              "security": [
+                {
+                  "sessionAuth": []
+                }
+              ]
+            }
+          }
+        },
+        "components": {
+          "securitySchemes": {
+            "sessionAuth": {
+              "type": "apiKey",
+              "in": "cookie",
+              "name": "session"
+            }
+          }
+        }
+      }
     },
     {
-      "name": "Plan Management (PEV)",
-      "description": "Planning module that orchestrates plans, implantation dashboards, and shared utilities for company plans.",
+      "name": "Route Audit API",
+      "description": "APIs administrativas para auditar rotas registradas, habilitar e desabilitar auto logging e revisar lacunas de cobertura.",
       "files": [
-        "modules/pev/__init__.py",
-        "templates/implantacao/index.html",
-        "database/postgres_helper.py",
-        "utils/project_activity_utils.py"
-      ]
-    },
-    {
-      "name": "ModeFin Financial Modeling",
-      "description": "Comprehensive financial modeling page with eight sections, CRUD operations, 60-month cash flow projections, and viability analysis.",
-      "files": [
-        "templates/implantacao/modelo_modefin.html",
-        "static/js/modal-system.js",
-        "static/css/modal-system.css",
-        "MODEFIN_IMPLEMENTACAO_COMPLETA_FINAL.md",
-        "docs/governance/MODAL_STANDARDS.md"
-      ]
-    },
-    {
-      "name": "GRV Results Management",
-      "description": "Blueprint managing portfolios, indicators, processes, and dashboards for company results with Playwright exports.",
-      "files": [
-        "modules/grv/__init__.py",
-        "templates/grv_dashboard.html",
-        "templates/routine_dashboard.html",
-        "check_indicators.py",
-        "compare_meeting_tables.py"
-      ]
-    },
-    {
-      "name": "Meetings Module",
-      "description": "Scheduling and managing meetings, agendas, and reports with template-driven exports.",
-      "files": [
-        "modules/meetings/__init__.py",
-        "templates/meetings/index.html",
-        "templates/meetings/meeting_detail.html",
-        "services/meeting_service.py"
-      ]
-    },
-    {
-      "name": "My Work Task Management",
-      "description": "Personal productivity module for tracking activities, workloads, and calendar entries tied to plans.",
-      "files": [
-        "modules/my_work/__init__.py",
-        "templates/my_work/dashboard.html",
-        "templates/my_work/tasks.html",
-        "services/my_work_service.py"
-      ]
-    },
-    {
-      "name": "Infrastructure and Configuration",
-      "description": "Environment configuration, database abstraction layer, Celery integration, and deployment scripts.",
-      "files": [
-        "config.py",
-        "config_dev.py",
-        "config_database.py",
-        "app_pev.py",
-        "Dockerfile"
-      ]
-    },
-    {
-      "name": "AI and Integration Services",
-      "description": "AI helper services and integration scripts that extend automation capabilities and background tasks.",
-      "files": [
-        "services/ai_service.py",
-        "integrate_logs_system.py",
-        "configure_integrations.py",
-        "tests/governance/test_code_standards.py"
-      ]
+        "api/route_audit.py",
+        "services/route_audit_service.py",
+        "middleware/auto_log_decorator.py",
+        "templates/route_audit/dashboard.html"
+      ],
+      "api_doc": {
+        "openapi": "3.0.0",
+        "info": {
+          "title": "Route Audit API",
+          "version": "1.0.0"
+        },
+        "paths": {
+          "/route-audit/api/summary": {
+            "get": {
+              "summary": "Resumo da auditoria",
+              "responses": {
+                "200": {
+                  "description": "Resumo retornado"
+                },
+                "403": {
+                  "description": "Acesso negado"
+                },
+                "500": {
+                  "description": "Erro interno"
+                }
+              },
+              "security": [
+                {
+                  "sessionAuth": []
+                }
+              ]
+            }
+          },
+          "/route-audit/api/routes": {
+            "get": {
+              "summary": "Lista de rotas",
+              "parameters": [
+                {
+                  "name": "filter",
+                  "in": "query",
+                  "schema": {
+                    "type": "string",
+                    "enum": [
+                      "all",
+                      "with_logging",
+                      "without_logging",
+                      "crud"
+                    ],
+                    "default": "all"
+                  }
+                }
+              ],
+              "responses": {
+                "200": {
+                  "description": "Rotas retornadas"
+                },
+                "403": {
+                  "description": "Acesso negado"
+                },
+                "500": {
+                  "description": "Erro interno"
+                }
+              },
+              "security": [
+                {
+                  "sessionAuth": []
+                }
+              ]
+            }
+          },
+          "/route-audit/api/entity/{entity_type}/enable": {
+            "post": {
+              "summary": "Habilita auto logging",
+              "parameters": [
+                {
+                  "name": "entity_type",
+                  "in": "path",
+                  "required": true,
+                  "schema": {
+                    "type": "string"
+                  }
+                }
+              ],
+              "responses": {
+                "200": {
+                  "description": "Logging habilitado"
+                },
+                "403": {
+                  "description": "Acesso negado"
+                },
+                "500": {
+                  "description": "Erro interno"
+                }
+              },
+              "security": [
+                {
+                  "sessionAuth": []
+                }
+              ]
+            }
+          }
+        },
+        "components": {
+          "securitySchemes": {
+            "sessionAuth": {
+              "type": "apiKey",
+              "in": "cookie",
+              "name": "session"
+            }
+          }
+        }
+      }
     }
   ]
 }

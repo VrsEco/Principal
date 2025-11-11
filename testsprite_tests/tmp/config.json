@@ -1,8 +1,19 @@
 {
   "status": "commited",
-  "type": "frontend",
+  "type": "backend",
   "scope": "codebase",
   "localEndpoint": "http://localhost:5003",
-  "loginUser": "admin@versus.com.br",
-  "loginPassword": "123456"
+  "backendAuthType": "basic token",
+  "backendUsername": "admin@versus.com.br",
+  "backendPassword": "123456",
+  "executionArgs": {
+    "projectName": "app31",
+    "projectPath": "C:\\GestaoVersus\\app31",
+    "testIds": [],
+    "additionalInstruction": "",
+    "envs": {
+      "API_KEY": "sk-user-z29u2_yQCGGuCWaIHKg5KpGXpjL7w7jAYuumiZE0VfeYTXOEu7VwPR-gO8MkS9pqxehT0GRh9vOCe3Z3yBmMoSUN2e90TVK8B9ijjWp7-9OodXcufWJdMn-mhaHLzDssaYE"
+    }
+  },
+  "proxy": "http://d1b0c36a-607a-43d1-b3c7-577a06af7742:ic2YE1kjQg7S13VP13SWt8LYerNGe8m1@tun.testsprite.com:8080"
 }

@@ -1,0 +1,52 @@
+[
+  {
+    "id": "TC001",
+    "title": "authentication login endpoint",
+    "description": "Test the /auth/login POST endpoint for successful login with valid credentials, invalid data handling, and incorrect credentials response."
+  },
+  {
+    "id": "TC002",
+    "title": "authentication logout endpoint",
+    "description": "Verify the /auth/logout POST endpoint to ensure session termination works correctly and handles internal server errors."
+  },
+  {
+    "id": "TC003",
+    "title": "authentication register endpoint",
+    "description": "Validate the /auth/register POST endpoint for user creation, including permission checks and invalid data handling."
+  },
+  {
+    "id": "TC004",
+    "title": "authentication change password endpoint",
+    "description": "Check the /auth/change-password POST endpoint for password update success, validation failures, and unauthorized access."
+  },
+  {
+    "id": "TC005",
+    "title": "user logs list endpoint",
+    "description": "Test the /logs/ GET endpoint for listing user logs with various filters, pagination, and secure access."
+  },
+  {
+    "id": "TC006",
+    "title": "user logs statistics endpoint",
+    "description": "Verify the /logs/stats GET endpoint to retrieve log statistics filtered by company and days with proper authentication."
+  },
+  {
+    "id": "TC007",
+    "title": "user logs entity activity endpoint",
+    "description": "Validate the /logs/entity-activity/{entity_type}/{entity_id} GET endpoint for fetching logs by entity, including not found and error cases."
+  },
+  {
+    "id": "TC008",
+    "title": "route audit summary endpoint",
+    "description": "Test the /route-audit/api/summary GET endpoint for returning audit summary data with access control and error handling."
+  },
+  {
+    "id": "TC009",
+    "title": "route audit routes list endpoint",
+    "description": "Verify the /route-audit/api/routes GET endpoint for listing routes with filters like all, with_logging, without_logging, and crud."
+  },
+  {
+    "id": "TC010",
+    "title": "route audit enable auto logging endpoint",
+    "description": "Check the /route-audit/api/entity/{entity_type}/enable POST endpoint to enable auto logging for a given entity type with permission checks."
+  }
+]
