@@ -11,8 +11,8 @@
     }
 
     @page {
-      size: A4 landscape;
-      margin: 8mm;
+      size: A4 portrait;
+      margin: 8mm 6mm 8mm 6mm;
     }
 
     * {
@@ -23,483 +23,495 @@
 
     body {
       font-family: "Calibri", "Segoe UI", "Inter", Arial, sans-serif;
-      font-size: 6.8pt;
-      line-height: 1.25;
+      font-size: 7.5pt;
+      line-height: 1.1;
       background: #ffffff;
-      color: #0f172a;
+      color: #1e293b;
       -webkit-print-color-adjust: exact;
       print-color-adjust: exact;
+      padding-top: 3mm;
       min-height: 100vh;
       display: flex;
       flex-direction: column;
     }
 
-    .page-wrapper {
+    /* Container Principal */
+    .main-content {
       flex: 1;
       display: flex;
       flex-direction: column;
-      gap: 4mm;
     }
 
-    .report-header {
+    .areas-wrapper {
+      flex: 1;
       display: flex;
-      justify-content: space-between;
+      flex-direction: column;
+      gap: 8px;
+      padding-top: 8px;
+    }
+
+    /* Layout Principal - Áreas Verticais + Macros em Grid */
+    .area-section {
+      display: flex;
+      page-break-inside: avoid;
+      border: 1.5px solid;
+      border-radius: 4px;
+      overflow: hidden;
+      min-height: auto;
+    }
+
+    /* Área - Barra Lateral Vertical */
+    .area-sidebar {
+      width: 50px;
+      writing-mode: vertical-rl;
+      text-orientation: mixed;
+      display: flex;
       align-items: center;
-      padding: 3mm 4mm;
-      border: 0.4mm solid #cbd5e1;
+      justify-content: center;
+      padding: 8px 6px;
+      font-weight: 700;
+      font-size: 7.5pt;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+      border-right: 1.5px solid;
+      color: #000000;
+      transform: rotate(180deg);
+      transform-origin: center;
+    }
+
+    .area-sidebar-text {
+      display: inline-block;
+      transform: rotate(180deg);
+      color: inherit;
+    }
+
+    /* Container dos Macroprocessos */
+    .macros-container {
+      flex: 1;
+      padding: 6px;
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      column-gap: 4px;
+      row-gap: 6px;
+      align-content: start;
+    }
+
+    /* Macroprocesso - Retângulo Vertical */
+    .macro-box {
+      border: 1px solid #cbd5e1;
       border-radius: 3px;
-      background: linear-gradient(90deg, #eef2ff 0%, #f8fafc 100%);
+      background: #ffffff;
+      padding: 5px;
+      display: flex;
+      flex-direction: column;
+      min-height: auto;
+      page-break-inside: avoid;
+    }
+
+    .macro-header {
+      text-align: center;
+      padding-bottom: 4px;
+      border-bottom: 1px solid #e2e8f0;
+      margin-bottom: 5px;
+      flex-shrink: 0;
+    }
+
+    .macro-title {
+      font-size: 6.5pt;
+      font-weight: 700;
+      color: #1e40af;
+      line-height: 1.2;
+      word-wrap: break-word;
+    }
+
+    .macro-footer {
+      margin-top: 5px;
+      padding-top: 4px;
+      border-top: 1px solid #e2e8f0;
+      text-align: center;
+      font-size: 5.5pt;
+      color: #64748b;
+      flex-shrink: 0;
+    }
+
+    /* Processos - Grid 2 por linha */
+    .processes-grid {
+      display: grid;
+      grid-template-columns: repeat(2, 1fr);
+      column-gap: 3px;
+      row-gap: 4px;
+      flex: 1;
+    }
+
+    /* Processo - Card com badges laterais - TAMANHO FIXO para 3 linhas */
+    .process-card {
+      border: 1px solid #cbd5e1;
+      border-radius: 2px;
+      background: #f8fafc;
+      padding: 4px 3px;
+      display: flex;
+      gap: 3px;
+      align-items: stretch;
+      height: 42px;
+      page-break-inside: avoid;
+    }
+
+    /* Badges Laterais - Estruturação e Desempenho */
+    .process-badges {
+      display: flex;
+      flex-direction: column;
+      gap: 2px;
+      flex-shrink: 0;
+    }
+
+    .badge-indicator {
+      width: 10px;
+      height: 10px;
+      border-radius: 2px;
+      border: 0.5px solid rgba(0,0,0,0.1);
+    }
+
+    /* Cores dos Badges - Estruturação */
+    .badge-scope { background: #94a3b8; }
+    .badge-progress { background: #f59e0b; }
+    .badge-stabilized { background: #10b981; }
+
+    /* Cores dos Badges - Desempenho */
+    .badge-critical { background: #ef4444; }
+    .badge-below { background: #f59e0b; }
+    .badge-satisfactory { background: #10b981; }
+
+    /* Conteúdo do Processo */
+    .process-content {
+      flex: 1;
+      min-width: 0;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+
+    .process-name {
+      font-size: 5.8pt;
+      font-weight: 600;
+      color: #1e293b;
+      line-height: 1.15;
+      text-align: center;
+      display: -webkit-box;
+      -webkit-line-clamp: 3;
+      -webkit-box-orient: vertical;
+      overflow: hidden;
+      text-transform: none;
+      white-space: normal;
+      word-wrap: break-word;
+      width: 100%;
+      padding: 0 2px;
+    }
+
+    /* Empty State */
+    .empty-macros {
+      grid-column: 1 / -1;
+      padding: 8px;
+      text-align: center;
+      color: #94a3b8;
+      font-style: italic;
+      font-size: 6pt;
+    }
+
+    .empty-processes {
+      grid-column: 1 / -1;
+      padding: 6px;
+      text-align: center;
+      color: #94a3b8;
+      font-style: italic;
+      font-size: 5.5pt;
+      border: 1px dashed #cbd5e1;
+      border-radius: 2px;
+    }
+
+    /* Legenda - Horizontal no Topo */
+    .report-title-section {
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      margin-bottom: 6px;
+      padding: 3px 8px;
     }
 
     .report-title {
-      font-size: 9pt;
+      font-size: 11pt;
       font-weight: 700;
-      color: #1d4ed8;
-      text-transform: uppercase;
-      letter-spacing: 0.4px;
-    }
-
-    .report-meta {
-      display: flex;
-      gap: 6mm;
-      font-size: 6pt;
-      color: #475569;
-      text-transform: uppercase;
-      letter-spacing: 0.3px;
-    }
-
-    .report-meta span {
-      font-weight: 600;
       color: #1e3a8a;
+      text-transform: uppercase;
+      letter-spacing: 0.6px;
     }
 
     .legend-section {
+      padding: 3px 8px;
+      background: #f8fafc;
+      border: 1px solid #e2e8f0;
+      border-radius: 2px;
+      margin-bottom: 8px;
+      page-break-inside: avoid;
       display: flex;
       align-items: center;
-      gap: 8mm;
-      padding: 3mm 4mm;
-      border: 0.35mm solid #cbd5e1;
-      border-radius: 3px;
-      background: #ffffff;
+      justify-content: space-between;
+      gap: 12px;
+      flex-wrap: wrap;
+    }
+
+    .legend-main {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      flex-wrap: wrap;
+      flex: 1 1 auto;
+    }
+
+    .legend-title {
+      font-size: 5pt;
+      font-weight: 700;
+      color: #334155;
+      text-transform: uppercase;
+      white-space: nowrap;
+    }
+
+    .legend-content {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      flex-wrap: nowrap;
     }
 
     .legend-group {
       display: flex;
       align-items: center;
-      gap: 3mm;
+      gap: 6px;
     }
 
-    .legend-label {
-      font-weight: 700;
-      text-transform: uppercase;
-      font-size: 5.3pt;
+    .legend-group-title {
+      font-weight: 600;
+      font-size: 4.5pt;
       color: #334155;
-      letter-spacing: 0.35px;
+      margin-right: 2px;
     }
 
     .legend-item {
       display: flex;
       align-items: center;
-      gap: 1.5mm;
-      font-size: 5pt;
-      color: #0f172a;
-      white-space: nowrap;
+      gap: 2px;
+      font-size: 4.5pt;
     }
 
     .legend-badge {
-      width: 7px;
-      height: 7px;
+      width: 6px;
+      height: 6px;
       border-radius: 1px;
-      border: 0.4px solid rgba(15,23,42,0.18);
-      box-shadow: inset 0 0 0 0.4px rgba(255,255,255,0.3);
+      border: 0.5px solid rgba(0,0,0,0.1);
+      flex-shrink: 0;
     }
 
-    .badge-scope { background: #94a3b8; }
-    .badge-progress { background: #f59e0b; }
-    .badge-stabilized { background: #10b981; }
-    .badge-critical { background: #ef4444; }
-    .badge-below { background: #f59e0b; }
-    .badge-satisfactory { background: #10b981; }
-
-    .areas-wrapper {
-      display: flex;
-      flex-direction: column;
-      gap: 3.5mm;
+    .legend-separator {
+      width: 1px;
+      height: 12px;
+      background: #cbd5e1;
+      margin: 0 2px;
     }
 
-    .area-section {
-      display: grid;
-      grid-template-columns: 16mm 1fr;
-      border-radius: 5px;
-      overflow: hidden;
-      border: 0.45mm solid rgba(59,130,246,0.35);
-      background: linear-gradient(180deg, rgba(240,249,255,0.86), rgba(248,250,252,0.95));
-      box-shadow: 0 1mm 2.4mm rgba(15,23,42,0.08);
-      page-break-inside: avoid;
-    }
-
-    .area-sidebar {
+    .legend-metadata {
       display: flex;
       align-items: center;
-      justify-content: center;
-      padding: 4mm 2mm;
-      font-weight: 700;
-      font-size: 11pt;
-      text-transform: uppercase;
-      letter-spacing: 0.65px;
-      color: #0b1120;
-      border-right: 0.5pt solid rgba(15,23,42,0.12);
-      box-shadow: inset -1px 0 0 rgba(255,255,255,0.2);
-    }
-
-    .area-title {
-      display: inline-flex;
-      align-items: center;
-      gap: 0.8mm;
-      transform: rotate(-90deg);
-      transform-origin: center;
-      white-space: nowrap;
-      color: inherit;
-    }
-
-    .area-label {
-      display: inline-flex;
-      align-items: center;
-      justify-content: center;
-      letter-spacing: 0.65px;
-    }
-
-    .area-label.area-divider {
-      font-weight: 500;
-      letter-spacing: 0.2px;
-    }
-
-    .area-content {
-      padding: 3.2mm 4mm 3.6mm;
-      background: rgba(255,255,255,0.97);
-      display: grid;
-      grid-template-columns: repeat(3, minmax(0, 1fr));
-      gap: 3mm;
-    }
-
-    .empty-macros {
-      grid-column: 1 / -1;
-      padding: 6mm 3mm;
-      border: 0.4mm dashed rgba(148,163,184,0.55);
-      border-radius: 3mm;
-      text-align: center;
-      font-size: 5.2pt;
-      text-transform: uppercase;
-      letter-spacing: 0.35px;
-      color: rgba(71,85,105,0.85);
-      background: rgba(248,250,252,0.85);
-    }
-
-    .macro-card {
-      border: 0.35mm solid rgba(148,163,184,0.55);
-      border-radius: 4px;
-      background: #ffffff;
-      display: flex;
-      flex-direction: column;
-      min-height: 55mm;
-      box-shadow: 0 1.2mm 2.4mm rgba(15,23,42,0.08);
-      page-break-inside: avoid;
-    }
-
-    .macro-header {
-      padding: 2.6mm 3mm 2.2mm;
-      border-bottom: 0.35mm solid rgba(148,163,184,0.35);
-    }
-
-    .macro-title {
-      display: flex;
+      gap: 10px;
       flex-wrap: wrap;
-      align-items: baseline;
-      gap: 1mm;
-      font-size: 6.2pt;
-      font-weight: 700;
-      color: #0f172a;
-      text-transform: uppercase;
-      letter-spacing: 0.35px;
-      line-height: 1.25;
-    }
-
-    .macro-code {
-      display: inline-flex;
-      align-items: center;
-      justify-content: center;
-      padding: 0;
-      border-radius: 0;
-      background: transparent;
-      color: #0f172a;
-      font-size: inherit;
-      font-weight: 800;
-      letter-spacing: 0.45px;
-    }
-
-    .macro-divider {
-      color: rgba(79, 70, 229, 0.55);
-      font-weight: 600;
-    }
-
-    .macro-name {
-      flex: none;
-      font-weight: 700;
-      text-align: left;
-      color: #1d4ed8;
-    }
-
-    .macro-owner {
-      margin-top: auto;
-      font-size: 4.9pt;
+      font-size: 4.6pt;
       color: #475569;
       text-transform: uppercase;
-      letter-spacing: 0.4px;
-      text-align: center;
-      padding: 2.2mm 3mm;
-      border-top: 0.35mm solid rgba(148,163,184,0.25);
-      background: rgba(248,250,255,0.9);
+      letter-spacing: 0.3px;
     }
 
-    .processes-grid {
-      display: grid;
-      grid-template-columns: repeat(2, minmax(0, 1fr));
-      gap: 2mm 2.4mm;
-      padding: 2.4mm 3mm 3.2mm;
-    }
-
-    .process-card {
-      border: 0.35mm solid rgba(148,163,184,0.45);
-      border-radius: 3mm;
-      background: linear-gradient(180deg, rgba(248,250,255,0.92) 0%, #ffffff 100%);
-      padding: 0.6mm 1.2mm;
-      display: grid;
-      grid-template-columns: 14px 1fr;
-      grid-template-rows: repeat(3, 1fr);
-      row-gap: 0;
-      column-gap: 1.2mm;
-      min-height: 14mm;
-      box-shadow: inset 0 0 0 0.25mm rgba(255,255,255,0.85);
-    }
-
-    .process-indicators {
-      grid-row: 1 / span 3;
-      grid-column: 1;
-      display: grid;
-      grid-template-rows: repeat(3, 1fr);
-      row-gap: 0;
-      justify-items: center;
+    .legend-meta-item {
+      display: inline-flex;
       align-items: center;
-      padding: 0;
+      gap: 2px;
     }
 
-    .process-dot {
-      width: 13px;
-      height: 13px;
-      border-radius: 2px;
-      border: 0.35mm solid rgba(15,23,42,0.25);
-      box-shadow: 0 0.6mm 1mm rgba(15,23,42,0.18);
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      font-size: 5.5pt;
-      font-weight: 700;
-      color: #0b1120;
-    }
-
-    .process-indicators .process-dot:first-child {
-      grid-row: 1;
-    }
-
-    .process-indicators .process-dot:last-child {
-      grid-row: 2;
-    }
-
-    .process-body {
-      grid-column: 2;
-      grid-row: 1 / span 3;
-      display: grid;
-      grid-template-rows: repeat(3, 1fr);
-      gap: 0;
-      align-items: stretch;
-    }
-
-    .process-name {
-      grid-row: 1 / span 3;
-      display: flex;
-      flex-direction: column;
-      align-items: center;
-      justify-content: center;
-      text-align: center;
-      font-size: 6.3pt;
-      font-weight: 700;
+    .legend-meta-label {
+      font-weight: 600;
       color: #0f172a;
-      line-height: 1.25;
-      letter-spacing: 0.25px;
-      text-transform: uppercase;
-      padding: 0;
     }
 
-    .empty-processes {
-      margin: 3mm;
-      padding: 4mm 2.4mm;
-      border: 0.35mm dashed rgba(148,163,184,0.55);
-      border-radius: 3mm;
-      text-align: center;
-      font-size: 5pt;
-      text-transform: uppercase;
-      color: rgba(71,85,105,0.85);
-      letter-spacing: 0.35px;
-      background: rgba(248,250,252,0.8);
-    }
-
+    /* Print Optimization */
     @media print {
       body {
         -webkit-print-color-adjust: exact !important;
         print-color-adjust: exact !important;
       }
+
+      .area-section {
+        page-break-inside: avoid;
+      }
+
+      .macro-box {
+        page-break-inside: avoid;
+      }
+
+      .process-card {
+        page-break-inside: avoid;
+      }
     }
   </style>
 </head>
 <body>
-  <div class="page-wrapper">
-    <header class="report-header">
-      <div class="report-title">
-        Mapa de Processos · {{ company.get('name') or 'Empresa' }}
-      </div>
-      <div class="report-meta">
-        <div><span>Áreas:</span> {{ totals.areas }}</div>
-        <div><span>Macros:</span> {{ totals.macros }}</div>
-        <div><span>Processos:</span> {{ totals.processes }}</div>
-        <div><span>Gerado em:</span> {{ generated_at.strftime('%d/%m/%Y %H:%M') }}</div>
-      </div>
-    </header>
+  <div class="main-content">
+    <section class="report-title-section">
+      <div class="report-title">Mapa de Processos - {{ company.get('name') or 'Empresa' }}</div>
+    </section>
 
+    <!-- Legenda Horizontal no Topo -->
     <section class="legend-section">
-      <div class="legend-group">
-        <div class="legend-label">Estruturação</div>
-        <div class="legend-item">
-          <div class="legend-badge badge-stabilized"></div>
-          <span>Estabilizado</span>
-        </div>
-        <div class="legend-item">
-          <div class="legend-badge badge-progress"></div>
-          <span>Map · Impl · Estabn</span>
-        </div>
-        <div class="legend-item">
-          <div class="legend-badge badge-scope"></div>
-          <span>Fora de Escopo</span>
+      <div class="legend-main">
+        <div class="legend-title">Legenda:</div>
+        <div class="legend-content">
+          <!-- Estruturação -->
+          <div class="legend-group">
+            <span class="legend-group-title">Estrut.:</span>
+            <div class="legend-item">
+              <div class="legend-badge badge-stabilized"></div>
+              <span>Estab.</span>
+            </div>
+            <div class="legend-item">
+              <div class="legend-badge badge-progress"></div>
+              <span>And.</span>
+            </div>
+            <div class="legend-item">
+              <div class="legend-badge badge-scope"></div>
+              <span>F.Esc.</span>
+            </div>
+          </div>
+
+          <div class="legend-separator"></div>
+
+          <!-- Desempenho -->
+          <div class="legend-group">
+            <span class="legend-group-title">Desemp.:</span>
+            <div class="legend-item">
+              <div class="legend-badge badge-satisfactory"></div>
+              <span>Satisf.</span>
+            </div>
+            <div class="legend-item">
+              <div class="legend-badge badge-below"></div>
+              <span>Abaixo</span>
+            </div>
+            <div class="legend-item">
+              <div class="legend-badge badge-critical"></div>
+              <span>Crítico</span>
+            </div>
+          </div>
         </div>
       </div>
-      <div class="legend-group">
-        <div class="legend-label">Desempenho</div>
-        <div class="legend-item">
-          <div class="legend-badge badge-satisfactory"></div>
-          <span>Satisfatório</span>
-        </div>
-        <div class="legend-item">
-          <div class="legend-badge badge-below"></div>
-          <span>Abaixo</span>
-        </div>
-        <div class="legend-item">
-          <div class="legend-badge badge-critical"></div>
-          <span>Crítico</span>
-        </div>
+      <div class="legend-metadata">
+        <span class="legend-meta-item">
+          <span class="legend-meta-label">Impresso:</span>
+          <span>{{ generated_at.strftime('%d/%m/%Y') }}</span>
+        </span>
+        {% if report_version %}
+        <span class="legend-meta-item">
+          <span class="legend-meta-label">Versão:</span>
+          <span>{{ report_version }}</span>
+        </span>
+        {% endif %}
       </div>
     </section>
 
+    <!-- Areas with Macros and Processes -->
     <div class="areas-wrapper">
       {% if not areas %}
-        <div class="empty-macros">
+        <div style="padding: 40px; text-align: center; color: #94a3b8; font-style: italic; border: 1px dashed #cbd5e1; border-radius: 6px;">
           Nenhum processo foi mapeado para esta empresa.
         </div>
       {% else %}
         {% for area in areas %}
-          <section class="area-section" style="border-color: {{ area.color }};">
-            {% set area_parts = area.display_name.split(' - ', 1) %}
-            <div class="area-sidebar" style="background: linear-gradient(180deg, {{ area.color }} 0%, {{ area.color_soft }} 100%);">
-              <div class="area-title">
-                {% if area_parts|length == 2 %}
-                  {% set area_title = area_parts[0] ~ ' - ' ~ area_parts[1] %}
-                {% else %}
-                  {% set area_title = area.display_name %}
-                {% endif %}
-                <span class="area-label">{{ area_title }}</span>
-              </div>
-            </div>
-            <div class="area-content" style="background: {{ area.color_soft }}1a;">
-              {% if not area.macros %}
-                <div class="empty-macros">Nenhum macroprocesso cadastrado para esta área.</div>
-              {% else %}
-                {% for macro in area.macros %}
-                  {% set macro_parts = macro.display_name.split(' - ', 1) %}
-                  <div class="macro-card">
-                    <div class="macro-header">
-                      <div class="macro-title">
-                        {% if macro_parts|length == 2 %}
-                          <span class="macro-code">{{ macro_parts[0] }}</span>
-                          <span class="macro-divider">-</span>
-                          <span class="macro-name">{{ macro_parts[1] }}</span>
-                        {% else %}
-                          <span class="macro-name">{{ macro.display_name }}</span>
-                        {% endif %}
-                      </div>
-                    </div>
+      <section class="area-section" style="border-color: {{ area.color }};">
+        <!-- Área - Sidebar Vertical -->
+        <div class="area-sidebar" style="background: linear-gradient(180deg, {{ area.color }} 0%, {{ area.color_soft }} 100%); border-right-color: {{ area.color }};">
+          <span class="area-sidebar-text">{{ area.display_name }}</span>
+        </div>
 
-                    {% if not macro.processes %}
-                      <div class="empty-processes">Sem processos</div>
-                    {% else %}
-                      <div class="processes-grid">
-                        {% for proc in macro.processes %}
-                          {% set proc_parts = proc.display_name.split(' - ', 1) %}
-                          {% if proc_parts|length == 2 %}
-                            {% set proc_code = proc_parts[0] %}
-                            {% set proc_name = proc_parts[1] %}
-                          {% else %}
-                            {% set proc_code = proc.code or '-' %}
-                            {% set proc_name = proc.display_name %}
+        <!-- Macroprocessos Container -->
+        <div class="macros-container">
+          {% if not area.macros %}
+            <div class="empty-macros">Nenhum macroprocesso cadastrado para esta área.</div>
+          {% else %}
+            {% for macro in area.macros %}
+              <div class="macro-box">
+                <!-- Macro Header -->
+                <div class="macro-header">
+                  <div class="macro-title">{{ macro.display_name }}</div>
+                </div>
+
+                <!-- Processes Grid -->
+                <div class="processes-grid">
+                  {% if not macro.processes %}
+                    <div class="empty-processes">Sem processos</div>
+                  {% else %}
+                    {% for proc in macro.processes %}
+                      <div class="process-card">
+                        <!-- Badges Laterais -->
+                        <div class="process-badges">
+                          <!-- Badge Estruturação -->
+                          {% set struct_class = 'scope' %}
+                          {% if 'Map | Impl | Estabn' in proc.structuring.label %}
+                            {% set struct_class = 'progress' %}
+                          {% elif proc.structuring.label == 'Estabilizado' %}
+                            {% set struct_class = 'stabilized' %}
                           {% endif %}
-                          {% set proc_full_name = proc_code ~ ' - ' ~ proc_name %}
-                          <div class="process-card">
-                            <div
-                              class="process-indicators"
-                              role="img"
-                              aria-label="Estruturação: {{ proc.structuring.label }}; Desempenho: {{ proc.performance.label }}"
-                            >
-                              <span
-                                class="process-dot"
-                                aria-hidden="true"
-                                title="Estruturação: {{ proc.structuring.label }}"
-                                style="background: {{ proc.structuring.color }};"
-                              >E</span>
-                              <span
-                                class="process-dot"
-                                aria-hidden="true"
-                                title="Desempenho: {{ proc.performance.label }}"
-                                style="background: {{ proc.performance.color }};"
-                              >D</span>
-                            </div>
-                            <div class="process-body">
-                              <div class="process-name">
-                                <span>{{ proc_full_name }}</span>
-                              </div>
-                            </div>
-                          </div>
-                        {% endfor %}
-                      </div>
-                    {% endif %}
+                          <div class="badge-indicator badge-{{ struct_class }}" title="Estruturação: {{ proc.structuring.label }}"></div>
 
-                    {% if macro.owner %}
-                      <div class="macro-owner">Dono: {{ macro.owner }}</div>
-                    {% endif %}
+                          <!-- Badge Desempenho -->
+                          {% set perf_class = 'scope' %}
+                          {% if proc.performance.label == 'Crítico' %}
+                            {% set perf_class = 'critical' %}
+                          {% elif proc.performance.label == 'Abaixo' %}
+                            {% set perf_class = 'below' %}
+                          {% elif proc.performance.label == 'Satisfatório' %}
+                            {% set perf_class = 'satisfactory' %}
+                          {% endif %}
+                          <div class="badge-indicator badge-{{ perf_class }}" title="Desempenho: {{ proc.performance.label }}"></div>
+                        </div>
+
+                        <!-- Conteúdo do Processo -->
+                        {% set proc_label = proc.display_name %}
+                        {% if proc.code and proc.raw_name %}
+                          {% set proc_label = proc.code ~ ' - ' ~ proc.raw_name %}
+                        {% elif proc.code %}
+                          {% set proc_label = proc.code %}
+                        {% elif proc.raw_name %}
+                          {% set proc_label = proc.raw_name %}
+                        {% endif %}
+                        <div class="process-content">
+                          <div class="process-name">
+                            <span>{{ proc_label }}</span>
+                          </div>
+                        </div>
+                      </div>
+                    {% endfor %}
+                  {% endif %}
+                </div>
+
+                <!-- Macro Footer -->
+                {% if macro.owner %}
+                  <div class="macro-footer">
+                    Dono: {{ macro.owner }}
                   </div>
-                {% endfor %}
-              {% endif %}
-            </div>
-          </section>
-        {% endfor %}
+                {% endif %}
+              </div>
+            {% endfor %}
+          {% endif %}
+        </div>
+        </section>
+      {% endfor %}
       {% endif %}
     </div>
   </div>
+
 </body>
 </html>

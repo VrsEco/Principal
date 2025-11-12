@@ -1,6 +1,6 @@
 # 🏗️ Arquitetura do Sistema
 
-**Última Atualização:** 18/10/2025  
+**Última Atualização:** 12/11/2025  
 **Versão:** 1.0  
 **Status:** ✅ Documentação Oficial
 
@@ -9,6 +9,18 @@
 ## 🎯 Visão Geral
 
 O sistema segue uma **arquitetura modular baseada em Blueprints do Flask**, com separação clara de responsabilidades.
+
+## 🌐 Ambientes Oficiais
+
+| Ambiente | Diretório | Porta HTTP | Banco de Dados | Redis | Observações |
+|----------|-----------|------------|----------------|-------|-------------|
+| Produção | `app31`   | `5003` (via Nginx `80/443`) | `bd_app_versus` (PostgreSQL instalado no host Windows) | `redis://app31_redis_prod:6379/0` | Usa `docker-compose.yml` com imagem `Dockerfile`; Celery worker e beat ativos |
+| Desenvolvimento | `app32` | `5004` | `bd_app_versus_dev` (dump atualizado do banco de produção) | `redis://app32_redis_dev:6379/0` (exposto em `6380`) | Usa `docker-compose.yml` próprio com `Dockerfile.dev`; volumes montados para hot-reload |
+
+**Notas operacionais**
+- O dump `bd_app_versus_dev` é gerado por `pg_dump` do banco produtivo e fica em `app31/backups/`.
+- O `.env` de cada app deve apontar para o banco correspondente (`DATABASE_URL` e `DEV_DATABASE_URL`).
+- Ajustes devem ser validados no `app32` antes de serem aplicados no `app31`.
 
 ### Princípios Arquiteturais
 

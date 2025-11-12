@@ -1,5 +1,6 @@
-from flask import Blueprint, render_template, abort, url_for, make_response, request, jsonify, redirect
+from flask import Blueprint, render_template, abort, url_for, make_response, request, jsonify, redirect, current_app
 from datetime import datetime
+from zoneinfo import ZoneInfo
 import re
 import subprocess
 import sys
@@ -602,7 +603,8 @@ def grv_process_map_print(company_id: int):
         total_processes += area_entry['process_count']
         areas.append(area_entry)
 
-    generated_at = datetime.now()
+    generated_at = datetime.now(ZoneInfo("America/Sao_Paulo"))
+    app_version = current_app.config.get('APP_VERSION') if current_app else None
     company_created_at = _parse_datetime(company.get('created_at'))
     header_meta = {
         'company_name': company.get('name'),
@@ -701,6 +703,8 @@ def grv_process_map_pdf_debug(company_id: int):
                 perf_info = performance_levels.get(proc.get('performance_level') or '', performance_levels[''])
                 macro_entry['processes'].append({
                     'display_name': _format_display_name(proc.get('code'), proc.get('name'), 'Processo'),
+                    'code': _clean_text(proc.get('code')),
+                    'raw_name': _clean_text(proc.get('name'), 'Processo'),
                     'responsible': proc.get('responsible'),
                     'description': proc.get('description'),
                     'structuring': {
@@ -734,7 +738,8 @@ def grv_process_map_pdf_debug(company_id: int):
             'macros': total_macros,
             'processes': total_processes
         },
-        generated_at=generated_at
+        generated_at=generated_at,
+        report_version=app_version
     )
 
 
@@ -1188,24 +1193,8 @@ def grv_process_map_pdf2(company_id: int):
         generated_at=generated_at
     )
 
-    header_template = (
-        "<style>"
-        ".pdf-header{width:100%;height:8px;font-size:0;}"
-        "</style>"
-        "<div class='pdf-header'></div>"
-    )
-
-    footer_template = (
-        "<style>"
-        ".pdf-footer{width:100%;font-family:'Calibri','Segoe UI','Inter',Arial,sans-serif;font-size:7.5pt;"
-        "color:#64748b;display:flex;justify-content:space-between;align-items:center;"
-        "padding:6px 10mm 0 10mm;border-top:1px solid #e2e8f0;background:#ffffff;}"
-        "</style>"
-        f"<div class='pdf-footer'>"
-        "<span>Versus Gestão Corporativa - Todos os direitos reservados.</span>"
-        f"<span>Gerado em {generated_at.strftime('%d/%m/%Y às %H:%M')}</span>"
-        "</div>"
-    )
+    header_template = ""
+    footer_template = ""
 
     print("DEBUG: Iniciando geração de PDF...")
     
@@ -1227,79 +1216,17 @@ def grv_process_map_pdf2(company_id: int):
                     try:
                         print("DEBUG: Criando nova página...")
                         page = browser.new_page()
-                        page.set_viewport_size({"width": 1123, "height": 794})
+                        page.set_viewport_size({"width": 794, "height": 1123})
                         print("DEBUG: Definindo conteúdo HTML...")
                         page.set_content(html, wait_until="networkidle")
                         page.emulate_media(media="print")
 
-                        def _apply_single_page_scale() -> None:
-                            """Ajusta dinamicamente o zoom para caber em uma página."""
-                            try:
-                                page.wait_for_timeout(180)
-                                print("DEBUG: Calculando escala dinâmica para caber em uma única página...")
-                                page.evaluate(
-                                    """
-                                    () => {
-                                        const html = document.documentElement;
-                                        const body = document.body;
-                                        if (!html || !body) {
-                                            return;
-                                        }
-
-                                        const target = document.querySelector('.page-wrapper') || body;
-                                        const availableWidth = html.clientWidth || window.innerWidth;
-                                        const availableHeight = html.clientHeight || window.innerHeight;
-                                        const rect = target.getBoundingClientRect();
-                                        const contentWidth = Math.max(
-                                            rect.width,
-                                            target.scrollWidth,
-                                            body.scrollWidth,
-                                            html.scrollWidth
-                                        );
-                                        const contentHeight = Math.max(
-                                            rect.height,
-                                            target.scrollHeight,
-                                            body.scrollHeight,
-                                            html.scrollHeight
-                                        );
-
-                                        const scaleX = availableWidth / (contentWidth || 1);
-                                        const scaleY = availableHeight / (contentHeight || 1);
-                                        const scale = Math.min(scaleX, scaleY, 1);
-
-                                        body.setAttribute(
-                                            'data-pdf-scale-debug',
-                                            JSON.stringify({
-                                                availableWidth,
-                                                availableHeight,
-                                                contentWidth,
-                                                contentHeight,
-                                                scale
-                                            })
-                                        );
-
-                                        if (Number.isFinite(scale) && scale > 0 && scale < 1) {
-                                            html.style.zoom = String(scale);
-                                            body.style.zoom = String(scale);
-                                        }
-
-                                        html.style.overflow = 'hidden';
-                                        body.style.overflow = 'hidden';
-                                    }
-                                    """
-                                )
-                                print("DEBUG: Escala dinâmica aplicada com sucesso.")
-                            except Exception as scale_error:
-                                print(f"AVISO: Falha ao ajustar escala dinâmica: {scale_error}")
-
-                        _apply_single_page_scale()
-
                         print("DEBUG: Gerando PDF...")
                         pdf = page.pdf(
                             format="A4",
-                            landscape=True,
+                            landscape=False,
                             print_background=True,
-                            display_header_footer=True,
+                            display_header_footer=False,
                             header_template=header_template,
                             footer_template=footer_template,
                             prefer_css_page_size=True,
@@ -1308,7 +1235,7 @@ def grv_process_map_pdf2(company_id: int):
                         print("DEBUG: PDF gerado com sucesso!")
                     finally:
                         browser.close()
-                return pdf
+                    return pdf
             except Exception as exc:
                 last_error = exc
                 print(f"ERRO ao gerar PDF (tentativa {attempt + 1}): {exc}")

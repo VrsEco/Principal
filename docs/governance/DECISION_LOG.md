@@ -1,7 +1,7 @@
 # 📋 Decision Log - Decisões Arquiteturais
 
 **Projeto:** GestaoVersus  
-**Última atualização:** 28/10/2025
+**Última atualização:** 12/11/2025
 
 ---
 
@@ -145,6 +145,17 @@ Cada decisão deve conter:
 **Decisão:** Script `scripts/deploy/auto_git_push.ps1` executado diariamente às 18h pela tarefa `GestaoVersus_GitHub_Publish`  
 **Alternativas:** Lembretes manuais, hooks externos  
 **Consequências:** +Governança do versionamento, +Rastreabilidade de mudanças, -Exige credenciais Git configuradas no host  
+**Status:** ✅ Ativa
+
+---
+
+### **#012 - Separação física entre ambientes Produção (APP31) e Desenvolvimento (APP32)**
+
+**Data:** 12/11/2025  
+**Contexto:** Necessidade de ter ambientes paralelos com os mesmos códigos para testar novas funcionalidades sem afetar usuários finais.  
+**Decisão:** Manter o diretório `app31` como ambiente de produção, executado com `docker-compose.yml` apontando para o PostgreSQL oficial (`bd_app_versus`) e exposto na porta `5003`/Nginx `80/443`. Usar o diretório `app32` como ambiente de desenvolvimento com `docker-compose.yml` próprio (build via `Dockerfile.dev`), Redis isolado (`6380`), aplicação em `5004` e banco clonado (`bd_app_versus_dev`). O dump é armazenado em `app31/backups/`.  
+**Alternativas:** Utilizar apenas um diretório alternando variáveis de ambiente; criar workspaces Git separados; usar ambientes em nuvem.  
+**Consequências:** +Segurança (prod estável), +Rapidez para testar correções, +Padronização dos scripts de subida, -Duplicação de diretórios e necessidade de manter dumps atualizados.  
 **Status:** ✅ Ativa
 
 ---
