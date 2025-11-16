@@ -1,4 +1,4 @@
-from flask import Blueprint, render_template, url_for, request, jsonify, redirect
+﻿from flask import Blueprint, render_template, url_for, request, jsonify, redirect
 from datetime import datetime
 import json
 from typing import Any, Dict, List
@@ -564,8 +564,13 @@ def implantacao_modefin():
     print(f"Parcelas Estruturas: {len(parcelas_estruturas)}")
     print("="*80 + "\n")
     
-    ui_attrs = get_screen_attr_map(MODEFIN_SCREEN_CODE)
-    ui_catalog_payload = serialize_screen_catalog(MODEFIN_SCREEN_CODE)
+    try:
+        ui_attrs = get_screen_attr_map(MODEFIN_SCREEN_CODE)
+        ui_catalog_payload = serialize_screen_catalog(MODEFIN_SCREEN_CODE)
+    except Exception as exc:  # pylint: disable=broad-except
+        print(f"[ModeFin] Warning: failed to load UI catalog (code {MODEFIN_SCREEN_CODE}): {exc}")
+        ui_attrs = {}
+        ui_catalog_payload = {}
     
     return render_template(
         "implantacao/modelo_modefin.html",
@@ -1833,6 +1838,132 @@ def delete_capacity(plan_id: int, capacity_id: int):
         print(f"Error deleting capacity: {e}")
         return jsonify({'success': False, 'error': str(e)}), 500
 
+
+@pev_bp.route('/api/implantacao/<int:plan_id>/structures/<int:structure_id>/installments', methods=['DELETE'])
+def delete_structure_installments(plan_id: int, structure_id: int):
+    """Delete all installments for a structure"""
+    try:
+        divider = "=" * 60
+        print(f"\n{divider}")
+        print(f"[installments] DELETE - plan_id={plan_id}, structure_id={structure_id}")
+        print(f"{divider}\n")
+        
+        from config_database import get_db
+        db = get_db()
+        
+        # Verificar se estrutura existe
+        structures = db.list_plan_structures(plan_id)
+        structure = next((s for s in structures if s.get('id') == structure_id), None)
+        
+        if not structure:
+            print(f"[installments] Estrutura {structure_id} nao encontrada para plan_id {plan_id}")
+            return jsonify({'success': False, 'error': 'Estrutura nao encontrada'}), 404
+        
+        print("[installments] Estrutura encontrada, deletando parcelas...")
+        
+        # Deletar parcelas
+        db.delete_plan_structure_installments(structure_id)
+        
+        print("[installments] Parcelas deletadas com sucesso!\n")
+        return jsonify({'success': True}), 200
+        
+    except Exception as e:
+        divider = "=" * 60
+        print(f"\n{divider}")
+        print("[installments] EXCEPTION ao deletar parcelas:")
+        print(f"Error: {e}")
+        import traceback
+        print(f"Traceback:\n{traceback.format_exc()}")
+        print(f"{divider}\n")
+        return jsonify({'success': False, 'error': str(e)}), 500
+
+
+@pev_bp.route('/api/implantacao/<int:plan_id>/structures/<int:structure_id>/installments', methods=['POST'])
+def create_structure_installment(plan_id: int, structure_id: int):
+    """Create a new installment for a structure"""
+    try:
+        data = request.get_json() or {}
+        
+        divider = "=" * 60
+        print(f"\n{divider}")
+        print(f"[installments] CREATE - plan_id={plan_id}, structure_id={structure_id}")
+        print(f"[installments] Data received: {data}")
+        print("[installments] Data types: "
+              f"installment_number={type(data.get('installment_number'))}, "
+              f"amount={type(data.get('amount'))}")
+        print(f"{divider}\n")
+        
+        from config_database import get_db
+        db = get_db()
+        
+        # Verificar se estrutura existe
+        structures = db.list_plan_structures(plan_id)
+        structure = next((s for s in structures if s.get('id') == structure_id), None)
+        
+        if not structure:
+            print(f"[installments] Estrutura {structure_id} nao encontrada para plan_id {plan_id}")
+            return jsonify({'success': False, 'error': 'Estrutura nao encontrada'}), 404
+        
+        print(f"[installments] Estrutura encontrada: {structure.get('description', 'N/A')}")
+        
+        # Validar campos obrigatorios
+        installment_number = data.get('installment_number')
+        amount = data.get('amount')
+        
+        if not installment_number or (isinstance(installment_number, str) and not installment_number.strip()):
+            print("[installments] Validacao falhou: installment_number ausente ou vazio")
+            print(f"   Valor recebido: {repr(installment_number)}")
+            return jsonify({'success': False, 'error': 'Numero da parcela e obrigatorio'}), 400
+        
+        if not amount or (isinstance(amount, str) and not amount.strip()):
+            print("[installments] Validacao falhou: amount ausente ou vazio")
+            print(f"   Valor recebido: {repr(amount)}")
+            return jsonify({'success': False, 'error': 'Valor da parcela e obrigatorio'}), 400
+        
+        # Converter amount para string se for numero (banco espera TEXT)
+        if isinstance(amount, (int, float)):
+            amount = str(amount)
+        elif isinstance(amount, str):
+            # Garantir que e um numero valido antes de converter
+            try:
+                float(amount)
+            except ValueError:
+                print("[installments] Validacao falhou: amount nao e um numero valido")
+                print(f"   Valor recebido: {repr(amount)}")
+                return jsonify({'success': False, 'error': 'Valor da parcela deve ser um numero valido'}), 400
+        
+        # Preparar dados para insercao (garantir que amount e string)
+        insert_data = {
+            'installment_number': str(installment_number).strip() if installment_number else None,
+            'amount': str(amount).strip() if amount else None,
+            'due_info': data.get('due_info') or None,
+            'installment_type': data.get('installment_type') or None,
+            'classification': data.get('classification') or None,
+            'repetition': data.get('repetition') or None
+        }
+        
+        print(f"[installments] Validacao OK, dados preparados: {insert_data}")
+        print("[installments] Criando parcela...")
+        
+        # Criar parcela
+        installment_id = db.create_plan_structure_installment(structure_id, insert_data)
+        
+        if installment_id:
+            print(f"[installments] Parcela criada com sucesso! ID={installment_id}\n")
+            return jsonify({'success': True, 'id': installment_id}), 201
+        else:
+            print("[installments] Erro: create_plan_structure_installment retornou 0 ou None\n")
+            return jsonify({'success': False, 'error': 'Erro ao criar parcela no banco de dados'}), 500
+        
+    except Exception as e:
+        divider = "=" * 60
+        print(f"\n{divider}")
+        print("[installments] EXCEPTION ao criar parcela:")
+        print(f"Error: {e}")
+        import traceback
+        print(f"Traceback:\n{traceback.format_exc()}")
+        print(f"{divider}\n")
+        return jsonify({'success': False, 'error': f'Erro ao criar parcela: {str(e)}'}), 500
 
 @pev_bp.route('/api/implantacao/<int:plan_id>/structures/fixed-costs-summary', methods=['GET'])
 def get_fixed_costs_summary(plan_id: int):

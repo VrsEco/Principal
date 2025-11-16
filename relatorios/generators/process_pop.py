@@ -71,6 +71,24 @@ class ProcessPOPReport(BaseReportGenerator):
         # Estilos customizados para este relatório
         self._add_custom_styles()
     
+    @staticmethod
+    def _safe_strip(value, default=''):
+        """
+        Remove espaços de uma string de forma segura, tratando None e tipos não-string.
+        
+        Args:
+            value: Valor a ser processado (pode ser None, str ou outro tipo)
+            default: Valor padrão se value for None ou não-string
+            
+        Returns:
+            str: String sem espaços ou default se value for inválido
+        """
+        if value is None:
+            return default
+        if not isinstance(value, str):
+            return default
+        return value.strip()
+    
     def _add_custom_styles(self):
         """Adiciona estilos específicos deste relatório"""
         # Obter margens do modelo
@@ -952,7 +970,7 @@ class ProcessPOPReport(BaseReportGenerator):
     def _render_section(self, section):
         """Renderiza uma seção individual"""
         break_class = ' new-section' if section['break_before'] else ''
-        section_class = section['class'].strip()
+        section_class = self._safe_strip(section.get('class'))
         
         # Construir classe de forma mais limpa
         classes = ['report-section']
@@ -979,8 +997,8 @@ class ProcessPOPReport(BaseReportGenerator):
     def get_report_title(self):
         """Retorna o titulo do relatorio no formato: Código - Nome"""
         process = self.data.get('process', {})
-        code = process.get('code', '').strip()
-        name = process.get('name', '').strip()
+        code = self._safe_strip(process.get('code'))
+        name = self._safe_strip(process.get('name'))
         
         # Formato: AB.C.2.3.1 - VENDAS - POSTOS
         if code and name:
@@ -1039,8 +1057,22 @@ class ProcessPOPReport(BaseReportGenerator):
             
             # Buscar etapas desta atividade
             entries_raw = db.list_process_activity_entries(activity['id'])
-            activity_dict['entries'] = [dict(e) for e in entries_raw]
+            sanitized_entries = []
+            for entry in entries_raw:
+                entry_dict = dict(entry)
+                
+                # Normalizar campos que podem vir vazios do banco
+                entry_dict['image_path'] = self._safe_strip(entry_dict.get('image_path'))
+                
+                image_width = entry_dict.get('image_width')
+                try:
+                    entry_dict['image_width'] = int(image_width) if image_width is not None else 280
+                except (TypeError, ValueError):
+                    entry_dict['image_width'] = 280
+                
+                sanitized_entries.append(entry_dict)
             
+            activity_dict['entries'] = sanitized_entries
             activities.append(activity_dict)
         
         return activities
@@ -1336,7 +1368,7 @@ class ProcessPOPReport(BaseReportGenerator):
     def _add_flow_section(self):
         """Adiciona secao de fluxograma"""
         process = self.data.get('process', {})
-        flow_document = (process.get('flow_document') or '').strip()
+        flow_document = self._safe_strip(process.get('flow_document'))
 
         def _build_public_url(document_path: str):
             """Retorna URL pública do documento ou None"""
@@ -1458,11 +1490,15 @@ class ProcessPOPReport(BaseReportGenerator):
             if entries:
                 block.append("<div class='step-list'>")
                 for step_index, entry in enumerate(entries, 1):
+                    # Garantir que entry seja um dicionário
+                    if not isinstance(entry, dict):
+                        entry = {}
+                    
                     # Pegar texto
                     step_text = entry.get('text_content') or entry.get('content') or entry.get('description') or '-'
                     
                     # Pegar imagem (se existir)
-                    image_path = entry.get('image_path', '').strip()
+                    image_path = self._safe_strip(entry.get('image_path'))
                     image_width = entry.get('image_width', 280)  # Largura configurada
                     
                     # Classe CSS baseada em ter ou não imagem

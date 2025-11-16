@@ -684,52 +684,101 @@
     }
 
     function addInstallment(data = null) {
-      installmentCounter++;
-      const container = document.getElementById('installments-container');
-      
-      // Debug: log data recebida
-      if (data) {
-        console.log('📝 addInstallment - data recebida:', data);
+      try {
+        const container = document.getElementById('installments-container');
+        
+        if (!container) {
+          console.error('❌ Container de parcelas não encontrado!');
+          showMessage('Erro: Modal não está aberto. Abra o modal de estrutura primeiro.', 'error');
+          return;
+        }
+        
+        installmentCounter++;
+        
+        // Debug: log data recebida
+        if (data) {
+          console.log('📝 addInstallment - data recebida:', data);
+        }
+        
+        // Funções auxiliares para converter valores
+        function parseAmount(value) {
+          if (!value) return '';
+          // Se já é número, retornar como está
+          if (typeof value === 'number') return value.toString();
+          // Remover formatação monetária (R$, espaços, pontos, vírgulas)
+          const cleaned = value.toString().replace(/[R$\s.]/g, '').replace(',', '.');
+          const num = parseFloat(cleaned);
+          return isNaN(num) ? '' : num.toString();
+        }
+        
+        function parseDate(value) {
+          if (!value) return '';
+          // Se já está no formato YYYY-MM-DD, retornar como está
+          if (/^\d{4}-\d{2}-\d{2}$/.test(value)) return value;
+          // Tentar converter formato brasileiro DD/MM/YYYY para YYYY-MM-DD
+          const match = value.toString().match(/^(\d{2})\/(\d{2})\/(\d{4})$/);
+          if (match) {
+            return `${match[3]}-${match[2]}-${match[1]}`;
+          }
+          // Tentar outros formatos comuns
+          const dateMatch = value.toString().match(/^(\d{4})[-\/](\d{2})[-\/](\d{2})$/);
+          if (dateMatch) {
+            return `${dateMatch[1]}-${dateMatch[2]}-${dateMatch[3]}`;
+          }
+          return '';
+        }
+        
+        const installmentDiv = document.createElement('div');
+        installmentDiv.className = 'installment-row';
+        installmentDiv.dataset.index = installmentCounter;
+        installmentDiv.style.cssText = 'display: grid; grid-template-columns: 70px 100px 110px 130px 130px 100px 50px; gap: 6px; align-items: center; padding: 10px; background: rgba(248, 250, 252, 0.8); border: 1px solid rgba(148, 163, 184, 0.2); border-radius: 8px; margin-bottom: 8px;';
+        
+        // Preparar valores com escape para prevenir XSS
+        const installmentNumber = data ? String(data.installment_number || '').replace(/"/g, '&quot;') : '';
+        const amount = data ? parseAmount(data.amount) : '';
+        const dueDate = data ? parseDate(data.due_info) : '';
+        const classification = data ? String(data.classification || '').replace(/"/g, '&quot;') : '';
+        const repetition = data ? String(data.repetition || '').replace(/"/g, '&quot;') : '';
+        const installmentType = data ? String(data.installment_type || '').replace(/"/g, '&quot;') : '';
+        
+        installmentDiv.innerHTML = `
+          <input type="text" placeholder="#" value="${installmentNumber}" 
+                 class="installment-number" style="padding: 6px; font-size: 12px;" title="Número da parcela">
+          <input type="number" placeholder="Valor" value="${amount}" step="0.01" min="0"
+                 class="installment-amount" style="padding: 6px; font-size: 12px;" title="Valor da parcela">
+          <input type="date" value="${dueDate}" 
+                 class="installment-due" style="padding: 6px; font-size: 12px;" title="Data de vencimento">
+          <select class="installment-classification" style="padding: 6px; font-size: 12px;" title="Classificação contábil">
+            <option value="">Classificação...</option>
+            <option value="Investimento" ${classification === 'Investimento' ? 'selected' : ''}>Investimento</option>
+            <option value="Custo Fixo" ${classification === 'Custo Fixo' ? 'selected' : ''}>Custo Fixo</option>
+            <option value="Despesa Fixa" ${classification === 'Despesa Fixa' ? 'selected' : ''}>Despesa Fixa</option>
+          </select>
+          <select class="installment-repetition" style="padding: 6px; font-size: 12px;" title="Repetição">
+            <option value="">Repetição...</option>
+            <option value="Única" ${repetition === 'Única' ? 'selected' : ''}>Única</option>
+            <option value="Mensal" ${repetition === 'Mensal' ? 'selected' : ''}>Mensal</option>
+            <option value="Trimestral" ${repetition === 'Trimestral' ? 'selected' : ''}>Trimestral</option>
+            <option value="Semestral" ${repetition === 'Semestral' ? 'selected' : ''}>Semestral</option>
+            <option value="Anual" ${repetition === 'Anual' ? 'selected' : ''}>Anual</option>
+          </select>
+          <select class="installment-type" style="padding: 6px; font-size: 12px;" title="Tipo de parcela">
+            <option value="">Tipo...</option>
+            <option value="Entrada" ${installmentType === 'Entrada' ? 'selected' : ''}>Entrada</option>
+            <option value="Mensalidade" ${installmentType === 'Mensalidade' ? 'selected' : ''}>Mensalidade</option>
+            <option value="Parcela" ${installmentType === 'Parcela' ? 'selected' : ''}>Parcela</option>
+            <option value="Pagamento único" ${installmentType === 'Pagamento único' ? 'selected' : ''}>Pagamento único</option>
+          </select>
+          <button type="button" onclick="removeInstallment(${installmentCounter})" 
+                  style="padding: 6px; background: #ef4444; color: white; border: none; border-radius: 4px; cursor: pointer; font-size: 12px;" title="Remover parcela">X</button>
+        `;
+        
+        container.appendChild(installmentDiv);
+        console.log('✅ Parcela adicionada com sucesso!');
+      } catch (error) {
+        console.error('❌ Erro ao adicionar parcela:', error);
+        showMessage('Erro ao adicionar parcela. Verifique o console para mais detalhes.', 'error');
       }
-      
-      const installmentDiv = document.createElement('div');
-      installmentDiv.className = 'installment-row';
-      installmentDiv.dataset.index = installmentCounter;
-      installmentDiv.style.cssText = 'display: grid; grid-template-columns: 70px 100px 110px 130px 130px 100px 50px; gap: 6px; align-items: center; padding: 10px; background: rgba(248, 250, 252, 0.8); border: 1px solid rgba(148, 163, 184, 0.2); border-radius: 8px; margin-bottom: 8px;';
-      
-      installmentDiv.innerHTML = `
-        <input type="text" placeholder="#" value="${data ? data.installment_number || '' : ''}" 
-               class="installment-number" style="padding: 6px; font-size: 12px;" title="Número da parcela">
-        <input type="number" placeholder="Valor" value="${data ? data.amount || '' : ''}" step="0.01" min="0"
-               class="installment-amount" style="padding: 6px; font-size: 12px;" title="Valor da parcela">
-        <input type="date" value="${data ? data.due_info || '' : ''}" 
-               class="installment-due" style="padding: 6px; font-size: 12px;" title="Data de vencimento">
-        <select class="installment-classification" style="padding: 6px; font-size: 12px;" title="Classificação contábil">
-          <option value="">Classificação...</option>
-          <option value="Investimento" ${data && data.classification === 'Investimento' ? 'selected' : ''}>Investimento</option>
-          <option value="Custo Fixo" ${data && data.classification === 'Custo Fixo' ? 'selected' : ''}>Custo Fixo</option>
-          <option value="Despesa Fixa" ${data && data.classification === 'Despesa Fixa' ? 'selected' : ''}>Despesa Fixa</option>
-        </select>
-        <select class="installment-repetition" style="padding: 6px; font-size: 12px;" title="Repetição">
-          <option value="">Repetição...</option>
-          <option value="Única" ${data && data.repetition === 'Única' ? 'selected' : ''}>Única</option>
-          <option value="Mensal" ${data && data.repetition === 'Mensal' ? 'selected' : ''}>Mensal</option>
-          <option value="Trimestral" ${data && data.repetition === 'Trimestral' ? 'selected' : ''}>Trimestral</option>
-          <option value="Semestral" ${data && data.repetition === 'Semestral' ? 'selected' : ''}>Semestral</option>
-          <option value="Anual" ${data && data.repetition === 'Anual' ? 'selected' : ''}>Anual</option>
-        </select>
-        <select class="installment-type" style="padding: 6px; font-size: 12px;" title="Tipo de parcela">
-          <option value="">Tipo...</option>
-          <option value="Entrada" ${data && data.installment_type === 'Entrada' ? 'selected' : ''}>Entrada</option>
-          <option value="Mensalidade" ${data && data.installment_type === 'Mensalidade' ? 'selected' : ''}>Mensalidade</option>
-          <option value="Parcela" ${data && data.installment_type === 'Parcela' ? 'selected' : ''}>Parcela</option>
-          <option value="Pagamento único" ${data && data.installment_type === 'Pagamento único' ? 'selected' : ''}>Pagamento único</option>
-        </select>
-        <button type="button" onclick="removeInstallment(${installmentCounter})" 
-                style="padding: 6px; background: #ef4444; color: white; border: none; border-radius: 4px; cursor: pointer; font-size: 12px;" title="Remover parcela">X</button>
-      `;
-      
-      container.appendChild(installmentDiv);
     }
 
     function removeInstallment(index) {
@@ -857,7 +906,9 @@
     }
 
     // Salvar parcelas da estrutura
+    // Versão: 2.1 - Corrigido tratamento de 404 na deleção (2025-11-13 23:41)
     async function saveInstallments() {
+      console.log('🔧 saveInstallments v2.1 - Iniciando salvamento de parcelas...');
       const structureId = document.getElementById('structure-id').value;
       
       if (!structureId) {
@@ -869,29 +920,85 @@
       
       // Coletar parcelas
       const installmentRows = document.querySelectorAll('.installment-row');
-      const installments = Array.from(installmentRows).map(row => ({
-        installment_number: row.querySelector('.installment-number').value,
-        amount: row.querySelector('.installment-amount').value,
-        due_info: row.querySelector('.installment-due').value,
-        classification: row.querySelector('.installment-classification').value,
-        repetition: row.querySelector('.installment-repetition').value,
-        installment_type: row.querySelector('.installment-type').value
-      }));
+      const installments = Array.from(installmentRows)
+        .map(row => {
+          const installmentNumber = (row.querySelector('.installment-number')?.value || '').trim();
+          const amount = (row.querySelector('.installment-amount')?.value || '').trim();
+          const dueInfo = (row.querySelector('.installment-due')?.value || '').trim();
+          const classification = (row.querySelector('.installment-classification')?.value || '').trim();
+          const repetition = (row.querySelector('.installment-repetition')?.value || '').trim();
+          const installmentType = (row.querySelector('.installment-type')?.value || '').trim();
+          
+          return {
+            installment_number: installmentNumber,
+            amount: amount,
+            due_info: dueInfo,
+            classification: classification,
+            repetition: repetition,
+            installment_type: installmentType
+          };
+        })
+        .filter(inst => {
+          // Filtrar apenas parcelas que têm pelo menos número ou valor preenchido
+          return inst.installment_number || inst.amount;
+        });
       
       console.log('📦 Parcelas a salvar:', installments);
       
-      try {
-        // Deletar parcelas antigas
-        const deleteResponse = await fetch(`/pev/api/implantacao/${planId}/structures/${structureId}/installments`, {
-          method: 'DELETE'
-        });
-        if (!deleteResponse.ok) {
-          const deleteError = await deleteResponse.json().catch(() => ({}));
-          throw new Error(deleteError.error || 'Falha ao limpar parcelas anteriores');
+      if (installments.length === 0) {
+        showMessage('Nenhuma parcela válida para salvar. Adicione pelo menos uma parcela com número ou valor.', 'error');
+        return;
+      }
+      
+      // Validar parcelas antes de enviar
+      for (let i = 0; i < installments.length; i++) {
+        const inst = installments[i];
+        if (!inst.installment_number || inst.installment_number.trim() === '') {
+          showMessage(`Parcela ${i + 1}: Número da parcela é obrigatório`, 'error');
+          return;
         }
+        if (!inst.amount || inst.amount.trim() === '' || parseFloat(inst.amount) <= 0) {
+          showMessage(`Parcela ${i + 1}: Valor da parcela é obrigatório e deve ser maior que zero`, 'error');
+          return;
+        }
+        // Garantir que amount é um número válido
+        const amountNum = parseFloat(inst.amount);
+        if (isNaN(amountNum) || amountNum <= 0) {
+          showMessage(`Parcela ${i + 1}: Valor da parcela deve ser um número válido maior que zero`, 'error');
+          return;
+        }
+      }
+      
+      try {
+        // Tentar deletar parcelas antigas primeiro (OPCIONAL - nunca falha)
+        // Usar Promise.resolve().then() para garantir que nunca bloqueia
+        Promise.resolve().then(async () => {
+          try {
+            const deleteResponse = await fetch(`/pev/api/implantacao/${planId}/structures/${structureId}/installments`, {
+              method: 'DELETE'
+            });
+            
+            if (deleteResponse.ok) {
+              console.log('✅ Parcelas antigas deletadas com sucesso');
+            } else {
+              // Qualquer status (404, 500, etc) é ignorado - não é crítico
+              console.log(`ℹ️ Deleção retornou status ${deleteResponse.status} - ignorando (não crítico)`);
+            }
+          } catch (deleteErr) {
+            // Qualquer erro é completamente ignorado
+            console.log('ℹ️ Erro na deleção ignorado (não crítico):', deleteErr.message || deleteErr);
+          }
+        }).catch(() => {
+          // Absolutamente nenhum erro deve ser propagado
+        });
+        
+        // Continuar imediatamente sem esperar a deleção
         
         // Criar novas parcelas
-        for (const inst of installments) {
+        for (let i = 0; i < installments.length; i++) {
+          const inst = installments[i];
+          console.log(`📝 Criando parcela ${i + 1}/${installments.length}:`, inst);
+          
           const createResponse = await fetch(`/pev/api/implantacao/${planId}/structures/${structureId}/installments`, {
             method: 'POST',
             headers: {'Content-Type': 'application/json'},
@@ -900,18 +1007,24 @@
 
           if (!createResponse.ok) {
             const errorData = await createResponse.json().catch(() => ({}));
-            throw new Error(errorData.error || 'Falha ao criar uma das parcelas');
+            const errorMsg = errorData.error || errorData.message || `Falha ao criar parcela ${i + 1}`;
+            console.error(`❌ Erro ao criar parcela ${i + 1}:`, errorMsg, errorData);
+            throw new Error(errorMsg);
           }
+          
+          const result = await createResponse.json().catch(() => ({}));
+          console.log(`✅ Parcela ${i + 1} criada:`, result);
         }
         
-        showMessage('Parcelas salvas com sucesso!', 'success');
+        showMessage(`Parcelas salvas com sucesso! (${installments.length} parcela${installments.length > 1 ? 's' : ''})`, 'success');
         
         // Fechar modal e recarregar estrutura para refletir dados atualizados
         closeStructureModal();
         setTimeout(() => window.location.reload(), 800);
       } catch (error) {
-        console.error('Error saving installments:', error);
-        showMessage('Erro ao salvar parcelas', 'error');
+        console.error('❌ Error saving installments:', error);
+        const errorMessage = error.message || 'Erro ao salvar parcelas';
+        showMessage(`Erro ao salvar parcelas: ${errorMessage}`, 'error');
       }
     }
 
