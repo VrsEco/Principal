@@ -1,19 +1,18 @@
 {
   "status": "commited",
-  "type": "backend",
+  "type": "frontend",
   "scope": "codebase",
   "localEndpoint": "http://localhost:5003",
-  "backendAuthType": "basic token",
-  "backendUsername": "admin@versus.com.br",
-  "backendPassword": "123456",
+  "loginUser": "admin@versus.com.br",
+  "loginPassword": "123456",
   "executionArgs": {
     "projectName": "app31",
     "projectPath": "C:\\GestaoVersus\\app31",
     "testIds": [],
-    "additionalInstruction": "",
+    "additionalInstruction": "Executar TODOS os testes frontend para TODAS as rotas do aplicativo. Testar todas as páginas HTML dos módulos PEV, GRV, Meetings e My Work. Testar todas as APIs REST. Verificar: autenticação, autorização, validação de dados, tratamento de erros, comportamento de UI, modais, formulários, navegação, paginação, filtros e todas as funcionalidades CRUD. Incluir testes de integração entre módulos.",
     "envs": {
       "API_KEY": "sk-user-z29u2_yQCGGuCWaIHKg5KpGXpjL7w7jAYuumiZE0VfeYTXOEu7VwPR-gO8MkS9pqxehT0GRh9vOCe3Z3yBmMoSUN2e90TVK8B9ijjWp7-9OodXcufWJdMn-mhaHLzDssaYE"
     }
   },
-  "proxy": "http://d1b0c36a-607a-43d1-b3c7-577a06af7742:ic2YE1kjQg7S13VP13SWt8LYerNGe8m1@tun.testsprite.com:8080"
+  "proxy": "http://9070fec2-64de-48ff-b2c7-f20042cef85a:PoJDUZXge5pqyNKDuYBmIpMG5s202okm@tun.testsprite.com:8080"
 }

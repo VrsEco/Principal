@@ -1,0 +1,6433 @@
+[
+  {
+    "endpoint": "pev.pev_dashboard",
+    "path": "/pev/dashboard",
+    "methods": [
+      "GET"
+    ],
+    "blueprint": "pev",
+    "function": "<function pev_dashboard at 0x000001D67C79B100>",
+    "function_name": "pev_dashboard",
+    "has_auto_log": false,
+    "has_manual_log": false,
+    "entity_type": null,
+    "is_crud": false,
+    "needs_logging": false
+  },
+  {
+    "endpoint": "pev.pev_implantacao_overview",
+    "path": "/pev/implantacao",
+    "methods": [
+      "GET"
+    ],
+    "blueprint": "pev",
+    "function": "<function pev_implantacao_overview at 0x000001D67C79B240>",
+    "function_name": "pev_implantacao_overview",
+    "has_auto_log": false,
+    "has_manual_log": false,
+    "entity_type": null,
+    "is_crud": false,
+    "needs_logging": false
+  },
+  {
+    "endpoint": "pev.implantacao_canvas_expectativas",
+    "path": "/pev/implantacao/alinhamento/canvas-expectativas",
+    "methods": [
+      "GET"
+    ],
+    "blueprint": "pev",
+    "function": "<function implantacao_canvas_expectativas at 0x000001D67C79B380>",
+    "function_name": "implantacao_canvas_expectativas",
+    "has_auto_log": false,
+    "has_manual_log": false,
+    "entity_type": null,
+    "is_crud": false,
+    "needs_logging": false
+  },
+  {
+    "endpoint": "pev.implantacao_agenda_planejamento",
+    "path": "/pev/implantacao/alinhamento/agenda-planejamento",
+    "methods": [
+      "GET"
+    ],
+    "blueprint": "pev",
+    "function": "<function implantacao_agenda_planejamento at 0x000001D67C79B4C0>",
+    "function_name": "implantacao_agenda_planejamento",
+    "has_auto_log": false,
+    "has_manual_log": false,
+    "entity_type": null,
+    "is_crud": false,
+    "needs_logging": false
+  },
+  {
+    "endpoint": "pev.implantacao_canvas_proposta_valor",
+    "path": "/pev/implantacao/modelo/canvas-proposta-valor",
+    "methods": [
+      "GET"
+    ],
+    "blueprint": "pev",
+    "function": "<function implantacao_canvas_proposta_valor at 0x000001D67C79B600>",
+    "function_name": "implantacao_canvas_proposta_valor",
+    "has_auto_log": false,
+    "has_manual_log": false,
+    "entity_type": null,
+    "is_crud": false,
+    "needs_logging": false
+  },
+  {
+    "endpoint": "pev.implantacao_mapa_persona",
+    "path": "/pev/implantacao/modelo/mapa-persona",
+    "methods": [
+      "GET"
+    ],
+    "blueprint": "pev",
+    "function": "<function implantacao_mapa_persona at 0x000001D67C79B740>",
+    "function_name": "implantacao_mapa_persona",
+    "has_auto_log": false,
+    "has_manual_log": false,
+    "entity_type": null,
+    "is_crud": false,
+    "needs_logging": false
+  },
+  {
+    "endpoint": "pev.implantacao_matriz_diferenciais",
+    "path": "/pev/implantacao/modelo/matriz-diferenciais",
+    "methods": [
+      "GET"
+    ],
+    "blueprint": "pev",
+    "function": "<function implantacao_matriz_diferenciais at 0x000001D67C79B880>",
+    "function_name": "implantacao_matriz_diferenciais",
+    "has_auto_log": false,
+    "has_manual_log": false,
+    "entity_type": null,
+    "is_crud": false,
+    "needs_logging": false
+  },
+  {
+    "endpoint": "pev.implantacao_produtos",
+    "path": "/pev/implantacao/modelo/produtos",
+    "methods": [
+      "GET"
+    ],
+    "blueprint": "pev",
+    "function": "<function implantacao_produtos at 0x000001D67C79B9C0>",
+    "function_name": "implantacao_produtos",
+    "has_auto_log": false,
+    "has_manual_log": false,
+    "entity_type": null,
+    "is_crud": false,
+    "needs_logging": false
+  },
+  {
+    "endpoint": "pev.implantacao_modelagem_financeira",
+    "path": "/pev/implantacao/modelo/modelagem-financeira",
+    "methods": [
+      "GET"
+    ],
+    "blueprint": "pev",
+    "function": "<function implantacao_modelagem_financeira at 0x000001D67C79BB00>",
+    "function_name": "implantacao_modelagem_financeira",
+    "has_auto_log": false,
+    "has_manual_log": false,
+    "entity_type": null,
+    "is_crud": false,
+    "needs_logging": false
+  },
+  {
+    "endpoint": "pev.implantacao_modefin",
+    "path": "/pev/implantacao/modelo/modefin",
+    "methods": [
+      "GET"
+    ],
+    "blueprint": "pev",
+    "function": "<function implantacao_modefin at 0x000001D67C79BC40>",
+    "function_name": "implantacao_modefin",
+    "has_auto_log": false,
+    "has_manual_log": false,
+    "entity_type": null,
+    "is_crud": false,
+    "needs_logging": false
+  },
+  {
+    "endpoint": "pev.get_products",
+    "path": "/pev/api/implantacao/<int:plan_id>/products",
+    "methods": [
+      "GET"
+    ],
+    "blueprint": "pev",
+    "function": "<function get_products at 0x000001D67C79BD80>",
+    "function_name": "get_products",
+    "has_auto_log": false,
+    "has_manual_log": false,
+    "entity_type": null,
+    "is_crud": false,
+    "needs_logging": false
+  },
+  {
+    "endpoint": "pev.get_products_totals",
+    "path": "/pev/api/implantacao/<int:plan_id>/products/totals",
+    "methods": [
+      "GET"
+    ],
+    "blueprint": "pev",
+    "function": "<function get_products_totals at 0x000001D67C79BEC0>",
+    "function_name": "get_products_totals",
+    "has_auto_log": false,
+    "has_manual_log": false,
+    "entity_type": null,
+    "is_crud": false,
+    "needs_logging": false
+  },
+  {
+    "endpoint": "pev.create_product",
+    "path": "/pev/api/implantacao/<int:plan_id>/products",
+    "methods": [
+      "POST"
+    ],
+    "blueprint": "pev",
+    "function": "<function create_product at 0x000001D67C7A8040>",
+    "function_name": "create_product",
+    "has_auto_log": false,
+    "has_manual_log": false,
+    "entity_type": null,
+    "is_crud": true,
+    "needs_logging": true
+  },
+  {
+    "endpoint": "pev.get_product",
+    "path": "/pev/api/implantacao/<int:plan_id>/products/<int:product_id>",
+    "methods": [
+      "GET"
+    ],
+    "blueprint": "pev",
+    "function": "<function get_product at 0x000001D67C7A8180>",
+    "function_name": "get_product",
+    "has_auto_log": false,
+    "has_manual_log": false,
+    "entity_type": null,
+    "is_crud": false,
+    "needs_logging": false
+  },
+  {
+    "endpoint": "pev.update_product",
+    "path": "/pev/api/implantacao/<int:plan_id>/products/<int:product_id>",
+    "methods": [
+      "PUT"
+    ],
+    "blueprint": "pev",
+    "function": "<function update_product at 0x000001D67C7A82C0>",
+    "function_name": "update_product",
+    "has_auto_log": false,
+    "has_manual_log": false,
+    "entity_type": null,
+    "is_crud": true,
+    "needs_logging": true
+  },
+  {
+    "endpoint": "pev.delete_product",
+    "path": "/pev/api/implantacao/<int:plan_id>/products/<int:product_id>",
+    "methods": [
+      "DELETE"
+    ],
+    "blueprint": "pev",
+    "function": "<function delete_product at 0x000001D67C7A8400>",
+    "function_name": "delete_product",
+    "has_auto_log": false,
+    "has_manual_log": false,
+    "entity_type": null,
+    "is_crud": true,
+    "needs_logging": true
+  },
+  {
+    "endpoint": "pev.implantacao_playbook_comercial",
+    "path": "/pev/implantacao/executivo/playbook-comercial",
+    "methods": [
+      "GET"
+    ],
+    "blueprint": "pev",
+    "function": "<function implantacao_playbook_comercial at 0x000001D67C7A8540>",
+    "function_name": "implantacao_playbook_comercial",
+    "has_auto_log": false,
+    "has_manual_log": false,
+    "entity_type": null,
+    "is_crud": false,
+    "needs_logging": false
+  },
+  {
+    "endpoint": "pev.implantacao_mapa_processos",
+    "path": "/pev/implantacao/executivo/mapa-processos",
+    "methods": [
+      "GET"
+    ],
+    "blueprint": "pev",
+    "function": "<function implantacao_mapa_processos at 0x000001D67C7A8680>",
+    "function_name": "implantacao_mapa_processos",
+    "has_auto_log": false,
+    "has_manual_log": false,
+    "entity_type": null,
+    "is_crud": false,
+    "needs_logging": false
+  },
+  {
+    "endpoint": "pev.implantacao_modelo_financeiro_base",
+    "path": "/pev/implantacao/executivo/modelo-financeiro-base",
+    "methods": [
+      "GET"
+    ],
+    "blueprint": "pev",
+    "function": "<function implantacao_modelo_financeiro_base at 0x000001D67C7A87C0>",
+    "function_name": "implantacao_modelo_financeiro_base",
+    "has_auto_log": false,
+    "has_manual_log": false,
+    "entity_type": null,
+    "is_crud": false,
+    "needs_logging": false
+  },
+  {
+    "endpoint": "pev.implantacao_plano_investimento",
+    "path": "/pev/implantacao/financeiro/plano-investimento",
+    "methods": [
+      "GET"
+    ],
+    "blueprint": "pev",
+    "function": "<function implantacao_plano_investimento at 0x000001D67C7A8900>",
+    "function_name": "implantacao_plano_investimento",
+    "has_auto_log": false,
+    "has_manual_log": false,
+    "entity_type": "plan",
+    "is_crud": false,
+    "needs_logging": false
+  },
+  {
+    "endpoint": "pev.implantacao_fluxo_caixa",
+    "path": "/pev/implantacao/financeiro/fluxo-caixa",
+    "methods": [
+      "GET"
+    ],
+    "blueprint": "pev",
+    "function": "<function implantacao_fluxo_caixa at 0x000001D67C7A8A40>",
+    "function_name": "implantacao_fluxo_caixa",
+    "has_auto_log": false,
+    "has_manual_log": false,
+    "entity_type": null,
+    "is_crud": false,
+    "needs_logging": false
+  },
+  {
+    "endpoint": "pev.implantacao_matriz_indicadores_financeiros",
+    "path": "/pev/implantacao/financeiro/matriz-indicadores",
+    "methods": [
+      "GET"
+    ],
+    "blueprint": "pev",
+    "function": "<function implantacao_matriz_indicadores_financeiros at 0x000001D67C7A8B80>",
+    "function_name": "implantacao_matriz_indicadores_financeiros",
+    "has_auto_log": false,
+    "has_manual_log": false,
+    "entity_type": null,
+    "is_crud": false,
+    "needs_logging": false
+  },
+  {
+    "endpoint": "pev.implantacao_relatorio_capa_resumo",
+    "path": "/pev/implantacao/relatorio/01-capa-resumo",
+    "methods": [
+      "GET"
+    ],
+    "blueprint": "pev",
+    "function": "<function implantacao_relatorio_capa_resumo at 0x000001D67C7A8CC0>",
+    "function_name": "implantacao_relatorio_capa_resumo",
+    "has_auto_log": false,
+    "has_manual_log": false,
+    "entity_type": null,
+    "is_crud": false,
+    "needs_logging": false
+  },
+  {
+    "endpoint": "pev.implantacao_relatorio_final",
+    "path": "/pev/implantacao/entrega/relatorio-final",
+    "methods": [
+      "GET"
+    ],
+    "blueprint": "pev",
+    "function": "<function implantacao_relatorio_final at 0x000001D67C7A8E00>",
+    "function_name": "implantacao_relatorio_final",
+    "has_auto_log": false,
+    "has_manual_log": false,
+    "entity_type": null,
+    "is_crud": false,
+    "needs_logging": false
+  },
+  {
+    "endpoint": "pev.implantacao_projeto_executivo",
+    "path": "/pev/implantacao/entrega/projeto-executivo",
+    "methods": [
+      "GET"
+    ],
+    "blueprint": "pev",
+    "function": "<function implantacao_projeto_executivo at 0x000001D67C7A8F40>",
+    "function_name": "implantacao_projeto_executivo",
+    "has_auto_log": false,
+    "has_manual_log": false,
+    "entity_type": null,
+    "is_crud": false,
+    "needs_logging": false
+  },
+  {
+    "endpoint": "pev.implantacao_painel_governanca",
+    "path": "/pev/implantacao/entrega/painel-governanca",
+    "methods": [
+      "GET"
+    ],
+    "blueprint": "pev",
+    "function": "<function implantacao_painel_governanca at 0x000001D67C7A9080>",
+    "function_name": "implantacao_painel_governanca",
+    "has_auto_log": false,
+    "has_manual_log": false,
+    "entity_type": null,
+    "is_crud": false,
+    "needs_logging": false
+  },
+  {
+    "endpoint": "pev.implantacao_estruturas",
+    "path": "/pev/implantacao/executivo/estruturas",
+    "methods": [
+      "GET"
+    ],
+    "blueprint": "pev",
+    "function": "<function implantacao_estruturas at 0x000001D67C7A91C0>",
+    "function_name": "implantacao_estruturas",
+    "has_auto_log": false,
+    "has_manual_log": false,
+    "entity_type": null,
+    "is_crud": false,
+    "needs_logging": false
+  },
+  {
+    "endpoint": "pev.add_alignment_member",
+    "path": "/pev/api/implantacao/<int:plan_id>/alignment/members",
+    "methods": [
+      "POST"
+    ],
+    "blueprint": "pev",
+    "function": "<function add_alignment_member at 0x000001D67C7A9300>",
+    "function_name": "add_alignment_member",
+    "has_auto_log": false,
+    "has_manual_log": false,
+    "entity_type": null,
+    "is_crud": true,
+    "needs_logging": true
+  },
+  {
+    "endpoint": "pev.update_alignment_member",
+    "path": "/pev/api/implantacao/<int:plan_id>/alignment/members/<int:member_id>",
+    "methods": [
+      "PUT"
+    ],
+    "blueprint": "pev",
+    "function": "<function update_alignment_member at 0x000001D67C7A9440>",
+    "function_name": "update_alignment_member",
+    "has_auto_log": false,
+    "has_manual_log": false,
+    "entity_type": null,
+    "is_crud": true,
+    "needs_logging": true
+  },
+  {
+    "endpoint": "pev.delete_alignment_member",
+    "path": "/pev/api/implantacao/<int:plan_id>/alignment/members/<int:member_id>",
+    "methods": [
+      "DELETE"
+    ],
+    "blueprint": "pev",
+    "function": "<function delete_alignment_member at 0x000001D67C7A9580>",
+    "function_name": "delete_alignment_member",
+    "has_auto_log": false,
+    "has_manual_log": false,
+    "entity_type": null,
+    "is_crud": true,
+    "needs_logging": true
+  },
+  {
+    "endpoint": "pev.save_alignment_overview",
+    "path": "/pev/api/implantacao/<int:plan_id>/alignment/overview",
+    "methods": [
+      "POST",
+      "PUT"
+    ],
+    "blueprint": "pev",
+    "function": "<function save_alignment_overview at 0x000001D67C7A96C0>",
+    "function_name": "save_alignment_overview",
+    "has_auto_log": false,
+    "has_manual_log": false,
+    "entity_type": null,
+    "is_crud": true,
+    "needs_logging": true
+  },
+  {
+    "endpoint": "pev.create_segment",
+    "path": "/pev/api/implantacao/<int:plan_id>/segments",
+    "methods": [
+      "POST"
+    ],
+    "blueprint": "pev",
+    "function": "<function create_segment at 0x000001D67C7A9800>",
+    "function_name": "create_segment",
+    "has_auto_log": false,
+    "has_manual_log": false,
+    "entity_type": null,
+    "is_crud": true,
+    "needs_logging": true
+  },
+  {
+    "endpoint": "pev.update_segment",
+    "path": "/pev/api/implantacao/<int:plan_id>/segments/<int:segment_id>",
+    "methods": [
+      "PUT"
+    ],
+    "blueprint": "pev",
+    "function": "<function update_segment at 0x000001D67C7A9940>",
+    "function_name": "update_segment",
+    "has_auto_log": false,
+    "has_manual_log": false,
+    "entity_type": null,
+    "is_crud": true,
+    "needs_logging": true
+  },
+  {
+    "endpoint": "pev.delete_segment",
+    "path": "/pev/api/implantacao/<int:plan_id>/segments/<int:segment_id>",
+    "methods": [
+      "DELETE"
+    ],
+    "blueprint": "pev",
+    "function": "<function delete_segment at 0x000001D67C7A9A80>",
+    "function_name": "delete_segment",
+    "has_auto_log": false,
+    "has_manual_log": false,
+    "entity_type": null,
+    "is_crud": true,
+    "needs_logging": true
+  },
+  {
+    "endpoint": "pev.get_structure",
+    "path": "/pev/api/implantacao/<int:plan_id>/structures/<int:structure_id>",
+    "methods": [
+      "GET"
+    ],
+    "blueprint": "pev",
+    "function": "<function get_structure at 0x000001D67C7A9BC0>",
+    "function_name": "get_structure",
+    "has_auto_log": false,
+    "has_manual_log": false,
+    "entity_type": null,
+    "is_crud": false,
+    "needs_logging": false
+  },
+  {
+    "endpoint": "pev.create_structure",
+    "path": "/pev/api/implantacao/<int:plan_id>/structures",
+    "methods": [
+      "POST"
+    ],
+    "blueprint": "pev",
+    "function": "<function create_structure at 0x000001D67C7A9D00>",
+    "function_name": "create_structure",
+    "has_auto_log": false,
+    "has_manual_log": false,
+    "entity_type": null,
+    "is_crud": true,
+    "needs_logging": true
+  },
+  {
+    "endpoint": "pev.update_structure",
+    "path": "/pev/api/implantacao/<int:plan_id>/structures/<int:structure_id>",
+    "methods": [
+      "PUT"
+    ],
+    "blueprint": "pev",
+    "function": "<function update_structure at 0x000001D67C7A9E40>",
+    "function_name": "update_structure",
+    "has_auto_log": false,
+    "has_manual_log": false,
+    "entity_type": null,
+    "is_crud": true,
+    "needs_logging": true
+  },
+  {
+    "endpoint": "pev.delete_structure",
+    "path": "/pev/api/implantacao/<int:plan_id>/structures/<int:structure_id>",
+    "methods": [
+      "DELETE"
+    ],
+    "blueprint": "pev",
+    "function": "<function delete_structure at 0x000001D67C7A9F80>",
+    "function_name": "delete_structure",
+    "has_auto_log": false,
+    "has_manual_log": false,
+    "entity_type": null,
+    "is_crud": true,
+    "needs_logging": true
+  },
+  {
+    "endpoint": "pev.create_capacity",
+    "path": "/pev/api/implantacao/<int:plan_id>/structures/capacities",
+    "methods": [
+      "POST"
+    ],
+    "blueprint": "pev",
+    "function": "<function create_capacity at 0x000001D67C7AA0C0>",
+    "function_name": "create_capacity",
+    "has_auto_log": false,
+    "has_manual_log": false,
+    "entity_type": null,
+    "is_crud": true,
+    "needs_logging": true
+  },
+  {
+    "endpoint": "pev.update_capacity",
+    "path": "/pev/api/implantacao/<int:plan_id>/structures/capacities/<int:capacity_id>",
+    "methods": [
+      "PUT"
+    ],
+    "blueprint": "pev",
+    "function": "<function update_capacity at 0x000001D67C7AA200>",
+    "function_name": "update_capacity",
+    "has_auto_log": false,
+    "has_manual_log": false,
+    "entity_type": null,
+    "is_crud": true,
+    "needs_logging": true
+  },
+  {
+    "endpoint": "pev.delete_capacity",
+    "path": "/pev/api/implantacao/<int:plan_id>/structures/capacities/<int:capacity_id>",
+    "methods": [
+      "DELETE"
+    ],
+    "blueprint": "pev",
+    "function": "<function delete_capacity at 0x000001D67C7AA340>",
+    "function_name": "delete_capacity",
+    "has_auto_log": false,
+    "has_manual_log": false,
+    "entity_type": null,
+    "is_crud": true,
+    "needs_logging": true
+  },
+  {
+    "endpoint": "pev.delete_structure_installments",
+    "path": "/pev/api/implantacao/<int:plan_id>/structures/<int:structure_id>/installments",
+    "methods": [
+      "DELETE"
+    ],
+    "blueprint": "pev",
+    "function": "<function delete_structure_installments at 0x000001D67C7AA480>",
+    "function_name": "delete_structure_installments",
+    "has_auto_log": false,
+    "has_manual_log": false,
+    "entity_type": null,
+    "is_crud": true,
+    "needs_logging": true
+  },
+  {
+    "endpoint": "pev.create_structure_installment",
+    "path": "/pev/api/implantacao/<int:plan_id>/structures/<int:structure_id>/installments",
+    "methods": [
+      "POST"
+    ],
+    "blueprint": "pev",
+    "function": "<function create_structure_installment at 0x000001D67C7AA5C0>",
+    "function_name": "create_structure_installment",
+    "has_auto_log": false,
+    "has_manual_log": false,
+    "entity_type": null,
+    "is_crud": true,
+    "needs_logging": true
+  },
+  {
+    "endpoint": "pev.get_fixed_costs_summary",
+    "path": "/pev/api/implantacao/<int:plan_id>/structures/fixed-costs-summary",
+    "methods": [
+      "GET"
+    ],
+    "blueprint": "pev",
+    "function": "<function get_fixed_costs_summary at 0x000001D67C7AA700>",
+    "function_name": "get_fixed_costs_summary",
+    "has_auto_log": false,
+    "has_manual_log": false,
+    "entity_type": null,
+    "is_crud": false,
+    "needs_logging": false
+  },
+  {
+    "endpoint": "pev.create_premise",
+    "path": "/pev/api/implantacao/<int:plan_id>/finance/premises",
+    "methods": [
+      "POST"
+    ],
+    "blueprint": "pev",
+    "function": "<function create_premise at 0x000001D67C7AA840>",
+    "function_name": "create_premise",
+    "has_auto_log": false,
+    "has_manual_log": false,
+    "entity_type": null,
+    "is_crud": true,
+    "needs_logging": true
+  },
+  {
+    "endpoint": "pev.update_premise",
+    "path": "/pev/api/implantacao/<int:plan_id>/finance/premises/<int:premise_id>",
+    "methods": [
+      "PUT"
+    ],
+    "blueprint": "pev",
+    "function": "<function update_premise at 0x000001D67C7AA980>",
+    "function_name": "update_premise",
+    "has_auto_log": false,
+    "has_manual_log": false,
+    "entity_type": null,
+    "is_crud": true,
+    "needs_logging": true
+  },
+  {
+    "endpoint": "pev.delete_premise",
+    "path": "/pev/api/implantacao/<int:plan_id>/finance/premises/<int:premise_id>",
+    "methods": [
+      "DELETE"
+    ],
+    "blueprint": "pev",
+    "function": "<function delete_premise at 0x000001D67C7AAAC0>",
+    "function_name": "delete_premise",
+    "has_auto_log": false,
+    "has_manual_log": false,
+    "entity_type": null,
+    "is_crud": true,
+    "needs_logging": true
+  },
+  {
+    "endpoint": "pev.create_investment",
+    "path": "/pev/api/implantacao/<int:plan_id>/finance/investments",
+    "methods": [
+      "POST"
+    ],
+    "blueprint": "pev",
+    "function": "<function create_investment at 0x000001D67C7AAC00>",
+    "function_name": "create_investment",
+    "has_auto_log": false,
+    "has_manual_log": false,
+    "entity_type": null,
+    "is_crud": true,
+    "needs_logging": true
+  },
+  {
+    "endpoint": "pev.update_investment",
+    "path": "/pev/api/implantacao/<int:plan_id>/finance/investments/<int:investment_id>",
+    "methods": [
+      "PUT"
+    ],
+    "blueprint": "pev",
+    "function": "<function update_investment at 0x000001D67C7AAD40>",
+    "function_name": "update_investment",
+    "has_auto_log": false,
+    "has_manual_log": false,
+    "entity_type": null,
+    "is_crud": true,
+    "needs_logging": true
+  },
+  {
+    "endpoint": "pev.delete_investment",
+    "path": "/pev/api/implantacao/<int:plan_id>/finance/investments/<int:investment_id>",
+    "methods": [
+      "DELETE"
+    ],
+    "blueprint": "pev",
+    "function": "<function delete_investment at 0x000001D67C7AAE80>",
+    "function_name": "delete_investment",
+    "has_auto_log": false,
+    "has_manual_log": false,
+    "entity_type": null,
+    "is_crud": true,
+    "needs_logging": true
+  },
+  {
+    "endpoint": "pev.create_source",
+    "path": "/pev/api/implantacao/<int:plan_id>/finance/sources",
+    "methods": [
+      "POST"
+    ],
+    "blueprint": "pev",
+    "function": "<function create_source at 0x000001D67C7AAFC0>",
+    "function_name": "create_source",
+    "has_auto_log": false,
+    "has_manual_log": false,
+    "entity_type": null,
+    "is_crud": true,
+    "needs_logging": true
+  },
+  {
+    "endpoint": "pev.update_source",
+    "path": "/pev/api/implantacao/<int:plan_id>/finance/sources/<int:source_id>",
+    "methods": [
+      "PUT"
+    ],
+    "blueprint": "pev",
+    "function": "<function update_source at 0x000001D67C7AB100>",
+    "function_name": "update_source",
+    "has_auto_log": false,
+    "has_manual_log": false,
+    "entity_type": null,
+    "is_crud": true,
+    "needs_logging": true
+  },
+  {
+    "endpoint": "pev.delete_source",
+    "path": "/pev/api/implantacao/<int:plan_id>/finance/sources/<int:source_id>",
+    "methods": [
+      "DELETE"
+    ],
+    "blueprint": "pev",
+    "function": "<function delete_source at 0x000001D67C7AB240>",
+    "function_name": "delete_source",
+    "has_auto_log": false,
+    "has_manual_log": false,
+    "entity_type": null,
+    "is_crud": true,
+    "needs_logging": true
+  },
+  {
+    "endpoint": "pev.create_variable_cost",
+    "path": "/pev/api/implantacao/<int:plan_id>/finance/variable_costs",
+    "methods": [
+      "POST"
+    ],
+    "blueprint": "pev",
+    "function": "<function create_variable_cost at 0x000001D67C7AB380>",
+    "function_name": "create_variable_cost",
+    "has_auto_log": false,
+    "has_manual_log": false,
+    "entity_type": null,
+    "is_crud": true,
+    "needs_logging": true
+  },
+  {
+    "endpoint": "pev.update_variable_cost",
+    "path": "/pev/api/implantacao/<int:plan_id>/finance/variable_costs/<int:cost_id>",
+    "methods": [
+      "PUT"
+    ],
+    "blueprint": "pev",
+    "function": "<function update_variable_cost at 0x000001D67C7AB4C0>",
+    "function_name": "update_variable_cost",
+    "has_auto_log": false,
+    "has_manual_log": false,
+    "entity_type": null,
+    "is_crud": true,
+    "needs_logging": true
+  },
+  {
+    "endpoint": "pev.delete_variable_cost",
+    "path": "/pev/api/implantacao/<int:plan_id>/finance/variable_costs/<int:cost_id>",
+    "methods": [
+      "DELETE"
+    ],
+    "blueprint": "pev",
+    "function": "<function delete_variable_cost at 0x000001D67C7AB600>",
+    "function_name": "delete_variable_cost",
+    "has_auto_log": false,
+    "has_manual_log": false,
+    "entity_type": null,
+    "is_crud": true,
+    "needs_logging": true
+  },
+  {
+    "endpoint": "pev.create_result_rule",
+    "path": "/pev/api/implantacao/<int:plan_id>/finance/result_rules",
+    "methods": [
+      "POST"
+    ],
+    "blueprint": "pev",
+    "function": "<function create_result_rule at 0x000001D67C7AB740>",
+    "function_name": "create_result_rule",
+    "has_auto_log": false,
+    "has_manual_log": false,
+    "entity_type": null,
+    "is_crud": true,
+    "needs_logging": true
+  },
+  {
+    "endpoint": "pev.update_result_rule",
+    "path": "/pev/api/implantacao/<int:plan_id>/finance/result_rules/<int:rule_id>",
+    "methods": [
+      "PUT"
+    ],
+    "blueprint": "pev",
+    "function": "<function update_result_rule at 0x000001D67C7AB880>",
+    "function_name": "update_result_rule",
+    "has_auto_log": false,
+    "has_manual_log": false,
+    "entity_type": null,
+    "is_crud": true,
+    "needs_logging": true
+  },
+  {
+    "endpoint": "pev.delete_result_rule",
+    "path": "/pev/api/implantacao/<int:plan_id>/finance/result_rules/<int:rule_id>",
+    "methods": [
+      "DELETE"
+    ],
+    "blueprint": "pev",
+    "function": "<function delete_result_rule at 0x000001D67C7AB9C0>",
+    "function_name": "delete_result_rule",
+    "has_auto_log": false,
+    "has_manual_log": false,
+    "entity_type": null,
+    "is_crud": true,
+    "needs_logging": true
+  },
+  {
+    "endpoint": "pev.get_investment_contributions",
+    "path": "/pev/api/implantacao/<int:plan_id>/finance/investment/contributions",
+    "methods": [
+      "GET"
+    ],
+    "blueprint": "pev",
+    "function": "<function get_investment_contributions at 0x000001D67C7ABB00>",
+    "function_name": "get_investment_contributions",
+    "has_auto_log": false,
+    "has_manual_log": false,
+    "entity_type": null,
+    "is_crud": false,
+    "needs_logging": false
+  },
+  {
+    "endpoint": "pev.get_funding_sources",
+    "path": "/pev/api/implantacao/<int:plan_id>/finance/funding_sources",
+    "methods": [
+      "GET"
+    ],
+    "blueprint": "pev",
+    "function": "<function get_funding_sources at 0x000001D67C7ABC40>",
+    "function_name": "get_funding_sources",
+    "has_auto_log": false,
+    "has_manual_log": false,
+    "entity_type": null,
+    "is_crud": false,
+    "needs_logging": false
+  },
+  {
+    "endpoint": "pev.update_metrics",
+    "path": "/pev/api/implantacao/<int:plan_id>/finance/metrics",
+    "methods": [
+      "PUT"
+    ],
+    "blueprint": "pev",
+    "function": "<function update_metrics at 0x000001D67C7ABD80>",
+    "function_name": "update_metrics",
+    "has_auto_log": false,
+    "has_manual_log": false,
+    "entity_type": null,
+    "is_crud": true,
+    "needs_logging": true
+  },
+  {
+    "endpoint": "pev.list_capital_giro",
+    "path": "/pev/api/implantacao/<int:plan_id>/finance/capital-giro",
+    "methods": [
+      "GET"
+    ],
+    "blueprint": "pev",
+    "function": "<function list_capital_giro at 0x000001D67C7ABEC0>",
+    "function_name": "list_capital_giro",
+    "has_auto_log": false,
+    "has_manual_log": false,
+    "entity_type": null,
+    "is_crud": false,
+    "needs_logging": false
+  },
+  {
+    "endpoint": "pev.create_capital_giro",
+    "path": "/pev/api/implantacao/<int:plan_id>/finance/capital-giro",
+    "methods": [
+      "POST"
+    ],
+    "blueprint": "pev",
+    "function": "<function create_capital_giro at 0x000001D67C7B0040>",
+    "function_name": "create_capital_giro",
+    "has_auto_log": false,
+    "has_manual_log": false,
+    "entity_type": null,
+    "is_crud": true,
+    "needs_logging": true
+  },
+  {
+    "endpoint": "pev.update_capital_giro",
+    "path": "/pev/api/implantacao/<int:plan_id>/finance/capital-giro/<int:item_id>",
+    "methods": [
+      "PUT"
+    ],
+    "blueprint": "pev",
+    "function": "<function update_capital_giro at 0x000001D67C7B0180>",
+    "function_name": "update_capital_giro",
+    "has_auto_log": false,
+    "has_manual_log": false,
+    "entity_type": null,
+    "is_crud": true,
+    "needs_logging": true
+  },
+  {
+    "endpoint": "pev.delete_capital_giro",
+    "path": "/pev/api/implantacao/<int:plan_id>/finance/capital-giro/<int:item_id>",
+    "methods": [
+      "DELETE"
+    ],
+    "blueprint": "pev",
+    "function": "<function delete_capital_giro at 0x000001D67C7B02C0>",
+    "function_name": "delete_capital_giro",
+    "has_auto_log": false,
+    "has_manual_log": false,
+    "entity_type": null,
+    "is_crud": true,
+    "needs_logging": true
+  },
+  {
+    "endpoint": "pev.get_executive_summary_api",
+    "path": "/pev/api/implantacao/<int:plan_id>/finance/executive-summary",
+    "methods": [
+      "GET"
+    ],
+    "blueprint": "pev",
+    "function": "<function get_executive_summary_api at 0x000001D67C7B0400>",
+    "function_name": "get_executive_summary_api",
+    "has_auto_log": false,
+    "has_manual_log": false,
+    "entity_type": null,
+    "is_crud": false,
+    "needs_logging": false
+  },
+  {
+    "endpoint": "pev.update_executive_summary_api",
+    "path": "/pev/api/implantacao/<int:plan_id>/finance/executive-summary",
+    "methods": [
+      "PUT"
+    ],
+    "blueprint": "pev",
+    "function": "<function update_executive_summary_api at 0x000001D67C7B0540>",
+    "function_name": "update_executive_summary_api",
+    "has_auto_log": false,
+    "has_manual_log": false,
+    "entity_type": null,
+    "is_crud": true,
+    "needs_logging": true
+  },
+  {
+    "endpoint": "pev.get_profit_distribution_api",
+    "path": "/pev/api/implantacao/<int:plan_id>/finance/profit-distribution",
+    "methods": [
+      "GET"
+    ],
+    "blueprint": "pev",
+    "function": "<function get_profit_distribution_api at 0x000001D67C7B0680>",
+    "function_name": "get_profit_distribution_api",
+    "has_auto_log": false,
+    "has_manual_log": false,
+    "entity_type": null,
+    "is_crud": false,
+    "needs_logging": false
+  },
+  {
+    "endpoint": "pev.update_profit_distribution_api",
+    "path": "/pev/api/implantacao/<int:plan_id>/finance/profit-distribution",
+    "methods": [
+      "PUT"
+    ],
+    "blueprint": "pev",
+    "function": "<function update_profit_distribution_api at 0x000001D67C7B07C0>",
+    "function_name": "update_profit_distribution_api",
+    "has_auto_log": false,
+    "has_manual_log": false,
+    "entity_type": null,
+    "is_crud": true,
+    "needs_logging": true
+  },
+  {
+    "endpoint": "grv.grv_dashboard",
+    "path": "/grv/dashboard",
+    "methods": [
+      "GET"
+    ],
+    "blueprint": "grv",
+    "function": "<function grv_dashboard at 0x000001D67C7F07C0>",
+    "function_name": "grv_dashboard",
+    "has_auto_log": false,
+    "has_manual_log": false,
+    "entity_type": null,
+    "is_crud": false,
+    "needs_logging": false
+  },
+  {
+    "endpoint": "grv.grv_company_dashboard",
+    "path": "/grv/company/<int:company_id>",
+    "methods": [
+      "GET"
+    ],
+    "blueprint": "grv",
+    "function": "<function grv_company_dashboard at 0x000001D67C7F0900>",
+    "function_name": "grv_company_dashboard",
+    "has_auto_log": false,
+    "has_manual_log": false,
+    "entity_type": null,
+    "is_crud": false,
+    "needs_logging": false
+  },
+  {
+    "endpoint": "grv.grv_identity_mvv",
+    "path": "/grv/company/<int:company_id>/identity/mvv",
+    "methods": [
+      "GET"
+    ],
+    "blueprint": "grv",
+    "function": "<function grv_identity_mvv at 0x000001D67C7F0A40>",
+    "function_name": "grv_identity_mvv",
+    "has_auto_log": false,
+    "has_manual_log": false,
+    "entity_type": null,
+    "is_crud": false,
+    "needs_logging": false
+  },
+  {
+    "endpoint": "grv.grv_identity_roles",
+    "path": "/grv/company/<int:company_id>/identity/roles",
+    "methods": [
+      "GET"
+    ],
+    "blueprint": "grv",
+    "function": "<function grv_identity_roles at 0x000001D67C7F0B80>",
+    "function_name": "grv_identity_roles",
+    "has_auto_log": false,
+    "has_manual_log": false,
+    "entity_type": null,
+    "is_crud": false,
+    "needs_logging": false
+  },
+  {
+    "endpoint": "grv.grv_identity_org_chart",
+    "path": "/grv/company/<int:company_id>/identity/org-chart",
+    "methods": [
+      "GET"
+    ],
+    "blueprint": "grv",
+    "function": "<function grv_identity_org_chart at 0x000001D67C7F0CC0>",
+    "function_name": "grv_identity_org_chart",
+    "has_auto_log": false,
+    "has_manual_log": false,
+    "entity_type": null,
+    "is_crud": false,
+    "needs_logging": false
+  },
+  {
+    "endpoint": "grv.grv_process_map",
+    "path": "/grv/company/<int:company_id>/process/map",
+    "methods": [
+      "GET"
+    ],
+    "blueprint": "grv",
+    "function": "<function grv_process_map at 0x000001D67C7F0E00>",
+    "function_name": "grv_process_map",
+    "has_auto_log": false,
+    "has_manual_log": false,
+    "entity_type": null,
+    "is_crud": false,
+    "needs_logging": false
+  },
+  {
+    "endpoint": "grv.grv_process_map_print",
+    "path": "/grv/company/<int:company_id>/process/map/print",
+    "methods": [
+      "GET"
+    ],
+    "blueprint": "grv",
+    "function": "<function grv_process_map_print at 0x000001D67C7F0F40>",
+    "function_name": "grv_process_map_print",
+    "has_auto_log": false,
+    "has_manual_log": false,
+    "entity_type": null,
+    "is_crud": false,
+    "needs_logging": false
+  },
+  {
+    "endpoint": "grv.grv_process_map_pdf_debug",
+    "path": "/grv/company/<int:company_id>/process/map/pdf/debug",
+    "methods": [
+      "GET"
+    ],
+    "blueprint": "grv",
+    "function": "<function grv_process_map_pdf_debug at 0x000001D67C7F1080>",
+    "function_name": "grv_process_map_pdf_debug",
+    "has_auto_log": false,
+    "has_manual_log": false,
+    "entity_type": null,
+    "is_crud": false,
+    "needs_logging": false
+  },
+  {
+    "endpoint": "grv.grv_process_map_pdf",
+    "path": "/grv/company/<int:company_id>/process/map/pdf",
+    "methods": [
+      "GET"
+    ],
+    "blueprint": "grv",
+    "function": "<function grv_process_map_pdf at 0x000001D67C7F11C0>",
+    "function_name": "grv_process_map_pdf",
+    "has_auto_log": false,
+    "has_manual_log": false,
+    "entity_type": null,
+    "is_crud": false,
+    "needs_logging": false
+  },
+  {
+    "endpoint": "grv.grv_process_map_pdf2_test",
+    "path": "/grv/company/<int:company_id>/process/map/pdf2/test",
+    "methods": [
+      "GET"
+    ],
+    "blueprint": "grv",
+    "function": "<function grv_process_map_pdf2_test at 0x000001D67C7F1300>",
+    "function_name": "grv_process_map_pdf2_test",
+    "has_auto_log": false,
+    "has_manual_log": false,
+    "entity_type": null,
+    "is_crud": false,
+    "needs_logging": false
+  },
+  {
+    "endpoint": "grv.grv_process_map_pdf2_debug",
+    "path": "/grv/company/<int:company_id>/process/map/pdf2/debug",
+    "methods": [
+      "GET"
+    ],
+    "blueprint": "grv",
+    "function": "<function grv_process_map_pdf2_debug at 0x000001D67C7F1440>",
+    "function_name": "grv_process_map_pdf2_debug",
+    "has_auto_log": false,
+    "has_manual_log": false,
+    "entity_type": null,
+    "is_crud": false,
+    "needs_logging": false
+  },
+  {
+    "endpoint": "grv.grv_process_map_pdf2",
+    "path": "/grv/company/<int:company_id>/process/map/pdf2",
+    "methods": [
+      "GET"
+    ],
+    "blueprint": "grv",
+    "function": "<function grv_process_map_pdf2 at 0x000001D67C7F1580>",
+    "function_name": "grv_process_map_pdf2",
+    "has_auto_log": false,
+    "has_manual_log": false,
+    "entity_type": null,
+    "is_crud": false,
+    "needs_logging": false
+  },
+  {
+    "endpoint": "grv.grv_process_macro",
+    "path": "/grv/company/<int:company_id>/process/macro",
+    "methods": [
+      "GET"
+    ],
+    "blueprint": "grv",
+    "function": "<function grv_process_macro at 0x000001D67C7F16C0>",
+    "function_name": "grv_process_macro",
+    "has_auto_log": false,
+    "has_manual_log": false,
+    "entity_type": null,
+    "is_crud": false,
+    "needs_logging": false
+  },
+  {
+    "endpoint": "grv.grv_process_list",
+    "path": "/grv/company/<int:company_id>/process/list",
+    "methods": [
+      "GET"
+    ],
+    "blueprint": "grv",
+    "function": "<function grv_process_list at 0x000001D67C7F1800>",
+    "function_name": "grv_process_list",
+    "has_auto_log": false,
+    "has_manual_log": false,
+    "entity_type": null,
+    "is_crud": false,
+    "needs_logging": false
+  },
+  {
+    "endpoint": "grv.grv_process_modeling",
+    "path": "/grv/company/<int:company_id>/process/modeling",
+    "methods": [
+      "GET"
+    ],
+    "blueprint": "grv",
+    "function": "<function grv_process_modeling at 0x000001D67C7F1940>",
+    "function_name": "grv_process_modeling",
+    "has_auto_log": false,
+    "has_manual_log": false,
+    "entity_type": null,
+    "is_crud": false,
+    "needs_logging": false
+  },
+  {
+    "endpoint": "grv.grv_process_detail",
+    "path": "/grv/company/<int:company_id>/process/modeling/<int:process_id>",
+    "methods": [
+      "GET"
+    ],
+    "blueprint": "grv",
+    "function": "<function grv_process_detail at 0x000001D67C7F1A80>",
+    "function_name": "grv_process_detail",
+    "has_auto_log": false,
+    "has_manual_log": false,
+    "entity_type": null,
+    "is_crud": false,
+    "needs_logging": false
+  },
+  {
+    "endpoint": "grv.api_process_activities",
+    "path": "/grv/api/companies/<int:company_id>/processes/<int:process_id>/activities",
+    "methods": [
+      "GET",
+      "POST"
+    ],
+    "blueprint": "grv",
+    "function": "<function api_process_activities at 0x000001D67C7F1BC0>",
+    "function_name": "api_process_activities",
+    "has_auto_log": false,
+    "has_manual_log": false,
+    "entity_type": "company",
+    "is_crud": true,
+    "needs_logging": true
+  },
+  {
+    "endpoint": "grv.api_process_activity_detail",
+    "path": "/grv/api/companies/<int:company_id>/processes/<int:process_id>/activities/<int:activity_id>",
+    "methods": [
+      "DELETE",
+      "GET",
+      "PUT"
+    ],
+    "blueprint": "grv",
+    "function": "<function api_process_activity_detail at 0x000001D67C7F1D00>",
+    "function_name": "api_process_activity_detail",
+    "has_auto_log": false,
+    "has_manual_log": false,
+    "entity_type": "company",
+    "is_crud": true,
+    "needs_logging": true
+  },
+  {
+    "endpoint": "grv.api_create_process_activity_entry",
+    "path": "/grv/api/companies/<int:company_id>/processes/<int:process_id>/activities/<int:activity_id>/entries",
+    "methods": [
+      "POST"
+    ],
+    "blueprint": "grv",
+    "function": "<function api_create_process_activity_entry at 0x000001D67C7F1E40>",
+    "function_name": "api_create_process_activity_entry",
+    "has_auto_log": false,
+    "has_manual_log": false,
+    "entity_type": "company",
+    "is_crud": true,
+    "needs_logging": true
+  },
+  {
+    "endpoint": "grv.api_process_activity_entry_detail",
+    "path": "/grv/api/companies/<int:company_id>/processes/<int:process_id>/activities/<int:activity_id>/entries/<int:entry_id>",
+    "methods": [
+      "DELETE",
+      "GET",
+      "PUT"
+    ],
+    "blueprint": "grv",
+    "function": "<function api_process_activity_entry_detail at 0x000001D67C7F1F80>",
+    "function_name": "api_process_activity_entry_detail",
+    "has_auto_log": false,
+    "has_manual_log": false,
+    "entity_type": "company",
+    "is_crud": true,
+    "needs_logging": true
+  },
+  {
+    "endpoint": "grv.grv_process_analysis",
+    "path": "/grv/company/<int:company_id>/process/analysis",
+    "methods": [
+      "GET"
+    ],
+    "blueprint": "grv",
+    "function": "<function grv_process_analysis at 0x000001D67C7F20C0>",
+    "function_name": "grv_process_analysis",
+    "has_auto_log": false,
+    "has_manual_log": false,
+    "entity_type": null,
+    "is_crud": false,
+    "needs_logging": false
+  },
+  {
+    "endpoint": "grv.grv_routine_work_distribution",
+    "path": "/grv/company/<int:company_id>/routine/work-distribution",
+    "methods": [
+      "GET"
+    ],
+    "blueprint": "grv",
+    "function": "<function grv_routine_work_distribution at 0x000001D67C7F2200>",
+    "function_name": "grv_routine_work_distribution",
+    "has_auto_log": false,
+    "has_manual_log": false,
+    "entity_type": "routine",
+    "is_crud": false,
+    "needs_logging": false
+  },
+  {
+    "endpoint": "grv.grv_routine_capacity",
+    "path": "/grv/company/<int:company_id>/routine/capacity",
+    "methods": [
+      "GET"
+    ],
+    "blueprint": "grv",
+    "function": "<function grv_routine_capacity at 0x000001D67C7F2340>",
+    "function_name": "grv_routine_capacity",
+    "has_auto_log": false,
+    "has_manual_log": false,
+    "entity_type": "routine",
+    "is_crud": false,
+    "needs_logging": false
+  },
+  {
+    "endpoint": "grv.grv_routine_activities",
+    "path": "/grv/company/<int:company_id>/routine/activities",
+    "methods": [
+      "GET"
+    ],
+    "blueprint": "grv",
+    "function": "<function grv_routine_activities at 0x000001D67C7F2480>",
+    "function_name": "grv_routine_activities",
+    "has_auto_log": false,
+    "has_manual_log": false,
+    "entity_type": "routine",
+    "is_crud": false,
+    "needs_logging": false
+  },
+  {
+    "endpoint": "grv.grv_routine_incidents",
+    "path": "/grv/company/<int:company_id>/routine/incidents",
+    "methods": [
+      "GET"
+    ],
+    "blueprint": "grv",
+    "function": "<function grv_routine_incidents at 0x000001D67C7F25C0>",
+    "function_name": "grv_routine_incidents",
+    "has_auto_log": false,
+    "has_manual_log": false,
+    "entity_type": "routine",
+    "is_crud": false,
+    "needs_logging": false
+  },
+  {
+    "endpoint": "grv.grv_routine_efficiency",
+    "path": "/grv/company/<int:company_id>/routine/efficiency",
+    "methods": [
+      "GET"
+    ],
+    "blueprint": "grv",
+    "function": "<function grv_routine_efficiency at 0x000001D67C7F2700>",
+    "function_name": "grv_routine_efficiency",
+    "has_auto_log": false,
+    "has_manual_log": false,
+    "entity_type": "routine",
+    "is_crud": false,
+    "needs_logging": false
+  },
+  {
+    "endpoint": "grv.grv_projects_portfolios",
+    "path": "/grv/company/<int:company_id>/projects/portfolios",
+    "methods": [
+      "GET"
+    ],
+    "blueprint": "grv",
+    "function": "<function grv_projects_portfolios at 0x000001D67C7F2840>",
+    "function_name": "grv_projects_portfolios",
+    "has_auto_log": false,
+    "has_manual_log": false,
+    "entity_type": "project",
+    "is_crud": false,
+    "needs_logging": false
+  },
+  {
+    "endpoint": "grv.grv_projects_projects",
+    "path": "/grv/company/<int:company_id>/projects/projects",
+    "methods": [
+      "GET"
+    ],
+    "blueprint": "grv",
+    "function": "<function grv_projects_projects at 0x000001D67C7F2980>",
+    "function_name": "grv_projects_projects",
+    "has_auto_log": false,
+    "has_manual_log": false,
+    "entity_type": "project",
+    "is_crud": false,
+    "needs_logging": false
+  },
+  {
+    "endpoint": "grv.grv_project_shortcut",
+    "path": "/grv/company/<int:company_id>/project/<int:project_id>",
+    "methods": [
+      "GET"
+    ],
+    "blueprint": "grv",
+    "function": "<function grv_project_shortcut at 0x000001D67C7F2AC0>",
+    "function_name": "grv_project_shortcut",
+    "has_auto_log": false,
+    "has_manual_log": false,
+    "entity_type": "project",
+    "is_crud": false,
+    "needs_logging": false
+  },
+  {
+    "endpoint": "grv.grv_project_manage",
+    "path": "/grv/company/<int:company_id>/projects/<int:project_id>/manage",
+    "methods": [
+      "GET"
+    ],
+    "blueprint": "grv",
+    "function": "<function grv_project_manage at 0x000001D67C7F2C00>",
+    "function_name": "grv_project_manage",
+    "has_auto_log": false,
+    "has_manual_log": false,
+    "entity_type": "project",
+    "is_crud": false,
+    "needs_logging": false
+  },
+  {
+    "endpoint": "grv.grv_projects_analysis",
+    "path": "/grv/company/<int:company_id>/projects/analysis",
+    "methods": [
+      "GET"
+    ],
+    "blueprint": "grv",
+    "function": "<function grv_projects_analysis at 0x000001D67C7F2D40>",
+    "function_name": "grv_projects_analysis",
+    "has_auto_log": false,
+    "has_manual_log": false,
+    "entity_type": "project",
+    "is_crud": false,
+    "needs_logging": false
+  },
+  {
+    "endpoint": "grv.grv_process_instances",
+    "path": "/grv/company/<int:company_id>/process/instances",
+    "methods": [
+      "GET"
+    ],
+    "blueprint": "grv",
+    "function": "<function grv_process_instances at 0x000001D67C7F2E80>",
+    "function_name": "grv_process_instances",
+    "has_auto_log": false,
+    "has_manual_log": false,
+    "entity_type": null,
+    "is_crud": false,
+    "needs_logging": false
+  },
+  {
+    "endpoint": "grv.grv_process_instance_manage",
+    "path": "/grv/company/<int:company_id>/process/instances/<int:instance_id>/manage",
+    "methods": [
+      "GET"
+    ],
+    "blueprint": "grv",
+    "function": "<function grv_process_instance_manage at 0x000001D67C7F2FC0>",
+    "function_name": "grv_process_instance_manage",
+    "has_auto_log": false,
+    "has_manual_log": false,
+    "entity_type": null,
+    "is_crud": false,
+    "needs_logging": false
+  },
+  {
+    "endpoint": "grv.grv_indicators_tree",
+    "path": "/grv/company/<int:company_id>/indicators/tree",
+    "methods": [
+      "GET"
+    ],
+    "blueprint": "grv",
+    "function": "<function grv_indicators_tree at 0x000001D67C7F3100>",
+    "function_name": "grv_indicators_tree",
+    "has_auto_log": false,
+    "has_manual_log": false,
+    "entity_type": "indicator",
+    "is_crud": false,
+    "needs_logging": false
+  },
+  {
+    "endpoint": "grv.grv_indicator_group_form",
+    "path": "/grv/company/<int:company_id>/indicator-groups/form",
+    "methods": [
+      "GET"
+    ],
+    "blueprint": "grv",
+    "function": "<function grv_indicator_group_form at 0x000001D67C7F32E0>",
+    "function_name": "grv_indicator_group_form",
+    "has_auto_log": false,
+    "has_manual_log": false,
+    "entity_type": "indicator",
+    "is_crud": false,
+    "needs_logging": false
+  },
+  {
+    "endpoint": "grv.grv_indicator_group_form",
+    "path": "/grv/company/<int:company_id>/indicator-groups/form/<int:group_id>",
+    "methods": [
+      "GET"
+    ],
+    "blueprint": "grv",
+    "function": "<function grv_indicator_group_form at 0x000001D67C7F32E0>",
+    "function_name": "grv_indicator_group_form",
+    "has_auto_log": false,
+    "has_manual_log": false,
+    "entity_type": "indicator",
+    "is_crud": false,
+    "needs_logging": false
+  },
+  {
+    "endpoint": "grv.grv_indicators_list",
+    "path": "/grv/company/<int:company_id>/indicators/list",
+    "methods": [
+      "GET"
+    ],
+    "blueprint": "grv",
+    "function": "<function grv_indicators_list at 0x000001D67C7F3420>",
+    "function_name": "grv_indicators_list",
+    "has_auto_log": false,
+    "has_manual_log": false,
+    "entity_type": "indicator",
+    "is_crud": false,
+    "needs_logging": false
+  },
+  {
+    "endpoint": "grv.grv_indicator_form",
+    "path": "/grv/company/<int:company_id>/indicators/form",
+    "methods": [
+      "GET"
+    ],
+    "blueprint": "grv",
+    "function": "<function grv_indicator_form at 0x000001D67C7F3600>",
+    "function_name": "grv_indicator_form",
+    "has_auto_log": false,
+    "has_manual_log": false,
+    "entity_type": "indicator",
+    "is_crud": false,
+    "needs_logging": false
+  },
+  {
+    "endpoint": "grv.grv_indicator_form",
+    "path": "/grv/company/<int:company_id>/indicators/form/<int:indicator_id>",
+    "methods": [
+      "GET"
+    ],
+    "blueprint": "grv",
+    "function": "<function grv_indicator_form at 0x000001D67C7F3600>",
+    "function_name": "grv_indicator_form",
+    "has_auto_log": false,
+    "has_manual_log": false,
+    "entity_type": "indicator",
+    "is_crud": false,
+    "needs_logging": false
+  },
+  {
+    "endpoint": "grv.grv_indicators_goals",
+    "path": "/grv/company/<int:company_id>/indicators/goals",
+    "methods": [
+      "GET"
+    ],
+    "blueprint": "grv",
+    "function": "<function grv_indicators_goals at 0x000001D67C7F3740>",
+    "function_name": "grv_indicators_goals",
+    "has_auto_log": false,
+    "has_manual_log": false,
+    "entity_type": "indicator",
+    "is_crud": false,
+    "needs_logging": false
+  },
+  {
+    "endpoint": "grv.grv_indicator_goal_form",
+    "path": "/grv/company/<int:company_id>/indicator-goals/form",
+    "methods": [
+      "GET"
+    ],
+    "blueprint": "grv",
+    "function": "<function grv_indicator_goal_form at 0x000001D67C7F3920>",
+    "function_name": "grv_indicator_goal_form",
+    "has_auto_log": false,
+    "has_manual_log": false,
+    "entity_type": "indicator",
+    "is_crud": false,
+    "needs_logging": false
+  },
+  {
+    "endpoint": "grv.grv_indicator_goal_form",
+    "path": "/grv/company/<int:company_id>/indicator-goals/form/<int:goal_id>",
+    "methods": [
+      "GET"
+    ],
+    "blueprint": "grv",
+    "function": "<function grv_indicator_goal_form at 0x000001D67C7F3920>",
+    "function_name": "grv_indicator_goal_form",
+    "has_auto_log": false,
+    "has_manual_log": false,
+    "entity_type": "indicator",
+    "is_crud": false,
+    "needs_logging": false
+  },
+  {
+    "endpoint": "grv.grv_indicators_data",
+    "path": "/grv/company/<int:company_id>/indicators/data",
+    "methods": [
+      "GET"
+    ],
+    "blueprint": "grv",
+    "function": "<function grv_indicators_data at 0x000001D67C7F3A60>",
+    "function_name": "grv_indicators_data",
+    "has_auto_log": false,
+    "has_manual_log": false,
+    "entity_type": "indicator",
+    "is_crud": false,
+    "needs_logging": false
+  },
+  {
+    "endpoint": "grv.grv_indicator_data_form",
+    "path": "/grv/company/<int:company_id>/indicator-data/form",
+    "methods": [
+      "GET"
+    ],
+    "blueprint": "grv",
+    "function": "<function grv_indicator_data_form at 0x000001D67C7F3C40>",
+    "function_name": "grv_indicator_data_form",
+    "has_auto_log": false,
+    "has_manual_log": false,
+    "entity_type": "indicator",
+    "is_crud": false,
+    "needs_logging": false
+  },
+  {
+    "endpoint": "grv.grv_indicator_data_form",
+    "path": "/grv/company/<int:company_id>/indicator-data/form/<int:record_id>",
+    "methods": [
+      "GET"
+    ],
+    "blueprint": "grv",
+    "function": "<function grv_indicator_data_form at 0x000001D67C7F3C40>",
+    "function_name": "grv_indicator_data_form",
+    "has_auto_log": false,
+    "has_manual_log": false,
+    "entity_type": "indicator",
+    "is_crud": false,
+    "needs_logging": false
+  },
+  {
+    "endpoint": "grv.grv_indicators_analysis",
+    "path": "/grv/company/<int:company_id>/indicators/analysis",
+    "methods": [
+      "GET"
+    ],
+    "blueprint": "grv",
+    "function": "<function grv_indicators_analysis at 0x000001D67C7F3D80>",
+    "function_name": "grv_indicators_analysis",
+    "has_auto_log": false,
+    "has_manual_log": false,
+    "entity_type": "indicator",
+    "is_crud": false,
+    "needs_logging": false
+  },
+  {
+    "endpoint": "grv.api_get_plan_okrs",
+    "path": "/grv/api/plans/<int:plan_id>/okrs",
+    "methods": [
+      "GET"
+    ],
+    "blueprint": "grv",
+    "function": "<function api_get_plan_okrs at 0x000001D67C7F3EC0>",
+    "function_name": "api_get_plan_okrs",
+    "has_auto_log": false,
+    "has_manual_log": false,
+    "entity_type": "plan",
+    "is_crud": false,
+    "needs_logging": false
+  },
+  {
+    "endpoint": "grv.api_get_indicator_groups",
+    "path": "/grv/api/company/<int:company_id>/indicator-groups",
+    "methods": [
+      "GET"
+    ],
+    "blueprint": "grv",
+    "function": "<function api_get_indicator_groups at 0x000001D67C7F4040>",
+    "function_name": "api_get_indicator_groups",
+    "has_auto_log": false,
+    "has_manual_log": false,
+    "entity_type": "indicator",
+    "is_crud": false,
+    "needs_logging": false
+  },
+  {
+    "endpoint": "grv.api_get_indicator_group",
+    "path": "/grv/api/company/<int:company_id>/indicator-groups/<int:group_id>",
+    "methods": [
+      "GET"
+    ],
+    "blueprint": "grv",
+    "function": "<function api_get_indicator_group at 0x000001D67C7F4180>",
+    "function_name": "api_get_indicator_group",
+    "has_auto_log": false,
+    "has_manual_log": false,
+    "entity_type": "indicator",
+    "is_crud": false,
+    "needs_logging": false
+  },
+  {
+    "endpoint": "grv.api_create_indicator_group",
+    "path": "/grv/api/company/<int:company_id>/indicator-groups",
+    "methods": [
+      "POST"
+    ],
+    "blueprint": "grv",
+    "function": "<function api_create_indicator_group at 0x000001D67C7F4400>",
+    "function_name": "api_create_indicator_group",
+    "has_auto_log": false,
+    "has_manual_log": false,
+    "entity_type": "indicator",
+    "is_crud": true,
+    "needs_logging": true
+  },
+  {
+    "endpoint": "grv.api_update_indicator_group",
+    "path": "/grv/api/company/<int:company_id>/indicator-groups/<int:group_id>",
+    "methods": [
+      "PUT"
+    ],
+    "blueprint": "grv",
+    "function": "<function api_update_indicator_group at 0x000001D67C7F45E0>",
+    "function_name": "api_update_indicator_group",
+    "has_auto_log": false,
+    "has_manual_log": false,
+    "entity_type": "indicator",
+    "is_crud": true,
+    "needs_logging": true
+  },
+  {
+    "endpoint": "grv.api_delete_indicator_group",
+    "path": "/grv/api/company/<int:company_id>/indicator-groups/<int:group_id>",
+    "methods": [
+      "DELETE"
+    ],
+    "blueprint": "grv",
+    "function": "<function api_delete_indicator_group at 0x000001D67C7F4680>",
+    "function_name": "api_delete_indicator_group",
+    "has_auto_log": false,
+    "has_manual_log": false,
+    "entity_type": "indicator",
+    "is_crud": true,
+    "needs_logging": true
+  },
+  {
+    "endpoint": "grv.api_get_indicators",
+    "path": "/grv/api/company/<int:company_id>/indicators",
+    "methods": [
+      "GET"
+    ],
+    "blueprint": "grv",
+    "function": "<function api_get_indicators at 0x000001D67C7F47C0>",
+    "function_name": "api_get_indicators",
+    "has_auto_log": false,
+    "has_manual_log": false,
+    "entity_type": "indicator",
+    "is_crud": false,
+    "needs_logging": false
+  },
+  {
+    "endpoint": "grv.api_get_indicator",
+    "path": "/grv/api/company/<int:company_id>/indicators/<int:indicator_id>",
+    "methods": [
+      "GET"
+    ],
+    "blueprint": "grv",
+    "function": "<function api_get_indicator at 0x000001D67C7F4900>",
+    "function_name": "api_get_indicator",
+    "has_auto_log": false,
+    "has_manual_log": false,
+    "entity_type": "indicator",
+    "is_crud": false,
+    "needs_logging": false
+  },
+  {
+    "endpoint": "grv.api_get_process_indicators",
+    "path": "/grv/api/company/<int:company_id>/processes/<int:process_id>/indicators",
+    "methods": [
+      "GET"
+    ],
+    "blueprint": "grv",
+    "function": "<function api_get_process_indicators at 0x000001D67C7F4A40>",
+    "function_name": "api_get_process_indicators",
+    "has_auto_log": false,
+    "has_manual_log": false,
+    "entity_type": "indicator",
+    "is_crud": false,
+    "needs_logging": false
+  },
+  {
+    "endpoint": "grv.api_create_indicator",
+    "path": "/grv/api/company/<int:company_id>/indicators",
+    "methods": [
+      "POST"
+    ],
+    "blueprint": "grv",
+    "function": "<function api_create_indicator at 0x000001D67C7F4CC0>",
+    "function_name": "api_create_indicator",
+    "has_auto_log": false,
+    "has_manual_log": false,
+    "entity_type": "indicator",
+    "is_crud": true,
+    "needs_logging": true
+  },
+  {
+    "endpoint": "grv.api_update_indicator",
+    "path": "/grv/api/company/<int:company_id>/indicators/<int:indicator_id>",
+    "methods": [
+      "PUT"
+    ],
+    "blueprint": "grv",
+    "function": "<function api_update_indicator at 0x000001D67C7F4EA0>",
+    "function_name": "api_update_indicator",
+    "has_auto_log": false,
+    "has_manual_log": false,
+    "entity_type": "indicator",
+    "is_crud": true,
+    "needs_logging": true
+  },
+  {
+    "endpoint": "grv.api_delete_indicator",
+    "path": "/grv/api/company/<int:company_id>/indicators/<int:indicator_id>",
+    "methods": [
+      "DELETE"
+    ],
+    "blueprint": "grv",
+    "function": "<function api_delete_indicator at 0x000001D67C7F5080>",
+    "function_name": "api_delete_indicator",
+    "has_auto_log": false,
+    "has_manual_log": false,
+    "entity_type": "indicator",
+    "is_crud": true,
+    "needs_logging": true
+  },
+  {
+    "endpoint": "grv.api_get_indicator_goals",
+    "path": "/grv/api/company/<int:company_id>/indicator-goals",
+    "methods": [
+      "GET"
+    ],
+    "blueprint": "grv",
+    "function": "<function api_get_indicator_goals at 0x000001D67C7F5120>",
+    "function_name": "api_get_indicator_goals",
+    "has_auto_log": false,
+    "has_manual_log": false,
+    "entity_type": "indicator",
+    "is_crud": false,
+    "needs_logging": false
+  },
+  {
+    "endpoint": "grv.api_get_indicator_goal",
+    "path": "/grv/api/company/<int:company_id>/indicator-goals/<int:goal_id>",
+    "methods": [
+      "GET"
+    ],
+    "blueprint": "grv",
+    "function": "<function api_get_indicator_goal at 0x000001D67C7F5260>",
+    "function_name": "api_get_indicator_goal",
+    "has_auto_log": false,
+    "has_manual_log": false,
+    "entity_type": "indicator",
+    "is_crud": false,
+    "needs_logging": false
+  },
+  {
+    "endpoint": "grv.api_create_indicator_goal",
+    "path": "/grv/api/company/<int:company_id>/indicator-goals",
+    "methods": [
+      "POST"
+    ],
+    "blueprint": "grv",
+    "function": "<function api_create_indicator_goal at 0x000001D67C7F54E0>",
+    "function_name": "api_create_indicator_goal",
+    "has_auto_log": false,
+    "has_manual_log": false,
+    "entity_type": "indicator",
+    "is_crud": true,
+    "needs_logging": true
+  },
+  {
+    "endpoint": "grv.api_update_indicator_goal",
+    "path": "/grv/api/company/<int:company_id>/indicator-goals/<int:goal_id>",
+    "methods": [
+      "PUT"
+    ],
+    "blueprint": "grv",
+    "function": "<function api_update_indicator_goal at 0x000001D67C7F5580>",
+    "function_name": "api_update_indicator_goal",
+    "has_auto_log": false,
+    "has_manual_log": false,
+    "entity_type": "indicator",
+    "is_crud": true,
+    "needs_logging": true
+  },
+  {
+    "endpoint": "grv.api_delete_indicator_goal",
+    "path": "/grv/api/company/<int:company_id>/indicator-goals/<int:goal_id>",
+    "methods": [
+      "DELETE"
+    ],
+    "blueprint": "grv",
+    "function": "<function api_delete_indicator_goal at 0x000001D67C7F56C0>",
+    "function_name": "api_delete_indicator_goal",
+    "has_auto_log": false,
+    "has_manual_log": false,
+    "entity_type": "indicator",
+    "is_crud": true,
+    "needs_logging": true
+  },
+  {
+    "endpoint": "grv.api_get_indicator_data",
+    "path": "/grv/api/company/<int:company_id>/indicator-data",
+    "methods": [
+      "GET"
+    ],
+    "blueprint": "grv",
+    "function": "<function api_get_indicator_data at 0x000001D67C7F5800>",
+    "function_name": "api_get_indicator_data",
+    "has_auto_log": false,
+    "has_manual_log": false,
+    "entity_type": "indicator",
+    "is_crud": false,
+    "needs_logging": false
+  },
+  {
+    "endpoint": "grv.api_get_indicator_data_record",
+    "path": "/grv/api/company/<int:company_id>/indicator-data/<int:data_id>",
+    "methods": [
+      "GET"
+    ],
+    "blueprint": "grv",
+    "function": "<function api_get_indicator_data_record at 0x000001D67C7F5940>",
+    "function_name": "api_get_indicator_data_record",
+    "has_auto_log": false,
+    "has_manual_log": false,
+    "entity_type": "indicator",
+    "is_crud": false,
+    "needs_logging": false
+  },
+  {
+    "endpoint": "grv.api_create_indicator_data",
+    "path": "/grv/api/company/<int:company_id>/indicator-data",
+    "methods": [
+      "POST"
+    ],
+    "blueprint": "grv",
+    "function": "<function api_create_indicator_data at 0x000001D67C7F5BC0>",
+    "function_name": "api_create_indicator_data",
+    "has_auto_log": false,
+    "has_manual_log": false,
+    "entity_type": "indicator",
+    "is_crud": true,
+    "needs_logging": true
+  },
+  {
+    "endpoint": "grv.api_update_indicator_data",
+    "path": "/grv/api/company/<int:company_id>/indicator-data/<int:data_id>",
+    "methods": [
+      "PUT"
+    ],
+    "blueprint": "grv",
+    "function": "<function api_update_indicator_data at 0x000001D67C7F5C60>",
+    "function_name": "api_update_indicator_data",
+    "has_auto_log": false,
+    "has_manual_log": false,
+    "entity_type": "indicator",
+    "is_crud": true,
+    "needs_logging": true
+  },
+  {
+    "endpoint": "grv.api_delete_indicator_data",
+    "path": "/grv/api/company/<int:company_id>/indicator-data/<int:data_id>",
+    "methods": [
+      "DELETE"
+    ],
+    "blueprint": "grv",
+    "function": "<function api_delete_indicator_data at 0x000001D67C7F5DA0>",
+    "function_name": "api_delete_indicator_data",
+    "has_auto_log": false,
+    "has_manual_log": false,
+    "entity_type": "indicator",
+    "is_crud": true,
+    "needs_logging": true
+  },
+  {
+    "endpoint": "meetings.meetings_manage",
+    "path": "/meetings/company/<int:company_id>/list",
+    "methods": [
+      "GET"
+    ],
+    "blueprint": "meetings",
+    "function": "<function meetings_manage at 0x000001D67C7F6200>",
+    "function_name": "meetings_manage",
+    "has_auto_log": false,
+    "has_manual_log": false,
+    "entity_type": "meeting",
+    "is_crud": false,
+    "needs_logging": false
+  },
+  {
+    "endpoint": "meetings.meetings_manage",
+    "path": "/meetings/company/<int:company_id>",
+    "methods": [
+      "GET"
+    ],
+    "blueprint": "meetings",
+    "function": "<function meetings_manage at 0x000001D67C7F6200>",
+    "function_name": "meetings_manage",
+    "has_auto_log": false,
+    "has_manual_log": false,
+    "entity_type": "meeting",
+    "is_crud": false,
+    "needs_logging": false
+  },
+  {
+    "endpoint": "meetings.meeting_edit",
+    "path": "/meetings/company/<int:company_id>/meeting/<int:meeting_id>/edit",
+    "methods": [
+      "GET"
+    ],
+    "blueprint": "meetings",
+    "function": "<function meeting_edit at 0x000001D67C7F6340>",
+    "function_name": "meeting_edit",
+    "has_auto_log": false,
+    "has_manual_log": false,
+    "entity_type": "meeting",
+    "is_crud": false,
+    "needs_logging": false
+  },
+  {
+    "endpoint": "meetings.meeting_delete",
+    "path": "/meetings/company/<int:company_id>/meeting/<int:meeting_id>/delete",
+    "methods": [
+      "POST"
+    ],
+    "blueprint": "meetings",
+    "function": "<function meeting_delete at 0x000001D67C7F6480>",
+    "function_name": "meeting_delete",
+    "has_auto_log": false,
+    "has_manual_log": false,
+    "entity_type": "meeting",
+    "is_crud": true,
+    "needs_logging": true
+  },
+  {
+    "endpoint": "meetings.api_create_meeting",
+    "path": "/meetings/api/company/<int:company_id>/meeting",
+    "methods": [
+      "POST"
+    ],
+    "blueprint": "meetings",
+    "function": "<function api_create_meeting at 0x000001D67C7F65C0>",
+    "function_name": "api_create_meeting",
+    "has_auto_log": false,
+    "has_manual_log": false,
+    "entity_type": "meeting",
+    "is_crud": true,
+    "needs_logging": true
+  },
+  {
+    "endpoint": "meetings.api_generate_meetings_report",
+    "path": "/meetings/api/company/<int:company_id>/meetings/report",
+    "methods": [
+      "GET"
+    ],
+    "blueprint": "meetings",
+    "function": "<function api_generate_meetings_report at 0x000001D67C7F6700>",
+    "function_name": "api_generate_meetings_report",
+    "has_auto_log": false,
+    "has_manual_log": false,
+    "entity_type": "meeting",
+    "is_crud": false,
+    "needs_logging": false
+  },
+  {
+    "endpoint": "meetings.api_list_company_meetings",
+    "path": "/meetings/api/company/<int:company_id>/meetings",
+    "methods": [
+      "GET"
+    ],
+    "blueprint": "meetings",
+    "function": "<function api_list_company_meetings at 0x000001D67C7F6840>",
+    "function_name": "api_list_company_meetings",
+    "has_auto_log": false,
+    "has_manual_log": false,
+    "entity_type": "meeting",
+    "is_crud": false,
+    "needs_logging": false
+  },
+  {
+    "endpoint": "meetings.api_get_meeting",
+    "path": "/meetings/api/meeting/<int:meeting_id>",
+    "methods": [
+      "GET"
+    ],
+    "blueprint": "meetings",
+    "function": "<function api_get_meeting at 0x000001D67C7F6980>",
+    "function_name": "api_get_meeting",
+    "has_auto_log": false,
+    "has_manual_log": false,
+    "entity_type": "meeting",
+    "is_crud": false,
+    "needs_logging": false
+  },
+  {
+    "endpoint": "meetings.api_update_preliminares",
+    "path": "/meetings/api/meeting/<int:meeting_id>/preliminares",
+    "methods": [
+      "PUT"
+    ],
+    "blueprint": "meetings",
+    "function": "<function api_update_preliminares at 0x000001D67C7F6AC0>",
+    "function_name": "api_update_preliminares",
+    "has_auto_log": false,
+    "has_manual_log": false,
+    "entity_type": "meeting",
+    "is_crud": true,
+    "needs_logging": true
+  },
+  {
+    "endpoint": "meetings.api_start_meeting",
+    "path": "/meetings/api/meeting/<int:meeting_id>/iniciar",
+    "methods": [
+      "POST"
+    ],
+    "blueprint": "meetings",
+    "function": "<function api_start_meeting at 0x000001D67C7F6C00>",
+    "function_name": "api_start_meeting",
+    "has_auto_log": false,
+    "has_manual_log": false,
+    "entity_type": "meeting",
+    "is_crud": true,
+    "needs_logging": true
+  },
+  {
+    "endpoint": "meetings.api_update_execucao",
+    "path": "/meetings/api/meeting/<int:meeting_id>/execucao",
+    "methods": [
+      "PUT"
+    ],
+    "blueprint": "meetings",
+    "function": "<function api_update_execucao at 0x000001D67C7F6D40>",
+    "function_name": "api_update_execucao",
+    "has_auto_log": false,
+    "has_manual_log": false,
+    "entity_type": "meeting",
+    "is_crud": true,
+    "needs_logging": true
+  },
+  {
+    "endpoint": "meetings.api_finish_meeting",
+    "path": "/meetings/api/meeting/<int:meeting_id>/finalizar",
+    "methods": [
+      "POST"
+    ],
+    "blueprint": "meetings",
+    "function": "<function api_finish_meeting at 0x000001D67C7F6E80>",
+    "function_name": "api_finish_meeting",
+    "has_auto_log": false,
+    "has_manual_log": false,
+    "entity_type": "meeting",
+    "is_crud": true,
+    "needs_logging": true
+  },
+  {
+    "endpoint": "meetings.api_sync_meeting_activities",
+    "path": "/meetings/api/meeting/<int:meeting_id>/sync-activities",
+    "methods": [
+      "POST"
+    ],
+    "blueprint": "meetings",
+    "function": "<function api_sync_meeting_activities at 0x000001D67C7F6FC0>",
+    "function_name": "api_sync_meeting_activities",
+    "has_auto_log": false,
+    "has_manual_log": false,
+    "entity_type": "meeting",
+    "is_crud": true,
+    "needs_logging": true
+  },
+  {
+    "endpoint": "meetings.api_check_meeting_sync",
+    "path": "/meetings/api/meeting/<int:meeting_id>/check-sync",
+    "methods": [
+      "GET"
+    ],
+    "blueprint": "meetings",
+    "function": "<function api_check_meeting_sync at 0x000001D67C7F7100>",
+    "function_name": "api_check_meeting_sync",
+    "has_auto_log": false,
+    "has_manual_log": false,
+    "entity_type": "meeting",
+    "is_crud": false,
+    "needs_logging": false
+  },
+  {
+    "endpoint": "meetings.api_remove_activity_from_project",
+    "path": "/meetings/api/meeting/<int:meeting_id>/remove-from-project",
+    "methods": [
+      "POST"
+    ],
+    "blueprint": "meetings",
+    "function": "<function api_remove_activity_from_project at 0x000001D67C7F7240>",
+    "function_name": "api_remove_activity_from_project",
+    "has_auto_log": false,
+    "has_manual_log": false,
+    "entity_type": "meeting",
+    "is_crud": true,
+    "needs_logging": true
+  },
+  {
+    "endpoint": "meetings.api_delete_meeting",
+    "path": "/meetings/api/meeting/<int:meeting_id>",
+    "methods": [
+      "DELETE"
+    ],
+    "blueprint": "meetings",
+    "function": "<function api_delete_meeting at 0x000001D67C7F7380>",
+    "function_name": "api_delete_meeting",
+    "has_auto_log": false,
+    "has_manual_log": false,
+    "entity_type": "meeting",
+    "is_crud": true,
+    "needs_logging": true
+  },
+  {
+    "endpoint": "meetings.api_get_meeting_activities",
+    "path": "/meetings/api/meeting/<int:meeting_id>/atividades",
+    "methods": [
+      "GET"
+    ],
+    "blueprint": "meetings",
+    "function": "<function api_get_meeting_activities at 0x000001D67C7F74C0>",
+    "function_name": "api_get_meeting_activities",
+    "has_auto_log": false,
+    "has_manual_log": false,
+    "entity_type": "meeting",
+    "is_crud": false,
+    "needs_logging": false
+  },
+  {
+    "endpoint": "meetings.api_save_agenda_item",
+    "path": "/meetings/api/company/<int:company_id>/agenda-item",
+    "methods": [
+      "POST"
+    ],
+    "blueprint": "meetings",
+    "function": "<function api_save_agenda_item at 0x000001D67C7F7600>",
+    "function_name": "api_save_agenda_item",
+    "has_auto_log": false,
+    "has_manual_log": false,
+    "entity_type": "meeting",
+    "is_crud": true,
+    "needs_logging": true
+  },
+  {
+    "endpoint": "meetings.meeting_report",
+    "path": "/meetings/company/<int:company_id>/meeting/<int:meeting_id>/report",
+    "methods": [
+      "GET"
+    ],
+    "blueprint": "meetings",
+    "function": "<function meeting_report at 0x000001D67C7F7740>",
+    "function_name": "meeting_report",
+    "has_auto_log": false,
+    "has_manual_log": false,
+    "entity_type": "meeting",
+    "is_crud": false,
+    "needs_logging": false
+  },
+  {
+    "endpoint": "meetings.api_use_agenda_item",
+    "path": "/meetings/api/agenda-item/<int:item_id>/use",
+    "methods": [
+      "POST"
+    ],
+    "blueprint": "meetings",
+    "function": "<function api_use_agenda_item at 0x000001D67C7F7880>",
+    "function_name": "api_use_agenda_item",
+    "has_auto_log": false,
+    "has_manual_log": false,
+    "entity_type": "meeting",
+    "is_crud": true,
+    "needs_logging": true
+  },
+  {
+    "endpoint": "my_work.dashboard",
+    "path": "/my-work/",
+    "methods": [
+      "GET"
+    ],
+    "blueprint": "my_work",
+    "function": "<function dashboard at 0x000001D67C83E5C0>",
+    "function_name": "dashboard",
+    "has_auto_log": false,
+    "has_manual_log": false,
+    "entity_type": null,
+    "is_crud": false,
+    "needs_logging": false
+  },
+  {
+    "endpoint": "my_work.get_activities",
+    "path": "/my-work/api/activities",
+    "methods": [
+      "GET"
+    ],
+    "blueprint": "my_work",
+    "function": "<function get_activities at 0x000001D67C83E7A0>",
+    "function_name": "get_activities",
+    "has_auto_log": false,
+    "has_manual_log": false,
+    "entity_type": null,
+    "is_crud": false,
+    "needs_logging": false
+  },
+  {
+    "endpoint": "my_work.api_team_overview",
+    "path": "/my-work/api/team-overview",
+    "methods": [
+      "GET"
+    ],
+    "blueprint": "my_work",
+    "function": "<function api_team_overview at 0x000001D67C83E980>",
+    "function_name": "api_team_overview",
+    "has_auto_log": false,
+    "has_manual_log": false,
+    "entity_type": null,
+    "is_crud": false,
+    "needs_logging": false
+  },
+  {
+    "endpoint": "my_work.api_company_overview",
+    "path": "/my-work/api/company-overview",
+    "methods": [
+      "GET"
+    ],
+    "blueprint": "my_work",
+    "function": "<function api_company_overview at 0x000001D67C83EB60>",
+    "function_name": "api_company_overview",
+    "has_auto_log": false,
+    "has_manual_log": false,
+    "entity_type": null,
+    "is_crud": false,
+    "needs_logging": false
+  },
+  {
+    "endpoint": "my_work.api_add_work_hours",
+    "path": "/my-work/api/work-hours",
+    "methods": [
+      "POST"
+    ],
+    "blueprint": "my_work",
+    "function": "<function api_add_work_hours at 0x000001D67C83ECA0>",
+    "function_name": "api_add_work_hours",
+    "has_auto_log": false,
+    "has_manual_log": false,
+    "entity_type": null,
+    "is_crud": true,
+    "needs_logging": true
+  },
+  {
+    "endpoint": "my_work.api_add_comment",
+    "path": "/my-work/api/comments",
+    "methods": [
+      "POST"
+    ],
+    "blueprint": "my_work",
+    "function": "<function api_add_comment at 0x000001D67C83EF20>",
+    "function_name": "api_add_comment",
+    "has_auto_log": false,
+    "has_manual_log": false,
+    "entity_type": null,
+    "is_crud": true,
+    "needs_logging": true
+  },
+  {
+    "endpoint": "my_work.api_complete_activity",
+    "path": "/my-work/api/complete",
+    "methods": [
+      "POST"
+    ],
+    "blueprint": "my_work",
+    "function": "<function api_complete_activity at 0x000001D67C83F1A0>",
+    "function_name": "api_complete_activity",
+    "has_auto_log": false,
+    "has_manual_log": false,
+    "entity_type": null,
+    "is_crud": true,
+    "needs_logging": true
+  },
+  {
+    "endpoint": "my_work.view_project_activity",
+    "path": "/my-work/activity/<int:activity_id>",
+    "methods": [
+      "GET"
+    ],
+    "blueprint": "my_work",
+    "function": "<function view_project_activity at 0x000001D67C83F4C0>",
+    "function_name": "view_project_activity",
+    "has_auto_log": false,
+    "has_manual_log": false,
+    "entity_type": null,
+    "is_crud": false,
+    "needs_logging": false
+  },
+  {
+    "endpoint": "my_work.view_process_instance",
+    "path": "/my-work/process-instance/<int:instance_id>",
+    "methods": [
+      "GET"
+    ],
+    "blueprint": "my_work",
+    "function": "<function view_process_instance at 0x000001D67C83F6A0>",
+    "function_name": "view_process_instance",
+    "has_auto_log": false,
+    "has_manual_log": false,
+    "entity_type": "process_instance",
+    "is_crud": false,
+    "needs_logging": false
+  },
+  {
+    "endpoint": "auth.login",
+    "path": "/auth/login",
+    "methods": [
+      "GET",
+      "POST"
+    ],
+    "blueprint": "auth",
+    "function": "<function login at 0x000001D67C91B060>",
+    "function_name": "login",
+    "has_auto_log": false,
+    "has_manual_log": false,
+    "entity_type": null,
+    "is_crud": true,
+    "needs_logging": false
+  },
+  {
+    "endpoint": "auth.logout",
+    "path": "/auth/logout",
+    "methods": [
+      "GET",
+      "POST"
+    ],
+    "blueprint": "auth",
+    "function": "<function logout at 0x000001D67C91B240>",
+    "function_name": "logout",
+    "has_auto_log": false,
+    "has_manual_log": false,
+    "entity_type": null,
+    "is_crud": true,
+    "needs_logging": false
+  },
+  {
+    "endpoint": "auth.register",
+    "path": "/auth/register",
+    "methods": [
+      "GET",
+      "POST"
+    ],
+    "blueprint": "auth",
+    "function": "<function register at 0x000001D67C91B380>",
+    "function_name": "register",
+    "has_auto_log": false,
+    "has_manual_log": false,
+    "entity_type": null,
+    "is_crud": true,
+    "needs_logging": true
+  },
+  {
+    "endpoint": "auth.profile",
+    "path": "/auth/profile",
+    "methods": [
+      "GET",
+      "POST"
+    ],
+    "blueprint": "auth",
+    "function": "<function profile at 0x000001D67C91B560>",
+    "function_name": "profile",
+    "has_auto_log": false,
+    "has_manual_log": false,
+    "entity_type": null,
+    "is_crud": true,
+    "needs_logging": true
+  },
+  {
+    "endpoint": "auth.change_password",
+    "path": "/auth/change-password",
+    "methods": [
+      "POST"
+    ],
+    "blueprint": "auth",
+    "function": "<function change_password at 0x000001D67C91B740>",
+    "function_name": "change_password",
+    "has_auto_log": false,
+    "has_manual_log": false,
+    "entity_type": null,
+    "is_crud": true,
+    "needs_logging": true
+  },
+  {
+    "endpoint": "auth.list_users_page",
+    "path": "/auth/users/page",
+    "methods": [
+      "GET"
+    ],
+    "blueprint": "auth",
+    "function": "<function list_users_page at 0x000001D67C91B920>",
+    "function_name": "list_users_page",
+    "has_auto_log": false,
+    "has_manual_log": false,
+    "entity_type": null,
+    "is_crud": false,
+    "needs_logging": false
+  },
+  {
+    "endpoint": "auth.list_users",
+    "path": "/auth/users",
+    "methods": [
+      "GET"
+    ],
+    "blueprint": "auth",
+    "function": "<function list_users at 0x000001D67C91BB00>",
+    "function_name": "list_users",
+    "has_auto_log": false,
+    "has_manual_log": false,
+    "entity_type": null,
+    "is_crud": false,
+    "needs_logging": false
+  },
+  {
+    "endpoint": "auth.toggle_user_status",
+    "path": "/auth/users/<int:user_id>/status",
+    "methods": [
+      "PUT"
+    ],
+    "blueprint": "auth",
+    "function": "<function toggle_user_status at 0x000001D67C91BCE0>",
+    "function_name": "toggle_user_status",
+    "has_auto_log": false,
+    "has_manual_log": false,
+    "entity_type": null,
+    "is_crud": true,
+    "needs_logging": true
+  },
+  {
+    "endpoint": "auth.get_current_user",
+    "path": "/auth/current-user",
+    "methods": [
+      "GET"
+    ],
+    "blueprint": "auth",
+    "function": "<function get_current_user at 0x000001D67C91BEC0>",
+    "function_name": "get_current_user",
+    "has_auto_log": false,
+    "has_manual_log": false,
+    "entity_type": null,
+    "is_crud": false,
+    "needs_logging": false
+  },
+  {
+    "endpoint": "auth.get_user",
+    "path": "/auth/users/<int:user_id>",
+    "methods": [
+      "GET"
+    ],
+    "blueprint": "auth",
+    "function": "<function get_user at 0x000001D67D98C0E0>",
+    "function_name": "get_user",
+    "has_auto_log": false,
+    "has_manual_log": false,
+    "entity_type": null,
+    "is_crud": false,
+    "needs_logging": false
+  },
+  {
+    "endpoint": "auth.update_user",
+    "path": "/auth/users/<int:user_id>",
+    "methods": [
+      "PUT"
+    ],
+    "blueprint": "auth",
+    "function": "<function update_user at 0x000001D67D98C2C0>",
+    "function_name": "update_user",
+    "has_auto_log": false,
+    "has_manual_log": false,
+    "entity_type": null,
+    "is_crud": true,
+    "needs_logging": true
+  },
+  {
+    "endpoint": "auth.delete_user",
+    "path": "/auth/users/<int:user_id>",
+    "methods": [
+      "DELETE"
+    ],
+    "blueprint": "auth",
+    "function": "<function delete_user at 0x000001D67D98C4A0>",
+    "function_name": "delete_user",
+    "has_auto_log": false,
+    "has_manual_log": false,
+    "entity_type": null,
+    "is_crud": true,
+    "needs_logging": true
+  },
+  {
+    "endpoint": "logs.list_logs",
+    "path": "/logs/",
+    "methods": [
+      "GET"
+    ],
+    "blueprint": "logs",
+    "function": "<function list_logs at 0x000001D67D98C7C0>",
+    "function_name": "list_logs",
+    "has_auto_log": false,
+    "has_manual_log": true,
+    "entity_type": null,
+    "is_crud": false,
+    "needs_logging": false
+  },
+  {
+    "endpoint": "logs.get_log_stats",
+    "path": "/logs/stats",
+    "methods": [
+      "GET"
+    ],
+    "blueprint": "logs",
+    "function": "<function get_log_stats at 0x000001D67D98C9A0>",
+    "function_name": "get_log_stats",
+    "has_auto_log": false,
+    "has_manual_log": true,
+    "entity_type": null,
+    "is_crud": false,
+    "needs_logging": false
+  },
+  {
+    "endpoint": "logs.logs_dashboard",
+    "path": "/logs/dashboard",
+    "methods": [
+      "GET"
+    ],
+    "blueprint": "logs",
+    "function": "<function logs_dashboard at 0x000001D67D98CB80>",
+    "function_name": "logs_dashboard",
+    "has_auto_log": false,
+    "has_manual_log": false,
+    "entity_type": null,
+    "is_crud": false,
+    "needs_logging": false
+  },
+  {
+    "endpoint": "logs.user_activity",
+    "path": "/logs/user-activity",
+    "methods": [
+      "GET"
+    ],
+    "blueprint": "logs",
+    "function": "<function user_activity at 0x000001D67D98CD60>",
+    "function_name": "user_activity",
+    "has_auto_log": false,
+    "has_manual_log": false,
+    "entity_type": null,
+    "is_crud": false,
+    "needs_logging": false
+  },
+  {
+    "endpoint": "logs.entity_activity",
+    "path": "/logs/entity-activity/<entity_type>/<entity_id>",
+    "methods": [
+      "GET"
+    ],
+    "blueprint": "logs",
+    "function": "<function entity_activity at 0x000001D67D98CF40>",
+    "function_name": "entity_activity",
+    "has_auto_log": false,
+    "has_manual_log": true,
+    "entity_type": null,
+    "is_crud": false,
+    "needs_logging": false
+  },
+  {
+    "endpoint": "logs.export_logs",
+    "path": "/logs/export",
+    "methods": [
+      "GET"
+    ],
+    "blueprint": "logs",
+    "function": "<function export_logs at 0x000001D67D98D120>",
+    "function_name": "export_logs",
+    "has_auto_log": false,
+    "has_manual_log": true,
+    "entity_type": null,
+    "is_crud": false,
+    "needs_logging": false
+  },
+  {
+    "endpoint": "route_audit.audit_dashboard",
+    "path": "/route-audit/",
+    "methods": [
+      "GET"
+    ],
+    "blueprint": "route_audit",
+    "function": "<function audit_dashboard at 0x000001D67D98DB20>",
+    "function_name": "audit_dashboard",
+    "has_auto_log": false,
+    "has_manual_log": false,
+    "entity_type": null,
+    "is_crud": false,
+    "needs_logging": false
+  },
+  {
+    "endpoint": "route_audit.get_audit_summary",
+    "path": "/route-audit/api/summary",
+    "methods": [
+      "GET"
+    ],
+    "blueprint": "route_audit",
+    "function": "<function get_audit_summary at 0x000001D67D98DD00>",
+    "function_name": "get_audit_summary",
+    "has_auto_log": false,
+    "has_manual_log": false,
+    "entity_type": null,
+    "is_crud": false,
+    "needs_logging": false
+  },
+  {
+    "endpoint": "route_audit.get_all_routes",
+    "path": "/route-audit/api/routes",
+    "methods": [
+      "GET"
+    ],
+    "blueprint": "route_audit",
+    "function": "<function get_all_routes at 0x000001D67D98DEE0>",
+    "function_name": "get_all_routes",
+    "has_auto_log": false,
+    "has_manual_log": false,
+    "entity_type": null,
+    "is_crud": false,
+    "needs_logging": false
+  },
+  {
+    "endpoint": "route_audit.get_routes_without_logging",
+    "path": "/route-audit/api/routes/without-logging",
+    "methods": [
+      "GET"
+    ],
+    "blueprint": "route_audit",
+    "function": "<function get_routes_without_logging at 0x000001D67D98E0C0>",
+    "function_name": "get_routes_without_logging",
+    "has_auto_log": false,
+    "has_manual_log": false,
+    "entity_type": null,
+    "is_crud": false,
+    "needs_logging": false
+  },
+  {
+    "endpoint": "route_audit.get_route_details",
+    "path": "/route-audit/api/routes/<path:endpoint>/details",
+    "methods": [
+      "GET"
+    ],
+    "blueprint": "route_audit",
+    "function": "<function get_route_details at 0x000001D67D98E2A0>",
+    "function_name": "get_route_details",
+    "has_auto_log": false,
+    "has_manual_log": false,
+    "entity_type": null,
+    "is_crud": false,
+    "needs_logging": false
+  },
+  {
+    "endpoint": "route_audit.get_logging_config",
+    "path": "/route-audit/api/config",
+    "methods": [
+      "GET"
+    ],
+    "blueprint": "route_audit",
+    "function": "<function get_logging_config at 0x000001D67D98E480>",
+    "function_name": "get_logging_config",
+    "has_auto_log": false,
+    "has_manual_log": false,
+    "entity_type": null,
+    "is_crud": false,
+    "needs_logging": false
+  },
+  {
+    "endpoint": "route_audit.enable_entity_logging",
+    "path": "/route-audit/api/entity/<entity_type>/enable",
+    "methods": [
+      "POST"
+    ],
+    "blueprint": "route_audit",
+    "function": "<function enable_entity_logging at 0x000001D67D98E660>",
+    "function_name": "enable_entity_logging",
+    "has_auto_log": false,
+    "has_manual_log": false,
+    "entity_type": null,
+    "is_crud": true,
+    "needs_logging": true
+  },
+  {
+    "endpoint": "route_audit.disable_entity_logging",
+    "path": "/route-audit/api/entity/<entity_type>/disable",
+    "methods": [
+      "POST"
+    ],
+    "blueprint": "route_audit",
+    "function": "<function disable_entity_logging at 0x000001D67D98E840>",
+    "function_name": "disable_entity_logging",
+    "has_auto_log": false,
+    "has_manual_log": false,
+    "entity_type": null,
+    "is_crud": true,
+    "needs_logging": true
+  },
+  {
+    "endpoint": "route_audit.export_audit_report",
+    "path": "/route-audit/api/export-report",
+    "methods": [
+      "GET"
+    ],
+    "blueprint": "route_audit",
+    "function": "<function export_audit_report at 0x000001D67D98EA20>",
+    "function_name": "export_audit_report",
+    "has_auto_log": false,
+    "has_manual_log": false,
+    "entity_type": null,
+    "is_crud": false,
+    "needs_logging": false
+  },
+  {
+    "endpoint": "favicon",
+    "path": "/favicon.ico",
+    "methods": [
+      "GET"
+    ],
+    "blueprint": null,
+    "function": "<function favicon at 0x000001D67D9C93A0>",
+    "function_name": "favicon",
+    "has_auto_log": false,
+    "has_manual_log": false,
+    "entity_type": null,
+    "is_crud": false,
+    "needs_logging": false
+  },
+  {
+    "endpoint": "purge_companies_except_versus",
+    "path": "/admin/purge/companies",
+    "methods": [
+      "POST"
+    ],
+    "blueprint": null,
+    "function": "<function purge_companies_except_versus at 0x000001D67D9C94E0>",
+    "function_name": "purge_companies_except_versus",
+    "has_auto_log": false,
+    "has_manual_log": false,
+    "entity_type": "company",
+    "is_crud": true,
+    "needs_logging": true
+  },
+  {
+    "endpoint": "index",
+    "path": "/",
+    "methods": [
+      "GET"
+    ],
+    "blueprint": null,
+    "function": "<function index at 0x000001D67DA03880>",
+    "function_name": "index",
+    "has_auto_log": false,
+    "has_manual_log": false,
+    "entity_type": null,
+    "is_crud": false,
+    "needs_logging": false
+  },
+  {
+    "endpoint": "login",
+    "path": "/login",
+    "methods": [
+      "GET",
+      "POST"
+    ],
+    "blueprint": null,
+    "function": "<function login at 0x000001D67DA03920>",
+    "function_name": "login",
+    "has_auto_log": false,
+    "has_manual_log": false,
+    "entity_type": null,
+    "is_crud": true,
+    "needs_logging": false
+  },
+  {
+    "endpoint": "main",
+    "path": "/main",
+    "methods": [
+      "GET"
+    ],
+    "blueprint": null,
+    "function": "<function main at 0x000001D67DA03A60>",
+    "function_name": "main",
+    "has_auto_log": false,
+    "has_manual_log": false,
+    "entity_type": null,
+    "is_crud": false,
+    "needs_logging": false
+  },
+  {
+    "endpoint": "integrations",
+    "path": "/integrations",
+    "methods": [
+      "GET"
+    ],
+    "blueprint": null,
+    "function": "<function integrations at 0x000001D67DA03CE0>",
+    "function_name": "integrations",
+    "has_auto_log": false,
+    "has_manual_log": false,
+    "entity_type": null,
+    "is_crud": false,
+    "needs_logging": false
+  },
+  {
+    "endpoint": "system_configs",
+    "path": "/configs",
+    "methods": [
+      "GET"
+    ],
+    "blueprint": null,
+    "function": "<function system_configs at 0x000001D67DA03F60>",
+    "function_name": "system_configs",
+    "has_auto_log": false,
+    "has_manual_log": false,
+    "entity_type": null,
+    "is_crud": false,
+    "needs_logging": false
+  },
+  {
+    "endpoint": "system_configs_system",
+    "path": "/configs/system",
+    "methods": [
+      "GET"
+    ],
+    "blueprint": null,
+    "function": "<function system_configs_system at 0x000001D67DA34220>",
+    "function_name": "system_configs_system",
+    "has_auto_log": false,
+    "has_manual_log": true,
+    "entity_type": null,
+    "is_crud": false,
+    "needs_logging": false
+  },
+  {
+    "endpoint": "system_configs_audit",
+    "path": "/configs/system/audit",
+    "methods": [
+      "GET"
+    ],
+    "blueprint": null,
+    "function": "<function system_configs_audit at 0x000001D67DA344A0>",
+    "function_name": "system_configs_audit",
+    "has_auto_log": false,
+    "has_manual_log": false,
+    "entity_type": null,
+    "is_crud": false,
+    "needs_logging": false
+  },
+  {
+    "endpoint": "system_configs_ai",
+    "path": "/configs/ai",
+    "methods": [
+      "GET"
+    ],
+    "blueprint": null,
+    "function": "<function system_configs_ai at 0x000001D67DA34720>",
+    "function_name": "system_configs_ai",
+    "has_auto_log": false,
+    "has_manual_log": false,
+    "entity_type": null,
+    "is_crud": false,
+    "needs_logging": false
+  },
+  {
+    "endpoint": "settings_reports",
+    "path": "/settings/reports",
+    "methods": [
+      "GET"
+    ],
+    "blueprint": null,
+    "function": "<function settings_reports at 0x000001D67DA349A0>",
+    "function_name": "settings_reports",
+    "has_auto_log": false,
+    "has_manual_log": false,
+    "entity_type": null,
+    "is_crud": false,
+    "needs_logging": false
+  },
+  {
+    "endpoint": "api_report_preview",
+    "path": "/api/reports/preview",
+    "methods": [
+      "POST"
+    ],
+    "blueprint": null,
+    "function": "<function api_report_preview at 0x000001D67DA34C20>",
+    "function_name": "api_report_preview",
+    "has_auto_log": false,
+    "has_manual_log": false,
+    "entity_type": null,
+    "is_crud": true,
+    "needs_logging": true
+  },
+  {
+    "endpoint": "api_report_generate",
+    "path": "/api/reports/generate",
+    "methods": [
+      "POST"
+    ],
+    "blueprint": null,
+    "function": "<function api_report_generate at 0x000001D67DA34EA0>",
+    "function_name": "api_report_generate",
+    "has_auto_log": false,
+    "has_manual_log": false,
+    "entity_type": null,
+    "is_crud": true,
+    "needs_logging": true
+  },
+  {
+    "endpoint": "api_report_download",
+    "path": "/api/reports/download/<filename>",
+    "methods": [
+      "GET"
+    ],
+    "blueprint": null,
+    "function": "<function api_report_download at 0x000001D67DA35120>",
+    "function_name": "api_report_download",
+    "has_auto_log": false,
+    "has_manual_log": false,
+    "entity_type": null,
+    "is_crud": false,
+    "needs_logging": false
+  },
+  {
+    "endpoint": "api_save_report_model",
+    "path": "/api/reports/models",
+    "methods": [
+      "POST"
+    ],
+    "blueprint": null,
+    "function": "<function api_save_report_model at 0x000001D67DA353A0>",
+    "function_name": "api_save_report_model",
+    "has_auto_log": false,
+    "has_manual_log": false,
+    "entity_type": null,
+    "is_crud": true,
+    "needs_logging": true
+  },
+  {
+    "endpoint": "api_get_report_model",
+    "path": "/api/reports/models/<int:model_id>",
+    "methods": [
+      "GET"
+    ],
+    "blueprint": null,
+    "function": "<function api_get_report_model at 0x000001D67DA35620>",
+    "function_name": "api_get_report_model",
+    "has_auto_log": false,
+    "has_manual_log": false,
+    "entity_type": null,
+    "is_crud": false,
+    "needs_logging": false
+  },
+  {
+    "endpoint": "api_update_report_model",
+    "path": "/api/reports/models/<int:model_id>",
+    "methods": [
+      "PUT"
+    ],
+    "blueprint": null,
+    "function": "<function api_update_report_model at 0x000001D67DA358A0>",
+    "function_name": "api_update_report_model",
+    "has_auto_log": false,
+    "has_manual_log": false,
+    "entity_type": null,
+    "is_crud": true,
+    "needs_logging": true
+  },
+  {
+    "endpoint": "api_check_model_conflicts",
+    "path": "/api/reports/models/<int:model_id>/conflicts",
+    "methods": [
+      "GET"
+    ],
+    "blueprint": null,
+    "function": "<function api_check_model_conflicts at 0x000001D67DA35B20>",
+    "function_name": "api_check_model_conflicts",
+    "has_auto_log": false,
+    "has_manual_log": false,
+    "entity_type": null,
+    "is_crud": false,
+    "needs_logging": false
+  },
+  {
+    "endpoint": "api_delete_report_model",
+    "path": "/api/reports/models/<int:model_id>",
+    "methods": [
+      "DELETE"
+    ],
+    "blueprint": null,
+    "function": "<function api_delete_report_model at 0x000001D67DA35DA0>",
+    "function_name": "api_delete_report_model",
+    "has_auto_log": false,
+    "has_manual_log": false,
+    "entity_type": null,
+    "is_crud": true,
+    "needs_logging": true
+  },
+  {
+    "endpoint": "report_templates_manager",
+    "path": "/report-templates",
+    "methods": [
+      "GET"
+    ],
+    "blueprint": null,
+    "function": "<function report_templates_manager at 0x000001D67DA36020>",
+    "function_name": "report_templates_manager",
+    "has_auto_log": false,
+    "has_manual_log": false,
+    "entity_type": null,
+    "is_crud": false,
+    "needs_logging": false
+  },
+  {
+    "endpoint": "api_get_report_templates",
+    "path": "/api/report-templates",
+    "methods": [
+      "GET"
+    ],
+    "blueprint": null,
+    "function": "<function api_get_report_templates at 0x000001D67DA362A0>",
+    "function_name": "api_get_report_templates",
+    "has_auto_log": false,
+    "has_manual_log": false,
+    "entity_type": null,
+    "is_crud": false,
+    "needs_logging": false
+  },
+  {
+    "endpoint": "api_create_report_template",
+    "path": "/api/report-templates",
+    "methods": [
+      "POST"
+    ],
+    "blueprint": null,
+    "function": "<function api_create_report_template at 0x000001D67DA36520>",
+    "function_name": "api_create_report_template",
+    "has_auto_log": false,
+    "has_manual_log": false,
+    "entity_type": null,
+    "is_crud": true,
+    "needs_logging": true
+  },
+  {
+    "endpoint": "api_get_report_template",
+    "path": "/api/report-templates/<int:template_id>",
+    "methods": [
+      "GET"
+    ],
+    "blueprint": null,
+    "function": "<function api_get_report_template at 0x000001D67DA367A0>",
+    "function_name": "api_get_report_template",
+    "has_auto_log": false,
+    "has_manual_log": false,
+    "entity_type": null,
+    "is_crud": false,
+    "needs_logging": false
+  },
+  {
+    "endpoint": "api_update_report_template",
+    "path": "/api/report-templates/<int:template_id>",
+    "methods": [
+      "PUT"
+    ],
+    "blueprint": null,
+    "function": "<function api_update_report_template at 0x000001D67DA36A20>",
+    "function_name": "api_update_report_template",
+    "has_auto_log": false,
+    "has_manual_log": false,
+    "entity_type": null,
+    "is_crud": true,
+    "needs_logging": true
+  },
+  {
+    "endpoint": "api_delete_report_template",
+    "path": "/api/report-templates/<int:template_id>",
+    "methods": [
+      "DELETE"
+    ],
+    "blueprint": null,
+    "function": "<function api_delete_report_template at 0x000001D67DA36CA0>",
+    "function_name": "api_delete_report_template",
+    "has_auto_log": false,
+    "has_manual_log": false,
+    "entity_type": null,
+    "is_crud": true,
+    "needs_logging": true
+  },
+  {
+    "endpoint": "api_generate_report_from_template",
+    "path": "/api/report-templates/<int:template_id>/generate",
+    "methods": [
+      "POST"
+    ],
+    "blueprint": null,
+    "function": "<function api_generate_report_from_template at 0x000001D67DA36F20>",
+    "function_name": "api_generate_report_from_template",
+    "has_auto_log": false,
+    "has_manual_log": false,
+    "entity_type": null,
+    "is_crud": true,
+    "needs_logging": true
+  },
+  {
+    "endpoint": "api_get_templates_by_type",
+    "path": "/api/report-templates/by-type/<report_type>",
+    "methods": [
+      "GET"
+    ],
+    "blueprint": null,
+    "function": "<function api_get_templates_by_type at 0x000001D67DA371A0>",
+    "function_name": "api_get_templates_by_type",
+    "has_auto_log": false,
+    "has_manual_log": false,
+    "entity_type": null,
+    "is_crud": false,
+    "needs_logging": false
+  },
+  {
+    "endpoint": "api_get_report_models",
+    "path": "/api/reports/models",
+    "methods": [
+      "GET"
+    ],
+    "blueprint": null,
+    "function": "<function api_get_report_models at 0x000001D67DA37420>",
+    "function_name": "api_get_report_models",
+    "has_auto_log": false,
+    "has_manual_log": false,
+    "entity_type": null,
+    "is_crud": false,
+    "needs_logging": false
+  },
+  {
+    "endpoint": "companies_page",
+    "path": "/companies",
+    "methods": [
+      "GET"
+    ],
+    "blueprint": null,
+    "function": "<function companies_page at 0x000001D67DA376A0>",
+    "function_name": "companies_page",
+    "has_auto_log": false,
+    "has_manual_log": false,
+    "entity_type": "company",
+    "is_crud": false,
+    "needs_logging": false
+  },
+  {
+    "endpoint": "companies_new",
+    "path": "/companies/new",
+    "methods": [
+      "GET"
+    ],
+    "blueprint": null,
+    "function": "<function companies_new at 0x000001D67DA37920>",
+    "function_name": "companies_new",
+    "has_auto_log": false,
+    "has_manual_log": false,
+    "entity_type": "company",
+    "is_crud": false,
+    "needs_logging": false
+  },
+  {
+    "endpoint": "company_details",
+    "path": "/companies/<int:company_id>",
+    "methods": [
+      "GET"
+    ],
+    "blueprint": null,
+    "function": "<function company_details at 0x000001D67DA37BA0>",
+    "function_name": "company_details",
+    "has_auto_log": false,
+    "has_manual_log": false,
+    "entity_type": "company",
+    "is_crud": false,
+    "needs_logging": false
+  },
+  {
+    "endpoint": "companies_edit",
+    "path": "/companies/<int:company_id>/edit",
+    "methods": [
+      "GET"
+    ],
+    "blueprint": null,
+    "function": "<function companies_edit at 0x000001D67DA37E20>",
+    "function_name": "companies_edit",
+    "has_auto_log": false,
+    "has_manual_log": false,
+    "entity_type": "company",
+    "is_crud": false,
+    "needs_logging": false
+  },
+  {
+    "endpoint": "company_logos_manager",
+    "path": "/companies/<int:company_id>/logos",
+    "methods": [
+      "GET"
+    ],
+    "blueprint": null,
+    "function": "<function company_logos_manager at 0x000001D67DA540E0>",
+    "function_name": "company_logos_manager",
+    "has_auto_log": false,
+    "has_manual_log": false,
+    "entity_type": "company",
+    "is_crud": false,
+    "needs_logging": false
+  },
+  {
+    "endpoint": "api_upload_company_logo",
+    "path": "/api/companies/<int:company_id>/logos",
+    "methods": [
+      "POST"
+    ],
+    "blueprint": null,
+    "function": "<function api_upload_company_logo at 0x000001D67DA54360>",
+    "function_name": "api_upload_company_logo",
+    "has_auto_log": false,
+    "has_manual_log": false,
+    "entity_type": "company",
+    "is_crud": true,
+    "needs_logging": true
+  },
+  {
+    "endpoint": "api_delete_company_logo",
+    "path": "/api/companies/<int:company_id>/logos/<logo_type>",
+    "methods": [
+      "DELETE"
+    ],
+    "blueprint": null,
+    "function": "<function api_delete_company_logo at 0x000001D67DA545E0>",
+    "function_name": "api_delete_company_logo",
+    "has_auto_log": false,
+    "has_manual_log": false,
+    "entity_type": "company",
+    "is_crud": true,
+    "needs_logging": true
+  },
+  {
+    "endpoint": "dashboard",
+    "path": "/dashboard",
+    "methods": [
+      "GET"
+    ],
+    "blueprint": null,
+    "function": "<function dashboard at 0x000001D67DA54860>",
+    "function_name": "dashboard",
+    "has_auto_log": false,
+    "has_manual_log": false,
+    "entity_type": null,
+    "is_crud": false,
+    "needs_logging": false
+  },
+  {
+    "endpoint": "api_get_company_data",
+    "path": "/api/plans/<int:plan_id>/company-data",
+    "methods": [
+      "GET"
+    ],
+    "blueprint": null,
+    "function": "<function api_get_company_data at 0x000001D67DA54AE0>",
+    "function_name": "api_get_company_data",
+    "has_auto_log": false,
+    "has_manual_log": false,
+    "entity_type": "plan",
+    "is_crud": false,
+    "needs_logging": false
+  },
+  {
+    "endpoint": "api_update_company_data",
+    "path": "/api/plans/<int:plan_id>/company-data",
+    "methods": [
+      "POST"
+    ],
+    "blueprint": null,
+    "function": "<function api_update_company_data at 0x000001D67DA54D60>",
+    "function_name": "api_update_company_data",
+    "has_auto_log": false,
+    "has_manual_log": false,
+    "entity_type": "plan",
+    "is_crud": true,
+    "needs_logging": true
+  },
+  {
+    "endpoint": "api_get_company_mvv",
+    "path": "/api/companies/<int:company_id>/mvv",
+    "methods": [
+      "GET"
+    ],
+    "blueprint": null,
+    "function": "<function api_get_company_mvv at 0x000001D67DA54FE0>",
+    "function_name": "api_get_company_mvv",
+    "has_auto_log": false,
+    "has_manual_log": false,
+    "entity_type": "company",
+    "is_crud": false,
+    "needs_logging": false
+  },
+  {
+    "endpoint": "api_update_company_mvv",
+    "path": "/api/companies/<int:company_id>/mvv",
+    "methods": [
+      "POST"
+    ],
+    "blueprint": null,
+    "function": "<function api_update_company_mvv at 0x000001D67DA55260>",
+    "function_name": "api_update_company_mvv",
+    "has_auto_log": false,
+    "has_manual_log": false,
+    "entity_type": "company",
+    "is_crud": true,
+    "needs_logging": true
+  },
+  {
+    "endpoint": "api_update_company_economic",
+    "path": "/api/companies/<int:company_id>/economic",
+    "methods": [
+      "POST"
+    ],
+    "blueprint": null,
+    "function": "<function api_update_company_economic at 0x000001D67DA554E0>",
+    "function_name": "api_update_company_economic",
+    "has_auto_log": false,
+    "has_manual_log": false,
+    "entity_type": "company",
+    "is_crud": true,
+    "needs_logging": true
+  },
+  {
+    "endpoint": "api_create_company",
+    "path": "/api/companies",
+    "methods": [
+      "POST"
+    ],
+    "blueprint": null,
+    "function": "<function api_create_company at 0x000001D67DA55760>",
+    "function_name": "api_create_company",
+    "has_auto_log": false,
+    "has_manual_log": false,
+    "entity_type": "company",
+    "is_crud": true,
+    "needs_logging": true
+  },
+  {
+    "endpoint": "api_create_plan",
+    "path": "/api/plans",
+    "methods": [
+      "POST"
+    ],
+    "blueprint": null,
+    "function": "<function api_create_plan at 0x000001D67DA559E0>",
+    "function_name": "api_create_plan",
+    "has_auto_log": false,
+    "has_manual_log": false,
+    "entity_type": "plan",
+    "is_crud": true,
+    "needs_logging": true
+  },
+  {
+    "endpoint": "api_get_plan",
+    "path": "/api/plans/<int:plan_id>",
+    "methods": [
+      "GET"
+    ],
+    "blueprint": null,
+    "function": "<function api_get_plan at 0x000001D67DA55C60>",
+    "function_name": "api_get_plan",
+    "has_auto_log": false,
+    "has_manual_log": false,
+    "entity_type": "plan",
+    "is_crud": false,
+    "needs_logging": false
+  },
+  {
+    "endpoint": "api_get_company_profile",
+    "path": "/api/companies/<int:company_id>",
+    "methods": [
+      "GET"
+    ],
+    "blueprint": null,
+    "function": "<function api_get_company_profile at 0x000001D67DA55EE0>",
+    "function_name": "api_get_company_profile",
+    "has_auto_log": false,
+    "has_manual_log": false,
+    "entity_type": "company",
+    "is_crud": false,
+    "needs_logging": false
+  },
+  {
+    "endpoint": "api_update_company_profile",
+    "path": "/api/companies/<int:company_id>",
+    "methods": [
+      "POST"
+    ],
+    "blueprint": null,
+    "function": "<function api_update_company_profile at 0x000001D67DA56160>",
+    "function_name": "api_update_company_profile",
+    "has_auto_log": false,
+    "has_manual_log": false,
+    "entity_type": "company",
+    "is_crud": true,
+    "needs_logging": true
+  },
+  {
+    "endpoint": "api_delete_company",
+    "path": "/api/companies/<int:company_id>",
+    "methods": [
+      "DELETE"
+    ],
+    "blueprint": null,
+    "function": "<function api_delete_company at 0x000001D67DA563E0>",
+    "function_name": "api_delete_company",
+    "has_auto_log": false,
+    "has_manual_log": false,
+    "entity_type": "company",
+    "is_crud": true,
+    "needs_logging": true
+  },
+  {
+    "endpoint": "gerar_relatorio_projetos",
+    "path": "/relatorios/projetos/<int:company_id>",
+    "methods": [
+      "GET"
+    ],
+    "blueprint": null,
+    "function": "<function gerar_relatorio_projetos at 0x000001D67DA56660>",
+    "function_name": "gerar_relatorio_projetos",
+    "has_auto_log": false,
+    "has_manual_log": false,
+    "entity_type": null,
+    "is_crud": false,
+    "needs_logging": false
+  },
+  {
+    "endpoint": "api_gerar_relatorio_projetos",
+    "path": "/api/relatorios/projetos/<int:company_id>",
+    "methods": [
+      "GET"
+    ],
+    "blueprint": null,
+    "function": "<function api_gerar_relatorio_projetos at 0x000001D67DA56840>",
+    "function_name": "api_gerar_relatorio_projetos",
+    "has_auto_log": false,
+    "has_manual_log": false,
+    "entity_type": null,
+    "is_crud": false,
+    "needs_logging": false
+  },
+  {
+    "endpoint": "api_company_employees",
+    "path": "/api/companies/<int:company_id>/employees",
+    "methods": [
+      "GET",
+      "POST"
+    ],
+    "blueprint": null,
+    "function": "<function api_company_employees at 0x000001D67DA56AC0>",
+    "function_name": "api_company_employees",
+    "has_auto_log": false,
+    "has_manual_log": false,
+    "entity_type": "company",
+    "is_crud": true,
+    "needs_logging": true
+  },
+  {
+    "endpoint": "api_company_employee",
+    "path": "/api/companies/<int:company_id>/employees/<int:employee_id>",
+    "methods": [
+      "DELETE",
+      "PUT"
+    ],
+    "blueprint": null,
+    "function": "<function api_company_employee at 0x000001D67DA56D40>",
+    "function_name": "api_company_employee",
+    "has_auto_log": false,
+    "has_manual_log": false,
+    "entity_type": "company",
+    "is_crud": true,
+    "needs_logging": true
+  },
+  {
+    "endpoint": "api_workforce_analysis",
+    "path": "/api/companies/<int:company_id>/workforce-analysis",
+    "methods": [
+      "GET"
+    ],
+    "blueprint": null,
+    "function": "<function api_workforce_analysis at 0x000001D67DA56FC0>",
+    "function_name": "api_workforce_analysis",
+    "has_auto_log": false,
+    "has_manual_log": false,
+    "entity_type": "company",
+    "is_crud": false,
+    "needs_logging": false
+  },
+  {
+    "endpoint": "api_update_client_code",
+    "path": "/api/companies/<int:company_id>/client-code",
+    "methods": [
+      "POST"
+    ],
+    "blueprint": null,
+    "function": "<function api_update_client_code at 0x000001D67DA571A0>",
+    "function_name": "api_update_client_code",
+    "has_auto_log": false,
+    "has_manual_log": false,
+    "entity_type": "company",
+    "is_crud": true,
+    "needs_logging": true
+  },
+  {
+    "endpoint": "api_list_roles",
+    "path": "/api/companies/<int:company_id>/roles",
+    "methods": [
+      "GET"
+    ],
+    "blueprint": null,
+    "function": "<function api_list_roles at 0x000001D67DA57240>",
+    "function_name": "api_list_roles",
+    "has_auto_log": false,
+    "has_manual_log": false,
+    "entity_type": "company",
+    "is_crud": false,
+    "needs_logging": false
+  },
+  {
+    "endpoint": "api_roles_tree",
+    "path": "/api/companies/<int:company_id>/roles/tree",
+    "methods": [
+      "GET"
+    ],
+    "blueprint": null,
+    "function": "<function api_roles_tree at 0x000001D67DA57420>",
+    "function_name": "api_roles_tree",
+    "has_auto_log": false,
+    "has_manual_log": false,
+    "entity_type": "company",
+    "is_crud": false,
+    "needs_logging": false
+  },
+  {
+    "endpoint": "api_create_role",
+    "path": "/api/companies/<int:company_id>/roles",
+    "methods": [
+      "POST"
+    ],
+    "blueprint": null,
+    "function": "<function api_create_role at 0x000001D67DA574C0>",
+    "function_name": "api_create_role",
+    "has_auto_log": false,
+    "has_manual_log": false,
+    "entity_type": "company",
+    "is_crud": true,
+    "needs_logging": true
+  },
+  {
+    "endpoint": "api_update_role",
+    "path": "/api/companies/<int:company_id>/roles/<int:role_id>",
+    "methods": [
+      "PUT"
+    ],
+    "blueprint": null,
+    "function": "<function api_update_role at 0x000001D67DA576A0>",
+    "function_name": "api_update_role",
+    "has_auto_log": false,
+    "has_manual_log": false,
+    "entity_type": "company",
+    "is_crud": true,
+    "needs_logging": true
+  },
+  {
+    "endpoint": "api_delete_role",
+    "path": "/api/companies/<int:company_id>/roles/<int:role_id>",
+    "methods": [
+      "DELETE"
+    ],
+    "blueprint": null,
+    "function": "<function api_delete_role at 0x000001D67DA57880>",
+    "function_name": "api_delete_role",
+    "has_auto_log": false,
+    "has_manual_log": false,
+    "entity_type": "company",
+    "is_crud": true,
+    "needs_logging": true
+  },
+  {
+    "endpoint": "api_get_process_map",
+    "path": "/api/companies/<int:company_id>/process-map",
+    "methods": [
+      "GET"
+    ],
+    "blueprint": null,
+    "function": "<function api_get_process_map at 0x000001D67DA57A60>",
+    "function_name": "api_get_process_map",
+    "has_auto_log": false,
+    "has_manual_log": false,
+    "entity_type": "company",
+    "is_crud": false,
+    "needs_logging": false
+  },
+  {
+    "endpoint": "api_list_process_areas",
+    "path": "/api/companies/<int:company_id>/process-areas",
+    "methods": [
+      "GET"
+    ],
+    "blueprint": null,
+    "function": "<function api_list_process_areas at 0x000001D67DA57C40>",
+    "function_name": "api_list_process_areas",
+    "has_auto_log": false,
+    "has_manual_log": false,
+    "entity_type": "company",
+    "is_crud": false,
+    "needs_logging": false
+  },
+  {
+    "endpoint": "api_create_process_area",
+    "path": "/api/companies/<int:company_id>/process-areas",
+    "methods": [
+      "POST"
+    ],
+    "blueprint": null,
+    "function": "<function api_create_process_area at 0x000001D67DA57E20>",
+    "function_name": "api_create_process_area",
+    "has_auto_log": false,
+    "has_manual_log": false,
+    "entity_type": "company",
+    "is_crud": true,
+    "needs_logging": true
+  },
+  {
+    "endpoint": "api_update_process_area",
+    "path": "/api/companies/<int:company_id>/process-areas/<int:area_id>",
+    "methods": [
+      "PUT"
+    ],
+    "blueprint": null,
+    "function": "<function api_update_process_area at 0x000001D67DDD0040>",
+    "function_name": "api_update_process_area",
+    "has_auto_log": false,
+    "has_manual_log": false,
+    "entity_type": "company",
+    "is_crud": true,
+    "needs_logging": true
+  },
+  {
+    "endpoint": "api_delete_process_area",
+    "path": "/api/companies/<int:company_id>/process-areas/<int:area_id>",
+    "methods": [
+      "DELETE"
+    ],
+    "blueprint": null,
+    "function": "<function api_delete_process_area at 0x000001D67DDD0220>",
+    "function_name": "api_delete_process_area",
+    "has_auto_log": false,
+    "has_manual_log": false,
+    "entity_type": "company",
+    "is_crud": true,
+    "needs_logging": true
+  },
+  {
+    "endpoint": "api_list_macro_processes",
+    "path": "/api/companies/<int:company_id>/macro-processes",
+    "methods": [
+      "GET"
+    ],
+    "blueprint": null,
+    "function": "<function api_list_macro_processes at 0x000001D67DDD0400>",
+    "function_name": "api_list_macro_processes",
+    "has_auto_log": false,
+    "has_manual_log": false,
+    "entity_type": "company",
+    "is_crud": false,
+    "needs_logging": false
+  },
+  {
+    "endpoint": "api_create_macro_process",
+    "path": "/api/companies/<int:company_id>/macro-processes",
+    "methods": [
+      "POST"
+    ],
+    "blueprint": null,
+    "function": "<function api_create_macro_process at 0x000001D67DDD05E0>",
+    "function_name": "api_create_macro_process",
+    "has_auto_log": false,
+    "has_manual_log": false,
+    "entity_type": "company",
+    "is_crud": true,
+    "needs_logging": true
+  },
+  {
+    "endpoint": "api_update_macro_process",
+    "path": "/api/companies/<int:company_id>/macro-processes/<int:macro_id>",
+    "methods": [
+      "PUT"
+    ],
+    "blueprint": null,
+    "function": "<function api_update_macro_process at 0x000001D67DDD07C0>",
+    "function_name": "api_update_macro_process",
+    "has_auto_log": false,
+    "has_manual_log": false,
+    "entity_type": "company",
+    "is_crud": true,
+    "needs_logging": true
+  },
+  {
+    "endpoint": "api_delete_macro_process",
+    "path": "/api/companies/<int:company_id>/macro-processes/<int:macro_id>",
+    "methods": [
+      "DELETE"
+    ],
+    "blueprint": null,
+    "function": "<function api_delete_macro_process at 0x000001D67DDD09A0>",
+    "function_name": "api_delete_macro_process",
+    "has_auto_log": false,
+    "has_manual_log": false,
+    "entity_type": "company",
+    "is_crud": true,
+    "needs_logging": true
+  },
+  {
+    "endpoint": "api_list_processes",
+    "path": "/api/companies/<int:company_id>/processes",
+    "methods": [
+      "GET"
+    ],
+    "blueprint": null,
+    "function": "<function api_list_processes at 0x000001D67DDD0B80>",
+    "function_name": "api_list_processes",
+    "has_auto_log": false,
+    "has_manual_log": false,
+    "entity_type": "company",
+    "is_crud": false,
+    "needs_logging": false
+  },
+  {
+    "endpoint": "api_create_process",
+    "path": "/api/companies/<int:company_id>/processes",
+    "methods": [
+      "POST"
+    ],
+    "blueprint": null,
+    "function": "<function api_create_process at 0x000001D67DDD0D60>",
+    "function_name": "api_create_process",
+    "has_auto_log": false,
+    "has_manual_log": false,
+    "entity_type": "company",
+    "is_crud": true,
+    "needs_logging": true
+  },
+  {
+    "endpoint": "api_update_process",
+    "path": "/api/companies/<int:company_id>/processes/<int:process_id>",
+    "methods": [
+      "PUT"
+    ],
+    "blueprint": null,
+    "function": "<function api_update_process at 0x000001D67DDD0F40>",
+    "function_name": "api_update_process",
+    "has_auto_log": false,
+    "has_manual_log": false,
+    "entity_type": "company",
+    "is_crud": true,
+    "needs_logging": true
+  },
+  {
+    "endpoint": "api_update_process_stage",
+    "path": "/api/companies/<int:company_id>/processes/<int:process_id>/stage",
+    "methods": [
+      "PATCH"
+    ],
+    "blueprint": null,
+    "function": "<function api_update_process_stage at 0x000001D67DDD1120>",
+    "function_name": "api_update_process_stage",
+    "has_auto_log": false,
+    "has_manual_log": false,
+    "entity_type": "company",
+    "is_crud": true,
+    "needs_logging": true
+  },
+  {
+    "endpoint": "api_process_notes",
+    "path": "/api/companies/<int:company_id>/processes/<int:process_id>/notes",
+    "methods": [
+      "GET",
+      "PUT"
+    ],
+    "blueprint": null,
+    "function": "<function api_process_notes at 0x000001D67DDD1300>",
+    "function_name": "api_process_notes",
+    "has_auto_log": false,
+    "has_manual_log": false,
+    "entity_type": "company",
+    "is_crud": true,
+    "needs_logging": true
+  },
+  {
+    "endpoint": "api_process_flow_document",
+    "path": "/api/companies/<int:company_id>/processes/<int:process_id>/flow",
+    "methods": [
+      "DELETE",
+      "POST"
+    ],
+    "blueprint": null,
+    "function": "<function api_process_flow_document at 0x000001D67DDD1EE0>",
+    "function_name": "api_process_flow_document",
+    "has_auto_log": false,
+    "has_manual_log": false,
+    "entity_type": "company",
+    "is_crud": true,
+    "needs_logging": true
+  },
+  {
+    "endpoint": "api_process_activities",
+    "path": "/api/companies/<int:company_id>/processes/<int:process_id>/activities",
+    "methods": [
+      "GET",
+      "POST"
+    ],
+    "blueprint": null,
+    "function": "<function api_process_activities at 0x000001D67DDD20C0>",
+    "function_name": "api_process_activities",
+    "has_auto_log": false,
+    "has_manual_log": false,
+    "entity_type": "company",
+    "is_crud": true,
+    "needs_logging": true
+  },
+  {
+    "endpoint": "api_process_activity_detail",
+    "path": "/api/companies/<int:company_id>/processes/<int:process_id>/activities/<int:activity_id>",
+    "methods": [
+      "DELETE",
+      "PUT"
+    ],
+    "blueprint": null,
+    "function": "<function api_process_activity_detail at 0x000001D67DDD2160>",
+    "function_name": "api_process_activity_detail",
+    "has_auto_log": false,
+    "has_manual_log": false,
+    "entity_type": "company",
+    "is_crud": true,
+    "needs_logging": true
+  },
+  {
+    "endpoint": "api_create_process_activity_entry",
+    "path": "/api/companies/<int:company_id>/processes/<int:process_id>/activities/<int:activity_id>/entries",
+    "methods": [
+      "POST"
+    ],
+    "blueprint": null,
+    "function": "<function api_create_process_activity_entry at 0x000001D67DDD2340>",
+    "function_name": "api_create_process_activity_entry",
+    "has_auto_log": false,
+    "has_manual_log": false,
+    "entity_type": "company",
+    "is_crud": true,
+    "needs_logging": true
+  },
+  {
+    "endpoint": "api_process_activity_entry_detail",
+    "path": "/api/companies/<int:company_id>/processes/<int:process_id>/activities/<int:activity_id>/entries/<int:entry_id>",
+    "methods": [
+      "DELETE",
+      "PUT"
+    ],
+    "blueprint": null,
+    "function": "<function api_process_activity_entry_detail at 0x000001D67DDD23E0>",
+    "function_name": "api_process_activity_entry_detail",
+    "has_auto_log": false,
+    "has_manual_log": false,
+    "entity_type": "company",
+    "is_crud": true,
+    "needs_logging": true
+  },
+  {
+    "endpoint": "api_delete_process",
+    "path": "/api/companies/<int:company_id>/processes/<int:process_id>",
+    "methods": [
+      "DELETE"
+    ],
+    "blueprint": null,
+    "function": "<function api_delete_process at 0x000001D67DDD2480>",
+    "function_name": "api_delete_process",
+    "has_auto_log": false,
+    "has_manual_log": false,
+    "entity_type": "company",
+    "is_crud": true,
+    "needs_logging": true
+  },
+  {
+    "endpoint": "api_list_process_instances",
+    "path": "/api/companies/<int:company_id>/process-instances",
+    "methods": [
+      "GET"
+    ],
+    "blueprint": null,
+    "function": "<function api_list_process_instances at 0x000001D67DDD2840>",
+    "function_name": "api_list_process_instances",
+    "has_auto_log": false,
+    "has_manual_log": false,
+    "entity_type": "company",
+    "is_crud": false,
+    "needs_logging": false
+  },
+  {
+    "endpoint": "api_create_process_instance",
+    "path": "/api/companies/<int:company_id>/process-instances",
+    "methods": [
+      "POST"
+    ],
+    "blueprint": null,
+    "function": "<function api_create_process_instance at 0x000001D67DDD2A20>",
+    "function_name": "api_create_process_instance",
+    "has_auto_log": false,
+    "has_manual_log": false,
+    "entity_type": "company",
+    "is_crud": true,
+    "needs_logging": true
+  },
+  {
+    "endpoint": "api_get_process_routine_collaborators",
+    "path": "/api/companies/<int:company_id>/processes/<int:process_id>/routine-collaborators",
+    "methods": [
+      "GET"
+    ],
+    "blueprint": null,
+    "function": "<function api_get_process_routine_collaborators at 0x000001D67DDD2DE0>",
+    "function_name": "api_get_process_routine_collaborators",
+    "has_auto_log": false,
+    "has_manual_log": false,
+    "entity_type": "company",
+    "is_crud": false,
+    "needs_logging": false
+  },
+  {
+    "endpoint": "api_update_process_instance",
+    "path": "/api/companies/<int:company_id>/process-instances/<int:instance_id>",
+    "methods": [
+      "PATCH"
+    ],
+    "blueprint": null,
+    "function": "<function api_update_process_instance at 0x000001D67DDD2FC0>",
+    "function_name": "api_update_process_instance",
+    "has_auto_log": false,
+    "has_manual_log": false,
+    "entity_type": "company",
+    "is_crud": true,
+    "needs_logging": true
+  },
+  {
+    "endpoint": "api_get_unified_activities",
+    "path": "/api/companies/<int:company_id>/unified-activities",
+    "methods": [
+      "GET"
+    ],
+    "blueprint": null,
+    "function": "<function api_get_unified_activities at 0x000001D67DDD31A0>",
+    "function_name": "api_get_unified_activities",
+    "has_auto_log": false,
+    "has_manual_log": false,
+    "entity_type": "company",
+    "is_crud": false,
+    "needs_logging": false
+  },
+  {
+    "endpoint": "api_company_occurrences",
+    "path": "/api/companies/<int:company_id>/occurrences",
+    "methods": [
+      "GET",
+      "POST"
+    ],
+    "blueprint": null,
+    "function": "<function api_company_occurrences at 0x000001D67DDD3380>",
+    "function_name": "api_company_occurrences",
+    "has_auto_log": false,
+    "has_manual_log": false,
+    "entity_type": "company",
+    "is_crud": true,
+    "needs_logging": true
+  },
+  {
+    "endpoint": "api_company_occurrence",
+    "path": "/api/companies/<int:company_id>/occurrences/<int:occurrence_id>",
+    "methods": [
+      "DELETE",
+      "PUT"
+    ],
+    "blueprint": null,
+    "function": "<function api_company_occurrence at 0x000001D67DDD3560>",
+    "function_name": "api_company_occurrence",
+    "has_auto_log": false,
+    "has_manual_log": false,
+    "entity_type": "company",
+    "is_crud": true,
+    "needs_logging": true
+  },
+  {
+    "endpoint": "api_company_efficiency_collaborators",
+    "path": "/api/companies/<int:company_id>/efficiency/collaborators",
+    "methods": [
+      "GET"
+    ],
+    "blueprint": null,
+    "function": "<function api_company_efficiency_collaborators at 0x000001D67DDD3740>",
+    "function_name": "api_company_efficiency_collaborators",
+    "has_auto_log": false,
+    "has_manual_log": false,
+    "entity_type": "company",
+    "is_crud": false,
+    "needs_logging": false
+  },
+  {
+    "endpoint": "api_generate_process_report",
+    "path": "/api/companies/<int:company_id>/processes/<int:process_id>/report",
+    "methods": [
+      "GET"
+    ],
+    "blueprint": null,
+    "function": "<function api_generate_process_report at 0x000001D67DDD3920>",
+    "function_name": "api_generate_process_report",
+    "has_auto_log": false,
+    "has_manual_log": false,
+    "entity_type": "company",
+    "is_crud": false,
+    "needs_logging": false
+  },
+  {
+    "endpoint": "__routes",
+    "path": "/__routes",
+    "methods": [
+      "GET"
+    ],
+    "blueprint": null,
+    "function": "<function __routes at 0x000001D67DDD3B00>",
+    "function_name": "__routes",
+    "has_auto_log": false,
+    "has_manual_log": false,
+    "entity_type": null,
+    "is_crud": false,
+    "needs_logging": false
+  },
+  {
+    "endpoint": "api_get_routines",
+    "path": "/api/companies/<int:company_id>/routines",
+    "methods": [
+      "GET"
+    ],
+    "blueprint": null,
+    "function": "<function api_get_routines at 0x000001D67DDD3CE0>",
+    "function_name": "api_get_routines",
+    "has_auto_log": false,
+    "has_manual_log": false,
+    "entity_type": "company",
+    "is_crud": false,
+    "needs_logging": false
+  },
+  {
+    "endpoint": "api_create_routine",
+    "path": "/api/companies/<int:company_id>/routines",
+    "methods": [
+      "POST"
+    ],
+    "blueprint": null,
+    "function": "<function api_create_routine at 0x000001D67DDD3EC0>",
+    "function_name": "api_create_routine",
+    "has_auto_log": false,
+    "has_manual_log": false,
+    "entity_type": "company",
+    "is_crud": true,
+    "needs_logging": true
+  },
+  {
+    "endpoint": "api_get_routine",
+    "path": "/api/routines/<int:routine_id>",
+    "methods": [
+      "GET"
+    ],
+    "blueprint": null,
+    "function": "<function api_get_routine at 0x000001D67DE0C0E0>",
+    "function_name": "api_get_routine",
+    "has_auto_log": false,
+    "has_manual_log": false,
+    "entity_type": "routine",
+    "is_crud": false,
+    "needs_logging": false
+  },
+  {
+    "endpoint": "api_update_routine",
+    "path": "/api/routines/<int:routine_id>",
+    "methods": [
+      "PUT"
+    ],
+    "blueprint": null,
+    "function": "<function api_update_routine at 0x000001D67DE0C2C0>",
+    "function_name": "api_update_routine",
+    "has_auto_log": false,
+    "has_manual_log": false,
+    "entity_type": "routine",
+    "is_crud": true,
+    "needs_logging": true
+  },
+  {
+    "endpoint": "api_delete_routine",
+    "path": "/api/routines/<int:routine_id>",
+    "methods": [
+      "DELETE"
+    ],
+    "blueprint": null,
+    "function": "<function api_delete_routine at 0x000001D67DE0C4A0>",
+    "function_name": "api_delete_routine",
+    "has_auto_log": false,
+    "has_manual_log": false,
+    "entity_type": "routine",
+    "is_crud": true,
+    "needs_logging": true
+  },
+  {
+    "endpoint": "api_get_routine_triggers",
+    "path": "/api/routines/<int:routine_id>/triggers",
+    "methods": [
+      "GET"
+    ],
+    "blueprint": null,
+    "function": "<function api_get_routine_triggers at 0x000001D67DE0C680>",
+    "function_name": "api_get_routine_triggers",
+    "has_auto_log": false,
+    "has_manual_log": false,
+    "entity_type": "routine",
+    "is_crud": false,
+    "needs_logging": false
+  },
+  {
+    "endpoint": "api_create_routine_trigger",
+    "path": "/api/routines/<int:routine_id>/triggers",
+    "methods": [
+      "POST"
+    ],
+    "blueprint": null,
+    "function": "<function api_create_routine_trigger at 0x000001D67DE0C860>",
+    "function_name": "api_create_routine_trigger",
+    "has_auto_log": false,
+    "has_manual_log": false,
+    "entity_type": "routine",
+    "is_crud": true,
+    "needs_logging": true
+  },
+  {
+    "endpoint": "api_update_routine_trigger",
+    "path": "/api/triggers/<int:trigger_id>",
+    "methods": [
+      "PUT"
+    ],
+    "blueprint": null,
+    "function": "<function api_update_routine_trigger at 0x000001D67DE0CA40>",
+    "function_name": "api_update_routine_trigger",
+    "has_auto_log": false,
+    "has_manual_log": false,
+    "entity_type": null,
+    "is_crud": true,
+    "needs_logging": true
+  },
+  {
+    "endpoint": "api_delete_routine_trigger",
+    "path": "/api/triggers/<int:trigger_id>",
+    "methods": [
+      "DELETE"
+    ],
+    "blueprint": null,
+    "function": "<function api_delete_routine_trigger at 0x000001D67DE0CC20>",
+    "function_name": "api_delete_routine_trigger",
+    "has_auto_log": false,
+    "has_manual_log": false,
+    "entity_type": null,
+    "is_crud": true,
+    "needs_logging": true
+  },
+  {
+    "endpoint": "api_get_routine_tasks",
+    "path": "/api/companies/<int:company_id>/routine-tasks",
+    "methods": [
+      "GET"
+    ],
+    "blueprint": null,
+    "function": "<function api_get_routine_tasks at 0x000001D67DE0CE00>",
+    "function_name": "api_get_routine_tasks",
+    "has_auto_log": false,
+    "has_manual_log": false,
+    "entity_type": "company",
+    "is_crud": false,
+    "needs_logging": false
+  },
+  {
+    "endpoint": "api_get_overdue_tasks",
+    "path": "/api/companies/<int:company_id>/routine-tasks/overdue",
+    "methods": [
+      "GET"
+    ],
+    "blueprint": null,
+    "function": "<function api_get_overdue_tasks at 0x000001D67DE0CFE0>",
+    "function_name": "api_get_overdue_tasks",
+    "has_auto_log": false,
+    "has_manual_log": false,
+    "entity_type": "company",
+    "is_crud": false,
+    "needs_logging": false
+  },
+  {
+    "endpoint": "api_get_upcoming_tasks",
+    "path": "/api/companies/<int:company_id>/routine-tasks/upcoming",
+    "methods": [
+      "GET"
+    ],
+    "blueprint": null,
+    "function": "<function api_get_upcoming_tasks at 0x000001D67DE0D1C0>",
+    "function_name": "api_get_upcoming_tasks",
+    "has_auto_log": false,
+    "has_manual_log": false,
+    "entity_type": "company",
+    "is_crud": false,
+    "needs_logging": false
+  },
+  {
+    "endpoint": "api_update_task_status",
+    "path": "/api/routine-tasks/<int:task_id>/status",
+    "methods": [
+      "PUT"
+    ],
+    "blueprint": null,
+    "function": "<function api_update_task_status at 0x000001D67DE0D3A0>",
+    "function_name": "api_update_task_status",
+    "has_auto_log": false,
+    "has_manual_log": false,
+    "entity_type": "routine",
+    "is_crud": true,
+    "needs_logging": true
+  },
+  {
+    "endpoint": "routines_management",
+    "path": "/companies/<int:company_id>/routines",
+    "methods": [
+      "GET"
+    ],
+    "blueprint": null,
+    "function": "<function routines_management at 0x000001D67DE0D580>",
+    "function_name": "routines_management",
+    "has_auto_log": false,
+    "has_manual_log": false,
+    "entity_type": "company",
+    "is_crud": false,
+    "needs_logging": false
+  },
+  {
+    "endpoint": "routine_details",
+    "path": "/companies/<int:company_id>/routines/<routine_id>",
+    "methods": [
+      "GET"
+    ],
+    "blueprint": null,
+    "function": "<function routine_details at 0x000001D67DE0D760>",
+    "function_name": "routine_details",
+    "has_auto_log": false,
+    "has_manual_log": false,
+    "entity_type": "company",
+    "is_crud": false,
+    "needs_logging": false
+  },
+  {
+    "endpoint": "api_get_process_routines",
+    "path": "/api/companies/<int:company_id>/process-routines",
+    "methods": [
+      "GET"
+    ],
+    "blueprint": null,
+    "function": "<function api_get_process_routines at 0x000001D67DE0D940>",
+    "function_name": "api_get_process_routines",
+    "has_auto_log": false,
+    "has_manual_log": false,
+    "entity_type": "company",
+    "is_crud": false,
+    "needs_logging": false
+  },
+  {
+    "endpoint": "api_create_process_routine",
+    "path": "/api/companies/<int:company_id>/process-routines",
+    "methods": [
+      "POST"
+    ],
+    "blueprint": null,
+    "function": "<function api_create_process_routine at 0x000001D67DE0DB20>",
+    "function_name": "api_create_process_routine",
+    "has_auto_log": false,
+    "has_manual_log": false,
+    "entity_type": "company",
+    "is_crud": true,
+    "needs_logging": true
+  },
+  {
+    "endpoint": "api_delete_process_routine",
+    "path": "/api/companies/<int:company_id>/process-routines/<int:routine_id>",
+    "methods": [
+      "DELETE"
+    ],
+    "blueprint": null,
+    "function": "<function api_delete_process_routine at 0x000001D67DE0DD00>",
+    "function_name": "api_delete_process_routine",
+    "has_auto_log": false,
+    "has_manual_log": false,
+    "entity_type": "company",
+    "is_crud": true,
+    "needs_logging": true
+  },
+  {
+    "endpoint": "api_update_process_routine",
+    "path": "/api/companies/<int:company_id>/process-routines/<int:routine_id>",
+    "methods": [
+      "PUT"
+    ],
+    "blueprint": null,
+    "function": "<function api_update_process_routine at 0x000001D67DE0DEE0>",
+    "function_name": "api_update_process_routine",
+    "has_auto_log": false,
+    "has_manual_log": false,
+    "entity_type": "company",
+    "is_crud": true,
+    "needs_logging": true
+  },
+  {
+    "endpoint": "api_get_process_routines_with_collaborators",
+    "path": "/api/processes/<int:process_id>/routines-with-collaborators",
+    "methods": [
+      "GET"
+    ],
+    "blueprint": null,
+    "function": "<function api_get_process_routines_with_collaborators at 0x000001D67DE0E0C0>",
+    "function_name": "api_get_process_routines_with_collaborators",
+    "has_auto_log": false,
+    "has_manual_log": false,
+    "entity_type": "process",
+    "is_crud": false,
+    "needs_logging": false
+  },
+  {
+    "endpoint": "api_get_routine_collaborators",
+    "path": "/api/routines/<int:routine_id>/collaborators",
+    "methods": [
+      "GET"
+    ],
+    "blueprint": null,
+    "function": "<function api_get_routine_collaborators at 0x000001D67DE0E2A0>",
+    "function_name": "api_get_routine_collaborators",
+    "has_auto_log": false,
+    "has_manual_log": false,
+    "entity_type": "routine",
+    "is_crud": false,
+    "needs_logging": false
+  },
+  {
+    "endpoint": "api_add_routine_collaborator",
+    "path": "/api/routines/<int:routine_id>/collaborators",
+    "methods": [
+      "POST"
+    ],
+    "blueprint": null,
+    "function": "<function api_add_routine_collaborator at 0x000001D67DE0E480>",
+    "function_name": "api_add_routine_collaborator",
+    "has_auto_log": false,
+    "has_manual_log": false,
+    "entity_type": "routine",
+    "is_crud": true,
+    "needs_logging": true
+  },
+  {
+    "endpoint": "api_update_routine_collaborator",
+    "path": "/api/routines/<int:routine_id>/collaborators/<int:collaborator_id>",
+    "methods": [
+      "PUT"
+    ],
+    "blueprint": null,
+    "function": "<function api_update_routine_collaborator at 0x000001D67DE0E660>",
+    "function_name": "api_update_routine_collaborator",
+    "has_auto_log": false,
+    "has_manual_log": false,
+    "entity_type": "routine",
+    "is_crud": true,
+    "needs_logging": true
+  },
+  {
+    "endpoint": "api_delete_routine_collaborator",
+    "path": "/api/routines/<int:routine_id>/collaborators/<int:collaborator_id>",
+    "methods": [
+      "DELETE"
+    ],
+    "blueprint": null,
+    "function": "<function api_delete_routine_collaborator at 0x000001D67DE0E840>",
+    "function_name": "api_delete_routine_collaborator",
+    "has_auto_log": false,
+    "has_manual_log": false,
+    "entity_type": "routine",
+    "is_crud": true,
+    "needs_logging": true
+  },
+  {
+    "endpoint": "routine_tasks_page",
+    "path": "/companies/<int:company_id>/routine-tasks",
+    "methods": [
+      "GET"
+    ],
+    "blueprint": null,
+    "function": "<function routine_tasks_page at 0x000001D67DE0EA20>",
+    "function_name": "routine_tasks_page",
+    "has_auto_log": false,
+    "has_manual_log": false,
+    "entity_type": "company",
+    "is_crud": false,
+    "needs_logging": false
+  },
+  {
+    "endpoint": "test_routines_modal",
+    "path": "/test-routines-modal",
+    "methods": [
+      "GET"
+    ],
+    "blueprint": null,
+    "function": "<function test_routines_modal at 0x000001D67DE0EC00>",
+    "function_name": "test_routines_modal",
+    "has_auto_log": false,
+    "has_manual_log": false,
+    "entity_type": null,
+    "is_crud": false,
+    "needs_logging": false
+  },
+  {
+    "endpoint": "plan_dashboard",
+    "path": "/plans/<plan_id>",
+    "methods": [
+      "GET"
+    ],
+    "blueprint": null,
+    "function": "<function plan_dashboard at 0x000001D67DE0EDE0>",
+    "function_name": "plan_dashboard",
+    "has_auto_log": false,
+    "has_manual_log": false,
+    "entity_type": "plan",
+    "is_crud": false,
+    "needs_logging": false
+  },
+  {
+    "endpoint": "plan_company",
+    "path": "/plans/<plan_id>/company",
+    "methods": [
+      "GET"
+    ],
+    "blueprint": null,
+    "function": "<function plan_company at 0x000001D67DE0EFC0>",
+    "function_name": "plan_company",
+    "has_auto_log": false,
+    "has_manual_log": false,
+    "entity_type": "plan",
+    "is_crud": false,
+    "needs_logging": false
+  },
+  {
+    "endpoint": "plan_participants",
+    "path": "/plans/<plan_id>/participants",
+    "methods": [
+      "GET"
+    ],
+    "blueprint": null,
+    "function": "<function plan_participants at 0x000001D67DE0F1A0>",
+    "function_name": "plan_participants",
+    "has_auto_log": false,
+    "has_manual_log": false,
+    "entity_type": "plan",
+    "is_crud": false,
+    "needs_logging": false
+  },
+  {
+    "endpoint": "toggle_participant",
+    "path": "/plans/<plan_id>/participants/toggle/<int:employee_id>",
+    "methods": [
+      "POST"
+    ],
+    "blueprint": null,
+    "function": "<function toggle_participant at 0x000001D67DE0F380>",
+    "function_name": "toggle_participant",
+    "has_auto_log": false,
+    "has_manual_log": false,
+    "entity_type": "plan",
+    "is_crud": true,
+    "needs_logging": true
+  },
+  {
+    "endpoint": "plan_drivers",
+    "path": "/plans/<plan_id>/drivers",
+    "methods": [
+      "GET"
+    ],
+    "blueprint": null,
+    "function": "<function plan_drivers at 0x000001D67DE0F560>",
+    "function_name": "plan_drivers",
+    "has_auto_log": false,
+    "has_manual_log": false,
+    "entity_type": "plan",
+    "is_crud": false,
+    "needs_logging": false
+  },
+  {
+    "endpoint": "plan_okr_global",
+    "path": "/plans/<plan_id>/okr-global",
+    "methods": [
+      "GET"
+    ],
+    "blueprint": null,
+    "function": "<function plan_okr_global at 0x000001D67DE0F920>",
+    "function_name": "plan_okr_global",
+    "has_auto_log": false,
+    "has_manual_log": false,
+    "entity_type": "plan",
+    "is_crud": false,
+    "needs_logging": false
+  },
+  {
+    "endpoint": "plan_okr_area",
+    "path": "/plans/<plan_id>/okr-area",
+    "methods": [
+      "GET"
+    ],
+    "blueprint": null,
+    "function": "<function plan_okr_area at 0x000001D67DE0FCE0>",
+    "function_name": "plan_okr_area",
+    "has_auto_log": false,
+    "has_manual_log": false,
+    "entity_type": "plan",
+    "is_crud": false,
+    "needs_logging": false
+  },
+  {
+    "endpoint": "plan_projects",
+    "path": "/plans/<plan_id>/projects",
+    "methods": [
+      "GET"
+    ],
+    "blueprint": null,
+    "function": "<function plan_projects at 0x000001D67DE0FD80>",
+    "function_name": "plan_projects",
+    "has_auto_log": false,
+    "has_manual_log": false,
+    "entity_type": "plan",
+    "is_crud": false,
+    "needs_logging": false
+  },
+  {
+    "endpoint": "create_project",
+    "path": "/plans/<plan_id>/projects",
+    "methods": [
+      "POST"
+    ],
+    "blueprint": null,
+    "function": "<function create_project at 0x000001D67DE0FF60>",
+    "function_name": "create_project",
+    "has_auto_log": false,
+    "has_manual_log": false,
+    "entity_type": "plan",
+    "is_crud": true,
+    "needs_logging": true
+  },
+  {
+    "endpoint": "update_project_route",
+    "path": "/plans/<plan_id>/projects/<int:project_id>",
+    "methods": [
+      "POST"
+    ],
+    "blueprint": null,
+    "function": "<function update_project_route at 0x000001D67DE4C040>",
+    "function_name": "update_project_route",
+    "has_auto_log": false,
+    "has_manual_log": false,
+    "entity_type": "plan",
+    "is_crud": true,
+    "needs_logging": true
+  },
+  {
+    "endpoint": "save_projects_analysis",
+    "path": "/plans/<plan_id>/projects/analysis",
+    "methods": [
+      "POST"
+    ],
+    "blueprint": null,
+    "function": "<function save_projects_analysis at 0x000001D67DE4C220>",
+    "function_name": "save_projects_analysis",
+    "has_auto_log": false,
+    "has_manual_log": false,
+    "entity_type": "plan",
+    "is_crud": true,
+    "needs_logging": true
+  },
+  {
+    "endpoint": "edit_project",
+    "path": "/plans/<plan_id>/projects/<int:project_id>/edit",
+    "methods": [
+      "GET"
+    ],
+    "blueprint": null,
+    "function": "<function edit_project at 0x000001D67DE4C400>",
+    "function_name": "edit_project",
+    "has_auto_log": false,
+    "has_manual_log": false,
+    "entity_type": "plan",
+    "is_crud": false,
+    "needs_logging": false
+  },
+  {
+    "endpoint": "delete_project",
+    "path": "/plans/<plan_id>/projects/<int:project_id>/delete",
+    "methods": [
+      "POST"
+    ],
+    "blueprint": null,
+    "function": "<function delete_project at 0x000001D67DE4C5E0>",
+    "function_name": "delete_project",
+    "has_auto_log": false,
+    "has_manual_log": false,
+    "entity_type": "plan",
+    "is_crud": true,
+    "needs_logging": true
+  },
+  {
+    "endpoint": "plan_reports",
+    "path": "/plans/<plan_id>/reports",
+    "methods": [
+      "GET"
+    ],
+    "blueprint": null,
+    "function": "<function plan_reports at 0x000001D67DE4C7C0>",
+    "function_name": "plan_reports",
+    "has_auto_log": false,
+    "has_manual_log": false,
+    "entity_type": "plan",
+    "is_crud": false,
+    "needs_logging": false
+  },
+  {
+    "endpoint": "plan_reports_pdf",
+    "path": "/plans/<plan_id>/reports/pdf/<variant>",
+    "methods": [
+      "GET"
+    ],
+    "blueprint": null,
+    "function": "<function plan_reports_pdf at 0x000001D67DE4C9A0>",
+    "function_name": "plan_reports_pdf",
+    "has_auto_log": false,
+    "has_manual_log": false,
+    "entity_type": "plan",
+    "is_crud": false,
+    "needs_logging": false
+  },
+  {
+    "endpoint": "generate_formal_report",
+    "path": "/plans/<plan_id>/reports/formal",
+    "methods": [
+      "GET"
+    ],
+    "blueprint": null,
+    "function": "<function generate_formal_report at 0x000001D67DE4CB80>",
+    "function_name": "generate_formal_report",
+    "has_auto_log": false,
+    "has_manual_log": false,
+    "entity_type": "plan",
+    "is_crud": false,
+    "needs_logging": false
+  },
+  {
+    "endpoint": "generate_presentation_slides",
+    "path": "/plans/<plan_id>/reports/slides",
+    "methods": [
+      "GET"
+    ],
+    "blueprint": null,
+    "function": "<function generate_presentation_slides at 0x000001D67DE4CD60>",
+    "function_name": "generate_presentation_slides",
+    "has_auto_log": false,
+    "has_manual_log": false,
+    "entity_type": "plan",
+    "is_crud": false,
+    "needs_logging": false
+  },
+  {
+    "endpoint": "serve_uploaded_file",
+    "path": "/uploads/<path:filename>",
+    "methods": [
+      "GET"
+    ],
+    "blueprint": null,
+    "function": "<function serve_uploaded_file at 0x000001D67DE4CF40>",
+    "function_name": "serve_uploaded_file",
+    "has_auto_log": false,
+    "has_manual_log": false,
+    "entity_type": null,
+    "is_crud": false,
+    "needs_logging": false
+  },
+  {
+    "endpoint": "delete_company_file",
+    "path": "/plans/<plan_id>/company/delete-file",
+    "methods": [
+      "POST"
+    ],
+    "blueprint": null,
+    "function": "<function delete_company_file at 0x000001D67DE4D120>",
+    "function_name": "delete_company_file",
+    "has_auto_log": false,
+    "has_manual_log": false,
+    "entity_type": "plan",
+    "is_crud": true,
+    "needs_logging": true
+  },
+  {
+    "endpoint": "update_company_data",
+    "path": "/plans/<plan_id>/company",
+    "methods": [
+      "POST"
+    ],
+    "blueprint": null,
+    "function": "<function update_company_data at 0x000001D67DE4D300>",
+    "function_name": "update_company_data",
+    "has_auto_log": false,
+    "has_manual_log": false,
+    "entity_type": "plan",
+    "is_crud": true,
+    "needs_logging": true
+  },
+  {
+    "endpoint": "update_company_analyses",
+    "path": "/plans/<plan_id>/company/update-analyses",
+    "methods": [
+      "POST"
+    ],
+    "blueprint": null,
+    "function": "<function update_company_analyses at 0x000001D67DE4D4E0>",
+    "function_name": "update_company_analyses",
+    "has_auto_log": false,
+    "has_manual_log": false,
+    "entity_type": "plan",
+    "is_crud": true,
+    "needs_logging": true
+  },
+  {
+    "endpoint": "generate_company_ai_insights",
+    "path": "/plans/<plan_id>/company/generate-ai-insights",
+    "methods": [
+      "POST"
+    ],
+    "blueprint": null,
+    "function": "<function generate_company_ai_insights at 0x000001D67DE4D6C0>",
+    "function_name": "generate_company_ai_insights",
+    "has_auto_log": false,
+    "has_manual_log": false,
+    "entity_type": "plan",
+    "is_crud": true,
+    "needs_logging": true
+  },
+  {
+    "endpoint": "update_company_section_status",
+    "path": "/plans/<plan_id>/sections/company/status",
+    "methods": [
+      "POST"
+    ],
+    "blueprint": null,
+    "function": "<function update_company_section_status at 0x000001D67DE4D8A0>",
+    "function_name": "update_company_section_status",
+    "has_auto_log": false,
+    "has_manual_log": false,
+    "entity_type": "plan",
+    "is_crud": true,
+    "needs_logging": true
+  },
+  {
+    "endpoint": "add_participant",
+    "path": "/plans/<plan_id>/participants",
+    "methods": [
+      "POST"
+    ],
+    "blueprint": null,
+    "function": "<function add_participant at 0x000001D67DE4DA80>",
+    "function_name": "add_participant",
+    "has_auto_log": false,
+    "has_manual_log": false,
+    "entity_type": "plan",
+    "is_crud": true,
+    "needs_logging": true
+  },
+  {
+    "endpoint": "get_participant",
+    "path": "/plans/<plan_id>/participants/<participant_id>",
+    "methods": [
+      "GET"
+    ],
+    "blueprint": null,
+    "function": "<function get_participant at 0x000001D67DE4DC60>",
+    "function_name": "get_participant",
+    "has_auto_log": false,
+    "has_manual_log": false,
+    "entity_type": "plan",
+    "is_crud": false,
+    "needs_logging": false
+  },
+  {
+    "endpoint": "update_participant",
+    "path": "/plans/<plan_id>/participants/<participant_id>",
+    "methods": [
+      "PUT"
+    ],
+    "blueprint": null,
+    "function": "<function update_participant at 0x000001D67DE4DE40>",
+    "function_name": "update_participant",
+    "has_auto_log": false,
+    "has_manual_log": false,
+    "entity_type": "plan",
+    "is_crud": true,
+    "needs_logging": true
+  },
+  {
+    "endpoint": "update_participant_status",
+    "path": "/plans/<plan_id>/participants/<participant_id>/status",
+    "methods": [
+      "POST"
+    ],
+    "blueprint": null,
+    "function": "<function update_participant_status at 0x000001D67DE4E020>",
+    "function_name": "update_participant_status",
+    "has_auto_log": false,
+    "has_manual_log": false,
+    "entity_type": "plan",
+    "is_crud": true,
+    "needs_logging": true
+  },
+  {
+    "endpoint": "get_message_templates",
+    "path": "/plans/<plan_id>/messages",
+    "methods": [
+      "GET"
+    ],
+    "blueprint": null,
+    "function": "<function get_message_templates at 0x000001D67DE4E200>",
+    "function_name": "get_message_templates",
+    "has_auto_log": false,
+    "has_manual_log": false,
+    "entity_type": "plan",
+    "is_crud": false,
+    "needs_logging": false
+  },
+  {
+    "endpoint": "get_message_template",
+    "path": "/plans/<plan_id>/messages/<message_type>",
+    "methods": [
+      "GET"
+    ],
+    "blueprint": null,
+    "function": "<function get_message_template at 0x000001D67DE4E3E0>",
+    "function_name": "get_message_template",
+    "has_auto_log": false,
+    "has_manual_log": false,
+    "entity_type": "plan",
+    "is_crud": false,
+    "needs_logging": false
+  },
+  {
+    "endpoint": "save_message_template",
+    "path": "/plans/<plan_id>/messages/<message_type>",
+    "methods": [
+      "POST"
+    ],
+    "blueprint": null,
+    "function": "<function save_message_template at 0x000001D67DE4E5C0>",
+    "function_name": "save_message_template",
+    "has_auto_log": false,
+    "has_manual_log": false,
+    "entity_type": "plan",
+    "is_crud": true,
+    "needs_logging": true
+  },
+  {
+    "endpoint": "send_participant_message",
+    "path": "/plans/<plan_id>/participants/<participant_id>/send-message",
+    "methods": [
+      "POST"
+    ],
+    "blueprint": null,
+    "function": "<function send_participant_message at 0x000001D67DE4E7A0>",
+    "function_name": "send_participant_message",
+    "has_auto_log": false,
+    "has_manual_log": false,
+    "entity_type": "plan",
+    "is_crud": true,
+    "needs_logging": true
+  },
+  {
+    "endpoint": "delete_participant",
+    "path": "/plans/<plan_id>/participants/<participant_id>",
+    "methods": [
+      "DELETE"
+    ],
+    "blueprint": null,
+    "function": "<function delete_participant at 0x000001D67DE4E980>",
+    "function_name": "delete_participant",
+    "has_auto_log": false,
+    "has_manual_log": false,
+    "entity_type": "plan",
+    "is_crud": true,
+    "needs_logging": true
+  },
+  {
+    "endpoint": "add_driver",
+    "path": "/plans/<plan_id>/drivers",
+    "methods": [
+      "POST"
+    ],
+    "blueprint": null,
+    "function": "<function add_driver at 0x000001D67DE4EB60>",
+    "function_name": "add_driver",
+    "has_auto_log": false,
+    "has_manual_log": false,
+    "entity_type": "plan",
+    "is_crud": true,
+    "needs_logging": true
+  },
+  {
+    "endpoint": "add_interview",
+    "path": "/plans/<plan_id>/interviews",
+    "methods": [
+      "POST"
+    ],
+    "blueprint": null,
+    "function": "<function add_interview at 0x000001D67DE4ED40>",
+    "function_name": "add_interview",
+    "has_auto_log": false,
+    "has_manual_log": false,
+    "entity_type": "plan",
+    "is_crud": true,
+    "needs_logging": true
+  },
+  {
+    "endpoint": "update_interview",
+    "path": "/plans/<plan_id>/interviews/<interview_id>",
+    "methods": [
+      "PUT"
+    ],
+    "blueprint": null,
+    "function": "<function update_interview at 0x000001D67DE4EF20>",
+    "function_name": "update_interview",
+    "has_auto_log": false,
+    "has_manual_log": false,
+    "entity_type": "plan",
+    "is_crud": true,
+    "needs_logging": true
+  },
+  {
+    "endpoint": "delete_interview",
+    "path": "/plans/<plan_id>/interviews/<interview_id>",
+    "methods": [
+      "DELETE"
+    ],
+    "blueprint": null,
+    "function": "<function delete_interview at 0x000001D67DE4F100>",
+    "function_name": "delete_interview",
+    "has_auto_log": false,
+    "has_manual_log": false,
+    "entity_type": "plan",
+    "is_crud": true,
+    "needs_logging": true
+  },
+  {
+    "endpoint": "get_interview",
+    "path": "/plans/<plan_id>/interviews/<interview_id>",
+    "methods": [
+      "GET"
+    ],
+    "blueprint": null,
+    "function": "<function get_interview at 0x000001D67DE4F2E0>",
+    "function_name": "get_interview",
+    "has_auto_log": false,
+    "has_manual_log": false,
+    "entity_type": "plan",
+    "is_crud": false,
+    "needs_logging": false
+  },
+  {
+    "endpoint": "update_section_status",
+    "path": "/plans/<plan_id>/sections/<section_name>/status",
+    "methods": [
+      "POST"
+    ],
+    "blueprint": null,
+    "function": "<function update_section_status at 0x000001D67DE4F4C0>",
+    "function_name": "update_section_status",
+    "has_auto_log": false,
+    "has_manual_log": false,
+    "entity_type": "plan",
+    "is_crud": true,
+    "needs_logging": true
+  },
+  {
+    "endpoint": "get_section_status",
+    "path": "/plans/<plan_id>/sections/<section_name>/status",
+    "methods": [
+      "GET"
+    ],
+    "blueprint": null,
+    "function": "<function get_section_status at 0x000001D67DE4F6A0>",
+    "function_name": "get_section_status",
+    "has_auto_log": false,
+    "has_manual_log": false,
+    "entity_type": "plan",
+    "is_crud": false,
+    "needs_logging": false
+  },
+  {
+    "endpoint": "save_alignment_consultant_notes",
+    "path": "/plans/<plan_id>/sections/alignment/consultant-notes",
+    "methods": [
+      "POST"
+    ],
+    "blueprint": null,
+    "function": "<function save_alignment_consultant_notes at 0x000001D67DE4F880>",
+    "function_name": "save_alignment_consultant_notes",
+    "has_auto_log": false,
+    "has_manual_log": false,
+    "entity_type": "plan",
+    "is_crud": true,
+    "needs_logging": true
+  },
+  {
+    "endpoint": "save_misalignment_consultant_notes",
+    "path": "/plans/<plan_id>/sections/misalignment/consultant-notes",
+    "methods": [
+      "POST"
+    ],
+    "blueprint": null,
+    "function": "<function save_misalignment_consultant_notes at 0x000001D67DE4FA60>",
+    "function_name": "save_misalignment_consultant_notes",
+    "has_auto_log": false,
+    "has_manual_log": false,
+    "entity_type": "plan",
+    "is_crud": true,
+    "needs_logging": true
+  },
+  {
+    "endpoint": "save_workshop_consultant_notes",
+    "path": "/plans/<plan_id>/sections/workshop/consultant-notes",
+    "methods": [
+      "POST"
+    ],
+    "blueprint": null,
+    "function": "<function save_workshop_consultant_notes at 0x000001D67DE4FC40>",
+    "function_name": "save_workshop_consultant_notes",
+    "has_auto_log": false,
+    "has_manual_log": false,
+    "entity_type": "plan",
+    "is_crud": true,
+    "needs_logging": true
+  },
+  {
+    "endpoint": "save_directionals_consultant_analysis",
+    "path": "/plans/<plan_id>/sections/directionals/consultant-analysis",
+    "methods": [
+      "POST"
+    ],
+    "blueprint": null,
+    "function": "<function save_directionals_consultant_analysis at 0x000001D67DE4FE20>",
+    "function_name": "save_directionals_consultant_analysis",
+    "has_auto_log": false,
+    "has_manual_log": false,
+    "entity_type": "plan",
+    "is_crud": true,
+    "needs_logging": true
+  },
+  {
+    "endpoint": "add_workshop_adjustment",
+    "path": "/plans/<plan_id>/workshop-adjustments",
+    "methods": [
+      "POST"
+    ],
+    "blueprint": null,
+    "function": "<function add_workshop_adjustment at 0x000001D67DE94040>",
+    "function_name": "add_workshop_adjustment",
+    "has_auto_log": false,
+    "has_manual_log": false,
+    "entity_type": "plan",
+    "is_crud": true,
+    "needs_logging": true
+  },
+  {
+    "endpoint": "add_directionals_approval",
+    "path": "/plans/<plan_id>/directionals-approvals",
+    "methods": [
+      "POST"
+    ],
+    "blueprint": null,
+    "function": "<function add_directionals_approval at 0x000001D67DE94220>",
+    "function_name": "add_directionals_approval",
+    "has_auto_log": false,
+    "has_manual_log": false,
+    "entity_type": "plan",
+    "is_crud": true,
+    "needs_logging": true
+  },
+  {
+    "endpoint": "add_vision_record",
+    "path": "/plans/<plan_id>/vision-records",
+    "methods": [
+      "POST"
+    ],
+    "blueprint": null,
+    "function": "<function add_vision_record at 0x000001D67DE94400>",
+    "function_name": "add_vision_record",
+    "has_auto_log": false,
+    "has_manual_log": false,
+    "entity_type": "plan",
+    "is_crud": true,
+    "needs_logging": true
+  },
+  {
+    "endpoint": "update_vision_record",
+    "path": "/plans/<plan_id>/vision-records/<vision_id>",
+    "methods": [
+      "PUT"
+    ],
+    "blueprint": null,
+    "function": "<function update_vision_record at 0x000001D67DE945E0>",
+    "function_name": "update_vision_record",
+    "has_auto_log": false,
+    "has_manual_log": false,
+    "entity_type": "plan",
+    "is_crud": true,
+    "needs_logging": true
+  },
+  {
+    "endpoint": "delete_vision_record",
+    "path": "/plans/<plan_id>/vision-records/<vision_id>",
+    "methods": [
+      "DELETE"
+    ],
+    "blueprint": null,
+    "function": "<function delete_vision_record at 0x000001D67DE947C0>",
+    "function_name": "delete_vision_record",
+    "has_auto_log": false,
+    "has_manual_log": false,
+    "entity_type": "plan",
+    "is_crud": true,
+    "needs_logging": true
+  },
+  {
+    "endpoint": "get_vision_record",
+    "path": "/plans/<plan_id>/vision-records/<vision_id>",
+    "methods": [
+      "GET"
+    ],
+    "blueprint": null,
+    "function": "<function get_vision_record at 0x000001D67DE949A0>",
+    "function_name": "get_vision_record",
+    "has_auto_log": false,
+    "has_manual_log": false,
+    "entity_type": "plan",
+    "is_crud": false,
+    "needs_logging": false
+  },
+  {
+    "endpoint": "add_market_record",
+    "path": "/plans/<plan_id>/market-records",
+    "methods": [
+      "POST"
+    ],
+    "blueprint": null,
+    "function": "<function add_market_record at 0x000001D67DE94B80>",
+    "function_name": "add_market_record",
+    "has_auto_log": false,
+    "has_manual_log": false,
+    "entity_type": "plan",
+    "is_crud": true,
+    "needs_logging": true
+  },
+  {
+    "endpoint": "update_market_record",
+    "path": "/plans/<plan_id>/market-records/<market_id>",
+    "methods": [
+      "PUT"
+    ],
+    "blueprint": null,
+    "function": "<function update_market_record at 0x000001D67DE94D60>",
+    "function_name": "update_market_record",
+    "has_auto_log": false,
+    "has_manual_log": false,
+    "entity_type": "plan",
+    "is_crud": true,
+    "needs_logging": true
+  },
+  {
+    "endpoint": "delete_market_record",
+    "path": "/plans/<plan_id>/market-records/<market_id>",
+    "methods": [
+      "DELETE"
+    ],
+    "blueprint": null,
+    "function": "<function delete_market_record at 0x000001D67DE94F40>",
+    "function_name": "delete_market_record",
+    "has_auto_log": false,
+    "has_manual_log": false,
+    "entity_type": "plan",
+    "is_crud": true,
+    "needs_logging": true
+  },
+  {
+    "endpoint": "get_market_record",
+    "path": "/plans/<plan_id>/market-records/<market_id>",
+    "methods": [
+      "GET"
+    ],
+    "blueprint": null,
+    "function": "<function get_market_record at 0x000001D67DE95120>",
+    "function_name": "get_market_record",
+    "has_auto_log": false,
+    "has_manual_log": false,
+    "entity_type": "plan",
+    "is_crud": false,
+    "needs_logging": false
+  },
+  {
+    "endpoint": "add_company_record",
+    "path": "/plans/<plan_id>/company-records",
+    "methods": [
+      "POST"
+    ],
+    "blueprint": null,
+    "function": "<function add_company_record at 0x000001D67DE95300>",
+    "function_name": "add_company_record",
+    "has_auto_log": false,
+    "has_manual_log": false,
+    "entity_type": "plan",
+    "is_crud": true,
+    "needs_logging": true
+  },
+  {
+    "endpoint": "update_company_record",
+    "path": "/plans/<plan_id>/company-records/<company_id>",
+    "methods": [
+      "PUT"
+    ],
+    "blueprint": null,
+    "function": "<function update_company_record at 0x000001D67DE954E0>",
+    "function_name": "update_company_record",
+    "has_auto_log": false,
+    "has_manual_log": false,
+    "entity_type": "plan",
+    "is_crud": true,
+    "needs_logging": true
+  },
+  {
+    "endpoint": "delete_company_record",
+    "path": "/plans/<plan_id>/company-records/<company_id>",
+    "methods": [
+      "DELETE"
+    ],
+    "blueprint": null,
+    "function": "<function delete_company_record at 0x000001D67DE956C0>",
+    "function_name": "delete_company_record",
+    "has_auto_log": false,
+    "has_manual_log": false,
+    "entity_type": "plan",
+    "is_crud": true,
+    "needs_logging": true
+  },
+  {
+    "endpoint": "get_company_record",
+    "path": "/plans/<plan_id>/company-records/<company_id>",
+    "methods": [
+      "GET"
+    ],
+    "blueprint": null,
+    "function": "<function get_company_record at 0x000001D67DE958A0>",
+    "function_name": "get_company_record",
+    "has_auto_log": false,
+    "has_manual_log": false,
+    "entity_type": "plan",
+    "is_crud": false,
+    "needs_logging": false
+  },
+  {
+    "endpoint": "add_alignment_record",
+    "path": "/plans/<plan_id>/alignment-records",
+    "methods": [
+      "POST"
+    ],
+    "blueprint": null,
+    "function": "<function add_alignment_record at 0x000001D67DE95A80>",
+    "function_name": "add_alignment_record",
+    "has_auto_log": false,
+    "has_manual_log": false,
+    "entity_type": "plan",
+    "is_crud": true,
+    "needs_logging": true
+  },
+  {
+    "endpoint": "update_alignment_record",
+    "path": "/plans/<plan_id>/alignment-records/<alignment_id>",
+    "methods": [
+      "PUT"
+    ],
+    "blueprint": null,
+    "function": "<function update_alignment_record at 0x000001D67DE95C60>",
+    "function_name": "update_alignment_record",
+    "has_auto_log": false,
+    "has_manual_log": false,
+    "entity_type": "plan",
+    "is_crud": true,
+    "needs_logging": true
+  },
+  {
+    "endpoint": "delete_alignment_record",
+    "path": "/plans/<plan_id>/alignment-records/<alignment_id>",
+    "methods": [
+      "DELETE"
+    ],
+    "blueprint": null,
+    "function": "<function delete_alignment_record at 0x000001D67DE95E40>",
+    "function_name": "delete_alignment_record",
+    "has_auto_log": false,
+    "has_manual_log": false,
+    "entity_type": "plan",
+    "is_crud": true,
+    "needs_logging": true
+  },
+  {
+    "endpoint": "get_alignment_record",
+    "path": "/plans/<plan_id>/alignment-records/<alignment_id>",
+    "methods": [
+      "GET"
+    ],
+    "blueprint": null,
+    "function": "<function get_alignment_record at 0x000001D67DE96020>",
+    "function_name": "get_alignment_record",
+    "has_auto_log": false,
+    "has_manual_log": false,
+    "entity_type": "plan",
+    "is_crud": false,
+    "needs_logging": false
+  },
+  {
+    "endpoint": "add_misalignment_record",
+    "path": "/plans/<plan_id>/misalignment-records",
+    "methods": [
+      "POST"
+    ],
+    "blueprint": null,
+    "function": "<function add_misalignment_record at 0x000001D67DE96200>",
+    "function_name": "add_misalignment_record",
+    "has_auto_log": false,
+    "has_manual_log": false,
+    "entity_type": "plan",
+    "is_crud": true,
+    "needs_logging": true
+  },
+  {
+    "endpoint": "update_misalignment_record",
+    "path": "/plans/<plan_id>/misalignment-records/<misalignment_id>",
+    "methods": [
+      "PUT"
+    ],
+    "blueprint": null,
+    "function": "<function update_misalignment_record at 0x000001D67DE963E0>",
+    "function_name": "update_misalignment_record",
+    "has_auto_log": false,
+    "has_manual_log": false,
+    "entity_type": "plan",
+    "is_crud": true,
+    "needs_logging": true
+  },
+  {
+    "endpoint": "delete_misalignment_record",
+    "path": "/plans/<plan_id>/misalignment-records/<misalignment_id>",
+    "methods": [
+      "DELETE"
+    ],
+    "blueprint": null,
+    "function": "<function delete_misalignment_record at 0x000001D67DE965C0>",
+    "function_name": "delete_misalignment_record",
+    "has_auto_log": false,
+    "has_manual_log": false,
+    "entity_type": "plan",
+    "is_crud": true,
+    "needs_logging": true
+  },
+  {
+    "endpoint": "get_misalignment_record",
+    "path": "/plans/<plan_id>/misalignment-records/<misalignment_id>",
+    "methods": [
+      "GET"
+    ],
+    "blueprint": null,
+    "function": "<function get_misalignment_record at 0x000001D67DE967A0>",
+    "function_name": "get_misalignment_record",
+    "has_auto_log": false,
+    "has_manual_log": false,
+    "entity_type": "plan",
+    "is_crud": false,
+    "needs_logging": false
+  },
+  {
+    "endpoint": "add_directional_record",
+    "path": "/plans/<plan_id>/directional-records",
+    "methods": [
+      "POST"
+    ],
+    "blueprint": null,
+    "function": "<function add_directional_record at 0x000001D67DE96980>",
+    "function_name": "add_directional_record",
+    "has_auto_log": false,
+    "has_manual_log": false,
+    "entity_type": "plan",
+    "is_crud": true,
+    "needs_logging": true
+  },
+  {
+    "endpoint": "update_directional_record",
+    "path": "/plans/<plan_id>/directional-records/<directional_id>",
+    "methods": [
+      "PUT"
+    ],
+    "blueprint": null,
+    "function": "<function update_directional_record at 0x000001D67DE96B60>",
+    "function_name": "update_directional_record",
+    "has_auto_log": false,
+    "has_manual_log": false,
+    "entity_type": "plan",
+    "is_crud": true,
+    "needs_logging": true
+  },
+  {
+    "endpoint": "delete_directional_record",
+    "path": "/plans/<plan_id>/directional-records/<directional_id>",
+    "methods": [
+      "DELETE"
+    ],
+    "blueprint": null,
+    "function": "<function delete_directional_record at 0x000001D67DE96D40>",
+    "function_name": "delete_directional_record",
+    "has_auto_log": false,
+    "has_manual_log": false,
+    "entity_type": "plan",
+    "is_crud": true,
+    "needs_logging": true
+  },
+  {
+    "endpoint": "get_directional_record",
+    "path": "/plans/<plan_id>/directional-records/<directional_id>",
+    "methods": [
+      "GET"
+    ],
+    "blueprint": null,
+    "function": "<function get_directional_record at 0x000001D67DE96F20>",
+    "function_name": "get_directional_record",
+    "has_auto_log": false,
+    "has_manual_log": false,
+    "entity_type": "plan",
+    "is_crud": false,
+    "needs_logging": false
+  },
+  {
+    "endpoint": "add_workshop_okr_record",
+    "path": "/plans/<plan_id>/okr-global/workshop",
+    "methods": [
+      "POST"
+    ],
+    "blueprint": null,
+    "function": "<function add_workshop_okr_record at 0x000001D67DE97100>",
+    "function_name": "add_workshop_okr_record",
+    "has_auto_log": false,
+    "has_manual_log": false,
+    "entity_type": "plan",
+    "is_crud": true,
+    "needs_logging": true
+  },
+  {
+    "endpoint": "add_okr_approval_record",
+    "path": "/plans/<plan_id>/okr-global/approval",
+    "methods": [
+      "POST"
+    ],
+    "blueprint": null,
+    "function": "<function add_okr_approval_record at 0x000001D67DE972E0>",
+    "function_name": "add_okr_approval_record",
+    "has_auto_log": false,
+    "has_manual_log": false,
+    "entity_type": "plan",
+    "is_crud": true,
+    "needs_logging": true
+  },
+  {
+    "endpoint": "add_preliminary_okr_record",
+    "path": "/plans/<plan_id>/okr-global/preliminary",
+    "methods": [
+      "POST"
+    ],
+    "blueprint": null,
+    "function": "<function add_preliminary_okr_record at 0x000001D67DE974C0>",
+    "function_name": "add_preliminary_okr_record",
+    "has_auto_log": false,
+    "has_manual_log": false,
+    "entity_type": "plan",
+    "is_crud": true,
+    "needs_logging": true
+  },
+  {
+    "endpoint": "get_preliminary_okr_data",
+    "path": "/plans/<plan_id>/okr-global/preliminary/<record_id>",
+    "methods": [
+      "GET"
+    ],
+    "blueprint": null,
+    "function": "<function get_preliminary_okr_data at 0x000001D67DE976A0>",
+    "function_name": "get_preliminary_okr_data",
+    "has_auto_log": false,
+    "has_manual_log": false,
+    "entity_type": "plan",
+    "is_crud": false,
+    "needs_logging": false
+  },
+  {
+    "endpoint": "edit_preliminary_okr_record",
+    "path": "/plans/<plan_id>/okr-global/preliminary/<record_id>",
+    "methods": [
+      "POST"
+    ],
+    "blueprint": null,
+    "function": "<function edit_preliminary_okr_record at 0x000001D67DE97880>",
+    "function_name": "edit_preliminary_okr_record",
+    "has_auto_log": false,
+    "has_manual_log": false,
+    "entity_type": "plan",
+    "is_crud": true,
+    "needs_logging": true
+  },
+  {
+    "endpoint": "delete_preliminary_okr_record",
+    "path": "/plans/<plan_id>/okr-global/preliminary/<record_id>/delete",
+    "methods": [
+      "POST"
+    ],
+    "blueprint": null,
+    "function": "<function delete_preliminary_okr_record at 0x000001D67DE97A60>",
+    "function_name": "delete_preliminary_okr_record",
+    "has_auto_log": false,
+    "has_manual_log": false,
+    "entity_type": "plan",
+    "is_crud": true,
+    "needs_logging": true
+  },
+  {
+    "endpoint": "save_workshop_discussions",
+    "path": "/plans/<plan_id>/okr-global/workshop-discussions",
+    "methods": [
+      "POST"
+    ],
+    "blueprint": null,
+    "function": "<function save_workshop_discussions at 0x000001D67DE97C40>",
+    "function_name": "save_workshop_discussions",
+    "has_auto_log": false,
+    "has_manual_log": false,
+    "entity_type": "plan",
+    "is_crud": true,
+    "needs_logging": true
+  },
+  {
+    "endpoint": "delete_workshop_discussions",
+    "path": "/plans/<plan_id>/okr-global/workshop-discussions/delete",
+    "methods": [
+      "POST"
+    ],
+    "blueprint": null,
+    "function": "<function delete_workshop_discussions at 0x000001D67DE97E20>",
+    "function_name": "delete_workshop_discussions",
+    "has_auto_log": false,
+    "has_manual_log": false,
+    "entity_type": "plan",
+    "is_crud": true,
+    "needs_logging": true
+  },
+  {
+    "endpoint": "save_approval_discussions",
+    "path": "/plans/<plan_id>/okr-global/approval-discussions",
+    "methods": [
+      "POST"
+    ],
+    "blueprint": null,
+    "function": "<function save_approval_discussions at 0x000001D67DED4040>",
+    "function_name": "save_approval_discussions",
+    "has_auto_log": false,
+    "has_manual_log": false,
+    "entity_type": "plan",
+    "is_crud": true,
+    "needs_logging": true
+  },
+  {
+    "endpoint": "delete_approval_discussions",
+    "path": "/plans/<plan_id>/okr-global/approval-discussions/delete",
+    "methods": [
+      "POST"
+    ],
+    "blueprint": null,
+    "function": "<function delete_approval_discussions at 0x000001D67DED4220>",
+    "function_name": "delete_approval_discussions",
+    "has_auto_log": false,
+    "has_manual_log": false,
+    "entity_type": "plan",
+    "is_crud": true,
+    "needs_logging": true
+  },
+  {
+    "endpoint": "edit_workshop_okr_record",
+    "path": "/plans/<plan_id>/okr-global/workshop/<record_id>",
+    "methods": [
+      "POST"
+    ],
+    "blueprint": null,
+    "function": "<function edit_workshop_okr_record at 0x000001D67DED4400>",
+    "function_name": "edit_workshop_okr_record",
+    "has_auto_log": false,
+    "has_manual_log": false,
+    "entity_type": "plan",
+    "is_crud": true,
+    "needs_logging": true
+  },
+  {
+    "endpoint": "edit_approval_okr_record",
+    "path": "/plans/<plan_id>/okr-global/approval/<record_id>",
+    "methods": [
+      "POST"
+    ],
+    "blueprint": null,
+    "function": "<function edit_approval_okr_record at 0x000001D67DED45E0>",
+    "function_name": "edit_approval_okr_record",
+    "has_auto_log": false,
+    "has_manual_log": false,
+    "entity_type": "plan",
+    "is_crud": true,
+    "needs_logging": true
+  },
+  {
+    "endpoint": "delete_workshop_okr_record",
+    "path": "/plans/<plan_id>/okr-global/workshop/<record_id>/delete",
+    "methods": [
+      "POST"
+    ],
+    "blueprint": null,
+    "function": "<function delete_workshop_okr_record at 0x000001D67DED47C0>",
+    "function_name": "delete_workshop_okr_record",
+    "has_auto_log": false,
+    "has_manual_log": false,
+    "entity_type": "plan",
+    "is_crud": true,
+    "needs_logging": true
+  },
+  {
+    "endpoint": "delete_approval_okr_record",
+    "path": "/plans/<plan_id>/okr-global/approval/<record_id>/delete",
+    "methods": [
+      "POST"
+    ],
+    "blueprint": null,
+    "function": "<function delete_approval_okr_record at 0x000001D67DED49A0>",
+    "function_name": "delete_approval_okr_record",
+    "has_auto_log": false,
+    "has_manual_log": false,
+    "entity_type": "plan",
+    "is_crud": true,
+    "needs_logging": true
+  },
+  {
+    "endpoint": "duplicate_okr_record",
+    "path": "/plans/<plan_id>/okr-global/duplicate/<type>/<record_id>",
+    "methods": [
+      "POST"
+    ],
+    "blueprint": null,
+    "function": "<function duplicate_okr_record at 0x000001D67DED4B80>",
+    "function_name": "duplicate_okr_record",
+    "has_auto_log": false,
+    "has_manual_log": false,
+    "entity_type": "plan",
+    "is_crud": true,
+    "needs_logging": true
+  },
+  {
+    "endpoint": "update_okr_preliminary_analysis_section_status",
+    "path": "/plans/<plan_id>/okr-global/preliminary-analysis/status",
+    "methods": [
+      "POST"
+    ],
+    "blueprint": null,
+    "function": "<function update_okr_preliminary_analysis_section_status at 0x000001D67DED4D60>",
+    "function_name": "update_okr_preliminary_analysis_section_status",
+    "has_auto_log": false,
+    "has_manual_log": false,
+    "entity_type": "plan",
+    "is_crud": true,
+    "needs_logging": true
+  },
+  {
+    "endpoint": "update_okr_workshop_final_section_status",
+    "path": "/plans/<plan_id>/okr-global/workshop-final/status",
+    "methods": [
+      "POST"
+    ],
+    "blueprint": null,
+    "function": "<function update_okr_workshop_final_section_status at 0x000001D67DED4F40>",
+    "function_name": "update_okr_workshop_final_section_status",
+    "has_auto_log": false,
+    "has_manual_log": false,
+    "entity_type": "plan",
+    "is_crud": true,
+    "needs_logging": true
+  },
+  {
+    "endpoint": "update_okr_approvals_section_status",
+    "path": "/plans/<plan_id>/okr-global/approvals/status",
+    "methods": [
+      "POST"
+    ],
+    "blueprint": null,
+    "function": "<function update_okr_approvals_section_status at 0x000001D67DED5120>",
+    "function_name": "update_okr_approvals_section_status",
+    "has_auto_log": false,
+    "has_manual_log": false,
+    "entity_type": "plan",
+    "is_crud": true,
+    "needs_logging": true
+  },
+  {
+    "endpoint": "generate_ai_okr_suggestions",
+    "path": "/plans/<plan_id>/okr-global/ai-suggestions",
+    "methods": [
+      "POST"
+    ],
+    "blueprint": null,
+    "function": "<function generate_ai_okr_suggestions at 0x000001D67DED5300>",
+    "function_name": "generate_ai_okr_suggestions",
+    "has_auto_log": false,
+    "has_manual_log": false,
+    "entity_type": "plan",
+    "is_crud": true,
+    "needs_logging": true
+  },
+  {
+    "endpoint": "add_preliminary_area_okr_record",
+    "path": "/plans/<plan_id>/okr-area/preliminary",
+    "methods": [
+      "POST"
+    ],
+    "blueprint": null,
+    "function": "<function add_preliminary_area_okr_record at 0x000001D67DED5580>",
+    "function_name": "add_preliminary_area_okr_record",
+    "has_auto_log": false,
+    "has_manual_log": false,
+    "entity_type": "plan",
+    "is_crud": true,
+    "needs_logging": true
+  },
+  {
+    "endpoint": "add_area_okr_record",
+    "path": "/plans/<plan_id>/okr-area/workshop",
+    "methods": [
+      "POST"
+    ],
+    "blueprint": null,
+    "function": "<function add_area_okr_record at 0x000001D67DED5760>",
+    "function_name": "add_area_okr_record",
+    "has_auto_log": false,
+    "has_manual_log": false,
+    "entity_type": "plan",
+    "is_crud": true,
+    "needs_logging": true
+  },
+  {
+    "endpoint": "add_final_area_okr_record",
+    "path": "/plans/<plan_id>/okr-area/final",
+    "methods": [
+      "POST"
+    ],
+    "blueprint": null,
+    "function": "<function add_final_area_okr_record at 0x000001D67DED5940>",
+    "function_name": "add_final_area_okr_record",
+    "has_auto_log": false,
+    "has_manual_log": false,
+    "entity_type": "plan",
+    "is_crud": true,
+    "needs_logging": true
+  },
+  {
+    "endpoint": "save_area_workshop_discussions",
+    "path": "/plans/<plan_id>/okr-area/workshop-discussions",
+    "methods": [
+      "POST"
+    ],
+    "blueprint": null,
+    "function": "<function save_area_workshop_discussions at 0x000001D67DED5B20>",
+    "function_name": "save_area_workshop_discussions",
+    "has_auto_log": false,
+    "has_manual_log": false,
+    "entity_type": "plan",
+    "is_crud": true,
+    "needs_logging": true
+  },
+  {
+    "endpoint": "save_final_area_discussions",
+    "path": "/plans/<plan_id>/okr-area/final-discussions",
+    "methods": [
+      "POST"
+    ],
+    "blueprint": null,
+    "function": "<function save_final_area_discussions at 0x000001D67DED5D00>",
+    "function_name": "save_final_area_discussions",
+    "has_auto_log": false,
+    "has_manual_log": false,
+    "entity_type": "plan",
+    "is_crud": true,
+    "needs_logging": true
+  },
+  {
+    "endpoint": "delete_area_workshop_discussions",
+    "path": "/plans/<plan_id>/okr-area/workshop-discussions/delete",
+    "methods": [
+      "POST"
+    ],
+    "blueprint": null,
+    "function": "<function delete_area_workshop_discussions at 0x000001D67DED5EE0>",
+    "function_name": "delete_area_workshop_discussions",
+    "has_auto_log": false,
+    "has_manual_log": false,
+    "entity_type": "plan",
+    "is_crud": true,
+    "needs_logging": true
+  },
+  {
+    "endpoint": "delete_final_area_discussions",
+    "path": "/plans/<plan_id>/okr-area/final-discussions/delete",
+    "methods": [
+      "POST"
+    ],
+    "blueprint": null,
+    "function": "<function delete_final_area_discussions at 0x000001D67DED60C0>",
+    "function_name": "delete_final_area_discussions",
+    "has_auto_log": false,
+    "has_manual_log": false,
+    "entity_type": "plan",
+    "is_crud": true,
+    "needs_logging": true
+  },
+  {
+    "endpoint": "update_area_preliminary_analysis_section_status",
+    "path": "/plans/<plan_id>/okr-area/preliminary-analysis/status",
+    "methods": [
+      "POST"
+    ],
+    "blueprint": null,
+    "function": "<function update_area_preliminary_analysis_section_status at 0x000001D67DED62A0>",
+    "function_name": "update_area_preliminary_analysis_section_status",
+    "has_auto_log": false,
+    "has_manual_log": false,
+    "entity_type": "plan",
+    "is_crud": true,
+    "needs_logging": true
+  },
+  {
+    "endpoint": "update_workshop_area_section_status",
+    "path": "/plans/<plan_id>/okr-area/workshop/status",
+    "methods": [
+      "POST"
+    ],
+    "blueprint": null,
+    "function": "<function update_workshop_area_section_status at 0x000001D67DED6480>",
+    "function_name": "update_workshop_area_section_status",
+    "has_auto_log": false,
+    "has_manual_log": false,
+    "entity_type": "plan",
+    "is_crud": true,
+    "needs_logging": true
+  },
+  {
+    "endpoint": "update_final_area_section_status",
+    "path": "/plans/<plan_id>/okr-area/final/status",
+    "methods": [
+      "POST"
+    ],
+    "blueprint": null,
+    "function": "<function update_final_area_section_status at 0x000001D67DED6660>",
+    "function_name": "update_final_area_section_status",
+    "has_auto_log": false,
+    "has_manual_log": false,
+    "entity_type": "plan",
+    "is_crud": true,
+    "needs_logging": true
+  },
+  {
+    "endpoint": "generate_ai_area_okr_suggestions",
+    "path": "/plans/<plan_id>/okr-area/ai-suggestions",
+    "methods": [
+      "POST"
+    ],
+    "blueprint": null,
+    "function": "<function generate_ai_area_okr_suggestions at 0x000001D67DED6840>",
+    "function_name": "generate_ai_area_okr_suggestions",
+    "has_auto_log": false,
+    "has_manual_log": false,
+    "entity_type": "plan",
+    "is_crud": true,
+    "needs_logging": true
+  },
+  {
+    "endpoint": "get_agents",
+    "path": "/api/agents",
+    "methods": [
+      "GET"
+    ],
+    "blueprint": null,
+    "function": "<function get_agents at 0x000001D67DED6A20>",
+    "function_name": "get_agents",
+    "has_auto_log": false,
+    "has_manual_log": false,
+    "entity_type": null,
+    "is_crud": false,
+    "needs_logging": false
+  },
+  {
+    "endpoint": "api_available_buttons",
+    "path": "/api/agents/available-buttons",
+    "methods": [
+      "GET"
+    ],
+    "blueprint": null,
+    "function": "<function api_available_buttons at 0x000001D67DED6C00>",
+    "function_name": "api_available_buttons",
+    "has_auto_log": false,
+    "has_manual_log": false,
+    "entity_type": null,
+    "is_crud": false,
+    "needs_logging": false
+  },
+  {
+    "endpoint": "create_agent",
+    "path": "/api/agents",
+    "methods": [
+      "POST"
+    ],
+    "blueprint": null,
+    "function": "<function create_agent at 0x000001D67DED6DE0>",
+    "function_name": "create_agent",
+    "has_auto_log": false,
+    "has_manual_log": false,
+    "entity_type": null,
+    "is_crud": true,
+    "needs_logging": true
+  },
+  {
+    "endpoint": "get_agent",
+    "path": "/api/agents/<agent_id>",
+    "methods": [
+      "GET"
+    ],
+    "blueprint": null,
+    "function": "<function get_agent at 0x000001D67DED6FC0>",
+    "function_name": "get_agent",
+    "has_auto_log": false,
+    "has_manual_log": false,
+    "entity_type": null,
+    "is_crud": false,
+    "needs_logging": false
+  },
+  {
+    "endpoint": "update_agent",
+    "path": "/api/agents/<agent_id>",
+    "methods": [
+      "PUT"
+    ],
+    "blueprint": null,
+    "function": "<function update_agent at 0x000001D67DED71A0>",
+    "function_name": "update_agent",
+    "has_auto_log": false,
+    "has_manual_log": false,
+    "entity_type": null,
+    "is_crud": true,
+    "needs_logging": true
+  },
+  {
+    "endpoint": "delete_agent",
+    "path": "/api/agents/<agent_id>",
+    "methods": [
+      "DELETE"
+    ],
+    "blueprint": null,
+    "function": "<function delete_agent at 0x000001D67DED7380>",
+    "function_name": "delete_agent",
+    "has_auto_log": false,
+    "has_manual_log": false,
+    "entity_type": null,
+    "is_crud": true,
+    "needs_logging": true
+  },
+  {
+    "endpoint": "get_available_fields",
+    "path": "/api/agents/available-fields",
+    "methods": [
+      "GET"
+    ],
+    "blueprint": null,
+    "function": "<function get_available_fields at 0x000001D67DED7560>",
+    "function_name": "get_available_fields",
+    "has_auto_log": false,
+    "has_manual_log": false,
+    "entity_type": null,
+    "is_crud": false,
+    "needs_logging": false
+  },
+  {
+    "endpoint": "run_custom_agent",
+    "path": "/api/agents/<agent_id>/run",
+    "methods": [
+      "POST"
+    ],
+    "blueprint": null,
+    "function": "<function run_custom_agent at 0x000001D67DED7740>",
+    "function_name": "run_custom_agent",
+    "has_auto_log": false,
+    "has_manual_log": false,
+    "entity_type": null,
+    "is_crud": true,
+    "needs_logging": true
+  },
+  {
+    "endpoint": "api_company_portfolios",
+    "path": "/api/companies/<int:company_id>/portfolios",
+    "methods": [
+      "GET",
+      "POST"
+    ],
+    "blueprint": null,
+    "function": "<function api_company_portfolios at 0x000001D67DED7CE0>",
+    "function_name": "api_company_portfolios",
+    "has_auto_log": false,
+    "has_manual_log": false,
+    "entity_type": "company",
+    "is_crud": true,
+    "needs_logging": true
+  },
+  {
+    "endpoint": "api_portfolio",
+    "path": "/api/companies/<int:company_id>/portfolios/<int:portfolio_id>",
+    "methods": [
+      "DELETE",
+      "PUT"
+    ],
+    "blueprint": null,
+    "function": "<function api_portfolio at 0x000001D67DED7EC0>",
+    "function_name": "api_portfolio",
+    "has_auto_log": false,
+    "has_manual_log": false,
+    "entity_type": "company",
+    "is_crud": true,
+    "needs_logging": true
+  },
+  {
+    "endpoint": "api_company_projects",
+    "path": "/api/companies/<int:company_id>/projects",
+    "methods": [
+      "GET",
+      "POST"
+    ],
+    "blueprint": null,
+    "function": "<function api_company_projects at 0x000001D67DF14A40>",
+    "function_name": "api_company_projects",
+    "has_auto_log": false,
+    "has_manual_log": false,
+    "entity_type": "company",
+    "is_crud": true,
+    "needs_logging": true
+  },
+  {
+    "endpoint": "api_company_project",
+    "path": "/api/companies/<int:company_id>/projects/<int:project_id>",
+    "methods": [
+      "DELETE",
+      "PUT"
+    ],
+    "blueprint": null,
+    "function": "<function api_company_project at 0x000001D67DF14AE0>",
+    "function_name": "api_company_project",
+    "has_auto_log": false,
+    "has_manual_log": false,
+    "entity_type": "company",
+    "is_crud": true,
+    "needs_logging": true
+  },
+  {
+    "endpoint": "api_project_activities",
+    "path": "/api/companies/<int:company_id>/projects/<int:project_id>/activities",
+    "methods": [
+      "GET",
+      "POST"
+    ],
+    "blueprint": null,
+    "function": "<function api_project_activities at 0x000001D67DF14C20>",
+    "function_name": "api_project_activities",
+    "has_auto_log": false,
+    "has_manual_log": false,
+    "entity_type": "company",
+    "is_crud": true,
+    "needs_logging": true
+  },
+  {
+    "endpoint": "api_project_activity",
+    "path": "/api/companies/<int:company_id>/projects/<int:project_id>/activities/<int:activity_id>",
+    "methods": [
+      "DELETE",
+      "PUT"
+    ],
+    "blueprint": null,
+    "function": "<function api_project_activity at 0x000001D67DF14CC0>",
+    "function_name": "api_project_activity",
+    "has_auto_log": false,
+    "has_manual_log": false,
+    "entity_type": "company",
+    "is_crud": true,
+    "needs_logging": true
+  },
+  {
+    "endpoint": "api_project_activity_stage",
+    "path": "/api/companies/<int:company_id>/projects/<int:project_id>/activities/<int:activity_id>/stage",
+    "methods": [
+      "PATCH"
+    ],
+    "blueprint": null,
+    "function": "<function api_project_activity_stage at 0x000001D67DF14EA0>",
+    "function_name": "api_project_activity_stage",
+    "has_auto_log": false,
+    "has_manual_log": false,
+    "entity_type": "company",
+    "is_crud": true,
+    "needs_logging": true
+  },
+  {
+    "endpoint": "api_transfer_activity",
+    "path": "/api/companies/<int:company_id>/projects/<int:project_id>/activities/<int:activity_id>/transfer",
+    "methods": [
+      "POST"
+    ],
+    "blueprint": null,
+    "function": "<function api_transfer_activity at 0x000001D67DF15080>",
+    "function_name": "api_transfer_activity",
+    "has_auto_log": false,
+    "has_manual_log": false,
+    "entity_type": "company",
+    "is_crud": true,
+    "needs_logging": true
+  },
+  {
+    "endpoint": "api_get_project_info",
+    "path": "/api/companies/<int:company_id>/projects/<int:project_id>/info",
+    "methods": [
+      "GET"
+    ],
+    "blueprint": null,
+    "function": "<function api_get_project_info at 0x000001D67DF15120>",
+    "function_name": "api_get_project_info",
+    "has_auto_log": false,
+    "has_manual_log": false,
+    "entity_type": "company",
+    "is_crud": false,
+    "needs_logging": false
+  },
+  {
+    "endpoint": "api_plan_okr_global_records",
+    "path": "/api/plans/<int:plan_id>/okr-global-records",
+    "methods": [
+      "GET"
+    ],
+    "blueprint": null,
+    "function": "<function api_plan_okr_global_records at 0x000001D67DF154E0>",
+    "function_name": "api_plan_okr_global_records",
+    "has_auto_log": false,
+    "has_manual_log": false,
+    "entity_type": "plan",
+    "is_crud": false,
+    "needs_logging": false
+  },
+  {
+    "endpoint": "api_plan_projects",
+    "path": "/api/plans/<int:plan_id>/projects",
+    "methods": [
+      "GET"
+    ],
+    "blueprint": null,
+    "function": "<function api_plan_projects at 0x000001D67DF158A0>",
+    "function_name": "api_plan_projects",
+    "has_auto_log": false,
+    "has_manual_log": false,
+    "entity_type": "plan",
+    "is_crud": false,
+    "needs_logging": false
+  },
+  {
+    "endpoint": "health_check",
+    "path": "/health",
+    "methods": [
+      "GET"
+    ],
+    "blueprint": null,
+    "function": "<function health_check at 0x000001D67DF15A80>",
+    "function_name": "health_check",
+    "has_auto_log": false,
+    "has_manual_log": false,
+    "entity_type": null,
+    "is_crud": false,
+    "needs_logging": false
+  }
+]

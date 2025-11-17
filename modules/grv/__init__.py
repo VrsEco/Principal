@@ -1291,6 +1291,13 @@ def grv_process_modeling(company_id: int):
     company = db.get_company(company_id) or {}
     processes = db.list_processes(company_id)
     macro_processes = {m['id']: m for m in db.list_macro_processes(company_id) or []}
+    artifact_presence = {}
+    if hasattr(db, 'get_process_artifact_presence'):
+        try:
+            artifact_presence = db.get_process_artifact_presence(company_id) or {}
+        except Exception as exc:
+            print(f"[grv_process_modeling] Warning: failed to load artifact presence -> {exc}")
+            artifact_presence = {}
 
     process_groups = {stage['slug']: [] for stage in KANBAN_STAGE_DEFINITIONS}
     default_stage = 'inbox'
@@ -1315,6 +1322,7 @@ def grv_process_modeling(company_id: int):
         if stage_slug not in process_groups:
             stage_slug = default_stage
         macro = macro_processes.get(process.get('macro_id'))
+        flags = artifact_presence.get(process.get('id'), {})
         process_groups[stage_slug].append({
             'id': process.get('id'),
             'name': process.get('name'),
@@ -1329,7 +1337,13 @@ def grv_process_modeling(company_id: int):
             'macro_name': macro.get('name') if macro else '',
             'description': process.get('description'),
             'order_index': process.get('order_index'),
-            'kanban_stage': stage_slug
+            'kanban_stage': stage_slug,
+            'artifact_flags': {
+                'has_flow': bool(process.get('flow_document')),
+                'has_routine': bool(flags.get('has_routine')),
+                'has_pop': bool(flags.get('has_pop')),
+                'has_indicator': bool(flags.get('has_indicator'))
+            }
         })
 
     return render_template(

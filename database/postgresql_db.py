@@ -11,6 +11,7 @@ from .postgres_helper import connect as pg_connect
 
 class PostgreSQLDatabase(DatabaseInterface):
     """PostgreSQL database implementation usando psycopg2"""
+
     
     # Classe mantém flags para evitar verificações repetidas de schema
     _plans_schema_checked = False
@@ -6230,6 +6231,72 @@ class PostgreSQLDatabase(DatabaseInterface):
             rows.append(as_dict)
         conn.close()
         return rows
+
+
+    def get_process_artifact_presence(self, company_id: int) -> Dict[int, Dict[str, bool]]:
+        """
+        Recupera indicadores booleanos sobre artefatos já produzidos
+        para cada processo da empresa (rotinas, POP, indicadores).
+        """
+        conn = self._get_connection()
+        cursor = conn.cursor()
+        summary: Dict[int, Dict[str, bool]] = {}
+
+        def _slot(process_id: Optional[int]) -> Optional[Dict[str, bool]]:
+            if not process_id:
+                return None
+            if process_id not in summary:
+                summary[process_id] = {
+                    'has_routine': False,
+                    'has_pop': False,
+                    'has_indicator': False
+                }
+            return summary[process_id]
+
+        try:
+            cursor.execute('''
+                SELECT process_id, COUNT(*) AS total
+                FROM routines
+                WHERE company_id = %s AND process_id IS NOT NULL AND is_active = 1
+                GROUP BY process_id
+            ''', (company_id,))
+            for row in cursor.fetchall():
+                record = dict(row)
+                slot = _slot(record.get('process_id'))
+                if slot:
+                    slot['has_routine'] = (record.get('total') or 0) > 0
+
+            cursor.execute('''
+                SELECT p.id AS process_id, COUNT(a.id) AS total
+                FROM processes p
+                JOIN process_activities a ON a.process_id = p.id
+                WHERE p.company_id = %s
+                GROUP BY p.id
+            ''', (company_id,))
+            for row in cursor.fetchall():
+                record = dict(row)
+                slot = _slot(record.get('process_id'))
+                if slot:
+                    slot['has_pop'] = (record.get('total') or 0) > 0
+
+            cursor.execute('''
+                SELECT process_id, COUNT(*) AS total
+                FROM indicators
+                WHERE company_id = %s AND process_id IS NOT NULL
+                GROUP BY process_id
+            ''', (company_id,))
+            for row in cursor.fetchall():
+                record = dict(row)
+                slot = _slot(record.get('process_id'))
+                if slot:
+                    slot['has_indicator'] = (record.get('total') or 0) > 0
+
+            return summary
+        except Exception as exc:
+            print(f"Error gathering process artifact presence: {exc}")
+            return {}
+        finally:
+            conn.close()
     
 
 
@@ -7403,122 +7470,6 @@ def list_integrations():
         print(f"Error listing integrations: {e}")
         return []
 
-
-# ============================================================
-# HELPER FUNCTIONS (moved from inside class)
-# ============================================================
-
-def get_integration(integration_id):
-    try:
-        ensure_integrations_tables()
-        conn = get_connection()
-        cursor = conn.cursor()
-        cursor.execute("SELECT id, name, provider, type, auth_type, config, created_at, updated_at FROM integrations WHERE id = %s", (integration_id,))
-        r = cursor.fetchone()
-        conn.close()
-        if not r:
-            return None
-        import json as _json
-        try:
-            cfg = _json.loads(r[5]) if r[5] else {}
-        except Exception:
-            cfg = {}
-        return {
-            'id': r[0], 'name': r[1], 'provider': r[2], 'type': r[3], 'auth_type': r[4],
-            'config': cfg, 'created_at': r[6], 'updated_at': r[7]
-        }
-    except Exception as e:
-        print(f"Error getting integration: {e}")
-        return None
-
-
-def create_integration(item):
-    try:
-        ensure_integrations_tables()
-        conn = get_connection()
-        cursor = conn.cursor()
-        import json as _json
-        cursor.execute("""
-            INSERT INTO integrations (id, name, provider, type, auth_type, config, created_at, updated_at)
-            VALUES (%s, %s, %s, %s, %s, %s, datetime('now'), datetime('now'))
-        """, (
-            item['id'], item['name'], item['provider'], item['type'], item['auth_type'], _json.dumps(item.get('config') or {})
-        ))
-        conn.commit()
-        conn.close()
-        return True
-    except Exception as e:
-        print(f"Error creating integration: {e}")
-        return False
-
-
-def update_integration(integration_id, item):
-    try:
-        ensure_integrations_tables()
-        conn = get_connection()
-        cursor = conn.cursor()
-        import json as _json
-        cursor.execute("""
-            UPDATE integrations SET name = %s, provider = %s, type = %s, auth_type = %s, config = %s, updated_at = datetime('now')
-            WHERE id = %s
-        """, (
-            item['name'], item['provider'], item['type'], item['auth_type'], _json.dumps(item.get('config') or {}), integration_id
-        ))
-        conn.commit()
-        conn.close()
-        return True
-    except Exception as e:
-        print(f"Error updating integration: {e}")
-        return False
-
-
-def delete_integration(integration_id):
-    try:
-        ensure_integrations_tables()
-        conn = get_connection()
-        cursor = conn.cursor()
-        cursor.execute("DELETE FROM agent_integrations WHERE integration_id = %s", (integration_id,))
-        cursor.execute("DELETE FROM integrations WHERE id = %s", (integration_id,))
-        conn.commit()
-        conn.close()
-        return True
-    except Exception as e:
-        print(f"Error deleting integration: {e}")
-        return False
-
-
-def set_agent_integrations(agent_id, integration_ids):
-    try:
-        ensure_integrations_tables()
-        conn = get_connection()
-        cursor = conn.cursor()
-        cursor.execute("DELETE FROM agent_integrations WHERE agent_id = %s", (agent_id,))
-        for iid in (integration_ids or []):
-            cursor.execute("INSERT OR IGNORE INTO agent_integrations (agent_id, integration_id) VALUES (%s, %s)", (agent_id, iid))
-        conn.commit()
-        conn.close()
-        return True
-    except Exception as e:
-        print(f"Error setting agent integrations: {e}")
-        return False
-
-
-def get_agent_integrations(agent_id):
-    try:
-        ensure_integrations_tables()
-        conn = get_connection()
-        cursor = conn.cursor()
-        cursor.execute("""
-            SELECT i.id, i.name, i.provider, i.type, i.auth_type
-            FROM agent_integrations ai JOIN integrations i ON i.id = ai.integration_id
-            WHERE ai.agent_id = %s
-        """, (agent_id,))
-        rows = cursor.fetchall()
-        conn.close()
-        return [ {'id': r[0], 'name': r[1], 'provider': r[2], 'type': r[3], 'auth_type': r[4]} for r in rows ]
-    except Exception as e:
-        print(f"Error getting agent integrations: {e}")
-        return []
 
     # ===== ROTINAS - CRUD =====
 

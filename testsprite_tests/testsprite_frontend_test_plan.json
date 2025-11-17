@@ -1,0 +1,578 @@
+[
+  {
+    "id": "TC001",
+    "title": "User Registration Success",
+    "description": "Verify that a user can successfully register with valid email and password.",
+    "category": "functional",
+    "priority": "High",
+    "steps": [
+      {
+        "type": "action",
+        "description": "Navigate to the registration page."
+      },
+      {
+        "type": "action",
+        "description": "Input valid email and password."
+      },
+      {
+        "type": "action",
+        "description": "Submit the registration form."
+      },
+      {
+        "type": "assertion",
+        "description": "Verify response status is 200 and user is created."
+      },
+      {
+        "type": "assertion",
+        "description": "Verify user data is persisted in the database."
+      }
+    ]
+  },
+  {
+    "id": "TC002",
+    "title": "User Registration Failure on Invalid Data",
+    "description": "Verify that registration fails with invalid email format or weak password.",
+    "category": "error handling",
+    "priority": "High",
+    "steps": [
+      {
+        "type": "action",
+        "description": "Navigate to the registration page."
+      },
+      {
+        "type": "action",
+        "description": "Input invalid email format and/or password."
+      },
+      {
+        "type": "action",
+        "description": "Submit the registration form."
+      },
+      {
+        "type": "assertion",
+        "description": "Verify response status is 400 with appropriate error message."
+      }
+    ]
+  },
+  {
+    "id": "TC003",
+    "title": "User Login Success",
+    "description": "Verify that a user can login successfully with correct credentials.",
+    "category": "functional",
+    "priority": "High",
+    "steps": [
+      {
+        "type": "action",
+        "description": "Navigate to login page."
+      },
+      {
+        "type": "action",
+        "description": "Input valid registered email and correct password."
+      },
+      {
+        "type": "action",
+        "description": "Submit login form."
+      },
+      {
+        "type": "assertion",
+        "description": "Verify response status is 200 and session cookie is set."
+      },
+      {
+        "type": "assertion",
+        "description": "Verify user is redirected to dashboard (PEV module)."
+      }
+    ]
+  },
+  {
+    "id": "TC004",
+    "title": "User Login Failure on Incorrect Credentials",
+    "description": "Verify that login fails with incorrect email or password.",
+    "category": "error handling",
+    "priority": "High",
+    "steps": [
+      {
+        "type": "action",
+        "description": "Navigate to login page."
+      },
+      {
+        "type": "action",
+        "description": "Input incorrect email and/or password."
+      },
+      {
+        "type": "action",
+        "description": "Submit login form."
+      },
+      {
+        "type": "assertion",
+        "description": "Verify response status is 401 with appropriate error message."
+      },
+      {
+        "type": "assertion",
+        "description": "Verify user remains on login page."
+      }
+    ]
+  },
+  {
+    "id": "TC005",
+    "title": "Password Recovery Flow",
+    "description": "Verify that user can initiate password recovery and receive confirmation.",
+    "category": "functional",
+    "priority": "Medium",
+    "steps": [
+      {
+        "type": "action",
+        "description": "Navigate to password recovery page."
+      },
+      {
+        "type": "action",
+        "description": "Input registered email address."
+      },
+      {
+        "type": "action",
+        "description": "Submit recovery request."
+      },
+      {
+        "type": "assertion",
+        "description": "Verify confirmation message is displayed."
+      }
+    ]
+  },
+  {
+    "id": "TC006",
+    "title": "Change Password Success",
+    "description": "Verify that authenticated user can change password successfully.",
+    "category": "functional",
+    "priority": "High",
+    "steps": [
+      {
+        "type": "action",
+        "description": "Login with valid credentials."
+      },
+      {
+        "type": "action",
+        "description": "Navigate to change password interface."
+      },
+      {
+        "type": "action",
+        "description": "Input current password and new valid password."
+      },
+      {
+        "type": "action",
+        "description": "Submit password change request."
+      },
+      {
+        "type": "assertion",
+        "description": "Verify response status is 200 and password is updated."
+      }
+    ]
+  },
+  {
+    "id": "TC007",
+    "title": "Change Password Failure on Validation Errors",
+    "description": "Verify password change fails with invalid new password or wrong current password.",
+    "category": "error handling",
+    "priority": "High",
+    "steps": [
+      {
+        "type": "action",
+        "description": "Login with valid credentials."
+      },
+      {
+        "type": "action",
+        "description": "Navigate to change password interface."
+      },
+      {
+        "type": "action",
+        "description": "Input incorrect current password or invalid new password."
+      },
+      {
+        "type": "action",
+        "description": "Submit password change request."
+      },
+      {
+        "type": "assertion",
+        "description": "Verify response status is 400 or 401 with proper error message."
+      }
+    ]
+  },
+  {
+    "id": "TC008",
+    "title": "Logout Success",
+    "description": "Verify that logged-in user can logout successfully and session ends.",
+    "category": "functional",
+    "priority": "Medium",
+    "steps": [
+      {
+        "type": "action",
+        "description": "Login with valid credentials."
+      },
+      {
+        "type": "action",
+        "description": "Click logout button or invoke logout endpoint."
+      },
+      {
+        "type": "assertion",
+        "description": "Verify response status is 200 and session cookie is cleared."
+      },
+      {
+        "type": "assertion",
+        "description": "Verify user is redirected to login page."
+      }
+    ]
+  },
+  {
+    "id": "TC009",
+    "title": "Access Protected Resource Without Authentication",
+    "description": "Verify that access to protected modules or APIs without session redirects to login or returns unauthorized.",
+    "category": "security",
+    "priority": "High",
+    "steps": [
+      {
+        "type": "action",
+        "description": "Attempt access to PEV dashboard or other module URL without login."
+      },
+      {
+        "type": "assertion",
+        "description": "Verify response redirects to login page or returns 401 unauthorized."
+      }
+    ]
+  },
+  {
+    "id": "TC010",
+    "title": "CRUD Operations Audit Logging",
+    "description": "Verify that all create, read, update, delete operations produce detailed audit entries in user_logs with correct user, timestamp and data.",
+    "category": "functional",
+    "priority": "High",
+    "steps": [
+      {
+        "type": "action",
+        "description": "Login with valid user."
+      },
+      {
+        "type": "action",
+        "description": "Create a new project in GRV module."
+      },
+      {
+        "type": "assertion",
+        "description": "Verify creation entry is present in user_logs with relevant details."
+      },
+      {
+        "type": "action",
+        "description": "Update the newly created project."
+      },
+      {
+        "type": "assertion",
+        "description": "Verify update entry is logged correctly."
+      },
+      {
+        "type": "action",
+        "description": "Delete the project."
+      },
+      {
+        "type": "assertion",
+        "description": "Verify deletion entry is logged in user_logs."
+      }
+    ]
+  },
+  {
+    "id": "TC011",
+    "title": "Pagination and Filtering on Logs API",
+    "description": "Verify that logs API returns paginated results and supports filters for entity_type, action, user_id, and company_id.",
+    "category": "functional",
+    "priority": "Medium",
+    "steps": [
+      {
+        "type": "action",
+        "description": "Authenticate user with appropriate permissions."
+      },
+      {
+        "type": "action",
+        "description": "Call logs API with default parameters."
+      },
+      {
+        "type": "assertion",
+        "description": "Verify response returns logs with pagination info and HTTP 200."
+      },
+      {
+        "type": "action",
+        "description": "Call logs API with filter parameters (e.g. entity_type=project)."
+      },
+      {
+        "type": "assertion",
+        "description": "Verify response only includes filtered logs."
+      }
+    ]
+  },
+  {
+    "id": "TC012",
+    "title": "Route Audit Enable and Disable Auto Logging",
+    "description": "Verify that admins can enable or disable auto logging on specific entity types via route audit API.",
+    "category": "functional",
+    "priority": "Medium",
+    "steps": [
+      {
+        "type": "action",
+        "description": "Login as admin user."
+      },
+      {
+        "type": "action",
+        "description": "Access route audit API to enable auto logging for entity 'project'."
+      },
+      {
+        "type": "assertion",
+        "description": "Verify response status 200 and logging is enabled."
+      },
+      {
+        "type": "action",
+        "description": "Disable auto logging for entity 'project'."
+      },
+      {
+        "type": "assertion",
+        "description": "Verify response status 200 and logging is disabled."
+      }
+    ]
+  },
+  {
+    "id": "TC013",
+    "title": "ModeFin Business Rules Validation",
+    "description": "Verify ModeFin module enforces business rules including conditional percentage distributions and 60 month projections correctness.",
+    "category": "functional",
+    "priority": "High",
+    "steps": [
+      {
+        "type": "action",
+        "description": "Login and navigate to ModeFin section of PEV module."
+      },
+      {
+        "type": "action",
+        "description": "Enter financial distributions violating percentage constraints."
+      },
+      {
+        "type": "assertion",
+        "description": "Verify form validation prevents submission with clear error messages."
+      },
+      {
+        "type": "action",
+        "description": "Enter valid distributions and project for 60 months."
+      },
+      {
+        "type": "assertion",
+        "description": "Verify financial projections are correctly calculated and displayed dynamically."
+      }
+    ]
+  },
+  {
+    "id": "TC014",
+    "title": "Meetings Module CRUD and Export",
+    "description": "Verify meeting creation, agenda management, participant addition, minutes recording and PDF export.",
+    "category": "functional",
+    "priority": "Medium",
+    "steps": [
+      {
+        "type": "action",
+        "description": "Login and go to Meetings module."
+      },
+      {
+        "type": "action",
+        "description": "Create a meeting with agenda and participants."
+      },
+      {
+        "type": "assertion",
+        "description": "Confirm meeting is saved and visible in list."
+      },
+      {
+        "type": "action",
+        "description": "Update meeting notes and save."
+      },
+      {
+        "type": "assertion",
+        "description": "Confirm updated notes are saved successfully."
+      },
+      {
+        "type": "action",
+        "description": "Export meeting minutes to PDF."
+      },
+      {
+        "type": "assertion",
+        "description": "Verify generated PDF is correctly formatted and downloadable."
+      }
+    ]
+  },
+  {
+    "id": "TC015",
+    "title": "My Work Module Task Management",
+    "description": "Verify individual task creation, update, completion status and linkage to plans and OKRs.",
+    "category": "functional",
+    "priority": "Medium",
+    "steps": [
+      {
+        "type": "action",
+        "description": "Login and access My Work module."
+      },
+      {
+        "type": "action",
+        "description": "Create a new task linked to a plan and OKR."
+      },
+      {
+        "type": "assertion",
+        "description": "Verify task appears in user task list with correct linkage."
+      },
+      {
+        "type": "action",
+        "description": "Mark task as completed."
+      },
+      {
+        "type": "assertion",
+        "description": "Verify status updates and relevant audit log entry is created."
+      }
+    ]
+  },
+  {
+    "id": "TC016",
+    "title": "Session Security and Cookie Management",
+    "description": "Verify security of session management via cookies and correct enforcement using Flask-Login.",
+    "category": "security",
+    "priority": "High",
+    "steps": [
+      {
+        "type": "action",
+        "description": "Login to generate authenticated session cookie."
+      },
+      {
+        "type": "action",
+        "description": "Attempt session hijacking by manipulating cookie."
+      },
+      {
+        "type": "assertion",
+        "description": "Verify unauthorized access is denied and user redirected to login."
+      },
+      {
+        "type": "action",
+        "description": "Logout and verify session cookie is invalidated."
+      },
+      {
+        "type": "assertion",
+        "description": "Verify further access to protected resources requires re-authentication."
+      }
+    ]
+  },
+  {
+    "id": "TC017",
+    "title": "Admin Permissions Enforcement",
+    "description": "Verify permission controls that only admin users can access administrative APIs like route audit and control logging.",
+    "category": "security",
+    "priority": "High",
+    "steps": [
+      {
+        "type": "action",
+        "description": "Login as non-admin (consultant or client)."
+      },
+      {
+        "type": "action",
+        "description": "Attempt access to route audit or logging control APIs."
+      },
+      {
+        "type": "assertion",
+        "description": "Verify access is denied with HTTP 403 Forbidden."
+      },
+      {
+        "type": "action",
+        "description": "Login as admin and access the same APIs."
+      },
+      {
+        "type": "assertion",
+        "description": "Verify access is granted and functions perform as expected."
+      }
+    ]
+  },
+  {
+    "id": "TC018",
+    "title": "Interface Modal Behavior for CRUD Operations",
+    "description": "Verify that all CRUD operations use modals for create, update and delete dialogs following UX guidelines, with smooth scroll and navigation behavior.",
+    "category": "ui",
+    "priority": "Medium",
+    "steps": [
+      {
+        "type": "action",
+        "description": "Navigate to a CRUD list (e.g. projects in GRV)."
+      },
+      {
+        "type": "action",
+        "description": "Open create modal and fill in data."
+      },
+      {
+        "type": "assertion",
+        "description": "Verify modal opens correctly and scroll behavior is smooth."
+      },
+      {
+        "type": "action",
+        "description": "Close modal, open edit modal for an item."
+      },
+      {
+        "type": "assertion",
+        "description": "Verify edit modal opens correctly with pre-filled data."
+      },
+      {
+        "type": "action",
+        "description": "Open delete confirmation modal."
+      },
+      {
+        "type": "assertion",
+        "description": "Verify modal shows correct confirmation."
+      }
+    ]
+  },
+  {
+    "id": "TC019",
+    "title": "Audit Logs Retrieval by Entity",
+    "description": "Verify that API returns audit logs for a specific entity type and entity ID with appropriate error handling for invalid inputs.",
+    "category": "functional",
+    "priority": "Medium",
+    "steps": [
+      {
+        "type": "action",
+        "description": "Authenticate and request logs for valid entity type and existing entity ID."
+      },
+      {
+        "type": "assertion",
+        "description": "Verify response contains logs related to the entity with 200 status."
+      },
+      {
+        "type": "action",
+        "description": "Request logs for valid entity type but non-existing entity ID."
+      },
+      {
+        "type": "assertion",
+        "description": "Verify response is 404 Not Found."
+      }
+    ]
+  },
+  {
+    "id": "TC020",
+    "title": "Audit Statistics Retrieval",
+    "description": "Verify that API returns log statistics filtered by company_id and date range, with correct pagination and error handling.",
+    "category": "functional",
+    "priority": "Medium",
+    "steps": [
+      {
+        "type": "action",
+        "description": "Authenticate user with permissions."
+      },
+      {
+        "type": "action",
+        "description": "Request logs statistics for a valid company and 30 day period."
+      },
+      {
+        "type": "assertion",
+        "description": "Verify statistics are returned and formatted correctly with 200 status."
+      },
+      {
+        "type": "action",
+        "description": "Request statistics with invalid parameters (e.g. negative days)."
+      },
+      {
+        "type": "assertion",
+        "description": "Verify proper error response (4xx or 500) with descriptive message."
+      }
+    ]
+  }
+]

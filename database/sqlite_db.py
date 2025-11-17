@@ -1939,6 +1939,65 @@ class SQLiteDatabase(DatabaseInterface):
             rows.append(as_dict)
         conn.close()
         return rows
+
+    def get_process_artifact_presence(self, company_id: int) -> Dict[int, Dict[str, bool]]:
+        """
+        Recupera indicadores booleanos sobre artefatos já produzidos
+        para cada processo (rotinas, POP e indicadores).
+        Mantido para compatibilidade, embora o app utilize PostgreSQL.
+        """
+        conn = self._get_connection()
+        cursor = conn.cursor()
+        summary: Dict[int, Dict[str, bool]] = {}
+
+        def _slot(process_id: Optional[int]) -> Optional[Dict[str, bool]]:
+            if not process_id:
+                return None
+            if process_id not in summary:
+                summary[process_id] = {
+                    'has_routine': False,
+                    'has_pop': False,
+                    'has_indicator': False
+                }
+            return summary[process_id]
+
+        def _run_query(query: str, params: tuple, flag_key: str, id_field: str = 'process_id') -> None:
+            try:
+                cursor.execute(query, params)
+                for row in cursor.fetchall():
+                    record = dict(row)
+                    slot = _slot(record.get(id_field))
+                    if slot:
+                        slot[flag_key] = (record.get('total') or 0) > 0
+            except Exception as exc:
+                print(f"[SQLite] Warning while gathering process artifact presence ({flag_key}): {exc}")
+
+        try:
+            _run_query('''
+                SELECT process_id, COUNT(*) AS total
+                FROM routines
+                WHERE company_id = ? AND process_id IS NOT NULL AND is_active = 1
+                GROUP BY process_id
+            ''', (company_id,), 'has_routine')
+
+            _run_query('''
+                SELECT p.id AS process_id, COUNT(a.id) AS total
+                FROM processes p
+                JOIN process_activities a ON a.process_id = p.id
+                WHERE p.company_id = ?
+                GROUP BY p.id
+            ''', (company_id,), 'has_pop')
+
+            _run_query('''
+                SELECT process_id, COUNT(*) AS total
+                FROM indicators
+                WHERE company_id = ? AND process_id IS NOT NULL
+                GROUP BY process_id
+            ''', (company_id,), 'has_indicator')
+
+            return summary
+        finally:
+            conn.close()
     
     def create_process(self, company_id: int, process: Dict[str, Any]) -> Optional[int]:
         try:

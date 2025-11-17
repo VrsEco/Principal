@@ -78,6 +78,52 @@ def api_login_required(f):
         return f(*args, **kwargs)
     return decorated_function
 
+# Custom helper utilities
+def ensure_routine_collaborators_sequence(cursor: Any) -> None:
+    """Ensure routine_collaborators.id uses a PostgreSQL sequence."""
+    cursor.execute(
+        """
+        SELECT column_default
+        FROM information_schema.columns
+        WHERE table_schema = 'public'
+          AND table_name = 'routine_collaborators'
+          AND column_name = 'id'
+        """
+    )
+    row = cursor.fetchone()
+    column_default = row[0] if row else None
+
+    if column_default and 'nextval' in str(column_default):
+        return
+
+    cursor.execute("CREATE SEQUENCE IF NOT EXISTS routine_collaborators_id_seq")
+    cursor.execute(
+        """
+        ALTER TABLE routine_collaborators
+        ALTER COLUMN id SET DEFAULT nextval('routine_collaborators_id_seq')
+        """
+    )
+    cursor.execute(
+        """
+        SELECT setval(
+            'routine_collaborators_id_seq',
+            COALESCE((SELECT MAX(id) FROM routine_collaborators), 0) + 1,
+            false
+        )
+        """
+    )
+    try:
+        cursor.fetchone()
+    except Exception:
+        pass
+    cursor.execute(
+        """
+        ALTER SEQUENCE routine_collaborators_id_seq
+        OWNED BY routine_collaborators.id
+        """
+    )
+
+
 # Custom Jinja2 filter for parsing JSON
 @app.template_filter('from_json')
 def from_json_filter(json_string):
@@ -3710,6 +3756,11 @@ def api_generate_process_report(company_id: int, process_id: int):
     # GERADOR DE RELATÓRIOS COM TEMPLATE ESPECÍFICO
     # ========================================
     try:
+        # Forçar reload do módulo para garantir que está usando código atualizado
+        import sys
+        import importlib
+        if 'relatorios.generators.process_pop' in sys.modules:
+            importlib.reload(sys.modules['relatorios.generators.process_pop'])
         from relatorios.generators.process_pop import ProcessPOPReport
         
         print(f">> Gerando relatório de processo - Empresa: {company_id}, Processo: {process_id}")
@@ -3728,6 +3779,8 @@ def api_generate_process_report(company_id: int, process_id: int):
             routines='routine' in sections,
             indicators='indicators' in sections
         )
+        
+        print(f">> [DEBUG] Configuração: flow={report.include_flow}, routines={report.include_routines}, indicators={report.include_indicators}, activities={report.include_activities}")
         
         # Gerar HTML usando o template específico
         html_content = report.generate_html(
@@ -4541,12 +4594,23 @@ def api_add_routine_collaborator(routine_id: int):
         
         conn = pg_connect()
         cursor = conn.cursor()
+
+        ensure_routine_collaborators_sequence(cursor)
+
+        cursor.execute("SELECT nextval('routine_collaborators_id_seq')")
+        seq_row = cursor.fetchone()
+        if not seq_row or seq_row[0] is None:
+            conn.rollback()
+            conn.close()
+            return jsonify({'success': False, 'message': 'Falha ao gerar identificador da rotina'}), 500
+        generated_id = seq_row[0]
         
         cursor.execute('''
-            INSERT INTO routine_collaborators (routine_id, employee_id, hours_used, notes)
-            VALUES (%s, %s, %s, %s)
+            INSERT INTO routine_collaborators (id, routine_id, employee_id, hours_used, notes)
+            VALUES (%s, %s, %s, %s, %s)
             RETURNING id
         ''', (
+            generated_id,
             routine_id,
             data.get('employee_id'),
             data.get('hours_used'),
@@ -4576,7 +4640,10 @@ def api_update_routine_collaborator(routine_id: int, collaborator_id: int):
         
         cursor.execute('''
             UPDATE routine_collaborators
-            SET employee_id = %s, hours_used = ?, notes = ?, updated_at = CURRENT_TIMESTAMP
+            SET employee_id = %s,
+                hours_used = %s,
+                notes = %s,
+                updated_at = CURRENT_TIMESTAMP
             WHERE id = %s AND routine_id = %s
         ''', (
             data.get('employee_id'),

@@ -307,6 +307,13 @@ class ProcessPOPReport(BaseReportGenerator):
             page-break-inside: auto !important;
             break-inside: auto !important;
         }}
+        
+        /* NO MODO DE IMPRESSÃO: Remover margem que pode causar quebra */
+        @media print {{
+            .report-section .section-content {{
+                margin-top: 1mm !important;  /* Reduzir margem no modo impressão */
+            }}
+        }}
 
         .report-section .section-content > * {{
             /* Items individuais podem quebrar se necessário */
@@ -329,9 +336,9 @@ class ProcessPOPReport(BaseReportGenerator):
             border-radius: 14px;
             padding: 16px 18px;
             box-shadow: 0 12px 28px -26px rgba(15, 23, 42, 0.6);
-            /* NÃO quebra - mantém atividade inteira */
-            page-break-inside: avoid !important;
-            break-inside: avoid !important;
+            /* Permitir quebra dentro do card para evitar páginas em branco */
+            page-break-inside: auto !important;
+            break-inside: auto !important;
         }}
         
         .activity-card h3 {{
@@ -346,7 +353,6 @@ class ProcessPOPReport(BaseReportGenerator):
             background: rgba(96, 165, 250, 0.16);
             border-radius: 999px;
             border: 1px solid rgba(96, 165, 250, 0.35);
-            /* NÃO quebra */
             page-break-inside: avoid !important;
             break-inside: avoid !important;
         }}
@@ -366,9 +372,9 @@ class ProcessPOPReport(BaseReportGenerator):
             gap: 6px;
             font-size: 9pt;
             color: #475569;
-            /* NÃO quebra */
-            page-break-inside: avoid !important;
-            break-inside: avoid !important;
+            /* Permitir quebra entre badges para evitar páginas em branco */
+            page-break-inside: auto !important;
+            break-inside: auto !important;
         }}
         
         .activity-meta span {{
@@ -791,6 +797,13 @@ class ProcessPOPReport(BaseReportGenerator):
         /* Quebras de página */
         {generate_page_break_css()}
         
+        /* SOBRESCREVER: Remover quebra forçada de .new-section */
+        /* Esta regra DEVE vir depois de generate_page_break_css() para sobrescrever */
+        .new-section {{
+            page-break-before: auto !important;
+            break-before: auto !important;
+        }}
+        
         /* Conteúdo principal - SEM offset de cabeçalho/rodapé */
         .report-content {{
             margin: 0;
@@ -871,15 +884,109 @@ class ProcessPOPReport(BaseReportGenerator):
                 margin-top: 10mm !important;
             }}
             
-            /* Evitar quebras inadequadas */
+            /* =============================================
+               REGRAS CRÍTICAS: MANTER TÍTULO E CONTEÚDO JUNTOS
+               ============================================= */
+            
+            /* MANTER SEÇÃO INTEIRA JUNTA - Evitar quebra dentro da seção */
+            /* REGRA CRÍTICA: Se a seção não cabe na página atual, mover TUDO para próxima página */
             .report-section {{
-                page-break-inside: avoid;
+                page-break-inside: auto !important;
+                break-inside: auto !important;
                 clear: both !important;
                 position: relative !important;
                 float: none !important;
+                display: block !important;
+                orphans: 3 !important;
+                widows: 3 !important;
+                page-break-before: auto;
+                break-before: auto;
             }}
             
-            h1, h2, h3, h4, h5, h6 {{
+            /* GARANTIR QUE TÍTULO NÃO FIQUE SOZINHO NO FINAL DA PÁGINA */
+            /* Se o título não cabe no final da página, mover título E conteúdo juntos */
+            .report-section h1 {{
+                page-break-after: avoid !important;
+                break-after: avoid !important;
+                page-break-inside: avoid !important;
+                break-inside: avoid !important;
+                orphans: 3 !important;
+                widows: 3 !important;
+                margin-bottom: 1mm !important;  /* Margem mínima para não causar quebra */
+                padding-bottom: 0 !important;
+                page-break-before: auto;
+                break-before: auto;
+            }}
+            
+            /* GARANTIR QUE CONTEÚDO NÃO COMECE SOZINHO EM NOVA PÁGINA */
+            .report-section .section-content {{
+                page-break-before: avoid !important;
+                break-before: avoid !important;
+                page-break-inside: auto !important;   /* Permitir quebra dentro do conteúdo para evitar páginas em branco enormes */
+                break-inside: auto !important;
+                orphans: 2 !important;
+                widows: 2 !important;
+                margin-top: 1mm !important;  /* Margem mínima reduzida no modo impressão */
+                padding-top: 0 !important;
+            }}
+
+            /* REGRA ESPECÍFICA: Título seguido imediatamente de conteúdo não pode quebrar */
+            .report-section h1 + .section-content {{
+                page-break-before: avoid !important;
+                break-before: avoid !important;
+                margin-top: 1mm !important;  /* Margem mínima reduzida */
+                padding-top: 0 !important;
+            }}
+
+            /* Garantir que o primeiro bloco de conteúdo continue junto com o título */
+            .report-section .section-content > *:first-child {{
+                page-break-before: avoid !important;
+                break-before: avoid !important;
+            }}
+            
+            /* REGRA CRÍTICA: Garantir que título e conteúdo fiquem sempre juntos */
+            /* Se não couber na mesma página, mover ambos para próxima página */
+            .report-section h1 ~ .section-content {{
+                page-break-before: avoid !important;
+                break-before: avoid !important;
+            }}
+            
+            /* REMOVER QUEBRA FORÇADA PARA .new-section - Permitir continuidade natural */
+            /* Aplicar mesma regra que funciona entre Fluxo, Rotinas e Indicadores */
+            .report-section.new-section {{
+                page-break-before: auto !important;
+                break-before: auto !important;
+            }}
+            
+            /* REGRA ESPECÍFICA: Garantir que seções consecutivas não quebrem desnecessariamente */
+            /* Replicar comportamento entre Fluxo->Rotinas->Indicadores para Indicadores->Procedimento */
+            .report-section + .report-section {{
+                page-break-before: auto !important;
+                break-before: auto !important;
+            }}
+            
+            /* Garantir que não há quebra forçada entre Indicadores e Procedimento Operacional */
+            /* Sobrescrever regra do visual_identity.py que força quebra em .new-section */
+            .report-section.indicators-section + .report-section,
+            .report-section.indicators-section + .report-section.new-section,
+            .report-section + .report-section.new-section {{
+                page-break-before: auto !important;
+                break-before: auto !important;
+            }}
+            
+            /* REGRA CRÍTICA: Sobrescrever qualquer regra que force quebra antes de seções */
+            /* Isso garante que Indicadores -> Procedimento se comporta como Fluxo -> Rotinas -> Indicadores */
+            /* Sobrescrever regra do visual_identity.py que aplica page-break-before: always em .new-section */
+            /* Usar maior especificidade para garantir que sobrescreva */
+            .report-section.new-section,
+            section.new-section,
+            .report-content .new-section,
+            .new-section {{
+                page-break-before: auto !important;
+                break-before: auto !important;
+            }}
+            
+            h2, h3, h4, h5, h6 {{
                 page-break-after: avoid;
             }}
             
@@ -1347,19 +1454,27 @@ class ProcessPOPReport(BaseReportGenerator):
         
         # 1. Seção de Fluxo (se incluído)
         if self.include_flow:
+            print(">> [DEBUG] Adicionando seção: Fluxo")
             self._add_flow_section()
 
-        # 2. Seção de Atividades (se incluído)
-        if self.include_activities:
-            self._add_activities_section()
-
-        # 3. Seção de Rotinas (se incluído)
+        # 2. Seção de Rotinas (se incluído) - ORDEM CORRIGIDA
         if self.include_routines:
+            print(">> [DEBUG] Adicionando seção: Rotinas")
             self._add_routines_section()
 
-        # 4. Seção de Indicadores (se incluído)
+        # 3. Seção de Indicadores (se incluído) - ORDEM CORRIGIDA
         if self.include_indicators:
+            print(">> [DEBUG] Adicionando seção: Indicadores")
             self._add_indicators_section()
+
+        # 4. Seção de Atividades/POP (se incluído) - ORDEM CORRIGIDA (última)
+        if self.include_activities:
+            print(">> [DEBUG] Adicionando seção: Atividades/POP")
+            self._add_activities_section()
+        
+        # Debug: mostrar ordem final das seções
+        section_titles = [s['title'] for s in self.sections]
+        print(f">> [DEBUG] Ordem final das seções: {section_titles}")
     
     # ====================================
     # SEÇÕES ESPECÍFICAS
@@ -1478,7 +1593,7 @@ class ProcessPOPReport(BaseReportGenerator):
 
             block = [
                 "<div class='activity-card'>",
-                f"<h3>{index}. {activity.get('name') or 'Atividade sem nome'}</h3>",
+                self._build_activity_title(index, activity),
             ]
 
             if meta_badges:
@@ -1528,6 +1643,18 @@ class ProcessPOPReport(BaseReportGenerator):
         parts.append("</div>")
         content = '\n'.join(parts)
         self.add_section('Procedimento Operacional', content)
+
+    def _build_activity_title(self, index, activity):
+        """Retorna o título formatado da atividade com código completo quando existir."""
+        activity_name = activity.get('name') or 'Atividade sem nome'
+        activity_code = self._safe_strip(activity.get('code'))
+
+        if activity_code:
+            title_text = f"{activity_code} - {activity_name}"
+        else:
+            title_text = f"{index}. {activity_name}"
+
+        return f"<h3>{title_text}</h3>"
 
     def _add_routines_section(self):
         """Adiciona seção de rotinas"""

@@ -189,7 +189,8 @@ PAGE_BREAK_RULES = {
     ],
     
     'force_break_before': [
-        '.new-section',
+        # Removido '.new-section' - não queremos forçar quebra antes de novas seções
+        # Isso permite que seções continuem naturalmente na mesma página
     ],
     
     'keep_with_next': [
@@ -348,10 +349,11 @@ def generate_page_break_css():
         css.append(f"{selector} {{ page-break-after: avoid; }}")
     
     # Regras específicas para manter título e conteúdo juntos
-    css.append("h1 + * { page-break-before: avoid; }")
-    css.append(".report-section { page-break-inside: avoid; }")
-    css.append("h1 { orphans: 3; widows: 3; }")
-    css.append(".section-content { orphans: 2; widows: 2; }")
+    css.append("h1 + * { page-break-before: avoid !important; break-before: avoid !important; }")
+    css.append(".report-section { page-break-inside: avoid !important; break-inside: avoid !important; }")
+    css.append("h1 { orphans: 3; widows: 3; page-break-after: avoid !important; break-after: avoid !important; }")
+    css.append(".section-content { orphans: 2; widows: 2; page-break-before: avoid !important; break-before: avoid !important; }")
+    css.append(".report-section h1 + .section-content { page-break-before: avoid !important; break-before: avoid !important; }")
     
     return '\n    '.join(css)
 
