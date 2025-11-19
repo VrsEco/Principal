@@ -70,7 +70,7 @@ jobs:
             ls -lh $BACKUP_DIR/backup_*.sql.gz
 
       - name: ☁️ Upload to S3 (AWS)
-        if: ${{ secrets.AWS_ACCESS_KEY_ID != '' }}
+        continue-on-error: true
         uses: appleboy/ssh-action@v1.0.0
         with:
           host: ${{ secrets.SSH_HOST }}
@@ -79,6 +79,12 @@ jobs:
           envs: AWS_ACCESS_KEY_ID,AWS_SECRET_ACCESS_KEY,AWS_S3_BUCKET
           script: |
             cd /opt/gestaoversos
+            
+            # Verificar se AWS está configurado
+            if [ -z "$AWS_ACCESS_KEY_ID" ] || [ -z "$AWS_SECRET_ACCESS_KEY" ] || [ -z "$AWS_S3_BUCKET" ]; then
+              echo "⚠️ AWS credentials não configuradas, pulando upload para S3"
+              exit 0
+            fi
             
             # Instalar AWS CLI se não existir
             if ! command -v aws &> /dev/null; then
@@ -100,7 +106,7 @@ jobs:
             echo "✅ Backup enviado para S3"
 
       - name: ☁️ Upload to Google Cloud Storage
-        if: ${{ secrets.GCP_PROJECT_ID != '' }}
+        continue-on-error: true
         uses: appleboy/ssh-action@v1.0.0
         with:
           host: ${{ secrets.SSH_HOST }}
@@ -108,6 +114,12 @@ jobs:
           key: ${{ secrets.SSH_PRIVATE_KEY }}
           script: |
             cd /opt/gestaoversos
+            
+            # Verificar se GCP está configurado
+            if [ ! -f "/app/credentials/gcp-key.json" ]; then
+              echo "⚠️ GCP credentials não configuradas, pulando upload para GCS"
+              exit 0
+            fi
             
             # Configurar GCloud
             if [ -f "/app/credentials/gcp-key.json" ]; then
