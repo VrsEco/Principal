@@ -26,26 +26,26 @@ steps:
     args:
       - 'build'
       - '-t'
-      - 'gcr.io/$PROJECT_ID/gestaoversos:$COMMIT_SHA'
+      - 'us-central1-docker.pkg.dev/$PROJECT_ID/my-app-repo/my-backend:$COMMIT_SHA'
       - '-t'
-      - 'gcr.io/$PROJECT_ID/gestaoversos:latest'
+      - 'us-central1-docker.pkg.dev/$PROJECT_ID/my-app-repo/my-backend:latest'
       - '-f'
       - 'Dockerfile'
       - '.'
 
   # ==========================================
-  # Step 3: Push to Container Registry
+  # Step 3: Push to Artifact Registry
   # ==========================================
   - name: 'gcr.io/cloud-builders/docker'
     id: 'push'
     args:
       - 'push'
-      - 'gcr.io/$PROJECT_ID/gestaoversos:$COMMIT_SHA'
+      - 'us-central1-docker.pkg.dev/$PROJECT_ID/my-app-repo/my-backend:$COMMIT_SHA'
 
   - name: 'gcr.io/cloud-builders/docker'
     args:
       - 'push'
-      - 'gcr.io/$PROJECT_ID/gestaoversos:latest'
+      - 'us-central1-docker.pkg.dev/$PROJECT_ID/my-app-repo/my-backend:latest'
 
   # ==========================================
   # Step 4: Deploy to Cloud Run
@@ -58,7 +58,7 @@ steps:
       - 'deploy'
       - 'gestaoversos'
       - '--image'
-      - 'gcr.io/$PROJECT_ID/gestaoversos:$COMMIT_SHA'
+      - 'us-central1-docker.pkg.dev/$PROJECT_ID/my-app-repo/my-backend:$COMMIT_SHA'
       - '--region'
       - 'us-central1'
       - '--platform'
@@ -106,8 +106,8 @@ steps:
 # Images to push
 # ==========================================
 images:
-  - 'gcr.io/$PROJECT_ID/gestaoversos:$COMMIT_SHA'
-  - 'gcr.io/$PROJECT_ID/gestaoversos:latest'
+  - 'us-central1-docker.pkg.dev/$PROJECT_ID/my-app-repo/my-backend:$COMMIT_SHA'
+  - 'us-central1-docker.pkg.dev/$PROJECT_ID/my-app-repo/my-backend:latest'
 
 # ==========================================
 # Options
@@ -130,7 +130,8 @@ substitutions:
 # ==========================================
 # Trigger on push to 'main' branch:
 # gcloud builds triggers create github \
-#   --repo-name=GestaoVersus \
-#   --repo-owner=mff2000 \
+#   --repo-name=Principal \
+#   --repo-owner=VrsEco \
 #   --branch-pattern="^main$" \
-#   --build-config=cloudbuild.yaml
+#   --build-config=cloudbuild.yaml \
+#   --region=us-central1
