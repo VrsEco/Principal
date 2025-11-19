@@ -1,4 +1,4 @@
-"""
+﻿"""
 Route Audit Service
 Discovers and audits all routes in the application to check logging coverage
 """
@@ -16,22 +16,26 @@ class RouteAuditService:
     @staticmethod
     def discover_all_routes(app: Optional[Flask] = None) -> List[Dict[str, Any]]:
         """
-        Descobre todas as rotas da aplicação
+        Descobre todas as rotas da aplicaÃ§Ã£o
         
         Returns:
-            Lista de dicionários com informações das rotas
+            Lista de dicionÃ¡rios com informaÃ§Ãµes das rotas
         """
         if app is None:
-            app = current_app
+            try:
+                app = current_app._get_current_object()
+            except RuntimeError:
+                # Fora do contexto de aplicação
+                return []
         
         routes = []
         
         for rule in app.url_map.iter_rules():
-            # Pular rotas estáticas
+            # Pular rotas estÃ¡ticas
             if rule.endpoint == 'static':
                 continue
             
-            # Obter informações da rota
+            # Obter informaÃ§Ãµes da rota
             route_info = {
                 'endpoint': rule.endpoint,
                 'path': rule.rule,
@@ -50,7 +54,7 @@ class RouteAuditService:
             if '.' in rule.endpoint:
                 route_info['blueprint'] = rule.endpoint.split('.')[0]
             
-            # Obter função view
+            # Obter funÃ§Ã£o view
             try:
                 view_func = app.view_functions.get(rule.endpoint)
                 if view_func:
@@ -59,20 +63,20 @@ class RouteAuditService:
                     
                     # Verificar se tem decorador auto_log_crud
                     if hasattr(view_func, '__wrapped__'):
-                        # Função foi decorada
+                        # FunÃ§Ã£o foi decorada
                         route_info['has_auto_log'] = 'auto_log_crud' in str(view_func)
                     
-                    # Verificar se tem chamadas manuais de log_service no código
+                    # Verificar se tem chamadas manuais de log_service no cÃ³digo
                     try:
                         source = inspect.getsource(view_func)
                         if 'log_service' in source or 'log_create' in source or 'log_update' in source or 'log_delete' in source:
                             route_info['has_manual_log'] = True
-                    except:
+                    except Exception as exc:
                         pass
             except Exception as e:
                 pass
             
-            # Determinar se é rota CRUD
+            # Determinar se Ã© rota CRUD
             crud_methods = {'POST', 'PUT', 'PATCH', 'DELETE'}
             if any(method in crud_methods for method in route_info['methods']):
                 route_info['is_crud'] = True
@@ -125,7 +129,7 @@ class RouteAuditService:
     @staticmethod
     def get_routes_without_logging(app: Optional[Flask] = None) -> List[Dict[str, Any]]:
         """
-        Retorna rotas CRUD que não têm logging configurado
+        Retorna rotas CRUD que nÃ£o tÃªm logging configurado
         
         Returns:
             Lista de rotas sem logging
@@ -142,7 +146,7 @@ class RouteAuditService:
     @staticmethod
     def get_routes_with_logging(app: Optional[Flask] = None) -> List[Dict[str, Any]]:
         """
-        Retorna rotas que têm logging configurado
+        Retorna rotas que tÃªm logging configurado
         
         Returns:
             Lista de rotas com logging
@@ -162,7 +166,7 @@ class RouteAuditService:
         Retorna resumo da auditoria de logging
         
         Returns:
-            Dicionário com estatísticas da auditoria
+            DicionÃ¡rio com estatÃ­sticas da auditoria
         """
         all_routes = RouteAuditService.discover_all_routes(app)
         
@@ -213,20 +217,20 @@ class RouteAuditService:
             'coverage_percentage': coverage_percentage,
             'by_blueprint': dict(by_blueprint),
             'by_entity': dict(by_entity),
-            'critical_missing': routes_without_logging[:10]  # Top 10 rotas críticas sem log
+            'critical_missing': routes_without_logging[:10]  # Top 10 rotas crÃ­ticas sem log
         }
     
     @staticmethod
     def get_route_details(endpoint: str, app: Optional[Flask] = None) -> Optional[Dict[str, Any]]:
         """
-        Obtém detalhes de uma rota específica
+        ObtÃ©m detalhes de uma rota especÃ­fica
         
         Args:
             endpoint: Nome do endpoint Flask
-            app: Instância Flask (opcional)
+            app: InstÃ¢ncia Flask (opcional)
         
         Returns:
-            Dicionário com detalhes da rota ou None
+            DicionÃ¡rio com detalhes da rota ou None
         """
         all_routes = RouteAuditService.discover_all_routes(app)
         
@@ -239,13 +243,13 @@ class RouteAuditService:
     @staticmethod
     def generate_decorator_code(route: Dict[str, Any]) -> str:
         """
-        Gera código do decorador para uma rota
+        Gera cÃ³digo do decorador para uma rota
         
         Args:
-            route: Dicionário com informações da rota
+            route: DicionÃ¡rio com informaÃ§Ãµes da rota
         
         Returns:
-            String com código do decorador
+            String com cÃ³digo do decorador
         """
         entity_type = route.get('entity_type', 'unknown')
         
@@ -256,13 +260,13 @@ class RouteAuditService:
     @staticmethod
     def get_implementation_guide(route: Dict[str, Any]) -> Dict[str, str]:
         """
-        Gera guia de implementação para adicionar logs a uma rota
+        Gera guia de implementaÃ§Ã£o para adicionar logs a uma rota
         
         Args:
-            route: Dicionário com informações da rota
+            route: DicionÃ¡rio com informaÃ§Ãµes da rota
         
         Returns:
-            Dicionário com instruções de implementação
+            DicionÃ¡rio com instruÃ§Ãµes de implementaÃ§Ã£o
         """
         entity_type = route.get('entity_type', 'unknown')
         endpoint = route.get('endpoint', '')
@@ -275,11 +279,11 @@ class RouteAuditService:
 # Adicione o import no topo do arquivo:
 from middleware.auto_log_decorator import auto_log_crud
 
-# Adicione o decorador antes da definição da rota:
+# Adicione o decorador antes da definiÃ§Ã£o da rota:
 @blueprint.route('{path}', methods={route.get('methods', [])})
 @auto_log_crud('{entity_type}')
 def {route.get('function_name', 'function')}():
-    # ... seu código aqui
+    # ... seu cÃ³digo aqui
     pass
 """,
             'entity_type': entity_type,
@@ -289,6 +293,7 @@ def {route.get('function_name', 'function')}():
         return guide
 
 
-# Instância global do serviço
+# InstÃ¢ncia global do serviÃ§o
 route_audit_service = RouteAuditService()
+
 

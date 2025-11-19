@@ -1,7 +1,10 @@
+﻿import logging
+
 """
 Service para My Work - Lógica de negócio
 Gerencia atividades pessoais, de equipe e da empresa
 """
+
 from datetime import datetime, timedelta, date
 from decimal import Decimal
 from typing import List, Dict, Any, Optional, Sequence
@@ -14,12 +17,12 @@ def get_employee_from_user(user_id: int) -> Optional[int]:
     """
     Mapeia user_id para employee_id
     
-    Estratégia:
+    EstratÃ©gia:
     1. Busca direta por user_id (relacionamento FK)
     2. Fallback: busca por email (para dados legados)
     
     Args:
-        user_id: ID do usuário logado
+        user_id: ID do usuÃ¡rio logado
     
     Returns:
         employee_id ou None
@@ -51,7 +54,7 @@ def get_employee_from_user(user_id: int) -> Optional[int]:
             if row:
                 employee_id = row[0]
                 
-                # Auto-vincular para próximas consultas
+                # Auto-vincular para prÃ³ximas consultas
                 try:
                     cursor.execute("""
                         UPDATE employees 
@@ -59,8 +62,8 @@ def get_employee_from_user(user_id: int) -> Optional[int]:
                         WHERE id = %s AND user_id IS NULL
                     """, (user_id, employee_id))
                     conn.commit()
-                    print(f"✅ Auto-vinculado: User #{user_id} -> Employee #{employee_id}")
-                except:
+                    logger.info(f"âœ… Auto-vinculado: User #{user_id} -> Employee #{employee_id}")
+                except Exception as exc:
                     conn.rollback()
                 
                 conn.close()
@@ -70,7 +73,7 @@ def get_employee_from_user(user_id: int) -> Optional[int]:
         return None
         
     except Exception as e:
-        print(f"❌ Erro ao mapear user_id para employee_id: {e}")
+        logger.info(f"âŒ Erro ao mapear user_id para employee_id: {e}")
         conn.close()
         return None
 
@@ -149,9 +152,9 @@ def _get_team_activities(cursor, employee_id: int, filters: Dict) -> List[Dict]:
 def _get_company_activities(cursor, employee_id: int, filters: Dict) -> List[Dict]:
     """Busca todas as atividades da empresa"""
     
-    # Verificar permissão
+    # Verificar permissÃ£o
     if not _can_view_company(cursor, employee_id):
-        raise PermissionError("Usuário sem permissão para visualizar atividades da empresa")
+        raise PermissionError("UsuÃ¡rio sem permissÃ£o para visualizar atividades da empresa")
     
     company_id = _fetch_employee_company_id(cursor, employee_id)
     if company_id is None:
@@ -171,7 +174,7 @@ def _get_company_activities(cursor, employee_id: int, filters: Dict) -> List[Dic
 
 def get_user_stats(employee_id: Optional[int], scope: str = 'me') -> Dict:
     """
-    Retorna estatísticas conforme escopo
+    Retorna estatÃ­sticas conforme escopo
     
     Returns:
         Dict com contadores
@@ -206,19 +209,19 @@ def get_user_stats(employee_id: Optional[int], scope: str = 'me') -> Dict:
 
 
 def _get_my_stats(cursor, employee_id: int) -> Dict:
-    """Estatísticas pessoais"""
+    """EstatÃ­sticas pessoais"""
     activities = _get_my_activities(cursor, employee_id, filters={})
     return _calculate_stats_from_activities(activities)
 
 
 def _get_team_stats(cursor, employee_id: int) -> Dict:
-    """Estatísticas da equipe"""
+    """EstatÃ­sticas da equipe"""
     activities = _get_team_activities(cursor, employee_id, filters={})
     return _calculate_stats_from_activities(activities)
 
 
 def _get_company_stats(cursor, employee_id: int) -> Dict:
-    """Estatísticas da empresa"""
+    """EstatÃ­sticas da empresa"""
     activities = _get_company_activities(cursor, employee_id, filters={})
     return _calculate_stats_from_activities(activities)
 
@@ -259,7 +262,7 @@ def count_activities_by_scope(employee_id: Optional[int]) -> Dict:
 
 
 def _fetch_projects_for_employee(cursor, employee_id: int):
-    """Busca projetos onde o colaborador é responsável ou executor."""
+    """Busca projetos onde o colaborador Ã© responsÃ¡vel ou executor."""
     cursor.execute("""
         SELECT 
             cp.id,
@@ -327,12 +330,12 @@ def _fetch_company_projects(cursor, company_id: int):
 
 
 def _fetch_projects_for_members(cursor, member_ids: Sequence[int]):
-    """Busca projetos atribuídos a membros de equipe."""
+    """Busca projetos atribuÃ­dos a membros de equipe."""
     if not member_ids:
         return []
     
-    placeholders = ','.join(['%s'] * len(member_ids))
-    cursor.execute(f"""
+    member_tuple = tuple(member_ids)
+    cursor.execute("""
         SELECT 
             cp.id,
             cp.company_id,
@@ -358,14 +361,14 @@ def _fetch_projects_for_members(cursor, member_ids: Sequence[int]):
         LEFT JOIN employees exec ON exec.id = cp.executor_id
         LEFT JOIN plans pl ON pl.id = cp.plan_id
         LEFT JOIN companies co ON co.id = cp.company_id
-        WHERE (cp.responsible_id IN ({placeholders}) OR cp.executor_id IN ({placeholders}))
-    """, tuple(member_ids) + tuple(member_ids))
+        WHERE (cp.responsible_id = ANY(%(members)s) OR cp.executor_id = ANY(%(members)s))
+    """, {"members": member_tuple})
     
     return cursor.fetchall()
 
 
 def _fetch_company_processes(cursor, company_id: int):
-    """Busca instâncias de processos da empresa."""
+    """Busca instÃ¢ncias de processos da empresa."""
     cursor.execute("""
         SELECT 
             pi.id,
@@ -391,7 +394,7 @@ def _fetch_company_processes(cursor, company_id: int):
 
 
 def _fetch_processes_for_employee(cursor, employee_id: int):
-    """Busca processos onde o colaborador está designado."""
+    """Busca processos onde o colaborador estÃ¡ designado."""
     company_id = _fetch_employee_company_id(cursor, employee_id)
     if company_id is None:
         return []
@@ -473,7 +476,7 @@ def _serialize_project_activity(row, employee_id: int, member_ids: Optional[Sequ
 
 
 def _serialize_process_activity(row, employee_id: int, member_ids: Optional[Sequence[int]] = None) -> Dict:
-    """Serializa instância de processo."""
+    """Serializa instÃ¢ncia de processo."""
     data = dict(row)
     deadline = _coerce_date(data.get('deadline_date'))
     created_dt = _coerce_datetime(data.get('created_at'))
@@ -640,26 +643,28 @@ def _fetch_team_member_ids(cursor, employee_id: int) -> List[int]:
 
 
 def _fetch_employee_company_id(cursor, employee_id: int) -> Optional[int]:
-    """Obtém company_id do colaborador."""
+    """ObtÃ©m company_id do colaborador."""
     cursor.execute("SELECT company_id FROM employees WHERE id = %s", (employee_id,))
     row = cursor.fetchone()
     return row[0] if row else None
 
 
 def _fetch_companies_for_members(cursor, member_ids: Sequence[int]) -> List[int]:
-    """Obtém empresas vinculadas aos membros."""
-    placeholders = ','.join(['%s'] * len(member_ids))
-    cursor.execute(f"""
+    """ObtÃ©m empresas vinculadas aos membros."""
+    cursor.execute(
+        """
         SELECT DISTINCT company_id
         FROM employees
-        WHERE id IN ({placeholders})
-    """, tuple(member_ids))
+        WHERE id = ANY(%(members)s)
+        """,
+        {"members": tuple(member_ids)},
+    )
     
     return [row[0] for row in cursor.fetchall()]
 
 
 def _is_employee_in_process(row, member_ids: set) -> bool:
-    """Verifica se algum membro está associado a um processo."""
+    """Verifica se algum membro estÃ¡ associado a um processo."""
     collaborators = _parse_collaborators(row.get('assigned_collaborators'))
     collaborator_ids = {collab.get('id') for collab in collaborators if collab.get('id') is not None}
     return bool(member_ids & collaborator_ids)
@@ -687,11 +692,11 @@ def _resolve_assignment(employee_id: int, responsible_id: Optional[int], executo
     assignment = {'type': None, 'label': None}
     
     if employee_id and executor_id == employee_id:
-        assignment.update({'type': 'executor', 'label': '⚙️ Executor'})
+        assignment.update({'type': 'executor', 'label': 'âš™ï¸ Executor'})
     elif employee_id and responsible_id == employee_id:
-        assignment.update({'type': 'responsible', 'label': '👤 Responsável'})
+        assignment.update({'type': 'responsible', 'label': 'ðŸ‘¤ ResponsÃ¡vel'})
     elif member_ids and (responsible_id in member_ids or executor_id in member_ids):
-        assignment.update({'type': 'team', 'label': '👥 Equipe'})
+        assignment.update({'type': 'team', 'label': 'ðŸ‘¥ Equipe'})
     
     return assignment
 
@@ -702,9 +707,9 @@ def _resolve_process_assignment(employee_id: int, collaborators: List[Dict], mem
     assignment = {'type': None, 'label': None}
     
     if employee_id in collaborator_ids:
-        assignment.update({'type': 'assigned', 'label': '⚙️ Executor'})
+        assignment.update({'type': 'assigned', 'label': 'âš™ï¸ Executor'})
     elif member_ids and collaborator_ids.intersection(member_ids):
-        assignment.update({'type': 'team', 'label': '👥 Equipe'})
+        assignment.update({'type': 'team', 'label': 'ðŸ‘¥ Equipe'})
     
     return assignment
 
@@ -745,7 +750,7 @@ def _build_filter_tags(flags: Dict[str, bool], status: Optional[str]) -> List[st
 
 
 def _deadline_label(deadline: Optional[date], status: Optional[str]) -> Optional[str]:
-    """Texto amigável de prazo."""
+    """Texto amigÃ¡vel de prazo."""
     if not deadline:
         return None
     
@@ -755,7 +760,7 @@ def _deadline_label(deadline: Optional[date], status: Optional[str]) -> Optional
     if delta == 0:
         return 'Hoje'
     if delta == 1:
-        return 'Amanhã'
+        return 'AmanhÃ£'
     if delta == -1:
         return 'Ontem'
     if delta > 1:
@@ -763,7 +768,7 @@ def _deadline_label(deadline: Optional[date], status: Optional[str]) -> Optional
     
     status = (status or '').lower()
     if status == 'completed':
-        return f'Concluído há {-delta} dias'
+        return f'ConcluÃ­do hÃ¡ {-delta} dias'
     
     return f'Atrasado {abs(delta)} dias'
 
@@ -839,33 +844,33 @@ def _date_to_iso(value: Optional[date]) -> Optional[str]:
 
 
 def _deadline_sort_key(deadline: Optional[date]) -> int:
-    """Chave de ordenação por prazo."""
+    """Chave de ordenaÃ§Ã£o por prazo."""
     return deadline.toordinal() if deadline else 9999999
 
 
 def _datetime_sort_key(value: Optional[datetime]) -> int:
-    """Chave de ordenação por data/hora."""
+    """Chave de ordenaÃ§Ã£o por data/hora."""
     if not value:
         return 0
     return int(value.timestamp())
 
 
 def _can_view_company(cursor, employee_id: int) -> bool:
-    """Verifica se employee tem permissão para ver atividades da empresa"""
+    """Verifica se employee tem permissÃ£o para ver atividades da empresa"""
     
-    # TODO: Implementar verificação de role/permissão
+    # TODO: Implementar verificaÃ§Ã£o de role/permissÃ£o
     # Por enquanto, permitir para todos (demo)
     return True
 
 
 def _priority_order(priority: str) -> int:
-    """Ordem de prioridade para ordenação"""
+    """Ordem de prioridade para ordenaÃ§Ã£o"""
     order = {'urgent': 4, 'high': 3, 'normal': 2, 'low': 1}
     return order.get(priority, 0)
 
 
 def _status_order(status: str) -> int:
-    """Ordem de status para ordenação"""
+    """Ordem de status para ordenaÃ§Ã£o"""
     order = {'overdue': 1, 'pending': 2, 'planned': 3, 'in_progress': 4, 'executing': 5, 'completed': 6}
     return order.get(status, 99)
 
@@ -930,7 +935,7 @@ def add_work_hours(employee_id: int, activity_type: str, activity_id: int, work_
 
 def add_comment(employee_id: int, activity_type: str, activity_id: int, comment_data: Dict) -> Dict:
     """
-    Adiciona comentário em atividade
+    Adiciona comentÃ¡rio em atividade
     
     Args:
         employee_id: ID do colaborador
@@ -939,7 +944,7 @@ def add_comment(employee_id: int, activity_type: str, activity_id: int, comment_
         comment_data: {comment_type, comment, is_private}
     
     Returns:
-        Dict com comentário criado
+        Dict com comentÃ¡rio criado
     """
     conn = pg_connect()
     cursor = conn.cursor()
@@ -950,7 +955,7 @@ def add_comment(employee_id: int, activity_type: str, activity_id: int, comment_
         employee_row = cursor.fetchone()
         employee_name = employee_row[0] if employee_row else "Desconhecido"
         
-        # Inserir comentário
+        # Inserir comentÃ¡rio
         cursor.execute("""
             INSERT INTO activity_comments 
             (activity_type, activity_id, employee_id, employee_name, comment_type, comment_text, is_private)
@@ -973,7 +978,7 @@ def add_comment(employee_id: int, activity_type: str, activity_id: int, comment_
         return {
             'id': comment_id,
             'success': True,
-            'message': 'Comentário adicionado com sucesso'
+            'message': 'ComentÃ¡rio adicionado com sucesso'
         }
         
     except Exception as e:
@@ -999,7 +1004,7 @@ def complete_activity(employee_id: int, activity_type: str, activity_id: int, co
     cursor = conn.cursor()
     
     try:
-        # Adicionar comentário final se fornecido
+        # Adicionar comentÃ¡rio final se fornecido
         if completion_data.get('completion_comment'):
             add_comment(employee_id, activity_type, activity_id, {
                 'comment_type': 'note',
@@ -1046,7 +1051,7 @@ def get_team_overview(employee_id: int) -> Dict:
     Retorna dados para o Team Overview
     
     Returns:
-        Dict com distribuição, alertas e performance
+        Dict com distribuiÃ§Ã£o, alertas e performance
     """
     conn = pg_connect()
     cursor = conn.cursor()
@@ -1069,7 +1074,7 @@ def get_team_overview(employee_id: int) -> Dict:
         team_id = team_row[0]
         team_name = team_row[1]
         
-        # Buscar distribuição de carga
+        # Buscar distribuiÃ§Ã£o de carga
         distribution = _get_team_load_distribution(cursor, team_id)
         
         # Gerar alertas
@@ -1093,7 +1098,7 @@ def get_team_overview(employee_id: int) -> Dict:
 
 
 def _get_team_load_distribution(cursor, team_id: int) -> List[Dict]:
-    """Calcula distribuição de carga entre membros"""
+    """Calcula distribuiÃ§Ã£o de carga entre membros"""
     
     cursor.execute("""
         SELECT 
@@ -1140,7 +1145,7 @@ def _get_team_load_distribution(cursor, team_id: int) -> List[Dict]:
 
 
 def _get_load_status(utilization: float) -> str:
-    """Determina status baseado na utilização"""
+    """Determina status baseado na utilizaÃ§Ã£o"""
     if utilization > 90:
         return 'overload'
     elif utilization > 75:
@@ -1152,7 +1157,7 @@ def _get_load_status(utilization: float) -> str:
 
 
 def _generate_team_alerts(members: List[Dict]) -> List[Dict]:
-    """Gera alertas baseado na distribuição"""
+    """Gera alertas baseado na distribuiÃ§Ã£o"""
     alerts = []
     
     for member in members:
@@ -1171,7 +1176,7 @@ def _generate_team_alerts(members: List[Dict]) -> List[Dict]:
                 'severity': 'success',
                 'employee_id': member['id'],
                 'employee_name': member['name'],
-                'message': f"{member['name']} disponível",
+                'message': f"{member['name']} disponÃ­vel",
                 'details': f"{member['capacity'] - member['allocated']}h de capacidade livre"
             })
     
@@ -1179,9 +1184,9 @@ def _generate_team_alerts(members: List[Dict]) -> List[Dict]:
 
 
 def _calculate_team_performance(cursor, team_id: int) -> Dict:
-    """Calcula métricas de performance da equipe"""
+    """Calcula mÃ©tricas de performance da equipe"""
     
-    # TODO: Implementar cálculo real
+    # TODO: Implementar cÃ¡lculo real
     return {
         'avg_score': 78,
         'completion_rate': 85,
@@ -1198,21 +1203,21 @@ def get_company_overview(employee_id: int) -> Dict:
     Retorna dados executivos para Company Overview
     
     Returns:
-        Dict com métricas executivas
+        Dict com mÃ©tricas executivas
     """
     conn = pg_connect()
     cursor = conn.cursor()
     
     try:
-        # Verificar permissão
+        # Verificar permissÃ£o
         if not _can_view_company(cursor, employee_id):
-            raise PermissionError("Sem permissão para visualizar dados da empresa")
+            raise PermissionError("Sem permissÃ£o para visualizar dados da empresa")
         
         # Buscar company_id
         cursor.execute("SELECT company_id FROM employees WHERE id = %s", (employee_id,))
         company_id = cursor.fetchone()[0]
         
-        # Buscar métricas
+        # Buscar mÃ©tricas
         summary = _get_company_summary(cursor, company_id)
         heatmap = _get_company_heatmap(cursor, company_id)
         ranking = _get_department_ranking(cursor, company_id)
@@ -1231,7 +1236,7 @@ def get_company_overview(employee_id: int) -> Dict:
 
 
 def _get_company_summary(cursor, company_id: int) -> Dict:
-    """Métricas gerais da empresa"""
+    """MÃ©tricas gerais da empresa"""
     
     # Contar equipes
     cursor.execute("SELECT COUNT(*) FROM teams WHERE company_id = %s AND is_active = true", (company_id,))
@@ -1281,7 +1286,7 @@ def _get_company_heatmap(cursor, company_id: int) -> List[Dict]:
             'status': 'low'
         },
         {
-            'team_name': 'Operações',
+            'team_name': 'OperaÃ§Ãµes',
             'employee_count': 25,
             'activities_count': 52,
             'utilization_percent': 98,
@@ -1297,7 +1302,10 @@ def _get_department_ranking(cursor, company_id: int) -> List[Dict]:
     return [
         {'rank': 1, 'team_name': 'TI / Tecnologia', 'score': 85, 'completion_rate': 92},
         {'rank': 2, 'team_name': 'Comercial', 'score': 82, 'completion_rate': 88},
-        {'rank': 3, 'team_name': 'Operações', 'score': 78, 'completion_rate': 85},
+        {'rank': 3, 'team_name': 'OperaÃ§Ãµes', 'score': 78, 'completion_rate': 85},
         {'rank': 4, 'team_name': 'RH / Administrativo', 'score': 75, 'completion_rate': 80}
     ]
+
+
+
 

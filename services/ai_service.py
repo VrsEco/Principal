@@ -1,3 +1,4 @@
+﻿import logging
 import os
 import requests
 import json
@@ -5,15 +6,16 @@ from typing import Dict, Any, Optional
 from string import Formatter
 from datetime import datetime
 from dotenv import load_dotenv
-try:
-    # Utilities to fetch agent-linked integrations and their configs
-    from database.sqlite_db import get_agent_integrations as _get_agent_integrations, get_integration as _get_integration
-except Exception:
-    _get_agent_integrations = None
-    _get_integration = None
+# Utilities to fetch agent-linked integrations and their configs
+from database.postgresql_db import (
+    get_agent_integrations as _get_agent_integrations,
+    get_integration as _get_integration,
+)
 
-# Carregar variáveis de ambiente
+# Carregar variÃ¡veis de ambiente
 load_dotenv()
+
+logger = logging.getLogger(__name__)
 
 class AIService:
     """Service for AI integration with multiple providers"""
@@ -24,7 +26,7 @@ class AIService:
         self.webhook_url = os.environ.get('AI_WEBHOOK_URL')
         self.base_url = os.environ.get('AI_BASE_URL', 'https://api.openai.com/v1')
         
-        # Inicializa serviços auxiliares (nenhum serviço fixo necessário)
+        # Inicializa serviÃ§os auxiliares (nenhum serviÃ§o fixo necessÃ¡rio)
     
     def generate_okr_suggestions(self, company_data: Dict[str, Any], directionals: list = None) -> Optional[str]:
         """
@@ -47,7 +49,7 @@ class AIService:
             else:
                 return self._generate_local_okr_suggestions(company_data, directionals)
         except Exception as e:
-            print(f"Error generating OKR suggestions: {e}")
+            logger.exception("Error generating OKR suggestions")
             return None
     
     def _generate_openai_okr_suggestions(self, company_data: Dict[str, Any], directionals: list) -> str:
@@ -67,7 +69,7 @@ class AIService:
             'messages': [
                 {
                     'role': 'system',
-                    'content': 'Você é um consultor estratégico especializado em OKRs (Objectives and Key Results). Forneça sugestões práticas e mensuráveis de OKRs baseadas nos direcionadores estratégicos da empresa.'
+                    'content': 'VocÃª Ã© um consultor estratÃ©gico especializado em OKRs (Objectives and Key Results). ForneÃ§a sugestÃµes prÃ¡ticas e mensurÃ¡veis de OKRs baseadas nos direcionadores estratÃ©gicos da empresa.'
                 },
                 {
                     'role': 'user',
@@ -155,34 +157,34 @@ class AIService:
         suggestions = []
         
         if directionals:
-            suggestions.append("Sugestões de OKRs baseadas nos direcionadores estratégicos:")
+            suggestions.append("SugestÃµes de OKRs baseadas nos direcionadores estratÃ©gicos:")
             suggestions.append("")
             
             for i, directional in enumerate(directionals[:3], 1):  # Limit to 3 suggestions
                 title = directional.get('title', f'Direcionador {i}')
                 suggestions.append(f"{i}. **{title}**")
-                suggestions.append("   - Objetivo: [Definir objetivo específico baseado no direcionador]")
+                suggestions.append("   - Objetivo: [Definir objetivo especÃ­fico baseado no direcionador]")
                 suggestions.append("   - Key Results:")
-                suggestions.append("     - KR1: [Métrica mensurável e específica]")
-                suggestions.append("     - KR2: [Segunda métrica importante]")
-                suggestions.append("     - KR3: [Terceira métrica complementar]")
+                suggestions.append("     - KR1: [MÃ©trica mensurÃ¡vel e especÃ­fica]")
+                suggestions.append("     - KR2: [Segunda mÃ©trica importante]")
+                suggestions.append("     - KR3: [Terceira mÃ©trica complementar]")
                 suggestions.append("")
         else:
-            suggestions.append("Sugestões gerais de OKRs:")
+            suggestions.append("SugestÃµes gerais de OKRs:")
             suggestions.append("")
-            suggestions.append("1. **Crescimento e Expansão**")
-            suggestions.append("   - Objetivo: Expandir presença no mercado")
+            suggestions.append("1. **Crescimento e ExpansÃ£o**")
+            suggestions.append("   - Objetivo: Expandir presenÃ§a no mercado")
             suggestions.append("   - Key Results:")
             suggestions.append("     - KR1: Aumentar receita em X%")
             suggestions.append("     - KR2: Conquistar X novos clientes")
-            suggestions.append("     - KR3: Expandir para X novas regiões")
+            suggestions.append("     - KR3: Expandir para X novas regiÃµes")
             suggestions.append("")
-            suggestions.append("2. **Operacional e Eficiência**")
-            suggestions.append("   - Objetivo: Melhorar eficiência operacional")
+            suggestions.append("2. **Operacional e EficiÃªncia**")
+            suggestions.append("   - Objetivo: Melhorar eficiÃªncia operacional")
             suggestions.append("   - Key Results:")
             suggestions.append("     - KR1: Reduzir custos operacionais em X%")
             suggestions.append("     - KR2: Melhorar tempo de resposta em X%")
-            suggestions.append("     - KR3: Aumentar satisfação do cliente para X%")
+            suggestions.append("     - KR3: Aumentar satisfaÃ§Ã£o do cliente para X%")
             suggestions.append("")
         
         return "\n".join(suggestions)
@@ -190,44 +192,44 @@ class AIService:
     def _build_okr_suggestions_prompt(self, company_data: Dict[str, Any], directionals: list) -> str:
         """Build OKR suggestions prompt from company data and directionals"""
         prompt = f"""
-        Analise os dados da empresa e direcionadores estratégicos para sugerir OKRs (Objectives and Key Results) relevantes e mensuráveis.
+        Analise os dados da empresa e direcionadores estratÃ©gicos para sugerir OKRs (Objectives and Key Results) relevantes e mensurÃ¡veis.
         
         Dados da Empresa:
         - Nome: {company_data.get('trade_name', 'N/A')}
         - Segmento: {company_data.get('segment', 'N/A')}
-        - Localização: {company_data.get('city', 'N/A')}, {company_data.get('state', 'N/A')}
-        - Cobertura Física: {company_data.get('coverage_physical', 'N/A')}
+        - LocalizaÃ§Ã£o: {company_data.get('city', 'N/A')}, {company_data.get('state', 'N/A')}
+        - Cobertura FÃ­sica: {company_data.get('coverage_physical', 'N/A')}
         - Cobertura Online: {company_data.get('coverage_online', 'N/A')}
-        - Experiência Total: {company_data.get('experience_total', 'N/A')}
-        - Experiência no Segmento: {company_data.get('experience_segment', 'N/A')}
-        - Missão: {company_data.get('mission', 'N/A')}
-        - Visão: {company_data.get('vision', 'N/A')}
+        - ExperiÃªncia Total: {company_data.get('experience_total', 'N/A')}
+        - ExperiÃªncia no Segmento: {company_data.get('experience_segment', 'N/A')}
+        - MissÃ£o: {company_data.get('mission', 'N/A')}
+        - VisÃ£o: {company_data.get('vision', 'N/A')}
         - Valores: {company_data.get('values', 'N/A')}
         
-        Direcionadores Estratégicos Consolidados:
+        Direcionadores EstratÃ©gicos Consolidados:
         """
         
         if directionals:
             for i, directional in enumerate(directionals, 1):
                 title = directional.get('title', f'Direcionador {i}')
-                description = directional.get('description', 'Sem descrição')
+                description = directional.get('description', 'Sem descriÃ§Ã£o')
                 directional_type = directional.get('type', 'Geral')
                 prompt += f"\n{i}. {title} ({directional_type}): {description}"
         else:
-            prompt += "\nNenhum direcionador estratégico consolidado encontrado."
+            prompt += "\nNenhum direcionador estratÃ©gico consolidado encontrado."
         
         prompt += """
         
-        Com base nessas informações, sugira 3-5 OKRs estratégicos que sejam:
-        1. Alinhados com os direcionadores estratégicos
-        2. Específicos e mensuráveis
+        Com base nessas informaÃ§Ãµes, sugira 3-5 OKRs estratÃ©gicos que sejam:
+        1. Alinhados com os direcionadores estratÃ©gicos
+        2. EspecÃ­ficos e mensurÃ¡veis
         3. Relevantes para o segmento e contexto da empresa
-        4. Balanceados entre objetivos estruturantes e de aceleração
+        4. Balanceados entre objetivos estruturantes e de aceleraÃ§Ã£o
         
-        Para cada OKR, forneça:
+        Para cada OKR, forneÃ§a:
         - Um Objetivo claro e inspirador
-        - 2-3 Key Results mensuráveis e específicos
-        - Indicação se é estruturante ou aceleração
+        - 2-3 Key Results mensurÃ¡veis e especÃ­ficos
+        - IndicaÃ§Ã£o se Ã© estruturante ou aceleraÃ§Ã£o
         - Justificativa baseada nos direcionadores
         
         Formate a resposta de forma clara e organizada.
@@ -256,7 +258,7 @@ class AIService:
             else:
                 return self._generate_local_insights(company_data, context)
         except Exception as e:
-            print(f"Error generating AI insights: {e}")
+            logger.exception("Error generating AI insights")
             return None
     
     def _generate_openai_insights(self, company_data: Dict[str, Any], context: str) -> str:
@@ -276,7 +278,7 @@ class AIService:
             'messages': [
                 {
                     'role': 'system',
-                    'content': 'Você é um consultor estratégico especializado em análise de empresas. Forneça insights práticos e acionáveis.'
+                    'content': 'VocÃª Ã© um consultor estratÃ©gico especializado em anÃ¡lise de empresas. ForneÃ§a insights prÃ¡ticos e acionÃ¡veis.'
                 },
                 {
                     'role': 'user',
@@ -368,54 +370,54 @@ class AIService:
             insights.append(f"A empresa atua no segmento de {company_data['segment']}")
         
         if company_data.get('coverage_physical'):
-            insights.append(f"Cobertura física: {company_data['coverage_physical']}")
+            insights.append(f"Cobertura fÃ­sica: {company_data['coverage_physical']}")
         
         if company_data.get('experience_total'):
-            insights.append(f"Experiência total: {company_data['experience_total']}")
+            insights.append(f"ExperiÃªncia total: {company_data['experience_total']}")
         
         if company_data.get('mission'):
-            insights.append(f"Missão: {company_data['mission'][:100]}...")
+            insights.append(f"MissÃ£o: {company_data['mission'][:100]}...")
         
-        return "\n".join(insights) if insights else "Análise local básica não disponível"
+        return "\n".join(insights) if insights else "AnÃ¡lise local bÃ¡sica nÃ£o disponÃ­vel"
     
     def _build_analysis_prompt(self, company_data: Dict[str, Any], context: str) -> str:
         """Build analysis prompt from company data"""
         prompt = f"""
-        Analise os seguintes dados da empresa e forneça insights estratégicos:
+        Analise os seguintes dados da empresa e forneÃ§a insights estratÃ©gicos:
         
         Dados da Empresa:
         - Nome: {company_data.get('trade_name', 'N/A')}
         - Segmento: {company_data.get('segment', 'N/A')}
-        - Localização: {company_data.get('city', 'N/A')}, {company_data.get('state', 'N/A')}
-        - Cobertura Física: {company_data.get('coverage_physical', 'N/A')}
+        - LocalizaÃ§Ã£o: {company_data.get('city', 'N/A')}, {company_data.get('state', 'N/A')}
+        - Cobertura FÃ­sica: {company_data.get('coverage_physical', 'N/A')}
         - Cobertura Online: {company_data.get('coverage_online', 'N/A')}
-        - Experiência Total: {company_data.get('experience_total', 'N/A')}
-        - Experiência no Segmento: {company_data.get('experience_segment', 'N/A')}
-        - Missão: {company_data.get('mission', 'N/A')}
-        - Visão: {company_data.get('vision', 'N/A')}
+        - ExperiÃªncia Total: {company_data.get('experience_total', 'N/A')}
+        - ExperiÃªncia no Segmento: {company_data.get('experience_segment', 'N/A')}
+        - MissÃ£o: {company_data.get('mission', 'N/A')}
+        - VisÃ£o: {company_data.get('vision', 'N/A')}
         - Valores: {company_data.get('values', 'N/A')}
         
         Contexto Adicional: {context}
         
-        Forneça insights sobre:
+        ForneÃ§a insights sobre:
         1. Pontos fortes da empresa
         2. Oportunidades de crescimento
         3. Riscos potenciais
-        4. Recomendações estratégicas
+        4. RecomendaÃ§Ãµes estratÃ©gicas
         """
         return prompt
 
     def execute_custom_agent(self, agent_config: Dict[str, Any], plan_id: int, db_instance) -> Dict[str, Any]:
         """
-        Executa um agente customizado com integração de serviços externos
+        Executa um agente customizado com integraÃ§Ã£o de serviÃ§os externos
         
         Args:
-            agent_config: Configuração do agente
+            agent_config: ConfiguraÃ§Ã£o do agente
             plan_id: ID do plano
-            db_instance: Instância do banco de dados
+            db_instance: InstÃ¢ncia do banco de dados
             
         Returns:
-            Resultado da execução do agente
+            Resultado da execuÃ§Ã£o do agente
         """
         try:
             # Obter dados da empresa
@@ -423,7 +425,7 @@ class AIService:
             if not company_data:
                 return {
                     'success': False,
-                    'error': 'Dados da empresa não encontrados'
+                    'error': 'Dados da empresa nÃ£o encontrados'
                 }
             
             # Preparar dados para o prompt
@@ -437,10 +439,10 @@ class AIService:
                 'coverage_online': company_data.get('coverage_online', '')
             }
             
-            # Executar serviços externos dinamicamente com base nas integrações vinculadas
+            # Executar serviÃ§os externos dinamicamente com base nas integraÃ§Ãµes vinculadas
             external_data = {}
             aggregated_services_markdown = []
-            # Coletar integrações a partir da config do agente e do cadastro
+            # Coletar integraÃ§Ãµes a partir da config do agente e do cadastro
             configured_ids = set(agent_config.get('integration_ids', []) or [])
             linked = []
             try:
@@ -449,7 +451,7 @@ class AIService:
                     linked = _get_agent_integrations(agent_config.get('id')) or []
             except Exception:
                 linked = []
-            # Construir lista única de ids
+            # Construir lista Ãºnica de ids
             linked_ids = {i.get('id') for i in linked if isinstance(i, dict) and i.get('id')}
             all_integration_ids = list(configured_ids.union(linked_ids))
 
@@ -469,22 +471,22 @@ class AIService:
                             return resp.text
                     return f"Erro {resp.status_code}: {resp.text[:200]}"
                 except Exception as exc:
-                    return f"Erro ao chamar integração: {str(exc)}"
+                    return f"Erro ao chamar integraÃ§Ã£o: {str(exc)}"
 
-            # Executar cada integração vinculada
+            # Executar cada integraÃ§Ã£o vinculada
             for iid in all_integration_ids:
                 try:
                     integ = None
                     if _get_integration:
                         integ = _get_integration(iid)
-                    # Se não houver detalhes, continue com próximo
+                    # Se nÃ£o houver detalhes, continue com prÃ³ximo
                     if not integ:
                         continue
                     cfg = integ.get('config') or {}
                     provider = (integ.get('provider') or '').lower()
                     itype = (integ.get('type') or '').lower()
 
-                    # Payload padrão para integrações externas
+                    # Payload padrÃ£o para integraÃ§Ãµes externas
                     integration_payload = {
                         'agent_id': agent_config.get('id'),
                         'agent_name': agent_config.get('name'),
@@ -494,7 +496,7 @@ class AIService:
                     }
 
                     result_text = ''
-                    # Suporte a webhook/HTTP genérico
+                    # Suporte a webhook/HTTP genÃ©rico
                     if provider == 'webhook' or itype == 'webhook':
                         url = cfg.get('url') or cfg.get('endpoint')
                         headers = cfg.get('headers') or {}
@@ -504,9 +506,9 @@ class AIService:
                     # Outros provedores podem ser adicionados aqui no futuro
 
                     if result_text:
-                        # Agregar markdown e expor chave específica para uso no template
+                        # Agregar markdown e expor chave especÃ­fica para uso no template
                         title = integ.get('name') or integ.get('id')
-                        aggregated_services_markdown.append(f"\n## Dados do Serviço: {title}\n\n{result_text}\n")
+                        aggregated_services_markdown.append(f"\n## Dados do ServiÃ§o: {title}\n\n{result_text}\n")
                         safe_key = f"service_{iid}_data"
                         external_data[safe_key] = result_text
                 except Exception:
@@ -534,7 +536,7 @@ class AIService:
             else:
                 final_prompt = json.dumps(format_context, ensure_ascii=False, indent=2)
 
-            # 1) Tentar usar um provedor LLM vindo das integrações vinculadas (sem .env)
+            # 1) Tentar usar um provedor LLM vindo das integraÃ§Ãµes vinculadas (sem .env)
             llm_result = None
             try:
                 # Reutiliza 'linked' coletado acima
@@ -547,7 +549,7 @@ class AIService:
                         continue
                     cfg = ( _get_integration(integ.get('id')) or {} ).get('config') if _get_integration else (integ.get('config') or {})
                     cfg = cfg or {}
-                    # OpenAI via integração
+                    # OpenAI via integraÃ§Ã£o
                     if provider == 'openai' or (itype == 'llm' and cfg.get('provider') == 'openai'):
                         api_key = cfg.get('api_key')
                         model = cfg.get('model', 'gpt-3.5-turbo')
@@ -561,7 +563,7 @@ class AIService:
                                 data = {
                                     'model': model,
                                     'messages': [
-                                        {'role': 'system', 'content': 'Você é um consultor estratégico especializado em reputação online.'},
+                                        {'role': 'system', 'content': 'VocÃª Ã© um consultor estratÃ©gico especializado em reputaÃ§Ã£o online.'},
                                         {'role': 'user', 'content': final_prompt}
                                     ],
                                     'max_tokens': int(cfg.get('max_tokens', 2000)),
@@ -576,7 +578,7 @@ class AIService:
                                     llm_result = f"Erro OpenAI ({resp.status_code}): {resp.text[:200]}"
                             except Exception as exc:
                                 llm_result = f"Erro OpenAI: {str(exc)}"
-                    # Anthropic via integração
+                    # Anthropic via integraÃ§Ã£o
                     elif provider == 'anthropic' or (itype == 'llm' and cfg.get('provider') == 'anthropic'):
                         api_key = cfg.get('api_key')
                         model = cfg.get('model', 'claude-3-sonnet-20240229')
@@ -600,7 +602,7 @@ class AIService:
                                     llm_result = f"Erro Anthropic ({resp.status_code}): {resp.text[:200]}"
                             except Exception as exc:
                                 llm_result = f"Erro Anthropic: {str(exc)}"
-                    # Webhook LLM genérico via integração
+                    # Webhook LLM genÃ©rico via integraÃ§Ã£o
                     elif provider in ('webhook-llm', 'webhook') or itype in ('llm', 'ai'):
                         try:
                             url = cfg.get('url') or cfg.get('endpoint')
@@ -623,13 +625,13 @@ class AIService:
                         except Exception as exc:
                             llm_result = f"Erro Webhook LLM: {str(exc)}"
 
-                    # Se já obteve um resultado (ou erro significativo), parar no primeiro provedor LLM
+                    # Se jÃ¡ obteve um resultado (ou erro significativo), parar no primeiro provedor LLM
                     if llm_result:
                         break
             except Exception:
                 llm_result = None
 
-            # 2) Se não houver provedor via integração, usar configuração padrão do serviço (env) ou local
+            # 2) Se nÃ£o houver provedor via integraÃ§Ã£o, usar configuraÃ§Ã£o padrÃ£o do serviÃ§o (env) ou local
             if llm_result is None:
                 if self.provider == 'openai':
                     result = self._generate_openai_analysis(final_prompt)
@@ -659,10 +661,10 @@ class AIService:
             }
     
     def _generate_openai_analysis(self, prompt: str) -> str:
-        """Gera análise usando OpenAI"""
+        """Gera anÃ¡lise usando OpenAI"""
         try:
             if not self.api_key:
-                return "Erro: API key do OpenAI não configurada"
+                return "Erro: API key do OpenAI nÃ£o configurada"
             
             headers = {
                 'Authorization': f'Bearer {self.api_key}',
@@ -672,7 +674,7 @@ class AIService:
             data = {
                 'model': 'gpt-3.5-turbo',
                 'messages': [
-                    {'role': 'system', 'content': 'Você é um consultor estratégico especializado em análise de reputação online e inteligência de negócios.'},
+                    {'role': 'system', 'content': 'VocÃª Ã© um consultor estratÃ©gico especializado em anÃ¡lise de reputaÃ§Ã£o online e inteligÃªncia de negÃ³cios.'},
                     {'role': 'user', 'content': prompt}
                 ],
                 'max_tokens': 2000,
@@ -693,13 +695,13 @@ class AIService:
                 return f"Erro na API OpenAI: {response.status_code} - {response.text}"
                 
         except Exception as e:
-            return f"Erro ao gerar análise: {str(e)}"
+            return f"Erro ao gerar anÃ¡lise: {str(e)}"
     
     def _generate_anthropic_analysis(self, prompt: str) -> str:
-        """Gera análise usando Anthropic Claude"""
+        """Gera anÃ¡lise usando Anthropic Claude"""
         try:
             if not self.api_key:
-                return "Erro: API key do Anthropic não configurada"
+                return "Erro: API key do Anthropic nÃ£o configurada"
             
             headers = {
                 'x-api-key': self.api_key,
@@ -729,13 +731,13 @@ class AIService:
                 return f"Erro na API Anthropic: {response.status_code} - {response.text}"
                 
         except Exception as e:
-            return f"Erro ao gerar análise: {str(e)}"
+            return f"Erro ao gerar anÃ¡lise: {str(e)}"
     
     def _generate_webhook_analysis(self, prompt: str) -> str:
-        """Gera análise usando webhook externo"""
+        """Gera anÃ¡lise usando webhook externo"""
         try:
             if not self.webhook_url:
-                return "Erro: URL do webhook não configurada"
+                return "Erro: URL do webhook nÃ£o configurada"
             
             data = {
                 'prompt': prompt,
@@ -756,59 +758,59 @@ class AIService:
                 return f"Erro no webhook: {response.status_code} - {response.text}"
                 
         except Exception as e:
-            return f"Erro ao gerar análise via webhook: {str(e)}"
+            return f"Erro ao gerar anÃ¡lise via webhook: {str(e)}"
     
     def _generate_local_analysis(self, prompt: str) -> str:
-        """Gera análise local (simulada)"""
+        """Gera anÃ¡lise local (simulada)"""
         return f"""
-# ANÁLISE DE REPUTAÇÃO ONLINE — TechCorp Solutions
+# ANÃLISE DE REPUTAÃ‡ÃƒO ONLINE â€” TechCorp Solutions
 
-## 🔍 RESUMO EXECUTIVO
-- Score de Reputação: 75/100
+## ðŸ” RESUMO EXECUTIVO
+- Score de ReputaÃ§Ã£o: 75/100
 - Status Geral: Bom
 - Principais Achados: 
-  - Presença digital estabelecida
+  - PresenÃ§a digital estabelecida
   - Sentimento online predominantemente positivo
   - Oportunidades de crescimento em SEO
 
-## 📊 ANÁLISE POR CANAL
-### Presença Digital
+## ðŸ“Š ANÃLISE POR CANAL
+### PresenÃ§a Digital
 - Site oficial: Funcional e informativo
 - Redes sociais: Ativa em LinkedIn e Instagram
-- Mídia tradicional: Menções positivas recentes
+- MÃ­dia tradicional: MenÃ§Ãµes positivas recentes
 
 ### Sentimento Online
-- Positivo: 70% (notícias sobre prêmios e crescimento)
-- Neutro: 25% (informações corporativas)
-- Negativo: 5% (críticas menores isoladas)
+- Positivo: 70% (notÃ­cias sobre prÃªmios e crescimento)
+- Neutro: 25% (informaÃ§Ãµes corporativas)
+- Negativo: 5% (crÃ­ticas menores isoladas)
 
-## ⚡ OPORTUNIDADES PRIORIZADAS
-- [Alta Prioridade] Investir em SEO para melhorar ranking orgânico
-- [Média Prioridade] Expandir presença em TikTok e YouTube
-- [Baixa Prioridade] Implementar programa de advocacy de funcionários
+## âš¡ OPORTUNIDADES PRIORIZADAS
+- [Alta Prioridade] Investir em SEO para melhorar ranking orgÃ¢nico
+- [MÃ©dia Prioridade] Expandir presenÃ§a em TikTok e YouTube
+- [Baixa Prioridade] Implementar programa de advocacy de funcionÃ¡rios
 
-## ⚠️ RISCOS E MITIGAÇÕES
-- Risco: Concorrência crescente | Mitigação: Diferenciação por inovação
-- Risco: Mudanças regulatórias | Mitigação: Monitoramento proativo
+## âš ï¸ RISCOS E MITIGAÃ‡Ã•ES
+- Risco: ConcorrÃªncia crescente | MitigaÃ§Ã£o: DiferenciaÃ§Ã£o por inovaÃ§Ã£o
+- Risco: MudanÃ§as regulatÃ³rias | MitigaÃ§Ã£o: Monitoramento proativo
 
-## 🎯 RECOMENDAÇÕES ESTRATÉGICAS
+## ðŸŽ¯ RECOMENDAÃ‡Ã•ES ESTRATÃ‰GICAS
 - [Curto Prazo] Otimizar site para mobile e velocidade
-- [Médio Prazo] Lançar campanha de conteúdo educativo
+- [MÃ©dio Prazo] LanÃ§ar campanha de conteÃºdo educativo
 - [Longo Prazo] Desenvolver programa de influenciadores
 
-## 📈 PRÓXIMOS PASSOS
+## ðŸ“ˆ PRÃ“XIMOS PASSOS
 - Auditoria completa de SEO (imediato)
-- Criação de calendário editorial (30 dias)
-- Implementação de monitoramento de reputação (90 dias)
+- CriaÃ§Ã£o de calendÃ¡rio editorial (30 dias)
+- ImplementaÃ§Ã£o de monitoramento de reputaÃ§Ã£o (90 dias)
 
-_Análise baseada em dados de reputação online e inteligência estratégica._
+_AnÃ¡lise baseada em dados de reputaÃ§Ã£o online e inteligÃªncia estratÃ©gica._
 """
     def test_connection(self) -> Dict[str, Any]:
         """
-        Testa a conexão com o provedor de IA configurado
+        Testa a conexÃ£o com o provedor de IA configurado
         
         Returns:
-            Resultado do teste de conexão
+            Resultado do teste de conexÃ£o
         """
         try:
             if self.provider == 'openai':
@@ -827,11 +829,11 @@ _Análise baseada em dados de reputação online e inteligência estratégica._
             }
     
     def _test_openai_connection(self) -> Dict[str, Any]:
-        """Testa conexão com OpenAI"""
+        """Testa conexÃ£o com OpenAI"""
         if not self.api_key:
             return {
                 'success': False,
-                'error': 'API key não configurada',
+                'error': 'API key nÃ£o configurada',
                 'provider': 'openai'
             }
         
@@ -843,11 +845,11 @@ _Análise baseada em dados de reputação online e inteligência estratégica._
             
             data = {
                 'model': 'gpt-3.5-turbo',
-                'messages': [{'role': 'user', 'content': 'Teste de conexão'}],
+                'messages': [{'role': 'user', 'content': 'Teste de conexÃ£o'}],
                 'max_tokens': 10
             }
             
-            # Usar base_url configurável ou padrão
+            # Usar base_url configurÃ¡vel ou padrÃ£o
             url = f"{self.base_url.rstrip('/')}/chat/completions"
             response = requests.post(
                 url,
@@ -860,7 +862,7 @@ _Análise baseada em dados de reputação online e inteligência estratégica._
                 return {
                     'success': True,
                     'provider': 'openai',
-                    'message': 'Conexão com OpenAI estabelecida com sucesso'
+                    'message': 'ConexÃ£o com OpenAI estabelecida com sucesso'
                 }
             else:
                 return {
@@ -876,33 +878,33 @@ _Análise baseada em dados de reputação online e inteligência estratégica._
             }
     
     def _test_anthropic_connection(self) -> Dict[str, Any]:
-        """Testa conexão com Anthropic"""
+        """Testa conexÃ£o com Anthropic"""
         if not self.api_key:
             return {
                 'success': False,
-                'error': 'API key não configurada',
+                'error': 'API key nÃ£o configurada',
                 'provider': 'anthropic'
             }
         
         return {
             'success': True,
             'provider': 'anthropic',
-            'message': 'Teste de conexão com Anthropic implementado'
+            'message': 'Teste de conexÃ£o com Anthropic implementado'
         }
     
     def _test_webhook_connection(self) -> Dict[str, Any]:
-        """Testa conexão com webhook"""
+        """Testa conexÃ£o com webhook"""
         if not self.webhook_url:
             return {
                 'success': False,
-                'error': 'URL do webhook não configurada',
+                'error': 'URL do webhook nÃ£o configurada',
                 'provider': 'webhook'
             }
         
         try:
             response = requests.post(
                 self.webhook_url,
-                json={'test': True, 'message': 'Teste de conexão'},
+                json={'test': True, 'message': 'Teste de conexÃ£o'},
                 timeout=10
             )
             
@@ -910,7 +912,7 @@ _Análise baseada em dados de reputação online e inteligência estratégica._
                 return {
                     'success': True,
                     'provider': 'webhook',
-                    'message': 'Conexão com webhook estabelecida com sucesso'
+                    'message': 'ConexÃ£o com webhook estabelecida com sucesso'
                 }
             else:
                 return {
@@ -926,12 +928,13 @@ _Análise baseada em dados de reputação online e inteligência estratégica._
             }
     
     def _test_local_connection(self) -> Dict[str, Any]:
-        """Testa conexão local"""
+        """Testa conexÃ£o local"""
         return {
             'success': True,
             'provider': 'local',
-            'message': 'Modo local ativo - sem conexão externa necessária'
+            'message': 'Modo local ativo - sem conexÃ£o externa necessÃ¡ria'
         }
 
 # Singleton instance
 ai_service = AIService()
+

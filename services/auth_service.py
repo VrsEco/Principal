@@ -1,14 +1,18 @@
-"""
+﻿"""
 Authentication Service
 Handles user authentication, session management, and user creation
 """
 
+import logging
+import os
 from datetime import datetime
 from werkzeug.security import generate_password_hash, check_password_hash
 from flask_login import login_user, logout_user, login_required, current_user
 from models.user import User
 from models import db
 from services.log_service import log_service
+
+logger = logging.getLogger(__name__)
 
 class AuthService:
     """Service for user authentication and management"""
@@ -45,24 +49,12 @@ class AuthService:
             db.session.add(user)
             db.session.commit()
             
-            # Log user creation - Temporarily disabled
-            # log_service.log_create(
-            #     entity_type='user',
-            #     entity_id=user.id,
-            #     entity_name=user.name,
-            #     new_values={
-            #         'email': user.email,
-            #         'name': user.name,
-            #         'role': user.role
-            #     },
-            #     description=f"Usuário criado: {user.name} ({user.email})"
-            # )
-            
             return user
             
         except Exception as e:
             db.session.rollback()
-            raise e
+            logger.error(f"Error creating user: {e}")
+            return None
     
     @staticmethod
     def authenticate_user(email, password):
@@ -153,13 +145,13 @@ class AuthService:
             
             db.session.commit()
             
-            # Log password change
+            # Log credential change
             log_service.log_update(
                 entity_type='user',
                 entity_id=user.id,
                 entity_name=user.name,
-                old_values={'password': '***'},
-                new_values={'password': '***'},
+                old_values={'credential': '***'},
+                new_values={'credential': '***'},
                 description=f"Senha alterada por {user.name}"
             )
             
@@ -268,7 +260,7 @@ class AuthService:
                 entity_name=user.name,
                 old_values={'is_active': old_status},
                 new_values={'is_active': is_active},
-                description=f"Status do usuário {user.name} alterado para {'ativo' if is_active else 'inativo'}"
+                description=f"Status do usuÃ¡rio {user.name} alterado para {'ativo' if is_active else 'inativo'}"
             )
             
             return True
@@ -285,28 +277,34 @@ class AuthService:
         try:
             admin_email = 'admin@versus.com.br'
             admin_user = User.query.filter_by(email=admin_email).first()
-            
+            admin_password = os.environ.get('ADMIN_DEFAULT_PASSWORD')
+
             if not admin_user:
+                if not admin_password:
+                    logger.warning("Admin default credential missing. Set env for admin credentials.")
+                    return None
+
                 admin_user = AuthService.create_user(
                     email=admin_email,
-                    password='123456',
+                    password=admin_password,
                     name='Administrador',
                     role='admin'
                 )
-                
+
                 if admin_user:
-                    print(f"✅ Usuário administrador criado: {admin_email}")
+                    logger.info("Admin user created: %s", admin_email)
                     return admin_user
-                else:
-                    print(f"❌ Falha ao criar usuário administrador")
-                    return None
-            else:
-                print(f"ℹ️ Usuário administrador já existe: {admin_email}")
-                return admin_user
-                
-        except Exception as e:
-            print(f"❌ Erro ao criar usuário administrador: {str(e)}")
+
+                logger.error("Failed to create admin user")
+                return None
+
+            logger.info("Admin user already exists: %s", admin_email)
+            return admin_user
+
+        except Exception:
+            logger.exception("Error creating admin user")
             return None
 
 # Global instance
 auth_service = AuthService()
+

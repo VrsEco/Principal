@@ -25,6 +25,7 @@ marshmallow-sqlalchemy==0.29.0
 # PDF Generation
 reportlab==4.0.4
 playwright==1.55.0
+plotly==5.24.0
 
 # Background Tasks & Scheduling
 APScheduler==3.10.4
@@ -43,6 +44,7 @@ python-dotenv==1.0.0
 requests==2.31.0
 Pillow==10.0.0
 python-dateutil==2.8.2
+pandas==2.2.3
 
 # Development
 pytest==7.4.2

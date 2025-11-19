@@ -1,4 +1,4 @@
-"""
+﻿"""
 User Logging Service
 Responsible for recording all user activities and system operations
 """
@@ -34,13 +34,13 @@ class LogService:
                         'user_email': admin_user.email,
                         'user_name': admin_user.name
                     }
-            except:
+            except Exception as exc:
                 pass
         
         return {
             'user_id': None,
             'user_email': 'anonymous',
-            'user_name': 'Usuário Anônimo'
+            'user_name': 'UsuÃ¡rio AnÃ´nimo'
         }
     
     @staticmethod
@@ -122,7 +122,7 @@ class LogService:
             current_app.logger.error(f"Failed to create log entry: {str(e)}")
             try:
                 db.session.rollback()
-            except:
+            except Exception as exc:
                 pass
             return None
     
@@ -134,7 +134,7 @@ class LogService:
             action='LOGIN' if success else 'LOGIN_FAILED',
             entity_type='user',
             entity_id=user.id if user else None,
-            entity_name=user.name if user else 'Usuário Desconhecido',
+            entity_name=user.name if user else 'UsuÃ¡rio Desconhecido',
             description=description
         )
     
@@ -158,7 +158,7 @@ class LogService:
             entity_id=entity_id,
             entity_name=entity_name,
             new_values=new_values,
-            description=description or f"Criação de {entity_type}: {entity_name}",
+            description=description or f"CriaÃ§Ã£o de {entity_type}: {entity_name}",
             company_id=company_id,
             plan_id=plan_id
         )
@@ -173,7 +173,7 @@ class LogService:
             entity_name=entity_name,
             old_values=old_values,
             new_values=new_values,
-            description=description or f"Atualização de {entity_type}: {entity_name}",
+            description=description or f"AtualizaÃ§Ã£o de {entity_type}: {entity_name}",
             company_id=company_id,
             plan_id=plan_id
         )
@@ -187,7 +187,7 @@ class LogService:
             entity_id=entity_id,
             entity_name=entity_name,
             old_values=old_values,
-            description=description or f"Exclusão de {entity_type}: {entity_name}",
+            description=description or f"ExclusÃ£o de {entity_type}: {entity_name}",
             company_id=company_id,
             plan_id=plan_id
         )
@@ -200,7 +200,7 @@ class LogService:
             entity_type=entity_type,
             entity_id=entity_id,
             entity_name=entity_name,
-            description=description or f"Visualização de {entity_type}" + (f": {entity_name}" if entity_name else ""),
+            description=description or f"VisualizaÃ§Ã£o de {entity_type}" + (f": {entity_name}" if entity_name else ""),
             company_id=company_id,
             plan_id=plan_id
         )
@@ -293,3 +293,4 @@ class LogService:
 
 # Global instance
 log_service = LogService()
+

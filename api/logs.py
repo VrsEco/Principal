@@ -1,4 +1,4 @@
-"""
+﻿"""
 User Logs API endpoints
 """
 
@@ -31,13 +31,13 @@ def list_logs():
         if start_date_str:
             try:
                 start_date = datetime.fromisoformat(start_date_str.replace('Z', '+00:00'))
-            except:
+            except Exception as exc:
                 start_date = None
         
         if end_date_str:
             try:
                 end_date = datetime.fromisoformat(end_date_str.replace('Z', '+00:00'))
-            except:
+            except Exception as exc:
                 end_date = None
         
         # Pagination
@@ -127,7 +127,7 @@ def get_log_stats():
     except Exception as e:
         return jsonify({
             'success': False,
-            'message': f'Erro ao obter estatísticas: {str(e)}'
+            'message': f'Erro ao obter estatÃ­sticas: {str(e)}'
         }), 500
 
 @logs_bp.route('/dashboard', methods=['GET'])
@@ -154,7 +154,7 @@ def user_activity():
     if not user:
         return jsonify({
             'success': False,
-            'message': 'Usuário não encontrado'
+            'message': 'UsuÃ¡rio nÃ£o encontrado'
         }), 404
     
     return render_template('logs/user_activity.html', target_user=user)
@@ -216,13 +216,13 @@ def export_logs():
         if start_date_str:
             try:
                 start_date = datetime.fromisoformat(start_date_str.replace('Z', '+00:00'))
-            except:
+            except Exception as exc:
                 start_date = None
         
         if end_date_str:
             try:
                 end_date = datetime.fromisoformat(end_date_str.replace('Z', '+00:00'))
-            except:
+            except Exception as exc:
                 end_date = None
         
         # Get all logs (no limit for export)
@@ -247,13 +247,13 @@ def export_logs():
         # Write header
         writer.writerow([
             'Data/Hora',
-            'Usuário',
+            'UsuÃ¡rio',
             'Email',
-            'Ação',
+            'AÃ§Ã£o',
             'Tipo de Entidade',
             'ID da Entidade',
             'Nome da Entidade',
-            'Descrição',
+            'DescriÃ§Ã£o',
             'IP',
             'Endpoint'
         ])
@@ -288,3 +288,4 @@ def export_logs():
             'success': False,
             'message': f'Erro ao exportar logs: {str(e)}'
         }), 500
+

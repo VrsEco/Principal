@@ -1,11 +1,12 @@
-#!/usr/bin/env python3
+﻿#!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 """
-Módulo de Geração de Relatórios Profissionais
+MÃ³dulo de GeraÃ§Ã£o de RelatÃ³rios Profissionais
 Sistema PEVAPP22
-Usando ReportLab + Plotly (compatível com Windows)
+Usando ReportLab + Plotly (compatÃ­vel com Windows)
 """
 
+import logging
 import os
 from database.postgres_helper import connect as pg_connect
 from datetime import datetime
@@ -18,6 +19,8 @@ from reportlab.platypus import (
     PageBreak, Image, KeepTogether
 )
 from reportlab.lib.enums import TA_CENTER, TA_RIGHT, TA_LEFT
+
+logger = logging.getLogger(__name__)
 from reportlab.pdfgen import canvas
 import plotly.graph_objects as go
 from plotly.subplots import make_subplots
@@ -25,14 +28,14 @@ from plotly.subplots import make_subplots
 
 class GeradorRelatoriosProfissionais:
     """
-    Classe para gerar relatórios profissionais em PDF
+    Classe para gerar relatÃ³rios profissionais em PDF
     Integrado ao sistema PEVAPP22
-    Usando ReportLab (compatível com Windows)
+    Usando ReportLab (compatÃ­vel com Windows)
     """
     
     def __init__(self, db_path=None):
         """
-        Inicializa o gerador de relatórios
+        Inicializa o gerador de relatÃ³rios
         
         Args:
             db_path: Caminho para o banco de dados SQLite (opcional)
@@ -41,25 +44,25 @@ class GeradorRelatoriosProfissionais:
         self.temp_dir = "temp_relatorios"
         self.output_dir = "relatorios"
         
-        # Cria diretórios se não existirem
+        # Cria diretÃ³rios se nÃ£o existirem
         os.makedirs(self.temp_dir, exist_ok=True)
         os.makedirs(self.output_dir, exist_ok=True)
         
-        # Configuração de estilos
+        # ConfiguraÃ§Ã£o de estilos
         self.styles = getSampleStyleSheet()
         self._criar_estilos_personalizados()
     
     def _get_connection(self):
-        """Cria uma conexão com o banco de dados"""
+        """Cria uma conexÃ£o com o banco de dados"""
         from database.postgres_helper import connect as pg_connect
         conn = pg_connect()
-        # PostgreSQL retorna Row objects por padrão
+        # PostgreSQL retorna Row objects por padrÃ£o
         return conn
     
     def _criar_estilos_personalizados(self):
         """Cria estilos personalizados para o documento"""
         
-        # Título principal
+        # TÃ­tulo principal
         self.styles.add(ParagraphStyle(
             name='TituloPrincipal',
             parent=self.styles['Heading1'],
@@ -69,7 +72,7 @@ class GeradorRelatoriosProfissionais:
             alignment=TA_CENTER
         ))
         
-        # Subtítulo
+        # SubtÃ­tulo
         self.styles.add(ParagraphStyle(
             name='Subtitulo',
             parent=self.styles['Normal'],
@@ -79,7 +82,7 @@ class GeradorRelatoriosProfissionais:
             alignment=TA_CENTER
         ))
         
-        # Título de seção
+        # TÃ­tulo de seÃ§Ã£o
         self.styles.add(ParagraphStyle(
             name='TituloSecao',
             parent=self.styles['Heading2'],
@@ -89,7 +92,7 @@ class GeradorRelatoriosProfissionais:
             spaceAfter=10
         ))
         
-        # Métrica
+        # MÃ©trica
         self.styles.add(ParagraphStyle(
             name='MetricaValor',
             parent=self.styles['Normal'],
@@ -108,7 +111,7 @@ class GeradorRelatoriosProfissionais:
         ))
     
     # ========================================
-    # MÉTODOS DE BUSCA DE DADOS
+    # MÃ‰TODOS DE BUSCA DE DADOS
     # ========================================
     
     def buscar_empresa(self, empresa_id):
@@ -161,12 +164,12 @@ class GeradorRelatoriosProfissionais:
         for row in cursor.fetchall():
             projetos.append({
                 'codigo': f'PRJ-{row[0]:03d}',
-                'nome': row[1] or 'Projeto sem título',
+                'nome': row[1] or 'Projeto sem tÃ­tulo',
                 'descricao': row[2] or '',
                 'status': row[3] or 'Planejamento',
                 'data_inicio': row[4],
                 'data_fim': row[5],
-                'investimento': 0.0,  # Não existe no banco, deixar zerado
+                'investimento': 0.0,  # NÃ£o existe no banco, deixar zerado
                 'responsavel': row[7] or '',
                 'prioridade': row[6] or ''
             })
@@ -175,7 +178,7 @@ class GeradorRelatoriosProfissionais:
         return projetos
     
     def calcular_metricas_empresa(self, empresa_id):
-        """Calcula métricas gerais da empresa"""
+        """Calcula mÃ©tricas gerais da empresa"""
         conn = self._get_connection()
         cursor = conn.cursor()
         
@@ -185,10 +188,10 @@ class GeradorRelatoriosProfissionais:
         """, (empresa_id,))
         total_projetos = cursor.fetchone()[0]
         
-        # Projetos concluídos
+        # Projetos concluÃ­dos
         cursor.execute("""
             SELECT COUNT(*) FROM company_projects 
-            WHERE company_id = ? AND status IN ('completed', 'Concluído')
+            WHERE company_id = ? AND status IN ('completed', 'ConcluÃ­do')
         """, (empresa_id,))
         projetos_concluidos = cursor.fetchone()[0]
         
@@ -201,23 +204,23 @@ class GeradorRelatoriosProfissionais:
         
         conn.close()
         
-        # Calcula eficiência
+        # Calcula eficiÃªncia
         eficiencia = (projetos_concluidos / total_projetos * 100) if total_projetos > 0 else 0
         
         return {
             'total_projetos': total_projetos,
             'projetos_concluidos': projetos_concluidos,
             'projetos_em_andamento': projetos_em_andamento,
-            'investimento_total': 0.0,  # Não há no banco
+            'investimento_total': 0.0,  # NÃ£o hÃ¡ no banco
             'eficiencia': round(eficiencia, 1)
         }
     
     # ========================================
-    # MÉTODOS DE GERAÇÃO DE GRÁFICOS
+    # MÃ‰TODOS DE GERAÃ‡ÃƒO DE GRÃFICOS
     # ========================================
     
     def gerar_grafico_projetos_status(self, empresa_id):
-        """Gera gráfico de pizza com status dos projetos"""
+        """Gera grÃ¡fico de pizza com status dos projetos"""
         conn = self._get_connection()
         cursor = conn.cursor()
         cursor.execute("""
@@ -240,7 +243,7 @@ class GeradorRelatoriosProfissionais:
         cores = {
             'Planejamento': '#ffc107',
             'Em Andamento': '#1a76ff',
-            'Concluído': '#28a745',
+            'ConcluÃ­do': '#28a745',
             'Pausado': '#dc3545',
             'Cancelado': '#6c757d'
         }
@@ -258,7 +261,7 @@ class GeradorRelatoriosProfissionais:
         
         fig.update_layout(
             title={
-                'text': 'Distribuição de Projetos por Status',
+                'text': 'DistribuiÃ§Ã£o de Projetos por Status',
                 'x': 0.5,
                 'xanchor': 'center',
                 'font': {'size': 16}
@@ -275,7 +278,7 @@ class GeradorRelatoriosProfissionais:
         return os.path.abspath(path)
     
     def gerar_grafico_investimentos(self, empresa_id):
-        """Gera gráfico de barras com investimentos por projeto"""
+        """Gera grÃ¡fico de barras com investimentos por projeto"""
         projetos = self.buscar_projetos(empresa_id)
         
         if not projetos:
@@ -321,7 +324,7 @@ class GeradorRelatoriosProfissionais:
         return os.path.abspath(path)
     
     # ========================================
-    # MÉTODOS AUXILIARES
+    # MÃ‰TODOS AUXILIARES
     # ========================================
     
     @staticmethod
@@ -333,7 +336,7 @@ class GeradorRelatoriosProfissionais:
     
     @staticmethod
     def format_date(data_str):
-        """Formata data para padrão brasileiro"""
+        """Formata data para padrÃ£o brasileiro"""
         if not data_str:
             return "-"
         try:
@@ -342,26 +345,26 @@ class GeradorRelatoriosProfissionais:
             else:
                 data = data_str
             return data.strftime('%d/%m/%Y')
-        except:
+        except Exception as exc:
             return data_str
     
     def limpar_temp(self):
-        """Remove arquivos temporários"""
+        """Remove arquivos temporÃ¡rios"""
         try:
             for arquivo in os.listdir(self.temp_dir):
                 file_path = os.path.join(self.temp_dir, arquivo)
                 if os.path.isfile(file_path):
                     os.remove(file_path)
         except Exception as e:
-            print(f"Erro ao limpar arquivos temporários: {e}")
+            logger.exception("Erro ao limpar arquivos temporÃ¡rios")
     
     # ========================================
-    # MÉTODO PRINCIPAL DE GERAÇÃO
+    # MÃ‰TODO PRINCIPAL DE GERAÃ‡ÃƒO
     # ========================================
     
     def gerar_relatorio_projetos(self, empresa_id):
         """
-        Gera relatório completo de projetos da empresa
+        Gera relatÃ³rio completo de projetos da empresa
         
         Args:
             empresa_id: ID da empresa
@@ -373,12 +376,12 @@ class GeradorRelatoriosProfissionais:
         # 1. Busca dados
         empresa = self.buscar_empresa(empresa_id)
         if not empresa:
-            raise ValueError(f"Empresa {empresa_id} não encontrada")
+            raise ValueError(f"Empresa {empresa_id} nÃ£o encontrada")
         
         projetos = self.buscar_projetos(empresa_id)
         metricas = self.calcular_metricas_empresa(empresa_id)
         
-        # 2. Gera gráficos
+        # 2. Gera grÃ¡ficos
         grafico_status = None
         grafico_investimentos = None
         
@@ -386,12 +389,12 @@ class GeradorRelatoriosProfissionais:
             try:
                 grafico_status = self.gerar_grafico_projetos_status(empresa_id)
             except Exception as e:
-                print(f"Aviso: Erro ao gerar gráfico de status: {e}")
+                logger.warning("Erro ao gerar grÃ¡fico de status: %s", e)
             
             try:
                 grafico_investimentos = self.gerar_grafico_investimentos(empresa_id)
             except Exception as e:
-                print(f"Aviso: Erro ao gerar gráfico de investimentos: {e}")
+                logger.warning("Erro ao gerar grÃ¡fico de investimentos: %s", e)
         
         # 3. Configura PDF
         timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
@@ -411,15 +414,15 @@ class GeradorRelatoriosProfissionais:
         # 4. Cria elementos do PDF
         story = []
         
-        # Cabeçalho
-        story.append(Paragraph("Relatório de Projetos", self.styles['TituloPrincipal']))
+        # CabeÃ§alho
+        story.append(Paragraph("RelatÃ³rio de Projetos", self.styles['TituloPrincipal']))
         story.append(Paragraph(
-            f"{empresa['nome']}<br/>Gerado em: {datetime.now().strftime('%d/%m/%Y às %H:%M')}",
+            f"{empresa['nome']}<br/>Gerado em: {datetime.now().strftime('%d/%m/%Y Ã s %H:%M')}",
             self.styles['Subtitulo']
         ))
         story.append(Spacer(1, 1*cm))
         
-        # Cards de Métricas
+        # Cards de MÃ©tricas
         metricas_data = [
             [
                 Paragraph('<br/>'.join([
@@ -428,7 +431,7 @@ class GeradorRelatoriosProfissionais:
                 ]), self.styles['Normal']),
                 Paragraph('<br/>'.join([
                     '<font size="20" color="#1a76ff"><b>' + str(metricas['projetos_concluidos']) + '</b></font>',
-                    '<font size="9" color="#666666">CONCLUÍDOS</font>'
+                    '<font size="9" color="#666666">CONCLUÃDOS</font>'
                 ]), self.styles['Normal']),
                 Paragraph('<br/>'.join([
                     '<font size="20" color="#1a76ff"><b>' + str(metricas['projetos_em_andamento']) + '</b></font>',
@@ -436,7 +439,7 @@ class GeradorRelatoriosProfissionais:
                 ]), self.styles['Normal']),
                 Paragraph('<br/>'.join([
                     '<font size="20" color="#1a76ff"><b>' + str(metricas['eficiencia']) + '%</b></font>',
-                    '<font size="9" color="#666666">TAXA DE CONCLUSÃO</font>'
+                    '<font size="9" color="#666666">TAXA DE CONCLUSÃƒO</font>'
                 ]), self.styles['Normal'])
             ]
         ]
@@ -456,23 +459,23 @@ class GeradorRelatoriosProfissionais:
         story.append(metricas_table)
         story.append(Spacer(1, 1*cm))
         
-        # Gráfico de Status
+        # GrÃ¡fico de Status
         if grafico_status and os.path.exists(grafico_status):
-            story.append(Paragraph("📊 Distribuição por Status", self.styles['TituloSecao']))
+            story.append(Paragraph("ðŸ“Š DistribuiÃ§Ã£o por Status", self.styles['TituloSecao']))
             try:
                 img = Image(grafico_status, width=18*cm, height=9*cm)
                 story.append(img)
                 story.append(Spacer(1, 0.5*cm))
             except Exception as e:
-                print(f"Erro ao adicionar gráfico de status: {e}")
+                logger.exception("Erro ao adicionar grÃ¡fico de status")
         
         # Tabela de Projetos
         if projetos:
-            story.append(Paragraph("📋 Lista de Projetos", self.styles['TituloSecao']))
+            story.append(Paragraph("ðŸ“‹ Lista de Projetos", self.styles['TituloSecao']))
             story.append(Spacer(1, 0.3*cm))
             
             # Prepara dados da tabela
-            tabela_data = [['Código', 'Projeto', 'Status', 'Início', 'Fim', 'Investimento']]
+            tabela_data = [['CÃ³digo', 'Projeto', 'Status', 'InÃ­cio', 'Fim', 'Investimento']]
             
             for projeto in projetos:
                 tabela_data.append([
@@ -493,7 +496,7 @@ class GeradorRelatoriosProfissionais:
             # Cria tabela
             tabela_projetos = Table(tabela_data, colWidths=[3*cm, 9*cm, 3.5*cm, 3*cm, 3*cm, 3.5*cm])
             tabela_projetos.setStyle(TableStyle([
-                # Cabeçalho
+                # CabeÃ§alho
                 ('BACKGROUND', (0, 0), (-1, 0), colors.HexColor('#1a76ff')),
                 ('TEXTCOLOR', (0, 0), (-1, 0), colors.white),
                 ('FONTNAME', (0, 0), (-1, 0), 'Helvetica-Bold'),
@@ -525,25 +528,25 @@ class GeradorRelatoriosProfissionais:
             story.append(tabela_projetos)
             story.append(Spacer(1, 1*cm))
         else:
-            story.append(Paragraph("⚠️ Nenhum projeto cadastrado", self.styles['Normal']))
+            story.append(Paragraph("âš ï¸ Nenhum projeto cadastrado", self.styles['Normal']))
             story.append(Spacer(1, 0.5*cm))
         
-        # Gráfico de Investimentos
+        # GrÃ¡fico de Investimentos
         if grafico_investimentos and os.path.exists(grafico_investimentos):
             story.append(PageBreak())
-            story.append(Paragraph("💰 Investimentos por Projeto", self.styles['TituloSecao']))
+            story.append(Paragraph("ðŸ’° Investimentos por Projeto", self.styles['TituloSecao']))
             try:
                 img = Image(grafico_investimentos, width=20*cm, height=10*cm)
                 story.append(img)
             except Exception as e:
-                print(f"Erro ao adicionar gráfico de investimentos: {e}")
+                logger.exception("Erro ao adicionar grÃ¡fico de investimentos")
         
-        # Rodapé
+        # RodapÃ©
         story.append(Spacer(1, 1*cm))
         rodape_text = f"""
         <para align="center">
-        <font size="10"><b>PEVAPP22 - Sistema de Gestão Empresarial</b></font><br/>
-        <font size="9" color="#666666">Documento gerado automaticamente em {datetime.now().strftime('%d/%m/%Y às %H:%M:%S')}</font>
+        <font size="10"><b>PEVAPP22 - Sistema de GestÃ£o Empresarial</b></font><br/>
+        <font size="9" color="#666666">Documento gerado automaticamente em {datetime.now().strftime('%d/%m/%Y Ã s %H:%M:%S')}</font>
         </para>
         """
         story.append(Paragraph(rodape_text, self.styles['Normal']))
@@ -551,19 +554,19 @@ class GeradorRelatoriosProfissionais:
         # 5. Gera PDF
         doc.build(story)
         
-        # 6. Limpa arquivos temporários
+        # 6. Limpa arquivos temporÃ¡rios
         self.limpar_temp()
         
         return output_path
 
 
 # ========================================
-# FUNÇÕES DE CONVENIÊNCIA
+# FUNÃ‡Ã•ES DE CONVENIÃŠNCIA
 # ========================================
 
 def gerar_relatorio_empresa(empresa_id):
     """
-    Função de conveniência para gerar relatório de projetos
+    FunÃ§Ã£o de conveniÃªncia para gerar relatÃ³rio de projetos
     
     Args:
         empresa_id: ID da empresa
@@ -576,9 +579,11 @@ def gerar_relatorio_empresa(empresa_id):
 
 
 if __name__ == "__main__":
-    # Teste rápido
-    print("Teste do Gerador de Relatórios Profissionais")
-    print("Para integrar ao Flask, use:")
-    print("  from modules.gerador_relatorios_reportlab import gerar_relatorio_empresa")
-    print("  pdf_path = gerar_relatorio_empresa(empresa_id)")
+    # Teste rÃ¡pido
+    logger.info("Teste do Gerador de RelatÃ³rios Profissionais")
+    logger.info("Para integrar ao Flask, use:")
+    logger.info("  from modules.gerador_relatorios_reportlab import gerar_relatorio_empresa")
+    logger.info("  pdf_path = gerar_relatorio_empresa(empresa_id)")
+
+
 

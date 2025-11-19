@@ -1,4 +1,4 @@
-"""
+﻿"""
 Audit Middleware
 Automatically logs all CRUD operations across the system
 """
@@ -45,7 +45,7 @@ class AuditMiddleware:
                         try:
                             entity_id = path_parts[i + 1]
                             break
-                        except:
+                        except Exception as exc:
                             pass
             
             elif '/plans/' in request.path:
@@ -57,7 +57,7 @@ class AuditMiddleware:
                         try:
                             entity_id = path_parts[i + 1]
                             break
-                        except:
+                        except Exception as exc:
                             pass
             
             elif '/participants/' in request.path:
@@ -69,7 +69,7 @@ class AuditMiddleware:
                         try:
                             entity_id = path_parts[i + 1]
                             break
-                        except:
+                        except Exception as exc:
                             pass
             
             # Store request info in g for use in response
@@ -207,7 +207,7 @@ def log_create(entity_type, get_entity_id=None, get_entity_name=None):
                     entity_id=entity_id,
                     entity_name=entity_name,
                     new_values=result.to_dict() if hasattr(result, 'to_dict') else None,
-                    description=f"Criação de {entity_type}"
+                    description=f"CriaÃ§Ã£o de {entity_type}"
                 )
             
             return result
@@ -242,7 +242,7 @@ def log_update(entity_type, get_entity_id=None, get_entity_name=None):
                     
                     if old_entity and hasattr(old_entity, 'to_dict'):
                         old_values = old_entity.to_dict()
-                except:
+                except Exception as exc:
                     pass
             
             # Call the original function
@@ -261,7 +261,7 @@ def log_update(entity_type, get_entity_id=None, get_entity_name=None):
                     entity_name=entity_name,
                     old_values=old_values,
                     new_values=new_values,
-                    description=f"Atualização de {entity_type}"
+                    description=f"AtualizaÃ§Ã£o de {entity_type}"
                 )
             
             return result
@@ -303,7 +303,7 @@ def log_delete(entity_type, get_entity_id=None, get_entity_name=None):
                             entity_name = get_entity_name(entity)
                         elif hasattr(entity, 'name'):
                             entity_name = entity.name
-                except:
+                except Exception as exc:
                     pass
             
             # Call the original function
@@ -315,9 +315,10 @@ def log_delete(entity_type, get_entity_id=None, get_entity_name=None):
                 entity_id=entity_id,
                 entity_name=entity_name,
                 old_values=old_values,
-                description=f"Exclusão de {entity_type}"
+                description=f"ExclusÃ£o de {entity_type}"
             )
             
             return result
         return decorated_function
     return decorator
+

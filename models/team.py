@@ -58,6 +58,8 @@ class TeamMember(db.Model):
     
     # Auditoria
     joined_at = db.Column(db.DateTime, default=datetime.utcnow, nullable=False)
+    created_at = db.Column(db.DateTime, default=datetime.utcnow, nullable=False)
+    updated_at = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
     left_at = db.Column(db.DateTime)
     
     # Constraint: Usuário não pode estar duplicado na mesma equipe
@@ -73,6 +75,8 @@ class TeamMember(db.Model):
             'employee_id': self.employee_id,
             'role': self.role,
             'joined_at': self.joined_at.isoformat() if self.joined_at else None,
+            'created_at': self.created_at.isoformat() if self.created_at else None,
+            'updated_at': self.updated_at.isoformat() if self.updated_at else None,
             'left_at': self.left_at.isoformat() if self.left_at else None
         }
     

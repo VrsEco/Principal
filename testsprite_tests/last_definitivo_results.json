@@ -1,0 +1,4561 @@
+{
+  "critical": [],
+  "warnings": [
+    {
+      "path": "/admin/purge/companies",
+      "method": "POST",
+      "status_code": 400,
+      "url": "http://localhost:5003/admin/purge/companies",
+      "status": "warning",
+      "details": "{\n  \"message\": \"Senha inv\\u00e1lida.\",\n  \"success\": false\n}\n"
+    },
+    {
+      "path": "/api/agents",
+      "method": "POST",
+      "status_code": 400,
+      "url": "http://localhost:5003/api/agents",
+      "status": "warning",
+      "details": "{\n  \"error\": \"Campo obrigat\\u00f3rio: name\",\n  \"success\": false\n}\n"
+    },
+    {
+      "path": "/api/companies",
+      "method": "POST",
+      "status_code": 400,
+      "url": "http://localhost:5003/api/companies",
+      "status": "warning",
+      "details": "{\n  \"error\": \"Nome da empresa \\u00e9 obrigat\\u00f3rio\",\n  \"success\": false\n}\n"
+    },
+    {
+      "path": "/api/companies/<int:company_id>",
+      "method": "DELETE",
+      "status_code": 404,
+      "url": "http://localhost:5003/api/companies/1",
+      "status": "warning",
+      "details": "{\n  \"error\": \"Empresa n\\u00e3o encontrada\",\n  \"success\": false\n}\n"
+    },
+    {
+      "path": "/api/companies/<int:company_id>",
+      "method": "GET",
+      "status_code": 404,
+      "url": "http://localhost:5003/api/companies/1",
+      "status": "warning",
+      "details": "{\n  \"error\": \"not_found\",\n  \"success\": false\n}\n"
+    },
+    {
+      "path": "/api/companies/<int:company_id>",
+      "method": "POST",
+      "status_code": 400,
+      "url": "http://localhost:5003/api/companies/1",
+      "status": "warning",
+      "details": "{\n  \"error\": \"Nome da empresa \\u00e9 obrigat\\u00f3rio\",\n  \"success\": false\n}\n"
+    },
+    {
+      "path": "/api/companies/<int:company_id>/employees",
+      "method": "GET",
+      "status_code": 404,
+      "url": "http://localhost:5003/api/companies/1/employees",
+      "status": "warning",
+      "details": "{\n  \"error\": \"Empresa n\\u00e3o encontrada.\",\n  \"success\": false\n}\n"
+    },
+    {
+      "path": "/api/companies/<int:company_id>/employees",
+      "method": "POST",
+      "status_code": 404,
+      "url": "http://localhost:5003/api/companies/1/employees",
+      "status": "warning",
+      "details": "{\n  \"error\": \"Empresa n\\u00e3o encontrada.\",\n  \"success\": false\n}\n"
+    },
+    {
+      "path": "/api/companies/<int:company_id>/employees/<int:employee_id>",
+      "method": "DELETE",
+      "status_code": 404,
+      "url": "http://localhost:5003/api/companies/1/employees/1",
+      "status": "warning",
+      "details": "{\n  \"error\": \"Empresa n\\u00e3o encontrada.\",\n  \"success\": false\n}\n"
+    },
+    {
+      "path": "/api/companies/<int:company_id>/employees/<int:employee_id>",
+      "method": "GET",
+      "status_code": 404,
+      "url": "http://localhost:5003/api/companies/1/employees/1",
+      "status": "warning",
+      "details": "{\n  \"error\": \"Empresa n\\u00e3o encontrada.\",\n  \"success\": false\n}\n"
+    },
+    {
+      "path": "/api/companies/<int:company_id>/employees/<int:employee_id>",
+      "method": "PUT",
+      "status_code": 404,
+      "url": "http://localhost:5003/api/companies/1/employees/1",
+      "status": "warning",
+      "details": "{\n  \"error\": \"Empresa n\\u00e3o encontrada.\",\n  \"success\": false\n}\n"
+    },
+    {
+      "path": "/api/companies/<int:company_id>/logos",
+      "method": "POST",
+      "status_code": 404,
+      "url": "http://localhost:5003/api/companies/1/logos",
+      "status": "warning",
+      "details": "{\n  \"error\": \"Empresa n\\u00e3o encontrada\",\n  \"success\": false\n}\n"
+    },
+    {
+      "path": "/api/companies/<int:company_id>/macro-processes",
+      "method": "POST",
+      "status_code": 400,
+      "url": "http://localhost:5003/api/companies/1/macro-processes",
+      "status": "warning",
+      "details": "{\n  \"error\": \"create_failed\",\n  \"success\": false\n}\n"
+    },
+    {
+      "path": "/api/companies/<int:company_id>/mvv",
+      "method": "GET",
+      "status_code": 404,
+      "url": "http://localhost:5003/api/companies/1/mvv",
+      "status": "warning",
+      "details": "{\n  \"error\": \"not_found\",\n  \"success\": false\n}\n"
+    },
+    {
+      "path": "/api/companies/<int:company_id>/occurrences",
+      "method": "POST",
+      "status_code": 400,
+      "url": "http://localhost:5003/api/companies/1/occurrences",
+      "status": "warning",
+      "details": "{\n  \"message\": \"Colaborador \\u00e9 obrigat\\u00f3rio.\",\n  \"success\": false\n}\n"
+    },
+    {
+      "path": "/api/companies/<int:company_id>/portfolios",
+      "method": "POST",
+      "status_code": 400,
+      "url": "http://localhost:5003/api/companies/1/portfolios",
+      "status": "warning",
+      "details": "{\n  \"message\": \"C\\u00f3digo do portf\\u00f3lio \\u00e9 obrigat\\u00f3rio.\",\n  \"success\": false\n}\n"
+    },
+    {
+      "path": "/api/companies/<int:company_id>/portfolios/<int:portfolio_id>",
+      "method": "DELETE",
+      "status_code": 404,
+      "url": "http://localhost:5003/api/companies/1/portfolios/1",
+      "status": "warning",
+      "details": "{\n  \"message\": \"Portf\\u00f3lio n\\u00e3o encontrado.\",\n  \"success\": false\n}\n"
+    },
+    {
+      "path": "/api/companies/<int:company_id>/portfolios/<int:portfolio_id>",
+      "method": "PUT",
+      "status_code": 400,
+      "url": "http://localhost:5003/api/companies/1/portfolios/1",
+      "status": "warning",
+      "details": "{\n  \"message\": \"C\\u00f3digo e nome s\\u00e3o obrigat\\u00f3rios.\",\n  \"success\": false\n}\n"
+    },
+    {
+      "path": "/api/companies/<int:company_id>/process-areas",
+      "method": "POST",
+      "status_code": 400,
+      "url": "http://localhost:5003/api/companies/1/process-areas",
+      "status": "warning",
+      "details": "{\n  \"error\": \"create_failed\",\n  \"success\": false\n}\n"
+    },
+    {
+      "path": "/api/companies/<int:company_id>/process-instances",
+      "method": "POST",
+      "status_code": 400,
+      "url": "http://localhost:5003/api/companies/1/process-instances",
+      "status": "warning",
+      "details": "{\n  \"error\": \"Missing required fields\"\n}\n"
+    },
+    {
+      "path": "/api/companies/<int:company_id>/process-routines",
+      "method": "POST",
+      "status_code": 400,
+      "url": "http://localhost:5003/api/companies/1/process-routines",
+      "status": "warning",
+      "details": "{\n  \"message\": \"Nome \\u00e9 obrigat\\u00f3rio\",\n  \"success\": false\n}\n"
+    },
+    {
+      "path": "/api/companies/<int:company_id>/processes",
+      "method": "POST",
+      "status_code": 400,
+      "url": "http://localhost:5003/api/companies/1/processes",
+      "status": "warning",
+      "details": "{\n  \"error\": \"create_failed\",\n  \"success\": false\n}\n"
+    },
+    {
+      "path": "/api/companies/<int:company_id>/projects/<int:project_id>",
+      "method": "DELETE",
+      "status_code": 404,
+      "url": "http://localhost:5003/api/companies/1/projects/1",
+      "status": "warning",
+      "details": "{\n  \"message\": \"Projeto n\\u00e3o encontrado.\",\n  \"success\": false\n}\n"
+    },
+    {
+      "path": "/api/companies/<int:company_id>/projects/<int:project_id>",
+      "method": "PUT",
+      "status_code": 404,
+      "url": "http://localhost:5003/api/companies/1/projects/1",
+      "status": "warning",
+      "details": "{\n  \"message\": \"Projeto n\\u00e3o encontrado.\",\n  \"success\": false\n}\n"
+    },
+    {
+      "path": "/api/companies/<int:company_id>/projects/<int:project_id>/activities",
+      "method": "GET",
+      "status_code": 404,
+      "url": "http://localhost:5003/api/companies/1/projects/1/activities",
+      "status": "warning",
+      "details": "{\n  \"message\": \"Projeto n\\u00e3o encontrado.\",\n  \"success\": false\n}\n"
+    },
+    {
+      "path": "/api/companies/<int:company_id>/projects/<int:project_id>/activities",
+      "method": "POST",
+      "status_code": 400,
+      "url": "http://localhost:5003/api/companies/1/projects/1/activities",
+      "status": "warning",
+      "details": "{\n  \"message\": \"Descri\\u00e7\\u00e3o da atividade \\u00e9 obrigat\\u00f3ria.\",\n  \"success\": false\n}\n"
+    },
+    {
+      "path": "/api/companies/<int:company_id>/projects/<int:project_id>/info",
+      "method": "GET",
+      "status_code": 404,
+      "url": "http://localhost:5003/api/companies/1/projects/1/info",
+      "status": "warning",
+      "details": "{\n  \"message\": \"Projeto n\\u00e3o encontrado.\",\n  \"success\": false\n}\n"
+    },
+    {
+      "path": "/api/companies/<int:company_id>/roles",
+      "method": "POST",
+      "status_code": 400,
+      "url": "http://localhost:5003/api/companies/1/roles",
+      "status": "warning",
+      "details": "{\n  \"error\": \"create_failed\",\n  \"success\": false\n}\n"
+    },
+    {
+      "path": "/api/companies/<int:company_id>/routines",
+      "method": "POST",
+      "status_code": 400,
+      "url": "http://localhost:5003/api/companies/1/routines",
+      "status": "warning",
+      "details": "{\n  \"error\": \"Nome \\u00e9 obrigat\\u00f3rio\",\n  \"success\": false\n}\n"
+    },
+    {
+      "path": "/api/plans",
+      "method": "POST",
+      "status_code": 400,
+      "url": "http://localhost:5003/api/plans",
+      "status": "warning",
+      "details": "{\n  \"error\": \"Nome do planejamento \\u00e9 obrigat\\u00f3rio\",\n  \"success\": false\n}\n"
+    },
+    {
+      "path": "/api/plans/<int:plan_id>",
+      "method": "GET",
+      "status_code": 404,
+      "url": "http://localhost:5003/api/plans/1",
+      "status": "warning",
+      "details": "{\n  \"error\": \"Planejamento n\\u00e3o encontrado\",\n  \"success\": false\n}\n"
+    },
+    {
+      "path": "/api/relatorios/projetos/<int:company_id>",
+      "method": "GET",
+      "status_code": 500,
+      "url": "http://localhost:5003/api/relatorios/projetos/1",
+      "status": "warning",
+      "details": "{\n  \"error\": \"N\\ufffdo foi poss\\ufffdvel gerar o relat\\ufffdrio profissional. WeasyPrint: Empresa 1 n\\u00e3o encontrada\",\n  \"success\": false\n}\n"
+    },
+    {
+      "path": "/api/report-templates",
+      "method": "POST",
+      "status_code": 400,
+      "url": "http://localhost:5003/api/report-templates",
+      "status": "warning",
+      "details": "{\n  \"error\": \"Dados n\\u00e3o fornecidos\"\n}\n"
+    },
+    {
+      "path": "/api/routine-tasks/<int:task_id>/status",
+      "method": "PUT",
+      "status_code": 400,
+      "url": "http://localhost:5003/api/routine-tasks/1/status",
+      "status": "warning",
+      "details": "{\n  \"error\": \"Status \\u00e9 obrigat\\u00f3rio\",\n  \"success\": false\n}\n"
+    },
+    {
+      "path": "/companies/<int:company_id>",
+      "method": "GET",
+      "status_code": 404,
+      "url": "http://localhost:5003/companies/1",
+      "status": "warning",
+      "details": "<!doctype html>\n<html lang=en>\n<title>404 Not Found</title>\n<h1>Not Found</h1>\n<p>The requested URL was not found on the server. If you entered the URL manually please check your spelling and try agai"
+    },
+    {
+      "path": "/companies/<int:company_id>/edit",
+      "method": "GET",
+      "status_code": 404,
+      "url": "http://localhost:5003/companies/1/edit",
+      "status": "warning",
+      "details": "<!doctype html>\n<html lang=en>\n<title>404 Not Found</title>\n<h1>Not Found</h1>\n<p>The requested URL was not found on the server. If you entered the URL manually please check your spelling and try agai"
+    },
+    {
+      "path": "/companies/<int:company_id>/logos",
+      "method": "GET",
+      "status_code": 404,
+      "url": "http://localhost:5003/companies/1/logos",
+      "status": "warning",
+      "details": "<!doctype html>\n<html lang=en>\n<title>404 Not Found</title>\n<h1>Not Found</h1>\n<p>The requested URL was not found on the server. If you entered the URL manually please check your spelling and try agai"
+    },
+    {
+      "path": "/companies/<int:company_id>/routine-tasks",
+      "method": "GET",
+      "status_code": 404,
+      "url": "http://localhost:5003/companies/1/routine-tasks",
+      "status": "warning",
+      "details": "<!doctype html>\n<html lang=en>\n<title>404 Not Found</title>\n<h1>Not Found</h1>\n<p>The requested URL was not found on the server. If you entered the URL manually please check your spelling and try agai"
+    },
+    {
+      "path": "/companies/<int:company_id>/routines",
+      "method": "GET",
+      "status_code": 404,
+      "url": "http://localhost:5003/companies/1/routines",
+      "status": "warning",
+      "details": "<!doctype html>\n<html lang=en>\n<title>404 Not Found</title>\n<h1>Not Found</h1>\n<p>The requested URL was not found on the server. If you entered the URL manually please check your spelling and try agai"
+    },
+    {
+      "path": "/plans/<plan_id>",
+      "method": "GET",
+      "status_code": 404,
+      "url": "http://localhost:5003/plans/1",
+      "status": "warning",
+      "details": "<!doctype html>\n<html lang=en>\n<title>404 Not Found</title>\n<h1>Not Found</h1>\n<p>The requested URL was not found on the server. If you entered the URL manually please check your spelling and try agai"
+    },
+    {
+      "path": "/plans/<plan_id>/alignment-records",
+      "method": "POST",
+      "status_code": 404,
+      "url": "http://localhost:5003/plans/1/alignment-records",
+      "status": "warning",
+      "details": "<!doctype html>\n<html lang=en>\n<title>404 Not Found</title>\n<h1>Not Found</h1>\n<p>The requested URL was not found on the server. If you entered the URL manually please check your spelling and try agai"
+    },
+    {
+      "path": "/plans/<plan_id>/company",
+      "method": "GET",
+      "status_code": 404,
+      "url": "http://localhost:5003/plans/1/company",
+      "status": "warning",
+      "details": "<!doctype html>\n<html lang=en>\n<title>404 Not Found</title>\n<h1>Not Found</h1>\n<p>The requested URL was not found on the server. If you entered the URL manually please check your spelling and try agai"
+    },
+    {
+      "path": "/plans/<plan_id>/company",
+      "method": "POST",
+      "status_code": 404,
+      "url": "http://localhost:5003/plans/1/company",
+      "status": "warning",
+      "details": "<!doctype html>\n<html lang=en>\n<title>404 Not Found</title>\n<h1>Not Found</h1>\n<p>The requested URL was not found on the server. If you entered the URL manually please check your spelling and try agai"
+    },
+    {
+      "path": "/plans/<plan_id>/company-records",
+      "method": "POST",
+      "status_code": 404,
+      "url": "http://localhost:5003/plans/1/company-records",
+      "status": "warning",
+      "details": "<!doctype html>\n<html lang=en>\n<title>404 Not Found</title>\n<h1>Not Found</h1>\n<p>The requested URL was not found on the server. If you entered the URL manually please check your spelling and try agai"
+    },
+    {
+      "path": "/plans/<plan_id>/company-records/<company_id>",
+      "method": "GET",
+      "status_code": 404,
+      "url": "http://localhost:5003/plans/1/company-records/1",
+      "status": "warning",
+      "details": "{\n  \"error\": \"Possibilidades da empresa n\\u00e3o encontradas\",\n  \"success\": false\n}\n"
+    },
+    {
+      "path": "/plans/<plan_id>/company/delete-file",
+      "method": "POST",
+      "status_code": 400,
+      "url": "http://localhost:5003/plans/1/company/delete-file",
+      "status": "warning",
+      "details": "{\n  \"error\": \"Par\\u00e2metros inv\\u00e1lidos\",\n  \"success\": false\n}\n"
+    },
+    {
+      "path": "/plans/<plan_id>/directional-records",
+      "method": "POST",
+      "status_code": 404,
+      "url": "http://localhost:5003/plans/1/directional-records",
+      "status": "warning",
+      "details": "<!doctype html>\n<html lang=en>\n<title>404 Not Found</title>\n<h1>Not Found</h1>\n<p>The requested URL was not found on the server. If you entered the URL manually please check your spelling and try agai"
+    },
+    {
+      "path": "/plans/<plan_id>/directionals-approvals",
+      "method": "POST",
+      "status_code": 404,
+      "url": "http://localhost:5003/plans/1/directionals-approvals",
+      "status": "warning",
+      "details": "<!doctype html>\n<html lang=en>\n<title>404 Not Found</title>\n<h1>Not Found</h1>\n<p>The requested URL was not found on the server. If you entered the URL manually please check your spelling and try agai"
+    },
+    {
+      "path": "/plans/<plan_id>/drivers",
+      "method": "GET",
+      "status_code": 404,
+      "url": "http://localhost:5003/plans/1/drivers",
+      "status": "warning",
+      "details": "<!doctype html>\n<html lang=en>\n<title>404 Not Found</title>\n<h1>Not Found</h1>\n<p>The requested URL was not found on the server. If you entered the URL manually please check your spelling and try agai"
+    },
+    {
+      "path": "/plans/<plan_id>/drivers",
+      "method": "POST",
+      "status_code": 404,
+      "url": "http://localhost:5003/plans/1/drivers",
+      "status": "warning",
+      "details": "<!doctype html>\n<html lang=en>\n<title>404 Not Found</title>\n<h1>Not Found</h1>\n<p>The requested URL was not found on the server. If you entered the URL manually please check your spelling and try agai"
+    },
+    {
+      "path": "/plans/<plan_id>/interviews",
+      "method": "POST",
+      "status_code": 404,
+      "url": "http://localhost:5003/plans/1/interviews",
+      "status": "warning",
+      "details": "<!doctype html>\n<html lang=en>\n<title>404 Not Found</title>\n<h1>Not Found</h1>\n<p>The requested URL was not found on the server. If you entered the URL manually please check your spelling and try agai"
+    },
+    {
+      "path": "/plans/<plan_id>/market-records",
+      "method": "POST",
+      "status_code": 404,
+      "url": "http://localhost:5003/plans/1/market-records",
+      "status": "warning",
+      "details": "<!doctype html>\n<html lang=en>\n<title>404 Not Found</title>\n<h1>Not Found</h1>\n<p>The requested URL was not found on the server. If you entered the URL manually please check your spelling and try agai"
+    },
+    {
+      "path": "/plans/<plan_id>/misalignment-records",
+      "method": "POST",
+      "status_code": 404,
+      "url": "http://localhost:5003/plans/1/misalignment-records",
+      "status": "warning",
+      "details": "<!doctype html>\n<html lang=en>\n<title>404 Not Found</title>\n<h1>Not Found</h1>\n<p>The requested URL was not found on the server. If you entered the URL manually please check your spelling and try agai"
+    },
+    {
+      "path": "/plans/<plan_id>/okr-area",
+      "method": "GET",
+      "status_code": 404,
+      "url": "http://localhost:5003/plans/1/okr-area",
+      "status": "warning",
+      "details": "<!doctype html>\n<html lang=en>\n<title>404 Not Found</title>\n<h1>Not Found</h1>\n<p>The requested URL was not found on the server. If you entered the URL manually please check your spelling and try agai"
+    },
+    {
+      "path": "/plans/<plan_id>/okr-area/final",
+      "method": "POST",
+      "status_code": 404,
+      "url": "http://localhost:5003/plans/1/okr-area/final",
+      "status": "warning",
+      "details": "<!doctype html>\n<html lang=en>\n<title>404 Not Found</title>\n<h1>Not Found</h1>\n<p>The requested URL was not found on the server. If you entered the URL manually please check your spelling and try agai"
+    },
+    {
+      "path": "/plans/<plan_id>/okr-area/final-discussions",
+      "method": "POST",
+      "status_code": 404,
+      "url": "http://localhost:5003/plans/1/okr-area/final-discussions",
+      "status": "warning",
+      "details": "<!doctype html>\n<html lang=en>\n<title>404 Not Found</title>\n<h1>Not Found</h1>\n<p>The requested URL was not found on the server. If you entered the URL manually please check your spelling and try agai"
+    },
+    {
+      "path": "/plans/<plan_id>/okr-area/final-discussions/delete",
+      "method": "POST",
+      "status_code": 404,
+      "url": "http://localhost:5003/plans/1/okr-area/final-discussions/delete",
+      "status": "warning",
+      "details": "<!doctype html>\n<html lang=en>\n<title>404 Not Found</title>\n<h1>Not Found</h1>\n<p>The requested URL was not found on the server. If you entered the URL manually please check your spelling and try agai"
+    },
+    {
+      "path": "/plans/<plan_id>/okr-area/preliminary",
+      "method": "POST",
+      "status_code": 404,
+      "url": "http://localhost:5003/plans/1/okr-area/preliminary",
+      "status": "warning",
+      "details": "<!doctype html>\n<html lang=en>\n<title>404 Not Found</title>\n<h1>Not Found</h1>\n<p>The requested URL was not found on the server. If you entered the URL manually please check your spelling and try agai"
+    },
+    {
+      "path": "/plans/<plan_id>/okr-area/workshop",
+      "method": "POST",
+      "status_code": 404,
+      "url": "http://localhost:5003/plans/1/okr-area/workshop",
+      "status": "warning",
+      "details": "<!doctype html>\n<html lang=en>\n<title>404 Not Found</title>\n<h1>Not Found</h1>\n<p>The requested URL was not found on the server. If you entered the URL manually please check your spelling and try agai"
+    },
+    {
+      "path": "/plans/<plan_id>/okr-area/workshop-discussions",
+      "method": "POST",
+      "status_code": 404,
+      "url": "http://localhost:5003/plans/1/okr-area/workshop-discussions",
+      "status": "warning",
+      "details": "<!doctype html>\n<html lang=en>\n<title>404 Not Found</title>\n<h1>Not Found</h1>\n<p>The requested URL was not found on the server. If you entered the URL manually please check your spelling and try agai"
+    },
+    {
+      "path": "/plans/<plan_id>/okr-area/workshop-discussions/delete",
+      "method": "POST",
+      "status_code": 404,
+      "url": "http://localhost:5003/plans/1/okr-area/workshop-discussions/delete",
+      "status": "warning",
+      "details": "<!doctype html>\n<html lang=en>\n<title>404 Not Found</title>\n<h1>Not Found</h1>\n<p>The requested URL was not found on the server. If you entered the URL manually please check your spelling and try agai"
+    },
+    {
+      "path": "/plans/<plan_id>/okr-global",
+      "method": "GET",
+      "status_code": 404,
+      "url": "http://localhost:5003/plans/1/okr-global",
+      "status": "warning",
+      "details": "<!doctype html>\n<html lang=en>\n<title>404 Not Found</title>\n<h1>Not Found</h1>\n<p>The requested URL was not found on the server. If you entered the URL manually please check your spelling and try agai"
+    },
+    {
+      "path": "/plans/<plan_id>/okr-global/approval",
+      "method": "POST",
+      "status_code": 404,
+      "url": "http://localhost:5003/plans/1/okr-global/approval",
+      "status": "warning",
+      "details": "<!doctype html>\n<html lang=en>\n<title>404 Not Found</title>\n<h1>Not Found</h1>\n<p>The requested URL was not found on the server. If you entered the URL manually please check your spelling and try agai"
+    },
+    {
+      "path": "/plans/<plan_id>/okr-global/approval-discussions",
+      "method": "POST",
+      "status_code": 404,
+      "url": "http://localhost:5003/plans/1/okr-global/approval-discussions",
+      "status": "warning",
+      "details": "<!doctype html>\n<html lang=en>\n<title>404 Not Found</title>\n<h1>Not Found</h1>\n<p>The requested URL was not found on the server. If you entered the URL manually please check your spelling and try agai"
+    },
+    {
+      "path": "/plans/<plan_id>/okr-global/approval-discussions/delete",
+      "method": "POST",
+      "status_code": 404,
+      "url": "http://localhost:5003/plans/1/okr-global/approval-discussions/delete",
+      "status": "warning",
+      "details": "<!doctype html>\n<html lang=en>\n<title>404 Not Found</title>\n<h1>Not Found</h1>\n<p>The requested URL was not found on the server. If you entered the URL manually please check your spelling and try agai"
+    },
+    {
+      "path": "/plans/<plan_id>/okr-global/approval/<record_id>",
+      "method": "POST",
+      "status_code": 404,
+      "url": "http://localhost:5003/plans/1/okr-global/approval/1",
+      "status": "warning",
+      "details": "<!doctype html>\n<html lang=en>\n<title>404 Not Found</title>\n<h1>Not Found</h1>\n<p>The requested URL was not found on the server. If you entered the URL manually please check your spelling and try agai"
+    },
+    {
+      "path": "/plans/<plan_id>/okr-global/approval/<record_id>/delete",
+      "method": "POST",
+      "status_code": 404,
+      "url": "http://localhost:5003/plans/1/okr-global/approval/1/delete",
+      "status": "warning",
+      "details": "<!doctype html>\n<html lang=en>\n<title>404 Not Found</title>\n<h1>Not Found</h1>\n<p>The requested URL was not found on the server. If you entered the URL manually please check your spelling and try agai"
+    },
+    {
+      "path": "/plans/<plan_id>/okr-global/preliminary",
+      "method": "POST",
+      "status_code": 404,
+      "url": "http://localhost:5003/plans/1/okr-global/preliminary",
+      "status": "warning",
+      "details": "<!doctype html>\n<html lang=en>\n<title>404 Not Found</title>\n<h1>Not Found</h1>\n<p>The requested URL was not found on the server. If you entered the URL manually please check your spelling and try agai"
+    },
+    {
+      "path": "/plans/<plan_id>/okr-global/preliminary/<record_id>",
+      "method": "GET",
+      "status_code": 404,
+      "url": "http://localhost:5003/plans/1/okr-global/preliminary/1",
+      "status": "warning",
+      "details": "{\n  \"message\": \"Registro n\\u00e3o encontrado\",\n  \"success\": false\n}\n"
+    },
+    {
+      "path": "/plans/<plan_id>/okr-global/preliminary/<record_id>",
+      "method": "POST",
+      "status_code": 404,
+      "url": "http://localhost:5003/plans/1/okr-global/preliminary/1",
+      "status": "warning",
+      "details": "<!doctype html>\n<html lang=en>\n<title>404 Not Found</title>\n<h1>Not Found</h1>\n<p>The requested URL was not found on the server. If you entered the URL manually please check your spelling and try agai"
+    },
+    {
+      "path": "/plans/<plan_id>/okr-global/preliminary/<record_id>/delete",
+      "method": "POST",
+      "status_code": 404,
+      "url": "http://localhost:5003/plans/1/okr-global/preliminary/1/delete",
+      "status": "warning",
+      "details": "<!doctype html>\n<html lang=en>\n<title>404 Not Found</title>\n<h1>Not Found</h1>\n<p>The requested URL was not found on the server. If you entered the URL manually please check your spelling and try agai"
+    },
+    {
+      "path": "/plans/<plan_id>/okr-global/workshop",
+      "method": "POST",
+      "status_code": 404,
+      "url": "http://localhost:5003/plans/1/okr-global/workshop",
+      "status": "warning",
+      "details": "<!doctype html>\n<html lang=en>\n<title>404 Not Found</title>\n<h1>Not Found</h1>\n<p>The requested URL was not found on the server. If you entered the URL manually please check your spelling and try agai"
+    },
+    {
+      "path": "/plans/<plan_id>/okr-global/workshop-discussions",
+      "method": "POST",
+      "status_code": 404,
+      "url": "http://localhost:5003/plans/1/okr-global/workshop-discussions",
+      "status": "warning",
+      "details": "<!doctype html>\n<html lang=en>\n<title>404 Not Found</title>\n<h1>Not Found</h1>\n<p>The requested URL was not found on the server. If you entered the URL manually please check your spelling and try agai"
+    },
+    {
+      "path": "/plans/<plan_id>/okr-global/workshop-discussions/delete",
+      "method": "POST",
+      "status_code": 404,
+      "url": "http://localhost:5003/plans/1/okr-global/workshop-discussions/delete",
+      "status": "warning",
+      "details": "<!doctype html>\n<html lang=en>\n<title>404 Not Found</title>\n<h1>Not Found</h1>\n<p>The requested URL was not found on the server. If you entered the URL manually please check your spelling and try agai"
+    },
+    {
+      "path": "/plans/<plan_id>/okr-global/workshop/<record_id>",
+      "method": "POST",
+      "status_code": 404,
+      "url": "http://localhost:5003/plans/1/okr-global/workshop/1",
+      "status": "warning",
+      "details": "<!doctype html>\n<html lang=en>\n<title>404 Not Found</title>\n<h1>Not Found</h1>\n<p>The requested URL was not found on the server. If you entered the URL manually please check your spelling and try agai"
+    },
+    {
+      "path": "/plans/<plan_id>/okr-global/workshop/<record_id>/delete",
+      "method": "POST",
+      "status_code": 404,
+      "url": "http://localhost:5003/plans/1/okr-global/workshop/1/delete",
+      "status": "warning",
+      "details": "<!doctype html>\n<html lang=en>\n<title>404 Not Found</title>\n<h1>Not Found</h1>\n<p>The requested URL was not found on the server. If you entered the URL manually please check your spelling and try agai"
+    },
+    {
+      "path": "/plans/<plan_id>/participants",
+      "method": "GET",
+      "status_code": 404,
+      "url": "http://localhost:5003/plans/1/participants",
+      "status": "warning",
+      "details": "<!doctype html>\n<html lang=en>\n<title>404 Not Found</title>\n<h1>Not Found</h1>\n<p>The requested URL was not found on the server. If you entered the URL manually please check your spelling and try agai"
+    },
+    {
+      "path": "/plans/<plan_id>/participants",
+      "method": "POST",
+      "status_code": 500,
+      "url": "http://localhost:5003/plans/1/participants",
+      "status": "warning",
+      "details": "{\n  \"error\": \"Erro ao adicionar participante\",\n  \"success\": false\n}\n"
+    },
+    {
+      "path": "/plans/<plan_id>/participants/toggle/<int:employee_id>",
+      "method": "POST",
+      "status_code": 500,
+      "url": "http://localhost:5003/plans/1/participants/toggle/1",
+      "status": "warning",
+      "details": "{\n  \"error\": \"404 Not Found: The requested URL was not found on the server. If you entered the URL manually please check your spelling and try again.\",\n  \"success\": false\n}\n"
+    },
+    {
+      "path": "/plans/<plan_id>/projects",
+      "method": "GET",
+      "status_code": 500,
+      "url": "http://localhost:5003/plans/1/projects",
+      "status": "warning",
+      "details": "<html>\n  <head>\n    <title>Internal Server Error</title>\n  </head>\n  <body>\n    <h1><p>Internal Server Error</p></h1>\n    \n  </body>\n</html>\n"
+    },
+    {
+      "path": "/plans/<plan_id>/projects",
+      "method": "POST",
+      "status_code": 500,
+      "url": "http://localhost:5003/plans/1/projects",
+      "status": "warning",
+      "details": "<html>\n  <head>\n    <title>Internal Server Error</title>\n  </head>\n  <body>\n    <h1><p>Internal Server Error</p></h1>\n    \n  </body>\n</html>\n"
+    },
+    {
+      "path": "/plans/<plan_id>/projects/<int:project_id>",
+      "method": "POST",
+      "status_code": 500,
+      "url": "http://localhost:5003/plans/1/projects/1",
+      "status": "warning",
+      "details": "<html>\n  <head>\n    <title>Internal Server Error</title>\n  </head>\n  <body>\n    <h1><p>Internal Server Error</p></h1>\n    \n  </body>\n</html>\n"
+    },
+    {
+      "path": "/plans/<plan_id>/projects/<int:project_id>/delete",
+      "method": "POST",
+      "status_code": 500,
+      "url": "http://localhost:5003/plans/1/projects/1/delete",
+      "status": "warning",
+      "details": "<html>\n  <head>\n    <title>Internal Server Error</title>\n  </head>\n  <body>\n    <h1><p>Internal Server Error</p></h1>\n    \n  </body>\n</html>\n"
+    },
+    {
+      "path": "/plans/<plan_id>/projects/<int:project_id>/edit",
+      "method": "GET",
+      "status_code": 500,
+      "url": "http://localhost:5003/plans/1/projects/1/edit",
+      "status": "warning",
+      "details": "<html>\n  <head>\n    <title>Internal Server Error</title>\n  </head>\n  <body>\n    <h1><p>Internal Server Error</p></h1>\n    \n  </body>\n</html>\n"
+    },
+    {
+      "path": "/plans/<plan_id>/projects/analysis",
+      "method": "POST",
+      "status_code": 500,
+      "url": "http://localhost:5003/plans/1/projects/analysis",
+      "status": "warning",
+      "details": "<html>\n  <head>\n    <title>Internal Server Error</title>\n  </head>\n  <body>\n    <h1><p>Internal Server Error</p></h1>\n    \n  </body>\n</html>\n"
+    },
+    {
+      "path": "/plans/<plan_id>/reports",
+      "method": "GET",
+      "status_code": 404,
+      "url": "http://localhost:5003/plans/1/reports",
+      "status": "warning",
+      "details": "<!doctype html>\n<html lang=en>\n<title>404 Not Found</title>\n<h1>Not Found</h1>\n<p>The requested URL was not found on the server. If you entered the URL manually please check your spelling and try agai"
+    },
+    {
+      "path": "/plans/<plan_id>/reports/formal",
+      "method": "GET",
+      "status_code": 404,
+      "url": "http://localhost:5003/plans/1/reports/formal",
+      "status": "warning",
+      "details": "<!doctype html>\n<html lang=en>\n<title>404 Not Found</title>\n<h1>Not Found</h1>\n<p>The requested URL was not found on the server. If you entered the URL manually please check your spelling and try agai"
+    },
+    {
+      "path": "/plans/<plan_id>/reports/slides",
+      "method": "GET",
+      "status_code": 404,
+      "url": "http://localhost:5003/plans/1/reports/slides",
+      "status": "warning",
+      "details": "<!doctype html>\n<html lang=en>\n<title>404 Not Found</title>\n<h1>Not Found</h1>\n<p>The requested URL was not found on the server. If you entered the URL manually please check your spelling and try agai"
+    },
+    {
+      "path": "/plans/<plan_id>/sections/alignment/consultant-notes",
+      "method": "POST",
+      "status_code": 404,
+      "url": "http://localhost:5003/plans/1/sections/alignment/consultant-notes",
+      "status": "warning",
+      "details": "<!doctype html>\n<html lang=en>\n<title>404 Not Found</title>\n<h1>Not Found</h1>\n<p>The requested URL was not found on the server. If you entered the URL manually please check your spelling and try agai"
+    },
+    {
+      "path": "/plans/<plan_id>/sections/company/status",
+      "method": "POST",
+      "status_code": 400,
+      "url": "http://localhost:5003/plans/1/sections/company/status",
+      "status": "warning",
+      "details": "{\n  \"error\": \"Status inv\\u00e1lido\",\n  \"success\": false\n}\n"
+    },
+    {
+      "path": "/plans/<plan_id>/sections/directionals/consultant-analysis",
+      "method": "POST",
+      "status_code": 404,
+      "url": "http://localhost:5003/plans/1/sections/directionals/consultant-analysis",
+      "status": "warning",
+      "details": "<!doctype html>\n<html lang=en>\n<title>404 Not Found</title>\n<h1>Not Found</h1>\n<p>The requested URL was not found on the server. If you entered the URL manually please check your spelling and try agai"
+    },
+    {
+      "path": "/plans/<plan_id>/sections/misalignment/consultant-notes",
+      "method": "POST",
+      "status_code": 404,
+      "url": "http://localhost:5003/plans/1/sections/misalignment/consultant-notes",
+      "status": "warning",
+      "details": "<!doctype html>\n<html lang=en>\n<title>404 Not Found</title>\n<h1>Not Found</h1>\n<p>The requested URL was not found on the server. If you entered the URL manually please check your spelling and try agai"
+    },
+    {
+      "path": "/plans/<plan_id>/sections/workshop/consultant-notes",
+      "method": "POST",
+      "status_code": 404,
+      "url": "http://localhost:5003/plans/1/sections/workshop/consultant-notes",
+      "status": "warning",
+      "details": "<!doctype html>\n<html lang=en>\n<title>404 Not Found</title>\n<h1>Not Found</h1>\n<p>The requested URL was not found on the server. If you entered the URL manually please check your spelling and try agai"
+    },
+    {
+      "path": "/plans/<plan_id>/vision-records",
+      "method": "POST",
+      "status_code": 404,
+      "url": "http://localhost:5003/plans/1/vision-records",
+      "status": "warning",
+      "details": "<!doctype html>\n<html lang=en>\n<title>404 Not Found</title>\n<h1>Not Found</h1>\n<p>The requested URL was not found on the server. If you entered the URL manually please check your spelling and try agai"
+    },
+    {
+      "path": "/plans/<plan_id>/workshop-adjustments",
+      "method": "POST",
+      "status_code": 404,
+      "url": "http://localhost:5003/plans/1/workshop-adjustments",
+      "status": "warning",
+      "details": "<!doctype html>\n<html lang=en>\n<title>404 Not Found</title>\n<h1>Not Found</h1>\n<p>The requested URL was not found on the server. If you entered the URL manually please check your spelling and try agai"
+    },
+    {
+      "path": "/relatorios/projetos/<int:company_id>",
+      "method": "GET",
+      "status_code": 500,
+      "url": "http://localhost:5003/relatorios/projetos/1",
+      "status": "warning",
+      "details": "<html>\n  <head>\n    <title>Internal Server Error</title>\n  </head>\n  <body>\n    <h1><p>Internal Server Error</p></h1>\n    \n  </body>\n</html>\n"
+    },
+    {
+      "path": "/report-templates",
+      "method": "GET",
+      "status": "warning",
+      "status_code": null,
+      "details": "('Connection aborted.', RemoteDisconnected('Remote end closed connection without response'))"
+    },
+    {
+      "path": "/auth/change-password",
+      "method": "POST",
+      "status_code": 400,
+      "url": "http://localhost:5003/auth/change-password",
+      "status": "warning",
+      "details": "{\n  \"message\": \"Senha atual e nova senha s\\u00e3o obrigat\\u00f3rias\",\n  \"success\": false\n}\n"
+    },
+    {
+      "path": "/auth/register",
+      "method": "POST",
+      "status_code": 403,
+      "url": "http://localhost:5003/auth/register",
+      "status": "warning",
+      "details": "{\n  \"message\": \"Acesso negado\",\n  \"success\": false\n}\n"
+    },
+    {
+      "path": "/grv/api/company/<int:company_id>/indicator-data",
+      "method": "POST",
+      "status_code": 400,
+      "url": "http://localhost:5003/grv/api/company/1/indicator-data",
+      "status": "warning",
+      "details": "{\n  \"message\": \"(psycopg2.errors.SyntaxError) ERRO:  erro de sintaxe em ou pr\\u00f3ximo a \\\",\\\"\\nLINE 4:             VALUES (1, NULL, ?, ?, ?)\\n                                      ^\\n\\n[SQL: \\n     "
+    },
+    {
+      "path": "/grv/api/company/<int:company_id>/indicator-goals",
+      "method": "POST",
+      "status_code": 400,
+      "url": "http://localhost:5003/grv/api/company/1/indicator-goals",
+      "status": "warning",
+      "details": "{\n  \"message\": \"Indicador obrigatorio nao informado ou invalido.\",\n  \"success\": false\n}\n"
+    },
+    {
+      "path": "/grv/api/company/<int:company_id>/indicator-groups",
+      "method": "POST",
+      "status_code": 400,
+      "url": "http://localhost:5003/grv/api/company/1/indicator-groups",
+      "status": "warning",
+      "details": "{\n  \"message\": \"(psycopg2.errors.SyntaxError) ERRO:  erro de sintaxe em ou pr\\u00f3ximo a \\\",\\\"\\nLINE 4:             VALUES (1, NULL, ?, ?, ?)\\n                                      ^\\n\\n[SQL: \\n     "
+    },
+    {
+      "path": "/grv/api/company/<int:company_id>/indicators",
+      "method": "POST",
+      "status_code": 400,
+      "url": "http://localhost:5003/grv/api/company/1/indicators",
+      "status": "warning",
+      "details": "{\n  \"message\": \"(psycopg2.errors.SyntaxError) ERRO:  erro de sintaxe em ou pr\\u00f3ximo a \\\",\\\"\\nLINE 7:             VALUES (1, NULL, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?...\\n                              "
+    },
+    {
+      "path": "/grv/company/<int:company_id>",
+      "method": "GET",
+      "status_code": 404,
+      "url": "http://localhost:5003/grv/company/1",
+      "status": "warning",
+      "details": "<!doctype html>\n<html lang=en>\n<title>404 Not Found</title>\n<h1>Not Found</h1>\n<p>The requested URL was not found on the server. If you entered the URL manually please check your spelling and try agai"
+    },
+    {
+      "path": "/grv/company/<int:company_id>/identity/mvv",
+      "method": "GET",
+      "status_code": 500,
+      "url": "http://localhost:5003/grv/company/1/identity/mvv",
+      "status": "warning",
+      "details": "<html>\n  <head>\n    <title>Internal Server Error</title>\n  </head>\n  <body>\n    <h1><p>Internal Server Error</p></h1>\n    \n  </body>\n</html>\n"
+    },
+    {
+      "path": "/grv/company/<int:company_id>/identity/org-chart",
+      "method": "GET",
+      "status_code": 500,
+      "url": "http://localhost:5003/grv/company/1/identity/org-chart",
+      "status": "warning",
+      "details": "<html>\n  <head>\n    <title>Internal Server Error</title>\n  </head>\n  <body>\n    <h1><p>Internal Server Error</p></h1>\n    \n  </body>\n</html>\n"
+    },
+    {
+      "path": "/grv/company/<int:company_id>/identity/roles",
+      "method": "GET",
+      "status_code": 500,
+      "url": "http://localhost:5003/grv/company/1/identity/roles",
+      "status": "warning",
+      "details": "<html>\n  <head>\n    <title>Internal Server Error</title>\n  </head>\n  <body>\n    <h1><p>Internal Server Error</p></h1>\n    \n  </body>\n</html>\n"
+    },
+    {
+      "path": "/grv/company/<int:company_id>/indicators/analysis",
+      "method": "GET",
+      "status_code": 500,
+      "url": "http://localhost:5003/grv/company/1/indicators/analysis",
+      "status": "warning",
+      "details": "<html>\n  <head>\n    <title>Internal Server Error</title>\n  </head>\n  <body>\n    <h1><p>Internal Server Error</p></h1>\n    \n  </body>\n</html>\n"
+    },
+    {
+      "path": "/grv/company/<int:company_id>/indicators/data",
+      "method": "GET",
+      "status_code": 500,
+      "url": "http://localhost:5003/grv/company/1/indicators/data",
+      "status": "warning",
+      "details": "<html>\n  <head>\n    <title>Internal Server Error</title>\n  </head>\n  <body>\n    <h1><p>Internal Server Error</p></h1>\n    \n  </body>\n</html>\n"
+    },
+    {
+      "path": "/grv/company/<int:company_id>/indicators/goals",
+      "method": "GET",
+      "status_code": 500,
+      "url": "http://localhost:5003/grv/company/1/indicators/goals",
+      "status": "warning",
+      "details": "<html>\n  <head>\n    <title>Internal Server Error</title>\n  </head>\n  <body>\n    <h1><p>Internal Server Error</p></h1>\n    \n  </body>\n</html>\n"
+    },
+    {
+      "path": "/grv/company/<int:company_id>/indicators/list",
+      "method": "GET",
+      "status_code": 500,
+      "url": "http://localhost:5003/grv/company/1/indicators/list",
+      "status": "warning",
+      "details": "<html>\n  <head>\n    <title>Internal Server Error</title>\n  </head>\n  <body>\n    <h1><p>Internal Server Error</p></h1>\n    \n  </body>\n</html>\n"
+    },
+    {
+      "path": "/grv/company/<int:company_id>/indicators/tree",
+      "method": "GET",
+      "status_code": 500,
+      "url": "http://localhost:5003/grv/company/1/indicators/tree",
+      "status": "warning",
+      "details": "<html>\n  <head>\n    <title>Internal Server Error</title>\n  </head>\n  <body>\n    <h1><p>Internal Server Error</p></h1>\n    \n  </body>\n</html>\n"
+    },
+    {
+      "path": "/grv/company/<int:company_id>/process/analysis",
+      "method": "GET",
+      "status_code": 500,
+      "url": "http://localhost:5003/grv/company/1/process/analysis",
+      "status": "warning",
+      "details": "<html>\n  <head>\n    <title>Internal Server Error</title>\n  </head>\n  <body>\n    <h1><p>Internal Server Error</p></h1>\n    \n  </body>\n</html>\n"
+    },
+    {
+      "path": "/grv/company/<int:company_id>/process/instances",
+      "method": "GET",
+      "status_code": 500,
+      "url": "http://localhost:5003/grv/company/1/process/instances",
+      "status": "warning",
+      "details": "<html>\n  <head>\n    <title>Internal Server Error</title>\n  </head>\n  <body>\n    <h1><p>Internal Server Error</p></h1>\n    \n  </body>\n</html>\n"
+    },
+    {
+      "path": "/grv/company/<int:company_id>/process/list",
+      "method": "GET",
+      "status_code": 500,
+      "url": "http://localhost:5003/grv/company/1/process/list",
+      "status": "warning",
+      "details": "<html>\n  <head>\n    <title>Internal Server Error</title>\n  </head>\n  <body>\n    <h1><p>Internal Server Error</p></h1>\n    \n  </body>\n</html>\n"
+    },
+    {
+      "path": "/grv/company/<int:company_id>/process/macro",
+      "method": "GET",
+      "status_code": 500,
+      "url": "http://localhost:5003/grv/company/1/process/macro",
+      "status": "warning",
+      "details": "<html>\n  <head>\n    <title>Internal Server Error</title>\n  </head>\n  <body>\n    <h1><p>Internal Server Error</p></h1>\n    \n  </body>\n</html>\n"
+    },
+    {
+      "path": "/grv/company/<int:company_id>/process/map",
+      "method": "GET",
+      "status_code": 500,
+      "url": "http://localhost:5003/grv/company/1/process/map",
+      "status": "warning",
+      "details": "<html>\n  <head>\n    <title>Internal Server Error</title>\n  </head>\n  <body>\n    <h1><p>Internal Server Error</p></h1>\n    \n  </body>\n</html>\n"
+    },
+    {
+      "path": "/grv/company/<int:company_id>/process/map/pdf",
+      "method": "GET",
+      "status_code": 404,
+      "url": "http://localhost:5003/grv/company/1/process/map/pdf",
+      "status": "warning",
+      "details": "<!doctype html>\n<html lang=en>\n<title>404 Not Found</title>\n<h1>Not Found</h1>\n<p>The requested URL was not found on the server. If you entered the URL manually please check your spelling and try agai"
+    },
+    {
+      "path": "/grv/company/<int:company_id>/process/map/pdf/debug",
+      "method": "GET",
+      "status_code": 404,
+      "url": "http://localhost:5003/grv/company/1/process/map/pdf/debug",
+      "status": "warning",
+      "details": "<!doctype html>\n<html lang=en>\n<title>404 Not Found</title>\n<h1>Not Found</h1>\n<p>The requested URL was not found on the server. If you entered the URL manually please check your spelling and try agai"
+    },
+    {
+      "path": "/grv/company/<int:company_id>/process/map/pdf2",
+      "method": "GET",
+      "status_code": 404,
+      "url": "http://localhost:5003/grv/company/1/process/map/pdf2",
+      "status": "warning",
+      "details": "<!doctype html>\n<html lang=en>\n<title>404 Not Found</title>\n<h1>Not Found</h1>\n<p>The requested URL was not found on the server. If you entered the URL manually please check your spelling and try agai"
+    },
+    {
+      "path": "/grv/company/<int:company_id>/process/map/pdf2/debug",
+      "method": "GET",
+      "status_code": 404,
+      "url": "http://localhost:5003/grv/company/1/process/map/pdf2/debug",
+      "status": "warning",
+      "details": "<!doctype html>\n<html lang=en>\n<title>404 Not Found</title>\n<h1>Not Found</h1>\n<p>The requested URL was not found on the server. If you entered the URL manually please check your spelling and try agai"
+    },
+    {
+      "path": "/grv/company/<int:company_id>/process/map/print",
+      "method": "GET",
+      "status_code": 404,
+      "url": "http://localhost:5003/grv/company/1/process/map/print",
+      "status": "warning",
+      "details": "<!doctype html>\n<html lang=en>\n<title>404 Not Found</title>\n<h1>Not Found</h1>\n<p>The requested URL was not found on the server. If you entered the URL manually please check your spelling and try agai"
+    },
+    {
+      "path": "/grv/company/<int:company_id>/process/modeling",
+      "method": "GET",
+      "status_code": 500,
+      "url": "http://localhost:5003/grv/company/1/process/modeling",
+      "status": "warning",
+      "details": "<html>\n  <head>\n    <title>Internal Server Error</title>\n  </head>\n  <body>\n    <h1><p>Internal Server Error</p></h1>\n    \n  </body>\n</html>\n"
+    },
+    {
+      "path": "/grv/company/<int:company_id>/project/<int:project_id>",
+      "method": "GET",
+      "status_code": 404,
+      "url": "http://localhost:5003/grv/company/1/project/1",
+      "status": "warning",
+      "details": "<!doctype html>\n<html lang=en>\n<title>404 Not Found</title>\n<h1>Not Found</h1>\n<p>The requested URL was not found on the server. If you entered the URL manually please check your spelling and try agai"
+    },
+    {
+      "path": "/grv/company/<int:company_id>/projects/<int:project_id>/manage",
+      "method": "GET",
+      "status_code": 404,
+      "url": "http://localhost:5003/grv/company/1/projects/1/manage",
+      "status": "warning",
+      "details": "<!doctype html>\n<html lang=en>\n<title>404 Not Found</title>\n<h1>Not Found</h1>\n<p>The requested URL was not found on the server. If you entered the URL manually please check your spelling and try agai"
+    },
+    {
+      "path": "/grv/company/<int:company_id>/projects/analysis",
+      "method": "GET",
+      "status_code": 500,
+      "url": "http://localhost:5003/grv/company/1/projects/analysis",
+      "status": "warning",
+      "details": "<html>\n  <head>\n    <title>Internal Server Error</title>\n  </head>\n  <body>\n    <h1><p>Internal Server Error</p></h1>\n    \n  </body>\n</html>\n"
+    },
+    {
+      "path": "/grv/company/<int:company_id>/projects/portfolios",
+      "method": "GET",
+      "status_code": 500,
+      "url": "http://localhost:5003/grv/company/1/projects/portfolios",
+      "status": "warning",
+      "details": "<html>\n  <head>\n    <title>Internal Server Error</title>\n  </head>\n  <body>\n    <h1><p>Internal Server Error</p></h1>\n    \n  </body>\n</html>\n"
+    },
+    {
+      "path": "/grv/company/<int:company_id>/projects/projects",
+      "method": "GET",
+      "status_code": 500,
+      "url": "http://localhost:5003/grv/company/1/projects/projects",
+      "status": "warning",
+      "details": "<html>\n  <head>\n    <title>Internal Server Error</title>\n  </head>\n  <body>\n    <h1><p>Internal Server Error</p></h1>\n    \n  </body>\n</html>\n"
+    },
+    {
+      "path": "/grv/company/<int:company_id>/routine/activities",
+      "method": "GET",
+      "status_code": 500,
+      "url": "http://localhost:5003/grv/company/1/routine/activities",
+      "status": "warning",
+      "details": "<html>\n  <head>\n    <title>Internal Server Error</title>\n  </head>\n  <body>\n    <h1><p>Internal Server Error</p></h1>\n    \n  </body>\n</html>\n"
+    },
+    {
+      "path": "/grv/company/<int:company_id>/routine/capacity",
+      "method": "GET",
+      "status_code": 500,
+      "url": "http://localhost:5003/grv/company/1/routine/capacity",
+      "status": "warning",
+      "details": "<html>\n  <head>\n    <title>Internal Server Error</title>\n  </head>\n  <body>\n    <h1><p>Internal Server Error</p></h1>\n    \n  </body>\n</html>\n"
+    },
+    {
+      "path": "/grv/company/<int:company_id>/routine/efficiency",
+      "method": "GET",
+      "status_code": 500,
+      "url": "http://localhost:5003/grv/company/1/routine/efficiency",
+      "status": "warning",
+      "details": "<html>\n  <head>\n    <title>Internal Server Error</title>\n  </head>\n  <body>\n    <h1><p>Internal Server Error</p></h1>\n    \n  </body>\n</html>\n"
+    },
+    {
+      "path": "/grv/company/<int:company_id>/routine/incidents",
+      "method": "GET",
+      "status_code": 500,
+      "url": "http://localhost:5003/grv/company/1/routine/incidents",
+      "status": "warning",
+      "details": "<html>\n  <head>\n    <title>Internal Server Error</title>\n  </head>\n  <body>\n    <h1><p>Internal Server Error</p></h1>\n    \n  </body>\n</html>\n"
+    },
+    {
+      "path": "/grv/company/<int:company_id>/routine/work-distribution",
+      "method": "GET",
+      "status_code": 500,
+      "url": "http://localhost:5003/grv/company/1/routine/work-distribution",
+      "status": "warning",
+      "details": "<html>\n  <head>\n    <title>Internal Server Error</title>\n  </head>\n  <body>\n    <h1><p>Internal Server Error</p></h1>\n    \n  </body>\n</html>\n"
+    },
+    {
+      "path": "/meetings/api/company/<int:company_id>/meetings",
+      "method": "GET",
+      "status_code": 404,
+      "url": "http://localhost:5003/meetings/api/company/1/meetings",
+      "status": "warning",
+      "details": "{\n  \"error\": \"company_not_found\",\n  \"success\": false\n}\n"
+    },
+    {
+      "path": "/meetings/api/company/<int:company_id>/meetings/report",
+      "method": "GET",
+      "status_code": 404,
+      "url": "http://localhost:5003/meetings/api/company/1/meetings/report",
+      "status": "warning",
+      "details": "{\n  \"error\": \"company_not_found\",\n  \"success\": false\n}\n"
+    },
+    {
+      "path": "/meetings/api/meeting/<int:meeting_id>",
+      "method": "DELETE",
+      "status_code": 404,
+      "url": "http://localhost:5003/meetings/api/meeting/1",
+      "status": "warning",
+      "details": "{\n  \"message\": \"Reuni\\u00e3o n\\u00e3o encontrada.\",\n  \"success\": false\n}\n"
+    },
+    {
+      "path": "/meetings/company/<int:company_id>/meeting/<int:meeting_id>/delete",
+      "method": "POST",
+      "status_code": 404,
+      "url": "http://localhost:5003/meetings/company/1/meeting/1/delete",
+      "status": "warning",
+      "details": "{\n  \"message\": \"Reuni\\u00e3o n\\u00e3o encontrada\",\n  \"success\": false\n}\n"
+    },
+    {
+      "path": "/pev/api/implantacao/<int:plan_id>/alignment/members",
+      "method": "POST",
+      "status_code": 400,
+      "url": "http://localhost:5003/pev/api/implantacao/1/alignment/members",
+      "status": "warning",
+      "details": "{\n  \"error\": \"Nome \\u00e9 obrigat\\u00f3rio\",\n  \"success\": false\n}\n"
+    },
+    {
+      "path": "/pev/api/implantacao/<int:plan_id>/alignment/overview",
+      "method": "POST",
+      "status_code": 500,
+      "url": "http://localhost:5003/pev/api/implantacao/1/alignment/overview",
+      "status": "warning",
+      "details": "{\n  \"error\": \"(psycopg2.errors.ForeignKeyViolation) ERRO:  inser\\u00e7\\u00e3o ou atualiza\\u00e7\\u00e3o em tabela \\\"plan_alignment_overview\\\" viola restri\\u00e7\\u00e3o de chave estrangeira \\\"plan_align"
+    },
+    {
+      "path": "/pev/api/implantacao/<int:plan_id>/alignment/overview",
+      "method": "PUT",
+      "status_code": 500,
+      "url": "http://localhost:5003/pev/api/implantacao/1/alignment/overview",
+      "status": "warning",
+      "details": "{\n  \"error\": \"(psycopg2.errors.ForeignKeyViolation) ERRO:  inser\\u00e7\\u00e3o ou atualiza\\u00e7\\u00e3o em tabela \\\"plan_alignment_overview\\\" viola restri\\u00e7\\u00e3o de chave estrangeira \\\"plan_align"
+    },
+    {
+      "path": "/pev/api/implantacao/<int:plan_id>/finance/capital-giro",
+      "method": "POST",
+      "status_code": 400,
+      "url": "http://localhost:5003/pev/api/implantacao/1/finance/capital-giro",
+      "status": "warning",
+      "details": "{\n  \"error\": \"Tipo \\u00e9 obrigat\\u00f3rio (caixa, recebiveis, estoques)\",\n  \"success\": false\n}\n"
+    },
+    {
+      "path": "/pev/api/implantacao/<int:plan_id>/finance/executive-summary",
+      "method": "PUT",
+      "status_code": 400,
+      "url": "http://localhost:5003/pev/api/implantacao/1/finance/executive-summary",
+      "status": "warning",
+      "details": "{\n  \"error\": \"Campo executive_summary \\u00e9 obrigat\\u00f3rio\",\n  \"success\": false\n}\n"
+    },
+    {
+      "path": "/pev/api/implantacao/<int:plan_id>/finance/investments",
+      "method": "POST",
+      "status_code": 400,
+      "url": "http://localhost:5003/pev/api/implantacao/1/finance/investments",
+      "status": "warning",
+      "details": "{\n  \"error\": \"Descri\\u00e7\\u00e3o \\u00e9 obrigat\\u00f3ria\",\n  \"success\": false\n}\n"
+    },
+    {
+      "path": "/pev/api/implantacao/<int:plan_id>/finance/metrics",
+      "method": "PUT",
+      "status_code": 500,
+      "url": "http://localhost:5003/pev/api/implantacao/1/finance/metrics",
+      "status": "warning",
+      "details": "{\n  \"error\": \"Erro ao atualizar m\\u00e9tricas\",\n  \"success\": false\n}\n"
+    },
+    {
+      "path": "/pev/api/implantacao/<int:plan_id>/finance/premises",
+      "method": "POST",
+      "status_code": 400,
+      "url": "http://localhost:5003/pev/api/implantacao/1/finance/premises",
+      "status": "warning",
+      "details": "{\n  \"error\": \"Descri\\u00e7\\u00e3o \\u00e9 obrigat\\u00f3ria\",\n  \"success\": false\n}\n"
+    },
+    {
+      "path": "/pev/api/implantacao/<int:plan_id>/finance/profit-distribution",
+      "method": "PUT",
+      "status_code": 400,
+      "url": "http://localhost:5003/pev/api/implantacao/1/finance/profit-distribution",
+      "status": "warning",
+      "details": "{\n  \"error\": \"Campo profit_distribution_percent \\u00e9 obrigat\\u00f3rio\",\n  \"success\": false\n}\n"
+    },
+    {
+      "path": "/pev/api/implantacao/<int:plan_id>/finance/result_rules",
+      "method": "POST",
+      "status_code": 400,
+      "url": "http://localhost:5003/pev/api/implantacao/1/finance/result_rules",
+      "status": "warning",
+      "details": "{\n  \"error\": \"Descri\\u00e7\\u00e3o \\u00e9 obrigat\\u00f3ria\",\n  \"success\": false\n}\n"
+    },
+    {
+      "path": "/pev/api/implantacao/<int:plan_id>/finance/sources",
+      "method": "POST",
+      "status_code": 400,
+      "url": "http://localhost:5003/pev/api/implantacao/1/finance/sources",
+      "status": "warning",
+      "details": "{\n  \"error\": \"Descri\\u00e7\\u00e3o \\u00e9 obrigat\\u00f3ria\",\n  \"success\": false\n}\n"
+    },
+    {
+      "path": "/pev/api/implantacao/<int:plan_id>/finance/variable_costs",
+      "method": "POST",
+      "status_code": 400,
+      "url": "http://localhost:5003/pev/api/implantacao/1/finance/variable_costs",
+      "status": "warning",
+      "details": "{\n  \"error\": \"Descri\\u00e7\\u00e3o \\u00e9 obrigat\\u00f3ria\",\n  \"success\": false\n}\n"
+    },
+    {
+      "path": "/pev/api/implantacao/<int:plan_id>/products",
+      "method": "POST",
+      "status_code": 400,
+      "url": "http://localhost:5003/pev/api/implantacao/1/products",
+      "status": "warning",
+      "details": "{\n  \"error\": \"Plano informado nao existe.\",\n  \"success\": false\n}\n"
+    },
+    {
+      "path": "/pev/api/implantacao/<int:plan_id>/products/<int:product_id>",
+      "method": "DELETE",
+      "status_code": 404,
+      "url": "http://localhost:5003/pev/api/implantacao/1/products/1",
+      "status": "warning",
+      "details": "{\n  \"error\": \"Produto nao encontrado.\",\n  \"success\": false\n}\n"
+    },
+    {
+      "path": "/pev/api/implantacao/<int:plan_id>/products/<int:product_id>",
+      "method": "GET",
+      "status_code": 404,
+      "url": "http://localhost:5003/pev/api/implantacao/1/products/1",
+      "status": "warning",
+      "details": "{\n  \"error\": \"Produto nao encontrado.\",\n  \"success\": false\n}\n"
+    },
+    {
+      "path": "/pev/api/implantacao/<int:plan_id>/products/<int:product_id>",
+      "method": "PUT",
+      "status_code": 404,
+      "url": "http://localhost:5003/pev/api/implantacao/1/products/1",
+      "status": "warning",
+      "details": "{\n  \"error\": \"Produto nao encontrado.\",\n  \"success\": false\n}\n"
+    },
+    {
+      "path": "/pev/api/implantacao/<int:plan_id>/segments",
+      "method": "POST",
+      "status_code": 400,
+      "url": "http://localhost:5003/pev/api/implantacao/1/segments",
+      "status": "warning",
+      "details": "{\n  \"error\": \"Nome \\u00e9 obrigat\\u00f3rio\",\n  \"success\": false\n}\n"
+    },
+    {
+      "path": "/pev/api/implantacao/<int:plan_id>/structures",
+      "method": "POST",
+      "status_code": 500,
+      "url": "http://localhost:5003/pev/api/implantacao/1/structures",
+      "status": "warning",
+      "details": "{\n  \"error\": \"Erro ao criar estrutura no banco\",\n  \"success\": false\n}\n"
+    },
+    {
+      "path": "/pev/api/implantacao/<int:plan_id>/structures/<int:structure_id>",
+      "method": "GET",
+      "status_code": 404,
+      "url": "http://localhost:5003/pev/api/implantacao/1/structures/1",
+      "status": "warning",
+      "details": "{\n  \"error\": \"Estrutura n\\u00e3o encontrada\",\n  \"success\": false\n}\n"
+    },
+    {
+      "path": "/pev/api/implantacao/<int:plan_id>/structures/<int:structure_id>/installments",
+      "method": "DELETE",
+      "status_code": 404,
+      "url": "http://localhost:5003/pev/api/implantacao/1/structures/1/installments",
+      "status": "warning",
+      "details": "{\n  \"error\": \"Estrutura nao encontrada\",\n  \"success\": false\n}\n"
+    },
+    {
+      "path": "/pev/api/implantacao/<int:plan_id>/structures/<int:structure_id>/installments",
+      "method": "POST",
+      "status_code": 404,
+      "url": "http://localhost:5003/pev/api/implantacao/1/structures/1/installments",
+      "status": "warning",
+      "details": "{\n  \"error\": \"Estrutura nao encontrada\",\n  \"success\": false\n}\n"
+    },
+    {
+      "path": "/pev/api/implantacao/<int:plan_id>/structures/capacities",
+      "method": "POST",
+      "status_code": 400,
+      "url": "http://localhost:5003/pev/api/implantacao/1/structures/capacities",
+      "status": "warning",
+      "details": "{\n  \"error\": \"Capacidade de faturamento \\u00e9 obrigat\\u00f3ria\",\n  \"success\": false\n}\n"
+    },
+    {
+      "path": "/pev/implantacao",
+      "method": "GET",
+      "status_code": 500,
+      "url": "http://localhost:5003/pev/implantacao",
+      "status": "warning",
+      "details": "<html>\n  <head>\n    <title>Internal Server Error</title>\n  </head>\n  <body>\n    <h1><p>Internal Server Error</p></h1>\n    \n  </body>\n</html>\n"
+    },
+    {
+      "path": "/pev/implantacao/alinhamento/agenda-planejamento",
+      "method": "GET",
+      "status_code": 500,
+      "url": "http://localhost:5003/pev/implantacao/alinhamento/agenda-planejamento",
+      "status": "warning",
+      "details": "<html>\n  <head>\n    <title>Internal Server Error</title>\n  </head>\n  <body>\n    <h1><p>Internal Server Error</p></h1>\n    \n  </body>\n</html>\n"
+    },
+    {
+      "path": "/pev/implantacao/alinhamento/canvas-expectativas",
+      "method": "GET",
+      "status_code": 500,
+      "url": "http://localhost:5003/pev/implantacao/alinhamento/canvas-expectativas",
+      "status": "warning",
+      "details": "<html>\n  <head>\n    <title>Internal Server Error</title>\n  </head>\n  <body>\n    <h1><p>Internal Server Error</p></h1>\n    \n  </body>\n</html>\n"
+    },
+    {
+      "path": "/pev/implantacao/entrega/relatorio-final",
+      "method": "GET",
+      "status_code": 500,
+      "url": "http://localhost:5003/pev/implantacao/entrega/relatorio-final",
+      "status": "warning",
+      "details": "<html>\n  <head>\n    <title>Internal Server Error</title>\n  </head>\n  <body>\n    <h1><p>Internal Server Error</p></h1>\n    \n  </body>\n</html>\n"
+    },
+    {
+      "path": "/pev/implantacao/executivo/estruturas",
+      "method": "GET",
+      "status_code": 500,
+      "url": "http://localhost:5003/pev/implantacao/executivo/estruturas",
+      "status": "warning",
+      "details": "<html>\n  <head>\n    <title>Internal Server Error</title>\n  </head>\n  <body>\n    <h1><p>Internal Server Error</p></h1>\n    \n  </body>\n</html>\n"
+    },
+    {
+      "path": "/pev/implantacao/modelo/canvas-proposta-valor",
+      "method": "GET",
+      "status_code": 500,
+      "url": "http://localhost:5003/pev/implantacao/modelo/canvas-proposta-valor",
+      "status": "warning",
+      "details": "<html>\n  <head>\n    <title>Internal Server Error</title>\n  </head>\n  <body>\n    <h1><p>Internal Server Error</p></h1>\n    \n  </body>\n</html>\n"
+    },
+    {
+      "path": "/pev/implantacao/modelo/mapa-persona",
+      "method": "GET",
+      "status_code": 500,
+      "url": "http://localhost:5003/pev/implantacao/modelo/mapa-persona",
+      "status": "warning",
+      "details": "<html>\n  <head>\n    <title>Internal Server Error</title>\n  </head>\n  <body>\n    <h1><p>Internal Server Error</p></h1>\n    \n  </body>\n</html>\n"
+    },
+    {
+      "path": "/pev/implantacao/modelo/matriz-diferenciais",
+      "method": "GET",
+      "status_code": 500,
+      "url": "http://localhost:5003/pev/implantacao/modelo/matriz-diferenciais",
+      "status": "warning",
+      "details": "<html>\n  <head>\n    <title>Internal Server Error</title>\n  </head>\n  <body>\n    <h1><p>Internal Server Error</p></h1>\n    \n  </body>\n</html>\n"
+    },
+    {
+      "path": "/pev/implantacao/modelo/modefin",
+      "method": "GET",
+      "status_code": 500,
+      "url": "http://localhost:5003/pev/implantacao/modelo/modefin",
+      "status": "warning",
+      "details": "<html>\n  <head>\n    <title>Internal Server Error</title>\n  </head>\n  <body>\n    <h1><p>Internal Server Error</p></h1>\n    \n  </body>\n</html>\n"
+    },
+    {
+      "path": "/pev/implantacao/modelo/modelagem-financeira",
+      "method": "GET",
+      "status_code": 500,
+      "url": "http://localhost:5003/pev/implantacao/modelo/modelagem-financeira",
+      "status": "warning",
+      "details": "<html>\n  <head>\n    <title>Internal Server Error</title>\n  </head>\n  <body>\n    <h1><p>Internal Server Error</p></h1>\n    \n  </body>\n</html>\n"
+    },
+    {
+      "path": "/pev/implantacao/modelo/produtos",
+      "method": "GET",
+      "status_code": 500,
+      "url": "http://localhost:5003/pev/implantacao/modelo/produtos",
+      "status": "warning",
+      "details": "<html>\n  <head>\n    <title>Internal Server Error</title>\n  </head>\n  <body>\n    <h1><p>Internal Server Error</p></h1>\n    \n  </body>\n</html>\n"
+    },
+    {
+      "path": "/pev/implantacao/relatorio/01-capa-resumo",
+      "method": "GET",
+      "status_code": 500,
+      "url": "http://localhost:5003/pev/implantacao/relatorio/01-capa-resumo",
+      "status": "warning",
+      "details": "<html>\n  <head>\n    <title>Internal Server Error</title>\n  </head>\n  <body>\n    <h1><p>Internal Server Error</p></h1>\n    \n  </body>\n</html>\n"
+    }
+  ],
+  "results": [
+    {
+      "path": "/",
+      "method": "GET",
+      "status_code": 200,
+      "url": "http://localhost:5003/",
+      "status": "ok"
+    },
+    {
+      "path": "/__routes",
+      "method": "GET",
+      "status_code": 200,
+      "url": "http://localhost:5003/__routes",
+      "status": "ok"
+    },
+    {
+      "path": "/admin/purge/companies",
+      "method": "POST",
+      "status_code": 400,
+      "url": "http://localhost:5003/admin/purge/companies",
+      "status": "warning",
+      "details": "{\n  \"message\": \"Senha inv\\u00e1lida.\",\n  \"success\": false\n}\n"
+    },
+    {
+      "path": "/api/agents",
+      "method": "GET",
+      "status_code": 200,
+      "url": "http://localhost:5003/api/agents",
+      "status": "ok"
+    },
+    {
+      "path": "/api/agents",
+      "method": "POST",
+      "status_code": 400,
+      "url": "http://localhost:5003/api/agents",
+      "status": "warning",
+      "details": "{\n  \"error\": \"Campo obrigat\\u00f3rio: name\",\n  \"success\": false\n}\n"
+    },
+    {
+      "path": "/api/agents/<agent_id>",
+      "method": "DELETE",
+      "status": "skipped",
+      "reason": "Placeholders n\u00e3o resolvidos"
+    },
+    {
+      "path": "/api/agents/<agent_id>",
+      "method": "GET",
+      "status": "skipped",
+      "reason": "Placeholders n\u00e3o resolvidos"
+    },
+    {
+      "path": "/api/agents/<agent_id>",
+      "method": "PUT",
+      "status": "skipped",
+      "reason": "Placeholders n\u00e3o resolvidos"
+    },
+    {
+      "path": "/api/agents/<agent_id>/run",
+      "method": "POST",
+      "status": "skipped",
+      "reason": "Placeholders n\u00e3o resolvidos"
+    },
+    {
+      "path": "/api/agents/available-buttons",
+      "method": "GET",
+      "status_code": 200,
+      "url": "http://localhost:5003/api/agents/available-buttons",
+      "status": "ok"
+    },
+    {
+      "path": "/api/agents/available-fields",
+      "method": "GET",
+      "status_code": 200,
+      "url": "http://localhost:5003/api/agents/available-fields",
+      "status": "ok"
+    },
+    {
+      "path": "/api/companies",
+      "method": "POST",
+      "status_code": 400,
+      "url": "http://localhost:5003/api/companies",
+      "status": "warning",
+      "details": "{\n  \"error\": \"Nome da empresa \\u00e9 obrigat\\u00f3rio\",\n  \"success\": false\n}\n"
+    },
+    {
+      "path": "/api/companies/<int:company_id>",
+      "method": "DELETE",
+      "status_code": 404,
+      "url": "http://localhost:5003/api/companies/1",
+      "status": "warning",
+      "details": "{\n  \"error\": \"Empresa n\\u00e3o encontrada\",\n  \"success\": false\n}\n"
+    },
+    {
+      "path": "/api/companies/<int:company_id>",
+      "method": "GET",
+      "status_code": 404,
+      "url": "http://localhost:5003/api/companies/1",
+      "status": "warning",
+      "details": "{\n  \"error\": \"not_found\",\n  \"success\": false\n}\n"
+    },
+    {
+      "path": "/api/companies/<int:company_id>",
+      "method": "POST",
+      "status_code": 400,
+      "url": "http://localhost:5003/api/companies/1",
+      "status": "warning",
+      "details": "{\n  \"error\": \"Nome da empresa \\u00e9 obrigat\\u00f3rio\",\n  \"success\": false\n}\n"
+    },
+    {
+      "path": "/api/companies/<int:company_id>/client-code",
+      "method": "POST",
+      "status_code": 200,
+      "url": "http://localhost:5003/api/companies/1/client-code",
+      "status": "ok"
+    },
+    {
+      "path": "/api/companies/<int:company_id>/economic",
+      "method": "POST",
+      "status_code": 200,
+      "url": "http://localhost:5003/api/companies/1/economic",
+      "status": "ok"
+    },
+    {
+      "path": "/api/companies/<int:company_id>/efficiency/collaborators",
+      "method": "GET",
+      "status_code": 200,
+      "url": "http://localhost:5003/api/companies/1/efficiency/collaborators",
+      "status": "ok"
+    },
+    {
+      "path": "/api/companies/<int:company_id>/employees",
+      "method": "GET",
+      "status_code": 404,
+      "url": "http://localhost:5003/api/companies/1/employees",
+      "status": "warning",
+      "details": "{\n  \"error\": \"Empresa n\\u00e3o encontrada.\",\n  \"success\": false\n}\n"
+    },
+    {
+      "path": "/api/companies/<int:company_id>/employees",
+      "method": "POST",
+      "status_code": 404,
+      "url": "http://localhost:5003/api/companies/1/employees",
+      "status": "warning",
+      "details": "{\n  \"error\": \"Empresa n\\u00e3o encontrada.\",\n  \"success\": false\n}\n"
+    },
+    {
+      "path": "/api/companies/<int:company_id>/employees/<int:employee_id>",
+      "method": "DELETE",
+      "status_code": 404,
+      "url": "http://localhost:5003/api/companies/1/employees/1",
+      "status": "warning",
+      "details": "{\n  \"error\": \"Empresa n\\u00e3o encontrada.\",\n  \"success\": false\n}\n"
+    },
+    {
+      "path": "/api/companies/<int:company_id>/employees/<int:employee_id>",
+      "method": "GET",
+      "status_code": 404,
+      "url": "http://localhost:5003/api/companies/1/employees/1",
+      "status": "warning",
+      "details": "{\n  \"error\": \"Empresa n\\u00e3o encontrada.\",\n  \"success\": false\n}\n"
+    },
+    {
+      "path": "/api/companies/<int:company_id>/employees/<int:employee_id>",
+      "method": "PUT",
+      "status_code": 404,
+      "url": "http://localhost:5003/api/companies/1/employees/1",
+      "status": "warning",
+      "details": "{\n  \"error\": \"Empresa n\\u00e3o encontrada.\",\n  \"success\": false\n}\n"
+    },
+    {
+      "path": "/api/companies/<int:company_id>/logos",
+      "method": "POST",
+      "status_code": 404,
+      "url": "http://localhost:5003/api/companies/1/logos",
+      "status": "warning",
+      "details": "{\n  \"error\": \"Empresa n\\u00e3o encontrada\",\n  \"success\": false\n}\n"
+    },
+    {
+      "path": "/api/companies/<int:company_id>/logos/<logo_type>",
+      "method": "DELETE",
+      "status": "skipped",
+      "reason": "Placeholders n\u00e3o resolvidos"
+    },
+    {
+      "path": "/api/companies/<int:company_id>/macro-processes",
+      "method": "GET",
+      "status_code": 200,
+      "url": "http://localhost:5003/api/companies/1/macro-processes",
+      "status": "ok"
+    },
+    {
+      "path": "/api/companies/<int:company_id>/macro-processes",
+      "method": "POST",
+      "status_code": 400,
+      "url": "http://localhost:5003/api/companies/1/macro-processes",
+      "status": "warning",
+      "details": "{\n  \"error\": \"create_failed\",\n  \"success\": false\n}\n"
+    },
+    {
+      "path": "/api/companies/<int:company_id>/macro-processes/<int:macro_id>",
+      "method": "DELETE",
+      "status": "skipped",
+      "reason": "Placeholders n\u00e3o resolvidos"
+    },
+    {
+      "path": "/api/companies/<int:company_id>/macro-processes/<int:macro_id>",
+      "method": "PUT",
+      "status": "skipped",
+      "reason": "Placeholders n\u00e3o resolvidos"
+    },
+    {
+      "path": "/api/companies/<int:company_id>/mvv",
+      "method": "GET",
+      "status_code": 404,
+      "url": "http://localhost:5003/api/companies/1/mvv",
+      "status": "warning",
+      "details": "{\n  \"error\": \"not_found\",\n  \"success\": false\n}\n"
+    },
+    {
+      "path": "/api/companies/<int:company_id>/mvv",
+      "method": "POST",
+      "status_code": 200,
+      "url": "http://localhost:5003/api/companies/1/mvv",
+      "status": "ok"
+    },
+    {
+      "path": "/api/companies/<int:company_id>/occurrences",
+      "method": "GET",
+      "status_code": 200,
+      "url": "http://localhost:5003/api/companies/1/occurrences",
+      "status": "ok"
+    },
+    {
+      "path": "/api/companies/<int:company_id>/occurrences",
+      "method": "POST",
+      "status_code": 400,
+      "url": "http://localhost:5003/api/companies/1/occurrences",
+      "status": "warning",
+      "details": "{\n  \"message\": \"Colaborador \\u00e9 obrigat\\u00f3rio.\",\n  \"success\": false\n}\n"
+    },
+    {
+      "path": "/api/companies/<int:company_id>/occurrences/<int:occurrence_id>",
+      "method": "DELETE",
+      "status": "skipped",
+      "reason": "Placeholders n\u00e3o resolvidos"
+    },
+    {
+      "path": "/api/companies/<int:company_id>/occurrences/<int:occurrence_id>",
+      "method": "PUT",
+      "status": "skipped",
+      "reason": "Placeholders n\u00e3o resolvidos"
+    },
+    {
+      "path": "/api/companies/<int:company_id>/portfolios",
+      "method": "GET",
+      "status_code": 200,
+      "url": "http://localhost:5003/api/companies/1/portfolios",
+      "status": "ok"
+    },
+    {
+      "path": "/api/companies/<int:company_id>/portfolios",
+      "method": "POST",
+      "status_code": 400,
+      "url": "http://localhost:5003/api/companies/1/portfolios",
+      "status": "warning",
+      "details": "{\n  \"message\": \"C\\u00f3digo do portf\\u00f3lio \\u00e9 obrigat\\u00f3rio.\",\n  \"success\": false\n}\n"
+    },
+    {
+      "path": "/api/companies/<int:company_id>/portfolios/<int:portfolio_id>",
+      "method": "DELETE",
+      "status_code": 404,
+      "url": "http://localhost:5003/api/companies/1/portfolios/1",
+      "status": "warning",
+      "details": "{\n  \"message\": \"Portf\\u00f3lio n\\u00e3o encontrado.\",\n  \"success\": false\n}\n"
+    },
+    {
+      "path": "/api/companies/<int:company_id>/portfolios/<int:portfolio_id>",
+      "method": "PUT",
+      "status_code": 400,
+      "url": "http://localhost:5003/api/companies/1/portfolios/1",
+      "status": "warning",
+      "details": "{\n  \"message\": \"C\\u00f3digo e nome s\\u00e3o obrigat\\u00f3rios.\",\n  \"success\": false\n}\n"
+    },
+    {
+      "path": "/api/companies/<int:company_id>/process-areas",
+      "method": "GET",
+      "status_code": 200,
+      "url": "http://localhost:5003/api/companies/1/process-areas",
+      "status": "ok"
+    },
+    {
+      "path": "/api/companies/<int:company_id>/process-areas",
+      "method": "POST",
+      "status_code": 400,
+      "url": "http://localhost:5003/api/companies/1/process-areas",
+      "status": "warning",
+      "details": "{\n  \"error\": \"create_failed\",\n  \"success\": false\n}\n"
+    },
+    {
+      "path": "/api/companies/<int:company_id>/process-areas/<int:area_id>",
+      "method": "DELETE",
+      "status": "skipped",
+      "reason": "Placeholders n\u00e3o resolvidos"
+    },
+    {
+      "path": "/api/companies/<int:company_id>/process-areas/<int:area_id>",
+      "method": "PUT",
+      "status": "skipped",
+      "reason": "Placeholders n\u00e3o resolvidos"
+    },
+    {
+      "path": "/api/companies/<int:company_id>/process-instances",
+      "method": "GET",
+      "status_code": 200,
+      "url": "http://localhost:5003/api/companies/1/process-instances",
+      "status": "ok"
+    },
+    {
+      "path": "/api/companies/<int:company_id>/process-instances",
+      "method": "POST",
+      "status_code": 400,
+      "url": "http://localhost:5003/api/companies/1/process-instances",
+      "status": "warning",
+      "details": "{\n  \"error\": \"Missing required fields\"\n}\n"
+    },
+    {
+      "path": "/api/companies/<int:company_id>/process-instances/<int:instance_id>",
+      "method": "PATCH",
+      "status": "skipped",
+      "reason": "Placeholders n\u00e3o resolvidos"
+    },
+    {
+      "path": "/api/companies/<int:company_id>/process-map",
+      "method": "GET",
+      "status_code": 200,
+      "url": "http://localhost:5003/api/companies/1/process-map",
+      "status": "ok"
+    },
+    {
+      "path": "/api/companies/<int:company_id>/process-routines",
+      "method": "GET",
+      "status_code": 200,
+      "url": "http://localhost:5003/api/companies/1/process-routines",
+      "status": "ok"
+    },
+    {
+      "path": "/api/companies/<int:company_id>/process-routines",
+      "method": "POST",
+      "status_code": 400,
+      "url": "http://localhost:5003/api/companies/1/process-routines",
+      "status": "warning",
+      "details": "{\n  \"message\": \"Nome \\u00e9 obrigat\\u00f3rio\",\n  \"success\": false\n}\n"
+    },
+    {
+      "path": "/api/companies/<int:company_id>/process-routines/<int:routine_id>",
+      "method": "DELETE",
+      "status": "skipped",
+      "reason": "Placeholders n\u00e3o resolvidos"
+    },
+    {
+      "path": "/api/companies/<int:company_id>/process-routines/<int:routine_id>",
+      "method": "PUT",
+      "status": "skipped",
+      "reason": "Placeholders n\u00e3o resolvidos"
+    },
+    {
+      "path": "/api/companies/<int:company_id>/processes",
+      "method": "GET",
+      "status_code": 200,
+      "url": "http://localhost:5003/api/companies/1/processes",
+      "status": "ok"
+    },
+    {
+      "path": "/api/companies/<int:company_id>/processes",
+      "method": "POST",
+      "status_code": 400,
+      "url": "http://localhost:5003/api/companies/1/processes",
+      "status": "warning",
+      "details": "{\n  \"error\": \"create_failed\",\n  \"success\": false\n}\n"
+    },
+    {
+      "path": "/api/companies/<int:company_id>/processes/<int:process_id>",
+      "method": "DELETE",
+      "status": "skipped",
+      "reason": "Placeholders n\u00e3o resolvidos"
+    },
+    {
+      "path": "/api/companies/<int:company_id>/processes/<int:process_id>",
+      "method": "PUT",
+      "status": "skipped",
+      "reason": "Placeholders n\u00e3o resolvidos"
+    },
+    {
+      "path": "/api/companies/<int:company_id>/processes/<int:process_id>/activities",
+      "method": "GET",
+      "status": "skipped",
+      "reason": "Placeholders n\u00e3o resolvidos"
+    },
+    {
+      "path": "/api/companies/<int:company_id>/processes/<int:process_id>/activities",
+      "method": "POST",
+      "status": "skipped",
+      "reason": "Placeholders n\u00e3o resolvidos"
+    },
+    {
+      "path": "/api/companies/<int:company_id>/processes/<int:process_id>/activities/<int:activity_id>",
+      "method": "DELETE",
+      "status": "skipped",
+      "reason": "Placeholders n\u00e3o resolvidos"
+    },
+    {
+      "path": "/api/companies/<int:company_id>/processes/<int:process_id>/activities/<int:activity_id>",
+      "method": "PUT",
+      "status": "skipped",
+      "reason": "Placeholders n\u00e3o resolvidos"
+    },
+    {
+      "path": "/api/companies/<int:company_id>/processes/<int:process_id>/activities/<int:activity_id>/entries",
+      "method": "POST",
+      "status": "skipped",
+      "reason": "Placeholders n\u00e3o resolvidos"
+    },
+    {
+      "path": "/api/companies/<int:company_id>/processes/<int:process_id>/activities/<int:activity_id>/entries/<int:entry_id>",
+      "method": "DELETE",
+      "status": "skipped",
+      "reason": "Placeholders n\u00e3o resolvidos"
+    },
+    {
+      "path": "/api/companies/<int:company_id>/processes/<int:process_id>/activities/<int:activity_id>/entries/<int:entry_id>",
+      "method": "PUT",
+      "status": "skipped",
+      "reason": "Placeholders n\u00e3o resolvidos"
+    },
+    {
+      "path": "/api/companies/<int:company_id>/processes/<int:process_id>/flow",
+      "method": "DELETE",
+      "status": "skipped",
+      "reason": "Placeholders n\u00e3o resolvidos"
+    },
+    {
+      "path": "/api/companies/<int:company_id>/processes/<int:process_id>/flow",
+      "method": "POST",
+      "status": "skipped",
+      "reason": "Placeholders n\u00e3o resolvidos"
+    },
+    {
+      "path": "/api/companies/<int:company_id>/processes/<int:process_id>/notes",
+      "method": "GET",
+      "status": "skipped",
+      "reason": "Placeholders n\u00e3o resolvidos"
+    },
+    {
+      "path": "/api/companies/<int:company_id>/processes/<int:process_id>/notes",
+      "method": "PUT",
+      "status": "skipped",
+      "reason": "Placeholders n\u00e3o resolvidos"
+    },
+    {
+      "path": "/api/companies/<int:company_id>/processes/<int:process_id>/report",
+      "method": "GET",
+      "status": "skipped",
+      "reason": "Placeholders n\u00e3o resolvidos"
+    },
+    {
+      "path": "/api/companies/<int:company_id>/processes/<int:process_id>/routine-collaborators",
+      "method": "GET",
+      "status": "skipped",
+      "reason": "Placeholders n\u00e3o resolvidos"
+    },
+    {
+      "path": "/api/companies/<int:company_id>/processes/<int:process_id>/stage",
+      "method": "PATCH",
+      "status": "skipped",
+      "reason": "Placeholders n\u00e3o resolvidos"
+    },
+    {
+      "path": "/api/companies/<int:company_id>/projects",
+      "method": "GET",
+      "status_code": 200,
+      "url": "http://localhost:5003/api/companies/1/projects",
+      "status": "ok"
+    },
+    {
+      "path": "/api/companies/<int:company_id>/projects",
+      "method": "POST",
+      "status_code": 201,
+      "url": "http://localhost:5003/api/companies/1/projects",
+      "status": "ok"
+    },
+    {
+      "path": "/api/companies/<int:company_id>/projects/<int:project_id>",
+      "method": "DELETE",
+      "status_code": 404,
+      "url": "http://localhost:5003/api/companies/1/projects/1",
+      "status": "warning",
+      "details": "{\n  \"message\": \"Projeto n\\u00e3o encontrado.\",\n  \"success\": false\n}\n"
+    },
+    {
+      "path": "/api/companies/<int:company_id>/projects/<int:project_id>",
+      "method": "PUT",
+      "status_code": 404,
+      "url": "http://localhost:5003/api/companies/1/projects/1",
+      "status": "warning",
+      "details": "{\n  \"message\": \"Projeto n\\u00e3o encontrado.\",\n  \"success\": false\n}\n"
+    },
+    {
+      "path": "/api/companies/<int:company_id>/projects/<int:project_id>/activities",
+      "method": "GET",
+      "status_code": 404,
+      "url": "http://localhost:5003/api/companies/1/projects/1/activities",
+      "status": "warning",
+      "details": "{\n  \"message\": \"Projeto n\\u00e3o encontrado.\",\n  \"success\": false\n}\n"
+    },
+    {
+      "path": "/api/companies/<int:company_id>/projects/<int:project_id>/activities",
+      "method": "POST",
+      "status_code": 400,
+      "url": "http://localhost:5003/api/companies/1/projects/1/activities",
+      "status": "warning",
+      "details": "{\n  \"message\": \"Descri\\u00e7\\u00e3o da atividade \\u00e9 obrigat\\u00f3ria.\",\n  \"success\": false\n}\n"
+    },
+    {
+      "path": "/api/companies/<int:company_id>/projects/<int:project_id>/activities/<int:activity_id>",
+      "method": "DELETE",
+      "status": "skipped",
+      "reason": "Placeholders n\u00e3o resolvidos"
+    },
+    {
+      "path": "/api/companies/<int:company_id>/projects/<int:project_id>/activities/<int:activity_id>",
+      "method": "PUT",
+      "status": "skipped",
+      "reason": "Placeholders n\u00e3o resolvidos"
+    },
+    {
+      "path": "/api/companies/<int:company_id>/projects/<int:project_id>/activities/<int:activity_id>/stage",
+      "method": "PATCH",
+      "status": "skipped",
+      "reason": "Placeholders n\u00e3o resolvidos"
+    },
+    {
+      "path": "/api/companies/<int:company_id>/projects/<int:project_id>/activities/<int:activity_id>/transfer",
+      "method": "POST",
+      "status": "skipped",
+      "reason": "Placeholders n\u00e3o resolvidos"
+    },
+    {
+      "path": "/api/companies/<int:company_id>/projects/<int:project_id>/info",
+      "method": "GET",
+      "status_code": 404,
+      "url": "http://localhost:5003/api/companies/1/projects/1/info",
+      "status": "warning",
+      "details": "{\n  \"message\": \"Projeto n\\u00e3o encontrado.\",\n  \"success\": false\n}\n"
+    },
+    {
+      "path": "/api/companies/<int:company_id>/roles",
+      "method": "GET",
+      "status_code": 200,
+      "url": "http://localhost:5003/api/companies/1/roles",
+      "status": "ok"
+    },
+    {
+      "path": "/api/companies/<int:company_id>/roles",
+      "method": "POST",
+      "status_code": 400,
+      "url": "http://localhost:5003/api/companies/1/roles",
+      "status": "warning",
+      "details": "{\n  \"error\": \"create_failed\",\n  \"success\": false\n}\n"
+    },
+    {
+      "path": "/api/companies/<int:company_id>/roles/<int:role_id>",
+      "method": "DELETE",
+      "status": "skipped",
+      "reason": "Placeholders n\u00e3o resolvidos"
+    },
+    {
+      "path": "/api/companies/<int:company_id>/roles/<int:role_id>",
+      "method": "PUT",
+      "status": "skipped",
+      "reason": "Placeholders n\u00e3o resolvidos"
+    },
+    {
+      "path": "/api/companies/<int:company_id>/roles/tree",
+      "method": "GET",
+      "status_code": 200,
+      "url": "http://localhost:5003/api/companies/1/roles/tree",
+      "status": "ok"
+    },
+    {
+      "path": "/api/companies/<int:company_id>/routine-tasks",
+      "method": "GET",
+      "status_code": 200,
+      "url": "http://localhost:5003/api/companies/1/routine-tasks",
+      "status": "ok"
+    },
+    {
+      "path": "/api/companies/<int:company_id>/routine-tasks/overdue",
+      "method": "GET",
+      "status_code": 200,
+      "url": "http://localhost:5003/api/companies/1/routine-tasks/overdue",
+      "status": "ok"
+    },
+    {
+      "path": "/api/companies/<int:company_id>/routine-tasks/upcoming",
+      "method": "GET",
+      "status_code": 200,
+      "url": "http://localhost:5003/api/companies/1/routine-tasks/upcoming",
+      "status": "ok"
+    },
+    {
+      "path": "/api/companies/<int:company_id>/routines",
+      "method": "GET",
+      "status_code": 200,
+      "url": "http://localhost:5003/api/companies/1/routines",
+      "status": "ok"
+    },
+    {
+      "path": "/api/companies/<int:company_id>/routines",
+      "method": "POST",
+      "status_code": 400,
+      "url": "http://localhost:5003/api/companies/1/routines",
+      "status": "warning",
+      "details": "{\n  \"error\": \"Nome \\u00e9 obrigat\\u00f3rio\",\n  \"success\": false\n}\n"
+    },
+    {
+      "path": "/api/companies/<int:company_id>/unified-activities",
+      "method": "GET",
+      "status_code": 200,
+      "url": "http://localhost:5003/api/companies/1/unified-activities",
+      "status": "ok"
+    },
+    {
+      "path": "/api/companies/<int:company_id>/workforce-analysis",
+      "method": "GET",
+      "status_code": 200,
+      "url": "http://localhost:5003/api/companies/1/workforce-analysis",
+      "status": "ok"
+    },
+    {
+      "path": "/api/plans",
+      "method": "POST",
+      "status_code": 400,
+      "url": "http://localhost:5003/api/plans",
+      "status": "warning",
+      "details": "{\n  \"error\": \"Nome do planejamento \\u00e9 obrigat\\u00f3rio\",\n  \"success\": false\n}\n"
+    },
+    {
+      "path": "/api/plans/<int:plan_id>",
+      "method": "GET",
+      "status_code": 404,
+      "url": "http://localhost:5003/api/plans/1",
+      "status": "warning",
+      "details": "{\n  \"error\": \"Planejamento n\\u00e3o encontrado\",\n  \"success\": false\n}\n"
+    },
+    {
+      "path": "/api/plans/<int:plan_id>/company-data",
+      "method": "GET",
+      "status_code": 200,
+      "url": "http://localhost:5003/api/plans/1/company-data",
+      "status": "ok"
+    },
+    {
+      "path": "/api/plans/<int:plan_id>/company-data",
+      "method": "POST",
+      "status_code": 200,
+      "url": "http://localhost:5003/api/plans/1/company-data",
+      "status": "ok"
+    },
+    {
+      "path": "/api/plans/<int:plan_id>/okr-global-records",
+      "method": "GET",
+      "status_code": 200,
+      "url": "http://localhost:5003/api/plans/1/okr-global-records",
+      "status": "ok"
+    },
+    {
+      "path": "/api/plans/<int:plan_id>/projects",
+      "method": "GET",
+      "status_code": 200,
+      "url": "http://localhost:5003/api/plans/1/projects",
+      "status": "ok"
+    },
+    {
+      "path": "/api/processes/<int:process_id>/routines-with-collaborators",
+      "method": "GET",
+      "status": "skipped",
+      "reason": "Placeholders n\u00e3o resolvidos"
+    },
+    {
+      "path": "/api/relatorios/projetos/<int:company_id>",
+      "method": "GET",
+      "status_code": 500,
+      "url": "http://localhost:5003/api/relatorios/projetos/1",
+      "status": "warning",
+      "details": "{\n  \"error\": \"N\\ufffdo foi poss\\ufffdvel gerar o relat\\ufffdrio profissional. WeasyPrint: Empresa 1 n\\u00e3o encontrada\",\n  \"success\": false\n}\n"
+    },
+    {
+      "path": "/api/report-templates",
+      "method": "GET",
+      "status_code": 200,
+      "url": "http://localhost:5003/api/report-templates",
+      "status": "ok"
+    },
+    {
+      "path": "/api/report-templates",
+      "method": "POST",
+      "status_code": 400,
+      "url": "http://localhost:5003/api/report-templates",
+      "status": "warning",
+      "details": "{\n  \"error\": \"Dados n\\u00e3o fornecidos\"\n}\n"
+    },
+    {
+      "path": "/api/report-templates/<int:template_id>",
+      "method": "DELETE",
+      "status": "skipped",
+      "reason": "Placeholders n\u00e3o resolvidos"
+    },
+    {
+      "path": "/api/report-templates/<int:template_id>",
+      "method": "GET",
+      "status": "skipped",
+      "reason": "Placeholders n\u00e3o resolvidos"
+    },
+    {
+      "path": "/api/report-templates/<int:template_id>",
+      "method": "PUT",
+      "status": "skipped",
+      "reason": "Placeholders n\u00e3o resolvidos"
+    },
+    {
+      "path": "/api/report-templates/<int:template_id>/generate",
+      "method": "POST",
+      "status": "skipped",
+      "reason": "Placeholders n\u00e3o resolvidos"
+    },
+    {
+      "path": "/api/report-templates/by-type/<report_type>",
+      "method": "GET",
+      "status": "skipped",
+      "reason": "Placeholders n\u00e3o resolvidos"
+    },
+    {
+      "path": "/api/reports/generate",
+      "method": "POST",
+      "status_code": 200,
+      "url": "http://localhost:5003/api/reports/generate",
+      "status": "ok"
+    },
+    {
+      "path": "/api/reports/models",
+      "method": "GET",
+      "status_code": 200,
+      "url": "http://localhost:5003/api/reports/models",
+      "status": "ok"
+    },
+    {
+      "path": "/api/reports/models",
+      "method": "POST",
+      "status_code": 200,
+      "url": "http://localhost:5003/api/reports/models",
+      "status": "ok"
+    },
+    {
+      "path": "/api/reports/models/<int:model_id>",
+      "method": "DELETE",
+      "status": "skipped",
+      "reason": "Placeholders n\u00e3o resolvidos"
+    },
+    {
+      "path": "/api/reports/models/<int:model_id>",
+      "method": "GET",
+      "status": "skipped",
+      "reason": "Placeholders n\u00e3o resolvidos"
+    },
+    {
+      "path": "/api/reports/models/<int:model_id>",
+      "method": "PUT",
+      "status": "skipped",
+      "reason": "Placeholders n\u00e3o resolvidos"
+    },
+    {
+      "path": "/api/reports/models/<int:model_id>/conflicts",
+      "method": "GET",
+      "status": "skipped",
+      "reason": "Placeholders n\u00e3o resolvidos"
+    },
+    {
+      "path": "/api/reports/preview",
+      "method": "POST",
+      "status_code": 200,
+      "url": "http://localhost:5003/api/reports/preview",
+      "status": "ok"
+    },
+    {
+      "path": "/api/routine-tasks/<int:task_id>/status",
+      "method": "PUT",
+      "status_code": 400,
+      "url": "http://localhost:5003/api/routine-tasks/1/status",
+      "status": "warning",
+      "details": "{\n  \"error\": \"Status \\u00e9 obrigat\\u00f3rio\",\n  \"success\": false\n}\n"
+    },
+    {
+      "path": "/api/routines/<int:routine_id>",
+      "method": "DELETE",
+      "status": "skipped",
+      "reason": "Placeholders n\u00e3o resolvidos"
+    },
+    {
+      "path": "/api/routines/<int:routine_id>",
+      "method": "GET",
+      "status": "skipped",
+      "reason": "Placeholders n\u00e3o resolvidos"
+    },
+    {
+      "path": "/api/routines/<int:routine_id>",
+      "method": "PUT",
+      "status": "skipped",
+      "reason": "Placeholders n\u00e3o resolvidos"
+    },
+    {
+      "path": "/api/routines/<int:routine_id>/collaborators",
+      "method": "GET",
+      "status": "skipped",
+      "reason": "Placeholders n\u00e3o resolvidos"
+    },
+    {
+      "path": "/api/routines/<int:routine_id>/collaborators",
+      "method": "POST",
+      "status": "skipped",
+      "reason": "Placeholders n\u00e3o resolvidos"
+    },
+    {
+      "path": "/api/routines/<int:routine_id>/collaborators/<int:collaborator_id>",
+      "method": "DELETE",
+      "status": "skipped",
+      "reason": "Placeholders n\u00e3o resolvidos"
+    },
+    {
+      "path": "/api/routines/<int:routine_id>/collaborators/<int:collaborator_id>",
+      "method": "PUT",
+      "status": "skipped",
+      "reason": "Placeholders n\u00e3o resolvidos"
+    },
+    {
+      "path": "/api/routines/<int:routine_id>/triggers",
+      "method": "GET",
+      "status": "skipped",
+      "reason": "Placeholders n\u00e3o resolvidos"
+    },
+    {
+      "path": "/api/routines/<int:routine_id>/triggers",
+      "method": "POST",
+      "status": "skipped",
+      "reason": "Placeholders n\u00e3o resolvidos"
+    },
+    {
+      "path": "/api/triggers/<int:trigger_id>",
+      "method": "DELETE",
+      "status": "skipped",
+      "reason": "Placeholders n\u00e3o resolvidos"
+    },
+    {
+      "path": "/api/triggers/<int:trigger_id>",
+      "method": "PUT",
+      "status": "skipped",
+      "reason": "Placeholders n\u00e3o resolvidos"
+    },
+    {
+      "path": "/companies",
+      "method": "GET",
+      "status_code": 200,
+      "url": "http://localhost:5003/companies",
+      "status": "ok"
+    },
+    {
+      "path": "/companies/<int:company_id>",
+      "method": "GET",
+      "status_code": 404,
+      "url": "http://localhost:5003/companies/1",
+      "status": "warning",
+      "details": "<!doctype html>\n<html lang=en>\n<title>404 Not Found</title>\n<h1>Not Found</h1>\n<p>The requested URL was not found on the server. If you entered the URL manually please check your spelling and try agai"
+    },
+    {
+      "path": "/companies/<int:company_id>/edit",
+      "method": "GET",
+      "status_code": 404,
+      "url": "http://localhost:5003/companies/1/edit",
+      "status": "warning",
+      "details": "<!doctype html>\n<html lang=en>\n<title>404 Not Found</title>\n<h1>Not Found</h1>\n<p>The requested URL was not found on the server. If you entered the URL manually please check your spelling and try agai"
+    },
+    {
+      "path": "/companies/<int:company_id>/logos",
+      "method": "GET",
+      "status_code": 404,
+      "url": "http://localhost:5003/companies/1/logos",
+      "status": "warning",
+      "details": "<!doctype html>\n<html lang=en>\n<title>404 Not Found</title>\n<h1>Not Found</h1>\n<p>The requested URL was not found on the server. If you entered the URL manually please check your spelling and try agai"
+    },
+    {
+      "path": "/companies/<int:company_id>/routine-tasks",
+      "method": "GET",
+      "status_code": 404,
+      "url": "http://localhost:5003/companies/1/routine-tasks",
+      "status": "warning",
+      "details": "<!doctype html>\n<html lang=en>\n<title>404 Not Found</title>\n<h1>Not Found</h1>\n<p>The requested URL was not found on the server. If you entered the URL manually please check your spelling and try agai"
+    },
+    {
+      "path": "/companies/<int:company_id>/routines",
+      "method": "GET",
+      "status_code": 404,
+      "url": "http://localhost:5003/companies/1/routines",
+      "status": "warning",
+      "details": "<!doctype html>\n<html lang=en>\n<title>404 Not Found</title>\n<h1>Not Found</h1>\n<p>The requested URL was not found on the server. If you entered the URL manually please check your spelling and try agai"
+    },
+    {
+      "path": "/companies/<int:company_id>/routines/<routine_id>",
+      "method": "GET",
+      "status": "skipped",
+      "reason": "Placeholders n\u00e3o resolvidos"
+    },
+    {
+      "path": "/companies/new",
+      "method": "GET",
+      "status_code": 200,
+      "url": "http://localhost:5003/companies/new",
+      "status": "ok"
+    },
+    {
+      "path": "/configs",
+      "method": "GET",
+      "status_code": 200,
+      "url": "http://localhost:5003/configs",
+      "status": "ok"
+    },
+    {
+      "path": "/configs/ai",
+      "method": "GET",
+      "status_code": 200,
+      "url": "http://localhost:5003/configs/ai",
+      "status": "ok"
+    },
+    {
+      "path": "/configs/system",
+      "method": "GET",
+      "status_code": 200,
+      "url": "http://localhost:5003/configs/system",
+      "status": "ok"
+    },
+    {
+      "path": "/configs/system/audit",
+      "method": "GET",
+      "status_code": 200,
+      "url": "http://localhost:5003/configs/system/audit",
+      "status": "ok"
+    },
+    {
+      "path": "/dashboard",
+      "method": "GET",
+      "status_code": 200,
+      "url": "http://localhost:5003/dashboard",
+      "status": "ok"
+    },
+    {
+      "path": "/favicon.ico",
+      "method": "GET",
+      "status_code": 200,
+      "url": "http://localhost:5003/favicon.ico",
+      "status": "ok"
+    },
+    {
+      "path": "/health",
+      "method": "GET",
+      "status_code": 200,
+      "url": "http://localhost:5003/health",
+      "status": "ok"
+    },
+    {
+      "path": "/integrations",
+      "method": "GET",
+      "status_code": 200,
+      "url": "http://localhost:5003/integrations",
+      "status": "ok"
+    },
+    {
+      "path": "/login",
+      "method": "GET",
+      "status_code": 200,
+      "url": "http://localhost:5003/login",
+      "status": "ok"
+    },
+    {
+      "path": "/login",
+      "method": "POST",
+      "status_code": 200,
+      "url": "http://localhost:5003/login",
+      "status": "ok"
+    },
+    {
+      "path": "/main",
+      "method": "GET",
+      "status_code": 200,
+      "url": "http://localhost:5003/main",
+      "status": "ok"
+    },
+    {
+      "path": "/plans/<plan_id>",
+      "method": "GET",
+      "status_code": 404,
+      "url": "http://localhost:5003/plans/1",
+      "status": "warning",
+      "details": "<!doctype html>\n<html lang=en>\n<title>404 Not Found</title>\n<h1>Not Found</h1>\n<p>The requested URL was not found on the server. If you entered the URL manually please check your spelling and try agai"
+    },
+    {
+      "path": "/plans/<plan_id>/alignment-records",
+      "method": "POST",
+      "status_code": 404,
+      "url": "http://localhost:5003/plans/1/alignment-records",
+      "status": "warning",
+      "details": "<!doctype html>\n<html lang=en>\n<title>404 Not Found</title>\n<h1>Not Found</h1>\n<p>The requested URL was not found on the server. If you entered the URL manually please check your spelling and try agai"
+    },
+    {
+      "path": "/plans/<plan_id>/alignment-records/<alignment_id>",
+      "method": "DELETE",
+      "status": "skipped",
+      "reason": "Placeholders n\u00e3o resolvidos"
+    },
+    {
+      "path": "/plans/<plan_id>/alignment-records/<alignment_id>",
+      "method": "GET",
+      "status": "skipped",
+      "reason": "Placeholders n\u00e3o resolvidos"
+    },
+    {
+      "path": "/plans/<plan_id>/alignment-records/<alignment_id>",
+      "method": "PUT",
+      "status": "skipped",
+      "reason": "Placeholders n\u00e3o resolvidos"
+    },
+    {
+      "path": "/plans/<plan_id>/company",
+      "method": "GET",
+      "status_code": 404,
+      "url": "http://localhost:5003/plans/1/company",
+      "status": "warning",
+      "details": "<!doctype html>\n<html lang=en>\n<title>404 Not Found</title>\n<h1>Not Found</h1>\n<p>The requested URL was not found on the server. If you entered the URL manually please check your spelling and try agai"
+    },
+    {
+      "path": "/plans/<plan_id>/company",
+      "method": "POST",
+      "status_code": 404,
+      "url": "http://localhost:5003/plans/1/company",
+      "status": "warning",
+      "details": "<!doctype html>\n<html lang=en>\n<title>404 Not Found</title>\n<h1>Not Found</h1>\n<p>The requested URL was not found on the server. If you entered the URL manually please check your spelling and try agai"
+    },
+    {
+      "path": "/plans/<plan_id>/company-records",
+      "method": "POST",
+      "status_code": 404,
+      "url": "http://localhost:5003/plans/1/company-records",
+      "status": "warning",
+      "details": "<!doctype html>\n<html lang=en>\n<title>404 Not Found</title>\n<h1>Not Found</h1>\n<p>The requested URL was not found on the server. If you entered the URL manually please check your spelling and try agai"
+    },
+    {
+      "path": "/plans/<plan_id>/company-records/<company_id>",
+      "method": "DELETE",
+      "status_code": 200,
+      "url": "http://localhost:5003/plans/1/company-records/1",
+      "status": "ok"
+    },
+    {
+      "path": "/plans/<plan_id>/company-records/<company_id>",
+      "method": "GET",
+      "status_code": 404,
+      "url": "http://localhost:5003/plans/1/company-records/1",
+      "status": "warning",
+      "details": "{\n  \"error\": \"Possibilidades da empresa n\\u00e3o encontradas\",\n  \"success\": false\n}\n"
+    },
+    {
+      "path": "/plans/<plan_id>/company-records/<company_id>",
+      "method": "PUT",
+      "status_code": 200,
+      "url": "http://localhost:5003/plans/1/company-records/1",
+      "status": "ok"
+    },
+    {
+      "path": "/plans/<plan_id>/company/delete-file",
+      "method": "POST",
+      "status_code": 400,
+      "url": "http://localhost:5003/plans/1/company/delete-file",
+      "status": "warning",
+      "details": "{\n  \"error\": \"Par\\u00e2metros inv\\u00e1lidos\",\n  \"success\": false\n}\n"
+    },
+    {
+      "path": "/plans/<plan_id>/company/generate-ai-insights",
+      "method": "POST",
+      "status_code": 200,
+      "url": "http://localhost:5003/plans/1/company/generate-ai-insights",
+      "status": "ok"
+    },
+    {
+      "path": "/plans/<plan_id>/company/update-analyses",
+      "method": "POST",
+      "status_code": 200,
+      "url": "http://localhost:5003/plans/1/company/update-analyses",
+      "status": "ok"
+    },
+    {
+      "path": "/plans/<plan_id>/directional-records",
+      "method": "POST",
+      "status_code": 404,
+      "url": "http://localhost:5003/plans/1/directional-records",
+      "status": "warning",
+      "details": "<!doctype html>\n<html lang=en>\n<title>404 Not Found</title>\n<h1>Not Found</h1>\n<p>The requested URL was not found on the server. If you entered the URL manually please check your spelling and try agai"
+    },
+    {
+      "path": "/plans/<plan_id>/directional-records/<directional_id>",
+      "method": "DELETE",
+      "status": "skipped",
+      "reason": "Placeholders n\u00e3o resolvidos"
+    },
+    {
+      "path": "/plans/<plan_id>/directional-records/<directional_id>",
+      "method": "GET",
+      "status": "skipped",
+      "reason": "Placeholders n\u00e3o resolvidos"
+    },
+    {
+      "path": "/plans/<plan_id>/directional-records/<directional_id>",
+      "method": "PUT",
+      "status": "skipped",
+      "reason": "Placeholders n\u00e3o resolvidos"
+    },
+    {
+      "path": "/plans/<plan_id>/directionals-approvals",
+      "method": "POST",
+      "status_code": 404,
+      "url": "http://localhost:5003/plans/1/directionals-approvals",
+      "status": "warning",
+      "details": "<!doctype html>\n<html lang=en>\n<title>404 Not Found</title>\n<h1>Not Found</h1>\n<p>The requested URL was not found on the server. If you entered the URL manually please check your spelling and try agai"
+    },
+    {
+      "path": "/plans/<plan_id>/drivers",
+      "method": "GET",
+      "status_code": 404,
+      "url": "http://localhost:5003/plans/1/drivers",
+      "status": "warning",
+      "details": "<!doctype html>\n<html lang=en>\n<title>404 Not Found</title>\n<h1>Not Found</h1>\n<p>The requested URL was not found on the server. If you entered the URL manually please check your spelling and try agai"
+    },
+    {
+      "path": "/plans/<plan_id>/drivers",
+      "method": "POST",
+      "status_code": 404,
+      "url": "http://localhost:5003/plans/1/drivers",
+      "status": "warning",
+      "details": "<!doctype html>\n<html lang=en>\n<title>404 Not Found</title>\n<h1>Not Found</h1>\n<p>The requested URL was not found on the server. If you entered the URL manually please check your spelling and try agai"
+    },
+    {
+      "path": "/plans/<plan_id>/interviews",
+      "method": "POST",
+      "status_code": 404,
+      "url": "http://localhost:5003/plans/1/interviews",
+      "status": "warning",
+      "details": "<!doctype html>\n<html lang=en>\n<title>404 Not Found</title>\n<h1>Not Found</h1>\n<p>The requested URL was not found on the server. If you entered the URL manually please check your spelling and try agai"
+    },
+    {
+      "path": "/plans/<plan_id>/interviews/<interview_id>",
+      "method": "DELETE",
+      "status": "skipped",
+      "reason": "Placeholders n\u00e3o resolvidos"
+    },
+    {
+      "path": "/plans/<plan_id>/interviews/<interview_id>",
+      "method": "GET",
+      "status": "skipped",
+      "reason": "Placeholders n\u00e3o resolvidos"
+    },
+    {
+      "path": "/plans/<plan_id>/interviews/<interview_id>",
+      "method": "PUT",
+      "status": "skipped",
+      "reason": "Placeholders n\u00e3o resolvidos"
+    },
+    {
+      "path": "/plans/<plan_id>/market-records",
+      "method": "POST",
+      "status_code": 404,
+      "url": "http://localhost:5003/plans/1/market-records",
+      "status": "warning",
+      "details": "<!doctype html>\n<html lang=en>\n<title>404 Not Found</title>\n<h1>Not Found</h1>\n<p>The requested URL was not found on the server. If you entered the URL manually please check your spelling and try agai"
+    },
+    {
+      "path": "/plans/<plan_id>/market-records/<market_id>",
+      "method": "DELETE",
+      "status": "skipped",
+      "reason": "Placeholders n\u00e3o resolvidos"
+    },
+    {
+      "path": "/plans/<plan_id>/market-records/<market_id>",
+      "method": "GET",
+      "status": "skipped",
+      "reason": "Placeholders n\u00e3o resolvidos"
+    },
+    {
+      "path": "/plans/<plan_id>/market-records/<market_id>",
+      "method": "PUT",
+      "status": "skipped",
+      "reason": "Placeholders n\u00e3o resolvidos"
+    },
+    {
+      "path": "/plans/<plan_id>/messages",
+      "method": "GET",
+      "status_code": 200,
+      "url": "http://localhost:5003/plans/1/messages",
+      "status": "ok"
+    },
+    {
+      "path": "/plans/<plan_id>/messages/<message_type>",
+      "method": "GET",
+      "status": "skipped",
+      "reason": "Placeholders n\u00e3o resolvidos"
+    },
+    {
+      "path": "/plans/<plan_id>/messages/<message_type>",
+      "method": "POST",
+      "status": "skipped",
+      "reason": "Placeholders n\u00e3o resolvidos"
+    },
+    {
+      "path": "/plans/<plan_id>/misalignment-records",
+      "method": "POST",
+      "status_code": 404,
+      "url": "http://localhost:5003/plans/1/misalignment-records",
+      "status": "warning",
+      "details": "<!doctype html>\n<html lang=en>\n<title>404 Not Found</title>\n<h1>Not Found</h1>\n<p>The requested URL was not found on the server. If you entered the URL manually please check your spelling and try agai"
+    },
+    {
+      "path": "/plans/<plan_id>/misalignment-records/<misalignment_id>",
+      "method": "DELETE",
+      "status": "skipped",
+      "reason": "Placeholders n\u00e3o resolvidos"
+    },
+    {
+      "path": "/plans/<plan_id>/misalignment-records/<misalignment_id>",
+      "method": "GET",
+      "status": "skipped",
+      "reason": "Placeholders n\u00e3o resolvidos"
+    },
+    {
+      "path": "/plans/<plan_id>/misalignment-records/<misalignment_id>",
+      "method": "PUT",
+      "status": "skipped",
+      "reason": "Placeholders n\u00e3o resolvidos"
+    },
+    {
+      "path": "/plans/<plan_id>/okr-area",
+      "method": "GET",
+      "status_code": 404,
+      "url": "http://localhost:5003/plans/1/okr-area",
+      "status": "warning",
+      "details": "<!doctype html>\n<html lang=en>\n<title>404 Not Found</title>\n<h1>Not Found</h1>\n<p>The requested URL was not found on the server. If you entered the URL manually please check your spelling and try agai"
+    },
+    {
+      "path": "/plans/<plan_id>/okr-area/ai-suggestions",
+      "method": "POST",
+      "status_code": 200,
+      "url": "http://localhost:5003/plans/1/okr-area/ai-suggestions",
+      "status": "ok"
+    },
+    {
+      "path": "/plans/<plan_id>/okr-area/final",
+      "method": "POST",
+      "status_code": 404,
+      "url": "http://localhost:5003/plans/1/okr-area/final",
+      "status": "warning",
+      "details": "<!doctype html>\n<html lang=en>\n<title>404 Not Found</title>\n<h1>Not Found</h1>\n<p>The requested URL was not found on the server. If you entered the URL manually please check your spelling and try agai"
+    },
+    {
+      "path": "/plans/<plan_id>/okr-area/final-discussions",
+      "method": "POST",
+      "status_code": 404,
+      "url": "http://localhost:5003/plans/1/okr-area/final-discussions",
+      "status": "warning",
+      "details": "<!doctype html>\n<html lang=en>\n<title>404 Not Found</title>\n<h1>Not Found</h1>\n<p>The requested URL was not found on the server. If you entered the URL manually please check your spelling and try agai"
+    },
+    {
+      "path": "/plans/<plan_id>/okr-area/final-discussions/delete",
+      "method": "POST",
+      "status_code": 404,
+      "url": "http://localhost:5003/plans/1/okr-area/final-discussions/delete",
+      "status": "warning",
+      "details": "<!doctype html>\n<html lang=en>\n<title>404 Not Found</title>\n<h1>Not Found</h1>\n<p>The requested URL was not found on the server. If you entered the URL manually please check your spelling and try agai"
+    },
+    {
+      "path": "/plans/<plan_id>/okr-area/final/status",
+      "method": "POST",
+      "status_code": 200,
+      "url": "http://localhost:5003/plans/1/okr-area/final/status",
+      "status": "ok"
+    },
+    {
+      "path": "/plans/<plan_id>/okr-area/preliminary",
+      "method": "POST",
+      "status_code": 404,
+      "url": "http://localhost:5003/plans/1/okr-area/preliminary",
+      "status": "warning",
+      "details": "<!doctype html>\n<html lang=en>\n<title>404 Not Found</title>\n<h1>Not Found</h1>\n<p>The requested URL was not found on the server. If you entered the URL manually please check your spelling and try agai"
+    },
+    {
+      "path": "/plans/<plan_id>/okr-area/preliminary-analysis/status",
+      "method": "POST",
+      "status_code": 200,
+      "url": "http://localhost:5003/plans/1/okr-area/preliminary-analysis/status",
+      "status": "ok"
+    },
+    {
+      "path": "/plans/<plan_id>/okr-area/workshop",
+      "method": "POST",
+      "status_code": 404,
+      "url": "http://localhost:5003/plans/1/okr-area/workshop",
+      "status": "warning",
+      "details": "<!doctype html>\n<html lang=en>\n<title>404 Not Found</title>\n<h1>Not Found</h1>\n<p>The requested URL was not found on the server. If you entered the URL manually please check your spelling and try agai"
+    },
+    {
+      "path": "/plans/<plan_id>/okr-area/workshop-discussions",
+      "method": "POST",
+      "status_code": 404,
+      "url": "http://localhost:5003/plans/1/okr-area/workshop-discussions",
+      "status": "warning",
+      "details": "<!doctype html>\n<html lang=en>\n<title>404 Not Found</title>\n<h1>Not Found</h1>\n<p>The requested URL was not found on the server. If you entered the URL manually please check your spelling and try agai"
+    },
+    {
+      "path": "/plans/<plan_id>/okr-area/workshop-discussions/delete",
+      "method": "POST",
+      "status_code": 404,
+      "url": "http://localhost:5003/plans/1/okr-area/workshop-discussions/delete",
+      "status": "warning",
+      "details": "<!doctype html>\n<html lang=en>\n<title>404 Not Found</title>\n<h1>Not Found</h1>\n<p>The requested URL was not found on the server. If you entered the URL manually please check your spelling and try agai"
+    },
+    {
+      "path": "/plans/<plan_id>/okr-area/workshop/status",
+      "method": "POST",
+      "status_code": 200,
+      "url": "http://localhost:5003/plans/1/okr-area/workshop/status",
+      "status": "ok"
+    },
+    {
+      "path": "/plans/<plan_id>/okr-global",
+      "method": "GET",
+      "status_code": 404,
+      "url": "http://localhost:5003/plans/1/okr-global",
+      "status": "warning",
+      "details": "<!doctype html>\n<html lang=en>\n<title>404 Not Found</title>\n<h1>Not Found</h1>\n<p>The requested URL was not found on the server. If you entered the URL manually please check your spelling and try agai"
+    },
+    {
+      "path": "/plans/<plan_id>/okr-global/ai-suggestions",
+      "method": "POST",
+      "status_code": 200,
+      "url": "http://localhost:5003/plans/1/okr-global/ai-suggestions",
+      "status": "ok"
+    },
+    {
+      "path": "/plans/<plan_id>/okr-global/approval",
+      "method": "POST",
+      "status_code": 404,
+      "url": "http://localhost:5003/plans/1/okr-global/approval",
+      "status": "warning",
+      "details": "<!doctype html>\n<html lang=en>\n<title>404 Not Found</title>\n<h1>Not Found</h1>\n<p>The requested URL was not found on the server. If you entered the URL manually please check your spelling and try agai"
+    },
+    {
+      "path": "/plans/<plan_id>/okr-global/approval-discussions",
+      "method": "POST",
+      "status_code": 404,
+      "url": "http://localhost:5003/plans/1/okr-global/approval-discussions",
+      "status": "warning",
+      "details": "<!doctype html>\n<html lang=en>\n<title>404 Not Found</title>\n<h1>Not Found</h1>\n<p>The requested URL was not found on the server. If you entered the URL manually please check your spelling and try agai"
+    },
+    {
+      "path": "/plans/<plan_id>/okr-global/approval-discussions/delete",
+      "method": "POST",
+      "status_code": 404,
+      "url": "http://localhost:5003/plans/1/okr-global/approval-discussions/delete",
+      "status": "warning",
+      "details": "<!doctype html>\n<html lang=en>\n<title>404 Not Found</title>\n<h1>Not Found</h1>\n<p>The requested URL was not found on the server. If you entered the URL manually please check your spelling and try agai"
+    },
+    {
+      "path": "/plans/<plan_id>/okr-global/approval/<record_id>",
+      "method": "POST",
+      "status_code": 404,
+      "url": "http://localhost:5003/plans/1/okr-global/approval/1",
+      "status": "warning",
+      "details": "<!doctype html>\n<html lang=en>\n<title>404 Not Found</title>\n<h1>Not Found</h1>\n<p>The requested URL was not found on the server. If you entered the URL manually please check your spelling and try agai"
+    },
+    {
+      "path": "/plans/<plan_id>/okr-global/approval/<record_id>/delete",
+      "method": "POST",
+      "status_code": 404,
+      "url": "http://localhost:5003/plans/1/okr-global/approval/1/delete",
+      "status": "warning",
+      "details": "<!doctype html>\n<html lang=en>\n<title>404 Not Found</title>\n<h1>Not Found</h1>\n<p>The requested URL was not found on the server. If you entered the URL manually please check your spelling and try agai"
+    },
+    {
+      "path": "/plans/<plan_id>/okr-global/approvals/status",
+      "method": "POST",
+      "status_code": 200,
+      "url": "http://localhost:5003/plans/1/okr-global/approvals/status",
+      "status": "ok"
+    },
+    {
+      "path": "/plans/<plan_id>/okr-global/duplicate/<type>/<record_id>",
+      "method": "POST",
+      "status": "skipped",
+      "reason": "Placeholders n\u00e3o resolvidos"
+    },
+    {
+      "path": "/plans/<plan_id>/okr-global/preliminary",
+      "method": "POST",
+      "status_code": 404,
+      "url": "http://localhost:5003/plans/1/okr-global/preliminary",
+      "status": "warning",
+      "details": "<!doctype html>\n<html lang=en>\n<title>404 Not Found</title>\n<h1>Not Found</h1>\n<p>The requested URL was not found on the server. If you entered the URL manually please check your spelling and try agai"
+    },
+    {
+      "path": "/plans/<plan_id>/okr-global/preliminary-analysis/status",
+      "method": "POST",
+      "status_code": 200,
+      "url": "http://localhost:5003/plans/1/okr-global/preliminary-analysis/status",
+      "status": "ok"
+    },
+    {
+      "path": "/plans/<plan_id>/okr-global/preliminary/<record_id>",
+      "method": "GET",
+      "status_code": 404,
+      "url": "http://localhost:5003/plans/1/okr-global/preliminary/1",
+      "status": "warning",
+      "details": "{\n  \"message\": \"Registro n\\u00e3o encontrado\",\n  \"success\": false\n}\n"
+    },
+    {
+      "path": "/plans/<plan_id>/okr-global/preliminary/<record_id>",
+      "method": "POST",
+      "status_code": 404,
+      "url": "http://localhost:5003/plans/1/okr-global/preliminary/1",
+      "status": "warning",
+      "details": "<!doctype html>\n<html lang=en>\n<title>404 Not Found</title>\n<h1>Not Found</h1>\n<p>The requested URL was not found on the server. If you entered the URL manually please check your spelling and try agai"
+    },
+    {
+      "path": "/plans/<plan_id>/okr-global/preliminary/<record_id>/delete",
+      "method": "POST",
+      "status_code": 404,
+      "url": "http://localhost:5003/plans/1/okr-global/preliminary/1/delete",
+      "status": "warning",
+      "details": "<!doctype html>\n<html lang=en>\n<title>404 Not Found</title>\n<h1>Not Found</h1>\n<p>The requested URL was not found on the server. If you entered the URL manually please check your spelling and try agai"
+    },
+    {
+      "path": "/plans/<plan_id>/okr-global/workshop",
+      "method": "POST",
+      "status_code": 404,
+      "url": "http://localhost:5003/plans/1/okr-global/workshop",
+      "status": "warning",
+      "details": "<!doctype html>\n<html lang=en>\n<title>404 Not Found</title>\n<h1>Not Found</h1>\n<p>The requested URL was not found on the server. If you entered the URL manually please check your spelling and try agai"
+    },
+    {
+      "path": "/plans/<plan_id>/okr-global/workshop-discussions",
+      "method": "POST",
+      "status_code": 404,
+      "url": "http://localhost:5003/plans/1/okr-global/workshop-discussions",
+      "status": "warning",
+      "details": "<!doctype html>\n<html lang=en>\n<title>404 Not Found</title>\n<h1>Not Found</h1>\n<p>The requested URL was not found on the server. If you entered the URL manually please check your spelling and try agai"
+    },
+    {
+      "path": "/plans/<plan_id>/okr-global/workshop-discussions/delete",
+      "method": "POST",
+      "status_code": 404,
+      "url": "http://localhost:5003/plans/1/okr-global/workshop-discussions/delete",
+      "status": "warning",
+      "details": "<!doctype html>\n<html lang=en>\n<title>404 Not Found</title>\n<h1>Not Found</h1>\n<p>The requested URL was not found on the server. If you entered the URL manually please check your spelling and try agai"
+    },
+    {
+      "path": "/plans/<plan_id>/okr-global/workshop-final/status",
+      "method": "POST",
+      "status_code": 200,
+      "url": "http://localhost:5003/plans/1/okr-global/workshop-final/status",
+      "status": "ok"
+    },
+    {
+      "path": "/plans/<plan_id>/okr-global/workshop/<record_id>",
+      "method": "POST",
+      "status_code": 404,
+      "url": "http://localhost:5003/plans/1/okr-global/workshop/1",
+      "status": "warning",
+      "details": "<!doctype html>\n<html lang=en>\n<title>404 Not Found</title>\n<h1>Not Found</h1>\n<p>The requested URL was not found on the server. If you entered the URL manually please check your spelling and try agai"
+    },
+    {
+      "path": "/plans/<plan_id>/okr-global/workshop/<record_id>/delete",
+      "method": "POST",
+      "status_code": 404,
+      "url": "http://localhost:5003/plans/1/okr-global/workshop/1/delete",
+      "status": "warning",
+      "details": "<!doctype html>\n<html lang=en>\n<title>404 Not Found</title>\n<h1>Not Found</h1>\n<p>The requested URL was not found on the server. If you entered the URL manually please check your spelling and try agai"
+    },
+    {
+      "path": "/plans/<plan_id>/participants",
+      "method": "GET",
+      "status_code": 404,
+      "url": "http://localhost:5003/plans/1/participants",
+      "status": "warning",
+      "details": "<!doctype html>\n<html lang=en>\n<title>404 Not Found</title>\n<h1>Not Found</h1>\n<p>The requested URL was not found on the server. If you entered the URL manually please check your spelling and try agai"
+    },
+    {
+      "path": "/plans/<plan_id>/participants",
+      "method": "POST",
+      "status_code": 500,
+      "url": "http://localhost:5003/plans/1/participants",
+      "status": "warning",
+      "details": "{\n  \"error\": \"Erro ao adicionar participante\",\n  \"success\": false\n}\n"
+    },
+    {
+      "path": "/plans/<plan_id>/participants/<participant_id>",
+      "method": "DELETE",
+      "status": "skipped",
+      "reason": "Placeholders n\u00e3o resolvidos"
+    },
+    {
+      "path": "/plans/<plan_id>/participants/<participant_id>",
+      "method": "GET",
+      "status": "skipped",
+      "reason": "Placeholders n\u00e3o resolvidos"
+    },
+    {
+      "path": "/plans/<plan_id>/participants/<participant_id>",
+      "method": "PUT",
+      "status": "skipped",
+      "reason": "Placeholders n\u00e3o resolvidos"
+    },
+    {
+      "path": "/plans/<plan_id>/participants/<participant_id>/send-message",
+      "method": "POST",
+      "status": "skipped",
+      "reason": "Placeholders n\u00e3o resolvidos"
+    },
+    {
+      "path": "/plans/<plan_id>/participants/<participant_id>/status",
+      "method": "POST",
+      "status": "skipped",
+      "reason": "Placeholders n\u00e3o resolvidos"
+    },
+    {
+      "path": "/plans/<plan_id>/participants/toggle/<int:employee_id>",
+      "method": "POST",
+      "status_code": 500,
+      "url": "http://localhost:5003/plans/1/participants/toggle/1",
+      "status": "warning",
+      "details": "{\n  \"error\": \"404 Not Found: The requested URL was not found on the server. If you entered the URL manually please check your spelling and try again.\",\n  \"success\": false\n}\n"
+    },
+    {
+      "path": "/plans/<plan_id>/projects",
+      "method": "GET",
+      "status_code": 500,
+      "url": "http://localhost:5003/plans/1/projects",
+      "status": "warning",
+      "details": "<html>\n  <head>\n    <title>Internal Server Error</title>\n  </head>\n  <body>\n    <h1><p>Internal Server Error</p></h1>\n    \n  </body>\n</html>\n"
+    },
+    {
+      "path": "/plans/<plan_id>/projects",
+      "method": "POST",
+      "status_code": 500,
+      "url": "http://localhost:5003/plans/1/projects",
+      "status": "warning",
+      "details": "<html>\n  <head>\n    <title>Internal Server Error</title>\n  </head>\n  <body>\n    <h1><p>Internal Server Error</p></h1>\n    \n  </body>\n</html>\n"
+    },
+    {
+      "path": "/plans/<plan_id>/projects/<int:project_id>",
+      "method": "POST",
+      "status_code": 500,
+      "url": "http://localhost:5003/plans/1/projects/1",
+      "status": "warning",
+      "details": "<html>\n  <head>\n    <title>Internal Server Error</title>\n  </head>\n  <body>\n    <h1><p>Internal Server Error</p></h1>\n    \n  </body>\n</html>\n"
+    },
+    {
+      "path": "/plans/<plan_id>/projects/<int:project_id>/delete",
+      "method": "POST",
+      "status_code": 500,
+      "url": "http://localhost:5003/plans/1/projects/1/delete",
+      "status": "warning",
+      "details": "<html>\n  <head>\n    <title>Internal Server Error</title>\n  </head>\n  <body>\n    <h1><p>Internal Server Error</p></h1>\n    \n  </body>\n</html>\n"
+    },
+    {
+      "path": "/plans/<plan_id>/projects/<int:project_id>/edit",
+      "method": "GET",
+      "status_code": 500,
+      "url": "http://localhost:5003/plans/1/projects/1/edit",
+      "status": "warning",
+      "details": "<html>\n  <head>\n    <title>Internal Server Error</title>\n  </head>\n  <body>\n    <h1><p>Internal Server Error</p></h1>\n    \n  </body>\n</html>\n"
+    },
+    {
+      "path": "/plans/<plan_id>/projects/analysis",
+      "method": "POST",
+      "status_code": 500,
+      "url": "http://localhost:5003/plans/1/projects/analysis",
+      "status": "warning",
+      "details": "<html>\n  <head>\n    <title>Internal Server Error</title>\n  </head>\n  <body>\n    <h1><p>Internal Server Error</p></h1>\n    \n  </body>\n</html>\n"
+    },
+    {
+      "path": "/plans/<plan_id>/reports",
+      "method": "GET",
+      "status_code": 404,
+      "url": "http://localhost:5003/plans/1/reports",
+      "status": "warning",
+      "details": "<!doctype html>\n<html lang=en>\n<title>404 Not Found</title>\n<h1>Not Found</h1>\n<p>The requested URL was not found on the server. If you entered the URL manually please check your spelling and try agai"
+    },
+    {
+      "path": "/plans/<plan_id>/reports/formal",
+      "method": "GET",
+      "status_code": 404,
+      "url": "http://localhost:5003/plans/1/reports/formal",
+      "status": "warning",
+      "details": "<!doctype html>\n<html lang=en>\n<title>404 Not Found</title>\n<h1>Not Found</h1>\n<p>The requested URL was not found on the server. If you entered the URL manually please check your spelling and try agai"
+    },
+    {
+      "path": "/plans/<plan_id>/reports/slides",
+      "method": "GET",
+      "status_code": 404,
+      "url": "http://localhost:5003/plans/1/reports/slides",
+      "status": "warning",
+      "details": "<!doctype html>\n<html lang=en>\n<title>404 Not Found</title>\n<h1>Not Found</h1>\n<p>The requested URL was not found on the server. If you entered the URL manually please check your spelling and try agai"
+    },
+    {
+      "path": "/plans/<plan_id>/sections/<section_name>/status",
+      "method": "GET",
+      "status": "skipped",
+      "reason": "Placeholders n\u00e3o resolvidos"
+    },
+    {
+      "path": "/plans/<plan_id>/sections/<section_name>/status",
+      "method": "POST",
+      "status": "skipped",
+      "reason": "Placeholders n\u00e3o resolvidos"
+    },
+    {
+      "path": "/plans/<plan_id>/sections/alignment/consultant-notes",
+      "method": "POST",
+      "status_code": 404,
+      "url": "http://localhost:5003/plans/1/sections/alignment/consultant-notes",
+      "status": "warning",
+      "details": "<!doctype html>\n<html lang=en>\n<title>404 Not Found</title>\n<h1>Not Found</h1>\n<p>The requested URL was not found on the server. If you entered the URL manually please check your spelling and try agai"
+    },
+    {
+      "path": "/plans/<plan_id>/sections/company/status",
+      "method": "POST",
+      "status_code": 400,
+      "url": "http://localhost:5003/plans/1/sections/company/status",
+      "status": "warning",
+      "details": "{\n  \"error\": \"Status inv\\u00e1lido\",\n  \"success\": false\n}\n"
+    },
+    {
+      "path": "/plans/<plan_id>/sections/directionals/consultant-analysis",
+      "method": "POST",
+      "status_code": 404,
+      "url": "http://localhost:5003/plans/1/sections/directionals/consultant-analysis",
+      "status": "warning",
+      "details": "<!doctype html>\n<html lang=en>\n<title>404 Not Found</title>\n<h1>Not Found</h1>\n<p>The requested URL was not found on the server. If you entered the URL manually please check your spelling and try agai"
+    },
+    {
+      "path": "/plans/<plan_id>/sections/misalignment/consultant-notes",
+      "method": "POST",
+      "status_code": 404,
+      "url": "http://localhost:5003/plans/1/sections/misalignment/consultant-notes",
+      "status": "warning",
+      "details": "<!doctype html>\n<html lang=en>\n<title>404 Not Found</title>\n<h1>Not Found</h1>\n<p>The requested URL was not found on the server. If you entered the URL manually please check your spelling and try agai"
+    },
+    {
+      "path": "/plans/<plan_id>/sections/workshop/consultant-notes",
+      "method": "POST",
+      "status_code": 404,
+      "url": "http://localhost:5003/plans/1/sections/workshop/consultant-notes",
+      "status": "warning",
+      "details": "<!doctype html>\n<html lang=en>\n<title>404 Not Found</title>\n<h1>Not Found</h1>\n<p>The requested URL was not found on the server. If you entered the URL manually please check your spelling and try agai"
+    },
+    {
+      "path": "/plans/<plan_id>/vision-records",
+      "method": "POST",
+      "status_code": 404,
+      "url": "http://localhost:5003/plans/1/vision-records",
+      "status": "warning",
+      "details": "<!doctype html>\n<html lang=en>\n<title>404 Not Found</title>\n<h1>Not Found</h1>\n<p>The requested URL was not found on the server. If you entered the URL manually please check your spelling and try agai"
+    },
+    {
+      "path": "/plans/<plan_id>/vision-records/<vision_id>",
+      "method": "DELETE",
+      "status": "skipped",
+      "reason": "Placeholders n\u00e3o resolvidos"
+    },
+    {
+      "path": "/plans/<plan_id>/vision-records/<vision_id>",
+      "method": "GET",
+      "status": "skipped",
+      "reason": "Placeholders n\u00e3o resolvidos"
+    },
+    {
+      "path": "/plans/<plan_id>/vision-records/<vision_id>",
+      "method": "PUT",
+      "status": "skipped",
+      "reason": "Placeholders n\u00e3o resolvidos"
+    },
+    {
+      "path": "/plans/<plan_id>/workshop-adjustments",
+      "method": "POST",
+      "status_code": 404,
+      "url": "http://localhost:5003/plans/1/workshop-adjustments",
+      "status": "warning",
+      "details": "<!doctype html>\n<html lang=en>\n<title>404 Not Found</title>\n<h1>Not Found</h1>\n<p>The requested URL was not found on the server. If you entered the URL manually please check your spelling and try agai"
+    },
+    {
+      "path": "/relatorios/projetos/<int:company_id>",
+      "method": "GET",
+      "status_code": 500,
+      "url": "http://localhost:5003/relatorios/projetos/1",
+      "status": "warning",
+      "details": "<html>\n  <head>\n    <title>Internal Server Error</title>\n  </head>\n  <body>\n    <h1><p>Internal Server Error</p></h1>\n    \n  </body>\n</html>\n"
+    },
+    {
+      "path": "/report-templates",
+      "method": "GET",
+      "status": "warning",
+      "status_code": null,
+      "details": "('Connection aborted.', RemoteDisconnected('Remote end closed connection without response'))"
+    },
+    {
+      "path": "/settings/reports",
+      "method": "GET",
+      "status_code": 200,
+      "url": "http://localhost:5003/settings/reports",
+      "status": "ok"
+    },
+    {
+      "path": "/test-routines-modal",
+      "method": "GET",
+      "status_code": 200,
+      "url": "http://localhost:5003/test-routines-modal",
+      "status": "ok"
+    },
+    {
+      "path": "/auth/change-password",
+      "method": "POST",
+      "status_code": 400,
+      "url": "http://localhost:5003/auth/change-password",
+      "status": "warning",
+      "details": "{\n  \"message\": \"Senha atual e nova senha s\\u00e3o obrigat\\u00f3rias\",\n  \"success\": false\n}\n"
+    },
+    {
+      "path": "/auth/current-user",
+      "method": "GET",
+      "status_code": 200,
+      "url": "http://localhost:5003/auth/current-user",
+      "status": "ok"
+    },
+    {
+      "path": "/auth/login",
+      "method": "GET",
+      "status_code": 200,
+      "url": "http://localhost:5003/auth/login",
+      "status": "ok"
+    },
+    {
+      "path": "/auth/login",
+      "method": "POST",
+      "status_code": 200,
+      "url": "http://localhost:5003/auth/login",
+      "status": "ok"
+    },
+    {
+      "path": "/auth/logout",
+      "method": "GET",
+      "status_code": 200,
+      "url": "http://localhost:5003/auth/logout",
+      "status": "ok"
+    },
+    {
+      "path": "/auth/logout",
+      "method": "POST",
+      "status_code": 200,
+      "url": "http://localhost:5003/auth/logout",
+      "status": "ok"
+    },
+    {
+      "path": "/auth/profile",
+      "method": "GET",
+      "status_code": 200,
+      "url": "http://localhost:5003/auth/profile",
+      "status": "ok"
+    },
+    {
+      "path": "/auth/profile",
+      "method": "POST",
+      "status_code": 200,
+      "url": "http://localhost:5003/auth/profile",
+      "status": "ok"
+    },
+    {
+      "path": "/auth/register",
+      "method": "GET",
+      "status_code": 200,
+      "url": "http://localhost:5003/auth/register",
+      "status": "ok"
+    },
+    {
+      "path": "/auth/register",
+      "method": "POST",
+      "status_code": 403,
+      "url": "http://localhost:5003/auth/register",
+      "status": "warning",
+      "details": "{\n  \"message\": \"Acesso negado\",\n  \"success\": false\n}\n"
+    },
+    {
+      "path": "/auth/users",
+      "method": "GET",
+      "status_code": 200,
+      "url": "http://localhost:5003/auth/users",
+      "status": "ok"
+    },
+    {
+      "path": "/auth/users/<int:user_id>",
+      "method": "DELETE",
+      "status": "skipped",
+      "reason": "Placeholders n\u00e3o resolvidos"
+    },
+    {
+      "path": "/auth/users/<int:user_id>",
+      "method": "GET",
+      "status": "skipped",
+      "reason": "Placeholders n\u00e3o resolvidos"
+    },
+    {
+      "path": "/auth/users/<int:user_id>",
+      "method": "PUT",
+      "status": "skipped",
+      "reason": "Placeholders n\u00e3o resolvidos"
+    },
+    {
+      "path": "/auth/users/<int:user_id>/status",
+      "method": "PUT",
+      "status": "skipped",
+      "reason": "Placeholders n\u00e3o resolvidos"
+    },
+    {
+      "path": "/auth/users/page",
+      "method": "GET",
+      "status_code": 200,
+      "url": "http://localhost:5003/auth/users/page",
+      "status": "ok"
+    },
+    {
+      "path": "/grv/api/companies/<int:company_id>/processes/<int:process_id>/activities",
+      "method": "GET",
+      "status": "skipped",
+      "reason": "Placeholders n\u00e3o resolvidos"
+    },
+    {
+      "path": "/grv/api/companies/<int:company_id>/processes/<int:process_id>/activities",
+      "method": "POST",
+      "status": "skipped",
+      "reason": "Placeholders n\u00e3o resolvidos"
+    },
+    {
+      "path": "/grv/api/companies/<int:company_id>/processes/<int:process_id>/activities/<int:activity_id>",
+      "method": "DELETE",
+      "status": "skipped",
+      "reason": "Placeholders n\u00e3o resolvidos"
+    },
+    {
+      "path": "/grv/api/companies/<int:company_id>/processes/<int:process_id>/activities/<int:activity_id>",
+      "method": "GET",
+      "status": "skipped",
+      "reason": "Placeholders n\u00e3o resolvidos"
+    },
+    {
+      "path": "/grv/api/companies/<int:company_id>/processes/<int:process_id>/activities/<int:activity_id>",
+      "method": "PUT",
+      "status": "skipped",
+      "reason": "Placeholders n\u00e3o resolvidos"
+    },
+    {
+      "path": "/grv/api/companies/<int:company_id>/processes/<int:process_id>/activities/<int:activity_id>/entries",
+      "method": "POST",
+      "status": "skipped",
+      "reason": "Placeholders n\u00e3o resolvidos"
+    },
+    {
+      "path": "/grv/api/companies/<int:company_id>/processes/<int:process_id>/activities/<int:activity_id>/entries/<int:entry_id>",
+      "method": "DELETE",
+      "status": "skipped",
+      "reason": "Placeholders n\u00e3o resolvidos"
+    },
+    {
+      "path": "/grv/api/companies/<int:company_id>/processes/<int:process_id>/activities/<int:activity_id>/entries/<int:entry_id>",
+      "method": "GET",
+      "status": "skipped",
+      "reason": "Placeholders n\u00e3o resolvidos"
+    },
+    {
+      "path": "/grv/api/companies/<int:company_id>/processes/<int:process_id>/activities/<int:activity_id>/entries/<int:entry_id>",
+      "method": "PUT",
+      "status": "skipped",
+      "reason": "Placeholders n\u00e3o resolvidos"
+    },
+    {
+      "path": "/grv/api/company/<int:company_id>/indicator-data",
+      "method": "GET",
+      "status_code": 200,
+      "url": "http://localhost:5003/grv/api/company/1/indicator-data",
+      "status": "ok"
+    },
+    {
+      "path": "/grv/api/company/<int:company_id>/indicator-data",
+      "method": "POST",
+      "status_code": 400,
+      "url": "http://localhost:5003/grv/api/company/1/indicator-data",
+      "status": "warning",
+      "details": "{\n  \"message\": \"(psycopg2.errors.SyntaxError) ERRO:  erro de sintaxe em ou pr\\u00f3ximo a \\\",\\\"\\nLINE 4:             VALUES (1, NULL, ?, ?, ?)\\n                                      ^\\n\\n[SQL: \\n     "
+    },
+    {
+      "path": "/grv/api/company/<int:company_id>/indicator-data/<int:data_id>",
+      "method": "DELETE",
+      "status": "skipped",
+      "reason": "Placeholders n\u00e3o resolvidos"
+    },
+    {
+      "path": "/grv/api/company/<int:company_id>/indicator-data/<int:data_id>",
+      "method": "GET",
+      "status": "skipped",
+      "reason": "Placeholders n\u00e3o resolvidos"
+    },
+    {
+      "path": "/grv/api/company/<int:company_id>/indicator-data/<int:data_id>",
+      "method": "PUT",
+      "status": "skipped",
+      "reason": "Placeholders n\u00e3o resolvidos"
+    },
+    {
+      "path": "/grv/api/company/<int:company_id>/indicator-goals",
+      "method": "GET",
+      "status_code": 200,
+      "url": "http://localhost:5003/grv/api/company/1/indicator-goals",
+      "status": "ok"
+    },
+    {
+      "path": "/grv/api/company/<int:company_id>/indicator-goals",
+      "method": "POST",
+      "status_code": 400,
+      "url": "http://localhost:5003/grv/api/company/1/indicator-goals",
+      "status": "warning",
+      "details": "{\n  \"message\": \"Indicador obrigatorio nao informado ou invalido.\",\n  \"success\": false\n}\n"
+    },
+    {
+      "path": "/grv/api/company/<int:company_id>/indicator-goals/<int:goal_id>",
+      "method": "DELETE",
+      "status": "skipped",
+      "reason": "Placeholders n\u00e3o resolvidos"
+    },
+    {
+      "path": "/grv/api/company/<int:company_id>/indicator-goals/<int:goal_id>",
+      "method": "GET",
+      "status": "skipped",
+      "reason": "Placeholders n\u00e3o resolvidos"
+    },
+    {
+      "path": "/grv/api/company/<int:company_id>/indicator-goals/<int:goal_id>",
+      "method": "PUT",
+      "status": "skipped",
+      "reason": "Placeholders n\u00e3o resolvidos"
+    },
+    {
+      "path": "/grv/api/company/<int:company_id>/indicator-groups",
+      "method": "GET",
+      "status_code": 200,
+      "url": "http://localhost:5003/grv/api/company/1/indicator-groups",
+      "status": "ok"
+    },
+    {
+      "path": "/grv/api/company/<int:company_id>/indicator-groups",
+      "method": "POST",
+      "status_code": 400,
+      "url": "http://localhost:5003/grv/api/company/1/indicator-groups",
+      "status": "warning",
+      "details": "{\n  \"message\": \"(psycopg2.errors.SyntaxError) ERRO:  erro de sintaxe em ou pr\\u00f3ximo a \\\",\\\"\\nLINE 4:             VALUES (1, NULL, ?, ?, ?)\\n                                      ^\\n\\n[SQL: \\n     "
+    },
+    {
+      "path": "/grv/api/company/<int:company_id>/indicator-groups/<int:group_id>",
+      "method": "DELETE",
+      "status": "skipped",
+      "reason": "Placeholders n\u00e3o resolvidos"
+    },
+    {
+      "path": "/grv/api/company/<int:company_id>/indicator-groups/<int:group_id>",
+      "method": "GET",
+      "status": "skipped",
+      "reason": "Placeholders n\u00e3o resolvidos"
+    },
+    {
+      "path": "/grv/api/company/<int:company_id>/indicator-groups/<int:group_id>",
+      "method": "PUT",
+      "status": "skipped",
+      "reason": "Placeholders n\u00e3o resolvidos"
+    },
+    {
+      "path": "/grv/api/company/<int:company_id>/indicators",
+      "method": "GET",
+      "status_code": 200,
+      "url": "http://localhost:5003/grv/api/company/1/indicators",
+      "status": "ok"
+    },
+    {
+      "path": "/grv/api/company/<int:company_id>/indicators",
+      "method": "POST",
+      "status_code": 400,
+      "url": "http://localhost:5003/grv/api/company/1/indicators",
+      "status": "warning",
+      "details": "{\n  \"message\": \"(psycopg2.errors.SyntaxError) ERRO:  erro de sintaxe em ou pr\\u00f3ximo a \\\",\\\"\\nLINE 7:             VALUES (1, NULL, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?...\\n                              "
+    },
+    {
+      "path": "/grv/api/company/<int:company_id>/indicators/<int:indicator_id>",
+      "method": "DELETE",
+      "status": "skipped",
+      "reason": "Placeholders n\u00e3o resolvidos"
+    },
+    {
+      "path": "/grv/api/company/<int:company_id>/indicators/<int:indicator_id>",
+      "method": "GET",
+      "status": "skipped",
+      "reason": "Placeholders n\u00e3o resolvidos"
+    },
+    {
+      "path": "/grv/api/company/<int:company_id>/indicators/<int:indicator_id>",
+      "method": "PUT",
+      "status": "skipped",
+      "reason": "Placeholders n\u00e3o resolvidos"
+    },
+    {
+      "path": "/grv/api/company/<int:company_id>/processes/<int:process_id>/indicators",
+      "method": "GET",
+      "status": "skipped",
+      "reason": "Placeholders n\u00e3o resolvidos"
+    },
+    {
+      "path": "/grv/api/plans/<int:plan_id>/okrs",
+      "method": "GET",
+      "status_code": 200,
+      "url": "http://localhost:5003/grv/api/plans/1/okrs",
+      "status": "ok"
+    },
+    {
+      "path": "/grv/company/<int:company_id>",
+      "method": "GET",
+      "status_code": 404,
+      "url": "http://localhost:5003/grv/company/1",
+      "status": "warning",
+      "details": "<!doctype html>\n<html lang=en>\n<title>404 Not Found</title>\n<h1>Not Found</h1>\n<p>The requested URL was not found on the server. If you entered the URL manually please check your spelling and try agai"
+    },
+    {
+      "path": "/grv/company/<int:company_id>/identity/mvv",
+      "method": "GET",
+      "status_code": 500,
+      "url": "http://localhost:5003/grv/company/1/identity/mvv",
+      "status": "warning",
+      "details": "<html>\n  <head>\n    <title>Internal Server Error</title>\n  </head>\n  <body>\n    <h1><p>Internal Server Error</p></h1>\n    \n  </body>\n</html>\n"
+    },
+    {
+      "path": "/grv/company/<int:company_id>/identity/org-chart",
+      "method": "GET",
+      "status_code": 500,
+      "url": "http://localhost:5003/grv/company/1/identity/org-chart",
+      "status": "warning",
+      "details": "<html>\n  <head>\n    <title>Internal Server Error</title>\n  </head>\n  <body>\n    <h1><p>Internal Server Error</p></h1>\n    \n  </body>\n</html>\n"
+    },
+    {
+      "path": "/grv/company/<int:company_id>/identity/roles",
+      "method": "GET",
+      "status_code": 500,
+      "url": "http://localhost:5003/grv/company/1/identity/roles",
+      "status": "warning",
+      "details": "<html>\n  <head>\n    <title>Internal Server Error</title>\n  </head>\n  <body>\n    <h1><p>Internal Server Error</p></h1>\n    \n  </body>\n</html>\n"
+    },
+    {
+      "path": "/grv/company/<int:company_id>/indicator-data/form",
+      "method": "GET",
+      "status_code": 200,
+      "url": "http://localhost:5003/grv/company/1/indicator-data/form",
+      "status": "ok"
+    },
+    {
+      "path": "/grv/company/<int:company_id>/indicator-data/form/<int:record_id>",
+      "method": "GET",
+      "status_code": 200,
+      "url": "http://localhost:5003/grv/company/1/indicator-data/form/1",
+      "status": "ok"
+    },
+    {
+      "path": "/grv/company/<int:company_id>/indicator-goals/form",
+      "method": "GET",
+      "status_code": 200,
+      "url": "http://localhost:5003/grv/company/1/indicator-goals/form",
+      "status": "ok"
+    },
+    {
+      "path": "/grv/company/<int:company_id>/indicator-goals/form/<int:goal_id>",
+      "method": "GET",
+      "status": "skipped",
+      "reason": "Placeholders n\u00e3o resolvidos"
+    },
+    {
+      "path": "/grv/company/<int:company_id>/indicator-groups/form",
+      "method": "GET",
+      "status_code": 200,
+      "url": "http://localhost:5003/grv/company/1/indicator-groups/form",
+      "status": "ok"
+    },
+    {
+      "path": "/grv/company/<int:company_id>/indicator-groups/form/<int:group_id>",
+      "method": "GET",
+      "status": "skipped",
+      "reason": "Placeholders n\u00e3o resolvidos"
+    },
+    {
+      "path": "/grv/company/<int:company_id>/indicators/analysis",
+      "method": "GET",
+      "status_code": 500,
+      "url": "http://localhost:5003/grv/company/1/indicators/analysis",
+      "status": "warning",
+      "details": "<html>\n  <head>\n    <title>Internal Server Error</title>\n  </head>\n  <body>\n    <h1><p>Internal Server Error</p></h1>\n    \n  </body>\n</html>\n"
+    },
+    {
+      "path": "/grv/company/<int:company_id>/indicators/data",
+      "method": "GET",
+      "status_code": 500,
+      "url": "http://localhost:5003/grv/company/1/indicators/data",
+      "status": "warning",
+      "details": "<html>\n  <head>\n    <title>Internal Server Error</title>\n  </head>\n  <body>\n    <h1><p>Internal Server Error</p></h1>\n    \n  </body>\n</html>\n"
+    },
+    {
+      "path": "/grv/company/<int:company_id>/indicators/form",
+      "method": "GET",
+      "status_code": 200,
+      "url": "http://localhost:5003/grv/company/1/indicators/form",
+      "status": "ok"
+    },
+    {
+      "path": "/grv/company/<int:company_id>/indicators/form/<int:indicator_id>",
+      "method": "GET",
+      "status": "skipped",
+      "reason": "Placeholders n\u00e3o resolvidos"
+    },
+    {
+      "path": "/grv/company/<int:company_id>/indicators/goals",
+      "method": "GET",
+      "status_code": 500,
+      "url": "http://localhost:5003/grv/company/1/indicators/goals",
+      "status": "warning",
+      "details": "<html>\n  <head>\n    <title>Internal Server Error</title>\n  </head>\n  <body>\n    <h1><p>Internal Server Error</p></h1>\n    \n  </body>\n</html>\n"
+    },
+    {
+      "path": "/grv/company/<int:company_id>/indicators/list",
+      "method": "GET",
+      "status_code": 500,
+      "url": "http://localhost:5003/grv/company/1/indicators/list",
+      "status": "warning",
+      "details": "<html>\n  <head>\n    <title>Internal Server Error</title>\n  </head>\n  <body>\n    <h1><p>Internal Server Error</p></h1>\n    \n  </body>\n</html>\n"
+    },
+    {
+      "path": "/grv/company/<int:company_id>/indicators/tree",
+      "method": "GET",
+      "status_code": 500,
+      "url": "http://localhost:5003/grv/company/1/indicators/tree",
+      "status": "warning",
+      "details": "<html>\n  <head>\n    <title>Internal Server Error</title>\n  </head>\n  <body>\n    <h1><p>Internal Server Error</p></h1>\n    \n  </body>\n</html>\n"
+    },
+    {
+      "path": "/grv/company/<int:company_id>/process/analysis",
+      "method": "GET",
+      "status_code": 500,
+      "url": "http://localhost:5003/grv/company/1/process/analysis",
+      "status": "warning",
+      "details": "<html>\n  <head>\n    <title>Internal Server Error</title>\n  </head>\n  <body>\n    <h1><p>Internal Server Error</p></h1>\n    \n  </body>\n</html>\n"
+    },
+    {
+      "path": "/grv/company/<int:company_id>/process/instances",
+      "method": "GET",
+      "status_code": 500,
+      "url": "http://localhost:5003/grv/company/1/process/instances",
+      "status": "warning",
+      "details": "<html>\n  <head>\n    <title>Internal Server Error</title>\n  </head>\n  <body>\n    <h1><p>Internal Server Error</p></h1>\n    \n  </body>\n</html>\n"
+    },
+    {
+      "path": "/grv/company/<int:company_id>/process/instances/<int:instance_id>/manage",
+      "method": "GET",
+      "status": "skipped",
+      "reason": "Placeholders n\u00e3o resolvidos"
+    },
+    {
+      "path": "/grv/company/<int:company_id>/process/list",
+      "method": "GET",
+      "status_code": 500,
+      "url": "http://localhost:5003/grv/company/1/process/list",
+      "status": "warning",
+      "details": "<html>\n  <head>\n    <title>Internal Server Error</title>\n  </head>\n  <body>\n    <h1><p>Internal Server Error</p></h1>\n    \n  </body>\n</html>\n"
+    },
+    {
+      "path": "/grv/company/<int:company_id>/process/macro",
+      "method": "GET",
+      "status_code": 500,
+      "url": "http://localhost:5003/grv/company/1/process/macro",
+      "status": "warning",
+      "details": "<html>\n  <head>\n    <title>Internal Server Error</title>\n  </head>\n  <body>\n    <h1><p>Internal Server Error</p></h1>\n    \n  </body>\n</html>\n"
+    },
+    {
+      "path": "/grv/company/<int:company_id>/process/map",
+      "method": "GET",
+      "status_code": 500,
+      "url": "http://localhost:5003/grv/company/1/process/map",
+      "status": "warning",
+      "details": "<html>\n  <head>\n    <title>Internal Server Error</title>\n  </head>\n  <body>\n    <h1><p>Internal Server Error</p></h1>\n    \n  </body>\n</html>\n"
+    },
+    {
+      "path": "/grv/company/<int:company_id>/process/map/pdf",
+      "method": "GET",
+      "status_code": 404,
+      "url": "http://localhost:5003/grv/company/1/process/map/pdf",
+      "status": "warning",
+      "details": "<!doctype html>\n<html lang=en>\n<title>404 Not Found</title>\n<h1>Not Found</h1>\n<p>The requested URL was not found on the server. If you entered the URL manually please check your spelling and try agai"
+    },
+    {
+      "path": "/grv/company/<int:company_id>/process/map/pdf/debug",
+      "method": "GET",
+      "status_code": 404,
+      "url": "http://localhost:5003/grv/company/1/process/map/pdf/debug",
+      "status": "warning",
+      "details": "<!doctype html>\n<html lang=en>\n<title>404 Not Found</title>\n<h1>Not Found</h1>\n<p>The requested URL was not found on the server. If you entered the URL manually please check your spelling and try agai"
+    },
+    {
+      "path": "/grv/company/<int:company_id>/process/map/pdf2",
+      "method": "GET",
+      "status_code": 404,
+      "url": "http://localhost:5003/grv/company/1/process/map/pdf2",
+      "status": "warning",
+      "details": "<!doctype html>\n<html lang=en>\n<title>404 Not Found</title>\n<h1>Not Found</h1>\n<p>The requested URL was not found on the server. If you entered the URL manually please check your spelling and try agai"
+    },
+    {
+      "path": "/grv/company/<int:company_id>/process/map/pdf2/debug",
+      "method": "GET",
+      "status_code": 404,
+      "url": "http://localhost:5003/grv/company/1/process/map/pdf2/debug",
+      "status": "warning",
+      "details": "<!doctype html>\n<html lang=en>\n<title>404 Not Found</title>\n<h1>Not Found</h1>\n<p>The requested URL was not found on the server. If you entered the URL manually please check your spelling and try agai"
+    },
+    {
+      "path": "/grv/company/<int:company_id>/process/map/pdf2/test",
+      "method": "GET",
+      "status_code": 200,
+      "url": "http://localhost:5003/grv/company/1/process/map/pdf2/test",
+      "status": "ok"
+    },
+    {
+      "path": "/grv/company/<int:company_id>/process/map/print",
+      "method": "GET",
+      "status_code": 404,
+      "url": "http://localhost:5003/grv/company/1/process/map/print",
+      "status": "warning",
+      "details": "<!doctype html>\n<html lang=en>\n<title>404 Not Found</title>\n<h1>Not Found</h1>\n<p>The requested URL was not found on the server. If you entered the URL manually please check your spelling and try agai"
+    },
+    {
+      "path": "/grv/company/<int:company_id>/process/modeling",
+      "method": "GET",
+      "status_code": 500,
+      "url": "http://localhost:5003/grv/company/1/process/modeling",
+      "status": "warning",
+      "details": "<html>\n  <head>\n    <title>Internal Server Error</title>\n  </head>\n  <body>\n    <h1><p>Internal Server Error</p></h1>\n    \n  </body>\n</html>\n"
+    },
+    {
+      "path": "/grv/company/<int:company_id>/process/modeling/<int:process_id>",
+      "method": "GET",
+      "status": "skipped",
+      "reason": "Placeholders n\u00e3o resolvidos"
+    },
+    {
+      "path": "/grv/company/<int:company_id>/project/<int:project_id>",
+      "method": "GET",
+      "status_code": 404,
+      "url": "http://localhost:5003/grv/company/1/project/1",
+      "status": "warning",
+      "details": "<!doctype html>\n<html lang=en>\n<title>404 Not Found</title>\n<h1>Not Found</h1>\n<p>The requested URL was not found on the server. If you entered the URL manually please check your spelling and try agai"
+    },
+    {
+      "path": "/grv/company/<int:company_id>/projects/<int:project_id>/manage",
+      "method": "GET",
+      "status_code": 404,
+      "url": "http://localhost:5003/grv/company/1/projects/1/manage",
+      "status": "warning",
+      "details": "<!doctype html>\n<html lang=en>\n<title>404 Not Found</title>\n<h1>Not Found</h1>\n<p>The requested URL was not found on the server. If you entered the URL manually please check your spelling and try agai"
+    },
+    {
+      "path": "/grv/company/<int:company_id>/projects/analysis",
+      "method": "GET",
+      "status_code": 500,
+      "url": "http://localhost:5003/grv/company/1/projects/analysis",
+      "status": "warning",
+      "details": "<html>\n  <head>\n    <title>Internal Server Error</title>\n  </head>\n  <body>\n    <h1><p>Internal Server Error</p></h1>\n    \n  </body>\n</html>\n"
+    },
+    {
+      "path": "/grv/company/<int:company_id>/projects/portfolios",
+      "method": "GET",
+      "status_code": 500,
+      "url": "http://localhost:5003/grv/company/1/projects/portfolios",
+      "status": "warning",
+      "details": "<html>\n  <head>\n    <title>Internal Server Error</title>\n  </head>\n  <body>\n    <h1><p>Internal Server Error</p></h1>\n    \n  </body>\n</html>\n"
+    },
+    {
+      "path": "/grv/company/<int:company_id>/projects/projects",
+      "method": "GET",
+      "status_code": 500,
+      "url": "http://localhost:5003/grv/company/1/projects/projects",
+      "status": "warning",
+      "details": "<html>\n  <head>\n    <title>Internal Server Error</title>\n  </head>\n  <body>\n    <h1><p>Internal Server Error</p></h1>\n    \n  </body>\n</html>\n"
+    },
+    {
+      "path": "/grv/company/<int:company_id>/routine/activities",
+      "method": "GET",
+      "status_code": 500,
+      "url": "http://localhost:5003/grv/company/1/routine/activities",
+      "status": "warning",
+      "details": "<html>\n  <head>\n    <title>Internal Server Error</title>\n  </head>\n  <body>\n    <h1><p>Internal Server Error</p></h1>\n    \n  </body>\n</html>\n"
+    },
+    {
+      "path": "/grv/company/<int:company_id>/routine/capacity",
+      "method": "GET",
+      "status_code": 500,
+      "url": "http://localhost:5003/grv/company/1/routine/capacity",
+      "status": "warning",
+      "details": "<html>\n  <head>\n    <title>Internal Server Error</title>\n  </head>\n  <body>\n    <h1><p>Internal Server Error</p></h1>\n    \n  </body>\n</html>\n"
+    },
+    {
+      "path": "/grv/company/<int:company_id>/routine/efficiency",
+      "method": "GET",
+      "status_code": 500,
+      "url": "http://localhost:5003/grv/company/1/routine/efficiency",
+      "status": "warning",
+      "details": "<html>\n  <head>\n    <title>Internal Server Error</title>\n  </head>\n  <body>\n    <h1><p>Internal Server Error</p></h1>\n    \n  </body>\n</html>\n"
+    },
+    {
+      "path": "/grv/company/<int:company_id>/routine/incidents",
+      "method": "GET",
+      "status_code": 500,
+      "url": "http://localhost:5003/grv/company/1/routine/incidents",
+      "status": "warning",
+      "details": "<html>\n  <head>\n    <title>Internal Server Error</title>\n  </head>\n  <body>\n    <h1><p>Internal Server Error</p></h1>\n    \n  </body>\n</html>\n"
+    },
+    {
+      "path": "/grv/company/<int:company_id>/routine/work-distribution",
+      "method": "GET",
+      "status_code": 500,
+      "url": "http://localhost:5003/grv/company/1/routine/work-distribution",
+      "status": "warning",
+      "details": "<html>\n  <head>\n    <title>Internal Server Error</title>\n  </head>\n  <body>\n    <h1><p>Internal Server Error</p></h1>\n    \n  </body>\n</html>\n"
+    },
+    {
+      "path": "/grv/dashboard",
+      "method": "GET",
+      "status_code": 200,
+      "url": "http://localhost:5003/grv/dashboard",
+      "status": "ok"
+    },
+    {
+      "path": "/logs/",
+      "method": "GET",
+      "status_code": 200,
+      "url": "http://localhost:5003/logs/",
+      "status": "ok"
+    },
+    {
+      "path": "/logs/dashboard",
+      "method": "GET",
+      "status_code": 200,
+      "url": "http://localhost:5003/logs/dashboard",
+      "status": "ok"
+    },
+    {
+      "path": "/logs/entity-activity/<entity_type>/<entity_id>",
+      "method": "GET",
+      "status": "skipped",
+      "reason": "Placeholders n\u00e3o resolvidos"
+    },
+    {
+      "path": "/logs/export",
+      "method": "GET",
+      "status_code": 200,
+      "url": "http://localhost:5003/logs/export",
+      "status": "ok"
+    },
+    {
+      "path": "/logs/stats",
+      "method": "GET",
+      "status_code": 200,
+      "url": "http://localhost:5003/logs/stats",
+      "status": "ok"
+    },
+    {
+      "path": "/logs/user-activity",
+      "method": "GET",
+      "status_code": 200,
+      "url": "http://localhost:5003/logs/user-activity",
+      "status": "ok"
+    },
+    {
+      "path": "/meetings/api/agenda-item/<int:item_id>/use",
+      "method": "POST",
+      "status": "skipped",
+      "reason": "Placeholders n\u00e3o resolvidos"
+    },
+    {
+      "path": "/meetings/api/company/<int:company_id>/agenda-item",
+      "method": "POST",
+      "status_code": 200,
+      "url": "http://localhost:5003/meetings/api/company/1/agenda-item",
+      "status": "ok"
+    },
+    {
+      "path": "/meetings/api/company/<int:company_id>/meeting",
+      "method": "POST",
+      "status_code": 200,
+      "url": "http://localhost:5003/meetings/api/company/1/meeting",
+      "status": "ok"
+    },
+    {
+      "path": "/meetings/api/company/<int:company_id>/meetings",
+      "method": "GET",
+      "status_code": 404,
+      "url": "http://localhost:5003/meetings/api/company/1/meetings",
+      "status": "warning",
+      "details": "{\n  \"error\": \"company_not_found\",\n  \"success\": false\n}\n"
+    },
+    {
+      "path": "/meetings/api/company/<int:company_id>/meetings/report",
+      "method": "GET",
+      "status_code": 404,
+      "url": "http://localhost:5003/meetings/api/company/1/meetings/report",
+      "status": "warning",
+      "details": "{\n  \"error\": \"company_not_found\",\n  \"success\": false\n}\n"
+    },
+    {
+      "path": "/meetings/api/meeting/<int:meeting_id>",
+      "method": "DELETE",
+      "status_code": 404,
+      "url": "http://localhost:5003/meetings/api/meeting/1",
+      "status": "warning",
+      "details": "{\n  \"message\": \"Reuni\\u00e3o n\\u00e3o encontrada.\",\n  \"success\": false\n}\n"
+    },
+    {
+      "path": "/meetings/api/meeting/<int:meeting_id>",
+      "method": "GET",
+      "status_code": 200,
+      "url": "http://localhost:5003/meetings/api/meeting/1",
+      "status": "ok"
+    },
+    {
+      "path": "/meetings/api/meeting/<int:meeting_id>/atividades",
+      "method": "GET",
+      "status_code": 200,
+      "url": "http://localhost:5003/meetings/api/meeting/1/atividades",
+      "status": "ok"
+    },
+    {
+      "path": "/meetings/api/meeting/<int:meeting_id>/check-sync",
+      "method": "GET",
+      "status_code": 200,
+      "url": "http://localhost:5003/meetings/api/meeting/1/check-sync",
+      "status": "ok"
+    },
+    {
+      "path": "/meetings/api/meeting/<int:meeting_id>/execucao",
+      "method": "PUT",
+      "status_code": 200,
+      "url": "http://localhost:5003/meetings/api/meeting/1/execucao",
+      "status": "ok"
+    },
+    {
+      "path": "/meetings/api/meeting/<int:meeting_id>/finalizar",
+      "method": "POST",
+      "status_code": 200,
+      "url": "http://localhost:5003/meetings/api/meeting/1/finalizar",
+      "status": "ok"
+    },
+    {
+      "path": "/meetings/api/meeting/<int:meeting_id>/iniciar",
+      "method": "POST",
+      "status_code": 200,
+      "url": "http://localhost:5003/meetings/api/meeting/1/iniciar",
+      "status": "ok"
+    },
+    {
+      "path": "/meetings/api/meeting/<int:meeting_id>/preliminares",
+      "method": "PUT",
+      "status_code": 200,
+      "url": "http://localhost:5003/meetings/api/meeting/1/preliminares",
+      "status": "ok"
+    },
+    {
+      "path": "/meetings/api/meeting/<int:meeting_id>/remove-from-project",
+      "method": "POST",
+      "status_code": 200,
+      "url": "http://localhost:5003/meetings/api/meeting/1/remove-from-project",
+      "status": "ok"
+    },
+    {
+      "path": "/meetings/api/meeting/<int:meeting_id>/sync-activities",
+      "method": "POST",
+      "status_code": 200,
+      "url": "http://localhost:5003/meetings/api/meeting/1/sync-activities",
+      "status": "ok"
+    },
+    {
+      "path": "/meetings/company/<int:company_id>",
+      "method": "GET",
+      "status_code": 200,
+      "url": "http://localhost:5003/meetings/company/1",
+      "status": "ok"
+    },
+    {
+      "path": "/meetings/company/<int:company_id>/list",
+      "method": "GET",
+      "status_code": 200,
+      "url": "http://localhost:5003/meetings/company/1/list",
+      "status": "ok"
+    },
+    {
+      "path": "/meetings/company/<int:company_id>/meeting/<int:meeting_id>/delete",
+      "method": "POST",
+      "status_code": 404,
+      "url": "http://localhost:5003/meetings/company/1/meeting/1/delete",
+      "status": "warning",
+      "details": "{\n  \"message\": \"Reuni\\u00e3o n\\u00e3o encontrada\",\n  \"success\": false\n}\n"
+    },
+    {
+      "path": "/meetings/company/<int:company_id>/meeting/<int:meeting_id>/edit",
+      "method": "GET",
+      "status_code": 200,
+      "url": "http://localhost:5003/meetings/company/1/meeting/1/edit",
+      "status": "ok"
+    },
+    {
+      "path": "/meetings/company/<int:company_id>/meeting/<int:meeting_id>/report",
+      "method": "GET",
+      "status_code": 200,
+      "url": "http://localhost:5003/meetings/company/1/meeting/1/report",
+      "status": "ok"
+    },
+    {
+      "path": "/my-work/",
+      "method": "GET",
+      "status_code": 200,
+      "url": "http://localhost:5003/my-work/",
+      "status": "ok"
+    },
+    {
+      "path": "/my-work/activity/<int:activity_id>",
+      "method": "GET",
+      "status": "skipped",
+      "reason": "Placeholders n\u00e3o resolvidos"
+    },
+    {
+      "path": "/my-work/api/activities",
+      "method": "GET",
+      "status_code": 200,
+      "url": "http://localhost:5003/my-work/api/activities",
+      "status": "ok"
+    },
+    {
+      "path": "/my-work/api/comments",
+      "method": "POST",
+      "status_code": 200,
+      "url": "http://localhost:5003/my-work/api/comments",
+      "status": "ok"
+    },
+    {
+      "path": "/my-work/api/company-overview",
+      "method": "GET",
+      "status_code": 200,
+      "url": "http://localhost:5003/my-work/api/company-overview",
+      "status": "ok"
+    },
+    {
+      "path": "/my-work/api/complete",
+      "method": "POST",
+      "status_code": 200,
+      "url": "http://localhost:5003/my-work/api/complete",
+      "status": "ok"
+    },
+    {
+      "path": "/my-work/api/team-overview",
+      "method": "GET",
+      "status_code": 200,
+      "url": "http://localhost:5003/my-work/api/team-overview",
+      "status": "ok"
+    },
+    {
+      "path": "/my-work/api/work-hours",
+      "method": "POST",
+      "status_code": 200,
+      "url": "http://localhost:5003/my-work/api/work-hours",
+      "status": "ok"
+    },
+    {
+      "path": "/my-work/process-instance/<int:instance_id>",
+      "method": "GET",
+      "status": "skipped",
+      "reason": "Placeholders n\u00e3o resolvidos"
+    },
+    {
+      "path": "/pev/api/implantacao/<int:plan_id>/alignment/members",
+      "method": "POST",
+      "status_code": 400,
+      "url": "http://localhost:5003/pev/api/implantacao/1/alignment/members",
+      "status": "warning",
+      "details": "{\n  \"error\": \"Nome \\u00e9 obrigat\\u00f3rio\",\n  \"success\": false\n}\n"
+    },
+    {
+      "path": "/pev/api/implantacao/<int:plan_id>/alignment/members/<int:member_id>",
+      "method": "DELETE",
+      "status": "skipped",
+      "reason": "Placeholders n\u00e3o resolvidos"
+    },
+    {
+      "path": "/pev/api/implantacao/<int:plan_id>/alignment/members/<int:member_id>",
+      "method": "PUT",
+      "status": "skipped",
+      "reason": "Placeholders n\u00e3o resolvidos"
+    },
+    {
+      "path": "/pev/api/implantacao/<int:plan_id>/alignment/overview",
+      "method": "POST",
+      "status_code": 500,
+      "url": "http://localhost:5003/pev/api/implantacao/1/alignment/overview",
+      "status": "warning",
+      "details": "{\n  \"error\": \"(psycopg2.errors.ForeignKeyViolation) ERRO:  inser\\u00e7\\u00e3o ou atualiza\\u00e7\\u00e3o em tabela \\\"plan_alignment_overview\\\" viola restri\\u00e7\\u00e3o de chave estrangeira \\\"plan_align"
+    },
+    {
+      "path": "/pev/api/implantacao/<int:plan_id>/alignment/overview",
+      "method": "PUT",
+      "status_code": 500,
+      "url": "http://localhost:5003/pev/api/implantacao/1/alignment/overview",
+      "status": "warning",
+      "details": "{\n  \"error\": \"(psycopg2.errors.ForeignKeyViolation) ERRO:  inser\\u00e7\\u00e3o ou atualiza\\u00e7\\u00e3o em tabela \\\"plan_alignment_overview\\\" viola restri\\u00e7\\u00e3o de chave estrangeira \\\"plan_align"
+    },
+    {
+      "path": "/pev/api/implantacao/<int:plan_id>/finance/capital-giro",
+      "method": "GET",
+      "status_code": 200,
+      "url": "http://localhost:5003/pev/api/implantacao/1/finance/capital-giro",
+      "status": "ok"
+    },
+    {
+      "path": "/pev/api/implantacao/<int:plan_id>/finance/capital-giro",
+      "method": "POST",
+      "status_code": 400,
+      "url": "http://localhost:5003/pev/api/implantacao/1/finance/capital-giro",
+      "status": "warning",
+      "details": "{\n  \"error\": \"Tipo \\u00e9 obrigat\\u00f3rio (caixa, recebiveis, estoques)\",\n  \"success\": false\n}\n"
+    },
+    {
+      "path": "/pev/api/implantacao/<int:plan_id>/finance/capital-giro/<int:item_id>",
+      "method": "DELETE",
+      "status": "skipped",
+      "reason": "Placeholders n\u00e3o resolvidos"
+    },
+    {
+      "path": "/pev/api/implantacao/<int:plan_id>/finance/capital-giro/<int:item_id>",
+      "method": "PUT",
+      "status": "skipped",
+      "reason": "Placeholders n\u00e3o resolvidos"
+    },
+    {
+      "path": "/pev/api/implantacao/<int:plan_id>/finance/executive-summary",
+      "method": "GET",
+      "status_code": 200,
+      "url": "http://localhost:5003/pev/api/implantacao/1/finance/executive-summary",
+      "status": "ok"
+    },
+    {
+      "path": "/pev/api/implantacao/<int:plan_id>/finance/executive-summary",
+      "method": "PUT",
+      "status_code": 400,
+      "url": "http://localhost:5003/pev/api/implantacao/1/finance/executive-summary",
+      "status": "warning",
+      "details": "{\n  \"error\": \"Campo executive_summary \\u00e9 obrigat\\u00f3rio\",\n  \"success\": false\n}\n"
+    },
+    {
+      "path": "/pev/api/implantacao/<int:plan_id>/finance/funding_sources",
+      "method": "GET",
+      "status_code": 200,
+      "url": "http://localhost:5003/pev/api/implantacao/1/finance/funding_sources",
+      "status": "ok"
+    },
+    {
+      "path": "/pev/api/implantacao/<int:plan_id>/finance/investment/contributions",
+      "method": "GET",
+      "status_code": 200,
+      "url": "http://localhost:5003/pev/api/implantacao/1/finance/investment/contributions",
+      "status": "ok"
+    },
+    {
+      "path": "/pev/api/implantacao/<int:plan_id>/finance/investments",
+      "method": "POST",
+      "status_code": 400,
+      "url": "http://localhost:5003/pev/api/implantacao/1/finance/investments",
+      "status": "warning",
+      "details": "{\n  \"error\": \"Descri\\u00e7\\u00e3o \\u00e9 obrigat\\u00f3ria\",\n  \"success\": false\n}\n"
+    },
+    {
+      "path": "/pev/api/implantacao/<int:plan_id>/finance/investments/<int:investment_id>",
+      "method": "DELETE",
+      "status": "skipped",
+      "reason": "Placeholders n\u00e3o resolvidos"
+    },
+    {
+      "path": "/pev/api/implantacao/<int:plan_id>/finance/investments/<int:investment_id>",
+      "method": "PUT",
+      "status": "skipped",
+      "reason": "Placeholders n\u00e3o resolvidos"
+    },
+    {
+      "path": "/pev/api/implantacao/<int:plan_id>/finance/metrics",
+      "method": "PUT",
+      "status_code": 500,
+      "url": "http://localhost:5003/pev/api/implantacao/1/finance/metrics",
+      "status": "warning",
+      "details": "{\n  \"error\": \"Erro ao atualizar m\\u00e9tricas\",\n  \"success\": false\n}\n"
+    },
+    {
+      "path": "/pev/api/implantacao/<int:plan_id>/finance/premises",
+      "method": "POST",
+      "status_code": 400,
+      "url": "http://localhost:5003/pev/api/implantacao/1/finance/premises",
+      "status": "warning",
+      "details": "{\n  \"error\": \"Descri\\u00e7\\u00e3o \\u00e9 obrigat\\u00f3ria\",\n  \"success\": false\n}\n"
+    },
+    {
+      "path": "/pev/api/implantacao/<int:plan_id>/finance/premises/<int:premise_id>",
+      "method": "DELETE",
+      "status": "skipped",
+      "reason": "Placeholders n\u00e3o resolvidos"
+    },
+    {
+      "path": "/pev/api/implantacao/<int:plan_id>/finance/premises/<int:premise_id>",
+      "method": "PUT",
+      "status": "skipped",
+      "reason": "Placeholders n\u00e3o resolvidos"
+    },
+    {
+      "path": "/pev/api/implantacao/<int:plan_id>/finance/profit-distribution",
+      "method": "GET",
+      "status_code": 200,
+      "url": "http://localhost:5003/pev/api/implantacao/1/finance/profit-distribution",
+      "status": "ok"
+    },
+    {
+      "path": "/pev/api/implantacao/<int:plan_id>/finance/profit-distribution",
+      "method": "PUT",
+      "status_code": 400,
+      "url": "http://localhost:5003/pev/api/implantacao/1/finance/profit-distribution",
+      "status": "warning",
+      "details": "{\n  \"error\": \"Campo profit_distribution_percent \\u00e9 obrigat\\u00f3rio\",\n  \"success\": false\n}\n"
+    },
+    {
+      "path": "/pev/api/implantacao/<int:plan_id>/finance/result_rules",
+      "method": "POST",
+      "status_code": 400,
+      "url": "http://localhost:5003/pev/api/implantacao/1/finance/result_rules",
+      "status": "warning",
+      "details": "{\n  \"error\": \"Descri\\u00e7\\u00e3o \\u00e9 obrigat\\u00f3ria\",\n  \"success\": false\n}\n"
+    },
+    {
+      "path": "/pev/api/implantacao/<int:plan_id>/finance/result_rules/<int:rule_id>",
+      "method": "DELETE",
+      "status": "skipped",
+      "reason": "Placeholders n\u00e3o resolvidos"
+    },
+    {
+      "path": "/pev/api/implantacao/<int:plan_id>/finance/result_rules/<int:rule_id>",
+      "method": "PUT",
+      "status": "skipped",
+      "reason": "Placeholders n\u00e3o resolvidos"
+    },
+    {
+      "path": "/pev/api/implantacao/<int:plan_id>/finance/sources",
+      "method": "POST",
+      "status_code": 400,
+      "url": "http://localhost:5003/pev/api/implantacao/1/finance/sources",
+      "status": "warning",
+      "details": "{\n  \"error\": \"Descri\\u00e7\\u00e3o \\u00e9 obrigat\\u00f3ria\",\n  \"success\": false\n}\n"
+    },
+    {
+      "path": "/pev/api/implantacao/<int:plan_id>/finance/sources/<int:source_id>",
+      "method": "DELETE",
+      "status": "skipped",
+      "reason": "Placeholders n\u00e3o resolvidos"
+    },
+    {
+      "path": "/pev/api/implantacao/<int:plan_id>/finance/sources/<int:source_id>",
+      "method": "PUT",
+      "status": "skipped",
+      "reason": "Placeholders n\u00e3o resolvidos"
+    },
+    {
+      "path": "/pev/api/implantacao/<int:plan_id>/finance/variable_costs",
+      "method": "POST",
+      "status_code": 400,
+      "url": "http://localhost:5003/pev/api/implantacao/1/finance/variable_costs",
+      "status": "warning",
+      "details": "{\n  \"error\": \"Descri\\u00e7\\u00e3o \\u00e9 obrigat\\u00f3ria\",\n  \"success\": false\n}\n"
+    },
+    {
+      "path": "/pev/api/implantacao/<int:plan_id>/finance/variable_costs/<int:cost_id>",
+      "method": "DELETE",
+      "status": "skipped",
+      "reason": "Placeholders n\u00e3o resolvidos"
+    },
+    {
+      "path": "/pev/api/implantacao/<int:plan_id>/finance/variable_costs/<int:cost_id>",
+      "method": "PUT",
+      "status": "skipped",
+      "reason": "Placeholders n\u00e3o resolvidos"
+    },
+    {
+      "path": "/pev/api/implantacao/<int:plan_id>/products",
+      "method": "GET",
+      "status_code": 200,
+      "url": "http://localhost:5003/pev/api/implantacao/1/products",
+      "status": "ok"
+    },
+    {
+      "path": "/pev/api/implantacao/<int:plan_id>/products",
+      "method": "POST",
+      "status_code": 400,
+      "url": "http://localhost:5003/pev/api/implantacao/1/products",
+      "status": "warning",
+      "details": "{\n  \"error\": \"Plano informado nao existe.\",\n  \"success\": false\n}\n"
+    },
+    {
+      "path": "/pev/api/implantacao/<int:plan_id>/products/<int:product_id>",
+      "method": "DELETE",
+      "status_code": 404,
+      "url": "http://localhost:5003/pev/api/implantacao/1/products/1",
+      "status": "warning",
+      "details": "{\n  \"error\": \"Produto nao encontrado.\",\n  \"success\": false\n}\n"
+    },
+    {
+      "path": "/pev/api/implantacao/<int:plan_id>/products/<int:product_id>",
+      "method": "GET",
+      "status_code": 404,
+      "url": "http://localhost:5003/pev/api/implantacao/1/products/1",
+      "status": "warning",
+      "details": "{\n  \"error\": \"Produto nao encontrado.\",\n  \"success\": false\n}\n"
+    },
+    {
+      "path": "/pev/api/implantacao/<int:plan_id>/products/<int:product_id>",
+      "method": "PUT",
+      "status_code": 404,
+      "url": "http://localhost:5003/pev/api/implantacao/1/products/1",
+      "status": "warning",
+      "details": "{\n  \"error\": \"Produto nao encontrado.\",\n  \"success\": false\n}\n"
+    },
+    {
+      "path": "/pev/api/implantacao/<int:plan_id>/products/totals",
+      "method": "GET",
+      "status_code": 200,
+      "url": "http://localhost:5003/pev/api/implantacao/1/products/totals",
+      "status": "ok"
+    },
+    {
+      "path": "/pev/api/implantacao/<int:plan_id>/segments",
+      "method": "POST",
+      "status_code": 400,
+      "url": "http://localhost:5003/pev/api/implantacao/1/segments",
+      "status": "warning",
+      "details": "{\n  \"error\": \"Nome \\u00e9 obrigat\\u00f3rio\",\n  \"success\": false\n}\n"
+    },
+    {
+      "path": "/pev/api/implantacao/<int:plan_id>/segments/<int:segment_id>",
+      "method": "DELETE",
+      "status_code": 200,
+      "url": "http://localhost:5003/pev/api/implantacao/1/segments/1",
+      "status": "ok"
+    },
+    {
+      "path": "/pev/api/implantacao/<int:plan_id>/segments/<int:segment_id>",
+      "method": "PUT",
+      "status_code": 200,
+      "url": "http://localhost:5003/pev/api/implantacao/1/segments/1",
+      "status": "ok"
+    },
+    {
+      "path": "/pev/api/implantacao/<int:plan_id>/structures",
+      "method": "POST",
+      "status_code": 500,
+      "url": "http://localhost:5003/pev/api/implantacao/1/structures",
+      "status": "warning",
+      "details": "{\n  \"error\": \"Erro ao criar estrutura no banco\",\n  \"success\": false\n}\n"
+    },
+    {
+      "path": "/pev/api/implantacao/<int:plan_id>/structures/<int:structure_id>",
+      "method": "DELETE",
+      "status_code": 200,
+      "url": "http://localhost:5003/pev/api/implantacao/1/structures/1",
+      "status": "ok"
+    },
+    {
+      "path": "/pev/api/implantacao/<int:plan_id>/structures/<int:structure_id>",
+      "method": "GET",
+      "status_code": 404,
+      "url": "http://localhost:5003/pev/api/implantacao/1/structures/1",
+      "status": "warning",
+      "details": "{\n  \"error\": \"Estrutura n\\u00e3o encontrada\",\n  \"success\": false\n}\n"
+    },
+    {
+      "path": "/pev/api/implantacao/<int:plan_id>/structures/<int:structure_id>",
+      "method": "PUT",
+      "status_code": 200,
+      "url": "http://localhost:5003/pev/api/implantacao/1/structures/1",
+      "status": "ok"
+    },
+    {
+      "path": "/pev/api/implantacao/<int:plan_id>/structures/<int:structure_id>/installments",
+      "method": "DELETE",
+      "status_code": 404,
+      "url": "http://localhost:5003/pev/api/implantacao/1/structures/1/installments",
+      "status": "warning",
+      "details": "{\n  \"error\": \"Estrutura nao encontrada\",\n  \"success\": false\n}\n"
+    },
+    {
+      "path": "/pev/api/implantacao/<int:plan_id>/structures/<int:structure_id>/installments",
+      "method": "POST",
+      "status_code": 404,
+      "url": "http://localhost:5003/pev/api/implantacao/1/structures/1/installments",
+      "status": "warning",
+      "details": "{\n  \"error\": \"Estrutura nao encontrada\",\n  \"success\": false\n}\n"
+    },
+    {
+      "path": "/pev/api/implantacao/<int:plan_id>/structures/capacities",
+      "method": "POST",
+      "status_code": 400,
+      "url": "http://localhost:5003/pev/api/implantacao/1/structures/capacities",
+      "status": "warning",
+      "details": "{\n  \"error\": \"Capacidade de faturamento \\u00e9 obrigat\\u00f3ria\",\n  \"success\": false\n}\n"
+    },
+    {
+      "path": "/pev/api/implantacao/<int:plan_id>/structures/capacities/<int:capacity_id>",
+      "method": "DELETE",
+      "status": "skipped",
+      "reason": "Placeholders n\u00e3o resolvidos"
+    },
+    {
+      "path": "/pev/api/implantacao/<int:plan_id>/structures/capacities/<int:capacity_id>",
+      "method": "PUT",
+      "status": "skipped",
+      "reason": "Placeholders n\u00e3o resolvidos"
+    },
+    {
+      "path": "/pev/api/implantacao/<int:plan_id>/structures/fixed-costs-summary",
+      "method": "GET",
+      "status_code": 200,
+      "url": "http://localhost:5003/pev/api/implantacao/1/structures/fixed-costs-summary",
+      "status": "ok"
+    },
+    {
+      "path": "/pev/dashboard",
+      "method": "GET",
+      "status_code": 200,
+      "url": "http://localhost:5003/pev/dashboard",
+      "status": "ok"
+    },
+    {
+      "path": "/pev/implantacao",
+      "method": "GET",
+      "status_code": 500,
+      "url": "http://localhost:5003/pev/implantacao",
+      "status": "warning",
+      "details": "<html>\n  <head>\n    <title>Internal Server Error</title>\n  </head>\n  <body>\n    <h1><p>Internal Server Error</p></h1>\n    \n  </body>\n</html>\n"
+    },
+    {
+      "path": "/pev/implantacao/alinhamento/agenda-planejamento",
+      "method": "GET",
+      "status_code": 500,
+      "url": "http://localhost:5003/pev/implantacao/alinhamento/agenda-planejamento",
+      "status": "warning",
+      "details": "<html>\n  <head>\n    <title>Internal Server Error</title>\n  </head>\n  <body>\n    <h1><p>Internal Server Error</p></h1>\n    \n  </body>\n</html>\n"
+    },
+    {
+      "path": "/pev/implantacao/alinhamento/canvas-expectativas",
+      "method": "GET",
+      "status_code": 500,
+      "url": "http://localhost:5003/pev/implantacao/alinhamento/canvas-expectativas",
+      "status": "warning",
+      "details": "<html>\n  <head>\n    <title>Internal Server Error</title>\n  </head>\n  <body>\n    <h1><p>Internal Server Error</p></h1>\n    \n  </body>\n</html>\n"
+    },
+    {
+      "path": "/pev/implantacao/entrega/painel-governanca",
+      "method": "GET",
+      "status_code": 200,
+      "url": "http://localhost:5003/pev/implantacao/entrega/painel-governanca",
+      "status": "ok"
+    },
+    {
+      "path": "/pev/implantacao/entrega/projeto-executivo",
+      "method": "GET",
+      "status_code": 200,
+      "url": "http://localhost:5003/pev/implantacao/entrega/projeto-executivo",
+      "status": "ok"
+    },
+    {
+      "path": "/pev/implantacao/entrega/relatorio-final",
+      "method": "GET",
+      "status_code": 500,
+      "url": "http://localhost:5003/pev/implantacao/entrega/relatorio-final",
+      "status": "warning",
+      "details": "<html>\n  <head>\n    <title>Internal Server Error</title>\n  </head>\n  <body>\n    <h1><p>Internal Server Error</p></h1>\n    \n  </body>\n</html>\n"
+    },
+    {
+      "path": "/pev/implantacao/executivo/estruturas",
+      "method": "GET",
+      "status_code": 500,
+      "url": "http://localhost:5003/pev/implantacao/executivo/estruturas",
+      "status": "warning",
+      "details": "<html>\n  <head>\n    <title>Internal Server Error</title>\n  </head>\n  <body>\n    <h1><p>Internal Server Error</p></h1>\n    \n  </body>\n</html>\n"
+    },
+    {
+      "path": "/pev/implantacao/executivo/mapa-processos",
+      "method": "GET",
+      "status_code": 200,
+      "url": "http://localhost:5003/pev/implantacao/executivo/mapa-processos",
+      "status": "ok"
+    },
+    {
+      "path": "/pev/implantacao/executivo/modelo-financeiro-base",
+      "method": "GET",
+      "status_code": 200,
+      "url": "http://localhost:5003/pev/implantacao/executivo/modelo-financeiro-base",
+      "status": "ok"
+    },
+    {
+      "path": "/pev/implantacao/executivo/playbook-comercial",
+      "method": "GET",
+      "status_code": 200,
+      "url": "http://localhost:5003/pev/implantacao/executivo/playbook-comercial",
+      "status": "ok"
+    },
+    {
+      "path": "/pev/implantacao/financeiro/fluxo-caixa",
+      "method": "GET",
+      "status_code": 200,
+      "url": "http://localhost:5003/pev/implantacao/financeiro/fluxo-caixa",
+      "status": "ok"
+    },
+    {
+      "path": "/pev/implantacao/financeiro/matriz-indicadores",
+      "method": "GET",
+      "status_code": 200,
+      "url": "http://localhost:5003/pev/implantacao/financeiro/matriz-indicadores",
+      "status": "ok"
+    },
+    {
+      "path": "/pev/implantacao/financeiro/plano-investimento",
+      "method": "GET",
+      "status_code": 200,
+      "url": "http://localhost:5003/pev/implantacao/financeiro/plano-investimento",
+      "status": "ok"
+    },
+    {
+      "path": "/pev/implantacao/modelo/canvas-proposta-valor",
+      "method": "GET",
+      "status_code": 500,
+      "url": "http://localhost:5003/pev/implantacao/modelo/canvas-proposta-valor",
+      "status": "warning",
+      "details": "<html>\n  <head>\n    <title>Internal Server Error</title>\n  </head>\n  <body>\n    <h1><p>Internal Server Error</p></h1>\n    \n  </body>\n</html>\n"
+    },
+    {
+      "path": "/pev/implantacao/modelo/mapa-persona",
+      "method": "GET",
+      "status_code": 500,
+      "url": "http://localhost:5003/pev/implantacao/modelo/mapa-persona",
+      "status": "warning",
+      "details": "<html>\n  <head>\n    <title>Internal Server Error</title>\n  </head>\n  <body>\n    <h1><p>Internal Server Error</p></h1>\n    \n  </body>\n</html>\n"
+    },
+    {
+      "path": "/pev/implantacao/modelo/matriz-diferenciais",
+      "method": "GET",
+      "status_code": 500,
+      "url": "http://localhost:5003/pev/implantacao/modelo/matriz-diferenciais",
+      "status": "warning",
+      "details": "<html>\n  <head>\n    <title>Internal Server Error</title>\n  </head>\n  <body>\n    <h1><p>Internal Server Error</p></h1>\n    \n  </body>\n</html>\n"
+    },
+    {
+      "path": "/pev/implantacao/modelo/modefin",
+      "method": "GET",
+      "status_code": 500,
+      "url": "http://localhost:5003/pev/implantacao/modelo/modefin",
+      "status": "warning",
+      "details": "<html>\n  <head>\n    <title>Internal Server Error</title>\n  </head>\n  <body>\n    <h1><p>Internal Server Error</p></h1>\n    \n  </body>\n</html>\n"
+    },
+    {
+      "path": "/pev/implantacao/modelo/modelagem-financeira",
+      "method": "GET",
+      "status_code": 500,
+      "url": "http://localhost:5003/pev/implantacao/modelo/modelagem-financeira",
+      "status": "warning",
+      "details": "<html>\n  <head>\n    <title>Internal Server Error</title>\n  </head>\n  <body>\n    <h1><p>Internal Server Error</p></h1>\n    \n  </body>\n</html>\n"
+    },
+    {
+      "path": "/pev/implantacao/modelo/produtos",
+      "method": "GET",
+      "status_code": 500,
+      "url": "http://localhost:5003/pev/implantacao/modelo/produtos",
+      "status": "warning",
+      "details": "<html>\n  <head>\n    <title>Internal Server Error</title>\n  </head>\n  <body>\n    <h1><p>Internal Server Error</p></h1>\n    \n  </body>\n</html>\n"
+    },
+    {
+      "path": "/pev/implantacao/relatorio/01-capa-resumo",
+      "method": "GET",
+      "status_code": 500,
+      "url": "http://localhost:5003/pev/implantacao/relatorio/01-capa-resumo",
+      "status": "warning",
+      "details": "<html>\n  <head>\n    <title>Internal Server Error</title>\n  </head>\n  <body>\n    <h1><p>Internal Server Error</p></h1>\n    \n  </body>\n</html>\n"
+    },
+    {
+      "path": "/route-audit/",
+      "method": "GET",
+      "status_code": 200,
+      "url": "http://localhost:5003/route-audit/",
+      "status": "ok"
+    },
+    {
+      "path": "/route-audit/api/config",
+      "method": "GET",
+      "status_code": 200,
+      "url": "http://localhost:5003/route-audit/api/config",
+      "status": "ok"
+    },
+    {
+      "path": "/route-audit/api/entity/<entity_type>/disable",
+      "method": "POST",
+      "status": "skipped",
+      "reason": "Placeholders n\u00e3o resolvidos"
+    },
+    {
+      "path": "/route-audit/api/entity/<entity_type>/enable",
+      "method": "POST",
+      "status": "skipped",
+      "reason": "Placeholders n\u00e3o resolvidos"
+    },
+    {
+      "path": "/route-audit/api/export-report",
+      "method": "GET",
+      "status_code": 200,
+      "url": "http://localhost:5003/route-audit/api/export-report",
+      "status": "ok"
+    },
+    {
+      "path": "/route-audit/api/routes",
+      "method": "GET",
+      "status_code": 200,
+      "url": "http://localhost:5003/route-audit/api/routes",
+      "status": "ok"
+    },
+    {
+      "path": "/route-audit/api/routes/<path:endpoint>/details",
+      "method": "GET",
+      "status": "skipped",
+      "reason": "Placeholders n\u00e3o resolvidos"
+    },
+    {
+      "path": "/route-audit/api/routes/without-logging",
+      "method": "GET",
+      "status_code": 200,
+      "url": "http://localhost:5003/route-audit/api/routes/without-logging",
+      "status": "ok"
+    },
+    {
+      "path": "/route-audit/api/summary",
+      "method": "GET",
+      "status_code": 200,
+      "url": "http://localhost:5003/route-audit/api/summary",
+      "status": "ok"
+    }
+  ]
+}

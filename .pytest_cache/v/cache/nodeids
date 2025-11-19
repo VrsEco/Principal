@@ -1,4 +1,5 @@
 [
+  "test_all_pages_complete.py::test_all_pages_complete",
   "tests/governance/test_code_standards.py::TestAPIStandards::test_routes_use_login_required",
   "tests/governance/test_code_standards.py::TestCodingStandards::test_class_naming_convention",
   "tests/governance/test_code_standards.py::TestCodingStandards::test_imports_organization",
@@ -11,6 +12,7 @@
   "tests/governance/test_code_standards.py::TestForbiddenPatterns::test_no_sql_string_concatenation",
   "tests/governance/test_code_standards.py::TestSecurityStandards::test_no_eval_or_exec",
   "tests/governance/test_code_standards.py::TestSecurityStandards::test_no_password_in_logs",
+  "testsprite_tests/test_all_pages_complete.py::test_all_pages_complete",
   "testsprite_tests/test_auth_routes.py::test_auth_change_password",
   "testsprite_tests/test_auth_routes.py::test_auth_delete_user",
   "testsprite_tests/test_auth_routes.py::test_auth_get_current_user",

@@ -56,8 +56,8 @@ def login():
                 'message': f'Erro no login: {str(e)}'
             }), 500
 
-@auth_bp.route('/logout', methods=['GET', 'POST'])
 @login_required
+@auth_bp.route('/logout', methods=['GET', 'POST'])
 def logout():
     """Logout user"""
     try:
@@ -85,6 +85,7 @@ def logout():
             'message': f'Erro no logout: {str(e)}'
         }), 500
 
+@login_required
 @auth_bp.route('/register', methods=['GET', 'POST'])
 def register():
     """User registration (admin only)"""
@@ -136,21 +137,29 @@ def register():
                 'message': f'Erro ao criar usuário: {str(e)}'
             }), 500
 
-@auth_bp.route('/profile', methods=['GET', 'POST'])
 @login_required
+@auth_bp.route('/profile', methods=['GET', 'POST'])
 def profile():
     """User profile management"""
     if request.method == 'GET':
+        if not current_user or not current_user.is_authenticated:
+            return redirect(url_for('login'))
         return render_template('auth/profile.html', user=current_user)
     
     elif request.method == 'POST':
         try:
+            if not current_user or not current_user.is_authenticated:
+                return jsonify({
+                    'success': False,
+                    'message': 'Não autenticado'
+                }), 401
+            
             data = request.get_json() if request.is_json else request.form
             
             # Update profile
             name = data.get('name', '').strip()
-            role = data.get('role', '').strip() if current_user.role == 'admin' else None
-            is_active = data.get('is_active') if current_user.role == 'admin' else None
+            role = data.get('role', '').strip() if getattr(current_user, 'role', None) == 'admin' else None
+            is_active = data.get('is_active') if getattr(current_user, 'role', None) == 'admin' else None
             
             if is_active is not None:
                 is_active = is_active.lower() in ['true', '1', 'yes', 'on']
@@ -180,8 +189,8 @@ def profile():
                 'message': f'Erro ao atualizar perfil: {str(e)}'
             }), 500
 
-@auth_bp.route('/change-password', methods=['POST'])
 @login_required
+@auth_bp.route('/change-password', methods=['POST'])
 def change_password():
     """Change user password"""
     try:
@@ -262,8 +271,8 @@ def list_users():
             'message': f'Erro ao listar usuários: {str(e)}'
         }), 500
 
-@auth_bp.route('/users/<int:user_id>/status', methods=['PUT'])
 @login_required
+@auth_bp.route('/users/<int:user_id>/status', methods=['PUT'])
 def toggle_user_status(user_id):
     """Toggle user active status (admin only)"""
     if not current_user or current_user.role != 'admin':
@@ -344,8 +353,8 @@ def get_user(user_id):
             'message': f'Erro ao obter usuário: {str(e)}'
         }), 500
 
-@auth_bp.route('/users/<int:user_id>', methods=['PUT'])
 @login_required
+@auth_bp.route('/users/<int:user_id>', methods=['PUT'])
 def update_user(user_id):
     """Update user (admin only)"""
     if not current_user or current_user.role != 'admin':
@@ -397,8 +406,8 @@ def update_user(user_id):
             'message': f'Erro ao atualizar usuário: {str(e)}'
         }), 500
 
-@auth_bp.route('/users/<int:user_id>', methods=['DELETE'])
 @login_required
+@auth_bp.route('/users/<int:user_id>', methods=['DELETE'])
 def delete_user(user_id):
     """Delete user (admin only) - Soft delete"""
     if not current_user or current_user.role != 'admin':

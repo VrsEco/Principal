@@ -5,8 +5,7 @@ SQLite está DESATIVADO para forçar uso do PostgreSQL
 """
 
 from .base import DatabaseInterface
-from .sqlite_db import SQLiteDatabase  # Mantido apenas para compatibilidade histórica
-from .postgresql_db import PostgreSQLDatabase  # Importar no topo para evitar problemas de cache
+from .postgresql_db import PostgreSQLDatabase  # Implementação oficial
 
 def get_database(db_type='postgresql', **kwargs):  # ⚠️ Padrão mudou para PostgreSQL
     """
@@ -25,22 +24,7 @@ def get_database(db_type='postgresql', **kwargs):  # ⚠️ Padrão mudou para P
     Raises:
         RuntimeError: Se tentar usar SQLite
     """
-    if db_type == 'sqlite':
-        # ⚠️ BLOQUEIO PROPOSITAL - SQLite desativado
-        raise RuntimeError(
-            "❌ ERRO: Tentativa de usar SQLite BLOQUEADA!\n\n"
-            "O APP30 foi completamente migrado para PostgreSQL.\n"
-            "SQLite foi desativado propositalmente.\n\n"
-            "Este erro indica que algum código está tentando usar SQLite.\n"
-            "Verifique o TRACEBACK acima para identificar ONDE.\n\n"
-            "CORREÇÃO:\n"
-            "  1. Configure .env com DB_TYPE=postgresql\n"
-            "  2. Use get_database('postgresql', ...) ao invés de 'sqlite'\n"
-            "  3. Ou use config_database.get_db() que já retorna PostgreSQL\n\n"
-            "Para emergências (consulta apenas), os arquivos SQLite estão em:\n"
-            "  instance/pevapp22.db.DESATIVADO (renomeie para .db temporariamente)\n"
-        )
-    elif db_type == 'postgresql':
+    if db_type == 'postgresql':
         return PostgreSQLDatabase(**kwargs)
     else:
         raise ValueError(
@@ -51,10 +35,6 @@ def get_database(db_type='postgresql', **kwargs):  # ⚠️ Padrão mudou para P
 # Default database configuration
 # ⚠️ APP30: SQLite DESATIVADO - Apenas PostgreSQL
 DEFAULT_CONFIG = {
-    'sqlite': {
-        # ⚠️ DESATIVADO - Não usar
-        'db_path': 'instance/pevapp22.db.DESATIVADO'  # Arquivo renomeado propositalmente
-    },
     'postgresql': {
         'host': 'localhost',
         'port': 5432,

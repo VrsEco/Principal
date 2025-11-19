@@ -114,24 +114,26 @@ class TestForbiddenPatterns:
         assert not violations, f"Bare except encontrados (especificar exceção):\n" + "\n".join(violations)
     
     def test_no_sql_string_concatenation(self):
-        """Verifica se não há concatenação de strings em SQL."""
-        patterns = [
-            r'\.execute\s*\(\s*f["\']',  # f-string em execute
-            r'\.execute\s*\(\s*["\'].*?%s',  # Old-style formatting
-        ]
-        
+        """
+        Verifica se não há concatenação insegura de strings em SQL.
+
+        Observação: placeholders do psycopg (%(name)s ou %s) são aceitos; o foco
+        aqui é apenas flagrar f-strings em SQL.
+        """
+        pattern = r'\.execute\s*\(\s*f["\']'  # f-string em execute
+
         violations = []
-        
+
         for py_file in get_python_files():
             content = py_file.read_text(encoding='utf-8')
-            
-            for pattern in patterns:
-                matches = re.finditer(pattern, content)
-                for match in matches:
-                    line_num = content[:match.start()].count('\n') + 1
-                    violations.append(f"{py_file}:{line_num}")
-        
-        assert not violations, f"SQL string concatenation encontrado (risco de injection):\n" + "\n".join(violations)
+            for match in re.finditer(pattern, content):
+                line_num = content[:match.start()].count('\n') + 1
+                violations.append(f"{py_file}:{line_num}")
+
+        assert not violations, (
+            "SQL string concatenation encontrado (risco de injection):\n"
+            + "\n".join(violations)
+        )
 
 
 class TestCodingStandards:

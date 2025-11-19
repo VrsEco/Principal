@@ -1,4 +1,6 @@
-﻿from flask import Blueprint, render_template, url_for, request, jsonify, redirect
+﻿import logging
+from flask_login import login_required
+from flask import Blueprint, render_template, url_for, request, jsonify, redirect
 from datetime import datetime
 import json
 from typing import Any, Dict, List
@@ -36,6 +38,7 @@ from services.ui_catalog_service import (
 
 MODEFIN_SCREEN_CODE = 314
 
+logger = logging.getLogger(__name__)
 pev_bp = Blueprint('pev', __name__, url_prefix='/pev')
 
 
@@ -96,7 +99,7 @@ def _resolve_plan_id():
         try:
             return int(plan_id)
         except (TypeError, ValueError):
-            print(f"[ERROR] plan_id inválido: {plan_id}")
+            logger.info(f"[ERROR] plan_id inválido: {plan_id}")
             pass
     
     view_args = getattr(request, 'view_args', None) or {}
@@ -105,11 +108,11 @@ def _resolve_plan_id():
         try:
             return int(plan_id)
         except (TypeError, ValueError):
-            print(f"[ERROR] plan_id inválido em view_args: {plan_id}")
+            logger.info(f"[ERROR] plan_id inválido em view_args: {plan_id}")
             pass
     
     # ERRO: plan_id não foi fornecido - isso NÃO deve acontecer!
-    print(f"[CRITICAL ERROR] plan_id não fornecido na URL! request.url: {request.url}")
+    logger.info(f"[CRITICAL ERROR] plan_id não fornecido na URL! request.url: {request.url}")
     raise ValueError("plan_id é obrigatório e deve ser passado na URL")
 
 
@@ -204,7 +207,7 @@ def pev_implantacao_overview():
 
     plan_mode = (plan.get("plan_mode") or "evolucao").lower()
     if plan_mode != "implantacao":
-        print(f"ℹ️ Plano {plan_id} com plan_mode='{plan_mode}' redirecionado para interface clássica.")
+        logger.info(f"?? Plano {plan_id} com plan_mode='{plan_mode}' redirecionado para interface clássica.")
         return redirect(url_for("plan_dashboard", plan_id=plan_id))
 
     project_info = load_alignment_project(db, plan_id)
@@ -227,13 +230,13 @@ def pev_implantacao_overview():
                 grv_project_id = project_dict.get('id')
                 # Link direto para o projeto (Kanban)
                 plan["project_link"] = url_for("grv.grv_project_manage", company_id=plan.get("company_id"), project_id=grv_project_id)
-                print(f"✅ Link direto para projeto GRV ID {grv_project_id} configurado")
+                logger.info(f"? Link direto para projeto GRV ID {grv_project_id} configurado")
             else:
                 # Se não tiver projeto, vai para lista de projetos
                 plan["project_link"] = url_for("grv.grv_projects_projects", company_id=plan.get("company_id"))
-                print(f"⚠️ Nenhum projeto vinculado ao plan {plan_id}, link para lista de projetos")
+                logger.info(f"?? Nenhum projeto vinculado ao plan {plan_id}, link para lista de projetos")
         except Exception as e:
-            print(f"⚠️ Erro ao buscar projeto vinculado: {e}")
+            logger.info(f"?? Erro ao buscar projeto vinculado: {e}")
             plan["project_link"] = url_for("grv.grv_projects_projects", company_id=plan.get("company_id"))
     else:
         plan["project_link"] = url_for("grv.grv_dashboard")
@@ -251,14 +254,14 @@ def implantacao_canvas_expectativas():
     plan_id = _resolve_plan_id()
     
     # Log para debug
-    print(f"DEBUG: Canvas Expectativas - plan_id resolvido: {plan_id}")
-    print(f"DEBUG: request.args: {request.args}")
+    logger.info(f"DEBUG: Canvas Expectativas - plan_id resolvido: {plan_id}")
+    logger.info(f"DEBUG: request.args: {request.args}")
     
     db = get_db()
     plan = build_plan_context(db, plan_id)
     
     # Log do plan
-    print(f"DEBUG: plan loaded: {plan.get('id') if plan else 'None'}")
+    logger.info(f"DEBUG: plan loaded: {plan.get('id') if plan else 'None'}")
     
     canvas_data = load_alignment_canvas(db, plan_id)
     return render_template(
@@ -360,12 +363,12 @@ def implantacao_modelagem_financeira():
     products_totals = products_service.calculate_totals(products)
     
     # DEBUG: Log dos totais de produtos (sem emojis para evitar encoding issues)
-    print("\n" + "="*80)
-    print(f"DEBUG - MODELAGEM FINANCEIRA - plan_id={plan_id}")
-    print("="*80)
-    print(f"Produtos encontrados: {len(products)}")
-    print(f"Products Totals: {products_totals}")
-    print("="*80 + "\n")
+    logger.info("\n" + "="*80)
+    logger.info(f"DEBUG - MODELAGEM FINANCEIRA - plan_id={plan_id}")
+    logger.info("="*80)
+    logger.info(f"Produtos encontrados: {len(products)}")
+    logger.info(f"Products Totals: {products_totals}")
+    logger.info("="*80 + "\n")
 
     resumo_totais = next(
         (
@@ -386,9 +389,9 @@ def implantacao_modelagem_financeira():
     }
     
     # DEBUG: Log dos custos fixos
-    print(f"Fixed Costs Summary: {fixed_costs_summary}")
-    print(f"Resumo Totais Raw: {resumo_totais}")
-    print("="*80 + "\n")
+    logger.info(f"Fixed Costs Summary: {fixed_costs_summary}")
+    logger.info(f"Resumo Totais Raw: {resumo_totais}")
+    logger.info("="*80 + "\n")
 
     return render_template(
         "implantacao/modelo_modelagem_financeira.html",
@@ -554,21 +557,21 @@ def implantacao_modefin():
         )
 
     # DEBUG
-    print("\n" + "="*80)
-    print(f"[ModeFin] plan_id={plan_id}")
-    print(f"Products Totals: {products_totals}")
-    print(f"Fixed Costs: {fixed_costs_summary}")
-    print(f"Investimentos Estruturas: {list(investimentos_estruturas.keys())}")
-    print(f"Capital Giro Items: {len(capital_giro_items)}")
-    print(f"Funding Sources: {len(funding_sources)}")
-    print(f"Parcelas Estruturas: {len(parcelas_estruturas)}")
-    print("="*80 + "\n")
+    logger.info("\n" + "="*80)
+    logger.info(f"[ModeFin] plan_id={plan_id}")
+    logger.info(f"Products Totals: {products_totals}")
+    logger.info(f"Fixed Costs: {fixed_costs_summary}")
+    logger.info(f"Investimentos Estruturas: {list(investimentos_estruturas.keys())}")
+    logger.info(f"Capital Giro Items: {len(capital_giro_items)}")
+    logger.info(f"Funding Sources: {len(funding_sources)}")
+    logger.info(f"Parcelas Estruturas: {len(parcelas_estruturas)}")
+    logger.info("="*80 + "\n")
     
     try:
         ui_attrs = get_screen_attr_map(MODEFIN_SCREEN_CODE)
         ui_catalog_payload = serialize_screen_catalog(MODEFIN_SCREEN_CODE)
     except Exception as exc:  # pylint: disable=broad-except
-        print(f"[ModeFin] Warning: failed to load UI catalog (code {MODEFIN_SCREEN_CODE}): {exc}")
+        logger.info(f"[ModeFin] Warning: failed to load UI catalog (code {MODEFIN_SCREEN_CODE}): {exc}")
         ui_attrs = {}
         ui_catalog_payload = {}
     
@@ -605,13 +608,13 @@ def get_products(plan_id: int):
         totals = products_service.calculate_totals(products)
         
         # DEBUG
-        print(f"\nAPI GET /products - plan_id={plan_id}")
-        print(f"   Produtos: {len(products)}")
-        print(f"   Totals: {totals}\n")
+        logger.info(f"\nAPI GET /products - plan_id={plan_id}")
+        logger.info(f"   Produtos: {len(products)}")
+        logger.info(f"   Totals: {totals}\n")
         
         return jsonify({'success': True, 'products': products, 'totals': totals}), 200
     except Exception as exc:
-        print(f"[products] Error fetching products for plan {plan_id}: {exc}")
+        logger.info(f"[products] Error fetching products for plan {plan_id}: {exc}")
         return jsonify({'success': False, 'error': 'Erro ao carregar produtos'}), 500
 
 
@@ -625,10 +628,11 @@ def get_products_totals(plan_id: int):
         totals = products_service.calculate_totals(products)
         return jsonify({'success': True, 'totals': totals}), 200
     except Exception as exc:
-        print(f"[products] Error calculating totals for plan {plan_id}: {exc}")
+        logger.info(f"[products] Error calculating totals for plan {plan_id}: {exc}")
         return jsonify({'success': False, 'error': 'Erro ao calcular totalizados'}), 500
 
 
+@login_required
 @pev_bp.route('/api/implantacao/<int:plan_id>/products', methods=['POST'])
 def create_product(plan_id: int):
     """Cria novo produto."""
@@ -639,7 +643,7 @@ def create_product(plan_id: int):
     except products_service.ProductValidationError as exc:
         return jsonify({'success': False, 'error': str(exc)}), 400
     except Exception as exc:
-        print(f"[products] Error creating product for plan {plan_id}: {exc}")
+        logger.info(f"[products] Error creating product for plan {plan_id}: {exc}")
         import traceback
         traceback.print_exc()
         return jsonify({'success': False, 'error': 'Erro ao criar produto'}), 500
@@ -654,10 +658,11 @@ def get_product(plan_id: int, product_id: int):
     except products_service.ProductNotFoundError as exc:
         return jsonify({'success': False, 'error': str(exc)}), 404
     except Exception as exc:
-        print(f"[products] Error fetching product {product_id} for plan {plan_id}: {exc}")
+        logger.info(f"[products] Error fetching product {product_id} for plan {plan_id}: {exc}")
         return jsonify({'success': False, 'error': 'Erro ao buscar produto'}), 500
 
 
+@login_required
 @pev_bp.route('/api/implantacao/<int:plan_id>/products/<int:product_id>', methods=['PUT'])
 def update_product(plan_id: int, product_id: int):
     """Atualiza produto existente."""
@@ -670,12 +675,13 @@ def update_product(plan_id: int, product_id: int):
     except products_service.ProductValidationError as exc:
         return jsonify({'success': False, 'error': str(exc)}), 400
     except Exception as exc:
-        print(f"[products] Error updating product {product_id} for plan {plan_id}: {exc}")
+        logger.info(f"[products] Error updating product {product_id} for plan {plan_id}: {exc}")
         import traceback
         traceback.print_exc()
         return jsonify({'success': False, 'error': 'Erro ao atualizar produto'}), 500
 
 
+@login_required
 @pev_bp.route('/api/implantacao/<int:plan_id>/products/<int:product_id>', methods=['DELETE'])
 def delete_product(plan_id: int, product_id: int):
     """Remove produto (soft delete)."""
@@ -685,7 +691,7 @@ def delete_product(plan_id: int, product_id: int):
     except products_service.ProductNotFoundError as exc:
         return jsonify({'success': False, 'error': str(exc)}), 404
     except Exception as exc:
-        print(f"[products] Error deleting product {product_id} for plan {plan_id}: {exc}")
+        logger.info(f"[products] Error deleting product {product_id} for plan {plan_id}: {exc}")
         return jsonify({'success': False, 'error': 'Erro ao deletar produto'}), 500
 
 
@@ -1026,295 +1032,337 @@ def implantacao_relatorio_capa_resumo():
 
 @pev_bp.route('/implantacao/entrega/relatorio-final')
 def implantacao_relatorio_final():
-    plan_id = _resolve_plan_id()
-    db = get_db()
-    plan = build_plan_context(db, plan_id)
-    canvas_data = load_alignment_canvas(db, plan_id)
-    agenda_project = load_alignment_project(db, plan_id)
-    agenda_data = load_alignment_agenda(db, plan_id)
-    projeto_atividades = agenda_data.get('atividades', [])
-    
-    print(f"\n[DEBUG] Atividades carregadas: {len(projeto_atividades)}")
-    if projeto_atividades:
-        print(f"[DEBUG] Primeira atividade: {projeto_atividades[0]}")
-    principles = db.list_alignment_principles(plan_id)
-    segments = load_segments(db, plan_id)
-    competitive_segments = build_competitive_segments(segments)
-    estruturas = load_structures(db, plan_id)
-    financeiro = load_financial_model(db, plan_id)
-    
-    # ===== DADOS DA MODEFIN =====
-    # Produtos e margens
-    products = products_service.fetch_products(plan_id)
-    products_totals = products_service.calculate_totals(products)
-    
-    # Investimentos das estruturas
-    resumo_investimentos = calculate_investment_summary_by_block(estruturas)
-    estrutura_investimentos_payload = aggregate_structure_investments(estruturas)
-    investimentos_estruturas = serialize_structure_investment_summary(
-        estrutura_investimentos_payload.get("categories", {})
-    )
-    
-    # Extrair resumo de custos fixos do resumo_investimentos
-    resumo_totais = next(
-        (item for item in resumo_investimentos 
-         if item.get("is_total") or (item.get("bloco") or "").strip().upper() == "TOTAL"),
-        {}
-    )
-    
-    fixed_costs_dict = {
-        "custos_fixos_mensal": float(resumo_totais.get("custos_fixos_mensal") or 0),
-        "despesas_fixas_mensal": float(resumo_totais.get("despesas_fixas_mensal") or 0),
-        "total_gastos_mensal": float(resumo_totais.get("total_gastos_mensal") or 0),
-    }
-    
-    # Capital de giro
-    capital_giro_items = db.list_plan_capital_giro(plan_id) if hasattr(db, 'list_plan_capital_giro') else []
-    
-    # Fontes de recursos
-    funding_sources = db.list_plan_finance_sources(plan_id)
-    
-    # Distribuição de lucros e destinações
-    profit_distribution_data = db.get_profit_distribution(plan_id) if hasattr(db, 'get_profit_distribution') else None
-    profit_distribution = [profit_distribution_data] if profit_distribution_data else []
-    result_rules = db.list_plan_finance_result_rules(plan_id)
-    
-    # Resumo executivo
-    executive_summary = db.get_executive_summary(plan_id) if hasattr(db, 'get_executive_summary') else None
-    
-    # Preparar métricas de análise a partir dos fluxos reais da ModeFin
-    analysis_metrics = {
-        'total_investimentos': 0.0,
-        'resultado_operacional': 0.0,
-        'periodo_meses': 60,
-        'custo_oportunidade_percent': 12.0,
-        'payback_meses': None,
-        'payback_inicio': None,
-        'payback_fim': None,
-        'roi_percent': None,
-        'tir_percent': None,
-        'vpl': None,
-    }
-    
-    # Construir fixed_cost_entries (custos fixos por data)
-    def _safe_float_local(value):
-        if value in (None, "", 0):
-            return 0.0
-        if isinstance(value, (int, float)):
-            return float(value)
+    try:
+        plan_id = _resolve_plan_id()
+        db = get_db()
+        plan = build_plan_context(db, plan_id)
+        canvas_data = load_alignment_canvas(db, plan_id)
+        agenda_project = load_alignment_project(db, plan_id)
+        agenda_data = load_alignment_agenda(db, plan_id)
+        projeto_atividades = agenda_data.get('atividades', [])
+        
+        logger.info(f"\n[DEBUG] Atividades carregadas: {len(projeto_atividades)}")
+        if projeto_atividades:
+            logger.info(f"[DEBUG] Primeira atividade: {projeto_atividades[0]}")
+        principles = db.list_alignment_principles(plan_id)
+        segments = load_segments(db, plan_id)
+        competitive_segments = build_competitive_segments(segments)
+        estruturas = load_structures(db, plan_id)
+        financeiro = load_financial_model(db, plan_id)
+        
+        # ===== DADOS DA MODEFIN =====
+        # Produtos e margens
+        products = products_service.fetch_products(plan_id)
+        products_totals = products_service.calculate_totals(products)
+        
+        # Investimentos das estruturas
+        resumo_investimentos = calculate_investment_summary_by_block(estruturas)
+        estrutura_investimentos_payload = aggregate_structure_investments(estruturas)
+        investimentos_estruturas = serialize_structure_investment_summary(
+            estrutura_investimentos_payload.get("categories", {})
+        )
+        
+        # Extrair resumo de custos fixos do resumo_investimentos
+        resumo_totais = next(
+            (item for item in resumo_investimentos 
+             if item.get("is_total") or (item.get("bloco") or "").strip().upper() == "TOTAL"),
+            {}
+        )
+        
+        fixed_costs_dict = {
+            "custos_fixos_mensal": float(resumo_totais.get("custos_fixos_mensal") or 0),
+            "despesas_fixas_mensal": float(resumo_totais.get("despesas_fixas_mensal") or 0),
+            "total_gastos_mensal": float(resumo_totais.get("total_gastos_mensal") or 0),
+        }
+        
+        # Capital de giro
         try:
-            return float(str(value).strip().replace(',', '.'))
-        except (ValueError, TypeError):
-            return 0.0
-    
-    fixed_cost_entries = []
-    for area in estruturas:
-        for bloco in area.get("blocos", []):
-            bloco_nome = bloco.get("nome") or ""
-            for item in bloco.get("itens", []):
-                acquisition_info = item.get("data_aquisicao")
-                structure_id = item.get("id")
-                for parcela in item.get("parcelas", []):
-                    classification = _classify_structure_installment(bloco_nome, parcela)
-                    class_norm = classification.get("classificacao_norm")
-                    if class_norm not in {"custo fixo", "despesa fixa"}:
-                        continue
-                    repeticao_norm = classification.get("repeticao_norm")
-                    if repeticao_norm not in {"mensal", "trimestral", "semestral"}:
-                        continue
-                    valor_decimal = _parse_decimal(parcela.get("valor"))
-                    if valor_decimal is None:
-                        continue
-                    valor_float = float(valor_decimal)
-                    if valor_float <= 0:
-                        continue
-                    if repeticao_norm == "trimestral":
-                        valor_float /= 3.0
-                    elif repeticao_norm == "semestral":
-                        valor_float /= 6.0
-                    
-                    start_tuple = None
-                    if acquisition_info:
-                        start_tuple = _month_tuple_from_value(acquisition_info)
-                    if not start_tuple:
-                        start_tuple = _month_tuple_from_value(parcela.get("vencimento") or parcela.get("due_info"))
-                    if not start_tuple:
-                        continue
-                    
-                    start_month = _month_key_from_tuple(start_tuple)
-                    fixed_cost_entries.append({
-                        "structure_id": structure_id,
-                        "type": "custo" if class_norm == "custo fixo" else "despesa",
-                        "monthly_value": valor_float,
-                        "start_month": start_month,
-                        "installment_number": parcela.get("numero"),
-                    })
-    
-    # Construir Fluxo de Investimento usando função específica
-    investment_flow = build_modefin_investment_flow(
-        capital_giro_items,
-        investimentos_estruturas,
-        funding_sources
-    )
-    
-    # Construir Fluxo de Caixa do Negócio com dados corretos da ModeFin
-    business_flow = build_modefin_business_flow(
-        products,
-        products_totals,
-        fixed_cost_entries,
-        profit_distribution,
-        result_rules,
-        num_months=60
-    )
-    
-    # Construir Fluxo de Caixa do Investidor (combina investment_flow + business_flow)
-    investor_flow = build_modefin_investor_flow(
-        investment_flow,
-        business_flow,
-        profit_distribution
-    )
-    
-    # Calcular métricas de análise a partir dos fluxos reais
-    # Investimento total
-    analysis_metrics['total_investimentos'] = investment_flow.get('totals', {}).get('investimentos', 0.0)
-    
-    # Resultado operacional (média dos primeiros 12 meses após ramp-up completo)
-    business_rows_full = business_flow.get('rows_full', [])
-    if business_rows_full and len(business_rows_full) >= 12:
-        # Pegar últimos meses com ramp-up em 100%
-        resultados_estabilizados = [r.get('resultado_operacional', 0) for r in business_rows_full[-12:]]
-        analysis_metrics['resultado_operacional'] = sum(resultados_estabilizados) / len(resultados_estabilizados)
-    
-    # Calcular métricas financeiras a partir do investor_flow
-    # Precisamos dos dados COMPLETOS (não condensados) para cálculos precisos
-    
-    # Reconstruir investor_flow completo para cálculos
-    # Vou processar business_rows_full diretamente
-    total_aportes = 0.0
-    total_distribuicoes = 0.0
-    fluxos_mensais = []  # Para VPL e TIR
-    
-    payback_meses = None
-    payback_inicio = None
-    payback_fim = None
-    primeiro_aporte_idx = None
-    saldo_acum = 0.0
-    
-    # Criar mapa de aportes por período
-    aportes_map = {}
-    for row in investment_flow.get("rows", []):
-        periodo = row.get("period_label", "")
-        fontes = row.get("fontes", 0.0)
-        if periodo and fontes > 0:
-            aportes_map[periodo] = fontes
-    
-    # Processar cada mês
-    for idx, bus_row in enumerate(business_rows_full):
-        periodo = bus_row.get("periodo", "")
-        aporte = aportes_map.get(periodo, 0.0)
-        distribuicao = bus_row.get("distribuicao", 0.0)
+            capital_giro_items = db.list_plan_capital_giro(plan_id) if hasattr(db, 'list_plan_capital_giro') else []
+        except Exception as e:
+            logger.warning(f"Erro ao carregar capital de giro: {e}")
+            capital_giro_items = []
         
-        # Fluxo do investidor: distribuição - aporte
-        fluxo = distribuicao - aporte
-        fluxos_mensais.append(fluxo)
+        # Fontes de recursos
+        try:
+            funding_sources = db.list_plan_finance_sources(plan_id) if hasattr(db, 'list_plan_finance_sources') else []
+        except Exception as e:
+            logger.warning(f"Erro ao carregar fontes de recursos: {e}")
+            funding_sources = []
         
-        # Acumular totais
-        total_aportes += aporte
-        total_distribuicoes += distribuicao
+        # Distribuição de lucros e destinações
+        try:
+            profit_distribution_data = db.get_profit_distribution(plan_id) if hasattr(db, 'get_profit_distribution') else None
+            profit_distribution = [profit_distribution_data] if profit_distribution_data else []
+        except Exception as e:
+            logger.warning(f"Erro ao carregar distribuição de lucros: {e}")
+            profit_distribution = []
         
-        # Calcular saldo acumulado
-        saldo_acum += fluxo
+        try:
+            result_rules = db.list_plan_finance_result_rules(plan_id) if hasattr(db, 'list_plan_finance_result_rules') else []
+        except Exception as e:
+            logger.warning(f"Erro ao carregar regras de resultado: {e}")
+            result_rules = []
         
-        # Detectar pay-back
-        if aporte > 0 and primeiro_aporte_idx is None:
-            primeiro_aporte_idx = idx
-            payback_inicio = periodo
+        # Resumo executivo
+        try:
+            executive_summary = db.get_executive_summary(plan_id) if hasattr(db, 'get_executive_summary') else None
+        except Exception as e:
+            logger.warning(f"Erro ao carregar resumo executivo: {e}")
+            executive_summary = None
         
-        if primeiro_aporte_idx is not None and payback_fim is None and saldo_acum >= 0:
-            payback_meses = (idx - primeiro_aporte_idx) + 1
-            payback_fim = periodo
-    
-    # Calcular ROI
-    roi_percent = None
-    if total_aportes > 0:
-        roi_percent = (total_distribuicoes / total_aportes) * 100
-    
-    # Calcular VPL
-    vpl = 0.0
-    taxa_anual = 12.0  # 12% a.a.
-    taxa_mensal = ((1 + (taxa_anual / 100)) ** (1/12)) - 1
-    
-    for mes, fluxo in enumerate(fluxos_mensais, start=1):
-        valor_presente = fluxo / ((1 + taxa_mensal) ** mes)
-        vpl += valor_presente
-    
-    # Calcular TIR usando Newton-Raphson
-    tir_percent = None
-    if total_aportes > 0 and total_distribuicoes > 0:
-        tir_mensal = _calcular_tir_newton(fluxos_mensais)
-        if tir_mensal is not None:
-            # Converter para taxa anual
-            tir_percent = ((1 + tir_mensal) ** 12 - 1) * 100
-    
-    # Atualizar analysis_metrics
-    analysis_metrics['payback_meses'] = payback_meses
-    analysis_metrics['payback_inicio'] = payback_inicio
-    analysis_metrics['payback_fim'] = payback_fim
-    analysis_metrics['roi_percent'] = roi_percent
-    analysis_metrics['tir_percent'] = tir_percent
-    analysis_metrics['vpl'] = vpl
-    
-    print(f"\n[DEBUG] Métricas Calculadas:")
-    print(f"  Total Aportes: {total_aportes:,.2f}")
-    print(f"  Total Distribuições: {total_distribuicoes:,.2f}")
-    print(f"  Pay-back: {payback_meses} meses ({payback_inicio} a {payback_fim})")
-    print(f"  ROI: {roi_percent:.2f}%" if roi_percent else "  ROI: None")
-    print(f"  TIR: {tir_percent:.2f}% a.a." if tir_percent else "  TIR: None")
-    print(f"  VPL: {vpl:,.2f}")
-    
-    # ===== FIM DADOS MODEFIN =====
-    
-    report_payload = build_final_report_payload(
-        plan,
-        canvas_data,
-        agenda_project,
-        principles,
-        competitive_segments,
-        summarize_structures_for_report(estruturas),
-        financeiro,
-    )
-    # Adicionar investment_flow ao financeiro para o template
-    financeiro_completo = report_payload.get("financeiro", {})
-    if investment_flow:
-        financeiro_completo['investimento'] = investment_flow
-    
-    return render_template(
-        "implantacao/entrega_relatorio_final.html",
-        user_name=plan.get("consultant", "Consultor responsavel"),
-        plan=report_payload.get("plan"),
-        alinhamento=report_payload.get("alinhamento"),
-        segmentos=report_payload.get("segmentos"),
-        estruturas=report_payload.get("estruturas"),
-        financeiro=financeiro_completo,
-        projeto=agenda_project,
-        projeto_atividades=projeto_atividades,
-        issued_at=report_payload.get("issued_at"),
-        # Dados da ModeFin
-        modefin_products=products,
-        modefin_products_totals=products_totals,
-        modefin_fixed_costs=fixed_costs_dict,
-        modefin_investimentos_resumo=resumo_investimentos,
-        modefin_capital_giro=capital_giro_items,
-        modefin_funding_sources=funding_sources,
-        modefin_profit_distribution=profit_distribution,
-        modefin_result_rules=result_rules,
-        modefin_executive_summary=executive_summary,
-        modefin_investment_flow=investment_flow,
-        modefin_business_flow=business_flow,
-        modefin_investor_flow=investor_flow,
-        investment_flow=investment_flow,
-        analysis_metrics=analysis_metrics,
-    )
+        # Preparar métricas de análise a partir dos fluxos reais da ModeFin
+        analysis_metrics = {
+            'total_investimentos': 0.0,
+            'resultado_operacional': 0.0,
+            'periodo_meses': 60,
+            'custo_oportunidade_percent': 12.0,
+            'payback_meses': None,
+            'payback_inicio': None,
+            'payback_fim': None,
+            'roi_percent': None,
+            'tir_percent': None,
+            'vpl': None,
+        }
+        
+        # Construir fixed_cost_entries (custos fixos por data)
+        def _safe_float_local(value):
+            if value in (None, "", 0):
+                return 0.0
+            if isinstance(value, (int, float)):
+                return float(value)
+            try:
+                return float(str(value).strip().replace(',', '.'))
+            except (ValueError, TypeError):
+                return 0.0
+        
+        fixed_cost_entries = []
+        for area in estruturas:
+            for bloco in area.get("blocos", []):
+                bloco_nome = bloco.get("nome") or ""
+                for item in bloco.get("itens", []):
+                    acquisition_info = item.get("data_aquisicao")
+                    structure_id = item.get("id")
+                    for parcela in item.get("parcelas", []):
+                        classification = _classify_structure_installment(bloco_nome, parcela)
+                        class_norm = classification.get("classificacao_norm")
+                        if class_norm not in {"custo fixo", "despesa fixa"}:
+                            continue
+                        repeticao_norm = classification.get("repeticao_norm")
+                        if repeticao_norm not in {"mensal", "trimestral", "semestral"}:
+                            continue
+                        valor_decimal = _parse_decimal(parcela.get("valor"))
+                        if valor_decimal is None:
+                            continue
+                        valor_float = float(valor_decimal)
+                        if valor_float <= 0:
+                            continue
+                        if repeticao_norm == "trimestral":
+                            valor_float /= 3.0
+                        elif repeticao_norm == "semestral":
+                            valor_float /= 6.0
+                        
+                        start_tuple = None
+                        if acquisition_info:
+                            start_tuple = _month_tuple_from_value(acquisition_info)
+                        if not start_tuple:
+                            start_tuple = _month_tuple_from_value(parcela.get("vencimento") or parcela.get("due_info"))
+                        if not start_tuple:
+                            continue
+                        
+                        start_month = _month_key_from_tuple(start_tuple)
+                        fixed_cost_entries.append({
+                            "structure_id": structure_id,
+                            "type": "custo" if class_norm == "custo fixo" else "despesa",
+                            "monthly_value": valor_float,
+                            "start_month": start_month,
+                            "installment_number": parcela.get("numero"),
+                        })
+        
+        # Construir Fluxo de Investimento usando função específica
+        try:
+            investment_flow = build_modefin_investment_flow(
+                capital_giro_items,
+                investimentos_estruturas,
+                funding_sources
+            )
+        except Exception as e:
+            logger.warning(f"Erro ao construir fluxo de investimento: {e}")
+            investment_flow = {"rows": [], "totals": {}}
+        
+        # Construir Fluxo de Caixa do Negócio com dados corretos da ModeFin
+        try:
+            business_flow = build_modefin_business_flow(
+                products,
+                products_totals,
+                fixed_cost_entries,
+                profit_distribution,
+                result_rules,
+                num_months=60
+            )
+        except Exception as e:
+            logger.warning(f"Erro ao construir fluxo de caixa do negócio: {e}")
+            business_flow = {"rows_full": [], "rows": [], "totals": {}}
+        
+        # Construir Fluxo de Caixa do Investidor (combina investment_flow + business_flow)
+        try:
+            investor_flow = build_modefin_investor_flow(
+                investment_flow,
+                business_flow,
+                profit_distribution
+            )
+        except Exception as e:
+            logger.warning(f"Erro ao construir fluxo de caixa do investidor: {e}")
+            investor_flow = {"rows": [], "totals": {}}
+        
+        # Calcular métricas de análise a partir dos fluxos reais
+        # Investimento total
+        analysis_metrics['total_investimentos'] = investment_flow.get('totals', {}).get('investimentos', 0.0)
+        
+        # Resultado operacional (média dos primeiros 12 meses após ramp-up completo)
+        business_rows_full = business_flow.get('rows_full', [])
+        if business_rows_full and len(business_rows_full) >= 12:
+            # Pegar últimos meses com ramp-up em 100%
+            resultados_estabilizados = [r.get('resultado_operacional', 0) for r in business_rows_full[-12:]]
+            analysis_metrics['resultado_operacional'] = sum(resultados_estabilizados) / len(resultados_estabilizados)
+        
+        # Calcular métricas financeiras a partir do investor_flow
+        # Precisamos dos dados COMPLETOS (não condensados) para cálculos precisos
+        
+        # Reconstruir investor_flow completo para cálculos
+        # Vou processar business_rows_full diretamente
+        total_aportes = 0.0
+        total_distribuicoes = 0.0
+        fluxos_mensais = []  # Para VPL e TIR
+        
+        payback_meses = None
+        payback_inicio = None
+        payback_fim = None
+        primeiro_aporte_idx = None
+        saldo_acum = 0.0
+        
+        # Criar mapa de aportes por período
+        aportes_map = {}
+        for row in investment_flow.get("rows", []):
+            periodo = row.get("period_label", "")
+            fontes = row.get("fontes", 0.0)
+            if periodo and fontes > 0:
+                aportes_map[periodo] = fontes
+        
+        # Processar cada mês
+        if business_rows_full:
+            for idx, bus_row in enumerate(business_rows_full):
+                periodo = bus_row.get("periodo", "")
+                aporte = aportes_map.get(periodo, 0.0)
+                distribuicao = bus_row.get("distribuicao", 0.0)
+                
+                # Fluxo do investidor: distribuição - aporte
+                fluxo = distribuicao - aporte
+                fluxos_mensais.append(fluxo)
+                
+                # Acumular totais
+                total_aportes += aporte
+                total_distribuicoes += distribuicao
+                
+                # Calcular saldo acumulado
+                saldo_acum += fluxo
+                
+                # Detectar pay-back
+                if aporte > 0 and primeiro_aporte_idx is None:
+                    primeiro_aporte_idx = idx
+                    payback_inicio = periodo
+                
+                if primeiro_aporte_idx is not None and payback_fim is None and saldo_acum >= 0:
+                    payback_meses = (idx - primeiro_aporte_idx) + 1
+                    payback_fim = periodo
+        
+        # Calcular ROI
+        roi_percent = None
+        if total_aportes > 0:
+            roi_percent = (total_distribuicoes / total_aportes) * 100
+        
+        # Calcular VPL
+        vpl = 0.0
+        taxa_anual = 12.0  # 12% a.a.
+        taxa_mensal = ((1 + (taxa_anual / 100)) ** (1/12)) - 1
+        
+        for mes, fluxo in enumerate(fluxos_mensais, start=1):
+            valor_presente = fluxo / ((1 + taxa_mensal) ** mes)
+            vpl += valor_presente
+        
+        # Calcular TIR usando Newton-Raphson
+        tir_percent = None
+        if total_aportes > 0 and total_distribuicoes > 0:
+            tir_mensal = _calcular_tir_newton(fluxos_mensais)
+            if tir_mensal is not None:
+                # Converter para taxa anual
+                tir_percent = ((1 + tir_mensal) ** 12 - 1) * 100
+        
+        # Atualizar analysis_metrics
+        analysis_metrics['payback_meses'] = payback_meses
+        analysis_metrics['payback_inicio'] = payback_inicio
+        analysis_metrics['payback_fim'] = payback_fim
+        analysis_metrics['roi_percent'] = roi_percent
+        analysis_metrics['tir_percent'] = tir_percent
+        analysis_metrics['vpl'] = vpl
+        
+        logger.info(f"\n[DEBUG] Métricas Calculadas:")
+        logger.info(f"  Total Aportes: {total_aportes:,.2f}")
+        logger.info(f"  Total Distribuições: {total_distribuicoes:,.2f}")
+        logger.info(f"  Pay-back: {payback_meses} meses ({payback_inicio} a {payback_fim})")
+        logger.info(f"  ROI: {roi_percent:.2f}%" if roi_percent else "  ROI: None")
+        logger.info(f"  TIR: {tir_percent:.2f}% a.a." if tir_percent else "  TIR: None")
+        logger.info(f"  VPL: {vpl:,.2f}")
+        
+        # ===== FIM DADOS MODEFIN =====
+        
+        report_payload = build_final_report_payload(
+            plan,
+            canvas_data,
+            agenda_project,
+            principles,
+            competitive_segments,
+            summarize_structures_for_report(estruturas),
+            financeiro,
+        )
+        # Adicionar investment_flow ao financeiro para o template
+        financeiro_completo = report_payload.get("financeiro", {})
+        if investment_flow:
+            financeiro_completo['investimento'] = investment_flow
+        
+        return render_template(
+            "implantacao/entrega_relatorio_final.html",
+            user_name=plan.get("consultant", "Consultor responsavel"),
+            plan=report_payload.get("plan"),
+            alinhamento=report_payload.get("alinhamento"),
+            segmentos=report_payload.get("segmentos"),
+            estruturas=report_payload.get("estruturas"),
+            financeiro=financeiro_completo,
+            projeto=agenda_project,
+            projeto_atividades=projeto_atividades,
+            issued_at=report_payload.get("issued_at"),
+            # Dados da ModeFin
+            modefin_products=products,
+            modefin_products_totals=products_totals,
+            modefin_fixed_costs=fixed_costs_dict,
+            modefin_investimentos_resumo=resumo_investimentos,
+            modefin_capital_giro=capital_giro_items,
+            modefin_funding_sources=funding_sources,
+            modefin_profit_distribution=profit_distribution,
+            modefin_result_rules=result_rules,
+            modefin_executive_summary=executive_summary,
+            modefin_investment_flow=investment_flow,
+            modefin_business_flow=business_flow,
+            modefin_investor_flow=investor_flow,
+            investment_flow=investment_flow,
+            analysis_metrics=analysis_metrics,
+        )
+    except Exception as e:
+        plan_id_str = str(plan_id) if 'plan_id' in locals() else 'unknown'
+        logger.error(f"[ERROR] Erro ao gerar relatório final para plan_id={plan_id_str}: {e}", exc_info=True)
+        import traceback
+        traceback.print_exc()
+        from flask import abort
+        abort(500, description=f"Erro ao gerar relatório final: {str(e)}")
 
 
 # Rotas antigas removidas - Serão substituídas por 6 relatórios modulares
@@ -1388,6 +1436,7 @@ def implantacao_estruturas():
 
 # ========== APIs para Canvas de Expectativas ==========
 
+@login_required
 @pev_bp.route('/api/implantacao/<int:plan_id>/alignment/members', methods=['POST'])
 def add_alignment_member(plan_id: int):
     """Add new alignment member (socio)"""
@@ -1423,10 +1472,11 @@ def add_alignment_member(plan_id: int):
         return jsonify({'success': True, 'id': member_id}), 201
         
     except Exception as e:
-        print(f"Error adding alignment member: {e}")
+        logger.info(f"Error adding alignment member: {e}")
         return jsonify({'success': False, 'error': str(e)}), 500
 
 
+@login_required
 @pev_bp.route('/api/implantacao/<int:plan_id>/alignment/members/<int:member_id>', methods=['PUT'])
 def update_alignment_member(plan_id: int, member_id: int):
     """Update alignment member"""
@@ -1458,10 +1508,12 @@ def update_alignment_member(plan_id: int, member_id: int):
         return jsonify({'success': True}), 200
         
     except Exception as e:
-        print(f"Error updating alignment member: {e}")
+        logger.info(f"Error updating alignment member: {e}")
         return jsonify({'success': False, 'error': str(e)}), 500
 
+@login_required
 
+@login_required
 @pev_bp.route('/api/implantacao/<int:plan_id>/alignment/members/<int:member_id>', methods=['DELETE'])
 def delete_alignment_member(plan_id: int, member_id: int):
     """Delete alignment member"""
@@ -1479,10 +1531,11 @@ def delete_alignment_member(plan_id: int, member_id: int):
         return jsonify({'success': True}), 200
         
     except Exception as e:
-        print(f"Error deleting alignment member: {e}")
+        logger.info(f"Error deleting alignment member: {e}")
         return jsonify({'success': False, 'error': str(e)}), 500
 
 
+@login_required
 @pev_bp.route('/api/implantacao/<int:plan_id>/alignment/overview', methods=['POST', 'PUT'])
 def save_alignment_overview(plan_id: int):
     """Save or update alignment overview"""
@@ -1532,21 +1585,22 @@ def save_alignment_overview(plan_id: int):
         return jsonify({'success': True}), 200
         
     except Exception as e:
-        print(f"Error saving alignment overview: {e}")
+        logger.info(f"Error saving alignment overview: {e}")
         return jsonify({'success': False, 'error': str(e)}), 500
 
 
 # ========== APIs para Modelo & Mercado (Segmentos) ==========
 
+@login_required
 @pev_bp.route('/api/implantacao/<int:plan_id>/segments', methods=['POST'])
 def create_segment(plan_id: int):
     """Create new segment"""
     try:
         data = request.get_json() or {}
         
-        print(f"=== CREATE SEGMENT DEBUG ===")
-        print(f"plan_id: {plan_id}")
-        print(f"data recebido: {data}")
+        logger.info(f"=== CREATE SEGMENT DEBUG ===")
+        logger.info(f"plan_id: {plan_id}")
+        logger.info(f"data recebido: {data}")
         
         # Validate required fields
         if not data.get('name'):
@@ -1567,11 +1621,11 @@ def create_segment(plan_id: int):
             'strategy': data.get('strategy', {})
         }
         
-        print(f"Dados preparados: {segment_data}")
+        logger.info(f"Dados preparados: {segment_data}")
         
         segment_id = db.create_plan_segment(plan_id, segment_data)
         
-        print(f"Segment ID criado: {segment_id}")
+        logger.info(f"Segment ID criado: {segment_id}")
         
         if segment_id:
             return jsonify({'success': True, 'id': segment_id}), 201
@@ -1580,11 +1634,12 @@ def create_segment(plan_id: int):
         
     except Exception as e:
         import traceback
-        print(f"Error creating segment: {e}")
-        print(f"Traceback: {traceback.format_exc()}")
+        logger.info(f"Error creating segment: {e}")
+        logger.info(f"Traceback: {traceback.format_exc()}")
         return jsonify({'success': False, 'error': f'Erro no servidor: {str(e)}'}), 500
 
 
+@login_required
 @pev_bp.route('/api/implantacao/<int:plan_id>/segments/<int:segment_id>', methods=['PUT'])
 def update_segment(plan_id: int, segment_id: int):
     """Update segment"""
@@ -1602,10 +1657,11 @@ def update_segment(plan_id: int, segment_id: int):
             return jsonify({'success': False, 'error': 'Erro ao atualizar segmento'}), 500
         
     except Exception as e:
-        print(f"Error updating segment: {e}")
+        logger.info(f"Error updating segment: {e}")
         return jsonify({'success': False, 'error': str(e)}), 500
 
 
+@login_required
 @pev_bp.route('/api/implantacao/<int:plan_id>/segments/<int:segment_id>', methods=['DELETE'])
 def delete_segment(plan_id: int, segment_id: int):
     """Delete segment"""
@@ -1621,7 +1677,7 @@ def delete_segment(plan_id: int, segment_id: int):
             return jsonify({'success': False, 'error': 'Erro ao deletar segmento'}), 500
         
     except Exception as e:
-        print(f"Error deleting segment: {e}")
+        logger.info(f"Error deleting segment: {e}")
         return jsonify({'success': False, 'error': str(e)}), 500
 
 
@@ -1650,20 +1706,21 @@ def get_structure(plan_id: int, structure_id: int):
         return jsonify({'success': True, 'data': structure}), 200
         
     except Exception as e:
-        print(f"Error getting structure: {e}")
+        logger.info(f"Error getting structure: {e}")
         return jsonify({'success': False, 'error': str(e)}), 500
 
 
+@login_required
 @pev_bp.route('/api/implantacao/<int:plan_id>/structures', methods=['POST'])
 def create_structure(plan_id: int):
     """Create new structure item"""
     try:
         data = request.get_json() or {}
         
-        print(f"\n{'='*60}")
-        print(f"🔵 CREATE STRUCTURE - plan_id={plan_id}")
-        print(f"📦 Data received: {data}")
-        print(f"{'='*60}\n")
+        logger.info(f"\n{'='*60}")
+        logger.info(f"?? CREATE STRUCTURE - plan_id={plan_id}")
+        logger.info(f"?? Data received: {data}")
+        logger.info(f"{'='*60}\n")
         
         # Validate required fields
         if not data.get('area'):
@@ -1676,41 +1733,42 @@ def create_structure(plan_id: int):
         from config_database import get_db
         db = get_db()
         
-        print(f"✅ Validação OK, criando estrutura...")
+        logger.info(f"? Validação OK, criando estrutura...")
         
         # Criar estrutura
         structure_id = db.create_plan_structure(plan_id, data)
         
-        print(f"📝 Structure ID retornado: {structure_id}")
+        logger.info(f"?? Structure ID retornado: {structure_id}")
         
         if structure_id:
             # Criar parcelas se fornecidas
             installments = data.get('installments', [])
-            print(f"📋 Parcelas a criar: {len(installments)}")
+            logger.info(f"?? Parcelas a criar: {len(installments)}")
             
             if installments:
                 for idx, inst in enumerate(installments):
-                    print(f"  Criando parcela {idx+1}/{len(installments)}: {inst}")
+                    logger.info(f"  Criando parcela {idx+1}/{len(installments)}: {inst}")
                     inst_id = db.create_plan_structure_installment(structure_id, inst)
-                    print(f"  ✅ Parcela criada com ID: {inst_id}")
+                    logger.info(f"  ? Parcela criada com ID: {inst_id}")
             
-            print(f"✅ Estrutura criada com sucesso! ID={structure_id}\n")
+            logger.info(f"? Estrutura criada com sucesso! ID={structure_id}\n")
             return jsonify({'success': True, 'id': structure_id}), 201
         else:
-            print(f"❌ ERRO: create_plan_structure retornou 0 ou None\n")
+            logger.info(f"? ERRO: create_plan_structure retornou 0 ou None\n")
             return jsonify({'success': False, 'error': 'Erro ao criar estrutura no banco'}), 500
         
     except Exception as e:
         import traceback
         error_trace = traceback.format_exc()
-        print(f"\n{'='*60}")
-        print(f"❌ EXCEPTION ao criar estrutura:")
-        print(f"Error: {e}")
-        print(f"Traceback:\n{error_trace}")
-        print(f"{'='*60}\n")
+        logger.info(f"\n{'='*60}")
+        logger.info(f"? EXCEPTION ao criar estrutura:")
+        logger.info(f"Error: {e}")
+        logger.info(f"Traceback:\n{error_trace}")
+        logger.info(f"{'='*60}\n")
         return jsonify({'success': False, 'error': f'Erro no servidor: {str(e)}'}), 500
 
 
+@login_required
 @pev_bp.route('/api/implantacao/<int:plan_id>/structures/<int:structure_id>', methods=['PUT'])
 def update_structure(plan_id: int, structure_id: int):
     """Update structure item"""
@@ -1739,11 +1797,12 @@ def update_structure(plan_id: int, structure_id: int):
         
     except Exception as e:
         import traceback
-        print(f"Error updating structure: {e}")
-        print(f"Traceback: {traceback.format_exc()}")
+        logger.info(f"Error updating structure: {e}")
+        logger.info(f"Traceback: {traceback.format_exc()}")
         return jsonify({'success': False, 'error': str(e)}), 500
 
 
+@login_required
 @pev_bp.route('/api/implantacao/<int:plan_id>/structures/<int:structure_id>', methods=['DELETE'])
 def delete_structure(plan_id: int, structure_id: int):
     """Delete structure item"""
@@ -1759,11 +1818,12 @@ def delete_structure(plan_id: int, structure_id: int):
             return jsonify({'success': False, 'error': 'Erro ao deletar estrutura'}), 500
         
     except Exception as e:
-        print(f"Error deleting structure: {e}")
+        logger.info(f"Error deleting structure: {e}")
         return jsonify({'success': False, 'error': str(e)}), 500
 
 
 # APIs de Capacidade de Faturamento
+@login_required
 @pev_bp.route('/api/implantacao/<int:plan_id>/structures/capacities', methods=['POST'])
 def create_capacity(plan_id: int):
     """Create revenue capacity entry for structure area"""
@@ -1788,10 +1848,12 @@ def create_capacity(plan_id: int):
             return jsonify({'success': False, 'error': 'Erro ao criar capacidade'}), 500
         
     except Exception as e:
-        print(f"Error creating capacity: {e}")
+        logger.info(f"Error creating capacity: {e}")
         return jsonify({'success': False, 'error': str(e)}), 500
 
+@login_required
 
+@login_required
 @pev_bp.route('/api/implantacao/<int:plan_id>/structures/capacities/<int:capacity_id>', methods=['PUT'])
 def update_capacity(plan_id: int, capacity_id: int):
     """Update revenue capacity entry for structure area"""
@@ -1816,10 +1878,12 @@ def update_capacity(plan_id: int, capacity_id: int):
             return jsonify({'success': False, 'error': 'Erro ao atualizar capacidade'}), 500
         
     except Exception as e:
-        print(f"Error updating capacity: {e}")
+        logger.info(f"Error updating capacity: {e}")
         return jsonify({'success': False, 'error': str(e)}), 500
 
+@login_required
 
+@login_required
 @pev_bp.route('/api/implantacao/<int:plan_id>/structures/capacities/<int:capacity_id>', methods=['DELETE'])
 def delete_capacity(plan_id: int, capacity_id: int):
     """Delete revenue capacity entry for structure area"""
@@ -1835,18 +1899,19 @@ def delete_capacity(plan_id: int, capacity_id: int):
             return jsonify({'success': False, 'error': 'Erro ao deletar capacidade'}), 500
         
     except Exception as e:
-        print(f"Error deleting capacity: {e}")
+        logger.info(f"Error deleting capacity: {e}")
         return jsonify({'success': False, 'error': str(e)}), 500
 
 
+@login_required
 @pev_bp.route('/api/implantacao/<int:plan_id>/structures/<int:structure_id>/installments', methods=['DELETE'])
 def delete_structure_installments(plan_id: int, structure_id: int):
     """Delete all installments for a structure"""
     try:
         divider = "=" * 60
-        print(f"\n{divider}")
-        print(f"[installments] DELETE - plan_id={plan_id}, structure_id={structure_id}")
-        print(f"{divider}\n")
+        logger.info(f"\n{divider}")
+        logger.info(f"[installments] DELETE - plan_id={plan_id}, structure_id={structure_id}")
+        logger.info(f"{divider}\n")
         
         from config_database import get_db
         db = get_db()
@@ -1856,28 +1921,29 @@ def delete_structure_installments(plan_id: int, structure_id: int):
         structure = next((s for s in structures if s.get('id') == structure_id), None)
         
         if not structure:
-            print(f"[installments] Estrutura {structure_id} nao encontrada para plan_id {plan_id}")
+            logger.info(f"[installments] Estrutura {structure_id} nao encontrada para plan_id {plan_id}")
             return jsonify({'success': False, 'error': 'Estrutura nao encontrada'}), 404
         
-        print("[installments] Estrutura encontrada, deletando parcelas...")
+        logger.info("[installments] Estrutura encontrada, deletando parcelas...")
         
         # Deletar parcelas
         db.delete_plan_structure_installments(structure_id)
         
-        print("[installments] Parcelas deletadas com sucesso!\n")
+        logger.info("[installments] Parcelas deletadas com sucesso!\n")
         return jsonify({'success': True}), 200
         
     except Exception as e:
         divider = "=" * 60
-        print(f"\n{divider}")
-        print("[installments] EXCEPTION ao deletar parcelas:")
-        print(f"Error: {e}")
+        logger.info(f"\n{divider}")
+        logger.info("[installments] EXCEPTION ao deletar parcelas:")
+        logger.info(f"Error: {e}")
         import traceback
-        print(f"Traceback:\n{traceback.format_exc()}")
-        print(f"{divider}\n")
+        logger.info(f"Traceback:\n{traceback.format_exc()}")
+        logger.info(f"{divider}\n")
         return jsonify({'success': False, 'error': str(e)}), 500
 
 
+@login_required
 @pev_bp.route('/api/implantacao/<int:plan_id>/structures/<int:structure_id>/installments', methods=['POST'])
 def create_structure_installment(plan_id: int, structure_id: int):
     """Create a new installment for a structure"""
@@ -1885,13 +1951,13 @@ def create_structure_installment(plan_id: int, structure_id: int):
         data = request.get_json() or {}
         
         divider = "=" * 60
-        print(f"\n{divider}")
-        print(f"[installments] CREATE - plan_id={plan_id}, structure_id={structure_id}")
-        print(f"[installments] Data received: {data}")
-        print("[installments] Data types: "
+        logger.info(f"\n{divider}")
+        logger.info(f"[installments] CREATE - plan_id={plan_id}, structure_id={structure_id}")
+        logger.info(f"[installments] Data received: {data}")
+        logger.info("[installments] Data types: "
               f"installment_number={type(data.get('installment_number'))}, "
               f"amount={type(data.get('amount'))}")
-        print(f"{divider}\n")
+        logger.info(f"{divider}\n")
         
         from config_database import get_db
         db = get_db()
@@ -1901,23 +1967,23 @@ def create_structure_installment(plan_id: int, structure_id: int):
         structure = next((s for s in structures if s.get('id') == structure_id), None)
         
         if not structure:
-            print(f"[installments] Estrutura {structure_id} nao encontrada para plan_id {plan_id}")
+            logger.info(f"[installments] Estrutura {structure_id} nao encontrada para plan_id {plan_id}")
             return jsonify({'success': False, 'error': 'Estrutura nao encontrada'}), 404
         
-        print(f"[installments] Estrutura encontrada: {structure.get('description', 'N/A')}")
+        logger.info(f"[installments] Estrutura encontrada: {structure.get('description', 'N/A')}")
         
         # Validar campos obrigatorios
         installment_number = data.get('installment_number')
         amount = data.get('amount')
         
         if not installment_number or (isinstance(installment_number, str) and not installment_number.strip()):
-            print("[installments] Validacao falhou: installment_number ausente ou vazio")
-            print(f"   Valor recebido: {repr(installment_number)}")
+            logger.info("[installments] Validacao falhou: installment_number ausente ou vazio")
+            logger.info(f"   Valor recebido: {repr(installment_number)}")
             return jsonify({'success': False, 'error': 'Numero da parcela e obrigatorio'}), 400
         
         if not amount or (isinstance(amount, str) and not amount.strip()):
-            print("[installments] Validacao falhou: amount ausente ou vazio")
-            print(f"   Valor recebido: {repr(amount)}")
+            logger.info("[installments] Validacao falhou: amount ausente ou vazio")
+            logger.info(f"   Valor recebido: {repr(amount)}")
             return jsonify({'success': False, 'error': 'Valor da parcela e obrigatorio'}), 400
         
         # Converter amount para string se for numero (banco espera TEXT)
@@ -1928,8 +1994,8 @@ def create_structure_installment(plan_id: int, structure_id: int):
             try:
                 float(amount)
             except ValueError:
-                print("[installments] Validacao falhou: amount nao e um numero valido")
-                print(f"   Valor recebido: {repr(amount)}")
+                logger.info("[installments] Validacao falhou: amount nao e um numero valido")
+                logger.info(f"   Valor recebido: {repr(amount)}")
                 return jsonify({'success': False, 'error': 'Valor da parcela deve ser um numero valido'}), 400
         
         # Preparar dados para insercao (garantir que amount e string)
@@ -1942,27 +2008,27 @@ def create_structure_installment(plan_id: int, structure_id: int):
             'repetition': data.get('repetition') or None
         }
         
-        print(f"[installments] Validacao OK, dados preparados: {insert_data}")
-        print("[installments] Criando parcela...")
+        logger.info(f"[installments] Validacao OK, dados preparados: {insert_data}")
+        logger.info("[installments] Criando parcela...")
         
         # Criar parcela
         installment_id = db.create_plan_structure_installment(structure_id, insert_data)
         
         if installment_id:
-            print(f"[installments] Parcela criada com sucesso! ID={installment_id}\n")
+            logger.info(f"[installments] Parcela criada com sucesso! ID={installment_id}\n")
             return jsonify({'success': True, 'id': installment_id}), 201
         else:
-            print("[installments] Erro: create_plan_structure_installment retornou 0 ou None\n")
+            logger.info("[installments] Erro: create_plan_structure_installment retornou 0 ou None\n")
             return jsonify({'success': False, 'error': 'Erro ao criar parcela no banco de dados'}), 500
         
     except Exception as e:
         divider = "=" * 60
-        print(f"\n{divider}")
-        print("[installments] EXCEPTION ao criar parcela:")
-        print(f"Error: {e}")
+        logger.info(f"\n{divider}")
+        logger.info("[installments] EXCEPTION ao criar parcela:")
+        logger.info(f"Error: {e}")
         import traceback
-        print(f"Traceback:\n{traceback.format_exc()}")
-        print(f"{divider}\n")
+        logger.info(f"Traceback:\n{traceback.format_exc()}")
+        logger.info(f"{divider}\n")
         return jsonify({'success': False, 'error': f'Erro ao criar parcela: {str(e)}'}), 500
 
 @pev_bp.route('/api/implantacao/<int:plan_id>/structures/fixed-costs-summary', methods=['GET'])
@@ -2000,14 +2066,14 @@ def get_fixed_costs_summary(plan_id: int):
         }
         
         # DEBUG
-        print(f"\nAPI GET /structures/fixed-costs-summary - plan_id={plan_id}")
-        print(f"   Estruturas: {len(estruturas)}")
-        print(f"   Fixed Costs: {fixed_costs_summary}\n")
+        logger.info(f"\nAPI GET /structures/fixed-costs-summary - plan_id={plan_id}")
+        logger.info(f"   Estruturas: {len(estruturas)}")
+        logger.info(f"   Fixed Costs: {fixed_costs_summary}\n")
         
         return jsonify({'success': True, 'data': fixed_costs_summary}), 200
         
     except Exception as exc:
-        print(f"[structures] Error calculating fixed costs summary for plan {plan_id}: {exc}")
+        logger.info(f"[structures] Error calculating fixed costs summary for plan {plan_id}: {exc}")
         import traceback
         traceback.print_exc()
         return jsonify({'success': False, 'error': 'Erro ao calcular resumo de custos fixos'}), 500
@@ -2016,6 +2082,7 @@ def get_fixed_costs_summary(plan_id: int):
 # ==================== FINANCIAL MODEL APIS ====================
 
 # PREMISSAS
+@login_required
 @pev_bp.route('/api/implantacao/<int:plan_id>/finance/premises', methods=['POST'])
 def create_premise(plan_id: int):
     """Create financial premise"""
@@ -2036,10 +2103,11 @@ def create_premise(plan_id: int):
             return jsonify({'success': False, 'error': 'Erro ao criar premissa'}), 500
         
     except Exception as e:
-        print(f"Error creating premise: {e}")
+        logger.info(f"Error creating premise: {e}")
         return jsonify({'success': False, 'error': str(e)}), 500
 
 
+@login_required
 @pev_bp.route('/api/implantacao/<int:plan_id>/finance/premises/<int:premise_id>', methods=['PUT'])
 def update_premise(plan_id: int, premise_id: int):
     """Update financial premise"""
@@ -2057,10 +2125,11 @@ def update_premise(plan_id: int, premise_id: int):
             return jsonify({'success': False, 'error': 'Erro ao atualizar premissa'}), 500
         
     except Exception as e:
-        print(f"Error updating premise: {e}")
+        logger.info(f"Error updating premise: {e}")
         return jsonify({'success': False, 'error': str(e)}), 500
 
 
+@login_required
 @pev_bp.route('/api/implantacao/<int:plan_id>/finance/premises/<int:premise_id>', methods=['DELETE'])
 def delete_premise(plan_id: int, premise_id: int):
     """Delete financial premise"""
@@ -2076,11 +2145,12 @@ def delete_premise(plan_id: int, premise_id: int):
             return jsonify({'success': False, 'error': 'Erro ao deletar premissa'}), 500
         
     except Exception as e:
-        print(f"Error deleting premise: {e}")
+        logger.info(f"Error deleting premise: {e}")
         return jsonify({'success': False, 'error': str(e)}), 500
 
 
 # INVESTIMENTOS
+@login_required
 @pev_bp.route('/api/implantacao/<int:plan_id>/finance/investments', methods=['POST'])
 def create_investment(plan_id: int):
     """Create investment item"""
@@ -2101,10 +2171,11 @@ def create_investment(plan_id: int):
             return jsonify({'success': False, 'error': 'Erro ao criar investimento'}), 500
         
     except Exception as e:
-        print(f"Error creating investment: {e}")
+        logger.info(f"Error creating investment: {e}")
         return jsonify({'success': False, 'error': str(e)}), 500
 
 
+@login_required
 @pev_bp.route('/api/implantacao/<int:plan_id>/finance/investments/<int:investment_id>', methods=['PUT'])
 def update_investment(plan_id: int, investment_id: int):
     """Update investment item"""
@@ -2122,10 +2193,11 @@ def update_investment(plan_id: int, investment_id: int):
             return jsonify({'success': False, 'error': 'Erro ao atualizar investimento'}), 500
         
     except Exception as e:
-        print(f"Error updating investment: {e}")
+        logger.info(f"Error updating investment: {e}")
         return jsonify({'success': False, 'error': str(e)}), 500
 
 
+@login_required
 @pev_bp.route('/api/implantacao/<int:plan_id>/finance/investments/<int:investment_id>', methods=['DELETE'])
 def delete_investment(plan_id: int, investment_id: int):
     """Delete investment item"""
@@ -2141,11 +2213,13 @@ def delete_investment(plan_id: int, investment_id: int):
             return jsonify({'success': False, 'error': 'Erro ao deletar investimento'}), 500
         
     except Exception as e:
-        print(f"Error deleting investment: {e}")
+        logger.info(f"Error deleting investment: {e}")
         return jsonify({'success': False, 'error': str(e)}), 500
 
 
+@login_required
 # FONTES DE RECURSOS
+@login_required
 @pev_bp.route('/api/implantacao/<int:plan_id>/finance/sources', methods=['POST'])
 def create_source(plan_id: int):
     """Create funding source"""
@@ -2175,10 +2249,11 @@ def create_source(plan_id: int):
             return jsonify({'success': False, 'error': 'Erro ao criar fonte'}), 500
         
     except Exception as e:
-        print(f"Error creating source: {e}")
+        logger.info(f"Error creating source: {e}")
         return jsonify({'success': False, 'error': str(e)}), 500
 
 
+@login_required
 @pev_bp.route('/api/implantacao/<int:plan_id>/finance/sources/<int:source_id>', methods=['PUT'])
 def update_source(plan_id: int, source_id: int):
     """Update funding source"""
@@ -2205,10 +2280,11 @@ def update_source(plan_id: int, source_id: int):
             return jsonify({'success': False, 'error': 'Erro ao atualizar fonte'}), 500
         
     except Exception as e:
-        print(f"Error updating source: {e}")
+        logger.info(f"Error updating source: {e}")
         return jsonify({'success': False, 'error': str(e)}), 500
 
 
+@login_required
 @pev_bp.route('/api/implantacao/<int:plan_id>/finance/sources/<int:source_id>', methods=['DELETE'])
 def delete_source(plan_id: int, source_id: int):
     """Delete funding source"""
@@ -2225,11 +2301,12 @@ def delete_source(plan_id: int, source_id: int):
             return jsonify({'success': False, 'error': 'Erro ao deletar fonte'}), 500
         
     except Exception as e:
-        print(f"Error deleting source: {e}")
+        logger.info(f"Error deleting source: {e}")
         return jsonify({'success': False, 'error': str(e)}), 500
 
 
 # CUSTOS VARIÁVEIS
+@login_required
 @pev_bp.route('/api/implantacao/<int:plan_id>/finance/variable_costs', methods=['POST'])
 def create_variable_cost(plan_id: int):
     """Create variable cost"""
@@ -2250,10 +2327,11 @@ def create_variable_cost(plan_id: int):
             return jsonify({'success': False, 'error': 'Erro ao criar custo variável'}), 500
         
     except Exception as e:
-        print(f"Error creating variable cost: {e}")
+        logger.info(f"Error creating variable cost: {e}")
         return jsonify({'success': False, 'error': str(e)}), 500
 
 
+@login_required
 @pev_bp.route('/api/implantacao/<int:plan_id>/finance/variable_costs/<int:cost_id>', methods=['PUT'])
 def update_variable_cost(plan_id: int, cost_id: int):
     """Update variable cost"""
@@ -2271,10 +2349,11 @@ def update_variable_cost(plan_id: int, cost_id: int):
             return jsonify({'success': False, 'error': 'Erro ao atualizar custo variável'}), 500
         
     except Exception as e:
-        print(f"Error updating variable cost: {e}")
+        logger.info(f"Error updating variable cost: {e}")
         return jsonify({'success': False, 'error': str(e)}), 500
 
 
+@login_required
 @pev_bp.route('/api/implantacao/<int:plan_id>/finance/variable_costs/<int:cost_id>', methods=['DELETE'])
 def delete_variable_cost(plan_id: int, cost_id: int):
     """Delete variable cost"""
@@ -2290,11 +2369,12 @@ def delete_variable_cost(plan_id: int, cost_id: int):
             return jsonify({'success': False, 'error': 'Erro ao deletar custo variável'}), 500
         
     except Exception as e:
-        print(f"Error deleting variable cost: {e}")
+        logger.info(f"Error deleting variable cost: {e}")
         return jsonify({'success': False, 'error': str(e)}), 500
 
 
 # REGRAS DE DESTINAÇÃO
+@login_required
 @pev_bp.route('/api/implantacao/<int:plan_id>/finance/result_rules', methods=['POST'])
 def create_result_rule(plan_id: int):
     """Create result distribution rule"""
@@ -2315,10 +2395,11 @@ def create_result_rule(plan_id: int):
             return jsonify({'success': False, 'error': 'Erro ao criar regra de destinação'}), 500
         
     except Exception as e:
-        print(f"Error creating result rule: {e}")
+        logger.info(f"Error creating result rule: {e}")
         return jsonify({'success': False, 'error': str(e)}), 500
 
 
+@login_required
 @pev_bp.route('/api/implantacao/<int:plan_id>/finance/result_rules/<int:rule_id>', methods=['PUT'])
 def update_result_rule(plan_id: int, rule_id: int):
     """Update result distribution rule"""
@@ -2336,10 +2417,11 @@ def update_result_rule(plan_id: int, rule_id: int):
             return jsonify({'success': False, 'error': 'Erro ao atualizar regra de destinação'}), 500
         
     except Exception as e:
-        print(f"Error updating result rule: {e}")
+        logger.info(f"Error updating result rule: {e}")
         return jsonify({'success': False, 'error': str(e)}), 500
 
 
+@login_required
 @pev_bp.route('/api/implantacao/<int:plan_id>/finance/result_rules/<int:rule_id>', methods=['DELETE'])
 def delete_result_rule(plan_id: int, rule_id: int):
     """Delete result distribution rule"""
@@ -2355,7 +2437,7 @@ def delete_result_rule(plan_id: int, rule_id: int):
             return jsonify({'success': False, 'error': 'Erro ao deletar regra de destinação'}), 500
         
     except Exception as e:
-        print(f"Error deleting result rule: {e}")
+        logger.info(f"Error deleting result rule: {e}")
         return jsonify({'success': False, 'error': str(e)}), 500
 
 
@@ -2374,7 +2456,7 @@ def get_investment_contributions(plan_id: int):
         return jsonify({'success': True, 'data': []}), 200
         
     except Exception as e:
-        print(f"Error getting investment contributions: {e}")
+        logger.info(f"Error getting investment contributions: {e}")
         return jsonify({'success': False, 'error': str(e)}), 500
 
 
@@ -2391,11 +2473,12 @@ def get_funding_sources(plan_id: int):
         return jsonify({'success': True, 'data': sources}), 200
         
     except Exception as e:
-        print(f"Error getting funding sources: {e}")
+        logger.info(f"Error getting funding sources: {e}")
         return jsonify({'success': False, 'error': str(e)}), 500
 
 
 # MÉTRICAS
+@login_required
 @pev_bp.route('/api/implantacao/<int:plan_id>/finance/metrics', methods=['PUT'])
 def update_metrics(plan_id: int):
     """Update financial metrics (payback, TIR, notes)"""
@@ -2413,7 +2496,7 @@ def update_metrics(plan_id: int):
             return jsonify({'success': False, 'error': 'Erro ao atualizar métricas'}), 500
         
     except Exception as e:
-        print(f"Error updating metrics: {e}")
+        logger.info(f"Error updating metrics: {e}")
         return jsonify({'success': False, 'error': str(e)}), 500
 
 
@@ -2433,10 +2516,11 @@ def list_capital_giro(plan_id: int):
         return jsonify({'success': True, 'data': items}), 200
         
     except Exception as e:
-        print(f"[API] Error listing capital giro: {e}")
+        logger.info(f"[API] Error listing capital giro: {e}")
         return jsonify({'success': False, 'error': str(e)}), 500
 
 
+@login_required
 @pev_bp.route('/api/implantacao/<int:plan_id>/finance/capital-giro', methods=['POST'])
 def create_capital_giro(plan_id: int):
     """Create new capital de giro item"""
@@ -2471,10 +2555,11 @@ def create_capital_giro(plan_id: int):
             return jsonify({'success': False, 'error': 'Erro ao criar investimento'}), 500
         
     except Exception as e:
-        print(f"[API] Error creating capital giro: {e}")
+        logger.info(f"[API] Error creating capital giro: {e}")
         return jsonify({'success': False, 'error': str(e)}), 500
 
 
+@login_required
 @pev_bp.route('/api/implantacao/<int:plan_id>/finance/capital-giro/<int:item_id>', methods=['PUT'])
 def update_capital_giro(plan_id: int, item_id: int):
     """Update capital de giro item"""
@@ -2503,10 +2588,11 @@ def update_capital_giro(plan_id: int, item_id: int):
             return jsonify({'success': False, 'error': 'Erro ao atualizar investimento'}), 500
         
     except Exception as e:
-        print(f"[API] Error updating capital giro: {e}")
+        logger.info(f"[API] Error updating capital giro: {e}")
         return jsonify({'success': False, 'error': str(e)}), 500
 
 
+@login_required
 @pev_bp.route('/api/implantacao/<int:plan_id>/finance/capital-giro/<int:item_id>', methods=['DELETE'])
 def delete_capital_giro(plan_id: int, item_id: int):
     """Delete capital de giro item"""
@@ -2522,7 +2608,7 @@ def delete_capital_giro(plan_id: int, item_id: int):
             return jsonify({'success': False, 'error': 'Erro ao deletar investimento'}), 500
         
     except Exception as e:
-        print(f"[API] Error deleting capital giro: {e}")
+        logger.info(f"[API] Error deleting capital giro: {e}")
         return jsonify({'success': False, 'error': str(e)}), 500
 
 
@@ -2538,10 +2624,11 @@ def get_executive_summary_api(plan_id: int):
         return jsonify({'success': True, 'data': summary or ''}), 200
         
     except Exception as e:
-        print(f"[API] Error getting executive summary: {e}")
+        logger.info(f"[API] Error getting executive summary: {e}")
         return jsonify({'success': False, 'error': str(e)}), 500
 
 
+@login_required
 @pev_bp.route('/api/implantacao/<int:plan_id>/finance/executive-summary', methods=['PUT'])
 def update_executive_summary_api(plan_id: int):
     """Update executive summary"""
@@ -2562,7 +2649,7 @@ def update_executive_summary_api(plan_id: int):
             return jsonify({'success': False, 'error': 'Erro ao atualizar resumo executivo'}), 500
         
     except Exception as e:
-        print(f"[API] Error updating executive summary: {e}")
+        logger.info(f"[API] Error updating executive summary: {e}")
         return jsonify({'success': False, 'error': str(e)}), 500
 
 
@@ -2578,10 +2665,11 @@ def get_profit_distribution_api(plan_id: int):
         return jsonify({'success': True, 'data': distribution}), 200
         
     except Exception as e:
-        print(f"[API] Error getting profit distribution: {e}")
+        logger.info(f"[API] Error getting profit distribution: {e}")
         return jsonify({'success': False, 'error': str(e)}), 500
 
 
+@login_required
 @pev_bp.route('/api/implantacao/<int:plan_id>/finance/profit-distribution', methods=['PUT'])
 def update_profit_distribution_api(plan_id: int):
     """Update profit distribution"""
@@ -2607,5 +2695,9 @@ def update_profit_distribution_api(plan_id: int):
             return jsonify({'success': False, 'error': 'Erro ao atualizar distribuição'}), 500
         
     except Exception as e:
-        print(f"[API] Error updating profit distribution: {e}")
+        logger.info(f"[API] Error updating profit distribution: {e}")
         return jsonify({'success': False, 'error': str(e)}), 500
+
+
+
+

@@ -1,0 +1,48 @@
+==========================================
+GestaoVersus - Imagens Docker no GCP
+==========================================
+
+PROJECT_ID: vrs-eco-478714
+REGION: us-central1
+REPOSITORY: my-app-repo
+
+==========================================
+NOMES COMPLETOS DAS IMAGENS
+==========================================
+
+BACKEND (Flask Application):
+us-central1-docker.pkg.dev/vrs-eco-478714/my-app-repo/my-backend:latest
+
+FRONTEND (Nginx):
+us-central1-docker.pkg.dev/vrs-eco-478714/my-app-repo/my-frontend:latest
+
+==========================================
+FORMATO ALTERNATIVO (gcr.io - Legacy)
+==========================================
+
+Se preferir usar o formato antigo do Container Registry:
+gcr.io/vrs-eco-478714/my-app-repo/my-backend:latest
+gcr.io/vrs-eco-478714/my-app-repo/my-frontend:latest
+
+NOTA: O Artifact Registry é o formato recomendado pelo Google.
+O formato acima usa o novo Artifact Registry (us-central1-docker.pkg.dev).
+
+==========================================
+COMO USAR
+==========================================
+
+1. Execute o script de build e push:
+   - Linux/Mac: ./scripts/build-and-push-gcp.sh
+   - Windows: .\scripts\build-and-push-gcp.ps1
+
+2. Use os nomes completos acima no seu design do Cloud Run
+
+3. Para verificar as imagens:
+   gcloud artifacts docker images list \
+       us-central1-docker.pkg.dev/vrs-eco-478714/my-app-repo \
+       --include-tags
+
+==========================================
+
+
+

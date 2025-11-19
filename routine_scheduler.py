@@ -14,7 +14,9 @@ import calendar
 # Add the app directory to the path
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 
-from database import sqlite_db as db
+from config_database import get_db
+
+db = get_db()
 
 
 def get_weekday_name(date: datetime) -> str:

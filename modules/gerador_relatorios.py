@@ -1,11 +1,12 @@
-#!/usr/bin/env python3
+﻿#!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 """
-Módulo de Geração de Relatórios Profissionais
+MÃ³dulo de GeraÃ§Ã£o de RelatÃ³rios Profissionais
 Sistema PEVAPP22
 Usando WeasyPrint + Plotly
 """
 
+import logging
 import os
 from contextlib import contextmanager
 from datetime import datetime, timedelta
@@ -14,6 +15,8 @@ from plotly.subplots import make_subplots
 import pandas as pd
 from decimal import Decimal
 from config_database import get_db
+
+logger = logging.getLogger(__name__)
 
 try:
     from weasyprint import HTML  # type: ignore
@@ -27,22 +30,22 @@ except Exception as _weasy_exc:  # pragma: no cover - defensive import
 
 class GeradorRelatoriosProfissionais:
     """
-    Classe para gerar relatórios profissionais em PDF
+    Classe para gerar relatÃ³rios profissionais em PDF
     Integrado ao sistema PEVAPP22
     """
     
     def __init__(self, db_connection=None):
         """
-        Inicializa o gerador de relatórios
+        Inicializa o gerador de relatÃ³rios
         
         Args:
-            db_connection: Conexão com banco de dados (opcional)
+            db_connection: ConexÃ£o com banco de dados (opcional)
         """
         self.db = db_connection or get_db()
         self.temp_dir = "temp_relatorios"
         self.output_dir = "relatorios"
         
-        # Cria diretórios se não existirem
+        # Cria diretÃ³rios se nÃ£o existirem
         os.makedirs(self.temp_dir, exist_ok=True)
         os.makedirs(self.output_dir, exist_ok=True)
 
@@ -73,107 +76,77 @@ class GeradorRelatoriosProfissionais:
                     pass
 
     def _ensure_weasyprint(self):
-        """Garante que a dependência principal esteja instalada."""
+        """Garante que a dependÃªncia principal esteja instalada."""
         if not _WEASYPRINT_AVAILABLE or HTML is None:
             raise RuntimeError(
-                "WeasyPrint não está disponível. Instale as dependências de relatório."
+                "WeasyPrint nÃ£o estÃ¡ disponÃ­vel. Instale as dependÃªncias de relatÃ³rio."
             ) from _WEASYPRINT_IMPORT_ERROR
 
     def _safe_write_image(self, fig, path, **kwargs):
-        """Exporta o gráfico tratando ausência do motor de imagens."""
+        """Exporta o grÃ¡fico tratando ausÃªncia do motor de imagens."""
         try:
             fig.write_image(path, **kwargs)
             return os.path.abspath(path)
         except Exception as exc:
-            print(f"[relatorios] Não foi possível exportar gráfico: {exc}")
+            logger.warning("[relatorios] NÃ£o foi possÃ­vel exportar grÃ¡fico: %s", exc)
             return None
 
     # ========================================
-    # MÉTODOS DE BUSCA DE DADOS
+    # MÃ‰TODOS DE BUSCA DE DADOS
     # ========================================
     
     def buscar_empresa(self, empresa_id):
-        """Busca dados da empresa"""
-        with self._cursor() as cursor:
-            cursor.execute("""
-                SELECT id, nome, cnpj, endereco, telefone, email, logo_path
-                FROM companies
-                WHERE id = ?
-            """, (empresa_id,))
-            row = cursor.fetchone()
-        if row:
-            return {
-                'id': row[0],
-                'nome': row[1],
-                'cnpj': row[2] or '',
-                'endereco': row[3] or '',
-                'telefone': row[4] or '',
-                'email': row[5] or '',
-                'logo': row[6] or ''
-            }
-        return None
+        """Busca dados da empresa utilizando o adaptador atual."""
+        company = self.db.get_company(empresa_id)
+        if not company:
+            return None
+        return {
+            'id': company.get('id'),
+            'nome': company.get('name') or company.get('legal_name') or 'Empresa',
+            'cnpj': company.get('cnpj') or '',
+            'endereco': company.get('address') or '',
+            'telefone': company.get('phone') or '',
+            'email': company.get('email') or '',
+            'logo': company.get('logo_path') or ''
+        }
     
     def buscar_projetos(self, empresa_id, status=None):
         """Busca projetos da empresa"""
-        query = """
-            SELECT 
-                codigo, nome, descricao, status, 
-                data_inicio, data_fim, investimento,
-                responsavel
-            FROM company_projects
-            WHERE company_id = ?
-        """
-        params = [empresa_id]
-        
-        if status:
-            query += " AND status = ?"
-            params.append(status)
-        
-        query += " ORDER BY data_inicio DESC"
-        
-        with self._cursor() as cursor:
-            cursor.execute(query, params)
-            rows = cursor.fetchall()
-        
+        projetos_brutos = self.db.get_company_projects(empresa_id)
         projetos = []
-        for row in rows:
+        for projeto in projetos_brutos:
+            if status and (projeto.get('status') or '').lower() != status.lower():
+                continue
+            codigo = projeto.get('code')
+            if not codigo:
+                codigo = f"PRJ-{projeto.get('id', 0):04d}"
             projetos.append({
-                'codigo': row[0],
-                'nome': row[1],
-                'descricao': row[2] or '',
-                'status': row[3],
-                'data_inicio': row[4],
-                'data_fim': row[5],
-                'investimento': float(row[6]) if row[6] else 0.0,
-                'responsavel': row[7] or ''
+                'codigo': codigo,
+                'nome': projeto.get('title') or 'Projeto',
+                'descricao': projeto.get('description') or '',
+                'status': projeto.get('status') or 'planned',
+                'data_inicio': projeto.get('start_date'),
+                'data_fim': projeto.get('end_date'),
+                'investimento': float(projeto.get('budget') or 0),
+                'responsavel': projeto.get('owner') or ''
             })
-        
-        return projetos
+        return sorted(
+            projetos,
+            key=lambda item: item.get('data_inicio') or datetime.utcnow(),
+            reverse=True
+        )
     
     def calcular_metricas_empresa(self, empresa_id, periodo_inicio=None, periodo_fim=None):
         """Calcula m?tricas gerais da empresa"""
-        with self._cursor() as cursor:
-            # Total de projetos
-            cursor.execute("""
-                SELECT COUNT(*) FROM company_projects WHERE company_id = ?
-            """, (empresa_id,))
-            total_projetos = cursor.fetchone()[0]
-            
-            # Projetos conclu?dos
-            cursor.execute("""
-                SELECT COUNT(*) FROM company_projects 
-                WHERE company_id = ? AND status = 'Conclu?do'
-            """, (empresa_id,))
-            projetos_concluidos = cursor.fetchone()[0]
-            
-            # Investimento total
-            cursor.execute("""
-                SELECT COALESCE(SUM(investimento), 0) FROM company_projects 
-                WHERE company_id = ?
-            """, (empresa_id,))
-            investimento_total = float(cursor.fetchone()[0] or 0)
+        projetos = self.db.get_company_projects(empresa_id)
+        total_projetos = len(projetos)
+        projetos_concluidos = sum(
+            1
+            for projeto in projetos
+            if (projeto.get('status') or '').lower() in {'concluÃ­do', 'concluido', 'completed', 'done'}
+        )
+        investimento_total = sum(float(projeto.get('budget') or 0) for projeto in projetos)
 
-        # Calcula efici?ncia
         eficiencia = (projetos_concluidos / total_projetos * 100) if total_projetos > 0 else 0
 
         return {
@@ -185,18 +158,21 @@ class GeradorRelatoriosProfissionais:
         }
     
     # ========================================
-    # MÉTODOS DE GERAÇÃO DE GRÁFICOS
+    # MÃ‰TODOS DE GERAÃ‡ÃƒO DE GRÃFICOS
     # ========================================
     
     def gerar_grafico_projetos_status(self, empresa_id):
-        """Gera gráfico de pizza com status dos projetos"""
+        """Gera grÃ¡fico de pizza com status dos projetos"""
         with self._cursor() as cursor:
-            cursor.execute("""
+            cursor.execute(
+                """
                 SELECT status, COUNT(*) as total
                 FROM company_projects
-                WHERE company_id = ?
+                WHERE company_id = %s
                 GROUP BY status
-            """, (empresa_id,))
+            """,
+                (empresa_id,),
+            )
             dados = cursor.fetchall()
         
         if not dados:
@@ -209,7 +185,7 @@ class GeradorRelatoriosProfissionais:
         cores = {
             'Planejamento': '#ffc107',
             'Em Andamento': '#1a76ff',
-            'Concluído': '#28a745',
+            'ConcluÃ­do': '#28a745',
             'Pausado': '#dc3545',
             'Cancelado': '#6c757d'
         }
@@ -226,7 +202,7 @@ class GeradorRelatoriosProfissionais:
         )])
         
         fig.update_layout(
-            title='Distribuição de Projetos por Status',
+            title='DistribuiÃ§Ã£o de Projetos por Status',
             template='plotly_white',
             font=dict(family="Arial", size=12),
             height=400
@@ -236,7 +212,7 @@ class GeradorRelatoriosProfissionais:
         return self._safe_write_image(fig, path, width=800, height=400, scale=2)
     
     def gerar_grafico_investimentos(self, empresa_id):
-        """Gera gráfico de barras com investimentos por projeto"""
+        """Gera grÃ¡fico de barras com investimentos por projeto"""
         projetos = self.buscar_projetos(empresa_id)
         
         if not projetos:
@@ -273,13 +249,13 @@ class GeradorRelatoriosProfissionais:
         return self._safe_write_image(fig, path, width=1000, height=500, scale=2)
     
     def gerar_grafico_timeline(self, empresa_id):
-        """Gera gráfico de timeline dos projetos"""
+        """Gera grÃ¡fico de timeline dos projetos"""
         projetos = self.buscar_projetos(empresa_id)
         
         if not projetos:
             return None
         
-        # Filtra projetos com datas válidas
+        # Filtra projetos com datas vÃ¡lidas
         projetos_validos = [
             p for p in projetos 
             if p['data_inicio'] and p['data_fim']
@@ -294,7 +270,7 @@ class GeradorRelatoriosProfissionais:
             cor = {
                 'Planejamento': '#ffc107',
                 'Em Andamento': '#1a76ff',
-                'Concluído': '#28a745',
+                'ConcluÃ­do': '#28a745',
                 'Pausado': '#dc3545'
             }.get(projeto['status'], '#666666')
             
@@ -306,7 +282,7 @@ class GeradorRelatoriosProfissionais:
                 line=dict(color=cor, width=10),
                 marker=dict(size=8),
                 hovertemplate=f"<b>{projeto['nome']}</b><br>" +
-                             f"Início: {projeto['data_inicio']}<br>" +
+                             f"InÃ­cio: {projeto['data_inicio']}<br>" +
                              f"Fim: {projeto['data_fim']}<br>" +
                              f"Status: {projeto['status']}<extra></extra>"
             ))
@@ -335,7 +311,7 @@ class GeradorRelatoriosProfissionais:
         )
     
     # ========================================
-    # MÉTODOS AUXILIARES
+    # MÃ‰TODOS AUXILIARES
     # ========================================
     
     @staticmethod
@@ -347,7 +323,7 @@ class GeradorRelatoriosProfissionais:
     
     @staticmethod
     def format_date(data_str):
-        """Formata data para padrão brasileiro"""
+        """Formata data para padrÃ£o brasileiro"""
         if not data_str:
             return "-"
         try:
@@ -356,26 +332,26 @@ class GeradorRelatoriosProfissionais:
             else:
                 data = data_str
             return data.strftime('%d/%m/%Y')
-        except:
+        except Exception as exc:
             return data_str
     
     def limpar_temp(self):
-        """Remove arquivos temporários"""
+        """Remove arquivos temporÃ¡rios"""
         try:
             for arquivo in os.listdir(self.temp_dir):
                 file_path = os.path.join(self.temp_dir, arquivo)
                 if os.path.isfile(file_path):
                     os.remove(file_path)
         except Exception as e:
-            print(f"Erro ao limpar arquivos temporários: {e}")
+            logger.exception("Erro ao limpar arquivos temporÃ¡rios")
     
     # ========================================
-    # MÉTODOS PRINCIPAIS DE GERAÇÃO
+    # MÃ‰TODOS PRINCIPAIS DE GERAÃ‡ÃƒO
     # ========================================
     
     def gerar_relatorio_projetos(self, empresa_id):
         """
-        Gera relatório completo de projetos da empresa
+        Gera relatÃ³rio completo de projetos da empresa
         
         Args:
             empresa_id: ID da empresa
@@ -387,12 +363,12 @@ class GeradorRelatoriosProfissionais:
         # 1. Busca dados
         empresa = self.buscar_empresa(empresa_id)
         if not empresa:
-            raise ValueError(f"Empresa {empresa_id} não encontrada")
+            raise ValueError(f"Empresa {empresa_id} nÃ£o encontrada")
         
         projetos = self.buscar_projetos(empresa_id)
         metricas = self.calcular_metricas_empresa(empresa_id)
         
-        # 2. Gera gráficos
+        # 2. Gera grÃ¡ficos
         grafico_status = self.gerar_grafico_projetos_status(empresa_id)
         grafico_investimentos = self.gerar_grafico_investimentos(empresa_id)
         grafico_timeline = self.gerar_grafico_timeline(empresa_id)
@@ -406,7 +382,7 @@ class GeradorRelatoriosProfissionais:
             'grafico_status_path': grafico_status,
             'grafico_investimentos_path': grafico_investimentos,
             'grafico_timeline_path': grafico_timeline,
-            'data_geracao': datetime.now().strftime('%d/%m/%Y às %H:%M:%S'),
+            'data_geracao': datetime.now().strftime('%d/%m/%Y Ã s %H:%M:%S'),
             'format_currency': self.format_currency,
             'format_date': self.format_date
         }
@@ -422,13 +398,13 @@ class GeradorRelatoriosProfissionais:
         self._ensure_weasyprint()
         HTML(string=html_content).write_pdf(output_path)
         
-        # 6. Limpa arquivos temporários
+        # 6. Limpa arquivos temporÃ¡rios
         self.limpar_temp()
         
         return output_path
     
     def _gerar_html_relatorio_projetos(self, contexto):
-        """Gera HTML do relatório de projetos"""
+        """Gera HTML do relatÃ³rio de projetos"""
         
         # Gera tabela de projetos
         tabela_projetos = ""
@@ -436,7 +412,7 @@ class GeradorRelatoriosProfissionais:
             cor_status = {
                 'Planejamento': 'orange',
                 'Em Andamento': 'blue',
-                'Concluído': 'green',
+                'ConcluÃ­do': 'green',
                 'Pausado': 'red',
                 'Cancelado': 'gray'
             }.get(projeto['status'], 'black')
@@ -445,7 +421,7 @@ class GeradorRelatoriosProfissionais:
             <tr>
                 <td><strong>{projeto['codigo']}</strong></td>
                 <td>{projeto['nome']}</td>
-                <td><span style="color: {cor_status};">● {projeto['status']}</span></td>
+                <td><span style="color: {cor_status};">â— {projeto['status']}</span></td>
                 <td>{self.format_date(projeto['data_inicio'])}</td>
                 <td>{self.format_date(projeto['data_fim'])}</td>
                 <td style="text-align: right;">{self.format_currency(projeto['investimento'])}</td>
@@ -458,18 +434,18 @@ class GeradorRelatoriosProfissionais:
 <html lang="pt-BR">
 <head>
     <meta charset="UTF-8">
-    <title>Relatório de Projetos - {contexto['empresa']['nome']}</title>
+    <title>RelatÃ³rio de Projetos - {contexto['empresa']['nome']}</title>
     <style>
         @page {{
             size: A4 landscape;
             margin: 1.5cm;
             @top-center {{
-                content: "{contexto['empresa']['nome']} - Relatório de Projetos";
+                content: "{contexto['empresa']['nome']} - RelatÃ³rio de Projetos";
                 font-size: 10pt;
                 color: #666;
             }}
             @bottom-right {{
-                content: "Página " counter(page);
+                content: "PÃ¡gina " counter(page);
                 font-size: 9pt;
                 color: #666;
             }}
@@ -566,10 +542,10 @@ class GeradorRelatoriosProfissionais:
     </style>
 </head>
 <body>
-    <!-- Cabeçalho -->
+    <!-- CabeÃ§alho -->
     <div class="header">
         <div>
-            <h1>Relatório de Projetos</h1>
+            <h1>RelatÃ³rio de Projetos</h1>
             <p style="color: #666; font-size: 12pt;">{contexto['empresa']['nome']}</p>
         </div>
         <div style="text-align: right;">
@@ -578,7 +554,7 @@ class GeradorRelatoriosProfissionais:
         </div>
     </div>
     
-    <!-- Métricas -->
+    <!-- MÃ©tricas -->
     <div class="metrics">
         <div class="metric-card">
             <div class="metric-value">{contexto['metricas']['total_projetos']}</div>
@@ -586,7 +562,7 @@ class GeradorRelatoriosProfissionais:
         </div>
         <div class="metric-card">
             <div class="metric-value">{contexto['metricas']['projetos_concluidos']}</div>
-            <div class="metric-label">Projetos Concluídos</div>
+            <div class="metric-label">Projetos ConcluÃ­dos</div>
         </div>
         <div class="metric-card">
             <div class="metric-value">{contexto['metricas']['projetos_em_andamento']}</div>
@@ -594,23 +570,23 @@ class GeradorRelatoriosProfissionais:
         </div>
         <div class="metric-card">
             <div class="metric-value">{contexto['metricas']['eficiencia']}%</div>
-            <div class="metric-label">Taxa de Conclusão</div>
+            <div class="metric-label">Taxa de ConclusÃ£o</div>
         </div>
     </div>
     
-    <!-- Gráfico de Status -->
-    {f'<div class="section"><h2>📊 Distribuição por Status</h2><div class="chart"><img src="file:///{contexto["grafico_status_path"]}" style="width: 100%;"></div></div>' if contexto['grafico_status_path'] else ''}
+    <!-- GrÃ¡fico de Status -->
+    {f'<div class="section"><h2>ðŸ“Š DistribuiÃ§Ã£o por Status</h2><div class="chart"><img src="file:///{contexto["grafico_status_path"]}" style="width: 100%;"></div></div>' if contexto['grafico_status_path'] else ''}
     
     <!-- Tabela de Projetos -->
     <div class="section">
-        <h2>📋 Lista de Projetos</h2>
+        <h2>ðŸ“‹ Lista de Projetos</h2>
         <table>
             <thead>
                 <tr>
-                    <th>Código</th>
+                    <th>CÃ³digo</th>
                     <th>Projeto</th>
                     <th>Status</th>
-                    <th>Data Início</th>
+                    <th>Data InÃ­cio</th>
                     <th>Data Fim</th>
                     <th style="text-align: right;">Investimento</th>
                 </tr>
@@ -627,15 +603,15 @@ class GeradorRelatoriosProfissionais:
         </table>
     </div>
     
-    <!-- Gráfico de Investimentos -->
-    {f'<div class="section"><h2>💰 Investimentos por Projeto</h2><div class="chart"><img src="file:///{contexto["grafico_investimentos_path"]}" style="width: 100%;"></div></div>' if contexto['grafico_investimentos_path'] else ''}
+    <!-- GrÃ¡fico de Investimentos -->
+    {f'<div class="section"><h2>ðŸ’° Investimentos por Projeto</h2><div class="chart"><img src="file:///{contexto["grafico_investimentos_path"]}" style="width: 100%;"></div></div>' if contexto['grafico_investimentos_path'] else ''}
     
     <!-- Timeline -->
-    {f'<div class="section"><h2>📅 Timeline de Projetos</h2><div class="chart"><img src="file:///{contexto["grafico_timeline_path"]}" style="width: 100%;"></div></div>' if contexto['grafico_timeline_path'] else ''}
+    {f'<div class="section"><h2>ðŸ“… Timeline de Projetos</h2><div class="chart"><img src="file:///{contexto["grafico_timeline_path"]}" style="width: 100%;"></div></div>' if contexto['grafico_timeline_path'] else ''}
     
-    <!-- Rodapé -->
+    <!-- RodapÃ© -->
     <div class="footer">
-        <p><strong>PEVAPP22 - Sistema de Gestão Empresarial</strong></p>
+        <p><strong>PEVAPP22 - Sistema de GestÃ£o Empresarial</strong></p>
         <p>Documento gerado automaticamente | {contexto['data_geracao']}</p>
     </div>
 </body>
@@ -646,12 +622,12 @@ class GeradorRelatoriosProfissionais:
 
 
 # ========================================
-# FUNÇÕES DE CONVENIÊNCIA
+# FUNÃ‡Ã•ES DE CONVENIÃŠNCIA
 # ========================================
 
 def gerar_relatorio_empresa(empresa_id):
     """
-    Função de conveniência para gerar relatório de projetos
+    FunÃ§Ã£o de conveniÃªncia para gerar relatÃ³rio de projetos
     
     Args:
         empresa_id: ID da empresa
@@ -664,10 +640,12 @@ def gerar_relatorio_empresa(empresa_id):
 
 
 if __name__ == "__main__":
-    # Teste rápido
-    print("Teste do Gerador de Relatórios Profissionais")
-    print("Para integrar ao Flask, use:")
-    print("  from modules.gerador_relatorios import gerar_relatorio_empresa")
-    print("  pdf_path = gerar_relatorio_empresa(empresa_id)")
+    # Teste rÃ¡pido
+    logger.info("Teste do Gerador de RelatÃ³rios Profissionais")
+    logger.info("Para integrar ao Flask, use:")
+    logger.info("  from modules.gerador_relatorios import gerar_relatorio_empresa")
+    logger.info("  pdf_path = gerar_relatorio_empresa(empresa_id)")
+
+
 
 

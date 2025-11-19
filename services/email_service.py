@@ -1,3 +1,4 @@
+﻿import logging
 import os
 import smtplib
 import requests
@@ -8,6 +9,8 @@ from email import encoders
 from typing import List, Optional, Dict, Any
 from datetime import datetime
 
+logger = logging.getLogger(__name__)
+
 class EmailService:
     """Service for email integration with multiple providers"""
     
@@ -16,7 +19,7 @@ class EmailService:
         self.smtp_server = os.environ.get('MAIL_SERVER')
         self.smtp_port = int(os.environ.get('MAIL_PORT') or 587)
         self.smtp_username = os.environ.get('MAIL_USERNAME')
-        self.smtp_password = os.environ.get('MAIL_PASSWORD')
+        self.smtp_secret = os.environ.get('MAIL_PASSWORD')
         self.webhook_url = os.environ.get('EMAIL_WEBHOOK_URL')
     
     def send_email(self, to_emails: List[str], subject: str, body: str, 
@@ -41,15 +44,15 @@ class EmailService:
                 return self._send_webhook_email(to_emails, subject, body, html_body, attachments)
             else:
                 return self._send_local_email(to_emails, subject, body, html_body, attachments)
-        except Exception as e:
-            print(f"Error sending email: {e}")
+        except Exception:
+            logger.exception("Error sending email")
             return False
     
     def _send_smtp_email(self, to_emails: List[str], subject: str, body: str, 
                         html_body: Optional[str] = None, attachments: Optional[List[str]] = None) -> bool:
         """Send email using SMTP"""
-        if not all([self.smtp_server, self.smtp_username, self.smtp_password]):
-            print("SMTP configuration incomplete")
+        if not all([self.smtp_server, self.smtp_username, self.smtp_secret]):
+            logger.warning("SMTP configuration incomplete")
             return False
         
         try:
@@ -85,21 +88,21 @@ class EmailService:
             # Send email
             server = smtplib.SMTP(self.smtp_server, self.smtp_port)
             server.starttls()
-            server.login(self.smtp_username, self.smtp_password)
+            server.login(self.smtp_username, self.smtp_secret)
             server.send_message(msg)
             server.quit()
             
             return True
             
-        except Exception as e:
-            print(f"SMTP error: {e}")
+        except Exception:
+            logger.exception("SMTP error")
             return False
     
     def _send_webhook_email(self, to_emails: List[str], subject: str, body: str, 
                            html_body: Optional[str] = None, attachments: Optional[List[str]] = None) -> bool:
         """Send email using webhook"""
         if not self.webhook_url:
-            print("Email webhook URL not configured")
+            logger.warning("Email webhook URL not configured")
             return False
         
         payload = {
@@ -118,30 +121,27 @@ class EmailService:
                 timeout=30
             )
             return response.status_code == 200
-        except Exception as e:
-            print(f"Webhook error: {e}")
+        except Exception:
+            logger.exception("Webhook error")
             return False
     
     def _send_local_email(self, to_emails: List[str], subject: str, body: str, 
                          html_body: Optional[str] = None, attachments: Optional[List[str]] = None) -> bool:
         """Simulate email sending locally"""
-        print(f"LOCAL EMAIL SIMULATION:")
-        print(f"To: {', '.join(to_emails)}")
-        print(f"Subject: {subject}")
-        print(f"Body: {body}")
-        if html_body:
-            print(f"HTML Body: {html_body}")
-        if attachments:
-            print(f"Attachments: {attachments}")
-        print("=" * 50)
+        logger.info(
+            "LOCAL EMAIL SIMULATION to=%s subject=%s attachments=%s",
+            ', '.join(to_emails),
+            subject,
+            attachments,
+        )
         return True
     
     def test_connection(self) -> Dict[str, Any]:
         """
-        Testa a conexão com o provedor de email configurado
+        Testa a conexÃ£o com o provedor de email configurado
         
         Returns:
-            Resultado do teste de conexão
+            Resultado do teste de conexÃ£o
         """
         try:
             if self.provider == 'smtp':
@@ -158,25 +158,25 @@ class EmailService:
             }
     
     def _test_smtp_connection(self) -> Dict[str, Any]:
-        """Testa conexão SMTP"""
-        if not all([self.smtp_server, self.smtp_username, self.smtp_password]):
+        """Testa conexÃ£o SMTP"""
+        if not all([self.smtp_server, self.smtp_username, self.smtp_secret]):
             return {
                 'success': False,
-                'error': 'Configuração SMTP incompleta',
+                'error': 'ConfiguraÃ§Ã£o SMTP incompleta',
                 'provider': 'smtp'
             }
         
         try:
-            # Testar conexão SMTP
+            # Testar conexÃ£o SMTP
             server = smtplib.SMTP(self.smtp_server, self.smtp_port)
             server.starttls()
-            server.login(self.smtp_username, self.smtp_password)
+            server.login(self.smtp_username, self.smtp_secret)
             server.quit()
             
             return {
                 'success': True,
                 'provider': 'smtp',
-                'message': f'Conexão SMTP estabelecida com {self.smtp_server}:{self.smtp_port}'
+                'message': f'ConexÃ£o SMTP estabelecida com {self.smtp_server}:{self.smtp_port}'
             }
         except Exception as e:
             return {
@@ -186,18 +186,18 @@ class EmailService:
             }
     
     def _test_webhook_connection(self) -> Dict[str, Any]:
-        """Testa conexão com webhook"""
+        """Testa conexÃ£o com webhook"""
         if not self.webhook_url:
             return {
                 'success': False,
-                'error': 'URL do webhook não configurada',
+                'error': 'URL do webhook nÃ£o configurada',
                 'provider': 'webhook'
             }
         
         try:
             response = requests.post(
                 self.webhook_url,
-                json={'test': True, 'message': 'Teste de conexão'},
+                json={'test': True, 'message': 'Teste de conexÃ£o'},
                 timeout=10
             )
             
@@ -205,7 +205,7 @@ class EmailService:
                 return {
                     'success': True,
                     'provider': 'webhook',
-                    'message': 'Conexão com webhook estabelecida com sucesso'
+                    'message': 'ConexÃ£o com webhook estabelecida com sucesso'
                 }
             else:
                 return {
@@ -221,7 +221,7 @@ class EmailService:
             }
     
     def _test_local_connection(self) -> Dict[str, Any]:
-        """Testa conexão local"""
+        """Testa conexÃ£o local"""
         return {
             'success': True,
             'provider': 'local',
@@ -230,34 +230,34 @@ class EmailService:
     
     def send_welcome_email(self, participant_email: str, participant_name: str, plan_name: str) -> bool:
         """Send welcome email to participant"""
-        subject = f"Bem-vindo ao Planejamento Estratégico - {plan_name}"
+        subject = f"Bem-vindo ao Planejamento EstratÃ©gico - {plan_name}"
         
         body = f"""
-        Olá {participant_name},
+        OlÃ¡ {participant_name},
         
-        Bem-vindo ao processo de planejamento estratégico da empresa!
+        Bem-vindo ao processo de planejamento estratÃ©gico da empresa!
         
-        Você foi convidado a participar do plano "{plan_name}" e sua contribuição é muito importante para o sucesso desta iniciativa.
+        VocÃª foi convidado a participar do plano "{plan_name}" e sua contribuiÃ§Ã£o Ã© muito importante para o sucesso desta iniciativa.
         
-        Em breve você receberá mais informações sobre como participar e contribuir com o processo.
+        Em breve vocÃª receberÃ¡ mais informaÃ§Ãµes sobre como participar e contribuir com o processo.
         
-        Se tiver alguma dúvida, não hesite em entrar em contato conosco.
+        Se tiver alguma dÃºvida, nÃ£o hesite em entrar em contato conosco.
         
         Atenciosamente,
-        Equipe de Planejamento Estratégico
+        Equipe de Planejamento EstratÃ©gico
         """
         
         html_body = f"""
         <html>
         <body>
-            <h2>Bem-vindo ao Planejamento Estratégico!</h2>
-            <p>Olá <strong>{participant_name}</strong>,</p>
-            <p>Bem-vindo ao processo de planejamento estratégico da empresa!</p>
-            <p>Você foi convidado a participar do plano <strong>"{plan_name}"</strong> e sua contribuição é muito importante para o sucesso desta iniciativa.</p>
-            <p>Em breve você receberá mais informações sobre como participar e contribuir com o processo.</p>
-            <p>Se tiver alguma dúvida, não hesite em entrar em contato conosco.</p>
+            <h2>Bem-vindo ao Planejamento EstratÃ©gico!</h2>
+            <p>OlÃ¡ <strong>{participant_name}</strong>,</p>
+            <p>Bem-vindo ao processo de planejamento estratÃ©gico da empresa!</p>
+            <p>VocÃª foi convidado a participar do plano <strong>"{plan_name}"</strong> e sua contribuiÃ§Ã£o Ã© muito importante para o sucesso desta iniciativa.</p>
+            <p>Em breve vocÃª receberÃ¡ mais informaÃ§Ãµes sobre como participar e contribuir com o processo.</p>
+            <p>Se tiver alguma dÃºvida, nÃ£o hesite em entrar em contato conosco.</p>
             <br>
-            <p>Atenciosamente,<br>Equipe de Planejamento Estratégico</p>
+            <p>Atenciosamente,<br>Equipe de Planejamento EstratÃ©gico</p>
         </body>
         </html>
         """
@@ -266,3 +266,4 @@ class EmailService:
 
 # Singleton instance
 email_service = EmailService()
+

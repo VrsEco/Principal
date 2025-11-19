@@ -1,7 +1,15 @@
 # 📋 Decision Log - Decisões Arquiteturais
+- 2025-11-17 — Arthur  
+  - Removido suporte a SQLite (arquivo `database/sqlite_db.py` e scripts legados)  
+  - `PostgreSQLDatabase` passou a implementar `get_company_profile`, `update_company_profile`, `update_company_mvv`, `get_overdue_tasks`  
+  - Rotinas/tarefas e integrações agora usam apenas o driver Postgres  
+  - **Pendência registrada**: tabela `user_logs` está falhando por não ter coluna `id` com default/sequence → corrigir próximo
+- 2025-11-17 — Equipe Governança  
+  - Adicionada dependência `plotly` aos relatórios profissionais (gráficos gerados por `modules/gerador_relatorios.py`)  
+  - Ajustados endpoints `/api/companies/<id>/routine-tasks/*` para usar colunas `TIMESTAMP` no PostgreSQL
 
 **Projeto:** GestaoVersus  
-**Última atualização:** 12/11/2025
+**Última atualização:** 17/11/2025
 
 ---
 
@@ -156,6 +164,17 @@ Cada decisão deve conter:
 **Decisão:** Manter o diretório `app31` como ambiente de produção, executado com `docker-compose.yml` apontando para o PostgreSQL oficial (`bd_app_versus`) e exposto na porta `5003`/Nginx `80/443`. Usar o diretório `app32` como ambiente de desenvolvimento com `docker-compose.yml` próprio (build via `Dockerfile.dev`), Redis isolado (`6380`), aplicação em `5004` e banco clonado (`bd_app_versus_dev`). O dump é armazenado em `app31/backups/`.  
 **Alternativas:** Utilizar apenas um diretório alternando variáveis de ambiente; criar workspaces Git separados; usar ambientes em nuvem.  
 **Consequências:** +Segurança (prod estável), +Rapidez para testar correções, +Padronização dos scripts de subida, -Duplicação de diretórios e necessidade de manter dumps atualizados.  
+**Status:** ✅ Ativa
+
+---
+
+### **#013 - Plotly como dependência obrigatória dos relatórios profissionais**
+
+**Data:** 17/11/2025  
+**Contexto:** O gerador de relatórios (`modules/gerador_relatorios.py`) já utilizava Plotly para montar gráficos antes de exportar PDFs, mas a dependência não estava listada em `requirements.txt`, fazendo o endpoint `/api/relatorios/projetos/<company_id>` retornar 500 por `ModuleNotFoundError`.  
+**Decisão:** Adicionar `plotly==5.24.0` às dependências oficiais e documentar a obrigatoriedade da biblioteca para geração dos gráficos usados nos relatórios corporativos.  
+**Alternativas:** Remover os gráficos dos relatórios ou reimplementar usando apenas ReportLab. Ambas foram descartadas por reduzir valor visual do documento e já existir código estável com Plotly.  
+**Consequências:** +Confiabilidade dos relatórios (sem 500), +Consistência entre ambientes, -Aumento mínimo no tempo de build (pacote adicional).  
 **Status:** ✅ Ativa
 
 ---

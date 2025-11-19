@@ -34,10 +34,6 @@ class UserLog(db.Model):
     # Timestamps
     created_at = db.Column(db.DateTime, default=datetime.utcnow, nullable=False)
     
-    # Relationships - Commented out to avoid circular import issues
-    # user = db.relationship('User', backref='logs')
-    # company = db.relationship('Company', backref='logs')
-    # plan = db.relationship('Plan', backref='logs')
     
     def to_dict(self):
         """Convert to dictionary"""

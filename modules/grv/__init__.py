@@ -1,4 +1,6 @@
+﻿import logging
 from flask import Blueprint, render_template, abort, url_for, make_response, request, jsonify, redirect, current_app
+from flask_login import login_required
 from datetime import datetime
 from zoneinfo import ZoneInfo
 import re
@@ -9,9 +11,11 @@ from typing import Any, Optional
 from config_database import get_db
 from middleware.auto_log_decorator import auto_log_crud
 
+logger = logging.getLogger(__name__)
 grv_bp = Blueprint('grv', __name__, url_prefix='/grv')
 
-print(">>> MÓDULO GRV CARREGADO - VERSÃO COM API ROUTES <<<")
+logger.info("MÓDULO GRV CARREGADO - VERSÃO COM API ROUTES")
+
 
 _playwright_install_lock = threading.Lock()
 _playwright_chromium_ready = False
@@ -19,10 +23,10 @@ _playwright_chromium_ready = False
 
 def _ensure_playwright_browser_installed(browser_name: str = 'chromium') -> None:
     """
-    Garantir que o navegador necessário do Playwright esteja disponível.
+    Garantir que o navegador necess+írio do Playwright esteja dispon+¡vel.
 
-    Executa `python -m playwright install <browser>` uma única vez por processo.
-    Levanta RuntimeError se a instalação falhar.
+    Executa `python -m playwright install <browser>` uma +¦nica vez por processo.
+    Levanta RuntimeError se a instala+º+úo falhar.
     """
     global _playwright_chromium_ready
     if _playwright_chromium_ready:
@@ -42,7 +46,7 @@ def _ensure_playwright_browser_installed(browser_name: str = 'chromium') -> None
             )
             stdout = completed.stdout.strip()
             if stdout:
-                print(f"Playwright install output: {stdout}")
+                logger.info(f"Playwright install output: {stdout}")
         except subprocess.CalledProcessError as exc:
             stderr = (exc.stderr or '').strip()
             stdout = (exc.stdout or '').strip()
@@ -55,7 +59,7 @@ def _ensure_playwright_browser_installed(browser_name: str = 'chromium') -> None
 
 
 def _should_attempt_playwright_install(error: Exception) -> bool:
-    """Detecta mensagens típicas de ausência do executável Playwright."""
+    """Detecta mensagens t+¡picas de aus+¬ncia do execut+ível Playwright."""
     message = str(error) if error else ''
     triggers = (
         "Executable doesn't exist",
@@ -186,12 +190,12 @@ def normalize_goal_row(goal: dict) -> dict:
     return goal
 
 KANBAN_STAGE_DEFINITIONS = [
-    {'slug': 'inbox', 'title': 'Caixa de Entrada', 'description': 'Processos recÃ©m cadastrados aguardando priorizaÃ§Ã£o.'},
-    {'slug': 'out_of_scope', 'title': 'Fora de Escopo', 'description': 'Itens registrados que nÃ£o serÃ£o modelados neste ciclo.'},
-    {'slug': 'designing', 'title': 'Modelando', 'description': 'Processos em anÃ¡lise e desenho do fluxo.'},
-    {'slug': 'deploying', 'title': 'Implantando', 'description': 'Processos em implementaÃ§Ã£o junto Ã s equipes.'},
-    {'slug': 'stabilizing', 'title': 'Estabilizando', 'description': 'Processos acompanhados atÃ© atingirem estabilidade.'},
-    {'slug': 'stable', 'title': 'EstÃ¡vel', 'description': 'Processos consolidados e operando conforme desenho.'}
+    {'slug': 'inbox', 'title': 'Caixa de Entrada', 'description': 'Processos rec+â-®m cadastrados aguardando prioriza+â-º+â-úo.'},
+    {'slug': 'out_of_scope', 'title': 'Fora de Escopo', 'description': 'Itens registrados que n+â-úo ser+â-úo modelados neste ciclo.'},
+    {'slug': 'designing', 'title': 'Modelando', 'description': 'Processos em an+â-ílise e desenho do fluxo.'},
+    {'slug': 'deploying', 'title': 'Implantando', 'description': 'Processos em implementa+â-º+â-úo junto +â-ás equipes.'},
+    {'slug': 'stabilizing', 'title': 'Estabilizando', 'description': 'Processos acompanhados at+â-® atingirem estabilidade.'},
+    {'slug': 'stable', 'title': 'Est+â-ível', 'description': 'Processos consolidados e operando conforme desenho.'}
 ]
 
 PROCESS_DETAIL_TABS = [
@@ -208,59 +212,59 @@ def grv_navigation():
         {
             'title': 'Dashboard',
             'items': [
-                {'id': 'dashboard', 'name': 'Visão Geral'}
+                {'id': 'dashboard', 'name': 'Vis+úo Geral'}
             ]
         },
         {
             'title': 'Identidade Organizacional',
             'items': [
-                {'id': 'identity-mvv', 'name': 'Missão / Visão / Valores'},
-                {'id': 'identity-roles', 'name': 'Cadastro de Funções'},
+                {'id': 'identity-mvv', 'name': 'Miss+úo / Vis+úo / Valores'},
+                {'id': 'identity-roles', 'name': 'Cadastro de Fun+º+Áes'},
                 {'id': 'identity-chart', 'name': 'Organograma'}
             ]
         },
         {
-            'title': 'Gestão de Processos',
+            'title': 'Gest+úo de Processos',
             'items': [
                 {'id': 'process-map', 'name': 'Arquitetura'},
                 {'id': 'process-modeling', 'name': 'Modelagem / Desenho'},
-                {'id': 'process-instances', 'name': 'Instâncias de Processos'},
-                {'id': 'process-analysis', 'name': 'Análises'},
+                {'id': 'process-instances', 'name': 'Inst+óncias de Processos'},
+                {'id': 'process-analysis', 'name': 'An+ílises'},
                 {'id': 'process-routines', 'name': 'Rotina dos Processos'}
             ]
         },
         {
-            'title': 'Gestão de Projetos',
+            'title': 'Gest+úo de Projetos',
             'items': [
-                {'id': 'project-portfolios', 'name': 'Portfólios'},
+                {'id': 'project-portfolios', 'name': 'Portf+¦lios'},
                 {'id': 'project-projects', 'name': 'Projetos'},
-                {'id': 'project-analysis', 'name': 'Análises'}
+                {'id': 'project-analysis', 'name': 'An+ílises'}
             ]
         },
         {
-            'title': 'Gestão de Reuniões',
+            'title': 'Gest+úo de Reuni+Áes',
             'items': [
-                {'id': 'meetings-manage', 'name': 'Gerir Reuniões'}
+                {'id': 'meetings-manage', 'name': 'Gerir Reuni+Áes'}
             ]
         },
         {
-            'title': 'Gestão de Indicadores',
+            'title': 'Gest+úo de Indicadores',
             'items': [
-                {'id': 'indicators-tree', 'name': 'Árvore de Indicadores'},
+                {'id': 'indicators-tree', 'name': '+ürvore de Indicadores'},
                 {'id': 'indicators-list', 'name': 'Indicadores'},
                 {'id': 'indicators-goals', 'name': 'Metas'},
                 {'id': 'indicators-data', 'name': 'Registros de Dados'},
-                {'id': 'indicators-analysis', 'name': 'Análises'}
+                {'id': 'indicators-analysis', 'name': 'An+ílises'}
             ]
         },
         {
-            'title': 'Gestão da Rotina',
+            'title': 'Gest+úo da Rotina',
             'items': [
-                {'id': 'routine-work-distribution', 'name': 'Mapa de Distribuição do Trabalho'},
-                {'id': 'routine-capacity', 'name': 'Gestão da Capacidade Operacional'},
-                {'id': 'routine-activities', 'name': 'Gestão de Atividades / Calendário'},
-                {'id': 'routine-incidents', 'name': 'Gestão de Ocorrências'},
-                {'id': 'routine-efficiency', 'name': 'Gestão da Eficiência'}
+                {'id': 'routine-work-distribution', 'name': 'Mapa de Distribui+º+úo do Trabalho'},
+                {'id': 'routine-capacity', 'name': 'Gest+úo da Capacidade Operacional'},
+                {'id': 'routine-activities', 'name': 'Gest+úo de Atividades / Calend+írio'},
+                {'id': 'routine-incidents', 'name': 'Gest+úo de Ocorr+¬ncias'},
+                {'id': 'routine-efficiency', 'name': 'Gest+úo da Efici+¬ncia'}
             ]
         }
     ]
@@ -306,7 +310,7 @@ def grv_dashboard():
             
             conn.close()
         except Exception as e:
-            print(f"Erro ao contar processos/areas/projetos: {e}")
+            logger.info(f"Erro ao contar processos/areas/projetos: {e}")
             process_count = 0
             areas_count = 0
             projects_count = 0
@@ -367,8 +371,8 @@ def grv_company_dashboard(company_id: int):
         },
         {
             'label': 'Capacidade estimada',
-            'value': '72% ocupação',
-            'description': 'Espaço disponível para novas atividades'
+            'value': '72% ocupa+º+úo',
+            'description': 'Espa+ºo dispon+¡vel para novas atividades'
         },
         {
             'label': 'Processos mapeados',
@@ -376,18 +380,18 @@ def grv_company_dashboard(company_id: int):
             'description': 'Fluxos documentados e validados'
         },
         {
-            'label': 'Última atualização',
+            'label': '+Ültima atualiza+º+úo',
             'value': datetime.now().strftime('%d/%m/%Y'),
-            'description': 'Data do último ajuste registrado'
+            'description': 'Data do +¦ltimo ajuste registrado'
         }
     ]
 
     navigation = grv_navigation()
 
     upcoming_activities = [
-        {'title': 'Revisar POP de atendimento', 'responsible': 'Equipe Operacional', 'deadline': 'Próx. segunda'},
-        {'title': 'Reunião de status dos projetos', 'responsible': 'PMO', 'deadline': 'Quarta-feira'},
-        {'title': 'Atualizar carga horária do time', 'responsible': 'RH', 'deadline': 'Sexta-feira'}
+        {'title': 'Revisar POP de atendimento', 'responsible': 'Equipe Operacional', 'deadline': 'Pr+¦x. segunda'},
+        {'title': 'Reuni+úo de status dos projetos', 'responsible': 'PMO', 'deadline': 'Quarta-feira'},
+        {'title': 'Atualizar carga hor+íria do time', 'responsible': 'RH', 'deadline': 'Sexta-feira'}
     ]
 
     quick_links = [
@@ -472,11 +476,11 @@ def grv_process_map_print(company_id: int):
     }
     performance_levels = {
         '': {'label': 'Fora de Escopo', 'color': '#94a3b8'},
-        'critical': {'label': 'Crítico', 'color': '#ef4444'},
+        'critical': {'label': 'Cr+¡tico', 'color': '#ef4444'},
         'below': {'label': 'Abaixo', 'color': '#f59e0b'},
-        'satisfactory': {'label': 'Satisfatório', 'color': '#10b981'},
+        'satisfactory': {'label': 'Satisfat+¦rio', 'color': '#10b981'},
         'initiated': {'label': 'Abaixo', 'color': '#f59e0b'},
-        'structured': {'label': 'Satisfatório', 'color': '#10b981'}
+        'structured': {'label': 'Satisfat+¦rio', 'color': '#10b981'}
     }
 
     def _normalize_hex(value: str, default: str = '#1d4ed8') -> str:
@@ -555,7 +559,7 @@ def grv_process_map_print(company_id: int):
         macros = area.get('macros') or []
         area_color = _normalize_hex(area.get('color'))
         area_entry = {
-            'display_name': _format_display_name(area.get('code'), area.get('name'), 'Área'),
+            'display_name': _format_display_name(area.get('code'), area.get('name'), '+ürea'),
             'color': area_color,
             'color_soft': _mix_with_white(area_color, 0.82),
             'color_accent': _mix_with_white(area_color, 0.68),
@@ -648,11 +652,11 @@ def grv_process_map_pdf_debug(company_id: int):
     }
     performance_levels = {
         '': {'label': 'Fora de Escopo', 'color': '#94a3b8'},
-        'critical': {'label': 'Crítico', 'color': '#ef4444'},
+        'critical': {'label': 'Cr+¡tico', 'color': '#ef4444'},
         'below': {'label': 'Abaixo', 'color': '#f59e0b'},
-        'satisfactory': {'label': 'Satisfatório', 'color': '#10b981'},
+        'satisfactory': {'label': 'Satisfat+¦rio', 'color': '#10b981'},
         'initiated': {'label': 'Abaixo', 'color': '#f59e0b'},
-        'structured': {'label': 'Satisfatório', 'color': '#10b981'}
+        'structured': {'label': 'Satisfat+¦rio', 'color': '#10b981'}
     }
 
     def _normalize_hex(value: str, default: str = '#1d4ed8') -> str:
@@ -682,7 +686,7 @@ def grv_process_map_pdf_debug(company_id: int):
         macros = area.get('macros') or []
         area_color = _normalize_hex(area.get('color'))
         area_entry = {
-            'display_name': f"{area.get('code')} - {area.get('name').upper()}" if area.get('code') else (area.get('name') or 'Área'),
+            'display_name': f"{area.get('code')} - {area.get('name').upper()}" if area.get('code') else (area.get('name') or '+ürea'),
             'color': area_color,
             'color_soft': _mix_with_white(area_color, 0.82),
             'macros': [],
@@ -762,11 +766,11 @@ def grv_process_map_pdf(company_id: int):
     }
     performance_levels = {
         '': {'label': 'Fora de Escopo', 'color': '#94a3b8'},
-        'critical': {'label': 'Crítico', 'color': '#ef4444'},
+        'critical': {'label': 'Cr+¡tico', 'color': '#ef4444'},
         'below': {'label': 'Abaixo', 'color': '#f59e0b'},
-        'satisfactory': {'label': 'Satisfatório', 'color': '#10b981'},
+        'satisfactory': {'label': 'Satisfat+¦rio', 'color': '#10b981'},
         'initiated': {'label': 'Abaixo', 'color': '#f59e0b'},
-        'structured': {'label': 'Satisfatório', 'color': '#10b981'}
+        'structured': {'label': 'Satisfat+¦rio', 'color': '#10b981'}
     }
 
     def _normalize_hex(value: str, default: str = '#1d4ed8') -> str:
@@ -813,7 +817,7 @@ def grv_process_map_pdf(company_id: int):
         macros = area.get('macros') or []
         area_color = _normalize_hex(area.get('color'))
         area_entry = {
-            'display_name': _format_display_name(area.get('code'), area.get('name'), 'Área'),
+            'display_name': _format_display_name(area.get('code'), area.get('name'), '+ürea'),
             'color': area_color,
             'color_soft': _mix_with_white(area_color, 0.82),
             'macros': [],
@@ -883,13 +887,13 @@ def grv_process_map_pdf(company_id: int):
         "color:#475569;display:flex;justify-content:flex-end;align-items:center;"
         "padding:6px 12mm 0 12mm;border-top:1px solid rgba(15,23,42,0.12);background:#ffffff;}"
         "</style>"
-        f"<div class='pdf-footer'>Gerado em {generated_at.strftime('%d/%m/%Y %H:%M')} â€¢ {company.get('name') or 'Empresa'}</div>"
+        f"<div class='pdf-footer'>Gerado em {generated_at.strftime('%d/%m/%Y %H:%M')} +óÔé¼-ó {company.get('name') or 'Empresa'}</div>"
     )
 
     try:
         from playwright.sync_api import sync_playwright
     except ImportError:
-        abort(500, description="Dependência 'playwright' não encontrada. Execute: pip install playwright && playwright install chromium")
+        abort(500, description="Depend+¬ncia 'playwright' n+úo encontrada. Execute: pip install playwright && playwright install chromium")
 
     def _build_pdf(html: str) -> bytes:
         last_error: Optional[Exception] = None
@@ -921,7 +925,7 @@ def grv_process_map_pdf(company_id: int):
                         _ensure_playwright_browser_installed('chromium')
                         continue
                     except Exception as install_error:
-                        print(f"Erro ao instalar navegador Playwright: {install_error}")
+                        logger.info(f"Erro ao instalar navegador Playwright: {install_error}")
                         last_error = install_error
                 break
 
@@ -932,7 +936,7 @@ def grv_process_map_pdf(company_id: int):
     try:
         pdf_bytes = _build_pdf(html_content)
     except Exception as pdf_error:
-        print(f"ERRO Playwright ao gerar PDF: {pdf_error}")
+        logger.info(f"ERRO Playwright ao gerar PDF: {pdf_error}")
         abort(500, description=f"Erro ao gerar PDF: {pdf_error}")
 
     safe_name = re.sub(r'[^a-z0-9_-]+', '-', (company.get('name') or 'empresa').lower()).strip('-') or 'empresa'
@@ -974,10 +978,10 @@ def grv_process_map_pdf2_debug(company_id: int):
     }
     performance_levels = {
         '': {'label': 'Fora de Escopo', 'color': '#94a3b8'},
-        'critical': {'label': 'Crítico', 'color': '#ef4444'},
+        'critical': {'label': 'Cr+¡tico', 'color': '#ef4444'},
         'below': {'label': 'Abaixo do esperado', 'color': '#f97316'},
         'initiated': {'label': 'Ajustando', 'color': '#f59e0b'},
-        'structured': {'label': 'Satisfatório', 'color': '#10b981'}
+        'structured': {'label': 'Satisfat+¦rio', 'color': '#10b981'}
     }
     
     def _normalize_hex(color: str) -> str:
@@ -1004,7 +1008,7 @@ def grv_process_map_pdf2_debug(company_id: int):
         macros = area.get('macros') or []
         area_color = _normalize_hex(area.get('color'))
         area_entry = {
-            'display_name': f"{area.get('code')} - {area.get('name').upper()}" if area.get('code') else (area.get('name') or 'Área'),
+            'display_name': f"{area.get('code')} - {area.get('name').upper()}" if area.get('code') else (area.get('name') or '+ürea'),
             'color': area_color,
             'color_soft': _mix_with_white(area_color, 0.82),
             'macros': [],
@@ -1065,13 +1069,13 @@ def grv_process_map_pdf2_debug(company_id: int):
 @grv_bp.route('/company/<int:company_id>/process/map/pdf2')
 def grv_process_map_pdf2(company_id: int):
     """Generate Process Map PDF - Version 2 (Landscape, Table Format)"""
-    print(f"DEBUG: Rota /pdf2 chamada para company_id={company_id}")
+    logger.info(f"DEBUG: Rota /pdf2 chamada para company_id={company_id}")
     db = get_db()
     company = db.get_company(company_id)
     if not company:
-        print("DEBUG: Empresa não encontrada!")
+        logger.info("DEBUG: Empresa n+úo encontrada!")
         abort(404)
-    print(f"DEBUG: Empresa encontrada: {company.get('name')}")
+    logger.info(f"DEBUG: Empresa encontrada: {company.get('name')}")
 
     map_data = db.get_process_map(company_id) or {}
     raw_areas = map_data.get('areas', [])
@@ -1085,11 +1089,11 @@ def grv_process_map_pdf2(company_id: int):
     }
     performance_levels = {
         '': {'label': 'Fora de Escopo', 'color': '#94a3b8'},
-        'critical': {'label': 'Crítico', 'color': '#ef4444'},
+        'critical': {'label': 'Cr+¡tico', 'color': '#ef4444'},
         'below': {'label': 'Abaixo', 'color': '#f59e0b'},
-        'satisfactory': {'label': 'Satisfatório', 'color': '#10b981'},
+        'satisfactory': {'label': 'Satisfat+¦rio', 'color': '#10b981'},
         'initiated': {'label': 'Abaixo', 'color': '#f59e0b'},
-        'structured': {'label': 'Satisfatório', 'color': '#10b981'}
+        'structured': {'label': 'Satisfat+¦rio', 'color': '#10b981'}
     }
 
     def _normalize_hex(value: str, default: str = '#1d4ed8') -> str:
@@ -1136,7 +1140,7 @@ def grv_process_map_pdf2(company_id: int):
         macros = area.get('macros') or []
         area_color = _normalize_hex(area.get('color'))
         area_entry = {
-            'display_name': _format_display_name(area.get('code'), area.get('name'), 'Área'),
+            'display_name': _format_display_name(area.get('code'), area.get('name'), '+ürea'),
             'color': area_color,
             'color_soft': _mix_with_white(area_color, 0.82),
             'macros': [],
@@ -1196,32 +1200,32 @@ def grv_process_map_pdf2(company_id: int):
     header_template = ""
     footer_template = ""
 
-    print("DEBUG: Iniciando geração de PDF...")
+    logger.info("DEBUG: Iniciando gera+º+úo de PDF...")
     
     try:
         from playwright.sync_api import sync_playwright
-        print("DEBUG: Playwright importado com sucesso")
+        logger.info("DEBUG: Playwright importado com sucesso")
     except ImportError as e:
-        print(f"DEBUG: Erro ao importar Playwright: {str(e)}")
-        abort(500, description="Dependência 'playwright' não encontrada. Execute: pip install playwright && playwright install chromium")
+        logger.info(f"DEBUG: Erro ao importar Playwright: {str(e)}")
+        abort(500, description="Depend+¬ncia 'playwright' n+úo encontrada. Execute: pip install playwright && playwright install chromium")
 
     def _build_pdf(html: str) -> bytes:
         last_error: Optional[Exception] = None
         for attempt in range(2):
             try:
-                print("DEBUG: Iniciando sync_playwright...")
+                logger.info("DEBUG: Iniciando sync_playwright...")
                 with sync_playwright() as p:
-                    print("DEBUG: Lançando navegador...")
+                    logger.info("DEBUG: Lan+ºando navegador...")
                     browser = p.chromium.launch(headless=True, args=['--no-sandbox'])
                     try:
-                        print("DEBUG: Criando nova página...")
+                        logger.info("DEBUG: Criando nova p+ígina...")
                         page = browser.new_page()
                         page.set_viewport_size({"width": 794, "height": 1123})
-                        print("DEBUG: Definindo conteúdo HTML...")
+                        logger.info("DEBUG: Definindo conte+¦do HTML...")
                         page.set_content(html, wait_until="networkidle")
                         page.emulate_media(media="print")
 
-                        print("DEBUG: Gerando PDF...")
+                        logger.info("DEBUG: Gerando PDF...")
                         pdf = page.pdf(
                             format="A4",
                             landscape=False,
@@ -1232,21 +1236,21 @@ def grv_process_map_pdf2(company_id: int):
                             prefer_css_page_size=True,
                             margin={"top": "8mm", "bottom": "8mm", "left": "6mm", "right": "6mm"}
                         )
-                        print("DEBUG: PDF gerado com sucesso!")
+                        logger.info("DEBUG: PDF gerado com sucesso!")
                     finally:
                         browser.close()
                     return pdf
             except Exception as exc:
                 last_error = exc
-                print(f"ERRO ao gerar PDF (tentativa {attempt + 1}): {exc}")
+                logger.info(f"ERRO ao gerar PDF (tentativa {attempt + 1}): {exc}")
                 if attempt == 0 and _should_attempt_playwright_install(exc):
                     try:
-                        print("DEBUG: Tentando instalar navegador Playwright ausente...")
+                        logger.info("DEBUG: Tentando instalar navegador Playwright ausente...")
                         _ensure_playwright_browser_installed('chromium')
-                        print("DEBUG: Instalação Playwright concluída, repetindo tentativa...")
+                        logger.info("DEBUG: Instala+º+úo Playwright conclu+¡da, repetindo tentativa...")
                         continue
                     except Exception as install_error:
-                        print(f"ERRO ao instalar navegador Playwright: {install_error}")
+                        logger.info(f"ERRO ao instalar navegador Playwright: {install_error}")
                         last_error = install_error
                 break
 
@@ -1257,7 +1261,7 @@ def grv_process_map_pdf2(company_id: int):
     try:
         pdf_bytes = _build_pdf(html_content)
     except Exception as critical_error:
-        print(f"ERRO CRÍTICO ao gerar PDF: {critical_error}")
+        logger.info(f"ERRO CR+ìTICO ao gerar PDF: {critical_error}")
         import traceback
         traceback.print_exc()
         abort(500, description=f"Erro ao gerar PDF: {critical_error}")
@@ -1280,7 +1284,7 @@ def grv_process_macro(company_id: int):
 
 @grv_bp.route('/company/<int:company_id>/process/list')
 def grv_process_list(company_id: int):
-    """Redirect to process map - AnÃ¡lise is now integrated into Arquitetura"""
+    """Redirect to process map - An+â-ílise is now integrated into Arquitetura"""
     from flask import redirect
     return redirect(url_for('grv.grv_process_map', company_id=company_id))
 
@@ -1296,7 +1300,7 @@ def grv_process_modeling(company_id: int):
         try:
             artifact_presence = db.get_process_artifact_presence(company_id) or {}
         except Exception as exc:
-            print(f"[grv_process_modeling] Warning: failed to load artifact presence -> {exc}")
+            logger.info(f"[grv_process_modeling] Warning: failed to load artifact presence -> {exc}")
             artifact_presence = {}
 
     process_groups = {stage['slug']: [] for stage in KANBAN_STAGE_DEFINITIONS}
@@ -1310,11 +1314,11 @@ def grv_process_modeling(company_id: int):
     }
     performance_labels = {
         '': 'Fora de Escopo',
-        'critical': 'CrÃ­tico',
+        'critical': 'Cr+â-¡tico',
         'below': 'Abaixo do esperado',
         'initiated': 'Ajustando',
-        'structured': 'SatisfatÃ³rio',
-        'satisfactory': 'SatisfatÃ³rio'
+        'structured': 'Satisfat+â-¦rio',
+        'satisfactory': 'Satisfat+â-¦rio'
     }
 
     for process in processes or []:
@@ -1330,8 +1334,8 @@ def grv_process_modeling(company_id: int):
             'responsible': process.get('responsible'),
             'structuring_level': process.get('structuring_level'),
             'performance_level': process.get('performance_level'),
-            'structuring_label': structuring_labels.get(process.get('structuring_level') or '', 'Sem avaliaÃ§Ã£o'),
-            'performance_label': performance_labels.get(process.get('performance_level') or '', 'Sem avaliaÃ§Ã£o'),
+            'structuring_label': structuring_labels.get(process.get('structuring_level') or '', 'Sem avalia+â-º+â-úo'),
+            'performance_label': performance_labels.get(process.get('performance_level') or '', 'Sem avalia+â-º+â-úo'),
             'macro_id': process.get('macro_id'),
             'macro_code': macro.get('code') if macro else '',
             'macro_name': macro.get('name') if macro else '',
@@ -1376,15 +1380,15 @@ def grv_process_detail(company_id: int, process_id: int):
     }
     performance_labels = {
         '': 'Fora de Escopo',
-        'critical': 'CrÃ­tico',
+        'critical': 'Cr+â-¡tico',
         'below': 'Abaixo do esperado',
         'initiated': 'Ajustando',
-        'structured': 'SatisfatÃ³rio',
-        'satisfactory': 'SatisfatÃ³rio'
+        'structured': 'Satisfat+â-¦rio',
+        'satisfactory': 'Satisfat+â-¦rio'
     }
     process_detail = dict(process)
-    process_detail['structuring_label'] = structuring_labels.get(process.get('structuring_level') or '', 'Sem avaliaÃ§Ã£o')
-    process_detail['performance_label'] = performance_labels.get(process.get('performance_level') or '', 'Sem avaliaÃ§Ã£o')
+    process_detail['structuring_label'] = structuring_labels.get(process.get('structuring_level') or '', 'Sem avalia+â-º+â-úo')
+    process_detail['performance_label'] = performance_labels.get(process.get('performance_level') or '', 'Sem avalia+â-º+â-úo')
 
     stage_lookup = {stage['slug']: stage for stage in KANBAN_STAGE_DEFINITIONS}
     stage_info = stage_lookup.get(process_detail.get('kanban_stage'), stage_lookup['inbox'])
@@ -1399,22 +1403,22 @@ def grv_process_detail(company_id: int, process_id: int):
     }
     stage_badge = stage_palette.get(process_detail.get('kanban_stage'), stage_palette['inbox'])
 
-    # Buscar modelos de relatÃ³rio disponÃ­veis
+    # Buscar modelos de relat+â-¦rio dispon+â-¡veis
     from modules.report_models import ReportModelsManager
     try:
         models_manager = ReportModelsManager()
         report_models = models_manager.get_all_models()
     except Exception as e:
-        print(f"Erro ao buscar modelos de relatÃ³rio: {e}")
+        logger.info(f"Erro ao buscar modelos de relat+â-¦rio: {e}")
         report_models = []
 
-    # Buscar padrÃµes de relatÃ³rio disponÃ­veis
+    # Buscar padr+â-Áes de relat+â-¦rio dispon+â-¡veis
     from modules.report_patterns import ReportPatternsManager
     try:
         patterns_manager = ReportPatternsManager()
         report_patterns = patterns_manager.get_patterns_by_type('process')
     except Exception as e:
-        print(f"Erro ao buscar padrÃµes de relatÃ³rio: {e}")
+        logger.info(f"Erro ao buscar padr+â-Áes de relat+â-¦rio: {e}")
         report_patterns = []
 
     return render_template(
@@ -1433,20 +1437,21 @@ def grv_process_detail(company_id: int, process_id: int):
 
 
 # API Routes for POP Activities Management
-# Padrão de URL: /api/companies/<company_id>/processes/<process_id>/activities/...
+# Padr+úo de URL: /api/companies/<company_id>/processes/<process_id>/activities/...
+@login_required
 @grv_bp.route('/api/companies/<int:company_id>/processes/<int:process_id>/activities', methods=['GET', 'POST'])
 def api_process_activities(company_id: int, process_id: int):
     """List or create POP activities for a process"""
     from flask import jsonify, request
     db = get_db()
     
-    # Verificar se o processo existe e pertence à empresa
+    # Verificar se o processo existe e pertence +á empresa
     process = db.get_process(process_id)
     if not process or process.get('company_id') != company_id:
         return jsonify({'success': False, 'error': 'Process not found'}), 404
     
     if request.method == 'GET':
-        # Buscar atividades do POP usando método do banco
+        # Buscar atividades do POP usando m+®todo do banco
         activities = db.list_process_activities(process_id) or []
         return jsonify({'success': True, 'data': activities})
     
@@ -1482,13 +1487,14 @@ def api_process_activities(company_id: int, process_id: int):
             return jsonify({'success': False, 'error': 'Failed to save activity'}), 500
 
 
+@login_required
 @grv_bp.route('/api/companies/<int:company_id>/processes/<int:process_id>/activities/<int:activity_id>', methods=['GET', 'PUT', 'DELETE'])
 def api_process_activity_detail(company_id: int, process_id: int, activity_id: int):
     """Get, update or delete a POP activity"""
     from flask import jsonify, request
     db = get_db()
     
-    # Verificar se o processo existe e pertence à empresa
+    # Verificar se o processo existe e pertence +á empresa
     process = db.get_process(process_id)
     if not process or process.get('company_id') != company_id:
         return jsonify({'success': False, 'error': 'Process not found'}), 404
@@ -1520,6 +1526,7 @@ def api_process_activity_detail(company_id: int, process_id: int, activity_id: i
         return jsonify({'success': success})
 
 
+@login_required
 @grv_bp.route('/api/companies/<int:company_id>/processes/<int:process_id>/activities/<int:activity_id>/entries', methods=['POST'])
 def api_create_process_activity_entry(company_id: int, process_id: int, activity_id: int):
     """Create a new entry (step) for a POP activity"""
@@ -1530,30 +1537,30 @@ def api_create_process_activity_entry(company_id: int, process_id: int, activity
     
     # Log em arquivo para debug
     with open('debug_api.log', 'a', encoding='utf-8') as f:
-        f.write(f"\n=== {dt.now()} - FUNÇÃO CHAMADA! company_id={company_id}, process_id={process_id}, activity_id={activity_id} ===\n")
-    print(f"=== FUNÇÃO CHAMADA! company_id={company_id}, process_id={process_id}, activity_id={activity_id} ===")
+        f.write(f"\n=== {dt.now()} - FUN+ç+âO CHAMADA! company_id={company_id}, process_id={process_id}, activity_id={activity_id} ===\n")
+    logger.info(f"=== FUN+ç+âO CHAMADA! company_id={company_id}, process_id={process_id}, activity_id={activity_id} ===")
     
     db = get_db()
     
-    print(f"DEBUG: Recebendo requisição para criar etapa - company_id={company_id}, process_id={process_id}, activity_id={activity_id}")
+    logger.info(f"DEBUG: Recebendo requisi+º+úo para criar etapa - company_id={company_id}, process_id={process_id}, activity_id={activity_id}")
     
-    # Verificar se o processo existe e pertence à empresa
+    # Verificar se o processo existe e pertence +á empresa
     process = db.get_process(process_id)
     if not process or process.get('company_id') != company_id:
-        print(f"DEBUG: Processo não encontrado ou não pertence à empresa")
+        logger.info(f"DEBUG: Processo n+úo encontrado ou n+úo pertence +á empresa")
         return jsonify({'success': False, 'error': 'Process not found'}), 404
     
-    print(f"DEBUG: Processo encontrado: {process.get('name')}")
+    logger.info(f"DEBUG: Processo encontrado: {process.get('name')}")
     
     # Verificar se a atividade existe
     activity = db.get_process_activity(activity_id)
     if not activity:
-        print(f"DEBUG: Atividade {activity_id} não encontrada!")
+        logger.info(f"DEBUG: Atividade {activity_id} n+úo encontrada!")
         return jsonify({'success': False, 'error': 'Activity not found'}), 404
     
-    print(f"DEBUG: Atividade encontrada: {activity.get('name')}")
+    logger.info(f"DEBUG: Atividade encontrada: {activity.get('name')}")
     
-    # Processar dados do formulário
+    # Processar dados do formul+írio
     form_data = request.form
     file = request.files.get('image')
     
@@ -1561,21 +1568,21 @@ def api_create_process_activity_entry(company_id: int, process_id: int, activity
     text_content = (form_data.get('text_content') or '').strip()
     image_width = form_data.get('image_width', '280')
     
-    print(f"DEBUG: Dados recebidos - layout={layout}, text_content={text_content[:50] if text_content else 'VAZIO'}, image_width={image_width}")
+    logger.info(f"DEBUG: Dados recebidos - layout={layout}, text_content={text_content[:50] if text_content else 'VAZIO'}, image_width={image_width}")
     
     if not text_content:
-        print(f"DEBUG: Texto vazio!")
+        logger.info(f"DEBUG: Texto vazio!")
         return jsonify({'success': False, 'error': 'Text content is required'}), 400
     
     # Processar imagem se fornecida
     image_path = None
     if file and file.filename:
-        print(f"DEBUG: Processando imagem: {file.filename}")
-        # Criar diretório de uploads se não existir
+        logger.info(f"DEBUG: Processando imagem: {file.filename}")
+        # Criar diret+¦rio de uploads se n+úo existir
         upload_dir = os.path.join('static', 'uploads', 'pop')
         os.makedirs(upload_dir, exist_ok=True)
         
-        # Gerar nome único para o arquivo
+        # Gerar nome +¦nico para o arquivo
         file_ext = os.path.splitext(file.filename)[1]
         timestamp = dt.now().strftime('%Y%m%d%H%M%S')
         unique_name = f"pop-{process_id}-{activity_id}-{timestamp}-{uuid.uuid4().hex[:8]}{file_ext}"
@@ -1586,9 +1593,9 @@ def api_create_process_activity_entry(company_id: int, process_id: int, activity
         
         # URL relativa para o arquivo
         image_path = f"uploads/pop/{unique_name}"
-        print(f"DEBUG: Imagem salva em: {image_path}")
+        logger.info(f"DEBUG: Imagem salva em: {image_path}")
     else:
-        print(f"DEBUG: Nenhuma imagem fornecida")
+        logger.info(f"DEBUG: Nenhuma imagem fornecida")
     
     # Criar nova etapa
     entry_data = {
@@ -1598,35 +1605,36 @@ def api_create_process_activity_entry(company_id: int, process_id: int, activity
         'image_width': int(image_width) if image_width else 280
     }
     
-    print(f"DEBUG: Criando nova etapa: {entry_data}")
+    logger.info(f"DEBUG: Criando nova etapa: {entry_data}")
     
     # Salvar no banco
-    print(f"DEBUG: Salvando no banco...")
+    logger.info(f"DEBUG: Salvando no banco...")
     try:
         new_id = db.create_process_activity_entry(activity_id, entry_data)
-        print(f"DEBUG: Método retornou new_id={new_id}")
+        logger.info(f"DEBUG: M+®todo retornou new_id={new_id}")
         
         if new_id:
-            print(f"DEBUG: Etapa salva com sucesso! ID: {new_id}")
+            logger.info(f"DEBUG: Etapa salva com sucesso! ID: {new_id}")
             # Buscar a etapa criada
             new_entry = db.get_process_activity_entry(new_id)
-            print(f"DEBUG: Etapa buscada: {new_entry}")
+            logger.info(f"DEBUG: Etapa buscada: {new_entry}")
             
             if new_entry:
                 return jsonify({'success': True, 'data': new_entry})
             else:
-                print(f"DEBUG: Falha ao buscar etapa criada!")
+                logger.info(f"DEBUG: Falha ao buscar etapa criada!")
                 return jsonify({'success': False, 'error': 'Entry created but not found', 'message': 'Falha ao buscar no banco'}), 500
         else:
-            print(f"DEBUG: Falha ao salvar etapa! new_id é None")
+            logger.info(f"DEBUG: Falha ao salvar etapa! new_id +® None")
             return jsonify({'success': False, 'error': 'create_failed', 'message': 'Falha ao criar no banco'}), 500
     except Exception as e:
-        print(f"DEBUG: EXCEÇÃO ao salvar: {e}")
+        logger.info(f"DEBUG: EXCE+ç+âO ao salvar: {e}")
         import traceback
         traceback.print_exc()
         return jsonify({'success': False, 'error': 'exception', 'message': str(e)}), 500
 
 
+@login_required
 @grv_bp.route('/api/companies/<int:company_id>/processes/<int:process_id>/activities/<int:activity_id>/entries/<int:entry_id>', methods=['GET', 'PUT', 'DELETE'])
 def api_process_activity_entry_detail(company_id: int, process_id: int, activity_id: int, entry_id: int):
     """Get, update or delete a POP entry"""
@@ -1636,7 +1644,7 @@ def api_process_activity_entry_detail(company_id: int, process_id: int, activity
     from datetime import datetime
     db = get_db()
     
-    # Verificar se o processo existe e pertence à empresa
+    # Verificar se o processo existe e pertence +á empresa
     process = db.get_process(process_id)
     if not process or process.get('company_id') != company_id:
         return jsonify({'success': False, 'error': 'Process not found'}), 404
@@ -1656,7 +1664,7 @@ def api_process_activity_entry_detail(company_id: int, process_id: int, activity
             if os.path.exists(image_path):
                 try:
                     os.remove(image_path)
-                except:
+                except Exception as exc:
                     pass
         
         success = db.delete_process_activity_entry(entry_id)
@@ -1675,21 +1683,21 @@ def api_process_activity_entry_detail(company_id: int, process_id: int, activity
         if not text_content:
             return jsonify({'success': False, 'error': 'Text content is required'}), 400
         
-        # Preparar dados para atualização
+        # Preparar dados para atualiza+º+úo
         update_data = {
             'layout': layout,
             'text_content': text_content,
             'image_width': int(image_width) if image_width else 280,
-            'image_path': entry.get('image_path')  # Manter imagem atual por padrão
+            'image_path': entry.get('image_path')  # Manter imagem atual por padr+úo
         }
         
-        # Processar remoção de imagem
+        # Processar remo+º+úo de imagem
         if remove_image and entry.get('image_path'):
             image_path = os.path.join('static', entry['image_path'])
             if os.path.exists(image_path):
                 try:
                     os.remove(image_path)
-                except:
+                except Exception as exc:
                     pass
             update_data['image_path'] = None
         
@@ -1701,7 +1709,7 @@ def api_process_activity_entry_detail(company_id: int, process_id: int, activity
                 if os.path.exists(old_image_path):
                     try:
                         os.remove(old_image_path)
-                    except:
+                    except Exception as exc:
                         pass
             
             # Salvar nova imagem
@@ -1752,7 +1760,7 @@ def grv_routine_activities(company_id: int):
     company = db.get_company(company_id) or {}
     
     conn = pg_connect()
-    # PostgreSQL retorna Row objects por padrão
+    # PostgreSQL retorna Row objects por padr+úo
     cursor = conn.cursor()
     ensure_indicator_schema(conn)
     ensure_indicator_goals_schema(conn)
@@ -1802,7 +1810,7 @@ def grv_routine_incidents(company_id: int):
     
     # Get employees, processes and projects for filters
     conn = pg_connect()
-    # PostgreSQL retorna Row objects por padrão
+    # PostgreSQL retorna Row objects por padr+úo
     cursor = conn.cursor()
     
     # Get employees
@@ -1868,7 +1876,7 @@ def grv_projects_projects(company_id: int):
     grv_portfolios = []
     try:
         conn = pg_connect()
-        # PostgreSQL retorna Row objects por padrão
+        # PostgreSQL retorna Row objects por padr+úo
         cursor = conn.cursor()
         cursor.execute(
             "SELECT id, code, name FROM portfolios WHERE company_id = %s ORDER BY LOWER(name)",
@@ -1883,7 +1891,7 @@ def grv_projects_projects(company_id: int):
             })
         conn.close()
     except Exception as e:
-        print(f"Erro ao buscar portfólios GRV: {e}")
+        logger.info(f"Erro ao buscar portf+¦lios GRV: {e}")
     
     # Get company projects (projetos criados)
     company_projects = []
@@ -1915,7 +1923,7 @@ def grv_projects_projects(company_id: int):
             })
         conn.close()
     except Exception as e:
-        print(f"Erro ao buscar company_projects: {e}")
+        logger.info(f"Erro ao buscar company_projects: {e}")
         import traceback
         traceback.print_exc()
     
@@ -1950,7 +1958,7 @@ def grv_project_manage(company_id: int, project_id: int):
     
     # Get project details
     conn = pg_connect()
-    # PostgreSQL retorna Row objects por padrão
+    # PostgreSQL retorna Row objects por padr+úo
     cursor = conn.cursor()
     
     cursor.execute(
@@ -1986,9 +1994,9 @@ def grv_project_manage(company_id: int, project_id: int):
         {'slug': 'inbox', 'title': 'Caixa de Entrada', 'color': '#94a3b8'},
         {'slug': 'waiting', 'title': 'Aguardando', 'color': '#fbbf24'},
         {'slug': 'executing', 'title': 'Executando', 'color': '#3b82f6'},
-        {'slug': 'pending', 'title': 'PendÃªncias', 'color': '#f59e0b'},
+        {'slug': 'pending', 'title': 'Pend+â-¬ncias', 'color': '#f59e0b'},
         {'slug': 'suspended', 'title': 'Suspensos', 'color': '#ef4444'},
-        {'slug': 'completed', 'title': 'ConcluÃ­dos', 'color': '#10b981'}
+        {'slug': 'completed', 'title': 'Conclu+â-¡dos', 'color': '#10b981'}
     ]
     
     return render_template(
@@ -2011,7 +2019,7 @@ def grv_projects_analysis(company_id: int):
     
     # Get all projects for the company
     conn = pg_connect()
-    # PostgreSQL retorna Row objects por padrão
+    # PostgreSQL retorna Row objects por padr+úo
     cursor = conn.cursor()
     
     cursor.execute(
@@ -2050,7 +2058,7 @@ def grv_projects_analysis(company_id: int):
         # Parse activities
         try:
             activities = json.loads(project.get('activities', '[]'))
-        except:
+        except Exception as exc:
             activities = []
         
         project['activities'] = activities
@@ -2069,9 +2077,9 @@ def grv_projects_analysis(company_id: int):
         {'slug': 'inbox', 'title': 'Caixa de Entrada', 'color': '#94a3b8'},
         {'slug': 'waiting', 'title': 'Aguardando', 'color': '#fbbf24'},
         {'slug': 'executing', 'title': 'Executando', 'color': '#3b82f6'},
-        {'slug': 'pending', 'title': 'PendÃªncias', 'color': '#f59e0b'},
+        {'slug': 'pending', 'title': 'Pend+â-¬ncias', 'color': '#f59e0b'},
         {'slug': 'suspended', 'title': 'Suspensos', 'color': '#ef4444'},
-        {'slug': 'completed', 'title': 'ConcluÃ­dos', 'color': '#10b981'}
+        {'slug': 'completed', 'title': 'Conclu+â-¡dos', 'color': '#10b981'}
     ]
     
     return render_template(
@@ -2095,7 +2103,7 @@ def grv_process_instances(company_id: int):
         {'value': 'pending', 'label': 'Pendente', 'color': '#94a3b8'},
         {'value': 'in_progress', 'label': 'Em Andamento', 'color': '#3b82f6'},
         {'value': 'waiting', 'label': 'Aguardando', 'color': '#fbbf24'},
-        {'value': 'completed', 'label': 'ConcluÃ­do', 'color': '#10b981'},
+        {'value': 'completed', 'label': 'Conclu+â-¡do', 'color': '#10b981'},
         {'value': 'cancelled', 'label': 'Cancelado', 'color': '#ef4444'}
     ]
     
@@ -2126,7 +2134,7 @@ def grv_process_instance_manage(company_id: int, instance_id: int):
     
     # Get instance details
     conn = pg_connect()
-    # PostgreSQL retorna Row objects por padrão
+    # PostgreSQL retorna Row objects por padr+úo
     cursor = conn.cursor()
     
     cursor.execute(
@@ -2161,12 +2169,12 @@ def grv_process_instance_manage(company_id: int, instance_id: int):
 
 
 # =============================================================================
-# GESTÃƒO DE INDICADORES
+# GEST+âãÆO DE INDICADORES
 # =============================================================================
 
 @grv_bp.route('/company/<int:company_id>/indicators/tree')
 def grv_indicators_tree(company_id: int):
-    """Árvore de Indicadores - Grupos e Subgrupos hierÃ¡rquicos"""
+    """+ürvore de Indicadores - Grupos e Subgrupos hier+â-írquicos"""
     db = get_db()
     company = db.get_company(company_id) or {}
     return render_template(
@@ -2180,7 +2188,7 @@ def grv_indicators_tree(company_id: int):
 @grv_bp.route('/company/<int:company_id>/indicator-groups/form', defaults={'group_id': None})
 @grv_bp.route('/company/<int:company_id>/indicator-groups/form/<int:group_id>')
 def grv_indicator_group_form(company_id: int, group_id: Optional[int] = None):
-    """FormulÃ¡rio em popup para criar ou editar grupos de indicadores."""
+    """Formul+â-írio em popup para criar ou editar grupos de indicadores."""
     db = get_db()
     company = db.get_company(company_id) or {}
     group = None
@@ -2188,7 +2196,7 @@ def grv_indicator_group_form(company_id: int, group_id: Optional[int] = None):
     if group_id:
         from database.postgres_helper import connect as pg_connect
         conn = pg_connect()
-        # PostgreSQL retorna Row objects por padrão
+        # PostgreSQL retorna Row objects por padr+úo
         cursor = conn.cursor()
         cursor.execute("""
             SELECT *
@@ -2217,7 +2225,7 @@ def grv_indicators_list(company_id: int):
     
     # Get related data for dropdowns
     conn = pg_connect()
-    # PostgreSQL retorna Row objects por padrão
+    # PostgreSQL retorna Row objects por padr+úo
     cursor = conn.cursor()
     
     # Get processes
@@ -2248,13 +2256,13 @@ def grv_indicators_list(company_id: int):
 @grv_bp.route('/company/<int:company_id>/indicators/form', defaults={'indicator_id': None})
 @grv_bp.route('/company/<int:company_id>/indicators/form/<int:indicator_id>')
 def grv_indicator_form(company_id: int, indicator_id: Optional[int] = None):
-    """FormulÃ¡rio pop-up para criaÃ§Ã£o/ediÃ§Ã£o de indicadores"""
+    """Formul+â-írio pop-up para cria+â-º+â-úo/edi+â-º+â-úo de indicadores"""
     from database.postgres_helper import connect as pg_connect
     db = get_db()
     company = db.get_company(company_id) or {}
     default_process_id = request.args.get('process_id', type=int)
     
-    # Capturar parÃ¢metros de contexto da URL
+    # Capturar par+â-ómetros de contexto da URL
     context_params = {
         'plan_id': request.args.get('plan_id'),
         'okr_id': request.args.get('okr_id', type=int),
@@ -2264,7 +2272,7 @@ def grv_indicator_form(company_id: int, indicator_id: Optional[int] = None):
     }
 
     conn = pg_connect()
-    # PostgreSQL retorna Row objects por padrão
+    # PostgreSQL retorna Row objects por padr+úo
     cursor = conn.cursor()
 
     cursor.execute('SELECT id, code, name FROM indicator_groups WHERE company_id = %s ORDER BY code', (company_id,))
@@ -2331,7 +2339,7 @@ def grv_indicators_goals(company_id: int):
     
     # Get employees for responsible dropdown
     conn = pg_connect()
-    # PostgreSQL retorna Row objects por padrão
+    # PostgreSQL retorna Row objects por padr+úo
     cursor = conn.cursor()
     
     cursor.execute('SELECT id, name FROM employees WHERE company_id = %s ORDER BY name', (company_id,))
@@ -2351,13 +2359,13 @@ def grv_indicators_goals(company_id: int):
 @grv_bp.route('/company/<int:company_id>/indicator-goals/form', defaults={'goal_id': None})
 @grv_bp.route('/company/<int:company_id>/indicator-goals/form/<int:goal_id>')
 def grv_indicator_goal_form(company_id: int, goal_id: Optional[int] = None):
-    """FormulÃ¡rio pop-up para metas de indicadores"""
+    """Formul+â-írio pop-up para metas de indicadores"""
     from database.postgres_helper import connect as pg_connect
     db = get_db()
     company = db.get_company(company_id) or {}
 
     conn = pg_connect()
-    # PostgreSQL retorna Row objects por padrão
+    # PostgreSQL retorna Row objects por padr+úo
     cursor = conn.cursor()
 
     cursor.execute("""
@@ -2410,13 +2418,13 @@ def grv_indicators_data(company_id: int):
 @grv_bp.route('/company/<int:company_id>/indicator-data/form', defaults={'record_id': None})
 @grv_bp.route('/company/<int:company_id>/indicator-data/form/<int:record_id>')
 def grv_indicator_data_form(company_id: int, record_id: Optional[int] = None):
-    """FormulÃ¡rio pop-up para registros de dados"""
+    """Formul+â-írio pop-up para registros de dados"""
     from database.postgres_helper import connect as pg_connect
     db = get_db()
     company = db.get_company(company_id) or {}
 
     conn = pg_connect()
-    # PostgreSQL retorna Row objects por padrão
+    # PostgreSQL retorna Row objects por padr+úo
     cursor = conn.cursor()
 
     cursor.execute("""
@@ -2455,7 +2463,7 @@ def grv_indicator_data_form(company_id: int, record_id: Optional[int] = None):
 
 @grv_bp.route('/company/<int:company_id>/indicators/analysis')
 def grv_indicators_analysis(company_id: int):
-    """AnÃ¡lises de Indicadores"""
+    """An+â-ílises de Indicadores"""
     db = get_db()
     company = db.get_company(company_id) or {}
     return render_template(
@@ -2477,7 +2485,7 @@ def api_get_plan_okrs(plan_id: int):
         from database.postgres_helper import connect as pg_connect
         
         conn = pg_connect()
-        # PostgreSQL retorna Row objects por padrão
+        # PostgreSQL retorna Row objects por padr+úo
         cursor = conn.cursor()
         
         # Buscar OKRs globais aprovados
@@ -2490,7 +2498,7 @@ def api_get_plan_okrs(plan_id: int):
         
         global_okrs = [dict(row) for row in cursor.fetchall()]
         
-        # Buscar OKRs de Ã¡rea finalizados
+        # Buscar OKRs de +â-írea finalizados
         cursor.execute("""
             SELECT id, objective, type as okr_type, owner, 'area' as okr_level, department
             FROM okr_area_records 
@@ -2508,23 +2516,23 @@ def api_get_plan_okrs(plan_id: int):
         return jsonify({'success': True, 'data': all_okrs})
         
     except Exception as e:
-        print(f"Error getting plan OKRs: {e}")
+        logger.info(f"Error getting plan OKRs: {e}")
         return jsonify({'success': False, 'message': str(e)}), 500
 
 # =============================================================================
-# API - GESTÃƒO DE INDICADORES
+# API - GEST+âãÆO DE INDICADORES
 # =============================================================================
 
-# ===== Árvore de Indicadores (Grupos) =====
+# ===== +ürvore de Indicadores (Grupos) =====
 
-@grv_bp.route('/api/company/<int:company_id>/indicator-groups', methods=['GET'])
+@login_required
 def api_get_indicator_groups(company_id: int):
     """Lista todos os grupos de indicadores da empresa"""
     from database.postgres_helper import connect as pg_connect
     import json
     
     conn = pg_connect()
-    # PostgreSQL retorna Row objects por padrão
+    # PostgreSQL retorna Row objects por padr+úo
     cursor = conn.cursor()
     
     cursor.execute("""
@@ -2544,13 +2552,13 @@ def api_get_indicator_groups(company_id: int):
     return jsonify({'success': True, 'data': groups})
 
 
-@grv_bp.route('/api/company/<int:company_id>/indicator-groups/<int:group_id>', methods=['GET'])
+@login_required
 def api_get_indicator_group(company_id: int, group_id: int):
-    """ObtÃ©m detalhes de um grupo especÃ­fico"""
+    """Obt+â-®m detalhes de um grupo espec+â-¡fico"""
     from database.postgres_helper import connect as pg_connect
     
     conn = pg_connect()
-    # PostgreSQL retorna Row objects por padrão
+    # PostgreSQL retorna Row objects por padr+úo
     cursor = conn.cursor()
     
     cursor.execute("""
@@ -2562,12 +2570,12 @@ def api_get_indicator_group(company_id: int, group_id: int):
     conn.close()
     
     if not group:
-        return jsonify({'success': False, 'message': 'Grupo nÃ£o encontrado'}), 404
+        return jsonify({'success': False, 'message': 'Grupo n+â-úo encontrado'}), 404
     
     return jsonify({'success': True, 'data': dict(group)})
 
 
-@grv_bp.route('/api/company/<int:company_id>/indicator-groups', methods=['POST'])
+@login_required
 @auto_log_crud('indicator_group')
 def api_create_indicator_group(company_id: int):
     """Cria um novo grupo de indicadores"""
@@ -2577,12 +2585,12 @@ def api_create_indicator_group(company_id: int):
     data = request.json
     
     conn = pg_connect()
-    # PostgreSQL retorna Row objects por padrão
+    # PostgreSQL retorna Row objects por padr+úo
     cursor = conn.cursor()
     ensure_indicator_goals_schema(conn)
     
     try:
-        # Gerar cÃ³digo automÃ¡tico
+        # Gerar c+â-¦digo autom+â-ítico
         cursor.execute("""
             SELECT client_code FROM companies WHERE id = %s
         """, (company_id,))
@@ -2593,7 +2601,7 @@ def api_create_indicator_group(company_id: int):
             if raw_code:
                 company_code = raw_code.upper()
         
-        # Contar grupos existentes para gerar prÃ³ximo nÃºmero
+        # Contar grupos existentes para gerar pr+â-¦ximo n+â-¦mero
         parent_id = data.get('parent_id')
         if parent_id:
             cursor.execute("""
@@ -2647,7 +2655,7 @@ def api_create_indicator_group(company_id: int):
         return jsonify({'success': False, 'message': str(e)}), 400
 
 
-@grv_bp.route('/api/company/<int:company_id>/indicator-groups/<int:group_id>', methods=['PUT'])
+@login_required
 @auto_log_crud('indicator_group')
 def api_update_indicator_group(company_id: int, group_id: int):
     """Atualiza um grupo de indicadores"""
@@ -2657,7 +2665,7 @@ def api_update_indicator_group(company_id: int, group_id: int):
     data = request.json
     
     conn = pg_connect()
-    # PostgreSQL retorna Row objects por padrão
+    # PostgreSQL retorna Row objects por padr+úo
     cursor = conn.cursor()
     
     try:
@@ -2690,13 +2698,13 @@ def api_update_indicator_group(company_id: int, group_id: int):
         return jsonify({'success': False, 'message': str(e)}), 400
 
 
-@grv_bp.route('/api/company/<int:company_id>/indicator-groups/<int:group_id>', methods=['DELETE'])
+@login_required
 def api_delete_indicator_group(company_id: int, group_id: int):
     """Deleta um grupo de indicadores"""
     from database.postgres_helper import connect as pg_connect
     
     conn = pg_connect()
-    # PostgreSQL retorna Row objects por padrão
+    # PostgreSQL retorna Row objects por padr+úo
     cursor = conn.cursor()
     
     try:
@@ -2710,7 +2718,7 @@ def api_delete_indicator_group(company_id: int, group_id: int):
             conn.close()
             return jsonify({
                 'success': False, 
-                'message': f'NÃ£o Ã© possÃ­vel excluir. Existem {count} indicador(es) associado(s) a este grupo.'
+                'message': f'N+â-úo +â-® poss+â-¡vel excluir. Existem {count} indicador(es) associado(s) a este grupo.'
             }), 400
         
         cursor.execute("""
@@ -2720,7 +2728,7 @@ def api_delete_indicator_group(company_id: int, group_id: int):
         
         conn.commit()
         conn.close()
-        return jsonify({'success': True, 'message': 'Grupo excluÃ­do com sucesso'})
+        return jsonify({'success': True, 'message': 'Grupo exclu+â-¡do com sucesso'})
         
     except Exception as e:
         conn.rollback()
@@ -2730,13 +2738,13 @@ def api_delete_indicator_group(company_id: int, group_id: int):
 
 # ===== Indicadores =====
 
-@grv_bp.route('/api/company/<int:company_id>/indicators', methods=['GET'])
+@login_required
 def api_get_indicators(company_id: int):
     """Lista todos os indicadores da empresa"""
     from database.postgres_helper import connect as pg_connect
     
     conn = pg_connect()
-    # PostgreSQL retorna Row objects por padrão
+    # PostgreSQL retorna Row objects por padr+úo
     cursor = conn.cursor()
     ensure_indicator_schema(conn)
     
@@ -2768,13 +2776,13 @@ def api_get_indicators(company_id: int):
     return jsonify({'success': True, 'data': indicators})
 
 
-@grv_bp.route('/api/company/<int:company_id>/indicators/<int:indicator_id>', methods=['GET'])
+@login_required
 def api_get_indicator(company_id: int, indicator_id: int):
-    """ObtÃ©m detalhes de um indicador especÃ­fico"""
+    """Obt+â-®m detalhes de um indicador espec+â-¡fico"""
     from database.postgres_helper import connect as pg_connect
     
     conn = pg_connect()
-    # PostgreSQL retorna Row objects por padrão
+    # PostgreSQL retorna Row objects por padr+úo
     cursor = conn.cursor()
     ensure_indicator_schema(conn)
     
@@ -2787,7 +2795,7 @@ def api_get_indicator(company_id: int, indicator_id: int):
     conn.close()
     
     if not row:
-        return jsonify({'success': False, 'message': 'Indicador nÃ£o encontrado'}), 404
+        return jsonify({'success': False, 'message': 'Indicador n+â-úo encontrado'}), 404
     
     indicator = dict(row)
     indicator['code'] = normalize_indicator_code(indicator.get('code'))
@@ -2795,14 +2803,14 @@ def api_get_indicator(company_id: int, indicator_id: int):
     return jsonify({'success': True, 'data': indicator})
 
 
-@grv_bp.route('/api/company/<int:company_id>/processes/<int:process_id>/indicators', methods=['GET'])
+@login_required
 def api_get_process_indicators(company_id: int, process_id: int):
-    """Lista os indicadores associados a um processo especÃ­fico"""
+    """Lista os indicadores associados a um processo espec+â-¡fico"""
     from database.postgres_helper import connect as pg_connect
     import json
 
     conn = pg_connect()
-    # PostgreSQL retorna Row objects por padrão
+    # PostgreSQL retorna Row objects por padr+úo
     cursor = conn.cursor()
 
     cursor.execute("""
@@ -2860,15 +2868,14 @@ def api_get_process_indicators(company_id: int, process_id: int):
                     collaborator_ids = []
 
             if collaborator_ids:
-                placeholders = ",".join("%s" * len(collaborator_ids))
                 cursor.execute(
-                    f"""
+                    """
                         SELECT id, name, email 
                         FROM employees 
-                        WHERE company_id = %s AND id IN ({placeholders})
+                        WHERE company_id = %s AND id = ANY(%s)
                         ORDER BY name
                     """,
-                    (company_id, *collaborator_ids)
+                    (company_id, tuple(collaborator_ids)),
                 )
                 collaborator_entries = [dict(item) for item in cursor.fetchall()]
 
@@ -2904,7 +2911,7 @@ def api_get_process_indicators(company_id: int, process_id: int):
     return jsonify({'success': True, 'data': indicators})
 
 
-@grv_bp.route('/api/company/<int:company_id>/indicators', methods=['POST'])
+@login_required
 @auto_log_crud('indicator')
 def api_create_indicator(company_id: int):
     """Cria um novo indicador"""
@@ -2914,11 +2921,11 @@ def api_create_indicator(company_id: int):
     data = request.json
     
     conn = pg_connect()
-    # PostgreSQL retorna Row objects por padrão
+    # PostgreSQL retorna Row objects por padr+úo
     cursor = conn.cursor()
     
     try:
-        # Gerar cÃ³digo automÃ¡tico
+        # Gerar c+â-¦digo autom+â-ítico
         group_id = data.get('group_id')
         if group_id:
             cursor.execute("""
@@ -3023,7 +3030,7 @@ def api_create_indicator(company_id: int):
         return jsonify({'success': False, 'message': str(e)}), 400
 
 
-@grv_bp.route('/api/company/<int:company_id>/indicators/<int:indicator_id>', methods=['PUT'])
+@login_required
 @auto_log_crud('indicator')
 def api_update_indicator(company_id: int, indicator_id: int):
     """Atualiza um indicador"""
@@ -3033,7 +3040,7 @@ def api_update_indicator(company_id: int, indicator_id: int):
     data = request.json
     
     conn = pg_connect()
-    # PostgreSQL retorna Row objects por padrão
+    # PostgreSQL retorna Row objects por padr+úo
     cursor = conn.cursor()
     
     try:
@@ -3100,14 +3107,14 @@ def api_update_indicator(company_id: int, indicator_id: int):
         return jsonify({'success': False, 'message': str(e)}), 400
 
 
-@grv_bp.route('/api/company/<int:company_id>/indicators/<int:indicator_id>', methods=['DELETE'])
+@login_required
 @auto_log_crud('indicator')
 def api_delete_indicator(company_id: int, indicator_id: int):
     """Deleta um indicador"""
     from database.postgres_helper import connect as pg_connect
     
     conn = pg_connect()
-    # PostgreSQL retorna Row objects por padrão
+    # PostgreSQL retorna Row objects por padr+úo
     cursor = conn.cursor()
     
     try:
@@ -3121,7 +3128,7 @@ def api_delete_indicator(company_id: int, indicator_id: int):
             conn.close()
             return jsonify({
                 'success': False, 
-                'message': f'NÃ£o Ã© possÃ­vel excluir. Existem {count} meta(s) associada(s) a este indicador.'
+                'message': f'N+â-úo +â-® poss+â-¡vel excluir. Existem {count} meta(s) associada(s) a este indicador.'
             }), 400
         
         cursor.execute("""
@@ -3131,7 +3138,7 @@ def api_delete_indicator(company_id: int, indicator_id: int):
         
         conn.commit()
         conn.close()
-        return jsonify({'success': True, 'message': 'Indicador excluÃ­do com sucesso'})
+        return jsonify({'success': True, 'message': 'Indicador exclu+â-¡do com sucesso'})
         
     except Exception as e:
         conn.rollback()
@@ -3141,14 +3148,14 @@ def api_delete_indicator(company_id: int, indicator_id: int):
 
 # ===== Metas de Indicadores =====
 
-@grv_bp.route('/api/company/<int:company_id>/indicator-goals', methods=['GET'])
+@login_required
 def api_get_indicator_goals(company_id: int):
     """Lista todas as metas de indicadores da empresa"""
     from database.postgres_helper import connect as pg_connect
     
     try:
         conn = pg_connect()
-        # PostgreSQL retorna Row objects por padrão
+        # PostgreSQL retorna Row objects por padr+úo
         cursor = conn.cursor()
         ensure_indicator_goals_schema(conn)
         
@@ -3174,19 +3181,19 @@ def api_get_indicator_goals(company_id: int):
         
         return jsonify({'success': True, 'data': goals})
     except Exception as e:
-        print(f"Erro ao carregar metas de indicadores: {e}")
+        logger.info(f"Erro ao carregar metas de indicadores: {e}")
         import traceback
         traceback.print_exc()
         return jsonify({'success': False, 'message': str(e)}), 500
 
 
-@grv_bp.route('/api/company/<int:company_id>/indicator-goals/<int:goal_id>', methods=['GET'])
+@login_required
 def api_get_indicator_goal(company_id: int, goal_id: int):
-    """ObtÃ©m detalhes de uma meta especÃ­fica"""
+    """Obt+â-®m detalhes de uma meta espec+â-¡fica"""
     from database.postgres_helper import connect as pg_connect
     
     conn = pg_connect()
-    # PostgreSQL retorna Row objects por padrão
+    # PostgreSQL retorna Row objects por padr+úo
     cursor = conn.cursor()
     
     cursor.execute("""
@@ -3198,12 +3205,12 @@ def api_get_indicator_goal(company_id: int, goal_id: int):
     conn.close()
     
     if not goal:
-        return jsonify({'success': False, 'message': 'Meta nÃ£o encontrada'}), 404
+        return jsonify({'success': False, 'message': 'Meta n+â-úo encontrada'}), 404
     
     return jsonify({'success': True, 'data': normalize_goal_row(dict(goal))})
 
 
-@grv_bp.route('/api/company/<int:company_id>/indicator-goals', methods=['POST'])
+@login_required
 @auto_log_crud('indicator_goal')
 def api_create_indicator_goal(company_id: int):
     """Cria uma nova meta de indicador"""
@@ -3213,7 +3220,7 @@ def api_create_indicator_goal(company_id: int):
     data = request.json
 
     conn = pg_connect()
-    # PostgreSQL retorna Row objects por padrão
+    # PostgreSQL retorna Row objects por padr+úo
     cursor = conn.cursor()
     ensure_indicator_goals_schema(conn)
 
@@ -3321,7 +3328,7 @@ def api_create_indicator_goal(company_id: int):
         return jsonify({'success': False, 'message': str(e)}), 400
 
 
-@grv_bp.route('/api/company/<int:company_id>/indicator-goals/<int:goal_id>', methods=['PUT'])
+@login_required
 def api_update_indicator_goal(company_id: int, goal_id: int):
     """Atualiza uma meta de indicador"""
     from database.postgres_helper import connect as pg_connect
@@ -3330,7 +3337,7 @@ def api_update_indicator_goal(company_id: int, goal_id: int):
     data = request.json
 
     conn = pg_connect()
-    # PostgreSQL retorna Row objects por padrão
+    # PostgreSQL retorna Row objects por padr+úo
     cursor = conn.cursor()
     ensure_indicator_goals_schema(conn)
 
@@ -3434,13 +3441,13 @@ def api_update_indicator_goal(company_id: int, goal_id: int):
         return jsonify({'success': False, 'message': str(e)}), 400
 
 
-@grv_bp.route('/api/company/<int:company_id>/indicator-goals/<int:goal_id>', methods=['DELETE'])
+@login_required
 def api_delete_indicator_goal(company_id: int, goal_id: int):
     """Deleta uma meta de indicador"""
     from database.postgres_helper import connect as pg_connect
     
     conn = pg_connect()
-    # PostgreSQL retorna Row objects por padrão
+    # PostgreSQL retorna Row objects por padr+úo
     cursor = conn.cursor()
     
     try:
@@ -3454,7 +3461,7 @@ def api_delete_indicator_goal(company_id: int, goal_id: int):
             conn.close()
             return jsonify({
                 'success': False, 
-                'message': f'NÃ£o Ã© possÃ­vel excluir. Existem {count} registro(s) de dados associado(s) a esta meta.'
+                'message': f'N+â-úo +â-® poss+â-¡vel excluir. Existem {count} registro(s) de dados associado(s) a esta meta.'
             }), 400
         
         cursor.execute("""
@@ -3464,7 +3471,7 @@ def api_delete_indicator_goal(company_id: int, goal_id: int):
         
         conn.commit()
         conn.close()
-        return jsonify({'success': True, 'message': 'Meta excluÃ­da com sucesso'})
+        return jsonify({'success': True, 'message': 'Meta exclu+â-¡da com sucesso'})
         
     except Exception as e:
         conn.rollback()
@@ -3474,13 +3481,13 @@ def api_delete_indicator_goal(company_id: int, goal_id: int):
 
 # ===== Registros de Dados =====
 
-@grv_bp.route('/api/company/<int:company_id>/indicator-data', methods=['GET'])
+@login_required
 def api_get_indicator_data(company_id: int):
     """Lista todos os registros de dados de indicadores da empresa"""
     from database.postgres_helper import connect as pg_connect
     
     conn = pg_connect()
-    # PostgreSQL retorna Row objects por padrão
+    # PostgreSQL retorna Row objects por padr+úo
     cursor = conn.cursor()
     
     cursor.execute("""
@@ -3506,13 +3513,13 @@ def api_get_indicator_data(company_id: int):
     return jsonify({'success': True, 'data': data_records})
 
 
-@grv_bp.route('/api/company/<int:company_id>/indicator-data/<int:data_id>', methods=['GET'])
+@login_required
 def api_get_indicator_data_record(company_id: int, data_id: int):
-    """ObtÃ©m detalhes de um registro de dados especÃ­fico"""
+    """Obt+â-®m detalhes de um registro de dados espec+â-¡fico"""
     from database.postgres_helper import connect as pg_connect
     
     conn = pg_connect()
-    # PostgreSQL retorna Row objects por padrão
+    # PostgreSQL retorna Row objects por padr+úo
     cursor = conn.cursor()
     
     cursor.execute("""
@@ -3524,12 +3531,12 @@ def api_get_indicator_data_record(company_id: int, data_id: int):
     conn.close()
     
     if not data_record:
-        return jsonify({'success': False, 'message': 'Registro nÃ£o encontrado'}), 404
+        return jsonify({'success': False, 'message': 'Registro n+â-úo encontrado'}), 404
     
     return jsonify({'success': True, 'data': dict(data_record)})
 
 
-@grv_bp.route('/api/company/<int:company_id>/indicator-data', methods=['POST'])
+@login_required
 @auto_log_crud('indicator_data')
 def api_create_indicator_data(company_id: int):
     """Cria um novo registro de dados"""
@@ -3539,7 +3546,7 @@ def api_create_indicator_data(company_id: int):
     data = request.json
     
     conn = pg_connect()
-    # PostgreSQL retorna Row objects por padrão
+    # PostgreSQL retorna Row objects por padr+úo
     cursor = conn.cursor()
     
     try:
@@ -3572,7 +3579,7 @@ def api_create_indicator_data(company_id: int):
         return jsonify({'success': False, 'message': str(e)}), 400
 
 
-@grv_bp.route('/api/company/<int:company_id>/indicator-data/<int:data_id>', methods=['PUT'])
+@login_required
 def api_update_indicator_data(company_id: int, data_id: int):
     """Atualiza um registro de dados"""
     from database.postgres_helper import connect as pg_connect
@@ -3614,7 +3621,7 @@ def api_update_indicator_data(company_id: int, data_id: int):
         return jsonify({'success': False, 'message': str(e)}), 400
 
 
-@grv_bp.route('/api/company/<int:company_id>/indicator-data/<int:data_id>', methods=['DELETE'])
+@login_required
 def api_delete_indicator_data(company_id: int, data_id: int):
     """Deleta um registro de dados"""
     from database.postgres_helper import connect as pg_connect
@@ -3630,9 +3637,16 @@ def api_delete_indicator_data(company_id: int, data_id: int):
         
         conn.commit()
         conn.close()
-        return jsonify({'success': True, 'message': 'Registro excluÃ­do com sucesso'})
+        return jsonify({'success': True, 'message': 'Registro exclu+â-¡do com sucesso'})
         
     except Exception as e:
         conn.rollback()
         conn.close()
         return jsonify({'success': False, 'message': str(e)}), 400
+
+
+
+
+
+
+

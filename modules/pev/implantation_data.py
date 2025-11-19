@@ -1,9 +1,12 @@
+﻿from __future__ import annotations
+import logging
 """
 Helper functions to assemble Implantação (new venture) data structures
 for templates and reports.
 """
 
-from __future__ import annotations
+logger = logging.getLogger(__name__)
+
 
 import re
 import unicodedata
@@ -16,22 +19,22 @@ PHASE_ORDER = ["alignment", "model", "execution", "delivery"]
 
 PHASE_DEFAULTS: Dict[str, Dict[str, Any]] = {
     "alignment": {
-        "title": "Alinhamento Estratégico",
-        "tagline": "Garantir visão, ritmo compartilhado e responsabilidades antes de evoluir para modelo e execução.",
+        "title": "Alinhamento EstratÃ©gico",
+        "tagline": "Garantir visÃ£o, ritmo compartilhado e responsabilidades antes de evoluir para modelo e execuÃ§Ã£o.",
         "pulse": None,
     },
     "model": {
         "title": "Modelo & Mercado",
-        "tagline": "Transformar hipóteses em propostas fundamentadas para cada segmento do negócio.",
+        "tagline": "Transformar hipÃ³teses em propostas fundamentadas para cada segmento do negÃ³cio.",
         "pulse": None,
     },
     "execution": {
-        "title": "Estruturas de Execução",
-        "tagline": "Ancorar operação, comercial e finanças para suportar o plano.",
+        "title": "Estruturas de ExecuÃ§Ã£o",
+        "tagline": "Ancorar operaÃ§Ã£o, comercial e finanÃ§as para suportar o plano.",
         "pulse": None,
     },
     "delivery": {
-        "title": "Relatório Final",
+        "title": "RelatÃ³rio Final",
         "tagline": "Consolidar narrativa, indicadores e entrega final do planejamento.",
         "pulse": None,
     },
@@ -39,7 +42,7 @@ PHASE_DEFAULTS: Dict[str, Dict[str, Any]] = {
 
 DEFAULT_DELIVERABLES: Dict[str, List[Dict[str, str]]] = {
     "alignment": [
-        {"label": "Canvas de expectativas dos sócios", "endpoint": "pev.implantacao_canvas_expectativas"},
+        {"label": "Canvas de expectativas dos sÃ³cios", "endpoint": "pev.implantacao_canvas_expectativas"},
     ],
     "model": [
         {"label": "Canvas de proposta de valor", "endpoint": "pev.implantacao_canvas_proposta_valor"},
@@ -48,10 +51,10 @@ DEFAULT_DELIVERABLES: Dict[str, List[Dict[str, str]]] = {
         {"label": "Produtos e Margens", "endpoint": "pev.implantacao_produtos"},
     ],
     "execution": [
-        {"label": "Estruturas por área", "endpoint": "pev.implantacao_estruturas"},
+        {"label": "Estruturas por Ã¡rea", "endpoint": "pev.implantacao_estruturas"},
     ],
     "delivery": [
-        {"label": "Relatório final", "endpoint": "pev.implantacao_relatorio_final"},
+        {"label": "RelatÃ³rio final", "endpoint": "pev.implantacao_relatorio_final"},
     ],
 }
 
@@ -71,37 +74,37 @@ MONTH_LABELS_PT: Dict[int, str] = {
 }
 
 AREA_LABELS = {
-    "comercial": "Estruturação Comercial",
-    "comércio": "Estruturação Comercial",
-    "operacional": "Estruturação Operacional",
-    "operacao": "Estruturação Operacional",
-    "adm_fin": "Estruturação Adm / Fin",
-    "administrativo_financeiro": "Estruturação Adm / Fin",
-    "administrativo": "Estruturação Adm / Fin",
+    "comercial": "EstruturaÃ§Ã£o Comercial",
+    "comÃ©rcio": "EstruturaÃ§Ã£o Comercial",
+    "operacional": "EstruturaÃ§Ã£o Operacional",
+    "operacao": "EstruturaÃ§Ã£o Operacional",
+    "adm_fin": "EstruturaÃ§Ã£o Adm / Fin",
+    "administrativo_financeiro": "EstruturaÃ§Ã£o Adm / Fin",
+    "administrativo": "EstruturaÃ§Ã£o Adm / Fin",
 }
 
-AREA_ORDER = ["Estruturação Comercial", "Estruturação Operacional", "Estruturação Adm / Fin"]
+AREA_ORDER = ["EstruturaÃ§Ã£o Comercial", "EstruturaÃ§Ã£o Operacional", "EstruturaÃ§Ã£o Adm / Fin"]
 
 BLOCK_LABELS = {
     "pessoas": "Pessoas",
-    "imoveis": "Imóveis",
-    "imóveis": "Imóveis",
-    "instalacoes": "Instalações",
-    "instalações": "Instalações",
-    "maquinas_equipamentos": "Máquinas e Equipamentos",
-    "maquinas": "Máquinas e Equipamentos",
-    "equipamentos": "Máquinas e Equipamentos",
-    "moveis_utensilios": "Móveis e Utensílios",
-    "móveis_utensílios": "Móveis e Utensílios",
-    "moveis": "Móveis e Utensílios",
-    "móveis": "Móveis e Utensílios",
-    "utensilios": "Móveis e Utensílios",
-    "utensílios": "Móveis e Utensílios",
-    "ti_comunicacao": "TI e Comunicação",
-    "ti_e_comunicação": "TI e Comunicação",
-    "ti": "TI e Comunicação",
-    "comunicacao": "TI e Comunicação",
-    "comunicação": "TI e Comunicação",
+    "imoveis": "ImÃ³veis",
+    "imÃ³veis": "ImÃ³veis",
+    "instalacoes": "InstalaÃ§Ãµes",
+    "instalaÃ§Ãµes": "InstalaÃ§Ãµes",
+    "maquinas_equipamentos": "MÃ¡quinas e Equipamentos",
+    "maquinas": "MÃ¡quinas e Equipamentos",
+    "equipamentos": "MÃ¡quinas e Equipamentos",
+    "moveis_utensilios": "MÃ³veis e UtensÃ­lios",
+    "mÃ³veis_utensÃ­lios": "MÃ³veis e UtensÃ­lios",
+    "moveis": "MÃ³veis e UtensÃ­lios",
+    "mÃ³veis": "MÃ³veis e UtensÃ­lios",
+    "utensilios": "MÃ³veis e UtensÃ­lios",
+    "utensÃ­lios": "MÃ³veis e UtensÃ­lios",
+    "ti_comunicacao": "TI e ComunicaÃ§Ã£o",
+    "ti_e_comunicaÃ§Ã£o": "TI e ComunicaÃ§Ã£o",
+    "ti": "TI e ComunicaÃ§Ã£o",
+    "comunicacao": "TI e ComunicaÃ§Ã£o",
+    "comunicaÃ§Ã£o": "TI e ComunicaÃ§Ã£o",
     "outros": "Outros",
 }
 
@@ -885,13 +888,13 @@ def _compute_status_summary(phases: List[Dict[str, Any]]) -> Tuple[str, str, str
     total = len(phases)
     concluded = sum(1 for status in statuses if status == "concluida")
     if concluded == total and total > 0:
-        total_status_text = "Todas as fases concluídas"
-        progress_message = "Implantação pronta para apresentação final."
+        total_status_text = "Todas as fases concluÃ­das"
+        progress_message = "ImplantaÃ§Ã£o pronta para apresentaÃ§Ã£o final."
     elif concluded > 0:
-        total_status_text = f"{concluded} de {total} fases concluídas"
-        progress_message = "Continue concluindo as próximas macro fases para evoluir a implantação."
+        total_status_text = f"{concluded} de {total} fases concluÃ­das"
+        progress_message = "Continue concluindo as prÃ³ximas macro fases para evoluir a implantaÃ§Ã£o."
     else:
-        total_status_text = "Nenhuma fase concluída"
+        total_status_text = "Nenhuma fase concluÃ­da"
         progress_message = "Inicie pela fase de alinhamento para dar ritmo ao planejamento."
     return total_status_text, progress_message, statuses
 
@@ -905,14 +908,14 @@ def build_plan_context(db, plan_id: int) -> Dict[str, Any]:
 
     actual_plan_id = plan_record.get("id") or plan_id
     return {
-        "id": actual_plan_id,  # Adicionar id também (usado em templates)
+        "id": actual_plan_id,  # Adicionar id tambÃ©m (usado em templates)
         "plan_id": actual_plan_id,
         "company_id": plan_record.get("company_id"),
-        "plan_name": plan_record.get("name") or "Implantação do Negócio",
-        "company_name": plan_record.get("company_name") or "Empresa não informada",
+        "plan_name": plan_record.get("name") or "ImplantaÃ§Ã£o do NegÃ³cio",
+        "company_name": plan_record.get("company_name") or "Empresa nÃ£o informada",
         "status": status.capitalize() if isinstance(status, str) else status,
         "version": plan_record.get("version") or "v1.0",
-        "consultant": plan_record.get("owner") or "Consultor responsável",
+        "consultant": plan_record.get("owner") or "Consultor responsÃ¡vel",
         "sponsor": plan_record.get("sponsor") or "Patrocinador",
         "last_update": _format_date(last_update_reference),
         "next_checkpoint": dashboard_record.get("next_focus") or "Checkpoint a definir",
@@ -937,16 +940,16 @@ def _generate_model_summary_sections(db, plan_id: int) -> List[Dict[str, Any]]:
     # Resumo geral
     sections.append({
         "title": "Resumo Geral",
-        "description": f"{total_segments} segmento(s) de negócio mapeado(s) com propostas de valor definidas.",
+        "description": f"{total_segments} segmento(s) de negÃ³cio mapeado(s) com propostas de valor definidas.",
         "highlights": [
             f"{total_personas} persona(s) detalhada(s)",
-            f"{total_competitors} critério(s) competitivo(s) analisado(s)",
-            "Estratégia de posicionamento por segmento"
+            f"{total_competitors} critÃ©rio(s) competitivo(s) analisado(s)",
+            "EstratÃ©gia de posicionamento por segmento"
         ]
     })
     
     # Detalhes por segmento
-    for segment in segments[:3]:  # Mostrar até 3 segmentos no resumo
+    for segment in segments[:3]:  # Mostrar atÃ© 3 segmentos no resumo
         seg_personas = len(segment.get('personas', []))
         seg_differentials = len(segment.get('differentials', []))
         
@@ -989,7 +992,7 @@ def build_overview_payload(db, plan_id: int) -> Dict[str, Any]:
         defaults = PHASE_DEFAULTS.get(key, {})
         normalized_sections = _normalize_sections(stored.get("sections"), defaults.get("sections"))
         
-        # Gerar resumo dinâmico para fase "model" baseado em dados reais
+        # Gerar resumo dinÃ¢mico para fase "model" baseado em dados reais
         if key == "model" and not normalized_sections:
             normalized_sections = _generate_model_summary_sections(db, plan_id)
         
@@ -1019,7 +1022,7 @@ def build_overview_payload(db, plan_id: int) -> Dict[str, Any]:
     total_status_text, computed_progress_message, statuses = _compute_status_summary(macro_phases)
 
     next_focus_phase = next((phase for phase in macro_phases if phase.get("status") != "concluida"), None)
-    next_focus = dashboard_record.get("next_focus") or (next_focus_phase["title"] if next_focus_phase else "Implantação concluída")
+    next_focus = dashboard_record.get("next_focus") or (next_focus_phase["title"] if next_focus_phase else "ImplantaÃ§Ã£o concluÃ­da")
     next_focus_details = dashboard_record.get("next_focus_details") or (
         next_focus_phase.get("tagline") if next_focus_phase else "Todas as macro fases foram finalizadas."
     )
@@ -1030,7 +1033,7 @@ def build_overview_payload(db, plan_id: int) -> Dict[str, Any]:
         "next_focus": next_focus,
         "next_focus_details": next_focus_details,
         "general_note": dashboard_record.get("general_note") or "Status geral atualizado",
-        "general_details": dashboard_record.get("general_details") or "Utilize os botões de conclusão para registrar o andamento de cada macro fase.",
+        "general_details": dashboard_record.get("general_details") or "Utilize os botÃµes de conclusÃ£o para registrar o andamento de cada macro fase.",
         "statuses": statuses,
     }
 
@@ -1078,8 +1081,8 @@ def load_alignment_canvas(db, plan_id: int) -> Dict[str, Any]:
 
 def load_alignment_project(db, plan_id: int) -> Dict[str, Any]:
     """
-    Carrega informações do projeto de alinhamento
-    Busca projeto GRV vinculado através do plan_id
+    Carrega informaÃ§Ãµes do projeto de alinhamento
+    Busca projeto GRV vinculado atravÃ©s do plan_id
     """
     import json
     from database.postgres_helper import connect as pg_connect
@@ -1126,13 +1129,13 @@ def load_alignment_project(db, plan_id: int) -> Dict[str, Any]:
                 if isinstance(activities_json, str):
                     try:
                         atividades_grv = json.loads(activities_json)
-                    except:
+                    except Exception as exc:
                         atividades_grv = []
                 elif isinstance(activities_json, list):
                     atividades_grv = activities_json
                     
     except Exception as e:
-        print(f"[load_alignment_project] Erro ao buscar projeto GRV para plan_id {plan_id}: {e}")
+        logger.info(f"[load_alignment_project] Erro ao buscar projeto GRV para plan_id {plan_id}: {e}")
         import traceback
         traceback.print_exc()
 
@@ -1914,10 +1917,10 @@ def calculate_investment_summary_by_block(structures: List[Dict[str, Any]]) -> L
     """
     Calcula resumo de investimentos agrupados por bloco estruturante.
     
-    Usa as classificações das parcelas para categorizar:
-    - Investimentos (classificação = "Investimento")
-    - Custos Fixos Mensais/Anuais (classificação = "Custo Fixo")
-    - Despesas Fixas Mensais/Anuais (classificação = "Despesa Fixa")
+    Usa as classificaÃ§Ãµes das parcelas para categorizar:
+    - Investimentos (classificaÃ§Ã£o = "Investimento")
+    - Custos Fixos Mensais/Anuais (classificaÃ§Ã£o = "Custo Fixo")
+    - Despesas Fixas Mensais/Anuais (classificaÃ§Ã£o = "Despesa Fixa")
     """
     from decimal import Decimal
     
@@ -1927,11 +1930,11 @@ def calculate_investment_summary_by_block(structures: List[Dict[str, Any]]) -> L
     # Lista de blocos na ordem desejada
     blocos_ordem = [
         "Pessoas",
-        "Imóveis",
-        "Instalações",
-        "Máquinas e Equipamentos",
-        "Móveis e Utensílios",
-        "TI e Comunicação",
+        "ImÃ³veis",
+        "InstalaÃ§Ãµes",
+        "MÃ¡quinas e Equipamentos",
+        "MÃ³veis e UtensÃ­lios",
+        "TI e ComunicaÃ§Ã£o",
         "Outros",
     ]
     
@@ -1959,9 +1962,9 @@ def calculate_investment_summary_by_block(structures: List[Dict[str, Any]]) -> L
                     classificacao_norm = classification["classificacao_norm"]
                     repeticao = classification["repeticao_norm"]
 
-                    # Classificar baseado na classificação da parcela
+                    # Classificar baseado na classificaÃ§Ã£o da parcela
                     if classificacao_norm == "investimento":
-                        # Investimentos (independente da repetição)
+                        # Investimentos (independente da repetiÃ§Ã£o)
                         blocos_totais[bloco_nome]["investimentos"] += valor
                     
                     elif classificacao_norm == "custo fixo":
@@ -1977,7 +1980,7 @@ def calculate_investment_summary_by_block(structures: List[Dict[str, Any]]) -> L
                             # Converter semestral para mensal (divide por 6)
                             blocos_totais[bloco_nome]["custos_fixos_mensal"] += valor / Decimal("6")
                         elif repeticao in ["unica", ""]:
-                            # Se for única ou sem repetição, não conta como recorrente
+                            # Se for Ãºnica ou sem repetiÃ§Ã£o, nÃ£o conta como recorrente
                             pass
                     
                     elif classificacao_norm == "despesa fixa":
@@ -1993,7 +1996,7 @@ def calculate_investment_summary_by_block(structures: List[Dict[str, Any]]) -> L
                             # Converter semestral para mensal (divide por 6)
                             blocos_totais[bloco_nome]["despesas_fixas_mensal"] += valor / Decimal("6")
                         elif repeticao in ["unica", ""]:
-                            # Se for única ou sem repetição, não conta como recorrente
+                            # Se for Ãºnica ou sem repetiÃ§Ã£o, nÃ£o conta como recorrente
                             pass
     
     # Preparar lista de resultados ordenada
@@ -2065,7 +2068,7 @@ def calculate_investment_summary_by_block(structures: List[Dict[str, Any]]) -> L
     total_gastos_mensal = total_custos_mensal + total_despesas_mensal
     total_custos_anual = sum(r["custos_fixos_anual"] for r in resultado)
     total_despesas_anual = sum(r["despesas_fixas_anual"] for r in resultado)
-    # Soma os totais anuais já calculados de cada bloco (que já incluem mensais × 12)
+    # Soma os totais anuais jÃ¡ calculados de cada bloco (que jÃ¡ incluem mensais Ã— 12)
     total_gastos_anual = sum(r["total_gastos_anual"] for r in resultado)
     
     resultado.append({
@@ -2262,7 +2265,7 @@ def build_modefin_business_flow(
                     "percentage": _safe_float(entry.get("percentage", 100))
                 })
     
-    # Se não há ramp-up, usar totais dos produtos
+    # Se nÃ£o hÃ¡ ramp-up, usar totais dos produtos
     if base_revenue == 0:
         margem = products_totals.get("margem_contribuicao", {})
         base_revenue = _safe_float(margem.get("valor", 0))
@@ -2272,16 +2275,16 @@ def build_modefin_business_flow(
         base_expense = _safe_float(despesas_var.get("valor", 0))
         base_revenue = base_revenue + base_cost + base_expense  # Reconstituir receita
     
-    # Determinar mês inicial (sempre começar em janeiro para relatório)
+    # Determinar mÃªs inicial (sempre comeÃ§ar em janeiro para relatÃ³rio)
     start_month = "2026-01"
     
-    # Gerar sequência de meses
+    # Gerar sequÃªncia de meses
     meses = _generate_month_sequence(start_month, num_months)
     
-    # Construir fluxo mês a mês
+    # Construir fluxo mÃªs a mÃªs
     rows = []
     
-    # Distribuição de lucros
+    # DistribuiÃ§Ã£o de lucros
     dist_percent = 0.0
     dist_start_month = None
     if profit_distribution:
@@ -2302,7 +2305,7 @@ def build_modefin_business_flow(
         
         resultado_op = margem - custo_fixo - despesa_fixa
         
-        # Distribuições (só se resultado positivo e após data de início)
+        # DistribuiÃ§Ãµes (sÃ³ se resultado positivo e apÃ³s data de inÃ­cio)
         distribuicao = 0.0
         if resultado_op > 0:
             if dist_start_month:
@@ -2311,7 +2314,7 @@ def build_modefin_business_flow(
             else:
                 distribuicao = resultado_op * (dist_percent / 100.0)
             
-            # Outras destinações
+            # Outras destinaÃ§Ãµes
             for rule in result_rules:
                 rule_start = rule.get("start_date")
                 if rule_start and mes < rule_start:
@@ -2336,21 +2339,21 @@ def build_modefin_business_flow(
         })
     
     # Condensar fluxo para formato compacto
-    print(f"[DEBUG] Business Flow - Total de linhas antes de condensar: {len(rows)}")
+    logger.info(f"[DEBUG] Business Flow - Total de linhas antes de condensar: {len(rows)}")
     
     value_fields = ["receita", "custo_variavel", "despesa_variavel", "margem", 
                     "custo_fixo", "despesa_fixa", "fixos_total", 
                     "resultado_operacional", "distribuicao", "resultado_periodo"]
     condensed_rows = condense_cash_flow_rows(rows, value_fields)
     
-    print(f"[DEBUG] Business Flow - Total de linhas após condensar: {len(condensed_rows)}")
+    logger.info(f"[DEBUG] Business Flow - Total de linhas apÃ³s condensar: {len(condensed_rows)}")
     if condensed_rows:
-        print(f"[DEBUG] Primeiros 3 períodos: {[r['periodo'] for r in condensed_rows[:3]]}")
-        print(f"[DEBUG] Últimos 3 períodos: {[r['periodo'] for r in condensed_rows[-3:]]}")
+        logger.info(f"[DEBUG] Primeiros 3 perÃ­odos: {[r['periodo'] for r in condensed_rows[:3]]}")
+        logger.info(f"[DEBUG] Ãšltimos 3 perÃ­odos: {[r['periodo'] for r in condensed_rows[-3:]]}")
     
     return {
         "rows": condensed_rows,
-        "rows_full": rows,  # Retornar também dados completos para investor_flow
+        "rows_full": rows,  # Retornar tambÃ©m dados completos para investor_flow
         "has_rows": bool(condensed_rows)
     }
 
@@ -2360,10 +2363,10 @@ def _get_ramp_percentage(month: str, ramp_entries: List[Dict[str, Any]]) -> floa
     if not ramp_entries:
         return 100.0
     
-    # Ordenar por mês
+    # Ordenar por mÃªs
     sorted_entries = sorted(ramp_entries, key=lambda e: e["month"])
     
-    # Se antes do primeiro mês, retorna 0
+    # Se antes do primeiro mÃªs, retorna 0
     if month < sorted_entries[0]["month"]:
         return 0.0
     
@@ -2374,7 +2377,7 @@ def _get_ramp_percentage(month: str, ramp_entries: List[Dict[str, Any]]) -> floa
         if month < entry["month"]:
             break
     
-    # Se passou do último, retorna 100%
+    # Se passou do Ãºltimo, retorna 100%
     return 100.0
 
 
@@ -2422,15 +2425,15 @@ def condense_cash_flow_rows(rows: List[Dict[str, Any]], value_fields: List[str])
     """
     Condensa fluxo de caixa para formato compacto:
     - 12 primeiros meses (detalhado)
-    - 13º mês até fim do ano (agregado)
+    - 13Âº mÃªs atÃ© fim do ano (agregado)
     - Anos seguintes (agregado por ano)
     
-    value_fields: lista de campos numéricos para somar na agregação
+    value_fields: lista de campos numÃ©ricos para somar na agregaÃ§Ã£o
     """
     if not rows:
         return []
     
-    print(f"[DEBUG condense] Condensando {len(rows)} linhas...")
+    logger.info(f"[DEBUG condense] Condensando {len(rows)} linhas...")
     
     condensed = []
     
@@ -2439,27 +2442,27 @@ def condense_cash_flow_rows(rows: List[Dict[str, Any]], value_fields: List[str])
         condensed.append(rows[i].copy())
     
     if len(rows) <= 12:
-        print(f"[DEBUG condense] Menos de 12 linhas, retornando {len(condensed)}")
+        logger.info(f"[DEBUG condense] Menos de 12 linhas, retornando {len(condensed)}")
         return condensed
     
-    # Agrupar restante por ano usando dicionário
+    # Agrupar restante por ano usando dicionÃ¡rio
     anos_agregados = {}
     
     for i in range(12, len(rows)):
         row = rows[i]
         periodo = row.get("periodo", "")
         
-        # Extrair ano do período (formato: "Mmm/YYYY" ou "YYYY-MM")
+        # Extrair ano do perÃ­odo (formato: "Mmm/YYYY" ou "YYYY-MM")
         try:
             if "/" in periodo:
                 year = int(periodo.split("/")[-1])
             else:
                 year = int(periodo.split("-")[0])
         except (ValueError, IndexError, AttributeError):
-            print(f"[DEBUG condense] Ignorando período inválido: {periodo}")
+            logger.info(f"[DEBUG condense] Ignorando perÃ­odo invÃ¡lido: {periodo}")
             continue
         
-        # Criar agregado do ano se não existir
+        # Criar agregado do ano se nÃ£o existir
         if year not in anos_agregados:
             anos_agregados[year] = {
                 "periodo": f"Ano {year}",
@@ -2474,8 +2477,8 @@ def condense_cash_flow_rows(rows: List[Dict[str, Any]], value_fields: List[str])
     for year in sorted(anos_agregados.keys()):
         condensed.append(anos_agregados[year])
     
-    print(f"[DEBUG condense] Anos encontrados: {sorted(anos_agregados.keys())}")
-    print(f"[DEBUG condense] Total de linhas condensadas: {len(condensed)}")
+    logger.info(f"[DEBUG condense] Anos encontrados: {sorted(anos_agregados.keys())}")
+    logger.info(f"[DEBUG condense] Total de linhas condensadas: {len(condensed)}")
     
     return condensed
 
@@ -2487,13 +2490,13 @@ def build_modefin_investor_flow(
 ) -> Dict[str, Any]:
     """Build investor cash flow combining investments and profit distributions."""
     
-    # Pegar TODOS os meses do business_flow (usar rows_full para não pegar condensado)
+    # Pegar TODOS os meses do business_flow (usar rows_full para nÃ£o pegar condensado)
     business_rows = business_flow.get("rows_full") or business_flow.get("rows", [])
-    print(f"[DEBUG] Investor Flow - business_rows recebidos: {len(business_rows)}")
+    logger.info(f"[DEBUG] Investor Flow - business_rows recebidos: {len(business_rows)}")
     if not business_rows:
         return {"rows": [], "has_rows": False}
     
-    # Criar mapa de aportes por período
+    # Criar mapa de aportes por perÃ­odo
     aportes_map = {}
     for row in investment_flow.get("rows", []):
         periodo = row.get("period_label", "")
@@ -2508,13 +2511,13 @@ def build_modefin_investor_flow(
     for bus_row in business_rows:
         periodo = bus_row.get("periodo", "")
         
-        # Buscar aporte deste período (se houver)
+        # Buscar aporte deste perÃ­odo (se houver)
         aporte = aportes_map.get(periodo, 0.0)
         
-        # Distribuição vem do business_flow
+        # DistribuiÃ§Ã£o vem do business_flow
         distribuicao = bus_row.get("distribuicao", 0.0)
         
-        # Saldo do período (perspectiva do investidor: recebe - coloca)
+        # Saldo do perÃ­odo (perspectiva do investidor: recebe - coloca)
         saldo_periodo = distribuicao - aporte
         saldo_acumulado += saldo_periodo
         
@@ -2527,7 +2530,7 @@ def build_modefin_investor_flow(
         })
     
     # Condensar fluxo para formato compacto
-    print(f"[DEBUG] Investor Flow - Total de linhas antes de condensar: {len(rows)}")
+    logger.info(f"[DEBUG] Investor Flow - Total de linhas antes de condensar: {len(rows)}")
     
     condensed = []
     
@@ -2535,7 +2538,7 @@ def build_modefin_investor_flow(
     for i in range(min(12, len(rows))):
         condensed.append(rows[i].copy())
     
-    print(f"[DEBUG] Adicionados primeiros 12 meses. Total condensed: {len(condensed)}")
+    logger.info(f"[DEBUG] Adicionados primeiros 12 meses. Total condensed: {len(condensed)}")
     
     if len(rows) > 12:
         # Agrupar restante por ano
@@ -2552,7 +2555,7 @@ def build_modefin_investor_flow(
                 else:
                     year = int(periodo.split("-")[0])
             except (ValueError, IndexError, AttributeError):
-                print(f"[DEBUG] Não conseguiu extrair ano de: {periodo}")
+                logger.info(f"[DEBUG] NÃ£o conseguiu extrair ano de: {periodo}")
                 continue
             
             # Criar ou atualizar agregado do ano
@@ -2570,7 +2573,7 @@ def build_modefin_investor_flow(
             anos_agregados[year]["aporte"] += row.get("aporte", 0.0)
             anos_agregados[year]["distribuicao"] += row.get("distribuicao", 0.0)
             anos_agregados[year]["saldo_periodo"] += row.get("saldo_periodo", 0.0)
-            # Guardar o último saldo acumulado deste ano
+            # Guardar o Ãºltimo saldo acumulado deste ano
             anos_agregados[year]["ultimo_saldo"] = row.get("saldo_acumulado", 0.0)
         
         # Adicionar anos na ordem
@@ -2585,8 +2588,8 @@ def build_modefin_investor_flow(
                 "saldo_acumulado": year_data["saldo_acumulado"]
             })
         
-        print(f"[DEBUG] Anos agregados: {sorted(anos_agregados.keys())}")
-        print(f"[DEBUG] Total de linhas condensadas: {len(condensed)}")
+        logger.info(f"[DEBUG] Anos agregados: {sorted(anos_agregados.keys())}")
+        logger.info(f"[DEBUG] Total de linhas condensadas: {len(condensed)}")
     
     return {
         "rows": condensed,
@@ -2696,7 +2699,7 @@ def build_modefin_investment_flow(
     condensed_rows = rows
     if len(rows) > 12:
         value_fields = ["capital_giro", "imobilizado", "investimentos", "fontes", "saldo_periodo"]
-        # Para investment flow, precisamos lógica especial para saldo_acumulado
+        # Para investment flow, precisamos lÃ³gica especial para saldo_acumulado
         condensed = []
         
         # Primeiros 12 registros (detalhado)
@@ -2745,7 +2748,7 @@ def build_modefin_investment_flow(
                 year_aggregate[field] += _safe_float(row.get(field, 0))
             last_saldo_acumulado = row.get("saldo_acumulado", last_saldo_acumulado)
         
-        # Adicionar último ano
+        # Adicionar Ãºltimo ano
         if year_aggregate:
             year_aggregate["saldo_acumulado"] = last_saldo_acumulado
             condensed.append(year_aggregate)
@@ -3426,6 +3429,9 @@ def build_final_report_payload(
         "segmentos": segments_for_report,
         "estruturas": structures_summary,
         "financeiro": financial_model,
-        "issued_at": datetime.now().strftime("%d/%m/%Y às %H:%M"),
+        "issued_at": datetime.now().strftime("%d/%m/%Y Ã s %H:%M"),
         "projeto": alignment_project,
     }
+
+
+

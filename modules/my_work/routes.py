@@ -1,7 +1,10 @@
+﻿import logging
+
 """
 Rotas do Módulo My Work
 APIs e páginas para gestão de atividades
 """
+
 from flask import render_template, jsonify, request
 from flask_login import login_required, current_user
 from . import my_work_bp
@@ -20,14 +23,14 @@ from middleware.auto_log_decorator import auto_log_crud
 
 
 # ============================================================================
-# PÁGINAS
+# PÃGINAS
 # ============================================================================
 
 @my_work_bp.route('/')
 @login_required
 def dashboard():
     """
-    Página principal - My Work Dashboard
+    PÃ¡gina principal - My Work Dashboard
     """
     return render_template('my_work.html')
 
@@ -55,10 +58,10 @@ def get_activities():
         if employee_id is None:
             return jsonify({
                 'success': False,
-                'error': 'Usuário não vinculado a um colaborador. Solicite ao administrador para concluir o cadastro.'
+                'error': 'UsuÃ¡rio nÃ£o vinculado a um colaborador. Solicite ao administrador para concluir o cadastro.'
             }), 404
         
-        # Parâmetros
+        # ParÃ¢metros
         scope = request.args.get('scope', 'me')
         filters = {
             'filter': request.args.get('filter', 'all'),
@@ -69,7 +72,7 @@ def get_activities():
         # Buscar atividades
         activities = get_user_activities(employee_id, scope, filters)
         
-        # Buscar estatísticas
+        # Buscar estatÃ­sticas
         stats = get_user_stats(employee_id, scope)
         
         # Contadores das abas
@@ -88,7 +91,7 @@ def get_activities():
             'error': str(e)
         }), 403
     except Exception as e:
-        print(f"Erro ao buscar atividades: {e}")
+        logger.info(f"Erro ao buscar atividades: {e}")
         import traceback
         traceback.print_exc()
         return jsonify({
@@ -154,9 +157,10 @@ def api_company_overview():
 
 
 # ============================================================================
-# APIs - AÇÕES
+# APIs - AÃ‡Ã•ES
 # ============================================================================
 
+@login_required
 @my_work_bp.route('/api/work-hours', methods=['POST'])
 @login_required
 @auto_log_crud('activity_work_log')
@@ -178,17 +182,17 @@ def api_add_work_hours():
         
         data = request.get_json()
         
-        # Validações
+        # ValidaÃ§Ãµes
         if not data:
             return jsonify({
                 'success': False,
-                'error': 'Dados não fornecidos'
+                'error': 'Dados nÃ£o fornecidos'
             }), 400
         
         if 'activity_type' not in data or 'activity_id' not in data:
             return jsonify({
                 'success': False,
-                'error': 'activity_type e activity_id obrigatórios'
+                'error': 'activity_type e activity_id obrigatÃ³rios'
             }), 400
         
         if 'hours' not in data or data['hours'] <= 0:
@@ -216,7 +220,7 @@ def api_add_work_hours():
         })
         
     except Exception as e:
-        print(f"Erro ao adicionar horas: {e}")
+        logger.info(f"Erro ao adicionar horas: {e}")
         import traceback
         traceback.print_exc()
         return jsonify({
@@ -225,12 +229,13 @@ def api_add_work_hours():
         }), 500
 
 
+@login_required
 @my_work_bp.route('/api/comments', methods=['POST'])
 @login_required
 @auto_log_crud('activity_comment')
 def api_add_comment():
     """
-    API: Adicionar comentário em atividade
+    API: Adicionar comentÃ¡rio em atividade
     
     Payload:
         {
@@ -246,26 +251,26 @@ def api_add_comment():
         
         data = request.get_json()
         
-        # Validações
+        # ValidaÃ§Ãµes
         if not data:
             return jsonify({
                 'success': False,
-                'error': 'Dados não fornecidos'
+                'error': 'Dados nÃ£o fornecidos'
             }), 400
         
         if 'activity_type' not in data or 'activity_id' not in data:
             return jsonify({
                 'success': False,
-                'error': 'activity_type e activity_id obrigatórios'
+                'error': 'activity_type e activity_id obrigatÃ³rios'
             }), 400
         
         if 'comment' not in data or not data['comment'].strip():
             return jsonify({
                 'success': False,
-                'error': 'Comentário não pode ser vazio'
+                'error': 'ComentÃ¡rio nÃ£o pode ser vazio'
             }), 400
         
-        # Adicionar comentário
+        # Adicionar comentÃ¡rio
         result = add_comment(
             employee_id,
             data['activity_type'],
@@ -284,7 +289,7 @@ def api_add_comment():
         })
         
     except Exception as e:
-        print(f"Erro ao adicionar comentário: {e}")
+        logger.info(f"Erro ao adicionar comentÃ¡rio: {e}")
         import traceback
         traceback.print_exc()
         return jsonify({
@@ -293,6 +298,7 @@ def api_add_comment():
         }), 500
 
 
+@login_required
 @my_work_bp.route('/api/complete', methods=['POST'])
 @login_required
 @auto_log_crud('activity')
@@ -312,17 +318,17 @@ def api_complete_activity():
         
         data = request.get_json()
         
-        # Validações
+        # ValidaÃ§Ãµes
         if not data:
             return jsonify({
                 'success': False,
-                'error': 'Dados não fornecidos'
+                'error': 'Dados nÃ£o fornecidos'
             }), 400
         
         if 'activity_type' not in data or 'activity_id' not in data:
             return jsonify({
                 'success': False,
-                'error': 'activity_type e activity_id obrigatórios'
+                'error': 'activity_type e activity_id obrigatÃ³rios'
             }), 400
         
         # Finalizar
@@ -342,7 +348,7 @@ def api_complete_activity():
         })
         
     except Exception as e:
-        print(f"Erro ao finalizar atividade: {e}")
+        logger.info(f"Erro ao finalizar atividade: {e}")
         import traceback
         traceback.print_exc()
         return jsonify({
@@ -359,9 +365,9 @@ def api_complete_activity():
 @login_required
 def view_project_activity(activity_id):
     """
-    Página de detalhes da atividade de projeto
+    PÃ¡gina de detalhes da atividade de projeto
     """
-    # TODO: Implementar página de detalhamento
+    # TODO: Implementar pÃ¡gina de detalhamento
     return f"<h1>Detalhes da Atividade de Projeto #{activity_id}</h1><p>Em desenvolvimento...</p>"
 
 
@@ -369,8 +375,10 @@ def view_project_activity(activity_id):
 @login_required
 def view_process_instance(instance_id):
     """
-    Página de detalhes da instância de processo
+    PÃ¡gina de detalhes da instÃ¢ncia de processo
     """
-    # TODO: Implementar página de detalhamento
-    return f"<h1>Detalhes da Instância de Processo #{instance_id}</h1><p>Em desenvolvimento...</p>"
+    # TODO: Implementar pÃ¡gina de detalhamento
+    return f"<h1>Detalhes da InstÃ¢ncia de Processo #{instance_id}</h1><p>Em desenvolvimento...</p>"
+
+
 

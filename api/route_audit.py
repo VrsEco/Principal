@@ -15,12 +15,12 @@ from middleware.auto_log_decorator import (
 route_audit_bp = Blueprint('route_audit', __name__, url_prefix='/route-audit')
 
 
-@route_audit_bp.route('/', methods=['GET'])
 @login_required
+@route_audit_bp.route('/', methods=['GET'])
 def audit_dashboard():
     """Dashboard de auditoria de rotas"""
     # Apenas administradores podem acessar
-    if current_user.role != 'admin':
+    if not current_user or not current_user.is_authenticated or getattr(current_user, 'role', None) != 'admin':
         return jsonify({
             'success': False,
             'message': 'Acesso negado. Apenas administradores podem acessar.'
@@ -29,13 +29,13 @@ def audit_dashboard():
     return render_template('route_audit/dashboard.html')
 
 
-@route_audit_bp.route('/api/summary', methods=['GET'])
 @login_required
+@route_audit_bp.route('/api/summary', methods=['GET'])
 def get_audit_summary():
     """Retorna resumo da auditoria de rotas"""
     try:
         # Apenas administradores podem acessar
-        if current_user.role != 'admin':
+        if not current_user or not current_user.is_authenticated or getattr(current_user, 'role', None) != 'admin':
             return jsonify({
                 'success': False,
                 'message': 'Acesso negado. Apenas administradores podem acessar.'
@@ -61,7 +61,7 @@ def get_all_routes():
     """Lista todas as rotas da aplicação"""
     try:
         # Apenas administradores podem acessar
-        if current_user.role != 'admin':
+        if not current_user or not current_user.is_authenticated or getattr(current_user, 'role', None) != 'admin':
             return jsonify({
                 'success': False,
                 'message': 'Acesso negado. Apenas administradores podem acessar.'
@@ -104,7 +104,7 @@ def get_routes_without_logging():
     """Lista rotas sem logging configurado"""
     try:
         # Apenas administradores podem acessar
-        if current_user.role != 'admin':
+        if not current_user or not current_user.is_authenticated or getattr(current_user, 'role', None) != 'admin':
             return jsonify({
                 'success': False,
                 'message': 'Acesso negado. Apenas administradores podem acessar.'
@@ -136,7 +136,7 @@ def get_route_details(endpoint):
     """Obtém detalhes de uma rota específica"""
     try:
         # Apenas administradores podem acessar
-        if current_user.role != 'admin':
+        if not current_user or not current_user.is_authenticated or getattr(current_user, 'role', None) != 'admin':
             return jsonify({
                 'success': False,
                 'message': 'Acesso negado. Apenas administradores podem acessar.'
@@ -176,7 +176,7 @@ def get_logging_config():
     """Obtém configuração atual de logging automático"""
     try:
         # Apenas administradores podem acessar
-        if current_user.role != 'admin':
+        if not current_user or not current_user.is_authenticated or getattr(current_user, 'role', None) != 'admin':
             return jsonify({
                 'success': False,
                 'message': 'Acesso negado. Apenas administradores podem acessar.'
@@ -196,8 +196,8 @@ def get_logging_config():
         }), 500
 
 
-@route_audit_bp.route('/api/entity/<entity_type>/enable', methods=['POST'])
 @login_required
+@route_audit_bp.route('/api/entity/<entity_type>/enable', methods=['POST'])
 def enable_entity_logging(entity_type):
     """Habilita logging automático para um tipo de entidade"""
     try:
@@ -223,8 +223,8 @@ def enable_entity_logging(entity_type):
         }), 500
 
 
-@route_audit_bp.route('/api/entity/<entity_type>/disable', methods=['POST'])
 @login_required
+@route_audit_bp.route('/api/entity/<entity_type>/disable', methods=['POST'])
 def disable_entity_logging(entity_type):
     """Desabilita logging automático para um tipo de entidade"""
     try:

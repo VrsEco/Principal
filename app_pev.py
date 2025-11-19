@@ -5,6 +5,8 @@ PEVAPP22 - Modular Application with Database Abstraction
 Easy switching between different database backends
 """
 
+import logging
+import sys
 from flask import Flask, render_template, request, redirect, url_for, flash, jsonify, abort, send_file, send_from_directory
 from config_database import get_db, db_config
 from config import Config
@@ -24,16 +26,32 @@ from database.postgres_helper import connect as pg_connect
 from decimal import Decimal, InvalidOperation, ROUND_HALF_UP
 from typing import Optional, List, Dict, Any, Tuple
 from services.ai_service import ai_service
-from models import db as models_db
+# models_db import moved to after init_app() call below
 from werkzeug.routing import BuildError
 from werkzeug.utils import secure_filename
-from database.sqlite_db import ensure_integrations_tables, list_integrations, get_integration, create_integration, update_integration, delete_integration, set_agent_integrations, get_agent_integrations
+from werkzeug.exceptions import NotFound
+from database.postgresql_db import ensure_integrations_tables, list_integrations, get_integration, create_integration, update_integration, delete_integration, set_agent_integrations, get_agent_integrations
 from utils.project_activity_utils import normalize_project_activities
 
 try:
     from celery import Celery
 except ImportError:
     Celery = None
+
+def _force_utf8_stdio():
+    """Ensure stdout/stderr accept UTF-8 even on cp1252 consoles."""
+    for stream_name in ("stdout", "stderr"):
+        stream = getattr(sys, stream_name, None)
+        if stream and hasattr(stream, "reconfigure"):
+            try:
+                stream.reconfigure(encoding="utf-8")
+            except Exception:
+                pass
+
+
+_force_utf8_stdio()
+
+logger = logging.getLogger(__name__)
 
 # Initialize Flask app
 app = Flask(__name__, template_folder="templates", static_folder="static")
@@ -142,7 +160,7 @@ def from_json_filter(json_string):
         else:
             return {}
     except (json.JSONDecodeError, TypeError, ValueError) as e:
-        print(f"Error parsing JSON: {e}, input: {json_string}")
+        logger.info(f"Error parsing JSON: {e}, input: {json_string}")
         return {}
 
 
@@ -152,25 +170,20 @@ app.config.from_object(Config)
 if Celery is not None:
     try:
         celery = make_celery(app)
-        print("Celery inicializado com sucesso.")
+        logger.info("Celery inicializado com sucesso.")
     except Exception as celery_init_error:
-        print(f"Aviso: Celery não pôde ser inicializado: {celery_init_error}")
+        logger.info(f"Aviso: Celery não pôde ser inicializado: {celery_init_error}")
         celery = Celery(app.import_name, broker="memory://", backend="cache+memory://")
         celery.conf.update(task_always_eager=True)
 else:
-    celery = None
+    Celery = None
 
-# Initialize Flask-Login
-from flask_login import LoginManager
-login_manager = LoginManager()
-login_manager.init_app(app)
-login_manager.login_view = 'login'
-login_manager.login_message = 'Por favor, faça login para acessar esta página.'
-login_manager.login_message_category = 'info'
+logger = logging.getLogger(__name__)
 
-# Initialize database
-from models import db
-db.init_app(app)
+# Initialize database and Flask-Login using models.init_app()
+from models import init_app
+db, login_manager, migrate = init_app(app)
+models_db = db  # Alias for backward compatibility with existing code
 
 # User loader for Flask-Login
 @login_manager.user_loader
@@ -179,7 +192,7 @@ def load_user(user_id):
     try:
         from models.user import User
         return User.query.get(int(user_id))
-    except:
+    except Exception as exc:
         return None
 
 # Register blueprints for PEV and GRV modules at import time
@@ -188,13 +201,15 @@ try:
     from modules.grv import grv_bp
     from modules.meetings import meetings_bp
     from modules.my_work import my_work_bp
+
     app.register_blueprint(pev_bp)
     app.register_blueprint(grv_bp)
     app.register_blueprint(meetings_bp)
     app.register_blueprint(my_work_bp)
-    print("[OK] My Work module registered at /my-work")
+
+    logger.info("[OK] My Work module registered at /my-work")
 except Exception as _bp_err:
-    print("Aviso: Blueprints PEV/GRV/Meetings/MyWork não registrados:", _bp_err)
+    logger.info("Aviso: Blueprints PEV/GRV/Meetings/MyWork não registrados:", _bp_err)
     # Expor detalhe no log para facilitar diagnóstico
     try:
         import traceback as _tb
@@ -208,18 +223,18 @@ try:
     from api.logs import logs_bp
     from api.route_audit import route_audit_bp
     from middleware.audit_middleware import init_audit_middleware
-    
+
     app.register_blueprint(auth_bp)
     app.register_blueprint(logs_bp)
     app.register_blueprint(route_audit_bp)
-    
+
     # Initialize audit middleware
     init_audit_middleware(app)
     
-    print("Sistema de logs de usuários integrado com sucesso!")
-    print("Sistema de auditoria de rotas integrado com sucesso!")
+    logger.info("Sistema de logs de usuários integrado com sucesso!")
+    logger.info("Sistema de auditoria de rotas integrado com sucesso!")
 except Exception as e:
-    print(f"Aviso: Sistema de logs não integrado: {e}")
+    logger.info(f"Aviso: Sistema de logs não integrado: {e}")
 
 # Add custom Jinja2 filters
 @app.template_filter('nl2br')
@@ -433,7 +448,12 @@ db = get_db()
 # Utility functions
 def _plan_for(plan_id):
     """Get plan and company data"""
-    plan_data = db.get_plan_with_company(int(plan_id))
+    plan_identifier = int(plan_id)
+    plan_data = db.get_plan_with_company(plan_identifier)
+    if not plan_data:
+        ensured = db.ensure_plan_seed(plan_identifier)
+        if ensured:
+            plan_data = db.get_plan_with_company(plan_identifier)
     
     if not plan_data:
         abort(404)
@@ -479,7 +499,7 @@ def _indicator_navigation(company_id: Optional[int]) -> List[Dict[str, Any]]:
             if 'indicador' in title:
                 return [group]
     except Exception as exc:
-        print(f"Error building indicator navigation for company {company_id}: {exc}")
+        logger.info(f"Error building indicator navigation for company {company_id}: {exc}")
     return []
 
 def _parse_datetime(value):
@@ -589,7 +609,7 @@ def _load_company_indicators(company_id: int) -> List[Dict[str, Any]]:
             })
         conn.close()
     except Exception as exc:
-        print(f"Error loading indicators for company {company_id}: {exc}")
+        logger.info(f"Error loading indicators for company {company_id}: {exc}")
     return indicators
 
 
@@ -604,7 +624,7 @@ def _build_participant_lookup(plan_id: int) -> Dict[str, Dict[str, Any]]:
                 continue
             lookup[str(participant_id)] = participant
     except Exception as exc:
-        print(f"Error building participant lookup for plan {plan_id}: {exc}")
+        logger.info(f"Error building participant lookup for plan {plan_id}: {exc}")
     return lookup
 
 
@@ -640,7 +660,7 @@ def _build_participant_context(plan_id: int) -> Tuple[List[Dict[str, Any]], Dict
             })
             name_lookup[participant_id_str] = participant_name
     except Exception as exc:
-        print(f"Error building participant context for plan {plan_id}: {exc}")
+        logger.info(f"Error building participant context for plan {plan_id}: {exc}")
     return options, name_lookup
 
 
@@ -695,7 +715,7 @@ def _load_directionals(plan_id: int):
     try:
         raw_directionals = db.get_directional_records(plan_id) or []
     except Exception as exc:
-        print(f"Error fetching directional_records: {exc}")
+        logger.info(f"Error fetching directional_records: {exc}")
         raw_directionals = []
 
     normalized = []
@@ -757,7 +777,7 @@ def _load_directionals(plan_id: int):
                 item['type'] = item.get('type') or item.get('category') or ''
                 directionals.append(item)
     except Exception as exc:
-        print(f"Error loading directionals: {exc}")
+        logger.info(f"Error loading directionals: {exc}")
     return directionals
 
 
@@ -842,7 +862,7 @@ def main():
         try:
             module_links[key] = url_for(endpoint)
         except BuildError as exc:
-            print(f"[WARN] Endpoint indisponivel '{endpoint}': {exc}")
+            logger.info(f"[WARN] Endpoint indisponivel '{endpoint}': {exc}")
 
     return render_template("ecosystem.html", module_links=module_links)
 
@@ -870,7 +890,7 @@ def system_configs_system():
     # Obter estatísticas de auditoria de rotas
     try:
         audit_summary = route_audit_service.get_audit_summary()
-    except:
+    except Exception as exc:
         audit_summary = {
             'total_routes': 0,
             'routes_with_logging': 0,
@@ -883,7 +903,7 @@ def system_configs_system():
         end_date = datetime.utcnow()
         start_date = end_date - timedelta(days=30)
         log_stats = log_service.get_log_stats(start_date=start_date, end_date=end_date)
-    except:
+    except Exception as exc:
         log_stats = {
             'total_logs': 0,
             'actions': {},
@@ -1036,7 +1056,7 @@ def settings_reports():
         )
         
     except Exception as e:
-        print(f"Erro ao carregar página de configurações de relatórios: {e}")
+        logger.info(f"Erro ao carregar página de configurações de relatórios: {e}")
         # Retorna página com lista vazia em caso de erro
         return render_template(
             "report_settings.html",
@@ -1557,7 +1577,10 @@ def api_upload_company_logo(company_id: int):
         field_name = f'logo_{logo_type}'
         conn = pg_connect()
         cursor = conn.cursor()
-        cursor.execute(f"UPDATE companies SET {field_name} = %s WHERE id = %s", (logo_path, company_id))
+        cursor.execute(
+            "UPDATE companies SET " + field_name + " = %s WHERE id = %s",
+            (logo_path, company_id),
+        )
         conn.commit()
         conn.close()
         
@@ -1571,7 +1594,7 @@ def api_upload_company_logo(company_id: int):
     except ValueError as e:
         return jsonify({'success': False, 'error': str(e)}), 400
     except Exception as e:
-        print(f"Erro ao fazer upload de logo: {e}")
+        logger.info(f"Erro ao fazer upload de logo: {e}")
         return jsonify({'success': False, 'error': 'Erro ao processar logo'}), 500
 
 @app.route("/api/companies/<int:company_id>/logos/<logo_type>", methods=['DELETE'])
@@ -1601,14 +1624,17 @@ def api_delete_company_logo(company_id: int, logo_type: str):
         # Atualizar banco de dados
         conn = pg_connect()
         cursor = conn.cursor()
-        cursor.execute(f"UPDATE companies SET {field_name} = NULL WHERE id = %s", (company_id,))
+        cursor.execute(
+            "UPDATE companies SET " + field_name + " = NULL WHERE id = %s",
+            (company_id,),
+        )
         conn.commit()
         conn.close()
         
         return jsonify({'success': True, 'message': 'Logo removida com sucesso'})
         
     except Exception as e:
-        print(f"Erro ao deletar logo: {e}")
+        logger.info(f"Erro ao deletar logo: {e}")
         return jsonify({'success': False, 'error': 'Erro ao deletar logo'}), 500
 
 @app.route("/dashboard")
@@ -1732,7 +1758,7 @@ def api_update_company_economic(company_id: int):
     except Exception as _err:
         if conn:
             conn.rollback()
-        print(f"Error updating economic data: {_err}")
+        logger.info(f"Error updating economic data: {_err}")
         return jsonify({'success': False, 'error': str(_err)}), 500
     finally:
         if conn:
@@ -1772,7 +1798,7 @@ def api_create_company():
             return jsonify({'success': True, 'id': new_id}), 201
         return jsonify({'success': False, 'error': 'Erro ao criar empresa'}), 500
     except Exception as _err:
-        print(f"Error creating company: {_err}")
+        logger.info(f"Error creating company: {_err}")
         return jsonify({'success': False, 'error': str(_err)}), 500
 
 
@@ -1865,8 +1891,8 @@ def api_create_plan():
         project_created = False
         project_id = None
         
-        print(f"🔍 DEBUG: Iniciando criação de projeto GRV para plan_id={new_plan_id}")
-        print(f"🔍 DEBUG: company_id={company_id}, plan_mode={plan_mode}")
+        logger.info(f"?? DEBUG: Iniciando criação de projeto GRV para plan_id={new_plan_id}")
+        logger.info(f"?? DEBUG: company_id={company_id}, plan_mode={plan_mode}")
         
         try:
             project_data = {
@@ -1880,16 +1906,16 @@ def api_create_plan():
                 'notes': f"Projeto criado automaticamente ao criar o planejamento em {datetime.now().strftime('%d/%m/%Y %H:%M')}"
             }
             
-            print(f"🔍 DEBUG: project_data preparado: {project_data}")
+            logger.info(f"?? DEBUG: project_data preparado: {project_data}")
             
             # Criar projeto usando o método do database
-            print(f"🔍 DEBUG: Chamando db.create_company_project...")
+            logger.info(f"?? DEBUG: Chamando db.create_company_project...")
             project_id = db.create_company_project(company_id, project_data)
-            print(f"🔍 DEBUG: create_company_project retornou: {project_id}")
+            logger.info(f"?? DEBUG: create_company_project retornou: {project_id}")
             
             if project_id:
                 # Vincular projeto ao plan
-                print(f"🔍 DEBUG: Vinculando projeto {project_id} ao plan {new_plan_id}...")
+                logger.info(f"?? DEBUG: Vinculando projeto {project_id} ao plan {new_plan_id}...")
                 conn = db._get_connection()
                 cursor = conn.cursor()
                 cursor.execute(
@@ -1899,11 +1925,11 @@ def api_create_plan():
                 conn.commit()
                 conn.close()
                 project_created = True
-                print(f"[OK] Projeto GRV criado automaticamente: ID {project_id} para plan {new_plan_id}")
+                logger.info(f"[OK] Projeto GRV criado automaticamente: ID {project_id} para plan {new_plan_id}")
             else:
-                print(f"[ERRO] create_company_project retornou None!")
+                logger.info(f"[ERRO] create_company_project retornou None!")
         except Exception as project_err:
-            print(f"[ERRO] ERRO ao criar projeto GRV: {project_err}")
+            logger.info(f"[ERRO] ERRO ao criar projeto GRV: {project_err}")
             import traceback
             traceback.print_exc()
             # Não falhar a criação do plano por causa disso
@@ -1925,7 +1951,7 @@ def api_create_plan():
         }), 201
         
     except Exception as _err:
-        print(f"Error creating plan: {_err}")
+        logger.info(f"Error creating plan: {_err}")
         import traceback
         traceback.print_exc()
         return jsonify({'success': False, 'error': str(_err)}), 500
@@ -1970,7 +1996,7 @@ def api_get_plan(plan_id: int):
         }), 200
         
     except Exception as err:
-        print(f"❌ Error getting plan {plan_id}: {err}")
+        logger.info(f"? Error getting plan {plan_id}: {err}")
         import traceback
         traceback.print_exc()
         return jsonify({'success': False, 'error': str(err)}), 500
@@ -2044,7 +2070,7 @@ def api_update_company_profile(company_id: int):
     except Exception as _err:
         if conn:
             conn.rollback()
-        print(f"Error updating company: {_err}")
+        logger.info(f"Error updating company: {_err}")
         return jsonify({'success': False, 'error': str(_err)}), 500
     finally:
         if conn:
@@ -2069,7 +2095,7 @@ def api_delete_company(company_id: int):
             return jsonify({'success': False, 'error': 'Erro ao excluir empresa'}), 500
             
     except Exception as e:
-        print(f"Error deleting company: {e}")
+        logger.info(f"Error deleting company: {e}")
         return jsonify({'success': False, 'error': 'Erro interno do servidor'}), 500
 
 
@@ -2082,33 +2108,41 @@ def _gerar_relatorio_profissional(company_id: int):
     Tenta gerar o relatório profissional usando WeasyPrint e aplica fallback,
     garantindo compatibilidade com ambientes que ainda dependem do ReportLab.
     """
+    company = db.get_company(company_id)
+    if not company:
+        raise ValueError("Empresa não encontrada.")
+    
     erros = []
     try:
         from modules.gerador_relatorios import GeradorRelatoriosProfissionais as WeasyGenerator
-
+        
         gerador = WeasyGenerator(db)
         pdf_path = gerador.gerar_relatorio_projetos(company_id)
         return pdf_path, "weasyprint"
+    except ValueError:
+        raise
     except Exception as exc:
         erros.append(("WeasyPrint", exc))
-        print(f"[relatorios] Falha ao gerar via WeasyPrint: {exc}")
+        logger.info(f"[relatorios] Falha ao gerar via WeasyPrint: {exc}")
 
     if getattr(db_config, "db_type", "sqlite") == "sqlite":
         try:
             from modules.gerador_relatorios_reportlab import (
                 GeradorRelatoriosProfissionais as ReportLabGenerator,
             )
-
+            
             sqlite_path = db_config.config.get("db_path", "pevapp22.db")
             gerador = ReportLabGenerator(db_path=sqlite_path)
             pdf_path = gerador.gerar_relatorio_projetos(company_id)
             return pdf_path, "reportlab"
+        except ValueError:
+            raise
         except Exception as exc:
             erros.append(("ReportLab", exc))
-            print(f"[relatorios] Falha ao gerar via ReportLab: {exc}")
+            logger.info(f"[relatorios] Falha ao gerar via ReportLab: {exc}")
 
-    detalhes = "; ".join(f"{origem}: {err}" for origem, err in erros) or "Verifique as depend�ncias instaladas."
-    raise RuntimeError(f"N�o foi poss�vel gerar o relat�rio profissional. {detalhes}")
+    detalhes = "; ".join(f"{origem}: {err}" for origem, err in erros) or "Verifique as depend?ncias instaladas."
+    raise RuntimeError(f"N?o foi poss?vel gerar o relat?rio profissional. {detalhes}")
 
 
 @app.route("/relatorios/projetos/<int:company_id>")
@@ -2161,12 +2195,16 @@ def api_gerar_relatorio_projetos(company_id: int):
 @login_required
 def api_company_employees(company_id: int):
     """List or create employees for a company"""
+    company = db.get_company(company_id)
+    if not company:
+        return jsonify({'success': False, 'error': 'Empresa não encontrada.'}), 404
+
     if request.method == 'GET':
         try:
             employees = db.list_employees(company_id)
             return jsonify({'success': True, 'employees': employees})
         except Exception as exc:
-            print(f"Erro ao listar colaboradores: {exc}")
+            logger.info(f"Erro ao listar colaboradores: {exc}")
             return jsonify({'success': False, 'message': 'Erro ao listar colaboradores.'}), 500
     
     # POST
@@ -2176,17 +2214,32 @@ def api_company_employees(company_id: int):
         if employee_id:
             employee = db.get_employee(company_id, employee_id)
             return jsonify({'success': True, 'employee': employee, 'message': 'Colaborador criado com sucesso.'}), 201
-        else:
-            return jsonify({'success': False, 'message': 'Erro ao criar colaborador.'}), 500
+        return jsonify({'success': False, 'message': 'Erro ao criar colaborador.'}), 500
+    except ValueError as exc:
+        return jsonify({'success': False, 'error': str(exc)}), 400
     except Exception as exc:
-        print(f"Erro ao criar colaborador: {exc}")
+        logger.info(f"Erro ao criar colaborador: {exc}")
         return jsonify({'success': False, 'message': 'Erro ao criar colaborador.'}), 500
 
 
-@app.route("/api/companies/<int:company_id>/employees/<int:employee_id>", methods=['PUT', 'DELETE'])
+@app.route("/api/companies/<int:company_id>/employees/<int:employee_id>", methods=['GET', 'PUT', 'DELETE'])
 @login_required
 def api_company_employee(company_id: int, employee_id: int):
     """Update or delete an employee"""
+    company = db.get_company(company_id)
+    if not company:
+        return jsonify({'success': False, 'error': 'Empresa não encontrada.'}), 404
+
+    if request.method == 'GET':
+        try:
+            employee = db.get_employee(company_id, employee_id)
+            if employee:
+                return jsonify({'success': True, 'employee': employee})
+            return jsonify({'success': False, 'message': 'Colaborador não encontrado.'}), 404
+        except Exception as exc:
+            logger.info(f"Erro ao buscar colaborador: {exc}")
+            return jsonify({'success': False, 'message': 'Erro ao buscar colaborador.'}), 500
+
     if request.method == 'DELETE':
         try:
             success = db.delete_employee(company_id, employee_id)
@@ -2195,7 +2248,7 @@ def api_company_employee(company_id: int, employee_id: int):
             else:
                 return jsonify({'success': False, 'message': 'Colaborador não encontrado.'}), 404
         except Exception as exc:
-            print(f"Erro ao excluir colaborador: {exc}")
+            logger.info(f"Erro ao excluir colaborador: {exc}")
             return jsonify({'success': False, 'message': 'Erro ao excluir colaborador.'}), 500
     
     # PUT
@@ -2205,10 +2258,11 @@ def api_company_employee(company_id: int, employee_id: int):
         if success:
             employee = db.get_employee(company_id, employee_id)
             return jsonify({'success': True, 'employee': employee, 'message': 'Colaborador atualizado com sucesso.'})
-        else:
-            return jsonify({'success': False, 'message': 'Colaborador não encontrado.'}), 404
+        return jsonify({'success': False, 'message': 'Colaborador não encontrado.'}), 404
+    except ValueError as exc:
+        return jsonify({'success': False, 'error': str(exc)}), 400
     except Exception as exc:
-        print(f"Erro ao atualizar colaborador: {exc}")
+        logger.info(f"Erro ao atualizar colaborador: {exc}")
         return jsonify({'success': False, 'message': 'Erro ao atualizar colaborador.'}), 500
 
 
@@ -2285,7 +2339,7 @@ def api_workforce_analysis(company_id: int):
                                 weekly_hours = hours_used  # Default to once per week
                         else:
                             weekly_hours = hours_used  # Default to once per week
-                    except:
+                    except Exception as exc:
                         weekly_hours = hours_used  # Default to once per week
                 elif schedule_type == 'monthly':
                     # Monthly routines: ~4.33 weeks per month
@@ -2349,7 +2403,7 @@ def api_workforce_analysis(company_id: int):
         })
         
     except Exception as exc:
-        print(f"Erro ao analisar mão de obra: {exc}")
+        logger.info(f"Erro ao analisar mão de obra: {exc}")
         import traceback
         traceback.print_exc()
         return jsonify({'success': False, 'message': f'Erro ao analisar mão de obra: {str(exc)}'}), 500
@@ -2578,7 +2632,7 @@ def _delete_flow_file(relative_path: str):
         if os.path.exists(file_path):
             os.remove(file_path)
     except Exception as _exc:
-        print(f"Warning: failed to remove flow file {relative_path}: {_exc}")
+        logger.info(f"Warning: failed to remove flow file {relative_path}: {_exc}")
 
 
 def _allowed_activity_image_extension(filename: str) -> bool:
@@ -2593,7 +2647,7 @@ def _delete_activity_image(relative_path: str):
         if os.path.exists(file_path):
             os.remove(file_path)
     except Exception as _exc:
-        print(f"Warning: failed to remove activity image {relative_path}: {_exc}")
+        logger.info(f"Warning: failed to remove activity image {relative_path}: {_exc}")
 
 
 def _save_activity_image(activity_id: int, storage) -> Optional[str]:
@@ -2670,7 +2724,7 @@ def api_process_flow_document(company_id: int, process_id: int):
         upload.save(storage_path)
         db.set_process_flow_document(process_id, relative_path)
     except Exception as exc:
-        print(f"Error saving process flow document: {exc}")
+        logger.info(f"Error saving process flow document: {exc}")
         return jsonify({'success': False, 'error': 'save_failed'}), 500
 
     preview_type = 'pdf' if ext.lower() == '.pdf' else 'image'
@@ -2824,29 +2878,29 @@ def api_create_process_activity_entry(company_id: int, process_id: int, activity
     image_width = request.form.get('image_width')
     layout = request.form.get('layout', 'dual')  # ADICIONADO
 
-    print(f"\n{'='*60}")
-    print(f"DEBUG - CREATE ENTRY para activity_id={activity_id}")
-    print(f"  text_content: '{text_content[:50]}...' ({len(text_content)} chars)")
-    print(f"  image_file: {image_file.filename if image_file else 'None'}")
-    print(f"  image_width: {image_width}")
-    print(f"  layout: {layout}")  # ADICIONADO
-    print(f"{'='*60}\n")
+    logger.info(f"\n{'='*60}")
+    logger.info(f"DEBUG - CREATE ENTRY para activity_id={activity_id}")
+    logger.info(f"  text_content: '{text_content[:50]}...' ({len(text_content)} chars)")
+    logger.info(f"  image_file: {image_file.filename if image_file else 'None'}")
+    logger.info(f"  image_width: {image_width}")
+    logger.info(f"  layout: {layout}")  # ADICIONADO
+    logger.info(f"{'='*60}\n")
 
     if not text_content and not image_file:
-        print("ERROR - Sem texto e sem imagem")
+        logger.info("ERROR - Sem texto e sem imagem")
         return jsonify({'success': False, 'error': 'missing_content', 'message': 'Adicione texto ou imagem'}), 400
 
     image_path = None
     if image_file and image_file.filename:
-        print(f"Tentando salvar imagem: {image_file.filename}")
+        logger.info(f"Tentando salvar imagem: {image_file.filename}")
         try:
             image_path = _save_activity_image(activity_id, image_file)
             if not image_path:
-                print("ERROR - _save_activity_image retornou None")
+                logger.info("ERROR - _save_activity_image retornou None")
                 return jsonify({'success': False, 'error': 'invalid_image', 'message': 'Falha ao salvar imagem'}), 400
-            print(f">> Imagem salva: {image_path}")
+            logger.info(f">> Imagem salva: {image_path}")
         except Exception as img_err:
-            print(f"ERROR - Exceção ao salvar imagem: {img_err}")
+            logger.info(f"ERROR - Exceção ao salvar imagem: {img_err}")
             import traceback
             traceback.print_exc()
             return jsonify({'success': False, 'error': 'image_save_failed', 'message': str(img_err)}), 400
@@ -2858,10 +2912,10 @@ def api_create_process_activity_entry(company_id: int, process_id: int, activity
         else:
             width_val = 280
     except (ValueError, TypeError) as e:
-        print(f"WARN - Erro ao converter image_width '{image_width}': {e}, usando 280")
+        logger.info(f"WARN - Erro ao converter image_width '{image_width}': {e}, usando 280")
         width_val = 280
 
-    print(f"Criando entry no banco: text_len={len(text_content)}, image_path={image_path}, width={width_val}, layout={layout}")
+    logger.info(f"Criando entry no banco: text_len={len(text_content)}, image_path={image_path}, width={width_val}, layout={layout}")
 
     try:
         new_id = db.create_process_activity_entry(activity_id, {
@@ -2871,7 +2925,7 @@ def api_create_process_activity_entry(company_id: int, process_id: int, activity
             'layout': layout  # ADICIONADO
         })
     except Exception as db_err:
-        print(f"ERROR - Exceção no create_process_activity_entry: {db_err}")
+        logger.info(f"ERROR - Exceção no create_process_activity_entry: {db_err}")
         import traceback
         traceback.print_exc()
         if image_path:
@@ -2879,12 +2933,12 @@ def api_create_process_activity_entry(company_id: int, process_id: int, activity
         return jsonify({'success': False, 'error': 'database_error', 'message': str(db_err)}), 500
     
     if not new_id:
-        print("ERROR - create_process_activity_entry retornou None/False")
+        logger.info("ERROR - create_process_activity_entry retornou None/False")
         if image_path:
             _delete_activity_image(image_path)
         return jsonify({'success': False, 'error': 'create_failed', 'message': 'Falha ao criar no banco'}), 400
 
-    print(f">> Entry criada com sucesso! ID={new_id}")
+    logger.info(f">> Entry criada com sucesso! ID={new_id}")
     entry = db.get_process_activity_entry(new_id) or {}
     return jsonify({'success': True, 'data': _serialize_activity_entry(entry)}), 201
 
@@ -2996,7 +3050,7 @@ def api_list_process_instances(company_id: int):
         conn.close()
         return jsonify(instances)
     except Exception as e:
-        print(f"Erro ao listar instâncias: {e}")
+        logger.info(f"Erro ao listar instâncias: {e}")
         return jsonify({'error': str(e)}), 500
 
 
@@ -3087,7 +3141,7 @@ def api_create_process_instance(company_id: int):
                                 })
                                 estimated_hours += hours
         except Exception as e:
-            print(f"Warning: Could not fetch routine collaborators: {e}")
+            logger.info(f"Warning: Could not fetch routine collaborators: {e}")
         
         # Insert instance
         cursor.execute(
@@ -3120,7 +3174,7 @@ def api_create_process_instance(company_id: int):
         return jsonify(instance), 201
         
     except Exception as e:
-        print(f"Erro ao criar instância: {e}")
+        logger.info(f"Erro ao criar instância: {e}")
         import traceback
         traceback.print_exc()
         return jsonify({'error': str(e)}), 500
@@ -3176,7 +3230,7 @@ def api_get_process_routine_collaborators(company_id: int, process_id: int):
         return jsonify({'collaborators': collaborators})
         
     except Exception as e:
-        print(f"Erro ao buscar colaboradores: {e}")
+        logger.info(f"Erro ao buscar colaboradores: {e}")
         return jsonify({'error': str(e)}), 500
 
 
@@ -3252,7 +3306,7 @@ def api_update_process_instance(company_id: int, instance_id: int):
         return jsonify(dict(updated_instance) if updated_instance else {})
         
     except Exception as e:
-        print(f"Erro ao atualizar instância: {e}")
+        logger.info(f"Erro ao atualizar instância: {e}")
         import traceback
         traceback.print_exc()
         return jsonify({'error': str(e)}), 500
@@ -3324,7 +3378,7 @@ def api_get_unified_activities(company_id: int):
                                 'how': activity.get('how', '')
                             })
                 except Exception as e:
-                    print(f"Error parsing project activities: {e}")
+                    logger.info(f"Error parsing project activities: {e}")
         
         # Get process instances
         cursor.execute(
@@ -3351,7 +3405,7 @@ def api_get_unified_activities(company_id: int):
                     collabs = json.loads(collab_json) if isinstance(collab_json, str) else collab_json
                     if isinstance(collabs, list):
                         executors = [c.get('name', '') for c in collabs if c.get('name')]
-                except:
+                except Exception as exc:
                     pass
             
             unified_activities.append({
@@ -3380,7 +3434,7 @@ def api_get_unified_activities(company_id: int):
         return jsonify(unified_activities)
         
     except Exception as e:
-        print(f"Erro ao buscar atividades unificadas: {e}")
+        logger.info(f"Erro ao buscar atividades unificadas: {e}")
         import traceback
         traceback.print_exc()
         return jsonify({'error': str(e)}), 500
@@ -3446,7 +3500,7 @@ def api_company_occurrences(company_id: int):
             conn.close()
             return jsonify(occurrences)
         except Exception as e:
-            print(f"Erro ao listar ocorrências: {e}")
+            logger.info(f"Erro ao listar ocorrências: {e}")
             import traceback
             traceback.print_exc()
             return jsonify({'error': str(e)}), 500
@@ -3492,7 +3546,7 @@ def api_company_occurrences(company_id: int):
             'id': occurrence_id
         }), 201
     except Exception as e:
-        print(f"Erro ao criar ocorrência: {e}")
+        logger.info(f"Erro ao criar ocorrência: {e}")
         import traceback
         traceback.print_exc()
         return jsonify({'success': False, 'message': str(e)}), 500
@@ -3537,7 +3591,7 @@ def api_company_occurrence(company_id: int, occurrence_id: int):
             
             return jsonify({'success': True, 'message': 'Ocorrência atualizada com sucesso!'})
         except Exception as e:
-            print(f"Erro ao atualizar ocorrência: {e}")
+            logger.info(f"Erro ao atualizar ocorrência: {e}")
             import traceback
             traceback.print_exc()
             return jsonify({'success': False, 'message': str(e)}), 500
@@ -3554,7 +3608,7 @@ def api_company_occurrence(company_id: int, occurrence_id: int):
         
         return jsonify({'success': True, 'message': 'Ocorrência excluída com sucesso!'})
     except Exception as e:
-        print(f"Erro ao excluir ocorrência: {e}")
+        logger.info(f"Erro ao excluir ocorrência: {e}")
         import traceback
         traceback.print_exc()
         return jsonify({'success': False, 'message': str(e)}), 500
@@ -3623,11 +3677,11 @@ def api_company_efficiency_collaborators(company_id: int):
                                     try:
                                         due_date = datetime.fromisoformat(due_date_str.replace('Z', '+00:00')).date()
                                         is_late = due_date < today
-                                    except:
+                                    except Exception as exc:
                                         try:
                                             due_date = datetime.strptime(due_date_str, '%Y-%m-%d').date()
                                             is_late = due_date < today
-                                        except:
+                                        except Exception as exc:
                                             pass
                                 
                                 # Count by status
@@ -3644,7 +3698,7 @@ def api_company_efficiency_collaborators(company_id: int):
                                     else:
                                         data['in_progress']['on_time'] += 1
                     except Exception as e:
-                        print(f"Error parsing activities: {e}")
+                        logger.info(f"Error parsing activities: {e}")
             
             # 2. Get process instances (where employee is assigned)
             cursor.execute(
@@ -3666,7 +3720,7 @@ def api_company_efficiency_collaborators(company_id: int):
                         collabs = json.loads(collab_json) if isinstance(collab_json, str) else collab_json
                         if isinstance(collabs, list):
                             is_assigned = any(c.get('id') == employee_id or c.get('name') == employee_name for c in collabs)
-                    except:
+                    except Exception as exc:
                         pass
                 
                 if not is_assigned:
@@ -3686,11 +3740,11 @@ def api_company_efficiency_collaborators(company_id: int):
                             try:
                                 completed_at = datetime.fromisoformat(completed_at_str.replace('Z', '+00:00')).date()
                                 is_late = completed_at > due_date
-                            except:
+                            except Exception as exc:
                                 is_late = False
                         else:
                             is_late = due_date < today
-                    except:
+                    except Exception as exc:
                         pass
                 
                 # Count by status
@@ -3734,7 +3788,7 @@ def api_company_efficiency_collaborators(company_id: int):
         return jsonify(efficiency_data)
         
     except Exception as e:
-        print(f"Erro ao buscar dados de eficiência: {e}")
+        logger.info(f"Erro ao buscar dados de eficiência: {e}")
         import traceback
         traceback.print_exc()
         return jsonify({'error': str(e)}), 500
@@ -3763,8 +3817,8 @@ def api_generate_process_report(company_id: int, process_id: int):
             importlib.reload(sys.modules['relatorios.generators.process_pop'])
         from relatorios.generators.process_pop import ProcessPOPReport
         
-        print(f">> Gerando relatório de processo - Empresa: {company_id}, Processo: {process_id}")
-        print(f">> Seções selecionadas: {', '.join(sections) if sections else 'Todas'}")
+        logger.info(f">> Gerando relatório de processo - Empresa: {company_id}, Processo: {process_id}")
+        logger.info(f">> Seções selecionadas: {', '.join(sections) if sections else 'Todas'}")
         
         # Determinar modelo de página (se não especificado, usa configuração padrão)
         model_id = request.args.get('model', type=int)
@@ -3780,7 +3834,7 @@ def api_generate_process_report(company_id: int, process_id: int):
             indicators='indicators' in sections
         )
         
-        print(f">> [DEBUG] Configuração: flow={report.include_flow}, routines={report.include_routines}, indicators={report.include_indicators}, activities={report.include_activities}")
+        logger.info(f">> [DEBUG] Configuração: flow={report.include_flow}, routines={report.include_routines}, indicators={report.include_indicators}, activities={report.include_activities}")
         
         # Gerar HTML usando o template específico
         html_content = report.generate_html(
@@ -3788,7 +3842,7 @@ def api_generate_process_report(company_id: int, process_id: int):
             process_id=process_id
         )
         
-        print(f">> Relatório gerado com sucesso!")
+        logger.info(f">> Relatório gerado com sucesso!")
         
         # Retornar HTML
         response = app.make_response(html_content)
@@ -3796,7 +3850,7 @@ def api_generate_process_report(company_id: int, process_id: int):
         return response
         
     except Exception as e:
-        print(f">> ERRO ao gerar relatório: {e}")
+        logger.info(f">> ERRO ao gerar relatório: {e}")
         import traceback
         traceback.print_exc()
         error_trace = traceback.format_exc()
@@ -3953,7 +4007,7 @@ def api_generate_process_report(company_id: int, process_id: int):
 <body>
     <div class="error-container">
         <div class="error-header">
-            <div class="icon">⚠️</div>
+            <div class="icon">??</div>
             <h1>Erro ao Gerar Relatório</h1>
             <p>Ocorreu um problema durante a geração do relatório do processo</p>
         </div>
@@ -3966,11 +4020,11 @@ def api_generate_process_report(company_id: int, process_id: int):
             
             <div class="error-details">
                 <h3>
-                    <span>🔍</span>
+                    <span>??</span>
                     <span>Detalhes Técnicos</span>
                 </h3>
                 <p style="margin-bottom: 10px; color: #6b7280;">
-                    <button class="toggle-trace" onclick="toggleTrace()">▶ Mostrar stack trace completo</button>
+                    <button class="toggle-trace" onclick="toggleTrace()">? Mostrar stack trace completo</button>
                 </p>
                 <div id="traceDetails">
                     <pre>{error_trace}</pre>
@@ -3979,10 +4033,10 @@ def api_generate_process_report(company_id: int, process_id: int):
             
             <div class="actions">
                 <button class="button button-primary" onclick="window.history.back()">
-                    ← Voltar para o Processo
+                    ? Voltar para o Processo
                 </button>
                 <button class="button button-secondary" onclick="window.location.reload()">
-                    🔄 Tentar Novamente
+                    ?? Tentar Novamente
                 </button>
             </div>
         </div>
@@ -3994,10 +4048,10 @@ def api_generate_process_report(company_id: int, process_id: int):
             const button = document.querySelector('.toggle-trace');
             if (details.classList.contains('show')) {{
                 details.classList.remove('show');
-                button.textContent = '▶ Mostrar stack trace completo';
+                button.textContent = '? Mostrar stack trace completo';
             }} else {{
                 details.classList.add('show');
-                button.textContent = '▼ Ocultar stack trace';
+                button.textContent = '? Ocultar stack trace';
             }}
         }}
     </script>
@@ -4368,7 +4422,7 @@ def api_get_process_routines(company_id: int):
         return jsonify({'success': True, 'routines': routines})
         
     except Exception as e:
-        print(f"Erro ao buscar rotinas: {e}")
+        logger.info(f"Erro ao buscar rotinas: {e}")
         return jsonify({'success': False, 'error': str(e)}), 500
 
 # API - Criar rotina de processo
@@ -4424,7 +4478,7 @@ def api_create_process_routine(company_id: int):
         return jsonify({'success': True, 'routine_id': routine_id, 'message': 'Rotina cadastrada com sucesso'}), 201
         
     except Exception as e:
-        print(f"Erro ao criar rotina: {e}")
+        logger.info(f"Erro ao criar rotina: {e}")
         import traceback
         traceback.print_exc()
         return jsonify({'success': False, 'message': str(e)}), 500
@@ -4452,7 +4506,7 @@ def api_delete_process_routine(company_id: int, routine_id: int):
         return jsonify({'success': True, 'message': 'Rotina excluída com sucesso'}), 200
         
     except Exception as e:
-        print(f"Erro ao deletar rotina: {e}")
+        logger.info(f"Erro ao deletar rotina: {e}")
         return jsonify({'success': False, 'message': str(e)}), 500
 
 
@@ -4503,7 +4557,7 @@ def api_update_process_routine(company_id: int, routine_id: int):
         return jsonify({'success': True, 'message': 'Rotina atualizada com sucesso'}), 200
         
     except Exception as e:
-        print(f"Erro ao atualizar rotina: {e}")
+        logger.info(f"Erro ao atualizar rotina: {e}")
         return jsonify({'success': False, 'message': str(e)}), 500
 
 
@@ -4552,7 +4606,7 @@ def api_get_process_routines_with_collaborators(process_id: int):
         return jsonify({'success': True, 'routines': routines}), 200
         
     except Exception as e:
-        print(f"Erro ao buscar rotinas com colaboradores: {e}")
+        logger.info(f"Erro ao buscar rotinas com colaboradores: {e}")
         return jsonify({'success': False, 'message': str(e)}), 500
 
 
@@ -4581,7 +4635,7 @@ def api_get_routine_collaborators(routine_id: int):
         return jsonify({'success': True, 'collaborators': collaborators}), 200
         
     except Exception as e:
-        print(f"Erro ao buscar colaboradores: {e}")
+        logger.info(f"Erro ao buscar colaboradores: {e}")
         return jsonify({'success': False, 'message': str(e)}), 500
 
 
@@ -4624,7 +4678,7 @@ def api_add_routine_collaborator(routine_id: int):
         return jsonify({'success': True, 'id': collaborator_id, 'message': 'Colaborador adicionado com sucesso'}), 201
         
     except Exception as e:
-        print(f"Erro ao adicionar colaborador: {e}")
+        logger.info(f"Erro ao adicionar colaborador: {e}")
         return jsonify({'success': False, 'message': str(e)}), 500
 
 
@@ -4659,7 +4713,7 @@ def api_update_routine_collaborator(routine_id: int, collaborator_id: int):
         return jsonify({'success': True, 'message': 'Colaborador atualizado com sucesso'}), 200
         
     except Exception as e:
-        print(f"Erro ao atualizar colaborador: {e}")
+        logger.info(f"Erro ao atualizar colaborador: {e}")
         return jsonify({'success': False, 'message': str(e)}), 500
 
 
@@ -4680,7 +4734,7 @@ def api_delete_routine_collaborator(routine_id: int, collaborator_id: int):
         return jsonify({'success': True, 'message': 'Colaborador removido com sucesso'}), 200
         
     except Exception as e:
-        print(f"Erro ao deletar colaborador: {e}")
+        logger.info(f"Erro ao deletar colaborador: {e}")
         return jsonify({'success': False, 'message': str(e)}), 500
 
 
@@ -4709,7 +4763,6 @@ def plan_dashboard(plan_id: str):
     # Verificar se é planejamento de implantação e redirecionar
     plan_mode = (plan.get('plan_mode') or 'evolucao').lower()
     if plan_mode == 'implantacao':
-        from flask import redirect, url_for
         return redirect(url_for('pev.pev_implantacao_overview', plan_id=plan_id))
     
     navigation = _navigation(plan_id, "dashboard")
@@ -5339,7 +5392,7 @@ def toggle_participant(plan_id: str, employee_id: int):
             else:
                 return jsonify({'success': False, 'error': 'Erro ao adicionar participante'}), 500
     except Exception as e:
-        print(f"Error toggling participant: {e}")
+        logger.info(f"Error toggling participant: {e}")
         return jsonify({'success': False, 'error': str(e)}), 500
 
 
@@ -5484,7 +5537,7 @@ def plan_drivers(plan_id: str):
                 directionals_consultant_notes = ''
                 directionals_approvals = []
         except Exception as e:
-            print(f"Error parsing directionals-approvals notes: {e}")
+            logger.info(f"Error parsing directionals-approvals notes: {e}")
             directionals_consultant_notes = ''
             directionals_approvals = []
     else:
@@ -5772,7 +5825,7 @@ def plan_okr_global(plan_id: str):
                 workshop_raw = db.get_global_okr_records(int(plan_id), 'workshop')
                 workshop_status = db.get_section_status(int(plan_id), 'workshop-final-okr')
         except Exception as exc:
-            print(f"Error migrating legacy workshop OKRs: {exc}")
+            logger.info(f"Error migrating legacy workshop OKRs: {exc}")
 
     approvals_status = db.get_section_status(int(plan_id), 'okr-approvals')
     if not approvals_raw and approvals_status and approvals_status.get('notes'):
@@ -5812,7 +5865,7 @@ def plan_okr_global(plan_id: str):
                 approvals_raw = db.get_global_okr_records(int(plan_id), 'approval')
                 approvals_status = db.get_section_status(int(plan_id), 'okr-approvals')
         except Exception as exc:
-            print(f"Error migrating legacy approval OKRs: {exc}")
+            logger.info(f"Error migrating legacy approval OKRs: {exc}")
 
 
     preliminary_okr_records = []
@@ -6017,13 +6070,13 @@ def plan_okr_area(plan_id: str):
                 try:
                     from datetime import datetime
                     okr_data['created_at'] = datetime.fromisoformat(okr_data['created_at'].replace('Z', '+00:00'))
-                except:
+                except Exception as exc:
                     pass
             if 'updated_at' in okr_data and okr_data['updated_at']:
                 try:
                     from datetime import datetime
                     okr_data['updated_at'] = datetime.fromisoformat(okr_data['updated_at'].replace('Z', '+00:00'))
-                except:
+                except Exception as exc:
                     pass
             if 'deadline' in okr_data and okr_data['deadline']:
                 try:
@@ -6035,14 +6088,14 @@ def plan_okr_area(plan_id: str):
                         else:
                             # Try to parse as date string (YYYY-MM-DD)
                             okr_data['deadline'] = datetime.strptime(okr_data['deadline'], '%Y-%m-%d')
-                except:
+                except Exception as exc:
                     pass
             
             workshop_area_okr_records.append(okr_data)
         
         conn.close()
     except Exception as e:
-        print(f"Erro ao buscar OKRs da tabela: {e}")
+        logger.info(f"Erro ao buscar OKRs da tabela: {e}")
     
     # 2. Buscar do sistema antigo (JSON nas notas) se não houver dados na tabela
     if not workshop_area_okr_records and workshop_area_status and workshop_area_status.get('notes'):
@@ -6057,20 +6110,20 @@ def plan_okr_area(plan_id: str):
                         if 'created_at' in okr:
                             try:
                                 okr['created_at'] = datetime.fromisoformat(okr['created_at'].replace('Z', '+00:00'))
-                            except:
+                            except Exception as exc:
                                 okr['created_at'] = datetime.now()
                         if 'updated_at' in okr:
                             try:
                                 okr['updated_at'] = datetime.fromisoformat(okr['updated_at'].replace('Z', '+00:00'))
-                            except:
+                            except Exception as exc:
                                 okr['updated_at'] = okr.get('created_at', datetime.now())
                         if 'deadline' in okr and okr['deadline']:
                             try:
                                 okr['deadline'] = datetime.fromisoformat(okr['deadline'])
-                            except:
+                            except Exception as exc:
                                 pass
                         workshop_area_okr_records.append(okr)
-        except:
+        except Exception as exc:
             pass
 
     workshop_area_okr_records = _normalize_area_okr_payload(workshop_area_okr_records, participant_name_lookup, indicator_lookup)
@@ -6109,13 +6162,13 @@ def plan_okr_area(plan_id: str):
                 try:
                     from datetime import datetime
                     okr_data['created_at'] = datetime.fromisoformat(okr_data['created_at'].replace('Z', '+00:00'))
-                except:
+                except Exception as exc:
                     pass
             if 'updated_at' in okr_data and okr_data['updated_at']:
                 try:
                     from datetime import datetime
                     okr_data['updated_at'] = datetime.fromisoformat(okr_data['updated_at'].replace('Z', '+00:00'))
-                except:
+                except Exception as exc:
                     pass
             if 'deadline' in okr_data and okr_data['deadline']:
                 try:
@@ -6127,14 +6180,14 @@ def plan_okr_area(plan_id: str):
                         else:
                             # Try to parse as date string (YYYY-MM-DD)
                             okr_data['deadline'] = datetime.strptime(okr_data['deadline'], '%Y-%m-%d')
-                except:
+                except Exception as exc:
                     pass
             
             final_area_okr_records.append(okr_data)
         
         conn.close()
     except Exception as e:
-        print(f"Erro ao buscar OKRs finais da tabela: {e}")
+        logger.info(f"Erro ao buscar OKRs finais da tabela: {e}")
     
     # 2. Buscar do sistema antigo (JSON nas notas) se não houver dados na tabela
     if not final_area_okr_records and final_area_status and final_area_status.get('notes'):
@@ -6149,20 +6202,20 @@ def plan_okr_area(plan_id: str):
                         if 'created_at' in okr:
                             try:
                                 okr['created_at'] = datetime.fromisoformat(okr['created_at'].replace('Z', '+00:00'))
-                            except:
+                            except Exception as exc:
                                 okr['created_at'] = datetime.now()
                         if 'updated_at' in okr:
                             try:
                                 okr['updated_at'] = datetime.fromisoformat(okr['updated_at'].replace('Z', '+00:00'))
-                            except:
+                            except Exception as exc:
                                 okr['updated_at'] = okr.get('created_at', datetime.now())
                         if 'deadline' in okr and okr['deadline']:
                             try:
                                 okr['deadline'] = datetime.fromisoformat(okr['deadline'])
-                            except:
+                            except Exception as exc:
                                 pass
                         final_area_okr_records.append(okr)
-        except:
+        except Exception as exc:
             pass
 
     final_area_okr_records = _normalize_area_okr_payload(final_area_okr_records, participant_name_lookup, indicator_lookup)
@@ -6218,7 +6271,6 @@ def plan_projects(plan_id: str):
         # Verificar se é planejamento de implantação e redirecionar
         plan_mode = (plan.get('plan_mode') or 'evolucao').lower()
         if plan_mode == 'implantacao':
-            from flask import redirect, url_for
             return redirect(url_for('pev.pev_implantacao_overview', plan_id=plan_id))
         
         navigation = _navigation(plan_id, "projects")
@@ -6244,7 +6296,7 @@ def plan_projects(plan_id: str):
                 analysis_data = json.loads(projects_analysis_section_status.get('notes', '{}'))
                 projects_ai_analysis = analysis_data.get('ai_analysis', '')
                 projects_consultant_analysis = analysis_data.get('consultant_analysis', '')
-            except:
+            except Exception as exc:
                 pass
         
         # Get Area OKRs for dropdown
@@ -6262,7 +6314,7 @@ def plan_projects(plan_id: str):
                             'type': okr.get('type', ''),
                             'area': okr.get('area', '')
                         })
-            except:
+            except Exception as exc:
                 pass
         
         # Process projects data
@@ -6276,7 +6328,7 @@ def plan_projects(plan_id: str):
                     from datetime import datetime
                     start_date = datetime.fromisoformat(processed_project['start_date'].replace('Z', '+00:00'))
                     processed_project['start_date_display'] = start_date.strftime('%d/%m/%Y')
-                except:
+                except Exception as exc:
                     processed_project['start_date_display'] = processed_project['start_date']
             
             if processed_project.get('end_date'):
@@ -6284,14 +6336,14 @@ def plan_projects(plan_id: str):
                     from datetime import datetime
                     end_date = datetime.fromisoformat(processed_project['end_date'].replace('Z', '+00:00'))
                     processed_project['end_date_display'] = end_date.strftime('%d/%m/%Y')
-                except:
+                except Exception as exc:
                     processed_project['end_date_display'] = processed_project['end_date']
             
             # Process activities
             if processed_project.get('activities'):
                 try:
                     processed_project['activities_list'] = json.loads(processed_project['activities'])
-                except:
+                except Exception as exc:
                     processed_project['activities_list'] = []
             else:
                 processed_project['activities_list'] = []
@@ -6302,9 +6354,9 @@ def plan_projects(plan_id: str):
                     from datetime import datetime
                     created_at = datetime.fromisoformat(processed_project['created_at'].replace('Z', '+00:00'))
                     processed_project['created_at'] = created_at
-                    processed_project['created_at_display'] = created_at.strftime('%d/%m/%Y �s %H:%M')
-                except:
-                    # Se n�o conseguir converter, manter como string e criar display
+                    processed_project['created_at_display'] = created_at.strftime('%d/%m/%Y ?s %H:%M')
+                except Exception as exc:
+                    # Se n?o conseguir converter, manter como string e criar display
                     processed_project['created_at_display'] = processed_project['created_at']
             
             if processed_project.get('updated_at'):
@@ -6312,9 +6364,9 @@ def plan_projects(plan_id: str):
                     from datetime import datetime
                     updated_at = datetime.fromisoformat(processed_project['updated_at'].replace('Z', '+00:00'))
                     processed_project['updated_at'] = updated_at
-                    processed_project['updated_at_display'] = updated_at.strftime('%d/%m/%Y �s %H:%M')
-                except:
-                    # Se n�o conseguir converter, manter como string e criar display
+                    processed_project['updated_at_display'] = updated_at.strftime('%d/%m/%Y ?s %H:%M')
+                except Exception as exc:
+                    # Se n?o conseguir converter, manter como string e criar display
                     processed_project['updated_at_display'] = processed_project['updated_at']
             
             processed_projects.append(processed_project)
@@ -6340,7 +6392,7 @@ def plan_projects(plan_id: str):
         try:
             employees = db.list_employees(company.get('id'))
         except Exception as e:
-            print(f"Erro ao buscar colaboradores: {e}")
+            logger.info(f"Erro ao buscar colaboradores: {e}")
             employees = []
         
         return render_template(
@@ -6363,6 +6415,8 @@ def plan_projects(plan_id: str):
             projects_consultant_analysis=projects_consultant_analysis
         )
     
+    except NotFound:
+        raise
     except Exception as e:
         flash(f'Erro ao carregar projetos: {str(e)}', 'error')
         return redirect(url_for('plan_dashboard', plan_id=plan_id))
@@ -6671,7 +6725,7 @@ def plan_reports_pdf(plan_id: str, variant: str):
     
     # For now, just redirect to the reports page
     # In a real implementation, this would generate and return a PDF
-    flash(f'Gera��o de PDF {variant} ser� implementada em breve!', 'info')
+    flash(f'Gera??o de PDF {variant} ser? implementada em breve!', 'info')
     return redirect(url_for('plan_reports', plan_id=plan_id))
 
 @app.route("/plans/<plan_id>/reports/formal")
@@ -7195,31 +7249,31 @@ def get_interview(plan_id: str, interview_id: str):
 @app.route("/plans/<plan_id>/sections/<section_name>/status", methods=['POST'])
 def update_section_status(plan_id: str, section_name: str):
     """Update section status (open/closed)"""
-    print(f"\n=== UPDATE SECTION STATUS ===")
-    print(f"Plan ID: {plan_id}")
-    print(f"Section Name: {section_name}")
+    logger.info(f"\n=== UPDATE SECTION STATUS ===")
+    logger.info(f"Plan ID: {plan_id}")
+    logger.info(f"Section Name: {section_name}")
     
     data = request.get_json()
-    print(f"Dados recebidos: {data}")
+    logger.info(f"Dados recebidos: {data}")
     
     status = data.get('status')  # 'open' or 'closed'
     closed_by = data.get('closed_by', 'Sistema')
     notes = data.get('notes', '')
     
-    print(f"Status: {status}, Closed By: {closed_by}, Notes: {notes}")
+    logger.info(f"Status: {status}, Closed By: {closed_by}, Notes: {notes}")
     
     if status not in ['open', 'closed']:
-        print(f"Erro: Status inválido - {status}")
+        logger.info(f"Erro: Status inválido - {status}")
         return jsonify({'success': False, 'error': 'Status inválido'}), 400
     
     result = db.update_section_status(int(plan_id), section_name, status, closed_by, notes)
-    print(f"Resultado da atualização no banco: {result}")
+    logger.info(f"Resultado da atualização no banco: {result}")
     
     if result:
-        print(f"Sucesso! Retornando status: {status}")
+        logger.info(f"Sucesso! Retornando status: {status}")
         return jsonify({'success': True, 'status': status})
     else:
-        print("Erro ao atualizar status no banco de dados")
+        logger.info("Erro ao atualizar status no banco de dados")
         return jsonify({'success': False, 'error': 'Erro ao atualizar status da seção'}), 500
 
 @app.route("/plans/<plan_id>/sections/<section_name>/status", methods=['GET'])
@@ -7273,14 +7327,14 @@ def save_directionals_consultant_analysis(plan_id: str):
     """Save directionals consultant analysis"""
     consultant_directionals = request.form.get('consultant_directionals', '')
     
-    print(f"DEBUG: Salvando análise do consultor - plan_id: {plan_id}")
-    print(f"DEBUG: Conteúdo: {consultant_directionals[:100] if consultant_directionals else 'VAZIO'}")
+    logger.info(f"DEBUG: Salvando análise do consultor - plan_id: {plan_id}")
+    logger.info(f"DEBUG: Conteúdo: {consultant_directionals[:100] if consultant_directionals else 'VAZIO'}")
     
     # Get existing section data to preserve approvals
     section_status = db.get_section_status(int(plan_id), 'directionals-approvals')
     existing_approvals = []
     
-    print(f"DEBUG: Section status existente: {section_status}")
+    logger.info(f"DEBUG: Section status existente: {section_status}")
     
     if section_status and section_status.get('notes'):
         try:
@@ -7297,12 +7351,12 @@ def save_directionals_consultant_analysis(plan_id: str):
         'approvals': existing_approvals
     }
     
-    print(f"DEBUG: Combined data: {combined_data}")
+    logger.info(f"DEBUG: Combined data: {combined_data}")
     
     # Save combined data as JSON
     result = db.update_section_consultant_notes(int(plan_id), 'directionals-approvals', json.dumps(combined_data))
     
-    print(f"DEBUG: Resultado do salvamento: {result}")
+    logger.info(f"DEBUG: Resultado do salvamento: {result}")
     
     if result:
         flash('Análise do consultor salva com sucesso!', 'success')
@@ -7579,18 +7633,19 @@ def get_market_record(plan_id: str, market_id: str):
 @app.route("/plans/<plan_id>/company-records", methods=['POST'])
 def add_company_record(plan_id: str):
     """Add new company record"""
-    participants_text = request.form.get('company_participants', '')
-    consultants_text = request.form.get('company_consultants', '')
-    company_date = request.form.get('company_date')
-    bsc_financial = request.form.get('bsc_financial', '')
-    bsc_commercial = request.form.get('bsc_commercial', '')
-    bsc_process = request.form.get('bsc_process', '')
-    bsc_learning = request.form.get('bsc_learning', '')
-    tri_commercial = request.form.get('tri_commercial', '')
-    tri_adm_fin = request.form.get('tri_adm_fin', '')
-    tri_operational = request.form.get('tri_operational', '')
-    notes = request.form.get('company_notes', '')
-    
+    payload = request.get_json() if request.is_json else request.form
+    participants_text = (payload.get('company_participants') or payload.get('participants') or '').strip()
+    consultants_text = (payload.get('company_consultants') or payload.get('consultants') or '').strip()
+    company_date = payload.get('company_date')
+    bsc_financial = (payload.get('bsc_financial') or '').strip()
+    bsc_commercial = (payload.get('bsc_commercial') or '').strip()
+    bsc_process = (payload.get('bsc_process') or '').strip()
+    bsc_learning = (payload.get('bsc_learning') or '').strip()
+    tri_commercial = (payload.get('tri_commercial') or '').strip()
+    tri_adm_fin = (payload.get('tri_adm_fin') or '').strip()
+    tri_operational = (payload.get('tri_operational') or '').strip()
+    notes = (payload.get('company_notes') or payload.get('notes') or '').strip()
+
     company_data = {
         'participants': participants_text,
         'consultants': consultants_text,
@@ -7604,12 +7659,35 @@ def add_company_record(plan_id: str):
         'tri_operational': tri_operational,
         'notes': notes
     }
-    
-    if db.add_company_record(int(plan_id), company_data):
+
+    if not any([
+        participants_text,
+        consultants_text,
+        bsc_financial,
+        bsc_commercial,
+        bsc_process,
+        bsc_learning,
+        tri_commercial,
+        tri_adm_fin,
+        tri_operational,
+        notes,
+    ]):
+        message = 'Informe ao menos um campo para registrar possibilidades da empresa.'
+        if request.is_json:
+            return jsonify({'success': False, 'error': message}), 400
+        flash(message, 'error')
+        return redirect(url_for('plan_drivers', plan_id=plan_id))
+
+    created = db.add_company_record(int(plan_id), company_data)
+    if request.is_json:
+        if created:
+            return jsonify({'success': True, 'company_record': company_data}), 201
+        return jsonify({'success': False, 'error': 'Erro ao registrar possibilidades da empresa.'}), 500
+
+    if created:
         flash('Possibilidades da empresa registradas com sucesso!', 'success')
     else:
         flash('Erro ao registrar possibilidades da empresa.', 'error')
-    
     return redirect(url_for('plan_drivers', plan_id=plan_id))
 
 @app.route("/plans/<plan_id>/company-records/<company_id>", methods=['PUT'])
@@ -7681,19 +7759,32 @@ def get_company_record(plan_id: str, company_id: str):
 @app.route("/plans/<plan_id>/alignment-records", methods=['POST'])
 def add_alignment_record(plan_id: str):
     """Add new alignment record"""
+    payload = request.get_json() if request.is_json else request.form
     alignment_data = {
-        'topic': request.form.get('topic', ''),
-        'description': request.form.get('description', ''),
-        'consensus': request.form.get('consensus', ''),
-        'priority': request.form.get('priority', ''),
-        'notes': request.form.get('notes', '')
+        'topic': (payload.get('topic') or '').strip(),
+        'description': (payload.get('description') or '').strip(),
+        'consensus': (payload.get('consensus') or '').strip(),
+        'priority': (payload.get('priority') or '').strip(),
+        'notes': (payload.get('notes') or '').strip()
     }
-    
-    if db.add_alignment_record(int(plan_id), alignment_data):
+
+    if not alignment_data['topic']:
+        message = 'Tópico do alinhamento é obrigatório.'
+        if request.is_json:
+            return jsonify({'success': False, 'error': message}), 400
+        flash(message, 'error')
+        return redirect(url_for('plan_drivers', plan_id=plan_id))
+
+    created = db.add_alignment_record(int(plan_id), alignment_data)
+    if request.is_json:
+        if created:
+            return jsonify({'success': True, 'alignment': alignment_data}), 201
+        return jsonify({'success': False, 'error': 'Erro ao registrar alinhamento.'}), 500
+
+    if created:
         flash('Alinhamento registrado com sucesso!', 'success')
     else:
         flash('Erro ao registrar alinhamento.', 'error')
-    
     return redirect(url_for('plan_drivers', plan_id=plan_id))
 
 @app.route("/plans/<plan_id>/alignment-records/<alignment_id>", methods=['PUT'])
@@ -7751,19 +7842,32 @@ def get_alignment_record(plan_id: str, alignment_id: str):
 @app.route("/plans/<plan_id>/misalignment-records", methods=['POST'])
 def add_misalignment_record(plan_id: str):
     """Add new misalignment record"""
+    payload = request.get_json() if request.is_json else request.form
     misalignment_data = {
-        'issue': request.form.get('issue', ''),
-        'description': request.form.get('description', ''),
-        'severity': request.form.get('severity', ''),
-        'impact': request.form.get('impact', ''),
-        'notes': request.form.get('notes', '')
+        'issue': (payload.get('issue') or '').strip(),
+        'description': (payload.get('description') or '').strip(),
+        'severity': (payload.get('severity') or '').strip(),
+        'impact': (payload.get('impact') or '').strip(),
+        'notes': (payload.get('notes') or '').strip()
     }
-    
-    if db.add_misalignment_record(int(plan_id), misalignment_data):
+
+    if not misalignment_data['issue']:
+        message = 'Título do desalinhamento é obrigatório.'
+        if request.is_json:
+            return jsonify({'success': False, 'error': message}), 400
+        flash(message, 'error')
+        return redirect(url_for('plan_drivers', plan_id=plan_id))
+
+    created = db.add_misalignment_record(int(plan_id), misalignment_data)
+    if request.is_json:
+        if created:
+            return jsonify({'success': True, 'misalignment': misalignment_data}), 201
+        return jsonify({'success': False, 'error': 'Erro ao registrar desalinhamento.'}), 500
+
+    if created:
         flash('Desalinhamento registrado com sucesso!', 'success')
     else:
         flash('Erro ao registrar desalinhamento.', 'error')
-    
     return redirect(url_for('plan_drivers', plan_id=plan_id))
 
 @app.route("/plans/<plan_id>/misalignment-records/<misalignment_id>", methods=['PUT'])
@@ -7821,21 +7925,34 @@ def get_misalignment_record(plan_id: str, misalignment_id: str):
 @app.route("/plans/<plan_id>/directional-records", methods=['POST'])
 def add_directional_record(plan_id: str):
     """Add new directional record"""
+    payload = request.get_json() if request.is_json else request.form
     directional_data = {
-        'title': request.form.get('directional_title', ''),
-        'description': request.form.get('directional_description', ''),
-        'type': request.form.get('directional_type', ''),
-        'priority': request.form.get('directional_priority', ''),
-        'status': request.form.get('status', 'active'),
-        'owner': request.form.get('owner', ''),
-        'notes': request.form.get('notes', '')
+        'title': (payload.get('title') or payload.get('directional_title') or '').strip(),
+        'description': (payload.get('description') or payload.get('directional_description') or '').strip(),
+        'type': (payload.get('type') or payload.get('directional_type') or '').strip(),
+        'priority': (payload.get('priority') or payload.get('directional_priority') or '').strip(),
+        'status': (payload.get('status') or 'active').strip(),
+        'owner': (payload.get('owner') or '').strip(),
+        'notes': (payload.get('notes') or '').strip()
     }
-    
-    if db.add_directional_record(int(plan_id), directional_data):
+
+    if not directional_data['title']:
+        message = 'Título do direcionador é obrigatório.'
+        if request.is_json:
+            return jsonify({'success': False, 'error': message}), 400
+        flash(message, 'error')
+        return redirect(url_for('plan_drivers', plan_id=plan_id))
+
+    created = db.add_directional_record(int(plan_id), directional_data)
+    if request.is_json:
+        if created:
+            return jsonify({'success': True, 'directional': directional_data}), 201
+        return jsonify({'success': False, 'error': 'Erro ao registrar direcionador.'}), 500
+
+    if created:
         flash('Direcionador registrado com sucesso!', 'success')
     else:
         flash('Erro ao registrar direcionador.', 'error')
-    
     return redirect(url_for('plan_drivers', plan_id=plan_id))
 
 @app.route("/plans/<plan_id>/directional-records/<directional_id>", methods=['PUT'])
@@ -7950,7 +8067,7 @@ def add_workshop_okr_record(plan_id: str):
             flash('Erro ao salvar OKR Global.', 'error')
             
     except Exception as e:
-        print(f"Error adding workshop OKR: {e}")
+        logger.info(f"Error adding workshop OKR: {e}")
         flash('Erro ao salvar OKR Global.', 'error')
     
     return redirect(url_for('plan_okr_global', plan_id=plan_id))
@@ -8007,7 +8124,7 @@ def add_okr_approval_record(plan_id: str):
             flash('Erro ao salvar OKR Global.', 'error')
             
     except Exception as e:
-        print(f"Error adding approval OKR: {e}")
+        logger.info(f"Error adding approval OKR: {e}")
         flash('Erro ao salvar OKR Global.', 'error')
     
     return redirect(url_for('plan_okr_global', plan_id=plan_id))
@@ -8031,7 +8148,7 @@ def add_preliminary_okr_record(plan_id: str):
             flash('Erro ao salvar análise preliminar.', 'error')
             
     except Exception as e:
-        print(f"Error adding preliminary OKR: {e}")
+        logger.info(f"Error adding preliminary OKR: {e}")
         flash('Erro ao salvar análise preliminar.', 'error')
     
     return redirect(url_for('plan_okr_global', plan_id=plan_id))
@@ -8046,7 +8163,7 @@ def get_preliminary_okr_data(plan_id: str, record_id: str):
         else:
             return jsonify({'success': False, 'message': 'Registro não encontrado'}), 404
     except Exception as e:
-        print(f"Error getting preliminary OKR: {e}")
+        logger.info(f"Error getting preliminary OKR: {e}")
         return jsonify({'success': False, 'message': 'Erro ao buscar registro'}), 500
 
 @app.route("/plans/<plan_id>/okr-global/preliminary/<record_id>", methods=['POST'])
@@ -8067,7 +8184,7 @@ def edit_preliminary_okr_record(plan_id: str, record_id: str):
             flash('Erro ao atualizar análise preliminar.', 'error')
             
     except Exception as e:
-        print(f"Error updating preliminary OKR: {e}")
+        logger.info(f"Error updating preliminary OKR: {e}")
         flash('Erro ao atualizar análise preliminar.', 'error')
     
     return redirect(url_for('plan_okr_global', plan_id=plan_id))
@@ -8084,7 +8201,7 @@ def delete_preliminary_okr_record(plan_id: str, record_id: str):
             flash('Erro ao excluir análise preliminar.', 'error')
             
     except Exception as e:
-        print(f"Error deleting preliminary OKR: {e}")
+        logger.info(f"Error deleting preliminary OKR: {e}")
         flash('Erro ao excluir análise preliminar.', 'error')
     
     return redirect(url_for('plan_okr_global', plan_id=plan_id))
@@ -8103,7 +8220,7 @@ def save_workshop_discussions(plan_id: str):
             flash('Erro ao salvar discussões.', 'error')
             
     except Exception as e:
-        print(f"Error saving workshop discussions: {e}")
+        logger.info(f"Error saving workshop discussions: {e}")
         flash('Erro ao salvar discussões.', 'error')
     
     return redirect(url_for('plan_okr_global', plan_id=plan_id))
@@ -8120,7 +8237,7 @@ def delete_workshop_discussions(plan_id: str):
             flash('Erro ao excluir discussões.', 'error')
             
     except Exception as e:
-        print(f"Error deleting workshop discussions: {e}")
+        logger.info(f"Error deleting workshop discussions: {e}")
         flash('Erro ao excluir discussões.', 'error')
     
     return redirect(url_for('plan_okr_global', plan_id=plan_id))
@@ -8139,7 +8256,7 @@ def save_approval_discussions(plan_id: str):
             flash('Erro ao salvar discussões.', 'error')
             
     except Exception as e:
-        print(f"Error saving approval discussions: {e}")
+        logger.info(f"Error saving approval discussions: {e}")
         flash('Erro ao salvar discussões.', 'error')
     
     return redirect(url_for('plan_okr_global', plan_id=plan_id))
@@ -8156,7 +8273,7 @@ def delete_approval_discussions(plan_id: str):
             flash('Erro ao excluir discussões.', 'error')
             
     except Exception as e:
-        print(f"Error deleting approval discussions: {e}")
+        logger.info(f"Error deleting approval discussions: {e}")
         flash('Erro ao excluir discussões.', 'error')
     
     return redirect(url_for('plan_okr_global', plan_id=plan_id))
@@ -8213,7 +8330,7 @@ def edit_workshop_okr_record(plan_id: str, record_id: str):
             flash('Erro ao atualizar OKR Global.', 'error')
             
     except Exception as e:
-        print(f"Error updating workshop OKR: {e}")
+        logger.info(f"Error updating workshop OKR: {e}")
         flash('Erro ao atualizar OKR Global.', 'error')
     
     return redirect(url_for('plan_okr_global', plan_id=plan_id))
@@ -8270,7 +8387,7 @@ def edit_approval_okr_record(plan_id: str, record_id: str):
             flash('Erro ao atualizar OKR Global.', 'error')
             
     except Exception as e:
-        print(f"Error updating approval OKR: {e}")
+        logger.info(f"Error updating approval OKR: {e}")
         flash('Erro ao atualizar OKR Global.', 'error')
     
     return redirect(url_for('plan_okr_global', plan_id=plan_id))
@@ -8287,7 +8404,7 @@ def delete_workshop_okr_record(plan_id: str, record_id: str):
             flash('Erro ao excluir OKR Global.', 'error')
             
     except Exception as e:
-        print(f"Error deleting workshop OKR: {e}")
+        logger.info(f"Error deleting workshop OKR: {e}")
         flash('Erro ao excluir OKR Global.', 'error')
     
     return redirect(url_for('plan_okr_global', plan_id=plan_id))
@@ -8304,7 +8421,7 @@ def delete_approval_okr_record(plan_id: str, record_id: str):
             flash('Erro ao excluir OKR Global.', 'error')
             
     except Exception as e:
-        print(f"Error deleting approval OKR: {e}")
+        logger.info(f"Error deleting approval OKR: {e}")
         flash('Erro ao excluir OKR Global.', 'error')
     
     return redirect(url_for('plan_okr_global', plan_id=plan_id))
@@ -8366,7 +8483,7 @@ def duplicate_okr_record(plan_id: str, type: str, record_id: str):
             flash('Erro ao duplicar OKR.', 'error')
             
     except Exception as e:
-        print(f"Error duplicating OKR: {e}")
+        logger.info(f"Error duplicating OKR: {e}")
         import traceback
         traceback.print_exc()
         flash('Erro ao duplicar OKR.', 'error')
@@ -8388,7 +8505,7 @@ def update_okr_preliminary_analysis_section_status(plan_id: str):
             return jsonify({'success': False, 'message': 'Erro ao atualizar status'}), 500
             
     except Exception as e:
-        print(f"Error updating preliminary analysis status: {e}")
+        logger.info(f"Error updating preliminary analysis status: {e}")
         return jsonify({'success': False, 'message': 'Erro ao atualizar status'}), 500
 
 @app.route("/plans/<plan_id>/okr-global/workshop-final/status", methods=['POST'])
@@ -8406,7 +8523,7 @@ def update_okr_workshop_final_section_status(plan_id: str):
             return jsonify({'success': False, 'message': 'Erro ao atualizar status'}), 500
             
     except Exception as e:
-        print(f"Error updating workshop final status: {e}")
+        logger.info(f"Error updating workshop final status: {e}")
         return jsonify({'success': False, 'message': 'Erro ao atualizar status'}), 500
 
 @app.route("/plans/<plan_id>/okr-global/approvals/status", methods=['POST'])
@@ -8424,7 +8541,7 @@ def update_okr_approvals_section_status(plan_id: str):
             return jsonify({'success': False, 'message': 'Erro ao atualizar status'}), 500
             
     except Exception as e:
-        print(f"Error updating approvals status: {e}")
+        logger.info(f"Error updating approvals status: {e}")
         return jsonify({'success': False, 'message': 'Erro ao atualizar status'}), 500
 
 @app.route("/plans/<plan_id>/okr-global/ai-suggestions", methods=['POST'])
@@ -8440,7 +8557,7 @@ def generate_ai_okr_suggestions(plan_id: str):
         })
             
     except Exception as e:
-        print(f"Error generating AI suggestions: {e}")
+        logger.info(f"Error generating AI suggestions: {e}")
         return jsonify({'success': False, 'message': 'Erro ao gerar sugestões'}), 500
 
 # OKR Area Routes
@@ -8462,7 +8579,7 @@ def add_preliminary_area_okr_record(plan_id: str):
             flash('Erro ao salvar análise preliminar.', 'error')
             
     except Exception as e:
-        print(f"Error adding preliminary area OKR: {e}")
+        logger.info(f"Error adding preliminary area OKR: {e}")
         flash('Erro ao salvar análise preliminar.', 'error')
     
     return redirect(url_for('plan_okr_area', plan_id=plan_id))
@@ -8495,7 +8612,7 @@ def add_area_okr_record(plan_id: str):
                 workshop_data = json.loads(workshop_status['notes'])
                 if isinstance(workshop_data, dict) and 'okrs' in workshop_data:
                     existing_okrs = workshop_data['okrs']
-            except:
+            except Exception as exc:
                 pass
         
         # Create new OKR
@@ -8561,9 +8678,9 @@ def add_area_okr_record(plan_id: str):
             
             conn.commit()
             conn.close()
-            print(f"OKR salvo na tabela okr_area_records com sucesso!")
+            logger.info(f"OKR salvo na tabela okr_area_records com sucesso!")
         except Exception as e:
-            print(f"Erro ao salvar na tabela okr_area_records: {e}")
+            logger.info(f"Erro ao salvar na tabela okr_area_records: {e}")
         
         # 2. Salvar no sistema antigo (JSON) para compatibilidade
         workshop_data = {'okrs': existing_okrs}
@@ -8574,7 +8691,7 @@ def add_area_okr_record(plan_id: str):
             flash('Erro ao salvar OKR de Área.', 'error')
             
     except Exception as e:
-        print(f"Error adding area OKR: {e}")
+        logger.info(f"Error adding area OKR: {e}")
         import traceback
         traceback.print_exc()
         flash('Erro ao salvar OKR de Área.', 'error')
@@ -8609,7 +8726,7 @@ def add_final_area_okr_record(plan_id: str):
                 final_data = json.loads(final_status['notes'])
                 if isinstance(final_data, dict) and 'okrs' in final_data:
                     existing_okrs = final_data['okrs']
-            except:
+            except Exception as exc:
                 pass
         
         # Create new OKR
@@ -8675,9 +8792,9 @@ def add_final_area_okr_record(plan_id: str):
             
             conn.commit()
             conn.close()
-            print(f"OKR Final salvo na tabela okr_area_records com sucesso!")
+            logger.info(f"OKR Final salvo na tabela okr_area_records com sucesso!")
         except Exception as e:
-            print(f"Erro ao salvar OKR Final na tabela okr_area_records: {e}")
+            logger.info(f"Erro ao salvar OKR Final na tabela okr_area_records: {e}")
         
         # 2. Salvar no sistema antigo (JSON) para compatibilidade
         final_data = {'okrs': existing_okrs}
@@ -8688,7 +8805,7 @@ def add_final_area_okr_record(plan_id: str):
             flash('Erro ao salvar OKR de Área Final.', 'error')
             
     except Exception as e:
-        print(f"Error adding final area OKR: {e}")
+        logger.info(f"Error adding final area OKR: {e}")
         import traceback
         traceback.print_exc()
         flash('Erro ao salvar OKR de Área Final.', 'error')
@@ -8708,7 +8825,7 @@ def save_area_workshop_discussions(plan_id: str):
             flash('Erro ao salvar discussões.', 'error')
             
     except Exception as e:
-        print(f"Error saving area workshop discussions: {e}")
+        logger.info(f"Error saving area workshop discussions: {e}")
         flash('Erro ao salvar discussões.', 'error')
     
     return redirect(url_for('plan_okr_area', plan_id=plan_id))
@@ -8725,7 +8842,7 @@ def save_final_area_discussions(plan_id: str):
             flash('Erro ao salvar discussões finais.', 'error')
             
     except Exception as e:
-        print(f"Error saving final area discussions: {e}")
+        logger.info(f"Error saving final area discussions: {e}")
         flash('Erro ao salvar discussões finais.', 'error')
     
     return redirect(url_for('plan_okr_area', plan_id=plan_id))
@@ -8740,7 +8857,7 @@ def delete_area_workshop_discussions(plan_id: str):
             flash('Erro ao excluir discussões.', 'error')
             
     except Exception as e:
-        print(f"Error deleting area workshop discussions: {e}")
+        logger.info(f"Error deleting area workshop discussions: {e}")
         flash('Erro ao excluir discussões.', 'error')
     
     return redirect(url_for('plan_okr_area', plan_id=plan_id))
@@ -8755,7 +8872,7 @@ def delete_final_area_discussions(plan_id: str):
             flash('Erro ao excluir discussões finais.', 'error')
             
     except Exception as e:
-        print(f"Error deleting final area discussions: {e}")
+        logger.info(f"Error deleting final area discussions: {e}")
         flash('Erro ao excluir discussões finais.', 'error')
     
     return redirect(url_for('plan_okr_area', plan_id=plan_id))
@@ -8775,7 +8892,7 @@ def update_area_preliminary_analysis_section_status(plan_id: str):
             return jsonify({'success': False, 'message': 'Erro ao atualizar status'}), 500
             
     except Exception as e:
-        print(f"Error updating preliminary analysis section status: {e}")
+        logger.info(f"Error updating preliminary analysis section status: {e}")
         return jsonify({'success': False, 'message': str(e)}), 500
 
 @app.route("/plans/<plan_id>/okr-area/workshop/status", methods=['POST'])
@@ -8792,7 +8909,7 @@ def update_workshop_area_section_status(plan_id: str):
             return jsonify({'success': False, 'message': 'Erro ao atualizar status'}), 500
             
     except Exception as e:
-        print(f"Error updating workshop area section status: {e}")
+        logger.info(f"Error updating workshop area section status: {e}")
         return jsonify({'success': False, 'message': str(e)}), 500
 
 @app.route("/plans/<plan_id>/okr-area/final/status", methods=['POST'])
@@ -8809,7 +8926,7 @@ def update_final_area_section_status(plan_id: str):
             return jsonify({'success': False, 'message': 'Erro ao atualizar status'}), 500
             
     except Exception as e:
-        print(f"Error updating final area section status: {e}")
+        logger.info(f"Error updating final area section status: {e}")
         return jsonify({'success': False, 'message': str(e)}), 500
 
 # OKR Area AI Routes
@@ -8826,7 +8943,7 @@ def generate_ai_area_okr_suggestions(plan_id: str):
         })
         
     except Exception as e:
-        print(f"Error generating AI suggestions: {e}")
+        logger.info(f"Error generating AI suggestions: {e}")
         return jsonify({'success': False, 'message': str(e)}), 500
 
 # API Routes for AI Agents Management
@@ -8935,7 +9052,7 @@ def api_available_buttons():
             },
             'okr-global': {
                 'preliminary-analysis': [
-                    '✨ Gerar Sugestões da IA'
+                    '? Gerar Sugestões da IA'
                 ]
             },
             'drivers': {
@@ -9012,7 +9129,7 @@ def get_agent(agent_id):
         a = db.get_ai_agent(agent_id)
         if a:
             # Get linked integrations
-            from database.sqlite_db import get_agent_integrations
+            from database.postgresql_db import get_agent_integrations
             integrations = get_agent_integrations(agent_id)
             
             # Normalize as in list endpoint
@@ -9296,7 +9413,7 @@ def api_company_portfolios(company_id: int):
             
             return jsonify({'success': True, 'portfolios': portfolios})
         except Exception as exc:
-            print(f"Erro ao listar portfólios: {exc}")
+            logger.info(f"Erro ao listar portfólios: {exc}")
             import traceback
             traceback.print_exc()
             return jsonify({'success': False, 'message': 'Erro ao listar portfólios.'}), 500
@@ -9376,7 +9493,7 @@ def api_company_portfolios(company_id: int):
             'portfolio': _serialize_portfolio(created_row)
         }), 201
     except Exception as exc:
-        print(f"Erro ao criar portfolio: {exc}")
+        logger.info(f"Erro ao criar portfolio: {exc}")
         return jsonify({'success': False, 'message': 'Erro ao criar portfólio.'}), 500
 
 
@@ -9414,7 +9531,7 @@ def api_portfolio(company_id: int, portfolio_id: int):
             conn.close()
             return jsonify({'success': True, 'message': 'Portfólio excluído com sucesso.'})
         except Exception as exc:
-            print(f"Erro ao excluir portfolio: {exc}")
+            logger.info(f"Erro ao excluir portfolio: {exc}")
             import traceback
             traceback.print_exc()
             return jsonify({'success': False, 'message': 'Erro ao excluir portfólio.'}), 500
@@ -9495,7 +9612,7 @@ def api_portfolio(company_id: int, portfolio_id: int):
             'portfolio': _serialize_portfolio(updated_row)
         })
     except Exception as exc:
-        print(f"Erro ao atualizar portfolio: {exc}")
+        logger.info(f"Erro ao atualizar portfolio: {exc}")
         import traceback
         traceback.print_exc()
         return jsonify({'success': False, 'message': 'Erro ao atualizar portfólio.'}), 500
@@ -9693,7 +9810,7 @@ def _serialize_company_project(row) -> Dict[str, Any]:
                                 break
                             except ValueError:
                                 continue
-                except:
+                except Exception as exc:
                     pass
         
         if activity_deadlines:
@@ -9889,7 +10006,7 @@ def api_company_projects(company_id: int):
             conn.close()
             return jsonify({'success': True, 'projects': [_serialize_company_project(row) for row in rows]})
         except Exception as exc:
-            print(f"Erro ao buscar projetos: {exc}")
+            logger.info(f"Erro ao buscar projetos: {exc}")
             return jsonify({'success': False, 'message': 'Erro ao listar projetos.'}), 500
 
     payload = request.get_json(silent=True) or {}
@@ -10025,7 +10142,7 @@ def api_company_projects(company_id: int):
             'project': _serialize_company_project(created_row)
         }), 201
     except Exception as exc:
-        print(f"Erro ao criar projeto: {exc}")
+        logger.info(f"Erro ao criar projeto: {exc}")
         import traceback
         traceback.print_exc()
         return jsonify({'success': False, 'message': f'Erro ao criar projeto: {str(exc)}'}), 500
@@ -10053,7 +10170,7 @@ def api_company_project(company_id: int, project_id: int):
             conn.close()
             return jsonify({'success': True, 'message': 'Projeto excluído com sucesso.'})
         except Exception as exc:
-            print(f"Erro ao excluir projeto: {exc}")
+            logger.info(f"Erro ao excluir projeto: {exc}")
             return jsonify({'success': False, 'message': 'Erro ao excluir projeto.'}), 500
 
     payload = request.get_json(silent=True) or {}
@@ -10194,7 +10311,7 @@ def api_company_project(company_id: int, project_id: int):
             'project': _serialize_company_project(updated_row)
         })
     except Exception as exc:
-        print(f"Erro ao atualizar projeto: {exc}")
+        logger.info(f"Erro ao atualizar projeto: {exc}")
         return jsonify({'success': False, 'message': 'Erro ao atualizar projeto.'}), 500
 
 
@@ -10232,7 +10349,7 @@ def _generate_activity_code(cursor, company_id: int, project_id: int) -> tuple:
                                 max_seq = max(max_seq, seq)
                             except ValueError:
                                 pass
-        except:
+        except Exception as exc:
             pass
     
     next_sequence = max_seq + 1
@@ -10283,7 +10400,7 @@ def api_project_activities(company_id: int, project_id: int):
             conn.close()
             return jsonify({'success': True, 'activities': activities})
         except Exception as exc:
-            print(f"Erro ao listar atividades: {exc}")
+            logger.info(f"Erro ao listar atividades: {exc}")
             import traceback
             traceback.print_exc()
             return jsonify({'success': False, 'message': 'Erro ao listar atividades.'}), 500
@@ -10360,7 +10477,7 @@ def api_project_activities(company_id: int, project_id: int):
             'activity': created_activity
         }), 201
     except Exception as exc:
-        print(f"Erro ao criar atividade: {exc}")
+        logger.info(f"Erro ao criar atividade: {exc}")
         import traceback
         traceback.print_exc()
         return jsonify({'success': False, 'message': 'Erro ao criar atividade.'}), 500
@@ -10394,7 +10511,7 @@ def api_project_activity(company_id: int, project_id: int, activity_id: int):
                     activities = json.loads(activities_json) if isinstance(activities_json, str) else activities_json
                     if not isinstance(activities, list):
                         activities = []
-                except:
+                except Exception as exc:
                     activities = []
             
             # Remove activity
@@ -10412,7 +10529,7 @@ def api_project_activity(company_id: int, project_id: int, activity_id: int):
             
             return jsonify({'success': True, 'message': 'Atividade excluída com sucesso.'})
         except Exception as exc:
-            print(f"Erro ao excluir atividade: {exc}")
+            logger.info(f"Erro ao excluir atividade: {exc}")
             return jsonify({'success': False, 'message': 'Erro ao excluir atividade.'}), 500
     
     # PUT - Update activity
@@ -10446,7 +10563,7 @@ def api_project_activity(company_id: int, project_id: int, activity_id: int):
                 activities = json.loads(activities_json) if isinstance(activities_json, str) else activities_json
                 if not isinstance(activities, list):
                     activities = []
-            except:
+            except Exception as exc:
                 activities = []
         
         # Find and update activity
@@ -10480,7 +10597,7 @@ def api_project_activity(company_id: int, project_id: int, activity_id: int):
         
         return jsonify({'success': True, 'message': 'Atividade atualizada com sucesso.'})
     except Exception as exc:
-        print(f"Erro ao atualizar atividade: {exc}")
+        logger.info(f"Erro ao atualizar atividade: {exc}")
         return jsonify({'success': False, 'message': 'Erro ao atualizar atividade.'}), 500
 
 
@@ -10517,7 +10634,7 @@ def api_project_activity_stage(company_id: int, project_id: int, activity_id: in
                 activities = json.loads(activities_json) if isinstance(activities_json, str) else activities_json
                 if not isinstance(activities, list):
                     activities = []
-            except:
+            except Exception as exc:
                 activities = []
         
         # Find and update stage
@@ -10561,7 +10678,7 @@ def api_project_activity_stage(company_id: int, project_id: int, activity_id: in
         
         return jsonify({'success': True, 'message': 'Atividade movida com sucesso.', 'stage': stage})
     except Exception as exc:
-        print(f"Erro ao atualizar estágio: {exc}")
+        logger.info(f"Erro ao atualizar estágio: {exc}")
         return jsonify({'success': False, 'message': 'Erro ao atualizar estágio.'}), 500
 
 
@@ -10614,7 +10731,7 @@ def api_transfer_activity(company_id: int, project_id: int, activity_id: int):
                 source_activities = json.loads(source_activities_json) if isinstance(source_activities_json, str) else source_activities_json
                 if not isinstance(source_activities, list):
                     source_activities = []
-            except:
+            except Exception as exc:
                 source_activities = []
         
         target_activities_json = target_row['activities']
@@ -10625,7 +10742,7 @@ def api_transfer_activity(company_id: int, project_id: int, activity_id: int):
                 target_activities = json.loads(target_activities_json) if isinstance(target_activities_json, str) else target_activities_json
                 if not isinstance(target_activities, list):
                     target_activities = []
-            except:
+            except Exception as exc:
                 target_activities = []
 
         source_activities, _, _ = normalize_project_activities(source_activities, source_code)
@@ -10720,7 +10837,7 @@ def api_transfer_activity(company_id: int, project_id: int, activity_id: int):
         })
         
     except Exception as exc:
-        print(f"Erro ao transferir atividade: {exc}")
+        logger.info(f"Erro ao transferir atividade: {exc}")
         import traceback
         traceback.print_exc()
         return jsonify({'success': False, 'message': 'Erro ao transferir atividade.'}), 500
@@ -10763,7 +10880,7 @@ def api_get_project_info(company_id: int, project_id: int):
         })
         
     except Exception as exc:
-        print(f"Erro ao buscar projeto: {exc}")
+        logger.info(f"Erro ao buscar projeto: {exc}")
         return jsonify({'success': False, 'message': 'Erro ao buscar projeto.'}), 500
 
 
@@ -10775,7 +10892,7 @@ def api_plan_okr_global_records(plan_id: int):
         records = db.get_global_okr_records(int(plan_id), stage)
         return jsonify({'success': True, 'records': records})
     except Exception as exc:
-        print(f"Erro ao buscar OKRs: {exc}")
+        logger.info(f"Erro ao buscar OKRs: {exc}")
         return jsonify({'success': False, 'message': 'Erro ao listar OKRs.'}), 500
 
 
@@ -10814,7 +10931,7 @@ def api_plan_projects(plan_id: int):
         conn.close()
         return jsonify({'success': True, 'projects': [_serialize_company_project(row) for row in rows]})
     except Exception as exc:
-        print(f"Erro ao buscar projetos do plano: {exc}")
+        logger.info(f"Erro ao buscar projetos do plano: {exc}")
         return jsonify({'success': False, 'message': 'Erro ao carregar projetos do planejamento.'}), 500
 
 
@@ -10864,32 +10981,32 @@ def health_check():
 if __name__ == "__main__":
     try:
         # Print database configuration
-        print("Carregando configuração do banco...")
+        logger.info("Carregando configuração do banco...")
         db_config.print_config()
         
-        print("\nAPP29 - Sistema de Gestão Versus Starting...")
-        print("Database abstraction layer active")
-        print("Sistema de relatórios implementado")
-        print("Server running at: http://127.0.0.1:5003")
-        print("Available operations:")
-        print("   - View and edit company data")
-        print("   - Manage participants")
-        print("   - Manage drivers")
-        print("   - Manage OKRs (Global and Area)")
-        print("   - Manage projects")
-        print("   - Generate reports")
-        print("   - Strategic analysis with AI agents")
-        print("\nAI Agents available:")
-        print("   - Market Possibilities Agent (APM)")
-        print("   - Company Capacity Agent (ACE)")
-        print("   - Stakeholder Expectations Agent (AES)")
-        print("   - Coordinator Agent (AC)")
-        print("\nTo switch database:")
-        print("   - Set DB_TYPE environment variable (sqlite, postgresql)")
-        print("   - Configure connection parameters")
+        logger.info("\nAPP29 - Sistema de Gestão Versus Starting...")
+        logger.info("Database abstraction layer active")
+        logger.info("Sistema de relatórios implementado")
+        logger.info("Server running at: http://127.0.0.1:5003")
+        logger.info("Available operations:")
+        logger.info("   - View and edit company data")
+        logger.info("   - Manage participants")
+        logger.info("   - Manage drivers")
+        logger.info("   - Manage OKRs (Global and Area)")
+        logger.info("   - Manage projects")
+        logger.info("   - Generate reports")
+        logger.info("   - Strategic analysis with AI agents")
+        logger.info("\nAI Agents available:")
+        logger.info("   - Market Possibilities Agent (APM)")
+        logger.info("   - Company Capacity Agent (ACE)")
+        logger.info("   - Stakeholder Expectations Agent (AES)")
+        logger.info("   - Coordinator Agent (AC)")
+        logger.info("\nTo switch database:")
+        logger.info("   - Set DB_TYPE environment variable (sqlite, postgresql)")
+        logger.info("   - Configure connection parameters")
         
         # Inicializar Scheduler para tarefas agendadas
-        print("\n[SCHEDULER] Inicializando Scheduler de Tarefas...")
+        logger.info("\n[SCHEDULER] Inicializando Scheduler de Tarefas...")
         try:
             from services.scheduler_service import initialize_scheduler, shutdown_scheduler
             import atexit
@@ -10900,15 +11017,21 @@ if __name__ == "__main__":
             # Registrar shutdown do scheduler ao fechar a aplicação
             atexit.register(shutdown_scheduler)
             
-            print("[OK] Scheduler ativo - Rotinas serao executadas automaticamente!")
+            logger.info("[OK] Scheduler ativo - Rotinas serao executadas automaticamente!")
         except Exception as e:
-            print(f"[AVISO] Scheduler nao pode ser iniciado: {e}")
-            print("   Rotinas devem ser executadas manualmente via routine_scheduler.py")
+            logger.info(f"[AVISO] Scheduler nao pode ser iniciado: {e}")
+            logger.info("   Rotinas devem ser executadas manualmente via routine_scheduler.py")
         
-        print("\nIniciando servidor...")
+        logger.info("\nIniciando servidor...")
         # Reload trigger
         app.run(debug=True, host='0.0.0.0', port=5003, use_reloader=False)
     except Exception as e:
-        print(f">> ERRO AO INICIAR SERVIDOR: {e}")
+        logger.info(f">> ERRO AO INICIAR SERVIDOR: {e}")
         import traceback
         traceback.print_exc()
+
+
+
+
+
+

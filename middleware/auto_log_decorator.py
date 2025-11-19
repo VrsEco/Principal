@@ -1,13 +1,16 @@
-"""
+﻿"""
 Auto-logging decorator system
 Automatically logs CRUD operations with intelligent entity detection
 """
 
+import logging
 from functools import wraps
 from flask import request, g
 from flask_login import current_user
 from services.log_service import log_service
 import json
+
+logger = logging.getLogger(__name__)
 import re
 from typing import Optional, Dict, Any, Callable
 
@@ -27,7 +30,7 @@ class AutoLogConfig:
         'auth.logout'
     ]
     
-    # Mapeamento de padrões de URL para tipos de entidade
+    # Mapeamento de padrÃµes de URL para tipos de entidade
     ENTITY_TYPE_PATTERNS = {
         r'/companies/(\d+)': 'company',
         r'/plans/([^/]+)': 'plan',
@@ -56,12 +59,12 @@ class AutoLogConfig:
 
 def extract_entity_info(path: str, method: str, data: Optional[Dict] = None) -> Dict[str, Any]:
     """
-    Extrai informações sobre a entidade da URL e dados
+    Extrai informaÃ§Ãµes sobre a entidade da URL e dados
     
     Args:
         path: Caminho da URL
-        method: Método HTTP
-        data: Dados da requisição
+        method: MÃ©todo HTTP
+        data: Dados da requisiÃ§Ã£o
     
     Returns:
         Dict com entity_type, entity_id, entity_name
@@ -87,7 +90,7 @@ def extract_entity_info(path: str, method: str, data: Optional[Dict] = None) -> 
             entity_info['entity_id'] = match.group(1)
             break
     
-    # Se não encontrou na URL, tentar inferir do endpoint
+    # Se nÃ£o encontrou na URL, tentar inferir do endpoint
     if not entity_info['entity_type']:
         path_parts = path.strip('/').split('/')
         for part in path_parts:
@@ -131,11 +134,11 @@ def should_log_route(endpoint: str, entity_type: Optional[str]) -> bool:
     Returns:
         True se deve registrar log
     """
-    # Verificar se está na lista de skip
+    # Verificar se estÃ¡ na lista de skip
     if endpoint in AutoLogConfig.SKIP_ENDPOINTS:
         return False
     
-    # Se há tipo de entidade, verificar se está habilitado/desabilitado
+    # Se hÃ¡ tipo de entidade, verificar se estÃ¡ habilitado/desabilitado
     if entity_type:
         if AutoLogConfig.DISABLED_ENTITIES and entity_type in AutoLogConfig.DISABLED_ENTITIES:
             return False
@@ -151,12 +154,12 @@ def auto_log_crud(
     custom_description: Optional[str] = None
 ):
     """
-    Decorador universal para logging automático de operações CRUD
+    Decorador universal para logging automÃ¡tico de operaÃ§Ãµes CRUD
     
     Args:
-        entity_type: Tipo da entidade (opcional, será inferido da URL se não fornecido)
-        get_entity_name: Função para extrair o nome da entidade do resultado
-        custom_description: Descrição customizada para o log
+        entity_type: Tipo da entidade (opcional, serÃ¡ inferido da URL se nÃ£o fornecido)
+        get_entity_name: FunÃ§Ã£o para extrair o nome da entidade do resultado
+        custom_description: DescriÃ§Ã£o customizada para o log
     
     Exemplo:
         @app.route('/api/company/<int:company_id>/indicators', methods=['POST'])
@@ -171,21 +174,21 @@ def auto_log_crud(
             # Verificar se deve registrar log
             endpoint = request.endpoint or ''
             
-            # Extrair informações da requisição
+            # Extrair informaÃ§Ãµes da requisiÃ§Ã£o
             path = request.path
             method = request.method
             
-            # Pegar dados da requisição
+            # Pegar dados da requisiÃ§Ã£o
             request_data = None
             try:
                 if request.is_json:
                     request_data = request.get_json(silent=True)
                 elif request.form:
                     request_data = request.form.to_dict()
-            except:
+            except Exception as exc:
                 pass
             
-            # Extrair informações da entidade
+            # Extrair informaÃ§Ãµes da entidade
             entity_info = extract_entity_info(path, method, request_data)
             
             # Usar entity_type fornecido ou inferido
@@ -195,18 +198,18 @@ def auto_log_crud(
             if not should_log_route(endpoint, final_entity_type):
                 return f(*args, **kwargs)
             
-            # Guardar informações antes da execução (para DELETE e UPDATE)
+            # Guardar informaÃ§Ãµes antes da execuÃ§Ã£o (para DELETE e UPDATE)
             old_values = None
             if method in ['PUT', 'PATCH', 'DELETE'] and entity_info['entity_id']:
-                # Aqui poderíamos buscar os valores antigos do banco
+                # Aqui poderÃ­amos buscar os valores antigos do banco
                 # Por enquanto, deixaremos None
                 pass
             
-            # Executar a função original
+            # Executar a funÃ§Ã£o original
             try:
                 result = f(*args, **kwargs)
                 
-                # Determinar ação baseada no método HTTP
+                # Determinar aÃ§Ã£o baseada no mÃ©todo HTTP
                 action = None
                 if method == 'POST':
                     action = 'CREATE'
@@ -217,7 +220,7 @@ def auto_log_crud(
                 elif method == 'GET':
                     action = 'VIEW'
                 
-                if action and action != 'VIEW':  # Não logar todas as visualizações
+                if action and action != 'VIEW':  # NÃ£o logar todas as visualizaÃ§Ãµes
                     # Extrair valores novos do resultado
                     new_values = None
                     if hasattr(result, 'get_json'):
@@ -225,7 +228,7 @@ def auto_log_crud(
                             response_data = result.get_json(silent=True)
                             if isinstance(response_data, dict):
                                 new_values = response_data.get('data', response_data)
-                        except:
+                        except Exception as exc:
                             pass
                     
                     # Extrair nome da entidade
@@ -233,16 +236,16 @@ def auto_log_crud(
                     if get_entity_name and new_values:
                         try:
                             entity_name = get_entity_name(new_values)
-                        except:
+                        except Exception as exc:
                             pass
                     
-                    # Criar descrição
+                    # Criar descriÃ§Ã£o
                     description = custom_description
                     if not description:
                         action_pt = {
-                            'CREATE': 'Criação',
-                            'UPDATE': 'Atualização',
-                            'DELETE': 'Exclusão'
+                            'CREATE': 'CriaÃ§Ã£o',
+                            'UPDATE': 'AtualizaÃ§Ã£o',
+                            'DELETE': 'ExclusÃ£o'
                         }.get(action, action)
                         
                         entity_type_pt = final_entity_type or 'entidade'
@@ -264,24 +267,24 @@ def auto_log_crud(
                             plan_id=entity_info['plan_id']
                         )
                     except Exception as log_error:
-                        # Não deixar erros de log quebrarem a aplicação
-                        print(f"Erro ao registrar log: {log_error}")
+                        # NÃ£o deixar erros de log quebrarem a aplicaÃ§Ã£o
+                        logger.exception("Erro ao registrar log")
                 
                 return result
                 
             except Exception as e:
-                # Se houver erro, registrar também
+                # Se houver erro, registrar tambÃ©m
                 try:
                     log_service.create_log(
                         action='ERROR',
                         entity_type=final_entity_type or 'unknown',
                         entity_id=entity_info['entity_id'],
                         entity_name=entity_info['entity_name'],
-                        description=f"Erro em operação: {str(e)[:200]}",
+                        description=f"Erro em operaÃ§Ã£o: {str(e)[:200]}",
                         company_id=entity_info['company_id'],
                         plan_id=entity_info['plan_id']
                     )
-                except:
+                except Exception as exc:
                     pass
                 raise e
         
@@ -290,25 +293,27 @@ def auto_log_crud(
 
 
 def enable_auto_logging_for_entity(entity_type: str):
-    """Habilita logging automático para um tipo de entidade"""
+    """Habilita logging automÃ¡tico para um tipo de entidade"""
     if entity_type in AutoLogConfig.DISABLED_ENTITIES:
         AutoLogConfig.DISABLED_ENTITIES.remove(entity_type)
     AutoLogConfig.ENABLED_ENTITIES.add(entity_type)
 
 
 def disable_auto_logging_for_entity(entity_type: str):
-    """Desabilita logging automático para um tipo de entidade"""
+    """Desabilita logging automÃ¡tico para um tipo de entidade"""
     AutoLogConfig.DISABLED_ENTITIES.add(entity_type)
     if entity_type in AutoLogConfig.ENABLED_ENTITIES:
         AutoLogConfig.ENABLED_ENTITIES.remove(entity_type)
 
 
 def get_auto_logging_config() -> Dict[str, Any]:
-    """Retorna a configuração atual de auto-logging"""
+    """Retorna a configuraÃ§Ã£o atual de auto-logging"""
     return {
         'enabled_entities': list(AutoLogConfig.ENABLED_ENTITIES),
         'disabled_entities': list(AutoLogConfig.DISABLED_ENTITIES),
         'skip_endpoints': AutoLogConfig.SKIP_ENDPOINTS,
         'entity_patterns': list(AutoLogConfig.ENTITY_TYPE_PATTERNS.keys())
     }
+
+
 

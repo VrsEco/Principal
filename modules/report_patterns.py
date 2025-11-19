@@ -1,13 +1,16 @@
-#!/usr/bin/env python3
+﻿#!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 """
-Módulo de Padrões de Relatório
+MÃ³dulo de PadrÃµes de RelatÃ³rio
 Sistema PEVAPP22
-Gerencia padrões de relatório com seções pré-configuradas
+Gerencia padrÃµes de relatÃ³rio com seÃ§Ãµes prÃ©-configuradas
 """
 
+import logging
 from database.postgres_helper import connect as pg_connect
 from datetime import datetime
+
+logger = logging.getLogger(__name__)
 from contextlib import contextmanager
 import sys
 import os
@@ -17,21 +20,21 @@ from config_database import get_db
 
 class ReportPatternsManager:
     """
-    Classe para gerenciar padrões de relatório
+    Classe para gerenciar padrÃµes de relatÃ³rio
     """
     
     def __init__(self, db_connection=None):
         """
-        Inicializa o gerenciador de padrões
+        Inicializa o gerenciador de padrÃµes
         
         Args:
-            db_connection: Conexão com banco de dados (opcional)
+            db_connection: ConexÃ£o com banco de dados (opcional)
         """
         self.db = db_connection or get_db()
         self._create_table()
     
     def _create_table(self):
-        """Cria a tabela de padrões de relatório se não existir"""
+        """Cria a tabela de padrÃµes de relatÃ³rio se nÃ£o existir"""
         with self.db._get_connection() as conn:
             conn.execute('''
                 CREATE TABLE IF NOT EXISTS report_patterns (
@@ -40,7 +43,7 @@ class ReportPatternsManager:
                     code TEXT NOT NULL UNIQUE,
                     description TEXT,
                     pattern_type TEXT NOT NULL,  -- 'process', 'company', 'custom'
-                    sections_config TEXT NOT NULL,  -- JSON com configuração das seções
+                    sections_config TEXT NOT NULL,  -- JSON com configuraÃ§Ã£o das seÃ§Ãµes
                     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
                     updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
                 )
@@ -48,17 +51,17 @@ class ReportPatternsManager:
     
     def create_pattern(self, name, code, description, pattern_type, sections_config):
         """
-        Cria um novo padrão de relatório
+        Cria um novo padrÃ£o de relatÃ³rio
         
         Args:
-            name: Nome do padrão
-            code: Código único do padrão
-            description: Descrição do padrão
-            pattern_type: Tipo do padrão ('process', 'company', 'custom')
-            sections_config: Configuração das seções em JSON
+            name: Nome do padrÃ£o
+            code: CÃ³digo Ãºnico do padrÃ£o
+            description: DescriÃ§Ã£o do padrÃ£o
+            pattern_type: Tipo do padrÃ£o ('process', 'company', 'custom')
+            sections_config: ConfiguraÃ§Ã£o das seÃ§Ãµes em JSON
             
         Returns:
-            int: ID do padrão criado
+            int: ID do padrÃ£o criado
         """
         with self.db._get_connection() as conn:
             cursor = conn.execute('''
@@ -69,10 +72,10 @@ class ReportPatternsManager:
     
     def get_all_patterns(self):
         """
-        Retorna todos os padrões de relatório
+        Retorna todos os padrÃµes de relatÃ³rio
         
         Returns:
-            list: Lista de padrões
+            list: Lista de padrÃµes
         """
         with self.db._get_connection() as conn:
             cursor = conn.execute('''
@@ -84,13 +87,13 @@ class ReportPatternsManager:
     
     def get_pattern_by_id(self, pattern_id):
         """
-        Retorna um padrão específico pelo ID
+        Retorna um padrÃ£o especÃ­fico pelo ID
         
         Args:
-            pattern_id: ID do padrão
+            pattern_id: ID do padrÃ£o
             
         Returns:
-            dict: Dados do padrão ou None
+            dict: Dados do padrÃ£o ou None
         """
         with self.db._get_connection() as conn:
             cursor = conn.execute('''
@@ -103,13 +106,13 @@ class ReportPatternsManager:
     
     def get_patterns_by_type(self, pattern_type):
         """
-        Retorna padrões de um tipo específico
+        Retorna padrÃµes de um tipo especÃ­fico
         
         Args:
-            pattern_type: Tipo do padrão ('process', 'company', 'custom')
+            pattern_type: Tipo do padrÃ£o ('process', 'company', 'custom')
             
         Returns:
-            list: Lista de padrões do tipo especificado
+            list: Lista de padrÃµes do tipo especificado
         """
         with self.db._get_connection() as conn:
             cursor = conn.execute('''
@@ -122,15 +125,15 @@ class ReportPatternsManager:
     
     def update_pattern(self, pattern_id, name, code, description, pattern_type, sections_config):
         """
-        Atualiza um padrão existente
+        Atualiza um padrÃ£o existente
         
         Args:
-            pattern_id: ID do padrão
+            pattern_id: ID do padrÃ£o
             name: Novo nome
-            code: Novo código
-            description: Nova descrição
+            code: Novo cÃ³digo
+            description: Nova descriÃ§Ã£o
             pattern_type: Novo tipo
-            sections_config: Nova configuração das seções
+            sections_config: Nova configuraÃ§Ã£o das seÃ§Ãµes
             
         Returns:
             bool: True se atualizado com sucesso
@@ -145,42 +148,42 @@ class ReportPatternsManager:
     
     def delete_pattern(self, pattern_id):
         """
-        Exclui um padrão
+        Exclui um padrÃ£o
         
         Args:
-            pattern_id: ID do padrão
+            pattern_id: ID do padrÃ£o
             
         Returns:
-            bool: True se excluído com sucesso
+            bool: True se excluÃ­do com sucesso
         """
         with self.db._get_connection() as conn:
             cursor = conn.execute('DELETE FROM report_patterns WHERE id = ?', (pattern_id,))
             return cursor.rowcount > 0
 
 
-# Padrões pré-definidos
+# PadrÃµes prÃ©-definidos
 DEFAULT_PATTERNS = [
     {
-        'name': 'Relatório Executivo de Processo',
+        'name': 'RelatÃ³rio Executivo de Processo',
         'code': 'EXEC_PROC',
-        'description': 'Relatório resumido para executivos com foco em indicadores e resumo',
+        'description': 'RelatÃ³rio resumido para executivos com foco em indicadores e resumo',
         'pattern_type': 'process',
         'sections_config': {
             'sections': [
-                {'id': 'info', 'name': 'Informações do Processo', 'required': True},
+                {'id': 'info', 'name': 'InformaÃ§Ãµes do Processo', 'required': True},
                 {'id': 'flow', 'name': 'Fluxo do Processo', 'required': True},
                 {'id': 'indicators', 'name': 'Indicadores de Desempenho', 'required': True}
             ]
         }
     },
     {
-        'name': 'Relatório Operacional Completo',
+        'name': 'RelatÃ³rio Operacional Completo',
         'code': 'OP_COMPLETE',
-        'description': 'Relatório completo com todas as seções para uso operacional',
+        'description': 'RelatÃ³rio completo com todas as seÃ§Ãµes para uso operacional',
         'pattern_type': 'process',
         'sections_config': {
             'sections': [
-                {'id': 'info', 'name': 'Informações do Processo', 'required': True},
+                {'id': 'info', 'name': 'InformaÃ§Ãµes do Processo', 'required': True},
                 {'id': 'flow', 'name': 'Fluxo do Processo', 'required': True},
                 {'id': 'pop', 'name': 'Procedimento Operacional', 'required': True},
                 {'id': 'routine', 'name': 'Rotinas e Colaboradores', 'required': True},
@@ -189,13 +192,13 @@ DEFAULT_PATTERNS = [
         }
     },
     {
-        'name': 'Relatório de Auditoria',
+        'name': 'RelatÃ³rio de Auditoria',
         'code': 'AUDIT',
-        'description': 'Relatório focado em auditoria com POP e rotinas detalhadas',
+        'description': 'RelatÃ³rio focado em auditoria com POP e rotinas detalhadas',
         'pattern_type': 'process',
         'sections_config': {
             'sections': [
-                {'id': 'info', 'name': 'Informações do Processo', 'required': True},
+                {'id': 'info', 'name': 'InformaÃ§Ãµes do Processo', 'required': True},
                 {'id': 'pop', 'name': 'Procedimento Operacional', 'required': True},
                 {'id': 'routine', 'name': 'Rotinas e Colaboradores', 'required': True},
                 {'id': 'indicators', 'name': 'Indicadores de Desempenho', 'required': True}
@@ -207,14 +210,14 @@ DEFAULT_PATTERNS = [
 
 def initialize_default_patterns():
     """
-    Inicializa os padrões padrão do sistema
+    Inicializa os padrÃµes padrÃ£o do sistema
     """
     import json
     manager = ReportPatternsManager()
     
     for pattern_data in DEFAULT_PATTERNS:
         try:
-            # Verificar se já existe
+            # Verificar se jÃ¡ existe
             existing = manager.get_all_patterns()
             if not any(p['code'] == pattern_data['code'] for p in existing):
                 manager.create_pattern(
@@ -224,11 +227,13 @@ def initialize_default_patterns():
                     pattern_type=pattern_data['pattern_type'],
                     sections_config=json.dumps(pattern_data['sections_config'])
                 )
-                print(f"✅ Padrão '{pattern_data['name']}' criado")
+                logger.info(f"âœ… PadrÃ£o '{pattern_data['name']}' criado")
         except Exception as e:
-            print(f"❌ Erro ao criar padrão '{pattern_data['name']}': {e}")
+            logger.info(f"âŒ Erro ao criar padrÃ£o '{pattern_data['name']}': {e}")
 
 
 if __name__ == "__main__":
-    # Inicializar padrões padrão
+    # Inicializar padrÃµes padrÃ£o
     initialize_default_patterns()
+
+

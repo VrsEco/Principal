@@ -18,6 +18,7 @@ class PostgreSQLDatabase(DatabaseInterface):
     _investment_contributions_schema_checked = False
     _structure_installments_schema_checked = False
     _metrics_schema_checked = False
+    _routine_tasks_schema_checked = False
     
     def __init__(self, host: str = 'localhost', port: int = 5432, 
                  database: str = 'pevapp22', user: str = 'postgres', 
@@ -141,6 +142,47 @@ class PostgreSQLDatabase(DatabaseInterface):
             return altered
         except Exception as exc:
             print(f"Error ensuring plan_finance_metrics schema: {exc}")
+            raise
+
+    def _ensure_routine_tasks_schema(self, cursor) -> None:
+        """Normalize routine_tasks datetime columns for PostgreSQL compatibility."""
+        if PostgreSQLDatabase._routine_tasks_schema_checked:
+            return
+        try:
+            cursor.execute("""
+                SELECT column_name, data_type
+                FROM information_schema.columns
+                WHERE table_name = 'routine_tasks'
+            """)
+            rows = cursor.fetchall()
+            column_types = {
+                row['column_name']: row['data_type']
+                for row in rows or []
+            }
+            timestamp_columns = [
+                'scheduled_date',
+                'deadline_date',
+                'completed_at',
+                'created_at',
+                'updated_at',
+            ]
+            altered = False
+            for column in timestamp_columns:
+                if column_types.get(column) == 'time without time zone':
+                    cursor.execute(f"""
+                        ALTER TABLE routine_tasks
+                        ALTER COLUMN {column} TYPE TIMESTAMP
+                        USING NULL
+                    """)
+                    altered = True
+            if altered:
+                try:
+                    cursor.conn.commit()
+                except Exception:
+                    pass
+            PostgreSQLDatabase._routine_tasks_schema_checked = True
+        except Exception as exc:
+            print(f"Error ensuring routine_tasks schema: {exc}")
             raise
 
     def _convert_params(self, sql, params):
@@ -1305,6 +1347,76 @@ class PostgreSQLDatabase(DatabaseInterface):
         conn.close()
         return dict(row) if row else None
     
+    def get_company_profile(self, company_id: int) -> Optional[Dict[str, Any]]:
+        """Get full company profile including configs"""
+        conn = self._get_connection()
+        cursor = conn.cursor()
+        cursor.execute('SELECT * FROM companies WHERE id = %s', (company_id,))
+        row = cursor.fetchone()
+        conn.close()
+        if not row:
+            return None
+        data = dict(row)
+        try:
+            data['pev_config'] = json.loads(data.get('pev_config') or '{}')
+        except Exception:
+            data['pev_config'] = {}
+        try:
+            data['grv_config'] = json.loads(data.get('grv_config') or '{}')
+        except Exception:
+            data['grv_config'] = {}
+        return data
+    
+    def update_company_profile(self, company_id: int, profile: Dict[str, Any]) -> bool:
+        """Update company profile fields including configs"""
+        try:
+            conn = self._get_connection()
+            cursor = conn.cursor()
+            cursor.execute('''
+                UPDATE companies SET
+                    name = %s, legal_name = %s, industry = %s, size = %s, description = %s,
+                    client_code = %s,
+                    mvv_mission = %s, mvv_vision = %s, mvv_values = %s,
+                    pev_config = %s, grv_config = %s
+                WHERE id = %s
+            ''', (
+                profile.get('name'),
+                profile.get('legal_name'),
+                profile.get('industry'),
+                profile.get('size'),
+                profile.get('description'),
+                self._normalize_client_code(profile.get('client_code')),
+                profile.get('mvv_mission'),
+                profile.get('mvv_vision'),
+                profile.get('mvv_values'),
+                json.dumps(profile.get('pev_config') or {}),
+                json.dumps(profile.get('grv_config') or {}),
+                company_id
+            ))
+            conn.commit()
+            conn.close()
+            return True
+        except Exception as exc:
+            print(f"Error updating company profile: {exc}")
+            return False
+    
+    def update_company_mvv(self, company_id: int, mission: str, vision: str, values: str) -> bool:
+        """Update company-level MVV fields"""
+        try:
+            conn = self._get_connection()
+            cursor = conn.cursor()
+            cursor.execute('''
+                UPDATE companies SET
+                    mvv_mission = %s, mvv_vision = %s, mvv_values = %s
+                WHERE id = %s
+            ''', (mission, vision, values, company_id))
+            conn.commit()
+            conn.close()
+            return True
+        except Exception as exc:
+            print(f"Error updating company MVV: {exc}")
+            return False
+    
     # Plan operations
     def get_plans_by_company(self, company_id: int) -> List[Dict[str, Any]]:
         """Get plans for a company"""
@@ -1344,6 +1456,84 @@ class PostgreSQLDatabase(DatabaseInterface):
         conn.close()
         
         return dict(row) if row else None
+
+    def ensure_plan_seed(self, plan_id: int, company_id: Optional[int] = None) -> Optional[Dict[str, Any]]:
+        """Ensure a plan (and its company) exist for placeholder routes."""
+        conn = None
+        try:
+            conn = self._get_connection()
+            cursor = conn.cursor()
+            target_plan_id = int(plan_id)
+            self._ensure_plans_schema(cursor)
+
+            cursor.execute(
+                '''
+                SELECT id, company_id, name
+                FROM plans
+                WHERE id = %s
+                ''',
+                (target_plan_id,),
+            )
+            existing = cursor.fetchone()
+            if existing:
+                return dict(existing)
+
+            target_company_id = int(company_id) if company_id is not None else 1
+
+            cursor.execute(
+                '''
+                INSERT INTO companies (id, name, legal_name, segment, coverage_physical, coverage_online, created_at, updated_at)
+                VALUES (%s, %s, %s, %s, %s, %s, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)
+                ON CONFLICT (id) DO NOTHING
+                ''',
+                (
+                    target_company_id,
+                    'Empresa Demonstrativa',
+                    'Empresa Demonstrativa Ltda',
+                    'servicos',
+                    'regional',
+                    'online',
+                ),
+            )
+
+            cursor.execute(
+                '''
+                INSERT INTO plans (id, company_id, name, description, status, plan_mode)
+                VALUES (%s, %s, %s, %s, %s, %s)
+                ON CONFLICT (id) DO NOTHING
+                ''',
+                (
+                    target_plan_id,
+                    target_company_id,
+                    'Plano Demonstrativo Permanente',
+                    'Plano criado automaticamente para testes de rotas.',
+                    'active',
+                    'evolucao',
+                ),
+            )
+
+            cursor.execute(
+                '''
+                SELECT id, company_id, name
+                FROM plans
+                WHERE id = %s
+                ''',
+                (target_plan_id,),
+            )
+            seed_row = cursor.fetchone()
+            conn.commit()
+            return dict(seed_row) if seed_row else None
+        except Exception as exc:
+            if conn:
+                try:
+                    conn.rollback()
+                except Exception:
+                    pass
+            print(f"Error ensuring plan seed: {exc}")
+            return None
+        finally:
+            if conn:
+                conn.close()
     
     # Participant operations
     def get_participants(self, plan_id: int) -> List[Dict[str, Any]]:
@@ -1597,6 +1787,46 @@ class PostgreSQLDatabase(DatabaseInterface):
             return True
         except Exception as e:
             print(f"Error updating company data: {e}")
+            return False
+
+    def update_company_analyses(self, plan_id: int, data: Dict[str, Any]) -> bool:
+        """Update only the analysis-related fields for a company's data."""
+        try:
+            conn = self._get_connection()
+            cursor = conn.cursor()
+            cursor.execute("ALTER TABLE company_data ADD COLUMN IF NOT EXISTS ai_insights TEXT")
+            cursor.execute("ALTER TABLE company_data ADD COLUMN IF NOT EXISTS consultant_analysis TEXT")
+
+            cursor.execute('SELECT id FROM company_data WHERE plan_id = %s', (plan_id,))
+            existing = cursor.fetchone()
+
+            if existing:
+                cursor.execute('''
+                    UPDATE company_data
+                    SET ai_insights = %s,
+                        consultant_analysis = %s,
+                        updated_at = CURRENT_TIMESTAMP
+                    WHERE plan_id = %s
+                ''', (
+                    data.get('ai_insights'),
+                    data.get('consultant_analysis'),
+                    plan_id
+                ))
+            else:
+                cursor.execute('''
+                    INSERT INTO company_data (plan_id, ai_insights, consultant_analysis)
+                    VALUES (%s, %s, %s)
+                ''', (
+                    plan_id,
+                    data.get('ai_insights'),
+                    data.get('consultant_analysis')
+                ))
+
+            conn.commit()
+            conn.close()
+            return True
+        except Exception as exc:
+            print(f"Error updating company analyses: {exc}")
             return False
     
     # Driver operations
@@ -5512,6 +5742,34 @@ class PostgreSQLDatabase(DatabaseInterface):
         except Exception as e:
             print(f"Error creating company_project: {e}")
             return None
+
+    def _ensure_meetings_schema(self, cursor) -> None:
+        """Ensure the meetings table exists with the expected structure."""
+        cursor.execute('''
+            CREATE TABLE IF NOT EXISTS meetings (
+                id SERIAL PRIMARY KEY,
+                company_id INTEGER NOT NULL REFERENCES companies(id) ON DELETE CASCADE,
+                project_id INTEGER REFERENCES company_projects(id) ON DELETE SET NULL,
+                title VARCHAR(255) NOT NULL,
+                scheduled_date DATE,
+                scheduled_time VARCHAR(10),
+                actual_date DATE,
+                actual_time VARCHAR(10),
+                status VARCHAR(50) DEFAULT 'draft',
+                invite_notes TEXT,
+                meeting_notes TEXT,
+                guests_json TEXT,
+                agenda_json TEXT,
+                participants_json TEXT,
+                discussions_json TEXT,
+                activities_json TEXT,
+                created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+            )
+        ''')
+        cursor.execute('CREATE INDEX IF NOT EXISTS idx_meetings_company ON meetings(company_id)')
+        cursor.execute('CREATE INDEX IF NOT EXISTS idx_meetings_project ON meetings(project_id)')
+        cursor.connection.commit()
     
     def list_company_meetings(self, company_id: int) -> List[Dict[str, Any]]:
         """List meetings registered for a company"""
@@ -5762,6 +6020,28 @@ class PostgreSQLDatabase(DatabaseInterface):
             import traceback
             traceback.print_exc()
             return False
+
+    def delete_meeting(self, meeting_id: int) -> bool:
+        """Delete a meeting and return True when a record was affected."""
+        conn = None
+        try:
+            conn = self._get_connection()
+            cursor = conn.cursor()
+            self._ensure_meetings_schema(cursor)
+            cursor.execute('DELETE FROM meetings WHERE id = %s', (meeting_id,))
+            conn.commit()
+            return cursor.rowcount > 0
+        except Exception as exc:
+            print(f"Error deleting meeting: {exc}")
+            if conn:
+                try:
+                    conn.rollback()
+                except Exception:
+                    pass
+            return False
+        finally:
+            if conn:
+                conn.close()
     
     def delete_company(self, company_id: int) -> bool:
         """Delete company by ID"""
@@ -7047,6 +7327,9 @@ class PostgreSQLDatabase(DatabaseInterface):
     def get_routine_tasks(self, company_id: int, status: str = None) -> List[Dict[str, Any]]:
         """Get routine tasks for a company, optionally filtered by status"""
         conn = self._get_connection()
+        ensure_cursor = conn.cursor()
+        self._ensure_routine_tasks_schema(ensure_cursor)
+        ensure_cursor.close()
         cursor = conn.cursor()
         
         if status:
@@ -7068,6 +7351,25 @@ class PostgreSQLDatabase(DatabaseInterface):
         conn.close()
         return [dict(row) for row in rows]
 
+    def get_overdue_tasks(self, company_id: int) -> List[Dict[str, Any]]:
+        """Get all overdue routine tasks for a company"""
+        conn = self._get_connection()
+        ensure_cursor = conn.cursor()
+        self._ensure_routine_tasks_schema(ensure_cursor)
+        ensure_cursor.close()
+        cursor = conn.cursor()
+        cursor.execute('''
+            SELECT rt.* FROM routine_tasks rt
+            JOIN routines r ON r.id = rt.routine_id
+            WHERE r.company_id = %s
+              AND rt.status IN ('pending', 'in_progress')
+              AND rt.deadline_date < NOW()
+            ORDER BY rt.deadline_date ASC
+        ''', (company_id,))
+        rows = cursor.fetchall()
+        conn.close()
+        return [dict(row) for row in rows]
+
 
 
     def create_routine_task(self, routine_id: int, trigger_id: int, title: str, description: str,
@@ -7075,16 +7377,20 @@ class PostgreSQLDatabase(DatabaseInterface):
         """Create a new routine task"""
         try:
             conn = self._get_connection()
+            ensure_cursor = conn.cursor()
+            self._ensure_routine_tasks_schema(ensure_cursor)
+            ensure_cursor.close()
             cursor = conn.cursor()
             cursor.execute('''
                 INSERT INTO routine_tasks 
                 (routine_id, trigger_id, title, description, scheduled_date, deadline_date)
                 VALUES (%s, %s, %s, %s, %s, %s)
+                RETURNING id
             ''', (routine_id, trigger_id, title, description, scheduled_date, deadline_date))
-            new_id = cursor.lastrowid
+            new_row = cursor.fetchone()
             conn.commit()
             conn.close()
-            return new_id
+            return new_row[0] if new_row else None
         except Exception as e:
             print(f"Error creating routine task: {e}")
             return None
@@ -7095,6 +7401,9 @@ class PostgreSQLDatabase(DatabaseInterface):
         """Update the status of a routine task"""
         try:
             conn = self._get_connection()
+            ensure_cursor = conn.cursor()
+            self._ensure_routine_tasks_schema(ensure_cursor)
+            ensure_cursor.close()
             cursor = conn.cursor()
             
             if status == 'completed':
@@ -7123,14 +7432,17 @@ class PostgreSQLDatabase(DatabaseInterface):
     def get_upcoming_tasks(self, company_id: int, days: int = 7) -> List[Dict[str, Any]]:
         """Get upcoming tasks for the next N days"""
         conn = self._get_connection()
+        ensure_cursor = conn.cursor()
+        self._ensure_routine_tasks_schema(ensure_cursor)
+        ensure_cursor.close()
         cursor = conn.cursor()
         cursor.execute('''
             SELECT rt.* FROM routine_tasks rt
             JOIN routines r ON r.id = rt.routine_id
             WHERE r.company_id = %s 
             AND rt.status IN ('pending', 'in_progress')
-            AND rt.deadline_date >= CURRENT_TIMESTAMP
-            AND rt.deadline_date <= datetime(CURRENT_TIMESTAMP, '+' || %s || ' days')
+            AND rt.deadline_date >= NOW()
+            AND rt.deadline_date <= NOW() + (%s * INTERVAL '1 day')
             ORDER BY rt.deadline_date ASC
         ''', (company_id, days))
         rows = cursor.fetchall()
@@ -7420,20 +7732,20 @@ def ensure_integrations_tables():
         cursor = conn.cursor()
         cursor.execute("""
             CREATE TABLE IF NOT EXISTS integrations (
-                id TEXT PRIMARY KEY,
-                name TEXT NOT NULL,
-                provider TEXT NOT NULL,
-                type TEXT NOT NULL,
-                auth_type TEXT NOT NULL,
-                config TEXT,
-                created_at TEXT DEFAULT (datetime('now')),
-                updated_at TEXT DEFAULT (datetime('now'))
+                id VARCHAR(64) PRIMARY KEY,
+                name VARCHAR(255) NOT NULL,
+                provider VARCHAR(100) NOT NULL,
+                type VARCHAR(100) NOT NULL,
+                auth_type VARCHAR(100) NOT NULL,
+                config JSON,
+                created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
             )
         """)
         cursor.execute("""
             CREATE TABLE IF NOT EXISTS agent_integrations (
-                agent_id TEXT NOT NULL,
-                integration_id TEXT NOT NULL,
+                agent_id VARCHAR(64) NOT NULL,
+                integration_id VARCHAR(64) NOT NULL,
                 PRIMARY KEY (agent_id, integration_id),
                 FOREIGN KEY (agent_id) REFERENCES ai_agents(id) ON DELETE CASCADE,
                 FOREIGN KEY (integration_id) REFERENCES integrations(id) ON DELETE CASCADE
@@ -7454,12 +7766,11 @@ def list_integrations():
         cursor.execute("SELECT id, name, provider, type, auth_type, config, created_at, updated_at FROM integrations ORDER BY name")
         rows = cursor.fetchall()
         conn.close()
-        import json as _json
         items = []
         for r in rows:
             try:
-                cfg = _json.loads(r[5]) if r[5] else {}
-            except Exception:
+                cfg = json.loads(r[5]) if r[5] else {}
+            except (json.JSONDecodeError, TypeError, ValueError):
                 cfg = {}
             items.append({
                 'id': r[0], 'name': r[1], 'provider': r[2], 'type': r[3], 'auth_type': r[4],
@@ -7471,168 +7782,220 @@ def list_integrations():
         return []
 
 
-    # ===== ROTINAS - CRUD =====
+def _serialize_integration_row(row):
+    """Helper to convert integration row tuples into dictionaries."""
+    if not row:
+        return None
+    try:
+        cfg = json.loads(row[5]) if row[5] else {}
+    except (json.JSONDecodeError, TypeError, ValueError):
+        cfg = {}
+    return {
+        'id': row[0],
+        'name': row[1],
+        'provider': row[2],
+        'type': row[3],
+        'auth_type': row[4],
+        'config': cfg,
+        'created_at': row[6],
+        'updated_at': row[7]
+    }
 
 
-
-    def get_overdue_tasks(self, company_id: int) -> List[Dict[str, Any]]:
-        """Get all overdue tasks for a company"""
-        conn = self._get_connection()
+def get_integration(integration_id: str) -> Optional[Dict[str, Any]]:
+    """Retrieve a single integration definition."""
+    if not integration_id:
+        return None
+    try:
+        ensure_integrations_tables()
+        conn = get_connection()
         cursor = conn.cursor()
-        cursor.execute('''
-            SELECT rt.* FROM routine_tasks rt
-            JOIN routines r ON r.id = rt.routine_id
-            WHERE r.company_id = %s 
-            AND rt.status IN ('pending', 'in_progress')
-            AND rt.deadline_date < CURRENT_TIMESTAMP
-            ORDER BY rt.deadline_date ASC
-        ''', (company_id,))
-        rows = cursor.fetchall()
-        conn.close()
-        return [dict(row) for row in rows]
-
-
-
-    def get_company_profile(self, company_id: int) -> Optional[Dict[str, Any]]:
-        """Get full company profile including configs"""
-        conn = self._get_connection()
-        cursor = conn.cursor()
-        cursor.execute('SELECT * FROM companies WHERE id = %s', (company_id,))
+        cursor.execute("""
+            SELECT id, name, provider, type, auth_type, config, created_at, updated_at
+            FROM integrations
+            WHERE id = %s
+        """, (integration_id,))
         row = cursor.fetchone()
         conn.close()
-        if not row:
+        return _serialize_integration_row(row)
+    except Exception as exc:
+        print(f"Error fetching integration {integration_id}: {exc}")
+        return None
+
+
+def _normalize_config_payload(config_value: Any) -> Optional[str]:
+    """Prepare config payload for storage as JSON text."""
+    if config_value in (None, '', {}):
+        return None
+    if isinstance(config_value, str):
+        stripped = config_value.strip()
+        if not stripped:
             return None
-        data = dict(row)
-        # Parse JSON configs if present
+        # Ensure it is valid JSON, fallback to string literal
         try:
-            data['pev_config'] = json.loads(data.get('pev_config') or '{}')
-        except Exception:
-            data['pev_config'] = {}
-        try:
-            data['grv_config'] = json.loads(data.get('grv_config') or '{}')
-        except Exception:
-            data['grv_config'] = {}
-        return data
+            json.loads(stripped)
+            return stripped
+        except (json.JSONDecodeError, TypeError, ValueError):
+            return json.dumps({'raw': stripped})
+    try:
+        return json.dumps(config_value)
+    except (TypeError, ValueError):
+        return None
 
 
-
-    def update_company_profile(self, company_id: int, profile: Dict[str, Any]) -> bool:
-        """Update company profile fields including configs"""
-        try:
-            conn = self._get_connection()
-            cursor = conn.cursor()
-            cursor.execute('''
-                UPDATE companies SET
-                    name = %s, legal_name = %s, industry = %s, size = %s, description = %s,
-                    client_code = %s,
-                    mvv_mission = %s, mvv_vision = %s, mvv_values = %s,
-                    pev_config = %s, grv_config = %s
-                WHERE id = %s
-            ''', (
-                profile.get('name'),
-                profile.get('legal_name'),
-                profile.get('industry'),
-                profile.get('size'),
-                profile.get('description'),
-                self._normalize_client_code(profile.get('client_code')),
-                profile.get('mvv_mission'),
-                profile.get('mvv_vision'),
-                profile.get('mvv_values'),
-                json.dumps(profile.get('pev_config') or {}),
-                json.dumps(profile.get('grv_config') or {}),
-                company_id
-            ))
-            conn.commit()
+def create_integration(data: Dict[str, Any]) -> bool:
+    """Create a new integration record."""
+    required_fields = ['id', 'name', 'provider', 'type', 'auth_type']
+    if not all(data.get(field) for field in required_fields):
+        return False
+    conn = None
+    try:
+        ensure_integrations_tables()
+        conn = get_connection()
+        cursor = conn.cursor()
+        cursor.execute("""
+            INSERT INTO integrations (
+                id, name, provider, type, auth_type, config, created_at, updated_at
+            ) VALUES (%s, %s, %s, %s, %s, %s, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)
+            ON CONFLICT (id) DO UPDATE SET
+                name = EXCLUDED.name,
+                provider = EXCLUDED.provider,
+                type = EXCLUDED.type,
+                auth_type = EXCLUDED.auth_type,
+                config = EXCLUDED.config,
+                updated_at = CURRENT_TIMESTAMP
+        """, (
+            data['id'],
+            data['name'],
+            data['provider'],
+            data['type'],
+            data['auth_type'],
+            _normalize_config_payload(data.get('config'))
+        ))
+        conn.commit()
+        return True
+    except Exception as exc:
+        if conn:
+            conn.rollback()
+        print(f"Error creating integration {data.get('id')}: {exc}")
+        return False
+    finally:
+        if conn:
             conn.close()
-            return True
-        except Exception as exc:
-            print(f"Error updating company profile: {exc}")
-            return False
-    
-    # Plan operations
 
 
-    def update_company_mvv(self, company_id: int, mission: str, vision: str, values: str) -> bool:
-        """Update company-level MVV fields"""
-        try:
-            conn = self._get_connection()
-            cursor = conn.cursor()
-            cursor.execute('''
-                UPDATE companies SET
-                    mvv_mission = %s, mvv_vision = %s, mvv_values = %s
-                WHERE id = %s
-            ''', (mission, vision, values, company_id))
-            conn.commit()
+def update_integration(integration_id: str, data: Dict[str, Any]) -> bool:
+    """Update an existing integration definition."""
+    if not integration_id:
+        return False
+    conn = None
+    try:
+        ensure_integrations_tables()
+        conn = get_connection()
+        cursor = conn.cursor()
+        cursor.execute("""
+            UPDATE integrations SET
+                name = %s,
+                provider = %s,
+                type = %s,
+                auth_type = %s,
+                config = %s,
+                updated_at = CURRENT_TIMESTAMP
+            WHERE id = %s
+        """, (
+            data.get('name'),
+            data.get('provider'),
+            data.get('type'),
+            data.get('auth_type'),
+            _normalize_config_payload(data.get('config')),
+            integration_id
+        ))
+        conn.commit()
+        return cursor.rowcount > 0
+    except Exception as exc:
+        if conn:
+            conn.rollback()
+        print(f"Error updating integration {integration_id}: {exc}")
+        return False
+    finally:
+        if conn:
             conn.close()
-            return True
-        except Exception as exc:
-            print(f"Error updating company MVV: {exc}")
-            return False
 
 
-
-    def update_company_analyses(self, plan_id: int, data: Dict[str, Any]) -> bool:
-        """Update only analysis fields in company data"""
-        try:
-            conn = self._get_connection()
-            cursor = conn.cursor()
-            
-            # Check if company data exists
-            cursor.execute('SELECT id FROM company_data WHERE plan_id = %s', (plan_id,))
-            existing = cursor.fetchone()
-            
-            if existing:
-                # Update only analysis fields
-                cursor.execute('''
-                    UPDATE company_data SET
-                        ai_insights = %s, consultant_analysis = %s, updated_at = CURRENT_TIMESTAMP
-                    WHERE plan_id = %s
-                ''', (
-                    data.get('ai_insights'),
-                    data.get('consultant_analysis'),
-                    plan_id
-                ))
-            else:
-                # Insert new record with only analysis fields
-                cursor.execute('''
-                    INSERT INTO company_data (plan_id, ai_insights, consultant_analysis)
-                    VALUES (%s, %s, %s)
-                ''', (
-                    plan_id,
-                    data.get('ai_insights'),
-                    data.get('consultant_analysis')
-                ))
-            
-            conn.commit()
+def delete_integration(integration_id: str) -> bool:
+    """Remove an integration definition."""
+    if not integration_id:
+        return False
+    conn = None
+    try:
+        ensure_integrations_tables()
+        conn = get_connection()
+        cursor = conn.cursor()
+        cursor.execute("DELETE FROM agent_integrations WHERE integration_id = %s", (integration_id,))
+        cursor.execute("DELETE FROM integrations WHERE id = %s", (integration_id,))
+        conn.commit()
+        return cursor.rowcount > 0
+    except Exception as exc:
+        if conn:
+            conn.rollback()
+        print(f"Error deleting integration {integration_id}: {exc}")
+        return False
+    finally:
+        if conn:
             conn.close()
-            return True
-        except Exception as e:
-            print(f"Error updating company analyses: {e}")
-            return False
 
 
+def set_agent_integrations(agent_id: str, integration_ids: List[str]) -> bool:
+    """Persist the many-to-many relationship between agents and integrations."""
+    if not agent_id:
+        return False
+    integration_ids = integration_ids or []
+    conn = None
+    try:
+        ensure_integrations_tables()
+        conn = get_connection()
+        cursor = conn.cursor()
+        cursor.execute("DELETE FROM agent_integrations WHERE agent_id = %s", (agent_id,))
+        for integration_id in integration_ids:
+            if not integration_id:
+                continue
+            cursor.execute("""
+                INSERT INTO agent_integrations (agent_id, integration_id)
+                VALUES (%s, %s)
+                ON CONFLICT DO NOTHING
+            """, (agent_id, integration_id))
+        conn.commit()
+        return True
+    except Exception as exc:
+        if conn:
+            conn.rollback()
+        print(f"Error linking integrations to agent {agent_id}: {exc}")
+        return False
+    finally:
+        if conn:
+            conn.close()
 
 
-    def delete_meeting(self, meeting_id: int) -> bool:
-        """Delete a meeting"""
-        conn = None
-        try:
-            conn = self._get_connection()
-            cursor = conn.cursor()
-            self._ensure_meetings_schema(cursor)
-            cursor.execute('DELETE FROM meetings WHERE id = %s', (meeting_id,))
-            conn.commit()
-            return cursor.rowcount > 0
-        except Exception as exc:
-            print(f"Error deleting meeting: {exc}")
-            if conn:
-                try:
-                    conn.rollback()
-                except Exception:
-                    pass
-            return False
-        finally:
-            if conn:
-                conn.close()
-    # Company creation
+def get_agent_integrations(agent_id: str) -> List[Dict[str, Any]]:
+    """Return integrations linked to a specific AI agent."""
+    if not agent_id:
+        return []
+    try:
+        ensure_integrations_tables()
+        conn = get_connection()
+        cursor = conn.cursor()
+        cursor.execute("""
+            SELECT i.id, i.name, i.provider, i.type, i.auth_type, i.config, i.created_at, i.updated_at
+            FROM agent_integrations ai
+            JOIN integrations i ON i.id = ai.integration_id
+            WHERE ai.agent_id = %s
+            ORDER BY i.name
+        """, (agent_id,))
+        rows = cursor.fetchall()
+        conn.close()
+        return [ _serialize_integration_row(row) for row in rows if row ]
+    except Exception as exc:
+        print(f"Error fetching agent integrations for {agent_id}: {exc}")
+        return []
+
 

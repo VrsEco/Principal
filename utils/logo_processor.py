@@ -1,22 +1,25 @@
-#!/usr/bin/env python3
+﻿#!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 """
 Sistema de Processamento de Logos
 Redimensiona e otimiza logos automaticamente
 """
 
+import logging
 from PIL import Image
 import os
 from pathlib import Path
 from werkzeug.utils import secure_filename
 
-# Configurações de logos
+logger = logging.getLogger(__name__)
+
+# ConfiguraÃ§Ãµes de logos
 LOGO_TYPES = {
     'square': {
         'name': 'Quadrada',
         'size': (400, 400),
         'aspect_ratio': '1:1',
-        'description': 'Para ícones, perfis e redes sociais',
+        'description': 'Para Ã­cones, perfis e redes sociais',
         'max_size_mb': 2
     },
     'vertical': {
@@ -30,14 +33,14 @@ LOGO_TYPES = {
         'name': 'Retangular Horizontal',
         'size': (800, 400),
         'aspect_ratio': '2:1',
-        'description': 'Para cabeçalhos e assinaturas',
+        'description': 'Para cabeÃ§alhos e assinaturas',
         'max_size_mb': 2
     },
     'banner': {
         'name': 'Banner',
         'size': (1200, 300),
         'aspect_ratio': '4:1',
-        'description': 'Para topo de documentos e apresentações',
+        'description': 'Para topo de documentos e apresentaÃ§Ãµes',
         'max_size_mb': 3
     }
 }
@@ -46,11 +49,11 @@ UPLOAD_FOLDER = 'uploads/logos'
 ALLOWED_EXTENSIONS = {'png', 'jpg', 'jpeg', 'webp', 'svg'}
 
 def init_logo_folders():
-    """Cria pastas necessárias para logos"""
+    """Cria pastas necessÃ¡rias para logos"""
     Path(UPLOAD_FOLDER).mkdir(parents=True, exist_ok=True)
 
 def allowed_file(filename):
-    """Verifica se extensão é permitida"""
+    """Verifica se extensÃ£o Ã© permitida"""
     return '.' in filename and filename.rsplit('.', 1)[1].lower() in ALLOWED_EXTENSIONS
 
 def resize_and_save_logo(image_file, company_id, logo_type):
@@ -67,16 +70,16 @@ def resize_and_save_logo(image_file, company_id, logo_type):
     """
     
     if logo_type not in LOGO_TYPES:
-        raise ValueError(f"Tipo de logo inválido: {logo_type}")
+        raise ValueError(f"Tipo de logo invÃ¡lido: {logo_type}")
     
     if not allowed_file(image_file.filename):
-        raise ValueError("Extensão de arquivo não permitida")
+        raise ValueError("ExtensÃ£o de arquivo nÃ£o permitida")
     
-    # Configurações do tipo de logo
+    # ConfiguraÃ§Ãµes do tipo de logo
     config = LOGO_TYPES[logo_type]
     target_size = config['size']
     
-    # Criar pasta se não existe
+    # Criar pasta se nÃ£o existe
     init_logo_folders()
     
     # Nome do arquivo
@@ -88,7 +91,7 @@ def resize_and_save_logo(image_file, company_id, logo_type):
         # Abrir imagem
         img = Image.open(image_file)
         
-        # Converter RGBA para RGB se necessário (para JPG)
+        # Converter RGBA para RGB se necessÃ¡rio (para JPG)
         if img.mode in ('RGBA', 'LA', 'P') and ext in ('jpg', 'jpeg'):
             # Criar fundo branco
             background = Image.new('RGB', img.size, (255, 255, 255))
@@ -97,7 +100,7 @@ def resize_and_save_logo(image_file, company_id, logo_type):
             background.paste(img, mask=img.split()[-1] if img.mode == 'RGBA' else None)
             img = background
         
-        # Calcular redimensionamento mantendo proporção
+        # Calcular redimensionamento mantendo proporÃ§Ã£o
         img.thumbnail(target_size, Image.Resampling.LANCZOS)
         
         # Criar imagem final com fundo branco se menor que target
@@ -110,7 +113,7 @@ def resize_and_save_logo(image_file, company_id, logo_type):
                   (target_size[1] - img.size[1]) // 2)
         final_img.paste(img, offset)
         
-        # Salvar com otimização
+        # Salvar com otimizaÃ§Ã£o
         save_kwargs = {'optimize': True, 'quality': 90}
         if ext == 'png':
             save_kwargs['compress_level'] = 9
@@ -121,7 +124,7 @@ def resize_and_save_logo(image_file, company_id, logo_type):
         return f"{UPLOAD_FOLDER}/{safe_filename}"
         
     except Exception as e:
-        print(f"Erro ao processar logo: {e}")
+        logger.exception("Erro ao processar logo")
         raise
 
 def delete_logo(logo_path):
@@ -133,7 +136,7 @@ def delete_logo(logo_path):
                 file_path.unlink()
                 return True
         except Exception as e:
-            print(f"Erro ao deletar logo: {e}")
+            logger.exception("Erro ao deletar logo")
     return False
 
 def get_logo_url(logo_path):
@@ -143,12 +146,13 @@ def get_logo_url(logo_path):
     return None
 
 def get_logo_config(logo_type):
-    """Retorna configuração de um tipo de logo"""
+    """Retorna configuraÃ§Ã£o de um tipo de logo"""
     return LOGO_TYPES.get(logo_type)
 
 def get_all_logo_configs():
-    """Retorna todas as configurações de logos"""
+    """Retorna todas as configuraÃ§Ãµes de logos"""
     return LOGO_TYPES
+
 
 
 

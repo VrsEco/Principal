@@ -1,6 +1,9 @@
-
+﻿
+import logging
 from database.postgres_helper import connect as pg_connect
 import json
+
+logger = logging.getLogger(__name__)
 
 def _to_dict(cursor, row):
     """Converts a database row to a dictionary."""
@@ -25,21 +28,21 @@ def _decode_json_fields(row_dict):
 
 class ReportModelsManager:
     """
-    Gerencia os modelos de relatório do banco de dados.
+    Gerencia os modelos de relatÃ³rio do banco de dados.
     """
     def __init__(self, db_path='instance/pevapp22.db'):
         """Inicializa o gerenciador."""
         self.db_path = db_path
 
     def _get_connection(self):
-        """Retorna uma conexão com o banco de dados."""
+        """Retorna uma conexÃ£o com o banco de dados."""
         from database.postgres_helper import connect as pg_connect
         conn = pg_connect()
         return conn
 
     def get_model(self, model_id):
         """
-        Busca um modelo de relatório pelo ID.
+        Busca um modelo de relatÃ³rio pelo ID.
         """
         try:
             conn = self._get_connection()
@@ -54,12 +57,12 @@ class ReportModelsManager:
             return _decode_json_fields(dict_row)
             
         except Exception as e:
-            print(f"Erro ao buscar modelo de relatório {model_id}: {e}")
+            logger.exception(f"Erro ao buscar modelo de relatÃ³rio {model_id}: {e}")
             return None
 
     def get_all_models(self):
         """
-        Busca todos os modelos de relatório.
+        Busca todos os modelos de relatÃ³rio.
         """
         try:
             conn = self._get_connection()
@@ -74,18 +77,18 @@ class ReportModelsManager:
             return [_decode_json_fields(row) for row in dict_rows]
 
         except Exception as e:
-            print(f"Erro ao buscar todos os modelos de relatório: {e}")
+            logger.exception(f"Erro ao buscar todos os modelos de relatÃ³rio: {e}")
             return []
 
     def save_model(self, model_data):
         """
-        Salva um novo modelo de relatório.
+        Salva um novo modelo de relatÃ³rio.
         """
         try:
             conn = self._get_connection()
             cursor = conn.cursor()
             
-            # Prepara os dados para inserção
+            # Prepara os dados para inserÃ§Ã£o
             insert_data = (
                 model_data.get('name', ''),
                 model_data.get('description', ''),
@@ -121,18 +124,18 @@ class ReportModelsManager:
             return model_id
             
         except Exception as e:
-            print(f"Erro ao salvar modelo de relatório: {e}")
+            logger.exception(f"Erro ao salvar modelo de relatÃ³rio: {e}")
             return None
 
     def update_model(self, model_id, model_data):
         """
-        Atualiza um modelo de relatório existente.
+        Atualiza um modelo de relatÃ³rio existente.
         """
         try:
             conn = self._get_connection()
             cursor = conn.cursor()
             
-            # Prepara os dados para atualização
+            # Prepara os dados para atualizaÃ§Ã£o
             update_data = (
                 model_data.get('name', ''),
                 model_data.get('description', ''),
@@ -169,12 +172,12 @@ class ReportModelsManager:
             return cursor.rowcount > 0
             
         except Exception as e:
-            print(f"Erro ao atualizar modelo de relatório {model_id}: {e}")
+            logger.exception(f"Erro ao atualizar modelo de relatÃ³rio {model_id}: {e}")
             return False
 
     def delete_model(self, model_id):
         """
-        Exclui um modelo de relatório.
+        Exclui um modelo de relatÃ³rio.
         """
         try:
             conn = self._get_connection()
@@ -188,5 +191,8 @@ class ReportModelsManager:
             return cursor.rowcount > 0
             
         except Exception as e:
-            print(f"Erro ao excluir modelo de relatório {model_id}: {e}")
+            logger.exception(f"Erro ao excluir modelo de relatÃ³rio {model_id}: {e}")
             return False
+
+
+
