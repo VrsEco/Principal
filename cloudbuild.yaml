@@ -91,15 +91,15 @@ steps:
   # ==========================================
   # Step 6: Health Check
   # ==========================================
-  - name: 'gcr.io/cloud-builders/curl'
+  - name: 'gcr.io/google.com/cloudsdktool/cloud-sdk'
     id: 'health-check'
     entrypoint: 'bash'
     args:
       - '-c'
       - |
-        SERVICE_URL=$(gcloud run services describe gestaoversos --region us-central1 --format 'value(status.url)')
-        echo "Testing: $SERVICE_URL/health"
-        curl -f $SERVICE_URL/health || exit 1
+        SERVICE_URL=$$(gcloud run services describe gestaoversos --region us-central1 --format 'value(status.url)')
+        echo "Testing: $$SERVICE_URL/health"
+        curl -f $$SERVICE_URL/health || exit 1
         echo "✅ Health check passed!"
 
 # ==========================================
