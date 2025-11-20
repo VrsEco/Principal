@@ -23,7 +23,9 @@ def _resolve_placeholders(url: str) -> str:
     for key, value in PLACEHOLDER_DEFAULTS.items():
         token_plain = f"<{key}>"
         token_typed = f"<int:{key}>"
-        resolved = resolved.replace(token_typed, str(value)).replace(token_plain, str(value))
+        resolved = resolved.replace(token_typed, str(value)).replace(
+            token_plain, str(value)
+        )
     return resolved
 
 
@@ -83,7 +85,9 @@ def authenticated_session(base_url, auth_credentials):
     headers = {"Content-Type": "application/json"}
 
     try:
-        response = session.post(login_url, json=login_payload, headers=headers, timeout=TIMEOUT)
+        response = session.post(
+            login_url, json=login_payload, headers=headers, timeout=TIMEOUT
+        )
         if response.status_code == 200:
             return session
         pytest.skip(f"Falha ao autenticar: {response.status_code}")

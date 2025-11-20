@@ -9,9 +9,9 @@ from config_database import get_db
 import sys
 import io
 
-sys.stdout = io.TextIOWrapper(sys.stdout.buffer, encoding='utf-8', errors='replace')
+sys.stdout = io.TextIOWrapper(sys.stdout.buffer, encoding="utf-8", errors="replace")
 
-BASE_URL = 'http://127.0.0.1:5002'
+BASE_URL = "http://127.0.0.1:5002"
 
 print("=" * 80)
 print("TESTE FINAL COMPLETO - PostgreSQL")
@@ -31,14 +31,14 @@ except Exception as e:
 # 2. Teste de Páginas
 print("\n>> 2. TESTE DE PÁGINAS PRINCIPAIS")
 pages = [
-    ('/', 'Home'),
-    ('/login', 'Login'),
-    ('/main', 'Main'),
-    ('/companies', 'Empresas'),
-    ('/pev/dashboard', 'PEV Dashboard'),
-    ('/grv/dashboard', 'GRV Dashboard'),
-    ('/configs', 'Configs'),
-    ('/settings/reports', 'Relatórios'),
+    ("/", "Home"),
+    ("/login", "Login"),
+    ("/main", "Main"),
+    ("/companies", "Empresas"),
+    ("/pev/dashboard", "PEV Dashboard"),
+    ("/grv/dashboard", "GRV Dashboard"),
+    ("/configs", "Configs"),
+    ("/settings/reports", "Relatórios"),
 ]
 
 page_ok = 0
@@ -67,17 +67,22 @@ crud_fail = 0
 try:
     from sqlalchemy import text
     from database.postgres_helper import get_engine
-    
+
     engine = get_engine()
     with engine.connect() as conn:
-        result = conn.execute(text("""
+        result = conn.execute(
+            text(
+                """
             INSERT INTO companies (name, legal_name) 
             VALUES (:name, :legal_name) 
             RETURNING id
-        """), {'name': 'Final Test', 'legal_name': 'Final Test LTDA'})
+        """
+            ),
+            {"name": "Final Test", "legal_name": "Final Test LTDA"},
+        )
         test_id = result.fetchone()[0]
         conn.commit()
-    
+
     print(f"   CREATE - OK (ID: {test_id})")
     crud_ok += 1
 except Exception as e:
@@ -89,7 +94,7 @@ except Exception as e:
 if test_id:
     try:
         company = db.get_company(test_id)
-        if company and company['name'] == 'Final Test':
+        if company and company["name"] == "Final Test":
             print(f"   READ   - OK")
             crud_ok += 1
         else:
@@ -103,13 +108,18 @@ if test_id:
 if test_id:
     try:
         with engine.connect() as conn:
-            conn.execute(text("""
+            conn.execute(
+                text(
+                    """
                 UPDATE companies SET name = :name WHERE id = :id
-            """), {'name': 'Final Test Updated', 'id': test_id})
+            """
+                ),
+                {"name": "Final Test Updated", "id": test_id},
+            )
             conn.commit()
-        
+
         company = db.get_company(test_id)
-        if company and 'Updated' in company['name']:
+        if company and "Updated" in company["name"]:
             print(f"   UPDATE - OK")
             crud_ok += 1
         else:
@@ -139,10 +149,10 @@ print("\n>> 4. VERIFICAÇÃO DE INTEGRIDADE")
 try:
     companies = db.get_companies()
     employees = db.list_employees(13)  # Save Water
-    
+
     print(f"   Empresas: {len(companies)}")
     print(f"   Colaboradores (Save Water): {len(employees)}")
-    
+
     if len(companies) == 4:
         print("   STATUS: OK - Dados originais preservados")
     else:
@@ -168,4 +178,3 @@ else:
     print(f"  - Páginas: {page_fail} falhas")
     print(f"  - CRUD: {crud_fail} falhas")
     sys.exit(1)
-

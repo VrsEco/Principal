@@ -4,11 +4,12 @@ Script para criar a tabela de portfolios
 """
 import sqlite3
 
-conn = sqlite3.connect('instance/pevapp22.db')
+conn = sqlite3.connect("instance/pevapp22.db")
 cursor = conn.cursor()
 
 # Criar tabela de portfolios
-cursor.execute("""
+cursor.execute(
+    """
     CREATE TABLE IF NOT EXISTS portfolios (
         id INTEGER PRIMARY KEY AUTOINCREMENT,
         company_id INTEGER NOT NULL,
@@ -21,7 +22,8 @@ cursor.execute("""
         FOREIGN KEY (company_id) REFERENCES companies(id),
         FOREIGN KEY (responsible_id) REFERENCES employees(id)
     )
-""")
+"""
+)
 
 conn.commit()
 conn.close()
@@ -36,4 +38,3 @@ print("  - responsible_id (INTEGER)")
 print("  - notes (TEXT)")
 print("  - created_at (TIMESTAMP)")
 print("  - updated_at (TIMESTAMP)")
-

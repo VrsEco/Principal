@@ -19,26 +19,20 @@ print("=" * 80)
 
 # Executar pytest com saída capturada
 result = subprocess.run(
-    [
-        sys.executable, "-m", "pytest",
-        *test_paths,
-        "-v",
-        "--tb=no",
-        "--maxfail=1000"
-    ],
+    [sys.executable, "-m", "pytest", *test_paths, "-v", "--tb=no", "--maxfail=1000"],
     cwd=root_dir,
     capture_output=True,
-    text=True
+    text=True,
 )
 
 # Analisar resultados
 output = result.stdout + result.stderr
 
 # Extrair estatísticas
-collected_match = re.search(r'collected (\d+)', output)
-passed_matches = re.findall(r'PASSED', output)
-failed_matches = re.findall(r'FAILED', output)
-error_matches = re.findall(r'ERROR', output)
+collected_match = re.search(r"collected (\d+)", output)
+passed_matches = re.findall(r"PASSED", output)
+failed_matches = re.findall(r"FAILED", output)
+error_matches = re.findall(r"ERROR", output)
 
 collected = int(collected_match.group(1)) if collected_match else 0
 passed = len(passed_matches)
@@ -46,7 +40,7 @@ failed = len(failed_matches)
 error = len(error_matches)
 
 # Extrair resumo final
-summary_match = re.search(r'(\d+) passed.*?(\d+) failed', output)
+summary_match = re.search(r"(\d+) passed.*?(\d+) failed", output)
 if summary_match:
     passed = int(summary_match.group(1))
     failed = int(summary_match.group(2))
@@ -62,7 +56,7 @@ print(f"Taxa de sucesso: {(passed/collected*100) if collected > 0 else 0:.1f}%")
 print("=" * 80)
 
 # Mostrar algumas linhas de saída
-lines = output.split('\n')
+lines = output.split("\n")
 print("\nÚltimas linhas da execução:")
 print("-" * 80)
 for line in lines[-20:]:
@@ -70,4 +64,3 @@ for line in lines[-20:]:
         print(line)
 
 sys.exit(result.returncode)
-

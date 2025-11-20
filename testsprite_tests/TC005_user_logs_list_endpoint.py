@@ -5,18 +5,20 @@ USERNAME = "admin@versus.com.br"
 PASSWORD = "123456"
 TIMEOUT = 30
 
+
 def test_user_logs_list_endpoint():
     session = requests.Session()
     # Perform login to get session cookie
     login_url = f"{BASE_URL}/auth/login"
-    login_payload = {
-        "email": USERNAME,
-        "password": PASSWORD
-    }
+    login_payload = {"email": USERNAME, "password": PASSWORD}
     headers = {"Accept": "application/json"}
 
-    login_response = session.post(login_url, json=login_payload, headers=headers, timeout=TIMEOUT)
-    assert login_response.status_code == 200, f"Login failed with status code {login_response.status_code}"
+    login_response = session.post(
+        login_url, json=login_payload, headers=headers, timeout=TIMEOUT
+    )
+    assert (
+        login_response.status_code == 200
+    ), f"Login failed with status code {login_response.status_code}"
     login_json = login_response.json()
     assert login_json.get("success") is True, "Login did not succeed"
 
@@ -37,7 +39,9 @@ def test_user_logs_list_endpoint():
     for params in test_queries:
         try:
             response = session.get(url, headers=headers, params=params, timeout=TIMEOUT)
-            assert response.status_code == 200, f"Expected 200 but got {response.status_code} for params {params}"
+            assert (
+                response.status_code == 200
+            ), f"Expected 200 but got {response.status_code} for params {params}"
 
             json_data = response.json()
             assert isinstance(json_data, dict), "Response is not a JSON object"
@@ -46,10 +50,13 @@ def test_user_logs_list_endpoint():
             assert "logs" in json_data, "'logs' field missing in response"
             assert isinstance(json_data["logs"], list), "'logs' is not a list"
             assert "pagination" in json_data, "'pagination' field missing in response"
-            assert isinstance(json_data["pagination"], dict), "'pagination' is not an object"
+            assert isinstance(
+                json_data["pagination"], dict
+            ), "'pagination' is not an object"
         except requests.exceptions.RequestException as e:
             assert False, f"Request failed: {e}"
         except (ValueError, AssertionError) as e:
             assert False, f"Response validation failed: {e}"
+
 
 test_user_logs_list_endpoint()

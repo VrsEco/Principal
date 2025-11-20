@@ -25,7 +25,9 @@ def escape_attr(value: str) -> str:
     )
 
 
-def get_screen_entries(screen_code: int, include_inactive: bool = False) -> List[UiCatalog]:
+def get_screen_entries(
+    screen_code: int, include_inactive: bool = False
+) -> List[UiCatalog]:
     """Fetch catalog entries for a specific screen."""
     query = UiCatalog.query.filter_by(screen_code=screen_code, is_deleted=False)
     if not include_inactive:
@@ -111,34 +113,3 @@ def ensure_entry(
         entry.is_deleted = False
     db.session.commit()
     return entry
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-

@@ -5,13 +5,11 @@ BASE_URL = "http://localhost:5003"
 SESSION_COOKIE = "dummy_session_value"
 TIMEOUT = 30
 
+
 def test_route_audit_enable_auto_logging():
     entity_type = "test-entity"
     url = f"{BASE_URL}/route-audit/api/entity/{entity_type}/enable"
-    headers = {
-        "Accept": "application/json",
-        "Cookie": f"session={SESSION_COOKIE}"
-    }
+    headers = {"Accept": "application/json", "Cookie": f"session={SESSION_COOKIE}"}
 
     try:
         response = requests.post(url, headers=headers, timeout=TIMEOUT)
@@ -33,5 +31,6 @@ def test_route_audit_enable_auto_logging():
         pass
     else:
         assert False, f"Unexpected status code {response.status_code} returned."
+
 
 test_route_audit_enable_auto_logging()

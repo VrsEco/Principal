@@ -71,11 +71,11 @@ def create_structure_installment(plan_id: int, structure_id: int):
 '''
 
 # Ler arquivo
-with open('modules/pev/__init__.py', 'r', encoding='utf-8') as f:
+with open("modules/pev/__init__.py", "r", encoding="utf-8") as f:
     content = f.read()
 
 # Encontrar posição de inserção
-marker = '# APIs de Capacidade de Faturamento'
+marker = "# APIs de Capacidade de Faturamento"
 idx = content.find(marker)
 
 if idx == -1:
@@ -83,11 +83,10 @@ if idx == -1:
     exit(1)
 
 # Inserir código
-new_content = content[:idx] + endpoints_code + '\n' + content[idx:]
+new_content = content[:idx] + endpoints_code + "\n" + content[idx:]
 
 # Escrever arquivo
-with open('modules/pev/__init__.py', 'w', encoding='utf-8') as f:
+with open("modules/pev/__init__.py", "w", encoding="utf-8") as f:
     f.write(new_content)
 
 print("✅ Endpoints de parcelas inseridos com sucesso!")
-

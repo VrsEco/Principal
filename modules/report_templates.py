@@ -148,9 +148,7 @@ class ReportTemplatesManager:
         sections_config = json.dumps(
             template_data.get("sections_config") or {}, ensure_ascii=False
         )
-        variables = json.dumps(
-            template_data.get("variables") or {}, ensure_ascii=False
-        )
+        variables = json.dumps(template_data.get("variables") or {}, ensure_ascii=False)
 
         cursor.execute(
             """
@@ -263,7 +261,10 @@ class ReportTemplateGenerator:
         }
 
     def _render_html(
-        self, template: Dict[str, Any], page_config: Dict[str, Any], context: Dict[str, Any]
+        self,
+        template: Dict[str, Any],
+        page_config: Dict[str, Any],
+        context: Dict[str, Any],
     ) -> str:
         header_title = context.get("report_title") or template["name"]
         company_name = context.get("company_name", "Empresa")
@@ -274,7 +275,9 @@ class ReportTemplateGenerator:
             if isinstance(section_meta, dict) and not section_meta.get("enabled", True):
                 continue
             section_html.append(
-                self._render_section(section_key, section_meta, context.get(section_key))
+                self._render_section(
+                    section_key, section_meta, context.get(section_key)
+                )
             )
 
         html_parts = [
@@ -312,7 +315,13 @@ class ReportTemplateGenerator:
             description = meta.get("description") or ""
 
         if isinstance(data, list):
-            content = "<ul>" + "".join(f"<li>{json.dumps(item, ensure_ascii=False)}</li>" for item in data) + "</ul>"
+            content = (
+                "<ul>"
+                + "".join(
+                    f"<li>{json.dumps(item, ensure_ascii=False)}</li>" for item in data
+                )
+                + "</ul>"
+            )
         elif isinstance(data, dict):
             content = f"<pre>{json.dumps(data, ensure_ascii=False, indent=2)}</pre>"
         elif data:
@@ -327,4 +336,3 @@ class ReportTemplateGenerator:
             f"{content}"
             "</div>"
         )
-

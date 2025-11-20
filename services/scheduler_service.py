@@ -17,17 +17,19 @@ logger = logging.getLogger(__name__)
 
 class SchedulerService:
     """Serviço de agendamento de tarefas"""
-    
+
     def __init__(self):
         """Inicializa o scheduler"""
-        self.scheduler = BackgroundScheduler({
-            'apscheduler.timezone': 'America/Sao_Paulo',
-            'apscheduler.job_defaults.coalesce': True,
-            'apscheduler.job_defaults.max_instances': 1
-        })
+        self.scheduler = BackgroundScheduler(
+            {
+                "apscheduler.timezone": "America/Sao_Paulo",
+                "apscheduler.job_defaults.coalesce": True,
+                "apscheduler.job_defaults.max_instances": 1,
+            }
+        )
         self.is_running = False
         logger.info("📅 Scheduler Service inicializado")
-    
+
     def start(self):
         """Inicia o scheduler"""
         if not self.is_running:
@@ -38,7 +40,7 @@ class SchedulerService:
             except Exception as e:
                 logger.error(f"❌ Erro ao iniciar scheduler: {e}")
                 raise
-    
+
     def stop(self):
         """Para o scheduler"""
         if self.is_running:
@@ -48,11 +50,11 @@ class SchedulerService:
                 logger.info("⏹️ Scheduler parado")
             except Exception as e:
                 logger.error(f"❌ Erro ao parar scheduler: {e}")
-    
+
     def add_job(self, func, trigger, job_id, **trigger_args):
         """
         Adiciona um job ao scheduler
-        
+
         Args:
             func: Função a ser executada
             trigger: Tipo de trigger ('cron', 'interval', 'date')
@@ -65,13 +67,13 @@ class SchedulerService:
                 trigger=trigger,
                 id=job_id,
                 replace_existing=True,
-                **trigger_args
+                **trigger_args,
             )
             logger.info(f"✅ Job '{job_id}' adicionado: {trigger} {trigger_args}")
         except Exception as e:
             logger.error(f"❌ Erro ao adicionar job '{job_id}': {e}")
             raise
-    
+
     def remove_job(self, job_id):
         """Remove um job do scheduler"""
         try:
@@ -79,7 +81,7 @@ class SchedulerService:
             logger.info(f"🗑️ Job '{job_id}' removido")
         except Exception as e:
             logger.warning(f"⚠️ Job '{job_id}' não encontrado: {e}")
-    
+
     def list_jobs(self):
         """Lista todos os jobs agendados"""
         jobs = self.scheduler.get_jobs()
@@ -101,22 +103,23 @@ def process_daily_routines():
     logger.info("=" * 80)
     logger.info(f"🔄 Iniciando processamento de rotinas - {datetime.now()}")
     logger.info("=" * 80)
-    
+
     try:
         # Importar aqui para evitar circular import
         from routine_scheduler import process_routines
-        
+
         # Executar o processamento de rotinas
         success = process_routines()
-        
+
         if success:
             logger.info("✅ Processamento de rotinas concluído com sucesso!")
         else:
             logger.error("❌ Erro no processamento de rotinas")
-            
+
     except Exception as e:
         logger.error(f"❌ Erro ao processar rotinas: {e}")
         import traceback
+
         traceback.print_exc()
 
 
@@ -125,26 +128,26 @@ def setup_routine_jobs():
     Configura os jobs de rotina no scheduler
     """
     logger.info("🔧 Configurando jobs de rotina...")
-    
+
     # Job 1: Processar rotinas diárias às 00:01
     scheduler_service.add_job(
         func=process_daily_routines,
-        trigger='cron',
-        job_id='process_daily_routines',
+        trigger="cron",
+        job_id="process_daily_routines",
         hour=0,
         minute=1,
-        name='Processamento Diário de Rotinas'
+        name="Processamento Diário de Rotinas",
     )
-    
+
     # Job 2: Verificar tarefas atrasadas a cada hora
     scheduler_service.add_job(
         func=check_overdue_tasks,
-        trigger='cron',
-        job_id='check_overdue_tasks',
+        trigger="cron",
+        job_id="check_overdue_tasks",
         minute=0,  # A cada hora cheia
-        name='Verificação de Tarefas Atrasadas'
+        name="Verificação de Tarefas Atrasadas",
     )
-    
+
     logger.info("✅ Jobs de rotina configurados!")
 
 
@@ -154,14 +157,14 @@ def check_overdue_tasks():
     Executado a cada hora
     """
     logger.info("⏰ Verificando tarefas atrasadas...")
-    
+
     try:
         # Importar aqui para evitar circular import
         from routine_scheduler import update_overdue_tasks
-        
+
         update_overdue_tasks()
         logger.info("✅ Verificação de tarefas concluída!")
-        
+
     except Exception as e:
         logger.error(f"❌ Erro ao verificar tarefas: {e}")
 
@@ -172,21 +175,21 @@ def initialize_scheduler():
     Deve ser chamado no startup da aplicação
     """
     logger.info("🚀 Inicializando Scheduler Service...")
-    
+
     try:
         # Configurar jobs
         setup_routine_jobs()
-        
+
         # Iniciar scheduler
         scheduler_service.start()
-        
+
         # Listar jobs configurados
         scheduler_service.list_jobs()
-        
+
         logger.info("=" * 80)
         logger.info("✅ SCHEDULER ATIVO E FUNCIONANDO!")
         logger.info("=" * 80)
-        
+
     except Exception as e:
         logger.error(f"❌ Erro ao inicializar scheduler: {e}")
         raise
@@ -205,4 +208,3 @@ def shutdown_scheduler():
 def get_scheduler():
     """Retorna a instância do scheduler"""
     return scheduler_service
-

@@ -11,8 +11,7 @@ from .base import BaseReportGenerator
 from .process_pop import ProcessPOPReport, generate_process_pop_report
 
 __all__ = [
-    'BaseReportGenerator',
-    'ProcessPOPReport',
-    'generate_process_pop_report',
+    "BaseReportGenerator",
+    "ProcessPOPReport",
+    "generate_process_pop_report",
 ]
-

@@ -19,7 +19,9 @@ class ReportGenerator:
         self.output_dir.mkdir(parents=True, exist_ok=True)
 
     def generate_html_preview(
-        self, model_config: Optional[Dict[str, Any]] = None, model_id: Optional[int] = None
+        self,
+        model_config: Optional[Dict[str, Any]] = None,
+        model_id: Optional[int] = None,
     ) -> str:
         """Retorna HTML com base no modelo fornecido ou salvo."""
         model = None
@@ -29,13 +31,13 @@ class ReportGenerator:
         return self._render_html(combined_model)
 
     def generate_pdf_report(
-        self, model_config: Optional[Dict[str, Any]] = None, model_id: Optional[int] = None
+        self,
+        model_config: Optional[Dict[str, Any]] = None,
+        model_id: Optional[int] = None,
     ) -> str:
         """Gera arquivo HTML (placeholder de PDF) e retorna o caminho."""
         html = self.generate_html_preview(model_config, model_id)
-        filename = (
-            f"report_{datetime.utcnow().strftime('%Y%m%d%H%M%S')}_{uuid4().hex[:8]}.html"
-        )
+        filename = f"report_{datetime.utcnow().strftime('%Y%m%d%H%M%S')}_{uuid4().hex[:8]}.html"
         file_path = self.output_dir / filename
         file_path.write_text(html, encoding="utf-8")
         return str(file_path)
@@ -104,4 +106,3 @@ class ReportGenerator:
                 "</html>",
             ]
         )
-

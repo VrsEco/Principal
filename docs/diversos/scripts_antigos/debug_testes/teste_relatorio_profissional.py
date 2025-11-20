@@ -13,18 +13,19 @@ print("=" * 60)
 print("🚀 TESTE DE RELATÓRIO PROFISSIONAL - PEVAPP22")
 print("=" * 60)
 
+
 # Verifica se as bibliotecas estão instaladas
 def verificar_bibliotecas():
     """Verifica se todas as bibliotecas necessárias estão instaladas"""
     bibliotecas = {
-        'weasyprint': 'WeasyPrint (PDF)',
-        'plotly': 'Plotly (Gráficos)',
-        'pandas': 'Pandas (Dados)',
-        'kaleido': 'Kaleido (Exportar imagens)'
+        "weasyprint": "WeasyPrint (PDF)",
+        "plotly": "Plotly (Gráficos)",
+        "pandas": "Pandas (Dados)",
+        "kaleido": "Kaleido (Exportar imagens)",
     }
-    
+
     print("\n📦 Verificando bibliotecas instaladas...\n")
-    
+
     faltando = []
     for lib, nome in bibliotecas.items():
         try:
@@ -33,7 +34,7 @@ def verificar_bibliotecas():
         except ImportError:
             print(f"   ❌ {nome} - NÃO INSTALADO")
             faltando.append(lib)
-    
+
     if faltando:
         print("\n⚠️  ATENÇÃO: Algumas bibliotecas não estão instaladas!")
         print(f"\nPara instalar, execute:")
@@ -41,9 +42,10 @@ def verificar_bibliotecas():
         print("\nOu instale todas de uma vez:")
         print(f"   pip install -r requirements_relatorios.txt")
         return False
-    
+
     print("\n✅ Todas as bibliotecas estão instaladas!\n")
     return True
+
 
 if not verificar_bibliotecas():
     print("\n" + "=" * 60)
@@ -60,8 +62,8 @@ print("📊 Gerando Relatório de Demonstração...")
 print("=" * 60)
 
 # Cria diretórios necessários
-os.makedirs('temp_relatorios', exist_ok=True)
-os.makedirs('relatorios', exist_ok=True)
+os.makedirs("temp_relatorios", exist_ok=True)
+os.makedirs("relatorios", exist_ok=True)
 
 # ========================================
 # 1. GERA DADOS DE EXEMPLO
@@ -70,51 +72,51 @@ os.makedirs('relatorios', exist_ok=True)
 print("\n1️⃣  Preparando dados...")
 
 # Dados de vendas mensais
-meses = ['Jan', 'Fev', 'Mar', 'Abr', 'Mai', 'Jun']
+meses = ["Jan", "Fev", "Mar", "Abr", "Mai", "Jun"]
 vendas = [45000, 52000, 48000, 61000, 58000, 67000]
 meta = [50000, 50000, 50000, 50000, 50000, 50000]
 
 # Projetos em andamento
 projetos_data = [
     {
-        'codigo': 'PROJ-001',
-        'nome': 'Implementação Sistema ERP',
-        'status': 'Em dia',
-        'prazo': '15/12/2024',
-        'valor': 150000.00
+        "codigo": "PROJ-001",
+        "nome": "Implementação Sistema ERP",
+        "status": "Em dia",
+        "prazo": "15/12/2024",
+        "valor": 150000.00,
     },
     {
-        'codigo': 'PROJ-002',
-        'nome': 'Modernização Infraestrutura',
-        'status': 'Atrasado',
-        'prazo': '30/11/2024',
-        'valor': 89500.00
+        "codigo": "PROJ-002",
+        "nome": "Modernização Infraestrutura",
+        "status": "Atrasado",
+        "prazo": "30/11/2024",
+        "valor": 89500.00,
     },
     {
-        'codigo': 'PROJ-003',
-        'nome': 'Migração Cloud',
-        'status': 'Em dia',
-        'prazo': '20/01/2025',
-        'valor': 120000.00
+        "codigo": "PROJ-003",
+        "nome": "Migração Cloud",
+        "status": "Em dia",
+        "prazo": "20/01/2025",
+        "valor": 120000.00,
     },
     {
-        'codigo': 'PROJ-004',
-        'nome': 'Automação Processos',
-        'status': 'Em dia',
-        'prazo': '10/02/2025',
-        'valor': 75000.00
-    }
+        "codigo": "PROJ-004",
+        "nome": "Automação Processos",
+        "status": "Em dia",
+        "prazo": "10/02/2025",
+        "valor": 75000.00,
+    },
 ]
 
 # Métricas
 metricas = {
-    'faturamento': sum(vendas),
-    'projetos_concluidos': 8,
-    'eficiencia': 92,
-    'qualidade': 95,
-    'prazo': 88,
-    'custo': 91,
-    'satisfacao': 94
+    "faturamento": sum(vendas),
+    "projetos_concluidos": 8,
+    "eficiencia": 92,
+    "qualidade": 95,
+    "prazo": 88,
+    "custo": 91,
+    "satisfacao": 94,
 }
 
 print("   ✅ Dados preparados")
@@ -128,75 +130,80 @@ print("\n2️⃣  Gerando gráficos profissionais...")
 # Gráfico 1: Vendas vs Meta
 fig_vendas = go.Figure()
 
-fig_vendas.add_trace(go.Scatter(
-    x=meses,
-    y=vendas,
-    mode='lines+markers',
-    name='Vendas Realizadas',
-    line=dict(color='rgb(26, 118, 255)', width=3),
-    marker=dict(size=10)
-))
+fig_vendas.add_trace(
+    go.Scatter(
+        x=meses,
+        y=vendas,
+        mode="lines+markers",
+        name="Vendas Realizadas",
+        line=dict(color="rgb(26, 118, 255)", width=3),
+        marker=dict(size=10),
+    )
+)
 
-fig_vendas.add_trace(go.Scatter(
-    x=meses,
-    y=meta,
-    mode='lines',
-    name='Meta',
-    line=dict(color='rgb(255, 99, 71)', width=2, dash='dash')
-))
+fig_vendas.add_trace(
+    go.Scatter(
+        x=meses,
+        y=meta,
+        mode="lines",
+        name="Meta",
+        line=dict(color="rgb(255, 99, 71)", width=2, dash="dash"),
+    )
+)
 
 fig_vendas.update_layout(
     title={
-        'text': 'Evolução de Vendas vs Meta',
-        'x': 0.5,
-        'xanchor': 'center',
-        'font': {'size': 20, 'family': 'Arial'}
+        "text": "Evolução de Vendas vs Meta",
+        "x": 0.5,
+        "xanchor": "center",
+        "font": {"size": 20, "family": "Arial"},
     },
-    xaxis_title='Mês',
-    yaxis_title='Vendas (R$)',
-    template='plotly_white',
-    hovermode='x unified',
-    legend=dict(
-        orientation="h",
-        yanchor="bottom",
-        y=1.02,
-        xanchor="right",
-        x=1
-    ),
+    xaxis_title="Mês",
+    yaxis_title="Vendas (R$)",
+    template="plotly_white",
+    hovermode="x unified",
+    legend=dict(orientation="h", yanchor="bottom", y=1.02, xanchor="right", x=1),
     font=dict(family="Arial", size=12),
-    height=400
+    height=400,
 )
 
-grafico_vendas_path = os.path.abspath('temp_relatorios/grafico_vendas.png')
+grafico_vendas_path = os.path.abspath("temp_relatorios/grafico_vendas.png")
 fig_vendas.write_image(grafico_vendas_path, width=1000, height=400, scale=2)
 print("   ✅ Gráfico de vendas criado")
 
 # Gráfico 2: Indicadores de Desempenho
-categorias = ['Qualidade', 'Prazo', 'Custo', 'Satisfação']
-valores = [metricas['qualidade'], metricas['prazo'], metricas['custo'], metricas['satisfacao']]
-cores = ['#1a76ff', '#28a745', '#ffc107', '#dc3545']
+categorias = ["Qualidade", "Prazo", "Custo", "Satisfação"]
+valores = [
+    metricas["qualidade"],
+    metricas["prazo"],
+    metricas["custo"],
+    metricas["satisfacao"],
+]
+cores = ["#1a76ff", "#28a745", "#ffc107", "#dc3545"]
 
-fig_desempenho = go.Figure(data=[
-    go.Bar(
-        x=categorias,
-        y=valores,
-        marker_color=cores,
-        text=[f'{v}%' for v in valores],
-        textposition='auto',
-    )
-])
-
-fig_desempenho.update_layout(
-    title='Indicadores de Desempenho',
-    xaxis_title='Indicador',
-    yaxis_title='Score (%)',
-    template='plotly_white',
-    font=dict(family="Arial", size=12),
-    yaxis=dict(range=[0, 100]),
-    height=400
+fig_desempenho = go.Figure(
+    data=[
+        go.Bar(
+            x=categorias,
+            y=valores,
+            marker_color=cores,
+            text=[f"{v}%" for v in valores],
+            textposition="auto",
+        )
+    ]
 )
 
-grafico_desempenho_path = os.path.abspath('temp_relatorios/grafico_desempenho.png')
+fig_desempenho.update_layout(
+    title="Indicadores de Desempenho",
+    xaxis_title="Indicador",
+    yaxis_title="Score (%)",
+    template="plotly_white",
+    font=dict(family="Arial", size=12),
+    yaxis=dict(range=[0, 100]),
+    height=400,
+)
+
+grafico_desempenho_path = os.path.abspath("temp_relatorios/grafico_desempenho.png")
 fig_desempenho.write_image(grafico_desempenho_path, width=1000, height=400, scale=2)
 print("   ✅ Gráfico de desempenho criado")
 
@@ -206,16 +213,18 @@ print("   ✅ Gráfico de desempenho criado")
 
 print("\n3️⃣  Montando relatório HTML...")
 
+
 def format_currency(valor):
     """Formata valor como moeda brasileira"""
-    return f'R$ {valor:,.2f}'.replace(',', '_').replace('.', ',').replace('_', '.')
+    return f"R$ {valor:,.2f}".replace(",", "_").replace(".", ",").replace("_", ".")
+
 
 # Monta tabela de projetos
 tabela_projetos = ""
 for projeto in projetos_data:
-    cor_status = 'green' if projeto['status'] == 'Em dia' else 'red'
-    icone_status = '✓' if projeto['status'] == 'Em dia' else '⚠'
-    
+    cor_status = "green" if projeto["status"] == "Em dia" else "red"
+    icone_status = "✓" if projeto["status"] == "Em dia" else "⚠"
+
     tabela_projetos += f"""
     <tr>
         <td><strong>{projeto['codigo']}</strong></td>
@@ -517,7 +526,9 @@ print("   ✅ HTML montado")
 
 print("\n4️⃣  Convertendo para PDF...")
 
-output_path = f'relatorios/relatorio_demo_{datetime.now().strftime("%Y%m%d_%H%M%S")}.pdf'
+output_path = (
+    f'relatorios/relatorio_demo_{datetime.now().strftime("%Y%m%d_%H%M%S")}.pdf'
+)
 
 try:
     HTML(string=html_content).write_pdf(output_path)
@@ -556,12 +567,10 @@ print("\n" + "=" * 60)
 # Pergunta se quer abrir o arquivo
 try:
     resposta = input("\n🚀 Deseja abrir o PDF agora? (S/N): ").strip().upper()
-    if resposta == 'S':
+    if resposta == "S":
         os.startfile(output_path)
 except:
     pass
 
 print("\n✅ Teste concluído com sucesso!")
 print("=" * 60)
-
-

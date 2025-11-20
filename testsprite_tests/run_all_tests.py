@@ -7,26 +7,36 @@ import sys
 import json
 from datetime import datetime
 
+
 def run_tests():
     """Executa todos os testes e retorna resultados"""
     print("=" * 70)
     print("EXECUTANDO TODOS OS TESTES DO GESTAOVERSUS")
     print("=" * 70)
     print()
-    
+
     # Executar pytest com formato JSON para parsing
     result = subprocess.run(
-        [sys.executable, "-m", "pytest", "test_*.py", "-v", "--tb=short", "--json-report", "--json-report-file=test_report.json"],
+        [
+            sys.executable,
+            "-m",
+            "pytest",
+            "test_*.py",
+            "-v",
+            "--tb=short",
+            "--json-report",
+            "--json-report-file=test_report.json",
+        ],
         capture_output=True,
         text=True,
-        cwd="testsprite_tests"
+        cwd="testsprite_tests",
     )
-    
+
     # Mostrar saída
     print(result.stdout)
     if result.stderr:
         print("ERROS:", result.stderr)
-    
+
     # Tentar ler relatório JSON se existir
     try:
         with open("testsprite_tests/test_report.json", "r") as f:
@@ -34,12 +44,13 @@ def run_tests():
             return report
     except:
         pass
-    
+
     return {
         "exitcode": result.returncode,
         "stdout": result.stdout,
-        "stderr": result.stderr
+        "stderr": result.stderr,
     }
+
 
 if __name__ == "__main__":
     report = run_tests()
@@ -47,4 +58,3 @@ if __name__ == "__main__":
     print("TESTES CONCLUÍDOS")
     print("=" * 70)
     sys.exit(report.get("exitcode", 0))
-

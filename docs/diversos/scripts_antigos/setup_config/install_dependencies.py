@@ -9,6 +9,7 @@ import subprocess
 import sys
 import os
 
+
 def install_package(package):
     """Instala um pacote usando pip"""
     try:
@@ -19,12 +20,13 @@ def install_package(package):
         print(f"❌ Erro ao instalar {package}: {e}")
         return False
 
+
 def main():
     """Função principal de instalação"""
     print("=" * 60)
     print("APP25 - INSTALAÇÃO DE DEPENDÊNCIAS")
     print("=" * 60)
-    
+
     # Lista de dependências principais
     packages = [
         "Flask==2.3.3",
@@ -39,60 +41,65 @@ def main():
         "requests==2.31.0",
         "Werkzeug==2.3.7",
         "WTForms==3.0.1",
-        "bcrypt==4.0.1"
+        "bcrypt==4.0.1",
     ]
-    
+
     print(f"\nInstalando {len(packages)} dependências...")
-    
+
     success_count = 0
     failed_packages = []
-    
+
     for package in packages:
         if install_package(package):
             success_count += 1
         else:
             failed_packages.append(package)
-    
+
     print("\n" + "=" * 60)
     print("RESUMO DA INSTALAÇÃO")
     print("=" * 60)
     print(f"✅ Sucessos: {success_count}")
     print(f"❌ Falhas: {len(failed_packages)}")
-    
+
     if failed_packages:
         print("\nPacotes que falharam:")
         for package in failed_packages:
             print(f"  - {package}")
-    
+
     # Testa importações básicas
     print("\nTestando importações básicas...")
     try:
         import flask
+
         print("✅ Flask importado com sucesso")
     except ImportError as e:
         print(f"❌ Erro ao importar Flask: {e}")
-    
+
     try:
         import flask_sqlalchemy
+
         print("✅ Flask-SQLAlchemy importado com sucesso")
     except ImportError as e:
         print(f"❌ Erro ao importar Flask-SQLAlchemy: {e}")
-    
+
     try:
         import requests
+
         print("✅ Requests importado com sucesso")
     except ImportError as e:
         print(f"❌ Erro ao importar Requests: {e}")
-    
+
     try:
         from dotenv import load_dotenv
+
         print("✅ python-dotenv importado com sucesso")
     except ImportError as e:
         print(f"❌ Erro ao importar python-dotenv: {e}")
-    
+
     print("\n" + "=" * 60)
     print("INSTALAÇÃO CONCLUÍDA!")
     print("=" * 60)
+
 
 if __name__ == "__main__":
     main()

@@ -1,5 +1,6 @@
 ﻿from __future__ import annotations
 import logging
+
 """
 Helper functions to assemble Implantação (new venture) data structures
 for templates and reports.
@@ -42,12 +43,24 @@ PHASE_DEFAULTS: Dict[str, Dict[str, Any]] = {
 
 DEFAULT_DELIVERABLES: Dict[str, List[Dict[str, str]]] = {
     "alignment": [
-        {"label": "Canvas de expectativas dos sÃ³cios", "endpoint": "pev.implantacao_canvas_expectativas"},
+        {
+            "label": "Canvas de expectativas dos sÃ³cios",
+            "endpoint": "pev.implantacao_canvas_expectativas",
+        },
     ],
     "model": [
-        {"label": "Canvas de proposta de valor", "endpoint": "pev.implantacao_canvas_proposta_valor"},
-        {"label": "Mapa de persona e jornada", "endpoint": "pev.implantacao_mapa_persona"},
-        {"label": "Matriz de diferenciais", "endpoint": "pev.implantacao_matriz_diferenciais"},
+        {
+            "label": "Canvas de proposta de valor",
+            "endpoint": "pev.implantacao_canvas_proposta_valor",
+        },
+        {
+            "label": "Mapa de persona e jornada",
+            "endpoint": "pev.implantacao_mapa_persona",
+        },
+        {
+            "label": "Matriz de diferenciais",
+            "endpoint": "pev.implantacao_matriz_diferenciais",
+        },
         {"label": "Produtos e Margens", "endpoint": "pev.implantacao_produtos"},
     ],
     "execution": [
@@ -83,7 +96,11 @@ AREA_LABELS = {
     "administrativo": "EstruturaÃ§Ã£o Adm / Fin",
 }
 
-AREA_ORDER = ["EstruturaÃ§Ã£o Comercial", "EstruturaÃ§Ã£o Operacional", "EstruturaÃ§Ã£o Adm / Fin"]
+AREA_ORDER = [
+    "EstruturaÃ§Ã£o Comercial",
+    "EstruturaÃ§Ã£o Operacional",
+    "EstruturaÃ§Ã£o Adm / Fin",
+]
 
 BLOCK_LABELS = {
     "pessoas": "Pessoas",
@@ -312,7 +329,9 @@ def _ensure_list(value: Any, default: Optional[List[Any]] = None) -> List[Any]:
     return list(default or [])
 
 
-def _ensure_dict(value: Any, default: Optional[Dict[str, Any]] = None) -> Dict[str, Any]:
+def _ensure_dict(
+    value: Any, default: Optional[Dict[str, Any]] = None
+) -> Dict[str, Any]:
     if isinstance(value, dict):
         return value
     return dict(default or {})
@@ -329,15 +348,15 @@ def _parse_decimal(value: Any) -> Optional[Decimal]:
         except InvalidOperation:
             return None
     if isinstance(value, str):
-        cleaned = re.sub(r'[^0-9,.\-]', '', value.strip())
+        cleaned = re.sub(r"[^0-9,.\-]", "", value.strip())
         if not cleaned:
             return None
-        if ',' in cleaned and '.' in cleaned:
-            cleaned = cleaned.replace('.', '').replace(',', '.')
-        elif ',' in cleaned:
-            cleaned = cleaned.replace('.', '').replace(',', '.')
+        if "," in cleaned and "." in cleaned:
+            cleaned = cleaned.replace(".", "").replace(",", ".")
+        elif "," in cleaned:
+            cleaned = cleaned.replace(".", "").replace(",", ".")
         else:
-            cleaned = cleaned.replace(',', '')
+            cleaned = cleaned.replace(",", "")
         try:
             return Decimal(cleaned)
         except InvalidOperation:
@@ -350,7 +369,9 @@ def _format_currency_br(value: Any) -> str:
     if decimal_value is None:
         return ""
     quantized = decimal_value.quantize(Decimal("0.01"))
-    formatted = f"{quantized:,.2f}".replace(",", "_").replace(".", ",").replace("_", ".")
+    formatted = (
+        f"{quantized:,.2f}".replace(",", "_").replace(".", ",").replace("_", ".")
+    )
     return f"R$ {formatted}"
 
 
@@ -362,7 +383,9 @@ def _format_number_br(value: Any) -> str:
         formatted = f"{int(decimal_value):,}".replace(",", ".")
         return formatted
     quantized = decimal_value.quantize(Decimal("0.01"))
-    formatted = f"{quantized:,.2f}".replace(",", "_").replace(".", ",").replace("_", ".")
+    formatted = (
+        f"{quantized:,.2f}".replace(",", "_").replace(".", ",").replace("_", ".")
+    )
     return formatted
 
 
@@ -371,7 +394,9 @@ def _format_percentage_br(value: Any) -> str:
     if decimal_value is None:
         return ""
     quantized = decimal_value.quantize(Decimal("0.01"))
-    formatted = f"{quantized:,.2f}".replace(",", "_").replace(".", ",").replace("_", ".")
+    formatted = (
+        f"{quantized:,.2f}".replace(",", "_").replace(".", ",").replace("_", ".")
+    )
     return f"{formatted}%"
 
 
@@ -380,7 +405,11 @@ def _compute_value_percent(
     percent_decimal: Optional[Decimal],
     base_decimal: Optional[Decimal],
 ) -> Tuple[Optional[Decimal], Optional[Decimal]]:
-    if value_decimal is None and percent_decimal is not None and base_decimal is not None:
+    if (
+        value_decimal is None
+        and percent_decimal is not None
+        and base_decimal is not None
+    ):
         value_decimal = (base_decimal * percent_decimal) / Decimal("100")
     if (
         percent_decimal is None
@@ -404,8 +433,8 @@ def _slugify_key(value: Any) -> str:
     if value is None:
         return ""
     cleaned = _strip_accents(value).lower()
-    cleaned = re.sub(r'[^a-z0-9]+', '_', cleaned)
-    return cleaned.strip('_')
+    cleaned = re.sub(r"[^a-z0-9]+", "_", cleaned)
+    return cleaned.strip("_")
 
 
 def _normalize_ascii_lower(value: Any) -> str:
@@ -428,10 +457,16 @@ def _map_block_to_structure_category(block_name: Any) -> str:
     return STRUCTURE_BLOCK_CATEGORY_MAP.get(normalized, "outros")
 
 
-def _classify_structure_installment(block_name: str, installment: Dict[str, Any]) -> Dict[str, Any]:
+def _classify_structure_installment(
+    block_name: str, installment: Dict[str, Any]
+) -> Dict[str, Any]:
     block_slug = _slugify_key(block_name)
-    classificacao_raw = (installment.get("classificacao") or installment.get("classification") or "").strip()
-    repeticao_raw = (installment.get("repeticao") or installment.get("repetition") or "").strip()
+    classificacao_raw = (
+        installment.get("classificacao") or installment.get("classification") or ""
+    ).strip()
+    repeticao_raw = (
+        installment.get("repeticao") or installment.get("repetition") or ""
+    ).strip()
     tipo_raw = installment.get("tipo") or installment.get("installment_type") or ""
 
     classificacao_norm = _normalize_ascii_lower(classificacao_raw)
@@ -439,7 +474,10 @@ def _classify_structure_installment(block_name: str, installment: Dict[str, Any]
     tipo_norm = _normalize_ascii_lower(tipo_raw)
 
     if not classificacao_norm:
-        if block_slug in STRUCTURE_PEOPLE_BLOCK_SLUGS or tipo_norm in STRUCTURE_RECURRING_KEYWORDS:
+        if (
+            block_slug in STRUCTURE_PEOPLE_BLOCK_SLUGS
+            or tipo_norm in STRUCTURE_RECURRING_KEYWORDS
+        ):
             classificacao_raw = "Despesa Fixa"
             classificacao_norm = "despesa fixa"
         elif block_slug in STRUCTURE_INVESTMENT_BLOCK_SLUGS:
@@ -450,10 +488,10 @@ def _classify_structure_installment(block_name: str, installment: Dict[str, Any]
             classificacao_norm = "investimento"
 
     if not repeticao_norm:
-        if (
-            tipo_norm in STRUCTURE_RECURRING_KEYWORDS
-            or classificacao_norm in {"despesa fixa", "custo fixo"}
-        ):
+        if tipo_norm in STRUCTURE_RECURRING_KEYWORDS or classificacao_norm in {
+            "despesa fixa",
+            "custo fixo",
+        }:
             repeticao_raw = "Mensal"
             repeticao_norm = "mensal"
         elif classificacao_norm == "investimento":
@@ -483,7 +521,9 @@ def _normalize_investment_category(value: Any) -> str:
     return slug
 
 
-def _normalize_investment_group(value: Any, fallback_category: Optional[str] = None) -> str:
+def _normalize_investment_group(
+    value: Any, fallback_category: Optional[str] = None
+) -> str:
     slug = _slugify_key(value)
     if slug in INVESTMENT_GROUP_LABELS:
         return slug
@@ -519,7 +559,7 @@ def _parse_month_from_label(label: Any) -> Optional[Tuple[int, int]]:
     text = _strip_accents(label).lower()
     if not text:
         return None
-    tokens = re.split(r'[^a-z0-9]+', text)
+    tokens = re.split(r"[^a-z0-9]+", text)
     tokens = [token for token in tokens if token]
     if not tokens:
         return None
@@ -631,7 +671,9 @@ def _format_currency_cell(amount: Optional[Decimal]) -> str:
     return _format_currency_br(amount)
 
 
-def _accumulate_decimal(target: Dict[str, Decimal], key: str, amount: Optional[Decimal]) -> None:
+def _accumulate_decimal(
+    target: Dict[str, Decimal], key: str, amount: Optional[Decimal]
+) -> None:
     if amount is None:
         return
     target[key] = target.get(key, Decimal("0")) + amount
@@ -715,9 +757,15 @@ def _prepare_investment_dataset(investments: List[Dict[str, Any]]) -> Dict[str, 
 
     for raw in investments:
         category_slug = _normalize_investment_category(raw.get("category"))
-        group_slug = _normalize_investment_group(raw.get("investment_group"), category_slug)
-        group_label = INVESTMENT_GROUP_LABELS.get(group_slug, raw.get("investment_group") or group_slug or "Outros")
-        category_label = INVESTMENT_CATEGORY_LABELS.get(category_slug, raw.get("category") or category_slug or "Outros")
+        group_slug = _normalize_investment_group(
+            raw.get("investment_group"), category_slug
+        )
+        group_label = INVESTMENT_GROUP_LABELS.get(
+            group_slug, raw.get("investment_group") or group_slug or "Outros"
+        )
+        category_label = INVESTMENT_CATEGORY_LABELS.get(
+            category_slug, raw.get("category") or category_slug or "Outros"
+        )
         contribution_raw = raw.get("contribution_date")
         contribution_date = _coerce_date(contribution_raw)
         month_tuple = _month_tuple_from_value(contribution_date or contribution_raw)
@@ -728,13 +776,17 @@ def _prepare_investment_dataset(investments: List[Dict[str, Any]]) -> Dict[str, 
             "id": raw.get("id"),
             "descricao": raw.get("description"),
             "valor": _format_currency_br(raw.get("amount")),
-            "valor_decimal": float(amount_decimal) if amount_decimal is not None else None,
+            "valor_decimal": float(amount_decimal)
+            if amount_decimal is not None
+            else None,
             "grupo": group_slug,
             "grupo_label": group_label,
             "categoria": category_slug,
             "categoria_label": category_label,
             "data_aporte": _format_date(contribution_date) if contribution_date else "",
-            "data_aporte_iso": contribution_date.isoformat() if contribution_date else "",
+            "data_aporte_iso": contribution_date.isoformat()
+            if contribution_date
+            else "",
             "observacoes": raw.get("notes") or "",
             "mes_chave": month_key or "",
         }
@@ -752,7 +804,9 @@ def _prepare_investment_dataset(investments: List[Dict[str, Any]]) -> Dict[str, 
         if amount_decimal is None:
             continue
         grand_total += amount_decimal
-        totals_por_grupo[group_slug] = totals_por_grupo.get(group_slug, Decimal("0")) + amount_decimal
+        totals_por_grupo[group_slug] = (
+            totals_por_grupo.get(group_slug, Decimal("0")) + amount_decimal
+        )
         if month_key:
             _accumulate_decimal(totals_per_month, month_key, amount_decimal)
 
@@ -790,7 +844,9 @@ def _prepare_sources_dataset(sources: List[Dict[str, Any]]) -> Dict[str, Any]:
 
     for raw in sources:
         tipo_slug = _normalize_source_type(raw.get("category"))
-        tipo_label = SOURCE_TYPE_LABELS.get(tipo_slug, raw.get("category") or tipo_slug or "Outros")
+        tipo_label = SOURCE_TYPE_LABELS.get(
+            tipo_slug, raw.get("category") or tipo_slug or "Outros"
+        )
         contribution_raw = raw.get("contribution_date")
         contribution_date = _coerce_date(contribution_raw)
         month_tuple = _month_tuple_from_value(contribution_date or contribution_raw)
@@ -803,10 +859,14 @@ def _prepare_sources_dataset(sources: List[Dict[str, Any]]) -> Dict[str, Any]:
             "tipo_label": tipo_label,
             "descricao": raw.get("description"),
             "valor": _format_currency_br(raw.get("amount")),
-            "valor_decimal": float(amount_decimal) if amount_decimal is not None else None,
+            "valor_decimal": float(amount_decimal)
+            if amount_decimal is not None
+            else None,
             "disponibilidade": raw.get("availability") or "",
             "data_aporte": _format_date(contribution_date) if contribution_date else "",
-            "data_aporte_iso": contribution_date.isoformat() if contribution_date else "",
+            "data_aporte_iso": contribution_date.isoformat()
+            if contribution_date
+            else "",
             "observacoes": raw.get("notes") or "",
             "mes_chave": month_key or "",
         }
@@ -824,7 +884,9 @@ def _prepare_sources_dataset(sources: List[Dict[str, Any]]) -> Dict[str, Any]:
         if amount_decimal is None:
             continue
         grand_total += amount_decimal
-        totals_por_tipo[tipo_slug] = totals_por_tipo.get(tipo_slug, Decimal("0")) + amount_decimal
+        totals_por_tipo[tipo_slug] = (
+            totals_por_tipo.get(tipo_slug, Decimal("0")) + amount_decimal
+        )
         if month_key:
             _accumulate_decimal(totals_per_month, month_key, amount_decimal)
 
@@ -850,7 +912,9 @@ def _prepare_sources_dataset(sources: List[Dict[str, Any]]) -> Dict[str, Any]:
     }
 
 
-def _normalize_sections(sections: Any, fallback: Optional[List[Dict[str, Any]]] = None) -> List[Dict[str, Any]]:
+def _normalize_sections(
+    sections: Any, fallback: Optional[List[Dict[str, Any]]] = None
+) -> List[Dict[str, Any]]:
     normalized: List[Dict[str, Any]] = []
     raw_list = sections if isinstance(sections, list) else fallback or []
     for entry in raw_list:
@@ -860,13 +924,17 @@ def _normalize_sections(sections: Any, fallback: Optional[List[Dict[str, Any]]] 
             {
                 "title": entry.get("title") or entry.get("nome") or entry.get("header"),
                 "description": entry.get("description") or entry.get("descricao"),
-                "highlights": _ensure_list(entry.get("highlights") or entry.get("pontos") or []),
+                "highlights": _ensure_list(
+                    entry.get("highlights") or entry.get("pontos") or []
+                ),
             }
         )
     return normalized
 
 
-def _resolve_deliverables(phase_key: str, raw_deliverables: Any) -> List[Dict[str, str]]:
+def _resolve_deliverables(
+    phase_key: str, raw_deliverables: Any
+) -> List[Dict[str, str]]:
     deliverables: List[Dict[str, str]] = []
     if isinstance(raw_deliverables, list):
         for item in raw_deliverables:
@@ -875,7 +943,9 @@ def _resolve_deliverables(phase_key: str, raw_deliverables: Any) -> List[Dict[st
                 endpoint = item.get("endpoint")
                 url = item.get("url")
                 if label:
-                    deliverables.append({"label": label, "endpoint": endpoint, "url": url})
+                    deliverables.append(
+                        {"label": label, "endpoint": endpoint, "url": url}
+                    )
             elif isinstance(item, str):
                 deliverables.append({"label": item, "endpoint": None, "url": None})
     if not deliverables:
@@ -892,10 +962,14 @@ def _compute_status_summary(phases: List[Dict[str, Any]]) -> Tuple[str, str, str
         progress_message = "ImplantaÃ§Ã£o pronta para apresentaÃ§Ã£o final."
     elif concluded > 0:
         total_status_text = f"{concluded} de {total} fases concluÃ­das"
-        progress_message = "Continue concluindo as prÃ³ximas macro fases para evoluir a implantaÃ§Ã£o."
+        progress_message = (
+            "Continue concluindo as prÃ³ximas macro fases para evoluir a implantaÃ§Ã£o."
+        )
     else:
         total_status_text = "Nenhuma fase concluÃ­da"
-        progress_message = "Inicie pela fase de alinhamento para dar ritmo ao planejamento."
+        progress_message = (
+            "Inicie pela fase de alinhamento para dar ritmo ao planejamento."
+        )
     return total_status_text, progress_message, statuses
 
 
@@ -903,7 +977,11 @@ def build_plan_context(db, plan_id: int) -> Dict[str, Any]:
     plan_record = db.get_plan_with_company(plan_id) or {}
     dashboard_record = db.get_implantation_dashboard(plan_id) or {}
 
-    last_update_reference = dashboard_record.get("updated_at") or plan_record.get("updated_at") or datetime.now()
+    last_update_reference = (
+        dashboard_record.get("updated_at")
+        or plan_record.get("updated_at")
+        or datetime.now()
+    )
     status = plan_record.get("status") or "Em andamento"
 
     actual_plan_id = plan_record.get("id") or plan_id
@@ -927,56 +1005,62 @@ def build_plan_context(db, plan_id: int) -> Dict[str, Any]:
 def _generate_model_summary_sections(db, plan_id: int) -> List[Dict[str, Any]]:
     """Generate dynamic summary sections for Model & Market phase based on actual data"""
     segments = db.list_plan_segments(plan_id)
-    
+
     if not segments:
         return []
-    
+
     total_segments = len(segments)
-    total_personas = sum(len(seg.get('personas', [])) for seg in segments)
-    total_competitors = sum(len(seg.get('competitors_matrix', [])) for seg in segments)
-    
+    total_personas = sum(len(seg.get("personas", [])) for seg in segments)
+    total_competitors = sum(len(seg.get("competitors_matrix", [])) for seg in segments)
+
     sections = []
-    
+
     # Resumo geral
-    sections.append({
-        "title": "Resumo Geral",
-        "description": f"{total_segments} segmento(s) de negÃ³cio mapeado(s) com propostas de valor definidas.",
-        "highlights": [
-            f"{total_personas} persona(s) detalhada(s)",
-            f"{total_competitors} critÃ©rio(s) competitivo(s) analisado(s)",
-            "EstratÃ©gia de posicionamento por segmento"
-        ]
-    })
-    
+    sections.append(
+        {
+            "title": "Resumo Geral",
+            "description": f"{total_segments} segmento(s) de negÃ³cio mapeado(s) com propostas de valor definidas.",
+            "highlights": [
+                f"{total_personas} persona(s) detalhada(s)",
+                f"{total_competitors} critÃ©rio(s) competitivo(s) analisado(s)",
+                "EstratÃ©gia de posicionamento por segmento",
+            ],
+        }
+    )
+
     # Detalhes por segmento
     for segment in segments[:3]:  # Mostrar atÃ© 3 segmentos no resumo
-        seg_personas = len(segment.get('personas', []))
-        seg_differentials = len(segment.get('differentials', []))
-        
+        seg_personas = len(segment.get("personas", []))
+        seg_differentials = len(segment.get("differentials", []))
+
         highlights = []
         if seg_personas > 0:
             highlights.append(f"{seg_personas} persona(s)")
         if seg_differentials > 0:
             highlights.append(f"{seg_differentials} diferencial(is)")
-        
-        strategy = segment.get('strategy', {})
-        value_prop = strategy.get('value_proposition', {})
-        if value_prop.get('solution'):
+
+        strategy = segment.get("strategy", {})
+        value_prop = strategy.get("value_proposition", {})
+        if value_prop.get("solution"):
             highlights.append("Proposta de valor definida")
-        
-        sections.append({
-            "title": segment.get('name', 'Segmento'),
-            "description": segment.get('description', ''),
-            "highlights": highlights if highlights else ["Em desenvolvimento"]
-        })
-    
+
+        sections.append(
+            {
+                "title": segment.get("name", "Segmento"),
+                "description": segment.get("description", ""),
+                "highlights": highlights if highlights else ["Em desenvolvimento"],
+            }
+        )
+
     if total_segments > 3:
-        sections.append({
-            "title": "Outros Segmentos",
-            "description": f"+ {total_segments - 3} segmento(s) adicional(is)",
-            "highlights": []
-        })
-    
+        sections.append(
+            {
+                "title": "Outros Segmentos",
+                "description": f"+ {total_segments - 3} segmento(s) adicional(is)",
+                "highlights": [],
+            }
+        )
+
     return sections
 
 
@@ -984,18 +1068,22 @@ def build_overview_payload(db, plan_id: int) -> Dict[str, Any]:
     plan = build_plan_context(db, plan_id)
     dashboard_record = db.get_implantation_dashboard(plan_id) or {}
 
-    phases_raw = {row.get("phase_key"): row for row in db.list_implantation_phases(plan_id)}
+    phases_raw = {
+        row.get("phase_key"): row for row in db.list_implantation_phases(plan_id)
+    }
     macro_phases: List[Dict[str, Any]] = []
 
     for key in PHASE_ORDER:
         stored = phases_raw.get(key, {}) or {}
         defaults = PHASE_DEFAULTS.get(key, {})
-        normalized_sections = _normalize_sections(stored.get("sections"), defaults.get("sections"))
-        
+        normalized_sections = _normalize_sections(
+            stored.get("sections"), defaults.get("sections")
+        )
+
         # Gerar resumo dinÃ¢mico para fase "model" baseado em dados reais
         if key == "model" and not normalized_sections:
             normalized_sections = _generate_model_summary_sections(db, plan_id)
-        
+
         macro_phases.append(
             {
                 "id": key,
@@ -1019,21 +1107,32 @@ def build_overview_payload(db, plan_id: int) -> Dict[str, Any]:
         for item in db.list_implantation_checkpoints(plan_id)
     ]
 
-    total_status_text, computed_progress_message, statuses = _compute_status_summary(macro_phases)
+    total_status_text, computed_progress_message, statuses = _compute_status_summary(
+        macro_phases
+    )
 
-    next_focus_phase = next((phase for phase in macro_phases if phase.get("status") != "concluida"), None)
-    next_focus = dashboard_record.get("next_focus") or (next_focus_phase["title"] if next_focus_phase else "ImplantaÃ§Ã£o concluÃ­da")
+    next_focus_phase = next(
+        (phase for phase in macro_phases if phase.get("status") != "concluida"), None
+    )
+    next_focus = dashboard_record.get("next_focus") or (
+        next_focus_phase["title"] if next_focus_phase else "ImplantaÃ§Ã£o concluÃ­da"
+    )
     next_focus_details = dashboard_record.get("next_focus_details") or (
-        next_focus_phase.get("tagline") if next_focus_phase else "Todas as macro fases foram finalizadas."
+        next_focus_phase.get("tagline")
+        if next_focus_phase
+        else "Todas as macro fases foram finalizadas."
     )
 
     dashboard = {
         "total_status": total_status_text,
-        "progress_message": dashboard_record.get("progress_message") or computed_progress_message,
+        "progress_message": dashboard_record.get("progress_message")
+        or computed_progress_message,
         "next_focus": next_focus,
         "next_focus_details": next_focus_details,
-        "general_note": dashboard_record.get("general_note") or "Status geral atualizado",
-        "general_details": dashboard_record.get("general_details") or "Utilize os botÃµes de conclusÃ£o para registrar o andamento de cada macro fase.",
+        "general_note": dashboard_record.get("general_note")
+        or "Status geral atualizado",
+        "general_details": dashboard_record.get("general_details")
+        or "Utilize os botÃµes de conclusÃ£o para registrar o andamento de cada macro fase.",
         "statuses": statuses,
     }
 
@@ -1064,7 +1163,11 @@ def load_alignment_canvas(db, plan_id: int) -> Dict[str, Any]:
 
     criterios = overview.get("decision_criteria") or []
     if isinstance(principles_records, list) and not criterios:
-        criterios = [item.get("principle") for item in principles_records if item.get("principle")]
+        criterios = [
+            item.get("principle")
+            for item in principles_records
+            if item.get("principle")
+        ]
 
     alinhamento = {
         "visao_compartilhada": overview.get("shared_vision"),
@@ -1086,7 +1189,7 @@ def load_alignment_project(db, plan_id: int) -> Dict[str, Any]:
     """
     import json
     from database.postgres_helper import connect as pg_connect
-    
+
     project = db.get_alignment_project(plan_id) or {}
     observacoes = project.get("observations") or []
     if isinstance(observacoes, dict):
@@ -1100,31 +1203,34 @@ def load_alignment_project(db, plan_id: int) -> Dict[str, Any]:
     atividades_grv = []
     grv_project_id = None
     company_id = None
-    
+
     # Buscar projeto GRV vinculado (onde plan_id = este plan_id e plan_type = 'PEV')
     try:
         conn = pg_connect()
         cursor = conn.cursor()
-        cursor.execute('''
+        cursor.execute(
+            """
             SELECT id, code, title, description, activities, company_id
             FROM company_projects
             WHERE plan_id = %s AND plan_type = 'PEV'
             LIMIT 1
-        ''', (plan_id,))
-        
+        """,
+            (plan_id,),
+        )
+
         grv_row = cursor.fetchone()
         conn.close()
-        
+
         if grv_row:
             grv_project = dict(grv_row)
-            grv_project_id = grv_project.get('id')
-            company_id = grv_project.get('company_id')
-            codigo = grv_project.get('code')
-            nome = grv_project.get('title') or nome
-            descricao = grv_project.get('description') or descricao
-            
+            grv_project_id = grv_project.get("id")
+            company_id = grv_project.get("company_id")
+            codigo = grv_project.get("code")
+            nome = grv_project.get("title") or nome
+            descricao = grv_project.get("description") or descricao
+
             # Buscar atividades do projeto GRV
-            activities_json = grv_project.get('activities')
+            activities_json = grv_project.get("activities")
             if activities_json:
                 if isinstance(activities_json, str):
                     try:
@@ -1133,10 +1239,13 @@ def load_alignment_project(db, plan_id: int) -> Dict[str, Any]:
                         atividades_grv = []
                 elif isinstance(activities_json, list):
                     atividades_grv = activities_json
-                    
+
     except Exception as e:
-        logger.info(f"[load_alignment_project] Erro ao buscar projeto GRV para plan_id {plan_id}: {e}")
+        logger.info(
+            f"[load_alignment_project] Erro ao buscar projeto GRV para plan_id {plan_id}: {e}"
+        )
         import traceback
+
         traceback.print_exc()
 
     return {
@@ -1175,7 +1284,9 @@ def load_segments(db, plan_id: int) -> List[Dict[str, Any]]:
         personas = _ensure_list(record.get("personas"))
         for persona in personas:
             if isinstance(persona, dict):
-                persona.setdefault("jornada", persona.get("jornada") or persona.get("journey") or [])
+                persona.setdefault(
+                    "jornada", persona.get("jornada") or persona.get("journey") or []
+                )
         prepared.append(
             {
                 "id": record.get("id"),
@@ -1188,9 +1299,13 @@ def load_segments(db, plan_id: int) -> List[Dict[str, Any]]:
                 "strategy": strategy,
                 "value_proposition": value_prop,
                 "monetization": monetization,
-                "competitive_matrix": _ensure_list(record.get("competitors_matrix") or strategy.get("competitive_matrix")),
+                "competitive_matrix": _ensure_list(
+                    record.get("competitors_matrix")
+                    or strategy.get("competitive_matrix")
+                ),
                 "journey_triggers": _ensure_dict(strategy.get("journey_triggers")),
-                "persona_overview": strategy.get("persona_overview") or strategy.get("persona_description"),
+                "persona_overview": strategy.get("persona_overview")
+                or strategy.get("persona_description"),
                 "positioning": _ensure_dict(strategy.get("positioning")),
             }
         )
@@ -1209,15 +1324,23 @@ def build_value_canvas_segments(segments: List[Dict[str, Any]]) -> List[Dict[str
                 "descricao": segment.get("descricao"),
                 "proposta": {
                     "segmentos": segment.get("audiences") or [],
-                    "problemas": value_prop.get("problems") or value_prop.get("dor") or [],
+                    "problemas": value_prop.get("problems")
+                    or value_prop.get("dor")
+                    or [],
                     "solucao": value_prop.get("solution") or value_prop.get("solucao"),
                     "diferenciais": segment.get("differentials") or [],
                     "provas": segment.get("evidences") or [],
                 },
                 "monetizacao": {
-                    "fontes_receita": monetization.get("revenue_streams") or monetization.get("receitas") or [],
-                    "estrutura_custos": monetization.get("cost_structure") or monetization.get("custos") or [],
-                    "parcerias_chave": monetization.get("key_partners") or monetization.get("parcerias") or [],
+                    "fontes_receita": monetization.get("revenue_streams")
+                    or monetization.get("receitas")
+                    or [],
+                    "estrutura_custos": monetization.get("cost_structure")
+                    or monetization.get("custos")
+                    or [],
+                    "parcerias_chave": monetization.get("key_partners")
+                    or monetization.get("parcerias")
+                    or [],
                 },
             }
         )
@@ -1240,7 +1363,9 @@ def build_persona_segments(segments: List[Dict[str, Any]]) -> List[Dict[str, Any
     return persona_segments
 
 
-def _prepare_segment_products(raw_products: List[Any]) -> Tuple[List[Dict[str, Any]], Dict[str, Any]]:
+def _prepare_segment_products(
+    raw_products: List[Any],
+) -> Tuple[List[Dict[str, Any]], Dict[str, Any]]:
     prepared: List[Dict[str, Any]] = []
     total_units = Decimal("0")
     total_revenue = Decimal("0")
@@ -1367,7 +1492,9 @@ def _prepare_segment_products(raw_products: List[Any]) -> Tuple[List[Dict[str, A
                     "custosVariaveisObs",
                 ],
             )
-        cost_value, cost_percent = _compute_value_percent(cost_value, cost_percent, price_value)
+        cost_value, cost_percent = _compute_value_percent(
+            cost_value, cost_percent, price_value
+        )
 
         expense_raw = (
             product.get("variable_expenses")
@@ -1424,7 +1551,9 @@ def _prepare_segment_products(raw_products: List[Any]) -> Tuple[List[Dict[str, A
         margin_percent = None
         margin_notes = None
         if isinstance(margin_raw, dict):
-            margin_value = _extract_decimal_from(margin_raw, ["valor", "value", "amount"])
+            margin_value = _extract_decimal_from(
+                margin_raw, ["valor", "value", "amount"]
+            )
             margin_percent = _extract_decimal_from(
                 margin_raw, ["percentual", "percent", "percentage"]
             )
@@ -1513,7 +1642,11 @@ def _prepare_segment_products(raw_products: List[Any]) -> Tuple[List[Dict[str, A
                     "mercadoObs",
                 ],
             )
-        if market_revenue is None and market_units is not None and price_value is not None:
+        if (
+            market_revenue is None
+            and market_units is not None
+            and price_value is not None
+        ):
             market_revenue = price_value * market_units
 
         share_raw = (
@@ -1556,14 +1689,24 @@ def _prepare_segment_products(raw_products: List[Any]) -> Tuple[List[Dict[str, A
                     "metaMarketShareObs",
                 ],
             )
-        if share_units is None and share_percent is not None and market_units not in (
-            None,
-            Decimal("0"),
+        if (
+            share_units is None
+            and share_percent is not None
+            and market_units
+            not in (
+                None,
+                Decimal("0"),
+            )
         ):
             share_units = (share_percent / Decimal("100")) * market_units
-        if share_percent is None and share_units is not None and market_units not in (
-            None,
-            Decimal("0"),
+        if (
+            share_percent is None
+            and share_units is not None
+            and market_units
+            not in (
+                None,
+                Decimal("0"),
+            )
         ):
             share_percent = (share_units / market_units) * Decimal("100")
 
@@ -1640,18 +1783,14 @@ def _prepare_segment_products(raw_products: List[Any]) -> Tuple[List[Dict[str, A
                     "percentual": margin_percent,
                     "percentual_formatado": _format_percentage_br(margin_percent),
                     "total_mensal": margin_monthly_value,
-                    "total_mensal_formatado": _format_currency_br(
-                        margin_monthly_value
-                    ),
+                    "total_mensal_formatado": _format_currency_br(margin_monthly_value),
                     "observacoes": margin_notes,
                 },
                 "mercado": {
                     "unidades_mensais": market_units,
                     "unidades_mensais_formatado": _format_number_br(market_units),
                     "faturamento_mensal": market_revenue,
-                    "faturamento_mensal_formatado": _format_currency_br(
-                        market_revenue
-                    ),
+                    "faturamento_mensal_formatado": _format_currency_br(market_revenue),
                     "observacoes": market_notes,
                 },
                 "meta_market_share": {
@@ -1665,10 +1804,16 @@ def _prepare_segment_products(raw_products: List[Any]) -> Tuple[List[Dict[str, A
         )
 
     totals_units_value: Optional[Decimal] = total_units if units_has_data else None
-    totals_revenue_value: Optional[Decimal] = total_revenue if revenue_has_data else None
+    totals_revenue_value: Optional[Decimal] = (
+        total_revenue if revenue_has_data else None
+    )
     totals_cost_value: Optional[Decimal] = total_cost_value if cost_has_data else None
-    totals_expense_value: Optional[Decimal] = total_expense_value if expense_has_data else None
-    totals_margin_value: Optional[Decimal] = total_margin_value if margin_has_data else None
+    totals_expense_value: Optional[Decimal] = (
+        total_expense_value if expense_has_data else None
+    )
+    totals_margin_value: Optional[Decimal] = (
+        total_margin_value if margin_has_data else None
+    )
     totals_goal_units_value: Optional[Decimal] = (
         total_goal_units if goal_units_has_data else None
     )
@@ -1694,27 +1839,27 @@ def _prepare_segment_products(raw_products: List[Any]) -> Tuple[List[Dict[str, A
         totals_revenue_value not in (None, Decimal("0"))
         and totals_expense_value is not None
     ):
-        expense_percent_total = (
-            totals_expense_value / totals_revenue_value
-        ) * Decimal("100")
+        expense_percent_total = (totals_expense_value / totals_revenue_value) * Decimal(
+            "100"
+        )
 
     margin_percent_total: Optional[Decimal] = None
     if (
         totals_revenue_value not in (None, Decimal("0"))
         and totals_margin_value is not None
     ):
-        margin_percent_total = (
-            totals_margin_value / totals_revenue_value
-        ) * Decimal("100")
+        margin_percent_total = (totals_margin_value / totals_revenue_value) * Decimal(
+            "100"
+        )
 
     goal_percent_total: Optional[Decimal] = None
-    if (
-        totals_goal_units_value is not None
-        and totals_units_value not in (None, Decimal("0"))
+    if totals_goal_units_value is not None and totals_units_value not in (
+        None,
+        Decimal("0"),
     ):
-        goal_percent_total = (
-            totals_goal_units_value / totals_units_value
-        ) * Decimal("100")
+        goal_percent_total = (totals_goal_units_value / totals_units_value) * Decimal(
+            "100"
+        )
     elif goal_percent_weight not in (None, Decimal("0")):
         goal_percent_total = goal_percent_sum / goal_percent_weight
 
@@ -1781,9 +1926,13 @@ def build_competitive_segments(segments: List[Dict[str, Any]]) -> List[Dict[str,
                 "descricao": segment.get("descricao"),
                 "matriz": segment.get("competitive_matrix") or [],
                 "estrategia": {
-                    "posicionamento": positioning.get("narrative") or positioning.get("posicionamento"),
-                    "promessa": positioning.get("promise") or positioning.get("promessa"),
-                    "proximos_passos": positioning.get("next_steps") or positioning.get("proximos_passos") or [],
+                    "posicionamento": positioning.get("narrative")
+                    or positioning.get("posicionamento"),
+                    "promessa": positioning.get("promise")
+                    or positioning.get("promessa"),
+                    "proximos_passos": positioning.get("next_steps")
+                    or positioning.get("proximos_passos")
+                    or [],
                 },
                 "proposta": {
                     "publico": segment.get("audiences") or [],
@@ -1846,7 +1995,9 @@ def load_structures(db, plan_id: int) -> List[Dict[str, Any]]:
 
         structure_id = row.get("id")
         parcelas = installments_map.get(structure_id, [])
-        payment_form = row.get("payment_form") or ("Conforme parcelas" if parcelas else "A definir")
+        payment_form = row.get("payment_form") or (
+            "Conforme parcelas" if parcelas else "A definir"
+        )
         bloco_entry["itens"].append(
             {
                 "id": structure_id,
@@ -1882,7 +2033,9 @@ def load_structures(db, plan_id: int) -> List[Dict[str, Any]]:
         area_entry["capacidade_observacoes"] = cap.get("observations")
         area_entry["capacidade_id"] = cap.get("id")
         decimal_value = _parse_decimal(raw_capacity)
-        area_entry["capacidade_valor_decimal"] = float(decimal_value) if decimal_value is not None else None
+        area_entry["capacidade_valor_decimal"] = (
+            float(decimal_value) if decimal_value is not None else None
+        )
         if area_key_raw:
             area_entry["codigo"] = area_key_raw
             area_entry["id"] = area_key_raw
@@ -1913,20 +2066,22 @@ def load_structures(db, plan_id: int) -> List[Dict[str, Any]]:
     return ordered_areas
 
 
-def calculate_investment_summary_by_block(structures: List[Dict[str, Any]]) -> List[Dict[str, Any]]:
+def calculate_investment_summary_by_block(
+    structures: List[Dict[str, Any]]
+) -> List[Dict[str, Any]]:
     """
     Calcula resumo de investimentos agrupados por bloco estruturante.
-    
+
     Usa as classificaÃ§Ãµes das parcelas para categorizar:
     - Investimentos (classificaÃ§Ã£o = "Investimento")
     - Custos Fixos Mensais/Anuais (classificaÃ§Ã£o = "Custo Fixo")
     - Despesas Fixas Mensais/Anuais (classificaÃ§Ã£o = "Despesa Fixa")
     """
     from decimal import Decimal
-    
+
     # Inicializar totais por bloco
     blocos_totais: Dict[str, Dict[str, Decimal]] = {}
-    
+
     # Lista de blocos na ordem desejada
     blocos_ordem = [
         "Pessoas",
@@ -1937,11 +2092,11 @@ def calculate_investment_summary_by_block(structures: List[Dict[str, Any]]) -> L
         "TI e ComunicaÃ§Ã£o",
         "Outros",
     ]
-    
+
     for area in structures:
         for bloco in area.get("blocos", []):
             bloco_nome = bloco.get("nome", "Outros")
-            
+
             if bloco_nome not in blocos_totais:
                 blocos_totais[bloco_nome] = {
                     "investimentos": Decimal("0"),
@@ -1950,15 +2105,17 @@ def calculate_investment_summary_by_block(structures: List[Dict[str, Any]]) -> L
                     "custos_fixos_anual": Decimal("0"),
                     "despesas_fixas_anual": Decimal("0"),
                 }
-            
+
             for item in bloco.get("itens", []):
                 parcelas = item.get("parcelas", [])
-                
+
                 # Processar cada parcela individualmente
                 for parcela in parcelas:
                     valor_str = parcela.get("valor", "")
                     valor = _parse_decimal(valor_str) or Decimal("0")
-                    classification = _classify_structure_installment(bloco_nome, parcela)
+                    classification = _classify_structure_installment(
+                        bloco_nome, parcela
+                    )
                     classificacao_norm = classification["classificacao_norm"]
                     repeticao = classification["repeticao_norm"]
 
@@ -1966,7 +2123,7 @@ def calculate_investment_summary_by_block(structures: List[Dict[str, Any]]) -> L
                     if classificacao_norm == "investimento":
                         # Investimentos (independente da repetiÃ§Ã£o)
                         blocos_totais[bloco_nome]["investimentos"] += valor
-                    
+
                     elif classificacao_norm == "custo fixo":
                         # Custos Fixos
                         if repeticao == "mensal":
@@ -1975,14 +2132,18 @@ def calculate_investment_summary_by_block(structures: List[Dict[str, Any]]) -> L
                             blocos_totais[bloco_nome]["custos_fixos_anual"] += valor
                         elif repeticao == "trimestral":
                             # Converter trimestral para mensal (divide por 3)
-                            blocos_totais[bloco_nome]["custos_fixos_mensal"] += valor / Decimal("3")
+                            blocos_totais[bloco_nome][
+                                "custos_fixos_mensal"
+                            ] += valor / Decimal("3")
                         elif repeticao == "semestral":
                             # Converter semestral para mensal (divide por 6)
-                            blocos_totais[bloco_nome]["custos_fixos_mensal"] += valor / Decimal("6")
+                            blocos_totais[bloco_nome][
+                                "custos_fixos_mensal"
+                            ] += valor / Decimal("6")
                         elif repeticao in ["unica", ""]:
                             # Se for Ãºnica ou sem repetiÃ§Ã£o, nÃ£o conta como recorrente
                             pass
-                    
+
                     elif classificacao_norm == "despesa fixa":
                         # Despesas Fixas
                         if repeticao == "mensal":
@@ -1991,76 +2152,112 @@ def calculate_investment_summary_by_block(structures: List[Dict[str, Any]]) -> L
                             blocos_totais[bloco_nome]["despesas_fixas_anual"] += valor
                         elif repeticao == "trimestral":
                             # Converter trimestral para mensal (divide por 3)
-                            blocos_totais[bloco_nome]["despesas_fixas_mensal"] += valor / Decimal("3")
+                            blocos_totais[bloco_nome][
+                                "despesas_fixas_mensal"
+                            ] += valor / Decimal("3")
                         elif repeticao == "semestral":
                             # Converter semestral para mensal (divide por 6)
-                            blocos_totais[bloco_nome]["despesas_fixas_mensal"] += valor / Decimal("6")
+                            blocos_totais[bloco_nome][
+                                "despesas_fixas_mensal"
+                            ] += valor / Decimal("6")
                         elif repeticao in ["unica", ""]:
                             # Se for Ãºnica ou sem repetiÃ§Ã£o, nÃ£o conta como recorrente
                             pass
-    
+
     # Preparar lista de resultados ordenada
     resultado = []
-    
+
     # Primeiro, adicionar blocos na ordem especificada
     for bloco_nome in blocos_ordem:
         if bloco_nome in blocos_totais:
             totais = blocos_totais[bloco_nome]
-            
+
             # Calcular totais
-            total_gastos_mensal = totais["custos_fixos_mensal"] + totais["despesas_fixas_mensal"]
-            total_gastos_anual = (
-                totais["custos_fixos_anual"] + 
-                totais["despesas_fixas_anual"] +
-                (total_gastos_mensal * Decimal("12"))
+            total_gastos_mensal = (
+                totais["custos_fixos_mensal"] + totais["despesas_fixas_mensal"]
             )
-            
-            resultado.append({
+            total_gastos_anual = (
+                totais["custos_fixos_anual"]
+                + totais["despesas_fixas_anual"]
+                + (total_gastos_mensal * Decimal("12"))
+            )
+
+            resultado.append(
+                {
+                    "bloco": bloco_nome,
+                    "investimentos": totais["investimentos"],
+                    "investimentos_formatado": _format_currency_br(
+                        totais["investimentos"]
+                    ),
+                    "custos_fixos_mensal": totais["custos_fixos_mensal"],
+                    "custos_fixos_mensal_formatado": _format_currency_br(
+                        totais["custos_fixos_mensal"]
+                    ),
+                    "despesas_fixas_mensal": totais["despesas_fixas_mensal"],
+                    "despesas_fixas_mensal_formatado": _format_currency_br(
+                        totais["despesas_fixas_mensal"]
+                    ),
+                    "total_gastos_mensal": total_gastos_mensal,
+                    "total_gastos_mensal_formatado": _format_currency_br(
+                        total_gastos_mensal
+                    ),
+                    "custos_fixos_anual": totais["custos_fixos_anual"],
+                    "custos_fixos_anual_formatado": _format_currency_br(
+                        totais["custos_fixos_anual"]
+                    ),
+                    "despesas_fixas_anual": totais["despesas_fixas_anual"],
+                    "despesas_fixas_anual_formatado": _format_currency_br(
+                        totais["despesas_fixas_anual"]
+                    ),
+                    "total_gastos_anual": total_gastos_anual,
+                    "total_gastos_anual_formatado": _format_currency_br(
+                        total_gastos_anual
+                    ),
+                }
+            )
+            blocos_totais.pop(bloco_nome)
+
+    # Adicionar blocos restantes (se houver)
+    for bloco_nome, totais in sorted(blocos_totais.items()):
+        total_gastos_mensal = (
+            totais["custos_fixos_mensal"] + totais["despesas_fixas_mensal"]
+        )
+        total_gastos_anual = (
+            totais["custos_fixos_anual"]
+            + totais["despesas_fixas_anual"]
+            + (total_gastos_mensal * Decimal("12"))
+        )
+
+        resultado.append(
+            {
                 "bloco": bloco_nome,
                 "investimentos": totais["investimentos"],
                 "investimentos_formatado": _format_currency_br(totais["investimentos"]),
                 "custos_fixos_mensal": totais["custos_fixos_mensal"],
-                "custos_fixos_mensal_formatado": _format_currency_br(totais["custos_fixos_mensal"]),
+                "custos_fixos_mensal_formatado": _format_currency_br(
+                    totais["custos_fixos_mensal"]
+                ),
                 "despesas_fixas_mensal": totais["despesas_fixas_mensal"],
-                "despesas_fixas_mensal_formatado": _format_currency_br(totais["despesas_fixas_mensal"]),
+                "despesas_fixas_mensal_formatado": _format_currency_br(
+                    totais["despesas_fixas_mensal"]
+                ),
                 "total_gastos_mensal": total_gastos_mensal,
-                "total_gastos_mensal_formatado": _format_currency_br(total_gastos_mensal),
+                "total_gastos_mensal_formatado": _format_currency_br(
+                    total_gastos_mensal
+                ),
                 "custos_fixos_anual": totais["custos_fixos_anual"],
-                "custos_fixos_anual_formatado": _format_currency_br(totais["custos_fixos_anual"]),
+                "custos_fixos_anual_formatado": _format_currency_br(
+                    totais["custos_fixos_anual"]
+                ),
                 "despesas_fixas_anual": totais["despesas_fixas_anual"],
-                "despesas_fixas_anual_formatado": _format_currency_br(totais["despesas_fixas_anual"]),
+                "despesas_fixas_anual_formatado": _format_currency_br(
+                    totais["despesas_fixas_anual"]
+                ),
                 "total_gastos_anual": total_gastos_anual,
                 "total_gastos_anual_formatado": _format_currency_br(total_gastos_anual),
-            })
-            blocos_totais.pop(bloco_nome)
-    
-    # Adicionar blocos restantes (se houver)
-    for bloco_nome, totais in sorted(blocos_totais.items()):
-        total_gastos_mensal = totais["custos_fixos_mensal"] + totais["despesas_fixas_mensal"]
-        total_gastos_anual = (
-            totais["custos_fixos_anual"] + 
-            totais["despesas_fixas_anual"] +
-            (total_gastos_mensal * Decimal("12"))
+            }
         )
-        
-        resultado.append({
-            "bloco": bloco_nome,
-            "investimentos": totais["investimentos"],
-            "investimentos_formatado": _format_currency_br(totais["investimentos"]),
-            "custos_fixos_mensal": totais["custos_fixos_mensal"],
-            "custos_fixos_mensal_formatado": _format_currency_br(totais["custos_fixos_mensal"]),
-            "despesas_fixas_mensal": totais["despesas_fixas_mensal"],
-            "despesas_fixas_mensal_formatado": _format_currency_br(totais["despesas_fixas_mensal"]),
-            "total_gastos_mensal": total_gastos_mensal,
-            "total_gastos_mensal_formatado": _format_currency_br(total_gastos_mensal),
-            "custos_fixos_anual": totais["custos_fixos_anual"],
-            "custos_fixos_anual_formatado": _format_currency_br(totais["custos_fixos_anual"]),
-            "despesas_fixas_anual": totais["despesas_fixas_anual"],
-            "despesas_fixas_anual_formatado": _format_currency_br(totais["despesas_fixas_anual"]),
-            "total_gastos_anual": total_gastos_anual,
-            "total_gastos_anual_formatado": _format_currency_br(total_gastos_anual),
-        })
-    
+
     # Adicionar linha de totais
     total_investimentos = sum(r["investimentos"] for r in resultado)
     total_custos_mensal = sum(r["custos_fixos_mensal"] for r in resultado)
@@ -2070,26 +2267,30 @@ def calculate_investment_summary_by_block(structures: List[Dict[str, Any]]) -> L
     total_despesas_anual = sum(r["despesas_fixas_anual"] for r in resultado)
     # Soma os totais anuais jÃ¡ calculados de cada bloco (que jÃ¡ incluem mensais Ã— 12)
     total_gastos_anual = sum(r["total_gastos_anual"] for r in resultado)
-    
-    resultado.append({
-        "bloco": "TOTAL",
-        "investimentos": total_investimentos,
-        "investimentos_formatado": _format_currency_br(total_investimentos),
-        "custos_fixos_mensal": total_custos_mensal,
-        "custos_fixos_mensal_formatado": _format_currency_br(total_custos_mensal),
-        "despesas_fixas_mensal": total_despesas_mensal,
-        "despesas_fixas_mensal_formatado": _format_currency_br(total_despesas_mensal),
-        "total_gastos_mensal": total_gastos_mensal,
-        "total_gastos_mensal_formatado": _format_currency_br(total_gastos_mensal),
-        "custos_fixos_anual": total_custos_anual,
-        "custos_fixos_anual_formatado": _format_currency_br(total_custos_anual),
-        "despesas_fixas_anual": total_despesas_anual,
-        "despesas_fixas_anual_formatado": _format_currency_br(total_despesas_anual),
-        "total_gastos_anual": total_gastos_anual,
-        "total_gastos_anual_formatado": _format_currency_br(total_gastos_anual),
-        "is_total": True,
-    })
-    
+
+    resultado.append(
+        {
+            "bloco": "TOTAL",
+            "investimentos": total_investimentos,
+            "investimentos_formatado": _format_currency_br(total_investimentos),
+            "custos_fixos_mensal": total_custos_mensal,
+            "custos_fixos_mensal_formatado": _format_currency_br(total_custos_mensal),
+            "despesas_fixas_mensal": total_despesas_mensal,
+            "despesas_fixas_mensal_formatado": _format_currency_br(
+                total_despesas_mensal
+            ),
+            "total_gastos_mensal": total_gastos_mensal,
+            "total_gastos_mensal_formatado": _format_currency_br(total_gastos_mensal),
+            "custos_fixos_anual": total_custos_anual,
+            "custos_fixos_anual_formatado": _format_currency_br(total_custos_anual),
+            "despesas_fixas_anual": total_despesas_anual,
+            "despesas_fixas_anual_formatado": _format_currency_br(total_despesas_anual),
+            "total_gastos_anual": total_gastos_anual,
+            "total_gastos_anual_formatado": _format_currency_br(total_gastos_anual),
+            "is_total": True,
+        }
+    )
+
     return resultado
 
 
@@ -2123,9 +2324,16 @@ def aggregate_structure_investments(structures: List[Dict[str, Any]]) -> Dict[st
                         continue
 
                     category_slug = classificacao["category"]
-                    template_key = "maquinas" if category_slug == "maquinas_equipamentos" else category_slug
+                    template_key = (
+                        "maquinas"
+                        if category_slug == "maquinas_equipamentos"
+                        else category_slug
+                    )
                     if template_key not in categories_summary:
-                        categories_summary[template_key] = {"total": Decimal("0"), "per_month": {}}
+                        categories_summary[template_key] = {
+                            "total": Decimal("0"),
+                            "per_month": {},
+                        }
 
                     categories_summary[template_key]["total"] += valor_decimal
 
@@ -2135,13 +2343,19 @@ def aggregate_structure_investments(structures: List[Dict[str, Any]]) -> Dict[st
                     if month_tuple:
                         contribution_date = date(month_tuple[0], month_tuple[1], 1)
                         month_key = _month_key_from_tuple(month_tuple)
-                        _accumulate_decimal(categories_summary[template_key]["per_month"], month_key, valor_decimal)
+                        _accumulate_decimal(
+                            categories_summary[template_key]["per_month"],
+                            month_key,
+                            valor_decimal,
+                        )
                         _accumulate_decimal(per_month_total, month_key, valor_decimal)
                     else:
                         contribution_date = due_info
 
                     parcela_numero = parcela.get("numero") or idx
-                    description = f"{bloco_nome} - {item_desc} (Parcela {parcela_numero})"
+                    description = (
+                        f"{bloco_nome} - {item_desc} (Parcela {parcela_numero})"
+                    )
 
                     entries.append(
                         {
@@ -2166,13 +2380,19 @@ def aggregate_structure_investments(structures: List[Dict[str, Any]]) -> Dict[st
     }
 
 
-def serialize_structure_investment_summary(categories_summary: Dict[str, Dict[str, Any]]) -> Dict[str, Dict[str, Any]]:
+def serialize_structure_investment_summary(
+    categories_summary: Dict[str, Dict[str, Any]]
+) -> Dict[str, Dict[str, Any]]:
     serialized: Dict[str, Dict[str, Any]] = {}
     for key, data in categories_summary.items():
         total_decimal = data.get("total")
         per_month = data.get("per_month", {})
         total_float = float(total_decimal) if total_decimal is not None else 0.0
-        formatted_total = _format_currency_br(total_decimal) if total_decimal is not None else _format_currency_br(0)
+        formatted_total = (
+            _format_currency_br(total_decimal)
+            if total_decimal is not None
+            else _format_currency_br(0)
+        )
         serialized[key] = {
             "total": total_float,
             "total_formatado": formatted_total or _format_currency_br(0),
@@ -2216,7 +2436,9 @@ def _normalize_month_reference(value: Any) -> Tuple[str, Optional[datetime], str
 
     if parsed:
         month_key = parsed.strftime("%Y-%m")
-        label = f"{MONTH_LABELS_PT.get(parsed.month, parsed.strftime('%b'))}/{parsed.year}"
+        label = (
+            f"{MONTH_LABELS_PT.get(parsed.month, parsed.strftime('%b'))}/{parsed.year}"
+        )
         return (month_key, parsed, label)
 
     fallback_key = cleaned[:7] if len(cleaned) >= 7 and cleaned[4] == "-" else cleaned
@@ -2239,32 +2461,34 @@ def build_modefin_business_flow(
     fixed_cost_entries: List[Dict[str, Any]],
     profit_distribution: List[Dict[str, Any]],
     result_rules: List[Dict[str, Any]],
-    num_months: int = 60
+    num_months: int = 60,
 ) -> Dict[str, Any]:
     """Build business cash flow with ramp-up, fixed costs timeline, and profit distribution."""
     from decimal import Decimal
-    
+
     # Construir dataset de ramp-up
     base_revenue = 0.0
     base_cost = 0.0
     base_expense = 0.0
     ramp_entries_combined = []
-    
+
     for product in products:
         summary = product.get("ramp_up_summary") or {}
         base_revenue += _safe_float(summary.get("base_revenue", 0))
         base_cost += _safe_float(summary.get("base_cost", 0))
         base_expense += _safe_float(summary.get("base_expense", 0))
-        
+
         entries = product.get("ramp_up_entries") or []
         for entry in entries:
             month = entry.get("month") or entry.get("reference_month")
             if month:
-                ramp_entries_combined.append({
-                    "month": month,
-                    "percentage": _safe_float(entry.get("percentage", 100))
-                })
-    
+                ramp_entries_combined.append(
+                    {
+                        "month": month,
+                        "percentage": _safe_float(entry.get("percentage", 100)),
+                    }
+                )
+
     # Se nÃ£o hÃ¡ ramp-up, usar totais dos produtos
     if base_revenue == 0:
         margem = products_totals.get("margem_contribuicao", {})
@@ -2274,23 +2498,23 @@ def build_modefin_business_flow(
         despesas_var = products_totals.get("despesas_variaveis", {})
         base_expense = _safe_float(despesas_var.get("valor", 0))
         base_revenue = base_revenue + base_cost + base_expense  # Reconstituir receita
-    
+
     # Determinar mÃªs inicial (sempre comeÃ§ar em janeiro para relatÃ³rio)
     start_month = "2026-01"
-    
+
     # Gerar sequÃªncia de meses
     meses = _generate_month_sequence(start_month, num_months)
-    
+
     # Construir fluxo mÃªs a mÃªs
     rows = []
-    
+
     # DistribuiÃ§Ã£o de lucros
     dist_percent = 0.0
     dist_start_month = None
     if profit_distribution:
         dist_percent = _safe_float(profit_distribution[0].get("percentage", 0))
         dist_start_month = profit_distribution[0].get("start_date")
-    
+
     for mes in meses:
         # Receita com ramp-up
         ramp_pct = _get_ramp_percentage(mes, ramp_entries_combined) / 100.0
@@ -2298,13 +2522,13 @@ def build_modefin_business_flow(
         custo_var = base_cost * ramp_pct
         despesa_var = base_expense * ramp_pct
         margem = receita - custo_var - despesa_var
-        
+
         # Custos fixos por data
         custo_fixo = _get_fixed_cost_for_month(mes, fixed_cost_entries, "custo")
         despesa_fixa = _get_fixed_cost_for_month(mes, fixed_cost_entries, "despesa")
-        
+
         resultado_op = margem - custo_fixo - despesa_fixa
-        
+
         # DistribuiÃ§Ãµes (sÃ³ se resultado positivo e apÃ³s data de inÃ­cio)
         distribuicao = 0.0
         if resultado_op > 0:
@@ -2313,7 +2537,7 @@ def build_modefin_business_flow(
                     distribuicao = resultado_op * (dist_percent / 100.0)
             else:
                 distribuicao = resultado_op * (dist_percent / 100.0)
-            
+
             # Outras destinaÃ§Ãµes
             for rule in result_rules:
                 rule_start = rule.get("start_date")
@@ -2321,40 +2545,59 @@ def build_modefin_business_flow(
                     continue
                 rule_pct = _safe_float(rule.get("percentage", 0))
                 distribuicao += resultado_op * (rule_pct / 100.0)
-        
+
         resultado_periodo = resultado_op - distribuicao
-        
-        rows.append({
-            "periodo": _format_month_label(mes),
-            "receita": receita,
-            "custo_variavel": custo_var,
-            "despesa_variavel": despesa_var,
-            "margem": margem,
-            "custo_fixo": custo_fixo,
-            "despesa_fixa": despesa_fixa,
-            "fixos_total": custo_fixo + despesa_fixa,
-            "resultado_operacional": resultado_op,
-            "distribuicao": distribuicao,
-            "resultado_periodo": resultado_periodo
-        })
-    
+
+        rows.append(
+            {
+                "periodo": _format_month_label(mes),
+                "receita": receita,
+                "custo_variavel": custo_var,
+                "despesa_variavel": despesa_var,
+                "margem": margem,
+                "custo_fixo": custo_fixo,
+                "despesa_fixa": despesa_fixa,
+                "fixos_total": custo_fixo + despesa_fixa,
+                "resultado_operacional": resultado_op,
+                "distribuicao": distribuicao,
+                "resultado_periodo": resultado_periodo,
+            }
+        )
+
     # Condensar fluxo para formato compacto
-    logger.info(f"[DEBUG] Business Flow - Total de linhas antes de condensar: {len(rows)}")
-    
-    value_fields = ["receita", "custo_variavel", "despesa_variavel", "margem", 
-                    "custo_fixo", "despesa_fixa", "fixos_total", 
-                    "resultado_operacional", "distribuicao", "resultado_periodo"]
+    logger.info(
+        f"[DEBUG] Business Flow - Total de linhas antes de condensar: {len(rows)}"
+    )
+
+    value_fields = [
+        "receita",
+        "custo_variavel",
+        "despesa_variavel",
+        "margem",
+        "custo_fixo",
+        "despesa_fixa",
+        "fixos_total",
+        "resultado_operacional",
+        "distribuicao",
+        "resultado_periodo",
+    ]
     condensed_rows = condense_cash_flow_rows(rows, value_fields)
-    
-    logger.info(f"[DEBUG] Business Flow - Total de linhas apÃ³s condensar: {len(condensed_rows)}")
+
+    logger.info(
+        f"[DEBUG] Business Flow - Total de linhas apÃ³s condensar: {len(condensed_rows)}"
+    )
     if condensed_rows:
-        logger.info(f"[DEBUG] Primeiros 3 perÃ­odos: {[r['periodo'] for r in condensed_rows[:3]]}")
-        logger.info(f"[DEBUG] Ãšltimos 3 perÃ­odos: {[r['periodo'] for r in condensed_rows[-3:]]}")
-    
+        logger.info(
+            f"[DEBUG] Primeiros 3 perÃ­odos: {[r['periodo'] for r in condensed_rows[:3]]}"
+        )
+        logger.info(
+            f"[DEBUG] Ãšltimos 3 perÃ­odos: {[r['periodo'] for r in condensed_rows[-3:]]}"
+        )
+
     return {
         "rows": condensed_rows,
         "rows_full": rows,  # Retornar tambÃ©m dados completos para investor_flow
-        "has_rows": bool(condensed_rows)
+        "has_rows": bool(condensed_rows),
     }
 
 
@@ -2362,26 +2605,28 @@ def _get_ramp_percentage(month: str, ramp_entries: List[Dict[str, Any]]) -> floa
     """Get ramp-up percentage for a given month."""
     if not ramp_entries:
         return 100.0
-    
+
     # Ordenar por mÃªs
     sorted_entries = sorted(ramp_entries, key=lambda e: e["month"])
-    
+
     # Se antes do primeiro mÃªs, retorna 0
     if month < sorted_entries[0]["month"]:
         return 0.0
-    
+
     # Procurar percentual exato ou interpolar
     for entry in sorted_entries:
         if month == entry["month"]:
             return entry["percentage"]
         if month < entry["month"]:
             break
-    
+
     # Se passou do Ãºltimo, retorna 100%
     return 100.0
 
 
-def _get_fixed_cost_for_month(month: str, fixed_cost_entries: List[Dict[str, Any]], cost_type: str) -> float:
+def _get_fixed_cost_for_month(
+    month: str, fixed_cost_entries: List[Dict[str, Any]], cost_type: str
+) -> float:
     """Get fixed cost/expense for a given month."""
     total = 0.0
     for entry in fixed_cost_entries:
@@ -2409,7 +2654,7 @@ def _generate_month_sequence(start_month: str, num_months: int) -> List[str]:
         year, month = map(int, start_month.split("-"))
     except (ValueError, AttributeError):
         year, month = 2026, 1
-    
+
     months = []
     for _ in range(num_months):
         months.append(f"{year:04d}-{month:02d}")
@@ -2417,41 +2662,43 @@ def _generate_month_sequence(start_month: str, num_months: int) -> List[str]:
         if month > 12:
             month = 1
             year += 1
-    
+
     return months
 
 
-def condense_cash_flow_rows(rows: List[Dict[str, Any]], value_fields: List[str]) -> List[Dict[str, Any]]:
+def condense_cash_flow_rows(
+    rows: List[Dict[str, Any]], value_fields: List[str]
+) -> List[Dict[str, Any]]:
     """
     Condensa fluxo de caixa para formato compacto:
     - 12 primeiros meses (detalhado)
     - 13Âº mÃªs atÃ© fim do ano (agregado)
     - Anos seguintes (agregado por ano)
-    
+
     value_fields: lista de campos numÃ©ricos para somar na agregaÃ§Ã£o
     """
     if not rows:
         return []
-    
+
     logger.info(f"[DEBUG condense] Condensando {len(rows)} linhas...")
-    
+
     condensed = []
-    
+
     # Primeiros 12 meses (detalhado)
     for i in range(min(12, len(rows))):
         condensed.append(rows[i].copy())
-    
+
     if len(rows) <= 12:
         logger.info(f"[DEBUG condense] Menos de 12 linhas, retornando {len(condensed)}")
         return condensed
-    
+
     # Agrupar restante por ano usando dicionÃ¡rio
     anos_agregados = {}
-    
+
     for i in range(12, len(rows)):
         row = rows[i]
         periodo = row.get("periodo", "")
-        
+
         # Extrair ano do perÃ­odo (formato: "Mmm/YYYY" ou "YYYY-MM")
         try:
             if "/" in periodo:
@@ -2461,41 +2708,43 @@ def condense_cash_flow_rows(rows: List[Dict[str, Any]], value_fields: List[str])
         except (ValueError, IndexError, AttributeError):
             logger.info(f"[DEBUG condense] Ignorando perÃ­odo invÃ¡lido: {periodo}")
             continue
-        
+
         # Criar agregado do ano se nÃ£o existir
         if year not in anos_agregados:
             anos_agregados[year] = {
                 "periodo": f"Ano {year}",
-                **{field: 0.0 for field in value_fields}
+                **{field: 0.0 for field in value_fields},
             }
-        
+
         # Somar valores ao agregado do ano
         for field in value_fields:
             anos_agregados[year][field] += _safe_float(row.get(field, 0))
-    
+
     # Adicionar anos na ordem
     for year in sorted(anos_agregados.keys()):
         condensed.append(anos_agregados[year])
-    
+
     logger.info(f"[DEBUG condense] Anos encontrados: {sorted(anos_agregados.keys())}")
     logger.info(f"[DEBUG condense] Total de linhas condensadas: {len(condensed)}")
-    
+
     return condensed
 
 
 def build_modefin_investor_flow(
     investment_flow: Dict[str, Any],
     business_flow: Dict[str, Any],
-    profit_distribution: List[Dict[str, Any]]
+    profit_distribution: List[Dict[str, Any]],
 ) -> Dict[str, Any]:
     """Build investor cash flow combining investments and profit distributions."""
-    
+
     # Pegar TODOS os meses do business_flow (usar rows_full para nÃ£o pegar condensado)
     business_rows = business_flow.get("rows_full") or business_flow.get("rows", [])
-    logger.info(f"[DEBUG] Investor Flow - business_rows recebidos: {len(business_rows)}")
+    logger.info(
+        f"[DEBUG] Investor Flow - business_rows recebidos: {len(business_rows)}"
+    )
     if not business_rows:
         return {"rows": [], "has_rows": False}
-    
+
     # Criar mapa de aportes por perÃ­odo
     aportes_map = {}
     for row in investment_flow.get("rows", []):
@@ -2503,51 +2752,57 @@ def build_modefin_investor_flow(
         fontes = row.get("fontes", 0.0)
         if periodo:
             aportes_map[periodo] = fontes
-    
+
     # Construir fluxo completo (todos os meses do business_flow)
     rows = []
     saldo_acumulado = 0.0
-    
+
     for bus_row in business_rows:
         periodo = bus_row.get("periodo", "")
-        
+
         # Buscar aporte deste perÃ­odo (se houver)
         aporte = aportes_map.get(periodo, 0.0)
-        
+
         # DistribuiÃ§Ã£o vem do business_flow
         distribuicao = bus_row.get("distribuicao", 0.0)
-        
+
         # Saldo do perÃ­odo (perspectiva do investidor: recebe - coloca)
         saldo_periodo = distribuicao - aporte
         saldo_acumulado += saldo_periodo
-        
-        rows.append({
-            "periodo": periodo,
-            "aporte": aporte,
-            "distribuicao": distribuicao,
-            "saldo_periodo": saldo_periodo,
-            "saldo_acumulado": saldo_acumulado
-        })
-    
+
+        rows.append(
+            {
+                "periodo": periodo,
+                "aporte": aporte,
+                "distribuicao": distribuicao,
+                "saldo_periodo": saldo_periodo,
+                "saldo_acumulado": saldo_acumulado,
+            }
+        )
+
     # Condensar fluxo para formato compacto
-    logger.info(f"[DEBUG] Investor Flow - Total de linhas antes de condensar: {len(rows)}")
-    
+    logger.info(
+        f"[DEBUG] Investor Flow - Total de linhas antes de condensar: {len(rows)}"
+    )
+
     condensed = []
-    
+
     # Primeiros 12 meses (detalhado)
     for i in range(min(12, len(rows))):
         condensed.append(rows[i].copy())
-    
-    logger.info(f"[DEBUG] Adicionados primeiros 12 meses. Total condensed: {len(condensed)}")
-    
+
+    logger.info(
+        f"[DEBUG] Adicionados primeiros 12 meses. Total condensed: {len(condensed)}"
+    )
+
     if len(rows) > 12:
         # Agrupar restante por ano
         anos_agregados = {}
-        
+
         for i in range(12, len(rows)):
             row = rows[i]
             periodo = row.get("periodo", "")
-            
+
             # Extrair ano
             try:
                 if "/" in periodo:
@@ -2557,7 +2812,7 @@ def build_modefin_investor_flow(
             except (ValueError, IndexError, AttributeError):
                 logger.info(f"[DEBUG] NÃ£o conseguiu extrair ano de: {periodo}")
                 continue
-            
+
             # Criar ou atualizar agregado do ano
             if year not in anos_agregados:
                 anos_agregados[year] = {
@@ -2566,35 +2821,34 @@ def build_modefin_investor_flow(
                     "distribuicao": 0.0,
                     "saldo_periodo": 0.0,
                     "saldo_acumulado": 0.0,
-                    "ultimo_saldo": 0.0
+                    "ultimo_saldo": 0.0,
                 }
-            
+
             # Acumular valores do ano
             anos_agregados[year]["aporte"] += row.get("aporte", 0.0)
             anos_agregados[year]["distribuicao"] += row.get("distribuicao", 0.0)
             anos_agregados[year]["saldo_periodo"] += row.get("saldo_periodo", 0.0)
             # Guardar o Ãºltimo saldo acumulado deste ano
             anos_agregados[year]["ultimo_saldo"] = row.get("saldo_acumulado", 0.0)
-        
+
         # Adicionar anos na ordem
         for year in sorted(anos_agregados.keys()):
             year_data = anos_agregados[year]
             year_data["saldo_acumulado"] = year_data["ultimo_saldo"]
-            condensed.append({
-                "periodo": year_data["periodo"],
-                "aporte": year_data["aporte"],
-                "distribuicao": year_data["distribuicao"],
-                "saldo_periodo": year_data["saldo_periodo"],
-                "saldo_acumulado": year_data["saldo_acumulado"]
-            })
-        
+            condensed.append(
+                {
+                    "periodo": year_data["periodo"],
+                    "aporte": year_data["aporte"],
+                    "distribuicao": year_data["distribuicao"],
+                    "saldo_periodo": year_data["saldo_periodo"],
+                    "saldo_acumulado": year_data["saldo_acumulado"],
+                }
+            )
+
         logger.info(f"[DEBUG] Anos agregados: {sorted(anos_agregados.keys())}")
         logger.info(f"[DEBUG] Total de linhas condensadas: {len(condensed)}")
-    
-    return {
-        "rows": condensed,
-        "has_rows": bool(condensed)
-    }
+
+    return {"rows": condensed, "has_rows": bool(condensed)}
 
 
 def build_modefin_investment_flow(
@@ -2628,7 +2882,9 @@ def build_modefin_investment_flow(
         amount = _safe_float((item or {}).get("amount"))
         if not amount:
             continue
-        key, dt, label = _normalize_month_reference((item or {}).get("contribution_date"))
+        key, dt, label = _normalize_month_reference(
+            (item or {}).get("contribution_date")
+        )
         entry = ensure_entry(key, dt, label)
         entry["capital_giro"] += amount
 
@@ -2646,7 +2902,9 @@ def build_modefin_investment_flow(
         amount = _safe_float((source or {}).get("amount"))
         if not amount:
             continue
-        key, dt, label = _normalize_month_reference((source or {}).get("contribution_date"))
+        key, dt, label = _normalize_month_reference(
+            (source or {}).get("contribution_date")
+        )
         entry = ensure_entry(key, dt, label)
         entry["fontes"] += amount
 
@@ -2698,23 +2956,29 @@ def build_modefin_investment_flow(
     # Condensar fluxo para formato compacto (se houver muitas linhas)
     condensed_rows = rows
     if len(rows) > 12:
-        value_fields = ["capital_giro", "imobilizado", "investimentos", "fontes", "saldo_periodo"]
+        value_fields = [
+            "capital_giro",
+            "imobilizado",
+            "investimentos",
+            "fontes",
+            "saldo_periodo",
+        ]
         # Para investment flow, precisamos lÃ³gica especial para saldo_acumulado
         condensed = []
-        
+
         # Primeiros 12 registros (detalhado)
         for i in range(min(12, len(rows))):
             condensed.append(rows[i].copy())
-        
+
         # Agrupar restante por ano
         current_year = None
         year_aggregate = None
         last_saldo_acumulado = condensed[-1]["saldo_acumulado"] if condensed else 0.0
-        
+
         for i in range(12, len(rows)):
             row = rows[i]
             periodo = row.get("period_label", "")
-            
+
             # Extrair ano
             try:
                 if "/" in periodo:
@@ -2723,36 +2987,36 @@ def build_modefin_investment_flow(
                     year = int(periodo.split("-")[0])
             except (ValueError, IndexError, AttributeError):
                 continue
-            
+
             if current_year is None:
                 current_year = year
                 year_aggregate = {
                     "period_label": f"Ano {year}",
                     **{field: 0.0 for field in value_fields},
-                    "saldo_acumulado": 0.0
+                    "saldo_acumulado": 0.0,
                 }
-            
+
             if year != current_year:
                 year_aggregate["saldo_acumulado"] = last_saldo_acumulado
                 condensed.append(year_aggregate)
-                
+
                 current_year = year
                 year_aggregate = {
                     "period_label": f"Ano {year}",
                     **{field: 0.0 for field in value_fields},
-                    "saldo_acumulado": 0.0
+                    "saldo_acumulado": 0.0,
                 }
-            
+
             # Somar valores
             for field in value_fields:
                 year_aggregate[field] += _safe_float(row.get(field, 0))
             last_saldo_acumulado = row.get("saldo_acumulado", last_saldo_acumulado)
-        
+
         # Adicionar Ãºltimo ano
         if year_aggregate:
             year_aggregate["saldo_acumulado"] = last_saldo_acumulado
             condensed.append(year_aggregate)
-        
+
         condensed_rows = condensed
 
     return {
@@ -2802,7 +3066,9 @@ def calculate_modefin_analysis_metrics(
     total_investimentos = _safe_float(totals.get("investimentos"))
 
     fluxo_analises = (financeiro.get("fluxo_investidor") or {}).get("analises") or {}
-    periodo_meses = fluxo_analises.get("periodo_meses") or fluxo_analises.get("periodo") or 60
+    periodo_meses = (
+        fluxo_analises.get("periodo_meses") or fluxo_analises.get("periodo") or 60
+    )
     try:
         periodo_meses = int(periodo_meses)
     except (TypeError, ValueError):
@@ -2812,8 +3078,12 @@ def calculate_modefin_analysis_metrics(
 
     custo_oportunidade = fluxo_analises.get("opportunity_cost")
     if custo_oportunidade is None:
-        custo_oportunidade = (financeiro.get("investimento") or {}).get("custo_oportunidade")
-    custo_oportunidade_percent = _parse_percentage_value(custo_oportunidade, default=1.0)
+        custo_oportunidade = (financeiro.get("investimento") or {}).get(
+            "custo_oportunidade"
+        )
+    custo_oportunidade_percent = _parse_percentage_value(
+        custo_oportunidade, default=1.0
+    )
 
     payback = None
     if resultado_operacional > 0 and total_investimentos > 0:
@@ -2821,7 +3091,9 @@ def calculate_modefin_analysis_metrics(
 
     roi_percent = None
     if total_investimentos > 0 and resultado_operacional != 0:
-        roi_percent = (resultado_operacional * periodo_meses / total_investimentos) * 100
+        roi_percent = (
+            resultado_operacional * periodo_meses / total_investimentos
+        ) * 100
 
     tir_percent = None
     if payback and payback > 0:
@@ -2847,7 +3119,9 @@ def calculate_modefin_analysis_metrics(
     }
 
 
-def summarize_structures_for_report(structures: List[Dict[str, Any]]) -> List[Dict[str, Any]]:
+def summarize_structures_for_report(
+    structures: List[Dict[str, Any]]
+) -> List[Dict[str, Any]]:
     summary: List[Dict[str, Any]] = []
     for area in structures:
         area_summary = {
@@ -2859,10 +3133,16 @@ def summarize_structures_for_report(structures: List[Dict[str, Any]]) -> List[Di
             "resumo": [],
         }
         for bloco in area.get("blocos", []):
-            pontos = [item.get("descricao") for item in bloco.get("itens", []) if item.get("descricao")]
+            pontos = [
+                item.get("descricao")
+                for item in bloco.get("itens", [])
+                if item.get("descricao")
+            ]
             if not pontos:
                 continue
-            area_summary["resumo"].append({"escopo": bloco.get("nome"), "pontos": pontos[:5]})
+            area_summary["resumo"].append(
+                {"escopo": bloco.get("nome"), "pontos": pontos[:5]}
+            )
         summary.append(area_summary)
     return summary
 
@@ -2882,7 +3162,9 @@ def load_financial_model(db, plan_id: int) -> Dict[str, Any]:
         opportunity_cost = "1%"
     tir_horizon_raw = metrics.get("tir_horizon_years")
     try:
-        tir_horizon_years = int(tir_horizon_raw) if tir_horizon_raw not in (None, "") else None
+        tir_horizon_years = (
+            int(tir_horizon_raw) if tir_horizon_raw not in (None, "") else None
+        )
     except (TypeError, ValueError):
         tir_horizon_years = None
     if tir_horizon_years not in (2, 3, 5):
@@ -2940,7 +3222,9 @@ def load_financial_model(db, plan_id: int) -> Dict[str, Any]:
             label_display = period_label or f"Per\u00edodo {index + 1}"
             period_key = _build_fallback_key(label_display, prefix="negocio")
             if period_key not in business_fallback_seen:
-                business_fallback_labels.append({"label": label_display, "key": period_key})
+                business_fallback_labels.append(
+                    {"label": label_display, "key": period_key}
+                )
                 business_fallback_seen.add(period_key)
             period_label_short = label_display
             period_label_full = label_display
@@ -2959,7 +3243,9 @@ def load_financial_model(db, plan_id: int) -> Dict[str, Any]:
         if variaveis_decimal is not None:
             business_line_maps["custos_variaveis"][period_key] = variaveis_decimal
         if despesas_variaveis_decimal is not None:
-            business_line_maps["despesas_variaveis"][period_key] = despesas_variaveis_decimal
+            business_line_maps["despesas_variaveis"][
+                period_key
+            ] = despesas_variaveis_decimal
         if margem_decimal is not None:
             business_line_maps["margem_contribuicao"][period_key] = margem_decimal
         if fixos_decimal is not None:
@@ -2967,9 +3253,13 @@ def load_financial_model(db, plan_id: int) -> Dict[str, Any]:
         if despesas_fixas_decimal is not None:
             business_line_maps["despesas_fixas"][period_key] = despesas_fixas_decimal
         if resultado_operacional_decimal is not None:
-            business_line_maps["resultado_operacional"][period_key] = resultado_operacional_decimal
+            business_line_maps["resultado_operacional"][
+                period_key
+            ] = resultado_operacional_decimal
         if resultado_periodo_decimal is not None:
-            business_line_maps["resultado_periodo"][period_key] = resultado_periodo_decimal
+            business_line_maps["resultado_periodo"][
+                period_key
+            ] = resultado_periodo_decimal
 
         destinacao_itens = distribution_map.get(pid, [])
         destinacao_total_decimal = Decimal("0")
@@ -3026,7 +3316,9 @@ def load_financial_model(db, plan_id: int) -> Dict[str, Any]:
             label_display = period_label or f"Per\u00edodo {index + 1}"
             period_key = _build_fallback_key(label_display, prefix="investidor")
             if period_key not in investor_fallback_seen:
-                investor_fallback_labels.append({"label": label_display, "key": period_key})
+                investor_fallback_labels.append(
+                    {"label": label_display, "key": period_key}
+                )
                 investor_fallback_seen.add(period_key)
             period_label_short = label_display
 
@@ -3061,11 +3353,15 @@ def load_financial_model(db, plan_id: int) -> Dict[str, Any]:
         investment_dataset["fallback_labels"],
     )
     investment_matrix_rows: List[Dict[str, Any]] = []
-    totals_per_column: Dict[str, Decimal] = {column["key"]: Decimal("0") for column in investment_columns}
+    totals_per_column: Dict[str, Decimal] = {
+        column["key"]: Decimal("0") for column in investment_columns
+    }
     group_data = investment_dataset["per_group_category"]
 
     for group in ["capital_giro", "imobilizado"]:
-        group_label = INVESTMENT_GROUP_LABELS.get(group, group.replace("_", " ").title())
+        group_label = INVESTMENT_GROUP_LABELS.get(
+            group, group.replace("_", " ").title()
+        )
         investment_matrix_rows.append(
             {
                 "descricao": group_label,
@@ -3084,9 +3380,14 @@ def load_financial_model(db, plan_id: int) -> Dict[str, Any]:
                 },
             )
             per_month_map: Dict[str, Decimal] = category_info.get("per_month", {})
-            values_map = {column["key"]: per_month_map.get(column["key"]) for column in investment_columns}
+            values_map = {
+                column["key"]: per_month_map.get(column["key"])
+                for column in investment_columns
+            }
             line = _build_matrix_line(
-                INVESTMENT_CATEGORY_LABELS.get(category, category.replace("_", " ").title()),
+                INVESTMENT_CATEGORY_LABELS.get(
+                    category, category.replace("_", " ").title()
+                ),
                 values_map,
                 investment_columns,
             )
@@ -3100,21 +3401,33 @@ def load_financial_model(db, plan_id: int) -> Dict[str, Any]:
             if category in seen_categories:
                 continue
             per_month_map = category_info.get("per_month", {})
-            values_map = {column["key"]: per_month_map.get(column["key"]) for column in investment_columns}
+            values_map = {
+                column["key"]: per_month_map.get(column["key"])
+                for column in investment_columns
+            }
             line = _build_matrix_line(
-                INVESTMENT_CATEGORY_LABELS.get(category, category.replace("_", " ").title()),
+                INVESTMENT_CATEGORY_LABELS.get(
+                    category, category.replace("_", " ").title()
+                ),
                 values_map,
                 investment_columns,
             )
-            line.update({"tipo": "categoria_extra", "grupo": group, "categoria": category})
+            line.update(
+                {"tipo": "categoria_extra", "grupo": group, "categoria": category}
+            )
             investment_matrix_rows.append(line)
             for column in investment_columns:
                 value_decimal = per_month_map.get(column["key"])
                 if value_decimal is not None:
                     _accumulate_decimal(totals_per_column, column["key"], value_decimal)
 
-    total_line_map = {column["key"]: totals_per_column.get(column["key"]) for column in investment_columns}
-    investment_total_row = _build_matrix_line("Total Geral", total_line_map, investment_columns)
+    total_line_map = {
+        column["key"]: totals_per_column.get(column["key"])
+        for column in investment_columns
+    }
+    investment_total_row = _build_matrix_line(
+        "Total Geral", total_line_map, investment_columns
+    )
     investment_total_row.update({"tipo": "total"})
 
     investment_matrix = {
@@ -3127,7 +3440,9 @@ def load_financial_model(db, plan_id: int) -> Dict[str, Any]:
 
     investment_summary_por_grupo = {
         group: {
-            "label": INVESTMENT_GROUP_LABELS.get(group, group.replace("_", " ").title()),
+            "label": INVESTMENT_GROUP_LABELS.get(
+                group, group.replace("_", " ").title()
+            ),
             "total": _format_currency_br(total),
         }
         for group, total in investment_dataset["totals_por_grupo"].items()
@@ -3139,10 +3454,22 @@ def load_financial_model(db, plan_id: int) -> Dict[str, Any]:
         }
         for tipo, total in sources_dataset["totals_por_tipo"].items()
     }
-    necessidade_total_decimal = investment_dataset["grand_total"] if investment_dataset["entries"] else None
-    fontes_total_decimal = sources_dataset["grand_total"] if sources_dataset["entries"] else None
-    necessidade_total_str = _format_currency_br(necessidade_total_decimal) if necessidade_total_decimal is not None else ""
-    fontes_total_str = _format_currency_br(fontes_total_decimal) if fontes_total_decimal is not None else ""
+    necessidade_total_decimal = (
+        investment_dataset["grand_total"] if investment_dataset["entries"] else None
+    )
+    fontes_total_decimal = (
+        sources_dataset["grand_total"] if sources_dataset["entries"] else None
+    )
+    necessidade_total_str = (
+        _format_currency_br(necessidade_total_decimal)
+        if necessidade_total_decimal is not None
+        else ""
+    )
+    fontes_total_str = (
+        _format_currency_br(fontes_total_decimal)
+        if fontes_total_decimal is not None
+        else ""
+    )
 
     combined_month_tuples = (
         investment_dataset["month_tuples"]
@@ -3156,7 +3483,9 @@ def load_financial_model(db, plan_id: int) -> Dict[str, Any]:
         + business_fallback_labels
         + investor_fallback_labels
     )
-    fluxo_columns = _build_month_columns(combined_month_tuples, combined_fallback_labels)
+    fluxo_columns = _build_month_columns(
+        combined_month_tuples, combined_fallback_labels
+    )
 
     fontes_rows: List[Dict[str, Any]] = []
     per_tipo_map = sources_dataset["per_tipo"]
@@ -3168,7 +3497,9 @@ def load_financial_model(db, plan_id: int) -> Dict[str, Any]:
             },
         )
         per_month_map = tipo_info.get("per_month", {})
-        values_map = {column["key"]: per_month_map.get(column["key"]) for column in fluxo_columns}
+        values_map = {
+            column["key"]: per_month_map.get(column["key"]) for column in fluxo_columns
+        }
         line = _build_matrix_line(
             SOURCE_TYPE_LABELS.get(tipo_slug, tipo_slug.replace("_", " ").title()),
             values_map,
@@ -3180,7 +3511,9 @@ def load_financial_model(db, plan_id: int) -> Dict[str, Any]:
         if tipo_slug in SOURCE_TYPE_ORDER:
             continue
         per_month_map = tipo_info.get("per_month", {})
-        values_map = {column["key"]: per_month_map.get(column["key"]) for column in fluxo_columns}
+        values_map = {
+            column["key"]: per_month_map.get(column["key"]) for column in fluxo_columns
+        }
         line = _build_matrix_line(
             SOURCE_TYPE_LABELS.get(tipo_slug, tipo_slug.replace("_", " ").title()),
             values_map,
@@ -3199,9 +3532,13 @@ def load_financial_model(db, plan_id: int) -> Dict[str, Any]:
             },
         )
         per_month_map = categoria_info.get("per_month", {})
-        values_map = {column["key"]: per_month_map.get(column["key"]) for column in fluxo_columns}
+        values_map = {
+            column["key"]: per_month_map.get(column["key"]) for column in fluxo_columns
+        }
         line = _build_matrix_line(
-            INVESTMENT_CATEGORY_LABELS.get(categoria_slug, categoria_slug.replace("_", " ").title()),
+            INVESTMENT_CATEGORY_LABELS.get(
+                categoria_slug, categoria_slug.replace("_", " ").title()
+            ),
             values_map,
             fluxo_columns,
         )
@@ -3219,8 +3556,12 @@ def load_financial_model(db, plan_id: int) -> Dict[str, Any]:
         per_month_map = categoria_info.get("per_month", {})
         for key, amount in per_month_map.items():
             _accumulate_decimal(ativo_map, key, amount)
-    ativo_values_map = {column["key"]: ativo_map.get(column["key"]) for column in fluxo_columns}
-    ativo_line = _build_matrix_line("Ativo Imobilizado", ativo_values_map, fluxo_columns)
+    ativo_values_map = {
+        column["key"]: ativo_map.get(column["key"]) for column in fluxo_columns
+    }
+    ativo_line = _build_matrix_line(
+        "Ativo Imobilizado", ativo_values_map, fluxo_columns
+    )
     ativo_line.update({"grupo": "imobilizado", "categoria": "ativo_imobilizado"})
     aplicacao_rows.append(ativo_line)
 
@@ -3238,7 +3579,9 @@ def load_financial_model(db, plan_id: int) -> Dict[str, Any]:
     ]
     for slug, label in negocio_order:
         valores_map = business_line_maps.get(slug, {})
-        mapped_values = {column["key"]: valores_map.get(column["key"]) for column in fluxo_columns}
+        mapped_values = {
+            column["key"]: valores_map.get(column["key"]) for column in fluxo_columns
+        }
         line = _build_matrix_line(label, mapped_values, fluxo_columns)
         line.update({"slug": slug})
         negocio_rows.append(line)
@@ -3252,8 +3595,12 @@ def load_financial_model(db, plan_id: int) -> Dict[str, Any]:
     ]
     for slug, label, strategy in investidor_order:
         valores_map = investor_line_maps.get(slug, {})
-        mapped_values = {column["key"]: valores_map.get(column["key"]) for column in fluxo_columns}
-        line = _build_matrix_line(label, mapped_values, fluxo_columns, total_strategy=strategy)
+        mapped_values = {
+            column["key"]: valores_map.get(column["key"]) for column in fluxo_columns
+        }
+        line = _build_matrix_line(
+            label, mapped_values, fluxo_columns, total_strategy=strategy
+        )
         line.update({"slug": slug})
         investidor_rows.append(line)
 
@@ -3268,7 +3615,11 @@ def load_financial_model(db, plan_id: int) -> Dict[str, Any]:
                 "slug": "aplicacao",
                 "linhas": aplicacao_rows,
             },
-            {"titulo": "Resultado do Neg\u00f3cio", "slug": "negocio", "linhas": negocio_rows},
+            {
+                "titulo": "Resultado do Neg\u00f3cio",
+                "slug": "negocio",
+                "linhas": negocio_rows,
+            },
             {
                 "titulo": "Fluxo de Caixa dos S\u00f3cios / Investidores",
                 "slug": "investidores",
@@ -3304,19 +3655,29 @@ def load_financial_model(db, plan_id: int) -> Dict[str, Any]:
                 "area": area_name,
                 "valor": item.get("revenue_capacity"),
                 "valor_formatado": _format_currency_br(item.get("revenue_capacity")),
-                "valor_decimal": float(decimal_value) if decimal_value is not None else None,
+                "valor_decimal": float(decimal_value)
+                if decimal_value is not None
+                else None,
                 "observacoes": item.get("observations"),
             }
         )
 
     total_decimal_final = total_capacity_decimal if capacity_count > 0 else None
     resumo_capacidades = {
-        "total_decimal": float(total_decimal_final) if total_decimal_final is not None else None,
-        "total_formatado": _format_currency_br(total_decimal_final) if total_decimal_final is not None else "",
+        "total_decimal": float(total_decimal_final)
+        if total_decimal_final is not None
+        else None,
+        "total_formatado": _format_currency_br(total_decimal_final)
+        if total_decimal_final is not None
+        else "",
         "gargalo_area": bottleneck["area"] if bottleneck else "",
         "gargalo_area_codigo": bottleneck["area_codigo"] if bottleneck else "",
-        "gargalo_valor_decimal": float(bottleneck["valor_decimal"]) if bottleneck else None,
-        "gargalo_valor_formatado": _format_currency_br(bottleneck["valor_decimal"]) if bottleneck else "",
+        "gargalo_valor_decimal": float(bottleneck["valor_decimal"])
+        if bottleneck
+        else None,
+        "gargalo_valor_formatado": _format_currency_br(bottleneck["valor_decimal"])
+        if bottleneck
+        else "",
     }
 
     investimento_section = {
@@ -3334,11 +3695,16 @@ def load_financial_model(db, plan_id: int) -> Dict[str, Any]:
             "total_decimal": float(structure_investments_payload["grand_total"])
             if structure_investments_payload["grand_total"] is not None
             else 0.0,
-            "total_formatado": _format_currency_br(structure_investments_payload["grand_total"])
+            "total_formatado": _format_currency_br(
+                structure_investments_payload["grand_total"]
+            )
             if structure_investments_payload["grand_total"] is not None
             else _format_currency_br(0),
             "por_mes_total": {
-                month: float(amount) for month, amount in structure_investments_payload["per_month_total"].items()
+                month: float(amount)
+                for month, amount in structure_investments_payload[
+                    "per_month_total"
+                ].items()
             },
         },
     }
@@ -3370,7 +3736,11 @@ def load_financial_model(db, plan_id: int) -> Dict[str, Any]:
     }
 
     tir_value = metrics.get("tir")
-    tir_label = f"TIR {metrics['tir_horizon_years']} anos" if metrics.get("tir_horizon_years") else "TIR"
+    tir_label = (
+        f"TIR {metrics['tir_horizon_years']} anos"
+        if metrics.get("tir_horizon_years")
+        else "TIR"
+    )
     fluxo_investidor_payload = {
         "periodos": investor_periods_prepared,
         "analises": {
@@ -3414,7 +3784,9 @@ def build_final_report_payload(
     structures_summary: List[Dict[str, Any]],
     financial_model: Dict[str, Any],
 ) -> Dict[str, Any]:
-    principles_list = [item.get("principle") for item in principles if item.get("principle")]
+    principles_list = [
+        item.get("principle") for item in principles if item.get("principle")
+    ]
     alignment_section = {
         "socios": alignment_canvas.get("socios", []),
         "agenda": alignment_canvas.get("proximos_passos", []),
@@ -3432,6 +3804,3 @@ def build_final_report_payload(
         "issued_at": datetime.now().strftime("%d/%m/%Y Ã s %H:%M"),
         "projeto": alignment_project,
     }
-
-
-

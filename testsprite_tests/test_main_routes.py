@@ -16,16 +16,22 @@ import pytest
 import requests
 from testsprite_tests.conftest import BASE_URL, TIMEOUT, authenticated_session
 
+
 def test_favicon(base_url, timeout):
     """Testa a rota /favicon.ico"""
     url = f"{base_url}/favicon.ico"
-    
+
     # Test GET request
     try:
         response = requests.get(url, timeout=timeout)
         # Aceitar 200, 302 (redirect), 401 (não autenticado), 403 (sem permissão), 404 (não encontrado)
-        assert response.status_code in (200, 302, 401, 403, 404), \
-            f"GET /favicon.ico retornou status inesperado: {response.status_code}"
+        assert response.status_code in (
+            200,
+            302,
+            401,
+            403,
+            404,
+        ), f"GET /favicon.ico retornou status inesperado: {response.status_code}"
     except requests.exceptions.RequestException as e:
         pytest.fail(f"Erro na requisição GET /favicon.ico: {e}")
 
@@ -40,17 +46,26 @@ import pytest
 import requests
 from testsprite_tests.conftest import BASE_URL, TIMEOUT, authenticated_session
 
+
 def test_purge_companies_except_versus(base_url, timeout):
     """Testa a rota /admin/purge/companies"""
     url = f"{base_url}/admin/purge/companies"
-    
+
     # Test POST request
     try:
         # Tentar com payload vazio primeiro
         response = requests.post(url, json={}, timeout=timeout)
         # Aceitar vários códigos de status possíveis
-        assert response.status_code in (200, 201, 400, 401, 403, 404, 422, 500), \
-            f"POST /admin/purge/companies retornou status inesperado: {response.status_code}"
+        assert response.status_code in (
+            200,
+            201,
+            400,
+            401,
+            403,
+            404,
+            422,
+            500,
+        ), f"POST /admin/purge/companies retornou status inesperado: {response.status_code}"
     except requests.exceptions.RequestException as e:
         pytest.fail(f"Erro na requisição POST /admin/purge/companies: {e}")
 
@@ -65,16 +80,22 @@ import pytest
 import requests
 from testsprite_tests.conftest import BASE_URL, TIMEOUT, authenticated_session
 
+
 def test_index(base_url, timeout):
     """Testa a rota /"""
     url = f"{base_url}/"
-    
+
     # Test GET request
     try:
         response = requests.get(url, timeout=timeout)
         # Aceitar 200, 302 (redirect), 401 (não autenticado), 403 (sem permissão), 404 (não encontrado)
-        assert response.status_code in (200, 302, 401, 403, 404), \
-            f"GET / retornou status inesperado: {response.status_code}"
+        assert response.status_code in (
+            200,
+            302,
+            401,
+            403,
+            404,
+        ), f"GET / retornou status inesperado: {response.status_code}"
     except requests.exceptions.RequestException as e:
         pytest.fail(f"Erro na requisição GET /: {e}")
 
@@ -89,16 +110,22 @@ import pytest
 import requests
 from testsprite_tests.conftest import BASE_URL, TIMEOUT, authenticated_session
 
+
 def test_login(base_url, timeout):
     """Testa a rota /login"""
     url = f"{base_url}/login"
-    
+
     # Test GET request
     try:
         response = requests.get(url, timeout=timeout)
         # Aceitar 200, 302 (redirect), 401 (não autenticado), 403 (sem permissão), 404 (não encontrado)
-        assert response.status_code in (200, 302, 401, 403, 404), \
-            f"GET /login retornou status inesperado: {response.status_code}"
+        assert response.status_code in (
+            200,
+            302,
+            401,
+            403,
+            404,
+        ), f"GET /login retornou status inesperado: {response.status_code}"
     except requests.exceptions.RequestException as e:
         pytest.fail(f"Erro na requisição GET /login: {e}")
 
@@ -107,8 +134,16 @@ def test_login(base_url, timeout):
         # Tentar com payload vazio primeiro
         response = requests.post(url, json={}, timeout=timeout)
         # Aceitar vários códigos de status possíveis
-        assert response.status_code in (200, 201, 400, 401, 403, 404, 422, 500), \
-            f"POST /login retornou status inesperado: {response.status_code}"
+        assert response.status_code in (
+            200,
+            201,
+            400,
+            401,
+            403,
+            404,
+            422,
+            500,
+        ), f"POST /login retornou status inesperado: {response.status_code}"
     except requests.exceptions.RequestException as e:
         pytest.fail(f"Erro na requisição POST /login: {e}")
 
@@ -123,16 +158,22 @@ import pytest
 import requests
 from testsprite_tests.conftest import BASE_URL, TIMEOUT, authenticated_session
 
+
 def test_main(base_url, timeout):
     """Testa a rota /main"""
     url = f"{base_url}/main"
-    
+
     # Test GET request
     try:
         response = requests.get(url, timeout=timeout)
         # Aceitar 200, 302 (redirect), 401 (não autenticado), 403 (sem permissão), 404 (não encontrado)
-        assert response.status_code in (200, 302, 401, 403, 404), \
-            f"GET /main retornou status inesperado: {response.status_code}"
+        assert response.status_code in (
+            200,
+            302,
+            401,
+            403,
+            404,
+        ), f"GET /main retornou status inesperado: {response.status_code}"
     except requests.exceptions.RequestException as e:
         pytest.fail(f"Erro na requisição GET /main: {e}")
 
@@ -147,16 +188,22 @@ import pytest
 import requests
 from testsprite_tests.conftest import BASE_URL, TIMEOUT, authenticated_session
 
+
 def test_integrations(base_url, timeout):
     """Testa a rota /integrations"""
     url = f"{base_url}/integrations"
-    
+
     # Test GET request
     try:
         response = requests.get(url, timeout=timeout)
         # Aceitar 200, 302 (redirect), 401 (não autenticado), 403 (sem permissão), 404 (não encontrado)
-        assert response.status_code in (200, 302, 401, 403, 404), \
-            f"GET /integrations retornou status inesperado: {response.status_code}"
+        assert response.status_code in (
+            200,
+            302,
+            401,
+            403,
+            404,
+        ), f"GET /integrations retornou status inesperado: {response.status_code}"
     except requests.exceptions.RequestException as e:
         pytest.fail(f"Erro na requisição GET /integrations: {e}")
 
@@ -171,16 +218,22 @@ import pytest
 import requests
 from testsprite_tests.conftest import BASE_URL, TIMEOUT, authenticated_session
 
+
 def test_system_configs(base_url, timeout):
     """Testa a rota /configs"""
     url = f"{base_url}/configs"
-    
+
     # Test GET request
     try:
         response = requests.get(url, timeout=timeout)
         # Aceitar 200, 302 (redirect), 401 (não autenticado), 403 (sem permissão), 404 (não encontrado)
-        assert response.status_code in (200, 302, 401, 403, 404), \
-            f"GET /configs retornou status inesperado: {response.status_code}"
+        assert response.status_code in (
+            200,
+            302,
+            401,
+            403,
+            404,
+        ), f"GET /configs retornou status inesperado: {response.status_code}"
     except requests.exceptions.RequestException as e:
         pytest.fail(f"Erro na requisição GET /configs: {e}")
 
@@ -195,16 +248,22 @@ import pytest
 import requests
 from testsprite_tests.conftest import BASE_URL, TIMEOUT, authenticated_session
 
+
 def test_system_configs_system(base_url, timeout):
     """Testa a rota /configs/system"""
     url = f"{base_url}/configs/system"
-    
+
     # Test GET request
     try:
         response = requests.get(url, timeout=timeout)
         # Aceitar 200, 302 (redirect), 401 (não autenticado), 403 (sem permissão), 404 (não encontrado)
-        assert response.status_code in (200, 302, 401, 403, 404), \
-            f"GET /configs/system retornou status inesperado: {response.status_code}"
+        assert response.status_code in (
+            200,
+            302,
+            401,
+            403,
+            404,
+        ), f"GET /configs/system retornou status inesperado: {response.status_code}"
     except requests.exceptions.RequestException as e:
         pytest.fail(f"Erro na requisição GET /configs/system: {e}")
 
@@ -219,16 +278,22 @@ import pytest
 import requests
 from testsprite_tests.conftest import BASE_URL, TIMEOUT, authenticated_session
 
+
 def test_system_configs_audit(base_url, timeout):
     """Testa a rota /configs/system/audit"""
     url = f"{base_url}/configs/system/audit"
-    
+
     # Test GET request
     try:
         response = requests.get(url, timeout=timeout)
         # Aceitar 200, 302 (redirect), 401 (não autenticado), 403 (sem permissão), 404 (não encontrado)
-        assert response.status_code in (200, 302, 401, 403, 404), \
-            f"GET /configs/system/audit retornou status inesperado: {response.status_code}"
+        assert response.status_code in (
+            200,
+            302,
+            401,
+            403,
+            404,
+        ), f"GET /configs/system/audit retornou status inesperado: {response.status_code}"
     except requests.exceptions.RequestException as e:
         pytest.fail(f"Erro na requisição GET /configs/system/audit: {e}")
 
@@ -243,16 +308,22 @@ import pytest
 import requests
 from testsprite_tests.conftest import BASE_URL, TIMEOUT, authenticated_session
 
+
 def test_system_configs_ai(base_url, timeout):
     """Testa a rota /configs/ai"""
     url = f"{base_url}/configs/ai"
-    
+
     # Test GET request
     try:
         response = requests.get(url, timeout=timeout)
         # Aceitar 200, 302 (redirect), 401 (não autenticado), 403 (sem permissão), 404 (não encontrado)
-        assert response.status_code in (200, 302, 401, 403, 404), \
-            f"GET /configs/ai retornou status inesperado: {response.status_code}"
+        assert response.status_code in (
+            200,
+            302,
+            401,
+            403,
+            404,
+        ), f"GET /configs/ai retornou status inesperado: {response.status_code}"
     except requests.exceptions.RequestException as e:
         pytest.fail(f"Erro na requisição GET /configs/ai: {e}")
 
@@ -267,16 +338,22 @@ import pytest
 import requests
 from testsprite_tests.conftest import BASE_URL, TIMEOUT, authenticated_session
 
+
 def test_settings_reports(base_url, timeout):
     """Testa a rota /settings/reports"""
     url = f"{base_url}/settings/reports"
-    
+
     # Test GET request
     try:
         response = requests.get(url, timeout=timeout)
         # Aceitar 200, 302 (redirect), 401 (não autenticado), 403 (sem permissão), 404 (não encontrado)
-        assert response.status_code in (200, 302, 401, 403, 404), \
-            f"GET /settings/reports retornou status inesperado: {response.status_code}"
+        assert response.status_code in (
+            200,
+            302,
+            401,
+            403,
+            404,
+        ), f"GET /settings/reports retornou status inesperado: {response.status_code}"
     except requests.exceptions.RequestException as e:
         pytest.fail(f"Erro na requisição GET /settings/reports: {e}")
 
@@ -291,17 +368,26 @@ import pytest
 import requests
 from testsprite_tests.conftest import BASE_URL, TIMEOUT, authenticated_session
 
+
 def test_api_report_preview(base_url, timeout):
     """Testa a rota /api/reports/preview"""
     url = f"{base_url}/api/reports/preview"
-    
+
     # Test POST request
     try:
         # Tentar com payload vazio primeiro
         response = requests.post(url, json={}, timeout=timeout)
         # Aceitar vários códigos de status possíveis
-        assert response.status_code in (200, 201, 400, 401, 403, 404, 422, 500), \
-            f"POST /api/reports/preview retornou status inesperado: {response.status_code}"
+        assert response.status_code in (
+            200,
+            201,
+            400,
+            401,
+            403,
+            404,
+            422,
+            500,
+        ), f"POST /api/reports/preview retornou status inesperado: {response.status_code}"
     except requests.exceptions.RequestException as e:
         pytest.fail(f"Erro na requisição POST /api/reports/preview: {e}")
 
@@ -316,17 +402,26 @@ import pytest
 import requests
 from testsprite_tests.conftest import BASE_URL, TIMEOUT, authenticated_session
 
+
 def test_api_report_generate(base_url, timeout):
     """Testa a rota /api/reports/generate"""
     url = f"{base_url}/api/reports/generate"
-    
+
     # Test POST request
     try:
         # Tentar com payload vazio primeiro
         response = requests.post(url, json={}, timeout=timeout)
         # Aceitar vários códigos de status possíveis
-        assert response.status_code in (200, 201, 400, 401, 403, 404, 422, 500), \
-            f"POST /api/reports/generate retornou status inesperado: {response.status_code}"
+        assert response.status_code in (
+            200,
+            201,
+            400,
+            401,
+            403,
+            404,
+            422,
+            500,
+        ), f"POST /api/reports/generate retornou status inesperado: {response.status_code}"
     except requests.exceptions.RequestException as e:
         pytest.fail(f"Erro na requisição POST /api/reports/generate: {e}")
 
@@ -341,16 +436,22 @@ import pytest
 import requests
 from testsprite_tests.conftest import BASE_URL, TIMEOUT, authenticated_session
 
+
 def test_api_report_download(base_url, timeout):
     """Testa a rota /api/reports/download/<filename>"""
     url = f"{base_url}/api/reports/download/<filename>"
-    
+
     # Test GET request
     try:
         response = requests.get(url, timeout=timeout)
         # Aceitar 200, 302 (redirect), 401 (não autenticado), 403 (sem permissão), 404 (não encontrado)
-        assert response.status_code in (200, 302, 401, 403, 404), \
-            f"GET /api/reports/download/<filename> retornou status inesperado: {response.status_code}"
+        assert response.status_code in (
+            200,
+            302,
+            401,
+            403,
+            404,
+        ), f"GET /api/reports/download/<filename> retornou status inesperado: {response.status_code}"
     except requests.exceptions.RequestException as e:
         pytest.fail(f"Erro na requisição GET /api/reports/download/<filename>: {e}")
 
@@ -365,17 +466,26 @@ import pytest
 import requests
 from testsprite_tests.conftest import BASE_URL, TIMEOUT, authenticated_session
 
+
 def test_api_save_report_model(base_url, timeout):
     """Testa a rota /api/reports/models"""
     url = f"{base_url}/api/reports/models"
-    
+
     # Test POST request
     try:
         # Tentar com payload vazio primeiro
         response = requests.post(url, json={}, timeout=timeout)
         # Aceitar vários códigos de status possíveis
-        assert response.status_code in (200, 201, 400, 401, 403, 404, 422, 500), \
-            f"POST /api/reports/models retornou status inesperado: {response.status_code}"
+        assert response.status_code in (
+            200,
+            201,
+            400,
+            401,
+            403,
+            404,
+            422,
+            500,
+        ), f"POST /api/reports/models retornou status inesperado: {response.status_code}"
     except requests.exceptions.RequestException as e:
         pytest.fail(f"Erro na requisição POST /api/reports/models: {e}")
 
@@ -390,16 +500,22 @@ import pytest
 import requests
 from testsprite_tests.conftest import BASE_URL, TIMEOUT, authenticated_session
 
+
 def test_api_get_report_model(base_url, timeout):
     """Testa a rota /api/reports/models/<int:model_id>"""
     url = f"{base_url}/api/reports/models/<int:model_id>"
-    
+
     # Test GET request
     try:
         response = requests.get(url, timeout=timeout)
         # Aceitar 200, 302 (redirect), 401 (não autenticado), 403 (sem permissão), 404 (não encontrado)
-        assert response.status_code in (200, 302, 401, 403, 404), \
-            f"GET /api/reports/models/<int:model_id> retornou status inesperado: {response.status_code}"
+        assert response.status_code in (
+            200,
+            302,
+            401,
+            403,
+            404,
+        ), f"GET /api/reports/models/<int:model_id> retornou status inesperado: {response.status_code}"
     except requests.exceptions.RequestException as e:
         pytest.fail(f"Erro na requisição GET /api/reports/models/<int:model_id>: {e}")
 
@@ -414,17 +530,26 @@ import pytest
 import requests
 from testsprite_tests.conftest import BASE_URL, TIMEOUT, authenticated_session
 
+
 def test_api_update_report_model(base_url, timeout):
     """Testa a rota /api/reports/models/<int:model_id>"""
     url = f"{base_url}/api/reports/models/<int:model_id>"
-    
+
     # Test PUT request
     try:
         # Tentar com payload vazio primeiro
         response = requests.put(url, json={}, timeout=timeout)
         # Aceitar vários códigos de status possíveis
-        assert response.status_code in (200, 201, 400, 401, 403, 404, 422, 500), \
-            f"PUT /api/reports/models/<int:model_id> retornou status inesperado: {response.status_code}"
+        assert response.status_code in (
+            200,
+            201,
+            400,
+            401,
+            403,
+            404,
+            422,
+            500,
+        ), f"PUT /api/reports/models/<int:model_id> retornou status inesperado: {response.status_code}"
     except requests.exceptions.RequestException as e:
         pytest.fail(f"Erro na requisição PUT /api/reports/models/<int:model_id>: {e}")
 
@@ -439,18 +564,26 @@ import pytest
 import requests
 from testsprite_tests.conftest import BASE_URL, TIMEOUT, authenticated_session
 
+
 def test_api_check_model_conflicts(base_url, timeout):
     """Testa a rota /api/reports/models/<int:model_id>/conflicts"""
     url = f"{base_url}/api/reports/models/<int:model_id>/conflicts"
-    
+
     # Test GET request
     try:
         response = requests.get(url, timeout=timeout)
         # Aceitar 200, 302 (redirect), 401 (não autenticado), 403 (sem permissão), 404 (não encontrado)
-        assert response.status_code in (200, 302, 401, 403, 404), \
-            f"GET /api/reports/models/<int:model_id>/conflicts retornou status inesperado: {response.status_code}"
+        assert response.status_code in (
+            200,
+            302,
+            401,
+            403,
+            404,
+        ), f"GET /api/reports/models/<int:model_id>/conflicts retornou status inesperado: {response.status_code}"
     except requests.exceptions.RequestException as e:
-        pytest.fail(f"Erro na requisição GET /api/reports/models/<int:model_id>/conflicts: {e}")
+        pytest.fail(
+            f"Erro na requisição GET /api/reports/models/<int:model_id>/conflicts: {e}"
+        )
 
 
 """
@@ -463,18 +596,28 @@ import pytest
 import requests
 from testsprite_tests.conftest import BASE_URL, TIMEOUT, authenticated_session
 
+
 def test_api_delete_report_model(base_url, timeout):
     """Testa a rota /api/reports/models/<int:model_id>"""
     url = f"{base_url}/api/reports/models/<int:model_id>"
-    
+
     # Test DELETE request
     try:
         response = requests.delete(url, timeout=timeout)
         # Aceitar vários códigos de status possíveis
-        assert response.status_code in (200, 204, 400, 401, 403, 404, 500), \
-            f"DELETE /api/reports/models/<int:model_id> retornou status inesperado: {response.status_code}"
+        assert response.status_code in (
+            200,
+            204,
+            400,
+            401,
+            403,
+            404,
+            500,
+        ), f"DELETE /api/reports/models/<int:model_id> retornou status inesperado: {response.status_code}"
     except requests.exceptions.RequestException as e:
-        pytest.fail(f"Erro na requisição DELETE /api/reports/models/<int:model_id>: {e}")
+        pytest.fail(
+            f"Erro na requisição DELETE /api/reports/models/<int:model_id>: {e}"
+        )
 
 
 """
@@ -487,16 +630,22 @@ import pytest
 import requests
 from testsprite_tests.conftest import BASE_URL, TIMEOUT, authenticated_session
 
+
 def test_report_templates_manager(base_url, timeout):
     """Testa a rota /report-templates"""
     url = f"{base_url}/report-templates"
-    
+
     # Test GET request
     try:
         response = requests.get(url, timeout=timeout)
         # Aceitar 200, 302 (redirect), 401 (não autenticado), 403 (sem permissão), 404 (não encontrado)
-        assert response.status_code in (200, 302, 401, 403, 404), \
-            f"GET /report-templates retornou status inesperado: {response.status_code}"
+        assert response.status_code in (
+            200,
+            302,
+            401,
+            403,
+            404,
+        ), f"GET /report-templates retornou status inesperado: {response.status_code}"
     except requests.exceptions.RequestException as e:
         pytest.fail(f"Erro na requisição GET /report-templates: {e}")
 
@@ -511,16 +660,22 @@ import pytest
 import requests
 from testsprite_tests.conftest import BASE_URL, TIMEOUT, authenticated_session
 
+
 def test_api_get_report_templates(base_url, timeout):
     """Testa a rota /api/report-templates"""
     url = f"{base_url}/api/report-templates"
-    
+
     # Test GET request
     try:
         response = requests.get(url, timeout=timeout)
         # Aceitar 200, 302 (redirect), 401 (não autenticado), 403 (sem permissão), 404 (não encontrado)
-        assert response.status_code in (200, 302, 401, 403, 404), \
-            f"GET /api/report-templates retornou status inesperado: {response.status_code}"
+        assert response.status_code in (
+            200,
+            302,
+            401,
+            403,
+            404,
+        ), f"GET /api/report-templates retornou status inesperado: {response.status_code}"
     except requests.exceptions.RequestException as e:
         pytest.fail(f"Erro na requisição GET /api/report-templates: {e}")
 
@@ -535,17 +690,26 @@ import pytest
 import requests
 from testsprite_tests.conftest import BASE_URL, TIMEOUT, authenticated_session
 
+
 def test_api_create_report_template(base_url, timeout):
     """Testa a rota /api/report-templates"""
     url = f"{base_url}/api/report-templates"
-    
+
     # Test POST request
     try:
         # Tentar com payload vazio primeiro
         response = requests.post(url, json={}, timeout=timeout)
         # Aceitar vários códigos de status possíveis
-        assert response.status_code in (200, 201, 400, 401, 403, 404, 422, 500), \
-            f"POST /api/report-templates retornou status inesperado: {response.status_code}"
+        assert response.status_code in (
+            200,
+            201,
+            400,
+            401,
+            403,
+            404,
+            422,
+            500,
+        ), f"POST /api/report-templates retornou status inesperado: {response.status_code}"
     except requests.exceptions.RequestException as e:
         pytest.fail(f"Erro na requisição POST /api/report-templates: {e}")
 
@@ -560,18 +724,26 @@ import pytest
 import requests
 from testsprite_tests.conftest import BASE_URL, TIMEOUT, authenticated_session
 
+
 def test_api_get_report_template(base_url, timeout):
     """Testa a rota /api/report-templates/<int:template_id>"""
     url = f"{base_url}/api/report-templates/<int:template_id>"
-    
+
     # Test GET request
     try:
         response = requests.get(url, timeout=timeout)
         # Aceitar 200, 302 (redirect), 401 (não autenticado), 403 (sem permissão), 404 (não encontrado)
-        assert response.status_code in (200, 302, 401, 403, 404), \
-            f"GET /api/report-templates/<int:template_id> retornou status inesperado: {response.status_code}"
+        assert response.status_code in (
+            200,
+            302,
+            401,
+            403,
+            404,
+        ), f"GET /api/report-templates/<int:template_id> retornou status inesperado: {response.status_code}"
     except requests.exceptions.RequestException as e:
-        pytest.fail(f"Erro na requisição GET /api/report-templates/<int:template_id>: {e}")
+        pytest.fail(
+            f"Erro na requisição GET /api/report-templates/<int:template_id>: {e}"
+        )
 
 
 """
@@ -584,19 +756,30 @@ import pytest
 import requests
 from testsprite_tests.conftest import BASE_URL, TIMEOUT, authenticated_session
 
+
 def test_api_update_report_template(base_url, timeout):
     """Testa a rota /api/report-templates/<int:template_id>"""
     url = f"{base_url}/api/report-templates/<int:template_id>"
-    
+
     # Test PUT request
     try:
         # Tentar com payload vazio primeiro
         response = requests.put(url, json={}, timeout=timeout)
         # Aceitar vários códigos de status possíveis
-        assert response.status_code in (200, 201, 400, 401, 403, 404, 422, 500), \
-            f"PUT /api/report-templates/<int:template_id> retornou status inesperado: {response.status_code}"
+        assert response.status_code in (
+            200,
+            201,
+            400,
+            401,
+            403,
+            404,
+            422,
+            500,
+        ), f"PUT /api/report-templates/<int:template_id> retornou status inesperado: {response.status_code}"
     except requests.exceptions.RequestException as e:
-        pytest.fail(f"Erro na requisição PUT /api/report-templates/<int:template_id>: {e}")
+        pytest.fail(
+            f"Erro na requisição PUT /api/report-templates/<int:template_id>: {e}"
+        )
 
 
 """
@@ -609,18 +792,28 @@ import pytest
 import requests
 from testsprite_tests.conftest import BASE_URL, TIMEOUT, authenticated_session
 
+
 def test_api_delete_report_template(base_url, timeout):
     """Testa a rota /api/report-templates/<int:template_id>"""
     url = f"{base_url}/api/report-templates/<int:template_id>"
-    
+
     # Test DELETE request
     try:
         response = requests.delete(url, timeout=timeout)
         # Aceitar vários códigos de status possíveis
-        assert response.status_code in (200, 204, 400, 401, 403, 404, 500), \
-            f"DELETE /api/report-templates/<int:template_id> retornou status inesperado: {response.status_code}"
+        assert response.status_code in (
+            200,
+            204,
+            400,
+            401,
+            403,
+            404,
+            500,
+        ), f"DELETE /api/report-templates/<int:template_id> retornou status inesperado: {response.status_code}"
     except requests.exceptions.RequestException as e:
-        pytest.fail(f"Erro na requisição DELETE /api/report-templates/<int:template_id>: {e}")
+        pytest.fail(
+            f"Erro na requisição DELETE /api/report-templates/<int:template_id>: {e}"
+        )
 
 
 """
@@ -633,19 +826,30 @@ import pytest
 import requests
 from testsprite_tests.conftest import BASE_URL, TIMEOUT, authenticated_session
 
+
 def test_api_generate_report_from_template(base_url, timeout):
     """Testa a rota /api/report-templates/<int:template_id>/generate"""
     url = f"{base_url}/api/report-templates/<int:template_id>/generate"
-    
+
     # Test POST request
     try:
         # Tentar com payload vazio primeiro
         response = requests.post(url, json={}, timeout=timeout)
         # Aceitar vários códigos de status possíveis
-        assert response.status_code in (200, 201, 400, 401, 403, 404, 422, 500), \
-            f"POST /api/report-templates/<int:template_id>/generate retornou status inesperado: {response.status_code}"
+        assert response.status_code in (
+            200,
+            201,
+            400,
+            401,
+            403,
+            404,
+            422,
+            500,
+        ), f"POST /api/report-templates/<int:template_id>/generate retornou status inesperado: {response.status_code}"
     except requests.exceptions.RequestException as e:
-        pytest.fail(f"Erro na requisição POST /api/report-templates/<int:template_id>/generate: {e}")
+        pytest.fail(
+            f"Erro na requisição POST /api/report-templates/<int:template_id>/generate: {e}"
+        )
 
 
 """
@@ -658,18 +862,26 @@ import pytest
 import requests
 from testsprite_tests.conftest import BASE_URL, TIMEOUT, authenticated_session
 
+
 def test_api_get_templates_by_type(base_url, timeout):
     """Testa a rota /api/report-templates/by-type/<report_type>"""
     url = f"{base_url}/api/report-templates/by-type/<report_type>"
-    
+
     # Test GET request
     try:
         response = requests.get(url, timeout=timeout)
         # Aceitar 200, 302 (redirect), 401 (não autenticado), 403 (sem permissão), 404 (não encontrado)
-        assert response.status_code in (200, 302, 401, 403, 404), \
-            f"GET /api/report-templates/by-type/<report_type> retornou status inesperado: {response.status_code}"
+        assert response.status_code in (
+            200,
+            302,
+            401,
+            403,
+            404,
+        ), f"GET /api/report-templates/by-type/<report_type> retornou status inesperado: {response.status_code}"
     except requests.exceptions.RequestException as e:
-        pytest.fail(f"Erro na requisição GET /api/report-templates/by-type/<report_type>: {e}")
+        pytest.fail(
+            f"Erro na requisição GET /api/report-templates/by-type/<report_type>: {e}"
+        )
 
 
 """
@@ -682,16 +894,22 @@ import pytest
 import requests
 from testsprite_tests.conftest import BASE_URL, TIMEOUT, authenticated_session
 
+
 def test_api_get_report_models(base_url, timeout):
     """Testa a rota /api/reports/models"""
     url = f"{base_url}/api/reports/models"
-    
+
     # Test GET request
     try:
         response = requests.get(url, timeout=timeout)
         # Aceitar 200, 302 (redirect), 401 (não autenticado), 403 (sem permissão), 404 (não encontrado)
-        assert response.status_code in (200, 302, 401, 403, 404), \
-            f"GET /api/reports/models retornou status inesperado: {response.status_code}"
+        assert response.status_code in (
+            200,
+            302,
+            401,
+            403,
+            404,
+        ), f"GET /api/reports/models retornou status inesperado: {response.status_code}"
     except requests.exceptions.RequestException as e:
         pytest.fail(f"Erro na requisição GET /api/reports/models: {e}")
 
@@ -706,16 +924,22 @@ import pytest
 import requests
 from testsprite_tests.conftest import BASE_URL, TIMEOUT, authenticated_session
 
+
 def test_companies_page(base_url, timeout):
     """Testa a rota /companies"""
     url = f"{base_url}/companies"
-    
+
     # Test GET request
     try:
         response = requests.get(url, timeout=timeout)
         # Aceitar 200, 302 (redirect), 401 (não autenticado), 403 (sem permissão), 404 (não encontrado)
-        assert response.status_code in (200, 302, 401, 403, 404), \
-            f"GET /companies retornou status inesperado: {response.status_code}"
+        assert response.status_code in (
+            200,
+            302,
+            401,
+            403,
+            404,
+        ), f"GET /companies retornou status inesperado: {response.status_code}"
     except requests.exceptions.RequestException as e:
         pytest.fail(f"Erro na requisição GET /companies: {e}")
 
@@ -730,16 +954,22 @@ import pytest
 import requests
 from testsprite_tests.conftest import BASE_URL, TIMEOUT, authenticated_session
 
+
 def test_companies_new(base_url, timeout):
     """Testa a rota /companies/new"""
     url = f"{base_url}/companies/new"
-    
+
     # Test GET request
     try:
         response = requests.get(url, timeout=timeout)
         # Aceitar 200, 302 (redirect), 401 (não autenticado), 403 (sem permissão), 404 (não encontrado)
-        assert response.status_code in (200, 302, 401, 403, 404), \
-            f"GET /companies/new retornou status inesperado: {response.status_code}"
+        assert response.status_code in (
+            200,
+            302,
+            401,
+            403,
+            404,
+        ), f"GET /companies/new retornou status inesperado: {response.status_code}"
     except requests.exceptions.RequestException as e:
         pytest.fail(f"Erro na requisição GET /companies/new: {e}")
 
@@ -754,16 +984,22 @@ import pytest
 import requests
 from testsprite_tests.conftest import BASE_URL, TIMEOUT, authenticated_session
 
+
 def test_company_details(base_url, timeout):
     """Testa a rota /companies/<int:company_id>"""
     url = f"{base_url}/companies/<int:company_id>"
-    
+
     # Test GET request
     try:
         response = requests.get(url, timeout=timeout)
         # Aceitar 200, 302 (redirect), 401 (não autenticado), 403 (sem permissão), 404 (não encontrado)
-        assert response.status_code in (200, 302, 401, 403, 404), \
-            f"GET /companies/<int:company_id> retornou status inesperado: {response.status_code}"
+        assert response.status_code in (
+            200,
+            302,
+            401,
+            403,
+            404,
+        ), f"GET /companies/<int:company_id> retornou status inesperado: {response.status_code}"
     except requests.exceptions.RequestException as e:
         pytest.fail(f"Erro na requisição GET /companies/<int:company_id>: {e}")
 
@@ -778,16 +1014,22 @@ import pytest
 import requests
 from testsprite_tests.conftest import BASE_URL, TIMEOUT, authenticated_session
 
+
 def test_companies_edit(base_url, timeout):
     """Testa a rota /companies/<int:company_id>/edit"""
     url = f"{base_url}/companies/<int:company_id>/edit"
-    
+
     # Test GET request
     try:
         response = requests.get(url, timeout=timeout)
         # Aceitar 200, 302 (redirect), 401 (não autenticado), 403 (sem permissão), 404 (não encontrado)
-        assert response.status_code in (200, 302, 401, 403, 404), \
-            f"GET /companies/<int:company_id>/edit retornou status inesperado: {response.status_code}"
+        assert response.status_code in (
+            200,
+            302,
+            401,
+            403,
+            404,
+        ), f"GET /companies/<int:company_id>/edit retornou status inesperado: {response.status_code}"
     except requests.exceptions.RequestException as e:
         pytest.fail(f"Erro na requisição GET /companies/<int:company_id>/edit: {e}")
 
@@ -802,16 +1044,22 @@ import pytest
 import requests
 from testsprite_tests.conftest import BASE_URL, TIMEOUT, authenticated_session
 
+
 def test_company_logos_manager(base_url, timeout):
     """Testa a rota /companies/<int:company_id>/logos"""
     url = f"{base_url}/companies/<int:company_id>/logos"
-    
+
     # Test GET request
     try:
         response = requests.get(url, timeout=timeout)
         # Aceitar 200, 302 (redirect), 401 (não autenticado), 403 (sem permissão), 404 (não encontrado)
-        assert response.status_code in (200, 302, 401, 403, 404), \
-            f"GET /companies/<int:company_id>/logos retornou status inesperado: {response.status_code}"
+        assert response.status_code in (
+            200,
+            302,
+            401,
+            403,
+            404,
+        ), f"GET /companies/<int:company_id>/logos retornou status inesperado: {response.status_code}"
     except requests.exceptions.RequestException as e:
         pytest.fail(f"Erro na requisição GET /companies/<int:company_id>/logos: {e}")
 
@@ -826,19 +1074,30 @@ import pytest
 import requests
 from testsprite_tests.conftest import BASE_URL, TIMEOUT, authenticated_session
 
+
 def test_api_upload_company_logo(base_url, timeout):
     """Testa a rota /api/companies/<int:company_id>/logos"""
     url = f"{base_url}/api/companies/<int:company_id>/logos"
-    
+
     # Test POST request
     try:
         # Tentar com payload vazio primeiro
         response = requests.post(url, json={}, timeout=timeout)
         # Aceitar vários códigos de status possíveis
-        assert response.status_code in (200, 201, 400, 401, 403, 404, 422, 500), \
-            f"POST /api/companies/<int:company_id>/logos retornou status inesperado: {response.status_code}"
+        assert response.status_code in (
+            200,
+            201,
+            400,
+            401,
+            403,
+            404,
+            422,
+            500,
+        ), f"POST /api/companies/<int:company_id>/logos retornou status inesperado: {response.status_code}"
     except requests.exceptions.RequestException as e:
-        pytest.fail(f"Erro na requisição POST /api/companies/<int:company_id>/logos: {e}")
+        pytest.fail(
+            f"Erro na requisição POST /api/companies/<int:company_id>/logos: {e}"
+        )
 
 
 """
@@ -851,18 +1110,28 @@ import pytest
 import requests
 from testsprite_tests.conftest import BASE_URL, TIMEOUT, authenticated_session
 
+
 def test_api_delete_company_logo(base_url, timeout):
     """Testa a rota /api/companies/<int:company_id>/logos/<logo_type>"""
     url = f"{base_url}/api/companies/<int:company_id>/logos/<logo_type>"
-    
+
     # Test DELETE request
     try:
         response = requests.delete(url, timeout=timeout)
         # Aceitar vários códigos de status possíveis
-        assert response.status_code in (200, 204, 400, 401, 403, 404, 500), \
-            f"DELETE /api/companies/<int:company_id>/logos/<logo_type> retornou status inesperado: {response.status_code}"
+        assert response.status_code in (
+            200,
+            204,
+            400,
+            401,
+            403,
+            404,
+            500,
+        ), f"DELETE /api/companies/<int:company_id>/logos/<logo_type> retornou status inesperado: {response.status_code}"
     except requests.exceptions.RequestException as e:
-        pytest.fail(f"Erro na requisição DELETE /api/companies/<int:company_id>/logos/<logo_type>: {e}")
+        pytest.fail(
+            f"Erro na requisição DELETE /api/companies/<int:company_id>/logos/<logo_type>: {e}"
+        )
 
 
 """
@@ -875,16 +1144,22 @@ import pytest
 import requests
 from testsprite_tests.conftest import BASE_URL, TIMEOUT, authenticated_session
 
+
 def test_dashboard(base_url, timeout):
     """Testa a rota /dashboard"""
     url = f"{base_url}/dashboard"
-    
+
     # Test GET request
     try:
         response = requests.get(url, timeout=timeout)
         # Aceitar 200, 302 (redirect), 401 (não autenticado), 403 (sem permissão), 404 (não encontrado)
-        assert response.status_code in (200, 302, 401, 403, 404), \
-            f"GET /dashboard retornou status inesperado: {response.status_code}"
+        assert response.status_code in (
+            200,
+            302,
+            401,
+            403,
+            404,
+        ), f"GET /dashboard retornou status inesperado: {response.status_code}"
     except requests.exceptions.RequestException as e:
         pytest.fail(f"Erro na requisição GET /dashboard: {e}")
 
@@ -899,18 +1174,26 @@ import pytest
 import requests
 from testsprite_tests.conftest import BASE_URL, TIMEOUT, authenticated_session
 
+
 def test_api_get_company_data(base_url, timeout):
     """Testa a rota /api/plans/<int:plan_id>/company-data"""
     url = f"{base_url}/api/plans/<int:plan_id>/company-data"
-    
+
     # Test GET request
     try:
         response = requests.get(url, timeout=timeout)
         # Aceitar 200, 302 (redirect), 401 (não autenticado), 403 (sem permissão), 404 (não encontrado)
-        assert response.status_code in (200, 302, 401, 403, 404), \
-            f"GET /api/plans/<int:plan_id>/company-data retornou status inesperado: {response.status_code}"
+        assert response.status_code in (
+            200,
+            302,
+            401,
+            403,
+            404,
+        ), f"GET /api/plans/<int:plan_id>/company-data retornou status inesperado: {response.status_code}"
     except requests.exceptions.RequestException as e:
-        pytest.fail(f"Erro na requisição GET /api/plans/<int:plan_id>/company-data: {e}")
+        pytest.fail(
+            f"Erro na requisição GET /api/plans/<int:plan_id>/company-data: {e}"
+        )
 
 
 """
@@ -923,19 +1206,30 @@ import pytest
 import requests
 from testsprite_tests.conftest import BASE_URL, TIMEOUT, authenticated_session
 
+
 def test_api_update_company_data(base_url, timeout):
     """Testa a rota /api/plans/<int:plan_id>/company-data"""
     url = f"{base_url}/api/plans/<int:plan_id>/company-data"
-    
+
     # Test POST request
     try:
         # Tentar com payload vazio primeiro
         response = requests.post(url, json={}, timeout=timeout)
         # Aceitar vários códigos de status possíveis
-        assert response.status_code in (200, 201, 400, 401, 403, 404, 422, 500), \
-            f"POST /api/plans/<int:plan_id>/company-data retornou status inesperado: {response.status_code}"
+        assert response.status_code in (
+            200,
+            201,
+            400,
+            401,
+            403,
+            404,
+            422,
+            500,
+        ), f"POST /api/plans/<int:plan_id>/company-data retornou status inesperado: {response.status_code}"
     except requests.exceptions.RequestException as e:
-        pytest.fail(f"Erro na requisição POST /api/plans/<int:plan_id>/company-data: {e}")
+        pytest.fail(
+            f"Erro na requisição POST /api/plans/<int:plan_id>/company-data: {e}"
+        )
 
 
 """
@@ -948,16 +1242,22 @@ import pytest
 import requests
 from testsprite_tests.conftest import BASE_URL, TIMEOUT, authenticated_session
 
+
 def test_api_get_company_mvv(base_url, timeout):
     """Testa a rota /api/companies/<int:company_id>/mvv"""
     url = f"{base_url}/api/companies/<int:company_id>/mvv"
-    
+
     # Test GET request
     try:
         response = requests.get(url, timeout=timeout)
         # Aceitar 200, 302 (redirect), 401 (não autenticado), 403 (sem permissão), 404 (não encontrado)
-        assert response.status_code in (200, 302, 401, 403, 404), \
-            f"GET /api/companies/<int:company_id>/mvv retornou status inesperado: {response.status_code}"
+        assert response.status_code in (
+            200,
+            302,
+            401,
+            403,
+            404,
+        ), f"GET /api/companies/<int:company_id>/mvv retornou status inesperado: {response.status_code}"
     except requests.exceptions.RequestException as e:
         pytest.fail(f"Erro na requisição GET /api/companies/<int:company_id>/mvv: {e}")
 
@@ -972,17 +1272,26 @@ import pytest
 import requests
 from testsprite_tests.conftest import BASE_URL, TIMEOUT, authenticated_session
 
+
 def test_api_update_company_mvv(base_url, timeout):
     """Testa a rota /api/companies/<int:company_id>/mvv"""
     url = f"{base_url}/api/companies/<int:company_id>/mvv"
-    
+
     # Test POST request
     try:
         # Tentar com payload vazio primeiro
         response = requests.post(url, json={}, timeout=timeout)
         # Aceitar vários códigos de status possíveis
-        assert response.status_code in (200, 201, 400, 401, 403, 404, 422, 500), \
-            f"POST /api/companies/<int:company_id>/mvv retornou status inesperado: {response.status_code}"
+        assert response.status_code in (
+            200,
+            201,
+            400,
+            401,
+            403,
+            404,
+            422,
+            500,
+        ), f"POST /api/companies/<int:company_id>/mvv retornou status inesperado: {response.status_code}"
     except requests.exceptions.RequestException as e:
         pytest.fail(f"Erro na requisição POST /api/companies/<int:company_id>/mvv: {e}")
 
@@ -997,19 +1306,30 @@ import pytest
 import requests
 from testsprite_tests.conftest import BASE_URL, TIMEOUT, authenticated_session
 
+
 def test_api_update_company_economic(base_url, timeout):
     """Testa a rota /api/companies/<int:company_id>/economic"""
     url = f"{base_url}/api/companies/<int:company_id>/economic"
-    
+
     # Test POST request
     try:
         # Tentar com payload vazio primeiro
         response = requests.post(url, json={}, timeout=timeout)
         # Aceitar vários códigos de status possíveis
-        assert response.status_code in (200, 201, 400, 401, 403, 404, 422, 500), \
-            f"POST /api/companies/<int:company_id>/economic retornou status inesperado: {response.status_code}"
+        assert response.status_code in (
+            200,
+            201,
+            400,
+            401,
+            403,
+            404,
+            422,
+            500,
+        ), f"POST /api/companies/<int:company_id>/economic retornou status inesperado: {response.status_code}"
     except requests.exceptions.RequestException as e:
-        pytest.fail(f"Erro na requisição POST /api/companies/<int:company_id>/economic: {e}")
+        pytest.fail(
+            f"Erro na requisição POST /api/companies/<int:company_id>/economic: {e}"
+        )
 
 
 """
@@ -1022,17 +1342,26 @@ import pytest
 import requests
 from testsprite_tests.conftest import BASE_URL, TIMEOUT, authenticated_session
 
+
 def test_api_create_company(base_url, timeout):
     """Testa a rota /api/companies"""
     url = f"{base_url}/api/companies"
-    
+
     # Test POST request
     try:
         # Tentar com payload vazio primeiro
         response = requests.post(url, json={}, timeout=timeout)
         # Aceitar vários códigos de status possíveis
-        assert response.status_code in (200, 201, 400, 401, 403, 404, 422, 500), \
-            f"POST /api/companies retornou status inesperado: {response.status_code}"
+        assert response.status_code in (
+            200,
+            201,
+            400,
+            401,
+            403,
+            404,
+            422,
+            500,
+        ), f"POST /api/companies retornou status inesperado: {response.status_code}"
     except requests.exceptions.RequestException as e:
         pytest.fail(f"Erro na requisição POST /api/companies: {e}")
 
@@ -1047,17 +1376,26 @@ import pytest
 import requests
 from testsprite_tests.conftest import BASE_URL, TIMEOUT, authenticated_session
 
+
 def test_api_create_plan(base_url, timeout):
     """Testa a rota /api/plans"""
     url = f"{base_url}/api/plans"
-    
+
     # Test POST request
     try:
         # Tentar com payload vazio primeiro
         response = requests.post(url, json={}, timeout=timeout)
         # Aceitar vários códigos de status possíveis
-        assert response.status_code in (200, 201, 400, 401, 403, 404, 422, 500), \
-            f"POST /api/plans retornou status inesperado: {response.status_code}"
+        assert response.status_code in (
+            200,
+            201,
+            400,
+            401,
+            403,
+            404,
+            422,
+            500,
+        ), f"POST /api/plans retornou status inesperado: {response.status_code}"
     except requests.exceptions.RequestException as e:
         pytest.fail(f"Erro na requisição POST /api/plans: {e}")
 
@@ -1072,16 +1410,22 @@ import pytest
 import requests
 from testsprite_tests.conftest import BASE_URL, TIMEOUT, authenticated_session
 
+
 def test_api_get_plan(base_url, timeout):
     """Testa a rota /api/plans/<int:plan_id>"""
     url = f"{base_url}/api/plans/<int:plan_id>"
-    
+
     # Test GET request
     try:
         response = requests.get(url, timeout=timeout)
         # Aceitar 200, 302 (redirect), 401 (não autenticado), 403 (sem permissão), 404 (não encontrado)
-        assert response.status_code in (200, 302, 401, 403, 404), \
-            f"GET /api/plans/<int:plan_id> retornou status inesperado: {response.status_code}"
+        assert response.status_code in (
+            200,
+            302,
+            401,
+            403,
+            404,
+        ), f"GET /api/plans/<int:plan_id> retornou status inesperado: {response.status_code}"
     except requests.exceptions.RequestException as e:
         pytest.fail(f"Erro na requisição GET /api/plans/<int:plan_id>: {e}")
 
@@ -1096,16 +1440,22 @@ import pytest
 import requests
 from testsprite_tests.conftest import BASE_URL, TIMEOUT, authenticated_session
 
+
 def test_api_get_company_profile(base_url, timeout):
     """Testa a rota /api/companies/<int:company_id>"""
     url = f"{base_url}/api/companies/<int:company_id>"
-    
+
     # Test GET request
     try:
         response = requests.get(url, timeout=timeout)
         # Aceitar 200, 302 (redirect), 401 (não autenticado), 403 (sem permissão), 404 (não encontrado)
-        assert response.status_code in (200, 302, 401, 403, 404), \
-            f"GET /api/companies/<int:company_id> retornou status inesperado: {response.status_code}"
+        assert response.status_code in (
+            200,
+            302,
+            401,
+            403,
+            404,
+        ), f"GET /api/companies/<int:company_id> retornou status inesperado: {response.status_code}"
     except requests.exceptions.RequestException as e:
         pytest.fail(f"Erro na requisição GET /api/companies/<int:company_id>: {e}")
 
@@ -1120,17 +1470,26 @@ import pytest
 import requests
 from testsprite_tests.conftest import BASE_URL, TIMEOUT, authenticated_session
 
+
 def test_api_update_company_profile(base_url, timeout):
     """Testa a rota /api/companies/<int:company_id>"""
     url = f"{base_url}/api/companies/<int:company_id>"
-    
+
     # Test POST request
     try:
         # Tentar com payload vazio primeiro
         response = requests.post(url, json={}, timeout=timeout)
         # Aceitar vários códigos de status possíveis
-        assert response.status_code in (200, 201, 400, 401, 403, 404, 422, 500), \
-            f"POST /api/companies/<int:company_id> retornou status inesperado: {response.status_code}"
+        assert response.status_code in (
+            200,
+            201,
+            400,
+            401,
+            403,
+            404,
+            422,
+            500,
+        ), f"POST /api/companies/<int:company_id> retornou status inesperado: {response.status_code}"
     except requests.exceptions.RequestException as e:
         pytest.fail(f"Erro na requisição POST /api/companies/<int:company_id>: {e}")
 
@@ -1145,16 +1504,24 @@ import pytest
 import requests
 from testsprite_tests.conftest import BASE_URL, TIMEOUT, authenticated_session
 
+
 def test_api_delete_company(base_url, timeout):
     """Testa a rota /api/companies/<int:company_id>"""
     url = f"{base_url}/api/companies/<int:company_id>"
-    
+
     # Test DELETE request
     try:
         response = requests.delete(url, timeout=timeout)
         # Aceitar vários códigos de status possíveis
-        assert response.status_code in (200, 204, 400, 401, 403, 404, 500), \
-            f"DELETE /api/companies/<int:company_id> retornou status inesperado: {response.status_code}"
+        assert response.status_code in (
+            200,
+            204,
+            400,
+            401,
+            403,
+            404,
+            500,
+        ), f"DELETE /api/companies/<int:company_id> retornou status inesperado: {response.status_code}"
     except requests.exceptions.RequestException as e:
         pytest.fail(f"Erro na requisição DELETE /api/companies/<int:company_id>: {e}")
 
@@ -1169,18 +1536,26 @@ import pytest
 import requests
 from testsprite_tests.conftest import BASE_URL, TIMEOUT, authenticated_session
 
+
 def test_gerar_relatorio_projetos(base_url, timeout):
     """Testa a rota /relatorios/projetos/<int:company_id>"""
     url = f"{base_url}/relatorios/projetos/<int:company_id>"
-    
+
     # Test GET request
     try:
         response = requests.get(url, timeout=timeout)
         # Aceitar 200, 302 (redirect), 401 (não autenticado), 403 (sem permissão), 404 (não encontrado)
-        assert response.status_code in (200, 302, 401, 403, 404), \
-            f"GET /relatorios/projetos/<int:company_id> retornou status inesperado: {response.status_code}"
+        assert response.status_code in (
+            200,
+            302,
+            401,
+            403,
+            404,
+        ), f"GET /relatorios/projetos/<int:company_id> retornou status inesperado: {response.status_code}"
     except requests.exceptions.RequestException as e:
-        pytest.fail(f"Erro na requisição GET /relatorios/projetos/<int:company_id>: {e}")
+        pytest.fail(
+            f"Erro na requisição GET /relatorios/projetos/<int:company_id>: {e}"
+        )
 
 
 """
@@ -1193,18 +1568,26 @@ import pytest
 import requests
 from testsprite_tests.conftest import BASE_URL, TIMEOUT, authenticated_session
 
+
 def test_api_gerar_relatorio_projetos(base_url, timeout):
     """Testa a rota /api/relatorios/projetos/<int:company_id>"""
     url = f"{base_url}/api/relatorios/projetos/<int:company_id>"
-    
+
     # Test GET request
     try:
         response = requests.get(url, timeout=timeout)
         # Aceitar 200, 302 (redirect), 401 (não autenticado), 403 (sem permissão), 404 (não encontrado)
-        assert response.status_code in (200, 302, 401, 403, 404), \
-            f"GET /api/relatorios/projetos/<int:company_id> retornou status inesperado: {response.status_code}"
+        assert response.status_code in (
+            200,
+            302,
+            401,
+            403,
+            404,
+        ), f"GET /api/relatorios/projetos/<int:company_id> retornou status inesperado: {response.status_code}"
     except requests.exceptions.RequestException as e:
-        pytest.fail(f"Erro na requisição GET /api/relatorios/projetos/<int:company_id>: {e}")
+        pytest.fail(
+            f"Erro na requisição GET /api/relatorios/projetos/<int:company_id>: {e}"
+        )
 
 
 """
@@ -1217,28 +1600,46 @@ import pytest
 import requests
 from testsprite_tests.conftest import BASE_URL, TIMEOUT, authenticated_session
 
+
 def test_api_company_employees(base_url, timeout):
     """Testa a rota /api/companies/<int:company_id>/employees"""
     url = f"{base_url}/api/companies/<int:company_id>/employees"
-    
+
     # Test GET request
     try:
         response = requests.get(url, timeout=timeout)
         # Aceitar 200, 302 (redirect), 401 (não autenticado), 403 (sem permissão), 404 (não encontrado)
-        assert response.status_code in (200, 302, 401, 403, 404), \
-            f"GET /api/companies/<int:company_id>/employees retornou status inesperado: {response.status_code}"
+        assert response.status_code in (
+            200,
+            302,
+            401,
+            403,
+            404,
+        ), f"GET /api/companies/<int:company_id>/employees retornou status inesperado: {response.status_code}"
     except requests.exceptions.RequestException as e:
-        pytest.fail(f"Erro na requisição GET /api/companies/<int:company_id>/employees: {e}")
+        pytest.fail(
+            f"Erro na requisição GET /api/companies/<int:company_id>/employees: {e}"
+        )
 
     # Test POST request
     try:
         # Tentar com payload vazio primeiro
         response = requests.post(url, json={}, timeout=timeout)
         # Aceitar vários códigos de status possíveis
-        assert response.status_code in (200, 201, 400, 401, 403, 404, 422, 500), \
-            f"POST /api/companies/<int:company_id>/employees retornou status inesperado: {response.status_code}"
+        assert response.status_code in (
+            200,
+            201,
+            400,
+            401,
+            403,
+            404,
+            422,
+            500,
+        ), f"POST /api/companies/<int:company_id>/employees retornou status inesperado: {response.status_code}"
     except requests.exceptions.RequestException as e:
-        pytest.fail(f"Erro na requisição POST /api/companies/<int:company_id>/employees: {e}")
+        pytest.fail(
+            f"Erro na requisição POST /api/companies/<int:company_id>/employees: {e}"
+        )
 
 
 """
@@ -1251,28 +1652,48 @@ import pytest
 import requests
 from testsprite_tests.conftest import BASE_URL, TIMEOUT, authenticated_session
 
+
 def test_api_company_employee(base_url, timeout):
     """Testa a rota /api/companies/<int:company_id>/employees/<int:employee_id>"""
     url = f"{base_url}/api/companies/<int:company_id>/employees/<int:employee_id>"
-    
+
     # Test DELETE request
     try:
         response = requests.delete(url, timeout=timeout)
         # Aceitar vários códigos de status possíveis
-        assert response.status_code in (200, 204, 400, 401, 403, 404, 500), \
-            f"DELETE /api/companies/<int:company_id>/employees/<int:employee_id> retornou status inesperado: {response.status_code}"
+        assert response.status_code in (
+            200,
+            204,
+            400,
+            401,
+            403,
+            404,
+            500,
+        ), f"DELETE /api/companies/<int:company_id>/employees/<int:employee_id> retornou status inesperado: {response.status_code}"
     except requests.exceptions.RequestException as e:
-        pytest.fail(f"Erro na requisição DELETE /api/companies/<int:company_id>/employees/<int:employee_id>: {e}")
+        pytest.fail(
+            f"Erro na requisição DELETE /api/companies/<int:company_id>/employees/<int:employee_id>: {e}"
+        )
 
     # Test PUT request
     try:
         # Tentar com payload vazio primeiro
         response = requests.put(url, json={}, timeout=timeout)
         # Aceitar vários códigos de status possíveis
-        assert response.status_code in (200, 201, 400, 401, 403, 404, 422, 500), \
-            f"PUT /api/companies/<int:company_id>/employees/<int:employee_id> retornou status inesperado: {response.status_code}"
+        assert response.status_code in (
+            200,
+            201,
+            400,
+            401,
+            403,
+            404,
+            422,
+            500,
+        ), f"PUT /api/companies/<int:company_id>/employees/<int:employee_id> retornou status inesperado: {response.status_code}"
     except requests.exceptions.RequestException as e:
-        pytest.fail(f"Erro na requisição PUT /api/companies/<int:company_id>/employees/<int:employee_id>: {e}")
+        pytest.fail(
+            f"Erro na requisição PUT /api/companies/<int:company_id>/employees/<int:employee_id>: {e}"
+        )
 
 
 """
@@ -1285,18 +1706,26 @@ import pytest
 import requests
 from testsprite_tests.conftest import BASE_URL, TIMEOUT, authenticated_session
 
+
 def test_api_workforce_analysis(base_url, timeout):
     """Testa a rota /api/companies/<int:company_id>/workforce-analysis"""
     url = f"{base_url}/api/companies/<int:company_id>/workforce-analysis"
-    
+
     # Test GET request
     try:
         response = requests.get(url, timeout=timeout)
         # Aceitar 200, 302 (redirect), 401 (não autenticado), 403 (sem permissão), 404 (não encontrado)
-        assert response.status_code in (200, 302, 401, 403, 404), \
-            f"GET /api/companies/<int:company_id>/workforce-analysis retornou status inesperado: {response.status_code}"
+        assert response.status_code in (
+            200,
+            302,
+            401,
+            403,
+            404,
+        ), f"GET /api/companies/<int:company_id>/workforce-analysis retornou status inesperado: {response.status_code}"
     except requests.exceptions.RequestException as e:
-        pytest.fail(f"Erro na requisição GET /api/companies/<int:company_id>/workforce-analysis: {e}")
+        pytest.fail(
+            f"Erro na requisição GET /api/companies/<int:company_id>/workforce-analysis: {e}"
+        )
 
 
 """
@@ -1309,19 +1738,30 @@ import pytest
 import requests
 from testsprite_tests.conftest import BASE_URL, TIMEOUT, authenticated_session
 
+
 def test_api_update_client_code(base_url, timeout):
     """Testa a rota /api/companies/<int:company_id>/client-code"""
     url = f"{base_url}/api/companies/<int:company_id>/client-code"
-    
+
     # Test POST request
     try:
         # Tentar com payload vazio primeiro
         response = requests.post(url, json={}, timeout=timeout)
         # Aceitar vários códigos de status possíveis
-        assert response.status_code in (200, 201, 400, 401, 403, 404, 422, 500), \
-            f"POST /api/companies/<int:company_id>/client-code retornou status inesperado: {response.status_code}"
+        assert response.status_code in (
+            200,
+            201,
+            400,
+            401,
+            403,
+            404,
+            422,
+            500,
+        ), f"POST /api/companies/<int:company_id>/client-code retornou status inesperado: {response.status_code}"
     except requests.exceptions.RequestException as e:
-        pytest.fail(f"Erro na requisição POST /api/companies/<int:company_id>/client-code: {e}")
+        pytest.fail(
+            f"Erro na requisição POST /api/companies/<int:company_id>/client-code: {e}"
+        )
 
 
 """
@@ -1334,18 +1774,26 @@ import pytest
 import requests
 from testsprite_tests.conftest import BASE_URL, TIMEOUT, authenticated_session
 
+
 def test_api_list_roles(base_url, timeout):
     """Testa a rota /api/companies/<int:company_id>/roles"""
     url = f"{base_url}/api/companies/<int:company_id>/roles"
-    
+
     # Test GET request
     try:
         response = requests.get(url, timeout=timeout)
         # Aceitar 200, 302 (redirect), 401 (não autenticado), 403 (sem permissão), 404 (não encontrado)
-        assert response.status_code in (200, 302, 401, 403, 404), \
-            f"GET /api/companies/<int:company_id>/roles retornou status inesperado: {response.status_code}"
+        assert response.status_code in (
+            200,
+            302,
+            401,
+            403,
+            404,
+        ), f"GET /api/companies/<int:company_id>/roles retornou status inesperado: {response.status_code}"
     except requests.exceptions.RequestException as e:
-        pytest.fail(f"Erro na requisição GET /api/companies/<int:company_id>/roles: {e}")
+        pytest.fail(
+            f"Erro na requisição GET /api/companies/<int:company_id>/roles: {e}"
+        )
 
 
 """
@@ -1358,18 +1806,26 @@ import pytest
 import requests
 from testsprite_tests.conftest import BASE_URL, TIMEOUT, authenticated_session
 
+
 def test_api_roles_tree(base_url, timeout):
     """Testa a rota /api/companies/<int:company_id>/roles/tree"""
     url = f"{base_url}/api/companies/<int:company_id>/roles/tree"
-    
+
     # Test GET request
     try:
         response = requests.get(url, timeout=timeout)
         # Aceitar 200, 302 (redirect), 401 (não autenticado), 403 (sem permissão), 404 (não encontrado)
-        assert response.status_code in (200, 302, 401, 403, 404), \
-            f"GET /api/companies/<int:company_id>/roles/tree retornou status inesperado: {response.status_code}"
+        assert response.status_code in (
+            200,
+            302,
+            401,
+            403,
+            404,
+        ), f"GET /api/companies/<int:company_id>/roles/tree retornou status inesperado: {response.status_code}"
     except requests.exceptions.RequestException as e:
-        pytest.fail(f"Erro na requisição GET /api/companies/<int:company_id>/roles/tree: {e}")
+        pytest.fail(
+            f"Erro na requisição GET /api/companies/<int:company_id>/roles/tree: {e}"
+        )
 
 
 """
@@ -1382,19 +1838,30 @@ import pytest
 import requests
 from testsprite_tests.conftest import BASE_URL, TIMEOUT, authenticated_session
 
+
 def test_api_create_role(base_url, timeout):
     """Testa a rota /api/companies/<int:company_id>/roles"""
     url = f"{base_url}/api/companies/<int:company_id>/roles"
-    
+
     # Test POST request
     try:
         # Tentar com payload vazio primeiro
         response = requests.post(url, json={}, timeout=timeout)
         # Aceitar vários códigos de status possíveis
-        assert response.status_code in (200, 201, 400, 401, 403, 404, 422, 500), \
-            f"POST /api/companies/<int:company_id>/roles retornou status inesperado: {response.status_code}"
+        assert response.status_code in (
+            200,
+            201,
+            400,
+            401,
+            403,
+            404,
+            422,
+            500,
+        ), f"POST /api/companies/<int:company_id>/roles retornou status inesperado: {response.status_code}"
     except requests.exceptions.RequestException as e:
-        pytest.fail(f"Erro na requisição POST /api/companies/<int:company_id>/roles: {e}")
+        pytest.fail(
+            f"Erro na requisição POST /api/companies/<int:company_id>/roles: {e}"
+        )
 
 
 """
@@ -1407,19 +1874,30 @@ import pytest
 import requests
 from testsprite_tests.conftest import BASE_URL, TIMEOUT, authenticated_session
 
+
 def test_api_update_role(base_url, timeout):
     """Testa a rota /api/companies/<int:company_id>/roles/<int:role_id>"""
     url = f"{base_url}/api/companies/<int:company_id>/roles/<int:role_id>"
-    
+
     # Test PUT request
     try:
         # Tentar com payload vazio primeiro
         response = requests.put(url, json={}, timeout=timeout)
         # Aceitar vários códigos de status possíveis
-        assert response.status_code in (200, 201, 400, 401, 403, 404, 422, 500), \
-            f"PUT /api/companies/<int:company_id>/roles/<int:role_id> retornou status inesperado: {response.status_code}"
+        assert response.status_code in (
+            200,
+            201,
+            400,
+            401,
+            403,
+            404,
+            422,
+            500,
+        ), f"PUT /api/companies/<int:company_id>/roles/<int:role_id> retornou status inesperado: {response.status_code}"
     except requests.exceptions.RequestException as e:
-        pytest.fail(f"Erro na requisição PUT /api/companies/<int:company_id>/roles/<int:role_id>: {e}")
+        pytest.fail(
+            f"Erro na requisição PUT /api/companies/<int:company_id>/roles/<int:role_id>: {e}"
+        )
 
 
 """
@@ -1432,18 +1910,28 @@ import pytest
 import requests
 from testsprite_tests.conftest import BASE_URL, TIMEOUT, authenticated_session
 
+
 def test_api_delete_role(base_url, timeout):
     """Testa a rota /api/companies/<int:company_id>/roles/<int:role_id>"""
     url = f"{base_url}/api/companies/<int:company_id>/roles/<int:role_id>"
-    
+
     # Test DELETE request
     try:
         response = requests.delete(url, timeout=timeout)
         # Aceitar vários códigos de status possíveis
-        assert response.status_code in (200, 204, 400, 401, 403, 404, 500), \
-            f"DELETE /api/companies/<int:company_id>/roles/<int:role_id> retornou status inesperado: {response.status_code}"
+        assert response.status_code in (
+            200,
+            204,
+            400,
+            401,
+            403,
+            404,
+            500,
+        ), f"DELETE /api/companies/<int:company_id>/roles/<int:role_id> retornou status inesperado: {response.status_code}"
     except requests.exceptions.RequestException as e:
-        pytest.fail(f"Erro na requisição DELETE /api/companies/<int:company_id>/roles/<int:role_id>: {e}")
+        pytest.fail(
+            f"Erro na requisição DELETE /api/companies/<int:company_id>/roles/<int:role_id>: {e}"
+        )
 
 
 """
@@ -1456,18 +1944,26 @@ import pytest
 import requests
 from testsprite_tests.conftest import BASE_URL, TIMEOUT, authenticated_session
 
+
 def test_api_get_process_map(base_url, timeout):
     """Testa a rota /api/companies/<int:company_id>/process-map"""
     url = f"{base_url}/api/companies/<int:company_id>/process-map"
-    
+
     # Test GET request
     try:
         response = requests.get(url, timeout=timeout)
         # Aceitar 200, 302 (redirect), 401 (não autenticado), 403 (sem permissão), 404 (não encontrado)
-        assert response.status_code in (200, 302, 401, 403, 404), \
-            f"GET /api/companies/<int:company_id>/process-map retornou status inesperado: {response.status_code}"
+        assert response.status_code in (
+            200,
+            302,
+            401,
+            403,
+            404,
+        ), f"GET /api/companies/<int:company_id>/process-map retornou status inesperado: {response.status_code}"
     except requests.exceptions.RequestException as e:
-        pytest.fail(f"Erro na requisição GET /api/companies/<int:company_id>/process-map: {e}")
+        pytest.fail(
+            f"Erro na requisição GET /api/companies/<int:company_id>/process-map: {e}"
+        )
 
 
 """
@@ -1480,18 +1976,26 @@ import pytest
 import requests
 from testsprite_tests.conftest import BASE_URL, TIMEOUT, authenticated_session
 
+
 def test_api_list_process_areas(base_url, timeout):
     """Testa a rota /api/companies/<int:company_id>/process-areas"""
     url = f"{base_url}/api/companies/<int:company_id>/process-areas"
-    
+
     # Test GET request
     try:
         response = requests.get(url, timeout=timeout)
         # Aceitar 200, 302 (redirect), 401 (não autenticado), 403 (sem permissão), 404 (não encontrado)
-        assert response.status_code in (200, 302, 401, 403, 404), \
-            f"GET /api/companies/<int:company_id>/process-areas retornou status inesperado: {response.status_code}"
+        assert response.status_code in (
+            200,
+            302,
+            401,
+            403,
+            404,
+        ), f"GET /api/companies/<int:company_id>/process-areas retornou status inesperado: {response.status_code}"
     except requests.exceptions.RequestException as e:
-        pytest.fail(f"Erro na requisição GET /api/companies/<int:company_id>/process-areas: {e}")
+        pytest.fail(
+            f"Erro na requisição GET /api/companies/<int:company_id>/process-areas: {e}"
+        )
 
 
 """
@@ -1504,19 +2008,30 @@ import pytest
 import requests
 from testsprite_tests.conftest import BASE_URL, TIMEOUT, authenticated_session
 
+
 def test_api_create_process_area(base_url, timeout):
     """Testa a rota /api/companies/<int:company_id>/process-areas"""
     url = f"{base_url}/api/companies/<int:company_id>/process-areas"
-    
+
     # Test POST request
     try:
         # Tentar com payload vazio primeiro
         response = requests.post(url, json={}, timeout=timeout)
         # Aceitar vários códigos de status possíveis
-        assert response.status_code in (200, 201, 400, 401, 403, 404, 422, 500), \
-            f"POST /api/companies/<int:company_id>/process-areas retornou status inesperado: {response.status_code}"
+        assert response.status_code in (
+            200,
+            201,
+            400,
+            401,
+            403,
+            404,
+            422,
+            500,
+        ), f"POST /api/companies/<int:company_id>/process-areas retornou status inesperado: {response.status_code}"
     except requests.exceptions.RequestException as e:
-        pytest.fail(f"Erro na requisição POST /api/companies/<int:company_id>/process-areas: {e}")
+        pytest.fail(
+            f"Erro na requisição POST /api/companies/<int:company_id>/process-areas: {e}"
+        )
 
 
 """
@@ -1529,19 +2044,30 @@ import pytest
 import requests
 from testsprite_tests.conftest import BASE_URL, TIMEOUT, authenticated_session
 
+
 def test_api_update_process_area(base_url, timeout):
     """Testa a rota /api/companies/<int:company_id>/process-areas/<int:area_id>"""
     url = f"{base_url}/api/companies/<int:company_id>/process-areas/<int:area_id>"
-    
+
     # Test PUT request
     try:
         # Tentar com payload vazio primeiro
         response = requests.put(url, json={}, timeout=timeout)
         # Aceitar vários códigos de status possíveis
-        assert response.status_code in (200, 201, 400, 401, 403, 404, 422, 500), \
-            f"PUT /api/companies/<int:company_id>/process-areas/<int:area_id> retornou status inesperado: {response.status_code}"
+        assert response.status_code in (
+            200,
+            201,
+            400,
+            401,
+            403,
+            404,
+            422,
+            500,
+        ), f"PUT /api/companies/<int:company_id>/process-areas/<int:area_id> retornou status inesperado: {response.status_code}"
     except requests.exceptions.RequestException as e:
-        pytest.fail(f"Erro na requisição PUT /api/companies/<int:company_id>/process-areas/<int:area_id>: {e}")
+        pytest.fail(
+            f"Erro na requisição PUT /api/companies/<int:company_id>/process-areas/<int:area_id>: {e}"
+        )
 
 
 """
@@ -1554,18 +2080,28 @@ import pytest
 import requests
 from testsprite_tests.conftest import BASE_URL, TIMEOUT, authenticated_session
 
+
 def test_api_delete_process_area(base_url, timeout):
     """Testa a rota /api/companies/<int:company_id>/process-areas/<int:area_id>"""
     url = f"{base_url}/api/companies/<int:company_id>/process-areas/<int:area_id>"
-    
+
     # Test DELETE request
     try:
         response = requests.delete(url, timeout=timeout)
         # Aceitar vários códigos de status possíveis
-        assert response.status_code in (200, 204, 400, 401, 403, 404, 500), \
-            f"DELETE /api/companies/<int:company_id>/process-areas/<int:area_id> retornou status inesperado: {response.status_code}"
+        assert response.status_code in (
+            200,
+            204,
+            400,
+            401,
+            403,
+            404,
+            500,
+        ), f"DELETE /api/companies/<int:company_id>/process-areas/<int:area_id> retornou status inesperado: {response.status_code}"
     except requests.exceptions.RequestException as e:
-        pytest.fail(f"Erro na requisição DELETE /api/companies/<int:company_id>/process-areas/<int:area_id>: {e}")
+        pytest.fail(
+            f"Erro na requisição DELETE /api/companies/<int:company_id>/process-areas/<int:area_id>: {e}"
+        )
 
 
 """
@@ -1578,18 +2114,26 @@ import pytest
 import requests
 from testsprite_tests.conftest import BASE_URL, TIMEOUT, authenticated_session
 
+
 def test_api_list_macro_processes(base_url, timeout):
     """Testa a rota /api/companies/<int:company_id>/macro-processes"""
     url = f"{base_url}/api/companies/<int:company_id>/macro-processes"
-    
+
     # Test GET request
     try:
         response = requests.get(url, timeout=timeout)
         # Aceitar 200, 302 (redirect), 401 (não autenticado), 403 (sem permissão), 404 (não encontrado)
-        assert response.status_code in (200, 302, 401, 403, 404), \
-            f"GET /api/companies/<int:company_id>/macro-processes retornou status inesperado: {response.status_code}"
+        assert response.status_code in (
+            200,
+            302,
+            401,
+            403,
+            404,
+        ), f"GET /api/companies/<int:company_id>/macro-processes retornou status inesperado: {response.status_code}"
     except requests.exceptions.RequestException as e:
-        pytest.fail(f"Erro na requisição GET /api/companies/<int:company_id>/macro-processes: {e}")
+        pytest.fail(
+            f"Erro na requisição GET /api/companies/<int:company_id>/macro-processes: {e}"
+        )
 
 
 """
@@ -1602,19 +2146,30 @@ import pytest
 import requests
 from testsprite_tests.conftest import BASE_URL, TIMEOUT, authenticated_session
 
+
 def test_api_create_macro_process(base_url, timeout):
     """Testa a rota /api/companies/<int:company_id>/macro-processes"""
     url = f"{base_url}/api/companies/<int:company_id>/macro-processes"
-    
+
     # Test POST request
     try:
         # Tentar com payload vazio primeiro
         response = requests.post(url, json={}, timeout=timeout)
         # Aceitar vários códigos de status possíveis
-        assert response.status_code in (200, 201, 400, 401, 403, 404, 422, 500), \
-            f"POST /api/companies/<int:company_id>/macro-processes retornou status inesperado: {response.status_code}"
+        assert response.status_code in (
+            200,
+            201,
+            400,
+            401,
+            403,
+            404,
+            422,
+            500,
+        ), f"POST /api/companies/<int:company_id>/macro-processes retornou status inesperado: {response.status_code}"
     except requests.exceptions.RequestException as e:
-        pytest.fail(f"Erro na requisição POST /api/companies/<int:company_id>/macro-processes: {e}")
+        pytest.fail(
+            f"Erro na requisição POST /api/companies/<int:company_id>/macro-processes: {e}"
+        )
 
 
 """
@@ -1627,19 +2182,30 @@ import pytest
 import requests
 from testsprite_tests.conftest import BASE_URL, TIMEOUT, authenticated_session
 
+
 def test_api_update_macro_process(base_url, timeout):
     """Testa a rota /api/companies/<int:company_id>/macro-processes/<int:macro_id>"""
     url = f"{base_url}/api/companies/<int:company_id>/macro-processes/<int:macro_id>"
-    
+
     # Test PUT request
     try:
         # Tentar com payload vazio primeiro
         response = requests.put(url, json={}, timeout=timeout)
         # Aceitar vários códigos de status possíveis
-        assert response.status_code in (200, 201, 400, 401, 403, 404, 422, 500), \
-            f"PUT /api/companies/<int:company_id>/macro-processes/<int:macro_id> retornou status inesperado: {response.status_code}"
+        assert response.status_code in (
+            200,
+            201,
+            400,
+            401,
+            403,
+            404,
+            422,
+            500,
+        ), f"PUT /api/companies/<int:company_id>/macro-processes/<int:macro_id> retornou status inesperado: {response.status_code}"
     except requests.exceptions.RequestException as e:
-        pytest.fail(f"Erro na requisição PUT /api/companies/<int:company_id>/macro-processes/<int:macro_id>: {e}")
+        pytest.fail(
+            f"Erro na requisição PUT /api/companies/<int:company_id>/macro-processes/<int:macro_id>: {e}"
+        )
 
 
 """
@@ -1652,18 +2218,28 @@ import pytest
 import requests
 from testsprite_tests.conftest import BASE_URL, TIMEOUT, authenticated_session
 
+
 def test_api_delete_macro_process(base_url, timeout):
     """Testa a rota /api/companies/<int:company_id>/macro-processes/<int:macro_id>"""
     url = f"{base_url}/api/companies/<int:company_id>/macro-processes/<int:macro_id>"
-    
+
     # Test DELETE request
     try:
         response = requests.delete(url, timeout=timeout)
         # Aceitar vários códigos de status possíveis
-        assert response.status_code in (200, 204, 400, 401, 403, 404, 500), \
-            f"DELETE /api/companies/<int:company_id>/macro-processes/<int:macro_id> retornou status inesperado: {response.status_code}"
+        assert response.status_code in (
+            200,
+            204,
+            400,
+            401,
+            403,
+            404,
+            500,
+        ), f"DELETE /api/companies/<int:company_id>/macro-processes/<int:macro_id> retornou status inesperado: {response.status_code}"
     except requests.exceptions.RequestException as e:
-        pytest.fail(f"Erro na requisição DELETE /api/companies/<int:company_id>/macro-processes/<int:macro_id>: {e}")
+        pytest.fail(
+            f"Erro na requisição DELETE /api/companies/<int:company_id>/macro-processes/<int:macro_id>: {e}"
+        )
 
 
 """
@@ -1676,18 +2252,26 @@ import pytest
 import requests
 from testsprite_tests.conftest import BASE_URL, TIMEOUT, authenticated_session
 
+
 def test_api_list_processes(base_url, timeout):
     """Testa a rota /api/companies/<int:company_id>/processes"""
     url = f"{base_url}/api/companies/<int:company_id>/processes"
-    
+
     # Test GET request
     try:
         response = requests.get(url, timeout=timeout)
         # Aceitar 200, 302 (redirect), 401 (não autenticado), 403 (sem permissão), 404 (não encontrado)
-        assert response.status_code in (200, 302, 401, 403, 404), \
-            f"GET /api/companies/<int:company_id>/processes retornou status inesperado: {response.status_code}"
+        assert response.status_code in (
+            200,
+            302,
+            401,
+            403,
+            404,
+        ), f"GET /api/companies/<int:company_id>/processes retornou status inesperado: {response.status_code}"
     except requests.exceptions.RequestException as e:
-        pytest.fail(f"Erro na requisição GET /api/companies/<int:company_id>/processes: {e}")
+        pytest.fail(
+            f"Erro na requisição GET /api/companies/<int:company_id>/processes: {e}"
+        )
 
 
 """
@@ -1700,19 +2284,30 @@ import pytest
 import requests
 from testsprite_tests.conftest import BASE_URL, TIMEOUT, authenticated_session
 
+
 def test_api_create_process(base_url, timeout):
     """Testa a rota /api/companies/<int:company_id>/processes"""
     url = f"{base_url}/api/companies/<int:company_id>/processes"
-    
+
     # Test POST request
     try:
         # Tentar com payload vazio primeiro
         response = requests.post(url, json={}, timeout=timeout)
         # Aceitar vários códigos de status possíveis
-        assert response.status_code in (200, 201, 400, 401, 403, 404, 422, 500), \
-            f"POST /api/companies/<int:company_id>/processes retornou status inesperado: {response.status_code}"
+        assert response.status_code in (
+            200,
+            201,
+            400,
+            401,
+            403,
+            404,
+            422,
+            500,
+        ), f"POST /api/companies/<int:company_id>/processes retornou status inesperado: {response.status_code}"
     except requests.exceptions.RequestException as e:
-        pytest.fail(f"Erro na requisição POST /api/companies/<int:company_id>/processes: {e}")
+        pytest.fail(
+            f"Erro na requisição POST /api/companies/<int:company_id>/processes: {e}"
+        )
 
 
 """
@@ -1725,19 +2320,30 @@ import pytest
 import requests
 from testsprite_tests.conftest import BASE_URL, TIMEOUT, authenticated_session
 
+
 def test_api_update_process(base_url, timeout):
     """Testa a rota /api/companies/<int:company_id>/processes/<int:process_id>"""
     url = f"{base_url}/api/companies/<int:company_id>/processes/<int:process_id>"
-    
+
     # Test PUT request
     try:
         # Tentar com payload vazio primeiro
         response = requests.put(url, json={}, timeout=timeout)
         # Aceitar vários códigos de status possíveis
-        assert response.status_code in (200, 201, 400, 401, 403, 404, 422, 500), \
-            f"PUT /api/companies/<int:company_id>/processes/<int:process_id> retornou status inesperado: {response.status_code}"
+        assert response.status_code in (
+            200,
+            201,
+            400,
+            401,
+            403,
+            404,
+            422,
+            500,
+        ), f"PUT /api/companies/<int:company_id>/processes/<int:process_id> retornou status inesperado: {response.status_code}"
     except requests.exceptions.RequestException as e:
-        pytest.fail(f"Erro na requisição PUT /api/companies/<int:company_id>/processes/<int:process_id>: {e}")
+        pytest.fail(
+            f"Erro na requisição PUT /api/companies/<int:company_id>/processes/<int:process_id>: {e}"
+        )
 
 
 """
@@ -1750,19 +2356,30 @@ import pytest
 import requests
 from testsprite_tests.conftest import BASE_URL, TIMEOUT, authenticated_session
 
+
 def test_api_update_process_stage(base_url, timeout):
     """Testa a rota /api/companies/<int:company_id>/processes/<int:process_id>/stage"""
     url = f"{base_url}/api/companies/<int:company_id>/processes/<int:process_id>/stage"
-    
+
     # Test PATCH request
     try:
         # Tentar com payload vazio primeiro
         response = requests.patch(url, json={}, timeout=timeout)
         # Aceitar vários códigos de status possíveis
-        assert response.status_code in (200, 201, 400, 401, 403, 404, 422, 500), \
-            f"PATCH /api/companies/<int:company_id>/processes/<int:process_id>/stage retornou status inesperado: {response.status_code}"
+        assert response.status_code in (
+            200,
+            201,
+            400,
+            401,
+            403,
+            404,
+            422,
+            500,
+        ), f"PATCH /api/companies/<int:company_id>/processes/<int:process_id>/stage retornou status inesperado: {response.status_code}"
     except requests.exceptions.RequestException as e:
-        pytest.fail(f"Erro na requisição PATCH /api/companies/<int:company_id>/processes/<int:process_id>/stage: {e}")
+        pytest.fail(
+            f"Erro na requisição PATCH /api/companies/<int:company_id>/processes/<int:process_id>/stage: {e}"
+        )
 
 
 """
@@ -1775,28 +2392,46 @@ import pytest
 import requests
 from testsprite_tests.conftest import BASE_URL, TIMEOUT, authenticated_session
 
+
 def test_api_process_notes(base_url, timeout):
     """Testa a rota /api/companies/<int:company_id>/processes/<int:process_id>/notes"""
     url = f"{base_url}/api/companies/<int:company_id>/processes/<int:process_id>/notes"
-    
+
     # Test GET request
     try:
         response = requests.get(url, timeout=timeout)
         # Aceitar 200, 302 (redirect), 401 (não autenticado), 403 (sem permissão), 404 (não encontrado)
-        assert response.status_code in (200, 302, 401, 403, 404), \
-            f"GET /api/companies/<int:company_id>/processes/<int:process_id>/notes retornou status inesperado: {response.status_code}"
+        assert response.status_code in (
+            200,
+            302,
+            401,
+            403,
+            404,
+        ), f"GET /api/companies/<int:company_id>/processes/<int:process_id>/notes retornou status inesperado: {response.status_code}"
     except requests.exceptions.RequestException as e:
-        pytest.fail(f"Erro na requisição GET /api/companies/<int:company_id>/processes/<int:process_id>/notes: {e}")
+        pytest.fail(
+            f"Erro na requisição GET /api/companies/<int:company_id>/processes/<int:process_id>/notes: {e}"
+        )
 
     # Test PUT request
     try:
         # Tentar com payload vazio primeiro
         response = requests.put(url, json={}, timeout=timeout)
         # Aceitar vários códigos de status possíveis
-        assert response.status_code in (200, 201, 400, 401, 403, 404, 422, 500), \
-            f"PUT /api/companies/<int:company_id>/processes/<int:process_id>/notes retornou status inesperado: {response.status_code}"
+        assert response.status_code in (
+            200,
+            201,
+            400,
+            401,
+            403,
+            404,
+            422,
+            500,
+        ), f"PUT /api/companies/<int:company_id>/processes/<int:process_id>/notes retornou status inesperado: {response.status_code}"
     except requests.exceptions.RequestException as e:
-        pytest.fail(f"Erro na requisição PUT /api/companies/<int:company_id>/processes/<int:process_id>/notes: {e}")
+        pytest.fail(
+            f"Erro na requisição PUT /api/companies/<int:company_id>/processes/<int:process_id>/notes: {e}"
+        )
 
 
 """
@@ -1809,28 +2444,48 @@ import pytest
 import requests
 from testsprite_tests.conftest import BASE_URL, TIMEOUT, authenticated_session
 
+
 def test_api_process_flow_document(base_url, timeout):
     """Testa a rota /api/companies/<int:company_id>/processes/<int:process_id>/flow"""
     url = f"{base_url}/api/companies/<int:company_id>/processes/<int:process_id>/flow"
-    
+
     # Test DELETE request
     try:
         response = requests.delete(url, timeout=timeout)
         # Aceitar vários códigos de status possíveis
-        assert response.status_code in (200, 204, 400, 401, 403, 404, 500), \
-            f"DELETE /api/companies/<int:company_id>/processes/<int:process_id>/flow retornou status inesperado: {response.status_code}"
+        assert response.status_code in (
+            200,
+            204,
+            400,
+            401,
+            403,
+            404,
+            500,
+        ), f"DELETE /api/companies/<int:company_id>/processes/<int:process_id>/flow retornou status inesperado: {response.status_code}"
     except requests.exceptions.RequestException as e:
-        pytest.fail(f"Erro na requisição DELETE /api/companies/<int:company_id>/processes/<int:process_id>/flow: {e}")
+        pytest.fail(
+            f"Erro na requisição DELETE /api/companies/<int:company_id>/processes/<int:process_id>/flow: {e}"
+        )
 
     # Test POST request
     try:
         # Tentar com payload vazio primeiro
         response = requests.post(url, json={}, timeout=timeout)
         # Aceitar vários códigos de status possíveis
-        assert response.status_code in (200, 201, 400, 401, 403, 404, 422, 500), \
-            f"POST /api/companies/<int:company_id>/processes/<int:process_id>/flow retornou status inesperado: {response.status_code}"
+        assert response.status_code in (
+            200,
+            201,
+            400,
+            401,
+            403,
+            404,
+            422,
+            500,
+        ), f"POST /api/companies/<int:company_id>/processes/<int:process_id>/flow retornou status inesperado: {response.status_code}"
     except requests.exceptions.RequestException as e:
-        pytest.fail(f"Erro na requisição POST /api/companies/<int:company_id>/processes/<int:process_id>/flow: {e}")
+        pytest.fail(
+            f"Erro na requisição POST /api/companies/<int:company_id>/processes/<int:process_id>/flow: {e}"
+        )
 
 
 """
@@ -1843,28 +2498,46 @@ import pytest
 import requests
 from testsprite_tests.conftest import BASE_URL, TIMEOUT, authenticated_session
 
+
 def test_api_process_activities(base_url, timeout):
     """Testa a rota /api/companies/<int:company_id>/processes/<int:process_id>/activities"""
     url = f"{base_url}/api/companies/<int:company_id>/processes/<int:process_id>/activities"
-    
+
     # Test GET request
     try:
         response = requests.get(url, timeout=timeout)
         # Aceitar 200, 302 (redirect), 401 (não autenticado), 403 (sem permissão), 404 (não encontrado)
-        assert response.status_code in (200, 302, 401, 403, 404), \
-            f"GET /api/companies/<int:company_id>/processes/<int:process_id>/activities retornou status inesperado: {response.status_code}"
+        assert response.status_code in (
+            200,
+            302,
+            401,
+            403,
+            404,
+        ), f"GET /api/companies/<int:company_id>/processes/<int:process_id>/activities retornou status inesperado: {response.status_code}"
     except requests.exceptions.RequestException as e:
-        pytest.fail(f"Erro na requisição GET /api/companies/<int:company_id>/processes/<int:process_id>/activities: {e}")
+        pytest.fail(
+            f"Erro na requisição GET /api/companies/<int:company_id>/processes/<int:process_id>/activities: {e}"
+        )
 
     # Test POST request
     try:
         # Tentar com payload vazio primeiro
         response = requests.post(url, json={}, timeout=timeout)
         # Aceitar vários códigos de status possíveis
-        assert response.status_code in (200, 201, 400, 401, 403, 404, 422, 500), \
-            f"POST /api/companies/<int:company_id>/processes/<int:process_id>/activities retornou status inesperado: {response.status_code}"
+        assert response.status_code in (
+            200,
+            201,
+            400,
+            401,
+            403,
+            404,
+            422,
+            500,
+        ), f"POST /api/companies/<int:company_id>/processes/<int:process_id>/activities retornou status inesperado: {response.status_code}"
     except requests.exceptions.RequestException as e:
-        pytest.fail(f"Erro na requisição POST /api/companies/<int:company_id>/processes/<int:process_id>/activities: {e}")
+        pytest.fail(
+            f"Erro na requisição POST /api/companies/<int:company_id>/processes/<int:process_id>/activities: {e}"
+        )
 
 
 """
@@ -1877,28 +2550,48 @@ import pytest
 import requests
 from testsprite_tests.conftest import BASE_URL, TIMEOUT, authenticated_session
 
+
 def test_api_process_activity_detail(base_url, timeout):
     """Testa a rota /api/companies/<int:company_id>/processes/<int:process_id>/activities/<int:activity_id>"""
     url = f"{base_url}/api/companies/<int:company_id>/processes/<int:process_id>/activities/<int:activity_id>"
-    
+
     # Test DELETE request
     try:
         response = requests.delete(url, timeout=timeout)
         # Aceitar vários códigos de status possíveis
-        assert response.status_code in (200, 204, 400, 401, 403, 404, 500), \
-            f"DELETE /api/companies/<int:company_id>/processes/<int:process_id>/activities/<int:activity_id> retornou status inesperado: {response.status_code}"
+        assert response.status_code in (
+            200,
+            204,
+            400,
+            401,
+            403,
+            404,
+            500,
+        ), f"DELETE /api/companies/<int:company_id>/processes/<int:process_id>/activities/<int:activity_id> retornou status inesperado: {response.status_code}"
     except requests.exceptions.RequestException as e:
-        pytest.fail(f"Erro na requisição DELETE /api/companies/<int:company_id>/processes/<int:process_id>/activities/<int:activity_id>: {e}")
+        pytest.fail(
+            f"Erro na requisição DELETE /api/companies/<int:company_id>/processes/<int:process_id>/activities/<int:activity_id>: {e}"
+        )
 
     # Test PUT request
     try:
         # Tentar com payload vazio primeiro
         response = requests.put(url, json={}, timeout=timeout)
         # Aceitar vários códigos de status possíveis
-        assert response.status_code in (200, 201, 400, 401, 403, 404, 422, 500), \
-            f"PUT /api/companies/<int:company_id>/processes/<int:process_id>/activities/<int:activity_id> retornou status inesperado: {response.status_code}"
+        assert response.status_code in (
+            200,
+            201,
+            400,
+            401,
+            403,
+            404,
+            422,
+            500,
+        ), f"PUT /api/companies/<int:company_id>/processes/<int:process_id>/activities/<int:activity_id> retornou status inesperado: {response.status_code}"
     except requests.exceptions.RequestException as e:
-        pytest.fail(f"Erro na requisição PUT /api/companies/<int:company_id>/processes/<int:process_id>/activities/<int:activity_id>: {e}")
+        pytest.fail(
+            f"Erro na requisição PUT /api/companies/<int:company_id>/processes/<int:process_id>/activities/<int:activity_id>: {e}"
+        )
 
 
 """
@@ -1911,19 +2604,30 @@ import pytest
 import requests
 from testsprite_tests.conftest import BASE_URL, TIMEOUT, authenticated_session
 
+
 def test_api_create_process_activity_entry(base_url, timeout):
     """Testa a rota /api/companies/<int:company_id>/processes/<int:process_id>/activities/<int:activity_id>/entries"""
     url = f"{base_url}/api/companies/<int:company_id>/processes/<int:process_id>/activities/<int:activity_id>/entries"
-    
+
     # Test POST request
     try:
         # Tentar com payload vazio primeiro
         response = requests.post(url, json={}, timeout=timeout)
         # Aceitar vários códigos de status possíveis
-        assert response.status_code in (200, 201, 400, 401, 403, 404, 422, 500), \
-            f"POST /api/companies/<int:company_id>/processes/<int:process_id>/activities/<int:activity_id>/entries retornou status inesperado: {response.status_code}"
+        assert response.status_code in (
+            200,
+            201,
+            400,
+            401,
+            403,
+            404,
+            422,
+            500,
+        ), f"POST /api/companies/<int:company_id>/processes/<int:process_id>/activities/<int:activity_id>/entries retornou status inesperado: {response.status_code}"
     except requests.exceptions.RequestException as e:
-        pytest.fail(f"Erro na requisição POST /api/companies/<int:company_id>/processes/<int:process_id>/activities/<int:activity_id>/entries: {e}")
+        pytest.fail(
+            f"Erro na requisição POST /api/companies/<int:company_id>/processes/<int:process_id>/activities/<int:activity_id>/entries: {e}"
+        )
 
 
 """
@@ -1936,28 +2640,48 @@ import pytest
 import requests
 from testsprite_tests.conftest import BASE_URL, TIMEOUT, authenticated_session
 
+
 def test_api_process_activity_entry_detail(base_url, timeout):
     """Testa a rota /api/companies/<int:company_id>/processes/<int:process_id>/activities/<int:activity_id>/entries/<int:entry_id>"""
     url = f"{base_url}/api/companies/<int:company_id>/processes/<int:process_id>/activities/<int:activity_id>/entries/<int:entry_id>"
-    
+
     # Test DELETE request
     try:
         response = requests.delete(url, timeout=timeout)
         # Aceitar vários códigos de status possíveis
-        assert response.status_code in (200, 204, 400, 401, 403, 404, 500), \
-            f"DELETE /api/companies/<int:company_id>/processes/<int:process_id>/activities/<int:activity_id>/entries/<int:entry_id> retornou status inesperado: {response.status_code}"
+        assert response.status_code in (
+            200,
+            204,
+            400,
+            401,
+            403,
+            404,
+            500,
+        ), f"DELETE /api/companies/<int:company_id>/processes/<int:process_id>/activities/<int:activity_id>/entries/<int:entry_id> retornou status inesperado: {response.status_code}"
     except requests.exceptions.RequestException as e:
-        pytest.fail(f"Erro na requisição DELETE /api/companies/<int:company_id>/processes/<int:process_id>/activities/<int:activity_id>/entries/<int:entry_id>: {e}")
+        pytest.fail(
+            f"Erro na requisição DELETE /api/companies/<int:company_id>/processes/<int:process_id>/activities/<int:activity_id>/entries/<int:entry_id>: {e}"
+        )
 
     # Test PUT request
     try:
         # Tentar com payload vazio primeiro
         response = requests.put(url, json={}, timeout=timeout)
         # Aceitar vários códigos de status possíveis
-        assert response.status_code in (200, 201, 400, 401, 403, 404, 422, 500), \
-            f"PUT /api/companies/<int:company_id>/processes/<int:process_id>/activities/<int:activity_id>/entries/<int:entry_id> retornou status inesperado: {response.status_code}"
+        assert response.status_code in (
+            200,
+            201,
+            400,
+            401,
+            403,
+            404,
+            422,
+            500,
+        ), f"PUT /api/companies/<int:company_id>/processes/<int:process_id>/activities/<int:activity_id>/entries/<int:entry_id> retornou status inesperado: {response.status_code}"
     except requests.exceptions.RequestException as e:
-        pytest.fail(f"Erro na requisição PUT /api/companies/<int:company_id>/processes/<int:process_id>/activities/<int:activity_id>/entries/<int:entry_id>: {e}")
+        pytest.fail(
+            f"Erro na requisição PUT /api/companies/<int:company_id>/processes/<int:process_id>/activities/<int:activity_id>/entries/<int:entry_id>: {e}"
+        )
 
 
 """
@@ -1970,18 +2694,28 @@ import pytest
 import requests
 from testsprite_tests.conftest import BASE_URL, TIMEOUT, authenticated_session
 
+
 def test_api_delete_process(base_url, timeout):
     """Testa a rota /api/companies/<int:company_id>/processes/<int:process_id>"""
     url = f"{base_url}/api/companies/<int:company_id>/processes/<int:process_id>"
-    
+
     # Test DELETE request
     try:
         response = requests.delete(url, timeout=timeout)
         # Aceitar vários códigos de status possíveis
-        assert response.status_code in (200, 204, 400, 401, 403, 404, 500), \
-            f"DELETE /api/companies/<int:company_id>/processes/<int:process_id> retornou status inesperado: {response.status_code}"
+        assert response.status_code in (
+            200,
+            204,
+            400,
+            401,
+            403,
+            404,
+            500,
+        ), f"DELETE /api/companies/<int:company_id>/processes/<int:process_id> retornou status inesperado: {response.status_code}"
     except requests.exceptions.RequestException as e:
-        pytest.fail(f"Erro na requisição DELETE /api/companies/<int:company_id>/processes/<int:process_id>: {e}")
+        pytest.fail(
+            f"Erro na requisição DELETE /api/companies/<int:company_id>/processes/<int:process_id>: {e}"
+        )
 
 
 """
@@ -1994,18 +2728,26 @@ import pytest
 import requests
 from testsprite_tests.conftest import BASE_URL, TIMEOUT, authenticated_session
 
+
 def test_api_list_process_instances(base_url, timeout):
     """Testa a rota /api/companies/<int:company_id>/process-instances"""
     url = f"{base_url}/api/companies/<int:company_id>/process-instances"
-    
+
     # Test GET request
     try:
         response = requests.get(url, timeout=timeout)
         # Aceitar 200, 302 (redirect), 401 (não autenticado), 403 (sem permissão), 404 (não encontrado)
-        assert response.status_code in (200, 302, 401, 403, 404), \
-            f"GET /api/companies/<int:company_id>/process-instances retornou status inesperado: {response.status_code}"
+        assert response.status_code in (
+            200,
+            302,
+            401,
+            403,
+            404,
+        ), f"GET /api/companies/<int:company_id>/process-instances retornou status inesperado: {response.status_code}"
     except requests.exceptions.RequestException as e:
-        pytest.fail(f"Erro na requisição GET /api/companies/<int:company_id>/process-instances: {e}")
+        pytest.fail(
+            f"Erro na requisição GET /api/companies/<int:company_id>/process-instances: {e}"
+        )
 
 
 """
@@ -2018,19 +2760,30 @@ import pytest
 import requests
 from testsprite_tests.conftest import BASE_URL, TIMEOUT, authenticated_session
 
+
 def test_api_create_process_instance(base_url, timeout):
     """Testa a rota /api/companies/<int:company_id>/process-instances"""
     url = f"{base_url}/api/companies/<int:company_id>/process-instances"
-    
+
     # Test POST request
     try:
         # Tentar com payload vazio primeiro
         response = requests.post(url, json={}, timeout=timeout)
         # Aceitar vários códigos de status possíveis
-        assert response.status_code in (200, 201, 400, 401, 403, 404, 422, 500), \
-            f"POST /api/companies/<int:company_id>/process-instances retornou status inesperado: {response.status_code}"
+        assert response.status_code in (
+            200,
+            201,
+            400,
+            401,
+            403,
+            404,
+            422,
+            500,
+        ), f"POST /api/companies/<int:company_id>/process-instances retornou status inesperado: {response.status_code}"
     except requests.exceptions.RequestException as e:
-        pytest.fail(f"Erro na requisição POST /api/companies/<int:company_id>/process-instances: {e}")
+        pytest.fail(
+            f"Erro na requisição POST /api/companies/<int:company_id>/process-instances: {e}"
+        )
 
 
 """
@@ -2043,18 +2796,26 @@ import pytest
 import requests
 from testsprite_tests.conftest import BASE_URL, TIMEOUT, authenticated_session
 
+
 def test_api_get_process_routine_collaborators(base_url, timeout):
     """Testa a rota /api/companies/<int:company_id>/processes/<int:process_id>/routine-collaborators"""
     url = f"{base_url}/api/companies/<int:company_id>/processes/<int:process_id>/routine-collaborators"
-    
+
     # Test GET request
     try:
         response = requests.get(url, timeout=timeout)
         # Aceitar 200, 302 (redirect), 401 (não autenticado), 403 (sem permissão), 404 (não encontrado)
-        assert response.status_code in (200, 302, 401, 403, 404), \
-            f"GET /api/companies/<int:company_id>/processes/<int:process_id>/routine-collaborators retornou status inesperado: {response.status_code}"
+        assert response.status_code in (
+            200,
+            302,
+            401,
+            403,
+            404,
+        ), f"GET /api/companies/<int:company_id>/processes/<int:process_id>/routine-collaborators retornou status inesperado: {response.status_code}"
     except requests.exceptions.RequestException as e:
-        pytest.fail(f"Erro na requisição GET /api/companies/<int:company_id>/processes/<int:process_id>/routine-collaborators: {e}")
+        pytest.fail(
+            f"Erro na requisição GET /api/companies/<int:company_id>/processes/<int:process_id>/routine-collaborators: {e}"
+        )
 
 
 """
@@ -2067,19 +2828,32 @@ import pytest
 import requests
 from testsprite_tests.conftest import BASE_URL, TIMEOUT, authenticated_session
 
+
 def test_api_update_process_instance(base_url, timeout):
     """Testa a rota /api/companies/<int:company_id>/process-instances/<int:instance_id>"""
-    url = f"{base_url}/api/companies/<int:company_id>/process-instances/<int:instance_id>"
-    
+    url = (
+        f"{base_url}/api/companies/<int:company_id>/process-instances/<int:instance_id>"
+    )
+
     # Test PATCH request
     try:
         # Tentar com payload vazio primeiro
         response = requests.patch(url, json={}, timeout=timeout)
         # Aceitar vários códigos de status possíveis
-        assert response.status_code in (200, 201, 400, 401, 403, 404, 422, 500), \
-            f"PATCH /api/companies/<int:company_id>/process-instances/<int:instance_id> retornou status inesperado: {response.status_code}"
+        assert response.status_code in (
+            200,
+            201,
+            400,
+            401,
+            403,
+            404,
+            422,
+            500,
+        ), f"PATCH /api/companies/<int:company_id>/process-instances/<int:instance_id> retornou status inesperado: {response.status_code}"
     except requests.exceptions.RequestException as e:
-        pytest.fail(f"Erro na requisição PATCH /api/companies/<int:company_id>/process-instances/<int:instance_id>: {e}")
+        pytest.fail(
+            f"Erro na requisição PATCH /api/companies/<int:company_id>/process-instances/<int:instance_id>: {e}"
+        )
 
 
 """
@@ -2092,18 +2866,26 @@ import pytest
 import requests
 from testsprite_tests.conftest import BASE_URL, TIMEOUT, authenticated_session
 
+
 def test_api_get_unified_activities(base_url, timeout):
     """Testa a rota /api/companies/<int:company_id>/unified-activities"""
     url = f"{base_url}/api/companies/<int:company_id>/unified-activities"
-    
+
     # Test GET request
     try:
         response = requests.get(url, timeout=timeout)
         # Aceitar 200, 302 (redirect), 401 (não autenticado), 403 (sem permissão), 404 (não encontrado)
-        assert response.status_code in (200, 302, 401, 403, 404), \
-            f"GET /api/companies/<int:company_id>/unified-activities retornou status inesperado: {response.status_code}"
+        assert response.status_code in (
+            200,
+            302,
+            401,
+            403,
+            404,
+        ), f"GET /api/companies/<int:company_id>/unified-activities retornou status inesperado: {response.status_code}"
     except requests.exceptions.RequestException as e:
-        pytest.fail(f"Erro na requisição GET /api/companies/<int:company_id>/unified-activities: {e}")
+        pytest.fail(
+            f"Erro na requisição GET /api/companies/<int:company_id>/unified-activities: {e}"
+        )
 
 
 """
@@ -2116,28 +2898,46 @@ import pytest
 import requests
 from testsprite_tests.conftest import BASE_URL, TIMEOUT, authenticated_session
 
+
 def test_api_company_occurrences(base_url, timeout):
     """Testa a rota /api/companies/<int:company_id>/occurrences"""
     url = f"{base_url}/api/companies/<int:company_id>/occurrences"
-    
+
     # Test GET request
     try:
         response = requests.get(url, timeout=timeout)
         # Aceitar 200, 302 (redirect), 401 (não autenticado), 403 (sem permissão), 404 (não encontrado)
-        assert response.status_code in (200, 302, 401, 403, 404), \
-            f"GET /api/companies/<int:company_id>/occurrences retornou status inesperado: {response.status_code}"
+        assert response.status_code in (
+            200,
+            302,
+            401,
+            403,
+            404,
+        ), f"GET /api/companies/<int:company_id>/occurrences retornou status inesperado: {response.status_code}"
     except requests.exceptions.RequestException as e:
-        pytest.fail(f"Erro na requisição GET /api/companies/<int:company_id>/occurrences: {e}")
+        pytest.fail(
+            f"Erro na requisição GET /api/companies/<int:company_id>/occurrences: {e}"
+        )
 
     # Test POST request
     try:
         # Tentar com payload vazio primeiro
         response = requests.post(url, json={}, timeout=timeout)
         # Aceitar vários códigos de status possíveis
-        assert response.status_code in (200, 201, 400, 401, 403, 404, 422, 500), \
-            f"POST /api/companies/<int:company_id>/occurrences retornou status inesperado: {response.status_code}"
+        assert response.status_code in (
+            200,
+            201,
+            400,
+            401,
+            403,
+            404,
+            422,
+            500,
+        ), f"POST /api/companies/<int:company_id>/occurrences retornou status inesperado: {response.status_code}"
     except requests.exceptions.RequestException as e:
-        pytest.fail(f"Erro na requisição POST /api/companies/<int:company_id>/occurrences: {e}")
+        pytest.fail(
+            f"Erro na requisição POST /api/companies/<int:company_id>/occurrences: {e}"
+        )
 
 
 """
@@ -2150,28 +2950,48 @@ import pytest
 import requests
 from testsprite_tests.conftest import BASE_URL, TIMEOUT, authenticated_session
 
+
 def test_api_company_occurrence(base_url, timeout):
     """Testa a rota /api/companies/<int:company_id>/occurrences/<int:occurrence_id>"""
     url = f"{base_url}/api/companies/<int:company_id>/occurrences/<int:occurrence_id>"
-    
+
     # Test DELETE request
     try:
         response = requests.delete(url, timeout=timeout)
         # Aceitar vários códigos de status possíveis
-        assert response.status_code in (200, 204, 400, 401, 403, 404, 500), \
-            f"DELETE /api/companies/<int:company_id>/occurrences/<int:occurrence_id> retornou status inesperado: {response.status_code}"
+        assert response.status_code in (
+            200,
+            204,
+            400,
+            401,
+            403,
+            404,
+            500,
+        ), f"DELETE /api/companies/<int:company_id>/occurrences/<int:occurrence_id> retornou status inesperado: {response.status_code}"
     except requests.exceptions.RequestException as e:
-        pytest.fail(f"Erro na requisição DELETE /api/companies/<int:company_id>/occurrences/<int:occurrence_id>: {e}")
+        pytest.fail(
+            f"Erro na requisição DELETE /api/companies/<int:company_id>/occurrences/<int:occurrence_id>: {e}"
+        )
 
     # Test PUT request
     try:
         # Tentar com payload vazio primeiro
         response = requests.put(url, json={}, timeout=timeout)
         # Aceitar vários códigos de status possíveis
-        assert response.status_code in (200, 201, 400, 401, 403, 404, 422, 500), \
-            f"PUT /api/companies/<int:company_id>/occurrences/<int:occurrence_id> retornou status inesperado: {response.status_code}"
+        assert response.status_code in (
+            200,
+            201,
+            400,
+            401,
+            403,
+            404,
+            422,
+            500,
+        ), f"PUT /api/companies/<int:company_id>/occurrences/<int:occurrence_id> retornou status inesperado: {response.status_code}"
     except requests.exceptions.RequestException as e:
-        pytest.fail(f"Erro na requisição PUT /api/companies/<int:company_id>/occurrences/<int:occurrence_id>: {e}")
+        pytest.fail(
+            f"Erro na requisição PUT /api/companies/<int:company_id>/occurrences/<int:occurrence_id>: {e}"
+        )
 
 
 """
@@ -2184,18 +3004,26 @@ import pytest
 import requests
 from testsprite_tests.conftest import BASE_URL, TIMEOUT, authenticated_session
 
+
 def test_api_company_efficiency_collaborators(base_url, timeout):
     """Testa a rota /api/companies/<int:company_id>/efficiency/collaborators"""
     url = f"{base_url}/api/companies/<int:company_id>/efficiency/collaborators"
-    
+
     # Test GET request
     try:
         response = requests.get(url, timeout=timeout)
         # Aceitar 200, 302 (redirect), 401 (não autenticado), 403 (sem permissão), 404 (não encontrado)
-        assert response.status_code in (200, 302, 401, 403, 404), \
-            f"GET /api/companies/<int:company_id>/efficiency/collaborators retornou status inesperado: {response.status_code}"
+        assert response.status_code in (
+            200,
+            302,
+            401,
+            403,
+            404,
+        ), f"GET /api/companies/<int:company_id>/efficiency/collaborators retornou status inesperado: {response.status_code}"
     except requests.exceptions.RequestException as e:
-        pytest.fail(f"Erro na requisição GET /api/companies/<int:company_id>/efficiency/collaborators: {e}")
+        pytest.fail(
+            f"Erro na requisição GET /api/companies/<int:company_id>/efficiency/collaborators: {e}"
+        )
 
 
 """
@@ -2208,18 +3036,26 @@ import pytest
 import requests
 from testsprite_tests.conftest import BASE_URL, TIMEOUT, authenticated_session
 
+
 def test_api_generate_process_report(base_url, timeout):
     """Testa a rota /api/companies/<int:company_id>/processes/<int:process_id>/report"""
     url = f"{base_url}/api/companies/<int:company_id>/processes/<int:process_id>/report"
-    
+
     # Test GET request
     try:
         response = requests.get(url, timeout=timeout)
         # Aceitar 200, 302 (redirect), 401 (não autenticado), 403 (sem permissão), 404 (não encontrado)
-        assert response.status_code in (200, 302, 401, 403, 404), \
-            f"GET /api/companies/<int:company_id>/processes/<int:process_id>/report retornou status inesperado: {response.status_code}"
+        assert response.status_code in (
+            200,
+            302,
+            401,
+            403,
+            404,
+        ), f"GET /api/companies/<int:company_id>/processes/<int:process_id>/report retornou status inesperado: {response.status_code}"
     except requests.exceptions.RequestException as e:
-        pytest.fail(f"Erro na requisição GET /api/companies/<int:company_id>/processes/<int:process_id>/report: {e}")
+        pytest.fail(
+            f"Erro na requisição GET /api/companies/<int:company_id>/processes/<int:process_id>/report: {e}"
+        )
 
 
 """
@@ -2232,16 +3068,22 @@ import pytest
 import requests
 from testsprite_tests.conftest import BASE_URL, TIMEOUT, authenticated_session
 
+
 def test___routes(base_url, timeout):
     """Testa a rota /__routes"""
     url = f"{base_url}/__routes"
-    
+
     # Test GET request
     try:
         response = requests.get(url, timeout=timeout)
         # Aceitar 200, 302 (redirect), 401 (não autenticado), 403 (sem permissão), 404 (não encontrado)
-        assert response.status_code in (200, 302, 401, 403, 404), \
-            f"GET /__routes retornou status inesperado: {response.status_code}"
+        assert response.status_code in (
+            200,
+            302,
+            401,
+            403,
+            404,
+        ), f"GET /__routes retornou status inesperado: {response.status_code}"
     except requests.exceptions.RequestException as e:
         pytest.fail(f"Erro na requisição GET /__routes: {e}")
 
@@ -2256,18 +3098,26 @@ import pytest
 import requests
 from testsprite_tests.conftest import BASE_URL, TIMEOUT, authenticated_session
 
+
 def test_api_get_routines(base_url, timeout):
     """Testa a rota /api/companies/<int:company_id>/routines"""
     url = f"{base_url}/api/companies/<int:company_id>/routines"
-    
+
     # Test GET request
     try:
         response = requests.get(url, timeout=timeout)
         # Aceitar 200, 302 (redirect), 401 (não autenticado), 403 (sem permissão), 404 (não encontrado)
-        assert response.status_code in (200, 302, 401, 403, 404), \
-            f"GET /api/companies/<int:company_id>/routines retornou status inesperado: {response.status_code}"
+        assert response.status_code in (
+            200,
+            302,
+            401,
+            403,
+            404,
+        ), f"GET /api/companies/<int:company_id>/routines retornou status inesperado: {response.status_code}"
     except requests.exceptions.RequestException as e:
-        pytest.fail(f"Erro na requisição GET /api/companies/<int:company_id>/routines: {e}")
+        pytest.fail(
+            f"Erro na requisição GET /api/companies/<int:company_id>/routines: {e}"
+        )
 
 
 """
@@ -2280,19 +3130,30 @@ import pytest
 import requests
 from testsprite_tests.conftest import BASE_URL, TIMEOUT, authenticated_session
 
+
 def test_api_create_routine(base_url, timeout):
     """Testa a rota /api/companies/<int:company_id>/routines"""
     url = f"{base_url}/api/companies/<int:company_id>/routines"
-    
+
     # Test POST request
     try:
         # Tentar com payload vazio primeiro
         response = requests.post(url, json={}, timeout=timeout)
         # Aceitar vários códigos de status possíveis
-        assert response.status_code in (200, 201, 400, 401, 403, 404, 422, 500), \
-            f"POST /api/companies/<int:company_id>/routines retornou status inesperado: {response.status_code}"
+        assert response.status_code in (
+            200,
+            201,
+            400,
+            401,
+            403,
+            404,
+            422,
+            500,
+        ), f"POST /api/companies/<int:company_id>/routines retornou status inesperado: {response.status_code}"
     except requests.exceptions.RequestException as e:
-        pytest.fail(f"Erro na requisição POST /api/companies/<int:company_id>/routines: {e}")
+        pytest.fail(
+            f"Erro na requisição POST /api/companies/<int:company_id>/routines: {e}"
+        )
 
 
 """
@@ -2305,16 +3166,22 @@ import pytest
 import requests
 from testsprite_tests.conftest import BASE_URL, TIMEOUT, authenticated_session
 
+
 def test_api_get_routine(base_url, timeout):
     """Testa a rota /api/routines/<int:routine_id>"""
     url = f"{base_url}/api/routines/<int:routine_id>"
-    
+
     # Test GET request
     try:
         response = requests.get(url, timeout=timeout)
         # Aceitar 200, 302 (redirect), 401 (não autenticado), 403 (sem permissão), 404 (não encontrado)
-        assert response.status_code in (200, 302, 401, 403, 404), \
-            f"GET /api/routines/<int:routine_id> retornou status inesperado: {response.status_code}"
+        assert response.status_code in (
+            200,
+            302,
+            401,
+            403,
+            404,
+        ), f"GET /api/routines/<int:routine_id> retornou status inesperado: {response.status_code}"
     except requests.exceptions.RequestException as e:
         pytest.fail(f"Erro na requisição GET /api/routines/<int:routine_id>: {e}")
 
@@ -2329,17 +3196,26 @@ import pytest
 import requests
 from testsprite_tests.conftest import BASE_URL, TIMEOUT, authenticated_session
 
+
 def test_api_update_routine(base_url, timeout):
     """Testa a rota /api/routines/<int:routine_id>"""
     url = f"{base_url}/api/routines/<int:routine_id>"
-    
+
     # Test PUT request
     try:
         # Tentar com payload vazio primeiro
         response = requests.put(url, json={}, timeout=timeout)
         # Aceitar vários códigos de status possíveis
-        assert response.status_code in (200, 201, 400, 401, 403, 404, 422, 500), \
-            f"PUT /api/routines/<int:routine_id> retornou status inesperado: {response.status_code}"
+        assert response.status_code in (
+            200,
+            201,
+            400,
+            401,
+            403,
+            404,
+            422,
+            500,
+        ), f"PUT /api/routines/<int:routine_id> retornou status inesperado: {response.status_code}"
     except requests.exceptions.RequestException as e:
         pytest.fail(f"Erro na requisição PUT /api/routines/<int:routine_id>: {e}")
 
@@ -2354,16 +3230,24 @@ import pytest
 import requests
 from testsprite_tests.conftest import BASE_URL, TIMEOUT, authenticated_session
 
+
 def test_api_delete_routine(base_url, timeout):
     """Testa a rota /api/routines/<int:routine_id>"""
     url = f"{base_url}/api/routines/<int:routine_id>"
-    
+
     # Test DELETE request
     try:
         response = requests.delete(url, timeout=timeout)
         # Aceitar vários códigos de status possíveis
-        assert response.status_code in (200, 204, 400, 401, 403, 404, 500), \
-            f"DELETE /api/routines/<int:routine_id> retornou status inesperado: {response.status_code}"
+        assert response.status_code in (
+            200,
+            204,
+            400,
+            401,
+            403,
+            404,
+            500,
+        ), f"DELETE /api/routines/<int:routine_id> retornou status inesperado: {response.status_code}"
     except requests.exceptions.RequestException as e:
         pytest.fail(f"Erro na requisição DELETE /api/routines/<int:routine_id>: {e}")
 
@@ -2378,18 +3262,26 @@ import pytest
 import requests
 from testsprite_tests.conftest import BASE_URL, TIMEOUT, authenticated_session
 
+
 def test_api_get_routine_triggers(base_url, timeout):
     """Testa a rota /api/routines/<int:routine_id>/triggers"""
     url = f"{base_url}/api/routines/<int:routine_id>/triggers"
-    
+
     # Test GET request
     try:
         response = requests.get(url, timeout=timeout)
         # Aceitar 200, 302 (redirect), 401 (não autenticado), 403 (sem permissão), 404 (não encontrado)
-        assert response.status_code in (200, 302, 401, 403, 404), \
-            f"GET /api/routines/<int:routine_id>/triggers retornou status inesperado: {response.status_code}"
+        assert response.status_code in (
+            200,
+            302,
+            401,
+            403,
+            404,
+        ), f"GET /api/routines/<int:routine_id>/triggers retornou status inesperado: {response.status_code}"
     except requests.exceptions.RequestException as e:
-        pytest.fail(f"Erro na requisição GET /api/routines/<int:routine_id>/triggers: {e}")
+        pytest.fail(
+            f"Erro na requisição GET /api/routines/<int:routine_id>/triggers: {e}"
+        )
 
 
 """
@@ -2402,19 +3294,30 @@ import pytest
 import requests
 from testsprite_tests.conftest import BASE_URL, TIMEOUT, authenticated_session
 
+
 def test_api_create_routine_trigger(base_url, timeout):
     """Testa a rota /api/routines/<int:routine_id>/triggers"""
     url = f"{base_url}/api/routines/<int:routine_id>/triggers"
-    
+
     # Test POST request
     try:
         # Tentar com payload vazio primeiro
         response = requests.post(url, json={}, timeout=timeout)
         # Aceitar vários códigos de status possíveis
-        assert response.status_code in (200, 201, 400, 401, 403, 404, 422, 500), \
-            f"POST /api/routines/<int:routine_id>/triggers retornou status inesperado: {response.status_code}"
+        assert response.status_code in (
+            200,
+            201,
+            400,
+            401,
+            403,
+            404,
+            422,
+            500,
+        ), f"POST /api/routines/<int:routine_id>/triggers retornou status inesperado: {response.status_code}"
     except requests.exceptions.RequestException as e:
-        pytest.fail(f"Erro na requisição POST /api/routines/<int:routine_id>/triggers: {e}")
+        pytest.fail(
+            f"Erro na requisição POST /api/routines/<int:routine_id>/triggers: {e}"
+        )
 
 
 """
@@ -2427,17 +3330,26 @@ import pytest
 import requests
 from testsprite_tests.conftest import BASE_URL, TIMEOUT, authenticated_session
 
+
 def test_api_update_routine_trigger(base_url, timeout):
     """Testa a rota /api/triggers/<int:trigger_id>"""
     url = f"{base_url}/api/triggers/<int:trigger_id>"
-    
+
     # Test PUT request
     try:
         # Tentar com payload vazio primeiro
         response = requests.put(url, json={}, timeout=timeout)
         # Aceitar vários códigos de status possíveis
-        assert response.status_code in (200, 201, 400, 401, 403, 404, 422, 500), \
-            f"PUT /api/triggers/<int:trigger_id> retornou status inesperado: {response.status_code}"
+        assert response.status_code in (
+            200,
+            201,
+            400,
+            401,
+            403,
+            404,
+            422,
+            500,
+        ), f"PUT /api/triggers/<int:trigger_id> retornou status inesperado: {response.status_code}"
     except requests.exceptions.RequestException as e:
         pytest.fail(f"Erro na requisição PUT /api/triggers/<int:trigger_id>: {e}")
 
@@ -2452,16 +3364,24 @@ import pytest
 import requests
 from testsprite_tests.conftest import BASE_URL, TIMEOUT, authenticated_session
 
+
 def test_api_delete_routine_trigger(base_url, timeout):
     """Testa a rota /api/triggers/<int:trigger_id>"""
     url = f"{base_url}/api/triggers/<int:trigger_id>"
-    
+
     # Test DELETE request
     try:
         response = requests.delete(url, timeout=timeout)
         # Aceitar vários códigos de status possíveis
-        assert response.status_code in (200, 204, 400, 401, 403, 404, 500), \
-            f"DELETE /api/triggers/<int:trigger_id> retornou status inesperado: {response.status_code}"
+        assert response.status_code in (
+            200,
+            204,
+            400,
+            401,
+            403,
+            404,
+            500,
+        ), f"DELETE /api/triggers/<int:trigger_id> retornou status inesperado: {response.status_code}"
     except requests.exceptions.RequestException as e:
         pytest.fail(f"Erro na requisição DELETE /api/triggers/<int:trigger_id>: {e}")
 
@@ -2476,18 +3396,26 @@ import pytest
 import requests
 from testsprite_tests.conftest import BASE_URL, TIMEOUT, authenticated_session
 
+
 def test_api_get_routine_tasks(base_url, timeout):
     """Testa a rota /api/companies/<int:company_id>/routine-tasks"""
     url = f"{base_url}/api/companies/<int:company_id>/routine-tasks"
-    
+
     # Test GET request
     try:
         response = requests.get(url, timeout=timeout)
         # Aceitar 200, 302 (redirect), 401 (não autenticado), 403 (sem permissão), 404 (não encontrado)
-        assert response.status_code in (200, 302, 401, 403, 404), \
-            f"GET /api/companies/<int:company_id>/routine-tasks retornou status inesperado: {response.status_code}"
+        assert response.status_code in (
+            200,
+            302,
+            401,
+            403,
+            404,
+        ), f"GET /api/companies/<int:company_id>/routine-tasks retornou status inesperado: {response.status_code}"
     except requests.exceptions.RequestException as e:
-        pytest.fail(f"Erro na requisição GET /api/companies/<int:company_id>/routine-tasks: {e}")
+        pytest.fail(
+            f"Erro na requisição GET /api/companies/<int:company_id>/routine-tasks: {e}"
+        )
 
 
 """
@@ -2500,18 +3428,26 @@ import pytest
 import requests
 from testsprite_tests.conftest import BASE_URL, TIMEOUT, authenticated_session
 
+
 def test_api_get_overdue_tasks(base_url, timeout):
     """Testa a rota /api/companies/<int:company_id>/routine-tasks/overdue"""
     url = f"{base_url}/api/companies/<int:company_id>/routine-tasks/overdue"
-    
+
     # Test GET request
     try:
         response = requests.get(url, timeout=timeout)
         # Aceitar 200, 302 (redirect), 401 (não autenticado), 403 (sem permissão), 404 (não encontrado)
-        assert response.status_code in (200, 302, 401, 403, 404), \
-            f"GET /api/companies/<int:company_id>/routine-tasks/overdue retornou status inesperado: {response.status_code}"
+        assert response.status_code in (
+            200,
+            302,
+            401,
+            403,
+            404,
+        ), f"GET /api/companies/<int:company_id>/routine-tasks/overdue retornou status inesperado: {response.status_code}"
     except requests.exceptions.RequestException as e:
-        pytest.fail(f"Erro na requisição GET /api/companies/<int:company_id>/routine-tasks/overdue: {e}")
+        pytest.fail(
+            f"Erro na requisição GET /api/companies/<int:company_id>/routine-tasks/overdue: {e}"
+        )
 
 
 """
@@ -2524,18 +3460,26 @@ import pytest
 import requests
 from testsprite_tests.conftest import BASE_URL, TIMEOUT, authenticated_session
 
+
 def test_api_get_upcoming_tasks(base_url, timeout):
     """Testa a rota /api/companies/<int:company_id>/routine-tasks/upcoming"""
     url = f"{base_url}/api/companies/<int:company_id>/routine-tasks/upcoming"
-    
+
     # Test GET request
     try:
         response = requests.get(url, timeout=timeout)
         # Aceitar 200, 302 (redirect), 401 (não autenticado), 403 (sem permissão), 404 (não encontrado)
-        assert response.status_code in (200, 302, 401, 403, 404), \
-            f"GET /api/companies/<int:company_id>/routine-tasks/upcoming retornou status inesperado: {response.status_code}"
+        assert response.status_code in (
+            200,
+            302,
+            401,
+            403,
+            404,
+        ), f"GET /api/companies/<int:company_id>/routine-tasks/upcoming retornou status inesperado: {response.status_code}"
     except requests.exceptions.RequestException as e:
-        pytest.fail(f"Erro na requisição GET /api/companies/<int:company_id>/routine-tasks/upcoming: {e}")
+        pytest.fail(
+            f"Erro na requisição GET /api/companies/<int:company_id>/routine-tasks/upcoming: {e}"
+        )
 
 
 """
@@ -2548,19 +3492,30 @@ import pytest
 import requests
 from testsprite_tests.conftest import BASE_URL, TIMEOUT, authenticated_session
 
+
 def test_api_update_task_status(base_url, timeout):
     """Testa a rota /api/routine-tasks/<int:task_id>/status"""
     url = f"{base_url}/api/routine-tasks/<int:task_id>/status"
-    
+
     # Test PUT request
     try:
         # Tentar com payload vazio primeiro
         response = requests.put(url, json={}, timeout=timeout)
         # Aceitar vários códigos de status possíveis
-        assert response.status_code in (200, 201, 400, 401, 403, 404, 422, 500), \
-            f"PUT /api/routine-tasks/<int:task_id>/status retornou status inesperado: {response.status_code}"
+        assert response.status_code in (
+            200,
+            201,
+            400,
+            401,
+            403,
+            404,
+            422,
+            500,
+        ), f"PUT /api/routine-tasks/<int:task_id>/status retornou status inesperado: {response.status_code}"
     except requests.exceptions.RequestException as e:
-        pytest.fail(f"Erro na requisição PUT /api/routine-tasks/<int:task_id>/status: {e}")
+        pytest.fail(
+            f"Erro na requisição PUT /api/routine-tasks/<int:task_id>/status: {e}"
+        )
 
 
 """
@@ -2573,16 +3528,22 @@ import pytest
 import requests
 from testsprite_tests.conftest import BASE_URL, TIMEOUT, authenticated_session
 
+
 def test_routines_management(base_url, timeout):
     """Testa a rota /companies/<int:company_id>/routines"""
     url = f"{base_url}/companies/<int:company_id>/routines"
-    
+
     # Test GET request
     try:
         response = requests.get(url, timeout=timeout)
         # Aceitar 200, 302 (redirect), 401 (não autenticado), 403 (sem permissão), 404 (não encontrado)
-        assert response.status_code in (200, 302, 401, 403, 404), \
-            f"GET /companies/<int:company_id>/routines retornou status inesperado: {response.status_code}"
+        assert response.status_code in (
+            200,
+            302,
+            401,
+            403,
+            404,
+        ), f"GET /companies/<int:company_id>/routines retornou status inesperado: {response.status_code}"
     except requests.exceptions.RequestException as e:
         pytest.fail(f"Erro na requisição GET /companies/<int:company_id>/routines: {e}")
 
@@ -2597,18 +3558,26 @@ import pytest
 import requests
 from testsprite_tests.conftest import BASE_URL, TIMEOUT, authenticated_session
 
+
 def test_routine_details(base_url, timeout):
     """Testa a rota /companies/<int:company_id>/routines/<routine_id>"""
     url = f"{base_url}/companies/<int:company_id>/routines/<routine_id>"
-    
+
     # Test GET request
     try:
         response = requests.get(url, timeout=timeout)
         # Aceitar 200, 302 (redirect), 401 (não autenticado), 403 (sem permissão), 404 (não encontrado)
-        assert response.status_code in (200, 302, 401, 403, 404), \
-            f"GET /companies/<int:company_id>/routines/<routine_id> retornou status inesperado: {response.status_code}"
+        assert response.status_code in (
+            200,
+            302,
+            401,
+            403,
+            404,
+        ), f"GET /companies/<int:company_id>/routines/<routine_id> retornou status inesperado: {response.status_code}"
     except requests.exceptions.RequestException as e:
-        pytest.fail(f"Erro na requisição GET /companies/<int:company_id>/routines/<routine_id>: {e}")
+        pytest.fail(
+            f"Erro na requisição GET /companies/<int:company_id>/routines/<routine_id>: {e}"
+        )
 
 
 """
@@ -2621,18 +3590,26 @@ import pytest
 import requests
 from testsprite_tests.conftest import BASE_URL, TIMEOUT, authenticated_session
 
+
 def test_api_get_process_routines(base_url, timeout):
     """Testa a rota /api/companies/<int:company_id>/process-routines"""
     url = f"{base_url}/api/companies/<int:company_id>/process-routines"
-    
+
     # Test GET request
     try:
         response = requests.get(url, timeout=timeout)
         # Aceitar 200, 302 (redirect), 401 (não autenticado), 403 (sem permissão), 404 (não encontrado)
-        assert response.status_code in (200, 302, 401, 403, 404), \
-            f"GET /api/companies/<int:company_id>/process-routines retornou status inesperado: {response.status_code}"
+        assert response.status_code in (
+            200,
+            302,
+            401,
+            403,
+            404,
+        ), f"GET /api/companies/<int:company_id>/process-routines retornou status inesperado: {response.status_code}"
     except requests.exceptions.RequestException as e:
-        pytest.fail(f"Erro na requisição GET /api/companies/<int:company_id>/process-routines: {e}")
+        pytest.fail(
+            f"Erro na requisição GET /api/companies/<int:company_id>/process-routines: {e}"
+        )
 
 
 """
@@ -2645,19 +3622,30 @@ import pytest
 import requests
 from testsprite_tests.conftest import BASE_URL, TIMEOUT, authenticated_session
 
+
 def test_api_create_process_routine(base_url, timeout):
     """Testa a rota /api/companies/<int:company_id>/process-routines"""
     url = f"{base_url}/api/companies/<int:company_id>/process-routines"
-    
+
     # Test POST request
     try:
         # Tentar com payload vazio primeiro
         response = requests.post(url, json={}, timeout=timeout)
         # Aceitar vários códigos de status possíveis
-        assert response.status_code in (200, 201, 400, 401, 403, 404, 422, 500), \
-            f"POST /api/companies/<int:company_id>/process-routines retornou status inesperado: {response.status_code}"
+        assert response.status_code in (
+            200,
+            201,
+            400,
+            401,
+            403,
+            404,
+            422,
+            500,
+        ), f"POST /api/companies/<int:company_id>/process-routines retornou status inesperado: {response.status_code}"
     except requests.exceptions.RequestException as e:
-        pytest.fail(f"Erro na requisição POST /api/companies/<int:company_id>/process-routines: {e}")
+        pytest.fail(
+            f"Erro na requisição POST /api/companies/<int:company_id>/process-routines: {e}"
+        )
 
 
 """
@@ -2670,18 +3658,28 @@ import pytest
 import requests
 from testsprite_tests.conftest import BASE_URL, TIMEOUT, authenticated_session
 
+
 def test_api_delete_process_routine(base_url, timeout):
     """Testa a rota /api/companies/<int:company_id>/process-routines/<int:routine_id>"""
     url = f"{base_url}/api/companies/<int:company_id>/process-routines/<int:routine_id>"
-    
+
     # Test DELETE request
     try:
         response = requests.delete(url, timeout=timeout)
         # Aceitar vários códigos de status possíveis
-        assert response.status_code in (200, 204, 400, 401, 403, 404, 500), \
-            f"DELETE /api/companies/<int:company_id>/process-routines/<int:routine_id> retornou status inesperado: {response.status_code}"
+        assert response.status_code in (
+            200,
+            204,
+            400,
+            401,
+            403,
+            404,
+            500,
+        ), f"DELETE /api/companies/<int:company_id>/process-routines/<int:routine_id> retornou status inesperado: {response.status_code}"
     except requests.exceptions.RequestException as e:
-        pytest.fail(f"Erro na requisição DELETE /api/companies/<int:company_id>/process-routines/<int:routine_id>: {e}")
+        pytest.fail(
+            f"Erro na requisição DELETE /api/companies/<int:company_id>/process-routines/<int:routine_id>: {e}"
+        )
 
 
 """
@@ -2694,19 +3692,30 @@ import pytest
 import requests
 from testsprite_tests.conftest import BASE_URL, TIMEOUT, authenticated_session
 
+
 def test_api_update_process_routine(base_url, timeout):
     """Testa a rota /api/companies/<int:company_id>/process-routines/<int:routine_id>"""
     url = f"{base_url}/api/companies/<int:company_id>/process-routines/<int:routine_id>"
-    
+
     # Test PUT request
     try:
         # Tentar com payload vazio primeiro
         response = requests.put(url, json={}, timeout=timeout)
         # Aceitar vários códigos de status possíveis
-        assert response.status_code in (200, 201, 400, 401, 403, 404, 422, 500), \
-            f"PUT /api/companies/<int:company_id>/process-routines/<int:routine_id> retornou status inesperado: {response.status_code}"
+        assert response.status_code in (
+            200,
+            201,
+            400,
+            401,
+            403,
+            404,
+            422,
+            500,
+        ), f"PUT /api/companies/<int:company_id>/process-routines/<int:routine_id> retornou status inesperado: {response.status_code}"
     except requests.exceptions.RequestException as e:
-        pytest.fail(f"Erro na requisição PUT /api/companies/<int:company_id>/process-routines/<int:routine_id>: {e}")
+        pytest.fail(
+            f"Erro na requisição PUT /api/companies/<int:company_id>/process-routines/<int:routine_id>: {e}"
+        )
 
 
 """
@@ -2719,18 +3728,26 @@ import pytest
 import requests
 from testsprite_tests.conftest import BASE_URL, TIMEOUT, authenticated_session
 
+
 def test_api_get_process_routines_with_collaborators(base_url, timeout):
     """Testa a rota /api/processes/<int:process_id>/routines-with-collaborators"""
     url = f"{base_url}/api/processes/<int:process_id>/routines-with-collaborators"
-    
+
     # Test GET request
     try:
         response = requests.get(url, timeout=timeout)
         # Aceitar 200, 302 (redirect), 401 (não autenticado), 403 (sem permissão), 404 (não encontrado)
-        assert response.status_code in (200, 302, 401, 403, 404), \
-            f"GET /api/processes/<int:process_id>/routines-with-collaborators retornou status inesperado: {response.status_code}"
+        assert response.status_code in (
+            200,
+            302,
+            401,
+            403,
+            404,
+        ), f"GET /api/processes/<int:process_id>/routines-with-collaborators retornou status inesperado: {response.status_code}"
     except requests.exceptions.RequestException as e:
-        pytest.fail(f"Erro na requisição GET /api/processes/<int:process_id>/routines-with-collaborators: {e}")
+        pytest.fail(
+            f"Erro na requisição GET /api/processes/<int:process_id>/routines-with-collaborators: {e}"
+        )
 
 
 """
@@ -2743,18 +3760,26 @@ import pytest
 import requests
 from testsprite_tests.conftest import BASE_URL, TIMEOUT, authenticated_session
 
+
 def test_api_get_routine_collaborators(base_url, timeout):
     """Testa a rota /api/routines/<int:routine_id>/collaborators"""
     url = f"{base_url}/api/routines/<int:routine_id>/collaborators"
-    
+
     # Test GET request
     try:
         response = requests.get(url, timeout=timeout)
         # Aceitar 200, 302 (redirect), 401 (não autenticado), 403 (sem permissão), 404 (não encontrado)
-        assert response.status_code in (200, 302, 401, 403, 404), \
-            f"GET /api/routines/<int:routine_id>/collaborators retornou status inesperado: {response.status_code}"
+        assert response.status_code in (
+            200,
+            302,
+            401,
+            403,
+            404,
+        ), f"GET /api/routines/<int:routine_id>/collaborators retornou status inesperado: {response.status_code}"
     except requests.exceptions.RequestException as e:
-        pytest.fail(f"Erro na requisição GET /api/routines/<int:routine_id>/collaborators: {e}")
+        pytest.fail(
+            f"Erro na requisição GET /api/routines/<int:routine_id>/collaborators: {e}"
+        )
 
 
 """
@@ -2767,19 +3792,30 @@ import pytest
 import requests
 from testsprite_tests.conftest import BASE_URL, TIMEOUT, authenticated_session
 
+
 def test_api_add_routine_collaborator(base_url, timeout):
     """Testa a rota /api/routines/<int:routine_id>/collaborators"""
     url = f"{base_url}/api/routines/<int:routine_id>/collaborators"
-    
+
     # Test POST request
     try:
         # Tentar com payload vazio primeiro
         response = requests.post(url, json={}, timeout=timeout)
         # Aceitar vários códigos de status possíveis
-        assert response.status_code in (200, 201, 400, 401, 403, 404, 422, 500), \
-            f"POST /api/routines/<int:routine_id>/collaborators retornou status inesperado: {response.status_code}"
+        assert response.status_code in (
+            200,
+            201,
+            400,
+            401,
+            403,
+            404,
+            422,
+            500,
+        ), f"POST /api/routines/<int:routine_id>/collaborators retornou status inesperado: {response.status_code}"
     except requests.exceptions.RequestException as e:
-        pytest.fail(f"Erro na requisição POST /api/routines/<int:routine_id>/collaborators: {e}")
+        pytest.fail(
+            f"Erro na requisição POST /api/routines/<int:routine_id>/collaborators: {e}"
+        )
 
 
 """
@@ -2792,19 +3828,32 @@ import pytest
 import requests
 from testsprite_tests.conftest import BASE_URL, TIMEOUT, authenticated_session
 
+
 def test_api_update_routine_collaborator(base_url, timeout):
     """Testa a rota /api/routines/<int:routine_id>/collaborators/<int:collaborator_id>"""
-    url = f"{base_url}/api/routines/<int:routine_id>/collaborators/<int:collaborator_id>"
-    
+    url = (
+        f"{base_url}/api/routines/<int:routine_id>/collaborators/<int:collaborator_id>"
+    )
+
     # Test PUT request
     try:
         # Tentar com payload vazio primeiro
         response = requests.put(url, json={}, timeout=timeout)
         # Aceitar vários códigos de status possíveis
-        assert response.status_code in (200, 201, 400, 401, 403, 404, 422, 500), \
-            f"PUT /api/routines/<int:routine_id>/collaborators/<int:collaborator_id> retornou status inesperado: {response.status_code}"
+        assert response.status_code in (
+            200,
+            201,
+            400,
+            401,
+            403,
+            404,
+            422,
+            500,
+        ), f"PUT /api/routines/<int:routine_id>/collaborators/<int:collaborator_id> retornou status inesperado: {response.status_code}"
     except requests.exceptions.RequestException as e:
-        pytest.fail(f"Erro na requisição PUT /api/routines/<int:routine_id>/collaborators/<int:collaborator_id>: {e}")
+        pytest.fail(
+            f"Erro na requisição PUT /api/routines/<int:routine_id>/collaborators/<int:collaborator_id>: {e}"
+        )
 
 
 """
@@ -2817,18 +3866,30 @@ import pytest
 import requests
 from testsprite_tests.conftest import BASE_URL, TIMEOUT, authenticated_session
 
+
 def test_api_delete_routine_collaborator(base_url, timeout):
     """Testa a rota /api/routines/<int:routine_id>/collaborators/<int:collaborator_id>"""
-    url = f"{base_url}/api/routines/<int:routine_id>/collaborators/<int:collaborator_id>"
-    
+    url = (
+        f"{base_url}/api/routines/<int:routine_id>/collaborators/<int:collaborator_id>"
+    )
+
     # Test DELETE request
     try:
         response = requests.delete(url, timeout=timeout)
         # Aceitar vários códigos de status possíveis
-        assert response.status_code in (200, 204, 400, 401, 403, 404, 500), \
-            f"DELETE /api/routines/<int:routine_id>/collaborators/<int:collaborator_id> retornou status inesperado: {response.status_code}"
+        assert response.status_code in (
+            200,
+            204,
+            400,
+            401,
+            403,
+            404,
+            500,
+        ), f"DELETE /api/routines/<int:routine_id>/collaborators/<int:collaborator_id> retornou status inesperado: {response.status_code}"
     except requests.exceptions.RequestException as e:
-        pytest.fail(f"Erro na requisição DELETE /api/routines/<int:routine_id>/collaborators/<int:collaborator_id>: {e}")
+        pytest.fail(
+            f"Erro na requisição DELETE /api/routines/<int:routine_id>/collaborators/<int:collaborator_id>: {e}"
+        )
 
 
 """
@@ -2841,18 +3902,26 @@ import pytest
 import requests
 from testsprite_tests.conftest import BASE_URL, TIMEOUT, authenticated_session
 
+
 def test_routine_tasks_page(base_url, timeout):
     """Testa a rota /companies/<int:company_id>/routine-tasks"""
     url = f"{base_url}/companies/<int:company_id>/routine-tasks"
-    
+
     # Test GET request
     try:
         response = requests.get(url, timeout=timeout)
         # Aceitar 200, 302 (redirect), 401 (não autenticado), 403 (sem permissão), 404 (não encontrado)
-        assert response.status_code in (200, 302, 401, 403, 404), \
-            f"GET /companies/<int:company_id>/routine-tasks retornou status inesperado: {response.status_code}"
+        assert response.status_code in (
+            200,
+            302,
+            401,
+            403,
+            404,
+        ), f"GET /companies/<int:company_id>/routine-tasks retornou status inesperado: {response.status_code}"
     except requests.exceptions.RequestException as e:
-        pytest.fail(f"Erro na requisição GET /companies/<int:company_id>/routine-tasks: {e}")
+        pytest.fail(
+            f"Erro na requisição GET /companies/<int:company_id>/routine-tasks: {e}"
+        )
 
 
 """
@@ -2865,16 +3934,22 @@ import pytest
 import requests
 from testsprite_tests.conftest import BASE_URL, TIMEOUT, authenticated_session
 
+
 def test_routines_modal(base_url, timeout):
     """Testa a rota /test-routines-modal"""
     url = f"{base_url}/test-routines-modal"
-    
+
     # Test GET request
     try:
         response = requests.get(url, timeout=timeout)
         # Aceitar 200, 302 (redirect), 401 (não autenticado), 403 (sem permissão), 404 (não encontrado)
-        assert response.status_code in (200, 302, 401, 403, 404), \
-            f"GET /test-routines-modal retornou status inesperado: {response.status_code}"
+        assert response.status_code in (
+            200,
+            302,
+            401,
+            403,
+            404,
+        ), f"GET /test-routines-modal retornou status inesperado: {response.status_code}"
     except requests.exceptions.RequestException as e:
         pytest.fail(f"Erro na requisição GET /test-routines-modal: {e}")
 
@@ -2889,16 +3964,22 @@ import pytest
 import requests
 from testsprite_tests.conftest import BASE_URL, TIMEOUT, authenticated_session
 
+
 def test_plan_dashboard(base_url, timeout):
     """Testa a rota /plans/<plan_id>"""
     url = f"{base_url}/plans/<plan_id>"
-    
+
     # Test GET request
     try:
         response = requests.get(url, timeout=timeout)
         # Aceitar 200, 302 (redirect), 401 (não autenticado), 403 (sem permissão), 404 (não encontrado)
-        assert response.status_code in (200, 302, 401, 403, 404), \
-            f"GET /plans/<plan_id> retornou status inesperado: {response.status_code}"
+        assert response.status_code in (
+            200,
+            302,
+            401,
+            403,
+            404,
+        ), f"GET /plans/<plan_id> retornou status inesperado: {response.status_code}"
     except requests.exceptions.RequestException as e:
         pytest.fail(f"Erro na requisição GET /plans/<plan_id>: {e}")
 
@@ -2913,16 +3994,22 @@ import pytest
 import requests
 from testsprite_tests.conftest import BASE_URL, TIMEOUT, authenticated_session
 
+
 def test_plan_company(base_url, timeout):
     """Testa a rota /plans/<plan_id>/company"""
     url = f"{base_url}/plans/<plan_id>/company"
-    
+
     # Test GET request
     try:
         response = requests.get(url, timeout=timeout)
         # Aceitar 200, 302 (redirect), 401 (não autenticado), 403 (sem permissão), 404 (não encontrado)
-        assert response.status_code in (200, 302, 401, 403, 404), \
-            f"GET /plans/<plan_id>/company retornou status inesperado: {response.status_code}"
+        assert response.status_code in (
+            200,
+            302,
+            401,
+            403,
+            404,
+        ), f"GET /plans/<plan_id>/company retornou status inesperado: {response.status_code}"
     except requests.exceptions.RequestException as e:
         pytest.fail(f"Erro na requisição GET /plans/<plan_id>/company: {e}")
 
@@ -2937,16 +4024,22 @@ import pytest
 import requests
 from testsprite_tests.conftest import BASE_URL, TIMEOUT, authenticated_session
 
+
 def test_plan_participants(base_url, timeout):
     """Testa a rota /plans/<plan_id>/participants"""
     url = f"{base_url}/plans/<plan_id>/participants"
-    
+
     # Test GET request
     try:
         response = requests.get(url, timeout=timeout)
         # Aceitar 200, 302 (redirect), 401 (não autenticado), 403 (sem permissão), 404 (não encontrado)
-        assert response.status_code in (200, 302, 401, 403, 404), \
-            f"GET /plans/<plan_id>/participants retornou status inesperado: {response.status_code}"
+        assert response.status_code in (
+            200,
+            302,
+            401,
+            403,
+            404,
+        ), f"GET /plans/<plan_id>/participants retornou status inesperado: {response.status_code}"
     except requests.exceptions.RequestException as e:
         pytest.fail(f"Erro na requisição GET /plans/<plan_id>/participants: {e}")
 
@@ -2961,19 +4054,30 @@ import pytest
 import requests
 from testsprite_tests.conftest import BASE_URL, TIMEOUT, authenticated_session
 
+
 def test_toggle_participant(base_url, timeout):
     """Testa a rota /plans/<plan_id>/participants/toggle/<int:employee_id>"""
     url = f"{base_url}/plans/<plan_id>/participants/toggle/<int:employee_id>"
-    
+
     # Test POST request
     try:
         # Tentar com payload vazio primeiro
         response = requests.post(url, json={}, timeout=timeout)
         # Aceitar vários códigos de status possíveis
-        assert response.status_code in (200, 201, 400, 401, 403, 404, 422, 500), \
-            f"POST /plans/<plan_id>/participants/toggle/<int:employee_id> retornou status inesperado: {response.status_code}"
+        assert response.status_code in (
+            200,
+            201,
+            400,
+            401,
+            403,
+            404,
+            422,
+            500,
+        ), f"POST /plans/<plan_id>/participants/toggle/<int:employee_id> retornou status inesperado: {response.status_code}"
     except requests.exceptions.RequestException as e:
-        pytest.fail(f"Erro na requisição POST /plans/<plan_id>/participants/toggle/<int:employee_id>: {e}")
+        pytest.fail(
+            f"Erro na requisição POST /plans/<plan_id>/participants/toggle/<int:employee_id>: {e}"
+        )
 
 
 """
@@ -2986,16 +4090,22 @@ import pytest
 import requests
 from testsprite_tests.conftest import BASE_URL, TIMEOUT, authenticated_session
 
+
 def test_plan_drivers(base_url, timeout):
     """Testa a rota /plans/<plan_id>/drivers"""
     url = f"{base_url}/plans/<plan_id>/drivers"
-    
+
     # Test GET request
     try:
         response = requests.get(url, timeout=timeout)
         # Aceitar 200, 302 (redirect), 401 (não autenticado), 403 (sem permissão), 404 (não encontrado)
-        assert response.status_code in (200, 302, 401, 403, 404), \
-            f"GET /plans/<plan_id>/drivers retornou status inesperado: {response.status_code}"
+        assert response.status_code in (
+            200,
+            302,
+            401,
+            403,
+            404,
+        ), f"GET /plans/<plan_id>/drivers retornou status inesperado: {response.status_code}"
     except requests.exceptions.RequestException as e:
         pytest.fail(f"Erro na requisição GET /plans/<plan_id>/drivers: {e}")
 
@@ -3010,16 +4120,22 @@ import pytest
 import requests
 from testsprite_tests.conftest import BASE_URL, TIMEOUT, authenticated_session
 
+
 def test_plan_okr_global(base_url, timeout):
     """Testa a rota /plans/<plan_id>/okr-global"""
     url = f"{base_url}/plans/<plan_id>/okr-global"
-    
+
     # Test GET request
     try:
         response = requests.get(url, timeout=timeout)
         # Aceitar 200, 302 (redirect), 401 (não autenticado), 403 (sem permissão), 404 (não encontrado)
-        assert response.status_code in (200, 302, 401, 403, 404), \
-            f"GET /plans/<plan_id>/okr-global retornou status inesperado: {response.status_code}"
+        assert response.status_code in (
+            200,
+            302,
+            401,
+            403,
+            404,
+        ), f"GET /plans/<plan_id>/okr-global retornou status inesperado: {response.status_code}"
     except requests.exceptions.RequestException as e:
         pytest.fail(f"Erro na requisição GET /plans/<plan_id>/okr-global: {e}")
 
@@ -3034,16 +4150,22 @@ import pytest
 import requests
 from testsprite_tests.conftest import BASE_URL, TIMEOUT, authenticated_session
 
+
 def test_plan_okr_area(base_url, timeout):
     """Testa a rota /plans/<plan_id>/okr-area"""
     url = f"{base_url}/plans/<plan_id>/okr-area"
-    
+
     # Test GET request
     try:
         response = requests.get(url, timeout=timeout)
         # Aceitar 200, 302 (redirect), 401 (não autenticado), 403 (sem permissão), 404 (não encontrado)
-        assert response.status_code in (200, 302, 401, 403, 404), \
-            f"GET /plans/<plan_id>/okr-area retornou status inesperado: {response.status_code}"
+        assert response.status_code in (
+            200,
+            302,
+            401,
+            403,
+            404,
+        ), f"GET /plans/<plan_id>/okr-area retornou status inesperado: {response.status_code}"
     except requests.exceptions.RequestException as e:
         pytest.fail(f"Erro na requisição GET /plans/<plan_id>/okr-area: {e}")
 
@@ -3058,16 +4180,22 @@ import pytest
 import requests
 from testsprite_tests.conftest import BASE_URL, TIMEOUT, authenticated_session
 
+
 def test_plan_projects(base_url, timeout):
     """Testa a rota /plans/<plan_id>/projects"""
     url = f"{base_url}/plans/<plan_id>/projects"
-    
+
     # Test GET request
     try:
         response = requests.get(url, timeout=timeout)
         # Aceitar 200, 302 (redirect), 401 (não autenticado), 403 (sem permissão), 404 (não encontrado)
-        assert response.status_code in (200, 302, 401, 403, 404), \
-            f"GET /plans/<plan_id>/projects retornou status inesperado: {response.status_code}"
+        assert response.status_code in (
+            200,
+            302,
+            401,
+            403,
+            404,
+        ), f"GET /plans/<plan_id>/projects retornou status inesperado: {response.status_code}"
     except requests.exceptions.RequestException as e:
         pytest.fail(f"Erro na requisição GET /plans/<plan_id>/projects: {e}")
 
@@ -3082,17 +4210,26 @@ import pytest
 import requests
 from testsprite_tests.conftest import BASE_URL, TIMEOUT, authenticated_session
 
+
 def test_create_project(base_url, timeout):
     """Testa a rota /plans/<plan_id>/projects"""
     url = f"{base_url}/plans/<plan_id>/projects"
-    
+
     # Test POST request
     try:
         # Tentar com payload vazio primeiro
         response = requests.post(url, json={}, timeout=timeout)
         # Aceitar vários códigos de status possíveis
-        assert response.status_code in (200, 201, 400, 401, 403, 404, 422, 500), \
-            f"POST /plans/<plan_id>/projects retornou status inesperado: {response.status_code}"
+        assert response.status_code in (
+            200,
+            201,
+            400,
+            401,
+            403,
+            404,
+            422,
+            500,
+        ), f"POST /plans/<plan_id>/projects retornou status inesperado: {response.status_code}"
     except requests.exceptions.RequestException as e:
         pytest.fail(f"Erro na requisição POST /plans/<plan_id>/projects: {e}")
 
@@ -3107,19 +4244,30 @@ import pytest
 import requests
 from testsprite_tests.conftest import BASE_URL, TIMEOUT, authenticated_session
 
+
 def test_update_project_route(base_url, timeout):
     """Testa a rota /plans/<plan_id>/projects/<int:project_id>"""
     url = f"{base_url}/plans/<plan_id>/projects/<int:project_id>"
-    
+
     # Test POST request
     try:
         # Tentar com payload vazio primeiro
         response = requests.post(url, json={}, timeout=timeout)
         # Aceitar vários códigos de status possíveis
-        assert response.status_code in (200, 201, 400, 401, 403, 404, 422, 500), \
-            f"POST /plans/<plan_id>/projects/<int:project_id> retornou status inesperado: {response.status_code}"
+        assert response.status_code in (
+            200,
+            201,
+            400,
+            401,
+            403,
+            404,
+            422,
+            500,
+        ), f"POST /plans/<plan_id>/projects/<int:project_id> retornou status inesperado: {response.status_code}"
     except requests.exceptions.RequestException as e:
-        pytest.fail(f"Erro na requisição POST /plans/<plan_id>/projects/<int:project_id>: {e}")
+        pytest.fail(
+            f"Erro na requisição POST /plans/<plan_id>/projects/<int:project_id>: {e}"
+        )
 
 
 """
@@ -3132,17 +4280,26 @@ import pytest
 import requests
 from testsprite_tests.conftest import BASE_URL, TIMEOUT, authenticated_session
 
+
 def test_save_projects_analysis(base_url, timeout):
     """Testa a rota /plans/<plan_id>/projects/analysis"""
     url = f"{base_url}/plans/<plan_id>/projects/analysis"
-    
+
     # Test POST request
     try:
         # Tentar com payload vazio primeiro
         response = requests.post(url, json={}, timeout=timeout)
         # Aceitar vários códigos de status possíveis
-        assert response.status_code in (200, 201, 400, 401, 403, 404, 422, 500), \
-            f"POST /plans/<plan_id>/projects/analysis retornou status inesperado: {response.status_code}"
+        assert response.status_code in (
+            200,
+            201,
+            400,
+            401,
+            403,
+            404,
+            422,
+            500,
+        ), f"POST /plans/<plan_id>/projects/analysis retornou status inesperado: {response.status_code}"
     except requests.exceptions.RequestException as e:
         pytest.fail(f"Erro na requisição POST /plans/<plan_id>/projects/analysis: {e}")
 
@@ -3157,18 +4314,26 @@ import pytest
 import requests
 from testsprite_tests.conftest import BASE_URL, TIMEOUT, authenticated_session
 
+
 def test_edit_project(base_url, timeout):
     """Testa a rota /plans/<plan_id>/projects/<int:project_id>/edit"""
     url = f"{base_url}/plans/<plan_id>/projects/<int:project_id>/edit"
-    
+
     # Test GET request
     try:
         response = requests.get(url, timeout=timeout)
         # Aceitar 200, 302 (redirect), 401 (não autenticado), 403 (sem permissão), 404 (não encontrado)
-        assert response.status_code in (200, 302, 401, 403, 404), \
-            f"GET /plans/<plan_id>/projects/<int:project_id>/edit retornou status inesperado: {response.status_code}"
+        assert response.status_code in (
+            200,
+            302,
+            401,
+            403,
+            404,
+        ), f"GET /plans/<plan_id>/projects/<int:project_id>/edit retornou status inesperado: {response.status_code}"
     except requests.exceptions.RequestException as e:
-        pytest.fail(f"Erro na requisição GET /plans/<plan_id>/projects/<int:project_id>/edit: {e}")
+        pytest.fail(
+            f"Erro na requisição GET /plans/<plan_id>/projects/<int:project_id>/edit: {e}"
+        )
 
 
 """
@@ -3181,19 +4346,30 @@ import pytest
 import requests
 from testsprite_tests.conftest import BASE_URL, TIMEOUT, authenticated_session
 
+
 def test_delete_project(base_url, timeout):
     """Testa a rota /plans/<plan_id>/projects/<int:project_id>/delete"""
     url = f"{base_url}/plans/<plan_id>/projects/<int:project_id>/delete"
-    
+
     # Test POST request
     try:
         # Tentar com payload vazio primeiro
         response = requests.post(url, json={}, timeout=timeout)
         # Aceitar vários códigos de status possíveis
-        assert response.status_code in (200, 201, 400, 401, 403, 404, 422, 500), \
-            f"POST /plans/<plan_id>/projects/<int:project_id>/delete retornou status inesperado: {response.status_code}"
+        assert response.status_code in (
+            200,
+            201,
+            400,
+            401,
+            403,
+            404,
+            422,
+            500,
+        ), f"POST /plans/<plan_id>/projects/<int:project_id>/delete retornou status inesperado: {response.status_code}"
     except requests.exceptions.RequestException as e:
-        pytest.fail(f"Erro na requisição POST /plans/<plan_id>/projects/<int:project_id>/delete: {e}")
+        pytest.fail(
+            f"Erro na requisição POST /plans/<plan_id>/projects/<int:project_id>/delete: {e}"
+        )
 
 
 """
@@ -3206,16 +4382,22 @@ import pytest
 import requests
 from testsprite_tests.conftest import BASE_URL, TIMEOUT, authenticated_session
 
+
 def test_plan_reports(base_url, timeout):
     """Testa a rota /plans/<plan_id>/reports"""
     url = f"{base_url}/plans/<plan_id>/reports"
-    
+
     # Test GET request
     try:
         response = requests.get(url, timeout=timeout)
         # Aceitar 200, 302 (redirect), 401 (não autenticado), 403 (sem permissão), 404 (não encontrado)
-        assert response.status_code in (200, 302, 401, 403, 404), \
-            f"GET /plans/<plan_id>/reports retornou status inesperado: {response.status_code}"
+        assert response.status_code in (
+            200,
+            302,
+            401,
+            403,
+            404,
+        ), f"GET /plans/<plan_id>/reports retornou status inesperado: {response.status_code}"
     except requests.exceptions.RequestException as e:
         pytest.fail(f"Erro na requisição GET /plans/<plan_id>/reports: {e}")
 
@@ -3230,18 +4412,26 @@ import pytest
 import requests
 from testsprite_tests.conftest import BASE_URL, TIMEOUT, authenticated_session
 
+
 def test_plan_reports_pdf(base_url, timeout):
     """Testa a rota /plans/<plan_id>/reports/pdf/<variant>"""
     url = f"{base_url}/plans/<plan_id>/reports/pdf/<variant>"
-    
+
     # Test GET request
     try:
         response = requests.get(url, timeout=timeout)
         # Aceitar 200, 302 (redirect), 401 (não autenticado), 403 (sem permissão), 404 (não encontrado)
-        assert response.status_code in (200, 302, 401, 403, 404), \
-            f"GET /plans/<plan_id>/reports/pdf/<variant> retornou status inesperado: {response.status_code}"
+        assert response.status_code in (
+            200,
+            302,
+            401,
+            403,
+            404,
+        ), f"GET /plans/<plan_id>/reports/pdf/<variant> retornou status inesperado: {response.status_code}"
     except requests.exceptions.RequestException as e:
-        pytest.fail(f"Erro na requisição GET /plans/<plan_id>/reports/pdf/<variant>: {e}")
+        pytest.fail(
+            f"Erro na requisição GET /plans/<plan_id>/reports/pdf/<variant>: {e}"
+        )
 
 
 """
@@ -3254,16 +4444,22 @@ import pytest
 import requests
 from testsprite_tests.conftest import BASE_URL, TIMEOUT, authenticated_session
 
+
 def test_generate_formal_report(base_url, timeout):
     """Testa a rota /plans/<plan_id>/reports/formal"""
     url = f"{base_url}/plans/<plan_id>/reports/formal"
-    
+
     # Test GET request
     try:
         response = requests.get(url, timeout=timeout)
         # Aceitar 200, 302 (redirect), 401 (não autenticado), 403 (sem permissão), 404 (não encontrado)
-        assert response.status_code in (200, 302, 401, 403, 404), \
-            f"GET /plans/<plan_id>/reports/formal retornou status inesperado: {response.status_code}"
+        assert response.status_code in (
+            200,
+            302,
+            401,
+            403,
+            404,
+        ), f"GET /plans/<plan_id>/reports/formal retornou status inesperado: {response.status_code}"
     except requests.exceptions.RequestException as e:
         pytest.fail(f"Erro na requisição GET /plans/<plan_id>/reports/formal: {e}")
 
@@ -3278,16 +4474,22 @@ import pytest
 import requests
 from testsprite_tests.conftest import BASE_URL, TIMEOUT, authenticated_session
 
+
 def test_generate_presentation_slides(base_url, timeout):
     """Testa a rota /plans/<plan_id>/reports/slides"""
     url = f"{base_url}/plans/<plan_id>/reports/slides"
-    
+
     # Test GET request
     try:
         response = requests.get(url, timeout=timeout)
         # Aceitar 200, 302 (redirect), 401 (não autenticado), 403 (sem permissão), 404 (não encontrado)
-        assert response.status_code in (200, 302, 401, 403, 404), \
-            f"GET /plans/<plan_id>/reports/slides retornou status inesperado: {response.status_code}"
+        assert response.status_code in (
+            200,
+            302,
+            401,
+            403,
+            404,
+        ), f"GET /plans/<plan_id>/reports/slides retornou status inesperado: {response.status_code}"
     except requests.exceptions.RequestException as e:
         pytest.fail(f"Erro na requisição GET /plans/<plan_id>/reports/slides: {e}")
 
@@ -3302,16 +4504,22 @@ import pytest
 import requests
 from testsprite_tests.conftest import BASE_URL, TIMEOUT, authenticated_session
 
+
 def test_serve_uploaded_file(base_url, timeout):
     """Testa a rota /uploads/<path:filename>"""
     url = f"{base_url}/uploads/<path:filename>"
-    
+
     # Test GET request
     try:
         response = requests.get(url, timeout=timeout)
         # Aceitar 200, 302 (redirect), 401 (não autenticado), 403 (sem permissão), 404 (não encontrado)
-        assert response.status_code in (200, 302, 401, 403, 404), \
-            f"GET /uploads/<path:filename> retornou status inesperado: {response.status_code}"
+        assert response.status_code in (
+            200,
+            302,
+            401,
+            403,
+            404,
+        ), f"GET /uploads/<path:filename> retornou status inesperado: {response.status_code}"
     except requests.exceptions.RequestException as e:
         pytest.fail(f"Erro na requisição GET /uploads/<path:filename>: {e}")
 
@@ -3326,19 +4534,30 @@ import pytest
 import requests
 from testsprite_tests.conftest import BASE_URL, TIMEOUT, authenticated_session
 
+
 def test_delete_company_file(base_url, timeout):
     """Testa a rota /plans/<plan_id>/company/delete-file"""
     url = f"{base_url}/plans/<plan_id>/company/delete-file"
-    
+
     # Test POST request
     try:
         # Tentar com payload vazio primeiro
         response = requests.post(url, json={}, timeout=timeout)
         # Aceitar vários códigos de status possíveis
-        assert response.status_code in (200, 201, 400, 401, 403, 404, 422, 500), \
-            f"POST /plans/<plan_id>/company/delete-file retornou status inesperado: {response.status_code}"
+        assert response.status_code in (
+            200,
+            201,
+            400,
+            401,
+            403,
+            404,
+            422,
+            500,
+        ), f"POST /plans/<plan_id>/company/delete-file retornou status inesperado: {response.status_code}"
     except requests.exceptions.RequestException as e:
-        pytest.fail(f"Erro na requisição POST /plans/<plan_id>/company/delete-file: {e}")
+        pytest.fail(
+            f"Erro na requisição POST /plans/<plan_id>/company/delete-file: {e}"
+        )
 
 
 """
@@ -3351,17 +4570,26 @@ import pytest
 import requests
 from testsprite_tests.conftest import BASE_URL, TIMEOUT, authenticated_session
 
+
 def test_update_company_data(base_url, timeout):
     """Testa a rota /plans/<plan_id>/company"""
     url = f"{base_url}/plans/<plan_id>/company"
-    
+
     # Test POST request
     try:
         # Tentar com payload vazio primeiro
         response = requests.post(url, json={}, timeout=timeout)
         # Aceitar vários códigos de status possíveis
-        assert response.status_code in (200, 201, 400, 401, 403, 404, 422, 500), \
-            f"POST /plans/<plan_id>/company retornou status inesperado: {response.status_code}"
+        assert response.status_code in (
+            200,
+            201,
+            400,
+            401,
+            403,
+            404,
+            422,
+            500,
+        ), f"POST /plans/<plan_id>/company retornou status inesperado: {response.status_code}"
     except requests.exceptions.RequestException as e:
         pytest.fail(f"Erro na requisição POST /plans/<plan_id>/company: {e}")
 
@@ -3376,19 +4604,30 @@ import pytest
 import requests
 from testsprite_tests.conftest import BASE_URL, TIMEOUT, authenticated_session
 
+
 def test_update_company_analyses(base_url, timeout):
     """Testa a rota /plans/<plan_id>/company/update-analyses"""
     url = f"{base_url}/plans/<plan_id>/company/update-analyses"
-    
+
     # Test POST request
     try:
         # Tentar com payload vazio primeiro
         response = requests.post(url, json={}, timeout=timeout)
         # Aceitar vários códigos de status possíveis
-        assert response.status_code in (200, 201, 400, 401, 403, 404, 422, 500), \
-            f"POST /plans/<plan_id>/company/update-analyses retornou status inesperado: {response.status_code}"
+        assert response.status_code in (
+            200,
+            201,
+            400,
+            401,
+            403,
+            404,
+            422,
+            500,
+        ), f"POST /plans/<plan_id>/company/update-analyses retornou status inesperado: {response.status_code}"
     except requests.exceptions.RequestException as e:
-        pytest.fail(f"Erro na requisição POST /plans/<plan_id>/company/update-analyses: {e}")
+        pytest.fail(
+            f"Erro na requisição POST /plans/<plan_id>/company/update-analyses: {e}"
+        )
 
 
 """
@@ -3401,19 +4640,30 @@ import pytest
 import requests
 from testsprite_tests.conftest import BASE_URL, TIMEOUT, authenticated_session
 
+
 def test_generate_company_ai_insights(base_url, timeout):
     """Testa a rota /plans/<plan_id>/company/generate-ai-insights"""
     url = f"{base_url}/plans/<plan_id>/company/generate-ai-insights"
-    
+
     # Test POST request
     try:
         # Tentar com payload vazio primeiro
         response = requests.post(url, json={}, timeout=timeout)
         # Aceitar vários códigos de status possíveis
-        assert response.status_code in (200, 201, 400, 401, 403, 404, 422, 500), \
-            f"POST /plans/<plan_id>/company/generate-ai-insights retornou status inesperado: {response.status_code}"
+        assert response.status_code in (
+            200,
+            201,
+            400,
+            401,
+            403,
+            404,
+            422,
+            500,
+        ), f"POST /plans/<plan_id>/company/generate-ai-insights retornou status inesperado: {response.status_code}"
     except requests.exceptions.RequestException as e:
-        pytest.fail(f"Erro na requisição POST /plans/<plan_id>/company/generate-ai-insights: {e}")
+        pytest.fail(
+            f"Erro na requisição POST /plans/<plan_id>/company/generate-ai-insights: {e}"
+        )
 
 
 """
@@ -3426,19 +4676,30 @@ import pytest
 import requests
 from testsprite_tests.conftest import BASE_URL, TIMEOUT, authenticated_session
 
+
 def test_update_company_section_status(base_url, timeout):
     """Testa a rota /plans/<plan_id>/sections/company/status"""
     url = f"{base_url}/plans/<plan_id>/sections/company/status"
-    
+
     # Test POST request
     try:
         # Tentar com payload vazio primeiro
         response = requests.post(url, json={}, timeout=timeout)
         # Aceitar vários códigos de status possíveis
-        assert response.status_code in (200, 201, 400, 401, 403, 404, 422, 500), \
-            f"POST /plans/<plan_id>/sections/company/status retornou status inesperado: {response.status_code}"
+        assert response.status_code in (
+            200,
+            201,
+            400,
+            401,
+            403,
+            404,
+            422,
+            500,
+        ), f"POST /plans/<plan_id>/sections/company/status retornou status inesperado: {response.status_code}"
     except requests.exceptions.RequestException as e:
-        pytest.fail(f"Erro na requisição POST /plans/<plan_id>/sections/company/status: {e}")
+        pytest.fail(
+            f"Erro na requisição POST /plans/<plan_id>/sections/company/status: {e}"
+        )
 
 
 """
@@ -3451,17 +4712,26 @@ import pytest
 import requests
 from testsprite_tests.conftest import BASE_URL, TIMEOUT, authenticated_session
 
+
 def test_add_participant(base_url, timeout):
     """Testa a rota /plans/<plan_id>/participants"""
     url = f"{base_url}/plans/<plan_id>/participants"
-    
+
     # Test POST request
     try:
         # Tentar com payload vazio primeiro
         response = requests.post(url, json={}, timeout=timeout)
         # Aceitar vários códigos de status possíveis
-        assert response.status_code in (200, 201, 400, 401, 403, 404, 422, 500), \
-            f"POST /plans/<plan_id>/participants retornou status inesperado: {response.status_code}"
+        assert response.status_code in (
+            200,
+            201,
+            400,
+            401,
+            403,
+            404,
+            422,
+            500,
+        ), f"POST /plans/<plan_id>/participants retornou status inesperado: {response.status_code}"
     except requests.exceptions.RequestException as e:
         pytest.fail(f"Erro na requisição POST /plans/<plan_id>/participants: {e}")
 
@@ -3476,18 +4746,26 @@ import pytest
 import requests
 from testsprite_tests.conftest import BASE_URL, TIMEOUT, authenticated_session
 
+
 def test_get_participant(base_url, timeout):
     """Testa a rota /plans/<plan_id>/participants/<participant_id>"""
     url = f"{base_url}/plans/<plan_id>/participants/<participant_id>"
-    
+
     # Test GET request
     try:
         response = requests.get(url, timeout=timeout)
         # Aceitar 200, 302 (redirect), 401 (não autenticado), 403 (sem permissão), 404 (não encontrado)
-        assert response.status_code in (200, 302, 401, 403, 404), \
-            f"GET /plans/<plan_id>/participants/<participant_id> retornou status inesperado: {response.status_code}"
+        assert response.status_code in (
+            200,
+            302,
+            401,
+            403,
+            404,
+        ), f"GET /plans/<plan_id>/participants/<participant_id> retornou status inesperado: {response.status_code}"
     except requests.exceptions.RequestException as e:
-        pytest.fail(f"Erro na requisição GET /plans/<plan_id>/participants/<participant_id>: {e}")
+        pytest.fail(
+            f"Erro na requisição GET /plans/<plan_id>/participants/<participant_id>: {e}"
+        )
 
 
 """
@@ -3500,19 +4778,30 @@ import pytest
 import requests
 from testsprite_tests.conftest import BASE_URL, TIMEOUT, authenticated_session
 
+
 def test_update_participant(base_url, timeout):
     """Testa a rota /plans/<plan_id>/participants/<participant_id>"""
     url = f"{base_url}/plans/<plan_id>/participants/<participant_id>"
-    
+
     # Test PUT request
     try:
         # Tentar com payload vazio primeiro
         response = requests.put(url, json={}, timeout=timeout)
         # Aceitar vários códigos de status possíveis
-        assert response.status_code in (200, 201, 400, 401, 403, 404, 422, 500), \
-            f"PUT /plans/<plan_id>/participants/<participant_id> retornou status inesperado: {response.status_code}"
+        assert response.status_code in (
+            200,
+            201,
+            400,
+            401,
+            403,
+            404,
+            422,
+            500,
+        ), f"PUT /plans/<plan_id>/participants/<participant_id> retornou status inesperado: {response.status_code}"
     except requests.exceptions.RequestException as e:
-        pytest.fail(f"Erro na requisição PUT /plans/<plan_id>/participants/<participant_id>: {e}")
+        pytest.fail(
+            f"Erro na requisição PUT /plans/<plan_id>/participants/<participant_id>: {e}"
+        )
 
 
 """
@@ -3525,19 +4814,30 @@ import pytest
 import requests
 from testsprite_tests.conftest import BASE_URL, TIMEOUT, authenticated_session
 
+
 def test_update_participant_status(base_url, timeout):
     """Testa a rota /plans/<plan_id>/participants/<participant_id>/status"""
     url = f"{base_url}/plans/<plan_id>/participants/<participant_id>/status"
-    
+
     # Test POST request
     try:
         # Tentar com payload vazio primeiro
         response = requests.post(url, json={}, timeout=timeout)
         # Aceitar vários códigos de status possíveis
-        assert response.status_code in (200, 201, 400, 401, 403, 404, 422, 500), \
-            f"POST /plans/<plan_id>/participants/<participant_id>/status retornou status inesperado: {response.status_code}"
+        assert response.status_code in (
+            200,
+            201,
+            400,
+            401,
+            403,
+            404,
+            422,
+            500,
+        ), f"POST /plans/<plan_id>/participants/<participant_id>/status retornou status inesperado: {response.status_code}"
     except requests.exceptions.RequestException as e:
-        pytest.fail(f"Erro na requisição POST /plans/<plan_id>/participants/<participant_id>/status: {e}")
+        pytest.fail(
+            f"Erro na requisição POST /plans/<plan_id>/participants/<participant_id>/status: {e}"
+        )
 
 
 """
@@ -3550,16 +4850,22 @@ import pytest
 import requests
 from testsprite_tests.conftest import BASE_URL, TIMEOUT, authenticated_session
 
+
 def test_get_message_templates(base_url, timeout):
     """Testa a rota /plans/<plan_id>/messages"""
     url = f"{base_url}/plans/<plan_id>/messages"
-    
+
     # Test GET request
     try:
         response = requests.get(url, timeout=timeout)
         # Aceitar 200, 302 (redirect), 401 (não autenticado), 403 (sem permissão), 404 (não encontrado)
-        assert response.status_code in (200, 302, 401, 403, 404), \
-            f"GET /plans/<plan_id>/messages retornou status inesperado: {response.status_code}"
+        assert response.status_code in (
+            200,
+            302,
+            401,
+            403,
+            404,
+        ), f"GET /plans/<plan_id>/messages retornou status inesperado: {response.status_code}"
     except requests.exceptions.RequestException as e:
         pytest.fail(f"Erro na requisição GET /plans/<plan_id>/messages: {e}")
 
@@ -3574,18 +4880,26 @@ import pytest
 import requests
 from testsprite_tests.conftest import BASE_URL, TIMEOUT, authenticated_session
 
+
 def test_get_message_template(base_url, timeout):
     """Testa a rota /plans/<plan_id>/messages/<message_type>"""
     url = f"{base_url}/plans/<plan_id>/messages/<message_type>"
-    
+
     # Test GET request
     try:
         response = requests.get(url, timeout=timeout)
         # Aceitar 200, 302 (redirect), 401 (não autenticado), 403 (sem permissão), 404 (não encontrado)
-        assert response.status_code in (200, 302, 401, 403, 404), \
-            f"GET /plans/<plan_id>/messages/<message_type> retornou status inesperado: {response.status_code}"
+        assert response.status_code in (
+            200,
+            302,
+            401,
+            403,
+            404,
+        ), f"GET /plans/<plan_id>/messages/<message_type> retornou status inesperado: {response.status_code}"
     except requests.exceptions.RequestException as e:
-        pytest.fail(f"Erro na requisição GET /plans/<plan_id>/messages/<message_type>: {e}")
+        pytest.fail(
+            f"Erro na requisição GET /plans/<plan_id>/messages/<message_type>: {e}"
+        )
 
 
 """
@@ -3598,19 +4912,30 @@ import pytest
 import requests
 from testsprite_tests.conftest import BASE_URL, TIMEOUT, authenticated_session
 
+
 def test_save_message_template(base_url, timeout):
     """Testa a rota /plans/<plan_id>/messages/<message_type>"""
     url = f"{base_url}/plans/<plan_id>/messages/<message_type>"
-    
+
     # Test POST request
     try:
         # Tentar com payload vazio primeiro
         response = requests.post(url, json={}, timeout=timeout)
         # Aceitar vários códigos de status possíveis
-        assert response.status_code in (200, 201, 400, 401, 403, 404, 422, 500), \
-            f"POST /plans/<plan_id>/messages/<message_type> retornou status inesperado: {response.status_code}"
+        assert response.status_code in (
+            200,
+            201,
+            400,
+            401,
+            403,
+            404,
+            422,
+            500,
+        ), f"POST /plans/<plan_id>/messages/<message_type> retornou status inesperado: {response.status_code}"
     except requests.exceptions.RequestException as e:
-        pytest.fail(f"Erro na requisição POST /plans/<plan_id>/messages/<message_type>: {e}")
+        pytest.fail(
+            f"Erro na requisição POST /plans/<plan_id>/messages/<message_type>: {e}"
+        )
 
 
 """
@@ -3623,19 +4948,30 @@ import pytest
 import requests
 from testsprite_tests.conftest import BASE_URL, TIMEOUT, authenticated_session
 
+
 def test_send_participant_message(base_url, timeout):
     """Testa a rota /plans/<plan_id>/participants/<participant_id>/send-message"""
     url = f"{base_url}/plans/<plan_id>/participants/<participant_id>/send-message"
-    
+
     # Test POST request
     try:
         # Tentar com payload vazio primeiro
         response = requests.post(url, json={}, timeout=timeout)
         # Aceitar vários códigos de status possíveis
-        assert response.status_code in (200, 201, 400, 401, 403, 404, 422, 500), \
-            f"POST /plans/<plan_id>/participants/<participant_id>/send-message retornou status inesperado: {response.status_code}"
+        assert response.status_code in (
+            200,
+            201,
+            400,
+            401,
+            403,
+            404,
+            422,
+            500,
+        ), f"POST /plans/<plan_id>/participants/<participant_id>/send-message retornou status inesperado: {response.status_code}"
     except requests.exceptions.RequestException as e:
-        pytest.fail(f"Erro na requisição POST /plans/<plan_id>/participants/<participant_id>/send-message: {e}")
+        pytest.fail(
+            f"Erro na requisição POST /plans/<plan_id>/participants/<participant_id>/send-message: {e}"
+        )
 
 
 """
@@ -3648,18 +4984,28 @@ import pytest
 import requests
 from testsprite_tests.conftest import BASE_URL, TIMEOUT, authenticated_session
 
+
 def test_delete_participant(base_url, timeout):
     """Testa a rota /plans/<plan_id>/participants/<participant_id>"""
     url = f"{base_url}/plans/<plan_id>/participants/<participant_id>"
-    
+
     # Test DELETE request
     try:
         response = requests.delete(url, timeout=timeout)
         # Aceitar vários códigos de status possíveis
-        assert response.status_code in (200, 204, 400, 401, 403, 404, 500), \
-            f"DELETE /plans/<plan_id>/participants/<participant_id> retornou status inesperado: {response.status_code}"
+        assert response.status_code in (
+            200,
+            204,
+            400,
+            401,
+            403,
+            404,
+            500,
+        ), f"DELETE /plans/<plan_id>/participants/<participant_id> retornou status inesperado: {response.status_code}"
     except requests.exceptions.RequestException as e:
-        pytest.fail(f"Erro na requisição DELETE /plans/<plan_id>/participants/<participant_id>: {e}")
+        pytest.fail(
+            f"Erro na requisição DELETE /plans/<plan_id>/participants/<participant_id>: {e}"
+        )
 
 
 """
@@ -3672,17 +5018,26 @@ import pytest
 import requests
 from testsprite_tests.conftest import BASE_URL, TIMEOUT, authenticated_session
 
+
 def test_add_driver(base_url, timeout):
     """Testa a rota /plans/<plan_id>/drivers"""
     url = f"{base_url}/plans/<plan_id>/drivers"
-    
+
     # Test POST request
     try:
         # Tentar com payload vazio primeiro
         response = requests.post(url, json={}, timeout=timeout)
         # Aceitar vários códigos de status possíveis
-        assert response.status_code in (200, 201, 400, 401, 403, 404, 422, 500), \
-            f"POST /plans/<plan_id>/drivers retornou status inesperado: {response.status_code}"
+        assert response.status_code in (
+            200,
+            201,
+            400,
+            401,
+            403,
+            404,
+            422,
+            500,
+        ), f"POST /plans/<plan_id>/drivers retornou status inesperado: {response.status_code}"
     except requests.exceptions.RequestException as e:
         pytest.fail(f"Erro na requisição POST /plans/<plan_id>/drivers: {e}")
 
@@ -3697,17 +5052,26 @@ import pytest
 import requests
 from testsprite_tests.conftest import BASE_URL, TIMEOUT, authenticated_session
 
+
 def test_add_interview(base_url, timeout):
     """Testa a rota /plans/<plan_id>/interviews"""
     url = f"{base_url}/plans/<plan_id>/interviews"
-    
+
     # Test POST request
     try:
         # Tentar com payload vazio primeiro
         response = requests.post(url, json={}, timeout=timeout)
         # Aceitar vários códigos de status possíveis
-        assert response.status_code in (200, 201, 400, 401, 403, 404, 422, 500), \
-            f"POST /plans/<plan_id>/interviews retornou status inesperado: {response.status_code}"
+        assert response.status_code in (
+            200,
+            201,
+            400,
+            401,
+            403,
+            404,
+            422,
+            500,
+        ), f"POST /plans/<plan_id>/interviews retornou status inesperado: {response.status_code}"
     except requests.exceptions.RequestException as e:
         pytest.fail(f"Erro na requisição POST /plans/<plan_id>/interviews: {e}")
 
@@ -3722,19 +5086,30 @@ import pytest
 import requests
 from testsprite_tests.conftest import BASE_URL, TIMEOUT, authenticated_session
 
+
 def test_update_interview(base_url, timeout):
     """Testa a rota /plans/<plan_id>/interviews/<interview_id>"""
     url = f"{base_url}/plans/<plan_id>/interviews/<interview_id>"
-    
+
     # Test PUT request
     try:
         # Tentar com payload vazio primeiro
         response = requests.put(url, json={}, timeout=timeout)
         # Aceitar vários códigos de status possíveis
-        assert response.status_code in (200, 201, 400, 401, 403, 404, 422, 500), \
-            f"PUT /plans/<plan_id>/interviews/<interview_id> retornou status inesperado: {response.status_code}"
+        assert response.status_code in (
+            200,
+            201,
+            400,
+            401,
+            403,
+            404,
+            422,
+            500,
+        ), f"PUT /plans/<plan_id>/interviews/<interview_id> retornou status inesperado: {response.status_code}"
     except requests.exceptions.RequestException as e:
-        pytest.fail(f"Erro na requisição PUT /plans/<plan_id>/interviews/<interview_id>: {e}")
+        pytest.fail(
+            f"Erro na requisição PUT /plans/<plan_id>/interviews/<interview_id>: {e}"
+        )
 
 
 """
@@ -3747,18 +5122,28 @@ import pytest
 import requests
 from testsprite_tests.conftest import BASE_URL, TIMEOUT, authenticated_session
 
+
 def test_delete_interview(base_url, timeout):
     """Testa a rota /plans/<plan_id>/interviews/<interview_id>"""
     url = f"{base_url}/plans/<plan_id>/interviews/<interview_id>"
-    
+
     # Test DELETE request
     try:
         response = requests.delete(url, timeout=timeout)
         # Aceitar vários códigos de status possíveis
-        assert response.status_code in (200, 204, 400, 401, 403, 404, 500), \
-            f"DELETE /plans/<plan_id>/interviews/<interview_id> retornou status inesperado: {response.status_code}"
+        assert response.status_code in (
+            200,
+            204,
+            400,
+            401,
+            403,
+            404,
+            500,
+        ), f"DELETE /plans/<plan_id>/interviews/<interview_id> retornou status inesperado: {response.status_code}"
     except requests.exceptions.RequestException as e:
-        pytest.fail(f"Erro na requisição DELETE /plans/<plan_id>/interviews/<interview_id>: {e}")
+        pytest.fail(
+            f"Erro na requisição DELETE /plans/<plan_id>/interviews/<interview_id>: {e}"
+        )
 
 
 """
@@ -3771,18 +5156,26 @@ import pytest
 import requests
 from testsprite_tests.conftest import BASE_URL, TIMEOUT, authenticated_session
 
+
 def test_get_interview(base_url, timeout):
     """Testa a rota /plans/<plan_id>/interviews/<interview_id>"""
     url = f"{base_url}/plans/<plan_id>/interviews/<interview_id>"
-    
+
     # Test GET request
     try:
         response = requests.get(url, timeout=timeout)
         # Aceitar 200, 302 (redirect), 401 (não autenticado), 403 (sem permissão), 404 (não encontrado)
-        assert response.status_code in (200, 302, 401, 403, 404), \
-            f"GET /plans/<plan_id>/interviews/<interview_id> retornou status inesperado: {response.status_code}"
+        assert response.status_code in (
+            200,
+            302,
+            401,
+            403,
+            404,
+        ), f"GET /plans/<plan_id>/interviews/<interview_id> retornou status inesperado: {response.status_code}"
     except requests.exceptions.RequestException as e:
-        pytest.fail(f"Erro na requisição GET /plans/<plan_id>/interviews/<interview_id>: {e}")
+        pytest.fail(
+            f"Erro na requisição GET /plans/<plan_id>/interviews/<interview_id>: {e}"
+        )
 
 
 """
@@ -3795,19 +5188,30 @@ import pytest
 import requests
 from testsprite_tests.conftest import BASE_URL, TIMEOUT, authenticated_session
 
+
 def test_update_section_status(base_url, timeout):
     """Testa a rota /plans/<plan_id>/sections/<section_name>/status"""
     url = f"{base_url}/plans/<plan_id>/sections/<section_name>/status"
-    
+
     # Test POST request
     try:
         # Tentar com payload vazio primeiro
         response = requests.post(url, json={}, timeout=timeout)
         # Aceitar vários códigos de status possíveis
-        assert response.status_code in (200, 201, 400, 401, 403, 404, 422, 500), \
-            f"POST /plans/<plan_id>/sections/<section_name>/status retornou status inesperado: {response.status_code}"
+        assert response.status_code in (
+            200,
+            201,
+            400,
+            401,
+            403,
+            404,
+            422,
+            500,
+        ), f"POST /plans/<plan_id>/sections/<section_name>/status retornou status inesperado: {response.status_code}"
     except requests.exceptions.RequestException as e:
-        pytest.fail(f"Erro na requisição POST /plans/<plan_id>/sections/<section_name>/status: {e}")
+        pytest.fail(
+            f"Erro na requisição POST /plans/<plan_id>/sections/<section_name>/status: {e}"
+        )
 
 
 """
@@ -3820,18 +5224,26 @@ import pytest
 import requests
 from testsprite_tests.conftest import BASE_URL, TIMEOUT, authenticated_session
 
+
 def test_get_section_status(base_url, timeout):
     """Testa a rota /plans/<plan_id>/sections/<section_name>/status"""
     url = f"{base_url}/plans/<plan_id>/sections/<section_name>/status"
-    
+
     # Test GET request
     try:
         response = requests.get(url, timeout=timeout)
         # Aceitar 200, 302 (redirect), 401 (não autenticado), 403 (sem permissão), 404 (não encontrado)
-        assert response.status_code in (200, 302, 401, 403, 404), \
-            f"GET /plans/<plan_id>/sections/<section_name>/status retornou status inesperado: {response.status_code}"
+        assert response.status_code in (
+            200,
+            302,
+            401,
+            403,
+            404,
+        ), f"GET /plans/<plan_id>/sections/<section_name>/status retornou status inesperado: {response.status_code}"
     except requests.exceptions.RequestException as e:
-        pytest.fail(f"Erro na requisição GET /plans/<plan_id>/sections/<section_name>/status: {e}")
+        pytest.fail(
+            f"Erro na requisição GET /plans/<plan_id>/sections/<section_name>/status: {e}"
+        )
 
 
 """
@@ -3844,19 +5256,30 @@ import pytest
 import requests
 from testsprite_tests.conftest import BASE_URL, TIMEOUT, authenticated_session
 
+
 def test_save_alignment_consultant_notes(base_url, timeout):
     """Testa a rota /plans/<plan_id>/sections/alignment/consultant-notes"""
     url = f"{base_url}/plans/<plan_id>/sections/alignment/consultant-notes"
-    
+
     # Test POST request
     try:
         # Tentar com payload vazio primeiro
         response = requests.post(url, json={}, timeout=timeout)
         # Aceitar vários códigos de status possíveis
-        assert response.status_code in (200, 201, 400, 401, 403, 404, 422, 500), \
-            f"POST /plans/<plan_id>/sections/alignment/consultant-notes retornou status inesperado: {response.status_code}"
+        assert response.status_code in (
+            200,
+            201,
+            400,
+            401,
+            403,
+            404,
+            422,
+            500,
+        ), f"POST /plans/<plan_id>/sections/alignment/consultant-notes retornou status inesperado: {response.status_code}"
     except requests.exceptions.RequestException as e:
-        pytest.fail(f"Erro na requisição POST /plans/<plan_id>/sections/alignment/consultant-notes: {e}")
+        pytest.fail(
+            f"Erro na requisição POST /plans/<plan_id>/sections/alignment/consultant-notes: {e}"
+        )
 
 
 """
@@ -3869,19 +5292,30 @@ import pytest
 import requests
 from testsprite_tests.conftest import BASE_URL, TIMEOUT, authenticated_session
 
+
 def test_save_misalignment_consultant_notes(base_url, timeout):
     """Testa a rota /plans/<plan_id>/sections/misalignment/consultant-notes"""
     url = f"{base_url}/plans/<plan_id>/sections/misalignment/consultant-notes"
-    
+
     # Test POST request
     try:
         # Tentar com payload vazio primeiro
         response = requests.post(url, json={}, timeout=timeout)
         # Aceitar vários códigos de status possíveis
-        assert response.status_code in (200, 201, 400, 401, 403, 404, 422, 500), \
-            f"POST /plans/<plan_id>/sections/misalignment/consultant-notes retornou status inesperado: {response.status_code}"
+        assert response.status_code in (
+            200,
+            201,
+            400,
+            401,
+            403,
+            404,
+            422,
+            500,
+        ), f"POST /plans/<plan_id>/sections/misalignment/consultant-notes retornou status inesperado: {response.status_code}"
     except requests.exceptions.RequestException as e:
-        pytest.fail(f"Erro na requisição POST /plans/<plan_id>/sections/misalignment/consultant-notes: {e}")
+        pytest.fail(
+            f"Erro na requisição POST /plans/<plan_id>/sections/misalignment/consultant-notes: {e}"
+        )
 
 
 """
@@ -3894,19 +5328,30 @@ import pytest
 import requests
 from testsprite_tests.conftest import BASE_URL, TIMEOUT, authenticated_session
 
+
 def test_save_workshop_consultant_notes(base_url, timeout):
     """Testa a rota /plans/<plan_id>/sections/workshop/consultant-notes"""
     url = f"{base_url}/plans/<plan_id>/sections/workshop/consultant-notes"
-    
+
     # Test POST request
     try:
         # Tentar com payload vazio primeiro
         response = requests.post(url, json={}, timeout=timeout)
         # Aceitar vários códigos de status possíveis
-        assert response.status_code in (200, 201, 400, 401, 403, 404, 422, 500), \
-            f"POST /plans/<plan_id>/sections/workshop/consultant-notes retornou status inesperado: {response.status_code}"
+        assert response.status_code in (
+            200,
+            201,
+            400,
+            401,
+            403,
+            404,
+            422,
+            500,
+        ), f"POST /plans/<plan_id>/sections/workshop/consultant-notes retornou status inesperado: {response.status_code}"
     except requests.exceptions.RequestException as e:
-        pytest.fail(f"Erro na requisição POST /plans/<plan_id>/sections/workshop/consultant-notes: {e}")
+        pytest.fail(
+            f"Erro na requisição POST /plans/<plan_id>/sections/workshop/consultant-notes: {e}"
+        )
 
 
 """
@@ -3919,19 +5364,30 @@ import pytest
 import requests
 from testsprite_tests.conftest import BASE_URL, TIMEOUT, authenticated_session
 
+
 def test_save_directionals_consultant_analysis(base_url, timeout):
     """Testa a rota /plans/<plan_id>/sections/directionals/consultant-analysis"""
     url = f"{base_url}/plans/<plan_id>/sections/directionals/consultant-analysis"
-    
+
     # Test POST request
     try:
         # Tentar com payload vazio primeiro
         response = requests.post(url, json={}, timeout=timeout)
         # Aceitar vários códigos de status possíveis
-        assert response.status_code in (200, 201, 400, 401, 403, 404, 422, 500), \
-            f"POST /plans/<plan_id>/sections/directionals/consultant-analysis retornou status inesperado: {response.status_code}"
+        assert response.status_code in (
+            200,
+            201,
+            400,
+            401,
+            403,
+            404,
+            422,
+            500,
+        ), f"POST /plans/<plan_id>/sections/directionals/consultant-analysis retornou status inesperado: {response.status_code}"
     except requests.exceptions.RequestException as e:
-        pytest.fail(f"Erro na requisição POST /plans/<plan_id>/sections/directionals/consultant-analysis: {e}")
+        pytest.fail(
+            f"Erro na requisição POST /plans/<plan_id>/sections/directionals/consultant-analysis: {e}"
+        )
 
 
 """
@@ -3944,19 +5400,30 @@ import pytest
 import requests
 from testsprite_tests.conftest import BASE_URL, TIMEOUT, authenticated_session
 
+
 def test_add_workshop_adjustment(base_url, timeout):
     """Testa a rota /plans/<plan_id>/workshop-adjustments"""
     url = f"{base_url}/plans/<plan_id>/workshop-adjustments"
-    
+
     # Test POST request
     try:
         # Tentar com payload vazio primeiro
         response = requests.post(url, json={}, timeout=timeout)
         # Aceitar vários códigos de status possíveis
-        assert response.status_code in (200, 201, 400, 401, 403, 404, 422, 500), \
-            f"POST /plans/<plan_id>/workshop-adjustments retornou status inesperado: {response.status_code}"
+        assert response.status_code in (
+            200,
+            201,
+            400,
+            401,
+            403,
+            404,
+            422,
+            500,
+        ), f"POST /plans/<plan_id>/workshop-adjustments retornou status inesperado: {response.status_code}"
     except requests.exceptions.RequestException as e:
-        pytest.fail(f"Erro na requisição POST /plans/<plan_id>/workshop-adjustments: {e}")
+        pytest.fail(
+            f"Erro na requisição POST /plans/<plan_id>/workshop-adjustments: {e}"
+        )
 
 
 """
@@ -3969,19 +5436,30 @@ import pytest
 import requests
 from testsprite_tests.conftest import BASE_URL, TIMEOUT, authenticated_session
 
+
 def test_add_directionals_approval(base_url, timeout):
     """Testa a rota /plans/<plan_id>/directionals-approvals"""
     url = f"{base_url}/plans/<plan_id>/directionals-approvals"
-    
+
     # Test POST request
     try:
         # Tentar com payload vazio primeiro
         response = requests.post(url, json={}, timeout=timeout)
         # Aceitar vários códigos de status possíveis
-        assert response.status_code in (200, 201, 400, 401, 403, 404, 422, 500), \
-            f"POST /plans/<plan_id>/directionals-approvals retornou status inesperado: {response.status_code}"
+        assert response.status_code in (
+            200,
+            201,
+            400,
+            401,
+            403,
+            404,
+            422,
+            500,
+        ), f"POST /plans/<plan_id>/directionals-approvals retornou status inesperado: {response.status_code}"
     except requests.exceptions.RequestException as e:
-        pytest.fail(f"Erro na requisição POST /plans/<plan_id>/directionals-approvals: {e}")
+        pytest.fail(
+            f"Erro na requisição POST /plans/<plan_id>/directionals-approvals: {e}"
+        )
 
 
 """
@@ -3994,17 +5472,26 @@ import pytest
 import requests
 from testsprite_tests.conftest import BASE_URL, TIMEOUT, authenticated_session
 
+
 def test_add_vision_record(base_url, timeout):
     """Testa a rota /plans/<plan_id>/vision-records"""
     url = f"{base_url}/plans/<plan_id>/vision-records"
-    
+
     # Test POST request
     try:
         # Tentar com payload vazio primeiro
         response = requests.post(url, json={}, timeout=timeout)
         # Aceitar vários códigos de status possíveis
-        assert response.status_code in (200, 201, 400, 401, 403, 404, 422, 500), \
-            f"POST /plans/<plan_id>/vision-records retornou status inesperado: {response.status_code}"
+        assert response.status_code in (
+            200,
+            201,
+            400,
+            401,
+            403,
+            404,
+            422,
+            500,
+        ), f"POST /plans/<plan_id>/vision-records retornou status inesperado: {response.status_code}"
     except requests.exceptions.RequestException as e:
         pytest.fail(f"Erro na requisição POST /plans/<plan_id>/vision-records: {e}")
 
@@ -4019,19 +5506,30 @@ import pytest
 import requests
 from testsprite_tests.conftest import BASE_URL, TIMEOUT, authenticated_session
 
+
 def test_update_vision_record(base_url, timeout):
     """Testa a rota /plans/<plan_id>/vision-records/<vision_id>"""
     url = f"{base_url}/plans/<plan_id>/vision-records/<vision_id>"
-    
+
     # Test PUT request
     try:
         # Tentar com payload vazio primeiro
         response = requests.put(url, json={}, timeout=timeout)
         # Aceitar vários códigos de status possíveis
-        assert response.status_code in (200, 201, 400, 401, 403, 404, 422, 500), \
-            f"PUT /plans/<plan_id>/vision-records/<vision_id> retornou status inesperado: {response.status_code}"
+        assert response.status_code in (
+            200,
+            201,
+            400,
+            401,
+            403,
+            404,
+            422,
+            500,
+        ), f"PUT /plans/<plan_id>/vision-records/<vision_id> retornou status inesperado: {response.status_code}"
     except requests.exceptions.RequestException as e:
-        pytest.fail(f"Erro na requisição PUT /plans/<plan_id>/vision-records/<vision_id>: {e}")
+        pytest.fail(
+            f"Erro na requisição PUT /plans/<plan_id>/vision-records/<vision_id>: {e}"
+        )
 
 
 """
@@ -4044,18 +5542,28 @@ import pytest
 import requests
 from testsprite_tests.conftest import BASE_URL, TIMEOUT, authenticated_session
 
+
 def test_delete_vision_record(base_url, timeout):
     """Testa a rota /plans/<plan_id>/vision-records/<vision_id>"""
     url = f"{base_url}/plans/<plan_id>/vision-records/<vision_id>"
-    
+
     # Test DELETE request
     try:
         response = requests.delete(url, timeout=timeout)
         # Aceitar vários códigos de status possíveis
-        assert response.status_code in (200, 204, 400, 401, 403, 404, 500), \
-            f"DELETE /plans/<plan_id>/vision-records/<vision_id> retornou status inesperado: {response.status_code}"
+        assert response.status_code in (
+            200,
+            204,
+            400,
+            401,
+            403,
+            404,
+            500,
+        ), f"DELETE /plans/<plan_id>/vision-records/<vision_id> retornou status inesperado: {response.status_code}"
     except requests.exceptions.RequestException as e:
-        pytest.fail(f"Erro na requisição DELETE /plans/<plan_id>/vision-records/<vision_id>: {e}")
+        pytest.fail(
+            f"Erro na requisição DELETE /plans/<plan_id>/vision-records/<vision_id>: {e}"
+        )
 
 
 """
@@ -4068,18 +5576,26 @@ import pytest
 import requests
 from testsprite_tests.conftest import BASE_URL, TIMEOUT, authenticated_session
 
+
 def test_get_vision_record(base_url, timeout):
     """Testa a rota /plans/<plan_id>/vision-records/<vision_id>"""
     url = f"{base_url}/plans/<plan_id>/vision-records/<vision_id>"
-    
+
     # Test GET request
     try:
         response = requests.get(url, timeout=timeout)
         # Aceitar 200, 302 (redirect), 401 (não autenticado), 403 (sem permissão), 404 (não encontrado)
-        assert response.status_code in (200, 302, 401, 403, 404), \
-            f"GET /plans/<plan_id>/vision-records/<vision_id> retornou status inesperado: {response.status_code}"
+        assert response.status_code in (
+            200,
+            302,
+            401,
+            403,
+            404,
+        ), f"GET /plans/<plan_id>/vision-records/<vision_id> retornou status inesperado: {response.status_code}"
     except requests.exceptions.RequestException as e:
-        pytest.fail(f"Erro na requisição GET /plans/<plan_id>/vision-records/<vision_id>: {e}")
+        pytest.fail(
+            f"Erro na requisição GET /plans/<plan_id>/vision-records/<vision_id>: {e}"
+        )
 
 
 """
@@ -4092,17 +5608,26 @@ import pytest
 import requests
 from testsprite_tests.conftest import BASE_URL, TIMEOUT, authenticated_session
 
+
 def test_add_market_record(base_url, timeout):
     """Testa a rota /plans/<plan_id>/market-records"""
     url = f"{base_url}/plans/<plan_id>/market-records"
-    
+
     # Test POST request
     try:
         # Tentar com payload vazio primeiro
         response = requests.post(url, json={}, timeout=timeout)
         # Aceitar vários códigos de status possíveis
-        assert response.status_code in (200, 201, 400, 401, 403, 404, 422, 500), \
-            f"POST /plans/<plan_id>/market-records retornou status inesperado: {response.status_code}"
+        assert response.status_code in (
+            200,
+            201,
+            400,
+            401,
+            403,
+            404,
+            422,
+            500,
+        ), f"POST /plans/<plan_id>/market-records retornou status inesperado: {response.status_code}"
     except requests.exceptions.RequestException as e:
         pytest.fail(f"Erro na requisição POST /plans/<plan_id>/market-records: {e}")
 
@@ -4117,19 +5642,30 @@ import pytest
 import requests
 from testsprite_tests.conftest import BASE_URL, TIMEOUT, authenticated_session
 
+
 def test_update_market_record(base_url, timeout):
     """Testa a rota /plans/<plan_id>/market-records/<market_id>"""
     url = f"{base_url}/plans/<plan_id>/market-records/<market_id>"
-    
+
     # Test PUT request
     try:
         # Tentar com payload vazio primeiro
         response = requests.put(url, json={}, timeout=timeout)
         # Aceitar vários códigos de status possíveis
-        assert response.status_code in (200, 201, 400, 401, 403, 404, 422, 500), \
-            f"PUT /plans/<plan_id>/market-records/<market_id> retornou status inesperado: {response.status_code}"
+        assert response.status_code in (
+            200,
+            201,
+            400,
+            401,
+            403,
+            404,
+            422,
+            500,
+        ), f"PUT /plans/<plan_id>/market-records/<market_id> retornou status inesperado: {response.status_code}"
     except requests.exceptions.RequestException as e:
-        pytest.fail(f"Erro na requisição PUT /plans/<plan_id>/market-records/<market_id>: {e}")
+        pytest.fail(
+            f"Erro na requisição PUT /plans/<plan_id>/market-records/<market_id>: {e}"
+        )
 
 
 """
@@ -4142,18 +5678,28 @@ import pytest
 import requests
 from testsprite_tests.conftest import BASE_URL, TIMEOUT, authenticated_session
 
+
 def test_delete_market_record(base_url, timeout):
     """Testa a rota /plans/<plan_id>/market-records/<market_id>"""
     url = f"{base_url}/plans/<plan_id>/market-records/<market_id>"
-    
+
     # Test DELETE request
     try:
         response = requests.delete(url, timeout=timeout)
         # Aceitar vários códigos de status possíveis
-        assert response.status_code in (200, 204, 400, 401, 403, 404, 500), \
-            f"DELETE /plans/<plan_id>/market-records/<market_id> retornou status inesperado: {response.status_code}"
+        assert response.status_code in (
+            200,
+            204,
+            400,
+            401,
+            403,
+            404,
+            500,
+        ), f"DELETE /plans/<plan_id>/market-records/<market_id> retornou status inesperado: {response.status_code}"
     except requests.exceptions.RequestException as e:
-        pytest.fail(f"Erro na requisição DELETE /plans/<plan_id>/market-records/<market_id>: {e}")
+        pytest.fail(
+            f"Erro na requisição DELETE /plans/<plan_id>/market-records/<market_id>: {e}"
+        )
 
 
 """
@@ -4166,18 +5712,26 @@ import pytest
 import requests
 from testsprite_tests.conftest import BASE_URL, TIMEOUT, authenticated_session
 
+
 def test_get_market_record(base_url, timeout):
     """Testa a rota /plans/<plan_id>/market-records/<market_id>"""
     url = f"{base_url}/plans/<plan_id>/market-records/<market_id>"
-    
+
     # Test GET request
     try:
         response = requests.get(url, timeout=timeout)
         # Aceitar 200, 302 (redirect), 401 (não autenticado), 403 (sem permissão), 404 (não encontrado)
-        assert response.status_code in (200, 302, 401, 403, 404), \
-            f"GET /plans/<plan_id>/market-records/<market_id> retornou status inesperado: {response.status_code}"
+        assert response.status_code in (
+            200,
+            302,
+            401,
+            403,
+            404,
+        ), f"GET /plans/<plan_id>/market-records/<market_id> retornou status inesperado: {response.status_code}"
     except requests.exceptions.RequestException as e:
-        pytest.fail(f"Erro na requisição GET /plans/<plan_id>/market-records/<market_id>: {e}")
+        pytest.fail(
+            f"Erro na requisição GET /plans/<plan_id>/market-records/<market_id>: {e}"
+        )
 
 
 """
@@ -4190,17 +5744,26 @@ import pytest
 import requests
 from testsprite_tests.conftest import BASE_URL, TIMEOUT, authenticated_session
 
+
 def test_add_company_record(base_url, timeout):
     """Testa a rota /plans/<plan_id>/company-records"""
     url = f"{base_url}/plans/<plan_id>/company-records"
-    
+
     # Test POST request
     try:
         # Tentar com payload vazio primeiro
         response = requests.post(url, json={}, timeout=timeout)
         # Aceitar vários códigos de status possíveis
-        assert response.status_code in (200, 201, 400, 401, 403, 404, 422, 500), \
-            f"POST /plans/<plan_id>/company-records retornou status inesperado: {response.status_code}"
+        assert response.status_code in (
+            200,
+            201,
+            400,
+            401,
+            403,
+            404,
+            422,
+            500,
+        ), f"POST /plans/<plan_id>/company-records retornou status inesperado: {response.status_code}"
     except requests.exceptions.RequestException as e:
         pytest.fail(f"Erro na requisição POST /plans/<plan_id>/company-records: {e}")
 
@@ -4215,19 +5778,30 @@ import pytest
 import requests
 from testsprite_tests.conftest import BASE_URL, TIMEOUT, authenticated_session
 
+
 def test_update_company_record(base_url, timeout):
     """Testa a rota /plans/<plan_id>/company-records/<company_id>"""
     url = f"{base_url}/plans/<plan_id>/company-records/<company_id>"
-    
+
     # Test PUT request
     try:
         # Tentar com payload vazio primeiro
         response = requests.put(url, json={}, timeout=timeout)
         # Aceitar vários códigos de status possíveis
-        assert response.status_code in (200, 201, 400, 401, 403, 404, 422, 500), \
-            f"PUT /plans/<plan_id>/company-records/<company_id> retornou status inesperado: {response.status_code}"
+        assert response.status_code in (
+            200,
+            201,
+            400,
+            401,
+            403,
+            404,
+            422,
+            500,
+        ), f"PUT /plans/<plan_id>/company-records/<company_id> retornou status inesperado: {response.status_code}"
     except requests.exceptions.RequestException as e:
-        pytest.fail(f"Erro na requisição PUT /plans/<plan_id>/company-records/<company_id>: {e}")
+        pytest.fail(
+            f"Erro na requisição PUT /plans/<plan_id>/company-records/<company_id>: {e}"
+        )
 
 
 """
@@ -4240,18 +5814,28 @@ import pytest
 import requests
 from testsprite_tests.conftest import BASE_URL, TIMEOUT, authenticated_session
 
+
 def test_delete_company_record(base_url, timeout):
     """Testa a rota /plans/<plan_id>/company-records/<company_id>"""
     url = f"{base_url}/plans/<plan_id>/company-records/<company_id>"
-    
+
     # Test DELETE request
     try:
         response = requests.delete(url, timeout=timeout)
         # Aceitar vários códigos de status possíveis
-        assert response.status_code in (200, 204, 400, 401, 403, 404, 500), \
-            f"DELETE /plans/<plan_id>/company-records/<company_id> retornou status inesperado: {response.status_code}"
+        assert response.status_code in (
+            200,
+            204,
+            400,
+            401,
+            403,
+            404,
+            500,
+        ), f"DELETE /plans/<plan_id>/company-records/<company_id> retornou status inesperado: {response.status_code}"
     except requests.exceptions.RequestException as e:
-        pytest.fail(f"Erro na requisição DELETE /plans/<plan_id>/company-records/<company_id>: {e}")
+        pytest.fail(
+            f"Erro na requisição DELETE /plans/<plan_id>/company-records/<company_id>: {e}"
+        )
 
 
 """
@@ -4264,18 +5848,26 @@ import pytest
 import requests
 from testsprite_tests.conftest import BASE_URL, TIMEOUT, authenticated_session
 
+
 def test_get_company_record(base_url, timeout):
     """Testa a rota /plans/<plan_id>/company-records/<company_id>"""
     url = f"{base_url}/plans/<plan_id>/company-records/<company_id>"
-    
+
     # Test GET request
     try:
         response = requests.get(url, timeout=timeout)
         # Aceitar 200, 302 (redirect), 401 (não autenticado), 403 (sem permissão), 404 (não encontrado)
-        assert response.status_code in (200, 302, 401, 403, 404), \
-            f"GET /plans/<plan_id>/company-records/<company_id> retornou status inesperado: {response.status_code}"
+        assert response.status_code in (
+            200,
+            302,
+            401,
+            403,
+            404,
+        ), f"GET /plans/<plan_id>/company-records/<company_id> retornou status inesperado: {response.status_code}"
     except requests.exceptions.RequestException as e:
-        pytest.fail(f"Erro na requisição GET /plans/<plan_id>/company-records/<company_id>: {e}")
+        pytest.fail(
+            f"Erro na requisição GET /plans/<plan_id>/company-records/<company_id>: {e}"
+        )
 
 
 """
@@ -4288,17 +5880,26 @@ import pytest
 import requests
 from testsprite_tests.conftest import BASE_URL, TIMEOUT, authenticated_session
 
+
 def test_add_alignment_record(base_url, timeout):
     """Testa a rota /plans/<plan_id>/alignment-records"""
     url = f"{base_url}/plans/<plan_id>/alignment-records"
-    
+
     # Test POST request
     try:
         # Tentar com payload vazio primeiro
         response = requests.post(url, json={}, timeout=timeout)
         # Aceitar vários códigos de status possíveis
-        assert response.status_code in (200, 201, 400, 401, 403, 404, 422, 500), \
-            f"POST /plans/<plan_id>/alignment-records retornou status inesperado: {response.status_code}"
+        assert response.status_code in (
+            200,
+            201,
+            400,
+            401,
+            403,
+            404,
+            422,
+            500,
+        ), f"POST /plans/<plan_id>/alignment-records retornou status inesperado: {response.status_code}"
     except requests.exceptions.RequestException as e:
         pytest.fail(f"Erro na requisição POST /plans/<plan_id>/alignment-records: {e}")
 
@@ -4313,19 +5914,30 @@ import pytest
 import requests
 from testsprite_tests.conftest import BASE_URL, TIMEOUT, authenticated_session
 
+
 def test_update_alignment_record(base_url, timeout):
     """Testa a rota /plans/<plan_id>/alignment-records/<alignment_id>"""
     url = f"{base_url}/plans/<plan_id>/alignment-records/<alignment_id>"
-    
+
     # Test PUT request
     try:
         # Tentar com payload vazio primeiro
         response = requests.put(url, json={}, timeout=timeout)
         # Aceitar vários códigos de status possíveis
-        assert response.status_code in (200, 201, 400, 401, 403, 404, 422, 500), \
-            f"PUT /plans/<plan_id>/alignment-records/<alignment_id> retornou status inesperado: {response.status_code}"
+        assert response.status_code in (
+            200,
+            201,
+            400,
+            401,
+            403,
+            404,
+            422,
+            500,
+        ), f"PUT /plans/<plan_id>/alignment-records/<alignment_id> retornou status inesperado: {response.status_code}"
     except requests.exceptions.RequestException as e:
-        pytest.fail(f"Erro na requisição PUT /plans/<plan_id>/alignment-records/<alignment_id>: {e}")
+        pytest.fail(
+            f"Erro na requisição PUT /plans/<plan_id>/alignment-records/<alignment_id>: {e}"
+        )
 
 
 """
@@ -4338,18 +5950,28 @@ import pytest
 import requests
 from testsprite_tests.conftest import BASE_URL, TIMEOUT, authenticated_session
 
+
 def test_delete_alignment_record(base_url, timeout):
     """Testa a rota /plans/<plan_id>/alignment-records/<alignment_id>"""
     url = f"{base_url}/plans/<plan_id>/alignment-records/<alignment_id>"
-    
+
     # Test DELETE request
     try:
         response = requests.delete(url, timeout=timeout)
         # Aceitar vários códigos de status possíveis
-        assert response.status_code in (200, 204, 400, 401, 403, 404, 500), \
-            f"DELETE /plans/<plan_id>/alignment-records/<alignment_id> retornou status inesperado: {response.status_code}"
+        assert response.status_code in (
+            200,
+            204,
+            400,
+            401,
+            403,
+            404,
+            500,
+        ), f"DELETE /plans/<plan_id>/alignment-records/<alignment_id> retornou status inesperado: {response.status_code}"
     except requests.exceptions.RequestException as e:
-        pytest.fail(f"Erro na requisição DELETE /plans/<plan_id>/alignment-records/<alignment_id>: {e}")
+        pytest.fail(
+            f"Erro na requisição DELETE /plans/<plan_id>/alignment-records/<alignment_id>: {e}"
+        )
 
 
 """
@@ -4362,18 +5984,26 @@ import pytest
 import requests
 from testsprite_tests.conftest import BASE_URL, TIMEOUT, authenticated_session
 
+
 def test_get_alignment_record(base_url, timeout):
     """Testa a rota /plans/<plan_id>/alignment-records/<alignment_id>"""
     url = f"{base_url}/plans/<plan_id>/alignment-records/<alignment_id>"
-    
+
     # Test GET request
     try:
         response = requests.get(url, timeout=timeout)
         # Aceitar 200, 302 (redirect), 401 (não autenticado), 403 (sem permissão), 404 (não encontrado)
-        assert response.status_code in (200, 302, 401, 403, 404), \
-            f"GET /plans/<plan_id>/alignment-records/<alignment_id> retornou status inesperado: {response.status_code}"
+        assert response.status_code in (
+            200,
+            302,
+            401,
+            403,
+            404,
+        ), f"GET /plans/<plan_id>/alignment-records/<alignment_id> retornou status inesperado: {response.status_code}"
     except requests.exceptions.RequestException as e:
-        pytest.fail(f"Erro na requisição GET /plans/<plan_id>/alignment-records/<alignment_id>: {e}")
+        pytest.fail(
+            f"Erro na requisição GET /plans/<plan_id>/alignment-records/<alignment_id>: {e}"
+        )
 
 
 """
@@ -4386,19 +6016,30 @@ import pytest
 import requests
 from testsprite_tests.conftest import BASE_URL, TIMEOUT, authenticated_session
 
+
 def test_add_misalignment_record(base_url, timeout):
     """Testa a rota /plans/<plan_id>/misalignment-records"""
     url = f"{base_url}/plans/<plan_id>/misalignment-records"
-    
+
     # Test POST request
     try:
         # Tentar com payload vazio primeiro
         response = requests.post(url, json={}, timeout=timeout)
         # Aceitar vários códigos de status possíveis
-        assert response.status_code in (200, 201, 400, 401, 403, 404, 422, 500), \
-            f"POST /plans/<plan_id>/misalignment-records retornou status inesperado: {response.status_code}"
+        assert response.status_code in (
+            200,
+            201,
+            400,
+            401,
+            403,
+            404,
+            422,
+            500,
+        ), f"POST /plans/<plan_id>/misalignment-records retornou status inesperado: {response.status_code}"
     except requests.exceptions.RequestException as e:
-        pytest.fail(f"Erro na requisição POST /plans/<plan_id>/misalignment-records: {e}")
+        pytest.fail(
+            f"Erro na requisição POST /plans/<plan_id>/misalignment-records: {e}"
+        )
 
 
 """
@@ -4411,19 +6052,30 @@ import pytest
 import requests
 from testsprite_tests.conftest import BASE_URL, TIMEOUT, authenticated_session
 
+
 def test_update_misalignment_record(base_url, timeout):
     """Testa a rota /plans/<plan_id>/misalignment-records/<misalignment_id>"""
     url = f"{base_url}/plans/<plan_id>/misalignment-records/<misalignment_id>"
-    
+
     # Test PUT request
     try:
         # Tentar com payload vazio primeiro
         response = requests.put(url, json={}, timeout=timeout)
         # Aceitar vários códigos de status possíveis
-        assert response.status_code in (200, 201, 400, 401, 403, 404, 422, 500), \
-            f"PUT /plans/<plan_id>/misalignment-records/<misalignment_id> retornou status inesperado: {response.status_code}"
+        assert response.status_code in (
+            200,
+            201,
+            400,
+            401,
+            403,
+            404,
+            422,
+            500,
+        ), f"PUT /plans/<plan_id>/misalignment-records/<misalignment_id> retornou status inesperado: {response.status_code}"
     except requests.exceptions.RequestException as e:
-        pytest.fail(f"Erro na requisição PUT /plans/<plan_id>/misalignment-records/<misalignment_id>: {e}")
+        pytest.fail(
+            f"Erro na requisição PUT /plans/<plan_id>/misalignment-records/<misalignment_id>: {e}"
+        )
 
 
 """
@@ -4436,18 +6088,28 @@ import pytest
 import requests
 from testsprite_tests.conftest import BASE_URL, TIMEOUT, authenticated_session
 
+
 def test_delete_misalignment_record(base_url, timeout):
     """Testa a rota /plans/<plan_id>/misalignment-records/<misalignment_id>"""
     url = f"{base_url}/plans/<plan_id>/misalignment-records/<misalignment_id>"
-    
+
     # Test DELETE request
     try:
         response = requests.delete(url, timeout=timeout)
         # Aceitar vários códigos de status possíveis
-        assert response.status_code in (200, 204, 400, 401, 403, 404, 500), \
-            f"DELETE /plans/<plan_id>/misalignment-records/<misalignment_id> retornou status inesperado: {response.status_code}"
+        assert response.status_code in (
+            200,
+            204,
+            400,
+            401,
+            403,
+            404,
+            500,
+        ), f"DELETE /plans/<plan_id>/misalignment-records/<misalignment_id> retornou status inesperado: {response.status_code}"
     except requests.exceptions.RequestException as e:
-        pytest.fail(f"Erro na requisição DELETE /plans/<plan_id>/misalignment-records/<misalignment_id>: {e}")
+        pytest.fail(
+            f"Erro na requisição DELETE /plans/<plan_id>/misalignment-records/<misalignment_id>: {e}"
+        )
 
 
 """
@@ -4460,18 +6122,26 @@ import pytest
 import requests
 from testsprite_tests.conftest import BASE_URL, TIMEOUT, authenticated_session
 
+
 def test_get_misalignment_record(base_url, timeout):
     """Testa a rota /plans/<plan_id>/misalignment-records/<misalignment_id>"""
     url = f"{base_url}/plans/<plan_id>/misalignment-records/<misalignment_id>"
-    
+
     # Test GET request
     try:
         response = requests.get(url, timeout=timeout)
         # Aceitar 200, 302 (redirect), 401 (não autenticado), 403 (sem permissão), 404 (não encontrado)
-        assert response.status_code in (200, 302, 401, 403, 404), \
-            f"GET /plans/<plan_id>/misalignment-records/<misalignment_id> retornou status inesperado: {response.status_code}"
+        assert response.status_code in (
+            200,
+            302,
+            401,
+            403,
+            404,
+        ), f"GET /plans/<plan_id>/misalignment-records/<misalignment_id> retornou status inesperado: {response.status_code}"
     except requests.exceptions.RequestException as e:
-        pytest.fail(f"Erro na requisição GET /plans/<plan_id>/misalignment-records/<misalignment_id>: {e}")
+        pytest.fail(
+            f"Erro na requisição GET /plans/<plan_id>/misalignment-records/<misalignment_id>: {e}"
+        )
 
 
 """
@@ -4484,19 +6154,30 @@ import pytest
 import requests
 from testsprite_tests.conftest import BASE_URL, TIMEOUT, authenticated_session
 
+
 def test_add_directional_record(base_url, timeout):
     """Testa a rota /plans/<plan_id>/directional-records"""
     url = f"{base_url}/plans/<plan_id>/directional-records"
-    
+
     # Test POST request
     try:
         # Tentar com payload vazio primeiro
         response = requests.post(url, json={}, timeout=timeout)
         # Aceitar vários códigos de status possíveis
-        assert response.status_code in (200, 201, 400, 401, 403, 404, 422, 500), \
-            f"POST /plans/<plan_id>/directional-records retornou status inesperado: {response.status_code}"
+        assert response.status_code in (
+            200,
+            201,
+            400,
+            401,
+            403,
+            404,
+            422,
+            500,
+        ), f"POST /plans/<plan_id>/directional-records retornou status inesperado: {response.status_code}"
     except requests.exceptions.RequestException as e:
-        pytest.fail(f"Erro na requisição POST /plans/<plan_id>/directional-records: {e}")
+        pytest.fail(
+            f"Erro na requisição POST /plans/<plan_id>/directional-records: {e}"
+        )
 
 
 """
@@ -4509,19 +6190,30 @@ import pytest
 import requests
 from testsprite_tests.conftest import BASE_URL, TIMEOUT, authenticated_session
 
+
 def test_update_directional_record(base_url, timeout):
     """Testa a rota /plans/<plan_id>/directional-records/<directional_id>"""
     url = f"{base_url}/plans/<plan_id>/directional-records/<directional_id>"
-    
+
     # Test PUT request
     try:
         # Tentar com payload vazio primeiro
         response = requests.put(url, json={}, timeout=timeout)
         # Aceitar vários códigos de status possíveis
-        assert response.status_code in (200, 201, 400, 401, 403, 404, 422, 500), \
-            f"PUT /plans/<plan_id>/directional-records/<directional_id> retornou status inesperado: {response.status_code}"
+        assert response.status_code in (
+            200,
+            201,
+            400,
+            401,
+            403,
+            404,
+            422,
+            500,
+        ), f"PUT /plans/<plan_id>/directional-records/<directional_id> retornou status inesperado: {response.status_code}"
     except requests.exceptions.RequestException as e:
-        pytest.fail(f"Erro na requisição PUT /plans/<plan_id>/directional-records/<directional_id>: {e}")
+        pytest.fail(
+            f"Erro na requisição PUT /plans/<plan_id>/directional-records/<directional_id>: {e}"
+        )
 
 
 """
@@ -4534,18 +6226,28 @@ import pytest
 import requests
 from testsprite_tests.conftest import BASE_URL, TIMEOUT, authenticated_session
 
+
 def test_delete_directional_record(base_url, timeout):
     """Testa a rota /plans/<plan_id>/directional-records/<directional_id>"""
     url = f"{base_url}/plans/<plan_id>/directional-records/<directional_id>"
-    
+
     # Test DELETE request
     try:
         response = requests.delete(url, timeout=timeout)
         # Aceitar vários códigos de status possíveis
-        assert response.status_code in (200, 204, 400, 401, 403, 404, 500), \
-            f"DELETE /plans/<plan_id>/directional-records/<directional_id> retornou status inesperado: {response.status_code}"
+        assert response.status_code in (
+            200,
+            204,
+            400,
+            401,
+            403,
+            404,
+            500,
+        ), f"DELETE /plans/<plan_id>/directional-records/<directional_id> retornou status inesperado: {response.status_code}"
     except requests.exceptions.RequestException as e:
-        pytest.fail(f"Erro na requisição DELETE /plans/<plan_id>/directional-records/<directional_id>: {e}")
+        pytest.fail(
+            f"Erro na requisição DELETE /plans/<plan_id>/directional-records/<directional_id>: {e}"
+        )
 
 
 """
@@ -4558,18 +6260,26 @@ import pytest
 import requests
 from testsprite_tests.conftest import BASE_URL, TIMEOUT, authenticated_session
 
+
 def test_get_directional_record(base_url, timeout):
     """Testa a rota /plans/<plan_id>/directional-records/<directional_id>"""
     url = f"{base_url}/plans/<plan_id>/directional-records/<directional_id>"
-    
+
     # Test GET request
     try:
         response = requests.get(url, timeout=timeout)
         # Aceitar 200, 302 (redirect), 401 (não autenticado), 403 (sem permissão), 404 (não encontrado)
-        assert response.status_code in (200, 302, 401, 403, 404), \
-            f"GET /plans/<plan_id>/directional-records/<directional_id> retornou status inesperado: {response.status_code}"
+        assert response.status_code in (
+            200,
+            302,
+            401,
+            403,
+            404,
+        ), f"GET /plans/<plan_id>/directional-records/<directional_id> retornou status inesperado: {response.status_code}"
     except requests.exceptions.RequestException as e:
-        pytest.fail(f"Erro na requisição GET /plans/<plan_id>/directional-records/<directional_id>: {e}")
+        pytest.fail(
+            f"Erro na requisição GET /plans/<plan_id>/directional-records/<directional_id>: {e}"
+        )
 
 
 """
@@ -4582,19 +6292,30 @@ import pytest
 import requests
 from testsprite_tests.conftest import BASE_URL, TIMEOUT, authenticated_session
 
+
 def test_add_workshop_okr_record(base_url, timeout):
     """Testa a rota /plans/<plan_id>/okr-global/workshop"""
     url = f"{base_url}/plans/<plan_id>/okr-global/workshop"
-    
+
     # Test POST request
     try:
         # Tentar com payload vazio primeiro
         response = requests.post(url, json={}, timeout=timeout)
         # Aceitar vários códigos de status possíveis
-        assert response.status_code in (200, 201, 400, 401, 403, 404, 422, 500), \
-            f"POST /plans/<plan_id>/okr-global/workshop retornou status inesperado: {response.status_code}"
+        assert response.status_code in (
+            200,
+            201,
+            400,
+            401,
+            403,
+            404,
+            422,
+            500,
+        ), f"POST /plans/<plan_id>/okr-global/workshop retornou status inesperado: {response.status_code}"
     except requests.exceptions.RequestException as e:
-        pytest.fail(f"Erro na requisição POST /plans/<plan_id>/okr-global/workshop: {e}")
+        pytest.fail(
+            f"Erro na requisição POST /plans/<plan_id>/okr-global/workshop: {e}"
+        )
 
 
 """
@@ -4607,19 +6328,30 @@ import pytest
 import requests
 from testsprite_tests.conftest import BASE_URL, TIMEOUT, authenticated_session
 
+
 def test_add_okr_approval_record(base_url, timeout):
     """Testa a rota /plans/<plan_id>/okr-global/approval"""
     url = f"{base_url}/plans/<plan_id>/okr-global/approval"
-    
+
     # Test POST request
     try:
         # Tentar com payload vazio primeiro
         response = requests.post(url, json={}, timeout=timeout)
         # Aceitar vários códigos de status possíveis
-        assert response.status_code in (200, 201, 400, 401, 403, 404, 422, 500), \
-            f"POST /plans/<plan_id>/okr-global/approval retornou status inesperado: {response.status_code}"
+        assert response.status_code in (
+            200,
+            201,
+            400,
+            401,
+            403,
+            404,
+            422,
+            500,
+        ), f"POST /plans/<plan_id>/okr-global/approval retornou status inesperado: {response.status_code}"
     except requests.exceptions.RequestException as e:
-        pytest.fail(f"Erro na requisição POST /plans/<plan_id>/okr-global/approval: {e}")
+        pytest.fail(
+            f"Erro na requisição POST /plans/<plan_id>/okr-global/approval: {e}"
+        )
 
 
 """
@@ -4632,19 +6364,30 @@ import pytest
 import requests
 from testsprite_tests.conftest import BASE_URL, TIMEOUT, authenticated_session
 
+
 def test_add_preliminary_okr_record(base_url, timeout):
     """Testa a rota /plans/<plan_id>/okr-global/preliminary"""
     url = f"{base_url}/plans/<plan_id>/okr-global/preliminary"
-    
+
     # Test POST request
     try:
         # Tentar com payload vazio primeiro
         response = requests.post(url, json={}, timeout=timeout)
         # Aceitar vários códigos de status possíveis
-        assert response.status_code in (200, 201, 400, 401, 403, 404, 422, 500), \
-            f"POST /plans/<plan_id>/okr-global/preliminary retornou status inesperado: {response.status_code}"
+        assert response.status_code in (
+            200,
+            201,
+            400,
+            401,
+            403,
+            404,
+            422,
+            500,
+        ), f"POST /plans/<plan_id>/okr-global/preliminary retornou status inesperado: {response.status_code}"
     except requests.exceptions.RequestException as e:
-        pytest.fail(f"Erro na requisição POST /plans/<plan_id>/okr-global/preliminary: {e}")
+        pytest.fail(
+            f"Erro na requisição POST /plans/<plan_id>/okr-global/preliminary: {e}"
+        )
 
 
 """
@@ -4657,18 +6400,26 @@ import pytest
 import requests
 from testsprite_tests.conftest import BASE_URL, TIMEOUT, authenticated_session
 
+
 def test_get_preliminary_okr_data(base_url, timeout):
     """Testa a rota /plans/<plan_id>/okr-global/preliminary/<record_id>"""
     url = f"{base_url}/plans/<plan_id>/okr-global/preliminary/<record_id>"
-    
+
     # Test GET request
     try:
         response = requests.get(url, timeout=timeout)
         # Aceitar 200, 302 (redirect), 401 (não autenticado), 403 (sem permissão), 404 (não encontrado)
-        assert response.status_code in (200, 302, 401, 403, 404), \
-            f"GET /plans/<plan_id>/okr-global/preliminary/<record_id> retornou status inesperado: {response.status_code}"
+        assert response.status_code in (
+            200,
+            302,
+            401,
+            403,
+            404,
+        ), f"GET /plans/<plan_id>/okr-global/preliminary/<record_id> retornou status inesperado: {response.status_code}"
     except requests.exceptions.RequestException as e:
-        pytest.fail(f"Erro na requisição GET /plans/<plan_id>/okr-global/preliminary/<record_id>: {e}")
+        pytest.fail(
+            f"Erro na requisição GET /plans/<plan_id>/okr-global/preliminary/<record_id>: {e}"
+        )
 
 
 """
@@ -4681,19 +6432,30 @@ import pytest
 import requests
 from testsprite_tests.conftest import BASE_URL, TIMEOUT, authenticated_session
 
+
 def test_edit_preliminary_okr_record(base_url, timeout):
     """Testa a rota /plans/<plan_id>/okr-global/preliminary/<record_id>"""
     url = f"{base_url}/plans/<plan_id>/okr-global/preliminary/<record_id>"
-    
+
     # Test POST request
     try:
         # Tentar com payload vazio primeiro
         response = requests.post(url, json={}, timeout=timeout)
         # Aceitar vários códigos de status possíveis
-        assert response.status_code in (200, 201, 400, 401, 403, 404, 422, 500), \
-            f"POST /plans/<plan_id>/okr-global/preliminary/<record_id> retornou status inesperado: {response.status_code}"
+        assert response.status_code in (
+            200,
+            201,
+            400,
+            401,
+            403,
+            404,
+            422,
+            500,
+        ), f"POST /plans/<plan_id>/okr-global/preliminary/<record_id> retornou status inesperado: {response.status_code}"
     except requests.exceptions.RequestException as e:
-        pytest.fail(f"Erro na requisição POST /plans/<plan_id>/okr-global/preliminary/<record_id>: {e}")
+        pytest.fail(
+            f"Erro na requisição POST /plans/<plan_id>/okr-global/preliminary/<record_id>: {e}"
+        )
 
 
 """
@@ -4706,19 +6468,30 @@ import pytest
 import requests
 from testsprite_tests.conftest import BASE_URL, TIMEOUT, authenticated_session
 
+
 def test_delete_preliminary_okr_record(base_url, timeout):
     """Testa a rota /plans/<plan_id>/okr-global/preliminary/<record_id>/delete"""
     url = f"{base_url}/plans/<plan_id>/okr-global/preliminary/<record_id>/delete"
-    
+
     # Test POST request
     try:
         # Tentar com payload vazio primeiro
         response = requests.post(url, json={}, timeout=timeout)
         # Aceitar vários códigos de status possíveis
-        assert response.status_code in (200, 201, 400, 401, 403, 404, 422, 500), \
-            f"POST /plans/<plan_id>/okr-global/preliminary/<record_id>/delete retornou status inesperado: {response.status_code}"
+        assert response.status_code in (
+            200,
+            201,
+            400,
+            401,
+            403,
+            404,
+            422,
+            500,
+        ), f"POST /plans/<plan_id>/okr-global/preliminary/<record_id>/delete retornou status inesperado: {response.status_code}"
     except requests.exceptions.RequestException as e:
-        pytest.fail(f"Erro na requisição POST /plans/<plan_id>/okr-global/preliminary/<record_id>/delete: {e}")
+        pytest.fail(
+            f"Erro na requisição POST /plans/<plan_id>/okr-global/preliminary/<record_id>/delete: {e}"
+        )
 
 
 """
@@ -4731,19 +6504,30 @@ import pytest
 import requests
 from testsprite_tests.conftest import BASE_URL, TIMEOUT, authenticated_session
 
+
 def test_save_workshop_discussions(base_url, timeout):
     """Testa a rota /plans/<plan_id>/okr-global/workshop-discussions"""
     url = f"{base_url}/plans/<plan_id>/okr-global/workshop-discussions"
-    
+
     # Test POST request
     try:
         # Tentar com payload vazio primeiro
         response = requests.post(url, json={}, timeout=timeout)
         # Aceitar vários códigos de status possíveis
-        assert response.status_code in (200, 201, 400, 401, 403, 404, 422, 500), \
-            f"POST /plans/<plan_id>/okr-global/workshop-discussions retornou status inesperado: {response.status_code}"
+        assert response.status_code in (
+            200,
+            201,
+            400,
+            401,
+            403,
+            404,
+            422,
+            500,
+        ), f"POST /plans/<plan_id>/okr-global/workshop-discussions retornou status inesperado: {response.status_code}"
     except requests.exceptions.RequestException as e:
-        pytest.fail(f"Erro na requisição POST /plans/<plan_id>/okr-global/workshop-discussions: {e}")
+        pytest.fail(
+            f"Erro na requisição POST /plans/<plan_id>/okr-global/workshop-discussions: {e}"
+        )
 
 
 """
@@ -4756,19 +6540,30 @@ import pytest
 import requests
 from testsprite_tests.conftest import BASE_URL, TIMEOUT, authenticated_session
 
+
 def test_delete_workshop_discussions(base_url, timeout):
     """Testa a rota /plans/<plan_id>/okr-global/workshop-discussions/delete"""
     url = f"{base_url}/plans/<plan_id>/okr-global/workshop-discussions/delete"
-    
+
     # Test POST request
     try:
         # Tentar com payload vazio primeiro
         response = requests.post(url, json={}, timeout=timeout)
         # Aceitar vários códigos de status possíveis
-        assert response.status_code in (200, 201, 400, 401, 403, 404, 422, 500), \
-            f"POST /plans/<plan_id>/okr-global/workshop-discussions/delete retornou status inesperado: {response.status_code}"
+        assert response.status_code in (
+            200,
+            201,
+            400,
+            401,
+            403,
+            404,
+            422,
+            500,
+        ), f"POST /plans/<plan_id>/okr-global/workshop-discussions/delete retornou status inesperado: {response.status_code}"
     except requests.exceptions.RequestException as e:
-        pytest.fail(f"Erro na requisição POST /plans/<plan_id>/okr-global/workshop-discussions/delete: {e}")
+        pytest.fail(
+            f"Erro na requisição POST /plans/<plan_id>/okr-global/workshop-discussions/delete: {e}"
+        )
 
 
 """
@@ -4781,19 +6576,30 @@ import pytest
 import requests
 from testsprite_tests.conftest import BASE_URL, TIMEOUT, authenticated_session
 
+
 def test_save_approval_discussions(base_url, timeout):
     """Testa a rota /plans/<plan_id>/okr-global/approval-discussions"""
     url = f"{base_url}/plans/<plan_id>/okr-global/approval-discussions"
-    
+
     # Test POST request
     try:
         # Tentar com payload vazio primeiro
         response = requests.post(url, json={}, timeout=timeout)
         # Aceitar vários códigos de status possíveis
-        assert response.status_code in (200, 201, 400, 401, 403, 404, 422, 500), \
-            f"POST /plans/<plan_id>/okr-global/approval-discussions retornou status inesperado: {response.status_code}"
+        assert response.status_code in (
+            200,
+            201,
+            400,
+            401,
+            403,
+            404,
+            422,
+            500,
+        ), f"POST /plans/<plan_id>/okr-global/approval-discussions retornou status inesperado: {response.status_code}"
     except requests.exceptions.RequestException as e:
-        pytest.fail(f"Erro na requisição POST /plans/<plan_id>/okr-global/approval-discussions: {e}")
+        pytest.fail(
+            f"Erro na requisição POST /plans/<plan_id>/okr-global/approval-discussions: {e}"
+        )
 
 
 """
@@ -4806,19 +6612,30 @@ import pytest
 import requests
 from testsprite_tests.conftest import BASE_URL, TIMEOUT, authenticated_session
 
+
 def test_delete_approval_discussions(base_url, timeout):
     """Testa a rota /plans/<plan_id>/okr-global/approval-discussions/delete"""
     url = f"{base_url}/plans/<plan_id>/okr-global/approval-discussions/delete"
-    
+
     # Test POST request
     try:
         # Tentar com payload vazio primeiro
         response = requests.post(url, json={}, timeout=timeout)
         # Aceitar vários códigos de status possíveis
-        assert response.status_code in (200, 201, 400, 401, 403, 404, 422, 500), \
-            f"POST /plans/<plan_id>/okr-global/approval-discussions/delete retornou status inesperado: {response.status_code}"
+        assert response.status_code in (
+            200,
+            201,
+            400,
+            401,
+            403,
+            404,
+            422,
+            500,
+        ), f"POST /plans/<plan_id>/okr-global/approval-discussions/delete retornou status inesperado: {response.status_code}"
     except requests.exceptions.RequestException as e:
-        pytest.fail(f"Erro na requisição POST /plans/<plan_id>/okr-global/approval-discussions/delete: {e}")
+        pytest.fail(
+            f"Erro na requisição POST /plans/<plan_id>/okr-global/approval-discussions/delete: {e}"
+        )
 
 
 """
@@ -4831,19 +6648,30 @@ import pytest
 import requests
 from testsprite_tests.conftest import BASE_URL, TIMEOUT, authenticated_session
 
+
 def test_edit_workshop_okr_record(base_url, timeout):
     """Testa a rota /plans/<plan_id>/okr-global/workshop/<record_id>"""
     url = f"{base_url}/plans/<plan_id>/okr-global/workshop/<record_id>"
-    
+
     # Test POST request
     try:
         # Tentar com payload vazio primeiro
         response = requests.post(url, json={}, timeout=timeout)
         # Aceitar vários códigos de status possíveis
-        assert response.status_code in (200, 201, 400, 401, 403, 404, 422, 500), \
-            f"POST /plans/<plan_id>/okr-global/workshop/<record_id> retornou status inesperado: {response.status_code}"
+        assert response.status_code in (
+            200,
+            201,
+            400,
+            401,
+            403,
+            404,
+            422,
+            500,
+        ), f"POST /plans/<plan_id>/okr-global/workshop/<record_id> retornou status inesperado: {response.status_code}"
     except requests.exceptions.RequestException as e:
-        pytest.fail(f"Erro na requisição POST /plans/<plan_id>/okr-global/workshop/<record_id>: {e}")
+        pytest.fail(
+            f"Erro na requisição POST /plans/<plan_id>/okr-global/workshop/<record_id>: {e}"
+        )
 
 
 """
@@ -4856,19 +6684,30 @@ import pytest
 import requests
 from testsprite_tests.conftest import BASE_URL, TIMEOUT, authenticated_session
 
+
 def test_edit_approval_okr_record(base_url, timeout):
     """Testa a rota /plans/<plan_id>/okr-global/approval/<record_id>"""
     url = f"{base_url}/plans/<plan_id>/okr-global/approval/<record_id>"
-    
+
     # Test POST request
     try:
         # Tentar com payload vazio primeiro
         response = requests.post(url, json={}, timeout=timeout)
         # Aceitar vários códigos de status possíveis
-        assert response.status_code in (200, 201, 400, 401, 403, 404, 422, 500), \
-            f"POST /plans/<plan_id>/okr-global/approval/<record_id> retornou status inesperado: {response.status_code}"
+        assert response.status_code in (
+            200,
+            201,
+            400,
+            401,
+            403,
+            404,
+            422,
+            500,
+        ), f"POST /plans/<plan_id>/okr-global/approval/<record_id> retornou status inesperado: {response.status_code}"
     except requests.exceptions.RequestException as e:
-        pytest.fail(f"Erro na requisição POST /plans/<plan_id>/okr-global/approval/<record_id>: {e}")
+        pytest.fail(
+            f"Erro na requisição POST /plans/<plan_id>/okr-global/approval/<record_id>: {e}"
+        )
 
 
 """
@@ -4881,19 +6720,30 @@ import pytest
 import requests
 from testsprite_tests.conftest import BASE_URL, TIMEOUT, authenticated_session
 
+
 def test_delete_workshop_okr_record(base_url, timeout):
     """Testa a rota /plans/<plan_id>/okr-global/workshop/<record_id>/delete"""
     url = f"{base_url}/plans/<plan_id>/okr-global/workshop/<record_id>/delete"
-    
+
     # Test POST request
     try:
         # Tentar com payload vazio primeiro
         response = requests.post(url, json={}, timeout=timeout)
         # Aceitar vários códigos de status possíveis
-        assert response.status_code in (200, 201, 400, 401, 403, 404, 422, 500), \
-            f"POST /plans/<plan_id>/okr-global/workshop/<record_id>/delete retornou status inesperado: {response.status_code}"
+        assert response.status_code in (
+            200,
+            201,
+            400,
+            401,
+            403,
+            404,
+            422,
+            500,
+        ), f"POST /plans/<plan_id>/okr-global/workshop/<record_id>/delete retornou status inesperado: {response.status_code}"
     except requests.exceptions.RequestException as e:
-        pytest.fail(f"Erro na requisição POST /plans/<plan_id>/okr-global/workshop/<record_id>/delete: {e}")
+        pytest.fail(
+            f"Erro na requisição POST /plans/<plan_id>/okr-global/workshop/<record_id>/delete: {e}"
+        )
 
 
 """
@@ -4906,19 +6756,30 @@ import pytest
 import requests
 from testsprite_tests.conftest import BASE_URL, TIMEOUT, authenticated_session
 
+
 def test_delete_approval_okr_record(base_url, timeout):
     """Testa a rota /plans/<plan_id>/okr-global/approval/<record_id>/delete"""
     url = f"{base_url}/plans/<plan_id>/okr-global/approval/<record_id>/delete"
-    
+
     # Test POST request
     try:
         # Tentar com payload vazio primeiro
         response = requests.post(url, json={}, timeout=timeout)
         # Aceitar vários códigos de status possíveis
-        assert response.status_code in (200, 201, 400, 401, 403, 404, 422, 500), \
-            f"POST /plans/<plan_id>/okr-global/approval/<record_id>/delete retornou status inesperado: {response.status_code}"
+        assert response.status_code in (
+            200,
+            201,
+            400,
+            401,
+            403,
+            404,
+            422,
+            500,
+        ), f"POST /plans/<plan_id>/okr-global/approval/<record_id>/delete retornou status inesperado: {response.status_code}"
     except requests.exceptions.RequestException as e:
-        pytest.fail(f"Erro na requisição POST /plans/<plan_id>/okr-global/approval/<record_id>/delete: {e}")
+        pytest.fail(
+            f"Erro na requisição POST /plans/<plan_id>/okr-global/approval/<record_id>/delete: {e}"
+        )
 
 
 """
@@ -4931,19 +6792,30 @@ import pytest
 import requests
 from testsprite_tests.conftest import BASE_URL, TIMEOUT, authenticated_session
 
+
 def test_duplicate_okr_record(base_url, timeout):
     """Testa a rota /plans/<plan_id>/okr-global/duplicate/<type>/<record_id>"""
     url = f"{base_url}/plans/<plan_id>/okr-global/duplicate/<type>/<record_id>"
-    
+
     # Test POST request
     try:
         # Tentar com payload vazio primeiro
         response = requests.post(url, json={}, timeout=timeout)
         # Aceitar vários códigos de status possíveis
-        assert response.status_code in (200, 201, 400, 401, 403, 404, 422, 500), \
-            f"POST /plans/<plan_id>/okr-global/duplicate/<type>/<record_id> retornou status inesperado: {response.status_code}"
+        assert response.status_code in (
+            200,
+            201,
+            400,
+            401,
+            403,
+            404,
+            422,
+            500,
+        ), f"POST /plans/<plan_id>/okr-global/duplicate/<type>/<record_id> retornou status inesperado: {response.status_code}"
     except requests.exceptions.RequestException as e:
-        pytest.fail(f"Erro na requisição POST /plans/<plan_id>/okr-global/duplicate/<type>/<record_id>: {e}")
+        pytest.fail(
+            f"Erro na requisição POST /plans/<plan_id>/okr-global/duplicate/<type>/<record_id>: {e}"
+        )
 
 
 """
@@ -4956,19 +6828,30 @@ import pytest
 import requests
 from testsprite_tests.conftest import BASE_URL, TIMEOUT, authenticated_session
 
+
 def test_update_okr_preliminary_analysis_section_status(base_url, timeout):
     """Testa a rota /plans/<plan_id>/okr-global/preliminary-analysis/status"""
     url = f"{base_url}/plans/<plan_id>/okr-global/preliminary-analysis/status"
-    
+
     # Test POST request
     try:
         # Tentar com payload vazio primeiro
         response = requests.post(url, json={}, timeout=timeout)
         # Aceitar vários códigos de status possíveis
-        assert response.status_code in (200, 201, 400, 401, 403, 404, 422, 500), \
-            f"POST /plans/<plan_id>/okr-global/preliminary-analysis/status retornou status inesperado: {response.status_code}"
+        assert response.status_code in (
+            200,
+            201,
+            400,
+            401,
+            403,
+            404,
+            422,
+            500,
+        ), f"POST /plans/<plan_id>/okr-global/preliminary-analysis/status retornou status inesperado: {response.status_code}"
     except requests.exceptions.RequestException as e:
-        pytest.fail(f"Erro na requisição POST /plans/<plan_id>/okr-global/preliminary-analysis/status: {e}")
+        pytest.fail(
+            f"Erro na requisição POST /plans/<plan_id>/okr-global/preliminary-analysis/status: {e}"
+        )
 
 
 """
@@ -4981,19 +6864,30 @@ import pytest
 import requests
 from testsprite_tests.conftest import BASE_URL, TIMEOUT, authenticated_session
 
+
 def test_update_okr_workshop_final_section_status(base_url, timeout):
     """Testa a rota /plans/<plan_id>/okr-global/workshop-final/status"""
     url = f"{base_url}/plans/<plan_id>/okr-global/workshop-final/status"
-    
+
     # Test POST request
     try:
         # Tentar com payload vazio primeiro
         response = requests.post(url, json={}, timeout=timeout)
         # Aceitar vários códigos de status possíveis
-        assert response.status_code in (200, 201, 400, 401, 403, 404, 422, 500), \
-            f"POST /plans/<plan_id>/okr-global/workshop-final/status retornou status inesperado: {response.status_code}"
+        assert response.status_code in (
+            200,
+            201,
+            400,
+            401,
+            403,
+            404,
+            422,
+            500,
+        ), f"POST /plans/<plan_id>/okr-global/workshop-final/status retornou status inesperado: {response.status_code}"
     except requests.exceptions.RequestException as e:
-        pytest.fail(f"Erro na requisição POST /plans/<plan_id>/okr-global/workshop-final/status: {e}")
+        pytest.fail(
+            f"Erro na requisição POST /plans/<plan_id>/okr-global/workshop-final/status: {e}"
+        )
 
 
 """
@@ -5006,19 +6900,30 @@ import pytest
 import requests
 from testsprite_tests.conftest import BASE_URL, TIMEOUT, authenticated_session
 
+
 def test_update_okr_approvals_section_status(base_url, timeout):
     """Testa a rota /plans/<plan_id>/okr-global/approvals/status"""
     url = f"{base_url}/plans/<plan_id>/okr-global/approvals/status"
-    
+
     # Test POST request
     try:
         # Tentar com payload vazio primeiro
         response = requests.post(url, json={}, timeout=timeout)
         # Aceitar vários códigos de status possíveis
-        assert response.status_code in (200, 201, 400, 401, 403, 404, 422, 500), \
-            f"POST /plans/<plan_id>/okr-global/approvals/status retornou status inesperado: {response.status_code}"
+        assert response.status_code in (
+            200,
+            201,
+            400,
+            401,
+            403,
+            404,
+            422,
+            500,
+        ), f"POST /plans/<plan_id>/okr-global/approvals/status retornou status inesperado: {response.status_code}"
     except requests.exceptions.RequestException as e:
-        pytest.fail(f"Erro na requisição POST /plans/<plan_id>/okr-global/approvals/status: {e}")
+        pytest.fail(
+            f"Erro na requisição POST /plans/<plan_id>/okr-global/approvals/status: {e}"
+        )
 
 
 """
@@ -5031,19 +6936,30 @@ import pytest
 import requests
 from testsprite_tests.conftest import BASE_URL, TIMEOUT, authenticated_session
 
+
 def test_generate_ai_okr_suggestions(base_url, timeout):
     """Testa a rota /plans/<plan_id>/okr-global/ai-suggestions"""
     url = f"{base_url}/plans/<plan_id>/okr-global/ai-suggestions"
-    
+
     # Test POST request
     try:
         # Tentar com payload vazio primeiro
         response = requests.post(url, json={}, timeout=timeout)
         # Aceitar vários códigos de status possíveis
-        assert response.status_code in (200, 201, 400, 401, 403, 404, 422, 500), \
-            f"POST /plans/<plan_id>/okr-global/ai-suggestions retornou status inesperado: {response.status_code}"
+        assert response.status_code in (
+            200,
+            201,
+            400,
+            401,
+            403,
+            404,
+            422,
+            500,
+        ), f"POST /plans/<plan_id>/okr-global/ai-suggestions retornou status inesperado: {response.status_code}"
     except requests.exceptions.RequestException as e:
-        pytest.fail(f"Erro na requisição POST /plans/<plan_id>/okr-global/ai-suggestions: {e}")
+        pytest.fail(
+            f"Erro na requisição POST /plans/<plan_id>/okr-global/ai-suggestions: {e}"
+        )
 
 
 """
@@ -5056,19 +6972,30 @@ import pytest
 import requests
 from testsprite_tests.conftest import BASE_URL, TIMEOUT, authenticated_session
 
+
 def test_add_preliminary_area_okr_record(base_url, timeout):
     """Testa a rota /plans/<plan_id>/okr-area/preliminary"""
     url = f"{base_url}/plans/<plan_id>/okr-area/preliminary"
-    
+
     # Test POST request
     try:
         # Tentar com payload vazio primeiro
         response = requests.post(url, json={}, timeout=timeout)
         # Aceitar vários códigos de status possíveis
-        assert response.status_code in (200, 201, 400, 401, 403, 404, 422, 500), \
-            f"POST /plans/<plan_id>/okr-area/preliminary retornou status inesperado: {response.status_code}"
+        assert response.status_code in (
+            200,
+            201,
+            400,
+            401,
+            403,
+            404,
+            422,
+            500,
+        ), f"POST /plans/<plan_id>/okr-area/preliminary retornou status inesperado: {response.status_code}"
     except requests.exceptions.RequestException as e:
-        pytest.fail(f"Erro na requisição POST /plans/<plan_id>/okr-area/preliminary: {e}")
+        pytest.fail(
+            f"Erro na requisição POST /plans/<plan_id>/okr-area/preliminary: {e}"
+        )
 
 
 """
@@ -5081,17 +7008,26 @@ import pytest
 import requests
 from testsprite_tests.conftest import BASE_URL, TIMEOUT, authenticated_session
 
+
 def test_add_area_okr_record(base_url, timeout):
     """Testa a rota /plans/<plan_id>/okr-area/workshop"""
     url = f"{base_url}/plans/<plan_id>/okr-area/workshop"
-    
+
     # Test POST request
     try:
         # Tentar com payload vazio primeiro
         response = requests.post(url, json={}, timeout=timeout)
         # Aceitar vários códigos de status possíveis
-        assert response.status_code in (200, 201, 400, 401, 403, 404, 422, 500), \
-            f"POST /plans/<plan_id>/okr-area/workshop retornou status inesperado: {response.status_code}"
+        assert response.status_code in (
+            200,
+            201,
+            400,
+            401,
+            403,
+            404,
+            422,
+            500,
+        ), f"POST /plans/<plan_id>/okr-area/workshop retornou status inesperado: {response.status_code}"
     except requests.exceptions.RequestException as e:
         pytest.fail(f"Erro na requisição POST /plans/<plan_id>/okr-area/workshop: {e}")
 
@@ -5106,17 +7042,26 @@ import pytest
 import requests
 from testsprite_tests.conftest import BASE_URL, TIMEOUT, authenticated_session
 
+
 def test_add_final_area_okr_record(base_url, timeout):
     """Testa a rota /plans/<plan_id>/okr-area/final"""
     url = f"{base_url}/plans/<plan_id>/okr-area/final"
-    
+
     # Test POST request
     try:
         # Tentar com payload vazio primeiro
         response = requests.post(url, json={}, timeout=timeout)
         # Aceitar vários códigos de status possíveis
-        assert response.status_code in (200, 201, 400, 401, 403, 404, 422, 500), \
-            f"POST /plans/<plan_id>/okr-area/final retornou status inesperado: {response.status_code}"
+        assert response.status_code in (
+            200,
+            201,
+            400,
+            401,
+            403,
+            404,
+            422,
+            500,
+        ), f"POST /plans/<plan_id>/okr-area/final retornou status inesperado: {response.status_code}"
     except requests.exceptions.RequestException as e:
         pytest.fail(f"Erro na requisição POST /plans/<plan_id>/okr-area/final: {e}")
 
@@ -5131,19 +7076,30 @@ import pytest
 import requests
 from testsprite_tests.conftest import BASE_URL, TIMEOUT, authenticated_session
 
+
 def test_save_area_workshop_discussions(base_url, timeout):
     """Testa a rota /plans/<plan_id>/okr-area/workshop-discussions"""
     url = f"{base_url}/plans/<plan_id>/okr-area/workshop-discussions"
-    
+
     # Test POST request
     try:
         # Tentar com payload vazio primeiro
         response = requests.post(url, json={}, timeout=timeout)
         # Aceitar vários códigos de status possíveis
-        assert response.status_code in (200, 201, 400, 401, 403, 404, 422, 500), \
-            f"POST /plans/<plan_id>/okr-area/workshop-discussions retornou status inesperado: {response.status_code}"
+        assert response.status_code in (
+            200,
+            201,
+            400,
+            401,
+            403,
+            404,
+            422,
+            500,
+        ), f"POST /plans/<plan_id>/okr-area/workshop-discussions retornou status inesperado: {response.status_code}"
     except requests.exceptions.RequestException as e:
-        pytest.fail(f"Erro na requisição POST /plans/<plan_id>/okr-area/workshop-discussions: {e}")
+        pytest.fail(
+            f"Erro na requisição POST /plans/<plan_id>/okr-area/workshop-discussions: {e}"
+        )
 
 
 """
@@ -5156,19 +7112,30 @@ import pytest
 import requests
 from testsprite_tests.conftest import BASE_URL, TIMEOUT, authenticated_session
 
+
 def test_save_final_area_discussions(base_url, timeout):
     """Testa a rota /plans/<plan_id>/okr-area/final-discussions"""
     url = f"{base_url}/plans/<plan_id>/okr-area/final-discussions"
-    
+
     # Test POST request
     try:
         # Tentar com payload vazio primeiro
         response = requests.post(url, json={}, timeout=timeout)
         # Aceitar vários códigos de status possíveis
-        assert response.status_code in (200, 201, 400, 401, 403, 404, 422, 500), \
-            f"POST /plans/<plan_id>/okr-area/final-discussions retornou status inesperado: {response.status_code}"
+        assert response.status_code in (
+            200,
+            201,
+            400,
+            401,
+            403,
+            404,
+            422,
+            500,
+        ), f"POST /plans/<plan_id>/okr-area/final-discussions retornou status inesperado: {response.status_code}"
     except requests.exceptions.RequestException as e:
-        pytest.fail(f"Erro na requisição POST /plans/<plan_id>/okr-area/final-discussions: {e}")
+        pytest.fail(
+            f"Erro na requisição POST /plans/<plan_id>/okr-area/final-discussions: {e}"
+        )
 
 
 """
@@ -5181,19 +7148,30 @@ import pytest
 import requests
 from testsprite_tests.conftest import BASE_URL, TIMEOUT, authenticated_session
 
+
 def test_delete_area_workshop_discussions(base_url, timeout):
     """Testa a rota /plans/<plan_id>/okr-area/workshop-discussions/delete"""
     url = f"{base_url}/plans/<plan_id>/okr-area/workshop-discussions/delete"
-    
+
     # Test POST request
     try:
         # Tentar com payload vazio primeiro
         response = requests.post(url, json={}, timeout=timeout)
         # Aceitar vários códigos de status possíveis
-        assert response.status_code in (200, 201, 400, 401, 403, 404, 422, 500), \
-            f"POST /plans/<plan_id>/okr-area/workshop-discussions/delete retornou status inesperado: {response.status_code}"
+        assert response.status_code in (
+            200,
+            201,
+            400,
+            401,
+            403,
+            404,
+            422,
+            500,
+        ), f"POST /plans/<plan_id>/okr-area/workshop-discussions/delete retornou status inesperado: {response.status_code}"
     except requests.exceptions.RequestException as e:
-        pytest.fail(f"Erro na requisição POST /plans/<plan_id>/okr-area/workshop-discussions/delete: {e}")
+        pytest.fail(
+            f"Erro na requisição POST /plans/<plan_id>/okr-area/workshop-discussions/delete: {e}"
+        )
 
 
 """
@@ -5206,19 +7184,30 @@ import pytest
 import requests
 from testsprite_tests.conftest import BASE_URL, TIMEOUT, authenticated_session
 
+
 def test_delete_final_area_discussions(base_url, timeout):
     """Testa a rota /plans/<plan_id>/okr-area/final-discussions/delete"""
     url = f"{base_url}/plans/<plan_id>/okr-area/final-discussions/delete"
-    
+
     # Test POST request
     try:
         # Tentar com payload vazio primeiro
         response = requests.post(url, json={}, timeout=timeout)
         # Aceitar vários códigos de status possíveis
-        assert response.status_code in (200, 201, 400, 401, 403, 404, 422, 500), \
-            f"POST /plans/<plan_id>/okr-area/final-discussions/delete retornou status inesperado: {response.status_code}"
+        assert response.status_code in (
+            200,
+            201,
+            400,
+            401,
+            403,
+            404,
+            422,
+            500,
+        ), f"POST /plans/<plan_id>/okr-area/final-discussions/delete retornou status inesperado: {response.status_code}"
     except requests.exceptions.RequestException as e:
-        pytest.fail(f"Erro na requisição POST /plans/<plan_id>/okr-area/final-discussions/delete: {e}")
+        pytest.fail(
+            f"Erro na requisição POST /plans/<plan_id>/okr-area/final-discussions/delete: {e}"
+        )
 
 
 """
@@ -5231,19 +7220,30 @@ import pytest
 import requests
 from testsprite_tests.conftest import BASE_URL, TIMEOUT, authenticated_session
 
+
 def test_update_area_preliminary_analysis_section_status(base_url, timeout):
     """Testa a rota /plans/<plan_id>/okr-area/preliminary-analysis/status"""
     url = f"{base_url}/plans/<plan_id>/okr-area/preliminary-analysis/status"
-    
+
     # Test POST request
     try:
         # Tentar com payload vazio primeiro
         response = requests.post(url, json={}, timeout=timeout)
         # Aceitar vários códigos de status possíveis
-        assert response.status_code in (200, 201, 400, 401, 403, 404, 422, 500), \
-            f"POST /plans/<plan_id>/okr-area/preliminary-analysis/status retornou status inesperado: {response.status_code}"
+        assert response.status_code in (
+            200,
+            201,
+            400,
+            401,
+            403,
+            404,
+            422,
+            500,
+        ), f"POST /plans/<plan_id>/okr-area/preliminary-analysis/status retornou status inesperado: {response.status_code}"
     except requests.exceptions.RequestException as e:
-        pytest.fail(f"Erro na requisição POST /plans/<plan_id>/okr-area/preliminary-analysis/status: {e}")
+        pytest.fail(
+            f"Erro na requisição POST /plans/<plan_id>/okr-area/preliminary-analysis/status: {e}"
+        )
 
 
 """
@@ -5256,19 +7256,30 @@ import pytest
 import requests
 from testsprite_tests.conftest import BASE_URL, TIMEOUT, authenticated_session
 
+
 def test_update_workshop_area_section_status(base_url, timeout):
     """Testa a rota /plans/<plan_id>/okr-area/workshop/status"""
     url = f"{base_url}/plans/<plan_id>/okr-area/workshop/status"
-    
+
     # Test POST request
     try:
         # Tentar com payload vazio primeiro
         response = requests.post(url, json={}, timeout=timeout)
         # Aceitar vários códigos de status possíveis
-        assert response.status_code in (200, 201, 400, 401, 403, 404, 422, 500), \
-            f"POST /plans/<plan_id>/okr-area/workshop/status retornou status inesperado: {response.status_code}"
+        assert response.status_code in (
+            200,
+            201,
+            400,
+            401,
+            403,
+            404,
+            422,
+            500,
+        ), f"POST /plans/<plan_id>/okr-area/workshop/status retornou status inesperado: {response.status_code}"
     except requests.exceptions.RequestException as e:
-        pytest.fail(f"Erro na requisição POST /plans/<plan_id>/okr-area/workshop/status: {e}")
+        pytest.fail(
+            f"Erro na requisição POST /plans/<plan_id>/okr-area/workshop/status: {e}"
+        )
 
 
 """
@@ -5281,19 +7292,30 @@ import pytest
 import requests
 from testsprite_tests.conftest import BASE_URL, TIMEOUT, authenticated_session
 
+
 def test_update_final_area_section_status(base_url, timeout):
     """Testa a rota /plans/<plan_id>/okr-area/final/status"""
     url = f"{base_url}/plans/<plan_id>/okr-area/final/status"
-    
+
     # Test POST request
     try:
         # Tentar com payload vazio primeiro
         response = requests.post(url, json={}, timeout=timeout)
         # Aceitar vários códigos de status possíveis
-        assert response.status_code in (200, 201, 400, 401, 403, 404, 422, 500), \
-            f"POST /plans/<plan_id>/okr-area/final/status retornou status inesperado: {response.status_code}"
+        assert response.status_code in (
+            200,
+            201,
+            400,
+            401,
+            403,
+            404,
+            422,
+            500,
+        ), f"POST /plans/<plan_id>/okr-area/final/status retornou status inesperado: {response.status_code}"
     except requests.exceptions.RequestException as e:
-        pytest.fail(f"Erro na requisição POST /plans/<plan_id>/okr-area/final/status: {e}")
+        pytest.fail(
+            f"Erro na requisição POST /plans/<plan_id>/okr-area/final/status: {e}"
+        )
 
 
 """
@@ -5306,19 +7328,30 @@ import pytest
 import requests
 from testsprite_tests.conftest import BASE_URL, TIMEOUT, authenticated_session
 
+
 def test_generate_ai_area_okr_suggestions(base_url, timeout):
     """Testa a rota /plans/<plan_id>/okr-area/ai-suggestions"""
     url = f"{base_url}/plans/<plan_id>/okr-area/ai-suggestions"
-    
+
     # Test POST request
     try:
         # Tentar com payload vazio primeiro
         response = requests.post(url, json={}, timeout=timeout)
         # Aceitar vários códigos de status possíveis
-        assert response.status_code in (200, 201, 400, 401, 403, 404, 422, 500), \
-            f"POST /plans/<plan_id>/okr-area/ai-suggestions retornou status inesperado: {response.status_code}"
+        assert response.status_code in (
+            200,
+            201,
+            400,
+            401,
+            403,
+            404,
+            422,
+            500,
+        ), f"POST /plans/<plan_id>/okr-area/ai-suggestions retornou status inesperado: {response.status_code}"
     except requests.exceptions.RequestException as e:
-        pytest.fail(f"Erro na requisição POST /plans/<plan_id>/okr-area/ai-suggestions: {e}")
+        pytest.fail(
+            f"Erro na requisição POST /plans/<plan_id>/okr-area/ai-suggestions: {e}"
+        )
 
 
 """
@@ -5331,16 +7364,22 @@ import pytest
 import requests
 from testsprite_tests.conftest import BASE_URL, TIMEOUT, authenticated_session
 
+
 def test_get_agents(base_url, timeout):
     """Testa a rota /api/agents"""
     url = f"{base_url}/api/agents"
-    
+
     # Test GET request
     try:
         response = requests.get(url, timeout=timeout)
         # Aceitar 200, 302 (redirect), 401 (não autenticado), 403 (sem permissão), 404 (não encontrado)
-        assert response.status_code in (200, 302, 401, 403, 404), \
-            f"GET /api/agents retornou status inesperado: {response.status_code}"
+        assert response.status_code in (
+            200,
+            302,
+            401,
+            403,
+            404,
+        ), f"GET /api/agents retornou status inesperado: {response.status_code}"
     except requests.exceptions.RequestException as e:
         pytest.fail(f"Erro na requisição GET /api/agents: {e}")
 
@@ -5355,16 +7394,22 @@ import pytest
 import requests
 from testsprite_tests.conftest import BASE_URL, TIMEOUT, authenticated_session
 
+
 def test_api_available_buttons(base_url, timeout):
     """Testa a rota /api/agents/available-buttons"""
     url = f"{base_url}/api/agents/available-buttons"
-    
+
     # Test GET request
     try:
         response = requests.get(url, timeout=timeout)
         # Aceitar 200, 302 (redirect), 401 (não autenticado), 403 (sem permissão), 404 (não encontrado)
-        assert response.status_code in (200, 302, 401, 403, 404), \
-            f"GET /api/agents/available-buttons retornou status inesperado: {response.status_code}"
+        assert response.status_code in (
+            200,
+            302,
+            401,
+            403,
+            404,
+        ), f"GET /api/agents/available-buttons retornou status inesperado: {response.status_code}"
     except requests.exceptions.RequestException as e:
         pytest.fail(f"Erro na requisição GET /api/agents/available-buttons: {e}")
 
@@ -5379,17 +7424,26 @@ import pytest
 import requests
 from testsprite_tests.conftest import BASE_URL, TIMEOUT, authenticated_session
 
+
 def test_create_agent(base_url, timeout):
     """Testa a rota /api/agents"""
     url = f"{base_url}/api/agents"
-    
+
     # Test POST request
     try:
         # Tentar com payload vazio primeiro
         response = requests.post(url, json={}, timeout=timeout)
         # Aceitar vários códigos de status possíveis
-        assert response.status_code in (200, 201, 400, 401, 403, 404, 422, 500), \
-            f"POST /api/agents retornou status inesperado: {response.status_code}"
+        assert response.status_code in (
+            200,
+            201,
+            400,
+            401,
+            403,
+            404,
+            422,
+            500,
+        ), f"POST /api/agents retornou status inesperado: {response.status_code}"
     except requests.exceptions.RequestException as e:
         pytest.fail(f"Erro na requisição POST /api/agents: {e}")
 
@@ -5404,16 +7458,22 @@ import pytest
 import requests
 from testsprite_tests.conftest import BASE_URL, TIMEOUT, authenticated_session
 
+
 def test_get_agent(base_url, timeout):
     """Testa a rota /api/agents/<agent_id>"""
     url = f"{base_url}/api/agents/<agent_id>"
-    
+
     # Test GET request
     try:
         response = requests.get(url, timeout=timeout)
         # Aceitar 200, 302 (redirect), 401 (não autenticado), 403 (sem permissão), 404 (não encontrado)
-        assert response.status_code in (200, 302, 401, 403, 404), \
-            f"GET /api/agents/<agent_id> retornou status inesperado: {response.status_code}"
+        assert response.status_code in (
+            200,
+            302,
+            401,
+            403,
+            404,
+        ), f"GET /api/agents/<agent_id> retornou status inesperado: {response.status_code}"
     except requests.exceptions.RequestException as e:
         pytest.fail(f"Erro na requisição GET /api/agents/<agent_id>: {e}")
 
@@ -5428,17 +7488,26 @@ import pytest
 import requests
 from testsprite_tests.conftest import BASE_URL, TIMEOUT, authenticated_session
 
+
 def test_update_agent(base_url, timeout):
     """Testa a rota /api/agents/<agent_id>"""
     url = f"{base_url}/api/agents/<agent_id>"
-    
+
     # Test PUT request
     try:
         # Tentar com payload vazio primeiro
         response = requests.put(url, json={}, timeout=timeout)
         # Aceitar vários códigos de status possíveis
-        assert response.status_code in (200, 201, 400, 401, 403, 404, 422, 500), \
-            f"PUT /api/agents/<agent_id> retornou status inesperado: {response.status_code}"
+        assert response.status_code in (
+            200,
+            201,
+            400,
+            401,
+            403,
+            404,
+            422,
+            500,
+        ), f"PUT /api/agents/<agent_id> retornou status inesperado: {response.status_code}"
     except requests.exceptions.RequestException as e:
         pytest.fail(f"Erro na requisição PUT /api/agents/<agent_id>: {e}")
 
@@ -5453,16 +7522,24 @@ import pytest
 import requests
 from testsprite_tests.conftest import BASE_URL, TIMEOUT, authenticated_session
 
+
 def test_delete_agent(base_url, timeout):
     """Testa a rota /api/agents/<agent_id>"""
     url = f"{base_url}/api/agents/<agent_id>"
-    
+
     # Test DELETE request
     try:
         response = requests.delete(url, timeout=timeout)
         # Aceitar vários códigos de status possíveis
-        assert response.status_code in (200, 204, 400, 401, 403, 404, 500), \
-            f"DELETE /api/agents/<agent_id> retornou status inesperado: {response.status_code}"
+        assert response.status_code in (
+            200,
+            204,
+            400,
+            401,
+            403,
+            404,
+            500,
+        ), f"DELETE /api/agents/<agent_id> retornou status inesperado: {response.status_code}"
     except requests.exceptions.RequestException as e:
         pytest.fail(f"Erro na requisição DELETE /api/agents/<agent_id>: {e}")
 
@@ -5477,16 +7554,22 @@ import pytest
 import requests
 from testsprite_tests.conftest import BASE_URL, TIMEOUT, authenticated_session
 
+
 def test_get_available_fields(base_url, timeout):
     """Testa a rota /api/agents/available-fields"""
     url = f"{base_url}/api/agents/available-fields"
-    
+
     # Test GET request
     try:
         response = requests.get(url, timeout=timeout)
         # Aceitar 200, 302 (redirect), 401 (não autenticado), 403 (sem permissão), 404 (não encontrado)
-        assert response.status_code in (200, 302, 401, 403, 404), \
-            f"GET /api/agents/available-fields retornou status inesperado: {response.status_code}"
+        assert response.status_code in (
+            200,
+            302,
+            401,
+            403,
+            404,
+        ), f"GET /api/agents/available-fields retornou status inesperado: {response.status_code}"
     except requests.exceptions.RequestException as e:
         pytest.fail(f"Erro na requisição GET /api/agents/available-fields: {e}")
 
@@ -5501,17 +7584,26 @@ import pytest
 import requests
 from testsprite_tests.conftest import BASE_URL, TIMEOUT, authenticated_session
 
+
 def test_run_custom_agent(base_url, timeout):
     """Testa a rota /api/agents/<agent_id>/run"""
     url = f"{base_url}/api/agents/<agent_id>/run"
-    
+
     # Test POST request
     try:
         # Tentar com payload vazio primeiro
         response = requests.post(url, json={}, timeout=timeout)
         # Aceitar vários códigos de status possíveis
-        assert response.status_code in (200, 201, 400, 401, 403, 404, 422, 500), \
-            f"POST /api/agents/<agent_id>/run retornou status inesperado: {response.status_code}"
+        assert response.status_code in (
+            200,
+            201,
+            400,
+            401,
+            403,
+            404,
+            422,
+            500,
+        ), f"POST /api/agents/<agent_id>/run retornou status inesperado: {response.status_code}"
     except requests.exceptions.RequestException as e:
         pytest.fail(f"Erro na requisição POST /api/agents/<agent_id>/run: {e}")
 
@@ -5526,28 +7618,46 @@ import pytest
 import requests
 from testsprite_tests.conftest import BASE_URL, TIMEOUT, authenticated_session
 
+
 def test_api_company_portfolios(base_url, timeout):
     """Testa a rota /api/companies/<int:company_id>/portfolios"""
     url = f"{base_url}/api/companies/<int:company_id>/portfolios"
-    
+
     # Test GET request
     try:
         response = requests.get(url, timeout=timeout)
         # Aceitar 200, 302 (redirect), 401 (não autenticado), 403 (sem permissão), 404 (não encontrado)
-        assert response.status_code in (200, 302, 401, 403, 404), \
-            f"GET /api/companies/<int:company_id>/portfolios retornou status inesperado: {response.status_code}"
+        assert response.status_code in (
+            200,
+            302,
+            401,
+            403,
+            404,
+        ), f"GET /api/companies/<int:company_id>/portfolios retornou status inesperado: {response.status_code}"
     except requests.exceptions.RequestException as e:
-        pytest.fail(f"Erro na requisição GET /api/companies/<int:company_id>/portfolios: {e}")
+        pytest.fail(
+            f"Erro na requisição GET /api/companies/<int:company_id>/portfolios: {e}"
+        )
 
     # Test POST request
     try:
         # Tentar com payload vazio primeiro
         response = requests.post(url, json={}, timeout=timeout)
         # Aceitar vários códigos de status possíveis
-        assert response.status_code in (200, 201, 400, 401, 403, 404, 422, 500), \
-            f"POST /api/companies/<int:company_id>/portfolios retornou status inesperado: {response.status_code}"
+        assert response.status_code in (
+            200,
+            201,
+            400,
+            401,
+            403,
+            404,
+            422,
+            500,
+        ), f"POST /api/companies/<int:company_id>/portfolios retornou status inesperado: {response.status_code}"
     except requests.exceptions.RequestException as e:
-        pytest.fail(f"Erro na requisição POST /api/companies/<int:company_id>/portfolios: {e}")
+        pytest.fail(
+            f"Erro na requisição POST /api/companies/<int:company_id>/portfolios: {e}"
+        )
 
 
 """
@@ -5560,28 +7670,48 @@ import pytest
 import requests
 from testsprite_tests.conftest import BASE_URL, TIMEOUT, authenticated_session
 
+
 def test_api_portfolio(base_url, timeout):
     """Testa a rota /api/companies/<int:company_id>/portfolios/<int:portfolio_id>"""
     url = f"{base_url}/api/companies/<int:company_id>/portfolios/<int:portfolio_id>"
-    
+
     # Test DELETE request
     try:
         response = requests.delete(url, timeout=timeout)
         # Aceitar vários códigos de status possíveis
-        assert response.status_code in (200, 204, 400, 401, 403, 404, 500), \
-            f"DELETE /api/companies/<int:company_id>/portfolios/<int:portfolio_id> retornou status inesperado: {response.status_code}"
+        assert response.status_code in (
+            200,
+            204,
+            400,
+            401,
+            403,
+            404,
+            500,
+        ), f"DELETE /api/companies/<int:company_id>/portfolios/<int:portfolio_id> retornou status inesperado: {response.status_code}"
     except requests.exceptions.RequestException as e:
-        pytest.fail(f"Erro na requisição DELETE /api/companies/<int:company_id>/portfolios/<int:portfolio_id>: {e}")
+        pytest.fail(
+            f"Erro na requisição DELETE /api/companies/<int:company_id>/portfolios/<int:portfolio_id>: {e}"
+        )
 
     # Test PUT request
     try:
         # Tentar com payload vazio primeiro
         response = requests.put(url, json={}, timeout=timeout)
         # Aceitar vários códigos de status possíveis
-        assert response.status_code in (200, 201, 400, 401, 403, 404, 422, 500), \
-            f"PUT /api/companies/<int:company_id>/portfolios/<int:portfolio_id> retornou status inesperado: {response.status_code}"
+        assert response.status_code in (
+            200,
+            201,
+            400,
+            401,
+            403,
+            404,
+            422,
+            500,
+        ), f"PUT /api/companies/<int:company_id>/portfolios/<int:portfolio_id> retornou status inesperado: {response.status_code}"
     except requests.exceptions.RequestException as e:
-        pytest.fail(f"Erro na requisição PUT /api/companies/<int:company_id>/portfolios/<int:portfolio_id>: {e}")
+        pytest.fail(
+            f"Erro na requisição PUT /api/companies/<int:company_id>/portfolios/<int:portfolio_id>: {e}"
+        )
 
 
 """
@@ -5594,28 +7724,46 @@ import pytest
 import requests
 from testsprite_tests.conftest import BASE_URL, TIMEOUT, authenticated_session
 
+
 def test_api_company_projects(base_url, timeout):
     """Testa a rota /api/companies/<int:company_id>/projects"""
     url = f"{base_url}/api/companies/<int:company_id>/projects"
-    
+
     # Test GET request
     try:
         response = requests.get(url, timeout=timeout)
         # Aceitar 200, 302 (redirect), 401 (não autenticado), 403 (sem permissão), 404 (não encontrado)
-        assert response.status_code in (200, 302, 401, 403, 404), \
-            f"GET /api/companies/<int:company_id>/projects retornou status inesperado: {response.status_code}"
+        assert response.status_code in (
+            200,
+            302,
+            401,
+            403,
+            404,
+        ), f"GET /api/companies/<int:company_id>/projects retornou status inesperado: {response.status_code}"
     except requests.exceptions.RequestException as e:
-        pytest.fail(f"Erro na requisição GET /api/companies/<int:company_id>/projects: {e}")
+        pytest.fail(
+            f"Erro na requisição GET /api/companies/<int:company_id>/projects: {e}"
+        )
 
     # Test POST request
     try:
         # Tentar com payload vazio primeiro
         response = requests.post(url, json={}, timeout=timeout)
         # Aceitar vários códigos de status possíveis
-        assert response.status_code in (200, 201, 400, 401, 403, 404, 422, 500), \
-            f"POST /api/companies/<int:company_id>/projects retornou status inesperado: {response.status_code}"
+        assert response.status_code in (
+            200,
+            201,
+            400,
+            401,
+            403,
+            404,
+            422,
+            500,
+        ), f"POST /api/companies/<int:company_id>/projects retornou status inesperado: {response.status_code}"
     except requests.exceptions.RequestException as e:
-        pytest.fail(f"Erro na requisição POST /api/companies/<int:company_id>/projects: {e}")
+        pytest.fail(
+            f"Erro na requisição POST /api/companies/<int:company_id>/projects: {e}"
+        )
 
 
 """
@@ -5628,28 +7776,48 @@ import pytest
 import requests
 from testsprite_tests.conftest import BASE_URL, TIMEOUT, authenticated_session
 
+
 def test_api_company_project(base_url, timeout):
     """Testa a rota /api/companies/<int:company_id>/projects/<int:project_id>"""
     url = f"{base_url}/api/companies/<int:company_id>/projects/<int:project_id>"
-    
+
     # Test DELETE request
     try:
         response = requests.delete(url, timeout=timeout)
         # Aceitar vários códigos de status possíveis
-        assert response.status_code in (200, 204, 400, 401, 403, 404, 500), \
-            f"DELETE /api/companies/<int:company_id>/projects/<int:project_id> retornou status inesperado: {response.status_code}"
+        assert response.status_code in (
+            200,
+            204,
+            400,
+            401,
+            403,
+            404,
+            500,
+        ), f"DELETE /api/companies/<int:company_id>/projects/<int:project_id> retornou status inesperado: {response.status_code}"
     except requests.exceptions.RequestException as e:
-        pytest.fail(f"Erro na requisição DELETE /api/companies/<int:company_id>/projects/<int:project_id>: {e}")
+        pytest.fail(
+            f"Erro na requisição DELETE /api/companies/<int:company_id>/projects/<int:project_id>: {e}"
+        )
 
     # Test PUT request
     try:
         # Tentar com payload vazio primeiro
         response = requests.put(url, json={}, timeout=timeout)
         # Aceitar vários códigos de status possíveis
-        assert response.status_code in (200, 201, 400, 401, 403, 404, 422, 500), \
-            f"PUT /api/companies/<int:company_id>/projects/<int:project_id> retornou status inesperado: {response.status_code}"
+        assert response.status_code in (
+            200,
+            201,
+            400,
+            401,
+            403,
+            404,
+            422,
+            500,
+        ), f"PUT /api/companies/<int:company_id>/projects/<int:project_id> retornou status inesperado: {response.status_code}"
     except requests.exceptions.RequestException as e:
-        pytest.fail(f"Erro na requisição PUT /api/companies/<int:company_id>/projects/<int:project_id>: {e}")
+        pytest.fail(
+            f"Erro na requisição PUT /api/companies/<int:company_id>/projects/<int:project_id>: {e}"
+        )
 
 
 """
@@ -5662,28 +7830,46 @@ import pytest
 import requests
 from testsprite_tests.conftest import BASE_URL, TIMEOUT, authenticated_session
 
+
 def test_api_project_activities(base_url, timeout):
     """Testa a rota /api/companies/<int:company_id>/projects/<int:project_id>/activities"""
     url = f"{base_url}/api/companies/<int:company_id>/projects/<int:project_id>/activities"
-    
+
     # Test GET request
     try:
         response = requests.get(url, timeout=timeout)
         # Aceitar 200, 302 (redirect), 401 (não autenticado), 403 (sem permissão), 404 (não encontrado)
-        assert response.status_code in (200, 302, 401, 403, 404), \
-            f"GET /api/companies/<int:company_id>/projects/<int:project_id>/activities retornou status inesperado: {response.status_code}"
+        assert response.status_code in (
+            200,
+            302,
+            401,
+            403,
+            404,
+        ), f"GET /api/companies/<int:company_id>/projects/<int:project_id>/activities retornou status inesperado: {response.status_code}"
     except requests.exceptions.RequestException as e:
-        pytest.fail(f"Erro na requisição GET /api/companies/<int:company_id>/projects/<int:project_id>/activities: {e}")
+        pytest.fail(
+            f"Erro na requisição GET /api/companies/<int:company_id>/projects/<int:project_id>/activities: {e}"
+        )
 
     # Test POST request
     try:
         # Tentar com payload vazio primeiro
         response = requests.post(url, json={}, timeout=timeout)
         # Aceitar vários códigos de status possíveis
-        assert response.status_code in (200, 201, 400, 401, 403, 404, 422, 500), \
-            f"POST /api/companies/<int:company_id>/projects/<int:project_id>/activities retornou status inesperado: {response.status_code}"
+        assert response.status_code in (
+            200,
+            201,
+            400,
+            401,
+            403,
+            404,
+            422,
+            500,
+        ), f"POST /api/companies/<int:company_id>/projects/<int:project_id>/activities retornou status inesperado: {response.status_code}"
     except requests.exceptions.RequestException as e:
-        pytest.fail(f"Erro na requisição POST /api/companies/<int:company_id>/projects/<int:project_id>/activities: {e}")
+        pytest.fail(
+            f"Erro na requisição POST /api/companies/<int:company_id>/projects/<int:project_id>/activities: {e}"
+        )
 
 
 """
@@ -5696,28 +7882,48 @@ import pytest
 import requests
 from testsprite_tests.conftest import BASE_URL, TIMEOUT, authenticated_session
 
+
 def test_api_project_activity(base_url, timeout):
     """Testa a rota /api/companies/<int:company_id>/projects/<int:project_id>/activities/<int:activity_id>"""
     url = f"{base_url}/api/companies/<int:company_id>/projects/<int:project_id>/activities/<int:activity_id>"
-    
+
     # Test DELETE request
     try:
         response = requests.delete(url, timeout=timeout)
         # Aceitar vários códigos de status possíveis
-        assert response.status_code in (200, 204, 400, 401, 403, 404, 500), \
-            f"DELETE /api/companies/<int:company_id>/projects/<int:project_id>/activities/<int:activity_id> retornou status inesperado: {response.status_code}"
+        assert response.status_code in (
+            200,
+            204,
+            400,
+            401,
+            403,
+            404,
+            500,
+        ), f"DELETE /api/companies/<int:company_id>/projects/<int:project_id>/activities/<int:activity_id> retornou status inesperado: {response.status_code}"
     except requests.exceptions.RequestException as e:
-        pytest.fail(f"Erro na requisição DELETE /api/companies/<int:company_id>/projects/<int:project_id>/activities/<int:activity_id>: {e}")
+        pytest.fail(
+            f"Erro na requisição DELETE /api/companies/<int:company_id>/projects/<int:project_id>/activities/<int:activity_id>: {e}"
+        )
 
     # Test PUT request
     try:
         # Tentar com payload vazio primeiro
         response = requests.put(url, json={}, timeout=timeout)
         # Aceitar vários códigos de status possíveis
-        assert response.status_code in (200, 201, 400, 401, 403, 404, 422, 500), \
-            f"PUT /api/companies/<int:company_id>/projects/<int:project_id>/activities/<int:activity_id> retornou status inesperado: {response.status_code}"
+        assert response.status_code in (
+            200,
+            201,
+            400,
+            401,
+            403,
+            404,
+            422,
+            500,
+        ), f"PUT /api/companies/<int:company_id>/projects/<int:project_id>/activities/<int:activity_id> retornou status inesperado: {response.status_code}"
     except requests.exceptions.RequestException as e:
-        pytest.fail(f"Erro na requisição PUT /api/companies/<int:company_id>/projects/<int:project_id>/activities/<int:activity_id>: {e}")
+        pytest.fail(
+            f"Erro na requisição PUT /api/companies/<int:company_id>/projects/<int:project_id>/activities/<int:activity_id>: {e}"
+        )
 
 
 """
@@ -5730,19 +7936,30 @@ import pytest
 import requests
 from testsprite_tests.conftest import BASE_URL, TIMEOUT, authenticated_session
 
+
 def test_api_project_activity_stage(base_url, timeout):
     """Testa a rota /api/companies/<int:company_id>/projects/<int:project_id>/activities/<int:activity_id>/stage"""
     url = f"{base_url}/api/companies/<int:company_id>/projects/<int:project_id>/activities/<int:activity_id>/stage"
-    
+
     # Test PATCH request
     try:
         # Tentar com payload vazio primeiro
         response = requests.patch(url, json={}, timeout=timeout)
         # Aceitar vários códigos de status possíveis
-        assert response.status_code in (200, 201, 400, 401, 403, 404, 422, 500), \
-            f"PATCH /api/companies/<int:company_id>/projects/<int:project_id>/activities/<int:activity_id>/stage retornou status inesperado: {response.status_code}"
+        assert response.status_code in (
+            200,
+            201,
+            400,
+            401,
+            403,
+            404,
+            422,
+            500,
+        ), f"PATCH /api/companies/<int:company_id>/projects/<int:project_id>/activities/<int:activity_id>/stage retornou status inesperado: {response.status_code}"
     except requests.exceptions.RequestException as e:
-        pytest.fail(f"Erro na requisição PATCH /api/companies/<int:company_id>/projects/<int:project_id>/activities/<int:activity_id>/stage: {e}")
+        pytest.fail(
+            f"Erro na requisição PATCH /api/companies/<int:company_id>/projects/<int:project_id>/activities/<int:activity_id>/stage: {e}"
+        )
 
 
 """
@@ -5755,19 +7972,30 @@ import pytest
 import requests
 from testsprite_tests.conftest import BASE_URL, TIMEOUT, authenticated_session
 
+
 def test_api_transfer_activity(base_url, timeout):
     """Testa a rota /api/companies/<int:company_id>/projects/<int:project_id>/activities/<int:activity_id>/transfer"""
     url = f"{base_url}/api/companies/<int:company_id>/projects/<int:project_id>/activities/<int:activity_id>/transfer"
-    
+
     # Test POST request
     try:
         # Tentar com payload vazio primeiro
         response = requests.post(url, json={}, timeout=timeout)
         # Aceitar vários códigos de status possíveis
-        assert response.status_code in (200, 201, 400, 401, 403, 404, 422, 500), \
-            f"POST /api/companies/<int:company_id>/projects/<int:project_id>/activities/<int:activity_id>/transfer retornou status inesperado: {response.status_code}"
+        assert response.status_code in (
+            200,
+            201,
+            400,
+            401,
+            403,
+            404,
+            422,
+            500,
+        ), f"POST /api/companies/<int:company_id>/projects/<int:project_id>/activities/<int:activity_id>/transfer retornou status inesperado: {response.status_code}"
     except requests.exceptions.RequestException as e:
-        pytest.fail(f"Erro na requisição POST /api/companies/<int:company_id>/projects/<int:project_id>/activities/<int:activity_id>/transfer: {e}")
+        pytest.fail(
+            f"Erro na requisição POST /api/companies/<int:company_id>/projects/<int:project_id>/activities/<int:activity_id>/transfer: {e}"
+        )
 
 
 """
@@ -5780,18 +8008,26 @@ import pytest
 import requests
 from testsprite_tests.conftest import BASE_URL, TIMEOUT, authenticated_session
 
+
 def test_api_get_project_info(base_url, timeout):
     """Testa a rota /api/companies/<int:company_id>/projects/<int:project_id>/info"""
     url = f"{base_url}/api/companies/<int:company_id>/projects/<int:project_id>/info"
-    
+
     # Test GET request
     try:
         response = requests.get(url, timeout=timeout)
         # Aceitar 200, 302 (redirect), 401 (não autenticado), 403 (sem permissão), 404 (não encontrado)
-        assert response.status_code in (200, 302, 401, 403, 404), \
-            f"GET /api/companies/<int:company_id>/projects/<int:project_id>/info retornou status inesperado: {response.status_code}"
+        assert response.status_code in (
+            200,
+            302,
+            401,
+            403,
+            404,
+        ), f"GET /api/companies/<int:company_id>/projects/<int:project_id>/info retornou status inesperado: {response.status_code}"
     except requests.exceptions.RequestException as e:
-        pytest.fail(f"Erro na requisição GET /api/companies/<int:company_id>/projects/<int:project_id>/info: {e}")
+        pytest.fail(
+            f"Erro na requisição GET /api/companies/<int:company_id>/projects/<int:project_id>/info: {e}"
+        )
 
 
 """
@@ -5804,18 +8040,26 @@ import pytest
 import requests
 from testsprite_tests.conftest import BASE_URL, TIMEOUT, authenticated_session
 
+
 def test_api_plan_okr_global_records(base_url, timeout):
     """Testa a rota /api/plans/<int:plan_id>/okr-global-records"""
     url = f"{base_url}/api/plans/<int:plan_id>/okr-global-records"
-    
+
     # Test GET request
     try:
         response = requests.get(url, timeout=timeout)
         # Aceitar 200, 302 (redirect), 401 (não autenticado), 403 (sem permissão), 404 (não encontrado)
-        assert response.status_code in (200, 302, 401, 403, 404), \
-            f"GET /api/plans/<int:plan_id>/okr-global-records retornou status inesperado: {response.status_code}"
+        assert response.status_code in (
+            200,
+            302,
+            401,
+            403,
+            404,
+        ), f"GET /api/plans/<int:plan_id>/okr-global-records retornou status inesperado: {response.status_code}"
     except requests.exceptions.RequestException as e:
-        pytest.fail(f"Erro na requisição GET /api/plans/<int:plan_id>/okr-global-records: {e}")
+        pytest.fail(
+            f"Erro na requisição GET /api/plans/<int:plan_id>/okr-global-records: {e}"
+        )
 
 
 """
@@ -5828,16 +8072,22 @@ import pytest
 import requests
 from testsprite_tests.conftest import BASE_URL, TIMEOUT, authenticated_session
 
+
 def test_api_plan_projects(base_url, timeout):
     """Testa a rota /api/plans/<int:plan_id>/projects"""
     url = f"{base_url}/api/plans/<int:plan_id>/projects"
-    
+
     # Test GET request
     try:
         response = requests.get(url, timeout=timeout)
         # Aceitar 200, 302 (redirect), 401 (não autenticado), 403 (sem permissão), 404 (não encontrado)
-        assert response.status_code in (200, 302, 401, 403, 404), \
-            f"GET /api/plans/<int:plan_id>/projects retornou status inesperado: {response.status_code}"
+        assert response.status_code in (
+            200,
+            302,
+            401,
+            403,
+            404,
+        ), f"GET /api/plans/<int:plan_id>/projects retornou status inesperado: {response.status_code}"
     except requests.exceptions.RequestException as e:
         pytest.fail(f"Erro na requisição GET /api/plans/<int:plan_id>/projects: {e}")
 
@@ -5852,17 +8102,21 @@ import pytest
 import requests
 from testsprite_tests.conftest import BASE_URL, TIMEOUT, authenticated_session
 
+
 def test_health_check(base_url, timeout):
     """Testa a rota /health"""
     url = f"{base_url}/health"
-    
+
     # Test GET request
     try:
         response = requests.get(url, timeout=timeout)
         # Aceitar 200, 302 (redirect), 401 (não autenticado), 403 (sem permissão), 404 (não encontrado)
-        assert response.status_code in (200, 302, 401, 403, 404), \
-            f"GET /health retornou status inesperado: {response.status_code}"
+        assert response.status_code in (
+            200,
+            302,
+            401,
+            403,
+            404,
+        ), f"GET /health retornou status inesperado: {response.status_code}"
     except requests.exceptions.RequestException as e:
         pytest.fail(f"Erro na requisição GET /health: {e}")
-
-

@@ -17,150 +17,159 @@ from typing import Optional, Dict, Any, Callable
 
 class AutoLogConfig:
     """Configuration for auto-logging"""
+
     # Rotas que devem ser ignoradas automaticamente
     SKIP_ENDPOINTS = [
-        'static',
-        'favicon',
-        'logs.list_logs',
-        'logs.get_log_stats',
-        'logs.logs_dashboard',
-        'logs.export_logs',
-        'login',
-        'auth.login',
-        'auth.logout'
+        "static",
+        "favicon",
+        "logs.list_logs",
+        "logs.get_log_stats",
+        "logs.logs_dashboard",
+        "logs.export_logs",
+        "login",
+        "auth.login",
+        "auth.logout",
     ]
-    
+
     # Mapeamento de padrÃµes de URL para tipos de entidade
     ENTITY_TYPE_PATTERNS = {
-        r'/companies/(\d+)': 'company',
-        r'/plans/([^/]+)': 'plan',
-        r'/participants/(\d+)': 'participant',
-        r'/projects/(\d+)': 'project',
-        r'/indicators/(\d+)': 'indicator',
-        r'/indicator-groups/(\d+)': 'indicator_group',
-        r'/indicator-data/(\d+)': 'indicator_data',
-        r'/okrs?/(\d+)': 'okr',
-        r'/meetings/(\d+)': 'meeting',
-        r'/processes/(\d+)': 'process',
-        r'/employees/(\d+)': 'employee',
-        r'/departments/(\d+)': 'department',
-        r'/portfolios/(\d+)': 'portfolio',
-        r'/drivers/(\d+)': 'driver',
-        r'/routines/(\d+)': 'routine',
-        r'/routine-tasks/(\d+)': 'routine_task',
-        r'/process-instances/(\d+)': 'process_instance',
-        r'/process-activities/(\d+)': 'process_activity',
+        r"/companies/(\d+)": "company",
+        r"/plans/([^/]+)": "plan",
+        r"/participants/(\d+)": "participant",
+        r"/projects/(\d+)": "project",
+        r"/indicators/(\d+)": "indicator",
+        r"/indicator-groups/(\d+)": "indicator_group",
+        r"/indicator-data/(\d+)": "indicator_data",
+        r"/okrs?/(\d+)": "okr",
+        r"/meetings/(\d+)": "meeting",
+        r"/processes/(\d+)": "process",
+        r"/employees/(\d+)": "employee",
+        r"/departments/(\d+)": "department",
+        r"/portfolios/(\d+)": "portfolio",
+        r"/drivers/(\d+)": "driver",
+        r"/routines/(\d+)": "routine",
+        r"/routine-tasks/(\d+)": "routine_task",
+        r"/process-instances/(\d+)": "process_instance",
+        r"/process-activities/(\d+)": "process_activity",
     }
-    
+
     # Entidades que devem ser registradas
     ENABLED_ENTITIES = set()  # Vazio = todas habilitadas
     DISABLED_ENTITIES = set()  # Entidades desabilitadas explicitamente
 
 
-def extract_entity_info(path: str, method: str, data: Optional[Dict] = None) -> Dict[str, Any]:
+def extract_entity_info(
+    path: str, method: str, data: Optional[Dict] = None
+) -> Dict[str, Any]:
     """
     Extrai informaÃ§Ãµes sobre a entidade da URL e dados
-    
+
     Args:
         path: Caminho da URL
         method: MÃ©todo HTTP
         data: Dados da requisiÃ§Ã£o
-    
+
     Returns:
         Dict com entity_type, entity_id, entity_name
     """
     entity_info = {
-        'entity_type': None,
-        'entity_id': None,
-        'entity_name': None,
-        'company_id': None,
-        'plan_id': None
+        "entity_type": None,
+        "entity_id": None,
+        "entity_name": None,
+        "company_id": None,
+        "plan_id": None,
     }
-    
+
     # Tentar extrair company_id da URL
-    company_match = re.search(r'/company/(\d+)', path)
+    company_match = re.search(r"/company/(\d+)", path)
     if company_match:
-        entity_info['company_id'] = int(company_match.group(1))
-    
+        entity_info["company_id"] = int(company_match.group(1))
+
     # Tentar extrair tipo de entidade e ID
     for pattern, entity_type in AutoLogConfig.ENTITY_TYPE_PATTERNS.items():
         match = re.search(pattern, path)
         if match:
-            entity_info['entity_type'] = entity_type
-            entity_info['entity_id'] = match.group(1)
+            entity_info["entity_type"] = entity_type
+            entity_info["entity_id"] = match.group(1)
             break
-    
+
     # Se nÃ£o encontrou na URL, tentar inferir do endpoint
-    if not entity_info['entity_type']:
-        path_parts = path.strip('/').split('/')
+    if not entity_info["entity_type"]:
+        path_parts = path.strip("/").split("/")
         for part in path_parts:
-            if part in ['companies', 'company']:
-                entity_info['entity_type'] = 'company'
-            elif part in ['plans', 'plan']:
-                entity_info['entity_type'] = 'plan'
-            elif part in ['projects', 'project']:
-                entity_info['entity_type'] = 'project'
-            elif part in ['indicators', 'indicator']:
-                entity_info['entity_type'] = 'indicator'
-            elif part in ['meetings', 'meeting']:
-                entity_info['entity_type'] = 'meeting'
-    
+            if part in ["companies", "company"]:
+                entity_info["entity_type"] = "company"
+            elif part in ["plans", "plan"]:
+                entity_info["entity_type"] = "plan"
+            elif part in ["projects", "project"]:
+                entity_info["entity_type"] = "project"
+            elif part in ["indicators", "indicator"]:
+                entity_info["entity_type"] = "indicator"
+            elif part in ["meetings", "meeting"]:
+                entity_info["entity_type"] = "meeting"
+
     # Tentar extrair nome da entidade dos dados
     if data:
         if isinstance(data, dict):
-            entity_info['entity_name'] = (
-                data.get('name') or 
-                data.get('title') or 
-                data.get('description', '')[:50]
+            entity_info["entity_name"] = (
+                data.get("name")
+                or data.get("title")
+                or data.get("description", "")[:50]
             )
-            
+
             # Tentar extrair IDs adicionais dos dados
-            if not entity_info['company_id'] and 'company_id' in data:
-                entity_info['company_id'] = data.get('company_id')
-            if not entity_info['plan_id'] and 'plan_id' in data:
-                entity_info['plan_id'] = data.get('plan_id')
-    
+            if not entity_info["company_id"] and "company_id" in data:
+                entity_info["company_id"] = data.get("company_id")
+            if not entity_info["plan_id"] and "plan_id" in data:
+                entity_info["plan_id"] = data.get("plan_id")
+
     return entity_info
 
 
 def should_log_route(endpoint: str, entity_type: Optional[str]) -> bool:
     """
     Verifica se a rota deve ser registrada em log
-    
+
     Args:
         endpoint: Nome do endpoint Flask
         entity_type: Tipo da entidade
-    
+
     Returns:
         True se deve registrar log
     """
     # Verificar se estÃ¡ na lista de skip
     if endpoint in AutoLogConfig.SKIP_ENDPOINTS:
         return False
-    
+
     # Se hÃ¡ tipo de entidade, verificar se estÃ¡ habilitado/desabilitado
     if entity_type:
-        if AutoLogConfig.DISABLED_ENTITIES and entity_type in AutoLogConfig.DISABLED_ENTITIES:
+        if (
+            AutoLogConfig.DISABLED_ENTITIES
+            and entity_type in AutoLogConfig.DISABLED_ENTITIES
+        ):
             return False
-        if AutoLogConfig.ENABLED_ENTITIES and entity_type not in AutoLogConfig.ENABLED_ENTITIES:
+        if (
+            AutoLogConfig.ENABLED_ENTITIES
+            and entity_type not in AutoLogConfig.ENABLED_ENTITIES
+        ):
             return False
-    
+
     return True
 
 
 def auto_log_crud(
     entity_type: Optional[str] = None,
     get_entity_name: Optional[Callable] = None,
-    custom_description: Optional[str] = None
+    custom_description: Optional[str] = None,
 ):
     """
     Decorador universal para logging automÃ¡tico de operaÃ§Ãµes CRUD
-    
+
     Args:
         entity_type: Tipo da entidade (opcional, serÃ¡ inferido da URL se nÃ£o fornecido)
         get_entity_name: FunÃ§Ã£o para extrair o nome da entidade do resultado
         custom_description: DescriÃ§Ã£o customizada para o log
-    
+
     Exemplo:
         @app.route('/api/company/<int:company_id>/indicators', methods=['POST'])
         @auto_log_crud('indicator')
@@ -168,16 +177,17 @@ def auto_log_crud(
             # ... criar indicador
             return jsonify(result)
     """
+
     def decorator(f):
         @wraps(f)
         def decorated_function(*args, **kwargs):
             # Verificar se deve registrar log
-            endpoint = request.endpoint or ''
-            
+            endpoint = request.endpoint or ""
+
             # Extrair informaÃ§Ãµes da requisiÃ§Ã£o
             path = request.path
             method = request.method
-            
+
             # Pegar dados da requisiÃ§Ã£o
             request_data = None
             try:
@@ -187,108 +197,109 @@ def auto_log_crud(
                     request_data = request.form.to_dict()
             except Exception as exc:
                 pass
-            
+
             # Extrair informaÃ§Ãµes da entidade
             entity_info = extract_entity_info(path, method, request_data)
-            
+
             # Usar entity_type fornecido ou inferido
-            final_entity_type = entity_type or entity_info['entity_type']
-            
+            final_entity_type = entity_type or entity_info["entity_type"]
+
             # Verificar se deve registrar
             if not should_log_route(endpoint, final_entity_type):
                 return f(*args, **kwargs)
-            
+
             # Guardar informaÃ§Ãµes antes da execuÃ§Ã£o (para DELETE e UPDATE)
             old_values = None
-            if method in ['PUT', 'PATCH', 'DELETE'] and entity_info['entity_id']:
+            if method in ["PUT", "PATCH", "DELETE"] and entity_info["entity_id"]:
                 # Aqui poderÃ­amos buscar os valores antigos do banco
                 # Por enquanto, deixaremos None
                 pass
-            
+
             # Executar a funÃ§Ã£o original
             try:
                 result = f(*args, **kwargs)
-                
+
                 # Determinar aÃ§Ã£o baseada no mÃ©todo HTTP
                 action = None
-                if method == 'POST':
-                    action = 'CREATE'
-                elif method in ['PUT', 'PATCH']:
-                    action = 'UPDATE'
-                elif method == 'DELETE':
-                    action = 'DELETE'
-                elif method == 'GET':
-                    action = 'VIEW'
-                
-                if action and action != 'VIEW':  # NÃ£o logar todas as visualizaÃ§Ãµes
+                if method == "POST":
+                    action = "CREATE"
+                elif method in ["PUT", "PATCH"]:
+                    action = "UPDATE"
+                elif method == "DELETE":
+                    action = "DELETE"
+                elif method == "GET":
+                    action = "VIEW"
+
+                if action and action != "VIEW":  # NÃ£o logar todas as visualizaÃ§Ãµes
                     # Extrair valores novos do resultado
                     new_values = None
-                    if hasattr(result, 'get_json'):
+                    if hasattr(result, "get_json"):
                         try:
                             response_data = result.get_json(silent=True)
                             if isinstance(response_data, dict):
-                                new_values = response_data.get('data', response_data)
+                                new_values = response_data.get("data", response_data)
                         except Exception as exc:
                             pass
-                    
+
                     # Extrair nome da entidade
-                    entity_name = entity_info['entity_name']
+                    entity_name = entity_info["entity_name"]
                     if get_entity_name and new_values:
                         try:
                             entity_name = get_entity_name(new_values)
                         except Exception as exc:
                             pass
-                    
+
                     # Criar descriÃ§Ã£o
                     description = custom_description
                     if not description:
                         action_pt = {
-                            'CREATE': 'CriaÃ§Ã£o',
-                            'UPDATE': 'AtualizaÃ§Ã£o',
-                            'DELETE': 'ExclusÃ£o'
+                            "CREATE": "CriaÃ§Ã£o",
+                            "UPDATE": "AtualizaÃ§Ã£o",
+                            "DELETE": "ExclusÃ£o",
                         }.get(action, action)
-                        
-                        entity_type_pt = final_entity_type or 'entidade'
+
+                        entity_type_pt = final_entity_type or "entidade"
                         description = f"{action_pt} de {entity_type_pt}"
                         if entity_name:
                             description += f": {entity_name}"
-                    
+
                     # Registrar log
                     try:
                         log_service.create_log(
                             action=action,
-                            entity_type=final_entity_type or 'unknown',
-                            entity_id=entity_info['entity_id'],
+                            entity_type=final_entity_type or "unknown",
+                            entity_id=entity_info["entity_id"],
                             entity_name=entity_name,
                             old_values=old_values,
                             new_values=new_values,
                             description=description,
-                            company_id=entity_info['company_id'],
-                            plan_id=entity_info['plan_id']
+                            company_id=entity_info["company_id"],
+                            plan_id=entity_info["plan_id"],
                         )
                     except Exception as log_error:
                         # NÃ£o deixar erros de log quebrarem a aplicaÃ§Ã£o
                         logger.exception("Erro ao registrar log")
-                
+
                 return result
-                
+
             except Exception as e:
                 # Se houver erro, registrar tambÃ©m
                 try:
                     log_service.create_log(
-                        action='ERROR',
-                        entity_type=final_entity_type or 'unknown',
-                        entity_id=entity_info['entity_id'],
-                        entity_name=entity_info['entity_name'],
+                        action="ERROR",
+                        entity_type=final_entity_type or "unknown",
+                        entity_id=entity_info["entity_id"],
+                        entity_name=entity_info["entity_name"],
                         description=f"Erro em operaÃ§Ã£o: {str(e)[:200]}",
-                        company_id=entity_info['company_id'],
-                        plan_id=entity_info['plan_id']
+                        company_id=entity_info["company_id"],
+                        plan_id=entity_info["plan_id"],
                     )
                 except Exception as exc:
                     pass
                 raise e
-        
+
         return decorated_function
+
     return decorator
 
 
@@ -309,11 +320,8 @@ def disable_auto_logging_for_entity(entity_type: str):
 def get_auto_logging_config() -> Dict[str, Any]:
     """Retorna a configuraÃ§Ã£o atual de auto-logging"""
     return {
-        'enabled_entities': list(AutoLogConfig.ENABLED_ENTITIES),
-        'disabled_entities': list(AutoLogConfig.DISABLED_ENTITIES),
-        'skip_endpoints': AutoLogConfig.SKIP_ENDPOINTS,
-        'entity_patterns': list(AutoLogConfig.ENTITY_TYPE_PATTERNS.keys())
+        "enabled_entities": list(AutoLogConfig.ENABLED_ENTITIES),
+        "disabled_entities": list(AutoLogConfig.DISABLED_ENTITIES),
+        "skip_endpoints": AutoLogConfig.SKIP_ENDPOINTS,
+        "entity_patterns": list(AutoLogConfig.ENTITY_TYPE_PATTERNS.keys()),
     }
-
-
-

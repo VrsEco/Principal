@@ -10,45 +10,46 @@ import sys
 # Add current directory to Python path
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 
+
 def integrate_logs_system():
     """Integrate the logs system into the main application"""
     print("🔗 Integrando Sistema de Logs na Aplicação Principal")
     print("=" * 60)
-    
+
     # Check if app_pev.py exists
-    if not os.path.exists('app_pev.py'):
+    if not os.path.exists("app_pev.py"):
         print("❌ Arquivo app_pev.py não encontrado")
         return False
-    
+
     # Read current app_pev.py
-    with open('app_pev.py', 'r', encoding='utf-8') as f:
+    with open("app_pev.py", "r", encoding="utf-8") as f:
         content = f.read()
-    
+
     # Check if already integrated
-    if 'from api.auth import auth_bp' in content:
+    if "from api.auth import auth_bp" in content:
         print("✅ Sistema de logs já integrado")
         return True
-    
+
     # Add imports
     imports_to_add = [
         "from api.auth import auth_bp",
         "from api.logs import logs_bp",
-        "from middleware.audit_middleware import init_audit_middleware"
+        "from middleware.audit_middleware import init_audit_middleware",
     ]
-    
+
     # Find where to add imports (after existing imports)
-    lines = content.split('\n')
+    lines = content.split("\n")
     import_end = 0
-    
+
     for i, line in enumerate(lines):
-        if line.strip().startswith('from ') or line.strip().startswith('import '):
+        if line.strip().startswith("from ") or line.strip().startswith("import "):
             import_end = i
-    
+
     # Add new imports
     for import_line in imports_to_add:
         lines.insert(import_end + 1, import_line)
         import_end += 1
-    
+
     # Add blueprint registrations
     blueprint_registrations = [
         "",
@@ -57,27 +58,27 @@ def integrate_logs_system():
         "app.register_blueprint(logs_bp)",
         "",
         "# Initialize audit middleware",
-        "init_audit_middleware(app)"
+        "init_audit_middleware(app)",
     ]
-    
+
     # Find where to add blueprint registrations (after app creation)
     blueprint_insert_point = 0
     for i, line in enumerate(lines):
-        if 'app.register_blueprint(' in line:
+        if "app.register_blueprint(" in line:
             blueprint_insert_point = i
-    
+
     if blueprint_insert_point == 0:
         # Find app creation
         for i, line in enumerate(lines):
-            if 'app = Flask(' in line:
+            if "app = Flask(" in line:
                 blueprint_insert_point = i + 1
                 break
-    
+
     # Add blueprint registrations
     for blueprint_line in blueprint_registrations:
         lines.insert(blueprint_insert_point, blueprint_line)
         blueprint_insert_point += 1
-    
+
     # Add dashboard route
     dashboard_route = '''
 # Dashboard route
@@ -93,35 +94,36 @@ def login_redirect():
     """Redirect to auth login"""
     return redirect(url_for('auth.login'))
 '''
-    
+
     # Find where to add routes (before the main block)
     route_insert_point = len(lines) - 1
     for i, line in enumerate(lines):
         if 'if __name__ == "__main__":' in line:
             route_insert_point = i
             break
-    
+
     # Add dashboard route
-    for route_line in dashboard_route.strip().split('\n'):
+    for route_line in dashboard_route.strip().split("\n"):
         lines.insert(route_insert_point, route_line)
         route_insert_point += 1
-    
+
     # Write updated content
-    with open('app_pev.py', 'w', encoding='utf-8') as f:
-        f.write('\n'.join(lines))
-    
+    with open("app_pev.py", "w", encoding="utf-8") as f:
+        f.write("\n".join(lines))
+
     print("✅ Sistema de logs integrado com sucesso!")
     print("\n📋 Modificações realizadas:")
     print("   ✅ Imports adicionados")
     print("   ✅ Blueprints registrados")
     print("   ✅ Middleware de auditoria inicializado")
     print("   ✅ Rotas de dashboard adicionadas")
-    
+
     return True
+
 
 def create_dashboard_template():
     """Create basic dashboard template"""
-    dashboard_html = '''<!DOCTYPE html>
+    dashboard_html = """<!DOCTYPE html>
 <html lang="pt-BR">
 <head>
     <meta charset="UTF-8">
@@ -205,29 +207,30 @@ def create_dashboard_template():
     
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/js/bootstrap.bundle.min.js"></script>
 </body>
-</html>'''
-    
+</html>"""
+
     # Create templates directory if it doesn't exist
-    os.makedirs('templates', exist_ok=True)
-    
+    os.makedirs("templates", exist_ok=True)
+
     # Write dashboard template
-    with open('templates/dashboard.html', 'w', encoding='utf-8') as f:
+    with open("templates/dashboard.html", "w", encoding="utf-8") as f:
         f.write(dashboard_html)
-    
+
     print("✅ Template de dashboard criado")
+
 
 def main():
     """Main integration function"""
     print("🚀 Integrando Sistema de Logs na Aplicação")
     print("=" * 60)
-    
+
     # Integrate logs system
     if not integrate_logs_system():
         return False
-    
+
     # Create dashboard template
     create_dashboard_template()
-    
+
     print("\n🎉 Integração concluída com sucesso!")
     print("\n📋 Próximos passos:")
     print("   1. Execute: python app_pev.py")
@@ -242,8 +245,9 @@ def main():
     print("   /logs/ - Dashboard de logs")
     print("   /logs/stats - Estatísticas")
     print("   /auth/users - Listar usuários (admin)")
-    
+
     return True
+
 
 if __name__ == "__main__":
     success = main()

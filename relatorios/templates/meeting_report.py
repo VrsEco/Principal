@@ -20,61 +20,65 @@ from config_database import get_db
 def generate_meeting_report_html(meeting_id: int) -> str:
     """
     Gera relatório HTML de uma reunião específica
-    
+
     Args:
         meeting_id: ID da reunião
-        
+
     Returns:
         str: HTML completo do relatório
     """
-    
+
     # 1. Buscar dados da reunião
     db = get_db()
     meeting = db.get_meeting(meeting_id)
-    
+
     if not meeting:
         return f"<html><body><h1>Reunião não encontrada (ID: {meeting_id})</h1></body></html>"
-    
+
     # 2. Buscar dados da empresa
-    company_id = meeting.get('company_id')
+    company_id = meeting.get("company_id")
     company = db.get_company(company_id) if company_id else {}
-    
+
     # 3. Buscar participantes
-    guests = meeting.get('guests', [])
+    guests = meeting.get("guests", [])
     if isinstance(guests, str):
         try:
             import json
+
             guests = json.loads(guests)
         except:
             guests = []
-    
+
     # 4. Buscar pauta
-    agenda = meeting.get('agenda', [])
+    agenda = meeting.get("agenda", [])
     if isinstance(agenda, str):
         try:
             import json
+
             agenda = json.loads(agenda)
         except:
             agenda = []
-    
+
     # 5. Buscar discussões
-    discussions = meeting.get('discussions', [])
+    discussions = meeting.get("discussions", [])
     if isinstance(discussions, str):
         try:
             import json
+
             discussions = json.loads(discussions)
         except:
             discussions = []
-    
+
     # 6. Buscar atividades geradas
-    activities = meeting.get('activities', [])
+    activities = meeting.get("activities", [])
     if isinstance(activities, str):
         try:
             import json
+
             activities = json.loads(activities)
         except:
             activities = []
-    
+
     # 7. Gerar HTML
     html = f"""
 <!DOCTYPE html>
@@ -167,7 +171,7 @@ def generate_meeting_report_html(meeting_id: int) -> str:
 </body>
 </html>
     """
-    
+
     return html
 
 
@@ -179,41 +183,46 @@ def generate_participants_section(guests):
             <p>Nenhum participante foi convidado para esta reunião.</p>
         </div>
         """
-    
+
     # Se guests é uma string, tentar converter para dict/lista
     if isinstance(guests, str):
         try:
             import json
+
             guests = json.loads(guests)
         except:
             guests = {}
-    
+
     # Se guests é um dicionário com internal/external
     if isinstance(guests, dict):
         all_participants = []
-        
+
         # Processar participantes internos
-        internal_guests = guests.get('internal', [])
+        internal_guests = guests.get("internal", [])
         for guest in internal_guests:
             if isinstance(guest, dict):
-                all_participants.append({
-                    'name': guest.get('name', 'Nome não informado'),
-                    'email': guest.get('email', ''),
-                    'type': 'Interno'
-                })
-        
+                all_participants.append(
+                    {
+                        "name": guest.get("name", "Nome não informado"),
+                        "email": guest.get("email", ""),
+                        "type": "Interno",
+                    }
+                )
+
         # Processar participantes externos
-        external_guests = guests.get('external', [])
+        external_guests = guests.get("external", [])
         for guest in external_guests:
             if isinstance(guest, dict):
-                all_participants.append({
-                    'name': guest.get('name', 'Nome não informado'),
-                    'email': guest.get('email', ''),
-                    'type': 'Externo'
-                })
-        
+                all_participants.append(
+                    {
+                        "name": guest.get("name", "Nome não informado"),
+                        "email": guest.get("email", ""),
+                        "type": "Externo",
+                    }
+                )
+
         guests = all_participants
-    
+
     # Se guests é uma lista vazia
     if not guests:
         return """
@@ -221,20 +230,24 @@ def generate_participants_section(guests):
             <p>Nenhum participante foi convidado para esta reunião.</p>
         </div>
         """
-    
+
     participants_html = '<div class="participants-grid">'
     for guest in guests:
         # Se guest é uma string, tratar como nome simples
         if isinstance(guest, str):
             name = guest
-            email = ''
-            role = ''
+            email = ""
+            role = ""
         else:
             # Se é dicionário, extrair campos
-            name = guest.get('name', 'Nome não informado') if hasattr(guest, 'get') else str(guest)
-            email = guest.get('email', '') if hasattr(guest, 'get') else ''
-            role = guest.get('type', '') if hasattr(guest, 'get') else ''
-        
+            name = (
+                guest.get("name", "Nome não informado")
+                if hasattr(guest, "get")
+                else str(guest)
+            )
+            email = guest.get("email", "") if hasattr(guest, "get") else ""
+            role = guest.get("type", "") if hasattr(guest, "get") else ""
+
         participants_html += f"""
         <div class="participant-card">
             <div class="participant-info">
@@ -244,9 +257,9 @@ def generate_participants_section(guests):
             </div>
         </div>
         """
-    
-    participants_html += '</div>'
-    
+
+    participants_html += "</div>"
+
     return f"""
     <div class="participants-content">
         <p class="items-count">({len(guests)} convidados)</p>
@@ -257,13 +270,13 @@ def generate_participants_section(guests):
 
 def generate_scheduling_summary(meeting):
     """Gera resumo de agendamento da reunião"""
-    scheduled_date = meeting.get('scheduled_date', '')
-    scheduled_time = meeting.get('scheduled_time', '')
-    location = meeting.get('location', '')
-    duration = meeting.get('duration', '')
-    
+    scheduled_date = meeting.get("scheduled_date", "")
+    scheduled_time = meeting.get("scheduled_time", "")
+    location = meeting.get("location", "")
+    duration = meeting.get("duration", "")
+
     scheduling_info = []
-    
+
     if scheduled_date:
         scheduling_info.append(f"Data: {scheduled_date}")
     if scheduled_time:
@@ -273,89 +286,94 @@ def generate_scheduling_summary(meeting):
     elif not location:
         # Fallback para local não definido
         scheduling_info.append("Local: Não definido")
-    
+
     if scheduling_info:
         info_text = " | ".join(scheduling_info)
-        return f'<p><strong>Agendamento:</strong> {info_text}</p>'
+        return f"<p><strong>Agendamento:</strong> {info_text}</p>"
     else:
-        return '<p><em>Reunião ainda não foi agendada.</em></p>'
+        return "<p><em>Reunião ainda não foi agendada.</em></p>"
 
 
 def generate_execution_summary(meeting):
     """Gera resumo de execução da reunião"""
-    actual_date = meeting.get('actual_date', '')
-    actual_time = meeting.get('actual_time', '')
-    scheduled_date = meeting.get('scheduled_date', '')
-    scheduled_time = meeting.get('scheduled_time', '')
-    
+    actual_date = meeting.get("actual_date", "")
+    actual_time = meeting.get("actual_time", "")
+    scheduled_date = meeting.get("scheduled_date", "")
+    scheduled_time = meeting.get("scheduled_time", "")
+
     execution_info = []
-    
+
     # Usar dados reais se disponíveis, senão usar dados agendados
     date_to_show = actual_date if actual_date else scheduled_date
     time_to_show = actual_time if actual_time else scheduled_time
-    
+
     if date_to_show:
         execution_info.append(f"Data: {date_to_show}")
     if time_to_show:
         execution_info.append(f"Horário: {time_to_show}")
-    
+
     # Adicionar status
-    status = meeting.get('status', 'draft')
+    status = meeting.get("status", "draft")
     status_label = get_status_label(status)
     execution_info.append(f"Status: {status_label}")
-    
+
     if execution_info:
         info_text = " | ".join(execution_info)
-        return f'<p><strong>Execução:</strong> {info_text}</p>'
+        return f"<p><strong>Execução:</strong> {info_text}</p>"
     else:
-        return '<p><em>Reunião ainda não foi realizada.</em></p>'
+        return "<p><em>Reunião ainda não foi realizada.</em></p>"
 
 
 def generate_participants_execution_section(meeting):
     """Gera seção de participantes da execução"""
-    participants_json = meeting.get('participants_json')
-    
+    participants_json = meeting.get("participants_json")
+
     if not participants_json:
         return """
         <div class="empty-state">
             <p>Nenhum participante efetivo foi registrado para esta reunião.</p>
         </div>
         """
-    
+
     # Se participants_json é uma string, tentar converter para dict/lista
     if isinstance(participants_json, str):
         try:
             import json
+
             participants_json = json.loads(participants_json)
         except:
             participants_json = {}
-    
+
     # Se participants_json é um dicionário com internal/external
     if isinstance(participants_json, dict):
         all_participants = []
-        
+
         # Processar participantes internos
-        internal_participants = participants_json.get('internal', [])
+        internal_participants = participants_json.get("internal", [])
         for participant in internal_participants:
             if isinstance(participant, dict):
-                all_participants.append({
-                    'name': participant.get('name', 'Nome não informado'),
-                    'email': participant.get('email', ''),
-                    'type': 'Interno'
-                })
-        
+                all_participants.append(
+                    {
+                        "name": participant.get("name", "Nome não informado"),
+                        "email": participant.get("email", ""),
+                        "type": "Interno",
+                    }
+                )
+
         # Processar participantes externos
-        external_participants = participants_json.get('external', [])
+        external_participants = participants_json.get("external", [])
         for participant in external_participants:
             if isinstance(participant, dict):
-                all_participants.append({
-                    'name': participant.get('name', 'Nome não informado'),
-                    'email': participant.get('email', ''),
-                    'type': 'Externo'
-                })
-        
+                all_participants.append(
+                    {
+                        "name": participant.get("name", "Nome não informado"),
+                        "email": participant.get("email", ""),
+                        "type": "Externo",
+                    }
+                )
+
         participants_json = all_participants
-    
+
     # Se participants_json é uma lista vazia
     if not participants_json:
         return """
@@ -363,20 +381,26 @@ def generate_participants_execution_section(meeting):
             <p>Nenhum participante efetivo foi registrado para esta reunião.</p>
         </div>
         """
-    
+
     participants_html = '<div class="participants-grid">'
     for participant in participants_json:
         # Se participant é uma string simples
         if isinstance(participant, str):
             name = participant
-            email = ''
-            participant_type = ''
+            email = ""
+            participant_type = ""
         else:
             # Se participant é um dicionário, extrair campos
-            name = participant.get('name', 'Nome não informado') if hasattr(participant, 'get') else str(participant)
-            email = participant.get('email', '') if hasattr(participant, 'get') else ''
-            participant_type = participant.get('type', '') if hasattr(participant, 'get') else ''
-        
+            name = (
+                participant.get("name", "Nome não informado")
+                if hasattr(participant, "get")
+                else str(participant)
+            )
+            email = participant.get("email", "") if hasattr(participant, "get") else ""
+            participant_type = (
+                participant.get("type", "") if hasattr(participant, "get") else ""
+            )
+
         participants_html += f"""
         <div class="participant-card">
             <div class="participant-info">
@@ -386,9 +410,9 @@ def generate_participants_execution_section(meeting):
             </div>
         </div>
         """
-    
-    participants_html += '</div>'
-    
+
+    participants_html += "</div>"
+
     return f"""
     <div class="participants-content">
         <p class="items-count">({len(participants_json)} participantes efetivos)</p>
@@ -399,25 +423,31 @@ def generate_participants_execution_section(meeting):
 
 def generate_project_activities_section(meeting):
     """Gera seção de projeto e atividades cadastradas no estilo planilha"""
-    project_id = meeting.get('project_id')
-    
+    project_id = meeting.get("project_id")
+
     # Buscar dados do projeto se vinculado
-    project_name = 'Não vinculado'
+    project_name = "Não vinculado"
     if project_id:
         try:
             db = get_db()
             project = db.get_project(project_id)
             if project:
-                project_name = f"{project.get('code', 'N/A')} - {project.get('name', 'Sem nome')}"
+                project_name = (
+                    f"{project.get('code', 'N/A')} - {project.get('name', 'Sem nome')}"
+                )
         except Exception as e:
-            project_name = f'Erro ao carregar projeto: {str(e)}'
-    
+            project_name = f"Erro ao carregar projeto: {str(e)}"
+
     # Dados para as colunas especificadas - usar dados disponíveis
-    o_que = meeting.get('what') or meeting.get('project_title') or meeting.get('title', 'Não definido')
-    quem = meeting.get('who') or 'Participantes da reunião'
-    quando = meeting.get('when') or meeting.get('scheduled_date', 'Não definido')
-    como = meeting.get('how') or 'Reunião presencial'
-    
+    o_que = (
+        meeting.get("what")
+        or meeting.get("project_title")
+        or meeting.get("title", "Não definido")
+    )
+    quem = meeting.get("who") or "Participantes da reunião"
+    quando = meeting.get("when") or meeting.get("scheduled_date", "Não definido")
+    como = meeting.get("how") or "Reunião presencial"
+
     # Gerar linha de dados
     table_row = f"""
     <tr>
@@ -428,7 +458,7 @@ def generate_project_activities_section(meeting):
         <td>{project_name}</td>
     </tr>
     """
-    
+
     return f"""
     <table class="data-table">
         <thead>
@@ -455,28 +485,31 @@ def generate_agenda_section(agenda):
             <p>Nenhum item foi adicionado à pauta desta reunião.</p>
         </div>
         """
-    
+
     # Se agenda é uma string, tentar converter para lista
     if isinstance(agenda, str):
         try:
             import json
+
             agenda = json.loads(agenda)
         except:
             agenda = []
-    
+
     agenda_html = '<div class="agenda-list">'
     for i, item in enumerate(agenda, 1):
         # Se item é uma string, tratar como título simples
         if isinstance(item, str):
             title = item
-            description = ''
-            duration = ''
+            description = ""
+            duration = ""
         else:
             # Se é dicionário, extrair campos
-            title = item.get('title', f'Item {i}') if hasattr(item, 'get') else str(item)
-            description = item.get('description', '') if hasattr(item, 'get') else ''
-            duration = item.get('duration', '') if hasattr(item, 'get') else ''
-        
+            title = (
+                item.get("title", f"Item {i}") if hasattr(item, "get") else str(item)
+            )
+            description = item.get("description", "") if hasattr(item, "get") else ""
+            duration = item.get("duration", "") if hasattr(item, "get") else ""
+
         agenda_html += f"""
         <div class="agenda-item">
             <div class="agenda-number">{i}</div>
@@ -487,9 +520,9 @@ def generate_agenda_section(agenda):
             </div>
         </div>
         """
-    
-    agenda_html += '</div>'
-    
+
+    agenda_html += "</div>"
+
     return f"""
     <div class="agenda-content">
         <p class="items-count">({len(agenda)} itens)</p>
@@ -506,30 +539,41 @@ def generate_discussions_section(discussions):
             <p>Nenhuma discussão foi registrada nesta reunião.</p>
         </div>
         """
-    
+
     # Se discussions é uma string, tentar converter para lista
     if isinstance(discussions, str):
         try:
             import json
+
             discussions = json.loads(discussions)
         except:
             discussions = []
-    
+
     discussions_html = '<div class="discussions-list">'
     for discussion in discussions:
         # Se discussion é uma string, tratar como tópico simples
         if isinstance(discussion, str):
             topic = discussion
-            summary = ''
+            summary = ""
             participants = []
             decisions = []
         else:
             # Se é dicionário, extrair campos
-            topic = discussion.get('topic', 'Tópico não informado') if hasattr(discussion, 'get') else str(discussion)
-            summary = discussion.get('summary', '') if hasattr(discussion, 'get') else ''
-            participants = discussion.get('participants', []) if hasattr(discussion, 'get') else []
-            decisions = discussion.get('decisions', []) if hasattr(discussion, 'get') else []
-        
+            topic = (
+                discussion.get("topic", "Tópico não informado")
+                if hasattr(discussion, "get")
+                else str(discussion)
+            )
+            summary = (
+                discussion.get("summary", "") if hasattr(discussion, "get") else ""
+            )
+            participants = (
+                discussion.get("participants", []) if hasattr(discussion, "get") else []
+            )
+            decisions = (
+                discussion.get("decisions", []) if hasattr(discussion, "get") else []
+            )
+
         discussions_html += f"""
         <div class="discussion-item">
             <h4>{topic}</h4>
@@ -538,9 +582,9 @@ def generate_discussions_section(discussions):
             {generate_decisions_list(decisions) if decisions else ''}
         </div>
         """
-    
-    discussions_html += '</div>'
-    
+
+    discussions_html += "</div>"
+
     return f"""
     <div class="discussions-content">
         <p class="items-count">({len(discussions)} discussões)</p>
@@ -552,13 +596,13 @@ def generate_discussions_section(discussions):
 def generate_decisions_list(decisions):
     """Gera lista de decisões"""
     if not decisions:
-        return ''
-    
+        return ""
+
     decisions_html = '<div class="decisions-list">'
     for decision in decisions:
         decisions_html += f'<div class="decision-item">• {decision}</div>'
-    decisions_html += '</div>'
-    
+    decisions_html += "</div>"
+
     return decisions_html
 
 
@@ -570,32 +614,45 @@ def generate_activities_section(activities):
             <p>Nenhuma atividade foi gerada a partir desta reunião.</p>
         </div>
         """
-    
+
     # Se activities é uma string, tentar converter para lista
     if isinstance(activities, str):
         try:
             import json
+
             activities = json.loads(activities)
         except:
             activities = []
-    
+
     activities_html = '<div class="activities-list">'
     for activity in activities:
         # Se activity é uma string, tratar como título simples
         if isinstance(activity, str):
             title = activity
-            description = ''
-            responsible = ''
-            deadline = ''
-            status = 'pending'
+            description = ""
+            responsible = ""
+            deadline = ""
+            status = "pending"
         else:
             # Se é dicionário, extrair campos
-            title = activity.get('title', 'Atividade sem título') if hasattr(activity, 'get') else str(activity)
-            description = activity.get('description', '') if hasattr(activity, 'get') else ''
-            responsible = activity.get('responsible', '') if hasattr(activity, 'get') else ''
-            deadline = activity.get('deadline', '') if hasattr(activity, 'get') else ''
-            status = activity.get('status', 'pending') if hasattr(activity, 'get') else 'pending'
-        
+            title = (
+                activity.get("title", "Atividade sem título")
+                if hasattr(activity, "get")
+                else str(activity)
+            )
+            description = (
+                activity.get("description", "") if hasattr(activity, "get") else ""
+            )
+            responsible = (
+                activity.get("responsible", "") if hasattr(activity, "get") else ""
+            )
+            deadline = activity.get("deadline", "") if hasattr(activity, "get") else ""
+            status = (
+                activity.get("status", "pending")
+                if hasattr(activity, "get")
+                else "pending"
+            )
+
         activities_html += f"""
         <div class="activity-item">
             <h4>{title}</h4>
@@ -607,9 +664,9 @@ def generate_activities_section(activities):
             </div>
         </div>
         """
-    
-    activities_html += '</div>'
-    
+
+    activities_html += "</div>"
+
     return f"""
     <div class="activities-content">
         <p class="items-count">({len(activities)} atividades)</p>
@@ -621,11 +678,11 @@ def generate_activities_section(activities):
 def get_status_label(status):
     """Retorna label do status da reunião"""
     labels = {
-        'draft': 'Rascunho',
-        'scheduled': 'Agendada',
-        'in_progress': 'Em Andamento',
-        'completed': 'Concluída',
-        'cancelled': 'Cancelada'
+        "draft": "Rascunho",
+        "scheduled": "Agendada",
+        "in_progress": "Em Andamento",
+        "completed": "Concluída",
+        "cancelled": "Cancelada",
     }
     return labels.get(status, status.title())
 
@@ -633,10 +690,10 @@ def get_status_label(status):
 def get_activity_status_label(status):
     """Retorna label do status da atividade"""
     labels = {
-        'pending': 'Pendente',
-        'in_progress': 'Em Andamento',
-        'completed': 'Concluída',
-        'cancelled': 'Cancelada'
+        "pending": "Pendente",
+        "in_progress": "Em Andamento",
+        "completed": "Concluída",
+        "cancelled": "Cancelada",
     }
     return labels.get(status, status.title())
 
@@ -1155,26 +1212,28 @@ def get_report_css():
 def generate_meeting_report(meeting_id: int, save_path: str = None) -> str:
     """
     Gera relatório de reunião e opcionalmente salva em arquivo
-    
+
     Args:
         meeting_id: ID da reunião
         save_path: Caminho para salvar o arquivo (opcional)
-        
+
     Returns:
         str: HTML do relatório
     """
     html = generate_meeting_report_html(meeting_id)
-    
+
     if save_path:
-        with open(save_path, 'w', encoding='utf-8') as f:
+        with open(save_path, "w", encoding="utf-8") as f:
             f.write(html)
-    
+
     return html
 
 
 # Teste quando executado diretamente
-if __name__ == '__main__':
+if __name__ == "__main__":
     # Teste com uma reunião existente
     test_meeting_id = 1
-    html = generate_meeting_report(test_meeting_id, f'relatorio_reuniao_{test_meeting_id}.html')
+    html = generate_meeting_report(
+        test_meeting_id, f"relatorio_reuniao_{test_meeting_id}.html"
+    )
     print(f"Relatório gerado com sucesso! ({len(html)} caracteres)")

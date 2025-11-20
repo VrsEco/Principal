@@ -38,14 +38,8 @@ test_paths = [str(tf.relative_to(root_dir)) for tf in test_files]
 
 # Executar pytest
 result = subprocess.run(
-    [
-        sys.executable, "-m", "pytest",
-        *test_paths,
-        "-v",
-        "--tb=short",
-        "--maxfail=1000"
-    ],
-    cwd=root_dir
+    [sys.executable, "-m", "pytest", *test_paths, "-v", "--tb=short", "--maxfail=1000"],
+    cwd=root_dir,
 )
 
 print("\n" + "=" * 80)
@@ -53,4 +47,3 @@ print(f"TESTES CONCLUÍDOS - Código de saída: {result.returncode}")
 print("=" * 80)
 
 sys.exit(result.returncode)
-

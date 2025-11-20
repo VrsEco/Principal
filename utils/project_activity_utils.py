@@ -3,7 +3,9 @@ from __future__ import annotations
 from typing import Any, Dict, List, Optional, Tuple
 
 
-def _extract_sequence_from_code(code: Optional[str], project_code: Optional[str]) -> Optional[int]:
+def _extract_sequence_from_code(
+    code: Optional[str], project_code: Optional[str]
+) -> Optional[int]:
     """Return numeric sequence found at the end of an activity code."""
     if not code:
         return None
@@ -16,7 +18,7 @@ def _extract_sequence_from_code(code: Optional[str], project_code: Optional[str]
     if project_code:
         prefix = f"{project_code}."
         if text.startswith(prefix):
-            suffix = text[len(prefix):]
+            suffix = text[len(prefix) :]
         else:
             parts = text.split(".")
             if len(parts) > 1:
@@ -127,4 +129,3 @@ def normalize_project_activities(
             changed = True
 
     return normalized, changed, max_sequence
-

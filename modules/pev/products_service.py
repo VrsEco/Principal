@@ -9,6 +9,7 @@ from typing import Any, Dict, Iterable, List, Optional
 from models import db
 from models.product import Product
 from models.product_rampup import ProductRampUpEntry
+
 # Importar dependências ORM para garantir que as tabelas relacionadas estejam registradas
 from models import company as _company  # noqa: F401
 from models import participant as _participant  # noqa: F401
@@ -43,9 +44,8 @@ def fetch_products(plan_id: int) -> List[Dict[str, Any]]:
     """Return serialized products for a plan."""
     ensure_products_table()
 
-    query = (
-        Product.query.filter_by(plan_id=plan_id, is_deleted=False)
-        .order_by(Product.created_at.asc(), Product.id.asc())
+    query = Product.query.filter_by(plan_id=plan_id, is_deleted=False).order_by(
+        Product.created_at.asc(), Product.id.asc()
     )
     return [serialize_product(product) for product in query.all()]
 
@@ -94,7 +94,9 @@ def create_product(plan_id: int, payload: Dict[str, Any]) -> Dict[str, Any]:
     return serialize_product(product)
 
 
-def update_product(plan_id: int, product_id: int, payload: Dict[str, Any]) -> Dict[str, Any]:
+def update_product(
+    plan_id: int, product_id: int, payload: Dict[str, Any]
+) -> Dict[str, Any]:
     """Update an existing product."""
     ensure_products_table()
 
@@ -105,7 +107,7 @@ def update_product(plan_id: int, product_id: int, payload: Dict[str, Any]) -> Di
     ).first()
 
     if not product:
-        raise ProductNotFoundError('Produto nao encontrado.')
+        raise ProductNotFoundError("Produto nao encontrado.")
 
     ramp_payload = _extract_ramp_payload(payload)
 
@@ -145,7 +147,9 @@ def calculate_totals(products: Iterable[Dict[str, Any]]) -> Dict[str, Any]:
 
     def _as_decimal(value: Any) -> Decimal:
         """Coerce incoming numeric-ish values to a decimal with two places."""
-        return Decimal(str(_to_float(value))).quantize(TWOPLACES, rounding=ROUND_HALF_UP)
+        return Decimal(str(_to_float(value))).quantize(
+            TWOPLACES, rounding=ROUND_HALF_UP
+        )
 
     if count == 0:
         zero = 0.0
@@ -179,7 +183,11 @@ def calculate_totals(products: Iterable[Dict[str, Any]]) -> Dict[str, Any]:
         market_units = _as_decimal(item.get("market_size_monthly_units"))
 
         units_goal = _as_decimal(item.get("market_share_goal_monthly_units"))
-        if units_goal == decimal_zero and share_percent > decimal_zero and market_units > decimal_zero:
+        if (
+            units_goal == decimal_zero
+            and share_percent > decimal_zero
+            and market_units > decimal_zero
+        ):
             units_goal = ((share_percent / Decimal("100")) * market_units).quantize(
                 TWOPLACES, rounding=ROUND_HALF_UP
             )
@@ -193,9 +201,15 @@ def calculate_totals(products: Iterable[Dict[str, Any]]) -> Dict[str, Any]:
         expense_unit = _as_decimal(item.get("variable_expenses_value"))
         margin_unit = _as_decimal(item.get("unit_contribution_margin_value"))
 
-        cost_total = (cost_unit * units_goal).quantize(TWOPLACES, rounding=ROUND_HALF_UP)
-        expense_total = (expense_unit * units_goal).quantize(TWOPLACES, rounding=ROUND_HALF_UP)
-        margin_total = (margin_unit * units_goal).quantize(TWOPLACES, rounding=ROUND_HALF_UP)
+        cost_total = (cost_unit * units_goal).quantize(
+            TWOPLACES, rounding=ROUND_HALF_UP
+        )
+        expense_total = (expense_unit * units_goal).quantize(
+            TWOPLACES, rounding=ROUND_HALF_UP
+        )
+        margin_total = (margin_unit * units_goal).quantize(
+            TWOPLACES, rounding=ROUND_HALF_UP
+        )
 
         if margin_total == decimal_zero and revenue_goal > decimal_zero:
             margin_total = (revenue_goal - cost_total - expense_total).quantize(
@@ -219,25 +233,39 @@ def calculate_totals(products: Iterable[Dict[str, Any]]) -> Dict[str, Any]:
     def _percent(part: Decimal, whole: Decimal) -> float:
         if whole <= decimal_zero:
             return 0.0
-        return float((part / whole * Decimal("100")).quantize(TWOPLACES, rounding=ROUND_HALF_UP))
+        return float(
+            (part / whole * Decimal("100")).quantize(TWOPLACES, rounding=ROUND_HALF_UP)
+        )
 
     average_margin = (
-        (margin_percent_sum / Decimal(count)).quantize(TWOPLACES, rounding=ROUND_HALF_UP)
+        (margin_percent_sum / Decimal(count)).quantize(
+            TWOPLACES, rounding=ROUND_HALF_UP
+        )
         if count
         else decimal_zero
     )
 
     share_percent_overall = (
-        (share_percent_weighted / share_weight).quantize(TWOPLACES, rounding=ROUND_HALF_UP)
+        (share_percent_weighted / share_weight).quantize(
+            TWOPLACES, rounding=ROUND_HALF_UP
+        )
         if share_weight > decimal_zero
         else decimal_zero
     )
 
-    market_revenue_float = float(total_market_revenue.quantize(TWOPLACES, rounding=ROUND_HALF_UP))
-    units_goal_float = float(total_units_goal.quantize(TWOPLACES, rounding=ROUND_HALF_UP))
-    revenue_goal_float = float(total_revenue_goal.quantize(TWOPLACES, rounding=ROUND_HALF_UP))
+    market_revenue_float = float(
+        total_market_revenue.quantize(TWOPLACES, rounding=ROUND_HALF_UP)
+    )
+    units_goal_float = float(
+        total_units_goal.quantize(TWOPLACES, rounding=ROUND_HALF_UP)
+    )
+    revenue_goal_float = float(
+        total_revenue_goal.quantize(TWOPLACES, rounding=ROUND_HALF_UP)
+    )
     cost_float = float(total_cost_value.quantize(TWOPLACES, rounding=ROUND_HALF_UP))
-    expense_float = float(total_expense_value.quantize(TWOPLACES, rounding=ROUND_HALF_UP))
+    expense_float = float(
+        total_expense_value.quantize(TWOPLACES, rounding=ROUND_HALF_UP)
+    )
     margin_float = float(total_margin_value.quantize(TWOPLACES, rounding=ROUND_HALF_UP))
 
     return {
@@ -268,7 +296,9 @@ def calculate_totals(products: Iterable[Dict[str, Any]]) -> Dict[str, Any]:
     }
 
 
-def adapt_legacy_products(raw_products: Iterable[Dict[str, Any]]) -> List[Dict[str, Any]]:
+def adapt_legacy_products(
+    raw_products: Iterable[Dict[str, Any]]
+) -> List[Dict[str, Any]]:
     """Normalize legacy dictionaries (e.g. fallback data) into the new schema."""
     normalized = []
     for raw in raw_products:
@@ -283,17 +313,35 @@ def adapt_legacy_products(raw_products: Iterable[Dict[str, Any]]) -> List[Dict[s
                 "variable_costs_percent": _to_float(raw.get("variable_costs_percent")),
                 "variable_costs_value": _to_float(raw.get("variable_costs_value")),
                 "variable_costs_notes": raw.get("variable_costs_notes"),
-                "variable_expenses_percent": _to_float(raw.get("variable_expenses_percent")),
-                "variable_expenses_value": _to_float(raw.get("variable_expenses_value")),
+                "variable_expenses_percent": _to_float(
+                    raw.get("variable_expenses_percent")
+                ),
+                "variable_expenses_value": _to_float(
+                    raw.get("variable_expenses_value")
+                ),
                 "variable_expenses_notes": raw.get("variable_expenses_notes"),
-                "unit_contribution_margin_percent": _to_float(raw.get("unit_contribution_margin_percent")),
-                "unit_contribution_margin_value": _to_float(raw.get("unit_contribution_margin_value")),
-                "unit_contribution_margin_notes": raw.get("unit_contribution_margin_notes"),
-                "market_size_monthly_units": _to_float(raw.get("market_size_monthly_units")),
-                "market_size_monthly_revenue": _to_float(raw.get("market_size_monthly_revenue")),
+                "unit_contribution_margin_percent": _to_float(
+                    raw.get("unit_contribution_margin_percent")
+                ),
+                "unit_contribution_margin_value": _to_float(
+                    raw.get("unit_contribution_margin_value")
+                ),
+                "unit_contribution_margin_notes": raw.get(
+                    "unit_contribution_margin_notes"
+                ),
+                "market_size_monthly_units": _to_float(
+                    raw.get("market_size_monthly_units")
+                ),
+                "market_size_monthly_revenue": _to_float(
+                    raw.get("market_size_monthly_revenue")
+                ),
                 "market_size_notes": raw.get("market_size_notes"),
-                "market_share_goal_monthly_units": _to_float(raw.get("market_share_goal_monthly_units")),
-                "market_share_goal_percent": _to_float(raw.get("market_share_goal_percent")),
+                "market_share_goal_monthly_units": _to_float(
+                    raw.get("market_share_goal_monthly_units")
+                ),
+                "market_share_goal_percent": _to_float(
+                    raw.get("market_share_goal_percent")
+                ),
                 "market_share_goal_notes": raw.get("market_share_goal_notes"),
             }
         )
@@ -304,7 +352,10 @@ def adapt_legacy_products(raw_products: Iterable[Dict[str, Any]]) -> List[Dict[s
 # Helpers
 # ---------------------------------------------------------------------------
 
-def _assign_product_fields(product: Product, plan_id: int, payload: Dict[str, Any]) -> None:
+
+def _assign_product_fields(
+    product: Product, plan_id: int, payload: Dict[str, Any]
+) -> None:
     """Mutate a SQLAlchemy product instance with validated payload values."""
     clean = _build_clean_product_data(plan_id, payload)
 
@@ -332,21 +383,35 @@ def _assign_product_fields(product: Product, plan_id: int, payload: Dict[str, An
     product.updated_at = datetime.utcnow()
 
 
-def _build_clean_product_data(plan_id: int, payload: Dict[str, Any]) -> Dict[str, Decimal]:
+def _build_clean_product_data(
+    plan_id: int, payload: Dict[str, Any]
+) -> Dict[str, Decimal]:
     """Validate and normalize incoming payload into Decimal-based structure."""
     name = _normalize_text(payload.get("name"))
     if not name:
         raise ProductValidationError("Nome do produto é obrigatório.")
 
-    sale_price = _parse_decimal(payload.get("sale_price"), allow_zero=False, field="Preço de venda")
+    sale_price = _parse_decimal(
+        payload.get("sale_price"), allow_zero=False, field="Preço de venda"
+    )
     description = _normalize_text(payload.get("description"), allow_blank=True)
-    sale_price_notes = _normalize_text(payload.get("sale_price_notes"), allow_blank=True)
+    sale_price_notes = _normalize_text(
+        payload.get("sale_price_notes"), allow_blank=True
+    )
 
-    raw_cost_percent = _parse_decimal(payload.get("variable_costs_percent"), allow_zero=True)
-    raw_cost_value = _parse_decimal(payload.get("variable_costs_value"), allow_zero=True)
+    raw_cost_percent = _parse_decimal(
+        payload.get("variable_costs_percent"), allow_zero=True
+    )
+    raw_cost_value = _parse_decimal(
+        payload.get("variable_costs_value"), allow_zero=True
+    )
 
-    raw_expense_percent = _parse_decimal(payload.get("variable_expenses_percent"), allow_zero=True)
-    raw_expense_value = _parse_decimal(payload.get("variable_expenses_value"), allow_zero=True)
+    raw_expense_percent = _parse_decimal(
+        payload.get("variable_expenses_percent"), allow_zero=True
+    )
+    raw_expense_value = _parse_decimal(
+        payload.get("variable_expenses_value"), allow_zero=True
+    )
 
     # Derive costs
     costs_value = raw_cost_value
@@ -372,18 +437,32 @@ def _build_clean_product_data(plan_id: int, payload: Dict[str, Any]) -> Dict[str
 
     margin_value = _quantize(sale_price - costs_value - expenses_value)
     margin_percent = (
-        _quantize((margin_value / sale_price) * Decimal("100")) if sale_price > Decimal("0.00") else Decimal("0.00")
+        _quantize((margin_value / sale_price) * Decimal("100"))
+        if sale_price > Decimal("0.00")
+        else Decimal("0.00")
     )
 
-    market_units = _parse_decimal(payload.get("market_size_monthly_units"), allow_zero=True)
+    market_units = _parse_decimal(
+        payload.get("market_size_monthly_units"), allow_zero=True
+    )
     market_revenue = _quantize(market_units * sale_price)
     market_notes = _normalize_text(payload.get("market_size_notes"), allow_blank=True)
 
-    share_units = _parse_decimal(payload.get("market_share_goal_monthly_units"), allow_zero=True)
-    share_percent = _parse_decimal(payload.get("market_share_goal_percent"), allow_zero=True)
-    share_notes = _normalize_text(payload.get("market_share_goal_notes"), allow_blank=True)
+    share_units = _parse_decimal(
+        payload.get("market_share_goal_monthly_units"), allow_zero=True
+    )
+    share_percent = _parse_decimal(
+        payload.get("market_share_goal_percent"), allow_zero=True
+    )
+    share_notes = _normalize_text(
+        payload.get("market_share_goal_notes"), allow_blank=True
+    )
 
-    if share_percent == Decimal("0.00") and market_units > Decimal("0.00") and share_units > Decimal("0.00"):
+    if (
+        share_percent == Decimal("0.00")
+        and market_units > Decimal("0.00")
+        and share_units > Decimal("0.00")
+    ):
         share_percent = _quantize((share_units / market_units) * Decimal("100"))
     else:
         share_percent = _quantize(share_percent)
@@ -396,13 +475,19 @@ def _build_clean_product_data(plan_id: int, payload: Dict[str, Any]) -> Dict[str
         "sale_price_notes": sale_price_notes,
         "variable_costs_percent": costs_percent,
         "variable_costs_value": costs_value,
-        "variable_costs_notes": _normalize_text(payload.get("variable_costs_notes"), allow_blank=True),
+        "variable_costs_notes": _normalize_text(
+            payload.get("variable_costs_notes"), allow_blank=True
+        ),
         "variable_expenses_percent": expenses_percent,
         "variable_expenses_value": expenses_value,
-        "variable_expenses_notes": _normalize_text(payload.get("variable_expenses_notes"), allow_blank=True),
+        "variable_expenses_notes": _normalize_text(
+            payload.get("variable_expenses_notes"), allow_blank=True
+        ),
         "unit_contribution_margin_percent": margin_percent,
         "unit_contribution_margin_value": margin_value,
-        "unit_contribution_margin_notes": _normalize_text(payload.get("unit_contribution_margin_notes"), allow_blank=True),
+        "unit_contribution_margin_notes": _normalize_text(
+            payload.get("unit_contribution_margin_notes"), allow_blank=True
+        ),
         "market_size_monthly_units": _quantize(market_units),
         "market_size_monthly_revenue": market_revenue,
         "market_size_notes": market_notes,
@@ -424,7 +509,9 @@ def serialize_product(product: Product) -> Dict[str, Any]:
     cost_base_decimal = _quantize(cost_unit_decimal * units_goal_decimal)
     expense_base_decimal = _quantize(expense_unit_decimal * units_goal_decimal)
     revenue_base_decimal = _quantize(sale_price_decimal * units_goal_decimal)
-    margin_base_decimal = _quantize(revenue_base_decimal - cost_base_decimal - expense_base_decimal)
+    margin_base_decimal = _quantize(
+        revenue_base_decimal - cost_base_decimal - expense_base_decimal
+    )
 
     ramp_summary = {
         "base_units": _float_from_decimal(units_goal_decimal),
@@ -448,13 +535,19 @@ def serialize_product(product: Product) -> Dict[str, Any]:
         "variable_expenses_percent": _to_float(product.variable_expenses_percent),
         "variable_expenses_value": _to_float(product.variable_expenses_value),
         "variable_expenses_notes": product.variable_expenses_notes,
-        "unit_contribution_margin_percent": _to_float(product.unit_contribution_margin_percent),
-        "unit_contribution_margin_value": _to_float(product.unit_contribution_margin_value),
+        "unit_contribution_margin_percent": _to_float(
+            product.unit_contribution_margin_percent
+        ),
+        "unit_contribution_margin_value": _to_float(
+            product.unit_contribution_margin_value
+        ),
         "unit_contribution_margin_notes": product.unit_contribution_margin_notes,
         "market_size_monthly_units": _to_float(product.market_size_monthly_units),
         "market_size_monthly_revenue": _to_float(product.market_size_monthly_revenue),
         "market_size_notes": product.market_size_notes,
-        "market_share_goal_monthly_units": _to_float(product.market_share_goal_monthly_units),
+        "market_share_goal_monthly_units": _to_float(
+            product.market_share_goal_monthly_units
+        ),
         "market_share_goal_percent": _to_float(product.market_share_goal_percent),
         "market_share_goal_notes": product.market_share_goal_notes,
         "created_at": product.created_at.isoformat() if product.created_at else None,
@@ -522,7 +615,9 @@ def _normalize_ramp_entries(
             or raw.get("value")
         )
         if percent_value is None:
-            raise ProductValidationError(f"Percentual do mês {month_key} é obrigatório.")
+            raise ProductValidationError(
+                f"Percentual do mês {month_key} é obrigatório."
+            )
 
         try:
             percent_decimal = _quantize(Decimal(str(percent_value)))
@@ -535,7 +630,8 @@ def _normalize_ramp_entries(
             )
 
         notes_text = _normalize_text(
-            raw.get("notes") or raw.get("observacoes") or raw.get("obs"), allow_blank=True
+            raw.get("notes") or raw.get("observacoes") or raw.get("obs"),
+            allow_blank=True,
         )
 
         normalized.append(
@@ -551,7 +647,9 @@ def _normalize_ramp_entries(
     return normalized
 
 
-def _replace_rampup_entries(plan_id: int, product_id: int, entries: List[Dict[str, Any]]) -> None:
+def _replace_rampup_entries(
+    plan_id: int, product_id: int, entries: List[Dict[str, Any]]
+) -> None:
     """Replace ramp-up entries for product with provided list."""
     db.session.query(ProductRampUpEntry).filter_by(product_id=product_id).delete(
         synchronize_session=False
@@ -583,7 +681,9 @@ def _serialize_ramp_entries(product_id: int) -> List[Dict[str, Any]]:
                 "id": entry.id,
                 "month": month_key,
                 "month_label": _format_month_label(entry.reference_month),
-                "percentage": _float_from_decimal(_quantize(Decimal(entry.percentage or 0))),
+                "percentage": _float_from_decimal(
+                    _quantize(Decimal(entry.percentage or 0))
+                ),
                 "notes": entry.notes or "",
             }
         )
@@ -667,7 +767,9 @@ def _parse_decimal(value: Any, *, allow_zero: bool, field: str = "") -> Decimal:
                 label = f" ({field})" if field else ""
                 raise ProductValidationError(f"Valor inválido{label}.") from exc
     else:
-        raise ProductValidationError(f"Valor numérico inválido para {field or 'campo numérico'}.")
+        raise ProductValidationError(
+            f"Valor numérico inválido para {field or 'campo numérico'}."
+        )
 
     if not allow_zero and result <= Decimal("0.00"):
         label = f" ({field})" if field else ""

@@ -1,6 +1,7 @@
 #!/usr/bin/env python3
 import sys
-sys.path.insert(0, '.')
+
+sys.path.insert(0, ".")
 from config_database import get_db
 
 print("=" * 70)
@@ -30,14 +31,18 @@ else:
 
 print()
 print("📋 Listando todos os projetos da empresa 5...")
-cursor.execute("SELECT id, title, plan_id, plan_type FROM company_projects WHERE company_id = 5 ORDER BY id DESC LIMIT 10")
+cursor.execute(
+    "SELECT id, title, plan_id, plan_type FROM company_projects WHERE company_id = 5 ORDER BY id DESC LIMIT 10"
+)
 projetos = cursor.fetchall()
 
 if projetos:
     print(f"   Encontrados {len(projetos)} projetos:")
     for p in projetos:
         p_dict = dict(p)
-        print(f"      ID {p_dict.get('id')}: {p_dict.get('title')} (plan_id={p_dict.get('plan_id')}, type={p_dict.get('plan_type')})")
+        print(
+            f"      ID {p_dict.get('id')}: {p_dict.get('title')} (plan_id={p_dict.get('plan_id')}, type={p_dict.get('plan_type')})"
+        )
 else:
     print("   ❌ Nenhum projeto encontrado!")
 
@@ -46,4 +51,3 @@ conn.close()
 
 print()
 print("=" * 70)
-

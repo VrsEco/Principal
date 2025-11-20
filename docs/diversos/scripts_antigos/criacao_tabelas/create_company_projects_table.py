@@ -6,7 +6,7 @@ are migrated into it. Run once if you need to provision the schema manually.
 
 import sqlite3
 
-DB_PATH = 'instance/pevapp22.db'
+DB_PATH = "instance/pevapp22.db"
 
 DDL = """
 CREATE TABLE IF NOT EXISTS company_projects (
@@ -86,7 +86,7 @@ SET seq = (SELECT COALESCE(MAX(id), 0) FROM company_projects)
 WHERE name = 'company_projects';
 """
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     conn = sqlite3.connect(DB_PATH)
     cursor = conn.cursor()
 
@@ -99,4 +99,3 @@ if __name__ == '__main__':
     conn.close()
 
     print("? company_projects table ready.")
-

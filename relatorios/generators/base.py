@@ -24,7 +24,7 @@ from modules.report_models import ReportModelsManager
 class BaseReportGenerator(ABC):
     """
     Classe base para todos os geradores de relatórios
-    
+
     Fornece:
     - Configuração de modelo de página
     - Estrutura de cabeçalho/rodapé padrão
@@ -32,11 +32,11 @@ class BaseReportGenerator(ABC):
     - Renderização final do HTML
     - Aplicação de identidade visual
     """
-    
+
     def __init__(self, report_model_id=None):
         """
         Inicializa o gerador
-        
+
         Args:
             report_model_id: ID do modelo de página (opcional)
         """
@@ -45,11 +45,11 @@ class BaseReportGenerator(ABC):
         self.sections = []
         self.data = {}
         self.custom_styles = {}
-        
+
         # Carregar modelo se especificado
         if report_model_id:
             self._load_report_model()
-    
+
     def _load_report_model(self):
         """Carrega o modelo de relatório do banco"""
         try:
@@ -58,62 +58,62 @@ class BaseReportGenerator(ABC):
         except Exception as e:
             print(f"Erro ao carregar modelo {self.report_model_id}: {e}")
             self.report_model = None
-    
+
     # ====================================
     # MÉTODOS ABSTRATOS (devem ser implementados)
     # ====================================
-    
+
     @abstractmethod
     def get_report_title(self):
         """Retorna o título do relatório"""
         pass
-    
+
     @abstractmethod
     def fetch_data(self, **kwargs):
         """
         Busca os dados necessários para o relatório
-        
+
         Args:
             **kwargs: Parâmetros necessários (company_id, process_id, etc)
         """
         pass
-    
+
     @abstractmethod
     def build_sections(self):
         """
         Constrói as seções do relatório
-        
+
         Deve chamar self.add_section() para cada seção
         """
         pass
-    
+
     # ====================================
     # CONFIGURAÇÃO DE PÁGINA
     # ====================================
-    
+
     def set_page_model(self, model_id):
         """Define o modelo de página a ser usado"""
         self.report_model_id = model_id
         self._load_report_model()
-    
+
     def get_page_css(self):
         """Retorna o CSS da página"""
         return generate_page_style(self.report_model)
-    
+
     # ====================================
     # CABEÇALHO E RODAPÉ
     # ====================================
-    
+
     def get_default_header(self):
         """
         Retorna estrutura padrão de cabeçalho
-        
+
         Pode ser sobrescrito em geradores específicos
         """
-        company_name = self.data.get('company', {}).get('name', 'Nome da Empresa')
+        company_name = self.data.get("company", {}).get("name", "Nome da Empresa")
         report_title = self.get_report_title()
-        generation_date = datetime.now().strftime('%d/%m/%Y')
-        
+        generation_date = datetime.now().strftime("%d/%m/%Y")
+
         return f"""
         <div class="report-header">
             <div class="header-grid">
@@ -129,15 +129,15 @@ class BaseReportGenerator(ABC):
             </div>
         </div>
         """
-    
+
     def get_default_footer(self):
         """
         Retorna estrutura padrão de rodapé
-        
+
         Pode ser sobrescrito em geradores específicos
         """
         year = datetime.now().year
-        
+
         return f"""
         <div class="report-footer">
             <div class="footer-grid">
@@ -150,59 +150,67 @@ class BaseReportGenerator(ABC):
             </div>
         </div>
         """
-    
+
     def get_header(self):
         """
         Retorna o cabeçalho (pode usar modelo ou padrão)
-        
+
         Se o modelo tiver altura 0, não retorna cabeçalho.
         Se o modelo tiver conteúdo de cabeçalho, usa ele.
         Senão, usa o padrão.
         """
-        if self.report_model and self.report_model.get('header_height', 0) == 0:
+        if self.report_model and self.report_model.get("header_height", 0) == 0:
             return ""  # Sem cabeçalho se altura for 0
-        
-        if self.report_model and self.report_model['header'].get('content'):
+
+        if self.report_model and self.report_model["header"].get("content"):
             # Processar o conteúdo do modelo
-            return self._process_header_content(self.report_model['header']['content'])
+            return self._process_header_content(self.report_model["header"]["content"])
         else:
             # Usar padrão
             return self.get_default_header()
-    
+
     def get_footer(self):
         """
         Retorna o rodapé (pode usar modelo ou padrão)
-        
+
         Se o modelo tiver altura 0, não retorna rodapé.
         Se o modelo tiver conteúdo de rodapé, usa ele.
         Senão, usa o padrão.
         """
-        if self.report_model and self.report_model.get('footer_height', 0) == 0:
+        if self.report_model and self.report_model.get("footer_height", 0) == 0:
             return ""  # Sem rodapé se altura for 0
-        
-        if self.report_model and self.report_model['footer'].get('content'):
-            return self._process_footer_content(self.report_model['footer']['content'])
+
+        if self.report_model and self.report_model["footer"].get("content"):
+            return self._process_footer_content(self.report_model["footer"]["content"])
         else:
             return self.get_default_footer()
-    
+
     def _process_header_content(self, content):
         """Processa variáveis no conteúdo do cabeçalho"""
         # Substituir variáveis
-        company = self.data.get('company', {})
-        process = self.data.get('process', {})
-        macro = self.data.get('macro', {})
+        company = self.data.get("company", {})
+        process = self.data.get("process", {})
+        macro = self.data.get("macro", {})
 
-        def _display(value, fallback='\u2014'):
+        def _display(value, fallback="\u2014"):
             if isinstance(value, str):
                 value = value.strip()
-            if value in (None, ''):
+            if value in (None, ""):
                 return fallback
             return str(value)
 
-        macro_code_raw = macro.get('code')
-        macro_name_raw = macro.get('name')
-        macro_code = macro_code_raw.strip() if isinstance(macro_code_raw, str) else macro_code_raw
-        macro_name = macro_name_raw.strip() if isinstance(macro_name_raw, str) else macro_name_raw
+        macro_code_raw = macro.get("code")
+        macro_name_raw = macro.get("name")
+        macro_code = (
+            macro_code_raw.strip()
+            if isinstance(macro_code_raw, str)
+            else macro_code_raw
+        )
+        macro_name = (
+            macro_name_raw.strip()
+            if isinstance(macro_name_raw, str)
+            else macro_name_raw
+        )
 
         if macro_code and macro_name:
             macro_display = f"{macro_code} - {macro_name}"
@@ -213,125 +221,131 @@ class BaseReportGenerator(ABC):
         else:
             macro_display = None
 
-        content = content.replace('{{ company.name }}', _display(company.get('name')))
-        content = content.replace('{{ report.title }}', self.get_report_title())
-        content = content.replace('{{ date }}', datetime.now().strftime('%d/%m/%Y'))
-        content = content.replace('{{ datetime }}', datetime.now().strftime('%d/%m/%Y %H:%M'))
-        content = content.replace('{{ year }}', str(datetime.now().year))
-        content = content.replace('{{ process.code }}', _display(process.get('code')))
-        content = content.replace('{{ process.name }}', _display(process.get('name')))
-        content = content.replace('{{ process.responsible }}', _display(process.get('responsible')))
-        content = content.replace('{{ macro.name }}', _display(macro_name))
-        content = content.replace('{{ macro.code }}', _display(macro_code))
-        content = content.replace('{{ macro.display }}', _display(macro_display))
+        content = content.replace("{{ company.name }}", _display(company.get("name")))
+        content = content.replace("{{ report.title }}", self.get_report_title())
+        content = content.replace("{{ date }}", datetime.now().strftime("%d/%m/%Y"))
+        content = content.replace(
+            "{{ datetime }}", datetime.now().strftime("%d/%m/%Y %H:%M")
+        )
+        content = content.replace("{{ year }}", str(datetime.now().year))
+        content = content.replace("{{ process.code }}", _display(process.get("code")))
+        content = content.replace("{{ process.name }}", _display(process.get("name")))
+        content = content.replace(
+            "{{ process.responsible }}", _display(process.get("responsible"))
+        )
+        content = content.replace("{{ macro.name }}", _display(macro_name))
+        content = content.replace("{{ macro.code }}", _display(macro_code))
+        content = content.replace("{{ macro.display }}", _display(macro_display))
 
         # Se o conteúdo já define o wrapper principal (ex.: custom-report-header),
         # evitar adicionar uma camada extra que aplicaria estilos/classe do layout padrão.
-        if 'custom-report-header' in content or 'class="report-header"' in content:
+        if "custom-report-header" in content or 'class="report-header"' in content:
             return content
 
         return f'<div class="report-header">{content}</div>'
-    
+
     def _process_footer_content(self, content):
         """Processa variáveis no conteúdo do rodapé"""
-        content = content.replace('{{ system }}', 'Sistema PEVAPP22')
-        content = content.replace('{{ page }}', '<span class="page-number"></span>')
-        content = content.replace('{{ pages }}', '<span class="total-pages"></span>')
-        content = content.replace('{{ year }}', str(datetime.now().year))
+        content = content.replace("{{ system }}", "Sistema PEVAPP22")
+        content = content.replace("{{ page }}", '<span class="page-number"></span>')
+        content = content.replace("{{ pages }}", '<span class="total-pages"></span>')
+        content = content.replace("{{ year }}", str(datetime.now().year))
 
-        if 'custom-report-footer' in content or 'class="report-footer"' in content:
+        if "custom-report-footer" in content or 'class="report-footer"' in content:
             return content
 
         return f'<div class="report-footer">{content}</div>'
-    
+
     # ====================================
     # GERENCIAMENTO DE SEÇÕES
     # ====================================
-    
-    def add_section(self, title, content, section_class='', break_before=False):
+
+    def add_section(self, title, content, section_class="", break_before=False):
         """
         Adiciona uma seção ao relatório
-        
+
         Args:
             title: Título da seção
             content: Conteúdo HTML da seção
             section_class: Classes CSS adicionais
             break_before: Se deve forçar quebra de página antes
         """
-        self.sections.append({
-            'title': title,
-            'content': content,
-            'class': section_class,
-            'break_before': break_before
-        })
-    
+        self.sections.append(
+            {
+                "title": title,
+                "content": content,
+                "class": section_class,
+                "break_before": break_before,
+            }
+        )
+
     def clear_sections(self):
         """Limpa todas as seções"""
         self.sections = []
-    
+
     # ====================================
     # ESTILOS CUSTOMIZADOS
     # ====================================
-    
+
     def add_custom_style(self, name, css):
         """
         Adiciona um estilo customizado
-        
+
         Args:
             name: Nome do estilo
             css: Código CSS
         """
         self.custom_styles[name] = css
-    
+
     def get_custom_styles(self):
         """Retorna todos os estilos customizados"""
-        return '\n'.join(self.custom_styles.values())
-    
+        return "\n".join(self.custom_styles.values())
+
     # ====================================
     # MÉTODOS AUXILIARES PARA SEÇÕES
     # ====================================
-    
-    def create_table(self, headers, rows, table_class='data-table'):
+
+    def create_table(self, headers, rows, table_class="data-table"):
         """
         Cria uma tabela HTML
-        
+
         Args:
             headers: Lista de cabeçalhos
             rows: Lista de listas (dados das linhas)
             table_class: Classe CSS da tabela
-        
+
         Returns:
             str: HTML da tabela
         """
         html = f'<table class="{table_class}">\n'
-        
+
         # Cabeçalhos
-        html += '  <thead>\n    <tr>\n'
+        html += "  <thead>\n    <tr>\n"
         for header in headers:
-            html += f'      <th>{header}</th>\n'
-        html += '    </tr>\n  </thead>\n'
-        
+            html += f"      <th>{header}</th>\n"
+        html += "    </tr>\n  </thead>\n"
+
         # Linhas
-        html += '  <tbody>\n'
+        html += "  <tbody>\n"
         for row in rows:
-            html += '    <tr>\n'
+            html += "    <tr>\n"
             for cell in row:
-                html += f'      <td>{cell}</td>\n'
-            html += '    </tr>\n'
-        html += '  </tbody>\n'
-        
-        html += '</table>\n'
+                html += f"      <td>{cell}</td>\n"
+            html += "    </tr>\n"
+        html += "  </tbody>\n"
+
+        html += "</table>\n"
         return html
-    
-    def create_info_box(self, title, content, box_type='info'):
+
+    def create_info_box(self, title, content, box_type="info"):
         """
         Cria uma caixa de informação
-        
+
         Args:
             title: Título da caixa
             content: Conteúdo
             box_type: Tipo ('info', 'warning', 'success', 'error')
-        
+
         Returns:
             str: HTML da caixa
         """
@@ -341,35 +355,35 @@ class BaseReportGenerator(ABC):
             <div class="info-box-content">{content}</div>
         </div>
         """
-    
+
     # ====================================
     # RENDERIZAÇÃO FINAL
     # ====================================
-    
+
     def generate_html(self, **kwargs):
         """
         Gera o HTML final do relatório
-        
+
         Args:
             **kwargs: Parâmetros para fetch_data
-        
+
         Returns:
             str: HTML completo do relatório
         """
         # 1. Buscar dados
         self.fetch_data(**kwargs)
-        
+
         # 2. Construir seções
         self.build_sections()
-        
+
         # 3. Montar HTML
         html = self._build_html_template()
-        
+
         return html
-    
+
     def _build_html_template(self):
         """Monta o template HTML completo"""
-        
+
         # Determinar offsets padrão para cabeçalho/rodapé
         mm_to_px = 96 / 25.4
         extra_spacing_mm = 3.0
@@ -380,15 +394,27 @@ class BaseReportGenerator(ABC):
             except (TypeError, ValueError):
                 return fallback
 
-        header_conf = (self.report_model or {}).get('header', {}) if self.report_model else {}
-        footer_conf = (self.report_model or {}).get('footer', {}) if self.report_model else {}
+        header_conf = (
+            (self.report_model or {}).get("header", {}) if self.report_model else {}
+        )
+        footer_conf = (
+            (self.report_model or {}).get("footer", {}) if self.report_model else {}
+        )
 
-        header_height_mm = _safe_mm(header_conf.get('height'), SPACING.get('header_height', 25))
-        footer_height_mm = _safe_mm(footer_conf.get('height'), SPACING.get('footer_height', 15))
+        header_height_mm = _safe_mm(
+            header_conf.get("height"), SPACING.get("header_height", 25)
+        )
+        footer_height_mm = _safe_mm(
+            footer_conf.get("height"), SPACING.get("footer_height", 15)
+        )
 
         # Se altura for 0, não adicionar espaçamento extra
-        header_offset_mm = header_height_mm + (extra_spacing_mm if header_height_mm > 0 else 0)
-        footer_offset_mm = footer_height_mm + (extra_spacing_mm if footer_height_mm > 0 else 0)
+        header_offset_mm = header_height_mm + (
+            extra_spacing_mm if header_height_mm > 0 else 0
+        )
+        footer_offset_mm = footer_height_mm + (
+            extra_spacing_mm if footer_height_mm > 0 else 0
+        )
 
         header_offset_value = f"{header_offset_mm:.2f}mm"
         footer_offset_value = f"{footer_offset_mm:.2f}mm"
@@ -666,7 +692,7 @@ class BaseReportGenerator(ABC):
     })();
     </script>
         """
-        
+
         # Montar HTML
         html = f"""
 <!DOCTYPE html>
@@ -691,13 +717,13 @@ class BaseReportGenerator(ABC):
 </body>
 </html>
         """
-        
+
         return html
-    
+
     def _render_section(self, section):
         """Renderiza uma seção individual"""
-        break_class = ' new-section' if section['break_before'] else ''
-        
+        break_class = " new-section" if section["break_before"] else ""
+
         return f"""
     <section class="report-section {section['class']}{break_class}">
         <h1>{section['title']}</h1>
@@ -706,4 +732,3 @@ class BaseReportGenerator(ABC):
         </div>
     </section>
         """
-

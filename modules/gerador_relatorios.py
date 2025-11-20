@@ -20,6 +20,7 @@ logger = logging.getLogger(__name__)
 
 try:
     from weasyprint import HTML  # type: ignore
+
     _WEASYPRINT_AVAILABLE = True
     _WEASYPRINT_IMPORT_ERROR = None
 except Exception as _weasy_exc:  # pragma: no cover - defensive import
@@ -33,18 +34,18 @@ class GeradorRelatoriosProfissionais:
     Classe para gerar relatÃ³rios profissionais em PDF
     Integrado ao sistema PEVAPP22
     """
-    
+
     def __init__(self, db_connection=None):
         """
         Inicializa o gerador de relatÃ³rios
-        
+
         Args:
             db_connection: ConexÃ£o com banco de dados (opcional)
         """
         self.db = db_connection or get_db()
         self.temp_dir = "temp_relatorios"
         self.output_dir = "relatorios"
-        
+
         # Cria diretÃ³rios se nÃ£o existirem
         os.makedirs(self.temp_dir, exist_ok=True)
         os.makedirs(self.output_dir, exist_ok=True)
@@ -94,73 +95,82 @@ class GeradorRelatoriosProfissionais:
     # ========================================
     # MÃ‰TODOS DE BUSCA DE DADOS
     # ========================================
-    
+
     def buscar_empresa(self, empresa_id):
         """Busca dados da empresa utilizando o adaptador atual."""
         company = self.db.get_company(empresa_id)
         if not company:
             return None
         return {
-            'id': company.get('id'),
-            'nome': company.get('name') or company.get('legal_name') or 'Empresa',
-            'cnpj': company.get('cnpj') or '',
-            'endereco': company.get('address') or '',
-            'telefone': company.get('phone') or '',
-            'email': company.get('email') or '',
-            'logo': company.get('logo_path') or ''
+            "id": company.get("id"),
+            "nome": company.get("name") or company.get("legal_name") or "Empresa",
+            "cnpj": company.get("cnpj") or "",
+            "endereco": company.get("address") or "",
+            "telefone": company.get("phone") or "",
+            "email": company.get("email") or "",
+            "logo": company.get("logo_path") or "",
         }
-    
+
     def buscar_projetos(self, empresa_id, status=None):
         """Busca projetos da empresa"""
         projetos_brutos = self.db.get_company_projects(empresa_id)
         projetos = []
         for projeto in projetos_brutos:
-            if status and (projeto.get('status') or '').lower() != status.lower():
+            if status and (projeto.get("status") or "").lower() != status.lower():
                 continue
-            codigo = projeto.get('code')
+            codigo = projeto.get("code")
             if not codigo:
                 codigo = f"PRJ-{projeto.get('id', 0):04d}"
-            projetos.append({
-                'codigo': codigo,
-                'nome': projeto.get('title') or 'Projeto',
-                'descricao': projeto.get('description') or '',
-                'status': projeto.get('status') or 'planned',
-                'data_inicio': projeto.get('start_date'),
-                'data_fim': projeto.get('end_date'),
-                'investimento': float(projeto.get('budget') or 0),
-                'responsavel': projeto.get('owner') or ''
-            })
+            projetos.append(
+                {
+                    "codigo": codigo,
+                    "nome": projeto.get("title") or "Projeto",
+                    "descricao": projeto.get("description") or "",
+                    "status": projeto.get("status") or "planned",
+                    "data_inicio": projeto.get("start_date"),
+                    "data_fim": projeto.get("end_date"),
+                    "investimento": float(projeto.get("budget") or 0),
+                    "responsavel": projeto.get("owner") or "",
+                }
+            )
         return sorted(
             projetos,
-            key=lambda item: item.get('data_inicio') or datetime.utcnow(),
-            reverse=True
+            key=lambda item: item.get("data_inicio") or datetime.utcnow(),
+            reverse=True,
         )
-    
-    def calcular_metricas_empresa(self, empresa_id, periodo_inicio=None, periodo_fim=None):
+
+    def calcular_metricas_empresa(
+        self, empresa_id, periodo_inicio=None, periodo_fim=None
+    ):
         """Calcula m?tricas gerais da empresa"""
         projetos = self.db.get_company_projects(empresa_id)
         total_projetos = len(projetos)
         projetos_concluidos = sum(
             1
             for projeto in projetos
-            if (projeto.get('status') or '').lower() in {'concluÃ­do', 'concluido', 'completed', 'done'}
+            if (projeto.get("status") or "").lower()
+            in {"concluÃ­do", "concluido", "completed", "done"}
         )
-        investimento_total = sum(float(projeto.get('budget') or 0) for projeto in projetos)
+        investimento_total = sum(
+            float(projeto.get("budget") or 0) for projeto in projetos
+        )
 
-        eficiencia = (projetos_concluidos / total_projetos * 100) if total_projetos > 0 else 0
+        eficiencia = (
+            (projetos_concluidos / total_projetos * 100) if total_projetos > 0 else 0
+        )
 
         return {
-            'total_projetos': total_projetos,
-            'projetos_concluidos': projetos_concluidos,
-            'projetos_em_andamento': total_projetos - projetos_concluidos,
-            'investimento_total': investimento_total,
-            'eficiencia': round(eficiencia, 1)
+            "total_projetos": total_projetos,
+            "projetos_concluidos": projetos_concluidos,
+            "projetos_em_andamento": total_projetos - projetos_concluidos,
+            "investimento_total": investimento_total,
+            "eficiencia": round(eficiencia, 1),
         }
-    
+
     # ========================================
     # MÃ‰TODOS DE GERAÃ‡ÃƒO DE GRÃFICOS
     # ========================================
-    
+
     def gerar_grafico_projetos_status(self, empresa_id):
         """Gera grÃ¡fico de pizza com status dos projetos"""
         with self._cursor() as cursor:
@@ -174,134 +184,146 @@ class GeradorRelatoriosProfissionais:
                 (empresa_id,),
             )
             dados = cursor.fetchall()
-        
+
         if not dados:
             return None
-        
+
         labels = [row[0] for row in dados]
         values = [row[1] for row in dados]
-        
+
         # Cores personalizadas
         cores = {
-            'Planejamento': '#ffc107',
-            'Em Andamento': '#1a76ff',
-            'ConcluÃ­do': '#28a745',
-            'Pausado': '#dc3545',
-            'Cancelado': '#6c757d'
+            "Planejamento": "#ffc107",
+            "Em Andamento": "#1a76ff",
+            "ConcluÃ­do": "#28a745",
+            "Pausado": "#dc3545",
+            "Cancelado": "#6c757d",
         }
-        
-        colors = [cores.get(label, '#666666') for label in labels]
-        
-        fig = go.Figure(data=[go.Pie(
-            labels=labels,
-            values=values,
-            hole=0.4,
-            marker=dict(colors=colors),
-            textposition='auto',
-            textinfo='label+percent'
-        )])
-        
-        fig.update_layout(
-            title='DistribuiÃ§Ã£o de Projetos por Status',
-            template='plotly_white',
-            font=dict(family="Arial", size=12),
-            height=400
+
+        colors = [cores.get(label, "#666666") for label in labels]
+
+        fig = go.Figure(
+            data=[
+                go.Pie(
+                    labels=labels,
+                    values=values,
+                    hole=0.4,
+                    marker=dict(colors=colors),
+                    textposition="auto",
+                    textinfo="label+percent",
+                )
+            ]
         )
-        
-        path = os.path.join(self.temp_dir, f'grafico_status_{empresa_id}.png')
+
+        fig.update_layout(
+            title="DistribuiÃ§Ã£o de Projetos por Status",
+            template="plotly_white",
+            font=dict(family="Arial", size=12),
+            height=400,
+        )
+
+        path = os.path.join(self.temp_dir, f"grafico_status_{empresa_id}.png")
         return self._safe_write_image(fig, path, width=800, height=400, scale=2)
-    
+
     def gerar_grafico_investimentos(self, empresa_id):
         """Gera grÃ¡fico de barras com investimentos por projeto"""
         projetos = self.buscar_projetos(empresa_id)
-        
+
         if not projetos:
             return None
-        
+
         # Pega top 10 projetos por investimento
-        projetos_sorted = sorted(projetos, key=lambda x: x['investimento'], reverse=True)[:10]
-        
-        nomes = [p['nome'][:30] + '...' if len(p['nome']) > 30 else p['nome'] for p in projetos_sorted]
-        valores = [p['investimento'] for p in projetos_sorted]
-        
-        fig = go.Figure(data=[
-            go.Bar(
-                y=nomes,
-                x=valores,
-                orientation='h',
-                marker_color='#1a76ff',
-                text=[f'R$ {v:,.0f}' for v in valores],
-                textposition='auto',
-            )
-        ])
-        
+        projetos_sorted = sorted(
+            projetos, key=lambda x: x["investimento"], reverse=True
+        )[:10]
+
+        nomes = [
+            p["nome"][:30] + "..." if len(p["nome"]) > 30 else p["nome"]
+            for p in projetos_sorted
+        ]
+        valores = [p["investimento"] for p in projetos_sorted]
+
+        fig = go.Figure(
+            data=[
+                go.Bar(
+                    y=nomes,
+                    x=valores,
+                    orientation="h",
+                    marker_color="#1a76ff",
+                    text=[f"R$ {v:,.0f}" for v in valores],
+                    textposition="auto",
+                )
+            ]
+        )
+
         fig.update_layout(
-            title='Top 10 Projetos por Investimento',
-            xaxis_title='Investimento (R$)',
-            yaxis_title='Projeto',
-            template='plotly_white',
+            title="Top 10 Projetos por Investimento",
+            xaxis_title="Investimento (R$)",
+            yaxis_title="Projeto",
+            template="plotly_white",
             font=dict(family="Arial", size=11),
             height=500,
-            margin=dict(l=200)
+            margin=dict(l=200),
         )
-        
-        path = os.path.join(self.temp_dir, f'grafico_investimentos_{empresa_id}.png')
+
+        path = os.path.join(self.temp_dir, f"grafico_investimentos_{empresa_id}.png")
         return self._safe_write_image(fig, path, width=1000, height=500, scale=2)
-    
+
     def gerar_grafico_timeline(self, empresa_id):
         """Gera grÃ¡fico de timeline dos projetos"""
         projetos = self.buscar_projetos(empresa_id)
-        
+
         if not projetos:
             return None
-        
+
         # Filtra projetos com datas vÃ¡lidas
-        projetos_validos = [
-            p for p in projetos 
-            if p['data_inicio'] and p['data_fim']
-        ][:15]  # Top 15
-        
+        projetos_validos = [p for p in projetos if p["data_inicio"] and p["data_fim"]][
+            :15
+        ]  # Top 15
+
         if not projetos_validos:
             return None
-        
+
         fig = go.Figure()
-        
+
         for i, projeto in enumerate(projetos_validos):
             cor = {
-                'Planejamento': '#ffc107',
-                'Em Andamento': '#1a76ff',
-                'ConcluÃ­do': '#28a745',
-                'Pausado': '#dc3545'
-            }.get(projeto['status'], '#666666')
-            
-            fig.add_trace(go.Scatter(
-                x=[projeto['data_inicio'], projeto['data_fim']],
-                y=[i, i],
-                mode='lines+markers',
-                name=projeto['nome'][:30],
-                line=dict(color=cor, width=10),
-                marker=dict(size=8),
-                hovertemplate=f"<b>{projeto['nome']}</b><br>" +
-                             f"InÃ­cio: {projeto['data_inicio']}<br>" +
-                             f"Fim: {projeto['data_fim']}<br>" +
-                             f"Status: {projeto['status']}<extra></extra>"
-            ))
-        
+                "Planejamento": "#ffc107",
+                "Em Andamento": "#1a76ff",
+                "ConcluÃ­do": "#28a745",
+                "Pausado": "#dc3545",
+            }.get(projeto["status"], "#666666")
+
+            fig.add_trace(
+                go.Scatter(
+                    x=[projeto["data_inicio"], projeto["data_fim"]],
+                    y=[i, i],
+                    mode="lines+markers",
+                    name=projeto["nome"][:30],
+                    line=dict(color=cor, width=10),
+                    marker=dict(size=8),
+                    hovertemplate=f"<b>{projeto['nome']}</b><br>"
+                    + f"InÃ­cio: {projeto['data_inicio']}<br>"
+                    + f"Fim: {projeto['data_fim']}<br>"
+                    + f"Status: {projeto['status']}<extra></extra>",
+                )
+            )
+
         fig.update_layout(
-            title='Timeline de Projetos',
-            xaxis_title='Data',
+            title="Timeline de Projetos",
+            xaxis_title="Data",
             yaxis=dict(
-                tickmode='array',
+                tickmode="array",
                 tickvals=list(range(len(projetos_validos))),
-                ticktext=[p['codigo'] for p in projetos_validos]
+                ticktext=[p["codigo"] for p in projetos_validos],
             ),
-            template='plotly_white',
+            template="plotly_white",
             height=max(400, len(projetos_validos) * 30),
             showlegend=False,
-            font=dict(family="Arial", size=10)
+            font=dict(family="Arial", size=10),
         )
-        
-        path = os.path.join(self.temp_dir, f'grafico_timeline_{empresa_id}.png')
+
+        path = os.path.join(self.temp_dir, f"grafico_timeline_{empresa_id}.png")
         return self._safe_write_image(
             fig,
             path,
@@ -309,18 +331,22 @@ class GeradorRelatoriosProfissionais:
             height=max(400, len(projetos_validos) * 30),
             scale=2,
         )
-    
+
     # ========================================
     # MÃ‰TODOS AUXILIARES
     # ========================================
-    
+
     @staticmethod
     def format_currency(valor):
         """Formata valor como moeda brasileira"""
         if valor is None:
             return "R$ 0,00"
-        return f'R$ {float(valor):,.2f}'.replace(',', '_').replace('.', ',').replace('_', '.')
-    
+        return (
+            f"R$ {float(valor):,.2f}".replace(",", "_")
+            .replace(".", ",")
+            .replace("_", ".")
+        )
+
     @staticmethod
     def format_date(data_str):
         """Formata data para padrÃ£o brasileiro"""
@@ -328,13 +354,13 @@ class GeradorRelatoriosProfissionais:
             return "-"
         try:
             if isinstance(data_str, str):
-                data = datetime.strptime(data_str, '%Y-%m-%d')
+                data = datetime.strptime(data_str, "%Y-%m-%d")
             else:
                 data = data_str
-            return data.strftime('%d/%m/%Y')
+            return data.strftime("%d/%m/%Y")
         except Exception as exc:
             return data_str
-    
+
     def limpar_temp(self):
         """Remove arquivos temporÃ¡rios"""
         try:
@@ -344,79 +370,79 @@ class GeradorRelatoriosProfissionais:
                     os.remove(file_path)
         except Exception as e:
             logger.exception("Erro ao limpar arquivos temporÃ¡rios")
-    
+
     # ========================================
     # MÃ‰TODOS PRINCIPAIS DE GERAÃ‡ÃƒO
     # ========================================
-    
+
     def gerar_relatorio_projetos(self, empresa_id):
         """
         Gera relatÃ³rio completo de projetos da empresa
-        
+
         Args:
             empresa_id: ID da empresa
-            
+
         Returns:
             str: Caminho do arquivo PDF gerado
         """
-        
+
         # 1. Busca dados
         empresa = self.buscar_empresa(empresa_id)
         if not empresa:
             raise ValueError(f"Empresa {empresa_id} nÃ£o encontrada")
-        
+
         projetos = self.buscar_projetos(empresa_id)
         metricas = self.calcular_metricas_empresa(empresa_id)
-        
+
         # 2. Gera grÃ¡ficos
         grafico_status = self.gerar_grafico_projetos_status(empresa_id)
         grafico_investimentos = self.gerar_grafico_investimentos(empresa_id)
         grafico_timeline = self.gerar_grafico_timeline(empresa_id)
-        
+
         # 3. Prepara dados para o template
         contexto = {
-            'empresa': empresa,
-            'projetos': projetos,
-            'metricas': metricas,
-            'total_investimento': self.format_currency(metricas['investimento_total']),
-            'grafico_status_path': grafico_status,
-            'grafico_investimentos_path': grafico_investimentos,
-            'grafico_timeline_path': grafico_timeline,
-            'data_geracao': datetime.now().strftime('%d/%m/%Y Ã s %H:%M:%S'),
-            'format_currency': self.format_currency,
-            'format_date': self.format_date
+            "empresa": empresa,
+            "projetos": projetos,
+            "metricas": metricas,
+            "total_investimento": self.format_currency(metricas["investimento_total"]),
+            "grafico_status_path": grafico_status,
+            "grafico_investimentos_path": grafico_investimentos,
+            "grafico_timeline_path": grafico_timeline,
+            "data_geracao": datetime.now().strftime("%d/%m/%Y Ã s %H:%M:%S"),
+            "format_currency": self.format_currency,
+            "format_date": self.format_date,
         }
-        
+
         # 4. Gera HTML
         html_content = self._gerar_html_relatorio_projetos(contexto)
-        
+
         # 5. Converte para PDF
         timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
-        output_filename = f'relatorio_projetos_empresa_{empresa_id}_{timestamp}.pdf'
+        output_filename = f"relatorio_projetos_empresa_{empresa_id}_{timestamp}.pdf"
         output_path = os.path.join(self.output_dir, output_filename)
-        
+
         self._ensure_weasyprint()
         HTML(string=html_content).write_pdf(output_path)
-        
+
         # 6. Limpa arquivos temporÃ¡rios
         self.limpar_temp()
-        
+
         return output_path
-    
+
     def _gerar_html_relatorio_projetos(self, contexto):
         """Gera HTML do relatÃ³rio de projetos"""
-        
+
         # Gera tabela de projetos
         tabela_projetos = ""
-        for projeto in contexto['projetos']:
+        for projeto in contexto["projetos"]:
             cor_status = {
-                'Planejamento': 'orange',
-                'Em Andamento': 'blue',
-                'ConcluÃ­do': 'green',
-                'Pausado': 'red',
-                'Cancelado': 'gray'
-            }.get(projeto['status'], 'black')
-            
+                "Planejamento": "orange",
+                "Em Andamento": "blue",
+                "ConcluÃ­do": "green",
+                "Pausado": "red",
+                "Cancelado": "gray",
+            }.get(projeto["status"], "black")
+
             tabela_projetos += f"""
             <tr>
                 <td><strong>{projeto['codigo']}</strong></td>
@@ -427,7 +453,7 @@ class GeradorRelatoriosProfissionais:
                 <td style="text-align: right;">{self.format_currency(projeto['investimento'])}</td>
             </tr>
             """
-        
+
         # Template HTML
         html = f"""
 <!DOCTYPE html>
@@ -617,7 +643,7 @@ class GeradorRelatoriosProfissionais:
 </body>
 </html>
         """
-        
+
         return html
 
 
@@ -625,13 +651,14 @@ class GeradorRelatoriosProfissionais:
 # FUNÃ‡Ã•ES DE CONVENIÃŠNCIA
 # ========================================
 
+
 def gerar_relatorio_empresa(empresa_id):
     """
     FunÃ§Ã£o de conveniÃªncia para gerar relatÃ³rio de projetos
-    
+
     Args:
         empresa_id: ID da empresa
-        
+
     Returns:
         str: Caminho do arquivo PDF gerado
     """
@@ -645,7 +672,3 @@ if __name__ == "__main__":
     logger.info("Para integrar ao Flask, use:")
     logger.info("  from modules.gerador_relatorios import gerar_relatorio_empresa")
     logger.info("  pdf_path = gerar_relatorio_empresa(empresa_id)")
-
-
-
-

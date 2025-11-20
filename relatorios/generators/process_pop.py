@@ -43,7 +43,7 @@ from config_database import get_db
 class ProcessPOPReport(BaseReportGenerator):
     """
     Relatório de Procedimento Operacional Padrão (POP) de um Processo
-    
+
     Inclui:
     - Dados gerais do processo
     - Fluxograma (se disponível)
@@ -51,35 +51,35 @@ class ProcessPOPReport(BaseReportGenerator):
     - Rotinas associadas
     - Indicadores
     """
-    
+
     def __init__(self, report_model_id=None):
         """
         Inicializa o gerador de relatório de POP
-        
+
         Args:
             report_model_id: ID do modelo de página (opcional)
                 Se None, usa configuração padrão
         """
         super().__init__(report_model_id)
-        
+
         # Configurações específicas deste relatório
         self.include_flow = True
         self.include_activities = True
         self.include_routines = True
         self.include_indicators = False
-        
+
         # Estilos customizados para este relatório
         self._add_custom_styles()
-    
+
     @staticmethod
-    def _safe_strip(value, default=''):
+    def _safe_strip(value, default=""):
         """
         Remove espaços de uma string de forma segura, tratando None e tipos não-string.
-        
+
         Args:
             value: Valor a ser processado (pode ser None, str ou outro tipo)
             default: Valor padrão se value for None ou não-string
-            
+
         Returns:
             str: String sem espaços ou default se value for inválido
         """
@@ -88,7 +88,7 @@ class ProcessPOPReport(BaseReportGenerator):
         if not isinstance(value, str):
             return default
         return value.strip()
-    
+
     def _add_custom_styles(self):
         """Adiciona estilos específicos deste relatório"""
         # Obter margens do modelo
@@ -96,14 +96,14 @@ class ProcessPOPReport(BaseReportGenerator):
         margin_bottom = 5  # Padrão
         margin_left = 5  # Padrão - Reduzido para 5mm
         margin_right = 5  # Padrão - Reduzido para 5mm
-        
+
         if self.report_model:
-            margins = self.report_model.get('margins', {})
-            margin_top = margins.get('top', 5)
-            margin_bottom = margins.get('bottom', 5)
-            margin_left = margins.get('left', 20)
-            margin_right = margins.get('right', 15)
-        
+            margins = self.report_model.get("margins", {})
+            margin_top = margins.get("top", 5)
+            margin_bottom = margins.get("bottom", 5)
+            margin_left = margins.get("left", 20)
+            margin_right = margins.get("right", 15)
+
         # Construir CSS com margens dinâmicas
         css_layout = f"""
         /* Conteúdo principal - SEM offset, usa margens da página */
@@ -671,41 +671,46 @@ class ProcessPOPReport(BaseReportGenerator):
             }}
         }}
         """
-        
+
         # Adicionar CSS ao gerador
-        self.add_custom_style('layout', css_layout)
-    
+        self.add_custom_style("layout", css_layout)
+
     def get_default_header(self):
         """Cabeçalho desabilitado conforme solicitação do usuário"""
         return ""
-    
+
     def get_default_footer(self):
         """Rodapé personalizado usando configuração do modelo"""
         if not self.report_model:
             return ""
-        
+
         # Buscar conteúdo do rodapé (pode estar em footer.content ou footer_content)
-        footer_conf = self.report_model.get('footer', {})
-        footer_content = footer_conf.get('content', '') or self.report_model.get('footer_content', '')
-        
+        footer_conf = self.report_model.get("footer", {})
+        footer_content = footer_conf.get("content", "") or self.report_model.get(
+            "footer_content", ""
+        )
+
         if not footer_content:
             return ""
-        
+
         # Substituir variáveis PRIMEIRO (ordem importante: datetime antes de date/time!)
         from datetime import datetime
+
         now = datetime.now()
-        
+
         # Substituir {{datetime}} ANTES para não conflitar com {{date}} e {{time}}
-        footer_content = footer_content.replace('{{datetime}}', now.strftime('%d/%m/%Y às %H:%M'))
-        footer_content = footer_content.replace('{{date}}', now.strftime('%d/%m/%Y'))
-        footer_content = footer_content.replace('{{time}}', now.strftime('%H:%M'))
-        
+        footer_content = footer_content.replace(
+            "{{datetime}}", now.strftime("%d/%m/%Y às %H:%M")
+        )
+        footer_content = footer_content.replace("{{date}}", now.strftime("%d/%m/%Y"))
+        footer_content = footer_content.replace("{{time}}", now.strftime("%H:%M"))
+
         # DEPOIS dividir por colunas (separador: ||)
-        columns = footer_content.split('||')
-        
+        columns = footer_content.split("||")
+
         # Limpar espaços extras
         columns = [col.strip() for col in columns]
-        
+
         # Montar HTML do rodapé baseado no número de colunas
         if len(columns) == 2:
             footer_html = f"""
@@ -732,9 +737,9 @@ class ProcessPOPReport(BaseReportGenerator):
                 <div class="footer-single">{columns[0] if columns else ''}</div>
             </div>
             """
-        
+
         return footer_html
-    
+
     def _build_html_template(self):
         """
         Sobrescreve o método da classe base para usar margens do modelo
@@ -745,21 +750,26 @@ class ProcessPOPReport(BaseReportGenerator):
         margin_bottom = 5
         margin_left = 20
         margin_right = 15
-        
+
         if self.report_model:
-            margins = self.report_model.get('margins', {})
-            margin_top = margins.get('top', 5)
-            margin_bottom = margins.get('bottom', 5)
-            margin_left = margins.get('left', 20)
-            margin_right = margins.get('right', 15)
-        
+            margins = self.report_model.get("margins", {})
+            margin_top = margins.get("top", 5)
+            margin_bottom = margins.get("bottom", 5)
+            margin_left = margins.get("left", 20)
+            margin_right = margins.get("right", 15)
+
         # Importar funções necessárias
         from relatorios.config.visual_identity import (
-            COLORS, TYPOGRAPHY, SPACING, BORDERS,
-            get_css_variables, generate_section_css, 
-            generate_table_css, generate_page_break_css
+            COLORS,
+            TYPOGRAPHY,
+            SPACING,
+            BORDERS,
+            get_css_variables,
+            generate_section_css,
+            generate_table_css,
+            generate_page_break_css,
         )
-        
+
         # CSS base sem offsets de cabeçalho/rodapé
         base_css = f"""
         {self.get_page_css()}
@@ -1049,7 +1059,7 @@ class ProcessPOPReport(BaseReportGenerator):
             }}
         }}
         """
-        
+
         # Montar HTML
         html = f"""
 <!DOCTYPE html>
@@ -1071,23 +1081,23 @@ class ProcessPOPReport(BaseReportGenerator):
 </body>
 </html>
         """
-        
+
         return html
-    
+
     def _render_section(self, section):
         """Renderiza uma seção individual"""
-        break_class = ' new-section' if section['break_before'] else ''
-        section_class = self._safe_strip(section.get('class'))
-        
+        break_class = " new-section" if section["break_before"] else ""
+        section_class = self._safe_strip(section.get("class"))
+
         # Construir classe de forma mais limpa
-        classes = ['report-section']
+        classes = ["report-section"]
         if section_class:
             classes.append(section_class)
-        if section['break_before']:
-            classes.append('new-section')
-        
-        class_attr = ' '.join(classes)
-        
+        if section["break_before"]:
+            classes.append("new-section")
+
+        class_attr = " ".join(classes)
+
         return f"""
     <section class="{class_attr}">
         <h1>{section['title']}</h1>
@@ -1096,17 +1106,17 @@ class ProcessPOPReport(BaseReportGenerator):
         </div>
     </section>
         """
-    
+
     # ====================================
     # IMPLEMENTAÇÃO DOS MÉTODOS ABSTRATOS
     # ====================================
-    
+
     def get_report_title(self):
         """Retorna o titulo do relatorio no formato: Código - Nome"""
-        process = self.data.get('process', {})
-        code = self._safe_strip(process.get('code'))
-        name = self._safe_strip(process.get('name'))
-        
+        process = self.data.get("process", {})
+        code = self._safe_strip(process.get("code"))
+        name = self._safe_strip(process.get("name"))
+
         # Formato: AB.C.2.3.1 - VENDAS - POSTOS
         if code and name:
             return f"{code} - {name}"
@@ -1116,91 +1126,95 @@ class ProcessPOPReport(BaseReportGenerator):
             return name
         else:
             return "Processo"
-    
+
     def fetch_data(self, **kwargs):
         """
         Busca todos os dados necessários para o relatório
-        
+
         Args:
             company_id: ID da empresa
             process_id: ID do processo
         """
-        company_id = kwargs.get('company_id')
-        process_id = kwargs.get('process_id')
-        
+        company_id = kwargs.get("company_id")
+        process_id = kwargs.get("process_id")
+
         db = get_db()
-        
+
         # 1. Dados da empresa
-        self.data['company'] = db.get_company(company_id) or {}
-        
+        self.data["company"] = db.get_company(company_id) or {}
+
         # 2. Dados do processo
-        self.data['process'] = db.get_process(process_id) or {}
-        
+        self.data["process"] = db.get_process(process_id) or {}
+
         # 3. Macroprocesso (se existir)
-        macro_id = self.data['process'].get('macro_id')
+        macro_id = self.data["process"].get("macro_id")
         if macro_id:
-            self.data['macro'] = db.get_macro_process(macro_id) or {}
-        
+            self.data["macro"] = db.get_macro_process(macro_id) or {}
+
         # 4. Atividades e etapas (se incluído)
         if self.include_activities:
-            self.data['activities'] = self._fetch_activities(process_id)
-        
+            self.data["activities"] = self._fetch_activities(process_id)
+
         # 5. Rotinas (se incluído)
         if self.include_routines:
-            self.data['routines'] = self._fetch_routines(process_id)
-        
+            self.data["routines"] = self._fetch_routines(process_id)
+
         # 6. Indicadores (se incluído)
         if self.include_indicators:
-            self.data['indicators'] = self._fetch_indicators(process_id)
-    
+            self.data["indicators"] = self._fetch_indicators(process_id)
+
     def _fetch_activities(self, process_id):
         """Busca atividades e suas etapas"""
         db = get_db()
         activities = []
-        
+
         activities_raw = db.list_process_activities(process_id)
         for activity in activities_raw:
             activity_dict = dict(activity)
-            
+
             # Buscar etapas desta atividade
-            entries_raw = db.list_process_activity_entries(activity['id'])
+            entries_raw = db.list_process_activity_entries(activity["id"])
             sanitized_entries = []
             for entry in entries_raw:
                 entry_dict = dict(entry)
-                
+
                 # Normalizar campos que podem vir vazios do banco
-                entry_dict['image_path'] = self._safe_strip(entry_dict.get('image_path'))
-                
-                image_width = entry_dict.get('image_width')
+                entry_dict["image_path"] = self._safe_strip(
+                    entry_dict.get("image_path")
+                )
+
+                image_width = entry_dict.get("image_width")
                 try:
-                    entry_dict['image_width'] = int(image_width) if image_width is not None else 280
+                    entry_dict["image_width"] = (
+                        int(image_width) if image_width is not None else 280
+                    )
                 except (TypeError, ValueError):
-                    entry_dict['image_width'] = 280
-                
+                    entry_dict["image_width"] = 280
+
                 sanitized_entries.append(entry_dict)
-            
-            activity_dict['entries'] = sanitized_entries
+
+            activity_dict["entries"] = sanitized_entries
             activities.append(activity_dict)
-        
+
         return activities
-    
+
     def _fetch_routines(self, process_id):
         """
         Busca rotinas com colaboradores usando o backend ativo (PostgreSQL).
-        
+
         ⚠️ APP30: Usa APENAS PostgreSQL (SQLite foi desativado)
         """
         try:
             db = get_db()  # Usa o sistema de database configurado
-            
+
             # Usar os métodos do database wrapper ao invés de queries diretas
             # Isso garante compatibilidade e evita problemas de conexão
             routines = []
-            
+
             # Buscar rotinas do processo (assumindo que existe método no database.py)
             # Se não existir, vamos criar queries SQLAlchemy adequadas
             from database.postgres_helper import execute_query
-            
+
             # Query para rotinas (usando parametrização SQLAlchemy)
             routines_raw = execute_query(
                 "SELECT id, name, description, schedule_type, schedule_value, "
@@ -1208,21 +1222,25 @@ class ProcessPOPReport(BaseReportGenerator):
                 "FROM routines "
                 "WHERE process_id = :process_id "
                 "ORDER BY created_at DESC",
-                {"process_id": process_id}
+                {"process_id": process_id},
             )
-            
+
             for routine_row in routines_raw:
                 # Converter Row para dict de forma segura
                 try:
-                    routine = dict(routine_row._mapping) if hasattr(routine_row, '_mapping') else dict(routine_row)
+                    routine = (
+                        dict(routine_row._mapping)
+                        if hasattr(routine_row, "_mapping")
+                        else dict(routine_row)
+                    )
                 except Exception as e:
                     print(f"⚠️ Erro ao converter routine_row: {e}")
                     continue
-                
-                routine_id = routine.get('id')
+
+                routine_id = routine.get("id")
                 if not routine_id:
                     continue
-                
+
                 # Query para colaboradores (usando parametrização SQLAlchemy)
                 collaborators_raw = execute_query(
                     "SELECT rc.*, e.name as employee_name, e.email as employee_email "
@@ -1230,52 +1248,59 @@ class ProcessPOPReport(BaseReportGenerator):
                     "LEFT JOIN employees e ON rc.employee_id = e.id "
                     "WHERE rc.routine_id = :routine_id "
                     "ORDER BY e.name",
-                    {"routine_id": routine_id}
+                    {"routine_id": routine_id},
                 )
-                
+
                 collaborators = []
                 for row in collaborators_raw:
                     # Converter Row para dict de forma segura
                     try:
-                        collaborator = dict(row._mapping) if hasattr(row, '_mapping') else dict(row)
+                        collaborator = (
+                            dict(row._mapping)
+                            if hasattr(row, "_mapping")
+                            else dict(row)
+                        )
                     except Exception as e:
                         print(f"⚠️ Erro ao converter collaborator row: {e}")
                         continue
-                    
-                    hours_value = collaborator.get('hours_used') or 0
+
+                    hours_value = collaborator.get("hours_used") or 0
                     try:
                         hours_value = float(hours_value)
                     except (TypeError, ValueError):
                         hours_value = 0.0
-                    collaborator['hours_used'] = hours_value
+                    collaborator["hours_used"] = hours_value
                     collaborators.append(collaborator)
-                
-                total_hours = sum(collab.get('hours_used', 0.0) for collab in collaborators)
-                routine['collaborators'] = collaborators
-                routine['total_hours'] = total_hours
+
+                total_hours = sum(
+                    collab.get("hours_used", 0.0) for collab in collaborators
+                )
+                routine["collaborators"] = collaborators
+                routine["total_hours"] = total_hours
                 routines.append(routine)
-            
+
             return routines
-            
+
         except Exception as e:
             print(f"❌ ERRO ao buscar rotinas: {e}")
             import traceback
+
             traceback.print_exc()
             # Propagar o erro para que seja exibido na página de erro
             raise
-    
+
     def _fetch_indicators(self, process_id):
         """
         Busca indicadores do processo usando o backend ativo (PostgreSQL).
-        
+
         ⚠️ APP30: Usa APENAS PostgreSQL (SQLite foi desativado)
         """
         try:
             db = get_db()  # Usa o sistema de database configurado
-            
+
             # Usar os métodos do database wrapper ao invés de queries diretas
             from database.postgres_helper import execute_query, execute_fetchone
-            
+
             # Query para indicadores (usando parametrização SQLAlchemy)
             indicators_raw = execute_query(
                 "SELECT id, company_id, code, name, unit, formula, "
@@ -1283,23 +1308,25 @@ class ProcessPOPReport(BaseReportGenerator):
                 "FROM indicators "
                 "WHERE process_id = :process_id "
                 "ORDER BY code",
-                {"process_id": process_id}
+                {"process_id": process_id},
             )
-            
+
             indicators = []
             for row in indicators_raw:
                 # Converter Row para dict de forma segura
                 try:
-                    indicator = dict(row._mapping) if hasattr(row, '_mapping') else dict(row)
+                    indicator = (
+                        dict(row._mapping) if hasattr(row, "_mapping") else dict(row)
+                    )
                 except Exception as e:
                     print(f"⚠️ Erro ao converter indicator row: {e}")
                     continue
-                
-                indicator_id = indicator.get('id')
-                company_id = indicator.get('company_id')
+
+                indicator_id = indicator.get("id")
+                company_id = indicator.get("company_id")
                 if not indicator_id:
                     continue
-                
+
                 # Query para meta mais recente (usando parametrização SQLAlchemy)
                 goal_params = {"indicator_id": indicator_id}
                 goal_filter = (
@@ -1311,120 +1338,130 @@ class ProcessPOPReport(BaseReportGenerator):
                     goal_filter += "AND company_id = :company_id "
                     goal_params["company_id"] = company_id
                 goal_filter += "ORDER BY goal_date DESC LIMIT 1"
-                
+
                 goal_row = execute_fetchone(goal_filter, goal_params)
-                
+
                 # Converter goal_row para dict de forma segura
                 if goal_row:
                     try:
-                        indicator['latest_goal'] = dict(goal_row._mapping) if hasattr(goal_row, '_mapping') else dict(goal_row)
+                        indicator["latest_goal"] = (
+                            dict(goal_row._mapping)
+                            if hasattr(goal_row, "_mapping")
+                            else dict(goal_row)
+                        )
                     except Exception as e:
                         print(f"⚠️ Erro ao converter goal_row: {e}")
-                        indicator['latest_goal'] = None
+                        indicator["latest_goal"] = None
                 else:
-                    indicator['latest_goal'] = None
-                
+                    indicator["latest_goal"] = None
+
                 indicators.append(indicator)
-            
+
             return indicators
-            
+
         except Exception as e:
             print(f"❌ ERRO ao buscar indicadores: {e}")
             import traceback
+
             traceback.print_exc()
             # Propagar o erro para que seja exibido na página de erro
             raise
-    
+
     def _resolve_image_for_inline(self, image_path):
         """
         Resolve caminho de imagem para exibição inline no relatório
         Converte para base64 ou retorna URL acessível
-        
+
         Args:
             image_path: Caminho da imagem
-            
+
         Returns:
             str: Data URL (base64) ou URL HTTP, ou None se não encontrar
         """
         if not image_path:
             return None
-        
+
         # Se já é data URL, retornar direto
-        if image_path.startswith('data:image/'):
+        if image_path.startswith("data:image/"):
             return image_path
-        
+
         # Se é URL HTTP, retornar direto
-        if image_path.startswith(('http://', 'https://')):
+        if image_path.startswith(("http://", "https://")):
             return image_path
-        
+
         # Tentar encontrar o arquivo localmente
         candidates = [
             Path(image_path),
-            Path('uploads') / image_path,
-            Path('static') / image_path,
-            Path('uploads') / Path(image_path).name,
-            Path('static') / Path(image_path).name,
+            Path("uploads") / image_path,
+            Path("static") / image_path,
+            Path("uploads") / Path(image_path).name,
+            Path("static") / Path(image_path).name,
         ]
-        
+
         for candidate in candidates:
             if candidate.is_file():
                 # Converter para base64
                 ext = candidate.suffix.lower()
-                if ext in {'.png', '.jpg', '.jpeg', '.gif', '.bmp', '.webp', '.svg'}:
+                if ext in {".png", ".jpg", ".jpeg", ".gif", ".bmp", ".webp", ".svg"}:
                     mime_type, _ = mimetypes.guess_type(candidate.name)
-                    mime_type = mime_type or 'image/png'
+                    mime_type = mime_type or "image/png"
                     try:
-                        encoded = base64.b64encode(candidate.read_bytes()).decode('ascii')
+                        encoded = base64.b64encode(candidate.read_bytes()).decode(
+                            "ascii"
+                        )
                         return f"data:{mime_type};base64,{encoded}"
                     except Exception as e:
                         print(f"Erro ao converter imagem {candidate}: {e}")
                         continue
-        
+
         # Se não encontrou, tentar URL relativa
         try:
             from flask import has_request_context, url_for
+
             if has_request_context():
                 try:
-                    return url_for('serve_uploaded_file', filename=image_path, _external=False)
+                    return url_for(
+                        "serve_uploaded_file", filename=image_path, _external=False
+                    )
                 except Exception:
                     pass
         except ImportError:
             pass
-        
+
         # Último recurso: URL relativa simples
         return f"/uploads/{image_path.lstrip('/')}"
-    
+
     def _add_title_and_info_section(self):
         """Adiciona seção de título e informações do processo"""
-        process = self.data.get('process', {})
-        company = self.data.get('company', {})
-        macro = self.data.get('macro', {})
-        
+        process = self.data.get("process", {})
+        company = self.data.get("company", {})
+        macro = self.data.get("macro", {})
+
         # Título da seção: apenas "Book do Processo"
         section_title = "Book do Processo"
-        
+
         # Nome do processo (vai em uma linha separada no conteúdo)
-        process_code = process.get('code', '')
-        process_name = process.get('name', 'Processo')
-        
+        process_code = process.get("code", "")
+        process_name = process.get("name", "Processo")
+
         if process_code:
             process_full_name = f"{process_code} - {process_name}"
         else:
             process_full_name = process_name
-        
+
         # Informações do processo
-        company_name = company.get('name', 'Não informado')
-        
+        company_name = company.get("name", "Não informado")
+
         # Macroprocesso com código
-        macro_code = macro.get('code', '')
-        macro_name = macro.get('name', 'Não informado')
-        macro_owner = macro.get('owner', 'Não informado')
-        
+        macro_code = macro.get("code", "")
+        macro_name = macro.get("name", "Não informado")
+        macro_owner = macro.get("owner", "Não informado")
+
         if macro_code:
             macro_full_name = f"{macro_code} - {macro_name}"
         else:
             macro_full_name = macro_name
-        
+
         # Conteúdo: Nome do processo + dados como subsessões
         content_html = f"""
         <div class="book-process-name">{process_full_name}</div>
@@ -1439,19 +1476,19 @@ class ProcessPOPReport(BaseReportGenerator):
             </div>
         </div>
         """
-        
+
         # Adicionar como seção normal com título
-        self.add_section(section_title, content_html, section_class='book-section')
-    
+        self.add_section(section_title, content_html, section_class="book-section")
+
     def build_sections(self):
         """Constrói todas as seções do relatório"""
-        
+
         # Limpar seções anteriores
         self.clear_sections()
-        
+
         # 0. Seção de Título e Dados do Processo (sempre incluída)
         self._add_title_and_info_section()
-        
+
         # 1. Seção de Fluxo (se incluído)
         if self.include_flow:
             print(">> [DEBUG] Adicionando seção: Fluxo")
@@ -1471,19 +1508,19 @@ class ProcessPOPReport(BaseReportGenerator):
         if self.include_activities:
             print(">> [DEBUG] Adicionando seção: Atividades/POP")
             self._add_activities_section()
-        
+
         # Debug: mostrar ordem final das seções
-        section_titles = [s['title'] for s in self.sections]
+        section_titles = [s["title"] for s in self.sections]
         print(f">> [DEBUG] Ordem final das seções: {section_titles}")
-    
+
     # ====================================
     # SEÇÕES ESPECÍFICAS
     # ====================================
 
     def _add_flow_section(self):
         """Adiciona secao de fluxograma"""
-        process = self.data.get('process', {})
-        flow_document = self._safe_strip(process.get('flow_document'))
+        process = self.data.get("process", {})
+        flow_document = self._safe_strip(process.get("flow_document"))
 
         def _build_public_url(document_path: str):
             """Retorna URL pública do documento ou None"""
@@ -1491,7 +1528,7 @@ class ProcessPOPReport(BaseReportGenerator):
                 return None
 
             lowered = document_path.lower()
-            if lowered.startswith(('http://', 'https://', '/')):
+            if lowered.startswith(("http://", "https://", "/")):
                 return document_path
 
             try:
@@ -1499,7 +1536,11 @@ class ProcessPOPReport(BaseReportGenerator):
 
                 if has_request_context():
                     try:
-                        return url_for('serve_uploaded_file', filename=document_path, _external=False)
+                        return url_for(
+                            "serve_uploaded_file",
+                            filename=document_path,
+                            _external=False,
+                        )
                     except Exception:
                         pass
             except ImportError:
@@ -1514,46 +1555,50 @@ class ProcessPOPReport(BaseReportGenerator):
 
             lowered = document_path.lower()
 
-            if lowered.startswith('data:image/'):
-                return ('image', document_path)
+            if lowered.startswith("data:image/"):
+                return ("image", document_path)
 
-            if lowered.startswith(('http://', 'https://')):
+            if lowered.startswith(("http://", "https://")):
                 ext = Path(document_path).suffix.lower()
-                if ext in {'.png', '.jpg', '.jpeg', '.gif', '.webp', '.svg'}:
-                    return ('image', document_path)
-                return ('file', document_path)
+                if ext in {".png", ".jpg", ".jpeg", ".gif", ".webp", ".svg"}:
+                    return ("image", document_path)
+                return ("file", document_path)
 
             candidates = []
             path_obj = Path(document_path)
             if path_obj.is_file():
                 candidates.append(path_obj)
             else:
-                candidates.extend([
-                    Path(document_path.lstrip('/')),
-                    Path('static') / document_path.lstrip('/'),
-                    Path('uploads') / path_obj.name
-                ])
+                candidates.extend(
+                    [
+                        Path(document_path.lstrip("/")),
+                        Path("static") / document_path.lstrip("/"),
+                        Path("uploads") / path_obj.name,
+                    ]
+                )
 
             file_path = next((p for p in candidates if p.is_file()), None)
             if file_path:
                 ext = file_path.suffix.lower()
-                if ext in {'.png', '.jpg', '.jpeg', '.gif', '.bmp', '.webp', '.svg'}:
+                if ext in {".png", ".jpg", ".jpeg", ".gif", ".bmp", ".webp", ".svg"}:
                     mime_type, _ = mimetypes.guess_type(file_path.name)
-                    mime_type = mime_type or 'image/png'
+                    mime_type = mime_type or "image/png"
                     try:
-                        encoded = base64.b64encode(file_path.read_bytes()).decode('ascii')
-                        return ('image', f"data:{mime_type};base64,{encoded}")
+                        encoded = base64.b64encode(file_path.read_bytes()).decode(
+                            "ascii"
+                        )
+                        return ("image", f"data:{mime_type};base64,{encoded}")
                     except OSError:
                         pass
             url = _build_public_url(document_path)
-            return ('file', url)
+            return ("file", url)
 
         src_kind, src_value = _resolve_image_source(flow_document)
 
         # Sempre exibir como imagem inline
         if src_value:
             # Se retornou 'file', usar o URL como src da imagem mesmo assim
-            caption = process.get('name') or 'Fluxograma do Processo'
+            caption = process.get("name") or "Fluxograma do Processo"
             content = (
                 "<figure class='flow-figure'>"
                 f"<img src='{src_value}' alt='Fluxograma do processo' class='flow-figure-image'/>"
@@ -1567,11 +1612,11 @@ class ProcessPOPReport(BaseReportGenerator):
                 "</div>"
             )
 
-        self.add_section('Fluxo do Processo', content)
+        self.add_section("Fluxo do Processo", content)
 
     def _add_activities_section(self):
         """Adiciona seção de atividades e etapas"""
-        activities = self.data.get('activities', [])
+        activities = self.data.get("activities", [])
 
         if not activities:
             content = (
@@ -1579,17 +1624,21 @@ class ProcessPOPReport(BaseReportGenerator):
                 "Nenhuma atividade foi cadastrada para este processo até o momento."
                 "</div>"
             )
-            self.add_section('Procedimento Operacional', content)
+            self.add_section("Procedimento Operacional", content)
             return
 
         parts = ["<div class='activity-list'>"]
         for index, activity in enumerate(activities, 1):
-            entries = activity.get('entries', [])
+            entries = activity.get("entries", [])
             meta_badges = []
-            if activity.get('responsible'):
-                meta_badges.append(f"<span>Responsável: {activity['responsible']}</span>")
-            if activity.get('duration'):
-                meta_badges.append(f"<span>Duração média: {activity['duration']}</span>")
+            if activity.get("responsible"):
+                meta_badges.append(
+                    f"<span>Responsável: {activity['responsible']}</span>"
+                )
+            if activity.get("duration"):
+                meta_badges.append(
+                    f"<span>Duração média: {activity['duration']}</span>"
+                )
 
             block = [
                 "<div class='activity-card'>",
@@ -1597,10 +1646,14 @@ class ProcessPOPReport(BaseReportGenerator):
             ]
 
             if meta_badges:
-                block.append(f"<div class='activity-meta'>{' '.join(meta_badges)}</div>")
+                block.append(
+                    f"<div class='activity-meta'>{' '.join(meta_badges)}</div>"
+                )
 
-            if activity.get('description'):
-                block.append(f"<div class='activity-description'>{activity['description']}</div>")
+            if activity.get("description"):
+                block.append(
+                    f"<div class='activity-description'>{activity['description']}</div>"
+                )
 
             if entries:
                 block.append("<div class='step-list'>")
@@ -1608,46 +1661,53 @@ class ProcessPOPReport(BaseReportGenerator):
                     # Garantir que entry seja um dicionário
                     if not isinstance(entry, dict):
                         entry = {}
-                    
+
                     # Pegar texto
-                    step_text = entry.get('text_content') or entry.get('content') or entry.get('description') or '-'
-                    
+                    step_text = (
+                        entry.get("text_content")
+                        or entry.get("content")
+                        or entry.get("description")
+                        or "-"
+                    )
+
                     # Pegar imagem (se existir)
-                    image_path = self._safe_strip(entry.get('image_path'))
-                    image_width = entry.get('image_width', 280)  # Largura configurada
-                    
+                    image_path = self._safe_strip(entry.get("image_path"))
+                    image_width = entry.get("image_width", 280)  # Largura configurada
+
                     # Classe CSS baseada em ter ou não imagem
-                    step_class = 'step-text' if image_path else 'step-text text-only'
-                    
+                    step_class = "step-text" if image_path else "step-text text-only"
+
                     step_html = f"<div class='step-item'><span class='step-badge'>Passo {step_index}</span><div class='{step_class}'>"
-                    
+
                     # Adicionar texto
                     step_html += f"<div class='step-text-content'>{step_text}</div>"
-                    
+
                     # Adicionar imagem se existir (com largura configurada)
                     if image_path:
                         image_src = self._resolve_image_for_inline(image_path)
                         if image_src:
                             step_html += f"<img src='{image_src}' alt='Passo {step_index}' class='step-image' style='width: {image_width}px;'/>"
-                    
+
                     step_html += "</div></div>"
                     block.append(step_html)
-                    
+
                 block.append("</div>")
             else:
-                block.append("<div class='info-callout'>Etapas ainda não detalhadas.</div>")
+                block.append(
+                    "<div class='info-callout'>Etapas ainda não detalhadas.</div>"
+                )
 
             block.append("</div>")
             parts.extend(block)
 
         parts.append("</div>")
-        content = '\n'.join(parts)
-        self.add_section('Procedimento Operacional', content)
+        content = "\n".join(parts)
+        self.add_section("Procedimento Operacional", content)
 
     def _build_activity_title(self, index, activity):
         """Retorna o título formatado da atividade com código completo quando existir."""
-        activity_name = activity.get('name') or 'Atividade sem nome'
-        activity_code = self._safe_strip(activity.get('code'))
+        activity_name = activity.get("name") or "Atividade sem nome"
+        activity_code = self._safe_strip(activity.get("code"))
 
         if activity_code:
             title_text = f"{activity_code} - {activity_name}"
@@ -1658,7 +1718,7 @@ class ProcessPOPReport(BaseReportGenerator):
 
     def _add_routines_section(self):
         """Adiciona seção de rotinas"""
-        routines = self.data.get('routines', [])
+        routines = self.data.get("routines", [])
 
         if not routines:
             content = (
@@ -1666,66 +1726,77 @@ class ProcessPOPReport(BaseReportGenerator):
                 "Nenhuma rotina foi vinculada a este processo até o momento."
                 "</div>"
             )
-            self.add_section('Rotinas Associadas', content)
+            self.add_section("Rotinas Associadas", content)
             return
 
         # Labels de periodicidade
         schedule_labels = {
-            'daily': 'Diário',
-            'weekly': 'Semanal',
-            'monthly': 'Mensal',
-            'quarterly': 'Trimestral',
-            'yearly': 'Anual',
-            'specific': 'Data específica',
-            None: 'Não definido',
-            '': 'Não definido'
+            "daily": "Diário",
+            "weekly": "Semanal",
+            "monthly": "Mensal",
+            "quarterly": "Trimestral",
+            "yearly": "Anual",
+            "specific": "Data específica",
+            None: "Não definido",
+            "": "Não definido",
         }
-        
+
         # Construir tabela única com todas as rotinas
         table_rows = []
-        
+
         for routine in routines:
             # Periodicidade
-            periodicidade = schedule_labels.get(routine.get('schedule_type'), 'Não definido')
-            
+            periodicidade = schedule_labels.get(
+                routine.get("schedule_type"), "Não definido"
+            )
+
             # Agendamento (exemplo: "Todo dia 05", "Toda segunda", etc)
-            schedule_value = routine.get('schedule_value', '')
-            if routine.get('schedule_type') == 'monthly' and schedule_value:
+            schedule_value = routine.get("schedule_value", "")
+            if routine.get("schedule_type") == "monthly" and schedule_value:
                 agendamento = f"Todo dia {schedule_value}"
-            elif routine.get('schedule_type') == 'weekly' and schedule_value:
+            elif routine.get("schedule_type") == "weekly" and schedule_value:
                 dias_semana = {
-                    '1': 'segunda-feira', '2': 'terça-feira', '3': 'quarta-feira',
-                    '4': 'quinta-feira', '5': 'sexta-feira', '6': 'sábado', '0': 'domingo'
+                    "1": "segunda-feira",
+                    "2": "terça-feira",
+                    "3": "quarta-feira",
+                    "4": "quinta-feira",
+                    "5": "sexta-feira",
+                    "6": "sábado",
+                    "0": "domingo",
                 }
                 agendamento = f"Toda {dias_semana.get(schedule_value, schedule_value)}"
-            elif routine.get('schedule_type') == 'specific' and routine.get('deadline_date'):
+            elif routine.get("schedule_type") == "specific" and routine.get(
+                "deadline_date"
+            ):
                 agendamento = f"Em {routine.get('deadline_date')}"
             else:
-                agendamento = schedule_value or '-'
-            
+                agendamento = schedule_value or "-"
+
             # Mão de Obra Total
-            collaborators = routine.get('collaborators', [])
-            total_hours = routine.get('total_hours') or 0
+            collaborators = routine.get("collaborators", [])
+            total_hours = routine.get("total_hours") or 0
             num_collaborators = len(collaborators)
-            
+
             if num_collaborators > 0:
                 mao_obra = f"{total_hours} horas ({num_collaborators:02d} colaborador{'es' if num_collaborators > 1 else ''})"
             else:
                 mao_obra = "Não definido"
-            
+
             # Observações (descrição da rotina)
-            obs = routine.get('description') or '-'
-            
+            obs = routine.get("description") or "-"
+
             # Adicionar linha à tabela
-            table_rows.append(f"""
+            table_rows.append(
+                f"""
                 <tr>
                     <td>{periodicidade}</td>
                     <td>{agendamento}</td>
                     <td class="text-center">{mao_obra}</td>
                     <td>{obs}</td>
                 </tr>
-            """)
-        
+            """
+            )
+
         # Montar tabela HTML
         content = f"""
         <table class='routines-table'>
@@ -1742,12 +1813,12 @@ class ProcessPOPReport(BaseReportGenerator):
             </tbody>
         </table>
         """
-        
-        self.add_section('Rotinas Associadas', content)
+
+        self.add_section("Rotinas Associadas", content)
 
     def _add_indicators_section(self):
         """Adiciona seção de indicadores"""
-        indicators = self.data.get('indicators', [])
+        indicators = self.data.get("indicators", [])
 
         if not indicators:
             content = (
@@ -1755,43 +1826,46 @@ class ProcessPOPReport(BaseReportGenerator):
                 "O acompanhamento de indicadores para este processo ainda não foi configurado."
                 "</div>"
             )
-            self.add_section('Indicadores de Desempenho', content, section_class='indicators-section')
+            self.add_section(
+                "Indicadores de Desempenho", content, section_class="indicators-section"
+            )
             return
-        
+
         # Construir tabela com os indicadores
         table_rows = []
-        
+
         for indicator in indicators:
             # Código e Nome
-            code = indicator.get('code', '-')
-            name = indicator.get('name', 'Sem nome')
-            
+            code = indicator.get("code", "-")
+            name = indicator.get("name", "Sem nome")
+
             # Unidade
-            unit = indicator.get('unit', '-')
-            
+            unit = indicator.get("unit", "-")
+
             # Fórmula
-            formula = indicator.get('formula', '-')
-            
+            formula = indicator.get("formula", "-")
+
             # Polaridade (traduzir)
-            polarity = indicator.get('polarity', '')
+            polarity = indicator.get("polarity", "")
             polarity_label = {
-                'positive': '↑ Maior melhor',
-                'negative': '↓ Menor melhor',
-                'neutral': '- Neutro',
-                '': '-'
+                "positive": "↑ Maior melhor",
+                "negative": "↓ Menor melhor",
+                "neutral": "- Neutro",
+                "": "-",
             }.get(polarity, polarity)
-            
+
             # Meta atual
-            latest_goal = indicator.get('latest_goal')
+            latest_goal = indicator.get("latest_goal")
             if latest_goal:
-                goal_value = latest_goal.get('goal_value', '-')
-                goal_date = latest_goal.get('goal_date', '-')
+                goal_value = latest_goal.get("goal_value", "-")
+                goal_date = latest_goal.get("goal_date", "-")
                 meta_info = f"{goal_value} {unit} até {goal_date}"
             else:
                 meta_info = "Sem meta definida"
-            
+
             # Adicionar linha à tabela
-            table_rows.append(f"""
+            table_rows.append(
+                f"""
                 <tr>
                     <td><strong>{code}</strong><br/><small>{name}</small></td>
                     <td class="text-center">{unit}</td>
@@ -1799,8 +1873,9 @@ class ProcessPOPReport(BaseReportGenerator):
                     <td class="text-center">{polarity_label}</td>
                     <td>{meta_info}</td>
                 </tr>
-            """)
-        
+            """
+            )
+
         # Montar tabela HTML
         content = f"""
         <table class='indicators-table'>
@@ -1818,17 +1893,19 @@ class ProcessPOPReport(BaseReportGenerator):
             </tbody>
         </table>
         """
-        
-        self.add_section('Indicadores de Desempenho', content, section_class='indicators-section')
+
+        self.add_section(
+            "Indicadores de Desempenho", content, section_class="indicators-section"
+        )
 
     # ====================================
     # CONFIGURAÇÃO RÁPIDA
     # ====================================
-    
+
     def configure(self, flow=True, activities=True, routines=True, indicators=False):
         """
         Configura quais seções incluir
-        
+
         Args:
             flow: Incluir fluxograma
             activities: Incluir atividades
@@ -1839,7 +1916,7 @@ class ProcessPOPReport(BaseReportGenerator):
         self.include_activities = activities
         self.include_routines = routines
         self.include_indicators = indicators
-    
+
     def generate_html(self, **kwargs):
         """Gera o HTML completo usando a estrutura base."""
         return super().generate_html(**kwargs)
@@ -1849,12 +1926,13 @@ class ProcessPOPReport(BaseReportGenerator):
 # FUNÇÃO DE CONVENIÊNCIA
 # ====================================
 
+
 def generate_process_pop_report(
     company_id: int,
     process_id: int,
     *,
-    save_path = None,
-    model_id = 7,
+    save_path=None,
+    model_id=7,
     flow: bool = True,
     activities: bool = True,
     routines: bool = True,
@@ -1871,7 +1949,7 @@ def generate_process_pop_report(
     html = report.generate_html(company_id=company_id, process_id=process_id)
 
     if save_path:
-        with open(save_path, 'w', encoding='utf-8') as handler:
+        with open(save_path, "w", encoding="utf-8") as handler:
             handler.write(html)
 
     return html
@@ -1881,20 +1959,20 @@ def generate_process_pop_report(
 # EXEMPLO DE USO (EXECUÇÃO DIRETA)
 # ====================================
 
-if __name__ == '__main__':  # pragma: no cover
-    print('Gerando exemplos de relatório...')
+if __name__ == "__main__":  # pragma: no cover
+    print("Gerando exemplos de relatório...")
 
     html_full = generate_process_pop_report(
         company_id=6,
         process_id=123,
-        save_path='relatorio_processo_123.html',
+        save_path="relatorio_processo_123.html",
     )
-    print(f'Relatório completo gerado ({len(html_full)} caracteres)')
+    print(f"Relatório completo gerado ({len(html_full)} caracteres)")
 
     html_custom = generate_process_pop_report(
         company_id=6,
         process_id=456,
         routines=False,
-        save_path='relatorio_processo_456.html',
+        save_path="relatorio_processo_456.html",
     )
-    print(f'Relatório customizado gerado ({len(html_custom)} caracteres)')
+    print(f"Relatório customizado gerado ({len(html_custom)} caracteres)")

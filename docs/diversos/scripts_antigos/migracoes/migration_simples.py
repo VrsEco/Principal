@@ -7,7 +7,8 @@ cursor = conn.cursor()
 
 print("Criando tabela plan_finance_capital_giro...")
 
-cursor.execute("""
+cursor.execute(
+    """
 CREATE TABLE IF NOT EXISTS plan_finance_capital_giro (
     id SERIAL PRIMARY KEY,
     plan_id INTEGER NOT NULL,
@@ -20,30 +21,34 @@ CREATE TABLE IF NOT EXISTS plan_finance_capital_giro (
     updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     is_deleted BOOLEAN DEFAULT FALSE
 )
-""")
+"""
+)
 
 conn.commit()
 print("✅ Tabela criada!")
 
-cursor.execute("""
+cursor.execute(
+    """
 CREATE INDEX IF NOT EXISTS idx_capital_giro_plan_id 
 ON plan_finance_capital_giro(plan_id)
-""")
+"""
+)
 
 conn.commit()
 print("✅ Índice criado!")
 
-cursor.execute("""
+cursor.execute(
+    """
 ALTER TABLE plan_finance_metrics 
 ADD COLUMN IF NOT EXISTS executive_summary TEXT
-""")
+"""
+)
 
 conn.commit()
 print("✅ Coluna executive_summary adicionada!")
 
 conn.close()
 
-print("\n" + "="*50)
+print("\n" + "=" * 50)
 print("✅ MIGRATION COMPLETA!")
-print("="*50)
-
+print("=" * 50)

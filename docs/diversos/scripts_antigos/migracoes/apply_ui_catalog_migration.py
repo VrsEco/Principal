@@ -39,7 +39,11 @@ def apply_migration() -> None:
                 conn.execute(text(statement))
             except Exception as exc:  # pylint: disable=broad-except
                 message = str(exc).lower()
-                if "already exists" in message or "já existe" in message or "duplicate key" in message:
+                if (
+                    "already exists" in message
+                    or "já existe" in message
+                    or "duplicate key" in message
+                ):
                     print("  ⚠️ Já existente, seguindo adiante.")
                     continue
                 raise
@@ -53,32 +57,3 @@ if __name__ == "__main__":
     except Exception as error:  # pylint: disable=broad-except
         print(f"\n❌ Erro ao aplicar migration ui_catalog: {error}")
         raise
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-

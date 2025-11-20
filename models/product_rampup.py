@@ -56,4 +56,3 @@ class ProductRampUpEntry(db.Model):
             "percentage": percentage_value,
             "notes": self.notes or "",
         }
-

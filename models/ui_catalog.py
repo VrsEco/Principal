@@ -11,7 +11,9 @@ class UiCatalog(db.Model):
 
     __tablename__ = "ui_catalog"
     __table_args__ = (
-        db.UniqueConstraint("screen_code", "object_code", name="uq_ui_catalog_screen_object"),
+        db.UniqueConstraint(
+            "screen_code", "object_code", name="uq_ui_catalog_screen_object"
+        ),
     )
 
     id = db.Column(db.Integer, primary_key=True)
@@ -51,34 +53,3 @@ class UiCatalog(db.Model):
 
     def __repr__(self) -> str:
         return f"<UiCatalog {self.ui_code} ({self.name})>"
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-

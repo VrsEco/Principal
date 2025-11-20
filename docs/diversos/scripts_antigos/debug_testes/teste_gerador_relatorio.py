@@ -8,9 +8,9 @@ Testa a geração de um relatório de exemplo
 import os
 from relatorios.generators import generate_process_pop_report
 
-print("="*60)
+print("=" * 60)
 print("🔄 TESTANDO GERADOR DE RELATÓRIOS")
-print("="*60)
+print("=" * 60)
 
 # Configurações
 company_id = 6
@@ -45,13 +45,13 @@ try:
         company_id=company_id,
         process_id=process_id,
         model_id=model_id,
-        save_path=save_path
+        save_path=save_path,
     )
-    
+
     print(f"\n✅ SUCESSO!")
     print(f"   📄 Relatório gerado com sucesso!")
     print(f"   📁 Localização: {save_path}")
-    
+
     # Verificar se o arquivo foi criado
     if os.path.exists(save_path):
         file_size = os.path.getsize(save_path)
@@ -61,20 +61,20 @@ try:
         print(f"   2. Ou digite no terminal: start {save_path}")
     else:
         print(f"   ⚠️ ATENÇÃO: O arquivo não foi encontrado após a geração!")
-        
+
 except Exception as e:
     print(f"\n❌ ERRO ao gerar relatório:")
     print(f"   {type(e).__name__}: {str(e)}")
     print(f"\n📋 Detalhes do erro:")
     import traceback
+
     traceback.print_exc()
-    
+
     print(f"\n💡 Possíveis soluções:")
     print(f"   1. Verifique se o processo ID={process_id} existe")
     print(f"   2. Verifique se a empresa ID={company_id} existe")
     print(f"   3. Tente com outros IDs")
 
-print("\n" + "="*60)
+print("\n" + "=" * 60)
 print("FIM DO TESTE")
-print("="*60)
-
+print("=" * 60)

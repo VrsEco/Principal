@@ -8,41 +8,42 @@ Verifica se o favicon está configurado corretamente
 import os
 import sys
 
+
 def verificar_favicon():
     """Verifica se os arquivos de favicon existem"""
     print("=" * 60)
     print("VERIFICAÇÃO DO FAVICON - Gestão Versus App28")
     print("=" * 60)
     print()
-    
+
     # Verificar arquivos
     arquivos = {
-        'favicon.ico': 'static/favicon.ico',
-        'favicon.png': 'static/img/favicon.png'
+        "favicon.ico": "static/favicon.ico",
+        "favicon.png": "static/img/favicon.png",
     }
-    
+
     todos_ok = True
-    
+
     for nome, caminho in arquivos.items():
         existe = os.path.exists(caminho)
         status = "✓ OK" if existe else "✗ FALTANDO"
         tamanho = ""
-        
+
         if existe:
             tamanho_bytes = os.path.getsize(caminho)
             tamanho = f"({tamanho_bytes:,} bytes)".replace(",", ".")
-        
+
         print(f"  {status} - {nome}: {caminho} {tamanho}")
-        
+
         if not existe:
             todos_ok = False
-    
+
     print()
-    
+
     # Verificar app_pev.py
     print("Verificando rota no app_pev.py...")
     try:
-        with open('app_pev.py', 'r', encoding='utf-8') as f:
+        with open("app_pev.py", "r", encoding="utf-8") as f:
             conteudo = f.read()
             if "@app.route('/favicon.ico')" in conteudo:
                 print("  ✓ OK - Rota do favicon encontrada")
@@ -52,15 +53,15 @@ def verificar_favicon():
     except Exception as e:
         print(f"  ✗ ERRO ao ler app_pev.py: {e}")
         todos_ok = False
-    
+
     print()
-    
+
     # Verificar template base
     print("Verificando templates/base.html...")
     try:
-        with open('templates/base.html', 'r', encoding='utf-8') as f:
+        with open("templates/base.html", "r", encoding="utf-8") as f:
             conteudo = f.read()
-            if 'favicon.ico' in conteudo:
+            if "favicon.ico" in conteudo:
                 print("  ✓ OK - Referência ao favicon encontrada")
             else:
                 print("  ✗ FALTANDO - Referência ao favicon não encontrada")
@@ -68,10 +69,10 @@ def verificar_favicon():
     except Exception as e:
         print(f"  ✗ ERRO ao ler templates/base.html: {e}")
         todos_ok = False
-    
+
     print()
     print("=" * 60)
-    
+
     if todos_ok:
         print("✓ TUDO OK! O favicon está configurado corretamente.")
         print()
@@ -84,6 +85,6 @@ def verificar_favicon():
         print()
         return 1
 
-if __name__ == '__main__':
-    sys.exit(verificar_favicon())
 
+if __name__ == "__main__":
+    sys.exit(verificar_favicon())

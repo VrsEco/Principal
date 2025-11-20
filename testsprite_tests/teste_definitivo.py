@@ -168,7 +168,9 @@ class DefinitiveRouteTester:
                     continue
 
                 endpoint_name = rule.endpoint
-                blueprint = endpoint_name.split(".")[0] if "." in endpoint_name else None
+                blueprint = (
+                    endpoint_name.split(".")[0] if "." in endpoint_name else None
+                )
 
                 discovered.append(
                     {
@@ -182,7 +184,9 @@ class DefinitiveRouteTester:
 
         return discovered
 
-    def _merge_routes(self, *route_lists: Sequence[Dict[str, Any]]) -> List[Dict[str, Any]]:
+    def _merge_routes(
+        self, *route_lists: Sequence[Dict[str, Any]]
+    ) -> List[Dict[str, Any]]:
         """Une listas de rotas removendo duplicados e métodos redundantes."""
         merged: Dict[str, Dict[str, Any]] = {}
 
@@ -227,7 +231,9 @@ class DefinitiveRouteTester:
                 }
             )
 
-        normalized_routes.sort(key=lambda item: (item.get("blueprint") or "", item["path"]))
+        normalized_routes.sort(
+            key=lambda item: (item.get("blueprint") or "", item["path"])
+        )
         return normalized_routes
 
     def _should_skip_route(self, path: str) -> bool:
