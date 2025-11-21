@@ -66,8 +66,7 @@ steps:
       - 'managed'
       # - '--allow-unauthenticated' # Removed to avoid IAM errors
       - '--set-env-vars'
-      - 'CLOUD_SQL_CONNECTION_NAME=vrs-eco-478714:southamerica-east1:python-flask-db'
-      - 'FLASK_ENV=production'
+      - 'CLOUD_SQL_CONNECTION_NAME=vrs-eco-478714:southamerica-east1:python-flask-db,FLASK_ENV=production'
       - '--max-instances'
       - '10'
       - '--memory'
