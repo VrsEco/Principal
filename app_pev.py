@@ -220,7 +220,7 @@ if cloud_sql_connection_name:
         def getconn():
             conn = connector.connect(
                 cloud_sql_connection_name,
-                "psycopg2",
+                "pg8000",
                 user=os.environ.get("POSTGRES_USER", "postgres"),
                 password=os.environ.get("POSTGRES_PASSWORD", ""),
                 db=os.environ.get("POSTGRES_DB", "bd_app_versus"),
@@ -229,14 +229,14 @@ if cloud_sql_connection_name:
             return conn
 
         # Configure Flask-SQLAlchemy
-        app.config['SQLALCHEMY_DATABASE_URI'] = "postgresql+psycopg2://"
+        app.config['SQLALCHEMY_DATABASE_URI'] = "postgresql+pg8000://"
         app.config['SQLALCHEMY_ENGINE_OPTIONS'] = {
             "creator": getconn,
             "pool_pre_ping": True,
         }
         logger.info("Cloud SQL Connector configured for Flask-SQLAlchemy")
     except ImportError:
-        logger.error("Cloud SQL Connector not found. Please install cloud-sql-python-connector[psycopg2]")
+        logger.error("Cloud SQL Connector not found. Please install cloud-sql-python-connector[pg8000]")
     except Exception as e:
         logger.error(f"Error configuring Cloud SQL Connector: {e}")
 

@@ -61,7 +61,7 @@ def get_engine():
             def getconn():
                 conn = connector.connect(
                     connection_name,
-                    "psycopg2",
+                    "pg8000",
                     user=os.environ.get("POSTGRES_USER", "postgres"),
                     password=os.environ.get("POSTGRES_PASSWORD", ""),
                     db=os.environ.get("POSTGRES_DB", "bd_app_versus"),
@@ -70,7 +70,7 @@ def get_engine():
                 return conn
             
             _engine = create_engine(
-                "postgresql+psycopg2://",
+                "postgresql+pg8000://",
                 creator=getconn,
                 echo=False,
                 pool_pre_ping=True
