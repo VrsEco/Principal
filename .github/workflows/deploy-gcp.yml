@@ -17,7 +17,7 @@ on:
 
 env:
   PROJECT_ID: ${{ secrets.GCP_PROJECT_ID }}
-  REGION: us-central1
+  REGION: southamerica-east1
   SERVICE_NAME: gestaoversos-app
 
 jobs:
@@ -65,20 +65,33 @@ jobs:
     name: 📊 Monitor Cloud Build
     runs-on: ubuntu-latest
     needs: validate
-    if: ${{ secrets.GCP_PROJECT_ID != '' }}
     
     steps:
+      - name: 🔍 Check GCP Secrets
+        id: check-secrets
+        continue-on-error: true
+        run: |
+          if [ -n "${{ secrets.GCP_PROJECT_ID }}" ] && [ -n "${{ secrets.GCP_SA_KEY }}" ]; then
+            echo "secrets_configured=true" >> $GITHUB_OUTPUT
+            echo "✅ GCP secrets configurados"
+          else
+            echo "secrets_configured=false" >> $GITHUB_OUTPUT
+            echo "ℹ️ GCP secrets não configurados. Monitoramento será pulado."
+          fi
       - name: 🔐 Authenticate to Google Cloud
+        if: steps.check-secrets.outputs.secrets_configured == 'true'
         uses: google-github-actions/auth@v2
         with:
           credentials_json: ${{ secrets.GCP_SA_KEY }}
 
       - name: ⚙️ Set up Cloud SDK
+        if: steps.check-secrets.outputs.secrets_configured == 'true'
         uses: google-github-actions/setup-gcloud@v2
         with:
           project_id: ${{ secrets.GCP_PROJECT_ID }}
 
       - name: 📊 Check Latest Build Status
+        if: steps.check-secrets.outputs.secrets_configured == 'true'
         continue-on-error: true
         run: |
           echo "🔍 Checking latest Cloud Build status..."
@@ -101,110 +114,11 @@ jobs:
           echo "**Service:** ${{ env.SERVICE_NAME }}" >> $GITHUB_STEP_SUMMARY
           echo "**Region:** ${{ env.REGION }}" >> $GITHUB_STEP_SUMMARY
           echo "" >> $GITHUB_STEP_SUMMARY
+          if [ "${{ steps.check-secrets.outputs.secrets_configured }}" == "true" ]; then
+            echo "✅ GCP secrets configurados. Monitoramento ativo." >> $GITHUB_STEP_SUMMARY
+          else
+            echo "ℹ️ GCP secrets não configurados. Monitoramento pulado." >> $GITHUB_STEP_SUMMARY
+          fi
           echo "ℹ️ The actual build and deploy is performed by the Cloud Build Trigger configured in GCP." >> $GITHUB_STEP_SUMMARY
           echo "Check the [Cloud Build Console](https://console.cloud.google.com/cloud-build/builds) for deployment status." >> $GITHUB_STEP_SUMMARY
-    
-    steps:
-      - name: 📥 Checkout Code
-        uses: actions/checkout@v4
-
-      - name: 🔐 Authenticate to Google Cloud
-        uses: google-github-actions/auth@v2
-        with:
-          credentials_json: ${{ secrets.GCP_SA_KEY }}
-
-      - name: ⚙️ Set up Cloud SDK
-        uses: google-github-actions/setup-gcloud@v2
-        with:
-          project_id: ${{ secrets.GCP_PROJECT_ID }}
-
-      - name: 🐳 Configure Docker for Artifact Registry
-        run: |
-          gcloud auth configure-docker ${{ env.REGION }}-docker.pkg.dev --quiet
-
-      - name: 🏗️ Build Docker Image
-        run: |
-          docker build -t ${{ env.REGION }}-docker.pkg.dev/${{ env.PROJECT_ID }}/${{ env.ARTIFACT_REGISTRY }}/${{ env.IMAGE_NAME }}:${{ github.sha }} \
-                     -t ${{ env.REGION }}-docker.pkg.dev/${{ env.PROJECT_ID }}/${{ env.ARTIFACT_REGISTRY }}/${{ env.IMAGE_NAME }}:latest \
-                     -f Dockerfile .
-
-      - name: 📤 Push Docker Image to Artifact Registry
-        run: |
-          docker push ${{ env.REGION }}-docker.pkg.dev/${{ env.PROJECT_ID }}/${{ env.ARTIFACT_REGISTRY }}/${{ env.IMAGE_NAME }}:${{ github.sha }}
-          docker push ${{ env.REGION }}-docker.pkg.dev/${{ env.PROJECT_ID }}/${{ env.ARTIFACT_REGISTRY }}/${{ env.IMAGE_NAME }}:latest
-
-      - name: 🚀 Deploy to Cloud Run
-        run: |
-          gcloud run deploy ${{ env.SERVICE_NAME }} \
-            --image ${{ env.REGION }}-docker.pkg.dev/${{ env.PROJECT_ID }}/${{ env.ARTIFACT_REGISTRY }}/${{ env.IMAGE_NAME }}:${{ github.sha }} \
-            --region ${{ env.REGION }} \
-            --platform managed \
-            --allow-unauthenticated \
-            --memory 2Gi \
-            --cpu 2 \
-            --timeout 300 \
-            --max-instances 10 \
-            --min-instances 1 \
-            --port 5002 \
-            --set-env-vars FLASK_ENV=production,PORT=5002 \
-            --quiet
-
-      - name: 🔄 Run Database Migrations (if needed)
-        continue-on-error: true
-        run: |
-          SERVICE_URL=$(gcloud run services describe ${{ env.SERVICE_NAME }} \
-            --region ${{ env.REGION }} \
-            --format 'value(status.url)')
-          
-          echo "Running migrations via Cloud Run Job or direct command..."
-          # Adicione aqui o comando para executar migrations
-          # Exemplo: gcloud run jobs execute db-migration --region ${{ env.REGION }} --wait
-          echo "⚠️ Migrations step - configure according to your setup"
-
-      - name: ✅ Health Check
-        run: |
-          SERVICE_URL=$(gcloud run services describe ${{ env.SERVICE_NAME }} \
-            --region ${{ env.REGION }} \
-            --format 'value(status.url)')
-          
-          echo "🌐 Service URL: $SERVICE_URL"
-          echo "🔍 Testing health endpoint: $SERVICE_URL/health"
-          
-          # Aguardar alguns segundos para o serviço estar pronto
-          sleep 10
-          
-          # Health check com retry
-          for i in {1..5}; do
-            if curl -f "$SERVICE_URL/health"; then
-              echo "✅ Health check passed!"
-              exit 0
-            fi
-            echo "⏳ Attempt $i failed, retrying in 10 seconds..."
-            sleep 10
-          done
-          
-          echo "❌ Health check failed after 5 attempts"
-          exit 1
-
-      - name: 📢 Deployment Summary
-        if: always()
-        run: |
-          SERVICE_URL=$(gcloud run services describe ${{ env.SERVICE_NAME }} \
-            --region ${{ env.REGION }} \
-            --format 'value(status.url)')
-          
-          echo "## 🚀 Deployment Summary" >> $GITHUB_STEP_SUMMARY
-          echo "" >> $GITHUB_STEP_SUMMARY
-          echo "**Status:** ${{ job.status }}" >> $GITHUB_STEP_SUMMARY
-          echo "**Service:** ${{ env.SERVICE_NAME }}" >> $GITHUB_STEP_SUMMARY
-          echo "**Region:** ${{ env.REGION }}" >> $GITHUB_STEP_SUMMARY
-          echo "**Image:** ${{ github.sha }}" >> $GITHUB_STEP_SUMMARY
-          echo "**Service URL:** $SERVICE_URL" >> $GITHUB_STEP_SUMMARY
-          echo "" >> $GITHUB_STEP_SUMMARY
-          
-          if [ "${{ job.status }}" == "success" ]; then
-            echo "✅ Deployment completed successfully!" >> $GITHUB_STEP_SUMMARY
-          else
-            echo "❌ Deployment failed. Check logs for details." >> $GITHUB_STEP_SUMMARY
-          fi
 
