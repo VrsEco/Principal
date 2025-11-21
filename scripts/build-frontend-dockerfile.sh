@@ -42,3 +42,4 @@ echo "Execute: docker build -t <tag> -f $TEMP_DIR/Dockerfile $TEMP_DIR"
 
 
 
+

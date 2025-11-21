@@ -113,3 +113,4 @@ def ensure_entry(
         entry.is_deleted = False
     db.session.commit()
     return entry
+
