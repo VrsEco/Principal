@@ -10,15 +10,15 @@ sudo apt-get update
 sudo apt-get install certbot python3-certbot-nginx
 
 # 2. Obter certificado
-sudo certbot certonly --standalone -d congigr.com -d www.congigr.com
+sudo certbot certonly --standalone -d your-domain.com -d www.your-domain.com
 
 # 3. Certificados gerados em:
-# /etc/letsencrypt/live/congigr.com/fullchain.pem
-# /etc/letsencrypt/live/congigr.com/privkey.pem
+# /etc/letsencrypt/live/your-domain.com/fullchain.pem
+# /etc/letsencrypt/live/your-domain.com/privkey.pem
 
 # 4. Copiar para o projeto
-sudo cp /etc/letsencrypt/live/congigr.com/fullchain.pem ./
-sudo cp /etc/letsencrypt/live/congigr.com/privkey.pem ./
+sudo cp /etc/letsencrypt/live/your-domain.com/fullchain.pem ./
+sudo cp /etc/letsencrypt/live/your-domain.com/privkey.pem ./
 ```
 
 ### Renovação Automática

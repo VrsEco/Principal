@@ -143,7 +143,7 @@ def check_ssl_certificate():
     """Verifica validade do certificado SSL"""
     print("\n🔒 Verificando certificado SSL...")
 
-    domain = os.getenv("DOMAIN_NAME", "congigr.com")
+    domain = os.getenv("DOMAIN_NAME", "your-domain.com")
 
     try:
         import ssl

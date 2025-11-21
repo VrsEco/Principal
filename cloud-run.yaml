@@ -57,7 +57,7 @@ spec:
               value: GestaoVersus
             
             - name: DOMAIN
-              value: congigr.com
+              value: your-domain.com
             
             # Secrets (via Secret Manager)
             - name: SECRET_KEY

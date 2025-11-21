@@ -70,7 +70,7 @@ class ProductionConfig:
     MAIL_USE_SSL = os.getenv("MAIL_USE_SSL", "False").lower() == "true"
     MAIL_USERNAME = os.getenv("MAIL_USERNAME")
     MAIL_PASSWORD = os.getenv("MAIL_PASSWORD")
-    MAIL_DEFAULT_SENDER = os.getenv("MAIL_DEFAULT_SENDER", "noreply@congigr.com")
+    MAIL_DEFAULT_SENDER = os.getenv("MAIL_DEFAULT_SENDER", "noreply@example.com")
 
     # ===== REDIS =====
     REDIS_URL = os.getenv("REDIS_URL", "redis://redis:6379/0")
@@ -109,8 +109,8 @@ class ProductionConfig:
     LOG_BACKUP_COUNT = int(os.getenv("LOG_BACKUP_COUNT", 10))
 
     # ===== DOMÍNIO =====
-    DOMAIN = os.getenv("DOMAIN", "congigr.com")
-    ALLOWED_HOSTS = os.getenv("ALLOWED_HOSTS", "congigr.com,www.congigr.com").split(",")
+    DOMAIN = os.getenv("DOMAIN", "example.com")
+    ALLOWED_HOSTS = os.getenv("ALLOWED_HOSTS", "example.com,www.example.com").split(",")
 
     # ===== RATE LIMITING =====
     RATELIMIT_STORAGE_URL = REDIS_URL

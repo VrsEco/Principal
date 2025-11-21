@@ -134,7 +134,7 @@ jobs:
     if: github.event_name == 'push'
     environment:
       name: development
-      url: https://dev.congigr.com
+      url: https://console.cloud.google.com/run
     
     steps:
       - name: 📥 Checkout Code

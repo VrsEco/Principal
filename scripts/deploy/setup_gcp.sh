@@ -178,7 +178,7 @@ echo "🌐 Deseja configurar domínio customizado? (s/n)"
 read -p "> " CONFIG_DOMAIN
 
 if [ "$CONFIG_DOMAIN" = "s" ]; then
-    read -p "Digite o domínio (ex: congigr.com): " DOMAIN
+    read -p "Digite o domínio (ex: your-domain.com): " DOMAIN
     
     echo "Mapeando domínio..."
     gcloud run domain-mappings create \
