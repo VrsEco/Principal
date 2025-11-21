@@ -40,7 +40,7 @@ echo "======================================"
 echo "📋 Configuração"
 echo "======================================"
 echo "PROJECT_ID: $PROJECT_ID"
-echo "REGION: us-central1"
+echo "REGION: southamerica-east1"
 echo "======================================"
 echo ""
 
@@ -80,7 +80,7 @@ if [ "$CREATE_SQL" = "s" ]; then
     gcloud sql instances create gestaoversos-db \
         --database-version=POSTGRES_15 \
         --tier=db-f1-micro \
-        --region=us-central1 \
+        --region=southamerica-east1 \
         --root-password=CHANGE_THIS_PASSWORD \
         --backup-start-time=03:00
     
@@ -99,7 +99,7 @@ read -p "> " CREATE_VPC
 if [ "$CREATE_VPC" = "s" ]; then
     echo "Criando VPC Connector..."
     gcloud compute networks vpc-access connectors create gestaoversos-connector \
-        --region=us-central1 \
+        --region=southamerica-east1 \
         --range=10.8.0.0/28
     
     echo -e "${GREEN}✅ VPC Connector criado${NC}"
@@ -153,7 +153,7 @@ if [ "$DO_DEPLOY" = "s" ]; then
     gcloud run deploy gestaoversos \
         --image gcr.io/$PROJECT_ID/gestaoversos:latest \
         --platform managed \
-        --region us-central1 \
+        --region southamerica-east1 \
         --allow-unauthenticated \
         --set-secrets="SECRET_KEY=flask-secret-key:latest,DATABASE_URL=database-url:latest" \
         --max-instances=10 \
@@ -164,7 +164,7 @@ if [ "$DO_DEPLOY" = "s" ]; then
     echo -e "${GREEN}✅ Deploy concluído${NC}"
     
     # Obter URL
-    SERVICE_URL=$(gcloud run services describe gestaoversos --region us-central1 --format 'value(status.url)')
+    SERVICE_URL=$(gcloud run services describe gestaoversos --region southamerica-east1 --format 'value(status.url)')
     echo ""
     echo "======================================"
     echo -e "${GREEN}✅ Aplicação disponível em:${NC}"
@@ -184,7 +184,7 @@ if [ "$CONFIG_DOMAIN" = "s" ]; then
     gcloud run domain-mappings create \
         --service gestaoversos \
         --domain $DOMAIN \
-        --region us-central1
+        --region southamerica-east1
     
     echo ""
     echo "======================================"
@@ -192,7 +192,7 @@ if [ "$CONFIG_DOMAIN" = "s" ]; then
     echo ""
     gcloud run domain-mappings describe \
         --domain $DOMAIN \
-        --region us-central1 \
+        --region southamerica-east1 \
         --format="table(resourceRecords:format='Type: {type}, Name: {name}, Data: {rrdata}')"
     echo "======================================"
 fi

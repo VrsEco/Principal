@@ -16,7 +16,7 @@ Write-Host ""
 # Configuracoes
 # ==========================================
 $PROJECT_ID = "vrs-eco-478714"
-$REGION = "us-central1"
+$REGION = "southamerica-east1"
 $REPOSITORY = "my-app-repo"
 $BACKEND_IMAGE = "my-backend"
 $FRONTEND_IMAGE = "my-frontend"

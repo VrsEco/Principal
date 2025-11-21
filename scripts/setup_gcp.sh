@@ -8,7 +8,7 @@ echo "🚀 Configurando Google Cloud Platform para GestaoVersus..."
 
 # Variáveis
 PROJECT_ID="your-gcp-project-id"
-REGION="us-central1"
+REGION="southamerica-east1"
 SERVICE_NAME="gestaoversos-app"
 DB_INSTANCE="gestaoversos-db"
 DB_NAME="gestaoversos_prod"

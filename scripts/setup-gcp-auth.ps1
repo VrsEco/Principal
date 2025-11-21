@@ -61,7 +61,7 @@ switch ($opcao) {
         # Configurar Docker
         Write-Host ""
         Write-Host "Configurando autenticacao Docker..." -ForegroundColor Blue
-        gcloud auth configure-docker us-central1-docker.pkg.dev
+        gcloud auth configure-docker southamerica-east1-docker.pkg.dev
         
         Write-Host ""
         Write-Host "[OK] Autenticacao configurada com sucesso!" -ForegroundColor Green
@@ -151,7 +151,7 @@ switch ($opcao) {
         
         Write-Host ""
         Write-Host "Configurando autenticacao Docker..." -ForegroundColor Blue
-        gcloud auth configure-docker us-central1-docker.pkg.dev
+        gcloud auth configure-docker southamerica-east1-docker.pkg.dev
         
         Write-Host ""
         Write-Host "[OK] Service Account configurada com sucesso!" -ForegroundColor Green
@@ -178,7 +178,7 @@ switch ($opcao) {
         Write-Host ""
         Write-Host "Testando acesso ao Artifact Registry..." -ForegroundColor Blue
         try {
-            gcloud artifacts repositories list --location=us-central1 2>$null | Out-Null
+            gcloud artifacts repositories list --location=southamerica-east1 2>$null | Out-Null
             Write-Host "[OK] Acesso ao Artifact Registry OK" -ForegroundColor Green
         } catch {
             Write-Host "[ERRO] Nao foi possivel acessar o Artifact Registry" -ForegroundColor Red

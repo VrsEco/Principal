@@ -6,7 +6,7 @@ kind: Service
 metadata:
   name: gestaoversos-app
   labels:
-    cloud.googleapis.com/location: us-central1
+    cloud.googleapis.com/location: southamerica-east1
   annotations:
     run.googleapis.com/ingress: all
     run.googleapis.com/ingress-status: all
@@ -23,7 +23,7 @@ spec:
         run.googleapis.com/vpc-access-egress: private-ranges-only
         
         # Cloud SQL
-        run.googleapis.com/cloudsql-instances: PROJECT_ID:us-central1:gestaoversos-db
+        run.googleapis.com/cloudsql-instances: PROJECT_ID:southamerica-east1:gestaoversos-db
         
         # Resources
         run.googleapis.com/cpu-throttling: 'false'
