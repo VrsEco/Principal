@@ -43,6 +43,12 @@ def get_engine():
     if _engine is None:
         # Check for Cloud SQL Connection Name (Cloud Run environment)
         connection_name = os.environ.get("CLOUD_SQL_CONNECTION_NAME")
+        
+        # Fallback: Se estiver no Cloud Run (K_SERVICE existe) mas sem a variável definida, usar o valor conhecido
+        if not connection_name and os.environ.get("K_SERVICE"):
+            connection_name = "vrs-eco-478714:southamerica-east1:python-flask-db"
+            print(f"DEBUG: Using Fallback CLOUD_SQL_CONNECTION_NAME='{connection_name}'")
+        
         print(f"DEBUG: CLOUD_SQL_CONNECTION_NAME='{connection_name}'")
         
         if connection_name:
