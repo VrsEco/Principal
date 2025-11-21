@@ -43,6 +43,7 @@ def get_engine():
     if _engine is None:
         # Check for Cloud SQL Connection Name (Cloud Run environment)
         connection_name = os.environ.get("CLOUD_SQL_CONNECTION_NAME")
+        print(f"DEBUG: CLOUD_SQL_CONNECTION_NAME='{connection_name}'")
         
         if connection_name:
             # Use Cloud SQL Python Connector
@@ -54,7 +55,7 @@ def get_engine():
             def getconn():
                 conn = connector.connect(
                     connection_name,
-                    "pg8000",
+                    "psycopg2",
                     user=os.environ.get("POSTGRES_USER", "postgres"),
                     password=os.environ.get("POSTGRES_PASSWORD", ""),
                     db=os.environ.get("POSTGRES_DB", "bd_app_versus"),
@@ -63,13 +64,14 @@ def get_engine():
                 return conn
             
             _engine = create_engine(
-                "postgresql+pg8000://",
+                "postgresql+psycopg2://",
                 creator=getconn,
                 echo=False,
                 pool_pre_ping=True
             )
         else:
             # Local development or standard connection
+            print(f"DEBUG: Using standard DATABASE_URL connection")
             _engine = create_engine(DATABASE_URL, echo=False, pool_pre_ping=True)
             
     return _engine
