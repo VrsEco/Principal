@@ -203,6 +203,43 @@ def from_json_filter(json_string):
 # Load configuration
 app.config.from_object(Config)
 
+# Cloud SQL Connector Configuration for Flask-SQLAlchemy
+# Check for Cloud SQL Connection Name or Fallback (Cloud Run)
+cloud_sql_connection_name = os.environ.get("CLOUD_SQL_CONNECTION_NAME")
+if not cloud_sql_connection_name and os.environ.get("K_SERVICE"):
+    cloud_sql_connection_name = "vrs-eco-478714:southamerica-east1:python-flask-db"
+    logger.info(f"Using Fallback Cloud SQL Connection: {cloud_sql_connection_name}")
+
+if cloud_sql_connection_name:
+    try:
+        from google.cloud.sql.connector import Connector, IPTypes
+        
+        # Initialize Connector
+        connector = Connector()
+
+        def getconn():
+            conn = connector.connect(
+                cloud_sql_connection_name,
+                "psycopg2",
+                user=os.environ.get("POSTGRES_USER", "postgres"),
+                password=os.environ.get("POSTGRES_PASSWORD", ""),
+                db=os.environ.get("POSTGRES_DB", "bd_app_versus"),
+                ip_type=IPTypes.PRIVATE
+            )
+            return conn
+
+        # Configure Flask-SQLAlchemy
+        app.config['SQLALCHEMY_DATABASE_URI'] = "postgresql+psycopg2://"
+        app.config['SQLALCHEMY_ENGINE_OPTIONS'] = {
+            "creator": getconn,
+            "pool_pre_ping": True,
+        }
+        logger.info("Cloud SQL Connector configured for Flask-SQLAlchemy")
+    except ImportError:
+        logger.error("Cloud SQL Connector not found. Please install cloud-sql-python-connector[psycopg2]")
+    except Exception as e:
+        logger.error(f"Error configuring Cloud SQL Connector: {e}")
+
 if Celery is not None:
     try:
         celery = make_celery(app)
