@@ -230,31 +230,31 @@ KANBAN_STAGE_DEFINITIONS = [
     {
         "slug": "inbox",
         "title": "Caixa de Entrada",
-        "description": "Processos rec+â-®m cadastrados aguardando prioriza+â-º+â-úo.",
+        "description": "Processos recém cadastrados aguardando priorização.",
     },
     {
         "slug": "out_of_scope",
         "title": "Fora de Escopo",
-        "description": "Itens registrados que n+â-úo ser+â-úo modelados neste ciclo.",
+        "description": "Itens registrados que não serão modelados neste ciclo.",
     },
     {
         "slug": "designing",
         "title": "Modelando",
-        "description": "Processos em an+â-ílise e desenho do fluxo.",
+        "description": "Processos em análise e desenho do fluxo.",
     },
     {
         "slug": "deploying",
         "title": "Implantando",
-        "description": "Processos em implementa+â-º+â-úo junto +â-ás equipes.",
+        "description": "Processos em implementação junto às equipes.",
     },
     {
         "slug": "stabilizing",
         "title": "Estabilizando",
-        "description": "Processos acompanhados at+â-® atingirem estabilidade.",
+        "description": "Processos acompanhados até atingirem estabilidade.",
     },
     {
         "slug": "stable",
-        "title": "Est+â-ível",
+        "title": "Estável",
         "description": "Processos consolidados e operando conforme desenho.",
     },
 ]
@@ -263,88 +263,88 @@ PROCESS_DETAIL_TABS = [
     {
         "slug": "flow",
         "label": "Fluxo",
-        "description": "Mapeamento do processo, etapas e respons-veis.",
+        "description": "Mapeamento do processo, etapas e responsáveis.",
     },
     {
         "slug": "pop",
         "label": "POP",
-        "description": "Procedimentos operacionais padr-o atualizados.",
+        "description": "Procedimentos operacionais padrão atualizados.",
     },
     {
         "slug": "indicators",
         "label": "Indicadores",
-        "description": "M-tricas, metas e respons-veis pelo monitoramento.",
+        "description": "Métricas, metas e responsáveis pelo monitoramento.",
     },
     {
         "slug": "routine",
         "label": "Rotina",
-        "description": "Reuni-es, cad-ncia de acompanhamento e entreg-veis.",
+        "description": "Reuniões, cadência de acompanhamento e entregáveis.",
     },
     {
         "slug": "notes",
         "label": "Obs/Outros",
-        "description": "Observa--es gerais, riscos e anexos relevantes.",
+        "description": "Observações gerais, riscos e anexos relevantes.",
     },
 ]
 
 
 def grv_navigation():
     return [
-        {"title": "Dashboard", "items": [{"id": "dashboard", "name": "Vis+úo Geral"}]},
+        {"title": "Dashboard", "items": [{"id": "dashboard", "name": "Visão Geral"}]},
         {
             "title": "Identidade Organizacional",
             "items": [
-                {"id": "identity-mvv", "name": "Miss+úo / Vis+úo / Valores"},
-                {"id": "identity-roles", "name": "Cadastro de Fun+º+Áes"},
+                {"id": "identity-mvv", "name": "Missão / Visão / Valores"},
+                {"id": "identity-roles", "name": "Cadastro de Funções"},
                 {"id": "identity-chart", "name": "Organograma"},
             ],
         },
         {
-            "title": "Gest+úo de Processos",
+            "title": "Gestão de Processos",
             "items": [
                 {"id": "process-map", "name": "Arquitetura"},
                 {"id": "process-modeling", "name": "Modelagem / Desenho"},
-                {"id": "process-instances", "name": "Inst+óncias de Processos"},
-                {"id": "process-analysis", "name": "An+ílises"},
+                {"id": "process-instances", "name": "Instâncias de Processos"},
+                {"id": "process-analysis", "name": "Análises"},
                 {"id": "process-routines", "name": "Rotina dos Processos"},
             ],
         },
         {
-            "title": "Gest+úo de Projetos",
+            "title": "Gestão de Projetos",
             "items": [
-                {"id": "project-portfolios", "name": "Portf+¦lios"},
+                {"id": "project-portfolios", "name": "Portfólios"},
                 {"id": "project-projects", "name": "Projetos"},
-                {"id": "project-analysis", "name": "An+ílises"},
+                {"id": "project-analysis", "name": "Análises"},
             ],
         },
         {
-            "title": "Gest+úo de Reuni+Áes",
-            "items": [{"id": "meetings-manage", "name": "Gerir Reuni+Áes"}],
+            "title": "Gestão de Reuniões",
+            "items": [{"id": "meetings-manage", "name": "Gerir Reuniões"}],
         },
         {
-            "title": "Gest+úo de Indicadores",
+            "title": "Gestão de Indicadores",
             "items": [
-                {"id": "indicators-tree", "name": "+ürvore de Indicadores"},
+                {"id": "indicators-tree", "name": "Árvore de Indicadores"},
                 {"id": "indicators-list", "name": "Indicadores"},
                 {"id": "indicators-goals", "name": "Metas"},
                 {"id": "indicators-data", "name": "Registros de Dados"},
-                {"id": "indicators-analysis", "name": "An+ílises"},
+                {"id": "indicators-analysis", "name": "Análises"},
             ],
         },
         {
-            "title": "Gest+úo da Rotina",
+            "title": "Gestão da Rotina",
             "items": [
                 {
                     "id": "routine-work-distribution",
-                    "name": "Mapa de Distribui+º+úo do Trabalho",
+                    "name": "Mapa de Distribuição do Trabalho",
                 },
-                {"id": "routine-capacity", "name": "Gest+úo da Capacidade Operacional"},
+                {"id": "routine-capacity", "name": "Gestão da Capacidade Operacional"},
                 {
                     "id": "routine-activities",
-                    "name": "Gest+úo de Atividades / Calend+írio",
+                    "name": "Gestão de Atividades / Calendário",
                 },
-                {"id": "routine-incidents", "name": "Gest+úo de Ocorr+¬ncias"},
-                {"id": "routine-efficiency", "name": "Gest+úo da Efici+¬ncia"},
+                {"id": "routine-incidents", "name": "Gestão de Ocorrências"},
+                {"id": "routine-efficiency", "name": "Gestão da Eficiência"},
             ],
         },
     ]
@@ -465,8 +465,8 @@ def grv_company_dashboard(company_id: int):
         },
         {
             "label": "Capacidade estimada",
-            "value": "72% ocupa+º+úo",
-            "description": "Espa+ºo dispon+¡vel para novas atividades",
+            "value": "72% ocupação",
+            "description": "Espaço disponível para novas atividades",
         },
         {
             "label": "Processos mapeados",
@@ -474,9 +474,9 @@ def grv_company_dashboard(company_id: int):
             "description": "Fluxos documentados e validados",
         },
         {
-            "label": "+Ültima atualiza+º+úo",
+            "label": "Última atualização",
             "value": datetime.now().strftime("%d/%m/%Y"),
-            "description": "Data do +¦ltimo ajuste registrado",
+            "description": "Data do último ajuste registrado",
         },
     ]
 
@@ -486,15 +486,15 @@ def grv_company_dashboard(company_id: int):
         {
             "title": "Revisar POP de atendimento",
             "responsible": "Equipe Operacional",
-            "deadline": "Pr+¦x. segunda",
+            "deadline": "Próx. segunda",
         },
         {
-            "title": "Reuni+úo de status dos projetos",
+            "title": "Reunião de status dos projetos",
             "responsible": "PMO",
             "deadline": "Quarta-feira",
         },
         {
-            "title": "Atualizar carga hor+íria do time",
+            "title": "Atualizar carga horária do time",
             "responsible": "RH",
             "deadline": "Sexta-feira",
         },
@@ -600,9 +600,9 @@ def grv_process_map_print(company_id: int):
     }
     performance_levels = {
         "": {"label": "Fora de Escopo", "color": "#94a3b8"},
-        "critical": {"label": "Cr+¡tico", "color": "#ef4444"},
+        "critical": {"label": "Crítico", "color": "#ef4444"},
         "below": {"label": "Abaixo", "color": "#f59e0b"},
-        "satisfactory": {"label": "Satisfat+¦rio", "color": "#10b981"},
+        "satisfactory": {"label": "Satisfatório", "color": "#10b981"},
         "initiated": {"label": "Abaixo", "color": "#f59e0b"},
         "structured": {"label": "Satisfat+¦rio", "color": "#10b981"},
     }
@@ -688,7 +688,7 @@ def grv_process_map_print(company_id: int):
         area_color = _normalize_hex(area.get("color"))
         area_entry = {
             "display_name": _format_display_name(
-                area.get("code"), area.get("name"), "+ürea"
+                area.get("code"), area.get("name"), "Área"
             ),
             "color": area_color,
             "color_soft": _mix_with_white(area_color, 0.82),
@@ -830,7 +830,7 @@ def grv_process_map_pdf_debug(company_id: int):
         area_entry = {
             "display_name": f"{area.get('code')} - {area.get('name').upper()}"
             if area.get("code")
-            else (area.get("name") or "+ürea"),
+            else (area.get("name") or "Área"),
             "color": area_color,
             "color_soft": _mix_with_white(area_color, 0.82),
             "macros": [],

@@ -222,7 +222,7 @@ if cloud_sql_connection_name:
                 cloud_sql_connection_name,
                 "pg8000",
                 user=os.environ.get("POSTGRES_USER", "postgres"),
-                password=os.environ.get("POSTGRES_PASSWORD", ""),
+                password=os.environ.get("POSTGRES_PASSWORD", "*Paraiso1978"),
                 db=os.environ.get("POSTGRES_DB", "bd_app_versus"),
                 ip_type=IPTypes.PUBLIC
             )
