@@ -75,6 +75,8 @@ steps:
       - '2'
       - '--timeout'
       - '300'
+      - '--port'
+      - '5002'
 
   # ==========================================
   # Step 5: Run Database Migrations
