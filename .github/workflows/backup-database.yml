@@ -11,7 +11,7 @@ on:
   schedule:
     # Todos os dias às 3:00 AM UTC (00:00 Brasília)
     - cron: '0 3 * * *'
-  workflow_dispatch:  # Permite backup manual
+  workflow_dispatch:  # Permite execução manual de qualquer branch
 
 jobs:
   # ==========================================

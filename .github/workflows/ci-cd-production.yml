@@ -122,7 +122,7 @@ jobs:
     name: 🚀 Deploy to Server
     runs-on: ubuntu-latest
     needs: build
-    if: ${{ secrets.SSH_PRIVATE_KEY != '' && secrets.SSH_USER != '' && secrets.SSH_HOST != '' }}
+    if: always()  # Executa sempre, mas falha graciosamente se secrets não estiverem configurados
     environment:
       name: production
       url: https://congigr.com
@@ -130,6 +130,16 @@ jobs:
     steps:
       - name: 📥 Checkout Code
         uses: actions/checkout@v4
+
+      - name: 🔍 Check SSH Secrets
+        continue-on-error: false
+        run: |
+          if [ -z "${{ secrets.SSH_PRIVATE_KEY }}" ] || [ -z "${{ secrets.SSH_USER }}" ] || [ -z "${{ secrets.SSH_HOST }}" ]; then
+            echo "⚠️ SSH secrets não configurados. Pulando deploy."
+            echo "Configure os secrets: SSH_PRIVATE_KEY, SSH_USER, SSH_HOST"
+            exit 1
+          fi
+          echo "✅ SSH secrets configurados"
 
       - name: 🔐 Setup SSH
         uses: webfactory/ssh-agent@v0.8.0
