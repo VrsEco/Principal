@@ -41,7 +41,37 @@ def get_engine():
     """Retorna engine SQLAlchemy para PostgreSQL"""
     global _engine
     if _engine is None:
-        _engine = create_engine(DATABASE_URL, echo=False, pool_pre_ping=True)
+        # Check for Cloud SQL Connection Name (Cloud Run environment)
+        connection_name = os.environ.get("CLOUD_SQL_CONNECTION_NAME")
+        
+        if connection_name:
+            # Use Cloud SQL Python Connector
+            from google.cloud.sql.connector import Connector, IPTypes
+            
+            # Initialize Connector
+            connector = Connector()
+            
+            def getconn():
+                conn = connector.connect(
+                    connection_name,
+                    "pg8000",
+                    user=os.environ.get("POSTGRES_USER", "postgres"),
+                    password=os.environ.get("POSTGRES_PASSWORD", ""),
+                    db=os.environ.get("POSTGRES_DB", "bd_app_versus"),
+                    ip_type=IPTypes.PRIVATE
+                )
+                return conn
+            
+            _engine = create_engine(
+                "postgresql+pg8000://",
+                creator=getconn,
+                echo=False,
+                pool_pre_ping=True
+            )
+        else:
+            # Local development or standard connection
+            _engine = create_engine(DATABASE_URL, echo=False, pool_pre_ping=True)
+            
     return _engine
 
 
