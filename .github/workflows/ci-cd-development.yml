@@ -15,7 +15,7 @@ on:
   workflow_dispatch:
 
 env:
-  DOCKER_IMAGE: gestaoversos/app
+  DOCKER_IMAGE: mff2000/app
   DOCKER_TAG: dev
 
 jobs:
@@ -112,6 +112,7 @@ jobs:
         with:
           username: ${{ secrets.DOCKER_USERNAME }}
           password: ${{ secrets.DOCKER_PASSWORD }}
+        continue-on-error: false
 
       - name: 🏗️ Build and Push Dev Image
         uses: docker/build-push-action@v5
