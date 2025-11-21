@@ -520,13 +520,13 @@ def _calculate_financial_totals(financial_items):
 # Ensure upload folder exists
 upload_folder = app.config.get("UPLOAD_FOLDER", "uploads")
 if not os.path.exists(upload_folder):
-    os.makedirs(upload_folder)
+    os.makedirs(upload_folder, exist_ok=True)
 process_flow_folder = os.path.join(upload_folder, "process_flows")
 if not os.path.exists(process_flow_folder):
-    os.makedirs(process_flow_folder)
+    os.makedirs(process_flow_folder, exist_ok=True)
 process_activity_folder = os.path.join(upload_folder, "process_activities")
 if not os.path.exists(process_activity_folder):
-    os.makedirs(process_activity_folder)
+    os.makedirs(process_activity_folder, exist_ok=True)
 
 PROCESS_FLOW_ALLOWED_EXTENSIONS = {"pdf", "png", "jpg", "jpeg", "svg", "gif", "webp"}
 PROCESS_ACTIVITY_ALLOWED_EXTENSIONS = {"png", "jpg", "jpeg", "svg", "gif", "webp"}
