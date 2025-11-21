@@ -141,21 +141,26 @@ jobs:
         uses: actions/checkout@v4
 
       - name: 🔍 Check SSH Secrets
-        continue-on-error: false
+        id: check-secrets
+        continue-on-error: true
         run: |
           if [ -z "${{ secrets.DEV_SSH_PRIVATE_KEY }}" ] || [ -z "${{ secrets.DEV_SSH_USER }}" ] || [ -z "${{ secrets.DEV_SSH_HOST }}" ]; then
             echo "⚠️ SSH secrets não configurados. Pulando deploy."
             echo "Configure os secrets: DEV_SSH_PRIVATE_KEY, DEV_SSH_USER, DEV_SSH_HOST"
-            exit 1
+            echo "secrets_configured=false" >> $GITHUB_OUTPUT
+            exit 0
           fi
           echo "✅ SSH secrets configurados"
+          echo "secrets_configured=true" >> $GITHUB_OUTPUT
 
       - name: 🔐 Setup SSH
+        if: steps.check-secrets.outputs.secrets_configured == 'true'
         uses: webfactory/ssh-agent@v0.8.0
         with:
           ssh-private-key: ${{ secrets.DEV_SSH_PRIVATE_KEY }}
 
       - name: 🚀 Deploy via SSH
+        if: steps.check-secrets.outputs.secrets_configured == 'true'
         uses: appleboy/ssh-action@v1.0.0
         with:
           host: ${{ secrets.DEV_SSH_HOST }}
@@ -175,5 +180,12 @@ jobs:
             curl -f http://localhost:5003/health || exit 1
 
       - name: 📢 Notify Success
-        if: success()
+        if: success() && steps.check-secrets.outputs.secrets_configured == 'true'
         run: echo "✅ Deploy DEV realizado com sucesso!"
+
+      - name: 📢 Notify Skipped
+        if: steps.check-secrets.outputs.secrets_configured == 'false'
+        run: |
+          echo "⏭️ Deploy DEV pulado: SSH secrets não configurados"
+          echo "ℹ️ Configure os secrets: DEV_SSH_PRIVATE_KEY, DEV_SSH_USER, DEV_SSH_HOST"
+          echo "ℹ️ O deploy será executado automaticamente após configurar os secrets"
