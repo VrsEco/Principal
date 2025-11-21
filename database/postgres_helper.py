@@ -46,7 +46,7 @@ def get_engine():
         
         # Fallback: Se estiver no Cloud Run (K_SERVICE existe) mas sem a variável definida, usar o valor conhecido
         if not connection_name and os.environ.get("K_SERVICE"):
-            connection_name = "vrs-eco-478714:southamerica-east1:python-flask-db"
+            connection_name = "vrs-eco-478714:southamerica-east1:gestaoversus-db-prod"
             print(f"DEBUG: Using Fallback CLOUD_SQL_CONNECTION_NAME='{connection_name}'")
         
         print(f"DEBUG: CLOUD_SQL_CONNECTION_NAME='{connection_name}'")
@@ -65,7 +65,7 @@ def get_engine():
                     user=os.environ.get("POSTGRES_USER", "postgres"),
                     password=os.environ.get("POSTGRES_PASSWORD", ""),
                     db=os.environ.get("POSTGRES_DB", "bd_app_versus"),
-                    ip_type=IPTypes.PRIVATE
+                    ip_type=IPTypes.PUBLIC
                 )
                 return conn
             

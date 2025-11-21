@@ -207,7 +207,7 @@ app.config.from_object(Config)
 # Check for Cloud SQL Connection Name or Fallback (Cloud Run)
 cloud_sql_connection_name = os.environ.get("CLOUD_SQL_CONNECTION_NAME")
 if not cloud_sql_connection_name and os.environ.get("K_SERVICE"):
-    cloud_sql_connection_name = "vrs-eco-478714:southamerica-east1:python-flask-db"
+    cloud_sql_connection_name = "vrs-eco-478714:southamerica-east1:gestaoversus-db-prod"
     logger.info(f"Using Fallback Cloud SQL Connection: {cloud_sql_connection_name}")
 
 if cloud_sql_connection_name:
@@ -224,7 +224,7 @@ if cloud_sql_connection_name:
                 user=os.environ.get("POSTGRES_USER", "postgres"),
                 password=os.environ.get("POSTGRES_PASSWORD", ""),
                 db=os.environ.get("POSTGRES_DB", "bd_app_versus"),
-                ip_type=IPTypes.PRIVATE
+                ip_type=IPTypes.PUBLIC
             )
             return conn
 
