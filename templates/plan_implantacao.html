@@ -4,22 +4,7 @@
   {{ super() }}
 {% endblock %}
 
-{% block header_actions %}
-  <div class="header-nav">
-    <a href="/main" class="nav-link">Ecossistema</a>
-    <a href="{{ url_for('pev.pev_dashboard') }}" class="nav-link active">PEV</a>
-    <a href="{{ url_for('grv.grv_dashboard') }}" class="nav-link">GRV</a>
-  </div>
-  <div class="user-pill">
-    <span class="user-name">{{ user_name | default('Fabiano Ferreira') }}</span>
-  </div>
-  <div class="header-nav">
-    <select id="themeSelect" class="nav-link" style="padding: 8px 12px; color: #64748b;">
-      <option value="versus">Tema Versus</option>
-      <option value="alt">Tema Azul/Branco/Amarelo</option>
-    </select>
-  </div>
-{% endblock %}
+
 
 {% block content %}
   <style>

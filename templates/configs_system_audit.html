@@ -2,20 +2,11 @@
 {% block title %}Auditoria de Rotas | Sistema{% endblock %}
 
 {% block body %}
-  {% set active_nav = 'configs' %}
-  {{ super() }}
+{% set active_nav = 'configs' %}
+{{ super() }}
 {% endblock %}
 
-{% block header_actions %}
-  <div class="header-nav">
-    <a href="{{ url_for('system_configs') }}" class="nav-link">Configurações</a>
-    <a href="{{ url_for('system_configs_system') }}" class="nav-link">Sistema</a>
-    <span class="nav-link active">Auditoria</span>
-  </div>
-  <div class="user-pill">
-    <span class="user-name">{{ current_user.name if current_user.is_authenticated else 'Usuário' }}</span>
-  </div>
-{% endblock %}
+
 
 {% block content %}
 <style>
@@ -31,7 +22,7 @@
     padding: 2rem;
     border-radius: 12px;
     margin-bottom: 2rem;
-    box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+    box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
   }
 
   .audit-header h1 {
@@ -56,13 +47,13 @@
     background: white;
     border-radius: 10px;
     padding: 1.5rem;
-    box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
     transition: transform 0.2s;
   }
 
   .stat-card:hover {
     transform: translateY(-5px);
-    box-shadow: 0 4px 8px rgba(0,0,0,0.15);
+    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.15);
   }
 
   .stat-number {
@@ -77,10 +68,21 @@
     text-transform: uppercase;
   }
 
-  .stat-number.primary { color: #3498db; }
-  .stat-number.success { color: #27ae60; }
-  .stat-number.danger { color: #e74c3c; }
-  .stat-number.info { color: #9b59b6; }
+  .stat-number.primary {
+    color: #3498db;
+  }
+
+  .stat-number.success {
+    color: #27ae60;
+  }
+
+  .stat-number.danger {
+    color: #e74c3c;
+  }
+
+  .stat-number.info {
+    color: #9b59b6;
+  }
 
   .coverage-bar {
     height: 30px;
@@ -107,7 +109,7 @@
     border-radius: 10px;
     padding: 1.5rem;
     margin-bottom: 1.5rem;
-    box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
   }
 
   .filter-grid {
@@ -143,7 +145,7 @@
     background: white;
     border-radius: 10px;
     padding: 1.5rem;
-    box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
   }
 
   .loading {
@@ -158,8 +160,13 @@
   }
 
   @keyframes spin {
-    0% { transform: rotate(0deg); }
-    100% { transform: rotate(360deg); }
+    0% {
+      transform: rotate(0deg);
+    }
+
+    100% {
+      transform: rotate(360deg);
+    }
   }
 
   .btn {
@@ -326,7 +333,7 @@
   let currentFilter = 'without_logging';
 
   // Carregar dados ao iniciar
-  document.addEventListener('DOMContentLoaded', function() {
+  document.addEventListener('DOMContentLoaded', function () {
     loadData();
   });
 
@@ -388,7 +395,7 @@
 
   function displayRoutes(routes) {
     const container = document.getElementById('routes-container');
-    
+
     if (routes.length === 0) {
       document.getElementById('routes-section').style.display = 'none';
       document.getElementById('empty-state').style.display = 'block';
@@ -441,7 +448,7 @@
 
   function searchRoutes() {
     const searchTerm = document.getElementById('search-routes').value.toLowerCase();
-    const filtered = allRoutes.filter(route => 
+    const filtered = allRoutes.filter(route =>
       route.endpoint.toLowerCase().includes(searchTerm) ||
       route.path.toLowerCase().includes(searchTerm) ||
       (route.entity_type && route.entity_type.toLowerCase().includes(searchTerm))
@@ -507,4 +514,3 @@
   }
 </script>
 {% endblock %}
-

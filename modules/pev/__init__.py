@@ -1,5 +1,5 @@
 ﻿import logging
-from flask_login import login_required
+from flask_login import login_required, current_user
 from flask import Blueprint, render_template, url_for, request, jsonify, redirect
 from datetime import datetime
 import json
@@ -207,9 +207,15 @@ def pev_dashboard():
         },
     ]
 
+    # Safely get user name
+    user_name = "Fabiano Ferreira"
+    if current_user.is_authenticated:
+        user_name = getattr(current_user, 'name', None) or getattr(current_user, 'email', 'Usuário').split('@')[0]
+    
     return render_template(
         "plan_selector_compact.html",
-        user_name="Fabiano Ferreira",
+        user_name=user_name,
+        active_nav="pev",
         companies=companies_with_plans,
         highlights=highlights,
         timeline=timeline,
@@ -299,9 +305,11 @@ def implantacao_canvas_expectativas():
     canvas_data = load_alignment_canvas(db, plan_id)
     return render_template(
         "implantacao/alinhamento_canvas_expectativas.html",
-        user_name=plan.get("consultant", "Consultor responsavel"),
+        user_name=current_user.name if current_user.is_authenticated else "Fabiano Ferreira",
+        active_nav="pev",
+        plan=plan,
+        canvas=canvas_data,
         plan_id=plan_id,
-        plan=plan,  # Passar o plan completo também
         socios=canvas_data.get("socios", []),
         alinhamento=canvas_data.get("alinhamento", {}),
     )
@@ -315,8 +323,10 @@ def implantacao_agenda_planejamento():
     agenda_data = load_alignment_agenda(db, plan_id)
     return render_template(
         "implantacao/alinhamento_agenda_planejamento.html",
-        user_name=plan.get("consultant", "Consultor responsavel"),
-        projeto=agenda_data.get("projeto", {}),
+        user_name=current_user.name if current_user.is_authenticated else "Fabiano Ferreira",
+        active_nav="pev",
+        plan=plan,
+        project=agenda_data.get("projeto", {}),
         atividades=agenda_data.get("atividades", []),
     )
 
@@ -330,9 +340,11 @@ def implantacao_canvas_proposta_valor():
     segmentos = build_value_canvas_segments(segments)
     return render_template(
         "implantacao/modelo_canvas_proposta_valor.html",
-        user_name=plan.get("consultant", "Consultor responsavel"),
+        user_name=current_user.name if current_user.is_authenticated else "Fabiano Ferreira",
+        active_nav="pev",
+        plan=plan,
+        segments=segmentos,
         plan_id=plan_id,
-        segmentos=segmentos,
     )
 
 
@@ -345,9 +357,11 @@ def implantacao_mapa_persona():
     segmentos = build_persona_segments(segments)
     return render_template(
         "implantacao/modelo_mapa_persona.html",
-        user_name=plan.get("consultant", "Consultor responsavel"),
+        user_name=current_user.name if current_user.is_authenticated else "Fabiano Ferreira",
+        active_nav="pev",
+        plan=plan,
+        segments=segmentos,
         plan_id=plan_id,
-        segmentos=segmentos,
     )
 
 
@@ -360,9 +374,11 @@ def implantacao_matriz_diferenciais():
     segmentos = build_competitive_segments(segments)
     return render_template(
         "implantacao/modelo_matriz_diferenciais.html",
-        user_name=plan.get("consultant", "Consultor responsavel"),
+        user_name=current_user.name if current_user.is_authenticated else "Fabiano Ferreira",
+        active_nav="pev",
+        plan=plan,
+        segments=segmentos,
         plan_id=plan_id,
-        segmentos=segmentos,
     )
 
 
@@ -374,12 +390,17 @@ def implantacao_produtos():
     plan_id = _resolve_plan_id()
     db = get_db()
     plan = build_plan_context(db, plan_id)
+    products = products_service.fetch_products(plan_id)
+    totals = products_service.calculate_totals(products)
 
     return render_template(
         "implantacao/modelo_produtos.html",
-        user_name=plan.get("consultant", "Consultor responsavel"),
-        plan_id=plan_id,
+        user_name=current_user.name if current_user.is_authenticated else "Fabiano Ferreira",
+        active_nav="pev",
         plan=plan,
+        products=products,
+        totals=totals,
+        plan_id=plan_id,
     )
 
 
@@ -643,8 +664,8 @@ def implantacao_modefin():
 
     return render_template(
         "implantacao/modelo_modefin.html",
-        user_name=plan.get("consultant", "Consultor responsavel"),
-        plan_id=plan_id,
+        user_name=current_user.name if current_user.is_authenticated else "Fabiano Ferreira",
+        active_nav="pev",
         plan=plan,
         products_totals=products_totals,
         fixed_costs_summary=fixed_costs_summary,
@@ -825,7 +846,8 @@ def implantacao_playbook_comercial():
 
     return render_template(
         "implantacao/execution_playbook_comercial.html",
-        user_name="Fabiano Ferreira",
+        user_name=current_user.name if current_user.is_authenticated else "Fabiano Ferreira",
+        active_nav="pev",
         pilares=pilares,
         equipe=equipe,
     )
@@ -897,7 +919,8 @@ def implantacao_mapa_processos():
 
     return render_template(
         "implantacao/execution_mapa_processos.html",
-        user_name="Fabiano Ferreira",
+        user_name=current_user.name if current_user.is_authenticated else "Fabiano Ferreira",
+        active_nav="pev",
         processos=processos,
         capacidade=capacidade,
     )
@@ -963,7 +986,8 @@ def implantacao_modelo_financeiro_base():
 
     return render_template(
         "implantacao/execution_modelo_financeiro_base.html",
-        user_name="Fabiano Ferreira",
+        user_name=current_user.name if current_user.is_authenticated else "Fabiano Ferreira",
+        active_nav="pev",
         premissas=premissas,
         custos=custos,
         indicadores=indicadores,
@@ -1017,7 +1041,8 @@ def implantacao_plano_investimento():
 
     return render_template(
         "implantacao/financeiro_plano_investimento.html",
-        user_name="Fabiano Ferreira",
+        user_name=current_user.name if current_user.is_authenticated else "Fabiano Ferreira",
+        active_nav="pev",
         fases=fases,
         fontes=fontes,
     )
@@ -1066,7 +1091,8 @@ def implantacao_fluxo_caixa():
 
     return render_template(
         "implantacao/financeiro_fluxo_caixa.html",
-        user_name="Fabiano Ferreira",
+        user_name=current_user.name if current_user.is_authenticated else "Fabiano Ferreira",
+        active_nav="pev",
         cenarios=cenarios,
         gatilhos=gatilhos,
     )
@@ -1154,7 +1180,8 @@ def implantacao_matriz_indicadores_financeiros():
 
     return render_template(
         "implantacao/financeiro_matriz_indicadores.html",
-        user_name="Fabiano Ferreira",
+        user_name=current_user.name if current_user.is_authenticated else "Fabiano Ferreira",
+        active_nav="pev",
         indicadores=indicadores,
         rituais=rituais,
     )
@@ -1167,6 +1194,8 @@ def implantacao_relatorio_capa_resumo():
     payload = _prepare_report_one_payload(db, plan_id)
     return render_template(
         "implantacao/relatorios/relatorio_1_capa_resumo.html",
+        user_name=current_user.name if current_user.is_authenticated else "Fabiano Ferreira",
+        active_nav="pev",
         **payload,
     )
 
@@ -1516,7 +1545,8 @@ def implantacao_relatorio_final():
 
         return render_template(
             "implantacao/entrega_relatorio_final.html",
-            user_name=plan.get("consultant", "Consultor responsavel"),
+            user_name=current_user.name if current_user.is_authenticated else "Fabiano Ferreira",
+            active_nav="pev",
             plan=report_payload.get("plan"),
             alinhamento=report_payload.get("alinhamento"),
             segmentos=report_payload.get("segmentos"),
@@ -1611,7 +1641,8 @@ def implantacao_projeto_executivo():
 
     return render_template(
         "implantacao/entrega_projeto_executivo.html",
-        user_name="Fabiano Ferreira",
+        user_name=current_user.name if current_user.is_authenticated else "Fabiano Ferreira",
+        active_nav="pev",
         cronograma=cronograma,
         governance=governance,
         riscos=riscos,
@@ -1667,7 +1698,8 @@ def implantacao_painel_governanca():
 
     return render_template(
         "implantacao/entrega_painel_governanca.html",
-        user_name="Fabiano Ferreira",
+        user_name=current_user.name if current_user.is_authenticated else "Fabiano Ferreira",
+        active_nav="pev",
         indicadores=indicadores,
         painels=painels,
     )
@@ -1681,7 +1713,8 @@ def implantacao_estruturas():
     estruturas = load_structures(db, plan_id)
     return render_template(
         "implantacao/execution_estruturas.html",
-        user_name=plan.get("consultant", "Consultor responsavel"),
+        user_name=current_user.name if current_user.is_authenticated else "Fabiano Ferreira",
+        active_nav="pev",
         plan=plan,
         estruturas=estruturas,
     )

@@ -1,5 +1,6 @@
 <!DOCTYPE html>
 <html lang="pt-BR">
+
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
@@ -9,7 +10,8 @@
   <link rel="apple-touch-icon" href="{{ url_for('static', filename='img/favicon.png') }}" />
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
-  <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700&display=swap" rel="stylesheet" />
+  <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700&display=swap"
+    rel="stylesheet" />
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" />
   <link rel="stylesheet" href="{{ url_for('static', filename='css/main.css') }}" />
   <link rel="stylesheet" href="{{ url_for('static', filename='css/grv-global-pattern.css') }}" />
@@ -20,7 +22,7 @@
       gap: 16px;
       margin-right: 20px;
     }
-    
+
     .header-nav a.nav-link {
       color: #ffffff !important;
       text-decoration: none;
@@ -34,32 +36,32 @@
       box-shadow: 0 8px 16px rgba(0, 0, 0, 0.24);
       backdrop-filter: blur(6px);
     }
-    
+
     .header-nav a.nav-link:hover {
       background: rgba(58, 241, 174, 0.18) !important;
       color: #ffffff !important;
       box-shadow: 0 12px 26px rgba(0, 0, 0, 0.28);
       transform: translateY(-2px);
     }
-    
+
     .header-nav a.nav-link.active {
       background: rgba(58, 241, 174, 0.24) !important;
       color: #ffffff !important;
       border-color: rgba(58, 241, 174, 0.45);
     }
-    
+
     .header-actions {
       display: flex;
       align-items: center;
     }
-    
+
     .app-header {
       background: linear-gradient(135deg, rgba(6, 8, 8, 0.96) 0%, rgba(9, 13, 11, 0.94) 65%, rgba(6, 8, 8, 0.98) 100%) !important;
       border-bottom: 1px solid rgba(58, 241, 174, 0.32) !important;
       backdrop-filter: blur(18px) !important;
       box-shadow: 0 24px 48px rgba(0, 0, 0, 0.48) !important;
     }
-    
+
     .header-brand {
       padding: 8px 20px;
       border-radius: 20px;
@@ -67,7 +69,7 @@
       border: 1px solid rgba(58, 241, 174, 0.28);
       box-shadow: inset 0 0 0 1px rgba(0, 0, 0, 0.42), 0 18px 36px rgba(0, 0, 0, 0.32);
     }
-    
+
     .user-pill {
       position: relative;
       background: rgba(58, 241, 174, 0.12) !important;
@@ -81,18 +83,18 @@
       align-items: center;
       gap: 8px;
     }
-    
+
     .user-pill:hover {
       background: rgba(58, 241, 174, 0.18) !important;
       box-shadow: 0 14px 28px rgba(0, 0, 0, 0.35) !important;
     }
-    
+
     .user-name {
       color: #f8fafc !important;
       font-weight: 600 !important;
       font-size: 14px !important;
     }
-    
+
     #themeSelect {
       background: rgba(9, 13, 11, 0.8) !important;
       color: #e2fdf3 !important;
@@ -103,12 +105,12 @@
       font-weight: 500 !important;
       box-shadow: 0 12px 28px rgba(0, 0, 0, 0.28);
     }
-    
+
     #themeSelect option {
       background: #0b120f !important;
       color: #e2fdf3 !important;
     }
-    
+
     /* User Dropdown Menu */
     .user-dropdown {
       position: absolute;
@@ -127,41 +129,44 @@
       z-index: 1000;
       overflow: hidden;
     }
-    
+
     .user-dropdown.active {
       opacity: 1;
       visibility: visible;
       transform: translateY(0);
     }
-    
+
     .user-dropdown-header {
       padding: 16px;
       border-bottom: 1px solid rgba(58, 241, 174, 0.15);
       background: rgba(58, 241, 174, 0.05);
     }
-    
+
     .user-dropdown-name {
       font-size: 15px;
       font-weight: 600;
-      color: #fbbf24;  /* Amarelo */
+      color: #fbbf24;
+      /* Amarelo */
       margin-bottom: 4px;
     }
-    
+
     .user-dropdown-email {
       font-size: 13px;
-      color: #fcd34d;  /* Amarelo mais claro */
+      color: #fcd34d;
+      /* Amarelo mais claro */
     }
-    
+
     .user-dropdown-menu {
       padding: 8px;
     }
-    
+
     .user-dropdown-item {
       display: flex;
       align-items: center;
       gap: 12px;
       padding: 10px 12px;
-      color: #fbbf24;  /* Amarelo para todos os itens */
+      color: #fbbf24;
+      /* Amarelo para todos os itens */
       text-decoration: none;
       border-radius: 8px;
       transition: all 0.2s;
@@ -173,119 +178,289 @@
       width: 100%;
       text-align: left;
     }
-    
+
     .user-dropdown-item:hover {
-      background: rgba(251, 191, 36, 0.12);  /* Fundo amarelo suave */
-      color: #fcd34d;  /* Amarelo mais claro no hover */
+      background: rgba(251, 191, 36, 0.12);
+      /* Fundo amarelo suave */
+      color: #fcd34d;
+      /* Amarelo mais claro no hover */
     }
-    
+
     .user-dropdown-item svg {
       width: 16px;
       height: 16px;
       flex-shrink: 0;
-      color: #ffffff;  /* Branco para ícones */
+      color: #ffffff;
+      /* Branco para ícones */
       stroke: #ffffff;
     }
-    
+
     .user-dropdown-item:hover svg {
-      color: #f8fafc;  /* Branco suave no hover */
+      color: #f8fafc;
+      /* Branco suave no hover */
       stroke: #f8fafc;
     }
-    
+
     .user-dropdown-item.logout {
-      color: #fca5a5;  /* Texto vermelho */
+      color: #fca5a5;
+      /* Texto vermelho */
     }
-    
+
     .user-dropdown-item.logout svg {
-      color: #ffffff;  /* Ícone branco mesmo no logout */
+      color: #ffffff;
+      /* Ícone branco mesmo no logout */
       stroke: #ffffff;
     }
-    
+
     .user-dropdown-item.logout:hover {
       background: rgba(239, 68, 68, 0.12);
-      color: #ef4444;  /* Texto vermelho mais intenso */
+      color: #ef4444;
+      /* Texto vermelho mais intenso */
     }
-    
+
     .user-dropdown-item.logout:hover svg {
-      color: #ffffff;  /* Ícone continua branco no hover */
+      color: #ffffff;
+      /* Ícone continua branco no hover */
       stroke: #ffffff;
     }
-    
+
     .user-pill-icon {
       width: 8px;
       height: 8px;
       transition: transform 0.25s;
     }
-    
+
     .user-pill.active .user-pill-icon {
       transform: rotate(180deg);
+    }
+
+    /* Mobile Menu Toggle Button */
+    .mobile-menu-toggle {
+      display: none;
+      flex-direction: column;
+      gap: 5px;
+      background: rgba(58, 241, 174, 0.12);
+      border: 1px solid rgba(58, 241, 174, 0.32);
+      border-radius: 8px;
+      padding: 10px;
+      cursor: pointer;
+      transition: all 0.25s;
+      margin-left: auto;
+      margin-right: 12px;
+      z-index: 1001;
+    }
+
+    .mobile-menu-toggle:hover {
+      background: rgba(58, 241, 174, 0.18);
+    }
+
+    .mobile-menu-toggle.active .hamburger-line:nth-child(1) {
+      transform: rotate(45deg) translate(6px, 6px);
+    }
+
+    .mobile-menu-toggle.active .hamburger-line:nth-child(2) {
+      opacity: 0;
+    }
+
+    .mobile-menu-toggle.active .hamburger-line:nth-child(3) {
+      transform: rotate(-45deg) translate(6px, -6px);
+    }
+
+    .hamburger-line {
+      width: 24px;
+      height: 3px;
+      background: #3af1ae;
+      border-radius: 2px;
+      transition: all 0.3s;
+    }
+
+    /* Responsive Styles */
+    @media (max-width: 768px) {
+      .app-header {
+        flex-wrap: wrap;
+        padding: 12px 16px;
+      }
+
+      .header-brand {
+        padding: 6px 12px;
+      }
+
+      .header-banner {
+        max-height: 32px;
+      }
+
+      .mobile-menu-toggle {
+        display: flex;
+      }
+
+      .header-actions {
+        position: fixed;
+        top: 70px;
+        left: 0;
+        right: 0;
+        background: linear-gradient(135deg, rgba(6, 8, 8, 0.98) 0%, rgba(9, 13, 11, 0.96) 100%);
+        border-bottom: 1px solid rgba(58, 241, 174, 0.32);
+        box-shadow: 0 20px 40px rgba(0, 0, 0, 0.5);
+        backdrop-filter: blur(18px);
+        flex-direction: column;
+        align-items: stretch;
+        padding: 16px;
+        gap: 12px;
+        max-height: 0;
+        overflow: hidden;
+        opacity: 0;
+        transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+        z-index: 999;
+      }
+
+      .header-actions.active {
+        max-height: 500px;
+        opacity: 1;
+      }
+
+      .header-nav {
+        flex-direction: column;
+        gap: 8px;
+        margin-right: 0;
+      }
+
+      .header-nav a.nav-link,
+      .header-nav button.nav-link {
+        width: 100%;
+        text-align: center;
+        justify-content: center;
+      }
+
+      .user-pill {
+        width: 100%;
+        justify-content: center;
+      }
+    }
+
+    @media (max-width: 480px) {
+      .header-brand {
+        padding: 4px 8px;
+      }
+
+      .header-banner {
+        max-height: 28px;
+      }
+
+      .new-activity-text {
+        display: none;
+      }
+
+      .new-activity-icon {
+        margin-right: 0 !important;
+      }
+
+      .user-name {
+        display: none;
+      }
+
+      .user-pill {
+        min-width: auto;
+        padding: 8px 12px !important;
+      }
+
+      .header-nav a.nav-link,
+      .header-nav button.nav-link {
+        font-size: 13px;
+        padding: 10px 14px;
+      }
     }
   </style>
   {% block extra_head %}{% endblock %}
 </head>
+
 <body class="{% block body_class %}{% endblock %}">
-{% block body %}
+  {% block body %}
   <div class="app-shell">
     <header class="app-header">
       <div class="header-brand">
-        <img class="header-banner" src="{{ url_for('static', filename='img/header-banner.png') }}" alt="Versus banner" />
+        <img class="header-banner" src="{{ url_for('static', filename='img/header-banner.png') }}"
+          alt="Versus banner" />
       </div>
-      <div class="header-actions">
+
+      <!-- Hamburger Menu Button (Mobile Only) -->
+      <button class="mobile-menu-toggle" id="mobileMenuToggle" aria-label="Menu">
+        <span class="hamburger-line"></span>
+        <span class="hamburger-line"></span>
+        <span class="hamburger-line"></span>
+      </button>
+
+      <div class="header-actions" id="headerActions">
         {% block header_actions %}
         <div class="header-nav">
-          <a href="/main" class="nav-link">Ecossistema</a>
-          <a href="{{ url_for('pev.pev_dashboard') }}" class="nav-link">PEV</a>
-          <a href="{{ url_for('grv.grv_dashboard') }}" class="nav-link">GRV</a>
-          <a href="{{ url_for('my_work.dashboard') }}" class="nav-link">Minhas Atividades</a>
+          <a href="/main" class="nav-link {% if active_nav == 'ecosystem' %}active{% endif %}">Ecossistema</a>
+          <a href="{{ url_for('pev.pev_dashboard') }}"
+            class="nav-link {% if active_nav == 'pev' %}active{% endif %}">PEV</a>
+          <a href="{{ url_for('grv.grv_dashboard') }}"
+            class="nav-link {% if active_nav == 'grv' %}active{% endif %}">GRV</a>
+          <a href="{{ url_for('my_work.dashboard') }}"
+            class="nav-link {% if active_nav == 'my_work' %}active{% endif %}">Minhas Atividades</a>
         </div>
         {% endblock %}
-        
+
         <!-- Botão Nova Atividade - SEMPRE VISÍVEL -->
         <div class="header-nav" style="margin-left: 8px;">
-          <button onclick="openGlobalActivityModal()" class="nav-link nav-button" style="background: linear-gradient(135deg, #1e40af, #7c3aed); border: 1px solid rgba(58, 241, 174, 0.32);">
-            <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="margin-right: 6px;">
+          <button onclick="openGlobalActivityModal()" class="nav-link nav-button new-activity-btn"
+            style="background: linear-gradient(135deg, #1e40af, #7c3aed); border: 1px solid rgba(58, 241, 174, 0.32);">
+            <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none"
+              stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"
+              class="new-activity-icon">
               <line x1="12" y1="5" x2="12" y2="19"></line>
               <line x1="5" y1="12" x2="19" y2="12"></line>
             </svg>
-            Nova Atividade
+            <span class="new-activity-text">Nova Atividade</span>
           </button>
         </div>
-        
+
         <div class="user-pill" id="userMenuToggle">
-          <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none"
+            stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
             <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path>
             <circle cx="12" cy="7" r="4"></circle>
           </svg>
-          <span class="user-name">{% if current_user and current_user.is_authenticated %}{{ current_user.name or current_user.email.split('@')[0] }}{% else %}Usuário{% endif %}</span>
-          <svg class="user-pill-icon" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <span class="user-name">{% if current_user and current_user.is_authenticated %}{{ current_user.name or
+            current_user.email.split('@')[0] }}{% else %}Usuário{% endif %}</span>
+          <svg class="user-pill-icon" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none"
+            stroke="currentColor" stroke-width="2">
             <polyline points="6 9 12 15 18 9"></polyline>
           </svg>
-          
+
           <!-- User Dropdown Menu -->
           <div class="user-dropdown" id="userDropdown">
             <div class="user-dropdown-header">
-              <div class="user-dropdown-name">{% if current_user and current_user.is_authenticated %}{{ current_user.name or 'Usuário' }}{% else %}Usuário{% endif %}</div>
-              <div class="user-dropdown-email">{% if current_user and current_user.is_authenticated %}{{ current_user.email }}{% else %}não autenticado{% endif %}</div>
+              <div class="user-dropdown-name">{% if current_user and current_user.is_authenticated %}{{
+                current_user.name or 'Usuário' }}{% else %}Usuário{% endif %}</div>
+              <div class="user-dropdown-email">{% if current_user and current_user.is_authenticated %}{{
+                current_user.email }}{% else %}não autenticado{% endif %}</div>
             </div>
             <div class="user-dropdown-menu">
               {% if current_user and current_user.is_authenticated %}
               <a href="{{ url_for('auth.profile') }}" class="user-dropdown-item">
-                <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                  stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
                   <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path>
                   <circle cx="12" cy="7" r="4"></circle>
                 </svg>
                 Meu Perfil
               </a>
               <a href="{{ url_for('system_configs') }}" class="user-dropdown-item">
-                <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                  stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
                   <circle cx="12" cy="12" r="3"></circle>
-                  <path d="M12 1v6m0 6v6M5.64 5.64l4.24 4.24m6.36 6.36l4.24 4.24M1 12h6m6 0h6M5.64 18.36l4.24-4.24m6.36-6.36l4.24-4.24"></path>
+                  <path
+                    d="M12 1v6m0 6v6M5.64 5.64l4.24 4.24m6.36 6.36l4.24 4.24M1 12h6m6 0h6M5.64 18.36l4.24-4.24m6.36-6.36l4.24-4.24">
+                  </path>
                 </svg>
                 Configurações
               </a>
               <div style="height: 1px; background: rgba(58, 241, 174, 0.15); margin: 8px 0;"></div>
               <button onclick="handleLogout()" class="user-dropdown-item logout">
-                <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                  stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
                   <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"></path>
                   <polyline points="16 17 21 12 16 7"></polyline>
                   <line x1="21" y1="12" x2="9" y2="12"></line>
@@ -294,7 +469,8 @@
               </button>
               {% else %}
               <a href="{{ url_for('login') }}" class="user-dropdown-item">
-                <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                  stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
                   <path d="M15 3h4a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2h-4"></path>
                   <polyline points="10 17 15 12 10 7"></polyline>
                   <line x1="15" y1="12" x2="3" y2="12"></line>
@@ -313,27 +489,27 @@
     <main class="app-main">
       <!-- Flash Messages -->
       {% with messages = get_flashed_messages(with_categories=true) %}
-        {% if messages %}
-          <div class="flash-messages">
-            {% for category, message in messages %}
-              <div class="flash-message flash-{{ category }}">
-                <span class="flash-icon">
-                  {% if category == 'success' %}✓{% elif category == 'error' %}✗{% else %}ℹ{% endif %}
-                </span>
-                <span class="flash-text">{{ message }}</span>
-                <button class="flash-close" onclick="this.parentElement.remove()">×</button>
-              </div>
-            {% endfor %}
-          </div>
-        {% endif %}
+      {% if messages %}
+      <div class="flash-messages">
+        {% for category, message in messages %}
+        <div class="flash-message flash-{{ category }}">
+          <span class="flash-icon">
+            {% if category == 'success' %}✓{% elif category == 'error' %}✗{% else %}ℹ{% endif %}
+          </span>
+          <span class="flash-text">{{ message }}</span>
+          <button class="flash-close" onclick="this.parentElement.remove()">×</button>
+        </div>
+        {% endfor %}
+      </div>
+      {% endif %}
       {% endwith %}
-      
+
       {% block content %}{% endblock %}
     </main>
   </div>
-{% endblock %}
+  {% endblock %}
   {% block scripts %}{% endblock %}
-  
+
   <script>
     // Variáveis globais de contexto para JavaScript
     {% if company and company.id %}
@@ -342,53 +518,53 @@
     {% elif company_id %}
     window.companyId = {{ company_id }};
     {% endif %}
-    
+
     {% if plan and plan.id %}
     window.planId = '{{ plan.id }}';
     {% elif plan_id %}
     window.planId = '{{ plan_id }}';
     {% endif %}
-    
+
     {% if portfolio and portfolio.id %}
     window.portfolioId = {{ portfolio.id }};
     {% elif portfolio_id %}
     window.portfolioId = {{ portfolio_id }};
     {% endif %}
-    
-    console.log('Contexto global:', { 
-      companyId: window.companyId || null, 
+
+    console.log('Contexto global:', {
+      companyId: window.companyId || null,
       planId: window.planId || null,
       portfolioId: window.portfolioId || null
     });
   </script>
-  
+
   <script>
-    (function(){
+    (function () {
       const themeMap = {
         versus: '',
-        alt: '{{ url_for('static', filename='css/theme-alt.css') }}'
+        alt: '{{ url_for("static", filename="css/theme-alt.css") }}'
       };
-      function applyTheme(theme){
+      function applyTheme(theme) {
         const link = document.getElementById('themeStylesheet');
         const href = themeMap[theme] || '';
         link.setAttribute('href', href);
         localStorage.setItem('app_theme', theme);
       }
-      function initTheme(){
+      function initTheme() {
         const params = new URLSearchParams(window.location.search);
         const queryTheme = params.get('theme');
         const stored = localStorage.getItem('app_theme');
-        
+
         // Forçar tema claro se o tema atual for 'versus' (tema escuro)
         if (stored === 'versus') {
           localStorage.setItem('app_theme', 'alt');
         }
-        
+
         let theme = queryTheme || stored || 'alt';
-        if(theme === 'blue' || theme === 'white' || theme === 'yellow'){ theme = 'alt'; }
+        if (theme === 'blue' || theme === 'white' || theme === 'yellow') { theme = 'alt'; }
         applyTheme(theme);
         const sel = document.getElementById('themeSelect');
-        if(sel){ sel.value = theme; sel.addEventListener('change', () => applyTheme(sel.value)); }
+        if (sel) { sel.value = theme; sel.addEventListener('change', () => applyTheme(sel.value)); }
       }
       document.addEventListener('DOMContentLoaded', initTheme);
     })();
@@ -396,27 +572,27 @@
   <script>
     // Global fetch wrapper to handle authentication errors
     const originalFetch = window.fetch;
-    window.fetch = async function(...args) {
+    window.fetch = async function (...args) {
       const response = await originalFetch(...args);
-      
+
       // Check if redirected to login
       if (response.redirected && response.url && response.url.includes('/login')) {
         console.warn('Session expired. Redirecting to login...');
         window.location.href = '/login';
         return response;
       }
-      
+
       // Check for 401 Unauthorized
       if (response.status === 401) {
         console.warn('Unauthorized. Redirecting to login...');
         window.location.href = '/login';
         return response;
       }
-      
+
       return response;
     };
-    
-    window.showMessage = window.showMessage || function(message, type = 'info', timeout = 5000) {
+
+    window.showMessage = window.showMessage || function (message, type = 'info', timeout = 5000) {
       const containerId = 'global-feedback-messages';
       let container = document.getElementById(containerId);
       if (!container) {
@@ -487,12 +663,12 @@
   </script>
   <script>
     // Auto-hide flash messages after 5 seconds
-    document.addEventListener('DOMContentLoaded', function() {
+    document.addEventListener('DOMContentLoaded', function () {
       const flashMessages = document.querySelectorAll('.flash-message');
-      flashMessages.forEach(function(message) {
-        setTimeout(function() {
+      flashMessages.forEach(function (message) {
+        setTimeout(function () {
           message.style.animation = 'slideOut 0.3s ease-out';
-          setTimeout(function() {
+          setTimeout(function () {
             message.remove();
           }, 300);
         }, 5000);
@@ -500,10 +676,10 @@
     });
   </script>
   <script>
-    document.addEventListener('DOMContentLoaded', function() {
+    document.addEventListener('DOMContentLoaded', function () {
       const storageKey = 'grv_sidebar_collapsed';
 
-      document.querySelectorAll('.plan-layout[data-sidebar-toggle]').forEach(function(layout) {
+      document.querySelectorAll('.plan-layout[data-sidebar-toggle]').forEach(function (layout) {
         if (layout.dataset.sidebarToggleReady === 'true') {
           return;
         }
@@ -528,7 +704,7 @@
         wrapper.appendChild(button);
         content.insertBefore(wrapper, content.firstChild);
 
-        const applyState = function(collapsed) {
+        const applyState = function (collapsed) {
           layout.dataset.sidebarCollapsed = collapsed ? 'true' : 'false';
           if (collapsed) {
             layout.style.gridTemplateColumns = 'minmax(0, 1fr)';
@@ -554,7 +730,7 @@
 
         applyState(collapsed);
 
-        button.addEventListener('click', function() {
+        button.addEventListener('click', function () {
           collapsed = !collapsed;
           applyState(collapsed);
           try {
@@ -566,36 +742,37 @@
       });
     });
   </script>
-  
+
   <style>
     @keyframes slideOut {
       from {
         transform: translateX(0);
         opacity: 1;
       }
+
       to {
         transform: translateX(100%);
         opacity: 0;
       }
     }
   </style>
-  
+
   <!-- Botão Global de Adicionar Atividade -->
   {% include 'components/global_activity_button.html' %}
-  
+
   <!-- User Dropdown Script -->
   <script>
     // Toggle user dropdown menu
-    document.addEventListener('DOMContentLoaded', function() {
+    document.addEventListener('DOMContentLoaded', function () {
       const userMenuToggle = document.getElementById('userMenuToggle');
       const userDropdown = document.getElementById('userDropdown');
-      
+
       if (userMenuToggle && userDropdown) {
         // Toggle dropdown on click
-        userMenuToggle.addEventListener('click', function(e) {
+        userMenuToggle.addEventListener('click', function (e) {
           e.stopPropagation();
           const isActive = userDropdown.classList.contains('active');
-          
+
           if (isActive) {
             userDropdown.classList.remove('active');
             userMenuToggle.classList.remove('active');
@@ -604,34 +781,78 @@
             userMenuToggle.classList.add('active');
           }
         });
-        
+
         // Close dropdown when clicking outside
-        document.addEventListener('click', function(e) {
+        document.addEventListener('click', function (e) {
           if (!userMenuToggle.contains(e.target)) {
             userDropdown.classList.remove('active');
             userMenuToggle.classList.remove('active');
           }
         });
-        
+
         // Prevent dropdown from closing when clicking inside it
-        userDropdown.addEventListener('click', function(e) {
+        userDropdown.addEventListener('click', function (e) {
           e.stopPropagation();
         });
       }
     });
-    
+
+    // Mobile Menu Toggle
+    document.addEventListener('DOMContentLoaded', function () {
+      const mobileMenuToggle = document.getElementById('mobileMenuToggle');
+      const headerActions = document.getElementById('headerActions');
+      const navLinks = headerActions ? headerActions.querySelectorAll('.nav-link') : [];
+
+      if (mobileMenuToggle && headerActions) {
+        // Toggle mobile menu
+        mobileMenuToggle.addEventListener('click', function (e) {
+          e.stopPropagation();
+          const isActive = headerActions.classList.contains('active');
+
+          if (isActive) {
+            headerActions.classList.remove('active');
+            mobileMenuToggle.classList.remove('active');
+          } else {
+            headerActions.classList.add('active');
+            mobileMenuToggle.classList.add('active');
+          }
+        });
+
+        // Close menu when clicking a nav link
+        navLinks.forEach(function (link) {
+          link.addEventListener('click', function () {
+            headerActions.classList.remove('active');
+            mobileMenuToggle.classList.remove('active');
+          });
+        });
+
+        // Close menu when clicking outside
+        document.addEventListener('click', function (e) {
+          if (!mobileMenuToggle.contains(e.target) && !headerActions.contains(e.target)) {
+            headerActions.classList.remove('active');
+            mobileMenuToggle.classList.remove('active');
+          }
+        });
+
+        // Prevent menu from closing when clicking inside it
+        headerActions.addEventListener('click', function (e) {
+          e.stopPropagation();
+        });
+      }
+    });
+
     // Handle logout
     async function handleLogout() {
       if (!confirm('Tem certeza que deseja sair?')) {
         return;
       }
-      
+
       try {
         // Show loading message
         if (window.showMessage) {
           window.showMessage('Saindo...', 'info', 0);
         }
-        
+
         // Send logout request
         const response = await fetch('{{ url_for("auth.logout") }}', {
           method: 'POST',
@@ -640,17 +861,17 @@
           },
           credentials: 'same-origin'
         });
-        
+
         const data = await response.json();
-        
+
         if (data.success) {
           // Show success message
           if (window.showMessage) {
             window.showMessage('Logout realizado com sucesso!', 'success', 2000);
           }
-          
+
           // Redirect to login page after a short delay
-          setTimeout(function() {
+          setTimeout(function () {
             window.location.href = data.redirect || '{{ url_for("login") }}';
           }, 500);
         } else {
@@ -661,12 +882,13 @@
         }
       } catch (error) {
         console.error('Erro no logout:', error);
-        
+
         // Fallback: redirect to logout GET route
         window.location.href = '{{ url_for("auth.logout") }}';
       }
     }
   </script>
-  
+
 </body>
+
 </html>
