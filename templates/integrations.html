@@ -44,13 +44,13 @@
   <div class="integration-section">
     <div class="section-header">
       <h2>🤖 Inteligência Artificial</h2>
-      <button class="btn btn-secondary" onclick="testIntegration('ai')">Testar Conexão</button>
+      <button class="btn btn-secondary" onclick="testIntegration('ai')" data-ref="01">Testar Conexão</button>
     </div>
 
     <div class="config-form">
       <div class="form-group">
         <label for="ai-provider">Provedor de IA:</label>
-        <select id="ai-provider" onchange="updateAIForm()">
+        <select id="ai-provider" onchange="updateAIForm()" data-ref="44">
           <option value="openai">OpenAI (GPT)</option>
           <option value="anthropic">Anthropic (Claude)</option>
           <option value="webhook">Webhook Personalizado</option>
@@ -61,32 +61,32 @@
       <div id="openai-config" class="provider-config">
         <div class="form-group">
           <label for="openai-api-key">API Key da OpenAI:</label>
-          <input type="password" id="openai-api-key" placeholder="sk-..." />
+          <input type="password" id="openai-api-key" placeholder="sk-..."  data-ref="18" />
           <small>Obtenha sua chave em: <a href="https://platform.openai.com/api-keys"
               target="_blank">platform.openai.com</a></small>
         </div>
         <div class="form-row">
           <div class="form-group">
             <label for="openai-model">Modelo:</label>
-            <input type="text" id="openai-model" placeholder="gpt-4o-mini" />
+            <input type="text" id="openai-model" placeholder="gpt-4o-mini"  data-ref="19" />
           </div>
           <div class="form-group">
             <label for="openai-base-url">Base URL:</label>
-            <input type="url" id="openai-base-url" placeholder="https://api.openai.com/v1" />
+            <input type="url" id="openai-base-url" placeholder="https://api.openai.com/v1"  data-ref="20" />
           </div>
         </div>
         <div class="form-row">
           <div class="form-group">
             <label for="openai-temperature">Temperature:</label>
-            <input type="number" id="openai-temperature" min="0" max="2" step="0.1" placeholder="0.7" />
+            <input type="number" id="openai-temperature" min="0" max="2" step="0.1" placeholder="0.7"  data-ref="21" />
           </div>
           <div class="form-group">
             <label for="openai-max-tokens">Max Tokens:</label>
-            <input type="number" id="openai-max-tokens" min="1" step="1" placeholder="2000" />
+            <input type="number" id="openai-max-tokens" min="1" step="1" placeholder="2000"  data-ref="22" />
           </div>
           <div class="form-group">
             <label for="openai-timeout">Timeout (s):</label>
-            <input type="number" id="openai-timeout" min="10" step="10" placeholder="120" />
+            <input type="number" id="openai-timeout" min="10" step="10" placeholder="120"  data-ref="23" />
           </div>
         </div>
       </div>
@@ -94,22 +94,22 @@
       <div id="anthropic-config" class="provider-config" style="display: none;">
         <div class="form-group">
           <label for="anthropic-api-key">API Key da Anthropic:</label>
-          <input type="password" id="anthropic-api-key" placeholder="sk-ant-..." />
+          <input type="password" id="anthropic-api-key" placeholder="sk-ant-..."  data-ref="24" />
           <small>Obtenha sua chave em: <a href="https://console.anthropic.com/"
               target="_blank">console.anthropic.com</a></small>
         </div>
         <div class="form-row">
           <div class="form-group">
             <label for="anthropic-model">Modelo:</label>
-            <input type="text" id="anthropic-model" placeholder="claude-3-sonnet-20240229" />
+            <input type="text" id="anthropic-model" placeholder="claude-3-sonnet-20240229"  data-ref="25" />
           </div>
           <div class="form-group">
             <label for="anthropic-timeout">Timeout (s):</label>
-            <input type="number" id="anthropic-timeout" min="10" step="10" placeholder="120" />
+            <input type="number" id="anthropic-timeout" min="10" step="10" placeholder="120"  data-ref="26" />
           </div>
           <div class="form-group">
             <label for="anthropic-max-tokens">Max Tokens:</label>
-            <input type="number" id="anthropic-max-tokens" min="1" step="1" placeholder="2000" />
+            <input type="number" id="anthropic-max-tokens" min="1" step="1" placeholder="2000"  data-ref="27" />
           </div>
         </div>
       </div>
@@ -117,20 +117,20 @@
       <div id="webhook-config" class="provider-config" style="display: none;">
         <div class="form-group">
           <label for="webhook-url">URL do Webhook:</label>
-          <input type="url" id="webhook-url" placeholder="https://seu-webhook.com/ai" />
+          <input type="url" id="webhook-url" placeholder="https://seu-webhook.com/ai"  data-ref="28" />
         </div>
         <div class="form-row">
           <div class="form-group">
             <label for="webhook-headers">Headers (JSON):</label>
-            <input type="text" id="webhook-headers" placeholder='{"Authorization":"Bearer ..."}' />
+            <input type="text" id="webhook-headers" placeholder='{"Authorization":"Bearer ..."}'  data-ref="29" />
           </div>
           <div class="form-group">
             <label for="webhook-model">Modelo (opcional):</label>
-            <input type="text" id="webhook-model" placeholder="custom" />
+            <input type="text" id="webhook-model" placeholder="custom"  data-ref="30" />
           </div>
           <div class="form-group">
             <label for="webhook-timeout">Timeout (s):</label>
-            <input type="number" id="webhook-timeout" min="10" step="10" placeholder="120" />
+            <input type="number" id="webhook-timeout" min="10" step="10" placeholder="120"  data-ref="31" />
           </div>
         </div>
       </div>
@@ -142,7 +142,7 @@
         </div>
       </div>
 
-      <button class="btn btn-primary" onclick="saveAIConfig()">Salvar Configuração</button>
+      <button class="btn btn-primary" onclick="saveAIConfig()" data-ref="02">Salvar Configuração</button>
     </div>
   </div>
 
@@ -150,13 +150,13 @@
   <div class="integration-section">
     <div class="section-header">
       <h2>📧 Email</h2>
-      <button class="btn btn-secondary" onclick="testIntegration('email')">Testar Conexão</button>
+      <button class="btn btn-secondary" onclick="testIntegration('email')" data-ref="03">Testar Conexão</button>
     </div>
 
     <div class="config-form">
       <div class="form-group">
         <label for="email-provider">Provedor de Email:</label>
-        <select id="email-provider" onchange="updateEmailForm()">
+        <select id="email-provider" onchange="updateEmailForm()" data-ref="45">
           <option value="smtp">SMTP (Gmail, Outlook, etc.)</option>
           <option value="webhook">Webhook Personalizado</option>
           <option value="disabled">Desabilitado</option>
@@ -167,26 +167,26 @@
         <div class="form-row">
           <div class="form-group">
             <label for="mail-server">Servidor SMTP:</label>
-            <input type="text" id="mail-server" placeholder="smtp.gmail.com" />
+            <input type="text" id="mail-server" placeholder="smtp.gmail.com"  data-ref="32" />
           </div>
           <div class="form-group">
             <label for="mail-port">Porta:</label>
-            <input type="number" id="mail-port" placeholder="587" />
+            <input type="number" id="mail-port" placeholder="587"  data-ref="33" />
           </div>
         </div>
         <div class="form-group">
           <label for="mail-username">Usuário:</label>
-          <input type="email" id="mail-username" placeholder="seu-email@gmail.com" />
+          <input type="email" id="mail-username" placeholder="seu-email@gmail.com"  data-ref="34" />
         </div>
         <div class="form-group">
           <label for="mail-password">Senha/App Password:</label>
-          <input type="password" id="mail-password" placeholder="Sua senha ou app password" />
+          <input type="password" id="mail-password" placeholder="Sua senha ou app password"  data-ref="35" />
           <small>Para Gmail, use App Password: <a href="https://support.google.com/accounts/answer/185833"
               target="_blank">Como criar</a></small>
         </div>
         <div class="form-group">
           <label>
-            <input type="checkbox" id="mail-use-tls" checked />
+            <input type="checkbox" id="mail-use-tls" checked  data-ref="36" />
             Usar TLS
           </label>
         </div>
@@ -195,11 +195,11 @@
       <div id="email-webhook-config" class="provider-config" style="display: none;">
         <div class="form-group">
           <label for="email-webhook-url">URL do Webhook:</label>
-          <input type="url" id="email-webhook-url" placeholder="https://seu-webhook.com/email" />
+          <input type="url" id="email-webhook-url" placeholder="https://seu-webhook.com/email"  data-ref="37" />
         </div>
       </div>
 
-      <button class="btn btn-primary" onclick="saveEmailConfig()">Salvar Configuração</button>
+      <button class="btn btn-primary" onclick="saveEmailConfig()" data-ref="04">Salvar Configuração</button>
     </div>
   </div>
 
@@ -207,13 +207,13 @@
   <div class="integration-section">
     <div class="section-header">
       <h2>💬 WhatsApp</h2>
-      <button class="btn btn-secondary" onclick="testIntegration('whatsapp')">Testar Conexão</button>
+      <button class="btn btn-secondary" onclick="testIntegration('whatsapp')" data-ref="05">Testar Conexão</button>
     </div>
 
     <div class="config-form">
       <div class="form-group">
         <label for="whatsapp-provider">Provedor de WhatsApp:</label>
-        <select id="whatsapp-provider" onchange="updateWhatsAppForm()">
+        <select id="whatsapp-provider" onchange="updateWhatsAppForm()" data-ref="46">
           <option value="z-api">Z-API</option>
           <option value="twilio">Twilio</option>
           <option value="webhook">Webhook Personalizado</option>
@@ -224,11 +224,11 @@
       <div id="z-api-config" class="provider-config">
         <div class="form-group">
           <label for="z-api-key">Token Z-API:</label>
-          <input type="password" id="z-api-key" placeholder="Seu token Z-API" />
+          <input type="password" id="z-api-key" placeholder="Seu token Z-API"  data-ref="38" />
         </div>
         <div class="form-group">
           <label for="z-instance-id">Instance ID:</label>
-          <input type="text" id="z-instance-id" placeholder="Sua instance ID" />
+          <input type="text" id="z-instance-id" placeholder="Sua instance ID"  data-ref="39" />
         </div>
         <small>Obtenha suas credenciais em: <a href="https://z-api.io/" target="_blank">z-api.io</a></small>
       </div>
@@ -236,15 +236,15 @@
       <div id="twilio-config" class="provider-config" style="display: none;">
         <div class="form-group">
           <label for="twilio-account-sid">Account SID:</label>
-          <input type="text" id="twilio-account-sid" placeholder="AC..." />
+          <input type="text" id="twilio-account-sid" placeholder="AC..."  data-ref="40" />
         </div>
         <div class="form-group">
           <label for="twilio-auth-token">Auth Token:</label>
-          <input type="password" id="twilio-auth-token" placeholder="Seu auth token" />
+          <input type="password" id="twilio-auth-token" placeholder="Seu auth token"  data-ref="41" />
         </div>
         <div class="form-group">
           <label for="twilio-whatsapp-number">Número WhatsApp:</label>
-          <input type="text" id="twilio-whatsapp-number" placeholder="+1234567890" />
+          <input type="text" id="twilio-whatsapp-number" placeholder="+1234567890"  data-ref="42" />
         </div>
         <small>Configure em: <a href="https://console.twilio.com/" target="_blank">console.twilio.com</a></small>
       </div>
@@ -252,11 +252,11 @@
       <div id="whatsapp-webhook-config" class="provider-config" style="display: none;">
         <div class="form-group">
           <label for="whatsapp-webhook-url">URL do Webhook:</label>
-          <input type="url" id="whatsapp-webhook-url" placeholder="https://seu-webhook.com/whatsapp" />
+          <input type="url" id="whatsapp-webhook-url" placeholder="https://seu-webhook.com/whatsapp"  data-ref="43" />
         </div>
       </div>
 
-      <button class="btn btn-primary" onclick="saveWhatsAppConfig()">Salvar Configuração</button>
+      <button class="btn btn-primary" onclick="saveWhatsAppConfig()" data-ref="06">Salvar Configuração</button>
     </div>
   </div>
 
@@ -264,7 +264,7 @@
   <div class="integration-section">
     <div class="section-header">
       <h2>🔧 Serviços Cadastrados</h2>
-      <button class="btn btn-primary" onclick="refreshServices()">Atualizar Lista</button>
+      <button class="btn btn-primary" onclick="refreshServices()" data-ref="07">Atualizar Lista</button>
     </div>
 
     <div class="services-list" id="services-list">
@@ -276,7 +276,7 @@
   <div class="integration-section">
     <div class="section-header">
       <h2>🤖 Agentes Cadastrados</h2>
-      <button class="btn btn-primary" onclick="refreshAgents()">Atualizar Lista</button>
+      <button class="btn btn-primary" onclick="refreshAgents()" data-ref="08">Atualizar Lista</button>
     </div>
 
     <div class="agents-list" id="agents-list">
@@ -298,7 +298,7 @@
   <div class="test-modal-content">
     <div class="test-modal-header">
       <h3 class="test-modal-title" id="testModalTitle">Resultado do Teste</h3>
-      <button class="test-modal-close" onclick="closeTestModal()">&times;</button>
+      <button class="test-modal-close" onclick="closeTestModal()" data-ref="09">&times;</button>
     </div>
     <div class="test-modal-body" id="testModalBody">
       <!-- Conteúdo será preenchido dinamicamente -->
@@ -1074,16 +1074,16 @@
         </span>
       </div>
       <div class="service-actions">
-        <button class="action-btn btn-view" onclick="viewService('${service.id}')" title="Visualizar">
+        <button class="action-btn btn-view" onclick="viewService('${service.id}')" title="Visualizar" data-ref="10">
           👁️ Visualizar
         </button>
-        <button class="action-btn btn-edit" onclick="editService('${service.id}')" title="Editar">
+        <button class="action-btn btn-edit" onclick="editService('${service.id}')" title="Editar" data-ref="11">
           ✏️ Editar
         </button>
-        <button class="action-btn btn-test" onclick="testService('${service.id}', '${service.name || service.id}')" title="Testar Conexão">
+        <button class="action-btn btn-test" onclick="testService('${service.id}', '${service.name || service.id}')" title="Testar Conexão" data-ref="12">
           🔧 Testar
         </button>
-        <button class="action-btn btn-delete" onclick="deleteService('${service.id}')" title="Excluir">
+        <button class="action-btn btn-delete" onclick="deleteService('${service.id}')" title="Excluir" data-ref="13">
           🗑️ Excluir
         </button>
       </div>
@@ -1128,16 +1128,16 @@
         </span>
       </div>
       <div class="agent-actions">
-        <button class="action-btn btn-view" onclick="viewAgent('${agent.id}')" title="Visualizar">
+        <button class="action-btn btn-view" onclick="viewAgent('${agent.id}')" title="Visualizar" data-ref="14">
           👁️ Visualizar
         </button>
-        <button class="action-btn btn-edit" onclick="editAgent('${agent.id}')" title="Editar">
+        <button class="action-btn btn-edit" onclick="editAgent('${agent.id}')" title="Editar" data-ref="15">
           ✏️ Editar
         </button>
-        <button class="action-btn btn-test" onclick="testAgent('${agent.id}', '${agent.name}')" title="Testar Agente">
+        <button class="action-btn btn-test" onclick="testAgent('${agent.id}', '${agent.name}')" title="Testar Agente" data-ref="16">
           🤖 Testar
         </button>
-        <button class="action-btn btn-delete" onclick="deleteAgent('${agent.id}')" title="Excluir">
+        <button class="action-btn btn-delete" onclick="deleteAgent('${agent.id}')" title="Excluir" data-ref="17">
           🗑️ Excluir
         </button>
       </div>

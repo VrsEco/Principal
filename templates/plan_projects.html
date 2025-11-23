@@ -1,4 +1,4 @@
-﻿{% extends "base.html" %}
+{% extends "base.html" %}
 {% block title %}Projetos | {{ plan.name }}{% endblock %}
 
 {% block extra_head %}
@@ -60,12 +60,12 @@
         </div>
         <div class="interview-actions">
           {% if projects_analysis_section_open %}
-          <button class="button button-ghost" onclick="concludeProjectsAnalysisSection()">
+          <button class="button button-ghost" onclick="concludeProjectsAnalysisSection()" data-ref="01">
             <span class="button-icon">✅</span>
             Concluir
           </button>
           {% else %}
-          <button class="button button-ghost" onclick="reopenProjectsAnalysisSection()">
+          <button class="button button-ghost" onclick="reopenProjectsAnalysisSection()" data-ref="02">
             <span class="button-icon">🔄</span>
             Reabrir
           </button>
@@ -86,10 +86,10 @@
               <form action="{{ url_for('save_projects_analysis', plan_id=plan.id) }}" method="post">
                 <div class="form-field">
                   <span>Análise da IA</span>
-                  <textarea name="ai_analysis" rows="8" placeholder="A IA analisará automaticamente os projetos cadastrados, suas atividades, recursos, prazos e alinhamento com os OKRs de área...">{{ projects_ai_analysis }}</textarea>
+                  <textarea name="ai_analysis" rows="8" placeholder="A IA analisará automaticamente os projetos cadastrados, suas atividades, recursos, prazos e alinhamento com os OKRs de área..." data-ref="35">{{ projects_ai_analysis }}</textarea>
                 </div>
                 <div class="form-actions">
-                  <button type="submit" class="button button-primary">Salvar Análise</button>
+                  <button type="submit" class="button button-primary" data-ref="03">Salvar Análise</button>
                 </div>
               </form>
               {% else %}
@@ -120,10 +120,10 @@
               <form action="{{ url_for('save_projects_analysis', plan_id=plan.id) }}" method="post">
                 <div class="form-field">
                   <span>Parecer do Consultor</span>
-                  <textarea name="consultant_analysis" rows="8" placeholder="Análise do consultor sobre a viabilidade, riscos, recursos e alinhamento estratégico dos projetos...">{{ projects_consultant_analysis }}</textarea>
+                  <textarea name="consultant_analysis" rows="8" placeholder="Análise do consultor sobre a viabilidade, riscos, recursos e alinhamento estratégico dos projetos..." data-ref="36">{{ projects_consultant_analysis }}</textarea>
                 </div>
                 <div class="form-actions">
-                  <button type="submit" class="button button-primary">Salvar Análise</button>
+                  <button type="submit" class="button button-primary" data-ref="04">Salvar Análise</button>
                 </div>
               </form>
               {% else %}
@@ -166,12 +166,12 @@
         </div>
         <div class="interview-actions">
           {% if projects_section_open %}
-          <button class="button button-ghost" onclick="concludeProjectsSection()">
+          <button class="button button-ghost" onclick="concludeProjectsSection()" data-ref="05">
             <span class="button-icon">✅</span>
             Concluir
           </button>
           {% else %}
-          <button class="button button-ghost" onclick="reopenProjectsSection()">
+          <button class="button button-ghost" onclick="reopenProjectsSection()" data-ref="06">
             <span class="button-icon">🔄</span>
             Reabrir
           </button>
@@ -204,11 +204,11 @@
             <div class="form-two-cols">
               <label class="form-field">
                 <span>Nome do projeto *</span>
-                <input type="text" name="title" placeholder="Identifique o projeto" value="{{ editing_project.title if editing_project else '' }}" required />
+                <input type="text" name="title" placeholder="Identifique o projeto" value="{{ editing_project.title if editing_project else '' }}" required  data-ref="14" />
               </label>
               <label class="form-field">
                 <span>Responsável</span>
-                <select name="owner">
+                <select name="owner" data-ref="29">
                   <option value="">Selecione um responsável</option>
                   {% for employee in employees %}
                     {% if employee.status == 'active' %}
@@ -223,7 +223,7 @@
             
             <label class="form-field">
               <span>OKR de Área Associado</span>
-              <select name="okr_area_ref">
+              <select name="okr_area_ref" data-ref="30">
                 <option value="">Selecione um OKR de área (opcional)</option>
                 {% for okr in area_okrs %}
                 <option value="{{ okr.id }}" {% if editing_project and editing_project.okr_area_ref == okr.id %}selected{% endif %}>{{ okr.title }} - {{ okr.area }}</option>
@@ -232,21 +232,21 @@
             </label>
             <label class="form-field">
               <span>Descrição</span>
-              <textarea name="description" placeholder="Descreva o projeto, seus objetivos e entregas" rows="3">{{ editing_project.description if editing_project else '' }}</textarea>
+              <textarea name="description" placeholder="Descreva o projeto, seus objetivos e entregas" rows="3" data-ref="37">{{ editing_project.description if editing_project else '' }}</textarea>
             </label>
             <div class="form-two-cols">
               <label class="form-field">
                 <span>Data de início</span>
-                <input type="date" name="start_date" value="{{ editing_project.start_date if editing_project else '' }}" />
+                <input type="date" name="start_date" value="{{ editing_project.start_date if editing_project else '' }}"  data-ref="15" />
               </label>
               <label class="form-field">
                 <span>Data de fim</span>
-                <input type="date" name="end_date" value="{{ editing_project.end_date if editing_project else '' }}" />
+                <input type="date" name="end_date" value="{{ editing_project.end_date if editing_project else '' }}"  data-ref="16" />
               </label>
             </div>
             <label class="form-field">
               <span>Prioridade</span>
-              <select name="priority">
+              <select name="priority" data-ref="31">
                 <option value="low" {% if editing_project and editing_project.priority == 'low' %}selected{% endif %}>Baixa</option>
                 <option value="medium" {% if editing_project and editing_project.priority == 'medium' %}selected{% elif not editing_project %}selected{% endif %}>Média</option>
                 <option value="high" {% if editing_project and editing_project.priority == 'high' %}selected{% endif %}>Alta</option>
@@ -263,16 +263,16 @@
                   <div class="activity-item">
                     <div class="activity-header">
                       <span class="activity-number">Atividade {{ loop.index }}</span>
-                      <button type="button" class="button button-ghost remove-activity" onclick="removeActivity(this)" {% if editing_project.activities_list|length <= 1 %}style="display: none;"{% endif %}>🗑️ Remover</button>
+                      <button type="button" class="button button-ghost remove-activity" onclick="removeActivity(this)" {% if editing_project.activities_list|length <= 1 %}style="display: none;"{% endif %} data-ref="07">🗑️ Remover</button>
                     </div>
                     <div class="activity-grid">
                       <label class="form-field">
                         <span>O Que *</span>
-                        <input type="text" name="activity_what_{{ loop.index0 }}" placeholder="Descreva a atividade" value="{{ activity.what }}" required />
+                        <input type="text" name="activity_what_{{ loop.index0 }}" placeholder="Descreva a atividade" value="{{ activity.what }}" required  data-ref="17" />
                       </label>
                       <label class="form-field">
                         <span>Quem (Equipe)</span>
-                        <select name="activity_who_{{ loop.index0 }}">
+                        <select name="activity_who_{{ loop.index0 }}" data-ref="32">
                           <option value="">Selecione um responsável</option>
                           {% for employee in employees %}
                             {% if employee.status == 'active' %}
@@ -285,23 +285,23 @@
                       </label>
                       <label class="form-field">
                         <span>Quando (Prazo)</span>
-                        <input type="date" name="activity_when_{{ loop.index0 }}" value="{{ activity.when }}" />
+                        <input type="date" name="activity_when_{{ loop.index0 }}" value="{{ activity.when }}"  data-ref="18" />
                       </label>
                       <label class="form-field">
                         <span>Quanto (Orçamento)</span>
-                        <input type="text" name="activity_amount_{{ loop.index0 }}" placeholder="Ex: R$ 10.000" value="{{ activity.amount }}" />
+                        <input type="text" name="activity_amount_{{ loop.index0 }}" placeholder="Ex: R$ 10.000" value="{{ activity.amount }}"  data-ref="19" />
                       </label>
                       <label class="form-field">
                         <span>Como (Detalhes da Execução)</span>
-                        <textarea name="activity_how_{{ loop.index0 }}" placeholder="Como será executada a atividade" rows="2">{{ activity.how }}</textarea>
+                        <textarea name="activity_how_{{ loop.index0 }}" placeholder="Como será executada a atividade" rows="2" data-ref="38">{{ activity.how }}</textarea>
                       </label>
                       <label class="form-field">
                         <span>Observações</span>
-                        <textarea name="activity_observations_{{ loop.index0 }}" placeholder="Observações adicionais" rows="2">{{ activity.observations }}</textarea>
+                        <textarea name="activity_observations_{{ loop.index0 }}" placeholder="Observações adicionais" rows="2" data-ref="39">{{ activity.observations }}</textarea>
                       </label>
                       <label class="form-field">
                         <span>Data de Conclusão</span>
-                        <input type="date" name="activity_completion_date_{{ loop.index0 }}" value="{{ activity.completion_date }}" />
+                        <input type="date" name="activity_completion_date_{{ loop.index0 }}" value="{{ activity.completion_date }}"  data-ref="20" />
                       </label>
                     </div>
                   </div>
@@ -311,16 +311,16 @@
                   <div class="activity-item">
                     <div class="activity-header">
                       <span class="activity-number">Atividade 1</span>
-                      <button type="button" class="button button-ghost remove-activity" onclick="removeActivity(this)" style="display: none;">🗑️ Remover</button>
+                      <button type="button" class="button button-ghost remove-activity" onclick="removeActivity(this)" style="display: none;" data-ref="08">🗑️ Remover</button>
                     </div>
                     <div class="activity-grid">
                       <label class="form-field">
                         <span>O Que *</span>
-                        <input type="text" name="activity_what_0" placeholder="Descreva a atividade" required />
+                        <input type="text" name="activity_what_0" placeholder="Descreva a atividade" required  data-ref="21" />
                       </label>
                       <label class="form-field">
                         <span>Quem (Equipe)</span>
-                        <select name="activity_who_0">
+                        <select name="activity_who_0" data-ref="33">
                           <option value="">Selecione um responsável</option>
                           {% for employee in employees %}
                             {% if employee.status == 'active' %}
@@ -333,38 +333,38 @@
                       </label>
                       <label class="form-field">
                         <span>Quando (Prazo)</span>
-                        <input type="date" name="activity_when_0" />
+                        <input type="date" name="activity_when_0"  data-ref="22" />
                       </label>
                       <label class="form-field">
                         <span>Quanto (Orçamento)</span>
-                        <input type="text" name="activity_amount_0" placeholder="Ex: R$ 10.000" />
+                        <input type="text" name="activity_amount_0" placeholder="Ex: R$ 10.000"  data-ref="23" />
                       </label>
                       <label class="form-field">
                         <span>Como (Detalhes da Execução)</span>
-                        <textarea name="activity_how_0" placeholder="Como será executada a atividade" rows="2"></textarea>
+                        <textarea name="activity_how_0" placeholder="Como será executada a atividade" rows="2" data-ref="40"></textarea>
                       </label>
                       <label class="form-field">
                         <span>Observações</span>
-                        <textarea name="activity_observations_0" placeholder="Observações adicionais" rows="2"></textarea>
+                        <textarea name="activity_observations_0" placeholder="Observações adicionais" rows="2" data-ref="41"></textarea>
                       </label>
                       <label class="form-field">
                         <span>Data de Conclusão</span>
-                        <input type="date" name="activity_completion_date_0" />
+                        <input type="date" name="activity_completion_date_0"  data-ref="24" />
                       </label>
                     </div>
                   </div>
                 {% endif %}
               </div>
-              <button type="button" class="button button-ghost" onclick="addActivity()">➕ Adicionar Atividade</button>
+              <button type="button" class="button button-ghost" onclick="addActivity()" data-ref="09">➕ Adicionar Atividade</button>
             </div>
             
             <div class="form-actions">
-              <button type="submit" class="button button-primary">
+              <button type="submit" class="button button-primary" data-ref="10">
                 {% if editing_project %}Atualizar projeto{% else %}Salvar projeto{% endif %}
               </button>
-              <button type="reset" class="button button-ghost">Limpar</button>
+              <button type="reset" class="button button-ghost" data-ref="11">Limpar</button>
               {% if editing_project %}
-              <a href="{{ url_for('plan_projects', plan_id=plan.id) }}" class="button button-ghost">Cancelar</a>
+              <a href="{{ url_for('plan_projects', plan_id=plan.id) }}" class="button button-ghost" data-ref="44">Cancelar</a>
               {% endif %}
             </div>
           </form>
@@ -435,9 +435,9 @@
                 {% endif %}
                 
                 <div class="project-actions">
-                  <a href="{{ url_for('edit_project', plan_id=plan.id, project_id=project.id) }}" class="button button-ghost">✏️ Editar</a>
+                  <a href="{{ url_for('edit_project', plan_id=plan.id, project_id=project.id) }}" class="button button-ghost" data-ref="45">✏️ Editar</a>
                   <form method="post" action="{{ url_for('delete_project', plan_id=plan.id, project_id=project.id) }}" style="display: inline;" onsubmit="return confirm('Tem certeza que deseja excluir este projeto?');">
-                    <button type="submit" class="button button-ghost button-danger">🗑️ Excluir</button>
+                    <button type="submit" class="button button-ghost button-danger" data-ref="12">🗑️ Excluir</button>
                   </form>
                 </div>
               </div>
@@ -631,16 +631,16 @@ function addActivity() {
     activityItem.innerHTML = `
         <div class="activity-header">
             <span class="activity-number">Atividade ${activityCount + 1}</span>
-            <button type="button" class="button button-ghost remove-activity" onclick="removeActivity(this)">🗑️ Remover</button>
+            <button type="button" class="button button-ghost remove-activity" onclick="removeActivity(this)" data-ref="13">🗑️ Remover</button>
         </div>
         <div class="activity-grid">
             <label class="form-field">
                 <span>O Que *</span>
-                <input type="text" name="activity_what_${activityCount}" placeholder="Descreva a atividade" required />
+                <input type="text" name="activity_what_${activityCount}" placeholder="Descreva a atividade" required  data-ref="25" />
             </label>
             <label class="form-field">
                 <span>Quem (Equipe)</span>
-                <select name="activity_who_${activityCount}">
+                <select name="activity_who_${activityCount}" data-ref="34">
                     <option value="">Selecione um responsável</option>
                     {% for employee in employees %}
                         {% if employee.status == 'active' %}
@@ -651,23 +651,23 @@ function addActivity() {
             </label>
             <label class="form-field">
                 <span>Quando (Prazo)</span>
-                <input type="date" name="activity_when_${activityCount}" />
+                <input type="date" name="activity_when_${activityCount}"  data-ref="26" />
             </label>
             <label class="form-field">
                 <span>Quanto (Orçamento)</span>
-                <input type="text" name="activity_amount_${activityCount}" placeholder="Ex: R$ 10.000" />
+                <input type="text" name="activity_amount_${activityCount}" placeholder="Ex: R$ 10.000"  data-ref="27" />
             </label>
             <label class="form-field">
                 <span>Como (Detalhes da Execução)</span>
-                <textarea name="activity_how_${activityCount}" placeholder="Como será executada a atividade" rows="2"></textarea>
+                <textarea name="activity_how_${activityCount}" placeholder="Como será executada a atividade" rows="2" data-ref="42"></textarea>
             </label>
             <label class="form-field">
                 <span>Observações</span>
-                <textarea name="activity_observations_${activityCount}" placeholder="Observações adicionais" rows="2"></textarea>
+                <textarea name="activity_observations_${activityCount}" placeholder="Observações adicionais" rows="2" data-ref="43"></textarea>
             </label>
             <label class="form-field">
                 <span>Data de Conclusão</span>
-                <input type="date" name="activity_completion_date_${activityCount}" />
+                <input type="date" name="activity_completion_date_${activityCount}"  data-ref="28" />
             </label>
         </div>
     `;

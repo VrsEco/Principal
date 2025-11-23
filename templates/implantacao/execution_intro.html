@@ -191,10 +191,10 @@
     </p>
 
     <div class="execution-actions">
-      <a href="{{ url_for('pev.implantacao_estruturas', plan_id=plan.id) }}" class="button button-primary">
+      <a href="{{ url_for('pev.implantacao_estruturas', plan_id=plan.id) }}" class="button button-primary" data-ref="03">
         📋 Ver Estruturas Detalhadas
       </a>
-      <a href="{{ url_for('pev.pev_implantacao_overview', plan_id=plan.id) }}" class="button button-secondary">
+      <a href="{{ url_for('pev.pev_implantacao_overview', plan_id=plan.id) }}" class="button button-secondary" data-ref="04">
         ← Voltar ao Dashboard
       </a>
     </div>
@@ -210,7 +210,7 @@
     </p>
 
     {% if resumo_investimentos and resumo_investimentos|length > 0 %}
-    <table class="investment-table">
+    <table class="investment-table" data-ref="01">
       <thead>
         <tr>
           <th rowspan="2" style="width: 20%; vertical-align: middle;">Bloco Estruturante</th>
@@ -260,7 +260,7 @@
       </tbody>
     </table>
     {% else %}
-    <table class="investment-table">
+    <table class="investment-table" data-ref="02">
       <thead>
         <tr>
           <th rowspan="2" style="width: 20%; vertical-align: middle;">Bloco Estruturante</th>

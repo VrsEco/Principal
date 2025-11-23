@@ -62,7 +62,7 @@ def get_activities():
                 jsonify(
                     {
                         "success": False,
-                        "error": "UsuÃ¡rio nÃ£o vinculado a um colaborador. Solicite ao administrador para concluir o cadastro.",
+                        "error": "Usuário não vinculado a um colaborador. Solicite ao administrador para concluir o cadastro.",
                     }
                 ),
                 404,
@@ -348,3 +348,4 @@ def view_process_instance(instance_id):
     """
     # TODO: Implementar pÃ¡gina de detalhamento
     return f"<h1>Detalhes da InstÃ¢ncia de Processo #{instance_id}</h1><p>Em desenvolvimento...</p>"
+

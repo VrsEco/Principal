@@ -22,11 +22,11 @@
       <div style="display: flex; gap: 12px; justify-content: center;">
         <a href="/companies/{{ company.id }}?tab=mvv" 
            class="button button-primary" 
-           style="padding: 16px 32px; font-size: 16px;">
+           style="padding: 16px 32px; font-size: 16px;" data-ref="01">
           <span>⚙️</span> Gerenciar MVV
         </a>
         <a href="{{ url_for('grv.grv_company_dashboard', company_id=company.id) }}" 
-           class="button button-ghost">
+           class="button button-ghost" data-ref="02">
           <span>←</span> Voltar ao Dashboard
         </a>
       </div>

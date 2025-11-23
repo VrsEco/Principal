@@ -242,7 +242,7 @@
         </div>
       </div>
       <div class="indicators-actions">
-        <button class="indicators-button primary" onclick="openDataPopup()">
+        <button class="indicators-button primary" onclick="openDataPopup()" data-ref="01">
           + Novo Registro
         </button>
       </div>
@@ -250,7 +250,7 @@
 
     <!-- Table -->
     <div class="indicators-table-wrapper">
-      <table class="indicators-table" id="dataTable">
+      <table class="indicators-table" id="dataTable" data-ref="04">
         <thead>
           <tr>
             <th>Meta</th>
@@ -335,8 +335,8 @@ function renderDataTable() {
         <td>${record.notes || '--'}</td>
         <td style="text-align: center;">
           <div class="actions">
-            <button class="btn-small btn-edit" onclick="openDataPopup(${record.id})">Editar</button>
-            <button class="btn-small btn-delete" onclick="deleteData(${record.id})">Excluir</button>
+            <button class="btn-small btn-edit" onclick="openDataPopup(${record.id})" data-ref="02">Editar</button>
+            <button class="btn-small btn-delete" onclick="deleteData(${record.id})" data-ref="03">Excluir</button>
           </div>
         </td>
       </tr>

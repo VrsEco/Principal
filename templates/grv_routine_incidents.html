@@ -1,4 +1,4 @@
-﻿{% extends "base.html" %}
+{% extends "base.html" %}
 {% block title %}GRV | Gestão de Ocorrências{% endblock %}
 {% block body %}{% set active_nav = 'routine-incidents' %}{{ super() }}{% endblock %}
 
@@ -342,15 +342,15 @@
         </p>
       </div>
       <div class="incident-actions">
-        <button id="refreshButton" class="incident-button" type="button">🔄 Atualizar</button>
-        <button id="newIncidentButton" class="incident-button primary" type="button">➕ Nova Ocorrência</button>
+        <button id="refreshButton" class="incident-button" type="button" data-ref="01">🔄 Atualizar</button>
+        <button id="newIncidentButton" class="incident-button primary" type="button" data-ref="02">➕ Nova Ocorrência</button>
       </div>
     </header>
 
     <section class="incident-filters" style="display: grid; grid-template-columns: repeat(auto-fit, minmax(160px, 1fr)); gap: 12px; padding: 18px; background: rgba(59, 130, 246, 0.04); border-radius: 12px; border: 1px solid rgba(59, 130, 246, 0.1);">
       <div class="filter-field" style="display: grid; gap: 6px;">
         <label for="filterType" style="font-size: 11px; text-transform: uppercase; letter-spacing: 0.08em; font-weight: 600; color: #475569;">Tipo</label>
-        <select id="filterType" style="border-radius: 8px; border: 1px solid rgba(148, 163, 184, 0.35); padding: 8px 12px; font-size: 13px;">
+        <select id="filterType" style="border-radius: 8px; border: 1px solid rgba(148, 163, 184, 0.35); padding: 8px 12px; font-size: 13px;" data-ref="11">
           <option value="">Todos</option>
           <option value="positive">Positivo</option>
           <option value="negative">Negativo</option>
@@ -358,7 +358,7 @@
       </div>
       <div class="filter-field" style="display: grid; gap: 6px;">
         <label for="filterEmployee" style="font-size: 11px; text-transform: uppercase; letter-spacing: 0.08em; font-weight: 600; color: #475569;">Colaborador</label>
-        <select id="filterEmployee" style="border-radius: 8px; border: 1px solid rgba(148, 163, 184, 0.35); padding: 8px 12px; font-size: 13px;">
+        <select id="filterEmployee" style="border-radius: 8px; border: 1px solid rgba(148, 163, 184, 0.35); padding: 8px 12px; font-size: 13px;" data-ref="12">
           <option value="">Todos</option>
           {% for emp in employees %}
           <option value="{{ emp.id }}">{{ emp.name }}</option>
@@ -367,7 +367,7 @@
       </div>
       <div class="filter-field" style="display: grid; gap: 6px;">
         <label for="filterProcess" style="font-size: 11px; text-transform: uppercase; letter-spacing: 0.08em; font-weight: 600; color: #475569;">Processo</label>
-        <select id="filterProcess" style="border-radius: 8px; border: 1px solid rgba(148, 163, 184, 0.35); padding: 8px 12px; font-size: 13px;">
+        <select id="filterProcess" style="border-radius: 8px; border: 1px solid rgba(148, 163, 184, 0.35); padding: 8px 12px; font-size: 13px;" data-ref="13">
           <option value="">Todos</option>
           {% for proc in processes %}
           <option value="{{ proc.id }}">{{ proc.code or proc.id }} - {{ proc.name }}</option>
@@ -376,7 +376,7 @@
       </div>
       <div class="filter-field" style="display: grid; gap: 6px;">
         <label for="filterProject" style="font-size: 11px; text-transform: uppercase; letter-spacing: 0.08em; font-weight: 600; color: #475569;">Projeto</label>
-        <select id="filterProject" style="border-radius: 8px; border: 1px solid rgba(148, 163, 184, 0.35); padding: 8px 12px; font-size: 13px;">
+        <select id="filterProject" style="border-radius: 8px; border: 1px solid rgba(148, 163, 184, 0.35); padding: 8px 12px; font-size: 13px;" data-ref="14">
           <option value="">Todos</option>
           {% for proj in projects %}
           <option value="{{ proj.id }}">{{ proj.code or proj.id }} - {{ proj.name }}</option>
@@ -385,14 +385,14 @@
       </div>
       <div class="filter-field" style="display: grid; gap: 6px;">
         <label for="searchInput" style="font-size: 11px; text-transform: uppercase; letter-spacing: 0.08em; font-weight: 600; color: #475569;">Buscar</label>
-        <input id="searchInput" type="text" placeholder="Digite para buscar..." style="border-radius: 8px; border: 1px solid rgba(148, 163, 184, 0.35); padding: 8px 12px; font-size: 13px;">
+        <input id="searchInput" type="text" placeholder="Digite para buscar..." style="border-radius: 8px; border: 1px solid rgba(148, 163, 184, 0.35); padding: 8px 12px; font-size: 13px;" data-ref="08">
       </div>
     </section>
 
     <section id="incidentSummary" class="incident-summary"></section>
 
     <div class="incident-table-wrapper">
-      <table class="incident-table">
+      <table class="incident-table" data-ref="17">
         <thead>
           <tr>
             <th>Ocorrência</th>
@@ -417,31 +417,31 @@
   <div class="incident-modal">
     <header>
       <h2 id="modalTitle">Novo Ocorrência</h2>
-      <button type="button" id="closeModalButton" aria-label="Fechar">×</button>
+      <button type="button" id="closeModalButton" aria-label="Fechar" data-ref="03">×</button>
     </header>
     <form id="incidentForm" class="incident-form">
         <input type="hidden" id="incidentId">
       <div class="field">
         <label for="incidentCode">Código *</label>
-        <input id="incidentCode" type="text" placeholder="Ex: PORT-001" required>
+        <input id="incidentCode" type="text" placeholder="Ex: PORT-001" required data-ref="09">
         </div>
       <div class="field">
         <label for="incidentName">Nome do Ocorrência *</label>
-        <input id="incidentName" type="text" placeholder="Ex: Transformação Digital" required>
+        <input id="incidentName" type="text" placeholder="Ex: Transformação Digital" required data-ref="10">
           </div>
       <div class="field">
         <label for="incidentResponsible">Responsável</label>
-        <select id="incidentResponsible">
+        <select id="incidentResponsible" data-ref="15">
           <option value="">Selecione um responsável</option>
             </select>
           </div>
       <div class="field">
         <label for="incidentNotes">Observações</label>
-        <textarea id="incidentNotes" placeholder="Detalhes relevantes sobre o portfólio"></textarea>
+        <textarea id="incidentNotes" placeholder="Detalhes relevantes sobre o portfólio" data-ref="16"></textarea>
         </div>
       <footer>
-        <button type="button" class="secondary" id="cancelModalButton">Cancelar</button>
-        <button type="submit" class="primary">Salvar Ocorrência</button>
+        <button type="button" class="secondary" id="cancelModalButton" data-ref="04">Cancelar</button>
+        <button type="submit" class="primary" data-ref="05">Salvar Ocorrência</button>
       </footer>
     </form>
   </div>
@@ -653,8 +653,8 @@ function closeModal() {
           <td>${notes}</td>
           <td>
             <div class="incident-table-actions">
-              <button class="incident-link" type="button" data-action="edit" data-id="${incident.id}">Editar</button>
-              <button class="incident-link danger" type="button" data-action="remove" data-id="${incident.id}">Excluir</button>
+              <button class="incident-link" type="button" data-action="edit" data-id="${incident.id}" data-ref="06">Editar</button>
+              <button class="incident-link danger" type="button" data-action="remove" data-id="${incident.id}" data-ref="07">Excluir</button>
             </div>
           </td>
         </tr>`;

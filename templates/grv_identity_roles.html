@@ -23,45 +23,45 @@
           <div class="form-two-cols">
             <label class="form-field">
               <span>Cargo</span>
-              <input name="title" required />
+              <input name="title" required  data-ref="05" />
             </label>
             <label class="form-field">
               <span>Superior (para organograma)</span>
-              <select name="parent_role_id" id="parentRoleSelect"><option value="">Sem superior</option></select>
+              <select name="parent_role_id" id="parentRoleSelect" data-ref="10"><option value="">Sem superior</option></select>
             </label>
           </div>
           <div class="form-two-cols">
             <label class="form-field">
               <span>Departamento/Área</span>
-              <input name="department" placeholder="Ex: Financeiro, Comercial" />
+              <input name="department" placeholder="Ex: Financeiro, Comercial"  data-ref="06" />
             </label>
             <label class="form-field">
               <span>Cor do box (organograma)</span>
-              <input name="color" type="color" value="#c084fc" />
+              <input name="color" type="color" value="#c084fc"  data-ref="07" />
             </label>
           </div>
           <div class="form-two-cols">
             <label class="form-field">
               <span>Quantidade de Colaboradores Prevista</span>
-              <input name="headcount_planned" type="number" min="0" />
+              <input name="headcount_planned" type="number" min="0"  data-ref="08" />
             </label>
             <label class="form-field">
               <span>Carga Horária Semanal</span>
-              <input name="weekly_hours" type="number" min="0" />
+              <input name="weekly_hours" type="number" min="0"  data-ref="09" />
             </label>
           </div>
           <label class="form-field">
             <span>Observações</span>
-            <textarea name="notes" rows="3"></textarea>
+            <textarea name="notes" rows="3" data-ref="11"></textarea>
           </label>
           <div style="display:flex;gap:8px;justify-content:flex-end;">
-            <button type="reset" class="button button-ghost">Limpar</button>
-            <button type="submit" class="button button-primary">Salvar Função</button>
+            <button type="reset" class="button button-ghost" data-ref="01">Limpar</button>
+            <button type="submit" class="button button-primary" data-ref="02">Salvar Função</button>
           </div>
         </form>
 
         <div class="surface-sub" style="padding:0;margin-top:12px;">
-          <table class="financial-editor-table" style="width:100%;border-collapse:collapse;">
+          <table class="financial-editor-table" style="width:100%;border-collapse:collapse;" data-ref="12">
             <thead>
               <tr>
                 <th style="text-align:left;">Cargo</th>
@@ -108,8 +108,8 @@
             <td style="padding:8px;border-bottom:1px solid rgba(148,163,184,.15);text-align:right;">${r.headcount_planned||0}</td>
             <td style="padding:8px;border-bottom:1px solid rgba(148,163,184,.15);text-align:right;">${r.weekly_hours||0}</td>
             <td style="padding:8px;border-bottom:1px solid rgba(148,163,184,.15);text-align:right;">
-              <button data-edit="${r.id}" class="button button-ghost">Editar</button>
-              <button data-del="${r.id}" class="button button-ghost">Excluir</button>
+              <button data-edit="${r.id}" class="button button-ghost" data-ref="03">Editar</button>
+              <button data-del="${r.id}" class="button button-ghost" data-ref="04">Excluir</button>
             </td>
           `;
           tbody.appendChild(tr);

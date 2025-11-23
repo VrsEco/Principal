@@ -458,11 +458,11 @@
       <div class="analysis-controls">
         <label class="analysis-search">
           <span>🔍</span>
-          <input id="employeeSearch" type="search" placeholder="Buscar colaborador ou função">
+          <input id="employeeSearch" type="search" placeholder="Buscar colaborador ou função" data-ref="01">
         </label>
         <label class="analysis-filter">
           <span>🗂️</span>
-          <select id="departmentFilter">
+          <select id="departmentFilter" data-ref="02">
             <option value="">Todas as áreas</option>
           </select>
         </label>
@@ -540,7 +540,7 @@
           <p class="panel-note">Clique na linha para ver detalhes das rotinas</p>
         </header>
         <div style="overflow-x: auto; border-radius: var(--analysis-radius);">
-          <table class="workforce-table">
+          <table class="workforce-table" data-ref="03">
             <thead>
               <tr>
                 <th>Colaborador</th>

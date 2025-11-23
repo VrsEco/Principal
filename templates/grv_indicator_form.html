@@ -132,7 +132,7 @@
       <div class="form-grid">
         <div class="form-group">
           <label for="groupId">Grupo de Indicadores</label>
-          <select id="groupId" name="group_id">
+          <select id="groupId" name="group_id" data-ref="05">
             <option value="">Nenhum (indicador raiz)</option>
             {% for group in groups %}
               <option value="{{ group.id }}">{{ group.code }} - {{ group.name }}</option>
@@ -142,17 +142,17 @@
 
         <div class="form-group full-width">
           <label for="indicatorName">Nome *</label>
-          <input id="indicatorName" name="name" type="text" maxlength="160" required>
+          <input id="indicatorName" name="name" type="text" maxlength="160" required data-ref="03">
         </div>
 
         <div class="form-group full-width">
           <label for="unit">Unidade de Medida</label>
-          <input id="unit" name="unit" type="text" maxlength="60">
+          <input id="unit" name="unit" type="text" maxlength="60" data-ref="04">
         </div>
 
         <div class="form-group">
           <label for="polarity">Polaridade</label>
-          <select id="polarity" name="polarity">
+          <select id="polarity" name="polarity" data-ref="06">
             <option value="">Selecione</option>
             <option value="positive">Quanto maior melhor</option>
             <option value="negative">Quanto menor melhor</option>
@@ -163,7 +163,7 @@
       <div class="form-grid">
         <div class="form-group">
           <label for="processId">Processo associado</label>
-          <select id="processId" name="process_id">
+          <select id="processId" name="process_id" data-ref="07">
             <option value="">Selecione</option>
             {% for process in processes %}
               <option value="{{ process.id }}">{{ process.code }} - {{ process.name }}</option>
@@ -173,7 +173,7 @@
 
         <div class="form-group">
           <label for="projectId">Projeto associado</label>
-          <select id="projectId" name="project_id">
+          <select id="projectId" name="project_id" data-ref="08">
             <option value="">Selecione</option>
             {% for project in projects %}
               <option value="{{ project.id }}">{{ project.code }} - {{ project.name }}</option>
@@ -185,7 +185,7 @@
       <div class="form-grid">
         <div class="form-group">
           <label for="planId">Planejamento</label>
-          <select id="planId" name="plan_id">
+          <select id="planId" name="plan_id" data-ref="09">
             <option value="">Selecione um planejamento</option>
             {% for plan in plans %}
               <option value="{{ plan.id }}">{{ plan.name }}</option>
@@ -195,7 +195,7 @@
 
         <div class="form-group">
           <label for="okrId">OKR Associado</label>
-          <select id="okrId" name="okr_id" disabled>
+          <select id="okrId" name="okr_id" disabled data-ref="10">
             <option value="">Selecione um planejamento primeiro</option>
           </select>
         </div>
@@ -203,17 +203,17 @@
 
       <div class="form-group">
         <label for="formula">Formula do Indicador</label>
-        <textarea id="formula" name="formula" placeholder="Descreva como o indicador e calculado"></textarea>
+        <textarea id="formula" name="formula" placeholder="Descreva como o indicador e calculado" data-ref="12"></textarea>
       </div>
 
       <div class="form-group">
         <label for="dataSource">Fonte de Dados</label>
-        <textarea id="dataSource" name="data_source" placeholder="Sistemas, relatorios ou responsaveis pela coleta"></textarea>
+        <textarea id="dataSource" name="data_source" placeholder="Sistemas, relatorios ou responsaveis pela coleta" data-ref="13"></textarea>
       </div>
 
       <div class="form-group">
         <label for="responsibleId">Responsavel</label>
-        <select id="responsibleId" name="responsible_id">
+        <select id="responsibleId" name="responsible_id" data-ref="11">
           <option value="">Selecione</option>
           {% for employee in employees %}
             <option value="{{ employee.id }}">{{ employee.name }}</option>
@@ -223,12 +223,12 @@
 
       <div class="form-group">
         <label for="notes">Observacoes</label>
-        <textarea id="notes" name="notes" placeholder="Referencias, alertas ou anexos relevantes"></textarea>
+        <textarea id="notes" name="notes" placeholder="Referencias, alertas ou anexos relevantes" data-ref="14"></textarea>
       </div>
 
       <div class="actions">
-        <button type="button" class="btn-secondary" id="cancelButton">Cancelar</button>
-        <button type="submit" class="btn-primary">Salvar Indicador</button>
+        <button type="button" class="btn-secondary" id="cancelButton" data-ref="01">Cancelar</button>
+        <button type="submit" class="btn-primary" data-ref="02">Salvar Indicador</button>
       </div>
     </form>
   </div>

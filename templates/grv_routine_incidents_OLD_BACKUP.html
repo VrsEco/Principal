@@ -404,15 +404,15 @@
         </p>
       </div>
       <div class="incidents-actions">
-        <button id="refreshButton" class="incidents-button" type="button">🔄 Atualizar</button>
-        <button id="newIncidentButton" class="incidents-button primary" type="button">➕ Nova Ocorrência</button>
+        <button id="refreshButton" class="incidents-button" type="button" data-ref="01">🔄 Atualizar</button>
+        <button id="newIncidentButton" class="incidents-button primary" type="button" data-ref="02">➕ Nova Ocorrência</button>
       </div>
     </header>
 
     <section class="incidents-filters">
       <div class="filter-field">
         <label for="filterType">Tipo</label>
-        <select id="filterType">
+        <select id="filterType" data-ref="11">
           <option value="">Todos</option>
           <option value="positive">Positivo</option>
           <option value="negative">Negativo</option>
@@ -420,7 +420,7 @@
       </div>
       <div class="filter-field">
         <label for="filterEmployee">Colaborador</label>
-        <select id="filterEmployee">
+        <select id="filterEmployee" data-ref="12">
           <option value="">Todos</option>
           {% for emp in employees %}
           <option value="{{ emp.id }}">{{ emp.name }}</option>
@@ -429,7 +429,7 @@
       </div>
       <div class="filter-field">
         <label for="filterProcess">Processo</label>
-        <select id="filterProcess">
+        <select id="filterProcess" data-ref="13">
           <option value="">Todos</option>
           {% for proc in processes %}
           <option value="{{ proc.id }}">{{ proc.code or proc.id }} - {{ proc.name }}</option>
@@ -438,7 +438,7 @@
       </div>
       <div class="filter-field">
         <label for="filterProject">Projeto</label>
-        <select id="filterProject">
+        <select id="filterProject" data-ref="14">
           <option value="">Todos</option>
           {% for proj in projects %}
           <option value="{{ proj.id }}">{{ proj.code or proj.id }} - {{ proj.name }}</option>
@@ -447,14 +447,14 @@
       </div>
       <div class="filter-field">
         <label for="searchInput">Buscar</label>
-        <input id="searchInput" type="text" placeholder="Digite para buscar...">
+        <input id="searchInput" type="text" placeholder="Digite para buscar..." data-ref="08">
       </div>
     </section>
 
     <section id="incidentsSummary" class="incidents-summary"></section>
 
     <div class="incidents-table-wrapper">
-      <table class="incidents-table">
+      <table class="incidents-table" data-ref="20">
         <thead>
           <tr>
             <th>Ocorrência</th>
@@ -479,14 +479,14 @@
   <div class="incidents-modal">
     <header>
       <h2 id="modalTitle">Nova Ocorrência</h2>
-      <button type="button" id="closeModalButton" aria-label="Fechar">×</button>
+      <button type="button" id="closeModalButton" aria-label="Fechar" data-ref="03">×</button>
     </header>
     <form id="incidentForm" class="incidents-form">
       <input type="hidden" id="incidentId">
       
       <div class="field">
         <label for="incidentEmployee">Colaborador <span class="required">*</span></label>
-        <select id="incidentEmployee" required>
+        <select id="incidentEmployee" required data-ref="15">
           <option value="">Selecione um colaborador</option>
           {% for emp in employees %}
           <option value="{{ emp.id }}">{{ emp.name }}</option>
@@ -497,7 +497,7 @@
       <div class="field-row">
         <div class="field">
           <label for="incidentProcess">Processo</label>
-          <select id="incidentProcess">
+          <select id="incidentProcess" data-ref="16">
             <option value="">Nenhum</option>
             {% for proc in processes %}
             <option value="{{ proc.id }}">{{ proc.code or proc.id }} - {{ proc.name }}</option>
@@ -506,7 +506,7 @@
         </div>
         <div class="field">
           <label for="incidentProject">Projeto</label>
-          <select id="incidentProject">
+          <select id="incidentProject" data-ref="17">
             <option value="">Nenhum</option>
             {% for proj in projects %}
             <option value="{{ proj.id }}">{{ proj.code or proj.id }} - {{ proj.name }}</option>
@@ -517,18 +517,18 @@
 
       <div class="field">
         <label for="incidentTitle">Título <span class="required">*</span></label>
-        <input id="incidentTitle" type="text" placeholder="Ex: Excelente atendimento ao cliente" required>
+        <input id="incidentTitle" type="text" placeholder="Ex: Excelente atendimento ao cliente" required data-ref="09">
       </div>
 
       <div class="field">
         <label for="incidentDescription">Descrição</label>
-        <textarea id="incidentDescription" placeholder="Descreva a ocorrência em detalhes..."></textarea>
+        <textarea id="incidentDescription" placeholder="Descreva a ocorrência em detalhes..." data-ref="19"></textarea>
       </div>
 
       <div class="field-row">
         <div class="field">
           <label for="incidentType">Tipo <span class="required">*</span></label>
-          <select id="incidentType" required>
+          <select id="incidentType" required data-ref="18">
             <option value="">Selecione...</option>
             <option value="positive">✅ Positivo</option>
             <option value="negative">⚠️ Negativo</option>
@@ -536,13 +536,13 @@
         </div>
         <div class="field">
           <label for="incidentScore">Pontuação</label>
-          <input id="incidentScore" type="number" value="0" min="-100" max="100" placeholder="Ex: 10">
+          <input id="incidentScore" type="number" value="0" min="-100" max="100" placeholder="Ex: 10" data-ref="10">
         </div>
       </div>
 
       <footer>
-        <button type="button" class="secondary" id="cancelModalButton">Cancelar</button>
-        <button type="submit" class="primary">Salvar Ocorrência</button>
+        <button type="button" class="secondary" id="cancelModalButton" data-ref="04">Cancelar</button>
+        <button type="submit" class="primary" data-ref="05">Salvar Ocorrência</button>
       </footer>
     </form>
   </div>
@@ -801,8 +801,8 @@ document.addEventListener('DOMContentLoaded', () => {
           <td><strong style="color: ${score >= 0 ? '#059669' : '#dc2626'}">${scoreDisplay}</strong></td>
           <td>
             <div class="incidents-table-actions">
-              <button class="incidents-link" type="button" data-action="edit" data-id="${incident.id}">Editar</button>
-              <button class="incidents-link danger" type="button" data-action="remove" data-id="${incident.id}">Excluir</button>
+              <button class="incidents-link" type="button" data-action="edit" data-id="${incident.id}" data-ref="06">Editar</button>
+              <button class="incidents-link danger" type="button" data-action="remove" data-id="${incident.id}" data-ref="07">Excluir</button>
             </div>
           </td>
         </tr>`;

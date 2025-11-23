@@ -37,12 +37,12 @@
           </div>
           <div class="section-status-controls">
             <!-- Botão Concluir Todas - sempre presente no DOM -->
-            <button class="button button-small button-warning" onclick="closeCompanySection()" title="Concluir todas as seções da página" {% if not company_section_open|default(true) %}style="display: none;"{% endif %}>
+            <button class="button button-small button-warning" onclick="closeCompanySection()" title="Concluir todas as seções da página" {% if not company_section_open|default(true) %}style="display: none;"{% endif %} data-ref="01">
               🎯 Concluir Todas
               </button>
             
             <!-- Botão Reabrir Todas - sempre presente no DOM -->
-            <button class="button button-small button-success" onclick="openCompanySection()" title="Reabrir todas as seções da página" {% if company_section_open|default(true) %}style="display: none;"{% endif %}>
+            <button class="button button-small button-success" onclick="openCompanySection()" title="Reabrir todas as seções da página" {% if company_section_open|default(true) %}style="display: none;"{% endif %} data-ref="02">
               🎯 Reabrir Todas
               </button>
             
@@ -68,7 +68,7 @@
           
           <div class="financial-editor">
             <span class="card-subtitle">Faturamento / Margem por produto</span>
-            <table class="financial-editor-table" id="financial-table">
+            <table class="financial-editor-table" id="financial-table" data-ref="24">
               <thead>
                 <tr>
                   <th>Linha / Produto</th>
@@ -81,23 +81,23 @@
               <tbody id="financial-tbody">
                 {% for item in company_data.financials|default([]) %}
                 <tr class="financial-row">
-                  <td><input type="text" name="financial_line_{{ loop.index }}" value="{{ item.line }}" class="financial-input" /></td>
-                  <td><input type="number" name="financial_revenue_{{ loop.index }}" value="{{ item.revenue }}" placeholder="0.00" step="0.01" min="0" class="financial-input revenue-input" /></td>
-                  <td><input type="number" name="financial_margin_{{ loop.index }}" value="{{ item.margin }}" placeholder="0" step="0.01" min="0" max="100" class="financial-input margin-input" /></td>
-                  <td><textarea name="financial_market_{{ loop.index }}" rows="2" placeholder="Descreva o tamanho do mercado, market share e concorrencia" class="financial-input">{{ item.market|default('') }}</textarea></td>
-                  <td><button type="button" class="button-remove-row" onclick="removeFinancialRow(this)">×</button></td>
+                  <td><input type="text" name="financial_line_{{ loop.index }}" value="{{ item.line }}" class="financial-input"  data-ref="12" /></td>
+                  <td><input type="number" name="financial_revenue_{{ loop.index }}" value="{{ item.revenue }}" placeholder="0.00" step="0.01" min="0" class="financial-input revenue-input"  data-ref="13" /></td>
+                  <td><input type="number" name="financial_margin_{{ loop.index }}" value="{{ item.margin }}" placeholder="0" step="0.01" min="0" max="100" class="financial-input margin-input"  data-ref="14" /></td>
+                  <td><textarea name="financial_market_{{ loop.index }}" rows="2" placeholder="Descreva o tamanho do mercado, market share e concorrencia" class="financial-input" data-ref="20">{{ item.market|default('') }}</textarea></td>
+                  <td><button type="button" class="button-remove-row" onclick="removeFinancialRow(this)" data-ref="03">×</button></td>
                 </tr>
                 {% endfor %}
                 <tr class="financial-total-row">
                   <td><strong>Total</strong></td>
-                  <td><input type="text" name="financial_total_revenue" value="{% if company_data.financial_total_revenue not in (None, '') %}{{ company_data.financial_total_revenue|format_number_br }}{% endif %}" readonly class="total-input" /></td>
-                  <td><input type="text" name="financial_total_margin" value="{% if company_data.financial_total_margin not in (None, '') %}{{ company_data.financial_total_margin|format_percent_br }}{% endif %}" readonly class="total-input" /></td>
+                  <td><input type="text" name="financial_total_revenue" value="{% if company_data.financial_total_revenue not in (None, '') %}{{ company_data.financial_total_revenue|format_number_br }}{% endif %}" readonly class="total-input"  data-ref="15" /></td>
+                  <td><input type="text" name="financial_total_margin" value="{% if company_data.financial_total_margin not in (None, '') %}{{ company_data.financial_total_margin|format_percent_br }}{% endif %}" readonly class="total-input"  data-ref="16" /></td>
                   <td></td>
                   <td></td>
                 </tr>
               </tbody>
             </table>
-            <button type="button" class="button button-ghost" id="add-financial-row">+ Adicionar linha</button>
+            <button type="button" class="button button-ghost" id="add-financial-row" data-ref="04">+ Adicionar linha</button>
           </div>
 
           <!-- Campos removidos: Todos os dados básicos e econômicos -->
@@ -157,7 +157,7 @@
             
             <div style="margin-top: 20px; text-align: center;">
               {% if plan.company_id or company.id %}
-              <a href="/companies/{{ plan.company_id or company.id }}" class="button button-primary" target="_blank" style="font-size: 16px; padding: 14px 28px;">
+              <a href="/companies/{{ plan.company_id or company.id }}" class="button button-primary" target="_blank" style="font-size: 16px; padding: 14px 28px;" data-ref="26">
                 <span>⚙️</span> Acessar Cadastro Centralizado da Empresa
               </a>
               {% else %}
@@ -167,8 +167,8 @@
           </div>
           
           <div class="form-actions">
-            <button type="submit" class="button button-primary" {% if not company_section_open|default(true) %}disabled{% endif %}>Salvar informacoes</button>
-            <button type="reset" class="button button-ghost" {% if not company_section_open|default(true) %}disabled{% endif %}>Descartar alteracoes</button>
+            <button type="submit" class="button button-primary" {% if not company_section_open|default(true) %}disabled{% endif %} data-ref="05">Salvar informacoes</button>
+            <button type="reset" class="button button-ghost" {% if not company_section_open|default(true) %}disabled{% endif %} data-ref="06">Descartar alteracoes</button>
           </div>
         </form>
       </div>
@@ -199,16 +199,16 @@
         <form class="analyses-form-fields" action="#" method="post">
           <label class="form-field">
             <span>Insights e Análise da IA</span>
-            <textarea name="ai_insights" rows="6" placeholder="As análises geradas ficarão registradas aqui" {% if not company_section_open|default(true) %}disabled{% endif %}>{{ company_data.ai_insights|default('') }}</textarea>
+            <textarea name="ai_insights" rows="6" placeholder="As análises geradas ficarão registradas aqui" {% if not company_section_open|default(true) %}disabled{% endif %} data-ref="21">{{ company_data.ai_insights|default('') }}</textarea>
           </label>
           <label class="form-field">
             <span>Análises e Impressões do Consultor</span>
-            <textarea name="consultant_analysis" rows="8" placeholder="Versão detalhada: Registre suas análises completas, impressões e insights sobre a empresa, mercado, oportunidades e desafios identificados durante o processo de planejamento estratégico." {% if not company_section_open|default(true) %}disabled{% endif %}>{{ company_data.consultant_analysis|default('') }}</textarea>
+            <textarea name="consultant_analysis" rows="8" placeholder="Versão detalhada: Registre suas análises completas, impressões e insights sobre a empresa, mercado, oportunidades e desafios identificados durante o processo de planejamento estratégico." {% if not company_section_open|default(true) %}disabled{% endif %} data-ref="22">{{ company_data.consultant_analysis|default('') }}</textarea>
           </label>
           <div class="form-actions">
-            <button type="button" class="button button-primary" onclick="saveAnalyses()" {% if not company_section_open|default(true) %}disabled{% endif %}>Salvar análises</button>
-            <button type="button" class="button button-primary" onclick="generateAIInsights()" {% if not company_section_open|default(true) %}disabled{% endif %}>Gerar buscas e análises de IA</button>
-            <button type="button" class="button button-ghost" onclick="resetAnalysesForm()" {% if not company_section_open|default(true) %}disabled{% endif %}>Descartar alterações</button>
+            <button type="button" class="button button-primary" onclick="saveAnalyses()" {% if not company_section_open|default(true) %}disabled{% endif %} data-ref="07">Salvar análises</button>
+            <button type="button" class="button button-primary" onclick="generateAIInsights()" {% if not company_section_open|default(true) %}disabled{% endif %} data-ref="08">Gerar buscas e análises de IA</button>
+            <button type="button" class="button button-ghost" onclick="resetAnalysesForm()" {% if not company_section_open|default(true) %}disabled{% endif %} data-ref="09">Descartar alterações</button>
           </div>
         </form>
       </div>
@@ -258,7 +258,7 @@
           </div>
         </div>
         <div class="financial-table-wrapper">
-          <table class="financial-table">
+          <table class="financial-table" data-ref="25">
             <thead>
               <tr>
                 <th>Linha / Produto</th>
@@ -318,7 +318,7 @@
   <div class="modal-content">
     <div class="modal-header">
       <h3>Visualizar PDF</h3>
-      <button type="button" class="modal-close" onclick="closePDFModal()">&times;</button>
+      <button type="button" class="modal-close" onclick="closePDFModal()" data-ref="10">&times;</button>
     </div>
     <div class="modal-body">
       <iframe id="pdfViewer" src="" width="100%" height="600px" style="border: none;"></iframe>
@@ -343,11 +343,11 @@ document.addEventListener('DOMContentLoaded', function() {
         financialRowIndex++;
         
         newRow.innerHTML = `
-            <td><input type="text" name="financial_line_${financialRowIndex}" value="" class="financial-input" /></td>
-            <td><input type="number" name="financial_revenue_${financialRowIndex}" value="" placeholder="0.00" step="0.01" min="0" class="financial-input revenue-input" /></td>
-            <td><input type="number" name="financial_margin_${financialRowIndex}" value="" placeholder="0" step="0.01" min="0" max="100" class="financial-input margin-input" /></td>
-            <td><textarea name="financial_market_${financialRowIndex}" rows="2" placeholder="Descreva o tamanho do mercado, market share e concorrencia" class="financial-input"></textarea></td>
-            <td><button type="button" class="button-remove-row" onclick="removeFinancialRow(this)">×</button></td>
+            <td><input type="text" name="financial_line_${financialRowIndex}" value="" class="financial-input"  data-ref="17" /></td>
+            <td><input type="number" name="financial_revenue_${financialRowIndex}" value="" placeholder="0.00" step="0.01" min="0" class="financial-input revenue-input"  data-ref="18" /></td>
+            <td><input type="number" name="financial_margin_${financialRowIndex}" value="" placeholder="0" step="0.01" min="0" max="100" class="financial-input margin-input"  data-ref="19" /></td>
+            <td><textarea name="financial_market_${financialRowIndex}" rows="2" placeholder="Descreva o tamanho do mercado, market share e concorrencia" class="financial-input" data-ref="23"></textarea></td>
+            <td><button type="button" class="button-remove-row" onclick="removeFinancialRow(this)" data-ref="11">×</button></td>
         `;
         
         tbody.insertBefore(newRow, totalRow);

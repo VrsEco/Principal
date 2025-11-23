@@ -1,0 +1,5 @@
+    <div class="section-closed-notice">
+              <p>🎯 Esta seção foi conclu�da e não permite mais edições.</p>
+            </div>
+            {% endif %}
+ 

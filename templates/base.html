@@ -16,6 +16,136 @@
   <link rel="stylesheet" href="{{ url_for('static', filename='css/main.css') }}" />
   <link rel="stylesheet" href="{{ url_for('static', filename='css/grv-global-pattern.css') }}" />
   <link rel="stylesheet" href="{{ url_for('static', filename='css/responsive.css') }}" />
+  <link rel="stylesheet" href="{{ url_for('static', filename='css/responsive.css') }}" />
+  <style>
+    /* UI Reference System Styles (Inline to avoid cache) */
+    [data-ref] {
+      position: relative;
+    }
+
+    [data-ref]::before {
+      content: attr(data-ref-full);
+      position: absolute;
+      bottom: 100%;
+      left: 50%;
+      transform: translate(-50%, -5px);
+      background-color: #ffffff !important;
+      color: #0f172a !important;
+      border: 2px solid #0f172a !important;
+      padding: 4px 8px;
+      border-radius: 4px;
+      font-size: 12px;
+      font-weight: 700;
+      font-family: monospace;
+      white-space: nowrap;
+      opacity: 0;
+      pointer-events: none;
+      transition: opacity 0.2s, transform 0.2s;
+      z-index: 999999;
+      box-shadow: 0 4px 10px rgba(0, 0, 0, 0.3);
+    }
+
+    [data-ref]::after {
+      content: "";
+      position: absolute;
+      bottom: 100%;
+      left: 50%;
+      transform: translateX(-50%);
+      border-width: 6px;
+      border-style: solid;
+      border-color: #0f172a transparent transparent transparent !important;
+      opacity: 0;
+      pointer-events: none;
+      transition: opacity 0.2s, transform 0.2s;
+      z-index: 999999;
+    }
+
+    body:not(.hide-ref-tooltips) [data-ref]:hover::before,
+    body:not(.hide-ref-tooltips) [data-ref]:hover::after {
+      opacity: 1;
+      pointer-events: auto;
+    }
+
+    [data-ref].ref-bottom::before {
+      bottom: auto;
+      top: 100%;
+      transform: translateX(-50%) translateY(5px);
+    }
+
+    [data-ref].ref-bottom::after {
+      bottom: auto;
+      top: 100%;
+      border-color: transparent transparent #000000 transparent !important;
+    }
+
+    body.show-ref-codes [data-ref] {
+      outline: 1.5px dashed #2563eb !important;
+      background: rgba(59, 130, 246, 0.08) !important;
+    }
+
+    body.show-ref-codes [data-ref]::before,
+    body.show-ref-codes [data-ref]::after {
+      opacity: 0;
+    }
+
+    #ui-ref-toggle {
+      position: fixed;
+      bottom: 20px;
+      right: 20px;
+      background: #000000 !important;
+      color: #ffffff !important;
+      border: 2px solid #ffffff !important;
+      padding: 8px 12px;
+      border-radius: 6px;
+      cursor: pointer;
+      font-size: 12px;
+      font-weight: 700;
+      z-index: 999999;
+      display: none;
+      align-items: center;
+      gap: 6px;
+    }
+
+    .ref-copied {
+      animation: copy-flash 0.5s ease-out;
+    }
+
+    @keyframes copy-flash {
+      0% {
+        background-color: rgba(34, 197, 94, 0.4);
+      }
+
+      100% {
+        background-color: transparent;
+      }
+    }
+
+    .ui-ref-badge {
+      position: absolute;
+      background: rgba(255, 255, 255, 0.96);
+      color: #18181b;
+      padding: 2px 8px;
+      border-radius: 999px;
+      font-size: 11px;
+      font-weight: 700;
+      letter-spacing: 0.08em;
+      font-family: "JetBrains Mono", "Fira Code", monospace;
+      border: 1px solid rgba(15, 23, 42, 0.25);
+      box-shadow: 0 6px 20px rgba(15, 23, 42, 0.18);
+      pointer-events: none;
+      z-index: 1000000;
+      opacity: 0;
+      transition: opacity 0.15s ease;
+    }
+
+    .ui-ref-badge[data-position="bottom"] {
+      margin-top: 4px;
+    }
+
+    body.show-ref-codes .ui-ref-badge {
+      opacity: 1;
+    }
+  </style>
   <link id="themeStylesheet" rel="stylesheet" href="" />
   <style>
     .header-nav {
@@ -374,7 +504,7 @@
   {% block extra_head %}{% endblock %}
 </head>
 
-<body class="{% block body_class %}{% endblock %}">
+<body class="{% block body_class %}{% endblock %}" data-page-ref="{{ page_code }}">
   {% block body %}
   <div class="app-shell">
     <header class="app-header">
@@ -890,6 +1020,7 @@
     }
   </script>
 
+  <script src="{{ url_for('static', filename='js/ui-reference.js') }}"></script>
 </body>
 
 </html>

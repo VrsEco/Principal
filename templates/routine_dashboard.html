@@ -308,7 +308,7 @@
         <div class="activities-panel">
           <div class="panel-header">
             <h4 class="panel-title">Próximas Atividades</h4>
-            <a href="{{ url_for('grv.grv_routine_activities', company_id=company.id) }}" class="button button-ghost button-sm">Ver todas</a>
+            <a href="{{ url_for('grv.grv_routine_activities', company_id=company.id) }}" class="button button-ghost button-sm" data-ref="02">Ver todas</a>
           </div>
           <div class="activity-list">
             {% for activity in upcoming_activities %}
@@ -320,7 +320,7 @@
                   <span>Prazo: {{ activity.deadline }}</span>
                 </div>
               </div>
-              <button class="button button-ghost button-sm">Detalhes</button>
+              <button class="button button-ghost button-sm" data-ref="01">Detalhes</button>
             </div>
             {% endfor %}
           </div>

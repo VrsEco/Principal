@@ -96,15 +96,15 @@
     </div>
 
     <div>
-        <button class="button button-primary" onclick="testRoutineModal()">
+        <button class="button button-primary" onclick="testRoutineModal()" data-ref="01">
             Teste: Abrir Modal de Rotina
         </button>
         
-        <button class="button button-primary" onclick="testTriggerModal()">
+        <button class="button button-primary" onclick="testTriggerModal()" data-ref="02">
             Teste: Abrir Modal de Gatilho
         </button>
         
-        <button class="button button-primary" onclick="testAPICall()">
+        <button class="button button-primary" onclick="testAPICall()" data-ref="03">
             Teste: Chamada API
         </button>
     </div>
@@ -117,14 +117,14 @@
     <!-- Modal de Rotina -->
     <div id="routineModal" class="modal">
         <div class="modal-content">
-            <button class="close-modal" onclick="closeRoutineModal()">Fechar</button>
+            <button class="close-modal" onclick="closeRoutineModal()" data-ref="04">Fechar</button>
             <h2>Modal de Rotina</h2>
             <form onsubmit="event.preventDefault(); alert('Form enviado!');">
                 <div class="form-group">
                     <label>Nome da Rotina</label>
-                    <input type="text" placeholder="Digite o nome...">
+                    <input type="text" placeholder="Digite o nome..." data-ref="08">
                 </div>
-                <button type="submit" class="button button-primary">Salvar</button>
+                <button type="submit" class="button button-primary" data-ref="05">Salvar</button>
             </form>
         </div>
     </div>
@@ -132,19 +132,19 @@
     <!-- Modal de Gatilho -->
     <div id="triggerModal" class="modal">
         <div class="modal-content">
-            <button class="close-modal" onclick="closeTriggerModal()">Fechar</button>
+            <button class="close-modal" onclick="closeTriggerModal()" data-ref="06">Fechar</button>
             <h2>Modal de Gatilho</h2>
             <form onsubmit="event.preventDefault(); alert('Form enviado!');">
                 <div class="form-group">
                     <label>Tipo de Gatilho</label>
-                    <select>
+                    <select data-ref="09">
                         <option>Diário</option>
                         <option>Semanal</option>
                         <option>Mensal</option>
                         <option>Anual</option>
                     </select>
                 </div>
-                <button type="submit" class="button button-primary">Salvar</button>
+                <button type="submit" class="button button-primary" data-ref="07">Salvar</button>
             </form>
         </div>
     </div>

@@ -123,7 +123,7 @@
       <h1>{% if form_mode == 'edit' %}Editar empresa{% else %}Nova empresa{% endif %}</h1>
       <p>Preencha os dados principais da organizacao. Essas informacoes serao utilizadas em relatorios, cadastros e geracao automatica dos codigos de processos.</p>
     </div>
-    <a href="{{ url_for('companies_page') }}" class="button button-ghost">Voltar para lista</a>
+    <a href="{{ url_for('companies_page') }}" class="button button-ghost" data-ref="08">Voltar para lista</a>
   </header>
 
   <form id="companyForm" class="company-form-card">
@@ -142,7 +142,7 @@
                maxlength="3"
                pattern="[A-Za-z0-9]{1,3}"
                placeholder="Ex: AO, V1, J99"
-               value="{{ company_data.client_code if company_data else '' }}">
+               value="{{ company_data.client_code if company_data else '' }}" data-ref="02">
         <span style="display: block; margin-top: 14px; font-size: 13px; color: var(--color-accent); line-height: 1.6;">
           Este codigo de 1 a 3 caracteres sera usado para gerar automaticamente identificadores de areas, macroprocessos e processos.
         </span>
@@ -158,7 +158,7 @@
                name="name"
                required
                placeholder="Nome comercial da empresa"
-               value="{{ company_data.name if company_data else '' }}">
+               value="{{ company_data.name if company_data else '' }}" data-ref="03">
       </label>
       <label class="form-field">
         <span>Razao social</span>
@@ -166,7 +166,7 @@
                id="companyLegalName"
                name="legal_name"
                placeholder="Razao social completa"
-               value="{{ company_data.legal_name if company_data else '' }}">
+               value="{{ company_data.legal_name if company_data else '' }}" data-ref="04">
       </label>
     </div>
 
@@ -177,11 +177,11 @@
                id="companyIndustry"
                name="industry"
                placeholder="Ex: Alimentos, Tecnologia, Consultoria"
-               value="{{ company_data.industry if company_data else '' }}">
+               value="{{ company_data.industry if company_data else '' }}" data-ref="05">
       </label>
       <label class="form-field">
         <span>Porte</span>
-        <select id="companySize" name="size">
+        <select id="companySize" name="size" data-ref="06">
           <option value="">Selecione o porte</option>
           <option value="micro" {% if company_data and company_data.size == 'micro' %}selected{% endif %}>Microempresa</option>
           <option value="pequena" {% if company_data and company_data.size == 'pequena' %}selected{% endif %}>Pequena</option>
@@ -196,7 +196,7 @@
       <textarea id="companyDescription"
                 name="description"
                 rows="4"
-                placeholder="Breve descricao da empresa, principais atividades, produtos ou diferenciais.">{{ company_data.description if company_data else '' }}</textarea>
+                placeholder="Breve descricao da empresa, principais atividades, produtos ou diferenciais." data-ref="07">{{ company_data.description if company_data else '' }}</textarea>
     </label>
 
     <!-- Informação sobre Logos -->
@@ -211,7 +211,7 @@
           <p style="margin: 0 0 16px 0; font-size: 14px; color: #1e40af;">
             Faça upload das logos da empresa em diferentes formatos (quadrada, vertical, horizontal, banner) para uso em documentos e relatórios.
           </p>
-          <a href="/companies/{{ company_data.id }}/logos" class="button button-primary" style="display: inline-flex; align-items: center; gap: 8px;">
+          <a href="/companies/{{ company_data.id }}/logos" class="button button-primary" style="display: inline-flex; align-items: center; gap: 8px;" data-ref="09">
             <span>🎨</span> Gerenciar Logos
           </a>
         </div>
@@ -234,8 +234,8 @@
     {% endif %}
 
     <div class="company-form-actions">
-      <a href="{{ url_for('companies_page') }}" class="button button-ghost">Cancelar</a>
-      <button type="submit" class="button button-primary">{% if form_mode == 'edit' %}Atualizar empresa{% else %}Cadastrar empresa{% endif %}</button>
+      <a href="{{ url_for('companies_page') }}" class="button button-ghost" data-ref="10">Cancelar</a>
+      <button type="submit" class="button button-primary" data-ref="01">{% if form_mode == 'edit' %}Atualizar empresa{% else %}Cadastrar empresa{% endif %}</button>
     </div>
   </form>
 </section>

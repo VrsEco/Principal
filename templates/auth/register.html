@@ -202,7 +202,7 @@
                     name="name" 
                     required
                     placeholder="Digite o nome completo"
-                >
+                 data-ref="02">
                 <small class="form-text">Nome que será exibido no sistema</small>
             </div>
 
@@ -218,7 +218,7 @@
                     name="email" 
                     required
                     placeholder="usuario@exemplo.com"
-                >
+                 data-ref="03">
                 <small class="form-text">Email será usado para login</small>
             </div>
 
@@ -235,7 +235,7 @@
                     required
                     placeholder="Digite uma senha segura"
                     minlength="6"
-                >
+                 data-ref="04">
                 <div class="password-strength" id="passwordStrength">
                     <div class="password-strength-bar"></div>
                 </div>
@@ -255,7 +255,7 @@
                     required
                     placeholder="Digite a senha novamente"
                     minlength="6"
-                >
+                 data-ref="05">
                 <small class="form-text" id="confirmPasswordText">Digite a senha novamente</small>
             </div>
 
@@ -264,7 +264,7 @@
                     Perfil de Acesso
                     <span class="required">*</span>
                 </label>
-                <select class="form-control" id="role" name="role" required>
+                <select class="form-control" id="role" name="role" required data-ref="06">
                     <option value="consultant" selected>Consultor</option>
                     <option value="client">Cliente</option>
                     <option value="admin">Administrador</option>
@@ -277,10 +277,10 @@
             </div>
 
             <div class="form-actions">
-                <a href="{{ url_for('auth.list_users_page') }}" class="btn btn-secondary">
+                <a href="{{ url_for('auth.list_users_page') }}" class="btn btn-secondary" data-ref="07">
                     <i class="fas fa-arrow-left"></i> Cancelar
                 </a>
-                <button type="submit" class="btn btn-primary" id="submitBtn">
+                <button type="submit" class="btn btn-primary" id="submitBtn" data-ref="01">
                     <i class="fas fa-save"></i> Cadastrar Usuário
                 </button>
             </div>

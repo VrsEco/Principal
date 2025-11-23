@@ -358,11 +358,11 @@
         <div class="filters-row">
           <div class="filter-group">
             <label>Buscar Colaborador</label>
-            <input type="text" id="searchInput" placeholder="Nome do colaborador...">
+            <input type="text" id="searchInput" placeholder="Nome do colaborador..." data-ref="02">
           </div>
           <div class="filter-group">
             <label>Filtrar por Atividade</label>
-            <select id="filterActivity">
+            <select id="filterActivity" data-ref="03">
               <option value="">Todos</option>
               <option value="with_activities">Com atividades</option>
               <option value="with_occurrences">Com ocorrências</option>
@@ -370,7 +370,7 @@
           </div>
           <div class="filter-group">
             <label>Ações</label>
-            <button onclick="clearAllFilters()" style="padding: 8px 14px; border-radius: 6px; border: 1px solid rgba(15, 23, 42, 0.15); background: #fff; font-size: 12px; font-weight: 600; cursor: pointer;">
+            <button onclick="clearAllFilters()" style="padding: 8px 14px; border-radius: 6px; border: 1px solid rgba(15, 23, 42, 0.15); background: #fff; font-size: 12px; font-weight: 600; cursor: pointer;" data-ref="01">
               Limpar Filtros
             </button>
           </div>

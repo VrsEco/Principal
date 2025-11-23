@@ -183,7 +183,7 @@
                                class="form-input" 
                                value="{{ meeting.title if meeting else '' }}" 
                                required 
-                               placeholder="Ex: Planejamento Estratégico Q4">
+                               placeholder="Ex: Planejamento Estratégico Q4" data-ref="23">
                     </div>
 
                     <div class="form-row" style="display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 1rem;">
@@ -193,7 +193,7 @@
                                    id="scheduled_date" 
                                    name="scheduled_date" 
                                    class="form-input" 
-                                   value="{{ meeting.scheduled_date if meeting else '' }}">
+                                   value="{{ meeting.scheduled_date if meeting else '' }}" data-ref="24">
                         </div>
 
                         <div class="form-group">
@@ -202,7 +202,7 @@
                                    id="scheduled_time" 
                                    name="scheduled_time" 
                                    class="form-input" 
-                                   value="{{ meeting.scheduled_time if meeting else '' }}">
+                                   value="{{ meeting.scheduled_time if meeting else '' }}" data-ref="25">
                         </div>
 
                         <div class="form-group">
@@ -212,7 +212,7 @@
                                    name="owner" 
                                    class="form-input" 
                                    value="{{ meeting.owner if meeting else '' }}" 
-                                   placeholder="Nome do responsável">
+                                   placeholder="Nome do responsável" data-ref="26">
                         </div>
                     </div>
 
@@ -222,7 +222,7 @@
                                   name="invite_notes" 
                                   class="form-textarea" 
                                   rows="3" 
-                                  placeholder="Informações adicionais sobre o convite...">{{ meeting.invite_notes if meeting else '' }}</textarea>
+                                  placeholder="Informações adicionais sobre o convite..." data-ref="47">{{ meeting.invite_notes if meeting else '' }}</textarea>
                     </div>
                 </section>
 
@@ -237,13 +237,13 @@
                             {% if meeting and meeting.guests and meeting.guests.internal %}
                                 {% for guest in meeting.guests.internal %}
                                 <div class="input-group" style="display: flex; gap: 0.5rem; margin-bottom: 0.5rem;">
-                                    <input type="text" name="guests_internal[]" class="form-input" value="{{ guest }}" placeholder="Nome do colaborador">
-                                    <button type="button" class="btn btn-sm btn-danger remove-item">✕</button>
+                                    <input type="text" name="guests_internal[]" class="form-input" value="{{ guest }}" placeholder="Nome do colaborador" data-ref="27">
+                                    <button type="button" class="btn btn-sm btn-danger remove-item" data-ref="01">✕</button>
                                 </div>
                                 {% endfor %}
                             {% endif %}
                         </div>
-                        <button type="button" class="btn btn-sm btn-secondary" onclick="addGuestInternal()">+ Adicionar Interno</button>
+                        <button type="button" class="btn btn-sm btn-secondary" onclick="addGuestInternal()" data-ref="02">+ Adicionar Interno</button>
                     </div>
 
                     <div class="form-group">
@@ -252,13 +252,13 @@
                             {% if meeting and meeting.guests and meeting.guests.external %}
                                 {% for guest in meeting.guests.external %}
                                 <div class="input-group" style="display: flex; gap: 0.5rem; margin-bottom: 0.5rem;">
-                                    <input type="text" name="guests_external[]" class="form-input" value="{{ guest }}" placeholder="Nome do convidado externo">
-                                    <button type="button" class="btn btn-sm btn-danger remove-item">✕</button>
+                                    <input type="text" name="guests_external[]" class="form-input" value="{{ guest }}" placeholder="Nome do convidado externo" data-ref="28">
+                                    <button type="button" class="btn btn-sm btn-danger remove-item" data-ref="03">✕</button>
                                 </div>
                                 {% endfor %}
                             {% endif %}
                         </div>
-                        <button type="button" class="btn btn-sm btn-secondary" onclick="addGuestExternal()">+ Adicionar Externo</button>
+                        <button type="button" class="btn btn-sm btn-secondary" onclick="addGuestExternal()" data-ref="04">+ Adicionar Externo</button>
                     </div>
                 </section>
 
@@ -271,13 +271,13 @@
                         {% if meeting and meeting.agenda %}
                             {% for item in meeting.agenda %}
                             <div class="input-group" style="display: flex; gap: 0.5rem; margin-bottom: 0.5rem;">
-                                <input type="text" name="agenda[]" class="form-input" value="{{ item }}" placeholder="Tópico da pauta">
-                                <button type="button" class="btn btn-sm btn-danger remove-item">✕</button>
+                                <input type="text" name="agenda[]" class="form-input" value="{{ item }}" placeholder="Tópico da pauta" data-ref="29">
+                                <button type="button" class="btn btn-sm btn-danger remove-item" data-ref="05">✕</button>
                             </div>
                             {% endfor %}
                         {% endif %}
                     </div>
-                    <button type="button" class="btn btn-sm btn-secondary" onclick="addAgendaItem()">+ Adicionar Tópico</button>
+                    <button type="button" class="btn btn-sm btn-secondary" onclick="addAgendaItem()" data-ref="06">+ Adicionar Tópico</button>
                 </section>
 
                 {% if action == 'edit' %}
@@ -292,13 +292,13 @@
                             {% if meeting.participants and meeting.participants.internal %}
                                 {% for participant in meeting.participants.internal %}
                                 <div class="input-group" style="display: flex; gap: 0.5rem; margin-bottom: 0.5rem;">
-                                    <input type="text" name="participants_internal[]" class="form-input" value="{{ participant }}">
-                                    <button type="button" class="btn btn-sm btn-danger remove-item">✕</button>
+                                    <input type="text" name="participants_internal[]" class="form-input" value="{{ participant }}" data-ref="30">
+                                    <button type="button" class="btn btn-sm btn-danger remove-item" data-ref="07">✕</button>
                                 </div>
                                 {% endfor %}
                             {% endif %}
                         </div>
-                        <button type="button" class="btn btn-sm btn-secondary" onclick="addParticipantInternal()">+ Adicionar</button>
+                        <button type="button" class="btn btn-sm btn-secondary" onclick="addParticipantInternal()" data-ref="08">+ Adicionar</button>
                     </div>
 
                     <div class="form-group">
@@ -307,13 +307,13 @@
                             {% if meeting.participants and meeting.participants.external %}
                                 {% for participant in meeting.participants.external %}
                                 <div class="input-group" style="display: flex; gap: 0.5rem; margin-bottom: 0.5rem;">
-                                    <input type="text" name="participants_external[]" class="form-input" value="{{ participant }}">
-                                    <button type="button" class="btn btn-sm btn-danger remove-item">✕</button>
+                                    <input type="text" name="participants_external[]" class="form-input" value="{{ participant }}" data-ref="31">
+                                    <button type="button" class="btn btn-sm btn-danger remove-item" data-ref="09">✕</button>
                                 </div>
                                 {% endfor %}
                             {% endif %}
                         </div>
-                        <button type="button" class="btn btn-sm btn-secondary" onclick="addParticipantExternal()">+ Adicionar</button>
+                        <button type="button" class="btn btn-sm btn-secondary" onclick="addParticipantExternal()" data-ref="10">+ Adicionar</button>
                     </div>
                 </section>
 
@@ -326,7 +326,7 @@
                                   name="meeting_notes" 
                                   class="form-textarea" 
                                   rows="4" 
-                                  placeholder="Anotações gerais da reunião...">{{ meeting.meeting_notes if meeting else '' }}</textarea>
+                                  placeholder="Anotações gerais da reunião..." data-ref="48">{{ meeting.meeting_notes if meeting else '' }}</textarea>
                     </div>
                 </section>
 
@@ -340,15 +340,15 @@
                             {% for discussion in meeting.discussions %}
                             <div class="discussion-item" style="border: 1px solid var(--border-color); padding: 1rem; border-radius: 4px; margin-bottom: 0.5rem;">
                                 <div style="display: flex; justify-content: space-between; margin-bottom: 0.5rem;">
-                                    <input type="text" name="discussion_topic[]" class="form-input" value="{{ discussion.topic }}" placeholder="Tópico discutido" style="flex: 1;">
-                                    <button type="button" class="btn btn-sm btn-danger remove-item" style="margin-left: 0.5rem;">✕</button>
+                                    <input type="text" name="discussion_topic[]" class="form-input" value="{{ discussion.topic }}" placeholder="Tópico discutido" style="flex: 1;" data-ref="32">
+                                    <button type="button" class="btn btn-sm btn-danger remove-item" style="margin-left: 0.5rem;" data-ref="11">✕</button>
                                 </div>
-                                <textarea name="discussion_text[]" class="form-textarea" rows="2" placeholder="Descrição da discussão e definições...">{{ discussion.text }}</textarea>
+                                <textarea name="discussion_text[]" class="form-textarea" rows="2" placeholder="Descrição da discussão e definições..." data-ref="49">{{ discussion.text }}</textarea>
                             </div>
                             {% endfor %}
                         {% endif %}
                     </div>
-                    <button type="button" class="btn btn-sm btn-secondary" onclick="addDiscussion()">+ Adicionar Discussão</button>
+                    <button type="button" class="btn btn-sm btn-secondary" onclick="addDiscussion()" data-ref="12">+ Adicionar Discussão</button>
                 </section>
 
                 <!-- Atividades -->
@@ -361,19 +361,19 @@
                             {% for activity in meeting.activities %}
                             <div class="activity-item" style="border: 1px solid var(--border-color); padding: 1rem; border-radius: 4px; margin-bottom: 0.5rem;">
                                 <div style="display: grid; grid-template-columns: 2fr 1fr 1fr auto; gap: 0.5rem; align-items: start; margin-bottom: 0.5rem;">
-                                    <input type="text" name="activity_title[]" class="form-input" value="{{ activity.title }}" placeholder="Título da atividade">
-                                    <input type="text" name="activity_responsible[]" class="form-input" value="{{ activity.responsible }}" placeholder="Responsável">
-                                    <input type="date" name="activity_deadline[]" class="form-input" value="{{ activity.deadline }}">
-                                    <button type="button" class="btn btn-sm btn-danger remove-item">✕</button>
+                                    <input type="text" name="activity_title[]" class="form-input" value="{{ activity.title }}" placeholder="Título da atividade" data-ref="33">
+                                    <input type="text" name="activity_responsible[]" class="form-input" value="{{ activity.responsible }}" placeholder="Responsável" data-ref="34">
+                                    <input type="date" name="activity_deadline[]" class="form-input" value="{{ activity.deadline }}" data-ref="35">
+                                    <button type="button" class="btn btn-sm btn-danger remove-item" data-ref="13">✕</button>
                                 </div>
                                 <div style="display: grid; grid-template-columns: 3fr 1fr; gap: 0.5rem; margin-bottom: 0.5rem;">
                                     <div>
                                         <label class="form-label" style="font-size: 0.875rem; color: var(--text-secondary); margin-bottom: 0.25rem;">Como (Detalhes da Execução)</label>
-                                        <textarea name="activity_how[]" class="form-textarea" rows="3" placeholder="Como será executada a atividade">{{ activity.how if activity.how else '' }}</textarea>
+                                        <textarea name="activity_how[]" class="form-textarea" rows="3" placeholder="Como será executada a atividade" data-ref="50">{{ activity.how if activity.how else '' }}</textarea>
                                     </div>
                                     <div>
                                         <label class="form-label" style="font-size: 0.875rem; color: var(--text-secondary); margin-bottom: 0.25rem;">Projeto</label>
-                                        <select name="activity_project[]" class="form-input">
+                                        <select name="activity_project[]" class="form-input" data-ref="45">
                                             <option value="">Padrão</option>
                                         </select>
                                     </div>
@@ -382,14 +382,14 @@
                             {% endfor %}
                         {% endif %}
                     </div>
-                    <button type="button" class="btn btn-sm btn-secondary" onclick="addActivity()">+ Adicionar Atividade</button>
+                    <button type="button" class="btn btn-sm btn-secondary" onclick="addActivity()" data-ref="14">+ Adicionar Atividade</button>
                 </section>
                 {% endif %}
 
                 <!-- Ações do Formulário -->
                 <div class="form-actions" style="display: flex; gap: 1rem; justify-content: flex-end; padding-top: 1.5rem; border-top: 1px solid var(--border-color);">
-                    <a href="{{ url_for('meetings.meetings_list', company_id=company.id) }}" class="btn btn-secondary">Cancelar</a>
-                    <button type="submit" class="btn btn-primary">{{ 'Criar Reunião' if action == 'new' else 'Salvar Alterações' }}</button>
+                    <a href="{{ url_for('meetings.meetings_list', company_id=company.id) }}" class="btn btn-secondary" data-ref="53">Cancelar</a>
+                    <button type="submit" class="btn btn-primary" data-ref="15">{{ 'Criar Reunião' if action == 'new' else 'Salvar Alterações' }}</button>
                 </div>
             </form>
         </div>
@@ -411,8 +411,8 @@ function addGuestInternal() {
     div.className = 'input-group';
     div.style.cssText = 'display: flex; gap: 0.5rem; margin-bottom: 0.5rem;';
     div.innerHTML = `
-        <input type="text" name="guests_internal[]" class="form-input" placeholder="Nome do colaborador">
-        <button type="button" class="btn btn-sm btn-danger remove-item">✕</button>
+        <input type="text" name="guests_internal[]" class="form-input" placeholder="Nome do colaborador" data-ref="36">
+        <button type="button" class="btn btn-sm btn-danger remove-item" data-ref="16">✕</button>
     `;
     list.appendChild(div);
 }
@@ -424,8 +424,8 @@ function addGuestExternal() {
     div.className = 'input-group';
     div.style.cssText = 'display: flex; gap: 0.5rem; margin-bottom: 0.5rem;';
     div.innerHTML = `
-        <input type="text" name="guests_external[]" class="form-input" placeholder="Nome do convidado externo">
-        <button type="button" class="btn btn-sm btn-danger remove-item">✕</button>
+        <input type="text" name="guests_external[]" class="form-input" placeholder="Nome do convidado externo" data-ref="37">
+        <button type="button" class="btn btn-sm btn-danger remove-item" data-ref="17">✕</button>
     `;
     list.appendChild(div);
 }
@@ -437,8 +437,8 @@ function addAgendaItem() {
     div.className = 'input-group';
     div.style.cssText = 'display: flex; gap: 0.5rem; margin-bottom: 0.5rem;';
     div.innerHTML = `
-        <input type="text" name="agenda[]" class="form-input" placeholder="Tópico da pauta">
-        <button type="button" class="btn btn-sm btn-danger remove-item">✕</button>
+        <input type="text" name="agenda[]" class="form-input" placeholder="Tópico da pauta" data-ref="38">
+        <button type="button" class="btn btn-sm btn-danger remove-item" data-ref="18">✕</button>
     `;
     list.appendChild(div);
 }
@@ -450,8 +450,8 @@ function addParticipantInternal() {
     div.className = 'input-group';
     div.style.cssText = 'display: flex; gap: 0.5rem; margin-bottom: 0.5rem;';
     div.innerHTML = `
-        <input type="text" name="participants_internal[]" class="form-input" placeholder="Nome do participante">
-        <button type="button" class="btn btn-sm btn-danger remove-item">✕</button>
+        <input type="text" name="participants_internal[]" class="form-input" placeholder="Nome do participante" data-ref="39">
+        <button type="button" class="btn btn-sm btn-danger remove-item" data-ref="19">✕</button>
     `;
     list.appendChild(div);
 }
@@ -463,8 +463,8 @@ function addParticipantExternal() {
     div.className = 'input-group';
     div.style.cssText = 'display: flex; gap: 0.5rem; margin-bottom: 0.5rem;';
     div.innerHTML = `
-        <input type="text" name="participants_external[]" class="form-input" placeholder="Nome do participante">
-        <button type="button" class="btn btn-sm btn-danger remove-item">✕</button>
+        <input type="text" name="participants_external[]" class="form-input" placeholder="Nome do participante" data-ref="40">
+        <button type="button" class="btn btn-sm btn-danger remove-item" data-ref="20">✕</button>
     `;
     list.appendChild(div);
 }
@@ -477,10 +477,10 @@ function addDiscussion() {
     div.style.cssText = 'border: 1px solid var(--border-color); padding: 1rem; border-radius: 4px; margin-bottom: 0.5rem;';
     div.innerHTML = `
         <div style="display: flex; justify-content: space-between; margin-bottom: 0.5rem;">
-            <input type="text" name="discussion_topic[]" class="form-input" placeholder="Tópico discutido" style="flex: 1;">
-            <button type="button" class="btn btn-sm btn-danger remove-item" style="margin-left: 0.5rem;">✕</button>
+            <input type="text" name="discussion_topic[]" class="form-input" placeholder="Tópico discutido" style="flex: 1;" data-ref="41">
+            <button type="button" class="btn btn-sm btn-danger remove-item" style="margin-left: 0.5rem;" data-ref="21">✕</button>
         </div>
-        <textarea name="discussion_text[]" class="form-textarea" rows="2" placeholder="Descrição da discussão e definições..."></textarea>
+        <textarea name="discussion_text[]" class="form-textarea" rows="2" placeholder="Descrição da discussão e definições..." data-ref="51"></textarea>
     `;
     list.appendChild(div);
 }
@@ -493,19 +493,19 @@ function addActivity() {
     div.style.cssText = 'border: 1px solid var(--border-color); padding: 1rem; border-radius: 4px; margin-bottom: 0.5rem;';
     div.innerHTML = `
         <div style="display: grid; grid-template-columns: 2fr 1fr 1fr auto; gap: 0.5rem; align-items: start; margin-bottom: 0.5rem;">
-            <input type="text" name="activity_title[]" class="form-input" placeholder="Título da atividade">
-            <input type="text" name="activity_responsible[]" class="form-input" placeholder="Responsável">
-            <input type="date" name="activity_deadline[]" class="form-input">
-            <button type="button" class="btn btn-sm btn-danger remove-item">✕</button>
+            <input type="text" name="activity_title[]" class="form-input" placeholder="Título da atividade" data-ref="42">
+            <input type="text" name="activity_responsible[]" class="form-input" placeholder="Responsável" data-ref="43">
+            <input type="date" name="activity_deadline[]" class="form-input" data-ref="44">
+            <button type="button" class="btn btn-sm btn-danger remove-item" data-ref="22">✕</button>
         </div>
         <div style="display: grid; grid-template-columns: 3fr 1fr; gap: 0.5rem; margin-bottom: 0.5rem;">
             <div>
                 <label class="form-label" style="font-size: 0.875rem; color: var(--text-secondary); margin-bottom: 0.25rem;">Como (Detalhes da Execução)</label>
-                <textarea name="activity_how[]" class="form-textarea" rows="3" placeholder="Como será executada a atividade"></textarea>
+                <textarea name="activity_how[]" class="form-textarea" rows="3" placeholder="Como será executada a atividade" data-ref="52"></textarea>
             </div>
             <div>
                 <label class="form-label" style="font-size: 0.875rem; color: var(--text-secondary); margin-bottom: 0.25rem;">Projeto</label>
-                <select name="activity_project[]" class="form-input">
+                <select name="activity_project[]" class="form-input" data-ref="46">
                     <option value="">Padrão</option>
                 </select>
             </div>

@@ -71,15 +71,15 @@
       <div class="project-hub-header-compact">
         <h2>Empresas & Planejamentos</h2>
         <div class="project-hub-actions-compact">
-          <button class="button-compact button-ghost-compact" type="button" id="new-company-btn">+ Empresa</button>
-          <button class="button-compact button-primary-compact" type="button" id="new-plan-btn">+ Planejamento</button>
+          <button class="button-compact button-ghost-compact" type="button" id="new-company-btn" data-ref="01">+ Empresa</button>
+          <button class="button-compact button-primary-compact" type="button" id="new-plan-btn" data-ref="02">+ Planejamento</button>
         </div>
       </div>
 
       <div class="project-selectors-compact">
         <div class="selector-group-compact">
           <label class="combo-label-compact" for="company-select">Empresa</label>
-          <select id="company-select" class="combo-control-compact">
+          <select id="company-select" class="combo-control-compact" data-ref="13">
             <option value="">Escolha uma empresa</option>
             {% for company in companies %}
             <option value="{{ company.id }}">{{ company.name }}</option>
@@ -88,12 +88,12 @@
         </div>
         <div class="selector-group-compact">
           <label class="combo-label-compact" for="plan-select">Planejamento</label>
-          <select id="plan-select" class="combo-control-compact" disabled>
+          <select id="plan-select" class="combo-control-compact" disabled data-ref="14">
             <option value="">Selecione empresa primeiro</option>
           </select>
         </div>
         <button id="plan-confirm" class="button-compact button-primary-compact button-full-compact" type="button"
-          disabled>Ir para Planejamento</button>
+          disabled data-ref="03">Ir para Planejamento</button>
       </div>
 
       <div class="project-summary-compact">
@@ -125,16 +125,16 @@
     <form id="company-form-compact">
       <div class="form-group-compact">
         <label>Nome da Empresa</label>
-        <input type="text" id="company-name" name="name" required class="input-compact" />
+        <input type="text" id="company-name" name="name" required class="input-compact"  data-ref="08" />
       </div>
       <div class="form-group-compact">
         <label>Código (1-3 caracteres)</label>
-        <input type="text" id="company-code" name="code" maxlength="3" required class="input-compact" />
+        <input type="text" id="company-code" name="code" maxlength="3" required class="input-compact"  data-ref="09" />
         <small>Para identificação em códigos de processos</small>
       </div>
       <div class="modal-footer-compact">
-        <button type="button" class="button-compact button-ghost-compact" id="company-cancel">Cancelar</button>
-        <button type="submit" class="button-compact button-primary-compact">Salvar</button>
+        <button type="button" class="button-compact button-ghost-compact" id="company-cancel" data-ref="04">Cancelar</button>
+        <button type="submit" class="button-compact button-primary-compact" data-ref="05">Salvar</button>
       </div>
     </form>
   </div>
@@ -150,7 +150,7 @@
     <form id="plan-form-compact">
       <div class="form-group-compact">
         <label>Empresa *</label>
-        <select id="plan-company" name="company_id" required class="input-compact input-pfpn">
+        <select id="plan-company" name="company_id" required class="input-compact input-pfpn" data-ref="15">
           <option value="">Selecione uma empresa</option>
           {% for company in companies %}
           <option value="{{ company.id }}">{{ company.name }}</option>
@@ -159,7 +159,7 @@
       </div>
       <div class="form-group-compact">
         <label>Tipo de Planejamento *</label>
-        <select id="plan-type" name="plan_mode" required class="input-compact input-pfpn">
+        <select id="plan-type" name="plan_mode" required class="input-compact input-pfpn" data-ref="16">
           <option value="">Selecione o tipo</option>
           <option value="evolucao">Planejamento de Evolução (Clássico)</option>
           <option value="implantacao">Planejamento de Implantação (Novo Negócio)</option>
@@ -171,25 +171,25 @@
       <div class="form-group-compact">
         <label>Nome do Planejamento *</label>
         <input type="text" id="plan-name" name="name" required class="input-compact input-pfpn"
-          placeholder="Ex: Expansão 2025" />
+          placeholder="Ex: Expansão 2025"  data-ref="10" />
       </div>
       <div class="form-group-compact">
         <label>Descrição</label>
         <textarea id="plan-description" name="description" rows="3" class="input-compact input-pfpn"
-          placeholder="Descreva os objetivos principais deste planejamento..."></textarea>
+          placeholder="Descreva os objetivos principais deste planejamento..." data-ref="17"></textarea>
       </div>
       <div class="form-group-compact">
         <label>Data de Início *</label>
-        <input type="date" id="plan-start-date" name="start_date" required class="input-compact input-pfpn" />
+        <input type="date" id="plan-start-date" name="start_date" required class="input-compact input-pfpn"  data-ref="11" />
       </div>
       <div class="form-group-compact">
         <label>Data de Fim *</label>
-        <input type="date" id="plan-end-date" name="end_date" required class="input-compact input-pfpn" />
+        <input type="date" id="plan-end-date" name="end_date" required class="input-compact input-pfpn"  data-ref="12" />
       </div>
       <div class="modal-footer-compact">
         <button type="button" class="button-compact button-ghost-compact button-pfpn-ghost"
-          id="plan-cancel">Cancelar</button>
-        <button type="submit" class="button-compact button-primary-compact button-pfpn-primary">Criar
+          id="plan-cancel" data-ref="06">Cancelar</button>
+        <button type="submit" class="button-compact button-primary-compact button-pfpn-primary" data-ref="07">Criar
           Planejamento</button>
       </div>
     </form>

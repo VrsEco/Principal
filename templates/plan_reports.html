@@ -54,7 +54,7 @@
             <li>✅ Conclusão e termo de entrega</li>
           </ul>
           <div class="report-actions">
-            <a href="{{ url_for('generate_formal_report', plan_id=plan.id) }}" target="_blank" class="button button-primary">
+            <a href="{{ url_for('generate_formal_report', plan_id=plan.id) }}" target="_blank" class="button button-primary" data-ref="01">
               <span class="button-icon">📄</span>
               Gerar Relatório Formal
             </a>
@@ -77,7 +77,7 @@
             <li>✅ Pronto para apresentação</li>
           </ul>
           <div class="report-actions">
-            <a href="{{ url_for('generate_presentation_slides', plan_id=plan.id) }}" target="_blank" class="button button-primary">
+            <a href="{{ url_for('generate_presentation_slides', plan_id=plan.id) }}" target="_blank" class="button button-primary" data-ref="02">
               <span class="button-icon">📊</span>
               Gerar Slides
             </a>

@@ -296,15 +296,15 @@
   <!-- Tabs -->
   <div class="tabs-container">
     <div class="tabs-header">
-      <button class="tab-button active" data-tab="routine" onclick="switchTab('routine')">
+      <button class="tab-button active" data-tab="routine" onclick="switchTab('routine')" data-ref="01">
         <span>📋</span> Dados da Rotina
       </button>
       {% if not is_new %}
-      <button class="tab-button" data-tab="collaborators" onclick="switchTab('collaborators')">
+      <button class="tab-button" data-tab="collaborators" onclick="switchTab('collaborators')" data-ref="02">
         <span>👥</span> Colaboradores
       </button>
       {% else %}
-      <button class="tab-button" disabled style="opacity: 0.5; cursor: not-allowed;" title="Salve a rotina primeiro">
+      <button class="tab-button" disabled style="opacity: 0.5; cursor: not-allowed;" title="Salve a rotina primeiro" data-ref="03">
         <span>👥</span> Colaboradores
       </button>
       {% endif %}
@@ -316,12 +316,12 @@
         <div class="form-grid">
           <div class="form-group">
             <label class="form-label">Nome da Rotina *</label>
-            <input type="text" name="name" class="form-input" value="{{ routine.name }}" required>
+            <input type="text" name="name" class="form-input" value="{{ routine.name }}" required data-ref="10">
           </div>
 
           <div class="form-group">
             <label class="form-label">Processo Associado *</label>
-            <select name="process_id" class="form-select" required>
+            <select name="process_id" class="form-select" required data-ref="22">
               <option value="">Selecione...</option>
               {% for process in processes %}
               <option value="{{ process.id }}" {{ 'selected' if routine.process_id == process.id else '' }}>
@@ -333,7 +333,7 @@
 
           <div class="form-group">
             <label class="form-label">Tipo de Agendamento *</label>
-            <select name="schedule_type" class="form-select" id="scheduleType" required>
+            <select name="schedule_type" class="form-select" id="scheduleType" required data-ref="23">
               <option value="daily" {{ 'selected' if routine.schedule_type == 'daily' else '' }}>Diário</option>
               <option value="weekly" {{ 'selected' if routine.schedule_type == 'weekly' else '' }}>Semanal</option>
               <option value="monthly" {{ 'selected' if routine.schedule_type == 'monthly' else '' }}>Mensal</option>
@@ -346,7 +346,7 @@
           <div class="form-group" id="scheduleValueGroup">
             <label class="form-label" id="scheduleValueLabel">Detalhes do Agendamento *</label>
             <input type="text" name="schedule_value" class="form-input" id="scheduleValue" 
-                   value="{{ routine.schedule_value or '' }}">
+                   value="{{ routine.schedule_value or '' }}" data-ref="11">
             <span class="form-hint" id="scheduleValueHint"></span>
           </div>
           
@@ -356,31 +356,31 @@
             <div style="display: flex; flex-wrap: wrap; gap: 12px; margin-top: 8px;">
               {% set selected_days = (routine.schedule_value or '').split(',') %}
               <label class="weekday-checkbox-label">
-                <input type="checkbox" name="weekday" value="segunda" {{ 'checked' if 'segunda' in selected_days else '' }}>
+                <input type="checkbox" name="weekday" value="segunda" {{ 'checked' if 'segunda' in selected_days else '' }} data-ref="12">
                 <span>Segunda-feira</span>
               </label>
               <label class="weekday-checkbox-label">
-                <input type="checkbox" name="weekday" value="terca" {{ 'checked' if 'terca' in selected_days else '' }}>
+                <input type="checkbox" name="weekday" value="terca" {{ 'checked' if 'terca' in selected_days else '' }} data-ref="13">
                 <span>Terça-feira</span>
               </label>
               <label class="weekday-checkbox-label">
-                <input type="checkbox" name="weekday" value="quarta" {{ 'checked' if 'quarta' in selected_days else '' }}>
+                <input type="checkbox" name="weekday" value="quarta" {{ 'checked' if 'quarta' in selected_days else '' }} data-ref="14">
                 <span>Quarta-feira</span>
               </label>
               <label class="weekday-checkbox-label">
-                <input type="checkbox" name="weekday" value="quinta" {{ 'checked' if 'quinta' in selected_days else '' }}>
+                <input type="checkbox" name="weekday" value="quinta" {{ 'checked' if 'quinta' in selected_days else '' }} data-ref="15">
                 <span>Quinta-feira</span>
               </label>
               <label class="weekday-checkbox-label">
-                <input type="checkbox" name="weekday" value="sexta" {{ 'checked' if 'sexta' in selected_days else '' }}>
+                <input type="checkbox" name="weekday" value="sexta" {{ 'checked' if 'sexta' in selected_days else '' }} data-ref="16">
                 <span>Sexta-feira</span>
               </label>
               <label class="weekday-checkbox-label">
-                <input type="checkbox" name="weekday" value="sabado" {{ 'checked' if 'sabado' in selected_days else '' }}>
+                <input type="checkbox" name="weekday" value="sabado" {{ 'checked' if 'sabado' in selected_days else '' }} data-ref="17">
                 <span>Sábado</span>
               </label>
               <label class="weekday-checkbox-label">
-                <input type="checkbox" name="weekday" value="domingo" {{ 'checked' if 'domingo' in selected_days else '' }}>
+                <input type="checkbox" name="weekday" value="domingo" {{ 'checked' if 'domingo' in selected_days else '' }} data-ref="18">
                 <span>Domingo</span>
               </label>
             </div>
@@ -389,28 +389,28 @@
           <div class="form-group">
             <label class="form-label">Prazo (dias após disparo)</label>
             <input type="number" name="deadline_days" id="deadlineDays" class="form-input" 
-                   min="0" value="{{ routine.deadline_days or 0 }}">
+                   min="0" value="{{ routine.deadline_days or 0 }}" data-ref="19">
             <span class="form-hint">Quantidade de dias após o disparo</span>
           </div>
 
           <div class="form-group">
             <label class="form-label">Prazo (horas após disparo)</label>
             <input type="number" name="deadline_hours" id="deadlineHours" class="form-input" 
-                   min="0" value="{{ routine.deadline_hours or 0 }}">
+                   min="0" value="{{ routine.deadline_hours or 0 }}" data-ref="20">
             <span class="form-hint">Quantidade de horas após o disparo</span>
           </div>
         </div>
 
         <div class="form-group">
           <label class="form-label">Descrição / Observações</label>
-          <textarea name="description" class="form-textarea">{{ routine.description or '' }}</textarea>
+          <textarea name="description" class="form-textarea" data-ref="25">{{ routine.description or '' }}</textarea>
         </div>
 
         <div class="form-actions">
-          <a href="/companies/{{ company.id }}/routines" class="btn btn-secondary">
+          <a href="/companies/{{ company.id }}/routines" class="btn btn-secondary" data-ref="28">
             <span>✖</span> Cancelar
           </a>
-          <button type="submit" class="btn btn-primary">
+          <button type="submit" class="btn btn-primary" data-ref="04">
             <span>💾</span> {{ 'Cadastrar Rotina' if is_new else 'Salvar Alterações' }}
           </button>
         </div>
@@ -442,7 +442,7 @@
           <div class="form-grid">
             <div class="form-group">
               <label class="form-label">Colaborador *</label>
-              <select name="employee_id" id="collaboratorEmployeeId" class="form-select" required>
+              <select name="employee_id" id="collaboratorEmployeeId" class="form-select" required data-ref="24">
                 <option value="">Selecione...</option>
               </select>
             </div>
@@ -450,7 +450,7 @@
             <div class="form-group">
               <label class="form-label">Horas Úteis *</label>
               <input type="number" name="hours_used" id="hoursUsed" class="form-input" 
-                     step="0.5" min="0.5" required placeholder="Ex: 8">
+                     step="0.5" min="0.5" required placeholder="Ex: 8" data-ref="21">
               <span class="form-hint">Tempo dedicado a esta rotina</span>
             </div>
           </div>
@@ -458,14 +458,14 @@
           <div class="form-group">
             <label class="form-label">Observações</label>
             <textarea name="notes" id="collaboratorNotes" class="form-textarea" rows="3" 
-                      placeholder="Observações sobre a participação deste colaborador..."></textarea>
+                      placeholder="Observações sobre a participação deste colaborador..." data-ref="26"></textarea>
           </div>
           
           <div class="form-actions" style="margin-top: 16px; padding-top: 16px;">
-            <button type="button" class="btn btn-secondary" onclick="cancelCollaboratorForm()">
+            <button type="button" class="btn btn-secondary" onclick="cancelCollaboratorForm()" data-ref="05">
               <span>✖</span> Cancelar
             </button>
-            <button type="submit" class="btn btn-primary">
+            <button type="submit" class="btn btn-primary" data-ref="06">
               <span>💾</span> Salvar
             </button>
           </div>
@@ -475,12 +475,12 @@
       <!-- Lista de colaboradores -->
       <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px;">
         <h3 style="font-size: 18px; font-weight: 600; color: #0f172a;">Colaboradores Cadastrados</h3>
-        <button class="btn btn-primary" onclick="openAddCollaboratorForm()">
+        <button class="btn btn-primary" onclick="openAddCollaboratorForm()" data-ref="07">
           <span>➕</span> Adicionar Colaborador
         </button>
       </div>
 
-      <table class="collaborators-table" id="collaboratorsTable">
+      <table class="collaborators-table" id="collaboratorsTable" data-ref="27">
         <thead>
           <tr>
             <th>Colaborador</th>
@@ -729,10 +729,10 @@
                     data-hours="${collab.hours_used}"
                     data-notes="${collab.notes || ''}"
                     onclick="editCollaborator(this)" 
-                    title="Editar">
+                    title="Editar" data-ref="08">
               ✏️
             </button>
-            <button class="btn-icon delete" onclick="deleteCollaborator(${collab.id})" title="Remover">
+            <button class="btn-icon delete" onclick="deleteCollaborator(${collab.id})" title="Remover" data-ref="09">
               🗑️
             </button>
           </div>

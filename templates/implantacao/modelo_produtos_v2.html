@@ -50,8 +50,8 @@
       <p>Cadastre e acompanhe os produtos do plano <strong>{{ plan.name }}</strong>.</p>
     </div>
     <div class="actions">
-      <a class="btn btn-secondary" href="{{ url_for('pev.pev_implantacao_overview') }}?plan_id={{ plan_id }}">Voltar</a>
-      <button type="button" class="btn btn-primary" id="btnNew">Novo produto</button>
+      <a class="btn btn-secondary" href="{{ url_for('pev.pev_implantacao_overview') }}?plan_id={{ plan_id }}" data-ref="26">Voltar</a>
+      <button type="button" class="btn btn-primary" id="btnNew" data-ref="01">Novo produto</button>
     </div>
   </header>
 
@@ -65,7 +65,7 @@
   <section class="card">
     <header>Produtos cadastrados</header>
     <div class="empty" id="emptyState">Nenhum produto cadastrado.</div>
-    <table id="productsTable" hidden>
+    <table id="productsTable" hidden data-ref="25">
       <thead>
         <tr>
           <th>Produto</th><th>Preço</th><th>Custos</th><th>Despesas</th><th>Margem %</th><th>Mercado</th><th>Share</th><th>Ações</th>
@@ -81,30 +81,30 @@
     <div class="dialog-body">
       <input type="hidden" id="productId">
       <div class="grid">
-        <div class="field"><label for="fieldName">Nome *</label><input id="fieldName" name="name" required></div>
-        <div class="field"><label for="fieldPrice">Preço (R$) *</label><input id="fieldPrice" name="sale_price" type="number" step="0.01" min="0" required></div>
-        <div class="field"><label for="fieldDescription">Descrição</label><textarea id="fieldDescription" name="description"></textarea></div>
-        <div class="field"><label for="fieldPriceNotes">Obs. preço</label><textarea id="fieldPriceNotes" name="sale_price_notes"></textarea></div>
-        <div class="field"><label for="fieldCostPercent">Custos (%)</label><input id="fieldCostPercent" name="variable_costs_percent" type="number" step="0.01"></div>
-        <div class="field"><label for="fieldCostValue">Custos (R$)</label><input id="fieldCostValue" name="variable_costs_value" type="number" step="0.01"></div>
-        <div class="field"><label for="fieldCostNotes">Obs. custos</label><textarea id="fieldCostNotes" name="variable_costs_notes"></textarea></div>
-        <div class="field"><label for="fieldExpensePercent">Despesas (%)</label><input id="fieldExpensePercent" name="variable_expenses_percent" type="number" step="0.01"></div>
-        <div class="field"><label for="fieldExpenseValue">Despesas (R$)</label><input id="fieldExpenseValue" name="variable_expenses_value" type="number" step="0.01"></div>
-        <div class="field"><label for="fieldExpenseNotes">Obs. despesas</label><textarea id="fieldExpenseNotes" name="variable_expenses_notes"></textarea></div>
-        <div class="field"><label for="fieldMarginPercent">Margem (%)</label><input id="fieldMarginPercent" readonly class="readonly"></div>
-        <div class="field"><label for="fieldMarginValue">Margem (R$)</label><input id="fieldMarginValue" readonly class="readonly"></div>
-        <div class="field"><label for="fieldMarginNotes">Obs. margem</label><textarea id="fieldMarginNotes" name="unit_contribution_margin_notes"></textarea></div>
-        <div class="field"><label for="fieldMarketUnits">Mercado (un)</label><input id="fieldMarketUnits" name="market_size_monthly_units" type="number" step="0.01"></div>
-        <div class="field"><label for="fieldMarketRevenue">Faturamento (R$)</label><input id="fieldMarketRevenue" readonly class="readonly"></div>
-        <div class="field"><label for="fieldMarketNotes">Obs. mercado</label><textarea id="fieldMarketNotes" name="market_size_notes"></textarea></div>
-        <div class="field"><label for="fieldShareUnits">Share (un)</label><input id="fieldShareUnits" name="market_share_goal_monthly_units" type="number" step="0.01"></div>
-        <div class="field"><label for="fieldSharePercent">Share (%)</label><input id="fieldSharePercent" name="market_share_goal_percent" type="number" step="0.01"></div>
-        <div class="field"><label for="fieldShareNotes">Obs. share</label><textarea id="fieldShareNotes" name="market_share_goal_notes"></textarea></div>
+        <div class="field"><label for="fieldName">Nome *</label><input id="fieldName" name="name" required data-ref="06"></div>
+        <div class="field"><label for="fieldPrice">Preço (R$) *</label><input id="fieldPrice" name="sale_price" type="number" step="0.01" min="0" required data-ref="07"></div>
+        <div class="field"><label for="fieldDescription">Descrição</label><textarea id="fieldDescription" name="description" data-ref="18"></textarea></div>
+        <div class="field"><label for="fieldPriceNotes">Obs. preço</label><textarea id="fieldPriceNotes" name="sale_price_notes" data-ref="19"></textarea></div>
+        <div class="field"><label for="fieldCostPercent">Custos (%)</label><input id="fieldCostPercent" name="variable_costs_percent" type="number" step="0.01" data-ref="08"></div>
+        <div class="field"><label for="fieldCostValue">Custos (R$)</label><input id="fieldCostValue" name="variable_costs_value" type="number" step="0.01" data-ref="09"></div>
+        <div class="field"><label for="fieldCostNotes">Obs. custos</label><textarea id="fieldCostNotes" name="variable_costs_notes" data-ref="20"></textarea></div>
+        <div class="field"><label for="fieldExpensePercent">Despesas (%)</label><input id="fieldExpensePercent" name="variable_expenses_percent" type="number" step="0.01" data-ref="10"></div>
+        <div class="field"><label for="fieldExpenseValue">Despesas (R$)</label><input id="fieldExpenseValue" name="variable_expenses_value" type="number" step="0.01" data-ref="11"></div>
+        <div class="field"><label for="fieldExpenseNotes">Obs. despesas</label><textarea id="fieldExpenseNotes" name="variable_expenses_notes" data-ref="21"></textarea></div>
+        <div class="field"><label for="fieldMarginPercent">Margem (%)</label><input id="fieldMarginPercent" readonly class="readonly" data-ref="12"></div>
+        <div class="field"><label for="fieldMarginValue">Margem (R$)</label><input id="fieldMarginValue" readonly class="readonly" data-ref="13"></div>
+        <div class="field"><label for="fieldMarginNotes">Obs. margem</label><textarea id="fieldMarginNotes" name="unit_contribution_margin_notes" data-ref="22"></textarea></div>
+        <div class="field"><label for="fieldMarketUnits">Mercado (un)</label><input id="fieldMarketUnits" name="market_size_monthly_units" type="number" step="0.01" data-ref="14"></div>
+        <div class="field"><label for="fieldMarketRevenue">Faturamento (R$)</label><input id="fieldMarketRevenue" readonly class="readonly" data-ref="15"></div>
+        <div class="field"><label for="fieldMarketNotes">Obs. mercado</label><textarea id="fieldMarketNotes" name="market_size_notes" data-ref="23"></textarea></div>
+        <div class="field"><label for="fieldShareUnits">Share (un)</label><input id="fieldShareUnits" name="market_share_goal_monthly_units" type="number" step="0.01" data-ref="16"></div>
+        <div class="field"><label for="fieldSharePercent">Share (%)</label><input id="fieldSharePercent" name="market_share_goal_percent" type="number" step="0.01" data-ref="17"></div>
+        <div class="field"><label for="fieldShareNotes">Obs. share</label><textarea id="fieldShareNotes" name="market_share_goal_notes" data-ref="24"></textarea></div>
       </div>
     </div>
     <div class="dialog-footer">
-      <button type="button" class="btn btn-secondary" data-close>Cancelar</button>
-      <button type="submit" class="btn btn-primary">Salvar</button>
+      <button type="button" class="btn btn-secondary" data-close data-ref="02">Cancelar</button>
+      <button type="submit" class="btn btn-primary" data-ref="03">Salvar</button>
     </div>
   </form>
 </dialog>
@@ -197,7 +197,7 @@
         <td>${fmt(item.unit_contribution_margin_percent)}%</td>
         <td>${fmt(item.market_size_monthly_units)} un</td>
         <td>${fmt(item.market_share_goal_monthly_units)} un</td>
-        <td><div class="table-actions"><button class="table-btn edit" data-action="edit" data-id="${item.id}">Editar</button><button class="table-btn delete" data-action="delete" data-id="${item.id}">Excluir</button></div></td>
+        <td><div class="table-actions"><button class="table-btn edit" data-action="edit" data-id="${item.id}" data-ref="04">Editar</button><button class="table-btn delete" data-action="delete" data-id="${item.id}" data-ref="05">Excluir</button></div></td>
       </tr>`).join('');
   }
 

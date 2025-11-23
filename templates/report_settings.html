@@ -386,8 +386,8 @@
       </p>
     </div>
     <div class="preset-actions" style="display: flex; gap: 8px;">
-      <button type="button" class="btn-link" id="save-model-btn-top" style="border-color:#22c55e; color:#166534;">💾 Salvar modelo</button>
-      <button type="button" class="btn-link" id="clear-fields-btn-top" style="border-color:#ef4444; color:#991b1b;">🗑️ Limpar campos</button>
+      <button type="button" class="btn-link" id="save-model-btn-top" style="border-color:#22c55e; color:#166534;" data-ref="01">💾 Salvar modelo</button>
+      <button type="button" class="btn-link" id="clear-fields-btn-top" style="border-color:#ef4444; color:#991b1b;" data-ref="02">🗑️ Limpar campos</button>
     </div>
   </header>
 
@@ -404,16 +404,16 @@
           <div class="field-row">
             <div class="field-input">
               <label class="field-label" for="preset_name_inline">Nome do modelo</label>
-              <input id="preset_name_inline" type="text" placeholder="Ex.: Relatório Executivo A4">
+              <input id="preset_name_inline" type="text" placeholder="Ex.: Relatório Executivo A4" data-ref="05">
             </div>
             <div class="field-input">
               <label class="field-label" for="preset_code">Código</label>
-              <input id="preset_code" type="text" readonly disabled style="background: #f1f5f9; cursor: not-allowed;" placeholder="Gerado automaticamente">
+              <input id="preset_code" type="text" readonly disabled style="background: #f1f5f9; cursor: not-allowed;" placeholder="Gerado automaticamente" data-ref="06">
             </div>
           </div>
           <div class="field-input">
             <label class="field-label" for="preset_description_inline">Descrição</label>
-            <input id="preset_description_inline" type="text" placeholder="Descrição resumida do uso">
+            <input id="preset_description_inline" type="text" placeholder="Descrição resumida do uso" data-ref="07">
           </div>
         </div>
       </div>
@@ -424,7 +424,7 @@
           <div class="field-row">
             <div class="field-input">
               <label class="field-label" for="paper_size">Tamanho do papel</label>
-              <select id="paper_size" name="paper_size">
+              <select id="paper_size" name="paper_size" data-ref="18">
                 <option>A4</option>
                 <option>Carta</option>
                 <option>Ofício</option>
@@ -432,7 +432,7 @@
             </div>
             <div class="field-input">
               <label class="field-label" for="orientation">Orientação</label>
-              <select id="orientation" name="orientation">
+              <select id="orientation" name="orientation" data-ref="19">
                 <option>Retrato</option>
                 <option>Paisagem</option>
               </select>
@@ -441,21 +441,21 @@
           <div class="field-row">
             <div class="field-input">
               <label class="field-label" for="margin_top">Margem superior (mm)</label>
-              <input id="margin_top" type="number" min="0" step="1" value="20">
+              <input id="margin_top" type="number" min="0" step="1" value="20" data-ref="08">
             </div>
             <div class="field-input">
               <label class="field-label" for="margin_bottom">Margem inferior (mm)</label>
-              <input id="margin_bottom" type="number" min="0" step="1" value="15">
+              <input id="margin_bottom" type="number" min="0" step="1" value="15" data-ref="09">
             </div>
           </div>
           <div class="field-row">
             <div class="field-input">
               <label class="field-label" for="margin_left">Margem esquerda (mm)</label>
-              <input id="margin_left" type="number" min="0" step="1" value="20">
+              <input id="margin_left" type="number" min="0" step="1" value="20" data-ref="10">
             </div>
             <div class="field-input">
               <label class="field-label" for="margin_right">Margem direita (mm)</label>
-              <input id="margin_right" type="number" min="0" step="1" value="15">
+              <input id="margin_right" type="number" min="0" step="1" value="15" data-ref="11">
             </div>
           </div>
         </div>
@@ -467,20 +467,20 @@
           <div class="field-row">
             <div class="field-input">
               <label class="field-label" for="header_height">Altura (mm)</label>
-              <input id="header_height" type="number" min="0" step="1" value="25">
+              <input id="header_height" type="number" min="0" step="1" value="25" data-ref="12">
             </div>
             <div class="field-input">
               <label class="field-label" for="header_rows">Linhas</label>
-              <input id="header_rows" type="number" min="1" step="1" value="2">
+              <input id="header_rows" type="number" min="1" step="1" value="2" data-ref="13">
             </div>
             <div class="field-input">
               <label class="field-label" for="header_columns">Colunas</label>
-              <input id="header_columns" type="number" min="1" step="1" value="3">
+              <input id="header_columns" type="number" min="1" step="1" value="3" data-ref="14">
             </div>
           </div>
           <div class="field-input">
             <label class="field-label" for="header_content">Conteúdo (markdown leve)</label>
-            <textarea id="header_content" rows="3" placeholder="Ex.: ## {{ '{{ company.name }}' }} | **{{ '{{ report.title }}' }}** | {{ '{{ date }}' }}"></textarea>
+            <textarea id="header_content" rows="3" placeholder="Ex.: ## {{ '{{ company.name }}' }} | **{{ '{{ report.title }}' }}** | {{ '{{ date }}' }}" data-ref="20"></textarea>
             <div class="helper-text" style="font-size: 10px; margin-top: 4px; color: #64748b;">
               Variáveis: {{ '{{ company.name }}' }}, {{ '{{ report.title }}' }}, {{ '{{ date }}' }}, {{ '{{ time }}' }}, {{ '{{ year }}' }}<br>
               Markdown: **negrito**, *itálico*, ## Título, [link](url)
@@ -495,20 +495,20 @@
           <div class="field-row">
             <div class="field-input">
               <label class="field-label" for="footer_height">Altura (mm)</label>
-              <input id="footer_height" type="number" min="0" step="1" value="12">
+              <input id="footer_height" type="number" min="0" step="1" value="12" data-ref="15">
             </div>
             <div class="field-input">
               <label class="field-label" for="footer_rows">Linhas</label>
-              <input id="footer_rows" type="number" min="1" step="1" value="1">
+              <input id="footer_rows" type="number" min="1" step="1" value="1" data-ref="16">
             </div>
             <div class="field-input">
               <label class="field-label" for="footer_columns">Colunas</label>
-              <input id="footer_columns" type="number" min="1" step="1" value="2">
+              <input id="footer_columns" type="number" min="1" step="1" value="2" data-ref="17">
             </div>
           </div>
           <div class="field-input">
           <label class="field-label" for="footer_content">Conteúdo (markdown leve)</label>
-          <textarea id="footer_content" rows="3" placeholder="Ex.: © {{ '{{ year }}' }} **{{ '{{ system }}' }}** | Página {{ '{{ page }}' }} de {{ '{{ pages }}' }}"></textarea>
+          <textarea id="footer_content" rows="3" placeholder="Ex.: © {{ '{{ year }}' }} **{{ '{{ system }}' }}** | Página {{ '{{ page }}' }} de {{ '{{ pages }}' }}" data-ref="21"></textarea>
           <div class="helper-text" style="font-size: 10px; margin-top: 4px; color: #64748b;">
             Variáveis: {{ '{{ system }}' }}, {{ '{{ page }}' }}, {{ '{{ pages }}' }}, {{ '{{ year }}' }}, {{ '{{ datetime }}' }}<br>
             Markdown: **negrito**, *itálico*, ## Título, [link](url)
@@ -541,9 +541,9 @@
           <div class="preset-card-header">
             <span class="preset-name">{{ style.name }}</span>
             <div class="preset-actions">
-              <a class="btn-link apply-model-btn" href="#" data-model-id="{{style.id}}">Aplicar</a>
-              <a class="btn-link edit-model-btn" href="#" data-model-id="{{style.id}}">Editar</a>
-              <a class="btn-link delete-model-btn" href="#" data-model-id="{{style.id}}" style="border-color:#ef4444; color:#991b1b;">Excluir</a>
+              <a class="btn-link apply-model-btn" href="#" data-model-id="{{style.id}}" data-ref="22">Aplicar</a>
+              <a class="btn-link edit-model-btn" href="#" data-model-id="{{style.id}}" data-ref="23">Editar</a>
+              <a class="btn-link delete-model-btn" href="#" data-model-id="{{style.id}}" style="border-color:#ef4444; color:#991b1b;" data-ref="24">Excluir</a>
             </div>
           </div>
           <p>{{ style.description }}</p>
@@ -559,8 +559,8 @@
           </div>
           <div class="model-report-actions" style="margin-top: 15px; padding-top: 15px; border-top: 1px solid #e2e8f0;">
             <div class="action-buttons">
-              <button type="button" class="btn-secondary model-preview-btn" data-model-id="{{style.id}}">🖨️ Visualizar impressão</button>
-              <button type="button" class="btn-ghost model-generate-btn" data-model-id="{{style.id}}">📄 Gerar PDF</button>
+              <button type="button" class="btn-secondary model-preview-btn" data-model-id="{{style.id}}" data-ref="03">🖨️ Visualizar impressão</button>
+              <button type="button" class="btn-ghost model-generate-btn" data-model-id="{{style.id}}" data-ref="04">📄 Gerar PDF</button>
             </div>
           </div>
         </article>

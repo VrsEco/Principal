@@ -21,7 +21,7 @@
           <div class="form-two-cols">
             <label class="form-field" style="max-width:420px;">
               <span>Planejamento</span>
-              <select id="mvvPlanSelect">
+              <select id="mvvPlanSelect" data-ref="04">
                 {% for p in plans %}
                 <option value="{{ p.id }}" {% if default_plan_id and p.id == default_plan_id %}selected{% endif %}>{{ p.name }}</option>
                 {% endfor %}
@@ -29,28 +29,28 @@
             </label>
             <label class="form-field" style="align-self:end;">
               <span>Usar no GRV</span>
-              <input type="checkbox" name="grv_mvv_in_use" />
+              <input type="checkbox" name="grv_mvv_in_use"  data-ref="03" />
             </label>
           </div>
 
           <div class="form-three-cols">
             <label class="form-field">
               <span>Missão</span>
-              <textarea name="mission" rows="3" placeholder="Declare a razão de existir"></textarea>
+              <textarea name="mission" rows="3" placeholder="Declare a razão de existir" data-ref="05"></textarea>
             </label>
             <label class="form-field">
               <span>Visão</span>
-              <textarea name="vision" rows="3" placeholder="Declare onde deseja chegar"></textarea>
+              <textarea name="vision" rows="3" placeholder="Declare onde deseja chegar" data-ref="06"></textarea>
             </label>
             <label class="form-field">
               <span>Valores</span>
-              <textarea name="values" rows="3" placeholder="Declare os valores essenciais"></textarea>
+              <textarea name="values" rows="3" placeholder="Declare os valores essenciais" data-ref="07"></textarea>
             </label>
           </div>
 
           <div style="display:flex;gap:8px;justify-content:flex-end;">
-            <button type="button" id="mvvLoad" class="button button-ghost">Carregar</button>
-            <button type="submit" class="button button-primary">Salvar</button>
+            <button type="button" id="mvvLoad" class="button button-ghost" data-ref="01">Carregar</button>
+            <button type="submit" class="button button-primary" data-ref="02">Salvar</button>
           </div>
         </form>
       </div>

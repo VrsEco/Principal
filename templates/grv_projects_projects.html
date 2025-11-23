@@ -1,4 +1,4 @@
-﻿{% extends "base.html" %}
+{% extends "base.html" %}
 {% block title %}GRV | Projetos{% endblock %}
 {% block body %}{% set active_nav = 'project-projects' %}{{ super() }}{% endblock %}
 
@@ -532,8 +532,8 @@
         <p>Centralize aqui os projetos estratégicos da {{ company.name or company.legal_name or 'empresa' }}. Os planejamentos vinculados do PEV aparecem automaticamente como portfólios.</p>
       </div>
       <div class="projects-actions">
-        <button id="refreshProjects" class="projects-button secondary" type="button">🔄 Atualizar</button>
-        <button id="newProjectButton" class="projects-button primary" type="button">➕ Novo Projeto</button>
+        <button id="refreshProjects" class="projects-button secondary" type="button" data-ref="01">🔄 Atualizar</button>
+        <button id="newProjectButton" class="projects-button primary" type="button" data-ref="02">➕ Novo Projeto</button>
       </div>
     </header>
 
@@ -549,21 +549,21 @@
   <div class="project-modal">
     <header>
       <h2 id="projectModalTitle">Novo Projeto</h2>
-      <button type="button" id="closeProjectModal" aria-label="Fechar">×</button>
+      <button type="button" id="closeProjectModal" aria-label="Fechar" data-ref="03">×</button>
     </header>
     <form id="projectForm" class="project-form">
       <input type="hidden" id="projectId">
       <div class="field">
         <label for="projectTitle">Título *</label>
-        <input type="text" id="projectTitle" placeholder="Ex: Implantação OKR" required>
+        <input type="text" id="projectTitle" placeholder="Ex: Implantação OKR" required data-ref="08">
       </div>
       <div class="field">
         <label for="projectDescription">Descrição</label>
-        <textarea id="projectDescription" placeholder="Escopo resumido do projeto"></textarea>
+        <textarea id="projectDescription" placeholder="Escopo resumido do projeto" data-ref="16"></textarea>
       </div>
       <div class="field">
         <label for="projectPlan">Portfólio/Planejamento</label>
-        <select id="projectPlan">
+        <select id="projectPlan" data-ref="12">
           <option value="">Sem planejamento vinculado</option>
           {% for plan in plans %}
           <option value="{{ plan.id }}" data-origin="{{ plan.origin }}">
@@ -574,7 +574,7 @@
       </div>
       <div class="field">
         <label for="projectPriority">Prioridade</label>
-        <select id="projectPriority">
+        <select id="projectPriority" data-ref="13">
           <option value="high">Alta</option>
           <option value="medium" selected>Média</option>
           <option value="low">Baixa</option>
@@ -582,35 +582,35 @@
       </div>
       <div class="field">
         <label for="projectResponsible">Responsável</label>
-        <select id="projectResponsible">
+        <select id="projectResponsible" data-ref="14">
           <option value="">Selecione um colaborador</option>
         </select>
       </div>
       <div class="field">
         <label for="projectStart">Início</label>
-        <input type="date" id="projectStart">
+        <input type="date" id="projectStart" data-ref="09">
       </div>
       <div class="field">
         <label for="projectEnd">Previsão de Término</label>
-        <input type="date" id="projectEnd">
+        <input type="date" id="projectEnd" data-ref="10">
       </div>
       <div class="field">
         <label for="projectOkrRef">OKR Associado</label>
-        <select id="projectOkrRef">
+        <select id="projectOkrRef" data-ref="15">
           <option value="">Sem OKR associado</option>
         </select>
       </div>
       <div class="field">
         <label for="projectIndicatorRef">Indicador Associado</label>
-        <input type="text" id="projectIndicatorRef" placeholder="Ex: Taxa de conversão">
+        <input type="text" id="projectIndicatorRef" placeholder="Ex: Taxa de conversão" data-ref="11">
       </div>
       <div class="field">
         <label for="projectNotes">Notas</label>
-        <textarea id="projectNotes" placeholder="Observações relevantes"></textarea>
+        <textarea id="projectNotes" placeholder="Observações relevantes" data-ref="17"></textarea>
       </div>
       <footer>
-        <button type="button" class="secondary" id="cancelProjectModal">Cancelar</button>
-        <button type="submit" class="primary">Salvar Projeto</button>
+        <button type="button" class="secondary" id="cancelProjectModal" data-ref="04">Cancelar</button>
+        <button type="submit" class="primary" data-ref="05">Salvar Projeto</button>
       </footer>
     </form>
   </div>
@@ -902,8 +902,8 @@
           </div>
           <div class="project-actions">
             <a class="project-action" href="/grv/company/${companyId}/projects/${project.id}/manage" style="text-decoration:none;">📋 Gerenciar</a>
-            <button class="project-action" type="button" data-action="edit" data-id="${project.id}">Editar</button>
-            <button class="project-action danger" type="button" data-action="remove" data-id="${project.id}">Excluir</button>
+            <button class="project-action" type="button" data-action="edit" data-id="${project.id}" data-ref="06">Editar</button>
+            <button class="project-action danger" type="button" data-action="remove" data-id="${project.id}" data-ref="07">Excluir</button>
             ${project.plan_id && project.plan_origin === 'PEV' ? (() => {
               const planMode = (project.plan_mode || 'evolucao').toLowerCase();
               const url = planMode === 'implantacao' 

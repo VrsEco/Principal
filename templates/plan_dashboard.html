@@ -19,8 +19,8 @@
 
   <section class="project-content plan-content">
     <div class="plan-actions">
-      <a class="button button-ghost" href="{{ url_for('pev.pev_dashboard') }}">Trocar planejamento</a>
-      <button class="button button-primary plan-lock-button" type="button">
+      <a class="button button-ghost" href="{{ url_for('pev.pev_dashboard') }}" data-ref="02">Trocar planejamento</a>
+      <button class="button button-primary plan-lock-button" type="button" data-ref="01">
         {% if plan.locked %}
         Destravar planejamento
         {% else %}

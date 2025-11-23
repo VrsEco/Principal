@@ -343,7 +343,7 @@
           </p>
         </div>
         <div class="modeling-actions">
-          <a class="button button-ghost" href="{{ url_for('grv.grv_process_map', company_id=company.id) }}#processes">Ir para Arquitetura</a>
+          <a class="button button-ghost" href="{{ url_for('grv.grv_process_map', company_id=company.id) }}#processes" data-ref="08">Ir para Arquitetura</a>
         </div>
       </div>
 
@@ -351,17 +351,17 @@
 
       <div class="filters-toggle">
         <span class="filters-toggle-title">Filtros</span>
-        <button id="toggleModelFilters" type="button" class="button button-ghost">Ocultar filtros</button>
+        <button id="toggleModelFilters" type="button" class="button button-ghost" data-ref="01">Ocultar filtros</button>
       </div>
       <div id="modelFilters" class="company-form-fields filters-panel">
         <div class="form-two-cols">
           <label class="form-field">
             <span>Buscar</span>
-            <input id="filterModelQuery" placeholder="Código ou nome" />
+            <input id="filterModelQuery" placeholder="Código ou nome"  data-ref="04" />
           </label>
           <label class="form-field">
             <span>Macroprocesso</span>
-            <select id="filterModelMacro">
+            <select id="filterModelMacro" data-ref="05">
               <option value="">Todos</option>
             </select>
           </label>
@@ -369,13 +369,13 @@
         <div class="form-two-cols">
           <label class="form-field">
             <span>Responsável</span>
-            <select id="filterModelResponsible">
+            <select id="filterModelResponsible" data-ref="06">
               <option value="">Todos</option>
             </select>
           </label>
           <label class="form-field">
             <span>Desempenho</span>
-            <select id="filterModelPerformance">
+            <select id="filterModelPerformance" data-ref="07">
               <option value="">Todos</option>
               <option value="critical">Crítico</option>
               <option value="below">Abaixo</option>
@@ -384,7 +384,7 @@
           </label>
         </div>
         <div class="filters-actions">
-          <button id="btnClearModelFilters" type="button" class="button button-ghost">Limpar filtros</button>
+          <button id="btnClearModelFilters" type="button" class="button button-ghost" data-ref="02">Limpar filtros</button>
         </div>
       </div>
 
@@ -407,7 +407,7 @@
               <article class="kanban-card" draggable="true" data-kanban-card data-process-id="{{ process.id }}" data-stage="{{ process.kanban_stage }}" data-macro-id="{{ process.macro_id }}" data-responsible="{{ process.responsible or '' }}" data-performance="{{ process.performance_level or '' }}" data-detail-url="{{ url_for('grv.grv_process_detail', company_id=company.id, process_id=process.id) }}">
                 <div class="kanban-card-header">
                   <span class="kanban-card-code">{{ process.code or 'Sem código' }}</span>
-                  <button type="button" class="kanban-card-open" data-action="open-card">Abrir</button>
+                  <button type="button" class="kanban-card-open" data-action="open-card" data-ref="03">Abrir</button>
                 </div>
                 <div class="kanban-card-title">{{ process.name }}</div>
                 {% set flags = process.artifact_flags or {} %}

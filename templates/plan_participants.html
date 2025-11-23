@@ -29,14 +29,14 @@
           <!-- Botão Concluir -->
           <button class="button button-small button-warning" onclick="closeParticipantsSection()" 
                   title="Concluir seção de participantes" 
-                  {% if not participants_section_open %}style="display: none;"{% endif %}>
+                  {% if not participants_section_open %}style="display: none;"{% endif %} data-ref="01">
             🔒 Concluir Seção
           </button>
           
           <!-- Botão Reabrir -->
           <button class="button button-small button-success" onclick="openParticipantsSection()" 
                   title="Reabrir seção de participantes" 
-                  {% if participants_section_open %}style="display: none;"{% endif %}>
+                  {% if participants_section_open %}style="display: none;"{% endif %} data-ref="02">
             🔓 Reabrir Seção
           </button>
           
@@ -62,7 +62,7 @@
           <div class="empty-state-icon">👥</div>
           <h3>Nenhum colaborador cadastrado</h3>
           <p>Para adicionar participantes ao planejamento, primeiro você precisa cadastrar colaboradores na empresa.</p>
-          <a href="{{ url_for('company_details', company_id=company.id) }}" class="button button-primary">
+          <a href="{{ url_for('company_details', company_id=company.id) }}" class="button button-primary" data-ref="26">
             Cadastrar Colaboradores
           </a>
         </div>
@@ -87,21 +87,21 @@
         <!-- Search and Filter -->
         <div class="table-controls">
           <div class="search-box">
-            <input type="text" id="searchEmployee" placeholder="🔍 Buscar colaborador..." onkeyup="filterEmployees()">
+            <input type="text" id="searchEmployee" placeholder="🔍 Buscar colaborador..." onkeyup="filterEmployees()" data-ref="20">
           </div>
           <div class="filter-chips">
-            <button class="filter-chip active" onclick="filterByStatus('all')">Todos ({{ total_employees }})</button>
-            <button class="filter-chip" onclick="filterByStatus('participants')">Participantes ({{ total_participants }})</button>
-            <button class="filter-chip" onclick="filterByStatus('non-participants')">Não Participantes ({{ total_employees - total_participants }})</button>
+            <button class="filter-chip active" onclick="filterByStatus('all')" data-ref="03">Todos ({{ total_employees }})</button>
+            <button class="filter-chip" onclick="filterByStatus('participants')" data-ref="04">Participantes ({{ total_participants }})</button>
+            <button class="filter-chip" onclick="filterByStatus('non-participants')" data-ref="05">Não Participantes ({{ total_employees - total_participants }})</button>
           </div>
         </div>
 
         <!-- Employees List -->
-        <table class="participant-table" id="employeesTable">
+        <table class="participant-table" id="employeesTable" data-ref="25">
           <thead>
             <tr>
               <th width="60">
-                <input type="checkbox" id="selectAll" onchange="toggleAllParticipants()" title="Selecionar/Desselecionar todos">
+                <input type="checkbox" id="selectAll" onchange="toggleAllParticipants()" title="Selecionar/Desselecionar todos" data-ref="21">
               </th>
               <th>Nome</th>
               <th>Cargo/Função</th>
@@ -125,7 +125,7 @@
                        data-employee-id="{{ employee.id }}"
                        {% if employee.is_participant %}checked{% endif %}
                        onchange="toggleParticipation({{ employee.id }}, this)"
-                       title="Marcar como participante">
+                       title="Marcar como participante" data-ref="22">
               </td>
               <td>
                 <strong>{{ employee.name }}</strong>
@@ -150,10 +150,10 @@
               <td>
                 {% if employee.is_participant %}
                 <div class="action-buttons">
-                  <button type="button" class="button-icon" onclick="sendMessage({{ employee.id }}, 'email')" title="Enviar E-mail">
+                  <button type="button" class="button-icon" onclick="sendMessage({{ employee.id }}, 'email')" title="Enviar E-mail" data-ref="06">
                     📧
                   </button>
-                  <button type="button" class="button-icon" onclick="sendMessage({{ employee.id }}, 'whatsapp')" title="Enviar WhatsApp">
+                  <button type="button" class="button-icon" onclick="sendMessage({{ employee.id }}, 'whatsapp')" title="Enviar WhatsApp" data-ref="07">
                     📱
                   </button>
                 </div>
@@ -180,10 +180,10 @@
         <div class="message-config-content">
           <p>Personalize as mensagens que serão enviadas para os participantes selecionados.</p>
           <div class="message-config-actions">
-            <button type="button" class="button button-ghost" onclick="editMessageTemplate('email')">
+            <button type="button" class="button button-ghost" onclick="editMessageTemplate('email')" data-ref="08">
               📧 Editar Template de E-mail
             </button>
-            <button type="button" class="button button-ghost" onclick="editMessageTemplate('whatsapp')">
+            <button type="button" class="button button-ghost" onclick="editMessageTemplate('whatsapp')" data-ref="09">
               📱 Editar Template de WhatsApp
             </button>
           </div>
@@ -218,7 +218,7 @@
           
           <h4>Gerenciando Colaboradores</h4>
           <p>Os colaboradores são cadastrados na <strong>página de gerenciamento da empresa</strong>. Para adicionar, editar ou remover colaboradores, acesse:</p>
-          <a href="{{ url_for('company_details', company_id=company.id) }}" class="button button-ghost">
+          <a href="{{ url_for('company_details', company_id=company.id) }}" class="button button-ghost" data-ref="27">
             ⚙️ Gerenciar Empresa
           </a>
           
@@ -235,7 +235,7 @@
   <div class="modal-content">
     <div class="modal-header">
       <h3 id="messageModalTitle">Enviar Mensagem</h3>
-      <button type="button" class="modal-close" onclick="closeMessageModal()">&times;</button>
+      <button type="button" class="modal-close" onclick="closeMessageModal()" data-ref="10">&times;</button>
     </div>
     <div class="modal-body">
       <div class="message-preview">
@@ -257,16 +257,16 @@
         </div>
         
         <div class="message-actions">
-          <button type="button" class="button button-primary" onclick="copyMessage()">
+          <button type="button" class="button button-primary" onclick="copyMessage()" data-ref="11">
             📋 Copiar Mensagem
           </button>
-          <button type="button" class="button button-primary" onclick="openEmailApp()" id="emailAppBtn" style="display: none;">
+          <button type="button" class="button button-primary" onclick="openEmailApp()" id="emailAppBtn" style="display: none;" data-ref="12">
             📧 Abrir E-mail
           </button>
-          <button type="button" class="button button-primary" onclick="openWhatsAppApp()" id="whatsappAppBtn" style="display: none;">
+          <button type="button" class="button button-primary" onclick="openWhatsAppApp()" id="whatsappAppBtn" style="display: none;" data-ref="13">
             📱 Abrir WhatsApp
           </button>
-          <button type="button" class="button button-ghost" onclick="closeMessageModal()">
+          <button type="button" class="button button-ghost" onclick="closeMessageModal()" data-ref="14">
             Fechar
           </button>
         </div>
@@ -280,7 +280,7 @@
   <div class="modal-content">
     <div class="modal-header">
       <h3 id="editMessageModalTitle">Editar Template de Mensagem</h3>
-      <button type="button" class="modal-close" onclick="closeEditMessageModal()">&times;</button>
+      <button type="button" class="modal-close" onclick="closeEditMessageModal()" data-ref="15">&times;</button>
     </div>
     <div class="modal-body">
       <form id="editMessageForm">
@@ -288,20 +288,20 @@
         
         <div class="form-field" id="subjectField" style="display: none;">
           <span>Assunto</span>
-          <input type="text" id="editMessageSubject" placeholder="Digite o assunto do e-mail" />
+          <input type="text" id="editMessageSubject" placeholder="Digite o assunto do e-mail"  data-ref="23" />
         </div>
         
         <div class="form-field">
           <span>Conteúdo da Mensagem</span>
-          <textarea id="editMessageContent" rows="10" placeholder="Digite o conteúdo da mensagem..."></textarea>
+          <textarea id="editMessageContent" rows="10" placeholder="Digite o conteúdo da mensagem..." data-ref="24"></textarea>
           <small class="form-hint">
             Use as variáveis: <code>{{'{{'}}name{{'}}'}}</code>, <code>{{'{{'}}role{{'}}'}}</code>, <code>{{'{{'}}plan_name{{'}}'}}</code>
           </small>
         </div>
         
         <div class="form-actions">
-          <button type="submit" class="button button-primary">Salvar Template</button>
-          <button type="button" class="button button-ghost" onclick="closeEditMessageModal()">Cancelar</button>
+          <button type="submit" class="button button-primary" data-ref="16">Salvar Template</button>
+          <button type="button" class="button button-ghost" onclick="closeEditMessageModal()" data-ref="17">Cancelar</button>
         </div>
       </form>
     </div>
@@ -764,10 +764,10 @@ function toggleParticipation(employeeId, checkbox) {
         const employeeId = row.getAttribute('data-employee-id');
         actionsCell.innerHTML = `
           <div class="action-buttons">
-            <button type="button" class="button-icon" onclick="sendMessage(${employeeId}, 'email')" title="Enviar E-mail">
+            <button type="button" class="button-icon" onclick="sendMessage(${employeeId}, 'email')" title="Enviar E-mail" data-ref="18">
               📧
             </button>
-            <button type="button" class="button-icon" onclick="sendMessage(${employeeId}, 'whatsapp')" title="Enviar WhatsApp">
+            <button type="button" class="button-icon" onclick="sendMessage(${employeeId}, 'whatsapp')" title="Enviar WhatsApp" data-ref="19">
               📱
             </button>
           </div>

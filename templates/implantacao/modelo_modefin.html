@@ -492,7 +492,7 @@
     Plano: <strong style="color: #0f172a;">{{ plan.name }}</strong>
   </p>
   <div style="margin-top: 12px;">
-    <a href="{{ url_for('pev.pev_implantacao_overview', plan_id=plan_id) }}" class="button button-ghost" style="font-size: 13px; padding: 8px 16px;" {{ ui_attrs.get('2', '')|safe }}>
+    <a href="{{ url_for('pev.pev_implantacao_overview', plan_id=plan_id) }}" class="button button-ghost" style="font-size: 13px; padding: 8px 16px;" {{ ui_attrs.get('2', '')|safe }} data-ref="47">
       ← Voltar para Implantacao
     </a>
   </div>
@@ -1236,8 +1236,8 @@
             <td>${data}</td>
             <td style="text-align: right;">${valor}</td>
             <td style="text-align: center;">
-              <button class="action-btn edit" onclick="editCapitalGiro('${id}')">Editar</button>
-              <button class="action-btn delete" onclick="deleteCapitalGiro('${id}')">Excluir</button>
+              <button class="action-btn edit" onclick="editCapitalGiro('${id}')" data-ref="01">Editar</button>
+              <button class="action-btn delete" onclick="deleteCapitalGiro('${id}')" data-ref="02">Excluir</button>
             </td>
           </tr>
         `;
@@ -1282,10 +1282,10 @@
   
         <div style="margin-top: 24px; display: flex; justify-content: space-between; align-items: center;">
           <h3 style="margin: 0;">Investimentos por Bloco</h3>
-          <button class="button" ${uiAttr('21')} onclick="openCapitalGiroModal()">+ Capital de Giro</button>
+          <button class="button" ${uiAttr('21')} onclick="openCapitalGiroModal()" data-ref="03">+ Capital de Giro</button>
         </div>
   
-        <table class="modefin-table">
+        <table class="modefin-table" data-ref="39">
           <thead>
             <tr>
               <th>Bloco</th>
@@ -1349,7 +1349,7 @@
   
         <div style="margin-top: 32px;">
           <h3 style="margin-bottom: 12px;">Capital de Giro Detalhado</h3>
-          <table class="modefin-table">
+          <table class="modefin-table" data-ref="40">
             <thead>
               <tr>
                 <th>Tipo</th>
@@ -1373,7 +1373,7 @@
   
         <div style="margin-top: 32px;">
           <h3 style="margin-bottom: 12px;">Imobilizado por Categoria</h3>
-          <table class="modefin-table">
+          <table class="modefin-table" data-ref="41">
             <thead>
               <tr>
                 <th>Categoria</th>
@@ -1445,8 +1445,8 @@
           <td>${disponibilidade}</td>
           <td style="text-align: right;">${valor}</td>
           <td style="text-align: center;">
-            <button class="action-btn edit" onclick="editFundingSource('${id}')">Editar</button>
-            <button class="action-btn delete" onclick="deleteFundingSource('${id}')">Excluir</button>
+            <button class="action-btn edit" onclick="editFundingSource('${id}')" data-ref="04">Editar</button>
+            <button class="action-btn delete" onclick="deleteFundingSource('${id}')" data-ref="05">Excluir</button>
           </td>
         </tr>
       `;
@@ -1471,10 +1471,10 @@
 
         <div style="margin-top: 24px; display: flex; justify-content: space-between; align-items: center;">
           <h3 style="margin: 0;">Fontes cadastradas</h3>
-          <button class="button" ${uiAttr('31')} onclick="openFundingSourceModal()">+ Nova Fonte</button>
+          <button class="button" ${uiAttr('31')} onclick="openFundingSourceModal()" data-ref="06">+ Nova Fonte</button>
         </div>
 
-        <table class="modefin-table">
+        <table class="modefin-table" data-ref="42">
           <thead>
             <tr>
               <th>Categoria</th>
@@ -1545,8 +1545,8 @@
           <td>${periodicidade}</td>
           <td>${observacoes}</td>
           <td style="text-align: center;">
-            <button class="action-btn edit" onclick="editResultRule('${id}')">Editar</button>
-            <button class="action-btn delete" onclick="deleteResultRule('${id}')">Excluir</button>
+            <button class="action-btn edit" onclick="editResultRule('${id}')" data-ref="07">Editar</button>
+            <button class="action-btn delete" onclick="deleteResultRule('${id}')" data-ref="08">Excluir</button>
           </td>
         </tr>
       `;
@@ -1578,11 +1578,11 @@
         </div>
 
         <div style="margin-top: 24px; display: flex; justify-content: space-between; flex-wrap: wrap; gap: 12px;">
-          <button class="button button-ghost" ${uiAttr('41')} onclick="openProfitDistributionModal()">Configurar distribuicao de lucros</button>
-          <button class="button" onclick="openResultRuleModal()">+ Nova destinacao</button>
+          <button class="button button-ghost" ${uiAttr('41')} onclick="openProfitDistributionModal()" data-ref="09">Configurar distribuicao de lucros</button>
+          <button class="button" onclick="openResultRuleModal()" data-ref="10">+ Nova destinacao</button>
         </div>
 
-        <table class="modefin-table" style="margin-top: 20px;">
+        <table class="modefin-table" style="margin-top: 20px;" data-ref="43">
           <thead>
             <tr>
               <th>Descricao</th>
@@ -1693,7 +1693,7 @@
         </p>
 
         <div style="overflow-x: auto;">
-          <table class="modefin-table">
+          <table class="modefin-table" data-ref="44">
             <thead>
               <tr>
                 <th style="min-width: 120px;">Periodo</th>
@@ -1892,7 +1892,7 @@
         </p>
 
         <div style="overflow-x: auto; max-height: 600px;">
-          <table class="modefin-table">
+          <table class="modefin-table" data-ref="45">
             <thead>
               <tr>
                 <th style="min-width: 120px;">Periodo</th>
@@ -2001,7 +2001,7 @@
         </p>
         
         <div style="overflow-x: auto; max-height: 600px; overflow-y: auto; border-radius: 8px;">
-          <table class="modefin-table">
+          <table class="modefin-table" data-ref="46">
             <thead style="position: sticky; top: 0; background: #f8fafc; z-index: 10;">
               <tr>
                 <th style="min-width: 100px; position: sticky; top: 0; background: #f8fafc;">Periodo</th>
@@ -2298,7 +2298,7 @@
         
         <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px;">
           <h3 style="margin: 0;">Metricas Calculadas</h3>
-          <button class="button button-ghost" onclick="openAnalysisConfigModal()" title="Configurar parametros">
+          <button class="button button-ghost" onclick="openAnalysisConfigModal()" title="Configurar parametros" data-ref="11">
              Configurar Analise
           </button>
         </div>
@@ -2349,7 +2349,7 @@
           ${executiveSummary || 'Nenhum resumo executivo cadastrado. Clique em "Editar" para adicionar.'}
         </div>
         
-        <button class="button" onclick="openExecutiveSummaryModal()" style="margin-top: 12px;">
+        <button class="button" onclick="openExecutiveSummaryModal()" style="margin-top: 12px;" data-ref="12">
            Editar Resumo Executivo
         </button>
       </div>
@@ -2395,52 +2395,52 @@
       <div class="modal-content">
         <div class="modal-header">
           <h3>${ruleId ? 'Editar Destinacao' : 'Nova Destinacao'}</h3>
-          <button class="modal-close" onclick="closeResultRuleModal()"></button>
+          <button class="modal-close" onclick="closeResultRuleModal()" data-ref="13"></button>
         </div>
 
         <div class="form-group">
           <label>Descricao</label>
-          <input type="text" id="rr-description" value="${dadosRegra?.description || ''}" placeholder="Ex: Reserva de contingencia" required>
+          <input type="text" id="rr-description" value="${dadosRegra?.description || ''}" placeholder="Ex: Reserva de contingencia" required data-ref="27">
         </div>
 
         <div class="form-group">
           <label>Tipo de Regra</label>
           <div id="rr-type-toggle" style="display: flex; gap: 8px;">
-            <button type="button" class="button button-ghost" data-rule-type="percentage" onclick="toggleResultRuleType('percentage')">Percentual</button>
-            <button type="button" class="button button-ghost" data-rule-type="fixed" onclick="toggleResultRuleType('fixed')">Valor Fixo</button>
+            <button type="button" class="button button-ghost" data-rule-type="percentage" onclick="toggleResultRuleType('percentage')" data-ref="14">Percentual</button>
+            <button type="button" class="button button-ghost" data-rule-type="fixed" onclick="toggleResultRuleType('fixed')" data-ref="15">Valor Fixo</button>
           </div>
         </div>
 
         <div class="form-group" data-field="percentage">
           <label>Percentual (%)</label>
-          <input type="number" id="rr-percentage" min="0" max="100" step="0.1" value="${dadosRegra?.percentage ?? dadosRegra?.value ?? ''}" placeholder="Ex: 10">
+          <input type="number" id="rr-percentage" min="0" max="100" step="0.1" value="${dadosRegra?.percentage ?? dadosRegra?.value ?? ''}" placeholder="Ex: 10" data-ref="28">
           <small style="font-size: 12px; color: #64748b;">Sera aplicado sobre o resultado operacional positivo.</small>
         </div>
 
         <div class="form-group" data-field="value">
           <label>Valor Fixo (R$)</label>
-          <input type="number" id="rr-value" min="0" step="0.01" value="${dadosRegra?.value ?? ''}" placeholder="Ex: 5000,00">
+          <input type="number" id="rr-value" min="0" step="0.01" value="${dadosRegra?.value ?? ''}" placeholder="Ex: 5000,00" data-ref="29">
           <small style="font-size: 12px; color: #64748b;">Valor mensal fixo a ser provisionado.</small>
         </div>
 
         <div class="form-group">
           <label>Data de Inicio</label>
-          <input type="date" id="rr-start-date" value="${dadosRegra?.start_date || ''}">
+          <input type="date" id="rr-start-date" value="${dadosRegra?.start_date || ''}" data-ref="30">
         </div>
 
         <div class="form-group">
           <label>Periodicidade</label>
-          <input type="text" id="rr-periodicity" value="${dadosRegra?.periodicity || ''}" placeholder="Ex: mensal, trimestral">
+          <input type="text" id="rr-periodicity" value="${dadosRegra?.periodicity || ''}" placeholder="Ex: mensal, trimestral" data-ref="31">
         </div>
 
         <div class="form-group">
           <label>Observacoes</label>
-          <textarea id="rr-notes" rows="3" placeholder="Detalhes adicionais">${dadosRegra?.notes || ''}</textarea>
+          <textarea id="rr-notes" rows="3" placeholder="Detalhes adicionais" data-ref="36">${dadosRegra?.notes || ''}</textarea>
         </div>
 
         <div class="modal-actions">
-          <button class="button button-ghost" onclick="closeResultRuleModal()">Cancelar</button>
-          <button class="button button-primary" onclick="saveResultRule()">${ruleId ? 'Atualizar' : 'Salvar'}</button>
+          <button class="button button-ghost" onclick="closeResultRuleModal()" data-ref="16">Cancelar</button>
+          <button class="button button-primary" onclick="saveResultRule()" data-ref="17">${ruleId ? 'Atualizar' : 'Salvar'}</button>
         </div>
       </div>
     `;
@@ -2629,7 +2629,7 @@
       <div class="modal-content">
         <div class="modal-header">
           <h3>Configurar Distribuicao de Lucros</h3>
-          <button class="modal-close" onclick="closeProfitDistributionModal()"></button>
+          <button class="modal-close" onclick="closeProfitDistributionModal()" data-ref="18"></button>
         </div>
         
         <div class="info-box info" style="margin-bottom: 20px;">
@@ -2639,7 +2639,7 @@
         
         <div class="form-group">
           <label>Percentual de Distribuicao (%)</label>
-          <input type="number" id="pd-percent" step="0.1" min="0" max="100" value="${percAtual}" required>
+          <input type="number" id="pd-percent" step="0.1" min="0" max="100" value="${percAtual}" required data-ref="32">
           <small style="color: #64748b; font-size: 12px;">
             Ex: 30% significa que 30% do Resultado Operacional sera distribuido como lucros
           </small>
@@ -2647,19 +2647,19 @@
         
         <div class="form-group">
           <label>Data de Inicio</label>
-          <input type="date" id="pd-data" value="${profitDistribution[0]?.start_date || ''}">
+          <input type="date" id="pd-data" value="${profitDistribution[0]?.start_date || ''}" data-ref="33">
         </div>
         
         <div class="form-group">
           <label>Observacoes</label>
-          <textarea id="pd-obs" rows="3">${profitDistribution[0]?.notes || ''}</textarea>
+          <textarea id="pd-obs" rows="3" data-ref="37">${profitDistribution[0]?.notes || ''}</textarea>
         </div>
         
         <div class="modal-actions">
-          <button class="button button-ghost" onclick="closeProfitDistributionModal()">
+          <button class="button button-ghost" onclick="closeProfitDistributionModal()" data-ref="19">
             Cancelar
           </button>
-          <button class="button button-primary" onclick="saveProfitDistribution()">
+          <button class="button button-primary" onclick="saveProfitDistribution()" data-ref="20">
             Salvar
           </button>
         </div>
@@ -2760,20 +2760,20 @@
       <div class="modal-content">
         <div class="modal-header">
           <h3>Editar Resumo Executivo</h3>
-          <button class="modal-close" onclick="closeExecutiveSummaryModal()"></button>
+          <button class="modal-close" onclick="closeExecutiveSummaryModal()" data-ref="21"></button>
         </div>
         
         <div class="form-group">
           <label>Resumo Executivo</label>
-          <textarea id="es-texto" rows="10" style="font-family: Arial, sans-serif;">${textoAtual}</textarea>
+          <textarea id="es-texto" rows="10" style="font-family: Arial, sans-serif;" data-ref="38">${textoAtual}</textarea>
           <small style="color: #64748b; font-size: 12px;">Este texto sera incluido no relatorio final de planejamento.</small>
         </div>
         
         <div class="modal-actions">
-          <button class="button button-ghost" onclick="closeExecutiveSummaryModal()">
+          <button class="button button-ghost" onclick="closeExecutiveSummaryModal()" data-ref="22">
             Cancelar
           </button>
-          <button class="button button-primary" onclick="saveExecutiveSummary()">
+          <button class="button button-primary" onclick="saveExecutiveSummary()" data-ref="23">
             Salvar
           </button>
         </div>
@@ -2872,7 +2872,7 @@
       <div class="modal-content">
         <div class="modal-header">
           <h3> Configurar Parametros da Analise</h3>
-          <button class="modal-close" onclick="closeAnalysisConfigModal()"></button>
+          <button class="modal-close" onclick="closeAnalysisConfigModal()" data-ref="24"></button>
         </div>
         
         <div class="info-box info" style="margin-bottom: 20px;">
@@ -2881,7 +2881,7 @@
         
         <div class="form-group">
           <label>Periodo de Analise (meses)</label>
-          <input type="number" id="ac-periodo" min="12" max="120" step="1" value="${periodoAtual}" required>
+          <input type="number" id="ac-periodo" min="12" max="120" step="1" value="${periodoAtual}" required data-ref="34">
           <small style="color: #64748b; font-size: 12px;">
             Quantos meses considerar na analise (ex: 60 meses = 5 anos)
           </small>
@@ -2889,7 +2889,7 @@
         
         <div class="form-group">
           <label>Custo de Oportunidade (% ao ano)</label>
-          <input type="number" id="ac-custo" min="0" max="100" step="0.1" value="${custoAtual}" required>
+          <input type="number" id="ac-custo" min="0" max="100" step="0.1" value="${custoAtual}" required data-ref="35">
           <small style="color: #64748b; font-size: 12px;">
             Taxa de retorno alternativa (ex: 12% = poupanca/CDI, 20% = investimento de risco)
           </small>
@@ -2901,10 +2901,10 @@
         </div>
         
         <div class="modal-actions">
-          <button class="button button-ghost" onclick="closeAnalysisConfigModal()">
+          <button class="button button-ghost" onclick="closeAnalysisConfigModal()" data-ref="25">
             Cancelar
           </button>
-          <button class="button button-primary" onclick="saveAnalysisConfig()">
+          <button class="button button-primary" onclick="saveAnalysisConfig()" data-ref="26">
             Salvar e Recalcular
           </button>
         </div>

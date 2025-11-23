@@ -1,4 +1,4 @@
-﻿<!DOCTYPE html>
+<!DOCTYPE html>
 <html lang="pt-BR">
 <head>
   <meta charset="utf-8">
@@ -155,7 +155,7 @@
         <div class="form-grid two-columns">
           <div class="form-group">
             <label for="indicatorId">Indicador *</label>
-            <select id="indicatorId" name="indicator_id" required>
+            <select id="indicatorId" name="indicator_id" required data-ref="17">
               <option value="">Selecione</option>
               {% for indicator in indicators %}
                 <option value="{{ indicator.id }}">{{ indicator.code }} - {{ indicator.name }}</option>
@@ -164,7 +164,7 @@
           </div>
           <div class="form-group">
             <label for="goalType">Formato da meta *</label>
-            <select id="goalType" name="goal_type" required>
+            <select id="goalType" name="goal_type" required data-ref="18">
               <option value="single">Meta unica</option>
               <option value="daily">Meta diaria</option>
               <option value="weekly">Meta semanal</option>
@@ -183,12 +183,12 @@
         <div class="form-grid two-columns">
           <div class="form-group">
             <label id="goalValueLabel" for="goalValue">Valor alvo *</label>
-            <input id="goalValue" name="goal_value" type="number" step="0.01" required>
+            <input id="goalValue" name="goal_value" type="number" step="0.01" required data-ref="03">
             <span class="input-hint" id="goalValueHint">Informe o valor que deseja alcancar.</span>
           </div>
           <div class="form-group" id="evaluationBasisGroup">
             <label for="evaluationBasis">Forma de avaliacao</label>
-            <select id="evaluationBasis" name="evaluation_basis">
+            <select id="evaluationBasis" name="evaluation_basis" data-ref="19">
               <option value="sum">Somar valores do periodo</option>
               <option value="average">Media do periodo</option>
               <option value="latest">Usar ultimo valor registrado</option>
@@ -201,7 +201,7 @@
         <div class="type-section" data-type-section="single">
           <div class="form-group">
             <label for="singleDeadline">Prazo para atingir *</label>
-            <input id="singleDeadline" type="date" placeholder="dd/mm/aaaa">
+            <input id="singleDeadline" type="date" placeholder="dd/mm/aaaa" data-ref="04">
           </div>
           <span class="input-hint">Clique no campo e selecione a data usando o calendario.</span>
         </div>
@@ -210,11 +210,11 @@
           <div class="form-grid two-columns">
             <div class="form-group">
               <label for="dailyStart">Data inicial *</label>
-              <input id="dailyStart" type="date" placeholder="dd/mm/aaaa">
+              <input id="dailyStart" type="date" placeholder="dd/mm/aaaa" data-ref="05">
             </div>
             <div class="form-group">
               <label for="dailyEnd">Data final *</label>
-              <input id="dailyEnd" type="date" placeholder="dd/mm/aaaa">
+              <input id="dailyEnd" type="date" placeholder="dd/mm/aaaa" data-ref="06">
             </div>
           </div>
           <span class="input-hint">Clique no campo e selecione a data usando o calendario.</span>
@@ -224,11 +224,11 @@
           <div class="form-grid two-columns">
             <div class="form-group">
               <label for="weeklyStart">Data inicial *</label>
-              <input id="weeklyStart" type="date" placeholder="dd/mm/aaaa">
+              <input id="weeklyStart" type="date" placeholder="dd/mm/aaaa" data-ref="07">
             </div>
             <div class="form-group">
               <label for="weeklyEnd">Data final *</label>
-              <input id="weeklyEnd" type="date" placeholder="dd/mm/aaaa">
+              <input id="weeklyEnd" type="date" placeholder="dd/mm/aaaa" data-ref="08">
             </div>
           </div>
           <span class="input-hint">Clique no campo e selecione a data usando o calendario.</span>
@@ -238,11 +238,11 @@
           <div class="form-grid two-columns">
             <div class="form-group">
               <label for="monthlyStart">Mes/Ano inicial *</label>
-              <input id="monthlyStart" type="month" placeholder="Ex: Janeiro 2025">
+              <input id="monthlyStart" type="month" placeholder="Ex: Janeiro 2025" data-ref="09">
             </div>
             <div class="form-group">
               <label for="monthlyEnd">Mes/Ano final *</label>
-              <input id="monthlyEnd" type="month" placeholder="Ex: Dezembro 2025">
+              <input id="monthlyEnd" type="month" placeholder="Ex: Dezembro 2025" data-ref="10">
             </div>
           </div>
           <span class="input-hint">Clique no campo e selecione mes e ano usando o calendario.</span>
@@ -252,11 +252,11 @@
           <div class="form-grid two-columns">
             <div class="form-group">
               <label for="quarterlyStart">Mes/Ano inicial *</label>
-              <input id="quarterlyStart" type="month" placeholder="Ex: Janeiro 2025">
+              <input id="quarterlyStart" type="month" placeholder="Ex: Janeiro 2025" data-ref="11">
             </div>
             <div class="form-group">
               <label for="quarterlyEnd">Mes/Ano final *</label>
-              <input id="quarterlyEnd" type="month" placeholder="Ex: Dezembro 2025">
+              <input id="quarterlyEnd" type="month" placeholder="Ex: Dezembro 2025" data-ref="12">
             </div>
           </div>
           <span class="input-hint">Clique no campo e selecione mes e ano usando o calendario.</span>
@@ -266,11 +266,11 @@
           <div class="form-grid two-columns">
             <div class="form-group">
               <label for="biannualStart">Mes/Ano inicial *</label>
-              <input id="biannualStart" type="month" placeholder="Ex: Janeiro 2025">
+              <input id="biannualStart" type="month" placeholder="Ex: Janeiro 2025" data-ref="13">
             </div>
             <div class="form-group">
               <label for="biannualEnd">Mes/Ano final *</label>
-              <input id="biannualEnd" type="month" placeholder="Ex: Junho 2025">
+              <input id="biannualEnd" type="month" placeholder="Ex: Junho 2025" data-ref="14">
             </div>
           </div>
           <span class="input-hint">Clique no campo e selecione mes e ano usando o calendario.</span>
@@ -280,11 +280,11 @@
           <div class="form-grid two-columns">
             <div class="form-group">
               <label for="annualStart">Ano inicial *</label>
-              <input id="annualStart" type="number" min="2020" max="2050" step="1" placeholder="2025">
+              <input id="annualStart" type="number" min="2020" max="2050" step="1" placeholder="2025" data-ref="15">
             </div>
             <div class="form-group">
               <label for="annualEnd">Ano final *</label>
-              <input id="annualEnd" type="number" min="2020" max="2050" step="1" placeholder="2025">
+              <input id="annualEnd" type="number" min="2020" max="2050" step="1" placeholder="2025" data-ref="16">
             </div>
           </div>
           <span class="input-hint">Defina o intervalo de anos para acompanhamento anual.</span>
@@ -296,7 +296,7 @@
         <div class="form-grid two-columns">
           <div class="form-group">
             <label for="responsibleId">Responsavel</label>
-            <select id="responsibleId" name="responsible_id">
+            <select id="responsibleId" name="responsible_id" data-ref="20">
               <option value="">Selecione</option>
               {% for employee in employees %}
                 <option value="{{ employee.id }}">{{ employee.name }}</option>
@@ -305,7 +305,7 @@
           </div>
           <div class="form-group">
             <label for="status">Status</label>
-            <select id="status" name="status">
+            <select id="status" name="status" data-ref="21">
               <option value="active">Em andamento</option>
               <option value="achieved">Atingida</option>
               <option value="delayed">Atrasada</option>
@@ -315,13 +315,13 @@
         </div>
         <div class="form-group">
           <label for="notes">Observacoes</label>
-          <textarea id="notes" name="notes" placeholder="Contexto, premissas ou acoes de acompanhamento"></textarea>
+          <textarea id="notes" name="notes" placeholder="Contexto, premissas ou acoes de acompanhamento" data-ref="22"></textarea>
         </div>
       </div>
 
       <div class="actions">
-        <button type="button" class="btn-secondary" id="cancelButton">Cancelar</button>
-        <button type="submit" class="btn-primary">Salvar Meta</button>
+        <button type="button" class="btn-secondary" id="cancelButton" data-ref="01">Cancelar</button>
+        <button type="submit" class="btn-primary" data-ref="02">Salvar Meta</button>
       </div>
     </form>
   </div>

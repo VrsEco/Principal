@@ -444,11 +444,11 @@
         <div class="instance-process">📋 {{ instance.process_code }} - {{ instance.process_name }}</div>
       </div>
       <div class="instance-header-actions">
-        <button class="btn-instance btn-back" onclick="goBack()">
+        <button class="btn-instance btn-back" onclick="goBack()" data-ref="01">
           ← Voltar
         </button>
         {% if instance.status != 'completed' and instance.status != 'cancelled' %}
-        <button class="btn-instance btn-complete" onclick="openCompleteModal()">
+        <button class="btn-instance btn-complete" onclick="openCompleteModal()" data-ref="02">
           ✓ Concluir
         </button>
         {% endif %}
@@ -510,8 +510,8 @@
       <h2 class="section-title">Registro Diário</h2>
       
       <div class="add-log-form">
-        <textarea id="logTextarea" placeholder="Adicione uma observação sobre o andamento..."></textarea>
-        <button onclick="addLog()">Adicionar Registro</button>
+        <textarea id="logTextarea" placeholder="Adicione uma observação sobre o andamento..." data-ref="09"></textarea>
+        <button onclick="addLog()" data-ref="03">Adicionar Registro</button>
       </div>
 
       <div id="logsContainer">
@@ -530,16 +530,16 @@
     <form class="modal-form" id="completeForm">
       <div class="field">
         <label>Data de Conclusão</label>
-        <input type="datetime-local" id="completionDate" required>
+        <input type="datetime-local" id="completionDate" required data-ref="07">
       </div>
       <div class="field">
         <label>Observações finais (opcional)</label>
-        <textarea id="completionNotes" rows="3" placeholder="Comentários sobre a conclusão..."></textarea>
+        <textarea id="completionNotes" rows="3" placeholder="Comentários sobre a conclusão..." data-ref="10"></textarea>
       </div>
     </form>
     <div class="modal-footer">
-      <button class="btn-modal cancel" onclick="closeCompleteModal()">Cancelar</button>
-      <button class="btn-modal submit" onclick="submitCompletion()">Confirmar Conclusão</button>
+      <button class="btn-modal cancel" onclick="closeCompleteModal()" data-ref="04">Cancelar</button>
+      <button class="btn-modal submit" onclick="submitCompletion()" data-ref="05">Confirmar Conclusão</button>
     </div>
   </div>
 </div>
@@ -601,10 +601,10 @@ function renderCollaborators() {
           id="hours-${index}"
           value="${collab.actual_hours || 0}"
           ${instanceData.status === 'completed' || instanceData.status === 'cancelled' ? 'disabled' : ''}
-        >
+         data-ref="08">
       </div>
       ${instanceData.status !== 'completed' && instanceData.status !== 'cancelled' ? `
-      <button class="btn-save-hours" onclick="saveCollaboratorHours(${index})">Salvar</button>
+      <button class="btn-save-hours" onclick="saveCollaboratorHours(${index})" data-ref="06">Salvar</button>
       ` : ''}
     </div>
   `).join('');

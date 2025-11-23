@@ -123,7 +123,7 @@
    ======================================== #}
 
 {% macro data_table(headers, rows, caption="", hover=true) %}
-<table class="model7-table{% if hover %} table-hover{% endif %}">
+<table class="model7-table{% if hover %} table-hover{% endif %}" data-ref="01">
   {% if caption %}
     <caption>{{ caption }}</caption>
   {% endif %}
@@ -160,7 +160,7 @@
    ======================================== #}
 
 {% macro custom_table(headers, rows, caption="") %}
-<table class="model7-table">
+<table class="model7-table" data-ref="02">
   {% if caption %}
     <caption>{{ caption }}</caption>
   {% endif %}

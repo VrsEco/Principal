@@ -282,7 +282,7 @@
         </div>
       </div>
       <div class="company-actions">
-        <a href="{{ url_for('companies_page') }}" class="btn btn-ghost">
+        <a href="{{ url_for('companies_page') }}" class="btn btn-ghost" data-ref="53">
           <span>←</span> Voltar
         </a>
       </div>
@@ -292,19 +292,19 @@
   <!-- Abas -->
   <div class="tabs-container">
     <div class="tabs-nav">
-      <button class="tab-button active" data-tab="basic" onclick="switchTab('basic')">
+      <button class="tab-button active" data-tab="basic" onclick="switchTab('basic')" data-ref="01">
         <span>📋</span> Dados Básicos
       </button>
-      <button class="tab-button" data-tab="mvv" onclick="switchTab('mvv')">
+      <button class="tab-button" data-tab="mvv" onclick="switchTab('mvv')" data-ref="02">
         <span>🎯</span> Missão/Visão/Valores
       </button>
-      <button class="tab-button" data-tab="roles" onclick="switchTab('roles')">
+      <button class="tab-button" data-tab="roles" onclick="switchTab('roles')" data-ref="03">
         <span>👔</span> Funções/Cargos
       </button>
-      <button class="tab-button" data-tab="employees" onclick="switchTab('employees')">
+      <button class="tab-button" data-tab="employees" onclick="switchTab('employees')" data-ref="04">
         <span>👥</span> Colaboradores
       </button>
-      <button class="tab-button" data-tab="economic" onclick="switchTab('economic')">
+      <button class="tab-button" data-tab="economic" onclick="switchTab('economic')" data-ref="05">
         <span>💰</span> Cadastro Econômico
       </button>
     </div>
@@ -319,30 +319,30 @@
             <label class="form-label">Código do Cliente *</label>
             <input type="text" name="client_code" class="form-input" 
                    value="{{ company.client_code or '' }}" 
-                   maxlength="3" pattern="[A-Za-z0-9]{1,3}" required>
+                   maxlength="3" pattern="[A-Za-z0-9]{1,3}" required data-ref="21">
           </div>
 
           <div class="form-group">
             <label class="form-label">Nome Fantasia *</label>
             <input type="text" name="name" class="form-input" 
-                   value="{{ company.name or '' }}" required>
+                   value="{{ company.name or '' }}" required data-ref="22">
           </div>
 
           <div class="form-group">
             <label class="form-label">Razão Social</label>
             <input type="text" name="legal_name" class="form-input" 
-                   value="{{ company.legal_name or '' }}">
+                   value="{{ company.legal_name or '' }}" data-ref="23">
           </div>
 
           <div class="form-group">
             <label class="form-label">Setor/Indústria</label>
             <input type="text" name="industry" class="form-input" 
-                   value="{{ company.industry or '' }}">
+                   value="{{ company.industry or '' }}" data-ref="24">
           </div>
 
           <div class="form-group">
             <label class="form-label">Porte</label>
-            <select name="size" class="form-select">
+            <select name="size" class="form-select" data-ref="39">
               <option value="">Selecione...</option>
               <option value="MEI" {% if company.size == 'MEI' %}selected{% endif %}>MEI</option>
               <option value="Micro" {% if company.size == 'Micro' %}selected{% endif %}>Micro</option>
@@ -355,11 +355,11 @@
 
         <div class="form-group">
           <label class="form-label">Descrição</label>
-          <textarea name="description" class="form-textarea">{{ company.description or '' }}</textarea>
+          <textarea name="description" class="form-textarea" data-ref="45">{{ company.description or '' }}</textarea>
         </div>
 
         <div class="form-actions">
-          <button type="submit" class="btn btn-primary">
+          <button type="submit" class="btn btn-primary" data-ref="06">
             <span>💾</span> Salvar Alterações
           </button>
         </div>
@@ -374,23 +374,23 @@
         <div class="form-group">
           <label class="form-label">Missão</label>
           <textarea name="mission" class="form-textarea" 
-                    placeholder="Qual é o propósito da organização?">{{ company.mvv_mission or '' }}</textarea>
+                    placeholder="Qual é o propósito da organização?" data-ref="46">{{ company.mvv_mission or '' }}</textarea>
         </div>
 
         <div class="form-group">
           <label class="form-label">Visão</label>
           <textarea name="vision" class="form-textarea" 
-                    placeholder="Onde a organização quer chegar?">{{ company.mvv_vision or '' }}</textarea>
+                    placeholder="Onde a organização quer chegar?" data-ref="47">{{ company.mvv_vision or '' }}</textarea>
         </div>
 
         <div class="form-group">
           <label class="form-label">Valores</label>
           <textarea name="values" class="form-textarea" 
-                    placeholder="Quais são os princípios que guiam a organização?">{{ company.mvv_values or '' }}</textarea>
+                    placeholder="Quais são os princípios que guiam a organização?" data-ref="48">{{ company.mvv_values or '' }}</textarea>
         </div>
 
         <div class="form-actions">
-          <button type="submit" class="btn btn-primary">
+          <button type="submit" class="btn btn-primary" data-ref="07">
             <span>💾</span> Salvar MVV
           </button>
         </div>
@@ -401,7 +401,7 @@
     <div id="tab-roles" class="tab-content">
       <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 24px;">
         <h2 style="font-size: 20px; font-weight: 700; margin: 0;">Funções e Cargos</h2>
-        <button class="btn btn-primary" onclick="openRoleModal()">
+        <button class="btn btn-primary" onclick="openRoleModal()" data-ref="08">
           <span>➕</span> Nova Função
         </button>
       </div>
@@ -415,7 +415,7 @@
     <div id="tab-employees" class="tab-content">
       <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 24px;">
         <h2 style="font-size: 20px; font-weight: 700; margin: 0;">Colaboradores</h2>
-        <button class="btn btn-primary" onclick="openEmployeeModal()">
+        <button class="btn btn-primary" onclick="openEmployeeModal()" data-ref="09">
           <span>➕</span> Novo Colaborador
         </button>
       </div>
@@ -435,14 +435,14 @@
             <label class="form-label">CNPJ</label>
             <input type="text" name="cnpj" class="form-input" 
                    value="{{ company.cnpj or '' }}" 
-                   placeholder="00.000.000/0000-00">
+                   placeholder="00.000.000/0000-00" data-ref="25">
           </div>
 
           <div class="form-group">
             <label class="form-label">Cidade</label>
             <input type="text" name="city" class="form-input" 
                    value="{{ company.city or '' }}" 
-                   placeholder="Ex: São Paulo">
+                   placeholder="Ex: São Paulo" data-ref="26">
           </div>
 
           <div class="form-group">
@@ -450,19 +450,19 @@
             <input type="text" name="state" class="form-input" 
                    value="{{ company.state or '' }}" 
                    maxlength="2"
-                   placeholder="Ex: SP">
+                   placeholder="Ex: SP" data-ref="27">
           </div>
 
           <div class="form-group">
             <label class="form-label">CNAEs</label>
             <input type="text" name="cnaes" class="form-input" 
                    value="{{ company.cnaes or '' }}" 
-                   placeholder="Ex: 6201-5/00, 6202-3/00">
+                   placeholder="Ex: 6201-5/00, 6202-3/00" data-ref="28">
           </div>
 
           <div class="form-group">
             <label class="form-label">Cobertura Física</label>
-            <select name="coverage_physical" class="form-select">
+            <select name="coverage_physical" class="form-select" data-ref="40">
               <option value="">Selecione...</option>
               <option value="Micro" {% if company.coverage_physical == 'Micro' %}selected{% endif %}>Micro (Bairro)</option>
               <option value="Local" {% if company.coverage_physical == 'Local' %}selected{% endif %}>Local (Cidade)</option>
@@ -474,7 +474,7 @@
 
           <div class="form-group">
             <label class="form-label">Cobertura Online</label>
-            <select name="coverage_online" class="form-select">
+            <select name="coverage_online" class="form-select" data-ref="41">
               <option value="">Selecione...</option>
               <option value="Sem presença" {% if company.coverage_online == 'Sem presença' %}selected{% endif %}>Sem presença</option>
               <option value="Local" {% if company.coverage_online == 'Local' %}selected{% endif %}>Local</option>
@@ -488,20 +488,20 @@
             <label class="form-label">Experiência Total</label>
             <input type="text" name="experience_total" class="form-input" 
                    value="{{ company.experience_total or '' }}" 
-                   placeholder="Ex: 15 anos">
+                   placeholder="Ex: 15 anos" data-ref="29">
           </div>
 
           <div class="form-group">
             <label class="form-label">Experiência no Segmento</label>
             <input type="text" name="experience_segment" class="form-input" 
                    value="{{ company.experience_segment or '' }}" 
-                   placeholder="Ex: 8 anos">
+                   placeholder="Ex: 8 anos" data-ref="30">
           </div>
 
         </div>
 
         <div class="form-actions">
-          <button type="submit" class="btn btn-primary">
+          <button type="submit" class="btn btn-primary" data-ref="10">
             <span>💾</span> Salvar Dados Econômicos
           </button>
         </div>
@@ -668,15 +668,15 @@
                         data-role-department="${role.department || ''}"
                         data-role-notes="${role.notes || ''}"
                         data-role-parent="${role.parent_role_id || ''}"
-                        title="Editar">✏️</button>
-                <button class="btn-icon delete" onclick="deleteRole(${role.id})" title="Excluir">🗑️</button>
+                        title="Editar" data-ref="11">✏️</button>
+                <button class="btn-icon delete" onclick="deleteRole(${role.id})" title="Excluir" data-ref="12">🗑️</button>
               </td>
             </tr>
           `;
         };
 
         container.innerHTML = `
-          <table class="routines-table">
+          <table class="routines-table" data-ref="51">
             <thead>
               <tr>
                 <th>Função/Cargo</th>
@@ -733,32 +733,32 @@
       <div class="modal-dialog">
         <div class="modal-header">
           <h3>${role ? 'Editar' : 'Nova'} Função/Cargo</h3>
-          <button onclick="this.closest('.modal-overlay').remove()" class="btn-close">×</button>
+          <button onclick="this.closest('.modal-overlay').remove()" class="btn-close" data-ref="13">×</button>
         </div>
         <form id="roleForm" class="modal-body">
           <div class="form-grid">
             <div class="form-group">
               <label class="form-label">Nome da Função *</label>
-              <input type="text" name="title" class="form-input" value="${role?.title || role?.name || ''}" required placeholder="Ex: Gerente de Vendas">
+              <input type="text" name="title" class="form-input" value="${role?.title || role?.name || ''}" required placeholder="Ex: Gerente de Vendas" data-ref="31">
             </div>
             <div class="form-group">
               <label class="form-label">Subordinado a</label>
-              <select name="parent_role_id" class="form-select" id="parentRoleSelect">
+              <select name="parent_role_id" class="form-select" id="parentRoleSelect" data-ref="42">
                 <option value="">Nenhum (Cargo principal)</option>
               </select>
             </div>
             <div class="form-group">
               <label class="form-label">Departamento</label>
-              <input type="text" name="department" class="form-input" value="${role?.department || ''}" placeholder="Ex: Vendas, TI, RH">
+              <input type="text" name="department" class="form-input" value="${role?.department || ''}" placeholder="Ex: Vendas, TI, RH" data-ref="32">
             </div>
           </div>
           <div class="form-group">
             <label class="form-label">Observações</label>
-            <textarea name="notes" class="form-textarea" placeholder="Descreva as responsabilidades desta função...">${role?.notes || role?.description || ''}</textarea>
+            <textarea name="notes" class="form-textarea" placeholder="Descreva as responsabilidades desta função..." data-ref="49">${role?.notes || role?.description || ''}</textarea>
           </div>
           <div class="form-actions">
-            <button type="button" class="btn btn-ghost" onclick="this.closest('.modal-overlay').remove()">Cancelar</button>
-            <button type="submit" class="btn btn-primary">
+            <button type="button" class="btn btn-ghost" onclick="this.closest('.modal-overlay').remove()" data-ref="14">Cancelar</button>
+            <button type="submit" class="btn btn-primary" data-ref="15">
               <span>💾</span> Salvar
             </button>
           </div>
@@ -873,7 +873,7 @@
 
       if (result.success && result.employees && result.employees.length > 0) {
         container.innerHTML = `
-          <table class="routines-table">
+          <table class="routines-table" data-ref="52">
             <thead>
               <tr>
                 <th>Nome</th>
@@ -910,8 +910,8 @@
                             data-emp-status="${emp.status || 'active'}"
                             data-emp-notes="${emp.notes || ''}"
                             data-emp-role-name="${emp.role_name || ''}"
-                            title="Editar">✏️</button>
-                    <button class="btn-icon delete" onclick="deleteEmployee(${emp.id})" title="Excluir">🗑️</button>
+                            title="Editar" data-ref="16">✏️</button>
+                    <button class="btn-icon delete" onclick="deleteEmployee(${emp.id})" title="Excluir" data-ref="17">🗑️</button>
                   </td>
                 </tr>
               `).join('')}
@@ -958,55 +958,55 @@
       <div class="modal-dialog">
         <div class="modal-header">
           <h3>${employee ? 'Editar' : 'Novo'} Colaborador</h3>
-          <button onclick="this.closest('.modal-overlay').remove()" class="btn-close">×</button>
+          <button onclick="this.closest('.modal-overlay').remove()" class="btn-close" data-ref="18">×</button>
         </div>
         <form id="employeeForm" class="modal-body">
           <div class="form-grid">
             <div class="form-group">
               <label class="form-label">Nome Completo *</label>
-              <input type="text" name="name" class="form-input" value="${employee?.name || ''}" required>
+              <input type="text" name="name" class="form-input" value="${employee?.name || ''}" required data-ref="33">
             </div>
             <div class="form-group">
               <label class="form-label">E-mail</label>
-              <input type="email" name="email" class="form-input" value="${employee?.email || ''}">
+              <input type="email" name="email" class="form-input" value="${employee?.email || ''}" data-ref="34">
             </div>
             <div class="form-group">
               <label class="form-label">Telefone</label>
-              <input type="tel" name="phone" class="form-input" value="${employee?.phone || ''}">
+              <input type="tel" name="phone" class="form-input" value="${employee?.phone || ''}" data-ref="35">
             </div>
             <div class="form-group">
               <label class="form-label">Função/Cargo</label>
-              <select name="role_id" class="form-select" id="roleSelect">
+              <select name="role_id" class="form-select" id="roleSelect" data-ref="43">
                 <option value="">Selecione...</option>
               </select>
             </div>
             <div class="form-group">
               <label class="form-label">Departamento</label>
-              <input type="text" name="department" class="form-input" value="${employee?.department || ''}">
+              <input type="text" name="department" class="form-input" value="${employee?.department || ''}" data-ref="36">
             </div>
             <div class="form-group">
               <label class="form-label">Data de Admissão</label>
-              <input type="date" name="hire_date" class="form-input" value="${employee?.hire_date || ''}">
+              <input type="date" name="hire_date" class="form-input" value="${employee?.hire_date || ''}" data-ref="37">
             </div>
             <div class="form-group">
               <label class="form-label">Status</label>
-              <select name="status" class="form-select">
+              <select name="status" class="form-select" data-ref="44">
                 <option value="active" ${employee?.status === 'active' ? 'selected' : ''}>Ativo</option>
                 <option value="inactive" ${employee?.status === 'inactive' ? 'selected' : ''}>Inativo</option>
               </select>
             </div>
             <div class="form-group">
               <label class="form-label">Carga Horária Semanal</label>
-              <input type="number" name="weekly_hours" class="form-input" value="${employee?.weekly_hours || 40}" min="1" max="60" step="0.5">
+              <input type="number" name="weekly_hours" class="form-input" value="${employee?.weekly_hours || 40}" min="1" max="60" step="0.5" data-ref="38">
             </div>
           </div>
           <div class="form-group">
             <label class="form-label">Observações</label>
-            <textarea name="notes" class="form-textarea">${employee?.notes || ''}</textarea>
+            <textarea name="notes" class="form-textarea" data-ref="50">${employee?.notes || ''}</textarea>
           </div>
           <div class="form-actions">
-            <button type="button" class="btn btn-ghost" onclick="this.closest('.modal-overlay').remove()">Cancelar</button>
-            <button type="submit" class="btn btn-primary">
+            <button type="button" class="btn btn-ghost" onclick="this.closest('.modal-overlay').remove()" data-ref="19">Cancelar</button>
+            <button type="submit" class="btn btn-primary" data-ref="20">
               <span>💾</span> Salvar
             </button>
           </div>

@@ -251,7 +251,7 @@
         </div>
       </div>
       <div class="indicators-actions">
-        <button class="indicators-button primary" onclick="openIndicatorPopup()">
+        <button class="indicators-button primary" onclick="openIndicatorPopup()" data-ref="01">
           + Novo Indicador
         </button>
       </div>
@@ -259,7 +259,7 @@
 
     <!-- Table -->
     <div class="indicators-table-wrapper">
-      <table class="indicators-table" id="indicatorsTable">
+      <table class="indicators-table" id="indicatorsTable" data-ref="05">
         <thead>
           <tr>
             <th>Código</th>
@@ -289,7 +289,7 @@
 
 <div class="form-group">
           <label for="indicatorName">Nome do Indicador *</label>
-          <input type="text" id="indicatorName" name="name" required>
+          <input type="text" id="indicatorName" name="name" required data-ref="04">
         </div>
       </div>
 
@@ -355,8 +355,8 @@ function renderIndicatorsTable() {
         <td>${polarity}</td>
         <td style="text-align: center;">
           <div class="actions">
-            <button class="btn-small btn-edit" onclick="openIndicatorPopup(${indicator.id})">Editar</button>
-            <button class="btn-small btn-delete" onclick="deleteIndicator(${indicator.id})">Excluir</button>
+            <button class="btn-small btn-edit" onclick="openIndicatorPopup(${indicator.id})" data-ref="02">Editar</button>
+            <button class="btn-small btn-delete" onclick="deleteIndicator(${indicator.id})" data-ref="03">Excluir</button>
           </div>
         </td>
       </tr>

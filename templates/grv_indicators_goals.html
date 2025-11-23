@@ -1,4 +1,4 @@
-﻿{% extends "base.html" %}
+{% extends "base.html" %}
 {% block title %}GRV | Metas de Indicadores{% endblock %}
 {% block body %}{% set active_nav = 'indicators-goals' %}{{ super() }}{% endblock %}
 
@@ -302,7 +302,7 @@
         </div>
       </div>
       <div class="indicators-actions">
-        <button class="indicators-button primary" onclick="openGoalPopup()">
+        <button class="indicators-button primary" onclick="openGoalPopup()" data-ref="01">
           + Nova Meta
         </button>
       </div>
@@ -310,7 +310,7 @@
 
     <!-- Table -->
     <div class="indicators-table-wrapper">
-      <table class="indicators-table" id="goalsTable">
+      <table class="indicators-table" id="goalsTable" data-ref="04">
         <thead>
           <tr>
             <th>Codigo</th>
@@ -459,8 +459,8 @@ function renderGoalsTable() {
         <td><span class="status-badge ${statusInfo.css}">${statusInfo.text}</span></td>
         <td style="text-align: center;">
           <div class="actions">
-            <button class="btn-small btn-edit" onclick="openGoalPopup(${goal.id})">Editar</button>
-            <button class="btn-small btn-delete" onclick="deleteGoal(${goal.id})">Excluir</button>
+            <button class="btn-small btn-edit" onclick="openGoalPopup(${goal.id})" data-ref="02">Editar</button>
+            <button class="btn-small btn-delete" onclick="deleteGoal(${goal.id})" data-ref="03">Excluir</button>
           </div>
         </td>
       </tr>

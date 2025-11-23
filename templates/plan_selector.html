@@ -1,4 +1,4 @@
-﻿{% extends "base.html" %}
+{% extends "base.html" %}
 {% block title %}Projetos | PEV 2.0{% endblock %}
 {% block body %}
 {% set active_nav = 'configs' if show_ai_only|default(False) else 'pev' %}
@@ -84,7 +84,7 @@
   <p class="page-subtitle">Uma jornada de evoluã§ã£o continua, na qual planejamento, execuã§ã£o e gestã£o caminham com
     ritmo coordenado.</p>
   <div style="margin-top: 16px;">
-    <a href="/main" style="color: var(--color-accent); text-decoration: none; font-size: 14px;">â† Voltar ao
+    <a href="/main" style="color: var(--color-accent); text-decoration: none; font-size: 14px;">← Voltar ao
       Ecossistema Versus</a>
   </div>
 </div>
@@ -136,8 +136,8 @@
       <p>Criar novas empresas para centralizar indicadores e, em seguida, adicione o planejamento estrategico. Essa
         estrutura garante visibilidade total dos objetivos e entregas.</p>
       <div class="project-hub-actions">
-        <button class="button button-ghost" type="button" id="new-company-btn">Nova empresa</button>
-        <button class="button button-primary" type="button" id="new-plan-btn">Novo planejamento</button>
+        <button class="button button-ghost" type="button" id="new-company-btn" data-ref="01">Nova empresa</button>
+        <button class="button button-primary" type="button" id="new-plan-btn" data-ref="02">Novo planejamento</button>
       </div>
       <div class="project-hub-hint">
         <span>Apos cadastrar, utilize os campos ao lado para acessar rapidamente os planejamentos existentes.</span>
@@ -147,7 +147,7 @@
       <div class="selector-group">
         <label class="combo-label" for="company-select">Selecione a empresa</label>
         <div class="combo-field">
-          <select id="company-select" class="combo-control">
+          <select id="company-select" class="combo-control" data-ref="78">
             <option value="">Escolha uma empresa</option>
             {% for company in companies %}
             <option value="{{ company.id }}">{{ company.name }}</option>
@@ -158,13 +158,13 @@
       <div class="selector-group">
         <label class="combo-label" for="plan-select">Selecionar planejamento</label>
         <div class="combo-field">
-          <select id="plan-select" class="combo-control" disabled>
+          <select id="plan-select" class="combo-control" disabled data-ref="79">
             <option value="">Selecione uma empresa primeiro</option>
           </select>
         </div>
       </div>
       <div class="selector-actions">
-        <button id="plan-confirm" class="button button-primary" type="button" disabled>Ir para planejamento</button>
+        <button id="plan-confirm" class="button button-primary" type="button" disabled data-ref="03">Ir para planejamento</button>
       </div>
       <div class="selector-summary surface-tint">
         <span class="summary-eyebrow">Resumo rapido</span>
@@ -193,11 +193,11 @@
           <span class="subsection-badge">Automação estratégica</span>
         </div>
         <div class="subsection-actions">
-          <button class="button button-primary" type="button" id="agents-new-btn">
+          <button class="button button-primary" type="button" id="agents-new-btn" data-ref="04">
             <span class="button-icon">➕</span>
             Novo Agente
           </button>
-          <button class="button button-secondary" type="button" onclick="testAgentsTable()" style="margin-left: 8px;">
+          <button class="button button-secondary" type="button" onclick="testAgentsTable()" style="margin-left: 8px;" data-ref="05">
             🧪 Testar
           </button>
         </div>
@@ -213,7 +213,7 @@
           <span class="subsection-badge">Conectividade externa</span>
         </div>
         <div class="subsection-actions">
-          <button class="button button-primary" type="button" id="integrations-new-btn">
+          <button class="button button-primary" type="button" id="integrations-new-btn" data-ref="06">
             <span class="button-icon">➕</span>
             Nova Integração
           </button>
@@ -233,7 +233,7 @@
       <p class="services-subtitle">Monitoramento em tempo real da conectividade e disponibilidade dos serviços</p>
     </div>
     <div class="services-actions">
-      <button class="button button-secondary" type="button" onclick="refreshServicesStatus()">
+      <button class="button button-secondary" type="button" onclick="refreshServicesStatus()" data-ref="07">
         <span class="button-icon">🔄</span>
         Atualizar Status
       </button>
@@ -265,10 +265,10 @@
           </div>
         </div>
         <div class="service-actions">
-          <button type="button" class="button button-sm button-secondary" onclick="testAIService()">
+          <button type="button" class="button button-sm button-secondary" onclick="testAIService()" data-ref="08">
             🧪 Testar
           </button>
-          <button type="button" class="button button-sm button-secondary" onclick="configureAIService()">
+          <button type="button" class="button button-sm button-secondary" onclick="configureAIService()" data-ref="09">
             ⚙️ Configurar
           </button>
         </div>
@@ -298,10 +298,10 @@
           </div>
         </div>
         <div class="service-actions">
-          <button type="button" class="button button-sm button-secondary" onclick="testEmailService()">
+          <button type="button" class="button button-sm button-secondary" onclick="testEmailService()" data-ref="10">
             🧪 Testar
           </button>
-          <button type="button" class="button button-sm button-secondary" onclick="configureEmailService()">
+          <button type="button" class="button button-sm button-secondary" onclick="configureEmailService()" data-ref="11">
             ⚙️ Configurar
           </button>
         </div>
@@ -331,10 +331,10 @@
           </div>
         </div>
         <div class="service-actions">
-          <button type="button" class="button button-sm button-secondary" onclick="testWhatsAppService()">
+          <button type="button" class="button button-sm button-secondary" onclick="testWhatsAppService()" data-ref="12">
             🧪 Testar
           </button>
-          <button type="button" class="button button-sm button-secondary" onclick="configureWhatsAppService()">
+          <button type="button" class="button button-sm button-secondary" onclick="configureWhatsAppService()" data-ref="13">
             ⚙️ Configurar
           </button>
         </div>
@@ -364,10 +364,10 @@
           </div>
         </div>
         <div class="service-actions">
-          <button type="button" class="button button-sm button-secondary" onclick="viewDatabaseInfo()">
+          <button type="button" class="button button-sm button-secondary" onclick="viewDatabaseInfo()" data-ref="14">
             📊 Info
           </button>
-          <button type="button" class="button button-sm button-secondary" onclick="backupDatabase()">
+          <button type="button" class="button button-sm button-secondary" onclick="backupDatabase()" data-ref="15">
             💾 Backup
           </button>
         </div>
@@ -387,27 +387,27 @@
     <form id="company-form">
       <div class="form-group">
         <label for="company-name">Nome da Empresa *</label>
-        <input type="text" id="company-name" name="name" required>
+        <input type="text" id="company-name" name="name" required data-ref="47">
       </div>
       <div class="form-group">
         <label for="company-client-code">Código do Cliente *</label>
         <input type="text" id="company-client-code" name="client_code" required maxlength="3" pattern="[A-Za-z0-9]{1,3}"
-          placeholder="Ex: AO, A1, J99" style="text-transform:uppercase;">
+          placeholder="Ex: AO, A1, J99" style="text-transform:uppercase;" data-ref="48">
         <small style="color:var(--color-muted);font-size:11px;display:block;margin-top:4px;">
           Entre 1 e 3 caracteres (letras ou números) para identificação (usado nos códigos de processos)
         </small>
       </div>
       <div class="form-group">
         <label for="company-legal-name">Razã£o Social</label>
-        <input type="text" id="company-legal-name" name="legal_name">
+        <input type="text" id="company-legal-name" name="legal_name" data-ref="49">
       </div>
       <div class="form-group">
         <label for="company-industry">Setor</label>
-        <input type="text" id="company-industry" name="industry">
+        <input type="text" id="company-industry" name="industry" data-ref="50">
       </div>
       <div class="form-group">
         <label for="company-size">Porte</label>
-        <select id="company-size" name="size">
+        <select id="company-size" name="size" data-ref="80">
           <option value="">Selecione</option>
           <option value="micro">Microempresa</option>
           <option value="pequena">Pequena</option>
@@ -417,11 +417,11 @@
       </div>
       <div class="form-group">
         <label for="company-description">Descriã§ã£o</label>
-        <textarea id="company-description" name="description" rows="3"></textarea>
+        <textarea id="company-description" name="description" rows="3" data-ref="94"></textarea>
       </div>
       <div class="form-actions">
-        <button type="button" class="button button-ghost" id="company-cancel">Cancelar</button>
-        <button type="submit" class="button button-primary">Criar Empresa</button>
+        <button type="button" class="button button-ghost" id="company-cancel" data-ref="16">Cancelar</button>
+        <button type="submit" class="button button-primary" data-ref="17">Criar Empresa</button>
       </div>
     </form>
   </div>
@@ -439,7 +439,7 @@
       <div class="form-group">
         <label for="plan-company" style="color: #000000 !important; font-weight: 600 !important;">Empresa *</label>
         <select id="plan-company" name="company_id" required class="input-fundo-claro"
-          style="color: #000000 !important;">
+          style="color: #000000 !important;" data-ref="81">
           <option value="" style="color: #000000 !important;">Selecione uma empresa</option>
           {% for company in companies %}
           <option value="{{ company.id }}" style="color: #000000 !important;">{{ company.name }}</option>
@@ -450,7 +450,7 @@
         <label for="plan-type" style="color: #000000 !important; font-weight: 600 !important;">Tipo de Planejamento
           *</label>
         <select id="plan-type" name="plan_mode" required class="input-fundo-claro"
-          style="margin-bottom: 8px; color: #000000 !important;">
+          style="margin-bottom: 8px; color: #000000 !important;" data-ref="82">
           <option value="" style="color: #000000 !important;">Selecione o tipo</option>
           <option value="evolucao" style="color: #000000 !important;">Planejamento de Evolução (Clássico)</option>
           <option value="implantacao" style="color: #000000 !important;">Planejamento de Implantação (Novo Negócio)
@@ -464,25 +464,25 @@
       <div class="form-group">
         <label for="plan-name" style="color: #000000 !important; font-weight: 600 !important;">Nome do Planejamento
           *</label>
-        <input type="text" id="plan-name" name="name" required class="input-fundo-claro">
+        <input type="text" id="plan-name" name="name" required class="input-fundo-claro" data-ref="51">
       </div>
       <div class="form-group">
         <label for="plan-description" style="color: #000000 !important; font-weight: 600 !important;">Descrição</label>
-        <textarea id="plan-description" name="description" rows="3" class="input-fundo-claro"></textarea>
+        <textarea id="plan-description" name="description" rows="3" class="input-fundo-claro" data-ref="95"></textarea>
       </div>
       <div class="form-group">
         <label for="plan-start-date" style="color: #000000 !important; font-weight: 600 !important;">Data de Início
           *</label>
-        <input type="date" id="plan-start-date" name="start_date" required class="input-fundo-claro">
+        <input type="date" id="plan-start-date" name="start_date" required class="input-fundo-claro" data-ref="52">
       </div>
       <div class="form-group">
         <label for="plan-end-date" style="color: #000000 !important; font-weight: 600 !important;">Data de Fim *</label>
-        <input type="date" id="plan-end-date" name="end_date" required class="input-fundo-claro">
+        <input type="date" id="plan-end-date" name="end_date" required class="input-fundo-claro" data-ref="53">
       </div>
       <div class="form-actions">
         <button type="button" class="button button-ghost" id="plan-cancel"
-          style="background: linear-gradient(135deg, #f1f5f9 0%, #e2e8f0 100%) !important; color: #1e293b !important; border: 1px solid rgba(30, 64, 175, 0.2) !important;">Cancelar</button>
-        <button type="submit" class="button button-primary botao-fundo-claro">Criar Planejamento</button>
+          style="background: linear-gradient(135deg, #f1f5f9 0%, #e2e8f0 100%) !important; color: #1e293b !important; border: 1px solid rgba(30, 64, 175, 0.2) !important;" data-ref="18">Cancelar</button>
+        <button type="submit" class="button button-primary botao-fundo-claro" data-ref="19">Criar Planejamento</button>
       </div>
     </form>
   </div>
@@ -499,7 +499,7 @@
     <div class="modal-body">
       <div class="form-group">
         <label for="ai-provider-select">Provedor de IA:</label>
-        <select id="ai-provider-select" onchange="updateAIForm()">
+        <select id="ai-provider-select" onchange="updateAIForm()" data-ref="83">
           <option value="openai">OpenAI (GPT)</option>
           <option value="anthropic">Anthropic (Claude)</option>
           <option value="webhook">Webhook Personalizado</option>
@@ -510,7 +510,7 @@
       <div id="openai-config" class="provider-config">
         <div class="form-group">
           <label for="openai-api-key">API Key da OpenAI:</label>
-          <input type="password" id="openai-api-key" placeholder="sk-..." />
+          <input type="password" id="openai-api-key" placeholder="sk-..."  data-ref="54" />
           <small>Obtenha sua chave em: <a href="https://platform.openai.com/api-keys"
               target="_blank">platform.openai.com</a></small>
         </div>
@@ -519,7 +519,7 @@
       <div id="anthropic-config" class="provider-config" style="display: none;">
         <div class="form-group">
           <label for="anthropic-api-key">API Key da Anthropic:</label>
-          <input type="password" id="anthropic-api-key" placeholder="sk-ant-..." />
+          <input type="password" id="anthropic-api-key" placeholder="sk-ant-..."  data-ref="55" />
           <small>Obtenha sua chave em: <a href="https://console.anthropic.com/"
               target="_blank">console.anthropic.com</a></small>
         </div>
@@ -528,7 +528,7 @@
       <div id="webhook-config" class="provider-config" style="display: none;">
         <div class="form-group">
           <label for="webhook-url">URL do Webhook:</label>
-          <input type="url" id="webhook-url" placeholder="https://seu-webhook.com/ai" />
+          <input type="url" id="webhook-url" placeholder="https://seu-webhook.com/ai"  data-ref="56" />
         </div>
       </div>
 
@@ -540,13 +540,13 @@
       </div>
 
       <div class="test-section">
-        <button class="button button-secondary" onclick="testAIConnection()">🧪 Testar Conexão</button>
+        <button class="button button-secondary" onclick="testAIConnection()" data-ref="20">🧪 Testar Conexão</button>
         <div id="ai-test-result" class="test-result"></div>
       </div>
     </div>
     <div class="modal-footer">
-      <button type="button" class="button button-secondary" id="ai-config-cancel">Cancelar</button>
-      <button type="button" class="button button-primary" onclick="saveAIConfig()">Salvar Configuração</button>
+      <button type="button" class="button button-secondary" id="ai-config-cancel" data-ref="21">Cancelar</button>
+      <button type="button" class="button button-primary" onclick="saveAIConfig()" data-ref="22">Salvar Configuração</button>
     </div>
   </div>
 </div>
@@ -561,7 +561,7 @@
     <div class="modal-body">
       <div class="form-group">
         <label for="email-provider-select">Provedor de Email:</label>
-        <select id="email-provider-select" onchange="updateEmailForm()">
+        <select id="email-provider-select" onchange="updateEmailForm()" data-ref="84">
           <option value="smtp">SMTP (Gmail, Outlook, etc.)</option>
           <option value="webhook">Webhook Personalizado</option>
           <option value="disabled">Desabilitado</option>
@@ -572,26 +572,26 @@
         <div class="form-row">
           <div class="form-group">
             <label for="mail-server">Servidor SMTP:</label>
-            <input type="text" id="mail-server" placeholder="smtp.gmail.com" />
+            <input type="text" id="mail-server" placeholder="smtp.gmail.com"  data-ref="57" />
           </div>
           <div class="form-group">
             <label for="mail-port">Porta:</label>
-            <input type="number" id="mail-port" placeholder="587" />
+            <input type="number" id="mail-port" placeholder="587"  data-ref="58" />
           </div>
         </div>
         <div class="form-group">
           <label for="mail-username">Usuário:</label>
-          <input type="email" id="mail-username" placeholder="seu-email@gmail.com" />
+          <input type="email" id="mail-username" placeholder="seu-email@gmail.com"  data-ref="59" />
         </div>
         <div class="form-group">
           <label for="mail-password">Senha/App Password:</label>
-          <input type="password" id="mail-password" placeholder="Sua senha ou app password" />
+          <input type="password" id="mail-password" placeholder="Sua senha ou app password"  data-ref="60" />
           <small>Para Gmail, use App Password: <a href="https://support.google.com/accounts/answer/185833"
               target="_blank">Como criar</a></small>
         </div>
         <div class="form-group">
           <label>
-            <input type="checkbox" id="mail-use-tls" checked />
+            <input type="checkbox" id="mail-use-tls" checked  data-ref="61" />
             Usar TLS
           </label>
         </div>
@@ -600,18 +600,18 @@
       <div id="email-webhook-config" class="provider-config" style="display: none;">
         <div class="form-group">
           <label for="email-webhook-url">URL do Webhook:</label>
-          <input type="url" id="email-webhook-url" placeholder="https://seu-webhook.com/email" />
+          <input type="url" id="email-webhook-url" placeholder="https://seu-webhook.com/email"  data-ref="62" />
         </div>
       </div>
 
       <div class="test-section">
-        <button class="button button-secondary" onclick="testEmailConnection()">🧪 Testar Conexão</button>
+        <button class="button button-secondary" onclick="testEmailConnection()" data-ref="23">🧪 Testar Conexão</button>
         <div id="email-test-result" class="test-result"></div>
       </div>
     </div>
     <div class="modal-footer">
-      <button type="button" class="button button-secondary" id="email-config-cancel">Cancelar</button>
-      <button type="button" class="button button-primary" onclick="saveEmailConfig()">Salvar Configuração</button>
+      <button type="button" class="button button-secondary" id="email-config-cancel" data-ref="24">Cancelar</button>
+      <button type="button" class="button button-primary" onclick="saveEmailConfig()" data-ref="25">Salvar Configuração</button>
     </div>
   </div>
 </div>
@@ -626,7 +626,7 @@
     <div class="modal-body">
       <div class="form-group">
         <label for="whatsapp-provider-select">Provedor de WhatsApp:</label>
-        <select id="whatsapp-provider-select" onchange="updateWhatsAppForm()">
+        <select id="whatsapp-provider-select" onchange="updateWhatsAppForm()" data-ref="85">
           <option value="z-api">Z-API</option>
           <option value="twilio">Twilio</option>
           <option value="webhook">Webhook Personalizado</option>
@@ -637,11 +637,11 @@
       <div id="z-api-config" class="provider-config">
         <div class="form-group">
           <label for="z-api-key">Token Z-API:</label>
-          <input type="password" id="z-api-key" placeholder="Seu token Z-API" />
+          <input type="password" id="z-api-key" placeholder="Seu token Z-API"  data-ref="63" />
         </div>
         <div class="form-group">
           <label for="z-instance-id">Instance ID:</label>
-          <input type="text" id="z-instance-id" placeholder="Sua instance ID" />
+          <input type="text" id="z-instance-id" placeholder="Sua instance ID"  data-ref="64" />
         </div>
         <small>Obtenha suas credenciais em: <a href="https://z-api.io/" target="_blank">z-api.io</a></small>
       </div>
@@ -649,15 +649,15 @@
       <div id="twilio-config" class="provider-config" style="display: none;">
         <div class="form-group">
           <label for="twilio-account-sid">Account SID:</label>
-          <input type="text" id="twilio-account-sid" placeholder="AC..." />
+          <input type="text" id="twilio-account-sid" placeholder="AC..."  data-ref="65" />
         </div>
         <div class="form-group">
           <label for="twilio-auth-token">Auth Token:</label>
-          <input type="password" id="twilio-auth-token" placeholder="Seu auth token" />
+          <input type="password" id="twilio-auth-token" placeholder="Seu auth token"  data-ref="66" />
         </div>
         <div class="form-group">
           <label for="twilio-whatsapp-number">Número WhatsApp:</label>
-          <input type="text" id="twilio-whatsapp-number" placeholder="+1234567890" />
+          <input type="text" id="twilio-whatsapp-number" placeholder="+1234567890"  data-ref="67" />
         </div>
         <small>Configure em: <a href="https://console.twilio.com/" target="_blank">console.twilio.com</a></small>
       </div>
@@ -665,18 +665,18 @@
       <div id="whatsapp-webhook-config" class="provider-config" style="display: none;">
         <div class="form-group">
           <label for="whatsapp-webhook-url">URL do Webhook:</label>
-          <input type="url" id="whatsapp-webhook-url" placeholder="https://seu-webhook.com/whatsapp" />
+          <input type="url" id="whatsapp-webhook-url" placeholder="https://seu-webhook.com/whatsapp"  data-ref="68" />
         </div>
       </div>
 
       <div class="test-section">
-        <button class="button button-secondary" onclick="testWhatsAppConnection()">🧪 Testar Conexão</button>
+        <button class="button button-secondary" onclick="testWhatsAppConnection()" data-ref="26">🧪 Testar Conexão</button>
         <div id="whatsapp-test-result" class="test-result"></div>
       </div>
     </div>
     <div class="modal-footer">
-      <button type="button" class="button button-secondary" id="whatsapp-config-cancel">Cancelar</button>
-      <button type="button" class="button button-primary" onclick="saveWhatsAppConfig()">Salvar Configuração</button>
+      <button type="button" class="button button-secondary" id="whatsapp-config-cancel" data-ref="27">Cancelar</button>
+      <button type="button" class="button button-primary" onclick="saveWhatsAppConfig()" data-ref="28">Salvar Configuração</button>
     </div>
   </div>
 </div>
@@ -694,7 +694,7 @@
       </div>
     </div>
     <div class="modal-footer">
-      <button type="button" class="button button-primary" id="test-result-close">Fechar</button>
+      <button type="button" class="button button-primary" id="test-result-close" data-ref="29">Fechar</button>
     </div>
   </div>
 </div>
@@ -1252,7 +1252,7 @@
         return;
       }
       console.log('Rendering table with', items.length, 'items');
-      var html = '<table class="table"><thead><tr><th>Nome</th><th>ID</th><th>Página</th><th>Sessão</th><th>Status</th><th>Criado</th><th style="width:140px;">Ações</th></tr></thead><tbody>';
+      var html = '<table class="table" data-ref="A1"><thead><tr><th>Nome</th><th>ID</th><th>Página</th><th>Sessão</th><th>Status</th><th>Criado</th><th style="width:140px;">Ações</th></tr></thead><tbody>';
       items.forEach(function (a) {
         var act = a.activation || {};
         var createdDate = a.created_at ? new Date(a.created_at).toLocaleDateString('pt-BR') : 'N/A';
@@ -1270,10 +1270,10 @@
           '<td><span class="status-badge ' + statusClass + '">' + statusText + '</span></td>' +
           '<td><small>' + createdDate + '</small></td>' +
           '<td>' +
-          '<button class="button button-sm button-secondary" data-agent-action="view" data-id="' + a.id + '" title="Visualizar detalhes">👁️</button> ' +
-          '<button class="button button-sm button-secondary" data-agent-action="edit" data-id="' + a.id + '" title="Editar agente">✏️</button> ' +
-          '<button class="button button-sm button-success" data-agent-action="test" data-id="' + a.id + '" title="Testar agente">🧪</button> ' +
-          '<button class="button button-sm button-danger" data-agent-action="delete" data-id="' + a.id + '" title="Excluir agente">🗑️</button>' +
+          '<button class="button button-sm button-secondary" data-agent-action="view" data-id="' + a.id + '" title="Visualizar detalhes" data-ref="30">👁️</button> ' +
+          '<button class="button button-sm button-secondary" data-agent-action="edit" data-id="' + a.id + '" title="Editar agente" data-ref="31">✏️</button> ' +
+          '<button class="button button-sm button-success" data-agent-action="test" data-id="' + a.id + '" title="Testar agente" data-ref="32">🧪</button> ' +
+          '<button class="button button-sm button-danger" data-agent-action="delete" data-id="' + a.id + '" title="Excluir agente" data-ref="33">🗑️</button>' +
           '</td>' +
           '</tr>';
       });
@@ -1306,14 +1306,14 @@
             <div class="modal-content modal-large">
               <div class="modal-header">
                 <h3 class="modal-title">Detalhes do Agente</h3>
-                <button type="button" class="modal-close" id="agentViewClose">×</button>
+                <button type="button" class="modal-close" id="agentViewClose" data-ref="34">×</button>
               </div>
               <div class="modal-body" id="agentViewContent">
                 <!-- Content will be populated here -->
               </div>
               <div class="modal-footer">
-                <button type="button" class="button button-secondary" id="agentViewCloseBtn">Fechar</button>
-                <button type="button" class="button button-primary" id="agentViewEditBtn">Editar</button>
+                <button type="button" class="button button-secondary" id="agentViewCloseBtn" data-ref="35">Fechar</button>
+                <button type="button" class="button button-primary" id="agentViewEditBtn" data-ref="36">Editar</button>
               </div>
             </div>
           `;
@@ -1538,39 +1538,39 @@
           '<div class="modal-content">' +
           '  <div class="modal-header">' +
           '    <h3 class="modal-title" id="agentGlobalTitle">Novo Agente</h3>' +
-          '    <button type="button" class="modal-close" id="agentGlobalClose">×</button>' +
+          '    <button type="button" class="modal-close" id="agentGlobalClose" data-ref="37">×</button>' +
           '  </div>' +
           '  <form id="agentGlobalForm" class="modal-body">' +
           '    <div class="form-row">' +
-          '      <label class="form-field"><span>Nome</span><input type="text" id="g_name" required></label>' +
-          '      <label class="form-field"><span>ID</span><input type="text" id="g_id" required pattern="[a-z0-9_]+"></label>' +
+          '      <label class="form-field"><span>Nome</span><input type="text" id="g_name" required data-ref="69"></label>' +
+          '      <label class="form-field"><span>ID</span><input type="text" id="g_id" required pattern="[a-z0-9_]+" data-ref="70"></label>' +
           '    </div>' +
           '    <div class="form-row">' +
-          '      <label class="form-field"><span>Página</span><select id="g_page" required><option value="">Selecione</option><option value="company">Dados da Organização</option><option value="participants">Participantes</option><option value="drivers">Direcionadores</option><option value="okr-global">OKRs Globais</option><option value="okr-area">OKRs de Área</option><option value="projects">Projetos</option><option value="reports">Relatórios</option></select></label>' +
-          '      <label class="form-field"><span>Sessão</span><select id="g_section" required><option value="">Selecione</option></select></label>' +
+          '      <label class="form-field"><span>Página</span><select id="g_page" required data-ref="86"><option value="">Selecione</option><option value="company">Dados da Organização</option><option value="participants">Participantes</option><option value="drivers">Direcionadores</option><option value="okr-global">OKRs Globais</option><option value="okr-area">OKRs de Área</option><option value="projects">Projetos</option><option value="reports">Relatórios</option></select></label>' +
+          '      <label class="form-field"><span>Sessão</span><select id="g_section" required data-ref="87"><option value="">Selecione</option></select></label>' +
           '    </div>' +
-          '    <label class="form-field"><span>Botão</span><select id="g_button" required><option value="">Selecione</option></select></label>' +
+          '    <label class="form-field"><span>Botão</span><select id="g_button" required data-ref="88"><option value="">Selecione</option></select></label>' +
           '    <div class="form-row">' +
-          '      <label class="form-field"><span>Campos Obrigatórios</span><div id="g_required_fields" class="fields-list"></div><textarea id="g_required" rows="2" style="display:none;"></textarea></label>' +
-          '      <label class="form-field"><span>Campos Opcionais</span><div id="g_optional_fields" class="fields-list"></div><textarea id="g_optional" rows="2" style="display:none;"></textarea></label>' +
+          '      <label class="form-field"><span>Campos Obrigatórios</span><div id="g_required_fields" class="fields-list"></div><textarea id="g_required" rows="2" style="display:none;" data-ref="96"></textarea></label>' +
+          '      <label class="form-field"><span>Campos Opcionais</span><div id="g_optional_fields" class="fields-list"></div><textarea id="g_optional" rows="2" style="display:none;" data-ref="97"></textarea></label>' +
           '    </div>' +
-          '    <label class="form-field"><span>Prompt</span><textarea id="g_prompt" rows="6"></textarea></label>' +
+          '    <label class="form-field"><span>Prompt</span><textarea id="g_prompt" rows="6" data-ref="98"></textarea></label>' +
           '    <div class="form-row">' +
-          '      <label class="form-field"><span>Formato</span><select id="g_format"><option value="markdown">Markdown</option><option value="json">JSON</option><option value="html">HTML</option></select></label>' +
-          '      <label class="form-field"><span>Destino</span><select id="g_output"><option value="ai_insights">Insights da IA</option><option value="consultant_analysis">Análise do Consultor</option></select></label>' +
+          '      <label class="form-field"><span>Formato</span><select id="g_format" data-ref="89"><option value="markdown">Markdown</option><option value="json">JSON</option><option value="html">HTML</option></select></label>' +
+          '      <label class="form-field"><span>Destino</span><select id="g_output" data-ref="90"><option value="ai_insights">Insights da IA</option><option value="consultant_analysis">Análise do Consultor</option></select></label>' +
           '    </div>' +
-          '    <label class="form-field"><span>Template de Resposta</span><textarea id="g_resp_template" rows="4"></textarea></label>' +
+          '    <label class="form-field"><span>Template de Resposta</span><textarea id="g_resp_template" rows="4" data-ref="99"></textarea></label>' +
           '    <div class="form-row">' +
-          '      <label class="form-field"><span>Timeout (s)</span><input type="number" id="g_timeout" value="300" min="30"></label>' +
-          '      <label class="form-field"><span>Tentativas</span><input type="number" id="g_retries" value="3" min="1" max="5"></label>' +
-          '      <label class="form-field"><span>Execução</span><select id="g_exec"><option value="sequential">Sequencial</option><option value="parallel">Paralelo</option></select></label>' +
-          '      <label class="form-field"><span>Cache</span><select id="g_cache"><option value="true">Habilitado</option><option value="false">Desabilitado</option></select></label>' +
+          '      <label class="form-field"><span>Timeout (s)</span><input type="number" id="g_timeout" value="300" min="30" data-ref="71"></label>' +
+          '      <label class="form-field"><span>Tentativas</span><input type="number" id="g_retries" value="3" min="1" max="5" data-ref="72"></label>' +
+          '      <label class="form-field"><span>Execução</span><select id="g_exec" data-ref="91"><option value="sequential">Sequencial</option><option value="parallel">Paralelo</option></select></label>' +
+          '      <label class="form-field"><span>Cache</span><select id="g_cache" data-ref="92"><option value="true">Habilitado</option><option value="false">Desabilitado</option></select></label>' +
           '    </div>' +
           '    <div class="form-row"><label class="form-field"><span>Integrações</span><div id="g_integrations" class="fields-list"></div></label></div>' +
           '  </form>' +
           '  <div class="modal-footer">' +
-          '    <button type="button" class="button button-secondary" id="g_cancel">Cancelar</button>' +
-          '    <button type="button" class="button button-primary" id="g_save">Salvar</button>' +
+          '    <button type="button" class="button button-secondary" id="g_cancel" data-ref="38">Cancelar</button>' +
+          '    <button type="button" class="button button-primary" id="g_save" data-ref="39">Salvar</button>' +
           '  </div>' +
           '</div>';
         document.body.appendChild(modal);
@@ -1749,7 +1749,7 @@
         var checked = selected.indexOf(fieldValue) !== -1 ? 'checked' : '';
 
         html += '<label class="field-option">' +
-          '<input type="checkbox" value="' + fieldValue + '" ' + checked + ' data-field-type="' + type + '">' +
+          '<input type="checkbox" value="' + fieldValue + '" ' + checked + ' data-field-type="' + type + '" data-ref="73">' +
           '<span>' + fieldLabel + '</span>' +
           '</label>';
       });
@@ -1835,7 +1835,7 @@
         container.innerHTML = '<div class="empty-state"><div class="empty-state-icon">🔌</div><h3 class="empty-state-title">Nenhuma integração cadastrada</h3><p class="empty-state-description">Cadastre sua primeira integração para permitir que os agentes acessem serviços externos</p></div>';
         return;
       }
-      var html = '<table class="table"><thead><tr><th>Nome</th><th>Provider</th><th>Tipo</th><th>Auth</th><th>Status</th><th style="width:140px;">Ações</th></tr></thead><tbody>';
+      var html = '<table class="table" data-ref="A2"><thead><tr><th>Nome</th><th>Provider</th><th>Tipo</th><th>Auth</th><th>Status</th><th style="width:140px;">Ações</th></tr></thead><tbody>';
       items.forEach(function (it) {
         var statusClass = 'status-active';
         var statusText = 'Ativo';
@@ -1848,10 +1848,10 @@
           '<td>' + (it.auth_type || '') + '</td>' +
           '<td><span class="status-dot status-' + statusClass + '"></span> ' + statusText + '</td>' +
           '<td>' +
-          '<button class="button button-sm button-secondary" data-integration-action="view" data-id="' + it.id + '" title="Visualizar">👁️</button> ' +
-          '<button class="button button-sm button-secondary" data-integration-action="edit" data-id="' + it.id + '" title="Editar">✏️</button> ' +
-          '<button class="button button-sm button-success" data-integration-action="test" data-id="' + it.id + '" title="Testar">🧪</button> ' +
-          '<button class="button button-sm button-danger" data-integration-action="delete" data-id="' + it.id + '" title="Excluir">🗑️</button>' +
+          '<button class="button button-sm button-secondary" data-integration-action="view" data-id="' + it.id + '" title="Visualizar" data-ref="40">👁️</button> ' +
+          '<button class="button button-sm button-secondary" data-integration-action="edit" data-id="' + it.id + '" title="Editar" data-ref="41">✏️</button> ' +
+          '<button class="button button-sm button-success" data-integration-action="test" data-id="' + it.id + '" title="Testar" data-ref="42">🧪</button> ' +
+          '<button class="button button-sm button-danger" data-integration-action="delete" data-id="' + it.id + '" title="Excluir" data-ref="43">🗑️</button>' +
           '</td>' +
           '</tr>';
       });
@@ -1877,25 +1877,25 @@
           '<div class="modal-content">' +
           '  <div class="modal-header">' +
           '    <h3 class="modal-title" id="integrationGlobalTitle">Nova Integração</h3>' +
-          '    <button type="button" class="modal-close" id="integrationGlobalClose">×</button>' +
+          '    <button type="button" class="modal-close" id="integrationGlobalClose" data-ref="44">×</button>' +
           '  </div>' +
           '  <form id="integrationGlobalForm" class="modal-body">' +
           '    <div class="form-row">' +
-          '      <label class="form-field"><span>ID</span><input type="text" id="i_id" required pattern="[a-z0-9_]+"></label>' +
-          '      <label class="form-field"><span>Nome</span><input type="text" id="i_name" required></label>' +
+          '      <label class="form-field"><span>ID</span><input type="text" id="i_id" required pattern="[a-z0-9_]+" data-ref="74"></label>' +
+          '      <label class="form-field"><span>Nome</span><input type="text" id="i_name" required data-ref="75"></label>' +
           '    </div>' +
           '    <div class="form-row">' +
-          '      <label class="form-field"><span>Provider</span><input type="text" id="i_provider" placeholder="ex.: google_ads, webhook" required></label>' +
-          '      <label class="form-field"><span>Tipo</span><input type="text" id="i_type" placeholder="ex.: ads, data_source" required></label>' +
+          '      <label class="form-field"><span>Provider</span><input type="text" id="i_provider" placeholder="ex.: google_ads, webhook" required data-ref="76"></label>' +
+          '      <label class="form-field"><span>Tipo</span><input type="text" id="i_type" placeholder="ex.: ads, data_source" required data-ref="77"></label>' +
           '    </div>' +
           '    <div class="form-row">' +
-          '      <label class="form-field"><span>Auth Type</span><select id="i_auth_type"><option value="api_key">API Key</option><option value="oauth2">OAuth2</option><option value="webhook">Webhook</option></select></label>' +
+          '      <label class="form-field"><span>Auth Type</span><select id="i_auth_type" data-ref="93"><option value="api_key">API Key</option><option value="oauth2">OAuth2</option><option value="webhook">Webhook</option></select></label>' +
           '    </div>' +
-          '    <label class="form-field"><span>Config (JSON)</span><textarea id="i_config" rows="6" placeholder="{\n  \"api_key\": \"...\",\n  \"base_url\": \"https://...\"\n}"></textarea></label>' +
+          '    <label class="form-field"><span>Config (JSON)</span><textarea id="i_config" rows="6" placeholder="{\n  \"api_key\": \"...\",\n  \"base_url\": \"https://...\"\n}" data-ref="A0"></textarea></label>' +
           '  </form>' +
           '  <div class="modal-footer">' +
-          '    <button type="button" class="button button-secondary" id="i_cancel">Cancelar</button>' +
-          '    <button type="button" class="button button-primary" id="i_save">Salvar</button>' +
+          '    <button type="button" class="button button-secondary" id="i_cancel" data-ref="45">Cancelar</button>' +
+          '    <button type="button" class="button button-primary" id="i_save" data-ref="46">Salvar</button>' +
           '  </div>' +
           '</div>';
         document.body.appendChild(modal);

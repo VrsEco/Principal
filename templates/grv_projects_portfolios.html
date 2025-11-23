@@ -1,4 +1,4 @@
-﻿{% extends "base.html" %}
+{% extends "base.html" %}
 {% block title %}GRV | Portfólios{% endblock %}
 {% block body %}{% set active_nav = 'project-portfolios' %}{{ super() }}{% endblock %}
 
@@ -344,15 +344,15 @@
         </p>
       </div>
       <div class="portfolio-actions">
-        <button id="refreshButton" class="portfolio-button" type="button">🔄 Atualizar</button>
-        <button id="newPortfolioButton" class="portfolio-button primary" type="button">➕ Novo Portfólio</button>
+        <button id="refreshButton" class="portfolio-button" type="button" data-ref="01">🔄 Atualizar</button>
+        <button id="newPortfolioButton" class="portfolio-button primary" type="button" data-ref="02">➕ Novo Portfólio</button>
       </div>
     </header>
 
     <section id="portfolioSummary" class="portfolio-summary"></section>
 
     <div class="portfolio-table-wrapper">
-      <table class="portfolio-table">
+      <table class="portfolio-table" data-ref="12">
         <thead>
           <tr>
             <th>Portfólio</th>
@@ -377,31 +377,31 @@
   <div class="portfolio-modal">
     <header>
       <h2 id="modalTitle">Novo Portfólio</h2>
-      <button type="button" id="closeModalButton" aria-label="Fechar">×</button>
+      <button type="button" id="closeModalButton" aria-label="Fechar" data-ref="03">×</button>
     </header>
     <form id="portfolioForm" class="portfolio-form">
       <input type="hidden" id="portfolioId">
       <div class="field">
         <label for="portfolioCode">Código *</label>
-        <input id="portfolioCode" type="text" placeholder="Ex: PORT-001" required>
+        <input id="portfolioCode" type="text" placeholder="Ex: PORT-001" required data-ref="08">
       </div>
       <div class="field">
         <label for="portfolioName">Nome do Portfólio *</label>
-        <input id="portfolioName" type="text" placeholder="Ex: Transformação Digital" required>
+        <input id="portfolioName" type="text" placeholder="Ex: Transformação Digital" required data-ref="09">
       </div>
       <div class="field">
         <label for="portfolioResponsible">Responsável</label>
-        <select id="portfolioResponsible">
+        <select id="portfolioResponsible" data-ref="10">
           <option value="">Selecione um responsável</option>
         </select>
       </div>
       <div class="field">
         <label for="portfolioNotes">Observações</label>
-        <textarea id="portfolioNotes" placeholder="Detalhes relevantes sobre o portfólio"></textarea>
+        <textarea id="portfolioNotes" placeholder="Detalhes relevantes sobre o portfólio" data-ref="11"></textarea>
       </div>
       <footer>
-        <button type="button" class="secondary" id="cancelModalButton">Cancelar</button>
-        <button type="submit" class="primary">Salvar Portfólio</button>
+        <button type="button" class="secondary" id="cancelModalButton" data-ref="04">Cancelar</button>
+        <button type="submit" class="primary" data-ref="05">Salvar Portfólio</button>
       </footer>
     </form>
   </div>
@@ -613,8 +613,8 @@ document.addEventListener('DOMContentLoaded', () => {
           <td>${notes}</td>
           <td>
             <div class="portfolio-table-actions">
-              <button class="portfolio-link" type="button" data-action="edit" data-id="${portfolio.id}">Editar</button>
-              <button class="portfolio-link danger" type="button" data-action="remove" data-id="${portfolio.id}">Excluir</button>
+              <button class="portfolio-link" type="button" data-action="edit" data-id="${portfolio.id}" data-ref="06">Editar</button>
+              <button class="portfolio-link danger" type="button" data-action="remove" data-id="${portfolio.id}" data-ref="07">Excluir</button>
             </div>
           </td>
         </tr>`;

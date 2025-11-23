@@ -324,7 +324,7 @@
       ofertas e experiências tanto no varejo boutique quanto em eventos corporativos.
     </p>
     <div style="margin-top: 20px;">
-      <button class="btn btn-secondary" onclick="window.history.back()">← Voltar</button>
+      <button class="btn btn-secondary" onclick="window.history.back()" data-ref="01">← Voltar</button>
     </div>
   </article>
 
@@ -335,7 +335,7 @@
         <h2 style="margin:0 0 10px;">{{ segmento.nome }}</h2>
         <p style="margin:0; color:#475569;">{{ segmento.persona_descricao }}</p>
       </div>
-      <button class="btn btn-primary btn-small" onclick="openAddPersonaModal({{ segmento.id }})">+ Persona</button>
+      <button class="btn btn-primary btn-small" onclick="openAddPersonaModal({{ segmento.id }})" data-ref="02">+ Persona</button>
     </div>
 
     <div class="persona-grid" id="personas-{{ segmento.id }}">
@@ -343,9 +343,9 @@
       <div class="persona-box" data-persona-index="{{ loop.index0 }}">
         <div class="persona-actions">
           <button class="btn-icon" onclick="editPersona({{ segmento.id }}, {{ loop.index0 }})"
-            title="Editar">✏️</button>
+            title="Editar" data-ref="03">✏️</button>
           <button class="btn-icon" onclick="deletePersona({{ segmento.id }}, {{ loop.index0 }})"
-            title="Deletar">🗑️</button>
+            title="Deletar" data-ref="04">🗑️</button>
         </div>
 
         <h2>{{ persona.nome }}</h2>
@@ -376,7 +376,7 @@
     <div class="persona-card" style="margin-top:24px; padding:24px;">
       <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px;">
         <h3 style="margin:0; color:#0f172a;">Gatilhos por etapa</h3>
-        <button class="btn btn-secondary btn-small" onclick="editGatilhos({{ segmento.id }})">Editar Gatilhos</button>
+        <button class="btn btn-secondary btn-small" onclick="editGatilhos({{ segmento.id }})" data-ref="05">Editar Gatilhos</button>
       </div>
       <div class="journey-grid">
         {% for etapa, itens in segmento.gatilhos.items() %}
@@ -393,7 +393,7 @@
     </div>
     {% else %}
     <div style="margin-top:20px; text-align: center;">
-      <button class="btn btn-secondary" onclick="editGatilhos({{ segmento.id }})">Adicionar Gatilhos</button>
+      <button class="btn btn-secondary" onclick="editGatilhos({{ segmento.id }})" data-ref="06">Adicionar Gatilhos</button>
     </div>
     {% endif %}
   </article>
@@ -412,43 +412,43 @@
       <form id="personaForm">
         <div class="form-group">
           <label>Nome *</label>
-          <input type="text" id="personaName" required>
+          <input type="text" id="personaName" required data-ref="13">
         </div>
 
         <div class="form-group">
           <label>Idade</label>
-          <input type="text" id="personaAge">
+          <input type="text" id="personaAge" data-ref="14">
         </div>
 
         <div class="form-group">
           <label>Perfil</label>
-          <textarea id="personaProfile"></textarea>
+          <textarea id="personaProfile" data-ref="20"></textarea>
         </div>
 
         <div class="form-group">
           <label>Objetivos (pressione Enter para adicionar)</label>
           <div class="tag-input-container" id="goalsContainer">
-            <input type="text" class="tag-input" id="goalsInput" placeholder="Digite e pressione Enter">
+            <input type="text" class="tag-input" id="goalsInput" placeholder="Digite e pressione Enter" data-ref="15">
           </div>
         </div>
 
         <div class="form-group">
           <label>Desafios (pressione Enter)</label>
           <div class="tag-input-container" id="challengesContainer">
-            <input type="text" class="tag-input" id="challengesInput" placeholder="Digite e pressione Enter">
+            <input type="text" class="tag-input" id="challengesInput" placeholder="Digite e pressione Enter" data-ref="16">
           </div>
         </div>
 
         <div class="form-group">
           <label>Jornada (pressione Enter)</label>
           <div class="tag-input-container" id="journeyContainer">
-            <input type="text" class="tag-input" id="journeyInput" placeholder="Digite e pressione Enter">
+            <input type="text" class="tag-input" id="journeyInput" placeholder="Digite e pressione Enter" data-ref="17">
           </div>
         </div>
 
         <div class="form-actions">
-          <button type="button" class="btn btn-secondary" onclick="closePersonaModal()">Cancelar</button>
-          <button type="submit" class="btn btn-primary">Salvar</button>
+          <button type="button" class="btn btn-secondary" onclick="closePersonaModal()" data-ref="07">Cancelar</button>
+          <button type="submit" class="btn btn-primary" data-ref="08">Salvar</button>
         </div>
       </form>
     </div>
@@ -473,12 +473,12 @@
       </div>
 
       <div style="margin-top: 20px;">
-        <button type="button" class="btn btn-secondary btn-small" onclick="adicionarNovaEtapa()">+ Nova Etapa</button>
+        <button type="button" class="btn btn-secondary btn-small" onclick="adicionarNovaEtapa()" data-ref="09">+ Nova Etapa</button>
       </div>
 
       <div class="form-actions" style="margin-top: 24px;">
-        <button type="button" class="btn btn-secondary" onclick="closeGatilhosModal()">Cancelar</button>
-        <button type="button" class="btn btn-primary" onclick="salvarGatilhos()">Salvar</button>
+        <button type="button" class="btn btn-secondary" onclick="closeGatilhosModal()" data-ref="10">Cancelar</button>
+        <button type="button" class="btn btn-primary" onclick="salvarGatilhos()" data-ref="11">Salvar</button>
       </div>
     </div>
   </div>
@@ -731,16 +731,16 @@
         <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px;">
           <input type="text" class="etapa-nome" value="${nomeEtapa}" 
                  style="font-weight: 600; font-size: 14px; border: 1px solid rgba(148, 163, 184, 0.3); 
-                        border-radius: 6px; padding: 6px 10px; width: 200px;">
+                        border-radius: 6px; padding: 6px 10px; width: 200px;" data-ref="18">
           <button type="button" class="btn-icon" onclick="removerEtapa('${etapaId}')" 
                   style="background: rgba(239, 68, 68, 0.1); color: #dc2626; border: 1px solid rgba(239, 68, 68, 0.3); 
-                         padding: 6px 10px; border-radius: 6px; cursor: pointer;">
+                         padding: 6px 10px; border-radius: 6px; cursor: pointer;" data-ref="12">
             🗑️ Remover
           </button>
         </div>
         <div class="tag-input-container" id="${etapaId}-container">
           <input type="text" class="tag-input" id="${etapaId}-input" 
-                 placeholder="Digite um gatilho e pressione Enter">
+                 placeholder="Digite um gatilho e pressione Enter" data-ref="19">
         </div>
       `;
 

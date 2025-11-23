@@ -190,7 +190,7 @@
                     </p>
                 </div>
                 <div style="display:flex;gap:8px;flex-wrap:wrap;">
-                    <button type="button" class="button button-primary" onclick="novaReuniao()">+ Nova Reunião</button>
+                    <button type="button" class="button button-primary" onclick="novaReuniao()" data-ref="01">+ Nova Reunião</button>
                 </div>
             </div>
 
@@ -229,7 +229,7 @@
                                     <button type="button" 
                                             class="button button-sm button-outline" 
                                             onclick="event.stopPropagation(); gerarRelatorioReuniao({{ meeting.id }})"
-                                            title="Gerar relatório desta reunião">
+                                            title="Gerar relatório desta reunião" data-ref="02">
                                         📄 Relatório
                                     </button>
                                 </div>
@@ -243,7 +243,7 @@
                         <div style="font-size: 48px; margin-bottom: 16px;">📅</div>
                         <h4 style="margin: 0 0 8px 0; color: #0f172a;">Nenhuma reunião cadastrada</h4>
                         <p style="color: #64748b; margin: 0 0 24px 0;">Crie sua primeira reunião para começar.</p>
-                        <button onclick="novaReuniao()" class="button button-primary">
+                        <button onclick="novaReuniao()" class="button button-primary" data-ref="03">
                             + Criar Primeira Reunião
                         </button>
                     </div>
@@ -258,7 +258,7 @@
                         <span class="section-eyebrow">Editor</span>
                         <h3 id="meeting-editor-title" style="margin: 4px 0 0 0;">Nova Reunião</h3>
                     </div>
-                    <button type="button" onclick="fecharEditor()" class="button button-ghost">← Voltar à Lista</button>
+                    <button type="button" onclick="fecharEditor()" class="button button-ghost" data-ref="04">← Voltar à Lista</button>
                 </div>
                 
                 <input type="hidden" id="current-meeting-id" value="">
@@ -266,13 +266,13 @@
                 <!-- Tabs -->
                 <div class="tabs-container" style="border-bottom: 2px solid rgba(15, 23, 42, 0.08); margin-bottom: 24px;">
                     <div class="tabs" style="display: flex; gap: 8px;">
-                        <button class="tab-btn active" onclick="trocarAba('preliminares')" id="tab-preliminares" type="button">
+                        <button class="tab-btn active" onclick="trocarAba('preliminares')" id="tab-preliminares" type="button" data-ref="05">
                             Dados Preliminares / Convites
                         </button>
-                        <button class="tab-btn" onclick="trocarAba('execucao')" id="tab-execucao" type="button">
+                        <button class="tab-btn" onclick="trocarAba('execucao')" id="tab-execucao" type="button" data-ref="06">
                             Execução da Reunião
                         </button>
-                        <button class="tab-btn" onclick="trocarAba('atividades')" id="tab-atividades" type="button">
+                        <button class="tab-btn" onclick="trocarAba('atividades')" id="tab-atividades" type="button" data-ref="07">
                             Atividades Geradas
                         </button>
                     </div>
@@ -283,17 +283,17 @@
                         <div class="form-section">
                             <div class="form-group">
                                 <label class="form-label">Título da Reunião *</label>
-                                <input type="text" id="meeting-title" class="form-input" placeholder="Ex: Planejamento Estratégico Q4">
+                                <input type="text" id="meeting-title" class="form-input" placeholder="Ex: Planejamento Estratégico Q4" data-ref="32">
                             </div>
                             
                             <div class="form-row" style="display: grid; grid-template-columns: 1fr 1fr; gap: 1rem;">
                                 <div class="form-group">
                                     <label class="form-label">Data Prevista</label>
-                                    <input type="date" id="meeting-scheduled-date" class="form-input">
+                                    <input type="date" id="meeting-scheduled-date" class="form-input" data-ref="33">
                                 </div>
                                 <div class="form-group">
                                     <label class="form-label">Hora Prevista</label>
-                                    <input type="time" id="meeting-scheduled-time" class="form-input">
+                                    <input type="time" id="meeting-scheduled-time" class="form-input" data-ref="34">
                                 </div>
                             </div>
                             
@@ -301,7 +301,7 @@
                             <div class="form-group">
                                 <label class="form-label">Convidados da Organização</label>
                                 <div style="display: flex; gap: 0.5rem; margin-bottom: 0.5rem;">
-                                    <select id="employee-select" class="form-input" style="flex: 1;">
+                                    <select id="employee-select" class="form-input" style="flex: 1;" data-ref="49">
                                         <option value="">Selecione um colaborador...</option>
                                         {% for employee in employees %}
                                         <option value="{{ employee.id }}" 
@@ -312,7 +312,7 @@
                                         </option>
                                         {% endfor %}
                                     </select>
-                                    <button type="button" class="button button-secondary" onclick="adicionarColaborador()">+ Adicionar</button>
+                                    <button type="button" class="button button-secondary" onclick="adicionarColaborador()" data-ref="08">+ Adicionar</button>
                                 </div>
                                 <div id="guests-internal-list" class="guests-list"></div>
                             </div>
@@ -321,10 +321,10 @@
                             <div class="form-group">
                                 <label class="form-label">Convidados Externos</label>
                                 <div style="display: grid; grid-template-columns: 2fr 2fr 2fr auto; gap: 0.5rem; margin-bottom: 0.5rem;">
-                                    <input type="text" id="external-name" class="form-input" placeholder="Nome">
-                                    <input type="email" id="external-email" class="form-input" placeholder="E-mail">
-                                    <input type="text" id="external-whatsapp" class="form-input" placeholder="WhatsApp">
-                                    <button type="button" class="button button-secondary" onclick="adicionarExterno()">+ Adicionar</button>
+                                    <input type="text" id="external-name" class="form-input" placeholder="Nome" data-ref="35">
+                                    <input type="email" id="external-email" class="form-input" placeholder="E-mail" data-ref="36">
+                                    <input type="text" id="external-whatsapp" class="form-input" placeholder="WhatsApp" data-ref="37">
+                                    <button type="button" class="button button-secondary" onclick="adicionarExterno()" data-ref="09">+ Adicionar</button>
                                 </div>
                                 <div id="guests-external-list" class="guests-list"></div>
                             </div>
@@ -333,9 +333,9 @@
                             <div class="form-group">
                                 <label class="form-label">Pauta da Reunião</label>
                                 <div style="display: flex; gap: 0.5rem; margin-bottom: 0.5rem;">
-                                    <input type="text" id="agenda-item-input" class="form-input" placeholder="Digite um tópico da pauta" style="flex: 1;">
-                                    <button type="button" class="button button-secondary" onclick="adicionarPauta()">+ Adicionar</button>
-                                    <button type="button" class="button button-secondary" onclick="mostrarPautaSalva()">📋 Reutilizar</button>
+                                    <input type="text" id="agenda-item-input" class="form-input" placeholder="Digite um tópico da pauta" style="flex: 1;" data-ref="38">
+                                    <button type="button" class="button button-secondary" onclick="adicionarPauta()" data-ref="10">+ Adicionar</button>
+                                    <button type="button" class="button button-secondary" onclick="mostrarPautaSalva()" data-ref="11">📋 Reutilizar</button>
                                 </div>
                                 <div id="agenda-list" class="agenda-list"></div>
                                 
@@ -352,7 +352,7 @@
                                         </div>
                                         {% endfor %}
                                     </div>
-                                    <button type="button" class="button button-small button-ghost" onclick="fecharPautaSalva()" style="margin-top: 8px;">Fechar</button>
+                                    <button type="button" class="button button-small button-ghost" onclick="fecharPautaSalva()" style="margin-top: 8px;" data-ref="12">Fechar</button>
                                 </div>
                             </div>
                             
@@ -360,14 +360,14 @@
                             <div class="form-group">
                                 <label class="form-label">Observações do Convite</label>
                                 <textarea id="meeting-invite-notes" class="form-textarea" rows="4" 
-                                          placeholder="Informações adicionais para os convidados..."></textarea>
+                                          placeholder="Informações adicionais para os convidados..." data-ref="53"></textarea>
                             </div>
                             
                             <!-- Botões -->
                             <div style="display: flex; gap: 12px; justify-content: flex-end; margin-top: 24px;">
-                                <button type="button" class="button button-ghost" onclick="fecharEditor()">Cancelar</button>
-                                <button type="button" class="button button-primary" onclick="salvarPreliminares()">💾 Salvar Dados Preliminares</button>
-                                <button type="button" class="button button-success" onclick="gerarConvite()">📧 Gerar Convite (.ics)</button>
+                                <button type="button" class="button button-ghost" onclick="fecharEditor()" data-ref="13">Cancelar</button>
+                                <button type="button" class="button button-primary" onclick="salvarPreliminares()" data-ref="14">💾 Salvar Dados Preliminares</button>
+                                <button type="button" class="button button-success" onclick="gerarConvite()" data-ref="15">📧 Gerar Convite (.ics)</button>
                             </div>
                         </div>
                     </div>
@@ -379,7 +379,7 @@
                                 <p style="margin: 0; color: var(--text-primary);">
                                     <strong>Status:</strong> <span id="meeting-status-display">Rascunho</span>
                                 </p>
-                                <button type="button" class="button button-success" onclick="iniciarReuniao()" id="btn-iniciar-reuniao" style="margin-top: 8px;">
+                                <button type="button" class="button button-success" onclick="iniciarReuniao()" id="btn-iniciar-reuniao" style="margin-top: 8px;" data-ref="16">
                                     ▶️ Iniciar Reunião
                                 </button>
                             </div>
@@ -387,11 +387,11 @@
                             <div class="form-row" style="display: grid; grid-template-columns: 1fr 1fr; gap: 1rem;">
                                 <div class="form-group">
                                     <label class="form-label">Data da Realização</label>
-                                    <input type="date" id="meeting-actual-date" class="form-input">
+                                    <input type="date" id="meeting-actual-date" class="form-input" data-ref="39">
                                 </div>
                                 <div class="form-group">
                                     <label class="form-label">Hora da Realização</label>
-                                    <input type="time" id="meeting-actual-time" class="form-input">
+                                    <input type="time" id="meeting-actual-time" class="form-input" data-ref="40">
                                 </div>
                             </div>
                             
@@ -402,10 +402,10 @@
                                     Selecione dos convidados ou adicione novos participantes
                                 </p>
                                 <div style="display: flex; gap: 0.5rem; margin-bottom: 0.5rem;">
-                                    <select id="participant-select" class="form-input" style="flex: 1;">
+                                    <select id="participant-select" class="form-input" style="flex: 1;" data-ref="50">
                                         <option value="">Selecionar dos convidados...</option>
                                     </select>
-                                    <button type="button" class="button button-secondary" onclick="adicionarParticipante()">+ Adicionar</button>
+                                    <button type="button" class="button button-secondary" onclick="adicionarParticipante()" data-ref="17">+ Adicionar</button>
                                 </div>
                                 <div id="participants-list" class="participants-list"></div>
                             </div>
@@ -414,7 +414,7 @@
                             <div class="form-group">
                                 <label class="form-label">Assuntos Discutidos</label>
                                 <div id="discussions-list" class="discussions-list"></div>
-                                <button type="button" class="button button-secondary" onclick="adicionarDiscussao()">+ Adicionar Discussão</button>
+                                <button type="button" class="button button-secondary" onclick="adicionarDiscussao()" data-ref="18">+ Adicionar Discussão</button>
                             </div>
                             
                             <!-- Atividades Cadastradas -->
@@ -425,8 +425,8 @@
                                 </p>
                                 <div id="activities-list" class="activities-list"></div>
                                 <div style="display: flex; gap: 8px; margin-top: 8px;">
-                                    <button type="button" class="button button-secondary" onclick="adicionarAtividade()">+ Adicionar Atividade</button>
-                                    <button type="button" class="button button-outline" onclick="atualizarListaAtividades(this)" id="sync-activities-btn">
+                                    <button type="button" class="button button-secondary" onclick="adicionarAtividade()" data-ref="19">+ Adicionar Atividade</button>
+                                    <button type="button" class="button button-outline" onclick="atualizarListaAtividades(this)" id="sync-activities-btn" data-ref="20">
                                         🔄 Atualizar Lista
                                     </button>
                                 </div>
@@ -436,13 +436,13 @@
                             <div class="form-group">
                                 <label class="form-label">Notas Gerais da Reunião</label>
                                 <textarea id="meeting-notes" class="form-textarea" rows="4" 
-                                          placeholder="Observações gerais sobre a reunião..."></textarea>
+                                          placeholder="Observações gerais sobre a reunião..." data-ref="54"></textarea>
                             </div>
                             
                             <!-- Botões -->
                             <div style="display: flex; gap: 12px; justify-content: flex-end; margin-top: 24px;">
-                                <button type="button" class="button button-secondary" onclick="salvarExecucao()">💾 Salvar Execução</button>
-                                <button type="button" class="button button-success" onclick="finalizarReuniao()" id="btn-finalizar-reuniao">
+                                <button type="button" class="button button-secondary" onclick="salvarExecucao()" data-ref="21">💾 Salvar Execução</button>
+                                <button type="button" class="button button-success" onclick="finalizarReuniao()" id="btn-finalizar-reuniao" data-ref="22">
                                     ✅ Finalizar Reunião
                                 </button>
                             </div>
@@ -461,7 +461,7 @@
                             <h3 style="margin-bottom: 1rem;">Atividades Geradas nesta Reunião</h3>
                             <div id="generated-activities-list" class="generated-activities-list"></div>
                             
-                            <button type="button" class="button button-primary" onclick="atualizarAtividades()" style="margin-top: 16px;">
+                            <button type="button" class="button button-primary" onclick="atualizarAtividades()" style="margin-top: 16px;" data-ref="23">
                                 🔄 Atualizar Lista
                             </button>
                         </div>
@@ -865,7 +865,7 @@ function renderGuestsInternal() {
                 <strong>${guest.name}</strong><br>
                 <small>${guest.email || 'Sem e-mail'} | ${guest.whatsapp || 'Sem WhatsApp'}</small>
             </div>
-            <button type="button" class="btn btn-sm btn-danger" onclick="removerGuestInternal(${index})">✕</button>
+            <button type="button" class="btn btn-sm btn-danger" onclick="removerGuestInternal(${index})" data-ref="24">✕</button>
         </div>
     `).join('');
 }
@@ -899,7 +899,7 @@ function renderGuestsExternal() {
                 <strong>${guest.name}</strong><br>
                 <small>${guest.email || 'Sem e-mail'} | ${guest.whatsapp || 'Sem WhatsApp'}</small>
             </div>
-            <button type="button" class="btn btn-sm btn-danger" onclick="removerGuestExternal(${index})">✕</button>
+            <button type="button" class="btn btn-sm btn-danger" onclick="removerGuestExternal(${index})" data-ref="25">✕</button>
         </div>
     `).join('');
 }
@@ -927,7 +927,7 @@ function renderAgenda() {
     container.innerHTML = agendaItems.map((item, index) => `
         <div class="agenda-item">
             <span>${index + 1}. ${item.title}</span>
-            <button type="button" class="btn btn-sm btn-danger" onclick="removerAgenda(${index})">✕</button>
+            <button type="button" class="btn btn-sm btn-danger" onclick="removerAgenda(${index})" data-ref="26">✕</button>
         </div>
     `).join('');
 }
@@ -1063,11 +1063,11 @@ function adicionarDiscussao() {
         <div class="discussion-item" data-index="${index}" style="border: 1px solid var(--border-color); padding: 1rem; border-radius: 4px; margin-bottom: 0.5rem;">
             <div style="display: flex; justify-content: space-between; margin-bottom: 0.5rem;">
                 <input type="text" class="form-input" placeholder="Tópico / Título" 
-                       onchange="discussions[${index}].title = this.value" style="flex: 1; margin-right: 0.5rem;">
-                <button type="button" class="btn btn-sm btn-danger" onclick="removerDiscussao(${index})">✕</button>
+                       onchange="discussions[${index}].title = this.value" style="flex: 1; margin-right: 0.5rem;" data-ref="41">
+                <button type="button" class="btn btn-sm btn-danger" onclick="removerDiscussao(${index})" data-ref="27">✕</button>
             </div>
             <textarea class="form-textarea" rows="3" placeholder="Discussão e definições..."
-                      onchange="discussions[${index}].discussion = this.value"></textarea>
+                      onchange="discussions[${index}].discussion = this.value" data-ref="55"></textarea>
         </div>
     `;
     container.insertAdjacentHTML('beforeend', html);
@@ -1085,11 +1085,11 @@ function renderDiscussions() {
             <div style="display: flex; justify-content: space-between; margin-bottom: 0.5rem;">
                 <input type="text" class="form-input" placeholder="Tópico / Título" 
                        value="${disc.title || ''}"
-                       onchange="discussions[${index}].title = this.value" style="flex: 1; margin-right: 0.5rem;">
-                <button type="button" class="btn btn-sm btn-danger" onclick="removerDiscussao(${index})">✕</button>
+                       onchange="discussions[${index}].title = this.value" style="flex: 1; margin-right: 0.5rem;" data-ref="42">
+                <button type="button" class="btn btn-sm btn-danger" onclick="removerDiscussao(${index})" data-ref="28">✕</button>
             </div>
             <textarea class="form-textarea" rows="3" placeholder="Discussão e definições..."
-                      onchange="discussions[${index}].discussion = this.value">${disc.discussion || ''}</textarea>
+                      onchange="discussions[${index}].discussion = this.value" data-ref="56">${disc.discussion || ''}</textarea>
         </div>
     `).join('');
 }
@@ -1104,22 +1104,22 @@ function adicionarAtividade() {
         <div class="activity-item" style="border: 1px solid var(--border-color); padding: 1rem; border-radius: 4px; margin-bottom: 0.5rem;">
             <div style="display: grid; grid-template-columns: 2fr 1fr 1fr auto; gap: 0.5rem; margin-bottom: 0.5rem;">
                 <input type="text" class="form-input" placeholder="Título da atividade" 
-                       onchange="activities[${index}].title = this.value">
+                       onchange="activities[${index}].title = this.value" data-ref="43">
                 <input type="text" class="form-input" placeholder="Responsável" 
-                       onchange="activities[${index}].responsible = this.value">
+                       onchange="activities[${index}].responsible = this.value" data-ref="44">
                 <input type="date" class="form-input" 
-                       onchange="activities[${index}].deadline = this.value">
-                <button type="button" class="btn btn-sm btn-danger" onclick="removerAtividadeComConfirmacao(${index})">✕</button>
+                       onchange="activities[${index}].deadline = this.value" data-ref="45">
+                <button type="button" class="btn btn-sm btn-danger" onclick="removerAtividadeComConfirmacao(${index})" data-ref="29">✕</button>
             </div>
             <div style="display: grid; grid-template-columns: 3fr 1fr; gap: 0.5rem; margin-bottom: 0.5rem;">
                 <div>
                     <label class="form-label" style="font-size: 0.875rem; color: var(--text-secondary); margin-bottom: 0.25rem;">Como (Detalhes da Execução)</label>
                     <textarea class="form-textarea" rows="3" placeholder="Como será executada a atividade"
-                              onchange="activities[${index}].how = this.value"></textarea>
+                              onchange="activities[${index}].how = this.value" data-ref="57"></textarea>
                 </div>
                 <div>
                     <label class="form-label" style="font-size: 0.875rem; color: var(--text-secondary); margin-bottom: 0.25rem;">Projeto</label>
-                    <select class="form-input" onchange="activities[${index}].project_id = this.value">
+                    <select class="form-input" onchange="activities[${index}].project_id = this.value" data-ref="51">
                         <option value="">Padrão</option>
                         {% for project in projects %}
                         <option value="{{ project.id }}">{{ project.title }}</option>
@@ -1144,24 +1144,24 @@ function renderActivities() {
             <div style="display: grid; grid-template-columns: 2fr 1fr 1fr auto; gap: 0.5rem; margin-bottom: 0.5rem;">
                 <input type="text" class="form-input" placeholder="Título da atividade" 
                        value="${act.title || ''}"
-                       onchange="activities[${index}].title = this.value">
+                       onchange="activities[${index}].title = this.value" data-ref="46">
                 <input type="text" class="form-input" placeholder="Responsável" 
                        value="${act.responsible || ''}"
-                       onchange="activities[${index}].responsible = this.value">
+                       onchange="activities[${index}].responsible = this.value" data-ref="47">
                 <input type="date" class="form-input" 
                        value="${act.deadline || ''}"
-                       onchange="activities[${index}].deadline = this.value">
-                <button type="button" class="btn btn-sm btn-danger" onclick="removerAtividadeComConfirmacao(${index})">✕</button>
+                       onchange="activities[${index}].deadline = this.value" data-ref="48">
+                <button type="button" class="btn btn-sm btn-danger" onclick="removerAtividadeComConfirmacao(${index})" data-ref="30">✕</button>
             </div>
             <div style="display: grid; grid-template-columns: 3fr 1fr; gap: 0.5rem; margin-bottom: 0.5rem;">
                 <div>
                     <label class="form-label" style="font-size: 0.875rem; color: var(--text-secondary); margin-bottom: 0.25rem;">Como (Detalhes da Execução)</label>
                     <textarea class="form-textarea" rows="3" placeholder="Como será executada a atividade"
-                              onchange="activities[${index}].how = this.value">${act.how || ''}</textarea>
+                              onchange="activities[${index}].how = this.value" data-ref="58">${act.how || ''}</textarea>
                 </div>
                 <div>
                     <label class="form-label" style="font-size: 0.875rem; color: var(--text-secondary); margin-bottom: 0.25rem;">Projeto</label>
-                    <select class="form-input" onchange="activities[${index}].project_id = this.value">
+                    <select class="form-input" onchange="activities[${index}].project_id = this.value" data-ref="52">
                         <option value="">Padrão</option>
                         {% for project in projects %}
                         <option value="{{ project.id }}" ${act.project_id == "{{ project.id }}" ? 'selected' : ''}>{{ project.title }}</option>
@@ -1215,7 +1215,7 @@ function renderParticipants() {
                 <strong>${p.name}</strong><br>
                 <small>${p.email || ''} | ${p.whatsapp || ''}</small>
             </div>
-            <button type="button" class="btn btn-sm btn-danger" onclick="removerParticipant(${index})">✕</button>
+            <button type="button" class="btn btn-sm btn-danger" onclick="removerParticipant(${index})" data-ref="31">✕</button>
         </div>
     `).join('');
 }

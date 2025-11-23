@@ -210,10 +210,10 @@
                     <p class="mb-0">Sistema de monitoramento e gerenciamento de logging de rotas</p>
                 </div>
                 <div>
-                    <a href="/logs/" class="btn btn-light me-2">
+                    <a href="/logs/" class="btn btn-light me-2" data-ref="11">
                         <i class="fas fa-list"></i> Ver Logs
                     </a>
-                    <button class="btn btn-outline-light" onclick="exportReport()">
+                    <button class="btn btn-outline-light" onclick="exportReport()" data-ref="01">
                         <i class="fas fa-download"></i> Exportar Relatório
                     </button>
                 </div>
@@ -276,7 +276,7 @@
             <div class="row align-items-center">
                 <div class="col-md-4">
                     <label class="form-label"><i class="fas fa-filter"></i> Filtrar por:</label>
-                    <select class="form-select" id="filter-type" onchange="filterRoutes()">
+                    <select class="form-select" id="filter-type" onchange="filterRoutes()" data-ref="08">
                         <option value="without_logging">Sem Logging (Crítico)</option>
                         <option value="all">Todas as Rotas</option>
                         <option value="crud">Apenas CRUD</option>
@@ -285,11 +285,11 @@
                 </div>
                 <div class="col-md-4">
                     <label class="form-label"><i class="fas fa-search"></i> Buscar:</label>
-                    <input type="text" class="form-control" id="search-routes" placeholder="Buscar rota..." oninput="searchRoutes()">
+                    <input type="text" class="form-control" id="search-routes" placeholder="Buscar rota..." oninput="searchRoutes()" data-ref="07">
                 </div>
                 <div class="col-md-4">
                     <label class="form-label">&nbsp;</label>
-                    <button class="btn btn-primary w-100" onclick="loadData()">
+                    <button class="btn btn-primary w-100" onclick="loadData()" data-ref="02">
                         <i class="fas fa-sync-alt"></i> Atualizar
                     </button>
                 </div>
@@ -318,13 +318,13 @@
             <div class="modal-content">
                 <div class="modal-header">
                     <h5 class="modal-title"><i class="fas fa-info-circle"></i> Detalhes da Rota</h5>
-                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" data-ref="03"></button>
                 </div>
                 <div class="modal-body">
                     <div id="route-details"></div>
                 </div>
                 <div class="modal-footer">
-                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Fechar</button>
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal" data-ref="04">Fechar</button>
                 </div>
             </div>
         </div>
@@ -432,7 +432,7 @@
                             <i class="fas fa-chevron-down" id="icon-${blueprint}"></i>
                         </div>
                         <div class="blueprint-body" id="body-${blueprint}">
-                            <table class="table table-hover">
+                            <table class="table table-hover" data-ref="09">
                                 <thead>
                                     <tr>
                                         <th>Endpoint</th>
@@ -468,10 +468,10 @@
                         '<span class="text-muted">-</span>';
 
                     const actions = needsLogging && !hasLogging ?
-                        `<button class="action-btn btn-enable" onclick="showImplementationGuide('${route.endpoint}')">
+                        `<button class="action-btn btn-enable" onclick="showImplementationGuide('${route.endpoint}')" data-ref="05">
                             <i class="fas fa-plus-circle"></i> Incluir Log
                         </button>` :
-                        `<button class="action-btn btn-view" onclick="showRouteDetails('${route.endpoint}')">
+                        `<button class="action-btn btn-view" onclick="showRouteDetails('${route.endpoint}')" data-ref="06">
                             <i class="fas fa-eye"></i> Ver Detalhes
                         </button>`;
 
@@ -576,7 +576,7 @@
                     
                     const details = `
                         <h5><i class="fas fa-info-circle"></i> Informações da Rota</h5>
-                        <table class="table">
+                        <table class="table" data-ref="10">
                             <tr><td><strong>Endpoint:</strong></td><td><code>${route.endpoint}</code></td></tr>
                             <tr><td><strong>Path:</strong></td><td><code>${route.path}</code></td></tr>
                             <tr><td><strong>Métodos:</strong></td><td>${route.methods.join(', ')}</td></tr>

@@ -328,7 +328,7 @@
       <div class="page-header">
         <h1>📅 Rotina dos Processos</h1>
         <div class="quick-actions">
-          <a href="/companies/{{ company.id }}/routines/new" class="btn btn-primary create-routine-button" style="text-decoration: none;">
+          <a href="/companies/{{ company.id }}/routines/new" class="btn btn-primary create-routine-button" style="text-decoration: none;" data-ref="03">
             <span>➕</span>
             Criar Nova Rotina
           </a>
@@ -391,7 +391,7 @@
     };
 
     wrapper.innerHTML = `
-      <table class="routines-table">
+      <table class="routines-table" data-ref="02">
         <thead>
           <tr>
             <th>Nome da Rotina</th>
@@ -442,19 +442,19 @@
                     <a href="/grv/company/${companyId}/process/modeling/${routine.process_id}" 
                        class="btn-icon" 
                        title="Ir para Modelagem do Processo" 
-                       style="text-decoration: none;">
+                       style="text-decoration: none;" data-ref="04">
                       🎨
                     </a>
                   ` : ''}
                   <a href="/companies/${companyId}/routines/${routine.id}" 
                      class="btn-icon" 
                      title="Gerenciar Rotina" 
-                     style="text-decoration: none;">
+                     style="text-decoration: none;" data-ref="05">
                     ⚙️
                   </a>
                   <button class="btn-icon delete" 
                           onclick="deleteRoutine(${routine.id})" 
-                          title="Excluir">
+                          title="Excluir" data-ref="01">
                     🗑️
                   </button>
                 </div>

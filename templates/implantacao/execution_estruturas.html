@@ -239,10 +239,10 @@
           Visualize as iniciativas de estruturacao por area, bloco estruturante e status. Cada item gera uma
           atividade no projeto humano e alimenta o fluxo de caixa conforme valores, repeticoes e disponibilizacao.
         </p>
-        <button class="button button-secondary" onclick="window.history.back()" style="margin-top: 8px;">←
+        <button class="button button-secondary" onclick="window.history.back()" style="margin-top: 8px;" data-ref="01">←
           Voltar</button>
       </div>
-      <button type="button" class="button button-primary" onclick="openStructureModal()" style="white-space: nowrap;">
+      <button type="button" class="button button-primary" onclick="openStructureModal()" style="white-space: nowrap;" data-ref="02">
         + Nova Estrutura
       </button>
     </div>
@@ -257,12 +257,12 @@
           e destacam gargalos operacionais.
         </p>
       </div>
-      <button type="button" class="button button-secondary" onclick="openCapacityModal()" style="white-space: nowrap;">
+      <button type="button" class="button button-secondary" onclick="openCapacityModal()" style="white-space: nowrap;" data-ref="03">
         Registrar capacidade
       </button>
     </div>
 
-    <table class="structure-table capacity-table">
+    <table class="structure-table capacity-table" data-ref="35">
       <thead>
         <tr>
           <th style="width:28%;">Area</th>
@@ -281,11 +281,11 @@
           <td><span class="capacity-display">-</span></td>
           <td><span class="capacity-notes">-</span></td>
           <td style="white-space: nowrap;">
-            <button type="button" class="button button-secondary" onclick="openCapacityModal(this)">
+            <button type="button" class="button button-secondary" onclick="openCapacityModal(this)" data-ref="04">
               {{ 'Editar' if area.capacidade else 'Registrar' }}
             </button>
             {% if area.capacidade_id %}
-            <button type="button" class="link-button" onclick="deleteCapacity({{ area.capacidade_id }})">
+            <button type="button" class="link-button" onclick="deleteCapacity({{ area.capacidade_id }})" data-ref="05">
               Remover
             </button>
             {% endif %}
@@ -307,7 +307,7 @@
     <div class="area-tabs">
       {% for area in estruturas %}
       <button class="area-button {% if loop.first %}is-active{% endif %}" type="button"
-        data-area-target="{{ area.id }}">
+        data-area-target="{{ area.id }}" data-ref="06">
         {{ area.nome }}
       </button>
       {% endfor %}
@@ -322,7 +322,7 @@
       {% for bloco in area.blocos %}
       <div class="block-card">
         <h2>{{ bloco.nome }}</h2>
-        <table class="structure-table">
+        <table class="structure-table" data-ref="36">
           <thead>
             <tr>
               <th>Tipo</th>
@@ -354,9 +354,9 @@
               <td>{{ item.status }}</td>
               <td>
                 <button type="button" class="button button-small" onclick="editStructure({{ item.id }})"
-                  style="padding: 4px 8px; font-size: 12px; margin-right: 4px;">Editar</button>
+                  style="padding: 4px 8px; font-size: 12px; margin-right: 4px;" data-ref="07">Editar</button>
                 <button type="button" class="button button-danger button-small" onclick="deleteStructure({{ item.id }})"
-                  style="padding: 4px 8px; font-size: 12px;">Excluir</button>
+                  style="padding: 4px 8px; font-size: 12px;" data-ref="08">Excluir</button>
               </td>
             </tr>
             {% if item.parcelas %}
@@ -364,7 +364,7 @@
               <td colspan="11">
                 <div class="installments-wrapper">
                   <strong>Parcelas / Ocorrencias de pagamento</strong>
-                  <table class="installments-table">
+                  <table class="installments-table" data-ref="37">
                     <thead>
                       <tr>
                         <th>#</th>
@@ -437,7 +437,7 @@
       <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 16px; margin-bottom: 16px;">
         <div class="form-group">
           <label for="structure-area">Área *</label>
-          <select id="structure-area" required>
+          <select id="structure-area" required data-ref="26">
             <option value="">Selecione...</option>
             <option value="comercial">Estruturação Comercial</option>
             <option value="operacional">Estruturação Operacional</option>
@@ -447,7 +447,7 @@
 
         <div class="form-group">
           <label for="structure-block">Bloco *</label>
-          <select id="structure-block" required>
+          <select id="structure-block" required data-ref="27">
             <option value="">Selecione...</option>
             <option value="pessoas">Pessoas</option>
             <option value="imoveis">Imóveis</option>
@@ -464,7 +464,7 @@
       <div style="display: grid; grid-template-columns: 1fr 2fr; gap: 16px; margin-bottom: 16px;">
         <div class="form-group">
           <label for="structure-type">Tipo *</label>
-          <select id="structure-type" required>
+          <select id="structure-type" required data-ref="28">
             <option value="">Selecione...</option>
             <option value="Aquisição">Aquisição</option>
             <option value="Contratação">Contratação</option>
@@ -473,7 +473,7 @@
 
         <div class="form-group">
           <label for="structure-description">Descrição *</label>
-          <input type="text" id="structure-description" placeholder="Descrição do item" required>
+          <input type="text" id="structure-description" placeholder="Descrição do item" required data-ref="17">
         </div>
       </div>
 
@@ -481,7 +481,7 @@
       <div style="margin-bottom: 16px;">
         <div class="form-group">
           <label for="structure-value">Valor Total (referência)</label>
-          <input type="number" id="structure-value" placeholder="0.00" step="0.01" min="0">
+          <input type="number" id="structure-value" placeholder="0.00" step="0.01" min="0" data-ref="18">
           <small style="color: #64748b; font-size: 12px; display: block; margin-top: 4px;">
             Valor de referência. Os valores das parcelas serão usados para cálculos financeiros.
           </small>
@@ -492,17 +492,17 @@
       <div style="display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 16px; margin-bottom: 16px;">
         <div class="form-group">
           <label for="structure-acquisition">Data Aquisição</label>
-          <input type="date" id="structure-acquisition">
+          <input type="date" id="structure-acquisition" data-ref="19">
         </div>
 
         <div class="form-group">
           <label for="structure-supplier">Fornecedor</label>
-          <input type="text" id="structure-supplier" placeholder="Nome do fornecedor">
+          <input type="text" id="structure-supplier" placeholder="Nome do fornecedor" data-ref="20">
         </div>
 
         <div class="form-group">
           <label for="structure-availability">Disponibilização</label>
-          <input type="date" id="structure-availability">
+          <input type="date" id="structure-availability" data-ref="21">
         </div>
       </div>
 
@@ -510,7 +510,7 @@
       <div style="margin-bottom: 16px;">
         <div class="form-group">
           <label for="structure-observations">Observações</label>
-          <textarea id="structure-observations" rows="2" placeholder="Observações adicionais"></textarea>
+          <textarea id="structure-observations" rows="2" placeholder="Observações adicionais" data-ref="33"></textarea>
         </div>
       </div>
 
@@ -518,7 +518,7 @@
       <div style="border-top: 2px solid rgba(148, 163, 184, 0.2); padding-top: 16px; margin-top: 16px;">
         <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px;">
           <h4 style="margin: 0; color: #1d4ed8;">Parcelas / Ocorrências de Pagamento</h4>
-          <button type="button" class="button button-secondary" onclick="addInstallment()">+ Adicionar Parcela</button>
+          <button type="button" class="button button-secondary" onclick="addInstallment()" data-ref="09">+ Adicionar Parcela</button>
         </div>
 
         <div id="installments-container" style="display: flex; flex-direction: column; gap: 8px;">
@@ -530,15 +530,15 @@
           <p style="margin: 0; font-size: 13px; color: #64748b;">
             ℹ️ Adicione todas as parcelas e clique em "Salvar Parcelas" para registrar
           </p>
-          <button type="button" class="button button-secondary" onclick="saveInstallments()" id="btn-save-installments">
+          <button type="button" class="button button-secondary" onclick="saveInstallments()" id="btn-save-installments" data-ref="10">
             Salvar Parcelas
           </button>
         </div>
       </div>
 
       <div class="form-actions" style="margin-top: 24px;">
-        <button type="button" class="button button-secondary" onclick="closeStructureModal()">Cancelar</button>
-        <button type="button" class="button button-primary" onclick="saveStructureOnly()">Salvar Estrutura</button>
+        <button type="button" class="button button-secondary" onclick="closeStructureModal()" data-ref="11">Cancelar</button>
+        <button type="button" class="button button-primary" onclick="saveStructureOnly()" data-ref="12">Salvar Estrutura</button>
       </div>
     </form>
   </div>
@@ -557,7 +557,7 @@
 
       <div class="form-group">
         <label for="capacity-area">Area *</label>
-        <select id="capacity-area" required>
+        <select id="capacity-area" required data-ref="29">
           <option value="">Selecione...</option>
           <option value="comercial">Estruturacao Comercial</option>
           <option value="operacional">Estruturacao Operacional</option>
@@ -568,19 +568,19 @@
 
       <div class="form-group">
         <label for="capacity-value">Faturamento suportado *</label>
-        <input type="number" id="capacity-value" placeholder="0.00" step="0.01" min="0" required>
+        <input type="number" id="capacity-value" placeholder="0.00" step="0.01" min="0" required data-ref="22">
       </div>
 
       <div class="form-group">
         <label for="capacity-notes">Observacoes</label>
-        <textarea id="capacity-notes" rows="3" placeholder="Detalhes sobre limites e premissas"></textarea>
+        <textarea id="capacity-notes" rows="3" placeholder="Detalhes sobre limites e premissas" data-ref="34"></textarea>
       </div>
 
       <div class="form-actions" style="display:flex; justify-content: space-between; align-items: center; gap: 12px;">
-        <button type="button" id="capacity-delete" class="link-button" style="display:none;">Remover capacidade</button>
+        <button type="button" id="capacity-delete" class="link-button" style="display:none;" data-ref="13">Remover capacidade</button>
         <div style="display:flex; gap: 12px;">
-          <button type="button" class="button button-secondary" onclick="closeCapacityModal()">Cancelar</button>
-          <button type="submit" class="button button-primary">Salvar</button>
+          <button type="button" class="button button-secondary" onclick="closeCapacityModal()" data-ref="14">Cancelar</button>
+          <button type="submit" class="button button-primary" data-ref="15">Salvar</button>
         </div>
       </div>
     </form>
@@ -728,18 +728,18 @@
 
       installmentDiv.innerHTML = `
           <input type="text" placeholder="#" value="${installmentNumber}" 
-                 class="installment-number" style="padding: 6px; font-size: 12px;" title="Número da parcela">
+                 class="installment-number" style="padding: 6px; font-size: 12px;" title="Número da parcela" data-ref="23">
           <input type="number" placeholder="Valor" value="${amount}" step="0.01" min="0"
-                 class="installment-amount" style="padding: 6px; font-size: 12px;" title="Valor da parcela">
+                 class="installment-amount" style="padding: 6px; font-size: 12px;" title="Valor da parcela" data-ref="24">
           <input type="date" value="${dueDate}" 
-                 class="installment-due" style="padding: 6px; font-size: 12px;" title="Data de vencimento">
-          <select class="installment-classification" style="padding: 6px; font-size: 12px;" title="Classificação contábil">
+                 class="installment-due" style="padding: 6px; font-size: 12px;" title="Data de vencimento" data-ref="25">
+          <select class="installment-classification" style="padding: 6px; font-size: 12px;" title="Classificação contábil" data-ref="30">
             <option value="">Classificação...</option>
             <option value="Investimento" ${classification === 'Investimento' ? 'selected' : ''}>Investimento</option>
             <option value="Custo Fixo" ${classification === 'Custo Fixo' ? 'selected' : ''}>Custo Fixo</option>
             <option value="Despesa Fixa" ${classification === 'Despesa Fixa' ? 'selected' : ''}>Despesa Fixa</option>
           </select>
-          <select class="installment-repetition" style="padding: 6px; font-size: 12px;" title="Repetição">
+          <select class="installment-repetition" style="padding: 6px; font-size: 12px;" title="Repetição" data-ref="31">
             <option value="">Repetição...</option>
             <option value="Única" ${repetition === 'Única' ? 'selected' : ''}>Única</option>
             <option value="Mensal" ${repetition === 'Mensal' ? 'selected' : ''}>Mensal</option>
@@ -747,7 +747,7 @@
             <option value="Semestral" ${repetition === 'Semestral' ? 'selected' : ''}>Semestral</option>
             <option value="Anual" ${repetition === 'Anual' ? 'selected' : ''}>Anual</option>
           </select>
-          <select class="installment-type" style="padding: 6px; font-size: 12px;" title="Tipo de parcela">
+          <select class="installment-type" style="padding: 6px; font-size: 12px;" title="Tipo de parcela" data-ref="32">
             <option value="">Tipo...</option>
             <option value="Entrada" ${installmentType === 'Entrada' ? 'selected' : ''}>Entrada</option>
             <option value="Mensalidade" ${installmentType === 'Mensalidade' ? 'selected' : ''}>Mensalidade</option>
@@ -755,7 +755,7 @@
             <option value="Pagamento único" ${installmentType === 'Pagamento único' ? 'selected' : ''}>Pagamento único</option>
           </select>
           <button type="button" onclick="removeInstallment(${installmentCounter})" 
-                  style="padding: 6px; background: #ef4444; color: white; border: none; border-radius: 4px; cursor: pointer; font-size: 12px;" title="Remover parcela">X</button>
+                  style="padding: 6px; background: #ef4444; color: white; border: none; border-radius: 4px; cursor: pointer; font-size: 12px;" title="Remover parcela" data-ref="16">X</button>
         `;
 
       container.appendChild(installmentDiv);

@@ -1,4 +1,4 @@
-﻿{% extends "base.html" %}
+{% extends "base.html" %}
 {% block title %}Direcionadores | {{ plan.name }}{% endblock %}
 {% block body_class %}drivers-page{% endblock %}
 {% block body %}
@@ -26,12 +26,12 @@
           <span class="interview-count">{{ interview_records|length }} entrevistas salvas</span>
           <div class="section-status-controls">
             <!-- Botão Concluir - sempre presente no DOM -->
-            <button type="button" class="button button-small button-warning" onclick="closeInterviewSection(event)" title="Concluir seção de entrevistas" {% if not interview_section_open|default(true) %}style="display: none;"{% endif %}>
+            <button type="button" class="button button-small button-warning" onclick="closeInterviewSection(event)" title="Concluir seção de entrevistas" {% if not interview_section_open|default(true) %}style="display: none;"{% endif %} data-ref="01">
               🎯 Concluir
             </button>
             
             <!-- Botão Reabrir - sempre presente no DOM -->
-            <button type="button" class="button button-small button-success" onclick="openInterviewSection(event)" title="Reabrir seção de entrevistas" {% if interview_section_open|default(true) %}style="display: none;"{% endif %}>
+            <button type="button" class="button button-small button-success" onclick="openInterviewSection(event)" title="Reabrir seção de entrevistas" {% if interview_section_open|default(true) %}style="display: none;"{% endif %} data-ref="02">
               🎯 Reabrir
             </button>
             
@@ -70,7 +70,7 @@
             <form class="interview-form-fields" action="{{ url_for('add_interview', plan_id=plan.id) }}" method="post" {% if not interview_section_open %}style="opacity: 0.5; pointer-events: none;"{% endif %}>
               <label class="form-field">
                 <span>Participante *</span>
-                <select name="participant" required>
+                <select name="participant" required data-ref="85">
                   <option value="">Selecione um participante</option>
                   {% for participant in participants %}
                   <option value="{{ participant.name }}">{{ participant.name }}{% if participant.role %} - {{ participant.role }}{% endif %}</option>
@@ -79,16 +79,16 @@
               </label>
               <label class="form-field">
                 <span>Consultor *</span>
-                <input type="text" name="consultant" placeholder="Nome do consultor" required />
+                <input type="text" name="consultant" placeholder="Nome do consultor" required  data-ref="65" />
               </label>
               <div class="form-two-cols">
                 <label class="form-field">
                   <span>Data</span>
-                  <input type="date" name="date" />
+                  <input type="date" name="date"  data-ref="66" />
                 </label>
                 <label class="form-field">
                   <span>Formato</span>
-                  <select name="format">
+                  <select name="format" data-ref="86">
                     <option>Presencial</option>
                     <option>Online</option>
                     <option>Telefone</option>
@@ -97,11 +97,11 @@
               </div>
               <label class="form-field">
                 <span>Entrevista / principais pontos</span>
-                <textarea name="notes" rows="4" placeholder="Resumo das percepções e destaques"></textarea>
+                <textarea name="notes" rows="4" placeholder="Resumo das percepções e destaques" data-ref="A1"></textarea>
               </label>
               <div class="form-actions">
-                <button type="submit" class="button button-primary">Registrar entrevista</button>
-                <button type="reset" class="button button-ghost">Limpar</button>
+                <button type="submit" class="button button-primary" data-ref="03">Registrar entrevista</button>
+                <button type="reset" class="button button-ghost" data-ref="04">Limpar</button>
               </div>
             </form>
           </section>
@@ -123,10 +123,10 @@
                   </div>
                   <span class="record-date">{{ record.date }}</span>
                   <div class="interview-actions">
-                    <button class="button button-small button-ghost" onclick="editInterview({{ record.id }})" title="Editar entrevista">
+                    <button class="button button-small button-ghost" onclick="editInterview({{ record.id }})" title="Editar entrevista" data-ref="05">
                       🎯
                     </button>
-                    <button class="button button-small button-danger" onclick="deleteInterview({{ record.id }})" title="Excluir entrevista">
+                    <button class="button button-small button-danger" onclick="deleteInterview({{ record.id }})" title="Excluir entrevista" data-ref="06">
                       🗑️
                     </button>
                   </div>
@@ -146,7 +146,7 @@
             <p class="panel-hint">Ajuste o indicador com base nas entrevistas consolidadas.</p>
             <label class="form-field">
               <span>Resultado consolidado (0 a 5)</span>
-              <input type="number" name="maturity" min="0" max="5" step="0.1" value="{{ interview_maturity_score if interview_maturity_score is not none else '' }}" placeholder="Defina a maturidade" />
+              <input type="number" name="maturity" min="0" max="5" step="0.1" value="{{ interview_maturity_score if interview_maturity_score is not none else '' }}" placeholder="Defina a maturidade"  data-ref="67" />
             </label>
             {% if interview_maturity_updated_at %}
             <span class="summary-meta">Atualizado em {{ interview_maturity_updated_at }}</span>
@@ -158,10 +158,10 @@
             </div>
             {% endif %}
             <div style="margin-top: 12px; display: flex; gap: 8px;">
-              <button type="button" class="button button-small button-primary" onclick="saveInterviewMaturity()" title="Salvar Nível de Maturidade">
+              <button type="button" class="button button-small button-primary" onclick="saveInterviewMaturity()" title="Salvar Nível de Maturidade" data-ref="07">
                 💾 Salvar
               </button>
-              <button type="button" class="button button-small button-ghost" onclick="editInterviewMaturity()" title="Editar Nível de Maturidade">
+              <button type="button" class="button button-small button-ghost" onclick="editInterviewMaturity()" title="Editar Nível de Maturidade" data-ref="08">
                 ✏️ Editar
               </button>
             </div>
@@ -172,7 +172,7 @@
             <p class="panel-hint">Descreva os principais insights e encaminhamentos das entrevistas.</p>
             <label class="form-field">
               <span>Resumo consolidado</span>
-              <textarea name="analysis" rows="6" placeholder="Sintetize percepcoes, alertas e oportunidades">{{ interview_analysis_text or '' }}</textarea>
+              <textarea name="analysis" rows="6" placeholder="Sintetize percepcoes, alertas e oportunidades" data-ref="A2">{{ interview_analysis_text or '' }}</textarea>
             </label>
             {% if interview_analysis_suggestion %}
             <div class="ia-suggestion">
@@ -181,10 +181,10 @@
             </div>
             {% endif %}
             <div style="margin-top: 12px; display: flex; gap: 8px;">
-              <button type="button" class="button button-small button-primary" onclick="saveInterviewAnalysis()" title="Salvar Síntese / Análise">
+              <button type="button" class="button button-small button-primary" onclick="saveInterviewAnalysis()" title="Salvar Síntese / Análise" data-ref="09">
                 💾 Salvar
               </button>
-              <button type="button" class="button button-small button-ghost" onclick="editInterviewAnalysis()" title="Editar Síntese / Análise">
+              <button type="button" class="button button-small button-ghost" onclick="editInterviewAnalysis()" title="Editar Síntese / Análise" data-ref="10">
                 ✏️ Editar
               </button>
             </div>
@@ -206,11 +206,11 @@
           <span class="interview-count">{{ vision_records|length }} relatos salvos</span>
           <div class="section-status-controls">
             {% if vision_section_open|default(true) %}
-              <button type="button" class="button button-small button-warning" onclick="closeVisionSection(event)" title="Concluir seção de vis�o dos sócios">
+              <button type="button" class="button button-small button-warning" onclick="closeVisionSection(event)" title="Concluir seção de visão dos sócios" data-ref="11">
                 🎯 Concluir
               </button>
             {% else %}
-              <button type="button" class="button button-small button-success" onclick="openVisionSection(event)" title="Reabrir seção de vis�o dos sócios">
+              <button type="button" class="button button-small button-success" onclick="openVisionSection(event)" title="Reabrir seção de visão dos sócios" data-ref="12">
                 🎯 Reabrir
               </button>
               {% if vision_section_status %}
@@ -243,25 +243,25 @@
             <h4>Coleta de Informacoes</h4>
             {% if not vision_section_open %}
             <div class="section-closed-notice">
-              <p>🎯 Esta seção foi conclu�da e não permite mais edições.</p>
+              <p>🎯 Esta seção foi concluída e não permite mais edições.</p>
             </div>
             {% endif %}
             <form class="interview-form-fields" action="{{ url_for('add_vision_record', plan_id=plan.id) }}" method="post" {% if not vision_section_open %}style="opacity: 0.5; pointer-events: none;"{% endif %}>
               <label class="form-field">
                 <span>Sócios envolvidos *</span>
-                <input type="text" name="participants" placeholder="Nomes dos sócios envolvidos (separados por vírgula)" required />
+                <input type="text" name="participants" placeholder="Nomes dos sócios envolvidos (separados por vírgula)" required  data-ref="68" />
               </label>
               <label class="form-field">
                 <span>Consultores *</span>
-                <input type="text" name="consultants" placeholder="Nomes dos consultores (separados por vírgula)" required />
+                <input type="text" name="consultants" placeholder="Nomes dos consultores (separados por vírgula)" required  data-ref="69" />
               </label>
               <label class="form-field">
                 <span>Data</span>
-                <input type="date" name="vision_date" />
+                <input type="date" name="vision_date"  data-ref="70" />
               </label>
               <label class="form-field">
                 <span>Formato</span>
-                <select name="format">
+                <select name="format" data-ref="87">
                   <option value="">Selecione</option>
                   <option value="Presencial">Presencial</option>
                   <option value="Online">Online</option>
@@ -270,28 +270,28 @@
               </label>
               <label class="form-field">
                 <span>Investimento de tempo e recursos</span>
-                <textarea name="time_investment" rows="3" placeholder="Qual sera o investimento de tempo e recursos para o planejamento e gestao estrategicas"></textarea>
+                <textarea name="time_investment" rows="3" placeholder="Qual sera o investimento de tempo e recursos para o planejamento e gestao estrategicas" data-ref="A3"></textarea>
               </label>
               <label class="form-field">
                 <span>Estilo de gestao predominante</span>
-                <textarea name="management_style" rows="2" placeholder="Centralizada, participativa, hibrida..."></textarea>
+                <textarea name="management_style" rows="2" placeholder="Centralizada, participativa, hibrida..." data-ref="A4"></textarea>
               </label>
               <label class="form-field">
                 <span>Atividades, responsabilidades e nivel de formalizacao</span>
-                <textarea name="responsibilities" rows="3" placeholder="Descreva atividades, responsabilidades e nivel de formalizacao"></textarea>
+                <textarea name="responsibilities" rows="3" placeholder="Descreva atividades, responsabilidades e nivel de formalizacao" data-ref="A5"></textarea>
               </label>
               <label class="form-field">
                 <span>Experiencias, formacoes e capacidades</span>
-                <textarea name="capacities" rows="3" placeholder="Experiencias, formacoes, capacidades e possibilidades"></textarea>
+                <textarea name="capacities" rows="3" placeholder="Experiencias, formacoes, capacidades e possibilidades" data-ref="A6"></textarea>
               </label>
               <label class="form-field">
                 <span>Modelo de decisão estratégica</span>
-                <textarea name="decision_model" rows="2" placeholder="Consenso, maioria, lideranca principal..."></textarea>
+                <textarea name="decision_model" rows="2" placeholder="Consenso, maioria, lideranca principal..." data-ref="A7"></textarea>
               </label>
               <div class="form-two-cols">
                 <label class="form-field">
                   <span>Aceita investidores / parcerias externas</span>
-                  <select name="investor_profile">
+                  <select name="investor_profile" data-ref="88">
                     <option value="">Selecione</option>
                     <option>Sim</option>
                     <option>Nao</option>
@@ -300,7 +300,7 @@
                 </label>
                 <label class="form-field">
                   <span>Perfil de risco aceitavel</span>
-                  <select name="risk_profile">
+                  <select name="risk_profile" data-ref="89">
                     <option value="">Selecione</option>
                     <option>Conservador</option>
                     <option>Moderado</option>
@@ -310,19 +310,19 @@
               </div>
               <label class="form-field">
                 <span>Proposito pessoal / legado desejado</span>
-                <textarea name="purpose" rows="2" placeholder="Descreva proposito e legado desejado"></textarea>
+                <textarea name="purpose" rows="2" placeholder="Descreva proposito e legado desejado" data-ref="A8"></textarea>
               </label>
               <label class="form-field">
                 <span>Objetivos curto / medição / longo prazo</span>
-                <textarea name="goals" rows="3" placeholder="Liste objetivos por horizonte de tempo"></textarea>
+                <textarea name="goals" rows="3" placeholder="Liste objetivos por horizonte de tempo" data-ref="A9"></textarea>
               </label>
               <label class="form-field">
                 <span>Notas adicionais</span>
-                <textarea name="notes" rows="3" placeholder="Observações e informa��es complementares"></textarea>
+                <textarea name="notes" rows="3" placeholder="Observações e informações complementares" data-ref="B0"></textarea>
               </label>
               <div class="form-actions">
-                <button type="submit" class="button button-primary">Registrar relato</button>
-                <button type="reset" class="button button-ghost">Limpar</button>
+                <button type="submit" class="button button-primary" data-ref="13">Registrar relato</button>
+                <button type="reset" class="button button-ghost" data-ref="14">Limpar</button>
               </div>
             </form>
           </section>
@@ -340,10 +340,10 @@
                     <span class="vision-record-title">{{ record.participants }}</span>
                     <span class="vision-record-date">{{ record.vision_date }}</span>
                     <div class="vision-record-actions">
-                      <button class="button button-small button-ghost" onclick="editVisionRecord({{ record.id }})" title="Editar relato">
+                      <button class="button button-small button-ghost" onclick="editVisionRecord({{ record.id }})" title="Editar relato" data-ref="15">
                         🎯
                       </button>
-                      <button class="button button-small button-danger" onclick="deleteVisionRecord({{ record.id }})" title="Excluir relato">
+                      <button class="button button-small button-danger" onclick="deleteVisionRecord({{ record.id }})" title="Excluir relato" data-ref="16">
                         🗑️
                       </button>
                     </div>
@@ -386,7 +386,7 @@
                 <p class="panel-hint">Consolide alinhamentos, alertas e proximos passos da visao dos socios.</p>
                 <label class="form-field">
                   <span>Resumo consolidado</span>
-                  <textarea name="vision_analysis" rows="6" placeholder="Sintetize percepcoes, alertas e oportunidades">{{ vision_analysis_text or '' }}</textarea>
+                  <textarea name="vision_analysis" rows="6" placeholder="Sintetize percepcoes, alertas e oportunidades" data-ref="B1">{{ vision_analysis_text or '' }}</textarea>
                 </label>
                 {% if vision_analysis_suggestion %}
                 <div class="ia-suggestion">
@@ -395,10 +395,10 @@
                 </div>
                 {% endif %}
                 <div style="margin-top: 12px; display: flex; gap: 8px;">
-                  <button type="button" class="button button-small button-primary" onclick="saveVisionAnalysis()" title="Salvar Síntese / Análise">
+                  <button type="button" class="button button-small button-primary" onclick="saveVisionAnalysis()" title="Salvar Síntese / Análise" data-ref="17">
                     💾 Salvar
                   </button>
-                  <button type="button" class="button button-small button-ghost" onclick="editVisionAnalysis()" title="Editar Síntese / Análise">
+                  <button type="button" class="button button-small button-ghost" onclick="editVisionAnalysis()" title="Editar Síntese / Análise" data-ref="18">
                     ✏️ Editar
                   </button>
                 </div>
@@ -409,7 +409,7 @@
                 <p class="panel-hint">Defina o nível consolidado de maturidade da governança societária.</p>
                 <label class="form-field">
                   <span>Resultado consolidado (0 a 5)</span>
-                  <input type="number" name="vision_maturity" min="0" max="5" step="0.1" value="{{ vision_maturity_score if vision_maturity_score is not none else '' }}" placeholder="Defina a maturidade" />
+                  <input type="number" name="vision_maturity" min="0" max="5" step="0.1" value="{{ vision_maturity_score if vision_maturity_score is not none else '' }}" placeholder="Defina a maturidade"  data-ref="71" />
                 </label>
                 {% if vision_maturity_updated_at %}
                 <span class="summary-meta">Atualizado em {{ vision_maturity_updated_at }}</span>
@@ -421,10 +421,10 @@
                 </div>
                 {% endif %}
                 <div style="margin-top: 12px; display: flex; gap: 8px;">
-                  <button type="button" class="button button-small button-primary" onclick="saveVisionMaturity()" title="Salvar Nível de Maturidade">
+                  <button type="button" class="button button-small button-primary" onclick="saveVisionMaturity()" title="Salvar Nível de Maturidade" data-ref="19">
                     💾 Salvar
                   </button>
-                  <button type="button" class="button button-small button-ghost" onclick="editVisionMaturity()" title="Editar Nível de Maturidade">
+                  <button type="button" class="button button-small button-ghost" onclick="editVisionMaturity()" title="Editar Nível de Maturidade" data-ref="20">
                     ✏️ Editar
                   </button>
                 </div>
@@ -447,11 +447,11 @@
           <span class="interview-count">{{ market_records|length }} registro(s) salvo(s)</span>
           <div class="section-status-controls">
             {% if market_section_open|default(true) %}
-              <button type="button" class="button button-small button-warning" onclick="closeMarketSection(event)" title="Concluir seção de possibilidades do mercado">
+              <button type="button" class="button button-small button-warning" onclick="closeMarketSection(event)" title="Concluir seção de possibilidades do mercado" data-ref="21">
                 🎯 Concluir
               </button>
             {% else %}
-              <button type="button" class="button button-small button-success" onclick="openMarketSection(event)" title="Reabrir seção de possibilidades do mercado">
+              <button type="button" class="button button-small button-success" onclick="openMarketSection(event)" title="Reabrir seção de possibilidades do mercado" data-ref="22">
                 🎯 Reabrir
               </button>
               {% if market_section_status %}
@@ -484,26 +484,26 @@
             <h4>Coleta de Informacoes</h4>
             {% if not market_section_open %}
             <div class="section-closed-notice">
-              <p>🎯 Esta seção foi conclu�da e não permite mais edições.</p>
+              <p>🎯 Esta seção foi concluída e não permite mais edições.</p>
             </div>
             {% endif %}
             <form class="market-form-fields" action="{{ url_for('add_market_record', plan_id=plan.id) }}" method="post" {% if not market_section_open %}style="opacity: 0.5; pointer-events: none;"{% endif %}>
               <label class="form-field">
                 <span>Participantes *</span>
-                <input type="text" name="market_participants" placeholder="Nomes dos participantes (separados por vírgula)" required />
+                <input type="text" name="market_participants" placeholder="Nomes dos participantes (separados por vírgula)" required  data-ref="72" />
               </label>
               <label class="form-field">
                 <span>Consultores *</span>
-                <input type="text" name="market_consultants" placeholder="Nomes dos consultores (separados por vírgula)" required />
+                <input type="text" name="market_consultants" placeholder="Nomes dos consultores (separados por vírgula)" required  data-ref="73" />
               </label>
               <div class="form-two-cols">
                 <label class="form-field">
                   <span>Data</span>
-                  <input type="date" name="market_date" />
+                  <input type="date" name="market_date"  data-ref="74" />
                 </label>
                 <label class="form-field">
                   <span>Formato</span>
-                  <select name="format">
+                  <select name="format" data-ref="90">
                     <option>Presencial</option>
                     <option>Online</option>
                     <option>Telefone</option>
@@ -512,39 +512,39 @@
               </div>
               <label class="form-field">
                 <span>Economico e politico (mundial, nacional, estadual, municipal)</span>
-                <textarea name="global_context" rows="3" placeholder="Resumo do contexto macroeconomico e regulatorio"></textarea>
+                <textarea name="global_context" rows="3" placeholder="Resumo do contexto macroeconomico e regulatorio" data-ref="B2"></textarea>
               </label>
               <label class="form-field">
                 <span>Economico setorial (atual e possiveis)</span>
-                <textarea name="sector_context" rows="3" placeholder="Descreva movimentos do setor"></textarea>
+                <textarea name="sector_context" rows="3" placeholder="Descreva movimentos do setor" data-ref="B3"></textarea>
               </label>
               <label class="form-field">
                 <span>Tamanho do mercado em numeros</span>
-                <textarea name="market_size" rows="2" placeholder="Potenciais clientes, volume financeiro"></textarea>
+                <textarea name="market_size" rows="2" placeholder="Potenciais clientes, volume financeiro" data-ref="B4"></textarea>
               </label>
               <label class="form-field">
                 <span>Espaco para aumento de vendas</span>
-                <textarea name="growth_space" rows="2" placeholder="Onde ha espaco para crescer"></textarea>
+                <textarea name="growth_space" rows="2" placeholder="Onde ha espaco para crescer" data-ref="B5"></textarea>
               </label>
               <label class="form-field">
                 <span>Ameacas externas a monitorar</span>
-                <textarea name="threats" rows="2" placeholder="Principais ameacas"></textarea>
+                <textarea name="threats" rows="2" placeholder="Principais ameacas" data-ref="B6"></textarea>
               </label>
               <label class="form-field">
                 <span>Mudanças de comportamento do consumidor</span>
-                <textarea name="consumer_behavior" rows="2" placeholder="Digitalizacao, sustentabilidade, outros"></textarea>
+                <textarea name="consumer_behavior" rows="2" placeholder="Digitalizacao, sustentabilidade, outros" data-ref="B7"></textarea>
               </label>
               <label class="form-field">
                 <span>Concorrencia direta e benchmarking</span>
-                <textarea name="competition" rows="3" placeholder="Concorrentes atuais e possiveis referenciais"></textarea>
+                <textarea name="competition" rows="3" placeholder="Concorrentes atuais e possiveis referenciais" data-ref="B8"></textarea>
               </label>
               <label class="form-field">
                 <span>Observacoes</span>
-                <textarea name="notes" rows="2" placeholder="Observacoes adicionais"></textarea>
+                <textarea name="notes" rows="2" placeholder="Observacoes adicionais" data-ref="B9"></textarea>
               </label>
               <div class="form-actions">
-                <button type="submit" class="button button-primary">Salvar informacoes</button>
-                <button type="reset" class="button button-ghost">Limpar</button>
+                <button type="submit" class="button button-primary" data-ref="23">Salvar informacoes</button>
+                <button type="reset" class="button button-ghost" data-ref="24">Limpar</button>
               </div>
             </form>
           </section>
@@ -559,10 +559,10 @@
                     <span class="market-record-title">{{ record.participants }}</span>
                     <span class="market-record-date">{{ record.date }}</span>
                     <div class="market-record-actions">
-                      <button class="button button-small button-ghost" onclick="editMarketRecord({{ record.id }})" title="Editar relato">
+                      <button class="button button-small button-ghost" onclick="editMarketRecord({{ record.id }})" title="Editar relato" data-ref="25">
                         🎯
                       </button>
-                      <button class="button button-small button-danger" onclick="deleteMarketRecord({{ record.id }})" title="Excluir relato">
+                      <button class="button button-small button-danger" onclick="deleteMarketRecord({{ record.id }})" title="Excluir relato" data-ref="26">
                         🗑️
                       </button>
                     </div>
@@ -632,7 +632,7 @@
                 <p class="panel-hint">Identifique implicacoes estrategicas a partir do mercado avaliado.</p>
                 <label class="form-field">
                   <span>Resumo consolidado</span>
-                  <textarea name="market_analysis" rows="6" placeholder="Sintetize percepcoes e encaminhamentos" {% if not market_section_open %}disabled{% endif %}>{{ market_analysis_text or '' }}</textarea>
+                  <textarea name="market_analysis" rows="6" placeholder="Sintetize percepcoes e encaminhamentos" {% if not market_section_open %}disabled{% endif %} data-ref="C0">{{ market_analysis_text or '' }}</textarea>
                 </label>
                 {% if market_analysis_suggestion %}
                 <div class="ia-suggestion">
@@ -641,10 +641,10 @@
                 </div>
                 {% endif %}
                 <div style="margin-top: 12px; display: flex; gap: 8px;">
-                  <button type="button" class="button button-small button-primary" onclick="saveMarketAnalysis()" title="Salvar Síntese / Análise" {% if not market_section_open %}disabled{% endif %}>
+                  <button type="button" class="button button-small button-primary" onclick="saveMarketAnalysis()" title="Salvar Síntese / Análise" {% if not market_section_open %}disabled{% endif %} data-ref="27">
                     💾 Salvar
                   </button>
-                  <button type="button" class="button button-small button-ghost" onclick="editMarketAnalysis()" title="Editar Síntese / Análise" {% if not market_section_open %}disabled{% endif %}>
+                  <button type="button" class="button button-small button-ghost" onclick="editMarketAnalysis()" title="Editar Síntese / Análise" {% if not market_section_open %}disabled{% endif %} data-ref="28">
                     ✏️ Editar
                   </button>
                 </div>
@@ -655,7 +655,7 @@
                 <p class="panel-hint">Avalie a maturidade da analise de mercado.</p>
                 <label class="form-field">
                   <span>Resultado consolidado (0 a 5)</span>
-                  <input type="number" name="market_maturity" min="0" max="5" step="0.1" value="{{ market_maturity_score if market_maturity_score is not none else '' }}" placeholder="Defina a maturidade" {% if not market_section_open %}disabled{% endif %} />
+                  <input type="number" name="market_maturity" min="0" max="5" step="0.1" value="{{ market_maturity_score if market_maturity_score is not none else '' }}" placeholder="Defina a maturidade" {% if not market_section_open %}disabled{% endif %}  data-ref="75" />
                 </label>
                 {% if market_maturity_updated_at %}
                 <span class="summary-meta">Atualizado em {{ market_maturity_updated_at }}</span>
@@ -667,10 +667,10 @@
                 </div>
                 {% endif %}
                 <div style="margin-top: 12px; display: flex; gap: 8px;">
-                  <button type="button" class="button button-small button-primary" onclick="saveMarketMaturity()" title="Salvar Nível de Maturidade" {% if not market_section_open %}disabled{% endif %}>
+                  <button type="button" class="button button-small button-primary" onclick="saveMarketMaturity()" title="Salvar Nível de Maturidade" {% if not market_section_open %}disabled{% endif %} data-ref="29">
                     💾 Salvar
                   </button>
-                  <button type="button" class="button button-small button-ghost" onclick="editMarketMaturity()" title="Editar Nível de Maturidade" {% if not market_section_open %}disabled{% endif %}>
+                  <button type="button" class="button button-small button-ghost" onclick="editMarketMaturity()" title="Editar Nível de Maturidade" {% if not market_section_open %}disabled{% endif %} data-ref="30">
                     ✏️ Editar
                   </button>
                 </div>
@@ -692,11 +692,11 @@
           <span class="interview-count">{{ company_records|length }} registro(s) salvo(s)</span>
           <div class="section-status-controls">
             {% if company_section_open|default(true) %}
-              <button type="button" class="button button-small button-warning" onclick="closeCompanySection(event)" title="Concluir seção de possibilidades da empresa">
+              <button type="button" class="button button-small button-warning" onclick="closeCompanySection(event)" title="Concluir seção de possibilidades da empresa" data-ref="31">
                 🎯 Concluir
               </button>
             {% else %}
-              <button type="button" class="button button-small button-success" onclick="openCompanySection(event)" title="Reabrir seção de possibilidades da empresa">
+              <button type="button" class="button button-small button-success" onclick="openCompanySection(event)" title="Reabrir seção de possibilidades da empresa" data-ref="32">
                 🎯 Reabrir
               </button>
               {% if company_section_status %}
@@ -729,40 +729,40 @@
             <h4>Coleta de Informacoes</h4>
             {% if not company_section_open %}
             <div class="section-closed-notice">
-              <p>🎯 Esta seção foi conclu�da e não permite mais edições.</p>
+              <p>🎯 Esta seção foi concluída e não permite mais edições.</p>
             </div>
             {% endif %}
             <form class="company-form-fields" action="{{ url_for('add_company_record', plan_id=plan.id) }}" method="post" {% if not company_section_open %}style="opacity: 0.5; pointer-events: none;"{% endif %}>
               <label class="form-field">
                 <span>Participantes *</span>
-                <input type="text" name="company_participants" placeholder="Nomes dos participantes (separados por vírgula)" required />
+                <input type="text" name="company_participants" placeholder="Nomes dos participantes (separados por vírgula)" required  data-ref="76" />
               </label>
               <label class="form-field">
                 <span>Consultores *</span>
-                <input type="text" name="company_consultants" placeholder="Nomes dos consultores (separados por vírgula)" required />
+                <input type="text" name="company_consultants" placeholder="Nomes dos consultores (separados por vírgula)" required  data-ref="77" />
               </label>
               <label class="form-field">
                 <span>Data</span>
-                <input type="date" name="company_date" value="{{ company_record.date if company_record else '' }}" />
+                <input type="date" name="company_date" value="{{ company_record.date if company_record else '' }}"  data-ref="78" />
               </label>
 
               <div class="company-fieldset">
                 <span class="chip-label">Analise via BSC</span>
                 <label class="form-field">
                   <span>Financeira (visao dos socios)</span>
-                  <textarea name="bsc_financial" rows="2" placeholder="Indicadores financeiros, investimentos, retorno">{{ company_record.bsc_financial if company_record else '' }}</textarea>
+                  <textarea name="bsc_financial" rows="2" placeholder="Indicadores financeiros, investimentos, retorno" data-ref="C1">{{ company_record.bsc_financial if company_record else '' }}</textarea>
                 </label>
                 <label class="form-field">
                   <span>Comercial (mercado x produtos)</span>
-                  <textarea name="bsc_commercial" rows="2" placeholder="Clientes, mix de produtos e estagio da relacao">{{ company_record.bsc_commercial if company_record else '' }}</textarea>
+                  <textarea name="bsc_commercial" rows="2" placeholder="Clientes, mix de produtos e estagio da relacao" data-ref="C2">{{ company_record.bsc_commercial if company_record else '' }}</textarea>
                 </label>
                 <label class="form-field">
                   <span>Processos de negocios</span>
-                  <textarea name="bsc_process" rows="2" placeholder="Visao da organizacao interna">{{ company_record.bsc_process if company_record else '' }}</textarea>
+                  <textarea name="bsc_process" rows="2" placeholder="Visao da organizacao interna" data-ref="C3">{{ company_record.bsc_process if company_record else '' }}</textarea>
                 </label>
                 <label class="form-field">
                   <span>Aprendizado e crescimento</span>
-                  <textarea name="bsc_learning" rows="2" placeholder="Percepcao, motivacao e qualificacao dos colaboradores">{{ company_record.bsc_learning if company_record else '' }}</textarea>
+                  <textarea name="bsc_learning" rows="2" placeholder="Percepcao, motivacao e qualificacao dos colaboradores" data-ref="C4">{{ company_record.bsc_learning if company_record else '' }}</textarea>
                 </label>
               </div>
 
@@ -770,21 +770,21 @@
                 <span class="chip-label">Analise Tri-partite</span>
                 <label class="form-field">
                   <span>Comercial</span>
-                  <textarea name="tri_commercial" rows="3" placeholder="Produtos, canais, marketing, marca, dependencia de clientes">{{ company_record.tri_commercial if company_record else '' }}</textarea>
+                  <textarea name="tri_commercial" rows="3" placeholder="Produtos, canais, marketing, marca, dependencia de clientes" data-ref="C5">{{ company_record.tri_commercial if company_record else '' }}</textarea>
                 </label>
                 <label class="form-field">
                   <span>Adm / Fin</span>
-                  <textarea name="tri_adm_fin" rows="3" placeholder="Gestao, valores, eficiencia de processos, gargalos, parceiros">{{ company_record.tri_adm_fin if company_record else '' }}</textarea>
+                  <textarea name="tri_adm_fin" rows="3" placeholder="Gestao, valores, eficiencia de processos, gargalos, parceiros" data-ref="C6">{{ company_record.tri_adm_fin if company_record else '' }}</textarea>
                 </label>
                 <label class="form-field">
                   <span>Operacional</span>
-                  <textarea name="tri_operational" rows="3" placeholder="Novos produtos, fornecedores, riscos de insumos">{{ company_record.tri_operational if company_record else '' }}</textarea>
+                  <textarea name="tri_operational" rows="3" placeholder="Novos produtos, fornecedores, riscos de insumos" data-ref="C7">{{ company_record.tri_operational if company_record else '' }}</textarea>
                 </label>
               </div>
 
               <div class="form-actions">
-                <button type="submit" class="button button-primary">Salvar informacoes</button>
-                <button type="reset" class="button button-ghost">Limpar</button>
+                <button type="submit" class="button button-primary" data-ref="33">Salvar informacoes</button>
+                <button type="reset" class="button button-ghost" data-ref="34">Limpar</button>
               </div>
             </form>
           </section>
@@ -799,10 +799,10 @@
                     <span class="company-record-title">{{ record.participants }}</span>
                     <span class="company-record-date">{{ record.date }}</span>
                     <div class="company-record-actions">
-                      <button class="button button-small button-ghost" onclick="editCompanyRecord({{ record.id }})" title="Editar relato">
+                      <button class="button button-small button-ghost" onclick="editCompanyRecord({{ record.id }})" title="Editar relato" data-ref="35">
                         🎯
                       </button>
-                      <button class="button button-small button-danger" onclick="deleteCompanyRecord({{ record.id }})" title="Excluir relato">
+                      <button class="button button-small button-danger" onclick="deleteCompanyRecord({{ record.id }})" title="Excluir relato" data-ref="36">
                         🗑️
                       </button>
                     </div>
@@ -868,7 +868,7 @@
                 <p class="panel-hint">Consolide conclusoes sobre cultura, processos e capacidades internas.</p>
                 <label class="form-field">
                   <span>Resumo consolidado</span>
-                  <textarea name="company_analysis" rows="6" placeholder="Sintetize percepcoes e encaminhamentos" {% if not company_section_open %}disabled{% endif %}>{{ company_analysis_text or '' }}</textarea>
+                  <textarea name="company_analysis" rows="6" placeholder="Sintetize percepcoes e encaminhamentos" {% if not company_section_open %}disabled{% endif %} data-ref="C8">{{ company_analysis_text or '' }}</textarea>
                 </label>
                 {% if company_analysis_suggestion %}
                 <div class="ia-suggestion">
@@ -883,7 +883,7 @@
                 <p class="panel-hint">Avalie o nivel de maturidade interna.</p>
                 <label class="form-field">
                   <span>Resultado consolidado (0 a 5)</span>
-                  <input type="number" name="company_maturity" min="0" max="5" step="0.1" value="{{ company_maturity_score if company_maturity_score is not none else '' }}" placeholder="Defina a maturidade" {% if not company_section_open %}disabled{% endif %} />
+                  <input type="number" name="company_maturity" min="0" max="5" step="0.1" value="{{ company_maturity_score if company_maturity_score is not none else '' }}" placeholder="Defina a maturidade" {% if not company_section_open %}disabled{% endif %}  data-ref="79" />
                 </label>
                 {% if company_maturity_updated_at %}
                 <span class="summary-meta">Atualizado em {{ company_maturity_updated_at }}</span>
@@ -909,18 +909,18 @@
         <div class="interview-summary-text">
           <span class="section-eyebrow">Análise Preliminar</span>
           <h3>Alinhamentos Encontrados</h3>
-          <p>Identificação e an�lise dos pontos convergentes entre os participantes.</p>
+          <p>Identificação e análise dos pontos convergentes entre os participantes.</p>
         </div>
         <div class="interview-progress">
           <span class="chip-label">Alinhamentos</span>
           <span class="interview-count">{{ alignment_records|length }} registros</span>
           <div class="section-status-controls">
             {% if alignments_found_section_open %}
-              <button type="button" class="button button-small button-warning" onclick="closeAlignmentsFoundSection(event)" title="Concluir seção de alinhamentos">
+              <button type="button" class="button button-small button-warning" onclick="closeAlignmentsFoundSection(event)" title="Concluir seção de alinhamentos" data-ref="37">
                 🎯 Concluir
               </button>
             {% else %}
-              <button type="button" class="button button-small button-success" onclick="openAlignmentsFoundSection(event)" title="Reabrir seção de alinhamentos">
+              <button type="button" class="button button-small button-success" onclick="openAlignmentsFoundSection(event)" title="Reabrir seção de alinhamentos" data-ref="38">
                 🎯 Reabrir
               </button>
               {% if alignments_found_section_status %}
@@ -948,8 +948,8 @@
           <div class="card-content">
             <p class="panel-hint">Análise automática baseada nos dados coletados até agora.</p>
             <div class="ai-analysis-placeholder">
-              <p>🎯 A IA analisar� automaticamente os dados coletados nas seções anteriores e sugerir� possíveis alinhamentos identificados.</p>
-              <button class="button button-secondary" onclick="generateAIAnalysis('alignments')">Gerar Análise da IA</button>
+              <p>🎯 A IA analisará automaticamente os dados coletados nas seções anteriores e sugerirá possíveis alinhamentos identificados.</p>
+              <button class="button button-secondary" onclick="generateAIAnalysis('alignments')" data-ref="39">Gerar Análise da IA</button>
             </div>
           </div>
         </div>
@@ -966,10 +966,10 @@
             <form action="{{ url_for('save_alignment_consultant_notes', plan_id=plan.id) }}" method="post">
               <div class="form-field">
                 <span>Parecer do Consultor</span>
-                <textarea name="consultant_notes" rows="6" placeholder="Análise do consultor sobre os alinhamentos identificados...">{{ alignment_consultant_notes }}</textarea>
+                <textarea name="consultant_notes" rows="6" placeholder="Análise do consultor sobre os alinhamentos identificados..." data-ref="C9">{{ alignment_consultant_notes }}</textarea>
               </div>
               <div class="form-actions">
-                <button type="submit" class="button button-primary">Salvar Análise</button>
+                <button type="submit" class="button button-primary" data-ref="40">Salvar Análise</button>
               </div>
             </form>
             {% else %}
@@ -978,7 +978,7 @@
                 <p><strong>Parecer do Consultor:</strong></p>
                 <p>{{ alignment_consultant_notes }}</p>
               {% else %}
-                <p class="empty-state">🎯 Nenhuma an�lise do consultor registrada ainda.</p>
+                <p class="empty-state">🎯 Nenhuma análise do consultor registrada ainda.</p>
               {% endif %}
             </div>
             {% endif %}
@@ -998,35 +998,35 @@
             <form class="alignment-form" action="{{ url_for('add_alignment_record', plan_id=plan.id) }}" method="post">
               <div class="form-field">
                 <span>Adicionar Alinhamento</span>
-                <input type="text" name="alignment_topic" placeholder="T�pico do alinhamento" required />
+                <input type="text" name="alignment_topic" placeholder="Tópico do alinhamento" required  data-ref="80" />
               </div>
               <div class="form-field">
                 <span>Descrição</span>
-                <textarea name="alignment_description" rows="3" placeholder="Descrição do alinhamento encontrado" required></textarea>
+                <textarea name="alignment_description" rows="3" placeholder="Descrição do alinhamento encontrado" required data-ref="D0"></textarea>
               </div>
               <div class="form-two-cols">
                 <div class="form-field">
-                  <span>N�vel de Consenso</span>
-                  <select name="alignment_consensus" required>
+                  <span>Nível de Consenso</span>
+                  <select name="alignment_consensus" required data-ref="91">
                     <option value="">Selecione</option>
                     <option value="Baixo">Baixo</option>
-                    <option value="M�dio">M�dio</option>
+                    <option value="Médio">Médio</option>
                     <option value="Alto">Alto</option>
                   </select>
                 </div>
                 <div class="form-field">
                   <span>Prioridade</span>
-                  <select name="alignment_priority" required>
+                  <select name="alignment_priority" required data-ref="92">
                     <option value="">Selecione</option>
                     <option value="Baixa">Baixa</option>
-                    <option value="M�dia">M�dia</option>
+                    <option value="Média">Média</option>
                     <option value="Alta">Alta</option>
-                    <option value="Cr�tica">Cr�tica</option>
+                    <option value="Crítica">Crítica</option>
                   </select>
                 </div>
               </div>
               <div class="form-actions">
-                <button type="submit" class="button button-primary">Adicionar Alinhamento</button>
+                <button type="submit" class="button button-primary" data-ref="41">Adicionar Alinhamento</button>
               </div>
             </form>
             {% endif %}
@@ -1042,10 +1042,10 @@
                     <strong>{{ record.title or record.topic or 'Alinhamento' }}</strong>
                     {% if alignments_found_section_open %}
                     <div class="alignment-record-actions">
-                      <button class="button button-small button-ghost" onclick="editAlignmentRecord({{ record.id }})" title="Editar alinhamento">
+                      <button class="button button-small button-ghost" onclick="editAlignmentRecord({{ record.id }})" title="Editar alinhamento" data-ref="42">
                         🎯
                       </button>
-                      <button class="button button-small button-danger" onclick="deleteAlignmentRecord({{ record.id }})" title="Excluir alinhamento">
+                      <button class="button button-small button-danger" onclick="deleteAlignmentRecord({{ record.id }})" title="Excluir alinhamento" data-ref="43">
                         🗑️
                       </button>
                     </div>
@@ -1070,7 +1070,7 @@
             {% else %}
             <div class="empty-state">
               <p>🎯 Nenhum alinhamento registrado ainda.</p>
-              <p>Use o formul�rio acima para adicionar os pontos convergentes identificados.</p>
+              <p>Use o formulário acima para adicionar os pontos convergentes identificados.</p>
             </div>
             {% endif %}
           </div>
@@ -1084,18 +1084,18 @@
         <div class="interview-summary-text">
           <span class="section-eyebrow">Análise Preliminar</span>
           <h3>Desalinhamentos Críticos</h3>
-          <p>Identificação e an�lise dos pontos divergentes entre os participantes.</p>
+          <p>Identificação e análise dos pontos divergentes entre os participantes.</p>
         </div>
         <div class="interview-progress">
           <span class="chip-label">Desalinhamentos</span>
           <span class="interview-count">{{ misalignment_records|length }} registros</span>
           <div class="section-status-controls">
             {% if misalignments_critical_section_open %}
-              <button type="button" class="button button-small button-warning" onclick="closeMisalignmentsCriticalSection(event)" title="Concluir seção de desalinhamentos">
+              <button type="button" class="button button-small button-warning" onclick="closeMisalignmentsCriticalSection(event)" title="Concluir seção de desalinhamentos" data-ref="44">
                 🎯 Concluir
               </button>
             {% else %}
-              <button type="button" class="button button-small button-success" onclick="openMisalignmentsCriticalSection(event)" title="Reabrir seção de desalinhamentos">
+              <button type="button" class="button button-small button-success" onclick="openMisalignmentsCriticalSection(event)" title="Reabrir seção de desalinhamentos" data-ref="45">
                 🎯 Reabrir
               </button>
               {% if misalignments_critical_section_status %}
@@ -1123,8 +1123,8 @@
           <div class="card-content">
             <p class="panel-hint">Análise automática baseada nos dados coletados até agora.</p>
             <div class="ai-analysis-placeholder">
-              <p>🎯 A IA analisar� automaticamente os dados coletados nas seções anteriores e sugerir� possíveis desalinhamentos críticos identificados.</p>
-              <button class="button button-secondary" onclick="generateAIAnalysis('misalignments')">Gerar Análise da IA</button>
+              <p>🎯 A IA analisará automaticamente os dados coletados nas seções anteriores e sugerirá possíveis desalinhamentos críticos identificados.</p>
+              <button class="button button-secondary" onclick="generateAIAnalysis('misalignments')" data-ref="46">Gerar Análise da IA</button>
             </div>
           </div>
         </div>
@@ -1141,10 +1141,10 @@
             <form action="{{ url_for('save_misalignment_consultant_notes', plan_id=plan.id) }}" method="post">
               <div class="form-field">
                 <span>Parecer do Consultor</span>
-                <textarea name="consultant_notes" rows="6" placeholder="Análise do consultor sobre os desalinhamentos críticos identificados...">{{ misalignment_consultant_notes }}</textarea>
+                <textarea name="consultant_notes" rows="6" placeholder="Análise do consultor sobre os desalinhamentos críticos identificados..." data-ref="D1">{{ misalignment_consultant_notes }}</textarea>
               </div>
               <div class="form-actions">
-                <button type="submit" class="button button-primary">Salvar Análise</button>
+                <button type="submit" class="button button-primary" data-ref="47">Salvar Análise</button>
               </div>
             </form>
             {% else %}
@@ -1153,7 +1153,7 @@
                 <p><strong>Parecer do Consultor:</strong></p>
                 <p>{{ misalignment_consultant_notes }}</p>
               {% else %}
-                <p class="empty-state">🎯 Nenhuma an�lise do consultor registrada ainda.</p>
+                <p class="empty-state">🎯 Nenhuma análise do consultor registrada ainda.</p>
               {% endif %}
             </div>
             {% endif %}
@@ -1173,36 +1173,36 @@
             <form class="misalignment-form" action="{{ url_for('add_misalignment_record', plan_id=plan.id) }}" method="post">
               <div class="form-field">
                 <span>Adicionar Desalinhamento</span>
-                <input type="text" name="misalignment_topic" placeholder="T�pico do desalinhamento" required />
+                <input type="text" name="misalignment_topic" placeholder="Tópico do desalinhamento" required  data-ref="81" />
               </div>
               <div class="form-field">
                 <span>Descrição</span>
-                <textarea name="misalignment_description" rows="3" placeholder="Descrição do desalinhamento crítico encontrado" required></textarea>
+                <textarea name="misalignment_description" rows="3" placeholder="Descrição do desalinhamento crítico encontrado" required data-ref="D2"></textarea>
               </div>
               <div class="form-two-cols">
                 <div class="form-field">
-                  <span>N�vel de Conflito</span>
-                  <select name="misalignment_conflict_level" required>
+                  <span>Nível de Conflito</span>
+                  <select name="misalignment_conflict_level" required data-ref="93">
                     <option value="">Selecione</option>
                     <option value="Baixo">Baixo</option>
-                    <option value="M�dio">M�dio</option>
+                    <option value="Médio">Médio</option>
                     <option value="Alto">Alto</option>
                     <option value="Crítico">Crítico</option>
                   </select>
                 </div>
                 <div class="form-field">
                   <span>Impacto</span>
-                  <select name="misalignment_impact" required>
+                  <select name="misalignment_impact" required data-ref="94">
                     <option value="">Selecione</option>
                     <option value="Baixo">Baixo</option>
-                    <option value="M�dio">M�dio</option>
+                    <option value="Médio">Médio</option>
                     <option value="Alto">Alto</option>
                     <option value="Crítico">Crítico</option>
                   </select>
                 </div>
               </div>
               <div class="form-actions">
-                <button type="submit" class="button button-primary">Adicionar Desalinhamento</button>
+                <button type="submit" class="button button-primary" data-ref="48">Adicionar Desalinhamento</button>
               </div>
             </form>
             {% endif %}
@@ -1218,10 +1218,10 @@
                     <strong>{{ record.title or record.topic or 'Desalinhamento' }}</strong>
                     {% if misalignments_critical_section_open %}
                     <div class="misalignment-record-actions">
-                      <button class="button button-small button-ghost" onclick="editMisalignmentRecord({{ record.id }})" title="Editar desalinhamento">
+                      <button class="button button-small button-ghost" onclick="editMisalignmentRecord({{ record.id }})" title="Editar desalinhamento" data-ref="49">
                         🎯
                       </button>
-                      <button class="button button-small button-danger" onclick="deleteMisalignmentRecord({{ record.id }})" title="Excluir desalinhamento">
+                      <button class="button button-small button-danger" onclick="deleteMisalignmentRecord({{ record.id }})" title="Excluir desalinhamento" data-ref="50">
                         🗑️
                       </button>
                     </div>
@@ -1246,7 +1246,7 @@
             {% else %}
             <div class="empty-state">
               <p>🎯 Nenhum desalinhamento registrado ainda.</p>
-              <p>Use o formul�rio acima para adicionar os pontos divergentes identificados.</p>
+              <p>Use o formulário acima para adicionar os pontos divergentes identificados.</p>
             </div>
             {% endif %}
           </div>
@@ -1267,11 +1267,11 @@
           <span class="interview-count">{{ workshop_adjustments|length }} ajustes registrados</span>
           <div class="section-status-controls">
             {% if workshop_final_analysis_section_open|default(true) %}
-              <button type="button" class="button button-small button-warning" onclick="closeWorkshopFinalAnalysisSection(event)" title="Concluir seção de workshop">
+              <button type="button" class="button button-small button-warning" onclick="closeWorkshopFinalAnalysisSection(event)" title="Concluir seção de workshop" data-ref="51">
                 🎯 Concluir
               </button>
             {% else %}
-              <button type="button" class="button button-small button-success" onclick="openWorkshopFinalAnalysisSection(event)" title="Reabrir seção de workshop">
+              <button type="button" class="button button-small button-success" onclick="openWorkshopFinalAnalysisSection(event)" title="Reabrir seção de workshop" data-ref="52">
                 🎯 Reabrir
               </button>
               {% if workshop_final_analysis_section_status %}
@@ -1299,8 +1299,8 @@
           <div class="card-content">
             <p class="panel-hint">Análise automática para consolidação final.</p>
             <div class="ai-analysis-placeholder">
-              <p>🎯 A IA analisar� os alinhamentos e desalinhamentos identificados e sugerir� ajustes para consolidação final.</p>
-              <button class="button button-secondary" onclick="generateAIAnalysis('workshop')">Gerar Análise da IA</button>
+              <p>🎯 A IA analisará os alinhamentos e desalinhamentos identificados e sugerirá ajustes para consolidação final.</p>
+              <button class="button button-secondary" onclick="generateAIAnalysis('workshop')" data-ref="53">Gerar Análise da IA</button>
             </div>
           </div>
         </div>
@@ -1317,10 +1317,10 @@
             <form action="{{ url_for('save_workshop_consultant_notes', plan_id=plan.id) }}" method="post">
               <div class="form-field">
                 <span>Parecer do Consultor</span>
-                <textarea name="consultant_notes" rows="6" placeholder="Análise do consultor para consolidação final dos alinhamentos e desalinhamentos...">{{ workshop_consultant_notes }}</textarea>
+                <textarea name="consultant_notes" rows="6" placeholder="Análise do consultor para consolidação final dos alinhamentos e desalinhamentos..." data-ref="D3">{{ workshop_consultant_notes }}</textarea>
               </div>
               <div class="form-actions">
-                <button type="submit" class="button button-primary">Salvar Análise</button>
+                <button type="submit" class="button button-primary" data-ref="54">Salvar Análise</button>
               </div>
             </form>
             {% else %}
@@ -1329,7 +1329,7 @@
                 <p><strong>Parecer do Consultor:</strong></p>
                 <p>{{ workshop_consultant_notes }}</p>
               {% else %}
-                <p class="empty-state">🎯 Nenhuma an�lise do consultor registrada ainda.</p>
+                <p class="empty-state">🎯 Nenhuma análise do consultor registrada ainda.</p>
               {% endif %}
             </div>
             {% endif %}
@@ -1349,36 +1349,36 @@
             <form class="workshop-form" action="{{ url_for('add_workshop_adjustment', plan_id=plan.id) }}" method="post">
               <div class="form-field">
                 <span>Adicionar Ajuste</span>
-                <input type="text" name="adjustment_title" placeholder="Título do ajuste" required />
+                <input type="text" name="adjustment_title" placeholder="Título do ajuste" required  data-ref="82" />
               </div>
               <div class="form-field">
                 <span>Descrição do Ajuste</span>
-                <textarea name="adjustment_description" rows="4" placeholder="Descrição detalhada do ajuste definido no workshop" required></textarea>
+                <textarea name="adjustment_description" rows="4" placeholder="Descrição detalhada do ajuste definido no workshop" required data-ref="D4"></textarea>
               </div>
               <div class="form-two-cols">
                 <div class="form-field">
                   <span>Tipo de Ajuste</span>
-                  <select name="adjustment_type" required>
+                  <select name="adjustment_type" required data-ref="95">
                     <option value="">Selecione</option>
                     <option value="Alinhamento">Alinhamento</option>
                     <option value="Desalinhamento">Desalinhamento</option>
                     <option value="Consolidação">Consolidação</option>
-                    <option value="Resolu��o">Resolu��o</option>
+                    <option value="Resolução">Resolução</option>
                   </select>
                 </div>
                 <div class="form-field">
                   <span>Prioridade</span>
-                  <select name="adjustment_priority" required>
+                  <select name="adjustment_priority" required data-ref="96">
                     <option value="">Selecione</option>
                     <option value="Baixa">Baixa</option>
-                    <option value="M�dia">M�dia</option>
+                    <option value="Média">Média</option>
                     <option value="Alta">Alta</option>
-                    <option value="Cr�tica">Cr�tica</option>
+                    <option value="Crítica">Crítica</option>
                   </select>
                 </div>
               </div>
               <div class="form-actions">
-                <button type="submit" class="button button-primary">Adicionar Ajuste</button>
+                <button type="submit" class="button button-primary" data-ref="55">Adicionar Ajuste</button>
               </div>
             </form>
             {% endif %}
@@ -1406,7 +1406,7 @@
               {% else %}
                 <div class="empty-state">
                   <p>🎯 Nenhum ajuste registrado ainda.</p>
-                  <p>Use o formul�rio acima para registrar os ajustes definidos no workshop.</p>
+                  <p>Use o formulário acima para registrar os ajustes definidos no workshop.</p>
                 </div>
               {% endif %}
             </div>
@@ -1428,11 +1428,11 @@
           <span class="interview-count">{{ directionals_records|length }} registros</span>
           <div class="section-status-controls">
             {% if directionals_approvals_section_open|default(true) %}
-              <button type="button" class="button button-small button-warning" onclick="closeDirectionalsApprovalsSection(event)" title="Concluir seção de direcionadores">
+              <button type="button" class="button button-small button-warning" onclick="closeDirectionalsApprovalsSection(event)" title="Concluir seção de direcionadores" data-ref="56">
                 🎯 Concluir
               </button>
             {% else %}
-              <button type="button" class="button button-small button-success" onclick="openDirectionalsApprovalsSection(event)" title="Reabrir seção de direcionadores">
+              <button type="button" class="button button-small button-success" onclick="openDirectionalsApprovalsSection(event)" title="Reabrir seção de direcionadores" data-ref="57">
                 🎯 Reabrir
               </button>
               {% if directionals_approvals_section_status %}
@@ -1459,10 +1459,10 @@
             <span class="badge">Inteligência Artificial</span>
           </div>
           <div class="card-content">
-            <p class="panel-hint">Análise automática para defini��o dos direcionadores finais.</p>
+            <p class="panel-hint">Análise automática para definição dos direcionadores finais.</p>
             <div class="ai-analysis-placeholder">
-              <p>🎯 A IA analisar� todo o processo até agora e sugerir� direcionadores estratégicos ideais para o plano.</p>
-              <button class="button button-secondary" onclick="generateAIAnalysis('directionals')">Gerar Análise da IA</button>
+              <p>🎯 A IA analisará todo o processo até agora e sugerirá direcionadores estratégicos ideais para o plano.</p>
+              <button class="button button-secondary" onclick="generateAIAnalysis('directionals')" data-ref="58">Gerar Análise da IA</button>
             </div>
           </div>
         </div>
@@ -1479,10 +1479,10 @@
             <form action="{{ url_for('save_directionals_consultant_analysis', plan_id=plan.id) }}" method="post">
               <div class="form-field">
                 <span>Parecer do Consultor</span>
-                <textarea name="consultant_directionals" rows="6" placeholder="Análise do consultor sobre os direcionadores estratégicos propostos...">{{ directionals_consultant_notes }}</textarea>
+                <textarea name="consultant_directionals" rows="6" placeholder="Análise do consultor sobre os direcionadores estratégicos propostos..." data-ref="D5">{{ directionals_consultant_notes }}</textarea>
               </div>
               <div class="form-actions">
-                <button type="submit" class="button button-primary">Salvar Análise</button>
+                <button type="submit" class="button button-primary" data-ref="59">Salvar Análise</button>
               </div>
             </form>
             {% else %}
@@ -1491,7 +1491,7 @@
                 <p><strong>Parecer do Consultor:</strong></p>
                 <p>{{ directionals_consultant_notes }}</p>
               {% else %}
-                <p class="empty-state">🎯 Nenhuma an�lise do consultor registrada ainda.</p>
+                <p class="empty-state">🎯 Nenhuma análise do consultor registrada ainda.</p>
               {% endif %}
             </div>
             {% endif %}
@@ -1511,16 +1511,16 @@
             <form class="directional-form" action="{{ url_for('add_directional_record', plan_id=plan.id) }}" method="post">
               <div class="form-field">
                 <span>Adicionar Direcionador</span>
-                <input type="text" name="directional_title" placeholder="Título do direcionador" required />
+                <input type="text" name="directional_title" placeholder="Título do direcionador" required  data-ref="83" />
               </div>
               <div class="form-field">
                 <span>Descrição</span>
-                <textarea name="directional_description" rows="4" placeholder="Descrição detalhada do direcionador estratégico" required></textarea>
+                <textarea name="directional_description" rows="4" placeholder="Descrição detalhada do direcionador estratégico" required data-ref="D6"></textarea>
               </div>
               <div class="form-two-cols">
                 <div class="form-field">
                   <span>Categoria</span>
-                  <select name="directional_type" required>
+                  <select name="directional_type" required data-ref="97">
                     <option value="">Selecione</option>
                     <option value="Estruturante">Estruturante</option>
                     <option value="Acelerador">Acelerador</option>
@@ -1529,17 +1529,17 @@
                 </div>
                 <div class="form-field">
                   <span>Prioridade</span>
-                  <select name="directional_priority" required>
+                  <select name="directional_priority" required data-ref="98">
                     <option value="">Selecione</option>
                     <option value="Baixa">Baixa</option>
-                    <option value="M�dia">M�dia</option>
+                    <option value="Média">Média</option>
                     <option value="Alta">Alta</option>
-                    <option value="Cr�tica">Cr�tica</option>
+                    <option value="Crítica">Crítica</option>
                   </select>
                 </div>
               </div>
               <div class="form-actions">
-                <button type="submit" class="button button-primary">Adicionar Direcionador</button>
+                <button type="submit" class="button button-primary" data-ref="60">Adicionar Direcionador</button>
               </div>
             </form>
             {% endif %}
@@ -1555,10 +1555,10 @@
                     <strong>{{ record.title or 'Direcionador' }}</strong>
                     {% if directionals_approvals_section_open|default(true) %}
                     <div class="directional-record-actions">
-                      <button class="button button-small button-ghost" onclick="editDirectionalRecord({{ record.id }})" title="Editar direcionador">
+                      <button class="button button-small button-ghost" onclick="editDirectionalRecord({{ record.id }})" title="Editar direcionador" data-ref="61">
                         🎯
                       </button>
-                      <button class="button button-small button-danger" onclick="deleteDirectionalRecord({{ record.id }})" title="Excluir direcionador">
+                      <button class="button button-small button-danger" onclick="deleteDirectionalRecord({{ record.id }})" title="Excluir direcionador" data-ref="62">
                         🗑️
                       </button>
                     </div>
@@ -1589,7 +1589,7 @@
             {% else %}
             <div class="empty-state">
               <p>🎯 Nenhum direcionador registrado ainda.</p>
-              <p>Use o formul�rio acima para adicionar os direcionadores estratégicos.</p>
+              <p>Use o formulário acima para adicionar os direcionadores estratégicos.</p>
             </div>
             {% endif %}
           </div>
@@ -1608,16 +1608,16 @@
             <form class="approval-form" action="{{ url_for('add_directionals_approval', plan_id=plan.id) }}" method="post">
               <div class="form-field">
                 <span>Título da Aprovação</span>
-                <input type="text" name="approval_title" placeholder="Título da aprovação" required />
+                <input type="text" name="approval_title" placeholder="Título da aprovação" required  data-ref="84" />
               </div>
               <div class="form-field">
                 <span>Descrição</span>
-                <textarea name="approval_description" rows="4" placeholder="Descrição detalhada da aprovação" required></textarea>
+                <textarea name="approval_description" rows="4" placeholder="Descrição detalhada da aprovação" required data-ref="D7"></textarea>
               </div>
               <div class="form-two-cols">
                 <div class="form-field">
                   <span>Tipo de Aprovação</span>
-                  <select name="approval_type" required>
+                  <select name="approval_type" required data-ref="99">
                     <option value="">Selecione</option>
                     <option value="Aprovação Formal">Aprovação Formal</option>
                     <option value="Aprovação Condicional">Aprovação Condicional</option>
@@ -1627,7 +1627,7 @@
                 </div>
                 <div class="form-field">
                   <span>Status</span>
-                  <select name="approval_status" required>
+                  <select name="approval_status" required data-ref="A0">
                     <option value="">Selecione</option>
                     <option value="Aprovado">Aprovado</option>
                     <option value="Pendente">Pendente</option>
@@ -1637,7 +1637,7 @@
                 </div>
               </div>
               <div class="form-actions">
-                <button type="submit" class="button button-primary">Registrar Aprovação</button>
+                <button type="submit" class="button button-primary" data-ref="63">Registrar Aprovação</button>
               </div>
             </form>
             {% endif %}
@@ -1673,7 +1673,7 @@
               {% else %}
                 <div class="empty-state">
                   <p>🎯 Nenhuma aprovação registrada ainda.</p>
-                  <p>Use o formul�rio acima para registrar as aprovações dos direcionadores.</p>
+                  <p>Use o formulário acima para registrar as aprovações dos direcionadores.</p>
                 </div>
               {% endif %}
             </div>
@@ -1682,7 +1682,7 @@
       </div>
     </details>
 
-    <!-- Se��o Final: Direcionadores Consolidados do Plano -->
+    <!-- Seção Final: Direcionadores Consolidados do Plano -->
     <details class="interview-section surface-card consolidated-directionals-section" {% if not directionals_approvals_section_status %}style="opacity: 0.5;"{% endif %} open>
       <summary class="interview-summary-bar">
         <div class="interview-summary-text">
@@ -1729,7 +1729,7 @@
                     </div>
                   </div>
                 </div>
-                <p>{{ record.insight or record.description or 'Sem descri��o' }}</p>
+                <p>{{ record.insight or record.description or 'Sem descrição' }}</p>
               </div>
               {% endfor %}
             </div>
@@ -1749,13 +1749,13 @@
         {% else %}
         <div class="surface-card">
           <div class="card-header">
-            <h4>🎯 Se��o Bloqueada</h4>
+            <h4>🎯 Seção Bloqueada</h4>
             <span class="badge">Aguardando Conclusão</span>
           </div>
           <div class="card-content">
-            <p class="panel-hint">Esta seção será liberada quando todas as seções anteriores forem conclu�das.</p>
+            <p class="panel-hint">Esta seção será liberada quando todas as seções anteriores forem concluídas.</p>
             <div class="locked-section-info">
-              <p>🎯 Para visualizar os direcionadores consolidados, � necessário concluir a seção "Direcionadores e Aprovação".</p>
+              <p>🎯 Para visualizar os direcionadores consolidados, não é necessário concluir a seção "Direcionadores e Aprovação".</p>
               
             </div>
           </div>
@@ -1822,7 +1822,7 @@
               {% else %}
               <p>Sem Aprovações registradas.</p>
               {% endif %}
-              <button type="button" class="button button-ghost" disabled>Editar (em breve)</button>
+              <button type="button" class="button button-ghost" disabled data-ref="64">Editar (em breve)</button>
             </div>
           </div>
         </details>
@@ -2029,7 +2029,7 @@ document.addEventListener('DOMContentLoaded', function() {
     console.log('Total de botões de status encontrados:', statusButtons.length);
 });
 
-// Funcionalidades de edi��o e exclus�o de entrevistas
+// Funcionalidades de edição e exclusão de entrevistas
 function editInterview(interviewId) {
     // Buscar dados da entrevista
     fetch(`/plans/{{ plan.id }}/interviews/${interviewId}`)
@@ -2038,19 +2038,19 @@ function editInterview(interviewId) {
             if (data.success) {
                 const interview = data.interview;
                 
-                // Preencher formul�rio com dados existentes
+                // Preencher formulário com dados existentes
                 document.querySelector('select[name="participant"]').value = interview.participant_name;
                 document.querySelector('input[name="consultant"]').value = interview.consultant_name;
                 document.querySelector('input[name="date"]').value = interview.interview_date;
                 document.querySelector('select[name="format"]').value = interview.format;
                 document.querySelector('textarea[name="notes"]').value = interview.notes;
                 
-                // Alterar a��o do formul�rio para edi��o
+                // Alterar ação do formulário para edição
                 const form = document.querySelector('.interview-form-fields');
                 form.action = `/plans/{{ plan.id }}/interviews/${interviewId}`;
                 form.method = 'PUT';
                 
-                // Adicionar campo hidden para indicar que � edi��o
+                // Adicionar campo hidden para indicar que é edição
                 let hiddenInput = form.querySelector('input[name="interview_id"]');
                 if (!hiddenInput) {
                     hiddenInput = document.createElement('input');
@@ -2060,27 +2060,27 @@ function editInterview(interviewId) {
                 }
                 hiddenInput.value = interviewId;
                 
-                // Alterar texto do bot�o
+                // Alterar texto do botão
                 const submitBtn = form.querySelector('button[type="submit"]');
                 submitBtn.textContent = 'Atualizar entrevista';
                 
-                // Adicionar bot�o de cancelar se não existir
+                // Adicionar botão de cancelar se não existir
                 let cancelBtn = form.querySelector('.cancel-edit-btn');
                 if (!cancelBtn) {
                     cancelBtn = document.createElement('button');
                     cancelBtn.type = 'button';
                     cancelBtn.className = 'button button-ghost cancel-edit-btn';
-                    cancelBtn.textContent = 'Cancelar edi��o';
+                    cancelBtn.textContent = 'Cancelar edição';
                     cancelBtn.onclick = cancelEdit;
-// Inserir antes do bot�o de submit
+// Inserir antes do botão de submit
                     submitBtn.parentNode.insertBefore(cancelBtn, submitBtn);
                 }
                 
-                // Scroll para o formul�rio
+                // Scroll para o formulário
                 form.scrollIntoView({ behavior: 'smooth' });
                 
                 // Mostrar mensagem
-                showMessage('Formul�rio preenchido para edi��o. Modifique os dados e clique em "Atualizar entrevista".', 'info');
+                showMessage('Formulário preenchido para edição. Modifique os dados e clique em "Atualizar entrevista".', 'info');
             } else {
                 showMessage('Erro ao carregar dados da entrevista.', 'error');
             }
@@ -2094,34 +2094,34 @@ function editInterview(interviewId) {
 function cancelEdit() {
     const form = document.querySelector('.interview-form-fields');
     
-    // Restaurar a��o original do formul�rio
+    // Restaurar ação original do formulário
     form.action = '{{ url_for("add_interview", plan_id=plan.id) }}';
     form.method = 'POST';
     
-    // Remover campo hidden de edi��o
+    // Remover campo hidden de edição
     const hiddenInput = form.querySelector('input[name="interview_id"]');
     if (hiddenInput) {
         hiddenInput.remove();
     }
     
-    // Restaurar texto do bot�o
+    // Restaurar texto do botão
     const submitBtn = form.querySelector('button[type="submit"]');
     submitBtn.textContent = 'Registrar entrevista';
     
-    // Remover bot�o de cancelar
+    // Remover botão de cancelar
     const cancelBtn = form.querySelector('.cancel-edit-btn');
     if (cancelBtn) {
         cancelBtn.remove();
     }
     
-    // Limpar formul�rio
+    // Limpar formulário
     form.reset();
     
-    showMessage('Edi��o cancelada. Formul�rio limpo para nova entrevista.', 'info');
+    showMessage('Edição cancelada. Formulário limpo para nova entrevista.', 'info');
 }
 
 function deleteInterview(interviewId) {
-    if (confirm('Tem certeza que deseja excluir esta entrevista? Esta a��o não pode ser desfeita.')) {
+    if (confirm('Tem certeza que deseja excluir esta entrevista? Esta ação não pode ser desfeita.')) {
         fetch(`/plans/{{ plan.id }}/interviews/${interviewId}`, {
             method: 'DELETE',
             headers: {
@@ -2131,8 +2131,8 @@ function deleteInterview(interviewId) {
         .then(response => response.json())
         .then(data => {
             if (data.success) {
-                showMessage('Entrevista exclu�da com sucesso!', 'success');
-                // Recarregar a p�gina para atualizar a lista
+                showMessage('Entrevista excluída com sucesso!', 'success');
+                // Recarregar a página para atualizar a lista
                 setTimeout(() => {
                     window.location.reload();
                 }, 1000);
@@ -2231,7 +2231,7 @@ function openInterviewSection(event)  {
     }
 }
 
-// Funcionalidades de vis�o dos sócios
+// Funcionalidades de visão dos sócios
 function editVisionRecord(visionId) {
     fetch(`/plans/{{ plan.id }}/vision-records/${visionId}`)
         .then(response => response.json())
@@ -2239,7 +2239,7 @@ function editVisionRecord(visionId) {
             if (data.success) {
                 const record = data.vision_record;
                 
-                // Preencher formul�rio
+                // Preencher formulário
                 const form = document.querySelector('form[action*="vision-records"]');
                 if (form) {
                     // Preencher campo de participantes
@@ -2256,9 +2256,9 @@ function editVisionRecord(visionId) {
                     form.querySelector('input[name="vision_date"]').value = record.vision_date || '';
                     form.querySelector('select[name="format"]').value = record.format || '';
                     form.querySelector('textarea[name="notes"]').value = record.notes || '';
-// Alterar action do formul�rio para update
+// Alterar action do formulário para update
                     form.action = `/plans/{{ plan.id }}/vision-records/${visionId}`;
-// Alterar bot�o de submit
+// Alterar botão de submit
                     const submitBtn = form.querySelector('button[type="submit"]');
                     if (submitBtn) {
                         submitBtn.textContent = 'Atualizar relato';
@@ -2267,7 +2267,7 @@ function editVisionRecord(visionId) {
                             updateVisionRecord(visionId);
                         };
                     }
-// Adicionar bot�o de cancelar
+// Adicionar botão de cancelar
                     const cancelBtn = document.createElement('button');
                     cancelBtn.type = 'button';
                     cancelBtn.className = 'button button-ghost cancel-edit-btn';
@@ -2275,7 +2275,7 @@ function editVisionRecord(visionId) {
                     cancelBtn.onclick = cancelVisionEdit;
 const formActions = form.querySelector('.form-actions');
                     formActions.insertBefore(cancelBtn, formActions.firstChild);
-showMessage('Formul�rio preenchido para edi��o. Modifique os campos desejados.', 'info');
+showMessage('Formulário preenchido para edição. Modifique os campos desejados.', 'info');
                 }
             } else {
                 showMessage('Erro ao carregar dados do relato: ' + data.error, 'error');
@@ -2328,14 +2328,14 @@ function updateVisionRecord(visionId) {
 }
 
 function deleteVisionRecord(visionId) {
-    if (confirm('Tem certeza que deseja excluir este relato? Esta a��o não pode ser desfeita.')) {
+    if (confirm('Tem certeza que deseja excluir este relato? Esta ação não pode ser desfeita.')) {
         fetch(`/plans/{{ plan.id }}/vision-records/${visionId}`, {
             method: 'DELETE'
         })
         .then(response => response.json())
         .then(data => {
             if (data.success) {
-                showMessage('Relato exclu�do com sucesso!', 'success');
+                showMessage('Relato excluído com sucesso!', 'success');
                 setTimeout(() => {
                     window.location.reload();
                 }, 1000);
@@ -2356,23 +2356,23 @@ function cancelVisionEdit() {
         // Restaurar action original
         form.action = '{{ url_for("add_vision_record", plan_id=plan.id) }}';
         
-        // Limpar formul�rio
+        // Limpar formulário
         form.reset();
         
-        // Restaurar bot�o de submit
+        // Restaurar botão de submit
         const submitBtn = form.querySelector('button[type="submit"]');
         if (submitBtn) {
             submitBtn.textContent = 'Registrar relato';
             submitBtn.onclick = null;
         }
         
-        // Remover bot�o de cancelar
+        // Remover botão de cancelar
         const cancelBtn = form.querySelector('.cancel-edit-btn');
         if (cancelBtn) {
             cancelBtn.remove();
         }
         
-        showMessage('Edi��o cancelada.', 'info');
+        showMessage('Edição cancelada.', 'info');
     }
 }
 
@@ -2381,7 +2381,7 @@ function closeVisionSection(event)  {
         event.preventDefault();
         event.stopPropagation();
     }
-    const notes = prompt('Motivo da conclusão da seção de vis�o dos sócios (opcional):');
+    const notes = prompt('Motivo da conclusão da seção de visão dos sócios (opcional):');
     
     fetch(`/plans/{{ plan.id }}/sections/vision/status`, {
         method: 'POST',
@@ -2390,15 +2390,15 @@ function closeVisionSection(event)  {
         },
         body: JSON.stringify({
             status: 'closed',
-            closed_by: 'Usu�rio',
+            closed_by: 'Usuário',
             notes: notes || ''
         })
     })
     .then(response => response.json())
     .then(data => {
         if (data.success) {
-            showMessage('Se��o de vis�o dos sócios conclu�da com sucesso!', 'success');
-            // Recarregar a p�gina para atualizar a interface
+            showMessage('Seção de visão dos sócios concluída com sucesso!', 'success');
+            // Recarregar a página para atualizar a interface
             setTimeout(() => {
                 window.location.reload();
             }, 1000);
@@ -2408,7 +2408,7 @@ function closeVisionSection(event)  {
     })
     .catch(error => {
         console.error('Erro:', error);
-        showMessage('Erro ao concluir seção de vis�o dos sócios.', 'error');
+        showMessage('Erro ao concluir seção de visão dos sócios.', 'error');
     });
 }
 
@@ -2417,7 +2417,7 @@ function openVisionSection(event)  {
         event.preventDefault();
         event.stopPropagation();
     }
-    if (confirm('Tem certeza que deseja reabrir a seção de vis�o dos sócios? Isso permitir� novas edições.')) {
+    if (confirm('Tem certeza que deseja reabrir a seção de visão dos sócios? Isso permitirá novas edições.')) {
         fetch(`/plans/{{ plan.id }}/sections/vision/status`, {
             method: 'POST',
             headers: {
@@ -2432,8 +2432,8 @@ function openVisionSection(event)  {
         .then(response => response.json())
         .then(data => {
             if (data.success) {
-                showMessage('Se��o de vis�o dos sócios reaberta com sucesso!', 'success');
-                // Recarregar a p�gina para atualizar a interface
+                showMessage('Seção de visão dos sócios reaberta com sucesso!', 'success');
+                // Recarregar a página para atualizar a interface
                 setTimeout(() => {
                     window.location.reload();
                 }, 1000);
@@ -2443,7 +2443,7 @@ function openVisionSection(event)  {
         })
         .catch(error => {
             console.error('Erro:', error);
-            showMessage('Erro ao reabrir seção de vis�o dos sócios.', 'error');
+            showMessage('Erro ao reabrir seção de visão dos sócios.', 'error');
         });
     }
 }
@@ -2456,7 +2456,7 @@ function editMarketRecord(marketId) {
             if (data.success) {
                 const record = data.market_record;
                 
-                // Preencher formul�rio
+                // Preencher formulário
                 const form = document.querySelector('form[action*="market-records"]');
                 if (form) {
                     // Preencher campo de participantes
@@ -2481,10 +2481,10 @@ function editMarketRecord(marketId) {
                     form.querySelector('textarea[name="competition"]').value = record.competition || '';
                     form.querySelector('textarea[name="notes"]').value = record.notes || '';
 
-                    // Alterar action do formul�rio para update
+                    // Alterar action do formulário para update
                     form.action = `/plans/{{ plan.id }}/market-records/${marketId}`;        
 
-                    // Alterar bot�o de submit
+                    // Alterar botão de submit
                     const submitBtn = form.querySelector('button[type="submit"]');
                     if (submitBtn) {
                         submitBtn.textContent = 'Atualizar relato';
@@ -2494,7 +2494,7 @@ function editMarketRecord(marketId) {
                         };
                     }
 
-                    // Adicionar bot�o de cancelar
+                    // Adicionar botão de cancelar
                     const cancelBtn = document.createElement('button');
                     cancelBtn.type = 'button';
                     cancelBtn.className = 'button button-ghost cancel-edit-btn';
@@ -2502,7 +2502,7 @@ function editMarketRecord(marketId) {
                     cancelBtn.onclick = cancelMarketEdit;
 const formActions = form.querySelector('.form-actions');
                     formActions.insertBefore(cancelBtn, formActions.firstChild);
-showMessage('Formul�rio preenchido para edi��o. Modifique os campos desejados.', 'info');
+showMessage('Formulário preenchido para edição. Modifique os campos desejados.', 'info');
                 }
             } else {
                 showMessage('Erro ao carregar dados do relato: ' + data.error, 'error');
@@ -2569,7 +2569,7 @@ function deleteMarketRecord(marketId) {
         .then(response => response.json())
         .then(data => {
             if (data.success) {
-                showMessage('Relato exclu�do com sucesso!', 'success');
+                showMessage('Relato excluído com sucesso!', 'success');
                 setTimeout(() => {
                     window.location.reload();
                 }, 1000);
@@ -2590,23 +2590,23 @@ function cancelMarketEdit() {
         // Restaurar action original
         form.action = '{{ url_for("add_market_record", plan_id=plan.id) }}';
         
-        // Limpar formul�rio
+        // Limpar formulário
         form.reset();
         
-        // Restaurar bot�o de submit
+        // Restaurar botão de submit
         const submitBtn = form.querySelector('button[type="submit"]');
         if (submitBtn) {
             submitBtn.textContent = 'Salvar informacoes';
             submitBtn.onclick = null;
         }
         
-        // Remover bot�o de cancelar
+        // Remover botão de cancelar
         const cancelBtn = form.querySelector('.cancel-edit-btn');
         if (cancelBtn) {
             cancelBtn.remove();
         }
         
-        showMessage('Edi��o cancelada.', 'info');
+        showMessage('Edição cancelada.', 'info');
     }
 }
 
@@ -2624,15 +2624,15 @@ function closeMarketSection(event)  {
         },
         body: JSON.stringify({
             status: 'closed',
-            closed_by: 'Usu�rio',
+            closed_by: 'Usuário',
             notes: notes || ''
         })
     })
     .then(response => response.json())
     .then(data => {
         if (data.success) {
-            showMessage('Se��o de possibilidades do mercado conclu�da com sucesso!', 'success');
-            // Recarregar a p�gina para atualizar a interface
+            showMessage('Seção de possibilidades do mercado concluída com sucesso!', 'success');
+            // Recarregar a página para atualizar a interface
             setTimeout(() => {
                 window.location.reload();
             }, 1000);
@@ -2651,7 +2651,7 @@ function openMarketSection(event)  {
         event.preventDefault();
         event.stopPropagation();
     }
-    if (confirm('Tem certeza que deseja reabrir a seção de possibilidades do mercado? Isso permitir� novas edições.')) {
+    if (confirm('Tem certeza que deseja reabrir a seção de possibilidades do mercado? Isso permitirá novas edições.')) {
         fetch(`/plans/{{ plan.id }}/sections/market/status`, {
             method: 'POST',
             headers: {
@@ -2666,8 +2666,8 @@ function openMarketSection(event)  {
         .then(response => response.json())
         .then(data => {
             if (data.success) {
-                showMessage('Se��o de possibilidades do mercado reaberta com sucesso!', 'success');
-                // Recarregar a p�gina para atualizar a interface
+                showMessage('Seção de possibilidades do mercado reaberta com sucesso!', 'success');
+                // Recarregar a página para atualizar a interface
                 setTimeout(() => {
                     window.location.reload();
                 }, 1000);
@@ -2697,15 +2697,15 @@ function closeCompanySection(event)  {
         },
         body: JSON.stringify({
             status: 'closed',
-            closed_by: 'Usu�rio',
+            closed_by: 'Usuário',
             notes: notes || ''
         })
     })
     .then(response => response.json())
     .then(data => {
         if (data.success) {
-            showMessage('Se��o de possibilidades da empresa conclu�da com sucesso!', 'success');
-            // Recarregar a p�gina para atualizar a interface
+            showMessage('Seção de possibilidades da empresa concluída com sucesso!', 'success');
+            // Recarregar a página para atualizar a interface
             setTimeout(() => {
                 window.location.reload();
             }, 1000);
@@ -2724,7 +2724,7 @@ function openCompanySection(event)  {
         event.preventDefault();
         event.stopPropagation();
     }
-    if (confirm('Tem certeza que deseja reabrir a seção de possibilidades da empresa? Isso permitir� novas edições.')) {
+    if (confirm('Tem certeza que deseja reabrir a seção de possibilidades da empresa? Isso permitirá novas edições.')) {
         fetch(`/plans/{{ plan.id }}/sections/company/status`, {
             method: 'POST',
             headers: {
@@ -2739,8 +2739,8 @@ function openCompanySection(event)  {
         .then(response => response.json())
         .then(data => {
             if (data.success) {
-                showMessage('Se��o de possibilidades da empresa reaberta com sucesso!', 'success');
-                // Recarregar a p�gina para atualizar a interface
+                showMessage('Seção de possibilidades da empresa reaberta com sucesso!', 'success');
+                // Recarregar a página para atualizar a interface
                 setTimeout(() => {
                     window.location.reload();
                 }, 1000);
@@ -2762,7 +2762,7 @@ function editCompanyRecord(companyId) {
             if (data.success) {
                 const record = data.company_record;
                 
-                // Preencher formul�rio
+                // Preencher formulário
                 const form = document.querySelector('form[action*="company-records"]');
                 if (form) {
                     // Preencher campos
@@ -2778,10 +2778,10 @@ function editCompanyRecord(companyId) {
                     form.querySelector('textarea[name="tri_operational"]').value = record.tri_operational || '';
                     form.querySelector('textarea[name="notes"]').value = record.notes || '';
 
-                    // Alterar action do formul�rio para update
+                    // Alterar action do formulário para update
                     form.action = `/plans/{{ plan.id }}/company-records/${companyId}`;        
 
-                    // Alterar bot�o de submit
+                    // Alterar botão de submit
                     const submitBtn = form.querySelector('button[type="submit"]');
                     if (submitBtn) {
                         submitBtn.textContent = 'Atualizar relato';
@@ -2791,7 +2791,7 @@ function editCompanyRecord(companyId) {
                         };
                     }
 
-                    // Adicionar bot�o de cancelar
+                    // Adicionar botão de cancelar
                     const cancelBtn = document.createElement('button');
                     cancelBtn.type = 'button';
                     cancelBtn.className = 'button button-ghost cancel-edit-btn';
@@ -2799,7 +2799,7 @@ function editCompanyRecord(companyId) {
                     cancelBtn.onclick = cancelCompanyEdit;
 const formActions = form.querySelector('.form-actions');
                     formActions.insertBefore(cancelBtn, formActions.firstChild);
-showMessage('Formul�rio preenchido para edi��o. Modifique os campos desejados.', 'info');
+showMessage('Formulário preenchido para edição. Modifique os campos desejados.', 'info');
                 }
             } else {
                 showMessage('Erro ao carregar dados do relato: ' + data.error, 'error');
@@ -2863,7 +2863,7 @@ function deleteCompanyRecord(companyId) {
         .then(response => response.json())
         .then(data => {
             if (data.success) {
-                showMessage('Relato exclu�do com sucesso!', 'success');
+                showMessage('Relato excluído com sucesso!', 'success');
                 setTimeout(() => {
                     window.location.reload();
                 }, 1000);
@@ -2884,23 +2884,23 @@ function cancelCompanyEdit() {
         // Restaurar action original
         form.action = '{{ url_for("add_company_record", plan_id=plan.id) }}';
         
-        // Limpar formul�rio
+        // Limpar formulário
         form.reset();
         
-        // Restaurar bot�o de submit
+        // Restaurar botão de submit
         const submitBtn = form.querySelector('button[type="submit"]');
         if (submitBtn) {
             submitBtn.textContent = 'Salvar informacoes';
             submitBtn.onclick = null;
         }
         
-        // Remover bot�o de cancelar
+        // Remover botão de cancelar
         const cancelBtn = form.querySelector('.cancel-edit-btn');
         if (cancelBtn) {
             cancelBtn.remove();
         }
         
-        showMessage('Edi��o cancelada.', 'info');
+        showMessage('Edição cancelada.', 'info');
     }
 }
 
@@ -2910,7 +2910,7 @@ function closeAlignmentSection(event)  {
         event.preventDefault();
         event.stopPropagation();
     }
-    const notes = prompt('Motivo da conclusão da seção de an�lise preliminar (opcional):');
+    const notes = prompt('Motivo da conclusão da seção de análise preliminar (opcional):');
     
     fetch(`/plans/{{ plan.id }}/sections/alignment/status`, {
         method: 'POST',
@@ -2919,15 +2919,15 @@ function closeAlignmentSection(event)  {
         },
         body: JSON.stringify({
             status: 'closed',
-            closed_by: 'Usu�rio',
+            closed_by: 'Usuário',
             notes: notes || ''
         })
     })
     .then(response => response.json())
     .then(data => {
         if (data.success) {
-            showMessage('Se��o de an�lise preliminar conclu�da com sucesso!', 'success');
-            // Recarregar a p�gina para atualizar a interface
+            showMessage('Seção de análise preliminar concluída com sucesso!', 'success');
+            // Recarregar a página para atualizar a interface
             setTimeout(() => {
                 window.location.reload();
             }, 1000);
@@ -2937,7 +2937,7 @@ function closeAlignmentSection(event)  {
     })
     .catch(error => {
         console.error('Erro:', error);
-        showMessage('Erro ao concluir seção de an�lise preliminar.', 'error');
+        showMessage('Erro ao concluir seção de análise preliminar.', 'error');
     });
 }
 
@@ -2946,7 +2946,7 @@ function openAlignmentSection(event)  {
         event.preventDefault();
         event.stopPropagation();
     }
-    if (confirm('Tem certeza que deseja reabrir a seção de an�lise preliminar? Isso permitir� novas edições.')) {
+    if (confirm('Tem certeza que deseja reabrir a seção de análise preliminar? Isso permitirá novas edições.')) {
         fetch(`/plans/{{ plan.id }}/sections/alignment/status`, {
             method: 'POST',
             headers: {
@@ -2961,8 +2961,8 @@ function openAlignmentSection(event)  {
         .then(response => response.json())
         .then(data => {
             if (data.success) {
-                showMessage('Se��o de an�lise preliminar reaberta com sucesso!', 'success');
-                // Recarregar a p�gina para atualizar a interface
+                showMessage('Seção de análise preliminar reaberta com sucesso!', 'success');
+                // Recarregar a página para atualizar a interface
                 setTimeout(() => {
                     window.location.reload();
                 }, 1000);
@@ -2972,7 +2972,7 @@ function openAlignmentSection(event)  {
         })
         .catch(error => {
             console.error('Erro:', error);
-            showMessage('Erro ao reabrir seção de an�lise preliminar.', 'error');
+            showMessage('Erro ao reabrir seção de análise preliminar.', 'error');
         });
     }
 }
@@ -2993,14 +2993,14 @@ function closeAlignmentsFoundSection(event)  {
         },
         body: JSON.stringify({
             status: 'closed',
-            closed_by: 'Usu�rio',
+            closed_by: 'Usuário',
             notes: notes || ''
         })
     })
     .then(response => response.json())
     .then(data => {
         if (data.success) {
-            showMessage('Se��o de alinhamentos conclu�da com sucesso!', 'success');
+            showMessage('Seção de alinhamentos concluída com sucesso!', 'success');
             setTimeout(() => {
                 window.location.reload();
             }, 1000);
@@ -3019,7 +3019,7 @@ function openAlignmentsFoundSection(event)  {
         event.preventDefault();
         event.stopPropagation();
     }
-    if (confirm('Tem certeza que deseja reabrir a seção de alinhamentos? Isso permitir� novas edições.')) {
+    if (confirm('Tem certeza que deseja reabrir a seção de alinhamentos? Isso permitirá novas edições.')) {
         fetch(`/plans/{{ plan.id }}/sections/alignments-found/status`, {
             method: 'POST',
             headers: {
@@ -3034,7 +3034,7 @@ function openAlignmentsFoundSection(event)  {
         .then(response => response.json())
         .then(data => {
             if (data.success) {
-                showMessage('Se��o de alinhamentos reaberta com sucesso!', 'success');
+                showMessage('Seção de alinhamentos reaberta com sucesso!', 'success');
                 setTimeout(() => {
                     window.location.reload();
                 }, 1000);
@@ -3063,14 +3063,14 @@ function closeMisalignmentsCriticalSection(event)  {
         },
         body: JSON.stringify({
             status: 'closed',
-            closed_by: 'Usu�rio',
+            closed_by: 'Usuário',
             notes: notes || ''
         })
     })
     .then(response => response.json())
     .then(data => {
         if (data.success) {
-            showMessage('Se��o de desalinhamentos conclu�da com sucesso!', 'success');
+            showMessage('Seção de desalinhamentos concluída com sucesso!', 'success');
             setTimeout(() => {
                 window.location.reload();
             }, 1000);
@@ -3089,7 +3089,7 @@ function openMisalignmentsCriticalSection(event)  {
         event.preventDefault();
         event.stopPropagation();
     }
-    if (confirm('Tem certeza que deseja reabrir a seção de desalinhamentos? Isso permitir� novas edições.')) {
+    if (confirm('Tem certeza que deseja reabrir a seção de desalinhamentos? Isso permitirá novas edições.')) {
         fetch(`/plans/{{ plan.id }}/sections/misalignments-critical/status`, {
             method: 'POST',
             headers: {
@@ -3104,7 +3104,7 @@ function openMisalignmentsCriticalSection(event)  {
         .then(response => response.json())
         .then(data => {
             if (data.success) {
-                showMessage('Se��o de desalinhamentos reaberta com sucesso!', 'success');
+                showMessage('Seção de desalinhamentos reaberta com sucesso!', 'success');
                 setTimeout(() => {
                     window.location.reload();
                 }, 1000);
@@ -3124,7 +3124,7 @@ function closePreliminaryAnalysisSection(event)  {
         event.preventDefault();
         event.stopPropagation();
     }
-    const notes = prompt('Motivo da conclusão da an�lise preliminar (opcional):');
+    const notes = prompt('Motivo da conclusão da análise preliminar (opcional):');
     
     fetch(`/plans/{{ plan.id }}/sections/preliminary-analysis/status`, {
         method: 'POST',
@@ -3133,24 +3133,24 @@ function closePreliminaryAnalysisSection(event)  {
         },
         body: JSON.stringify({
             status: 'closed',
-            closed_by: 'Usu�rio',
+            closed_by: 'Usuário',
             notes: notes || ''
         })
     })
     .then(response => response.json())
     .then(data => {
         if (data.success) {
-            showMessage('Análise preliminar conclu�da com sucesso!', 'success');
+            showMessage('Análise preliminar concluída com sucesso!', 'success');
             setTimeout(() => {
                 window.location.reload();
             }, 1000);
         } else {
-            showMessage('Erro ao concluir an�lise: ' + data.error, 'error');
+            showMessage('Erro ao concluir análise: ' + data.error, 'error');
         }
     })
     .catch(error => {
         console.error('Erro:', error);
-        showMessage('Erro ao concluir an�lise preliminar.', 'error');
+        showMessage('Erro ao concluir análise preliminar.', 'error');
     });
 }
 
@@ -3159,7 +3159,7 @@ function openPreliminaryAnalysisSection(event)  {
         event.preventDefault();
         event.stopPropagation();
     }
-    if (confirm('Tem certeza que deseja reabrir a an�lise preliminar? Isso permitir� novas edições.')) {
+    if (confirm('Tem certeza que deseja reabrir a análise preliminar? Isso permitirá novas edições.')) {
         fetch(`/plans/{{ plan.id }}/sections/preliminary-analysis/status`, {
             method: 'POST',
             headers: {
@@ -3179,12 +3179,12 @@ function openPreliminaryAnalysisSection(event)  {
                     window.location.reload();
                 }, 1000);
             } else {
-                showMessage('Erro ao reabrir an�lise: ' + data.error, 'error');
+                showMessage('Erro ao reabrir análise: ' + data.error, 'error');
             }
         })
         .catch(error => {
             console.error('Erro:', error);
-            showMessage('Erro ao reabrir an�lise preliminar.', 'error');
+            showMessage('Erro ao reabrir análise preliminar.', 'error');
         });
     }
 }
@@ -3203,14 +3203,14 @@ function closeWorkshopFinalAnalysisSection(event)  {
         },
         body: JSON.stringify({
             status: 'closed',
-            closed_by: 'Usu�rio',
+            closed_by: 'Usuário',
             notes: notes || ''
         })
     })
     .then(response => response.json())
     .then(data => {
         if (data.success) {
-            showMessage('Workshop conclu�do com sucesso!', 'success');
+            showMessage('Workshop concluído com sucesso!', 'success');
             setTimeout(() => {
                 window.location.reload();
             }, 1000);
@@ -3229,7 +3229,7 @@ function openWorkshopFinalAnalysisSection(event)  {
         event.preventDefault();
         event.stopPropagation();
     }
-    if (confirm('Tem certeza que deseja reabrir o workshop? Isso permitir� novas edições.')) {
+    if (confirm('Tem certeza que deseja reabrir o workshop? Isso permitirá novas edições.')) {
         fetch(`/plans/{{ plan.id }}/sections/workshop-final-analysis/status`, {
             method: 'POST',
             headers: {
@@ -3266,7 +3266,7 @@ function editAlignmentRecord(alignmentId) {
             if (data.success) {
                 const record = data.alignment_record;
                 
-                // Preencher formul�rio
+                // Preencher formulário
                 const form = document.querySelector('.alignment-form');
                 if (form) {
                     form.querySelector('input[name="alignment_topic"]').value = record.topic || '';
@@ -3274,10 +3274,10 @@ function editAlignmentRecord(alignmentId) {
                     form.querySelector('select[name="alignment_consensus"]').value = record.consensus || '';
                     form.querySelector('select[name="alignment_priority"]').value = record.priority || '';
 
-                    // Alterar action do formul�rio para update
+                    // Alterar action do formulário para update
                     form.action = `/plans/{{ plan.id }}/alignment-records/${alignmentId}`;        
 
-                    // Alterar bot�o de submit
+                    // Alterar botão de submit
                     const submitBtn = form.querySelector('button[type="submit"]');
                     if (submitBtn) {
                         submitBtn.textContent = 'Atualizar Alinhamento';
@@ -3287,7 +3287,7 @@ function editAlignmentRecord(alignmentId) {
                         };
                     }
 
-                    // Adicionar bot�o de cancelar
+                    // Adicionar botão de cancelar
                     const cancelBtn = document.createElement('button');
                     cancelBtn.type = 'button';
                     cancelBtn.className = 'button button-ghost cancel-edit-btn';
@@ -3295,7 +3295,7 @@ function editAlignmentRecord(alignmentId) {
                     cancelBtn.onclick = cancelAlignmentEdit;
 const formActions = form.querySelector('.form-actions');
                     formActions.appendChild(cancelBtn);
-showMessage('Formul�rio preenchido para edi��o. Modifique os campos desejados.', 'info');
+showMessage('Formulário preenchido para edição. Modifique os campos desejados.', 'info');
                 }
             } else {
                 showMessage('Erro ao carregar dados do alinhamento: ' + data.error, 'error');
@@ -3352,7 +3352,7 @@ function deleteAlignmentRecord(alignmentId) {
         .then(response => response.json())
         .then(data => {
             if (data.success) {
-                showMessage('Alinhamento exclu�do com sucesso!', 'success');
+                showMessage('Alinhamento excluído com sucesso!', 'success');
                 setTimeout(() => {
                     window.location.reload();
                 }, 1000);
@@ -3373,23 +3373,23 @@ function cancelAlignmentEdit() {
         // Restaurar action original
         form.action = '{{ url_for("add_alignment_record", plan_id=plan.id) }}';
         
-        // Limpar formul�rio
+        // Limpar formulário
         form.reset();
         
-        // Restaurar bot�o de submit
+        // Restaurar botão de submit
         const submitBtn = form.querySelector('button[type="submit"]');
         if (submitBtn) {
             submitBtn.textContent = 'Adicionar Alinhamento';
             submitBtn.onclick = null;
         }
         
-        // Remover bot�o de cancelar
+        // Remover botão de cancelar
         const cancelBtn = form.querySelector('.cancel-edit-btn');
         if (cancelBtn) {
             cancelBtn.remove();
         }
         
-        showMessage('Edi��o cancelada.', 'info');
+        showMessage('Edição cancelada.', 'info');
     }
 }
 
@@ -3400,7 +3400,7 @@ function editMisalignmentRecord(misalignmentId) {
             if (data.success) {
                 const record = data.misalignment_record;
                 
-                // Preencher formul�rio
+                // Preencher formulário
                 const form = document.querySelector('.misalignment-form');
                 if (form) {
                     form.querySelector('input[name="misalignment_issue"]').value = record.issue || '';
@@ -3408,10 +3408,10 @@ function editMisalignmentRecord(misalignmentId) {
                     form.querySelector('select[name="misalignment_severity"]').value = record.severity || '';
                     form.querySelector('select[name="misalignment_impact"]').value = record.impact || '';
 
-                    // Alterar action do formul�rio para update
+                    // Alterar action do formulário para update
                     form.action = `/plans/{{ plan.id }}/misalignment-records/${misalignmentId}`;        
 
-                    // Alterar bot�o de submit
+                    // Alterar botão de submit
                     const submitBtn = form.querySelector('button[type="submit"]');
                     if (submitBtn) {
                         submitBtn.textContent = 'Atualizar Desalinhamento';
@@ -3421,7 +3421,7 @@ function editMisalignmentRecord(misalignmentId) {
                         };
                     }
 
-                    // Adicionar bot�o de cancelar
+                    // Adicionar botão de cancelar
                     const cancelBtn = document.createElement('button');
                     cancelBtn.type = 'button';
                     cancelBtn.className = 'button button-ghost cancel-edit-btn';
@@ -3429,7 +3429,7 @@ function editMisalignmentRecord(misalignmentId) {
                     cancelBtn.onclick = cancelMisalignmentEdit;
 const formActions = form.querySelector('.form-actions');
                     formActions.appendChild(cancelBtn);
-showMessage('Formul�rio preenchido para edi��o. Modifique os campos desejados.', 'info');
+showMessage('Formulário preenchido para edição. Modifique os campos desejados.', 'info');
                 }
             } else {
                 showMessage('Erro ao carregar dados do desalinhamento: ' + data.error, 'error');
@@ -3486,7 +3486,7 @@ function deleteMisalignmentRecord(misalignmentId) {
         .then(response => response.json())
         .then(data => {
             if (data.success) {
-                showMessage('Desalinhamento exclu�do com sucesso!', 'success');
+                showMessage('Desalinhamento excluído com sucesso!', 'success');
                 setTimeout(() => {
                     window.location.reload();
                 }, 1000);
@@ -3507,23 +3507,23 @@ function cancelMisalignmentEdit() {
         // Restaurar action original
         form.action = '{{ url_for("add_misalignment_record", plan_id=plan.id) }}';
         
-        // Limpar formul�rio
+        // Limpar formulário
         form.reset();
         
-        // Restaurar bot�o de submit
+        // Restaurar botão de submit
         const submitBtn = form.querySelector('button[type="submit"]');
         if (submitBtn) {
             submitBtn.textContent = 'Adicionar Desalinhamento';
             submitBtn.onclick = null;
         }
         
-        // Remover bot�o de cancelar
+        // Remover botão de cancelar
         const cancelBtn = form.querySelector('.cancel-edit-btn');
         if (cancelBtn) {
             cancelBtn.remove();
         }
         
-        showMessage('Edi��o cancelada.', 'info');
+        showMessage('Edição cancelada.', 'info');
     }
 }
 
@@ -3533,7 +3533,7 @@ function closeDirectionalsAiSection(event)  {
         event.preventDefault();
         event.stopPropagation();
     }
-    const notes = prompt('Motivo da conclusão da an�lise da IA (opcional):');
+    const notes = prompt('Motivo da conclusão da análise da IA (opcional):');
     
     fetch(`/plans/{{ plan.id }}/sections/directionals-ai/status`, {
         method: 'POST',
@@ -3542,24 +3542,24 @@ function closeDirectionalsAiSection(event)  {
         },
         body: JSON.stringify({
             status: 'closed',
-            closed_by: 'Usu�rio',
+            closed_by: 'Usuário',
             notes: notes || ''
         })
     })
     .then(response => response.json())
     .then(data => {
         if (data.success) {
-            showMessage('Análise da IA conclu�da com sucesso!', 'success');
+            showMessage('Análise da IA concluída com sucesso!', 'success');
             setTimeout(() => {
                 window.location.reload();
             }, 1000);
         } else {
-            showMessage('Erro ao concluir an�lise: ' + data.error, 'error');
+            showMessage('Erro ao concluir análise: ' + data.error, 'error');
         }
     })
     .catch(error => {
         console.error('Erro:', error);
-        showMessage('Erro ao concluir an�lise da IA.', 'error');
+        showMessage('Erro ao concluir análise da IA.', 'error');
     });
 }
 
@@ -3568,7 +3568,7 @@ function openDirectionalsAiSection(event)  {
         event.preventDefault();
         event.stopPropagation();
     }
-    if (confirm('Tem certeza que deseja reabrir a an�lise da IA? Isso permitir� novas edições.')) {
+    if (confirm('Tem certeza que deseja reabrir a análise da IA? Isso permitirá novas edições.')) {
         fetch(`/plans/{{ plan.id }}/sections/directionals-ai/status`, {
             method: 'POST',
             headers: {
@@ -3588,19 +3588,19 @@ function openDirectionalsAiSection(event)  {
                     window.location.reload();
                 }, 1000);
             } else {
-                showMessage('Erro ao reabrir an�lise: ' + data.error, 'error');
+                showMessage('Erro ao reabrir análise: ' + data.error, 'error');
             }
         })
         .catch(error => {
             console.error('Erro:', error);
-            showMessage('Erro ao reabrir an�lise da IA.', 'error');
+            showMessage('Erro ao reabrir análise da IA.', 'error');
         });
     }
 }
 
 function generateAiAnalysis() {
-    showMessage('Gerando an�lise da IA...', 'info');
-    // Aqui seria implementada a chamada para gerar an�lise via IA
+    showMessage('Gerando análise da IA...', 'info');
+    // Aqui seria implementada a chamada para gerar análise via IA
     setTimeout(() => {
         showMessage('Análise gerada com sucesso!', 'success');
     }, 2000);
@@ -3612,7 +3612,7 @@ function closeDirectionalsConsultantSection(event)  {
         event.preventDefault();
         event.stopPropagation();
     }
-    const notes = prompt('Motivo da conclusão da an�lise do consultor (opcional):');
+    const notes = prompt('Motivo da conclusão da análise do consultor (opcional):');
     
     fetch(`/plans/{{ plan.id }}/sections/directionals-consultant/status`, {
         method: 'POST',
@@ -3621,24 +3621,24 @@ function closeDirectionalsConsultantSection(event)  {
         },
         body: JSON.stringify({
             status: 'closed',
-            closed_by: 'Usu�rio',
+            closed_by: 'Usuário',
             notes: notes || ''
         })
     })
     .then(response => response.json())
     .then(data => {
         if (data.success) {
-            showMessage('Análise do consultor conclu�da com sucesso!', 'success');
+            showMessage('Análise do consultor concluída com sucesso!', 'success');
             setTimeout(() => {
                 window.location.reload();
             }, 1000);
         } else {
-            showMessage('Erro ao concluir an�lise: ' + data.error, 'error');
+            showMessage('Erro ao concluir análise: ' + data.error, 'error');
         }
     })
     .catch(error => {
         console.error('Erro:', error);
-        showMessage('Erro ao concluir an�lise do consultor.', 'error');
+        showMessage('Erro ao concluir análise do consultor.', 'error');
     });
 }
 
@@ -3647,7 +3647,7 @@ function openDirectionalsConsultantSection(event)  {
         event.preventDefault();
         event.stopPropagation();
     }
-    if (confirm('Tem certeza que deseja reabrir a an�lise do consultor? Isso permitir� novas edições.')) {
+    if (confirm('Tem certeza que deseja reabrir a análise do consultor? Isso permitirá novas edições.')) {
         fetch(`/plans/{{ plan.id }}/sections/directionals-consultant/status`, {
             method: 'POST',
             headers: {
@@ -3667,12 +3667,12 @@ function openDirectionalsConsultantSection(event)  {
                     window.location.reload();
                 }, 1000);
             } else {
-                showMessage('Erro ao reabrir an�lise: ' + data.error, 'error');
+                showMessage('Erro ao reabrir análise: ' + data.error, 'error');
             }
         })
         .catch(error => {
             console.error('Erro:', error);
-            showMessage('Erro ao reabrir an�lise do consultor.', 'error');
+            showMessage('Erro ao reabrir análise do consultor.', 'error');
         });
     }
 }
@@ -3692,14 +3692,14 @@ function closeDirectionalsWorkshopSection(event)  {
         },
         body: JSON.stringify({
             status: 'closed',
-            closed_by: 'Usu�rio',
+            closed_by: 'Usuário',
             notes: notes || ''
         })
     })
     .then(response => response.json())
     .then(data => {
         if (data.success) {
-            showMessage('Workshop conclu�do com sucesso!', 'success');
+            showMessage('Workshop concluído com sucesso!', 'success');
             setTimeout(() => {
                 window.location.reload();
             }, 1000);
@@ -3718,7 +3718,7 @@ function openDirectionalsWorkshopSection(event)  {
         event.preventDefault();
         event.stopPropagation();
     }
-    if (confirm('Tem certeza que deseja reabrir o workshop? Isso permitir� novas edições.')) {
+    if (confirm('Tem certeza que deseja reabrir o workshop? Isso permitirá novas edições.')) {
         fetch(`/plans/{{ plan.id }}/sections/directionals-workshop/status`, {
             method: 'POST',
             headers: {
@@ -3763,14 +3763,14 @@ function closeDirectionalsFinalSection(event)  {
         },
         body: JSON.stringify({
             status: 'closed',
-            closed_by: 'Usu�rio',
+            closed_by: 'Usuário',
             notes: notes || ''
         })
     })
     .then(response => response.json())
     .then(data => {
         if (data.success) {
-            showMessage('Direcionadores finais conclu�dos com sucesso!', 'success');
+            showMessage('Direcionadores finais concluídos com sucesso!', 'success');
             setTimeout(() => {
                 window.location.reload();
             }, 1000);
@@ -3789,7 +3789,7 @@ function openDirectionalsFinalSection(event)  {
         event.preventDefault();
         event.stopPropagation();
     }
-    if (confirm('Tem certeza que deseja reabrir os direcionadores finais? Isso permitir� novas edições.')) {
+    if (confirm('Tem certeza que deseja reabrir os direcionadores finais? Isso permitirá novas edições.')) {
         fetch(`/plans/{{ plan.id }}/sections/directionals-final/status`, {
             method: 'POST',
             headers: {
@@ -3834,14 +3834,14 @@ function closeDirectionalsApprovalsSection(event)  {
         },
         body: JSON.stringify({
             status: 'closed',
-            closed_by: 'Usu�rio',
+            closed_by: 'Usuário',
             notes: notes || ''
         })
     })
     .then(response => response.json())
     .then(data => {
         if (data.success) {
-            showMessage('Aprovações conclu�das com sucesso!', 'success');
+            showMessage('Aprovações concluídas com sucesso!', 'success');
             setTimeout(() => {
                 window.location.reload();
             }, 1000);
@@ -3860,7 +3860,7 @@ function openDirectionalsApprovalsSection(event)  {
         event.preventDefault();
         event.stopPropagation();
     }
-    if (confirm('Tem certeza que deseja reabrir as aprovações? Isso permitir� novas edições.')) {
+    if (confirm('Tem certeza que deseja reabrir as aprovações? Isso permitirá novas edições.')) {
         fetch(`/plans/{{ plan.id }}/sections/directionals-approvals/status`, {
             method: 'POST',
             headers: {
@@ -4013,7 +4013,7 @@ function deleteDirectionalRecord(directionalId) {
         .then(data => {
             console.log('Delete result:', data);
             if (data.success) {
-                showMessage('Direcionador exclu�do com sucesso!', 'success');
+                showMessage('Direcionador excluído com sucesso!', 'success');
                 setTimeout(() => {
                     window.location.reload();
                 }, 1000);
@@ -4037,26 +4037,26 @@ function cancelDirectionalEdit() {
         // Limpar formulário
         form.reset();
         
-        // Restaurar bot�o de submit
+        // Restaurar botão de submit
         const submitBtn = form.querySelector('button[type="submit"]');
         if (submitBtn) {
             submitBtn.textContent = 'Salvar direcionador';
             submitBtn.onclick = null;
         }
         
-        // Remover bot�o de cancelar
+        // Remover botão de cancelar
         const cancelBtn = form.querySelector('.cancel-edit-btn');
         if (cancelBtn) {
             cancelBtn.remove();
         }
         
-        showMessage('Edi��o cancelada.', 'info');
+        showMessage('Edição cancelada.', 'info');
     }
 }
 
 
 
-// Funcionalidade para mostrar informa��es do participante selecionado
+// Funcionalidade para mostrar informações do participante selecionado
 document.addEventListener('DOMContentLoaded', function() {
     const participantSelect = document.querySelector('select[name="participant"]');
     const participantInfo = document.createElement('div');
@@ -4065,7 +4065,7 @@ document.addEventListener('DOMContentLoaded', function() {
     participantInfo.style.fontSize = '0.9em';
     participantInfo.style.color = '#666';
     
-    // Adicionar o elemento de informa��o ap�s o select
+    // Adicionar o elemento de informação após o select
     participantSelect.parentNode.appendChild(participantInfo);
     
     // Dados dos participantes (passados do backend)

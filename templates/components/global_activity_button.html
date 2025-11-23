@@ -17,7 +17,7 @@
           📁 Projeto *
           <span id="project-context-badge" style="display: none; margin-left: 8px; font-size: 11px; padding: 2px 8px; background: #10b981; color: white; border-radius: 4px; font-weight: 500;">✓ Detectado</span>
         </label>
-        <select id="activity-project" required class="input-fundo-claro" style="cursor: pointer;">
+        <select id="activity-project" required class="input-fundo-claro" style="cursor: pointer;" data-ref="05">
           <option value="">🔍 Carregando projetos...</option>
         </select>
         <small id="project-help-text" style="color: #64748b; font-size: 12px; margin-top: 4px; display: block;">
@@ -28,36 +28,36 @@
       <!-- O Que -->
       <div class="form-group">
         <label for="activity-what" style="color: #000000 !important; font-weight: 600;">O que fazer? *</label>
-        <textarea id="activity-what" required class="input-fundo-claro" rows="3" placeholder="Descreva o que precisa ser feito..."></textarea>
+        <textarea id="activity-what" required class="input-fundo-claro" rows="3" placeholder="Descreva o que precisa ser feito..." data-ref="06"></textarea>
       </div>
       
       <!-- Quem -->
       <div class="form-group">
         <label for="activity-who" style="color: #000000 !important; font-weight: 600;">Quem é o responsável?</label>
-        <input type="text" id="activity-who" class="input-fundo-claro" placeholder="Nome do responsável">
+        <input type="text" id="activity-who" class="input-fundo-claro" placeholder="Nome do responsável" data-ref="03">
       </div>
       
       <!-- Quando -->
       <div class="form-group">
         <label for="activity-when" style="color: #000000 !important; font-weight: 600;">Quando (prazo)?</label>
-        <input type="date" id="activity-when" class="input-fundo-claro">
+        <input type="date" id="activity-when" class="input-fundo-claro" data-ref="04">
       </div>
       
       <!-- Como -->
       <div class="form-group">
         <label for="activity-how" style="color: #000000 !important; font-weight: 600;">Como executar?</label>
-        <textarea id="activity-how" class="input-fundo-claro" rows="3" placeholder="Descreva como a atividade deve ser executada..."></textarea>
+        <textarea id="activity-how" class="input-fundo-claro" rows="3" placeholder="Descreva como a atividade deve ser executada..." data-ref="07"></textarea>
       </div>
       
       <!-- Observações -->
       <div class="form-group">
         <label for="activity-obs" style="color: #000000 !important; font-weight: 600;">Observações</label>
-        <textarea id="activity-obs" class="input-fundo-claro" rows="2" placeholder="Observações adicionais..."></textarea>
+        <textarea id="activity-obs" class="input-fundo-claro" rows="2" placeholder="Observações adicionais..." data-ref="08"></textarea>
       </div>
       
       <div class="form-actions" style="margin-top: 24px;">
-        <button type="button" class="button button-secondary" onclick="closeGlobalActivityModal()">Cancelar</button>
-        <button type="submit" class="button button-primary botao-fundo-claro">Adicionar Atividade</button>
+        <button type="button" class="button button-secondary" onclick="closeGlobalActivityModal()" data-ref="01">Cancelar</button>
+        <button type="submit" class="button button-primary botao-fundo-claro" data-ref="02">Adicionar Atividade</button>
       </div>
     </form>
   </div>

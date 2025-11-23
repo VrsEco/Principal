@@ -463,7 +463,7 @@
         </p>
       </div>
       <div class="instances-actions">
-        <button class="btn-trigger" onclick="openTriggerModal()">
+        <button class="btn-trigger" onclick="openTriggerModal()" data-ref="01">
           <span>⚡</span>
           <span>Disparar Processo</span>
         </button>
@@ -474,7 +474,7 @@
     <div class="instances-filters">
       <div class="filter-group">
         <label>Status</label>
-        <select id="filterStatus">
+        <select id="filterStatus" data-ref="09">
           <option value="">Todos</option>
           {% for status in status_options %}
           <option value="{{ status.value }}">{{ status.label }}</option>
@@ -483,7 +483,7 @@
       </div>
       <div class="filter-group">
         <label>Prioridade</label>
-        <select id="filterPriority">
+        <select id="filterPriority" data-ref="10">
           <option value="">Todas</option>
           {% for priority in priority_options %}
           <option value="{{ priority.value }}">{{ priority.label }}</option>
@@ -492,13 +492,13 @@
       </div>
       <div class="filter-group">
         <label>Processo</label>
-        <select id="filterProcess">
+        <select id="filterProcess" data-ref="11">
           <option value="">Todos</option>
         </select>
       </div>
       <div class="filter-group">
         <label>Buscar</label>
-        <input type="text" id="searchInput" placeholder="Buscar por título...">
+        <input type="text" id="searchInput" placeholder="Buscar por título..." data-ref="06">
       </div>
     </div>
 
@@ -514,26 +514,26 @@
   <div class="modal-content">
     <div class="modal-header">
       <h2>Disparar Processo</h2>
-      <button class="modal-close" onclick="closeTriggerModal()">&times;</button>
+      <button class="modal-close" onclick="closeTriggerModal()" data-ref="02">&times;</button>
     </div>
     <form class="modal-form" id="triggerForm">
       <div class="field">
         <label>Processo <span>*</span></label>
-        <select id="triggerProcess" required>
+        <select id="triggerProcess" required data-ref="12">
           <option value="">Selecione um processo</option>
         </select>
       </div>
       <div class="field">
         <label>Título da Instância <span>*</span></label>
-        <input type="text" id="triggerTitle" placeholder="Ex: Calcular Impostos - Janeiro/2025" required>
+        <input type="text" id="triggerTitle" placeholder="Ex: Calcular Impostos - Janeiro/2025" required data-ref="07">
       </div>
       <div class="field">
         <label>Data/Hora de Vencimento <span>*</span></label>
-        <input type="datetime-local" id="triggerDueDate" required>
+        <input type="datetime-local" id="triggerDueDate" required data-ref="08">
       </div>
       <div class="field">
         <label>Prioridade</label>
-        <select id="triggerPriority">
+        <select id="triggerPriority" data-ref="13">
           {% for priority in priority_options %}
           <option value="{{ priority.value }}" {% if priority.value == 'normal' %}selected{% endif %}>
             {{ priority.label }}
@@ -543,7 +543,7 @@
       </div>
       <div class="field">
         <label>Descrição</label>
-        <textarea id="triggerDescription" placeholder="Observações sobre esta execução..."></textarea>
+        <textarea id="triggerDescription" placeholder="Observações sobre esta execução..." data-ref="14"></textarea>
       </div>
       <div id="collaboratorsInfo" style="display: none; padding: 14px; background: #f8fafc; border-radius: 8px; font-size: 13px; color: #475569;">
         <strong>Colaboradores:</strong>
@@ -551,8 +551,8 @@
       </div>
     </form>
     <div class="modal-footer">
-      <button class="btn-modal cancel" onclick="closeTriggerModal()">Cancelar</button>
-      <button class="btn-modal submit" onclick="submitTrigger()">Disparar</button>
+      <button class="btn-modal cancel" onclick="closeTriggerModal()" data-ref="03">Cancelar</button>
+      <button class="btn-modal submit" onclick="submitTrigger()" data-ref="04">Disparar</button>
     </div>
   </div>
 </div>
@@ -725,7 +725,7 @@ function renderInstances(instances) {
             ${instance.trigger_type === 'automatic' ? '🤖 Automático' : '👤 Manual'}
           </div>
           <div class="instance-actions" onclick="event.stopPropagation()">
-            <button class="btn-instance-action" onclick="startInstance(${instance.id})">
+            <button class="btn-instance-action" onclick="startInstance(${instance.id})" data-ref="05">
               ${instance.status === 'pending' ? 'Iniciar' : instance.status === 'completed' ? 'Ver Detalhes' : 'Gerenciar'}
             </button>
           </div>

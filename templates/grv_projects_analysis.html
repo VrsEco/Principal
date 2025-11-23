@@ -473,7 +473,7 @@
     </div>
 
     <div class="surface-card" style="padding:24px;">
-      <a href="{{ url_for('grv.grv_projects_projects', company_id=company.id) }}" class="btn-back">← Voltar para Projetos</a>
+      <a href="{{ url_for('grv.grv_projects_projects', company_id=company.id) }}" class="btn-back" data-ref="09">← Voltar para Projetos</a>
 
       <!-- Filtro Colapsável -->
       <div class="filter-section">
@@ -488,11 +488,11 @@
           <div class="filter-grid">
             <div class="filter-field">
               <label for="filterSearch">Buscar Atividade</label>
-              <input type="text" id="filterSearch" placeholder="Descrição da atividade...">
+              <input type="text" id="filterSearch" placeholder="Descrição da atividade..." data-ref="03">
             </div>
             <div class="filter-field">
               <label for="filterProject">Projeto</label>
-              <select id="filterProject">
+              <select id="filterProject" data-ref="04">
                 <option value="">Todos os projetos</option>
                 {% for project in projects %}
                 <option value="{{ project.id }}">{{ project.title }} ({{ project.code }})</option>
@@ -501,7 +501,7 @@
             </div>
             <div class="filter-field">
               <label for="filterPortfolio">Portfólio</label>
-              <select id="filterPortfolio">
+              <select id="filterPortfolio" data-ref="05">
                 <option value="">Todos os portfólios</option>
                 {% set unique_portfolios = [] %}
                 {% for project in projects %}
@@ -514,13 +514,13 @@
             </div>
             <div class="filter-field">
               <label for="filterResponsible">Responsável</label>
-              <select id="filterResponsible">
+              <select id="filterResponsible" data-ref="06">
                 <option value="">Todos os responsáveis</option>
               </select>
             </div>
             <div class="filter-field">
               <label for="filterStatus">Status</label>
-              <select id="filterStatus">
+              <select id="filterStatus" data-ref="07">
                 <option value="">Todos os status</option>
                 <option value="inbox">Caixa de Entrada</option>
                 <option value="waiting">Aguardando</option>
@@ -532,7 +532,7 @@
             </div>
             <div class="filter-field">
               <label for="filterDeadline">Prazo</label>
-              <select id="filterDeadline">
+              <select id="filterDeadline" data-ref="08">
                 <option value="">Todos os prazos</option>
                 <option value="overdue">Atrasados</option>
                 <option value="today">Hoje</option>
@@ -543,8 +543,8 @@
             </div>
           </div>
           <div class="filter-actions">
-            <button type="button" class="btn-filter secondary" id="clearFilters">Limpar Filtros</button>
-            <button type="button" class="btn-filter primary" id="applyFilters">Aplicar Filtros</button>
+            <button type="button" class="btn-filter secondary" id="clearFilters" data-ref="01">Limpar Filtros</button>
+            <button type="button" class="btn-filter primary" id="applyFilters" data-ref="02">Aplicar Filtros</button>
           </div>
         </div>
       </div>

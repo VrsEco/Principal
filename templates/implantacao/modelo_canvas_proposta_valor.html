@@ -292,8 +292,8 @@
       quem atendemos, problemas resolvidos, solução e diferenças competitivas que sustentam o modelo.
     </p>
     <div style="display: flex; gap: 12px; align-items: center;">
-      <button class="btn btn-secondary" onclick="window.history.back()">← Voltar</button>
-      <button class="btn btn-primary" onclick="openAddSegmentModal()">+ Adicionar Segmento</button>
+      <button class="btn btn-secondary" onclick="window.history.back()" data-ref="01">← Voltar</button>
+      <button class="btn btn-primary" onclick="openAddSegmentModal()" data-ref="02">+ Adicionar Segmento</button>
     </div>
   </article>
 
@@ -301,9 +301,9 @@
     {% for segmento in segmentos %}
     <article class="canvas-card segment-card" data-segment-id="{{ loop.index0 }}">
       <div class="segment-actions">
-        <button class="btn btn-icon btn-secondary" onclick="editSegment({{ loop.index0 }})" title="Editar">✏️</button>
+        <button class="btn btn-icon btn-secondary" onclick="editSegment({{ loop.index0 }})" title="Editar" data-ref="03">✏️</button>
         <button class="btn btn-icon btn-secondary" onclick="deleteSegment({{ loop.index0 }})"
-          title="Deletar">🗑️</button>
+          title="Deletar" data-ref="04">🗑️</button>
       </div>
 
       <h2>{{ segmento.nome }}</h2>
@@ -391,71 +391,71 @@
       <form id="segmentForm">
         <div class="form-group">
           <label>Nome do Segmento *</label>
-          <input type="text" id="segmentName" required>
+          <input type="text" id="segmentName" required data-ref="07">
         </div>
 
         <div class="form-group">
           <label>Descrição</label>
-          <textarea id="segmentDescription"></textarea>
+          <textarea id="segmentDescription" data-ref="15"></textarea>
         </div>
 
         <div class="form-group">
           <label>público atendido (pressione Enter para adicionar)</label>
           <div class="tag-input-container" id="audiencesContainer">
-            <input type="text" class="tag-input" id="audiencesInput" placeholder="Digite e pressione Enter">
+            <input type="text" class="tag-input" id="audiencesInput" placeholder="Digite e pressione Enter" data-ref="08">
           </div>
         </div>
 
         <div class="form-group">
           <label>Problemas Observados (pressione Enter)</label>
           <div class="tag-input-container" id="problemsContainer">
-            <input type="text" class="tag-input" id="problemsInput" placeholder="Digite e pressione Enter">
+            <input type="text" class="tag-input" id="problemsInput" placeholder="Digite e pressione Enter" data-ref="09">
           </div>
         </div>
 
         <div class="form-group">
           <label>Nossa Solução</label>
-          <textarea id="solutionText"></textarea>
+          <textarea id="solutionText" data-ref="16"></textarea>
         </div>
 
         <div class="form-group">
           <label>Diferenciais (pressione Enter)</label>
           <div class="tag-input-container" id="differentialsContainer">
-            <input type="text" class="tag-input" id="differentialsInput" placeholder="Digite e pressione Enter">
+            <input type="text" class="tag-input" id="differentialsInput" placeholder="Digite e pressione Enter" data-ref="10">
           </div>
         </div>
 
         <div class="form-group">
           <label>Evidências (pressione Enter)</label>
           <div class="tag-input-container" id="evidencesContainer">
-            <input type="text" class="tag-input" id="evidencesInput" placeholder="Digite e pressione Enter">
+            <input type="text" class="tag-input" id="evidencesInput" placeholder="Digite e pressione Enter" data-ref="11">
           </div>
         </div>
 
         <div class="form-group">
           <label>Fontes de Receita (pressione Enter)</label>
           <div class="tag-input-container" id="revenueContainer">
-            <input type="text" class="tag-input" id="revenueInput" placeholder="Digite e pressione Enter">
+            <input type="text" class="tag-input" id="revenueInput" placeholder="Digite e pressione Enter" data-ref="12">
           </div>
         </div>
 
         <div class="form-group">
           <label>Estrutura de Custos (pressione Enter)</label>
           <div class="tag-input-container" id="costsContainer">
-            <input type="text" class="tag-input" id="costsInput" placeholder="Digite e pressione Enter">
+            <input type="text" class="tag-input" id="costsInput" placeholder="Digite e pressione Enter" data-ref="13">
           </div>
         </div>
 
         <div class="form-group">
           <label>Parcerias Chave (pressione Enter)</label>
           <div class="tag-input-container" id="partnersContainer">
-            <input type="text" class="tag-input" id="partnersInput" placeholder="Digite e pressione Enter">
+            <input type="text" class="tag-input" id="partnersInput" placeholder="Digite e pressione Enter" data-ref="14">
           </div>
         </div>
 
         <div class="form-actions">
-          <button type="button" class="btn btn-secondary" onclick="closeSegmentModal()">Cancelar</button>
-          <button type="submit" class="btn btn-primary">Salvar</button>
+          <button type="button" class="btn btn-secondary" onclick="closeSegmentModal()" data-ref="05">Cancelar</button>
+          <button type="submit" class="btn btn-primary" data-ref="06">Salvar</button>
         </div>
       </form>
     </div>

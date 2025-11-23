@@ -429,15 +429,15 @@
         <div class="period-filters">
           <div class="filter-group">
             <label>Data Início</label>
-            <input type="date" id="periodStart" />
+            <input type="date" id="periodStart"  data-ref="03" />
           </div>
           <div class="filter-group">
             <label>Data Fim</label>
-            <input type="date" id="periodEnd" />
+            <input type="date" id="periodEnd"  data-ref="04" />
           </div>
           <div class="filter-group">
             <label>Visualização</label>
-            <select id="viewMode">
+            <select id="viewMode" data-ref="07">
               <option value="all">Todos os Pontos</option>
               <option value="monthly">Agregado por Mês</option>
               <option value="quarterly">Agregado por Trimestre</option>
@@ -446,10 +446,10 @@
         </div>
 
         <div class="button-group" style="margin-top: 16px;">
-          <button class="indicators-button secondary" onclick="clearSelection()">
+          <button class="indicators-button secondary" onclick="clearSelection()" data-ref="01">
             Limpar Seleção
           </button>
-          <button class="indicators-button primary" onclick="generateAnalysis()">
+          <button class="indicators-button primary" onclick="generateAnalysis()" data-ref="02">
             Gerar Análise Comparativa
           </button>
         </div>
@@ -469,7 +469,7 @@
       <div class="section-title">
         📋 Estatísticas Comparativas
       </div>
-      <table class="comparison-table" id="comparisonTable">
+      <table class="comparison-table" id="comparisonTable" data-ref="08">
         <thead>
           <tr>
             <th>Indicador / Meta</th>
@@ -608,7 +608,7 @@ function renderIndicatorsList() {
             class="indicator-checkbox" 
             id="check-ind-${ind.id}"
             onchange="toggleIndicator(${ind.id})"
-          />
+           data-ref="05" />
           <div class="indicator-info">
             <div class="indicator-code">${ind.code || ''}</div>
             <div class="indicator-name">${ind.name}</div>
@@ -625,7 +625,7 @@ function renderIndicatorsList() {
                   id="check-goal-${goal.id}"
                   data-indicator-id="${ind.id}"
                   data-goal-id="${goal.id}"
-                />
+                 data-ref="06" />
                 <div class="goal-info">
                   <strong>${goal.code}</strong> - 
                   ${GOAL_TYPE_LABELS[goal.goal_type] || 'Meta'}: 

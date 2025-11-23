@@ -236,13 +236,13 @@
           Envie uma imagem de 400x400 pixels (ou proporção 1:1). O sistema ajustará automaticamente.
         </div>
         <form id="form-square" enctype="multipart/form-data">
-          <input type="file" id="file-square" accept="image/*" style="display:none">
-          <button type="button" class="upload-btn" onclick="document.getElementById('file-square').click()">
+          <input type="file" id="file-square" accept="image/*" style="display:none" data-ref="09">
+          <button type="button" class="upload-btn" onclick="document.getElementById('file-square').click()" data-ref="01">
             <span>📤</span> Fazer Upload
           </button>
         </form>
         {% if company.logo_square %}
-        <button class="remove-btn" onclick="removeLogo('square')">
+        <button class="remove-btn" onclick="removeLogo('square')" data-ref="02">
           <span>🗑️</span> Remover Logo
         </button>
         {% endif %}
@@ -280,13 +280,13 @@
           Envie uma imagem de 300x600 pixels (ou proporção 1:2). O sistema ajustará automaticamente.
         </div>
         <form id="form-vertical" enctype="multipart/form-data">
-          <input type="file" id="file-vertical" accept="image/*" style="display:none">
-          <button type="button" class="upload-btn" onclick="document.getElementById('file-vertical').click()">
+          <input type="file" id="file-vertical" accept="image/*" style="display:none" data-ref="10">
+          <button type="button" class="upload-btn" onclick="document.getElementById('file-vertical').click()" data-ref="03">
             <span>📤</span> Fazer Upload
           </button>
         </form>
         {% if company.logo_vertical %}
-        <button class="remove-btn" onclick="removeLogo('vertical')">
+        <button class="remove-btn" onclick="removeLogo('vertical')" data-ref="04">
           <span>🗑️</span> Remover Logo
         </button>
         {% endif %}
@@ -324,13 +324,13 @@
           Envie uma imagem de 800x400 pixels (ou proporção 2:1). O sistema ajustará automaticamente.
         </div>
         <form id="form-horizontal" enctype="multipart/form-data">
-          <input type="file" id="file-horizontal" accept="image/*" style="display:none">
-          <button type="button" class="upload-btn" onclick="document.getElementById('file-horizontal').click()">
+          <input type="file" id="file-horizontal" accept="image/*" style="display:none" data-ref="11">
+          <button type="button" class="upload-btn" onclick="document.getElementById('file-horizontal').click()" data-ref="05">
             <span>📤</span> Fazer Upload
           </button>
         </form>
         {% if company.logo_horizontal %}
-        <button class="remove-btn" onclick="removeLogo('horizontal')">
+        <button class="remove-btn" onclick="removeLogo('horizontal')" data-ref="06">
           <span>🗑️</span> Remover Logo
         </button>
         {% endif %}
@@ -368,13 +368,13 @@
           Envie uma imagem de 1200x300 pixels (ou proporção 4:1). O sistema ajustará automaticamente.
         </div>
         <form id="form-banner" enctype="multipart/form-data">
-          <input type="file" id="file-banner" accept="image/*" style="display:none">
-          <button type="button" class="upload-btn" onclick="document.getElementById('file-banner').click()">
+          <input type="file" id="file-banner" accept="image/*" style="display:none" data-ref="12">
+          <button type="button" class="upload-btn" onclick="document.getElementById('file-banner').click()" data-ref="07">
             <span>📤</span> Fazer Upload
           </button>
         </form>
         {% if company.logo_banner %}
-        <button class="remove-btn" onclick="removeLogo('banner')">
+        <button class="remove-btn" onclick="removeLogo('banner')" data-ref="08">
           <span>🗑️</span> Remover Logo
         </button>
         {% endif %}
@@ -383,7 +383,7 @@
   </div>
 
   <div style="text-align: center; padding-top: 20px; border-top: 1px solid #e2e8f0;">
-    <a href="{{ url_for('grv.grv_company_dashboard', company_id=company.id) }}" class="back-btn">
+    <a href="{{ url_for('grv.grv_company_dashboard', company_id=company.id) }}" class="back-btn" data-ref="13">
       <span>←</span> Voltar ao Dashboard
     </a>
   </div>

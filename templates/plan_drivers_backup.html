@@ -1,4 +1,4 @@
-﻿{% extends "base.html" %}
+{% extends "base.html" %}
 {% block title %}Direcionadores | {{ plan.name }}{% endblock %}
 {% block body %}
   {% set active_nav = 'projetos' %}
@@ -25,11 +25,11 @@
           <span class="interview-count">{{ interview_records|length }} entrevistas salvas</span>
           <div class="section-status-controls">
             {% if interview_section_open %}
-              <button class="button button-small button-warning" onclick="closeInterviewSection()" title="Concluir seção de entrevistas">
+              <button class="button button-small button-warning" onclick="closeInterviewSection()" title="Concluir seção de entrevistas" data-ref="01">
                 🔒 Concluir
               </button>
             {% else %}
-              <button class="button button-small button-success" onclick="openInterviewSection()" title="Reabrir seção de entrevistas">
+              <button class="button button-small button-success" onclick="openInterviewSection()" title="Reabrir seção de entrevistas" data-ref="02">
                 🔓 Reabrir
               </button>
               {% if interview_section_status %}
@@ -67,7 +67,7 @@
             <form class="interview-form-fields" action="{{ url_for('add_interview', plan_id=plan.id) }}" method="post" {% if not interview_section_open %}style="opacity: 0.5; pointer-events: none;"{% endif %}>
               <label class="form-field">
                 <span>Participante *</span>
-                <select name="participant" required>
+                <select name="participant" required data-ref="A6">
                   <option value="">Selecione um participante</option>
                   {% for participant in participants %}
                   <option value="{{ participant.name }}">{{ participant.name }}{% if participant.role %} - {{ participant.role }}{% endif %}</option>
@@ -76,16 +76,16 @@
               </label>
               <label class="form-field">
                 <span>Consultor *</span>
-                <input type="text" name="consultant" placeholder="Nome do consultor" required />
+                <input type="text" name="consultant" placeholder="Nome do consultor" required  data-ref="79" />
               </label>
               <div class="form-two-cols">
                 <label class="form-field">
                   <span>Data</span>
-                  <input type="date" name="date" />
+                  <input type="date" name="date"  data-ref="80" />
                 </label>
                 <label class="form-field">
                   <span>Formato</span>
-                  <select name="format">
+                  <select name="format" data-ref="A7">
                     <option>Presencial</option>
                     <option>Online</option>
                     <option>Telefone</option>
@@ -94,11 +94,11 @@
               </div>
               <label class="form-field">
                 <span>Entrevista / principais pontos</span>
-                <textarea name="notes" rows="4" placeholder="Resumo das percepcoes e destaques"></textarea>
+                <textarea name="notes" rows="4" placeholder="Resumo das percepcoes e destaques" data-ref="C0"></textarea>
               </label>
               <div class="form-actions">
-                <button type="submit" class="button button-primary">Registrar entrevista</button>
-                <button type="reset" class="button button-ghost">Limpar</button>
+                <button type="submit" class="button button-primary" data-ref="03">Registrar entrevista</button>
+                <button type="reset" class="button button-ghost" data-ref="04">Limpar</button>
               </div>
             </form>
           </section>
@@ -120,10 +120,10 @@
                   </div>
                   <span class="record-date">{{ record.date }}</span>
                   <div class="interview-actions">
-                    <button class="button button-small button-ghost" onclick="editInterview({{ record.id }})" title="Editar entrevista">
+                    <button class="button button-small button-ghost" onclick="editInterview({{ record.id }})" title="Editar entrevista" data-ref="05">
                       ✏️
                     </button>
-                    <button class="button button-small button-danger" onclick="deleteInterview({{ record.id }})" title="Excluir entrevista">
+                    <button class="button button-small button-danger" onclick="deleteInterview({{ record.id }})" title="Excluir entrevista" data-ref="06">
                       🗑️
                     </button>
                   </div>
@@ -143,7 +143,7 @@
             <p class="panel-hint">Ajuste o indicador com base nas entrevistas consolidadas.</p>
             <label class="form-field">
               <span>Resultado consolidado (0 a 5)</span>
-              <input type="number" name="maturity" min="0" max="5" step="0.1" value="{{ interview_maturity_score if interview_maturity_score is not none else '' }}" placeholder="Defina a maturidade" />
+              <input type="number" name="maturity" min="0" max="5" step="0.1" value="{{ interview_maturity_score if interview_maturity_score is not none else '' }}" placeholder="Defina a maturidade"  data-ref="81" />
             </label>
             {% if interview_maturity_updated_at %}
             <span class="summary-meta">Atualizado em {{ interview_maturity_updated_at }}</span>
@@ -161,7 +161,7 @@
             <p class="panel-hint">Descreva os principais insights e encaminhamentos das entrevistas.</p>
             <label class="form-field">
               <span>Resumo consolidado</span>
-              <textarea name="analysis" rows="6" placeholder="Sintetize percepcoes, alertas e oportunidades">{{ interview_analysis_text or '' }}</textarea>
+              <textarea name="analysis" rows="6" placeholder="Sintetize percepcoes, alertas e oportunidades" data-ref="C1">{{ interview_analysis_text or '' }}</textarea>
             </label>
             {% if interview_analysis_suggestion %}
             <div class="ia-suggestion">
@@ -187,11 +187,11 @@
           <span class="interview-count">{{ vision_records|length }} relatos salvos</span>
           <div class="section-status-controls">
             {% if vision_section_open %}
-              <button class="button button-small button-warning" onclick="closeVisionSection()" title="Concluir seção de visão dos sócios">
+              <button class="button button-small button-warning" onclick="closeVisionSection()" title="Concluir seção de visão dos sócios" data-ref="07">
                 🔒 Concluir
               </button>
             {% else %}
-              <button class="button button-small button-success" onclick="openVisionSection()" title="Reabrir seção de visão dos sócios">
+              <button class="button button-small button-success" onclick="openVisionSection()" title="Reabrir seção de visão dos sócios" data-ref="08">
                 🔓 Reabrir
               </button>
               {% if vision_section_status %}
@@ -230,19 +230,19 @@
             <form class="interview-form-fields" action="{{ url_for('add_vision_record', plan_id=plan.id) }}" method="post" {% if not vision_section_open %}style="opacity: 0.5; pointer-events: none;"{% endif %}>
               <label class="form-field">
                 <span>Sócios envolvidos *</span>
-                <input type="text" name="participants" placeholder="Nomes dos sócios envolvidos (separados por vírgula)" required />
+                <input type="text" name="participants" placeholder="Nomes dos sócios envolvidos (separados por vírgula)" required  data-ref="82" />
               </label>
               <label class="form-field">
                 <span>Consultores *</span>
-                <input type="text" name="consultants" placeholder="Nomes dos consultores (separados por vírgula)" required />
+                <input type="text" name="consultants" placeholder="Nomes dos consultores (separados por vírgula)" required  data-ref="83" />
               </label>
               <label class="form-field">
                 <span>Data</span>
-                <input type="date" name="vision_date" />
+                <input type="date" name="vision_date"  data-ref="84" />
               </label>
               <label class="form-field">
                 <span>Formato</span>
-                <select name="format">
+                <select name="format" data-ref="A8">
                   <option value="">Selecione</option>
                   <option value="Presencial">Presencial</option>
                   <option value="Online">Online</option>
@@ -251,28 +251,28 @@
               </label>
               <label class="form-field">
                 <span>Investimento de tempo e recursos</span>
-                <textarea name="time_investment" rows="3" placeholder="Qual sera o investimento de tempo e recursos para o planejamento e gestao estrategicas"></textarea>
+                <textarea name="time_investment" rows="3" placeholder="Qual sera o investimento de tempo e recursos para o planejamento e gestao estrategicas" data-ref="C2"></textarea>
               </label>
               <label class="form-field">
                 <span>Estilo de gestao predominante</span>
-                <textarea name="management_style" rows="2" placeholder="Centralizada, participativa, hibrida..."></textarea>
+                <textarea name="management_style" rows="2" placeholder="Centralizada, participativa, hibrida..." data-ref="C3"></textarea>
               </label>
               <label class="form-field">
                 <span>Atividades, responsabilidades e nivel de formalizacao</span>
-                <textarea name="responsibilities" rows="3" placeholder="Descreva atividades, responsabilidades e nivel de formalizacao"></textarea>
+                <textarea name="responsibilities" rows="3" placeholder="Descreva atividades, responsabilidades e nivel de formalizacao" data-ref="C4"></textarea>
               </label>
               <label class="form-field">
                 <span>Experiencias, formacoes e capacidades</span>
-                <textarea name="capacities" rows="3" placeholder="Experiencias, formacoes, capacidades e possibilidades"></textarea>
+                <textarea name="capacities" rows="3" placeholder="Experiencias, formacoes, capacidades e possibilidades" data-ref="C5"></textarea>
               </label>
               <label class="form-field">
                 <span>Modelo de decisão estratégica</span>
-                <textarea name="decision_model" rows="2" placeholder="Consenso, maioria, lideranca principal..."></textarea>
+                <textarea name="decision_model" rows="2" placeholder="Consenso, maioria, lideranca principal..." data-ref="C6"></textarea>
               </label>
               <div class="form-two-cols">
                 <label class="form-field">
                   <span>Aceita investidores / parcerias externas</span>
-                  <select name="investor_profile">
+                  <select name="investor_profile" data-ref="A9">
                     <option value="">Selecione</option>
                     <option>Sim</option>
                     <option>Nao</option>
@@ -281,7 +281,7 @@
                 </label>
                 <label class="form-field">
                   <span>Perfil de risco aceitavel</span>
-                  <select name="risk_profile">
+                  <select name="risk_profile" data-ref="B0">
                     <option value="">Selecione</option>
                     <option>Conservador</option>
                     <option>Moderado</option>
@@ -291,19 +291,19 @@
               </div>
               <label class="form-field">
                 <span>Proposito pessoal / legado desejado</span>
-                <textarea name="purpose" rows="2" placeholder="Descreva proposito e legado desejado"></textarea>
+                <textarea name="purpose" rows="2" placeholder="Descreva proposito e legado desejado" data-ref="C7"></textarea>
               </label>
               <label class="form-field">
                 <span>Objetivos curto / medio / longo prazo</span>
-                <textarea name="goals" rows="3" placeholder="Liste objetivos por horizonte de tempo"></textarea>
+                <textarea name="goals" rows="3" placeholder="Liste objetivos por horizonte de tempo" data-ref="C8"></textarea>
               </label>
               <label class="form-field">
                 <span>Notas adicionais</span>
-                <textarea name="notes" rows="3" placeholder="Observações e informações complementares"></textarea>
+                <textarea name="notes" rows="3" placeholder="Observações e informações complementares" data-ref="C9"></textarea>
               </label>
               <div class="form-actions">
-                <button type="submit" class="button button-primary">Registrar relato</button>
-                <button type="reset" class="button button-ghost">Limpar</button>
+                <button type="submit" class="button button-primary" data-ref="09">Registrar relato</button>
+                <button type="reset" class="button button-ghost" data-ref="10">Limpar</button>
               </div>
             </form>
           </section>
@@ -321,10 +321,10 @@
                     <span class="vision-record-title">{{ record.participants }}</span>
                     <span class="vision-record-date">{{ record.vision_date }}</span>
                     <div class="vision-record-actions">
-                      <button class="button button-small button-ghost" onclick="editVisionRecord({{ record.id }})" title="Editar relato">
+                      <button class="button button-small button-ghost" onclick="editVisionRecord({{ record.id }})" title="Editar relato" data-ref="11">
                         ✏️
                       </button>
-                      <button class="button button-small button-danger" onclick="deleteVisionRecord({{ record.id }})" title="Excluir relato">
+                      <button class="button button-small button-danger" onclick="deleteVisionRecord({{ record.id }})" title="Excluir relato" data-ref="12">
                         🗑️
                       </button>
                     </div>
@@ -367,7 +367,7 @@
                 <p class="panel-hint">Consolide alinhamentos, alertas e proximos passos da visao dos socios.</p>
                 <label class="form-field">
                   <span>Resumo consolidado</span>
-                  <textarea name="vision_analysis" rows="6" placeholder="Sintetize percepcoes, alertas e oportunidades">{{ vision_analysis_text or '' }}</textarea>
+                  <textarea name="vision_analysis" rows="6" placeholder="Sintetize percepcoes, alertas e oportunidades" data-ref="D0">{{ vision_analysis_text or '' }}</textarea>
                 </label>
                 {% if vision_analysis_suggestion %}
                 <div class="ia-suggestion">
@@ -382,7 +382,7 @@
                 <p class="panel-hint">Defina o nível consolidado de maturidade da governança societária.</p>
                 <label class="form-field">
                   <span>Resultado consolidado (0 a 5)</span>
-                  <input type="number" name="vision_maturity" min="0" max="5" step="0.1" value="{{ vision_maturity_score if vision_maturity_score is not none else '' }}" placeholder="Defina a maturidade" />
+                  <input type="number" name="vision_maturity" min="0" max="5" step="0.1" value="{{ vision_maturity_score if vision_maturity_score is not none else '' }}" placeholder="Defina a maturidade"  data-ref="85" />
                 </label>
                 {% if vision_maturity_updated_at %}
                 <span class="summary-meta">Atualizado em {{ vision_maturity_updated_at }}</span>
@@ -412,11 +412,11 @@
           <span class="interview-count">{{ market_records|length }} registro(s) salvo(s)</span>
           <div class="section-status-controls">
             {% if market_section_open %}
-              <button class="button button-small button-warning" onclick="closeMarketSection()" title="Concluir seção de possibilidades do mercado">
+              <button class="button button-small button-warning" onclick="closeMarketSection()" title="Concluir seção de possibilidades do mercado" data-ref="13">
                 🔒 Concluir
               </button>
             {% else %}
-              <button class="button button-small button-success" onclick="openMarketSection()" title="Reabrir seção de possibilidades do mercado">
+              <button class="button button-small button-success" onclick="openMarketSection()" title="Reabrir seção de possibilidades do mercado" data-ref="14">
                 🔓 Reabrir
               </button>
               {% if market_section_status %}
@@ -455,20 +455,20 @@
             <form class="market-form-fields" action="{{ url_for('add_market_record', plan_id=plan.id) }}" method="post" {% if not market_section_open %}style="opacity: 0.5; pointer-events: none;"{% endif %}>
               <label class="form-field">
                 <span>Participantes *</span>
-                <input type="text" name="market_participants" placeholder="Nomes dos participantes (separados por vírgula)" required />
+                <input type="text" name="market_participants" placeholder="Nomes dos participantes (separados por vírgula)" required  data-ref="86" />
               </label>
               <label class="form-field">
                 <span>Consultores *</span>
-                <input type="text" name="market_consultants" placeholder="Nomes dos consultores (separados por vírgula)" required />
+                <input type="text" name="market_consultants" placeholder="Nomes dos consultores (separados por vírgula)" required  data-ref="87" />
               </label>
               <div class="form-two-cols">
                 <label class="form-field">
                   <span>Data</span>
-                  <input type="date" name="market_date" />
+                  <input type="date" name="market_date"  data-ref="88" />
                 </label>
                 <label class="form-field">
                   <span>Formato</span>
-                  <select name="format">
+                  <select name="format" data-ref="B1">
                     <option>Presencial</option>
                     <option>Online</option>
                     <option>Telefone</option>
@@ -477,39 +477,39 @@
               </div>
               <label class="form-field">
                 <span>Economico e politico (mundial, nacional, estadual, municipal)</span>
-                <textarea name="global_context" rows="3" placeholder="Resumo do contexto macroeconomico e regulatorio"></textarea>
+                <textarea name="global_context" rows="3" placeholder="Resumo do contexto macroeconomico e regulatorio" data-ref="D1"></textarea>
               </label>
               <label class="form-field">
                 <span>Economico setorial (atual e possiveis)</span>
-                <textarea name="sector_context" rows="3" placeholder="Descreva movimentos do setor"></textarea>
+                <textarea name="sector_context" rows="3" placeholder="Descreva movimentos do setor" data-ref="D2"></textarea>
               </label>
               <label class="form-field">
                 <span>Tamanho do mercado em numeros</span>
-                <textarea name="market_size" rows="2" placeholder="Potenciais clientes, volume financeiro"></textarea>
+                <textarea name="market_size" rows="2" placeholder="Potenciais clientes, volume financeiro" data-ref="D3"></textarea>
               </label>
               <label class="form-field">
                 <span>Espaco para aumento de vendas</span>
-                <textarea name="growth_space" rows="2" placeholder="Onde ha espaco para crescer"></textarea>
+                <textarea name="growth_space" rows="2" placeholder="Onde ha espaco para crescer" data-ref="D4"></textarea>
               </label>
               <label class="form-field">
                 <span>Ameacas externas a monitorar</span>
-                <textarea name="threats" rows="2" placeholder="Principais ameacas"></textarea>
+                <textarea name="threats" rows="2" placeholder="Principais ameacas" data-ref="D5"></textarea>
               </label>
               <label class="form-field">
                 <span>Mudanças de comportamento do consumidor</span>
-                <textarea name="consumer_behavior" rows="2" placeholder="Digitalizacao, sustentabilidade, outros"></textarea>
+                <textarea name="consumer_behavior" rows="2" placeholder="Digitalizacao, sustentabilidade, outros" data-ref="D6"></textarea>
               </label>
               <label class="form-field">
                 <span>Concorrencia direta e benchmarking</span>
-                <textarea name="competition" rows="3" placeholder="Concorrentes atuais e possiveis referenciais"></textarea>
+                <textarea name="competition" rows="3" placeholder="Concorrentes atuais e possiveis referenciais" data-ref="D7"></textarea>
               </label>
               <label class="form-field">
                 <span>Observacoes</span>
-                <textarea name="notes" rows="2" placeholder="Observacoes adicionais"></textarea>
+                <textarea name="notes" rows="2" placeholder="Observacoes adicionais" data-ref="D8"></textarea>
               </label>
               <div class="form-actions">
-                <button type="submit" class="button button-primary">Salvar informacoes</button>
-                <button type="reset" class="button button-ghost">Limpar</button>
+                <button type="submit" class="button button-primary" data-ref="15">Salvar informacoes</button>
+                <button type="reset" class="button button-ghost" data-ref="16">Limpar</button>
               </div>
             </form>
           </section>
@@ -524,10 +524,10 @@
                     <span class="market-record-title">{{ record.participants }}</span>
                     <span class="market-record-date">{{ record.date }}</span>
                     <div class="market-record-actions">
-                      <button class="button button-small button-ghost" onclick="editMarketRecord({{ record.id }})" title="Editar relato">
+                      <button class="button button-small button-ghost" onclick="editMarketRecord({{ record.id }})" title="Editar relato" data-ref="17">
                         ✏️
                       </button>
-                      <button class="button button-small button-danger" onclick="deleteMarketRecord({{ record.id }})" title="Excluir relato">
+                      <button class="button button-small button-danger" onclick="deleteMarketRecord({{ record.id }})" title="Excluir relato" data-ref="18">
                         🗑️
                       </button>
                     </div>
@@ -597,7 +597,7 @@
                 <p class="panel-hint">Identifique implicacoes estrategicas a partir do mercado avaliado.</p>
                 <label class="form-field">
                   <span>Resumo consolidado</span>
-                  <textarea name="market_analysis" rows="6" placeholder="Sintetize percepcoes e encaminhamentos" {% if not market_section_open %}disabled{% endif %}>{{ market_analysis_text or '' }}</textarea>
+                  <textarea name="market_analysis" rows="6" placeholder="Sintetize percepcoes e encaminhamentos" {% if not market_section_open %}disabled{% endif %} data-ref="D9">{{ market_analysis_text or '' }}</textarea>
                 </label>
                 {% if market_analysis_suggestion %}
                 <div class="ia-suggestion">
@@ -612,7 +612,7 @@
                 <p class="panel-hint">Avalie a maturidade da analise de mercado.</p>
                 <label class="form-field">
                   <span>Resultado consolidado (0 a 5)</span>
-                  <input type="number" name="market_maturity" min="0" max="5" step="0.1" value="{{ market_maturity_score if market_maturity_score is not none else '' }}" placeholder="Defina a maturidade" {% if not market_section_open %}disabled{% endif %} />
+                  <input type="number" name="market_maturity" min="0" max="5" step="0.1" value="{{ market_maturity_score if market_maturity_score is not none else '' }}" placeholder="Defina a maturidade" {% if not market_section_open %}disabled{% endif %}  data-ref="89" />
                 </label>
                 {% if market_maturity_updated_at %}
                 <span class="summary-meta">Atualizado em {{ market_maturity_updated_at }}</span>
@@ -641,11 +641,11 @@
           <span class="interview-count">{{ company_records|length }} registro(s) salvo(s)</span>
           <div class="section-status-controls">
             {% if company_section_open %}
-              <button class="button button-small button-warning" onclick="closeCompanySection()" title="Concluir seção de possibilidades da empresa">
+              <button class="button button-small button-warning" onclick="closeCompanySection()" title="Concluir seção de possibilidades da empresa" data-ref="19">
                 🔒 Concluir
               </button>
             {% else %}
-              <button class="button button-small button-success" onclick="openCompanySection()" title="Reabrir seção de possibilidades da empresa">
+              <button class="button button-small button-success" onclick="openCompanySection()" title="Reabrir seção de possibilidades da empresa" data-ref="20">
                 🔓 Reabrir
               </button>
               {% if company_section_status %}
@@ -684,34 +684,34 @@
             <form class="company-form-fields" action="{{ url_for('add_company_record', plan_id=plan.id) }}" method="post" {% if not company_section_open %}style="opacity: 0.5; pointer-events: none;"{% endif %}>
               <label class="form-field">
                 <span>Participantes *</span>
-                <input type="text" name="company_participants" placeholder="Nomes dos participantes (separados por vírgula)" required />
+                <input type="text" name="company_participants" placeholder="Nomes dos participantes (separados por vírgula)" required  data-ref="90" />
               </label>
               <label class="form-field">
                 <span>Consultores *</span>
-                <input type="text" name="company_consultants" placeholder="Nomes dos consultores (separados por vírgula)" required />
+                <input type="text" name="company_consultants" placeholder="Nomes dos consultores (separados por vírgula)" required  data-ref="91" />
               </label>
               <label class="form-field">
                 <span>Data</span>
-                <input type="date" name="company_date" value="{{ company_record.date if company_record else '' }}" />
+                <input type="date" name="company_date" value="{{ company_record.date if company_record else '' }}"  data-ref="92" />
               </label>
 
               <div class="company-fieldset">
                 <span class="chip-label">Analise via BSC</span>
                 <label class="form-field">
                   <span>Financeira (visao dos socios)</span>
-                  <textarea name="bsc_financial" rows="2" placeholder="Indicadores financeiros, investimentos, retorno">{{ company_record.bsc_financial if company_record else '' }}</textarea>
+                  <textarea name="bsc_financial" rows="2" placeholder="Indicadores financeiros, investimentos, retorno" data-ref="E0">{{ company_record.bsc_financial if company_record else '' }}</textarea>
                 </label>
                 <label class="form-field">
                   <span>Comercial (mercado x produtos)</span>
-                  <textarea name="bsc_commercial" rows="2" placeholder="Clientes, mix de produtos e estagio da relacao">{{ company_record.bsc_commercial if company_record else '' }}</textarea>
+                  <textarea name="bsc_commercial" rows="2" placeholder="Clientes, mix de produtos e estagio da relacao" data-ref="E1">{{ company_record.bsc_commercial if company_record else '' }}</textarea>
                 </label>
                 <label class="form-field">
                   <span>Processos de negocios</span>
-                  <textarea name="bsc_process" rows="2" placeholder="Visao da organizacao interna">{{ company_record.bsc_process if company_record else '' }}</textarea>
+                  <textarea name="bsc_process" rows="2" placeholder="Visao da organizacao interna" data-ref="E2">{{ company_record.bsc_process if company_record else '' }}</textarea>
                 </label>
                 <label class="form-field">
                   <span>Aprendizado e crescimento</span>
-                  <textarea name="bsc_learning" rows="2" placeholder="Percepcao, motivacao e qualificacao dos colaboradores">{{ company_record.bsc_learning if company_record else '' }}</textarea>
+                  <textarea name="bsc_learning" rows="2" placeholder="Percepcao, motivacao e qualificacao dos colaboradores" data-ref="E3">{{ company_record.bsc_learning if company_record else '' }}</textarea>
                 </label>
               </div>
 
@@ -719,21 +719,21 @@
                 <span class="chip-label">Analise Tri-partite</span>
                 <label class="form-field">
                   <span>Comercial</span>
-                  <textarea name="tri_commercial" rows="3" placeholder="Produtos, canais, marketing, marca, dependencia de clientes">{{ company_record.tri_commercial if company_record else '' }}</textarea>
+                  <textarea name="tri_commercial" rows="3" placeholder="Produtos, canais, marketing, marca, dependencia de clientes" data-ref="E4">{{ company_record.tri_commercial if company_record else '' }}</textarea>
                 </label>
                 <label class="form-field">
                   <span>Adm / Fin</span>
-                  <textarea name="tri_adm_fin" rows="3" placeholder="Gestao, valores, eficiencia de processos, gargalos, parceiros">{{ company_record.tri_adm_fin if company_record else '' }}</textarea>
+                  <textarea name="tri_adm_fin" rows="3" placeholder="Gestao, valores, eficiencia de processos, gargalos, parceiros" data-ref="E5">{{ company_record.tri_adm_fin if company_record else '' }}</textarea>
                 </label>
                 <label class="form-field">
                   <span>Operacional</span>
-                  <textarea name="tri_operational" rows="3" placeholder="Novos produtos, fornecedores, riscos de insumos">{{ company_record.tri_operational if company_record else '' }}</textarea>
+                  <textarea name="tri_operational" rows="3" placeholder="Novos produtos, fornecedores, riscos de insumos" data-ref="E6">{{ company_record.tri_operational if company_record else '' }}</textarea>
                 </label>
               </div>
 
               <div class="form-actions">
-                <button type="submit" class="button button-primary">Salvar informacoes</button>
-                <button type="reset" class="button button-ghost">Limpar</button>
+                <button type="submit" class="button button-primary" data-ref="21">Salvar informacoes</button>
+                <button type="reset" class="button button-ghost" data-ref="22">Limpar</button>
               </div>
             </form>
           </section>
@@ -748,10 +748,10 @@
                     <span class="company-record-title">{{ record.participants }}</span>
                     <span class="company-record-date">{{ record.date }}</span>
                     <div class="company-record-actions">
-                      <button class="button button-small button-ghost" onclick="editCompanyRecord({{ record.id }})" title="Editar relato">
+                      <button class="button button-small button-ghost" onclick="editCompanyRecord({{ record.id }})" title="Editar relato" data-ref="23">
                         ✏️
                       </button>
-                      <button class="button button-small button-danger" onclick="deleteCompanyRecord({{ record.id }})" title="Excluir relato">
+                      <button class="button button-small button-danger" onclick="deleteCompanyRecord({{ record.id }})" title="Excluir relato" data-ref="24">
                         🗑️
                       </button>
                     </div>
@@ -817,7 +817,7 @@
                 <p class="panel-hint">Consolide conclusoes sobre cultura, processos e capacidades internas.</p>
                 <label class="form-field">
                   <span>Resumo consolidado</span>
-                  <textarea name="company_analysis" rows="6" placeholder="Sintetize percepcoes e encaminhamentos" {% if not company_section_open %}disabled{% endif %}>{{ company_analysis_text or '' }}</textarea>
+                  <textarea name="company_analysis" rows="6" placeholder="Sintetize percepcoes e encaminhamentos" {% if not company_section_open %}disabled{% endif %} data-ref="E7">{{ company_analysis_text or '' }}</textarea>
                 </label>
                 {% if company_analysis_suggestion %}
                 <div class="ia-suggestion">
@@ -832,7 +832,7 @@
                 <p class="panel-hint">Avalie o nivel de maturidade interna.</p>
                 <label class="form-field">
                   <span>Resultado consolidado (0 a 5)</span>
-                  <input type="number" name="company_maturity" min="0" max="5" step="0.1" value="{{ company_maturity_score if company_maturity_score is not none else '' }}" placeholder="Defina a maturidade" {% if not company_section_open %}disabled{% endif %} />
+                  <input type="number" name="company_maturity" min="0" max="5" step="0.1" value="{{ company_maturity_score if company_maturity_score is not none else '' }}" placeholder="Defina a maturidade" {% if not company_section_open %}disabled{% endif %}  data-ref="93" />
                 </label>
                 {% if company_maturity_updated_at %}
                 <span class="summary-meta">Atualizado em {{ company_maturity_updated_at }}</span>
@@ -863,11 +863,11 @@
           <span class="interview-count">{{ alignments_records|length }} relatos salvos</span>
           <div class="section-status-controls">
             {% if alignments_found_section_open %}
-              <button class="button button-small button-warning" onclick="closeAlignmentsFoundSection()" title="Concluir seção de alinhamentos">
+              <button class="button button-small button-warning" onclick="closeAlignmentsFoundSection()" title="Concluir seção de alinhamentos" data-ref="25">
                 🔒 Concluir
               </button>
             {% else %}
-              <button class="button button-small button-success" onclick="openAlignmentsFoundSection()" title="Reabrir seção de alinhamentos">
+              <button class="button button-small button-success" onclick="openAlignmentsFoundSection()" title="Reabrir seção de alinhamentos" data-ref="26">
                 🔓 Reabrir
               </button>
               {% if alignments_found_section_status %}
@@ -893,11 +893,11 @@
           <span class="interview-count">{{ misalignments_records|length }} relatos salvos</span>
           <div class="section-status-controls">
             {% if misalignments_critical_section_open %}
-              <button class="button button-small button-warning" onclick="closeMisalignmentsCriticalSection()" title="Concluir seção de desalinhamentos">
+              <button class="button button-small button-warning" onclick="closeMisalignmentsCriticalSection()" title="Concluir seção de desalinhamentos" data-ref="27">
                 🔒 Concluir
               </button>
             {% else %}
-              <button class="button button-small button-success" onclick="openMisalignmentsCriticalSection()" title="Reabrir seção de desalinhamentos">
+              <button class="button button-small button-success" onclick="openMisalignmentsCriticalSection()" title="Reabrir seção de desalinhamentos" data-ref="28">
                 🔓 Reabrir
               </button>
               {% if misalignments_critical_section_status %}
@@ -923,11 +923,11 @@
           <span class="interview-count">Parecer do consultor</span>
           <div class="section-status-controls">
             {% if preliminary_analysis_section_open %}
-              <button class="button button-small button-warning" onclick="closePreliminaryAnalysisSection()" title="Concluir análise preliminar">
+              <button class="button button-small button-warning" onclick="closePreliminaryAnalysisSection()" title="Concluir análise preliminar" data-ref="29">
                 🔒 Concluir
               </button>
             {% else %}
-              <button class="button button-small button-success" onclick="openPreliminaryAnalysisSection()" title="Reabrir análise preliminar">
+              <button class="button button-small button-success" onclick="openPreliminaryAnalysisSection()" title="Reabrir análise preliminar" data-ref="30">
                 🔓 Reabrir
               </button>
               {% if preliminary_analysis_section_status %}
@@ -953,11 +953,11 @@
           <span class="interview-count">Ajustes colaborativos</span>
           <div class="section-status-controls">
             {% if workshop_final_analysis_section_open %}
-              <button class="button button-small button-warning" onclick="closeWorkshopFinalAnalysisSection()" title="Concluir workshop">
+              <button class="button button-small button-warning" onclick="closeWorkshopFinalAnalysisSection()" title="Concluir workshop" data-ref="31">
                 🔒 Concluir
               </button>
             {% else %}
-              <button class="button button-small button-success" onclick="openWorkshopFinalAnalysisSection()" title="Reabrir workshop">
+              <button class="button button-small button-success" onclick="openWorkshopFinalAnalysisSection()" title="Reabrir workshop" data-ref="32">
                 🔓 Reabrir
               </button>
               {% if workshop_final_analysis_section_status %}
@@ -983,11 +983,11 @@
           <span class="interview-count">{{ directionals_final_records|length }} direcionadores</span>
           <div class="section-status-controls">
             {% if directionals_approvals_section_open %}
-              <button class="button button-small button-warning" onclick="closeDirectionalsApprovalsSection()" title="Concluir direcionadores">
+              <button class="button button-small button-warning" onclick="closeDirectionalsApprovalsSection()" title="Concluir direcionadores" data-ref="33">
                 🔒 Concluir
               </button>
             {% else %}
-              <button class="button button-small button-success" onclick="openDirectionalsApprovalsSection()" title="Reabrir direcionadores">
+              <button class="button button-small button-success" onclick="openDirectionalsApprovalsSection()" title="Reabrir direcionadores" data-ref="34">
                 🔓 Reabrir
               </button>
               {% if directionals_approvals_section_status %}
@@ -1012,16 +1012,16 @@
             <form class="alignment-form" action="{{ url_for('add_alignment_record', plan_id=plan.id) }}" method="post">
               <div class="form-field">
                 <span>Adicionar Alinhamento</span>
-                <input type="text" name="alignment_topic" placeholder="Tópico do alinhamento" required />
+                <input type="text" name="alignment_topic" placeholder="Tópico do alinhamento" required  data-ref="94" />
               </div>
               <div class="form-field">
                 <span>Descrição</span>
-                <textarea name="alignment_description" rows="3" placeholder="Descrição do alinhamento encontrado" required></textarea>
+                <textarea name="alignment_description" rows="3" placeholder="Descrição do alinhamento encontrado" required data-ref="E8"></textarea>
               </div>
               <div class="form-two-cols">
                 <div class="form-field">
                   <span>Nível de Consenso</span>
-                  <select name="alignment_consensus" required>
+                  <select name="alignment_consensus" required data-ref="B2">
                     <option value="">Selecione</option>
                     <option value="Baixo">Baixo</option>
                     <option value="Médio">Médio</option>
@@ -1030,7 +1030,7 @@
                 </div>
                 <div class="form-field">
                   <span>Prioridade</span>
-                  <select name="alignment_priority" required>
+                  <select name="alignment_priority" required data-ref="B3">
                     <option value="">Selecione</option>
                     <option value="Baixa">Baixa</option>
                     <option value="Média">Média</option>
@@ -1040,7 +1040,7 @@
                 </div>
               </div>
               <div class="form-actions">
-                <button type="submit" class="button button-primary">Adicionar Alinhamento</button>
+                <button type="submit" class="button button-primary" data-ref="35">Adicionar Alinhamento</button>
               </div>
             </form>
             {% endif %}
@@ -1054,10 +1054,10 @@
                     <strong>{{ record.title or record.topic or 'Relato' }}</strong>
                     {% if alignments_found_section_open %}
                     <div class="alignment-record-actions">
-                      <button class="button button-small button-ghost" onclick="editAlignmentRecord({{ record.id }})" title="Editar alinhamento">
+                      <button class="button button-small button-ghost" onclick="editAlignmentRecord({{ record.id }})" title="Editar alinhamento" data-ref="36">
                         ✏️
                       </button>
-                      <button class="button button-small button-danger" onclick="deleteAlignmentRecord({{ record.id }})" title="Excluir alinhamento">
+                      <button class="button button-small button-danger" onclick="deleteAlignmentRecord({{ record.id }})" title="Excluir alinhamento" data-ref="37">
                         🗑️
                       </button>
                     </div>
@@ -1103,11 +1103,11 @@
           <span class="interview-count">{{ misalignments_records|length }} relatos salvos</span>
           <div class="section-status-controls">
             {% if misalignments_critical_section_open %}
-              <button class="button button-small button-warning" onclick="closeMisalignmentsCriticalSection()" title="Concluir seção de desalinhamentos">
+              <button class="button button-small button-warning" onclick="closeMisalignmentsCriticalSection()" title="Concluir seção de desalinhamentos" data-ref="38">
                 🔒 Concluir
               </button>
             {% else %}
-              <button class="button button-small button-success" onclick="openMisalignmentsCriticalSection()" title="Reabrir seção de desalinhamentos">
+              <button class="button button-small button-success" onclick="openMisalignmentsCriticalSection()" title="Reabrir seção de desalinhamentos" data-ref="39">
                 🔓 Reabrir
               </button>
               {% if misalignments_critical_section_status %}
@@ -1133,16 +1133,16 @@
             <form class="misalignment-form" action="{{ url_for('add_misalignment_record', plan_id=plan.id) }}" method="post">
               <div class="form-field">
                 <span>Adicionar Desalinhamento</span>
-                <input type="text" name="misalignment_issue" placeholder="Tópico do desalinhamento" required />
+                <input type="text" name="misalignment_issue" placeholder="Tópico do desalinhamento" required  data-ref="95" />
               </div>
               <div class="form-field">
                 <span>Descrição</span>
-                <textarea name="misalignment_description" rows="3" placeholder="Descrição do desalinhamento crítico" required></textarea>
+                <textarea name="misalignment_description" rows="3" placeholder="Descrição do desalinhamento crítico" required data-ref="E9"></textarea>
               </div>
               <div class="form-two-cols">
                 <div class="form-field">
                   <span>Severidade</span>
-                  <select name="misalignment_severity" required>
+                  <select name="misalignment_severity" required data-ref="B4">
                     <option value="">Selecione</option>
                     <option value="Baixa">Baixa</option>
                     <option value="Média">Média</option>
@@ -1152,7 +1152,7 @@
                 </div>
                 <div class="form-field">
                   <span>Impacto</span>
-                  <select name="misalignment_impact" required>
+                  <select name="misalignment_impact" required data-ref="B5">
                     <option value="">Selecione</option>
                     <option value="Baixo">Baixo</option>
                     <option value="Médio">Médio</option>
@@ -1162,7 +1162,7 @@
                 </div>
               </div>
               <div class="form-actions">
-                <button type="submit" class="button button-primary">Adicionar Desalinhamento</button>
+                <button type="submit" class="button button-primary" data-ref="40">Adicionar Desalinhamento</button>
               </div>
             </form>
             {% endif %}
@@ -1177,10 +1177,10 @@
                     <strong>{{ record.title or record.issue or 'Relato' }}</strong>
                     {% if misalignments_critical_section_open %}
                     <div class="alignment-record-actions">
-                      <button class="button button-small button-ghost" onclick="editMisalignmentRecord({{ record.id }})" title="Editar desalinhamento">
+                      <button class="button button-small button-ghost" onclick="editMisalignmentRecord({{ record.id }})" title="Editar desalinhamento" data-ref="41">
                         ✏️
                       </button>
-                      <button class="button button-small button-danger" onclick="deleteMisalignmentRecord({{ record.id }})" title="Excluir desalinhamento">
+                      <button class="button button-small button-danger" onclick="deleteMisalignmentRecord({{ record.id }})" title="Excluir desalinhamento" data-ref="42">
                         🗑️
                       </button>
                     </div>
@@ -1226,11 +1226,11 @@
           <span class="interview-count">Parecer do consultor</span>
           <div class="section-status-controls">
             {% if preliminary_analysis_section_open %}
-              <button class="button button-small button-warning" onclick="closePreliminaryAnalysisSection()" title="Concluir análise preliminar">
+              <button class="button button-small button-warning" onclick="closePreliminaryAnalysisSection()" title="Concluir análise preliminar" data-ref="43">
                 🔒 Concluir
               </button>
             {% else %}
-              <button class="button button-small button-success" onclick="openPreliminaryAnalysisSection()" title="Reabrir análise preliminar">
+              <button class="button button-small button-success" onclick="openPreliminaryAnalysisSection()" title="Reabrir análise preliminar" data-ref="44">
                 🔓 Reabrir
               </button>
               {% if preliminary_analysis_section_status %}
@@ -1251,11 +1251,11 @@
             <form action="{{ url_for('save_alignment_consultant_notes', plan_id=plan.id) }}" method="post">
               <label class="form-field">
                 <span>Parecer do consultor</span>
-                <textarea name="alignment_consultant_notes" rows="5" placeholder="Referende os alinhamentos e destaque reforcos necessarios" {% if not preliminary_analysis_section_open %}disabled{% endif %}>{{ alignment_consultant_notes or '' }}</textarea>
+                <textarea name="alignment_consultant_notes" rows="5" placeholder="Referende os alinhamentos e destaque reforcos necessarios" {% if not preliminary_analysis_section_open %}disabled{% endif %} data-ref="F0">{{ alignment_consultant_notes or '' }}</textarea>
               </label>
               {% if preliminary_analysis_section_open %}
               <div class="form-actions">
-                <button type="submit" class="button button-primary">Salvar Parecer</button>
+                <button type="submit" class="button button-primary" data-ref="45">Salvar Parecer</button>
               </div>
               {% endif %}
             </form>
@@ -1267,11 +1267,11 @@
             <form action="{{ url_for('save_misalignment_consultant_notes', plan_id=plan.id) }}" method="post">
               <label class="form-field">
                 <span>Parecer do consultor</span>
-                <textarea name="misalignment_consultant_notes" rows="5" placeholder="Analise os desalinhamentos e proponha encaminhamentos" {% if not preliminary_analysis_section_open %}disabled{% endif %}>{{ misalignment_consultant_notes or '' }}</textarea>
+                <textarea name="misalignment_consultant_notes" rows="5" placeholder="Analise os desalinhamentos e proponha encaminhamentos" {% if not preliminary_analysis_section_open %}disabled{% endif %} data-ref="F1">{{ misalignment_consultant_notes or '' }}</textarea>
               </label>
               {% if preliminary_analysis_section_open %}
               <div class="form-actions">
-                <button type="submit" class="button button-primary">Salvar Parecer</button>
+                <button type="submit" class="button button-primary" data-ref="46">Salvar Parecer</button>
               </div>
               {% endif %}
             </form>
@@ -1293,11 +1293,11 @@
           <span class="interview-count">Ajustes colaborativos</span>
           <div class="section-status-controls">
             {% if workshop_final_analysis_section_open %}
-              <button class="button button-small button-warning" onclick="closeWorkshopFinalAnalysisSection()" title="Concluir workshop">
+              <button class="button button-small button-warning" onclick="closeWorkshopFinalAnalysisSection()" title="Concluir workshop" data-ref="47">
                 🔒 Concluir
               </button>
             {% else %}
-              <button class="button button-small button-success" onclick="openWorkshopFinalAnalysisSection()" title="Reabrir workshop">
+              <button class="button button-small button-success" onclick="openWorkshopFinalAnalysisSection()" title="Reabrir workshop" data-ref="48">
                 🔓 Reabrir
               </button>
               {% if workshop_final_analysis_section_status %}
@@ -1323,18 +1323,18 @@
             <form class="workshop-form" action="{{ url_for('add_workshop_adjustment', plan_id=plan.id) }}" method="post">
               <div class="form-field">
                 <span>Adicionar Ajuste do Workshop</span>
-                <input type="text" name="adjustment_title" placeholder="Título do ajuste" required />
+                <input type="text" name="adjustment_title" placeholder="Título do ajuste" required  data-ref="96" />
               </div>
               <div class="form-field">
                 <span>Descrição do Ajuste</span>
-                <textarea name="adjustment_description" rows="4" placeholder="Descreva o ajuste realizado no workshop" required></textarea>
+                <textarea name="adjustment_description" rows="4" placeholder="Descreva o ajuste realizado no workshop" required data-ref="F2"></textarea>
               </div>
               <div class="form-field">
                 <span>Participantes do Workshop</span>
-                <input type="text" name="workshop_participants" placeholder="Nomes dos participantes (separados por vírgula)" />
+                <input type="text" name="workshop_participants" placeholder="Nomes dos participantes (separados por vírgula)"  data-ref="97" />
               </div>
               <div class="form-actions">
-                <button type="submit" class="button button-primary">Adicionar Ajuste</button>
+                <button type="submit" class="button button-primary" data-ref="49">Adicionar Ajuste</button>
               </div>
             </form>
             {% endif %}
@@ -1364,11 +1364,11 @@
           <span class="interview-count">{{ directionals_final_records|length }} direcionadores</span>
           <div class="section-status-controls">
             {% if directionals_approvals_section_open %}
-              <button class="button button-small button-warning" onclick="closeDirectionalsApprovalsSection()" title="Concluir direcionadores">
+              <button class="button button-small button-warning" onclick="closeDirectionalsApprovalsSection()" title="Concluir direcionadores" data-ref="50">
                 🔒 Concluir
               </button>
             {% else %}
-              <button class="button button-small button-success" onclick="openDirectionalsApprovalsSection()" title="Reabrir direcionadores">
+              <button class="button button-small button-success" onclick="openDirectionalsApprovalsSection()" title="Reabrir direcionadores" data-ref="51">
                 🔓 Reabrir
               </button>
               {% if directionals_approvals_section_status %}
@@ -1391,22 +1391,22 @@
             <form class="directionals-form" action="{{ url_for('add_directionals_final_record', plan_id=plan.id) }}" method="post">
               <div class="form-field">
                 <span>Título do Direcionador</span>
-                <input type="text" name="directional_title" placeholder="Título do direcionador" required />
+                <input type="text" name="directional_title" placeholder="Título do direcionador" required  data-ref="98" />
               </div>
               <div class="form-field">
                 <span>Descrição</span>
-                <textarea name="directional_description" rows="3" placeholder="Descrição detalhada do direcionador" required></textarea>
+                <textarea name="directional_description" rows="3" placeholder="Descrição detalhada do direcionador" required data-ref="F3"></textarea>
               </div>
               <div class="form-field">
                 <span>Justificativa</span>
-                <textarea name="directional_justification" rows="3" placeholder="Justificativa baseada nas análises anteriores" required></textarea>
+                <textarea name="directional_justification" rows="3" placeholder="Justificativa baseada nas análises anteriores" required data-ref="F4"></textarea>
               </div>
               <div class="form-field">
                 <span>Responsável</span>
-                <input type="text" name="directional_owner" placeholder="Nome do responsável" />
+                <input type="text" name="directional_owner" placeholder="Nome do responsável"  data-ref="99" />
               </div>
               <div class="form-actions">
-                <button type="submit" class="button button-primary">Cadastrar Direcionador</button>
+                <button type="submit" class="button button-primary" data-ref="52">Cadastrar Direcionador</button>
               </div>
             </form>
             {% endif %}
@@ -1421,10 +1421,10 @@
                     <strong>{{ record.title or 'Direcionador' }}</strong>
                     {% if directionals_approvals_section_open %}
                     <div class="directionals-record-actions">
-                      <button class="button button-small button-ghost" onclick="editDirectionalsFinalRecord({{ record.id }})" title="Editar direcionador">
+                      <button class="button button-small button-ghost" onclick="editDirectionalsFinalRecord({{ record.id }})" title="Editar direcionador" data-ref="53">
                         ✏️
                       </button>
-                      <button class="button button-small button-danger" onclick="deleteDirectionalsFinalRecord({{ record.id }})" title="Excluir direcionador">
+                      <button class="button button-small button-danger" onclick="deleteDirectionalsFinalRecord({{ record.id }})" title="Excluir direcionador" data-ref="54">
                         🗑️
                       </button>
                     </div>
@@ -1462,7 +1462,7 @@
             <form class="approvals-form" action="{{ url_for('add_directionals_approval', plan_id=plan.id) }}" method="post">
               <div class="form-field">
                 <span>Direcionador</span>
-                <select name="directional_id" required>
+                <select name="directional_id" required data-ref="B6">
                   <option value="">Selecione um direcionador</option>
                   {% for record in directionals_final_records %}
                   <option value="{{ record.id }}">{{ record.title or 'Direcionador' }}</option>
@@ -1471,7 +1471,7 @@
               </div>
               <div class="form-field">
                 <span>Status da Aprovação</span>
-                <select name="approval_status" required>
+                <select name="approval_status" required data-ref="B7">
                   <option value="">Selecione</option>
                   <option value="Aprovado">Aprovado</option>
                   <option value="Rejeitado">Rejeitado</option>
@@ -1481,14 +1481,14 @@
               </div>
               <div class="form-field">
                 <span>Observações</span>
-                <textarea name="approval_notes" rows="3" placeholder="Observações sobre a aprovação"></textarea>
+                <textarea name="approval_notes" rows="3" placeholder="Observações sobre a aprovação" data-ref="F5"></textarea>
               </div>
               <div class="form-field">
                 <span>Aprovador</span>
-                <input type="text" name="approver_name" placeholder="Nome do aprovador" />
+                <input type="text" name="approver_name" placeholder="Nome do aprovador"  data-ref="A0" />
               </div>
               <div class="form-actions">
-                <button type="submit" class="button button-primary">Registrar Aprovação</button>
+                <button type="submit" class="button button-primary" data-ref="55">Registrar Aprovação</button>
               </div>
             </form>
             {% endif %}
@@ -1518,11 +1518,11 @@
           <span class="interview-count">Análise automática</span>
           <div class="section-status-controls">
             {% if directionals_ai_section_open %}
-              <button class="button button-small button-warning" onclick="closeDirectionalsAiSection()" title="Concluir análise da IA">
+              <button class="button button-small button-warning" onclick="closeDirectionalsAiSection()" title="Concluir análise da IA" data-ref="56">
                 🔒 Concluir
               </button>
             {% else %}
-              <button class="button button-small button-success" onclick="openDirectionalsAiSection()" title="Reabrir análise da IA">
+              <button class="button button-small button-success" onclick="openDirectionalsAiSection()" title="Reabrir análise da IA" data-ref="57">
                 🔓 Reabrir
               </button>
               {% if directionals_ai_section_status %}
@@ -1552,7 +1552,7 @@
             </div>
             {% if directionals_ai_section_open %}
             <div class="form-actions">
-              <button class="button button-primary" onclick="generateAiAnalysis()">Gerar Nova Análise</button>
+              <button class="button button-primary" onclick="generateAiAnalysis()" data-ref="58">Gerar Nova Análise</button>
             </div>
             {% endif %}
           </div>
@@ -1573,11 +1573,11 @@
           <span class="interview-count">Análise especializada</span>
           <div class="section-status-controls">
             {% if directionals_consultant_section_open %}
-              <button class="button button-small button-warning" onclick="closeDirectionalsConsultantSection()" title="Concluir análise do consultor">
+              <button class="button button-small button-warning" onclick="closeDirectionalsConsultantSection()" title="Concluir análise do consultor" data-ref="59">
                 🔒 Concluir
               </button>
             {% else %}
-              <button class="button button-small button-success" onclick="openDirectionalsConsultantSection()" title="Reabrir análise do consultor">
+              <button class="button button-small button-success" onclick="openDirectionalsConsultantSection()" title="Reabrir análise do consultor" data-ref="60">
                 🔓 Reabrir
               </button>
               {% if directionals_consultant_section_status %}
@@ -1605,19 +1605,19 @@
               {% endif %}
               <label class="form-field">
                 <span>Análise das Sugestões da IA</span>
-                <textarea name="consultant_ai_analysis" rows="4" placeholder="Analise as sugestões da IA e identifique pontos fortes e fracos" {% if not directionals_consultant_section_open %}disabled{% endif %}>{{ directionals_consultant_ai_analysis or '' }}</textarea>
+                <textarea name="consultant_ai_analysis" rows="4" placeholder="Analise as sugestões da IA e identifique pontos fortes e fracos" {% if not directionals_consultant_section_open %}disabled{% endif %} data-ref="F6">{{ directionals_consultant_ai_analysis or '' }}</textarea>
               </label>
               <label class="form-field">
                 <span>Diagnóstico e Recomendações</span>
-                <textarea name="consultant_diagnosis" rows="4" placeholder="Forneça seu diagnóstico e recomendações baseadas na experiência" {% if not directionals_consultant_section_open %}disabled{% endif %}>{{ directionals_consultant_diagnosis or '' }}</textarea>
+                <textarea name="consultant_diagnosis" rows="4" placeholder="Forneça seu diagnóstico e recomendações baseadas na experiência" {% if not directionals_consultant_section_open %}disabled{% endif %} data-ref="F7">{{ directionals_consultant_diagnosis or '' }}</textarea>
               </label>
               <label class="form-field">
                 <span>Direcionadores Propostos</span>
-                <textarea name="consultant_directionals" rows="5" placeholder="Liste os direcionadores que você propõe baseado na análise" {% if not directionals_consultant_section_open %}disabled{% endif %}>{{ directionals_consultant_directionals or '' }}</textarea>
+                <textarea name="consultant_directionals" rows="5" placeholder="Liste os direcionadores que você propõe baseado na análise" {% if not directionals_consultant_section_open %}disabled{% endif %} data-ref="F8">{{ directionals_consultant_directionals or '' }}</textarea>
               </label>
               {% if directionals_consultant_section_open %}
               <div class="form-actions">
-                <button type="submit" class="button button-primary">Salvar Análise</button>
+                <button type="submit" class="button button-primary" data-ref="61">Salvar Análise</button>
               </div>
               {% endif %}
             </div>
@@ -1639,11 +1639,11 @@
           <span class="interview-count">{{ directionals_workshop_records|length }} ajustes registrados</span>
           <div class="section-status-controls">
             {% if directionals_workshop_section_open %}
-              <button class="button button-small button-warning" onclick="closeDirectionalsWorkshopSection()" title="Concluir workshop">
+              <button class="button button-small button-warning" onclick="closeDirectionalsWorkshopSection()" title="Concluir workshop" data-ref="62">
                 🔒 Concluir
               </button>
             {% else %}
-              <button class="button button-small button-success" onclick="openDirectionalsWorkshopSection()" title="Reabrir workshop">
+              <button class="button button-small button-success" onclick="openDirectionalsWorkshopSection()" title="Reabrir workshop" data-ref="63">
                 🔓 Reabrir
               </button>
               {% if directionals_workshop_section_status %}
@@ -1673,23 +1673,23 @@
             <div class="card-content">
               <label class="form-field">
                 <span>Direcionador</span>
-                <input type="text" name="directional_title" placeholder="Nome do direcionador" required />
+                <input type="text" name="directional_title" placeholder="Nome do direcionador" required  data-ref="A1" />
               </label>
               <label class="form-field">
                 <span>Descrição</span>
-                <textarea name="directional_description" rows="3" placeholder="Descrição do direcionador" required></textarea>
+                <textarea name="directional_description" rows="3" placeholder="Descrição do direcionador" required data-ref="F9"></textarea>
               </label>
               <label class="form-field">
                 <span>Ajustes Realizados</span>
-                <textarea name="workshop_adjustments" rows="3" placeholder="Descreva os ajustes realizados no workshop" required></textarea>
+                <textarea name="workshop_adjustments" rows="3" placeholder="Descreva os ajustes realizados no workshop" required data-ref="G0"></textarea>
               </label>
               <label class="form-field">
                 <span>Participantes</span>
-                <input type="text" name="workshop_participants" placeholder="Participantes do workshop" />
+                <input type="text" name="workshop_participants" placeholder="Participantes do workshop"  data-ref="A2" />
               </label>
               <div class="form-actions">
-                <button type="submit" class="button button-primary">Registrar Ajuste</button>
-                <button type="reset" class="button button-ghost">Limpar</button>
+                <button type="submit" class="button button-primary" data-ref="64">Registrar Ajuste</button>
+                <button type="reset" class="button button-ghost" data-ref="65">Limpar</button>
               </div>
             </div>
           </div>
@@ -1710,10 +1710,10 @@
               </div>
               {% if directionals_workshop_section_open %}
               <div class="workshop-record-actions">
-                <button type="button" class="button button-small button-ghost" onclick="editWorkshopRecord({{ record.id }})" title="Editar registro">
+                <button type="button" class="button button-small button-ghost" onclick="editWorkshopRecord({{ record.id }})" title="Editar registro" data-ref="66">
                   ✏️
                 </button>
-                <button type="button" class="button button-small button-danger" onclick="deleteWorkshopRecord({{ record.id }})" title="Excluir registro">
+                <button type="button" class="button button-small button-danger" onclick="deleteWorkshopRecord({{ record.id }})" title="Excluir registro" data-ref="67">
                   🗑️
                 </button>
               </div>
@@ -1753,11 +1753,11 @@
           <span class="interview-count">{{ directionals_final_records|length }} direcionadores finais</span>
           <div class="section-status-controls">
             {% if directionals_final_section_open %}
-              <button class="button button-small button-warning" onclick="closeDirectionalsFinalSection()" title="Concluir direcionadores finais">
+              <button class="button button-small button-warning" onclick="closeDirectionalsFinalSection()" title="Concluir direcionadores finais" data-ref="68">
                 🔒 Concluir
               </button>
             {% else %}
-              <button class="button button-small button-success" onclick="openDirectionalsFinalSection()" title="Reabrir direcionadores finais">
+              <button class="button button-small button-success" onclick="openDirectionalsFinalSection()" title="Reabrir direcionadores finais" data-ref="69">
                 🔓 Reabrir
               </button>
               {% if directionals_final_section_status %}
@@ -1787,23 +1787,23 @@
             <div class="card-content">
               <label class="form-field">
                 <span>Título</span>
-                <input type="text" name="directional_title" placeholder="Nome do direcionador" required />
+                <input type="text" name="directional_title" placeholder="Nome do direcionador" required  data-ref="A3" />
               </label>
               <label class="form-field">
                 <span>Descrição</span>
-                <textarea name="directional_description" rows="4" placeholder="Descrição completa do direcionador" required></textarea>
+                <textarea name="directional_description" rows="4" placeholder="Descrição completa do direcionador" required data-ref="G1"></textarea>
               </label>
               <label class="form-field">
                 <span>Justificativa</span>
-                <textarea name="directional_justification" rows="3" placeholder="Justificativa para este direcionador" required></textarea>
+                <textarea name="directional_justification" rows="3" placeholder="Justificativa para este direcionador" required data-ref="G2"></textarea>
               </label>
               <label class="form-field">
                 <span>Responsável</span>
-                <input type="text" name="directional_owner" placeholder="Responsável pela implementação" />
+                <input type="text" name="directional_owner" placeholder="Responsável pela implementação"  data-ref="A4" />
               </label>
               <div class="form-actions">
-                <button type="submit" class="button button-primary">Cadastrar Direcionador</button>
-                <button type="reset" class="button button-ghost">Limpar</button>
+                <button type="submit" class="button button-primary" data-ref="70">Cadastrar Direcionador</button>
+                <button type="reset" class="button button-ghost" data-ref="71">Limpar</button>
               </div>
             </div>
           </div>
@@ -1824,10 +1824,10 @@
               </div>
               {% if directionals_final_section_open %}
               <div class="final-directional-actions">
-                <button type="button" class="button button-small button-ghost" onclick="editFinalDirectionalRecord({{ record.id }})" title="Editar direcionador">
+                <button type="button" class="button button-small button-ghost" onclick="editFinalDirectionalRecord({{ record.id }})" title="Editar direcionador" data-ref="72">
                   ✏️
                 </button>
-                <button type="button" class="button button-small button-danger" onclick="deleteFinalDirectionalRecord({{ record.id }})" title="Excluir direcionador">
+                <button type="button" class="button button-small button-danger" onclick="deleteFinalDirectionalRecord({{ record.id }})" title="Excluir direcionador" data-ref="73">
                   🗑️
                 </button>
               </div>
@@ -1867,11 +1867,11 @@
           <span class="interview-count">{{ directionals_approvals|length }} aprovações registradas</span>
           <div class="section-status-controls">
             {% if directionals_approvals_section_open %}
-              <button class="button button-small button-warning" onclick="closeDirectionalsApprovalsSection()" title="Concluir aprovações">
+              <button class="button button-small button-warning" onclick="closeDirectionalsApprovalsSection()" title="Concluir aprovações" data-ref="74">
                 🔒 Concluir
               </button>
             {% else %}
-              <button class="button button-small button-success" onclick="openDirectionalsApprovalsSection()" title="Reabrir aprovações">
+              <button class="button button-small button-success" onclick="openDirectionalsApprovalsSection()" title="Reabrir aprovações" data-ref="75">
                 🔓 Reabrir
               </button>
               {% if directionals_approvals_section_status %}
@@ -1901,7 +1901,7 @@
             <div class="card-content">
               <label class="form-field">
                 <span>Direcionador</span>
-                <select name="directional_id" required>
+                <select name="directional_id" required data-ref="B8">
                   <option value="">Selecione um direcionador</option>
                   {% for record in directionals_final_records %}
                   <option value="{{ record.id }}">{{ record.title or 'Direcionador' }}</option>
@@ -1910,7 +1910,7 @@
               </label>
               <label class="form-field">
                 <span>Status da Aprovação</span>
-                <select name="approval_status" required>
+                <select name="approval_status" required data-ref="B9">
                   <option value="approved">Aprovado</option>
                   <option value="rejected">Rejeitado</option>
                   <option value="pending">Pendente</option>
@@ -1918,15 +1918,15 @@
               </label>
               <label class="form-field">
                 <span>Observações</span>
-                <textarea name="approval_notes" rows="3" placeholder="Observações sobre a aprovação"></textarea>
+                <textarea name="approval_notes" rows="3" placeholder="Observações sobre a aprovação" data-ref="G3"></textarea>
               </label>
               <label class="form-field">
                 <span>Aprovado por</span>
-                <input type="text" name="approved_by" placeholder="Nome do aprovador" />
+                <input type="text" name="approved_by" placeholder="Nome do aprovador"  data-ref="A5" />
               </label>
               <div class="form-actions">
-                <button type="submit" class="button button-primary">Registrar Aprovação</button>
-                <button type="reset" class="button button-ghost">Limpar</button>
+                <button type="submit" class="button button-primary" data-ref="76">Registrar Aprovação</button>
+                <button type="reset" class="button button-ghost" data-ref="77">Limpar</button>
               </div>
             </div>
           </div>
@@ -2068,7 +2068,7 @@
               {% else %}
               <p>Sem aprovacoes registradas.</p>
               {% endif %}
-              <button type="button" class="button button-ghost" disabled>Editar (em breve)</button>
+              <button type="button" class="button button-ghost" disabled data-ref="78">Editar (em breve)</button>
             </div>
           </div>
         </details>

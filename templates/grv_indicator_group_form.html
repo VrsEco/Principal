@@ -137,7 +137,7 @@
     <form id="groupForm">
       <div class="form-group">
         <label for="parentId">Grupo/Subgrupo Pai</label>
-        <select id="parentId" name="parent_id">
+        <select id="parentId" name="parent_id" data-ref="04">
           <option value="">Nenhum (Grupo Raiz)</option>
         </select>
         <span class="helper">Escolha para criar um subgrupo dentro de um grupo existente.</span>
@@ -145,17 +145,17 @@
 
       <div class="form-group">
         <label for="groupName">Nome *</label>
-        <input type="text" id="groupName" name="name" maxlength="120" required>
+        <input type="text" id="groupName" name="name" maxlength="120" required data-ref="03">
       </div>
 
       <div class="form-group">
         <label for="groupDescription">Descrição</label>
-        <textarea id="groupDescription" name="description" maxlength="500"></textarea>
+        <textarea id="groupDescription" name="description" maxlength="500" data-ref="05"></textarea>
       </div>
 
       <div class="actions">
-        <button type="button" class="btn-secondary" id="cancelButton">Cancelar</button>
-        <button type="submit" class="btn-primary">Salvar</button>
+        <button type="button" class="btn-secondary" id="cancelButton" data-ref="01">Cancelar</button>
+        <button type="submit" class="btn-primary" data-ref="02">Salvar</button>
       </div>
     </form>
   </div>

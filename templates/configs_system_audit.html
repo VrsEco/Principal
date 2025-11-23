@@ -296,7 +296,7 @@
     <div class="filter-grid">
       <div class="filter-item">
         <label>Filtrar por:</label>
-        <select id="filter-type" onchange="filterRoutes()">
+        <select id="filter-type" onchange="filterRoutes()" data-ref="06">
           <option value="without_logging">Sem Logging (Crítico)</option>
           <option value="all">Todas as Rotas</option>
           <option value="crud">Apenas CRUD</option>
@@ -305,11 +305,11 @@
       </div>
       <div class="filter-item">
         <label>Buscar:</label>
-        <input type="text" id="search-routes" placeholder="Buscar rota..." oninput="searchRoutes()">
+        <input type="text" id="search-routes" placeholder="Buscar rota..." oninput="searchRoutes()" data-ref="05">
       </div>
       <div class="filter-item" style="display: flex; align-items: flex-end; gap: 0.5rem;">
-        <button class="btn btn-primary" onclick="loadData()" style="flex: 1;">🔄 Atualizar</button>
-        <button class="btn btn-secondary" onclick="exportReport()" style="flex: 1;">📥 Exportar</button>
+        <button class="btn btn-primary" onclick="loadData()" style="flex: 1;" data-ref="01">🔄 Atualizar</button>
+        <button class="btn btn-secondary" onclick="exportReport()" style="flex: 1;" data-ref="02">📥 Exportar</button>
       </div>
     </div>
   </div>
@@ -405,7 +405,7 @@
     document.getElementById('routes-section').style.display = 'block';
     document.getElementById('empty-state').style.display = 'none';
 
-    let html = '<table class="routes-table"><thead><tr><th>Endpoint</th><th>Métodos</th><th>Entidade</th><th>Status</th><th>Ações</th></tr></thead><tbody>';
+    let html = '<table class="routes-table" data-ref="07"><thead><tr><th>Endpoint</th><th>Métodos</th><th>Entidade</th><th>Status</th><th>Ações</th></tr></thead><tbody>';
 
     routes.forEach(route => {
       const hasLogging = route.has_auto_log || route.has_manual_log;
@@ -424,8 +424,8 @@
       const entityBadge = route.entity_type ? `<span class="badge">${route.entity_type}</span>` : '-';
 
       const actions = needsLogging && !hasLogging ?
-        `<button class="btn btn-primary" style="padding: 0.4rem 1rem; font-size: 0.875rem;" onclick="showImplementationGuide('${route.endpoint}')">➕ Incluir Log</button>` :
-        `<button class="btn btn-secondary" style="padding: 0.4rem 1rem; font-size: 0.875rem;" onclick="showRouteDetails('${route.endpoint}')">👁️ Ver Detalhes</button>`;
+        `<button class="btn btn-primary" style="padding: 0.4rem 1rem; font-size: 0.875rem;" onclick="showImplementationGuide('${route.endpoint}')" data-ref="03">➕ Incluir Log</button>` :
+        `<button class="btn btn-secondary" style="padding: 0.4rem 1rem; font-size: 0.875rem;" onclick="showRouteDetails('${route.endpoint}')" data-ref="04">👁️ Ver Detalhes</button>`;
 
       html += `
         <tr>

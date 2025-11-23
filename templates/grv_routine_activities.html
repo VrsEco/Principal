@@ -418,8 +418,8 @@
 
     <!-- Tabs -->
     <div class="tabs">
-      <button class="tab active" onclick="switchTab('list')">📋 Lista</button>
-      <button class="tab" onclick="switchTab('calendar')">📅 Calendário</button>
+      <button class="tab active" onclick="switchTab('list')" data-ref="01">📋 Lista</button>
+      <button class="tab" onclick="switchTab('calendar')" data-ref="02">📅 Calendário</button>
     </div>
 
     <!-- Filters -->
@@ -436,7 +436,7 @@
         <div class="filters-row">
         <div class="filter-group">
           <label>Tipo</label>
-          <select id="filterType" multiple>
+          <select id="filterType" multiple data-ref="05">
             <option value="project_activity">Atividades de Projetos</option>
             <option value="process_instance">Instâncias de Processos</option>
           </select>
@@ -444,7 +444,7 @@
         </div>
         <div class="filter-group">
           <label>Status/Estágio</label>
-          <select id="filterStatus" multiple>
+          <select id="filterStatus" multiple data-ref="06">
             <option value="pending">Pendente</option>
             <option value="in_progress">Em Andamento</option>
             <option value="executing">Executando</option>
@@ -457,7 +457,7 @@
         </div>
         <div class="filter-group">
           <label>Pessoa</label>
-          <select id="filterPerson" multiple>
+          <select id="filterPerson" multiple data-ref="07">
             {% for emp in employees %}
             <option value="{{ emp.id }}">{{ emp.name }}</option>
             {% endfor %}
@@ -468,7 +468,7 @@
       <div class="filters-row">
         <div class="filter-group">
           <label>Projeto</label>
-          <select id="filterProject" multiple>
+          <select id="filterProject" multiple data-ref="08">
             {% for proj in projects %}
             <option value="{{ proj.id }}">{{ proj.code or proj.id }} - {{ proj.name }}</option>
             {% endfor %}
@@ -477,7 +477,7 @@
         </div>
         <div class="filter-group">
           <label>Processo</label>
-          <select id="filterProcess" multiple>
+          <select id="filterProcess" multiple data-ref="09">
             {% for proc in processes %}
             <option value="{{ proc.id }}">{{ proc.code or proc.id }} - {{ proc.name }}</option>
             {% endfor %}
@@ -486,8 +486,8 @@
         </div>
         <div class="filter-group">
           <label>Buscar</label>
-          <input type="text" id="searchInput" placeholder="Buscar por título...">
-          <button onclick="clearAllFilters()" style="margin-top: 4px; padding: 6px 12px; border-radius: 6px; border: 1px solid rgba(15, 23, 42, 0.15); background: #fff; font-size: 12px; font-weight: 600; cursor: pointer;">
+          <input type="text" id="searchInput" placeholder="Buscar por título..." data-ref="04">
+          <button onclick="clearAllFilters()" style="margin-top: 4px; padding: 6px 12px; border-radius: 6px; border: 1px solid rgba(15, 23, 42, 0.15); background: #fff; font-size: 12px; font-weight: 600; cursor: pointer;" data-ref="03">
             Limpar Filtros
           </button>
         </div>

@@ -211,7 +211,7 @@ class RowProxy:
         return self._dict[key]
 
     def __iter__(self):
-        return iter(self._dict.items())
+        return iter(self._values)
 
     def keys(self):
         return self._dict.keys()

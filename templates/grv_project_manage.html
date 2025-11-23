@@ -313,42 +313,48 @@
 
   .kanban-card-actions {
     display: flex;
-    gap: 8px;
+    gap: 6px;
+    flex-wrap: wrap;
+    justify-content: flex-end;
   }
 
   .kanban-card-btn {
-    border: none;
-    background: transparent;
-    font-size: 11px;
-    font-weight: 600;
-    color: #2563eb;
+    display: inline-flex;
+    align-items: center;
+    border: none !important;
+    background: transparent !important;
+    font-size: 11px !important;
+    font-weight: 600 !important;
+    color: #2563eb !important;
     cursor: pointer;
-    padding: 4px 8px;
-    border-radius: 6px;
+    padding: 4px 8px !important;
+    border-radius: 6px !important;
+    line-height: 1.2;
     transition: all 0.2s ease;
+    box-shadow: none !important;
   }
 
   .kanban-card-btn:hover {
-    background: rgba(37, 99, 235, 0.1);
+    background: rgba(37, 99, 235, 0.1) !important;
     transform: translateY(-1px);
   }
 
   .kanban-card-btn.danger {
-    color: #dc2626;
+    color: #dc2626 !important;
   }
 
   .kanban-card-btn.danger:hover {
-    background: rgba(220, 38, 38, 0.1);
-    color: #b91c1c;
+    background: rgba(220, 38, 38, 0.1) !important;
+    color: #b91c1c !important;
   }
 
   .kanban-card-btn.transfer {
-    color: #8b5cf6;
+    color: #8b5cf6 !important;
   }
 
   .kanban-card-btn.transfer:hover {
-    background: rgba(139, 92, 246, 0.1);
-    color: #7c3aed;
+    background: rgba(139, 92, 246, 0.1) !important;
+    color: #7c3aed !important;
   }
 
   .selected-activity-info {
@@ -951,8 +957,8 @@
 
     <div class="surface-card" style="padding:24px;">
       <div class="top-actions">
-        <a href="{{ url_for('grv.grv_projects_projects', company_id=company.id) }}" class="btn-back">← Voltar para Projetos</a>
-        <button type="button" id="btnNewActivity" class="btn-new-activity">➕ Nova Atividade</button>
+        <a href="{{ url_for('grv.grv_projects_projects', company_id=company.id) }}" class="btn-back" data-ref="32">← Voltar para Projetos</a>
+        <button type="button" id="btnNewActivity" class="btn-new-activity" data-ref="01">➕ Nova Atividade</button>
       </div>
 
       <div class="kanban-feedback" id="feedback" hidden></div>
@@ -985,7 +991,7 @@
   <div class="activity-modal">
     <header>
       <h2 id="activityModalTitle">Nova Atividade</h2>
-      <button type="button" id="closeActivityModal" aria-label="Fechar">×</button>
+      <button type="button" id="closeActivityModal" aria-label="Fechar" data-ref="02">×</button>
     </header>
     <form id="activityForm" class="activity-form">
       <input type="hidden" id="activityId">
@@ -994,34 +1000,34 @@
       <div class="form-two-cols">
         <div class="field">
           <label for="activityWhat">O quê? (Descrição da Atividade) *</label>
-          <input type="text" id="activityWhat" placeholder="Ex: Definir escopo do projeto" required>
+          <input type="text" id="activityWhat" placeholder="Ex: Definir escopo do projeto" required data-ref="18">
         </div>
         <div class="field">
           <label for="activityWho">Quem? (Responsável)</label>
-          <select id="activityWho">
+          <select id="activityWho" data-ref="23">
             <option value="">Selecione um responsável</option>
           </select>
         </div>
         <div class="field">
           <label for="activityWhen">Quando? (Prazo)</label>
-          <input type="date" id="activityWhen">
+          <input type="date" id="activityWhen" data-ref="19">
         </div>
         <div class="field">
           <label for="activityAmount">Orçamento (R$)</label>
-          <input type="number" id="activityAmount" step="0.01" min="0" placeholder="0.00">
+          <input type="number" id="activityAmount" step="0.01" min="0" placeholder="0.00" data-ref="20">
         </div>
       </div>
       
       <!-- Campo Como em linha completa -->
       <div class="field">
         <label for="activityHow">Como? (Método/Processo)</label>
-        <textarea id="activityHow" placeholder="Descreva como será executada"></textarea>
+        <textarea id="activityHow" placeholder="Descreva como será executada" data-ref="25"></textarea>
       </div>
       
       <!-- Campo Observações com editor rico -->
       <div class="field">
         <label for="activityObservations">Observações</label>
-        <textarea id="activityObservations" class="rich-text-editor" placeholder="Informações adicionais"></textarea>
+        <textarea id="activityObservations" class="rich-text-editor" placeholder="Informações adicionais" data-ref="26"></textarea>
       </div>
 
       <!-- Seção de Log/Diário -->
@@ -1030,12 +1036,12 @@
         <div class="log-entries" id="logEntries">
           <div style="text-align:center;color:#94a3b8;font-size:12px;">Nenhum registro ainda</div>
         </div>
-        <button type="button" class="btn-add-log" id="btnAddLog">➕ Adicionar Registro</button>
+        <button type="button" class="btn-add-log" id="btnAddLog" data-ref="03">➕ Adicionar Registro</button>
       </div>
 
       <footer>
-        <button type="button" class="secondary" id="cancelActivityModal">Cancelar</button>
-        <button type="submit" class="primary">Salvar Atividade</button>
+        <button type="button" class="secondary" id="cancelActivityModal" data-ref="04">Cancelar</button>
+        <button type="submit" class="primary" data-ref="05">Salvar Atividade</button>
       </footer>
     </form>
   </div>
@@ -1047,11 +1053,11 @@
     <h3>➕ Adicionar Registro</h3>
     <div class="field">
       <label>Descrição do Registro</label>
-      <textarea id="logText" placeholder="Descreva o que foi feito ou observado..." rows="3"></textarea>
+      <textarea id="logText" placeholder="Descreva o que foi feito ou observado..." rows="3" data-ref="27"></textarea>
     </div>
     <div class="confirmation-popup-actions">
-      <button type="button" class="secondary" id="cancelLogPopup">Cancelar</button>
-      <button type="button" class="primary" id="confirmLogPopup">Adicionar</button>
+      <button type="button" class="secondary" id="cancelLogPopup" data-ref="06">Cancelar</button>
+      <button type="button" class="primary" id="confirmLogPopup" data-ref="07">Adicionar</button>
     </div>
   </div>
 </div>
@@ -1063,15 +1069,15 @@
     <p style="margin:0 0 16px 0;color:#64748b;font-size:13px;">Confirme a data de conclusão desta atividade:</p>
     <div class="field">
       <label>Data de Conclusão</label>
-      <input type="date" id="completionDate">
+      <input type="date" id="completionDate" data-ref="21">
     </div>
     <div class="field">
       <label>Observação (Opcional)</label>
-      <textarea id="completionNote" placeholder="Comentários sobre a conclusão..." rows="2"></textarea>
+      <textarea id="completionNote" placeholder="Comentários sobre a conclusão..." rows="2" data-ref="28"></textarea>
     </div>
     <div class="confirmation-popup-actions">
-      <button type="button" class="secondary" id="cancelCompletionPopup">Cancelar</button>
-      <button type="button" class="primary" id="confirmCompletionPopup">Confirmar Conclusão</button>
+      <button type="button" class="secondary" id="cancelCompletionPopup" data-ref="08">Cancelar</button>
+      <button type="button" class="primary" id="confirmCompletionPopup" data-ref="09">Confirmar Conclusão</button>
     </div>
   </div>
 </div>
@@ -1083,15 +1089,15 @@
     <p style="margin:0 0 16px 0;color:#64748b;font-size:13px;">Confirme o cancelamento da conclusão desta atividade:</p>
     <div class="field">
       <label>Data do Cancelamento</label>
-      <input type="date" id="cancellationDate">
+      <input type="date" id="cancellationDate" data-ref="22">
     </div>
     <div class="field">
       <label>Motivo (Opcional)</label>
-      <textarea id="cancellationNote" placeholder="Por que está revertendo a conclusão?" rows="2"></textarea>
+      <textarea id="cancellationNote" placeholder="Por que está revertendo a conclusão?" rows="2" data-ref="29"></textarea>
     </div>
     <div class="confirmation-popup-actions">
-      <button type="button" class="secondary" id="cancelCancellationPopup">Voltar</button>
-      <button type="button" class="primary" id="confirmCancellationPopup">Confirmar Cancelamento</button>
+      <button type="button" class="secondary" id="cancelCancellationPopup" data-ref="10">Voltar</button>
+      <button type="button" class="primary" id="confirmCancellationPopup" data-ref="11">Confirmar Cancelamento</button>
     </div>
   </div>
 </div>
@@ -1101,7 +1107,7 @@
   <div class="activity-modal">
     <header>
       <h2>🔄 Transferir Atividade</h2>
-      <button type="button" id="closeTransferModal" aria-label="Fechar">×</button>
+      <button type="button" id="closeTransferModal" aria-label="Fechar" data-ref="12">×</button>
     </header>
     <div class="transfer-form">
       <div class="field">
@@ -1112,14 +1118,14 @@
       </div>
       <div class="field">
         <label for="targetProjectSelect">Projeto de Destino *</label>
-        <select id="targetProjectSelect" required>
+        <select id="targetProjectSelect" required data-ref="24">
           <option value="">Selecione um projeto...</option>
           <!-- Será preenchido dinamicamente -->
         </select>
       </div>
       <div class="field">
         <label for="transferNote">Observação (Opcional)</label>
-        <textarea id="transferNote" placeholder="Motivo da transferência..." rows="3"></textarea>
+        <textarea id="transferNote" placeholder="Motivo da transferência..." rows="3" data-ref="30"></textarea>
       </div>
       
       <!-- Seção de Histórico de Transferências -->
@@ -1130,8 +1136,8 @@
         </div>
       </div>
       <footer>
-        <button type="button" class="secondary" id="cancelTransferModal">Cancelar</button>
-        <button type="button" class="primary" id="confirmTransferModal">Transferir Atividade</button>
+        <button type="button" class="secondary" id="cancelTransferModal" data-ref="13">Cancelar</button>
+        <button type="button" class="primary" id="confirmTransferModal" data-ref="14">Transferir Atividade</button>
       </footer>
     </div>
   </div>
@@ -1719,9 +1725,9 @@
       <div class="kanban-card-header">
         <span class="kanban-card-code">${activity.code || '-'}</span>
         <div class="kanban-card-actions">
-          <button type="button" class="kanban-card-btn" data-action="edit">Editar</button>
-          <button type="button" class="kanban-card-btn transfer" data-action="transfer">Transferir</button>
-          <button type="button" class="kanban-card-btn danger" data-action="delete">Excluir</button>
+          <button type="button" class="kanban-card-btn" data-action="edit" data-ref="15">Editar</button>
+          <button type="button" class="kanban-card-btn transfer" data-action="transfer" data-ref="16">Transferir</button>
+          <button type="button" class="kanban-card-btn danger" data-action="delete" data-ref="17">Excluir</button>
         </div>
       </div>
       <div class="kanban-card-title">${activity.what || 'Sem descrição'}</div>
@@ -2053,7 +2059,7 @@
       const editorElement = document.getElementById('activityObservations');
       if (editorElement) {
         // Restaurar como textarea simples
-        editorElement.outerHTML = '<textarea id="activityObservations" class="rich-text-editor" placeholder="Informações adicionais"></textarea>';
+        editorElement.outerHTML = '<textarea id="activityObservations" class="rich-text-editor" placeholder="Informações adicionais" data-ref="31"></textarea>';
       }
     } catch (error) {
       console.error('Erro ao destruir editor:', error);

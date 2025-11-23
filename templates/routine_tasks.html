@@ -260,7 +260,7 @@
       <h1>Tarefas - {{ company.name }}</h1>
       <p>Acompanhe e gerencie todas as tarefas geradas pelas rotinas automáticas.</p>
     </div>
-    <a href="/companies/{{ company.id }}/routines" class="button button-ghost">Gerenciar Rotinas</a>
+    <a href="/companies/{{ company.id }}/routines" class="button button-ghost" data-ref="06">Gerenciar Rotinas</a>
   </header>
 
   <div class="tasks-stats">
@@ -283,11 +283,11 @@
   </div>
 
   <div class="tasks-filter">
-    <button class="filter-button active" data-filter="all" onclick="filterTasks('all')">Todas</button>
-    <button class="filter-button" data-filter="overdue" onclick="filterTasks('overdue')">Atrasadas</button>
-    <button class="filter-button" data-filter="in_progress" onclick="filterTasks('in_progress')">Em Andamento</button>
-    <button class="filter-button" data-filter="pending" onclick="filterTasks('pending')">Pendentes</button>
-    <button class="filter-button" data-filter="completed" onclick="filterTasks('completed')">Concluídas</button>
+    <button class="filter-button active" data-filter="all" onclick="filterTasks('all')" data-ref="01">Todas</button>
+    <button class="filter-button" data-filter="overdue" onclick="filterTasks('overdue')" data-ref="02">Atrasadas</button>
+    <button class="filter-button" data-filter="in_progress" onclick="filterTasks('in_progress')" data-ref="03">Em Andamento</button>
+    <button class="filter-button" data-filter="pending" onclick="filterTasks('pending')" data-ref="04">Pendentes</button>
+    <button class="filter-button" data-filter="completed" onclick="filterTasks('completed')" data-ref="05">Concluídas</button>
   </div>
 
   <div id="tasksContainer" class="tasks-list">

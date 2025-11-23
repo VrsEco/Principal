@@ -22,16 +22,16 @@
       <div style="display: flex; gap: 12px; justify-content: center; flex-wrap: wrap;">
         <a href="/companies/{{ company.id }}?tab=roles" 
            class="button button-primary" 
-           style="padding: 16px 32px; font-size: 16px;">
+           style="padding: 16px 32px; font-size: 16px;" data-ref="01">
           <span>⚙️</span> Gerenciar Funções
         </a>
         <a href="/companies/{{ company.id }}?tab=employees" 
            class="button button-ghost" 
-           style="padding: 16px 32px; font-size: 16px;">
+           style="padding: 16px 32px; font-size: 16px;" data-ref="02">
           <span>👥</span> Gerenciar Colaboradores
         </a>
         <a href="{{ url_for('grv.grv_company_dashboard', company_id=company.id) }}" 
-           class="button button-ghost">
+           class="button button-ghost" data-ref="03">
           <span>←</span> Voltar ao Dashboard
         </a>
       </div>

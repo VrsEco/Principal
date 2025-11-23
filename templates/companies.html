@@ -205,7 +205,7 @@
       <h1>Empresas cadastradas</h1>
       <p>Visualize e acesse rapidamente os dados de cada empresa. Use o botao ao lado para cadastrar uma nova organizacao.</p>
     </div>
-    <a href="{{ url_for('companies_new') }}" class="button button-primary">Nova empresa</a>
+    <a href="{{ url_for('companies_new') }}" class="button button-primary" data-ref="02">Nova empresa</a>
   </header>
 
   {% if companies %}
@@ -249,13 +249,13 @@
       </div>
       {% endif %}
       <div class="companies-card-actions">
-        <a href="/companies/{{ company.id }}" class="button button-primary" onclick="event.stopPropagation();">
+        <a href="/companies/{{ company.id }}" class="button button-primary" onclick="event.stopPropagation();" data-ref="03">
           ⚙️ Gerenciar
         </a>
-        <a href="/companies/{{ company.id }}/logos" class="button button-ghost" onclick="event.stopPropagation();">
+        <a href="/companies/{{ company.id }}/logos" class="button button-ghost" onclick="event.stopPropagation();" data-ref="04">
           🎨 Logos
         </a>
-        <button class="button button-danger" onclick="event.stopPropagation(); deleteCompany({{ company.id }}, '{{ company.name }}');">
+        <button class="button button-danger" onclick="event.stopPropagation(); deleteCompany({{ company.id }}, '{{ company.name }}');" data-ref="01">
           🗑️ Excluir
         </button>
       </div>
@@ -266,7 +266,7 @@
   <div class="companies-empty surface-card">
     <h3>Nenhuma empresa cadastrada</h3>
     <p>Comece adicionando sua primeira empresa para habilitar as ferramentas de planejamento e gestao.</p>
-    <a href="{{ url_for('companies_new') }}" class="button button-primary">Cadastrar empresa</a>
+    <a href="{{ url_for('companies_new') }}" class="button button-primary" data-ref="05">Cadastrar empresa</a>
   </div>
   {% endif %}
 </section>

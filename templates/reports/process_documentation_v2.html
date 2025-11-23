@@ -577,7 +577,7 @@
   {% if 'indicators' in sections %}
   <h2 class="section-title">Indicadores do Processo</h2>
   
-  <table class="indicators-table">
+  <table class="indicators-table" data-ref="01">
     <thead>
       <tr>
         <th style="width: 30%;">Indicador</th>
@@ -658,7 +658,7 @@
       {% if routine.collaborators %}
       <div style="margin-top: 12px; padding-top: 12px; border-top: 1px solid #e5e7eb;">
         <strong style="font-size: 10pt; color: #374151; display: block; margin-bottom: 8px;">👥 Colaboradores ({{ routine.collaborators|length }})</strong>
-        <table style="width: 100%; border-collapse: collapse; font-size: 9pt;">
+        <table style="width: 100%; border-collapse: collapse; font-size: 9pt;" data-ref="02">
           <thead>
             <tr style="background: #f3f4f6;">
               <th style="padding: 6px; text-align: left; border: 1px solid #d1d5db; font-weight: 600;">Colaborador</th>

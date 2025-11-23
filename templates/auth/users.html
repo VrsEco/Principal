@@ -351,11 +351,11 @@
     <div class="page-header">
         <div class="page-header-left">
             <h1>👥 Gerenciar Usuários</h1>
-            <a href="{{ url_for('system_configs') }}" class="btn-back-config">
+            <a href="{{ url_for('system_configs') }}" class="btn-back-config" data-ref="13">
                 <i class="fas fa-arrow-left"></i> Voltar às Configurações
             </a>
         </div>
-        <a href="{{ url_for('auth.register') }}" class="btn-primary">
+        <a href="{{ url_for('auth.register') }}" class="btn-primary" data-ref="14">
             <i class="fas fa-plus"></i> Novo Usuário
         </a>
     </div>
@@ -368,7 +368,7 @@
         </div>
 
         <div id="users-content" style="display: none;">
-            <table class="table">
+            <table class="table" data-ref="12">
                 <thead>
                     <tr>
                         <th>Nome</th>
@@ -391,24 +391,24 @@
         <div class="modal-content">
             <div class="modal-header">
                 <h2>✏️ Editar Usuário</h2>
-                <button class="modal-close" onclick="closeEditModal()">&times;</button>
+                <button class="modal-close" onclick="closeEditModal()" data-ref="01">&times;</button>
             </div>
             <form id="editForm">
                 <input type="hidden" id="edit_user_id">
                 
                 <div class="form-group">
                     <label for="edit_name">Nome Completo</label>
-                    <input type="text" class="form-control" id="edit_name" required>
+                    <input type="text" class="form-control" id="edit_name" required data-ref="08">
                 </div>
                 
                 <div class="form-group">
                     <label for="edit_email">Email</label>
-                    <input type="email" class="form-control" id="edit_email" disabled>
+                    <input type="email" class="form-control" id="edit_email" disabled data-ref="09">
                 </div>
                 
                 <div class="form-group">
                     <label for="edit_role">Perfil de Acesso</label>
-                    <select class="form-control" id="edit_role" required>
+                    <select class="form-control" id="edit_role" required data-ref="10">
                         <option value="consultant">Consultor</option>
                         <option value="client">Cliente</option>
                         <option value="admin">Administrador</option>
@@ -417,17 +417,17 @@
                 
                 <div class="form-group">
                     <label for="edit_is_active">Status</label>
-                    <select class="form-control" id="edit_is_active" required>
+                    <select class="form-control" id="edit_is_active" required data-ref="11">
                         <option value="true">Ativo</option>
                         <option value="false">Inativo</option>
                     </select>
                 </div>
                 
                 <div class="modal-actions">
-                    <button type="button" class="btn-sm btn-secondary" onclick="closeEditModal()" style="flex: 1;">
+                    <button type="button" class="btn-sm btn-secondary" onclick="closeEditModal()" style="flex: 1;" data-ref="02">
                         Cancelar
                     </button>
-                    <button type="submit" class="btn-sm btn-primary" style="flex: 1;">
+                    <button type="submit" class="btn-sm btn-primary" style="flex: 1;" data-ref="03">
                         <i class="fas fa-save"></i> Salvar
                     </button>
                 </div>
@@ -541,18 +541,18 @@ function displayUsers(users) {
             <td>${formatDate(user.created_at)}</td>
             <td>
                 <div class="user-actions">
-                    <button class="btn-sm btn-info" onclick="openEditModal(${user.id})" title="Editar usuário">
+                    <button class="btn-sm btn-info" onclick="openEditModal(${user.id})" title="Editar usuário" data-ref="04">
                         <i class="fas fa-edit"></i> Editar
                     </button>
                     ${user.is_active ? 
-                        `<button class="btn-sm btn-warning" onclick="toggleUserStatus(${user.id}, false)" title="Desativar usuário">
+                        `<button class="btn-sm btn-warning" onclick="toggleUserStatus(${user.id}, false)" title="Desativar usuário" data-ref="05">
                             <i class="fas fa-ban"></i> Desativar
                         </button>` : 
-                        `<button class="btn-sm btn-success" onclick="toggleUserStatus(${user.id}, true)" title="Ativar usuário">
+                        `<button class="btn-sm btn-success" onclick="toggleUserStatus(${user.id}, true)" title="Ativar usuário" data-ref="06">
                             <i class="fas fa-check"></i> Ativar
                         </button>`
                     }
-                    <button class="btn-sm btn-danger" onclick="deleteUser(${user.id})" title="Excluir usuário">
+                    <button class="btn-sm btn-danger" onclick="deleteUser(${user.id})" title="Excluir usuário" data-ref="07">
                         <i class="fas fa-trash"></i> Excluir
                     </button>
                 </div>

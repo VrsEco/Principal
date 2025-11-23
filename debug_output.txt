@@ -1,0 +1,80 @@
+
+============================================================
+Testando path: '/implantacao/financeiro-plano-investimento'
+============================================================
+DEBUG: CLOUD_SQL_CONNECTION_NAME='None'
+DEBUG: Using standard DATABASE_URL connection
+Total de rotas no cache: 115
+✗ Sem match exato para '/implantacao/financeiro-plano-investimento'
+
+Tentando 7 variações:
+  ✗ Sem match: '/templates/implantacao/financeiro-plano-investimento'
+  ✗ Sem match: '/implantacao/financeiro-plano-investimento.html'
+  ✗ Sem match: '/templates/implantacao/financeiro-plano-investimento.html'
+  ✓ MATCH: '/implantacao/financeiro_plano_investimento' -> Code: '2M'
+
+>>> RESULTADO: 2M-XX <<<
+
+
+============================================================
+Testando path: '/implantacao/financeiro_plano_investimento'
+============================================================
+Total de rotas no cache: 115
+✓ MATCH EXATO: '/implantacao/financeiro_plano_investimento' -> Code: '2M'
+
+>>> RESULTADO: 2M-XX <<<
+
+
+============================================================
+Testando path: '/pev/implantacao/financeiro-plano-investimento'
+============================================================
+Total de rotas no cache: 115
+✗ Sem match exato para '/pev/implantacao/financeiro-plano-investimento'
+
+Tentando 7 variações:
+  ✗ Sem match: '/templates/pev/implantacao/financeiro-plano-investimento'
+  ✗ Sem match: '/pev/implantacao/financeiro-plano-investimento.html'
+  ✗ Sem match: '/templates/pev/implantacao/financeiro-plano-investimento.html'
+  ✗ Sem match: '/pev/implantacao/financeiro_plano_investimento'
+  ✗ Sem match: '/templates/pev/implantacao/financeiro_plano_investimento'
+  ✗ Sem match: '/pev/implantacao/financeiro-plano-investimento'
+  ✗ Sem match: '/templates/pev/implantacao/financeiro-plano-investimento'
+
+Rotas similares no banco:
+  - '/plan_implantacao' -> 1J
+  - '/implantacao/alinhamento_agenda_planejamento' -> 2A
+  - '/implantacao/alinhamento_canvas_expectativas' -> 2B
+  - '/implantacao/entrega_painel_governanca' -> 2C
+  - '/implantacao/entrega_projeto_executivo' -> 2D
+  - '/implantacao/entrega_relatorio_final' -> 2E
+  - '/implantacao/execution_estruturas' -> 2F
+  - '/implantacao/execution_intro' -> 2G
+  - '/implantacao/execution_mapa_processos' -> 2H
+  - '/implantacao/execution_modelo_financeiro_base' -> 2I
+
+✗ NENHUM MATCH ENCONTRADO
+
+>>> RESULTADO: ??-XX <<<
+
+
+============================================================
+Testando path: '/modelo-matriz-diferenciais'
+============================================================
+Total de rotas no cache: 115
+✗ Sem match exato para '/modelo-matriz-diferenciais'
+
+Tentando 7 variações:
+  ✗ Sem match: '/templates/modelo-matriz-diferenciais'
+  ✗ Sem match: '/modelo-matriz-diferenciais.html'
+  ✗ Sem match: '/templates/modelo-matriz-diferenciais.html'
+  ✗ Sem match: '/modelo_matriz_diferenciais'
+  ✗ Sem match: '/templates/modelo_matriz_diferenciais'
+  ✗ Sem match: '/modelo-matriz-diferenciais'
+  ✗ Sem match: '/templates/modelo-matriz-diferenciais'
+
+Rotas similares no banco:
+
+✗ NENHUM MATCH ENCONTRADO
+
+>>> RESULTADO: ??-XX <<<
+

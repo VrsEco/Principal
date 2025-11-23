@@ -1,4 +1,4 @@
-﻿{% extends "base.html" %}
+{% extends "base.html" %}
 {% block title %}OKRs Globais | {{ plan.name }}{% endblock %}
 
 {% block extra_head %}
@@ -126,11 +126,11 @@
           <span class="interview-count">{{ preliminary_okr_records|length }} análises salvas</span>
           <div class="section-status-controls">
             {% if preliminary_analysis_section_open %}
-              <button class="button button-small button-warning" onclick="closePreliminaryAnalysisSection()" title="Concluir análise preliminar">
+              <button class="button button-small button-warning" onclick="closePreliminaryAnalysisSection()" title="Concluir análise preliminar" data-ref="01">
                 <span>Concluir</span>
               </button>
             {% else %}
-              <button class="button button-small button-success" onclick="openPreliminaryAnalysisSection()" title="Reabrir análise preliminar">
+              <button class="button button-small button-success" onclick="openPreliminaryAnalysisSection()" title="Reabrir análise preliminar" data-ref="02">
                 <span>Reabrir</span>
               </button>
             {% endif %}
@@ -151,7 +151,7 @@
           <div class="ai-suggestions-header">
             <h4><span class="icon-ai">⚙</span> Sugestões da IA</h4>
             <p>Gere sugestões inteligentes de OKRs baseadas nos direcionadores estratégicos consolidados.</p>
-            <button type="button" class="button button-primary" onclick="generateAISuggestions()" id="ai-suggestions-btn">
+            <button type="button" class="button button-primary" onclick="generateAISuggestions()" id="ai-suggestions-btn" data-ref="03">
               <span>✨ Gerar Sugestões da IA</span>
             </button>
           </div>
@@ -167,10 +167,10 @@
             <h5>💡 Sugestões Geradas pela IA</h5>
             <div id="ai-suggestions-content"></div>
             <div class="ai-suggestions-actions">
-              <button type="button" class="button button-secondary" onclick="useAISuggestion()">
+              <button type="button" class="button button-secondary" onclick="useAISuggestion()" data-ref="04">
                 <span>📝 Usar como Análise</span>
               </button>
-              <button type="button" class="button button-secondary" onclick="regenerateAISuggestions()">
+              <button type="button" class="button button-secondary" onclick="regenerateAISuggestions()" data-ref="05">
                 <span>🔄 Regenerar</span>
               </button>
             </div>
@@ -180,10 +180,10 @@
         <form class="okr-analysis-form" action="{{ url_for('add_preliminary_okr_record', plan_id=plan.id) }}" method="post">
           <div class="form-field">
             <span>Análise de OKR</span>
-            <textarea name="okr_analysis" id="okr-analysis-textarea" placeholder="Descreva a análise preliminar do OKR..." rows="4" required></textarea>
+            <textarea name="okr_analysis" id="okr-analysis-textarea" placeholder="Descreva a análise preliminar do OKR..." rows="4" required data-ref="53"></textarea>
           </div>
           <div class="form-actions">
-            <button type="submit" class="button button-primary">Salvar Análise</button>
+            <button type="submit" class="button button-primary" data-ref="06">Salvar Análise</button>
           </div>
         </form>
         {% endif %}
@@ -195,10 +195,10 @@
             <div class="okr-analysis-header">
               <p>{{ record.analysis }}</p>
               <div class="okr-analysis-actions">
-                <button type="button" class="button button-small button-secondary" onclick="editPreliminaryOKR('{{ record.id }}')" title="Editar análise">
+                <button type="button" class="button button-small button-secondary" onclick="editPreliminaryOKR('{{ record.id }}')" title="Editar análise" data-ref="07">
                   <span>✏️</span>
                 </button>
-                <button type="button" class="button button-small button-danger" onclick="deletePreliminaryOKR('{{ record.id }}', '{{ record.analysis[:50] }}...')" title="Excluir análise">
+                <button type="button" class="button button-small button-danger" onclick="deletePreliminaryOKR('{{ record.id }}', '{{ record.analysis[:50] }}...')" title="Excluir análise" data-ref="08">
                   <span>🗑️</span>
                 </button>
               </div>
@@ -229,11 +229,11 @@
           <span class="interview-count">{{ workshop_okr_records|length }} OKRs definidos</span>
           <div class="section-status-controls">
             {% if workshop_final_section_open %}
-              <button class="button button-small button-warning" onclick="closeWorkshopFinalSection()" title="Concluir versão preliminar">
+              <button class="button button-small button-warning" onclick="closeWorkshopFinalSection()" title="Concluir versão preliminar" data-ref="09">
                 <span>Concluir</span>
               </button>
             {% else %}
-              <button class="button button-small button-success" onclick="openWorkshopFinalSection()" title="Reabrir versão preliminar">
+              <button class="button button-small button-success" onclick="openWorkshopFinalSection()" title="Reabrir versão preliminar" data-ref="10">
                 <span>Reabrir</span>
               </button>
             {% endif %}
@@ -265,12 +265,12 @@
           <form class="workshop-discussions-form" action="{{ url_for('save_workshop_discussions', plan_id=plan.id) }}" method="post">
             <div class="form-field">
               <span>Registre as principais discussões e decisões da versão preliminar</span>
-              <textarea name="workshop_discussions" placeholder="Descreva as discussões realizadas durante a definição da versão preliminar, principais pontos levantados, decisões tomadas e consensos alcançados..." rows="8">{{ workshop_discussions or '' }}</textarea>
+              <textarea name="workshop_discussions" placeholder="Descreva as discussões realizadas durante a definição da versão preliminar, principais pontos levantados, decisões tomadas e consensos alcançados..." rows="8" data-ref="54">{{ workshop_discussions or '' }}</textarea>
             </div>
             <div class="form-actions">
-              <button type="submit" class="button button-primary">Salvar Discussões</button>
+              <button type="submit" class="button button-primary" data-ref="11">Salvar Discussões</button>
               {% if workshop_discussions %}
-              <button type="button" class="button button-danger" onclick="deleteWorkshopDiscussions()" title="Excluir discussões">
+              <button type="button" class="button button-danger" onclick="deleteWorkshopDiscussions()" title="Excluir discussões" data-ref="12">
                 🗑️ Excluir
               </button>
               {% endif %}
@@ -281,7 +281,7 @@
         <form class="okr-workshop-form" action="{{ url_for('add_workshop_okr_record', plan_id=plan.id) }}" method="post">
           <div class="form-field">
             <span>Direcionador Base</span>
-            <select name="okr_directional" {% if directionals_records %}required{% endif %}>
+            <select name="okr_directional" {% if directionals_records %}required{% endif %} data-ref="44">
               <option value="">Selecione o direcionador estratégico</option>
               {% for directional in directionals_records %}
               <option value="{{ directional.id }}">{{ directional.title or 'Direcionador' }} - {{ directional.type or 'Geral' }}</option>
@@ -293,12 +293,12 @@
           </div>
           <div class="form-field">
             <span>Objetivo do OKR</span>
-            <input type="text" name="okr_objective" placeholder="Objetivo estratégico preliminar..." required />
+            <input type="text" name="okr_objective" placeholder="Objetivo estratégico preliminar..." required  data-ref="36" />
           </div>
           <div class="form-two-cols">
             <div class="form-field">
               <span>Tipo</span>
-              <select name="okr_type" required>
+              <select name="okr_type" required data-ref="45">
                 <option value="">Selecione o tipo</option>
                 <option value="estruturante">Estruturante</option>
                 <option value="aceleracao">Aceleração</option>
@@ -306,7 +306,7 @@
             </div>
             <div class="form-field">
               <span>Responsável</span>
-              <select name="okr_owner_id" id="workshop-okr-owner-select" data-owner-target="workshop-okr-owner-name">
+              <select name="okr_owner_id" id="workshop-okr-owner-select" data-owner-target="workshop-okr-owner-name" data-ref="46">
                 <option value="">Selecione o responsável</option>
                 {% for participant in participants_options %}
                 <option value="{{ participant.id }}" data-name="{{ participant.name }}">{{ participant.label }}</option>
@@ -317,16 +317,16 @@
           </div>
           <div class="form-field">
             <span>Prazo</span>
-            <input type="date" name="okr_deadline" />
+            <input type="date" name="okr_deadline"  data-ref="37" />
           </div>
           <div class="form-field">
             <span>Observações</span>
-            <textarea name="okr_observations" placeholder="Observações adicionais..." rows="3"></textarea>
+            <textarea name="okr_observations" placeholder="Observações adicionais..." rows="3" data-ref="55"></textarea>
           </div>
           
           <div class="okr-kpi-grid" id="workshop-kr-container" data-participants='{{ participants_options|tojson|safe }}' data-indicators='{{ indicators|tojson|safe }}'>
             <div class="okr-kpi-header">
-              <button type="button" class="button button-small button-success" onclick="openIndicatorFormFromOKR('workshop-kr-container', '{{ plan.id }}', 'okr-global')" title="Criar indicador completo no formulário">
+              <button type="button" class="button button-small button-success" onclick="openIndicatorFormFromOKR('workshop-kr-container', '{{ plan.id }}', 'okr-global')" title="Criar indicador completo no formulário" data-ref="13">
                 <span>📊 Incluir Indicador</span>
               </button>
             </div>
@@ -336,7 +336,7 @@
           </div>
           
           <div class="form-actions">
-            <button type="submit" class="button button-primary">Salvar OKR Preliminar</button>
+            <button type="submit" class="button button-primary" data-ref="14">Salvar OKR Preliminar</button>
           </div>
         </form>
         {% endif %}
@@ -344,8 +344,8 @@
         {% if workshop_okr_records %}
         <div class="okr-search-bar">
           <div class="search-controls">
-            <input type="text" id="workshop-search" placeholder="Buscar OKRs..." onkeyup="searchOKRs('workshop', this.value)">
-            <button type="button" class="button button-small button-secondary" onclick="clearSearch('workshop')">
+            <input type="text" id="workshop-search" placeholder="Buscar OKRs..." onkeyup="searchOKRs('workshop', this.value)" data-ref="38">
+            <button type="button" class="button button-small button-secondary" onclick="clearSearch('workshop')" data-ref="15">
               <span>Limpar</span>
             </button>
           </div>
@@ -358,13 +358,13 @@
               <div class="okr-header-actions">
                 <span class="okr-type-badge {{ record.type }}">{{ record.type_display }}</span>
                 <div class="okr-action-buttons">
-                  <button type="button" class="button button-small button-secondary" onclick="editOKR('workshop', {{ record.id }})" title="Editar OKR">
+                  <button type="button" class="button button-small button-secondary" onclick="editOKR('workshop', {{ record.id }})" title="Editar OKR" data-ref="16">
                     <span>✏️</span>
                   </button>
-                  <button type="button" class="button button-small button-info" onclick="duplicateOKR('workshop', '{{ record.id }}')" title="Duplicar OKR">
+                  <button type="button" class="button button-small button-info" onclick="duplicateOKR('workshop', '{{ record.id }}')" title="Duplicar OKR" data-ref="17">
                     <span>📋</span>
                   </button>
-                  <button type="button" class="button button-small button-danger" onclick="deleteOKR('workshop', {{ record.id }}, '{{ record.objective }}')" title="Excluir OKR">
+                  <button type="button" class="button button-small button-danger" onclick="deleteOKR('workshop', {{ record.id }}, '{{ record.objective }}')" title="Excluir OKR" data-ref="18">
                     <span>🗑️</span>
                   </button>
                 </div>
@@ -429,11 +429,11 @@
           <span class="interview-count">{{ okr_approvals_records|length }} OKRs aprovados</span>
           <div class="section-status-controls">
             {% if okr_approvals_section_open %}
-              <button class="button button-small button-warning" onclick="closeOKRApprovalsSection()" title="Concluir versão final e aprovações">
+              <button class="button button-small button-warning" onclick="closeOKRApprovalsSection()" title="Concluir versão final e aprovações" data-ref="19">
                 <span>Concluir</span>
               </button>
             {% else %}
-              <button class="button button-small button-success" onclick="openOKRApprovalsSection()" title="Reabrir versão final e aprovações">
+              <button class="button button-small button-success" onclick="openOKRApprovalsSection()" title="Reabrir versão final e aprovações" data-ref="20">
                 <span>Reabrir</span>
               </button>
             {% endif %}
@@ -465,12 +465,12 @@
           <form class="approval-discussions-form" action="{{ url_for('save_approval_discussions', plan_id=plan.id) }}" method="post">
             <div class="form-field">
               <span>Registre as discussões e decisões da versão final e aprovações</span>
-              <textarea name="approval_discussions" placeholder="Descreva as discussões realizadas durante a definição da versão final e aprovação dos OKRs, feedback da liderança, ajustes solicitados e decisões finais..." rows="8">{{ approval_discussions or '' }}</textarea>
+              <textarea name="approval_discussions" placeholder="Descreva as discussões realizadas durante a definição da versão final e aprovação dos OKRs, feedback da liderança, ajustes solicitados e decisões finais..." rows="8" data-ref="56">{{ approval_discussions or '' }}</textarea>
             </div>
             <div class="form-actions">
-              <button type="submit" class="button button-primary">Salvar Discussões</button>
+              <button type="submit" class="button button-primary" data-ref="21">Salvar Discussões</button>
               {% if approval_discussions %}
-              <button type="button" class="button button-danger" onclick="deleteApprovalDiscussions()" title="Excluir discussões">
+              <button type="button" class="button button-danger" onclick="deleteApprovalDiscussions()" title="Excluir discussões" data-ref="22">
                 🗑️ Excluir
               </button>
               {% endif %}
@@ -481,7 +481,7 @@
         <form class="okr-approval-form" action="{{ url_for('add_okr_approval_record', plan_id=plan.id) }}" method="post">
           <div class="form-field">
             <span>Direcionador Base</span>
-            <select name="okr_directional" {% if directionals_records %}required{% endif %}>
+            <select name="okr_directional" {% if directionals_records %}required{% endif %} data-ref="47">
               <option value="">Selecione o direcionador estratégico</option>
               {% for directional in directionals_records %}
               <option value="{{ directional.id }}">{{ directional.title or 'Direcionador' }} - {{ directional.type or 'Geral' }}</option>
@@ -493,12 +493,12 @@
           </div>
           <div class="form-field">
             <span>Objetivo do OKR</span>
-            <input type="text" name="okr_objective" placeholder="Objetivo estratégico final..." required />
+            <input type="text" name="okr_objective" placeholder="Objetivo estratégico final..." required  data-ref="39" />
           </div>
           <div class="form-two-cols">
             <div class="form-field">
               <span>Tipo</span>
-              <select name="okr_type" required>
+              <select name="okr_type" required data-ref="48">
                 <option value="">Selecione o tipo</option>
                 <option value="estruturante">Estruturante</option>
                 <option value="aceleracao">Aceleração</option>
@@ -506,7 +506,7 @@
             </div>
             <div class="form-field">
               <span>Responsável</span>
-              <select name="okr_owner_id" id="approval-okr-owner-select" data-owner-target="approval-okr-owner-name">
+              <select name="okr_owner_id" id="approval-okr-owner-select" data-owner-target="approval-okr-owner-name" data-ref="49">
                 <option value="">Selecione o responsável</option>
                 {% for participant in participants_options %}
                 <option value="{{ participant.id }}" data-name="{{ participant.name }}">{{ participant.label }}</option>
@@ -517,16 +517,16 @@
           </div>
           <div class="form-field">
             <span>Prazo</span>
-            <input type="date" name="okr_deadline" />
+            <input type="date" name="okr_deadline"  data-ref="40" />
           </div>
           <div class="form-field">
             <span>Observações</span>
-            <textarea name="okr_observations" placeholder="Observações adicionais..." rows="3"></textarea>
+            <textarea name="okr_observations" placeholder="Observações adicionais..." rows="3" data-ref="57"></textarea>
           </div>
           
           <div class="okr-kpi-grid" id="approval-kr-container" data-participants='{{ participants_options|tojson|safe }}' data-indicators='{{ indicators|tojson|safe }}'>
             <div class="okr-kpi-header">
-              <button type="button" class="button button-small button-success" onclick="openIndicatorFormFromOKR('approval-kr-container', '{{ plan.id }}', 'okr-global')" title="Criar indicador completo no formulário">
+              <button type="button" class="button button-small button-success" onclick="openIndicatorFormFromOKR('approval-kr-container', '{{ plan.id }}', 'okr-global')" title="Criar indicador completo no formulário" data-ref="23">
                 <span>📊 Incluir Indicador</span>
               </button>
             </div>
@@ -536,7 +536,7 @@
           </div>
           
           <div class="form-actions">
-            <button type="submit" class="button button-primary">Salvar OKR Final</button>
+            <button type="submit" class="button button-primary" data-ref="24">Salvar OKR Final</button>
           </div>
         </form>
         {% endif %}
@@ -544,8 +544,8 @@
         {% if okr_approvals_records %}
         <div class="okr-search-bar">
           <div class="search-controls">
-            <input type="text" id="approval-search" placeholder="Buscar OKRs..." onkeyup="searchOKRs('approval', this.value)">
-            <button type="button" class="button button-small button-secondary" onclick="clearSearch('approval')">
+            <input type="text" id="approval-search" placeholder="Buscar OKRs..." onkeyup="searchOKRs('approval', this.value)" data-ref="41">
+            <button type="button" class="button button-small button-secondary" onclick="clearSearch('approval')" data-ref="25">
               <span>Limpar</span>
             </button>
           </div>
@@ -558,13 +558,13 @@
               <div class="okr-header-actions">
                 <span class="okr-type-badge {{ record.type }}">{{ record.type_display }}</span>
                 <div class="okr-action-buttons">
-                  <button type="button" class="button button-small button-secondary" onclick="editOKR('approval', {{ record.id }})" title="Editar OKR">
+                  <button type="button" class="button button-small button-secondary" onclick="editOKR('approval', {{ record.id }})" title="Editar OKR" data-ref="26">
                     <span>✏️</span>
                   </button>
-                  <button type="button" class="button button-small button-info" onclick="duplicateOKR('approval', '{{ record.id }}')" title="Duplicar OKR">
+                  <button type="button" class="button button-small button-info" onclick="duplicateOKR('approval', '{{ record.id }}')" title="Duplicar OKR" data-ref="27">
                     <span>📋</span>
                   </button>
-                  <button type="button" class="button button-small button-danger" onclick="deleteOKR('approval', {{ record.id }}, '{{ record.objective }}')" title="Excluir OKR">
+                  <button type="button" class="button button-small button-danger" onclick="deleteOKR('approval', {{ record.id }}, '{{ record.objective }}')" title="Excluir OKR" data-ref="28">
                     <span>🗑️</span>
                   </button>
                 </div>
@@ -712,7 +712,7 @@
       <div class="modal-body">
         <div class="form-field">
           <span>Direcionador Base</span>
-          <select id="edit-okr-directional" name="okr_directional" {% if directionals_records %}required{% endif %}>
+          <select id="edit-okr-directional" name="okr_directional" {% if directionals_records %}required{% endif %} data-ref="50">
             <option value="">Selecione o direcionador estratégico</option>
             {% for directional in directionals_records %}
             <option value="{{ directional.id }}">{{ directional.title or 'Direcionador' }} - {{ directional.type or 'Geral' }}</option>
@@ -721,12 +721,12 @@
         </div>
         <div class="form-field">
           <span>Objetivo do OKR</span>
-          <input type="text" id="edit-okr-objective" name="okr_objective" placeholder="Objetivo estratégico..." required />
+          <input type="text" id="edit-okr-objective" name="okr_objective" placeholder="Objetivo estratégico..." required  data-ref="42" />
         </div>
         <div class="form-two-cols">
           <div class="form-field">
             <span>Tipo</span>
-            <select id="edit-okr-type" name="okr_type" required>
+            <select id="edit-okr-type" name="okr_type" required data-ref="51">
               <option value="">Selecione o tipo</option>
               <option value="estruturante">Estruturante</option>
               <option value="aceleracao">Aceleração</option>
@@ -734,7 +734,7 @@
           </div>
           <div class="form-field">
             <span>Responsável</span>
-            <select id="edit-okr-owner-select" name="okr_owner_id" data-owner-target="edit-okr-owner">
+            <select id="edit-okr-owner-select" name="okr_owner_id" data-owner-target="edit-okr-owner" data-ref="52">
               <option value="">Selecione o responsável</option>
               {% for participant in participants_options %}
               <option value="{{ participant.id }}" data-name="{{ participant.name }}">{{ participant.label }}</option>
@@ -745,16 +745,16 @@
         </div>
         <div class="form-field">
           <span>Prazo</span>
-          <input type="date" id="edit-okr-deadline" name="okr_deadline" />
+          <input type="date" id="edit-okr-deadline" name="okr_deadline"  data-ref="43" />
         </div>
         <div class="form-field">
           <span>Observações</span>
-          <textarea id="edit-okr-observations" name="okr_observations" placeholder="Observações adicionais..." rows="3"></textarea>
+          <textarea id="edit-okr-observations" name="okr_observations" placeholder="Observações adicionais..." rows="3" data-ref="58"></textarea>
         </div>
         
         <div class="okr-kpi-grid" id="edit-kr-container" data-participants='{{ participants_options|tojson|safe }}' data-indicators='{{ indicators|tojson|safe }}'>
           <div class="okr-kpi-header">
-            <button type="button" class="button button-small button-success" onclick="openIndicatorFormFromOKR('edit-kr-container', '{{ plan.id }}', 'okr-global')" title="Criar indicador completo no formulário">
+            <button type="button" class="button button-small button-success" onclick="openIndicatorFormFromOKR('edit-kr-container', '{{ plan.id }}', 'okr-global')" title="Criar indicador completo no formulário" data-ref="29">
               <span>📊 Incluir Indicador</span>
             </button>
           </div>
@@ -764,8 +764,8 @@
         </div>
       </div>
       <div class="modal-footer">
-        <button type="button" class="button button-secondary" onclick="closeEditModal()">Cancelar</button>
-        <button type="submit" class="button button-primary">Salvar Alterações</button>
+        <button type="button" class="button button-secondary" onclick="closeEditModal()" data-ref="30">Cancelar</button>
+        <button type="submit" class="button button-primary" data-ref="31">Salvar Alterações</button>
       </div>
     </form>
   </div>
@@ -782,12 +782,12 @@
       <div class="modal-body">
         <div class="form-field">
           <span>Análise de OKR</span>
-          <textarea id="edit-preliminary-analysis" name="okr_analysis" placeholder="Descreva a análise preliminar do OKR..." rows="6" required></textarea>
+          <textarea id="edit-preliminary-analysis" name="okr_analysis" placeholder="Descreva a análise preliminar do OKR..." rows="6" required data-ref="59"></textarea>
         </div>
       </div>
       <div class="modal-footer">
-        <button type="button" class="button button-secondary" onclick="closePreliminaryModal()">Cancelar</button>
-        <button type="submit" class="button button-primary">Salvar Alterações</button>
+        <button type="button" class="button button-secondary" onclick="closePreliminaryModal()" data-ref="32">Cancelar</button>
+        <button type="submit" class="button button-primary" data-ref="33">Salvar Alterações</button>
       </div>
     </form>
   </div>
@@ -1334,8 +1334,8 @@ function showSaveOkrBeforeIndicatorModal(containerType, planId, pageType, compan
                         </p>
                     </div>
                     <div class="modal-footer" style="justify-content: center; gap: 12px;">
-                        <button type="button" class="button button-secondary" onclick="closeSaveOkrModal()">Cancelar</button>
-                        <button type="button" class="button button-primary" onclick="saveOkrAndOpenIndicatorForm('${containerType}', '${planId}', '${pageType}', ${companyId})">&#128190; Salvar e Continuar</button>
+                        <button type="button" class="button button-secondary" onclick="closeSaveOkrModal()" data-ref="34">Cancelar</button>
+                        <button type="button" class="button button-primary" onclick="saveOkrAndOpenIndicatorForm('${containerType}', '${planId}', '${pageType}', ${companyId})" data-ref="35">&#128190; Salvar e Continuar</button>
                     </div>
                 </div>
             </div>

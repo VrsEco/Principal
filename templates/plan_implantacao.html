@@ -1,4 +1,4 @@
-﻿{% extends "base.html" %}
+{% extends "base.html" %}
 {% block title %}Implantacao do Negocio | PEV 2.0{% endblock %}
 {% block body %}
   {{ super() }}
@@ -435,7 +435,7 @@
         <p class="plan-sidebar-meta-text">Status: {{ plan.status }}</p>
         <p class="plan-sidebar-meta-text">Ultima alteracao: {{ plan.last_update }}</p>
         {% set project_href = plan.project_link or url_for('grv.grv_dashboard') %}
-        <a class="button button-ghost" style="margin-top:8px;" href="{{ project_href }}" target="_blank">
+        <a class="button button-ghost" style="margin-top:8px;" href="{{ project_href }}" target="_blank" data-ref="04">
           Abrir projeto no GRV
         </a>
       </div>
@@ -476,7 +476,7 @@
           {% for phase in macro_phases %}
             <div class="phase-status-item" data-phase-indicator="{{ phase.id }}">
               <div class="phase-status-head">
-                <button type="button" class="phase-status-name phase-open" data-phase="{{ phase.id }}">
+                <button type="button" class="phase-status-name phase-open" data-phase="{{ phase.id }}" data-ref="01">
                   <span class="phase-status-index">{{ loop.index }}.</span>
                   {{ phase.title }}
                 </button>
@@ -504,10 +504,10 @@
                   <h2>{{ phase.title }}</h2>
                 </div>
                 <div class="phase-header-actions">
-                  <button class="button button-primary phase-complete-button" data-phase="{{ phase.id }}">
+                  <button class="button button-primary phase-complete-button" data-phase="{{ phase.id }}" data-ref="02">
                     Fechar fase
                   </button>
-                  <button class="button button-ghost phase-back-button" data-phase="{{ phase.id }}">
+                  <button class="button button-ghost phase-back-button" data-phase="{{ phase.id }}" data-ref="03">
                     Voltar ao dashboard
                   </button>
                 </div>

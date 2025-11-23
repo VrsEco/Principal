@@ -309,7 +309,7 @@
       entrega valor superior frente aos concorrentes e quais alavancas precisam de reforço.
     </p>
     <div style="margin-top: 20px;">
-      <button class="btn btn-secondary" onclick="window.history.back()">← Voltar</button>
+      <button class="btn btn-secondary" onclick="window.history.back()" data-ref="01">← Voltar</button>
     </div>
   </article>
 
@@ -321,14 +321,14 @@
         <p style="margin:8px 0 0; color:#475569;">{{ segmento.descricao }}</p>
       </div>
       <div style="display: flex; gap: 8px;">
-        <button class="btn btn-secondary btn-small" onclick="editPositioning({{ segmento.id }})">Editar
+        <button class="btn btn-secondary btn-small" onclick="editPositioning({{ segmento.id }})" data-ref="02">Editar
           Estratégia</button>
-        <button class="btn btn-primary btn-small" onclick="openAddCompetitorModal({{ segmento.id }})">+
+        <button class="btn btn-primary btn-small" onclick="openAddCompetitorModal({{ segmento.id }})" data-ref="03">+
           Critério</button>
       </div>
     </div>
 
-    <table class="matrix-table">
+    <table class="matrix-table" data-ref="18">
       <thead>
         <tr>
           <th style="width: 20%;">Critério</th>
@@ -350,9 +350,9 @@
           <td>
             <div class="row-actions">
               <button class="btn-icon" onclick="editCompetitorRow({{ segmento.id }}, {{ loop.index0 }})"
-                title="Editar">✏️</button>
+                title="Editar" data-ref="04">✏️</button>
               <button class="btn-icon" onclick="deleteCompetitorRow({{ segmento.id }}, {{ loop.index0 }})"
-                title="Deletar">🗑️</button>
+                title="Deletar" data-ref="05">🗑️</button>
             </div>
           </td>
         </tr>
@@ -387,32 +387,32 @@
       <form id="competitorForm">
         <div class="form-group">
           <label>Critério *</label>
-          <input type="text" id="criterio" required>
+          <input type="text" id="criterio" required data-ref="10">
         </div>
 
         <div class="form-group">
           <label>Nossa Empresa</label>
-          <input type="text" id="nossa_empresa">
+          <input type="text" id="nossa_empresa" data-ref="11">
         </div>
 
         <div class="form-group">
           <label>Concorrente A</label>
-          <input type="text" id="concorrente_a">
+          <input type="text" id="concorrente_a" data-ref="12">
         </div>
 
         <div class="form-group">
           <label>Concorrente B</label>
-          <input type="text" id="concorrente_b">
+          <input type="text" id="concorrente_b" data-ref="13">
         </div>
 
         <div class="form-group">
           <label>Observação</label>
-          <textarea id="observacao"></textarea>
+          <textarea id="observacao" data-ref="15"></textarea>
         </div>
 
         <div class="form-actions">
-          <button type="button" class="btn btn-secondary" onclick="closeCompetitorModal()">Cancelar</button>
-          <button type="submit" class="btn btn-primary">Salvar</button>
+          <button type="button" class="btn btn-secondary" onclick="closeCompetitorModal()" data-ref="06">Cancelar</button>
+          <button type="submit" class="btn btn-primary" data-ref="07">Salvar</button>
         </div>
       </form>
     </div>
@@ -431,24 +431,24 @@
       <form id="positioningForm">
         <div class="form-group">
           <label>Posicionamento</label>
-          <textarea id="posicionamento"></textarea>
+          <textarea id="posicionamento" data-ref="16"></textarea>
         </div>
 
         <div class="form-group">
           <label>Promessa Central</label>
-          <textarea id="promessa"></textarea>
+          <textarea id="promessa" data-ref="17"></textarea>
         </div>
 
         <div class="form-group">
           <label>Próximos Passos (pressione Enter para adicionar)</label>
           <div class="tag-input-container" id="stepsContainer">
-            <input type="text" class="tag-input" id="stepsInput" placeholder="Digite e pressione Enter">
+            <input type="text" class="tag-input" id="stepsInput" placeholder="Digite e pressione Enter" data-ref="14">
           </div>
         </div>
 
         <div class="form-actions">
-          <button type="button" class="btn btn-secondary" onclick="closePositioningModal()">Cancelar</button>
-          <button type="submit" class="btn btn-primary">Salvar</button>
+          <button type="button" class="btn btn-secondary" onclick="closePositioningModal()" data-ref="08">Cancelar</button>
+          <button type="submit" class="btn btn-primary" data-ref="09">Salvar</button>
         </div>
       </form>
     </div>

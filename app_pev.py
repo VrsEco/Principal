@@ -19,6 +19,7 @@ from flask import (
     send_file,
     send_from_directory,
 )
+from flask.signals import before_render_template
 from config_database import get_db, db_config
 from config import Config
 from datetime import datetime, date
@@ -322,6 +323,181 @@ def nl2br(value):
     if not value:
         return ""
     return value.replace("\n", "<br>")
+
+
+# UI Reference System Context Processor
+try:
+    from services.ui_reference_service import UIReferenceService
+except Exception as exc:
+    logger.error(f"Erro ao inicializar UI Reference Service: {exc}")
+
+    @app.context_processor
+    def inject_ui_reference_fallback():
+        """Fallback quando o serviço de endereçamento não está disponível."""
+        return {"page_code": "??"}
+else:
+    # Cache simples em memória para evitar queries repetitivas
+    _UI_PAGE_CACHE = {}
+    _UI_TEMPLATE_CACHE = {}
+    _UI_CACHE_TIMESTAMP = 0
+    _UI_CACHE_TTL = 300  # segundos
+
+    def _normalize_request_path(raw_path: str) -> str:
+        """
+        Normaliza a rota para comparação com o catálogo de páginas.
+        Remove querystring, barra final, prefixos redundantes e força prefixo '/'.
+        """
+        if not raw_path:
+            return "/"
+
+        path = raw_path.split("?", 1)[0].strip()
+        if not path:
+            path = "/"
+
+        if path != "/" and path.endswith("/"):
+            path = path[:-1]
+
+        # Rotas servidas via /pev/... continuam com o restante do caminho
+        if path.startswith("/pev"):
+            path = path[len("/pev") :]
+            if not path.startswith("/"):
+                path = f"/{path}"
+
+        return path or "/"
+
+    def _normalize_template_path(raw_template: Optional[str]) -> str:
+        """Normaliza caminhos de template para chave única do cache."""
+        if not raw_template:
+            return ""
+
+        normalized = str(raw_template).replace("\\", "/").strip()
+        if normalized.startswith("./"):
+            normalized = normalized[2:]
+        if normalized.startswith("templates/"):
+            normalized = normalized[len("templates/") :]
+
+        if normalized.startswith("/"):
+            normalized = normalized[1:]
+
+        return normalized.lower()
+
+    def _ensure_ui_cache():
+        """Atualiza o cache local obedecendo ao TTL definido na governança."""
+        import time
+
+        global _UI_CACHE_TIMESTAMP
+        current_time = time.time()
+        cache_expired = current_time - _UI_CACHE_TIMESTAMP > _UI_CACHE_TTL
+
+        if _UI_PAGE_CACHE and not cache_expired:
+            return
+
+        pages = UIReferenceService.get_all_pages()
+        _UI_PAGE_CACHE.clear()
+        _UI_TEMPLATE_CACHE.clear()
+
+        for page in pages:
+            route = page.get("page_route")
+            code = page.get("page_code")
+            if route and code:
+                _UI_PAGE_CACHE[route] = code
+
+            template_key = _normalize_template_path(page.get("template_file"))
+            if template_key and code:
+                _UI_TEMPLATE_CACHE[template_key] = code
+                basename = template_key.split("/")[-1]
+                _UI_TEMPLATE_CACHE[basename] = code
+
+        _UI_CACHE_TIMESTAMP = current_time
+        logger.debug(
+            "UI Ref cache recarregado (%s rotas).", len(_UI_PAGE_CACHE)
+        )
+
+    def _lookup_page_code_by_template(template_name: Optional[str]) -> Optional[str]:
+        """Obtém o código com base no template que está sendo renderizado."""
+        if not template_name:
+            return None
+
+        normalized = _normalize_template_path(template_name)
+        if not normalized:
+            return None
+
+        return _UI_TEMPLATE_CACHE.get(normalized)
+
+    def _resolve_page_code(normalized_path: str, original_path: str) -> str:
+        """Aplica heurísticas para localizar o código da página."""
+        if not normalized_path:
+            return "??"
+
+        page_code = _UI_PAGE_CACHE.get(normalized_path)
+        if page_code:
+            return page_code
+
+        variations = [
+            f"/templates{normalized_path}",
+            f"{normalized_path}.html",
+            f"/templates{normalized_path}.html",
+            normalized_path.replace("-", "_"),
+            f"/templates{normalized_path.replace('-', '_')}",
+            normalized_path.replace("_", "-"),
+            f"/templates{normalized_path.replace('_', '-')}",
+        ]
+
+        for variant in variations:
+            code = _UI_PAGE_CACHE.get(variant)
+            if code:
+                logger.debug(
+                    "UI Ref: rota '%s' resolvida por variação '%s'.",
+                    normalized_path,
+                    variant,
+                )
+                return code
+
+        if original_path in _UI_PAGE_CACHE:
+            logger.debug(
+                "UI Ref: rota '%s' resolvida usando caminho bruto.", original_path
+            )
+            return _UI_PAGE_CACHE[original_path]
+
+        logger.warning(
+            "UI Ref: rota '%s' não catalogada. Aplicando código genérico.",
+            normalized_path,
+        )
+        return "??"
+
+    @app.context_processor
+    def inject_ui_reference():
+        """Injeta o código da página atual no template base."""
+        try:
+            _ensure_ui_cache()
+            normalized = _normalize_request_path(request.path)
+            page_code = _resolve_page_code(normalized, request.path)
+            return {"page_code": page_code}
+        except Exception as exc:
+            logger.error(f"Erro no context processor de UI: {exc}")
+            return {"page_code": "??"}
+
+    @before_render_template.connect_via(app)
+    def enrich_page_code(sender, template, context, **extra):
+        """Atualiza o contexto com base no template principal renderizado."""
+        try:
+            if not isinstance(context, dict):
+                return
+
+            current_code = context.get("page_code")
+            if current_code and current_code != "??":
+                return
+
+            _ensure_ui_cache()
+            template_name = getattr(template, "name", None)
+            page_code = _lookup_page_code_by_template(template_name)
+
+            if page_code:
+                context["page_code"] = page_code
+        except Exception as exc:
+            logger.error(f"Erro ao sincronizar código de página (template): {exc}")
+
+
 
 
 # Favicon route to prevent 404 errors

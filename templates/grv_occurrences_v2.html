@@ -282,7 +282,7 @@
           Registre situações positivas ou negativas relacionadas a colaboradores, processos e projetos.
         </p>
       </div>
-      <button class="btn-primary" onclick="openModal()">
+      <button class="btn-primary" onclick="openModal()" data-ref="01">
         ➕ Nova Ocorrência
       </button>
     </header>
@@ -290,7 +290,7 @@
     <section class="filters-section">
       <div class="filter-item">
         <label>Tipo</label>
-        <select id="filterType" onchange="applyFilters()">
+        <select id="filterType" onchange="applyFilters()" data-ref="10">
           <option value="">Todos</option>
           <option value="positive">Positivo</option>
           <option value="negative">Negativo</option>
@@ -298,7 +298,7 @@
       </div>
       <div class="filter-item">
         <label>Colaborador</label>
-        <select id="filterEmployee" onchange="applyFilters()">
+        <select id="filterEmployee" onchange="applyFilters()" data-ref="11">
           <option value="">Todos</option>
           {% for emp in employees %}
           <option value="{{ emp.id }}">{{ emp.name }}</option>
@@ -307,7 +307,7 @@
       </div>
       <div class="filter-item">
         <label>Processo</label>
-        <select id="filterProcess" onchange="applyFilters()">
+        <select id="filterProcess" onchange="applyFilters()" data-ref="12">
           <option value="">Todos</option>
           {% for proc in processes %}
           <option value="{{ proc.id }}">{{ proc.code or proc.id }} - {{ proc.name }}</option>
@@ -316,7 +316,7 @@
       </div>
       <div class="filter-item">
         <label>Projeto</label>
-        <select id="filterProject" onchange="applyFilters()">
+        <select id="filterProject" onchange="applyFilters()" data-ref="13">
           <option value="">Todos</option>
           {% for proj in projects %}
           <option value="{{ proj.id }}">{{ proj.code or proj.id }} - {{ proj.name }}</option>
@@ -325,12 +325,12 @@
       </div>
       <div class="filter-item">
         <label>Buscar</label>
-        <input id="searchInput" type="text" placeholder="Digite..." oninput="applyFilters()">
+        <input id="searchInput" type="text" placeholder="Digite..." oninput="applyFilters()" data-ref="07">
       </div>
     </section>
 
     <div class="table-wrapper">
-      <table>
+      <table data-ref="19">
         <thead>
           <tr>
             <th>Ocorrência</th>
@@ -358,14 +358,14 @@
   <div class="modal-content">
     <div class="modal-header">
       <h2 id="modalTitle">Nova Ocorrência</h2>
-      <button class="modal-close" onclick="closeModal()">×</button>
+      <button class="modal-close" onclick="closeModal()" data-ref="02">×</button>
     </div>
     <form id="occurrenceForm">
       <input type="hidden" id="occurrenceId">
       
       <div class="form-field">
         <label>Colaborador <span class="required">*</span></label>
-        <select id="employeeId" required>
+        <select id="employeeId" required data-ref="14">
           <option value="">Selecione um colaborador</option>
           {% for emp in employees %}
           <option value="{{ emp.id }}">{{ emp.name }}</option>
@@ -376,7 +376,7 @@
       <div class="form-row">
         <div class="form-field">
           <label>Processo</label>
-          <select id="processId">
+          <select id="processId" data-ref="15">
             <option value="">Nenhum</option>
             {% for proc in processes %}
             <option value="{{ proc.id }}">{{ proc.code or proc.id }} - {{ proc.name }}</option>
@@ -385,7 +385,7 @@
         </div>
         <div class="form-field">
           <label>Projeto</label>
-          <select id="projectId">
+          <select id="projectId" data-ref="16">
             <option value="">Nenhum</option>
             {% for proj in projects %}
             <option value="{{ proj.id }}">{{ proj.code or proj.id }} - {{ proj.name }}</option>
@@ -396,18 +396,18 @@
 
       <div class="form-field">
         <label>Título <span class="required">*</span></label>
-        <input type="text" id="title" placeholder="Ex: Excelente atendimento ao cliente" required>
+        <input type="text" id="title" placeholder="Ex: Excelente atendimento ao cliente" required data-ref="08">
       </div>
 
       <div class="form-field">
         <label>Descrição</label>
-        <textarea id="description" placeholder="Descreva a ocorrência em detalhes..."></textarea>
+        <textarea id="description" placeholder="Descreva a ocorrência em detalhes..." data-ref="18"></textarea>
       </div>
 
       <div class="form-row">
         <div class="form-field">
           <label>Tipo <span class="required">*</span></label>
-          <select id="type" required>
+          <select id="type" required data-ref="17">
             <option value="">Selecione...</option>
             <option value="positive">✅ Positivo</option>
             <option value="negative">⚠️ Negativo</option>
@@ -415,13 +415,13 @@
         </div>
         <div class="form-field">
           <label>Pontuação</label>
-          <input type="number" id="score" value="0" min="-100" max="100" placeholder="Ex: 10">
+          <input type="number" id="score" value="0" min="-100" max="100" placeholder="Ex: 10" data-ref="09">
         </div>
       </div>
 
       <div class="modal-footer">
-        <button type="button" class="btn-secondary" onclick="closeModal()">Cancelar</button>
-        <button type="submit" class="btn-primary">Salvar Ocorrência</button>
+        <button type="button" class="btn-secondary" onclick="closeModal()" data-ref="03">Cancelar</button>
+        <button type="submit" class="btn-primary" data-ref="04">Salvar Ocorrência</button>
       </div>
     </form>
   </div>
@@ -516,8 +516,8 @@ function renderTable() {
         <td>${link}</td>
         <td><strong style="color: ${occ.score >= 0 ? '#059669' : '#dc2626'}">${score}</strong></td>
         <td>
-          <button class="link-btn" onclick="editOccurrence(${occ.id})">Editar</button>
-          <button class="link-btn danger" onclick="deleteOccurrence(${occ.id})">Excluir</button>
+          <button class="link-btn" onclick="editOccurrence(${occ.id})" data-ref="05">Editar</button>
+          <button class="link-btn danger" onclick="deleteOccurrence(${occ.id})" data-ref="06">Excluir</button>
         </td>
       </tr>
     `;

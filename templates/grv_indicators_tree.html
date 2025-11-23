@@ -246,7 +246,7 @@
           id="btnNovoGrupo"
           type="button"
           class="indicators-button primary"
-          onclick="openGroupPopup()">
+          onclick="openGroupPopup()" data-ref="01">
           + Novo Grupo
         </button>
       </div>
@@ -254,7 +254,7 @@
 
     <!-- Table -->
     <div class="indicators-table-wrapper">
-      <table class="indicators-table" id="groupsTable">
+      <table class="indicators-table" id="groupsTable" data-ref="04">
         <thead>
           <tr>
             <th>Código</th>
@@ -332,8 +332,8 @@ function renderGroupsTable() {
       <td>${group.description ? group.description : '--'}</td>
       <td style="text-align: center;">
         <div class="actions">
-          <button class="btn-small btn-edit" onclick="openGroupPopup(${group.id})">Editar</button>
-          <button class="btn-small btn-delete" onclick="deleteGroup(${group.id})">Excluir</button>
+          <button class="btn-small btn-edit" onclick="openGroupPopup(${group.id})" data-ref="02">Editar</button>
+          <button class="btn-small btn-delete" onclick="deleteGroup(${group.id})" data-ref="03">Excluir</button>
         </div>
       </td>
     </tr>

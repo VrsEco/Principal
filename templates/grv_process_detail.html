@@ -1765,8 +1765,8 @@
           </div>
         </div>
         <div style="display:flex;gap:8px;flex-wrap:wrap;">
-          <button type="button" class="button button-primary" data-action="generate-report">📄 Gerar Relatório</button>
-          <a class="button button-ghost" href="{{ url_for('grv.grv_process_modeling', company_id=company.id) }}">Voltar ao Kanban</a>
+          <button type="button" class="button button-primary" data-action="generate-report" data-ref="01">📄 Gerar Relatório</button>
+          <a class="button button-ghost" href="{{ url_for('grv.grv_process_modeling', company_id=company.id) }}" data-ref="54">Voltar ao Kanban</a>
         </div>
       </div>
 
@@ -1797,7 +1797,7 @@
 
       <div class="detail-tabs" data-detail-tabs>
         {% for tab in detail_tabs %}
-        <button type="button" data-tab-button data-target="{{ tab.slug }}">{{ tab.label }}</button>
+        <button type="button" data-tab-button data-target="{{ tab.slug }}" data-ref="02">{{ tab.label }}</button>
         {% endfor %}
       </div>
 
@@ -1812,12 +1812,12 @@
                 <label>
                   <span>+</span>
                   <span>Enviar novo fluxo</span>
-                  <input type="file" accept=".pdf,image/*" name="file" data-flow-input hidden />
+                  <input type="file" accept=".pdf,image/*" name="file" data-flow-input hidden  data-ref="36" />
                 </label>
               </form>
               <div class="flow-actions">
-                <button type="button" class="flow-secondary" data-flow-preview-button disabled>Visualizar em tela cheia</button>
-                <button type="button" class="flow-secondary" data-flow-remove-button disabled>Remover fluxo</button>
+                <button type="button" class="flow-secondary" data-flow-preview-button disabled data-ref="03">Visualizar em tela cheia</button>
+                <button type="button" class="flow-secondary" data-flow-remove-button disabled data-ref="04">Remover fluxo</button>
               </div>
             </div>
 
@@ -1874,14 +1874,14 @@
                 <div class="pop-code-input">
                   <span class="pop-code-base" data-pop-code-base>{{ process_code }}</span>
                   <span class="pop-code-separator">.</span>
-                  <input type="text" name="suffix" maxlength="2" pattern="\d{2}" placeholder="00" required />
+                  <input type="text" name="suffix" maxlength="2" pattern="\d{2}" placeholder="00" required  data-ref="37" />
                 </div>
               </div>
               <div>
                 <label class="pop-field-label">Nome</label>
-                <input type="text" name="name" placeholder="Nome da atividade" required />
+                <input type="text" name="name" placeholder="Nome da atividade" required  data-ref="38" />
               </div>
-              <button type="submit">Adicionar atividade</button>
+              <button type="submit" data-ref="05">Adicionar atividade</button>
             </form>
             <div class="pop-feedback" data-pop-feedback hidden></div>
             <div class="pop-empty" data-pop-empty>Cadastre atividades para documentar o passo a passo do POP.</div>
@@ -1899,7 +1899,7 @@
               <a href="{{ url_for('grv.grv_indicators_list', company_id=company.id) }}" rel="noopener">
                 Gerenciar Indicadores
               </a>
-              <button type="button" data-open-indicator-form>
+              <button type="button" data-open-indicator-form data-ref="06">
                 Novo Indicador
               </button>
             </div>
@@ -1917,7 +1917,7 @@
           <p>Configure gatilhos de disparo e prazos para execução das rotinas deste processo.</p>
           
           <div style="margin-top: 20px;">
-            <a href="{{ url_for('routines_management', company_id=company.id) }}" class="button button-primary" style="display: inline-block; padding: 12px 24px; background: #3182ce; color: white; text-decoration: none; border-radius: 6px; font-weight: 500;">
+            <a href="{{ url_for('routines_management', company_id=company.id) }}" class="button button-primary" style="display: inline-block; padding: 12px 24px; background: #3182ce; color: white; text-decoration: none; border-radius: 6px; font-weight: 500;" data-ref="55">
               ⚙️ Gerenciar Rotinas da Empresa
             </a>
           </div>
@@ -1942,7 +1942,7 @@
           <!-- Editor de Texto Rico Quill.js -->
           <div id="notes-toolbar">
             <span class="ql-formats">
-              <select class="ql-header">
+              <select class="ql-header" data-ref="46">
                 <option value="1">Título 1</option>
                 <option value="2">Título 2</option>
                 <option value="3">Título 3</option>
@@ -1950,34 +1950,34 @@
               </select>
             </span>
             <span class="ql-formats">
-              <button class="ql-bold"></button>
-              <button class="ql-italic"></button>
-              <button class="ql-underline"></button>
-              <button class="ql-strike"></button>
+              <button class="ql-bold" data-ref="07"></button>
+              <button class="ql-italic" data-ref="08"></button>
+              <button class="ql-underline" data-ref="09"></button>
+              <button class="ql-strike" data-ref="10"></button>
             </span>
             <span class="ql-formats">
-              <select class="ql-color"></select>
-              <select class="ql-background"></select>
+              <select class="ql-color" data-ref="47"></select>
+              <select class="ql-background" data-ref="48"></select>
             </span>
             <span class="ql-formats">
-              <button class="ql-list" value="ordered"></button>
-              <button class="ql-list" value="bullet"></button>
-              <button class="ql-indent" value="-1"></button>
-              <button class="ql-indent" value="+1"></button>
+              <button class="ql-list" value="ordered" data-ref="11"></button>
+              <button class="ql-list" value="bullet" data-ref="12"></button>
+              <button class="ql-indent" value="-1" data-ref="13"></button>
+              <button class="ql-indent" value="+1" data-ref="14"></button>
             </span>
             <span class="ql-formats">
-              <button class="ql-link"></button>
-              <button class="ql-image"></button>
-              <button class="ql-video"></button>
+              <button class="ql-link" data-ref="15"></button>
+              <button class="ql-image" data-ref="16"></button>
+              <button class="ql-video" data-ref="17"></button>
             </span>
             <span class="ql-formats">
-              <button class="ql-clean"></button>
+              <button class="ql-clean" data-ref="18"></button>
             </span>
           </div>
           <div id="notes-editor" style="min-height: 300px; background: white; border: 1px solid #e5e7eb; border-radius: 8px;"></div>
           
           <div style="margin-top: 16px; display: flex; gap: 12px; justify-content: flex-end;">
-            <button id="save-notes-btn" class="button button-primary" style="padding: 10px 24px; background: #2563eb; color: white; border: none; border-radius: 8px; font-weight: 600; cursor: pointer;">
+            <button id="save-notes-btn" class="button button-primary" style="padding: 10px 24px; background: #2563eb; color: white; border: none; border-radius: 8px; font-weight: 600; cursor: pointer;" data-ref="19">
               💾 Salvar Observações
             </button>
             <div id="notes-save-status" style="display: none; padding: 10px 16px; border-radius: 8px; font-size: 14px; font-weight: 500;"></div>
@@ -1992,7 +1992,7 @@
   <div class="flow-modal-content">
     <div class="flow-modal-header">
       <h4>Fluxo do Processo</h4>
-      <button type="button" class="flow-modal-close" data-flow-modal-close>&times;</button>
+      <button type="button" class="flow-modal-close" data-flow-modal-close data-ref="20">&times;</button>
     </div>
     <div class="flow-modal-body" data-flow-modal-body></div>
   </div>
@@ -2002,7 +2002,7 @@
   <div class="report-modal-content">
     <div class="report-modal-header">
       <h3>📄 Gerar Relatório do Processo</h3>
-      <button type="button" class="report-modal-close" data-report-modal-close>&times;</button>
+      <button type="button" class="report-modal-close" data-report-modal-close data-ref="21">&times;</button>
     </div>
     
     <p style="color: var(--color-muted); margin-bottom: 16px; font-size: 13px;">
@@ -2016,7 +2016,7 @@
       </label>
       
       <label class="report-section-item">
-        <input type="checkbox" name="sections" value="flow" checked />
+        <input type="checkbox" name="sections" value="flow" checked  data-ref="39" />
         <div class="report-section-label">
           <strong>🔄 Fluxo do Processo</strong>
           <small>Diagrama visual do fluxo do processo</small>
@@ -2024,7 +2024,7 @@
       </label>
 
       <label class="report-section-item">
-        <input type="checkbox" name="sections" value="pop" checked />
+        <input type="checkbox" name="sections" value="pop" checked  data-ref="40" />
         <div class="report-section-label">
           <strong>📋 POP - Procedimento Operacional</strong>
           <small>Atividades e etapas detalhadas</small>
@@ -2032,7 +2032,7 @@
       </label>
 
       <label class="report-section-item">
-        <input type="checkbox" name="sections" value="indicators" />
+        <input type="checkbox" name="sections" value="indicators"  data-ref="41" />
         <div class="report-section-label">
           <strong>📊 Indicadores</strong>
           <small>Métricas e indicadores de desempenho</small>
@@ -2040,7 +2040,7 @@
       </label>
 
       <label class="report-section-item">
-        <input type="checkbox" name="sections" value="routine" checked />
+        <input type="checkbox" name="sections" value="routine" checked  data-ref="42" />
         <div class="report-section-label">
           <strong>📅 Rotinas e Colaboradores</strong>
           <small>Rotinas do processo com colaboradores e horas</small>
@@ -2049,8 +2049,8 @@
     </form>
 
     <div class="report-modal-actions">
-      <button type="button" class="button button-ghost" data-report-modal-close>Cancelar</button>
-      <button type="button" class="button button-primary" data-report-generate>
+      <button type="button" class="button button-ghost" data-report-modal-close data-ref="22">Cancelar</button>
+      <button type="button" class="button button-primary" data-report-generate data-ref="23">
         📄 Gerar PDF
       </button>
     </div>
@@ -2115,7 +2115,7 @@ async function loadProcessRoutines() {
                   <a href="/companies/${companyId}/routines/${routine.id}" 
                      class="button button-ghost button-sm" 
                      style="font-size: 12px; padding: 6px 12px;"
-                     title="Gerenciar Rotina">
+                     title="Gerenciar Rotina" data-ref="56">
                     ⚙️ Gerenciar
                   </a>
                 </div>
@@ -2167,7 +2167,7 @@ async function loadProcessRoutines() {
                   <div style="font-size: 13px; font-weight: 600; color: #374151; margin-bottom: 12px; text-transform: uppercase; letter-spacing: 0.05em;">
                     <span>👥</span> Colaboradores (${routine.collaborators.length})
                   </div>
-                  <table style="width: 100%; border-collapse: collapse;">
+                  <table style="width: 100%; border-collapse: collapse;" data-ref="53">
                     <thead style="background: #f8fafc;">
                       <tr>
                         <th style="padding: 10px 12px; text-align: left; font-size: 11px; font-weight: 600; color: #6b7280; text-transform: uppercase;">Colaborador</th>
@@ -2360,7 +2360,7 @@ function renderIndicatorCard(indicator) {
       ${notes}
 
       <div class="indicator-card-actions">
-        <button type="button" data-indicator-edit="${indicator.id}">
+        <button type="button" data-indicator-edit="${indicator.id}" data-ref="24">
           Editar indicador
         </button>
       </div>
@@ -2882,26 +2882,26 @@ document.addEventListener('DOMContentLoaded', () => {
           <div class="${previewClass}" data-resizable-container>
             ${imageBlock}
             <div class="entry-text">
-              <textarea name="text_content" placeholder="Detalhamento do passo" readonly>${escapeHtml(entry.text_content || '')}</textarea>
+              <textarea name="text_content" placeholder="Detalhamento do passo" readonly data-ref="51">${escapeHtml(entry.text_content || '')}</textarea>
             </div>
           </div>
           ${extraImage}
           <div class="entry-controls">
             <label data-upload-label style="display: none;">
               <span>📤 Enviar imagem</span>
-              <input type="file" name="image" accept="image/*" hidden disabled />
+              <input type="file" name="image" accept="image/*" hidden disabled  data-ref="43" />
             </label>
-            <button type="button" data-action="remove-image" ${hasImage ? '' : 'disabled'} style="display: none;">🗑️ Remover imagem</button>
+            <button type="button" data-action="remove-image" ${hasImage ? '' : 'disabled'} style="display: none;" data-ref="25">🗑️ Remover imagem</button>
             <label style="display: none;" data-layout-label>
               <span>Layout:</span>
-              <select name="layout" disabled>
+              <select name="layout" disabled data-ref="49">
                 <option value="dual" ${entryLayout === 'dual' ? 'selected' : ''}>Texto + imagem</option>
                 <option value="single" ${entryLayout === 'single' ? 'selected' : ''}>Somente texto</option>
               </select>
             </label>
-            <button type="button" data-action="toggle-edit" data-edit-mode="false">✏️ Editar</button>
-            <button type="submit" style="display: none;">💾 Salvar</button>
-            <button type="button" data-action="delete-entry">🗑️ Excluir</button>
+            <button type="button" data-action="toggle-edit" data-edit-mode="false" data-ref="26">✏️ Editar</button>
+            <button type="submit" style="display: none;" data-ref="27">💾 Salvar</button>
+            <button type="button" data-action="delete-entry" data-ref="28">🗑️ Excluir</button>
           </div>
           <input type="hidden" name="remove_image" value="" />
           <input type="hidden" name="order_index" value="${entry.order_index || ''}" />
@@ -2915,12 +2915,12 @@ document.addEventListener('DOMContentLoaded', () => {
     const buildCreateEntryForm = (activity) => {
       return `
         <div class="add-entry-section" data-add-entry-section>
-          <button type="button" class="button-add-entry" data-action="show-create-form">➕ Adicionar Etapa</button>
+          <button type="button" class="button-add-entry" data-action="show-create-form" data-ref="29">➕ Adicionar Etapa</button>
           <form class="activity-entry-form" data-mode="create" data-entry-create-form data-activity-id="${activity.id}" style="display: none;">
             <div class="form-step-layout">
               <label>
                 <span>Layout da etapa:</span>
-                <select name="layout" data-layout-selector>
+                <select name="layout" data-layout-selector data-ref="50">
                   <option value="dual">Texto + imagem (lado a lado)</option>
                   <option value="single">Somente texto</option>
                 </select>
@@ -2932,16 +2932,16 @@ document.addEventListener('DOMContentLoaded', () => {
               </div>
               <div class="resize-divider" data-resize-divider></div>
               <div class="entry-text">
-                <textarea name="text_content" placeholder="Descreva o passo da atividade" required></textarea>
+                <textarea name="text_content" placeholder="Descreva o passo da atividade" required data-ref="52"></textarea>
               </div>
             </div>
             <div class="entry-controls">
               <label>
                 <span>📤 Adicionar imagem</span>
-                <input type="file" name="image" accept="image/*" hidden />
+                <input type="file" name="image" accept="image/*" hidden  data-ref="44" />
               </label>
-              <button type="submit" class="button-primary">💾 Salvar Etapa</button>
-              <button type="button" data-action="cancel-create-form" class="button-secondary">❌ Cancelar</button>
+              <button type="submit" class="button-primary" data-ref="30">💾 Salvar Etapa</button>
+              <button type="button" data-action="cancel-create-form" class="button-secondary" data-ref="31">❌ Cancelar</button>
             </div>
             <input type="hidden" name="image_width" value="280" data-image-width-input />
             <small>Escolha o layout e preencha os dados da etapa. Arraste o divisor para ajustar o tamanho.</small>
@@ -2963,13 +2963,13 @@ document.addEventListener('DOMContentLoaded', () => {
           </div>
           <div class="activity-card-meta">
             <label>Nome</label>
-            <input type="text" name="name" value="${escapeHtml(activity.name || '')}" required readonly />
+            <input type="text" name="name" value="${escapeHtml(activity.name || '')}" required readonly  data-ref="45" />
           </div>
           <div class="activity-actions">
-            <button type="button" data-action="toggle-collapse" title="Recolher/Expandir">▼</button>
-            <button type="button" data-action="toggle-edit-activity" data-edit-mode="false">✏️ Editar</button>
-            <button type="submit" style="display: none;">💾 Salvar</button>
-            <button type="button" data-action="delete-activity">🗑️ Excluir</button>
+            <button type="button" data-action="toggle-collapse" title="Recolher/Expandir" data-ref="32">▼</button>
+            <button type="button" data-action="toggle-edit-activity" data-edit-mode="false" data-ref="33">✏️ Editar</button>
+            <button type="submit" style="display: none;" data-ref="34">💾 Salvar</button>
+            <button type="button" data-action="delete-activity" data-ref="35">🗑️ Excluir</button>
           </div>
         </form>
         <div class="activity-entries">

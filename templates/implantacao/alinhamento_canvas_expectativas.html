@@ -294,7 +294,7 @@
     </p>
     <div class="form-actions" style="justify-content: flex-start; margin-top: 20px;">
       <a href="{{ url_for('pev.pev_implantacao_overview', plan_id=plan_id) }}" class="button button-secondary"
-        style="text-decoration: none; display: inline-block;">
+        style="text-decoration: none; display: inline-block;" data-ref="19">
         ← Voltar para Implantação
       </a>
     </div>
@@ -305,9 +305,9 @@
     <div class="canvas-section">
       <h2>
         Perfis dos sócios
-        <button class="button button-primary button-sm" onclick="openAddSocioModal()">+ Adicionar Sócio</button>
+        <button class="button button-primary button-sm" onclick="openAddSocioModal()" data-ref="01">+ Adicionar Sócio</button>
       </h2>
-      <table class="canvas-table">
+      <table class="canvas-table" data-ref="18">
         <thead>
           <tr>
             <th>Sócio</th>
@@ -328,8 +328,8 @@
             <td>{{ socio.risco }}</td>
             <td>
               <button class="button button-secondary button-sm"
-                onclick="editSocio({{ socio.id }}, '{{ socio.nome }}', '{{ socio.papel }}', '{{ socio.motivacao }}', '{{ socio.compromisso }}', '{{ socio.risco }}')">✏️</button>
-              <button class="button button-danger button-sm" onclick="deleteSocio({{ socio.id }})">🗑️</button>
+                onclick="editSocio({{ socio.id }}, '{{ socio.nome }}', '{{ socio.papel }}', '{{ socio.motivacao }}', '{{ socio.compromisso }}', '{{ socio.risco }}')" data-ref="02">✏️</button>
+              <button class="button button-danger button-sm" onclick="deleteSocio({{ socio.id }})" data-ref="03">🗑️</button>
             </td>
           </tr>
           {% else %}
@@ -351,11 +351,11 @@
         Pilares do alinhamento
         <div style="display: flex; gap: 8px;">
           <button id="edit-alinhamento-btn" class="button button-secondary button-sm" onclick="editarAlinhamento()"
-            style="display: inline-flex;">
+            style="display: inline-flex;" data-ref="04">
             ✏️ Editar
           </button>
           <button id="delete-alinhamento-btn" class="button button-danger button-sm" onclick="excluirAlinhamento()"
-            style="display: inline-flex;">
+            style="display: inline-flex;" data-ref="05">
             🗑️ Excluir
           </button>
         </div>
@@ -364,21 +364,21 @@
         <div class="form-group">
           <label for="visao">Visão compartilhada</label>
           <textarea id="visao" name="visao_compartilhada" class="readonly-field"
-            readonly>{{ alinhamento.visao_compartilhada or '' }}</textarea>
+            readonly data-ref="12">{{ alinhamento.visao_compartilhada or '' }}</textarea>
         </div>
         <div class="form-group">
           <label for="metas">Metas financeiras</label>
           <textarea id="metas" name="metas_financeiras" class="readonly-field"
-            readonly>{{ alinhamento.metas_financeiras or '' }}</textarea>
+            readonly data-ref="13">{{ alinhamento.metas_financeiras or '' }}</textarea>
         </div>
         <div class="form-group">
           <label for="criterios">Critérios de decisão</label>
           <textarea id="criterios" name="criterios_decisao" class="readonly-field" readonly
-            placeholder="Digite os critérios de decisão, um por linha...">{% if alinhamento.criterios_decisao %}{{ alinhamento.criterios_decisao | join('\n') }}{% endif %}</textarea>
+            placeholder="Digite os critérios de decisão, um por linha..." data-ref="14">{% if alinhamento.criterios_decisao %}{{ alinhamento.criterios_decisao | join('\n') }}{% endif %}</textarea>
         </div>
         <div class="form-actions" id="alinhamento-actions" style="display: none;">
-          <button type="button" class="button button-secondary" onclick="cancelarEdicao()">Cancelar</button>
-          <button type="submit" class="button button-primary">Salvar Alinhamento</button>
+          <button type="button" class="button button-secondary" onclick="cancelarEdicao()" data-ref="06">Cancelar</button>
+          <button type="submit" class="button button-primary" data-ref="07">Salvar Alinhamento</button>
         </div>
       </form>
     </div>
@@ -398,27 +398,27 @@
       <input type="hidden" id="socio-id">
       <div class="form-group">
         <label for="socio-nome" style="color: #000000 !important;">Nome do Sócio *</label>
-        <input type="text" id="socio-nome" required class="input-fundo-claro">
+        <input type="text" id="socio-nome" required class="input-fundo-claro" data-ref="10">
       </div>
       <div class="form-group">
         <label for="socio-papel" style="color: #000000 !important;">Papel Definido</label>
-        <input type="text" id="socio-papel" class="input-fundo-claro">
+        <input type="text" id="socio-papel" class="input-fundo-claro" data-ref="11">
       </div>
       <div class="form-group">
         <label for="socio-motivacao" style="color: #000000 !important;">Motivação Central</label>
-        <textarea id="socio-motivacao" rows="2" class="input-fundo-claro"></textarea>
+        <textarea id="socio-motivacao" rows="2" class="input-fundo-claro" data-ref="15"></textarea>
       </div>
       <div class="form-group">
         <label for="socio-compromisso" style="color: #000000 !important;">Compromisso</label>
-        <textarea id="socio-compromisso" rows="2" class="input-fundo-claro"></textarea>
+        <textarea id="socio-compromisso" rows="2" class="input-fundo-claro" data-ref="16"></textarea>
       </div>
       <div class="form-group">
         <label for="socio-risco" style="color: #000000 !important;">Tolerância a Risco</label>
-        <textarea id="socio-risco" rows="2" class="input-fundo-claro"></textarea>
+        <textarea id="socio-risco" rows="2" class="input-fundo-claro" data-ref="17"></textarea>
       </div>
       <div class="form-actions">
-        <button type="button" class="button button-secondary" onclick="closeSocioModal()">Cancelar</button>
-        <button type="submit" class="button button-primary botao-fundo-claro">Salvar</button>
+        <button type="button" class="button button-secondary" onclick="closeSocioModal()" data-ref="08">Cancelar</button>
+        <button type="submit" class="button button-primary botao-fundo-claro" data-ref="09">Salvar</button>
       </div>
     </form>
   </div>

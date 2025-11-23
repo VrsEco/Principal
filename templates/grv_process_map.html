@@ -147,10 +147,10 @@
   
   <section class="project-content plan-content" data-company-id="{{ company.id }}">
     <div style="display:flex;gap:8px;margin-bottom:12px;">
-      <button class="button" data-tab="visual">🗺️ Visualizar Mapa</button>
-      <button class="button button-ghost" data-tab="areas">Áreas</button>
-      <button class="button button-ghost" data-tab="macros">Macroprocessos</button>
-      <button class="button button-ghost" data-tab="processes">Processos</button>
+      <button class="button" data-tab="visual" data-ref="01">🗺️ Visualizar Mapa</button>
+      <button class="button button-ghost" data-tab="areas" data-ref="02">Áreas</button>
+      <button class="button button-ghost" data-tab="macros" data-ref="03">Macroprocessos</button>
+      <button class="button button-ghost" data-tab="processes" data-ref="04">Processos</button>
     </div>
 
     <!-- Tab: Visual do Mapa -->
@@ -166,9 +166,9 @@
           </div>
         </div>
         <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap;">
-          <button id="btnViewMap" class="button button-primary" style="font-size:12px;">👁️ Visualizar</button>
+          <button id="btnViewMap" class="button button-primary" style="font-size:12px;" data-ref="05">👁️ Visualizar</button>
           <div style="width:1px;height:24px;background:var(--color-border);margin:0 4px;"></div>
-          <button id="btnViewMapV2" class="button button-primary" style="font-size:12px;background:#10b981;border-color:#10b981;">👁️ Visualizar MP-2</button>
+          <button id="btnViewMapV2" class="button button-primary" style="font-size:12px;background:#10b981;border-color:#10b981;" data-ref="06">👁️ Visualizar MP-2</button>
         </div>
       </div>
       
@@ -187,7 +187,7 @@
           <div style="font-size:12px;color:var(--color-muted);">
             Configure o código do cliente (ex: AO, VSA) na página de edição da empresa para gerar códigos automáticos.
           </div>
-          <a href="/companies/{{ company.id }}/edit" class="button button-ghost" style="margin-top:8px;font-size:12px;">
+          <a href="/companies/{{ company.id }}/edit" class="button button-ghost" style="margin-top:8px;font-size:12px;" data-ref="40">
             Configurar Código do Cliente
           </a>
         </div>
@@ -206,19 +206,19 @@
         <div class="form-two-cols">
           <label class="form-field">
             <span>Sequência *</span>
-            <input name="code" type="number" min="1" required placeholder="Ex: 1, 2, 3..."/>
+            <input name="code" type="number" min="1" required placeholder="Ex: 1, 2, 3..." data-ref="21" />
             <span class="field-hint">Número usado na geração do código (ex: 1 gera AO.C.1)</span>
           </label>
           <label class="form-field">
             <span>Cor</span>
-            <input name="color" type="color" value="#a78bfa"/>
+            <input name="color" type="color" value="#a78bfa" data-ref="22" />
           </label>
         </div>
-        <label class="form-field"><span>Nome da Área *</span><input name="name" required placeholder="Ex: Gerencial, Comercial, Operações..."/></label>
-        <label class="form-field"><span>Descrição</span><textarea name="description" rows="2" placeholder="Descreva o escopo desta área"></textarea></label>
+        <label class="form-field"><span>Nome da Área *</span><input name="name" required placeholder="Ex: Gerencial, Comercial, Operações..." data-ref="23" /></label>
+        <label class="form-field"><span>Descrição</span><textarea name="description" rows="2" placeholder="Descreva o escopo desta área" data-ref="37"></textarea></label>
         <div style="display:flex;gap:8px;justify-content:flex-end;">
-          <button type="reset" class="button button-ghost">Limpar</button>
-          <button type="submit" class="button button-primary">Salvar Área</button>
+          <button type="reset" class="button button-ghost" data-ref="07">Limpar</button>
+          <button type="submit" class="button button-primary" data-ref="08">Salvar Área</button>
         </div>
       </form>
       <div id="areasList" style="margin-top:16px;"></div>
@@ -232,7 +232,7 @@
         
         <label class="form-field">
           <span>Área *</span>
-          <select name="area_id" id="macroAreaSelect" required>
+          <select name="area_id" id="macroAreaSelect" required data-ref="30">
             <option value="">Selecione uma área</option>
             {% for area in areas %}
             <option value="{{ area.id }}">{% if area.code %}{{ area.code }} - {% endif %}{{ area.name }}</option>
@@ -258,29 +258,29 @@
         <div class="form-two-cols">
           <label class="form-field">
             <span>Sequência *</span>
-            <input name="order_index" type="number" min="1" required placeholder="Ex: 1, 2, 3..."/>
+            <input name="order_index" type="number" min="1" required placeholder="Ex: 1, 2, 3..." data-ref="24" />
             <span class="field-hint">Número usado na geração do código e ordenação</span>
           </label>
           <label class="form-field">
             <span>Dono do Processo *</span>
-            <input name="owner" required placeholder="Nome do responsável"/>
+            <input name="owner" required placeholder="Nome do responsável" data-ref="25" />
             <span class="field-hint">Principal responsável por este macroprocesso</span>
           </label>
         </div>
         
         <label class="form-field">
           <span>Nome do Macroprocesso *</span>
-          <input name="name" required placeholder="Ex: Gestão Comercial, Gestão Financeira..."/>
+          <input name="name" required placeholder="Ex: Gestão Comercial, Gestão Financeira..." data-ref="26" />
         </label>
         
         <label class="form-field">
           <span>Descrição</span>
-          <textarea name="description" rows="3" placeholder="Descreva o objetivo e escopo deste macroprocesso"></textarea>
+          <textarea name="description" rows="3" placeholder="Descreva o objetivo e escopo deste macroprocesso" data-ref="38"></textarea>
         </label>
         
         <div style="display:flex;gap:8px;justify-content:flex-end;">
-          <button type="reset" class="button button-ghost">Limpar</button>
-          <button type="submit" class="button button-primary">Salvar Macroprocesso</button>
+          <button type="reset" class="button button-ghost" data-ref="09">Limpar</button>
+          <button type="submit" class="button button-primary" data-ref="10">Salvar Macroprocesso</button>
         </div>
       </form>
       <div id="macrosContainer" style="margin-top:16px;border:1px solid rgba(148,163,184,.2);border-radius:8px;padding:12px;background:var(--color-surface);position:relative;">
@@ -299,7 +299,7 @@
         
         <label class="form-field">
           <span>Macroprocesso *</span>
-          <select name="macro_id" id="processMacroSelect" required>
+          <select name="macro_id" id="processMacroSelect" required data-ref="31">
             <option value="">Selecione um macroprocesso</option>
           </select>
           {% if not macros %}
@@ -322,12 +322,12 @@
         <div class="form-two-cols">
           <label class="form-field">
             <span>Sequência *</span>
-            <input name="order_index" type="number" min="1" required placeholder="Ex: 1, 2, 3..."/>
+            <input name="order_index" type="number" min="1" required placeholder="Ex: 1, 2, 3..." data-ref="27" />
             <span class="field-hint">Número usado na geração do código</span>
           </label>
           <label class="form-field">
             <span>Responsável</span>
-            <select name="responsible" id="processResponsibleSelect">
+            <select name="responsible" id="processResponsibleSelect" data-ref="32">
               <option value="">Selecione um colaborador</option>
             </select>
             <span class="field-hint">Responsável pelo processo (cadastrado em Colaboradores)</span>
@@ -336,12 +336,12 @@
         
         <label class="form-field">
           <span>Nome do Processo *</span>
-          <input name="name" required placeholder="Ex: Contas a Pagar, Atendimento ao Cliente..."/>
+          <input name="name" required placeholder="Ex: Contas a Pagar, Atendimento ao Cliente..." data-ref="28" />
         </label>
         
         <label class="form-field">
           <span>Nível de Desempenho</span>
-          <select name="performance_level">
+          <select name="performance_level" data-ref="33">
             <option value="">Fora de Escopo</option>
             <option value="critical">Desemp. Crítico (Vermelho)</option>
             <option value="below">Desemp. Abaixo (Amarelo)</option>
@@ -352,27 +352,27 @@
         
         <label class="form-field">
           <span>Descrição</span>
-          <textarea name="description" rows="3" placeholder="Descreva o objetivo e escopo deste processo"></textarea>
+          <textarea name="description" rows="3" placeholder="Descreva o objetivo e escopo deste processo" data-ref="39"></textarea>
         </label>
         
         <div style="display:flex;gap:8px;justify-content:flex-end;">
-          <button type="reset" class="button button-ghost">Limpar</button>
-          <button type="submit" class="button button-primary">Salvar Processo</button>
+          <button type="reset" class="button button-ghost" data-ref="11">Limpar</button>
+          <button type="submit" class="button button-primary" data-ref="12">Salvar Processo</button>
         </div>
       </form>
       <div style="display:flex;justify-content:space-between;align-items:center;margin-top:16px;margin-bottom:6px;">
         <div style="font-weight:600;color:var(--color-text);">Filtros</div>
-        <button id="toggleProcessFilters" type="button" class="button button-ghost">Ocultar filtros</button>
+        <button id="toggleProcessFilters" type="button" class="button button-ghost" data-ref="13">Ocultar filtros</button>
       </div>
       <div id="processFilters" class="company-form-fields" style="margin-top:16px;margin-bottom:8px;background:rgba(148,163,184,.08);border:1px solid rgba(148,163,184,.25);border-radius:8px;padding:12px;">
         <div class="form-two-cols">
           <label class="form-field">
             <span>Buscar</span>
-            <input id="filterProcessQuery" placeholder="Código ou nome" />
+            <input id="filterProcessQuery" placeholder="Código ou nome"  data-ref="29" />
           </label>
           <label class="form-field">
             <span>Macroprocesso</span>
-            <select id="filterProcessMacro">
+            <select id="filterProcessMacro" data-ref="34">
               <option value="">Todos</option>
             </select>
           </label>
@@ -380,13 +380,13 @@
         <div class="form-two-cols">
           <label class="form-field">
             <span>Responsável</span>
-            <select id="filterProcessResponsible">
+            <select id="filterProcessResponsible" data-ref="35">
               <option value="">Todos</option>
             </select>
           </label>
           <label class="form-field">
             <span>Desempenho</span>
-            <select id="filterProcessPerformance">
+            <select id="filterProcessPerformance" data-ref="36">
               <option value="">Todos</option>
               <option value="critical">Crítico</option>
               <option value="below">Abaixo</option>
@@ -395,7 +395,7 @@
           </label>
         </div>
         <div style="display:flex;gap:8px;justify-content:flex-end;">
-          <button id="btnClearProcessFilters" type="button" class="button button-ghost">Limpar filtros</button>
+          <button id="btnClearProcessFilters" type="button" class="button button-ghost" data-ref="14">Limpar filtros</button>
         </div>
       </div>
       <div id="processesList" style="margin-top:16px;"></div>
@@ -414,14 +414,14 @@
         <div style="font-size:12px;color:var(--color-muted);">Use os controles de zoom para ajustar o tamanho</div>
       </div>
       <div style="display:flex;gap:8px;align-items:center;">
-        <button id="btnZoomOut" class="button button-ghost" title="Diminuir zoom">🔍−</button>
+        <button id="btnZoomOut" class="button button-ghost" title="Diminuir zoom" data-ref="15">🔍−</button>
         <span id="zoomLevel" style="font-size:12px;color:var(--color-muted);min-width:50px;text-align:center;">100%</span>
-        <button id="btnZoomIn" class="button button-ghost" title="Aumentar zoom">🔍+</button>
-        <button id="btnZoomReset" class="button button-ghost" title="Resetar zoom">⟲</button>
-        <button id="btnZoomFit" class="button button-ghost" title="Ajustar à tela">⤢</button>
+        <button id="btnZoomIn" class="button button-ghost" title="Aumentar zoom" data-ref="16">🔍+</button>
+        <button id="btnZoomReset" class="button button-ghost" title="Resetar zoom" data-ref="17">⟲</button>
+        <button id="btnZoomFit" class="button button-ghost" title="Ajustar à tela" data-ref="18">⤢</button>
         <div style="width:1px;height:24px;background:var(--color-border);margin:0 8px;"></div>
-        <button id="btnPrintFromViewer" class="button button-primary">🖨️ Imprimir</button>
-        <button id="btnCloseViewer" class="button button-ghost">✕ Fechar</button>
+        <button id="btnPrintFromViewer" class="button button-primary" data-ref="19">🖨️ Imprimir</button>
+        <button id="btnCloseViewer" class="button button-ghost" data-ref="20">✕ Fechar</button>
       </div>
     </div>
     

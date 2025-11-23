@@ -107,7 +107,7 @@
     <form id="dataForm">
       <div class="form-group">
         <label for="goalId">Meta / Indicador *</label>
-        <select id="goalId" name="goal_id" required>
+        <select id="goalId" name="goal_id" required data-ref="05">
           <option value="">Selecione</option>
           {% for goal in goals %}
             <option value="{{ goal.id }}">{{ goal.goal_code }} - {{ goal.indicator_name }}</option>
@@ -117,22 +117,22 @@
 
       <div class="form-group">
         <label for="recordDate">Data do Registro *</label>
-        <input id="recordDate" name="record_date" type="date" required>
+        <input id="recordDate" name="record_date" type="date" required data-ref="03">
       </div>
 
       <div class="form-group">
         <label for="value">Valor *</label>
-        <input id="value" name="value" type="number" step="0.01" required>
+        <input id="value" name="value" type="number" step="0.01" required data-ref="04">
       </div>
 
       <div class="form-group">
         <label for="notes">Observacoes</label>
-        <textarea id="notes" name="notes" placeholder="Observacoes relevantes sobre o registro"></textarea>
+        <textarea id="notes" name="notes" placeholder="Observacoes relevantes sobre o registro" data-ref="06"></textarea>
       </div>
 
       <div class="actions">
-        <button type="button" class="btn-secondary" id="cancelButton">Cancelar</button>
-        <button type="submit" class="btn-primary">Salvar Registro</button>
+        <button type="button" class="btn-secondary" id="cancelButton" data-ref="01">Cancelar</button>
+        <button type="submit" class="btn-primary" data-ref="02">Salvar Registro</button>
       </div>
     </form>
   </div>

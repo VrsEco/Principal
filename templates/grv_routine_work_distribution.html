@@ -457,7 +457,7 @@
         </p>
       </div>
       <div class="distribution-actions">
-        <button type="button" class="action-button" id="refreshDistribution">
+        <button type="button" class="action-button" id="refreshDistribution" data-ref="01">
           Atualizar dados
         </button>
       </div>
@@ -488,14 +488,14 @@
 
     <div class="distribution-filters">
       <div class="chip-group">
-        <button type="button" class="chip active" data-status="all" data-status-chip>Todas</button>
-        <button type="button" class="chip" data-status="pending" data-status-chip>Pendentes</button>
-        <button type="button" class="chip" data-status="in_progress" data-status-chip>Em andamento</button>
-        <button type="button" class="chip" data-status="completed" data-status-chip>Concluidas</button>
-        <button type="button" class="chip" data-status="overdue" data-status-chip>Atrasadas</button>
+        <button type="button" class="chip active" data-status="all" data-status-chip data-ref="02">Todas</button>
+        <button type="button" class="chip" data-status="pending" data-status-chip data-ref="03">Pendentes</button>
+        <button type="button" class="chip" data-status="in_progress" data-status-chip data-ref="04">Em andamento</button>
+        <button type="button" class="chip" data-status="completed" data-status-chip data-ref="05">Concluidas</button>
+        <button type="button" class="chip" data-status="overdue" data-status-chip data-ref="06">Atrasadas</button>
       </div>
       <div class="search-field">
-        <input type="search" id="searchRoutine" class="search-input" placeholder="Buscar por rotina" />
+        <input type="search" id="searchRoutine" class="search-input" placeholder="Buscar por rotina"  data-ref="07" />
       </div>
     </div>
 
@@ -516,7 +516,7 @@
             <p>Assim que tarefas forem geradas, a distribuicao aparecerá automaticamente.</p>
           </div>
           <div class="table-wrapper" id="distributionTableWrapper" hidden>
-            <table class="distribution-table">
+            <table class="distribution-table" data-ref="08">
               <thead>
                 <tr>
                   <th>Rotina</th>

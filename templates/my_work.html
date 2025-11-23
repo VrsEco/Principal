@@ -56,7 +56,7 @@
   <!-- View Tabs -->
   <div class="view-tabs-container">
     <div class="view-tabs">
-      <button class="view-tab view-tab--active" data-view="me" id="tabMe">
+      <button class="view-tab view-tab--active" data-view="me" id="tabMe" data-ref="01">
         <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
           <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path>
           <circle cx="12" cy="7" r="4"></circle>
@@ -65,7 +65,7 @@
         <span class="view-tab-count" id="countMe">0</span>
       </button>
       
-      <button class="view-tab" data-view="team" id="tabTeam">
+      <button class="view-tab" data-view="team" id="tabTeam" data-ref="02">
         <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
           <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"></path>
           <circle cx="9" cy="7" r="4"></circle>
@@ -76,7 +76,7 @@
         <span class="view-tab-count" id="countTeam">0</span>
       </button>
       
-      <button class="view-tab" data-view="company" id="tabCompany">
+      <button class="view-tab" data-view="company" id="tabCompany" data-ref="03">
         <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
           <rect x="2" y="7" width="20" height="14" rx="2" ry="2"></rect>
           <path d="M16 21V5a2 2 0 0 0-2-2h-4a2 2 0 0 0-2 2v16"></path>
@@ -174,23 +174,23 @@
   <!-- Filtros e Ações Rápidas -->
   <div class="work-toolbar">
     <div class="filter-tabs">
-      <button class="filter-tab filter-tab--active" data-filter="all">
+      <button class="filter-tab filter-tab--active" data-filter="all" data-ref="04">
         Todas <span class="tab-count" data-filter-count="all">0</span>
       </button>
-      <button class="filter-tab" data-filter="today">
+      <button class="filter-tab" data-filter="today" data-ref="05">
         Hoje <span class="tab-count" data-filter-count="today">0</span>
       </button>
-      <button class="filter-tab" data-filter="week">
+      <button class="filter-tab" data-filter="week" data-ref="06">
         Esta Semana <span class="tab-count" data-filter-count="week">0</span>
       </button>
-      <button class="filter-tab" data-filter="overdue">
+      <button class="filter-tab" data-filter="overdue" data-ref="07">
         Atrasadas <span class="tab-count" data-filter-count="overdue">0</span>
       </button>
     </div>
 
     <div class="work-toolbar__actions">
       <div class="view-switcher">
-        <button class="view-btn view-btn--active" data-view="list" title="Visualização em Lista">
+        <button class="view-btn view-btn--active" data-view="list" title="Visualização em Lista" data-ref="08">
           <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
             <line x1="8" y1="6" x2="21" y2="6"></line>
             <line x1="8" y1="12" x2="21" y2="12"></line>
@@ -200,7 +200,7 @@
             <line x1="3" y1="18" x2="3.01" y2="18"></line>
           </svg>
         </button>
-        <button class="view-btn" data-view="kanban" title="Visualização Kanban">
+        <button class="view-btn" data-view="kanban" title="Visualização Kanban" data-ref="09">
           <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
             <rect x="3" y="3" width="7" height="7"></rect>
             <rect x="14" y="3" width="7" height="7"></rect>
@@ -210,9 +210,9 @@
         </button>
       </div>
 
-      <input type="text" class="search-input" placeholder="Buscar atividades..." id="searchInput" />
+      <input type="text" class="search-input" placeholder="Buscar atividades..." id="searchInput"  data-ref="21" />
       
-      <select class="sort-select" id="sortSelect">
+      <select class="sort-select" id="sortSelect" data-ref="25">
         <option value="deadline">Ordenar por Prazo</option>
         <option value="priority">Ordenar por Prioridade</option>
         <option value="status">Ordenar por Status</option>
@@ -299,8 +299,8 @@
         <div class="time-tracker-header">
           <h3>⏱️ Controle de Horas</h3>
           <div class="time-tracker-tabs">
-            <button class="time-tab time-tab--active" data-period="day">Hoje</button>
-            <button class="time-tab" data-period="week">Semana</button>
+            <button class="time-tab time-tab--active" data-period="day" data-ref="10">Hoje</button>
+            <button class="time-tab" data-period="week" data-ref="11">Semana</button>
           </div>
         </div>
         
@@ -597,7 +597,7 @@
     <div class="modal-container">
       <div class="modal-header">
         <h3>⏱️ Adicionar Horas Trabalhadas</h3>
-        <button class="modal-close" onclick="closeModal('modalAddHours')">&times;</button>
+        <button class="modal-close" onclick="closeModal('modalAddHours')" data-ref="12">&times;</button>
       </div>
       
       <div class="modal-body">
@@ -608,14 +608,14 @@
         <form id="formAddHours">
           <div class="form-group">
             <label for="workDate">Data do Trabalho *</label>
-            <input type="date" id="workDate" name="work_date" class="form-input" required />
+            <input type="date" id="workDate" name="work_date" class="form-input" required  data-ref="22" />
             <small class="form-hint">Data em que as horas foram trabalhadas</small>
           </div>
           
           <div class="form-group">
             <label for="hoursWorked">Horas Trabalhadas *</label>
             <div class="hours-input-group">
-              <input type="number" id="hoursWorked" name="hours" class="form-input" min="0" max="24" step="0.25" placeholder="0" required />
+              <input type="number" id="hoursWorked" name="hours" class="form-input" min="0" max="24" step="0.25" placeholder="0" required  data-ref="23" />
               <span class="input-suffix">horas</span>
             </div>
             <small class="form-hint">Use decimais: 0.25 = 15min | 0.5 = 30min | 0.75 = 45min | 1 = 1h</small>
@@ -623,7 +623,7 @@
           
           <div class="form-group">
             <label for="workDescription">Descrição do Trabalho (Opcional)</label>
-            <textarea id="workDescription" name="description" class="form-textarea" rows="3" placeholder="Descreva brevemente o que foi feito..."></textarea>
+            <textarea id="workDescription" name="description" class="form-textarea" rows="3" placeholder="Descreva brevemente o que foi feito..." data-ref="27"></textarea>
           </div>
           
           <div class="hours-summary">
@@ -644,8 +644,8 @@
       </div>
       
       <div class="modal-footer">
-        <button type="button" class="btn btn-secondary" onclick="closeModal('modalAddHours')">Cancelar</button>
-        <button type="submit" form="formAddHours" class="btn btn-primary">
+        <button type="button" class="btn btn-secondary" onclick="closeModal('modalAddHours')" data-ref="13">Cancelar</button>
+        <button type="submit" form="formAddHours" class="btn btn-primary" data-ref="14">
           <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
             <polyline points="20 6 9 17 4 12"></polyline>
           </svg>
@@ -660,7 +660,7 @@
     <div class="modal-container">
       <div class="modal-header">
         <h3>💬 Adicionar Comentário / Anotação</h3>
-        <button class="modal-close" onclick="closeModal('modalAddComment')">&times;</button>
+        <button class="modal-close" onclick="closeModal('modalAddComment')" data-ref="15">&times;</button>
       </div>
       
       <div class="modal-body">
@@ -671,7 +671,7 @@
         <form id="formAddComment">
           <div class="form-group">
             <label for="commentType">Tipo de Comentário</label>
-            <select id="commentType" name="comment_type" class="form-select">
+            <select id="commentType" name="comment_type" class="form-select" data-ref="26">
               <option value="note">📝 Nota / Observação</option>
               <option value="progress">📈 Atualização de Progresso</option>
               <option value="issue">⚠️ Problema Identificado</option>
@@ -682,13 +682,13 @@
           
           <div class="form-group">
             <label for="commentText">Comentário *</label>
-            <textarea id="commentText" name="comment" class="form-textarea" rows="5" placeholder="Digite seu comentário ou anotação..." required></textarea>
+            <textarea id="commentText" name="comment" class="form-textarea" rows="5" placeholder="Digite seu comentário ou anotação..." required data-ref="28"></textarea>
             <small class="form-hint">Seja claro e objetivo. Suas anotações ajudam no acompanhamento.</small>
           </div>
           
           <div class="form-group">
             <label class="form-checkbox">
-              <input type="checkbox" id="commentPrivate" name="is_private" />
+              <input type="checkbox" id="commentPrivate" name="is_private"  data-ref="24" />
               <span>Comentário privado (apenas eu posso ver)</span>
             </label>
           </div>
@@ -704,8 +704,8 @@
       </div>
       
       <div class="modal-footer">
-        <button type="button" class="btn btn-secondary" onclick="closeModal('modalAddComment')">Cancelar</button>
-        <button type="submit" form="formAddComment" class="btn btn-primary">
+        <button type="button" class="btn btn-secondary" onclick="closeModal('modalAddComment')" data-ref="16">Cancelar</button>
+        <button type="submit" form="formAddComment" class="btn btn-primary" data-ref="17">
           <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
             <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"></path>
           </svg>
@@ -720,7 +720,7 @@
     <div class="modal-container modal-container--small">
       <div class="modal-header">
         <h3>✅ Finalizar Atividade</h3>
-        <button class="modal-close" onclick="closeModal('modalComplete')">&times;</button>
+        <button class="modal-close" onclick="closeModal('modalComplete')" data-ref="18">&times;</button>
       </div>
       
       <div class="modal-body">
@@ -740,7 +740,7 @@
         <form id="formComplete">
           <div class="form-group">
             <label for="completionComment">Comentário Final (Opcional)</label>
-            <textarea id="completionComment" name="completion_comment" class="form-textarea" rows="3" placeholder="Descreva o resultado, aprendizados ou observações finais..."></textarea>
+            <textarea id="completionComment" name="completion_comment" class="form-textarea" rows="3" placeholder="Descreva o resultado, aprendizados ou observações finais..." data-ref="29"></textarea>
           </div>
           
           <div class="completion-summary">
@@ -757,8 +757,8 @@
       </div>
       
       <div class="modal-footer">
-        <button type="button" class="btn btn-secondary" onclick="closeModal('modalComplete')">Cancelar</button>
-        <button type="submit" form="formComplete" class="btn btn-success">
+        <button type="button" class="btn btn-secondary" onclick="closeModal('modalComplete')" data-ref="19">Cancelar</button>
+        <button type="submit" form="formComplete" class="btn btn-success" data-ref="20">
           <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
             <polyline points="20 6 9 17 4 12"></polyline>
           </svg>
