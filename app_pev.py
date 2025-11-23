@@ -406,7 +406,7 @@ def _ensure_ui_cache():
         for entry in entries:
             # Mapeia rota -> código da tela (ex: /implantacao/modelo/modefin -> 314)
             route = entry.route
-            screen_code = str(entry.screen_code)
+            screen_code = f"{entry.screen_code:03d}"
             
             if route:
                 # Normaliza a rota do banco também
