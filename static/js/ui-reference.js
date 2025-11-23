@@ -5,17 +5,19 @@
 
 (function () {
     const CONFIG = {
-        toggleKey: 'Y', // Pressione Ctrl + Shift + Y
+        toggleKey: 'Y', // Ctrl + Shift + Y
         storageKey: 'ui_ref_debug_mode'
     };
 
+    // Estado
     let isDebugMode = localStorage.getItem(CONFIG.storageKey) === 'true';
-    let pageCode = document.body.dataset.pageRef || '??';
+    let pageCode = normalizePageCode(document.body.dataset.pageRef || '??');
     let refBadges = [];
     let resizeScheduled = false;
     let rebuildScheduled = false;
     let mutationObserver = null;
 
+    // Botão toggle
     const toggleBtn = document.createElement('button');
     toggleBtn.id = 'ui-ref-toggle';
     toggleBtn.innerHTML = '<span>&#128065;</span> Refs';
@@ -25,6 +27,7 @@
         enableDebug();
     }
 
+    // Atalho teclado
     document.addEventListener('keydown', (e) => {
         if (e.ctrlKey && e.shiftKey && e.key.toUpperCase() === CONFIG.toggleKey) {
             e.preventDefault();
@@ -34,12 +37,13 @@
 
     toggleBtn.addEventListener('click', toggleDebug);
 
+    // Ctrl+Click para copiar
     document.addEventListener('click', (e) => {
         const refElement = e.target.closest('[data-ref]');
         if (e.ctrlKey && refElement) {
             e.preventDefault();
             e.stopPropagation();
-            const elementCode = refElement.dataset.ref;
+            const elementCode = normalizeElementCode(refElement.dataset.ref);
             const fullCode = `${pageCode}-${elementCode}`;
             copyToClipboard(fullCode, refElement);
         }
@@ -113,7 +117,7 @@
     function buildBadges() {
         clearBadges();
         document.querySelectorAll('[data-ref]').forEach((element) => {
-            const elementCode = element.dataset.ref;
+            const elementCode = normalizeElementCode(element.dataset.ref);
             if (!elementCode) return;
 
             const badge = document.createElement('span');
@@ -204,4 +208,22 @@
             el.classList.add('ref-bottom');
         }
     });
+
+    function normalizePageCode(code) {
+        if (!code) return '??';
+        const clean = String(code).trim();
+        if (/^[0-9]+$/.test(clean)) {
+            return clean.padStart(3, '0');
+        }
+        return clean;
+    }
+
+    function normalizeElementCode(code) {
+        if (!code) return '';
+        const clean = String(code).trim();
+        if (/^[0-9]+$/.test(clean)) {
+            return clean.padStart(3, '0');
+        }
+        return clean;
+    }
 })();

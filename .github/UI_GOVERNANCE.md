@@ -1,82 +1,36 @@
 # Governança de Interface de Usuário (UI)
 
-Este documento define os padrões e processos obrigatórios para o desenvolvimento e manutenção da interface de usuário do sistema Gestão Versus.
+Padrões obrigatórios para o sistema de referência de UI (versão 2).
 
-## Sistema de Referência de UI (UI Reference System)
+## Sistema de Referência
 
-Implementamos um sistema de endereçamento único para todas as páginas e elementos interativos do sistema. O objetivo é facilitar a comunicação entre usuários, suporte e desenvolvimento, além de permitir testes automatizados mais robustos.
+- **Formato:** `XXX-XXX` (Página-Elemento), apenas numérico.
+- **Páginas (`XXX`):** códigos únicos, sequenciais (001, 002, ...), registrados em `ui_pages_v2`.
+- **Elementos (`XXX`):** sequenciais dentro da página (001, 002, ...), armazenados em `ui_elements_v2`.
+- `data-ref` no HTML é normalizado para 3 dígitos na UI (ex.: `data-ref="5"` → `005`).
 
-### Formato dos Códigos
+## Como Registrar
 
-O sistema utiliza um formato de dois blocos de dois caracteres alfanuméricos:
+1) **Página**  
+```python
+from services.ui_reference_service_v2 import UIReferenceServiceV2
+UIReferenceServiceV2.register_page(
+    page_name="Minha Página",
+    template_file="minha_pagina.html",
+    page_route="/minha/pagina"
+)
+```
 
-**`XX-XX`** (Página-Elemento)
+2) **Elementos**  
+- Marque os elementos interativos com `data-ref="NNN"`.
+- Para sincronizar com o banco (opcional): `python scripts/catalog_ui_elements.py --verbose`
 
-Exemplos:
-- `01-01`: Página 01 (Login), Elemento 01 (Botão Entrar)
-- `A5-B2`: Página A5 (PEV Projetos), Elemento B2 (Tabela de Projetos)
+## Ferramentas
+- **Overlay de códigos:** `Ctrl + Shift + Y`
+- **Cópia rápida:** `Ctrl + click` copia `XXX-XXX`
 
-#### Regras de Numeração
-
-1. **Páginas (Primeiro par `XX`)**:
-   - Sequencial: `01` a `99`, depois `A0` a `ZZ`.
-   - Único em todo o sistema.
-   - Gerado automaticamente pelo banco de dados/serviço.
-
-2. **Elementos (Segundo par `XX`)**:
-   - Sequencial dentro da página: `01` a `99`, depois `A0` a `ZZ`.
-   - Único dentro da página.
-
-### Processo de Desenvolvimento
-
-#### 1. Criando Nova Página
-
-Ao criar uma nova página HTML (`.html`):
-
-1. **Registrar no Banco**: Use o script ou serviço para criar a página e obter o próximo código disponível.
-   ```python
-   # Exemplo via shell
-   from services.ui_reference_service import create_page
-   code = create_page(page_code=get_next_page_code(), page_name="Nova Página", template_file="nova_pagina.html")
-   print(code) # Ex: 'A9'
-   ```
-
-2. **Adicionar ao Template**: O `base.html` já injeta o código automaticamente se passado pelo backend. No seu controller/rota, certifique-se de passar `page_code` para o template.
-   ```python
-   return render_template('nova_pagina.html', page_code='A9', ...)
-   ```
-
-#### 2. Adicionando Elementos
-
-Ao adicionar botões, campos, tabelas ou cards importantes:
-
-1. **Obter Código**: Use o serviço para reservar o código.
-2. **Adicionar Atributo**: Adicione `data-ref="XX"` ao elemento HTML.
-   ```html
-   <button class="btn btn-primary" data-ref="01">Salvar</button>
-   ```
-
-### Ferramentas de Apoio
-
-#### Modo Debug (Visualização)
-- Pressione `Ctrl + Shift + R` em qualquer página para ativar o modo de visualização dos códigos.
-- Todos os elementos com `data-ref` serão destacados.
-
-#### Cópia Rápida
-- Segure `Ctrl` e clique em qualquer elemento com referência para copiar o código completo (ex: `A9-01`) para a área de transferência.
-
-### Manutenção
-
-- **Script de Catalogação**: `scripts/catalog_ui_elements.py` pode ser rodado periodicamente para detectar novos elementos e páginas que não foram registrados (embora o ideal seja registrar na criação).
-- **Auditoria**: Todas as alterações nas tabelas `ui_pages` e `ui_elements` são logadas na tabela `ui_audit_log`.
-
----
-
-## Checklist para Pull Requests (UI)
-
-Todo PR que envolve alterações de interface deve conter:
-
-- [ ] Novos arquivos `.html` foram registrados na tabela `ui_pages`.
-- [ ] Novos elementos interativos (botões, inputs) possuem atributo `data-ref`.
-- [ ] Códigos de referência foram gerados sequencialmente e não conflitam.
-- [ ] Funcionalidade de `Ctrl+Click` testada nos novos elementos.
+## Checklist de PR (UI)
+- [ ] Novos templates registrados em `ui_pages_v2` (código numérico).
+- [ ] Elementos interativos têm `data-ref` e foram sincronizados em `ui_elements_v2`.
+- [ ] Formato `XXX-XXX` respeitado (sem alfanuméricos).
+- [ ] `Ctrl+Click` testado nos novos elementos.
