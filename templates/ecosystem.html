@@ -2,508 +2,619 @@
 <html lang="pt-BR">
 
 <head>
-
-    <meta charset="utf-8">
-
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-
-    <title>Ecossistema Versus - Gest&#227;o Corporativa</title>
-
-    <link rel="icon" type="image/x-icon" href="{{ url_for('static', filename='favicon.ico') }}" />
-
-    <link rel="shortcut icon" type="image/x-icon" href="{{ url_for('static', filename='favicon.ico') }}" />
-
-    <link rel="preconnect" href="https://fonts.googleapis.com">
-
-    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-
-    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700&display=swap"
-        rel="stylesheet">
-
-    <style>
-        :root {
-
-            --color-bg: #f5f7fa;
-
-            --color-surface: #ffffff;
-
-            --color-surface-alt: #f9fafb;
-
-            --color-border: #e2e8f0;
-
-            --color-text: #0f172a;
-
-            --color-muted: #64748b;
-
-            --color-accent: #2563eb;
-
-            --color-accent-strong: #1d4ed8;
-
-            --color-highlight: #f59e0b;
-
-            --color-danger: #ef4444;
-
-            --shadow-lg: 0 24px 48px rgba(0, 0, 0, 0.12);
-
-            --shadow-md: 0 16px 32px rgba(0, 0, 0, 0.08);
-
-            --radius-lg: 20px;
-
-            --radius-md: 14px;
-
-            --radius-sm: 10px;
-
-            --font-family: "Poppins", -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
-
-        }
-
-
-
-        * {
-
-            box-sizing: border-box;
-
-        }
-
-
-
-        body {
-
-            margin: 0;
-
-            font-family: var(--font-family);
-
-            background: var(--color-bg);
-
-            color: var(--color-text);
-
-            min-height: 100vh;
-
-        }
-
-
-
-        .ecosystem-container {
-
-            max-width: 1400px;
-
-            margin: 0 auto;
-
-            padding: 48px 24px;
-
-        }
-
-
-
-        .ecosystem-header {
-
-            text-align: center;
-
-            margin-bottom: 64px;
-
-        }
-
-
-
-        .ecosystem-title {
-
-            font-size: 48px;
-
-            font-weight: 700;
-
-            margin: 0 0 16px 0;
-
-            color: var(--color-text);
-
-        }
-
-
-
-        .ecosystem-subtitle {
-
-            font-size: 20px;
-
-            color: var(--color-muted);
-
-            margin: 0;
-
-        }
-
-
-
-        .modules-grid {
-
-            display: grid;
-
-            grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
-
-            gap: 16px;
-
-            margin-bottom: 24px;
-
-        }
-
-
-
-        .module-card {
-
-            background: var(--color-surface);
-
-            border: 1px solid var(--color-border);
-
-            border-radius: var(--radius-lg);
-
-            padding: 32px;
-
-            text-decoration: none;
-
-            color: inherit;
-
-            transition: all 0.3s ease;
-
-            position: relative;
-
-            overflow: hidden;
-
-            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.05);
-
-        }
-
-
-
-        .module-card::before {
-
-            content: '';
-
-            position: absolute;
-
-            top: 0;
-
-            left: 0;
-
-            right: 0;
-
-            bottom: 0;
-
-            background: linear-gradient(135deg, rgba(37, 99, 235, 0.05), transparent);
-
-            opacity: 0;
-
-            transition: opacity 0.3s ease;
-
-        }
-
-
-
-        .module-card:hover::before {
-
-            opacity: 1;
-
-        }
-
-
-
-        .module-card:hover {
-
-            transform: translateY(-8px);
-
-            border-color: var(--color-accent);
-
-            box-shadow: var(--shadow-lg);
-
-        }
-
-
-
-        .module-card[aria-disabled="true"] {
-
-            cursor: not-allowed;
-
-            pointer-events: none;
-
-        }
-
-
-
-        .module-icon {
-
-            width: 64px;
-
-            height: 64px;
-
-            border-radius: var(--radius-md);
-
-            background: linear-gradient(135deg, var(--color-accent), var(--color-accent-strong));
-
-            display: flex;
-
-            align-items: center;
-
-            justify-content: center;
-
-            font-size: 28px;
-
-            font-weight: 700;
-
-            margin-bottom: 20px;
-
-            color: #ffffff;
-
-        }
-
-
-
-        .module-title {
-
-            font-size: 24px;
-
-            font-weight: 600;
-
-            margin: 0 0 12px 0;
-
-        }
-
-
-
-        .module-description {
-
-            color: var(--color-muted);
-
-            line-height: 1.6;
-
-            margin: 0 0 20px 0;
-
-        }
-
-
-
-        .module-status {
-
-            display: inline-flex;
-
-            align-items: center;
-
-            gap: 8px;
-
-            padding: 6px 12px;
-
-            border-radius: 999px;
-
-            font-size: 12px;
-
-            font-weight: 500;
-
-            text-transform: uppercase;
-
-            letter-spacing: 0.1em;
-
-        }
-
-
-
-        .status-active {
-
-            background: #d1fae5;
-
-            border: 1px solid #10b981;
-
-            color: #065f46;
-
-        }
-
-
-
-        .status-coming-soon {
-
-            background: #fef3c7;
-
-            border: 1px solid #f59e0b;
-
-            color: #92400e;
-
-        }
-
-
-
-        .ecosystem-footer {
-
-            text-align: center;
-
-            padding: 48px 0;
-
-            border-top: 1px solid var(--color-border);
-
-        }
-
-
-
-        .footer-text {
-
-            color: var(--color-muted);
-
-            margin: 0;
-
-        }
-
-
-
-        .coming-soon {
-
-            opacity: 0.7;
-
-            cursor: not-allowed;
-
-        }
-
-
-
-        .coming-soon:hover {
-
-            transform: none;
-
-        }
-
-
-
-
-
-        @media (max-width: 768px) {
-
-            .ecosystem-container {
-
-                padding: 24px 16px;
-
-            }
-
-
-
-            .ecosystem-title {
-
-                font-size: 36px;
-
-            }
-
-
-
-            .modules-grid {
-
-                grid-template-columns: 1fr;
-
-                gap: 24px;
-
-            }
-
-        }
-    </style>
-
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Ecossistema Versus - Anotações Inteligentes</title>
+  <link rel="icon" type="image/x-icon" href="{{ url_for('static', filename='favicon.ico') }}" />
+  <link rel="shortcut icon" type="image/x-icon" href="{{ url_for('static', filename='favicon.ico') }}" />
+  <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700&display=swap"
+    rel="stylesheet" />
+  <style>
+    :root {
+      --bg: #050811;
+      --surface: #0f172a;
+      --surface-2: #121c33;
+      --border: rgba(255, 255, 255, 0.12);
+      --text: #f8fafc;
+      --muted: #94a3b8;
+      --accent: #2563eb;
+      --danger: #ef4444;
+      --radius: 18px;
+      --shadow: 0 20px 40px rgba(0, 0, 0, 0.6);
+      font-family: "Poppins", "Segoe UI", sans-serif;
+    }
+
+    * {
+      box-sizing: border-box;
+    }
+
+    body {
+      margin: 0;
+      background: linear-gradient(180deg, #020617, #090c1a 60%, #050811);
+      min-height: 100vh;
+      color: var(--text);
+      display: flex;
+    }
+
+    /* Sidebar Navigation */
+    .sidebar {
+      width: 280px;
+      background: var(--surface);
+      border-right: 1px solid var(--border);
+      padding: 24px 16px;
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+      position: fixed;
+      left: 0;
+      top: 0;
+      bottom: 0;
+      overflow-y: auto;
+      z-index: 100;
+    }
+
+    .sidebar-header {
+      padding: 0 12px 16px;
+      border-bottom: 1px solid var(--border);
+      margin-bottom: 8px;
+    }
+
+    .sidebar-logo {
+      font-size: 20px;
+      font-weight: 700;
+      color: var(--text);
+      margin: 0 0 4px;
+    }
+
+    .sidebar-subtitle {
+      font-size: 12px;
+      color: var(--muted);
+      margin: 0;
+    }
+
+    .sidebar-section {
+      margin-bottom: 16px;
+    }
+
+    .sidebar-section-title {
+      font-size: 11px;
+      font-weight: 600;
+      color: var(--muted);
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+      padding: 0 12px 8px;
+      margin: 0;
+    }
+
+    .sidebar-link {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      padding: 10px 12px;
+      border-radius: 10px;
+      color: var(--text);
+      text-decoration: none;
+      transition: background 0.2s ease;
+      font-size: 14px;
+    }
+
+    .sidebar-link:hover {
+      background: var(--surface-2);
+    }
+
+    .sidebar-link.active {
+      background: linear-gradient(135deg, #2563eb, #1d4ed8);
+      color: #fff;
+    }
+
+    .sidebar-icon {
+      width: 20px;
+      height: 20px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 16px;
+    }
+
+    .sidebar-logout {
+      margin-top: auto;
+      padding-top: 16px;
+      border-top: 1px solid var(--border);
+    }
+
+    /* Main Content */
+    .main-content {
+      margin-left: 280px;
+      flex: 1;
+      min-height: 100vh;
+    }
+
+    .page {
+      max-width: 1200px;
+      margin: 0 auto;
+      padding: 32px 20px 60px;
+    }
+
+    .hero {
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+      margin-bottom: 28px;
+    }
+
+    .hero-title {
+      font-size: 32px;
+      margin: 0;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+
+    .hero-subtitle {
+      margin: 0;
+      color: var(--muted);
+      font-size: 16px;
+    }
+
+    .grid {
+      display: grid;
+      gap: 18px;
+    }
+
+    .notes-panel {
+      display: grid;
+      grid-template-columns: minmax(280px, 1fr) 1fr;
+      gap: 18px;
+    }
+
+    .card {
+      background: var(--surface);
+      border-radius: var(--radius);
+      border: 1px solid var(--border);
+      padding: 22px;
+      box-shadow: var(--shadow);
+    }
+
+    .card-title {
+      margin: 0 0 12px;
+      font-size: 20px;
+    }
+
+    textarea,
+    .note-actions-row .btn {
+      font-family: inherit;
+    }
+
+    textarea {
+      width: 100%;
+      min-height: 140px;
+      border-radius: 14px;
+      border: 1px solid var(--border);
+      background: var(--surface-2);
+      padding: 14px;
+      color: var(--text);
+      resize: vertical;
+    }
+
+    .note-actions-row {
+      margin-top: 14px;
+      display: flex;
+      justify-content: flex-end;
+    }
+
+    .note-actions-row .btn {
+      background: linear-gradient(135deg, #2563eb, #1d4ed8);
+      color: #fff;
+      border-radius: 12px;
+      border: none;
+      padding: 10px 16px;
+      cursor: pointer;
+    }
+
+    .notes-list {
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+    }
+
+    .empty-state {
+      text-align: center;
+      color: var(--muted);
+      font-size: 13px;
+      padding: 24px 0;
+    }
+
+    .note-row {
+      background: var(--surface-2);
+      border: 1px solid var(--border);
+      border-radius: 14px;
+      padding: 12px 14px;
+      display: flex;
+      flex-direction: column;
+      gap: 6px;
+      width: 100%;
+      transition: border-color 0.2s ease, box-shadow 0.2s ease;
+    }
+
+    .note-row.selected {
+      border-color: #60a5fa;
+      box-shadow: 0 8px 18px rgba(37, 99, 235, 0.25);
+    }
+
+    .note-row-top {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+    }
+
+    .note-row-meta {
+      font-size: 13px;
+      color: var(--muted);
+      margin: 0;
+    }
+
+    .note-row-bottom {
+      width: 100%;
+    }
+
+    .note-row-text {
+      margin: 0;
+      font-size: 14px;
+      color: var(--text);
+      overflow: hidden;
+      text-overflow: ellipsis;
+      display: -webkit-box;
+      -webkit-line-clamp: 2;
+      -webkit-box-orient: vertical;
+      white-space: normal;
+    }
+
+    .note-row-location {
+      font-size: 12px;
+      color: var(--muted);
+      display: inline-block;
+      width: 100%;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+
+    .note-controls {
+      display: flex;
+      gap: 10px;
+      justify-content: flex-end;
+      margin-top: 16px;
+    }
+
+    .note-controls button {
+      flex: 1;
+      min-width: 120px;
+      border-radius: 12px;
+      border: none;
+      padding: 10px 12px;
+      font-weight: 600;
+      cursor: pointer;
+    }
+
+    .note-controls .btn-primary {
+      background: linear-gradient(135deg, #2563eb, #1d4ed8);
+      color: #fff;
+    }
+
+    .note-controls .btn-danger {
+      background: linear-gradient(135deg, #ef4444, #dc2626);
+      color: #fff;
+    }
+
+    .note-select input {
+      width: 20px;
+      height: 20px;
+      accent-color: #2563eb;
+      cursor: pointer;
+    }
+
+    /* Mobile Responsive */
+    @media (max-width: 1024px) {
+      .sidebar {
+        transform: translateX(-100%);
+        transition: transform 0.3s ease;
+      }
+
+      .sidebar.open {
+        transform: translateX(0);
+      }
+
+      .main-content {
+        margin-left: 0;
+      }
+
+      .mobile-menu-btn {
+        display: block;
+        position: fixed;
+        top: 20px;
+        left: 20px;
+        z-index: 101;
+        background: var(--surface);
+        border: 1px solid var(--border);
+        border-radius: 10px;
+        padding: 10px;
+        cursor: pointer;
+        color: var(--text);
+      }
+    }
+
+    @media (max-width: 900px) {
+      .notes-panel {
+        grid-template-columns: 1fr;
+      }
+    }
+
+    @media (max-width: 600px) {
+      .hero-title {
+        font-size: 24px;
+      }
+
+      .note-row {
+        flex-direction: column;
+        align-items: flex-start;
+      }
+
+      .note-controls {
+        flex-direction: column;
+        width: 100%;
+      }
+    }
+
+    .mobile-menu-btn {
+      display: none;
+    }
+  </style>
 </head>
 
 <body>
-
-    {% set module_links = module_links if module_links is defined else {} %}
-
-    {% set pev_link = module_links.get('pev') %}
-
-    {% set grv_link = module_links.get('grv') %}
-
-    <div class="ecosystem-container">
-
-        <header class="ecosystem-header">
-
-            <h1 class="ecosystem-title">Ecossistema Versus</h1>
-
-            <p class="ecosystem-subtitle">Plataforma completa de gest&#227;o corporativa</p>
-
-        </header>
-
-
-
-        <div class="modules-grid">
-
-            <!-- PEV - Planejamento Estrategico Versus -->
-            {% if pev_link %}
-            <a href="{{ pev_link }}" class="module-card">
-                <div class="module-icon">PEV</div>
-                <h2 class="module-title">Planejamento Estrategico</h2>
-                <p class="module-description">Desenvolva e gerencie planos estrategicos com OKRs, direcionadores e
-                    projetos.</p>
-                <div class="module-status status-active">Ativo</div>
-            </a>
-            {% else %}
-            <div class="module-card coming-soon" aria-disabled="true">
-                <div class="module-icon">PEV</div>
-                <h2 class="module-title">Planejamento Estrategico</h2>
-                <p class="module-description">Modulo indisponivel neste ambiente. Verifique dependencias do blueprint
-                    PEV.</p>
-                <div class="module-status status-coming-soon">Indisponivel</div>
-            </div>
-            {% endif %}
-
-            <!-- GRV - Gerenciamento da Rotina Versus -->
-            {% if grv_link %}
-            <a href="{{ grv_link }}" class="module-card">
-
-                <div class="module-icon">GRV</div>
-
-                <h2 class="module-title">Gerenciamento da Rotina</h2>
-
-                <p class="module-description">Organize processos operacionais, gerencie projetos e acompanhe a rotina.
-                </p>
-
-                <div class="module-status status-active">Ativo</div>
-
-            </a>
-
-            {% else %}
-            <div class="module-card coming-soon" aria-disabled="true">
-                <div class="module-icon">GRV</div>
-                <h2 class="module-title">Gerenciamento da Rotina</h2>
-                <p class="module-description">Modulo indisponivel neste ambiente. Verifique dependencias do blueprint
-                    GRV.</p>
-                <div class="module-status status-coming-soon">Indisponivel</div>
-            </div>
-            {% endif %}
-            <!-- Empresas - Cadastro Unificado -->
-            <a href="/companies" class="module-card">
-                <div class="module-icon">EMP</div>
-                <h2 class="module-title">Empresas</h2>
-                <p class="module-description">Cadastro unificado por abas: Geral, PEV e GRV.</p>
-                <div class="module-status status-active">Ativo</div>
-            </a>
-
-            <!-- GEV - Gest&#227;o Estrat&#233;gica Versus (em breve) -->
-            <div class="module-card coming-soon" aria-label="Gest&#227;o Estrat&#233;gica (em breve)">
-                <div class="module-icon">GEV</div>
-                <h2 class="module-title">Gest&#227;o Estrat&#233;gica</h2>
-                <p class="module-description">Dashboards, m&#233;tricas de performance e relat&#243;rios executivos.</p>
-                <div class="module-status status-coming-soon">Em breve</div>
-            </div>
-
-            <!-- GFV - Gest&#227;o Financeira Versus (em breve) -->
-            <div class="module-card coming-soon" aria-label="Gest&#227;o Financeira (em breve)">
-                <div class="module-icon">GFV</div>
-                <h2 class="module-title">Gest&#227;o Financeira</h2>
-                <p class="module-description">Or&#231;amentos, fluxo de caixa, custos e indicadores financeiros.</p>
-                <div class="module-status status-coming-soon">Em breve</div>
-            </div>
-
-            <!-- CFG - Configura&#231;&#245;es -->
-            <a href="/configs" class="module-card">
-                <div class="module-icon">CFG</div>
-                <h2 class="module-title">Configura&#231;&#245;es</h2>
-                <p class="module-description">Central de configura&#231;&#245;es do sistema, relat&#243;rios e
-                    padr&#245;es globais.</p>
-                <div class="module-status status-active">Ativo</div>
-            </a>
-
-        </div>
-
-        <footer class="ecosystem-footer">
-            <p class="footer-text">&copy; 2025 Versus Gestão Corporativa - Auxiliando os gestores e as organizações nas
-                definições e no alcance dos seus objetivos</p>
-        </footer>
-
+  <!-- Sidebar Navigation -->
+  <aside class="sidebar" id="sidebar">
+    <div class="sidebar-header">
+      <h2 class="sidebar-logo">Versus Gestão</h2>
+      <p class="sidebar-subtitle">Ecossistema Integrado</p>
     </div>
+
+    <nav>
+      <div class="sidebar-section">
+        <h3 class="sidebar-section-title">Módulos</h3>
+        {% if module_links.get('pev') %}
+        <a href="{{ module_links.pev }}" class="sidebar-link">
+          <span class="sidebar-icon">📊</span>
+          <span>PEV - Planejamento</span>
+        </a>
+        {% endif %}
+
+        {% if module_links.get('grv') %}
+        <a href="{{ module_links.grv }}" class="sidebar-link">
+          <span class="sidebar-icon">🔄</span>
+          <span>GRV - Processos</span>
+        </a>
+        {% endif %}
+
+        <a href="/main" class="sidebar-link active">
+          <span class="sidebar-icon">📝</span>
+          <span>Anotações</span>
+        </a>
+      </div>
+
+      <div class="sidebar-section">
+        <h3 class="sidebar-section-title">Sistema</h3>
+        <a href="/integrations" class="sidebar-link">
+          <span class="sidebar-icon">🔌</span>
+          <span>Integrações</span>
+        </a>
+        <a href="/configs-system" class="sidebar-link">
+          <span class="sidebar-icon">⚙️</span>
+          <span>Configurações</span>
+        </a>
+      </div>
+    </nav>
+
+    <div class="sidebar-logout">
+      <a href="/logout" class="sidebar-link">
+        <span class="sidebar-icon">🚪</span>
+        <span>Sair</span>
+      </a>
+    </div>
+  </aside>
+
+  <!-- Mobile Menu Button -->
+  <button class="mobile-menu-btn" id="mobileMenuBtn">
+    ☰
+  </button>
+
+  <!-- Main Content -->
+  <main class="main-content">
+    <div class="page">
+      <header class="hero">
+        <h1 class="hero-title">Anotações inteligentes</h1>
+        <p class="hero-subtitle">Crie, selecione e gere atividades sem perder o foco na responsividade.</p>
+      </header>
+
+      <section class="grid notes-panel">
+        <article class="card">
+          <h2 class="card-title">Nova anotação</h2>
+          <form class="note-form" id="noteForm">
+            <textarea id="noteText" name="noteText" placeholder="Descreva a anotação..." required></textarea>
+            <div class="note-actions-row">
+              <button type="submit" class="btn">Salvar nota</button>
+            </div>
+          </form>
+        </article>
+
+        <article class="card">
+          <h2 class="card-title">Notas em andamento</h2>
+          <div class="notes-list" id="noteBoard"></div>
+          <div class="note-controls">
+            <button class="btn-primary" id="action-create" disabled>Criar atividade</button>
+            <button class="btn-danger" id="action-delete" disabled>Excluir</button>
+          </div>
+        </article>
+      </section>
+    </div>
+  </main>
+
+  <script>
+    // Mobile menu toggle
+    const mobileMenuBtn = document.getElementById('mobileMenuBtn');
+    const sidebar = document.getElementById('sidebar');
+
+    if (mobileMenuBtn) {
+      mobileMenuBtn.addEventListener('click', () => {
+        sidebar.classList.toggle('open');
+      });
+    }
+
+    // Notes functionality
+    (function () {
+      const noteBoard = document.getElementById("noteBoard");
+      const noteForm = document.getElementById("noteForm");
+      const noteText = document.getElementById("noteText");
+      const actionCreate = document.getElementById("action-create");
+      const actionDelete = document.getElementById("action-delete");
+      const notesEndpoint = "{{ url_for('notes.list_notes') }}";
+
+      let notes = [];
+      let selectedNoteId = null;
+
+      function formatDate(value) {
+        if (!value) {
+          return "Sem data";
+        }
+        const parsed = new Date(value);
+        if (Number.isNaN(parsed)) {
+          return value;
+        }
+        return parsed.toLocaleDateString("pt-BR");
+      }
+
+      function renderNotes() {
+        if (!notes.length) {
+          noteBoard.innerHTML =
+            '<p class="empty-state">Nenhuma nota registrada até o momento.</p>';
+          return;
+        }
+
+        noteBoard.innerHTML = notes
+          .map((note) => {
+            const noteId = note.id ? String(note.id) : note.code || "";
+            const displayCode = note.code || noteId || "Nota";
+            const displayCreated =
+              note.created_at ? formatDate(note.created_at) : note.created || "";
+            const hasMeta = displayCode && displayCreated;
+            const metaText = hasMeta
+              ? `${displayCode} | ${displayCreated}`
+              : displayCode || displayCreated;
+            const locationText = note.location || "";
+
+            return `
+              <div class="note-row ${selectedNoteId === noteId ? "selected" : ""}" data-id="${noteId}">
+                <div class="note-row-top">
+                  <label class="note-select">
+                    <input type="checkbox" ${selectedNoteId === noteId ? "checked" : ""} />
+                  </label>
+                  <span class="note-row-meta">${metaText}</span>
+                </div>
+                <div class="note-row-bottom">
+                  <p class="note-row-text">${note.text}</p>
+                  ${locationText ? `<span class="note-row-location">${locationText}</span>` : ""}
+                </div>
+              </div>
+            `;
+          })
+          .join("");
+      }
+
+      function updateSelection(id) {
+        selectedNoteId = id;
+        actionCreate.disabled = !id;
+        actionDelete.disabled = !id;
+        renderNotes();
+      }
+
+      function addTemporaryNote(text) {
+        const newNote = {
+          id: `tmp-${Date.now()}`,
+          code: `NT-${Math.floor(Math.random() * 9000 + 1000)}`,
+          text,
+          created: "Agora",
+          location: "",
+          status: "ativa",
+        };
+
+        notes.unshift(newNote);
+        noteText.value = "";
+        updateSelection(newNote.id);
+      }
+
+      async function loadNotes() {
+        try {
+          const response = await fetch(notesEndpoint, {
+            headers: {
+              Accept: "application/json",
+            },
+          });
+
+          if (!response.ok) {
+            throw new Error("Falha ao carregar as notas do servidor.");
+          }
+
+          const payload = await response.json();
+
+          if (!payload || !payload.success) {
+            throw new Error(payload?.message || "Não foi possível recuperar as notas.");
+          }
+
+          notes = (payload.notes || []).map((note) => ({
+            ...note,
+            id: note.id ? String(note.id) : note.code || `tmp-${Date.now()}`,
+          }));
+        } catch (error) {
+          console.error("Não foi possível carregar as notas:", error);
+          noteBoard.innerHTML =
+            '<p class="empty-state">Erro ao carregar as notas. Atualize a página para tentar novamente.</p>';
+          return;
+        }
+
+        renderNotes();
+      }
+
+      noteForm.addEventListener("submit", (event) => {
+        event.preventDefault();
+        const text = noteText.value.trim();
+        if (!text) return;
+        addTemporaryNote(text);
+      });
+
+      noteBoard.addEventListener("click", (event) => {
+        const row = event.target.closest(".note-row");
+        if (!row) return;
+        const id = row.dataset.id;
+        updateSelection(selectedNoteId === id ? null : id);
+      });
+
+      actionDelete.addEventListener("click", () => {
+        if (!selectedNoteId) return;
+        const index = notes.findIndex((note) => note.id === selectedNoteId);
+        if (index >= 0) {
+          notes.splice(index, 1);
+          updateSelection(null);
+        }
+      });
+
+      actionCreate.addEventListener("click", () => {
+        if (!selectedNoteId) return;
+        alert(`Criar atividade a partir da nota selecionada (${selectedNoteId}).`);
+      });
+
+      loadNotes();
+    })();
+  </script>
 
 </body>
 
