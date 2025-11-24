@@ -344,6 +344,7 @@ def implantacao_canvas_proposta_valor():
         active_nav="pev",
         plan=plan,
         segments=segmentos,
+        segmentos=segmentos,
         plan_id=plan_id,
     )
 
@@ -361,6 +362,7 @@ def implantacao_mapa_persona():
         active_nav="pev",
         plan=plan,
         segments=segmentos,
+        segmentos=segmentos,
         plan_id=plan_id,
     )
 
@@ -378,6 +380,7 @@ def implantacao_matriz_diferenciais():
         active_nav="pev",
         plan=plan,
         segments=segmentos,
+        segmentos=segmentos,
         plan_id=plan_id,
     )
 
