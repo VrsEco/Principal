@@ -4,7 +4,7 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Ecossistema Versus - Anotações Inteligentes</title>
+  <title>Ecossistema Versus - Anotações</title>
   <link rel="icon" type="image/x-icon" href="{{ url_for('static', filename='favicon.ico') }}" />
   <link rel="shortcut icon" type="image/x-icon" href="{{ url_for('static', filename='favicon.ico') }}" />
   <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700&display=swap"
@@ -217,6 +217,12 @@
       margin-bottom: 28px;
     }
 
+    .hero-header-row {
+      display: flex;
+      align-items: center;
+      gap: 16px;
+    }
+
     .hero-title {
       font-size: 32px;
       margin: 0;
@@ -225,10 +231,21 @@
       text-overflow: ellipsis;
     }
 
-    .hero-subtitle {
-      margin: 0;
-      color: var(--muted);
-      font-size: 16px;
+    .menu-trigger {
+      display: none;
+      /* Hidden by default on desktop */
+      background: transparent;
+      border: none;
+      color: var(--text);
+      cursor: pointer;
+      padding: 8px;
+      border-radius: 8px;
+      align-items: center;
+      justify-content: center;
+    }
+
+    .menu-trigger:hover {
+      background: var(--surface-2);
     }
 
     .grid {
@@ -393,7 +410,6 @@
       .sidebar {
         transform: translateX(-100%);
         width: var(--sidebar-width) !important;
-        /* Force full width on mobile when open */
       }
 
       .sidebar.open {
@@ -404,25 +420,7 @@
         margin-left: 0 !important;
       }
 
-      .mobile-menu-btn {
-        display: flex;
-        align-items: center;
-        justify-content: center;
-        position: fixed;
-        top: 20px;
-        left: 20px;
-        z-index: 101;
-        background: var(--surface);
-        border: 1px solid var(--border);
-        border-radius: 10px;
-        width: 40px;
-        height: 40px;
-        cursor: pointer;
-        color: var(--text);
-        box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
-      }
-
-      /* Hide collapse button on mobile */
+      /* Hide desktop toggle on mobile */
       .desktop-toggle {
         display: none;
       }
@@ -444,6 +442,10 @@
       .sidebar-link {
         justify-content: flex-start !important;
         padding: 10px 12px !important;
+      }
+
+      .menu-trigger {
+        display: flex !important;
       }
     }
 
@@ -467,10 +469,6 @@
         flex-direction: column;
         width: 100%;
       }
-    }
-
-    .mobile-menu-btn {
-      display: none;
     }
   </style>
 </head>
@@ -535,22 +533,21 @@
     </div>
   </aside>
 
-  <!-- Mobile Menu Button -->
-  <button class="mobile-menu-btn" id="mobileMenuBtn">
-    <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
-      stroke-linecap="round" stroke-linejoin="round">
-      <line x1="3" y1="12" x2="21" y2="12"></line>
-      <line x1="3" y1="6" x2="21" y2="6"></line>
-      <line x1="3" y1="18" x2="21" y2="18"></line>
-    </svg>
-  </button>
-
   <!-- Main Content -->
   <main class="main-content" id="mainContent">
     <div class="page">
       <header class="hero">
-        <h1 class="hero-title">Anotações inteligentes</h1>
-        <p class="hero-subtitle">Crie, selecione e gere atividades sem perder o foco na responsividade.</p>
+        <div class="hero-header-row">
+          <button class="menu-trigger" id="mobileMenuBtn">
+            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
+              stroke-linecap="round" stroke-linejoin="round">
+              <line x1="3" y1="12" x2="21" y2="12"></line>
+              <line x1="3" y1="6" x2="21" y2="6"></line>
+              <line x1="3" y1="18" x2="21" y2="18"></line>
+            </svg>
+          </button>
+          <h1 class="hero-title">Anotações</h1>
+        </div>
       </header>
 
       <section class="grid notes-panel">
