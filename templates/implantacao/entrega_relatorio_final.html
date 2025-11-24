@@ -18,11 +18,14 @@
   subsection,
   cover_meta_grid,
   status_badge,
-  format_currency,
   format_percent,
   format_date,
   format_number
 %}
+
+{% macro format_currency(value) -%}
+  {{ format_number(value or 0, 2) }}
+{%- endmacro %}
 
 {% block page_title %}Análise de Viabilidade - {{ plan.plan_name }} - GestaoVersus{% endblock %}
 {% block meta_description %}Relatorio final do plano {{ plan.plan_name }} para {{ plan.company_name }}, consolidando alinhamento, modelo, estruturas e viabilidade financeira.{% endblock %}
@@ -935,7 +938,7 @@
       {% endcall %}
 
       {% if modefin_executive_summary %}
-        {% call highlight_box("info", "Resumo executivo ModeFin") %}
+        {% call highlight_box("info", "Resumo Executivo") %}
           <p>{{ modefin_executive_summary }}</p>
         {% endcall %}
       {% else %}
@@ -954,12 +957,6 @@
     {% call responsive_grid("260px") %}
       {% set projeto_titulo = plan.plan_name or "Planejamento | Agenda do Planejamento" %}
       {% call model7_card("Projeto vinculado", projeto_titulo) %}
-        {% if projeto and projeto.nome %}
-          <p>
-            <strong>O Projeto associado a este planejamento:</strong><br>
-            {{ projeto.nome }}
-          </p>
-        {% endif %}
         {% if projeto and projeto.codigo %}
           <p><strong>Codigo:</strong> {{ projeto.codigo }}</p>
         {% endif %}
@@ -989,13 +986,8 @@
         <ul class="story-list compact">
           <li><strong>Status do plano:</strong> {{ plan.status }}</li>
           <li><strong>Consultor responsavel:</strong> Fabiano Ferreira</li>
-          <li><strong>Atividades agenda PEV:</strong> {{ projeto_atividades|length }}</li>
           {% if projeto and projeto.atividades_grv %}
             <li><strong>Atividades projeto GRV:</strong> {{ projeto.atividades_grv|length }}</li>
-            {% set total_atividades = projeto_atividades|length + projeto.atividades_grv|length %}
-            <li><strong>Total de atividades:</strong> {{ total_atividades }}</li>
-          {% else %}
-            <li><strong>Total de atividades:</strong> {{ projeto_atividades|length }}</li>
           {% endif %}
         </ul>
       {% endcall %}

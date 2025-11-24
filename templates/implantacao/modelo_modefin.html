@@ -512,8 +512,94 @@
 </div>
 
 <!-- ========== MODALS ========== -->
-<div class="modal" id="capitalGiroModal"></div>
-<div class="modal" id="fundingSourceModal"></div>
+<div class="modal" id="capitalGiroModal" aria-hidden="true">
+  <div class="modal-content">
+    <div class="modal-header">
+      <h3 id="capitalGiroModalTitle">Capital de Giro</h3>
+      <button type="button" class="modal-close" onclick="closeCapitalGiroModal()" aria-label="Fechar">&times;</button>
+    </div>
+    <form id="capitalGiroForm">
+      <input type="hidden" id="capitalGiroId" name="capitalGiroId">
+      <div class="form-group">
+        <label for="capitalGiroType">Tipo</label>
+        <select id="capitalGiroType" name="capitalGiroType" required>
+          <option value="">Selecione</option>
+          <option value="caixa">Caixa</option>
+          <option value="recebiveis">Recebíveis</option>
+          <option value="estoques">Estoques</option>
+          <option value="outro">Outro</option>
+        </select>
+      </div>
+      <div class="form-group">
+        <label for="capitalGiroDate">Data do aporte</label>
+        <input type="date" id="capitalGiroDate" name="capitalGiroDate" required>
+      </div>
+      <div class="form-group">
+        <label for="capitalGiroAmount">Valor (R$)</label>
+        <input type="number" id="capitalGiroAmount" name="capitalGiroAmount" step="0.01" min="0" required>
+      </div>
+      <div class="form-group">
+        <label for="capitalGiroDescription">Descrição</label>
+        <textarea id="capitalGiroDescription" name="capitalGiroDescription" rows="2"></textarea>
+      </div>
+      <div class="form-group">
+        <label for="capitalGiroNotes">Notas</label>
+        <textarea id="capitalGiroNotes" name="capitalGiroNotes" rows="2"></textarea>
+      </div>
+      <div class="form-actions" style="justify-content: flex-end; gap: 12px;">
+        <button type="button" class="button button-secondary" onclick="closeCapitalGiroModal()" data-ref="06">Cancelar</button>
+        <button type="submit" class="button button-primary" data-ref="07">Salvar</button>
+      </div>
+    </form>
+  </div>
+</div>
+<div class="modal" id="fundingSourceModal" aria-hidden="true">
+  <div class="modal-content">
+    <div class="modal-header">
+      <h3 id="fundingSourceModalTitle">Fonte de Recursos</h3>
+      <button type="button" class="modal-close" onclick="closeFundingSourceModal()" aria-label="Fechar">&times;</button>
+    </div>
+    <form id="fundingSourceForm">
+      <input type="hidden" id="fundingSourceId" name="fundingSourceId">
+      <div class="form-group">
+        <label for="fundingSourceCategory">Categoria</label>
+        <select id="fundingSourceCategory" name="fundingSourceCategory" required>
+          <option value="">Selecione</option>
+          <option value="aporte">Aporte</option>
+          <option value="emprestimos">Empréstimos</option>
+          <option value="capital_proprio">Capital Próprio</option>
+          <option value="fornecedores">Fornecedores</option>
+          <option value="investidores">Investidores</option>
+          <option value="outros">Outros</option>
+        </select>
+      </div>
+      <div class="form-group">
+        <label for="fundingSourceDescription">Descrição</label>
+        <input type="text" id="fundingSourceDescription" name="fundingSourceDescription" required>
+      </div>
+      <div class="form-group">
+        <label for="fundingSourceAmount">Valor (R$)</label>
+        <input type="number" id="fundingSourceAmount" name="fundingSourceAmount" step="0.01" min="0" required>
+      </div>
+      <div class="form-group">
+        <label for="fundingSourceAvailability">Disponibilidade</label>
+        <input type="date" id="fundingSourceAvailability" name="fundingSourceAvailability">
+      </div>
+      <div class="form-group">
+        <label for="fundingSourceContributionDate">Data de aporte</label>
+        <input type="date" id="fundingSourceContributionDate" name="fundingSourceContributionDate">
+      </div>
+      <div class="form-group">
+        <label for="fundingSourceNotes">Notas</label>
+        <textarea id="fundingSourceNotes" name="fundingSourceNotes" rows="2"></textarea>
+      </div>
+      <div class="form-actions" style="justify-content: flex-end; gap: 12px;">
+        <button type="button" class="button button-secondary" onclick="closeFundingSourceModal()" data-ref="07">Cancelar</button>
+        <button type="submit" class="button button-primary" data-ref="08">Salvar</button>
+      </div>
+    </form>
+  </div>
+</div>
 <div class="modal" id="profitDistributionModal"></div>
 <div class="modal" id="resultRuleModal"></div>
 <div class="modal" id="executiveSummaryModal"></div>
@@ -1047,17 +1133,263 @@
     console.warn(`${functionName} ainda nao foi implementada neste modo de visualizacao.`);
   }
 
-  function openCapitalGiroModal() { logStub('openCapitalGiroModal'); }
-  function closeCapitalGiroModal() { logStub('closeCapitalGiroModal'); }
-  function saveCapitalGiro() { logStub('saveCapitalGiro'); }
-  function editCapitalGiro() { logStub('editCapitalGiro'); }
-  function deleteCapitalGiro() { logStub('deleteCapitalGiro'); }
+  let currentCapitalGiroId = null;
+  let currentFundingSourceId = null;
 
-  function openFundingSourceModal() { logStub('openFundingSourceModal'); }
-  function closeFundingSourceModal() { logStub('closeFundingSourceModal'); }
-  function saveFundingSource() { logStub('saveFundingSource'); }
-  function editFundingSource() { logStub('editFundingSource'); }
-  function deleteFundingSource() { logStub('deleteFundingSource'); }
+  function setModalActive(modalId, active) {
+    const modal = document.getElementById(modalId);
+    if (!modal) {
+      return;
+    }
+    if (active) {
+      modal.classList.add('active');
+      modal.classList.add('show');
+      modal.style.display = 'flex';
+      modal.setAttribute('aria-hidden', 'false');
+      document.body.style.overflow = 'hidden';
+    } else {
+      modal.classList.remove('active');
+      modal.classList.remove('show');
+      modal.style.display = 'none';
+      modal.setAttribute('aria-hidden', 'true');
+      document.body.style.overflow = '';
+    }
+  }
+
+  function normalizeNumberValue(value) {
+    const number = parseFloat(String(value || '').replace(',', '.'));
+    return Number.isFinite(number) ? number : null;
+  }
+
+  function openCapitalGiroModal(itemId = null) {
+    currentCapitalGiroId = itemId;
+    const modal = document.getElementById('capitalGiroModal');
+    const form = document.getElementById('capitalGiroForm');
+    if (!modal || !form) {
+      return;
+    }
+
+    form.reset();
+    const title = document.getElementById('capitalGiroModalTitle');
+    if (title) {
+      title.textContent = itemId ? 'Editar Capital de Giro' : 'Adicionar Capital de Giro';
+    }
+
+    if (itemId) {
+      const item = capitalGiroItems.find(entry => String(entry.id) === String(itemId));
+      if (item) {
+        form.capitalGiroType.value = item.item_type || '';
+        form.capitalGiroDate.value = item.contribution_date || '';
+        form.capitalGiroAmount.value = item.amount || '';
+        form.capitalGiroDescription.value = item.description || '';
+        form.capitalGiroNotes.value = item.notes || '';
+      }
+    }
+
+    setModalActive('capitalGiroModal', true);
+    setTimeout(() => form.capitalGiroType?.focus(), 0);
+  }
+
+  function closeCapitalGiroModal() {
+    currentCapitalGiroId = null;
+    setModalActive('capitalGiroModal', false);
+  }
+
+  async function saveCapitalGiro(event) {
+    event.preventDefault();
+    const form = document.getElementById('capitalGiroForm');
+    if (!form) {
+      return;
+    }
+    const payload = {
+      item_type: form.capitalGiroType.value.trim(),
+      contribution_date: form.capitalGiroDate.value,
+      amount: normalizeNumberValue(form.capitalGiroAmount.value),
+      description: form.capitalGiroDescription.value.trim(),
+      notes: form.capitalGiroNotes.value.trim(),
+    };
+    if (!payload.item_type || !payload.contribution_date || payload.amount === null) {
+      showMessage('Informe tipo, data e valor do capital de giro.', 'warning');
+      return;
+    }
+
+    const apiUrl = currentCapitalGiroId
+      ? `/pev/api/implantacao/${planId}/finance/capital-giro/${currentCapitalGiroId}`
+      : `/pev/api/implantacao/${planId}/finance/capital-giro`;
+    const method = currentCapitalGiroId ? 'PUT' : 'POST';
+
+    try {
+      const result = await apiCall(apiUrl, method, payload);
+      const savedItem = {
+        id: currentCapitalGiroId || result.id,
+        ...payload,
+        amount: payload.amount,
+      };
+
+      if (currentCapitalGiroId) {
+        const index = capitalGiroItems.findIndex(item => String(item.id) === String(currentCapitalGiroId));
+        if (index >= 0) {
+          capitalGiroItems[index] = {
+            ...capitalGiroItems[index],
+            ...savedItem,
+          };
+        }
+      } else if (result?.id) {
+        capitalGiroItems.unshift(savedItem);
+      }
+
+      showMessage('Capital de giro salvo com sucesso!', 'success');
+      closeCapitalGiroModal();
+      renderInvestimentos();
+      renderFluxoInvestimento();
+      renderFluxoNegocio();
+      renderFluxoInvestidor();
+    } catch (error) {
+      console.error('Capital Giro error:', error);
+      showMessage('Erro ao salvar capital de giro: ' + (error.message || 'Erro inesperado'), 'error');
+    }
+  }
+
+  async function deleteCapitalGiro(itemId) {
+    if (!itemId || !confirm('Tem certeza que deseja remover este capital de giro?')) {
+      return;
+    }
+    try {
+      await apiCall(`/pev/api/implantacao/${planId}/finance/capital-giro/${itemId}`, 'DELETE');
+      const index = capitalGiroItems.findIndex(item => String(item.id) === String(itemId));
+      if (index >= 0) {
+        capitalGiroItems.splice(index, 1);
+      }
+      showMessage('Capital de giro removido!', 'success');
+      renderInvestimentos();
+      renderFluxoInvestimento();
+      renderFluxoNegocio();
+      renderFluxoInvestidor();
+    } catch (error) {
+      console.error('Capital Giro delete error:', error);
+      showMessage('Erro ao remover capital de giro: ' + (error.message || 'Erro inesperado'), 'error');
+    }
+  }
+
+  function editCapitalGiro(itemId) {
+    openCapitalGiroModal(itemId);
+  }
+
+  function openFundingSourceModal(sourceId = null) {
+    currentFundingSourceId = sourceId;
+    const modal = document.getElementById('fundingSourceModal');
+    const form = document.getElementById('fundingSourceForm');
+    if (!modal || !form) {
+      return;
+    }
+
+    form.reset();
+    const title = document.getElementById('fundingSourceModalTitle');
+    if (title) {
+      title.textContent = sourceId ? 'Editar Fonte de Recursos' : 'Adicionar Fonte de Recursos';
+    }
+
+    if (sourceId) {
+      const fonte = fundingSources.find(entry => String(entry.id) === String(sourceId));
+      if (fonte) {
+        form.fundingSourceCategory.value = fonte.category || '';
+        form.fundingSourceDescription.value = fonte.description || '';
+        form.fundingSourceAmount.value = fonte.amount || '';
+        form.fundingSourceAvailability.value = fonte.availability || '';
+        form.fundingSourceContributionDate.value = fonte.contribution_date || '';
+        form.fundingSourceNotes.value = fonte.notes || '';
+      }
+    }
+
+    setModalActive('fundingSourceModal', true);
+    setTimeout(() => form.fundingSourceDescription?.focus(), 0);
+  }
+
+  function closeFundingSourceModal() {
+    currentFundingSourceId = null;
+    setModalActive('fundingSourceModal', false);
+  }
+
+  async function saveFundingSource(event) {
+    event.preventDefault();
+    const form = document.getElementById('fundingSourceForm');
+    if (!form) {
+      return;
+    }
+    const payload = {
+      category: form.fundingSourceCategory.value.trim(),
+      description: form.fundingSourceDescription.value.trim(),
+      amount: normalizeNumberValue(form.fundingSourceAmount.value),
+      availability: form.fundingSourceAvailability.value || null,
+      contribution_date: form.fundingSourceContributionDate.value || null,
+      notes: form.fundingSourceNotes.value.trim(),
+    };
+    if (!payload.description || payload.amount === null) {
+      showMessage('Informe descrição e valor da fonte.', 'warning');
+      return;
+    }
+
+    const apiUrl = currentFundingSourceId
+      ? `/pev/api/implantacao/${planId}/finance/sources/${currentFundingSourceId}`
+      : `/pev/api/implantacao/${planId}/finance/sources`;
+    const method = currentFundingSourceId ? 'PUT' : 'POST';
+
+    try {
+      const result = await apiCall(apiUrl, method, payload);
+      const savedSource = {
+        id: currentFundingSourceId || result.id,
+        ...payload,
+        amount: payload.amount,
+      };
+
+      if (currentFundingSourceId) {
+        const index = fundingSources.findIndex(source => String(source.id) === String(currentFundingSourceId));
+        if (index >= 0) {
+          fundingSources[index] = {
+            ...fundingSources[index],
+            ...savedSource,
+          };
+        }
+      } else if (result?.id) {
+        fundingSources.unshift(savedSource);
+      }
+
+      showMessage('Fonte de recursos salva com sucesso!', 'success');
+      closeFundingSourceModal();
+      renderFontes();
+      renderFluxoInvestimento();
+      renderFluxoNegocio();
+      renderFluxoInvestidor();
+    } catch (error) {
+      console.error('Funding source error:', error);
+      showMessage('Erro ao salvar fonte de recursos: ' + (error.message || 'Erro inesperado'), 'error');
+    }
+  }
+
+  async function deleteFundingSource(sourceId) {
+    if (!sourceId || !confirm('Deseja remover esta fonte de recursos?')) {
+      return;
+    }
+    try {
+      await apiCall(`/pev/api/implantacao/${planId}/finance/sources/${sourceId}`, 'DELETE');
+      const index = fundingSources.findIndex(source => String(source.id) === String(sourceId));
+      if (index >= 0) {
+        fundingSources.splice(index, 1);
+      }
+      showMessage('Fonte removida com sucesso!', 'success');
+      renderFontes();
+      renderFluxoInvestimento();
+      renderFluxoNegocio();
+      renderFluxoInvestidor();
+    } catch (error) {
+      console.error('Funding source delete error:', error);
+      showMessage('Erro ao remover fonte: ' + (error.message || 'Erro inesperado'), 'error');
+    }
+  }
+
+  function editFundingSource(sourceId) {
+    openFundingSourceModal(sourceId);
+  }
 
   function openProfitDistributionModal() { logStub('openProfitDistributionModal'); }
   function closeProfitDistributionModal() { logStub('closeProfitDistributionModal'); }
@@ -1100,6 +1432,21 @@
       throw error;
     }
   }
+  document.getElementById('capitalGiroForm')?.addEventListener('submit', saveCapitalGiro);
+  document.getElementById('fundingSourceForm')?.addEventListener('submit', saveFundingSource);
+  function bindOverlay(modalId, closeFn) {
+    const modal = document.getElementById(modalId);
+    if (!modal) {
+      return;
+    }
+    modal.addEventListener('click', event => {
+      if (event.target === modal) {
+        closeFn();
+      }
+    });
+  }
+  bindOverlay('capitalGiroModal', closeCapitalGiroModal);
+  bindOverlay('fundingSourceModal', closeFundingSourceModal);
   
   // =========================================
   // SEO 1: RESULTADOS
