@@ -25,6 +25,7 @@ def init_app(app):
     from . import team, activity_work_log, activity_comment
     from . import product
     from . import product_rampup
+    from . import note
     from . import ui_catalog
 
     return db, login_manager, migrate

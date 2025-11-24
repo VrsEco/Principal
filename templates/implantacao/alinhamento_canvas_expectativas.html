@@ -1,6 +1,5 @@
 {% extends "base.html" %}
-{% block title %}Canvas de Expectativas | Implantacao{% endblock %}
-{% block body %}{{ super() }}{% endblock %}
+{% block title %}Canvas de Expectativas | Implantação{% endblock %}
 
 {% block content %}
 <style>
@@ -39,12 +38,6 @@
     color: #475569;
     line-height: 1.6;
     max-width: 760px;
-  }
-
-  .canvas-grid {
-    display: grid;
-    grid-template-columns: minmax(0, 1fr);
-    gap: 24px;
   }
 
   .canvas-table {
@@ -86,50 +79,13 @@
     align-items: center;
   }
 
-  .canvas-section p {
-    margin: 0 0 16px;
-    font-size: 15px;
-    color: #475569;
-  }
-
-  .canvas-section ul {
-    margin: 0;
-    padding-left: 20px;
-    color: #475569;
-    line-height: 1.6;
-  }
-
-  .next-steps {
-    display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
-    gap: 16px;
-    margin-top: 16px;
-  }
-
-  .next-step-card {
-    background: rgba(248, 250, 252, 0.9);
-    border: 1px solid rgba(148, 163, 184, 0.2);
-    border-radius: 16px;
-    padding: 16px;
-    display: flex;
-    flex-direction: column;
-    gap: 6px;
-    font-size: 14px;
-    color: #475569;
-    position: relative;
-  }
-
-  .next-step-card strong {
-    color: #0f172a;
-  }
-
   .button {
     padding: 10px 16px;
     border-radius: 8px;
     border: none;
     font-weight: 600;
     cursor: pointer;
-    transition: all 0.3s ease;
+    transition: 0.3s;
     font-size: 14px;
   }
 
@@ -149,17 +105,9 @@
     border: 1px solid rgba(148, 163, 184, 0.3);
   }
 
-  .button-secondary:hover {
-    background: #e2e8f0;
-  }
-
   .button-danger {
     background: #ef4444;
     color: white;
-  }
-
-  .button-danger:hover {
-    background: #dc2626;
   }
 
   .button-sm {
@@ -190,29 +138,10 @@
     font-size: 14px;
   }
 
-  .form-group textarea {
-    min-height: 80px;
-    resize: vertical;
-  }
-
-  .form-group input:focus,
-  .form-group textarea:focus {
-    outline: none;
-    border-color: #3b82f6;
-    box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
-  }
-
-  textarea.readonly-field,
-  input.readonly-field {
+  .readonly-field {
     background: #f1f5f9 !important;
     cursor: not-allowed;
     color: #475569 !important;
-  }
-
-  textarea.readonly-field:focus,
-  input.readonly-field:focus {
-    border-color: rgba(148, 163, 184, 0.3) !important;
-    box-shadow: none !important;
   }
 
   .form-actions {
@@ -222,50 +151,7 @@
     margin-top: 20px;
   }
 
-  .criterios-list {
-    display: flex;
-    flex-direction: column;
-    gap: 8px;
-    margin-bottom: 12px;
-    min-height: 40px;
-  }
-
-  .criterio-item {
-    display: flex;
-    align-items: center;
-    gap: 8px;
-    padding: 8px 12px;
-    background: #f8fafc;
-    border: 1px solid rgba(148, 163, 184, 0.2);
-    border-radius: 8px;
-  }
-
-  .criterio-item span {
-    flex: 1;
-    color: #1e293b;
-    font-size: 14px;
-  }
-
-  .criterios-empty {
-    color: #94a3b8;
-    font-style: italic;
-    font-size: 14px;
-    padding: 12px;
-    text-align: center;
-    background: #f8fafc;
-    border: 1px dashed rgba(148, 163, 184, 0.3);
-    border-radius: 8px;
-  }
-
-  .delete-btn {
-    position: absolute;
-    top: 8px;
-    right: 8px;
-    padding: 4px 8px;
-    font-size: 12px;
-  }
-
-  @media (max-width: 768px) {
+  @media (max-width:768px) {
     .canvas-wrapper {
       padding: 20px;
     }
@@ -285,16 +171,11 @@
 <section class="canvas-wrapper">
   <header class="canvas-hero">
     <h1>Canvas de expectativas dos sócios</h1>
-    <p>
-      Registro estruturado das ambições, níveis de dedicação e tolerância a risco
-      de cada sócio. Utilize este canvas para alinhar decisões críticas ao longo
-      da implantação do negócio.
-    </p>
-    <div class="form-actions" style="justify-content: flex-start; margin-top: 20px;">
+    <p>Registro estruturado das ambições, níveis de dedicação e tolerância a risco de cada sócio. Utilize este canvas
+      para alinhar decisões críticas ao longo da implantação do negócio.</p>
+    <div class="form-actions" style="justify-content:flex-start; margin-top:20px;">
       <a href="{{ url_for('pev.pev_implantacao_overview', plan_id=plan_id) }}" class="button button-secondary"
-        style="text-decoration: none; display: inline-block;" data-ref="19">
-        ← Voltar para Implantação
-      </a>
+        style="text-decoration:none; display:inline-block;" data-ref="19">← Voltar para Implantação</a>
     </div>
   </header>
 
@@ -314,7 +195,7 @@
             <th>Motivação central</th>
             <th>Compromisso</th>
             <th>Tolerância a risco</th>
-            <th style="width: 100px;">Ações</th>
+            <th style="width:100px;">Ações</th>
           </tr>
         </thead>
         <tbody id="socios-table">
@@ -327,7 +208,7 @@
             <td>{{ socio.risco }}</td>
             <td>
               <button class="button button-secondary button-sm"
-                onclick="editSocio({{ socio.id }}, '{{ socio.nome | replace('\'', '\\\'') }}', '{{ socio.papel | replace('\'', '\\\'') }}', '{{ socio.motivacao | replace('\'', '\\\'') }}', '{{ socio.compromisso | replace('\'', '\\\'') }}', '{{ socio.risco | replace('\'', '\\\'') }}')"
+                onclick="editSocio({{ socio.id }}, '{{ socio.nome|replace("'", "\\'") }}', '{{ socio.papel|replace("'", "\\'") }}', '{{ socio.motivacao|replace("'", "\\'") }}', '{{ socio.compromisso|replace("'", "\\'") }}', '{{ socio.risco|replace("'", "\\'") }}')"
                 data-ref="02">✏️</button>
               <button class="button button-danger button-sm" onclick="deleteSocio({{ socio.id }})"
                 data-ref="03">🗑️</button>
@@ -335,9 +216,8 @@
           </tr>
           {% else %}
           <tr>
-            <td colspan="6" style="text-align: center; color: #94a3b8; padding: 32px;">
-              Nenhum sócio cadastrado. Clique em "Adicionar Sócio" para começar.
-            </td>
+            <td colspan="6" style="text-align:center; color:#94a3b8; padding:32px;">Nenhum sócio cadastrado. Clique em
+              "Adicionar Sócio" para começar.</td>
           </tr>
           {% endfor %}
         </tbody>
@@ -350,15 +230,11 @@
     <div class="canvas-card canvas-section">
       <h2>
         Pilares do alinhamento
-        <div style="display: flex; gap: 8px;">
+        <div style="display:flex; gap:8px;">
           <button id="edit-alinhamento-btn" class="button button-secondary button-sm" onclick="editarAlinhamento()"
-            style="display: inline-flex;" data-ref="04">
-            ✏️ Editar
-          </button>
+            data-ref="04">✏️ Editar</button>
           <button id="delete-alinhamento-btn" class="button button-danger button-sm" onclick="excluirAlinhamento()"
-            style="display: inline-flex;" data-ref="05">
-            🗑️ Excluir
-          </button>
+            data-ref="05">🗑️ Excluir</button>
         </div>
       </h2>
       <form id="alinhamento-form">
@@ -378,87 +254,59 @@
             placeholder="Digite os critérios de decisão, um por linha..."
             data-ref="14">{% if alinhamento.criterios_decisao %}{{ alinhamento.criterios_decisao | join('\n') }}{% endif %}</textarea>
         </div>
-        <div class="form-actions" id="alinhamento-actions" style="display: none;">
+        <div class="form-actions" id="alinhamento-actions" style="display:none;">
           <button type="button" class="button button-secondary" onclick="cancelarEdicao()"
             data-ref="06">Cancelar</button>
           <button type="submit" class="button button-primary" data-ref="07">Salvar Alinhamento</button>
         </div>
       </form>
     </div>
-
   </div>
 </section>
 
 <!-- Modal Adicionar/Editar Sócio -->
-<div id="socio-modal" class="modal" style="display: none;">
+<div id="socio-modal" class="modal" style="display:none;">
   <div class="modal-content modal-fundo-claro">
-    <div class="modal-header" style="background: linear-gradient(135deg, #ffffff 0%, #f9fafb 100%) !important;">
-      <h3 id="socio-modal-title" style="color: #000000 !important;">Adicionar Sócio</h3>
+    <div class="modal-header" style="background:linear-gradient(135deg,#ffffff 0%,#f9fafb 100%) !important;">
+      <h3 id="socio-modal-title" style="color:#000000 !important;">Adicionar Sócio</h3>
       <span class="modal-close" onclick="closeSocioModal()">&times;</span>
     </div>
-    <form id="socio-form"
-      style="padding: 24px; background: linear-gradient(135deg, #ffffff 0%, #f8fafc 100%) !important;">
+    <form id="socio-form" style="padding:24px; background:linear-gradient(135deg,#ffffff 0%,#f8fafc 100%) !important;">
       <input type="hidden" id="socio-id">
-      <div class="form-group">
-        <label for="socio-nome" style="color: #000000 !important;">Nome do Sócio *</label>
-        <input type="text" id="socio-nome" required class="input-fundo-claro" data-ref="10">
+      <div class="form-group"><label for="socio-nome" style="color:#000000 !important;">Nome do Sócio *</label><input
+          type="text" id="socio-nome" required class="input-fundo-claro" data-ref="10"></div>
+      <div class="form-group"><label for="socio-papel" style="color:#000000 !important;">Papel Definido</label><input
+          type="text" id="socio-papel" class="input-fundo-claro" data-ref="11"></div>
+      <div class="form-group"><label for="socio-motivacao" style="color:#000000 !important;">Motivação
+          Central</label><textarea id="socio-motivacao" rows="2" class="input-fundo-claro" data-ref="15"></textarea>
       </div>
-      <div class="form-group">
-        <label for="socio-papel" style="color: #000000 !important;">Papel Definido</label>
-        <input type="text" id="socio-papel" class="input-fundo-claro" data-ref="11">
-      </div>
-      <div class="form-group">
-        <label for="socio-motivacao" style="color: #000000 !important;">Motivação Central</label>
-        <textarea id="socio-motivacao" rows="2" class="input-fundo-claro" data-ref="15"></textarea>
-      </div>
-      <div class="form-group">
-        <label for="socio-compromisso" style="color: #000000 !important;">Compromisso</label>
-        <textarea id="socio-compromisso" rows="2" class="input-fundo-claro" data-ref="16"></textarea>
-      </div>
-      <div class="form-group">
-        <label for="socio-risco" style="color: #000000 !important;">Tolerância a Risco</label>
-        <textarea id="socio-risco" rows="2" class="input-fundo-claro" data-ref="17"></textarea>
-      </div>
-      <div class="form-actions">
-        <button type="button" class="button button-secondary" onclick="closeSocioModal()"
-          data-ref="08">Cancelar</button>
-        <button type="submit" class="button button-primary botao-fundo-claro" data-ref="09">Salvar</button>
-      </div>
+      <div class="form-group"><label for="socio-compromisso"
+          style="color:#000000 !important;">Compromisso</label><textarea id="socio-compromisso" rows="2"
+          class="input-fundo-claro" data-ref="16"></textarea></div>
+      <div class="form-group"><label for="socio-risco" style="color:#000000 !important;">Tolerância a
+          Risco</label><textarea id="socio-risco" rows="2" class="input-fundo-claro" data-ref="17"></textarea></div>
+      <div class="form-actions"><button type="button" class="button button-secondary" onclick="closeSocioModal()"
+          data-ref="08">Cancelar</button><button type="submit" class="button button-primary botao-fundo-claro"
+          data-ref="09">Salvar</button></div>
     </form>
   </div>
 </div>
 
 <script>
-  // Pegar plan_id da URL atual (mais confiável)
   function getPlanIdFromUrl() {
     const urlParams = new URLSearchParams(window.location.search);
     const planId = urlParams.get('plan_id');
-    if (planId) {
-      return parseInt(planId);
-    }
-    // Se não tiver na URL atual, tentar pegar do referrer
+    if (planId) return parseInt(planId);
     const referrer = document.referrer;
     if (referrer) {
-      const referrerUrl = new URL(referrer);
-      const referrerPlanId = new URLSearchParams(referrerUrl.search).get('plan_id');
-      if (referrerPlanId) {
-        return parseInt(referrerPlanId);
-      }
+      const refUrl = new URL(referrer);
+      const refPlanId = new URLSearchParams(refUrl.search).get('plan_id');
+      if (refPlanId) return parseInt(refPlanId);
     }
-    // Último recurso: usar valor padrão do backend
-    return {{ plan_id if plan_id else 'null' }
-  };
+    return {{ plan_id if plan_id else 'null' }};
   }
-
   const planId = getPlanIdFromUrl();
-
-  console.log('Plan ID detectado:', planId);
-
-  if (!planId) {
-    showMessage('ERRO: plan_id não foi encontrado na URL! Recarregue a página com ?plan_id=5 ou ?plan_id=6', 'error');
-  }
-
-  // ========== Sócios ==========
+  if (!planId) showMessage('ERRO: plan_id não foi encontrado na URL! Recarregue a página com ?plan_id=5 ou ?plan_id=6', 'error');
 
   function openAddSocioModal() {
     document.getElementById('socio-modal-title').textContent = 'Adicionar Sócio';
@@ -470,7 +318,6 @@
     document.getElementById('socio-risco').value = '';
     showModal('socio-modal');
   }
-
   function editSocio(id, nome, papel, motivacao, compromisso, risco) {
     document.getElementById('socio-modal-title').textContent = 'Editar Sócio';
     document.getElementById('socio-id').value = id;
@@ -481,349 +328,32 @@
     document.getElementById('socio-risco').value = risco || '';
     showModal('socio-modal');
   }
+  function closeSocioModal() { hideModal('socio-modal'); }
 
-  function closeSocioModal() {
-    hideModal('socio-modal');
-  }
-
-  document.getElementById('socio-form').addEventListener('submit', async (e) => {
+  document.getElementById('socio-form').addEventListener('submit', async e => {
     e.preventDefault();
-
     const socioId = document.getElementById('socio-id').value;
-    const data = {
-      name: document.getElementById('socio-nome').value,
-      role: document.getElementById('socio-papel').value,
-      motivation: document.getElementById('socio-motivacao').value,
-      commitment: document.getElementById('socio-compromisso').value,
-      risk: document.getElementById('socio-risco').value
-    };
-
-    try {
-      let url, method;
-      if (socioId) {
-        // Edit
-        url = `/pev/api/implantacao/${planId}/alignment/members/${socioId}`;
-        method = 'PUT';
-      } else {
-        // Add
-        url = `/pev/api/implantacao/${planId}/alignment/members`;
-        method = 'POST';
-      }
-
-      const response = await fetch(url, {
-        method: method,
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(data)
-      });
-
-      const result = await response.json();
-
-      if (result.success) {
-        showMessage('Sócio salvo com sucesso!', 'success');
-        closeSocioModal();
-        setTimeout(() => window.location.reload(), 1000);
-      } else {
-        showMessage('Erro ao salvar sócio: ' + result.error, 'error');
-      }
-    } catch (error) {
-      console.error(error);
-      showMessage('Erro ao salvar sócio', 'error');
-    }
+    const data = { name: document.getElementById('socio-nome').value, role: document.getElementById('socio-papel').value, motivation: document.getElementById('socio-motivacao').value, commitment: document.getElementById('socio-compromisso').value, risk: document.getElementById('socio-risco').value };
+    const url = socioId ? `/pev/api/implantacao/${planId}/alignment/members/${socioId}` : `/pev/api/implantacao/${planId}/alignment/members`;
+    const method = socioId ? 'PUT' : 'POST';
+    const resp = await fetch(url, { method, headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(data) });
+    const res = await resp.json();
+    if (res.success) { showMessage('Sócio salvo com sucesso!', 'success'); closeSocioModal(); setTimeout(() => window.location.reload(), 1000); } else { showMessage('Erro ao salvar sócio: ' + res.error, 'error'); }
   });
-
   async function deleteSocio(socioId) {
     if (!confirm('Tem certeza que deseja remover este sócio?')) return;
-
-    try {
-      const response = await fetch(`/pev/api/implantacao/${planId}/alignment/members/${socioId}`, {
-        method: 'DELETE'
-      });
-
-      const result = await response.json();
-
-      if (result.success) {
-        showMessage('Sócio removido com sucesso!', 'success');
-        setTimeout(() => window.location.reload(), 1000);
-      } else {
-        showMessage('Erro ao remover sócio', 'error');
-      }
-    } catch (error) {
-      console.error(error);
-      showMessage('Erro ao remover sócio', 'error');
-    }
+    const resp = await fetch(`/pev/api/implantacao/${planId}/alignment/members/${socioId}`, { method: 'DELETE' });
+    const res = await resp.json();
+    if (res.success) { showMessage('Sócio removido com sucesso!', 'success'); setTimeout(() => window.location.reload(), 1000); } else { showMessage('Erro ao remover sócio', 'error'); }
   }
+  let alinhamentoOriginal = { visao: document.getElementById('visao').value, metas: document.getElementById('metas').value, criterios: document.getElementById('criterios').value };
+  function editarAlinhamento() { ['visao', 'metas', 'criterios'].forEach(id => { const el = document.getElementById(id); el.removeAttribute('readonly'); el.classList.remove('readonly-field'); el.style.background = 'white'; }); document.getElementById('edit-alinhamento-btn').style.display = 'none'; document.getElementById('delete-alinhamento-btn').style.display = 'none'; document.getElementById('alinhamento-actions').style.display = 'flex'; }
+  function cancelarEdicao() { document.getElementById('visao').value = alinhamentoOriginal.visao; document.getElementById('metas').value = alinhamentoOriginal.metas; document.getElementById('criterios').value = alinhamentoOriginal.criterios;['visao', 'metas', 'criterios'].forEach(id => { const el = document.getElementById(id); el.setAttribute('readonly', true); el.classList.add('readonly-field'); el.style.background = '#f1f5f9'; }); document.getElementById('edit-alinhamento-btn').style.display = 'inline-flex'; document.getElementById('delete-alinhamento-btn').style.display = 'inline-flex'; document.getElementById('alinhamento-actions').style.display = 'none'; }
+  async function excluirAlinhamento() { if (!confirm('Tem certeza que deseja excluir todos os dados de alinhamento?')) return; document.getElementById('visao').value = ''; document.getElementById('metas').value = ''; document.getElementById('criterios').value = ''; const data = { visao_compartilhada: '', metas_financeiras: '', criterios_decisao: [] }; const resp = await fetch(`/pev/api/implantacao/${planId}/alignment/overview`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(data) }); const res = await resp.json(); if (res.success) { showMessage('Alinhamento excluído com sucesso!', 'success'); alinhamentoOriginal = { visao: '', metas: '', criterios: '' }; } else { showMessage('Erro ao excluir alinhamento: ' + res.error, 'error'); } }
 
-  // ========== Alinhamento ==========
-
-  let alinhamentoOriginal = {
-    visao: document.getElementById('visao').value,
-    metas: document.getElementById('metas').value,
-    criterios: document.getElementById('criterios').value
-  };
-
-  function editarAlinhamento() {
-    // Habilitar campos
-    const visaoField = document.getElementById('visao');
-    visaoField.removeAttribute('readonly');
-    visaoField.classList.remove('readonly-field');
-    visaoField.style.background = 'white';
-
-    const metasField = document.getElementById('metas');
-    metasField.removeAttribute('readonly');
-    metasField.classList.remove('readonly-field');
-    metasField.style.background = 'white';
-
-    const criteriosField = document.getElementById('criterios');
-    criteriosField.removeAttribute('readonly');
-    criteriosField.classList.remove('readonly-field');
-    criteriosField.style.background = 'white';
-
-    // Esconder botões editar/excluir
-    document.getElementById('edit-alinhamento-btn').style.display = 'none';
-    document.getElementById('delete-alinhamento-btn').style.display = 'none';
-
-    // Mostrar ações de salvar/cancelar
-    document.getElementById('alinhamento-actions').style.display = 'flex';
-  }
-
-  function cancelarEdicao() {
-    // Restaurar valores originais
-    document.getElementById('visao').value = alinhamentoOriginal.visao;
-    document.getElementById('metas').value = alinhamentoOriginal.metas;
-    document.getElementById('criterios').value = alinhamentoOriginal.criterios;
-
-    // Desabilitar campos
-    const visaoField = document.getElementById('visao');
-    visaoField.setAttribute('readonly', true);
-    visaoField.classList.add('readonly-field');
-    visaoField.style.background = '#f1f5f9';
-
-    const metasField = document.getElementById('metas');
-    metasField.setAttribute('readonly', true);
-    metasField.classList.add('readonly-field');
-    metasField.style.background = '#f1f5f9';
-
-    const criteriosField = document.getElementById('criterios');
-    criteriosField.setAttribute('readonly', true);
-    criteriosField.classList.add('readonly-field');
-    criteriosField.style.background = '#f1f5f9';
-
-    // Mostrar botões editar/excluir
-    document.getElementById('edit-alinhamento-btn').style.display = 'inline-flex';
-    document.getElementById('delete-alinhamento-btn').style.display = 'inline-flex';
-
-    // Esconder ações
-    document.getElementById('alinhamento-actions').style.display = 'none';
-  }
-
-  async function excluirAlinhamento() {
-    if (!confirm('Tem certeza que deseja excluir todos os dados de alinhamento?')) return;
-
-    // Limpar campos
-    document.getElementById('visao').value = '';
-    document.getElementById('metas').value = '';
-    document.getElementById('criterios').value = '';
-
-    // Salvar vazio
-    const data = {
-      visao_compartilhada: '',
-      metas_financeiras: '',
-      criterios_decisao: []
-    };
-
-    try {
-      const response = await fetch(`/pev/api/implantacao/${planId}/alignment/overview`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(data)
-      });
-
-      const result = await response.json();
-
-      if (result.success) {
-        showMessage('Alinhamento excluído com sucesso!', 'success');
-        alinhamentoOriginal = { visao: '', metas: '', criterios: '' };
-      } else {
-        showMessage('Erro ao excluir alinhamento: ' + result.error, 'error');
-      }
-    } catch (error) {
-      console.error(error);
-      showMessage('Erro ao excluir alinhamento', 'error');
-    }
-  }
-
-  document.getElementById('alinhamento-form').addEventListener('submit', async (e) => {
-    e.preventDefault();
-
-    // Converter texto de critérios (um por linha) em array
-    const criteriosText = document.getElementById('criterios').value;
-    const criterios = criteriosText
-      .split('\n')
-      .map(c => c.trim())
-      .filter(c => c.length > 0);
-
-    const data = {
-      visao_compartilhada: document.getElementById('visao').value,
-      metas_financeiras: document.getElementById('metas').value,
-      criterios_decisao: criterios
-    };
-
-    try {
-      const response = await fetch(`/pev/api/implantacao/${planId}/alignment/overview`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(data)
-      });
-
-      const result = await response.json();
-
-      if (result.success) {
-        showMessage('Alinhamento salvo com sucesso!', 'success');
-
-        // Atualizar valores originais
-        alinhamentoOriginal.visao = data.visao_compartilhada;
-        alinhamentoOriginal.metas = data.metas_financeiras;
-        alinhamentoOriginal.criterios = criteriosText;
-
-        // Atualizar campos com fundo cinza
-        const visaoField = document.getElementById('visao');
-        visaoField.setAttribute('readonly', true);
-        visaoField.classList.add('readonly-field');
-        visaoField.style.background = '#f1f5f9';
-
-        const metasField = document.getElementById('metas');
-        metasField.setAttribute('readonly', true);
-        metasField.classList.add('readonly-field');
-        metasField.style.background = '#f1f5f9';
-
-        const criteriosField = document.getElementById('criterios');
-        criteriosField.setAttribute('readonly', true);
-        criteriosField.classList.add('readonly-field');
-        criteriosField.style.background = '#f1f5f9';
-
-        // Mostrar botões editar/excluir
-        document.getElementById('edit-alinhamento-btn').style.display = 'inline-flex';
-        document.getElementById('delete-alinhamento-btn').style.display = 'inline-flex';
-
-        // Esconder ações
-        document.getElementById('alinhamento-actions').style.display = 'none';
-      } else {
-        showMessage('Erro ao salvar alinhamento: ' + result.error, 'error');
-      }
-    } catch (error) {
-      console.error(error);
-      showMessage('Erro ao salvar alinhamento', 'error');
-    }
-  });
-
-  // ========== Utilities ==========
-
-  function showModal(modalId) {
-    const modal = document.getElementById(modalId);
-    if (modal) {
-      modal.style.display = 'block';
-      setTimeout(() => modal.classList.add('show'), 10);
-    }
-  }
-
-  function hideModal(modalId) {
-    const modal = document.getElementById(modalId);
-    if (modal) {
-      modal.classList.remove('show');
-      setTimeout(() => modal.style.display = 'none', 300);
-    }
-  }
-
-  function showMessage(message, type = 'info') {
-    const notification = document.createElement('div');
-    notification.style.cssText = `
-        position: fixed;
-        top: 20px;
-        right: 20px;
-        padding: 16px 24px;
-        border-radius: 8px;
-        color: white;
-        font-weight: 600;
-        z-index: 10000;
-        max-width: 400px;
-        box-shadow: 0 8px 24px rgba(0,0,0,0.2);
-      `;
-
-    const colors = {
-      success: '#10b981',
-      error: '#ef4444',
-      warning: '#f59e0b',
-      info: '#3b82f6'
-    };
-
-    notification.style.backgroundColor = colors[type] || colors.info;
-    notification.textContent = message;
-    document.body.appendChild(notification);
-
-    setTimeout(() => {
-      if (notification.parentNode) {
-        notification.parentNode.removeChild(notification);
-      }
-    }, 5000);
-  }
-
-  // Modal styles
-  const style = document.createElement('style');
-  style.textContent = `
-      .modal {
-        position: fixed;
-        z-index: 1000;
-        left: 0;
-        top: 0;
-        width: 100%;
-        height: 100%;
-        background-color: rgba(0, 0, 0, 0.7);
-        backdrop-filter: blur(4px);
-        opacity: 0;
-        transition: opacity 0.3s ease;
-      }
-
-      .modal.show {
-        opacity: 1;
-      }
-
-      .modal-content {
-        position: absolute;
-        top: 50%;
-        left: 50%;
-        transform: translate(-50%, -50%);
-        max-width: 600px;
-        width: 90%;
-        max-height: 90vh;
-        overflow-y: auto;
-        border-radius: 16px;
-      }
-
-      .modal-header {
-        display: flex;
-        justify-content: space-between;
-        align-items: center;
-        padding: 20px 24px;
-        border-bottom: 1px solid rgba(148, 163, 184, 0.2);
-      }
-
-      .modal-header h3 {
-        margin: 0;
-        font-size: 18px;
-        font-weight: 600;
-      }
-
-      .modal-close {
-        font-size: 24px;
-        cursor: pointer;
-        color: #94a3b8;
-        transition: color 0.2s;
-      }
-
-      .modal-close:hover {
-        color: #ef4444;
-      }
-    `;
-  document.head.appendChild(style);
+  document.getElementById('alinhamento-form').addEventListener('submit', async e => { e.preventDefault(); const criteriosText = document.getElementById('criterios').value; const criterios = criteriosText.split('\n').map(c => c.trim()).filter(c => c); const data = { visao_compartilhada: document.getElementById('visao').value, metas_financeiras: document.getElementById('metas').value, criterios_decisao: criterios }; const resp = await fetch(`/pev/api/implantacao/${planId}/alignment/overview`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(data) }); const res = await resp.json(); if (res.success) { showMessage('Alinhamento salvo com sucesso!', 'success'); alinhamentoOriginal.visao = data.visao_compartilhada; alinhamentoOriginal.metas = data.metas_financeiras; alinhamentoOriginal.criterios = criteriosText;['visao', 'metas', 'criterios'].forEach(id => { const el = document.getElementById(id); el.setAttribute('readonly', true); el.classList.add('readonly-field'); el.style.background = '#f1f5f9'; }); document.getElementById('edit-alinhamento-btn').style.display = 'inline-flex'; document.getElementById('delete-alinhamento-btn').style.display = 'inline-flex'; document.getElementById('alinhamento-actions').style.display = 'none'; } else { showMessage('Erro ao salvar alinhamento: ' + res.error, 'error'); } });
+  function showModal(id) { const m = document.getElementById(id); if (m) { m.style.display = 'block'; setTimeout(() => m.classList.add('show'), 10); } }
+  function hideModal(id) { const m = document.getElementById(id); if (m) { m.classList.remove('show'); setTimeout(() => m.style.display = 'none', 300); } }
+  function showMessage(msg, type = 'info') { const n = document.createElement('div'); n.style.cssText = 'position:fixed;top:20px;right:20px;padding:16px 24px;border-radius:8px;color:white;font-weight:600;z-index:10000;max-width:400px;box-shadow:0 8px 24px rgba(0,0,0,0.2);background:' + ({ success: '#10b981', error: '#ef4444', warning: '#f59e0b', info: '#3b82f6' }[type] || '#3b82f6'); n.textContent = msg; document.body.appendChild(n); setTimeout(() => n.remove(), 5000); }
 </script>
 {% endblock %}

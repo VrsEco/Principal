@@ -311,6 +311,7 @@ def grv_navigation():
         },
         {
             "title": "Gestão de Projetos",
+            "landing": {"id": "project-projects"},
             "items": [
                 {"id": "project-portfolios", "name": "Portfólios"},
                 {"id": "project-projects", "name": "Projetos"},

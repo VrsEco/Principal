@@ -273,6 +273,31 @@ def load_user(user_id):
         return None
 
 
+# Return JSON for API unauthorized requests to avoid HTML parsing errors
+@login_manager.unauthorized_handler
+def handle_unauthorized():
+    """Return JSON 401 for API calls, redirect otherwise."""
+    api_prefixes = ("/my-work/api", "/api/")
+    accepts_json = (
+        request.accept_mimetypes["application/json"]
+        >= request.accept_mimetypes["text/html"]
+    )
+    if request.path.startswith(api_prefixes) or accepts_json or request.headers.get(
+        "X-Requested-With"
+    ) == "XMLHttpRequest":
+        return (
+            jsonify(
+                {
+                    "success": False,
+                    "error": "Sessão expirada. Faça login novamente.",
+                    "code": "AUTHENTICATION_REQUIRED",
+                }
+            ),
+            401,
+        )
+    return redirect(url_for(login_manager.login_view, next=request.url))
+
+
 # Register blueprints for PEV and GRV modules at import time
 try:
     from modules.pev import pev_bp
@@ -300,11 +325,13 @@ except Exception as _bp_err:
 try:
     from api.auth import auth_bp
     from api.logs import logs_bp
+    from api.notes import notes_bp
     from api.route_audit import route_audit_bp
     from middleware.audit_middleware import init_audit_middleware
 
     app.register_blueprint(auth_bp)
     app.register_blueprint(logs_bp)
+    app.register_blueprint(notes_bp)
     app.register_blueprint(route_audit_bp)
 
     # Initialize audit middleware
@@ -11806,6 +11833,18 @@ def _open_portfolio_connection():
     return conn
 
 
+def _normalize_plan_type_value(plan_type: Optional[str]) -> Optional[str]:
+    """Normalize plan_type strings to canonical values used in the DB (GRV/PEV)."""
+    if not plan_type:
+        return None
+    normalized = str(plan_type).strip().upper()
+    if normalized.startswith("GRV"):
+        return "GRV"
+    if normalized.startswith("PEV"):
+        return "PEV"
+    return None
+
+
 def _serialize_company_project(row) -> Dict[str, Any]:
     raw_activities = row["activities"]
     project_code = row["code"] if "code" in row.keys() else None
@@ -11975,11 +12014,15 @@ def api_company_projects(company_id: int):
                         p.plan_id,
                         p.plan_type,
                         CASE 
-                            WHEN p.plan_type = 'GRV' THEN pf.name
-                            WHEN p.plan_type = 'PEV' THEN pl.name
+                            WHEN UPPER(p.plan_type) LIKE 'GRV%' THEN pf.name
+                            WHEN UPPER(p.plan_type) LIKE 'PEV%' THEN pl.name
                             ELSE COALESCE(pf.name, pl.name)
                         END AS plan_name,
-                        p.plan_type AS plan_origin,
+                        CASE 
+                            WHEN UPPER(p.plan_type) LIKE 'GRV%' THEN 'GRV'
+                            WHEN UPPER(p.plan_type) LIKE 'PEV%' THEN 'PEV'
+                            ELSE p.plan_type
+                        END AS plan_origin,
                         pl.plan_mode,
                         p.title,
                         p.description,
@@ -12000,8 +12043,8 @@ def api_company_projects(company_id: int):
                         p.created_at,
                         p.updated_at
                     FROM company_projects p
-                    LEFT JOIN portfolios pf ON pf.id = p.plan_id AND p.plan_type = 'GRV'
-                    LEFT JOIN plans pl ON pl.id = p.plan_id AND p.plan_type = 'PEV'
+                    LEFT JOIN portfolios pf ON pf.id = p.plan_id
+                    LEFT JOIN plans pl ON pl.id = p.plan_id
                     LEFT JOIN employees e ON e.id = p.responsible_id
                     WHERE p.company_id = %s AND p.plan_id = %s
                     ORDER BY LOWER(p.title)
@@ -12018,11 +12061,15 @@ def api_company_projects(company_id: int):
                         p.plan_id,
                         p.plan_type,
                         CASE 
-                            WHEN p.plan_type = 'GRV' THEN pf.name
-                            WHEN p.plan_type = 'PEV' THEN pl.name
+                            WHEN UPPER(p.plan_type) LIKE 'GRV%' THEN pf.name
+                            WHEN UPPER(p.plan_type) LIKE 'PEV%' THEN pl.name
                             ELSE COALESCE(pf.name, pl.name)
                         END AS plan_name,
-                        p.plan_type AS plan_origin,
+                        CASE 
+                            WHEN UPPER(p.plan_type) LIKE 'GRV%' THEN 'GRV'
+                            WHEN UPPER(p.plan_type) LIKE 'PEV%' THEN 'PEV'
+                            ELSE p.plan_type
+                        END AS plan_origin,
                         pl.plan_mode,
                         p.title,
                         p.description,
@@ -12043,8 +12090,8 @@ def api_company_projects(company_id: int):
                         p.created_at,
                         p.updated_at
                     FROM company_projects p
-                    LEFT JOIN portfolios pf ON pf.id = p.plan_id AND p.plan_type = 'GRV'
-                    LEFT JOIN plans pl ON pl.id = p.plan_id AND p.plan_type = 'PEV'
+                    LEFT JOIN portfolios pf ON pf.id = p.plan_id
+                    LEFT JOIN plans pl ON pl.id = p.plan_id
                     LEFT JOIN employees e ON e.id = p.responsible_id
                     WHERE p.company_id = %s
                     ORDER BY LOWER(p.title)
@@ -12076,7 +12123,7 @@ def api_company_projects(company_id: int):
         )
 
     plan_id = payload.get("plan_id")
-    plan_type = (payload.get("plan_type") or "").strip() or None  # 'PEV' or 'GRV'
+    plan_type = _normalize_plan_type_value(payload.get("plan_type"))  # 'PEV' or 'GRV'
     priority = (payload.get("priority") or "").strip() or None
     description = (payload.get("description") or "").strip() or None
     notes = (payload.get("notes") or "").strip() or None
@@ -12107,34 +12154,41 @@ def api_company_projects(company_id: int):
 
         plan_id_value = None
         if plan_id:
-            # Verificar se é um plan PEV ou portfolio GRV
+            # Verificar se  um plan PEV ou portfolio GRV
             cursor.execute("SELECT company_id FROM plans WHERE id = %s", (plan_id,))
             plan_row = cursor.fetchone()
 
             if plan_row and plan_row["company_id"] == company_id:
-                # É um plan PEV válido
+                #  um plan PEV vlido
                 plan_id_value = int(plan_id)
+                if not plan_type:
+                    plan_type = "PEV"
             else:
-                # Verificar se é um portfolio GRV
+                # Verificar se  um portfolio GRV
                 cursor.execute(
                     "SELECT company_id FROM portfolios WHERE id = %s", (plan_id,)
                 )
                 portfolio_row = cursor.fetchone()
 
                 if portfolio_row and portfolio_row["company_id"] == company_id:
-                    # É um portfolio GRV válido
+                    #  um portfolio GRV vlido
                     plan_id_value = int(plan_id)
+                    if not plan_type:
+                        plan_type = "GRV"
                 else:
                     conn.close()
                     return (
                         jsonify(
                             {
                                 "success": False,
-                                "message": "Planejamento ou portfólio inválido para esta empresa.",
+                                "message": "Planejamento ou portflio invlido para esta empresa.",
                             }
                         ),
                         400,
                     )
+
+        # Normalizar o tipo antes de salvar
+        plan_type = _normalize_plan_type_value(plan_type)
 
         # Generate project code
         project_code, code_sequence = _generate_project_code(cursor, company_id)
@@ -12178,11 +12232,15 @@ def api_company_projects(company_id: int):
                 p.plan_id,
                 p.plan_type,
                 CASE 
-                    WHEN p.plan_type = 'GRV' THEN pf.name
-                    WHEN p.plan_type = 'PEV' THEN pl.name
+                    WHEN UPPER(p.plan_type) LIKE 'GRV%' THEN pf.name
+                    WHEN UPPER(p.plan_type) LIKE 'PEV%' THEN pl.name
                     ELSE COALESCE(pf.name, pl.name)
                 END AS plan_name,
-                p.plan_type AS plan_origin,
+                CASE 
+                    WHEN UPPER(p.plan_type) LIKE 'GRV%' THEN 'GRV'
+                    WHEN UPPER(p.plan_type) LIKE 'PEV%' THEN 'PEV'
+                    ELSE p.plan_type
+                END AS plan_origin,
                 p.title,
                 p.description,
                 p.status,
@@ -12202,8 +12260,8 @@ def api_company_projects(company_id: int):
                 p.created_at,
                 p.updated_at
             FROM company_projects p
-            LEFT JOIN portfolios pf ON pf.id = p.plan_id AND p.plan_type = 'GRV'
-            LEFT JOIN plans pl ON pl.id = p.plan_id AND p.plan_type = 'PEV'
+            LEFT JOIN portfolios pf ON pf.id = p.plan_id
+            LEFT JOIN plans pl ON pl.id = p.plan_id
             LEFT JOIN employees e ON e.id = p.responsible_id
             WHERE p.company_id = %s AND p.id = %s
             """,
@@ -12280,7 +12338,7 @@ def api_company_project(company_id: int, project_id: int):
         )
 
     plan_id = payload.get("plan_id")
-    plan_type = (payload.get("plan_type") or "").strip() or None  # 'PEV' or 'GRV'
+    plan_type = _normalize_plan_type_value(payload.get("plan_type"))  # 'PEV' or 'GRV'
     priority = (payload.get("priority") or "").strip() or None
     description = (payload.get("description") or "").strip() or None
     notes = (payload.get("notes") or "").strip() or None
@@ -12321,28 +12379,26 @@ def api_company_project(company_id: int, project_id: int):
 
         plan_id_value = None
         if plan_id:
-            # Verificar se é um plan PEV ou portfolio GRV
+            # Verificar se  um plan PEV ou portfolio GRV
             cursor.execute("SELECT company_id FROM plans WHERE id = %s", (plan_id,))
             plan_row = cursor.fetchone()
 
             if plan_row and plan_row["company_id"] == company_id:
-                # É um plan PEV válido
+                #  um plan PEV vlido
                 plan_id_value = int(plan_id)
-                if not plan_type:  # Se não foi fornecido no payload, definir como PEV
+                if not plan_type:
                     plan_type = "PEV"
             else:
-                # Verificar se é um portfolio GRV
+                # Verificar se  um portfolio GRV
                 cursor.execute(
                     "SELECT company_id FROM portfolios WHERE id = %s", (plan_id,)
                 )
                 portfolio_row = cursor.fetchone()
 
                 if portfolio_row and portfolio_row["company_id"] == company_id:
-                    # É um portfolio GRV válido
+                    #  um portfolio GRV vlido
                     plan_id_value = int(plan_id)
-                    if (
-                        not plan_type
-                    ):  # Se não foi fornecido no payload, definir como GRV
+                    if not plan_type:
                         plan_type = "GRV"
                 else:
                     conn.close()
@@ -12350,19 +12406,22 @@ def api_company_project(company_id: int, project_id: int):
                         jsonify(
                             {
                                 "success": False,
-                                "message": "Planejamento ou portfólio inválido para esta empresa.",
+                                "message": "Planejamento ou portflio invlido para esta empresa.",
                             }
                         ),
                         400,
                     )
 
+        # Normalizar o tipo antes de salvar
+        plan_type = _normalize_plan_type_value(plan_type)
+
         cursor.execute(
             """
             UPDATE company_projects
-            SET plan_id = %s, plan_type = ?, title = ?, description = ?, priority = ?,
-                responsible_id = %s, start_date = ?, end_date = ?,
-                okr_reference = ?, indicator_reference = ?,
-                activities = ?, notes = ?, updated_at = CURRENT_TIMESTAMP
+            SET plan_id = %s, plan_type = %s, title = %s, description = %s, priority = %s,
+                responsible_id = %s, start_date = %s, end_date = %s,
+                okr_reference = %s, indicator_reference = %s,
+                activities = %s, notes = %s, updated_at = CURRENT_TIMESTAMP
             WHERE company_id = %s AND id = %s
             """,
             (
@@ -12392,11 +12451,15 @@ def api_company_project(company_id: int, project_id: int):
                 p.plan_id,
                 p.plan_type,
                 CASE 
-                    WHEN p.plan_type = 'GRV' THEN pf.name
-                    WHEN p.plan_type = 'PEV' THEN pl.name
+                    WHEN UPPER(p.plan_type) LIKE 'GRV%' THEN pf.name
+                    WHEN UPPER(p.plan_type) LIKE 'PEV%' THEN pl.name
                     ELSE COALESCE(pf.name, pl.name)
                 END AS plan_name,
-                p.plan_type AS plan_origin,
+                CASE 
+                    WHEN UPPER(p.plan_type) LIKE 'GRV%' THEN 'GRV'
+                    WHEN UPPER(p.plan_type) LIKE 'PEV%' THEN 'PEV'
+                    ELSE p.plan_type
+                END AS plan_origin,
                 p.title,
                 p.description,
                 p.status,
@@ -12416,8 +12479,8 @@ def api_company_project(company_id: int, project_id: int):
                 p.created_at,
                 p.updated_at
             FROM company_projects p
-            LEFT JOIN portfolios pf ON pf.id = p.plan_id AND p.plan_type = 'GRV'
-            LEFT JOIN plans pl ON pl.id = p.plan_id AND p.plan_type = 'PEV'
+            LEFT JOIN portfolios pf ON pf.id = p.plan_id
+            LEFT JOIN plans pl ON pl.id = p.plan_id
             LEFT JOIN employees e ON e.id = p.responsible_id
             WHERE p.company_id = %s AND p.id = %s
             """,

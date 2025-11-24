@@ -1,4 +1,5 @@
 ﻿import logging
+from datetime import datetime
 
 """
 Rotas do Módulo My Work
@@ -20,6 +21,8 @@ from services.my_work_service import (
     complete_activity,
 )
 from middleware.auto_log_decorator import auto_log_crud
+
+logger = logging.getLogger(__name__)
 
 
 # ============================================================================
@@ -348,4 +351,6 @@ def view_process_instance(instance_id):
     """
     # TODO: Implementar pÃ¡gina de detalhamento
     return f"<h1>Detalhes da InstÃ¢ncia de Processo #{instance_id}</h1><p>Em desenvolvimento...</p>"
+
+
 

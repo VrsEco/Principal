@@ -666,6 +666,7 @@ def implantacao_modefin():
         "implantacao/modelo_modefin.html",
         user_name=current_user.name if current_user.is_authenticated else "Fabiano Ferreira",
         active_nav="pev",
+        plan_id=plan_id,
         plan=plan,
         products_totals=products_totals,
         fixed_costs_summary=fixed_costs_summary,

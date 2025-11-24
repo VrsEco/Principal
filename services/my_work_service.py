@@ -1,4 +1,5 @@
 ﻿import logging
+logger = logging.getLogger(__name__)
 
 """
 Service para My Work - Lógica de negócio
@@ -399,7 +400,7 @@ def _fetch_company_processes(cursor, company_id: int):
             LOWER(COALESCE(pi.priority, 'normal')) AS priority,
             pi.due_date AS deadline_date,
             pi.estimated_hours,
-            COALESCE(pi.worked_hours, pi.actual_hours) AS worked_hours,
+            COALESCE(pi.actual_hours, 0) AS worked_hours,
             pi.created_at,
             pi.updated_at,
             pi.assigned_collaborators,
@@ -1404,3 +1405,4 @@ def _get_department_ranking(cursor, company_id: int) -> List[Dict]:
             "completion_rate": 80,
         },
     ]
+
