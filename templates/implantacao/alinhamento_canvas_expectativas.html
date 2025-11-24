@@ -315,65 +315,49 @@
             <th>Papel definido</th>
             <th>Motivação central</th>
             <th>Compromisso</th>
-            <th>Tolerância a risco</th>
-            <th style="width: 100px;">Ações</th>
-          </tr>
-        </thead>
-        <tbody id="socios-table">
-          {% for socio in socios %}
-          <tr data-socio-id="{{ socio.id }}">
-            <td>{{ socio.nome }}</td>
-            Nenhum sócio cadastrado. Clique em "Adicionar Sócio" para começar.
-            </td>
-          </tr>
-          {% endfor %}
-        </tbody>
-      </table>
-    </div>
-  </div>
 
-  <!-- Pilares do Alinhamento -->
-  <div class="canvas-grid">
-    <div class="canvas-card canvas-section">
-      <h2>
-        Pilares do alinhamento
-        <div style="display: flex; gap: 8px;">
-          <button id="edit-alinhamento-btn" class="button button-secondary button-sm" onclick="editarAlinhamento()"
-            style="display: inline-flex;" data-ref="04">
-            ✏️ Editar
-          </button>
-          <button id="delete-alinhamento-btn" class="button button-danger button-sm" onclick="excluirAlinhamento()"
-            style="display: inline-flex;" data-ref="05">
-            🗑️ Excluir
-          </button>
-        </div>
-      </h2>
-      <form id="alinhamento-form">
-        <div class="form-group">
-          <label for="visao">Visão compartilhada</label>
-          <textarea id="visao" name="visao_compartilhada" class="readonly-field" readonly
-            data-ref="12">{{ alinhamento.visao_compartilhada or '' }}</textarea>
-        </div>
-        <div class="form-group">
-          <label for="metas">Metas financeiras</label>
-          <textarea id="metas" name="metas_financeiras" class="readonly-field" readonly
-            data-ref="13">{{ alinhamento.metas_financeiras or '' }}</textarea>
-        </div>
-        <div class="form-group">
-          <label for="criterios">Critérios de decisão</label>
-          <textarea id="criterios" name="criterios_decisao" class="readonly-field" readonly
-            placeholder="Digite os critérios de decisão, um por linha..."
-            data-ref="14">{% if alinhamento.criterios_decisao %}{{ alinhamento.criterios_decisao | join('\n') }}{% endif %}</textarea>
-        </div>
-        <div class="form-actions" id="alinhamento-actions" style="display: none;">
-          <button type="button" class="button button-secondary" onclick="cancelarEdicao()"
-            data-ref="06">Cancelar</button>
-          <button type="submit" class="button button-primary" data-ref="07">Salvar Alinhamento</button>
-        </div>
-      </form>
-    </div>
+            <!-- Pilares do Alinhamento -->
+            <div class="canvas-grid">
+              <div class="canvas-card canvas-section">
+                <h2>
+                  Pilares do alinhamento
+                  <div style="display: flex; gap: 8px;">
+                    <button id="edit-alinhamento-btn" class="button button-secondary button-sm"
+                      onclick="editarAlinhamento()" style="display: inline-flex;" data-ref="04">
+                      ✏️ Editar
+                    </button>
+                    <button id="delete-alinhamento-btn" class="button button-danger button-sm"
+                      onclick="excluirAlinhamento()" style="display: inline-flex;" data-ref="05">
+                      🗑️ Excluir
+                    </button>
+                  </div>
+                </h2>
+                <form id="alinhamento-form">
+                  <div class="form-group">
+                    <label for="visao">Visão compartilhada</label>
+                    <textarea id="visao" name="visao_compartilhada" class="readonly-field" readonly
+                      data-ref="12">{{ alinhamento.visao_compartilhada or '' }}</textarea>
+                  </div>
+                  <div class="form-group">
+                    <label for="metas">Metas financeiras</label>
+                    <textarea id="metas" name="metas_financeiras" class="readonly-field" readonly
+                      data-ref="13">{{ alinhamento.metas_financeiras or '' }}</textarea>
+                  </div>
+                  <div class="form-group">
+                    <label for="criterios">Critérios de decisão</label>
+                    <textarea id="criterios" name="criterios_decisao" class="readonly-field" readonly
+                      placeholder="Digite os critérios de decisão, um por linha..."
+                      data-ref="14">{% if alinhamento.criterios_decisao %}{{ alinhamento.criterios_decisao | join('\n') }}{% endif %}</textarea>
+                  </div>
+                  <div class="form-actions" id="alinhamento-actions" style="display: none;">
+                    <button type="button" class="button button-secondary" onclick="cancelarEdicao()"
+                      data-ref="06">Cancelar</button>
+                    <button type="submit" class="button button-primary" data-ref="07">Salvar Alinhamento</button>
+                  </div>
+                </form>
+              </div>
 
-  </div>
+            </div>
 </section>
 
 <!-- Modal Adicionar/Editar Sócio -->
