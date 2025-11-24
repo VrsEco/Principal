@@ -2,6 +2,7 @@ from datetime import datetime
 from flask_login import UserMixin
 from werkzeug.security import generate_password_hash, check_password_hash
 from . import db
+from models.note import Note
 
 
 class User(UserMixin, db.Model):
@@ -22,9 +23,7 @@ class User(UserMixin, db.Model):
         db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow, nullable=False
     )
 
-    # Relationships will be added later to avoid circular import issues
-    # plans_owned = db.relationship('Plan', backref='owner_user', foreign_keys='Plan.owner_id', lazy='dynamic')
-    # plans_sponsored = db.relationship('Plan', backref='sponsor_user', foreign_keys='Plan.sponsor_id', lazy='dynamic')
+    notes = db.relationship("Note", back_populates="user", lazy="dynamic")
 
     def set_password(self, password):
         """Set password hash"""
