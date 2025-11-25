@@ -66,7 +66,7 @@
                 const locationText = note.location || "";
 
                 return `
-          <div class="note-row ${selectedNoteId === noteId ? "selected" : ""}" data-id="${noteId}">
+          <div class="note-row ${selectedNoteId === noteId ? "selected" : ""}" data-id="${noteId}" draggable="true">
             <div class="note-row-top">
               <label class="note-select">
                 <input type="checkbox" ${selectedNoteId === noteId ? "checked" : ""} />

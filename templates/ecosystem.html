@@ -39,9 +39,9 @@
         {% endif %}
 
         {% if module_links.get('grv') %}
-        <a href="{{ module_links.grv }}" class="sidebar-link" title="GRV - Processos">
+        <a href="{{ module_links.grv }}" class="sidebar-link" title="GRV - Rotina">
           <span class="sidebar-icon">🔄</span>
-          <span class="link-text">GRV - Processos</span>
+          <span class="link-text">GRV - Rotina</span>
         </a>
         {% endif %}
 
@@ -115,6 +115,7 @@
 
   <script src="{{ url_for('static', filename='js/ecosystem.js') }}"></script>
   <script src="{{ url_for('static', filename='js/notes.js') }}"></script>
+  <script src="{{ url_for('static', filename='js/notes-drag-drop.js') }}"></script>
 
 </body>
 
