@@ -1,6 +1,6 @@
 # 🏗️ Arquitetura do Sistema
 
-**Última Atualização:** 12/11/2025  
+**Última Atualização:** 26/11/2025  
 **Versão:** 1.0  
 **Status:** ✅ Documentação Oficial
 
@@ -237,6 +237,132 @@ class Project(db.Model):
 
 - PostgreSQL (produção)
 - SQLite (desenvolvimento)
+
+---
+
+## 👥 Arquitetura de Usuários e Empresas
+
+### Modelo de Três Camadas (User-Employee-Company)
+
+**Implementado em:** 26/11/2025  
+**ADR:** #014 - Ver `DECISION_LOG_ADR008.md`
+
+O sistema utiliza uma arquitetura de três camadas para permitir que usuários trabalhem em múltiplas empresas:
+
+```
+┌─────────────┐
+│    USER     │  (Credenciais de Login)
+│  id, email  │  - Autenticação global
+│  password   │  - Um usuário pode ter múltiplos vínculos
+└──────┬──────┘
+       │
+       │ 1:N (Um usuário pode ser colaborador em várias empresas)
+       ▼
+┌─────────────┐
+│  EMPLOYEE   │  (Vínculo / Colaborador)
+│ user_id     │  - Define o que o usuário pode fazer
+│ company_id  │  - Permissões específicas por empresa
+│ role_id     │  - Pode existir sem user_id (funcionário sem acesso)
+└──────┬──────┘
+       │
+       │ N:1 (Vários colaboradores por empresa)
+       ▼
+┌─────────────┐
+│   COMPANY   │  (Organização)
+│  id, name   │  - Agrupa todos os dados da empresa
+│  cnpj       │  - Planos, projetos, atividades
+└─────────────┘
+```
+
+### Modelos Principais
+
+#### 1. User (Autenticação)
+```python
+# models/user.py
+class User(db.Model):
+    id = db.Column(db.Integer, primary_key=True)
+    email = db.Column(db.String(120), unique=True)
+    password_hash = db.Column(db.String(255))
+    name = db.Column(db.String(100))
+    role = db.Column(db.String(20))  # admin, consultant, client
+```
+
+#### 2. Employee (Colaborador/Vínculo)
+```python
+# models/employee.py
+class Employee(db.Model):
+    id = db.Column(db.Integer, primary_key=True)
+    user_id = db.Column(db.Integer, db.ForeignKey('users.id'))  # Pode ser NULL
+    company_id = db.Column(db.Integer, db.ForeignKey('companies.id'))
+    role_id = db.Column(db.Integer, db.ForeignKey('roles.id'))
+    name = db.Column(db.String(200))
+    status = db.Column(db.String(20))  # active, inactive
+```
+
+#### 3. Role (Cargo/Permissões)
+```python
+# models/role.py
+class Role(db.Model):
+    id = db.Column(db.Integer, primary_key=True)
+    company_id = db.Column(db.Integer, db.ForeignKey('companies.id'))
+    title = db.Column(db.String(100))
+    permissions = db.Column(db.JSON)  # {"financial": "view", "tasks": "edit"}
+```
+
+### Casos de Uso
+
+#### Caso 1: Novo Cliente se Cadastrando
+```python
+from services.user_employee_service import UserEmployeeService
+
+result = UserEmployeeService.create_user_with_company(
+    user_data={'name': 'João', 'email': 'joao@tech.com', 'password': '123'},
+    company_data={'name': 'Tech Solutions', 'cnpj': '12.345.678/0001-90'}
+)
+# Cria: User + Company + Employee em uma transação
+```
+
+#### Caso 2: Consultor em Múltiplas Empresas
+```python
+# Adicionar usuário existente em outra empresa
+UserEmployeeService.add_employee_to_company(
+    user_id=5,
+    company_id=12,
+    role_id=3  # Cargo de "Consultor"
+)
+```
+
+#### Caso 3: Atividades Agregadas
+```python
+# Retorna TODAS as atividades de TODAS as empresas do usuário
+activities = UserEmployeeService.get_user_activities(current_user.id)
+```
+
+### API REST
+
+Endpoints disponíveis em `/api/user-employee/*`:
+
+- `POST /register` - Cadastro completo (User + Company + Employee)
+- `POST /add-to-company` - Adicionar usuário em empresa
+- `GET /my-companies` - Listar empresas do usuário
+- `GET /my-activities` - **Atividades agregadas de todas as empresas**
+- `GET /employees/{company_id}` - Listar colaboradores
+- `PUT /employee/{employee_id}` - Atualizar colaborador
+
+### Benefícios
+
+✅ **Flexibilidade:** Um usuário pode trabalhar em múltiplas empresas  
+✅ **Permissões Granulares:** Específicas por empresa e cargo  
+✅ **Atividades Agregadas:** Query eficiente para "Minhas Atividades"  
+✅ **Rastreabilidade:** Histórico completo por colaborador  
+✅ **Escalabilidade:** Preparado para multi-tenancy  
+
+### Documentação Completa
+
+- **Arquitetura:** `docs/REORGANIZACAO_USUARIOS.md`
+- **API:** `docs/API_USER_EMPLOYEE.md`
+- **ADR:** `docs/governance/DECISION_LOG_ADR008.md`
+- **Serviço:** `services/user_employee_service.py`
 
 ---
 

@@ -399,6 +399,22 @@
                    min="0" value="{{ routine.deadline_hours or 0 }}" data-ref="20">
             <span class="form-hint">Quantidade de horas após o disparo</span>
           </div>
+
+          <div class="form-group">
+            <label class="form-label">Peso de Pontuação *</label>
+            <input
+              type="number"
+              name="score_weight"
+              id="scoreWeight"
+              class="form-input"
+              min="0.1"
+              step="0.1"
+              value="{{ routine.score_weight or 1 }}"
+              required
+              data-ref="29"
+            >
+            <span class="form-hint">Multiplica a pontuação padrão aplicada às instâncias desta rotina.</span>
+          </div>
         </div>
 
         <div class="form-group">
@@ -602,6 +618,14 @@
 
     const formData = new FormData(this);
     const scheduleType = formData.get('schedule_type');
+    let scoreWeight = parseFloat(formData.get('score_weight'));
+    
+    if (!Number.isFinite(scoreWeight) || scoreWeight <= 0) {
+      alert('⚠️ Informe um peso de pontuação válido (mínimo 0.1)');
+      return;
+    }
+    
+    scoreWeight = parseFloat(scoreWeight.toFixed(2));
     
     // Validação de prazo
     const deadlineDays = parseInt(formData.get('deadline_days')) || 0;
@@ -633,7 +657,8 @@
       schedule_type: scheduleType,
       schedule_value: scheduleValue,
       deadline_days: deadlineDays,
-      deadline_hours: deadlineHours
+      deadline_hours: deadlineHours,
+      score_weight: scoreWeight
     };
 
     try {

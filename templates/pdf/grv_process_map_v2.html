@@ -339,6 +339,16 @@
       color: #0f172a;
     }
 
+    .print-hint {
+      background: #fef3c7;
+      border: 1px solid #fcd34d;
+      color: #92400e;
+      padding: 6px 8px;
+      border-radius: 4px;
+      font-size: 7pt;
+      margin-bottom: 6px;
+    }
+
     /* Print Optimization */
     @media print {
       body {
@@ -362,6 +372,11 @@
 </head>
 <body>
   <div class="main-content">
+    {% if fallback_error %}
+    <div class="print-hint">Exibindo em HTML porque a gera&ccedil;&atilde;o do PDF falhou: {{ fallback_error }}</div>
+    {% elif auto_print %}
+    <div class="print-hint">Dica: use o atalho de impress&atilde;o do navegador para salvar em PDF mantendo o layout.</div>
+    {% endif %}
     <section class="report-title-section">
       <div class="report-title">Mapa de Processos - {{ company.get('name') or 'Empresa' }}</div>
     </section>
@@ -513,5 +528,12 @@
     </div>
   </div>
 
+  {% if auto_print %}
+  <script>
+    document.addEventListener('DOMContentLoaded', () => {
+      setTimeout(() => window.print(), 400);
+    });
+  </script>
+  {% endif %}
 </body>
 </html>

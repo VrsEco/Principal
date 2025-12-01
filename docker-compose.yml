@@ -68,6 +68,8 @@ services:
     depends_on:
       redis:
         condition: service_healthy
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
     healthcheck:
       test: ["CMD", "curl", "-f", "http://localhost:5002/health"]
       interval: 30s
@@ -107,6 +109,8 @@ services:
         condition: service_healthy
       app:
         condition: service_started
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
     networks:
       - app31_network
 
@@ -136,6 +140,8 @@ services:
     depends_on:
       redis:
         condition: service_healthy
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
     networks:
       - app31_network
 

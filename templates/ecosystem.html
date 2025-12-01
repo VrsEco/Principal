@@ -4,7 +4,7 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Ecossistema Versus - Anotações</title>
+  <title>Principal Versus - Anotações</title>
   <link rel="icon" type="image/x-icon" href="{{ url_for('static', filename='favicon.ico') }}" />
   <link rel="shortcut icon" type="image/x-icon" href="{{ url_for('static', filename='favicon.ico') }}" />
   <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700&display=swap"
@@ -52,11 +52,33 @@
       </div>
 
       <div class="sidebar-section">
+        <h3 class="sidebar-section-title">Agentes</h3>
+        <a href="/agents/cadastro" class="sidebar-link" title="Agente de Cadastro">
+          <span class="sidebar-icon">🤖</span>
+          <span class="link-text">Agente de Cadastro</span>
+        </a>
+        <a href="#" class="sidebar-link" title="Agente xxxxx" style="opacity: 0.5; cursor: not-allowed;">
+          <span class="sidebar-icon">🤖</span>
+          <span class="link-text">Agente xxxxx</span>
+        </a>
+        <a href="#" class="sidebar-link" title="Agente yyyyy" style="opacity: 0.5; cursor: not-allowed;">
+          <span class="sidebar-icon">🤖</span>
+          <span class="link-text">Agente yyyyy</span>
+        </a>
+      </div>
+
+      <div class="sidebar-section">
         <h3 class="sidebar-section-title">Sistema</h3>
         <a href="/companies" class="sidebar-link" title="Empresas">
           <span class="sidebar-icon">🏢</span>
           <span class="link-text">Empresas</span>
         </a>
+        {% if current_user and current_user.is_authenticated and current_user.role == 'admin' %}
+        <a href="{{ url_for('auth.list_users_page') }}" class="sidebar-link" title="Usuários">
+          <span class="sidebar-icon">👥</span>
+          <span class="link-text">Usuários</span>
+        </a>
+        {% endif %}
         <a href="/integrations" class="sidebar-link" title="Integrações">
           <span class="sidebar-icon">🔌</span>
           <span class="link-text">Integrações</span>

@@ -1371,14 +1371,14 @@
     "needs_logging": false
   },
   {
-    "endpoint": "grv.grv_routine_work_distribution",
-    "path": "/grv/company/<int:company_id>/routine/work-distribution",
+    "endpoint": "grv.grv_process_routines",
+    "path": "/grv/company/<int:company_id>/process/routines",
     "methods": [
       "GET"
     ],
     "blueprint": "grv",
-    "function": "<function grv_routine_work_distribution at 0x000001D67C7F2200>",
-    "function_name": "grv_routine_work_distribution",
+    "function": "<function grv_process_routines at 0x000001D67C7F2200>",
+    "function_name": "grv_process_routines",
     "has_auto_log": false,
     "has_manual_log": false,
     "entity_type": "routine",

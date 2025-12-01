@@ -74,7 +74,7 @@ KNOWN_SERVER_GAPS = {
     "/grv/company/<int:company_id>/routine/capacity",
     "/grv/company/<int:company_id>/routine/efficiency",
     "/grv/company/<int:company_id>/routine/incidents",
-    "/grv/company/<int:company_id>/routine/work-distribution",
+    "/grv/company/<int:company_id>/process/routines",
     "/meetings/api/meeting/<int:meeting_id>",
     "/pev/api/implantacao/<int:plan_id>/alignment/overview",
     "/pev/api/implantacao/<int:plan_id>/finance/metrics",

@@ -79,6 +79,17 @@
     box-shadow: 0 6px 16px rgba(16, 185, 129, 0.4);
   }
 
+  .placeholder-alert {
+    margin: 0 0 16px 0;
+    padding: 14px 18px;
+    border-radius: 10px;
+    border: 1px solid rgba(251, 191, 36, 0.6);
+    background: #fffbeb;
+    color: #78350f;
+    font-size: 14px;
+    line-height: 1.4;
+  }
+
   .btn-back {
     background: #f1f5f9;
     color: #475569;
@@ -438,6 +449,11 @@
   <!-- Main Content -->
   <div class="project-content plan-content instance-manage-main">
     <!-- Header -->
+    {% if instance.is_placeholder %}
+    <div class="placeholder-alert">
+      Conteudo demonstrativo exibido ate que uma instancia real seja cadastrada.
+    </div>
+    {% endif %}
     <div class="instance-header">
       <div class="instance-header-info">
         <div class="instance-code">{{ instance.instance_code }}</div>
@@ -489,6 +505,10 @@
       <div class="meta-item">
         <div class="meta-label">Horas Realizadas</div>
         <div class="meta-value" id="actualHoursDisplay">{{ instance.actual_hours or 0 }}h</div>
+      </div>
+      <div class="meta-item">
+        <div class="meta-label">Peso de Pontuação</div>
+        <div class="meta-value">{{ (instance.score_weight or 1)|float }}x</div>
       </div>
       {% if instance.completed_at %}
       <div class="meta-item">
@@ -795,4 +815,3 @@ function goBack() {
 }
 </script>
 {% endblock %}
-

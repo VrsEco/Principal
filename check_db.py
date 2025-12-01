@@ -13,13 +13,16 @@ from models.note import Note
 with app.app_context():
     inspector = inspect(db.engine)
     tables = inspector.get_table_names()
-    print(f"Tabelas existentes: {tables}")
+    with open('tables_list.txt', 'w') as f:
+        for table in tables:
+            f.write(f"{table}\n")
+    print("Tables written to tables_list.txt")
     
-    if 'notes' in tables:
-        print("Tabela 'notes' ENCONTRADA.")
-        # Verificar colunas
-        columns = [c['name'] for c in inspector.get_columns('notes')]
-        print(f"Colunas na tabela 'notes': {columns}")
+    if 'project_tasks' in tables:
+        columns = [c['name'] for c in inspector.get_columns('project_tasks')]
+        with open('project_tasks_columns.txt', 'w') as f:
+            f.write(str(columns))
+        print("Columns written to project_tasks_columns.txt")
     else:
         print("Tabela 'notes' NÃO ENCONTRADA.")
         print("Tentando criar tabela 'notes'...")

@@ -109,8 +109,15 @@
   }
 
   @keyframes fadeIn {
-    from { opacity: 0; transform: translateY(10px); }
-    to { opacity: 1; transform: translateY(0); }
+    from {
+      opacity: 0;
+      transform: translateY(10px);
+    }
+
+    to {
+      opacity: 1;
+      transform: translateY(0);
+    }
   }
 
   /* Botões */
@@ -191,7 +198,8 @@
   .form-label {
     font-size: 13px;
     font-weight: 700;
-    color: #0f172a;  /* Preto/cinza muito escuro - máximo contraste */
+    color: #0f172a;
+    /* Preto/cinza muito escuro - máximo contraste */
     text-transform: uppercase;
     letter-spacing: 0.05em;
   }
@@ -238,6 +246,41 @@
   .form-textarea {
     resize: vertical;
     min-height: 100px;
+  }
+
+  .score-settings-description {
+    font-size: 15px;
+    color: #475569;
+    margin-bottom: 20px;
+  }
+
+  .score-helper-card {
+    background: #f8fafc;
+    border: 1px solid #e2e8f0;
+    border-radius: 12px;
+    padding: 16px;
+    margin-top: 16px;
+    color: #475569;
+    font-size: 14px;
+    line-height: 1.5;
+  }
+
+  .score-status-message {
+    font-size: 0.9rem;
+    color: #475569;
+    margin-right: auto;
+  }
+
+  .score-status-message.score-status--error {
+    color: #dc2626;
+  }
+
+  .score-status-message.score-status--success {
+    color: #15803d;
+  }
+
+  .score-status-message.score-status--info {
+    color: #475569;
   }
 
   .form-actions {
@@ -307,48 +350,48 @@
       <button class="tab-button" data-tab="economic" onclick="switchTab('economic')" data-ref="05">
         <span>💰</span> Cadastro Econômico
       </button>
+      <button class="tab-button" data-tab="performance" onclick="switchTab('performance')" data-ref="06">
+        <span>⭐</span> Cadastro de Pontuação
+      </button>
     </div>
 
     <!-- Tab: Dados Básicos -->
     <div id="tab-basic" class="tab-content active">
       <h2 style="font-size: 20px; font-weight: 700; margin-bottom: 24px;">Informações da Empresa</h2>
-      
+
       <form id="basicForm">
         <div class="form-grid">
           <div class="form-group">
             <label class="form-label">Código do Cliente *</label>
-            <input type="text" name="client_code" class="form-input" 
-                   value="{{ company.client_code or '' }}" 
-                   maxlength="3" pattern="[A-Za-z0-9]{1,3}" required data-ref="21">
+            <input type="text" name="client_code" class="form-input" value="{{ company.client_code or '' }}"
+              maxlength="3" pattern="[A-Za-z0-9]{1,3}" required data-ref="21">
           </div>
 
           <div class="form-group">
             <label class="form-label">Nome Fantasia *</label>
-            <input type="text" name="name" class="form-input" 
-                   value="{{ company.name or '' }}" required data-ref="22">
+            <input type="text" name="name" class="form-input" value="{{ company.name or '' }}" required data-ref="22">
           </div>
 
           <div class="form-group">
             <label class="form-label">Razão Social</label>
-            <input type="text" name="legal_name" class="form-input" 
-                   value="{{ company.legal_name or '' }}" data-ref="23">
+            <input type="text" name="legal_name" class="form-input" value="{{ company.legal_name or '' }}"
+              data-ref="23">
           </div>
 
           <div class="form-group">
             <label class="form-label">Setor/Indústria</label>
-            <input type="text" name="industry" class="form-input" 
-                   value="{{ company.industry or '' }}" data-ref="24">
+            <input type="text" name="industry" class="form-input" value="{{ company.industry or '' }}" data-ref="24">
           </div>
 
           <div class="form-group">
             <label class="form-label">Porte</label>
             <select name="size" class="form-select" data-ref="39">
               <option value="">Selecione...</option>
-              <option value="MEI" {% if company.size == 'MEI' %}selected{% endif %}>MEI</option>
-              <option value="Micro" {% if company.size == 'Micro' %}selected{% endif %}>Micro</option>
-              <option value="Pequena" {% if company.size == 'Pequena' %}selected{% endif %}>Pequena</option>
-              <option value="Média" {% if company.size == 'Média' %}selected{% endif %}>Média</option>
-              <option value="Grande" {% if company.size == 'Grande' %}selected{% endif %}>Grande</option>
+              <option value="MEI" {% if company.size=='MEI' %}selected{% endif %}>MEI</option>
+              <option value="Micro" {% if company.size=='Micro' %}selected{% endif %}>Micro</option>
+              <option value="Pequena" {% if company.size=='Pequena' %}selected{% endif %}>Pequena</option>
+              <option value="Média" {% if company.size=='Média' %}selected{% endif %}>Média</option>
+              <option value="Grande" {% if company.size=='Grande' %}selected{% endif %}>Grande</option>
             </select>
           </div>
         </div>
@@ -369,24 +412,24 @@
     <!-- Tab: MVV -->
     <div id="tab-mvv" class="tab-content">
       <h2 style="font-size: 20px; font-weight: 700; margin-bottom: 24px;">Missão, Visão e Valores</h2>
-      
+
       <form id="mvvForm">
         <div class="form-group">
           <label class="form-label">Missão</label>
-          <textarea name="mission" class="form-textarea" 
-                    placeholder="Qual é o propósito da organização?" data-ref="46">{{ company.mvv_mission or '' }}</textarea>
+          <textarea name="mission" class="form-textarea" placeholder="Qual é o propósito da organização?"
+            data-ref="46">{{ company.mvv_mission or '' }}</textarea>
         </div>
 
         <div class="form-group">
           <label class="form-label">Visão</label>
-          <textarea name="vision" class="form-textarea" 
-                    placeholder="Onde a organização quer chegar?" data-ref="47">{{ company.mvv_vision or '' }}</textarea>
+          <textarea name="vision" class="form-textarea" placeholder="Onde a organização quer chegar?"
+            data-ref="47">{{ company.mvv_vision or '' }}</textarea>
         </div>
 
         <div class="form-group">
           <label class="form-label">Valores</label>
-          <textarea name="values" class="form-textarea" 
-                    placeholder="Quais são os princípios que guiam a organização?" data-ref="48">{{ company.mvv_values or '' }}</textarea>
+          <textarea name="values" class="form-textarea" placeholder="Quais são os princípios que guiam a organização?"
+            data-ref="48">{{ company.mvv_values or '' }}</textarea>
         </div>
 
         <div class="form-actions">
@@ -428,47 +471,47 @@
     <!-- Tab: Cadastro Econômico -->
     <div id="tab-economic" class="tab-content">
       <h2 style="font-size: 20px; font-weight: 700; margin-bottom: 24px;">Cadastro Econômico</h2>
-      
+
       <form id="economicForm">
         <div class="form-grid">
           <div class="form-group">
             <label class="form-label">CNPJ</label>
-            <input type="text" name="cnpj" class="form-input" 
-                   value="{{ company.cnpj or '' }}" 
-                   placeholder="00.000.000/0000-00" data-ref="25">
+            <input type="text" name="cnpj" class="form-input" value="{{ company.cnpj or '' }}"
+              placeholder="00.000.000/0000-00" data-ref="25">
           </div>
 
           <div class="form-group">
             <label class="form-label">Cidade</label>
-            <input type="text" name="city" class="form-input" 
-                   value="{{ company.city or '' }}" 
-                   placeholder="Ex: São Paulo" data-ref="26">
+            <input type="text" name="city" class="form-input" value="{{ company.city or '' }}"
+              placeholder="Ex: São Paulo" data-ref="26">
           </div>
 
           <div class="form-group">
             <label class="form-label">Estado (UF)</label>
-            <input type="text" name="state" class="form-input" 
-                   value="{{ company.state or '' }}" 
-                   maxlength="2"
-                   placeholder="Ex: SP" data-ref="27">
+            <input type="text" name="state" class="form-input" value="{{ company.state or '' }}" maxlength="2"
+              placeholder="Ex: SP" data-ref="27">
           </div>
 
           <div class="form-group">
             <label class="form-label">CNAEs</label>
-            <input type="text" name="cnaes" class="form-input" 
-                   value="{{ company.cnaes or '' }}" 
-                   placeholder="Ex: 6201-5/00, 6202-3/00" data-ref="28">
+            <input type="text" name="cnaes" class="form-input" value="{{ company.cnaes or '' }}"
+              placeholder="Ex: 6201-5/00, 6202-3/00" data-ref="28">
           </div>
 
           <div class="form-group">
             <label class="form-label">Cobertura Física</label>
             <select name="coverage_physical" class="form-select" data-ref="40">
               <option value="">Selecione...</option>
-              <option value="Micro" {% if company.coverage_physical == 'Micro' %}selected{% endif %}>Micro (Bairro)</option>
-              <option value="Local" {% if company.coverage_physical == 'Local' %}selected{% endif %}>Local (Cidade)</option>
-              <option value="Regional" {% if company.coverage_physical == 'Regional' %}selected{% endif %}>Regional (Estado)</option>
-              <option value="Nacional" {% if company.coverage_physical == 'Nacional' %}selected{% endif %}>Nacional</option>
-              <option value="Internacional" {% if company.coverage_physical == 'Internacional' %}selected{% endif %}>Internacional</option>
+              <option value="Micro" {% if company.coverage_physical=='Micro' %}selected{% endif %}>Micro (Bairro)
+              </option>
+              <option value="Local" {% if company.coverage_physical=='Local' %}selected{% endif %}>Local (Cidade)
+              </option>
+              <option value="Regional" {% if company.coverage_physical=='Regional' %}selected{% endif %}>Regional
+                (Estado)</option>
+              <option value="Nacional" {% if company.coverage_physical=='Nacional' %}selected{% endif %}>Nacional
+              </option>
+              <option value="Internacional" {% if company.coverage_physical=='Internacional' %}selected{% endif %}>
+                Internacional</option>
             </select>
           </div>
 
@@ -476,26 +519,26 @@
             <label class="form-label">Cobertura Online</label>
             <select name="coverage_online" class="form-select" data-ref="41">
               <option value="">Selecione...</option>
-              <option value="Sem presença" {% if company.coverage_online == 'Sem presença' %}selected{% endif %}>Sem presença</option>
-              <option value="Local" {% if company.coverage_online == 'Local' %}selected{% endif %}>Local</option>
-              <option value="Regional" {% if company.coverage_online == 'Regional' %}selected{% endif %}>Regional</option>
-              <option value="Nacional" {% if company.coverage_online == 'Nacional' %}selected{% endif %}>Nacional</option>
-              <option value="Internacional" {% if company.coverage_online == 'Internacional' %}selected{% endif %}>Internacional</option>
+              <option value="Sem presença" {% if company.coverage_online=='Sem presença' %}selected{% endif %}>Sem
+                presença</option>
+              <option value="Local" {% if company.coverage_online=='Local' %}selected{% endif %}>Local</option>
+              <option value="Regional" {% if company.coverage_online=='Regional' %}selected{% endif %}>Regional</option>
+              <option value="Nacional" {% if company.coverage_online=='Nacional' %}selected{% endif %}>Nacional</option>
+              <option value="Internacional" {% if company.coverage_online=='Internacional' %}selected{% endif %}>
+                Internacional</option>
             </select>
           </div>
 
           <div class="form-group">
             <label class="form-label">Experiência Total</label>
-            <input type="text" name="experience_total" class="form-input" 
-                   value="{{ company.experience_total or '' }}" 
-                   placeholder="Ex: 15 anos" data-ref="29">
+            <input type="text" name="experience_total" class="form-input" value="{{ company.experience_total or '' }}"
+              placeholder="Ex: 15 anos" data-ref="29">
           </div>
 
           <div class="form-group">
             <label class="form-label">Experiência no Segmento</label>
-            <input type="text" name="experience_segment" class="form-input" 
-                   value="{{ company.experience_segment or '' }}" 
-                   placeholder="Ex: 8 anos" data-ref="30">
+            <input type="text" name="experience_segment" class="form-input"
+              value="{{ company.experience_segment or '' }}" placeholder="Ex: 8 anos" data-ref="30">
           </div>
 
         </div>
@@ -507,11 +550,82 @@
         </div>
       </form>
     </div>
+
+    <!-- Tab: Cadastro de Pontuação -->
+    <div id="tab-performance" class="tab-content">
+      <h2 style="font-size: 20px; font-weight: 700; margin-bottom: 16px;">Cadastro de Pontuação</h2>
+      <p class="score-settings-description">
+        Configure como cada atividade ou instância impacta o Performance Score desta empresa.
+      </p>
+
+      <form id="scoreConfigForm">
+        <div class="form-grid">
+          <div class="form-group">
+            <label class="form-label">Atividade / Instância Entregues no Prazo</label>
+            <input type="number" step="0.1" name="on_time_score" class="form-input" placeholder="Ex: 10"
+              data-ref="58">
+            <small class="form-hint">Pontuação atribuída quando a entrega acontece dentro do prazo.</small>
+          </div>
+
+          <div class="form-group">
+            <label class="form-label">Atividade / Instância Entregues em Atraso</label>
+            <input type="number" step="0.1" name="late_score" class="form-input" placeholder="Ex: -5" data-ref="59">
+            <small class="form-hint">Pontuação aplicada quando a entrega acontece após o prazo.</small>
+          </div>
+
+          <div class="form-group">
+            <label class="form-label">Pontuação Por Dia de Atraso</label>
+            <input type="number" step="0.1" name="daily_delay_penalty" class="form-input" placeholder="Ex: -1"
+              data-ref="60">
+            <small class="form-hint">Valor somado (ou deduzido) por dia corrido de atraso.</small>
+          </div>
+
+          <div class="form-group">
+            <label class="form-label">Registro de Conclusão em Atraso</label>
+            <input type="number" step="0.1" name="late_registration_penalty" class="form-input" placeholder="Ex: -1"
+              data-ref="62">
+            <small class="form-hint">
+              Penalidade aplicada quando a conclusão é registrada após 1 dia útil do evento real (sábados e domingos não contam).
+            </small>
+          </div>
+        </div>
+
+        <div class="score-helper-card">
+          Utilize números positivos para bonificar entregas e números negativos para penalizações.
+          Essas configurações são utilizadas em todos os cálculos de Performance Score do My Work para esta empresa.
+        </div>
+
+        <div class="form-actions">
+          <span class="score-status-message score-status--info" id="scoreConfigStatus">Carregando configurações...</span>
+          <button type="submit" class="btn btn-primary" data-ref="61">
+            <span>💾</span> Salvar Pontuação
+          </button>
+        </div>
+      </form>
+    </div>
   </div>
 </div>
 
 <script>
   const companyId = {{ company.id }};
+  let performanceSettingsLoaded = false;
+  const DEFAULT_PERFORMANCE_SETTINGS = {
+    on_time_score: 0,
+    late_score: 0,
+    daily_delay_penalty: 0,
+    late_registration_penalty: -1,
+  };
+
+  async function getJsonOrThrow(response) {
+    if (!response.ok) {
+      const bodyText = await response.text();
+      const message = bodyText?.trim()
+        ? bodyText.trim().slice(0, 200)
+        : `Status ${response.status}`;
+      throw new Error(message);
+    }
+    return response.json();
+  }
 
   // Sistema de Tabs
   function switchTab(tabName) {
@@ -522,46 +636,94 @@
     // Adicionar active ao botão e conteúdo clicado
     const tabButton = document.querySelector(`[data-tab="${tabName}"]`);
     const tabContent = document.getElementById(`tab-${tabName}`);
-    
+
     if (tabButton && tabContent) {
       tabButton.classList.add('active');
       tabContent.classList.add('active');
-      
+
       // Carregar dados específicos da aba se necessário
       if (tabName === 'roles') {
         loadRoles();
       } else if (tabName === 'employees') {
         loadEmployees();
+      } else if (tabName === 'performance') {
+        loadPerformanceSettings();
       }
     }
   }
 
+  function updateScoreStatus(message, variant = 'info') {
+    const statusEl = document.getElementById('scoreConfigStatus');
+    if (!statusEl) return;
+    statusEl.textContent = message;
+    statusEl.classList.remove('score-status--info', 'score-status--error', 'score-status--success');
+    statusEl.classList.add(`score-status--${variant}`);
+  }
+
+  function fillPerformanceSettingsForm(settings = {}) {
+    const form = document.getElementById('scoreConfigForm');
+    if (!form) return;
+    const normalized = {
+      ...DEFAULT_PERFORMANCE_SETTINGS,
+      ...settings,
+    };
+    form.on_time_score.value = normalized.on_time_score;
+    form.late_score.value = normalized.late_score;
+    form.daily_delay_penalty.value = normalized.daily_delay_penalty;
+    if (form.late_registration_penalty) {
+      form.late_registration_penalty.value = normalized.late_registration_penalty;
+    }
+  }
+
+  async function loadPerformanceSettings(forceReload = false) {
+    if (performanceSettingsLoaded && !forceReload) {
+      return;
+    }
+    updateScoreStatus('Carregando configurações...', 'info');
+    try {
+      const response = await fetch(`/api/companies/${companyId}/performance-settings`);
+      const result = await getJsonOrThrow(response);
+      if (!result.success) {
+        throw new Error(result.error || 'Erro ao carregar configurações');
+      }
+      fillPerformanceSettingsForm(result.data);
+      performanceSettingsLoaded = true;
+      updateScoreStatus('Configurações carregadas.', 'info');
+    } catch (error) {
+      console.warn('Performance settings indisponíveis, aplicando padrão.', error);
+      fillPerformanceSettingsForm(DEFAULT_PERFORMANCE_SETTINGS);
+      updateScoreStatus('Configurações padrão em uso (endpoint indisponível).', 'error');
+    }
+  }
+
   // Verificar se há uma aba especificada na URL
-  document.addEventListener('DOMContentLoaded', function() {
+  document.addEventListener('DOMContentLoaded', function () {
     const urlParams = new URLSearchParams(window.location.search);
     const tabParam = urlParams.get('tab');
-    
+
     if (tabParam) {
       switchTab(tabParam);
+    } else {
+      loadPerformanceSettings();
     }
   });
 
   // Salvar Dados Básicos
-  document.getElementById('basicForm').addEventListener('submit', async function(e) {
+  document.getElementById('basicForm').addEventListener('submit', async function (e) {
     e.preventDefault();
-    
+
     const formData = new FormData(this);
     const data = Object.fromEntries(formData.entries());
 
     try {
       const response = await fetch(`/api/companies/${companyId}`, {
         method: 'POST',
-        headers: {'Content-Type': 'application/json'},
+        headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(data)
       });
 
       const result = await response.json();
-      
+
       if (result.success) {
         alert('Dados atualizados com sucesso!');
         location.reload();
@@ -575,9 +737,9 @@
   });
 
   // Salvar MVV
-  document.getElementById('mvvForm').addEventListener('submit', async function(e) {
+  document.getElementById('mvvForm').addEventListener('submit', async function (e) {
     e.preventDefault();
-    
+
     const formData = new FormData(this);
     const data = {
       mission: formData.get('mission'),
@@ -588,12 +750,12 @@
     try {
       const response = await fetch(`/api/companies/${companyId}/mvv`, {
         method: 'POST',
-        headers: {'Content-Type': 'application/json'},
+        headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(data)
       });
 
       const result = await response.json();
-      
+
       if (result.success) {
         alert('MVV atualizado com sucesso!');
       } else {
@@ -606,21 +768,21 @@
   });
 
   // Salvar Dados Econômicos
-  document.getElementById('economicForm').addEventListener('submit', async function(e) {
+  document.getElementById('economicForm').addEventListener('submit', async function (e) {
     e.preventDefault();
-    
+
     const formData = new FormData(this);
     const data = Object.fromEntries(formData.entries());
 
     try {
       const response = await fetch(`/api/companies/${companyId}/economic`, {
         method: 'POST',
-        headers: {'Content-Type': 'application/json'},
+        headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(data)
       });
 
       const result = await response.json();
-      
+
       if (result.success) {
         alert('Dados econômicos atualizados com sucesso!');
         location.reload();
@@ -633,8 +795,34 @@
     }
   });
 
+  const scoreForm = document.getElementById('scoreConfigForm');
+  if (scoreForm) {
+    scoreForm.addEventListener('submit', async function (e) {
+      e.preventDefault();
+      const formData = new FormData(this);
+      const payload = Object.fromEntries(formData.entries());
+      updateScoreStatus('Salvando configurações...', 'info');
+      try {
+        const response = await fetch(`/api/companies/${companyId}/performance-settings`, {
+          method: 'PUT',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(payload)
+        });
+        const result = await getJsonOrThrow(response);
+        if (!result.success) {
+          throw new Error(result.error || 'Erro ao salvar pontuação');
+        }
+        fillPerformanceSettingsForm(result.data);
+        updateScoreStatus('Pontuação atualizada com sucesso!', 'success');
+      } catch (error) {
+        console.error(error);
+        updateScoreStatus(error.message || 'Erro ao salvar pontuação', 'error');
+      }
+    });
+  }
+
   // ===== ROLES =====
-  
+
   async function loadRoles() {
     try {
       const response = await fetch(`/api/companies/${companyId}/roles`);
@@ -646,12 +834,12 @@
         // Organizar funções por hierarquia (principais primeiro, depois subordinadas)
         const mainRoles = result.roles.filter(role => !role.parent_role_id);
         const subordinateRoles = result.roles.filter(role => role.parent_role_id);
-        
+
         // Função para renderizar uma função
         const renderRole = (role, isSubordinate = false) => {
           const parentRole = result.roles.find(r => r.id === role.parent_role_id);
           const parentName = parentRole ? parentRole.title : null;
-          
+
           return `
             <tr style="${isSubordinate ? 'background: #f8fafc;' : ''}">
               <td>
@@ -687,20 +875,20 @@
             </thead>
             <tbody>
               ${mainRoles.map(role => {
-                let html = renderRole(role, false);
-                // Adicionar funções subordinadas logo abaixo
-                const subordinates = subordinateRoles.filter(sub => sub.parent_role_id === role.id);
-                html += subordinates.map(sub => renderRole(sub, true)).join('');
-                return html;
-              }).join('')}
+          let html = renderRole(role, false);
+          // Adicionar funções subordinadas logo abaixo
+          const subordinates = subordinateRoles.filter(sub => sub.parent_role_id === role.id);
+          html += subordinates.map(sub => renderRole(sub, true)).join('');
+          return html;
+        }).join('')}
               ${subordinateRoles.filter(role => !mainRoles.find(main => main.id === role.parent_role_id)).map(role => renderRole(role, false)).join('')}
             </tbody>
           </table>
         `;
-        
+
         // Adicionar event listeners para os botões de editar
         container.querySelectorAll('.edit-role-btn').forEach(btn => {
-          btn.addEventListener('click', function() {
+          btn.addEventListener('click', function () {
             const roleData = {
               id: parseInt(this.dataset.roleId),
               title: this.dataset.roleTitle,
@@ -711,7 +899,7 @@
             editRole(roleData);
           });
         });
-        
+
       } else {
         container.innerHTML = `
           <div class="empty-state">
@@ -765,33 +953,33 @@
         </form>
       </div>
     `;
-    
+
     document.body.appendChild(modal);
-    
+
     // Carregar funções para o select de subordinação
     await loadParentRolesForSelect(role?.parent_role_id, role?.id);
-    
+
     // Submit do formulário
     document.getElementById('roleForm').addEventListener('submit', async (e) => {
       e.preventDefault();
       const formData = new FormData(e.target);
       const data = Object.fromEntries(formData.entries());
-      
+
       try {
-        const url = role 
+        const url = role
           ? `/api/companies/${companyId}/roles/${role.id}`
           : `/api/companies/${companyId}/roles`;
-        
+
         const method = role ? 'PUT' : 'POST';
-        
+
         const response = await fetch(url, {
           method,
-          headers: {'Content-Type': 'application/json'},
+          headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify(data)
         });
-        
+
         const result = await response.json();
-        
+
         if (result.success) {
           alert(role ? 'Função atualizada!' : 'Função cadastrada!');
           modal.remove();
@@ -812,14 +1000,14 @@
 
   async function deleteRole(roleId) {
     if (!confirm('Deseja realmente excluir esta função?')) return;
-    
+
     try {
       const response = await fetch(`/api/companies/${companyId}/roles/${roleId}`, {
         method: 'DELETE'
       });
-      
+
       const result = await response.json();
-      
+
       if (result.success) {
         alert('Função excluída!');
         loadRoles();
@@ -836,24 +1024,24 @@
     try {
       const response = await fetch(`/api/companies/${companyId}/roles`);
       const result = await response.json();
-      
+
       const select = document.getElementById('parentRoleSelect');
       if (select && result.success && result.roles) {
         // Limpar opções existentes, mantendo apenas a primeira
         select.innerHTML = '<option value="">Nenhum (Cargo principal)</option>';
-        
+
         result.roles.forEach(role => {
           // Não permitir que uma função seja subordinada a si mesma
           if (currentRoleId && role.id === currentRoleId) return;
-          
+
           const option = document.createElement('option');
           option.value = role.id;
           option.textContent = role.title || role.name;
-          
+
           if (selectedParentId && role.id === selectedParentId) {
             option.selected = true;
           }
-          
+
           select.appendChild(option);
         });
       }
@@ -863,7 +1051,7 @@
   }
 
   // ===== EMPLOYEES =====
-  
+
   async function loadEmployees() {
     try {
       const response = await fetch(`/api/companies/${companyId}/employees`);
@@ -910,7 +1098,9 @@
                             data-emp-status="${emp.status || 'active'}"
                             data-emp-notes="${emp.notes || ''}"
                             data-emp-role-name="${emp.role_name || ''}"
+                            data-emp-user-id="${emp.user_id || ''}"
                             title="Editar" data-ref="16">✏️</button>
+                    ${!emp.user_id ? `<button class="btn-icon link-user-btn" onclick="linkEmployeeToUser(${emp.id}, '${(emp.name || '').replace(/'/g, "\\'")}')" title="Vincular a Usuário" data-ref="53" style="background: #3b82f6; color: white; border: none; padding: 4px 8px; border-radius: 4px; cursor: pointer; font-size: 12px; margin-left: 4px;">🔗 Vincular</button>` : ''}
                     <button class="btn-icon delete" onclick="deleteEmployee(${emp.id})" title="Excluir" data-ref="17">🗑️</button>
                   </td>
                 </tr>
@@ -918,10 +1108,10 @@
             </tbody>
           </table>
         `;
-        
+
         // Adicionar event listeners para os botões de editar
         container.querySelectorAll('.edit-employee-btn').forEach(btn => {
-          btn.addEventListener('click', function() {
+          btn.addEventListener('click', function () {
             const empData = {
               id: parseInt(this.dataset.empId),
               name: this.dataset.empName,
@@ -931,12 +1121,13 @@
               department: this.dataset.empDepartment,
               hire_date: this.dataset.empHireDate,
               status: this.dataset.empStatus,
-              notes: this.dataset.empNotes
+              notes: this.dataset.empNotes,
+              user_id: this.dataset.empUserId ? parseInt(this.dataset.empUserId) : null
             };
             editEmployee(empData);
           });
         });
-        
+
       } else {
         container.innerHTML = `
           <div class="empty-state">
@@ -999,6 +1190,13 @@
               <label class="form-label">Carga Horária Semanal</label>
               <input type="number" name="weekly_hours" class="form-input" value="${employee?.weekly_hours || 40}" min="1" max="60" step="0.5" data-ref="38">
             </div>
+            <div class="form-group">
+              <label class="form-label">Vincular a Usuário do Sistema</label>
+              <select name="user_id" class="form-select" id="userSelect" data-ref="51">
+                <option value="">Nenhum (Colaborador sem acesso ao sistema)</option>
+              </select>
+              <small class="form-hint">Selecione um usuário para dar acesso ao sistema a este colaborador</small>
+            </div>
           </div>
           <div class="form-group">
             <label class="form-label">Observações</label>
@@ -1013,34 +1211,61 @@
         </form>
       </div>
     `;
-    
+
     document.body.appendChild(modal);
-    
+
     // Carregar funções para o select
     await loadRolesForSelect(employee?.role_id);
-    
+
+    // Carregar usuários para o select
+    await loadUsersForSelect(employee?.user_id);
+
     // Submit do formulário
     document.getElementById('employeeForm').addEventListener('submit', async (e) => {
       e.preventDefault();
       const formData = new FormData(e.target);
       const data = Object.fromEntries(formData.entries());
-      
+
+      // Converter user_id para número ou null
+      if (data.user_id) {
+        data.user_id = parseInt(data.user_id);
+      } else {
+        data.user_id = null;
+      }
+
       try {
-        const url = employee 
+        const url = employee
           ? `/api/companies/${companyId}/employees/${employee.id}`
           : `/api/companies/${companyId}/employees`;
-        
+
         const method = employee ? 'PUT' : 'POST';
-        
+
         const response = await fetch(url, {
           method,
-          headers: {'Content-Type': 'application/json'},
+          headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify(data)
         });
-        
+
         const result = await response.json();
-        
+
         if (result.success) {
+          // Se user_id foi fornecido e é um update, também atualizar via API de vínculo
+          if (employee && data.user_id) {
+            try {
+              const linkResponse = await fetch(`/api/user-employee/employee/${employee.id}`, {
+                method: 'PUT',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ user_id: data.user_id })
+              });
+              const linkResult = await linkResponse.json();
+              if (!linkResult.success) {
+                console.warn('Aviso ao vincular usuário:', linkResult.error);
+              }
+            } catch (linkError) {
+              console.warn('Erro ao vincular usuário:', linkError);
+            }
+          }
+
           alert(employee ? 'Colaborador atualizado!' : 'Colaborador cadastrado!');
           modal.remove();
           loadEmployees();
@@ -1060,14 +1285,14 @@
 
   async function deleteEmployee(employeeId) {
     if (!confirm('Deseja realmente excluir este colaborador?')) return;
-    
+
     try {
       const response = await fetch(`/api/companies/${companyId}/employees/${employeeId}`, {
         method: 'DELETE'
       });
-      
+
       const result = await response.json();
-      
+
       if (result.success) {
         alert('Colaborador excluído!');
         loadEmployees();
@@ -1080,11 +1305,134 @@
     }
   }
 
+  async function loadUsersForSelect(selectedUserId = null) {
+    try {
+      const response = await fetch('/auth/users?per_page=1000');
+      const result = await response.json();
+
+      const select = document.getElementById('userSelect');
+      if (!select || !result.success) {
+        return;
+      }
+
+      const users = Array.isArray(result.users)
+        ? result.users
+        : (result.data && Array.isArray(result.data.users) ? result.data.users : []);
+
+      // Limpar opções existentes, mantendo apenas a primeira
+      select.innerHTML = '<option value="">Nenhum (Colaborador sem acesso ao sistema)</option>';
+
+      users.forEach(user => {
+        const option = document.createElement('option');
+        option.value = user.id;
+        option.textContent = `${user.name} (${user.email}) - ${user.role}`;
+
+        if (selectedUserId && user.id == selectedUserId) {
+          option.selected = true;
+        }
+
+        select.appendChild(option);
+      });
+    } catch (error) {
+      console.error('Erro ao carregar usuários:', error);
+    }
+  }
+
+  async function linkEmployeeToUser(employeeId, employeeName) {
+    try {
+      // Carregar lista de usuários
+      const response = await fetch('/auth/users?per_page=1000');
+      const result = await response.json();
+
+      const users = Array.isArray(result.users)
+        ? result.users
+        : (result.data && Array.isArray(result.data.users) ? result.data.users : []);
+
+      if (!result.success) {
+        alert('Erro ao carregar lista de usuários');
+        return;
+      }
+
+      if (users.length === 0) {
+        alert('Não há usuários cadastrados no sistema');
+        return;
+      }
+
+      // Criar modal para seleção
+      const modal = document.createElement('div');
+      modal.className = 'modal-overlay';
+      modal.style.display = 'flex';
+      modal.innerHTML = `
+        <div class="modal-container" style="max-width: 500px;">
+          <div class="modal-header">
+            <h3>Vincular Colaborador a Usuário</h3>
+            <button onclick="this.closest('.modal-overlay').remove()" class="btn-close">×</button>
+          </div>
+          <div class="modal-body">
+            <p><strong>Colaborador:</strong> ${employeeName}</p>
+            <div class="form-group" style="margin-top: 1rem;">
+              <label class="form-label">Selecione o Usuário *</label>
+              <select id="linkUserSelect" class="form-select" style="width: 100%;">
+                <option value="">Selecione um usuário...</option>
+                ${users.map(user => `
+                  <option value="${user.id}">${user.name} (${user.email}) - ${user.role}</option>
+                `).join('')}
+              </select>
+            </div>
+          </div>
+          <div class="modal-footer">
+            <button type="button" class="btn btn-secondary" onclick="this.closest('.modal-overlay').remove()">Cancelar</button>
+            <button type="button" class="btn btn-primary" onclick="confirmLinkEmployee(${employeeId})">Vincular</button>
+          </div>
+        </div>
+      `;
+
+      document.body.appendChild(modal);
+
+      // Função para confirmar vínculo
+      window.confirmLinkEmployee = async function (empId) {
+        const select = document.getElementById('linkUserSelect');
+        const userId = select.value;
+
+        if (!userId) {
+          alert('Por favor, selecione um usuário');
+          return;
+        }
+
+        try {
+          const linkResponse = await fetch(`/api/user-employee/employee/${empId}/link-user`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ user_id: parseInt(userId) })
+          });
+
+          const linkResult = await linkResponse.json();
+
+          if (linkResult.success) {
+            alert('Colaborador vinculado ao usuário com sucesso!');
+            modal.remove();
+            loadEmployees();
+          } else {
+            alert(`Erro: ${linkResult.error}`);
+          }
+        } catch (error) {
+          console.error('Erro ao vincular:', error);
+          alert('Erro ao vincular colaborador ao usuário');
+        }
+      };
+    } catch (error) {
+      console.error('Erro ao abrir modal de vínculo:', error);
+      alert('Erro ao carregar dados');
+    }
+  }
+
+
+
   async function loadRolesForSelect(selectedRoleId = null) {
     try {
       const response = await fetch(`/api/companies/${companyId}/roles`);
       const result = await response.json();
-      
+
       const select = document.getElementById('roleSelect');
       if (select && result.success && result.roles) {
         result.roles.forEach(role => {
@@ -1227,21 +1575,23 @@
   .modal-body .form-group label {
     font-size: 13px !important;
     font-weight: 700 !important;
-    color: #0f172a !important;  /* Preto/cinza muito escuro - máximo contraste */
+    color: #0f172a !important;
+    /* Preto/cinza muito escuro - máximo contraste */
     text-transform: uppercase !important;
     letter-spacing: 0.05em !important;
   }
-  
+
   /* Também aplicar a qualquer label dentro de modal */
   div[class*="modal"] label {
     color: #0f172a !important;
     font-weight: 700 !important;
   }
-  
+
   /* Labels em fundos escuros (se houver) */
   .dark-bg label,
   .dark-bg .form-label {
-    color: #fbbf24 !important;  /* Amarelo para fundos escuros */
+    color: #fbbf24 !important;
+    /* Amarelo para fundos escuros */
   }
 
   /* FORÇA MÁXIMA - Labels nas abas principais */
@@ -1255,10 +1605,11 @@
   #tab-employees label,
   #tab-economic .form-label,
   #tab-economic label {
-    color: #000000 !important;  /* PRETO PURO para máximo contraste */
-    font-weight: 700 !important;  /* NEGRITO */
+    color: #000000 !important;
+    /* PRETO PURO para máximo contraste */
+    font-weight: 700 !important;
+    /* NEGRITO */
     font-size: 13px !important;
   }
 </style>
 {% endblock %}
-

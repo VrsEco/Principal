@@ -6,32 +6,56 @@ Substitui conexões diretas ao SQLite
 """
 
 from sqlalchemy import create_engine, text
+from sqlalchemy.engine.url import make_url
 from urllib.parse import quote_plus
 
 from utils.env_helpers import normalize_database_url, normalize_docker_host
 import os
 
 # Configurações do PostgreSQL
-# Priorizar DATABASE_URL do ambiente (já vem com psycopg2)
-DATABASE_URL = normalize_database_url(os.environ.get("DATABASE_URL"))
+# Sempre construir a URL a partir de variáveis individuais para garantir encoding correto
+PG_HOST = normalize_docker_host(os.environ.get("POSTGRES_HOST", "localhost"))
+PG_PORT = int(os.environ.get("POSTGRES_PORT", 5432))
+PG_DB = os.environ.get("POSTGRES_DB", "bd_app_versus")
+PG_USER = os.environ.get("POSTGRES_USER", "postgres")
+PG_PASSWORD = os.environ.get("POSTGRES_PASSWORD", "*Paraiso1978")
 
-# Se DATABASE_URL não existir, construir a partir de variáveis individuais
-if not DATABASE_URL:
-    PG_HOST = normalize_docker_host(os.environ.get("POSTGRES_HOST", "localhost"))
-    PG_PORT = int(os.environ.get("POSTGRES_PORT", 5432))
-    PG_DB = os.environ.get("POSTGRES_DB", "bd_app_versus")
-    PG_USER = os.environ.get("POSTGRES_USER", "postgres")
-    PG_PASSWORD = os.environ.get("POSTGRES_PASSWORD", "*Paraiso1978")
+# ✅ FIX: Encode password para evitar problemas com caracteres especiais (*, @, #, etc)
+PG_PASSWORD_ENCODED = quote_plus(PG_PASSWORD)
 
-    # ✅ FIX: Encode password para evitar problemas com caracteres especiais (*, @, #, etc)
-    PG_PASSWORD_ENCODED = quote_plus(PG_PASSWORD)
+# Priorizar DATABASE_URL do ambiente, mas reconstruir se necessário para garantir encoding correto
+_raw_database_url = os.environ.get("DATABASE_URL")
+if _raw_database_url:
+    # Normalizar hostname se necessário e garantir encoding seguro da senha
+    normalized_raw = normalize_database_url(_raw_database_url)
+    try:
+        url = make_url(normalized_raw)
+        driver = (
+            "postgresql+psycopg2"
+            if url.drivername.startswith("postgresql")
+            else url.drivername
+        )
 
-    DATABASE_URL = f"postgresql+psycopg2://{PG_USER}:{PG_PASSWORD_ENCODED}@{PG_HOST}:{PG_PORT}/{PG_DB}"
+        # Manter host vindo da URL (normalizado), evitando sobrescrever com defaults errados
+        url = url.set(
+            drivername=driver,
+            username=url.username or PG_USER,
+            password=url.password or PG_PASSWORD,
+            host=normalize_docker_host(url.host or PG_HOST),
+            port=url.port or PG_PORT,
+            database=url.database or PG_DB,
+        )
+        # `str(url)` mascara a senha com ***, então renderizamos manualmente
+        DATABASE_URL = url.render_as_string(hide_password=False)
+    except Exception:
+        # Se houver erro ao parsear, reconstruir a partir das variáveis
+        DATABASE_URL = f"postgresql+psycopg2://{PG_USER}:{PG_PASSWORD_ENCODED}@{PG_HOST}:{PG_PORT}/{PG_DB}"
 else:
-    if not DATABASE_URL.startswith("postgresql+psycopg2"):
-        # Se DATABASE_URL existe mas não tem o driver, adicionar
-        DATABASE_URL = DATABASE_URL.replace("postgresql://", "postgresql+psycopg2://")
-    DATABASE_URL = normalize_database_url(DATABASE_URL)
+    # Construir a partir de variáveis individuais
+    DATABASE_URL = f"postgresql+psycopg2://{PG_USER}:{PG_PASSWORD_ENCODED}@{PG_HOST}:{PG_PORT}/{PG_DB}"
+
+# Normalizar hostname na URL final
+DATABASE_URL = normalize_database_url(DATABASE_URL)
 
 # Engine global
 _engine = None

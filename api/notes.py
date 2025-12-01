@@ -1,5 +1,5 @@
 """
-Notes API endpoints for the Ecossistema view.
+Notes API endpoints for the Principal view.
 """
 
 import logging
@@ -243,5 +243,4 @@ def update_note_endpoint(note_id):
             ),
             500,
         )
-
 

@@ -1057,10 +1057,10 @@
       "details": "<html>\n  <head>\n    <title>Internal Server Error</title>\n  </head>\n  <body>\n    <h1><p>Internal Server Error</p></h1>\n    \n  </body>\n</html>\n"
     },
     {
-      "path": "/grv/company/<int:company_id>/routine/work-distribution",
+      "path": "/grv/company/<int:company_id>/process/routines",
       "method": "GET",
       "status_code": 500,
-      "url": "http://localhost:5003/grv/company/1/routine/work-distribution",
+      "url": "http://localhost:5003/grv/company/1/process/routines",
       "status": "warning",
       "details": "<html>\n  <head>\n    <title>Internal Server Error</title>\n  </head>\n  <body>\n    <h1><p>Internal Server Error</p></h1>\n    \n  </body>\n</html>\n"
     },
@@ -3723,10 +3723,10 @@
       "details": "<html>\n  <head>\n    <title>Internal Server Error</title>\n  </head>\n  <body>\n    <h1><p>Internal Server Error</p></h1>\n    \n  </body>\n</html>\n"
     },
     {
-      "path": "/grv/company/<int:company_id>/routine/work-distribution",
+      "path": "/grv/company/<int:company_id>/process/routines",
       "method": "GET",
       "status_code": 500,
-      "url": "http://localhost:5003/grv/company/1/routine/work-distribution",
+      "url": "http://localhost:5003/grv/company/1/process/routines",
       "status": "warning",
       "details": "<html>\n  <head>\n    <title>Internal Server Error</title>\n  </head>\n  <body>\n    <h1><p>Internal Server Error</p></h1>\n    \n  </body>\n</html>\n"
     },

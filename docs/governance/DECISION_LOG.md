@@ -9,7 +9,7 @@
   - Ajustados endpoints `/api/companies/<id>/routine-tasks/*` para usar colunas `TIMESTAMP` no PostgreSQL
 
 **Projeto:** GestaoVersus  
-**Última atualização:** 17/11/2025
+**Última atualização:** 26/11/2025
 
 ---
 
@@ -142,7 +142,7 @@ Cada decisão deve conter:
 **Decisão:** Script `scripts/backup/run_pg_backup.ps1` executado às 12h, 18h e 22h via tarefa agendada `GestaoVersus_Postgres_Backup`  
 **Alternativas:** Cron dentro do container, jobs no PostgreSQL, execuções manuais  
 **Consequências:** +Confiabilidade, +Centralização dos artefatos em `backups/`, -Depende de usuário logado para Task Scheduler interativo  
-**Status:** ✅ Ativa
+**Status:** ❌ Superada (ver #016)
 
 ---
 
@@ -175,6 +175,40 @@ Cada decisão deve conter:
 **Decisão:** Adicionar `plotly==5.24.0` às dependências oficiais e documentar a obrigatoriedade da biblioteca para geração dos gráficos usados nos relatórios corporativos.  
 **Alternativas:** Remover os gráficos dos relatórios ou reimplementar usando apenas ReportLab. Ambas foram descartadas por reduzir valor visual do documento e já existir código estável com Plotly.  
 **Consequências:** +Confiabilidade dos relatórios (sem 500), +Consistência entre ambientes, -Aumento mínimo no tempo de build (pacote adicional).  
+**Status:** ✅ Ativa
+
+---
+
+### **#014 - Reorganização do Sistema de Usuários e Empresas (User-Employee-Company)**
+
+**Data:** 26/11/2025  
+**Contexto:** O sistema original tinha relação direta User ↔ Company, limitando a flexibilidade. Consultores que atendem múltiplas empresas precisavam de múltiplos logins. Atividades eram atribuídas por nome (texto), impossibilitando agregação eficiente. Necessidade de implementar "Minhas Atividades" agregadas de todas as empresas.  
+**Decisão:** Implementar arquitetura de três camadas com entidade intermediária `Employee` (Colaborador): `USER ←→ EMPLOYEE ←→ COMPANY`. Criados modelos `Employee` e `Role` (com campo `permissions` JSON). Adicionado campo `employee_id` em `project_tasks`. Criado serviço `UserEmployeeService` e API REST completa (`/api/user-employee/*`).  
+**Alternativas:** Manter estrutura atual (não resolve múltiplas empresas), Tabela de associação simples N:M (não suporta funcionários sem acesso), Duplicar usuários (má UX).  
+**Consequências:** +Flexibilidade total (usuário em múltiplas empresas), +Atividades agregadas eficientes, +Permissões granulares por empresa, +Rastreabilidade completa, -Complexidade adicional (mais joins), -Migração de dados necessária, -Mudança de paradigma para desenvolvedores.  
+**Implementação:** Ver `docs/governance/DECISION_LOG_ADR008.md` para detalhes completos.  
+**Status:** ✅ Ativa
+
+---
+
+### **#015 - Normalização das Atividades do My Work**
+
+**Data:** 28/11/2025  
+**Contexto:** As atividades de projetos estavam armazenadas em JSON dentro de `company_projects.activities` e as instâncias de processo usavam `assigned_collaborators` também em JSON. Isso impedia o My Work de aplicar filtros por responsável/executor, quebrava o controle de permissões e dificultava auditoria.  
+**Decisão:** Criar tabelas normalizadas `project_activities` e `process_instance_collaborators`, adicionar colunas `responsible_id`/`executor_id`/`owner_employee_id` em `processes` e `process_instances`, migrar os dados existentes e atualizar o serviço `my_work_service` para consumir apenas essas estruturas relacionais (com fallback legado).  
+**Alternativas:** Continuar no JSON e interpretar dinamicamente (não resolve permissões), reaproveitar `project_tasks` (não cobre processos, exigiria ajustes maiores nos módulos legados).  
+**Consequências:** +Consistência dos vínculos User → Employee → Atividade, +Filtros confiáveis, +Auditoria, +Base para RBAC por papel (dono/responsável/executor), -Migração de dados e scripts adicionais, -Atualizações em serviços e páginas que ainda consumiam o JSON.  
+**Status:** ✅ Ativa
+
+---
+
+### **#016 - Suspensão da tarefa automática de backup no Windows**
+
+**Data:** 29/11/2025  
+**Contexto:** Solicitado cancelar a execução periódica `GestaoVersus_Postgres_Backup` e concentrar os disparos de backup apenas quando houver demanda operacional específica.  
+**Decisão:** remover a tarefa agendada do Windows Task Scheduler utilizando `scripts/backup/unregister_postgres_backup_tasks.ps1` e manter apenas execuções manuais do `scripts/backup/run_pg_backup.ps1` (ou reativar conscientemente via `register_postgres_backup_tasks.ps1`, se necessário).  
+**Alternativas:** Manter a tarefa ativa, migrar o agendamento para cron em containers, mover a responsabilidade para jobs do PostgreSQL.  
+**Consequências:** +Evita execuções automáticas duplicadas, +Controle explícito sobre quando gerar dumps, -Backups passam a depender de acionamento manual, -Requer disciplina operacional até definição de nova política.  
 **Status:** ✅ Ativa
 
 ---

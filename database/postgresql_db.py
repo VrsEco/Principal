@@ -2894,8 +2894,8 @@ class PostgreSQLDatabase(DatabaseInterface):
 
             cursor.execute(
                 """
-                INSERT INTO companies (name, legal_name, industry, size, description)
-                VALUES (%s, %s, %s, %s, %s)
+                INSERT INTO companies (name, legal_name, industry, size, description, client_code)
+                VALUES (%s, %s, %s, %s, %s, %s)
                 RETURNING id
             """,
                 (
@@ -2904,6 +2904,7 @@ class PostgreSQLDatabase(DatabaseInterface):
                     company_data.get("industry"),
                     company_data.get("size"),
                     company_data.get("description"),
+                    company_data.get("client_code"),
                 ),
             )
 
@@ -4367,6 +4368,23 @@ class PostgreSQLDatabase(DatabaseInterface):
         else:
             role_id = None
 
+        # Processar user_id
+        user_id_value = employee.get("user_id")
+        user_id = None
+        if user_id_value is not None:
+            if isinstance(user_id_value, str):
+                user_id_value = user_id_value.strip()
+                if user_id_value:
+                    try:
+                        user_id = int(user_id_value)
+                    except ValueError:
+                        user_id = None
+            elif isinstance(user_id_value, (int, float)):
+                try:
+                    user_id = int(user_id_value)
+                except (TypeError, ValueError):
+                    user_id = None
+
         return {
             "name": name,
             "email": email,
@@ -4376,6 +4394,7 @@ class PostgreSQLDatabase(DatabaseInterface):
             "hire_date": hire_date,
             "status": status,
             "notes": notes,
+            "user_id": user_id,
         }
 
     def list_employees(self, company_id: int) -> List[Dict[str, Any]]:
@@ -4430,24 +4449,39 @@ class PostgreSQLDatabase(DatabaseInterface):
         try:
             cursor = conn.cursor()
             normalized = self._normalize_employee_payload(employee_data)
+            
+            # Construir query dinamicamente para incluir user_id se fornecido
+            insert_fields = [
+                "company_id", "name", "email", "phone", "role_id", 
+                "department", "hire_date", "status", "notes"
+            ]
+            insert_values = [
+                company_id,
+                normalized["name"],
+                normalized["email"],
+                normalized["phone"],
+                normalized["role_id"],
+                normalized["department"],
+                normalized["hire_date"],
+                normalized["status"],
+                normalized["notes"],
+            ]
+            
+            # Adicionar user_id se fornecido
+            if normalized.get("user_id") is not None:
+                insert_fields.append("user_id")
+                insert_values.append(normalized["user_id"])
+            
+            placeholders = ", ".join(["%s"] * len(insert_values))
+            fields_str = ", ".join(insert_fields)
+            
             cursor.execute(
-                """
-                INSERT INTO employees (
-                    company_id, name, email, phone, role_id, department, hire_date, status, notes
-                ) VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s)
+                f"""
+                INSERT INTO employees ({fields_str})
+                VALUES ({placeholders})
                 RETURNING id
             """,
-                (
-                    company_id,
-                    normalized["name"],
-                    normalized["email"],
-                    normalized["phone"],
-                    normalized["role_id"],
-                    normalized["department"],
-                    normalized["hire_date"],
-                    normalized["status"],
-                    normalized["notes"],
-                ),
+                tuple(insert_values),
             )
             new_id = cursor.fetchone()[0]
             conn.commit()
@@ -4472,25 +4506,37 @@ class PostgreSQLDatabase(DatabaseInterface):
         try:
             cursor = conn.cursor()
             normalized = self._normalize_employee_payload(employee_data)
+            # Construir query dinamicamente para incluir user_id se fornecido
+            update_fields = [
+                "name = %s", "email = %s", "phone = %s", "role_id = %s", 
+                "department = %s", "hire_date = %s", "status = %s", 
+                "notes = %s", "updated_at = CURRENT_TIMESTAMP"
+            ]
+            update_values = [
+                normalized["name"],
+                normalized["email"],
+                normalized["phone"],
+                normalized["role_id"],
+                normalized["department"],
+                normalized["hire_date"],
+                normalized["status"],
+                normalized["notes"],
+            ]
+            
+            # Adicionar user_id se fornecido
+            if "user_id" in normalized and normalized["user_id"] is not None:
+                update_fields.append("user_id = %s")
+                update_values.append(normalized["user_id"])
+            
+            update_values.extend([employee_id, company_id])
+            
             cursor.execute(
-                """
+                f"""
                 UPDATE employees
-                SET name = %s, email = %s, phone = %s, role_id = %s, department = %s,
-                    hire_date = %s, status = %s, notes = %s, updated_at = CURRENT_TIMESTAMP
+                SET {', '.join(update_fields)}
                 WHERE id = %s AND company_id = %s
             """,
-                (
-                    normalized["name"],
-                    normalized["email"],
-                    normalized["phone"],
-                    normalized["role_id"],
-                    normalized["department"],
-                    normalized["hire_date"],
-                    normalized["status"],
-                    normalized["notes"],
-                    employee_id,
-                    company_id,
-                ),
+                tuple(update_values),
             )
             conn.commit()
             return cursor.rowcount > 0

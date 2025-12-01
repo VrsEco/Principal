@@ -615,9 +615,9 @@
                       {% for proc in macro.processes %}
                         <div class="process-card">
                           <div class="process-title">{{ proc.display_name }}</div>
-                          {% if proc.responsible %}
-                            <div class="process-meta">Dono do Processo: {{ proc.responsible }}</div>
-                          {% endif %}
+                            {% if proc.responsible %}
+                            <div class="process-meta">Responsável: {{ proc.responsible }}</div>
+                            {% endif %}
                           <div class="badge-group">
                             <div class="badge" style="background: {{ proc.structuring.background }}; color: {{ proc.structuring.text_color }};">
                               <span class="badge-label">Estruturação</span>

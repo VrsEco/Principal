@@ -392,6 +392,32 @@
       </div>
     </div>
 
+    <!-- Company Selector -->
+    {% if companies and companies|length > 1 %}
+    <div class="filters-section" style="margin-bottom: 24px;">
+      <div class="filters-header">
+        <h3>
+          <span>🏢</span>
+          <span>Selecionar Empresa</span>
+        </h3>
+      </div>
+      <div class="filters-content">
+        <div class="filter-group">
+          <label>Empresa</label>
+          <select id="companySelector" data-ref="10">
+            <option value="">Todas as empresas</option>
+            {% for comp in companies %}
+            <option value="{{ comp.company_id }}" {% if company.id == comp.company_id %}selected{% endif %}>
+              {{ comp.company_name }}
+            </option>
+            {% endfor %}
+          </select>
+          <div class="filter-hint">Selecione uma ou mais empresas para filtrar</div>
+        </div>
+      </div>
+    </div>
+    {% endif %}
+
     <!-- Stats -->
     <div class="stats-grid" id="statsGrid">
       <div class="stat-card">
@@ -553,12 +579,45 @@ document.addEventListener('DOMContentLoaded', async () => {
   updateStats();
 });
 
-async function loadActivities() {
+async function loadActivities(selectedCompanyId = null) {
   try {
-    const response = await fetch(`/api/companies/${companyId}/unified-activities`);
-    if (!response.ok) throw new Error('Erro ao carregar atividades');
+    // Check if company selector exists and get selected value
+    const companySelector = document.getElementById('companySelector');
+    const selectedValue = companySelector ? companySelector.value : null;
     
-    allActivities = await response.json();
+    // If "Todas as empresas" is selected (empty value), load from all companies
+    if (selectedValue === '' || (!selectedCompanyId && !selectedValue)) {
+      const companies = {{ companies | tojson | safe }};
+      if (companies && companies.length > 0) {
+        const allActivitiesList = [];
+        
+        for (const comp of companies) {
+          try {
+            const compResponse = await fetch(`/api/companies/${comp.company_id}/unified-activities`);
+            if (compResponse.ok) {
+              const compActivities = await compResponse.json();
+              allActivitiesList.push(...compActivities);
+            }
+          } catch (e) {
+            console.warn(`Erro ao carregar atividades da empresa ${comp.company_id}:`, e);
+          }
+        }
+        
+        allActivities = allActivitiesList;
+      } else {
+        // Fallback to current company
+        const response = await fetch(`/api/companies/${companyId}/unified-activities`);
+        if (!response.ok) throw new Error('Erro ao carregar atividades');
+        allActivities = await response.json();
+      }
+    } else {
+      // Use selected company or current company
+      const targetCompanyId = selectedCompanyId || (selectedValue ? parseInt(selectedValue) : companyId);
+      const response = await fetch(`/api/companies/${targetCompanyId}/unified-activities`);
+      if (!response.ok) throw new Error('Erro ao carregar atividades');
+      allActivities = await response.json();
+    }
+    
     filteredActivities = allActivities;
     renderList();
     updateCalendar();
@@ -577,6 +636,15 @@ function setupFilters() {
   document.getElementById('filterProject').addEventListener('change', applyFilters);
   document.getElementById('filterProcess').addEventListener('change', applyFilters);
   document.getElementById('searchInput').addEventListener('input', applyFilters);
+  
+  // Company selector
+  const companySelector = document.getElementById('companySelector');
+  if (companySelector) {
+    companySelector.addEventListener('change', function() {
+      // Reload activities when company changes
+      loadActivities();
+    });
+  }
   
   // Restore filters collapsed state from localStorage
   const isCollapsed = localStorage.getItem('filtersCollapsed') === 'true';

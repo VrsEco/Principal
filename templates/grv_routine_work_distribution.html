@@ -1,893 +1,880 @@
 {% extends "base.html" %}
-{% block title %}GRV | Distribuicao do Trabalho{% endblock %}
+{% block title %}GRV | Rotinas{% endblock %}
 {% block body %}{% set active_nav = 'routine-work-distribution' %}{{ super() }}{% endblock %}
 
 {% block extra_head %}
 {{ super() }}
 <style>
-  .distribution-shell {
+  .routines-shell {
     display: grid;
-    grid-template-columns: 250px minmax(0, 1fr);
-    gap: 18px;
+    grid-template-columns: 240px minmax(0, 1fr);
+    gap: 16px;
     align-items: start;
   }
 
-  .distribution-main {
-    background: #ffffff;
-    border-radius: 14px;
+  .routines-main {
+    background: #fff;
+    border-radius: 16px;
     border: 1px solid rgba(15, 23, 42, 0.08);
-    padding: 22px 24px;
-    box-shadow: 0 12px 32px rgba(15, 23, 42, 0.08);
+    padding: 18px 22px;
+    box-shadow: 0 8px 28px rgba(15, 23, 42, 0.08);
     display: grid;
-    gap: 22px;
-  }
-
-  .distribution-header {
-    display: flex;
-    justify-content: space-between;
-    align-items: flex-start;
-    gap: 16px;
-    flex-wrap: wrap;
-  }
-
-  .distribution-header h1 {
-    margin: 0;
-    font-size: 22px;
-    font-weight: 700;
-    color: #0f172a;
-  }
-
-  .distribution-description {
-    color: #64748b;
-    font-size: 13px;
-    margin-top: 6px;
-    max-width: 600px;
-    line-height: 1.5;
-  }
-
-  .distribution-actions {
-    display: flex;
-    align-items: center;
-    gap: 10px;
-  }
-
-  .action-button {
-    display: inline-flex;
-    align-items: center;
-    gap: 8px;
-    padding: 10px 18px;
-    border-radius: 10px;
-    border: 1px solid rgba(37, 99, 235, 0.32);
-    background: rgba(59, 130, 246, 0.12);
-    color: #1d4ed8;
-    font-weight: 600;
-    cursor: pointer;
-    transition: all 0.2s ease;
-  }
-
-  .action-button:hover {
-    background: rgba(59, 130, 246, 0.2);
-    border-color: rgba(37, 99, 235, 0.48);
-  }
-
-  .distribution-stats {
-    display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
-    gap: 14px;
-  }
-
-  .stat-card {
-    background: linear-gradient(135deg, rgba(59, 130, 246, 0.12), rgba(14, 165, 233, 0.08));
-    border: 1px solid rgba(59, 130, 246, 0.24);
-    border-radius: 12px;
-    padding: 16px;
-    display: grid;
-    gap: 6px;
-  }
-
-  .stat-card.pending {
-    background: linear-gradient(135deg, rgba(251, 191, 36, 0.12), rgba(217, 119, 6, 0.08));
-    border-color: rgba(217, 119, 6, 0.24);
-  }
-
-  .stat-card.progress {
-    background: linear-gradient(135deg, rgba(129, 140, 248, 0.12), rgba(79, 70, 229, 0.08));
-    border-color: rgba(79, 70, 229, 0.24);
-  }
-
-  .stat-card.completed {
-    background: linear-gradient(135deg, rgba(16, 185, 129, 0.12), rgba(5, 150, 105, 0.08));
-    border-color: rgba(16, 185, 129, 0.24);
-  }
-
-  .stat-card.overdue {
-    background: linear-gradient(135deg, rgba(248, 113, 113, 0.12), rgba(220, 38, 38, 0.08));
-    border-color: rgba(220, 38, 38, 0.24);
-  }
-
-  .stat-label {
-    font-size: 12px;
-    text-transform: uppercase;
-    letter-spacing: 0.05em;
-    color: rgba(15, 23, 42, 0.6);
-    font-weight: 600;
-  }
-
-  .stat-value {
-    font-size: 30px;
-    font-weight: 700;
-    color: #0f172a;
-    line-height: 1.1;
-  }
-
-  .distribution-filters {
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    gap: 16px;
-    flex-wrap: wrap;
-  }
-
-  .chip-group {
-    display: flex;
-    flex-wrap: wrap;
-    gap: 8px;
-  }
-
-  .chip {
-    padding: 8px 18px;
-    border-radius: 999px;
-    border: 1px solid rgba(15, 23, 42, 0.16);
-    background: rgba(15, 23, 42, 0.04);
-    color: #0f172a;
-    font-weight: 600;
-    font-size: 13px;
-    cursor: pointer;
-    transition: all 0.2s ease;
-  }
-
-  .chip:hover {
-    border-color: rgba(59, 130, 246, 0.42);
-  }
-
-  .chip.active {
-    background: rgba(59, 130, 246, 0.1);
-    border-color: rgba(37, 99, 235, 0.45);
-    color: #1d4ed8;
-  }
-
-  .search-field {
-    position: relative;
-    min-width: 220px;
-    flex: 1;
-    max-width: 320px;
-  }
-
-  .search-input {
-    width: 100%;
-    padding: 10px 14px;
-    border-radius: 10px;
-    border: 1px solid rgba(15, 23, 42, 0.16);
-    font-size: 14px;
-    transition: border-color 0.2s ease;
-  }
-
-  .search-input:focus {
-    outline: none;
-    border-color: rgba(37, 99, 235, 0.55);
-    box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.12);
-  }
-
-  .distribution-panels {
-    display: grid;
-    grid-template-columns: minmax(0, 1fr);
     gap: 18px;
   }
 
-  .distribution-panel {
-    background: #ffffff;
-    border: 1px solid rgba(15, 23, 42, 0.08);
-    border-radius: 14px;
-    padding: 20px 22px;
-    box-shadow: 0 10px 30px rgba(15, 23, 42, 0.08);
-  }
-
-  .panel-header {
+  .routines-header {
     display: flex;
     justify-content: space-between;
     align-items: flex-start;
-    gap: 14px;
-    margin-bottom: 18px;
+    gap: 12px;
+    flex-wrap: wrap;
   }
 
-  .panel-header h2 {
+  .header-right {
+    display: flex;
+    gap: 12px;
+    flex-wrap: wrap;
+    align-items: center;
+    justify-content: flex-end;
+  }
+
+  .routines-header h1 {
     margin: 0;
-    font-size: 18px;
+    font-size: 20px;
     font-weight: 700;
     color: #0f172a;
   }
 
-  .panel-header p {
-    margin: 6px 0 0;
+  .routines-header p {
+    margin: 4px 0 0;
     font-size: 13px;
-    color: #64748b;
+    color: #475569;
+    max-width: 540px;
   }
 
-  .panel-meta {
-    font-size: 12px;
+  .summary-pills {
+    display: flex;
+    gap: 10px;
+    flex-wrap: wrap;
+  }
+
+  .summary-pill {
+    border-radius: 999px;
+    background: rgba(59, 130, 246, 0.1);
+    border: 1px solid rgba(59, 130, 246, 0.3);
+    color: #1d4ed8;
     font-weight: 600;
-    color: rgba(15, 23, 42, 0.55);
-    text-transform: uppercase;
-    letter-spacing: 0.04em;
-  }
-
-  .table-wrapper {
-    width: 100%;
-    overflow: auto;
-  }
-
-  .table-wrapper.is-loading {
-    opacity: 0.45;
-    pointer-events: none;
-  }
-
-  .distribution-table {
-    width: 100%;
-    border-collapse: separate;
-    border-spacing: 0 10px;
-  }
-
-  .distribution-table thead th {
-    text-align: left;
     font-size: 12px;
-    color: #64748b;
-    padding: 0 12px 6px;
-    text-transform: uppercase;
-    letter-spacing: 0.05em;
-    font-weight: 700;
+    padding: 6px 12px;
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
   }
 
-  .distribution-table tbody tr {
-    background: rgba(248, 250, 252, 0.9);
-    border-radius: 10px;
-    box-shadow: 0 8px 24px rgba(15, 23, 42, 0.04);
-  }
-
-  .distribution-table tbody td {
-    padding: 16px 12px;
+  .create-routine-btn {
+    border-radius: 999px;
+    background: linear-gradient(120deg, #2563eb, #1d4ed8);
+    border: none;
+    color: #fff;
+    font-weight: 600;
     font-size: 13px;
-    color: #334155;
+    padding: 10px 18px;
+    text-decoration: none;
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+  }
+
+  .create-routine-btn:hover {
+    opacity: 0.92;
+  }
+
+  .filters-card {
+    border: 1px solid rgba(15, 23, 42, 0.08);
+    border-radius: 12px;
+    background: #f8fafc;
+    padding: 0 16px 10px;
+  }
+
+  .filters-card > summary {
+    cursor: pointer;
+    list-style: none;
+    padding: 12px 0;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    font-weight: 600;
+    font-size: 14px;
+    color: #0f172a;
+  }
+
+  .filters-card > summary::-webkit-details-marker {
+    display: none;
+  }
+
+  .filters-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+    gap: 12px;
+    margin-top: 4px;
+  }
+
+  .filter-field {
+    display: grid;
+    gap: 4px;
+  }
+
+  .filter-field label {
+    font-size: 12px;
+    color: #475569;
+    font-weight: 600;
+    text-transform: uppercase;
+  }
+
+  .filter-field input,
+  .filter-field select {
+    border: 1px solid rgba(15, 23, 42, 0.16);
+    border-radius: 10px;
+    padding: 8px 10px;
+    font-size: 13px;
+    background: #fff;
+  }
+
+  .filters-actions {
+    display: flex;
+    justify-content: flex-end;
+    gap: 10px;
+    margin-top: 12px;
+  }
+
+  .filters-actions button {
+    border-radius: 10px;
+    font-weight: 600;
+    font-size: 13px;
+    padding: 8px 12px;
+    border: 1px solid rgba(15, 23, 42, 0.1);
+    background: #fff;
+    cursor: pointer;
+  }
+
+  .filters-actions button.primary {
+    background: #1d4ed8;
+    color: #fff;
+    border-color: #1d4ed8;
+  }
+
+  .routines-table-wrapper {
+    overflow: auto;
+    border: 1px solid rgba(15, 23, 42, 0.08);
+    border-radius: 14px;
+  }
+
+  table.routines-table {
+    width: 100%;
+    border-collapse: collapse;
+    min-width: 960px;
+  }
+
+  table.routines-table thead th {
+    text-transform: uppercase;
+    font-size: 11px;
+    letter-spacing: 0.06em;
+    text-align: left;
+    padding: 10px 12px;
+    color: #64748b;
+    background: #f8fafc;
+  }
+
+  table.routines-table tbody tr {
+    border-top: 1px solid rgba(15, 23, 42, 0.06);
+  }
+
+  table.routines-table tbody td {
+    padding: 12px;
+    font-size: 13px;
+    color: #0f172a;
     vertical-align: middle;
   }
 
-  .distribution-table tbody tr td:first-child {
-    border-top-left-radius: 12px;
-    border-bottom-left-radius: 12px;
+  .routine-meta {
+    display: grid;
+    gap: 2px;
   }
 
-  .distribution-table tbody tr td:last-child {
-    border-top-right-radius: 12px;
-    border-bottom-right-radius: 12px;
-  }
-
-  .distribution-name .routine-name {
+  .routine-meta .routine-name {
     font-weight: 600;
-    color: #0f172a;
-    margin-bottom: 4px;
   }
 
-  .routine-description {
-    color: #64748b;
+  .routine-meta small {
+    color: #475569;
     font-size: 12px;
-    line-height: 1.4;
   }
 
-  .distribution-total strong {
-    font-size: 18px;
-    color: #0f172a;
-  }
-
-  .status-pill {
+  .collaborator-pill {
     display: inline-flex;
     align-items: center;
-    justify-content: center;
-    min-width: 34px;
+    gap: 6px;
     padding: 6px 10px;
+    background: rgba(14, 165, 233, 0.12);
     border-radius: 999px;
+    border: 1px solid rgba(14, 165, 233, 0.4);
     font-weight: 600;
     font-size: 12px;
+    color: #0369a1;
   }
 
-  .status-pill.pending {
+  .collaborator-pill span {
+    font-variant-numeric: tabular-nums;
+  }
+
+  .status-chip {
+    border-radius: 999px;
+    padding: 6px 12px;
+    font-weight: 600;
+    font-size: 12px;
+    text-transform: capitalize;
+    display: inline-flex;
+    align-items: center;
+  }
+
+  .status-chip.pending {
     background: rgba(217, 119, 6, 0.12);
     color: #b45309;
   }
 
-  .status-pill.progress {
+  .status-chip.in_progress {
     background: rgba(79, 70, 229, 0.12);
     color: #4338ca;
   }
 
-  .status-pill.completed {
+  .status-chip.completed {
     background: rgba(16, 185, 129, 0.12);
-    color: #0f766e;
+    color: #047857;
   }
 
-  .status-pill.overdue {
-    background: rgba(220, 38, 38, 0.12);
+  .status-chip.paused {
+    background: rgba(148, 163, 184, 0.2);
+    color: #334155;
+  }
+
+  .status-chip.overdue {
+    background: rgba(239, 68, 68, 0.12);
     color: #b91c1c;
   }
 
-  .progress-bar {
-    position: relative;
-    width: 160px;
-    height: 8px;
-    border-radius: 999px;
-    background: rgba(15, 23, 42, 0.08);
-    overflow: hidden;
-    margin-bottom: 6px;
-  }
-
-  .progress-fill {
-    position: absolute;
-    top: 0;
-    left: 0;
-    height: 100%;
-  }
-
-  .progress-fill.completed {
-    background: #10b981;
-  }
-
-  .progress-fill.overdue {
-    background: #ef4444;
-  }
-
-  .progress-meta {
-    display: inline-block;
+  .trigger-button {
+    border: 1px solid rgba(34, 197, 94, 0.5);
+    background: linear-gradient(130deg, rgba(34, 197, 94, 0.15), rgba(16, 185, 129, 0.2));
+    color: #047857;
+    font-weight: 700;
     font-size: 12px;
-    color: #64748b;
-  }
-
-  .distribution-deadline {
-    font-weight: 600;
-    color: #1d4ed8;
-  }
-
-  .loading-state,
-  .error-state,
-  .empty-state {
-    padding: 20px;
-    border-radius: 12px;
-    text-align: center;
-    font-size: 13px;
-    margin-bottom: 10px;
-  }
-
-  .loading-state {
-    background: rgba(59, 130, 246, 0.08);
-    color: #1d4ed8;
-  }
-
-  .error-state {
-    background: rgba(248, 113, 113, 0.12);
-    color: #b91c1c;
-  }
-
-  .empty-state {
-    background: rgba(148, 163, 184, 0.08);
-    color: #475569;
-  }
-
-  .upcoming-list {
-    list-style: none;
-    padding: 0;
-    margin: 0;
-    display: grid;
-    gap: 12px;
-  }
-
-  .upcoming-list li {
-    display: grid;
-    gap: 6px;
-    padding: 12px 14px;
+    padding: 8px 12px;
     border-radius: 10px;
-    border: 1px solid rgba(15, 23, 42, 0.08);
-    background: rgba(248, 250, 252, 0.8);
-  }
-
-  .upcoming-title {
-    font-weight: 600;
-    color: #0f172a;
-  }
-
-  .upcoming-meta {
-    display: flex;
-    flex-wrap: wrap;
-    gap: 10px;
-    font-size: 12px;
-    color: #64748b;
-  }
-
-  .upcoming-meta .meta-item {
+    cursor: pointer;
     display: inline-flex;
     align-items: center;
     gap: 6px;
+    min-width: 140px;
+    justify-content: center;
   }
 
-  .upcoming-meta .status-pending {
-    color: #b45309;
+  .trigger-button[disabled] {
+    opacity: 0.6;
+    cursor: not-allowed;
   }
 
-  .upcoming-meta .status-in-progress {
-    color: #4338ca;
+  .routine-actions {
+    display: flex;
+    gap: 8px;
+    align-items: center;
+    flex-wrap: wrap;
+    justify-content: flex-start;
   }
 
-  .upcoming-meta .status-completed {
-    color: #0f766e;
+  .routine-actions .action-link,
+  .routine-actions .action-delete {
+    border-radius: 999px;
+    border: 1px solid rgba(15, 23, 42, 0.15);
+    background: #fff;
+    color: #0f172a;
+    font-weight: 600;
+    font-size: 12px;
+    padding: 6px 12px;
+    cursor: pointer;
+    text-decoration: none;
   }
 
-  .upcoming-meta .status-overdue {
-    color: #b91c1c;
+  .routine-actions .action-delete {
+    border-color: rgba(220, 38, 38, 0.4);
+    color: #dc2626;
   }
 
-  @media (max-width: 1080px) {
-    .distribution-shell {
+  .routine-actions .action-link:hover,
+  .routine-actions .action-delete:hover,
+  .trigger-button:hover {
+    opacity: 0.85;
+  }
+
+  .toast {
+    position: fixed;
+    bottom: 24px;
+    right: 24px;
+    min-width: 220px;
+    padding: 12px 16px;
+    border-radius: 12px;
+    color: #fff;
+    font-weight: 600;
+    display: none;
+    z-index: 99;
+  }
+
+  .toast.success {
+    background: linear-gradient(120deg, #059669, #10b981);
+  }
+
+  .toast.error {
+    background: linear-gradient(120deg, #dc2626, #ef4444);
+  }
+
+  .empty-state {
+    text-align: center;
+    padding: 30px 20px;
+    background: #f8fafc;
+    border-radius: 12px;
+    border: 1px dashed rgba(15, 23, 42, 0.2);
+    font-size: 14px;
+    color: #475569;
+  }
+
+  @media (max-width: 1100px) {
+    .routines-shell {
       grid-template-columns: minmax(0, 1fr);
     }
 
-    .distribution-main {
-      padding: 18px;
+    .routines-main {
+      padding: 16px;
     }
   }
 </style>
 {% endblock %}
 
 {% block content %}
-<div class="project-layout plan-layout distribution-shell" data-sidebar-toggle>
-  {% include 'routines_sidebar.html' %}
+{% set sidebar_template_name = sidebar_template if sidebar_template is defined else 'routines_sidebar.html' %}
+<div class="project-layout plan-layout routines-shell" data-sidebar-toggle>
+  {% include sidebar_template_name %}
 
-  <div class="project-content plan-content distribution-main">
-    <div class="distribution-header">
+  <div class="project-content plan-content routines-main">
+    <header class="routines-header">
       <div>
-        <h1>Mapa de Distribuicao do Trabalho</h1>
-        <p class="distribution-description">
-          Acompanhe como as tarefas geradas pelas rotinas estao distribuidas, identifique gargalos
-          e priorize onde concentrar esforcos.
+        <h1>Rotinas do Processo</h1>
+        <p>
+          Visualize rapidamente quem são os colaboradores atribuídos, ajuste filtros por coluna e dispare novas instâncias manualmente.
         </p>
       </div>
-      <div class="distribution-actions">
-        <button type="button" class="action-button" id="refreshDistribution" data-ref="01">
-          Atualizar dados
-        </button>
-      </div>
-    </div>
-
-    <div class="distribution-stats">
-      <div class="stat-card">
-        <span class="stat-label">Tarefas registradas</span>
-        <span class="stat-value" id="statTotal">0</span>
-      </div>
-      <div class="stat-card pending">
-        <span class="stat-label">Pendentes</span>
-        <span class="stat-value" id="statPending">0</span>
-      </div>
-      <div class="stat-card progress">
-        <span class="stat-label">Em andamento</span>
-        <span class="stat-value" id="statInProgress">0</span>
-      </div>
-      <div class="stat-card completed">
-        <span class="stat-label">Concluidas</span>
-        <span class="stat-value" id="statCompleted">0</span>
-      </div>
-      <div class="stat-card overdue">
-        <span class="stat-label">Atrasadas</span>
-        <span class="stat-value" id="statOverdue">0</span>
-      </div>
-    </div>
-
-    <div class="distribution-filters">
-      <div class="chip-group">
-        <button type="button" class="chip active" data-status="all" data-status-chip data-ref="02">Todas</button>
-        <button type="button" class="chip" data-status="pending" data-status-chip data-ref="03">Pendentes</button>
-        <button type="button" class="chip" data-status="in_progress" data-status-chip data-ref="04">Em andamento</button>
-        <button type="button" class="chip" data-status="completed" data-status-chip data-ref="05">Concluidas</button>
-        <button type="button" class="chip" data-status="overdue" data-status-chip data-ref="06">Atrasadas</button>
-      </div>
-      <div class="search-field">
-        <input type="search" id="searchRoutine" class="search-input" placeholder="Buscar por rotina"  data-ref="07" />
-      </div>
-    </div>
-
-    <div class="distribution-panels">
-      <section class="distribution-panel">
-        <div class="panel-header">
-          <div>
-            <h2>Distribuicao por rotina</h2>
-            <p>Volume de trabalho consolidado por rotina e status atual.</p>
-          </div>
-          <div class="panel-meta" id="distributionMeta">Nenhum dado carregado</div>
+      <div class="header-right">
+        <div class="summary-pills">
+          <span class="summary-pill">
+            <strong>{{ routines|length }}</strong> rotinas
+          </span>
+          <span class="summary-pill">
+            <strong>{{ '%02d'|format(total_collaborators|default(0)) }}</strong> colaboradores atribuídos
+          </span>
         </div>
-        <div class="panel-body">
-          <div id="distributionLoading" class="loading-state">Carregando dados...</div>
-          <div id="distributionError" class="error-state" hidden></div>
-          <div id="distributionEmpty" class="empty-state" hidden>
-            <strong>Nenhuma tarefa registrada.</strong>
-            <p>Assim que tarefas forem geradas, a distribuicao aparecerá automaticamente.</p>
-          </div>
-          <div class="table-wrapper" id="distributionTableWrapper" hidden>
-            <table class="distribution-table" data-ref="08">
-              <thead>
-                <tr>
-                  <th>Rotina</th>
-                  <th>Total</th>
-                  <th>Pendente</th>
-                  <th>Em andamento</th>
-                  <th>Concluida</th>
-                  <th>Atrasada</th>
-                  <th>Progresso</th>
-                  <th>Proximo prazo</th>
-                </tr>
-              </thead>
-              <tbody id="distributionTableBody"></tbody>
-            </table>
-          </div>
-        </div>
-      </section>
+        <a
+          href="{{ url_for('routine_details', company_id=company.id, routine_id='new') }}"
+          class="create-routine-btn"
+        >
+          + Nova rotina
+        </a>
+      </div>
+    </header>
 
-      <section class="distribution-panel">
-        <div class="panel-header">
-          <div>
-            <h2>Proximos prazos criticos</h2>
-            <p>Tarefas com prazo mais proximo para acompanhar de perto.</p>
-          </div>
+    <details class="filters-card" open>
+      <summary>
+        Filtros por coluna
+        <small style="font-weight: 500; color: #64748b;">Clique para expandir/ocultar</small>
+      </summary>
+      <div class="filters-grid">
+        <div class="filter-field">
+          <label for="filterSearch">Busca geral</label>
+          <input type="search" id="filterSearch" placeholder="Código, rotina, processo..." />
         </div>
-        <div class="panel-body">
-          <ul class="upcoming-list" id="upcomingList">
-            <li class="empty">Nenhum dado carregado.</li>
-          </ul>
+        <div class="filter-field">
+          <label for="filterProcess">Processo</label>
+          <input type="search" id="filterProcess" placeholder="Ex: Onboarding" />
         </div>
-      </section>
+        <div class="filter-field">
+          <label for="filterRoutine">Rotina</label>
+          <input type="search" id="filterRoutine" placeholder="Ex: Revisar contrato" />
+        </div>
+        <div class="filter-field">
+          <label for="filterTrigger">Gatilho</label>
+          <select id="filterTrigger">
+            <option value="all">Todos</option>
+            {% for trigger in filter_options.trigger %}
+            <option value="{{ trigger|lower }}">{{ trigger|title }}</option>
+            {% endfor %}
+          </select>
+        </div>
+        <div class="filter-field">
+          <label for="filterFrequency">Frequência</label>
+          <select id="filterFrequency">
+            <option value="all">Todas</option>
+            {% for frequency in filter_options.frequency %}
+            <option value="{{ frequency|lower }}">{{ frequency }}</option>
+            {% endfor %}
+          </select>
+        </div>
+        <div class="filter-field">
+          <label for="filterStatus">Status</label>
+          <select id="filterStatus">
+            <option value="all">Todos</option>
+            {% for status in filter_options.status %}
+            {% set status_value = status|lower %}
+            <option value="{{ status_value }}">{{ status_value.replace('_', ' ')|title }}</option>
+            {% endfor %}
+          </select>
+        </div>
+        <div class="filter-field">
+          <label for="filterCollaborators">Mínimo de colab.</label>
+          <input type="number" id="filterCollaborators" min="0" placeholder="0" />
+        </div>
+        <div class="filter-field">
+          <label for="filterHours">Mínimo de horas</label>
+          <input type="number" id="filterHours" min="0" step="0.5" placeholder="0" />
+        </div>
+        <div class="filter-field">
+          <label for="filterDeadline">Próxima execução</label>
+          <select id="filterDeadline">
+            <option value="all">Todas</option>
+            <option value="today">Hoje</option>
+            <option value="week">Próxima semana</option>
+            <option value="overdue">Atrasadas</option>
+          </select>
+        </div>
+      </div>
+      <div class="filters-actions">
+        <button type="button" id="filtersReset">Limpar filtros</button>
+        <button type="button" id="filtersApply" class="primary">Aplicar</button>
+      </div>
+    </details>
+
+    {% if routines %}
+    <div class="routines-table-wrapper">
+      <table class="routines-table" id="routinesTable">
+        <thead>
+          <tr>
+            {% for header in headers %}
+            <th>{{ header.title }}</th>
+            {% endfor %}
+          </tr>
+        </thead>
+        <tbody>
+          {% for routine in routines %}
+          {% set collaborator_names = routine.collaborators | map(attribute='employee_name') | list %}
+          {% set collaborator_display = collaborator_names[:3]|join(', ') %}
+          <tr
+            class="routine-row"
+            data-process="{{ (routine.process_name|default(''))|lower }}"
+            data-routine="{{ (routine.name or routine.title or '')|lower }}"
+            data-trigger="{{ (routine.trigger_type or 'manual')|lower }}"
+            data-frequency="{{ (routine.frequency_label)|lower }}"
+            data-status="{{ (routine.status or 'pending')|lower }}"
+            data-collaborators="{{ routine.collaborators_count|default(0) }}"
+            data-hours="{{ routine.estimated_hours|default(0) }}"
+            data-deadline="{{ routine.next_run or '' }}"
+          >
+            <td>
+              <div class="routine-meta">
+                <span class="routine-name">{{ routine.process_name }}</span>
+              </div>
+            </td>
+            <td>
+              <div class="routine-meta">
+                <span class="routine-name">{{ routine.name or routine.title or 'Rotina sem nome' }}</span>
+                {% if routine.description %}
+                <small>{{ routine.description }}</small>
+                {% endif %}
+              </div>
+            </td>
+            <td>{{ routine.trigger_type_label }}</td>
+            <td>{{ routine.frequency_label }}</td>
+            <td>
+              <span class="collaborator-pill" title="{{ collaborator_names|join(', ') }}">
+                <span>{{ '%02d'|format(routine.collaborators_count|default(0)) }}</span>
+                colab.
+              </span>
+              {% if collaborator_display %}
+              <small style="display:block; font-size:11px; color:#475569; margin-top:2px;">
+                {{ collaborator_display }}{% if collaborator_names|length > 3 %} +{{ collaborator_names|length - 3 }}{% endif %}
+              </small>
+              {% endif %}
+            </td>
+            <td>{{ routine.estimated_hours|default(0) }}h</td>
+            <td>
+              <span class="status-chip {{ (routine.status or 'pending')|lower }}">
+                {{ routine.status_label }}
+              </span>
+            </td>
+            <td>
+              {% if routine.next_run %}
+              <strong>{{ routine.next_run }}</strong>
+              {% else %}
+              <span>N/D</span>
+              {% endif %}
+            </td>
+            <td>
+              <div class="routine-actions">
+                <a
+                  href="{{ url_for('routine_details', company_id=company.id, routine_id=routine.id) }}"
+                  class="action-link"
+                >
+                  Editar
+                </a>
+                <button
+                  type="button"
+                  class="action-delete routine-delete-button"
+                  data-routine-id="{{ routine.id }}"
+                >
+                  Excluir
+                </button>
+                <button
+                  type="button"
+                  class="trigger-button"
+                  data-process-id="{{ routine.process_id }}"
+                  data-routine-id="{{ routine.id }}"
+                  data-title="{{ routine.name or routine.title or routine.process_name }}"
+                  data-description="{{ routine.description or '' }}"
+                  data-deadline="{{ routine.next_run or '' }}"
+                  data-collaborators='{{ routine.collaborators | tojson | safe }}'
+                  onclick="return window.dispatchRoutineTrigger ? window.dispatchRoutineTrigger(event, this) : false;"
+                >
+                  Disparar agora
+                </button>
+              </div>
+            </td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
     </div>
+    {% else %}
+    <div class="empty-state">
+      Nenhuma rotina cadastrada para esta empresa. Configure um processo com colaboradores para visualizar aqui.
+    </div>
+    {% endif %}
   </div>
 </div>
 
+<div class="toast" id="routineToast"></div>
+
+{% endblock %}
+
+{% block extra_scripts %}
+{{ super() }}
 <script>
   (function () {
-    const companyId = {{ company.id | default(0) }};
-    const routinesUrl = "{{ url_for('api_get_routines', company_id=company.id|default(0)) }}";
-    const tasksUrl = "{{ url_for('api_get_routine_tasks', company_id=company.id|default(0)) }}";
+    const companyId = Number({{ company.id or 0 }});
+    const toast = document.getElementById('routineToast');
+    const routineTriggerTracker = new Set();
 
-    if (!companyId) {
-      console.warn('Missing company id for work distribution view.');
+    function showToast (message, type = 'success') {
+      if (!toast) return;
+      toast.textContent = message;
+      toast.className = `toast ${type}`;
+      toast.style.display = 'block';
+      setTimeout(() => {
+        toast.style.display = 'none';
+      }, 4000);
+    }
+
+    async function triggerInstance (button) {
+      const processAttr = button?.dataset?.processId;
+      const processId = processAttr ? Number(processAttr) : null;
+
+      if (!processId) {
+        showToast('Rotina precisa estar vinculada a um processo para ser disparada.', 'error');
+        return;
+      }
+
+      if (!companyId) {
+        showToast('Empresa não identificada. Recarregue a página e tente novamente.', 'error');
+        return;
+      }
+
+      let collaborators = [];
+      const collaboratorsRaw = button.dataset.collaborators;
+      if (collaboratorsRaw) {
+        try {
+          const parsed = JSON.parse(collaboratorsRaw);
+          if (Array.isArray(parsed)) {
+            collaborators = parsed.map(col => ({
+              id: col.employee_id || col.id || null,
+              name: col.name || col.employee_name || '',
+              email: col.email || '',
+              role: (col.role || 'executor').toLowerCase(),
+              hours: col.hours || col.assigned_hours || 0
+            }));
+          }
+        } catch (err) {
+          console.warn('Falha ao interpretar colaboradores da rotina', err);
+        }
+      }
+
+      const payload = {
+        process_id: processId,
+        routine_id: Number(button.dataset.routineId) || null,
+        title: button.dataset.title || 'Instância manual',
+        description: button.dataset.description || '',
+        due_date: button.dataset.deadline || null,
+        priority: 'normal',
+        trigger_type: 'manual',
+        assigned_collaborators: collaborators
+      };
+
+      const routineKey = String(payload.routine_id || processId || button.dataset.routineId || '');
+      if (routineTriggerTracker.has(routineKey)) {
+        return;
+      }
+
+      try {
+        routineTriggerTracker.add(routineKey);
+        button.disabled = true;
+        button.setAttribute('data-triggering', '1');
+        const response = await fetch(`/api/companies/${companyId}/process-instances`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(payload)
+        });
+
+        if (!response.ok) {
+          const error = await response.json().catch(() => ({}));
+          throw new Error(error.error || 'Erro ao disparar instância.');
+        }
+
+        showToast('Instância criada com sucesso!');
+      } catch (error) {
+        console.error('[Rotinas] Falha ao disparar instância', error);
+        showToast(error.message || 'Erro ao disparar instância.', 'error');
+      } finally {
+        routineTriggerTracker.delete(routineKey);
+        button.disabled = false;
+        button.removeAttribute('data-triggering');
+      }
+    }
+
+    async function deleteRoutine (routineId, button) {
+      if (!routineId) {
+        showToast('Rotina inválida.', 'error');
+        return;
+      }
+
+      if (!window.confirm('Deseja excluir esta rotina?')) {
+        return;
+      }
+
+      try {
+        button.disabled = true;
+        const response = await fetch(
+          `/api/companies/${companyId}/process-routines/${routineId}`,
+          { method: 'DELETE' }
+        );
+        const result = await response.json().catch(() => ({}));
+
+        if (!response.ok) {
+          throw new Error(result.message || 'Erro ao excluir rotina.');
+        }
+
+        showToast(result.message || 'Rotina excluída com sucesso!');
+        setTimeout(() => window.location.reload(), 700);
+      } catch (error) {
+        console.error('[Rotinas] Falha ao excluir rotina', error);
+        showToast(error.message || 'Erro ao excluir rotina.', 'error');
+      } finally {
+        button.disabled = false;
+      }
+    }
+
+    window.dispatchRoutineTrigger = function (event, button) {
+      if (event) {
+        event.preventDefault();
+        event.stopPropagation();
+      }
+      if (!button) {
+        return false;
+      }
+      if (button.disabled || button.getAttribute('data-triggering') === '1') {
+        return false;
+      }
+      triggerInstance(button);
+      return false;
+    };
+
+    const table = document.getElementById('routinesTable');
+    if (!table) {
       return;
     }
 
-    const state = {
-      routines: [],
-      tasks: [],
-      distribution: [],
-      filteredDistribution: [],
-      filters: { status: 'all', search: '' },
-      lastUpdated: null
+    const rows = Array.from(table.querySelectorAll('.routine-row'));
+    const filters = {
+      search: '',
+      process: '',
+      routine: '',
+      trigger: 'all',
+      frequency: 'all',
+      status: 'all',
+      collaborators: '',
+      hours: '',
+      deadline: 'all'
     };
 
-    const elements = {
-      loading: document.getElementById('distributionLoading'),
-      error: document.getElementById('distributionError'),
-      empty: document.getElementById('distributionEmpty'),
-      tableWrapper: document.getElementById('distributionTableWrapper'),
-      tableBody: document.getElementById('distributionTableBody'),
-      meta: document.getElementById('distributionMeta'),
-      upcomingList: document.getElementById('upcomingList'),
-      stats: {
-        total: document.getElementById('statTotal'),
-        pending: document.getElementById('statPending'),
-        inProgress: document.getElementById('statInProgress'),
-        completed: document.getElementById('statCompleted'),
-        overdue: document.getElementById('statOverdue')
-      }
+    const inputs = {
+      search: document.getElementById('filterSearch'),
+      process: document.getElementById('filterProcess'),
+      routine: document.getElementById('filterRoutine'),
+      trigger: document.getElementById('filterTrigger'),
+      frequency: document.getElementById('filterFrequency'),
+      status: document.getElementById('filterStatus'),
+      collaborators: document.getElementById('filterCollaborators'),
+      hours: document.getElementById('filterHours'),
+      deadline: document.getElementById('filterDeadline')
     };
 
-    const statusChips = Array.from(document.querySelectorAll('[data-status-chip]'));
-    const searchField = document.getElementById('searchRoutine');
-    const refreshButton = document.getElementById('refreshDistribution');
+    const resetButton = document.getElementById('filtersReset');
+    const applyButton = document.getElementById('filtersApply');
 
-    refreshButton?.addEventListener('click', () => loadData(true));
-
-    statusChips.forEach((chip) => {
-      chip.addEventListener('click', () => {
-        statusChips.forEach((c) => c.classList.remove('active'));
-        chip.classList.add('active');
-        state.filters.status = chip.dataset.status;
-        applyFilters();
-        renderDistribution();
-      });
-    });
-
-    searchField?.addEventListener('input', (event) => {
-      state.filters.search = event.target.value;
-      applyFilters();
-      renderDistribution();
-    });
-
-    async function loadData(force = false) {
-      toggleLoading(true);
-      clearError();
-
-      try {
-        const [routinesResp, tasksResp] = await Promise.all([
-          fetch(routinesUrl, { cache: force ? 'no-store' : 'default' }),
-          fetch(tasksUrl, { cache: force ? 'no-store' : 'default' })
-        ]);
-
-        const routinesData = await routinesResp.json();
-        const tasksData = await tasksResp.json();
-
-        state.routines = routinesData?.success ? routinesData.routines || [] : [];
-        state.tasks = tasksData?.success ? tasksData.tasks || [] : [];
-        state.lastUpdated = new Date();
-
-        buildDistribution();
-        render();
-      } catch (error) {
-        console.error('Failed to load work distribution data', error);
-        showError('Nao foi possivel carregar os dados de distribuicao.');
-      } finally {
-        toggleLoading(false);
-      }
+    function normalize(value) {
+      return (value || '').toString().trim().toLowerCase();
     }
 
-    function buildDistribution() {
-      const routineIndex = new Map();
-      state.routines.forEach((routine) => {
-        if (!routine?.id) {
-          return;
-        }
-        routineIndex.set(routine.id, {
-          id: routine.id,
-          name: routine.name || 'Rotina sem nome',
-          description: routine.description || '',
-          total: 0,
-          pending: 0,
-          in_progress: 0,
-          completed: 0,
-          overdue: 0,
-          nextDeadline: null
-        });
-      });
+    function applyFilters () {
+      rows.forEach((row) => {
+        const processValue = row.dataset.process || '';
+        const routineValue = row.dataset.routine || '';
+        const triggerValue = row.dataset.trigger || '';
+        const frequencyValue = row.dataset.frequency || '';
+        const statusValue = row.dataset.status || '';
+        const collaboratorsValue = parseInt(row.dataset.collaborators || '0', 10);
+        const hoursValue = parseFloat(row.dataset.hours || '0');
+        const deadlineValue = row.dataset.deadline || '';
 
-      state.tasks.forEach((task) => {
-        const routineId = task.routine_id;
-        if (!routineIndex.has(routineId)) {
-          routineIndex.set(routineId, {
-            id: routineId,
-            name: `Rotina #${routineId}`,
-            description: '',
-            total: 0,
-            pending: 0,
-            in_progress: 0,
-            completed: 0,
-            overdue: 0,
-            nextDeadline: null
-          });
-        }
+        const matchesSearch = !filters.search || row.innerText.toLowerCase().includes(filters.search);
+        const matchesProcess = !filters.process || processValue.includes(filters.process);
+        const matchesRoutine = !filters.routine || routineValue.includes(filters.routine);
+        const matchesTrigger = filters.trigger === 'all' || triggerValue === filters.trigger;
+        const matchesFrequency = filters.frequency === 'all' || frequencyValue === filters.frequency;
+        const matchesStatus = filters.status === 'all' || statusValue === filters.status;
+        const matchesCollaborators = !filters.collaborators || collaboratorsValue >= Number(filters.collaborators);
+        const matchesHours = !filters.hours || hoursValue >= Number(filters.hours);
 
-        const bucket = routineIndex.get(routineId);
-        bucket.total += 1;
-
-        const statusKey = (task.status || 'pending').toLowerCase();
-        if (statusKey in bucket) {
-          bucket[statusKey] += 1;
-        }
-
-        if (task.deadline_date) {
-          const deadline = new Date(task.deadline_date);
-          if (!Number.isNaN(deadline.getTime())) {
-            if (!bucket.nextDeadline || deadline < bucket.nextDeadline) {
-              bucket.nextDeadline = deadline;
+        let matchesDeadline = true;
+        if (filters.deadline !== 'all') {
+          const deadlineDate = deadlineValue ? new Date(deadlineValue) : null;
+          const today = new Date();
+          today.setHours(0, 0, 0, 0);
+          if (!deadlineDate || Number.isNaN(deadlineDate.getTime())) {
+            matchesDeadline = false;
+          } else {
+            const compareDate = new Date(deadlineDate);
+            compareDate.setHours(0, 0, 0, 0);
+            if (filters.deadline === 'today') {
+              matchesDeadline = compareDate.getTime() === today.getTime();
+            } else if (filters.deadline === 'week') {
+              const weekAhead = new Date(today);
+              weekAhead.setDate(weekAhead.getDate() + 7);
+              matchesDeadline = compareDate >= today && compareDate <= weekAhead;
+            } else if (filters.deadline === 'overdue') {
+              matchesDeadline = compareDate < today;
             }
           }
         }
-      });
 
-      state.distribution = Array.from(routineIndex.values()).sort((a, b) => b.total - a.total);
+        const shouldShow =
+          matchesSearch &&
+          matchesProcess &&
+          matchesRoutine &&
+          matchesTrigger &&
+          matchesFrequency &&
+          matchesStatus &&
+          matchesCollaborators &&
+          matchesHours &&
+          matchesDeadline;
+
+        row.style.display = shouldShow ? '' : 'none';
+      });
+    }
+
+    function syncFilters () {
+      filters.search = normalize(inputs.search?.value);
+      filters.process = normalize(inputs.process?.value);
+      filters.routine = normalize(inputs.routine?.value);
+      filters.trigger = inputs.trigger?.value || 'all';
+      filters.frequency = inputs.frequency?.value || 'all';
+      filters.status = inputs.status?.value || 'all';
+      filters.collaborators = inputs.collaborators?.value || '';
+      filters.hours = inputs.hours?.value || '';
+      filters.deadline = inputs.deadline?.value || 'all';
+    }
+
+    function resetFilters () {
+      Object.values(inputs).forEach((input) => {
+        if (!input) return;
+        if (input.tagName === 'SELECT') {
+          input.value = 'all';
+        } else {
+          input.value = '';
+        }
+      });
+      syncFilters();
       applyFilters();
     }
 
-    function applyFilters() {
-      const term = state.filters.search.trim().toLowerCase();
-      const status = state.filters.status;
-
-      state.filteredDistribution = state.distribution.filter((item) => {
-        const matchesStatus = status === 'all' || (item[status] || 0) > 0;
-        const matchesSearch = !term || item.name.toLowerCase().includes(term);
-        return matchesStatus && matchesSearch;
+    [inputs.search, inputs.process, inputs.routine].forEach((input) => {
+      input?.addEventListener('input', () => {
+        syncFilters();
+        applyFilters();
       });
-    }
+    });
 
-    function render() {
-      renderStats();
-      renderDistribution();
-      renderUpcoming();
-    }
-
-    function renderStats() {
-      const totals = state.tasks.reduce((acc, task) => {
-        const key = (task.status || 'pending').toLowerCase();
-        acc[key] = (acc[key] || 0) + 1;
-        return acc;
-      }, {});
-
-      elements.stats.total.textContent = state.tasks.length;
-      elements.stats.pending.textContent = totals.pending || 0;
-      elements.stats.inProgress.textContent = totals.in_progress || 0;
-      elements.stats.completed.textContent = totals.completed || 0;
-      elements.stats.overdue.textContent = totals.overdue || 0;
-    }
-
-    function renderDistribution() {
-      const body = elements.tableBody;
-      body.innerHTML = '';
-
-      if (state.filteredDistribution.length === 0) {
-        elements.tableWrapper.hidden = true;
-        elements.empty.hidden = false;
-        elements.meta.textContent = 'Nenhuma rotina corresponde aos filtros atuais.';
-        return;
-      }
-
-      elements.tableWrapper.hidden = false;
-      elements.empty.hidden = true;
-
-      const totalRotinas = state.filteredDistribution.length;
-      elements.meta.textContent = `${totalRotinas} rotina${totalRotinas === 1 ? '' : 's'}`;
-
-      const fragment = document.createDocumentFragment();
-
-      state.filteredDistribution.forEach((item) => {
-        const total = item.total || 0;
-        const completion = total > 0 ? Math.round((item.completed / total) * 100) : 0;
-        const overdueShare = total > 0 ? Math.round((item.overdue / total) * 100) : 0;
-        const nextDeadline = item.nextDeadline ? formatDate(item.nextDeadline) : 'Sem prazo';
-        const row = document.createElement('tr');
-        row.innerHTML = `
-          <td class="distribution-name">
-            <div class="routine-name">${escapeHtml(item.name)}</div>
-            ${item.description ? `<div class="routine-description">${escapeHtml(item.description)}</div>` : ''}
-          </td>
-          <td class="distribution-total">
-            <strong>${total}</strong>
-          </td>
-          <td>
-            <div class="status-pill pending">${item.pending || 0}</div>
-          </td>
-          <td>
-            <div class="status-pill progress">${item.in_progress || 0}</div>
-          </td>
-          <td>
-            <div class="status-pill completed">${item.completed || 0}</div>
-          </td>
-          <td>
-            <div class="status-pill overdue">${item.overdue || 0}</div>
-          </td>
-          <td>
-            <div class="progress-bar">
-              <span class="progress-fill completed" style="width: ${completion}%;"></span>
-              ${overdueShare > 0 ? `<span class="progress-fill overdue" style="width: ${overdueShare}%;"></span>` : ''}
-            </div>
-            <span class="progress-meta">${completion}% concluido</span>
-          </td>
-          <td class="distribution-deadline">${nextDeadline}</td>
-        `;
-        fragment.appendChild(row);
+    [inputs.trigger, inputs.frequency, inputs.status, inputs.deadline].forEach((select) => {
+      select?.addEventListener('change', () => {
+        syncFilters();
+        applyFilters();
       });
+    });
 
-      body.appendChild(fragment);
-    }
-
-    function renderUpcoming() {
-      const list = elements.upcomingList;
-      list.innerHTML = '';
-
-      const tasks = state.tasks
-        .filter((task) => task.deadline_date)
-        .map((task) => ({
-          ...task,
-          deadline: new Date(task.deadline_date)
-        }))
-        .filter((task) => !Number.isNaN(task.deadline.getTime()))
-        .sort((a, b) => a.deadline - b.deadline)
-        .slice(0, 6);
-
-      if (tasks.length === 0) {
-        list.innerHTML = '<li class="empty">Nenhum prazo cadastrado.</li>';
-        return;
-      }
-
-      const routineNameById = state.routines.reduce((acc, routine) => {
-        if (routine?.id) {
-          acc[routine.id] = routine.name || `Rotina #${routine.id}`;
-        }
-        return acc;
-      }, {});
-
-      tasks.forEach((task) => {
-        const li = document.createElement('li');
-        const statusLabel = mapStatus(task.status);
-        li.innerHTML = `
-          <div class="upcoming-title">${escapeHtml(task.title || 'Tarefa sem titulo')}</div>
-          <div class="upcoming-meta">
-            <span class="meta-item">${formatDate(task.deadline)}</span>
-            <span class="meta-item">${escapeHtml(routineNameById[task.routine_id] || `Rotina #${task.routine_id}`)}</span>
-            <span class="meta-item status-${statusLabel.key}">${statusLabel.text}</span>
-          </div>
-        `;
-        list.appendChild(li);
+    [inputs.collaborators, inputs.hours].forEach((input) => {
+      input?.addEventListener('input', () => {
+        syncFilters();
+        applyFilters();
       });
-    }
+    });
 
-    function toggleLoading(isLoading) {
-      if (!elements.loading) {
-        return;
-      }
-      elements.loading.hidden = !isLoading;
-      if (elements.tableWrapper) {
-        elements.tableWrapper.classList.toggle('is-loading', isLoading);
-      }
-    }
+    applyButton?.addEventListener('click', () => {
+      syncFilters();
+      applyFilters();
+    });
 
-    function showError(message) {
-      if (!elements.error) {
-        return;
-      }
-      elements.error.textContent = message;
-      elements.error.hidden = false;
-      if (elements.tableWrapper) {
-        elements.tableWrapper.hidden = true;
-      }
-    }
+    resetButton?.addEventListener('click', () => resetFilters());
 
-    function clearError() {
-      if (!elements.error) {
-        return;
-      }
-      elements.error.hidden = true;
-      elements.error.textContent = '';
-    }
+    syncFilters();
+    applyFilters();
 
-    function escapeHtml(value) {
-      if (typeof value !== 'string') {
-        return value ?? '';
-      }
-      const span = document.createElement('span');
-      span.textContent = value;
-      return span.innerHTML;
-    }
-
-    function formatDate(date) {
-      if (!(date instanceof Date)) {
-        return 'Sem data';
-      }
-      return date.toLocaleDateString('pt-BR', {
-        year: 'numeric',
-        month: 'short',
-        day: 'numeric'
+    table.querySelectorAll('.trigger-button').forEach((button) => {
+      button.addEventListener('click', (event) => {
+        event.preventDefault();
+        event.stopPropagation();
+        triggerInstance(button);
       });
-    }
+    });
 
-    function mapStatus(status) {
-      const key = (status || 'pending').toLowerCase();
-      const labels = {
-        pending: { key: 'pending', text: 'Pendente' },
-        in_progress: { key: 'in-progress', text: 'Em andamento' },
-        completed: { key: 'completed', text: 'Concluida' },
-        overdue: { key: 'overdue', text: 'Atrasada' }
-      };
-      return labels[key] || labels.pending;
-    }
-
-    loadData();
+    table.querySelectorAll('.routine-delete-button').forEach((button) => {
+      button.addEventListener('click', (event) => {
+        event.preventDefault();
+        event.stopPropagation();
+        deleteRoutine(button.dataset.routineId, button);
+      });
+    });
   })();
 </script>
 {% endblock %}

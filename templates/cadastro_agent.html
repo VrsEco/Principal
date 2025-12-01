@@ -1,0 +1,827 @@
+{% extends "base.html" %}
+{% block title %}Agente de Cadastro - Assistente de Empresas{% endblock %}
+
+{% block body %}
+  {% set active_nav = 'dashboard' %}
+  {{ super() }}
+{% endblock %}
+
+{% block extra_head %}
+  {{ super() }}
+  <style>
+    .cadastro-agent-page {
+      max-width: 900px;
+      margin: 0 auto;
+      padding: 32px 20px 64px;
+    }
+
+    .agent-header {
+      text-align: center;
+      margin-bottom: 40px;
+    }
+
+    .agent-header h1 {
+      font-size: 32px;
+      margin-bottom: 12px;
+      background: linear-gradient(135deg, #3af1ae 0%, #10b981 100%);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      background-clip: text;
+    }
+
+    .agent-header p {
+      color: var(--color-muted);
+      font-size: 16px;
+    }
+
+    .agent-card {
+      background: var(--color-bg-secondary);
+      border-radius: 16px;
+      padding: 32px;
+      box-shadow: 0 4px 16px rgba(0, 0, 0, 0.1);
+      margin-bottom: 24px;
+    }
+
+    .agent-message {
+      background: linear-gradient(135deg, rgba(58, 241, 174, 0.1) 0%, rgba(16, 185, 129, 0.05) 100%);
+      border-left: 4px solid #3af1ae;
+      padding: 20px 24px;
+      border-radius: 12px;
+      margin-bottom: 24px;
+      font-size: 16px;
+      line-height: 1.6;
+    }
+
+    .agent-message.error {
+      background: linear-gradient(135deg, rgba(239, 68, 68, 0.1) 0%, rgba(220, 38, 38, 0.05) 100%);
+      border-left-color: #ef4444;
+    }
+
+    .agent-message.success {
+      background: linear-gradient(135deg, rgba(16, 185, 129, 0.1) 0%, rgba(5, 150, 105, 0.05) 100%);
+      border-left-color: #10b981;
+    }
+
+    .progress-bar {
+      width: 100%;
+      height: 8px;
+      background: var(--color-border);
+      border-radius: 4px;
+      overflow: hidden;
+      margin-bottom: 24px;
+    }
+
+    .progress-fill {
+      height: 100%;
+      background: linear-gradient(90deg, #3af1ae 0%, #10b981 100%);
+      transition: width 0.3s ease;
+    }
+
+    .progress-text {
+      text-align: center;
+      font-size: 14px;
+      color: var(--color-muted);
+      margin-bottom: 8px;
+    }
+
+    .form-group {
+      margin-bottom: 24px;
+    }
+
+    .form-group label {
+      display: block;
+      font-weight: 600;
+      margin-bottom: 8px;
+      color: var(--color-text);
+      font-size: 14px;
+    }
+
+    .form-group input,
+    .form-group select,
+    .form-group textarea {
+      width: 100%;
+      padding: 12px 16px;
+      border: 1px solid var(--color-border);
+      border-radius: 8px;
+      background: var(--color-bg);
+      color: var(--color-text);
+      font-size: 15px;
+      transition: all 0.2s;
+    }
+
+    .form-group input:focus,
+    .form-group select:focus,
+    .form-group textarea:focus {
+      outline: none;
+      border-color: #3af1ae;
+      box-shadow: 0 0 0 3px rgba(58, 241, 174, 0.1);
+    }
+
+    .form-group textarea {
+      min-height: 100px;
+      resize: vertical;
+    }
+
+    .form-actions {
+      display: flex;
+      gap: 12px;
+      justify-content: flex-end;
+      margin-top: 32px;
+    }
+
+    .btn {
+      padding: 12px 24px;
+      border-radius: 8px;
+      font-weight: 600;
+      cursor: pointer;
+      transition: all 0.2s;
+      border: none;
+      font-size: 15px;
+    }
+
+    .btn-primary {
+      background: linear-gradient(135deg, #3af1ae 0%, #10b981 100%);
+      color: #000;
+    }
+
+    .btn-primary:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 4px 12px rgba(58, 241, 174, 0.3);
+    }
+
+    .btn-secondary {
+      background: var(--color-bg-secondary);
+      color: var(--color-text);
+      border: 1px solid var(--color-border);
+    }
+
+    .btn-secondary:hover {
+      background: var(--color-bg);
+    }
+
+    .btn:disabled {
+      opacity: 0.5;
+      cursor: not-allowed;
+    }
+
+    .tipo-selector {
+      display: flex;
+      gap: 12px;
+      margin-bottom: 32px;
+    }
+
+    .tipo-option {
+      flex: 1;
+      padding: 16px;
+      border: 2px solid var(--color-border);
+      border-radius: 12px;
+      text-align: center;
+      cursor: pointer;
+      transition: all 0.2s;
+      background: var(--color-bg-secondary);
+    }
+
+    .tipo-option:hover {
+      border-color: #3af1ae;
+      background: rgba(58, 241, 174, 0.05);
+    }
+
+    .tipo-option.active {
+      border-color: #3af1ae;
+      background: rgba(58, 241, 174, 0.1);
+    }
+
+    .tipo-option input[type="radio"] {
+      display: none;
+    }
+
+    .tipo-option label {
+      cursor: pointer;
+      margin: 0;
+      font-weight: 600;
+    }
+
+    .dados-coletados {
+      background: var(--color-bg-secondary);
+      border-radius: 12px;
+      padding: 20px;
+      margin-top: 24px;
+    }
+
+    .dados-coletados h3 {
+      font-size: 16px;
+      margin-bottom: 12px;
+      color: var(--color-text);
+    }
+
+    .dados-item {
+      display: flex;
+      justify-content: space-between;
+      padding: 8px 0;
+      border-bottom: 1px solid var(--color-border);
+      font-size: 14px;
+    }
+
+    .dados-item:last-child {
+      border-bottom: none;
+    }
+
+    .dados-item strong {
+      color: var(--color-text);
+    }
+
+    .dados-item span {
+      color: var(--color-muted);
+    }
+
+    .loading {
+      text-align: center;
+      padding: 40px;
+      color: var(--color-muted);
+    }
+
+    .spinner {
+      border: 3px solid var(--color-border);
+      border-top: 3px solid #3af1ae;
+      border-radius: 50%;
+      width: 40px;
+      height: 40px;
+      animation: spin 1s linear infinite;
+      margin: 0 auto 16px;
+    }
+
+    @keyframes spin {
+      0% { transform: rotate(0deg); }
+      100% { transform: rotate(360deg); }
+    }
+
+    .help-text {
+      font-size: 13px;
+      color: var(--color-muted);
+      margin-top: 6px;
+    }
+
+    .validation-error {
+      color: #ef4444;
+      font-size: 13px;
+      margin-top: 6px;
+      display: none;
+    }
+
+    .validation-error.show {
+      display: block;
+    }
+  </style>
+{% endblock %}
+
+{% block content %}
+<div class="cadastro-agent-page">
+  <div class="agent-header">
+    <h1>🤖 Agente de Cadastro</h1>
+    <p>Assistente inteligente para cadastro de empresas</p>
+  </div>
+
+  <!-- Seletor de Tipo -->
+  <div id="tipo-selector" class="agent-card">
+    <h2 style="margin-bottom: 16px;">Escolha o tipo de cadastro:</h2>
+    <div class="tipo-selector">
+      <div class="tipo-option" onclick="selecionarTipo('real')">
+        <input type="radio" name="tipo" id="tipo-real" value="real" checked>
+        <label for="tipo-real">
+          <div style="font-size: 24px; margin-bottom: 8px;">🏢</div>
+          <div>Empresa Real</div>
+        </label>
+      </div>
+      <div class="tipo-option" onclick="selecionarTipo('exemplo')">
+        <input type="radio" name="tipo" id="tipo-exemplo" value="exemplo">
+        <label for="tipo-exemplo">
+          <div style="font-size: 24px; margin-bottom: 8px;">📝</div>
+          <div>Empresa Exemplo</div>
+        </label>
+      </div>
+    </div>
+    <div class="form-actions">
+      <button class="btn btn-primary" onclick="iniciarCadastro()">Iniciar Cadastro</button>
+    </div>
+  </div>
+
+  <!-- Área de Interação -->
+  <div id="interacao-area" class="agent-card" style="display: none;">
+    <!-- Barra de Progresso -->
+    <div class="progress-text" id="progress-text">Progresso: 0%</div>
+    <div class="progress-bar">
+      <div class="progress-fill" id="progress-fill" style="width: 0%"></div>
+    </div>
+
+    <!-- Mensagem do Agente -->
+    <div id="agent-message" class="agent-message"></div>
+
+    <!-- Formulário -->
+    <form id="cadastro-form" onsubmit="processarResposta(event)">
+      <div class="form-group" id="form-group">
+        <!-- Campo será inserido dinamicamente -->
+      </div>
+
+      <div class="form-actions">
+        <button type="button" class="btn btn-secondary" onclick="cancelarCadastro()">Cancelar</button>
+        <button type="submit" class="btn btn-primary" id="submit-btn">Continuar</button>
+      </div>
+    </form>
+
+    <!-- Dados Coletados -->
+    <div id="dados-coletados" class="dados-coletados" style="display: none;">
+      <h3>📋 Dados Coletados:</h3>
+      <div id="dados-lista"></div>
+    </div>
+  </div>
+
+  <!-- Loading -->
+  <div id="loading" class="loading" style="display: none;">
+    <div class="spinner"></div>
+    <p>Processando...</p>
+  </div>
+
+  <!-- Sucesso -->
+  <div id="sucesso-area" class="agent-card" style="display: none;">
+    <div class="agent-message success">
+      <h2 style="margin: 0 0 12px 0;">✅ Empresa cadastrada com sucesso!</h2>
+      <p id="sucesso-mensagem"></p>
+    </div>
+    <div id="proximos-passos" style="margin-top: 24px;">
+      <h3>Próximos passos:</h3>
+      <ul id="passos-lista" style="margin-top: 12px; padding-left: 24px;"></ul>
+    </div>
+    <div class="form-actions">
+      <button class="btn btn-primary" onclick="window.location.href='/companies'">Ver Empresas</button>
+      <button class="btn btn-secondary" onclick="reiniciarCadastro()">Cadastrar Outra</button>
+    </div>
+  </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+{{ super() }}
+<script>
+let tipoCadastro = 'real';
+let dadosColetados = {};
+let estadoAtual = null;
+
+function selecionarTipo(tipo) {
+  tipoCadastro = tipo;
+  document.querySelectorAll('.tipo-option').forEach(el => el.classList.remove('active'));
+  event.currentTarget.classList.add('active');
+  document.getElementById(`tipo-${tipo}`).checked = true;
+}
+
+async function iniciarCadastro() {
+  mostrarLoading(true);
+  
+  try {
+    const response = await fetch('/api/cadastro-agent/empresa/iniciar', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json'
+      },
+      body: JSON.stringify({
+        tipo: tipoCadastro,
+        dados: {}
+      })
+    });
+
+    const result = await response.json();
+    
+    if (result.success) {
+      estadoAtual = result.data;
+      dadosColetados = estadoAtual.dados_coletados || {};
+      
+      document.getElementById('tipo-selector').style.display = 'none';
+      document.getElementById('interacao-area').style.display = 'block';
+      
+      atualizarInterface();
+    } else {
+      mostrarErro(result.error || 'Erro ao iniciar cadastro');
+    }
+  } catch (error) {
+    mostrarErro('Erro ao conectar com o servidor: ' + error.message);
+  } finally {
+    mostrarLoading(false);
+  }
+}
+
+function atualizarInterface() {
+  if (!estadoAtual) return;
+
+  // Atualizar mensagem
+  const messageEl = document.getElementById('agent-message');
+  messageEl.textContent = estadoAtual.mensagem || '';
+  messageEl.className = 'agent-message';
+  
+  if (estadoAtual.status === 'erro_validacao') {
+    messageEl.classList.add('error');
+  }
+
+  // Atualizar progresso
+  const progresso = estadoAtual.progresso || 0;
+  document.getElementById('progress-fill').style.width = progresso + '%';
+  document.getElementById('progress-text').textContent = `Progresso: ${progresso}%`;
+
+  // Atualizar formulário
+  const formGroup = document.getElementById('form-group');
+  formGroup.innerHTML = '';
+
+  if (estadoAtual.status === 'pronto_para_criar') {
+    // Mostrar botão de finalizar
+    formGroup.innerHTML = '<p style="text-align: center; color: var(--color-muted);">Todos os dados obrigatórios foram coletados. Clique em "Finalizar" para criar a empresa.</p>';
+    document.getElementById('submit-btn').textContent = 'Finalizar Cadastro';
+    document.getElementById('submit-btn').onclick = finalizarCadastro;
+  } else if (estadoAtual.proximo_campo) {
+    // Criar campo dinâmico
+    const campo = estadoAtual.proximo_campo;
+    const label = document.createElement('label');
+    label.textContent = obterLabelCampo(campo);
+    label.setAttribute('for', `campo-${campo}`);
+    
+    const input = criarInputCampo(campo);
+    input.id = `campo-${campo}`;
+    input.name = campo;
+    input.required = true;
+    
+    const helpText = document.createElement('div');
+    helpText.className = 'help-text';
+    helpText.textContent = obterHelpTextCampo(campo);
+    
+    const errorDiv = document.createElement('div');
+    errorDiv.className = 'validation-error';
+    errorDiv.id = `error-${campo}`;
+    
+    formGroup.appendChild(label);
+    formGroup.appendChild(input);
+    formGroup.appendChild(helpText);
+    formGroup.appendChild(errorDiv);
+    
+    // Focar no campo
+    setTimeout(() => input.focus(), 100);
+    
+    document.getElementById('submit-btn').textContent = 'Continuar';
+    document.getElementById('submit-btn').onclick = null;
+  }
+
+  // Atualizar dados coletados
+  atualizarDadosColetados();
+}
+
+function criarInputCampo(campo) {
+  const tipo = obterTipoCampo(campo);
+  
+  if (tipo === 'textarea') {
+    const textarea = document.createElement('textarea');
+    textarea.rows = 3;
+    return textarea;
+  } else if (tipo === 'select') {
+    const select = document.createElement('select');
+    const opcoes = obterOpcoesCampo(campo);
+    opcoes.forEach(opcao => {
+      const option = document.createElement('option');
+      option.value = opcao.value;
+      option.textContent = opcao.label;
+      select.appendChild(option);
+    });
+    return select;
+  } else {
+    const input = document.createElement('input');
+    input.type = tipo;
+    input.placeholder = obterPlaceholderCampo(campo);
+    
+    // Aplicar máscaras
+    if (campo === 'cnpj') {
+      input.addEventListener('input', aplicarMascaraCNPJ);
+    } else if (campo === 'client_code') {
+      input.addEventListener('input', function(e) {
+        e.target.value = e.target.value.toUpperCase().replace(/[^A-Z0-9]/g, '').substring(0, 3);
+      });
+    } else if (campo === 'state') {
+      input.addEventListener('input', function(e) {
+        e.target.value = e.target.value.toUpperCase().replace(/[^A-Z]/g, '').substring(0, 2);
+      });
+    }
+    
+    return input;
+  }
+}
+
+function obterTipoCampo(campo) {
+  const tipos = {
+    'mission': 'textarea',
+    'vision': 'textarea',
+    'values': 'textarea',
+    'coverage_physical': 'select',
+    'coverage_online': 'select',
+    'description': 'textarea'
+  };
+  return tipos[campo] || 'text';
+}
+
+function obterOpcoesCampo(campo) {
+  if (campo === 'coverage_physical') {
+    return [
+      { value: '', label: 'Selecione...' },
+      { value: 'micro', label: 'Micro (até 1km)' },
+      { value: 'local', label: 'Local (cidade)' },
+      { value: 'regional', label: 'Regional (estado)' },
+      { value: 'nacional', label: 'Nacional' },
+      { value: 'internacional', label: 'Internacional' }
+    ];
+  } else if (campo === 'coverage_online') {
+    return [
+      { value: '', label: 'Selecione...' },
+      { value: 'sim', label: 'Sim' },
+      { value: 'nao', label: 'Não' },
+      { value: 'parcial', label: 'Parcial' }
+    ];
+  }
+  return [];
+}
+
+function obterLabelCampo(campo) {
+  const labels = {
+    'name': 'Nome Fantasia *',
+    'client_code': 'Código do Cliente *',
+    'legal_name': 'Razão Social',
+    'cnpj': 'CNPJ',
+    'segment': 'Segmento/Indústria',
+    'city': 'Cidade',
+    'state': 'Estado (UF)',
+    'coverage_physical': 'Cobertura Física',
+    'coverage_online': 'Presença Online',
+    'experience_total': 'Experiência Total',
+    'experience_segment': 'Experiência no Segmento',
+    'mission': 'Missão',
+    'vision': 'Visão',
+    'values': 'Valores'
+  };
+  return labels[campo] || campo;
+}
+
+function obterPlaceholderCampo(campo) {
+  const placeholders = {
+    'name': 'Ex: Minha Empresa',
+    'client_code': 'Ex: ABC',
+    'legal_name': 'Ex: Minha Empresa LTDA',
+    'cnpj': 'Ex: 12.345.678/0001-90',
+    'segment': 'Ex: Tecnologia',
+    'city': 'Ex: São Paulo',
+    'state': 'Ex: SP',
+    'experience_total': 'Ex: 12 anos',
+    'experience_segment': 'Ex: 8 anos'
+  };
+  return placeholders[campo] || '';
+}
+
+function obterHelpTextCampo(campo) {
+  const helps = {
+    'client_code': '1 a 3 caracteres (letras ou números)',
+    'cnpj': 'Formato: XX.XXX.XXX/XXXX-XX',
+    'state': 'Sigla de 2 letras (ex: SP, RJ)'
+  };
+  return helps[campo] || '';
+}
+
+function aplicarMascaraCNPJ(e) {
+  let valor = e.target.value.replace(/\D/g, '');
+  if (valor.length <= 14) {
+    valor = valor.replace(/^(\d{2})(\d)/, '$1.$2');
+    valor = valor.replace(/^(\d{2})\.(\d{3})(\d)/, '$1.$2.$3');
+    valor = valor.replace(/\.(\d{3})(\d)/, '.$1/$2');
+    valor = valor.replace(/(\d{4})(\d)/, '$1-$2');
+    e.target.value = valor;
+  }
+}
+
+async function processarResposta(event) {
+  event.preventDefault();
+  
+  if (!estadoAtual || !estadoAtual.proximo_campo) return;
+  
+  const campo = estadoAtual.proximo_campo;
+  const input = document.getElementById(`campo-${campo}`);
+  const valor = input.value.trim();
+  
+  // Validar
+  const erro = validarCampo(campo, valor);
+  if (erro) {
+    mostrarErroCampo(campo, erro);
+    return;
+  }
+  
+  ocultarErroCampo(campo);
+  mostrarLoading(true);
+  
+  try {
+    const response = await fetch('/api/cadastro-agent/empresa/processar', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json'
+      },
+      body: JSON.stringify({
+        dados_coletados: dadosColetados,
+        campo: campo,
+        valor: valor,
+        tipo: tipoCadastro
+      })
+    });
+
+    const result = await response.json();
+    
+    if (result.success) {
+      estadoAtual = result.data;
+      dadosColetados = estadoAtual.dados_coletados || {};
+      atualizarInterface();
+    } else {
+      mostrarErro(result.error || 'Erro ao processar resposta');
+    }
+  } catch (error) {
+    mostrarErro('Erro ao conectar com o servidor: ' + error.message);
+  } finally {
+    mostrarLoading(false);
+  }
+}
+
+function validarCampo(campo, valor) {
+  if (!valor) {
+    return 'Este campo é obrigatório';
+  }
+  
+  if (campo === 'client_code') {
+    if (!/^[A-Z0-9]{1,3}$/.test(valor)) {
+      return 'Código deve ter de 1 a 3 caracteres (letras ou números)';
+    }
+  }
+  
+  if (campo === 'cnpj') {
+    const cnpjLimpo = valor.replace(/\D/g, '');
+    if (cnpjLimpo.length !== 14) {
+      return 'CNPJ deve ter 14 dígitos';
+    }
+    if (!validarCNPJ(cnpjLimpo)) {
+      return 'CNPJ inválido';
+    }
+  }
+  
+  if (campo === 'state') {
+    if (valor.length !== 2) {
+      return 'Estado deve ter 2 letras (ex: SP, RJ)';
+    }
+  }
+  
+  return null;
+}
+
+function validarCNPJ(cnpj) {
+  cnpj = cnpj.replace(/[^\d]+/g, '');
+  
+  if (cnpj.length !== 14) return false;
+  
+  // Elimina CNPJs conhecidos como inválidos
+  if (/^(\d)\1+$/.test(cnpj)) return false;
+  
+  // Validação dos dígitos verificadores
+  let tamanho = cnpj.length - 2;
+  let numeros = cnpj.substring(0, tamanho);
+  let digitos = cnpj.substring(tamanho);
+  let soma = 0;
+  let pos = tamanho - 7;
+  
+  for (let i = tamanho; i >= 1; i--) {
+    soma += numeros.charAt(tamanho - i) * pos--;
+    if (pos < 2) pos = 9;
+  }
+  
+  let resultado = soma % 11 < 2 ? 0 : 11 - soma % 11;
+  if (resultado != digitos.charAt(0)) return false;
+  
+  tamanho = tamanho + 1;
+  numeros = cnpj.substring(0, tamanho);
+  soma = 0;
+  pos = tamanho - 7;
+  
+  for (let i = tamanho; i >= 1; i--) {
+    soma += numeros.charAt(tamanho - i) * pos--;
+    if (pos < 2) pos = 9;
+  }
+  
+  resultado = soma % 11 < 2 ? 0 : 11 - soma % 11;
+  if (resultado != digitos.charAt(1)) return false;
+  
+  return true;
+}
+
+function mostrarErroCampo(campo, mensagem) {
+  const errorEl = document.getElementById(`error-${campo}`);
+  if (errorEl) {
+    errorEl.textContent = mensagem;
+    errorEl.classList.add('show');
+  }
+}
+
+function ocultarErroCampo(campo) {
+  const errorEl = document.getElementById(`error-${campo}`);
+  if (errorEl) {
+    errorEl.classList.remove('show');
+  }
+}
+
+function mostrarErro(mensagem) {
+  const messageEl = document.getElementById('agent-message');
+  messageEl.textContent = mensagem;
+  messageEl.className = 'agent-message error';
+}
+
+async function finalizarCadastro() {
+  mostrarLoading(true);
+  
+  try {
+    const response = await fetch('/api/cadastro-agent/empresa/finalizar', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json'
+      },
+      body: JSON.stringify({
+        dados: dadosColetados,
+        tipo: tipoCadastro
+      })
+    });
+
+    const result = await response.json();
+    
+    if (result.success) {
+      const data = result.data;
+      document.getElementById('interacao-area').style.display = 'none';
+      document.getElementById('sucesso-area').style.display = 'block';
+      document.getElementById('sucesso-mensagem').textContent = data.mensagem;
+      
+      const passosLista = document.getElementById('passos-lista');
+      passosLista.innerHTML = '';
+      if (data.proximos_passos) {
+        data.proximos_passos.forEach(passo => {
+          const li = document.createElement('li');
+          li.textContent = passo;
+          passosLista.appendChild(li);
+        });
+      }
+    } else {
+      mostrarErro(result.error || 'Erro ao finalizar cadastro');
+    }
+  } catch (error) {
+    mostrarErro('Erro ao conectar com o servidor: ' + error.message);
+  } finally {
+    mostrarLoading(false);
+  }
+}
+
+function atualizarDadosColetados() {
+  const dadosEl = document.getElementById('dados-coletados');
+  const listaEl = document.getElementById('dados-lista');
+  
+  if (Object.keys(dadosColetados).length === 0) {
+    dadosEl.style.display = 'none';
+    return;
+  }
+  
+  dadosEl.style.display = 'block';
+  listaEl.innerHTML = '';
+  
+  Object.entries(dadosColetados).forEach(([campo, valor]) => {
+    if (valor) {
+      const item = document.createElement('div');
+      item.className = 'dados-item';
+      item.innerHTML = `<strong>${obterLabelCampo(campo)}:</strong> <span>${valor}</span>`;
+      listaEl.appendChild(item);
+    }
+  });
+}
+
+function mostrarLoading(mostrar) {
+  document.getElementById('loading').style.display = mostrar ? 'block' : 'none';
+}
+
+function cancelarCadastro() {
+  if (confirm('Tem certeza que deseja cancelar o cadastro? Todos os dados coletados serão perdidos.')) {
+    reiniciarCadastro();
+  }
+}
+
+function reiniciarCadastro() {
+  tipoCadastro = 'real';
+  dadosColetados = {};
+  estadoAtual = null;
+  
+  document.getElementById('tipo-selector').style.display = 'block';
+  document.getElementById('interacao-area').style.display = 'none';
+  document.getElementById('sucesso-area').style.display = 'none';
+  document.getElementById('cadastro-form').reset();
+}
+</script>
+{% endblock %}
+
+
+

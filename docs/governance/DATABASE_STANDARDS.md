@@ -1,6 +1,6 @@
 # 🗄️ Padrões de Banco de Dados
 
-**Última Atualização:** 28/10/2025  
+**Última Atualização:** 29/11/2025  
 **Versão:** 1.0  
 **Status:** ✅ Obrigatório
 
@@ -21,7 +21,7 @@
 - **Instância primária:** PostgreSQL 18 instalado no host Windows (serviço corporativo oficial)  
 - **Acesso por containers:** utilizar `host.docker.internal:5432` com as credenciais definidas em `.env`
 - **Scripts oficiais:** `scripts/backup/run_pg_backup.ps1` gera `pg_dump` e comprime o resultado em `backups/`
-- **Agendamento:** tarefa `GestaoVersus_Postgres_Backup` (Windows Task Scheduler) executa os backups às 12h, 18h e 22h
+- **Agendamento:** ❌ Desativado em 29/11/2025 (ver DECISION_LOG #016). Utilize `scripts/backup/unregister_postgres_backup_tasks.ps1` para remover tarefas antigas ou `register_postgres_backup_tasks.ps1` caso precise reativar manualmente.
 - **Restauração:** usar os scripts em `scripts/backup/` apontando para a instância do host
 - **Monitoramento:** verificar `backups/postgres_backup.log` para acompanhar sucesso ou falhas diárias
 

@@ -58,7 +58,8 @@ class ProjectTask(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     project_id = db.Column(db.Integer, db.ForeignKey("projects.id"), nullable=False)
     what = db.Column(db.Text, nullable=False)
-    who = db.Column(db.String(200))
+    who = db.Column(db.String(200)) # Legacy field, keep for now
+    employee_id = db.Column(db.Integer, db.ForeignKey("employees.id")) # New link to Employee
     due_date = db.Column(db.Date)
     how = db.Column(db.Text)
     amount = db.Column(db.String(100))  # e.g., "R$ 80k"
@@ -66,6 +67,7 @@ class ProjectTask(db.Model):
         db.String(50), default="planned"
     )  # planned, in_progress, completed, cancelled
     notes = db.Column(db.Text)
+    score_weight = db.Column(db.Numeric(10, 2), default=1)
     created_at = db.Column(db.DateTime, default=datetime.utcnow, nullable=False)
     updated_at = db.Column(
         db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow, nullable=False
@@ -78,11 +80,13 @@ class ProjectTask(db.Model):
             "project_id": self.project_id,
             "what": self.what,
             "who": self.who,
+            "employee_id": self.employee_id,
             "due_date": self.due_date.isoformat() if self.due_date else None,
             "how": self.how,
             "amount": self.amount,
             "status": self.status,
             "notes": self.notes,
+            "score_weight": float(self.score_weight) if self.score_weight is not None else 1.0,
             "created_at": self.created_at.isoformat() if self.created_at else None,
             "updated_at": self.updated_at.isoformat() if self.updated_at else None,
         }

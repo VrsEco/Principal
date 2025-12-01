@@ -27,5 +27,9 @@ def init_app(app):
     from . import product_rampup
     from . import note
     from . import ui_catalog
+    from . import employee, role
+    from . import company_performance_settings
+    from . import app_compliance_report
+    from . import cadastro_session
 
     return db, login_manager, migrate

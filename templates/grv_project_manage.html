@@ -58,6 +58,17 @@
     color: #1e293b !important;
   }
 
+  .placeholder-alert {
+    margin: 12px 0 0;
+    padding: 14px 18px;
+    border-radius: 12px;
+    border: 1px solid rgba(251, 191, 36, 0.6);
+    background: #fffbeb;
+    color: #78350f;
+    font-size: 14px;
+    line-height: 1.4;
+  }
+
   .kanban-board-wrapper {
     overflow-x: auto;
     padding-bottom: 16px;
@@ -955,6 +966,12 @@
       </div>
     </div>
 
+    {% if project.is_placeholder %}
+    <div class="placeholder-alert">
+      Conteudo demonstrativo exibido ate que um projeto real seja cadastrado.
+    </div>
+    {% endif %}
+
     <div class="surface-card" style="padding:24px;">
       <div class="top-actions">
         <a href="{{ url_for('grv.grv_projects_projects', company_id=company.id) }}" class="btn-back" data-ref="32">← Voltar para Projetos</a>
@@ -1015,6 +1032,11 @@
         <div class="field">
           <label for="activityAmount">Orçamento (R$)</label>
           <input type="number" id="activityAmount" step="0.01" min="0" placeholder="0.00" data-ref="20">
+        </div>
+        <div class="field">
+          <label for="activityScoreWeight">Peso de Pontuação</label>
+          <input type="number" id="activityScoreWeight" step="0.1" min="0.1" value="1" inputmode="decimal" data-ref="32">
+          <small class="field-hint">Multiplica a pontuação da empresa para esta atividade.</small>
         </div>
       </div>
       
@@ -1168,6 +1190,7 @@
   const fieldWhen = document.getElementById('activityWhen');
   const fieldHow = document.getElementById('activityHow');
   const fieldAmount = document.getElementById('activityAmount');
+  const fieldScoreWeight = document.getElementById('activityScoreWeight');
   const fieldObservations = document.getElementById('activityObservations');
 
   // Log/Diary elements
@@ -1226,6 +1249,23 @@
     feedback._timeout = setTimeout(() => {
       feedback.hidden = true;
     }, 3500);
+  }
+
+  function normalizeScoreWeight(value) {
+    if (value === undefined || value === null || value === '') {
+      return 1;
+    }
+    const parsed = parseFloat(String(value).replace(',', '.'));
+    if (!Number.isFinite(parsed) || parsed <= 0) {
+      return 1;
+    }
+    return parseFloat(parsed.toFixed(2));
+  }
+
+  function formatScoreWeight(value) {
+    const normalized = normalizeScoreWeight(value);
+    const display = Number.isInteger(normalized) ? normalized.toString() : normalized.toFixed(2);
+    return display.replace('.', ',');
   }
 
   // ===== LOG/DIARY FUNCTIONS =====
@@ -1555,6 +1595,7 @@
       <div class="activity-meta">
         ${activity.who ? `Responsável: ${activity.who}` : ''}
         ${activity.when ? ` | Prazo: ${activity.when}` : ''}
+        ${activity.score_weight ? ` | Peso: ${formatScoreWeight(activity.score_weight)}` : ''}
       </div>
     `;
     
@@ -1720,6 +1761,7 @@
 
     const deadline = activity.when ? new Date(activity.when).toLocaleDateString('pt-BR') : '-';
     const budget = activity.amount ? `R$ ${parseFloat(activity.amount).toLocaleString('pt-BR', {minimumFractionDigits: 2})}` : '-';
+    const weightLabel = formatScoreWeight(activity.score_weight);
 
     card.innerHTML = `
       <div class="kanban-card-header">
@@ -1735,6 +1777,7 @@
         ${activity.who ? `<span><strong>Responsável:</strong> ${activity.who}</span>` : ''}
         <span><strong>Prazo:</strong> ${deadline}</span>
         <span><strong>Orçamento:</strong> ${budget}</span>
+        <span><strong>Peso:</strong> ${weightLabel}</span>
       </div>
     `;
 
@@ -1795,7 +1838,10 @@
         throw new Error(data.message || 'Erro ao carregar atividades');
       }
       
-      activities = data.activities || [];
+      activities = (data.activities || []).map(activity => ({
+        ...activity,
+        score_weight: normalizeScoreWeight(activity?.score_weight ?? 1)
+      }));
       renderKanban();
     } catch (error) {
       notify(error.message, 'error');
@@ -2099,6 +2145,7 @@
       fieldWhen.value = activity.when || '';
       fieldHow.value = activity.how || '';
       fieldAmount.value = activity.amount || '';
+      fieldScoreWeight.value = normalizeScoreWeight(activity.score_weight ?? 1);
       
       // Mostrar logs se existirem
       if (activity.logs && activity.logs.length > 0) {
@@ -2112,6 +2159,7 @@
       modalTitle.textContent = 'Nova Atividade';
       fieldId.value = '';
       form.reset();
+      fieldScoreWeight.value = '1';
       logSection.style.display = 'none';
       currentActivity = { logs: [] };
     }
@@ -2156,12 +2204,15 @@
       return;
     }
 
+    const scoreWeightValue = normalizeScoreWeight(fieldScoreWeight.value || 1);
+
     const payload = {
       what,
       who: fieldWho.value.trim() || null,
       when: fieldWhen.value || null,
       how: fieldHow.value.trim() || null,
       amount: fieldAmount.value || null,
+      score_weight: scoreWeightValue,
       observations: getRichTextContent() || null,
       logs: currentActivity && currentActivity.logs ? currentActivity.logs : []
     };

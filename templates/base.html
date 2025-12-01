@@ -587,14 +587,21 @@
 
       <div class="header-actions" id="headerActions">
         {% block header_actions %}
+        {% set _module_links = module_links if module_links is defined else {} %}
         <div class="header-nav">
-          <a href="/main" class="nav-link {% if active_nav == 'ecosystem' %}active{% endif %}">Ecossistema</a>
-          <a href="{{ url_for('pev.pev_dashboard') }}"
+          <a href="/main" class="nav-link {% if active_nav == 'ecosystem' %}active{% endif %}">Principal</a>
+          {% if _module_links.get('pev') %}
+          <a href="{{ _module_links.get('pev') }}"
             class="nav-link {% if active_nav == 'pev' %}active{% endif %}">PEV</a>
-          <a href="{{ url_for('grv.grv_dashboard') }}"
+          {% endif %}
+          {% if _module_links.get('grv') %}
+          <a href="{{ _module_links.get('grv') }}"
             class="nav-link {% if active_nav == 'grv' %}active{% endif %}">GRV</a>
-          <a href="{{ url_for('my_work.dashboard') }}"
+          {% endif %}
+          {% if _module_links.get('my_work') %}
+          <a href="{{ _module_links.get('my_work') }}"
             class="nav-link {% if active_nav == 'my_work' %}active{% endif %}">Minhas Atividades</a>
+          {% endif %}
         </div>
         {% endblock %}
 
@@ -1086,6 +1093,7 @@
   </script>
 
   <script src="{{ url_for('static', filename='js/ui-reference.js') }}"></script>
+  {% block extra_scripts %}{% endblock %}
 </body>
 
 </html>

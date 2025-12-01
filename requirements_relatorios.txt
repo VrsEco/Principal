@@ -5,7 +5,11 @@
 
 # 1. GERAÇÃO DE PDF PROFISSIONAL (PRINCIPAL)
 # WeasyPrint: Converte HTML/CSS em PDF de alta qualidade
-weasyprint==61.0
+# NOTA: WeasyPrint requer GTK/Cairo, não funciona facilmente em Docker
+# weasyprint==61.0
+
+# xhtml2pdf: Alternativa ao WeasyPrint (funciona melhor no Windows e Docker)
+xhtml2pdf==0.2.16
 
 # Dependências do WeasyPrint (instaladas automaticamente):
 # - cairocffi

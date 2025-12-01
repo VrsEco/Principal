@@ -54,3 +54,5 @@ class UiCatalog(db.Model):
     def __repr__(self) -> str:
         return f"<UiCatalog {self.ui_code} ({self.name})>"
 
+
+

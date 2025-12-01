@@ -775,8 +775,8 @@ def test_grv_grv_process_analysis(base_url, timeout):
 
 
 """
-Teste para rota: /grv/company/<int:company_id>/routine/work-distribution
-Endpoint: grv.grv_routine_work_distribution
+Teste para rota: /grv/company/<int:company_id>/process/routines
+Endpoint: grv.grv_process_routines
 Blueprint: grv
 Métodos: GET
 """
@@ -785,9 +785,9 @@ import requests
 from testsprite_tests.conftest import BASE_URL, TIMEOUT, authenticated_session
 
 
-def test_grv_grv_routine_work_distribution(base_url, timeout):
-    """Testa a rota /grv/company/<int:company_id>/routine/work-distribution"""
-    url = f"{base_url}/grv/company/<int:company_id>/routine/work-distribution"
+def test_grv_grv_process_routines(base_url, timeout):
+    """Testa a rota /grv/company/<int:company_id>/process/routines"""
+    url = f"{base_url}/grv/company/<int:company_id>/process/routines"
 
     # Test GET request
     try:
@@ -799,10 +799,10 @@ def test_grv_grv_routine_work_distribution(base_url, timeout):
             401,
             403,
             404,
-        ), f"GET /grv/company/<int:company_id>/routine/work-distribution retornou status inesperado: {response.status_code}"
+        ), f"GET /grv/company/<int:company_id>/process/routines retornou status inesperado: {response.status_code}"
     except requests.exceptions.RequestException as e:
         pytest.fail(
-            f"Erro na requisição GET /grv/company/<int:company_id>/routine/work-distribution: {e}"
+            f"Erro na requisição GET /grv/company/<int:company_id>/process/routines: {e}"
         )
 
 

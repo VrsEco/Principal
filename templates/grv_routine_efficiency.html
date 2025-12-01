@@ -16,10 +16,10 @@
     background: #ffffff;
     border-radius: 14px;
     border: 1px solid rgba(15, 23, 42, 0.08);
-    padding: 22px 24px;
+    padding: 18px 20px;
     box-shadow: 0 12px 32px rgba(15, 23, 42, 0.08);
     display: grid;
-    gap: 20px;
+    gap: 16px;
   }
 
   .efficiency-header {
@@ -48,11 +48,11 @@
   .stats-grid {
     display: grid;
     grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
-    gap: 12px;
+    gap: 10px;
   }
 
   .stat-card {
-    padding: 14px 16px;
+    padding: 12px 14px;
     border-radius: 10px;
     background: linear-gradient(135deg, rgba(59, 130, 246, 0.1), rgba(14, 116, 144, 0.08));
     border: 1px solid rgba(59, 130, 246, 0.18);
@@ -77,6 +77,132 @@
     font-size: 11px;
     color: #64748b;
     margin-top: 4px;
+  }
+
+  .header-actions {
+    display: flex;
+    gap: 8px;
+    flex-wrap: wrap;
+  }
+
+  .detail-button {
+    border: 1px solid rgba(15, 23, 42, 0.15);
+    background: linear-gradient(135deg, rgba(14, 165, 233, 0.15), rgba(59, 130, 246, 0.15));
+    color: #0f172a;
+    font-weight: 600;
+    font-size: 12px;
+    border-radius: 8px;
+    padding: 10px 16px;
+    cursor: pointer;
+    transition: all 0.2s ease;
+  }
+
+  .detail-button:hover {
+    transform: translateY(-1px);
+    box-shadow: 0 8px 16px rgba(15, 23, 42, 0.15);
+  }
+
+  .detail-button.secondary {
+    background: #0f172a;
+    color: #fff;
+  }
+
+  .score-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+    gap: 10px;
+  }
+
+  .score-section {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+  }
+
+  .score-section-title {
+    font-size: 12px;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+    color: #475569;
+  }
+
+  .score-card {
+    border-radius: 14px;
+    border: 1px solid rgba(15, 23, 42, 0.08);
+    padding: 12px;
+    background: linear-gradient(135deg, rgba(248, 250, 252, 0.95), rgba(240, 249, 255, 0.95));
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+  }
+
+  .score-card.total {
+    background: linear-gradient(135deg, rgba(14, 165, 233, 0.12), rgba(59, 130, 246, 0.12));
+    border-color: rgba(14, 165, 233, 0.25);
+  }
+
+  .score-card-title {
+    font-size: 14px;
+    font-weight: 700;
+    color: #0f172a;
+  }
+
+  .score-card-body {
+    display: grid;
+    gap: 8px;
+  }
+
+  .score-card-row {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    font-size: 12px;
+    color: #475569;
+    padding: 3px 0;
+  }
+
+  .score-card-row strong {
+    font-size: 18px;
+    color: #0f172a;
+  }
+
+  .score-chip {
+    display: inline-flex;
+    align-items: center;
+    gap: 3px;
+    font-size: 11px;
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+    font-weight: 600;
+    padding: 2px 6px;
+    border-radius: 999px;
+    background: rgba(15, 23, 42, 0.08);
+    color: #0f172a;
+  }
+
+  .score-chip.positive {
+    background: rgba(16, 185, 129, 0.15);
+    color: #065f46;
+  }
+
+  .score-chip.negative {
+    background: rgba(239, 68, 68, 0.15);
+    color: #7f1d1d;
+  }
+
+  .score-chip.neutral {
+    background: rgba(59, 130, 246, 0.15);
+    color: #1d4ed8;
+  }
+
+  .score-card-detail {
+    font-size: 12px;
+    color: #64748b;
+    display: flex;
+    gap: 6px;
+    flex-wrap: wrap;
+    align-items: center;
   }
 
   /* Filters */
@@ -172,16 +298,16 @@
   /* Collaborators Grid */
   .collaborators-grid {
     display: grid;
-    gap: 16px;
+    gap: 12px;
   }
 
   .collaborator-card {
     border-radius: 12px;
     border: 1px solid rgba(15, 23, 42, 0.08);
     background: #fff;
-    padding: 18px 20px;
+    padding: 14px 16px;
     display: grid;
-    gap: 16px;
+    gap: 12px;
     transition: all 0.2s ease;
   }
 
@@ -194,7 +320,7 @@
     display: flex;
     justify-content: space-between;
     align-items: center;
-    padding-bottom: 14px;
+    padding-bottom: 12px;
     border-bottom: 2px solid rgba(15, 23, 42, 0.06);
   }
 
@@ -210,11 +336,11 @@
   .collaborator-metrics {
     display: grid;
     grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
-    gap: 12px;
+    gap: 10px;
   }
 
   .metric-box {
-    padding: 12px 14px;
+    padding: 10px 12px;
     border-radius: 8px;
     border: 1px solid rgba(15, 23, 42, 0.08);
     background: linear-gradient(135deg, rgba(255, 255, 255, 0.9), rgba(248, 250, 252, 0.9));
@@ -236,6 +362,10 @@
     border-left: 3px solid #ef4444;
   }
 
+  .metric-box.delivery {
+    border-left: 3px solid #0ea5e9;
+  }
+
   .metric-title {
     font-size: 11px;
     font-weight: 600;
@@ -247,14 +377,14 @@
 
   .metric-values {
     display: flex;
-    gap: 16px;
+    gap: 10px;
     flex-wrap: wrap;
   }
 
   .metric-item {
     display: flex;
     flex-direction: column;
-    gap: 2px;
+    gap: 1px;
   }
 
   .metric-item-label {
@@ -290,6 +420,162 @@
     color: #64748b;
     margin-bottom: 8px;
   }
+
+  .metric-values--stacked {
+    flex-direction: column;
+  }
+
+  .metric-subtext {
+    font-size: 11px;
+    color: #94a3b8;
+  }
+
+  .detail-modal {
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: rgba(15, 23, 42, 0.7);
+    display: none;
+    align-items: center;
+    justify-content: center;
+    padding: 20px;
+    z-index: 1010;
+  }
+
+  .detail-modal.is-open {
+    display: flex;
+  }
+
+  .detail-modal__dialog {
+    width: min(1200px, 95vw);
+    max-height: 90vh;
+    background: #fff;
+    border-radius: 16px;
+    overflow: hidden;
+    display: flex;
+    flex-direction: column;
+    box-shadow: 0 25px 50px rgba(15, 23, 42, 0.35);
+  }
+
+  .detail-modal__header {
+    padding: 18px 24px;
+    border-bottom: 1px solid rgba(15, 23, 42, 0.08);
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: 16px;
+  }
+
+  .detail-modal__header h3 {
+    margin: 0;
+    font-size: 18px;
+    color: #0f172a;
+  }
+
+  .detail-modal__header p {
+    margin: 4px 0 0;
+    font-size: 12px;
+    color: #64748b;
+  }
+
+  .detail-modal__close {
+    border: none;
+    background: transparent;
+    font-size: 22px;
+    cursor: pointer;
+    color: #64748b;
+    line-height: 1;
+  }
+
+  .detail-modal__body {
+    padding: 20px 24px;
+    overflow-y: auto;
+    display: flex;
+    flex-direction: column;
+    gap: 20px;
+  }
+
+  .detail-modal__footer {
+    padding: 16px 24px;
+    border-top: 1px solid rgba(15, 23, 42, 0.08);
+    display: flex;
+    justify-content: flex-end;
+  }
+
+  .detail-section__title {
+    font-size: 14px;
+    font-weight: 700;
+    color: #0f172a;
+    margin-bottom: 10px;
+  }
+
+  .detail-table-wrapper {
+    border: 1px solid rgba(15, 23, 42, 0.08);
+    border-radius: 10px;
+    overflow: hidden;
+  }
+
+  .detail-table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 12px;
+  }
+
+  .detail-table th,
+  .detail-table td {
+    padding: 10px 12px;
+    border-bottom: 1px solid rgba(15, 23, 42, 0.06);
+    text-align: left;
+  }
+
+  .detail-table th {
+    background: rgba(248, 250, 252, 0.9);
+    font-size: 11px;
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+    color: #64748b;
+  }
+
+  .detail-table tbody tr:nth-child(even) {
+    background: #fff;
+  }
+
+  .detail-empty {
+    padding: 20px;
+    text-align: center;
+    font-size: 12px;
+    color: #94a3b8;
+  }
+
+  body.modal-open {
+    overflow: hidden;
+  }
+
+  @media print {
+    body * {
+      visibility: hidden;
+    }
+
+    .detail-modal,
+    .detail-modal * {
+      visibility: visible;
+    }
+
+    .detail-modal {
+      position: static;
+      display: block !important;
+      background: #fff;
+      padding: 0;
+    }
+
+    .detail-modal__dialog {
+      width: 100%;
+      max-height: none;
+      box-shadow: none;
+    }
+  }
 </style>
 {% endblock %}
 
@@ -305,9 +591,14 @@
       <div>
         <h1>👥 Gestão da Eficiência</h1>
         <p class="efficiency-description">
-          Visualização consolidada da eficiência dos colaboradores por atividades de projetos, 
+          Visualização consolidada da eficiência dos colaboradores por atividades de projetos,
           instâncias de processos e ocorrências registradas.
         </p>
+      </div>
+      <div class="header-actions">
+        <button class="detail-button" id="btnDetailModal" type="button" data-ref="80">
+          📄 Detalhar / Exportar
+        </button>
       </div>
     </div>
 
@@ -317,7 +608,7 @@
         <div class="stat-label">Em Andamento</div>
         <div class="stat-value" id="statInProgress">0</div>
         <div class="stat-detail">
-          <span style="color: #10b981;">●</span> <span id="statInProgressOnTime">0</span> no prazo · 
+          <span style="color: #10b981;">●</span> <span id="statInProgressOnTime">0</span> no prazo ·
           <span style="color: #ef4444;">●</span> <span id="statInProgressLate">0</span> atrasadas
         </div>
       </div>
@@ -325,32 +616,101 @@
         <div class="stat-label">Concluídas</div>
         <div class="stat-value" id="statCompleted">0</div>
         <div class="stat-detail">
-          <span style="color: #10b981;">●</span> <span id="statCompletedOnTime">0</span> no prazo · 
+          <span style="color: #10b981;">●</span> <span id="statCompletedOnTime">0</span> no prazo ·
           <span style="color: #ef4444;">●</span> <span id="statCompletedLate">0</span> atrasadas
         </div>
       </div>
-      <div class="stat-card">
-        <div class="stat-label">Ocorrências Positivas</div>
-        <div class="stat-value" id="statPositiveCount">0</div>
-        <div class="stat-detail">
-          ⭐ <span id="statPositiveScore">0</span> pontos
+
+    </div>
+
+    <div class="score-section">
+      <div class="score-section-title">Totalizados consolidados</div>
+      <div class="score-grid" aria-live="polite" aria-label="Totalizados consolidados dos colaboradores">
+        <div class="score-card">
+          <div class="score-card-title">Ocorrências</div>
+          <div class="score-card-body">
+            <div class="score-card-row">
+              <span>Positivo</span>
+              <strong id="scoreOccPositive">0</strong>
+            </div>
+            <div class="score-card-row">
+              <span>Negativo</span>
+              <strong id="scoreOccNegative">0</strong>
+            </div>
+            <div class="score-card-row">
+              <span>Total</span>
+              <strong id="scoreOccTotal">0</strong>
+            </div>
+            <div class="score-card-detail">
+              <span class="score-chip positive">Positivas <span id="scoreOccPositiveCount">0</span></span>
+              <span class="score-chip negative">Negativas <span id="scoreOccNegativeCount">0</span></span>
+            </div>
+          </div>
         </div>
-      </div>
-      <div class="stat-card">
-        <div class="stat-label">Ocorrências Negativas</div>
-        <div class="stat-value" id="statNegativeCount">0</div>
-        <div class="stat-detail">
-          ⚠️ <span id="statNegativeScore">0</span> pontos
+        <div class="score-card">
+          <div class="score-card-title">Pontuação em Processos</div>
+          <div class="score-card-body">
+            <div class="score-card-row">
+              <span>Positivo</span>
+              <strong id="scoreProcessPositive">0</strong>
+            </div>
+            <div class="score-card-row">
+              <span>Negativo</span>
+              <strong id="scoreProcessNegative">0</strong>
+            </div>
+            <div class="score-card-row">
+              <span>Total</span>
+              <strong id="scoreProcessTotal">0</strong>
+            </div>
+            <div class="score-card-detail">
+              <span class="score-chip neutral">Registros <span id="scoreProcessCount">0</span></span>
+            </div>
+          </div>
+        </div>
+        <div class="score-card">
+          <div class="score-card-title">Pontuação em Projetos</div>
+          <div class="score-card-body">
+            <div class="score-card-row">
+              <span>Positivo</span>
+              <strong id="scoreProjectPositive">0</strong>
+            </div>
+            <div class="score-card-row">
+              <span>Negativo</span>
+              <strong id="scoreProjectNegative">0</strong>
+            </div>
+            <div class="score-card-row">
+              <span>Total</span>
+              <strong id="scoreProjectTotal">0</strong>
+            </div>
+            <div class="score-card-detail">
+              <span class="score-chip neutral">Registros <span id="scoreProjectCount">0</span></span>
+            </div>
+          </div>
+        </div>
+        <div class="score-card total">
+          <div class="score-card-title">Total Geral</div>
+          <div class="score-card-body">
+            <div class="score-card-row">
+              <span>Positivo</span>
+              <strong id="scoreOverallPositive">0</strong>
+            </div>
+            <div class="score-card-row">
+              <span>Negativo</span>
+              <strong id="scoreOverallNegative">0</strong>
+            </div>
+            <div class="score-card-row">
+              <span>Total</span>
+              <strong id="scoreOverallTotal">0</strong>
+            </div>
+          </div>
         </div>
       </div>
     </div>
 
-    <!-- Filters -->
     <div class="filters-section">
       <div class="filters-header" onclick="toggleFilters()">
         <h3>
-          <span>🔍</span>
-          <span>Filtros</span>
+          <span style="color: #0f172a; margin-right: 6px;">Filtros</span>
         </h3>
         <span class="filters-toggle" id="filtersToggle">▼</span>
       </div>
@@ -370,7 +730,9 @@
           </div>
           <div class="filter-group">
             <label>Ações</label>
-            <button onclick="clearAllFilters()" style="padding: 8px 14px; border-radius: 6px; border: 1px solid rgba(15, 23, 42, 0.15); background: #fff; font-size: 12px; font-weight: 600; cursor: pointer;" data-ref="01">
+            <button onclick="clearAllFilters()"
+              style="padding: 8px 14px; border-radius: 6px; border: 1px solid rgba(15, 23, 42, 0.15); background: #fff; font-size: 12px; font-weight: 600; cursor: pointer;"
+              data-ref="01">
               Limpar Filtros
             </button>
           </div>
@@ -378,209 +740,391 @@
       </div>
     </div>
 
-    <!-- Collaborators Grid -->
     <div class="collaborators-grid" id="collaboratorsGrid">
       <!-- Cards will be inserted here by JavaScript -->
     </div>
   </div>
-</div>
 
-<script>
-const companyId = {{ company.id }};
-let allData = [];
-let filteredData = [];
+  <div class="detail-modal" id="detailModal" aria-hidden="true">
+    <div class="detail-modal__dialog">
+      <div class="detail-modal__header">
+        <div>
+          <h3>Detalhamento das Pontuações</h3>
+          <p>Os dados refletem os filtros aplicados na página.</p>
+        </div>
+        <button class="detail-modal__close" id="detailModalClose" aria-label="Fechar detalhamento">&times;</button>
+      </div>
+      <div class="detail-modal__body">
+        <div class="detail-section">
+          <div class="detail-section__title">Entregas de Projetos</div>
+          <div id="projectDetailWrapper" class="detail-table-wrapper"></div>
+        </div>
+        <div class="detail-section">
+          <div class="detail-section__title">Entregas de Processos</div>
+          <div id="processDetailWrapper" class="detail-table-wrapper"></div>
+        </div>
+        <div class="detail-section">
+          <div class="detail-section__title">Ocorrências</div>
+          <div id="occurrenceDetailWrapper" class="detail-table-wrapper"></div>
+        </div>
+      </div>
+      <div class="detail-modal__footer">
+        <button class="detail-button secondary" id="btnPrintDetails" type="button">
+          🖨️ Imprimir / Exportar PDF
+        </button>
+      </div>
+    </div>
+  </div>
 
-document.addEventListener('DOMContentLoaded', async () => {
-  await loadEfficiencyData();
-  setupFilters();
-  updateStats();
-});
+  <script>
+    const companyId = {{ company.id }};
+    let allData = [];
+    let filteredData = [];
+    let detailModalEl;
+    let detailModalCloseEl;
+    let btnDetailModalEl;
+    let btnPrintDetailsEl;
 
-async function loadEfficiencyData() {
-  try {
-    const url = `/api/companies/${companyId}/efficiency/collaborators`;
-    console.log('Carregando dados de:', url);
-    
-    const response = await fetch(url);
-    console.log('Response status:', response.status);
-    
-    if (!response.ok) {
-      const errorText = await response.text();
-      console.error('Erro HTTP:', response.status, errorText);
-      throw new Error(`Erro ${response.status}: ${errorText}`);
+    function formatScore(value) {
+      return Number(value || 0).toLocaleString('pt-BR', {
+        minimumFractionDigits: 2,
+        maximumFractionDigits: 2
+      });
     }
-    
-    allData = await response.json();
-    console.log('Dados carregados:', allData);
-    
-    filteredData = allData;
-    renderCollaborators();
-    
-    console.log(`${allData.length} colaboradores carregados`);
-  } catch (error) {
-    console.error('Erro ao carregar dados de eficiência:', error);
-    showEmptyState(error.message);
-  }
-}
 
-function setupFilters() {
-  document.getElementById('searchInput').addEventListener('input', applyFilters);
-  document.getElementById('filterActivity').addEventListener('change', applyFilters);
-  
-  // Restore filters collapsed state from localStorage
-  const isCollapsed = localStorage.getItem('efficiencyFiltersCollapsed') === 'true';
-  if (isCollapsed) {
-    document.getElementById('filtersContent').classList.add('collapsed');
-    document.getElementById('filtersToggle').classList.add('collapsed');
-  }
-}
-
-function applyFilters() {
-  const search = document.getElementById('searchInput').value.toLowerCase();
-  const activityFilter = document.getElementById('filterActivity').value;
-  
-  filteredData = allData.filter(data => {
-    // Filter by search
-    if (search && !data.employee_name.toLowerCase().includes(search)) return false;
-    
-    // Filter by activity type
-    if (activityFilter === 'with_activities') {
-      const hasActivities = (data.in_progress.total + data.completed.total) > 0;
-      if (!hasActivities) return false;
-    } else if (activityFilter === 'with_occurrences') {
-      const hasOccurrences = (data.positive_occurrences.count + data.negative_occurrences.count) > 0;
-      if (!hasOccurrences) return false;
+    function formatDate(value) {
+      if (!value) return '—';
+      const date = new Date(value);
+      if (Number.isNaN(date.getTime())) return value;
+      return date.toLocaleDateString('pt-BR');
     }
-    
-    return true;
-  });
-  
-  renderCollaborators();
-  updateStats();
-}
 
-function clearAllFilters() {
-  document.getElementById('searchInput').value = '';
-  document.getElementById('filterActivity').value = '';
-  applyFilters();
-}
+    function formatDateTime(value) {
+      if (!value) return '—';
+      const date = new Date(value);
+      if (Number.isNaN(date.getTime())) return value;
+      return `${date.toLocaleDateString('pt-BR')} ${date.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })}`;
+    }
 
-function toggleFilters() {
-  const content = document.getElementById('filtersContent');
-  const toggle = document.getElementById('filtersToggle');
-  
-  content.classList.toggle('collapsed');
-  toggle.classList.toggle('collapsed');
-  
-  // Save state to localStorage
-  const isCollapsed = content.classList.contains('collapsed');
-  localStorage.setItem('efficiencyFiltersCollapsed', isCollapsed);
-}
+    function formatWeight(value) {
+      return Number(value || 0).toLocaleString('pt-BR', {
+        minimumFractionDigits: 2,
+        maximumFractionDigits: 2
+      });
+    }
 
-function renderCollaborators() {
-  const grid = document.getElementById('collaboratorsGrid');
-  
-  if (filteredData.length === 0) {
-    grid.innerHTML = `
+    function escapeHtml(text) {
+      if (text === null || text === undefined) return '';
+      return String(text)
+        .replace(/&/g, '&amp;')
+        .replace(/</g, '&lt;')
+        .replace(/>/g, '&gt;')
+        .replace(/"/g, '&quot;')
+        .replace(/'/g, '&#039;');
+    }
+
+    function summarizeDelivery(summary = {}) {
+      const positiveScore = Number(summary?.positive?.score || 0);
+      const positiveCount = Number(summary?.positive?.count || 0);
+      const negativeScore = Number(summary?.negative?.score || 0);
+      const negativeCount = Number(summary?.negative?.count || 0);
+      const penaltyScore = Number(summary?.penalty?.score || 0);
+      const registrationScore = Number(summary?.registration?.score || 0);
+      const registrationCount = Number(summary?.registration?.count || 0);
+      const total = Number(summary?.total || 0);
+      return {
+        positive: positiveScore,
+        positiveCount,
+        negative: negativeScore + penaltyScore + registrationScore,
+        negativeBase: negativeScore,
+        penaltyScore,
+        registrationScore,
+        negativeCount: negativeCount + registrationCount,
+        total,
+        raw: summary || {},
+      };
+    }
+
+    function getDeliveryRecordCount(summary = {}) {
+      if (!summary) return 0;
+      return (
+        Number(summary.positive?.count || 0) +
+        Number(summary.negative?.count || 0) +
+        Number(summary.registration?.count || 0)
+      );
+    }
+
+    function toTimestamp(value) {
+      if (!value) return 0;
+      const date = new Date(value);
+      return Number.isNaN(date.getTime()) ? 0 : date.getTime();
+    }
+
+    function translateCategory(category) {
+      switch (category) {
+        case 'on_time':
+          return 'Entrega no prazo';
+        case 'late_completed':
+          return 'Entrega atrasada';
+        case 'late_pending':
+          return 'Pendente em atraso';
+        case 'daily_penalty':
+          return 'Penalidade diária';
+        case 'registration_penalty':
+          return 'Registro em atraso';
+        default:
+          return category || '—';
+      }
+    }
+
+    function buildDelayLabel(record) {
+      if (record.category === 'registration_penalty') {
+        const days = record.registration_delay_business_days ?? 0;
+        return days ? `${days} dia(s) útil(eis)` : '—';
+      }
+      if (record.days_overdue) {
+        return `${record.days_overdue} dia(s)`;
+      }
+      return '—';
+    }
+
+    function getDeliveryContext(record) {
+      if (record.source === 'project') {
+        const code = record.project_code || '';
+        const name = record.project_name || '';
+        return escapeHtml([code, name].filter(Boolean).join(' - ') || 'Projeto');
+      }
+      const code = record.process_code || '';
+      const name = record.process_name || '';
+      return escapeHtml([code, name].filter(Boolean).join(' - ') || 'Processo');
+    }
+
+    document.addEventListener('DOMContentLoaded', async () => {
+      detailModalEl = document.getElementById('detailModal');
+      detailModalCloseEl = document.getElementById('detailModalClose');
+      btnDetailModalEl = document.getElementById('btnDetailModal');
+      btnPrintDetailsEl = document.getElementById('btnPrintDetails');
+
+      if (btnDetailModalEl) {
+        btnDetailModalEl.addEventListener('click', () => {
+          populateDetailModal();
+          openDetailModal();
+        });
+      }
+      if (detailModalCloseEl) {
+        detailModalCloseEl.addEventListener('click', closeDetailModal);
+      }
+      if (detailModalEl) {
+        detailModalEl.addEventListener('click', (event) => {
+          if (event.target === detailModalEl) {
+            closeDetailModal();
+          }
+        });
+      }
+      if (btnPrintDetailsEl) {
+        btnPrintDetailsEl.addEventListener('click', () => window.print());
+      }
+
+      await loadEfficiencyData();
+      setupFilters();
+      updateStats();
+    });
+
+    async function loadEfficiencyData() {
+      try {
+        const url = `/api/companies/${companyId}/efficiency/collaborators`;
+        const response = await fetch(url);
+        if (!response.ok) {
+          const errorText = await response.text();
+          throw new Error(`Erro ${response.status}: ${errorText}`);
+        }
+        allData = await response.json();
+        filteredData = allData;
+        renderCollaborators();
+      } catch (error) {
+        console.error('Erro ao carregar dados de eficiência:', error);
+        showEmptyState(error.message);
+      }
+    }
+
+    function setupFilters() {
+      document.getElementById('searchInput').addEventListener('input', applyFilters);
+      document.getElementById('filterActivity').addEventListener('change', applyFilters);
+      const isCollapsed = localStorage.getItem('efficiencyFiltersCollapsed') === 'true';
+      if (isCollapsed) {
+        document.getElementById('filtersContent').classList.add('collapsed');
+        document.getElementById('filtersToggle').classList.add('collapsed');
+      }
+    }
+
+    function applyFilters() {
+      const search = document.getElementById('searchInput').value.toLowerCase();
+      const activityFilter = document.getElementById('filterActivity').value;
+      filteredData = allData.filter((data) => {
+        if (search && !data.employee_name.toLowerCase().includes(search)) return false;
+        if (activityFilter === 'with_activities') {
+          const hasActivities = data.in_progress.total + data.completed.total > 0;
+          if (!hasActivities) return false;
+        } else if (activityFilter === 'with_occurrences') {
+          const hasOccurrences =
+            data.positive_occurrences.count + data.negative_occurrences.count > 0;
+          if (!hasOccurrences) return false;
+        }
+        return true;
+      });
+      renderCollaborators();
+      updateStats();
+    }
+
+    function clearAllFilters() {
+      document.getElementById('searchInput').value = '';
+      document.getElementById('filterActivity').value = '';
+      applyFilters();
+    }
+
+    function toggleFilters() {
+      const content = document.getElementById('filtersContent');
+      const toggle = document.getElementById('filtersToggle');
+      content.classList.toggle('collapsed');
+      toggle.classList.toggle('collapsed');
+      const isCollapsed = content.classList.contains('collapsed');
+      localStorage.setItem('efficiencyFiltersCollapsed', isCollapsed);
+    }
+
+    function renderCollaborators() {
+      const grid = document.getElementById('collaboratorsGrid');
+      if (filteredData.length === 0) {
+        grid.innerHTML = `
       <div class="empty-state">
         <h3>Nenhum colaborador encontrado</h3>
         <p>Ajuste os filtros ou cadastre colaboradores</p>
       </div>
     `;
-    return;
-  }
-  
-  grid.innerHTML = filteredData.map(data => {
-    const totalActivities = data.in_progress.total + data.completed.total;
-    const totalOccurrences = data.positive_occurrences.count + data.negative_occurrences.count;
-    
-    return `
-      <div class="collaborator-card">
-        <div class="collaborator-card-header">
-          <div class="collaborator-name">
-            👤 ${data.employee_name}
-          </div>
-          <div style="font-size: 12px; color: #64748b;">
-            ${totalActivities} atividades · ${totalOccurrences} ocorrências
-          </div>
-        </div>
-        
-        <div class="collaborator-metrics">
-          <!-- In Progress -->
-          <div class="metric-box in-progress">
-            <div class="metric-title">📍 Em Andamento</div>
-            <div class="metric-values">
-              <div class="metric-item">
-                <div class="metric-item-label">Total</div>
-                <div class="metric-item-value">${data.in_progress.total}</div>
-              </div>
-              <div class="metric-item">
-                <div class="metric-item-label">No Prazo</div>
-                <div class="metric-item-value on-time">${data.in_progress.on_time}</div>
-              </div>
-              <div class="metric-item">
-                <div class="metric-item-label">Atrasadas</div>
-                <div class="metric-item-value late">${data.in_progress.late}</div>
-              </div>
-            </div>
-          </div>
-          
-          <!-- Completed -->
-          <div class="metric-box completed">
-            <div class="metric-title">✅ Concluídas</div>
-            <div class="metric-values">
-              <div class="metric-item">
-                <div class="metric-item-label">Total</div>
-                <div class="metric-item-value">${data.completed.total}</div>
-              </div>
-              <div class="metric-item">
-                <div class="metric-item-label">No Prazo</div>
-                <div class="metric-item-value on-time">${data.completed.on_time}</div>
-              </div>
-              <div class="metric-item">
-                <div class="metric-item-label">Atrasadas</div>
-                <div class="metric-item-value late">${data.completed.late}</div>
-              </div>
-            </div>
-          </div>
-          
-          <!-- Positive Occurrences -->
-          <div class="metric-box positive">
-            <div class="metric-title">✨ Ocorrências Positivas</div>
-            <div class="metric-values">
-              <div class="metric-item">
-                <div class="metric-item-label">Quantidade</div>
-                <div class="metric-item-value">${data.positive_occurrences.count}</div>
-              </div>
-              <div class="metric-item">
-                <div class="metric-item-label">Pontuação</div>
-                <div class="metric-item-value">⭐ ${data.positive_occurrences.score}</div>
-              </div>
-            </div>
-          </div>
-          
-          <!-- Negative Occurrences -->
-          <div class="metric-box negative">
-            <div class="metric-title">⚠️ Ocorrências Negativas</div>
-            <div class="metric-values">
-              <div class="metric-item">
-                <div class="metric-item-label">Quantidade</div>
-                <div class="metric-item-value">${data.negative_occurrences.count}</div>
-              </div>
-              <div class="metric-item">
-                <div class="metric-item-label">Pontuação</div>
-                <div class="metric-item-value">${data.negative_occurrences.score}</div>
-              </div>
-            </div>
-          </div>
-        </div>
-      </div>
-    `;
-  }).join('');
-}
+        return;
+      }
 
-function showEmptyState(errorMessage) {
-  document.getElementById('collaboratorsGrid').innerHTML = `
+      grid.innerHTML = filteredData
+        .map((data) => {
+          const totalActivities = data.in_progress.total + data.completed.total;
+          const totalOccurrences = data.positive_occurrences.count + data.negative_occurrences.count;
+          const deliveryScores = data.delivery_scores || {};
+          const processSummary = summarizeDelivery(deliveryScores.process);
+          const projectSummary = summarizeDelivery(deliveryScores.project);
+          const overallSummary = summarizeDelivery(deliveryScores.overall);
+          const positiveOccScore = Number(data.positive_occurrences.score || 0);
+          const negativeOccScore = Number(data.negative_occurrences.score || 0);
+
+          return `
+        <div class="collaborator-card">
+          <div class="collaborator-card-header">
+            <div class="collaborator-name">
+              👤 ${escapeHtml(data.employee_name)}
+            </div>
+            <div style="font-size: 12px; color: #64748b;">
+              ${totalActivities} atividades · ${totalOccurrences} ocorrências
+            </div>
+          </div>
+          
+          <div class="collaborator-metrics">
+            <div class="metric-box in-progress">
+              <div class="metric-title">📍 Em Andamento</div>
+              <div class="metric-values">
+                <div class="metric-item">
+                  <div class="metric-item-label">Total</div>
+                  <div class="metric-item-value">${data.in_progress.total}</div>
+                </div>
+                <div class="metric-item">
+                  <div class="metric-item-label">No Prazo</div>
+                  <div class="metric-item-value on-time">${data.in_progress.on_time}</div>
+                </div>
+                <div class="metric-item">
+                  <div class="metric-item-label">Atrasadas</div>
+                  <div class="metric-item-value late">${data.in_progress.late}</div>
+                </div>
+              </div>
+            </div>
+            
+            <div class="metric-box completed">
+              <div class="metric-title">✅ Concluídas</div>
+              <div class="metric-values">
+                <div class="metric-item">
+                  <div class="metric-item-label">Total</div>
+                  <div class="metric-item-value">${data.completed.total}</div>
+                </div>
+                <div class="metric-item">
+                  <div class="metric-item-label">No Prazo</div>
+                  <div class="metric-item-value on-time">${data.completed.on_time}</div>
+                </div>
+                <div class="metric-item">
+                  <div class="metric-item-label">Atrasadas</div>
+                  <div class="metric-item-value late">${data.completed.late}</div>
+                </div>
+              </div>
+            </div>
+            
+            <div class="metric-box positive">
+              <div class="metric-title">✨ Ocorrências Positivas</div>
+              <div class="metric-values">
+                <div class="metric-item">
+                  <div class="metric-item-label">Quantidade</div>
+                  <div class="metric-item-value">${data.positive_occurrences.count}</div>
+                </div>
+                <div class="metric-item">
+                  <div class="metric-item-label">Pontuação</div>
+                  <div class="metric-item-value">⭐ ${formatScore(positiveOccScore)}</div>
+                </div>
+              </div>
+            </div>
+            
+            <div class="metric-box negative">
+              <div class="metric-title">⚠️ Ocorrências Negativas</div>
+              <div class="metric-values">
+                <div class="metric-item">
+                  <div class="metric-item-label">Quantidade</div>
+                  <div class="metric-item-value">${data.negative_occurrences.count}</div>
+                </div>
+                <div class="metric-item">
+                  <div class="metric-item-label">Pontuação</div>
+                  <div class="metric-item-value">${formatScore(negativeOccScore)}</div>
+                </div>
+              </div>
+            </div>
+
+            <div class="metric-box delivery">
+              <div class="metric-title">📦 Pontuação das Entregas</div>
+              <div class="metric-values metric-values--stacked">
+                <div class="metric-item">
+                  <div class="metric-item-label">Processos</div>
+                  <div class="metric-item-value on-time">${formatScore(processSummary.positive)}</div>
+                  <div class="metric-subtext">
+                    Neg: ${formatScore(processSummary.negative)} · Total: ${formatScore(processSummary.total)}
+                  </div>
+                </div>
+                <div class="metric-item">
+                  <div class="metric-item-label">Projetos</div>
+                  <div class="metric-item-value on-time">${formatScore(projectSummary.positive)}</div>
+                  <div class="metric-subtext">
+                    Neg: ${formatScore(projectSummary.negative)} · Total: ${formatScore(projectSummary.total)}
+                  </div>
+                </div>
+                <div class="metric-item">
+                  <div class="metric-item-label">Geral</div>
+                  <div class="metric-item-value">${formatScore(overallSummary.total)}</div>
+                  <div class="metric-subtext">
+                    Pos: ${formatScore(overallSummary.positive)} · Neg: ${formatScore(overallSummary.negative)}
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      `;
+        })
+        .join('');
+    }
+
+    function showEmptyState(errorMessage) {
+      document.getElementById('collaboratorsGrid').innerHTML = `
     <div class="empty-state">
       <h3>Erro ao carregar dados</h3>
       <p>${errorMessage || 'Tente recarregar a página'}</p>
@@ -589,48 +1133,262 @@ function showEmptyState(errorMessage) {
       </p>
     </div>
   `;
-}
+    }
 
-function updateStats() {
-  // Aggregate totals from filtered data
-  const totals = filteredData.reduce((acc, data) => {
-    acc.inProgressTotal += data.in_progress.total;
-    acc.inProgressOnTime += data.in_progress.on_time;
-    acc.inProgressLate += data.in_progress.late;
-    acc.completedTotal += data.completed.total;
-    acc.completedOnTime += data.completed.on_time;
-    acc.completedLate += data.completed.late;
-    acc.positiveCount += data.positive_occurrences.count;
-    acc.positiveScore += data.positive_occurrences.score;
-    acc.negativeCount += data.negative_occurrences.count;
-    acc.negativeScore += data.negative_occurrences.score;
-    return acc;
-  }, {
-    inProgressTotal: 0,
-    inProgressOnTime: 0,
-    inProgressLate: 0,
-    completedTotal: 0,
-    completedOnTime: 0,
-    completedLate: 0,
-    positiveCount: 0,
-    positiveScore: 0,
-    negativeCount: 0,
-    negativeScore: 0
-  });
-  
-  document.getElementById('statInProgress').textContent = totals.inProgressTotal;
-  document.getElementById('statInProgressOnTime').textContent = totals.inProgressOnTime;
-  document.getElementById('statInProgressLate').textContent = totals.inProgressLate;
-  
-  document.getElementById('statCompleted').textContent = totals.completedTotal;
-  document.getElementById('statCompletedOnTime').textContent = totals.completedOnTime;
-  document.getElementById('statCompletedLate').textContent = totals.completedLate;
-  
-  document.getElementById('statPositiveCount').textContent = totals.positiveCount;
-  document.getElementById('statPositiveScore').textContent = totals.positiveScore;
-  
-  document.getElementById('statNegativeCount').textContent = totals.negativeCount;
-  document.getElementById('statNegativeScore').textContent = totals.negativeScore;
-}
-</script>
-{% endblock %}
+    function updateStats() {
+      const totals = filteredData.reduce(
+        (acc, data) => {
+          acc.inProgressTotal += data.in_progress.total;
+          acc.inProgressOnTime += data.in_progress.on_time;
+          acc.inProgressLate += data.in_progress.late;
+          acc.completedTotal += data.completed.total;
+          acc.completedOnTime += data.completed.on_time;
+          acc.completedLate += data.completed.late;
+          acc.positiveCount += data.positive_occurrences.count;
+          acc.negativeCount += data.negative_occurrences.count;
+          acc.occurrencePositiveScore += Number(data.positive_occurrences.score || 0);
+          acc.occurrenceNegativeScore += Number(data.negative_occurrences.score || 0);
+
+          const deliveryScores = data.delivery_scores || {};
+          const processSummary = summarizeDelivery(deliveryScores.process);
+          const projectSummary = summarizeDelivery(deliveryScores.project);
+          const overallSummary = summarizeDelivery(deliveryScores.overall);
+
+          acc.processPositive += processSummary.positive;
+          acc.processNegative += processSummary.negative;
+          acc.processTotal += processSummary.total;
+          acc.processCount += getDeliveryRecordCount(deliveryScores.process);
+
+          acc.projectPositive += projectSummary.positive;
+          acc.projectNegative += projectSummary.negative;
+          acc.projectTotal += projectSummary.total;
+          acc.projectCount += getDeliveryRecordCount(deliveryScores.project);
+
+          acc.overallPositive += overallSummary.positive;
+          acc.overallNegative += overallSummary.negative;
+          acc.overallTotal += overallSummary.total;
+          return acc;
+        },
+        {
+          inProgressTotal: 0,
+          inProgressOnTime: 0,
+          inProgressLate: 0,
+          completedTotal: 0,
+          completedOnTime: 0,
+          completedLate: 0,
+          positiveCount: 0,
+          negativeCount: 0,
+          occurrencePositiveScore: 0,
+          occurrenceNegativeScore: 0,
+          processPositive: 0,
+          processNegative: 0,
+          processTotal: 0,
+          processCount: 0,
+          projectPositive: 0,
+          projectNegative: 0,
+          projectTotal: 0,
+          projectCount: 0,
+          overallPositive: 0,
+          overallNegative: 0,
+          overallTotal: 0,
+        }
+      );
+
+      document.getElementById('statInProgress').textContent = totals.inProgressTotal;
+      document.getElementById('statInProgressOnTime').textContent = totals.inProgressOnTime;
+      document.getElementById('statInProgressLate').textContent = totals.inProgressLate;
+      document.getElementById('statCompleted').textContent = totals.completedTotal;
+      document.getElementById('statCompletedOnTime').textContent = totals.completedOnTime;
+      document.getElementById('statCompletedLate').textContent = totals.completedLate;
+
+      const occurrenceTotalScore =
+        totals.occurrencePositiveScore + totals.occurrenceNegativeScore;
+      document.getElementById('scoreOccPositive').textContent = formatScore(
+        totals.occurrencePositiveScore
+      );
+      document.getElementById('scoreOccNegative').textContent = formatScore(
+        totals.occurrenceNegativeScore
+      );
+      document.getElementById('scoreOccTotal').textContent = formatScore(occurrenceTotalScore);
+      document.getElementById('scoreOccPositiveCount').textContent = totals.positiveCount;
+      document.getElementById('scoreOccNegativeCount').textContent = totals.negativeCount;
+
+      document.getElementById('scoreProcessPositive').textContent = formatScore(
+        totals.processPositive
+      );
+      document.getElementById('scoreProcessNegative').textContent = formatScore(
+        totals.processNegative
+      );
+      document.getElementById('scoreProcessTotal').textContent = formatScore(
+        totals.processTotal
+      );
+      document.getElementById('scoreProcessCount').textContent = totals.processCount;
+
+      document.getElementById('scoreProjectPositive').textContent = formatScore(
+        totals.projectPositive
+      );
+      document.getElementById('scoreProjectNegative').textContent = formatScore(
+        totals.projectNegative
+      );
+      document.getElementById('scoreProjectTotal').textContent = formatScore(
+        totals.projectTotal
+      );
+      document.getElementById('scoreProjectCount').textContent = totals.projectCount;
+
+      const totalPositive = totals.overallPositive + totals.occurrencePositiveScore;
+      const totalNegative = totals.overallNegative + totals.occurrenceNegativeScore;
+      const totalScore = totalPositive + totalNegative;
+      document.getElementById('scoreOverallPositive').textContent = formatScore(totalPositive);
+      document.getElementById('scoreOverallNegative').textContent = formatScore(totalNegative);
+      document.getElementById('scoreOverallTotal').textContent = formatScore(totalScore);
+    }
+
+    function compileDetailRecords() {
+      const details = { projects: [], processes: [], occurrences: [] };
+      filteredData.forEach((collab) => {
+        const collabName = collab.employee_name;
+        (collab.delivery_records?.project || []).forEach((record) => {
+          details.projects.push({
+            ...record,
+            employee_name: record.employee_name || collabName,
+          });
+        });
+        (collab.delivery_records?.process || []).forEach((record) => {
+          details.processes.push({
+            ...record,
+            employee_name: record.employee_name || collabName,
+          });
+        });
+        const occurrenceRecords = [
+          ...(collab.occurrence_records?.positive || []),
+          ...(collab.occurrence_records?.negative || []),
+        ].map((record) => ({
+          ...record,
+          employee_name: record.employee_name || collabName,
+        }));
+        details.occurrences.push(...occurrenceRecords);
+      });
+      return details;
+    }
+
+    function renderDeliveryDetail(records, container, contextLabel) {
+      if (!container) return;
+      if (!records.length) {
+        container.innerHTML = `<div class="detail-empty">Nenhuma entrega de ${contextLabel} encontrada.</div>`;
+        return;
+      }
+
+      const sorted = records
+        .slice()
+        .sort(
+          (a, b) =>
+            toTimestamp(b.completion_date || b.due_date) -
+            toTimestamp(a.completion_date || a.due_date)
+        );
+
+      const rows = sorted
+        .map((record) => {
+          const itemTitle = escapeHtml(
+            record.activity_title || record.instance_title || record.activity_code || record.instance_code || '-'
+          );
+          const category = escapeHtml(translateCategory(record.category));
+          const dueDate = formatDate(record.due_date);
+          const completionDate = formatDate(record.completion_date);
+          const recordedAt = formatDateTime(record.completion_recorded_at);
+          const delay = buildDelayLabel(record);
+          return `
+        <tr>
+          <td>${escapeHtml(record.employee_name || '-')}</td>
+          <td>${getDeliveryContext(record)}</td>
+          <td>${itemTitle}</td>
+          <td>${category}</td>
+          <td>${formatWeight(record.weight)}</td>
+          <td>${dueDate}</td>
+          <td>${completionDate}</td>
+          <td>${recordedAt}</td>
+          <td>${escapeHtml(delay)}</td>
+          <td>${formatScore(record.points)}</td>
+        </tr>
+      `;
+        })
+        .join('');
+
+      container.innerHTML = `
+    <table class="detail-table">
+      <thead>
+        <tr>
+          <th>Colaborador</th>
+          <th>Contexto</th>
+          <th>Item</th>
+          <th>Categoria</th>
+          <th>Peso</th>
+          <th>Previsto</th>
+          <th>Conclusão</th>
+          <th>Registro</th>
+          <th>Detalhes</th>
+          <th>Pontos</th>
+        </tr>
+      </thead>
+      <tbody>${rows}</tbody>
+    </table>
+  `;
+    }
+
+    function renderOccurrenceDetail(records, container) {
+      if (!container) return;
+      if (!records.length) {
+        container.innerHTML = '<div class="detail-empty">Nenhuma ocorrência encontrada.</div>';
+        return;
+      }
+
+      const sorted = records.slice().sort((a, b) => toTimestamp(b.created_at) - toTimestamp(a.created_at));
+      const rows = sorted
+        .map((record) => `
+      <tr>
+        <td>${escapeHtml(record.employee_name || '-')}</td>
+        <td>${escapeHtml(record.type || '-')}</td>
+        <td>${escapeHtml(record.title || '-')}</td>
+        <td>${formatScore(record.score)}</td>
+        <td>${formatDateTime(record.created_at)}</td>
+      </tr>
+    `)
+        .join('');
+
+      container.innerHTML = `
+    <table class="detail-table">
+      <thead>
+        <tr>
+          <th>Colaborador</th>
+          <th>Tipo</th>
+          <th>Título</th>
+          <th>Pontos</th>
+          <th>Data</th>
+        </tr>
+      </thead>
+      <tbody>${rows}</tbody>
+    </table>
+  `;
+    }
+
+    function populateDetailModal() {
+      const { projects, processes, occurrences } = compileDetailRecords();
+      renderDeliveryDetail(projects, document.getElementById('projectDetailWrapper'), 'projetos');
+      renderDeliveryDetail(processes, document.getElementById('processDetailWrapper'), 'processos');
+      renderOccurrenceDetail(occurrences, document.getElementById('occurrenceDetailWrapper'));
+    }
+
+    function openDetailModal() {
+      if (!detailModalEl) return;
+      detailModalEl.classList.add('is-open');
+      detailModalEl.setAttribute('aria-hidden', 'false');
+      document.body.classList.add('modal-open');
+    }
+
+    function closeDetailModal() {
+      if (!detailModalEl) return;
+      detailModalEl.classList.remove('is-open');
+      detailModalEl.setAttribute('aria-hidden', 'true');
+      document.body.classList.remove('modal-open');
+    }
+  </script>
+  {% endblock %}

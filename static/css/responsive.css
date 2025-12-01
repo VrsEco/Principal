@@ -590,7 +590,7 @@
     gap: 1.5rem;
   }
 
-  /* Sidebar vira seção normal */
+  /* Sidebar vira seï¿½ï¿½o normal */
   .my-work-sidebar {
     position: static !important;
     order: 2;
@@ -741,7 +741,15 @@
   }
 
   .score-number {
-    font-size: 1.5rem !important;
+    font-size: 1.35rem !important;
+  }
+
+  .score-max {
+    font-size: 0.7rem !important;
+  }
+
+  .score-percent {
+    font-size: 0.6rem !important;
   }
 
   .performance-card__info h3 {

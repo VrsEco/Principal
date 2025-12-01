@@ -1,0 +1,1 @@
+['id', 'company_id', 'name', 'email', 'phone', 'role_id', 'department', 'hire_date', 'status', 'notes', 'created_at', 'updated_at', 'weekly_hours', 'whatsapp', 'user_id']

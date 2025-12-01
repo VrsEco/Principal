@@ -461,14 +461,23 @@
         const macroDisplay = macro.code ? `${escapeHtml(macro.code)} - ${escapeHtml((macro.name||'').toUpperCase())}` : escapeHtml(macro.name||'');
         macroTag = `<span style="display:inline-block;padding:2px 8px;background:${areaColor}15;color:${areaColor};border:1px solid ${areaColor}40;border-radius:6px;font-size:10px;font-weight:600;margin-right:8px;">${macroDisplay}</span>`;
       }
-      const responsibleHtml = p.responsible ? `<div style="color:#1e3a8a;font-size:12px;margin-top:4px;">👤 Dono do Processo: <span style=\"color:#1e3a8a;font-weight:600;\">${escapeHtml(p.responsible)}</span></div>` : '';
+      const ownerName = p.owner || macro?.owner;
+      let ownershipHtml = '';
+      if (ownerName || p.responsible) {
+        ownershipHtml = `
+          <div style="color:#0f172a;font-size:12px;margin-top:4px;display:flex;gap:10px;flex-wrap:wrap;align-items:center;">
+            ${ownerName ? `<span style="color:#1e3a8a;">👤 Dono: <strong style="color:#1e3a8a;">${escapeHtml(ownerName)}</strong></span>` : ''}
+            ${p.responsible ? `<span>👥 Responsável: <strong>${escapeHtml(p.responsible)}</strong></span>` : ''}
+          </div>
+        `;
+      }
       const description = p.description ? `<div style="color:#1e3a8a;font-size:12px;margin-top:4px;">${escapeHtml(p.description)}</div>` : '';
       div.innerHTML = `
         <div style="flex:1;">
           <div style="display:flex;align-items:center;margin-bottom:4px;">
             ${macroTag}<strong style="color:#000000;font-size:15px;">${displayText}</strong>
           </div>
-          ${responsibleHtml}
+          ${ownershipHtml}
           ${description}
         </div>
         <div style="display:flex;gap:6px;">
@@ -862,8 +871,8 @@
               html += `<div class="print-process-card" style="background:#ffffff;border:1px solid rgba(148,163,184,0.4);border-radius:10px;padding:12px;display:flex;flex-direction:column;gap:8px;">`;
               html += `<div class="process-title" style="font-weight:600;font-size:12px;color:#000000;margin:0;line-height:1.3;">${procDisplay}</div>`;
               
-              if(proc.responsible){
-                html += `<div class="process-meta" style="font-size:10px;color:#1e3a8a;">Dono do Processo: ${proc.responsible}</div>`;
+              if (proc.responsible) {
+                html += `<div class="process-meta" style="font-size:10px;color:#0f172a;">Responsável: <strong>${proc.responsible}</strong></div>`;
               }
               
               html += `<div class="badge-group" style="display:flex;flex-direction:row;align-items:center;gap:8px;flex-wrap:wrap;">`;
@@ -1101,7 +1110,7 @@
   if(btnViewMapV2){
     btnViewMapV2.addEventListener('click', () => {
       if(Number.isNaN(companyId)) return;
-      const url = `/grv/company/${companyId}/process/map/pdf2`;
+      const url = `/grv/company/${companyId}/process/map/pdf2?output=html`;
       const opened = window.open(url, '_blank', 'noopener');
       if(!opened && window.showMessage){
         window.showMessage('Não foi possível abrir o PDF MP-2. Verifique o bloqueador de pop-ups.', 'error');
@@ -1112,7 +1121,7 @@
   if(btnViewMapV2){
     btnViewMapV2.addEventListener('click', () => {
       if(Number.isNaN(companyId)) return;
-      const url = `/grv/company/${companyId}/process/map/pdf2`;
+      const url = `/grv/company/${companyId}/process/map/pdf2?output=html`;
       const opened = window.open(url, '_blank', 'noopener');
       if(!opened && window.showMessage){
         window.showMessage('Não foi possível abrir o PDF MP-2. Verifique o bloqueador de pop-ups.', 'error');
@@ -1206,4 +1215,3 @@
   loadEmployees();
   renderProcessMap();
 })();
-

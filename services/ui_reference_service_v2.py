@@ -97,6 +97,20 @@ class UIReferenceServiceV2:
             conn.close()
 
     @staticmethod
+    def update_page_route(page_id: int, page_route: str) -> bool:
+        conn = connect()
+        try:
+            cur = conn.cursor()
+            cur.execute(
+                "UPDATE ui_pages_v2 SET page_route=%s WHERE id=%s",
+                (page_route, page_id),
+            )
+            conn.commit()
+            return cur.rowcount > 0
+        finally:
+            conn.close()
+
+    @staticmethod
     def register_element(
         page_code: str,
         element_name: str,

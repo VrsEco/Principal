@@ -28,8 +28,8 @@
             },
             {
                 'id': 'process-routines',
-                'name': 'Rotinas de Processos',
-                'url': url_for('routines_management', company_id=company.id),
+                'name': 'Rotina de Processos',
+                'url': nav_url('grv.grv_process_routines', company_id=company.id, fallback='/grv/company/%s/process/routines' % company.id),
                 'description': 'Gerenciar rotinas operacionais'
             }
         ]

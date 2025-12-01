@@ -18,12 +18,14 @@ ENV PYTHONUNBUFFERED=1 \
     PIP_NO_CACHE_DIR=1 \
     PIP_DISABLE_PIP_VERSION_CHECK=1
 
-# Instalar dependências do sistema
+# Instalar dependências do sistema (incluindo para compilar pycairo)
 RUN apt-get update && apt-get install -y --no-install-recommends \
     gcc \
     g++ \
     libpq-dev \
     postgresql-client \
+    pkg-config \
+    libcairo2-dev \
     && rm -rf /var/lib/apt/lists/*
 
 # Criar diretório de trabalho
@@ -31,10 +33,12 @@ WORKDIR /app
 
 # Copiar apenas requirements primeiro (cache de layers)
 COPY requirements.txt .
+COPY requirements_relatorios.txt .
 
 # Instalar dependências Python
 RUN pip install --upgrade pip && \
-    pip install -r requirements.txt
+    pip install -r requirements.txt && \
+    pip install -r requirements_relatorios.txt
 
 # ============================================
 # Stage 2: Runtime
@@ -46,29 +50,16 @@ ENV PYTHONUNBUFFERED=1 \
     FLASK_APP=app_pev.py \
     FLASK_ENV=production
 
-# Instalar apenas dependências runtime necessárias + Playwright dependencies
+# Instalar dependências runtime e build necessárias para xhtml2pdf
 RUN apt-get update && apt-get install -y --no-install-recommends \
     libpq-dev \
     postgresql-client \
     curl \
-    # Playwright browser dependencies
-    libnss3 \
-    libnspr4 \
-    libatk1.0-0 \
-    libatk-bridge2.0-0 \
-    libcups2 \
-    libdrm2 \
-    libdbus-1-3 \
-    libxkbcommon0 \
-    libxcomposite1 \
-    libxdamage1 \
-    libxfixes3 \
-    libxrandr2 \
-    libgbm1 \
-    libpango-1.0-0 \
-    libcairo2 \
-    libasound2 \
-    libatspi2.0-0 \
+    # Dependências para compilar pycairo (necessário para xhtml2pdf)
+    gcc \
+    g++ \
+    pkg-config \
+    libcairo2-dev \
     && rm -rf /var/lib/apt/lists/*
 
 # Criar usuário não-root para segurança
@@ -82,9 +73,6 @@ WORKDIR /app
 # Copiar dependências instaladas do builder
 COPY --from=builder /usr/local/lib/python3.9/site-packages /usr/local/lib/python3.9/site-packages
 COPY --from=builder /usr/local/bin /usr/local/bin
-
-# Instalar browsers do Playwright (antes de mudar para appuser)
-RUN playwright install --with-deps chromium
 
 # Copiar código da aplicação
 COPY --chown=appuser:appuser . .

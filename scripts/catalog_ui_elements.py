@@ -69,11 +69,13 @@ def read_file(path: Path) -> Optional[str]:
     return None
 
 
-def infer_route(template_path: Path, content: str) -> str:
-    route_match = re.search(r"Route:\s*([/\w\-\._]+)", content, flags=re.IGNORECASE)
+def infer_route(template_path: Path, content: str) -> tuple[str, bool]:
+    route_match = re.search(
+        r"Route:\s*([/<>:\w\-\._]+)", content, flags=re.IGNORECASE
+    )
     if route_match:
-        return route_match.group(1)
-    return "/" + template_path.with_suffix("").as_posix()
+        return route_match.group(1), True
+    return "/" + template_path.with_suffix("").as_posix(), False
 
 
 def infer_page_name(template_path: Path, content: str) -> str:
@@ -155,11 +157,11 @@ class UICatalogV2:
             return
 
         rel_path = template_path.relative_to(self.templates_dir)
-        route = infer_route(rel_path, content)
+        route, has_route_hint = infer_route(rel_path, content)
         page_name = infer_page_name(rel_path, content)
         elements = extract_elements(content)
 
-        page_code = self._ensure_page(rel_path, page_name, route)
+        page_code = self._ensure_page(rel_path, page_name, route, has_route_hint)
         if not page_code:
             LOGGER.error(
                 "Skipping element sync because page code is empty for %s", rel_path
@@ -168,11 +170,30 @@ class UICatalogV2:
 
         self._sync_elements(page_code, elements)
 
-    def _ensure_page(self, rel_path: Path, page_name: str, route: str) -> Optional[str]:
+    def _ensure_page(
+        self, rel_path: Path, page_name: str, route: str, has_route_hint: bool
+    ) -> Optional[str]:
         template_key = rel_path.as_posix()
         existing = UIReferenceServiceV2.get_page_by_template(template_key)
         if existing and existing.get("active"):
             self.pages_reused += 1
+            existing_route = (existing.get("page_route") or "").strip()
+            normalized_route = route.strip()
+            if (
+                has_route_hint
+                and normalized_route
+                and normalized_route != existing_route
+            ):
+                updated = UIReferenceServiceV2.update_page_route(
+                    existing["id"], normalized_route
+                )
+                if updated:
+                    LOGGER.info(
+                        "Updated route for %s (%s -> %s)",
+                        existing["page_code"],
+                        existing_route or "<empty>",
+                        normalized_route,
+                    )
             LOGGER.debug("Reused page %s -> %s", existing["page_code"], template_key)
             return normalize_code(existing["page_code"])
 

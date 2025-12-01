@@ -194,3 +194,5 @@ Scripts que podem ser úteis ocasionalmente:
 
 
 
+
+

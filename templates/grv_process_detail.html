@@ -72,6 +72,17 @@
     color: #fef08a;
   }
 
+  .placeholder-alert {
+    margin: 16px 0;
+    padding: 14px 18px;
+    border-radius: 12px;
+    border: 1px solid rgba(251, 191, 36, 0.6);
+    background: #fffbeb;
+    color: #78350f;
+    font-size: 14px;
+    line-height: 1.4;
+  }
+
   .detail-tabs {
     display: flex;
     flex-wrap: wrap;
@@ -1770,6 +1781,12 @@
         </div>
       </div>
 
+      {% if process.is_placeholder %}
+      <div class="placeholder-alert">
+        {{ process.placeholder_notice or 'Conteudo demonstrativo ate que o processo seja cadastrado.' }}
+      </div>
+      {% endif %}
+
       <div class="process-detail-summary">
         <div class="summary-card">
           <span class="label">Responsável</span>
@@ -1917,7 +1934,7 @@
           <p>Configure gatilhos de disparo e prazos para execução das rotinas deste processo.</p>
           
           <div style="margin-top: 20px;">
-            <a href="{{ url_for('routines_management', company_id=company.id) }}" class="button button-primary" style="display: inline-block; padding: 12px 24px; background: #3182ce; color: white; text-decoration: none; border-radius: 6px; font-weight: 500;" data-ref="55">
+            <a href="{{ nav_url('grv.grv_process_routines', company_id=company.id, fallback='/grv/company/%s/process/routines' % company.id) }}" class="button button-primary" style="display: inline-block; padding: 12px 24px; background: #3182ce; color: white; text-decoration: none; border-radius: 6px; font-weight: 500;" data-ref="55">
               ⚙️ Gerenciar Rotinas da Empresa
             </a>
           </div>

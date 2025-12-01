@@ -8,10 +8,18 @@ Gerencia atividades pessoais, de equipe e da empresa
 
 from datetime import datetime, timedelta, date
 from decimal import Decimal
-from typing import List, Dict, Any, Optional, Sequence
+from typing import List, Dict, Any, Optional, Sequence, Tuple, Set
 import json
 
 from database.postgres_helper import connect as pg_connect
+from utils.project_activity_utils import normalize_project_activities
+
+DELIVERY_TAGS = [
+    "delivered_on_time",
+    "delivered_late",
+    "executing_on_time",
+    "executing_late",
+]
 
 
 def get_employee_from_user(user_id: int) -> Optional[int]:
@@ -87,8 +95,776 @@ def get_employee_from_user(user_id: int) -> Optional[int]:
         return None
 
 
+_EMPLOYEE_HAS_IS_DELETED_COLUMN: Optional[bool] = None
+_PROJECT_ACTIVITIES_TABLE_EXISTS: Optional[bool] = None
+_PROCESS_COLLAB_TABLE_EXISTS: Optional[bool] = None
+
+
+def _build_employee_active_filter(cursor) -> str:
+    """Return SQL snippet that filters out deleted/inactive employees."""
+    global _EMPLOYEE_HAS_IS_DELETED_COLUMN
+
+    if _EMPLOYEE_HAS_IS_DELETED_COLUMN is None:
+        cursor.execute(
+            """
+            SELECT 1
+            FROM information_schema.columns
+            WHERE table_name = 'employees'
+              AND column_name = 'is_deleted'
+            LIMIT 1
+            """
+        )
+        _EMPLOYEE_HAS_IS_DELETED_COLUMN = cursor.fetchone() is not None
+
+    if _EMPLOYEE_HAS_IS_DELETED_COLUMN:
+        return "AND COALESCE(e.is_deleted, FALSE) = FALSE"
+
+    # Fallback for schemas sem coluna is_deleted
+    return "AND (e.status IS NULL OR LOWER(e.status) <> 'inactive')"
+
+
+def _project_activities_table_available(cursor) -> bool:
+    """Detecta se a tabela project_activities existe no schema atual."""
+    global _PROJECT_ACTIVITIES_TABLE_EXISTS
+    if _PROJECT_ACTIVITIES_TABLE_EXISTS is None:
+        cursor.execute(
+            """
+            SELECT EXISTS (
+                SELECT 1
+                FROM information_schema.tables
+                WHERE table_schema = 'public'
+                  AND table_name = 'project_activities'
+            )
+            """
+        )
+        row = cursor.fetchone()
+        if isinstance(row, dict):
+            exists = list(row.values())[0]
+        else:
+            exists = row[0] if row else False
+        _PROJECT_ACTIVITIES_TABLE_EXISTS = bool(exists)
+    return bool(_PROJECT_ACTIVITIES_TABLE_EXISTS)
+
+
+def _process_collaborators_table_available(cursor) -> bool:
+    """Detecta se process_instance_collaborators está disponível."""
+    global _PROCESS_COLLAB_TABLE_EXISTS
+    if _PROCESS_COLLAB_TABLE_EXISTS is None:
+        cursor.execute(
+            """
+            SELECT EXISTS (
+                SELECT 1
+                FROM information_schema.tables
+                WHERE table_schema = 'public'
+                  AND table_name = 'process_instance_collaborators'
+            )
+            """
+        )
+        row = cursor.fetchone()
+        if isinstance(row, dict):
+            exists = list(row.values())[0]
+        else:
+            exists = row[0] if row else False
+        _PROCESS_COLLAB_TABLE_EXISTS = bool(exists)
+    return bool(_PROCESS_COLLAB_TABLE_EXISTS)
+
+
+def get_user_employees(user_id: int) -> List[Dict[str, Any]]:
+    """Return companies/employees associated with a user.
+
+    First tries the explicit FK `employees.user_id`, and if nothing is found it
+    falls back to matching by e-mail (covers legacy records that still lack
+    the user_id linkage).
+    """
+    conn = pg_connect()
+    cursor = conn.cursor()
+
+    def _fetch_by_user_id() -> List[tuple]:
+        cursor.execute(
+            f"""
+            SELECT e.id,
+                   e.name,
+                   e.email,
+                   e.company_id,
+                   c.name AS company_name
+            FROM employees e
+            LEFT JOIN companies c ON c.id = e.company_id
+            WHERE e.user_id = %s
+              {_build_employee_active_filter(cursor)}
+            """,
+            (user_id,),
+        )
+        return cursor.fetchall()
+
+    def _fetch_by_email(email: str) -> List[tuple]:
+        cursor.execute(
+            f"""
+            SELECT e.id,
+                   e.name,
+                   e.email,
+                   e.company_id,
+                   c.name AS company_name
+            FROM employees e
+            LEFT JOIN companies c ON c.id = e.company_id
+            WHERE LOWER(TRIM(e.email)) = LOWER(TRIM(%s))
+              {_build_employee_active_filter(cursor)}
+            """,
+            (email,),
+        )
+        return cursor.fetchall()
+
+    try:
+        rows = _fetch_by_user_id()
+        if not rows:
+            from models.user import User  # Import lazily to avoid circular refs
+
+            user = User.query.get(user_id)
+            if user and user.email:
+                rows = _fetch_by_email(user.email)
+
+        companies: Dict[int, Dict[str, Any]] = {}
+        for row in rows:
+            employee_id, employee_name, employee_email, company_id, company_name = row
+            if not company_id:
+                # Ignore orphan employees that are not linked to a company yet
+                continue
+
+            companies[company_id] = {
+                "company_id": company_id,
+                "company_name": company_name or "Empresa sem nome",
+                "employee_id": employee_id,
+                "employee_name": employee_name,
+                "employee_email": employee_email,
+            }
+
+        return list(companies.values())
+    except Exception:
+        raise
+    finally:
+        conn.close()
+
+
+def get_filter_options(user_id: int) -> Dict[str, List[Dict[str, Any]]]:
+    """Return company, collaborator, project and process directories for filters."""
+    base_companies = get_user_employees(user_id)
+    unique_companies: List[Dict[str, Any]] = []
+    seen_ids = set()
+
+    for company in base_companies:
+        company_id = company.get("company_id")
+        if not company_id or company_id in seen_ids:
+            continue
+        seen_ids.add(company_id)
+        unique_companies.append(
+            {
+                "company_id": company_id,
+                "company_name": company.get("company_name") or "Empresa",
+            }
+        )
+
+    company_ids = [item["company_id"] for item in unique_companies]
+    result = {
+        "companies": unique_companies,
+        "collaborators": [],
+        "projects": [],
+        "processes": [],
+    }
+
+    if not company_ids:
+        return result
+
+    conn = pg_connect()
+    cursor = conn.cursor()
+    try:
+        result["collaborators"] = _fetch_collaborator_directory(cursor, company_ids)
+        result["projects"] = _fetch_project_directory(cursor, company_ids)
+        result["processes"] = _fetch_process_directory(cursor, company_ids)
+        return result
+    finally:
+        conn.close()
+
+
+def _fetch_collaborator_directory(cursor, company_ids: List[int]) -> List[Dict[str, Any]]:
+    if not company_ids:
+        return []
+
+    placeholders = ",".join(["%s"] * len(company_ids))
+    active_filter = _build_employee_active_filter(cursor)
+    cursor.execute(
+        f"""
+        SELECT e.id,
+               e.name,
+               e.email,
+               e.company_id,
+               c.name AS company_name
+        FROM employees e
+        LEFT JOIN companies c ON c.id = e.company_id
+        WHERE e.company_id IN ({placeholders})
+          {active_filter}
+        ORDER BY c.name, e.name
+        """,
+        tuple(company_ids),
+    )
+
+    collaborators = []
+    for row in cursor.fetchall():
+        collaborator_id = row[0]
+        if collaborator_id is None:
+            continue
+        collaborators.append(
+            {
+                "id": collaborator_id,
+                "name": row[1] or "Colaborador",
+                "email": row[2],
+                "company_id": row[3],
+                "company_name": row[4],
+            }
+        )
+    return collaborators
+
+
+def _fetch_project_directory(cursor, company_ids: List[int]) -> List[Dict[str, Any]]:
+    if not company_ids:
+        return []
+
+    placeholders = ",".join(["%s"] * len(company_ids))
+    cursor.execute(
+        f"""
+        SELECT cp.id,
+               cp.title,
+               cp.company_id,
+               c.name AS company_name
+        FROM company_projects cp
+        LEFT JOIN companies c ON c.id = cp.company_id
+        WHERE cp.company_id IN ({placeholders})
+        ORDER BY c.name, cp.title
+        """,
+        tuple(company_ids),
+    )
+    projects = []
+    for row in cursor.fetchall():
+        project_id = row[0]
+        if project_id is None:
+            continue
+        projects.append(
+            {
+                "id": project_id,
+                "title": row[1] or "Projeto sem título",
+                "company_id": row[2],
+                "company_name": row[3],
+            }
+        )
+    return projects
+
+
+def _build_in_clause(values: Sequence[int], prefix: str) -> Tuple[str, Dict[str, int]]:
+    placeholders = []
+    params: Dict[str, int] = {}
+    for idx, value in enumerate(values):
+        key = f"{prefix}_{idx}"
+        placeholders.append(f":{key}")
+        params[key] = value
+    clause = ", ".join(placeholders) if placeholders else ""
+    return clause, params
+
+
+def _parse_project_activities_payload(raw: Any) -> List[Dict[str, Any]]:
+    """Converte payloads variados em lista de dicts."""
+    if not raw:
+        return []
+    if isinstance(raw, list):
+        return [item for item in raw if isinstance(item, dict)]
+    if isinstance(raw, (bytes, bytearray)):
+        raw = raw.decode("utf-8", errors="ignore")
+    if isinstance(raw, str):
+        try:
+            parsed = json.loads(raw)
+            if isinstance(parsed, list):
+                return [item for item in parsed if isinstance(item, dict)]
+        except Exception:
+            return []
+    return []
+
+
+def _extract_activity_employee_ids(activity: Dict[str, Any]) -> Set[int]:
+    """Retorna conjunto de employee_ids referenciados na atividade."""
+    ids: Set[int] = set()
+
+    def _collect(value: Any):
+        candidate = _safe_int(value)
+        if candidate:
+            ids.add(candidate)
+
+    for key in ("responsible_id", "executor_id", "owner_id", "employee_id"):
+        _collect(activity.get(key))
+
+    collaborators = activity.get("collaborators") or activity.get(
+        "assigned_collaborators"
+    )
+    if isinstance(collaborators, list):
+        for entry in collaborators:
+            if isinstance(entry, dict):
+                _collect(entry.get("id") or entry.get("employee_id"))
+            else:
+                _collect(entry)
+
+    return ids
+
+
+def _build_activity_row_from_json(
+    project_row: Dict[str, Any], activity: Dict[str, Any]
+) -> Dict[str, Any]:
+    """Monta estrutura compatível com _project_activity_row_from_normalized."""
+    deadline = (
+        activity.get("deadline")
+        or activity.get("when")
+        or activity.get("due_date")
+        or activity.get("completion_date")
+    )
+    return {
+        "activity_id": activity.get("id"),
+        "activity_code": activity.get("code"),
+        "activity_title": activity.get("title") or activity.get("name"),
+        "activity_description": activity.get("description")
+        or activity.get("notes"),
+        "activity_status": activity.get("status"),
+        "activity_stage": activity.get("stage"),
+        "activity_priority": activity.get("priority"),
+        "activity_deadline": deadline,
+        "estimated_hours": activity.get("estimated_hours"),
+        "worked_hours": activity.get("worked_hours") or activity.get("actual_hours"),
+        "metadata": json.dumps(activity, ensure_ascii=False),
+        "project_id": project_row.get("id"),
+        "responsible_id": _safe_int(activity.get("responsible_id")),
+        "responsible_name": activity.get("responsible_name")
+        or activity.get("responsible"),
+        "executor_id": _safe_int(activity.get("executor_id")),
+        "executor_name": activity.get("executor_name") or activity.get("executor"),
+        "company_id": project_row.get("company_id"),
+        "plan_id": project_row.get("plan_id"),
+        "project_title": project_row.get("title"),
+        "project_description": project_row.get("description"),
+        "project_status": project_row.get("status"),
+        "project_priority": project_row.get("priority"),
+        "start_date": project_row.get("start_date"),
+        "end_date": project_row.get("end_date"),
+        "created_at": project_row.get("created_at"),
+        "updated_at": project_row.get("updated_at"),
+        "project_code": project_row.get("code"),
+        "plan_name": project_row.get("plan_name"),
+        "plan_mode": project_row.get("plan_mode"),
+        "plan_origin": project_row.get("plan_origin"),
+        "company_name": project_row.get("company_name"),
+    }
+
+
+def _project_activity_row_from_normalized(row) -> Dict[str, Any]:
+    """Converte linha normalizada em estrutura esperada pelo serializer legado."""
+    data = dict(row)
+    return {
+        "id": data.get("activity_id"),
+        "company_id": data.get("company_id"),
+        "plan_id": data.get("plan_id"),
+        "title": data.get("activity_title") or data.get("project_title"),
+        "description": data.get("activity_description") or data.get("project_description"),
+        "status": data.get("activity_status") or data.get("project_status"),
+        "priority": data.get("activity_priority") or data.get("project_priority"),
+        "responsible_id": data.get("responsible_id"),
+        "responsible_name": data.get("responsible_name"),
+        "executor_id": data.get("executor_id"),
+        "executor_name": data.get("executor_name"),
+        "start_date": data.get("start_date"),
+        "end_date": data.get("end_date"),
+        "deadline_date": data.get("activity_deadline") or data.get("end_date"),
+        "estimated_hours": data.get("estimated_hours"),
+        "worked_hours": data.get("worked_hours"),
+        "company_name": data.get("company_name"),
+        "plan_name": data.get("plan_name"),
+        "plan_origin": data.get("plan_origin"),
+        "plan_mode": data.get("plan_mode"),
+        "project_id": data.get("project_id") or data.get("id"),
+        "project_code": data.get("project_code"),
+        "project_title": data.get("project_title"),
+        "activity_code": data.get("activity_code"),
+        "metadata": data.get("metadata"),
+    }
+
+
+def _fetch_normalized_project_rows(
+    cursor,
+    employee_ids: Optional[Sequence[int]] = None,
+    company_ids: Optional[Sequence[int]] = None,
+    project_ids: Optional[Sequence[int]] = None,
+) -> List[Dict[str, Any]]:
+    conditions = ["pa.is_deleted = FALSE"]
+    params: Dict[str, Any] = {}
+    filters_applied = False
+
+    if employee_ids:
+        clause, clause_params = _build_in_clause(employee_ids, "target_ids")
+        if clause:
+            params.update(clause_params)
+            conditions.append(
+                f"(pa.responsible_id IN ({clause}) OR pa.executor_id IN ({clause}))"
+            )
+            filters_applied = True
+
+    if company_ids:
+        clause, clause_params = _build_in_clause(company_ids, "company_ids")
+        if clause:
+            params.update(clause_params)
+            conditions.append(f"cp.company_id IN ({clause})")
+            filters_applied = True
+
+    if project_ids:
+        clause, clause_params = _build_in_clause(project_ids, "project_ids")
+        if clause:
+            params.update(clause_params)
+            conditions.append(f"pa.project_id IN ({clause})")
+            filters_applied = True
+
+    if not filters_applied:
+        return []
+
+    if not _project_activities_table_available(cursor):
+        return _fetch_project_rows_from_json(
+            cursor,
+            employee_ids=employee_ids,
+            company_ids=company_ids,
+            project_ids=project_ids,
+        )
+
+    query = f"""
+        SELECT
+            pa.id AS activity_id,
+            pa.code AS activity_code,
+            pa.title AS activity_title,
+            pa.description AS activity_description,
+            pa.status AS activity_status,
+            pa.stage AS activity_stage,
+            pa.priority AS activity_priority,
+            pa.deadline AS activity_deadline,
+            pa.estimated_hours,
+            pa.worked_hours,
+            pa.amount,
+            pa.metadata,
+            pa.project_id,
+            pa.responsible_id,
+            pa.executor_id,
+            resp.name AS responsible_name,
+            exec.name AS executor_name,
+            cp.company_id,
+            cp.plan_id,
+            cp.title AS project_title,
+            cp.description AS project_description,
+            cp.status AS project_status,
+            cp.priority AS project_priority,
+            cp.start_date,
+            cp.end_date,
+            cp.created_at,
+            cp.updated_at,
+            cp.code AS project_code,
+            pl.name AS plan_name,
+            c.name AS company_name
+        FROM project_activities pa
+        JOIN company_projects cp ON cp.id = pa.project_id
+        LEFT JOIN employees resp ON resp.id = pa.responsible_id
+        LEFT JOIN employees exec ON exec.id = pa.executor_id
+        LEFT JOIN plans pl ON pl.id = cp.plan_id
+        LEFT JOIN companies c ON c.id = cp.company_id
+        WHERE {" AND ".join(conditions)}
+        ORDER BY pa.deadline NULLS LAST, pa.updated_at DESC
+    """
+
+    cursor.execute(query, params)
+    rows = cursor.fetchall()
+    return [_project_activity_row_from_normalized(row) for row in rows]
+
+
+def _fetch_project_rows_from_json(
+    cursor,
+    employee_ids: Optional[Sequence[int]] = None,
+    company_ids: Optional[Sequence[int]] = None,
+    project_ids: Optional[Sequence[int]] = None,
+) -> List[Dict[str, Any]]:
+    employee_filter = {
+        value for value in (_safe_int(eid) for eid in (employee_ids or [])) if value
+    }
+
+    conditions: List[str] = []
+    params: List[Any] = []
+
+    if company_ids:
+        placeholders = ",".join(["%s"] * len(company_ids))
+        conditions.append(f"cp.company_id IN ({placeholders})")
+        params.extend(company_ids)
+
+    if project_ids:
+        placeholders = ",".join(["%s"] * len(project_ids))
+        conditions.append(f"cp.id IN ({placeholders})")
+        params.extend(project_ids)
+
+    where_clause = " AND ".join(conditions) if conditions else "TRUE"
+    cursor.execute(
+        f"""
+        SELECT
+            cp.id,
+            cp.company_id,
+            cp.plan_id,
+            cp.title,
+            cp.description,
+            cp.status,
+            cp.priority,
+            cp.start_date,
+            cp.end_date,
+            cp.created_at,
+            cp.updated_at,
+            cp.code,
+            cp.activities,
+            pl.name AS plan_name,
+            pl.plan_mode,
+            c.name AS company_name,
+            c.client_code AS company_code
+        FROM company_projects cp
+        LEFT JOIN plans pl ON pl.id = cp.plan_id
+        LEFT JOIN companies c ON c.id = cp.company_id
+        WHERE {where_clause}
+        """,
+        tuple(params),
+    )
+
+    rows = cursor.fetchall()
+    results: List[Dict[str, Any]] = []
+    for row in rows:
+        project_row = dict(row)
+        activities = _parse_project_activities_payload(project_row.get("activities"))
+        normalized, _, _ = normalize_project_activities(
+            activities, project_row.get("code"), project_row.get("company_code")
+        )
+        for activity in normalized:
+            if employee_filter:
+                if not (_extract_activity_employee_ids(activity) & employee_filter):
+                    continue
+            payload = _build_activity_row_from_json(project_row, activity)
+            results.append(_project_activity_row_from_normalized(payload))
+
+    return results
+
+
+def _fetch_process_directory(cursor, company_ids: List[int]) -> List[Dict[str, Any]]:
+    if not company_ids:
+        return []
+
+    placeholders = ",".join(["%s"] * len(company_ids))
+    cursor.execute(
+        f"""
+        SELECT pi.id,
+               pi.title,
+               pi.company_id,
+               c.name AS company_name
+        FROM process_instances pi
+        LEFT JOIN companies c ON c.id = pi.company_id
+        WHERE pi.company_id IN ({placeholders})
+        ORDER BY c.name, pi.title
+        """,
+        tuple(company_ids),
+    )
+    processes = []
+    for row in cursor.fetchall():
+        process_id = row[0]
+        if process_id is None:
+            continue
+        processes.append(
+            {
+                "id": process_id,
+                "title": row[1] or "Processo sem título",
+                "company_id": row[2],
+                "company_name": row[3],
+            }
+    )
+    return processes
+
+
+def _process_row_from_normalized(row) -> Dict[str, Any]:
+    data = dict(row)
+    collaborators = data.get("normalized_collaborators")
+    if isinstance(collaborators, list):
+        assigned_collaborators = json.dumps(collaborators)
+    else:
+        assigned_collaborators = data.get("assigned_collaborators")
+
+    return {
+        "id": data.get("id"),
+        "company_id": data.get("company_id"),
+        "process_id": data.get("process_id") or data.get("id"),
+        "title": data.get("title"),
+        "description": data.get("description"),
+        "status": data.get("status") or "pending",
+        "priority": data.get("priority") or "normal",
+        "due_date": data.get("due_date"),
+        "deadline_date": data.get("due_date"),
+        "estimated_hours": data.get("estimated_hours"),
+        "worked_hours": data.get("worked_hours") or data.get("actual_hours"),
+        "actual_hours": data.get("actual_hours"),
+        "assigned_collaborators": assigned_collaborators,
+        "company_name": data.get("company_name"),
+        "process_name": data.get("process_name"),
+        "created_at": data.get("created_at"),
+        "updated_at": data.get("updated_at"),
+    }
+
+
+def _fetch_normalized_process_rows(
+    cursor,
+    employee_ids: Optional[Sequence[int]] = None,
+    company_ids: Optional[Sequence[int]] = None,
+    process_ids: Optional[Sequence[int]] = None,
+) -> List[Dict[str, Any]]:
+    params: Dict[str, Any] = {}
+    joins: List[str] = []
+    filters: List[str] = []
+
+    if employee_ids:
+        clause, clause_params = _build_in_clause(employee_ids, "proc_target_ids")
+        if clause:
+            params.update(clause_params)
+            joins.append(
+                f"""
+                JOIN (
+                    SELECT DISTINCT process_instance_id
+                    FROM process_instance_collaborators
+                    WHERE is_deleted = FALSE
+                      AND employee_id IN ({clause})
+                ) pic_filter ON pic_filter.process_instance_id = pi.id
+                """
+            )
+
+    if company_ids:
+        clause, clause_params = _build_in_clause(company_ids, "proc_company_ids")
+        if clause:
+            params.update(clause_params)
+            filters.append(f"pi.company_id IN ({clause})")
+
+    if process_ids:
+        clause, clause_params = _build_in_clause(process_ids, "proc_ids")
+        if clause:
+            params.update(clause_params)
+            filters.append(f"pi.process_id IN ({clause})")
+
+    where_clause = f"WHERE {' AND '.join(filters)}" if filters else ""
+
+    if not employee_ids and not company_ids and not process_ids:
+        return []
+
+    if not _process_collaborators_table_available(cursor):
+        return _fetch_process_rows_from_json(
+            cursor,
+            employee_ids=employee_ids,
+            company_ids=company_ids,
+            process_ids=process_ids,
+        )
+
+    query = f"""
+        WITH collaborator_data AS (
+            SELECT
+                pic.process_instance_id,
+                json_agg(
+                    json_build_object(
+                        'id', pic.employee_id,
+                        'name', collab.name,
+                        'role', pic.role,
+                        'hours', pic.estimated_hours
+                    )
+                ) FILTER (WHERE pic.id IS NOT NULL) AS collaborators_json
+            FROM process_instance_collaborators pic
+            LEFT JOIN employees collab ON collab.id = pic.employee_id
+            WHERE pic.is_deleted = FALSE
+            GROUP BY pic.process_instance_id
+        )
+        SELECT
+            pi.*,
+            c.name AS company_name,
+            p.name AS process_name,
+            coalesce(collab.collaborators_json, '[]'::json) AS normalized_collaborators
+        FROM process_instances pi
+        {' '.join(joins)}
+        LEFT JOIN collaborator_data collab ON collab.process_instance_id = pi.id
+        LEFT JOIN companies c ON c.id = pi.company_id
+        LEFT JOIN processes p ON p.id = pi.process_id
+        {where_clause}
+        ORDER BY pi.due_date NULLS LAST, pi.updated_at DESC
+    """
+
+    cursor.execute(query, params)
+    rows = cursor.fetchall()
+    return [_process_row_from_normalized(row) for row in rows]
+
+
+def _fetch_process_rows_from_json(
+    cursor,
+    employee_ids: Optional[Sequence[int]] = None,
+    company_ids: Optional[Sequence[int]] = None,
+    process_ids: Optional[Sequence[int]] = None,
+) -> List[Dict[str, Any]]:
+    target_ids = {
+        value for value in (_safe_int(eid) for eid in (employee_ids or [])) if value
+    }
+    filters: List[str] = []
+    params: List[Any] = []
+
+    if company_ids:
+        placeholders = ",".join(["%s"] * len(company_ids))
+        filters.append(f"pi.company_id IN ({placeholders})")
+        params.extend(company_ids)
+
+    if process_ids:
+        placeholders = ",".join(["%s"] * len(process_ids))
+        filters.append(f"pi.process_id IN ({placeholders})")
+        params.extend(process_ids)
+
+    where_clause = f"WHERE {' AND '.join(filters)}" if filters else ""
+
+    cursor.execute(
+        f"""
+        SELECT
+            pi.*,
+            c.name AS company_name,
+            p.name AS process_name
+        FROM process_instances pi
+        LEFT JOIN companies c ON c.id = pi.company_id
+        LEFT JOIN processes p ON p.id = pi.process_id
+        {where_clause}
+        ORDER BY pi.due_date NULLS LAST, pi.updated_at DESC
+        """,
+        tuple(params),
+    )
+
+    results: List[Dict[str, Any]] = []
+    for row in cursor.fetchall():
+        collaborators = _parse_collaborators(row.get("assigned_collaborators"))
+        if target_ids:
+            collaborator_ids = {
+                cid
+                for cid in (_safe_int(collab.get("id")) for collab in collaborators)
+                if cid is not None
+            }
+            if not collaborator_ids & target_ids:
+                continue
+
+        data = dict(row)
+        data["normalized_collaborators"] = collaborators
+        results.append(_process_row_from_normalized(data))
+
+    return results
+
+
 def get_user_activities(
-    employee_id: Optional[int], scope: str = "me", filters: Dict = None
+    employee_id: Optional[int],
+    scope: str = "me",
+    filters: Optional[Dict] = None,
+    company_id: Optional[int] = None,
+    company_ids: Optional[List[int]] = None,
+    employee_ids: Optional[List[int]] = None,
 ) -> List[Dict]:
     """
     Retorna atividades conforme escopo
@@ -97,6 +873,8 @@ def get_user_activities(
         employee_id: ID do colaborador
         scope: 'me', 'team' ou 'company'
         filters: Filtros adicionais (filter, search, sort)
+        company_id: ID da empresa para filtrar (opcional, legado)
+        company_ids: Lista de empresas para filtrar (prioritário)
 
     Returns:
         Lista de atividades (projetos + processos)
@@ -104,18 +882,33 @@ def get_user_activities(
     if employee_id is None:
         return []
 
-    filters = filters or {}
+    filters = (filters or {}).copy()
+
+    if company_id and not company_ids:
+        company_ids = [company_id]
 
     conn = pg_connect()
     cursor = conn.cursor()
 
+    target_employee_ids = _normalize_employee_ids(employee_id, employee_ids)
+
     try:
         if scope == "me":
-            activities = _get_my_activities(cursor, employee_id, filters)
+            activities: List[Dict] = []
+            for target_id in target_employee_ids:
+                activities.extend(
+                    _collect_my_activities(cursor, target_id, company_ids=company_ids)
+                )
+            activities = _apply_filters(activities, filters)
+            activities = _apply_sort(activities, filters.get("sort", "deadline"))
         elif scope == "team":
-            activities = _get_team_activities(cursor, employee_id, filters)
+            activities = _get_team_activities(
+                cursor, employee_id, filters, company_ids=company_ids
+            )
         elif scope == "company":
-            activities = _get_company_activities(cursor, employee_id, filters)
+            activities = _get_company_activities(
+                cursor, employee_id, filters, company_ids=company_ids
+            )
         else:
             activities = []
 
@@ -127,9 +920,23 @@ def get_user_activities(
         raise e
 
 
-def _get_my_activities(cursor, employee_id: int, filters: Dict) -> List[Dict]:
+def _get_my_activities(
+    cursor, employee_id: int, filters: Optional[Dict], company_ids: Optional[List[int]] = None
+) -> List[Dict]:
     """Busca atividades pessoais do colaborador"""
 
+    filters = filters or {}
+    activities = _collect_my_activities(cursor, employee_id, company_ids=company_ids)
+    activities = _apply_filters(activities, filters)
+    activities = _apply_sort(activities, filters.get("sort", "deadline"))
+
+    return activities
+
+
+def _collect_my_activities(
+    cursor, employee_id: int, company_ids: Optional[List[int]] = None
+) -> List[Dict]:
+    """Retorna atividades do colaborador sem aplicar filtros."""
     project_rows = _fetch_projects_for_employee(cursor, employee_id)
     process_rows = _fetch_processes_for_employee(cursor, employee_id)
 
@@ -138,14 +945,19 @@ def _get_my_activities(cursor, employee_id: int, filters: Dict) -> List[Dict]:
         _serialize_process_activity(row, employee_id) for row in process_rows
     )
 
-    activities = _apply_filters(activities, filters)
-    activities = _apply_sort(activities, filters.get("sort", "deadline"))
+    if company_ids:
+        activities = [
+            activity for activity in activities if activity.get("company_id") in company_ids
+        ]
 
     return activities
 
 
-def _get_team_activities(cursor, employee_id: int, filters: Dict) -> List[Dict]:
+def _get_team_activities(
+    cursor, employee_id: int, filters: Optional[Dict], company_ids: Optional[List[int]] = None
+) -> List[Dict]:
     """Busca atividades da equipe do colaborador"""
+    filters = filters or {}
     member_ids = _fetch_team_member_ids(cursor, employee_id)
     if not member_ids:
         return []
@@ -162,32 +974,50 @@ def _get_team_activities(cursor, employee_id: int, filters: Dict) -> List[Dict]:
         for row in process_rows
     )
 
+    if company_ids:
+        activities = [
+            activity for activity in activities if activity.get("company_id") in company_ids
+        ]
+
     activities = _apply_filters(activities, filters)
     activities = _apply_sort(activities, filters.get("sort", "deadline"))
 
     return activities
 
 
-def _get_company_activities(cursor, employee_id: int, filters: Dict) -> List[Dict]:
+def _get_company_activities(cursor, employee_id: int, filters: Optional[Dict], company_ids: Optional[List[int]] = None) -> List[Dict]:
     """Busca todas as atividades da empresa"""
+    filters = filters or {}
 
-    # Verificar permissÃ£o
+    # Verificar permissão
     if not _can_view_company(cursor, employee_id):
         raise PermissionError(
-            "UsuÃ¡rio sem permissÃ£o para visualizar atividades da empresa"
+            "Usuário sem permissão para visualizar atividades da empresa"
         )
 
-    company_id = _fetch_employee_company_id(cursor, employee_id)
-    if company_id is None:
-        return []
+    target_company_ids = company_ids or []
+    if not target_company_ids:
+        company_id = _fetch_employee_company_id(cursor, employee_id)
+        if company_id is None:
+            return []
+        target_company_ids = [company_id]
 
-    project_rows = _fetch_company_projects(cursor, company_id)
-    process_rows = _fetch_company_processes(cursor, company_id)
+    activities = []
+    for company_id in target_company_ids:
+        project_rows = _fetch_company_projects(cursor, company_id)
+        process_rows = _fetch_company_processes(cursor, company_id)
 
-    activities = [_serialize_project_activity(row, employee_id) for row in project_rows]
-    activities.extend(
-        _serialize_process_activity(row, employee_id) for row in process_rows
-    )
+        activities.extend(
+            _serialize_project_activity(row, employee_id) for row in project_rows
+        )
+        activities.extend(
+            _serialize_process_activity(row, employee_id) for row in process_rows
+        )
+
+    if company_ids:
+        activities = [
+            activity for activity in activities if activity.get("company_id") in company_ids
+        ]
 
     activities = _apply_filters(activities, filters)
     activities = _apply_sort(activities, filters.get("sort", "deadline"))
@@ -195,9 +1025,22 @@ def _get_company_activities(cursor, employee_id: int, filters: Dict) -> List[Dic
     return activities
 
 
-def get_user_stats(employee_id: Optional[int], scope: str = "me") -> Dict:
+def get_user_stats(
+    employee_id: Optional[int],
+    scope: str = "me",
+    company_id: Optional[int] = None,
+    company_ids: Optional[List[int]] = None,
+    filters: Optional[Dict] = None,
+    employee_ids: Optional[List[int]] = None,
+) -> Dict:
     """
-    Retorna estatÃ­sticas conforme escopo
+    Retorna estatísticas conforme escopo
+
+    Args:
+        employee_id: ID do colaborador
+        scope: 'me', 'team' ou 'company'
+        company_id: ID da empresa para filtrar (opcional)
+        company_ids: Lista de IDs de empresa (prioritário)
 
     Returns:
         Dict com contadores
@@ -205,16 +1048,27 @@ def get_user_stats(employee_id: Optional[int], scope: str = "me") -> Dict:
     if employee_id is None:
         return {"pending": 0, "in_progress": 0, "overdue": 0, "completed": 0}
 
+    company_ids = _normalize_company_ids(company_id, company_ids)
+    filters = filters or {}
+
     conn = pg_connect()
     cursor = conn.cursor()
 
+    target_employee_ids = _normalize_employee_ids(employee_id, employee_ids)
+
     try:
         if scope == "me":
-            stats = _get_my_stats(cursor, employee_id)
+            activities: List[Dict] = []
+            for target_id in target_employee_ids:
+                activities.extend(
+                    _collect_my_activities(cursor, target_id, company_ids=company_ids)
+                )
+            activities = _apply_filters(activities, filters)
+            stats = _calculate_stats_from_activities(activities)
         elif scope == "team":
-            stats = _get_team_stats(cursor, employee_id)
+            stats = _get_team_stats(cursor, employee_id, company_ids=company_ids, filters=filters)
         elif scope == "company":
-            stats = _get_company_stats(cursor, employee_id)
+            stats = _get_company_stats(cursor, employee_id, company_ids=company_ids, filters=filters)
         else:
             stats = {}
 
@@ -225,45 +1079,108 @@ def get_user_stats(employee_id: Optional[int], scope: str = "me") -> Dict:
         conn.close()
         raise e
 
+def _normalize_company_ids(
+    company_id: Optional[int], company_ids: Optional[List[int]]
+) -> Optional[List[int]]:
+    if company_ids:
+        return company_ids
+    if company_id:
+        return [company_id]
+    return None
 
-def _get_my_stats(cursor, employee_id: int) -> Dict:
-    """EstatÃ­sticas pessoais"""
-    activities = _get_my_activities(cursor, employee_id, filters={})
+
+def _normalize_employee_ids(
+    employee_id: Optional[int], employee_ids: Optional[List[int]]
+) -> List[int]:
+    collected: List[int] = []
+    if employee_ids:
+        collected.extend([value for value in employee_ids if value is not None])
+    if employee_id is not None:
+        collected.append(employee_id)
+
+    normalized: List[int] = []
+    seen = set()
+    for value in collected:
+        if value not in seen:
+            seen.add(value)
+            normalized.append(value)
+    return normalized
+
+
+def _get_my_stats(
+    cursor,
+    employee_id: int,
+    company_ids: Optional[List[int]] = None,
+    filters: Optional[Dict] = None,
+) -> Dict:
+    """Estatísticas pessoais"""
+    activities = _get_my_activities(
+        cursor, employee_id, filters=filters, company_ids=company_ids
+    )
     return _calculate_stats_from_activities(activities)
 
 
-def _get_team_stats(cursor, employee_id: int) -> Dict:
-    """EstatÃ­sticas da equipe"""
-    activities = _get_team_activities(cursor, employee_id, filters={})
+def _get_team_stats(
+    cursor,
+    employee_id: int,
+    company_ids: Optional[List[int]] = None,
+    filters: Optional[Dict] = None,
+) -> Dict:
+    """Estatísticas da equipe"""
+    activities = _get_team_activities(
+        cursor, employee_id, filters=filters, company_ids=company_ids
+    )
     return _calculate_stats_from_activities(activities)
 
 
-def _get_company_stats(cursor, employee_id: int) -> Dict:
-    """EstatÃ­sticas da empresa"""
-    activities = _get_company_activities(cursor, employee_id, filters={})
+def _get_company_stats(
+    cursor,
+    employee_id: int,
+    company_ids: Optional[List[int]] = None,
+    filters: Optional[Dict] = None,
+) -> Dict:
+    """Estatísticas da empresa"""
+    activities = _get_company_activities(
+        cursor, employee_id, filters=filters, company_ids=company_ids
+    )
     return _calculate_stats_from_activities(activities)
 
 
-def count_activities_by_scope(employee_id: Optional[int]) -> Dict:
-    """
-    Conta atividades em cada escopo para os contadores das abas
+def count_activities_by_scope(
+    employee_id: Optional[int],
+    company_id: Optional[int] = None,
+    company_ids: Optional[List[int]] = None,
+    filters: Optional[Dict] = None,
+    employee_ids: Optional[List[int]] = None,
+) -> Dict:
+    """Conta atividades em cada escopo para os contadores das abas"""
 
-    Returns:
-        {'me': 17, 'team': 45, 'company': 180}
-    """
     if employee_id is None:
         return {"me": 0, "team": 0, "company": 0}
+
+    company_ids = _normalize_company_ids(company_id, company_ids)
+    filters = filters or {}
+    target_employee_ids = _normalize_employee_ids(employee_id, employee_ids)
 
     conn = pg_connect()
     cursor = conn.cursor()
 
     try:
-        count_me = _count_my_activities(cursor, employee_id)
-        count_team = _count_team_activities(cursor, employee_id)
-        count_company = _count_company_activities(cursor, employee_id)
+        count_me = _count_my_activities(
+            cursor,
+            employee_id,
+            company_ids=company_ids,
+            filters=filters,
+            employee_ids_list=target_employee_ids,
+        )
+        count_team = _count_team_activities(
+            cursor, employee_id, company_ids=company_ids, filters=filters
+        )
+        count_company = _count_company_activities(
+            cursor, employee_id, company_ids=company_ids, filters=filters
+        )
 
         conn.close()
-
         return {"me": count_me, "team": count_team, "company": count_company}
 
     except Exception as e:
@@ -271,8 +1188,74 @@ def count_activities_by_scope(employee_id: Optional[int]) -> Dict:
         raise e
 
 
+def _extract_company_id_from_row(row) -> Optional[int]:
+    if not row:
+        return None
+    if hasattr(row, "get"):
+        return row.get("company_id")
+    try:
+        return row["company_id"]
+    except Exception:
+        pass
+    try:
+        return row[1]
+    except Exception:
+        return None
+
+
+def _filter_rows_by_companies(rows, company_ids: Optional[List[int]]):
+    if not company_ids:
+        return rows
+    return [row for row in rows if _extract_company_id_from_row(row) in company_ids]
+
+
+def _count_my_activities(
+    cursor,
+    employee_id: int,
+    company_ids: Optional[List[int]] = None,
+    filters: Optional[Dict] = None,
+    employee_ids_list: Optional[List[int]] = None,
+) -> int:
+    target_ids = employee_ids_list or [employee_id]
+    activities: List[Dict] = []
+    for target_id in target_ids:
+        activities.extend(
+            _collect_my_activities(cursor, target_id, company_ids=company_ids)
+        )
+    activities = _apply_filters(activities, filters or {})
+    return len(activities)
+
+
+def _count_team_activities(
+    cursor,
+    employee_id: int,
+    company_ids: Optional[List[int]] = None,
+    filters: Optional[Dict] = None,
+) -> int:
+    activities = _get_team_activities(
+        cursor, employee_id, filters or {}, company_ids=company_ids
+    )
+    return len(activities)
+
+
+def _count_company_activities(
+    cursor,
+    employee_id: int,
+    company_ids: Optional[List[int]] = None,
+    filters: Optional[Dict] = None,
+) -> int:
+    activities = _get_company_activities(
+        cursor, employee_id, filters or {}, company_ids=company_ids
+    )
+    return len(activities)
+
+
 def _fetch_projects_for_employee(cursor, employee_id: int):
-    """Busca projetos onde o colaborador Ã© responsÃ¡vel ou executor."""
+    """Busca projetos onde o colaborador é responsável ou executor."""
+    rows = _fetch_normalized_project_rows(cursor, [employee_id])
+    if rows:
+        return rows
+
     cursor.execute(
         """
         SELECT 
@@ -310,6 +1293,10 @@ def _fetch_projects_for_employee(cursor, employee_id: int):
 
 def _fetch_company_projects(cursor, company_id: int):
     """Busca todos os projetos da empresa."""
+    rows = _fetch_normalized_project_rows(cursor, None, [company_id])
+    if rows:
+        return rows
+
     cursor.execute(
         """
         SELECT 
@@ -350,6 +1337,10 @@ def _fetch_projects_for_members(cursor, member_ids: Sequence[int]):
     if not member_ids:
         return []
 
+    rows = _fetch_normalized_project_rows(cursor, member_ids)
+    if rows:
+        return rows
+
     member_tuple = tuple(member_ids)
     cursor.execute(
         """
@@ -378,7 +1369,7 @@ def _fetch_projects_for_members(cursor, member_ids: Sequence[int]):
         LEFT JOIN employees exec ON exec.id = cp.executor_id
         LEFT JOIN plans pl ON pl.id = cp.plan_id
         LEFT JOIN companies co ON co.id = cp.company_id
-        WHERE (cp.responsible_id = ANY(%(members)s) OR cp.executor_id = ANY(%(members)s))
+        WHERE (cp.responsible_id = ANY(:members) OR cp.executor_id = ANY(:members))
     """,
         {"members": member_tuple},
     )
@@ -388,6 +1379,10 @@ def _fetch_projects_for_members(cursor, member_ids: Sequence[int]):
 
 def _fetch_company_processes(cursor, company_id: int):
     """Busca instÃ¢ncias de processos da empresa."""
+    rows = _fetch_normalized_process_rows(cursor, company_ids=[company_id])
+    if rows:
+        return rows
+
     cursor.execute(
         """
         SELECT 
@@ -417,12 +1412,16 @@ def _fetch_company_processes(cursor, company_id: int):
 
 def _fetch_processes_for_employee(cursor, employee_id: int):
     """Busca processos onde o colaborador estÃ¡ designado."""
+    rows = _fetch_normalized_process_rows(cursor, employee_ids=[employee_id])
+    if rows:
+        return rows
+
     company_id = _fetch_employee_company_id(cursor, employee_id)
     if company_id is None:
         return []
 
-    rows = _fetch_company_processes(cursor, company_id)
-    return [row for row in rows if _is_employee_in_process(row, {employee_id})]
+    legacy_rows = _fetch_company_processes(cursor, company_id)
+    return [row for row in legacy_rows if _is_employee_in_process(row, {employee_id})]
 
 
 def _fetch_processes_for_members(cursor, member_ids: Sequence[int]):
@@ -430,12 +1429,15 @@ def _fetch_processes_for_members(cursor, member_ids: Sequence[int]):
     if not member_ids:
         return []
 
+    rows = _fetch_normalized_process_rows(cursor, employee_ids=member_ids)
+    if rows:
+        return rows
+
     company_ids = _fetch_companies_for_members(cursor, member_ids)
     if not company_ids:
         return []
 
     member_set = set(member_ids)
-
     processes = []
     for company_id in company_ids:
         rows = _fetch_company_processes(cursor, company_id)
@@ -465,6 +1467,7 @@ def _serialize_project_activity(
     return {
         "id": data.get("id"),
         "type": "project",
+        "project_id": data.get("project_id"),
         "title": data.get("title"),
         "description": data.get("description"),
         "status": (data.get("status") or "planned").lower(),
@@ -516,6 +1519,7 @@ def _serialize_process_activity(
     return {
         "id": data.get("id"),
         "type": "process",
+        "process_id": data.get("process_id"),
         "title": data.get("title"),
         "description": data.get("description"),
         "status": (data.get("status") or "pending").lower(),
@@ -544,6 +1548,74 @@ def _serialize_process_activity(
     }
 
 
+def _parse_deadline_value(value: Any) -> Optional[date]:
+    if value is None:
+        return None
+    if isinstance(value, date):
+        return value
+    if isinstance(value, datetime):
+        return value.date()
+    if isinstance(value, str):
+        for fmt in ("%Y-%m-%d", "%Y-%m-%dT%H:%M:%S", "%Y-%m-%d %H:%M:%S"):
+            try:
+                return datetime.strptime(value, fmt).date()
+            except ValueError:
+                continue
+    return None
+
+
+def _activity_matches_roles(activity: Dict, roles: List[str]) -> bool:
+    if not roles:
+        return True
+    assignment = activity.get("assignment") or {}
+    assignment_type = (assignment.get("type") or "").lower()
+    matches = set()
+    if assignment_type == "responsible":
+        matches.add("responsible")
+    if assignment_type in ("executor", "assigned"):
+        matches.add("executor")
+    return any(role in matches for role in roles)
+
+
+def _activity_within_due_date(
+    activity: Dict, start_date: Optional[date], end_date: Optional[date]
+) -> bool:
+    if not start_date and not end_date:
+        return True
+    deadline_value = _parse_deadline_value(activity.get("deadline"))
+    if deadline_value is None:
+        return False
+    if start_date and deadline_value < start_date:
+        return False
+    if end_date and deadline_value > end_date:
+        return False
+    return True
+
+
+def _activity_matches_people(
+    activity: Dict, target_ids: List[int], role: str
+) -> bool:
+    """Filter helper for responsible/executor selectors."""
+    if not target_ids:
+        return True
+
+    if activity.get("type") == "project":
+        if role == "responsible":
+            return activity.get("responsible_id") in target_ids
+        if role == "executor":
+            return activity.get("executor_id") in target_ids
+        return True
+
+    if activity.get("type") == "process" and role == "executor":
+        collaborators = activity.get("collaborators") or []
+        collaborator_ids = {
+            collab.get("id") for collab in collaborators if collab.get("id") is not None
+        }
+        return bool(collaborator_ids.intersection(target_ids))
+
+    return True
+
+
 def _apply_filters(activities: List[Dict], filters: Dict) -> List[Dict]:
     """Aplica filtros e busca."""
     if not activities:
@@ -551,6 +1623,14 @@ def _apply_filters(activities: List[Dict], filters: Dict) -> List[Dict]:
 
     filter_type = (filters.get("filter") or "all").lower()
     search_term = (filters.get("search") or "").strip().lower()
+    types_filter = filters.get("types") or []
+    roles_filter = filters.get("roles") or []
+    due_date_start = filters.get("due_date_start")
+    due_date_end = filters.get("due_date_end")
+    responsible_ids = filters.get("responsible_ids") or []
+    executor_ids = filters.get("executor_ids") or []
+    project_ids = filters.get("project_ids") or []
+    process_ids = filters.get("process_ids") or []
 
     filtered = activities
 
@@ -559,6 +1639,59 @@ def _apply_filters(activities: List[Dict], filters: Dict) -> List[Dict]:
             activity
             for activity in filtered
             if filter_type in activity.get("filter_tags", [])
+        ]
+
+    if types_filter:
+        filtered = [
+            activity
+            for activity in filtered
+            if activity.get("type") in types_filter
+        ]
+
+    if roles_filter:
+        filtered = [
+            activity
+            for activity in filtered
+            if _activity_matches_roles(activity, roles_filter)
+        ]
+
+    if due_date_start or due_date_end:
+        filtered = [
+            activity
+            for activity in filtered
+            if _activity_within_due_date(activity, due_date_start, due_date_end)
+        ]
+
+    if responsible_ids:
+        filtered = [
+            activity
+            for activity in filtered
+            if _activity_matches_people(activity, responsible_ids, "responsible")
+        ]
+
+    if executor_ids:
+        filtered = [
+            activity
+            for activity in filtered
+            if _activity_matches_people(activity, executor_ids, "executor")
+        ]
+
+    if project_ids:
+        filtered = [
+            activity
+            for activity in filtered
+            if activity.get("type") != "project"
+            or activity.get("project_id") in project_ids
+            or activity.get("id") in project_ids
+        ]
+
+    if process_ids:
+        filtered = [
+            activity
+            for activity in filtered
+            if activity.get("type") != "process"
+            or activity.get("process_id") in process_ids
+            or activity.get("id") in process_ids
         ]
 
     if search_term:
@@ -625,35 +1758,6 @@ def _calculate_stats_from_activities(activities: List[Dict]) -> Dict:
     return stats
 
 
-def _count_my_activities(cursor, employee_id: int) -> int:
-    """Conta atividades pessoais."""
-    return len(_fetch_projects_for_employee(cursor, employee_id)) + len(
-        _fetch_processes_for_employee(cursor, employee_id)
-    )
-
-
-def _count_team_activities(cursor, employee_id: int) -> int:
-    """Conta atividades da equipe."""
-    member_ids = _fetch_team_member_ids(cursor, employee_id)
-    if not member_ids:
-        return 0
-
-    return len(_fetch_projects_for_members(cursor, member_ids)) + len(
-        _fetch_processes_for_members(cursor, member_ids)
-    )
-
-
-def _count_company_activities(cursor, employee_id: int) -> int:
-    """Conta atividades da empresa."""
-    company_id = _fetch_employee_company_id(cursor, employee_id)
-    if company_id is None:
-        return 0
-
-    return len(_fetch_company_projects(cursor, company_id)) + len(
-        _fetch_company_processes(cursor, company_id)
-    )
-
-
 def _fetch_team_member_ids(cursor, employee_id: int) -> List[int]:
     """Retorna IDs dos membros da equipe."""
     cursor.execute(
@@ -697,7 +1801,7 @@ def _fetch_companies_for_members(cursor, member_ids: Sequence[int]) -> List[int]
         """
         SELECT DISTINCT company_id
         FROM employees
-        WHERE id = ANY(%(members)s)
+        WHERE id = ANY(:members)
         """,
         {"members": tuple(member_ids)},
     )
@@ -848,6 +1952,19 @@ def _safe_float(value: Any) -> float:
         return 0.0
 
 
+def _safe_int(value: Any) -> Optional[int]:
+    """Converte valores em int ou retorna None."""
+    if value is None:
+        return None
+    if isinstance(value, bool):
+        return None
+    try:
+        parsed = int(str(value).strip())
+        return parsed
+    except (TypeError, ValueError):
+        return None
+
+
 def _coerce_date(value: Any) -> Optional[date]:
     """Converte valor em date."""
     if value is None:
@@ -935,6 +2052,59 @@ def _status_order(status: str) -> int:
     return order.get(status, 99)
 
 
+def get_occurrences_summary(
+    employee_id: Optional[int],
+    company_ids: Optional[List[int]] = None,
+    employee_ids: Optional[List[int]] = None,
+) -> Dict[str, Dict[str, int]]:
+    """Retorna o resumo de ocorrências para o dashboard My Work."""
+
+    company_ids = [int(value) for value in (company_ids or []) if value is not None]
+    employee_ids = [int(value) for value in (employee_ids or []) if value is not None]
+    if employee_id is not None and employee_id not in employee_ids:
+        employee_ids.append(employee_id)
+
+    filters = []
+    params: List[int] = []
+    if company_ids:
+        placeholders = ", ".join(["%s"] * len(company_ids))
+        filters.append(f"company_id IN ({placeholders})")
+        params.extend(company_ids)
+
+    if employee_ids:
+        placeholders = ", ".join(["%s"] * len(employee_ids))
+        filters.append(f"employee_id IN ({placeholders})")
+        params.extend(employee_ids)
+
+    where_clause = f"WHERE {' AND '.join(filters)}" if filters else ""
+
+    query = f"""
+        SELECT type,
+               COUNT(*) AS count,
+               COALESCE(SUM(score), 0) AS score
+        FROM occurrences
+        {where_clause}
+        GROUP BY type
+    """
+
+    conn = pg_connect()
+    cursor = conn.cursor()
+    summary = {
+        "positive": {"count": 0, "score": 0},
+        "negative": {"count": 0, "score": 0},
+    }
+    try:
+        cursor.execute(query, tuple(params))
+        for row in cursor.fetchall():
+            row_type = (row["type"] or "").lower()
+            if row_type not in summary:
+                continue
+            summary[row_type]["count"] = int(row["count"] or 0)
+            summary[row_type]["score"] = int(row["score"] or 0)
+        return summary
+    finally:
+        conn.close()
+
 # ============================================================================
 # WORK HOURS
 # ============================================================================
@@ -964,6 +2134,10 @@ def add_work_hours(
         employee_row = cursor.fetchone()
         employee_name = employee_row[0] if employee_row else "Desconhecido"
 
+        hours_value = _safe_float(work_data["hours"])
+        if not hours_value:
+            hours_value = 0
+
         # Inserir log
         cursor.execute(
             """
@@ -978,12 +2152,39 @@ def add_work_hours(
                 employee_id,
                 employee_name,
                 work_data["work_date"],
-                work_data["hours"],
+                hours_value,
                 work_data.get("description"),
             ),
         )
 
         log_id = cursor.fetchone()[0]
+        # Aplicar horas em activity específica
+        if activity_type == "project":
+            if _project_activities_table_available(cursor):
+                cursor.execute(
+                    """
+                    UPDATE project_activities
+                    SET worked_hours = COALESCE(worked_hours, 0) + %s,
+                        updated_at = CURRENT_TIMESTAMP
+                    WHERE id = %s
+                    """,
+                    (hours_value, activity_id),
+                )
+            else:
+                logger.info(
+                    "[my_work] project_activities ausente - horas registradas apenas no log."
+                )
+        elif activity_type == "process":
+            cursor.execute(
+                """
+                UPDATE process_instances
+                SET worked_hours = COALESCE(worked_hours, 0) + %s,
+                    updated_at = CURRENT_TIMESTAMP
+                WHERE id = %s
+                """,
+                (hours_value, activity_id),
+            )
+
         conn.commit()
         conn.close()
 
@@ -1090,6 +2291,8 @@ def complete_activity(
                 },
             )
 
+        now_iso = datetime.utcnow().isoformat()
+
         # Atualizar status
         if activity_type == "project":
             cursor.execute(
@@ -1100,6 +2303,31 @@ def complete_activity(
             """,
                 (activity_id,),
             )
+            if _project_activities_table_available(cursor):
+                cursor.execute(
+                    """
+                    UPDATE project_activities
+                    SET status = 'completed',
+                        stage = 'completed',
+                        worked_hours = COALESCE(worked_hours, 0),
+                        updated_at = CURRENT_TIMESTAMP,
+                        metadata = jsonb_set(
+                            COALESCE(metadata, '{}'::jsonb),
+                            '{completion_comment}',
+                            to_jsonb(%s::text),
+                            true
+                        )
+                    WHERE project_id = %s
+                """,
+                    (
+                        completion_data.get("completion_comment") or "",
+                        activity_id,
+                    ),
+                )
+            else:
+                logger.info(
+                    "[my_work] project_activities ausente - finalização registrada apenas no projeto."
+                )
         elif activity_type == "process":
             cursor.execute(
                 """
@@ -1289,7 +2517,7 @@ def _calculate_team_performance(cursor, team_id: int) -> Dict:
 # ============================================================================
 
 
-def get_company_overview(employee_id: int) -> Dict:
+def get_company_overview(employee_id: int, company_id: Optional[int] = None) -> Dict:
     """
     Retorna dados executivos para Company Overview
 
@@ -1304,9 +2532,13 @@ def get_company_overview(employee_id: int) -> Dict:
         if not _can_view_company(cursor, employee_id):
             raise PermissionError("Sem permissÃ£o para visualizar dados da empresa")
 
-        # Buscar company_id
-        cursor.execute("SELECT company_id FROM employees WHERE id = %s", (employee_id,))
-        company_id = cursor.fetchone()[0]
+        # Buscar company_id caso não tenha sido informado (fallback padrão)
+        if company_id is None:
+            cursor.execute("SELECT company_id FROM employees WHERE id = %s", (employee_id,))
+            result = cursor.fetchone()
+            if not result:
+                raise ValueError("Colaborador não vinculado a uma empresa")
+            company_id = result[0]
 
         # Buscar mÃ©tricas
         summary = _get_company_summary(cursor, company_id)

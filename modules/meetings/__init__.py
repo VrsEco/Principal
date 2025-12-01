@@ -588,15 +588,26 @@ PARTICIPANTES:
         # PostgreSQL retorna Row objects por padrÃ£o  # Importante: configurar row_factory
         cursor = conn.cursor()
 
-        # Buscar o JSON de atividades do projeto
+        # Buscar o JSON de atividades do projeto e company_id
         cursor.execute(
-            "SELECT code, activities FROM company_projects WHERE id = %s",
+            "SELECT code, activities, company_id FROM company_projects WHERE id = %s",
             (meeting["project_id"],),
         )
         row = cursor.fetchone()
 
         project_code = row["code"] if row else None
         activities_raw = row["activities"] if row else None
+        company_id = row["company_id"] if row else None
+
+        # Get company code
+        company_code = None
+        if company_id:
+            cursor.execute(
+                "SELECT client_code FROM companies WHERE id = %s",
+                (company_id,),
+            )
+            company_row = cursor.fetchone()
+            company_code = company_row["client_code"] if company_row and company_row.get("client_code") else None
 
         project_activities = []
         if activities_raw:
@@ -612,7 +623,7 @@ PARTICIPANTES:
                 project_activities = []
 
         project_activities, _, _ = normalize_project_activities(
-            project_activities, project_code
+            project_activities, project_code, company_code
         )
 
         # Adicionar atividades individuais da reuniÃ£o ao projeto
@@ -747,13 +758,25 @@ def api_sync_meeting_activities(meeting_id):
         cursor = conn.cursor()
 
         cursor.execute(
-            "SELECT code, activities FROM company_projects WHERE id = %s",
+            "SELECT code, activities, company_id FROM company_projects WHERE id = %s",
             (meeting["project_id"],),
         )
         row = cursor.fetchone()
 
         project_activities = []
         project_code = row["code"] if row else None
+        company_id = row["company_id"] if row else None
+        
+        # Get company code
+        company_code = None
+        if company_id:
+            cursor.execute(
+                "SELECT client_code FROM companies WHERE id = %s",
+                (company_id,),
+            )
+            company_row = cursor.fetchone()
+            company_code = company_row["client_code"] if company_row and company_row.get("client_code") else None
+        
         if row and row["activities"]:
             try:
                 project_activities = json.loads(row["activities"])
@@ -763,7 +786,7 @@ def api_sync_meeting_activities(meeting_id):
                 project_activities = []
 
         project_activities, _, _ = normalize_project_activities(
-            project_activities, project_code
+            project_activities, project_code, company_code
         )
 
         meeting_activity_titles = [act.get("title", "") for act in meeting_activities]
@@ -883,13 +906,25 @@ def api_check_meeting_sync(meeting_id):
 
         # Buscar atividades do projeto
         cursor.execute(
-            "SELECT code, activities FROM company_projects WHERE id = %s",
+            "SELECT code, activities, company_id FROM company_projects WHERE id = %s",
             (meeting["project_id"],),
         )
         row = cursor.fetchone()
 
         project_activities = []
         project_code = row["code"] if row else None
+        company_id = row["company_id"] if row else None
+        
+        # Get company code
+        company_code = None
+        if company_id:
+            cursor.execute(
+                "SELECT client_code FROM companies WHERE id = %s",
+                (company_id,),
+            )
+            company_row = cursor.fetchone()
+            company_code = company_row["client_code"] if company_row and company_row.get("client_code") else None
+        
         if row and row["activities"]:
             try:
                 project_activities = json.loads(row["activities"])
@@ -897,7 +932,7 @@ def api_check_meeting_sync(meeting_id):
                 pass
 
         project_activities, _, _ = normalize_project_activities(
-            project_activities, project_code
+            project_activities, project_code, company_code
         )
 
         # Filtrar atividades que vieram da reuniÃ£o

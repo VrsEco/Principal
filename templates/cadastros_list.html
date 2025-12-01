@@ -1,0 +1,241 @@
+{% extends "base.html" %}
+{% block title %}Cadastros em Andamento{% endblock %}
+{% block body %}
+  {% set active_nav = 'dashboard' %}
+  {{ super() }}
+{% endblock %}
+
+{% block extra_head %}
+  {{ super() }}
+  <style>
+    .cadastros-page {
+      max-width: 1200px;
+      margin: 0 auto;
+      padding: 32px 0 64px;
+    }
+    .cadastros-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 32px;
+      gap: 24px;
+      flex-wrap: wrap;
+    }
+    .cadastros-header h1 {
+      margin: 0;
+    }
+    .cadastros-grid {
+      display: grid;
+      gap: 20px;
+      grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
+    }
+    .cadastro-card {
+      background: var(--surface-card, #ffffff);
+      border: 1px solid var(--color-border, #e5e7eb);
+      border-radius: 12px;
+      padding: 24px;
+      transition: all 0.2s;
+    }
+    .cadastro-card:hover {
+      box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+      transform: translateY(-2px);
+    }
+    .cadastro-card-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: flex-start;
+      margin-bottom: 16px;
+    }
+    .cadastro-card-title {
+      font-size: 18px;
+      font-weight: 600;
+      margin: 0;
+      color: var(--color-text, #111827);
+    }
+    .cadastro-card-badge {
+      padding: 4px 12px;
+      border-radius: 12px;
+      font-size: 12px;
+      font-weight: 500;
+    }
+    .badge-real {
+      background: #dbeafe;
+      color: #1e40af;
+    }
+    .badge-modelo {
+      background: #fef3c7;
+      color: #92400e;
+    }
+    .cadastro-card-info {
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+      margin-bottom: 16px;
+    }
+    .cadastro-card-info-item {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      font-size: 14px;
+      color: var(--color-muted, #6b7280);
+    }
+    .cadastro-card-progress {
+      margin-bottom: 16px;
+    }
+    .progress-bar {
+      width: 100%;
+      height: 8px;
+      background: #e5e7eb;
+      border-radius: 4px;
+      overflow: hidden;
+    }
+    .progress-fill {
+      height: 100%;
+      background: linear-gradient(90deg, #3b82f6, #8b5cf6);
+      transition: width 0.3s;
+    }
+    .progress-text {
+      font-size: 12px;
+      color: var(--color-muted, #6b7280);
+      margin-top: 4px;
+    }
+    .cadastro-card-actions {
+      display: flex;
+      gap: 8px;
+      flex-wrap: wrap;
+    }
+    .cadastros-empty {
+      text-align: center;
+      padding: 64px 32px;
+      background: var(--surface-card, #ffffff);
+      border-radius: 12px;
+      border: 1px solid var(--color-border, #e5e7eb);
+    }
+    .cadastros-empty h3 {
+      margin: 0 0 8px 0;
+      color: var(--color-text, #111827);
+    }
+    .cadastros-empty p {
+      margin: 0 0 24px 0;
+      color: var(--color-muted, #6b7280);
+    }
+  </style>
+{% endblock %}
+
+{% block content %}
+<section class="cadastros-page">
+  <div class="cadastros-header">
+    <div>
+      <h1>Cadastros em Andamento</h1>
+      <p style="margin: 8px 0 0 0; color: var(--color-muted, #6b7280);">
+        Gerencie seus cadastros de empresas em andamento
+      </p>
+    </div>
+    <a href="{{ url_for('agents.cadastros_new') }}" class="button button-primary">
+      ➕ Novo Cadastro
+    </a>
+  </div>
+
+  {% if sessoes %}
+  <div class="cadastros-grid">
+    {% for sessao in sessoes %}
+    <article class="cadastro-card">
+      <div class="cadastro-card-header">
+        <h3 class="cadastro-card-title">
+          {% if sessao.dados_coletados.name %}
+            {{ sessao.dados_coletados.name }}
+          {% elif sessao.dados_coletados.legal_name %}
+            {{ sessao.dados_coletados.legal_name }}
+          {% else %}
+            Cadastro #{{ sessao.id }}
+          {% endif %}
+        </h3>
+        <span class="cadastro-card-badge {% if sessao.tipo_cadastro == 'real' %}badge-real{% else %}badge-modelo{% endif %}">
+          {{ 'Real' if sessao.tipo_cadastro == 'real' else 'Modelo' }}
+        </span>
+      </div>
+      
+      <div class="cadastro-card-info">
+        <div class="cadastro-card-info-item">
+          <span>📊 Estado:</span>
+          <strong>{{ sessao.estado or 'Inicial' }}</strong>
+        </div>
+        {% if sessao.campo_atual %}
+        <div class="cadastro-card-info-item">
+          <span>✏️ Campo atual:</span>
+          <strong>{{ sessao.campo_atual }}</strong>
+        </div>
+        {% endif %}
+        <div class="cadastro-card-info-item">
+          <span>🕒 Atualizado:</span>
+          <strong>{{ sessao.updated_at.strftime('%d/%m/%Y %H:%M') if sessao.updated_at else 'N/A' }}</strong>
+        </div>
+      </div>
+      
+      <div class="cadastro-card-progress">
+        <div class="progress-bar">
+          <div class="progress-fill" style="width: {{ sessao.progresso or 0 }}%"></div>
+        </div>
+        <div class="progress-text">{{ sessao.progresso or 0 }}% completo</div>
+      </div>
+      
+      <div class="cadastro-card-actions">
+        <a href="{{ url_for('agents.cadastros_view', session_id=sessao.id) }}" class="button button-primary">
+          ✏️ Editar
+        </a>
+        <button class="button button-danger" onclick="deleteCadastro({{ sessao.id }}, 'Cadastro #{{ sessao.id }}')">
+          🗑️ Excluir
+        </button>
+      </div>
+    </article>
+    {% endfor %}
+  </div>
+  {% else %}
+  <div class="cadastros-empty">
+    <h3>Nenhum cadastro em andamento</h3>
+    <p>Comece criando um novo cadastro ou use o agente conversacional para cadastrar uma empresa.</p>
+    <div style="display: flex; gap: 12px; justify-content: center; flex-wrap: wrap;">
+      <a href="{{ url_for('agents.cadastros_new') }}" class="button button-primary">
+        ➕ Novo Cadastro
+      </a>
+      <a href="{{ url_for('agents.agents_cadastro_page') }}" class="button button-ghost">
+        🤖 Usar Agente
+      </a>
+    </div>
+  </div>
+  {% endif %}
+</section>
+{% endblock %}
+
+{% block scripts %}
+{{ super() }}
+<script>
+  async function deleteCadastro(sessionId, nome) {
+    if (!confirm(`Tem certeza que deseja excluir "${nome}"?`)) {
+      return;
+    }
+    
+    try {
+      const response = await fetch(`/agents/api/cadastros/${sessionId}`, {
+        method: 'DELETE',
+        headers: {
+          'Content-Type': 'application/json'
+        }
+      });
+      
+      const result = await response.json();
+      
+      if (result.success) {
+        location.reload();
+      } else {
+        alert('Erro ao excluir: ' + (result.error || 'Erro desconhecido'));
+      }
+    } catch (error) {
+      alert('Erro ao excluir: ' + error.message);
+    }
+  }
+</script>
+{% endblock %}
+
+
+

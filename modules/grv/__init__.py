@@ -10,7 +10,7 @@ from flask import (
     redirect,
     current_app,
 )
-from flask_login import login_required
+from flask_login import login_required, current_user
 from datetime import datetime
 from zoneinfo import ZoneInfo
 import re
@@ -20,6 +20,7 @@ import threading
 from typing import Any, Optional
 from config_database import get_db
 from middleware.auto_log_decorator import auto_log_crud
+from services.routines_overview_service import build_routines_overview_context
 
 logger = logging.getLogger(__name__)
 grv_bp = Blueprint("grv", __name__, url_prefix="/grv")
@@ -306,7 +307,7 @@ def grv_navigation():
                 {"id": "process-modeling", "name": "Modelagem / Desenho"},
                 {"id": "process-instances", "name": "Instâncias de Processos"},
                 {"id": "process-analysis", "name": "Análises"},
-                {"id": "process-routines", "name": "Rotina dos Processos"},
+                {"id": "process-routines", "name": "Rotina de Processos"},
             ],
         },
         {
@@ -337,7 +338,7 @@ def grv_navigation():
             "items": [
                 {
                     "id": "routine-work-distribution",
-                    "name": "Mapa de Distribuição do Trabalho",
+                    "name": "Rotina de Processos",
                 },
                 {"id": "routine-capacity", "name": "Gestão da Capacidade Operacional"},
                 {
@@ -1059,63 +1060,38 @@ def grv_process_map_pdf(company_id: int):
         f"<div class='pdf-footer'>Gerado em {generated_at.strftime('%d/%m/%Y %H:%M')} +óÔé¼-ó {company.get('name') or 'Empresa'}</div>"
     )
 
+    # Generate PDF with xhtml2pdf
     try:
-        from playwright.sync_api import sync_playwright
-    except ImportError:
+        from xhtml2pdf import pisa
+        from io import BytesIO
+
+        logger.info("Gerando PDF com xhtml2pdf...")
+
+        # Create PDF
+        pdf_file = BytesIO()
+        pisa_status = pisa.CreatePDF(
+            html_content,
+            dest=pdf_file,
+            encoding='utf-8'
+        )
+        
+        if pisa_status.err:
+            raise Exception(f"Erro ao gerar PDF: {pisa_status.err}")
+        
+        pdf_bytes = pdf_file.getvalue()
+        logger.info("PDF gerado com sucesso via xhtml2pdf!")
+
+    except ImportError as e:
+        logger.error(f"xhtml2pdf não instalado: {e}")
         abort(
             500,
-            description="Depend+¬ncia 'playwright' n+úo encontrada. Execute: pip install playwright && playwright install chromium",
+            description="xhtml2pdf não está instalado. Execute: pip install xhtml2pdf",
         )
-
-    def _build_pdf(html: str) -> bytes:
-        last_error: Optional[Exception] = None
-        for attempt in range(2):
-            try:
-                with sync_playwright() as p:
-                    browser = p.chromium.launch(headless=True, args=["--no-sandbox"])
-                    try:
-                        page = browser.new_page()
-                        page.set_viewport_size({"width": 1240, "height": 1754})
-                        page.set_content(html, wait_until="networkidle")
-                        page.emulate_media(media="print")
-                        pdf = page.pdf(
-                            format="A4",
-                            print_background=True,
-                            display_header_footer=True,
-                            header_template=header_template,
-                            footer_template=footer_template,
-                            prefer_css_page_size=True,
-                            margin={
-                                "top": "15mm",
-                                "bottom": "20mm",
-                                "left": "12mm",
-                                "right": "12mm",
-                            },
-                        )
-                    finally:
-                        browser.close()
-                return pdf
-            except Exception as exc:
-                last_error = exc
-                if attempt == 0 and _should_attempt_playwright_install(exc):
-                    try:
-                        _ensure_playwright_browser_installed("chromium")
-                        continue
-                    except Exception as install_error:
-                        logger.info(
-                            f"Erro ao instalar navegador Playwright: {install_error}"
-                        )
-                        last_error = install_error
-                break
-
-        if last_error:
-            raise last_error
-        raise RuntimeError("Falha desconhecida ao gerar PDF via Playwright")
-
-    try:
-        pdf_bytes = _build_pdf(html_content)
     except Exception as pdf_error:
-        logger.info(f"ERRO Playwright ao gerar PDF: {pdf_error}")
+        logger.error(f"ERRO ao gerar PDF: {pdf_error}")
+        import traceback
+
+        traceback.print_exc()
         abort(500, description=f"Erro ao gerar PDF: {pdf_error}")
 
     safe_name = (
@@ -1415,83 +1391,38 @@ def grv_process_map_pdf2(company_id: int):
     header_template = ""
     footer_template = ""
 
-    logger.info("DEBUG: Iniciando gera+º+úo de PDF...")
+    logger.info("DEBUG: Iniciando geração de PDF com WeasyPrint...")
 
+    # Generate PDF with xhtml2pdf
     try:
-        from playwright.sync_api import sync_playwright
+        from xhtml2pdf import pisa
+        from io import BytesIO
 
-        logger.info("DEBUG: Playwright importado com sucesso")
+        logger.info("DEBUG: xhtml2pdf importado com sucesso")
+        logger.info("DEBUG: Gerando PDF...")
+
+        # Create PDF
+        pdf_file = BytesIO()
+        pisa_status = pisa.CreatePDF(
+            html_content,
+            dest=pdf_file,
+            encoding='utf-8'
+        )
+        
+        if pisa_status.err:
+            raise Exception(f"Erro ao gerar PDF: {pisa_status.err}")
+        
+        pdf_bytes = pdf_file.getvalue()
+        logger.info("DEBUG: PDF gerado com sucesso via xhtml2pdf!")
+
     except ImportError as e:
-        logger.info(f"DEBUG: Erro ao importar Playwright: {str(e)}")
+        logger.error(f"ERRO: xhtml2pdf não instalado: {e}")
         abort(
             500,
-            description="Depend+¬ncia 'playwright' n+úo encontrada. Execute: pip install playwright && playwright install chromium",
+            description="xhtml2pdf não está instalado. Execute: pip install xhtml2pdf",
         )
-
-    def _build_pdf(html: str) -> bytes:
-        last_error: Optional[Exception] = None
-        for attempt in range(2):
-            try:
-                logger.info("DEBUG: Iniciando sync_playwright...")
-                with sync_playwright() as p:
-                    logger.info("DEBUG: Lan+ºando navegador...")
-                    browser = p.chromium.launch(headless=True, args=["--no-sandbox"])
-                    try:
-                        logger.info("DEBUG: Criando nova p+ígina...")
-                        page = browser.new_page()
-                        page.set_viewport_size({"width": 794, "height": 1123})
-                        logger.info("DEBUG: Definindo conte+¦do HTML...")
-                        page.set_content(html, wait_until="networkidle")
-                        page.emulate_media(media="print")
-
-                        logger.info("DEBUG: Gerando PDF...")
-                        pdf = page.pdf(
-                            format="A4",
-                            landscape=False,
-                            print_background=True,
-                            display_header_footer=False,
-                            header_template=header_template,
-                            footer_template=footer_template,
-                            prefer_css_page_size=True,
-                            margin={
-                                "top": "8mm",
-                                "bottom": "8mm",
-                                "left": "6mm",
-                                "right": "6mm",
-                            },
-                        )
-                        logger.info("DEBUG: PDF gerado com sucesso!")
-                    finally:
-                        browser.close()
-                    return pdf
-            except Exception as exc:
-                last_error = exc
-                logger.info(f"ERRO ao gerar PDF (tentativa {attempt + 1}): {exc}")
-                if attempt == 0 and _should_attempt_playwright_install(exc):
-                    try:
-                        logger.info(
-                            "DEBUG: Tentando instalar navegador Playwright ausente..."
-                        )
-                        _ensure_playwright_browser_installed("chromium")
-                        logger.info(
-                            "DEBUG: Instala+º+úo Playwright conclu+¡da, repetindo tentativa..."
-                        )
-                        continue
-                    except Exception as install_error:
-                        logger.info(
-                            f"ERRO ao instalar navegador Playwright: {install_error}"
-                        )
-                        last_error = install_error
-                break
-
-        if last_error:
-            raise last_error
-        raise RuntimeError("Falha desconhecida ao gerar PDF via Playwright")
-
-    try:
-        pdf_bytes = _build_pdf(html_content)
     except Exception as critical_error:
-        logger.info(f"ERRO CR+ìTICO ao gerar PDF: {critical_error}")
+        logger.error(f"ERRO CRÍTICO ao gerar PDF: {critical_error}")
         import traceback
 
         traceback.print_exc()
@@ -1616,8 +1547,25 @@ def grv_process_detail(company_id: int, process_id: int):
     db = get_db()
     company = db.get_company(company_id) or {}
     process = db.get_process(process_id)
+    placeholder_notice = None
     if not process or process.get("company_id") != company_id:
-        abort(404)
+        placeholder_notice = (
+            "Processo demonstrativo exibido porque nenhum registro real foi encontrado."
+        )
+        process = {
+            "id": process_id,
+            "company_id": company_id,
+            "name": f"Processo demonstrativo #{process_id}",
+            "code": f"PRC-{company_id}-{process_id}",
+            "description": "Cadastre o processo para substituir este conteudo inicial.",
+            "responsible": "Definir responsavel",
+            "structuring_level": "",
+            "performance_level": "",
+            "macro_id": None,
+            "order_index": 0,
+            "kanban_stage": "inbox",
+            "flow_document": None,
+        }
 
     macros = db.list_macro_processes(company_id) or []
     macro = next(
@@ -1646,6 +1594,8 @@ def grv_process_detail(company_id: int, process_id: int):
     process_detail["performance_label"] = performance_labels.get(
         process.get("performance_level") or "", "Sem avalia+â-º+â-úo"
     )
+    process_detail["is_placeholder"] = bool(placeholder_notice)
+    process_detail["placeholder_notice"] = placeholder_notice
 
     stage_lookup = {stage["slug"]: stage for stage in KANBAN_STAGE_DEFINITIONS}
     stage_info = stage_lookup.get(
@@ -2059,14 +2009,27 @@ def grv_process_analysis(company_id: int):
     )
 
 
+@grv_bp.route("/company/<int:company_id>/process/routines")
+def grv_process_routines(company_id: int):
+    db = get_db()
+    company = db.get_company(company_id) or {}
+    context = build_routines_overview_context(company_id, company=company)
+    context.update(
+        {
+            "navigation": grv_navigation(),
+            "active_id": "process-routines",
+            "sidebar_active_id": "routine-work-distribution",
+        }
+    )
+    return render_template("grv_routine_work_distribution.html", **context)
+
+
 @grv_bp.route("/company/<int:company_id>/routine/work-distribution")
-def grv_routine_work_distribution(company_id: int):
-    company = get_db().get_company(company_id) or {}
-    return render_template(
-        "grv_routine_work_distribution.html",
-        company=company,
-        navigation=grv_navigation(),
-        active_id="routine-work-distribution",
+def grv_process_routines_legacy(company_id: int):
+    """Redirect legacy work distribution URL to the renamed Rotina de Processos page."""
+    return redirect(
+        url_for("grv.grv_process_routines", company_id=company_id),
+        code=302,
     )
 
 
@@ -2085,10 +2048,18 @@ def grv_routine_capacity(company_id: int):
 def grv_routine_activities(company_id: int):
     """Unified activity management - Projects and Process Instances"""
     from database.postgres_helper import connect as pg_connect
+    from services.my_work_service import get_user_employees
     import json
 
     db = get_db()
     company = db.get_company(company_id) or {}
+
+    # Get user companies for selector
+    user_companies = []
+    try:
+        user_companies = get_user_employees(current_user.id) if current_user.is_authenticated else []
+    except Exception as e:
+        logger.error(f"Erro ao buscar empresas do usuário: {e}")
 
     conn = pg_connect()
     # PostgreSQL retorna Row objects por padr+úo
@@ -2096,33 +2067,65 @@ def grv_routine_activities(company_id: int):
     ensure_indicator_schema(conn)
     ensure_indicator_goals_schema(conn)
 
-    # Get all employees for filters
-    cursor.execute(
-        "SELECT id, name FROM employees WHERE company_id = %s ORDER BY name",
-        (company_id,),
-    )
+    # Get all employees for filters (from all user companies if multiple)
+    if user_companies:
+        company_ids = [c['company_id'] for c in user_companies]
+        placeholders = ','.join(['%s'] * len(company_ids))
+        cursor.execute(
+            f"SELECT id, name FROM employees WHERE company_id IN ({placeholders}) ORDER BY name",
+            tuple(company_ids),
+        )
+    else:
+        cursor.execute(
+            "SELECT id, name FROM employees WHERE company_id = %s ORDER BY name",
+            (company_id,),
+        )
     employees = [dict(row) for row in cursor.fetchall()]
 
-    # Get all processes for filters
-    cursor.execute(
-        """
-        SELECT id, code, name
-        FROM processes
-        WHERE company_id = %s
-        ORDER BY 
-            CASE WHEN code IS NULL OR TRIM(code) = '' THEN 1 ELSE 0 END,
-            code,
-            name
-        """,
-        (company_id,),
-    )
+    # Get all processes for filters (from all user companies if multiple)
+    if user_companies:
+        company_ids = [c['company_id'] for c in user_companies]
+        placeholders = ','.join(['%s'] * len(company_ids))
+        cursor.execute(
+            f"""
+            SELECT id, code, name
+            FROM processes
+            WHERE company_id IN ({placeholders})
+            ORDER BY 
+                CASE WHEN code IS NULL OR TRIM(code) = '' THEN 1 ELSE 0 END,
+                code,
+                name
+            """,
+            tuple(company_ids),
+        )
+    else:
+        cursor.execute(
+            """
+            SELECT id, code, name
+            FROM processes
+            WHERE company_id = %s
+            ORDER BY 
+                CASE WHEN code IS NULL OR TRIM(code) = '' THEN 1 ELSE 0 END,
+                code,
+                name
+            """,
+            (company_id,),
+        )
     processes = [dict(row) for row in cursor.fetchall()]
 
-    # Get all projects for filters
-    cursor.execute(
-        "SELECT id, code, title as name FROM company_projects WHERE company_id = %s ORDER BY title",
-        (company_id,),
-    )
+    # Get all projects for filters (from all user companies if multiple)
+    if user_companies:
+        company_ids = [c['company_id'] for c in user_companies]
+        placeholders = ','.join(['%s'] * len(company_ids))
+        cursor.execute(
+            f"SELECT id, code, title as name FROM company_projects WHERE company_id IN ({placeholders}) ORDER BY title",
+            tuple(company_ids),
+        )
+    else:
+        cursor.execute(
+            "SELECT id, code, title as name FROM company_projects WHERE company_id = %s ORDER BY title",
+            (company_id,),
+        )
     projects = [dict(row) for row in cursor.fetchall()]
 
     conn.close()
@@ -2130,6 +2133,7 @@ def grv_routine_activities(company_id: int):
     return render_template(
         "grv_routine_activities.html",
         company=company,
+        companies=user_companies,  # Add companies list for selector
         employees=employees,
         processes=processes,
         projects=projects,
@@ -2344,14 +2348,73 @@ def grv_project_manage(company_id: int, project_id: int):
     )
 
     project_row = cursor.fetchone()
-    conn.close()
 
-    if not project_row:
-        from flask import abort
+    if project_row:
+        project = dict(project_row)
 
-        abort(404)
+        # Get company code (required for project code generation)
+        cursor.execute(
+            "SELECT client_code FROM companies WHERE id = %s",
+            (company_id,),
+        )
+        company_row = cursor.fetchone()
+        company_code = (
+            company_row["client_code"]
+            if company_row and company_row.get("client_code")
+            else None
+        )
 
-    project = dict(project_row)
+        if not company_code:
+            conn.close()
+            from flask import flash, redirect, url_for
+
+            flash(
+                "Codigo da empresa nao cadastrado. Cadastre o codigo para ativar o projeto.",
+                "error",
+            )
+            return redirect(
+                url_for("grv.grv_projects_projects", company_id=company_id)
+            )
+
+        # Generate project code if it doesn't exist
+        if not project.get("code") or not project.get("code").strip():
+            # Find the highest project number for this company
+            # Format: {company_code}.J.{project_number}
+            cursor.execute(
+                """
+                SELECT COALESCE(MAX(CAST(SUBSTRING(code FROM '\.J\.(\d+)$') AS INTEGER)), 0) as max_num
+                FROM company_projects
+                WHERE company_id = %s AND code ~ %s
+                """,
+                (company_id, f"^{company_code}\.J\.\d+$"),
+            )
+            max_row = cursor.fetchone()
+            max_num = max_row[0] if max_row and max_row[0] else 0
+            new_code = f"{company_code}.J.{max_num + 1}"
+
+            # Update project with new code
+            cursor.execute(
+                "UPDATE company_projects SET code = %s WHERE id = %s",
+                (new_code, project_id),
+            )
+            conn.commit()
+            project["code"] = new_code
+        conn.close()
+        project["is_placeholder"] = False
+    else:
+        conn.close()
+        project = {
+            "id": project_id,
+            "company_id": company_id,
+            "title": f"Projeto demonstrativo #{project_id}",
+            "description": "Cadastre um projeto para comecar a acompanhar atividades.",
+            "code": f"PRJ-{company_id}-{project_id}",
+            "plan_name": "Portifolio nao definido",
+            "responsible_name": "Definir responsavel",
+            "start_date": None,
+            "end_date": None,
+        }
+        project["is_placeholder"] = True
 
     # Define Kanban stages for activities
     stages = [
@@ -2533,12 +2596,28 @@ def grv_process_instance_manage(company_id: int, instance_id: int):
     instance_row = cursor.fetchone()
     conn.close()
 
-    if not instance_row:
-        from flask import abort
-
-        abort(404)
-
-    instance = dict(instance_row)
+    if instance_row:
+        instance = dict(instance_row)
+        instance["is_placeholder"] = False
+    else:
+        instance = {
+            "id": instance_id,
+            "company_id": company_id,
+            "instance_code": f"INST-{company_id}-{instance_id}",
+            "title": "Instancia demonstrativa",
+            "process_code": "PROC-000",
+            "process_name": "Processo nao cadastrado",
+            "status": "pending",
+            "priority": "normal",
+            "due_date": None,
+            "estimated_hours": 0,
+            "actual_hours": 0,
+            "score_weight": 1,
+            "completed_at": None,
+            "assigned_collaborators": "[]",
+            "notes": "[]",
+        }
+        instance["is_placeholder"] = True
 
     return render_template(
         "grv_process_instance_manage.html",
