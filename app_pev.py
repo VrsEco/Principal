@@ -188,67 +188,6 @@ def ensure_routine_collaborators_sequence(cursor: Any) -> None:
     )
 
 
-def ensure_process_instances_sequence(cursor: Any) -> None:
-    """Ensure process_instances.id auto-increments via PostgreSQL sequence."""
-    cursor.execute(
-        """
-        SELECT column_default
-        FROM information_schema.columns
-        WHERE table_schema = 'public'
-          AND table_name = 'process_instances'
-          AND column_name = 'id'
-        """
-    )
-    row = cursor.fetchone()
-    column_default = row[0] if row else None
-
-    if column_default and "nextval" in str(column_default):
-        return
-
-    cursor.execute("CREATE SEQUENCE IF NOT EXISTS process_instances_id_seq")
-    cursor.execute(
-        "SELECT COALESCE(MAX(id), 0) AS max_id FROM process_instances"
-    )
-    max_row = cursor.fetchone()
-    max_id = 0
-    if max_row:
-        raw_value = max_row.get("max_id") if hasattr(max_row, "get") else None
-        if raw_value is None:
-            try:
-                raw_value = max_row[0]
-            except (TypeError, KeyError, IndexError):
-                raw_value = 0
-        max_id = int(raw_value or 0)
-
-    cursor.execute(
-        """
-        SELECT setval(
-            'process_instances_id_seq',
-            %s,
-            false
-        )
-        """,
-        (max_id + 1,),
-    )
-    try:
-        cursor.fetchone()
-    except Exception:
-        pass
-
-    cursor.execute(
-        """
-        ALTER TABLE process_instances
-        ALTER COLUMN id SET DEFAULT nextval('process_instances_id_seq')
-        """
-    )
-    cursor.execute(
-        """
-        ALTER SEQUENCE process_instances_id_seq
-        OWNED BY process_instances.id
-        """
-    )
-
-
 # Custom Jinja2 filter for parsing JSON
 @app.template_filter("from_json")
 def from_json_filter(json_string):
@@ -452,6 +391,22 @@ _MODULE_ENDPOINTS = {
 }
 
 
+def nav_url(endpoint: str, fallback: Optional[str] = None, **kwargs) -> str:
+    """Resolve URLs usados em templates sem quebrar quando o endpoint não existe."""
+    try:
+        return url_for(endpoint, **kwargs)
+    except BuildError as exc:
+        logger.warning("nav_url: endpoint '%s' indisponível (%s).", endpoint, exc)
+    except Exception as exc:  # pragma: no cover - defensive
+        logger.error("nav_url: erro inesperado ao resolver '%s': %s", endpoint, exc)
+        logger.debug(traceback.format_exc())
+    return fallback or "#"
+
+
+# Disponibiliza helper diretamente aos templates
+app.jinja_env.globals["nav_url"] = nav_url
+
+
 def _build_module_links() -> Dict[str, str]:
     """Resolve module dashboard URLs without breaking when endpoints are missing."""
     module_links: Dict[str, str] = {}
@@ -476,21 +431,6 @@ def inject_module_links():
         logger.error("Erro ao injetar module_links: %s", exc)
         logger.debug(traceback.format_exc())
         return {"module_links": {}}
-
-
-@app.template_global()
-def nav_url(endpoint: str, fallback: str = "#", **values) -> str:
-    """Resolve endpoints de navegação com fallback seguro."""
-    try:
-        return url_for(endpoint, **values)
-    except BuildError as exc:
-        logger.warning(
-            "Endpoint '%s' indisponível para navegação. Usando fallback '%s'. Detalhes: %s",
-            endpoint,
-            fallback,
-            exc,
-        )
-        return fallback
 
 # Import and register authentication and logs blueprints
 try:
@@ -742,9 +682,6 @@ def purge_companies_except_versus():
             )
 
         payload = request.get_json(silent=True) or {}
-        logger.warning(
-            "[process-instance:create] payload=%s company_id=%s", payload, company_id
-        )
         password = payload.get("password")
         phrase = payload.get("phrase", "")
         expected_phrase = "APAGAR TUDO EXCETO VERSUS"
@@ -2400,8 +2337,8 @@ def api_update_company_performance_settings(company_id: int):
         for field, value in normalized.items():
             setattr(settings, field, value)
 
-        models_db.session.add(settings)
-        models_db.session.commit()
+        db.session.add(settings)
+        db.session.commit()
 
         data = settings.to_dict()
         data.pop("company_id", None)
@@ -2410,7 +2347,7 @@ def api_update_company_performance_settings(company_id: int):
         return jsonify({"success": False, "error": str(verr)}), 400
     except Exception as err:
         logger.error("Erro ao salvar configurações de performance: %s", err)
-        models_db.session.rollback()
+        db.session.rollback()
         return jsonify({"success": False, "error": str(err)}), 500
 
 
@@ -4136,7 +4073,6 @@ def api_list_process_instances(company_id: int):
     """List all process instances for a company"""
     try:
         from database.postgres_helper import connect as pg_connect
-        import json
 
         conn = pg_connect()
         # PostgreSQL retorna Row objects por padrão
@@ -4153,48 +4089,7 @@ def api_list_process_instances(company_id: int):
 
         instances = []
         for row in cursor.fetchall():
-            instance = dict(row)
-            
-            # Parse assigned_collaborators JSON to extract collaborator information
-            assigned_collaborators_raw = instance.get('assigned_collaborators')
-            parsed_collaborators = []
-            
-            if assigned_collaborators_raw:
-                try:
-                    if isinstance(assigned_collaborators_raw, str):
-                        parsed_collaborators = json.loads(assigned_collaborators_raw)
-                    elif isinstance(assigned_collaborators_raw, list):
-                        parsed_collaborators = assigned_collaborators_raw
-                except (json.JSONDecodeError, TypeError) as e:
-                    logger.info(f"Failed to parse assigned_collaborators for instance {instance.get('id')}: {e}")
-                    parsed_collaborators = []
-            
-            # Extract owner, responsible, and executor names from collaborators
-            owner_names = []
-            responsible_names = []
-            executor_names = []
-            
-            for collab in parsed_collaborators:
-                if not isinstance(collab, dict):
-                    continue
-                    
-                name = collab.get('name', '')
-                role = (collab.get('role', 'executor') or 'executor').lower()
-                
-                if role == 'owner' and name:
-                    owner_names.append(name)
-                elif role == 'responsible' and name:
-                    responsible_names.append(name)
-                elif role == 'executor' and name:
-                    executor_names.append(name)
-            
-            # Add parsed data to instance for frontend consumption
-            instance['process_owner_display'] = ', '.join(owner_names) if owner_names else ''
-            instance['process_responsible_display'] = ', '.join(responsible_names) if responsible_names else ''
-            instance['executor_names'] = executor_names
-            instance['parsed_collaborators'] = parsed_collaborators
-            
-            instances.append(instance)
+            instances.append(dict(row))
 
         conn.close()
         return jsonify(instances)
@@ -4206,20 +4101,31 @@ def api_list_process_instances(company_id: int):
 @app.route("/api/companies/<int:company_id>/process-instances", methods=["POST"])
 def api_create_process_instance(company_id: int):
     """Create a new process instance (manual trigger)"""
+    conn = None
     try:
-        from database.postgres_helper import get_engine
-        from sqlalchemy import text
+        from database.postgres_helper import connect as pg_connect
         import json
-        from datetime import datetime
+        from datetime import datetime, timedelta
 
         payload = request.get_json(silent=True) or {}
 
         process_id = payload.get("process_id")
         title = payload.get("title", "").strip()
-        due_date = payload.get("due_date")
         priority = payload.get("priority", "normal")
         description = payload.get("description", "").strip()
         trigger_type = payload.get("trigger_type", "manual")
+        raw_routine_id = payload.get("routine_id")
+
+        def _safe_int(value):
+            try:
+                return int(value)
+            except (TypeError, ValueError):
+                return 0
+
+        try:
+            requested_routine_id = int(raw_routine_id)
+        except (TypeError, ValueError):
+            requested_routine_id = None
 
         if not process_id or not title:
             return jsonify({"error": "Missing required fields"}), 400
@@ -4230,168 +4136,241 @@ def api_create_process_instance(company_id: int):
             return jsonify({"error": "Process not found"}), 404
 
         # Generate instance code
-        engine = get_engine()
-        with engine.connect() as conn:
-            # Start transaction
-            trans = conn.begin()
-            try:
-                # Get company code
-                company = db.get_company(company_id)
-                company_code = company.get("client_code", "XX")
+        conn = pg_connect()
+        # PostgreSQL retorna Row objects por padrão
+        cursor = conn.cursor()
 
-                # Get max sequence for this process
-                result = conn.execute(
-                    text("""
-                    SELECT COUNT(*) as count 
-                    FROM process_instances 
-                    WHERE company_id = :company_id AND process_id = :process_id
-                    """),
-                    {"company_id": company_id, "process_id": process_id}
-                ).fetchone()
-                
-                # SQLAlchemy row access
-                count = result[0] if result else 0
-                sequence = count + 1
+        # Get company code
+        company = db.get_company(company_id)
+        company_code = company.get("client_code", "XX")
 
-                instance_code = f"{company_code}.P{process_id}.{sequence:03d}"
-                
-                # Get routine collaborators if exists
-                assigned_collaborators = []
-                estimated_hours = 0.0
-                routine_id = None
+        # Get max sequence for this process
+        cursor.execute(
+            """
+            SELECT COUNT(*) as count 
+            FROM process_instances 
+            WHERE company_id = %s AND process_id = %s
+            """,
+            (company_id, process_id),
+        )
+        result = cursor.fetchone()
+        sequence = (result["count"] if result else 0) + 1
 
-                logger.warning(f"[instance-create] Fetching routine for company={company_id}, process={process_id}")
-                
+        instance_code = f"{company_code}.P{process_id}.{sequence:03d}"
+
+        # Get routine collaborators if exists
+        assigned_collaborators = []
+        estimated_hours = 0.0
+        routine_id = None
+        routine_deadline_days = 0
+        routine_deadline_hours = 0
+
+        def _routine_query(include_assigned: bool) -> str:
+            columns = "id, deadline_days, deadline_hours"
+            if include_assigned:
+                columns += ", assigned_roles"
+            if requested_routine_id:
+                filter_clause = "company_id = %s AND id = %s"
+            else:
+                filter_clause = "company_id = %s AND process_id = %s"
+            order_clause = "" if requested_routine_id else " ORDER BY created_at DESC"
+            return f"SELECT {columns} FROM routines WHERE {filter_clause}{order_clause} LIMIT 1"
+
+        routine_params = (
+            (company_id, requested_routine_id)
+            if requested_routine_id
+            else (company_id, process_id)
+        )
+
+        routine_row = None
+        assigned_roles_json = None
+
+        try:
+            cursor.execute(_routine_query(include_assigned=True), routine_params)
+            routine_row = cursor.fetchone()
+        except Exception as exc:
+            if conn:
+                conn.rollback()
+            if "assigned_roles" in str(exc):
                 try:
-                    with conn.begin_nested():
-                        routine_row = conn.execute(
-                            text("""
-                            SELECT id, assigned_roles 
-                            FROM routines 
-                            WHERE company_id = :company_id AND process_id = :process_id
-                            LIMIT 1
-                            """),
-                            {"company_id": company_id, "process_id": process_id}
-                        ).fetchone()
+                    cursor.execute(
+                        _routine_query(include_assigned=False), routine_params
+                    )
+                    routine_row = cursor.fetchone()
+                except Exception as inner_exc:
+                    logger.warning(
+                        "Failed to load routine metadata (fallback): %s", inner_exc
+                    )
+            else:
+                logger.warning("Failed to load routine metadata: %s", exc)
 
-                        logger.warning(f"[instance-create] Routine found: {bool(routine_row)}")
+        if routine_row:
+            routine_data = dict(routine_row)
+            routine_id = routine_data.get("id")
+            routine_deadline_days = _safe_int(routine_data.get("deadline_days"))
+            routine_deadline_hours = _safe_int(routine_data.get("deadline_hours"))
+            assigned_roles_json = routine_data.get("assigned_roles")
 
-                        if routine_row:
-                            routine_id = routine_row.id
-                            assigned_roles_json = routine_row.assigned_roles
-                            
-                            logger.warning(f"[instance-create] Routine ID: {routine_id}, assigned_roles type: {type(assigned_roles_json)}")
+            if routine_id:
+                table_collaborators = []
+                try:
+                    cursor.execute(
+                        """
+                        SELECT rc.employee_id, rc.hours_used, e.name AS employee_name
+                        FROM routine_collaborators rc
+                        LEFT JOIN employees e ON e.id = rc.employee_id
+                        WHERE rc.routine_id = %s
+                        ORDER BY e.name
+                        """,
+                        (routine_id,),
+                    )
+                    table_collaborators = cursor.fetchall()
+                except Exception as exc:
+                    if conn:
+                        conn.rollback()
+                    if "routine_collaborators" not in str(exc):
+                        logger.warning(
+                            "Failed to load routine_collaborators for routine %s: %s",
+                            routine_id,
+                            exc,
+                        )
+                    table_collaborators = []
 
-                            if assigned_roles_json:
-                                assigned_roles = (
-                                    json.loads(assigned_roles_json)
-                                    if isinstance(assigned_roles_json, str)
-                                    else assigned_roles_json
-                                )
-                                
-                                logger.warning(f"[instance-create] Parsed {len(assigned_roles)} roles from routine")
+                for collab_row in table_collaborators or []:
+                    employee_id = collab_row.get("employee_id")
+                    if not employee_id:
+                        continue
+                    hours_val = collab_row.get("hours_used") or 0
+                    try:
+                        numeric_hours = float(hours_val)
+                    except (TypeError, ValueError):
+                        numeric_hours = 0.0
+                    assigned_collaborators.append(
+                        {
+                            "id": employee_id,
+                            "name": collab_row.get("employee_name")
+                            or f"Colaborador {employee_id}",
+                            "hours": numeric_hours,
+                        }
+                    )
+                    estimated_hours += numeric_hours
 
-                                for role_data in assigned_roles:
-                                    employee_id = role_data.get("employee_id")
-                                    hours = float(role_data.get("hours", 0))
-                                    role = role_data.get("role", "executor")  # Get role from routine data
-                                    
-                                    logger.warning(f"[instance-create] Processing role: employee_id={employee_id}, role={role}, hours={hours}")
+            if not assigned_collaborators and assigned_roles_json:
+                legacy_roles = assigned_roles_json
+                if isinstance(legacy_roles, str):
+                    try:
+                        legacy_roles = json.loads(legacy_roles)
+                    except json.JSONDecodeError:
+                        legacy_roles = []
+                elif isinstance(legacy_roles, dict):
+                    legacy_roles = [legacy_roles]
 
-                                    if employee_id:
-                                        emp_row = conn.execute(
-                                            text("SELECT name FROM employees WHERE id = :id"),
-                                            {"id": employee_id}
-                                        ).fetchone()
-                                        
-                                        logger.warning(f"[instance-create] Employee {employee_id} found: {bool(emp_row)}")
-                                        
-                                        if emp_row:
-                                            assigned_collaborators.append(
-                                                {
-                                                    "id": employee_id,
-                                                    "name": emp_row.name,
-                                                    "role": role,  # Include role field
-                                                    "hours": hours,
-                                                }
-                                            )
-                                            estimated_hours += hours
-                                            logger.warning(f"[instance-create] Added collaborator: {emp_row.name} as {role}")
-                            else:
-                                logger.warning(f"[instance-create] Routine {routine_id} has no assigned_roles")
-                        else:
-                            logger.warning(f"[instance-create] No routine found for company={company_id}, process={process_id}")
-                            
-                except Exception as e:
-                    logger.warning(f"[instance-create] ERROR fetching routine collaborators: {e}")
-                    import traceback
-                    logger.warning(f"[instance-create] Traceback: {traceback.format_exc()}")
-                    # Savepoint rolled back automatically by context manager
+                for role_data in legacy_roles or []:
+                    if not isinstance(role_data, dict):
+                        continue
+                    employee_id = role_data.get("employee_id")
+                    if not employee_id:
+                        continue
+                    hours_val = role_data.get("hours", role_data.get("hours_used", 0))
+                    try:
+                        numeric_hours = float(hours_val)
+                    except (TypeError, ValueError):
+                        numeric_hours = 0.0
 
-                logger.warning(f"[instance-create] Final assigned_collaborators count: {len(assigned_collaborators)}")
+                    employee_name = role_data.get("employee_name")
+                    if not employee_name:
+                        cursor.execute(
+                            "SELECT name FROM employees WHERE id = %s",
+                            (employee_id,),
+                        )
+                        emp_row = cursor.fetchone()
+                        employee_name = (
+                            emp_row.get("name")
+                            if isinstance(emp_row, dict)
+                            else None
+                            if not emp_row
+                            else emp_row[0]
+                        )
 
+                    assigned_collaborators.append(
+                        {
+                            "id": employee_id,
+                            "name": employee_name or f"Colaborador {employee_id}",
+                            "hours": numeric_hours,
+                        }
+                    )
+                    estimated_hours += numeric_hours
 
+        due_date = payload.get("due_date")
+        computed_due_date = None
+        if routine_id and (routine_deadline_days > 0 or routine_deadline_hours > 0):
+            try:
+                computed_due_date = (
+                    datetime.now()
+                    + timedelta(
+                        days=routine_deadline_days,
+                        hours=routine_deadline_hours,
+                    )
+                ).isoformat()
+            except Exception as exc:
+                logger.info(f"[process-instances] Failed to compute deadline: {exc}")
 
-                # Insert instance
-                # Note: ensure_process_instances_sequence logic omitted as it seems to just fix sequence if needed, 
-                # but we are calculating sequence manually above? 
-                # Actually ensure_process_instances_sequence calls setval. 
-                # We can skip it for now or implement it if needed.
-                
-                result = conn.execute(
-                    text("""
-                    INSERT INTO process_instances (
-                        company_id, process_id, routine_id, instance_code,
-                        title, description, status, priority, due_date,
-                        assigned_collaborators, estimated_hours, trigger_type,
-                        created_at
-                    ) VALUES (:company_id, :process_id, :routine_id, :instance_code, :title, :description, :status, :priority, :due_date, :assigned_collaborators, :estimated_hours, :trigger_type, :created_at)
-                    RETURNING id
-                    """),
-                    {
-                        "company_id": company_id,
-                        "process_id": process_id,
-                        "routine_id": routine_id,
-                        "instance_code": instance_code,
-                        "title": title,
-                        "description": description,
-                        "status": "pending",
-                        "priority": priority,
-                        "due_date": due_date,
-                        "assigned_collaborators": json.dumps(assigned_collaborators),
-                        "estimated_hours": estimated_hours,
-                        "trigger_type": trigger_type,
-                        "created_at": datetime.now().isoformat(),
-                    }
-                )
-                
-                instance_id = result.fetchone()[0]
-                
-                # Sync collaborators - we need to adapt _sync... to accept conn/trans or reimplement logic
-                # For now, let's just commit the instance to see if it works.
-                # If we skip _sync, we lose collaborators in the other table, but we fix the main issue.
-                # We can re-add _sync later.
-                
-                trans.commit()
-                
-                # Fetch created instance
-                instance_row = conn.execute(
-                    text("SELECT * FROM process_instances WHERE id = :id"),
-                    {"id": instance_id}
-                ).fetchone()
-                
-                instance = dict(instance_row._mapping) if instance_row else {}
-                return jsonify(instance), 201
+        if computed_due_date:
+            due_date = computed_due_date
+        elif isinstance(due_date, str):
+            due_date = due_date.strip() or None
 
-            except Exception as e:
-                trans.rollback()
-                raise e
+        # Insert instance
+        cursor.execute(
+            """
+            INSERT INTO process_instances (
+                company_id, process_id, routine_id, instance_code,
+                title, description, status, priority, due_date,
+                assigned_collaborators, estimated_hours, trigger_type,
+                created_at
+            ) VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
+            RETURNING id
+            """,
+            (
+                company_id,
+                process_id,
+                routine_id,
+                instance_code,
+                title,
+                description,
+                "pending",
+                priority,
+                due_date,
+                json.dumps(assigned_collaborators),
+                estimated_hours,
+                trigger_type,
+                datetime.now().isoformat(),
+            ),
+        )
+
+        instance_id = cursor.fetchone()[0]
+        _sync_process_instance_collaborators_table(
+            cursor, company_id, instance_id, assigned_collaborators
+        )
+        conn.commit()
+
+        cursor.execute("SELECT * FROM process_instances WHERE id = %s", (instance_id,))
+        instance_row = cursor.fetchone()
+
+        instance = dict(instance_row) if instance_row else {}
+        return jsonify(instance), 201
 
     except Exception as e:
+        if conn:
+            conn.rollback()
         logger.info(f"Erro ao criar instância: {e}")
         import traceback
+
         traceback.print_exc()
         return jsonify({"error": str(e)}), 500
+    finally:
+        if conn:
+            conn.close()
 
 
 @app.route(
@@ -5729,8 +5708,8 @@ def api_update_task_status(task_id: int):
 # Rota para página de gerenciamento de rotinas DOS PROCESSOS
 @app.route("/companies/<int:company_id>/routines")
 def routines_management(company_id: int):
-    """Legacy route -> redirect to the canonical GRV Rotina de Processos page."""
-    return redirect(f"/grv/company/{company_id}/process/routines", code=302)
+    """Legacy route -> redirect to GRV work distribution page."""
+    return redirect(f"/grv/company/{company_id}/routine/work-distribution")
 
 
 @app.route("/companies/<int:company_id>/routines/<routine_id>")
@@ -13208,8 +13187,46 @@ def _build_placeholder_list(values):
     return placeholders
 
 
+_PROJECT_ACTIVITIES_TABLE_EXISTS: Optional[bool] = None
+
+
+def _ensure_project_activities_table(cursor) -> bool:
+    """
+    Verifica se a tabela normalizada project_activities existe.
+
+    Evita que consultas a tabelas inexistentes interrompam a transação e
+    revertam as atualizações já realizadas no JSON legado.
+    """
+    global _PROJECT_ACTIVITIES_TABLE_EXISTS
+
+    if _PROJECT_ACTIVITIES_TABLE_EXISTS is False:
+        # Já sabemos que não existe, evitar nova consulta custosa
+        return False
+
+    try:
+        cursor.execute("SELECT to_regclass('public.project_activities') AS table_name")
+        row = cursor.fetchone()
+        exists = bool(row and row[0])
+        _PROJECT_ACTIVITIES_TABLE_EXISTS = exists
+        if not exists:
+            logger.info(
+                "Tabela project_activities não encontrada. Sincronização ignorada."
+            )
+        return exists
+    except Exception as exc:
+        logger.info(
+            "Falha ao verificar existência de project_activities: %s. Pulando sincronização.",
+            exc,
+        )
+        _PROJECT_ACTIVITIES_TABLE_EXISTS = False
+        return False
+
+
 def _sync_project_activities_table(cursor, company_id: int, project_id: int, activities):
     """Mantém tabela project_activities em sincronia com o JSON legado."""
+    if not _ensure_project_activities_table(cursor):
+        return
+
     try:
         if not activities:
             activities_list = []

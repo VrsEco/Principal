@@ -169,7 +169,7 @@
     display: grid;
     gap: 10px;
     transition: all 0.2s ease;
-    cursor: pointer;
+    cursor: default;
   }
   .instance-card:hover {
     border-color: rgba(59, 130, 246, 0.3);
@@ -322,20 +322,25 @@
     border-color: rgba(59, 130, 246, 0.3);
     color: #3b82f6;
   }
-  .btn-instance-action.action-hours {
+  .btn-instance-action.action-info {
     background: #eef2ff;
     color: #4338ca;
     border-color: rgba(67, 56, 202, 0.18);
-  }
-  .btn-instance-action.action-comment {
-    background: #ecfeff;
-    color: #0f172a;
-    border-color: rgba(8, 47, 73, 0.15);
   }
   .btn-instance-action.action-complete {
     background: #ecfdf3;
     color: #166534;
     border-color: rgba(22, 101, 52, 0.2);
+  }
+  .btn-instance-action.action-delete {
+    background: #fef2f2;
+    color: #b91c1c;
+    border-color: rgba(248, 113, 113, 0.35);
+  }
+  .btn-instance-action.action-delete:hover {
+    background: #fee2e2;
+    color: #991b1b;
+    border-color: rgba(248, 113, 113, 0.55);
   }
   .btn-instance-action:disabled {
     opacity: 0.6;
@@ -608,63 +613,6 @@
   </div>
 </div>
 <!-- Action Modals -->
-<div class="modal-overlay" id="hoursModal">
-  <div class="modal-content">
-    <div class="modal-header">
-      <h2>Adicionar Horas</h2>
-      <button class="modal-close" type="button" onclick="closeInstanceModal('hoursModal')" aria-label="Fechar">&times;</button>
-    </div>
-    <div class="modal-info" id="hoursInstanceInfo"></div>
-    <form class="modal-form" id="hoursForm">
-      <div class="field">
-        <label>Data trabalhada <span>*</span></label>
-        <input type="date" id="hoursDate" required>
-      </div>
-      <div class="field">
-        <label>Horas <span>*</span></label>
-        <input type="number" id="hoursValue" min="0.25" step="0.25" placeholder="Ex: 1.5" required>
-      </div>
-      <div class="field">
-        <label>Descricao</label>
-        <textarea id="hoursDescription" placeholder="O que foi feito..."></textarea>
-      </div>
-    </form>
-    <div class="modal-footer">
-      <button class="btn-modal cancel" type="button" onclick="closeInstanceModal('hoursModal')">Cancelar</button>
-      <button class="btn-modal submit" type="button" onclick="submitHours()">Salvar</button>
-    </div>
-  </div>
-</div>
-<div class="modal-overlay" id="commentModal">
-  <div class="modal-content">
-    <div class="modal-header">
-      <h2>Adicionar Comentario</h2>
-      <button class="modal-close" type="button" onclick="closeInstanceModal('commentModal')" aria-label="Fechar">&times;</button>
-    </div>
-    <div class="modal-info" id="commentInstanceInfo"></div>
-    <form class="modal-form" id="commentForm">
-      <div class="field">
-        <label>Tipo de comentario</label>
-        <select id="commentType">
-          <option value="note">Nota</option>
-          <option value="risk">Risco</option>
-          <option value="blocker">Bloqueio</option>
-        </select>
-      </div>
-      <div class="field">
-        <label>Comentario <span>*</span></label>
-        <textarea id="commentText" placeholder="Descreva o andamento..." required></textarea>
-      </div>
-      <label style="display: flex; align-items: center; gap: 8px; font-size: 13px; color: #475569;">
-        <input type="checkbox" id="commentPrivate"> Comentario privado
-      </label>
-    </form>
-    <div class="modal-footer">
-      <button class="btn-modal cancel" type="button" onclick="closeInstanceModal('commentModal')">Cancelar</button>
-      <button class="btn-modal submit" type="button" onclick="submitComment()">Salvar</button>
-    </div>
-  </div>
-</div>
 <div class="modal-overlay" id="completeModal">
   <div class="modal-content">
     <div class="modal-header">
@@ -702,6 +650,35 @@ function normalizeScoreWeight(value) {
 function formatScoreWeight(value) {
   const normalized = normalizeScoreWeight(value);
   return Number.isInteger(normalized) ? `${normalized}x` : `${normalized.toFixed(2)}x`;
+}
+function normalizeHoursValue(value) {
+  if (value === undefined || value === null || value === '') {
+    return null;
+  }
+  const parsed = Number(String(value).replace(',', '.'));
+  if (!Number.isFinite(parsed)) {
+    return null;
+  }
+  return parsed;
+}
+function formatHoursValue(value) {
+  const normalized = normalizeHoursValue(value);
+  if (normalized === null) {
+    return null;
+  }
+  const rounded = Math.round(normalized * 10) / 10;
+  return Number.isInteger(rounded) ? `${rounded}h` : `${rounded.toFixed(1)}h`;
+}
+function getHoursDisplay(estimated, actual) {
+  const estimatedLabel = formatHoursValue(estimated);
+  const actualLabel = formatHoursValue(actual);
+  if (estimatedLabel === null && actualLabel === null) {
+    return null;
+  }
+  return {
+    prev: estimatedLabel ?? '--',
+    real: actualLabel ?? '--'
+  };
 }
 function parseCollaborators(rawValue) {
   if (!rawValue) return [];
@@ -749,9 +726,21 @@ function formatDateTime(value) {
 function normalizeInstance(instance, fallbackWeight = null) {
   if (!instance) return instance;
   const parsedCollaborators = parseCollaborators(instance.assigned_collaborators);
+  const parsedExecutors = parsedCollaborators
+    .filter(c => (c?.role || 'executor').toLowerCase() === 'executor')
+    .map(c => c?.name)
+    .filter(Boolean);
+  const parsedOwners = parsedCollaborators
+    .filter(c => (c?.role || '').toLowerCase() === 'owner')
+    .map(c => c?.name)
+    .filter(Boolean);
+  const parsedResponsibles = parsedCollaborators
+    .filter(c => (c?.role || '').toLowerCase() === 'responsible')
+    .map(c => c?.name)
+    .filter(Boolean);
   const executorNames = dedupeNames([
     ...(Array.isArray(instance.process_executor_names) ? instance.process_executor_names : []),
-    ...parsedCollaborators.map(c => c?.name).filter(Boolean)
+    ...parsedExecutors
   ]);
   const normalizedWeightSource =
     instance?.score_weight ?? fallbackWeight ?? 1;
@@ -760,12 +749,14 @@ function normalizeInstance(instance, fallbackWeight = null) {
     instance.process_owner_name ||
     instance.macro_owner_text ||
     instance.instance_owner_name ||
+    parsedOwners[0] ||
     '';
   const responsibleDisplay =
     instance.responsible_display ||
     instance.process_responsible_name ||
     instance.instance_responsible_name ||
     instance.process_responsible_text ||
+    parsedResponsibles[0] ||
     '';
   return {
     ...instance,
@@ -840,15 +831,27 @@ function renderInstances(instances) {
     const weightLabel = formatScoreWeight(instance.score_weight ?? 1);
     const dueDateFormatted = formatDateTime(instance.due_date) || 'Não definido';
     const startedFormatted = formatDateTime(instance.started_at);
+    const hoursDisplay = getHoursDisplay(instance.estimated_hours, instance.actual_hours);
+    const hoursLabel = hoursDisplay
+      ? `Horas: Prev.: ${hoursDisplay.prev} | Real.: ${hoursDisplay.real}`
+      : '';
+    const parsedCollabs = (instance.parsed_collaborators || []).filter(Boolean);
     const executorNames = (instance.executor_names && instance.executor_names.length)
       ? instance.executor_names
-      : (instance.parsed_collaborators || []).map(c => c?.name).filter(Boolean);
+      : parsedCollabs
+        .filter(c => (c.role || 'executor').toLowerCase() === 'executor')
+        .map(c => c?.name)
+        .filter(Boolean);
     const executorSummary = summarizeNames(executorNames) || 'Sem executores';
-    const ownerName = instance.process_owner_display || '--';
-    const responsibleName = instance.process_responsible_display || '--';
+    const ownerName = instance.process_owner_display
+      || parsedCollabs.find(c => (c.role || '').toLowerCase() === 'owner')?.name
+      || '--';
+    const responsibleName = instance.process_responsible_display
+      || parsedCollabs.find(c => (c.role || '').toLowerCase() === 'responsible')?.name
+      || '--';
     const triggerLabel = instance.trigger_type === 'automatic' ? 'Automático' : 'Manual';
     return `
-      <div class="instance-card" onclick="openInstance(${instance.id})">
+      <div class="instance-card">
         <div class="instance-card-header">
           <div class="instance-card-title">
             <div class="instance-title-line">
@@ -859,7 +862,7 @@ function renderInstances(instances) {
             <div class="instance-meta-row">
               <span class="meta-pill highlight">Prazo: ${dueDateFormatted}</span>
               ${startedFormatted ? `<span class="meta-pill muted">Início: ${startedFormatted}</span>` : ''}
-              ${instance.estimated_hours ? `<span class="meta-pill muted">Est.: ${instance.estimated_hours}h</span>` : ''}
+              ${hoursLabel ? `<span class="meta-pill muted">${hoursLabel}</span>` : ''}
               <span class="meta-pill muted">Peso: ${weightLabel}</span>
             </div>
           </div>
@@ -877,15 +880,15 @@ function renderInstances(instances) {
           <div class="instance-collaborators">
             ${triggerLabel}
           </div>
-          <div class="instance-actions" onclick="event.stopPropagation()">
-            <button class="btn-instance-action action-hours" onclick="openHoursModal(${instance.id})" data-ref="05">
-              + Horas
-            </button>
-            <button class="btn-instance-action action-comment" onclick="openCommentModal(${instance.id})" data-ref="06">
-              Comentar
+          <div class="instance-actions">
+            <button class="btn-instance-action action-info" onclick="openInstance(${instance.id})" data-ref="05">
+              + Horas / Info
             </button>
             <button class="btn-instance-action action-complete" onclick="openCompleteModal(${instance.id})" data-ref="07" ${instance.status === 'completed' ? 'disabled' : ''}>
               Finalizar
+            </button>
+            <button class="btn-instance-action action-delete" onclick="confirmDeleteInstance(${instance.id})" data-ref="08">
+              Excluir
             </button>
           </div>
         </div>
@@ -908,8 +911,9 @@ function populateInstanceInfo(containerId, instance) {
   if (instance.due_date) {
     details.push(`<li><strong>Vencimento:</strong> ${new Date(instance.due_date).toLocaleString('pt-BR')}</li>`);
   }
-  if (instance.estimated_hours) {
-    details.push(`<li><strong>Estimativa:</strong> ${instance.estimated_hours}h</li>`);
+  const hoursDisplay = getHoursDisplay(instance.estimated_hours, instance.actual_hours);
+  if (hoursDisplay) {
+    details.push(`<li><strong>Horas:</strong> Prev.: ${hoursDisplay.prev} | Real.: ${hoursDisplay.real}</li>`);
   }
   if (instance.status) {
     details.push(`<li><strong>Status:</strong> ${getStatusLabel(instance.status)}</li>`);
@@ -920,36 +924,18 @@ function populateInstanceInfo(containerId, instance) {
     ${details.length ? `<ul class="instance-detail-list">${details.join('')}</ul>` : ''}
   `;
 }
-function openModalWithInstance(modalId, instanceId) {
+function openCompleteModal(instanceId) {
   const instance = getInstanceById(instanceId);
   if (!instance) {
     alert('Instancia nao encontrada.');
     return;
   }
   currentInstance = instance;
-  if (modalId === 'hoursModal') {
-    populateInstanceInfo('hoursInstanceInfo', instance);
-    const today = new Date().toISOString().slice(0, 10);
-    const hoursDate = document.getElementById('hoursDate');
-    if (hoursDate) hoursDate.value = today;
-  } else if (modalId === 'commentModal') {
-    populateInstanceInfo('commentInstanceInfo', instance);
-  } else if (modalId === 'completeModal') {
-    populateInstanceInfo('completeInstanceInfo', instance);
-  }
-  const overlay = document.getElementById(modalId);
+  populateInstanceInfo('completeInstanceInfo', instance);
+  const overlay = document.getElementById('completeModal');
   if (overlay) {
     overlay.classList.add('active');
   }
-}
-function openHoursModal(instanceId) {
-  openModalWithInstance('hoursModal', instanceId);
-}
-function openCommentModal(instanceId) {
-  openModalWithInstance('commentModal', instanceId);
-}
-function openCompleteModal(instanceId) {
-  openModalWithInstance('completeModal', instanceId);
 }
 function closeInstanceModal(modalId) {
   const overlay = document.getElementById(modalId);
@@ -957,89 +943,34 @@ function closeInstanceModal(modalId) {
   overlay.classList.remove('active');
   const form = overlay.querySelector('form');
   if (form) form.reset();
-  if (modalId === 'hoursModal') {
-    const info = document.getElementById('hoursInstanceInfo');
-    if (info) info.innerHTML = '';
-  }
-  if (modalId === 'commentModal') {
-    const info = document.getElementById('commentInstanceInfo');
-    if (info) info.innerHTML = '';
-  }
   if (modalId === 'completeModal') {
     const info = document.getElementById('completeInstanceInfo');
     if (info) info.innerHTML = '';
   }
   currentInstance = null;
 }
-async function submitHours() {
-  if (!currentInstance) {
-    alert('Selecione uma instancia para registrar horas.');
-    return;
-  }
-  const workDate = document.getElementById('hoursDate')?.value;
-  const hoursValue = parseFloat(document.getElementById('hoursValue')?.value || '0');
-  const description = document.getElementById('hoursDescription')?.value || '';
-  if (!workDate || !hoursValue || hoursValue <= 0) {
-    alert('Informe data e horas validas.');
-    return;
-  }
-  try {
-    const response = await fetch('/my-work/api/work-hours', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        activity_id: currentInstance.id,
-        activity_type: 'process',
-        work_date: workDate,
-        hours: hoursValue,
-        description
-      })
-    });
-    const result = await response.json().catch(() => ({}));
-    if (!response.ok || !result.success) {
-      const message = result.error || 'Erro ao registrar horas.';
-      throw new Error(message);
-    }
-    alert('Horas registradas com sucesso.');
-    closeInstanceModal('hoursModal');
-  } catch (error) {
-    console.error('Erro ao adicionar horas:', error);
-    alert(error.message || 'Erro ao registrar horas.');
-  }
+function confirmDeleteInstance(instanceId) {
+  const instance = getInstanceById(instanceId);
+  const name = instance?.title || 'esta instancia';
+  const proceed = confirm(`Excluir "${name}"? Esta ação não poderá ser desfeita.`);
+  if (!proceed) return;
+  deleteInstance(instanceId);
 }
-async function submitComment() {
-  if (!currentInstance) {
-    alert('Selecione uma instancia para comentar.');
-    return;
-  }
-  const commentText = (document.getElementById('commentText')?.value || '').trim();
-  if (!commentText) {
-    alert('Digite um comentario.');
-    return;
-  }
-  const payload = {
-    activity_id: currentInstance.id,
-    activity_type: 'process',
-    comment_type: document.getElementById('commentType')?.value || 'note',
-    comment: commentText,
-    is_private: !!document.getElementById('commentPrivate')?.checked
-  };
+async function deleteInstance(instanceId) {
   try {
-    const response = await fetch('/my-work/api/comments', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(payload)
+    const response = await fetch(`/api/companies/${companyId}/process-instances/${instanceId}`, {
+      method: 'DELETE'
     });
     const result = await response.json().catch(() => ({}));
-    if (!response.ok || !result.success) {
-      const message = result.error || 'Erro ao adicionar comentario.';
-      throw new Error(message);
+    if (!response.ok || result.error || result.success === false) {
+      throw new Error(result.error || 'Erro ao excluir instancia.');
     }
-    alert('Comentario adicionado com sucesso.');
-    closeInstanceModal('commentModal');
+    allInstances = allInstances.filter(instance => String(instance.id) !== String(instanceId));
+    renderInstances(allInstances);
+    alert('Instancia excluida com sucesso.');
   } catch (error) {
-    console.error('Erro ao adicionar comentario:', error);
-    alert(error.message || 'Erro ao adicionar comentario.');
+    console.error('Erro ao excluir instancia:', error);
+    alert(error.message || 'Erro ao excluir instancia.');
   }
 }
 async function submitCompletion() {

@@ -42,3 +42,11 @@ def downgrade():
             batch_op.drop_column("updated_at")
 
 
+
+
+
+
+
+
+
+

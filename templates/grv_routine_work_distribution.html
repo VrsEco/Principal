@@ -436,7 +436,7 @@
           </select>
         </div>
         <div class="filter-field">
-          <label for="filterCollaborators">Mínimo de colab.</label>
+          <label for="filterCollaborators">Mínimo de exec.</label>
           <input type="number" id="filterCollaborators" min="0" placeholder="0" />
         </div>
         <div class="filter-field">
@@ -502,7 +502,7 @@
             <td>
               <span class="collaborator-pill" title="{{ collaborator_names|join(', ') }}">
                 <span>{{ '%02d'|format(routine.collaborators_count|default(0)) }}</span>
-                colab.
+                exec.
               </span>
               {% if collaborator_display %}
               <small style="display:block; font-size:11px; color:#475569; margin-top:2px;">

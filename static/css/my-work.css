@@ -2037,6 +2037,45 @@ body {
   margin: 0 0 1rem 0;
 }
 
+.activity-label {
+  font-size: 0.75rem;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: var(--color-text-tertiary);
+  font-weight: 600;
+}
+
+.process-separator {
+  color: var(--color-text-tertiary);
+  font-weight: 600;
+}
+
+.process-name {
+  font-weight: 600;
+  color: var(--color-text-primary);
+}
+
+.activity-item__instance {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 0.35rem;
+  margin-bottom: 0.75rem;
+  font-size: 0.95rem;
+  color: var(--color-text-secondary);
+}
+
+.instance-code {
+  font-family: 'Courier New', monospace;
+  font-weight: 600;
+  color: var(--color-text-tertiary);
+}
+
+.instance-name {
+  font-weight: 500;
+  color: var(--color-text-primary);
+}
+
 .activity-progress {
   margin-bottom: 1rem;
 }

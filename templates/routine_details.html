@@ -181,7 +181,7 @@
     background: #e2e8f0;
   }
 
-  /* Colaboradores */
+  /* Executores */
   .collaborators-table {
     width: 100%;
     border-collapse: collapse;
@@ -301,11 +301,11 @@
       </button>
       {% if not is_new %}
       <button class="tab-button" data-tab="collaborators" onclick="switchTab('collaborators')" data-ref="02">
-        <span>👥</span> Colaboradores
+        <span>👥</span> Executores
       </button>
       {% else %}
       <button class="tab-button" disabled style="opacity: 0.5; cursor: not-allowed;" title="Salve a rotina primeiro" data-ref="03">
-        <span>👥</span> Colaboradores
+        <span>👥</span> Executores
       </button>
       {% endif %}
     </div>
@@ -433,7 +433,7 @@
       </form>
     </div>
 
-    <!-- Aba: Colaboradores -->
+    <!-- Aba: Executores -->
     <div id="tab-collaborators" class="tab-content">
       {% if is_new %}
       <div style="text-align: center; padding: 48px; color: #9ca3af;">
@@ -490,7 +490,7 @@
 
       <!-- Lista de colaboradores -->
       <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px;">
-        <h3 style="font-size: 18px; font-weight: 600; color: #0f172a;">Colaboradores Cadastrados</h3>
+        <h3 style="font-size: 18px; font-weight: 600; color: #0f172a;">Executores Cadastrados</h3>
         <button class="btn btn-primary" onclick="openAddCollaboratorForm()" data-ref="07">
           <span>➕</span> Adicionar Colaborador
         </button>

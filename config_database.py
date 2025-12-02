@@ -1,7 +1,7 @@
-﻿"""
+"""
 Database configuration for PEVAPP22
-âš ï¸ APP30: Sistema migrado para PostgreSQL
-SQLite estÃ¡ DESATIVADO propositalmente
+⚠️ APP30: Sistema migrado para PostgreSQL
+SQLite está DESATIVADO propositalmente
 """
 
 import logging
@@ -16,25 +16,25 @@ class DatabaseConfig:
     """
     Database configuration manager
 
-    âš ï¸ APP30: SQLite DESATIVADO
+    ⚠️ APP30: SQLite DESATIVADO
     Sistema usa APENAS PostgreSQL
     """
 
     def __init__(self):
-        self.db_type = os.environ.get("DB_TYPE", "postgresql")  # PadrÃ£o: PostgreSQL
+        self.db_type = os.environ.get("DB_TYPE", "postgresql")  # Padrão: PostgreSQL
 
-        # âš ï¸ BLOQUEIO: Se tentar usar SQLite, gerar erro claro
+        # ⚠️ BLOQUEIO: Se tentar usar SQLite, gerar erro claro
         if self.db_type == "sqlite":
             raise RuntimeError(
-                "âŒ ERRO: SQLite estÃ¡ DESATIVADO no APP30!\n\n"
-                "O arquivo .env estÃ¡ configurado com DB_TYPE=sqlite\n"
+                "❌ ERRO: SQLite está DESATIVADO no APP30!\n\n"
+                "O arquivo .env está configurado com DB_TYPE=sqlite\n"
                 "mas o sistema foi migrado para PostgreSQL.\n\n"
-                "CORREÃ‡ÃƒO NECESSÃRIA:\n"
+                "CORREÇÃO NECESSÁRIA:\n"
                 "  1. Edite o arquivo .env\n"
                 "  2. Mude: DB_TYPE=sqlite\n"
                 "     Para: DB_TYPE=postgresql\n"
                 "  3. Verifique DATABASE_URL aponta para postgresql://...\n"
-                "  4. Reinicie a aplicaÃ§Ã£o\n\n"
+                "  4. Reinicie a aplicação\n\n"
                 "SQLite foi desativado propositalmente para garantir\n"
                 "que todo o sistema use PostgreSQL.\n"
             )
@@ -44,8 +44,8 @@ class DatabaseConfig:
     def _get_config(self):
         """Get database configuration based on environment"""
         if self.db_type == "sqlite":
-            # âš ï¸ Este cÃ³digo nunca deve ser executado (bloqueio no __init__)
-            raise RuntimeError("SQLite estÃ¡ desativado!")
+            # ⚠️ Este código nunca deve ser executado (bloqueio no __init__)
+            raise RuntimeError("SQLite está desativado!")
         elif self.db_type == "postgresql":
             host = normalize_docker_host(os.environ.get("POSTGRES_HOST", "localhost"))
             return {
@@ -53,7 +53,7 @@ class DatabaseConfig:
                 "port": int(os.environ.get("POSTGRES_PORT", 5432)),
                 "database": os.environ.get("POSTGRES_DB", "bd_app_versus"),
                 "user": os.environ.get("POSTGRES_USER", "postgres"),
-                # Nunca mantenha senhas em cÃ³digo: exigir variÃ¡vel de ambiente ou emitir erro claro
+                # Nunca mantenha senhas em código: exigir variável de ambiente ou emitir erro claro
                 "password": os.environ.get("POSTGRES_PASSWORD") or "",
             }
         else:

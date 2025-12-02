@@ -520,7 +520,7 @@
 
     <!-- Collaborators Section -->
     <div class="collaborators-section">
-      <h2 class="section-title">Colaboradores e Horas</h2>
+      <h2 class="section-title">Adicionar Horas</h2>
       <div class="collaborators-grid" id="collaboratorsGrid">
         <!-- Populated by JavaScript -->
       </div>
@@ -528,11 +528,11 @@
 
     <!-- Logs Section -->
     <div class="logs-section">
-      <h2 class="section-title">Registro Diário</h2>
+      <h2 class="section-title">Registro de Informações</h2>
       
       <div class="add-log-form">
-        <textarea id="logTextarea" placeholder="Adicione uma observação sobre o andamento..." data-ref="09"></textarea>
-        <button onclick="addLog()" data-ref="03">Adicionar Registro</button>
+        <textarea id="logTextarea" placeholder="Adicione uma informação ou observação sobre o andamento..." data-ref="09"></textarea>
+        <button onclick="addLog()" data-ref="03">Adicionar Informação</button>
       </div>
 
       <div id="logsContainer">
@@ -635,7 +635,7 @@ function renderLogs() {
   const container = document.getElementById('logsContainer');
   
   if (logs.length === 0) {
-    container.innerHTML = '<div style="text-align: center; color: #94a3b8; padding: 20px;">Nenhum registro ainda</div>';
+    container.innerHTML = '<div style="text-align: center; color: #94a3b8; padding: 20px;">Nenhuma informação registrada ainda</div>';
     return;
   }
 
@@ -754,13 +754,13 @@ async function addLog() {
       })
     });
 
-    if (!response.ok) throw new Error('Erro ao adicionar registro');
+    if (!response.ok) throw new Error('Erro ao adicionar informação');
 
     textarea.value = '';
     renderLogs();
   } catch (error) {
     console.error('Error adding log:', error);
-    alert('Erro ao adicionar registro. Tente novamente.');
+    alert('Erro ao adicionar informação. Tente novamente.');
   }
 }
 

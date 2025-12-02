@@ -37,8 +37,13 @@ const state = {
   dueDateStart: '',
   dueDateEnd: '',
   filtersCollapsed: false,
-  activitiesCollapsed: false
+  activitiesCollapsed: false,
+  processInstanceCache: {},
+  processesByCompany: {}
 };
+
+const processInstanceFetchPromises = Object.create(null);
+const processListFetchPromises = Object.create(null);
 
 const SELECTION_MODE_NONE = 'none';
 
@@ -903,6 +908,12 @@ async function loadActivitiesData() {
 
     state.activities = Array.isArray(data.data) ? data.data : [];
 
+    try {
+      await hydrateProcessActivities();
+    } catch (hydrationError) {
+      console.warn('Erro ao enriquecer dados de processos no My Work:', hydrationError);
+    }
+
     // Atualizar lista de donos de processos a partir das atividades carregadas
     updateProcessOwnersFromActivities();
 
@@ -930,6 +941,337 @@ async function loadActivitiesData() {
   } finally {
     setActivitiesLoading(false);
   }
+}
+
+// ========================================
+// Process activity hydration
+// ========================================
+
+async function hydrateProcessActivities() {
+  const processActivities = (state.activities || []).filter(
+    activity => activity && activity.type === 'process' && activity.company_id
+  );
+
+  if (!processActivities.length) {
+    return;
+  }
+
+  const companyIds = Array.from(
+    new Set(processActivities.map(activity => activity.company_id).filter(Boolean))
+  );
+
+  if (!companyIds.length) {
+    return;
+  }
+
+  await Promise.all(
+    companyIds.map(companyId =>
+      Promise.all([
+        ensureCompanyProcessInstances(companyId),
+        ensureCompanyProcesses(companyId)
+      ])
+    )
+  );
+
+  processActivities.forEach(activity => {
+    const instanceDetails = getCachedProcessInstance(activity.company_id, activity.id);
+    const processDetails = getCachedProcessDefinition(
+      activity.company_id,
+      activity.process_id || instanceDetails?.process_id
+    );
+    mergeProcessActivityDetails(activity, instanceDetails, processDetails);
+  });
+}
+
+function mergeProcessActivityDetails(activity, instanceDetails, processDetails) {
+  if (!activity || activity.type !== 'process') {
+    return;
+  }
+
+  if (processDetails) {
+    if (processDetails.id && !activity.process_id) {
+      activity.process_id = processDetails.id;
+    }
+    activity.process_name = processDetails.name || activity.process_name;
+    activity.process_code = processDetails.code || activity.process_code;
+  }
+
+  if (instanceDetails) {
+    activity.instance_code = instanceDetails.instance_code || activity.instance_code;
+    activity.title = instanceDetails.title || activity.title;
+    activity.instance_title = instanceDetails.title || activity.instance_title || activity.title;
+    activity.description = instanceDetails.description || activity.description;
+    activity.deadline = instanceDetails.due_date || instanceDetails.deadline || activity.deadline;
+    activity.deadline_label = formatDateLabel(activity.deadline) || activity.deadline_label;
+    const estimatedHours = resolveHoursValue([
+      instanceDetails.estimated_hours,
+      instanceDetails.estimated_time,
+      activity.estimated_hours
+    ]);
+    if (estimatedHours !== null) {
+      activity.estimated_hours = estimatedHours;
+    }
+    const workedHours = resolveHoursValue([
+      instanceDetails.actual_hours,
+      instanceDetails.worked_hours,
+      instanceDetails.hours_worked,
+      activity.worked_hours
+    ]);
+    if (workedHours !== null) {
+      activity.worked_hours = workedHours;
+    }
+    activity.owner_name =
+      instanceDetails.process_owner_display ||
+      instanceDetails.owner_display ||
+      activity.owner_name ||
+      findFirstCollaboratorByRole(instanceDetails.parsed_collaborators, 'owner') ||
+      activity.owner_name;
+    activity.responsible_name =
+      instanceDetails.process_responsible_display ||
+      instanceDetails.responsible_display ||
+      activity.responsible_name ||
+      findFirstCollaboratorByRole(instanceDetails.parsed_collaborators, 'responsible') ||
+      activity.responsible_name;
+
+    const executorNames = buildExecutorNames(instanceDetails);
+    if (executorNames.length) {
+      activity.executor_names = executorNames;
+      activity.executor_name = executorNames.join(', ');
+    }
+
+    if (!activity.collaborators?.length && instanceDetails.parsed_collaborators?.length) {
+      activity.collaborators = instanceDetails.parsed_collaborators;
+    }
+
+    if (instanceDetails.company_name && !activity.company_name) {
+      activity.company_name = instanceDetails.company_name;
+    }
+  }
+
+  if (!activity.owner_name && activity.collaborators?.length) {
+    activity.owner_name =
+      findFirstCollaboratorByRole(activity.collaborators, 'owner') || activity.owner_name;
+  }
+
+  if (!activity.responsible_name && activity.collaborators?.length) {
+    activity.responsible_name =
+      findFirstCollaboratorByRole(activity.collaborators, 'responsible') || activity.responsible_name;
+  }
+}
+
+function formatDateLabel(value) {
+  if (!value) {
+    return '';
+  }
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) {
+    return '';
+  }
+  return date.toLocaleDateString('pt-BR');
+}
+
+function buildExecutorNames(record) {
+  const names = [];
+  if (Array.isArray(record?.executor_names) && record.executor_names.length) {
+    names.push(...record.executor_names);
+  }
+  if (record?.parsed_collaborators?.length) {
+    record.parsed_collaborators.forEach(collaborator => {
+      const role = (collaborator?.role || 'executor').toLowerCase();
+      if (role === 'executor' && collaborator?.name) {
+        names.push(collaborator.name);
+      }
+    });
+  }
+  return dedupeNames(names);
+}
+
+function findFirstCollaboratorByRole(collaborators, role) {
+  if (!collaborators || !role) {
+    return '';
+  }
+  const normalizedRole = role.toLowerCase();
+  const match = (collaborators || []).find(
+    collaborator => (collaborator?.role || '').toLowerCase() === normalizedRole
+  );
+  return match?.name || '';
+}
+
+function getCachedProcessInstance(companyId, instanceId) {
+  if (!companyId || instanceId == null) {
+    return null;
+  }
+  return state.processInstanceCache?.[companyId]?.byId?.[instanceId] || null;
+}
+
+function getCachedProcessDefinition(companyId, processId) {
+  if (!companyId || processId == null) {
+    return null;
+  }
+  return state.processesByCompany?.[companyId]?.byId?.[processId] || null;
+}
+
+async function ensureCompanyProcessInstances(companyId) {
+  if (!companyId) {
+    return null;
+  }
+
+  state.processInstanceCache = state.processInstanceCache || {};
+  if (state.processInstanceCache[companyId]?.byId) {
+    return state.processInstanceCache[companyId];
+  }
+
+  if (processInstanceFetchPromises[companyId]) {
+    return processInstanceFetchPromises[companyId];
+  }
+
+  const fetchPromise = (async () => {
+    try {
+      const response = await fetch(`/api/companies/${companyId}/process-instances`);
+      const payload = await response.json().catch(() => ({}));
+      if (!response.ok || (payload && payload.success === false)) {
+        throw new Error(payload.error || 'Erro ao carregar instâncias');
+      }
+      const instances = Array.isArray(payload)
+        ? payload
+        : (payload.instances || payload.data || []);
+      const normalized = instances
+        .map(instance => normalizeProcessInstanceRecord(instance))
+        .filter(Boolean);
+      const byId = normalized.reduce((acc, instance) => {
+        if (instance && instance.id != null) {
+          acc[instance.id] = instance;
+        }
+        return acc;
+      }, {});
+      state.processInstanceCache[companyId] = {
+        loadedAt: Date.now(),
+        list: normalized,
+        byId
+      };
+      return state.processInstanceCache[companyId];
+    } catch (error) {
+      console.error(`Erro ao carregar instâncias de processos da empresa ${companyId}:`, error);
+      state.processInstanceCache[companyId] = {
+        loadedAt: Date.now(),
+        list: [],
+        byId: {}
+      };
+      return state.processInstanceCache[companyId];
+    } finally {
+      delete processInstanceFetchPromises[companyId];
+    }
+  })();
+
+  processInstanceFetchPromises[companyId] = fetchPromise;
+  return fetchPromise;
+}
+
+async function ensureCompanyProcesses(companyId) {
+  if (!companyId) {
+    return null;
+  }
+
+  state.processesByCompany = state.processesByCompany || {};
+  if (state.processesByCompany[companyId]?.byId) {
+    return state.processesByCompany[companyId];
+  }
+
+  if (processListFetchPromises[companyId]) {
+    return processListFetchPromises[companyId];
+  }
+
+  const fetchPromise = (async () => {
+    try {
+      const response = await fetch(`/api/companies/${companyId}/processes`);
+      const payload = await response.json().catch(() => ({}));
+      if (!response.ok || payload.success === false) {
+        throw new Error(payload.error || 'Erro ao carregar processos');
+      }
+      const list = Array.isArray(payload.data) ? payload.data : payload.processes || [];
+      const byId = (list || []).reduce((acc, process) => {
+        if (process && process.id != null) {
+          acc[process.id] = process;
+        }
+        return acc;
+      }, {});
+      state.processesByCompany[companyId] = {
+        loadedAt: Date.now(),
+        list: list || [],
+        byId
+      };
+      return state.processesByCompany[companyId];
+    } catch (error) {
+      console.error(`Erro ao carregar processos da empresa ${companyId}:`, error);
+      state.processesByCompany[companyId] = {
+        loadedAt: Date.now(),
+        list: [],
+        byId: {}
+      };
+      return state.processesByCompany[companyId];
+    } finally {
+      delete processListFetchPromises[companyId];
+    }
+  })();
+
+  processListFetchPromises[companyId] = fetchPromise;
+  return fetchPromise;
+}
+
+function normalizeProcessInstanceRecord(instance) {
+  if (!instance) {
+    return null;
+  }
+  const normalized = { ...instance };
+  normalized.parsed_collaborators = parseInstanceCollaborators(
+    instance.normalized_collaborators || instance.assigned_collaborators
+  );
+  normalized.executor_names = buildExecutorNames(normalized);
+  normalized.process_owner_display =
+    instance.process_owner_display ||
+    instance.owner_display ||
+    findFirstCollaboratorByRole(normalized.parsed_collaborators, 'owner');
+  normalized.process_responsible_display =
+    instance.process_responsible_display ||
+    instance.responsible_display ||
+    findFirstCollaboratorByRole(normalized.parsed_collaborators, 'responsible');
+  return normalized;
+}
+
+function parseInstanceCollaborators(rawValue) {
+  if (!rawValue) {
+    return [];
+  }
+  if (Array.isArray(rawValue)) {
+    return rawValue.filter(Boolean);
+  }
+  if (typeof rawValue === 'string') {
+    try {
+      const parsed = JSON.parse(rawValue);
+      return Array.isArray(parsed) ? parsed.filter(Boolean) : [];
+    } catch (_err) {
+      return [];
+    }
+  }
+  return [];
+}
+
+function dedupeNames(names) {
+  const seen = new Set();
+  const ordered = [];
+  (names || []).forEach(name => {
+    const normalized = (name || '').trim();
+    if (!normalized) {
+      return;
+    }
+    const key = normalized.toLowerCase();
+    if (seen.has(key)) {
+      return;
+    }
+    seen.add(key);
+    ordered.push(normalized);
+  });
+  return ordered;
 }
 
 async function updateIncidentSummary() {
@@ -1205,6 +1547,8 @@ function createActivityElement(activity) {
   wrapper.dataset.planName = activity.plan_name || '';
   wrapper.dataset.title = activity.title || '';
   wrapper.dataset.description = activity.description || '';
+  wrapper.dataset.companyId = activity.company_id || '';
+  wrapper.dataset.instanceId = activity.instance_id || activity.id;
 
   const statusIndicatorClass = getStatusIndicatorClass(activity);
   const assignmentLabel = activity.assignment?.label || '';
@@ -1214,62 +1558,129 @@ function createActivityElement(activity) {
   const deadlineInfo = formatDeadline(activity);
   const secondaryInfo = formatSecondaryInfo(activity);
   const progressBar = renderProgressBar(activity);
+  const isProcess = activity.type === 'process';
+  const actionButtons = isProcess
+    ? `
+          <button class="action-btn action-btn--add-hours" title="Adicionar horas e ver informações" data-action="open-info">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <circle cx="12" cy="12" r="10"></circle>
+              <polyline points="12 6 12 12 16 14"></polyline>
+            </svg>
+            + Horas / Info
+          </button>
+          <button class="action-btn action-btn--complete" title="Finalizar" data-action="complete">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <polyline points="20 6 9 17 4 12"></polyline>
+            </svg>
+            Finalizar
+          </button>
+      `
+    : `
+          <button class="action-btn action-btn--add-hours" title="Adicionar Horas" data-action="add-hours">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <circle cx="12" cy="12" r="10"></circle>
+              <polyline points="12 6 12 12 16 14"></polyline>
+            </svg>
+            + Horas
+          </button>
+          <button class="action-btn action-btn--comment" title="Adicionar Comentário" data-action="add-comment">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"></path>
+            </svg>
+            Comentar
+          </button>
+          <button class="action-btn action-btn--complete" title="Finalizar" data-action="complete">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <polyline points="20 6 9 17 4 12"></polyline>
+            </svg>
+            Finalizar
+          </button>
+      `;
+
+  const activityCodeMarkup = formatActivityCode(activity);
+  const hasActivityCode = Boolean((activityCodeMarkup || '').trim());
 
   // Formatação especial para processos
   let titleContent = '';
   let instanceContent = '';
   if (activity.type === 'process') {
-    const processName = activity.process_name || '';
-    const processCode = activity.process_code || '';
-    const instanceCode = activity.instance_code || '';
-    const instanceTitle = activity.title || '';
-    const deadline = activity.deadline || '';
-    
-    // Usar process_code se disponível, senão tentar extrair do process_name
-    let finalProcessCode = processCode;
-    let processDisplayName = processName || 'Processo sem nome';
-    
-    if (!finalProcessCode && processName) {
-      // Tentar extrair código do process_name (ex: "AL.C.3.3.1 - GERIR FATURAMENTO")
+    const processName = (activity.process_name || '').trim();
+    let processCode = (activity.process_code || '').trim();
+    const instanceCode = (activity.instance_code || '').trim();
+    const instanceTitle = (activity.instance_title || activity.title || '').trim();
+
+    if (!processCode && processName) {
       const processMatch = processName.match(/^([A-Z0-9.]+)\s*-\s*(.+)$/);
       if (processMatch) {
-        finalProcessCode = processMatch[1].trim();
-        processDisplayName = processMatch[2].trim();
-      } else {
-        // Se não tem o formato esperado, pode ser só o código ou só o nome
-        // Tentar detectar se é código (tem pontos e números)
-        if (/^[A-Z0-9.]+$/.test(processName)) {
-          finalProcessCode = processName;
-          processDisplayName = 'Processo sem nome';
-        } else {
-          processDisplayName = processName;
-        }
+        processCode = processMatch[1].trim();
+      } else if (/^[A-Z0-9.]+$/.test(processName)) {
+        processCode = processName.trim();
       }
     }
-    
-    // Se ainda não temos código, tentar extrair do instance_code
-    if (!finalProcessCode && instanceCode) {
-      // instance_code pode ser "AL.C.3.3.1.19" ou "AL.C.3.3.1.19 2025.11.25 - Teste"
-      // Extrair a parte antes do último número
+
+    if (!processCode && instanceCode) {
       const codeMatch = instanceCode.match(/^([A-Z0-9.]+)\.\d+/);
       if (codeMatch) {
-        finalProcessCode = codeMatch[1];
+        processCode = codeMatch[1];
       }
     }
-    
-    titleContent = `<strong>Processo:</strong> ${finalProcessCode ? `${finalProcessCode} - ` : ''}${processDisplayName}`;
-    
-    // Extrair informações da instância
-    if (instanceCode) {
-      const instanceInfo = extractInstanceInfo(instanceCode, finalProcessCode, instanceTitle, deadline);
-      if (instanceInfo) {
-        instanceContent = `<div class="activity-item__instance"><strong>Instância:</strong> ${instanceInfo}</div>`;
+
+    const processDisplayName =
+      processCode && processName.startsWith(processCode)
+        ? processName.slice(processCode.length).replace(/^\s*[-–]\s*/, '').trim()
+        : processName || activity.process_display_name || 'Processo sem nome';
+
+    const needsSeparator = processCode && processDisplayName;
+    const instanceDisplayName = instanceTitle || 'Instância sem nome';
+    const instanceHasInfo = hasActivityCode || instanceTitle;
+
+    titleContent = `
+      <span class="activity-label">Processo:</span>
+      ${
+        processCode
+          ? `<span class="activity-code">${processCode}</span>${needsSeparator ? '<span class="process-separator">-</span>' : ''}`
+          : ''
       }
-    } else if (instanceTitle) {
-      instanceContent = `<div class="activity-item__instance"><strong>Instância:</strong> ${instanceTitle}</div>`;
-    }
+      <span class="process-name">${processDisplayName || ''}</span>
+    `.trim();
+
+    instanceContent = instanceHasInfo
+      ? `
+        <div class="activity-item__instance">
+          <span class="activity-label">Instância:</span>
+          <span class="instance-name">
+            ${hasActivityCode ? activityCodeMarkup : ''}
+            ${instanceDisplayName}
+          </span>
+        </div>
+      `.trim()
+      : '';
   } else {
-    titleContent = `${formatActivityCode(activity)}${activity.title || 'Atividade sem título'}`;
+    const projectCode = (activity.project_code || '').trim();
+    const projectName =
+      (activity.project_title || activity.plan_name || 'Projeto sem nome').trim();
+    const activityTitle = activity.title || 'Atividade sem título';
+    const needsSeparator = projectCode && projectName;
+
+    titleContent = `
+      <span class="activity-label">Projeto:</span>
+      ${
+        projectCode
+          ? `<span class="activity-code">${projectCode}</span>${needsSeparator ? '<span class="process-separator">-</span>' : ''}`
+          : ''
+      }
+      <span class="process-name">${projectName}</span>
+    `.trim();
+
+    instanceContent = `
+      <div class="activity-item__instance">
+        <span class="activity-label">Atividade:</span>
+        <span class="instance-name">
+          ${hasActivityCode ? activityCodeMarkup : ''}
+          ${activityTitle}
+        </span>
+      </div>
+    `.trim();
   }
 
   wrapper.innerHTML = `
@@ -1307,25 +1718,7 @@ function createActivityElement(activity) {
           ${secondaryInfo}
         </div>
         <div class="activity-item__actions">
-          <button class="action-btn action-btn--add-hours" title="Adicionar Horas" data-action="add-hours">
-            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-              <circle cx="12" cy="12" r="10"></circle>
-              <polyline points="12 6 12 12 16 14"></polyline>
-            </svg>
-            + Horas
-          </button>
-          <button class="action-btn action-btn--comment" title="Adicionar Comentário" data-action="add-comment">
-            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-              <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"></path>
-            </svg>
-            Comentar
-          </button>
-          <button class="action-btn action-btn--complete" title="Finalizar" data-action="complete">
-            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-              <polyline points="20 6 9 17 4 12"></polyline>
-            </svg>
-            Finalizar
-          </button>
+          ${actionButtons}
         </div>
       </div>
     </div>
@@ -1424,6 +1817,18 @@ function formatSecondaryInfo(activity) {
         Executores: ${executorNames}
       </span>
     `);
+    const processHoursLabel = buildProcessHoursLabel(activity);
+    if (processHoursLabel) {
+      infoItems.push(`
+        <span class="info-item info-item--time">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <circle cx="12" cy="12" r="10"></circle>
+            <polyline points="12 6 12 12 16 14"></polyline>
+          </svg>
+          ${processHoursLabel}
+        </span>
+      `);
+    }
   } else {
     const responsibleName = activity.responsible_name || 'Sem responsável definido';
     infoItems.push(`
@@ -1459,7 +1864,7 @@ function formatSecondaryInfo(activity) {
     }
   }
 
-  if (activity.estimated_hours) {
+  if (activity.type !== 'process' && activity.estimated_hours) {
     infoItems.push(`
       <span class="info-item info-item--time">
         <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
@@ -1475,7 +1880,7 @@ function formatSecondaryInfo(activity) {
 }
 
 function renderProgressBar(activity) {
-  if (!activity.progress_percent) return '';
+  if (!activity || activity.type === 'process' || !activity.progress_percent) return '';
   return `
     <div class="activity-progress">
       <div class="progress-bar">
@@ -1494,6 +1899,12 @@ function formatHours(value) {
 
 function getProcessExecutorNames(activity) {
   if (!activity || activity.type !== 'process') return '';
+  if (Array.isArray(activity.executor_names) && activity.executor_names.length) {
+    return activity.executor_names.join(', ');
+  }
+  if (activity.executor_name) {
+    return activity.executor_name;
+  }
   const collabNames = (activity.collaborators || [])
     .map(collab => collab?.name)
     .filter(Boolean);
@@ -1502,7 +1913,32 @@ function getProcessExecutorNames(activity) {
     return collabNames.join(', ');
   }
 
-  return activity.executor_name || '';
+  return '';
+}
+
+function buildProcessHoursLabel(activity) {
+  if (!activity || activity.type !== 'process') {
+    return '';
+  }
+  const plannedHours = resolveHoursValue([
+    activity.estimated_hours,
+    activity.estimated_time
+  ]);
+  const actualHours = resolveHoursValue([
+    activity.worked_hours,
+    activity.actual_hours
+  ]);
+  const segments = [];
+  if (plannedHours !== null) {
+    segments.push(`Prev.: ${formatHours(plannedHours)}`);
+  }
+  if (actualHours !== null) {
+    segments.push(`Real.: ${formatHours(actualHours)}`);
+  }
+  if (!segments.length) {
+    return '';
+  }
+  return `Horas: ${segments.join(' | ')}`;
 }
 
 function activityMatchesPeopleFilter(activity, ids, role) {
@@ -1557,92 +1993,9 @@ function sortByTypeAndTitle(a, b, prioritizedType) {
 }
 
 function formatActivityCode(activity) {
-  // Para atividades de projeto: activity_code (ex: AB.J.3.01)
-  // Para instâncias de processo: instance_code (ex: AB.C.2.3.1.01)
-  const code = activity.activity_code || activity.instance_code;
+  const code = (activity.activity_code || activity.instance_code || activity.process_code || '').trim();
   if (!code) return '';
   return `<span class="activity-code">${code}</span> `;
-}
-
-function extractInstanceInfo(instanceCode, processCode, instanceTitle, deadline) {
-  /**
-   * Extrai informações da instância do instance_code
-   * Exemplo: "AL.C.3.3.1.19" ou "AL.C.3.3.1.19 2025.11.25 - Teste"
-   * Retorna: "19 - 2025.11.25 - Teste" ou "19" se não houver data/título
-   */
-  if (!instanceCode) return '';
-  
-  let instanceNumber = '';
-  let instanceDate = '';
-  let instanceTitleText = instanceTitle || '';
-  
-  // Se temos o código do processo, removemos ele do início
-  if (processCode && instanceCode.startsWith(processCode)) {
-    const remaining = instanceCode.substring(processCode.length).trim();
-    // Remove o ponto inicial se houver (ex: ".19" -> "19")
-    let cleaned = remaining.startsWith('.') ? remaining.substring(1).trim() : remaining;
-    
-    // Tentar extrair número, data e título do instance_code
-    // Formato pode ser: "19" ou "19 2025.11.25 - Teste" ou "19 2025.11.25"
-    const partsMatch = cleaned.match(/^(\d+)(?:\s+(\d{4}\.\d{2}\.\d{2})(?:\s*-\s*(.+))?)?/);
-    if (partsMatch) {
-      instanceNumber = partsMatch[1];
-      if (partsMatch[2]) {
-        instanceDate = partsMatch[2];
-      }
-      if (partsMatch[3]) {
-        instanceTitleText = partsMatch[3];
-      }
-    } else {
-      instanceNumber = cleaned;
-    }
-  } else {
-    // Se não temos o código do processo, tentamos extrair a parte numérica
-    const match = instanceCode.match(/\.(\d+)(?:\s+(.+))?$/);
-    if (match) {
-      instanceNumber = match[1];
-      if (match[2]) {
-        const rest = match[2];
-        const dateMatch = rest.match(/^(\d{4}\.\d{2}\.\d{2})(?:\s*-\s*(.+))?/);
-        if (dateMatch) {
-          instanceDate = dateMatch[1];
-          if (dateMatch[2]) {
-            instanceTitleText = dateMatch[2];
-          }
-        } else {
-          instanceTitleText = rest;
-        }
-      }
-    } else {
-      instanceNumber = instanceCode;
-    }
-  }
-  
-  // Se não temos data no instance_code, usar a deadline formatada
-  if (!instanceDate && deadline) {
-    try {
-      const date = new Date(deadline);
-      if (!isNaN(date.getTime())) {
-        const year = date.getFullYear();
-        const month = String(date.getMonth() + 1).padStart(2, '0');
-        const day = String(date.getDate()).padStart(2, '0');
-        instanceDate = `${year}.${month}.${day}`;
-      }
-    } catch (e) {
-      // Ignorar erro de parsing
-    }
-  }
-  
-  // Montar string final
-  const parts = [instanceNumber];
-  if (instanceDate) {
-    parts.push(instanceDate);
-  }
-  if (instanceTitleText) {
-    parts.push(instanceTitleText);
-  }
-  
-  return parts.join(' - ');
 }
 
 async function loadTeamOverview() {
@@ -2434,6 +2787,24 @@ function safeNumber(value) {
   return Number.isFinite(num) ? num : 0;
 }
 
+function coerceHours(value) {
+  if (value === null || value === undefined || value === '') {
+    return null;
+  }
+  const num = Number(value);
+  return Number.isFinite(num) ? num : null;
+}
+
+function resolveHoursValue(values) {
+  for (const value of values || []) {
+    const coerced = coerceHours(value);
+    if (coerced !== null) {
+      return coerced;
+    }
+  }
+  return null;
+}
+
 function calculatePercent(value, total) {
   const numerator = safeNumber(value);
   const denominator = safeNumber(total);
@@ -2769,6 +3140,8 @@ function initializeActivityActions() {
     const companyName = activity.dataset.companyName || '';
     const planName = activity.dataset.planName || '';
     const description = activity.dataset.description || '';
+    const companyId = activity.dataset.companyId ? parseInt(activity.dataset.companyId, 10) : null;
+    const instanceId = activity.dataset.instanceId ? parseInt(activity.dataset.instanceId, 10) : activityId;
 
     // Montar objeto de atividade
     const activityData = {
@@ -2783,13 +3156,22 @@ function initializeActivityActions() {
       status,
       company_name: companyName,
       plan_name: planName,
-      description
+      description,
+      company_id: companyId,
+      instance_id: instanceId
     };
 
     // Identificar ação pelo data-action
     const action = btn.dataset.action;
 
-    if (action === 'add-hours') {
+    if (action === 'open-info') {
+      if (!companyId || !instanceId) {
+        window.showMessage?.('Não foi possível abrir as informações desta instância.', 'error');
+        return;
+      }
+      window.location.href = `/grv/company/${companyId}/process/instances/${instanceId}/manage`;
+      return;
+    } else if (action === 'add-hours') {
       openModal('modalAddHours', activityData);
     } else if (action === 'add-comment') {
       openModal('modalAddComment', activityData);

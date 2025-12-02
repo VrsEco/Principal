@@ -53,3 +53,11 @@ for i, line in enumerate(data_lines[:5]):
 print("\n✅ Teste concluído! Dados podem ser importados.")
 
 
+
+
+
+
+
+
+
+

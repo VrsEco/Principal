@@ -71,3 +71,11 @@ else:
     print("❌ Nenhum bloco COPY encontrado!")
 
 
+
+
+
+
+
+
+
+

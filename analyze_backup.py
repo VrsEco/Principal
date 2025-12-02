@@ -59,3 +59,11 @@ for line in user_lines[:10]:
     print(line[:100] + '...' if len(line) > 100 else line)
 
 
+
+
+
+
+
+
+
+

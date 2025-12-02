@@ -6,3 +6,11 @@ echo ✅ Script executado
 pause
 
 
+
+
+
+
+
+
+
+

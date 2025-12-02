@@ -21,6 +21,10 @@ DELIVERY_TAGS = [
     "executing_late",
 ]
 
+TEAM_DEFAULT_WEEKLY_HOURS = 40.0
+RECENT_ACTIVITY_DAYS = 30
+_CLOSED_STATUSES = {"completed", "done", "cancelled", "canceled", "archived"}
+
 
 def get_employee_from_user(user_id: int) -> Optional[int]:
     """
@@ -368,6 +372,112 @@ def _build_in_clause(values: Sequence[int], prefix: str) -> Tuple[str, Dict[str,
     return clause, params
 
 
+def _normalize_identity_value(value: Any) -> Optional[str]:
+    """Normalize textual identifiers (names/emails) for comparisons."""
+    if value in (None, "", False):
+        return None
+    text = str(value).strip().lower()
+    if not text:
+        return None
+    normalized = " ".join(text.split())
+    return normalized or None
+
+
+def _build_employee_lookup(
+    cursor, employee_ids: Set[int]
+) -> Tuple[Dict[int, Dict[str, Any]], Dict[str, Set[int]]]:
+    """Return directory (id -> info) and lookup (normalized string -> ids)."""
+    if not employee_ids:
+        return {}, {}
+
+    placeholders = ",".join(["%s"] * len(employee_ids))
+    cursor.execute(
+        f"""
+        SELECT id, name, email
+        FROM employees
+        WHERE id IN ({placeholders})
+        """,
+        tuple(employee_ids),
+    )
+
+    directory: Dict[int, Dict[str, Any]] = {}
+    lookup: Dict[str, Set[int]] = {}
+    for row in cursor.fetchall() or []:
+        emp_id = row[0]
+        directory[emp_id] = {"name": row[1], "email": row[2]}
+        for value in (row[1], row[2]):
+            key = _normalize_identity_value(value)
+            if not key:
+                continue
+            lookup.setdefault(key, set()).add(emp_id)
+    return directory, lookup
+
+
+def _match_employee_from_lookup(
+    raw_value: Any, lookup: Dict[str, Set[int]]
+) -> Optional[int]:
+    """Resolve employee id from textual identifier."""
+    if not lookup or raw_value is None:
+        return None
+
+    if isinstance(raw_value, (int, float)):
+        try:
+            candidate = int(raw_value)
+            return candidate
+        except (TypeError, ValueError):
+            return None
+
+    text = _normalize_identity_value(raw_value)
+    if not text:
+        return None
+    candidates = lookup.get(text)
+    if not candidates:
+        return None
+    # Deterministic selection
+    return sorted(candidates)[0]
+
+
+def _enrich_activity_assignments(
+    activity: Dict[str, Any],
+    employee_lookup: Dict[str, Set[int]],
+    employee_directory: Dict[int, Dict[str, Any]],
+) -> None:
+    """Populate responsible/executor/collaborator IDs based on textual info."""
+    if not employee_lookup:
+        return
+
+    def _assign(field: str, sources: Sequence[str]):
+        if _safe_int(activity.get(field)):
+            return
+        for source in sources:
+            match = _match_employee_from_lookup(activity.get(source), employee_lookup)
+            if match:
+                activity[field] = match
+                if source.endswith("_name") and not activity.get(source):
+                    activity[source] = employee_directory.get(match, {}).get("name")
+                return
+
+    _assign("responsible_id", ["responsible_name", "responsible", "who"])
+    _assign("executor_id", ["executor_name", "executor"])
+    _assign("owner_id", ["owner_name", "owner"])
+
+    collaborators = activity.get("collaborators") or activity.get(
+        "assigned_collaborators"
+    )
+    if isinstance(collaborators, list):
+        for entry in collaborators:
+            if not isinstance(entry, dict):
+                continue
+            if _safe_int(entry.get("employee_id") or entry.get("id")):
+                continue
+            match = _match_employee_from_lookup(
+                entry.get("name") or entry.get("email"), employee_lookup
+            )
+            if match:
+                entry["employee_id"] = match
+                entry.setdefault("id", match)
+
+
 def _parse_project_activities_payload(raw: Any) -> List[Dict[str, Any]]:
     """Converte payloads variados em lista de dicts."""
     if not raw:
@@ -421,12 +531,23 @@ def _build_activity_row_from_json(
         or activity.get("due_date")
         or activity.get("completion_date")
     )
+    title = (
+        activity.get("title")
+        or activity.get("name")
+        or activity.get("what")
+        or project_row.get("title")
+    )
+    description = (
+        activity.get("description")
+        or activity.get("notes")
+        or activity.get("how")
+        or activity.get("observations")
+    )
     return {
         "activity_id": activity.get("id"),
         "activity_code": activity.get("code"),
-        "activity_title": activity.get("title") or activity.get("name"),
-        "activity_description": activity.get("description")
-        or activity.get("notes"),
+        "activity_title": title,
+        "activity_description": description,
         "activity_status": activity.get("status"),
         "activity_stage": activity.get("stage"),
         "activity_priority": activity.get("priority"),
@@ -488,6 +609,46 @@ def _project_activity_row_from_normalized(row) -> Dict[str, Any]:
         "activity_code": data.get("activity_code"),
         "metadata": data.get("metadata"),
     }
+
+
+def _project_activity_identity(activity: Dict[str, Any]) -> Tuple[Any, Any, Any, Any]:
+    """Return identity tuple used to deduplicate activity sources."""
+    project_id = activity.get("project_id") or activity.get("id")
+    return (
+        project_id,
+        activity.get("activity_code") or activity.get("code"),
+        activity.get("id"),
+        activity.get("title"),
+    )
+
+
+def _merge_activity_sources(
+    primary: List[Dict[str, Any]], secondary: List[Dict[str, Any]]
+) -> List[Dict[str, Any]]:
+    """
+    Merge project activities coming from different sources avoiding duplicates.
+
+    Args:
+        primary: Activities fetched from the normalized table.
+        secondary: Activities parsed directly from the legacy JSON column.
+
+    Returns:
+        Unique list prioritizing the normalized records.
+    """
+    if not secondary:
+        return primary
+
+    merged = list(primary)
+    seen = {_project_activity_identity(item) for item in primary if item}
+
+    for activity in secondary:
+        identity = _project_activity_identity(activity)
+        if identity in seen:
+            continue
+        merged.append(activity)
+        seen.add(identity)
+
+    return merged
 
 
 def _fetch_normalized_project_rows(
@@ -578,7 +739,19 @@ def _fetch_normalized_project_rows(
 
     cursor.execute(query, params)
     rows = cursor.fetchall()
-    return [_project_activity_row_from_normalized(row) for row in rows]
+    table_activities = [_project_activity_row_from_normalized(row) for row in rows]
+
+    legacy_activities = _fetch_project_rows_from_json(
+        cursor,
+        employee_ids=employee_ids,
+        company_ids=company_ids,
+        project_ids=project_ids,
+    )
+
+    if not legacy_activities:
+        return table_activities
+
+    return _merge_activity_sources(table_activities, legacy_activities)
 
 
 def _fetch_project_rows_from_json(
@@ -590,6 +763,13 @@ def _fetch_project_rows_from_json(
     employee_filter = {
         value for value in (_safe_int(eid) for eid in (employee_ids or [])) if value
     }
+
+    employee_directory: Dict[int, Dict[str, Any]] = {}
+    employee_lookup: Dict[str, Set[int]] = {}
+    if employee_filter:
+        employee_directory, employee_lookup = _build_employee_lookup(
+            cursor, employee_filter
+        )
 
     conditions: List[str] = []
     params: List[Any] = []
@@ -642,6 +822,8 @@ def _fetch_project_rows_from_json(
             activities, project_row.get("code"), project_row.get("company_code")
         )
         for activity in normalized:
+            if employee_lookup:
+                _enrich_activity_assignments(activity, employee_lookup, employee_directory)
             if employee_filter:
                 if not (_extract_activity_employee_ids(activity) & employee_filter):
                     continue
@@ -709,6 +891,9 @@ def _process_row_from_normalized(row) -> Dict[str, Any]:
         "assigned_collaborators": assigned_collaborators,
         "company_name": data.get("company_name"),
         "process_name": data.get("process_name"),
+        "process_code": data.get("process_code"),
+        "instance_code": data.get("instance_code"),
+        "trigger_type": data.get("trigger_type"),
         "created_at": data.get("created_at"),
         "updated_at": data.get("updated_at"),
     }
@@ -785,6 +970,7 @@ def _fetch_normalized_process_rows(
             pi.*,
             c.name AS company_name,
             p.name AS process_name,
+            p.code AS process_code,
             coalesce(collab.collaborators_json, '[]'::json) AS normalized_collaborators
         FROM process_instances pi
         {' '.join(joins)}
@@ -829,7 +1015,8 @@ def _fetch_process_rows_from_json(
         SELECT
             pi.*,
             c.name AS company_name,
-            p.name AS process_name
+            p.name AS process_name,
+            p.code AS process_code
         FROM process_instances pi
         LEFT JOIN companies c ON c.id = pi.company_id
         LEFT JOIN processes p ON p.id = pi.process_id
@@ -1468,6 +1655,9 @@ def _serialize_project_activity(
         "id": data.get("id"),
         "type": "project",
         "project_id": data.get("project_id"),
+        "activity_code": data.get("activity_code"),
+        "project_code": data.get("project_code"),
+        "project_title": data.get("project_title"),
         "title": data.get("title"),
         "description": data.get("description"),
         "status": (data.get("status") or "planned").lower(),
@@ -1520,6 +1710,7 @@ def _serialize_process_activity(
         "id": data.get("id"),
         "type": "process",
         "process_id": data.get("process_id"),
+        "process_code": data.get("process_code"),
         "title": data.get("title"),
         "description": data.get("description"),
         "status": (data.get("status") or "pending").lower(),
@@ -2352,11 +2543,323 @@ def complete_activity(
 
 
 # ============================================================================
+# CAPACIDADE E PERFORMANCE
+# ============================================================================
+
+
+def _resolve_employee_capacity(raw_value: Optional[Any]) -> float:
+    """Resolve capacidade semanal configurada para o colaborador."""
+    capacity = _safe_float(raw_value)
+    if capacity <= 0:
+        return TEAM_DEFAULT_WEEKLY_HOURS
+    return capacity
+
+
+def _empty_effort_bucket() -> Dict[str, float]:
+    """Retorna estrutura padrão para métricas de esforço."""
+    return {
+        "project_estimated": 0.0,
+        "project_worked": 0.0,
+        "process_estimated": 0.0,
+        "process_worked": 0.0,
+        "open_activities": 0,
+        "overdue_activities": 0,
+        "total_activities": 0,
+        "completed_total": 0,
+        "completed_recent": 0,
+        "recent_total": 0,
+    }
+
+
+def _collect_project_member_ids(row, target_ids: Set[int]) -> List[int]:
+    """Retorna colaboradores da equipe vinculados à atividade de projeto."""
+    assigned: List[int] = []
+    for key in ("responsible_id", "executor_id"):
+        member_id = _safe_int(row.get(key))
+        if member_id and member_id in target_ids and member_id not in assigned:
+            assigned.append(member_id)
+    return assigned
+
+
+def _collect_process_member_assignments(
+    row, target_ids: Set[int]
+) -> Tuple[List[int], Dict[int, float]]:
+    """Retorna colaboradores do processo e a fatia estimada de horas."""
+    collaborators = _parse_collaborators(row.get("assigned_collaborators"))
+    assigned: List[int] = []
+    hours_map: Dict[int, float] = {}
+    unspecified: List[int] = []
+
+    for entry in collaborators:
+        member_id = _safe_int(entry.get("id") or entry.get("employee_id"))
+        if not member_id or member_id not in target_ids:
+            continue
+        if member_id not in assigned:
+            assigned.append(member_id)
+
+        hours_value = entry.get("hours") or entry.get("estimated_hours")
+        hours = _safe_float(hours_value)
+        if hours > 0:
+            hours_map[member_id] = hours_map.get(member_id, 0.0) + hours
+        else:
+            unspecified.append(member_id)
+
+    total_estimated = _safe_float(row.get("estimated_hours") or row.get("actual_hours"))
+    allocated = sum(hours_map.values())
+    remaining = max(0.0, total_estimated - allocated)
+
+    if unspecified and remaining > 0:
+        share = remaining / len(unspecified)
+        for member_id in unspecified:
+            hours_map[member_id] = hours_map.get(member_id, 0.0) + share
+    elif not hours_map and assigned and total_estimated > 0:
+        share = total_estimated / len(assigned)
+        for member_id in assigned:
+            hours_map[member_id] = share
+
+    return assigned, hours_map
+
+
+def _load_employee_effort(
+    cursor, employee_ids: Sequence[int], company_id: Optional[int]
+) -> Dict[int, Dict[str, Any]]:
+    """Agrega horas e contadores de atividades por colaborador."""
+    normalized_ids = [
+        value for value in (_safe_int(eid) for eid in employee_ids) if value is not None
+    ]
+    if not normalized_ids:
+        return {}
+
+    target_ids = set(normalized_ids)
+    effort: Dict[int, Dict[str, Any]] = {eid: _empty_effort_bucket() for eid in target_ids}
+    company_filter = [company_id] if company_id else None
+    recent_cutoff = datetime.utcnow() - timedelta(days=RECENT_ACTIVITY_DAYS)
+    today = date.today()
+
+    project_rows = _fetch_normalized_project_rows(
+        cursor, employee_ids=normalized_ids, company_ids=company_filter
+    )
+
+    for row in project_rows:
+        assigned_ids = _collect_project_member_ids(row, target_ids)
+        if not assigned_ids:
+            continue
+
+        member_count = len(assigned_ids)
+        estimated = _safe_float(row.get("estimated_hours"))
+        worked = _safe_float(row.get("worked_hours"))
+        estimated_share = estimated / member_count if member_count else 0.0
+        worked_share = worked / member_count if member_count else 0.0
+
+        status = (row.get("status") or "planned").lower()
+        deadline = _coerce_date(row.get("deadline_date"))
+        updated_dt = _coerce_datetime(row.get("updated_at")) or _coerce_datetime(
+            row.get("created_at")
+        )
+        is_completed = status in _CLOSED_STATUSES
+        is_recent_completion = bool(updated_dt and updated_dt >= recent_cutoff)
+
+        for member_id in assigned_ids:
+            bucket = effort.setdefault(member_id, _empty_effort_bucket())
+            bucket["project_estimated"] += estimated_share
+            bucket["project_worked"] += worked_share
+            bucket["total_activities"] += 1
+
+            if is_completed:
+                bucket["completed_total"] += 1
+                if is_recent_completion:
+                    bucket["completed_recent"] += 1
+                    bucket["recent_total"] += 1
+            else:
+                bucket["open_activities"] += 1
+                bucket["recent_total"] += 1
+                if deadline and deadline < today:
+                    bucket["overdue_activities"] += 1
+
+    process_rows = _fetch_normalized_process_rows(
+        cursor, employee_ids=normalized_ids, company_ids=company_filter
+    )
+
+    for row in process_rows:
+        assigned_ids, hours_map = _collect_process_member_assignments(row, target_ids)
+        if not assigned_ids:
+            continue
+
+        status = (row.get("status") or "pending").lower()
+        deadline = _coerce_date(row.get("deadline_date") or row.get("due_date"))
+        updated_dt = (
+            _coerce_datetime(row.get("updated_at"))
+            or _coerce_datetime(row.get("completed_at"))
+            or _coerce_datetime(row.get("created_at"))
+        )
+        is_completed = status in _CLOSED_STATUSES
+        is_recent_completion = bool(updated_dt and updated_dt >= recent_cutoff)
+
+        worked_total = _safe_float(row.get("worked_hours") or row.get("actual_hours"))
+        worked_share = worked_total / len(assigned_ids) if assigned_ids else 0.0
+
+        for member_id in assigned_ids:
+            bucket = effort.setdefault(member_id, _empty_effort_bucket())
+            bucket["process_estimated"] += hours_map.get(member_id, 0.0)
+            bucket["process_worked"] += worked_share
+            bucket["total_activities"] += 1
+
+            if is_completed:
+                bucket["completed_total"] += 1
+                if is_recent_completion:
+                    bucket["completed_recent"] += 1
+                    bucket["recent_total"] += 1
+            else:
+                bucket["open_activities"] += 1
+                bucket["recent_total"] += 1
+                if deadline and deadline < today:
+                    bucket["overdue_activities"] += 1
+
+    return effort
+
+
+def _build_member_load(
+    members: List[Dict[str, Any]],
+    effort_map: Dict[int, Dict[str, Any]],
+) -> Tuple[List[Dict[str, Any]], Dict[str, Any]]:
+    """Monta payload de membros com métricas agregadas."""
+    summary = {
+        "open_total": 0,
+        "overdue_total": 0,
+        "completed_recent_total": 0,
+        "recent_total": 0,
+        "member_count": len(members),
+        "utilization_sum": 0.0,
+    }
+
+    result: List[Dict[str, Any]] = []
+    for member in members:
+        member_id = member.get("employee_id")
+        if member_id is None:
+            continue
+        bucket = effort_map.get(member_id, _empty_effort_bucket())
+        capacity = _resolve_employee_capacity(member.get("weekly_hours"))
+        allocated = bucket["project_estimated"] + bucket["process_estimated"]
+        worked = bucket["project_worked"] + bucket["process_worked"]
+        utilization = 0.0
+        if capacity > 0:
+            utilization = min((allocated / capacity) * 100, 200.0)
+        utilization_percent = int(round(utilization))
+
+        summary["open_total"] += bucket["open_activities"]
+        summary["overdue_total"] += bucket["overdue_activities"]
+        summary["completed_recent_total"] += bucket["completed_recent"]
+        recent_scope = bucket["recent_total"] or (
+            bucket["open_activities"] + bucket["completed_recent"]
+        )
+        summary["recent_total"] += recent_scope
+        summary["utilization_sum"] += utilization_percent
+
+        result.append(
+            {
+                "id": member_id,
+                "name": member.get("name") or "Colaborador",
+                "role": member.get("role"),
+                "capacity": capacity,
+                "allocated": round(allocated, 2),
+                "worked": round(worked, 2),
+                "utilization_percent": utilization_percent,
+                "status": _get_load_status(utilization_percent),
+                "open_activities": bucket["open_activities"],
+                "overdue_activities": bucket["overdue_activities"],
+            }
+        )
+
+    return result, summary
+
+
+def _classify_utilization_status(value: float) -> str:
+    """Classifica ocupação para o mapa de calor."""
+    if value >= 95:
+        return "critical"
+    if value >= 85:
+        return "high"
+    if value >= 70:
+        return "medium"
+    if value >= 50:
+        return "low"
+    return "available"
+
+
+# ============================================================================
 # TEAM OVERVIEW
 # ============================================================================
 
 
-def get_team_overview(employee_id: int) -> Dict:
+def _resolve_team_for_employee(
+    cursor, employee_id: int, company_id: Optional[int]
+) -> Optional[Dict[str, Any]]:
+    """Seleciona a equipe mais relevante para o colaborador."""
+    params: List[Any] = [employee_id]
+    company_filter = ""
+    if company_id:
+        params.append(company_id)
+        company_filter = " AND t.company_id = %s"
+
+    cursor.execute(
+        f"""
+        SELECT t.id, t.name, t.company_id
+        FROM teams t
+        JOIN team_members tm ON tm.team_id = t.id
+        WHERE tm.employee_id = %s
+          AND COALESCE(t.is_active, TRUE) = TRUE
+          {company_filter}
+        ORDER BY
+            CASE WHEN tm.role = 'leader' THEN 0 ELSE 1 END,
+            t.created_at DESC
+        LIMIT 1
+        """,
+        tuple(params),
+    )
+    row = cursor.fetchone()
+    if not row:
+        return None
+    return {
+        "id": row.get("id"),
+        "name": row.get("name"),
+        "company_id": row.get("company_id"),
+    }
+
+
+def _fetch_team_members(cursor, team_id: int) -> List[Dict[str, Any]]:
+    """Retorna membros da equipe com dados de capacidade."""
+    cursor.execute(
+        """
+        SELECT
+            tm.employee_id,
+            tm.role,
+            e.name,
+            e.weekly_hours,
+            e.company_id
+        FROM team_members tm
+        JOIN employees e ON e.id = tm.employee_id
+        WHERE tm.team_id = %s
+        ORDER BY
+            CASE WHEN tm.role = 'leader' THEN 0 ELSE 1 END,
+            e.name
+        """,
+        (team_id,),
+    )
+    members = []
+    for row in cursor.fetchall():
+        members.append(
+            {
+                "employee_id": row.get("employee_id"),
+                "role": row.get("role"),
+                "name": row.get("name"),
+                "weekly_hours": row.get("weekly_hours"),
+                "company_id": row.get("company_id"),
+            }
+        )
+    return members
+
+
+def get_team_overview(employee_id: int, company_id: Optional[int] = None) -> Dict:
     """
     Retorna dados para o Team Overview
 
@@ -2367,38 +2870,25 @@ def get_team_overview(employee_id: int) -> Dict:
     cursor = conn.cursor()
 
     try:
-        # Buscar equipe
-        cursor.execute(
-            """
-            SELECT t.id, t.name, t.description
-            FROM teams t
-            JOIN team_members tm ON tm.team_id = t.id
-            WHERE tm.employee_id = %s
-            LIMIT 1
-        """,
-            (employee_id,),
-        )
-
-        team_row = cursor.fetchone()
-        if not team_row:
+        team_info = _resolve_team_for_employee(cursor, employee_id, company_id)
+        if not team_info:
             conn.close()
             return {}
 
-        team_id = team_row[0]
-        team_name = team_row[1]
+        team_id = team_info["id"]
+        team_name = team_info.get("name") or "Equipe"
+        team_company_id = _safe_int(team_info.get("company_id"))
 
-        # Buscar distribuiÃ§Ã£o de carga
-        distribution = _get_team_load_distribution(cursor, team_id)
-
-        # Gerar alertas
+        distribution, team_summary = _get_team_load_distribution(
+            cursor, team_id, team_company_id
+        )
         alerts = _generate_team_alerts(distribution)
-
-        # Calcular performance
-        performance = _calculate_team_performance(cursor, team_id)
+        performance = _calculate_team_performance(team_summary)
 
         conn.close()
 
         return {
+            "team_id": team_id,
             "team_name": team_name,
             "members": distribution,
             "alerts": alerts,
@@ -2410,56 +2900,25 @@ def get_team_overview(employee_id: int) -> Dict:
         raise e
 
 
-def _get_team_load_distribution(cursor, team_id: int) -> List[Dict]:
-    """Calcula distribuiÃ§Ã£o de carga entre membros"""
+def _get_team_load_distribution(
+    cursor, team_id: int, company_id: Optional[int]
+) -> Tuple[List[Dict[str, Any]], Dict[str, Any]]:
+    """Calcula distribuição de carga entre membros da equipe."""
+    members = _fetch_team_members(cursor, team_id)
+    if not members:
+        empty_summary = {
+            "open_total": 0,
+            "overdue_total": 0,
+            "completed_recent_total": 0,
+            "recent_total": 0,
+            "member_count": 0,
+            "utilization_sum": 0.0,
+        }
+        return [], empty_summary
 
-    cursor.execute(
-        """
-        SELECT 
-            e.id,
-            e.name,
-            tm.role,
-            COALESCE(
-                (SELECT SUM(estimated_hours) 
-                 FROM company_projects 
-                 WHERE (responsible_id = e.id OR executor_id = e.id) 
-                 AND status != 'completed'), 
-                0
-            ) as allocated_hours,
-            COALESCE(
-                (SELECT SUM(worked_hours) 
-                 FROM company_projects 
-                 WHERE (responsible_id = e.id OR executor_id = e.id)), 
-                0
-            ) as worked_hours
-        FROM team_members tm
-        JOIN employees e ON e.id = tm.employee_id
-        WHERE tm.team_id = %s
-        ORDER BY allocated_hours DESC
-    """,
-        (team_id,),
-    )
-
-    members = []
-    for row in cursor.fetchall():
-        capacity = 40  # TODO: Buscar capacidade configurada do employee
-        allocated = float(row[3] or 0)
-        utilization = (allocated / capacity * 100) if capacity > 0 else 0
-
-        members.append(
-            {
-                "id": row[0],
-                "name": row[1],
-                "role": row[2],
-                "capacity": capacity,
-                "allocated": allocated,
-                "worked": float(row[4] or 0),
-                "utilization_percent": round(utilization),
-                "status": _get_load_status(utilization),
-            }
-        )
-
-    return members
+    member_ids = [member["employee_id"] for member in members if member.get("employee_id")]
+    effort_map = _load_employee_effort(cursor, member_ids, company_id)
+    return _build_member_load(members, effort_map)
 
 
 def _get_load_status(utilization: float) -> str:
@@ -2505,11 +2964,180 @@ def _generate_team_alerts(members: List[Dict]) -> List[Dict]:
     return alerts
 
 
-def _calculate_team_performance(cursor, team_id: int) -> Dict:
-    """Calcula mÃ©tricas de performance da equipe"""
+def _calculate_team_performance(summary: Dict[str, Any]) -> Dict[str, int]:
+    """Calcula métricas de performance a partir dos agregados."""
+    member_count = summary.get("member_count") or 0
+    utilization_sum = summary.get("utilization_sum", 0.0)
+    capacity_utilization = (
+        int(round(utilization_sum / member_count)) if member_count else 0
+    )
 
-    # TODO: Implementar cÃ¡lculo real
-    return {"avg_score": 78, "completion_rate": 85, "capacity_utilization": 75}
+    completed_recent = summary.get("completed_recent_total", 0)
+    recent_total = summary.get("recent_total", 0)
+    completion_rate = (
+        int(round((completed_recent / recent_total) * 100)) if recent_total else 0
+    )
+
+    open_total = summary.get("open_total", 0)
+    overdue_total = summary.get("overdue_total", 0)
+    overdue_penalty = (
+        min(overdue_total / open_total, 1.0) if open_total else 0.0
+    )
+    deadline_score = max(0, 100 - int(round(overdue_penalty * 100)))
+
+    avg_score = int(
+        round(
+            (completion_rate * 0.5)
+            + (deadline_score * 0.3)
+            + (min(capacity_utilization, 100) * 0.2)
+        )
+    )
+    avg_score = max(0, min(avg_score, 100))
+
+    return {
+        "avg_score": avg_score,
+        "completion_rate": completion_rate,
+        "capacity_utilization": max(0, min(capacity_utilization, 100)),
+    }
+
+
+def _fetch_company_teams(cursor, company_id: int) -> Dict[int, Dict[str, Any]]:
+    """Carrega equipes da empresa e seus membros brutos."""
+    cursor.execute(
+        """
+        SELECT
+            t.id AS team_id,
+            t.name AS team_name,
+            tm.employee_id,
+            tm.role,
+            e.name AS employee_name,
+            e.weekly_hours
+        FROM teams t
+        LEFT JOIN team_members tm ON tm.team_id = t.id
+        LEFT JOIN employees e ON e.id = tm.employee_id
+        WHERE t.company_id = %s
+          AND COALESCE(t.is_active, TRUE) = TRUE
+        ORDER BY t.name, e.name
+        """,
+        (company_id,),
+    )
+
+    teams: Dict[int, Dict[str, Any]] = {}
+    for row in cursor.fetchall():
+        team_id = row.get("team_id")
+        if team_id is None:
+            continue
+        team_entry = teams.setdefault(
+            team_id,
+            {"team_name": row.get("team_name") or "Equipe", "members": []},
+        )
+        employee_id = row.get("employee_id")
+        if employee_id is None:
+            continue
+        team_entry["members"].append(
+            {
+                "employee_id": employee_id,
+                "role": row.get("role"),
+                "name": row.get("employee_name"),
+                "weekly_hours": row.get("weekly_hours"),
+            }
+        )
+    return teams
+
+
+def _build_company_team_metrics(cursor, company_id: int) -> Dict[str, Any]:
+    """Retorna métricas agregadas por equipe para a empresa."""
+    teams = _fetch_company_teams(cursor, company_id)
+    all_member_ids: List[int] = []
+    for team in teams.values():
+        all_member_ids.extend(
+            [
+                member.get("employee_id")
+                for member in team.get("members", [])
+                if member.get("employee_id")
+            ]
+        )
+
+    effort_map = _load_employee_effort(cursor, all_member_ids, company_id)
+    metrics: Dict[int, Dict[str, Any]] = {}
+    total_member_count = 0
+    total_util_sum = 0.0
+
+    for team_id, data in teams.items():
+        distribution, summary = _build_member_load(data.get("members", []), effort_map)
+        metrics[team_id] = {
+            "team_name": data.get("team_name") or "Equipe",
+            "members": distribution,
+            "summary": summary,
+        }
+        total_member_count += summary.get("member_count", 0)
+        total_util_sum += summary.get("utilization_sum", 0.0)
+
+    return {
+        "team_metrics": metrics,
+        "member_count": total_member_count,
+        "utilization_sum": total_util_sum,
+    }
+
+
+def _count_company_employees(cursor, company_id: int) -> int:
+    """Conta colaboradores ativos da empresa."""
+    active_filter = _build_employee_active_filter(cursor)
+    cursor.execute(
+        f"""
+        SELECT COUNT(*) AS total
+        FROM employees e
+        WHERE e.company_id = %s
+          {active_filter}
+        """,
+        (company_id,),
+    )
+    row = cursor.fetchone()
+    return int(row.get("total") or 0) if row else 0
+
+
+def _count_open_project_activities(cursor, company_id: int) -> int:
+    """Conta atividades abertas do PEV para a empresa."""
+    if _project_activities_table_available(cursor):
+        cursor.execute(
+            """
+            SELECT COUNT(*) AS total
+            FROM project_activities pa
+            JOIN company_projects cp ON cp.id = pa.project_id
+            WHERE cp.company_id = :company_id
+              AND COALESCE(pa.is_deleted, FALSE) = FALSE
+              AND NOT (LOWER(COALESCE(pa.status, 'planned')) = ANY(:closed))
+            """,
+            {"closed": list(_CLOSED_STATUSES), "company_id": company_id},
+        )
+        row = cursor.fetchone()
+        return int(row.get("total") or 0) if row else 0
+
+    project_rows = _fetch_company_projects(cursor, company_id)
+    total = 0
+    for row in project_rows:
+        activities = _parse_project_activities_payload(row.get("activities"))
+        for activity in activities:
+            status = (activity.get("status") or "").lower()
+            if status in _CLOSED_STATUSES:
+                continue
+            total += 1
+    return total
+
+
+def _count_open_process_instances(cursor, company_id: int) -> int:
+    """Conta instâncias de processos abertas (GRV)."""
+    cursor.execute(
+        """
+        SELECT COUNT(*) AS total
+        FROM process_instances
+        WHERE company_id = :company_id
+          AND NOT (LOWER(COALESCE(status, 'pending')) = ANY(:closed))
+        """,
+        {"company_id": company_id, "closed": list(_CLOSED_STATUSES)},
+    )
+    row = cursor.fetchone()
+    return int(row.get("total") or 0) if row else 0
 
 
 # ============================================================================
@@ -2540,10 +3168,10 @@ def get_company_overview(employee_id: int, company_id: Optional[int] = None) -> 
                 raise ValueError("Colaborador não vinculado a uma empresa")
             company_id = result[0]
 
-        # Buscar mÃ©tricas
-        summary = _get_company_summary(cursor, company_id)
-        heatmap = _get_company_heatmap(cursor, company_id)
-        ranking = _get_department_ranking(cursor, company_id)
+        team_stats = _build_company_team_metrics(cursor, company_id)
+        summary = _get_company_summary(cursor, company_id, team_stats)
+        heatmap = _get_company_heatmap(team_stats)
+        ranking = _get_department_ranking(team_stats)
 
         conn.close()
 
@@ -2554,87 +3182,74 @@ def get_company_overview(employee_id: int, company_id: Optional[int] = None) -> 
         raise e
 
 
-def _get_company_summary(cursor, company_id: int) -> Dict:
-    """MÃ©tricas gerais da empresa"""
+def _get_company_summary(
+    cursor, company_id: int, team_stats: Dict[str, Any]
+) -> Dict[str, int]:
+    """Retorna métricas gerais consolidadas da empresa."""
+    active_teams = len(team_stats.get("team_metrics", {}))
+    total_employees = _count_company_employees(cursor, company_id)
+    total_activities = _count_open_project_activities(
+        cursor, company_id
+    ) + _count_open_process_instances(cursor, company_id)
 
-    # Contar equipes
-    cursor.execute(
-        "SELECT COUNT(*) FROM teams WHERE company_id = %s AND is_active = true",
-        (company_id,),
+    member_count = team_stats.get("member_count") or 0
+    util_sum = team_stats.get("utilization_sum", 0.0)
+    avg_capacity_utilization = (
+        int(round(util_sum / member_count)) if member_count else 0
     )
-    teams_count = cursor.fetchone()[0]
-
-    # Contar colaboradores
-    cursor.execute(
-        "SELECT COUNT(*) FROM employees WHERE company_id = %s", (company_id,)
-    )
-    employees_count = cursor.fetchone()[0]
-
-    # Contar atividades
-    cursor.execute(
-        "SELECT COUNT(*) FROM company_projects WHERE company_id = %s AND status != 'completed'",
-        (company_id,),
-    )
-    activities_count = cursor.fetchone()[0]
 
     return {
-        "active_teams": teams_count,
-        "total_employees": employees_count,
-        "avg_capacity_utilization": 78,  # TODO: Calcular real
-        "total_activities": activities_count,
+        "active_teams": active_teams,
+        "total_employees": total_employees,
+        "avg_capacity_utilization": avg_capacity_utilization,
+        "total_activities": total_activities,
     }
 
 
-def _get_company_heatmap(cursor, company_id: int) -> List[Dict]:
-    """Mapa de calor por equipe/departamento"""
-
-    # TODO: Implementar query real agrupando por equipe
-    # Mockado por enquanto
-    return [
-        {
-            "team_name": "Comercial",
-            "employee_count": 12,
-            "activities_count": 45,
-            "utilization_percent": 92,
-            "status": "high",
-        },
-        {
-            "team_name": "TI / Tecnologia",
-            "employee_count": 18,
-            "activities_count": 65,
-            "utilization_percent": 75,
-            "status": "medium",
-        },
-        {
-            "team_name": "RH / Administrativo",
-            "employee_count": 8,
-            "activities_count": 18,
-            "utilization_percent": 48,
-            "status": "low",
-        },
-        {
-            "team_name": "OperaÃ§Ãµes",
-            "employee_count": 25,
-            "activities_count": 52,
-            "utilization_percent": 98,
-            "status": "critical",
-        },
-    ]
+def _get_company_heatmap(team_stats: Dict[str, Any]) -> List[Dict[str, Any]]:
+    """Mapa de calor por equipe/departamento baseado em métricas reais."""
+    heatmap: List[Dict[str, Any]] = []
+    for data in team_stats.get("team_metrics", {}).values():
+        summary = data.get("summary") or {}
+        member_count = summary.get("member_count", 0)
+        activities_count = summary.get("open_total", 0)
+        avg_utilization = (
+            int(
+                round(summary.get("utilization_sum", 0.0) / member_count)
+            )
+            if member_count
+            else 0
+        )
+        heatmap.append(
+            {
+                "team_name": data.get("team_name") or "Equipe",
+                "employee_count": member_count,
+                "activities_count": activities_count,
+                "utilization_percent": avg_utilization,
+                "status": _classify_utilization_status(avg_utilization),
+            }
+        )
+    return heatmap
 
 
-def _get_department_ranking(cursor, company_id: int) -> List[Dict]:
-    """Ranking de performance por departamento"""
+def _get_department_ranking(team_stats: Dict[str, Any]) -> List[Dict[str, Any]]:
+    """Ranking de performance por equipe baseado em score calculado."""
+    ranking: List[Dict[str, Any]] = []
+    for data in team_stats.get("team_metrics", {}).values():
+        summary = data.get("summary") or {}
+        performance = _calculate_team_performance(summary)
+        ranking.append(
+            {
+                "team_name": data.get("team_name") or "Equipe",
+                "score": performance["avg_score"],
+                "completion_rate": performance["completion_rate"],
+            }
+        )
 
-    # TODO: Implementar query real
-    return [
-        {"rank": 1, "team_name": "TI / Tecnologia", "score": 85, "completion_rate": 92},
-        {"rank": 2, "team_name": "Comercial", "score": 82, "completion_rate": 88},
-        {"rank": 3, "team_name": "OperaÃ§Ãµes", "score": 78, "completion_rate": 85},
-        {
-            "rank": 4,
-            "team_name": "RH / Administrativo",
-            "score": 75,
-            "completion_rate": 80,
-        },
-    ]
+    ranking.sort(
+        key=lambda item: (item["score"], item["completion_rate"]), reverse=True
+    )
+    for idx, entry in enumerate(ranking, start=1):
+        entry["rank"] = idx
+    return ranking[:5]
 
