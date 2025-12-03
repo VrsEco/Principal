@@ -4071,6 +4071,7 @@ def api_delete_process(company_id: int, process_id: int):
 @app.route("/api/companies/<int:company_id>/process-instances", methods=["GET"])
 def api_list_process_instances(company_id: int):
     """List all process instances for a company"""
+    conn = None
     try:
         from database.postgres_helper import connect as pg_connect
 
@@ -4078,14 +4079,30 @@ def api_list_process_instances(company_id: int):
         # PostgreSQL retorna Row objects por padrão
         cursor = conn.cursor()
 
-        cursor.execute(
-            """
-            SELECT * FROM process_instances 
-            WHERE company_id = %s
-            ORDER BY created_at DESC
-            """,
-            (company_id,),
-        )
+        # Try to filter by is_deleted if column exists
+        try:
+            cursor.execute(
+                """
+                SELECT * FROM process_instances 
+                WHERE company_id = %s AND (is_deleted = FALSE OR is_deleted IS NULL)
+                ORDER BY created_at DESC
+                """,
+                (company_id,),
+            )
+        except Exception as column_error:
+            # If is_deleted column doesn't exist, query without it
+            if "is_deleted" in str(column_error).lower():
+                conn.rollback()
+                cursor.execute(
+                    """
+                    SELECT * FROM process_instances 
+                    WHERE company_id = %s
+                    ORDER BY created_at DESC
+                    """,
+                    (company_id,),
+                )
+            else:
+                raise column_error
 
         instances = []
         for row in cursor.fetchall():
@@ -4094,6 +4111,8 @@ def api_list_process_instances(company_id: int):
         conn.close()
         return jsonify(instances)
     except Exception as e:
+        if conn:
+            conn.close()
         logger.info(f"Erro ao listar instâncias: {e}")
         return jsonify({"error": str(e)}), 500
 
@@ -4579,6 +4598,72 @@ def api_update_process_instance(company_id: int, instance_id: int):
 
         traceback.print_exc()
         return jsonify({"error": str(e)}), 500
+
+
+@app.route(
+    "/api/companies/<int:company_id>/process-instances/<int:instance_id>",
+    methods=["DELETE"],
+)
+@login_required
+def api_delete_process_instance(company_id: int, instance_id: int):
+    """Delete process instance (soft delete preferred, hard delete fallback)"""
+    conn = None
+    try:
+        from database.postgres_helper import connect as pg_connect
+        from datetime import datetime
+
+        conn = pg_connect()
+        cursor = conn.cursor()
+
+        # Verify instance exists and belongs to company
+        cursor.execute(
+            "SELECT id, status FROM process_instances WHERE id = %s AND company_id = %s",
+            (instance_id, company_id),
+        )
+        instance = cursor.fetchone()
+        
+        if not instance:
+            if conn:
+                conn.close()
+            return jsonify({"success": False, "error": "Instância não encontrada"}), 404
+
+        # Try soft delete first (if is_deleted column exists)
+        try:
+            cursor.execute(
+                """
+                UPDATE process_instances 
+                SET is_deleted = TRUE, updated_at = %s 
+                WHERE id = %s AND company_id = %s
+                """,
+                (datetime.now().isoformat(), instance_id, company_id),
+            )
+            conn.commit()
+        except Exception as soft_delete_error:
+            # If is_deleted column doesn't exist, do hard delete
+            if "is_deleted" in str(soft_delete_error).lower():
+                conn.rollback()
+                logger.warning(f"Coluna is_deleted não existe. Fazendo hard delete.")
+                cursor.execute(
+                    "DELETE FROM process_instances WHERE id = %s AND company_id = %s",
+                    (instance_id, company_id),
+                )
+                conn.commit()
+            else:
+                raise soft_delete_error
+        
+        if conn:
+            conn.close()
+
+        return jsonify({"success": True, "message": "Instância excluída com sucesso"}), 200
+
+    except Exception as e:
+        if conn:
+            conn.rollback()
+            conn.close()
+        logger.error(f"Erro ao excluir instância: {e}")
+        import traceback
+        traceback.print_exc()
+        return jsonify({"success": False, "error": str(e)}), 500
 
 
 @app.route("/api/companies/<int:company_id>/unified-activities", methods=["GET"])
