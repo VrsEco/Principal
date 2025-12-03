@@ -483,6 +483,37 @@ def _build_employee_lookup(
     return directory, lookup
 
 
+def _build_employee_lookup_by_companies(
+    cursor, company_ids: List[int]
+) -> Tuple[Dict[int, Dict[str, Any]], Dict[str, Set[int]]]:
+    """Return directory and lookup for ALL employees in specified companies."""
+    if not company_ids:
+        return {}, {}
+
+    placeholders = ",".join(["%s"] * len(company_ids))
+    cursor.execute(
+        f"""
+        SELECT id, name, email
+        FROM employees
+        WHERE company_id IN ({placeholders})
+        AND status = 'active'
+        """,
+        tuple(company_ids),
+    )
+
+    directory: Dict[int, Dict[str, Any]] = {}
+    lookup: Dict[str, Set[int]] = {}
+    for row in cursor.fetchall() or []:
+        emp_id = row[0]
+        directory[emp_id] = {"name": row[1], "email": row[2]}
+        for value in (row[1], row[2]):
+            key = _normalize_identity_value(value)
+            if not key:
+                continue
+            lookup.setdefault(key, set()).add(emp_id)
+    return directory, lookup
+
+
 def _match_employee_from_lookup(
     raw_value: Any, lookup: Dict[str, Set[int]]
 ) -> Optional[int]:
@@ -834,9 +865,15 @@ def _fetch_project_rows_from_json(
         value for value in (_safe_int(eid) for eid in (employee_ids or [])) if value
     }
 
+    # Construir lookup com TODOS os colaboradores das empresas filtradas
+    # para permitir mapeamento de nomes para IDs
     employee_directory: Dict[int, Dict[str, Any]] = {}
     employee_lookup: Dict[str, Set[int]] = {}
-    if employee_filter:
+    if company_ids:
+        employee_directory, employee_lookup = _build_employee_lookup_by_companies(
+            cursor, company_ids
+        )
+    elif employee_filter:
         employee_directory, employee_lookup = _build_employee_lookup(
             cursor, employee_filter
         )
@@ -1065,6 +1102,19 @@ def _fetch_process_rows_from_json(
     target_ids = {
         value for value in (_safe_int(eid) for eid in (employee_ids or [])) if value
     }
+    
+    # Construir lookup com TODOS os colaboradores das empresas filtradas
+    employee_directory: Dict[int, Dict[str, Any]] = {}
+    employee_lookup: Dict[str, Set[int]] = {}
+    if company_ids:
+        employee_directory, employee_lookup = _build_employee_lookup_by_companies(
+            cursor, company_ids
+        )
+    elif target_ids:
+        employee_directory, employee_lookup = _build_employee_lookup(
+            cursor, target_ids
+        )
+    
     filters: List[str] = []
     params: List[Any] = []
 
@@ -1099,10 +1149,22 @@ def _fetch_process_rows_from_json(
     results: List[Dict[str, Any]] = []
     for row in cursor.fetchall():
         collaborators = _parse_collaborators(row.get("assigned_collaborators"))
+        
+        # Enriquecer collaborators com employee_id baseado em nome/email
+        if employee_lookup:
+            for collab in collaborators:
+                if not _safe_int(collab.get("id") or collab.get("employee_id")):
+                    match = _match_employee_from_lookup(
+                        collab.get("name") or collab.get("email"), employee_lookup
+                    )
+                    if match:
+                        collab["id"] = match
+                        collab["employee_id"] = match
+        
         if target_ids:
             collaborator_ids = {
                 cid
-                for cid in (_safe_int(collab.get("id")) for collab in collaborators)
+                for cid in (_safe_int(collab.get("id") or collab.get("employee_id")) for collab in collaborators)
                 if cid is not None
             }
             if not collaborator_ids & target_ids:
