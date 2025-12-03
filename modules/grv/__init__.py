@@ -2254,49 +2254,17 @@ def grv_projects_projects(company_id: int):
     except Exception as e:
         logger.info(f"Erro ao buscar portf+¦lios GRV: {e}")
 
-    # Get company projects (projetos criados)
-    company_projects = []
-    try:
-        conn = pg_connect()
-        cursor = conn.cursor()
-        cursor.execute(
-            """
-            SELECT p.id, p.title, p.code, p.plan_id, p.plan_type,
-                   CASE 
-                       WHEN p.plan_type = 'PEV' THEN pl.name
-                       ELSE NULL
-                   END as plan_name
-            FROM company_projects p
-            LEFT JOIN plans pl ON pl.id = p.plan_id AND p.plan_type = 'PEV'
-            WHERE p.company_id = %s
-            ORDER BY p.created_at DESC
-            """,
-            (company_id,),
-        )
-        for row in cursor.fetchall():
-            row_dict = dict(row)
-            company_projects.append(
-                {
-                    "id": row_dict.get("id"),
-                    "code": row_dict.get("code"),
-                    "name": row_dict.get("title"),
-                    "origin": "Projeto",
-                    "plan_name": row_dict.get("plan_name"),
-                }
-            )
-        conn.close()
-    except Exception as e:
-        logger.info(f"Erro ao buscar company_projects: {e}")
-        import traceback
-
-        traceback.print_exc()
-
     # Mark PEV plans with origin
     for plan in pev_plans:
-        plan["origin"] = "PEV Plan"
+        plan["origin"] = "PEV"
 
-    # Combine all lists
-    all_plans = pev_plans + grv_portfolios + company_projects
+    # Mark GRV portfolios with origin
+    for portfolio in grv_portfolios:
+        portfolio["origin"] = "GRV"
+
+    # Combine APENAS planejamentos (PEV + GRV)
+    # NÃO incluir company_projects aqui (projetos não são planejamentos!)
+    all_plans = pev_plans + grv_portfolios
 
     return render_template(
         "grv_projects_projects.html",

@@ -516,6 +516,168 @@
       grid-template-columns: minmax(0, 1fr);
     }
   }
+
+  /* Seção de Filtros */
+  .projects-filters-section {
+    background: white;
+    border-radius: 12px;
+    border: 1px solid #e2e8f0;
+    overflow: hidden;
+  }
+
+  .projects-filters-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 16px 20px;
+    cursor: pointer;
+    user-select: none;
+    background: linear-gradient(135deg, #f8fafc 0%, #ffffff 100%);
+    border-bottom: 1px solid #e2e8f0;
+  }
+
+  .projects-filters-header:hover {
+    background: linear-gradient(135deg, #f1f5f9 0%, #f8fafc 100%);
+  }
+
+  .filters-title {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    font-size: 15px;
+    font-weight: 600;
+    color: #1e293b;
+  }
+
+  .filters-title svg {
+    color: #3b82f6;
+  }
+
+  .filters-count {
+    font-size: 13px;
+    font-weight: 500;
+    color: #64748b;
+  }
+
+  .filters-chevron {
+    transition: transform 0.3s ease;
+    color: #64748b;
+  }
+
+  .projects-filters-section.collapsed .filters-chevron {
+    transform: rotate(-90deg);
+  }
+
+  .projects-filters-body {
+    padding: 20px;
+    display: grid;
+    gap: 20px;
+    max-height: 500px;
+    transition: max-height 0.3s ease, padding 0.3s ease;
+  }
+
+  .projects-filters-section.collapsed .projects-filters-body {
+    max-height: 0;
+    padding: 0 20px;
+    overflow: hidden;
+  }
+
+  .filters-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+    gap: 16px;
+  }
+
+  .filter-item {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+  }
+
+  .filter-item label {
+    font-size: 13px;
+    font-weight: 600;
+    color: #475569;
+  }
+
+  .filter-item input[type="text"],
+  .filter-item select {
+    padding: 10px 12px;
+    border: 1px solid #cbd5e1;
+    border-radius: 8px;
+    font-size: 14px;
+  }
+
+  .filter-item input:focus,
+  .filter-item select:focus {
+    outline: none;
+    border-color: #3b82f6;
+    box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
+  }
+
+  .filter-item select[multiple] {
+    min-height: 80px;
+  }
+
+  .filter-checkbox {
+    flex-direction: row;
+    align-items: center;
+  }
+
+  .filter-checkbox label {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    cursor: pointer;
+    font-weight: 500;
+  }
+
+  .filter-checkbox input[type="checkbox"] {
+    width: 18px;
+    height: 18px;
+    cursor: pointer;
+  }
+
+  .filters-actions {
+    display: flex;
+    justify-content: flex-end;
+    gap: 10px;
+    padding-top: 12px;
+    border-top: 1px solid #e2e8f0;
+  }
+
+  .filters-btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    padding: 10px 16px;
+    border: none;
+    border-radius: 8px;
+    font-size: 13px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.2s ease;
+  }
+
+  .filters-btn.primary {
+    background: linear-gradient(135deg, #3b82f6, #2563eb);
+    color: white;
+  }
+
+  .filters-btn.primary:hover {
+    transform: translateY(-1px);
+    box-shadow: 0 4px 12px rgba(59, 130, 246, 0.3);
+  }
+
+  .filters-btn.secondary {
+    background: white;
+    color: #64748b;
+    border: 1px solid #cbd5e1;
+  }
+
+  .filters-btn.secondary:hover {
+    background: #f8fafc;
+  }
 </style>
 {% endblock %}
 
@@ -538,6 +700,93 @@
     </header>
 
     <section id="projectsSummary" class="projects-summary"></section>
+
+    <!-- Seção de Filtros -->
+    <section class="projects-filters-section">
+      <div class="projects-filters-header" id="filtersToggle">
+        <div class="filters-title">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <path d="M22 3H2l8 9.46V19l4 2v-8.54L22 3z"/>
+          </svg>
+          <span>Filtros</span>
+          <span class="filters-count" id="filtersCount">(0 ativos)</span>
+        </div>
+        <svg class="filters-chevron" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <path d="M6 9l6 6 6-6"/>
+        </svg>
+      </div>
+      
+      <div class="projects-filters-body" id="filtersBody">
+        <div class="filters-grid">
+          <!-- Filtro de Texto -->
+          <div class="filter-item">
+            <label for="filterText">Buscar por texto</label>
+            <input type="text" id="filterText" placeholder="Título, descrição, código..." />
+          </div>
+          
+          <!-- Filtro de Status -->
+          <div class="filter-item">
+            <label for="filterStatus">Status</label>
+            <select id="filterStatus" multiple>
+              <option value="planned">Planejado</option>
+              <option value="in_progress">Em andamento</option>
+              <option value="on_hold">Em pausa</option>
+              <option value="completed">Concluído</option>
+            </select>
+          </div>
+          
+          <!-- Filtro de Prioridade -->
+          <div class="filter-item">
+            <label for="filterPriority">Prioridade</label>
+            <select id="filterPriority" multiple>
+              <option value="urgent">Urgente</option>
+              <option value="high">Alta</option>
+              <option value="normal">Normal</option>
+              <option value="low">Baixa</option>
+            </select>
+          </div>
+          
+          <!-- Filtro de Responsável -->
+          <div class="filter-item">
+            <label for="filterResponsible">Responsável</label>
+            <select id="filterResponsible">
+              <option value="">Todos</option>
+            </select>
+          </div>
+          
+          <!-- Filtro de Portfólio -->
+          <div class="filter-item">
+            <label for="filterPortfolio">Portfólio/Planejamento</label>
+            <select id="filterPortfolio">
+              <option value="">Todos</option>
+            </select>
+          </div>
+          
+          <!-- Mostrar Arquivados -->
+          <div class="filter-item filter-checkbox">
+            <label>
+              <input type="checkbox" id="filterShowArchived" />
+              <span>Mostrar projetos arquivados</span>
+            </label>
+          </div>
+        </div>
+        
+        <div class="filters-actions">
+          <button type="button" id="clearFilters" class="filters-btn secondary">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <path d="M3 6h18M19 6v14a2 2 0 01-2 2H7a2 2 0 01-2-2V6m3 0V4a2 2 0 012-2h4a2 2 0 012 2v2"/>
+            </svg>
+            Limpar Filtros
+          </button>
+          <button type="button" id="applyFilters" class="filters-btn primary">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <path d="M22 3H2l8 9.46V19l4 2v-8.54L22 3z"/>
+            </svg>
+            Aplicar Filtros
+          </button>
+        </div>
+      </div>
+    </section>
 
     <div id="projectsGrid" class="projects-grid">
       <div class="projects-empty">Carregando projetos...</div>
@@ -682,6 +931,7 @@
       if (response.ok && data.success && data.employees) {
         employees = data.employees.filter(e => e.status === 'active');
         populateEmployeeSelect();
+        populateResponsibleFilter();  // Popular filtro de responsáveis
       }
     } catch (error) {
       console.error('Erro ao carregar colaboradores:', error);
@@ -695,6 +945,22 @@
       option.value = employee.id;
       option.textContent = employee.name + (employee.role_name ? ` (${employee.role_name})` : '');
       fieldResponsible.appendChild(option);
+    });
+  }
+  
+  function populateResponsibleFilter() {
+    const filterResponsible = document.getElementById('filterResponsible');
+    if (!filterResponsible) return;
+    
+    // Manter apenas a opção "Todos"
+    filterResponsible.innerHTML = '<option value="">Todos</option>';
+    
+    // Adicionar colaboradores ativos ao filtro
+    employees.forEach((employee) => {
+      const option = document.createElement('option');
+      option.value = employee.id;
+      option.textContent = employee.name + (employee.role_name ? ` (${employee.role_name})` : '');
+      filterResponsible.appendChild(option);
     });
   }
 
@@ -775,10 +1041,35 @@
 
   function normalizeActivities(raw) {
     if (!raw) return [];
-    if (Array.isArray(raw)) return raw;
+    if (Array.isArray(raw)) {
+      // Filtrar atividades inválidas ou vazias
+      return raw.filter(activity => {
+        if (!activity || typeof activity !== 'object') return false;
+        
+        // Atividade válida DEVE ter conteúdo descritivo (what ou title)
+        // Apenas code+status não é suficiente (são placeholders vazios)
+        const hasTitle = activity.title && activity.title.trim() !== '';
+        const hasWhat = activity.what && activity.what.trim() !== '';
+        
+        // Precisa ter pelo menos um campo descritivo
+        return hasTitle || hasWhat;
+      });
+    }
     try {
       const parsed = JSON.parse(raw);
-      return Array.isArray(parsed) ? parsed : [];
+      if (Array.isArray(parsed)) {
+        // Filtrar atividades inválidas ou vazias
+        return parsed.filter(activity => {
+          if (!activity || typeof activity !== 'object') return false;
+          
+          const hasTitle = activity.title && activity.title.trim() !== '';
+          const hasWhat = activity.what && activity.what.trim() !== '';
+          
+          // Precisa ter pelo menos um campo descritivo
+          return hasTitle || hasWhat;
+        });
+      }
+      return [];
     } catch (e) {
       return [];
     }
@@ -826,13 +1117,117 @@
       </article>`;
   }
 
+  // Estado dos filtros
+  const filterState = {
+    text: '',
+    status: [],
+    priority: [],
+    responsible: '',
+    portfolio: '',
+    showArchived: false
+  };
+
+  function canArchive(project) {
+    // Pode arquivar se todas as atividades estiverem concluídas
+    const activities = normalizeActivities(project.activities);
+    
+    // Se não tem atividades válidas, pode arquivar
+    if (!activities.length) {
+      return !project.is_archived;
+    }
+    
+    // Verificar se todas as atividades estão concluídas
+    const allCompleted = activities.every(a => {
+      const status = (a.status || '').toLowerCase();
+      return status === 'completed' || 
+             status === 'concluída' || 
+             status === 'concluida' ||
+             status === 'done';
+    });
+    
+    return allCompleted && !project.is_archived;
+  }
+
+  function applyFilters() {
+    const filtered = projects.filter(project => {
+      // Filtro de texto
+      if (filterState.text) {
+        const searchText = filterState.text.toLowerCase();
+        const matchesText = 
+          (project.title || '').toLowerCase().includes(searchText) ||
+          (project.description || '').toLowerCase().includes(searchText) ||
+          (project.code || '').toLowerCase().includes(searchText);
+        if (!matchesText) return false;
+      }
+      
+      // Filtro de status
+      if (filterState.status.length > 0) {
+        const activities = normalizeActivities(project.activities);
+        const completedCount = activities.filter(a => a.status === 'completed' || a.status === 'concluída').length;
+        const totalCount = activities.length;
+        
+        let projectStatus = 'planned';
+        if (totalCount > 0) {
+          if (completedCount === totalCount) {
+            projectStatus = 'completed';
+          } else if (completedCount > 0) {
+            projectStatus = 'in_progress';
+          } else {
+            projectStatus = 'in_progress';
+          }
+        }
+        
+        if (!filterState.status.includes(projectStatus)) return false;
+      }
+      
+      // Filtro de prioridade
+      if (filterState.priority.length > 0) {
+        if (!filterState.priority.includes(project.priority || 'normal')) return false;
+      }
+      
+      // Filtro de responsável
+      if (filterState.responsible) {
+        if (String(project.responsible_id) !== filterState.responsible) return false;
+      }
+      
+      // Filtro de portfólio
+      if (filterState.portfolio) {
+        if (String(project.plan_id || '') !== filterState.portfolio) return false;
+      }
+      
+      // Filtro de arquivados
+      if (!filterState.showArchived && project.is_archived) return false;
+      
+      return true;
+    });
+    
+    return filtered;
+  }
+
+  function updateFiltersCount() {
+    let count = 0;
+    if (filterState.text) count++;
+    if (filterState.status.length > 0) count++;
+    if (filterState.priority.length > 0) count++;
+    if (filterState.responsible) count++;
+    if (filterState.portfolio) count++;
+    if (filterState.showArchived) count++;
+    
+    const countEl = document.getElementById('filtersCount');
+    if (countEl) {
+      countEl.textContent = count > 0 ? `(${count} ativo${count > 1 ? 's' : ''})` : '(0 ativos)';
+    }
+  }
+
   function renderCards() {
-    if (!projects.length) {
-      grid.innerHTML = '<div class="projects-empty">Nenhum projeto cadastrado até o momento.</div>';
+    const filtered = applyFilters();
+    
+    if (!filtered.length) {
+      grid.innerHTML = '<div class="projects-empty">Nenhum projeto encontrado com os filtros aplicados.</div>';
       return;
     }
 
-    grid.innerHTML = projects.map((project) => {
+    grid.innerHTML = filtered.map((project) => {
       // Montar nome do planejamento com origem
       let planDisplay = 'Sem planejamento vinculado';
       if (project.plan_name) {
@@ -902,14 +1297,16 @@
           </div>
           <div class="project-actions">
             <a class="project-action" href="/grv/company/${companyId}/projects/${project.id}/manage" style="text-decoration:none;">📋 Gerenciar</a>
-            <button class="project-action" type="button" data-action="edit" data-id="${project.id}" data-ref="06">Editar</button>
-            <button class="project-action danger" type="button" data-action="remove" data-id="${project.id}" data-ref="07">Excluir</button>
+            <button class="project-action" type="button" data-action="edit" data-id="${project.id}" data-ref="06">✏️ Editar</button>
+            ${canArchive(project) ? `<button class="project-action archive" type="button" data-action="archive" data-id="${project.id}" data-ref="08">📦 Arquivar</button>` : ''}
+            ${project.is_archived ? `<button class="project-action" type="button" data-action="unarchive" data-id="${project.id}" data-ref="09">📂 Desarquivar</button>` : ''}
+            <button class="project-action danger" type="button" data-action="remove" data-id="${project.id}" data-ref="07">🗑️ Excluir</button>
             ${project.plan_id && project.plan_origin === 'PEV' ? (() => {
               const planMode = (project.plan_mode || 'evolucao').toLowerCase();
               const url = planMode === 'implantacao' 
                 ? `/pev/implantacao?plan_id=${project.plan_id}`
                 : `/plans/${project.plan_id}/projects`;
-              return `<a class="project-action" href="${url}" target="_blank">Abrir no planejamento</a>`;
+              return `<a class="project-action" href="${url}" target="_blank">🔗 Abrir no planejamento</a>`;
             })() : ''}
           </div>
         </article>`;
@@ -930,15 +1327,51 @@
     }
   }
 
+  function populatePortfolioFilter() {
+    const filterPortfolio = document.getElementById('filterPortfolio');
+    if (!filterPortfolio) return;
+    
+    // Manter apenas a opção "Todos"
+    filterPortfolio.innerHTML = '<option value="">Todos</option>';
+    
+    // Usar plansData (que vem do backend) ao invés de coletar dos projetos
+    // Isso garante que só mostrará planejamentos válidos/ativos
+    if (!plansData || !plansData.length) {
+      console.warn('Nenhum planejamento disponível para o filtro');
+      return;
+    }
+    
+    // Ordenar por origem (PEV primeiro) e depois por nome
+    const sortedPlans = plansData.slice().sort((a, b) => {
+      const originA = a.origin || '';
+      const originB = b.origin || '';
+      if (originA !== originB) {
+        return originA === 'PEV' ? -1 : 1;
+      }
+      return (a.name || '').localeCompare(b.name || '');
+    });
+    
+    // Adicionar opções ao select
+    sortedPlans.forEach(plan => {
+      const option = document.createElement('option');
+      option.value = plan.id;
+      const prefix = plan.origin ? `${plan.origin} - ` : '';
+      option.textContent = `${prefix}${plan.name}`;
+      filterPortfolio.appendChild(option);
+    });
+  }
+
   async function loadProjects(showToast = false) {
     grid.innerHTML = '<div class="projects-empty">Carregando projetos...</div>';
     try {
-      const response = await fetch(`/api/companies/${companyId}/projects`);
+      const showArchived = filterState.showArchived ? 'true' : 'false';
+      const response = await fetch(`/api/companies/${companyId}/projects?show_archived=${showArchived}`);
       const data = await response.json();
       if (!response.ok || !data.success) {
         throw new Error(data.message || 'Erro ao listar projetos');
       }
       projects = data.projects || [];
+      populatePortfolioFilter();  // Atualizar filtro de portfólio
       renderSummary();
       renderCards();
       if (showToast) {
@@ -1026,6 +1459,31 @@
       return;
     }
 
+    if (action === 'archive' || action === 'unarchive') {
+      const isArchiving = action === 'archive';
+      const actionText = isArchiving ? 'arquivar' : 'desarquivar';
+      const confirmed = confirm(`Confirmar ${actionText} o projeto "${project.title}"?`);
+      if (!confirmed) return;
+      
+      try {
+        const response = await fetch(`/api/companies/${companyId}/projects/${projectId}/archive`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ archived: isArchiving })
+        });
+        const data = await response.json();
+        if (!response.ok || !data.success) {
+          throw new Error(data.message || `Erro ao ${actionText} projeto`);
+        }
+        showMessage(data.message || `Projeto ${isArchiving ? 'arquivado' : 'desarquivado'}.`, 'success');
+        await loadProjects(true);
+      } catch (error) {
+        console.error(error);
+        showMessage(error.message, 'error');
+      }
+      return;
+    }
+
     if (action === 'remove') {
       const confirmed = confirm(`Confirmar exclusão do projeto "${project.title}"?`);
       if (!confirmed) return;
@@ -1055,8 +1513,70 @@
   form.addEventListener('submit', submitProject);
   grid.addEventListener('click', handleGridClick);
 
+  // Event listeners dos filtros
+  const filtersToggle = document.getElementById('filtersToggle');
+  const filtersSection = document.querySelector('.projects-filters-section');
+  const filterText = document.getElementById('filterText');
+  const filterStatus = document.getElementById('filterStatus');
+  const filterPriority = document.getElementById('filterPriority');
+  const filterResponsible = document.getElementById('filterResponsible');
+  const filterPortfolio = document.getElementById('filterPortfolio');
+  const filterShowArchived = document.getElementById('filterShowArchived');
+  const applyFiltersBtn = document.getElementById('applyFilters');
+  const clearFiltersBtn = document.getElementById('clearFilters');
+
+  // Toggle collapse dos filtros
+  if (filtersToggle && filtersSection) {
+    filtersToggle.addEventListener('click', () => {
+      filtersSection.classList.toggle('collapsed');
+    });
+    // Iniciar colapsado
+    filtersSection.classList.add('collapsed');
+  }
+
+  // Aplicar filtros
+  if (applyFiltersBtn) {
+    applyFiltersBtn.addEventListener('click', () => {
+      filterState.text = filterText.value.trim();
+      filterState.status = Array.from(filterStatus.selectedOptions).map(opt => opt.value);
+      filterState.priority = Array.from(filterPriority.selectedOptions).map(opt => opt.value);
+      filterState.responsible = filterResponsible.value;
+      filterState.portfolio = filterPortfolio.value;
+      filterState.showArchived = filterShowArchived.checked;
+      
+      updateFiltersCount();
+      renderCards();
+      renderSummary();
+    });
+  }
+
+  // Limpar filtros
+  if (clearFiltersBtn) {
+    clearFiltersBtn.addEventListener('click', () => {
+      filterState.text = '';
+      filterState.status = [];
+      filterState.priority = [];
+      filterState.responsible = '';
+      filterState.portfolio = '';
+      filterState.showArchived = false;
+      
+      filterText.value = '';
+      filterStatus.selectedIndex = -1;
+      filterPriority.selectedIndex = -1;
+      filterResponsible.selectedIndex = 0;
+      filterPortfolio.selectedIndex = 0;
+      filterShowArchived.checked = false;
+      
+      updateFiltersCount();
+      renderCards();
+      renderSummary();
+      showMessage('Filtros limpos.', 'info');
+    });
+  }
+
   // Inicialização
   populatePlanSelect();
+  populatePortfolioFilter();  // Popular filtro de portfólio na inicialização
   loadEmployees();
   loadOKRs();
   loadProjects();

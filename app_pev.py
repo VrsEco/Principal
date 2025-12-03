@@ -12611,6 +12611,7 @@ def _serialize_company_project(row) -> Dict[str, Any]:
         else None,
         "created_at": row["created_at"],
         "updated_at": row["updated_at"],
+        "is_archived": row.get("is_archived", False),
     }
 
 
@@ -12650,11 +12651,14 @@ def api_company_projects(company_id: int):
 
             # Filtro opcional por plan_id
             plan_id_filter = request.args.get("plan_id")
+            # Filtro para mostrar arquivados
+            show_archived = request.args.get("show_archived", "false").lower() == "true"
 
             if plan_id_filter:
                 # Filtrar por plan_id específico
+                archived_filter = "" if show_archived else "AND COALESCE(p.is_archived, FALSE) = FALSE"
                 cursor.execute(
-                    """
+                    f"""
                     SELECT
                         p.id,
                         p.company_id,
@@ -12688,20 +12692,22 @@ def api_company_projects(company_id: int):
                         p.code,
                         p.code_sequence,
                         p.created_at,
-                        p.updated_at
+                        p.updated_at,
+                        COALESCE(p.is_archived, FALSE) AS is_archived
                     FROM company_projects p
                     LEFT JOIN portfolios pf ON pf.id = p.plan_id
                     LEFT JOIN plans pl ON pl.id = p.plan_id
                     LEFT JOIN employees e ON e.id = p.responsible_id
-                    WHERE p.company_id = %s AND p.plan_id = %s
+                    WHERE p.company_id = %s AND p.plan_id = %s {archived_filter}
                     ORDER BY LOWER(p.title)
                     """,
                     (company_id, int(plan_id_filter)),
                 )
             else:
                 # Listar todos os projetos da empresa
+                archived_filter = "" if show_archived else "AND COALESCE(p.is_archived, FALSE) = FALSE"
                 cursor.execute(
-                    """
+                    f"""
                     SELECT
                         p.id,
                         p.company_id,
@@ -12735,12 +12741,13 @@ def api_company_projects(company_id: int):
                         p.code,
                         p.code_sequence,
                         p.created_at,
-                        p.updated_at
+                        p.updated_at,
+                        COALESCE(p.is_archived, FALSE) AS is_archived
                     FROM company_projects p
                     LEFT JOIN portfolios pf ON pf.id = p.plan_id
                     LEFT JOIN plans pl ON pl.id = p.plan_id
                     LEFT JOIN employees e ON e.id = p.responsible_id
-                    WHERE p.company_id = %s
+                    WHERE p.company_id = %s {archived_filter}
                     ORDER BY LOWER(p.title)
                     """,
                     (company_id,),
@@ -13146,6 +13153,59 @@ def api_company_project(company_id: int, project_id: int):
     except Exception as exc:
         logger.info(f"Erro ao atualizar projeto: {exc}")
         return jsonify({"success": False, "message": "Erro ao atualizar projeto."}), 500
+
+
+@app.route(
+    "/api/companies/<int:company_id>/projects/<int:project_id>/archive",
+    methods=["POST"],
+)
+@login_required
+def api_archive_project(company_id: int, project_id: int):
+    """
+    Arquiva ou desarquiva um projeto
+    
+    Body JSON:
+        {
+            "archived": true/false
+        }
+    """
+    try:
+        payload = request.get_json(silent=True) or {}
+        is_archived = payload.get("archived", True)  # Default: arquivar
+        
+        conn = _open_portfolio_connection()
+        cursor = conn.cursor()
+        
+        # Verificar se o projeto existe
+        cursor.execute(
+            "SELECT id, title FROM company_projects WHERE company_id = %s AND id = %s",
+            (company_id, project_id),
+        )
+        project = cursor.fetchone()
+        
+        if not project:
+            conn.close()
+            return jsonify({"success": False, "message": "Projeto não encontrado."}), 404
+        
+        # Atualizar is_archived
+        cursor.execute(
+            "UPDATE company_projects SET is_archived = %s, updated_at = NOW() WHERE company_id = %s AND id = %s",
+            (is_archived, company_id, project_id),
+        )
+        conn.commit()
+        conn.close()
+        
+        action = "arquivado" if is_archived else "desarquivado"
+        return jsonify({
+            "success": True,
+            "message": f"Projeto {action} com sucesso.",
+            "project_id": project_id,
+            "is_archived": is_archived
+        })
+        
+    except Exception as exc:
+        logger.error(f"Erro ao arquivar/desarquivar projeto: {exc}")
+        return jsonify({"success": False, "message": "Erro ao arquivar projeto."}), 500
 
 
 def _generate_activity_code(cursor, company_id: int, project_id: int) -> tuple:
