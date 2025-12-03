@@ -110,7 +110,7 @@ def register():
             email = data.get("email", "").strip()
             password = data.get("password", "")
             name = data.get("name", "").strip()
-            role = data.get("role", "consultant").strip()
+            role = data.get("role", "collaborator").strip()
 
             if not email or not password or not name:
                 return (

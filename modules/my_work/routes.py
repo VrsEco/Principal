@@ -181,8 +181,19 @@ def get_activities():
         - search: texto de busca
         - sort: 'deadline', 'priority', 'status'
         - company_id: ID da empresa para filtrar (opcional)
+        - company_ids: IDs das empresas para filtrar (separados por vírgula)
+        
+    Regras por role:
+        - admin: vê todas as atividades de todas as empresas (se nenhuma empresa selecionada)
+        - client: vê atividades de todos os usuários das empresas vinculadas
+        - collaborator: vê apenas atividades atribuídas a ele
     """
     try:
+        # Obter role do usuário (normalizar 'consultant' para 'collaborator')
+        user_role = current_user.role
+        if user_role == 'consultant':
+            user_role = 'collaborator'
+        
         # Mapear user para employee
         employee_id = get_employee_from_user(current_user.id)
 
@@ -245,6 +256,23 @@ def get_activities():
         # Se company_id (legado) vier e company_ids não, adiciona
         if company_id and not company_ids:
             company_ids = [company_id]
+        
+        # DEBUG: Log dos filtros recebidos
+        logger.info(f"🔍 Filtros - user_role: {user_role}, scope: {scope}, company_ids: {company_ids}")
+        
+        # REGRA: Admin sem filtro de empresa vê TODAS as empresas
+        if user_role == 'admin' and not company_ids:
+            from models.company import Company
+            all_companies = Company.query.order_by(Company.name).all()
+            company_ids = [c.id for c in all_companies]
+            logger.info(f"🔑 Admin sem filtro - todas empresas: {len(company_ids)} encontradas")
+        
+        # REGRA: Collaborator sempre vê apenas suas atividades (forçar scope='me')
+        if user_role == 'collaborator':
+            scope = 'me'
+            # Filtrar apenas o employee_id do próprio usuário
+            employee_ids = [employee_id] if employee_id else []
+            logger.info(f"👤 Collaborator - scope='me', employee_ids: {employee_ids}")
 
         filters = {
             "filter": request.args.get("filter", "all"),
@@ -326,7 +354,7 @@ def get_activities():
         stats = get_user_stats(
             employee_id,
             scope,
-            company_id,
+            company_id=None,  # Não usar legado, usar apenas company_ids
             company_ids=company_ids,
             filters=filters,
             employee_ids=employee_ids,
@@ -335,11 +363,16 @@ def get_activities():
         # Contadores das abas
         counts = count_activities_by_scope(
             employee_id,
-            company_id,
+            company_id=None,  # Não usar legado, usar apenas company_ids
             company_ids=company_ids,
             filters=filters,
             employee_ids=employee_ids,
         )
+
+        # DEBUG: Log dos resultados
+        logger.info(f"📊 Stats calculadas: {stats}")
+        logger.info(f"🔢 Counts: {counts}")
+        logger.info(f"📝 Total atividades retornadas: {len(activities)}")
 
         return jsonify(
             {"success": True, "data": activities, "stats": stats, "counts": counts}

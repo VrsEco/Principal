@@ -19,7 +19,7 @@ class AuthService:
     """Service for user authentication and management"""
 
     @staticmethod
-    def create_user(email, password, name, role="consultant"):
+    def create_user(email, password, name, role="collaborator"):
         """
         Create a new user
 
@@ -27,7 +27,7 @@ class AuthService:
             email (str): User email
             password (str): Plain text password
             name (str): User full name
-            role (str): User role (admin, consultant, client)
+            role (str): User role (admin, collaborator, client)
 
         Returns:
             User object if created successfully, None otherwise

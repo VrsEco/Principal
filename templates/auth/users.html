@@ -130,7 +130,7 @@
         color: white;
     }
 
-    .badge-consultant {
+    .badge-collaborator {
         background-color: #3498db;
         color: white;
     }
@@ -725,7 +725,7 @@
                 <div class="form-group">
                     <label for="edit_role">Perfil de Acesso</label>
                     <select class="form-control" id="edit_role" required data-ref="11">
-                        <option value="consultant">Consultor</option>
+                        <option value="collaborator">Colaborador</option>
                         <option value="client">Cliente</option>
                         <option value="admin">Administrador</option>
                     </select>
@@ -924,7 +924,8 @@ function displayUsers(users) {
 function getRoleName(role) {
     const roles = {
         'admin': 'Administrador',
-        'consultant': 'Consultor',
+        'collaborator': 'Colaborador',
+        'consultant': 'Colaborador',  // Fallback para dados legados
         'client': 'Cliente'
     };
     return roles[role] || role;

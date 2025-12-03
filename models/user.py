@@ -15,8 +15,8 @@ class User(UserMixin, db.Model):
     password_hash = db.Column(db.String(255), nullable=False)
     name = db.Column(db.String(100), nullable=False)
     role = db.Column(
-        db.String(20), nullable=False, default="consultant"
-    )  # admin, consultant, client
+        db.String(20), nullable=False, default="collaborator"
+    )  # admin, collaborator, client
     is_active = db.Column(db.Boolean, default=True, nullable=False)
     created_at = db.Column(db.DateTime, default=datetime.utcnow, nullable=False)
     updated_at = db.Column(

@@ -36,7 +36,7 @@ class UserEmployeeService:
             user = User(
                 name=user_data['name'],
                 email=user_data['email'],
-                role=user_data.get('role', 'client')  # admin, consultant, client
+                role=user_data.get('role', 'client')  # admin, collaborator, client
             )
             user.set_password(user_data['password'])
             db.session.add(user)

@@ -183,7 +183,7 @@ const FILTER_MULTISELECTS = [
     selectAllId: 'selectAllCompanies',
     stateKey: 'selectedCompanyIds',
     selectAllByDefault: true,
-    requireSelection: true,
+    requireSelection: false,  // ← Permitir desmarcar todas
     optionsProvider: () =>
       (state.companies || []).map(company => ({
         id: company.company_id,
@@ -339,23 +339,14 @@ async function loadFilterOptions() {
     // Tentar carregar filtros do cache
     const hasCache = loadFiltersFromCache();
     
-    // Se não houver cache, inicializar com valores padrão
+    // Se não houver cache, inicializar com TODAS selecionadas por padrão
     if (!hasCache) {
-      if (!state.selectedCompanyIds.length && state.companies.length) {
-        state.selectedCompanyIds = state.companies.map(company => company.company_id);
-      }
-      if (!state.selectedResponsibleIds.length && state.collaborators.length) {
-        state.selectedResponsibleIds = state.collaborators.map(c => c.id);
-      }
-      if (!state.selectedExecutorIds.length && state.collaborators.length) {
-        state.selectedExecutorIds = state.collaborators.map(c => c.id);
-      }
-      if (!state.selectedProjectIds.length && state.projectsDirectory.length) {
-        state.selectedProjectIds = state.projectsDirectory.map(p => p.id);
-      }
-      if (!state.selectedProcessIds.length && state.processesDirectory.length) {
-        state.selectedProcessIds = state.processesDirectory.map(p => p.id);
-      }
+      // Sempre inicializar com todas as empresas selecionadas na primeira vez
+      state.selectedCompanyIds = state.companies.map(company => company.company_id);
+      state.selectedResponsibleIds = state.collaborators.map(c => c.id);
+      state.selectedExecutorIds = state.collaborators.map(c => c.id);
+      state.selectedProjectIds = state.projectsDirectory.map(p => p.id);
+      state.selectedProcessIds = state.processesDirectory.map(p => p.id);
     }
     
     // Aplicar os valores dos filtros restaurados nos campos do UI
@@ -638,9 +629,8 @@ function updateProcessOwnersFromActivities() {
 }
 
 function handleCompanySelectionChange() {
-  if (!state.selectedCompanyIds.length && state.companies.length) {
-    state.selectedCompanyIds = state.companies.map(company => company.company_id);
-  }
+  // Permitir que nenhuma empresa seja selecionada
+  // (O backend/filtros irão lidar com isso adequadamente)
   saveFiltersToCache();
   loadActivitiesData();
   if (state.currentScope === 'team') {

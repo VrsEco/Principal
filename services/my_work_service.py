@@ -262,24 +262,62 @@ def get_user_employees(user_id: int) -> List[Dict[str, Any]]:
 
 
 def get_filter_options(user_id: int) -> Dict[str, List[Dict[str, Any]]]:
-    """Return company, collaborator, project and process directories for filters."""
-    base_companies = get_user_employees(user_id)
-    unique_companies: List[Dict[str, Any]] = []
-    seen_ids = set()
-
-    for company in base_companies:
-        company_id = company.get("company_id")
-        if not company_id or company_id in seen_ids:
-            continue
-        seen_ids.add(company_id)
-        unique_companies.append(
+    """
+    Return company, collaborator, project and process directories for filters.
+    
+    Regras por role:
+    - admin: vê todas as empresas e todos os colaboradores
+    - client: vê apenas empresas vinculadas e seus colaboradores
+    - collaborator: vê apenas empresas vinculadas, mas apenas ele mesmo nos colaboradores
+    """
+    from models.user import User
+    
+    # Obter role do usuário
+    user = User.query.get(user_id)
+    if not user:
+        return {
+            "companies": [],
+            "collaborators": [],
+            "projects": [],
+            "processes": [],
+        }
+    
+    user_role = user.role
+    if user_role == 'consultant':
+        user_role = 'collaborator'  # Normalizar legado
+    
+    # Admin: buscar todas as empresas
+    if user_role == 'admin':
+        from models.company import Company
+        all_companies = Company.query.order_by(Company.name).all()
+        unique_companies = [
             {
-                "company_id": company_id,
-                "company_name": company.get("company_name") or "Empresa",
+                "company_id": c.id,
+                "company_name": c.name,
             }
-        )
+            for c in all_companies
+        ]
+        company_ids = [c.id for c in all_companies]
+    else:
+        # Client e Collaborator: apenas empresas vinculadas
+        base_companies = get_user_employees(user_id)
+        unique_companies: List[Dict[str, Any]] = []
+        seen_ids = set()
 
-    company_ids = [item["company_id"] for item in unique_companies]
+        for company in base_companies:
+            company_id = company.get("company_id")
+            if not company_id or company_id in seen_ids:
+                continue
+            seen_ids.add(company_id)
+            unique_companies.append(
+                {
+                    "company_id": company_id,
+                    "company_name": company.get("company_name") or "Empresa",
+                }
+            )
+
+        company_ids = [item["company_id"] for item in unique_companies]
+
     result = {
         "companies": unique_companies,
         "collaborators": [],
@@ -293,7 +331,26 @@ def get_filter_options(user_id: int) -> Dict[str, List[Dict[str, Any]]]:
     conn = pg_connect()
     cursor = conn.cursor()
     try:
-        result["collaborators"] = _fetch_collaborator_directory(cursor, company_ids)
+        # Collaborator: retorna apenas ele mesmo nos colaboradores
+        if user_role == 'collaborator':
+            employee_id = get_employee_from_user(user_id)
+            if employee_id:
+                from models.employee import Employee
+                employee = Employee.query.get(employee_id)
+                if employee:
+                    result["collaborators"] = [
+                        {
+                            "id": employee.id,
+                            "name": employee.name,
+                            "email": employee.email,
+                            "company_id": employee.company_id,
+                            "company_name": employee.company.name if employee.company else "Empresa",
+                        }
+                    ]
+        else:
+            # Admin e Client: todos os colaboradores das empresas
+            result["collaborators"] = _fetch_collaborator_directory(cursor, company_ids)
+        
         result["projects"] = _fetch_project_directory(cursor, company_ids)
         result["processes"] = _fetch_process_directory(cursor, company_ids)
         return result
@@ -2237,12 +2294,57 @@ def _datetime_sort_key(value: Optional[datetime]) -> int:
     return int(value.timestamp())
 
 
-def _can_view_company(cursor, employee_id: int) -> bool:
-    """Verifica se employee tem permissÃ£o para ver atividades da empresa"""
+def _get_user_role_from_employee(employee_id: int) -> Optional[str]:
+    """
+    Obtém o role do usuário a partir do employee_id
+    
+    Returns:
+        str: 'admin', 'client', 'collaborator' ou None
+    """
+    from models.user import User
+    from models.employee import Employee
+    
+    try:
+        employee = Employee.query.get(employee_id)
+        if not employee or not employee.user_id:
+            return None
+        
+        user = User.query.get(employee.user_id)
+        if not user:
+            return None
+        
+        # Normalizar 'consultant' legado para 'collaborator'
+        role = user.role
+        if role == 'consultant':
+            role = 'collaborator'
+        
+        return role
+    except Exception as e:
+        logger.warning(f"Erro ao obter role do usuário para employee {employee_id}: {e}")
+        return None
 
-    # TODO: Implementar verificaÃ§Ã£o de role/permissÃ£o
-    # Por enquanto, permitir para todos (demo)
-    return True
+
+def _can_view_company(cursor, employee_id: int) -> bool:
+    """
+    Verifica se employee tem permissÃ£o para ver atividades da empresa
+    
+    Regras:
+    - admin: pode ver tudo
+    - client: pode ver atividades das empresas vinculadas
+    - collaborator: NÃO pode ver (apenas suas próprias atividades)
+    """
+    role = _get_user_role_from_employee(employee_id)
+    
+    # Admin pode ver tudo
+    if role == 'admin':
+        return True
+    
+    # Client pode ver atividades da empresa
+    if role == 'client':
+        return True
+    
+    # Collaborator não pode ver visão de empresa
+    return False
 
 
 def _priority_order(priority: str) -> int:
