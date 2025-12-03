@@ -659,9 +659,15 @@ def _build_activity_row_from_json(
         "project_id": project_row.get("id"),
         "responsible_id": _safe_int(activity.get("responsible_id")),
         "responsible_name": activity.get("responsible_name")
-        or activity.get("responsible"),
+        or activity.get("responsible")
+        or activity.get("who")
+        or activity.get("owner"),
         "executor_id": _safe_int(activity.get("executor_id")),
-        "executor_name": activity.get("executor_name") or activity.get("executor"),
+        "executor_name": activity.get("executor_name")
+        or activity.get("executor")
+        or activity.get("assigned_to")
+        or activity.get("assigned")
+        or activity.get("executor_responsible"),
         "company_id": project_row.get("company_id"),
         "plan_id": project_row.get("plan_id"),
         "project_title": project_row.get("title"),

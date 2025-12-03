@@ -191,8 +191,28 @@ def get_activities():
     try:
         # Obter role do usuário (normalizar 'consultant' para 'collaborator')
         user_role = current_user.role
-        if user_role == 'consultant':
-            user_role = 'collaborator'
+        if user_role == "consultant":
+            user_role = "collaborator"
+
+        from models.company import Company
+
+        def _fetch_all_company_ids() -> List[int]:
+            """Retorna todos IDs de empresas cadastradas."""
+            return [
+                company_id
+                for (company_id,) in Company.query.with_entities(Company.id).all()
+            ]
+
+        allowed_company_ids: Optional[List[int]]
+        if user_role == "admin":
+            allowed_company_ids = None  # Admin pode ver todas
+        else:
+            base_companies = get_user_employees(current_user.id) or []
+            allowed_company_ids = [
+                comp.get("company_id")
+                for comp in base_companies
+                if comp.get("company_id") is not None
+            ]
         
         # Mapear user para employee
         employee_id = get_employee_from_user(current_user.id)
@@ -256,23 +276,41 @@ def get_activities():
         # Se company_id (legado) vier e company_ids não, adiciona
         if company_id and not company_ids:
             company_ids = [company_id]
-        
-        # DEBUG: Log dos filtros recebidos
-        logger.info(f"🔍 Filtros - user_role: {user_role}, scope: {scope}, company_ids: {company_ids}")
-        
-        # REGRA: Admin sem filtro de empresa vê TODAS as empresas
-        if user_role == 'admin' and not company_ids:
-            from models.company import Company
-            all_companies = Company.query.order_by(Company.name).all()
-            company_ids = [c.id for c in all_companies]
-            logger.info(f"🔑 Admin sem filtro - todas empresas: {len(company_ids)} encontradas")
-        
-        # REGRA: Collaborator sempre vê apenas suas atividades (forçar scope='me')
-        if user_role == 'collaborator':
-            scope = 'me'
-            # Filtrar apenas o employee_id do próprio usuário
+
+        # Ajustar company_ids conforme permissões
+        if allowed_company_ids is not None:
+            if company_ids:
+                company_ids = [cid for cid in company_ids if cid in allowed_company_ids]
+            else:
+                company_ids = allowed_company_ids[:]
+        elif not company_ids:
+            company_ids = _fetch_all_company_ids()
+
+        # Caso usuário não tenha nenhuma empresa disponível após as validações
+        if not company_ids:
+            logger.info(
+                f"🚫 Nenhuma empresa disponível para user_id={current_user.id} (role={user_role}). Retornando vazio."
+            )
+            empty_stats = {"pending": 0, "in_progress": 0, "overdue": 0, "completed": 0}
+            empty_counts = {"me": 0, "team": 0, "company": 0}
+            return jsonify({"success": True, "data": [], "stats": empty_stats, "counts": empty_counts})
+
+        # DEBUG: Log dos filtros recebidos (antes de ajustar escopo)
+        logger.info(
+            f"🔍 Filtros - user_role: {user_role}, scope: {scope}, company_ids: {company_ids}"
+        )
+
+        # Forçar escopo conforme perfil
+        if user_role == "admin":
+            scope = "company"
+        elif user_role == "client":
+            scope = "company"
+        elif user_role == "collaborator":
+            scope = "me"
             employee_ids = [employee_id] if employee_id else []
-            logger.info(f"👤 Collaborator - scope='me', employee_ids: {employee_ids}")
+            logger.info(
+                f"👤 Collaborator - scope='me', employee_ids: {employee_ids}, companies: {company_ids}"
+            )
 
         filters = {
             "filter": request.args.get("filter", "all"),
