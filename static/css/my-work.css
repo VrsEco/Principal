@@ -431,7 +431,7 @@ body {
 }
 
 .filters-panel__body {
-  overflow: hidden;
+  overflow: visible;
   transition: max-height 0.3s ease, opacity 0.3s ease;
   max-height: 2000px;
 }
@@ -440,6 +440,7 @@ body {
   max-height: 0;
   opacity: 0;
   pointer-events: none;
+  overflow: hidden;
 }
 
 .filters-panel__body.is-collapsed .filters-dashboard {

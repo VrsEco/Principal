@@ -43,3 +43,4 @@ print("🎯 Debug concluído")
 
 
 
+

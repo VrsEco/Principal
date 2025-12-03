@@ -692,3 +692,4 @@ def analisar_completude(company_id):
 
 
 
+
