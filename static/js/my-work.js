@@ -502,6 +502,7 @@ function initializeDueDateFilters() {
   const endInput = document.getElementById('filterDueDateEnd');
   const clearButton = document.getElementById('filterDueDateClear');
   const todayButton = document.getElementById('filterDueDateToday');
+  const untilYesterdayButton = document.getElementById('filterDueDateUntilYesterday');
   const weekButton = document.getElementById('filterDueDateWeek');
   const monthButton = document.getElementById('filterDueDateMonth');
 
@@ -567,6 +568,19 @@ function initializeDueDateFilters() {
     todayButton.addEventListener('click', () => {
       const today = new Date();
       applyRange(today, today);
+    });
+  }
+
+  if (untilYesterdayButton) {
+    untilYesterdayButton.addEventListener('click', () => {
+      const yesterday = new Date();
+      yesterday.setDate(yesterday.getDate() - 1);
+      state.dueDateStart = '';
+      state.dueDateEnd = formatDateInput(yesterday);
+      startInput.value = '';
+      endInput.value = state.dueDateEnd;
+      applyLimits();
+      loadActivitiesData();
     });
   }
 
