@@ -8,10 +8,8 @@
 // ========================================
 
 const DELIVERY_FILTER_OPTIONS = [
-  { value: 'delivered_on_time', label: 'Entregue em dia' },
-  { value: 'delivered_late', label: 'Entregue em atraso' },
-  { value: 'executing_on_time', label: 'Em execução em dia' },
-  { value: 'executing_late', label: 'Em execução em atraso' }
+  { value: 'open', label: 'Em aberto' },
+  { value: 'completed', label: 'Concluídas' }
 ];
 const DELIVERY_FILTER_VALUES = DELIVERY_FILTER_OPTIONS.map(option => option.value);
 
@@ -42,6 +40,103 @@ const state = {
   processesByCompany: {}
 };
 
+function toggleFilterHighlight(element, isActive) {
+  if (!element) return;
+  element.classList.toggle('filter-control--active', Boolean(isActive));
+}
+
+const FILTER_CACHE_KEY = 'mywork_filters';
+
+function saveFiltersToCache() {
+  try {
+    const filtersData = {
+      selectedCompanyIds: state.selectedCompanyIds,
+      selectedResponsibleIds: state.selectedResponsibleIds,
+      selectedExecutorIds: state.selectedExecutorIds,
+      selectedProjectIds: state.selectedProjectIds,
+      selectedProcessIds: state.selectedProcessIds,
+      selectedProcessOwnerIds: state.selectedProcessOwnerIds,
+      selectedDeliveryTags: state.selectedDeliveryTags,
+      dueDateStart: state.dueDateStart,
+      dueDateEnd: state.dueDateEnd,
+      searchQuery: state.searchQuery,
+      sortBy: state.sortBy
+    };
+    localStorage.setItem(FILTER_CACHE_KEY, JSON.stringify(filtersData));
+  } catch (error) {
+    console.warn('Erro ao salvar filtros no cache:', error);
+  }
+}
+
+function loadFiltersFromCache() {
+  try {
+    const cached = localStorage.getItem(FILTER_CACHE_KEY);
+    if (!cached) return false;
+    
+    const filtersData = JSON.parse(cached);
+    state.selectedCompanyIds = filtersData.selectedCompanyIds || [];
+    state.selectedResponsibleIds = filtersData.selectedResponsibleIds || [];
+    state.selectedExecutorIds = filtersData.selectedExecutorIds || [];
+    state.selectedProjectIds = filtersData.selectedProjectIds || [];
+    state.selectedProcessIds = filtersData.selectedProcessIds || [];
+    state.selectedProcessOwnerIds = filtersData.selectedProcessOwnerIds || [];
+    state.selectedDeliveryTags = filtersData.selectedDeliveryTags || DELIVERY_FILTER_VALUES.slice();
+    state.dueDateStart = filtersData.dueDateStart || '';
+    state.dueDateEnd = filtersData.dueDateEnd || '';
+    state.searchQuery = filtersData.searchQuery || '';
+    state.sortBy = filtersData.sortBy || 'deadline';
+    
+    return true;
+  } catch (error) {
+    console.warn('Erro ao carregar filtros do cache:', error);
+    return false;
+  }
+}
+
+function clearAllFilters() {
+  // Resetar todos os filtros para valores padrão
+  state.selectedCompanyIds = state.companies.map(c => c.company_id);
+  state.selectedResponsibleIds = state.collaborators.map(c => c.id);
+  state.selectedExecutorIds = state.collaborators.map(c => c.id);
+  state.selectedProjectIds = state.projectsDirectory.map(p => p.id);
+  state.selectedProcessIds = state.processesDirectory.map(p => p.id);
+  state.selectedProcessOwnerIds = state.processOwnersDirectory.map(o => o.id);
+  state.selectedDeliveryTags = DELIVERY_FILTER_VALUES.slice();
+  state.dueDateStart = '';
+  state.dueDateEnd = '';
+  state.searchQuery = '';
+  state.sortBy = 'deadline';
+  
+  // Atualizar UI
+  const searchInput = document.getElementById('searchInput');
+  if (searchInput) searchInput.value = '';
+  
+  const startInput = document.getElementById('filterDueDateStart');
+  if (startInput) startInput.value = '';
+  
+  const endInput = document.getElementById('filterDueDateEnd');
+  if (endInput) endInput.value = '';
+  
+  const sortSelect = document.getElementById('sortSelect');
+  if (sortSelect) sortSelect.value = '';
+  
+  // Re-inicializar todos os multiselects
+  FILTER_MULTISELECTS.forEach(config => setupMultiselect(config));
+  
+  // Atualizar highlights
+  const wrapper = searchInput?.closest('.filter-input-wrapper');
+  toggleFilterHighlight(wrapper, false);
+  
+  const dueDateCard = startInput?.closest('.filter-card');
+  toggleFilterHighlight(dueDateCard, false);
+  
+  // Salvar e recarregar atividades
+  saveFiltersToCache();
+  loadActivitiesData();
+  
+  window.showMessage?.('Todos os filtros foram limpos', 'success');
+}
+
 const processInstanceFetchPromises = Object.create(null);
 const processListFetchPromises = Object.create(null);
 
@@ -50,6 +145,12 @@ const SELECTION_MODE_NONE = 'none';
 const DEFAULT_DAILY_CAPACITY = 8;
 const WEEK_BAR_KEYS = ['seg', 'ter', 'qua', 'qui', 'sex'];
 const DEFAULT_WEEKLY_CAPACITY = DEFAULT_DAILY_CAPACITY * WEEK_BAR_KEYS.length;
+const CLOSED_STATUS_SET = new Set(['completed', 'done', 'cancelled', 'canceled', 'archived']);
+
+function getActivityStatusCategory(activity) {
+  const status = (activity?.status || '').toLowerCase();
+  return CLOSED_STATUS_SET.has(status) ? 'completed' : 'open';
+}
 
 // ========================================
 // Inicialização
@@ -63,6 +164,7 @@ document.addEventListener('DOMContentLoaded', async function () {
   initializeActivitiesCollapse();
   initializeSorting();
   initializeActivityActions();
+  initializeClearFiltersButton();
   updateSidebarCompactMode();
   animateOnScroll();
   loadActivitiesData();
@@ -111,7 +213,7 @@ const FILTER_MULTISELECTS = [
       all: 'Todos os responsáveis',
       summary: count => `${count} responsáveis`
     },
-    onChange: () => loadActivitiesData()
+    onChange: () => { saveFiltersToCache(); loadActivitiesData(); }
   },
   {
     key: 'executor',
@@ -129,7 +231,7 @@ const FILTER_MULTISELECTS = [
       all: 'Todos os executores',
       summary: count => `${count} executores`
     },
-    onChange: () => loadActivitiesData()
+    onChange: () => { saveFiltersToCache(); loadActivitiesData(); }
   },
   {
     key: 'projects',
@@ -147,7 +249,7 @@ const FILTER_MULTISELECTS = [
       all: 'Todos os projetos',
       summary: count => `${count} projetos`
     },
-    onChange: () => loadActivitiesData()
+    onChange: () => { saveFiltersToCache(); loadActivitiesData(); }
   },
   {
     key: 'processes',
@@ -165,7 +267,7 @@ const FILTER_MULTISELECTS = [
       all: 'Todos os processos',
       summary: count => `${count} processos`
     },
-    onChange: () => loadActivitiesData()
+    onChange: () => { saveFiltersToCache(); loadActivitiesData(); }
   },
   {
     key: 'processOwners',
@@ -184,7 +286,7 @@ const FILTER_MULTISELECTS = [
       all: 'Todos os donos',
       summary: count => `${count} donos`
     },
-    onChange: () => loadActivitiesData()
+    onChange: () => { saveFiltersToCache(); loadActivitiesData(); }
   },
   {
     key: 'delivery',
@@ -208,7 +310,7 @@ const FILTER_MULTISELECTS = [
       all: 'Todos os status',
       summary: count => `${count} status`
     },
-    onChange: () => loadActivitiesData()
+    onChange: () => { saveFiltersToCache(); loadActivitiesData(); }
   }
 ];
 
@@ -234,9 +336,49 @@ async function loadFilterOptions() {
     state.projectsDirectory = data.projects || [];
     state.processesDirectory = data.processes || [];
 
-    if (!state.selectedCompanyIds.length && state.companies.length) {
-      state.selectedCompanyIds = state.companies.map(company => company.company_id);
+    // Tentar carregar filtros do cache
+    const hasCache = loadFiltersFromCache();
+    
+    // Se não houver cache, inicializar com valores padrão
+    if (!hasCache) {
+      if (!state.selectedCompanyIds.length && state.companies.length) {
+        state.selectedCompanyIds = state.companies.map(company => company.company_id);
+      }
+      if (!state.selectedResponsibleIds.length && state.collaborators.length) {
+        state.selectedResponsibleIds = state.collaborators.map(c => c.id);
+      }
+      if (!state.selectedExecutorIds.length && state.collaborators.length) {
+        state.selectedExecutorIds = state.collaborators.map(c => c.id);
+      }
+      if (!state.selectedProjectIds.length && state.projectsDirectory.length) {
+        state.selectedProjectIds = state.projectsDirectory.map(p => p.id);
+      }
+      if (!state.selectedProcessIds.length && state.processesDirectory.length) {
+        state.selectedProcessIds = state.processesDirectory.map(p => p.id);
+      }
     }
+    
+    // Aplicar os valores dos filtros restaurados nos campos do UI
+    const searchInput = document.getElementById('searchInput');
+    if (searchInput && state.searchQuery) {
+      searchInput.value = state.searchQuery;
+    }
+    
+    const startInput = document.getElementById('filterDueDateStart');
+    if (startInput && state.dueDateStart) {
+      startInput.value = state.dueDateStart;
+    }
+    
+    const endInput = document.getElementById('filterDueDateEnd');
+    if (endInput && state.dueDateEnd) {
+      endInput.value = state.dueDateEnd;
+    }
+    
+    const sortSelect = document.getElementById('sortSelect');
+    if (sortSelect && state.sortBy && state.sortBy !== 'deadline') {
+      sortSelect.value = state.sortBy;
+    }
+    
   } catch (error) {
     console.error('Erro ao carregar opções de filtro:', error);
     window.showMessage?.('Não foi possível carregar as opções de filtro.', 'error');
@@ -266,7 +408,22 @@ function setupMultiselect(config) {
     state[config.stateKey] = Array.from(selectedSet);
   }
 
+  function updateTriggerHighlight() {
+    if (!trigger) return;
+    const total = options.length;
+    if (!total) {
+      toggleFilterHighlight(trigger, false);
+      return;
+    }
+    let isActive = selectedSet.size < total;
+    if (!config.requireSelection) {
+      isActive = selectedSet.size === 0 || selectedSet.size < total;
+    }
+    toggleFilterHighlight(trigger, isActive);
+  }
+
   function updateLabel() {
+    updateTriggerHighlight();
     const total = options.length;
     const selectedCount = selectedSet.size;
     if (!total) {
@@ -484,6 +641,7 @@ function handleCompanySelectionChange() {
   if (!state.selectedCompanyIds.length && state.companies.length) {
     state.selectedCompanyIds = state.companies.map(company => company.company_id);
   }
+  saveFiltersToCache();
   loadActivitiesData();
   if (state.currentScope === 'team') {
     loadTeamOverview();
@@ -509,6 +667,11 @@ function initializeDueDateFilters() {
   if (!startInput || !endInput) {
     return;
   }
+
+  const dueDateCard = startInput.closest('.filter-card');
+  const updateDateHighlight = () => {
+    toggleFilterHighlight(dueDateCard, Boolean(state.dueDateStart || state.dueDateEnd));
+  };
 
   const applyLimits = () => {
     if (state.dueDateStart) {
@@ -538,6 +701,8 @@ function initializeDueDateFilters() {
     }
 
     applyLimits();
+    updateDateHighlight();
+    saveFiltersToCache();
     loadActivitiesData();
   };
 
@@ -551,6 +716,8 @@ function initializeDueDateFilters() {
       startInput.value = '';
       endInput.value = '';
       applyLimits();
+      updateDateHighlight();
+      saveFiltersToCache();
       loadActivitiesData();
     });
   }
@@ -561,6 +728,8 @@ function initializeDueDateFilters() {
     startInput.value = state.dueDateStart;
     endInput.value = state.dueDateEnd;
     applyLimits();
+    updateDateHighlight();
+    saveFiltersToCache();
     loadActivitiesData();
   };
 
@@ -580,6 +749,8 @@ function initializeDueDateFilters() {
       startInput.value = '';
       endInput.value = state.dueDateEnd;
       applyLimits();
+      updateDateHighlight();
+      saveFiltersToCache();
       loadActivitiesData();
     });
   }
@@ -607,6 +778,7 @@ function initializeDueDateFilters() {
   }
 
   applyLimits();
+  updateDateHighlight();
 }
 
 function formatDateInput(date) {
@@ -627,10 +799,20 @@ function initializeSearch() {
   const searchInput = document.getElementById('searchInput');
   if (!searchInput) return;
 
+  const wrapper = searchInput.closest('.filter-input-wrapper');
+  const syncHighlight = () => {
+    const hasValue = Boolean((searchInput.value || '').trim());
+    toggleFilterHighlight(wrapper, hasValue);
+  };
+
   searchInput.addEventListener('input', function () {
     state.searchQuery = (this.value || '').toLowerCase();
+    syncHighlight();
+    saveFiltersToCache();
     renderActivities();
   });
+
+  syncHighlight();
 }
 
 function initializeFilterCollapse() {
@@ -659,6 +841,17 @@ function initializeFilterCollapse() {
   });
 
   updateUI();
+}
+
+function initializeClearFiltersButton() {
+  const clearButton = document.getElementById('filtersClearButton');
+  if (!clearButton) return;
+  
+  clearButton.addEventListener('click', () => {
+    if (confirm('Tem certeza que deseja limpar todos os filtros?')) {
+      clearAllFilters();
+    }
+  });
 }
 
 function initializeActivitiesCollapse() {
@@ -706,6 +899,7 @@ function initializeSorting() {
     if (!selectedValue) {
       this.value = '';
     }
+    saveFiltersToCache();
     renderActivities();
   });
 }
@@ -1400,14 +1594,12 @@ function getFilteredActivities() {
   if (!deliveryFilters.length) {
     return [];
   }
-  const restrictDelivery =
-    deliveryFilters.length && deliveryFilters.length < DELIVERY_FILTER_VALUES.length;
+  const restrictDelivery = deliveryFilters.length < DELIVERY_FILTER_VALUES.length;
 
   if (restrictDelivery) {
-    activities = activities.filter(activity => {
-      const activityTags = activity.delivery_tags || [];
-      return activityTags.some(tag => deliveryFilters.includes(tag));
-    });
+    activities = activities.filter(activity =>
+      deliveryFilters.includes(getActivityStatusCategory(activity))
+    );
   }
 
   if (

@@ -15,15 +15,28 @@ from database.postgres_helper import connect as pg_connect
 from utils.project_activity_utils import normalize_project_activities
 
 DELIVERY_TAGS = [
-    "delivered_on_time",
-    "delivered_late",
-    "executing_on_time",
-    "executing_late",
+    "open",
+    "completed",
 ]
 
 TEAM_DEFAULT_WEEKLY_HOURS = 40.0
 RECENT_ACTIVITY_DAYS = 30
 _CLOSED_STATUSES = {"completed", "done", "cancelled", "canceled", "archived"}
+
+
+def _activity_delivery_category(activity: Dict[str, Any]) -> str:
+    """Return the simplified delivery category for an activity."""
+    status = (activity.get("status") or "").lower()
+    return "completed" if status in _CLOSED_STATUSES else "open"
+
+
+def _activity_matches_delivery_filter(
+    activity: Dict[str, Any], tags: Sequence[str]
+) -> bool:
+    """Check if an activity matches at least one delivery filter tag."""
+    if not tags:
+        return True
+    return _activity_delivery_category(activity) in tags
 
 
 def get_employee_from_user(user_id: int) -> Optional[int]:
@@ -1816,6 +1829,7 @@ def _apply_filters(activities: List[Dict], filters: Dict) -> List[Dict]:
     search_term = (filters.get("search") or "").strip().lower()
     types_filter = filters.get("types") or []
     roles_filter = filters.get("roles") or []
+    delivery_tags = filters.get("delivery_tags") or []
     due_date_start = filters.get("due_date_start")
     due_date_end = filters.get("due_date_end")
     responsible_ids = filters.get("responsible_ids") or []
@@ -1844,6 +1858,13 @@ def _apply_filters(activities: List[Dict], filters: Dict) -> List[Dict]:
             activity
             for activity in filtered
             if _activity_matches_roles(activity, roles_filter)
+        ]
+
+    if delivery_tags:
+        filtered = [
+            activity
+            for activity in filtered
+            if _activity_matches_delivery_filter(activity, delivery_tags)
         ]
 
     if due_date_start or due_date_end:
