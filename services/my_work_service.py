@@ -1501,9 +1501,12 @@ def count_activities_by_scope(
         count_team = _count_team_activities(
             cursor, employee_id, company_ids=company_ids, filters=filters
         )
-        count_company = _count_company_activities(
-            cursor, employee_id, company_ids=company_ids, filters=filters
-        )
+        try:
+            count_company = _count_company_activities(
+                cursor, employee_id, company_ids=company_ids, filters=filters
+            )
+        except PermissionError:
+            count_company = 0
 
         conn.close()
         return {"me": count_me, "team": count_team, "company": count_company}

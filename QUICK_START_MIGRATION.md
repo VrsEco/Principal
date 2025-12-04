@@ -147,3 +147,5 @@ flask db upgrade
 
 **Dúvidas?** Consulte `migrations/README_ROLE_MIGRATION.md` para guia completo.
 
+
+

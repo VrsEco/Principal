@@ -50,3 +50,5 @@ def downgrade():
     print("⚠️  Campo is_archived removido da tabela company_projects")
     print("="*60 + "\n")
 
+
+

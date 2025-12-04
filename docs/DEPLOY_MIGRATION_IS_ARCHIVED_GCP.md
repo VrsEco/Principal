@@ -196,3 +196,5 @@ ON CONFLICT (version_num) DO NOTHING;
 **Autor:** Sistema de Migrações  
 **Status:** ✅ Pronto para deploy
 
+
+

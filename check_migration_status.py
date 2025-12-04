@@ -51,3 +51,5 @@ with app.app_context():
         else:
             print("⚠️  MIGRAÇÃO AINDA NÃO APLICADA")
 
+
+

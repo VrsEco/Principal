@@ -260,3 +260,5 @@ Se encontrar problemas:
 **Última atualização:** 03/12/2025  
 **Testado em:** PostgreSQL 13+ e SQLite 3.35+
 
+
+

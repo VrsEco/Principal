@@ -524,3 +524,5 @@ gcloud sql instances describe INSTANCE_NAME
 **Testado em:** Google Cloud SQL (PostgreSQL 13+)  
 **Autor:** Cursor AI
 
+
+

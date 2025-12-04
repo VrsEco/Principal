@@ -156,3 +156,5 @@ gcloud sql instances describe INSTANCE_NAME
 **Guia Completo:** `docs/DEPLOY_MIGRATION_GCP.md`  
 **Dúvidas?** Consulte o guia completo para troubleshooting detalhado.
 
+
+
