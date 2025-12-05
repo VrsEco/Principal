@@ -31,14 +31,24 @@ from modules.pev.implantation_data import (
     _parse_decimal,
 )
 from modules.pev import products_service
-from services.ui_catalog_service import (
-    get_screen_attr_map,
-    serialize_screen_catalog,
-)
-
-MODEFIN_SCREEN_CODE = 314
 
 logger = logging.getLogger(__name__)
+
+try:
+    from services.ui_catalog_service import (
+        get_screen_attr_map,
+        serialize_screen_catalog,
+    )
+except ImportError as exc:  # pragma: no cover - contingency for deployment
+    logger.warning("UI catalog service not available: %s", exc)
+
+    def get_screen_attr_map(screen_code: int):
+        return {}
+
+    def serialize_screen_catalog(screen_code: int):
+        return {}
+
+MODEFIN_SCREEN_CODE = 314
 pev_bp = Blueprint("pev", __name__, url_prefix="/pev")
 
 
