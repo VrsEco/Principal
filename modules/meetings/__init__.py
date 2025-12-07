@@ -16,16 +16,16 @@ meetings_bp = Blueprint("meetings", __name__, url_prefix="/meetings")
 logger = logging.getLogger(__name__)
 
 
-# PÃ¡gina principal de gerenciamento de reuniÃµes
+# PÃ¡gina principal de gerenciamento de reuniões
 @meetings_bp.route("/company/<int:company_id>")
 @meetings_bp.route("/company/<int:company_id>/list")
 def meetings_manage(company_id):
-    """PÃ¡gina principal de gerenciamento de reuniÃµes"""
+    """PÃ¡gina principal de gerenciamento de reuniões"""
     try:
         db = get_db()
         company = db.get_company(company_id)
         if not company:
-            flash("Empresa nÃ£o encontrada", "error")
+            flash("Empresa não encontrada", "error")
             return redirect(url_for("dashboard"))
 
         meetings = db.list_company_meetings(company_id)
@@ -74,11 +74,11 @@ def meetings_manage(company_id):
             active_id="meetings-manage",
         )
     except Exception as e:
-        logger.info(f"Erro ao carregar gerenciamento de reuniÃµes: {e}")
+        logger.info(f"Erro ao carregar gerenciamento de reuniões: {e}")
         import traceback
 
         traceback.print_exc()
-        flash(f"Erro ao carregar reuniÃµes: {str(e)}", "error")
+        flash(f"Erro ao carregar reuniões: {str(e)}", "error")
         return redirect(url_for("dashboard"))
 
 
@@ -86,25 +86,25 @@ def meetings_manage(company_id):
 meetings_list = meetings_manage
 
 
-# PÃ¡gina de ediÃ§Ã£o de uma reuniÃ£o
+# PÃ¡gina de ediÃ§Ã£o de uma reunião
 @meetings_bp.route("/company/<int:company_id>/meeting/<int:meeting_id>/edit")
 def meeting_edit(company_id, meeting_id):
-    """PÃ¡gina de ediÃ§Ã£o de uma reuniÃ£o"""
+    """PÃ¡gina de ediÃ§Ã£o de uma reunião"""
     try:
         db = get_db()
         company = db.get_company(company_id)
         if not company:
-            flash("Empresa nÃ£o encontrada", "error")
+            flash("Empresa não encontrada", "error")
             return redirect(url_for("dashboard"))
 
         meeting = db.get_meeting(meeting_id)
         if not meeting:
-            flash("ReuniÃ£o nÃ£o encontrada", "error")
+            flash("Reunião não encontrada", "error")
             return redirect(url_for("meetings.meetings_manage", company_id=company_id))
 
-        # Verificar se a reuniÃ£o pertence Ã  empresa
+        # Verificar se a reunião pertence Ã  empresa
         if meeting.get("company_id") != company_id:
-            flash("ReuniÃ£o nÃ£o pertence a esta empresa", "error")
+            flash("Reunião não pertence a esta empresa", "error")
             return redirect(url_for("meetings.meetings_manage", company_id=company_id))
 
         # Buscar colaboradores da empresa
@@ -152,52 +152,52 @@ def meeting_edit(company_id, meeting_id):
         )
 
     except Exception as e:
-        logger.info(f"Erro ao carregar ediÃ§Ã£o da reuniÃ£o: {e}")
+        logger.info(f"Erro ao carregar ediÃ§Ã£o da reunião: {e}")
         import traceback
 
         traceback.print_exc()
-        flash(f"Erro ao carregar reuniÃ£o: {str(e)}", "error")
+        flash(f"Erro ao carregar reunião: {str(e)}", "error")
         return redirect(url_for("meetings.meetings_manage", company_id=company_id))
 
 
-# API: Deletar reuniÃ£o (POST para compatibilidade com JavaScript)
+# API: Deletar reunião (POST para compatibilidade com JavaScript)
 @login_required
 @meetings_bp.route(
     "/company/<int:company_id>/meeting/<int:meeting_id>/delete", methods=["POST"]
 )
 def meeting_delete(company_id, meeting_id):
-    """Deletar uma reuniÃ£o"""
+    """Deletar uma reunião"""
     try:
         db = get_db()
 
-        # Verificar se a reuniÃ£o pertence Ã  empresa
+        # Verificar se a reunião pertence Ã  empresa
         meeting = db.get_meeting(meeting_id)
         if not meeting or meeting.get("company_id") != company_id:
             return (
-                jsonify({"success": False, "message": "ReuniÃ£o nÃ£o encontrada"}),
+                jsonify({"success": False, "message": "Reunião não encontrada"}),
                 404,
             )
 
         if db.delete_meeting(meeting_id):
             return jsonify(
-                {"success": True, "message": "ReuniÃ£o excluÃ­da com sucesso!"}
+                {"success": True, "message": "Reunião excluída com sucesso!"}
             )
         else:
             return (
-                jsonify({"success": False, "message": "Erro ao excluir reuniÃ£o"}),
+                jsonify({"success": False, "message": "Erro ao excluir reunião"}),
                 500,
             )
 
     except Exception as e:
-        logger.info(f"Erro ao deletar reuniÃ£o: {e}")
+        logger.info(f"Erro ao deletar reunião: {e}")
         return jsonify({"success": False, "message": str(e)}), 500
 
 
-# API: Criar nova reuniÃ£o
+# API: Criar nova reunião
 @login_required
 @meetings_bp.route("/api/company/<int:company_id>/meeting", methods=["POST"])
 def api_create_meeting(company_id):
-    """API: Criar nova reuniÃ£o"""
+    """API: Criar nova reunião"""
     try:
         data = request.get_json()
         db = get_db()
@@ -222,21 +222,21 @@ def api_create_meeting(company_id):
                 {
                     "success": True,
                     "meeting_id": meeting_id,
-                    "message": "ReuniÃ£o criada com sucesso!",
+                    "message": "Reunião criada com sucesso!",
                 }
             )
         else:
-            return jsonify({"success": False, "message": "Erro ao criar reuniÃ£o"}), 500
+            return jsonify({"success": False, "message": "Erro ao criar reunião"}), 500
 
     except Exception as e:
-        logger.info(f"Erro ao criar reuniÃ£o: {e}")
+        logger.info(f"Erro ao criar reunião: {e}")
         return jsonify({"success": False, "message": str(e)}), 500
 
 
-# API: Gerar relatÃ³rio de reuniÃµes
+# API: Gerar relatÃ³rio de reuniões
 @meetings_bp.route("/api/company/<int:company_id>/meetings/report", methods=["GET"])
 def api_generate_meetings_report(company_id):
-    """API: Gerar relatÃ³rio de reuniÃµes"""
+    """API: Gerar relatÃ³rio de reuniões"""
     try:
         db = get_db()
         company = db.get_company(company_id)
@@ -248,16 +248,16 @@ def api_generate_meetings_report(company_id):
         model_id = request.args.get("model", type=int)
         sections = request.args.getlist("sections")
 
-        logger.info(f"ðŸ”„ Gerando relatÃ³rio de reuniÃµes - Empresa: {company_id}")
+        logger.info(f"ðŸ”„ Gerando relatÃ³rio de reuniões - Empresa: {company_id}")
         logger.info(
-            f"ðŸ“‹ ReuniÃ£o especÃ­fica: {meeting_id if meeting_id else 'Todas'}"
+            f"ðŸ“‹ Reunião específica: {meeting_id if meeting_id else 'Todas'}"
         )
         logger.info(f"ðŸ“„ Modelo de pÃ¡gina: {model_id if model_id else 'PadrÃ£o'}")
         logger.info(
             f"ðŸ“‹ SeÃ§Ãµes selecionadas: {', '.join(sections) if sections else 'Todas'}"
         )
 
-        # Importar gerador de relatÃ³rios de reuniÃµes
+        # Importar gerador de relatÃ³rios de reuniões
         from relatorios.generators.meetings_report import MeetingsReportGenerator
 
         # Criar gerador aplicando o modelo desejado (padrÃ£o Model_7)
@@ -278,7 +278,7 @@ def api_generate_meetings_report(company_id):
             company_id=company_id, meeting_id=meeting_id
         )
 
-        logger.info(f"âœ… RelatÃ³rio de reuniÃµes gerado com sucesso!")
+        logger.info(f"âœ… RelatÃ³rio de reuniões gerado com sucesso!")
 
         # Retornar HTML
         from flask import make_response
@@ -288,7 +288,7 @@ def api_generate_meetings_report(company_id):
         return response
 
     except Exception as e:
-        logger.info(f"âŒ ERRO ao gerar relatÃ³rio de reuniÃµes: {e}")
+        logger.info(f"âŒ ERRO ao gerar relatÃ³rio de reuniões: {e}")
         import traceback
 
         traceback.print_exc()
@@ -298,17 +298,17 @@ def api_generate_meetings_report(company_id):
                 {
                     "success": False,
                     "error": str(e),
-                    "message": "Erro ao gerar relatÃ³rio de reuniÃµes. Verifique os logs do servidor.",
+                    "message": "Erro ao gerar relatÃ³rio de reuniões. Verifique os logs do servidor.",
                 }
             ),
             500,
         )
 
 
-# API: Listar reuniÃµes da empresa
+# API: Listar reuniões da empresa
 @meetings_bp.route("/api/company/<int:company_id>/meetings")
 def api_list_company_meetings(company_id):
-    """API: Listar reuniÃµes da empresa em formato JSON"""
+    """API: Listar reuniões da empresa em formato JSON"""
     try:
         db = get_db()
         company = db.get_company(company_id)
@@ -327,14 +327,14 @@ def api_list_company_meetings(company_id):
         )
 
     except Exception as e:
-        logger.info(f"Erro ao listar reuniÃµes: {e}")
+        logger.info(f"Erro ao listar reuniões: {e}")
         return jsonify({"success": False, "message": str(e)}), 500
 
 
-# API: Buscar reuniÃ£o especÃ­fica
+# API: Buscar reunião específica
 @meetings_bp.route("/api/meeting/<int:meeting_id>")
 def api_get_meeting(meeting_id):
-    """API: Buscar dados de uma reuniÃ£o"""
+    """API: Buscar dados de uma reunião"""
     try:
         db = get_db()
         meeting = db.get_meeting(meeting_id)
@@ -343,12 +343,12 @@ def api_get_meeting(meeting_id):
             return jsonify({"success": True, "meeting": meeting})
         else:
             return (
-                jsonify({"success": False, "message": "ReuniÃ£o nÃ£o encontrada"}),
+                jsonify({"success": False, "message": "Reunião não encontrada"}),
                 404,
             )
 
     except Exception as e:
-        logger.info(f"Erro ao buscar reuniÃ£o: {e}")
+        logger.info(f"Erro ao buscar reunião: {e}")
         return jsonify({"success": False, "message": str(e)}), 500
 
 
@@ -382,22 +382,22 @@ def api_update_preliminares(meeting_id):
         return jsonify({"success": False, "message": str(e)}), 500
 
 
-# API: Iniciar reuniÃ£o
+# API: Iniciar reunião
 @login_required
 @meetings_bp.route("/api/meeting/<int:meeting_id>/iniciar", methods=["POST"])
 def api_start_meeting(meeting_id):
-    """API: Iniciar reuniÃ£o - cria projeto automaticamente"""
+    """API: Iniciar reunião - cria projeto automaticamente"""
     try:
         db = get_db()
         meeting = db.get_meeting(meeting_id)
 
         if not meeting:
             return (
-                jsonify({"success": False, "message": "ReuniÃ£o nÃ£o encontrada"}),
+                jsonify({"success": False, "message": "Reunião não encontrada"}),
                 404,
             )
 
-        # Criar projeto se ainda nÃ£o existir
+        # Criar projeto se ainda não existir
         if not meeting.get("project_id"):
             execution_date = (
                 meeting.get("actual_date")
@@ -411,18 +411,18 @@ def api_start_meeting(meeting_id):
             except Exception:
                 display_date = execution_date
 
-            project_title = f"ReuniÃ£o - {meeting['title']} ({display_date})"
+            project_title = f"Reunião - {meeting['title']} ({display_date})"
             actual_date_str = datetime.now().strftime("%Y-%m-%d")
             actual_time_str = datetime.now().strftime("%H:%M")
 
             project_data = {
                 "title": project_title,
-                "description": f"Projeto gerado automaticamente para a reuniÃ£o: {meeting['title']}",
+                "description": f"Projeto gerado automaticamente para a reunião: {meeting['title']}",
                 "status": "in_progress",
                 "priority": "medium",
                 "owner": "Sistema",
                 "start_date": execution_date,
-                "notes": f"Projeto vinculado a reuniÃ£o ID {meeting_id}",
+                "notes": f"Projeto vinculado a reunião ID {meeting_id}",
             }
 
             project_id = db.create_company_project(meeting["company_id"], project_data)
@@ -450,7 +450,7 @@ def api_start_meeting(meeting_id):
             return jsonify(
                 {
                     "success": True,
-                    "message": "ReuniÃ£o iniciada e projeto criado!",
+                    "message": "Reunião iniciada e projeto criado!",
                     "project_id": project_id,
                     "actual_date": actual_date_str,
                     "actual_time": actual_time_str,
@@ -471,7 +471,7 @@ def api_start_meeting(meeting_id):
         return jsonify(
             {
                 "success": True,
-                "message": "ReuniÃ£o iniciada!",
+                "message": "Reunião iniciada!",
                 "project_id": meeting["project_id"],
                 "actual_date": actual_date_str,
                 "actual_time": actual_time_str,
@@ -479,18 +479,18 @@ def api_start_meeting(meeting_id):
         )
 
     except Exception as e:
-        logger.info(f"Erro ao iniciar reuniÃ£o: {e}")
+        logger.info(f"Erro ao iniciar reunião: {e}")
         import traceback
 
         traceback.print_exc()
         return jsonify({"success": False, "message": str(e)}), 500
 
 
-# API: Atualizar execuÃ§Ã£o da reuniÃ£o
+# API: Atualizar execuÃ§Ã£o da reunião
 @login_required
 @meetings_bp.route("/api/meeting/<int:meeting_id>/execucao", methods=["PUT"])
 def api_update_execucao(meeting_id):
-    """API: Atualizar dados da execuÃ§Ã£o da reuniÃ£o"""
+    """API: Atualizar dados da execuÃ§Ã£o da reunião"""
     try:
         data = request.get_json()
         db = get_db()
@@ -515,30 +515,30 @@ def api_update_execucao(meeting_id):
         return jsonify({"success": False, "message": str(e)}), 500
 
 
-# API: Finalizar reuniÃ£o
+# API: Finalizar reunião
 @login_required
 @meetings_bp.route("/api/meeting/<int:meeting_id>/finalizar", methods=["POST"])
 def api_finish_meeting(meeting_id):
-    """API: Finalizar reuniÃ£o - cria atividade resumo"""
+    """API: Finalizar reunião - cria atividade resumo"""
     try:
         db = get_db()
         meeting = db.get_meeting(meeting_id)
 
         if not meeting:
             return (
-                jsonify({"success": False, "message": "ReuniÃ£o nÃ£o encontrada"}),
+                jsonify({"success": False, "message": "Reunião não encontrada"}),
                 404,
             )
 
         if not meeting.get("project_id"):
             return (
                 jsonify(
-                    {"success": False, "message": "ReuniÃ£o sem projeto vinculado"}
+                    {"success": False, "message": "Reunião sem projeto vinculado"}
                 ),
                 400,
             )
 
-        # Criar resumo da reuniÃ£o
+        # Criar resumo da reunião
         resumo = f"""RESUMO DA REUNIÃƒO: {meeting['title']}
 
 Data: {meeting.get('actual_date', meeting['scheduled_date'])}
@@ -626,11 +626,11 @@ PARTICIPANTES:
             project_activities, project_code, company_code
         )
 
-        # Adicionar atividades individuais da reuniÃ£o ao projeto
+        # Adicionar atividades individuais da reunião ao projeto
         activities = meeting.get("activities", [])
         if activities:
             for act in activities:
-                # Converter atividade da reuniÃ£o para formato do projeto
+                # Converter atividade da reunião para formato do projeto
                 meeting_title = act.get("title") or "Sem tÃ­tulo"
                 meeting_responsible = act.get("responsible") or ""
                 meeting_deadline = act.get("deadline") or ""
@@ -650,14 +650,14 @@ PARTICIPANTES:
                     "stage": act.get("stage") or "inbox",
                     "created_at": datetime.now().isoformat(),
                     "updated_at": datetime.now().isoformat(),
-                    "source": "meeting",  # Marcar origem como reuniÃ£o
+                    "source": "meeting",  # Marcar origem como reunião
                     "meeting_id": meeting_id,
                 }
                 project_activities.append(project_activity)
 
         # Adicionar atividade de resumo
         resumo_text = resumo or ""
-        resumo_titulo = f'ðŸ“‹ Resumo da ReuniÃ£o - {meeting["title"]}'
+        resumo_titulo = f'ðŸ“‹ Resumo da Reunião - {meeting["title"]}'
         resumo_activity = {
             "title": resumo_titulo,
             "what": resumo_titulo,
@@ -686,7 +686,7 @@ PARTICIPANTES:
             (json.dumps(project_activities, ensure_ascii=False), meeting["project_id"]),
         )
 
-        # Atualizar status da reuniÃ£o
+        # Atualizar status da reunião
         cursor.execute(
             "UPDATE meetings SET status = 'completed' WHERE id = %s", (meeting_id,)
         )
@@ -697,13 +697,13 @@ PARTICIPANTES:
         return jsonify(
             {
                 "success": True,
-                "message": "ReuniÃ£o finalizada e resumo criado!",
+                "message": "Reunião finalizada e resumo criado!",
                 "project_id": meeting["project_id"],
             }
         )
 
     except Exception as e:
-        logger.info(f"Erro ao finalizar reuniÃ£o: {e}")
+        logger.info(f"Erro ao finalizar reunião: {e}")
         import traceback
 
         traceback.print_exc()
@@ -713,21 +713,21 @@ PARTICIPANTES:
 @login_required
 @meetings_bp.route("/api/meeting/<int:meeting_id>/sync-activities", methods=["POST"])
 def api_sync_meeting_activities(meeting_id):
-    """API: Sincronizar atividades entre reuniÃ£o e projeto"""
+    """API: Sincronizar atividades entre reunião e projeto"""
     try:
         db = get_db()
         meeting = db.get_meeting(meeting_id)
 
         if not meeting:
             return (
-                jsonify({"success": False, "message": "ReuniÃ£o nÃ£o encontrada"}),
+                jsonify({"success": False, "message": "Reunião não encontrada"}),
                 404,
             )
 
         if not meeting.get("project_id"):
             return (
                 jsonify(
-                    {"success": False, "message": "ReuniÃ£o sem projeto vinculado"}
+                    {"success": False, "message": "Reunião sem projeto vinculado"}
                 ),
                 400,
             )
@@ -882,7 +882,7 @@ def api_sync_meeting_activities(meeting_id):
 
 @meetings_bp.route("/api/meeting/<int:meeting_id>/check-sync", methods=["GET"])
 def api_check_meeting_sync(meeting_id):
-    """API: Verificar status de sincronizaÃ§Ã£o entre reuniÃ£o e projeto"""
+    """API: Verificar status de sincronizaÃ§Ã£o entre reunião e projeto"""
     try:
         db = get_db()
         meeting = db.get_meeting(meeting_id)
@@ -890,7 +890,7 @@ def api_check_meeting_sync(meeting_id):
         if not meeting or not meeting.get("project_id"):
             return (
                 jsonify(
-                    {"success": False, "message": "ReuniÃ£o ou projeto nÃ£o encontrado"}
+                    {"success": False, "message": "Reunião ou projeto não encontrado"}
                 ),
                 404,
             )
@@ -901,7 +901,7 @@ def api_check_meeting_sync(meeting_id):
         # PostgreSQL retorna Row objects por padrÃ£o
         cursor = conn.cursor()
 
-        # Buscar atividades da reuniÃ£o
+        # Buscar atividades da reunião
         meeting_activities = meeting.get("activities", [])
 
         # Buscar atividades do projeto
@@ -935,7 +935,7 @@ def api_check_meeting_sync(meeting_id):
             project_activities, project_code, company_code
         )
 
-        # Filtrar atividades que vieram da reuniÃ£o
+        # Filtrar atividades que vieram da reunião
         meeting_sourced_activities = [
             act
             for act in project_activities
@@ -976,7 +976,7 @@ def api_check_meeting_sync(meeting_id):
     "/api/meeting/<int:meeting_id>/remove-from-project", methods=["POST"]
 )
 def api_remove_activity_from_project(meeting_id):
-    """API: Remover atividade do projeto quando removida da reuniÃ£o"""
+    """API: Remover atividade do projeto quando removida da reunião"""
     try:
         data = request.get_json()
         activity_title = data.get("title")
@@ -984,7 +984,7 @@ def api_remove_activity_from_project(meeting_id):
         if not activity_title:
             return (
                 jsonify(
-                    {"success": False, "message": "TÃ­tulo da atividade nÃ£o fornecido"}
+                    {"success": False, "message": "TÃ­tulo da atividade não fornecido"}
                 ),
                 400,
             )
@@ -995,7 +995,7 @@ def api_remove_activity_from_project(meeting_id):
         if not meeting or not meeting.get("project_id"):
             return (
                 jsonify(
-                    {"success": False, "message": "ReuniÃ£o ou projeto nÃ£o encontrado"}
+                    {"success": False, "message": "Reunião ou projeto não encontrado"}
                 ),
                 404,
             )
@@ -1024,7 +1024,7 @@ def api_remove_activity_from_project(meeting_id):
             project_activities, project_code
         )
 
-        # Remover atividade especÃ­fica
+        # Remover atividade específica
         original_count = len(project_activities)
         project_activities = [
             act
@@ -1064,36 +1064,36 @@ def api_remove_activity_from_project(meeting_id):
         return jsonify({"success": False, "message": f"Erro ao remover: {str(e)}"}), 500
 
 
-# API: Deletar reuniÃ£o
+# API: Deletar reunião
 @login_required
 @meetings_bp.route("/api/meeting/<int:meeting_id>", methods=["DELETE"])
 def api_delete_meeting(meeting_id):
-    """API: Deletar reuniÃ£o"""
+    """API: Deletar reunião"""
     try:
         db = get_db()
 
         if db.delete_meeting(meeting_id):
             return jsonify(
-                {"success": True, "message": "ReuniÃ£o excluÃ­da com sucesso!"}
+                {"success": True, "message": "Reunião excluída com sucesso!"}
             )
-        return jsonify({"success": False, "message": "ReuniÃ£o nÃ£o encontrada."}), 404
+        return jsonify({"success": False, "message": "Reunião não encontrada."}), 404
 
     except Exception as e:
-        logger.info(f"Erro ao deletar reuniÃ£o: {e}")
+        logger.info(f"Erro ao deletar reunião: {e}")
         return jsonify({"success": False, "message": str(e)}), 500
 
 
-# API: Buscar atividades geradas pela reuniÃ£o
+# API: Buscar atividades geradas pela reunião
 @meetings_bp.route("/api/meeting/<int:meeting_id>/atividades")
 def api_get_meeting_activities(meeting_id):
-    """API: Buscar todas as atividades geradas pela reuniÃ£o"""
+    """API: Buscar todas as atividades geradas pela reunião"""
     try:
         db = get_db()
         meeting = db.get_meeting(meeting_id)
 
         if not meeting:
             return (
-                jsonify({"success": False, "message": "ReuniÃ£o nÃ£o encontrada"}),
+                jsonify({"success": False, "message": "Reunião não encontrada"}),
                 404,
             )
 
@@ -1180,17 +1180,17 @@ def api_save_agenda_item(company_id):
 
 @meetings_bp.route("/company/<int:company_id>/meeting/<int:meeting_id>/report")
 def meeting_report(company_id, meeting_id):
-    """Gera relatÃ³rio individual de uma reuniÃ£o (versÃ£o unificada)"""
+    """Gera relatÃ³rio individual de uma reunião (versÃ£o unificada)"""
     try:
         db = get_db()
         meeting = db.get_meeting(meeting_id)
 
         if not meeting:
-            flash("ReuniÃ£o nÃ£o encontrada", "error")
+            flash("Reunião não encontrada", "error")
             return redirect(url_for("meetings.meetings_manage", company_id=company_id))
 
         if meeting.get("company_id") != company_id:
-            flash("ReuniÃ£o nÃ£o pertence a esta empresa", "error")
+            flash("Reunião não pertence a esta empresa", "error")
             return redirect(url_for("meetings.meetings_manage", company_id=company_id))
 
         # Importar o gerador de relatÃ³rios unificado

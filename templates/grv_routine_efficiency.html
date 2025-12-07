@@ -299,6 +299,7 @@
   .collaborators-grid {
     display: grid;
     gap: 12px;
+    grid-template-columns: repeat(auto-fit, minmax(360px, 1fr));
   }
 
   .collaborator-card {
@@ -319,7 +320,8 @@
   .collaborator-card-header {
     display: flex;
     justify-content: space-between;
-    align-items: center;
+    align-items: flex-start;
+    gap: 20px;
     padding-bottom: 12px;
     border-bottom: 2px solid rgba(15, 23, 42, 0.06);
   }
@@ -333,79 +335,26 @@
     gap: 10px;
   }
 
-  .collaborator-metrics {
-    display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
-    gap: 10px;
-  }
-
-  .metric-box {
-    padding: 10px 12px;
-    border-radius: 8px;
-    border: 1px solid rgba(15, 23, 42, 0.08);
-    background: linear-gradient(135deg, rgba(255, 255, 255, 0.9), rgba(248, 250, 252, 0.9));
-  }
-
-  .metric-box.in-progress {
-    border-left: 3px solid #3b82f6;
-  }
-
-  .metric-box.completed {
-    border-left: 3px solid #10b981;
-  }
-
-  .metric-box.positive {
-    border-left: 3px solid #10b981;
-  }
-
-  .metric-box.negative {
-    border-left: 3px solid #ef4444;
-  }
-
-  .metric-box.delivery {
-    border-left: 3px solid #0ea5e9;
-  }
-
-  .metric-title {
-    font-size: 11px;
-    font-weight: 600;
-    text-transform: uppercase;
-    letter-spacing: 0.08em;
+  .collaborator-subtitle {
+    font-size: 13px;
     color: #64748b;
-    margin-bottom: 8px;
+    margin-top: 4px;
   }
 
-  .metric-values {
-    display: flex;
-    gap: 10px;
-    flex-wrap: wrap;
-  }
-
-  .metric-item {
-    display: flex;
-    flex-direction: column;
-    gap: 1px;
-  }
-
-  .metric-item-label {
-    font-size: 10px;
-    color: #94a3b8;
+  .collaborator-total-label {
+    text-align: right;
+    font-size: 11px;
+    letter-spacing: 0.08em;
     text-transform: uppercase;
-    letter-spacing: 0.06em;
+    color: #64748b;
   }
 
-  .metric-item-value {
+  .collaborator-total-label strong {
+    display: block;
     font-size: 20px;
     font-weight: 700;
     color: #0f172a;
-  }
-
-  .metric-item-value.on-time {
-    color: #10b981;
-  }
-
-  .metric-item-value.late {
-    color: #ef4444;
+    margin-top: 4px;
   }
 
   .empty-state {
@@ -419,15 +368,6 @@
     font-weight: 600;
     color: #64748b;
     margin-bottom: 8px;
-  }
-
-  .metric-values--stacked {
-    flex-direction: column;
-  }
-
-  .metric-subtext {
-    font-size: 11px;
-    color: #94a3b8;
   }
 
   .detail-modal {
@@ -1006,113 +946,119 @@
       grid.innerHTML = filteredData
         .map((data) => {
           const totalActivities = data.in_progress.total + data.completed.total;
-          const totalOccurrences = data.positive_occurrences.count + data.negative_occurrences.count;
+          const totalOccurrences =
+            data.positive_occurrences.count + data.negative_occurrences.count;
           const deliveryScores = data.delivery_scores || {};
           const processSummary = summarizeDelivery(deliveryScores.process);
           const projectSummary = summarizeDelivery(deliveryScores.project);
           const overallSummary = summarizeDelivery(deliveryScores.overall);
           const positiveOccScore = Number(data.positive_occurrences.score || 0);
           const negativeOccScore = Number(data.negative_occurrences.score || 0);
+          const occurrenceTotalScore = positiveOccScore + negativeOccScore;
+          const processCount = getDeliveryRecordCount(deliveryScores.process);
+          const projectCount = getDeliveryRecordCount(deliveryScores.project);
+          const overallPositive = overallSummary.positive + positiveOccScore;
+          const overallNegative = overallSummary.negative + negativeOccScore;
+          const overallTotal = overallPositive + overallNegative;
+          const sanitizedName = escapeHtml(data.employee_name);
 
           return `
         <div class="collaborator-card">
           <div class="collaborator-card-header">
-            <div class="collaborator-name">
-              👤 ${escapeHtml(data.employee_name)}
+            <div>
+              <div class="collaborator-name">&#128100; ${sanitizedName}</div>
+              <div class="collaborator-subtitle">
+                ${totalActivities} atividades &middot; ${totalOccurrences} ocorrencias
+              </div>
             </div>
-            <div style="font-size: 12px; color: #64748b;">
-              ${totalActivities} atividades · ${totalOccurrences} ocorrências
+            <div class="collaborator-total-label">
+              <span>Total Geral</span>
+              <strong>${formatScore(overallTotal)}</strong>
             </div>
           </div>
-          
-          <div class="collaborator-metrics">
-            <div class="metric-box in-progress">
-              <div class="metric-title">📍 Em Andamento</div>
-              <div class="metric-values">
-                <div class="metric-item">
-                  <div class="metric-item-label">Total</div>
-                  <div class="metric-item-value">${data.in_progress.total}</div>
+          <div
+            class="score-grid"
+            aria-label="Resumo do colaborador ${sanitizedName}"
+          >
+            <div class="score-card">
+              <div class="score-card-title">Ocorrências</div>
+              <div class="score-card-body">
+                <div class="score-card-row">
+                  <span>Positivo</span>
+                  <strong>${formatScore(positiveOccScore)}</strong>
                 </div>
-                <div class="metric-item">
-                  <div class="metric-item-label">No Prazo</div>
-                  <div class="metric-item-value on-time">${data.in_progress.on_time}</div>
+                <div class="score-card-row">
+                  <span>Negativo</span>
+                  <strong>${formatScore(negativeOccScore)}</strong>
                 </div>
-                <div class="metric-item">
-                  <div class="metric-item-label">Atrasadas</div>
-                  <div class="metric-item-value late">${data.in_progress.late}</div>
+                <div class="score-card-row">
+                  <span>Total</span>
+                  <strong>${formatScore(occurrenceTotalScore)}</strong>
                 </div>
-              </div>
-            </div>
-            
-            <div class="metric-box completed">
-              <div class="metric-title">✅ Concluídas</div>
-              <div class="metric-values">
-                <div class="metric-item">
-                  <div class="metric-item-label">Total</div>
-                  <div class="metric-item-value">${data.completed.total}</div>
-                </div>
-                <div class="metric-item">
-                  <div class="metric-item-label">No Prazo</div>
-                  <div class="metric-item-value on-time">${data.completed.on_time}</div>
-                </div>
-                <div class="metric-item">
-                  <div class="metric-item-label">Atrasadas</div>
-                  <div class="metric-item-value late">${data.completed.late}</div>
+                <div class="score-card-detail">
+                  <span class="score-chip positive">
+                    Positivas ${data.positive_occurrences.count}
+                  </span>
+                  <span class="score-chip negative">
+                    Negativas ${data.negative_occurrences.count}
+                  </span>
                 </div>
               </div>
             </div>
-            
-            <div class="metric-box positive">
-              <div class="metric-title">✨ Ocorrências Positivas</div>
-              <div class="metric-values">
-                <div class="metric-item">
-                  <div class="metric-item-label">Quantidade</div>
-                  <div class="metric-item-value">${data.positive_occurrences.count}</div>
+            <div class="score-card">
+              <div class="score-card-title">Pontuação em Processos</div>
+              <div class="score-card-body">
+                <div class="score-card-row">
+                  <span>Positivo</span>
+                  <strong>${formatScore(processSummary.positive)}</strong>
                 </div>
-                <div class="metric-item">
-                  <div class="metric-item-label">Pontuação</div>
-                  <div class="metric-item-value">⭐ ${formatScore(positiveOccScore)}</div>
+                <div class="score-card-row">
+                  <span>Negativo</span>
+                  <strong>${formatScore(processSummary.negative)}</strong>
                 </div>
-              </div>
-            </div>
-            
-            <div class="metric-box negative">
-              <div class="metric-title">⚠️ Ocorrências Negativas</div>
-              <div class="metric-values">
-                <div class="metric-item">
-                  <div class="metric-item-label">Quantidade</div>
-                  <div class="metric-item-value">${data.negative_occurrences.count}</div>
+                <div class="score-card-row">
+                  <span>Total</span>
+                  <strong>${formatScore(processSummary.total)}</strong>
                 </div>
-                <div class="metric-item">
-                  <div class="metric-item-label">Pontuação</div>
-                  <div class="metric-item-value">${formatScore(negativeOccScore)}</div>
+                <div class="score-card-detail">
+                  <span class="score-chip neutral">Registros ${processCount}</span>
                 </div>
               </div>
             </div>
-
-            <div class="metric-box delivery">
-              <div class="metric-title">📦 Pontuação das Entregas</div>
-              <div class="metric-values metric-values--stacked">
-                <div class="metric-item">
-                  <div class="metric-item-label">Processos</div>
-                  <div class="metric-item-value on-time">${formatScore(processSummary.positive)}</div>
-                  <div class="metric-subtext">
-                    Neg: ${formatScore(processSummary.negative)} · Total: ${formatScore(processSummary.total)}
-                  </div>
+            <div class="score-card">
+              <div class="score-card-title">Pontuação em Projetos</div>
+              <div class="score-card-body">
+                <div class="score-card-row">
+                  <span>Positivo</span>
+                  <strong>${formatScore(projectSummary.positive)}</strong>
                 </div>
-                <div class="metric-item">
-                  <div class="metric-item-label">Projetos</div>
-                  <div class="metric-item-value on-time">${formatScore(projectSummary.positive)}</div>
-                  <div class="metric-subtext">
-                    Neg: ${formatScore(projectSummary.negative)} · Total: ${formatScore(projectSummary.total)}
-                  </div>
+                <div class="score-card-row">
+                  <span>Negativo</span>
+                  <strong>${formatScore(projectSummary.negative)}</strong>
                 </div>
-                <div class="metric-item">
-                  <div class="metric-item-label">Geral</div>
-                  <div class="metric-item-value">${formatScore(overallSummary.total)}</div>
-                  <div class="metric-subtext">
-                    Pos: ${formatScore(overallSummary.positive)} · Neg: ${formatScore(overallSummary.negative)}
-                  </div>
+                <div class="score-card-row">
+                  <span>Total</span>
+                  <strong>${formatScore(projectSummary.total)}</strong>
+                </div>
+                <div class="score-card-detail">
+                  <span class="score-chip neutral">Registros ${projectCount}</span>
+                </div>
+              </div>
+            </div>
+            <div class="score-card total">
+              <div class="score-card-title">Total Geral</div>
+              <div class="score-card-body">
+                <div class="score-card-row">
+                  <span>Positivo</span>
+                  <strong>${formatScore(overallPositive)}</strong>
+                </div>
+                <div class="score-card-row">
+                  <span>Negativo</span>
+                  <strong>${formatScore(overallNegative)}</strong>
+                </div>
+                <div class="score-card-row">
+                  <span>Total</span>
+                  <strong>${formatScore(overallTotal)}</strong>
                 </div>
               </div>
             </div>

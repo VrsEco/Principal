@@ -12,7 +12,13 @@
 
     @page {
       size: A4 portrait;
-      margin: 8mm 6mm 8mm 6mm;
+      margin: 6mm;
+    }
+
+    html,
+    body {
+      width: 100%;
+      height: 100%;
     }
 
     * {
@@ -40,7 +46,18 @@
       flex: 1;
       display: flex;
       flex-direction: column;
+      width: 100%;
+      min-height: 100vh;
     }
+
+      .print-page {
+        page-break-inside: avoid;
+        break-inside: avoid;
+        width: 100%;
+        display: flex;
+        flex-direction: column;
+        gap: 8px;
+      }
 
     .areas-wrapper {
       flex: 1;
@@ -48,12 +65,12 @@
       flex-direction: column;
       gap: 8px;
       padding-top: 8px;
+      width: 100%;
     }
 
     /* Layout Principal - Áreas Verticais + Macros em Grid */
     .area-section {
       display: flex;
-      page-break-inside: avoid;
       border: 1.5px solid;
       border-radius: 4px;
       overflow: hidden;
@@ -101,7 +118,7 @@
       border: 1px solid #cbd5e1;
       border-radius: 3px;
       background: #ffffff;
-      padding: 5px;
+      padding: 4px;
       display: flex;
       flex-direction: column;
       min-height: auto;
@@ -117,7 +134,7 @@
     }
 
     .macro-title {
-      font-size: 6.5pt;
+      font-size: 6.2pt;
       font-weight: 700;
       color: #1e40af;
       line-height: 1.2;
@@ -148,7 +165,7 @@
       border: 1px solid #cbd5e1;
       border-radius: 2px;
       background: #f8fafc;
-      padding: 4px 3px;
+      padding: 3px 2px;
       display: flex;
       gap: 3px;
       align-items: stretch;
@@ -257,6 +274,8 @@
       justify-content: space-between;
       gap: 12px;
       flex-wrap: wrap;
+      page-break-after: avoid;
+      break-after: avoid;
     }
 
     .legend-main {
@@ -351,27 +370,58 @@
 
     /* Print Optimization */
     @media print {
+      html,
+      body {
+        height: 100%;
+        margin: 0;
+        padding: 0;
+      }
+
       body {
         -webkit-print-color-adjust: exact !important;
         print-color-adjust: exact !important;
+        padding-top: 0;
       }
 
-      .area-section {
+      .main-content {
+        padding-top: 0;
+      }
+
+      .legend-section {
+        page-break-after: avoid;
+        break-after: avoid;
+      }
+
+      .macro-box,
+      .process-card {
         page-break-inside: avoid;
+        break-inside: avoid;
+      }
+
+      .print-page {
+        transform: scale(0.88);
+        transform-origin: top left;
+        width: calc(100% / 0.88);
+      }
+
+      .legend-section {
+        padding: 2px 6px;
       }
 
       .macro-box {
-        page-break-inside: avoid;
+        padding: 3px;
       }
 
       .process-card {
-        page-break-inside: avoid;
+        padding: 2px 2px;
+        height: auto;
       }
     }
   </style>
 </head>
 <body>
   <div class="main-content">
+    <div class="print-page">
     {% if fallback_error %}
     <div class="print-hint">Exibindo em HTML porque a gera&ccedil;&atilde;o do PDF falhou: {{ fallback_error }}</div>
     {% elif auto_print %}
@@ -525,6 +575,7 @@
         </section>
       {% endfor %}
       {% endif %}
+    </div>
     </div>
   </div>
 

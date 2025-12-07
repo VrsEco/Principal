@@ -17,7 +17,7 @@ import re
 import subprocess
 import sys
 import threading
-from typing import Any, Optional
+from typing import Any, Dict, Optional
 from config_database import get_db
 from middleware.auto_log_decorator import auto_log_crud
 from services.routines_overview_service import build_routines_overview_context
@@ -1118,16 +1118,13 @@ def grv_process_map_pdf2_test(company_id: int):
     )
 
 
-@grv_bp.route("/company/<int:company_id>/process/map/pdf2/debug")
-def grv_process_map_pdf2_debug(company_id: int):
-    """Debug: View HTML before PDF conversion"""
-    from datetime import datetime
-    from flask import render_template
 
+
+def _build_process_map_context(company_id: int) -> Optional[Dict[str, Any]]:
     db = get_db()
     company = db.get_company(company_id)
     if not company:
-        abort(404)
+        return None
 
     map_data = db.get_process_map(company_id) or {}
     raw_areas = map_data.get("areas", [])
@@ -1141,142 +1138,17 @@ def grv_process_map_pdf2_debug(company_id: int):
     }
     performance_levels = {
         "": {"label": "Fora de Escopo", "color": "#94a3b8"},
-        "critical": {"label": "Cr+¡tico", "color": "#ef4444"},
-        "below": {"label": "Abaixo do esperado", "color": "#f97316"},
-        "initiated": {"label": "Ajustando", "color": "#f59e0b"},
-        "structured": {"label": "Satisfat+¦rio", "color": "#10b981"},
-    }
-
-    def _normalize_hex(color: str) -> str:
-        if not color or not isinstance(color, str):
-            return "#94a3b8"
-        if color.startswith("#"):
-            return color
-        return f"#{color}"
-
-    def _mix_with_white(color_hex: str, factor: float = 0.75) -> str:
-        base = _normalize_hex(color_hex)
-        r = int(base[1:3], 16)
-        g = int(base[3:5], 16)
-        b = int(base[5:7], 16)
-
-        def _blend(channel: int) -> int:
-            return max(0, min(255, int(channel + (255 - channel) * factor)))
-
-        return "#{0:02x}{1:02x}{2:02x}".format(_blend(r), _blend(g), _blend(b))
-
-    areas = []
-    total_macros = 0
-    total_processes = 0
-
-    for area in raw_areas:
-        macros = area.get("macros") or []
-        area_color = _normalize_hex(area.get("color"))
-        area_entry = {
-            "display_name": f"{area.get('code')} - {area.get('name').upper()}"
-            if area.get("code")
-            else (area.get("name") or "+ürea"),
-            "color": area_color,
-            "color_soft": _mix_with_white(area_color, 0.82),
-            "macros": [],
-            "macro_count": len(macros),
-            "process_count": 0,
-        }
-
-        for macro in macros:
-            processes = macro.get("processes") or []
-            macro_entry = {
-                "display_name": f"{macro.get('code')} - {macro.get('name').upper()}"
-                if macro.get("code")
-                else (macro.get("name") or "Macroprocesso"),
-                "owner": macro.get("owner"),
-                "processes": [],
-            }
-
-            for proc in processes:
-                struct_info = structuring_levels.get(
-                    proc.get("structuring_level") or "", structuring_levels[""]
-                )
-                perf_info = performance_levels.get(
-                    proc.get("performance_level") or "", performance_levels[""]
-                )
-                macro_entry["processes"].append(
-                    {
-                        "display_name": f"{proc.get('code')} - {proc.get('name').upper()}"
-                        if proc.get("code")
-                        else (proc.get("name") or "Processo"),
-                        "responsible": proc.get("responsible"),
-                        "description": proc.get("description"),
-                        "structuring": {
-                            "label": struct_info["label"],
-                            "color": struct_info["color"],
-                            "background": _mix_with_white(struct_info["color"], 0.88),
-                        },
-                        "performance": {
-                            "label": perf_info["label"],
-                            "color": perf_info["color"],
-                            "background": _mix_with_white(perf_info["color"], 0.88),
-                        },
-                    }
-                )
-
-            macro_entry["process_total"] = len(macro_entry["processes"])
-            area_entry["process_count"] += macro_entry["process_total"]
-            area_entry["macros"].append(macro_entry)
-
-        total_macros += area_entry["macro_count"]
-        total_processes += area_entry["process_count"]
-        areas.append(area_entry)
-
-    generated_at = datetime.now()
-
-    return render_template(
-        "pdf/grv_process_map_v2.html",
-        company=company,
-        areas=areas,
-        totals={
-            "areas": len(areas),
-            "macros": total_macros,
-            "processes": total_processes,
-        },
-        generated_at=generated_at,
-    )
-
-
-@grv_bp.route("/company/<int:company_id>/process/map/pdf2")
-def grv_process_map_pdf2(company_id: int):
-    """Generate Process Map PDF - Version 2 (Landscape, Table Format)"""
-    logger.info(f"DEBUG: Rota /pdf2 chamada para company_id={company_id}")
-    db = get_db()
-    company = db.get_company(company_id)
-    if not company:
-        logger.info("DEBUG: Empresa n+úo encontrada!")
-        abort(404)
-    logger.info(f"DEBUG: Empresa encontrada: {company.get('name')}")
-
-    map_data = db.get_process_map(company_id) or {}
-    raw_areas = map_data.get("areas", [])
-
-    structuring_levels = {
-        "": {"label": "Fora de Escopo", "color": "#94a3b8"},
-        "in_progress": {"label": "Map | Impl | Estabn", "color": "#f59e0b"},
-        "stabilized": {"label": "Estabilizado", "color": "#10b981"},
-        "initiated": {"label": "Map | Impl | Estabn", "color": "#f59e0b"},
-        "structured": {"label": "Estabilizado", "color": "#10b981"},
-    }
-    performance_levels = {
-        "": {"label": "Fora de Escopo", "color": "#94a3b8"},
-        "critical": {"label": "Cr+¡tico", "color": "#ef4444"},
+        "critical": {"label": "Critico", "color": "#ef4444"},
         "below": {"label": "Abaixo", "color": "#f59e0b"},
-        "satisfactory": {"label": "Satisfat+¦rio", "color": "#10b981"},
+        "satisfactory": {"label": "Satisfatorio", "color": "#10b981"},
         "initiated": {"label": "Abaixo", "color": "#f59e0b"},
-        "structured": {"label": "Satisfat+¦rio", "color": "#10b981"},
+        "structured": {"label": "Satisfatorio", "color": "#10b981"},
     }
 
-    def _normalize_hex(value: str, default: str = "#1d4ed8") -> str:
+    def _normalize_hex(value: Any, default: str = "#1d4ed8") -> str:
         if not value:
             return default
-        value = value.strip()
+        value = str(value).strip()
         if not value.startswith("#"):
             value = f"#{value}"
         if len(value) == 4:
@@ -1295,7 +1167,6 @@ def grv_process_map_pdf2(company_id: int):
         return "#{0:02x}{1:02x}{2:02x}".format(_blend(r), _blend(g), _blend(b))
 
     def _clean_text(value: Any, fallback: str = "") -> str:
-        """Return stripped text or fallback."""
         if isinstance(value, str):
             cleaned = value.strip()
             if cleaned:
@@ -1303,7 +1174,6 @@ def grv_process_map_pdf2(company_id: int):
         return fallback
 
     def _format_display_name(code: Any, name: Any, fallback: str) -> str:
-        """Format display name as 'CODE - NAME' guarding against missing values."""
         safe_name = _clean_text(name, fallback)
         safe_code = _clean_text(code)
         name_part = safe_name.upper() if safe_name else fallback.upper()
@@ -1319,9 +1189,7 @@ def grv_process_map_pdf2(company_id: int):
         macros = area.get("macros") or []
         area_color = _normalize_hex(area.get("color"))
         area_entry = {
-            "display_name": _format_display_name(
-                area.get("code"), area.get("name"), "+ürea"
-            ),
+            "display_name": _format_display_name(area.get("code"), area.get("name"), "+Area"),
             "color": area_color,
             "color_soft": _mix_with_white(area_color, 0.82),
             "macros": [],
@@ -1332,25 +1200,17 @@ def grv_process_map_pdf2(company_id: int):
         for macro in macros:
             processes = macro.get("processes") or []
             macro_entry = {
-                "display_name": _format_display_name(
-                    macro.get("code"), macro.get("name"), "Macroprocesso"
-                ),
+                "display_name": _format_display_name(macro.get("code"), macro.get("name"), "Macroprocesso"),
                 "owner": macro.get("owner"),
                 "processes": [],
             }
 
             for proc in processes:
-                struct_info = structuring_levels.get(
-                    proc.get("structuring_level") or "", structuring_levels[""]
-                )
-                perf_info = performance_levels.get(
-                    proc.get("performance_level") or "", performance_levels[""]
-                )
+                struct_info = structuring_levels.get(proc.get("structuring_level") or "", structuring_levels[""])
+                perf_info = performance_levels.get(proc.get("performance_level") or "", performance_levels[""])
                 macro_entry["processes"].append(
                     {
-                        "display_name": _format_display_name(
-                            proc.get("code"), proc.get("name"), "Processo"
-                        ),
+                        "display_name": _format_display_name(proc.get("code"), proc.get("name"), "Processo"),
                         "responsible": proc.get("responsible"),
                         "description": proc.get("description"),
                         "structuring": {
@@ -1374,74 +1234,55 @@ def grv_process_map_pdf2(company_id: int):
         total_processes += area_entry["process_count"]
         areas.append(area_entry)
 
-    generated_at = datetime.now()
-
-    html_content = render_template(
-        "pdf/grv_process_map_v2.html",
-        company=company,
-        areas=areas,
-        totals={
+    return {
+        "company": company,
+        "areas": areas,
+        "totals": {
             "areas": len(areas),
             "macros": total_macros,
             "processes": total_processes,
         },
-        generated_at=generated_at,
+        "generated_at": datetime.now(),
+    }
+
+
+@grv_bp.route("/company/<int:company_id>/process/map/pdf2/debug")
+def grv_process_map_pdf2_debug(company_id: int):
+    'Renderiza o HTML atual do mapa para conferencias manuais.'
+    context = _build_process_map_context(company_id)
+    if not context:
+        abort(404)
+
+    return render_template(
+        "pdf/grv_process_map_v2.html",
+        **context,
+        fallback_error=None,
+        auto_print=False,
+        report_version=request.args.get("version"),
     )
 
-    header_template = ""
-    footer_template = ""
 
-    logger.info("DEBUG: Iniciando geração de PDF com WeasyPrint...")
+@grv_bp.route("/company/<int:company_id>/process/map/pdf2")
+def grv_process_map_pdf2(company_id: int):
+    'Renderiza o mapa no layout atual para salvar via navegador.'
+    logger.info("Rota /pdf2 consultada | company_id=%s", company_id)
+    context = _build_process_map_context(company_id)
+    if not context:
+        logger.info("Empresa nao encontrada para o mapa MP-2")
+        abort(404)
 
-    # Generate PDF with xhtml2pdf
-    try:
-        from xhtml2pdf import pisa
-        from io import BytesIO
+    output = (request.args.get("output") or "html").lower()
+    if output != "html":
+        logger.info("Parametro output=%s ignorado; retorna HTML", output)
 
-        logger.info("DEBUG: xhtml2pdf importado com sucesso")
-        logger.info("DEBUG: Gerando PDF...")
-
-        # Create PDF
-        pdf_file = BytesIO()
-        pisa_status = pisa.CreatePDF(
-            html_content,
-            dest=pdf_file,
-            encoding='utf-8'
-        )
-        
-        if pisa_status.err:
-            raise Exception(f"Erro ao gerar PDF: {pisa_status.err}")
-        
-        pdf_bytes = pdf_file.getvalue()
-        logger.info("DEBUG: PDF gerado com sucesso via xhtml2pdf!")
-
-    except ImportError as e:
-        logger.error(f"ERRO: xhtml2pdf não instalado: {e}")
-        abort(
-            500,
-            description="xhtml2pdf não está instalado. Execute: pip install xhtml2pdf",
-        )
-    except Exception as critical_error:
-        logger.error(f"ERRO CRÍTICO ao gerar PDF: {critical_error}")
-        import traceback
-
-        traceback.print_exc()
-        abort(500, description=f"Erro ao gerar PDF: {critical_error}")
-
-    safe_name = (
-        re.sub(r"[^a-z0-9_-]+", "-", (company.get("name") or "empresa").lower()).strip(
-            "-"
-        )
-        or "empresa"
+    auto_print = request.args.get("auto_print") == "1"
+    return render_template(
+        "pdf/grv_process_map_v2.html",
+        **context,
+        fallback_error=None,
+        auto_print=auto_print,
+        report_version=request.args.get("version"),
     )
-    filename = f"mapa-processos-v2-{safe_name}.pdf"
-
-    response = make_response(pdf_bytes)
-    response.headers["Content-Type"] = "application/pdf"
-    response.headers["Content-Disposition"] = f'inline; filename="{filename}"'
-    return response
-
-
 @grv_bp.route("/company/<int:company_id>/process/macro")
 def grv_process_macro(company_id: int):
     """Redirect to process map - Modelagem is now integrated into Arquitetura"""
