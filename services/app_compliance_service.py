@@ -588,12 +588,19 @@ class AppComplianceService:
 
     def _filter_results(self, results: List[Dict[str, Any]], severity: str) -> List[Dict[str, Any]]:
         severity = (severity or "all").lower()
-        if severity == "errors":
-            allowed = {"fail"}
-        elif severity == "warnings":
-            allowed = {"warn"}
-        else:
-            allowed = None
+        status_mapping = {
+            "errors": {"fail"},
+            "error": {"fail"},
+            "fails": {"fail"},
+            "warnings": {"warn"},
+            "warnings_only": {"warn"},
+            "alerts": {"warn"},
+            "alertas": {"warn"},
+            "warn": {"warn"},
+            "ok": {"ok"},
+            "success": {"ok"},
+        }
+        allowed = status_mapping.get(severity)
 
         if not allowed:
             return list(results)
@@ -602,7 +609,15 @@ class AppComplianceService:
     def _describe_filter(self, severity: str) -> str:
         mapping = {
             "errors": "apenas erros (❌)",
+            "error": "apenas erros (❌)",
+            "fail": "apenas erros (❌)",
+            "fails": "apenas erros (❌)",
             "warnings": "apenas alertas (⚠️)",
+            "warn": "apenas alertas (⚠️)",
+            "alerts": "apenas alertas (⚠️)",
+            "alertas": "apenas alertas (⚠️)",
+            "ok": "apenas itens OK (✔️)",
+            "success": "apenas itens OK (✔️)",
             "all": "completo",
         }
         return mapping.get((severity or "all").lower(), "personalizado")

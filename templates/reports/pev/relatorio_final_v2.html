@@ -108,7 +108,7 @@
         <p>A agenda resume os compromissos que sustentam a implantação e garantem ritmo de execução.</p>
         {{ data_table(
           ["O que", "Quem", "Quando", "Como"],
-          [[item.oque, item.quem, item.quando, item.como] for item in alinhamento.agenda]
+          table_rows(alinhamento.agenda, "oque", "quem", "quando", "como")
         ) }}
       {% endcall %}
     {% endif %}
@@ -285,10 +285,10 @@
   <div class="section-body">
     {# Premissas #}
     {% call subsection("Premissas") %}
-      {{ data_table(
-        ["Descrição", "Sugestão", "Ajustado", "Observações", "Memória de cálculo"],
-        [[item.indicador, item.sugestao, item.ajustado, item.observacoes, item.memoria] for item in financeiro.premissas or []]
-      ) }}
+        {{ data_table(
+          ["Descrição", "Sugestão", "Ajustado", "Observações", "Memória de cálculo"],
+          table_rows(financeiro.premissas or [], "indicador", "sugestao", "ajustado", "observacoes", "memoria")
+        ) }}
     {% endcall %}
 
     {# Investimentos e Fontes #}
@@ -391,7 +391,7 @@
     {% call subsection("Fluxo de Caixa do Investidor") %}
       {{ data_table(
         ["Período", "Aporte", "Distribuição", "Saldo período", "Saldo acumulado"],
-        [[linha.periodo, linha.aporte, linha.distribuicao, linha.saldo, linha.acumulado] for linha in financeiro.fluxo_investidor.periodos or []]
+        table_rows(financeiro.fluxo_investidor.periodos or [], "periodo", "aporte", "distribuicao", "saldo", "acumulado")
       ) }}
 
       {% call highlight_box("info", "Análises") %}

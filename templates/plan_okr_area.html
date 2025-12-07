@@ -148,7 +148,7 @@
           <div class="okr-analysis-item">
             <p>{{ record.analysis }}</p>
             <div class="okr-analysis-meta">
-              <span class="summary-meta">Salvo em: {{ record.created_at.strftime('%d/%m/%Y ã s %H:%M') }}</span>
+              <span class="summary-meta">Salvo em: {{ record.created_at|format_date_br(True) }}</span>
             </div>
           </div>
           {% endfor %}
@@ -206,7 +206,7 @@
           <div class="okr-analysis-item">
             <p>{{ record.analysis }}</p>
             <div class="okr-analysis-meta">
-              <span class="summary-meta">Salvo em: {{ record.created_at.strftime('%d/%m/%Y ã s %H:%M') }}</span>
+              <span class="summary-meta">Salvo em: {{ record.created_at|format_date_br(True) }}</span>
             </div>
           </div>
           {% endfor %}
@@ -276,7 +276,7 @@
                 <span class="okr-owner">{{ record.owner or 'Sem responsã¡vel' }}</span>
                 <span class="okr-area">{{ record.area or 'Sem ã¡rea' }}</span>
                 {% if record.deadline %}
-                <span class="okr-deadline">{% if record.deadline %}{% if record.deadline.strftime is defined %}{{ record.deadline.strftime('%d/%m/%Y') }}{% else %}{{ record.deadline }}{% endif %}{% endif %}</span>
+                <span class="okr-deadline">{% if record.deadline %}{{ record.deadline|format_date_br(False) }}{% endif %}</span>
                 {% endif %}
               </div>
             </div>
@@ -463,7 +463,7 @@
               {% endif %}
               {% if record.area %}<p><strong>ãrea:</strong> {{ record.area|title }}</p>{% endif %}
               {% if record.owner %}<p><strong>Responsã¡vel:</strong> {{ record.owner }}</p>{% endif %}
-              {% if record.deadline %}<p><strong>Prazo:</strong> {% if record.deadline.strftime is defined %}{{ record.deadline.strftime('%d/%m/%Y') }}{% else %}{{ record.deadline }}{% endif %}</p>{% endif %}
+              {% if record.deadline %}<p><strong>Prazo:</strong> {{ record.deadline|format_date_br(False) }}</p>{% endif %}
               {% if record.observations %}<p><strong>Observaã§ãµes:</strong> {{ record.observations }}</p>{% endif %}
               
               {% if record.key_results %}
@@ -486,9 +486,9 @@
               {% endif %}
             </div>
             <div class="okr-workshop-meta">
-              <span class="summary-meta">Criado em: {{ record.created_at.strftime('%d/%m/%Y ã s %H:%M') }}</span>
+              <span class="summary-meta">Criado em: {{ record.created_at|format_date_br(True) }}</span>
               {% if record.updated_at and record.updated_at != record.created_at %}
-              <span class="summary-meta"> | Atualizado em: {{ record.updated_at.strftime('%d/%m/%Y ã s %H:%M') }}</span>
+              <span class="summary-meta"> | Atualizado em: {{ record.updated_at|format_date_br(True) }}</span>
               {% endif %}
             </div>
           </div>
@@ -559,7 +559,7 @@
                 <span class="okr-owner">{{ record.owner or 'Sem responsã¡vel' }}</span>
                 <span class="okr-area">{{ record.area or 'Sem ã¡rea' }}</span>
                 {% if record.deadline %}
-                <span class="okr-deadline">{% if record.deadline %}{% if record.deadline.strftime is defined %}{{ record.deadline.strftime('%d/%m/%Y') }}{% else %}{{ record.deadline }}{% endif %}{% endif %}</span>
+                <span class="okr-deadline">{% if record.deadline %}{{ record.deadline|format_date_br(False) }}{% endif %}</span>
                 {% endif %}
               </div>
             </div>
@@ -746,7 +746,7 @@
               {% endif %}
               {% if record.area %}<p><strong>ãrea:</strong> {{ record.area|title }}</p>{% endif %}
               {% if record.owner %}<p><strong>Responsã¡vel:</strong> {{ record.owner }}</p>{% endif %}
-              {% if record.deadline %}<p><strong>Prazo:</strong> {% if record.deadline.strftime is defined %}{{ record.deadline.strftime('%d/%m/%Y') }}{% else %}{{ record.deadline }}{% endif %}</p>{% endif %}
+              {% if record.deadline %}<p><strong>Prazo:</strong> {{ record.deadline|format_date_br(False) }}</p>{% endif %}
               {% if record.observations %}<p><strong>Observaã§ãµes:</strong> {{ record.observations }}</p>{% endif %}
               
               {% if record.key_results %}
@@ -769,9 +769,9 @@
               {% endif %}
             </div>
             <div class="okr-approval-meta">
-              <span class="summary-meta">Criado em: {{ record.created_at.strftime('%d/%m/%Y ã s %H:%M') }}</span>
+              <span class="summary-meta">Criado em: {{ record.created_at|format_date_br(True) }}</span>
               {% if record.updated_at and record.updated_at != record.created_at %}
-              <span class="summary-meta"> | Atualizado em: {{ record.updated_at.strftime('%d/%m/%Y ã s %H:%M') }}</span>
+              <span class="summary-meta"> | Atualizado em: {{ record.updated_at|format_date_br(True) }}</span>
               {% endif %}
             </div>
           </div>
@@ -818,7 +818,7 @@
             </div>
             <p><strong>ãrea:</strong> {{ record.area|title or 'Nã£o definida' }}</p>
             {% if record.owner %}<p><strong>Responsã¡vel:</strong> {{ record.owner }}</p>{% endif %}
-            {% if record.deadline %}<p><strong>Prazo:</strong> {% if record.deadline.strftime is defined %}{{ record.deadline.strftime('%d/%m/%Y') }}{% else %}{{ record.deadline }}{% endif %}</p>{% endif %}
+            {% if record.deadline %}<p><strong>Prazo:</strong> {{ record.deadline|format_date_br(False) }}</p>{% endif %}
             {% if record.observations %}<p><strong>Observaã§ãµes:</strong> {{ record.observations }}</p>{% endif %}
             {% if record.key_results %}
             <div class="okr-key-results">
@@ -839,9 +839,9 @@
             </div>
             {% endif %}
             <div class="directional-meta">
-              {% if record.created_at %}<span class="summary-meta">Criado em: {{ record.created_at.strftime('%d/%m/%Y ã s %H:%M') }}</span>{% endif %}
+              {% if record.created_at %}<span class="summary-meta">Criado em: {{ record.created_at|format_date_br(True) }}</span>{% endif %}
               {% if record.updated_at and record.updated_at != record.created_at %}
-              <span class="summary-meta"> | Atualizado em: {{ record.updated_at.strftime('%d/%m/%Y ã s %H:%M') }}</span>
+              <span class="summary-meta"> | Atualizado em: {{ record.updated_at|format_date_br(True) }}</span>
               {% endif %}
             </div>
           </div>

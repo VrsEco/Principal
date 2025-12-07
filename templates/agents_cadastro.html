@@ -12,10 +12,13 @@
     /* Forçar fundo branco para toda a área de agentes */
     .agents-layout {
       display: flex;
+      justify-content: center;
+      align-items: stretch;
       min-height: calc(100vh - 80px);
       gap: 24px;
       padding: 24px;
-      max-width: 1600px;
+      width: 100%;
+      max-width: 1400px;
       margin: 0 auto;
       background: #ffffff !important;
     }
@@ -365,19 +368,78 @@
       color: #000000 !important;
       border-color: #e5e7eb !important;
     }
+
+    .report-export-controls {
+      margin-top: 12px;
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
+      align-items: center;
+      font-size: 14px;
+      color: #0f172a;
+    }
+
+    .report-export-label {
+      font-weight: 600;
+      color: #0f172a;
+      white-space: nowrap;
+    }
+
+    .report-export-select {
+      background: #ffffff;
+      border: 1px solid #e5e7eb;
+      border-radius: 8px;
+      padding: 8px 12px;
+      font-size: 14px;
+      color: #0f172a;
+      min-width: 200px;
+      transition: border-color 0.2s, box-shadow 0.2s;
+    }
+
+    .report-export-select:focus {
+      outline: none;
+      border-color: #3af1ae;
+      box-shadow: 0 0 0 2px rgba(58, 241, 174, 0.3);
+    }
+
+    .report-export-button {
+      background: #f3f4f6;
+      border: 1px solid #e5e7eb;
+      border-radius: 8px;
+      padding: 8px 14px;
+      font-size: 14px;
+      color: #0f172a;
+      cursor: pointer;
+      transition: transform 0.2s, box-shadow 0.2s;
+    }
+
+    .report-export-button:hover {
+      transform: translateY(-1px);
+      box-shadow: 0 4px 10px rgba(15, 23, 42, 0.15);
+      border-color: #3af1ae;
+    }
   </style>
 {% endblock %}
 
 {% block content %}
-<div class="agents-layout">
-  {% include 'agents_sidebar.html' %}
-  
-  <div class="agents-chat-container">
+  <div class="agents-layout">
+    <div class="agents-chat-container">
     <div class="chat-header">
       <h2>
         <span>🤖</span>
         <span>Agente de Cadastro</span>
       </h2>
+      <div class="report-export-controls">
+        <span class="report-export-label">Exportar relatório:</span>
+        <select id="exportSeveritySelect" class="report-export-select" aria-label="Filtro de severidade para exportação">
+          <option value="all">Total / todas as páginas</option>
+          <option value="alerts">Apenas alertas</option>
+          <option value="errors">Apenas erros</option>
+          <option value="ok">Apenas itens OK</option>
+        </select>
+        <button type="button" class="report-export-button" onclick="handleExport('txt')">Exportar TXT</button>
+        <button type="button" class="report-export-button" onclick="handleExport('pdf')">Exportar PDF</button>
+      </div>
     </div>
     
     <div class="chat-messages" id="chatMessages">
@@ -492,6 +554,11 @@ document.addEventListener('DOMContentLoaded', function() {
   const agentsLayout = document.querySelector('.agents-layout');
   if (agentsLayout) {
     agentsLayout.style.background = '#ffffff';
+  }
+  
+  const exportSelect = document.getElementById('exportSeveritySelect');
+  if (exportSelect) {
+    exportSelect.value = ultimoFiltroConformidade;
   }
   
   iniciarConversa();
@@ -752,6 +819,14 @@ async function processarAcao(acao, dados) {
       case 'mostrar_relatorio_conformidade':
         response = gerarResumoCompletoConformidade();
         break;
+      case 'exportar_relatorio_txt':
+        exportarRelatorio('txt', dados?.filter);
+        response = { mensagem: 'Exportação TXT iniciada.' };
+        break;
+      case 'exportar_relatorio_pdf':
+        exportarRelatorio('pdf', dados?.filter);
+        response = { mensagem: 'Exportação PDF iniciada.' };
+        break;
       default:
         response = { mensagem: 'Ação não reconhecida' };
     }
@@ -808,14 +883,14 @@ async function validacaoEspecifica() {
 
 async function abrirTesteConformidade() {
   return {
-    mensagem: 'Posso executar o Teste de Conformidade usando o cat?logo de endere?amento. Qual modo deseja utilizar?',
+    mensagem: 'Posso executar o Teste de Conformidade usando o catálogo de endereçamento. Qual modo deseja utilizar?',
     opcoes: [
       { text: 'Varredura completa', action: 'executar_teste_conformidade', data: { scope: 'full', limit: 5, filter: 'all' } },
       { text: 'Somente alertas', action: 'executar_teste_conformidade', data: { scope: 'full', limit: 5, filter: 'warnings' } },
       { text: 'Somente erros', action: 'executar_teste_conformidade', data: { scope: 'full', limit: 5, filter: 'errors' } },
-      { text: 'Somente p?ginas ativas', action: 'executar_teste_conformidade', data: { scope: 'active', limit: 5, filter: 'all' } },
-      { text: 'Validar p?gina por c?digo', action: 'executar_teste_pagina' },
-      { text: 'Configurar par?metros de teste', action: 'configurar_parametros_conformidade' }
+      { text: 'Somente páginas ativas', action: 'executar_teste_conformidade', data: { scope: 'active', limit: 5, filter: 'all' } },
+      { text: 'Validar página por código', action: 'executar_teste_pagina' },
+      { text: 'Configurar parâmetros de teste', action: 'configurar_parametros_conformidade' }
     ]
   };
 }
@@ -901,14 +976,39 @@ function configurarContextoConformidade() {
   };
 }
 
-function exportarRelatorio(formato = 'txt', filtro = null) {
+function normalizeExportSeverity(severity) {
+  const normalized = (severity || 'all').toLowerCase();
+  const mapping = {
+    alerts: 'warnings',
+    alertas: 'warnings',
+    warn: 'warnings',
+    warnings_only: 'warnings',
+    warning: 'warnings',
+    errors: 'errors',
+    error: 'errors',
+    fail: 'errors',
+    fails: 'errors',
+    success: 'ok',
+    ok: 'ok',
+  };
+  return mapping[normalized] || normalized;
+}
+
+function exportarRelatorio(formato = 'txt', severity = null) {
   if (!ultimoRelatorioId) {
     alert('Nenhum relatório disponível para exportação.');
     return;
   }
-  const filtroFinal = filtro || ultimoFiltroConformidade || 'all';
-  const url = `/agents/api/teste-conformidade/${ultimoRelatorioId}/export?format=${formato}&filter=${filtroFinal}`;
+  const exportSelect = document.getElementById('exportSeveritySelect');
+  const selectedSeverity = exportSelect ? exportSelect.value : null;
+  const requestedSeverity = severity || selectedSeverity || ultimoFiltroConformidade || 'all';
+  const filtroFinal = normalizeExportSeverity(requestedSeverity);
+  const url = `/agents/api/teste-conformidade/${ultimoRelatorioId}/export?format=${encodeURIComponent(formato)}&filter=${encodeURIComponent(filtroFinal)}`;
   window.open(url, '_blank');
+}
+
+function handleExport(formato) {
+  exportarRelatorio(formato);
 }
 
 async function listarHistoricoConformidade() {
@@ -917,13 +1017,13 @@ async function listarHistoricoConformidade() {
     const result = await response.json();
 
     if (!result.success) {
-      return { mensagem: 'Erro ao carregar o hist?rico: ' + (result.error || 'Falha desconhecida.') };
+      return { mensagem: 'Erro ao carregar o histórico: ' + (result.error || 'Falha desconhecida.') };
     }
 
     const historico = result.data || [];
     if (!historico.length) {
       return {
-        mensagem: 'N?o encontrei relat?rios anteriores. Execute um teste para criar um novo registro.'
+        mensagem: 'Não encontrei relatórios anteriores. Execute um teste para criar um novo registro.'
       };
     }
 
@@ -938,25 +1038,25 @@ async function listarHistoricoConformidade() {
     });
 
     return {
-      mensagem: 'Selecione um relat?rio para visualizar os detalhes:',
+      mensagem: 'Selecione um relatório para visualizar os detalhes:',
       opcoes
     };
   } catch (error) {
-    return { mensagem: 'Erro ao acessar hist?rico: ' + error.message };
+    return { mensagem: 'Erro ao acessar histórico: ' + error.message };
   }
 }
 
 function gerarResumoCompletoConformidade() {
   if (!ultimoRelatorioConformidade) {
     return {
-      mensagem: 'Ainda n?o existe um relat?rio de conformidade dispon?vel. Execute um teste primeiro.'
+      mensagem: 'Ainda não existe um relatório de conformidade disponível. Execute um teste primeiro.'
     };
   }
 
   const relatorio = ultimoRelatorioConformidade;
   const overview = relatorio.overview || {};
   const linhas = [
-    'Relat?rio completo de conformidade',
+    'Relatório completo de conformidade',
     `Gerado em: ${relatorio.generated_at || 'agora mesmo'}`,
     `Escopo: ${relatorio.scope || 'full'}`,
     `Total: ${overview.total_pages || 0} | OK: ${overview.ok || 0} | Alertas: ${overview.warn || 0} | Falhas: ${overview.fail || 0}`,
@@ -970,7 +1070,7 @@ function gerarResumoCompletoConformidade() {
 
   const detalhes = relatorio.results || [];
   if (!detalhes.length) {
-    linhas.push('Nenhuma p?gina encontrada no cat?logo para este modo.');
+    linhas.push('Nenhuma página encontrada no catálogo para este modo.');
     return { mensagem: linhas.join('\n') };
   }
 
@@ -987,7 +1087,7 @@ function gerarResumoCompletoConformidade() {
   });
 
   if (detalhes.length > limiteDetalhes) {
-    linhas.push(`... +${detalhes.length - limiteDetalhes} p?ginas adicionais ocultadas para manter a resposta objetiva.`);
+    linhas.push(`... +${detalhes.length - limiteDetalhes} páginas adicionais ocultadas para manter a resposta objetiva.`);
   }
 
   return {
@@ -1150,6 +1250,10 @@ function processarRespostaAgente(resposta) {
 
   if (resposta.filtro) {
     ultimoFiltroConformidade = resposta.filtro;
+    const exportSelect = document.getElementById('exportSeveritySelect');
+    if (exportSelect) {
+      exportSelect.value = resposta.filtro;
+    }
   }
 
   if (resposta.test_context) {
@@ -1264,4 +1368,3 @@ async function enviarMensagem() {
 }
 </script>
 {% endblock %}
-

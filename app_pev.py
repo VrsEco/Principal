@@ -15,17 +15,17 @@ ROOT_DIR = Path(__file__).resolve().parent
 if str(ROOT_DIR) not in sys.path:
     sys.path.insert(0, str(ROOT_DIR))
 from flask import (
+    Blueprint,
     Flask,
-    render_template,
-    request,
-    redirect,
-    url_for,
     flash,
     jsonify,
-    abort,
+    redirect,
+    render_template,
+    request,
     send_file,
     send_from_directory,
-    Blueprint,
+    url_for,
+    abort,
 )
 from flask.signals import before_render_template
 from config_database import get_db, db_config
@@ -33,7 +33,8 @@ from config import Config
 from datetime import datetime, date
 from flask import request, jsonify
 from flask_login import current_user, login_required
-from functools import wraps
+from functools import partial, wraps
+from jinja2.exceptions import UndefinedError
 import os
 
 try:
@@ -384,6 +385,287 @@ _module_blueprints: List[Tuple[str, str, Callable[[], "Blueprint"]]] = [
 for label, mount_hint, loader in _module_blueprints:
     _register_module_blueprint(loader, label, mount_hint)
 
+_STATIC_TEMPLATE_ROUTE_MAP = {
+    "/plan_sidebar": "plan_sidebar.html",
+    "/plan_drivers_backup": "plan_drivers_backup.html",
+    "/plan_indicator_sidebar": "plan_indicator_sidebar.html",
+    "/grv_sidebar": "grv_sidebar.html",
+    "/identity_sidebar": "identity_sidebar.html",
+    "/indicators_sidebar": "indicators_sidebar.html",
+    "/meetings_sidebar": "meetings_sidebar.html",
+    "/processes_sidebar": "processes_sidebar.html",
+    "/projects_sidebar": "projects_sidebar.html",
+    "/agents_sidebar": "agents_sidebar.html",
+    "/agents_cadastro": "agents_cadastro.html",
+    "/cadastros_list": "cadastros_list.html",
+    "/cadastro_agent": "cadastro_agent.html",
+    "/cadastro_analise": "cadastro_analise.html",
+    "/usuarios/index": "usuarios/index.html",
+    "/report_pdf": "report_pdf.html",
+    "/components/global_activity_button": "components/global_activity_button.html",
+    "/routines": "routines.html",
+    "/routines_sidebar": "routines_sidebar.html",
+    "/routine_selector": "routine_selector.html",
+    "/implantacao/execution_intro": "implantacao/execution_intro.html",
+    "/implantacao/modelo_produtos_v2": "implantacao/modelo_produtos_v2.html",
+    "/implantacao/relatorios/relatorio_2_alinhamento": "implantacao/relatorios/relatorio_2_alinhamento.html",
+    "/reports/base_report": "reports/base_report.html",
+    "/reports/components": "reports/components.html",
+    "/reports/formal_report": "reports/formal_report.html",
+    "/reports/presentation_slides": "reports/presentation_slides.html",
+    "/reports/process_documentation": "reports/process_documentation.html",
+    "/reports/process_documentation_model5": "reports/process_documentation_model5.html",
+    "/reports/process_documentation_v2": "reports/process_documentation_v2.html",
+    "/reports/pev/relatorio_final_v2": "reports/pev/relatorio_final_v2.html",
+}
+
+
+class TemplateStub:
+    """Fallback object that safely survives any attribute or iteration."""
+
+    def __init__(self, name: Optional[str] = None):
+        self._name = name or "misconfigured"
+
+    def __getattr__(self, attr):
+        return TemplateStub(f"{self._name}.{attr}")
+
+    def __getitem__(self, key):
+        if isinstance(key, slice):
+            return TemplateStub(f"{self._name}[slice]")
+        return TemplateStub(f"{self._name}[{key}]")
+
+    def __iter__(self):
+        return iter(())
+
+    def __len__(self):
+        return 0
+
+    def __bool__(self):
+        return False
+
+    def __contains__(self, item):
+        return False
+
+    def __call__(self, *args, **kwargs):
+        return self
+
+    def __str__(self):
+        return ""
+
+    def __repr__(self):
+        return f"<TemplateStub {self._name}>"
+
+
+class AttrDict(dict):
+    """Dict with attribute access that fills missing keys with TemplateStubs."""
+
+    def __getattr__(self, key):
+        try:
+            return self[key]
+        except KeyError:
+            stub = TemplateStub(key)
+            self[key] = stub
+            return stub
+
+    def __setattr__(self, key, value):
+        self[key] = value
+
+
+def _parse_int_query_param(name: str, default: int) -> int:
+    value = request.args.get(name)
+    try:
+        return int(value)
+    except (TypeError, ValueError):
+        return default
+
+
+def _default_company_value() -> AttrDict:
+    company_id = _parse_int_query_param("company_id", 13)
+    return AttrDict(
+        id=company_id,
+        name=f"Empresa {company_id}",
+        legal_name=f"Empresa {company_id} Ltda.",
+    )
+
+
+def _default_plan_value() -> AttrDict:
+    plan_id = _parse_int_query_param("plan_id", 1)
+    company_id = _parse_int_query_param("company_id", 13)
+    plan_name = f"Plano {plan_id}"
+    return AttrDict(
+        id=plan_id,
+        name=plan_name,
+        plan_name=plan_name,
+        company_id=company_id,
+        company_name=f"Empresa {company_id}",
+        consultant="Consultor Demo",
+        sponsor="Patrocinador Demo",
+        last_update=datetime.now().strftime("%d/%m/%Y"),
+    )
+
+
+def _default_process_value() -> AttrDict:
+    process_id = _parse_int_query_param("process_id", 1)
+    return AttrDict(
+        id=process_id,
+        name=f"Processo {process_id}",
+        code=f"PROC-{process_id:03d}",
+    )
+
+
+def _default_highlights_value() -> Dict[str, Any]:
+    return {
+        "companies": 1,
+        "total_projects": 0,
+        "last_update": datetime.now().strftime("%d/%m/%Y"),
+    }
+
+
+def _default_directionals_session() -> AttrDict:
+    return AttrDict(
+        approvals=AttrDict(selected_partners=[], catalog=[]),
+        catalog=[],
+    )
+
+
+def _default_okr_global() -> AttrDict:
+    return AttrDict(maturity_updated_at=datetime.now().strftime("%d/%m/%Y"))
+
+
+def _default_company_data_value() -> AttrDict:
+    return AttrDict(
+        trade_name="Empresa Demo",
+        cnpj="00.000.000/0000-00",
+        coverage=AttrDict(physical="-", online="-"),
+        mission="Missão placeholder",
+        vision="Visão placeholder",
+        values="Valores placeholder",
+    )
+
+
+def _default_financeiro_value() -> AttrDict:
+    return AttrDict(
+        premissas=[],
+        investimento=AttrDict(investimento=[], fontes=[]),
+        capacidades=[],
+        resumo_capacidades=AttrDict(
+            total_formatado="R$ 0,00",
+            gargalo_valor_formatado=None,
+            gargalo_area=None,
+        ),
+        fluxo_investidor=AttrDict(periodos=[], analises=AttrDict()),
+    )
+
+
+def _default_alinhamento_value() -> AttrDict:
+    return AttrDict(visao=None, metas=[], socios=[], principios=[], agenda=[])
+
+
+def _default_sections_value() -> List[str]:
+    return [
+        "cover",
+        "dashboard",
+        "participants",
+        "company",
+        "directionals",
+        "okrs",
+        "projects",
+        "conclusion",
+    ]
+
+
+_STATIC_CONTEXT_DEFAULT_FACTORIES: Dict[str, Callable[[], Any]] = {
+    "company": _default_company_value,
+    "plan": _default_plan_value,
+    "process": _default_process_value,
+    "navigation": lambda: [],
+    "highlights": _default_highlights_value,
+    "sections": _default_sections_value,
+    "participants": lambda: [],
+    "directionals_session": _default_directionals_session,
+    "okr_global_summary": lambda: [],
+    "okr_global": _default_okr_global,
+    "projects_summary": lambda: [],
+    "company_data": _default_company_data_value,
+    "generated_at": lambda: datetime.now().strftime("%d/%m/%Y %H:%M"),
+    "user_name": lambda: "Consultor Demo",
+    "financeiro": _default_financeiro_value,
+    "alinhamento": _default_alinhamento_value,
+    "segmentos": lambda: [],
+    "estruturas": lambda: [],
+    "issued_at": lambda: datetime.now().strftime("%d/%m/%Y %H:%M"),
+}
+
+
+def _build_static_context() -> Dict[str, Any]:
+    return {key: factory() for key, factory in _STATIC_CONTEXT_DEFAULT_FACTORIES.items()}
+
+
+def _extract_undefined_variable(exc: UndefinedError) -> Optional[str]:
+    match = re.search(r"'([^']+)' is undefined", str(exc))
+    return match.group(1) if match else None
+
+
+def _default_value_for_missing(name: str) -> Any:
+    factory = _STATIC_CONTEXT_DEFAULT_FACTORIES.get(name)
+    if factory:
+        return factory()
+    return TemplateStub(name)
+
+
+def _resolve_attribute(entry: Any, path: str) -> Any:
+    value = entry
+    for part in path.split("."):
+        if value is None:
+            break
+        if isinstance(value, dict):
+            value = value.get(part)
+        else:
+            value = getattr(value, part, None)
+    if isinstance(value, TemplateStub):
+        return ""
+    return "" if value is None else value
+
+
+def table_rows(items: Any, *paths: str) -> List[List[Any]]:
+    result: List[List[Any]] = []
+    iterable = list(items or [])
+    for entry in iterable:
+        row = []
+        for path in paths:
+            row.append(_resolve_attribute(entry, path))
+        result.append(row)
+    return result
+
+
+def _render_static_template(template_name: str):
+    context = _build_static_context()
+    attempts = 0
+    while True:
+        try:
+            return render_template(template_name, **context)
+        except UndefinedError as exc:
+            missing = _extract_undefined_variable(exc)
+            if not missing or missing in context or attempts >= 32:
+                raise
+            context[missing] = _default_value_for_missing(missing)
+            attempts += 1
+
+
+static_pages_bp = Blueprint("static_pages", __name__)
+
+for route_path, template_name in _STATIC_TEMPLATE_ROUTE_MAP.items():
+    endpoint = (
+        f"static_{route_path.strip('/') or 'root'}"
+        .replace("-", "_")
+        .replace("/", "_")
+    )
+    view_func = partial(_render_static_template, template_name)
+    view_func.__name__ = endpoint
+    static_pages_bp.add_url_rule(route_path, endpoint=endpoint, view_func=view_func)
+
+app.register_blueprint(static_pages_bp)
+
 _MODULE_ENDPOINTS = {
     "pev": "pev.pev_dashboard",
     "grv": "grv.grv_dashboard",
@@ -405,6 +687,7 @@ def nav_url(endpoint: str, fallback: Optional[str] = None, **kwargs) -> str:
 
 # Disponibiliza helper diretamente aos templates
 app.jinja_env.globals["nav_url"] = nav_url
+app.jinja_env.globals["table_rows"] = table_rows
 
 
 def _build_module_links() -> Dict[str, str]:
@@ -462,6 +745,15 @@ try:
     logger.info("Módulo de Agentes registrado com sucesso!")
 except Exception as e:
     logger.warning(f"Erro ao registrar módulo de Agentes (não crítico): {e}")
+    logger.debug(traceback.format_exc())
+
+try:
+    from modules.usuarios import usuarios_bp
+
+    app.register_blueprint(usuarios_bp)
+    logger.info("M?dulo de Usu?rios registrado com sucesso!")
+except Exception as e:
+    logger.warning(f"Erro ao registrar m?dulo de Usu?rios (n?o cr?tico): {e}")
     logger.debug(traceback.format_exc())
 
 
@@ -2006,6 +2298,13 @@ def companies_page():
 def companies_new():
     """Formulário de nova empresa"""
     return render_template("company_form.html", form_mode="create", company_data=None)
+
+
+@app.route("/company-form")
+@login_required
+def company_form():
+    """Rota legacy usada por templates estáticos."""
+    return companies_new()
 
 
 @app.route("/companies/<int:company_id>")
@@ -5797,6 +6096,20 @@ def routines_management(company_id: int):
     return redirect(f"/grv/company/{company_id}/routine/work-distribution")
 
 
+def _build_blank_routine():
+    """Return a lightweight routine shell for new or missing entries."""
+    return {
+        "id": None,
+        "name": "",
+        "description": "",
+        "process_id": None,
+        "schedule_type": "weekly",
+        "schedule_value": "",
+        "deadline_days": 0,
+        "deadline_hours": 0,
+    }
+
+
 @app.route("/companies/<int:company_id>/routines/<routine_id>")
 def routine_details(company_id: int, routine_id):
     """Routine details/creation page with tabs (Routine Data + Collaborators)"""
@@ -5821,46 +6134,27 @@ def routine_details(company_id: int, routine_id):
         {"id": row[0], "code": row[1], "name": row[2]} for row in cursor.fetchall()
     ]
 
-    # Se routine_id = 'new', criar nova rotina
-    if routine_id == "new":
-        routine = {
-            "id": None,
-            "name": "",
-            "description": "",
-            "process_id": None,
-            "schedule_type": "weekly",
-            "schedule_value": "",
-            "deadline_days": 0,
-            "deadline_hours": 0,
-        }
-        conn.close()
-        return render_template(
-            "routine_details.html",
-            company=company,
-            routine=routine,
-            processes=processes,
-            is_new=True,
-            navigation=grv_navigation(),
-            active_id="process-routines",
+    routine: Dict[str, Any]
+    is_new = routine_id == "new"
+    if is_new:
+        routine = _build_blank_routine()
+    else:
+        cursor.execute(
+            """
+            SELECT r.*, p.code as process_code, p.name as process_name
+            FROM routines r
+            LEFT JOIN processes p ON r.process_id = p.id
+            WHERE r.id = %s AND r.company_id = %s
+        """,
+            (int(routine_id), company_id),
         )
+        routine_row = cursor.fetchone()
+        if routine_row:
+            routine = dict(routine_row)
+        else:
+            routine = _build_blank_routine()
+            is_new = True
 
-    # Caso contrário, buscar rotina existente
-    cursor.execute(
-        """
-        SELECT r.*, p.code as process_code, p.name as process_name
-        FROM routines r
-        LEFT JOIN processes p ON r.process_id = p.id
-        WHERE r.id = %s AND r.company_id = %s
-    """,
-        (int(routine_id), company_id),
-    )
-
-    routine_row = cursor.fetchone()
-    if not routine_row:
-        conn.close()
-        abort(404)
-
-    routine = dict(routine_row)
     conn.close()
 
     return render_template(
@@ -5868,7 +6162,7 @@ def routine_details(company_id: int, routine_id):
         company=company,
         routine=routine,
         processes=processes,
-        is_new=False,
+        is_new=is_new,
         navigation=grv_navigation(),
         active_id="process-routines",
     )

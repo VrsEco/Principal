@@ -1,4 +1,5 @@
-﻿import logging
+import logging
+from functools import wraps
 from flask_login import login_required, current_user
 from flask import Blueprint, render_template, url_for, request, jsonify, redirect
 from datetime import datetime
@@ -128,6 +129,23 @@ def _resolve_plan_id():
     raise ValueError("plan_id é obrigatório e deve ser passado na URL")
 
 
+def _require_plan_id(func):
+    """Decorator that enforces a plan_id is present and redirects otherwise."""
+
+    @wraps(func)
+    def wrapper(*args, **kwargs):
+        try:
+            plan_id = _resolve_plan_id()
+        except ValueError as exc:
+            logger.info(
+                f"[pev] plan_id ausente ({request.url}): {exc}. Redirecionando ao dashboard."
+            )
+            return redirect(url_for("pev.pev_dashboard"))
+        return func(plan_id, *args, **kwargs)
+
+    return wrapper
+
+
 def _get_plan_context(plan_id: int):
     """Fetch plan and company information for headers and reports."""
     db = get_db()
@@ -233,8 +251,8 @@ def pev_dashboard():
 
 
 @pev_bp.route("/implantacao")
-def pev_implantacao_overview():
-    plan_id = _resolve_plan_id()
+@_require_plan_id
+def pev_implantacao_overview(plan_id):
     db = get_db()
     payload = build_overview_payload(db, plan_id)
     plan = payload["plan"]
@@ -299,8 +317,8 @@ def pev_implantacao_overview():
 
 
 @pev_bp.route("/implantacao/alinhamento/canvas-expectativas")
-def implantacao_canvas_expectativas():
-    plan_id = _resolve_plan_id()
+@_require_plan_id
+def implantacao_canvas_expectativas(plan_id):
 
     # Log para debug
     logger.info(f"DEBUG: Canvas Expectativas - plan_id resolvido: {plan_id}")
@@ -326,8 +344,8 @@ def implantacao_canvas_expectativas():
 
 
 @pev_bp.route("/implantacao/alinhamento/agenda-planejamento")
-def implantacao_agenda_planejamento():
-    plan_id = _resolve_plan_id()
+@_require_plan_id
+def implantacao_agenda_planejamento(plan_id):
     db = get_db()
     plan = build_plan_context(db, plan_id)
     agenda_data = load_alignment_agenda(db, plan_id)
@@ -342,8 +360,8 @@ def implantacao_agenda_planejamento():
 
 
 @pev_bp.route("/implantacao/modelo/canvas-proposta-valor")
-def implantacao_canvas_proposta_valor():
-    plan_id = _resolve_plan_id()
+@_require_plan_id
+def implantacao_canvas_proposta_valor(plan_id):
     db = get_db()
     plan = build_plan_context(db, plan_id)
     segments = load_segments(db, plan_id)
@@ -360,8 +378,8 @@ def implantacao_canvas_proposta_valor():
 
 
 @pev_bp.route("/implantacao/modelo/mapa-persona")
-def implantacao_mapa_persona():
-    plan_id = _resolve_plan_id()
+@_require_plan_id
+def implantacao_mapa_persona(plan_id):
     db = get_db()
     plan = build_plan_context(db, plan_id)
     segments = load_segments(db, plan_id)
@@ -378,8 +396,8 @@ def implantacao_mapa_persona():
 
 
 @pev_bp.route("/implantacao/modelo/matriz-diferenciais")
-def implantacao_matriz_diferenciais():
-    plan_id = _resolve_plan_id()
+@_require_plan_id
+def implantacao_matriz_diferenciais(plan_id):
     db = get_db()
     plan = build_plan_context(db, plan_id)
     segments = load_segments(db, plan_id)
@@ -396,11 +414,11 @@ def implantacao_matriz_diferenciais():
 
 
 @pev_bp.route("/implantacao/modelo/produtos")
-def implantacao_produtos():
+@_require_plan_id
+def implantacao_produtos(plan_id):
     """
     Página de cadastro e gerenciamento de produtos.
     """
-    plan_id = _resolve_plan_id()
     db = get_db()
     plan = build_plan_context(db, plan_id)
     products = products_service.fetch_products(plan_id)
@@ -418,8 +436,8 @@ def implantacao_produtos():
 
 
 @pev_bp.route("/implantacao/modelo/modelagem-financeira")
-def implantacao_modelagem_financeira():
-    plan_id = _resolve_plan_id()
+@_require_plan_id
+def implantacao_modelagem_financeira(plan_id):
     db = get_db()
     plan = build_plan_context(db, plan_id)
     financeiro = load_financial_model(db, plan_id)
@@ -483,9 +501,9 @@ def implantacao_modelagem_financeira():
 
 
 @pev_bp.route("/implantacao/modelo/modefin")
-def implantacao_modefin():
+@_require_plan_id
+def implantacao_modefin(plan_id):
     """Nova página ModeFin - Modelagem Financeira Completa"""
-    plan_id = _resolve_plan_id()
     db = get_db()
     plan = build_plan_context(db, plan_id)
 
@@ -1202,8 +1220,8 @@ def implantacao_matriz_indicadores_financeiros():
 
 
 @pev_bp.route("/implantacao/relatorio/01-capa-resumo")
-def implantacao_relatorio_capa_resumo():
-    plan_id = _resolve_plan_id()
+@_require_plan_id
+def implantacao_relatorio_capa_resumo(plan_id):
     db = get_db()
     payload = _prepare_report_one_payload(db, plan_id)
     return render_template(
@@ -1215,9 +1233,9 @@ def implantacao_relatorio_capa_resumo():
 
 
 @pev_bp.route("/implantacao/entrega/relatorio-final")
-def implantacao_relatorio_final():
+@_require_plan_id
+def implantacao_relatorio_final(plan_id):
     try:
-        plan_id = _resolve_plan_id()
         db = get_db()
         plan = build_plan_context(db, plan_id)
         canvas_data = load_alignment_canvas(db, plan_id)
@@ -1586,7 +1604,7 @@ def implantacao_relatorio_final():
             analysis_metrics=analysis_metrics,
         )
     except Exception as e:
-        plan_id_str = str(plan_id) if "plan_id" in locals() else "unknown"
+        plan_id_str = str(plan_id)
         logger.error(
             f"[ERROR] Erro ao gerar relatório final para plan_id={plan_id_str}: {e}",
             exc_info=True,
@@ -1720,8 +1738,8 @@ def implantacao_painel_governanca():
 
 
 @pev_bp.route("/implantacao/executivo/estruturas")
-def implantacao_estruturas():
-    plan_id = _resolve_plan_id()
+@_require_plan_id
+def implantacao_estruturas(plan_id):
     db = get_db()
     plan = build_plan_context(db, plan_id)
     estruturas = load_structures(db, plan_id)
@@ -3336,3 +3354,4 @@ def update_profit_distribution_api(plan_id: int):
     except Exception as e:
         logger.info(f"[API] Error updating profit distribution: {e}")
         return jsonify({"success": False, "error": str(e)}), 500
+
