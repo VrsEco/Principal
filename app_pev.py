@@ -90,6 +90,20 @@ logger = logging.getLogger(__name__)
 
 # Initialize Flask app
 app = Flask(__name__, template_folder="templates", static_folder="static")
+
+# Middleware para forçar HTTPS em produção (Cloud Run)
+class ForceSchemeMiddleware:
+    def __init__(self, app):
+        self.app = app
+
+    def __call__(self, environ, start_response):
+        # Se estivermos em produção, forçamos o esquema para HTTPS
+        # Isso resolve problemas onde o Load Balancer termina o SSL mas o app acha que é HTTP
+        if os.environ.get("FLASK_ENV") == "production":
+            environ["wsgi.url_scheme"] = "https"
+        return self.app(environ, start_response)
+
+app.wsgi_app = ForceSchemeMiddleware(app.wsgi_app)
 # Ajuste para Cloud Run com Custom Domain (Load Balancer + GFE)
 app.wsgi_app = ProxyFix(app.wsgi_app, x_for=2, x_proto=2, x_host=1, x_prefix=1)
 app.secret_key = "dev-secret-key-change-in-production"

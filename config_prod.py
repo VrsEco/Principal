@@ -16,6 +16,7 @@ class ProductionConfig:
     ENV = "production"
     DEBUG = False
     TESTING = False
+    PREFERRED_URL_SCHEME = "https"  # Force URL generation to HTTPS
 
     # ===== APLICAÇÃO =====
     SECRET_KEY = os.getenv("SECRET_KEY")
