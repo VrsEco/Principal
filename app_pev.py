@@ -90,7 +90,8 @@ logger = logging.getLogger(__name__)
 
 # Initialize Flask app
 app = Flask(__name__, template_folder="templates", static_folder="static")
-app.wsgi_app = ProxyFix(app.wsgi_app, x_for=1, x_proto=1, x_host=1, x_prefix=1)
+# Ajuste para Cloud Run com Custom Domain (Load Balancer + GFE)
+app.wsgi_app = ProxyFix(app.wsgi_app, x_for=2, x_proto=2, x_host=1, x_prefix=1)
 app.secret_key = "dev-secret-key-change-in-production"
 
 

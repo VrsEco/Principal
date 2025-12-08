@@ -41,6 +41,7 @@ class ProductionConfig:
     SESSION_COOKIE_SECURE = True
     SESSION_COOKIE_HTTPONLY = True
     SESSION_COOKIE_SAMESITE = "Lax"
+    SESSION_COOKIE_DOMAIN = os.getenv("SESSION_COOKIE_DOMAIN")  # Permite configurar .gestaoversus.com.br
     PERMANENT_SESSION_LIFETIME = timedelta(hours=1)
     SESSION_COOKIE_NAME = "gestaoversos_session"
 
