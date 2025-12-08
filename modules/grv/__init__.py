@@ -383,6 +383,12 @@ def grv_dashboard():
     db = get_db()
     companies = db.get_companies()
 
+    if not _grv_user_is_admin():
+        allowed_company_ids = get_user_allowed_company_ids()
+        companies = [
+            company for company in companies if company.get("id") in allowed_company_ids
+        ]
+
     companies_context = []
     total_processes = 0
     total_projects = 0
