@@ -146,6 +146,17 @@ def api_login_required(f):
     return decorated_function
 
 
+@app.before_request
+def log_request_info():
+    """Log details about the request for debugging."""
+    # Log request headers (sanitized) to help debug proxy/protocol issues
+    headers = {k: v for k, v in request.headers.items() if k.lower() not in ['cookie', 'authorization']}
+    logger.info(f"DEBUG: Path: {request.path} | Scheme: {request.scheme} | Remote: {request.remote_addr} | Host: {request.host}")
+    logger.info(f"DEBUG: Headers: {headers}")
+    # Log cookie names only
+    logger.info(f"DEBUG: Cookies present: {list(request.cookies.keys())}")
+
+
 # Custom helper utilities
 def ensure_routine_collaborators_sequence(cursor: Any) -> None:
     """Ensure routine_collaborators.id uses a PostgreSQL sequence."""
