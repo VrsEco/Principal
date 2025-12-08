@@ -289,6 +289,29 @@
     opacity: 0.65;
   }
 
+  .kanban-card-meta {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+    margin-top: 6px;
+    font-size: 12px;
+    color: #475569;
+  }
+
+  .kanban-card-person {
+    display: flex;
+    justify-content: space-between;
+    gap: 8px;
+    color: inherit;
+  }
+
+  .kanban-card-person span:first-child {
+    font-weight: 600;
+    color: #0f172a;
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+  }
+
   .kanban-board-wrapper::-webkit-scrollbar {
     height: 8px;
   }
@@ -368,11 +391,19 @@
         </div>
         <div class="form-two-cols">
           <label class="form-field">
+            <span>Dono</span>
+            <select id="filterModelOwner" data-ref="09">
+              <option value="">Todos</option>
+            </select>
+          </label>
+          <label class="form-field">
             <span>Responsável</span>
             <select id="filterModelResponsible" data-ref="06">
               <option value="">Todos</option>
             </select>
           </label>
+        </div>
+        <div class="form-two-cols">
           <label class="form-field">
             <span>Desempenho</span>
             <select id="filterModelPerformance" data-ref="07">
@@ -382,6 +413,7 @@
               <option value="satisfactory">Satisfatório</option>
             </select>
           </label>
+          <div class="form-field"></div>
         </div>
         <div class="filters-actions">
           <button id="btnClearModelFilters" type="button" class="button button-ghost" data-ref="02">Limpar filtros</button>
@@ -404,7 +436,7 @@
                 Nenhum processo neste estágio.
               </div>
               {% for process in stage_processes %}
-              <article class="kanban-card" draggable="true" data-kanban-card data-process-id="{{ process.id }}" data-stage="{{ process.kanban_stage }}" data-macro-id="{{ process.macro_id }}" data-responsible="{{ process.responsible or '' }}" data-performance="{{ process.performance_level or '' }}" data-detail-url="{{ url_for('grv.grv_process_detail', company_id=company.id, process_id=process.id) }}">
+              <article class="kanban-card" draggable="true" data-kanban-card data-process-id="{{ process.id }}" data-stage="{{ process.kanban_stage }}" data-macro-id="{{ process.macro_id }}" data-owner="{{ process.owner_name or '' }}" data-responsible="{{ process.responsible_name or '' }}" data-performance="{{ process.performance_level or '' }}" data-detail-url="{{ url_for('grv.grv_process_detail', company_id=company.id, process_id=process.id) }}">
                 <div class="kanban-card-header">
                   <span class="kanban-card-code">{{ process.code or 'Sem código' }}</span>
                   <button type="button" class="kanban-card-open" data-action="open-card" data-ref="03">Abrir</button>
@@ -421,6 +453,16 @@
                   {% for flag in indicator_flags %}
                   <span class="kanban-flag{% if flag.active %} is-active{% endif %}">{{ flag.label }}</span>
                   {% endfor %}
+                </div>
+                <div class="kanban-card-meta">
+                  <div class="kanban-card-person">
+                    <span>Dono</span>
+                    <span>{{ process.owner_name or 'Sem dono definido' }}</span>
+                  </div>
+                  <div class="kanban-card-person">
+                    <span>Responsável</span>
+                    <span>{{ process.responsible_name or 'Sem responsavel definido' }}</span>
+                  </div>
                 </div>
               </article>
               {% endfor %}
@@ -459,6 +501,7 @@ document.addEventListener('DOMContentLoaded', () => {
   const toggleFilters = document.getElementById('toggleModelFilters');
   const filterQuery = document.getElementById('filterModelQuery');
   const filterMacro = document.getElementById('filterModelMacro');
+  const filterOwner = document.getElementById('filterModelOwner');
   const filterResponsible = document.getElementById('filterModelResponsible');
   const filterPerformance = document.getElementById('filterModelPerformance');
   const btnClear = document.getElementById('btnClearModelFilters');
@@ -507,10 +550,12 @@ document.addEventListener('DOMContentLoaded', () => {
           .filter(e => (e.status === 'active' || e.status == null))
           .map(e => e.name)
           .filter(Boolean)));
-        const current = filterResponsible.value;
+        const currentResponsible = filterResponsible ? filterResponsible.value : '';
         const opts = ['<option value="">Todos</option>'].concat(names.map(n => `<option value="${n}">${n}</option>`));
-        filterResponsible.innerHTML = opts.join('');
-        if (current) filterResponsible.value = current;
+        if (filterResponsible) {
+          filterResponsible.innerHTML = opts.join('');
+          if (currentResponsible) filterResponsible.value = currentResponsible;
+        }
       }
     } catch(_e) {}
   })();
@@ -519,6 +564,7 @@ document.addEventListener('DOMContentLoaded', () => {
     const payload = {
       q: filterQuery ? filterQuery.value.trim() : '',
       macro_id: filterMacro ? filterMacro.value : '',
+      owner: filterOwner ? filterOwner.value : '',
       responsible: filterResponsible ? filterResponsible.value : '',
       performance: filterPerformance ? filterPerformance.value : ''
     };
@@ -530,14 +576,39 @@ document.addEventListener('DOMContentLoaded', () => {
       const saved = JSON.parse(localStorage.getItem(FILTERS_KEY) || '{}');
       if (filterQuery) filterQuery.value = saved.q || '';
       if (filterMacro) filterMacro.value = saved.macro_id || '';
+      if (filterOwner) filterOwner.value = saved.owner || '';
       if (filterResponsible) filterResponsible.value = saved.responsible || '';
       if (filterPerformance) filterPerformance.value = saved.performance || '';
     } catch(_e) {}
   }
 
+  const populateOwnerFilterOptions = () => {
+    if (!filterOwner) {
+      return;
+    }
+    const cards = boardWrapper.querySelectorAll('[data-kanban-card]');
+    const ownerNames = Array.from(
+      new Set(
+        Array.from(cards)
+          .map(card => (card.getAttribute('data-owner') || '').trim())
+          .filter(Boolean)
+      )
+    );
+    ownerNames.sort((a, b) => a.localeCompare(b, 'pt-BR', { sensitivity: 'base' }));
+    const currentOwner = filterOwner.value;
+    const options = ['<option value="">Todos</option>'].concat(
+      ownerNames.map(name => `<option value="${name}">${name}</option>`)
+    );
+    filterOwner.innerHTML = options.join('');
+    if (currentOwner) {
+      filterOwner.value = currentOwner;
+    }
+  };
+
   function applyFilters(){
     const q = (filterQuery ? filterQuery.value.trim().toLowerCase() : '');
     const macroId = filterMacro ? filterMacro.value : '';
+    const owner = filterOwner ? filterOwner.value : '';
     const responsible = filterResponsible ? filterResponsible.value : '';
     const performance = filterPerformance ? filterPerformance.value : '';
 
@@ -551,6 +622,7 @@ document.addEventListener('DOMContentLoaded', () => {
         const title = (card.querySelector('.kanban-card-title')?.textContent || '').toLowerCase();
         const pid = card.getAttribute('data-process-id');
         const cardMacroId = card.getAttribute('data-macro-id') || '';
+        const cardOwner = card.getAttribute('data-owner') || '';
         const cardResp = card.getAttribute('data-responsible') || '';
         const cardPerf = card.getAttribute('data-performance') || '';
         let passes = true;
@@ -558,6 +630,7 @@ document.addEventListener('DOMContentLoaded', () => {
         if (macroId) passes = passes && String(cardMacroId) === String(macroId);
         if (performance) passes = passes && String(cardPerf) === String(performance);
         if (responsible) passes = passes && String(cardResp) === String(responsible);
+        if (owner) passes = passes && String(cardOwner) === String(owner);
         if (passes) {
           card.style.display = '';
           visibleCount++;
@@ -585,16 +658,19 @@ document.addEventListener('DOMContentLoaded', () => {
     });
   }
   updateCollapseUI();
+  populateOwnerFilterOptions();
   loadFilters();
   applyFilters();
 
   if (filterQuery) filterQuery.addEventListener('input', () => { saveFilters(); applyFilters(); });
   if (filterMacro) filterMacro.addEventListener('change', () => { saveFilters(); applyFilters(); });
   if (filterResponsible) filterResponsible.addEventListener('change', () => { saveFilters(); applyFilters(); });
+  if (filterOwner) filterOwner.addEventListener('change', () => { saveFilters(); applyFilters(); });
   if (filterPerformance) filterPerformance.addEventListener('change', () => { saveFilters(); applyFilters(); });
   if (btnClear) btnClear.addEventListener('click', () => {
     if (filterQuery) filterQuery.value = '';
     if (filterMacro) filterMacro.value = '';
+    if (filterOwner) filterOwner.value = '';
     if (filterResponsible) filterResponsible.value = '';
     if (filterPerformance) filterPerformance.value = '';
     saveFilters();

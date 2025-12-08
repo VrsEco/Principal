@@ -183,7 +183,15 @@ class PostgresConnection:
 
     def __init__(self):
         self.engine = get_engine()
-        self._conn = self.engine.connect()  # Inicializar conexão imediatamente
+        self._conn = self._create_connection()  # Inicializa a conexão com encoding forçado
+
+    def _create_connection(self):
+        conn = self.engine.connect()
+        try:
+            conn.execute(text("SET client_encoding = 'UTF8'"))
+        except Exception:
+            pass
+        return conn
 
     def __enter__(self):
         return self
@@ -199,7 +207,7 @@ class PostgresConnection:
     def cursor(self):
         """Retorna um cursor PostgreSQL"""
         if not self._conn:
-            self._conn = self.engine.connect()
+            self._conn = self._create_connection()
         return PostgresCursor(self._conn)
 
     def commit(self):

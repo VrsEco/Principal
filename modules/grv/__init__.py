@@ -1305,6 +1305,10 @@ def grv_process_modeling(company_id: int):
     company = db.get_company(company_id) or {}
     processes = db.list_processes(company_id)
     macro_processes = {m["id"]: m for m in db.list_macro_processes(company_id) or []}
+    employees = db.list_employees(company_id) or []
+    employees_by_id = {
+        emp.get("id"): emp for emp in employees if emp and emp.get("id") is not None
+    }
     artifact_presence = {}
     if hasattr(db, "get_process_artifact_presence"):
         try:
@@ -1333,6 +1337,12 @@ def grv_process_modeling(company_id: int):
         "satisfactory": "Satisfat+â-¦rio",
     }
 
+    def _resolve_employee_name(employee_id, fallback=None):
+        if employee_id is None:
+            return fallback or ""
+        employee = employees_by_id.get(employee_id)
+        return employee.get("name") if employee and employee.get("name") else (fallback or "")
+
     for process in processes or []:
         stage_slug = (
             (process.get("kanban_stage") or default_stage)
@@ -1350,6 +1360,16 @@ def grv_process_modeling(company_id: int):
                 "name": process.get("name"),
                 "code": process.get("code"),
                 "responsible": process.get("responsible"),
+                "responsible_name": _resolve_employee_name(
+                    process.get("responsible_id"), process.get("responsible")
+                ),
+                "owner_name": (
+                    macro.get("owner")
+                    if macro and macro.get("owner")
+                    else _resolve_employee_name(
+                        process.get("owner_employee_id"), process.get("owner")
+                    )
+                ),
                 "structuring_level": process.get("structuring_level"),
                 "performance_level": process.get("performance_level"),
                 "structuring_label": structuring_labels.get(
@@ -2230,9 +2250,9 @@ def grv_project_manage(company_id: int, project_id: int):
         {"slug": "inbox", "title": "Caixa de Entrada", "color": "#94a3b8"},
         {"slug": "waiting", "title": "Aguardando", "color": "#fbbf24"},
         {"slug": "executing", "title": "Executando", "color": "#3b82f6"},
-        {"slug": "pending", "title": "Pend+â-¬ncias", "color": "#f59e0b"},
+        {"slug": "pending", "title": "Pendências", "color": "#f59e0b"},
         {"slug": "suspended", "title": "Suspensos", "color": "#ef4444"},
-        {"slug": "completed", "title": "Conclu+â-¡dos", "color": "#10b981"},
+        {"slug": "completed", "title": "Concluídos", "color": "#10b981"},
     ]
 
     return render_template(
@@ -2328,9 +2348,9 @@ def grv_projects_analysis(company_id: int):
         {"slug": "inbox", "title": "Caixa de Entrada", "color": "#94a3b8"},
         {"slug": "waiting", "title": "Aguardando", "color": "#fbbf24"},
         {"slug": "executing", "title": "Executando", "color": "#3b82f6"},
-        {"slug": "pending", "title": "Pend+â-¬ncias", "color": "#f59e0b"},
+        {"slug": "pending", "title": "Pendências", "color": "#f59e0b"},
         {"slug": "suspended", "title": "Suspensos", "color": "#ef4444"},
-        {"slug": "completed", "title": "Conclu+â-¡dos", "color": "#10b981"},
+        {"slug": "completed", "title": "Concluídos", "color": "#10b981"},
     ]
 
     return render_template(
@@ -2354,7 +2374,7 @@ def grv_process_instances(company_id: int):
         {"value": "pending", "label": "Pendente", "color": "#94a3b8"},
         {"value": "in_progress", "label": "Em Andamento", "color": "#3b82f6"},
         {"value": "waiting", "label": "Aguardando", "color": "#fbbf24"},
-        {"value": "completed", "label": "Conclu+â-¡do", "color": "#10b981"},
+        {"value": "completed", "label": "Concluído", "color": "#10b981"},
         {"value": "cancelled", "label": "Cancelado", "color": "#ef4444"},
     ]
 
