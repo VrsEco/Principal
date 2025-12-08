@@ -4,7 +4,7 @@
 apiVersion: serving.knative.dev/v1
 kind: Service
 metadata:
-  name: gestaoversos-app
+  name: app-gestaoversus
   labels:
     cloud.googleapis.com/location: southamerica-east1
   annotations:

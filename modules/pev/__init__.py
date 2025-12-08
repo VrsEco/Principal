@@ -1,11 +1,12 @@
 import logging
 from functools import wraps
 from flask_login import login_required, current_user
-from flask import Blueprint, render_template, url_for, request, jsonify, redirect
+from flask import Blueprint, render_template, url_for, request, jsonify, redirect, abort, g
 from datetime import datetime
 import json
 from typing import Any, Dict, List
 from config_database import get_db
+from utils.company_access import get_user_allowed_company_ids
 from modules.pev.implantation_data import (
     build_final_report_payload,
     build_overview_payload,
@@ -51,6 +52,47 @@ except ImportError as exc:  # pragma: no cover - contingency for deployment
 
 MODEFIN_SCREEN_CODE = 314
 pev_bp = Blueprint("pev", __name__, url_prefix="/pev")
+
+
+def _pev_user_is_admin() -> bool:
+    """Identifica administradores globais."""
+    return current_user.is_authenticated and current_user.role == "admin"
+
+
+def _ensure_plan_access(plan_id: int) -> None:
+    """Valida que o plano pertence a uma empresa que o usuário pode acessar."""
+    if _pev_user_is_admin():
+        return
+
+    cache = getattr(g, "_pev_plan_cache", {})
+    plan = cache.get(plan_id)
+    if plan is None:
+        plan = get_db().get_plan(plan_id)
+        cache[plan_id] = plan
+        setattr(g, "_pev_plan_cache", cache)
+
+    if not plan:
+        abort(404, description="Plano não encontrado.")
+
+    company_id = plan.get("company_id")
+    if company_id is None:
+        abort(404, description="Plano não possui empresa associada.")
+
+    allowed_ids = get_user_allowed_company_ids()
+    if company_id not in allowed_ids:
+        abort(403, description="Você não tem acesso a esta empresa.")
+
+
+@pev_bp.before_request
+def _pev_require_auth_and_access():
+    """Garante login e valida o plano indicado na request."""
+    if not current_user.is_authenticated:
+        return redirect(url_for("login", next=request.url))
+
+    view_args = request.view_args or {}
+    plan_id = view_args.get("plan_id")
+    if plan_id is not None:
+        _ensure_plan_access(plan_id)
 
 
 def _calcular_tir_newton(fluxos: List[float]) -> float:
@@ -141,6 +183,7 @@ def _require_plan_id(func):
                 f"[pev] plan_id ausente ({request.url}): {exc}. Redirecionando ao dashboard."
             )
             return redirect(url_for("pev.pev_dashboard"))
+        _ensure_plan_access(plan_id)
         return func(plan_id, *args, **kwargs)
 
     return wrapper
@@ -205,6 +248,14 @@ def pev_dashboard():
             for plan in plans
         ]
         companies_with_plans.append(company_with_plans)
+
+    if not _pev_user_is_admin():
+        allowed_company_ids = get_user_allowed_company_ids()
+        companies_with_plans = [
+            company
+            for company in companies_with_plans
+            if company.get("id") in allowed_company_ids
+        ]
 
     highlights = [
         {"title": "Planejamentos Ativos", "value": "3", "trend": "+1"},

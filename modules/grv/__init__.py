@@ -21,11 +21,36 @@ from typing import Any, Dict, Optional
 from config_database import get_db
 from middleware.auto_log_decorator import auto_log_crud
 from services.routines_overview_service import build_routines_overview_context
+from utils.company_access import get_user_allowed_company_ids
 
 logger = logging.getLogger(__name__)
 grv_bp = Blueprint("grv", __name__, url_prefix="/grv")
 
 logger.info("MÓDULO GRV CARREGADO - VERSÃO COM API ROUTES")
+
+
+def _grv_user_is_admin() -> bool:
+    """Detecta se o usuário atual tem papel de administrador global."""
+    return current_user.is_authenticated and current_user.role == "admin"
+
+
+@grv_bp.before_request
+def _grv_require_company_access():
+    """Garante autenticação e limita o acesso às empresas permitidas."""
+    if not current_user.is_authenticated:
+        return redirect(url_for("login", next=request.url))
+
+    if _grv_user_is_admin():
+        return
+
+    view_args = request.view_args or {}
+    company_id = view_args.get("company_id")
+    if company_id is None:
+        return
+
+    allowed_ids = get_user_allowed_company_ids()
+    if company_id not in allowed_ids:
+        abort(403, description="Você não tem acesso a esta empresa.")
 
 
 _playwright_install_lock = threading.Lock()

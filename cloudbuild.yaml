@@ -57,7 +57,7 @@ steps:
     args:
       - 'run'
       - 'deploy'
-      - 'gestaoversos'
+      - 'app-gestaoversus'
       - '--image'
       - 'southamerica-east1-docker.pkg.dev/$PROJECT_ID/my-app-repo/my-backend:$COMMIT_SHA'
       - '--region'
@@ -126,7 +126,7 @@ timeout: '1800s'  # 30 minutos
 # ==========================================
 substitutions:
   _REGION: 'southamerica-east1'
-  _SERVICE_NAME: 'gestaoversos'
+  _SERVICE_NAME: 'app-gestaoversus'
 
 # ==========================================
 # Trigger Configuration (via Console ou gcloud)
