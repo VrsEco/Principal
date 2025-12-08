@@ -11,6 +11,7 @@ class Company(db.Model):
     name = db.Column(db.String(200), nullable=False)
     legal_name = db.Column(db.String(200))
     cnpj = db.Column(db.String(18), unique=True, index=True)
+    client_code = db.Column(db.String(16), index=True)  # Código interno único (ex: ABC)
     segment = db.Column("industry", db.String(100))
     city = db.Column(db.String(100))
     state = db.Column(db.String(2))

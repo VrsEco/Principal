@@ -1169,6 +1169,28 @@ async function continuarCadastroEmpresa(empresaId) {
   }
 }
 
+
+async function validacaoGeralPorNome(nome) {
+  try {
+    const response = await fetch('/agents/api/validacao-geral', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ empresa: nome })
+    });
+    const result = await response.json();
+    if (result.success && result.data) {
+      return result.data;
+    }
+    return {
+      mensagem: 'Erro: ' + (result.error || 'Não foi possível validar esta empresa.')
+    };
+  } catch (error) {
+    return {
+      mensagem: 'Erro: ' + error.message
+    };
+  }
+}
+
 async function processarMensagem(texto) {
   const input = document.getElementById('chatInput');
   input.value = '';
@@ -1178,6 +1200,16 @@ async function processarMensagem(texto) {
   mostrarDigitando();
   
   try {
+    if (conversationContext.estado === 'aguardando_empresa_validacao') {
+      const resposta = await validacaoGeralPorNome(texto);
+      removerDigitando();
+      conversationContext.estado = resposta.estado || 'inicial';
+      conversationContext.session_id = null;
+      conversationContext.tipo_cadastro = null;
+      conversationContext.dados_coletados = {};
+      return resposta;
+    }
+
     // Log do contexto antes de enviar
     console.log('Enviando mensagem. Session ID:', conversationContext.session_id);
     

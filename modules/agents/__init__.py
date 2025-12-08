@@ -48,7 +48,9 @@ def api_conversar():
                 }), 404
         else:
             # Criar nova sessão
-            tipo_cadastro = payload.get('tipo_cadastro', 'real')
+            tipo_cadastro = payload.get('tipo_cadastro')
+            if tipo_cadastro not in ['real', 'modelo']:
+                tipo_cadastro = 'real'
             session = CadastroSession.criar_sessao(current_user.id, tipo_cadastro)
             session_id = session.id
         
@@ -95,6 +97,94 @@ def api_conversar():
         })
     except Exception as e:
         logger.error(f"Erro ao processar conversa: {e}")
+        import traceback
+        logger.error(traceback.format_exc())
+        return jsonify({
+            'success': False,
+            'error': str(e)
+        }), 500
+
+
+@agents_bp.route('/api/validacao-geral', methods=['POST'])
+@login_required
+def api_validacao_geral():
+    """Analisa a completude do cadastro de uma empresa existente."""
+    try:
+        from services.cadastro_agent_service import CadastroAgentService
+        from models.company import Company
+
+        payload = request.get_json(silent=True) or {}
+        empresa_query = (payload.get('empresa') or payload.get('empresa_nome') or payload.get('texto') or '').strip()
+        company_id = payload.get('company_id')
+
+        if not empresa_query and not company_id:
+            return jsonify({
+                'success': False,
+                'error': 'Informe o nome ou ID da empresa para validar.'
+            }), 400
+
+        company = None
+        if company_id:
+            company = Company.query.get(company_id)
+        else:
+            query_ilike = f"%{empresa_query}%"
+            company = Company.query.filter(Company.name.ilike(query_ilike)).first()
+            if not company:
+                company = Company.query.filter(Company.client_code.ilike(empresa_query)).first()
+            if not company and empresa_query.isdigit():
+                company = Company.query.filter(Company.cnpj.ilike(f"%{empresa_query}%")).first()
+
+        if not company:
+            return jsonify({
+                'success': False,
+                'error': 'Empresa não encontrada para a validação.'
+            }), 404
+
+        service = CadastroAgentService()
+        resultado = service.analisar_completude(company.id)
+
+        if resultado.get('status') != 'sucesso':
+            return jsonify({
+                'success': False,
+                'error': resultado.get('mensagem', 'Erro ao analisar completude.')
+            }), 400
+
+        impacto_lines = []
+        impactos = resultado.get('impactos') or {}
+        if impactos:
+            impacto_lines.append('Impactos registrados:')
+            for campo, impacto in list(impactos.items())[:3]:
+                impacto_lines.append(
+                    f"- {campo}: criticidade {impacto.get('criticidade')}, {impacto.get('recomendacao')}"
+                )
+
+        mensagem = [
+            f"Análise da empresa {resultado.get('company_name')} ({resultado.get('status_completude')}):",
+            f"- Completude geral: {resultado.get('completude_percentual')}%",
+        ]
+
+        if impacto_lines:
+            mensagem.extend(impacto_lines)
+
+        mensagem.append(resultado.get('relatorio') or '')
+        texto_final = '\n'.join([linha for linha in mensagem if linha])
+
+        return jsonify({
+            'success': True,
+            'data': {
+                'mensagem': texto_final,
+                'estado': 'inicial',
+                'company_id': company.id,
+                'company_name': resultado.get('company_name'),
+                'completude_percentual': resultado.get('completude_percentual'),
+                'status_completude': resultado.get('status_completude'),
+                'campos_faltantes': resultado.get('campos_faltantes'),
+                'impactos': resultado.get('impactos'),
+                'relatorio': resultado.get('relatorio')
+            }
+        })
+    except Exception as e:
+        logger.error(f"Erro ao validar empresa: {e}")
         import traceback
         logger.error(traceback.format_exc())
         return jsonify({
