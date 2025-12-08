@@ -64,9 +64,9 @@ steps:
       - 'southamerica-east1'
       - '--platform'
       - 'managed'
-      # - '--allow-unauthenticated' # Removed to avoid IAM errors
+      - '--allow-unauthenticated' # Required for public access
       - '--set-env-vars'
-      - 'CLOUD_SQL_CONNECTION_NAME=vrs-eco-478714:southamerica-east1:gestaoversus-db-prod,FLASK_ENV=production'
+      - 'CLOUD_SQL_CONNECTION_NAME=vrs-eco-478714:southamerica-east1:gestaoversus-db-prod,FLASK_ENV=production,DOMAIN=app.gestaoversus.com.br'
       - '--max-instances'
       - '10'
       - '--memory'

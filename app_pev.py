@@ -51,6 +51,7 @@ import traceback
 from services.ai_service import ai_service
 
 # models_db import moved to after init_app() call below
+from werkzeug.middleware.proxy_fix import ProxyFix
 from werkzeug.routing import BuildError
 from werkzeug.utils import secure_filename
 from werkzeug.exceptions import NotFound
@@ -89,6 +90,7 @@ logger = logging.getLogger(__name__)
 
 # Initialize Flask app
 app = Flask(__name__, template_folder="templates", static_folder="static")
+app.wsgi_app = ProxyFix(app.wsgi_app, x_for=1, x_proto=1, x_host=1, x_prefix=1)
 app.secret_key = "dev-secret-key-change-in-production"
 
 

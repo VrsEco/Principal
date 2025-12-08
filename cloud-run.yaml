@@ -57,7 +57,7 @@ spec:
               value: GestaoVersus
             
             - name: DOMAIN
-              value: your-domain.com
+              value: app.gestaoversus.com.br
             
             # Secrets (via Secret Manager)
             - name: SECRET_KEY
