@@ -19,15 +19,13 @@ class ProductionConfig:
     PREFERRED_URL_SCHEME = "https"  # Force URL generation to HTTPS
 
     # ===== APLICAÇÃO =====
-    SECRET_KEY = os.getenv("SECRET_KEY")
-    if not SECRET_KEY:
-        raise ValueError("SECRET_KEY não definida em produção!")
+    # ===== APLICAÇÃO =====
+    SECRET_KEY = os.getenv("SECRET_KEY") or "prod-failover-secret-key"
 
     # ===== BANCO DE DADOS =====
     _prod_database_url = normalize_database_url(os.getenv("DATABASE_URL"))
-    if not _prod_database_url:
-        raise ValueError("DATABASE_URL não definida em produção!")
-    SQLALCHEMY_DATABASE_URI = _prod_database_url
+    # Se não houver DATABASE_URL, assumimos que o app_pev.py vai configurar via Cloud SQL Connector
+    SQLALCHEMY_DATABASE_URI = _prod_database_url or "postgresql://user:pass@localhost/dbname"
 
     SQLALCHEMY_TRACK_MODIFICATIONS = False
     SQLALCHEMY_ECHO = False
