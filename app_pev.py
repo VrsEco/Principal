@@ -161,35 +161,6 @@ def api_login_required(f):
     return decorated_function
 
 
-@app.before_request
-def log_request_info():
-    """Log details about the request for debugging."""
-    # Log request headers (sanitized) to help debug proxy/protocol issues
-    headers = {k: v for k, v in request.headers.items() if k.lower() not in ['cookie', 'authorization']}
-    logger.info(f"DEBUG: Path: {request.path} | Scheme: {request.scheme} | Remote: {request.remote_addr} | Host: {request.host}")
-    logger.info(f"DEBUG: Headers: {headers}")
-    # Log cookie names only
-    logger.info(f"DEBUG: Cookies present: {list(request.cookies.keys())}")
-
-@app.route("/debug-info")
-def debug_info():
-    import os
-    return jsonify({
-        "headers": dict(request.headers),
-        "scheme": request.scheme,
-        "host": request.host,
-        "url": request.url,
-        "x_forwarded_for": request.headers.get('X-Forwarded-For'),
-        "x_forwarded_proto": request.headers.get('X-Forwarded-Proto'),
-        "cookies": dict(request.cookies),
-        "session": dict(session),
-        "user_authenticated": current_user.is_authenticated,
-        "config_cookie_domain": app.config.get("SESSION_COOKIE_DOMAIN"),
-        "config_preferred_scheme": app.config.get("PREFERRED_URL_SCHEME"),
-        "env_flask_env": os.environ.get("FLASK_ENV")
-    })
-
-
 # Custom helper utilities
 def ensure_routine_collaborators_sequence(cursor: Any) -> None:
     """Ensure routine_collaborators.id uses a PostgreSQL sequence."""
