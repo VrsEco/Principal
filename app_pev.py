@@ -26,6 +26,7 @@ from flask import (
     send_from_directory,
     url_for,
     abort,
+    session,
 )
 from flask.signals import before_render_template
 from config_database import get_db, db_config
@@ -169,6 +170,24 @@ def log_request_info():
     logger.info(f"DEBUG: Headers: {headers}")
     # Log cookie names only
     logger.info(f"DEBUG: Cookies present: {list(request.cookies.keys())}")
+
+@app.route("/debug-info")
+def debug_info():
+    import os
+    return jsonify({
+        "headers": dict(request.headers),
+        "scheme": request.scheme,
+        "host": request.host,
+        "url": request.url,
+        "x_forwarded_for": request.headers.get('X-Forwarded-For'),
+        "x_forwarded_proto": request.headers.get('X-Forwarded-Proto'),
+        "cookies": dict(request.cookies),
+        "session": dict(session),
+        "user_authenticated": current_user.is_authenticated,
+        "config_cookie_domain": app.config.get("SESSION_COOKIE_DOMAIN"),
+        "config_preferred_scheme": app.config.get("PREFERRED_URL_SCHEME"),
+        "env_flask_env": os.environ.get("FLASK_ENV")
+    })
 
 
 # Custom helper utilities
