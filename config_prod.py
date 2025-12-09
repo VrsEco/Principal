@@ -42,7 +42,8 @@ class ProductionConfig:
     SESSION_COOKIE_SAMESITE = "Lax"
     SESSION_COOKIE_DOMAIN = os.getenv("SESSION_COOKIE_DOMAIN")  # Permite configurar .gestaoversus.com.br
     PERMANENT_SESSION_LIFETIME = timedelta(hours=1)
-    SESSION_COOKIE_NAME = "gestaoversos_session"
+    # IMPORTANTE: Firebase Hosting remove todos os cookies exceto "__session"
+    SESSION_COOKIE_NAME = "__session"
 
     # ===== SEGURANÇA =====
     WTF_CSRF_ENABLED = True
