@@ -259,7 +259,17 @@ def from_json_filter(json_string):
 
 
 # Load configuration
-app.config.from_object(Config)
+if os.environ.get("FLASK_ENV") == "production":
+    try:
+        from config_prod import ProductionConfig
+        app.config.from_object(ProductionConfig)
+        logger.info("Loaded configuration from config_prod.py")
+    except ImportError:
+        logger.warning("config_prod.py not found, falling back to config.ProductionConfig")
+        from config import ProductionConfig
+        app.config.from_object(ProductionConfig)
+else:
+    app.config.from_object(Config)
 
 # Cloud SQL Connector Configuration for Flask-SQLAlchemy
 # Check for Cloud SQL Connection Name or Fallback (Cloud Run)
