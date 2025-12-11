@@ -398,6 +398,35 @@ textarea {
     cursor: pointer;
 }
 
+.note-modal-label {
+    font-size: 11px;
+    text-transform: uppercase;
+    letter-spacing: 0.2em;
+    color: #94a3b8;
+    margin: 0 0 4px;
+}
+
+.note-modal-title {
+    margin: 0 0 8px;
+    font-size: 20px;
+    color: #0f172a;
+    font-weight: 600;
+}
+
+.note-modal-meta {
+    margin: 0 0 16px;
+    font-size: 13px;
+    color: #475569;
+    min-height: 16px;
+}
+
+.note-modal-body {
+    font-size: 15px;
+    color: #0f172a;
+    line-height: 1.6;
+    white-space: pre-wrap;
+}
+
 /* Mobile Responsive */
 @media (max-width: 1024px) {
     .sidebar {

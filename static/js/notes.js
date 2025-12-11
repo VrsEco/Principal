@@ -6,6 +6,19 @@
     const actionCreate = document.getElementById("action-create");
     const actionEdit = document.getElementById("action-edit");
     const actionDelete = document.getElementById("action-delete");
+    const noteDetailsModalTitle = document.getElementById("noteDetailsModalTitle");
+    const noteDetailsModalMeta = document.getElementById("noteDetailsModalMeta");
+    const noteDetailsModalBody = document.getElementById("noteDetailsModalBody");
+    let noteDetailsModalInstance = null;
+
+    if (document.getElementById("noteDetailsModal") && window.Modal) {
+        noteDetailsModalInstance = new Modal("noteDetailsModal", {
+            animation: true,
+            backdrop: true,
+            closeOnBackdrop: true,
+            closeOnEscape: true,
+        });
+    }
 
     // Get endpoint from data attribute or default
     const notesEndpoint = document.body.dataset.notesEndpoint || "/api/notes/";
@@ -44,6 +57,46 @@
             return value;
         }
         return parsed.toLocaleDateString("pt-BR");
+    }
+
+    function escapeHtml(value) {
+        if (value === undefined || value === null) {
+            return "";
+        }
+        return String(value)
+            .replace(/&/g, "&amp;")
+            .replace(/</g, "&lt;")
+            .replace(/>/g, "&gt;")
+            .replace(/"/g, "&quot;")
+            .replace(/'/g, "&#039;");
+    }
+
+    function openNoteModal(note) {
+        if (!noteDetailsModalInstance || !noteDetailsModalBody) {
+            return;
+        }
+
+        const displayCode = note.code || (note.id ? `Nota ${note.id}` : "Nota");
+        const displayCreated = note.created_at ? formatDate(note.created_at) : note.created || "";
+        const metaParts = [];
+
+        if (displayCreated) {
+            metaParts.push(displayCreated);
+        }
+        if (note.location) {
+            metaParts.push(note.location);
+        }
+
+        if (noteDetailsModalTitle) {
+            noteDetailsModalTitle.textContent = displayCode;
+        }
+        if (noteDetailsModalMeta) {
+            noteDetailsModalMeta.textContent = metaParts.join(" • ");
+            noteDetailsModalMeta.style.display = metaParts.length ? "block" : "none";
+        }
+
+        noteDetailsModalBody.innerHTML = escapeHtml(note.text).replace(/\n/g, "<br>");
+        noteDetailsModalInstance.open();
     }
 
     function renderNotes() {
@@ -236,6 +289,10 @@
             if (!row) return;
             const id = row.dataset.id;
             updateSelection(selectedNoteId === id ? null : id);
+            const note = notes.find((n) => n.id === id);
+            if (note) {
+                openNoteModal(note);
+            }
         });
     }
 

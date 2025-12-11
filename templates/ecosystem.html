@@ -10,6 +10,7 @@
   <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700&display=swap"
     rel="stylesheet" />
   <link rel="stylesheet" href="{{ url_for('static', filename='css/ecosystem.css') }}" />
+  <link rel="stylesheet" href="{{ url_for('static', filename='css/modal-system.css') }}" />
 </head>
 
 <body data-notes-endpoint="{{ url_for('notes.list_notes') }}">
@@ -139,7 +140,20 @@
     </div>
   </main>
 
+  <div id="noteDetailsModal" class="modal-system" aria-hidden="true">
+    <div class="modal-content-system">
+      <button class="modal-close-system" data-modal-close aria-label="Fechar modal">&times;</button>
+      <div class="modal-body-system">
+        <p class="note-modal-label">Notas em andamento</p>
+        <h3 id="noteDetailsModalTitle" class="note-modal-title">Nota</h3>
+        <p id="noteDetailsModalMeta" class="note-modal-meta"></p>
+        <div id="noteDetailsModalBody" class="note-modal-body"></div>
+      </div>
+    </div>
+  </div>
+
   <script src="{{ url_for('static', filename='js/ecosystem.js') }}"></script>
+  <script src="{{ url_for('static', filename='js/modal-system.js') }}"></script>
   <script src="{{ url_for('static', filename='js/notes.js') }}"></script>
   <script src="{{ url_for('static', filename='js/notes-drag-drop.js') }}"></script>
 

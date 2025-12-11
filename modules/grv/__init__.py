@@ -3032,9 +3032,15 @@ def api_create_indicator_group(company_id: int):
             """
             INSERT INTO indicator_groups 
             (company_id, parent_id, code, name, description)
-            VALUES (%s, %s, ?, ?, ?)
+            VALUES (%s, %s, %s, %s, %s)
         """,
-            (company_id, parent_id, code, data.get("name"), data.get("description")),
+            (
+                company_id,
+                parent_id,
+                code,
+                data.get("name"),
+                data.get("description"),
+            ),
         )
 
         conn.commit()
@@ -3433,7 +3439,7 @@ def api_create_indicator(company_id: int):
              department_id, collaborators, unit, formula, polarity, 
              data_source, notes, okr_reference, okr_reference_label,
              plan_id, okr_id, okr_level)
-            VALUES (%s, %s, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+            VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
         """,
             (
                 company_id,
@@ -3774,7 +3780,7 @@ def api_create_indicator_goal(company_id: int):
             INSERT INTO indicator_goals 
             (company_id, indicator_id, code, goal_type, goal_value, period_start, period_end, goal_date, 
              evaluation_basis, responsible_id, status, notes)
-            VALUES (%s, %s, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+            VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
         """,
             (
                 company_id,
@@ -4066,7 +4072,7 @@ def api_create_indicator_data(company_id: int):
             """
             INSERT INTO indicator_data 
             (company_id, goal_id, record_date, value, notes)
-            VALUES (%s, %s, ?, ?, ?)
+            VALUES (%s, %s, %s, %s, %s)
         """,
             (
                 company_id,
@@ -4173,3 +4179,145 @@ from modules.grv.project_hours_api import register_project_hours_routes
 
 register_project_hours_routes(grv_bp)
 logger.info("✅ Project hours API routes registered")
+
+
+# ============================================================================
+# Indicator API Routes
+# ============================================================================
+def register_indicator_api_routes(bp):
+    '''Registers all GRV indicator endpoints under the provided blueprint.'''
+    api_routes = [
+        (
+            "/api/company/<int:company_id>/indicator-groups",
+            "api_get_indicator_groups",
+            api_get_indicator_groups,
+            ["GET"],
+        ),
+        (
+            "/api/company/<int:company_id>/indicator-groups/<int:group_id>",
+            "api_get_indicator_group",
+            api_get_indicator_group,
+            ["GET"],
+        ),
+        (
+            "/api/company/<int:company_id>/indicator-groups",
+            "api_create_indicator_group",
+            api_create_indicator_group,
+            ["POST"],
+        ),
+        (
+            "/api/company/<int:company_id>/indicator-groups/<int:group_id>",
+            "api_update_indicator_group",
+            api_update_indicator_group,
+            ["PUT"],
+        ),
+        (
+            "/api/company/<int:company_id>/indicator-groups/<int:group_id>",
+            "api_delete_indicator_group",
+            api_delete_indicator_group,
+            ["DELETE"],
+        ),
+        (
+            "/api/company/<int:company_id>/indicators",
+            "api_get_indicators",
+            api_get_indicators,
+            ["GET"],
+        ),
+        (
+            "/api/company/<int:company_id>/indicators/<int:indicator_id>",
+            "api_get_indicator",
+            api_get_indicator,
+            ["GET"],
+        ),
+        (
+            "/api/company/<int:company_id>/processes/<int:process_id>/indicators",
+            "api_get_process_indicators",
+            api_get_process_indicators,
+            ["GET"],
+        ),
+        (
+            "/api/company/<int:company_id>/indicators",
+            "api_create_indicator",
+            api_create_indicator,
+            ["POST"],
+        ),
+        (
+            "/api/company/<int:company_id>/indicators/<int:indicator_id>",
+            "api_update_indicator",
+            api_update_indicator,
+            ["PUT"],
+        ),
+        (
+            "/api/company/<int:company_id>/indicators/<int:indicator_id>",
+            "api_delete_indicator",
+            api_delete_indicator,
+            ["DELETE"],
+        ),
+        (
+            "/api/company/<int:company_id>/indicator-goals",
+            "api_get_indicator_goals",
+            api_get_indicator_goals,
+            ["GET"],
+        ),
+        (
+            "/api/company/<int:company_id>/indicator-goals/<int:goal_id>",
+            "api_get_indicator_goal",
+            api_get_indicator_goal,
+            ["GET"],
+        ),
+        (
+            "/api/company/<int:company_id>/indicator-goals",
+            "api_create_indicator_goal",
+            api_create_indicator_goal,
+            ["POST"],
+        ),
+        (
+            "/api/company/<int:company_id>/indicator-goals/<int:goal_id>",
+            "api_update_indicator_goal",
+            api_update_indicator_goal,
+            ["PUT"],
+        ),
+        (
+            "/api/company/<int:company_id>/indicator-goals/<int:goal_id>",
+            "api_delete_indicator_goal",
+            api_delete_indicator_goal,
+            ["DELETE"],
+        ),
+        (
+            "/api/company/<int:company_id>/indicator-data",
+            "api_get_indicator_data",
+            api_get_indicator_data,
+            ["GET"],
+        ),
+        (
+            "/api/company/<int:company_id>/indicator-data/<int:data_id>",
+            "api_get_indicator_data_record",
+            api_get_indicator_data_record,
+            ["GET"],
+        ),
+        (
+            "/api/company/<int:company_id>/indicator-data",
+            "api_create_indicator_data",
+            api_create_indicator_data,
+            ["POST"],
+        ),
+        (
+            "/api/company/<int:company_id>/indicator-data/<int:data_id>",
+            "api_update_indicator_data",
+            api_update_indicator_data,
+            ["PUT"],
+        ),
+        (
+            "/api/company/<int:company_id>/indicator-data/<int:data_id>",
+            "api_delete_indicator_data",
+            api_delete_indicator_data,
+            ["DELETE"],
+        ),
+    ]
+
+    for path, endpoint, view_func, methods in api_routes:
+        bp.add_url_rule(path, endpoint, view_func, methods=methods)
+
+
+register_indicator_api_routes(grv_bp)
+logger.info("Indicator API routes registered")

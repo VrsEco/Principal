@@ -4,7 +4,8 @@ from flask_login import login_required, current_user
 from flask import Blueprint, render_template, url_for, request, jsonify, redirect, abort, g
 from datetime import datetime
 import json
-from typing import Any, Dict, List
+from typing import Any, Callable, Dict, List, Optional
+from markupsafe import Markup
 from config_database import get_db
 from utils.company_access import get_user_allowed_company_ids
 from modules.pev.implantation_data import (
@@ -36,19 +37,47 @@ from modules.pev import products_service
 
 logger = logging.getLogger(__name__)
 
-try:
-    from services.ui_catalog_service import (
-        get_screen_attr_map,
-        serialize_screen_catalog,
-    )
-except ImportError as exc:  # pragma: no cover - contingency for deployment
-    logger.warning("UI catalog service not available: %s", exc)
+_ui_catalog_loaded = False
+_ui_catalog_get_attr_map: Callable[[int], Dict[str, Markup]] = lambda screen_code: {}
+_ui_catalog_serialize: Callable[[int], Dict[str, Dict[str, Optional[str]]]] = (
+    lambda screen_code: {}
+)
+_ui_catalog_error_logged = False
 
-    def get_screen_attr_map(screen_code: int):
-        return {}
 
-    def serialize_screen_catalog(screen_code: int):
-        return {}
+def _ensure_ui_catalog_service() -> None:
+    """Lazy-load the optional UI catalog helpers."""
+    global _ui_catalog_loaded, _ui_catalog_get_attr_map, _ui_catalog_serialize, _ui_catalog_error_logged
+
+    if _ui_catalog_loaded:
+        return
+
+    try:
+        from services.ui_catalog_service import (
+            get_screen_attr_map as _real_attr_map,
+            serialize_screen_catalog as _real_serialize,
+        )
+    except ImportError as exc:
+        if not _ui_catalog_error_logged:
+            logger.warning("UI catalog service not available: %s", exc)
+            _ui_catalog_error_logged = True
+    else:
+        _ui_catalog_get_attr_map = _real_attr_map
+        _ui_catalog_serialize = _real_serialize
+
+    _ui_catalog_loaded = True
+
+
+def get_screen_attr_map(screen_code: int) -> Dict[str, Markup]:
+    """Return attribute map for the given screen code."""
+    _ensure_ui_catalog_service()
+    return _ui_catalog_get_attr_map(screen_code)
+
+
+def serialize_screen_catalog(screen_code: int) -> Dict[str, Dict[str, Optional[str]]]:
+    """Return a serializable catalog payload for the screen."""
+    _ensure_ui_catalog_service()
+    return _ui_catalog_serialize(screen_code)
 
 MODEFIN_SCREEN_CODE = 314
 pev_bp = Blueprint("pev", __name__, url_prefix="/pev")
@@ -3405,4 +3434,3 @@ def update_profit_distribution_api(plan_id: int):
     except Exception as e:
         logger.info(f"[API] Error updating profit distribution: {e}")
         return jsonify({"success": False, "error": str(e)}), 500
-

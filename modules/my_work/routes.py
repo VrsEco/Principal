@@ -1,4 +1,5 @@
-﻿import logging
+import json
+import logging
 from datetime import datetime
 from typing import List, Optional
 
@@ -7,7 +8,7 @@ Rotas do Módulo My Work
 APIs e páginas para gestão de atividades
 """
 
-from flask import render_template, jsonify, request
+from flask import Response, render_template, jsonify, request
 from flask_login import login_required, current_user
 from . import my_work_bp
 from services.my_work_service import (
@@ -26,6 +27,7 @@ from services.my_work_service import (
     DELIVERY_TAGS,
 )
 from middleware.auto_log_decorator import auto_log_crud
+from relatorios.generators.my_work_report import MyWorkReport
 
 logger = logging.getLogger(__name__)
 
@@ -44,6 +46,45 @@ def dashboard():
     PÃ¡gina principal - My Work Dashboard
     """
     return render_template("my_work.html", active_nav="my_work")
+
+
+@my_work_bp.route("/report")
+@login_required
+def my_work_report():
+    """
+    Gera o HTML simplificado do relatório inspirado na tela My Work.
+    """
+    scope = request.args.get("scope", "me")
+    raw_filters = request.args.get("filters")
+    filters_payload = {}
+    if raw_filters:
+        try:
+            filters_payload = json.loads(raw_filters)
+        except ValueError:
+            filters_payload = {}
+
+    try:
+        max_activities = int(request.args.get("max", 40))
+    except ValueError:
+        max_activities = 40
+    max_activities = max(0, max_activities)
+
+    report = MyWorkReport()
+    try:
+        html = report.generate_html(
+            user_id=current_user.id,
+            user_name=current_user.name or current_user.email,
+            scope=scope,
+            filters=filters_payload,
+            max_activities=max_activities,
+        )
+    except ValueError as exc:
+        return jsonify({"success": False, "error": str(exc)}), 400
+    except Exception as exc:
+        logger.error("Erro ao gerar relatório My Work: %s", exc, exc_info=True)
+        return jsonify({"success": False, "error": str(exc)}), 500
+
+    return Response(html, mimetype="text/html")
 
 
 # ============================================================================

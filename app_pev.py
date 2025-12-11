@@ -302,9 +302,9 @@ from models.company import Company
 from models.company_performance_settings import CompanyPerformanceSettings
 
 DEFAULT_COMPANY_PERFORMANCE_SETTINGS = {
-    "on_time_score": Decimal("0"),
-    "late_score": Decimal("0"),
-    "daily_delay_penalty": Decimal("0"),
+    "on_time_score": Decimal("5"),
+    "late_score": Decimal("-6"),
+    "daily_delay_penalty": Decimal("-1"),
     "late_registration_penalty": Decimal("-1"),
 }
 
@@ -331,6 +331,35 @@ def _default_performance_settings_payload():
         key: float(value)
         for key, value in DEFAULT_COMPANY_PERFORMANCE_SETTINGS.items()
     }
+
+
+def _ensure_default_company_performance_settings(company_id: int):
+    """Garantir configurações padrão de performance para empresa recém criada."""
+    try:
+        existing = CompanyPerformanceSettings.query.get(company_id)
+        if existing:
+            return
+
+        settings = CompanyPerformanceSettings(
+            company_id=company_id,
+            on_time_score=DEFAULT_COMPANY_PERFORMANCE_SETTINGS["on_time_score"],
+            late_score=DEFAULT_COMPANY_PERFORMANCE_SETTINGS["late_score"],
+            daily_delay_penalty=DEFAULT_COMPANY_PERFORMANCE_SETTINGS[
+                "daily_delay_penalty"
+            ],
+            late_registration_penalty=DEFAULT_COMPANY_PERFORMANCE_SETTINGS[
+                "late_registration_penalty"
+            ],
+        )
+        models_db.session.add(settings)
+        models_db.session.commit()
+    except Exception as exc:
+        logger.error(
+            "Erro ao inserir configurações padrão de performance para empresa %s: %s",
+            company_id,
+            exc,
+        )
+        models_db.session.rollback()
 
 
 # User loader for Flask-Login
@@ -2664,8 +2693,8 @@ def api_update_company_performance_settings(company_id: int):
         for field, value in normalized.items():
             setattr(settings, field, value)
 
-        db.session.add(settings)
-        db.session.commit()
+        models_db.session.add(settings)
+        models_db.session.commit()
 
         data = settings.to_dict()
         data.pop("company_id", None)
@@ -2674,7 +2703,7 @@ def api_update_company_performance_settings(company_id: int):
         return jsonify({"success": False, "error": str(verr)}), 400
     except Exception as err:
         logger.error("Erro ao salvar configurações de performance: %s", err)
-        db.session.rollback()
+        models_db.session.rollback()
         return jsonify({"success": False, "error": str(err)}), 500
 
 
@@ -2722,6 +2751,7 @@ def api_create_company():
 
         new_id = db.create_company(company_data)
         if new_id:
+            _ensure_default_company_performance_settings(new_id)
             return jsonify({"success": True, "id": new_id}), 201
         return jsonify({"success": False, "error": "Erro ao criar empresa"}), 500
     except Exception as _err:

@@ -52,7 +52,6 @@
 <div class="my-work-container">
 
   <h1 class="work-page-title" id="pageTitle">Gestão de Atividades</h1>
-
   <!-- Layout Principal: Conteúdo + Sidebar -->
   <div class="my-work-scale-wrapper">
     <div class="my-work-layout my-work-scale">
@@ -204,6 +203,20 @@
             <div class="stat-card__label">Concluídas</div>
           </div>
           <div class="stat-card__trend stat-card__trend--up">+10</div>
+        </div>
+
+        <div class="stat-card stat-card--report">
+          <div class="stat-card__content stat-card__content--center">
+            <div class="stat-card__label">Emitir relatório</div>
+            <a
+              class="stat-card__link"
+              href="{{ url_for('my_work.my_work_report') }}"
+              target="_blank"
+              rel="noopener"
+            >
+              Imprimir
+            </a>
+          </div>
         </div>
       </div>
 
