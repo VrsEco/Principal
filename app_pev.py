@@ -14207,6 +14207,7 @@ def api_project_activities(company_id: int, project_id: int):
             "who": payload.get("who"),
             "when": payload.get("when"),
             "how": payload.get("how"),
+            "estimated_hours": payload.get("estimated_hours"),
             "amount": payload.get("amount"),
             "observations": payload.get("observations"),
             "stage": "inbox",
@@ -14402,6 +14403,7 @@ def api_project_activity(company_id: int, project_id: int, activity_id: int):
                 activity["who"] = payload.get("who")
                 activity["when"] = payload.get("when")
                 activity["how"] = payload.get("how")
+                activity["estimated_hours"] = payload.get("estimated_hours")
                 activity["amount"] = payload.get("amount")
                 activity["observations"] = payload.get("observations")
                 # Update logs if provided

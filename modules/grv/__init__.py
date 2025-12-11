@@ -4164,3 +4164,12 @@ def api_delete_indicator_data(company_id: int, data_id: int):
         conn.rollback()
         conn.close()
         return jsonify({"success": False, "message": str(e)}), 400
+
+
+# ============================================================================
+# Project Hours API Routes
+# ============================================================================
+from modules.grv.project_hours_api import register_project_hours_routes
+
+register_project_hours_routes(grv_bp)
+logger.info("✅ Project hours API routes registered")

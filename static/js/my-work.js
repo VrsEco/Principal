@@ -72,7 +72,7 @@ function loadFiltersFromCache() {
   try {
     const cached = localStorage.getItem(FILTER_CACHE_KEY);
     if (!cached) return false;
-    
+
     const filtersData = JSON.parse(cached);
     state.selectedCompanyIds = filtersData.selectedCompanyIds || [];
     state.selectedResponsibleIds = filtersData.selectedResponsibleIds || [];
@@ -85,7 +85,7 @@ function loadFiltersFromCache() {
     state.dueDateEnd = filtersData.dueDateEnd || '';
     state.searchQuery = filtersData.searchQuery || '';
     state.sortBy = filtersData.sortBy || 'deadline';
-    
+
     return true;
   } catch (error) {
     console.warn('Erro ao carregar filtros do cache:', error);
@@ -106,34 +106,34 @@ function clearAllFilters() {
   state.dueDateEnd = '';
   state.searchQuery = '';
   state.sortBy = 'deadline';
-  
+
   // Atualizar UI
   const searchInput = document.getElementById('searchInput');
   if (searchInput) searchInput.value = '';
-  
+
   const startInput = document.getElementById('filterDueDateStart');
   if (startInput) startInput.value = '';
-  
+
   const endInput = document.getElementById('filterDueDateEnd');
   if (endInput) endInput.value = '';
-  
+
   const sortSelect = document.getElementById('sortSelect');
   if (sortSelect) sortSelect.value = '';
-  
+
   // Re-inicializar todos os multiselects
   FILTER_MULTISELECTS.forEach(config => setupMultiselect(config));
-  
+
   // Atualizar highlights
   const wrapper = searchInput?.closest('.filter-input-wrapper');
   toggleFilterHighlight(wrapper, false);
-  
+
   const dueDateCard = startInput?.closest('.filter-card');
   toggleFilterHighlight(dueDateCard, false);
-  
+
   // Salvar e recarregar atividades
   saveFiltersToCache();
   loadActivitiesData();
-  
+
   window.showMessage?.('Todos os filtros foram limpos', 'success');
 }
 
@@ -338,7 +338,7 @@ async function loadFilterOptions() {
 
     // Tentar carregar filtros do cache
     const hasCache = loadFiltersFromCache();
-    
+
     // Se não houver cache, inicializar com TODAS selecionadas por padrão
     if (!hasCache) {
       // Sempre inicializar com todas as empresas selecionadas na primeira vez
@@ -348,28 +348,28 @@ async function loadFilterOptions() {
       state.selectedProjectIds = state.projectsDirectory.map(p => p.id);
       state.selectedProcessIds = state.processesDirectory.map(p => p.id);
     }
-    
+
     // Aplicar os valores dos filtros restaurados nos campos do UI
     const searchInput = document.getElementById('searchInput');
     if (searchInput && state.searchQuery) {
       searchInput.value = state.searchQuery;
     }
-    
+
     const startInput = document.getElementById('filterDueDateStart');
     if (startInput && state.dueDateStart) {
       startInput.value = state.dueDateStart;
     }
-    
+
     const endInput = document.getElementById('filterDueDateEnd');
     if (endInput && state.dueDateEnd) {
       endInput.value = state.dueDateEnd;
     }
-    
+
     const sortSelect = document.getElementById('sortSelect');
     if (sortSelect && state.sortBy && state.sortBy !== 'deadline') {
       sortSelect.value = state.sortBy;
     }
-    
+
   } catch (error) {
     console.error('Erro ao carregar opções de filtro:', error);
     window.showMessage?.('Não foi possível carregar as opções de filtro.', 'error');
@@ -589,7 +589,7 @@ function getProcessOwnerOptions() {
 function updateProcessOwnersFromActivities() {
   // Extrair donos únicos das atividades de processos
   const ownersMap = new Map();
-  
+
   (state.activities || []).forEach(activity => {
     if (activity.type === 'process') {
       const ownerName = (activity.owner_name || activity.process_owner_name || '').trim();
@@ -602,11 +602,11 @@ function updateProcessOwnersFromActivities() {
       }
     }
   });
-  
+
   const newOwnersList = Array.from(ownersMap.values());
   const ownersChanged = JSON.stringify(state.processOwnersDirectory) !== JSON.stringify(newOwnersList);
   state.processOwnersDirectory = newOwnersList;
-  
+
   // Se a lista mudou, atualizar o multiselect
   if (ownersChanged) {
     const ownerMultiselectConfig = FILTER_MULTISELECTS.find(m => m.key === 'processOwners');
@@ -616,12 +616,12 @@ function updateProcessOwnersFromActivities() {
         const validOwnerIds = newOwnersList.map(o => o.id);
         state.selectedProcessOwnerIds = state.selectedProcessOwnerIds.filter(id => validOwnerIds.includes(id));
       }
-      
+
       // Se não há mais seleções mas há opções e está configurado para selecionar todos por padrão
       if (state.selectedProcessOwnerIds.length === 0 && newOwnersList.length > 0 && ownerMultiselectConfig.selectAllByDefault) {
         state.selectedProcessOwnerIds = newOwnersList.map(o => o.id);
       }
-      
+
       // Re-inicializar o multiselect
       setupMultiselect(ownerMultiselectConfig);
     }
@@ -836,7 +836,7 @@ function initializeFilterCollapse() {
 function initializeClearFiltersButton() {
   const clearButton = document.getElementById('filtersClearButton');
   if (!clearButton) return;
-  
+
   clearButton.addEventListener('click', () => {
     if (confirm('Tem certeza que deseja limpar todos os filtros?')) {
       clearAllFilters();
@@ -1483,7 +1483,7 @@ async function updateIncidentSummary() {
     if (!payload.success) {
       throw new Error(payload.error || 'Erro ao carregar ocorrências');
     }
-    const { positive = {count:0, score:0}, negative = {count:0, score:0} } = payload.data || {};
+    const { positive = { count: 0, score: 0 }, negative = { count: 0, score: 0 } } = payload.data || {};
     const totalScore = (positive.score || 0) + (negative.score || 0);
     setElementText('incidentPositiveValue', formatIncidentScore(positive.score) + ` (${positive.count || 0})`);
     setElementText('incidentNegativeValue', formatIncidentScore(negative.score) + ` (${negative.count || 0})`);
@@ -1626,9 +1626,16 @@ function getFilteredActivities() {
     state.selectedProjectIds.length &&
     state.selectedProjectIds.length < projectsTotal
   ) {
-    activities = activities.filter(activity =>
-      activity.type !== 'project' || state.selectedProjectIds.includes(activity.id)
-    );
+    activities = activities.filter(activity => {
+      if (activity.type !== 'project') {
+        return true;
+      }
+      const projectId = Number(activity.project_id ?? activity.id);
+      if (!projectId) {
+        return false;
+      }
+      return state.selectedProjectIds.includes(projectId);
+    });
   }
 
   if (processNoneSelected) {
@@ -1744,6 +1751,7 @@ function createActivityElement(activity) {
   wrapper.dataset.title = activity.title || '';
   wrapper.dataset.description = activity.description || '';
   wrapper.dataset.companyId = activity.company_id || '';
+  wrapper.dataset.projectId = activity.project_id || '';
   wrapper.dataset.instanceId = activity.instance_id || activity.id;
 
   const statusIndicatorClass = getStatusIndicatorClass(activity);
@@ -1772,18 +1780,12 @@ function createActivityElement(activity) {
           </button>
       `
     : `
-          <button class="action-btn action-btn--add-hours" title="Adicionar Horas" data-action="add-hours">
+          <button class="action-btn action-btn--edit" title="Editar atividade" data-action="edit">
             <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-              <circle cx="12" cy="12" r="10"></circle>
-              <polyline points="12 6 12 12 16 14"></polyline>
+              <path d="M12 20h9"></path>
+              <path d="M16.5 3.5c-.393-.393-1.03-.393-1.424 0L6.5 12.086v3.914h3.914l8.576-8.576c.393-.393.393-1.03 0-1.424l-2.49-2.49z"></path>
             </svg>
-            + Horas
-          </button>
-          <button class="action-btn action-btn--comment" title="Adicionar Comentário" data-action="add-comment">
-            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-              <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"></path>
-            </svg>
-            Comentar
+            Editar
           </button>
           <button class="action-btn action-btn--complete" title="Finalizar" data-action="complete">
             <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
@@ -1832,10 +1834,9 @@ function createActivityElement(activity) {
 
     titleContent = `
       <span class="activity-label">Processo:</span>
-      ${
-        processCode
-          ? `<span class="activity-code">${processCode}</span>${needsSeparator ? '<span class="process-separator">-</span>' : ''}`
-          : ''
+      ${processCode
+        ? `<span class="activity-code">${processCode}</span>${needsSeparator ? '<span class="process-separator">-</span>' : ''}`
+        : ''
       }
       <span class="process-name">${processDisplayName || ''}</span>
     `.trim();
@@ -1860,10 +1861,9 @@ function createActivityElement(activity) {
 
     titleContent = `
       <span class="activity-label">Projeto:</span>
-      ${
-        projectCode
-          ? `<span class="activity-code">${projectCode}</span>${needsSeparator ? '<span class="process-separator">-</span>' : ''}`
-          : ''
+      ${projectCode
+        ? `<span class="activity-code">${projectCode}</span>${needsSeparator ? '<span class="process-separator">-</span>' : ''}`
+        : ''
       }
       <span class="process-name">${projectName}</span>
     `.trim();
@@ -3188,39 +3188,111 @@ document.getElementById('formAddHours')?.addEventListener('submit', async functi
   e.preventDefault();
 
   const formData = new FormData(this);
-  const data = {
-    activity_id: parseInt(currentActivity.id),
-    activity_type: currentActivity.type,
-    work_date: formData.get('work_date'),
-    hours: parseFloat(formData.get('hours')),
-    description: formData.get('description')
-  };
+  const hoursToAdd = parseFloat(formData.get('hours'));
+  const description = formData.get('description');
+  const date = formData.get('work_date'); // Changed from 'date' to 'work_date' to match form field name
 
-  console.log('Submitting hours:', data);
+  if (!currentActivity) {
+    window.showMessage('❌ Dados da atividade incompletos', 'error');
+    return;
+  }
+
+  console.log('Adding hours to activity:', currentActivity.id, 'Type:', currentActivity.type);
 
   try {
-    const response = await fetch('/my-work/api/work-hours', {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify(data)
+    // Para PROJETOS: usar nova API de colaboradores
+    if (currentActivity.type === 'project' && currentActivity.company_id && currentActivity.project_id) {
+      // Registrar horas via nova API de colaboradores
+      const response = await fetch(
+        `/api/companies/${currentActivity.company_id}/projects/${currentActivity.project_id}/activities/${currentActivity.id}/collaborators`,
+        {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            employee_id: null,  // TODO: pegar do current_user quando disponível
+            role: 'executor',
+            hours: hoursToAdd,
+            notes: description || `Adicionado ${hoursToAdd}h em ${new Date(date).toLocaleDateString('pt-BR')}`
+          })
+        }
+      );
+
+      const data = await response.json();
+
+      if (!response.ok || !data.success) {
+        throw new Error(data.error || 'Erro ao registrar horas');
+      }
+
+      window.showMessage(`✅ ${hoursToAdd}h registradas com sucesso!`, 'success');
+      closeModal('modalAddHours');
+      loadActivitiesData();
+      return; // IMPORTANTE: return aqui para não executar o código antigo
+    }
+
+    // Para PROCESSOS ou fallback: usar método antigo
+    if (!currentActivity.company_id || !currentActivity.project_id) {
+      window.showMessage('❌ Dados da atividade incompletos', 'error');
+      return;
+    }
+
+    // Fetch current activity data
+    const fetchResponse = await fetch(
+      `/api/companies/${currentActivity.company_id}/projects/${currentActivity.project_id}/activities`
+    );
+    const fetchData = await fetchResponse.json();
+
+    if (!fetchResponse.ok || !fetchData.success) {
+      throw new Error('Erro ao buscar dados da atividade');
+    }
+
+    const activities = fetchData.activities || [];
+    const activity = activities.find(a => a.id === currentActivity.id);
+
+    if (!activity) {
+      throw new Error('Atividade não encontrada');
+    }
+
+    // Add log entry (hours tracking will be implemented later with proper API)
+    const logs = activity.logs || [];
+    logs.push({
+      timestamp: new Date().toISOString(),
+      text: description || `Adicionado ${hoursToAdd}h em ${new Date(date).toLocaleDateString('pt-BR')}`,
+      type: 'hours',
+      hours: hoursToAdd,
+      date: date
     });
 
-    const result = await response.json();
+    // Update activity - only updating logs, NOT touching amount or worked_hours
+    const updateResponse = await fetch(
+      `/api/companies/${currentActivity.company_id}/projects/${currentActivity.project_id}/activities/${currentActivity.id}`,
+      {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          what: activity.what,
+          who: activity.who,
+          when: activity.when,
+          how: activity.how,
+          amount: activity.amount,  // Keep original budget value
+          score_weight: activity.score_weight || 1,
+          observations: activity.observations,
+          logs: logs
+        })
+      }
+    );
 
-    if (result.success) {
-      window.showMessage(`✅ ${data.hours}h registradas com sucesso!`, 'success');
-      closeModal('modalAddHours');
+    const updateData = await updateResponse.json();
 
-      // Recarregar dados
-      loadActivitiesData();
-    } else {
-      window.showMessage(`❌ Erro: ${result.error}`, 'error');
+    if (!updateResponse.ok || !updateData.success) {
+      throw new Error(updateData.message || 'Erro ao atualizar atividade');
     }
+
+    window.showMessage(`✅ ${hoursToAdd}h registradas com sucesso! (Registro em log apenas)`, 'info');
+    closeModal('modalAddHours');
+    loadActivitiesData();
   } catch (error) {
     console.error('Erro ao adicionar horas:', error);
-    window.showMessage('❌ Erro ao registrar horas', 'error');
+    window.showMessage(`❌ ${error.message}`, 'error');
   }
 });
 
@@ -3229,36 +3301,73 @@ document.getElementById('formAddComment')?.addEventListener('submit', async func
   e.preventDefault();
 
   const formData = new FormData(this);
-  const data = {
-    activity_id: parseInt(currentActivity.id),
-    activity_type: currentActivity.type,
-    comment_type: formData.get('comment_type'),
-    comment: formData.get('comment'),
-    is_private: formData.get('is_private') === 'on'
-  };
+  const comment = formData.get('comment');
+  const commentType = formData.get('comment_type');
 
-  console.log('Submitting comment:', data);
+  if (!currentActivity || !currentActivity.company_id || !currentActivity.project_id) {
+    window.showMessage('❌ Dados da atividade incompletos', 'error');
+    return;
+  }
+
+  console.log('Adding comment to activity:', currentActivity.id);
 
   try {
-    const response = await fetch('/my-work/api/comments', {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify(data)
+    // Fetch current activity data
+    const fetchResponse = await fetch(
+      `/api/companies/${currentActivity.company_id}/projects/${currentActivity.project_id}/activities`
+    );
+    const fetchData = await fetchResponse.json();
+
+    if (!fetchResponse.ok || !fetchData.success) {
+      throw new Error('Erro ao buscar dados da atividade');
+    }
+
+    const activities = fetchData.activities || [];
+    const activity = activities.find(a => a.id === currentActivity.id);
+
+    if (!activity) {
+      throw new Error('Atividade não encontrada');
+    }
+
+    // Add log entry
+    const logs = activity.logs || [];
+    logs.push({
+      timestamp: new Date().toISOString(),
+      text: comment,
+      type: commentType || 'manual'
     });
 
-    const result = await response.json();
+    // Update activity
+    const updateResponse = await fetch(
+      `/api/companies/${currentActivity.company_id}/projects/${currentActivity.project_id}/activities/${currentActivity.id}`,
+      {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          what: activity.what,
+          who: activity.who,
+          when: activity.when,
+          how: activity.how,
+          amount: activity.amount,
+          score_weight: activity.score_weight || 1,
+          observations: activity.observations,
+          logs: logs
+        })
+      }
+    );
 
-    if (result.success) {
-      window.showMessage('✅ Comentário adicionado com sucesso!', 'success');
-      closeModal('modalAddComment');
-    } else {
-      window.showMessage(`❌ Erro: ${result.error}`, 'error');
+    const updateData = await updateResponse.json();
+
+    if (!updateResponse.ok || !updateData.success) {
+      throw new Error(updateData.message || 'Erro ao atualizar atividade');
     }
+
+    window.showMessage('✅ Comentário adicionado com sucesso!', 'success');
+    closeModal('modalAddComment');
+    loadActivitiesData();
   } catch (error) {
     console.error('Erro ao adicionar comentário:', error);
-    window.showMessage('❌ Erro ao adicionar comentário', 'error');
+    window.showMessage(`❌ ${error.message}`, 'error');
   }
 });
 
@@ -3267,49 +3376,82 @@ document.getElementById('formComplete')?.addEventListener('submit', async functi
   e.preventDefault();
 
   const formData = new FormData(this);
-  const data = {
-    activity_id: parseInt(currentActivity.id),
-    activity_type: currentActivity.type,
-    completion_comment: formData.get('completion_comment'),
-    status: 'completed'
-  };
+  const completionComment = formData.get('completion_comment');
+  const today = new Date().toISOString().split('T')[0];
 
-  console.log('Completing activity:', data);
+  if (!currentActivity || !currentActivity.company_id || !currentActivity.project_id) {
+    window.showMessage('❌ Dados da atividade incompletos', 'error');
+    return;
+  }
+
+  console.log('Completing activity:', currentActivity.id);
 
   try {
-    const response = await fetch('/my-work/api/complete', {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify(data)
+    // Fetch current activity data to get logs
+    const fetchResponse = await fetch(
+      `/api/companies/${currentActivity.company_id}/projects/${currentActivity.project_id}/activities`
+    );
+    const fetchData = await fetchResponse.json();
+
+    if (!fetchResponse.ok || !fetchData.success) {
+      throw new Error('Erro ao buscar dados da atividade');
+    }
+
+    const activities = fetchData.activities || [];
+    const activity = activities.find(a => a.id === currentActivity.id);
+
+    if (!activity) {
+      throw new Error('Atividade não encontrada');
+    }
+
+    // Add completion log
+    const logs = activity.logs || [];
+    logs.push({
+      timestamp: new Date().toISOString(),
+      text: completionComment || `Atividade concluída em ${new Date(today).toLocaleDateString('pt-BR')}`,
+      type: 'completion',
+      date: today
     });
 
-    const result = await response.json();
+    // Update activity stage to completed
+    const updateResponse = await fetch(
+      `/api/companies/${currentActivity.company_id}/projects/${currentActivity.project_id}/activities/${currentActivity.id}/stage`,
+      {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          stage: 'completed',
+          completion_date: today,
+          logs: logs
+        })
+      }
+    );
 
-    if (result.success) {
-      window.showMessage('✅ Atividade finalizada com sucesso!', 'success');
-      closeModal('modalComplete');
+    const updateData = await updateResponse.json();
 
-      // Remover atividade da lista
-      setTimeout(() => {
-        const activityElement = document.querySelector(`[data-activity-id="${data.activity_id}"]`);
-        if (activityElement) {
-          activityElement.style.animation = 'slideOut 0.3s ease-out';
-          setTimeout(() => activityElement.remove(), 300);
-        }
-      }, 500);
-
-      // Recarregar dados
-      setTimeout(() => {
-        loadActivitiesData();
-      }, 1000);
-    } else {
-      window.showMessage(`❌ Erro: ${result.error}`, 'error');
+    if (!updateResponse.ok || !updateData.success) {
+      throw new Error(updateData.message || 'Erro ao finalizar atividade');
     }
+
+    window.showMessage('✅ Atividade finalizada com sucesso!', 'success');
+    closeModal('modalComplete');
+
+    // Remover atividade da lista
+    setTimeout(() => {
+      const activityElement = document.querySelector(`[data-activity-id="${currentActivity.id}"]`);
+      if (activityElement) {
+        activityElement.style.animation = 'slideOut 0.3s ease-out';
+        setTimeout(() => activityElement.remove(), 300);
+      }
+    }, 500);
+
+    // Recarregar dados
+    setTimeout(() => {
+      loadActivitiesData();
+    }, 1000);
   } catch (error) {
     console.error('Erro ao finalizar atividade:', error);
-    window.showMessage('❌ Erro ao finalizar atividade', 'error');
+    window.showMessage(`❌ ${error.message}`, 'error');
   }
 });
 
@@ -3339,6 +3481,9 @@ function initializeActivityActions() {
     const companyId = activity.dataset.companyId ? parseInt(activity.dataset.companyId, 10) : null;
     const instanceId = activity.dataset.instanceId ? parseInt(activity.dataset.instanceId, 10) : activityId;
 
+    // Extract project_id from dataset
+    const projectId = activity.dataset.projectId ? parseInt(activity.dataset.projectId, 10) : null;
+
     // Montar objeto de atividade
     const activityData = {
       id: activityId,
@@ -3354,6 +3499,7 @@ function initializeActivityActions() {
       plan_name: planName,
       description,
       company_id: companyId,
+      project_id: projectId,
       instance_id: instanceId
     };
 
@@ -3365,7 +3511,17 @@ function initializeActivityActions() {
         window.showMessage?.('Não foi possível abrir as informações desta instância.', 'error');
         return;
       }
-      window.location.href = `/grv/company/${companyId}/process/instances/${instanceId}/manage`;
+      const params = new URLSearchParams({ from: 'my-work' });
+      window.location.href = `/grv/company/${companyId}/process/instances/${instanceId}/manage?${params.toString()}`;
+      return;
+    } else if (action === 'edit') {
+      if (!companyId || !projectId || !activityId) {
+        window.showMessage?.('Nao foi possivel abrir o editor desta atividade.', 'error');
+        return;
+      }
+      const params = new URLSearchParams({ activity_id: activityId });
+      params.append('from', 'my-work');
+      window.location.href = `/grv/company/${companyId}/projects/${projectId}/manage?${params.toString()}`;
       return;
     } else if (action === 'add-hours') {
       openModal('modalAddHours', activityData);

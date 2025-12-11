@@ -568,6 +568,8 @@
 <script>
 const companyId = {{ company.id }};
 const instanceId = {{ instance.id }};
+const processUrlParams = new URLSearchParams(window.location.search);
+const returnToMyWork = processUrlParams.get('from') === 'my-work';
 let instanceData = {{ instance | tojson | safe }};
 let collaborators = [];
 let logs = [];
@@ -803,7 +805,9 @@ async function submitCompletion() {
     if (!response.ok) throw new Error('Erro ao concluir instância');
 
     alert('Instância concluída com sucesso!');
-    window.location.href = `/grv/company/${companyId}/process/instances`;
+    if (!redirectToMyWork()) {
+      window.location.href = `/grv/company/${companyId}/process/instances`;
+    }
   } catch (error) {
     console.error('Error completing instance:', error);
     alert('Erro ao concluir instância. Tente novamente.');
@@ -811,7 +815,18 @@ async function submitCompletion() {
 }
 
 function goBack() {
+  if (redirectToMyWork()) {
+    return;
+  }
   window.location.href = `/grv/company/${companyId}/process/instances`;
+}
+
+function redirectToMyWork() {
+  if (!returnToMyWork) {
+    return false;
+  }
+  window.location.href = '/my-work/';
+  return true;
 }
 </script>
 {% endblock %}

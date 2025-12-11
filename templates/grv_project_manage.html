@@ -697,6 +697,22 @@
     border-top: 1px solid rgba(148, 163, 184, 0.25);
   }
 
+  .log-columns {
+    display: flex;
+    gap: 16px;
+    flex-wrap: wrap;
+    margin-bottom: 12px;
+  }
+
+  .log-block {
+    flex: 1;
+    min-width: 220px;
+  }
+
+  .log-block .log-entries {
+    max-height: 220px;
+  }
+
   .log-section h4 {
     margin: 0 0 12px 0;
     font-size: 13px;
@@ -912,11 +928,11 @@
     background: #f8fafc !important;
   }
 
-  .ck.ck-editor__main > .ck-editor__editable {
+  .ck.ck-editor__main>.ck-editor__editable {
     border-radius: 0 0 12px 12px !important;
   }
 
-  .ck.ck-editor__main > .ck-editor__editable:focus {
+  .ck.ck-editor__main>.ck-editor__editable:focus {
     border-color: #2563eb !important;
     box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.18) !important;
   }
@@ -959,8 +975,8 @@
         <span><strong>Código:</strong> {{ project.code or '-' }}</span>
         <span><strong>Responsável:</strong> {{ project.responsible_name or 'Não definido' }}</span>
         <span><strong>Portfólio:</strong> {{ project.plan_name or 'Sem vínculo' }}</span>
-        <span><strong>Prazo:</strong> 
-          {{ project.start_date if project.start_date else '-' }} – 
+        <span><strong>Prazo:</strong>
+          {{ project.start_date if project.start_date else '-' }} –
           {{ project.end_date if project.end_date else '-' }}
         </span>
       </div>
@@ -974,13 +990,15 @@
 
     <div class="surface-card" style="padding:24px;">
       <div class="top-actions">
-        <a href="{{ url_for('grv.grv_projects_projects', company_id=company.id) }}" class="btn-back" data-ref="32">← Voltar para Projetos</a>
+        <a href="{{ url_for('grv.grv_projects_projects', company_id=company.id) }}" class="btn-back" data-ref="32">←
+          Voltar para Projetos</a>
         <button type="button" id="btnNewActivity" class="btn-new-activity" data-ref="01">➕ Nova Atividade</button>
       </div>
 
       <div class="kanban-feedback" id="feedback" hidden></div>
 
-      <div class="kanban-board-wrapper" id="kanbanBoard" data-project-id="{{ project.id }}" data-company-id="{{ company.id }}">
+      <div class="kanban-board-wrapper" id="kanbanBoard" data-project-id="{{ project.id }}"
+        data-company-id="{{ company.id }}">
         <div class="kanban-board">
           {% for stage in stages %}
           <div class="kanban-column" data-kanban-column data-stage="{{ stage.slug }}">
@@ -1012,7 +1030,7 @@
     </header>
     <form id="activityForm" class="activity-form">
       <input type="hidden" id="activityId">
-      
+
       <!-- Campos em duas colunas -->
       <div class="form-two-cols">
         <div class="field">
@@ -1030,26 +1048,33 @@
           <input type="date" id="activityWhen" data-ref="19">
         </div>
         <div class="field">
+          <label for="activityEstimatedHours">Horas Previstas</label>
+          <input type="number" id="activityEstimatedHours" step="0.5" min="0" placeholder="Ex: 8.0" data-ref="33">
+          <small class="field-hint">Estimativa de horas necessárias para concluir a atividade.</small>
+        </div>
+        <div class="field">
           <label for="activityAmount">Orçamento (R$)</label>
           <input type="number" id="activityAmount" step="0.01" min="0" placeholder="0.00" data-ref="20">
         </div>
         <div class="field">
           <label for="activityScoreWeight">Peso de Pontuação</label>
-          <input type="number" id="activityScoreWeight" step="0.1" min="0.1" value="1" inputmode="decimal" data-ref="32">
+          <input type="number" id="activityScoreWeight" step="0.1" min="0.1" value="1" inputmode="decimal"
+            data-ref="32">
           <small class="field-hint">Multiplica a pontuação da empresa para esta atividade.</small>
         </div>
       </div>
-      
+
       <!-- Campo Como em linha completa -->
       <div class="field">
         <label for="activityHow">Como? (Método/Processo)</label>
         <textarea id="activityHow" placeholder="Descreva como será executada" data-ref="25"></textarea>
       </div>
-      
+
       <!-- Campo Observações com editor rico -->
       <div class="field">
         <label for="activityObservations">Observações</label>
-        <textarea id="activityObservations" class="rich-text-editor" placeholder="Informações adicionais" data-ref="26"></textarea>
+        <textarea id="activityObservations" class="rich-text-editor" placeholder="Informações adicionais"
+          data-ref="26"></textarea>
       </div>
 
       <!-- Seção de Log/Diário -->
@@ -1115,7 +1140,8 @@
     </div>
     <div class="field">
       <label>Motivo (Opcional)</label>
-      <textarea id="cancellationNote" placeholder="Por que está revertendo a conclusão?" rows="2" data-ref="29"></textarea>
+      <textarea id="cancellationNote" placeholder="Por que está revertendo a conclusão?" rows="2"
+        data-ref="29"></textarea>
     </div>
     <div class="confirmation-popup-actions">
       <button type="button" class="secondary" id="cancelCancellationPopup" data-ref="10">Voltar</button>
@@ -1149,7 +1175,7 @@
         <label for="transferNote">Observação (Opcional)</label>
         <textarea id="transferNote" placeholder="Motivo da transferência..." rows="3" data-ref="30"></textarea>
       </div>
-      
+
       <!-- Seção de Histórico de Transferências -->
       <div class="transfer-history-section" id="transferHistorySection" style="display:none;">
         <h4>📋 Histórico de Transferências</h4>
@@ -1169,10 +1195,10 @@
 {% block scripts %}
 {{ super() }}
 <script>
-(function() {
-  const companyId = {{ company.id }};
-  const projectId = {{ project.id }};
-  const projectCode = '{{ project.code }}';
+  (function () {
+    const companyId = {{ company.id }};
+    const projectId = {{ project.id }};
+    const projectCode = '{{ project.code }}';
 
   const kanbanBoard = document.getElementById('kanbanBoard');
   const feedback = document.getElementById('feedback');
@@ -1189,6 +1215,7 @@
   const fieldWho = document.getElementById('activityWho');
   const fieldWhen = document.getElementById('activityWhen');
   const fieldHow = document.getElementById('activityHow');
+  const fieldEstimatedHours = document.getElementById('activityEstimatedHours');
   const fieldAmount = document.getElementById('activityAmount');
   const fieldScoreWeight = document.getElementById('activityScoreWeight');
   const fieldObservations = document.getElementById('activityObservations');
@@ -1196,12 +1223,90 @@
   // Log/Diary elements
   const logSection = document.getElementById('logSection');
   const logEntries = document.getElementById('logEntries');
+  const logColumns = document.createElement('div');
+  logColumns.className = 'log-columns';
+  logSection.insertBefore(logColumns, logEntries);
+  logColumns.appendChild(logEntries);
+  const hoursDisplayWrapper = document.createElement('div');
+  hoursDisplayWrapper.className = 'log-block hours-block';
+  hoursDisplayWrapper.innerHTML = `
+    <h4>⏱ Horas registradas</h4>
+    <div class="log-entries" id="hoursDisplayEntries">
+      <div style="text-align:center;color:#94a3b8;font-size:12px;">Sem registros ainda</div>
+    </div>
+  `;
+  logColumns.appendChild(hoursDisplayWrapper);
+  const hoursDisplayEntries = hoursDisplayWrapper.querySelector('#hoursDisplayEntries');
   const btnAddLog = document.getElementById('btnAddLog');
-  
+  const btnAddHours = document.createElement('button');
+  btnAddHours.type = 'button';
+  btnAddHours.className = 'btn-add-log';
+  btnAddHours.id = 'btnAddHours';
+  btnAddHours.dataset.ref = '04';
+  btnAddHours.textContent = '⏱ Registrar Horas';
+  btnAddHours.style.marginLeft = '12px';
+  btnAddLog.after(btnAddHours);
+
   const logPopup = document.getElementById('logPopup');
   const logText = document.getElementById('logText');
   const btnCancelLog = document.getElementById('cancelLogPopup');
   const btnConfirmLog = document.getElementById('confirmLogPopup');
+  const hoursPopup = document.createElement('div');
+  hoursPopup.id = 'hoursPopup';
+  hoursPopup.className = 'confirmation-popup-backdrop';
+  hoursPopup.setAttribute('role', 'dialog');
+  hoursPopup.setAttribute('aria-hidden', 'true');
+  hoursPopup.innerHTML = `
+    <div class="confirmation-popup">
+      <h3>⏱ Registrar Horas</h3>
+      <div class="field">
+        <label for="hoursEmployee">Colaborador</label>
+        <select id="hoursEmployee" data-ref="12">
+          <option value="">Selecione um colaborador</option>
+        </select>
+      </div>
+      <div class="field">
+        <label for="hoursRole">Papel</label>
+        <select id="hoursRole" data-ref="13">
+          <option value="executor">Executor</option>
+          <option value="responsible">Responsável</option>
+        </select>
+      </div>
+      <div class="field">
+        <label for="hoursAmount">Horas Trabalhadas</label>
+        <input type="number" id="hoursAmount" step="0.25" min="0" placeholder="Ex: 2.5" data-ref="14">
+      </div>
+      <div class="field">
+        <label for="hoursNotes">Observação (opcional)</label>
+        <textarea id="hoursNotes" rows="3" placeholder="Anote o que foi executado..." data-ref="15"></textarea>
+      </div>
+      <div class="hours-summary" id="hoursSummary" style="margin-top:16px;">
+        <p><strong>Estimado:</strong> <span id="hoursEstimated">0</span>h</p>
+        <p><strong>Realizado:</strong> <span id="hoursWorked">0</span>h</p>
+        <p><strong>Progresso:</strong> <span id="hoursProgress">0</span>%</p>
+        <h4 style="margin-top:12px;">Horas registradas</h4>
+        <div id="hoursCollaboratorsList" class="log-entries">
+          <div style="text-align:center;color:#94a3b8;font-size:12px;">Sem registros ainda</div>
+        </div>
+      </div>
+      <div class="confirmation-popup-actions">
+        <button type="button" class="secondary" id="cancelHoursPopup" data-ref="16">Cancelar</button>
+        <button type="button" class="primary" id="confirmHoursPopup" data-ref="17">Registrar</button>
+      </div>
+    </div>
+  `;
+  document.body.appendChild(hoursPopup);
+
+  const hoursEmployeeSelect = hoursPopup.querySelector('#hoursEmployee');
+  const hoursRoleSelect = hoursPopup.querySelector('#hoursRole');
+  const hoursAmount = hoursPopup.querySelector('#hoursAmount');
+  const hoursNotes = hoursPopup.querySelector('#hoursNotes');
+  const hoursEstimated = hoursPopup.querySelector('#hoursEstimated');
+  const hoursWorked = hoursPopup.querySelector('#hoursWorked');
+  const hoursProgress = hoursPopup.querySelector('#hoursProgress');
+  const hoursCollaboratorsList = hoursPopup.querySelector('#hoursCollaboratorsList');
+  const btnCancelHours = hoursPopup.querySelector('#cancelHoursPopup');
+  const btnConfirmHours = hoursPopup.querySelector('#confirmHoursPopup');
 
   const completionPopup = document.getElementById('completionPopup');
   const completionDate = document.getElementById('completionDate');
@@ -1232,6 +1337,12 @@
   let currentActivity = null;  // Para rastrear atividade sendo editada
   let pendingMoveData = null;  // Para drag and drop com confirmação
   let activityToTransfer = null;  // Para rastrear atividade sendo transferida
+  const urlParams = new URLSearchParams(window.location.search);
+  let pendingActivityToOpen = Number.parseInt(urlParams.get('activity_id'), 10);
+  const returnToMyWork = urlParams.get('from') === 'my-work';
+  if (!Number.isFinite(pendingActivityToOpen)) {
+    pendingActivityToOpen = null;
+  }
 
   const stages = {{ stages | tojson }};
 
@@ -1269,7 +1380,7 @@
   }
 
   // ===== LOG/DIARY FUNCTIONS =====
-  
+
   function renderLogs(logs) {
     if (!logs || !logs.length) {
       logEntries.innerHTML = '<div style="text-align:center;color:#94a3b8;font-size:12px;">Nenhum registro ainda</div>';
@@ -1279,11 +1390,11 @@
     logEntries.innerHTML = logs.map(log => {
       const date = new Date(log.timestamp);
       const dateStr = date.toLocaleString('pt-BR');
-      
+
       let typeClass = '';
       let icon = '📝';
       let typeLabel = 'Registro';
-      
+
       if (log.type === 'completion') {
         typeClass = 'completion';
         icon = '✅';
@@ -1297,9 +1408,9 @@
         icon = '🔄';
         typeLabel = 'Transferência';
       }
-      
+
       let logContent = `<div class="log-entry-text">${log.text}</div>`;
-      
+
       // Add additional info for transfer logs
       if (log.type === 'transfer') {
         logContent += `
@@ -1312,7 +1423,7 @@
           logContent += `<div style="font-size: 11px; color: #6b7280; margin-top: 2px; font-style: italic;">"${log.note}"</div>`;
         }
       }
-      
+
       return `
         <div class="log-entry ${typeClass}">
           <div class="log-entry-header">
@@ -1361,13 +1472,98 @@
     notify('Registro adicionado.', 'info');
   }
 
+  function openHoursPopup() {
+    if (!currentActivity || !currentActivity.id) {
+      notify('Salve a atividade antes de registrar horas.', 'warning');
+      return;
+    }
+    loadEmployees();
+    hoursPopup.classList.add('open');
+    hoursPopup.setAttribute('aria-hidden', 'false');
+    loadHoursSummary();
+  }
+
+  function closeHoursPopup() {
+    hoursPopup.classList.remove('open');
+    hoursPopup.setAttribute('aria-hidden', 'true');
+    hoursAmount.value = '';
+    hoursNotes.value = '';
+  }
+
+  async function loadHoursSummary() {
+    if (!currentActivity || !currentActivity.id) {
+      return;
+    }
+    try {
+      const response = await fetch(`/grv/api/companies/${companyId}/projects/${projectId}/activities/${currentActivity.id}/hours-summary`);
+      const data = await response.json();
+      if (!response.ok || !data.success) {
+        throw new Error(data.error || data.message || 'Erro ao carregar resumo de horas.');
+      }
+      const summary = data.data || {};
+      const estimated = Number(summary.estimated_hours ?? summary.total_estimated ?? 0) || 0;
+      const worked = Number(summary.worked_hours ?? summary.total_worked ?? 0) || 0;
+      const percent = Number(summary.progress_percent ?? 0) || 0;
+      hoursEstimated.textContent = estimated.toLocaleString('pt-BR', { minimumFractionDigits: 0, maximumFractionDigits: 2 });
+      hoursWorked.textContent = worked.toLocaleString('pt-BR', { minimumFractionDigits: 0, maximumFractionDigits: 2 });
+      hoursProgress.textContent = percent.toLocaleString('pt-BR', { minimumFractionDigits: 0, maximumFractionDigits: 2 });
+      const collaborators = summary.collaborators || [];
+      renderHoursEntries(collaborators);
+      if (hoursDisplayEntries) {
+        hoursDisplayEntries.innerHTML = hoursCollaboratorsList.innerHTML;
+      }
+    } catch (error) {
+      console.error('Erro ao carregar resumo de horas:', error);
+    }
+  }
+
+  async function submitHoursEntry() {
+    if (!currentActivity || !currentActivity.id) {
+      notify('Salve a atividade antes de registrar horas.', 'warning');
+      return;
+    }
+    const employeeId = hoursEmployeeSelect.value;
+    const hoursValue = parseFloat(hoursAmount.value);
+    if (!employeeId) {
+      notify('Selecione um colaborador.', 'error');
+      return;
+    }
+    if (!hoursValue || hoursValue <= 0) {
+      notify('Informe um número válido de horas.', 'error');
+      return;
+    }
+    const payload = {
+      employee_id: parseInt(employeeId, 10),
+      role: hoursRoleSelect.value || 'executor',
+      hours: hoursValue,
+      notes: hoursNotes.value.trim() || ''
+    };
+    try {
+      const response = await fetch(`/grv/api/companies/${companyId}/projects/${projectId}/activities/${currentActivity.id}/collaborators`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(payload)
+      });
+      const data = await response.json();
+      if (!response.ok || !data.success) {
+        throw new Error(data.error || data.message || 'Erro ao registrar horas.');
+      }
+      notify('Horas registradas.', 'success');
+      hoursAmount.value = '';
+      hoursNotes.value = '';
+      loadHoursSummary();
+    } catch (error) {
+      notify(error.message, 'error');
+    }
+  }
+
   function openCompletionPopup(activityId, targetStage, dropzone, previousColumn) {
     const today = new Date().toISOString().split('T')[0];
     completionDate.value = today;
     completionNote.value = '';
-    
+
     pendingMoveData = { activityId, targetStage, dropzone, previousColumn };
-    
+
     completionPopup.classList.add('open');
     completionPopup.setAttribute('aria-hidden', 'false');
     completionDate.focus();
@@ -1376,7 +1572,7 @@
   function closeCompletionPopup(revert = false) {
     completionPopup.classList.remove('open');
     completionPopup.setAttribute('aria-hidden', 'true');
-    
+
     if (revert && pendingMoveData) {
       // Reverter movimento
       const { previousColumn } = pendingMoveData;
@@ -1388,7 +1584,7 @@
         }
       }
     }
-    
+
     pendingMoveData = null;
     draggedCard = null;
     originColumn = null;
@@ -1411,7 +1607,7 @@
       const activity = activities.find(a => a.id == activityId);
       if (activity) {
         if (!activity.logs) activity.logs = [];
-        
+
         activity.logs.push({
           timestamp: new Date().toISOString(),
           text: note || `Atividade concluída em ${new Date(date).toLocaleDateString('pt-BR')}`,
@@ -1424,7 +1620,7 @@
       const response = await fetch(`/api/companies/${companyId}/projects/${projectId}/activities/${activityId}/stage`, {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ 
+        body: JSON.stringify({
           stage: targetStage,
           completion_date: date,
           logs: activity ? activity.logs : []
@@ -1432,7 +1628,7 @@
       });
 
       const data = await response.json();
-      
+
       if (!response.ok || !data.success) {
         throw new Error(data.message || 'Erro ao concluir atividade');
       }
@@ -1444,7 +1640,7 @@
 
       const stageName = stages.find(s => s.slug === targetStage)?.title || targetStage;
       notify(`Atividade concluída em ${new Date(date).toLocaleDateString('pt-BR')}.`, 'info');
-      
+
       if (dropzone && previousColumn) {
         updateColumnState(dropzone.closest('[data-kanban-column]'));
         updateColumnState(previousColumn);
@@ -1461,9 +1657,9 @@
     const today = new Date().toISOString().split('T')[0];
     cancellationDate.value = today;
     cancellationNote.value = '';
-    
+
     pendingMoveData = { activityId, targetStage, dropzone, previousColumn };
-    
+
     cancellationPopup.classList.add('open');
     cancellationPopup.setAttribute('aria-hidden', 'false');
     cancellationDate.focus();
@@ -1472,7 +1668,7 @@
   function closeCancellationPopup(revert = false) {
     cancellationPopup.classList.remove('open');
     cancellationPopup.setAttribute('aria-hidden', 'true');
-    
+
     if (revert && pendingMoveData) {
       // Reverter movimento
       const { previousColumn } = pendingMoveData;
@@ -1484,7 +1680,7 @@
         }
       }
     }
-    
+
     pendingMoveData = null;
     draggedCard = null;
     originColumn = null;
@@ -1507,14 +1703,14 @@
       const activity = activities.find(a => a.id == activityId);
       if (activity) {
         if (!activity.logs) activity.logs = [];
-        
+
         activity.logs.push({
           timestamp: new Date().toISOString(),
           text: note || `Conclusão cancelada em ${new Date(date).toLocaleDateString('pt-BR')}`,
           type: 'cancellation',
           date: date
         });
-        
+
         // Remover data de conclusão
         activity.completion_date = null;
       }
@@ -1523,7 +1719,7 @@
       const response = await fetch(`/api/companies/${companyId}/projects/${projectId}/activities/${activityId}/stage`, {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ 
+        body: JSON.stringify({
           stage: targetStage,
           completion_date: null,
           logs: activity ? activity.logs : []
@@ -1531,7 +1727,7 @@
       });
 
       const data = await response.json();
-      
+
       if (!response.ok || !data.success) {
         throw new Error(data.message || 'Erro ao cancelar conclusão');
       }
@@ -1542,7 +1738,7 @@
 
       const stageName = stages.find(s => s.slug === targetStage)?.title || targetStage;
       notify(`Conclusão cancelada. Atividade movida para ${stageName}.`, 'info');
-      
+
       if (dropzone && previousColumn) {
         updateColumnState(dropzone.closest('[data-kanban-column]'));
         updateColumnState(previousColumn);
@@ -1557,19 +1753,19 @@
 
 
   // ===== TRANSFER FUNCTIONS =====
-  
+
   async function loadProjectsForTransfer() {
     try {
       const response = await fetch(`/api/companies/${companyId}/projects`);
       const data = await response.json();
-      
+
       if (!response.ok || !data.success) {
         throw new Error(data.message || 'Erro ao carregar projetos');
       }
-      
+
       // Clear existing options
       targetProjectSelect.innerHTML = '<option value="">Selecione um projeto...</option>';
-      
+
       // Add projects (exclude current project)
       data.projects.forEach(project => {
         if (project.id !== projectId) {
@@ -1579,15 +1775,15 @@
           targetProjectSelect.appendChild(option);
         }
       });
-      
+
     } catch (error) {
       notify(error.message, 'error');
     }
   }
-  
+
   function openTransferModal(activity) {
     activityToTransfer = activity;
-    
+
     // Show activity info
     selectedActivityInfo.innerHTML = `
       <div class="activity-code">${activity.code || '-'}</div>
@@ -1598,40 +1794,40 @@
         ${activity.score_weight ? ` | Peso: ${formatScoreWeight(activity.score_weight)}` : ''}
       </div>
     `;
-    
+
     // Reset form
     targetProjectSelect.value = '';
     transferNote.value = '';
-    
+
     // Load projects
     loadProjectsForTransfer();
-    
+
     // Load transfer history
     loadTransferHistory(activity);
-    
+
     // Show modal
     transferModal.classList.add('open');
     transferModal.setAttribute('aria-hidden', 'false');
   }
-  
+
   function closeTransferModal() {
     transferModal.classList.remove('open');
     transferModal.setAttribute('aria-hidden', 'true');
     activityToTransfer = null;
   }
-  
+
   function loadTransferHistory(activity) {
     const transferHistory = activity.transfer_history || [];
-    
+
     if (transferHistory.length === 0) {
       transferHistoryList.innerHTML = '<div style="text-align:center;color:#94a3b8;font-size:12px;">Nenhuma transferência realizada</div>';
       transferHistorySection.style.display = 'none';
       return;
     }
-    
+
     // Show history section
     transferHistorySection.style.display = 'block';
-    
+
     // Use transfer history data directly (names are already included)
     const historyWithNames = transferHistory.map(transfer => ({
       ...transfer,
@@ -1639,10 +1835,10 @@
       to_project_name: transfer.to_project_name || `Projeto ${transfer.to_project_id}`,
       user_name: transfer.user_name || 'Usuário'
     }));
-    
+
     // Sort by timestamp (most recent first)
     historyWithNames.sort((a, b) => new Date(b.timestamp) - new Date(a.timestamp));
-    
+
     // Render history
     transferHistoryList.innerHTML = historyWithNames.map(transfer => {
       const date = new Date(transfer.timestamp);
@@ -1653,7 +1849,7 @@
         hour: '2-digit',
         minute: '2-digit'
       });
-      
+
       return `
         <div class="transfer-history-item">
           <div class="transfer-history-header">
@@ -1670,19 +1866,19 @@
       `;
     }).join('');
   }
-  
+
   async function confirmTransfer() {
     if (!activityToTransfer) {
       notify('Nenhuma atividade selecionada', 'error');
       return;
     }
-    
+
     const targetProjectId = targetProjectSelect.value;
     if (!targetProjectId) {
       notify('Selecione um projeto de destino', 'error');
       return;
     }
-    
+
     try {
       const response = await fetch(`/api/companies/${companyId}/projects/${projectId}/activities/${activityToTransfer.id}/transfer`, {
         method: 'POST',
@@ -1692,17 +1888,17 @@
           note: transferNote.value
         })
       });
-      
+
       const data = await response.json();
-      
+
       if (!response.ok || !data.success) {
         throw new Error(data.message || 'Erro ao transferir atividade');
       }
-      
+
       notify(data.message, 'success');
       closeTransferModal();
       await loadActivities();
-      
+
     } catch (error) {
       notify(error.message, 'error');
     }
@@ -1713,7 +1909,7 @@
     const cards = dropzone ? dropzone.querySelectorAll('[data-activity-card]') : [];
     const countEl = column.querySelector('[data-column-count]');
     const placeholder = dropzone ? dropzone.querySelector('[data-empty-placeholder]') : null;
-    
+
     if (countEl) {
       countEl.textContent = cards.length;
     }
@@ -1760,7 +1956,7 @@
     card.dataset.stage = activity.stage;
 
     const deadline = activity.when ? new Date(activity.when).toLocaleDateString('pt-BR') : '-';
-    const budget = activity.amount ? `R$ ${parseFloat(activity.amount).toLocaleString('pt-BR', {minimumFractionDigits: 2})}` : '-';
+    const budget = activity.amount ? `R$ ${parseFloat(activity.amount).toLocaleString('pt-BR', { minimumFractionDigits: 2 })}` : '-';
     const weightLabel = formatScoreWeight(activity.score_weight);
 
     card.innerHTML = `
@@ -1808,17 +2004,17 @@
     card.querySelector('[data-action="delete"]').addEventListener('click', async (e) => {
       e.stopPropagation();
       if (!confirm(`Confirmar exclusão da atividade "${activity.what}"?`)) return;
-      
+
       try {
         const response = await fetch(`/api/companies/${companyId}/projects/${projectId}/activities/${activity.id}`, {
           method: 'DELETE'
         });
         const data = await response.json();
-        
+
         if (!response.ok || !data.success) {
           throw new Error(data.message || 'Erro ao excluir');
         }
-        
+
         notify(data.message || 'Atividade excluída.', 'info');
         await loadActivities();
       } catch (error) {
@@ -1833,19 +2029,44 @@
     try {
       const response = await fetch(`/api/companies/${companyId}/projects/${projectId}/activities`);
       const data = await response.json();
-      
+
       if (!response.ok || !data.success) {
         throw new Error(data.message || 'Erro ao carregar atividades');
       }
-      
+
       activities = (data.activities || []).map(activity => ({
         ...activity,
         score_weight: normalizeScoreWeight(activity?.score_weight ?? 1)
       }));
       renderKanban();
+      tryOpenPendingActivity();
     } catch (error) {
       notify(error.message, 'error');
     }
+  }
+
+  function tryOpenPendingActivity() {
+    if (!pendingActivityToOpen) {
+      return;
+    }
+    const activity = activities.find(a => Number(a?.id) === pendingActivityToOpen);
+    if (!activity) {
+      return;
+    }
+    pendingActivityToOpen = null;
+    openActivityModal(activity);
+    const currentUrl = new URL(window.location.href);
+    currentUrl.searchParams.delete('activity_id');
+    const newSearch = currentUrl.searchParams.toString();
+    window.history.replaceState(null, '', currentUrl.pathname + (newSearch ? `?${newSearch}` : ''));
+  }
+
+  function redirectToMyWork() {
+    if (!returnToMyWork) {
+      return false;
+    }
+    window.location.href = '/my-work/';
+    return true;
   }
 
 
@@ -1864,7 +2085,7 @@
     column.addEventListener('drop', async (event) => {
       event.preventDefault();
       column.removeAttribute('data-dropping');
-      
+
       if (!draggedCard) return;
 
       const targetStage = column.dataset.stage;
@@ -1914,17 +2135,17 @@
         });
 
         const data = await response.json();
-        
+
         if (!response.ok || !data.success) {
           throw new Error(data.message || 'Erro ao mover atividade');
         }
-        
+
         // Update local data
         const activity = activities.find(a => a.id == activityId);
         if (activity) {
           activity.stage = targetStage;
         }
-        
+
         const stageName = stages.find(s => s.slug === targetStage)?.title || targetStage;
         notify(`Atividade movida para ${stageName}.`, 'info');
       } catch (error) {
@@ -1962,6 +2183,12 @@
   logPopup.addEventListener('click', (event) => {
     if (event.target === logPopup) closeLogPopup();
   });
+  btnAddHours.addEventListener('click', openHoursPopup);
+  btnCancelHours.addEventListener('click', closeHoursPopup);
+  btnConfirmHours.addEventListener('click', submitHoursEntry);
+  hoursPopup.addEventListener('click', (event) => {
+    if (event.target === hoursPopup) closeHoursPopup();
+  });
 
   // Event listeners - Completion Popup
   btnCancelCompletion.addEventListener('click', () => closeCompletionPopup(true));
@@ -1986,18 +2213,19 @@
   });
 
   // ===== EMPLOYEES FUNCTIONS =====
-  
+
   let employees = [];
 
   async function loadEmployees() {
     try {
       const response = await fetch(`/api/companies/${companyId}/employees`);
       const data = await response.json();
-      
-      if (data.success) {
-        employees = data.employees || [];
-        populateEmployeeSelect();
-      } else {
+
+    if (data.success) {
+      employees = data.employees || [];
+      populateEmployeeSelect();
+      populateHoursEmployeeSelect();
+    } else {
         console.error('Erro ao carregar colaboradores:', data.message);
       }
     } catch (error) {
@@ -2018,7 +2246,7 @@
         const option = document.createElement('option');
         option.value = employee.name;
         option.textContent = employee.name;
-        
+
         // Adicionar informações adicionais se disponíveis
         if (employee.department) {
           option.textContent += ` - ${employee.department}`;
@@ -2026,14 +2254,65 @@
         if (employee.role_name) {
           option.textContent += ` (${employee.role_name})`;
         }
-        
+
         select.appendChild(option);
       }
     });
   }
 
+  function populateHoursEmployeeSelect() {
+    if (!hoursEmployeeSelect) return;
+
+    hoursEmployeeSelect.innerHTML = '<option value="">Selecione um colaborador</option>';
+
+    employees.forEach(employee => {
+      if (employee.status === 'active' && employee.id) {
+        const option = document.createElement('option');
+        option.value = employee.id;
+        option.textContent = employee.name;
+
+        if (employee.department) {
+          option.textContent += ` - ${employee.department}`;
+        }
+        if (employee.role_name) {
+          option.textContent += ` (${employee.role_name})`;
+        }
+
+        hoursEmployeeSelect.appendChild(option);
+      }
+    });
+  }
+
+  function renderHoursEntries(entries) {
+    if (!hoursCollaboratorsList) return;
+    if (!entries || entries.length === 0) {
+      hoursCollaboratorsList.innerHTML = `
+        <div class="log-entry" style="border-style:dashed;">
+          <div class="log-entry-text" style="text-align:center;color:#94a3b8;">Sem registros ainda</div>
+        </div>`;
+      return;
+    }
+
+    hoursCollaboratorsList.innerHTML = entries
+      .map(entry => {
+        const displayName = entry.employee_name || 'Colaborador';
+        const roleLabel = entry.role === 'responsible' ? 'Responsável' : 'Executor';
+        const worked = Number(entry.worked_hours || 0).toFixed(2);
+        const note = entry.notes ? `<div class="log-entry-text">${entry.notes}</div>` : '';
+        return `
+          <div class="log-entry">
+            <div class="log-entry-header">
+              <span>⏱ ${displayName} (${roleLabel})</span>
+              <span class="log-entry-date">${worked}h</span>
+            </div>
+            ${note}
+          </div>`;
+      })
+      .join('');
+  }
+
   // ===== RICH TEXT EDITOR FUNCTIONS =====
-  
+
   let ckEditorInstance = null;
   let isEditorInitializing = false;
 
@@ -2074,7 +2353,7 @@
           })
           .then(editor => {
             ckEditorInstance = editor;
-            
+
             // Sincronizar com o campo original quando o modal abrir
             if (currentActivity && currentActivity.observations) {
               editor.setData(currentActivity.observations);
@@ -2132,7 +2411,7 @@
   function openActivityModal(activity) {
     // Primeiro destruir qualquer editor existente
     destroyRichTextEditor();
-    
+
     modalBackdrop.classList.add('open');
     modalBackdrop.setAttribute('aria-hidden', 'false');
 
@@ -2144,9 +2423,10 @@
       fieldWhat.value = activity.what || '';
       fieldWhen.value = activity.when || '';
       fieldHow.value = activity.how || '';
+      fieldEstimatedHours.value = activity.estimated_hours || '';
       fieldAmount.value = activity.amount || '';
       fieldScoreWeight.value = normalizeScoreWeight(activity.score_weight ?? 1);
-      
+
       // Mostrar logs se existirem
       if (activity.logs && activity.logs.length > 0) {
         logSection.style.display = 'block';
@@ -2155,11 +2435,13 @@
         logSection.style.display = 'block';
         renderLogs([]);
       }
+      loadHoursSummary();
     } else {
       modalTitle.textContent = 'Nova Atividade';
       fieldId.value = '';
       form.reset();
       fieldScoreWeight.value = '1';
+      fieldEstimatedHours.value = '';
       logSection.style.display = 'none';
       currentActivity = { logs: [] };
     }
@@ -2174,7 +2456,7 @@
             setRichTextContent(activity.observations);
           }, 100);
         }
-        
+
         // Definir o responsável selecionado após carregar os colaboradores
         if (activity && activity.who) {
           fieldWho.value = activity.who;
@@ -2188,11 +2470,13 @@
   function closeActivityModal() {
     // Destruir o editor antes de fechar o modal
     destroyRichTextEditor();
-    
+
     modalBackdrop.classList.remove('open');
     modalBackdrop.setAttribute('aria-hidden', 'true');
     form.reset();
     fieldId.value = '';
+    fieldEstimatedHours.value = '';
+    redirectToMyWork();
   }
 
   async function submitActivity(event) {
@@ -2205,12 +2489,16 @@
     }
 
     const scoreWeightValue = normalizeScoreWeight(fieldScoreWeight.value || 1);
+    const estimatedHoursRaw = (fieldEstimatedHours.value || '').trim();
+    const parsedEstimatedHours = estimatedHoursRaw ? parseFloat(estimatedHoursRaw.replace(',', '.')) : null;
+    const estimatedHours = Number.isFinite(parsedEstimatedHours) ? parsedEstimatedHours : null;
 
     const payload = {
       what,
       who: fieldWho.value.trim() || null,
       when: fieldWhen.value || null,
       how: fieldHow.value.trim() || null,
+      estimated_hours: estimatedHours,
       amount: fieldAmount.value || null,
       score_weight: scoreWeightValue,
       observations: getRichTextContent() || null,
@@ -2231,14 +2519,15 @@
       });
 
       const data = await response.json();
-      
+
       if (!response.ok || !data.success) {
         throw new Error(data.message || 'Erro ao salvar');
       }
-      
+
       notify(data.message || 'Atividade salva com sucesso.', 'info');
       closeActivityModal();
       await loadActivities();
+      redirectToMyWork();
     } catch (error) {
       notify(error.message, 'error');
     }
@@ -2246,6 +2535,6 @@
 
   // Initial load
   loadActivities();
-})();
+  }) ();
 </script>
 {% endblock %}
