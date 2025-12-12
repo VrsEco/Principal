@@ -22,6 +22,7 @@ from services.my_work_service import (
     get_user_activities,
     get_user_stats,
     get_occurrences_summary,
+    process_my_work_filters,
 )
 
 DELIVERY_TAG_LABELS = {"open": "Em aberto", "completed": "Concluídas"}
@@ -30,6 +31,21 @@ FILTER_SHORTCUTS = {
     "today": "Hoje",
     "week": "Semana atual",
     "overdue": "Apenas atrasadas",
+}
+STATUS_LABELS = {
+    "pending": "Pendente",
+    "in_progress": "Em andamento",
+    "open": "Em aberto",
+    "overdue": "Atrasada",
+    "late": "Atrasada",
+    "completed": "Concluída",
+    "done": "Concluída",
+    "cancelled": "Cancelada",
+    "canceled": "Cancelada",
+    "archived": "Arquivada",
+    "blocked": "Bloqueada",
+    "on_hold": "Em espera",
+    "in_review": "Em revisão",
 }
 MAX_SUMMARY_ITEMS = 4
 
@@ -66,7 +82,7 @@ class MyWorkReport(BaseReportGenerator):
                     {user_name}
                 </div>
                 <div class="header-cell header-right">
-                    Página 1 de 1
+                    Página <span class="page-number"></span> de <span class="total-pages"></span>
                 </div>
             </div>
         </div>
@@ -96,7 +112,7 @@ class MyWorkReport(BaseReportGenerator):
         company_id: Optional[int] = None,
         company_ids: Optional[Sequence[int]] = None,
         filters: Optional[Dict[str, Any]] = None,
-        max_activities: Optional[int] = 40,
+        max_activities: Optional[int] = None,
     ) -> None:
         """
         Busca dados de filtros, atividades e indicadores.
@@ -108,63 +124,56 @@ class MyWorkReport(BaseReportGenerator):
             company_id: Empresa legada (opcional).
             company_ids: Lista de empresas selecionadas.
             filters: Dicionário com filtros adicionais.
-            max_activities: Quantidade máxima de cards a mostrar.
+            max_activities: Quantidade máxima de cards a mostrar. Se None ou 0,
+                exibe todos os registros retornados pelos filtros.
         """
-        employee_id = employee_id or get_employee_from_user(user_id)
-        if not employee_id:
-            raise ValueError("Usuário sem colaborador vinculado.")
-
-        # Processar filtros exatamente como a API faz
-        filters_payload = dict(filters or {})
-        # Normalizar filtros que podem vir como strings da URL
-        filters_payload = self._normalize_filters(filters_payload)
+        # Preparar request_args_dict a partir dos parâmetros recebidos
+        # A função compartilhada espera um dicionário como request.args
+        request_args_dict = {}
         
-        # Obter role do usuário (normalizar 'consultant' para 'collaborator')
-        from models.user import User
-        user = User.query.get(user_id)
-        user_role = user.role if user else "collaborator"
-        if user_role == "consultant":
-            user_role = "collaborator"
+        # Adicionar scope se fornecido
+        if scope:
+            request_args_dict["scope"] = scope
         
-        # Processar company_ids exatamente como a API faz (com permissões)
-        from models.company import Company
+        # Adicionar company_id e company_ids se fornecidos
+        if company_id:
+            request_args_dict["company_id"] = str(company_id)
+        if company_ids:
+            request_args_dict["company_ids"] = ",".join(str(cid) for cid in company_ids)
         
-        def _fetch_all_company_ids() -> List[int]:
-            """Retorna todos IDs de empresas cadastradas."""
-            return [
-                company_id
-                for (company_id,) in Company.query.with_entities(Company.id).all()
-            ]
+        # Adicionar filtros fornecidos
+        # IMPORTANTE: A página só envia filtros quando há uma seleção PARCIAL (não todos)
+        # Se filters estiver vazio ou None, não adicionar nada (como a página faz)
+        if filters:
+            # Normalizar filtros que podem vir como strings da URL
+            normalized_filters = self._normalize_filters(dict(filters))
+            for key, value in normalized_filters.items():
+                if value is None:
+                    continue
+                # Filtrar valores None de listas (como process_owner_ids: [null])
+                if isinstance(value, (list, tuple)):
+                    # Remover None/null da lista
+                    clean_value = [v for v in value if v is not None]
+                    if not clean_value:
+                        continue
+                    request_args_dict[key] = ",".join(str(v) for v in clean_value)
+                elif isinstance(value, date):
+                    request_args_dict[key] = value.strftime("%Y-%m-%d")
+                else:
+                    request_args_dict[key] = str(value)
         
-        # Determinar allowed_company_ids conforme role (como a API faz)
-        allowed_company_ids: Optional[List[int]]
-        if user_role == "admin":
-            allowed_company_ids = None  # Admin pode ver todas
-        else:
-            base_companies = get_user_employees(user_id) or []
-            allowed_company_ids = [
-                comp.get("company_id")
-                for comp in base_companies
-                if comp.get("company_id") is not None
-            ]
+        # Processar filtros usando função compartilhada (exatamente como a API faz)
+        try:
+            processed = process_my_work_filters(
+                user_id,
+                request_args_dict,
+                SELECTION_MODE_NONE="none",
+            )
+        except ValueError as exc:
+            raise ValueError(str(exc))
         
-        # Resolver company_ids dos parâmetros/filtros
-        resolved_company_ids = self._resolve_company_ids(
-            company_id, company_ids, filters_payload
-        )
-        
-        # Ajustar company_ids conforme permissões (exatamente como a API faz)
-        if allowed_company_ids is not None:
-            if resolved_company_ids:
-                resolved_company_ids = [cid for cid in resolved_company_ids if cid in allowed_company_ids]
-            else:
-                resolved_company_ids = allowed_company_ids[:]
-        elif not resolved_company_ids:
-            resolved_company_ids = _fetch_all_company_ids()
-        
-        # Caso usuário não tenha nenhuma empresa disponível após as validações
-        if not resolved_company_ids:
-            # Retornar dados vazios (como a API faz)
+        # Se não houver empresas disponíveis, retornar dados vazios
+        if processed["has_no_companies"]:
             self.data["user"] = {"name": self._resolve_user_name(user_id, user_name)}
             self.data["company"] = {"name": ""}
             self.data["filters_summary"] = []
@@ -174,79 +183,21 @@ class MyWorkReport(BaseReportGenerator):
             self.data["stats"] = {"pending": 0, "in_progress": 0, "overdue": 0, "completed": 0}
             self.data["counts"] = {"me": 0, "team": 0, "company": 0}
             self.data["occurrences"] = {"positive": {"count": 0}, "negative": {"count": 0}}
-            self.data["filters_payload"] = filters_payload
+            self.data["filters_payload"] = processed["filters"]
             return
         
-        # Coletar employee_ids como a API faz
-        def _collect_employee_ids() -> List[int]:
-            employee_ids_set = set()
-            if employee_id:
-                employee_ids_set.add(employee_id)
-            
-            try:
-                companies = get_user_employees(user_id) or []
-            except Exception:
-                companies = []
-            
-            for company in companies:
-                extra_id = company.get("employee_id")
-                if extra_id:
-                    employee_ids_set.add(extra_id)
-            
-            return list(employee_ids_set)
+        employee_id = processed["employee_id"]
+        scope = processed["scope"]
+        resolved_company_ids = processed["company_ids"]
+        employee_ids_list = processed["employee_ids"]
+        filters_payload = processed["filters"]
         
-        employee_ids_list = _collect_employee_ids()
-        
-        # Forçar escopo conforme perfil (exatamente como a API faz)
-        if user_role == "admin":
-            scope = "company"
-        elif user_role == "client":
-            scope = "company"
-        elif user_role == "collaborator":
-            scope = "me"
-            employee_ids_list = [employee_id] if employee_id else []
-        
-        # Processar filtros de data (converter strings para date objects, como a API faz)
-        def _parse_date(value):
-            if not value:
-                return None
-            if isinstance(value, datetime.date):
-                return value
-            if isinstance(value, str):
-                try:
-                    return datetime.strptime(value, "%Y-%m-%d").date()
-                except ValueError:
-                    return None
-            return None
-        
-        # Processar e converter filtros de data
-        due_date_start = filters_payload.get("due_date_start")
-        due_date_end = filters_payload.get("due_date_end")
-        if due_date_start:
-            parsed_start = _parse_date(due_date_start)
-            if parsed_start:
-                filters_payload["due_date_start"] = parsed_start
-            else:
-                filters_payload.pop("due_date_start", None)
-        if due_date_end:
-            parsed_end = _parse_date(due_date_end)
-            if parsed_end:
-                filters_payload["due_date_end"] = parsed_end
-            else:
-                filters_payload.pop("due_date_end", None)
-        
-        # Adicionar filtros padrão se não existirem (como a API faz)
-        if "filter" not in filters_payload:
-            filters_payload["filter"] = "all"
-        if "search" not in filters_payload:
-            filters_payload["search"] = ""
-        if "sort" not in filters_payload:
-            filters_payload["sort"] = "deadline"
-        
-        # Adicionar company_ids e scope aos filtros
-        if resolved_company_ids is not None:
-            filters_payload["company_ids"] = resolved_company_ids
-        filters_payload["scope"] = scope
+        # DEBUG: Log dos filtros processados
+        import logging
+        logger = logging.getLogger(__name__)
+        logger.info(
+            f"🔍 RELATÓRIO - Filtros processados - scope: {scope}, company_ids: {resolved_company_ids}, employee_ids: {employee_ids_list}, filters_keys: {list(filters_payload.keys())}"
+        )
 
         resolved_user_name = self._resolve_user_name(user_id, user_name)
         self.data["user"] = {"name": resolved_user_name}
@@ -287,8 +238,9 @@ class MyWorkReport(BaseReportGenerator):
             employee_ids=employee_ids_list,
         )
 
-        limit = max(0, max_activities or 0)
-        preview_activities = activities[:limit] if limit else []
+        # Exibir todos se max_activities não for definido ou for zero/negativo
+        limit = len(activities) if not max_activities or max_activities <= 0 else max_activities
+        preview_activities = activities[:limit]
         
         # Guardar todas as atividades para cálculos (como a página faz)
         self.data["all_activities"] = activities
@@ -310,9 +262,9 @@ class MyWorkReport(BaseReportGenerator):
 
     def build_sections(self) -> None:
         self.clear_sections()
-        self.add_section("Filtros", self._render_filters_section())
-        self.add_section("Indicadores", self._render_indicators_section())
-        self.add_section("Atividades e Instâncias", self._render_activities_section())
+        self.add_section("Filtros", self._render_filters_section(), section_class="filters-section")
+        self.add_section("Indicadores", self._render_indicators_section(), section_class="indicators-section")
+        self.add_section("Atividades e Instâncias", self._render_activities_section(), section_class="activities-section")
 
     # =============================================
     # Seções renderizadas
@@ -326,7 +278,7 @@ class MyWorkReport(BaseReportGenerator):
         if not summary:
             basic_info = []
             scope = filters_payload.get("scope", "me")
-            if scope and scope != "me":
+            if scope and scope not in ("me", "company"):
                 label = SCOPE_LABELS.get(scope, scope.title())
                 basic_info.append({"label": "Escopo", "value": label})
             
@@ -384,11 +336,12 @@ class MyWorkReport(BaseReportGenerator):
             status = (activity.get("status") or "").lower()
             return status in ("completed", "done")
         
-        total = len(all_activities)
+        total_activities = len(all_activities)
         completed_count = sum(1 for act in all_activities if is_completed(act))
+        total_count = open_count + completed_count
         
         # Performance Score: formato "X de Y pts (Z.Z%)" - exatamente como updatePerformanceCard
-        safe_total = max(0, total)
+        safe_total = max(0, total_activities)
         safe_completed = max(0, completed_count)
         if safe_total > 0:
             percent = (safe_completed / safe_total) * 100
@@ -396,21 +349,27 @@ class MyWorkReport(BaseReportGenerator):
         else:
             performance_display = "0 de 0 pts (0.0%)"
         
-        # Taxa de Conclusão: exatamente como updateCompletionRateCard (Math.round)
-        completion_rate = round((safe_completed / safe_total * 100)) if safe_total > 0 else 0
+        # Taxa de Conclusão: mesmo formato que Performance Score
+        if safe_total > 0:
+            completion_percent = (safe_completed / safe_total) * 100
+            completion_display = f"{safe_completed} de {safe_total} pts ({completion_percent:.1f}%)"
+        else:
+            completion_display = "0 de 0 pts (0.0%)"
         
-        # Ocorrências: soma de positivas e negativas (como a página faz)
+        # Ocorrências: formato "+X -Y = Z" (pontos positivos, negativos, resultado)
         positive_occ = int(occurrences.get("positive", {}).get("count", 0) or 0)
         negative_occ = int(occurrences.get("negative", {}).get("count", 0) or 0)
-        total_occurrences = positive_occ + negative_occ
+        occurrences_result = positive_occ - negative_occ
+        occurrences_display = f"+{positive_occ} -{negative_occ} = {occurrences_result:+d}"
 
         # Criar células com os 5 indicadores
         indicators = [
             ("Em aberto", open_count),
             ("Atrasadas", overdue),
-            ("Ocorrências", total_occurrences),
+            ("Total", total_count),
+            ("Ocorrências", occurrences_display),
             ("Performance Score", performance_display),
-            ("Taxa de Conclusão", f"{completion_rate:.1f}%"),
+            ("Taxa de Conclusão", completion_display),
         ]
         
         cells = []
@@ -435,8 +394,7 @@ class MyWorkReport(BaseReportGenerator):
             rows_html += f"<tr>{''.join(row_cells)}</tr>"
 
         displayed = len(self.data.get("activities") or [])
-        total = len(all_activities)
-        preview_note = f"<p class='activity-count'>Mostrando {displayed} de {total} registros.</p>"
+        preview_note = f"<p class='activity-count'>Mostrando {displayed} de {total_activities} registros.</p>"
         return f"<table class='indicator-table'>{rows_html}</table>{preview_note}"
 
     def _render_activities_section(self) -> str:
@@ -464,7 +422,7 @@ class MyWorkReport(BaseReportGenerator):
                 deadline = self._format_date(deadline_raw)
             else:
                 deadline = "-"
-            status = (activity.get("status") or "").title()
+            status = self._translate_status(activity.get("status"))
             rows.append(
                 f"<tr><td>{kind}</td><td>{primary}</td><td>{secondary}</td><td>{responsible}</td><td>{deadline}</td><td>{status}</td></tr>"
             )
@@ -527,7 +485,7 @@ class MyWorkReport(BaseReportGenerator):
         summary: List[Dict[str, str]] = []
 
         # Sempre mostrar o escopo se não for "me"
-        if scope and scope != "me":
+        if scope and scope not in ("me", "company"):
             label = SCOPE_LABELS.get(scope, scope.title())
             summary.append({"label": "Escopo", "value": label})
 
@@ -538,8 +496,18 @@ class MyWorkReport(BaseReportGenerator):
         if not effective_company_ids:
             effective_company_ids = self._ensure_list(filters.get("company_id"))
         
+        def _with_code(opts: List[Dict[str, Any]], code_key: str, name_key: str) -> List[Dict[str, Any]]:
+            decorated = []
+            for opt in opts or []:
+                code = (opt.get(code_key) or "").strip() if isinstance(opt.get(code_key), str) else opt.get(code_key)
+                name = opt.get(name_key) or ""
+                label = f"{code}-{name}" if code else name
+                decorated.append({**opt, name_key: label.strip()})
+            return decorated
+
+        companies_opts = _with_code(options.get("companies") or [], "company_code", "company_name")
         companies = self._build_selection_summary(
-            "Empresas", effective_company_ids, options.get("companies") or [], "company_id", "company_name"
+            "Empresas", effective_company_ids, companies_opts, "company_id", "company_name"
         )
         if companies:
             summary.append(companies)
@@ -564,20 +532,22 @@ class MyWorkReport(BaseReportGenerator):
         if executor:
             summary.append(executor)
 
+        projects_opts = _with_code(options.get("projects") or [], "code", "title")
         projects = self._build_selection_summary(
             "Projetos",
             filters.get("project_ids"),
-            options.get("projects") or [],
+            projects_opts,
             "id",
             "title",
         )
         if projects:
             summary.append(projects)
 
+        processes_opts = _with_code(options.get("processes") or [], "code", "title")
         processes = self._build_selection_summary(
             "Processos",
             filters.get("process_ids"),
-            options.get("processes") or [],
+            processes_opts,
             "id",
             "title",
         )
@@ -839,20 +809,76 @@ class MyWorkReport(BaseReportGenerator):
                     return sanitized
         return None
 
+    def _translate_status(self, status_value: Any) -> str:
+        raw = (status_value or "").strip()
+        if not raw:
+            return "-"
+        key = raw.lower()
+        translated = STATUS_LABELS.get(key)
+        if translated:
+            return translated
+        return raw.title()
+
 
     def _add_custom_styles(self) -> None:
         css = """
-        /* Margens de 0,5 mm em todos os lados */
+        /* Margens de 5 mm em todos os lados */
         @page {
-            margin: 0.5mm;
+            margin: 5mm;
         }
         
         body {
-            margin: 0.5mm;
+            margin: 0; /* evitar acúmulo de margens externas */
         }
         
         .report-content {
-            margin: 0.5mm;
+            margin: 0;
+            padding: 0 5mm;
+            padding-top: calc(var(--report-header-offset) + 2mm);
+            padding-bottom: calc(var(--report-footer-offset) + 2mm);
+        }
+
+        /* Espaços dedicados entre cabeçalho/rodapé e o conteúdo */
+        .custom-report-header,
+        .report-header {
+            margin-bottom: 3mm;
+        }
+
+        .custom-report-footer,
+        .report-footer {
+            margin-top: 3mm;
+        }
+
+        /* Seções gerais */
+        .report-section {
+            margin-bottom: 8mm;
+            page-break-inside: avoid;
+        }
+
+        .report-section h1 {
+            font-size: 18px;
+            line-height: 1.3;
+            margin: 0 0 6px 0;
+            padding: 0;
+            page-break-after: avoid;
+        }
+
+        .report-section .section-content {
+            page-break-inside: avoid;
+        }
+
+        /* Seções específicas */
+        .report-section.activities-section {
+            page-break-inside: auto;
+            margin-bottom: 6mm;
+        }
+
+        .report-section.activities-section h1 {
+            page-break-after: avoid;
+        }
+
+        .report-section.activities-section .section-content {
+            page-break-inside: auto;
         }
         
         .filters-summary {
@@ -874,9 +900,10 @@ class MyWorkReport(BaseReportGenerator):
         .activity-table {
             width: 100%;
             border-collapse: collapse;
-            margin-bottom: 1rem;
+            margin-bottom: 0.5rem;
             font-size: 10pt;
             border: 1px solid #d1d5db;
+            page-break-inside: avoid;
         }
         .indicator-table th,
         .indicator-table td,
@@ -884,6 +911,7 @@ class MyWorkReport(BaseReportGenerator):
         .activity-table td {
             border: 1px solid #d1d5db;
             padding: 0.35rem 0.45rem;
+            page-break-inside: avoid;
         }
 
         .indicator-table td {
@@ -925,7 +953,13 @@ class MyWorkReport(BaseReportGenerator):
 
         .activity-count {
             font-size: 9pt;
-            margin-top: 0;
+            margin-top: 2px;
+            margin-bottom: 0;
+        }
+
+        /* Evitar quebras abruptas em linhas de tabela */
+        .activity-table tr {
+            page-break-inside: avoid;
         }
         """
         self.add_custom_style("my-work-report", css)

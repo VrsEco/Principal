@@ -1766,6 +1766,10 @@ body {
   color: var(--color-success);
 }
 
+.stat-card--total {
+  color: var(--color-primary);
+}
+
 .stat-card--report {
   flex-direction: column;
   justify-content: center;
@@ -1831,6 +1835,12 @@ body {
   font-size: 0.875rem;
   color: var(--color-text-secondary);
   font-weight: 500;
+}
+
+.stat-card__helper {
+  font-size: 0.8125rem;
+  color: var(--color-text-tertiary);
+  margin-top: 0.15rem;
 }
 
 .stat-card__trend {

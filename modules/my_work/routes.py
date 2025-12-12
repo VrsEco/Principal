@@ -24,6 +24,7 @@ from services.my_work_service import (
     get_user_employees,
     get_user_stats,
     complete_activity,
+    process_my_work_filters,
     DELIVERY_TAGS,
 )
 from middleware.auto_log_decorator import auto_log_crud
@@ -63,11 +64,14 @@ def my_work_report():
         except ValueError:
             filters_payload = {}
 
-    try:
-        max_activities = int(request.args.get("max", 40))
-    except ValueError:
-        max_activities = 40
-    max_activities = max(0, max_activities)
+    raw_max = request.args.get("max")
+    max_activities = None
+    if raw_max is not None:
+        try:
+            parsed = int(raw_max)
+            max_activities = parsed if parsed > 0 else None
+        except ValueError:
+            max_activities = None
 
     report = MyWorkReport()
     try:
@@ -230,195 +234,50 @@ def get_activities():
         - collaborator: vê apenas atividades atribuídas a ele
     """
     try:
-        # Obter role do usuário (normalizar 'consultant' para 'collaborator')
-        user_role = current_user.role
-        if user_role == "consultant":
-            user_role = "collaborator"
-
-        from models.company import Company
-
-        def _fetch_all_company_ids() -> List[int]:
-            """Retorna todos IDs de empresas cadastradas."""
-            return [
-                company_id
-                for (company_id,) in Company.query.with_entities(Company.id).all()
-            ]
-
-        allowed_company_ids: Optional[List[int]]
-        if user_role == "admin":
-            allowed_company_ids = None  # Admin pode ver todas
-        else:
-            base_companies = get_user_employees(current_user.id) or []
-            allowed_company_ids = [
-                comp.get("company_id")
-                for comp in base_companies
-                if comp.get("company_id") is not None
-            ]
+        # Converter request.args para dicionário (a função compartilhada espera um dict)
+        # request.args é um MultiDict, então precisamos converter corretamente
+        request_args_dict = {}
+        for key, value in request.args.items():
+            # Se houver múltiplos valores, pegar o primeiro (como request.args.get faz)
+            if isinstance(value, list) and len(value) > 0:
+                request_args_dict[key] = value[0]
+            else:
+                request_args_dict[key] = value
         
-        # Mapear user para employee
-        employee_id = get_employee_from_user(current_user.id)
-
-        if employee_id is None:
+        # Processar filtros usando função compartilhada
+        try:
+            processed = process_my_work_filters(
+                current_user.id,
+                request_args_dict,
+                SELECTION_MODE_NONE=SELECTION_MODE_NONE,
+            )
+        except ValueError as exc:
             return (
                 jsonify(
                     {
                         "success": False,
-                        "error": "Usuário não vinculado a um colaborador. Solicite ao administrador para concluir o cadastro.",
+                        "error": str(exc),
                     }
                 ),
                 404,
             )
-
-        # Coleção de todos os employee_ids vinculados ao usuário
-        def _collect_employee_ids() -> List[int]:
-            employee_ids_set = set()
-            if employee_id:
-                employee_ids_set.add(employee_id)
-
-            try:
-                companies = get_user_employees(current_user.id) or []
-            except Exception as exc:  # pragma: no cover - defensivo
-                logger.warning(
-                    "Falha ao buscar colaboradores vinculados ao usuário %s: %s",
-                    current_user.id,
-                    exc,
-                )
-                companies = []
-
-            for company in companies:
-                extra_id = company.get("employee_id")
-                if extra_id:
-                    employee_ids_set.add(extra_id)
-
-            return list(employee_ids_set)
-
-        employee_ids = _collect_employee_ids()
-
-        # Parâmetros
-        scope = request.args.get("scope", "me")
-        company_id = request.args.get("company_id", type=int)  # Legado
-
-        def _parse_int_csv(raw_value: Optional[str]) -> List[int]:
-            if not raw_value:
-                return []
-            values = []
-            for chunk in raw_value.split(","):
-                chunk = chunk.strip()
-                if not chunk:
-                    continue
-                try:
-                    values.append(int(chunk))
-                except ValueError:
-                    continue
-            return values
-
-        company_ids = _parse_int_csv(request.args.get("company_ids"))
-
-        # Se company_id (legado) vier e company_ids não, adiciona
-        if company_id and not company_ids:
-            company_ids = [company_id]
-
-        # Ajustar company_ids conforme permissões
-        if allowed_company_ids is not None:
-            if company_ids:
-                company_ids = [cid for cid in company_ids if cid in allowed_company_ids]
-            else:
-                company_ids = allowed_company_ids[:]
-        elif not company_ids:
-            company_ids = _fetch_all_company_ids()
-
-        # Caso usuário não tenha nenhuma empresa disponível após as validações
-        if not company_ids:
-            logger.info(
-                f"🚫 Nenhuma empresa disponível para user_id={current_user.id} (role={user_role}). Retornando vazio."
-            )
+        
+        # Se não houver empresas disponíveis, retornar vazio
+        if processed["has_no_companies"]:
             empty_stats = {"pending": 0, "in_progress": 0, "overdue": 0, "completed": 0}
             empty_counts = {"me": 0, "team": 0, "company": 0}
             return jsonify({"success": True, "data": [], "stats": empty_stats, "counts": empty_counts})
-
-        # DEBUG: Log dos filtros recebidos (antes de ajustar escopo)
+        
+        employee_id = processed["employee_id"]
+        scope = processed["scope"]
+        company_ids = processed["company_ids"]
+        employee_ids = processed["employee_ids"]
+        filters = processed["filters"]
+        
+        # DEBUG: Log dos filtros recebidos
         logger.info(
-            f"🔍 Filtros - user_role: {user_role}, scope: {scope}, company_ids: {company_ids}"
+            f"🔍 API - Filtros processados - scope: {scope}, company_ids: {company_ids}, employee_ids: {employee_ids}, filters_keys: {list(filters.keys())}"
         )
-
-        # Forçar escopo conforme perfil
-        if user_role == "admin":
-            scope = "company"
-        elif user_role == "client":
-            scope = "company"
-        elif user_role == "collaborator":
-            scope = "me"
-            employee_ids = [employee_id] if employee_id else []
-            logger.info(
-                f"👤 Collaborator - scope='me', employee_ids: {employee_ids}, companies: {company_ids}"
-            )
-
-        filters = {
-            "filter": request.args.get("filter", "all"),
-            "search": request.args.get("search", ""),
-            "sort": request.args.get("sort", "deadline"),
-        }
-
-        types_raw = request.args.get("types")
-        if types_raw:
-            filters["types"] = [
-                t.strip()
-                for t in types_raw.split(",")
-                if t.strip() in ("project", "process")
-            ]
-
-        roles_raw = request.args.get("roles")
-        if roles_raw:
-            filters["roles"] = [
-                r.strip()
-                for r in roles_raw.split(",")
-                if r.strip() in ("responsible", "executor")
-            ]
-
-        responsible_ids = _parse_int_csv(request.args.get("responsible_ids"))
-        if responsible_ids:
-            filters["responsible_ids"] = responsible_ids
-
-        executor_ids = _parse_int_csv(request.args.get("executor_ids"))
-        if executor_ids:
-            filters["executor_ids"] = executor_ids
-
-        project_selection = (request.args.get("project_selection") or "").lower()
-        project_ids = _parse_int_csv(request.args.get("project_ids"))
-        if project_ids:
-            filters["project_ids"] = project_ids
-        elif project_selection == SELECTION_MODE_NONE:
-            filters["project_selection"] = SELECTION_MODE_NONE
-
-        process_selection = (request.args.get("process_selection") or "").lower()
-        process_ids = _parse_int_csv(request.args.get("process_ids"))
-        if process_ids:
-            filters["process_ids"] = process_ids
-        elif process_selection == SELECTION_MODE_NONE:
-            filters["process_selection"] = SELECTION_MODE_NONE
-
-        delivery_raw = request.args.get("delivery_tags")
-        if delivery_raw is not None:
-            filters["delivery_tags"] = [
-                tag.strip()
-                for tag in delivery_raw.split(",")
-                if tag.strip() in DELIVERY_TAGS
-            ]
-
-        def _parse_date(value: str):
-            if not value:
-                return None
-            try:
-                return datetime.strptime(value, "%Y-%m-%d").date()
-            except ValueError:
-                return None
-
-        due_date_start = _parse_date(request.args.get("due_date_start"))
-        due_date_end = _parse_date(request.args.get("due_date_end"))
-        if due_date_start:
-            filters["due_date_start"] = due_date_start
-        if due_date_end:
-            filters["due_date_end"] = due_date_end
 
         # Buscar atividades
         activities = get_user_activities(
@@ -433,7 +292,7 @@ def get_activities():
         stats = get_user_stats(
             employee_id,
             scope,
-            company_id=None,  # Não usar legado, usar apenas company_ids
+            company_id=None,
             company_ids=company_ids,
             filters=filters,
             employee_ids=employee_ids,
@@ -442,7 +301,7 @@ def get_activities():
         # Contadores das abas
         counts = count_activities_by_scope(
             employee_id,
-            company_id=None,  # Não usar legado, usar apenas company_ids
+            company_id=None,
             company_ids=company_ids,
             filters=filters,
             employee_ids=employee_ids,

@@ -203,7 +203,8 @@ def get_user_employees(user_id: int) -> List[Dict[str, Any]]:
                    e.name,
                    e.email,
                    e.company_id,
-                   c.name AS company_name
+                   c.name AS company_name,
+                   c.client_code AS company_code
             FROM employees e
             LEFT JOIN companies c ON c.id = e.company_id
             WHERE e.user_id = %s
@@ -220,7 +221,8 @@ def get_user_employees(user_id: int) -> List[Dict[str, Any]]:
                    e.name,
                    e.email,
                    e.company_id,
-                   c.name AS company_name
+                   c.name AS company_name,
+                   c.client_code AS company_code
             FROM employees e
             LEFT JOIN companies c ON c.id = e.company_id
             WHERE LOWER(TRIM(e.email)) = LOWER(TRIM(%s))
@@ -241,7 +243,7 @@ def get_user_employees(user_id: int) -> List[Dict[str, Any]]:
 
         companies: Dict[int, Dict[str, Any]] = {}
         for row in rows:
-            employee_id, employee_name, employee_email, company_id, company_name = row
+            employee_id, employee_name, employee_email, company_id, company_name, company_code = row
             if not company_id:
                 # Ignore orphan employees that are not linked to a company yet
                 continue
@@ -249,6 +251,7 @@ def get_user_employees(user_id: int) -> List[Dict[str, Any]]:
             companies[company_id] = {
                 "company_id": company_id,
                 "company_name": company_name or "Empresa sem nome",
+                "company_code": company_code,
                 "employee_id": employee_id,
                 "employee_name": employee_name,
                 "employee_email": employee_email,
@@ -294,6 +297,7 @@ def get_filter_options(user_id: int) -> Dict[str, List[Dict[str, Any]]]:
             {
                 "company_id": c.id,
                 "company_name": c.name,
+                "company_code": getattr(c, "client_code", None),
             }
             for c in all_companies
         ]
@@ -313,6 +317,7 @@ def get_filter_options(user_id: int) -> Dict[str, List[Dict[str, Any]]]:
                 {
                     "company_id": company_id,
                     "company_name": company.get("company_name") or "Empresa",
+                    "company_code": company.get("company_code"),
                 }
             )
 
@@ -402,33 +407,73 @@ def _fetch_project_directory(cursor, company_ids: List[int]) -> List[Dict[str, A
         return []
 
     placeholders = ",".join(["%s"] * len(company_ids))
-    cursor.execute(
-        f"""
-        SELECT cp.id,
-               cp.title,
-               cp.company_id,
-               c.name AS company_name
-        FROM company_projects cp
-        LEFT JOIN companies c ON c.id = cp.company_id
-        WHERE cp.company_id IN ({placeholders})
-        ORDER BY c.name, cp.title
-        """,
-        tuple(company_ids),
-    )
     projects = []
-    for row in cursor.fetchall():
-        project_id = row[0]
-        if project_id is None:
-            continue
-        projects.append(
-            {
-                "id": project_id,
-                "title": row[1] or "Projeto sem título",
-                "company_id": row[2],
-                "company_name": row[3],
-            }
+    try:
+        cursor.execute(
+            f"""
+            SELECT cp.id,
+                   cp.title,
+                   cp.code,
+                   cp.company_id,
+                   c.name AS company_name,
+                   c.client_code AS company_code
+            FROM company_projects cp
+            LEFT JOIN companies c ON c.id = cp.company_id
+            WHERE cp.company_id IN ({placeholders})
+            ORDER BY c.name, cp.code NULLS LAST, cp.title
+            """,
+            tuple(company_ids),
         )
-    return projects
+        rows = cursor.fetchall() or []
+        for row in rows:
+            row_dict = dict(row)
+            project_id = row_dict.get("id")
+            if project_id is None:
+                continue
+            code = row_dict.get("code")
+            if isinstance(code, str):
+                code = code.strip() or None
+            projects.append(
+                {
+                    "id": project_id,
+                    "title": row_dict.get("title") or "Projeto sem título",
+                    "code": code,
+                    "company_id": row_dict.get("company_id"),
+                    "company_name": row_dict.get("company_name"),
+                    "company_code": row_dict.get("company_code"),
+                }
+            )
+        return projects
+    except Exception as exc:
+        logger.warning("Fallback project directory (sem código): %s", exc)
+        cursor.execute(
+            f"""
+            SELECT cp.id,
+                   cp.title,
+                   cp.company_id,
+                   c.name AS company_name
+            FROM company_projects cp
+            LEFT JOIN companies c ON c.id = cp.company_id
+            WHERE cp.company_id IN ({placeholders})
+            ORDER BY c.name, cp.title
+            """,
+            tuple(company_ids),
+        )
+        rows = cursor.fetchall() or []
+        for row in rows:
+            row_dict = dict(row)
+            project_id = row_dict.get("id")
+            if project_id is None:
+                continue
+            projects.append(
+                {
+                    "id": project_id,
+                    "title": row_dict.get("title") or "Projeto sem título",
+                    "company_id": row_dict.get("company_id"),
+                    "company_name": row_dict.get("company_name"),
+                }
+            )
+        return projects
 
 
 def _build_in_clause(values: Sequence[int], prefix: str) -> Tuple[str, Dict[str, int]]:
@@ -951,33 +996,73 @@ def _fetch_process_directory(cursor, company_ids: List[int]) -> List[Dict[str, A
         return []
 
     placeholders = ",".join(["%s"] * len(company_ids))
-    cursor.execute(
-        f"""
-        SELECT pi.id,
-               pi.title,
-               pi.company_id,
-               c.name AS company_name
-        FROM process_instances pi
-        LEFT JOIN companies c ON c.id = pi.company_id
-        WHERE pi.company_id IN ({placeholders})
-        ORDER BY c.name, pi.title
-        """,
-        tuple(company_ids),
-    )
     processes = []
-    for row in cursor.fetchall():
-        process_id = row[0]
-        if process_id is None:
-            continue
-        processes.append(
-            {
-                "id": process_id,
-                "title": row[1] or "Processo sem título",
-                "company_id": row[2],
-                "company_name": row[3],
-            }
-    )
-    return processes
+    try:
+        cursor.execute(
+            f"""
+            SELECT p.id,
+                   p.name,
+                   p.code,
+                   p.company_id,
+                   c.name AS company_name
+            FROM processes p
+            LEFT JOIN companies c ON c.id = p.company_id
+            WHERE p.company_id IN ({placeholders})
+            ORDER BY c.name, p.code NULLS LAST, p.name
+            """,
+            tuple(company_ids),
+        )
+        rows = cursor.fetchall() or []
+        for row in rows:
+            row_dict = dict(row)
+            process_id = row_dict.get("id")
+            if process_id is None:
+                continue
+            name = row_dict.get("name") or "Processo sem título"
+            code = row_dict.get("code")
+            if isinstance(code, str):
+                code = code.strip() or None
+            processes.append(
+                {
+                    "id": process_id,
+                    "title": name,
+                    "name": name,
+                    "code": code,
+                    "company_id": row_dict.get("company_id"),
+                    "company_name": row_dict.get("company_name"),
+                }
+            )
+        return processes
+    except Exception as exc:
+        logger.warning("Fallback process directory (instâncias): %s", exc)
+        cursor.execute(
+            f"""
+            SELECT pi.id,
+                   pi.title,
+                   pi.company_id,
+                   c.name AS company_name
+            FROM process_instances pi
+            LEFT JOIN companies c ON c.id = pi.company_id
+            WHERE pi.company_id IN ({placeholders})
+            ORDER BY c.name, pi.title
+            """,
+            tuple(company_ids),
+        )
+        rows = cursor.fetchall() or []
+        for row in rows:
+            row_dict = dict(row)
+            process_id = row_dict.get("id")
+            if process_id is None:
+                continue
+            processes.append(
+                {
+                    "id": process_id,
+                    "title": row_dict.get("title") or "Processo sem título",
+                    "company_id": row_dict.get("company_id"),
+                    "company_name": row_dict.get("company_name"),
+                }
+            )
+        return processes
 
 
 def _process_row_from_normalized(row) -> Dict[str, Any]:
@@ -3450,4 +3535,243 @@ def _get_department_ranking(team_stats: Dict[str, Any]) -> List[Dict[str, Any]]:
     for idx, entry in enumerate(ranking, start=1):
         entry["rank"] = idx
     return ranking[:5]
+
+
+def process_my_work_filters(
+    user_id: int,
+    request_args: Dict[str, Any],
+    SELECTION_MODE_NONE: str = "none",
+) -> Dict[str, Any]:
+    """
+    Processa filtros do My Work exatamente como a API faz.
+    
+    Esta função centraliza toda a lógica de processamento de filtros,
+    garantindo que a API e o relatório usem exatamente a mesma lógica.
+    
+    Args:
+        user_id: ID do usuário logado
+        request_args: Dicionário com os parâmetros da requisição (equivalente a request.args)
+        SELECTION_MODE_NONE: Valor para modo de seleção "none" (padrão: "none")
+    
+    Returns:
+        Dicionário com:
+            - employee_id: ID do colaborador
+            - scope: Escopo ajustado conforme role
+            - company_ids: Lista de company_ids após validação de permissões
+            - employee_ids: Lista de employee_ids vinculados ao usuário
+            - filters: Dicionário com todos os filtros processados
+            - has_no_companies: True se usuário não tem empresas disponíveis
+    
+    Raises:
+        ValueError: Se usuário não estiver vinculado a um colaborador
+    """
+    from models.user import User
+    from models.company import Company
+    
+    # Obter role do usuário (normalizar 'consultant' para 'collaborator')
+    user = User.query.get(user_id)
+    if not user:
+        raise ValueError(f"Usuário {user_id} não encontrado")
+    
+    user_role = user.role
+    if user_role == "consultant":
+        user_role = "collaborator"
+
+    def _fetch_all_company_ids() -> List[int]:
+        """Retorna todos IDs de empresas cadastradas."""
+        return [
+            company_id
+            for (company_id,) in Company.query.with_entities(Company.id).all()
+        ]
+
+    # Determinar allowed_company_ids conforme role
+    allowed_company_ids: Optional[List[int]]
+    if user_role == "admin":
+        allowed_company_ids = None  # Admin pode ver todas
+    else:
+        base_companies = get_user_employees(user_id) or []
+        allowed_company_ids = [
+            comp.get("company_id")
+            for comp in base_companies
+            if comp.get("company_id") is not None
+        ]
+    
+    # Mapear user para employee
+    employee_id = get_employee_from_user(user_id)
+    if employee_id is None:
+        raise ValueError("Usuário não vinculado a um colaborador. Solicite ao administrador para concluir o cadastro.")
+
+    # Coleção de todos os employee_ids vinculados ao usuário
+    def _collect_employee_ids() -> List[int]:
+        employee_ids_set = set()
+        if employee_id:
+            employee_ids_set.add(employee_id)
+
+        try:
+            companies = get_user_employees(user_id) or []
+        except Exception as exc:
+            logger.warning(
+                "Falha ao buscar colaboradores vinculados ao usuário %s: %s",
+                user_id,
+                exc,
+            )
+            companies = []
+
+        for company in companies:
+            extra_id = company.get("employee_id")
+            if extra_id:
+                employee_ids_set.add(extra_id)
+
+        return list(employee_ids_set)
+
+    employee_ids = _collect_employee_ids()
+
+    # Parâmetros
+    scope = request_args.get("scope", "me")
+    company_id = request_args.get("company_id")
+    if company_id is not None:
+        try:
+            company_id = int(company_id)
+        except (ValueError, TypeError):
+            company_id = None
+
+    def _parse_int_csv(raw_value: Optional[str]) -> List[int]:
+        if not raw_value:
+            return []
+        values = []
+        for chunk in str(raw_value).split(","):
+            chunk = chunk.strip()
+            if not chunk:
+                continue
+            try:
+                values.append(int(chunk))
+            except ValueError:
+                continue
+        return values
+
+    company_ids = _parse_int_csv(request_args.get("company_ids"))
+
+    # Se company_id (legado) vier e company_ids não, adiciona
+    if company_id and not company_ids:
+        company_ids = [company_id]
+
+    # Ajustar company_ids conforme permissões
+    if allowed_company_ids is not None:
+        if company_ids:
+            company_ids = [cid for cid in company_ids if cid in allowed_company_ids]
+        else:
+            company_ids = allowed_company_ids[:]
+    elif not company_ids:
+        company_ids = _fetch_all_company_ids()
+
+    # Caso usuário não tenha nenhuma empresa disponível após as validações
+    if not company_ids:
+        logger.info(
+            f"🚫 Nenhuma empresa disponível para user_id={user_id} (role={user_role}). Retornando vazio."
+        )
+        return {
+            "employee_id": employee_id,
+            "scope": scope,
+            "company_ids": [],
+            "employee_ids": employee_ids,
+            "filters": {},
+            "has_no_companies": True,
+        }
+
+    # Forçar escopo conforme perfil
+    if user_role == "admin":
+        scope = "company"
+    elif user_role == "client":
+        scope = "company"
+    elif user_role == "collaborator":
+        scope = "me"
+        employee_ids = [employee_id] if employee_id else []
+        logger.info(
+            f"👤 Collaborator - scope='me', employee_ids: {employee_ids}, companies: {company_ids}"
+        )
+
+    # Processar filtros
+    filters = {
+        "filter": request_args.get("filter", "all"),
+        "search": request_args.get("search", ""),
+        "sort": request_args.get("sort", "deadline"),
+    }
+
+    types_raw = request_args.get("types")
+    if types_raw:
+        filters["types"] = [
+            t.strip()
+            for t in str(types_raw).split(",")
+            if t.strip() in ("project", "process")
+        ]
+
+    roles_raw = request_args.get("roles")
+    if roles_raw:
+        filters["roles"] = [
+            r.strip()
+            for r in str(roles_raw).split(",")
+            if r.strip() in ("responsible", "executor")
+        ]
+
+    responsible_ids = _parse_int_csv(request_args.get("responsible_ids"))
+    if responsible_ids:
+        filters["responsible_ids"] = responsible_ids
+
+    executor_ids = _parse_int_csv(request_args.get("executor_ids"))
+    if executor_ids:
+        filters["executor_ids"] = executor_ids
+
+    project_selection = (request_args.get("project_selection") or "").lower()
+    project_ids = _parse_int_csv(request_args.get("project_ids"))
+    if project_ids:
+        filters["project_ids"] = project_ids
+    elif project_selection == SELECTION_MODE_NONE:
+        filters["project_selection"] = SELECTION_MODE_NONE
+
+    process_selection = (request_args.get("process_selection") or "").lower()
+    process_ids = _parse_int_csv(request_args.get("process_ids"))
+    if process_ids:
+        filters["process_ids"] = process_ids
+    elif process_selection == SELECTION_MODE_NONE:
+        filters["process_selection"] = SELECTION_MODE_NONE
+
+    delivery_raw = request_args.get("delivery_tags")
+    if delivery_raw is not None:
+        filters["delivery_tags"] = [
+            tag.strip()
+            for tag in str(delivery_raw).split(",")
+            if tag.strip() in DELIVERY_TAGS
+        ]
+
+    def _parse_date(value: Any):
+        if not value:
+            return None
+        if isinstance(value, date):
+            return value
+        if isinstance(value, datetime):
+            return value.date()
+        try:
+            return datetime.strptime(str(value), "%Y-%m-%d").date()
+        except (ValueError, TypeError):
+            return None
+
+    due_date_start = _parse_date(request_args.get("due_date_start"))
+    due_date_end = _parse_date(request_args.get("due_date_end"))
+    if due_date_start:
+        filters["due_date_start"] = due_date_start
+    if due_date_end:
+        filters["due_date_end"] = due_date_end
+
+    # Adicionar company_ids e scope aos filtros
+    filters["company_ids"] = company_ids
+    filters["scope"] = scope
+
+    return {
+        "employee_id": employee_id,
+        "scope": scope,
+        "company_ids": company_ids,
+        "employee_ids": employee_ids,
+        "filters": filters,
+        "has_no_companies": False,
+    }
 

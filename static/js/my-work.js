@@ -197,7 +197,7 @@ const FILTER_MULTISELECTS = [
     optionsProvider: () =>
       (state.companies || []).map(company => ({
         id: company.company_id,
-        label: company.company_name || `Empresa ${company.company_id}`,
+        label: buildCompanyLabel(company),
         helper: ''
       })),
     labels: {
@@ -564,6 +564,12 @@ function setupMultiselect(config) {
   });
 }
 
+function buildCompanyLabel(company) {
+  const name = company.company_name || company.name || `Empresa ${company.company_id || ''}`.trim();
+  const code = company.company_code || company.client_code || '';
+  return code ? `${code}-${name}` : name;
+}
+
 function getCollaboratorOptions() {
   return (state.collaborators || []).map(collaborator => ({
     id: collaborator.id,
@@ -573,19 +579,29 @@ function getCollaboratorOptions() {
 }
 
 function getProjectOptions() {
-  return (state.projectsDirectory || []).map(project => ({
-    id: project.id,
-    label: project.title || 'Projeto sem título',
-    helper: project.company_name || ''
-  }));
+  return (state.projectsDirectory || []).map(project => {
+    const name = project.title || project.name || 'Projeto sem título';
+    const code = project.code || project.project_code || '';
+    const label = code ? `${code}-${name}` : name;
+    return {
+      id: project.id,
+      label,
+      helper: project.company_name || ''
+    };
+  });
 }
 
 function getProcessOptions() {
-  return (state.processesDirectory || []).map(process => ({
-    id: process.id,
-    label: process.title || 'Processo sem título',
-    helper: process.company_name || ''
-  }));
+  return (state.processesDirectory || []).map(process => {
+    const name = process.title || process.name || 'Processo sem título';
+    const code = process.code || process.process_code || '';
+    const label = code ? `${code} - ${name}` : name;
+    return {
+      id: process.id,
+      label,
+      helper: process.company_name || ''
+    };
+  });
 }
 
 function getProcessOwnerOptions() {
@@ -1654,9 +1670,19 @@ function getFilteredActivities() {
     state.selectedProcessIds.length &&
     state.selectedProcessIds.length < processesTotal
   ) {
-    activities = activities.filter(activity =>
-      activity.type !== 'process' || state.selectedProcessIds.includes(activity.id)
-    );
+    activities = activities.filter(activity => {
+      if (activity.type !== 'process') {
+        return true;
+      }
+      const activityProcessId = Number(activity.process_id ?? activity.id);
+      if (!activityProcessId) {
+        return false;
+      }
+      return (
+        state.selectedProcessIds.includes(activityProcessId) ||
+        state.selectedProcessIds.includes(String(activityProcessId))
+      );
+    });
   }
 
   // Filtro por donos de processos
@@ -2478,11 +2504,15 @@ function updateStats(stats) {
 
   const statPending = document.getElementById('stat-pending');
   const statOverdue = document.getElementById('stat-overdue');
+  const statTotal = document.getElementById('stat-total');
 
   // Card "Abertas" deve mostrar todas as atividades não concluídas (pending + in_progress)
   const openActivities = (stats.pending || 0) + (stats.in_progress || 0);
+  const completedActivities = stats.completed || 0;
+  const totalActivities = openActivities + completedActivities;
   if (statPending) animateValue(statPending, 0, openActivities, 1000);
   if (statOverdue) animateValue(statOverdue, 0, stats.overdue, 1000);
+  if (statTotal) animateValue(statTotal, Number(statTotal.textContent) || 0, totalActivities, 1000);
 }
 
 function updateInsightCards(filteredActivities) {
@@ -3545,44 +3575,68 @@ function initializeActivityActions() {
 function buildReportFiltersPayload() {
   const filters = {};
   
-  // Company IDs
+  // Company IDs - só incluir se houver seleção (mesma lógica da API)
   if (state.selectedCompanyIds && state.selectedCompanyIds.length > 0) {
     filters.company_ids = state.selectedCompanyIds.map(id => parseInt(id));
   }
   
-  // Responsible IDs
-  if (state.selectedResponsibleIds && state.selectedResponsibleIds.length > 0) {
+  // Responsible IDs - só incluir se seleção parcial (mesma lógica da API)
+  const collaboratorTotal = state.collaborators?.length || 0;
+  if (
+    state.selectedResponsibleIds.length &&
+    state.selectedResponsibleIds.length < collaboratorTotal
+  ) {
     filters.responsible_ids = state.selectedResponsibleIds.map(id => parseInt(id));
   }
   
-  // Executor IDs
-  if (state.selectedExecutorIds && state.selectedExecutorIds.length > 0) {
+  // Executor IDs - só incluir se seleção parcial (mesma lógica da API)
+  if (
+    state.selectedExecutorIds.length &&
+    state.selectedExecutorIds.length < collaboratorTotal
+  ) {
     filters.executor_ids = state.selectedExecutorIds.map(id => parseInt(id));
   }
   
-  // Project IDs
-  if (state.selectedProjectIds && state.selectedProjectIds.length > 0) {
+  // Project IDs - só incluir se seleção parcial ou nenhum selecionado (mesma lógica da API)
+  const projectsTotal = state.projectsDirectory?.length || 0;
+  const projectNoneSelected =
+    projectsTotal > 0 && state.selectedProjectIds.length === 0;
+  if (projectNoneSelected) {
+    filters.project_selection = SELECTION_MODE_NONE;
+  } else if (
+    state.selectedProjectIds.length &&
+    state.selectedProjectIds.length < projectsTotal
+  ) {
     filters.project_ids = state.selectedProjectIds.map(id => parseInt(id));
   }
   
-  // Process IDs
-  if (state.selectedProcessIds && state.selectedProcessIds.length > 0) {
+  // Process IDs - só incluir se seleção parcial ou nenhum selecionado (mesma lógica da API)
+  const processesTotal = state.processesDirectory?.length || 0;
+  const processNoneSelected =
+    processesTotal > 0 && state.selectedProcessIds.length === 0;
+  if (processNoneSelected) {
+    filters.process_selection = SELECTION_MODE_NONE;
+  } else if (
+    state.selectedProcessIds.length &&
+    state.selectedProcessIds.length < processesTotal
+  ) {
     filters.process_ids = state.selectedProcessIds.map(id => parseInt(id));
   }
   
-  // Process Owner IDs
+  // Process Owner IDs - só incluir se houver seleção válida (não null)
   if (state.selectedProcessOwnerIds && state.selectedProcessOwnerIds.length > 0) {
-    filters.process_owner_ids = state.selectedProcessOwnerIds.map(id => parseInt(id));
+    const validOwnerIds = state.selectedProcessOwnerIds
+      .map(id => id !== null && id !== undefined ? parseInt(id) : null)
+      .filter(id => id !== null);
+    if (validOwnerIds.length > 0) {
+      filters.process_owner_ids = validOwnerIds;
+    }
   }
   
-  // Delivery Tags
-  if (state.selectedDeliveryTags && state.selectedDeliveryTags.length > 0) {
-    const allTags = DELIVERY_FILTER_VALUES;
-    const hasAllTags = state.selectedDeliveryTags.length === allTags.length && 
-                       allTags.every(tag => state.selectedDeliveryTags.includes(tag));
-    if (!hasAllTags) {
-      filters.delivery_tags = state.selectedDeliveryTags;
-    }
+  // Delivery Tags - só incluir se seleção parcial (mesma lógica da API)
+  const deliveryFilters = state.selectedDeliveryTags || [];
+  if (deliveryFilters.length < DELIVERY_FILTER_VALUES.length) {
+    filters.delivery_tags = deliveryFilters;
   }
   
   // Due Date Range
