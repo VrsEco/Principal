@@ -46,6 +46,13 @@
         </a>
         {% endif %}
 
+        {% if module_links.get('my_work') %}
+        <a href="{{ module_links.my_work }}" class="sidebar-link" title="Minhas Atividades">
+          <span class="sidebar-icon">🧭</span>
+          <span class="link-text">Minhas Atividades</span>
+        </a>
+        {% endif %}
+
         <a href="/main" class="sidebar-link active" title="Anotações">
           <span class="sidebar-icon">📝</span>
           <span class="link-text">Anotações</span>

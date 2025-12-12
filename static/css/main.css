@@ -6133,6 +6133,11 @@ textarea::placeholder {
   .app-header {
     padding: 10px 12px;
     gap: 12px;
+    width: 100vw;
+    max-width: 100vw;
+    margin-left: calc(50% - 50vw);
+    margin-right: calc(50% - 50vw);
+    border-radius: 0;
   }
 
   .header-banner {
