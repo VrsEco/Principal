@@ -220,14 +220,15 @@
 
     .header-banner {
       display: block;
-      height: 60px;
+      height: 64px;
       width: auto;
+      max-width: 100%;
       object-fit: contain;
-      background: #000000;
-      padding: 8px 14px;
-      border-radius: 14px;
-      border: 1px solid rgba(255, 255, 255, 0.1);
-      box-shadow: 0 16px 32px rgba(0, 0, 0, 0.48);
+      background: transparent;
+      padding: 0;
+      border-radius: 0;
+      border: none;
+      box-shadow: none;
     }
 
     .user-pill {
@@ -576,7 +577,7 @@
   <div class="app-shell">
     <header class="app-header">
       <div class="header-brand">
-        <img class="header-banner" src="{{ url_for('static', filename='img/logo-versus-preta.png') }}"
+        <img class="header-banner" src="{{ url_for('static', filename='img/logo-versus-clara.png') }}"
           alt="Versus logo" />
       </div>
 

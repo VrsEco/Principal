@@ -1,6 +1,6 @@
 import json
 import logging
-from datetime import datetime
+from datetime import datetime, timedelta, timezone
 from typing import List, Optional
 
 """
@@ -8,7 +8,7 @@ Rotas do Módulo My Work
 APIs e páginas para gestão de atividades
 """
 
-from flask import Response, render_template, jsonify, request
+from flask import Response, render_template, jsonify, request, url_for, send_file
 from flask_login import login_required, current_user
 from . import my_work_bp
 from services.my_work_service import (
@@ -28,7 +28,9 @@ from services.my_work_service import (
     DELIVERY_TAGS,
 )
 from middleware.auto_log_decorator import auto_log_crud
-from relatorios.generators.my_work_report import MyWorkReport
+from relatorios.generators.my_work_report import MyWorkReport, MyWorkReportCompact
+from io import BytesIO
+from openpyxl import Workbook
 
 logger = logging.getLogger(__name__)
 
@@ -89,6 +91,407 @@ def my_work_report():
         return jsonify({"success": False, "error": str(exc)}), 500
 
     return Response(html, mimetype="text/html")
+
+
+@my_work_bp.route("/report-compact")
+@login_required
+def my_work_report_compact():
+    """
+    Gera a versão compacta (v2) do relatório My Work.
+    """
+    scope = request.args.get("scope", "me")
+    raw_filters = request.args.get("filters")
+    filters_payload = {}
+    if raw_filters:
+        try:
+            filters_payload = json.loads(raw_filters)
+        except ValueError:
+            filters_payload = {}
+
+    raw_max = request.args.get("max")
+    max_activities = None
+    if raw_max is not None:
+        try:
+            parsed = int(raw_max)
+            max_activities = parsed if parsed > 0 else None
+        except ValueError:
+            max_activities = None
+
+    qs = request.query_string.decode("utf-8")
+    query_suffix = f"?{qs}" if qs else ""
+    export_links = {
+        "pdf": url_for("my_work.my_work_report_compact_pdf") + query_suffix,
+        "excel": url_for("my_work.my_work_report_compact_excel") + query_suffix,
+    }
+
+    report = MyWorkReportCompact()
+    try:
+        html = report.generate_html(
+            user_id=current_user.id,
+            user_name=current_user.name or current_user.email,
+            scope=scope,
+            filters=filters_payload,
+            max_activities=max_activities,
+            export_links=export_links,
+        )
+    except ValueError as exc:
+        return jsonify({"success": False, "error": str(exc)}), 400
+    except Exception as exc:
+        logger.error("Erro ao gerar relatório My Work (compacto): %s", exc, exc_info=True)
+        return jsonify({"success": False, "error": str(exc)}), 500
+
+    return Response(html, mimetype="text/html")
+
+
+@my_work_bp.route("/report-compact.pdf")
+@login_required
+def my_work_report_compact_pdf():
+    scope = request.args.get("scope", "me")
+    raw_filters = request.args.get("filters")
+    filters_payload = {}
+    if raw_filters:
+        try:
+            filters_payload = json.loads(raw_filters)
+        except ValueError:
+            filters_payload = {}
+
+    raw_max = request.args.get("max")
+    max_activities = None
+    if raw_max is not None:
+        try:
+            parsed = int(raw_max)
+            max_activities = parsed if parsed > 0 else None
+        except ValueError:
+            max_activities = None
+
+    report = MyWorkReportCompact()
+    try:
+        report.fetch_data(
+            user_id=current_user.id,
+            user_name=current_user.name or current_user.email,
+            scope=scope,
+            filters=filters_payload,
+            max_activities=max_activities,
+        )
+    except Exception as exc:
+        logger.error("Erro ao buscar dados para PDF My Work: %s", exc, exc_info=True)
+        return jsonify({"success": False, "error": str(exc)}), 500
+
+    activities = report.data.get("all_activities") or []
+    filters_summary = report.data.get("filters_summary") or []
+    metrics = report._compute_metrics()
+    user_label = report.data.get("user", {}).get("name") or (current_user.name or current_user.email)
+
+    try:
+        from reportlab.lib.pagesizes import A4
+        from reportlab.lib import colors
+        from reportlab.lib.styles import getSampleStyleSheet, ParagraphStyle
+        from reportlab.platypus import (
+            BaseDocTemplate,
+            PageTemplate,
+            Frame,
+            Paragraph,
+            Table,
+            TableStyle,
+            Spacer,
+        )
+        from reportlab.pdfgen import canvas
+    except Exception:
+        return jsonify({"success": False, "error": "reportlab não está instalado. pip install reportlab"}), 500
+
+    buffer = BytesIO()
+
+    # Paginador: cabeçalho/rodapé com paginação e marca
+    generated_at = datetime.now(timezone(timedelta(hours=-3)))
+    timestamp = generated_at.strftime("%d/%m/%Y %H:%M")
+
+    class NumberedCanvas(canvas.Canvas):
+        def __init__(self, *args, **kwargs):
+            self.user_label = user_label
+            self.timestamp = timestamp
+            super().__init__(*args, **kwargs)
+            self._saved_page_states = []
+
+        def showPage(self):
+            self._saved_page_states.append(dict(self.__dict__))
+            self._startPage()
+
+        def save(self):
+            page_count = len(self._saved_page_states)
+            for state in self._saved_page_states:
+                self.__dict__.update(state)
+                self.draw_header_footer(page_count)
+                super().showPage()
+            super().save()
+
+        def draw_header_footer(self, page_count):
+            width, height = A4
+            self.saveState()
+            # Header
+            self.setFont("Helvetica-Bold", 11)
+            self.drawString(18, height - 24, "Gestão da Rotina")
+            self.setFont("Helvetica", 9)
+            self.drawRightString(width - 18, height - 24, f"Usuário: {self.user_label}")
+            # Footer
+            self.setFont("Helvetica", 8)
+            self.drawString(18, 16, "Versus Gestão Corporativa - Todos os direitos reservados")
+            self.drawRightString(width - 18, 16, f"Em: {self.timestamp} | Página {self._pageNumber} de {page_count}")
+            self.restoreState()
+
+    doc = BaseDocTemplate(
+        buffer,
+        pagesize=A4,
+        leftMargin=18,
+        rightMargin=18,
+        topMargin=42,
+        bottomMargin=32,
+    )
+
+    frame = Frame(
+        doc.leftMargin,
+        doc.bottomMargin,
+        doc.width,
+        doc.height,
+        id="normal",
+    )
+    doc.addPageTemplates([PageTemplate(id="report", frames=frame)])
+
+    styles = getSampleStyleSheet()
+    styles.add(ParagraphStyle(name="Cell", fontName="Helvetica", fontSize=8, leading=10))
+    styles.add(ParagraphStyle(name="CellBold", fontName="Helvetica-Bold", fontSize=8.5, leading=10.5))
+
+    body = []
+
+    # Filtros
+    if filters_summary:
+        filt_text = " | ".join(f"{entry.get('label')}: {entry.get('value')}" for entry in filters_summary)
+    else:
+        filt_text = "Sem filtros específicos"
+    body.append(Paragraph(f"<b>Filtros:</b> {filt_text}", styles["Normal"]))
+    body.append(Spacer(1, 8))
+
+    # Indicadores
+    perf_display = f"{int(metrics.get('performance_percent', 0))}%"
+    occ_balance = int(metrics.get("occ_pos", 0)) - int(metrics.get("occ_neg", 0))
+    indicators = [
+        ["Abertas", "Atrasadas (em aberto)", "Concluídas", "Total", "Performance", "Ocorrências"],
+        [
+            int(metrics.get("open_count", 0)),
+            int(metrics.get("overdue", 0)),
+            int(metrics.get("completed", 0)),
+            int(metrics.get("total", 0)),
+            perf_display,
+            occ_balance,
+        ],
+    ]
+    t = Table(indicators, colWidths=[60, 60, 70, 60, 70, 70], repeatRows=0)
+    t.setStyle(
+        TableStyle(
+            [
+                ("BACKGROUND", (0, 0), (-1, 0), colors.lightgrey),
+                ("TEXTCOLOR", (0, 0), (-1, 0), colors.black),
+                ("ALIGN", (0, 0), (-1, -1), "LEFT"),
+                ("FONTNAME", (0, 0), (-1, 0), "Helvetica-Bold"),
+                ("FONTSIZE", (0, 0), (-1, -1), 9),
+                ("BOTTOMPADDING", (0, 0), (-1, 0), 6),
+                ("GRID", (0, 0), (-1, -1), 0.5, colors.grey),
+            ]
+        )
+    )
+    body.append(t)
+    body.append(Spacer(1, 12))
+
+    # Tabela de atividades com quebra de linha nas células
+    table_data = [
+        [
+            Paragraph("Tipo", styles["CellBold"]),
+            Paragraph("Projeto / Processo", styles["CellBold"]),
+            Paragraph("Atividade / Instância", styles["CellBold"]),
+            Paragraph("Responsável", styles["CellBold"]),
+            Paragraph("Prazo", styles["CellBold"]),
+            Paragraph("Status", styles["CellBold"]),
+        ]
+    ]
+    for activity in activities:
+        kind = "Processo" if activity.get("type") == "process" else "Projeto"
+        primary = report._format_code_name(
+            activity.get("process_code") if kind == "Processo" else activity.get("project_code"),
+            activity.get("process_name") or activity.get("title") if kind == "Processo" else activity.get("project_title") or activity.get("plan_name"),
+        )
+        secondary = report._format_code_name(
+            activity.get("instance_code") if kind == "Processo" else activity.get("activity_code"),
+            activity.get("title"),
+        )
+        responsible = report._resolve_responsible_name(activity)
+        deadline_raw = activity.get("deadline")
+        deadline = report._format_date(deadline_raw) if deadline_raw else "-"
+        status = report._translate_status(activity.get("status"))
+        table_data.append(
+            [
+                Paragraph(str(kind), styles["Cell"]),
+                Paragraph(str(primary), styles["Cell"]),
+                Paragraph(str(secondary), styles["Cell"]),
+                Paragraph(str(responsible), styles["Cell"]),
+                Paragraph(str(deadline), styles["Cell"]),
+                Paragraph(str(status), styles["Cell"]),
+            ]
+        )
+
+    col_widths = [55, 110, 110, 90, 60, 60]
+    table = Table(table_data, colWidths=col_widths, repeatRows=1)
+    table.setStyle(
+        TableStyle(
+            [
+                ("BACKGROUND", (0, 0), (-1, 0), colors.lightgrey),
+                ("TEXTCOLOR", (0, 0), (-1, 0), colors.black),
+                ("FONTNAME", (0, 0), (-1, 0), "Helvetica-Bold"),
+                ("FONTSIZE", (0, 0), (-1, 0), 8.5),
+                ("ALIGN", (0, 0), (-1, -1), "LEFT"),
+                ("VALIGN", (0, 0), (-1, -1), "TOP"),
+                ("GRID", (0, 0), (-1, -1), 0.25, colors.grey),
+                ("FONTSIZE", (0, 1), (-1, -1), 8),
+                ("BOTTOMPADDING", (0, 0), (-1, 0), 4),
+                ("TOPPADDING", (0, 1), (-1, -1), 3),
+                ("BOTTOMPADDING", (0, 1), (-1, -1), 3),
+            ]
+        )
+    )
+    body.append(table)
+
+    try:
+        doc.build(body, canvasmaker=NumberedCanvas)
+    except Exception as exc:
+        logger.error("Erro ao gerar PDF My Work com reportlab: %s", exc, exc_info=True)
+        return jsonify({"success": False, "error": str(exc)}), 500
+
+    buffer.seek(0)
+    filename = f"my-work-report-{scope}.pdf"
+    return send_file(
+        buffer,
+        mimetype="application/pdf",
+        as_attachment=True,
+        download_name=filename,
+    )
+
+
+@my_work_bp.route("/report-compact.xlsx")
+@login_required
+def my_work_report_compact_excel():
+    scope = request.args.get("scope", "me")
+    raw_filters = request.args.get("filters")
+    filters_payload = {}
+    if raw_filters:
+        try:
+            filters_payload = json.loads(raw_filters)
+        except ValueError:
+            filters_payload = {}
+
+    raw_max = request.args.get("max")
+    max_activities = None
+    if raw_max is not None:
+        try:
+            parsed = int(raw_max)
+            max_activities = parsed if parsed > 0 else None
+        except ValueError:
+            max_activities = None
+
+    report = MyWorkReportCompact()
+    try:
+        report.fetch_data(
+            user_id=current_user.id,
+            user_name=current_user.name or current_user.email,
+            scope=scope,
+            filters=filters_payload,
+            max_activities=max_activities,
+        )
+    except Exception as exc:
+        logger.error("Erro ao buscar dados para Excel My Work: %s", exc, exc_info=True)
+        return jsonify({"success": False, "error": str(exc)}), 500
+
+    activities = report.data.get("all_activities") or []
+    filters_summary_raw = report.data.get("filters_summary") or []
+    filters_summary = filters_summary_raw if isinstance(filters_summary_raw, list) else []
+    metrics = report._compute_metrics()
+
+    def _safe_int(value, default=0):
+        try:
+            return int(value)
+        except Exception:
+            return default
+
+    wb = Workbook()
+    ws = wb.active
+    ws.title = "Atividades"
+
+    # Cabeçalho superior
+    user_label = report.data.get("user", {}).get("name") or (current_user.name or current_user.email)
+    ws.append(["Gestão da Rotina", "", "", "", f"Usuário: {user_label}"])
+    ws.append([])
+
+    # Resumo de filtros
+    filt_text = "Sem filtros específicos"
+    if filters_summary and isinstance(filters_summary, list):
+        try:
+            filt_text = " | ".join(f"{str(entry.get('label', '')).strip()}: {str(entry.get('value', '')).strip()}" for entry in filters_summary)
+        except Exception:
+            filt_text = "Sem filtros específicos"
+    ws.append([f"Filtros: {filt_text}"])
+    ws.append([])
+
+    # Indicadores
+    ws.append(["Abertas", "Atrasadas (em aberto)", "Concluídas", "Total", "Performance", "Ocorrências"])
+    performance_display = f"{_safe_int(metrics.get('performance_percent', 0))}%"
+    occ_balance = _safe_int(metrics.get("occ_pos", 0)) - _safe_int(metrics.get("occ_neg", 0))
+    ws.append([
+        _safe_int(metrics.get("open_count")),
+        _safe_int(metrics.get("overdue")),
+        _safe_int(metrics.get("completed")),
+        _safe_int(metrics.get("total")),
+        performance_display,
+        occ_balance,
+    ])
+    ws.append([])
+
+    # Dados das atividades
+    ws.append(["Tipo", "Projeto / Processo", "Atividade / Instância", "Responsável", "Prazo", "Status"])
+    for activity in activities:
+        kind = "Processo" if activity.get("type") == "process" else "Projeto"
+        primary = report._format_code_name(
+            activity.get("process_code") if kind == "Processo" else activity.get("project_code"),
+            activity.get("process_name") or activity.get("title") if kind == "Processo" else activity.get("project_title") or activity.get("plan_name"),
+        )
+        secondary = report._format_code_name(
+            activity.get("instance_code") if kind == "Processo" else activity.get("activity_code"),
+            activity.get("title"),
+        )
+        responsible = report._resolve_responsible_name(activity)
+        deadline_raw = activity.get("deadline")
+        deadline = report._format_date(deadline_raw) if deadline_raw else "-"
+        status = report._translate_status(activity.get("status"))
+        ws.append([
+            str(kind),
+            str(primary),
+            str(secondary),
+            str(responsible),
+            str(deadline),
+            str(status),
+        ])
+
+    output = BytesIO()
+    try:
+        wb.save(output)
+    except Exception as exc:
+        logger.error("Erro ao gerar Excel My Work: %s", exc, exc_info=True)
+        return jsonify({"success": False, "error": str(exc)}), 500
+
+    output.seek(0)
+    filename = f"my-work-report-{scope}.xlsx"
+    return send_file(
+        output,
+        mimetype="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+        as_attachment=True,
+        download_name=filename,
+    )
 
 
 # ============================================================================

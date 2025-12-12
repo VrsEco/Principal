@@ -265,7 +265,7 @@
 
   <div class="tasks-stats">
     <div class="stat-card overdue">
-      <div class="stat-card-label">Atrasadas</div>
+      <div class="stat-card-label">Atrasadas (em aberto)</div>
       <div class="stat-card-value" id="overdueCount">0</div>
     </div>
     <div class="stat-card upcoming">
@@ -284,7 +284,7 @@
 
   <div class="tasks-filter">
     <button class="filter-button active" data-filter="all" onclick="filterTasks('all')" data-ref="01">Todas</button>
-    <button class="filter-button" data-filter="overdue" onclick="filterTasks('overdue')" data-ref="02">Atrasadas</button>
+    <button class="filter-button" data-filter="overdue" onclick="filterTasks('overdue')" data-ref="02">Atrasadas (em aberto)</button>
     <button class="filter-button" data-filter="in_progress" onclick="filterTasks('in_progress')" data-ref="03">Em Andamento</button>
     <button class="filter-button" data-filter="pending" onclick="filterTasks('pending')" data-ref="04">Pendentes</button>
     <button class="filter-button" data-filter="completed" onclick="filterTasks('completed')" data-ref="05">Concluídas</button>
@@ -472,6 +472,5 @@
   }
 </script>
 {% endblock %}
-
 
 

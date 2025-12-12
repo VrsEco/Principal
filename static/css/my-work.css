@@ -51,6 +51,101 @@ body {
 }
 
 /* ========================================
+   Header align with light layout
+   ======================================== */
+.my-work-page .app-header {
+  background: linear-gradient(180deg, #f8fafc 0%, #e2e8f0 100%) !important;
+  border-bottom: 1px solid rgba(15, 23, 42, 0.08) !important;
+  box-shadow: 0 16px 32px rgba(15, 23, 42, 0.12) !important;
+  color: var(--color-text-primary);
+  padding: 18px 20px;
+}
+
+.my-work-page .header-brand {
+  flex: 1 1 auto;
+  justify-content: center;
+}
+
+.my-work-page .header-banner {
+  height: 78px;
+  max-height: 78px;
+  background: transparent;
+  border: none;
+  box-shadow: none;
+}
+
+.my-work-page .header-nav .nav-link,
+.my-work-page .header-nav .nav-link:visited {
+  color: var(--color-text-primary) !important;
+  background: #ffffff;
+  border: 1px solid #e2e8f0;
+  box-shadow: 0 8px 16px rgba(15, 23, 42, 0.08);
+}
+
+.my-work-page .header-nav .nav-link:hover {
+  background: #eef2ff !important;
+  color: #1d4ed8 !important;
+  border-color: #c7d2fe;
+}
+
+.my-work-page .header-nav .nav-link.active {
+  background: #e0e7ff !important;
+  color: #1d4ed8 !important;
+  border-color: #c7d2fe;
+}
+
+.my-work-page .header-nav .new-activity-btn {
+  color: #ffffff !important;
+  box-shadow: 0 10px 22px rgba(124, 58, 237, 0.35);
+}
+
+.my-work-page .user-pill {
+  background: #ffffff !important;
+  border: 1px solid #e2e8f0 !important;
+  color: var(--color-text-primary) !important;
+  box-shadow: 0 8px 18px rgba(15, 23, 42, 0.1) !important;
+}
+
+.my-work-page .user-pill svg {
+  color: inherit;
+  stroke: currentColor;
+}
+
+.my-work-page .user-name {
+  color: var(--color-text-primary) !important;
+}
+
+.my-work-page .mobile-menu-toggle {
+  background: #e0e7ff;
+  border: 1px solid #c7d2fe;
+  box-shadow: 0 8px 18px rgba(37, 99, 235, 0.12);
+}
+
+.my-work-page .mobile-menu-toggle .hamburger-line {
+  background: #2563eb;
+}
+
+@media (max-width: 768px) {
+  .my-work-page .header-actions {
+    background: linear-gradient(180deg, #f8fafc 0%, #e2e8f0 100%) !important;
+    border-bottom: 1px solid rgba(15, 23, 42, 0.08);
+    box-shadow: 0 18px 36px rgba(15, 23, 42, 0.14);
+  }
+
+  .my-work-page .header-banner {
+    height: 68px;
+    max-height: 68px;
+  }
+}
+
+@media (max-width: 480px) {
+  .my-work-page .header-banner {
+    height: 60px;
+    max-height: 60px;
+  }
+}
+
+/* ========================================
    Container & Layout
    ======================================== */
 

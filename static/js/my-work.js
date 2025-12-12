@@ -3655,12 +3655,11 @@ function buildReportFiltersPayload() {
   return filters;
 }
 
-// Função para atualizar o link do relatório com os filtros atuais
+// Função para atualizar os links do relatório (normal e compacto) com os filtros atuais
 function updateReportLink() {
-  const reportLink = document.querySelector('.stat-card__link[href*="report"]');
-  if (!reportLink) return;
+  const reportLinks = Array.from(document.querySelectorAll('.stat-card__link[href*="report"]'));
+  if (!reportLinks.length) return;
   
-  const baseUrl = reportLink.getAttribute('href').split('?')[0];
   const scope = state.currentScope || 'me';
   const filters = buildReportFiltersPayload();
   
@@ -3671,11 +3670,14 @@ function updateReportLink() {
     params.set('filters', JSON.stringify(filters));
   }
   
-  const newUrl = baseUrl + '?' + params.toString();
-  reportLink.setAttribute('href', newUrl);
+  reportLinks.forEach((link) => {
+    const baseUrl = link.getAttribute('href').split('?')[0];
+    const newUrl = `${baseUrl}?${params.toString()}`;
+    link.setAttribute('href', newUrl);
+  });
 }
 
-// Atualizar link do relatório quando os filtros mudarem
+// Atualizar links do relatório quando os filtros mudarem
 function initializeReportLink() {
   updateReportLink();
   

@@ -10,7 +10,8 @@ com cabeçalho, indicadores e a listagem de cartões de atividades/processos.
 from __future__ import annotations
 
 import json
-from datetime import datetime, date
+from datetime import datetime, date, timedelta, timezone
+from zoneinfo import ZoneInfo
 from typing import Any, Dict, List, Optional, Sequence
 
 from relatorios.generators.base import BaseReportGenerator
@@ -89,14 +90,19 @@ class MyWorkReport(BaseReportGenerator):
         """
 
     def get_footer(self) -> str:
-        return """
+        try:
+            now_dt = datetime.now(ZoneInfo("America/Sao_Paulo"))
+        except Exception:
+            now_dt = datetime.now(timezone(timedelta(hours=-3)))
+        now = now_dt.strftime("%d/%m/%Y às %H:%M")
+        return f"""
         <div class="custom-report-footer">
             <div class="footer-grid">
                 <div class="footer-cell">
                     Versus Gestão Corporativa - Todos os Direitos Reservados
                 </div>
                 <div class="footer-cell footer-right">
-                    Emitido em: 10/12/2025 às 10:31
+                    Emitido em: {now}
                 </div>
             </div>
         </div>
@@ -326,7 +332,7 @@ class MyWorkReport(BaseReportGenerator):
         in_progress = int(stats.get("in_progress", 0) or 0)
         open_count = pending + in_progress
         
-        # Atrasadas = overdue (como updateStats faz)
+        # Atrasadas (em aberto) = overdue (como updateStats faz)
         overdue = int(stats.get("overdue", 0) or 0)
         
         # Performance Score e Taxa de Conclusão: calcular como a página (updateInsightCards)
@@ -365,7 +371,7 @@ class MyWorkReport(BaseReportGenerator):
         # Criar células com os 5 indicadores
         indicators = [
             ("Em aberto", open_count),
-            ("Atrasadas", overdue),
+            ("Atrasadas (em aberto)", overdue),
             ("Total", total_count),
             ("Ocorrências", occurrences_display),
             ("Performance Score", performance_display),
@@ -718,12 +724,14 @@ class MyWorkReport(BaseReportGenerator):
             parts.append(self._format_date(end))
         return " até ".join(parts) if parts else "Sem prazo"
 
-    def _format_date(self, value: str) -> str:
+    def _format_date(self, value: Any) -> str:
+        if isinstance(value, (datetime, date)):
+            return value.strftime("%d/%m/%Y")
         try:
-            source = datetime.strptime(value, "%Y-%m-%d")
+            source = datetime.strptime(str(value), "%Y-%m-%d")
             return source.strftime("%d/%m/%Y")
         except Exception:
-            return value
+            return str(value)
 
     def _resolve_user_name(self, user_id: int, override: Optional[str]) -> str:
         if override:
@@ -822,59 +830,91 @@ class MyWorkReport(BaseReportGenerator):
 
     def _add_custom_styles(self) -> None:
         css = """
-        /* Margens de 5 mm em todos os lados */
+        /* Layout compacto para impressão */
         @page {
             margin: 5mm;
         }
         
         body {
-            margin: 0; /* evitar acúmulo de margens externas */
+            margin: 0;
+            background: #ffffff;
+        }
+        
+        :root {
+            --report-header-offset: 16mm;
+            --report-footer-offset: 12mm;
         }
         
         .report-content {
             margin: 0;
-            padding: 0 5mm;
-            padding-top: calc(var(--report-header-offset) + 2mm);
-            padding-bottom: calc(var(--report-footer-offset) + 2mm);
+            padding: calc(var(--report-header-offset) + 2mm) 5mm calc(var(--report-footer-offset) + 2mm) 5mm;
         }
 
-        /* Espaços dedicados entre cabeçalho/rodapé e o conteúdo */
+        /* Cabeçalho e rodapé enxutos */
         .custom-report-header,
         .report-header {
-            margin-bottom: 3mm;
+            margin: 0 0 3mm 0;
+            padding: 3mm 5mm 2mm 5mm;
+            border-bottom: 1px solid #e5e7eb;
+            background: #ffffff;
         }
 
         .custom-report-footer,
         .report-footer {
-            margin-top: 3mm;
+            margin: 3mm 0 0 0;
+            padding: 2mm 5mm 3mm 5mm;
+            border-top: 1px solid #e5e7eb;
+            background: #ffffff;
+            font-size: 8.5pt;
+            color: #475569;
+        }
+
+        .header-grid {
+            gap: 6px;
+            align-items: center;
+        }
+
+        .header-cell {
+            font-size: 9pt;
+            line-height: 1.3;
+        }
+
+        .header-cell:first-child {
+            font-weight: 600;
+        }
+
+        .header-center {
+            font-weight: 700;
         }
 
         /* Seções gerais */
         .report-section {
-            margin-bottom: 8mm;
+            margin-bottom: 4mm;
             page-break-inside: avoid;
         }
 
+        .report-section.activities-section {
+            margin-bottom: 3mm;
+            page-break-inside: auto;
+        }
+
         .report-section h1 {
-            font-size: 18px;
+            font-size: 12pt;
             line-height: 1.3;
-            margin: 0 0 6px 0;
-            padding: 0;
-            page-break-after: avoid;
+            margin: 0 0 2.5mm 0;
+            padding: 0 0 1.5mm 0;
+            border-bottom: 1px solid #e5e7eb;
+            color: #111827;
+            letter-spacing: 0.02em;
+        }
+
+        .section-content {
+            font-size: 9.5pt;
+            line-height: 1.35;
         }
 
         .report-section .section-content {
             page-break-inside: avoid;
-        }
-
-        /* Seções específicas */
-        .report-section.activities-section {
-            page-break-inside: auto;
-            margin-bottom: 6mm;
-        }
-
-        .report-section.activities-section h1 {
-            page-break-after: avoid;
         }
 
         .report-section.activities-section .section-content {
@@ -882,42 +922,44 @@ class MyWorkReport(BaseReportGenerator):
         }
         
         .filters-summary {
-            font-size: 10pt;
-            margin-bottom: 1rem;
-            line-height: 1.5;
+            font-size: 9pt;
+            margin: 0 0 3mm 0;
+            padding: 2mm 3mm;
+            line-height: 1.4;
+            background: #f8fafc;
+            border: 1px solid #e5e7eb;
+            border-radius: 4px;
         }
         
         .filters-summary strong {
-            font-weight: bold;
-        }
-
-        .filter-section-title {
-            font-weight: bold;
-            margin-bottom: 0.4rem;
+            font-weight: 700;
         }
 
         .indicator-table,
         .activity-table {
             width: 100%;
             border-collapse: collapse;
-            margin-bottom: 0.5rem;
-            font-size: 10pt;
+            margin-bottom: 2.5mm;
+            font-size: 9.5pt;
             border: 1px solid #d1d5db;
-            page-break-inside: avoid;
         }
         .indicator-table th,
         .indicator-table td,
         .activity-table th,
         .activity-table td {
             border: 1px solid #d1d5db;
-            padding: 0.35rem 0.45rem;
+            padding: 0.22rem 0.35rem;
             page-break-inside: avoid;
+            vertical-align: top;
+        }
+
+        .indicator-table {
+            table-layout: fixed;
         }
 
         .indicator-table td {
             width: 33%;
             background: #f9fafb;
-            border: 1px solid #d1d5db;
         }
         
         .indicator-table tr {
@@ -927,39 +969,436 @@ class MyWorkReport(BaseReportGenerator):
         .indicator-cell {
             display: flex;
             flex-direction: column;
-            gap: 0.15rem;
-            padding: 0.4rem 0;
+            gap: 0.1rem;
         }
 
         .indicator-title {
-            font-size: 0.75rem;
+            font-size: 8pt;
             color: #475569;
             text-transform: uppercase;
             letter-spacing: 0.04em;
         }
 
         .indicator-number {
-            font-size: 1.35rem;
+            font-size: 1.05rem;
             font-weight: 700;
         }
 
         .activity-table th {
             background: #f3f4f6;
+            font-weight: 600;
         }
 
         .activity-table td {
             background: #ffffff;
+            word-break: break-word;
+        }
+
+        .activity-table tr:nth-child(even) td {
+            background: #f9fafb;
         }
 
         .activity-count {
-            font-size: 9pt;
-            margin-top: 2px;
-            margin-bottom: 0;
+            font-size: 8.5pt;
+            margin: 0 0 1mm 0;
+            color: #475569;
         }
 
         /* Evitar quebras abruptas em linhas de tabela */
         .activity-table tr {
             page-break-inside: avoid;
         }
+
+        .activity-table td:last-child,
+        .activity-table th:last-child {
+            white-space: nowrap;
+        }
+
+        @media print {
+            body {
+                margin: 0;
+            }
+
+            .report-content {
+                padding-top: calc(var(--report-header-offset) + 2mm);
+                padding-bottom: calc(var(--report-footer-offset) + 2mm);
+            }
+        }
         """
         self.add_custom_style("my-work-report", css)
+
+
+class MyWorkReportCompact(MyWorkReport):
+    """
+    Layout compacto alternativo para impressão.
+
+    Reaproveita os mesmos dados do relatório principal, mas com um design
+    ainda mais enxuto para caber mais linhas por página.
+    """
+
+    REPORT_TITLE = "Gestão da Rotina - Compacto"
+
+    def get_header(self) -> str:
+        user_name = (self.data.get("user") or {}).get("name") or "Usuário"
+        return f"""
+        <div class="custom-report-header compact-header">
+            <div class="compact-header__title">
+                <div class="title-main">Gestão da Rotina</div>
+            </div>
+            <div class="compact-header__meta">
+                <span class="meta-chip">Usuário: {user_name}</span>
+                <span class="meta-chip">Página <span class="page-number"></span>/<span class="total-pages"></span></span>
+            </div>
+        </div>
+        """
+
+    def get_footer(self) -> str:
+        # Usar o comportamento padrão de paginação do navegador (counter(page)/counter(pages))
+        return super().get_footer()
+
+    def build_sections(self) -> None:
+        self.clear_sections()
+        if self.data.get("export_links"):
+            self.add_section("", self._render_export_actions(), section_class="export-section")
+        self.add_section("", self._render_compact_summary(), section_class="summary-section")
+        self.add_section("", self._render_compact_activities(), section_class="activities-section")
+
+    def generate_html(self, export_links: Optional[Dict[str, str]] = None, **kwargs) -> str:
+        """
+        Sobrescreve para aceitar links de exportação (PDF/Excel) e expor no layout.
+        """
+        self.fetch_data(**kwargs)
+        self.data["export_links"] = export_links or {}
+        self.build_sections()
+        return self._build_html_template()
+
+    def _render_compact_summary(self) -> str:
+        metrics = self._compute_metrics()
+        filters_html = self._render_filters_line()
+
+        chips = [
+            ("Abertas", metrics["open_count"]),
+            ("Atrasadas (em aberto)", metrics["overdue"]),
+            ("Concluídas", metrics["completed"]),
+            ("Total", metrics["total"]),
+            ("Performance", f"{metrics['performance_percent']:.0f}%"),
+            ("Ocorrências", f"+{metrics['occ_pos']} / -{metrics['occ_neg']}"),
+        ]
+        chip_html = "".join(
+            f"<div class='summary-chip'><div class='chip-label'>{label}</div><div class='chip-value'>{value}</div></div>"
+            for label, value in chips
+        )
+
+        return f"""
+        <div class="compact-summary">
+            <div class="filters-line">{filters_html}</div>
+            <div class="summary-grid">{chip_html}</div>
+        </div>
+        """
+
+    def _render_export_actions(self) -> str:
+        links = self.data.get("export_links") or {}
+        pdf_link = links.get("pdf")
+        excel_link = links.get("excel")
+        if not (pdf_link or excel_link):
+            return ""
+        buttons = []
+        if pdf_link:
+            buttons.append(f"<a class='export-button' href='{pdf_link}' target='_blank' rel='noopener'>Baixar PDF</a>")
+        if excel_link:
+            buttons.append(f"<a class='export-button' href='{excel_link}' target='_blank' rel='noopener'>Exportar Excel</a>")
+        return f"<div class='export-actions'>{''.join(buttons)}</div>"
+
+    def _render_compact_activities(self) -> str:
+        activities = self.data.get("activities") or []
+        if not activities:
+            return "<p>Nenhuma atividade ou instância disponível.</p>"
+
+        rows = []
+        rows.append(
+            "<tr><th>Tipo</th><th>Projeto / Processo</th><th>Atividade / Instância</th><th>Responsável</th><th>Prazo</th><th>Status</th></tr>"
+        )
+        for activity in activities:
+            kind = "Processo" if activity.get("type") == "process" else "Projeto"
+            primary = self._format_code_name(
+                activity.get("process_code") if kind == "Processo" else activity.get("project_code"),
+                activity.get("process_name") or activity.get("title") if kind == "Processo" else activity.get("project_title") or activity.get("plan_name"),
+            )
+            secondary = self._format_code_name(
+                activity.get("instance_code") if kind == "Processo" else activity.get("activity_code"),
+                activity.get("title"),
+            )
+            responsible = self._resolve_responsible_name(activity)
+            deadline_raw = activity.get("deadline")
+            deadline = self._format_date(deadline_raw) if deadline_raw else "-"
+            status = self._translate_status(activity.get("status"))
+            rows.append(
+                f"<tr><td>{kind}</td><td>{primary}</td><td>{secondary}</td><td>{responsible}</td><td>{deadline}</td><td>{status}</td></tr>"
+            )
+        displayed = len(activities)
+        total = len(self.data.get("all_activities") or [])
+        note = f"<p class='activity-count'>Mostrando {displayed} de {total} registros.</p>"
+        return f"{note}<table class='compact-table'>{''.join(rows)}</table>"
+
+    def _render_filters_line(self) -> str:
+        summary = self.data.get("filters_summary") or []
+        filters_payload = self.data.get("filters_payload") or {}
+
+        if summary:
+            items = " | ".join(
+                f"<strong>{entry['label']}:</strong> {entry['value']}"
+                for entry in summary
+            )
+            return items
+
+        # fallback básico se não houver resumo estruturado
+        basic_info = []
+        scope = filters_payload.get("scope", "me")
+        if scope and scope not in ("me", "company"):
+            label = SCOPE_LABELS.get(scope, scope.title())
+            basic_info.append(f"<strong>Escopo:</strong> {label}")
+
+        search = (filters_payload.get("search") or "").strip()
+        if search:
+            basic_info.append(f"<strong>Busca:</strong> {search}")
+
+        quick_filter = (filters_payload.get("filter") or "").lower()
+        if quick_filter and quick_filter != "all":
+            value = FILTER_SHORTCUTS.get(quick_filter, quick_filter)
+            basic_info.append(f"<strong>Filtro rápido:</strong> {value}")
+
+        due_start = filters_payload.get("due_date_start")
+        due_end = filters_payload.get("due_date_end")
+        if due_start or due_end:
+            date_range = self._format_date_range(due_start, due_end)
+            basic_info.append(f"<strong>Período:</strong> {date_range}")
+
+        return " | ".join(basic_info) if basic_info else "Sem filtros específicos"
+
+    def _compute_metrics(self) -> Dict[str, Any]:
+        stats = self.data.get("stats") or {}
+        occurrences = self.data.get("occurrences") or {}
+        all_activities = self.data.get("all_activities") or []
+
+        pending = int(stats.get("pending", 0) or 0)
+        in_progress = int(stats.get("in_progress", 0) or 0)
+        open_count = pending + in_progress
+        overdue = int(stats.get("overdue", 0) or 0)
+        completed = sum(
+            1 for act in all_activities if (act.get("status") or "").lower() in ("completed", "done")
+        )
+        total = len(all_activities)
+        perf_percent = (completed / total * 100) if total else 0
+        occ_pos = int(occurrences.get("positive", {}).get("count", 0) or 0)
+        occ_neg = int(occurrences.get("negative", {}).get("count", 0) or 0)
+
+        return {
+            "open_count": open_count,
+            "overdue": overdue,
+            "completed": completed,
+            "total": total,
+            "performance_percent": perf_percent,
+            "occ_pos": occ_pos,
+            "occ_neg": occ_neg,
+        }
+
+    def _add_custom_styles(self) -> None:
+        css = """
+        /* Segunda versão – ainda mais enxuta */
+        @page {
+            margin: 25mm 10mm 22mm 10mm;
+        }
+
+        :root {
+            --report-header-offset: 0mm;
+            --report-footer-offset: 0mm;
+        }
+
+        body {
+            font-family: Arial, Helvetica, sans-serif;
+            font-size: 9.5pt;
+            line-height: 1.35;
+            color: #0f172a;
+            margin: 0;
+            background: #ffffff;
+        }
+
+        .report-content {
+            margin: 0;
+            padding: 0 0 0 0;
+        }
+
+        .compact-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            gap: 10px;
+            padding: 6px 0 8px 0;
+            border-bottom: 1px solid #e5e7eb;
+        }
+
+        .compact-header__title .title-main {
+            font-size: 12pt;
+            font-weight: 700;
+            letter-spacing: 0.01em;
+        }
+
+        .compact-header__title .title-sub {
+            font-size: 9pt;
+            color: #475569;
+            margin-top: 2px;
+        }
+
+        .compact-header__meta {
+            display: flex;
+            gap: 6px;
+            flex-wrap: wrap;
+            justify-content: flex-end;
+        }
+
+        .meta-chip {
+            border: 1px solid #e5e7eb;
+            border-radius: 4px;
+            padding: 4px 8px;
+            font-size: 9pt;
+            background: #f8fafc;
+        }
+
+        .report-section {
+            margin: 0 0 5mm 0;
+            page-break-inside: auto !important;
+            break-inside: auto !important;
+        }
+
+        /* Ocultar títulos das seções (usaremos apenas o conteúdo) */
+        .report-section h1 {
+            display: none;
+        }
+
+        /* Permitir que o conteúdo continue na mesma página quando houver espaço */
+        .report-section .section-content {
+            page-break-inside: auto !important;
+            break-inside: auto !important;
+            page-break-before: auto !important;
+            break-before: auto !important;
+        }
+
+        .compact-summary {
+            display: grid;
+            gap: 6px;
+        }
+
+        .export-actions {
+            display: flex;
+            gap: 8px;
+            margin: 4mm 0 6mm 0;
+            justify-content: flex-start;
+        }
+
+        .export-button {
+            display: inline-block;
+            padding: 6px 12px;
+            border-radius: 6px;
+            background: #2563eb;
+            color: #ffffff;
+            font-size: 10pt;
+            font-weight: 600;
+            text-decoration: none;
+        }
+
+        .export-button:hover {
+            background: #1d4ed8;
+        }
+
+        .filters-line {
+            font-size: 9pt;
+            padding: 4px 6px;
+            background: #f8fafc;
+            border: 1px solid #e5e7eb;
+            border-radius: 4px;
+            line-height: 1.4;
+        }
+
+        .summary-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(100px, 1fr));
+            gap: 5px;
+        }
+
+        .summary-chip {
+            border: 1px solid #e5e7eb;
+            border-radius: 4px;
+            padding: 4px 6px;
+            background: #ffffff;
+        }
+
+        .chip-label {
+            font-size: 7.5pt;
+            color: #475569;
+            text-transform: uppercase;
+            letter-spacing: 0.04em;
+            margin-bottom: 1px;
+        }
+
+        .chip-value {
+            font-size: 10pt;
+            font-weight: 700;
+        }
+
+        .activity-count {
+            font-size: 8.5pt;
+            margin: 0 0 3px 0;
+            color: #475569;
+        }
+
+        .compact-table {
+            width: 100%;
+            border-collapse: collapse;
+            font-size: 9pt;
+            border: 1px solid #d1d5db;
+            page-break-inside: auto;
+        }
+
+        .compact-table th,
+        .compact-table td {
+            border: 1px solid #d1d5db;
+            padding: 6px 8px;
+            page-break-inside: avoid;
+            break-inside: avoid;
+            vertical-align: top;
+        }
+
+        .compact-table tr {
+            page-break-inside: avoid;
+            break-inside: avoid;
+            page-break-after: auto;
+        }
+
+        .compact-table th {
+            background: #f3f4f6;
+            font-weight: 700;
+        }
+
+        .compact-table tr:nth-child(even) td {
+            background: #f9fafb;
+        }
+
+        .compact-table td:last-child,
+        .compact-table th:last-child {
+            white-space: nowrap;
+        }
+
+        @media print {
+            .export-actions {
+                display: none !important;
+            }
+        }
+
+        @media print {
+            body { margin: 0; }
+            .report-content {
+                padding: 0;
+            }
+        }
+        """
+        self.add_custom_style("my-work-report-compact", css)

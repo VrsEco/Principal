@@ -1,5 +1,6 @@
 {% extends "base.html" %}
 {% block title %}Minhas Atividades | Versus Gestão{% endblock %}
+{% block body_class %}my-work-page{% endblock %}
 {% block extra_head %}
 <link rel="stylesheet" href="{{ url_for('static', filename='css/my-work.css') }}" />
 <link rel="stylesheet" href="{{ url_for('static', filename='css/my-work-multiselect.css') }}" />
@@ -171,7 +172,7 @@
           </div>
           <div class="stat-card__content">
             <div class="stat-card__value" id="stat-overdue">0</div>
-            <div class="stat-card__label">Atrasadas</div>
+            <div class="stat-card__label">Atrasadas (em aberto)</div>
           </div>
         </div>
 
@@ -199,6 +200,14 @@
               rel="noopener"
             >
               Imprimir
+            </a>
+            <a
+              class="stat-card__link"
+              href="{{ url_for('my_work.my_work_report_compact') }}"
+              target="_blank"
+              rel="noopener"
+            >
+              impr-2
             </a>
           </div>
         </div>
