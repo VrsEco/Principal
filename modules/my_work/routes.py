@@ -273,8 +273,16 @@ def my_work_report_compact_pdf():
     # Indicadores
     perf_display = f"{int(metrics.get('performance_percent', 0))}%"
     occ_balance = int(metrics.get("occ_pos", 0)) - int(metrics.get("occ_neg", 0))
+    indicator_headers = [
+        Paragraph("Abertas", styles["CellBold"]),
+        Paragraph("Atrasadas<br/>(em aberto)", styles["CellBold"]),
+        Paragraph("Concluídas", styles["CellBold"]),
+        Paragraph("Total", styles["CellBold"]),
+        Paragraph("Performance", styles["CellBold"]),
+        Paragraph("Ocorrências", styles["CellBold"]),
+    ]
     indicators = [
-        ["Abertas", "Atrasadas (em aberto)", "Concluídas", "Total", "Performance", "Ocorrências"],
+        indicator_headers,
         [
             int(metrics.get("open_count", 0)),
             int(metrics.get("overdue", 0)),
