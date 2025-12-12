@@ -1,4 +1,4 @@
-﻿import logging
+import logging
 logger = logging.getLogger(__name__)
 
 """
@@ -1852,6 +1852,7 @@ def _serialize_process_activity(
         "type": "process",
         "process_id": data.get("process_id"),
         "process_code": data.get("process_code"),
+        "process_name": data.get("process_name"),
         "title": data.get("title"),
         "description": data.get("description"),
         "status": (data.get("status") or "pending").lower(),
@@ -1958,8 +1959,11 @@ def _apply_filters(activities: List[Dict], filters: Dict) -> List[Dict]:
     types_filter = filters.get("types") or []
     roles_filter = filters.get("roles") or []
     delivery_tags = filters.get("delivery_tags") or []
-    due_date_start = filters.get("due_date_start")
-    due_date_end = filters.get("due_date_end")
+    # Converter strings de data para objetos date
+    due_date_start_raw = filters.get("due_date_start")
+    due_date_end_raw = filters.get("due_date_end")
+    due_date_start = _parse_deadline_value(due_date_start_raw) if due_date_start_raw else None
+    due_date_end = _parse_deadline_value(due_date_end_raw) if due_date_end_raw else None
     responsible_ids = filters.get("responsible_ids") or []
     executor_ids = filters.get("executor_ids") or []
     project_ids = filters.get("project_ids") or []

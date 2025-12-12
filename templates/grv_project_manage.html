@@ -507,9 +507,12 @@
     background: linear-gradient(135deg, #ffffff 0%, #f8fafc 100%);
     border-radius: 18px;
     width: min(1440px, 100%);
+    max-width: calc(100% - 40px);
     max-height: 90vh;
     overflow-y: auto;
+    overflow-x: hidden;
     padding: 28px;
+    box-sizing: border-box;
     box-shadow: 0 28px 56px rgba(15, 23, 42, 0.35);
     display: grid;
     gap: 18px;
@@ -541,6 +544,9 @@
   .activity-form {
     display: grid;
     gap: 16px;
+    width: 100%;
+    max-width: 100%;
+    box-sizing: border-box;
   }
 
   .form-two-cols {
@@ -558,6 +564,10 @@
   .activity-form .field {
     display: grid;
     gap: 6px;
+    min-width: 0;
+    width: 100%;
+    max-width: 100%;
+    box-sizing: border-box;
   }
 
   .activity-form label {
@@ -593,6 +603,9 @@
   .activity-form textarea {
     resize: vertical;
     min-height: 80px;
+    width: 100%;
+    max-width: 100%;
+    box-sizing: border-box;
   }
 
   .activity-form input:focus,
@@ -627,6 +640,43 @@
   .activity-form footer .primary {
     background: linear-gradient(135deg, #2563eb, #1d4ed8);
     color: white;
+  }
+
+  @media (max-width: 768px) {
+    .activity-form footer {
+      flex-direction: column;
+      align-items: stretch;
+    }
+
+    .activity-form footer button {
+      width: 100%;
+    }
+
+    .log-columns {
+      flex-direction: column;
+    }
+
+    .log-block {
+      min-width: 0;
+      width: 100%;
+    }
+
+    /* Garantir que todos os textareas respeitem a largura em mobile */
+    .activity-form textarea,
+    .confirmation-popup textarea,
+    textarea.ref-bottom,
+    textarea.input-fundo-claro,
+    textarea.rich-text-editor {
+      width: 100% !important;
+      max-width: 100% !important;
+      box-sizing: border-box !important;
+    }
+
+    /* Desabilitar resize em mobile para evitar problemas de compatibilidade */
+    .activity-form textarea,
+    .confirmation-popup textarea {
+      resize: none;
+    }
   }
 
   .top-actions {
@@ -695,6 +745,9 @@
     margin-top: 20px;
     padding-top: 20px;
     border-top: 1px solid rgba(148, 163, 184, 0.25);
+    width: 100%;
+    max-width: 100%;
+    overflow-x: hidden;
   }
 
   .log-columns {
@@ -702,11 +755,16 @@
     gap: 16px;
     flex-wrap: wrap;
     margin-bottom: 12px;
+    width: 100%;
+    box-sizing: border-box;
   }
 
   .log-block {
     flex: 1;
     min-width: 220px;
+    max-width: 100%;
+    width: clamp(220px, 100%, 100%);
+    box-sizing: border-box;
   }
 
   .log-block .log-entries {
@@ -722,12 +780,17 @@
     letter-spacing: 0.08em;
   }
 
-  .log-entries {
+  .log-entries,
+  #hoursDisplayEntries,
+  #hoursCollaboratorsList {
     display: flex;
     flex-direction: column;
     gap: 8px;
     max-height: 200px;
     overflow-y: auto;
+    width: 100%;
+    box-sizing: border-box;
+    word-break: break-word;
   }
 
   .log-entry {
@@ -850,6 +913,9 @@
   .confirmation-popup textarea {
     resize: vertical;
     min-height: 70px;
+    width: 100%;
+    max-width: 100%;
+    box-sizing: border-box;
   }
 
   .confirmation-popup-actions {
@@ -904,6 +970,9 @@
   /* Estilos para o editor de texto rico */
   .rich-text-editor {
     min-height: 300px;
+    width: 100%;
+    max-width: 100%;
+    box-sizing: border-box;
   }
 
   .ck-editor__editable {
@@ -919,6 +988,8 @@
 
   .ck.ck-editor {
     border-radius: 12px !important;
+    width: 100%;
+    box-sizing: border-box;
   }
 
   .ck.ck-toolbar {
@@ -926,6 +997,20 @@
     border: 1px solid rgba(148, 163, 184, 0.35) !important;
     border-bottom: none !important;
     background: #f8fafc !important;
+    flex-wrap: wrap;
+    gap: 0.35rem;
+  }
+
+  .ck-toolbar__items {
+    flex-wrap: wrap;
+    gap: 0.25rem;
+  }
+
+  @media (max-width: 768px) {
+    .ck.ck-toolbar {
+      justify-content: flex-start;
+      padding: 0.5rem;
+    }
   }
 
   .ck.ck-editor__main>.ck-editor__editable {
@@ -2313,6 +2398,7 @@
 
   // ===== RICH TEXT EDITOR FUNCTIONS =====
 
+  const richTextEditorEnabled = false;
   let ckEditorInstance = null;
   let isEditorInitializing = false;
 
@@ -2323,6 +2409,11 @@
 
     // Destruir instância anterior se existir
     destroyRichTextEditor();
+
+    if (!richTextEditorEnabled) {
+      isEditorInitializing = false;
+      return;
+    }
 
     // Aguardar um pouco para garantir que o DOM está pronto
     setTimeout(() => {

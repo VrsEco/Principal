@@ -10,6 +10,28 @@ import logging
 logger = logging.getLogger(__name__)
 
 
+def _fetch_project_activity(cursor, company_id: int, project_id: int, activity_id: int):
+    """Return a normalized activity row by primary or legacy ID."""
+    legacy_lookup = str(activity_id)
+    cursor.execute(
+        """
+        SELECT pa.*
+        FROM project_activities pa
+        JOIN company_projects cp ON pa.project_id = cp.id
+        WHERE pa.project_id = %s
+          AND cp.company_id = %s
+          AND pa.is_deleted = FALSE
+          AND (
+              pa.id = %s
+              OR (pa.metadata ->> 'legacy_id') = %s
+          )
+        LIMIT 1
+        """,
+        (project_id, company_id, activity_id, legacy_lookup),
+    )
+    return cursor.fetchone()
+
+
 @login_required
 def api_project_activity_collaborators(company_id: int, project_id: int, activity_id: int):
     """
@@ -20,18 +42,10 @@ def api_project_activity_collaborators(company_id: int, project_id: int, activit
     cursor = conn.cursor()
     
     try:
-        # Verificar se atividade existe e pertence ao projeto
-        cursor.execute("""
-            SELECT pa.* 
-            FROM project_activities pa
-            JOIN company_projects cp ON pa.project_id = cp.id
-            WHERE pa.id = %s AND pa.project_id = %s AND cp.company_id = %s
-              AND pa.is_deleted = FALSE
-        """, (activity_id, project_id, company_id))
-        
-        activity = cursor.fetchone()
+        activity = _fetch_project_activity(cursor, company_id, project_id, activity_id)
         if not activity:
             return jsonify({"success": False, "error": "Activity not found"}), 404
+        db_activity_id = activity["id"]
         
         if request.method == "GET":
             # Listar colaboradores
@@ -44,7 +58,7 @@ def api_project_activity_collaborators(company_id: int, project_id: int, activit
                 JOIN employees e ON pac.employee_id = e.id
                 WHERE pac.activity_id = %s AND pac.is_deleted = FALSE
                 ORDER BY pac.role, e.name
-            """, (activity_id,))
+            """, (db_activity_id,))
             
             collaborators = [dict(row) for row in cursor.fetchall()]
             return jsonify({"success": True, "data": collaborators})
@@ -66,7 +80,7 @@ def api_project_activity_collaborators(company_id: int, project_id: int, activit
                 FROM project_activity_collaborators
                 WHERE activity_id = %s AND employee_id = %s AND role = %s
                   AND is_deleted = FALSE
-            """, (activity_id, employee_id, role))
+            """, (db_activity_id, employee_id, role))
             
             existing = cursor.fetchone()
             
@@ -88,7 +102,7 @@ def api_project_activity_collaborators(company_id: int, project_id: int, activit
                     (activity_id, employee_id, role, worked_hours, notes)
                     VALUES (%s, %s, %s, %s, %s)
                     RETURNING *
-                """, (activity_id, employee_id, role, hours, notes))
+                """, (db_activity_id, employee_id, role, hours, notes))
             
             result = dict(cursor.fetchone())
             conn.commit()
@@ -119,25 +133,10 @@ def api_project_activity_hours_summary(company_id: int, project_id: int, activit
     
     try:
         # Buscar atividade com horas agregadas
-        cursor.execute("""
-            SELECT 
-                pa.id,
-                pa.title,
-                pa.estimated_hours,
-                pa.worked_hours,
-                COALESCE(pa.worked_hours, 0) as total_worked,
-                CASE 
-                    WHEN pa.estimated_hours > 0 THEN 
-                        ROUND((COALESCE(pa.worked_hours, 0) / pa.estimated_hours) * 100, 2)
-                    ELSE 0
-                END as progress_percent
-            FROM project_activities pa
-            WHERE pa.id = %s AND pa.project_id = %s AND pa.is_deleted = FALSE
-        """, (activity_id, project_id))
-        
-        activity = cursor.fetchone()
+        activity = _fetch_project_activity(cursor, company_id, project_id, activity_id)
         if not activity:
             return jsonify({"success": False, "error": "Activity not found"}), 404
+        db_activity_id = activity["id"]
         
         # Buscar detalhes por colaborador
         cursor.execute("""
@@ -151,13 +150,28 @@ def api_project_activity_hours_summary(company_id: int, project_id: int, activit
             JOIN employees e ON pac.employee_id = e.id
             WHERE pac.activity_id = %s AND pac.is_deleted = FALSE
             ORDER BY pac.worked_hours DESC
-        """, (activity_id,))
+        """, (db_activity_id,))
         
         collaborators = [dict(row) for row in cursor.fetchall()]
         
-        summary = dict(activity)
-        summary['collaborators'] = collaborators
-        summary['collaborator_count'] = len(collaborators)
+        worked_hours_value = activity.get("worked_hours")
+        estimated_hours_value = activity.get("estimated_hours")
+        total_worked = float(worked_hours_value) if worked_hours_value is not None else 0
+        estimated_hours = float(estimated_hours_value) if estimated_hours_value is not None else 0
+        progress_percent = (
+            round((total_worked / estimated_hours) * 100, 2) if estimated_hours else 0
+        )
+
+        summary = {
+            "id": activity["id"],
+            "title": activity.get("title"),
+            "estimated_hours": estimated_hours_value,
+            "worked_hours": worked_hours_value,
+            "total_worked": total_worked,
+            "progress_percent": progress_percent,
+            "collaborators": collaborators,
+            "collaborator_count": len(collaborators),
+        }
         
         return jsonify({"success": True, "data": summary})
     

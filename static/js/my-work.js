@@ -63,6 +63,10 @@ function saveFiltersToCache() {
       sortBy: state.sortBy
     };
     localStorage.setItem(FILTER_CACHE_KEY, JSON.stringify(filtersData));
+    // Atualizar link do relatório quando os filtros mudarem
+    if (typeof updateReportLink === 'function') {
+      updateReportLink();
+    }
   } catch (error) {
     console.warn('Erro ao salvar filtros no cache:', error);
   }
@@ -85,6 +89,11 @@ function loadFiltersFromCache() {
     state.dueDateEnd = filtersData.dueDateEnd || '';
     state.searchQuery = filtersData.searchQuery || '';
     state.sortBy = filtersData.sortBy || 'deadline';
+
+    // Atualizar link do relatório após carregar filtros
+    if (typeof updateReportLink === 'function') {
+      setTimeout(updateReportLink, 100);
+    }
 
     return true;
   } catch (error) {
@@ -165,6 +174,7 @@ document.addEventListener('DOMContentLoaded', async function () {
   initializeSorting();
   initializeActivityActions();
   initializeClearFiltersButton();
+  initializeReportLink();
   updateSidebarCompactMode();
   animateOnScroll();
   loadActivitiesData();
@@ -2467,14 +2477,12 @@ function updateStats(stats) {
   if (!stats) return;
 
   const statPending = document.getElementById('stat-pending');
-  const statProgress = document.getElementById('stat-progress');
   const statOverdue = document.getElementById('stat-overdue');
-  const statCompleted = document.getElementById('stat-completed');
 
-  if (statPending) animateValue(statPending, 0, stats.pending, 1000);
-  if (statProgress) animateValue(statProgress, 0, stats.in_progress, 1000);
+  // Card "Abertas" deve mostrar todas as atividades não concluídas (pending + in_progress)
+  const openActivities = (stats.pending || 0) + (stats.in_progress || 0);
+  if (statPending) animateValue(statPending, 0, openActivities, 1000);
   if (statOverdue) animateValue(statOverdue, 0, stats.overdue, 1000);
-  if (statCompleted) animateValue(statCompleted, 0, stats.completed, 1000);
 }
 
 function updateInsightCards(filteredActivities) {
@@ -3533,8 +3541,148 @@ function initializeActivityActions() {
   });
 }
 
+// Função para construir payload de filtros para o relatório
+function buildReportFiltersPayload() {
+  const filters = {};
+  
+  // Company IDs
+  if (state.selectedCompanyIds && state.selectedCompanyIds.length > 0) {
+    filters.company_ids = state.selectedCompanyIds.map(id => parseInt(id));
+  }
+  
+  // Responsible IDs
+  if (state.selectedResponsibleIds && state.selectedResponsibleIds.length > 0) {
+    filters.responsible_ids = state.selectedResponsibleIds.map(id => parseInt(id));
+  }
+  
+  // Executor IDs
+  if (state.selectedExecutorIds && state.selectedExecutorIds.length > 0) {
+    filters.executor_ids = state.selectedExecutorIds.map(id => parseInt(id));
+  }
+  
+  // Project IDs
+  if (state.selectedProjectIds && state.selectedProjectIds.length > 0) {
+    filters.project_ids = state.selectedProjectIds.map(id => parseInt(id));
+  }
+  
+  // Process IDs
+  if (state.selectedProcessIds && state.selectedProcessIds.length > 0) {
+    filters.process_ids = state.selectedProcessIds.map(id => parseInt(id));
+  }
+  
+  // Process Owner IDs
+  if (state.selectedProcessOwnerIds && state.selectedProcessOwnerIds.length > 0) {
+    filters.process_owner_ids = state.selectedProcessOwnerIds.map(id => parseInt(id));
+  }
+  
+  // Delivery Tags
+  if (state.selectedDeliveryTags && state.selectedDeliveryTags.length > 0) {
+    const allTags = DELIVERY_FILTER_VALUES;
+    const hasAllTags = state.selectedDeliveryTags.length === allTags.length && 
+                       allTags.every(tag => state.selectedDeliveryTags.includes(tag));
+    if (!hasAllTags) {
+      filters.delivery_tags = state.selectedDeliveryTags;
+    }
+  }
+  
+  // Due Date Range
+  if (state.dueDateStart) {
+    filters.due_date_start = state.dueDateStart;
+  }
+  if (state.dueDateEnd) {
+    filters.due_date_end = state.dueDateEnd;
+  }
+  
+  // Search
+  if (state.searchQuery && state.searchQuery.trim()) {
+    filters.search = state.searchQuery.trim();
+  }
+  
+  return filters;
+}
+
+// Função para atualizar o link do relatório com os filtros atuais
+function updateReportLink() {
+  const reportLink = document.querySelector('.stat-card__link[href*="report"]');
+  if (!reportLink) return;
+  
+  const baseUrl = reportLink.getAttribute('href').split('?')[0];
+  const scope = state.currentScope || 'me';
+  const filters = buildReportFiltersPayload();
+  
+  const params = new URLSearchParams();
+  params.set('scope', scope);
+  
+  if (Object.keys(filters).length > 0) {
+    params.set('filters', JSON.stringify(filters));
+  }
+  
+  const newUrl = baseUrl + '?' + params.toString();
+  reportLink.setAttribute('href', newUrl);
+}
+
+// Atualizar link do relatório quando os filtros mudarem
+function initializeReportLink() {
+  updateReportLink();
+  
+  // Observar mudanças nos campos de data diretamente
+  const dueDateStartInput = document.getElementById('filterDueDateStart');
+  const dueDateEndInput = document.getElementById('filterDueDateEnd');
+  
+  if (dueDateStartInput) {
+    dueDateStartInput.addEventListener('change', () => {
+      state.dueDateStart = dueDateStartInput.value || '';
+      updateReportLink();
+    });
+  }
+  
+  if (dueDateEndInput) {
+    dueDateEndInput.addEventListener('change', () => {
+      state.dueDateEnd = dueDateEndInput.value || '';
+      updateReportLink();
+    });
+  }
+  
+  // Observar mudanças no estado para atualizar o link
+  let lastState = JSON.stringify({
+    selectedCompanyIds: state.selectedCompanyIds,
+    selectedResponsibleIds: state.selectedResponsibleIds,
+    selectedExecutorIds: state.selectedExecutorIds,
+    selectedProjectIds: state.selectedProjectIds,
+    selectedProcessIds: state.selectedProcessIds,
+    selectedProcessOwnerIds: state.selectedProcessOwnerIds,
+    selectedDeliveryTags: state.selectedDeliveryTags,
+    dueDateStart: state.dueDateStart,
+    dueDateEnd: state.dueDateEnd,
+    searchQuery: state.searchQuery,
+    currentScope: state.currentScope
+  });
+  
+  setInterval(() => {
+    const currentState = JSON.stringify({
+      selectedCompanyIds: state.selectedCompanyIds,
+      selectedResponsibleIds: state.selectedResponsibleIds,
+      selectedExecutorIds: state.selectedExecutorIds,
+      selectedProjectIds: state.selectedProjectIds,
+      selectedProcessIds: state.selectedProcessIds,
+      selectedProcessOwnerIds: state.selectedProcessOwnerIds,
+      selectedDeliveryTags: state.selectedDeliveryTags,
+      dueDateStart: state.dueDateStart,
+      dueDateEnd: state.dueDateEnd,
+      searchQuery: state.searchQuery,
+      currentScope: state.currentScope
+    });
+    
+    if (currentState !== lastState) {
+      lastState = currentState;
+      updateReportLink();
+    }
+  }, 1000);
+}
+
 // Tornar funções globais para serem chamadas do HTML
 window.openModal = openModal;
 window.closeModal = closeModal;
+window.updateReportLink = updateReportLink;
 
 console.log('✅ My Work page initialized');

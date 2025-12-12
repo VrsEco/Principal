@@ -101,6 +101,9 @@ Para aplicar o padrão "Fundo Claro" em qualquer página:
   border: 1px solid rgba(148, 163, 184, 0.3) !important;
   border-radius: 8px !important;
   padding: 10px 12px !important;
+  width: 100%;
+  max-width: 100%;
+  box-sizing: border-box;
 }
 
 .input-fundo-claro:focus {
