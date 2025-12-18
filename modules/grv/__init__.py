@@ -1527,6 +1527,18 @@ def grv_process_detail(company_id: int, process_id: int):
         logger.info(f"Erro ao buscar padr+â-Áes de relat+â-¦rio: {e}")
         report_patterns = []
 
+    # Construir flow_url e flow_is_pdf para o template
+    flow_document = process.get("flow_document")
+    flow_url = None
+    flow_is_pdf = False
+    
+    if flow_document:
+        from flask import url_for
+        # Construir URL usando a rota de servir arquivos
+        flow_url = url_for("serve_uploaded_file", filename=flow_document)
+        # Detectar se é PDF
+        flow_is_pdf = flow_document.lower().endswith(".pdf")
+
     return render_template(
         "grv_process_detail.html",
         company=company,
@@ -1539,6 +1551,9 @@ def grv_process_detail(company_id: int, process_id: int):
         detail_tabs=PROCESS_DETAIL_TABS,
         report_models=report_models,
         report_patterns=report_patterns,
+        flow_document=flow_document,
+        flow_url=flow_url,
+        flow_is_pdf=flow_is_pdf,
     )
 
 
