@@ -5063,6 +5063,8 @@ def api_delete_process_instance(company_id: int, instance_id: int):
         logger.error(f"Erro ao excluir instância: {e}")
         import traceback
         traceback.print_exc()
+
+# GCS Migration - Persistence Verification Comment
         return jsonify({"success": False, "error": str(e)}), 500
 
 
