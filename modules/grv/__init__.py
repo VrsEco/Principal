@@ -22,6 +22,7 @@ from config_database import get_db
 from middleware.auto_log_decorator import auto_log_crud
 from services.routines_overview_service import build_routines_overview_context
 from utils.company_access import get_user_allowed_company_ids
+from utils.gcs_utils import upload_to_gcs, delete_from_gcs, get_gcs_config
 
 logger = logging.getLogger(__name__)
 grv_bp = Blueprint("grv", __name__, url_prefix="/grv")
@@ -1713,22 +1714,27 @@ def api_create_process_activity_entry(
     image_path = None
     if file and file.filename:
         logger.info(f"DEBUG: Processando imagem: {file.filename}")
-        # Criar diret+¦rio de uploads se n+úo existir
-        upload_dir = os.path.join("static", "uploads", "pop")
-        os.makedirs(upload_dir, exist_ok=True)
-
-        # Gerar nome +¦nico para o arquivo
+        
+        # Gerar nome único para o arquivo
         file_ext = os.path.splitext(file.filename)[1]
         timestamp = dt.now().strftime("%Y%m%d%H%M%S")
         unique_name = f"pop-{process_id}-{activity_id}-{timestamp}-{uuid.uuid4().hex[:8]}{file_ext}"
 
-        # Salvar arquivo
-        file_path = os.path.join(upload_dir, unique_name)
-        file.save(file_path)
-
-        # URL relativa para o arquivo
-        image_path = f"uploads/pop/{unique_name}"
-        logger.info(f"DEBUG: Imagem salva em: {image_path}")
+        # Se GCS estiver ativo, fazer upload para o bucket
+        if get_gcs_config():
+            gcs_path = upload_to_gcs(file, unique_name, subfolder="pop")
+            if gcs_path:
+                image_path = f"uploads/{gcs_path}"
+                logger.info(f"DEBUG: Imagem salva no GCS em: {image_path}")
+        
+        if not image_path:
+            # Fallback local
+            upload_dir = os.path.join("static", "uploads", "pop")
+            os.makedirs(upload_dir, exist_ok=True)
+            file_path = os.path.join(upload_dir, unique_name)
+            file.save(file_path)
+            image_path = f"uploads/pop/{unique_name}"
+            logger.info(f"DEBUG: Imagem salva localmente em: {image_path}")
     else:
         logger.info(f"DEBUG: Nenhuma imagem fornecida")
 
@@ -1809,6 +1815,36 @@ def api_process_activity_entry_detail(
     if not process or process.get("company_id") != company_id:
         return jsonify({"success": False, "error": "Process not found"}), 404
 
+def _pop_delete_image(relative_path: str):
+    """Helper to delete POP image from local or GCS"""
+    if not relative_path:
+        return
+    
+    # Se GCS estiver ativo, deletar do bucket
+    if get_gcs_config():
+        blob_path = relative_path
+        if blob_path.startswith("uploads/"):
+            blob_path = blob_path[8:]
+        delete_from_gcs(blob_path)
+        return
+
+    # Fallback local
+    try:
+        # Tentar remover do static
+        static_path = os.path.join("static", relative_path)
+        if os.path.exists(static_path):
+            os.remove(static_path)
+            return
+        
+        # Tentar remover do root uploads se não estiver no static
+        upload_folder = current_app.config.get("UPLOAD_FOLDER", "uploads")
+        root_path = os.path.join(upload_folder, relative_path.replace("uploads/", ""))
+        if os.path.exists(root_path):
+            os.remove(root_path)
+    except Exception as exc:
+        logger.info(f"Warning: failed to remove pop image {relative_path}: {exc}")
+
+
     # Buscar a etapa
     entry = db.get_process_activity_entry(entry_id)
     if not entry:
@@ -1820,12 +1856,7 @@ def api_process_activity_entry_detail(
     elif request.method == "DELETE":
         # Remover etapa e sua imagem se existir
         if entry.get("image_path"):
-            image_path = os.path.join("static", entry["image_path"])
-            if os.path.exists(image_path):
-                try:
-                    os.remove(image_path)
-                except Exception as exc:
-                    pass
+            _pop_delete_image(entry["image_path"])
 
         success = db.delete_process_activity_entry(entry_id)
         return jsonify({"success": success})
@@ -1851,39 +1882,35 @@ def api_process_activity_entry_detail(
             "image_path": entry.get("image_path"),  # Manter imagem atual por padr+úo
         }
 
-        # Processar remo+º+úo de imagem
+        # Processar remoção de imagem
         if remove_image and entry.get("image_path"):
-            image_path = os.path.join("static", entry["image_path"])
-            if os.path.exists(image_path):
-                try:
-                    os.remove(image_path)
-                except Exception as exc:
-                    pass
+            _pop_delete_image(entry["image_path"])
             update_data["image_path"] = None
 
         # Processar nova imagem
         if file and file.filename:
             # Remover imagem antiga se existir
             if entry.get("image_path"):
-                old_image_path = os.path.join("static", entry["image_path"])
-                if os.path.exists(old_image_path):
-                    try:
-                        os.remove(old_image_path)
-                    except Exception as exc:
-                        pass
+                _pop_delete_image(entry["image_path"])
 
-            # Salvar nova imagem
-            upload_dir = os.path.join("static", "uploads", "pop")
-            os.makedirs(upload_dir, exist_ok=True)
-
+            # Gerar nome único para o arquivo
             file_ext = os.path.splitext(file.filename)[1]
             timestamp = datetime.now().strftime("%Y%m%d%H%M%S")
             unique_name = f"pop-{process_id}-{activity_id}-{timestamp}-{uuid.uuid4().hex[:8]}{file_ext}"
 
-            file_path = os.path.join(upload_dir, unique_name)
-            file.save(file_path)
-
-            update_data["image_path"] = f"uploads/pop/{unique_name}"
+            # Se GCS estiver ativo, fazer upload para o bucket
+            if get_gcs_config():
+                gcs_path = upload_to_gcs(file, unique_name, subfolder="pop")
+                if gcs_path:
+                    update_data["image_path"] = f"uploads/{gcs_path}"
+            
+            if update_data["image_path"] == entry.get("image_path"): # Se GCS falhou ou não configurado
+                # Fallback local
+                upload_dir = os.path.join("static", "uploads", "pop")
+                os.makedirs(upload_dir, exist_ok=True)
+                file_path = os.path.join(upload_dir, unique_name)
+                file.save(file_path)
+                update_data["image_path"] = f"uploads/pop/{unique_name}"
 
         success = db.update_process_activity_entry(entry_id, update_data)
         return jsonify({"success": success})

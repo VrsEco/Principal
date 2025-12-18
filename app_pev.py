@@ -56,6 +56,8 @@ from werkzeug.middleware.proxy_fix import ProxyFix
 from werkzeug.routing import BuildError
 from werkzeug.utils import secure_filename
 from werkzeug.exceptions import NotFound
+from utils.gcs_utils import upload_to_gcs as _upload_to_gcs_shared, delete_from_gcs as _delete_from_gcs_shared, get_gcs_config, get_gcs_client
+
 from database.postgresql_db import (
     ensure_integrations_tables,
     list_integrations,
@@ -241,6 +243,15 @@ if os.environ.get("FLASK_ENV") == "production":
         app.config.from_object(ProductionConfig)
 else:
     app.config.from_object(Config)
+
+# Initialize Google Cloud Storage Configuration
+gcs_bucket_name = app.config.get("GCS_BUCKET")
+gcs_client = None
+if gcs_bucket_name:
+    gcs_client = get_gcs_client()
+    if gcs_client:
+        logger.info(f"GCS Client initialized. Using bucket: {gcs_bucket_name}")
+
 
 # Cloud SQL Connector Configuration for Flask-SQLAlchemy
 # Check for Cloud SQL Connection Name or Fallback (Cloud Run)
@@ -3916,6 +3927,12 @@ def api_process_notes(company_id: int, process_id: int):
     return jsonify({"success": False, "error": "update_failed"}), 400
 
 
+def _upload_to_gcs(storage_object, final_name, subfolder=""):
+    return _upload_to_gcs_shared(storage_object, final_name, subfolder)
+
+def _delete_from_gcs(blob_path):
+    return _delete_from_gcs_shared(blob_path)
+
 def _allowed_flow_extension(filename: str) -> bool:
     return (
         "." in filename
@@ -3926,6 +3943,11 @@ def _allowed_flow_extension(filename: str) -> bool:
 def _delete_flow_file(relative_path: str):
     if not relative_path:
         return
+    # Se GCS estiver ativo, deletar do bucket
+    if gcs_client and gcs_bucket_name:
+        _delete_from_gcs(relative_path)
+        return
+    # Fallback local
     try:
         file_path = os.path.join(upload_folder, relative_path.replace("/", os.sep))
         if os.path.exists(file_path):
@@ -3944,6 +3966,11 @@ def _allowed_activity_image_extension(filename: str) -> bool:
 def _delete_activity_image(relative_path: str):
     if not relative_path:
         return
+    # Se GCS estiver ativo, deletar do bucket
+    if gcs_client and gcs_bucket_name:
+        _delete_from_gcs(relative_path)
+        return
+    # Fallback local
     try:
         file_path = os.path.join(upload_folder, relative_path.replace("/", os.sep))
         if os.path.exists(file_path):
@@ -3962,6 +3989,12 @@ def _save_activity_image(activity_id: int, storage) -> Optional[str]:
     timestamp = datetime.now().strftime("%Y%m%d%H%M%S%f")
     final_name = f"activity-{activity_id}-{timestamp}{ext.lower()}"
     relative_path = f"process_activities/{final_name}"
+    
+    # Se GCS estiver ativo, fazer upload para o bucket
+    if gcs_client and gcs_bucket_name:
+        return _upload_to_gcs(storage, final_name, subfolder="process_activities")
+    
+    # Fallback para armazenamento local
     storage_path = os.path.join(process_activity_folder, final_name)
     storage.save(storage_path)
     return relative_path
@@ -4028,8 +4061,17 @@ def api_process_flow_document(company_id: int, process_id: int):
         _delete_flow_file(existing_path)
 
     try:
-        upload.save(storage_path)
-        db.set_process_flow_document(process_id, relative_path)
+        # Se GCS estiver ativo, fazer upload direto
+        if gcs_client and gcs_bucket_name:
+            gcs_path = _upload_to_gcs(upload, final_name, subfolder="process_flows")
+            if not gcs_path:
+                return jsonify({"success": False, "error": "gcs_upload_failed"}), 500
+            db.set_process_flow_document(process_id, gcs_path)
+            relative_path = gcs_path
+        else:
+            # Fallback local
+            upload.save(storage_path)
+            db.set_process_flow_document(process_id, relative_path)
     except Exception as exc:
         logger.info(f"Error saving process flow document: {exc}")
         return jsonify({"success": False, "error": "save_failed"}), 500
@@ -9243,7 +9285,17 @@ def generate_presentation_slides(plan_id: str):
 @app.route("/uploads/<path:filename>")
 def serve_uploaded_file(filename):
     """Serve uploaded files"""
-    from flask import send_from_directory
+    from flask import send_from_directory, redirect
+
+    # Se GCS estiver ativo, redirecionar para a URL do Google Cloud Storage
+    # Isso assume que o bucket tem permissões de leitura pública (allUsers -> Storage Object Viewer)
+    if gcs_client and gcs_bucket_name:
+        # Prevenindo prefixo 'uploads/' duplicado ou incorreto se já vier no filename
+        # Os arquivos no bucket estão organizados em subpastas como 'logos/', 'pop/', etc.
+        clean_filename = filename
+        if clean_filename.startswith("uploads/"):
+            clean_filename = clean_filename[8:]
+        return redirect(f"https://storage.googleapis.com/{gcs_bucket_name}/{clean_filename}")
 
     return send_from_directory(app.config["UPLOAD_FOLDER"], filename)
 
@@ -13742,7 +13794,7 @@ def _sync_project_activities_table(cursor, company_id: int, project_id: int, act
         existing_rows = cursor.fetchall() or []
     except Exception as exc:
         logger.info(
-            f"⚠️  Falha ao sincronizar project_activities (project_id={project_id}): {exc}"
+            f"??  Falha ao sincronizar project_activities (project_id={project_id}): {exc}"
         )
         return
 
@@ -13916,7 +13968,7 @@ def _sync_process_instance_collaborators_table(
         existing_rows = cursor.fetchall() or []
     except Exception as exc:
         logger.info(
-            f"⚠️  Falha ao sincronizar process_instance_collaborators (instance_id={instance_id}): {exc}"
+            f"??  Falha ao sincronizar process_instance_collaborators (instance_id={instance_id}): {exc}"
         )
         return
 

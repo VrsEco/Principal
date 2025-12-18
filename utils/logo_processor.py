@@ -10,6 +10,8 @@ from PIL import Image
 import os
 from pathlib import Path
 from werkzeug.utils import secure_filename
+import io
+from utils.gcs_utils import upload_to_gcs, delete_from_gcs, get_gcs_config
 
 logger = logging.getLogger(__name__)
 
@@ -120,11 +122,21 @@ def resize_and_save_logo(image_file, company_id, logo_type):
         )
         final_img.paste(img, offset)
 
-        # Salvar com otimizaÃ§Ã£o
+        # Salvar com otimização
         save_kwargs = {"optimize": True, "quality": 90}
         if ext == "png":
             save_kwargs["compress_level"] = 9
 
+        # Se GCS estiver ativo, fazer upload para o bucket
+        if get_gcs_config():
+            buffer = io.BytesIO()
+            final_img.save(buffer, format="PNG" if ext == "png" else "JPEG", **save_kwargs)
+            buffer.seek(0)
+            gcs_path = upload_to_gcs(buffer, safe_filename, subfolder="logos")
+            if gcs_path:
+                return f"uploads/{gcs_path}"
+
+        # Fallback local
         final_img.save(str(file_path), **save_kwargs)
 
         # Retornar caminho relativo
@@ -136,15 +148,26 @@ def resize_and_save_logo(image_file, company_id, logo_type):
 
 
 def delete_logo(logo_path):
-    """Deleta um logo do sistema de arquivos"""
-    if logo_path:
-        try:
-            file_path = Path(logo_path)
-            if file_path.exists():
-                file_path.unlink()
-                return True
-        except Exception as e:
-            logger.exception("Erro ao deletar logo")
+    """Deleta um logo do sistema de arquivos ou GCS"""
+    if not logo_path:
+        return False
+        
+    # Se GCS estiver ativo, deletar do bucket
+    if get_gcs_config():
+        # Remover prefixo 'uploads/' se existir para obter o path real no bucket
+        blob_path = logo_path
+        if blob_path.startswith("uploads/"):
+            blob_path = blob_path[8:]
+        return delete_from_gcs(blob_path)
+
+    # Fallback local
+    try:
+        file_path = Path(logo_path)
+        if file_path.exists():
+            file_path.unlink()
+            return True
+    except Exception as e:
+        logger.exception("Erro ao deletar logo")
     return False
 
 
