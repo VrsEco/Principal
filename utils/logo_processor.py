@@ -134,13 +134,13 @@ def resize_and_save_logo(image_file, company_id, logo_type):
             buffer.seek(0)
             gcs_path = upload_to_gcs(buffer, safe_filename, subfolder="logos")
             if gcs_path:
-                return f"uploads/{gcs_path}"
+                return gcs_path
 
         # Fallback local
         final_img.save(str(file_path), **save_kwargs)
 
         # Retornar caminho relativo
-        return f"{UPLOAD_FOLDER}/{safe_filename}"
+        return f"logos/{safe_filename}"
 
     except Exception as e:
         logger.exception("Erro ao processar logo")

@@ -12,8 +12,15 @@ except ImportError:
     storage = None
 
 def get_gcs_config():
-    """Get GCS configuration from current_app config"""
-    bucket_name = current_app.config.get("GCS_BUCKET")
+    """Get GCS configuration from current_app config or environment"""
+    try:
+        bucket_name = current_app.config.get("GCS_BUCKET")
+    except RuntimeError:
+        # Fallback for when called outside of application context (e.g., during app initialization)
+        bucket_name = os.environ.get("GCS_BUCKET")
+    
+    if bucket_name:
+        logger.debug(f"GCS utility using bucket: {bucket_name}")
     return bucket_name
 
 def get_gcs_client():
@@ -63,7 +70,7 @@ def upload_to_gcs(storage_object, final_name, subfolder=""):
             # Assume it's a path or bytes
             blob.upload_from_string(storage_object, content_type=content_type)
             
-        logger.info(f"File uploaded to GCS: {blob_path}")
+        logger.info(f"File successfully uploaded to GCS: {blob_path}")
         return blob_path
     except Exception as e:
         logger.error(f"Error uploading to GCS: {e}")

@@ -1724,16 +1724,17 @@ def api_create_process_activity_entry(
         if get_gcs_config():
             gcs_path = upload_to_gcs(file, unique_name, subfolder="pop")
             if gcs_path:
-                image_path = f"uploads/{gcs_path}"
+                image_path = gcs_path
                 logger.info(f"DEBUG: Imagem salva no GCS em: {image_path}")
         
         if not image_path:
             # Fallback local
-            upload_dir = os.path.join("static", "uploads", "pop")
+            upload_base = current_app.config.get("UPLOAD_FOLDER", "uploads")
+            upload_dir = os.path.join(upload_base, "pop")
             os.makedirs(upload_dir, exist_ok=True)
             file_path = os.path.join(upload_dir, unique_name)
             file.save(file_path)
-            image_path = f"uploads/pop/{unique_name}"
+            image_path = f"pop/{unique_name}"
             logger.info(f"DEBUG: Imagem salva localmente em: {image_path}")
     else:
         logger.info(f"DEBUG: Nenhuma imagem fornecida")
@@ -1902,15 +1903,16 @@ def _pop_delete_image(relative_path: str):
             if get_gcs_config():
                 gcs_path = upload_to_gcs(file, unique_name, subfolder="pop")
                 if gcs_path:
-                    update_data["image_path"] = f"uploads/{gcs_path}"
+                    update_data["image_path"] = gcs_path
             
             if update_data["image_path"] == entry.get("image_path"): # Se GCS falhou ou não configurado
                 # Fallback local
-                upload_dir = os.path.join("static", "uploads", "pop")
+                upload_base = current_app.config.get("UPLOAD_FOLDER", "uploads")
+                upload_dir = os.path.join(upload_base, "pop")
                 os.makedirs(upload_dir, exist_ok=True)
                 file_path = os.path.join(upload_dir, unique_name)
                 file.save(file_path)
-                update_data["image_path"] = f"uploads/pop/{unique_name}"
+                update_data["image_path"] = f"pop/{unique_name}"
 
         success = db.update_process_activity_entry(entry_id, update_data)
         return jsonify({"success": success})
