@@ -47,9 +47,10 @@ handlers:
     secure: always
     redirect_http_response_code: 301
   
-  # Uploads (não recomendado em App Engine - usar Cloud Storage)
-  - url: /uploads
-    static_dir: uploads
+  # Uploads precisam passar pelo Flask para redirecionar ao bucket GCS
+  # (evita servir diretorio local vazio apos deploy)
+  - url: /uploads/.*
+    script: auto
     secure: always
     redirect_http_response_code: 301
   
