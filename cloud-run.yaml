@@ -59,6 +59,9 @@ spec:
             - name: DOMAIN
               value: app.gestaoversus.com.br
             
+            - name: GCS_BUCKET
+              value: vrs-eco-app-files
+            
             # Secrets (via Secret Manager)
             - name: SECRET_KEY
               valueFrom:
