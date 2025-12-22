@@ -5,7 +5,7 @@ from sqlalchemy import create_engine, text
 from urllib.parse import quote_plus
 import os
 
-backup_file = r"C:\GestaoVersus\postgres_backup_20251127_220039.sql"
+backup_file = r"C:\GestaoVersus\app31\export_20251221_full.sql"
 
 if not os.path.exists(backup_file):
     print(f"❌ Arquivo de backup não encontrado: {backup_file}")

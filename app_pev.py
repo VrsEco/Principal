@@ -245,13 +245,18 @@ else:
     app.config.from_object(Config)
 
 # Initialize Google Cloud Storage Configuration
-gcs_bucket_name = app.config.get("GCS_BUCKET")
+# Usa env/config para habilitar upload/recuperação do GCS
+gcs_bucket_name = get_gcs_config()
 gcs_client = None
 if gcs_bucket_name:
     gcs_client = get_gcs_client()
     if gcs_client:
         # GCS connection successfully established at startup
         logger.info(f"GCS Client initialized. Using bucket: {gcs_bucket_name}")
+    else:
+        logger.warning("GCS_BUCKET informado, mas não foi possível inicializar o cliente GCS")
+else:
+    logger.info("GCS_BUCKET não configurado; uploads serão locais")
 
 
 # Cloud SQL Connector Configuration for Flask-SQLAlchemy

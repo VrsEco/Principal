@@ -15,7 +15,7 @@ spec:
     metadata:
       annotations:
         # Scaling
-        autoscaling.knative.dev/minScale: '1'
+        autoscaling.knative.dev/minScale: '0'
         autoscaling.knative.dev/maxScale: '10'
         
         # VPC Connector
@@ -23,10 +23,10 @@ spec:
         run.googleapis.com/vpc-access-egress: private-ranges-only
         
         # Cloud SQL
-        run.googleapis.com/cloudsql-instances: PROJECT_ID:southamerica-east1:gestaoversos-db
+        run.googleapis.com/cloudsql-instances: PROJECT_ID:southamerica-east1:gestaoversus-db-prod
         
         # Resources
-        run.googleapis.com/cpu-throttling: 'false'
+        run.googleapis.com/cpu-throttling: 'true'
         run.googleapis.com/startup-cpu-boost: 'true'
     
     spec:
@@ -43,8 +43,8 @@ spec:
           
           resources:
             limits:
-              cpu: '2'
-              memory: 2Gi
+              cpu: '1'
+              memory: 512Mi
           
           env:
             - name: FLASK_ENV
@@ -118,5 +118,3 @@ spec:
   traffic:
     - percent: 100
       latestRevision: true
-
-

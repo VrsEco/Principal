@@ -51,6 +51,10 @@ class Config:
     UPLOAD_FOLDER = os.environ.get("UPLOAD_FOLDER") or "uploads"
     ALLOWED_EXTENSIONS = {"pdf", "png", "jpg", "jpeg", "gif"}
 
+    # Google Cloud Storage
+    GCS_BUCKET = os.environ.get("GCS_BUCKET")
+    GOOGLE_APPLICATION_CREDENTIALS = os.environ.get("GOOGLE_APPLICATION_CREDENTIALS")
+
     # AI Integration
     AI_PROVIDER = os.environ.get("AI_PROVIDER", "openai")  # openai, anthropic, local
     AI_API_KEY = os.environ.get("AI_API_KEY")
