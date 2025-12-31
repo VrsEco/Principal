@@ -44,3 +44,7 @@ O arquivo `.github/workflows/deploy-configr.yml` automatiza:
 1.  [ ] Configurar as Secrets no GitHub.
 2.  [ ] Adicionar a chave pública ao servidor.
 3.  [ ] Realizar o push do código atualizado.
+
+
+--
+ Sistemática de deploy ativada com sucesso em 31/12/2025.
