@@ -9,7 +9,7 @@ Sistema completo de backup automático que protege:
 
 **Destino:** OneDrive (sincronização automática para nuvem)  
 **Frequência:** Diário  
-**Horários:**
+**Horários (Brasília - BRT/BRST):**
 - 18:10 - Servidor Configr gera backup do banco de dados
 - 18:30 - PC local baixa tudo para OneDrive
 **Retenção:** Mantém os 3 backups mais recentes de cada tipo
