@@ -1,13 +1,32 @@
 ﻿from flask import Blueprint, render_template, abort, url_for, make_response, request, jsonify, redirect
 from datetime import datetime
 import re
-from typing import Optional
+from typing import Any, Optional
 from config_database import get_db
 from middleware.auto_log_decorator import auto_log_crud
 
 grv_bp = Blueprint('grv', __name__, url_prefix='/grv')
 
 print(">>> MÓDULO GRV CARREGADO - VERSÃO COM API ROUTES <<<")
+
+
+def _clean_text(value: Any, fallback: str = '') -> str:
+    """Return stripped string value or fallback."""
+    if isinstance(value, str):
+        cleaned = value.strip()
+        if cleaned:
+            return cleaned
+    return fallback
+
+
+def _format_display_name(code: Any, name: Any, fallback: str) -> str:
+    """Format labels as CODE - NAME, guarding against missing values."""
+    safe_name = _clean_text(name, fallback)
+    safe_code = _clean_text(code)
+    name_part = safe_name.upper() if safe_name else fallback.upper()
+    if safe_code:
+        return f"{safe_code.upper()} - {name_part}"
+    return name_part
 
 def normalize_indicator_code(code: Optional[str]) -> Optional[str]:
     if not code:
@@ -443,6 +462,40 @@ def grv_process_map_print(company_id: int):
             return max(0, min(255, int(channel + (255 - channel) * factor)))
         return '#{0:02x}{1:02x}{2:02x}'.format(_blend(r), _blend(g), _blend(b))
 
+    def _accent_text_color(color_hex: str) -> str:
+        color = _normalize_hex(color_hex)
+        if color in {'#f59e0b', '#fbbf24'}:
+            return '#b45309'
+        return color
+
+    def _parse_datetime(value: Any) -> Optional[datetime]:
+        if not value:
+            return None
+        if isinstance(value, datetime):
+            return value
+        if isinstance(value, str):
+            cleaned = value.strip()
+            if not cleaned:
+                return None
+            if cleaned.endswith('Z'):
+                cleaned = cleaned[:-1] + '+00:00'
+            try:
+                return datetime.fromisoformat(cleaned)
+            except ValueError:
+                pass
+            for fmt in ('%Y-%m-%d %H:%M:%S.%f', '%Y-%m-%d %H:%M:%S', '%Y-%m-%d'):
+                try:
+                    return datetime.strptime(cleaned, fmt)
+                except ValueError:
+                    continue
+        return None
+
+    def _format_datetime(value: Optional[datetime], with_time: bool = True) -> Optional[str]:
+        if not value:
+            return None
+        fmt = '%d/%m/%Y %H:%M' if with_time else '%d/%m/%Y'
+        return value.strftime(fmt)
+
     areas = []
     total_macros = 0
     total_processes = 0
@@ -451,9 +504,10 @@ def grv_process_map_print(company_id: int):
         macros = area.get('macros') or []
         area_color = _normalize_hex(area.get('color'))
         area_entry = {
-            'display_name': f"{area.get('code')} - {area.get('name').upper()}" if area.get('code') else (area.get('name') or 'Área'),
+            'display_name': _format_display_name(area.get('code'), area.get('name'), 'Área'),
             'color': area_color,
             'color_soft': _mix_with_white(area_color, 0.82),
+            'color_accent': _mix_with_white(area_color, 0.68),
             'macros': [],
             'macro_count': len(macros),
             'process_count': 0
@@ -462,7 +516,7 @@ def grv_process_map_print(company_id: int):
         for macro in macros:
             processes = macro.get('processes') or []
             macro_entry = {
-                'display_name': f"{macro.get('code')} - {macro.get('name').upper()}" if macro.get('code') else (macro.get('name') or 'Macroprocesso'),
+                'display_name': _format_display_name(macro.get('code'), macro.get('name'), 'Macroprocesso'),
                 'owner': macro.get('owner'),
                 'processes': []
             }
@@ -470,19 +524,23 @@ def grv_process_map_print(company_id: int):
             for proc in processes:
                 struct_info = structuring_levels.get(proc.get('structuring_level') or '', structuring_levels[''])
                 perf_info = performance_levels.get(proc.get('performance_level') or '', performance_levels[''])
+                struct_color = _normalize_hex(struct_info['color'])
+                perf_color = _normalize_hex(perf_info['color'])
                 macro_entry['processes'].append({
-                    'display_name': f"{proc.get('code')} - {proc.get('name').upper()}" if proc.get('code') else (proc.get('name') or 'Processo'),
+                    'display_name': _format_display_name(proc.get('code'), proc.get('name'), 'Processo'),
                     'responsible': proc.get('responsible'),
                     'description': proc.get('description'),
                     'structuring': {
                         'label': struct_info['label'],
-                        'color': struct_info['color'],
-                        'background': _mix_with_white(struct_info['color'], 0.88)
+                        'color': struct_color,
+                        'text_color': _accent_text_color(struct_color),
+                        'background': _mix_with_white(struct_color, 0.88)
                     },
                     'performance': {
                         'label': perf_info['label'],
-                        'color': perf_info['color'],
-                        'background': _mix_with_white(perf_info['color'], 0.88)
+                        'color': perf_color,
+                        'text_color': _accent_text_color(perf_color),
+                        'background': _mix_with_white(perf_color, 0.88)
                     }
                 })
 
@@ -495,6 +553,14 @@ def grv_process_map_print(company_id: int):
         areas.append(area_entry)
 
     generated_at = datetime.now()
+    company_created_at = _parse_datetime(company.get('created_at'))
+    header_meta = {
+        'company_name': company.get('name'),
+        'version': map_data.get('version') or '1.0',
+        'created_at': _format_datetime(company_created_at, with_time=False),
+        'updated_at': _format_datetime(generated_at, with_time=False),
+        'printed_at': _format_datetime(generated_at, with_time=True)
+    }
 
     return render_template(
         'pdf/grv_process_map_print.html',
@@ -505,7 +571,8 @@ def grv_process_map_print(company_id: int):
             'macros': total_macros,
             'processes': total_processes
         },
-        generated_at=generated_at
+        generated_at=generated_at,
+        header_meta=header_meta
     )
 
 
@@ -574,7 +641,7 @@ def grv_process_map_pdf_debug(company_id: int):
         for macro in macros:
             processes = macro.get('processes') or []
             macro_entry = {
-                'display_name': f"{macro.get('code')} - {macro.get('name').upper()}" if macro.get('code') else (macro.get('name') or 'Macroprocesso'),
+                'display_name': _format_display_name(macro.get('code'), macro.get('name'), 'Macroprocesso'),
                 'owner': macro.get('owner'),
                 'processes': []
             }
@@ -583,7 +650,7 @@ def grv_process_map_pdf_debug(company_id: int):
                 struct_info = structuring_levels.get(proc.get('structuring_level') or '', structuring_levels[''])
                 perf_info = performance_levels.get(proc.get('performance_level') or '', performance_levels[''])
                 macro_entry['processes'].append({
-                    'display_name': f"{proc.get('code')} - {proc.get('name').upper()}" if proc.get('code') else (proc.get('name') or 'Processo'),
+                    'display_name': _format_display_name(proc.get('code'), proc.get('name'), 'Processo'),
                     'responsible': proc.get('responsible'),
                     'description': proc.get('description'),
                     'structuring': {
@@ -674,7 +741,7 @@ def grv_process_map_pdf(company_id: int):
         macros = area.get('macros') or []
         area_color = _normalize_hex(area.get('color'))
         area_entry = {
-            'display_name': f"{area.get('code')} - {area.get('name').upper()}" if area.get('code') else (area.get('name') or 'Ãrea'),
+            'display_name': _format_display_name(area.get('code'), area.get('name'), 'Área'),
             'color': area_color,
             'color_soft': _mix_with_white(area_color, 0.82),
             'macros': [],
@@ -685,7 +752,7 @@ def grv_process_map_pdf(company_id: int):
         for macro in macros:
             processes = macro.get('processes') or []
             macro_entry = {
-                'display_name': f"{macro.get('code')} - {macro.get('name').upper()}" if macro.get('code') else (macro.get('name') or 'Macroprocesso'),
+                'display_name': _format_display_name(macro.get('code'), macro.get('name'), 'Macroprocesso'),
                 'owner': macro.get('owner'),
                 'processes': []
             }
@@ -966,7 +1033,7 @@ def grv_process_map_pdf2(company_id: int):
         macros = area.get('macros') or []
         area_color = _normalize_hex(area.get('color'))
         area_entry = {
-            'display_name': f"{area.get('code')} - {area.get('name').upper()}" if area.get('code') else (area.get('name') or 'Ãrea'),
+            'display_name': _format_display_name(area.get('code'), area.get('name'), 'Área'),
             'color': area_color,
             'color_soft': _mix_with_white(area_color, 0.82),
             'macros': [],
@@ -977,7 +1044,7 @@ def grv_process_map_pdf2(company_id: int):
         for macro in macros:
             processes = macro.get('processes') or []
             macro_entry = {
-                'display_name': f"{macro.get('code')} - {macro.get('name').upper()}" if macro.get('code') else (macro.get('name') or 'Macroprocesso'),
+                'display_name': _format_display_name(macro.get('code'), macro.get('name'), 'Macroprocesso'),
                 'owner': macro.get('owner'),
                 'processes': []
             }
@@ -986,7 +1053,7 @@ def grv_process_map_pdf2(company_id: int):
                 struct_info = structuring_levels.get(proc.get('structuring_level') or '', structuring_levels[''])
                 perf_info = performance_levels.get(proc.get('performance_level') or '', performance_levels[''])
                 macro_entry['processes'].append({
-                    'display_name': f"{proc.get('code')} - {proc.get('name').upper()}" if proc.get('code') else (proc.get('name') or 'Processo'),
+                    'display_name': _format_display_name(proc.get('code'), proc.get('name'), 'Processo'),
                     'responsible': proc.get('responsible'),
                     'description': proc.get('description'),
                     'structuring': {
@@ -1067,14 +1134,14 @@ def grv_process_map_pdf2(company_id: int):
                 try:
                     print("DEBUG: Criando nova página...")
                     page = browser.new_page()
-                    page.set_viewport_size({"width": 794, "height": 1123})
+                    page.set_viewport_size({"width": 1123, "height": 794})
                     print("DEBUG: Definindo conteúdo HTML...")
                     page.set_content(html, wait_until="networkidle")
                     page.emulate_media(media="print")
                     print("DEBUG: Gerando PDF...")
                     pdf = page.pdf(
                         format="A4",
-                        landscape=False,
+                        landscape=True,
                         print_background=True,
                         display_header_footer=True,
                         header_template=header_template,

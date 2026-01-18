@@ -73,6 +73,69 @@
   #macrosContainer::-webkit-scrollbar-thumb:hover {
     background: rgba(58, 241, 174, 0.5);
   }
+
+  .summary-section {
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: space-between;
+    gap: 12px;
+    margin-bottom: 16px;
+  }
+
+  .summary-card {
+    flex: 1 1 0;
+    min-width: 180px;
+    border-radius: 12px;
+    padding: 10px 16px;
+    border: 1px solid rgba(148, 163, 184, 0.4);
+    background: linear-gradient(135deg, rgba(226, 232, 240, 0.4), rgba(248, 250, 252, 0.9));
+    box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.6);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 12px;
+    text-transform: uppercase;
+    letter-spacing: 0.12em;
+    font-size: 11px;
+    color: #475569;
+  }
+
+  .summary-card-label {
+    font-size: 11px;
+    letter-spacing: 0.12em;
+    font-weight: 600;
+  }
+
+  .summary-card-value {
+    font-size: 18px;
+    font-weight: 600;
+    color: #0f172a;
+    letter-spacing: -0.015em;
+  }
+
+  .print-legal {
+    font-size: 10px;
+    letter-spacing: 0.04em;
+    text-transform: uppercase;
+    color: #475569;
+    white-space: nowrap;
+  }
+
+  .print-footer-visible {
+    margin-top: 12px;
+    padding-top: 12px;
+    border-top: 1px solid rgba(148, 163, 184, 0.35);
+    display: flex;
+    justify-content: flex-end;
+  }
+
+  .print-footer {
+    display: none;
+    padding-top: 8px;
+    border-top: 1px solid rgba(148, 163, 184, 0.25);
+    margin-top: 16px;
+    text-align: right;
+  }
 </style>
 {% endblock %}
 
@@ -94,7 +157,7 @@
     <div data-panel="visual" class="surface-card" style="padding:20px;">
       <div class="card-header" style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:16px;">
         <div style="flex:1;">
-          <h3>{{ company.name }} - Mapa de Processos</h3>
+          <h3>Mapa de Processos - {{ company.name }}</h3>
           <div style="display:flex;gap:20px;margin-top:8px;font-size:12px;color:var(--color-muted);flex-wrap:wrap;">
             <div><strong>Versão:</strong> 1.0</div>
             <div><strong>Criado em:</strong> {{ company.created_at[:10] if company.created_at else 'N/A' }}</div>
@@ -104,10 +167,8 @@
         </div>
         <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap;">
           <button id="btnViewMap" class="button button-primary" style="font-size:12px;">👁️ Visualizar</button>
-          <button id="btnExportPdf" class="button button-ghost" style="font-size:12px;">📝 Exportar PDF</button>
           <div style="width:1px;height:24px;background:var(--color-border);margin:0 4px;"></div>
           <button id="btnViewMapV2" class="button button-primary" style="font-size:12px;background:#10b981;border-color:#10b981;">👁️ Visualizar MP-2</button>
-          <button id="btnExportPdfV2" class="button button-ghost" style="font-size:12px;">📄 Exportar PDF MP-2</button>
         </div>
       </div>
       
@@ -453,7 +514,7 @@
 .print-header-content {
   display: flex;
   flex-direction: column;
-  gap: 12px;
+  gap: 8px;
 }
 
 .print-header-title {
@@ -464,10 +525,13 @@
 
 .print-header-meta {
   display: flex;
+  justify-content: center;
   flex-wrap: wrap;
-  gap: 20px;
+  gap: 28px;
   font-size: 0.9em;
   color: #6b7280;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
 }
 
 .print-header-meta strong {
@@ -629,18 +693,54 @@
   .summary-section {
     display: flex !important;
     flex-wrap: wrap !important;
+    justify-content: space-between !important;
     gap: 12px !important;
     margin-bottom: 16px !important;
     page-break-after: avoid;
   }
   
   .summary-card {
-    border: 1px solid rgba(148, 163, 184, 0.35) !important;
-    border-radius: 8px !important;
-    padding: 12px 16px !important;
-    min-width: 140px !important;
-    background: #f8fafc !important;
+    flex: 1 1 0 !important;
+    min-width: 150px !important;
+    border-radius: 12px !important;
+    padding: 10px 14px !important;
+    border: 1px solid rgba(148, 163, 184, 0.4) !important;
+    background: linear-gradient(135deg, rgba(226, 232, 240, 0.4), rgba(248, 250, 252, 0.9)) !important;
+    box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.6) !important;
+    display: flex !important;
+    align-items: center !important;
+    justify-content: center !important;
+    gap: 12px !important;
+    text-transform: uppercase !important;
+    letter-spacing: 0.12em !important;
+    font-size: 11px !important;
+    color: #475569 !important;
     page-break-inside: avoid;
+  }
+
+  .summary-card-value {
+    font-size: 18px !important;
+    font-weight: 600 !important;
+    color: #0f172a !important;
+    letter-spacing: -0.015em !important;
+  }
+
+  .summary-card-label {
+    font-size: 11px !important;
+    letter-spacing: 0.12em !important;
+    font-weight: 600 !important;
+  }
+
+  .print-footer-visible {
+    display: none !important;
+  }
+
+  .print-footer {
+    display: block !important;
+    position: running(print-footer);
+    margin: 20px 0 0 0 !important;
+    padding: 6px 0 0 0 !important;
+    text-align: right !important;
   }
 
   .print-page-header-visible {
@@ -661,16 +761,14 @@
 
   .print-header-meta {
     color: #475569 !important;
+    justify-content: center !important;
   }
 
-  .print-page-counter {
-    display: block !important;
-    font-size: 10pt !important;
+  .print-legal {
+    font-size: 10px !important;
     color: #475569 !important;
-  }
-
-  .print-page-counter::after {
-    content: "Página " counter(page) " de " counter(pages);
+    letter-spacing: 0.04em !important;
+    text-transform: uppercase !important;
   }
 
   .print-area-block {
@@ -750,10 +848,12 @@
   
   .badge-group {
     display: flex !important;
-    flex-direction: column !important;
-    gap: 4px !important;
+    flex-direction: row !important;
+    align-items: center !important;
+    gap: 6px !important;
+    flex-wrap: wrap !important;
   }
-  
+
   .badge {
     display: inline-flex !important;
     align-items: center !important;
@@ -763,6 +863,7 @@
     font-size: 9.5px !important;
     font-weight: 600 !important;
     line-height: 1.1 !important;
+    white-space: nowrap !important;
   }
   
   .badge-label {
@@ -794,6 +895,9 @@
   margin: 16mm 14mm 18mm 14mm;
   @top-center {
     content: element(print-header);
+  }
+  @bottom-right {
+    content: element(print-footer);
   }
 }
 

@@ -85,6 +85,15 @@
             box-shadow: 0 4px 6px rgba(0, 0, 0, 0.05);
         }
 
+        .module-card.module-card--disabled {
+            cursor: not-allowed;
+            opacity: 0.65;
+            border: 1px dashed rgba(15, 23, 42, 0.25);
+            background: linear-gradient(135deg, #f8fafc 0%, #e2e8f0 100%);
+            pointer-events: none;
+            box-shadow: none;
+        }
+
         .module-card::before {
             content: '';
             position: absolute;
@@ -151,6 +160,12 @@
             color: #065f46;
         }
 
+        .status-disabled {
+            background: #e2e8f0;
+            border: 1px solid #94a3b8;
+            color: #475569;
+        }
+
         .status-coming-soon {
             background: #fef3c7;
             border: 1px solid #f59e0b;
@@ -203,20 +218,46 @@
 
         <div class="modules-grid">
             <!-- PEV - Planejamento Estratégico Versus -->
-            <a href="{{ url_for('pev.pev_dashboard') }}" class="module-card">
+            {% set pev_url = (module_links or {}).get('pev') %}
+            {% if pev_url %}
+            <a href="{{ pev_url }}" class="module-card">
+            {% else %}
+            <div class="module-card module-card--disabled" title="Módulo PEV indisponível no momento">
+            {% endif %}
                 <div class="module-icon">PEV</div>
                 <h2 class="module-title">Planejamento Estratégico</h2>
                 <p class="module-description">Desenvolva e gerencie planos estratégicos com OKRs, direcionadores e projetos.</p>
+                {% if pev_url %}
                 <div class="module-status status-active">✓ Ativo</div>
+                {% else %}
+                <div class="module-status status-disabled">Indisponível</div>
+                {% endif %}
+            {% if pev_url %}
             </a>
+            {% else %}
+            </div>
+            {% endif %}
 
             <!-- GRV - Gerenciamento da Rotina Versus -->
-            <a href="{{ url_for('grv.grv_dashboard') }}" class="module-card">
+            {% set grv_url = (module_links or {}).get('grv') %}
+            {% if grv_url %}
+            <a href="{{ grv_url }}" class="module-card">
+            {% else %}
+            <div class="module-card module-card--disabled" title="Módulo GRV indisponível no momento">
+            {% endif %}
                 <div class="module-icon">GRV</div>
                 <h2 class="module-title">Gerenciamento da Rotina</h2>
                 <p class="module-description">Organize processos operacionais, gerencie projetos e acompanhe a rotina.</p>
+                {% if grv_url %}
                 <div class="module-status status-active">✓ Ativo</div>
+                {% else %}
+                <div class="module-status status-disabled">Indisponível</div>
+                {% endif %}
+            {% if grv_url %}
             </a>
+            {% else %}
+            </div>
+            {% endif %}
 
             <!-- Empresas - Cadastro Unificado -->
             <a href="/companies" class="module-card">

@@ -23,6 +23,7 @@ import re
 from database.postgres_helper import connect as pg_connect
 from decimal import Decimal, InvalidOperation, ROUND_HALF_UP
 from typing import Optional, List, Dict, Any, Tuple
+from werkzeug.routing import BuildError
 from services.ai_service import ai_service
 from models import db as models_db
 from werkzeug.utils import secure_filename
@@ -781,11 +782,26 @@ def login():
                 'message': f'Erro no login: {str(e)}'
             }), 500
 
+
+def _safe_url(endpoint: str) -> Optional[str]:
+    """Return the resolved URL for an endpoint or None if unavailable."""
+    try:
+        return url_for(endpoint)
+    except (BuildError, RuntimeError):
+        return None
+
+
 @app.route("/main")
 @login_required
 def main():
     """Ecossistema Versus - Página principal"""
-    return render_template("ecosystem.html")
+    module_links = {
+        "pev": _safe_url("pev.pev_dashboard"),
+        "grv": _safe_url("grv.grv_dashboard"),
+        "meetings": _safe_url("meetings.meetings_home"),
+        "my_work": _safe_url("my_work.dashboard"),
+    }
+    return render_template("ecosystem.html", module_links=module_links)
 
 
 @app.route("/integrations")
