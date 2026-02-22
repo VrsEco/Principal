@@ -1,3 +1,0 @@
-Created instance_id: 16
-Committed transaction for instance_id: 16
-Fetched instance_row: False

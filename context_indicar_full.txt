@@ -1,4 +1,0 @@
-            
-                // Adicionar campo hidden para indicar que � edição
-                let hiddenInput = form.querySelector('input[name="interview_id"]');
-               

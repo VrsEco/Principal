@@ -1,1 +1,0 @@
-git checkout main; git reset --hard origin/main; git add .; git commit -m 'Update codebase clean'; git push origin main

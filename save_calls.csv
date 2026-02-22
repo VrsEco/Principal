@@ -1,7 +1,0 @@
-"LineNumber","Line","Filename"
-"4042","    storage.save(storage_path)","app_pev.py"
-"4116","            upload.save(storage_path)","app_pev.py"
-"1727","        file.save(file_path)","__init__.py"
-"1884","            file.save(file_path)","__init__.py"
-"225","            super().save()","routes.py"
-"490","        wb.save(output)","routes.py"

@@ -1,7 +1,0 @@
-﻿gs://vrs-eco-backup-db/Cloud_SQL_Export_2025-11-30 (01:55:37).sql
-gs://vrs-eco-backup-db/Cloud_SQL_Export_2025-11-30 (02:47:15).sql
-gs://vrs-eco-backup-db/backup_bd_app_versus_cloud.sql
-gs://vrs-eco-backup-db/backup_bd_app_versus_compat.sql
-gs://vrs-eco-backup-db/backup_bd_app_versus_final.backup
-gs://vrs-eco-backup-db/backup_compativel.sql
-gs://vrs-eco-backup-db/backup_gestaoversus.dump

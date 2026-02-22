@@ -1,1 +1,0 @@
-['id', 'project_id', 'what', 'who', 'due_date', 'how', 'amount', 'status', 'notes', 'created_at', 'updated_at']

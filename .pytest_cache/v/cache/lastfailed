@@ -1,4 +1,0 @@
-{
-  "tests/governance/test_code_standards.py::TestForbiddenPatterns::test_no_print_statements": true,
-  "tests/governance/test_code_standards.py::TestForbiddenPatterns::test_no_sql_string_concatenation": true
-}

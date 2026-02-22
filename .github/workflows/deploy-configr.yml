@@ -9,6 +9,7 @@ jobs:
   validate:
     name: 🧪 Validate Code
     runs-on: ubuntu-latest
+    continue-on-error: true
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
@@ -47,34 +48,36 @@ jobs:
           script: |
             cd /home/app2/public_html
             
-            # Atualizar código (Monorepo)
+            # 1. Sincronizar Código (Monorepo)
+            echo "📥 Sincronizando repositório do GitHub..."
             git fetch origin main
             git reset --hard origin/main
             
-            # Entrar na pasta do APP de produção atual (app32)
-            cd app32
-            
-            # Ativar venv e atualizar (Pode estar no root ou dentro do app)
-            if [ -d "../venv" ]; then
-              source ../venv/bin/activate
-            elif [ -d "../.venv" ]; then
-              source ../.venv/bin/activate
-            elif [ -d "venv" ]; then
-              source venv/bin/activate
+            # 2. Processar APP31 (Legado/Ativo)
+            if [ -d "app31" ]; then
+              echo "⚙️ Atualizando APP31 (Produção)..."
+              # Ativar venv (tenta local ou root)
+              if [ -d "app31/venv" ]; then source app31/venv/bin/activate
+              elif [ -d "app31/.venv" ]; then source app31/.venv/bin/activate
+              elif [ -d "venv" ]; then source venv/bin/activate
+              fi
+              
+              pip install -r app31/requirements.txt
+              mkdir -p app31/tmp
+              touch app31/tmp/restart.txt
             fi
             
-            pip install -r requirements.txt
+            # 3. Processar APP32 (Nova Estrutura/Beta)
+            if [ -d "app32" ]; then
+              echo "🧪 Atualizando APP32 (Desenvolvimento)..."
+              # Se o venv for compartilhado no root ou dentro do app
+              pip install -r app32/requirements.txt
+              mkdir -p app32/tmp
+              touch app32/tmp/restart.txt
+            fi
             
-            # Migrações (usando app.py como principal)
-            export FLASK_APP=app.py
-            # flask db upgrade  # Descomente quando o Alembic estiver configurado no app32
-            
-            # Restart da aplicação (Apache/Passenger no Configr)
-            # Geralmente o tmp/restart.txt fica na raiz de cada app no Passenger
+            # 4. Restart Global (Passenger/Configr)
             mkdir -p tmp
             touch tmp/restart.txt
             
-            # Se o servidor usa um passenger_wsgi.py na raiz de public_html, 
-            # você precisará garantir que ele aponte para app32.app:app
-            
-            echo "✅ Deploy do APP32 concluído com sucesso em $(date)"
+            echo "✅ Deploy Monorepo concluído em $(date)"

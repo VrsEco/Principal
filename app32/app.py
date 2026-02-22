@@ -7,6 +7,7 @@ import os
 from models import db
 from schemas import ma
 
+
 def create_app(config_name=None):
     app = Flask(__name__)
     print("DEBUG: Registering Jinja filters...")

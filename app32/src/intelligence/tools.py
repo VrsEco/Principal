@@ -10,8 +10,8 @@ def get_active_company_id():
     """Recupera o ID da empresa ativa de forma resiliente (Sessão, Ambiente ou Contexto)."""
     try:
         from flask import session
-        if get_active_company_id():
-            return get_active_company_id()
+        if session.get('company_id'):
+            return session.get('company_id')
     except:
         pass
     return os.environ.get('ACTIVE_COMPANY_ID')
