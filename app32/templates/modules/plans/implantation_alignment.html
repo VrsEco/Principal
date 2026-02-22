@@ -1,0 +1,243 @@
+{% extends "modules/plans/base_planning.html" %}
+
+{% block planning_content %}
+<div class="planning-header"
+    style="display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 32px;">
+    <div>
+        <h1 style="font-size: 32px; font-weight: 800; color: #0f172a; margin-bottom: 8px;">Alinhamento Estratégico</h1>
+        <p style="color: #64748b; font-size: 16px;">Garantir visão, ritmo compartilhado e responsabilidades antes de
+            evoluir para modelo e execução.</p>
+    </div>
+    <div style="display: flex; gap: 12px;">
+        <button onclick="saveAlignment()" class="nav-button"
+            style="background: #2563eb; color: #ffffff; padding: 12px 24px; border-radius: 12px; font-weight: 600; display: flex; align-items: center; gap: 8px; border: none; cursor: pointer;">
+            <i class="fa-solid fa-floppy-disk"></i> Salvar Alinhamento
+        </button>
+        <button onclick="completeSection()" class="nav-button"
+            style="background: #10b981; color: #ffffff; padding: 12px 24px; border-radius: 12px; font-weight: 600; display: flex; align-items: center; gap: 8px; border: none; cursor: pointer;">
+            <i class="fa-solid fa-check"></i> Concluir Etapa
+        </button>
+    </div>
+</div>
+
+<!-- Partners Table -->
+<div class="planning-card" style="margin-bottom: 24px;">
+    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px;">
+        <h3 style="font-size: 18px; font-weight: 700; color: #0f172a;">Perfis dos Sócios</h3>
+        <button onclick="addPartner()" class="button button-secondary"
+            style="padding: 8px 16px; border-radius: 8px; font-size: 13px;">
+            <i class="fa-solid fa-plus"></i> Adicionar Sócio
+        </button>
+    </div>
+    <div style="overflow-x: auto;">
+        <table style="width: 100%; border-collapse: separate; border-spacing: 0 12px;">
+            <thead
+                style="text-align: left; color: #64748b; font-size: 12px; text-transform: uppercase; font-weight: 700;">
+                <tr>
+                    <th style="padding: 0 12px;">Sócio</th>
+                    <th style="padding: 0 12px;">Papel definido</th>
+                    <th style="padding: 0 12px;">Motivação central</th>
+                    <th style="padding: 0 12px;">Compromisso</th>
+                    <th style="padding: 0 12px;">Tolerância a risco</th>
+                    <th style="padding: 0 12px; text-align: right;">Ações</th>
+                </tr>
+            </thead>
+            <tbody id="partnersContainer">
+                {% if section_content.partners %}
+                {% for partner in section_content.partners %}
+                <tr class="partner-row" style="background: #f8fafc; border-radius: 10px;">
+                    <td style="padding: 12px; border-radius: 10px 0 0 10px;"><input type="text" class="partner-name"
+                            value="{{ partner.name }}"
+                            style="width: 100%; background: transparent; border: none; font-weight: 600;"></td>
+                    <td style="padding: 12px;"><input type="text" class="partner-role" value="{{ partner.role }}"
+                            style="width: 100%; background: transparent; border: none;"></td>
+                    <td style="padding: 12px;"><input type="text" class="partner-motivation"
+                            value="{{ partner.motivation }}"
+                            style="width: 100%; background: transparent; border: none;"></td>
+                    <td style="padding: 12px;"><input type="text" class="partner-commitment"
+                            value="{{ partner.commitment }}"
+                            style="width: 100%; background: transparent; border: none;"></td>
+                    <td style="padding: 12px;"><input type="text" class="partner-risk" value="{{ partner.risk }}"
+                            style="width: 100%; background: transparent; border: none;"></td>
+                    <td style="padding: 12px; border-radius: 0 10px 10px 0; text-align: right;">
+                        <button onclick="this.closest('tr').remove()"
+                            style="color: #ef4444; background: none; border: none; cursor: pointer;"><i
+                                class="fa-solid fa-trash"></i></button>
+                    </td>
+                </tr>
+                {% endfor %}
+                {% else %}
+                <tr id="noPartnersMsg">
+                    <td colspan="6" style="padding: 24px; text-align: center; color: #64748b; font-size: 14px;">
+                        Nenhum sócio cadastrado. Clique em "Adicionar Sócio" para começar.
+                    </td>
+                </tr>
+                {% endif %}
+            </tbody>
+        </table>
+    </div>
+</div>
+
+<div class="planning-card" style="margin-bottom: 24px;">
+    <h3 style="font-size: 18px; font-weight: 700; color: #0f172a; margin-bottom: 20px;">Pilares do Alinhamento</h3>
+    <div style="display: grid; grid-template-columns: 1fr; gap: 24px;">
+        <div>
+            <label style="display: block; font-size: 14px; font-weight: 600; color: #475569; margin-bottom: 8px;">Visão
+                compartilhada</label>
+            <textarea id="shared_vision" placeholder="Qual a visão comum de futuro para este negócio?"
+                style="width: 100%; min-height: 100px; padding: 12px; border-radius: 10px; border: 1px solid #e2e8f0;">{{ section_content.shared_vision|default('') }}</textarea>
+        </div>
+        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 24px;">
+            <div>
+                <label
+                    style="display: block; font-size: 14px; font-weight: 600; color: #475569; margin-bottom: 8px;">Metas
+                    financeiras</label>
+                <textarea id="financial_goals" placeholder="Quais as metas de faturamento e margem?"
+                    style="width: 100%; min-height: 100px; padding: 12px; border-radius: 10px; border: 1px solid #e2e8f0;">{{ section_content.financial_goals|default('') }}</textarea>
+            </div>
+            <div>
+                <label
+                    style="display: block; font-size: 14px; font-weight: 600; color: #475569; margin-bottom: 8px;">Critérios
+                    de decisão (tópicos)</label>
+                <div id="decisionCriteriaContainer"
+                    style="display: flex; flex-direction: column; gap: 8px; margin-bottom: 12px;">
+                    <!-- Tópicos serão inseridos aqui -->
+                </div>
+                <button type="button" onclick="addDecisionCriterion()" class="button button-secondary"
+                    style="padding: 6px 12px; font-size: 12px; border-radius: 6px;">
+                    <i class="fa-solid fa-plus"></i> Adicionar Tópico
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
+
+
+<script>
+    function addPartner() {
+        const msg = document.getElementById('noPartnersMsg');
+        if (msg) msg.remove();
+
+        const container = document.getElementById('partnersContainer');
+        const tr = document.createElement('tr');
+        tr.className = 'partner-row';
+        tr.style.background = '#f8fafc';
+        tr.style.borderRadius = '10px';
+        tr.innerHTML = `
+        <td style="padding: 12px; border-radius: 10px 0 0 10px;"><input type="text" class="partner-name" placeholder="Sócio" style="width: 100%; background: transparent; border: none; font-weight: 600;"></td>
+        <td style="padding: 12px;"><input type="text" class="partner-role" placeholder="Papel definido" style="width: 100%; background: transparent; border: none;"></td>
+        <td style="padding: 12px;"><input type="text" class="partner-motivation" placeholder="Motivação central" style="width: 100%; background: transparent; border: none;"></td>
+        <td style="padding: 12px;"><input type="text" class="partner-commitment" placeholder="Compromisso" style="width: 100%; background: transparent; border: none;"></td>
+        <td style="padding: 12px;"><input type="text" class="partner-risk" placeholder="Tolerância a risco" style="width: 100%; background: transparent; border: none;"></td>
+        <td style="padding: 12px; border-radius: 0 10px 10px 0; text-align: right;">
+            <button onclick="this.closest('tr').remove()" style="color: #ef4444; background: none; border: none; cursor: pointer;"><i class="fa-solid fa-trash"></i></button>
+        </td>
+    `;
+        container.appendChild(tr);
+    }
+
+    function addDecisionCriterion(value = '') {
+        const container = document.getElementById('decisionCriteriaContainer');
+        const div = document.createElement('div');
+        div.className = 'criterion-item';
+        div.style.display = 'flex';
+        div.style.alignItems = 'center';
+        div.style.gap = '8px';
+        div.style.background = '#f8fafc';
+        div.style.padding = '8px 12px';
+        div.style.borderRadius = '8px';
+        div.innerHTML = `
+            <i class="fa-solid fa-circle" style="font-size: 6px; color: #94a3b8;"></i>
+            <input type="text" class="criterion-value" value="${value}" placeholder="Ex: Priorizar margem sobre volume" 
+                style="flex: 1; background: transparent; border: none; font-size: 14px; font-weight: 500;">
+            <button type="button" onclick="this.parentElement.remove()" style="color: #94a3b8; background: none; border: none; cursor: pointer; font-size: 12px;">
+                <i class="fa-solid fa-xmark"></i>
+            </button>
+        `;
+        container.appendChild(div);
+    }
+
+    // Inicializar critérios existentes
+    document.addEventListener('DOMContentLoaded', () => {
+        const existingCriteria = {{ section_content.decision_criteria|default ([]) | tojson | safe
+    }};
+    if (existingCriteria && existingCriteria.length > 0) {
+        existingCriteria.forEach(c => addDecisionCriterion(c));
+    } else {
+        addDecisionCriterion(); // Adiciona um campo vazio por padrão
+    }
+    });
+
+
+
+    async function saveAlignment() {
+        const partners = Array.from(document.querySelectorAll('.partner-row')).map(row => ({
+            name: row.querySelector('.partner-name').value,
+            role: row.querySelector('.partner-role').value,
+            motivation: row.querySelector('.partner-motivation').value,
+            commitment: row.querySelector('.partner-commitment').value,
+            risk: row.querySelector('.partner-risk').value
+        })).filter(p => p.name);
+
+        const criteria = Array.from(document.querySelectorAll('.criterion-value')).map(el => el.value.trim()).filter(v => v);
+
+        const data = {
+            partners: partners,
+            shared_vision: document.getElementById('shared_vision').value,
+            financial_goals: document.getElementById('financial_goals').value,
+            decision_criteria: criteria
+        };
+
+        try {
+            const response = await fetch('/api/plans/{{ plan.id }}/implantation/alignment?company_id={{ company.id }}', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(data)
+            });
+
+            if (response.ok) {
+                alert('Alinhamento salvo com sucesso!');
+            } else {
+                const err = await response.json();
+                console.error(err);
+                alert('Erro ao salvar alinhamento. Verifique se todos os campos obrigatórios estão preenchidos.');
+            }
+        } catch (error) {
+            console.error(error);
+            alert('Erro de conexão.');
+        }
+    }
+
+    async function completeSection() {
+        await saveAlignment();
+        const response = await fetch(`/api/plans/{{ plan.id }}/sections/alignment/complete`, { method: 'POST' });
+        if (response.ok) {
+            window.location.href = "{{ url_for('plans.implantation_section', plan_id=plan.id, section='model') }}";
+        }
+    }
+</script>
+
+<style>
+    .button-secondary {
+        background: #f1f5f9;
+        color: #475569;
+        border: 1px solid #e2e8f0;
+        font-weight: 600;
+        cursor: pointer;
+        transition: all 0.2s;
+    }
+
+    .button-secondary:hover {
+        background: #e2e8f0;
+        color: #0f172a;
+    }
+
+    input:focus,
+    textarea:focus {
+        outline: none;
+        border-color: #2563eb !important;
+        background: white !important;
+    }
+</style>
+{% endblock %}

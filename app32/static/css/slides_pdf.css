@@ -1,0 +1,77 @@
+@page {
+  size: A4 landscape;
+  margin: 1.5cm;
+}
+
+@media print {
+  @page {
+    size: A4 landscape;
+    margin: 1.5cm;
+  }
+  
+  * {
+    -webkit-print-color-adjust: exact;
+    color-adjust: exact;
+  }
+}
+
+:root {
+  --accent: #39f2ae;
+  --accent-light: rgba(57, 242, 174, 0.1);
+  --text: #1a1a1a;
+  --muted: #555555;
+  --border: rgba(57, 242, 174, 0.3);
+  --surface: rgba(255, 255, 255, 0.9);
+}
+
+.slides-body {
+  font-family: "Poppins", Arial, sans-serif;
+  color: var(--text);
+  margin: 0;
+  font-size: 12pt;
+  line-height: 1.4;
+  max-width: 29.7cm;
+  margin: 0 auto;
+}
+
+@media print {
+  .slides-body {
+    max-width: none;
+    margin: 0;
+    background: white;
+  }
+}
+
+.slide {
+  width: 100%;
+  height: 100vh;
+  background: white;
+  margin: 0 0 20px 0;
+  padding: 40px;
+  box-sizing: border-box;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  page-break-after: always;
+}
+
+@media print {
+  .slide {
+    width: 100%;
+    height: 100vh;
+    margin: 0;
+    padding: 1.5cm;
+    page-break-after: always;
+  }
+  
+  .slide:last-child {
+    page-break-after: avoid;
+  }
+}
+
+.slide:last-child {
+  page-break-after: avoid;
+}
+
+
+

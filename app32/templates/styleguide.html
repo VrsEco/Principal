@@ -1,0 +1,78 @@
+{% extends "layouts/app.html" %}
+
+{% block title %}Styleguide APP32{% endblock %}
+
+{% block content %}
+<div style="display: grid; gap: 40px;">
+
+    <section>
+        <h1 class="text-h1" style="margin-bottom: 16px;">Styleguide & Layouts APP32</h1>
+        <p class="text-muted">Área de teste para validação dos novos layouts padronizados.</p>
+    </section>
+
+    <section>
+        <h2 class="text-h2" style="margin-bottom: 24px;">1. Componentes de UI (Typography & Buttons)</h2>
+
+        <div
+            style="display: grid; gap: 16px; padding: 24px; background: white; border-radius: 12px; border: 1px solid var(--color-border);">
+            <div>
+                <h1 class="text-h1">Heading 1</h1>
+                <h2 class="text-h2">Heading 2</h2>
+                <h3 class="text-h3">Heading 3</h3>
+                <p>Parágrafo padrão com <a href="#">link</a> e texto <strong>negrito</strong>.</p>
+                <p class="text-sm">Texto pequeno para legendas.</p>
+            </div>
+
+            <div style="display: flex; gap: 12px; flex-wrap: wrap; margin-top: 16px;">
+                <button class="btn btn-primary">Primary Button</button>
+                <button class="btn btn-secondary">Secondary Button</button>
+                <button class="btn btn-ghost">Ghost Button</button>
+            </div>
+        </div>
+    </section>
+
+    <section>
+        <h2 class="text-h2" style="margin-bottom: 24px;">2. Layout "Form" (Popup Style)</h2>
+        <div style="border: 1px dashed #ccc; padding: 20px; background: #f0f0f0;">
+            <p style="margin-bottom: 12px; text-align: center; color: #666;">Preview do Layout Form (incorporado)</p>
+
+            <!-- Simulando o layout form dentro da página -->
+            <div class="form-card" style="margin: 0 auto;">
+                <header class="form-header">
+                    <h1 class="text-h1">Editar Grupo</h1>
+                    <div class="subtitle text-sm" style="margin-top: 8px;">
+                        Empresa: <strong>Versus Tecnologia</strong> <span class="info-badge">Código: V1</span>
+                    </div>
+                </header>
+
+                <form onsubmit="event.preventDefault(); alert('Submit!');">
+                    <div class="form-group">
+                        <label class="form-label">Nome do Grupo</label>
+                        <input type="text" class="form-input" value="Financeiro" placeholder="Nome do grupo">
+                    </div>
+
+                    <div class="form-group">
+                        <label class="form-label">Tipo</label>
+                        <select class="form-select">
+                            <option>Operacional</option>
+                            <option>Estratégico</option>
+                        </select>
+                    </div>
+
+                    <div class="form-group">
+                        <label class="form-label">Descrição</label>
+                        <textarea class="form-textarea" placeholder="Descreva o propósito deste grupo..."></textarea>
+                    </div>
+
+                    <div class="form-actions">
+                        <button type="button" class="btn btn-secondary">Cancelar</button>
+                        <button type="submit" class="btn btn-primary">Salvar Alterações</button>
+                    </div>
+                </form>
+            </div>
+
+        </div>
+    </section>
+
+</div>
+{% endblock %}

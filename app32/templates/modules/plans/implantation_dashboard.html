@@ -1,0 +1,129 @@
+{% extends "modules/plans/base_planning.html" %}
+
+{% block planning_content %}
+<div class="planning-header" style="margin-bottom: 32px;">
+    <h1 style="font-size: 32px; font-weight: 800; color: #0f172a; margin-bottom: 8px;">Dashboard de Implantação</h1>
+    <p style="color: #64748b; font-size: 16px;">Estruture a base para um crescimento sustentável e alinhado.</p>
+</div>
+
+<!-- KPI Cards -->
+<div
+    style="display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 20px; margin-bottom: 32px;">
+    <div class="planning-card" style="padding: 20px; display: flex; align-items: center; gap: 16px;">
+        <div
+            style="width: 52px; height: 52px; border-radius: 14px; background: #e0f2fe; color: #0369a1; display: flex; align-items: center; justify-content: center; font-size: 22px; flex-shrink: 0;">
+            <i class="fa-solid fa-money-bill-trend-up"></i>
+        </div>
+        <div>
+            <div style="font-size: 13px; color: #64748b; font-weight: 600; margin-bottom: 2px;">Investimento Total</div>
+            <div style="font-size: 22px; font-weight: 800; color: #0f172a; line-height: 1;">
+                R$ {{ "{:,.2f}".format(total_investment|default(0)).replace(',', 'X').replace('.', ',').replace('X',
+                '.') }}
+            </div>
+        </div>
+    </div>
+    <div class="planning-card" style="padding: 20px; display: flex; align-items: center; gap: 16px;">
+        <div
+            style="width: 52px; height: 52px; border-radius: 14px; background: #fefce8; color: #a16207; display: flex; align-items: center; justify-content: center; font-size: 22px; flex-shrink: 0;">
+            <i class="fa-solid fa-clock-rotate-left"></i>
+        </div>
+        <div>
+            <div style="font-size: 13px; color: #64748b; font-weight: 600; margin-bottom: 2px;">Payback Estimado</div>
+            <div style="font-size: 28px; font-weight: 800; color: #0f172a; line-height: 1;">
+                {{ payback|default(0) }}<span style="font-size: 14px; font-weight: 600; color: #94a3b8;"> meses</span>
+            </div>
+        </div>
+    </div>
+    <div class="planning-card" style="padding: 20px; display: flex; align-items: center; gap: 16px;">
+        <div
+            style="width: 52px; height: 52px; border-radius: 14px; background: #f0fdf4; color: #16a34a; display: flex; align-items: center; justify-content: center; font-size: 22px; flex-shrink: 0;">
+            <i class="fa-solid fa-check-to-slot"></i>
+        </div>
+        <div>
+            <div style="font-size: 13px; color: #64748b; font-weight: 600; margin-bottom: 2px;">Etapas Concluídas</div>
+            <div style="font-size: 28px; font-weight: 800; color: #0f172a; line-height: 1;">{{
+                completed_sections|default(0) }}<span style="font-size: 16px; font-weight: 600; color: #94a3b8;">/{{
+                    total_completable }}</span></div>
+        </div>
+    </div>
+</div>
+
+<!-- Lista Unificada de Etapas -->
+<div class="planning-card" style="padding: 28px;">
+    <h3 style="font-size: 18px; font-weight: 700; color: #0f172a; margin-bottom: 24px;">
+        <i class="fa-solid fa-map-signs" style="color: #a16207; margin-right: 10px;"></i>
+        Roteiro de Implantação
+    </h3>
+
+    <div style="display: flex; flex-direction: column; gap: 0;">
+        {% for section in sections %}
+        {% if section.key != 'dashboard' %}
+        {% set is_projects = section.key == 'projects' %}
+        {% set is_done = section.completable and section.status == 'completed' %}
+        {% set is_wip = section.completable and section.status == 'in_progress' %}
+
+        <div style="display: flex; align-items: center; gap: 16px; padding: 16px 12px; border-radius: 14px; transition: background 0.15s; {% if not loop.last %}border-bottom: 1px solid #f1f5f9;{% endif %}"
+            onmouseover="this.style.background='#f8fafc'" onmouseout="this.style.background='transparent'">
+
+            <!-- Ícone com cor de status -->
+            <div style="width: 44px; height: 44px; border-radius: 12px; flex-shrink: 0; display: flex; align-items: center; justify-content: center; font-size: 16px;
+                {% if is_projects %}background:#fefce8; color:#a16207;
+                {% elif is_done %}background:#dcfce7; color:#16a34a;
+                {% elif is_wip %}background:#fef9c3; color:#ca8a04;
+                {% else %}background:#f1f5f9; color:#94a3b8;{% endif %}">
+                <i class="fa-solid fa-{{ section.icon }}"></i>
+            </div>
+
+            <!-- Título + Descrição -->
+            <div style="flex: 1; min-width: 0;">
+                <div style="display: flex; align-items: center; gap: 10px; margin-bottom: 2px;">
+                    <span style="font-size: 15px; font-weight: 700; color: #0f172a;">{{ section.title }}</span>
+                    <span style="font-size: 10px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.06em; padding: 2px 8px; border-radius: 999px;
+                        {% if is_projects %}background:#fefce8; color:#a16207;
+                        {% elif is_done %}background:#dcfce7; color:#15803d;
+                        {% elif is_wip %}background:#fef9c3; color:#a16207;
+                        {% else %}background:#f1f5f9; color:#94a3b8;{% endif %}">
+                        {% if is_projects %}Projetos
+                        {% elif not section.completable %}Relatório
+                        {% elif is_done %}Concluído ✓
+                        {% elif is_wip %}Em Andamento
+                        {% else %}Pendente{% endif %}
+                    </span>
+                </div>
+                <span style="font-size: 13px; color: #64748b;">
+                    {% if section.key == 'participants' %}Defina os responsáveis e envolvidos no projeto.
+                    {% elif section.key == 'alignment' %}Expectativas dos sócios e identidade organizacional.
+                    {% elif section.key == 'model' %}Segmentos, personas e proposta de valor fundamentada.
+                    {% elif section.key == 'execution' %}Estruturas de apoio (Comercial, Operacional, Adm/Fin).
+                    {% elif section.key == 'finance' %}Viabilidade econômica, plano de investimento e payback.
+                    {% elif section.key == 'projects' %}Inicie a operacionalização através de projetos estruturados.
+                    {% elif section.key == 'final_report' %}Visualize o consolidado e gere o PDF do planejamento.
+                    {% endif %}
+                </span>
+            </div>
+
+            <!-- Botão de Acesso -->
+            <a href="{{ url_for('plans.implantation_section', plan_id=plan.id, section=section.key) }}" style="display: inline-flex; align-items: center; gap: 7px; padding: 9px 18px; border-radius: 10px; font-size: 13px; font-weight: 700; text-decoration: none; white-space: nowrap; flex-shrink: 0;
+               {% if is_projects %}background:#a16207; color:#ffffff;
+               {% elif is_done %}background:#f0fdf4; color:#16a34a; border: 1px solid #bbf7d0;
+               {% elif is_wip %}background:#fffbeb; color:#d97706; border: 1px solid #fde68a;
+               {% else %}background:#f8fafc; color:#374151; border: 1px solid #e2e8f0;{% endif %}"
+                onmouseover="this.style.opacity='0.85'" onmouseout="this.style.opacity='1'">
+                {% if is_projects %}
+                <i class="fa-solid fa-briefcase"></i> Gerenciar
+                {% elif not section.completable %}
+                <i class="fa-solid fa-file-pdf"></i> Abrir
+                {% elif is_done %}
+                <i class="fa-solid fa-rotate-right"></i> Revisar
+                {% elif is_wip %}
+                <i class="fa-solid fa-play"></i> Continuar
+                {% else %}
+                <i class="fa-solid fa-arrow-right"></i> Iniciar
+                {% endif %}
+            </a>
+        </div>
+        {% endif %}
+        {% endfor %}
+    </div>
+</div>
+{% endblock %}

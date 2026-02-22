@@ -1,0 +1,23 @@
+# Core API Stack (v2.0)
+flask
+flask-cors
+python-dotenv
+requests
+
+# Database (PostgreSQL)
+psycopg2-binary
+sqlalchemy
+
+# AI Intelligence & Orchestration (OpenAI + LangGraph)
+langchain
+langchain-openai
+langgraph
+langgraph-checkpoint-postgres
+
+# Knowledge Base (RAG)
+chromadb
+langchain-chroma
+numpy<2.0.0
+
+# Testing
+pytest

@@ -1,0 +1,258 @@
+from datetime import datetime
+from . import db
+
+
+class Project(db.Model):
+    """Project model"""
+
+    __tablename__ = "projects"
+    __table_args__ = {'extend_existing': True}
+
+    id = db.Column(db.Integer, primary_key=True)
+    company_id = db.Column(db.Integer, db.ForeignKey("companies.id"), nullable=False)
+    # Map 'name' attribute to 'title' column in DB to match PostgreSQL schema
+    name = db.Column("title", db.String(200), nullable=False)
+    plan_id = db.Column(db.Integer, db.ForeignKey("plans.id"), nullable=True)
+    okr_links = db.Column(db.JSON)  # List of OKR IDs
+    kpis = db.Column(db.JSON)  # List of KPI names
+    owner = db.Column(db.String(200))
+    status = db.Column(
+        db.String(50), default="planned"
+    )  # planned, in_progress, completed, cancelled
+    deadline = db.Column(db.Date)
+    budget = db.Column(db.String(100))  # e.g., "R$ 450k"
+    notes = db.Column(db.Text)
+    progress = db.Column(db.Integer, default=0)
+    priority = db.Column(db.String(20), default="medium") # low, medium, high
+    portfolio_id = db.Column(db.Integer, db.ForeignKey("portfolios.id"), nullable=True)
+    created_at = db.Column(db.DateTime, default=datetime.utcnow, nullable=False)
+    updated_at = db.Column(
+        db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow, nullable=False
+    )
+
+    # Relationships
+    tasks = db.relationship(
+        "ProjectTask", backref="project", lazy="dynamic", cascade="all, delete-orphan"
+    )
+    portfolio = db.relationship("Portfolio", backref="projects_list")
+
+    @property
+    def task_stats(self):
+        """Calculate task statistics for this project"""
+        # We can't use self.tasks.filter... because it's lazy="dynamic"
+        # and we want to avoid multiple queries if possible, but for properties it's okay
+        all_tasks = self.tasks.all()
+        now = datetime.now().date()
+        
+        total = len(all_tasks)
+        completed = len([t for t in all_tasks if t.stage == 'completed'])
+        open_tasks = total - completed
+        
+        delayed = len([t for t in all_tasks 
+                      if t.stage != 'completed' 
+                      and t.due_date 
+                      and (t.due_date.date() if isinstance(t.due_date, datetime) else t.due_date) < now])
+        
+        return {
+            "total": total,
+            "open": open_tasks,
+            "completed": completed,
+            "delayed": delayed,
+            "progress": round((completed / total) * 100) if total > 0 else 0
+        }
+
+    def update_progress(self):
+        """Update the persistent progress field based on task stats"""
+        stats = self.task_stats
+        self.progress = stats['progress']
+        return self.progress
+
+    @property
+    def code(self):
+        """Generates the project code in format: COMPANY.J.ID"""
+        from models.company import Company
+        company = Company.query.get(self.company_id)
+        # Use client_code if available, otherwise name prefix logic... Actually we use client_code or id
+        client_code = ""
+        if company:
+            client_code = company.client_code or company.name[:2].upper()
+        return f"{client_code}.J.{self.id}"
+
+    def to_dict(self):
+        """Convert to dictionary"""
+        stats = self.task_stats
+        return {
+            "id": self.id,
+            "code": self.code,
+            "company_id": self.company_id,
+            "portfolio_id": self.portfolio_id,
+            "plan_id": self.plan_id,
+            "name": self.name,
+            "okr_links": self.okr_links,
+            "kpis": self.kpis,
+            "owner": self.owner,
+            "status": self.status,
+            "priority": self.priority,
+            "progress": self.progress,
+            "deadline": self.deadline.isoformat() if hasattr(self.deadline, 'isoformat') else self.deadline,
+            "budget": self.budget,
+            "notes": self.notes,
+            "task_stats": stats,
+            "created_at": self.created_at.isoformat() if hasattr(self.created_at, 'isoformat') else self.created_at,
+            "updated_at": self.updated_at.isoformat() if hasattr(self.updated_at, 'isoformat') else self.updated_at,
+        }
+
+    def __json__(self):
+        """Allow Flask's tojson filter to serialize the model."""
+        return self.to_dict()
+
+    def __repr__(self):
+        return f"<Project {self.name}>"
+
+
+class ProjectTask(db.Model):
+    """Project task model"""
+
+    __tablename__ = "project_tasks"
+    __table_args__ = {'extend_existing': True}
+
+    id = db.Column(db.Integer, primary_key=True)
+    project_id = db.Column(db.Integer, db.ForeignKey("projects.id"), nullable=False)
+    what = db.Column(db.Text, nullable=False)
+    who = db.Column(db.String(200)) # Legacy field, keep for now
+    employee_id = db.Column(db.Integer, db.ForeignKey("employees.id")) # New link to Employee
+    due_date = db.Column(db.Date)
+    how = db.Column(db.Text)
+    amount = db.Column(db.String(100))  # e.g., "R$ 80k"
+    status = db.Column(
+        db.String(50), default="planned"
+    )  # planned, in_progress, completed, cancelled
+    stage = db.Column(db.String(50), default="inbox") # inbox, waiting, executing, pending, suspended, completed
+    priority = db.Column(db.String(20), default="normal") # low, normal, high, urgent
+    notes = db.Column(db.Text)
+    score_weight = db.Column(db.Numeric(10, 2), default=1)
+    estimated_hours = db.Column(db.Numeric(10, 2), default=0)
+    worked_hours = db.Column(db.Numeric(10, 2), default=0)
+    completion_date = db.Column(db.Date)
+    logs = db.Column(db.JSON, default=list)  # Diary/journal entries
+    created_at = db.Column(db.DateTime, default=datetime.utcnow, nullable=False)
+    updated_at = db.Column(
+        db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow, nullable=False
+    )
+
+    # Relationships
+    employee = db.relationship("Employee", backref="tasks_assigned")
+
+    @property
+    def employee_name(self):
+        """Returns the name of the assigned employee or fallback to legacy 'who'"""
+        if self.employee:
+            return self.employee.name
+        return self.who or "Sem responsável"
+
+    @property
+    def project_name(self):
+        """Returns the name of the associated project"""
+        return self.project.name if self.project else "Individual"
+
+    @property
+    def code(self):
+        """Generates the activity code in format: COMPANY.J.PROJECT_ID.TASK_ID"""
+        if not self.project:
+            return f"IND.{self.id}"
+        
+        from models.company import Company
+        company = Company.query.get(self.project.company_id)
+        client_code = ""
+        if company:
+            client_code = company.client_code or company.name[:2].upper()
+        return f"{client_code}.J.{self.project_id}.{self.id}"
+
+    def to_dict(self):
+        """Convert to dictionary"""
+        return {
+            "id": self.id,
+            "code": self.code,
+            "project_id": self.project_id,
+            "what": self.what,
+            "who": self.who,
+            "employee_id": self.employee_id,
+            "due_date": self.due_date.isoformat() if hasattr(self.due_date, 'isoformat') else self.due_date,
+            "completion_date": self.completion_date.isoformat() if hasattr(self.completion_date, 'isoformat') else self.completion_date,
+            "how": self.how,
+            "amount": self.amount,
+            "status": self.status,
+            "stage": self.stage,
+            "priority": self.priority,
+            "employee_name": self.employee_name,
+            "project_name": self.project_name,
+            "notes": self.notes,
+            "score_weight": float(self.score_weight) if self.score_weight is not None else 1.0,
+            "estimated_hours": float(self.estimated_hours) if self.estimated_hours is not None else 0.0,
+            "worked_hours": float(self.worked_hours) if self.worked_hours is not None else 0.0,
+            "logs": self.logs or [],
+            "created_at": self.created_at.isoformat() if hasattr(self.created_at, 'isoformat') else self.created_at,
+            "updated_at": self.updated_at.isoformat() if hasattr(self.updated_at, 'isoformat') else self.updated_at,
+        }
+
+    def __json__(self):
+        """Allow Flask's tojson filter to serialize the model."""
+        return self.to_dict()
+
+    def __repr__(self):
+        return f"<ProjectTask {self.what[:50]}...>"
+
+
+class ProjectActivityCollaborator(db.Model):
+    """Collaborator for project activities/tasks"""
+
+    __tablename__ = "project_activity_collaborators"
+    __table_args__ = {'extend_existing': True}
+
+    id = db.Column(db.Integer, primary_key=True)
+    activity_id = db.Column(
+        db.Integer, db.ForeignKey("project_tasks.id", ondelete="CASCADE"), nullable=False
+    )
+    employee_id = db.Column(
+        db.Integer, db.ForeignKey("employees.id"), nullable=False
+    )
+    role = db.Column(db.String(32), default="executor")  # responsible, executor, observer
+    estimated_hours = db.Column(db.Numeric(10, 2), default=0)
+    worked_hours = db.Column(db.Numeric(10, 2), default=0)
+    notes = db.Column(db.Text)
+    is_deleted = db.Column(db.Boolean, default=False)
+    created_at = db.Column(db.DateTime, default=datetime.utcnow)
+    updated_at = db.Column(
+        db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow
+    )
+
+    # Relationships
+    employee = db.relationship("Employee", backref="project_activities")
+    activity = db.relationship("ProjectTask", backref="collaborators")
+
+    def to_dict(self):
+        return {
+            "id": self.id,
+            "activity_id": self.activity_id,
+            "employee_id": self.employee_id,
+            "employee_name": self.employee.name if self.employee else "Unknown",
+            "role": self.role,
+            "estimated_hours": float(self.estimated_hours) if self.estimated_hours else 0,
+            "worked_hours": float(self.worked_hours) if self.worked_hours else 0,
+            "notes": self.notes,
+            "created_at": self.created_at.isoformat() if self.created_at else None,
+        }
+
+
+class ProjectTaskHoursSummary(db.Model):
+    """Aggregate hours summary for a project task"""
+    __tablename__ = "project_task_hours_summary"
+    __table_args__ = {'extend_existing': True}
+
+    id = db.Column(db.Integer, primary_key=True)
+    task_id = db.Column(db.Integer, db.ForeignKey("project_tasks.id", ondelete="CASCADE"), unique=True, nullable=False)
+    total_estimated_hours = db.Column(db.Numeric(10, 2), default=0)
+    total_worked_hours = db.Column(db.Numeric(10, 2), default=0)
+    updated_at = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+
+    task = db.relationship("ProjectTask", backref=db.backref("hours_summary", uselist=False))

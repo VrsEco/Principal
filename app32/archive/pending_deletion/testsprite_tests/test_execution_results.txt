@@ -1,0 +1,10 @@
+============================= test session starts =============================
+platform win32 -- Python 3.11.7, pytest-7.4.2, pluggy-1.0.0 -- C:\Users\mff20\anaconda3\python.exe
+cachedir: .pytest_cache
+rootdir: C:\GestaoVersus\app31
+plugins: anyio-4.2.0, Faker-25.9.1, flask-1.2.0, timeout-2.4.0
+collecting ... ERROR: file or directory not found: testsprite_tests/test_*.py
+
+collected 0 items
+
+============================ no tests ran in 0.02s ============================

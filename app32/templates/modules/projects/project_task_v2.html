@@ -1,0 +1,927 @@
+{% extends "layouts/workspace.html" %}
+
+{% block title %}Atividade: {{ task.what }} | Versus{% endblock %}
+
+{% block breadcrumb %}
+<a href="/dashboard">Dashboard</a>
+<span class="sep">/</span>
+{% if request.args.get('from') == 'my-work' %}
+<a href="/my-work">Meu Trabalho</a>
+{% elif request.args.get('from') == 'project' and project %}
+<a href="/projects/{{ project.id }}/manage">{{ project.code or project.title or 'Projeto' }}</a>
+{% else %}
+<a href="/my-work">Meu Trabalho</a>
+{% endif %}
+<span class="sep">/</span>
+<span class="current">{{ task.what }}</span>
+{% endblock %}
+
+{% block navbar_actions %}
+{% endblock %}
+
+{% block workspace_content %}
+<div class="workspace-wrapper">
+
+    <!-- Header -->
+    <div class="workspace-header" style="display: flex; justify-content: space-between; align-items: flex-start;">
+        <div class="header-content">
+            <div style="display: flex; align-items: center; gap: 0.75rem; margin-bottom: 0.5rem;">
+                <span class="badge"
+                    style="background: var(--surface-tertiary); color: var(--text-secondary); font-weight: 700;">
+                    {{ task.code or ('J.%s' % task.id) }}
+                </span>
+                <span class="badge status-{{ task.status }}">{{ task.status }}</span>
+                <span class="badge priority-{{ task.priority or 'normal' }}">{{ task.priority or 'Normal' }}</span>
+                {% if task.stage %}
+                <span class="badge"
+                    style="background: var(--primary-light); color: var(--primary); font-weight: 700; text-transform: capitalize;">
+                    {{ task.stage }}
+                </span>
+                {% endif %}
+            </div>
+            <h1 class="text-h1"><span style="color: var(--text-tertiary); font-weight: 500; font-size: 0.875em;">{{
+                    task.code or '' }}</span> {{ task.what }}</h1>
+            <p class="text-secondary">
+                {% if project %}<strong>{{ project.code }} - {{ project.title or project.name }}</strong> &bull; {%
+                endif %}
+                {% if task.employee_name %}Responsável: {{ task.employee_name }}{% endif %}
+            </p>
+            {% if task.how %}
+            <p class="text-secondary" style="margin-top: 0.5rem; font-size: 0.9rem;">{{ task.how }}</p>
+            {% endif %}
+        </div>
+        <div class="header-actions" id="mainHeaderActions">
+            {% if task.status != 'completed' %}
+            <button type="button" class="btn btn-outline btn-sm" onclick="showFinalizarModal()">
+                🏁 Finalizar Atividade
+            </button>
+            {% else %}
+            <span class="badge"
+                style="background: var(--success); color: white; padding: 0.5rem 1rem; border-radius: 8px; font-weight: 700; font-size: 0.9rem;">
+                ✅ Atividade Concluída
+            </span>
+            {% endif %}
+        </div>
+    </div>
+
+    <!-- Quick Stats Bar -->
+    <div style="display: flex; gap: 1rem; flex-wrap: wrap; margin: 1rem 0;">
+        <div class="stat-mini">
+            <span class="stat-mini__label">Prazo</span>
+            <span
+                class="stat-mini__value {{ 'text-danger' if task.due_date and task.status not in ['completed', 'done'] else '' }}">
+                {{ task.due_date.strftime('%d/%m/%Y') if task.due_date else '—' }}
+            </span>
+        </div>
+        <div class="stat-mini">
+            <span class="stat-mini__label">Horas Estimadas</span>
+            <span class="stat-mini__value">{{ '%.1f'|format(task.estimated_hours or 0) }}h</span>
+        </div>
+        <div class="stat-mini">
+            <span class="stat-mini__value" id="workedHoursDisplay" style="color: var(--primary);">{{
+                '%.1f'|format(task.worked_hours or 0) }}h</span>
+            <span class="stat-mini__label">Horas Realizadas</span>
+        </div>
+        <div class="stat-mini">
+            <span class="stat-mini__label">Peso (Score)</span>
+            <span class="stat-mini__value">{{ task.score_weight or 1.0 }}</span>
+        </div>
+        {% if task.amount %}
+        <div class="stat-mini">
+            <span class="stat-mini__label">Valor</span>
+            <span class="stat-mini__value">R$ {{ '%.2f'|format(task.amount) }}</span>
+        </div>
+        {% endif %}
+    </div>
+
+    <!-- Content Grid -->
+    <div class="instance-content mt-4">
+
+        <!-- 1. Lançamento de Horas (Card) -->
+        <div class="surface-card mb-4">
+            <div class="card-header mb-4">
+                <div style="display: flex; justify-content: space-between; align-items: center;">
+                    <div>
+                        <h2 class="text-h3">⏱️ Registro de Horas</h2>
+                        <p class="text-secondary">Apontamentos de trabalho desta atividade.</p>
+                    </div>
+                    <div id="hoursSummaryBadge" style="display: flex; gap: 0.5rem; align-items: center;">
+                        <!-- JS populated -->
+                    </div>
+                </div>
+            </div>
+
+            <!-- Add Hours Form -->
+            <div id="addHoursFormContainer" class="mb-4"
+                style="background: var(--surface-secondary); padding: 1rem; border-radius: 12px; border: 1px solid var(--border);">
+                <div style="display: flex; gap: 0.75rem; align-items: flex-end; flex-wrap: wrap;">
+                    <div style="flex: 2; min-width: 160px;">
+                        <label class="form-label small text-tertiary mb-1">Colaborador</label>
+                        <select id="newLogEmployeeId" class="form-control form-control-sm">
+                            <option value="" data-name="">Selecione...</option>
+                            <!-- JS populated from API -->
+                        </select>
+                    </div>
+                    <div style="flex: 1.5; min-width: 130px;">
+                        <label class="form-label small text-tertiary mb-1">Data</label>
+                        <input type="date" id="newLogDate" class="form-control form-control-sm">
+                    </div>
+                    <div style="flex: 1; min-width: 90px;">
+                        <label class="form-label small text-tertiary mb-1">Horas</label>
+                        <input type="number" id="newLogHours" step="0.25" min="0.25" max="24"
+                            class="form-control form-control-sm" placeholder="0.0">
+                    </div>
+                    <div style="flex: 3; min-width: 200px;">
+                        <label class="form-label small text-tertiary mb-1">Descrição</label>
+                        <input type="text" id="newLogDesc" class="form-control form-control-sm"
+                            placeholder="O que foi feito?">
+                    </div>
+                    <div>
+                        <button class="btn btn-primary btn-sm" onclick="saveNewWorkLog()" id="btnSaveNewLog"
+                            style="height: 42px; padding: 0 1.5rem; white-space: nowrap;">
+                            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                                stroke-width="2">
+                                <path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"></path>
+                                <polyline points="17 21 17 13 7 13 7 21"></polyline>
+                                <polyline points="7 3 7 8 15 8"></polyline>
+                            </svg>
+                            Salvar
+                        </button>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Edit Form (hidden) -->
+            <div id="editLogForm" class="log-input-box mb-4"
+                style="background: var(--surface-secondary); padding: 1.25rem; border-radius: 12px; border: 1px solid var(--warning); display: none;">
+                <div style="display: flex; justify-content: space-between; margin-bottom: 1rem;">
+                    <h4 class="text-h4" style="color: var(--warning-dark);">✏️ Editando Lançamento</h4>
+                    <button class="btn-icon-small" onclick="cancelEditLog()">&times;</button>
+                </div>
+                <div style="display: flex; gap: 1rem; align-items: flex-end; flex-wrap: wrap;">
+                    <input type="hidden" id="editLogId">
+                    <div style="flex: 2; min-width: 200px;">
+                        <label class="form-label small text-tertiary mb-1">Colaborador</label>
+                        <input type="text" class="form-control" id="editLogEmployeeName" readonly
+                            style="background: var(--surface);">
+                        <input type="hidden" id="editLogEmployeeId">
+                    </div>
+                    <div style="flex: 1.5; min-width: 140px;">
+                        <label class="form-label small text-tertiary mb-1">Data</label>
+                        <input type="date" class="form-control" id="editLogDate">
+                    </div>
+                    <div style="flex: 1; min-width: 100px;">
+                        <label class="form-label small text-tertiary mb-1">Horas</label>
+                        <input type="number" step="0.1" class="form-control" id="editLogHours">
+                    </div>
+                    <div style="flex: 3; min-width: 250px;">
+                        <label class="form-label small text-tertiary mb-1">Descrição</label>
+                        <input type="text" class="form-control" id="editLogDesc">
+                    </div>
+                    <div>
+                        <button class="btn btn-warning" onclick="saveEditedLog()"
+                            style="height: 42px; padding: 0 1.5rem; white-space: nowrap;">Salvar</button>
+                    </div>
+                </div>
+            </div>
+
+            <!-- History Table -->
+            <div class="table-responsive">
+                <table class="simple-table w-100">
+                    <thead>
+                        <tr>
+                            <th>Colaborador</th>
+                            <th>Data</th>
+                            <th>Horas</th>
+                            <th>Descrição</th>
+                            <th style="text-align: right;">Ações</th>
+                        </tr>
+                    </thead>
+                    <tbody id="workLogsHistoryTable">
+                        <!-- JS Populated -->
+                    </tbody>
+                </table>
+            </div>
+            <div id="logsEmptyState" class="text-center py-4 text-tertiary" style="display: none;">
+                Nenhum lançamento registrado.
+            </div>
+        </div>
+
+        <!-- 2. Diário de Bordo (Card) -->
+        <div class="surface-card mb-4">
+            <div class="card-header mb-4">
+                <h2 class="text-h3">📖 Diário de Bordo</h2>
+                <p class="text-secondary">Histórico de observações e ocorrências desta atividade.</p>
+            </div>
+
+            <div class="log-input-box mb-4" style="position: relative;">
+                <textarea class="form-control" id="logEntryText" rows="2"
+                    placeholder="Digite uma observação ou registro de progresso..."
+                    style="padding-right: 120px;"></textarea>
+                <button class="btn btn-secondary btn-sm" onclick="addLogEntry()"
+                    style="position: absolute; bottom: 10px; right: 10px;">
+                    Adicionar
+                </button>
+            </div>
+
+            <div id="logsHistory" class="logs-history-list">
+                <!-- JS Populated -->
+            </div>
+        </div>
+
+        <!-- 3. Notas da Atividade (Card) -->
+        {% if task.notes %}
+        <div class="surface-card">
+            <div class="card-header mb-4">
+                <h2 class="text-h3">📝 Notas da Atividade</h2>
+            </div>
+            <div
+                style="background: var(--surface-secondary); padding: 1rem; border-radius: 8px; color: var(--text-secondary); line-height: 1.6; white-space: pre-wrap;">
+                {{ task.notes }}</div>
+        </div>
+        {% endif %}
+
+    </div>
+
+    <!-- Modal de Finalização -->
+    <div id="finalizarModal" class="modal-overlay" style="display: none;">
+        <div class="modal-content surface-card"
+            style="max-width: 500px; width: 90%; animation: slideDown 0.3s ease-out;">
+            <div class="modal-header mb-4">
+                <h2 class="text-h3">🏁 Finalizar Atividade</h2>
+                <p class="text-secondary">Confirme a conclusão desta atividade do projeto.</p>
+            </div>
+
+            <div class="modal-body mb-5">
+                <div class="mb-4 p-3"
+                    style="background: var(--surface-secondary); border-radius: 12px; border: 1px solid var(--border);">
+                    <div style="display: flex; justify-content: space-between; margin-bottom: 8px;">
+                        <span class="text-tertiary small">Atividade:</span>
+                        <strong style="max-width: 280px; text-align: right; font-size: 0.9rem;">{{ task.what }}</strong>
+                    </div>
+                    <div style="display: flex; justify-content: space-between;">
+                        <span class="text-tertiary small">Prazo Previsto:</span>
+                        <strong id="modalDeadline">{{ task.due_date.strftime('%d/%m/%Y') if task.due_date else 'Não
+                            definido' }}</strong>
+                    </div>
+                </div>
+
+                <div class="form-group mb-4">
+                    <label class="form-label">Data de Conclusão Efetiva</label>
+                    <input type="date" id="actualEndDate" class="form-control">
+                </div>
+
+                <div class="form-group">
+                    <label class="form-label">Notas Finais / Observações</label>
+                    <textarea id="finalNotes" class="form-control" rows="3"
+                        placeholder="Opcional: Resumo da conclusão..."></textarea>
+                </div>
+            </div>
+
+            <div style="display: flex; gap: 12px; justify-content: flex-end;">
+                <button type="button" class="btn btn-ghost" onclick="closeFinalizarModal()">Cancelar</button>
+                <button type="button" class="btn btn-primary" onclick="confirmarFinalizacao(this)">Confirmar
+                    Conclusão</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<style>
+    .surface-card {
+        background: var(--surface-primary);
+        border: 1px solid var(--border);
+        border-radius: 16px;
+        padding: 1.5rem;
+    }
+
+    .stat-mini {
+        display: flex;
+        flex-direction: column;
+        background: var(--surface-secondary);
+        border: 1px solid var(--border);
+        border-radius: 10px;
+        padding: 0.6rem 1rem;
+        min-width: 100px;
+    }
+
+    .stat-mini__label {
+        font-size: 0.7rem;
+        text-transform: uppercase;
+        letter-spacing: 0.05em;
+        color: var(--text-tertiary);
+        font-weight: 600;
+    }
+
+    .stat-mini__value {
+        font-size: 1.1rem;
+        font-weight: 700;
+        color: var(--text-primary);
+        margin-top: 2px;
+    }
+
+    .simple-table {
+        width: 100%;
+        border-collapse: collapse;
+    }
+
+    .simple-table th {
+        text-align: left;
+        font-size: 0.75rem;
+        font-weight: 700;
+        text-transform: uppercase;
+        color: var(--text-tertiary);
+        padding: 0.75rem 1rem;
+        border-bottom: 2px solid var(--border);
+    }
+
+    .simple-table td {
+        padding: 1rem;
+        border-bottom: 1px solid var(--border);
+        color: var(--text-secondary);
+        vertical-align: middle;
+        font-size: 0.9rem;
+    }
+
+    .simple-table tr:hover {
+        background: var(--surface-secondary);
+    }
+
+    .simple-table tr:last-child td {
+        border-bottom: none;
+    }
+
+    .log-input-box {
+        transition: all 0.2s;
+    }
+
+    .log-item {
+        padding: 1rem;
+        background: var(--surface-secondary);
+        border-radius: 8px;
+        margin-bottom: 0.75rem;
+        border-left: 3px solid var(--primary);
+    }
+
+    .log-meta {
+        display: flex;
+        justify-content: space-between;
+        font-size: 0.75rem;
+        color: var(--text-tertiary);
+        margin-bottom: 0.5rem;
+    }
+
+    .log-text {
+        font-size: 0.9rem;
+        color: var(--text-secondary);
+        line-height: 1.5;
+    }
+
+    .btn-icon-small {
+        background: transparent;
+        border: none;
+        padding: 4px;
+        cursor: pointer;
+        border-radius: 4px;
+        transition: background 0.2s;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+    }
+
+    .btn-icon-small:hover {
+        background: rgba(0, 0, 0, 0.05);
+    }
+
+    .text-primary {
+        color: var(--primary);
+    }
+
+    .text-danger {
+        color: var(--danger);
+    }
+
+    .modal-overlay {
+        position: fixed;
+        inset: 0;
+        background: rgba(15, 23, 42, 0.6);
+        backdrop-filter: blur(4px);
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        z-index: 25000;
+    }
+
+    @keyframes slideDown {
+        from {
+            opacity: 0;
+            transform: translateY(-20px);
+        }
+
+        to {
+            opacity: 1;
+            transform: translateY(0);
+        }
+    }
+
+    @media (max-width: 900px) {
+        .workspace-header {
+            flex-direction: column;
+            align-items: flex-start !important;
+            gap: 1rem;
+        }
+
+        .log-input-box>div {
+            flex-direction: column;
+            align-items: stretch !important;
+        }
+
+        .log-input-box>div>div {
+            flex: 1 1 auto;
+            width: 100%;
+        }
+    }
+
+    @media (max-width: 600px) {
+
+        .simple-table th,
+        .simple-table td {
+            padding: 0.75rem 0.5rem;
+            font-size: 0.85rem;
+        }
+    }
+</style>
+
+<script>
+    const TASK_ID = "{{ task.id }}";
+    const PROJECT_ID = "{{ task.project_id or 0 }}";
+    const COMPANY_ID = "{{ company.id if company else 0 }}";
+    const CURRENT_USER_NAME = "{{ current_user.name or current_user.username or 'Usuário' }}";
+
+    let taskData = {{ task_data | tojson | safe }};
+    let workLogs = [];
+    let diaryLogs = [];
+    let currentLogId = null;
+
+    document.addEventListener('DOMContentLoaded', init);
+
+    async function init() {
+        // Set today's date as default
+        const today = new Date().toISOString().split('T')[0];
+        document.getElementById('newLogDate').value = today;
+
+        // Parse diary logs from task.logs field
+        try {
+            diaryLogs = Array.isArray(taskData.logs) ? taskData.logs : (taskData.logs ? JSON.parse(taskData.logs) : []);
+        } catch (e) {
+            diaryLogs = [];
+        }
+
+        renderDiaryLogs();
+        await fetchWorkLogs();
+        await loadEmployeesForSelect();
+
+        // Set default date for completion modal
+        const actualEndDate = document.getElementById('actualEndDate');
+        if (actualEndDate && !actualEndDate.value) {
+            actualEndDate.value = today;
+        }
+    }
+
+    // ============================================================
+    // Employees
+    // ============================================================
+    async function loadEmployeesForSelect() {
+        if (!COMPANY_ID || COMPANY_ID === '0') return;
+        try {
+            const res = await fetch(`/api/companies/${COMPANY_ID}/employees`);
+            if (!res.ok) return;
+            const data = await res.json();
+            const sel = document.getElementById('newLogEmployeeId');
+            (data.employees || []).forEach(emp => {
+                const opt = document.createElement('option');
+                opt.value = emp.id;
+                opt.dataset.name = emp.name;
+                opt.textContent = emp.name;
+                sel.appendChild(opt);
+            });
+
+            // Pre-select task's employee if available
+            if (taskData.employee_id) {
+                sel.value = taskData.employee_id;
+            }
+        } catch (e) {
+            console.warn('Não foi possível carregar colaboradores:', e);
+        }
+    }
+
+    // ============================================================
+    // Work Logs
+    // ============================================================
+    async function fetchWorkLogs() {
+        try {
+            const res = await fetch(`/api/projects/${PROJECT_ID}/tasks/${TASK_ID}/collaborators`);
+            if (res.ok) {
+                workLogs = await res.json();
+                renderWorkLogs();
+                updateHoursSummary();
+            }
+        } catch (e) {
+            console.error('Erro ao carregar apontamentos:', e);
+        }
+    }
+
+    function renderWorkLogs() {
+        const container = document.getElementById('workLogsHistoryTable');
+        const emptyState = document.getElementById('logsEmptyState');
+        if (!container) return;
+
+        if (!workLogs || workLogs.length === 0) {
+            container.innerHTML = '';
+            if (emptyState) emptyState.style.display = 'block';
+            return;
+        }
+
+        if (emptyState) emptyState.style.display = 'none';
+        container.innerHTML = workLogs.map(log => {
+            const dateStr = log.created_at ? new Date(log.created_at).toLocaleDateString('pt-BR') : '—';
+            const hours = parseFloat(log.worked_hours || 0).toFixed(1);
+            return `
+                <tr>
+                    <td>
+                        <div style="font-weight: 500;">${log.employee_name || 'Usuário'}</div>
+                        <div style="font-size: 0.75rem; color: var(--text-tertiary);">${log.role || ''}</div>
+                    </td>
+                    <td>${dateStr}</td>
+                    <td><strong>${hours}h</strong></td>
+                    <td><div class="text-secondary" style="font-size: 0.9em;">${log.notes || '—'}</div></td>
+                    <td style="text-align: right;">
+                        <div style="display: inline-flex; gap: 0.5rem;">
+                            <button class="btn-icon-small text-danger" onclick="deleteWorkLog(${log.id})" title="Excluir">
+                                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="3 6 5 6 21 6"></polyline><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path></svg>
+                            </button>
+                        </div>
+                    </td>
+                </tr>
+            `;
+        }).join('');
+    }
+
+    function updateHoursSummary() {
+        const badge = document.getElementById('hoursSummaryBadge');
+        if (!badge) return;
+
+        const totalWorked = workLogs.reduce((sum, l) => sum + parseFloat(l.worked_hours || 0), 0);
+        const estimated = parseFloat(taskData.estimated_hours || 0);
+
+        const pct = estimated > 0 ? Math.round((totalWorked / estimated) * 100) : null;
+
+        badge.innerHTML = `
+            <span class="badge" style="background: var(--primary-light); color: var(--primary); border: 1px solid var(--primary); font-weight: 700;">
+                ${totalWorked.toFixed(1)}h realizadas
+            </span>
+            ${estimated > 0 ? `<span class="badge" style="background: var(--surface-tertiary); color: var(--text-secondary); border: 1px solid var(--border);">
+                Estimado: ${estimated.toFixed(1)}h ${pct !== null ? '(' + pct + '%)' : ''}
+            </span>` : ''}
+        `;
+
+        // Update header display
+        const displayEl = document.getElementById('workedHoursDisplay');
+        if (displayEl) displayEl.textContent = totalWorked.toFixed(1) + 'h';
+    }
+
+    async function saveNewWorkLog() {
+        const sel = document.getElementById('newLogEmployeeId');
+        const empId = sel.value;
+        const empName = sel.options[sel.selectedIndex]?.dataset.name || sel.options[sel.selectedIndex]?.text || '';
+        const date = document.getElementById('newLogDate').value;
+        const hours = parseFloat(document.getElementById('newLogHours').value);
+        const desc = document.getElementById('newLogDesc').value;
+
+        if (!empId) { alert('Selecione o colaborador.'); return; }
+        if (!date) { alert('Informe a data.'); return; }
+        if (!hours || isNaN(hours) || hours <= 0) { alert('Informe as horas trabalhadas.'); return; }
+
+        const btn = document.getElementById('btnSaveNewLog');
+        if (btn) { btn.disabled = true; btn.textContent = 'Salvando...'; }
+
+        try {
+            const res = await fetch(`/api/projects/${PROJECT_ID}/tasks/${TASK_ID}/collaborators`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    employee_id: empId,
+                    hours: hours,
+                    role: 'executor',
+                    notes: desc
+                })
+            });
+
+            if (res.ok) {
+                // Clear inputs
+                document.getElementById('newLogHours').value = '';
+                document.getElementById('newLogDesc').value = '';
+                await fetchWorkLogs();
+                showToast('Apontamento salvo com sucesso!', 'success');
+            } else {
+                const err = await res.json();
+                alert('Erro: ' + (err.error || 'Erro ao salvar.'));
+            }
+        } catch (e) {
+            console.error(e);
+            alert('Erro de conexão.');
+        } finally {
+            if (btn) {
+                btn.disabled = false;
+                btn.innerHTML = `<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"></path><polyline points="17 21 17 13 7 13 7 21"></polyline><polyline points="7 3 7 8 15 8"></polyline></svg> Salvar`;
+            }
+        }
+    }
+
+    function cancelEditLog() {
+        currentLogId = null;
+        document.getElementById('editLogForm').style.display = 'none';
+    }
+
+    async function saveEditedLog() {
+        if (!currentLogId) return;
+        alert('Edição de apontamentos não disponível diretamente. Exclua e recrie o registro.');
+        cancelEditLog();
+    }
+
+    async function deleteWorkLog(id) {
+        if (!confirm('Tem certeza que deseja excluir este registro?')) return;
+        try {
+            const res = await fetch(`/api/projects/${PROJECT_ID}/tasks/${TASK_ID}/collaborators/${id}`, {
+                method: 'DELETE'
+            });
+            if (res.ok) {
+                await fetchWorkLogs();
+                showToast('Registro excluído.', 'info');
+            } else {
+                alert('Erro ao excluir registro.');
+            }
+        } catch (e) {
+            console.error(e);
+            alert('Erro de conexão.');
+        }
+    }
+
+    // ============================================================
+    // Diary Logs
+    // ============================================================
+    function renderDiaryLogs() {
+        const container = document.getElementById('logsHistory');
+        if (!container) return;
+
+        if (!diaryLogs || diaryLogs.length === 0) {
+            container.innerHTML = '<div class="text-tertiary text-center p-3">Nenhum registro no diário de bordo.</div>';
+            return;
+        }
+
+        const sorted = [...diaryLogs].sort((a, b) => new Date(b.timestamp) - new Date(a.timestamp));
+        container.innerHTML = sorted.map(log => `
+            <div class="log-item">
+                <div class="log-meta">
+                    <strong>${log.author || 'Sistema'}</strong>
+                    <span>${new Date(log.timestamp).toLocaleString('pt-BR')}</span>
+                </div>
+                <div class="log-text">${log.content || log.text || ''}</div>
+            </div>
+        `).join('');
+    }
+
+    async function addLogEntry(forcedText = null) {
+        const text = forcedText || document.getElementById('logEntryText').value.trim();
+        if (!text) return;
+
+        const newLog = {
+            timestamp: new Date().toISOString(),
+            author: CURRENT_USER_NAME,
+            content: text
+        };
+
+        diaryLogs.unshift(newLog);
+
+        try {
+            const res = await fetch(`/api/projects/${PROJECT_ID}/tasks/${TASK_ID}`, {
+                method: 'PUT',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ logs: diaryLogs })
+            });
+
+            if (res.ok) {
+                if (!forcedText) document.getElementById('logEntryText').value = '';
+                renderDiaryLogs();
+                showToast('Registro adicionado!', 'success');
+            } else {
+                const err = await res.json();
+                alert('Erro ao registrar: ' + (err.error || 'Erro desconhecido'));
+                diaryLogs.shift(); // revert
+            }
+        } catch (e) {
+            console.error(e);
+            diaryLogs.shift();
+            alert('Erro de conexão ao registrar.');
+        }
+    }
+
+    // ============================================================
+    // Finalizar Atividade
+    // ============================================================
+    function showFinalizarModal() {
+        document.getElementById('finalizarModal').style.display = 'flex';
+        const dateField = document.getElementById('actualEndDate');
+        if (dateField && !dateField.value) {
+            dateField.value = new Date().toISOString().split('T')[0];
+        }
+    }
+
+    function closeFinalizarModal() {
+        document.getElementById('finalizarModal').style.display = 'none';
+    }
+
+    async function confirmarFinalizacao(btn) {
+        const endDate = document.getElementById('actualEndDate').value;
+        const notes = document.getElementById('finalNotes').value.trim();
+
+        if (!endDate) { alert('Informe a data de conclusão.'); return; }
+
+        btn.disabled = true;
+        btn.textContent = 'Processando...';
+
+        try {
+            // Save final note if provided
+            if (notes) {
+                await addLogEntry(notes + ' (Nota de finalização)');
+            }
+
+            // Update task status and completion date
+            const res = await fetch(`/api/projects/${PROJECT_ID}/tasks/${TASK_ID}`, {
+                method: 'PUT',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    status: 'completed',
+                    completion_date: endDate,
+                    stage: 'completed'
+                })
+            });
+
+            if (res.ok) {
+                showToast('Atividade finalizada com sucesso! 🎉', 'success');
+                setTimeout(() => location.reload(), 1500);
+            } else {
+                const err = await res.json();
+                alert('Erro ao finalizar: ' + (err.error || 'Erro desconhecido'));
+                btn.disabled = false;
+                btn.textContent = 'Confirmar Conclusão';
+            }
+        } catch (e) {
+            console.error(e);
+            alert('Erro de conexão ao finalizar.');
+            btn.disabled = false;
+            btn.textContent = 'Confirmar Conclusão';
+        }
+    }
+
+    // ============================================================
+    // Utilities
+    // ============================================================
+    function showToast(message, type = 'success') {
+        const toast = document.createElement('div');
+        const bg = type === 'success' ? 'var(--success)' : type === 'error' ? 'var(--danger)' : 'var(--primary)';
+        toast.textContent = message;
+        toast.style.cssText = `
+            position: fixed; bottom: 20px; right: 20px;
+            background: ${bg}; color: white;
+            padding: 12px 24px; border-radius: 8px;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+            z-index: 99999; font-weight: 600; font-size: 0.9rem;
+            transition: opacity 0.3s;
+        `;
+        document.body.appendChild(toast);
+        setTimeout(() => {
+            toast.style.opacity = '0';
+            setTimeout(() => toast.remove(), 300);
+        }, 3000);
+    }
+
+    // Close modal on backdrop click
+    document.getElementById('finalizarModal').addEventListener('click', function (e) {
+        if (e.target === this) closeFinalizarModal();
+    });
+</script>
+{% endblock %}
+
+{% block sidebar_right %}
+<!-- Informações da Atividade -->
+<div class="sidebar-section-ws">
+    <div class="sidebar-header-ws">
+        <h3 class="text-h3">Detalhes</h3>
+    </div>
+    <div class="sidebar-content-ws" style="display: flex; flex-direction: column; gap: 1rem; margin-top: 1rem;">
+
+        <div class="detail-item">
+            <span class="detail-label">Projeto</span>
+            <span class="detail-value">
+                {% if project %}
+                <a href="/grv/company/{{ company.id if company else 0 }}/projects/{{ project.id }}/manage">{{
+                    project.title }}</a>
+                {% else %}—{% endif %}
+            </span>
+        </div>
+
+        <div class="detail-item">
+            <span class="detail-label">Status</span>
+            <span class="badge status-{{ task.status }}">{{ task.status }}</span>
+        </div>
+
+        <div class="detail-item">
+            <span class="detail-label">Responsável</span>
+            <span class="detail-value">{{ task.employee_name or '—' }}</span>
+        </div>
+
+        <div class="detail-item">
+            <span class="detail-label">Prazo</span>
+            <span
+                class="detail-value {% if task.due_date and task.status not in ['completed', 'done'] %}text-danger{% endif %}">
+                {{ task.due_date.strftime('%d/%m/%Y') if task.due_date else '—' }}
+            </span>
+        </div>
+
+        <div class="detail-item">
+            <span class="detail-label">Conclusão</span>
+            <span class="detail-value">{{ task.completion_date.strftime('%d/%m/%Y') if task.completion_date else '—'
+                }}</span>
+        </div>
+
+        <div class="detail-item">
+            <span class="detail-label">Horas Estimadas</span>
+            <span class="detail-value">{{ '%.1f'|format(task.estimated_hours or 0) }}h</span>
+        </div>
+
+        <div class="detail-item">
+            <span class="detail-label">Horas Realizadas</span>
+            <span class="detail-value" id="sidebarWorkedHours">{{ '%.1f'|format(task.worked_hours or 0) }}h</span>
+        </div>
+
+        <div class="detail-item">
+            <span class="detail-label">Prioridade</span>
+            <span class="badge priority-{{ task.priority or 'normal' }}">{{ task.priority or 'Normal' }}</span>
+        </div>
+
+        <div class="detail-item">
+            <span class="detail-label">Peso Score</span>
+            <span class="detail-value">{{ task.score_weight or 1.0 }}</span>
+        </div>
+
+        {% if task.status != 'completed' %}
+        <button class="btn btn-primary w-100" onclick="showFinalizarModal()" style="margin-top: 0.5rem;">
+            🏁 Finalizar Atividade
+        </button>
+        {% endif %}
+
+        <a href="/grv/company/{{ company.id if company else 0 }}/projects/{{ project.id if project else 0 }}/manage?activity_id={{ task.id }}"
+            class="btn btn-secondary w-100" style="text-align: center; text-decoration: none; display: block;">
+            ✏️ Editar Atividade
+        </a>
+    </div>
+</div>
+
+<style>
+    .detail-item {
+        display: flex;
+        flex-direction: column;
+        gap: 0.15rem;
+        padding-bottom: 0.75rem;
+        border-bottom: 1px solid var(--border);
+    }
+
+    .detail-item:last-child {
+        border-bottom: none;
+    }
+
+    .detail-label {
+        font-size: 0.7rem;
+        font-weight: 700;
+        text-transform: uppercase;
+        letter-spacing: 0.05em;
+        color: var(--text-tertiary);
+    }
+
+    .detail-value {
+        font-size: 0.9rem;
+        font-weight: 600;
+        color: var(--text-primary);
+    }
+
+    .detail-value a {
+        color: var(--primary);
+        text-decoration: none;
+    }
+
+    .detail-value a:hover {
+        text-decoration: underline;
+    }
+</style>
+{% endblock %}

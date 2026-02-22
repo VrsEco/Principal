@@ -1,0 +1,485 @@
+{
+  "metadata": {
+    "generated_at": "2025-10-17T08:18:15.198609",
+    "report_type": "general",
+    "data_source": "real_system_data"
+  },
+  "companies": [
+    {
+      "id": 15,
+      "nome": "Souto Costa Advogados Associados",
+      "cnpj": "38.442.146/0001-86",
+      "endereco": "São Paulo, SP",
+      "telefone": "(43) 7470-8080",
+      "email": "contato@soutocostaadvogadosassociados.com.br",
+      "descricao": "Empresa especializada em Tecnologia da Informação",
+      "setor": "Tecnologia da Informação",
+      "funcionarios": 207,
+      "receita_anual": 1441510
+    },
+    {
+      "id": 14,
+      "nome": "Gas Evolution",
+      "cnpj": "50160903000108",
+      "endereco": "Salvador, BA",
+      "telefone": "(46) 7909-5262",
+      "email": "contato@gasevolution.com.br",
+      "descricao": "Empresa especializada em Consultoria Empresarial",
+      "setor": "Consultoria Empresarial",
+      "funcionarios": 236,
+      "receita_anual": 9573362
+    },
+    {
+      "id": 13,
+      "nome": "Save Water",
+      "cnpj": "13.674.329/0002-60",
+      "endereco": "Salvador, BA",
+      "telefone": "(16) 5157-4115",
+      "email": "contato@savewater.com.br",
+      "descricao": "Empresa especializada em Manufatura",
+      "setor": "Manufatura",
+      "funcionarios": 350,
+      "receita_anual": 2246540
+    },
+    {
+      "id": 5,
+      "nome": "Versus Gestao Corporativa",
+      "cnpj": "15028181000131",
+      "endereco": "Salvador, BA",
+      "telefone": "(98) 8233-5651",
+      "email": "contato@versusgestaocorporativa.com.br",
+      "descricao": "Teste",
+      "setor": "Serviços Financeiros",
+      "funcionarios": 430,
+      "receita_anual": 3598360
+    },
+    {
+      "id": 1004,
+      "nome": "Digital Dynamics",
+      "cnpj": "11.469.886/0001-41",
+      "endereco": "Curitiba, PR",
+      "telefone": "(92) 4338-5910",
+      "email": "contato@digitaldynamics.com.br",
+      "descricao": "Empresa especializada em Varejo",
+      "setor": "Varejo",
+      "funcionarios": 142,
+      "receita_anual": 1675051
+    }
+  ],
+  "projects": [
+    {
+      "id": 41,
+      "codigo": "AL.J.3",
+      "nome": "Reunião Semanal Gerencial - 2025.10.14",
+      "descricao": "Projeto gerado automaticamente para a reunião: Reunião Semanal Gerencial",
+      "status": "in_progress",
+      "data_inicio": "2025-10-14",
+      "data_fim": "2026-03-14",
+      "investimento": 275765,
+      "responsavel": "Sistema",
+      "empresa": "Save Water",
+      "categoria": "Tecnologia",
+      "progresso": 92,
+      "equipe_size": 10,
+      "prioridade": "Baixa"
+    },
+    {
+      "id": 40,
+      "codigo": "AB.J.3",
+      "nome": "Estruturação de Processos",
+      "descricao": "Projeto estratégico de processos para modernização e melhoria dos processos organizacionais.",
+      "status": "planned",
+      "data_inicio": "2025-09-17",
+      "data_fim": "2026-05-13",
+      "investimento": 365515,
+      "responsavel": "Carlos Santos",
+      "empresa": "Gas Evolution",
+      "categoria": "Processos",
+      "progresso": 67,
+      "equipe_size": 12,
+      "prioridade": "Média"
+    },
+    {
+      "id": 39,
+      "codigo": "AB.J.2",
+      "nome": "Pendências Financeiro",
+      "descricao": "Projeto estratégico de qualidade para modernização e melhoria dos processos organizacionais.",
+      "status": "planned",
+      "data_inicio": "2025-06-08",
+      "data_fim": "2025-08-10",
+      "investimento": 313373,
+      "responsavel": "Mariana Costa",
+      "empresa": "Gas Evolution",
+      "categoria": "Qualidade",
+      "progresso": 30,
+      "equipe_size": 5,
+      "prioridade": "Baixa"
+    },
+    {
+      "id": 36,
+      "codigo": "AB.J.1",
+      "nome": "Pendências Fiscal",
+      "descricao": "Projeto estratégico de expansão para modernização e melhoria dos processos organizacionais.",
+      "status": "planned",
+      "data_inicio": "2025-07-02",
+      "data_fim": "2025-11-02",
+      "investimento": 214772,
+      "responsavel": "Ricardo Oliveira",
+      "empresa": "Gas Evolution",
+      "categoria": "Expansão",
+      "progresso": 42,
+      "equipe_size": 13,
+      "prioridade": "Média"
+    },
+    {
+      "id": 34,
+      "codigo": "AL.J.2",
+      "nome": "2025.10 - Reunião de Diretoria - Mensal",
+      "descricao": "Projeto estratégico de inovação para modernização e melhoria dos processos organizacionais.",
+      "status": "planned",
+      "data_inicio": "2025-05-27",
+      "data_fim": "2025-08-28",
+      "investimento": 376170,
+      "responsavel": "Fernanda Lima",
+      "empresa": "Save Water",
+      "categoria": "Inovação",
+      "progresso": 65,
+      "equipe_size": 11,
+      "prioridade": "Baixa"
+    },
+    {
+      "id": 33,
+      "codigo": "AL.J.1",
+      "nome": "2025.10.15 - Reunião Semanal Ordinária",
+      "descricao": "Projeto estratégico de infraestrutura para modernização e melhoria dos processos organizacionais.",
+      "status": "planned",
+      "data_inicio": "2025-07-28",
+      "data_fim": "2026-06-22",
+      "investimento": 50666,
+      "responsavel": "João Pedro",
+      "empresa": "Save Water",
+      "categoria": "Infraestrutura",
+      "progresso": 39,
+      "equipe_size": 3,
+      "prioridade": "Média"
+    },
+    {
+      "id": 31,
+      "codigo": "AA.J.6",
+      "nome": "Reunião Reunião Teste - 2025.10.14",
+      "descricao": "Projeto gerado automaticamente para a reunião: Reunião Teste",
+      "status": "planned",
+      "data_inicio": "2025-10-21",
+      "data_fim": "2026-04-28",
+      "investimento": 178575,
+      "responsavel": "Fabiano Ferreira",
+      "empresa": "Versus Gestao Corporativa",
+      "categoria": "Capacitação",
+      "progresso": 50,
+      "equipe_size": 5,
+      "prioridade": "Média"
+    },
+    {
+      "id": 30,
+      "codigo": "AA.J.5",
+      "nome": "Teste Fabiano Projeto PEV",
+      "descricao": "Teste Fabiano",
+      "status": "planned",
+      "data_inicio": "2025-10-01",
+      "data_fim": "2025-10-01",
+      "investimento": 264193,
+      "responsavel": "Fabiano Ferreira",
+      "empresa": "Versus Gestao Corporativa",
+      "categoria": "Sustentabilidade",
+      "progresso": 94,
+      "equipe_size": 12,
+      "prioridade": "Média"
+    },
+    {
+      "id": 29,
+      "codigo": "AA.J.4",
+      "nome": "Pendências e Afazeres",
+      "descricao": "Pendências cadastradas pelo usuário ou por outros colaboradores.",
+      "status": "planned",
+      "data_inicio": "2025-06-05",
+      "data_fim": "2026-01-04",
+      "investimento": 464040,
+      "responsavel": "Juliana Rodrigues",
+      "empresa": "Versus Gestao Corporativa",
+      "categoria": "Segurança",
+      "progresso": 89,
+      "equipe_size": 5,
+      "prioridade": "Alta"
+    },
+    {
+      "id": 28,
+      "codigo": "AA.J.3",
+      "nome": "Geral",
+      "descricao": "Inclusão de Afazeres não catalogados e outras coisas",
+      "status": "planned",
+      "data_inicio": "2025-05-24",
+      "data_fim": "2026-03-02",
+      "investimento": 317482,
+      "responsavel": "Gabriel Almeida",
+      "empresa": "Versus Gestao Corporativa",
+      "categoria": "Digital",
+      "progresso": 44,
+      "equipe_size": 3,
+      "prioridade": "Baixa"
+    }
+  ],
+  "processes": [
+    {
+      "id": 158,
+      "nome": "Gerir Demanda Jurídica Ativa (Autor)",
+      "descricao": "Descrição do processo não informada",
+      "estagio": "out_of_scope",
+      "data_criacao": "2025-10-16 18:29:48",
+      "responsavel": "Não definido",
+      "empresa": "Gas Evolution"
+    },
+    {
+      "id": 157,
+      "nome": "Gerir Hardware (Necess / Instal / Manut)",
+      "descricao": "Descrição do processo não informada",
+      "estagio": "out_of_scope",
+      "data_criacao": "2025-10-16 18:29:18",
+      "responsavel": "Não definido",
+      "empresa": "Gas Evolution"
+    },
+    {
+      "id": 156,
+      "nome": "Gerir Software (Necess / Instal / Manut)",
+      "descricao": "Descrição do processo não informada",
+      "estagio": "out_of_scope",
+      "data_criacao": "2025-10-16 18:28:59",
+      "responsavel": "Não definido",
+      "empresa": "Gas Evolution"
+    },
+    {
+      "id": 155,
+      "nome": "GERIR COMBUSTIVEIS",
+      "descricao": "Descrição do processo não informada",
+      "estagio": "out_of_scope",
+      "data_criacao": "2025-10-16 18:28:03",
+      "responsavel": "Não definido",
+      "empresa": "Gas Evolution"
+    },
+    {
+      "id": 154,
+      "nome": "GERIR VENDA E DESCARTE DE ATIVOS",
+      "descricao": "Descrição do processo não informada",
+      "estagio": "out_of_scope",
+      "data_criacao": "2025-10-16 18:27:49",
+      "responsavel": "Não definido",
+      "empresa": "Gas Evolution"
+    },
+    {
+      "id": 153,
+      "nome": "GERIR MANUTENÇÕES",
+      "descricao": "Descrição do processo não informada",
+      "estagio": "out_of_scope",
+      "data_criacao": "2025-10-16 18:27:37",
+      "responsavel": "Não definido",
+      "empresa": "Gas Evolution"
+    },
+    {
+      "id": 152,
+      "nome": "GERIR NECESSIDADE DE AQUISIÇÃO DE ATIVOS",
+      "descricao": "Descrição do processo não informada",
+      "estagio": "out_of_scope",
+      "data_criacao": "2025-10-16 18:27:20",
+      "responsavel": "Não definido",
+      "empresa": "Gas Evolution"
+    },
+    {
+      "id": 151,
+      "nome": "GERIR ARQUIVO DIGITAL",
+      "descricao": "Descrição do processo não informada",
+      "estagio": "designing",
+      "data_criacao": "2025-10-16 18:26:54",
+      "responsavel": "Não definido",
+      "empresa": "Gas Evolution"
+    }
+  ],
+  "employees": [
+    {
+      "id": 26,
+      "nome": "Wagner",
+      "email": "colaborador26@empresa.com.br",
+      "departamento": "Departamento não informado",
+      "status": "active",
+      "empresa": "Save Water"
+    },
+    {
+      "id": 25,
+      "nome": "Fabiano",
+      "email": "colaborador25@empresa.com.br",
+      "departamento": "Departamento não informado",
+      "status": "active",
+      "empresa": "Save Water"
+    },
+    {
+      "id": 24,
+      "nome": "Carla",
+      "email": "colaborador24@empresa.com.br",
+      "departamento": "Comercial",
+      "status": "active",
+      "empresa": "Gas Evolution"
+    },
+    {
+      "id": 23,
+      "nome": "Cida",
+      "email": "colaborador23@empresa.com.br",
+      "departamento": "Diretoria",
+      "status": "active",
+      "empresa": "Gas Evolution"
+    },
+    {
+      "id": 22,
+      "nome": "Fabiano",
+      "email": "colaborador22@empresa.com.br",
+      "departamento": "Departamento não informado",
+      "status": "active",
+      "empresa": "Gas Evolution"
+    },
+    {
+      "id": 21,
+      "nome": "Azevedo",
+      "email": "colaborador21@empresa.com.br",
+      "departamento": "Diretoria",
+      "status": "active",
+      "empresa": "Gas Evolution"
+    },
+    {
+      "id": 20,
+      "nome": "Victor",
+      "email": "colaborador20@empresa.com.br",
+      "departamento": "Adm/Fin",
+      "status": "active",
+      "empresa": "Gas Evolution"
+    },
+    {
+      "id": 19,
+      "nome": "Sandro",
+      "email": "colaborador19@empresa.com.br",
+      "departamento": "Adm/Fin",
+      "status": "active",
+      "empresa": "Gas Evolution"
+    },
+    {
+      "id": 18,
+      "nome": "Quesia",
+      "email": "colaborador18@empresa.com.br",
+      "departamento": "Adm/Fin",
+      "status": "active",
+      "empresa": "Gas Evolution"
+    },
+    {
+      "id": 17,
+      "nome": "Thais",
+      "email": "colaborador17@empresa.com.br",
+      "departamento": "Departamento não informado",
+      "status": "active",
+      "empresa": "Save Water"
+    }
+  ],
+  "metrics": {
+    "total_empresas": 4,
+    "total_projetos": 12,
+    "projetos_concluidos": 0,
+    "projetos_andamento": 0,
+    "total_processos": 157,
+    "media_colaboradores": 4.8,
+    "eficiencia_projetos": 0.0
+  },
+  "charts": {
+    "status_distribution": {
+      "in_progress": 1,
+      "planned": 11,
+      "Concluído": 2,
+      "Em Andamento": 1,
+      "Execução": 1,
+      "Finalização": 1,
+      "Pausado": 1,
+      "Planejamento": 1,
+      "Teste": 1
+    },
+    "top_investments": [
+      {
+        "nome": "Reunião Semanal Gerencial...",
+        "valor": 494574
+      },
+      {
+        "nome": "2025.10.15 - Reunião Sema...",
+        "valor": 468854
+      },
+      {
+        "nome": "Geral",
+        "valor": 468152
+      },
+      {
+        "nome": "Integração Sistemas Legad...",
+        "valor": 460891
+      },
+      {
+        "nome": "Projeto GRV",
+        "valor": 440940
+      },
+      {
+        "nome": "Projeto PEV",
+        "valor": 407111
+      }
+    ],
+    "timeline_data": [
+      {
+        "projeto": "Reunião Semanal Gere...",
+        "inicio": "2025-10-14",
+        "fim": "2025-09-18",
+        "status": "in_progress"
+      },
+      {
+        "projeto": "Estruturação de Proc...",
+        "inicio": "2025-08-11",
+        "fim": "2025-12-18",
+        "status": "planned"
+      },
+      {
+        "projeto": "Pendências Financeir...",
+        "inicio": "2025-08-25",
+        "fim": "2026-07-09",
+        "status": "planned"
+      },
+      {
+        "projeto": "Pendências Fiscal",
+        "inicio": "2025-08-12",
+        "fim": "2026-01-14",
+        "status": "planned"
+      },
+      {
+        "projeto": "2025.10 - Reunião de...",
+        "inicio": "2025-05-31",
+        "fim": "2026-04-24",
+        "status": "planned"
+      },
+      {
+        "projeto": "2025.10.15 - Reunião...",
+        "inicio": "2025-07-26",
+        "fim": "2026-03-10",
+        "status": "planned"
+      },
+      {
+        "projeto": "Reunião Reunião Test...",
+        "inicio": "2025-10-21",
+        "fim": "2026-03-10",
+        "status": "planned"
+      },
+      {
+        "projeto": "Teste Fabiano Projet...",
+        "inicio": "2025-10-01",
+        "fim": "2025-10-01",
+        "status": "planned"
+      }
+    ]
+  }
+}

@@ -1,0 +1,172 @@
+# ============================================
+# GestaoVersus - Docker Ignore
+# ============================================
+# Arquivos a NÃO copiar para o container
+# ============================================
+
+# ==========================================
+# Git & Version Control
+# ==========================================
+.git/
+.gitignore
+.gitattributes
+.github/
+
+# ==========================================
+# Documentation
+# ==========================================
+*.md
+!README.md
+docs/
+_*.md
+CHANGELOG.md
+
+# ==========================================
+# Python Cache & Build
+# ==========================================
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+build/
+dist/
+*.egg-info/
+.pytest_cache/
+.coverage
+htmlcov/
+.tox/
+
+# ==========================================
+# Virtual Environments
+# ==========================================
+venv/
+ENV/
+env/
+.venv
+
+# ==========================================
+# Database Files (Locais)
+# ==========================================
+*.db
+*.sqlite
+*.sqlite3
+database.db
+pevapp*.db
+backup_*.db
+
+# ==========================================
+# Logs
+# ==========================================
+*.log
+logs/
+server_log.txt
+
+# ==========================================
+# Backups
+# ==========================================
+backups/
+backups_migration/
+backup_*/
+
+# ==========================================
+# Uploads & Temp Files
+# ==========================================
+uploads/*
+!uploads/.gitkeep
+temp_pdfs/*
+!temp_pdfs/.gitkeep
+
+# ==========================================
+# IDE & Editor
+# ==========================================
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+.DS_Store
+
+# ==========================================
+# Docker Files (não precisa no container)
+# ==========================================
+docker-compose.yml
+docker-compose.dev.yml
+docker-compose.override.yml
+Dockerfile
+Dockerfile.dev
+.dockerignore
+
+# ==========================================
+# Environment Files
+# ==========================================
+.env
+.env.*
+*.env
+
+# ==========================================
+# Scripts de Setup Local
+# ==========================================
+*.bat
+*.sh
+setup_*.py
+install_*.py
+reinstall_*.bat
+
+# ==========================================
+# Test & Development Files
+# ==========================================
+test_*.py
+*_test.py
+tests/
+check_*.py
+debug_*.py
+exemplo_*.py
+compare_*.py
+create_test_*.py
+fix_*.py
+apply_*.py
+
+# ==========================================
+# Temporary & Backup Files
+# ==========================================
+*.tmp
+*.temp
+*.backup
+*~
+._*
+
+# ==========================================
+# Node (se existir)
+# ==========================================
+node_modules/
+npm-debug.log
+package-lock.json
+
+# ==========================================
+# Reports & Generated Files
+# ==========================================
+relatorio_*.html
+*.pdf
+final_report.py
+gerar_relatorio_*.py
+
+# ==========================================
+# Migration Scripts (usar migrations/)
+# ==========================================
+migrar_*.py
+migracao_*.py
+
+# ==========================================
+# Keep Essential
+# ==========================================
+!requirements.txt
+!app_pev.py
+!config.py
+!models/
+!modules/
+!services/
+!middleware/
+!templates/
+!static/
+!scripts/backup_*.py

@@ -1,0 +1,867 @@
+{% extends "layouts/app.html" %}
+
+{% block title %}Dashboard | Versus Premium{% endblock %}
+
+{% block page_title %}Visão Geral do Ecossistema{% endblock %}
+
+{% block header_actions %}
+{# Removido o botão "Ação Rápida" do dashboard #}
+{% endblock %}
+
+{% block content %}
+<div class="dashboard-wrapper">
+
+    <!-- Premium Header Summary -->
+    <header class="dashboard-header fade-in">
+        <div class="welcome-section">
+            <h1 class="text-h1">Olá, {{ current_user.name.split()[0] }}!</h1>
+            <p class="text-subtitle">Aqui está o pulso atual da sua operação corporativa.</p>
+        </div>
+
+        <div class="stats-summary-strip">
+            <div class="summary-item main-score">
+                <div class="summary-label">Score Global</div>
+                <div class="summary-value" id="global-score">--%</div>
+                <div class="summary-trend positive">↑ 2.4%</div>
+            </div>
+            <div class="summary-divider"></div>
+            <div class="summary-item">
+                <div class="summary-label">Pendências</div>
+                <div class="summary-value" id="count-pending-tasks">--</div>
+                <div class="summary-sub">Atividades em aberto</div>
+            </div>
+            <div class="summary-item warning">
+                <div class="summary-label">Em Atraso</div>
+                <div class="summary-value" id="count-overdue-tasks">--</div>
+                <div class="summary-sub">Urgência imediata</div>
+            </div>
+        </div>
+    </header>
+
+    <!-- Advanced Filter Bar - Collapsed by default -->
+    <section class="filter-bar fade-in collapsed" id="dashboard-filters">
+        <div class="collapsible-header" onclick="toggleCollapsible('dashboard-filters')">
+            <div class="header-left">
+                <div class="icon-box">
+                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <polygon points="22 3 2 3 10 12.46 10 19 14 21 14 12.46 22 3"></polygon>
+                    </svg>
+                </div>
+                <h3>Filtros Avançados</h3>
+            </div>
+            <div class="header-right">
+                <span class="filter-status">Clique para expandir e refinar a visão</span>
+                <svg class="chevron" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                    stroke-width="2">
+                    <polyline points="6 9 12 15 18 9"></polyline>
+                </svg>
+            </div>
+        </div>
+
+        <div class="filter-content">
+            <div class="filter-grid">
+                <div class="filter-item">
+                    <label>Empresa</label>
+                    <select id="filter-company" onchange="onCompanyChange()">
+                        <option value="">Todas as Unidades</option>
+                    </select>
+                </div>
+                <div class="filter-item">
+                    <label>Projeto Estratégico</label>
+                    <select id="filter-project" onchange="loadDashboardStats()">
+                        <option value="">Todos os Projetos</option>
+                    </select>
+                </div>
+                <div class="filter-item">
+                    <label>Processo Chave</label>
+                    <select id="filter-process" onchange="loadDashboardStats()">
+                        <option value="">Todos os Processos</option>
+                    </select>
+                </div>
+                <div class="filter-item">
+                    <label>Dono/Responsável</label>
+                    <input type="text" id="filter-responsible" placeholder="Filtrar por nome..."
+                        oninput="debounce(loadDashboardStats, 500)()">
+                </div>
+            </div>
+
+            <div class="filter-footer">
+                <div class="date-ranges">
+                    <div class="range-box">
+                        <label>Vencimento</label>
+                        <div class="inputs">
+                            <input type="date" id="filter-due-s">
+                            <span>a</span>
+                            <input type="date" id="filter-due-e">
+                        </div>
+                    </div>
+                </div>
+                <div class="actions">
+                    <button class="btn btn-secondary" onclick="resetFilters()">Limpar</button>
+                    <button class="btn btn-primary" onclick="loadDashboardStats()">Aplicar Filtros</button>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Main Dashboard Grid -->
+    <div class="main-grid fade-in">
+
+        <!-- Performance Column -->
+        <div class="performance-col">
+            <h2 class="section-title">Pilares de Performance</h2>
+            <div class="perf-cards-stack">
+                <div class="perf-stat-card okr">
+                    <div class="card-icon"><i class="fas fa-bullseye"></i></div>
+                    <div class="card-info">
+                        <span class="label">Objetivos (OKRs)</span>
+                        <div class="value-row">
+                            <span class="value" id="perf-okr">--%</span>
+                            <div class="mini-track">
+                                <div class="fill" id="bar-okr" style="width: 0%"></div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <div class="perf-stat-card indicators">
+                    <div class="card-icon"><i class="fas fa-chart-line"></i></div>
+                    <div class="card-info">
+                        <span class="label">Indicadores (KPIs)</span>
+                        <div class="value-row">
+                            <span class="value" id="perf-kpi">--%</span>
+                            <div class="mini-track">
+                                <div class="fill" id="bar-kpi" style="width: 0%"></div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <div class="perf-stat-card projects">
+                    <div class="card-icon"><i class="fas fa-tasks"></i></div>
+                    <div class="card-info">
+                        <span class="label">Projetos & Entregas</span>
+                        <div class="value-row">
+                            <span class="value" id="perf-project">--%</span>
+                            <div class="mini-track">
+                                <div class="fill" id="bar-project" style="width: 0%"></div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Quick Action Palette -->
+            <div class="quick-links-palette">
+                <h3>Acesso Rápido</h3>
+                <div class="links-grid">
+                    <a href="/agents/cadastro" class="q-link">
+                        <div class="q-icon"><i class="fas fa-robot"></i></div>
+                        <span>Agente IA</span>
+                    </a>
+                    <a href="/my-work" class="q-link">
+                        <div class="q-icon"><i class="fas fa-briefcase"></i></div>
+                        <span>Meu Trabalho</span>
+                    </a>
+                    <a href="/process-map" class="q-link">
+                        <div class="q-icon"><i class="fas fa-sitemap"></i></div>
+                        <span>Processos</span>
+                    </a>
+                    <a href="/indicators" class="q-link">
+                        <div class="q-icon"><i class="fas fa-signal"></i></div>
+                        <span>Dashboard</span>
+                    </a>
+                </div>
+            </div>
+        </div>
+
+        <!-- Modules Grid -->
+        <div class="modules-col">
+            <h2 class="section-title">Módulos do Ecossistema</h2>
+            <div class="modules-grid">
+                <a href="/pev/dashboard" class="module-card">
+                    <div class="card-header highlight-purple" style="color: #6366f1;">
+                        <i class="fas fa-compass"></i>
+                        <span class="count" id="count-pev">--</span>
+                    </div>
+                    <div class="card-content">
+                        <h3>Planejamento Estratégico</h3>
+                        <p>Jornada PEV, implantação e evolução do negócio.</p>
+                    </div>
+                </a>
+
+                <a href="/companies" class="module-card">
+                    <div class="card-header highlight-blue">
+                        <i class="fas fa-building"></i>
+                        <span class="count" id="count-companies">--</span>
+                    </div>
+                    <div class="card-content">
+                        <h3>Empresas</h3>
+                        <p>Gestão de unidades e estruturas corporativas.</p>
+                    </div>
+                </a>
+
+                <a href="/indicators" class="module-card">
+                    <div class="card-header highlight-green">
+                        <i class="fas fa-chart-pie"></i>
+                        <span class="count" id="count-indicators">--</span>
+                    </div>
+                    <div class="card-content">
+                        <h3>Indicadores</h3>
+                        <p>Acompanhamento de métricas e metas operacionais.</p>
+                    </div>
+                </a>
+
+                <a href="/processes" class="module-card">
+                    <div class="card-header highlight-orange">
+                        <i class="fas fa-sync"></i>
+                        <span class="count" id="count-processes">--</span>
+                    </div>
+                    <div class="card-content">
+                        <h3>Processos</h3>
+                        <p>Arquitetura, POPs e padronização operacional.</p>
+                    </div>
+                </a>
+
+                <a href="/projects" class="module-card">
+                    <div class="card-header highlight-cyan">
+                        <i class="fas fa-project-diagram"></i>
+                        <span class="count" id="count-projects">--</span>
+                    </div>
+                    <div class="card-content">
+                        <h3>Projetos</h3>
+                        <p>Cronogramas, Capex e iniciativas estratégicas.</p>
+                    </div>
+                </a>
+
+                <a href="/okrs" class="module-card">
+                    <div class="card-header highlight-purple">
+                        <i class="fas fa-gem"></i>
+                        <span class="count" id="count-okrs">--</span>
+                    </div>
+                    <div class="card-content">
+                        <h3>OKRs</h3>
+                        <p>Objetivos e resultados chave para visão anual.</p>
+                    </div>
+                </a>
+
+                <a href="/meetings" class="module-card">
+                    <div class="card-header highlight-red" style="color: #ef4444;">
+                        <i class="fas fa-handshake"></i>
+                        <span class="count" id="count-meetings">--</span>
+                    </div>
+                    <div class="card-content">
+                        <h3>Gestão de Reuniões</h3>
+                        <p>Pautas, atas e planos de ação derivados.</p>
+                    </div>
+                </a>
+
+                <a href="#" class="module-card">
+                    <div class="card-header highlight-slate">
+                        <i class="fas fa-users"></i>
+                        <span class="count" id="count-users">--</span>
+                    </div>
+                    <div class="card-content">
+                        <h3>Usuários</h3>
+                        <p>Controle de acessos, perfis e roles do sistema.</p>
+                    </div>
+                </a>
+
+            </div>
+        </div>
+    </div>
+
+</div>
+
+<style>
+    :root {
+        --dash-bg: #f1f5f9;
+        --card-bg: #ffffff;
+        --text-h: #0f172a;
+        --text-p: #475569;
+        --accent-blue: #2563eb;
+        --accent-green: #10b981;
+        --accent-orange: #f59e0b;
+        --accent-purple: #8b5cf6;
+        --accent-cyan: #06b6d4;
+    }
+
+    .dashboard-wrapper {
+        max-width: 1300px;
+        margin: 0 auto;
+        padding: 0 1rem 3rem 1rem;
+    }
+
+    /* Header Styles */
+    .dashboard-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        margin-bottom: 2.5rem;
+        gap: 2rem;
+        flex-wrap: wrap;
+    }
+
+    .stats-summary-strip {
+        display: flex;
+        background: var(--card-bg);
+        padding: 1rem 2rem;
+        border-radius: 20px;
+        box-shadow: var(--shadow-md);
+        border: 1px solid var(--border);
+        gap: 2rem;
+        align-items: center;
+    }
+
+    .summary-item {
+        display: flex;
+        flex-direction: column;
+    }
+
+    .summary-label {
+        font-size: 0.75rem;
+        font-weight: 700;
+        text-transform: uppercase;
+        color: var(--text-tertiary);
+        margin-bottom: 2px;
+    }
+
+    .summary-value {
+        font-size: 1.5rem;
+        font-weight: 800;
+        color: var(--text-h);
+        line-height: 1;
+    }
+
+    .summary-sub {
+        font-size: 0.7rem;
+        color: var(--text-tertiary);
+        margin-top: 4px;
+    }
+
+    .summary-trend {
+        font-size: 0.75rem;
+        font-weight: 600;
+        margin-top: 4px;
+    }
+
+    .summary-trend.positive {
+        color: var(--success);
+    }
+
+    .summary-item.main-score .summary-value {
+        color: var(--primary);
+        font-size: 2rem;
+    }
+
+    .summary-item.warning .summary-value {
+        color: var(--danger);
+    }
+
+    .summary-divider {
+        width: 1px;
+        height: 40px;
+        background: var(--border);
+    }
+
+    /* Filter Bar Overrides */
+    .filter-bar {
+        background: var(--card-bg);
+        border-radius: 20px;
+        border: 1px solid var(--border);
+        box-shadow: var(--shadow-sm);
+        margin-bottom: 2.5rem;
+        overflow: hidden;
+        transition: var(--transition);
+    }
+
+    .filter-bar.collapsed .filter-content {
+        display: none;
+    }
+
+    .filter-bar.collapsed .collapsible-header {
+        padding: 1.25rem 1.5rem;
+    }
+
+    .collapsible-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        padding: 1.5rem;
+        cursor: pointer;
+        transition: var(--transition);
+    }
+
+    .collapsible-header .header-left {
+        display: flex;
+        align-items: center;
+        gap: 1rem;
+    }
+
+    .collapsible-header .icon-box {
+        width: 40px;
+        height: 40px;
+        background: var(--primary-light);
+        color: var(--primary);
+        border-radius: 10px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+    }
+
+    .collapsible-header h3 {
+        font-size: 1rem;
+        font-weight: 700;
+        color: var(--text-h);
+        margin: 0;
+    }
+
+    .collapsible-header .filter-status {
+        font-size: 0.85rem;
+        color: var(--text-tertiary);
+        margin-right: 1rem;
+    }
+
+    .filter-content {
+        padding: 0 1.5rem 1.5rem 1.5rem;
+        border-top: 1px solid var(--border);
+        padding-top: 1.5rem;
+    }
+
+    .filter-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+        gap: 1.5rem;
+        margin-bottom: 2rem;
+    }
+
+    .filter-item label {
+        display: block;
+        font-size: 0.75rem;
+        font-weight: 700;
+        color: var(--text-tertiary);
+        text-transform: uppercase;
+        margin-bottom: 0.5rem;
+    }
+
+    .filter-item select,
+    .filter-item input {
+        width: 100%;
+        padding: 0.75rem 1rem;
+        border-radius: 12px;
+        border: 1px solid var(--border);
+        background: #f8fafc;
+        font-size: 0.9rem;
+        transition: var(--transition);
+    }
+
+    .filter-footer {
+        display: flex;
+        justify-content: space-between;
+        align-items: flex-end;
+        padding-top: 1.5rem;
+        border-top: 1px dotted var(--border);
+    }
+
+    .range-box .inputs {
+        display: flex;
+        align-items: center;
+        gap: 0.5rem;
+    }
+
+    .range-box label {
+        font-size: 0.7rem;
+        font-weight: 700;
+        color: var(--text-tertiary);
+        text-transform: uppercase;
+        margin-bottom: 0.5rem;
+        display: block;
+    }
+
+    .range-box input {
+        padding: 0.5rem;
+        border-radius: 8px;
+        border: 1px solid var(--border);
+        font-size: 0.8rem;
+    }
+
+    /* Main Grid Layout */
+    .section-title {
+        font-size: 1.1rem;
+        font-weight: 700;
+        color: var(--text-h);
+        margin-bottom: 1.5rem;
+        display: flex;
+        align-items: center;
+        gap: 0.5rem;
+    }
+
+    .main-grid {
+        display: grid;
+        grid-template-columns: 360px 1fr;
+        gap: 2.5rem;
+    }
+
+    .perf-cards-stack {
+        display: flex;
+        flex-direction: column;
+        gap: 1rem;
+        margin-bottom: 2rem;
+    }
+
+    .perf-stat-card {
+        background: var(--card-bg);
+        padding: 1.25rem;
+        border-radius: 18px;
+        border: 1px solid var(--border);
+        display: flex;
+        align-items: center;
+        gap: 1.25rem;
+        box-shadow: var(--shadow-sm);
+        transition: var(--transition);
+    }
+
+    .perf-stat-card:hover {
+        border-color: var(--primary);
+        transform: translateX(5px);
+    }
+
+    .perf-stat-card .card-icon {
+        width: 48px;
+        height: 48px;
+        border-radius: 12px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 1.25rem;
+        flex-shrink: 0;
+    }
+
+    .perf-stat-card.okr .card-icon {
+        background: rgba(139, 92, 246, 0.1);
+        color: var(--accent-purple);
+    }
+
+    .perf-stat-card.indicators .card-icon {
+        background: rgba(16, 185, 129, 0.1);
+        color: var(--accent-green);
+    }
+
+    .perf-stat-card.projects .card-icon {
+        background: rgba(6, 182, 212, 0.1);
+        color: var(--accent-cyan);
+    }
+
+    .perf-stat-card .card-info {
+        flex: 1;
+    }
+
+    .perf-stat-card .label {
+        font-size: 0.75rem;
+        font-weight: 600;
+        color: var(--text-tertiary);
+    }
+
+    .perf-stat-card .value-row {
+        display: flex;
+        align-items: center;
+        gap: 1rem;
+        margin-top: 4px;
+    }
+
+    .perf-stat-card .value {
+        font-size: 1.25rem;
+        font-weight: 700;
+        color: var(--text-h);
+        min-width: 50px;
+    }
+
+    .mini-track {
+        flex: 1;
+        height: 6px;
+        background: #f1f5f9;
+        border-radius: 3px;
+        overflow: hidden;
+    }
+
+    .mini-track .fill {
+        height: 100%;
+        border-radius: 3px;
+        transition: width 1s ease;
+    }
+
+    .okr .fill {
+        background: var(--accent-purple);
+    }
+
+    .indicators .fill {
+        background: var(--accent-green);
+    }
+
+    .projects .fill {
+        background: var(--accent-cyan);
+    }
+
+    /* Quick Links Palette */
+    .quick-links-palette {
+        background: var(--special-gradient);
+        padding: 1.5rem;
+        border-radius: 20px;
+        color: white;
+    }
+
+    .quick-links-palette h3 {
+        font-size: 0.9rem;
+        margin-bottom: 1.25rem;
+        opacity: 0.9;
+    }
+
+    .links-grid {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 1rem;
+    }
+
+    .q-link {
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        gap: 0.5rem;
+        background: rgba(255, 255, 255, 0.1);
+        padding: 1rem;
+        border-radius: 16px;
+        text-decoration: none;
+        color: white;
+        transition: var(--transition);
+        border: 1px solid rgba(255, 255, 255, 0.05);
+    }
+
+    .q-link:hover {
+        background: rgba(255, 255, 255, 0.2);
+        transform: translateY(-3px);
+    }
+
+    .q-link .q-icon {
+        font-size: 1.25rem;
+    }
+
+    .q-link span {
+        font-size: 0.75rem;
+        font-weight: 600;
+    }
+
+    /* Modules Grid */
+    .modules-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+        gap: 1.5rem;
+    }
+
+    .module-card {
+        background: var(--card-bg);
+        border-radius: 20px;
+        padding: 1.75rem;
+        border: 1px solid var(--border);
+        box-shadow: var(--shadow-sm);
+        text-decoration: none;
+        color: inherit;
+        transition: var(--transition);
+    }
+
+    .module-card:hover {
+        transform: translateY(-8px);
+        box-shadow: var(--shadow-xl);
+        border-color: var(--primary-light);
+    }
+
+    .module-card .card-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        margin-bottom: 1.50rem;
+        font-size: 1.5rem;
+    }
+
+    .module-card .count {
+        font-size: 1rem;
+        font-weight: 800;
+        background: #f8fafc;
+        padding: 4px 12px;
+        border-radius: 12px;
+        border: 1px solid var(--border);
+        color: var(--text-h);
+    }
+
+    .highlight-blue {
+        color: var(--accent-blue);
+    }
+
+    .highlight-green {
+        color: var(--accent-green);
+    }
+
+    .highlight-orange {
+        color: var(--accent-orange);
+    }
+
+    .highlight-purple {
+        color: var(--accent-purple);
+    }
+
+    .highlight-cyan {
+        color: var(--accent-cyan);
+    }
+
+    .highlight-slate {
+        color: var(--text-secondary);
+    }
+
+    .module-card h3 {
+        font-size: 1.15rem;
+        font-weight: 700;
+        color: var(--text-h);
+        margin-bottom: 0.5rem;
+    }
+
+    .module-card p {
+        font-size: 0.85rem;
+        color: var(--text-p);
+        line-height: 1.5;
+    }
+
+    @media (max-width: 1024px) {
+        .main-grid {
+            grid-template-columns: 1fr;
+        }
+
+        .stats-summary-strip {
+            width: 100%;
+            order: 2;
+        }
+    }
+</style>
+
+<script>
+    document.addEventListener('DOMContentLoaded', () => {
+        loadFilters();
+        loadDashboardStats();
+    });
+
+    async function loadFilters(companyId = null) {
+        try {
+            const url = companyId ? `/api/dashboard/filter-options?company_id=${companyId}` : '/api/dashboard/filter-options';
+            const res = await fetch(url);
+            const data = await res.json();
+
+            const companySelect = document.getElementById('filter-company');
+            const projectSelect = document.getElementById('filter-project');
+            const processSelect = document.getElementById('filter-process');
+
+            // Only populate company list if it's the initial load (companySelect is relatively empty)
+            if (companySelect.options.length <= 1) {
+                data.companies.forEach(c => {
+                    const opt = document.createElement('option');
+                    opt.value = c.id;
+                    opt.textContent = c.name;
+                    companySelect.appendChild(opt);
+                });
+            }
+
+            // Always refresh Projects and Processes
+            projectSelect.innerHTML = '<option value="">Todos os Projetos</option>';
+            processSelect.innerHTML = '<option value="">Todos os Processos</option>';
+
+            data.projects.forEach(p => {
+                const opt = document.createElement('option');
+                opt.value = p.id;
+                opt.textContent = p.name;
+                projectSelect.appendChild(opt);
+            });
+
+            data.processes.forEach(p => {
+                const opt = document.createElement('option');
+                opt.value = p.id;
+                opt.textContent = p.name;
+                processSelect.appendChild(opt);
+            });
+
+            const activeCompanyId = '{{ active_company_id or "" }}';
+            if (activeCompanyId && activeCompanyId !== 'None' && !companySelect.value) {
+                companySelect.value = activeCompanyId;
+            }
+
+        } catch (err) {
+            console.error('Erro ao carregar filtros:', err);
+        }
+    }
+
+    function onCompanyChange() {
+        const companyId = document.getElementById('filter-company').value;
+        loadFilters(companyId);
+        loadDashboardStats();
+    }
+
+    async function loadDashboardStats() {
+        try {
+            const companyId = document.getElementById('filter-company').value;
+            const projectId = document.getElementById('filter-project').value;
+            const processId = document.getElementById('filter-process').value;
+            const responsible = document.getElementById('filter-responsible').value;
+            const dueS = document.getElementById('filter-due-s').value;
+            const dueE = document.getElementById('filter-due-e').value;
+
+            let url = `/api/dashboard/stats?`;
+            if (companyId) url += `company_id=${companyId}&`;
+            if (projectId) url += `project_id=${projectId}&`;
+            if (processId) url += `process_id=${processId}&`;
+            if (responsible) url += `responsible=${encodeURIComponent(responsible)}&`;
+            if (dueS) url += `d_due_s=${dueS}&`;
+            if (dueE) url += `d_due_e=${dueE}&`;
+
+            const res = await fetch(url);
+            const data = await res.json();
+
+            const stats = data.counts;
+            const perf = data.performance;
+
+            // Update Counts
+            document.getElementById('count-companies').textContent = stats.companies;
+            document.getElementById('count-indicators').textContent = stats.indicators;
+            document.getElementById('count-processes').textContent = stats.processes;
+            document.getElementById('count-projects').textContent = stats.projects;
+            document.getElementById('count-okrs').textContent = stats.okrs || 0;
+            document.getElementById('count-meetings').textContent = stats.meetings || 0;
+            document.getElementById('count-users').textContent = stats.users;
+
+            document.getElementById('count-pending-tasks').textContent = stats.pending_tasks;
+            document.getElementById('count-overdue-tasks').textContent = stats.overdue_tasks;
+
+            // Update Performance
+            document.getElementById('global-score').textContent = perf.global_score + '%';
+
+            document.getElementById('perf-kpi').textContent = perf.kpis_avg + '%';
+            document.getElementById('bar-kpi').style.width = perf.kpis_avg + '%';
+
+            document.getElementById('perf-project').textContent = perf.projects_avg + '%';
+            document.getElementById('bar-project').style.width = perf.projects_avg + '%';
+
+            document.getElementById('perf-okr').textContent = perf.okr_avg + '%';
+            document.getElementById('bar-okr').style.width = perf.okr_avg + '%';
+
+        } catch (err) {
+            console.error('Erro ao carregar stats:', err);
+        }
+    }
+
+    function resetFilters() {
+        document.querySelectorAll('#dashboard-filters input, #dashboard-filters select').forEach(el => el.value = '');
+        loadDashboardStats();
+    }
+
+    function debounce(func, timeout = 300) {
+        let timer;
+        return (...args) => {
+            clearTimeout(timer);
+            timer = setTimeout(() => { func.apply(this, args); }, timeout);
+        };
+    }
+</script>
+{% endblock %}

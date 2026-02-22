@@ -1,0 +1,539 @@
+{% extends "layouts/app.html" %}
+
+{% block page_title %}{{ agent_name }}{% endblock %}
+
+{% block head %}
+{{ super() }}
+<script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
+<style>
+    .ai-board-container {
+        display: flex;
+        flex-direction: column;
+        height: calc(100vh - 120px);
+        max-width: 1100px;
+        margin: 0 auto;
+        background: var(--surface-primary);
+        border-radius: 20px;
+        overflow: hidden;
+        box-shadow: 0 10px 30px rgba(0, 0, 0, 0.1);
+        border: 1px solid var(--border);
+    }
+
+    /* Header do Board */
+    .board-header {
+        padding: 1.5rem 2rem;
+        background: var(--surface-secondary);
+        border-bottom: 1px solid var(--border);
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+    }
+
+    .board-title h2 {
+        font-size: 1.25rem;
+        font-weight: 700;
+        margin: 0;
+        background: var(--primary-gradient);
+        -webkit-background-clip: text;
+        -webkit-text-fill-color: transparent;
+    }
+
+    .board-title p {
+        font-size: 0.85rem;
+        color: var(--text-tertiary);
+        margin: 0;
+    }
+
+    /* Área de Chat */
+    .chat-messages {
+        flex: 1;
+        overflow-y: auto;
+        padding: 2rem;
+        display: flex;
+        flex-direction: column;
+        gap: 1.5rem;
+        scroll-behavior: smooth;
+    }
+
+    .message {
+        display: flex;
+        flex-direction: column;
+        max-width: 85%;
+    }
+
+    .message.user {
+        align-self: flex-end;
+    }
+
+    .message.assistant {
+        align-self: flex-start;
+    }
+
+    .message-bubble {
+        padding: 1rem 1.25rem;
+        border-radius: 18px;
+        font-size: 0.95rem;
+        line-height: 1.6;
+        position: relative;
+    }
+
+    .user .message-bubble {
+        background: var(--primary);
+        color: white;
+        border-bottom-right-radius: 4px;
+    }
+
+    .assistant .message-bubble {
+        background: var(--surface-secondary);
+        color: var(--text-primary);
+        border-bottom-left-radius: 4px;
+        border: 1px solid var(--border);
+    }
+
+    .message-info {
+        font-size: 0.75rem;
+        margin-bottom: 0.25rem;
+        color: var(--text-tertiary);
+        font-weight: 600;
+        display: flex;
+        align-items: center;
+        gap: 0.5rem;
+    }
+
+    .agent-badge {
+        background: var(--primary-light);
+        color: var(--primary);
+        padding: 1px 8px;
+        border-radius: 10px;
+        text-transform: uppercase;
+        font-size: 0.65rem;
+    }
+
+    /* Área de Input */
+    .chat-input-area {
+        padding: 1.5rem 2rem;
+        background: var(--surface-secondary);
+        border-top: 1px solid var(--border);
+    }
+
+    .input-wrapper {
+        display: flex;
+        background: var(--surface-primary);
+        border: 1px solid var(--border);
+        border-radius: 12px;
+        padding: 0.5rem;
+        transition: border-color 0.2s;
+    }
+
+    .input-wrapper:focus-within {
+        border-color: var(--primary);
+    }
+
+    .chat-input {
+        flex: 1;
+        border: none;
+        background: transparent;
+        color: var(--text-primary);
+        padding: 0.75rem 1rem;
+        font-size: 1rem;
+        outline: none;
+        resize: none;
+        max-height: 150px;
+    }
+
+    .send-btn {
+        background: var(--primary);
+        color: white;
+        border: none;
+        width: 44px;
+        height: 44px;
+        border-radius: 10px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        cursor: pointer;
+        transition: transform 0.2s, background 0.2s;
+        align-self: flex-end;
+    }
+
+    .send-btn:hover {
+        transform: scale(1.05);
+        background: var(--primary-dark);
+    }
+
+    .send-btn:disabled {
+        opacity: 0.5;
+        cursor: not-allowed;
+    }
+
+    /* Especialistas Sidebar (Opcional - Layout Desktop) */
+    .agents-grid {
+        display: flex;
+        gap: 1rem;
+        margin-bottom: 1.5rem;
+        overflow-x: auto;
+        padding-bottom: 0.5rem;
+    }
+
+    .agent-pill {
+        display: flex;
+        align-items: center;
+        gap: 0.5rem;
+        background: var(--surface-secondary);
+        border: 1px solid var(--border);
+        padding: 0.5rem 1rem;
+        border-radius: 50px;
+        font-size: 0.8rem;
+        white-space: nowrap;
+        color: var(--text-secondary);
+    }
+
+    .agent-pill.active {
+        background: var(--primary-light);
+        border-color: var(--primary);
+        color: var(--primary);
+    }
+
+    /* Typing indicator */
+    .typing {
+        display: flex;
+        gap: 4px;
+        padding: 10px 0;
+    }
+
+    .typing span {
+        width: 6px;
+        height: 6px;
+        background: var(--text-tertiary);
+        border-radius: 50%;
+        animation: blink 1s infinite alternate;
+    }
+
+    .typing span:nth-child(2) {
+        animation-delay: 0.3s;
+    }
+
+    .typing span:nth-child(3) {
+        animation-delay: 0.6s;
+    }
+
+    @keyframes blink {
+        from {
+            opacity: 0.3;
+        }
+
+        to {
+            opacity: 1;
+        }
+    }
+
+    /* Markdown styling */
+    .message-bubble h1,
+    .message-bubble h2,
+    .message-bubble h3 {
+        margin-top: 1rem;
+        font-size: 1.1em;
+    }
+
+    .message-bubble ul,
+    .message-bubble ol {
+        padding-left: 1.5rem;
+        margin: 0.5rem 0;
+    }
+
+    .message-bubble code {
+        background: rgba(0, 0, 0, 0.05);
+        padding: 2px 4px;
+        border-radius: 4px;
+        font-family: monospace;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="ai-board-container">
+    <div class="board-header">
+        <div class="board-title">
+            <h2>Board de Estratégia & Operações</h2>
+            <p>Seus especialistas estão online e prontos para ajudar.</p>
+        </div>
+        <div class="board-status">
+            <span class="agent-badge">Líder Ativo</span>
+        </div>
+    </div>
+
+    <!-- Lista de Agentes para visualização -->
+    <div style="padding: 1rem 2rem 0;">
+        <div class="agents-grid">
+            <div class="agent-pill">🧠 Estrategista</div>
+            <div class="agent-pill">🏗️ Negócios</div>
+            <div class="agent-pill">⚡ Operações</div>
+            <div class="agent-pill">💰 Financeiro</div>
+            <div class="agent-pill">🛡️ Auditor</div>
+            <div class="agent-pill">🧭 Sapiens</div>
+        </div>
+    </div>
+
+    <div id="techAlert" style="display: none; padding: 1rem 2rem;">
+        <div
+            style="background: rgba(239, 68, 68, 0.1); border: 1px solid #ef4444; border-radius: 12px; padding: 1rem; display: flex; align-items: center; justify-content: space-between;">
+            <div style="display: flex; align-items: center; gap: 1rem;">
+                <span style="font-size: 20px;">⚠️</span>
+                <div>
+                    <strong style="color: #ef4444; font-size: 0.9rem;">Erro Técnico Escalonado</strong>
+                    <p id="techAlertMsg" style="margin: 0; font-size: 0.8rem; color: var(--text-secondary);"></p>
+                </div>
+            </div>
+            <div id="techAlertActions" style="display: flex; gap: 0.5rem;">
+                <!-- Botões dinâmicos -->
+                <button id="btnApprove" onclick="handleAction('approve')" class="btn btn-primary"
+                    style="display: none; font-size: 0.75rem; padding: 0.5rem 1rem; background: #10b981; border: none;">Aprovar
+                    Reparo</button>
+                <button id="btnRollback" onclick="handleAction('rollback')" class="btn btn-secondary"
+                    style="display: none; font-size: 0.75rem; padding: 0.5rem 1rem;">Reverter (Rollback)</button>
+                <span id="txtChecking" style="font-size: 0.75rem; color: var(--text-tertiary);">Analisando...</span>
+            </div>
+        </div>
+    </div>
+
+    <div class="chat-messages" id="chatMessages">
+        <div class="message assistant">
+            <div class="message-info">
+                <span>Líder (Supervisor)</span>
+                <span class="agent-badge">Online</span>
+            </div>
+            <div class="message-bubble">
+                Olá! Eu sou o Líder do Board de IA do Gestão Versus. Estou aqui com nosso time de especialistas para
+                ajudar você a escalar seu negócio. Como podemos ajudar hoje?
+            </div>
+        </div>
+    </div>
+
+    <div class="chat-input-area">
+        <form id="chatForm" onsubmit="sendMessage(event)">
+            <div class="input-wrapper">
+                <textarea id="userInput" class="chat-input"
+                    placeholder="Digite sua mensagem aqui... Use Shift+Enter para quebrar linha." rows="1"
+                    onkeydown="if(event.keyCode===13 && !event.shiftKey){ event.preventDefault(); sendMessage(event); }"></textarea>
+                <button type="submit" id="sendBtn" class="send-btn">
+                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"
+                        stroke-linecap="round" stroke-linejoin="round">
+                        <line x1="22" y1="2" x2="11" y2="13"></line>
+                        <polygon points="22 2 15 22 11 13 2 9 22 2"></polygon>
+                    </svg>
+                </button>
+            </div>
+        </form>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+{{ super() }}
+<script>
+    const chatMessages = document.getElementById('chatMessages');
+    const chatForm = document.getElementById('chatForm');
+    const userInput = document.getElementById('userInput');
+    const sendBtn = document.getElementById('sendBtn');
+
+    let history = [];
+
+    async function loadHistory() {
+        try {
+            const response = await fetch('/api/agents/history');
+            const data = await response.json();
+            if (data.success && data.history.length > 0) {
+                // Limpa o chat inicial (exceto a primeira mensagem de boas-vindas se quiser manter)
+                chatMessages.innerHTML = '';
+                data.history.forEach(msg => {
+                    const role = msg.direction === 'inbound' ? 'user' : 'assistant';
+                    const agent = msg.metadata ? msg.metadata.agent : null;
+                    addMessage(role, msg.content, agent, false); // false para não duplicar no array local 'history'
+                });
+            }
+        } catch (e) {
+            console.error('Erro ao carregar histórico:', e);
+        }
+    }
+
+    function addMessage(role, content, agent = null, addToHistory = true) {
+        const messageDiv = document.createElement('div');
+        messageDiv.className = `message ${role}`;
+
+        let infoHtml = '';
+        if (role === 'assistant') {
+            const agentName = agent ? formatAgentName(agent) : 'Líder (Supervisor)';
+            infoHtml = `
+                <div class="message-info">
+                    <span>${agentName}</span>
+                    <span class="agent-badge">Especialista</span>
+                </div>
+            `;
+        } else {
+            infoHtml = `<div class="message-info" style="align-self: flex-end;">Você</div>`;
+        }
+
+        const bubbleDiv = document.createElement('div');
+        bubbleDiv.className = 'message-bubble';
+
+        if (role === 'assistant') {
+            bubbleDiv.innerHTML = marked.parse(content);
+        } else {
+            bubbleDiv.textContent = content;
+        }
+
+        messageDiv.innerHTML = infoHtml;
+        messageDiv.appendChild(bubbleDiv);
+        chatMessages.appendChild(messageDiv);
+
+        chatMessages.scrollTop = chatMessages.scrollHeight;
+
+        if (addToHistory) {
+            history.push({ role, content });
+            if (history.length > 20) history.shift();
+        }
+    }
+
+    // Inicialização
+    document.addEventListener('DOMContentLoaded', () => {
+        loadHistory();
+        checkActions();
+
+        // Polling de 10 segundos para ações do sistema
+        setInterval(checkActions, 10000);
+    });
+
+    function formatAgentName(id) {
+        const names = {
+            'strategist': '🧠 Agente Estrategista',
+            'business_architect': '🏗️ Agente de Negócios',
+            'operations': '⚡ Agente de Operações',
+            'finance': '💰 Agente Financeiro',
+            'auditor': '🛡️ Agente Auditor',
+            'sapiens': '🧭 Sapiens',
+            'end': 'Líder (Supervisor)'
+        };
+        return names[id] || id;
+    }
+
+    let currentActionId = null;
+
+    async function checkActions() {
+        try {
+            const response = await fetch('/api/agents/actions/pending');
+            const data = await response.json();
+
+            if (data.success && data.actions.length > 0) {
+                const action = data.actions[0];
+                currentActionId = action.id;
+                document.getElementById('techAlert').style.display = 'block';
+
+                const btnApprove = document.getElementById('btnApprove');
+                const btnRollback = document.getElementById('btnRollback');
+                const txtChecking = document.getElementById('txtChecking');
+
+                if (action.status === 'pending') {
+                    document.getElementById('techAlertMsg').textContent = `Detectado: ${action.description}`;
+                    txtChecking.style.display = 'block';
+                    btnApprove.style.display = 'none';
+                } else if (action.status === 'awaiting_approval') {
+                    const proposal = action.payload.proposal;
+                    document.getElementById('techAlert').style.background = 'rgba(16, 185, 129, 0.1)';
+                    document.getElementById('techAlert').querySelector('strong').textContent = 'Solução de Engenharia Pronta';
+                    document.getElementById('techAlert').querySelector('strong').style.color = '#10b981';
+                    document.getElementById('techAlertMsg').textContent = `Proposta: ${proposal.proposed_fix}`;
+
+                    txtChecking.style.display = 'none';
+                    btnApprove.style.display = 'block';
+                    btnRollback.style.display = 'none';
+                }
+            } else {
+                document.getElementById('techAlert').style.display = 'none';
+            }
+        } catch (e) {
+            console.error('Erro ao buscar ações:', e);
+        }
+    }
+
+    async function handleAction(type) {
+        if (!currentActionId) return;
+
+        try {
+            const endpoint = `/api/agents/actions/${type}/${currentActionId}`;
+            const response = await fetch(endpoint, { method: 'POST' });
+            const data = await response.json();
+
+            if (data.success) {
+                alert(data.message);
+                checkActions();
+                // Notifica no chat
+                addMessage('assistant', `🛠️ **SISTEMA:** ${data.message}`);
+            } else {
+                alert('Erro: ' + data.error);
+            }
+        } catch (e) {
+            alert('Erro de conexão ao processar ação.');
+        }
+    }
+
+    async function sendMessage(event) {
+        event.preventDefault();
+        const text = userInput.value.trim();
+        if (!text) return;
+
+        // Limpa input
+        userInput.value = '';
+        userInput.style.height = 'auto';
+
+        // Adiciona mensagem do usuário
+        addMessage('user', text);
+
+        // Mostra indicador de digitação
+        const typingDiv = document.createElement('div');
+        typingDiv.className = 'message assistant';
+        typingDiv.innerHTML = `
+            <div class="message-info"><span>Pensando...</span></div>
+            <div class="message-bubble">
+                <div class="typing"><span></span><span></span><span></span></div>
+            </div>
+        `;
+        chatMessages.appendChild(typingDiv);
+        chatMessages.scrollTop = chatMessages.scrollHeight;
+
+        userInput.disabled = true;
+        sendBtn.disabled = true;
+
+        try {
+            const response = await fetch('/api/agents/chat', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ message: text, history: history.slice(0, -1) })
+            });
+
+            const result = await response.json();
+
+            // Remove typing indicator
+            chatMessages.removeChild(typingDiv);
+
+            if (result.success) {
+                addMessage('assistant', result.response, result.agent);
+            } else {
+                addMessage('assistant', '⚠️ Desculpe, tive um erro ao processar sua solicitação: ' + result.error);
+            }
+        } catch (error) {
+            chatMessages.removeChild(typingDiv);
+            addMessage('assistant', '⚠️ Erro de conexão com o servidor.');
+        } finally {
+            userInput.disabled = false;
+            sendBtn.disabled = false;
+            userInput.focus();
+        }
+    }
+
+    // Auto-resize textarea
+    userInput.addEventListener('input', function () {
+        this.style.height = 'auto';
+        this.style.height = (this.scrollHeight) + 'px';
+    });
+</script>
+{% endblock %}

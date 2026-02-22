@@ -1,0 +1,1498 @@
+{% extends "base.html" %}
+{% set page_code = '015' %}
+{% block title %}Gerenciar Usuários - Sistema Versus{% endblock %}
+
+{% block extra_head %}
+{{ super() }}
+<style>
+    .users-container {
+        max-width: 1200px;
+        margin: 2rem auto;
+        padding: 0 1rem;
+    }
+
+    .page-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        margin-bottom: 2rem;
+        padding-bottom: 1rem;
+        border-bottom: 2px solid #e0e0e0;
+    }
+
+    .page-header h1 {
+        margin: 0;
+        color: #2c3e50;
+        font-size: 1.2rem;
+        /* Reduzido 40% */
+    }
+
+    .page-header-left {
+        display: flex;
+        flex-direction: column;
+        align-items: flex-start;
+        gap: 0.75rem;
+    }
+
+    .btn-primary {
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%) !important;
+        color: white !important;
+        padding: 0.45rem 0.9rem !important;
+        /* Reduzido 40% */
+        border: none !important;
+        border-radius: 6px !important;
+        cursor: pointer !important;
+        font-weight: 600 !important;
+        font-size: 0.75rem !important;
+        /* Reduzido 40% */
+        text-decoration: none !important;
+        display: inline-flex !important;
+        align-items: center !important;
+        gap: 0.3rem !important;
+        transition: transform 0.2s, box-shadow 0.2s !important;
+        box-shadow: 0 4px 12px rgba(102, 126, 234, 0.3) !important;
+    }
+
+    .btn-primary:hover {
+        transform: translateY(-2px) !important;
+        box-shadow: 0 6px 20px rgba(102, 126, 234, 0.5) !important;
+        color: white !important;
+        text-decoration: none !important;
+    }
+
+    .btn-back-config {
+        background: rgba(44, 62, 80, 0.08) !important;
+        color: #2c3e50 !important;
+        padding: 0.33rem 0.75rem !important;
+        /* Reduzido 40% */
+        border-radius: 6px !important;
+        border: 1px solid rgba(44, 62, 80, 0.2) !important;
+        display: inline-flex !important;
+        align-items: center !important;
+        gap: 0.3rem !important;
+        font-weight: 600 !important;
+        font-size: 0.75rem !important;
+        /* Reduzido 40% */
+        text-decoration: none !important;
+        transition: all 0.2s !important;
+        box-shadow: 0 4px 12px rgba(44, 62, 80, 0.08) !important;
+    }
+
+    .btn-back-config:hover {
+        background: rgba(44, 62, 80, 0.16) !important;
+        color: #2c3e50 !important;
+        text-decoration: none !important;
+        transform: translateY(-1px);
+        box-shadow: 0 6px 16px rgba(44, 62, 80, 0.18) !important;
+    }
+
+    .users-table {
+        background: white;
+        border-radius: 12px;
+        box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+        overflow: hidden;
+    }
+
+    .table {
+        margin-bottom: 0;
+    }
+
+    .table thead {
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        color: white;
+    }
+
+    .table thead th {
+        border: none;
+        padding: 0.6rem;
+        /* Reduzido 40% */
+        font-weight: 600;
+        font-size: 0.75rem;
+        /* Reduzido 40% */
+    }
+
+    .table tbody tr {
+        transition: background-color 0.2s;
+    }
+
+    .table tbody tr:hover {
+        background-color: #f8f9fa;
+    }
+
+    .table tbody td {
+        padding: 0.6rem;
+        /* Reduzido 40% */
+        vertical-align: middle;
+        font-size: 0.75rem;
+        /* Reduzido 40% */
+    }
+
+    .badge {
+        padding: 0.24rem 0.48rem;
+        /* Reduzido 40% */
+        border-radius: 12px;
+        font-size: 0.51rem;
+        /* Reduzido 40% */
+        font-weight: 600;
+    }
+
+    .badge-admin {
+        background-color: #e74c3c;
+        color: white;
+    }
+
+    .badge-collaborator {
+        background-color: #3498db;
+        color: white;
+    }
+
+    .badge-client {
+        background-color: #95a5a6;
+        color: white;
+    }
+
+    .badge-active {
+        background-color: #2ecc71;
+        color: white;
+    }
+
+    .badge-inactive {
+        background-color: #e74c3c;
+        color: white;
+    }
+
+    .companies-cell {
+        max-width: none;
+        white-space: nowrap;
+    }
+
+    .companies-info {
+        display: flex;
+        align-items: center;
+        gap: 0.5rem;
+        flex-wrap: nowrap;
+        overflow: hidden;
+    }
+
+    .companies-names {
+        color: #7f8c8d;
+        font-size: 0.75rem;
+        overflow: hidden;
+        text-overflow: ellipsis;
+        white-space: nowrap;
+        flex: 1;
+        min-width: 0;
+    }
+
+    .linked-company-item {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        padding: 0.45rem;
+        /* Reduzido 40% */
+        margin-bottom: 0.3rem;
+        /* Reduzido 40% */
+        background: #f8f9fa;
+        border-radius: 4px;
+        border: 1px solid #e0e0e0;
+    }
+
+    .linked-company-item:last-child {
+        margin-bottom: 0;
+    }
+
+    .linked-company-item:hover {
+        background: #f0f0f0;
+    }
+
+    .linked-company-name {
+        flex: 1;
+        font-weight: 500;
+        color: #2c3e50;
+        font-size: 0.75rem;
+        /* Reduzido 40% */
+    }
+
+    .btn-unlink-modal {
+        background: #e74c3c;
+        color: white;
+        border: none;
+        padding: 0.24rem 0.48rem;
+        /* Reduzido 40% */
+        border-radius: 4px;
+        font-size: 0.48rem;
+        /* Reduzido 40% */
+        cursor: pointer;
+        transition: background 0.2s;
+        display: inline-flex;
+        align-items: center;
+        gap: 0.2rem;
+    }
+
+    .btn-unlink-modal:hover {
+        background: #c0392b;
+    }
+
+    .empty-linked-companies {
+        color: #95a5a6;
+        text-align: center;
+        padding: 1.5rem;
+        font-style: italic;
+    }
+
+    /* Responsivo para mobile */
+    @media (max-width: 768px) {
+        .users-container {
+            padding: 0 0.5rem 0.5rem 0.5rem;
+            /* Adicionado padding-bottom mínimo */
+            margin: 0.5rem auto 0 auto;
+            /* Removido margin-bottom */
+        }
+
+        .page-header {
+            flex-direction: column;
+            align-items: flex-start;
+            gap: 0.5rem;
+            margin-bottom: 0.75rem;
+            /* Reduzido */
+            padding-bottom: 0.5rem;
+            /* Reduzido */
+        }
+
+        .page-header h1 {
+            font-size: 1rem;
+        }
+
+        .users-table {
+            overflow-x: auto;
+            -webkit-overflow-scrolling: touch;
+        }
+
+        .table {
+            min-width: 600px;
+        }
+
+        .table thead th {
+            padding: 0.5rem 0.4rem;
+            font-size: 0.65rem;
+        }
+
+        .table tbody td {
+            padding: 0.5rem 0.4rem;
+            font-size: 0.65rem;
+        }
+
+        .companies-cell {
+            max-width: 100%;
+        }
+
+        .companies-info {
+            flex-wrap: wrap;
+            gap: 0.3rem;
+        }
+
+        .companies-names {
+            font-size: 0.65rem;
+            width: 100%;
+            flex: 0 0 100%;
+        }
+
+        .badge {
+            font-size: 0.45rem;
+            padding: 0.2rem 0.35rem;
+        }
+
+        .btn-sm {
+            padding: 0.2rem 0.4rem;
+            font-size: 0.45rem;
+        }
+
+        .users-container .modal-content {
+            width: 95%;
+            padding: 1rem;
+            max-height: 90vh;
+        }
+
+        .empty-state {
+            padding: 1rem;
+            /* Reduzido para mobile */
+        }
+
+        .users-table {
+            margin-bottom: 0.5rem;
+            /* Reduzido */
+        }
+
+        .form-group {
+            margin-bottom: 0.9rem;
+            /* Reduzido para mobile */
+        }
+
+        #linked-companies-section {
+            margin-bottom: 1rem !important;
+            /* Reduzido para mobile */
+        }
+
+        .users-container .modal-header h2 {
+            font-size: 0.8rem;
+        }
+
+        .form-control {
+            font-size: 0.55rem;
+            padding: 0.4rem;
+        }
+
+        .form-group label {
+            font-size: 0.65rem;
+        }
+
+        .desktop-hint {
+            display: none;
+        }
+
+        .mobile-hint {
+            display: inline;
+            font-size: 0.55rem;
+        }
+
+        #link_company_ids {
+            min-height: 120px;
+            font-size: 0.55rem;
+        }
+
+        .linked-company-item {
+            flex-direction: column;
+            align-items: flex-start;
+            gap: 0.5rem;
+        }
+
+        .btn-unlink-modal {
+            width: 100%;
+            justify-content: center;
+        }
+    }
+
+    @media (max-width: 480px) {
+        .users-container {
+            margin: 0.25rem auto 0 auto;
+            /* Removido margin-bottom */
+            padding: 0 0.4rem 0.25rem 0.4rem;
+            /* Adicionado padding-bottom mínimo */
+        }
+
+        .page-header {
+            margin-bottom: 0.5rem;
+            /* Reduzido */
+            padding-bottom: 0.4rem;
+            /* Reduzido */
+        }
+
+        .page-header h1 {
+            font-size: 0.9rem;
+        }
+
+        .table {
+            min-width: 500px;
+        }
+
+        .table thead th,
+        .table tbody td {
+            padding: 0.4rem 0.3rem;
+            font-size: 0.6rem;
+        }
+
+        .users-container .modal-content {
+            width: 98%;
+            padding: 0.8rem;
+        }
+
+        .empty-state {
+            padding: 0.75rem;
+            /* Ainda mais reduzido */
+        }
+
+        .form-group {
+            margin-bottom: 0.75rem;
+            /* Ainda mais reduzido */
+        }
+    }
+
+    @media (min-width: 769px) {
+        .desktop-hint {
+            display: inline;
+        }
+
+        .mobile-hint {
+            display: none;
+        }
+    }
+
+    .user-actions {
+        display: flex;
+        gap: 0.5rem;
+    }
+
+    .btn-sm {
+        padding: 0.24rem 0.48rem;
+        /* Reduzido 40% */
+        font-size: 0.51rem;
+        /* Reduzido 40% */
+        border-radius: 4px;
+        border: none;
+        cursor: pointer;
+        transition: all 0.2s;
+    }
+
+    .btn-info {
+        background-color: #3498db;
+        color: white;
+    }
+
+    .btn-info:hover {
+        background-color: #2980b9;
+    }
+
+    .btn-danger {
+        background-color: #e74c3c;
+        color: white;
+    }
+
+    .btn-danger:hover {
+        background-color: #c0392b;
+    }
+
+    .btn-success {
+        background-color: #2ecc71;
+        color: white;
+    }
+
+    .btn-success:hover {
+        background-color: #27ae60;
+    }
+
+    .btn-warning {
+        background-color: #f39c12;
+        color: white;
+    }
+
+    .btn-warning:hover {
+        background-color: #e67e22;
+    }
+
+    .btn-secondary {
+        background-color: #95a5a6;
+        color: white;
+    }
+
+    .btn-secondary:hover {
+        background-color: #7f8c8d;
+    }
+
+    .empty-state {
+        text-align: center;
+        padding: 1.8rem;
+        /* Reduzido 40% */
+        color: #7f8c8d;
+        font-size: 0.75rem;
+        /* Reduzido 40% */
+    }
+
+    /* Modal Styles */
+    .users-container .modal {
+        display: none;
+        position: fixed;
+        z-index: 1000;
+        left: 0;
+        top: 0;
+        width: 100%;
+        height: 100%;
+        background-color: rgba(0, 0, 0, 0.5);
+        opacity: 0;
+    }
+
+    .users-container .modal.active {
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        opacity: 1;
+        animation: fadeIn 0.3s;
+    }
+
+    .users-container .modal-content {
+        background: white;
+        border-radius: 8px;
+        padding: 1.2rem;
+        /* Reduzido 40% */
+        max-width: 500px;
+        width: 90%;
+        max-height: 80vh;
+        overflow-y: auto;
+        animation: slideUp 0.3s;
+        box-shadow: 0 10px 40px rgba(0, 0, 0, 0.3);
+    }
+
+    .users-container .modal-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        margin-bottom: 0.9rem;
+        /* Reduzido 40% */
+        padding-bottom: 0.6rem;
+        /* Reduzido 40% */
+        border-bottom: 2px solid #e0e0e0;
+    }
+
+    .users-container .modal-header h2 {
+        margin: 0;
+        color: #2c3e50;
+        font-size: 0.9rem;
+        /* Reduzido 40% */
+    }
+
+    .users-container .modal-close {
+        background: none;
+        border: none;
+        font-size: 0.9rem;
+        /* Reduzido 40% */
+        cursor: pointer;
+        color: #7f8c8d;
+        padding: 0;
+        width: 18px;
+        /* Reduzido 40% */
+        height: 18px;
+        /* Reduzido 40% */
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        border-radius: 50%;
+        transition: all 0.2s;
+    }
+
+    .users-container .modal-close:hover {
+        background-color: #f0f0f0;
+        color: #2c3e50;
+    }
+
+    .form-group {
+        margin-bottom: 1.5rem;
+    }
+
+    .form-group label {
+        display: block;
+        margin-bottom: 0.3rem;
+        color: #2c3e50;
+        font-weight: 600;
+        font-size: 0.75rem;
+        /* Reduzido 40% */
+    }
+
+    .form-control {
+        width: 100%;
+        padding: 0.45rem;
+        /* Reduzido 40% */
+        border: 2px solid #e0e0e0;
+        border-radius: 6px;
+        font-size: 0.6rem;
+        /* Reduzido 40% */
+        transition: border-color 0.2s;
+        box-sizing: border-box;
+    }
+
+    .form-control:focus {
+        outline: none;
+        border-color: #667eea;
+    }
+
+    .users-container .modal-actions {
+        display: flex;
+        gap: 1rem;
+        margin-top: 1.2rem;
+        /* Reduzido 40% */
+    }
+
+    @media (max-width: 768px) {
+        .users-container .modal-actions {
+            margin-top: 0.9rem;
+            /* Reduzido para mobile */
+            gap: 0.6rem;
+        }
+    }
+
+    @keyframes fadeIn {
+        from {
+            opacity: 0;
+        }
+
+        to {
+            opacity: 1;
+        }
+    }
+
+    @keyframes slideUp {
+        from {
+            opacity: 0;
+            transform: translateY(20px);
+        }
+
+        to {
+            opacity: 1;
+            transform: translateY(0);
+        }
+    }
+
+    .empty-state i {
+        font-size: 2.4rem;
+        /* Reduzido 40% */
+        margin-bottom: 0.6rem;
+        /* Reduzido 40% */
+        opacity: 0.3;
+    }
+
+    .loading {
+        text-align: center;
+        padding: 2rem;
+    }
+
+    @media (max-width: 768px) {
+        .loading {
+            padding: 1rem;
+        }
+    }
+
+    .spinner-border {
+        width: 3rem;
+        height: 3rem;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="users-container">
+    <div class="page-header">
+        <div class="page-header-left">
+            <h1>👥 Gerenciar Usuários</h1>
+            <a href="{{ url_for('configs.system_settings') }}" class="btn-back-config" data-ref="01">
+                <i class="fas fa-arrow-left"></i> Voltar às Configurações
+            </a>
+        </div>
+        <a href="{{ url_for('auth.register') }}" class="btn-primary" data-ref="02">
+            <i class="fas fa-plus"></i> Novo Usuário
+        </a>
+    </div>
+
+    <div class="users-table">
+        <div id="loading" class="loading">
+            <div class="spinner-border text-primary" role="status">
+                <span class="sr-only">Carregando...</span>
+            </div>
+        </div>
+
+        <div id="users-content" style="display: none;">
+            <table class="table" data-ref="03">
+                <thead>
+                    <tr>
+                        <th>Nome</th>
+                        <th>Email</th>
+                        <th>Perfil</th>
+                        <th>Status</th>
+                        <th>Empresas</th>
+                        <th>Criado em</th>
+                        <th>Ações</th>
+                    </tr>
+                </thead>
+                <tbody id="users-tbody">
+                    <!-- Usuários serão carregados aqui via JavaScript -->
+                </tbody>
+            </table>
+        </div>
+    </div>
+
+    <!-- Modal de Gerenciamento de Empresas -->
+    <div id="linkCompanyModal" class="modal">
+        <div class="modal-content" style="max-width: 600px;">
+            <div class="modal-header">
+                <h2>🏢 Gerenciar Empresas do Usuário</h2>
+                <button class="modal-close" onclick="closeLinkCompanyModal()" data-ref="04">&times;</button>
+            </div>
+            <div id="linkCompanyContent">
+                <input type="hidden" id="link_user_id">
+
+                <!-- Seção: Empresas já vinculadas -->
+                <div class="form-group" id="linked-companies-section" style="margin-bottom: 1.2rem;">
+                    <label style="font-weight: 600; margin-bottom: 0.75rem; display: block;">
+                        <i class="fas fa-check-circle" style="color: #27ae60;"></i> Empresas Vinculadas
+                    </label>
+                    <div id="linked-companies-list"
+                        style="border: 1px solid #e0e0e0; border-radius: 8px; padding: 0.75rem; min-height: 100px; max-height: 200px; overflow-y: auto;">
+                        <p style="color: #95a5a6; text-align: center; padding: 1rem; margin: 0;">
+                            <i class="fas fa-spinner fa-spin"></i> Carregando...
+                        </p>
+                    </div>
+                </div>
+
+                <!-- Seção: Vincular novas empresas -->
+                <div class="form-group">
+                    <label for="link_company_ids" style="font-weight: 600; margin-bottom: 0.75rem; display: block;">
+                        <i class="fas fa-plus-circle" style="color: #3498db;"></i> Vincular Novas Empresas
+                    </label>
+                    <select class="form-control" id="link_company_ids" multiple size="6" data-ref="05"
+                        style="min-height: 90px; font-size: 0.6rem;">
+                        <option value="">Carregando empresas...</option>
+                    </select>
+                    <small style="color: #7f8c8d; display: block; margin-top: 0.3rem; font-size: 0.6rem;">
+                        <i class="fas fa-info-circle"></i>
+                        <span class="desktop-hint">Mantenha Ctrl (ou Cmd no Mac) pressionado para selecionar múltiplas
+                            empresas</span>
+                        <span class="mobile-hint">Toque nas empresas para selecionar múltiplas</span>
+                    </small>
+                </div>
+
+                <div class="modal-actions" style="margin-top: 0.9rem;">
+                    <button type="button" class="btn-sm btn-secondary" onclick="closeLinkCompanyModal()"
+                        style="flex: 1;" data-ref="06">
+                        Fechar
+                    </button>
+                    <button type="button" class="btn-sm btn-primary" onclick="linkSelectedCompanies()" style="flex: 1;"
+                        data-ref="07">
+                        <i class="fas fa-link"></i> Vincular Selecionadas
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Modal de Edição -->
+    <div id="editModal" class="modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h2>✏️ Editar Usuário</h2>
+                <button class="modal-close" onclick="closeEditModal()" data-ref="08">&times;</button>
+            </div>
+            <form id="editForm">
+                <input type="hidden" id="edit_user_id">
+
+                <div class="form-group">
+                    <label for="edit_name">Nome Completo</label>
+                    <input type="text" class="form-control" id="edit_name" required data-ref="09">
+                </div>
+
+                <div class="form-group">
+                    <label for="edit_email">Email</label>
+                    <input type="email" class="form-control" id="edit_email" disabled data-ref="10">
+                </div>
+
+                <div class="form-group">
+                    <label for="edit_role">Perfil de Acesso</label>
+                    <select class="form-control" id="edit_role" required data-ref="11">
+                        <option value="collaborator">Colaborador</option>
+                        <option value="client">Cliente</option>
+                        <option value="admin">Administrador</option>
+                    </select>
+                </div>
+
+                <div class="form-group">
+                    <label for="edit_is_active">Status</label>
+                    <select class="form-control" id="edit_is_active" required data-ref="12">
+                        <option value="true">Ativo</option>
+                        <option value="false">Inativo</option>
+                    </select>
+                </div>
+
+                <div class="modal-actions">
+                    <button type="button" class="btn-sm btn-secondary" onclick="closeEditModal()" style="flex: 1;"
+                        data-ref="13">
+                        Cancelar
+                    </button>
+                    <button type="submit" class="btn-sm btn-primary" style="flex: 1;" data-ref="14">
+                        <i class="fas fa-save"></i> Salvar
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+{% endblock %}
+
+{% block scripts %}
+{{ super() }}
+<script>
+    // Debug: Log para verificar se o script está carregando
+    console.log('✅ Script de usuários carregado');
+
+    document.addEventListener('DOMContentLoaded', function () {
+        // Verificar se usuário é admin antes de carregar
+        checkAdminAccess();
+    });
+
+    async function checkAdminAccess() {
+        try {
+            const response = await fetch('/auth/current-user');
+            const data = await response.json();
+
+            if (data.success && data.user && data.user.role === 'admin') {
+                console.log('✅ DOM carregado, iniciando loadUsers()');
+                loadUsers();
+            } else {
+                // Não é admin, redirecionar
+                alert('Acesso negado. Apenas administradores podem acessar esta página.');
+                window.location.href = '/main';
+            }
+        } catch (error) {
+            console.error('Erro ao verificar permissões:', error);
+            alert('Erro ao verificar permissões. Redirecionando...');
+            window.location.href = '/main';
+        }
+    }
+
+    let currentPage = 1;
+    let totalPages = 1;
+
+    async function loadUsers(page = 1) {
+        try {
+            console.log('📡 Fazendo fetch para /auth/users...', `page=${page}`);
+            const response = await fetch(`/auth/users?page=${page}&per_page=20`);
+            console.log('📡 Response recebido:', response.status, response.url);
+
+            // Se retornou 401 ou redirecionamento para login, redirecionar
+            if (response.status === 401 || response.redirected || !response.ok) {
+                console.warn('⚠️ Não autenticado ou erro:', response.status);
+                if (response.url && response.url.includes('/login')) {
+                    console.log('🔄 Redirecionando para login...');
+                    window.location.href = '/login';
+                    return;
+                }
+            }
+
+            // Verificar se a resposta é JSON
+            const contentType = response.headers.get('content-type');
+            console.log('📝 Content-Type:', contentType);
+            if (!contentType || !contentType.includes('application/json')) {
+                // Provavelmente foi redirecionado para login (HTML)
+                console.warn('⚠️ Resposta não é JSON, redirecionando para login');
+                window.location.href = '/login';
+                return;
+            }
+
+            console.log('📦 Parseando JSON...');
+            const data = await response.json();
+            console.log('📦 Dados recebidos:', data);
+
+            if (data.success) {
+                console.log('✅ Sucesso! Exibindo', data.users.length, 'usuários');
+                currentPage = data.pagination.page;
+                totalPages = data.pagination.pages;
+                usersList = data.users; // Salvar para uso no modal
+                displayUsers(data.users);
+                updatePagination(data.pagination);
+            } else {
+                console.error('❌ Erro na resposta:', data.message);
+                // Se erro de autenticação, redirecionar
+                if (response.status === 403 || data.message.includes('Acesso negado')) {
+                    alert('Você não tem permissão para acessar esta página.');
+                    window.location.href = '/main';
+                } else {
+                    showError(data.message);
+                }
+            }
+        } catch (error) {
+            console.error('❌ Erro ao carregar usuários:', error);
+            // Se erro de parsing JSON, provavelmente é HTML de login
+            if (error.message && error.message.includes('JSON')) {
+                console.log('🔄 Erro de JSON, redirecionando para login');
+                window.location.href = '/login';
+            } else {
+                showError('Erro ao carregar usuários. Tente novamente.');
+            }
+        }
+    }
+
+    function displayUsers(users) {
+        const loading = document.getElementById('loading');
+        const content = document.getElementById('users-content');
+        const tbody = document.getElementById('users-tbody');
+
+        loading.style.display = 'none';
+        content.style.display = 'block';
+
+        if (users.length === 0) {
+            tbody.innerHTML = `
+            <tr>
+                <td colspan="7" class="empty-state">
+                    <i class="fas fa-users"></i>
+                    <p>Nenhum usuário cadastrado</p>
+                </td>
+            </tr>
+        `;
+            return;
+        }
+
+        tbody.innerHTML = users.map(user => {
+            const companiesCount = user.companies ? user.companies.length : 0;
+
+            return `
+        <tr>
+            <td><strong>${escapeHtml(user.name)}</strong></td>
+            <td>${escapeHtml(user.email)}</td>
+            <td>
+                <span class="badge badge-${user.role}">
+                    ${getRoleName(user.role)}
+                </span>
+            </td>
+            <td>
+                <span class="badge badge-${user.is_active ? 'active' : 'inactive'}">
+                    ${user.is_active ? 'Ativo' : 'Inativo'}
+                </span>
+            </td>
+            <td class="companies-cell">
+                <div class="companies-info">
+                    <span class="companies-names">
+                        ${companiesCount > 0
+                    ? `${companiesCount} empresa${companiesCount !== 1 ? 's' : ''}`
+                    : 'Nenhuma empresa'
+                }
+                    </span>
+                    <button class="btn-sm btn-info" onclick="openLinkCompanyModal(${user.id})" title="Gerenciar empresas" data-ref="15">
+                        <i class="fas fa-building"></i> Gerenciar
+                    </button>
+                </div>
+            </td>
+            <td>${formatDate(user.created_at)}</td>
+            <td>
+                <div class="user-actions">
+                    <button class="btn-sm btn-info" onclick="openEditModal(${user.id})" title="Editar usuário" data-ref="16">
+                        <i class="fas fa-edit"></i> Editar
+                    </button>
+                    ${user.is_active ?
+                    `<button class="btn-sm btn-warning" onclick="toggleUserStatus(${user.id}, false)" title="Desativar usuário" data-ref="17">
+                            <i class="fas fa-ban"></i> Desativar
+                        </button>` :
+                    `<button class="btn-sm btn-success" onclick="toggleUserStatus(${user.id}, true)" title="Ativar usuário" data-ref="18">
+                            <i class="fas fa-check"></i> Ativar
+                        </button>`
+                }
+                    <button class="btn-sm btn-danger" onclick="deleteUser(${user.id})" title="Excluir usuário" data-ref="19">
+                        <i class="fas fa-trash"></i> Excluir
+                    </button>
+                </div>
+            </td>
+        </tr>
+    `;
+        }).join('');
+    }
+
+    function getRoleName(role) {
+        const roles = {
+            'admin': 'Administrador',
+            'collaborator': 'Colaborador',
+            'consultant': 'Colaborador',  // Fallback para dados legados
+            'client': 'Cliente'
+        };
+        return roles[role] || role;
+    }
+
+    function formatDate(dateString) {
+        if (!dateString) return '-';
+        const date = new Date(dateString);
+        return date.toLocaleDateString('pt-BR', {
+            day: '2-digit',
+            month: '2-digit',
+            year: 'numeric',
+            hour: '2-digit',
+            minute: '2-digit'
+        });
+    }
+
+    function escapeHtml(text) {
+        const div = document.createElement('div');
+        div.textContent = text;
+        return div.innerHTML;
+    }
+
+    async function toggleUserStatus(userId, activate) {
+        const action = activate ? 'ativar' : 'desativar';
+
+        if (!confirm(`Tem certeza que deseja ${action} este usuário?`)) {
+            return;
+        }
+
+        try {
+            const response = await fetch(`/auth/users/${userId}/status`, {
+                method: 'PUT',
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify({ is_active: activate })
+            });
+
+            const data = await response.json();
+
+            if (data.success) {
+                alert(`Usuário ${action}do com sucesso!`);
+                loadUsers(); // Recarrega a lista
+            } else {
+                alert(data.message || `Erro ao ${action} usuário`);
+            }
+        } catch (error) {
+            console.error('Erro:', error);
+            alert(`Erro ao ${action} usuário. Tente novamente.`);
+        }
+    }
+
+    function showError(message) {
+        const loading = document.getElementById('loading');
+        const content = document.getElementById('users-content');
+
+        loading.style.display = 'none';
+        content.style.display = 'block';
+
+        document.getElementById('users-tbody').innerHTML = `
+        <tr>
+            <td colspan="6" class="empty-state">
+                <i class="fas fa-exclamation-triangle"></i>
+                <p>${message}</p>
+            </td>
+        </tr>
+    `;
+    }
+
+    // Modal functions
+    async function openEditModal(userId) {
+        try {
+            const response = await fetch(`/auth/users/${userId}`);
+            const data = await response.json();
+
+            if (data.success) {
+                const user = data.user;
+                document.getElementById('edit_user_id').value = user.id;
+                document.getElementById('edit_name').value = user.name;
+                document.getElementById('edit_email').value = user.email;
+                document.getElementById('edit_role').value = user.role;
+                document.getElementById('edit_is_active').value = user.is_active ? 'true' : 'false';
+
+                const modal = document.getElementById('editModal');
+                modal.classList.add('active', 'show');
+            } else {
+                alert(data.message || 'Erro ao carregar usuário');
+            }
+        } catch (error) {
+            console.error('Erro:', error);
+            alert('Erro ao carregar usuário. Tente novamente.');
+        }
+    }
+
+    function closeEditModal() {
+        const modal = document.getElementById('editModal');
+        modal.classList.remove('active', 'show');
+    }
+
+    // Close modal on background click
+    document.addEventListener('DOMContentLoaded', function () {
+        const modal = document.getElementById('editModal');
+        if (modal) {
+            modal.addEventListener('click', function (e) {
+                if (e.target === modal) {
+                    closeEditModal();
+                }
+            });
+        }
+    });
+
+    // Handle edit form submission
+    document.addEventListener('DOMContentLoaded', function () {
+        const editForm = document.getElementById('editForm');
+        if (editForm) {
+            editForm.addEventListener('submit', async function (e) {
+                e.preventDefault();
+
+                const userId = document.getElementById('edit_user_id').value;
+                const name = document.getElementById('edit_name').value.trim();
+                const role = document.getElementById('edit_role').value;
+                const isActive = document.getElementById('edit_is_active').value === 'true';
+
+                if (!name) {
+                    alert('Por favor, preencha o nome do usuário');
+                    return;
+                }
+
+                try {
+                    const response = await fetch(`/auth/users/${userId}`, {
+                        method: 'PUT',
+                        headers: {
+                            'Content-Type': 'application/json'
+                        },
+                        body: JSON.stringify({
+                            name: name,
+                            role: role,
+                            is_active: isActive
+                        })
+                    });
+
+                    const data = await response.json();
+
+                    if (data.success) {
+                        if (window.showMessage) {
+                            window.showMessage('Usuário atualizado com sucesso!', 'success');
+                        } else {
+                            alert('Usuário atualizado com sucesso!');
+                        }
+                        closeEditModal();
+                        loadUsers(currentPage); // Recarrega a lista
+                    } else {
+                        alert(data.message || 'Erro ao atualizar usuário');
+                    }
+                } catch (error) {
+                    console.error('Erro:', error);
+                    alert('Erro ao atualizar usuário. Tente novamente.');
+                }
+            });
+        }
+    });
+
+    async function deleteUser(userId) {
+        if (!confirm('Tem certeza que deseja excluir este usuário?\n\nEsta ação irá desativar permanentemente o usuário.')) {
+            return;
+        }
+
+        try {
+            const response = await fetch(`/auth/users/${userId}`, {
+                method: 'DELETE',
+                headers: {
+                    'Content-Type': 'application/json'
+                }
+            });
+
+            const data = await response.json();
+
+            if (data.success) {
+                if (window.showMessage) {
+                    window.showMessage('Usuário excluído com sucesso!', 'success');
+                } else {
+                    alert('Usuário excluído com sucesso!');
+                }
+                loadUsers(); // Recarrega a lista
+            } else {
+                alert(data.message || 'Erro ao excluir usuário');
+            }
+        } catch (error) {
+            console.error('Erro:', error);
+            alert('Erro ao excluir usuário. Tente novamente.');
+        }
+    }
+
+    // Paginação
+    function updatePagination(pagination) {
+        // Detectar se é mobile
+        const isMobile = window.innerWidth <= 768;
+        const paginationMargin = isMobile ? '6px' : '12px';
+        const paginationPadding = isMobile ? '6px' : '12px';
+        let paginationHtml = `<div style="display: flex; justify-content: center; align-items: center; gap: 6px; margin-top: ${paginationMargin}; padding: ${paginationPadding}; font-size: 0.75rem;">`;
+
+        if (pagination.has_prev) {
+            paginationHtml += `<button class="btn-sm btn-secondary" onclick="loadUsers(${pagination.page - 1})" data-ref="20">
+            <i class="fas fa-chevron-left"></i> Anterior
+        </button>`;
+        }
+
+        paginationHtml += `<span style="padding: 0 9px; font-size: 0.75rem;">Página ${pagination.page} de ${pagination.pages} (${pagination.total} total)</span>`;
+
+        if (pagination.has_next) {
+            paginationHtml += `<button class="btn-sm btn-secondary" onclick="loadUsers(${pagination.page + 1})" data-ref="21">
+            Próxima <i class="fas fa-chevron-right"></i>
+        </button>`;
+        }
+
+        paginationHtml += '</div>';
+
+        // Remover paginação anterior se existir
+        const oldPagination = document.getElementById('pagination');
+        if (oldPagination) {
+            oldPagination.remove();
+        }
+
+        // Adicionar nova paginação
+        const paginationDiv = document.createElement('div');
+        paginationDiv.id = 'pagination';
+        paginationDiv.innerHTML = paginationHtml;
+        document.querySelector('.users-table').appendChild(paginationDiv);
+    }
+
+    // Modal de Vincular Empresa
+    let companiesList = [];
+
+    async function loadCompanies() {
+        try {
+            const response = await fetch('/auth/users/companies');
+            const data = await response.json();
+
+            if (data.success) {
+                companiesList = data.companies;
+                const select = document.getElementById('link_company_ids');
+                select.innerHTML = '';
+                data.companies.forEach(company => {
+                    const option = document.createElement('option');
+                    option.value = company.id;
+                    option.textContent = company.name || company.legal_name;
+                    select.appendChild(option);
+                });
+            }
+        } catch (error) {
+            console.error('Erro ao carregar empresas:', error);
+        }
+    }
+
+    async function openLinkCompanyModal(userId) {
+        document.getElementById('link_user_id').value = userId;
+
+        // Carregar empresas disponíveis
+        await loadCompanies();
+
+        // Carregar e exibir empresas já vinculadas
+        await loadLinkedCompanies(userId);
+
+        // Marcar empresas já vinculadas como desabilitadas no select
+        const user = usersList.find(u => u.id === userId);
+        const select = document.getElementById('link_company_ids');
+        if (user && user.companies && select) {
+            const linkedCompanyIds = user.companies.map(c => c.id);
+            Array.from(select.options).forEach(option => {
+                const companyId = parseInt(option.value);
+                if (!isNaN(companyId) && linkedCompanyIds.includes(companyId)) {
+                    option.disabled = true;
+                    if (!option.textContent.includes('(já vinculada)')) {
+                        option.textContent += ' (já vinculada)';
+                    }
+                } else {
+                    option.disabled = false;
+                    option.textContent = option.textContent.replace(' (já vinculada)', '');
+                }
+            });
+        }
+
+        // Limpar seleções no select
+        if (select) {
+            Array.from(select.options).forEach(option => {
+                option.selected = false;
+            });
+        }
+
+        const modal = document.getElementById('linkCompanyModal');
+        modal.classList.add('active', 'show');
+    }
+
+    async function loadLinkedCompanies(userId) {
+        const listContainer = document.getElementById('linked-companies-list');
+        if (!listContainer) return;
+
+        try {
+            const user = usersList.find(u => u.id === userId);
+            if (!user || !user.companies || user.companies.length === 0) {
+                listContainer.innerHTML = `
+                <div class="empty-linked-companies">
+                    <i class="fas fa-building" style="font-size: 2rem; margin-bottom: 0.5rem; opacity: 0.3;"></i>
+                    <p>Nenhuma empresa vinculada</p>
+                </div>
+            `;
+                return;
+            }
+
+            listContainer.innerHTML = user.companies.map(company => `
+            <div class="linked-company-item">
+                <span class="linked-company-name">
+                    <i class="fas fa-building" style="color: #3498db; margin-right: 0.5rem;"></i>
+                    ${escapeHtml(company.name || company.legal_name || 'Empresa sem nome')}
+                </span>
+                <button class="btn-unlink-modal" onclick="unlinkCompanyFromModal(${userId}, ${company.employee_id})" title="Remover vínculo">
+                    <i class="fas fa-unlink"></i> Remover
+                </button>
+            </div>
+        `).join('');
+        } catch (error) {
+            console.error('Erro ao carregar empresas vinculadas:', error);
+            listContainer.innerHTML = `
+            <div class="empty-linked-companies">
+                <p style="color: #e74c3c;">Erro ao carregar empresas vinculadas</p>
+            </div>
+        `;
+        }
+    }
+
+    let usersList = [];
+
+    function closeLinkCompanyModal() {
+        const modal = document.getElementById('linkCompanyModal');
+        modal.classList.remove('active', 'show');
+
+        // Limpar seleções e reabilitar todas as opções
+        const select = document.getElementById('link_company_ids');
+        if (select) {
+            Array.from(select.options).forEach(option => {
+                option.selected = false;
+                option.disabled = false;
+                // Remover texto "(já vinculada)" se existir
+                if (option.textContent.includes('(já vinculada)')) {
+                    option.textContent = option.textContent.replace(' (já vinculada)', '');
+                }
+            });
+        }
+
+        // Limpar lista de empresas vinculadas
+        const listContainer = document.getElementById('linked-companies-list');
+        if (listContainer) {
+            listContainer.innerHTML = '<p style="color: #95a5a6; text-align: center; padding: 0.6rem; margin: 0; font-size: 0.75rem;"><i class="fas fa-spinner fa-spin"></i> Carregando...</p>';
+        }
+    }
+
+    // Função para vincular empresas selecionadas
+    async function linkSelectedCompanies() {
+        const userId = document.getElementById('link_user_id').value;
+        if (!userId) {
+            alert('Erro: ID do usuário não encontrado');
+            return;
+        }
+
+        const select = document.getElementById('link_company_ids');
+        if (!select) {
+            alert('Erro: Select de empresas não encontrado');
+            return;
+        }
+
+        const selectedOptions = Array.from(select.selectedOptions);
+        const companyIds = selectedOptions
+            .filter(option => !option.disabled)
+            .map(option => parseInt(option.value))
+            .filter(id => !isNaN(id));
+
+        if (companyIds.length === 0) {
+            alert('Por favor, selecione pelo menos uma empresa');
+            return;
+        }
+
+        try {
+            const response = await fetch(`/auth/users/${userId}/link-companies`, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify({
+                    company_ids: companyIds
+                })
+            });
+
+            const data = await response.json();
+
+            if (data.success) {
+                const count = data.linked_count || companyIds.length;
+                let message = `Usuário vinculado a ${count} empresa(s) com sucesso!`;
+                if (data.skipped_count > 0) {
+                    message += ` (${data.skipped_count} já estava(m) vinculada(s))`;
+                }
+                alert(message);
+
+                // Recarregar lista de usuários e empresas vinculadas
+                await loadUsers(currentPage);
+                await loadLinkedCompanies(userId);
+
+                // Limpar seleções
+                Array.from(select.options).forEach(option => {
+                    option.selected = false;
+                });
+
+                // Atualizar lista de empresas disponíveis (marcar novas como desabilitadas)
+                const user = usersList.find(u => u.id === parseInt(userId));
+                if (user && user.companies) {
+                    const linkedCompanyIds = user.companies.map(c => c.id);
+                    Array.from(select.options).forEach(option => {
+                        const companyId = parseInt(option.value);
+                        if (!isNaN(companyId) && linkedCompanyIds.includes(companyId)) {
+                            option.disabled = true;
+                            if (!option.textContent.includes('(já vinculada)')) {
+                                option.textContent += ' (já vinculada)';
+                            }
+                        }
+                    });
+                }
+            } else {
+                console.error('Erro na resposta:', data);
+                alert(data.message || 'Erro ao vincular usuário');
+            }
+        } catch (error) {
+            console.error('Erro na requisição:', error);
+            alert('Erro ao vincular usuário. Verifique o console para mais detalhes.');
+        }
+    }
+
+    // Função para desvincular empresa do modal
+    async function unlinkCompanyFromModal(userId, employeeId) {
+        if (!confirm('Tem certeza que deseja remover o vínculo com esta empresa?')) {
+            return;
+        }
+
+        try {
+            const response = await fetch(`/auth/users/${userId}/unlink-company/${employeeId}`, {
+                method: 'DELETE',
+                headers: {
+                    'Content-Type': 'application/json'
+                }
+            });
+
+            const data = await response.json();
+
+            if (data.success) {
+                alert('Vínculo removido com sucesso!');
+
+                // Recarregar lista de usuários e empresas vinculadas
+                await loadUsers(currentPage);
+                await loadLinkedCompanies(userId);
+
+                // Reabilitar empresa no select
+                const select = document.getElementById('link_company_ids');
+                if (select) {
+                    // Encontrar qual empresa foi desvinculada e reabilitá-la
+                    const user = usersList.find(u => u.id === parseInt(userId));
+                    if (user && user.companies) {
+                        const linkedCompanyIds = user.companies.map(c => c.id);
+                        Array.from(select.options).forEach(option => {
+                            const companyId = parseInt(option.value);
+                            if (!isNaN(companyId)) {
+                                if (linkedCompanyIds.includes(companyId)) {
+                                    option.disabled = true;
+                                    if (!option.textContent.includes('(já vinculada)')) {
+                                        option.textContent += ' (já vinculada)';
+                                    }
+                                } else {
+                                    option.disabled = false;
+                                    option.textContent = option.textContent.replace(' (já vinculada)', '');
+                                }
+                            }
+                        });
+                    }
+                }
+            } else {
+                alert(data.message || 'Erro ao remover vínculo');
+            }
+        } catch (error) {
+            console.error('Erro:', error);
+            alert('Erro ao remover vínculo. Tente novamente.');
+        }
+    }
+
+    document.addEventListener('DOMContentLoaded', function () {
+
+        // Close modal on background click
+        const linkModal = document.getElementById('linkCompanyModal');
+        if (linkModal) {
+            linkModal.addEventListener('click', function (e) {
+                if (e.target === linkModal) {
+                    closeLinkCompanyModal();
+                }
+            });
+        }
+    });
+
+    // Função mantida para compatibilidade (caso seja chamada de outro lugar)
+    async function unlinkCompany(userId, employeeId) {
+        await unlinkCompanyFromModal(userId, employeeId);
+    }
+</script>
+{% endblock %}

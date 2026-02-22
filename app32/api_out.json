@@ -1,0 +1,61 @@
+[
+  {
+    "amount": null,
+    "code": "AA.J.1.90002",
+    "completion_date": null,
+    "created_at": "2026-02-21 22:20:35.857526",
+    "due_date": "2026-10-31",
+    "employee_id": 3,
+    "employee_name": "Fabiano - Gerente Adm/Fin",
+    "estimated_hours": 4.0,
+    "how": "teste",
+    "id": 90002,
+    "logs": [],
+    "notes": "",
+    "priority": "normal",
+    "project_id": 1,
+    "project_name": "Projeto Teste 0111",
+    "score_weight": 1.0,
+    "stage": "waiting",
+    "status": "in_progress",
+    "updated_at": "2026-02-21 22:20:38.021122",
+    "what": "Teste Atividade Projetos 02",
+    "who": null,
+    "worked_hours": 0.0
+  },
+  {
+    "amount": null,
+    "code": "AA.J.1.90001",
+    "completion_date": "2026-02-21",
+    "created_at": "2026-02-21 22:19:29.477646",
+    "due_date": "2026-10-31",
+    "employee_id": 3,
+    "employee_name": "Fabiano - Gerente Adm/Fin",
+    "estimated_hours": 40.0,
+    "how": "Teste",
+    "id": 90001,
+    "logs": [
+      {
+        "author": "Fabiano Ferreira",
+        "content": "teste (Nota de finaliza\u00e7\u00e3o)",
+        "timestamp": "2026-02-21T22:19:59.472Z"
+      },
+      {
+        "author": "Fabiano Ferreira",
+        "content": "tgeste",
+        "timestamp": "2026-02-21T22:19:47.880Z"
+      }
+    ],
+    "notes": "teste",
+    "priority": "normal",
+    "project_id": 1,
+    "project_name": "Projeto Teste 0111",
+    "score_weight": 1.0,
+    "stage": "completed",
+    "status": "completed",
+    "updated_at": "2026-02-21 22:19:59.553469",
+    "what": "Teste Atividade Projetos",
+    "who": null,
+    "worked_hours": 10.0
+  }
+]

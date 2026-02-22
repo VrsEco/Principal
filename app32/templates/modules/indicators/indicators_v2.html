@@ -1,0 +1,222 @@
+{% extends "layouts/workspace.html" %}
+
+{% block title %}Indicadores | Versus{% endblock %}
+
+{% block breadcrumb %}
+<a href="/dashboard">Dashboard</a>
+<span class="sep">/</span>
+<span class="current">Indicadores</span>
+{% endblock %}
+
+{% block navbar_actions %}
+<div style="display: flex; align-items: center; gap: 0.75rem;">
+    <a href="/indicators/new" class="btn btn-primary btn-sm">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
+            stroke-linecap="round" stroke-linejoin="round">
+            <line x1="12" y1="5" x2="12" y2="19"></line>
+            <line x1="5" y1="12" x2="19" y2="12"></line>
+        </svg>
+        Novo Indicador
+    </a>
+    <button class="btn btn-secondary btn-sm" onclick="toggleSidebar('right')">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <circle cx="11" cy="11" r="8"></circle>
+            <line x1="21" y1="21" x2="16.65" y2="16.65"></line>
+        </svg>
+        Filtros
+    </button>
+</div>
+{% endblock %}
+
+
+{% block workspace_content %}
+<div class="workspace-header">
+    <div class="header-content">
+        <h1 class="text-h1">📊 Indicadores</h1>
+        <p class="text-secondary">Gestão de métricas e KPIs de desempenho.</p>
+    </div>
+</div>
+
+<div class="workspace-body">
+    <!-- Grid de Indicadores -->
+    <div class="indicators-grid" id="indicatorsGrid">
+        <!-- JS irá popular aqui -->
+        <div class="loading-state" style="grid-column: 1/-1; text-align: center; padding: 3rem;">
+            <div class="spinner"></div>
+            <p class="text-secondary mt-2">Carregando indicadores...</p>
+        </div>
+    </div>
+
+    <!-- Empty State (Hidden) -->
+    <div id="emptyState" class="empty-state" style="display: none;">
+        <div class="empty-icon">📊</div>
+        <h3 class="text-h3">Nenhum indicador encontrado</h3>
+        <p class="text-secondary">Tente ajustar seus filtros ou cadastre um novo indicador.</p>
+        <a href="/indicators/new" class="btn btn-primary mt-3">Cadastrar Indicador</a>
+    </div>
+</div>
+
+<style>
+    .workspace-header {
+        margin-bottom: 2rem;
+    }
+
+    .indicators-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
+        gap: 1.5rem;
+    }
+
+    .indicator-card {
+        background: var(--surface-primary);
+        border: 1px solid var(--border);
+        border-radius: 12px;
+        padding: 1.5rem;
+        transition: var(--transition);
+        position: relative;
+        overflow: hidden;
+    }
+
+    .indicator-card:hover {
+        transform: translateY(-4px);
+        box-shadow: var(--shadow-lg);
+        border-color: var(--primary-light);
+    }
+
+    .indicator-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: flex-start;
+        margin-bottom: 1rem;
+    }
+
+    .indicator-code {
+        font-size: 0.75rem;
+        font-weight: 700;
+        color: var(--primary);
+        background: var(--primary-light);
+        padding: 2px 8px;
+        border-radius: 4px;
+        text-transform: uppercase;
+    }
+
+    .indicator-title {
+        font-weight: 600;
+        font-size: 1.1rem;
+        margin-bottom: 0.5rem;
+        color: var(--text-primary);
+    }
+
+    .indicator-meta {
+        display: flex;
+        gap: 1rem;
+        font-size: 0.85rem;
+        color: var(--text-tertiary);
+    }
+
+    .indicator-value-main {
+        margin: 1.5rem 0;
+        display: flex;
+        align-items: baseline;
+        gap: 0.5rem;
+    }
+
+    .current-value {
+        font-size: 2rem;
+        font-weight: 700;
+        color: var(--text-primary);
+    }
+
+    .value-unit {
+        color: var(--text-tertiary);
+        font-weight: 500;
+    }
+
+    .indicator-footer {
+        border-top: 1px solid var(--border);
+        padding-top: 1rem;
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+    }
+
+    .group-item {
+        padding: 0.75rem 1rem;
+        border-radius: 8px;
+        cursor: pointer;
+        transition: var(--transition);
+        color: var(--text-secondary);
+        font-size: 0.9rem;
+        display: flex;
+        align-items: center;
+        gap: 0.5rem;
+    }
+
+    .group-item:hover {
+        background: var(--surface-secondary);
+        color: var(--primary);
+    }
+
+    .group-item.active {
+        background: var(--primary-light);
+        color: var(--primary);
+        font-weight: 600;
+    }
+</style>
+
+<script src="{{ url_for('static', filename='js/indicators.js') }}"></script>
+{% endblock %}
+
+{% block sidebar_right %}
+<div class="sidebar-header-ws collapsible-header" onclick="toggleCollapsible('indicatorGroupsList')">
+    <h3 class="text-h3">Grupos</h3>
+    <svg class="chevron" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+        <polyline points="6 9 12 15 18 9"></polyline>
+    </svg>
+</div>
+<div class="sidebar-content-ws collapsible-content mb-4" id="indicatorGroupsList">
+    <div class="loading-shimmer" style="height: 20px; margin-bottom: 10px;"></div>
+    <div class="loading-shimmer" style="height: 20px; margin-bottom: 10px;"></div>
+    <div class="loading-shimmer" style="height: 20px;"></div>
+</div>
+
+<div class="sidebar-header-ws collapsible-header" onclick="toggleCollapsible('sidebar-filters-right')">
+    <h3 class="text-h3">Filtros</h3>
+    <svg class="chevron" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+        <polyline points="6 9 12 15 18 9"></polyline>
+    </svg>
+</div>
+<div class="sidebar-content-ws collapsible-content" id="sidebar-filters-right">
+    <div class="form-group mb-4">
+        <label class="form-label">Empresa</label>
+        <select class="form-select" id="filterCompany">
+            <option value="">Todas as Empresas</option>
+        </select>
+    </div>
+
+    <div class="form-group mb-4">
+        <label class="form-label">Plano</label>
+        <select class="form-select" id="filterPlan">
+            <option value="">Todos os Planos</option>
+        </select>
+    </div>
+
+    <div class="form-group mb-4">
+        <label class="form-label">Polaridade</label>
+        <div class="flex-column gap-2">
+            <label class="checkbox-container">
+                <input type="checkbox" name="polarity" value="positive" checked>
+                <span class="checkmark"></span>
+                Quanto maior melhor
+            </label>
+            <label class="checkbox-container">
+                <input type="checkbox" name="polarity" value="negative" checked>
+                <span class="checkmark"></span>
+                Quanto menor melhor
+            </label>
+        </div>
+    </div>
+
+    <button class="btn btn-primary w-100" onclick="applyFilters()">Aplicar Filtros</button>
+</div>
+{% endblock %}

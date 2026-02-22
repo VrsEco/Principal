@@ -1,0 +1,378 @@
+{% extends "modules/plans/base_planning.html" %}
+
+{% block planning_content %}
+<div class="planning-header"
+    style="display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 32px;">
+    <div>
+        <h1 style="font-size: 32px; font-weight: 800; color: #0f172a; margin-bottom: 8px;">Estruturas de Execução</h1>
+        <p style="color: #64748b; font-size: 16px;">Ancorar operação, comercial e finanças para suportar o plano
+            estratégico.</p>
+    </div>
+    <div style="display: flex; gap: 12px;">
+        <button onclick="saveExecution()" class="btn btn-primary" style="display: flex; align-items: center; gap: 8px;">
+            <i class="fa-solid fa-floppy-disk"></i> Salvar Estruturas
+        </button>
+        <button onclick="completeSection()" class="btn btn-success"
+            style="display: flex; align-items: center; gap: 8px;">
+            <i class="fa-solid fa-check"></i> Concluir Etapa
+        </button>
+    </div>
+</div>
+
+<div style="display: flex; flex-direction: column; gap: 32px;">
+    {% set areas = [
+    {'id': 'comercial', 'title': 'Estruturação Comercial', 'icon': 'shopping-cart'},
+    {'id': 'operacional', 'title': 'Estruturação Operacional', 'icon': 'gears'},
+    {'id': 'admin', 'title': 'Estruturação Adm/Fin', 'icon': 'building-user'}
+    ] %}
+
+    {% for area in areas %}
+    {% set area_data = section_content.get('areas', {}).get(area.id, {}) %}
+    <div class="area-card planning-card" data-area-id="{{ area.id }}">
+        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 24px;">
+            <div style="display: flex; align-items: center; gap: 12px;">
+                <div
+                    style="width: 40px; height: 40px; border-radius: 10px; background: #eff6ff; color: #2563eb; display: flex; align-items: center; justify-content: center; font-size: 18px;">
+                    <i class="fa-solid fa-{{ area.icon }}"></i>
+                </div>
+                <h3 style="font-size: 18px; font-weight: 700; color: #0f172a;">{{ area.title }}</h3>
+            </div>
+            <button onclick="addItem('{{ area.id }}')" class="btn btn-secondary btn-sm">
+                <i class="fa-solid fa-plus"></i> Adicionar Item
+            </button>
+        </div>
+
+        <div style="overflow-x: auto;">
+            <table style="width: 100%; border-collapse: separate; border-spacing: 0 8px;">
+                <thead
+                    style="text-align: left; color: #64748b; font-size: 10px; text-transform: uppercase; letter-spacing: 0.05em;">
+                    <tr>
+                        <th style="padding: 0 12px; width: 22%;">Recurso / Descrição</th>
+                        <th style="padding: 0 12px; width: 12%;">Categoria</th>
+                        <th style="padding: 0 12px; width: 12%;">Classificação</th>
+                        <th style="padding: 0 12px; width: 18%;">Datas (Início / Dispon.)</th>
+                        <th style="padding: 0 12px; width: 12%;">Capac. Op. (Fat)</th>
+                        <th style="padding: 0 12px; width: 15%;">Investimento Total</th>
+                        <th style="padding: 0 12px; text-align: right;">Ações</th>
+                    </tr>
+                </thead>
+                <tbody id="container-{{ area.id }}">
+                    {% for item in area_data.get('items', []) %}
+                    <tr class="item-row" style="background: #ffffff; border: 1px solid #e2e8f0; border-radius: 12px;">
+                        <td style="padding: 12px;">
+                            <input type="text" class="item-desc" value="{{ item.description }}"
+                                placeholder="Ex: Máquina de Embalar"
+                                style="width: 100%; background: transparent; border: none; font-weight: 600; font-size: 14px; outline: none;">
+                        </td>
+                        <td style="padding: 12px;">
+                            <select class="item-type"
+                                style="width: 100%; background: transparent; border: none; font-size: 13px; outline: none;">
+                                <option value="pessoas" {% if item.item_type=='pessoas' %}selected{% endif %}>Pessoas
+                                </option>
+                                <option value="imoveis" {% if item.item_type=='imoveis' %}selected{% endif %}>
+                                    Imóveis/Infra</option>
+                                <option value="maquinas" {% if item.item_type=='maquinas' %}selected{% endif %}>
+                                    Máquinas/Equip</option>
+                                <option value="ti" {% if item.item_type=='ti' %}selected{% endif %}>TI/Digital</option>
+                                <option value="outros" {% if item.item_type=='outros' %}selected{% endif %}>Outros
+                                </option>
+                            </select>
+                        </td>
+                        <td style="padding: 12px;">
+                            <select class="item-classification"
+                                style="width: 100%; background: transparent; border: none; font-size: 13px; outline: none;">
+                                <option value="aquisição" {% if item.classification=='aquisição' %}selected{% endif %}>
+                                    Aquisição (Ativo)</option>
+                                <option value="contratação" {% if item.classification=='contratação' %}selected{% endif
+                                    %}>Contratação (Desp)</option>
+                            </select>
+                        </td>
+                        <td style="padding: 12px;">
+                            <div style="display: flex; gap: 4px; flex-direction: column;">
+                                <div style="display: flex; align-items: center; gap: 4px;">
+                                    <span style="font-size: 9px; color: #94a3b8; width: 35px;">AQU:</span>
+                                    <input type="date" class="item-acquisition-date" value="{{ item.acquisition_date }}"
+                                        style="font-size: 11px; border: none; background: #f1f5f9; padding: 2px 4px; border-radius: 4px;">
+                                </div>
+                                <div style="display: flex; align-items: center; gap: 4px;">
+                                    <span style="font-size: 9px; color: #94a3b8; width: 35px;">DISP:</span>
+                                    <input type="date" class="item-avail-date" value="{{ item.availability_date }}"
+                                        style="font-size: 11px; border: none; background: #f1f5f9; padding: 2px 4px; border-radius: 4px;">
+                                </div>
+                            </div>
+                        </td>
+                        <td style="padding: 12px;">
+                            <input type="number" class="item-capacity" value="{{ item.operational_capacity_revenue }}"
+                                placeholder="0,00"
+                                style="width: 100%; background: transparent; border: none; font-size: 13px; font-weight: 500; text-align: right;">
+                        </td>
+                        <td style="padding: 12px;">
+                            <div style="display: flex; flex-direction: column; align-items: flex-end; gap: 4px;">
+                                <input type="number" class="item-value" value="{{ item.value }}" readonly
+                                    style="width: 100%; background: transparent; border: none; font-weight: 700; text-align: right; font-size: 14px; color: #1e293b;">
+                                <button onclick="openPaymentsModal(this)" class="btn-link"
+                                    style="font-size: 10px; color: #2563eb; cursor: pointer; border: none; background: none; text-decoration: underline; padding: 0;">
+                                    Planejar Pagamentos (<span class="payment-count">{{ item.payments|length if
+                                        item.payments else 0 }}</span>)
+                                </button>
+                                <input type="hidden" class="item-payments-json"
+                                    value='{{ item.payments|tojson if item.payments else "[]" }}'>
+                            </div>
+                        </td>
+                        <td style="padding: 12px; text-align: right;">
+                            <button onclick="this.closest('tr').remove()"
+                                style="color: #ef4444; background: none; border: none; cursor: pointer; padding: 8px;">
+                                <i class="fa-solid fa-trash"></i>
+                            </button>
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+    {% endfor %}
+</div>
+
+<!-- Modal de Pagamentos -->
+<div id="paymentsModal"
+    style="display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.5); z-index: 25000; align-items: center; justify-content: center; backdrop-filter: blur(4px);">
+    <div
+        style="background: white; width: 100%; max-width: 500px; border-radius: 20px; box-shadow: 0 25px 50px -12px rgba(0,0,0,0.25); overflow: hidden;">
+        <div
+            style="padding: 24px; border-bottom: 1px solid #f1f5f9; display: flex; justify-content: space-between; align-items: center; background: #f8fafc;">
+            <div>
+                <h3 style="font-size: 18px; font-weight: 700; color: #0f172a;">Planejamento de Pagamentos</h3>
+                <p id="modalItemName" style="font-size: 13px; color: #64748b; margin: 0;">Item</p>
+            </div>
+            <button onclick="closePaymentsModal()"
+                style="border: none; background: none; color: #94a3b8; cursor: pointer; font-size: 20px;">&times;</button>
+        </div>
+        <div style="padding: 24px;">
+            <div style="max-height: 300px; overflow-y: auto; margin-bottom: 24px;">
+                <table style="width: 100%;">
+                    <thead style="text-align: left; font-size: 11px; color: #94a3b8; text-transform: uppercase;">
+                        <tr>
+                            <th style="padding-bottom: 8px;">Data do Pagamento</th>
+                            <th style="padding-bottom: 8px; text-align: right;">Valor (R$)</th>
+                            <th style="padding-bottom: 8px; text-align: right; width: 40px;"></th>
+                        </tr>
+                    </thead>
+                    <tbody id="paymentsList">
+                        <!-- Items added via JS -->
+                    </tbody>
+                </table>
+                <button onclick="addPaymentRow()" class="btn btn-secondary btn-sm"
+                    style="width: 100%; margin-top: 12px; background: #f1f5f9; border: 1px dashed #cbd5e1; color: #64748b;">
+                    <i class="fa-solid fa-plus"></i> Adicionar Parcela
+                </button>
+            </div>
+
+            <div
+                style="padding-top: 20px; border-top: 1px solid #f1f5f9; display: flex; justify-content: space-between; align-items: center;">
+                <div>
+                    <span style="font-size: 12px; color: #64748b;">Total Acumulado:</span>
+                    <div id="modalTotalValue" style="font-size: 20px; font-weight: 800; color: #0f172a;">R$ 0,00</div>
+                </div>
+                <button onclick="applyPayments()" class="btn btn-primary">Confirmar</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+    let currentEditingRow = null;
+
+    function addItem(areaId) {
+        const container = document.getElementById(`container-${areaId}`);
+        const tr = document.createElement('tr');
+        tr.className = 'item-row';
+        tr.style.background = '#ffffff';
+        tr.style.border = '1px solid #e2e8f0';
+        tr.style.borderRadius = '12px';
+        tr.innerHTML = `
+            <td style="padding: 12px;">
+                <input type="text" class="item-desc" placeholder="Ex: Máquina de Embalar"
+                    style="width: 100%; background: transparent; border: none; font-weight: 600; font-size: 14px; outline: none;">
+            </td>
+            <td style="padding: 12px;">
+                <select class="item-type" style="width: 100%; background: transparent; border: none; font-size: 13px; outline: none;">
+                    <option value="pessoas">Pessoas</option>
+                    <option value="imoveis">Imóveis/Infra</option>
+                    <option value="maquinas" selected>Máquinas/Equip</option>
+                    <option value="ti">TI/Digital</option>
+                    <option value="outros">Outros</option>
+                </select>
+            </td>
+            <td style="padding: 12px;">
+                <select class="item-classification" style="width: 100%; background: transparent; border: none; font-size: 13px; outline: none;">
+                    <option value="aquisição" selected>Aquisição (Ativo)</option>
+                    <option value="contratação">Contratação (Desp)</option>
+                </select>
+            </td>
+            <td style="padding: 12px;">
+                <div style="display: flex; gap: 4px; flex-direction: column;">
+                    <div style="display: flex; align-items: center; gap: 4px;">
+                        <span style="font-size: 9px; color: #94a3b8; width: 35px;">AQU:</span>
+                        <input type="date" class="item-acquisition-date" 
+                            style="font-size: 11px; border: none; background: #f1f5f9; padding: 2px 4px; border-radius: 4px;">
+                    </div>
+                    <div style="display: flex; align-items: center; gap: 4px;">
+                        <span style="font-size: 9px; color: #94a3b8; width: 35px;">DISP:</span>
+                        <input type="date" class="item-avail-date"
+                            style="font-size: 11px; border: none; background: #f1f5f9; padding: 2px 4px; border-radius: 4px;">
+                    </div>
+                </div>
+            </td>
+            <td style="padding: 12px;">
+                <input type="number" class="item-capacity" placeholder="0,00"
+                    style="width: 100%; background: transparent; border: none; font-size: 13px; font-weight: 500; text-align: right;">
+            </td>
+            <td style="padding: 12px;">
+                <div style="display: flex; flex-direction: column; align-items: flex-end; gap: 4px;">
+                    <input type="number" class="item-value" value="0.00" readonly
+                        style="width: 100%; background: transparent; border: none; font-weight: 700; text-align: right; font-size: 14px;">
+                    <button onclick="openPaymentsModal(this)" class="btn-link" style="font-size: 10px; color: #2563eb; cursor: pointer; border: none; background: none; text-decoration: underline; padding: 0;">
+                        Planejar Pagamentos (<span class="payment-count">0</span>)
+                    </button>
+                    <input type="hidden" class="item-payments-json" value="[]">
+                </div>
+            </td>
+            <td style="padding: 12px; text-align: right;">
+                <button onclick="this.closest('tr').remove()" style="color: #ef4444; background: none; border: none; cursor: pointer; padding: 8px;">
+                    <i class="fa-solid fa-trash"></i>
+                </button>
+            </td>
+        `;
+        container.appendChild(tr);
+    }
+
+    function openPaymentsModal(btn) {
+        currentEditingRow = btn.closest('tr');
+        const desc = currentEditingRow.querySelector('.item-desc').value || "Novo Item";
+        const payments = JSON.parse(currentEditingRow.querySelector('.item-payments-json').value);
+
+        document.getElementById('modalItemName').innerText = desc;
+        const list = document.getElementById('paymentsList');
+        list.innerHTML = '';
+
+        payments.forEach(p => addPaymentRow(p.date, p.amount));
+        if (payments.length === 0) addPaymentRow();
+
+        updateModalTotal();
+        document.getElementById('paymentsModal').style.display = 'flex';
+    }
+
+    function addPaymentRow(date = '', amount = '') {
+        const tr = document.createElement('tr');
+        tr.innerHTML = `
+            <td style="padding: 8px 0;"><input type="date" class="modal-pay-date" value="${date}" style="border: 1px solid #e2e8f0; border-radius: 6px; padding: 6px; font-size: 13px; width: 90%;"></td>
+            <td style="padding: 8px 0;"><input type="number" class="modal-pay-amount" value="${amount}" onchange="updateModalTotal()" placeholder="0,00" style="border: 1px solid #e2e8f0; border-radius: 6px; padding: 6px; font-size: 13px; text-align: right; width: 100%;"></td>
+            <td style="padding: 8px 0; text-align: right;"><button onclick="this.closest('tr').remove(); updateModalTotal();" style="color: #94a3b8; border: none; background: none; cursor: pointer;"><i class="fa-solid fa-xmark"></i></button></td>
+        `;
+        document.getElementById('paymentsList').appendChild(tr);
+    }
+
+    function updateModalTotal() {
+        let total = 0;
+        document.querySelectorAll('.modal-pay-amount').forEach(input => {
+            total += parseFloat(input.value) || 0;
+        });
+        document.getElementById('modalTotalValue').innerText = new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(total);
+    }
+
+    function closePaymentsModal() {
+        document.getElementById('paymentsModal').style.display = 'none';
+        currentEditingRow = null;
+    }
+
+    function applyPayments() {
+        const payments = [];
+        let total = 0;
+
+        document.querySelectorAll('#paymentsList tr').forEach(row => {
+            const date = row.querySelector('.modal-pay-date').value;
+            const amount = parseFloat(row.querySelector('.modal-pay-amount').value) || 0;
+            if (date || amount > 0) {
+                payments.push({ date, amount });
+                total += amount;
+            }
+        });
+
+        currentEditingRow.querySelector('.item-payments-json').value = JSON.stringify(payments);
+        currentEditingRow.querySelector('.item-value').value = total.toFixed(2);
+        currentEditingRow.querySelector('.payment-count').innerText = payments.length;
+
+        closePaymentsModal();
+    }
+
+    async function saveExecution() {
+        const areas = {};
+        document.querySelectorAll('.area-card').forEach(card => {
+            const areaId = card.dataset.areaId;
+            const items = Array.from(card.querySelectorAll('.item-row')).map(row => ({
+                description: row.querySelector('.item-desc').value,
+                item_type: row.querySelector('.item-type').value,
+                classification: row.querySelector('.item-classification').value,
+                acquisition_date: row.querySelector('.item-acquisition-date').value || null,
+                availability_date: row.querySelector('.item-avail-date').value || null,
+                operational_capacity_revenue: parseFloat(row.querySelector('.item-capacity').value) || 0,
+                value: parseFloat(row.querySelector('.item-value').value) || 0,
+                payments: JSON.parse(row.querySelector('.item-payments-json').value),
+                repetition: "unica",
+                supplier: "",
+                notes: ""
+            })).filter(i => i.description);
+
+            areas[areaId] = { items: items };
+        });
+
+        const data = { areas: areas };
+
+        try {
+            const response = await fetch('/api/plans/{{ plan.id }}/implantation/execution?company_id={{ company.id }}', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(data)
+            });
+
+            if (response.ok) {
+                // Toast or feedback could be better but sticking to current UX
+                alert('Estruturas salvas com sucesso!');
+            } else {
+                const err = await response.json();
+                console.error(err);
+                alert('Erro na validação dos dados.');
+            }
+        } catch (error) {
+            console.error(error);
+            alert('Erro de conexão.');
+        }
+    }
+
+    async function completeSection() {
+        await saveExecution();
+        const response = await fetch(`/api/plans/{{ plan.id }}/sections/execution/complete`, { method: 'POST' });
+        if (response.ok) {
+            window.location.href = "{{ url_for('plans.implantation_section', plan_id=plan.id, section='finance') }}";
+        }
+    }
+</script>
+
+<style>
+    input:focus,
+    select:focus {
+        background: #f8fafc !important;
+        box-shadow: 0 0 0 2px #e2e8f0;
+    }
+
+    .btn-link:hover {
+        color: #1e40af !important;
+    }
+
+    .item-row:hover {
+        background: #f8fafc !important;
+        border-color: #cbd5e1 !important;
+    }
+</style>
+{% endblock %}

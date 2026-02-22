@@ -1,0 +1,112 @@
+{% extends "layouts/form.html" %}
+
+{% block title %}Novo Objetivo | Versus{% endblock %}
+
+{% block form_title %}Cadastrar Novo Objetivo (OKR){% endblock %}
+
+{% block form_content %}
+<form id="okrForm">
+    <div class="form-grid">
+        <div class="form-group full-width">
+            <label class="form-label">Objetivo Estratégico</label>
+            <input type="text" name="objective" class="form-control"
+                placeholder="Ex: Dominar o mercado de consultoria em SP" required>
+            <p class="text-small text-tertiary mt-1">O objetivo deve ser qualitativo, inspirador e memorável.</p>
+        </div>
+
+        <div class="form-group">
+            <label class="form-label">Tipo de OKR</label>
+            <select name="type" class="form-control" required>
+                <option value="aceleracao">Aceleração (Crescimento)</option>
+                <option value="estruturante">Estruturante (Fundação)</option>
+            </select>
+        </div>
+
+        <div class="form-group">
+            <label class="form-label">Dono do Objetivo</label>
+            <input type="text" name="owner" class="form-control" placeholder="Nome do responsável">
+        </div>
+
+        <div class="form-group">
+            <label class="form-label">Prazo Final</label>
+            <input type="date" name="deadline" class="form-control" required>
+        </div>
+
+        <div class="form-group">
+            <label class="form-label">Escopo</label>
+            <select name="scope" id="okrScope" class="form-control" onchange="toggleScopeFields()" required>
+                <option value="global">Global (Corporativo)</option>
+                <option value="area">Área / Time</option>
+            </select>
+        </div>
+
+        <div id="areaFields" class="form-group" style="display: none;">
+            <label class="form-label">Departamento / Área</label>
+            <input type="text" name="department" class="form-control" placeholder="Ex: Comercial, RH...">
+        </div>
+
+        <div class="form-group full-width">
+            <label class="form-label">Observações</label>
+            <textarea name="observations" class="form-control" rows="3"
+                placeholder="Contexto adicional sobre este objetivo..."></textarea>
+        </div>
+    </div>
+
+    <!-- Key Results Selection (Placeholder for now) -->
+    <div class="mt-4 p-4"
+        style="background: var(--surface-secondary); border-radius: 12px; border: 1px dashed var(--border);">
+        <h4 class="text-h4 mb-2">Resultados Chave (KRs)</h4>
+        <p class="text-small text-tertiary">Você poderá adicionar os resultados chave logo após salvar o objetivo
+            principal.</p>
+    </div>
+
+    <div class="form-actions mt-5">
+        <button type="button" class="btn btn-ghost" onclick="history.back()">Cancelar</button>
+        <button type="submit" class="btn btn-primary">Salvar Objetivo</button>
+    </div>
+</form>
+
+<script>
+    function toggleScopeFields() {
+        const scope = document.getElementById('okrScope').value;
+        document.getElementById('areaFields').style.display = scope === 'area' ? 'block' : 'none';
+    }
+
+    document.getElementById('okrForm').addEventListener('submit', async (e) => {
+        e.preventDefault();
+        const formData = new FormData(e.target);
+        const data = Object.fromEntries(formData.entries());
+
+        // Basic logic: determine endpoint based on scope
+        const isArea = data.scope === 'area';
+        delete data.scope; // API doesn't need this field as string if we target different endpoints
+
+        // We need plan_id. For now, we take from first active plan or default 1
+        data.plan_id = 1;
+
+        try {
+            const endpoint = isArea ? '/api/okrs-area' : '/api/okrs-global';
+            const res = await fetch(endpoint, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(data)
+            });
+
+            if (res.ok) {
+                alert('Objetivo criado com sucesso!');
+                window.location.href = '/okrs';
+            } else {
+                const err = await res.json();
+                alert('Erro: ' + JSON.stringify(err.errors || err.error));
+            }
+        } catch (err) {
+            console.error('Erro na requisição:', err);
+        }
+    });
+
+    // Initialize date with end of quarter
+    const now = new Date();
+    const endOfQuarter = new Date(now.getFullYear(), Math.floor(now.getMonth() / 3) * 3 + 3, 0);
+    document.querySelector('input[name="deadline"]').value = endOfQuarter.toISOString().split('T')[0];
+</script>
+{% endblock %}

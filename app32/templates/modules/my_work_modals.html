@@ -1,0 +1,131 @@
+<!-- Modal: Adicionar Horas -->
+<div class="modal-overlay" id="modalAddHours" style="display: none;">
+    <div class="modal-container">
+        <div class="modal-header">
+            <h3>⏱️ Adicionar Horas Trabalhadas</h3>
+            <button class="modal-close" onclick="closeModal('modalAddHours')">&times;</button>
+        </div>
+
+        <div class="modal-body">
+            <div class="modal-activity-info" id="addHoursActivityInfo"></div>
+
+            <form id="formAddHours">
+                <div class="form-group">
+                    <label for="workDate">Data do Trabalho *</label>
+                    <input type="date" id="workDate" name="work_date" class="form-input" required />
+                </div>
+
+                <div class="form-group">
+                    <label for="hoursWorked">Horas Trabalhadas *</label>
+                    <div class="hours-input-group">
+                        <input type="number" id="hoursWorked" name="hours" class="form-input" min="0" max="24"
+                            step="0.25" placeholder="0" required />
+                        <span class="input-suffix">horas</span>
+                    </div>
+                </div>
+
+                <div class="form-group">
+                    <label for="workDescription">Descrição do Trabalho (Opcional)</label>
+                    <textarea id="workDescription" name="description" class="form-textarea" rows="3"
+                        placeholder="O que foi feito?"></textarea>
+                </div>
+
+                <div class="hours-summary">
+                    <div class="summary-item">
+                        <span class="summary-label">Já registradas:</span>
+                        <span class="summary-value" id="currentHours">0h</span>
+                    </div>
+                    <div class="summary-item">
+                        <span class="summary-label">Estimadas:</span>
+                        <span class="summary-value" id="estimatedHours">0h</span>
+                    </div>
+                    <div class="summary-item summary-item--total">
+                        <span class="summary-label">Total projetado:</span>
+                        <span class="summary-value" id="totalHoursAfter">0h</span>
+                    </div>
+                </div>
+            </form>
+        </div>
+
+        <div class="modal-footer">
+            <button type="button" class="btn btn-secondary" onclick="closeModal('modalAddHours')">Cancelar</button>
+            <button type="submit" form="formAddHours" class="btn btn-primary">Registrar Horas</button>
+        </div>
+    </div>
+</div>
+
+<!-- Modal: Adicionar Comentário -->
+<div class="modal-overlay" id="modalAddComment" style="display: none;">
+    <div class="modal-container">
+        <div class="modal-header">
+            <h3>💬 Adicionar Nota</h3>
+            <button class="modal-close" onclick="closeModal('modalAddComment')">&times;</button>
+        </div>
+
+        <div class="modal-body">
+            <div class="modal-activity-info" id="addCommentActivityInfo"></div>
+
+            <form id="formAddComment">
+                <div class="form-group">
+                    <label for="commentType">Tipo</label>
+                    <select id="commentType" name="comment_type" class="form-select">
+                        <option value="note">📝 Nota</option>
+                        <option value="progress">📈 Progresso</option>
+                        <option value="issue">⚠️ Problema</option>
+                    </select>
+                </div>
+
+                <div class="form-group">
+                    <label for="commentText">Comentário *</label>
+                    <textarea id="commentText" name="comment" class="form-textarea" rows="5" placeholder="..."
+                        required></textarea>
+                </div>
+
+                <div class="form-group">
+                    <label class="form-checkbox">
+                        <input type="checkbox" id="commentPrivate" name="is_private" />
+                        <span>Privado</span>
+                    </label>
+                </div>
+            </form>
+
+            <div class="previous-comments" id="previousComments">
+                <h4>Histórico</h4>
+                <div class="comments-list" id="commentsList"></div>
+            </div>
+        </div>
+
+        <div class="modal-footer">
+            <button type="button" class="btn btn-secondary" onclick="closeModal('modalAddComment')">Cancelar</button>
+            <button type="submit" form="formAddComment" class="btn btn-primary">Salvar</button>
+        </div>
+    </div>
+</div>
+
+<!-- Modal: Finalizar Atividade -->
+<div class="modal-overlay" id="modalComplete" style="display: none;">
+    <div class="modal-container modal-container--small">
+        <div class="modal-header">
+            <h3>✅ Finalizar Atividade</h3>
+            <button class="modal-close" onclick="closeModal('modalComplete')">&times;</button>
+        </div>
+
+        <div class="modal-body">
+            <div class="modal-activity-info" id="completeActivityInfo"></div>
+            <p>Deseja marcar esta atividade como <strong>concluída</strong>?</p>
+
+            <form id="formComplete">
+                <div class="form-group">
+                    <label for="completionComment">Comentário Final</label>
+                    <textarea id="completionComment" name="completion_comment" class="form-textarea"
+                        rows="3"></textarea>
+                </div>
+            </form>
+        </div>
+
+        <div class="modal-footer">
+            <button type="button" class="btn btn-secondary" onclick="closeModal('modalComplete')">Cancelar</button>
+            <button type="submit" form="formComplete" class="btn btn-success">Confirmar</button>
+        </div>
+    </div>
+</div>

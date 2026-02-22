@@ -1,0 +1,18 @@
+U2|admin@versus.com.br|admin
+U3|mff2000@gmail.com|admin
+  E5|5|Fabiano Diretor
+  E25|13|Fabiano
+  E64|37|Fabiano Adm
+U4|carolmarques.imoveis@gmail.com|collaborator
+  E37|31|Caroline Marques
+U5|versus@gestaoversus.com.br|collaborator
+  E45|5|Marcos Ferreira
+U6|admin@gestaoversus.com.br|admin
+  E71|37|Diretor Geral
+  E46|32|Admin Versus
+U7|user@test.com|collaborator
+  E47|32|Test User
+U8|admin@titancorp.com|admin
+U9|fabiano.bpm@gmail.com|client
+U10|versusconsultoria@gmail.com|collaborator
+  E66|37|Ferreira Colaborador

@@ -1,0 +1,210 @@
+{% extends "layouts/base.html" %}
+
+{% block layout %}
+<div class="layout-workspace">
+    <!-- Navbar Compacta -->
+    <nav class="workspace-navbar">
+        <div style="display: flex; align-items: center; gap: 1rem;">
+            <button class="btn-icon" onclick="toggleSidebar('left')">
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <line x1="3" y1="12" x2="21" y2="12"></line>
+                    <line x1="3" y1="6" x2="21" y2="6"></line>
+                    <line x1="3" y1="18" x2="21" y2="18"></line>
+                </svg>
+            </button>
+            <a href="/" class="navbar-brand">
+                <img src="{{ url_for('static', filename='img/versus-logo-compact.png') }}" alt="V" style="height: 32px;"
+                    onerror="this.style.display='none'">
+                <span style="font-weight: 700; letter-spacing: -0.5px;">Versus</span>
+            </a>
+        </div>
+
+        <div class="navbar-breadcrumb">
+            {% block breadcrumb %}
+            <a href="/dashboard">Dashboard</a>
+            <span class="sep">/</span>
+            <span class="current">Workspace</span>
+            {% endblock %}
+        </div>
+
+        <div class="navbar-actions">
+            {% block navbar_actions %}
+            <div style="display: flex; align-items: center; gap: 0.75rem;">
+                <button class="btn btn-secondary btn-sm" onclick="toggleSidebar('right')">
+                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <circle cx="11" cy="11" r="8"></circle>
+                        <line x1="21" y1="21" x2="16.65" y2="16.65"></line>
+                    </svg>
+                    Filtros
+                </button>
+                <div class="user-avatar-mini" title="Meu Perfil">MV</div>
+            </div>
+            {% endblock %}
+        </div>
+    </nav>
+
+    <div class="workspace-container">
+        <!-- Sidebar Esquerda (Sidebar Padrão do Sistema) -->
+        <aside class="workspace-sidebar collapsed" id="sidebar-left">
+            {% block sidebar_left %}
+            {% include 'partials/sidebar_standard.html' %}
+            {% endblock %}
+        </aside>
+
+        <!-- Área de Trabalho Principal -->
+        <main class="workspace-main">
+            {% block workspace_content %}
+            <div class="fade-in">
+                <h1 class="text-h1">Área de Trabalho</h1>
+                <p>O conteúdo principal será renderizado aqui.</p>
+            </div>
+            {% endblock %}
+        </main>
+
+        <!-- Sidebar Direita (Detalhes e Contexto) -->
+        {% set sidebar_right_content %}{% block sidebar_right %}{% endblock %}{% endset %}
+        {% if sidebar_right_content | trim %}
+        <aside class="workspace-sidebar-right collapsed" id="sidebar-right">
+            {{ sidebar_right_content }}
+        </aside>
+        {% endif %}
+    </div>
+
+    <!-- Mobile Overlays -->
+    <div class="ws-overlay" id="ws-overlay" onclick="closeAllSidebars()"></div>
+</div>
+
+<style>
+    /* Inline styles for quick validation, will be moved to app32.css if permanent */
+    .btn-icon {
+        background: transparent;
+        border: none;
+        color: var(--text-secondary);
+        cursor: pointer;
+        padding: 8px;
+        border-radius: 8px;
+        display: flex;
+        align-items: center;
+        transition: var(--transition);
+    }
+
+    .btn-icon:hover {
+        background: var(--surface-secondary);
+        color: var(--primary);
+    }
+
+    .navbar-breadcrumb {
+        display: flex;
+        align-items: center;
+        gap: 0.5rem;
+        font-size: 0.9rem;
+        flex: 1;
+    }
+
+    .navbar-breadcrumb a {
+        text-decoration: none;
+        color: var(--text-tertiary);
+        transition: var(--transition);
+    }
+
+    .navbar-breadcrumb a:hover {
+        color: var(--primary);
+    }
+
+    .navbar-breadcrumb .sep {
+        color: var(--border);
+    }
+
+    .navbar-breadcrumb .current {
+        font-weight: 600;
+        color: var(--text-primary);
+    }
+
+    .user-avatar-mini {
+        width: 32px;
+        height: 32px;
+        border-radius: 50%;
+        background: var(--special-gradient);
+        color: white;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 0.75rem;
+        font-weight: 700;
+    }
+
+    .sidebar-header-ws {
+        margin-bottom: 1.5rem;
+        padding-bottom: 1rem;
+        border-bottom: 1px solid var(--border);
+    }
+
+    .ws-overlay {
+        position: fixed;
+        inset: 0;
+        background: rgba(0, 0, 0, 0.3);
+        backdrop-filter: blur(4px);
+        z-index: 100;
+        display: none;
+        opacity: 0;
+        transition: opacity 0.3s ease;
+    }
+
+    .ws-overlay.active {
+        display: block;
+        opacity: 1;
+    }
+</style>
+
+<script>
+    function toggleSidebar(side) {
+        console.log('Toggling sidebar:', side);
+        const el = document.getElementById(`sidebar-${side}`);
+        const overlay = document.getElementById('ws-overlay');
+
+        if (!el) {
+            console.error(`Sidebar element sidebar-${side} not found`);
+            return;
+        }
+
+        const isCollapsed = el.classList.contains('collapsed');
+
+        if (isCollapsed) {
+            el.classList.remove('collapsed');
+            if (window.innerWidth <= 768) {
+                overlay.classList.add('active');
+            }
+        } else {
+            el.classList.add('collapsed');
+            overlay.classList.remove('active');
+        }
+    }
+
+    function closeAllSidebars() {
+        const left = document.getElementById('sidebar-left');
+        const right = document.getElementById('sidebar-right');
+        if (left) left.classList.add('collapsed');
+        if (right) right.classList.add('collapsed');
+        document.getElementById('ws-overlay').classList.remove('active');
+    }
+
+    // Initialize state - Ensure they are collapsed by default as requested
+    // Logic removed that auto-expanded them on large screens.
+    document.addEventListener('DOMContentLoaded', () => {
+        const left = document.getElementById('sidebar-left');
+        const right = document.getElementById('sidebar-right');
+
+        // Ensure collapsed class is present (should be in HTML, but failsafe)
+        if (left && !left.classList.contains('collapsed')) left.classList.add('collapsed');
+        if (right && !right.classList.contains('collapsed')) right.classList.add('collapsed');
+    });
+
+    // Handle window resize logic - only close if resizing DOWN to mobile
+    window.addEventListener('resize', () => {
+        if (window.innerWidth > 768) {
+            document.getElementById('ws-overlay').classList.remove('active');
+        }
+        // No auto-expansion logic on resize UP
+    });
+</script>
+{% endblock %}

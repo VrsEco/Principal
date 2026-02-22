@@ -1,0 +1,179 @@
+{% extends "layouts/app.html" %}
+
+{% block title %}Log de Conversas IA | Gestão Versus{% endblock %}
+{% block page_title %}Log de Conversas IA{% endblock %}
+
+{% block head %}
+{{ super() }}
+<style>
+    .logs-container {
+        max-width: 1000px;
+        margin: 0 auto;
+        padding: 2rem;
+    }
+
+    .logs-header {
+        margin-bottom: 2rem;
+        display: flex;
+        justify-content: space-between;
+        align-items: flex-end;
+    }
+
+    .logs-header h2 {
+        font-size: 1.75rem;
+        font-weight: 700;
+        color: var(--text-main);
+        margin: 0;
+    }
+
+    .logs-list {
+        display: flex;
+        flex-direction: column;
+        gap: 1.5rem;
+    }
+
+    .log-card {
+        background: var(--surface-primary);
+        border: 1px solid var(--border);
+        border-radius: 20px;
+        padding: 1.5rem;
+        box-shadow: 0 4px 6px rgba(0, 0, 0, 0.02);
+        transition: transform 0.2s, box-shadow 0.2s;
+    }
+
+    .log-card:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 10px 15px rgba(0, 0, 0, 0.05);
+    }
+
+    .log-meta {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        margin-bottom: 1rem;
+        padding-bottom: 0.75rem;
+        border-bottom: 1px solid var(--border);
+    }
+
+    .log-agent {
+        display: flex;
+        align-items: center;
+        gap: 0.75rem;
+    }
+
+    .agent-icon {
+        width: 36px;
+        height: 36px;
+        border-radius: 10px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 1.1rem;
+    }
+
+    .agent-inbound .agent-icon {
+        background: var(--primary-light);
+        color: var(--primary);
+    }
+
+    .agent-outbound .agent-icon {
+        background: #d1fae5;
+        color: #10b981;
+    }
+
+    .agent-info {
+        display: flex;
+        flex-direction: column;
+    }
+
+    .agent-name {
+        font-size: 0.9rem;
+        font-weight: 700;
+        color: var(--text-primary);
+    }
+
+    .log-time {
+        font-size: 0.8rem;
+        color: var(--text-tertiary);
+    }
+
+    .log-content {
+        font-size: 0.95rem;
+        color: var(--text-secondary);
+        line-height: 1.6;
+        white-space: pre-wrap;
+    }
+
+    .badge-channel {
+        font-size: 0.7rem;
+        padding: 2px 8px;
+        border-radius: 50px;
+        background: var(--surface-secondary);
+        color: var(--text-tertiary);
+        text-transform: uppercase;
+        font-weight: 600;
+    }
+
+    .empty-state {
+        text-align: center;
+        padding: 5rem 2rem;
+        background: var(--surface-secondary);
+        border-radius: 24px;
+        border: 2px dashed var(--border);
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="logs-container">
+    <div class="logs-header">
+        <div>
+            <h2>Histórico de Atividade IA</h2>
+            <p style="color: var(--text-tertiary); margin-top: 0.5rem;">Registro de todas as interações com seus Agentes
+                de Trabalho.</p>
+        </div>
+        <div class="badge-channel">Canal: Plataforma</div>
+    </div>
+
+    <div class="logs-list">
+        {% if logs %}
+        {% for log in logs %}
+        <div class="log-card">
+            <div class="log-meta">
+                <div class="log-agent {{ 'agent-inbound' if log.direction == 'inbound' else 'agent-outbound' }}">
+                    <div class="agent-icon">
+                        {% if log.direction == 'inbound' %}
+                        👤
+                        {% else %}
+                        🤖
+                        {% endif %}
+                    </div>
+                    <div class="agent-info">
+                        <span class="agent-name">
+                            {{ 'Você' if log.direction == 'inbound' else (log.agent_name if log.agent_name else
+                            'Assistente IA') }}
+                        </span>
+                        <span class="log-time">{{ log.created_at.strftime('%d/%m/%Y às %H:%M') }}</span>
+                    </div>
+                </div>
+                <div>
+                    <span class="badge-channel">{{ log.channel }}</span>
+                </div>
+            </div>
+            <div class="log-content">{{ log.content }}</div>
+        </div>
+        {% endfor %}
+        {% else %}
+        <div class="empty-state">
+            <i class="fas fa-history"
+                style="font-size: 3rem; color: var(--border); margin-bottom: 1.5rem; display: block;"></i>
+            <h3 style="color: var(--text-primary);">Nenhum histórico encontrado</h3>
+            <p style="color: var(--text-tertiary);">Suas conversas com os agentes aparecerão aqui assim que você começar
+                a interagir.</p>
+            <a href="/agents/board" class="btn btn-primary" style="margin-top: 1.5rem; display: inline-block;">Ir para o
+                Board</a>
+        </div>
+        {% endif %}
+    </div>
+</div>
+{% endblock %}

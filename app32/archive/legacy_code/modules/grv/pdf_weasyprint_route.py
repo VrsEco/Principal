@@ -1,0 +1,188 @@
+# WeasyPrint PDF Generation Helper
+# Add this code to modules/grv/__init__.py after line 1512
+
+@grv_bp.route("/company/<int:company_id>/process/map/pdf-weasy")
+def grv_process_map_pdf_weasy(company_id: int):
+    """Generate Process Map PDF using WeasyPrint (Cloud-compatible)"""
+    logger.info(f"Gerando PDF com WeasyPrint para company_id={company_id}")
+    
+    db = get_db()
+    company = db.get_company(company_id)
+    if not company:
+        abort(404)
+    
+    map_data = db.get_process_map(company_id) or {}
+    raw_areas = map_data.get("areas", [])
+    
+    structuring_levels = {
+        "": {"label": "Fora de Escopo", "color": "#94a3b8"},
+        "in_progress": {"label": "Map | Impl | Estabn", "color": "#f59e0b"},
+        "stabilized": {"label": "Estabilizado", "color": "#10b981"},
+        "initiated": {"label": "Map | Impl | Estabn", "color": "#f59e0b"},
+        "structured": {"label": "Estabilizado", "color": "#10b981"},
+    }
+    performance_levels = {
+        "": {"label": "Fora de Escopo", "color": "#94a3b8"},
+        "critical": {"label": "Crítico", "color": "#ef4444"},
+        "below": {"label": "Abaixo", "color": "#f59e0b"},
+        "satisfactory": {"label": "Satisfatório", "color": "#10b981"},
+        "initiated": {"label": "Abaixo", "color": "#f59e0b"},
+        "structured": {"label": "Satisfatório", "color": "#10b981"},
+    }
+    
+    def _normalize_hex(value: str, default: str = "#1d4ed8") -> str:
+        if not value:
+            return default
+        value = value.strip()
+        if not value.startswith("#"):
+            value = f"#{value}"
+        if len(value) == 4:
+            value = f"#{''.join(ch * 2 for ch in value[1:])}"
+        return value.lower() if len(value) == 7 else default
+    
+    def _mix_with_white(color_hex: str, factor: float = 0.75) -> str:
+        base = _normalize_hex(color_hex)
+        r = int(base[1:3], 16)
+        g = int(base[3:5], 16)
+        b = int(base[5:7], 16)
+        
+        def _blend(channel: int) -> int:
+            return max(0, min(255, int(channel + (255 - channel) * factor)))
+        
+        return "#{0:02x}{1:02x}{2:02x}".format(_blend(r), _blend(g), _blend(b))
+    
+    def _clean_text(value: Any, fallback: str = "") -> str:
+        if isinstance(value, str):
+            cleaned = value.strip()
+            if cleaned:
+                return cleaned
+        return fallback
+    
+    def _format_display_name(code: Any, name: Any, fallback: str) -> str:
+        safe_name = _clean_text(name, fallback)
+        safe_code = _clean_text(code)
+        name_part = safe_name.upper() if safe_name else fallback.upper()
+        if safe_code:
+            return f"{safe_code.upper()} - {name_part}"
+        return name_part
+    
+    areas = []
+    total_macros = 0
+    total_processes = 0
+    
+    for area in raw_areas:
+        macros = area.get("macros") or []
+        area_color = _normalize_hex(area.get("color"))
+        area_entry = {
+            "display_name": _format_display_name(
+                area.get("code"), area.get("name"), "Área"
+            ),
+            "color": area_color,
+            "color_soft": _mix_with_white(area_color, 0.82),
+            "macros": [],
+            "macro_count": len(macros),
+            "process_count": 0,
+        }
+        
+        for macro in macros:
+            processes = macro.get("processes") or []
+            macro_entry = {
+                "display_name": _format_display_name(
+                    macro.get("code"), macro.get("name"), "Macroprocesso"
+                ),
+                "owner": macro.get("owner"),
+                "processes": [],
+            }
+            
+            for proc in processes:
+                struct_info = structuring_levels.get(
+                    proc.get("structuring_level") or "", structuring_levels[""]
+                )
+                perf_info = performance_levels.get(
+                    proc.get("performance_level") or "", performance_levels[""]
+                )
+                macro_entry["processes"].append(
+                    {
+                        "display_name": _format_display_name(
+                            proc.get("code"), proc.get("name"), "Processo"
+                        ),
+                        "responsible": proc.get("responsible"),
+                        "description": proc.get("description"),
+                        "structuring": {
+                            "label": struct_info["label"],
+                            "color": struct_info["color"],
+                            "background": _mix_with_white(struct_info["color"], 0.88),
+                        },
+                        "performance": {
+                            "label": perf_info["label"],
+                            "color": perf_info["color"],
+                            "background": _mix_with_white(perf_info["color"], 0.88),
+                        },
+                    }
+                )
+            
+            macro_entry["process_total"] = len(macro_entry["processes"])
+            area_entry["process_count"] += macro_entry["process_total"]
+            area_entry["macros"].append(macro_entry)
+        
+        total_macros += area_entry["macro_count"]
+        total_processes += area_entry["process_count"]
+        areas.append(area_entry)
+    
+    generated_at = datetime.now()
+    
+    # Render HTML
+    html_content = render_template(
+        "pdf/grv_process_map_v2.html",
+        company=company,
+        areas=areas,
+        totals={
+            "areas": len(areas),
+            "macros": total_macros,
+            "processes": total_processes,
+        },
+        generated_at=generated_at,
+    )
+    
+    # Generate PDF with WeasyPrint
+    try:
+        from weasyprint import HTML, CSS
+        from io import BytesIO
+        
+        logger.info("Gerando PDF com WeasyPrint...")
+        
+        # Create PDF
+        pdf_file = BytesIO()
+        HTML(string=html_content, base_url=request.url_root).write_pdf(
+            pdf_file,
+            stylesheets=[CSS(string='''
+                @page {
+                    size: A4;
+                    margin: 8mm 6mm;
+                }
+            ''')]
+        )
+        pdf_bytes = pdf_file.getvalue()
+        
+        logger.info("PDF gerado com sucesso via WeasyPrint!")
+        
+    except ImportError as e:
+        logger.error(f"WeasyPrint não instalado: {e}")
+        abort(500, description="WeasyPrint não está instalado. Execute: pip install weasyprint")
+    except Exception as e:
+        logger.error(f"Erro ao gerar PDF com WeasyPrint: {e}")
+        import traceback
+        traceback.print_exc()
+        abort(500, description=f"Erro ao gerar PDF: {str(e)}")
+    
+    # Prepare response
+    safe_name = (
+        re.sub(r"[^a-z0-9_-]+", "-", (company.get("name") or "empresa").lower()).strip("-")
+        or "empresa"
+    )
+    filename = f"mapa-processos-{safe_name}.pdf"
+    
+    response = make_response(pdf_bytes)
+    response.headers["Content-Type"] = "application/pdf"
+    response.headers["Content-Disposition"] = f'inline; filename="{filename}"'
+    return response

@@ -1,0 +1,262 @@
+{
+  "tech_stack": [
+    "Python 3.9+",
+    "Flask 2.3.3",
+    "PostgreSQL",
+    "SQLite",
+    "SQLAlchemy 2.0.21",
+    "Jinja2",
+    "JavaScript",
+    "HTML5",
+    "CSS3",
+    "Celery",
+    "Redis",
+    "bcrypt",
+    "Playwright",
+    "ReportLab"
+  ],
+  "features": [
+    {
+      "name": "Authentication System",
+      "description": "Sistema de autenticação com Flask-Login, login, registro e gestão de usuários",
+      "files": [
+        "api/auth/__init__.py",
+        "templates/auth/login.html",
+        "templates/auth/register.html",
+        "templates/auth/users.html",
+        "models/user.py"
+      ]
+    },
+    {
+      "name": "PEV Module - Dashboard",
+      "description": "Dashboard principal do módulo PEV com visão geral de planejamentos",
+      "files": [
+        "modules/pev/__init__.py",
+        "templates/plan_dashboard.html"
+      ]
+    },
+    {
+      "name": "PEV Module - Implantação",
+      "description": "Módulo completo de implantação com alinhamento, modelo e execução",
+      "files": [
+        "modules/pev/__init__.py",
+        "templates/implantacao/alinhamento_canvas_expectativas.html",
+        "templates/implantacao/alinhamento_agenda_planejamento.html",
+        "templates/implantacao/modelo_canvas_proposta_valor.html",
+        "templates/implantacao/modelo_mapa_persona.html",
+        "templates/implantacao/modelo_matriz_diferenciais.html",
+        "templates/implantacao/modelo_produtos.html",
+        "templates/implantacao/modelo_modefin.html",
+        "templates/implantacao/execution_estruturas.html",
+        "templates/implantacao/execution_mapa_processos.html",
+        "templates/implantacao/execution_modelo_financeiro_base.html",
+        "templates/implantacao/execution_playbook_comercial.html",
+        "templates/implantacao/financeiro_plano_investimento.html",
+        "templates/implantacao/financeiro_fluxo_caixa.html",
+        "templates/implantacao/financeiro_matriz_indicadores.html",
+        "templates/implantacao/entrega_relatorio_final.html",
+        "templates/implantacao/entrega_projeto_executivo.html",
+        "templates/implantacao/entrega_painel_governanca.html"
+      ]
+    },
+    {
+      "name": "PEV Module - Products Management",
+      "description": "Gestão completa de produtos com CRUD e cálculos de totais",
+      "files": [
+        "modules/pev/__init__.py",
+        "modules/pev/products_service.py",
+        "templates/implantacao/modelo_produtos.html"
+      ]
+    },
+    {
+      "name": "PEV Module - Financial Modeling",
+      "description": "Modelagem financeira completa com investimentos, fontes de recursos, distribuição de lucros e fluxos de caixa",
+      "files": [
+        "modules/pev/__init__.py",
+        "modules/pev/financial_metrics.py",
+        "modules/pev/implantation_data.py",
+        "templates/implantacao/modelo_modefin.html"
+      ]
+    },
+    {
+      "name": "GRV Module - Dashboard",
+      "description": "Dashboard do módulo GRV com visão geral da empresa",
+      "files": [
+        "modules/grv/__init__.py",
+        "templates/grv_dashboard.html"
+      ]
+    },
+    {
+      "name": "GRV Module - Identity Management",
+      "description": "Gestão de identidade organizacional: MVV, roles e organograma",
+      "files": [
+        "modules/grv/__init__.py",
+        "templates/grv_identity_mvv.html",
+        "templates/grv_identity_roles.html",
+        "templates/grv_identity_org_chart.html"
+      ]
+    },
+    {
+      "name": "GRV Module - Process Management",
+      "description": "Gestão completa de processos: mapa, modelagem, análise e instâncias",
+      "files": [
+        "modules/grv/__init__.py",
+        "templates/grv_process_map.html",
+        "templates/grv_process_modeling.html",
+        "templates/grv_process_analysis.html",
+        "templates/grv_process_instances.html",
+        "templates/grv_process_instance_manage.html"
+      ]
+    },
+    {
+      "name": "GRV Module - Routine Management",
+      "description": "Gestão de rotinas: distribuição de trabalho, capacidade, atividades, incidentes e eficiência",
+      "files": [
+        "modules/grv/__init__.py",
+        "templates/grv_routine_work_distribution.html",
+        "templates/grv_routine_capacity.html",
+        "templates/grv_routine_activities.html",
+        "templates/grv_routine_incidents.html",
+        "templates/grv_routine_efficiency.html"
+      ]
+    },
+    {
+      "name": "GRV Module - Projects Management",
+      "description": "Gestão de projetos: portfólios, projetos, análise e gestão individual",
+      "files": [
+        "modules/grv/__init__.py",
+        "templates/grv_projects_portfolios.html",
+        "templates/grv_projects_projects.html",
+        "templates/grv_projects_analysis.html",
+        "templates/grv_project_manage.html"
+      ]
+    },
+    {
+      "name": "GRV Module - Indicators Management",
+      "description": "Gestão completa de indicadores: grupos, indicadores, metas e dados",
+      "files": [
+        "modules/grv/__init__.py",
+        "templates/grv_indicators_tree.html",
+        "templates/grv_indicator_group_form.html",
+        "templates/grv_indicators_list.html",
+        "templates/grv_indicator_form.html",
+        "templates/grv_indicators_goals.html",
+        "templates/grv_indicator_goal_form.html",
+        "templates/grv_indicators_data.html",
+        "templates/grv_indicator_data_form.html",
+        "templates/grv_indicators_analysis.html"
+      ]
+    },
+    {
+      "name": "Meetings Module",
+      "description": "Gestão completa de reuniões com dados preliminares, execução e atividades geradas",
+      "files": [
+        "modules/meetings/__init__.py",
+        "templates/meetings_manage.html",
+        "templates/meeting_form.html"
+      ]
+    },
+    {
+      "name": "My Work Module",
+      "description": "Módulo de gestão de atividades pessoais, de equipe e empresariais",
+      "files": [
+        "modules/my_work/__init__.py",
+        "modules/my_work/routes.py",
+        "templates/my_work.html",
+        "services/my_work_service.py"
+      ]
+    },
+    {
+      "name": "Companies Management",
+      "description": "Gestão completa de empresas: CRUD, logos, dados econômicos e funcionários",
+      "files": [
+        "app_pev.py",
+        "templates/companies.html",
+        "templates/company_details.html",
+        "templates/company_form.html",
+        "templates/company_logos_manager.html",
+        "models/company.py"
+      ]
+    },
+    {
+      "name": "Plans Management",
+      "description": "Gestão de planejamentos: participantes, drivers, OKRs, projetos e relatórios",
+      "files": [
+        "app_pev.py",
+        "templates/plan_dashboard.html",
+        "templates/plan_participants.html",
+        "templates/plan_drivers.html",
+        "templates/plan_okr_global.html",
+        "templates/plan_okr_area.html",
+        "templates/plan_projects.html",
+        "templates/plan_reports.html",
+        "templates/plan_company.html",
+        "models/plan.py"
+      ]
+    },
+    {
+      "name": "Reports System",
+      "description": "Sistema completo de relatórios com templates, modelos e geração de PDF",
+      "files": [
+        "app_pev.py",
+        "templates/report_settings.html",
+        "templates/reports/",
+        "relatorios/generators/",
+        "modules/report_models.py",
+        "modules/report_patterns.py"
+      ]
+    },
+    {
+      "name": "Routines System",
+      "description": "Sistema de rotinas com tarefas, colaboradores e triggers",
+      "files": [
+        "app_pev.py",
+        "templates/routines.html",
+        "templates/routine_dashboard.html",
+        "templates/routine_details.html",
+        "templates/routine_tasks.html",
+        "templates/process_routines.html"
+      ]
+    },
+    {
+      "name": "User Logs System",
+      "description": "Sistema de logs automáticos e auditoria de ações dos usuários",
+      "files": [
+        "api/logs/__init__.py",
+        "middleware/auto_log_decorator.py",
+        "middleware/audit_middleware.py",
+        "models/user_log.py",
+        "templates/logs/dashboard.html"
+      ]
+    },
+    {
+      "name": "Route Audit System",
+      "description": "Sistema de auditoria de rotas para verificar cobertura de logs",
+      "files": [
+        "api/route_audit.py",
+        "services/route_audit_service.py",
+        "templates/route_audit/dashboard.html"
+      ]
+    },
+    {
+      "name": "Configurations System",
+      "description": "Sistema de configurações: sistema, AI e relatórios",
+      "files": [
+        "app_pev.py",
+        "templates/configurations.html",
+        "templates/configs_system.html",
+        "templates/configs_system_audit.html"
+      ]
+    },
+    {
+      "name": "Integrations System",
+      "description": "Sistema de integrações com agentes de IA e webhooks",
+      "files": [
+        "app_pev.py",
+        "templates/integrations.html",
+        "services/ai_service.py",
+        "database/sqlite_db.py"
+      ]
+    }
+  ]
+}

@@ -1,0 +1,455 @@
+{% extends "layouts/workspace.html" %}
+
+{% block title %}Modelagem de Processos | Versus{% endblock %}
+
+{% block breadcrumb %}
+<a href="/dashboard">Dashboard</a>
+<span class="sep">/</span>
+<span class="current">Modelagem</span>
+{% endblock %}
+
+{% block navbar_actions %}
+<div style="display: flex; align-items: center; gap: 0.75rem;">
+    <button class="btn btn-secondary btn-sm" onclick="toggleSidebar('right')">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <circle cx="11" cy="11" r="8"></circle>
+            <line x1="21" y1="21" x2="16.65" y2="16.65"></line>
+        </svg>
+        Filtros
+    </button>
+</div>
+{% endblock %}
+
+{% block workspace_content %}
+<div class="workspace-wrapper" id="kanbanContainer"
+    data-company-id="{{ (company_id or session.get('active_company_id') or 'null') | tojson }}">
+    <div class="workspace-header">
+        <div class="header-content">
+            <h1 class="text-h1">🔄 Pipeline de Modelagem</h1>
+            <p class="text-secondary">Arraste os processos para atualizar o estágio de evolução.</p>
+        </div>
+    </div>
+
+    <div class="kanban-board-ws no-scrollbar">
+        <!-- Colunas do Kanban -->
+        <div class="kanban-column" data-stage="inbox">
+            <div class="kanban-column-header" onclick="toggleColumn(this)">
+                <div style="display: flex; align-items: center; gap: 0.5rem;">
+                    <svg class="chevron" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                        stroke-width="2">
+                        <polyline points="6 9 12 15 18 9"></polyline>
+                    </svg>
+                    <h3>Fora do Radar</h3>
+                    <span class="collapsed-title" id="collapsed-title-inbox">F</span>
+                </div>
+                <span class="badge" id="count-inbox">0</span>
+            </div>
+            <div class="kanban-dropzone" id="dz-inbox"></div>
+        </div>
+
+        <div class="kanban-column" data-stage="waiting">
+            <div class="kanban-column-header" onclick="toggleColumn(this)">
+                <div style="display: flex; align-items: center; gap: 0.5rem;">
+                    <svg class="chevron" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                        stroke-width="2">
+                        <polyline points="6 9 12 15 18 9"></polyline>
+                    </svg>
+                    <h3>Aguardando</h3>
+                    <span class="collapsed-title" id="collapsed-title-waiting">A</span>
+                </div>
+                <span class="badge" id="count-waiting">0</span>
+            </div>
+            <div class="kanban-dropzone" id="dz-waiting"></div>
+        </div>
+
+        <div class="kanban-column" data-stage="designing">
+            <div class="kanban-column-header" onclick="toggleColumn(this)">
+                <div style="display: flex; align-items: center; gap: 0.5rem;">
+                    <svg class="chevron" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                        stroke-width="2">
+                        <polyline points="6 9 12 15 18 9"></polyline>
+                    </svg>
+                    <h3>Modelando</h3>
+                    <span class="collapsed-title" id="collapsed-title-designing">M</span>
+                </div>
+                <span class="badge" id="count-designing">0</span>
+            </div>
+            <div class="kanban-dropzone" id="dz-designing"></div>
+        </div>
+
+        <div class="kanban-column" data-stage="deploying">
+            <div class="kanban-column-header" onclick="toggleColumn(this)">
+                <div style="display: flex; align-items: center; gap: 0.5rem;">
+                    <svg class="chevron" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                        stroke-width="2">
+                        <polyline points="6 9 12 15 18 9"></polyline>
+                    </svg>
+                    <h3>Implantando</h3>
+                    <span class="collapsed-title" id="collapsed-title-deploying">I</span>
+                </div>
+                <span class="badge" id="count-deploying">0</span>
+            </div>
+            <div class="kanban-dropzone" id="dz-deploying"></div>
+        </div>
+
+        <div class="kanban-column" data-stage="stabilizing">
+            <div class="kanban-column-header" onclick="toggleColumn(this)">
+                <div style="display: flex; align-items: center; gap: 0.5rem;">
+                    <svg class="chevron" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                        stroke-width="2">
+                        <polyline points="6 9 12 15 18 9"></polyline>
+                    </svg>
+                    <h3>Estabilizando</h3>
+                    <span class="collapsed-title" id="collapsed-title-stabilizing">E</span>
+                </div>
+                <span class="badge" id="count-stabilizing">0</span>
+            </div>
+            <div class="kanban-dropzone" id="dz-stabilizing"></div>
+        </div>
+
+        <div class="kanban-column" data-stage="stable">
+            <div class="kanban-column-header" onclick="toggleColumn(this)">
+                <div style="display: flex; align-items: center; gap: 0.5rem;">
+                    <svg class="chevron" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                        stroke-width="2">
+                        <polyline points="6 9 12 15 18 9"></polyline>
+                    </svg>
+                    <h3>Estável</h3>
+                    <span class="collapsed-title" id="collapsed-title-stable">E</span>
+                </div>
+                <span class="badge badge-success" id="count-stable">0</span>
+            </div>
+            <div class="kanban-dropzone" id="dz-stable"></div>
+        </div>
+    </div>
+
+    <style>
+        /* Mostra a sidebar direita */
+        #sidebar-right {
+            display: block !important;
+        }
+
+        .kanban-board-ws {
+            display: flex;
+            gap: 1.5rem;
+            padding-bottom: 1rem;
+            overflow-x: auto;
+            min-height: 70vh;
+            align-items: flex-start;
+        }
+
+        .kanban-column {
+            flex: 0 0 300px;
+            background: var(--surface-secondary);
+            border-radius: 16px;
+            border: 1px solid var(--border);
+            display: flex;
+            flex-direction: column;
+            max-height: 80vh;
+            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+            overflow: hidden;
+        }
+
+        .kanban-column.collapsed {
+            flex: 0 0 80px;
+            max-height: 300px;
+        }
+
+        .kanban-column.collapsed h3,
+        .kanban-column.collapsed .badge {
+            display: none;
+        }
+
+        .collapsed-title {
+            display: none;
+            font-weight: 700;
+            color: var(--primary);
+            font-size: 1rem;
+            text-transform: uppercase;
+            white-space: nowrap;
+        }
+
+        .kanban-column.collapsed .collapsed-title {
+            display: block;
+        }
+
+        .kanban-column.collapsed .kanban-column-header {
+            border-bottom: none;
+            padding: 1rem 0.5rem;
+            justify-content: center;
+        }
+
+        .kanban-column.collapsed .chevron {
+            transform: rotate(-90deg);
+        }
+
+        .kanban-column.collapsed .kanban-dropzone {
+            display: none;
+        }
+
+        .kanban-column-header {
+            padding: 1rem;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            border-bottom: 1px solid var(--border);
+            cursor: pointer;
+            user-select: none;
+        }
+
+        .kanban-column-header .chevron {
+            transition: transform 0.3s ease;
+            color: var(--text-tertiary);
+        }
+
+        .kanban-column-header h3 {
+            font-size: 0.9rem;
+            font-weight: 700;
+            text-transform: uppercase;
+            color: var(--text-secondary);
+            margin: 0;
+        }
+
+        .kanban-dropzone {
+            flex: 1;
+            padding: 0.75rem;
+            overflow-y: auto;
+            display: flex;
+            flex-direction: column;
+            gap: 0.75rem;
+            min-height: 100px;
+            transition: background 0.2s ease;
+        }
+
+        .kanban-dropzone.drag-over {
+            background: rgba(59, 130, 246, 0.05);
+        }
+
+        /* Process Card in Kanban */
+        .kanban-card {
+            background: var(--surface);
+            padding: 1rem;
+            border-radius: 10px;
+            border: 1px solid var(--border);
+            box-shadow: var(--shadow-sm);
+            cursor: grab;
+            transition: var(--transition);
+            display: flex;
+            flex-direction: column;
+            gap: 0.5rem;
+        }
+
+        .kanban-card:active {
+            cursor: grabbing;
+        }
+
+        .kanban-card:hover {
+            border-color: var(--primary);
+            transform: translateY(-2px);
+        }
+
+        .kanban-card-code {
+            font-size: 0.65rem;
+            font-weight: 700;
+            color: var(--text-tertiary);
+            background: var(--surface-secondary);
+            padding: 2px 6px;
+            border-radius: 4px;
+        }
+
+        .tech-badges {
+            display: flex;
+            gap: 2px;
+        }
+
+        .tech-badge {
+            font-size: 0.6rem;
+            font-weight: 800;
+            padding: 1px 4px;
+            border-radius: 3px;
+            background: var(--surface-secondary);
+            color: var(--text-tertiary);
+            opacity: 0.4;
+            transition: all 0.2s ease;
+        }
+
+        .tech-badge.active {
+            opacity: 1;
+            background: var(--primary-light);
+            color: var(--primary);
+        }
+
+        .kanban-card-people {
+            display: flex;
+            flex-direction: column;
+            gap: 2px;
+            margin-top: 0.25rem;
+        }
+
+        .person-tag {
+            font-size: 0.75rem;
+            color: var(--text-secondary);
+            display: flex;
+            align-items: center;
+            gap: 4px;
+        }
+
+        .person-tag .label {
+            font-weight: 700;
+            color: var(--text-tertiary);
+            font-size: 0.65rem;
+            width: 14px;
+        }
+
+        .kanban-card-name {
+            font-weight: 600;
+            font-size: 0.9rem;
+            line-height: 1.3;
+        }
+
+        .kanban-card-meta {
+            display: flex;
+            justify-content: space-between;
+            font-size: 0.75rem;
+            color: var(--text-tertiary);
+            margin-top: 0.5rem;
+        }
+
+        .kanban-card.dragging {
+            opacity: 0.5;
+        }
+
+        /* Estilos para os filtros da sidebar */
+        .area-item {
+            padding: 0.75rem 1rem;
+            border-radius: 8px;
+            cursor: pointer;
+            transition: var(--transition);
+            color: var(--text-secondary);
+            font-size: 0.9rem;
+            display: flex;
+            align-items: center;
+            gap: 0.75rem;
+            margin-bottom: 2px;
+        }
+
+        .area-item:hover {
+            background: var(--surface-secondary);
+            color: var(--primary);
+        }
+
+        .area-item.active {
+            background: var(--primary-light);
+            color: var(--primary);
+            font-weight: 600;
+        }
+
+        .area-color-dot {
+            width: 10px;
+            height: 10px;
+            border-radius: 50%;
+            flex-shrink: 0;
+        }
+
+        .sidebar-section-ws {
+            margin-bottom: 1.5rem;
+            border-bottom: 1px solid var(--border);
+            padding-bottom: 1rem;
+        }
+
+        .sidebar-section-ws:last-child {
+            border-bottom: none;
+        }
+
+        .collapsible-header {
+            margin-bottom: 0.75rem;
+        }
+
+        /* Responsividade: Colunas empilhadas em telas pequenas */
+        @media (max-width: 992px) {
+            .kanban-board-ws {
+                flex-direction: column;
+                align-items: stretch;
+                overflow-x: hidden;
+            }
+
+            .kanban-column {
+                flex: 1 1 auto;
+                width: 100%;
+                max-height: none;
+            }
+
+            .kanban-column.collapsed {
+                flex: 0 0 auto;
+                width: 100%;
+                max-height: 56px;
+                height: 56px;
+            }
+        }
+    </style>
+
+</div>
+<script>
+    function toggleColumn(header) {
+        const column = header.parentElement;
+        column.classList.toggle('collapsed');
+    }
+</script>
+<script src="{{ url_for('static', filename='js/processes_kanban.js') }}"></script>
+{% endblock %}
+
+{% block sidebar_right %}
+<!-- Áreas -->
+<div class="sidebar-section-ws" id="sectionAreas">
+    <div class="sidebar-header-ws collapsible-header" onclick="toggleCollapsible('sectionAreas')">
+        <h3 class="text-h3">Áreas</h3>
+        <svg class="chevron" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+            stroke-width="2">
+            <polyline points="6 9 12 15 18 9"></polyline>
+        </svg>
+    </div>
+    <div class="sidebar-content-ws collapsible-content" id="processAreasList">
+        <div class="loading-state">
+            <p class="text-tertiary text-sm">Carregando áreas...</p>
+        </div>
+    </div>
+</div>
+
+<!-- Macroprocessos -->
+<div class="sidebar-section-ws" id="sectionMacros">
+    <div class="sidebar-header-ws collapsible-header" onclick="toggleCollapsible('sectionMacros')">
+        <h3 class="text-h3">Macroprocessos</h3>
+        <svg class="chevron" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+            stroke-width="2">
+            <polyline points="6 9 12 15 18 9"></polyline>
+        </svg>
+    </div>
+    <div class="sidebar-content-ws collapsible-content" id="macroProcessesList">
+        <p class="text-tertiary text-sm">Selecione uma área para ver os macroprocessos.</p>
+    </div>
+</div>
+
+<!-- Filtros Adicionais -->
+<div class="sidebar-section-ws" id="sectionFilters">
+    <div class="sidebar-header-ws collapsible-header" onclick="toggleCollapsible('sectionFilters')">
+        <h3 class="text-h3">Filtros</h3>
+        <svg class="chevron" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+            stroke-width="2">
+            <polyline points="6 9 12 15 18 9"></polyline>
+        </svg>
+    </div>
+    <div class="sidebar-content-ws collapsible-content">
+        <div class="form-group mb-4">
+            <label class="form-label">Pesquisa</label>
+            <input type="text" class="form-control" id="filterSearch" placeholder="Nome ou código..."
+                onkeyup="applyKanbanFilters()">
+        </div>
+        <div class="form-group mb-4">
+            <label class="form-label">Responsável</label>
+            <input type="text" class="form-control" id="filterResponsible" placeholder="Nome do responsável..."
+                onkeyup="applyKanbanFilters()">
+        </div>
+        <button class="btn btn-secondary w-100" onclick="resetKanbanFilters()">Limpar Filtros</button>
+    </div>
+</div>
+{% endblock %}

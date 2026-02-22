@@ -1,0 +1,118 @@
+{% extends "layouts/workspace.html" %}
+
+{% block title %}Analytics Dashboard - Gestão Versus{% endblock %}
+
+{% block head %}
+{{ super() }}
+<script src="https://cdn.tailwindcss.com"></script>
+<style>
+    .kpi-card-gradient {
+        background: linear-gradient(135deg, #ffffff 0%, #f8fafc 100%);
+    }
+
+    .chart-placeholder {
+        background-image: repeating-linear-gradient(45deg, #f1f5f9 0px, #f1f5f9 2px, transparent 2px, transparent 10px);
+    }
+</style>
+{% endblock %}
+
+{% block navbar_actions %}
+<div style="display: flex; align-items: center; gap: 0.75rem;">
+    <button class="btn btn-secondary btn-sm" onclick="toggleSidebar('right')">
+        <i class="fas fa-filter mr-2 text-xs"></i> Filtros
+    </button>
+    <div class="user-avatar-mini" title="Meu Perfil">MV</div>
+</div>
+{% endblock %}
+
+{% block workspace_content %}
+<div class="p-8 space-y-8 animate-in fade-in duration-500">
+    <div class="flex justify-between items-center bg-white p-6 rounded-[32px] border border-slate-200 shadow-sm">
+        <div>
+            <h1 class="text-2xl font-black text-slate-800 tracking-tight">Análise de Projetos</h1>
+            <p class="text-slate-400 text-sm">Dashboard consolidado da empresa</p>
+        </div>
+        <div class="flex items-center gap-3">
+            <button
+                class="px-6 py-2 bg-slate-900 text-white rounded-full text-sm font-bold shadow-lg hover:bg-slate-800 transition-all">
+                <i class="fas fa-download mr-2 text-xs"></i> Exportar
+            </button>
+        </div>
+    </div>
+
+    <!-- KPI Grid -->
+    <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+        <div class="kpi-card-gradient p-6 rounded-3xl border border-slate-200 shadow-sm overflow-hidden relative">
+            <span class="text-sm font-semibold text-slate-500 uppercase tracking-tighter">Total</span>
+            <div class="flex items-end gap-3 mt-2">
+                <span class="text-3xl font-bold text-slate-800">124</span>
+                <span class="text-xs font-bold text-green-500 bg-green-50 px-2 py-1 rounded-lg">+12%</span>
+            </div>
+        </div>
+        <div class="kpi-card-gradient p-6 rounded-3xl border border-slate-200 shadow-sm overflow-hidden relative">
+            <span class="text-sm font-semibold text-slate-500 uppercase tracking-tighter">Ativos</span>
+            <div class="flex items-end gap-3 mt-2">
+                <span class="text-3xl font-bold text-slate-800">42</span>
+            </div>
+        </div>
+        <div class="kpi-card-gradient p-6 rounded-3xl border border-slate-200 shadow-sm overflow-hidden relative">
+            <span class="text-sm font-semibold text-slate-500 uppercase tracking-tighter">Atrasados</span>
+            <div class="flex items-end gap-3 mt-2">
+                <span class="text-3xl font-bold text-red-600">08</span>
+            </div>
+        </div>
+        <div class="kpi-card-gradient p-6 rounded-3xl border border-slate-200 shadow-sm overflow-hidden relative">
+            <span class="text-sm font-semibold text-slate-500 uppercase tracking-tighter">Concluídos</span>
+            <div class="flex items-end gap-3 mt-2">
+                <span class="text-3xl font-bold text-slate-800">74</span>
+            </div>
+        </div>
+    </div>
+
+    <!-- Charts Section -->
+    <div class="grid grid-cols-1 lg:grid-cols-2 gap-8">
+        <div class="bg-white p-8 rounded-[32px] border border-slate-200 shadow-sm">
+            <h3 class="text-lg font-bold text-slate-800 mb-6">Desempenho Semestral</h3>
+            <div
+                class="h-64 chart-placeholder rounded-2xl flex items-center justify-center border-2 border-dashed border-slate-100 italic text-slate-300">
+                Gráfico de Linha: Evolução
+            </div>
+        </div>
+        <div class="bg-white p-8 rounded-[32px] border border-slate-200 shadow-sm">
+            <h3 class="text-lg font-bold text-slate-800 mb-6">Distribuição de Status</h3>
+            <div
+                class="h-64 chart-placeholder rounded-2xl flex items-center justify-center border-2 border-dashed border-slate-100 italic text-slate-300">
+                Gráfico de Pizza: Categorização
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block sidebar_right %}
+<div class="sidebar-header-ws">
+    <h3 class="text-h3">🔍 Filtros Analíticos</h3>
+</div>
+<div class="sidebar-content-ws p-4 space-y-6">
+    <div class="form-group">
+        <label class="form-label text-xs uppercase font-bold text-slate-400">Período</label>
+        <select class="w-full px-4 py-2 mt-2 bg-slate-50 border border-slate-200 rounded-xl outline-none text-sm">
+            <option>Últimos 30 dias</option>
+            <option>Este Trimestre</option>
+            <option>Ano Atual</option>
+        </select>
+    </div>
+
+    <div class="form-group">
+        <label class="form-label text-xs uppercase font-bold text-slate-400">Dimensões</label>
+        <div class="space-y-2 mt-2">
+            <label class="flex items-center gap-2 text-sm text-slate-600">
+                <input type="checkbox" checked class="rounded border-slate-300"> Unidade de Negócio
+            </label>
+            <label class="flex items-center gap-2 text-sm text-slate-600">
+                <input type="checkbox" class="rounded border-slate-300"> Segmento de Mercado
+            </label>
+        </div>
+    </div>
+</div>
+{% endblock %}

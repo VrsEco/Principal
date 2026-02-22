@@ -1,0 +1,100 @@
+{% extends "layouts/workspace.html" %}
+
+{% block title %}Timeline View - Gestão Versus{% endblock %}
+
+{% block head %}
+{{ super() }}
+<script src="https://cdn.tailwindcss.com"></script>
+<style>
+    .timeline-line::before {
+        content: '';
+        position: absolute;
+        left: 31px;
+        top: 0;
+        bottom: 0;
+        width: 2px;
+        background: repeating-linear-gradient(to bottom, #e2e8f0 0px, #e2e8f0 10px, transparent 10px, transparent 20px);
+    }
+</style>
+{% endblock %}
+
+{% block navbar_actions %}
+<div style="display: flex; align-items: center; gap: 0.75rem;">
+    <button class="btn btn-secondary btn-sm" onclick="toggleSidebar('right')">
+        <i class="fas fa-filter mr-2 text-xs"></i> Filtros
+    </button>
+    <div class="user-avatar-mini" title="Meu Perfil">MV</div>
+</div>
+{% endblock %}
+
+{% block workspace_content %}
+<div class="p-12 max-w-4xl mx-auto space-y-12">
+    <div>
+        <h1 class="text-3xl font-black text-slate-800 tracking-tight">Terça-feira, 17 de Fevereiro</h1>
+        <p class="text-slate-400 font-medium mt-1">Timeline de compromissos corporativos</p>
+    </div>
+
+    <!-- Timeline Container -->
+    <div class="relative timeline-line space-y-12">
+        <div class="relative flex items-start gap-8 group">
+            <div class="w-16 pt-1 text-right">
+                <span class="text-sm font-black text-slate-800">09:00</span>
+                <p class="text-[10px] font-bold text-slate-400 uppercase tracking-tighter">AM</p>
+            </div>
+            <div
+                class="relative z-10 w-16 h-16 flex items-center justify-center bg-white rounded-2xl border-4 border-slate-100 shadow-sm transition-transform group-hover:scale-110">
+                <i class="fas fa-users text-xl text-primary"></i>
+            </div>
+            <div
+                class="flex-1 bg-white p-8 rounded-[32px] border border-slate-200 shadow-sm hover:shadow-xl transition-all">
+                <h4 class="text-lg font-bold text-slate-800">Review Semanal de Operações</h4>
+                <div class="flex items-center gap-4 mt-6">
+                    <div class="flex -space-x-2">
+                        <img class="w-8 h-8 rounded-full border-2 border-white"
+                            src="https://ui-avatars.com/api/?name=CEO">
+                        <img class="w-8 h-8 rounded-full border-2 border-white"
+                            src="https://ui-avatars.com/api/?name=CTO">
+                    </div>
+                    <span class="text-xs text-slate-400 font-medium">Link Zoom • Sala A</span>
+                </div>
+            </div>
+        </div>
+
+        <div class="relative flex items-start gap-8 group">
+            <div class="w-16 pt-1 text-right">
+                <span class="text-sm font-black text-primary">11:30</span>
+                <p class="text-[10px] font-bold text-primary uppercase tracking-tighter">AM</p>
+            </div>
+            <div
+                class="relative z-10 w-16 h-16 flex items-center justify-center bg-primary rounded-2xl border-4 border-primary/20 shadow-lg">
+                <i class="fas fa-handshake text-xl text-white"></i>
+            </div>
+            <div class="flex-1 bg-slate-900 p-8 rounded-[32px] shadow-2xl">
+                <h4 class="text-lg font-bold text-white">Alinhamento Strategy v2.0</h4>
+                <p class="text-sm text-slate-400 mt-2">Acontecendo agora • Presencial</p>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block sidebar_right %}
+<div class="sidebar-header-ws">
+    <h3 class="text-h3">📅 Configurações</h3>
+</div>
+<div class="sidebar-content-ws p-4 space-y-4">
+    <div class="form-group">
+        <label class="form-label text-xs uppercase font-bold text-slate-400">Calendário</label>
+        <div class="mt-2 text-sm text-slate-600 bg-slate-50 p-4 rounded-xl border border-slate-100">
+            [Widget de Calendário Mensal]
+        </div>
+    </div>
+    <div class="form-group">
+        <label class="form-label text-xs uppercase font-bold text-slate-400">Notificações</label>
+        <div class="flex items-center justify-between mt-2">
+            <span class="text-sm text-slate-600">Lembrar 15min antes</span>
+            <input type="checkbox" checked class="rounded">
+        </div>
+    </div>
+</div>
+{% endblock %}

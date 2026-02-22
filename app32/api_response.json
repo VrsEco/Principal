@@ -1,0 +1,46 @@
+[
+  {
+    "created_at": "2025-10-06 22:15:05",
+    "updated_at": "2025-10-07 23:36:40",
+    "id": 1,
+    "company_id": 1,
+    "code": "AO.C.1",
+    "name": "Gest\u00e3o",
+    "description": "",
+    "order_index": 1,
+    "color": "#faa28b"
+  },
+  {
+    "created_at": "2025-10-06 22:15:11",
+    "updated_at": "2025-10-07 23:28:51",
+    "id": 2,
+    "company_id": 1,
+    "code": "AO.C.2",
+    "name": "Finalistico",
+    "description": "",
+    "order_index": 2,
+    "color": "#b7d8ad"
+  },
+  {
+    "created_at": "2025-10-06 22:15:15",
+    "updated_at": "2025-10-07 23:28:28",
+    "id": 3,
+    "company_id": 1,
+    "code": "AO.C.3",
+    "name": "Apoio",
+    "description": "",
+    "order_index": 3,
+    "color": "#a78bfa"
+  },
+  {
+    "created_at": "2025-10-07 19:34:31",
+    "updated_at": "2025-10-07 23:30:23",
+    "id": 4,
+    "company_id": 1,
+    "code": "AO.C.4",
+    "name": "TESTE 03",
+    "description": "",
+    "order_index": 4,
+    "color": "#a78bfa"
+  }
+]

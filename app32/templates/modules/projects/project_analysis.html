@@ -1,0 +1,1485 @@
+{% extends "layouts/workspace.html" %}
+
+{% block title %}Análise de Projetos - Versus{% endblock %}
+
+{% block head %}
+<link rel="stylesheet" href="{{ url_for('static', filename='css/my-work.css') }}" />
+<style>
+    /* Kanban Board Layout from processes_v2 */
+    .content-header-ws {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        margin-bottom: 2rem;
+        gap: 1rem;
+    }
+
+    .kanban-board-ws {
+        display: flex;
+        gap: 1.25rem;
+        padding: 0 0.5rem 1.5rem 0.5rem;
+        overflow-x: auto;
+        min-height: calc(100vh - 320px);
+        align-items: flex-start;
+        -webkit-overflow-scrolling: touch;
+    }
+
+    .kanban-column-ws {
+        flex: 0 0 310px;
+        background: var(--surface-secondary);
+        border-radius: 16px;
+        border: 1px solid var(--border);
+        display: flex;
+        flex-direction: column;
+        max-height: calc(100vh - 250px);
+        transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+        overflow: hidden;
+    }
+
+    .kanban-column-ws.collapsed {
+        flex: 0 0 60px;
+        max-height: 400px;
+    }
+
+    .kanban-column-title {
+        display: flex;
+        align-items: center;
+        gap: 0.5rem;
+    }
+
+    .collapsed-title {
+        display: none;
+        font-weight: 700;
+        color: var(--primary);
+        font-size: 0.9rem;
+        text-align: center;
+        white-space: nowrap;
+    }
+
+    .kanban-column-ws.collapsed .kanban-column-title {
+        display: none;
+    }
+
+    .kanban-column-ws.collapsed .collapsed-title {
+        display: block;
+    }
+
+    .kanban-column-ws.collapsed .kanban-column-header-ws {
+        border-bottom: none;
+        padding: 1rem 0.25rem;
+        flex-direction: column;
+        justify-content: center;
+    }
+
+    .kanban-column-ws.collapsed .kanban-dropzone-ws {
+        display: none;
+    }
+
+    .kanban-column-ws.collapsed .kanban-column-count {
+        display: none;
+    }
+
+    .kanban-column-header-ws {
+        padding: 1rem;
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        border-bottom: 1px solid var(--border);
+        cursor: pointer;
+        user-select: none;
+        background: rgba(255, 255, 255, 0.4);
+        backdrop-filter: blur(4px);
+    }
+
+    .kanban-column-header-ws h3 {
+        font-size: 0.8rem;
+        font-weight: 800;
+        text-transform: uppercase;
+        color: var(--text-secondary);
+        margin: 0;
+        display: flex;
+        align-items: center;
+        gap: 0.4rem;
+    }
+
+    .kanban-column-count {
+        font-size: 0.75rem;
+        font-weight: 700;
+        background: var(--border);
+        color: var(--text-tertiary);
+        padding: 2px 8px;
+        border-radius: 12px;
+        min-width: 24px;
+        text-align: center;
+    }
+
+    .kanban-dropzone-ws {
+        padding: 1rem;
+        flex: 1;
+        overflow-y: auto;
+        min-height: 100px;
+        display: flex;
+        flex-direction: column;
+        gap: 0.75rem;
+    }
+
+    .kanban-dropzone-ws[data-dropping="true"] {
+        background: rgba(37, 99, 235, 0.05);
+    }
+
+    /* Cards */
+    .kanban-card-ws {
+        background: var(--surface-primary);
+        border: 1px solid var(--border);
+        border-radius: 12px;
+        padding: 1rem;
+        cursor: pointer;
+        transition: all 0.2s;
+        box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
+        user-select: none;
+    }
+
+    .kanban-card-ws:hover {
+        border-color: var(--primary);
+        transform: translateY(-2px);
+        box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
+    }
+
+    .kanban-card-ws.dragging {
+        opacity: 0.5;
+        cursor: grabbing;
+    }
+
+    .card-top-row {
+        display: flex;
+        justify-content: space-between;
+        align-items: flex-start;
+        margin-bottom: 0.5rem;
+    }
+
+    .card-code {
+        font-family: var(--font-mono);
+        font-size: 0.65rem;
+        font-weight: 700;
+        color: var(--text-tertiary);
+        background: var(--surface-secondary);
+        padding: 2px 6px;
+        border-radius: 4px;
+    }
+
+    .card-project-tag {
+        font-size: 0.6rem;
+        font-weight: 800;
+        color: var(--primary);
+        background: var(--primary-light);
+        padding: 2px 6px;
+        border-radius: 4px;
+        text-transform: uppercase;
+        letter-spacing: 0.02em;
+        margin-bottom: 4px;
+        display: inline-block;
+        max-width: 100%;
+        overflow: hidden;
+        text-overflow: ellipsis;
+        white-space: nowrap;
+    }
+
+    .card-title {
+        font-size: 0.85rem;
+        font-weight: 600;
+        color: var(--text-primary);
+        line-height: 1.4;
+        margin-bottom: 0.75rem;
+        display: -webkit-box;
+        -webkit-line-clamp: 2;
+        line-clamp: 2;
+        -webkit-box-orient: vertical;
+        overflow: hidden;
+    }
+
+    .card-people {
+        display: flex;
+        flex-direction: column;
+        gap: 0.25rem;
+        margin-bottom: 0.75rem;
+    }
+
+    .person-tag {
+        display: flex;
+        align-items: center;
+        gap: 0.4rem;
+        font-size: 0.75rem;
+    }
+
+    .person-tag .label {
+        font-weight: 800;
+        font-size: 0.65rem;
+        color: var(--text-tertiary);
+        width: 24px;
+    }
+
+    .card-footer-meta {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        margin-top: auto;
+        border-top: 1px solid var(--border-light);
+        padding-top: 0.5rem;
+    }
+
+    .deadline-badge {
+        display: flex;
+        align-items: center;
+        gap: 4px;
+        font-size: 0.7rem;
+        font-weight: 600;
+        color: var(--text-secondary);
+    }
+
+    .deadline-badge.overdue {
+        color: var(--danger);
+    }
+
+    /* Modal Context styles from processes_v2 */
+    .confirmation-popup-backdrop {
+        position: fixed;
+        top: 0;
+        left: 0;
+        width: 100%;
+        height: 100%;
+        background: rgba(15, 23, 42, 0.75);
+        backdrop-filter: blur(8px);
+        display: none;
+        justify-content: center;
+        align-items: center;
+        z-index: 25000;
+        padding: 20px;
+    }
+
+    .confirmation-popup-backdrop.open {
+        display: flex;
+    }
+
+    .confirmation-popup {
+        background: white;
+        border-radius: 24px;
+        width: 100%;
+        max-width: 450px;
+        padding: 32px;
+        box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.25);
+    }
+
+    .confirmation-popup-actions {
+        display: flex;
+        gap: 12px;
+        margin-top: 24px;
+    }
+
+    .confirmation-popup h3 {
+        margin-top: 0;
+    }
+
+    .surface-card {
+        background: white;
+        border-radius: 20px;
+        border: 1px solid var(--border);
+        box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
+        padding: 1.5rem;
+    }
+
+    /* Activity Modal Styles */
+    .modal-backdrop-ws {
+        position: fixed;
+        top: 0;
+        left: 0;
+        width: 100%;
+        height: 100%;
+        background: rgba(15, 23, 42, 0.8);
+        backdrop-filter: blur(12px);
+        z-index: 25000;
+        display: none;
+        justify-content: center;
+        align-items: center;
+        padding: 20px;
+    }
+
+    .modal-backdrop-ws.open {
+        display: flex;
+    }
+
+    .modal-content-ws {
+        background: white;
+        width: 100%;
+        max-width: 800px;
+        max-height: 90vh;
+        border-radius: 24px;
+        position: relative;
+        display: flex;
+        flex-direction: column;
+        overflow: hidden;
+        animation: modalScaleUp 0.3s cubic-bezier(0.34, 1.56, 0.64, 1);
+    }
+
+    @keyframes modalScaleUp {
+        from {
+            transform: scale(0.9) translateY(10px);
+            opacity: 0;
+        }
+
+        to {
+            transform: scale(1) translateY(0);
+            opacity: 1;
+        }
+    }
+
+    .modal-header-ws {
+        padding: 1.5rem 2rem;
+        border-bottom: 1px solid var(--border-light);
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+    }
+
+    .modal-body-ws {
+        padding: 2rem;
+        overflow-y: auto;
+    }
+
+    .modal-footer-ws {
+        padding: 1.5rem 2rem;
+        border-top: 1px solid var(--border-light);
+        display: flex;
+        justify-content: flex-end;
+        gap: 1rem;
+        background: var(--surface-secondary);
+    }
+
+    .field {
+        margin-bottom: 1.5rem;
+        display: flex;
+        flex-direction: column;
+        gap: 0.5rem;
+    }
+
+    .field label {
+        font-size: 0.75rem;
+        font-weight: 800;
+        text-transform: uppercase;
+        color: var(--text-tertiary);
+        letter-spacing: 0.02em;
+    }
+
+    .field input,
+    .field select,
+    .field textarea {
+        width: 100%;
+        padding: 0.75rem 1rem;
+        border-radius: 12px;
+        border: 1.5px solid var(--border);
+        font-size: 0.9rem;
+        transition: all 0.2s;
+    }
+
+    .field input:focus,
+    .field select:focus,
+    .field textarea:focus {
+        border-color: var(--primary);
+        outline: none;
+        box-shadow: 0 0 0 4px var(--primary-light);
+    }
+
+    .form-grid {
+        display: grid;
+        grid-template-columns: repeat(2, 1fr);
+        gap: 1.5rem;
+    }
+
+    /* Responsive Adjustments */
+    @media (max-width: 992px) {
+        .dashboard-stats-row-ws {
+            grid-template-columns: repeat(2, 1fr) !important;
+            gap: 1rem !important;
+        }
+
+        .content-header-ws {
+            flex-direction: column;
+            align-items: flex-start;
+            gap: 1.5rem;
+        }
+
+        .header-actions {
+            width: 100%;
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 0.75rem;
+        }
+
+        .header-actions .btn {
+            width: 100%;
+            justify-content: center;
+        }
+
+        .form-grid {
+            grid-template-columns: 1fr;
+            gap: 1rem;
+        }
+
+        .kanban-board-ws {
+            flex-direction: column;
+            align-items: stretch;
+            overflow-x: hidden;
+            overflow-y: visible;
+            min-height: auto;
+        }
+
+        .kanban-column-ws {
+            flex: 1 1 auto;
+            width: 100%;
+            max-height: none !important;
+            height: auto !important;
+            min-height: min-content !important;
+        }
+
+        .kanban-column-ws.collapsed {
+            flex: 0 0 auto;
+            max-height: 56px !important;
+            height: 56px !important;
+            min-height: 56px !important;
+            margin-bottom: 0.5rem;
+        }
+
+        .kanban-dropzone-ws {
+            flex: none !important;
+            height: auto !important;
+            overflow: visible !important;
+            min-height: min-content !important;
+            display: flex !important;
+            flex-direction: column !important;
+            gap: 0.75rem !important;
+        }
+
+        .modal-content-ws {
+            max-height: 95vh;
+            border-radius: 16px;
+        }
+
+        .modal-body-ws {
+            padding: 1.25rem;
+        }
+
+        .modal-footer-ws {
+            padding: 1rem 1.25rem;
+        }
+
+        .workspace-main {
+            padding: 1rem !important;
+        }
+    }
+
+    @media (max-width: 480px) {
+        .dashboard-stats-row-ws {
+            grid-template-columns: 1fr !important;
+        }
+
+        .header-actions {
+            grid-template-columns: 1fr;
+        }
+
+        .text-h1 {
+            font-size: 1.75rem;
+        }
+    }
+
+    /* Diary Log Styling */
+    .log-section {
+        margin-top: 2rem;
+        padding-top: 2rem;
+        border-top: 1px solid var(--border-light);
+    }
+
+    .log-history-list {
+        display: flex;
+        flex-direction: column;
+        gap: 1rem;
+        margin-top: 1rem;
+    }
+
+    .log-entry {
+        background: var(--surface-secondary);
+        padding: 1rem;
+        border-radius: 16px;
+        position: relative;
+    }
+
+    .log-entry-header {
+        display: flex;
+        justify-content: space-between;
+        font-size: 0.7rem;
+        font-weight: 700;
+        color: var(--text-tertiary);
+        margin-bottom: 0.5rem;
+    }
+
+    .log-entry-text {
+        font-size: 0.85rem;
+        color: var(--text-primary);
+        line-height: 1.5;
+    }
+
+    /* Work Log Section */
+    .work-log-item {
+        display: grid;
+        grid-template-columns: 2fr 1fr 1fr auto;
+        gap: 1rem;
+        align-items: center;
+        padding: 0.75rem 0;
+        border-bottom: 1px solid var(--border-light);
+    }
+
+    .work-log-name {
+        font-size: 0.85rem;
+        font-weight: 600;
+    }
+
+    .work-log-role {
+        font-size: 0.75rem;
+        color: var(--text-tertiary);
+    }
+
+    .work-log-hours {
+        font-size: 0.85rem;
+        font-weight: 700;
+        color: var(--primary);
+    }
+</style>
+{% endblock %}
+
+{% block workspace_content %}
+<div class="content-header-ws">
+    <div>
+        <div class="breadcrumb-ws">
+            <a href="/projects">Projetos</a>
+            <span class="sep">/</span>
+            <span>Análise de Projetos</span>
+        </div>
+        <h1 class="text-h1">Análise Global de Projetos</h1>
+        <p class="text-body-secondary">Acompanhamento consolidado de todas as atividades da empresa.</p>
+    </div>
+
+    <div class="header-actions">
+        <button class="btn btn-secondary btn-with-icon" onclick="loadTasks()">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <path d="M23 4v6h-6M1 20v-6h6"></path>
+                <path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15"></path>
+            </svg>
+            Atualizar
+        </button>
+        <button class="btn btn-primary btn-with-icon" onclick="openTaskModal()">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
+                <line x1="12" y1="5" x2="12" y2="19"></line>
+                <line x1="5" y1="12" x2="19" y2="12"></line>
+            </svg>
+            Nova Atividade
+        </button>
+    </div>
+</div>
+
+<div class="dashboard-stats-row-ws"
+    style="margin-bottom: 2rem; display: grid; grid-template-columns: repeat(4, 1fr); gap: 1.5rem;">
+    <div class="stat-card-ws">
+        <span class="stat-label-ws">Total de Atividades</span>
+        <div class="stat-value-ws" id="stats-total">0</div>
+    </div>
+    <div class="stat-card-ws">
+        <span class="stat-label-ws">Avanço Médio</span>
+        <div class="stat-value-ws" style="color: var(--success);" id="stats-progress">0%</div>
+    </div>
+    <div class="stat-card-ws">
+        <span class="stat-label-ws">Em Execução</span>
+        <div class="stat-value-ws" style="color: var(--primary);" id="stats-executing">0</div>
+    </div>
+    <div class="stat-card-ws">
+        <span class="stat-label-ws">Atrasadas</span>
+        <div class="stat-value-ws" style="color: var(--danger);" id="stats-overdue">0</div>
+    </div>
+</div>
+
+<!-- Kanban Board -->
+<div class="kanban-board-ws">
+    {% for stage in stages %}
+    <div class="kanban-column-ws" id="col-{{ stage.slug }}" data-stage="{{ stage.slug }}">
+        <div class="kanban-column-header-ws" onclick="toggleColumn('{{ stage.slug }}')">
+            <div class="kanban-column-title">
+                <div style="width: 8px; height: 8px; border-radius: 50%; background: {{ stage.color }}"></div>
+                <h3>{{ stage.title }}</h3>
+            </div>
+            <div class="collapsed-title">
+                <span id="abbr-{{ stage.slug }}">{{ stage.title[:1] }}</span>
+                <span id="collapsed-count-{{ stage.slug }}"
+                    style="font-size: 0.7rem; color: var(--text-tertiary); margin-left: 4px;">0</span>
+            </div>
+            <span class="kanban-column-count" id="count-{{ stage.slug }}">0</span>
+        </div>
+        <div class="kanban-dropzone-ws" id="body-{{ stage.slug }}" data-stage="{{ stage.slug }}"
+            ondragover="handleDragOver(event)" ondragleave="handleDragLeave(event)" ondrop="handleDrop(event)">
+            <!-- Cards go here -->
+        </div>
+    </div>
+    {% endfor %}
+</div>
+
+<!-- Task Modal -->
+<div class="modal-backdrop-ws" id="taskModal">
+    <div class="modal-content-ws">
+        <div class="modal-header-ws">
+            <h2 class="text-h2" id="modalTitle">Atividade</h2>
+            <button class="btn btn-icon" onclick="closeTaskModal()">
+                <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <line x1="18" y1="6" x2="6" y2="18"></line>
+                    <line x1="6" y1="6" x2="18" y2="18"></line>
+                </svg>
+            </button>
+        </div>
+        <div class="modal-body-ws">
+            <form id="taskForm">
+                <input type="hidden" id="taskId">
+
+                <div class="field">
+                    <label>Projeto</label>
+                    <select id="taskProjectId" required>
+                        <option value="">Selecione o Projeto...</option>
+                        <!-- Populated by loadProjects -->
+                    </select>
+                </div>
+
+                <div class="field">
+                    <label>O que fazer</label>
+                    <textarea id="taskWhat" rows="2" placeholder="Descreva a atividade..." required></textarea>
+                </div>
+
+                <div class="form-grid">
+                    <div class="field">
+                        <label>Responsável</label>
+                        <select id="taskEmployeeId">
+                            <option value="">Selecione...</option>
+                            <!-- Populated by employees -->
+                        </select>
+                    </div>
+                    <div class="field">
+                        <label>Data de Entrega</label>
+                        <input type="date" id="taskDueDate">
+                    </div>
+                </div>
+
+                <div class="form-grid">
+                    <div class="field">
+                        <label>Horas Estimadas</label>
+                        <input type="number" id="taskEstimatedHours" step="0.5" value="0">
+                    </div>
+                    <div class="field">
+                        <label>Peso / Complexidade</label>
+                        <input type="number" id="taskScoreWeight" step="0.1" value="1.0">
+                    </div>
+                </div>
+
+                <div class="field">
+                    <label>Como fazer (Procedimento)</label>
+                    <textarea id="taskHow" rows="3" placeholder="Instruções passo a passo..."></textarea>
+                </div>
+
+                <div class="field">
+                    <label>Notas / Observações</label>
+                    <textarea id="taskNotes" rows="2"></textarea>
+                </div>
+
+                <!-- Work Log Section -->
+                <div id="workLogSection" class="log-section" style="display: none;">
+                    <div
+                        style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1rem;">
+                        <h4 style="font-size: 0.8rem; font-weight: 800; text-transform: uppercase;">Log de Trabalho</h4>
+                        <button type="button" class="btn btn-secondary btn-sm" onclick="showAddHoursForm()">+ Registrar
+                            Horas</button>
+                    </div>
+
+                    <div id="addHoursForm"
+                        style="display: none; background: var(--surface-secondary); padding: 1.5rem; border-radius: 16px; margin-bottom: 1.5rem;">
+                        <div class="form-grid">
+                            <div class="field">
+                                <label>Colaborador</label>
+                                <select id="logEmployeeId">
+                                    <option value="">Selecione...</option>
+                                </select>
+                            </div>
+                            <div class="field">
+                                <label>Horas Trabalhadas</label>
+                                <input type="number" id="logHours" step="0.1" placeholder="0.0">
+                            </div>
+                        </div>
+                        <div class="field">
+                            <label>Notas do Registro</label>
+                            <textarea id="logNotes" rows="2" placeholder="O que foi feito?"></textarea>
+                        </div>
+                        <div style="display: flex; gap: 0.5rem; justify-content: flex-end;">
+                            <button type="button" class="btn btn-secondary"
+                                onclick="hideAddHoursForm()">Cancelar</button>
+                            <button type="button" class="btn btn-primary" onclick="submitWorkLog()">Adicionar</button>
+                        </div>
+                    </div>
+
+                    <div id="workLogList">
+                        <!-- Populated dynamic -->
+                    </div>
+                </div>
+
+                <!-- Diary Log Section -->
+                <div id="diaryLogSection" class="log-section" style="display: none;">
+                    <div
+                        style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1rem;">
+                        <h4 style="font-size: 0.8rem; font-weight: 800; text-transform: uppercase;">Diário da Atividade
+                        </h4>
+                        <button type="button" class="btn btn-secondary btn-sm" onclick="openLogPopup()">+ Novo
+                            Registro</button>
+                    </div>
+                    <div id="diaryLogHistory" class="log-history-list">
+                        <!-- Populated by renderDiaryLogs -->
+                    </div>
+                </div>
+            </form>
+        </div>
+        <div class="modal-footer-ws">
+            <button class="btn btn-secondary" onclick="closeTaskModal()">Cancelar</button>
+            <button class="btn btn-primary" onclick="submitTask()">Salvar Atividade</button>
+            <button id="btnDeleteTask" class="btn btn-danger" style="display: none; margin-right: auto;"
+                onclick="deleteTask(document.getElementById('taskId').value)">
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <polyline points="3 6 5 6 21 6"></polyline>
+                    <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path>
+                </svg>
+            </button>
+        </div>
+    </div>
+</div>
+
+<!-- Confirmation Popups -->
+<div id="logPopup" class="confirmation-popup-backdrop">
+    <div class="confirmation-popup">
+        <h3 class="text-h3">➕ Adicionar Registro ao Diário</h3>
+        <div class="field">
+            <label>Descrição do Registro</label>
+            <textarea id="logText" placeholder="O que aconteceu hoje?" rows="3"></textarea>
+        </div>
+        <div class="confirmation-popup-actions">
+            <button class="btn btn-secondary w-100" onclick="closeLogPopup()">Cancelar</button>
+            <button class="btn btn-primary w-100" onclick="confirmAddLog()">Adicionar</button>
+        </div>
+    </div>
+</div>
+
+<div id="completionPopup" class="confirmation-popup-backdrop">
+    <div class="confirmation-popup">
+        <h3 class="text-h3">✅ Concluir Atividade</h3>
+        <p class="text-body-secondary">Deseja registrar notas finais sobre esta conclusão?</p>
+        <div class="field" style="margin-top: 1rem;">
+            <label>Data de Conclusão</label>
+            <input type="date" id="completionDateInput">
+        </div>
+        <div class="field">
+            <label>Notas de Conclusão (Opcional)</label>
+            <textarea id="completionNoteInput" rows="2"></textarea>
+        </div>
+        <div class="confirmation-popup-actions">
+            <button class="btn btn-secondary w-100" onclick="cancelCompletionPopup()">Cancelar</button>
+            <button class="btn btn-primary w-100" onclick="confirmCompletionPopup()">Concluir</button>
+        </div>
+    </div>
+</div>
+
+
+
+<script>
+    function addDebugLog(msg) {
+        // Silenced for production
+        console.log('[DEBUG]', msg);
+    }
+</script>
+
+<div id="cancellationPopup" class="confirmation-popup-backdrop">
+    <div class="confirmation-popup">
+        <h3 class="text-h3">↩️ Reabrir Atividade</h3>
+        <p class="text-body-secondary">Por que você está reabrindo esta atividade?</p>
+        <div class="field" style="margin-top: 1rem;">
+            <label>Data da Reabertura</label>
+            <input type="date" id="cancellationDateInput">
+        </div>
+        <div class="field">
+            <label>Motivo</label>
+            <textarea id="cancellationNoteInput" rows="2"></textarea>
+        </div>
+        <div class="confirmation-popup-actions">
+            <button class="btn btn-secondary w-100" onclick="cancelCancellationPopup()">Voltar</button>
+            <button class="btn btn-danger w-100" onclick="confirmCancellationPopup()">Reabrir</button>
+        </div>
+    </div>
+</div>
+
+{% endblock %}
+
+{% block scripts %}
+<script>
+    const COMPANY_ID = parseInt("{{ company.id if company else '0' }}");
+    let allTasks = [];
+    let allProjects = [];
+    let employeeNames = {};
+    let draggedTaskId = null;
+    let currentTaskLogs = [];
+    let pendingDrop = null;
+
+    const stageAbbreviations = {
+        'inbox': 'CE',
+        'waiting': 'A',
+        'executing': 'E',
+        'pending': 'P',
+        'suspended': 'S',
+        'completed': 'CD'
+    };
+
+    async function loadTasks() {
+        addDebugLog('Iniciando carga de atividades...');
+        try {
+            const response = await fetch('/api/projects/all-tasks');
+            addDebugLog(`API tarefas retornou status ${response.status}`);
+
+            if (!response.ok) {
+                console.error('Erro na API de tarefas:', response.status);
+                addDebugLog(`ERRO: Status ${response.status}`);
+                return;
+            }
+            const data = await response.json();
+            addDebugLog(`Recebidas ${Array.isArray(data) ? data.length : 0} atividades`);
+
+            if (Array.isArray(data)) {
+                allTasks = data;
+                renderKanban();
+                updateStats();
+                if (allTasks.length === 0) {
+                    addDebugLog('Aviso: Nenhuma atividade encontrada para esta empresa.');
+                }
+            } else {
+                addDebugLog('ERRO: Resposta da API não é uma lista');
+            }
+        } catch (error) {
+            console.error('Erro ao carregar atividades:', error);
+            addDebugLog(`FALHA: ${error.message}`);
+        }
+    }
+
+    async function loadProjects() {
+        addDebugLog('Carregando lista de projetos...');
+        try {
+            const response = await fetch('/api/projects');
+            if (!response.ok) {
+                console.error('Erro na API de projetos:', response.status);
+                addDebugLog(`ERRO: API projetos status ${response.status}`);
+                return;
+            }
+            const data = await response.json();
+
+            if (!Array.isArray(data)) {
+                console.error('API de projetos não retornou um array:', data);
+                addDebugLog('ERRO: API projetos não retornou uma lista');
+                return;
+            }
+            allProjects = data;
+            addDebugLog(`Carregados ${allProjects.length} projetos`);
+
+            const select = document.getElementById('taskProjectId');
+            const filterSelect = document.getElementById('filterProject');
+
+            allProjects.forEach(p => {
+                if (select) {
+                    const opt = document.createElement('option');
+                    opt.value = p.id;
+                    opt.textContent = p.name;
+                    select.appendChild(opt);
+
+                    if (filterSelect) {
+                        const optFilter = opt.cloneNode(true);
+                        filterSelect.appendChild(optFilter);
+                    }
+                }
+            });
+        } catch (error) {
+            console.error('Erro ao carregar projetos:', error);
+            addDebugLog(`FALHA projetos: ${error.message}`);
+        }
+    }
+
+    async function loadEmployees() {
+        addDebugLog(`Carregando colaboradores para empresa ${COMPANY_ID}...`);
+        try {
+            const response = await fetch(`/api/user-employee/employees/${COMPANY_ID}`);
+            addDebugLog(`API colaboradores retornou status ${response.status}`);
+
+            const data = await response.json();
+
+            if (!data.success || !data.employees) {
+                console.error('Erro ao carregar colaboradores:', data.error || 'Resposta inválida');
+                addDebugLog(`ERRO: ${data.error || 'Falha na resposta'}`);
+                return;
+            }
+
+            addDebugLog(`Carregados ${data.employees.length} colaboradores`);
+
+            const select = document.getElementById('taskEmployeeId');
+            const logSelect = document.getElementById('logEmployeeId');
+            const filterSelect = document.getElementById('filterResponsible');
+
+            data.employees.forEach(emp => {
+                employeeNames[emp.id] = emp.name;
+
+                const opt = document.createElement('option');
+                opt.value = emp.id;
+                opt.textContent = emp.name;
+
+                if (select) {
+                    select.appendChild(opt.cloneNode(true));
+                }
+
+                if (logSelect) {
+                    logSelect.appendChild(opt.cloneNode(true));
+                }
+
+                if (filterSelect) {
+                    filterSelect.appendChild(opt.cloneNode(true));
+                }
+            });
+
+            if (Object.keys(employeeNames).length > 0) renderKanban();
+        } catch (error) {
+            console.error('Erro ao carregar colaboradores:', error);
+        }
+    }
+
+    function renderKanban(tasksToRender = null) {
+        addDebugLog('Renderizando Kanban...');
+        const tasks = tasksToRender || allTasks;
+        if (!Array.isArray(tasks)) {
+            addDebugLog('ERRO: Tarefas para renderizar não é um array');
+            console.error('Tarefas inválidas para renderização:', tasks);
+            return;
+        }
+        addDebugLog(`Processando ${tasks.length} tarefas para o quadro...`);
+
+        // Clear columns
+        document.querySelectorAll('.kanban-dropzone-ws').forEach(body => body.innerHTML = '');
+
+        const grouped = tasks.reduce((acc, task) => {
+            const stage = task.stage || 'inbox';
+            if (!acc[stage]) acc[stage] = [];
+            acc[stage].push(task);
+            return acc;
+        }, {});
+
+        // Update each column defined in the template
+        document.querySelectorAll('.kanban-column-ws').forEach(col => {
+            const stage = col.dataset.stage;
+            const body = document.getElementById(`body-${stage}`);
+            const count = document.getElementById(`count-${stage}`);
+            const collapsedCount = document.getElementById(`collapsed-count-${stage}`);
+
+            const stageTasks = grouped[stage] || [];
+
+            if (body) {
+                stageTasks.forEach(task => body.appendChild(createCard(task)));
+            }
+            if (count) count.textContent = stageTasks.length;
+            if (collapsedCount) collapsedCount.textContent = stageTasks.length;
+        });
+        addDebugLog('Renderização concluída com sucesso.');
+    }
+
+    function createCard(task) {
+        const card = document.createElement('div');
+        card.className = 'kanban-card-ws';
+        card.draggable = true;
+        card.dataset.id = task.id;
+        card.classList.add(`prio-${task.priority || 'normal'}`);
+
+        card.ondragstart = (e) => {
+            draggedTaskId = task.id;
+            card.classList.add('dragging');
+            e.dataTransfer.setData('text/plain', task.id);
+        };
+
+        card.ondragend = () => {
+            card.classList.remove('dragging');
+            draggedTaskId = null;
+        };
+
+        const deadlineDate = task.due_date ? new Date(task.due_date) : null;
+        const isOverdue = deadlineDate && deadlineDate < new Date() && task.stage !== 'completed';
+        const deadlineLabel = deadlineDate ? deadlineDate.toLocaleDateString('pt-BR') : '-';
+
+        let ownerName = task.employee_name;
+        if (!ownerName && task.employee_id && employeeNames[task.employee_id]) {
+            ownerName = employeeNames[task.employee_id];
+        }
+        ownerName = ownerName || task.who || 'Sem responsável';
+
+        card.innerHTML = `
+            <div class="card-project-tag" title="Projeto">${task.project_name || 'Individual'}</div>
+            <div class="card-top-row">
+                <span class="card-code">#${task.id}</span>
+                <div class="deadline-badge ${isOverdue ? 'overdue' : ''}">
+                    <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3">
+                        <rect x="3" y="4" width="18" height="18" rx="2" ry="2"></rect>
+                        <line x1="16" y1="2" x2="16" y2="6"></line>
+                    </svg>
+                    ${deadlineLabel}
+                </div>
+            </div>
+            
+            <div class="card-title">${task.what}</div>
+            
+            <div class="card-people">
+                <div class="person-tag">
+                    <span class="label">RA:</span> 
+                    <span style="font-weight: 600; color: var(--text-primary);">${ownerName}</span>
+                </div>
+            </div>
+            
+            <div class="card-footer-meta">
+                <div style="font-size: 0.72rem; font-weight: 700; color: var(--text-secondary);">
+                    ${task.worked_hours || 0}h <span style="font-weight: 400; color: var(--text-tertiary);">/ ${task.estimated_hours || 0}h</span>
+                </div>
+                <button class="btn btn-icon" onclick="openTaskModal(${task.id})" style="padding: 4px; color: var(--primary); background: var(--primary-light); border-radius: 6px;">
+                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
+                        <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"></path>
+                        <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"></path>
+                    </svg>
+                </button>
+            </div>
+        `;
+        return card;
+    }
+
+    function updateStats(tasksToCount = null) {
+        const tasks = tasksToCount || allTasks;
+        const total = tasks.length;
+        const completed = tasks.filter(t => t.stage === 'completed').length;
+        const executing = tasks.filter(t => t.stage === 'executing').length;
+        const overdue = tasks.filter(t => {
+            if (t.stage === 'completed' || !t.due_date) return false;
+            return new Date(t.due_date) < new Date();
+        }).length;
+
+        const progress = total > 0 ? Math.round((completed / total) * 100) : 0;
+
+        document.getElementById('stats-total').textContent = total;
+        document.getElementById('stats-progress').textContent = `${progress}%`;
+        document.getElementById('stats-executing').textContent = executing;
+        document.getElementById('stats-overdue').textContent = overdue;
+    }
+
+    // Drag and Drop
+    function handleDragOver(e) {
+        e.preventDefault();
+        e.currentTarget.setAttribute('data-dropping', 'true');
+    }
+
+    function handleDragLeave(e) {
+        e.currentTarget.removeAttribute('data-dropping');
+    }
+
+    async function handleDrop(e) {
+        e.preventDefault();
+        const dropzone = e.currentTarget;
+        dropzone.removeAttribute('data-dropping');
+
+        const taskId = e.dataTransfer.getData('text/plain');
+        const targetStage = dropzone.dataset.stage;
+        const task = allTasks.find(t => t.id == taskId);
+
+        if (!task || task.stage === targetStage) return;
+
+        // Visual feedback immediate
+        const card = document.querySelector(`.kanban-card-ws[data-id="${taskId}"]`);
+        if (card) dropzone.appendChild(card);
+
+        // Confirmation for completion/reopening
+        if (targetStage === 'completed') {
+            openCompletionPopup(taskId, targetStage);
+            return;
+        }
+        if (task.stage === 'completed' && targetStage !== 'completed') {
+            openCancellationPopup(taskId, targetStage);
+            return;
+        }
+
+        // Standard stage move
+        try {
+            const response = await fetch(`/api/projects/${task.project_id}/tasks/${taskId}/stage`, {
+                method: 'PATCH',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ stage: targetStage })
+            });
+
+            if (response.ok) {
+                task.stage = targetStage;
+                updateStats();
+            } else {
+                throw new Error('Falha ao atualizar estágio');
+            }
+        } catch (error) {
+            console.error(error);
+            alert('Erro ao mover atividade: ' + error.message);
+            loadTasks();
+        }
+    }
+
+    function openCompletionPopup(taskId, targetStage) {
+        pendingDrop = { taskId, targetStage };
+        document.getElementById('completionDateInput').value = new Date().toISOString().split('T')[0];
+        document.getElementById('completionPopup').classList.add('open');
+    }
+
+    function cancelCompletionPopup() {
+        document.getElementById('completionPopup').classList.remove('open');
+        pendingDrop = null;
+        renderKanban();
+    }
+
+    async function confirmCompletionPopup() {
+        const date = document.getElementById('completionDateInput').value;
+        const note = document.getElementById('completionNoteInput').value;
+        const { taskId, targetStage } = pendingDrop;
+        const task = allTasks.find(t => t.id == taskId);
+
+        const newLog = {
+            timestamp: new Date().toISOString(),
+            text: (note || 'Concluído via Kanban'),
+            type: 'completion',
+            date: date
+        };
+
+        try {
+            const response = await fetch(`/api/projects/${task.project_id}/tasks/${taskId}/stage`, {
+                method: 'PATCH',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    stage: targetStage,
+                    completion_date: date,
+                    logs: [...(task.logs || []), newLog]
+                })
+            });
+
+            if (response.ok) {
+                document.getElementById('completionPopup').classList.remove('open');
+                loadTasks();
+            }
+        } catch (error) { console.error(error); }
+    }
+
+    function openCancellationPopup(taskId, targetStage) {
+        pendingDrop = { taskId, targetStage };
+        document.getElementById('cancellationDateInput').value = new Date().toISOString().split('T')[0];
+        document.getElementById('cancellationPopup').classList.add('open');
+    }
+
+    function cancelCancellationPopup() {
+        document.getElementById('cancellationPopup').classList.remove('open');
+        pendingDrop = null;
+        renderKanban();
+    }
+
+    async function confirmCancellationPopup() {
+        const date = document.getElementById('cancellationDateInput').value;
+        const note = document.getElementById('cancellationNoteInput').value;
+        const { taskId, targetStage } = pendingDrop;
+        const task = allTasks.find(t => t.id == taskId);
+
+        const newLog = {
+            timestamp: new Date().toISOString(),
+            text: (note || 'Atividade reaberta'),
+            type: 'reopen',
+            date: date
+        };
+
+        try {
+            const response = await fetch(`/api/projects/${task.project_id}/tasks/${taskId}/stage`, {
+                method: 'PATCH',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    stage: targetStage,
+                    completion_date: null,
+                    logs: [...(task.logs || []), newLog]
+                })
+            });
+
+            if (response.ok) {
+                document.getElementById('cancellationPopup').classList.remove('open');
+                loadTasks();
+            }
+        } catch (error) { console.error(error); }
+    }
+
+    // Modal Logic
+    const taskModal = document.getElementById('taskModal');
+    const taskForm = document.getElementById('taskForm');
+
+    function openTaskModal(taskId = null) {
+        const modalTitle = document.getElementById('modalTitle');
+        const idField = document.getElementById('taskId');
+
+        if (taskId) {
+            const task = allTasks.find(t => t.id == taskId);
+            modalTitle.textContent = `#${task.id} - ${task.what.substring(0, 30)}...`;
+            idField.value = task.id;
+
+            document.getElementById('taskProjectId').value = task.project_id;
+            document.getElementById('taskWhat').value = task.what;
+            document.getElementById('taskEmployeeId').value = task.employee_id || '';
+            document.getElementById('taskDueDate').value = task.due_date || '';
+            document.getElementById('taskEstimatedHours').value = task.estimated_hours || 0;
+            document.getElementById('taskScoreWeight').value = task.score_weight || 1.0;
+            document.getElementById('taskHow').value = task.how || '';
+            document.getElementById('taskNotes').value = task.notes || '';
+
+            document.getElementById('workLogSection').style.display = 'block';
+            document.getElementById('diaryLogSection').style.display = 'block';
+            document.getElementById('btnDeleteTask').style.display = 'block';
+
+            currentTaskLogs = task.logs || [];
+            renderDiaryLogs();
+            loadWorkLogs(taskId);
+        } else {
+            modalTitle.textContent = 'Nova Atividade';
+            idField.value = '';
+            taskForm.reset();
+            document.getElementById('workLogSection').style.display = 'none';
+            document.getElementById('diaryLogSection').style.display = 'none';
+            document.getElementById('btnDeleteTask').style.display = 'none';
+            currentTaskLogs = [];
+        }
+        taskModal.classList.add('open');
+    }
+
+    function closeTaskModal() {
+        taskModal.classList.remove('open');
+    }
+
+    async function submitTask() {
+        const taskId = document.getElementById('taskId').value;
+        const projectId = document.getElementById('taskProjectId').value;
+
+        if (!projectId) { alert('Selecione um projeto'); return; }
+
+        const payload = {
+            what: document.getElementById('taskWhat').value,
+            project_id: projectId,
+            employee_id: document.getElementById('taskEmployeeId').value || null,
+            due_date: document.getElementById('taskDueDate').value || null,
+            estimated_hours: document.getElementById('taskEstimatedHours').value || 0,
+            score_weight: document.getElementById('taskScoreWeight').value || 1.0,
+            how: document.getElementById('taskHow').value,
+            notes: document.getElementById('taskNotes').value,
+            logs: currentTaskLogs
+        };
+
+        const url = taskId ? `/api/projects/${projectId}/tasks/${taskId}` : `/api/projects/${projectId}/tasks`;
+        const method = taskId ? 'PUT' : 'POST';
+
+        try {
+            const response = await fetch(url, {
+                method,
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(payload)
+            });
+            if (response.ok) {
+                closeTaskModal();
+                loadTasks();
+            } else {
+                alert('Erro ao salvar atividade.');
+            }
+        } catch (error) { console.error(error); }
+    }
+
+    async function deleteTask(taskId) {
+        if (!confirm('Excluir esta atividade permanentemente?')) return;
+        const task = allTasks.find(t => t.id == taskId);
+        try {
+            const response = await fetch(`/api/projects/${task.project_id}/tasks/${taskId}`, { method: 'DELETE' });
+            if (response.ok) { closeTaskModal(); loadTasks(); }
+        } catch (error) { console.error(error); }
+    }
+
+    // Diary Logs
+    function openLogPopup() { document.getElementById('logPopup').classList.add('open'); }
+    function closeLogPopup() { document.getElementById('logPopup').classList.remove('open'); }
+
+    function confirmAddLog() {
+        const text = document.getElementById('logText').value.trim();
+        if (!text) return;
+        currentTaskLogs.push({ timestamp: new Date().toISOString(), text, type: 'manual' });
+        document.getElementById('logText').value = '';
+        closeLogPopup();
+        renderDiaryLogs();
+    }
+
+    function renderDiaryLogs() {
+        const container = document.getElementById('diaryLogHistory');
+        container.innerHTML = '';
+        currentTaskLogs.slice().reverse().forEach(log => {
+            const date = new Date(log.timestamp).toLocaleString('pt-BR');
+            const div = document.createElement('div');
+            div.className = 'log-entry';
+            div.innerHTML = `
+                <div class="log-entry-header">
+                    <span>${date}</span>
+                    <span style="text-transform: uppercase;">${log.type}</span>
+                </div>
+                <div class="log-entry-text">${log.text}</div>
+            `;
+            container.appendChild(div);
+        });
+    }
+
+    // Work Logs
+    function showAddHoursForm() { document.getElementById('addHoursForm').style.display = 'block'; }
+    function hideAddHoursForm() { document.getElementById('addHoursForm').style.display = 'none'; }
+
+    async function submitWorkLog() {
+        const taskId = document.getElementById('taskId').value;
+        const task = allTasks.find(t => t.id == taskId);
+        const employeeId = document.getElementById('logEmployeeId').value;
+        const hours = document.getElementById('logHours').value;
+        const notes = document.getElementById('logNotes').value;
+
+        if (!employeeId || !hours) { alert('Preencha os campos obrigatórios'); return; }
+
+        try {
+            const response = await fetch(`/api/projects/${task.project_id}/tasks/${taskId}/collaborators`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ employee_id: employeeId, worked_hours: hours, notes })
+            });
+
+            if (response.ok) {
+                hideAddHoursForm();
+                loadWorkLogs(taskId);
+                loadTasks();
+            }
+        } catch (error) { console.error(error); }
+    }
+
+    async function loadWorkLogs(taskId) {
+        const task = allTasks.find(t => t.id == taskId);
+        try {
+            const response = await fetch(`/api/projects/${task.project_id}/tasks/${taskId}/hours-summary`);
+            const data = await response.json();
+            const list = document.getElementById('workLogList');
+            list.innerHTML = '';
+            if (data.data && data.data.collaborators) {
+                data.data.collaborators.forEach(log => {
+                    const div = document.createElement('div');
+                    div.className = 'work-log-item';
+                    div.innerHTML = `
+                        <div>
+                            <div class="work-log-name">${log.employee_name}</div>
+                            <div class="work-log-role">${log.role || 'Colaborador'}</div>
+                        </div>
+                        <div class="work-log-hours">${log.worked_hours}h</div>
+                        <div style="font-size: 0.7rem; color: var(--text-tertiary);">${new Date(log.created_at).toLocaleDateString()}</div>
+                    `;
+                    list.appendChild(div);
+                });
+            }
+        } catch (error) { console.error(error); }
+    }
+
+    function toggleColumn(slug) {
+        document.getElementById(`col-${slug}`).classList.toggle('collapsed');
+    }
+
+    function applyKanbanFilters() {
+        const resp = document.getElementById('filterResponsible').value;
+        const proj = document.getElementById('filterProject').value;
+        const text = document.getElementById('filterSearch').value.toLowerCase();
+        const start = document.getElementById('filterDateStart').value;
+        const end = document.getElementById('filterDateEnd').value;
+
+        const filtered = allTasks.filter(t => {
+            const matchesResp = !resp || t.employee_id == resp;
+            const matchesProj = !proj || t.project_id == proj;
+            const matchesText = !text ||
+                t.what.toLowerCase().includes(text) ||
+                (t.project_name || '').toLowerCase().includes(text);
+
+            let matchesDate = true;
+            if (t.due_date) {
+                if (start && t.due_date < start) matchesDate = false;
+                if (end && t.due_date > end) matchesDate = false;
+            } else if (start || end) {
+                matchesDate = false;
+            }
+
+            return matchesResp && matchesProj && matchesText && matchesDate;
+        });
+        renderKanban(filtered);
+        updateStats(filtered);
+    }
+
+    function resetKanbanFilters() {
+        document.getElementById('filterResponsible').value = '';
+        document.getElementById('filterProject').value = '';
+        document.getElementById('filterSearch').value = '';
+        document.getElementById('filterDateStart').value = '';
+        document.getElementById('filterDateEnd').value = '';
+        renderKanban();
+        updateStats();
+    }
+
+    // Initialize
+    loadTasks();
+    loadProjects();
+    loadEmployees();
+</script>
+{% endblock %}
+
+{% block sidebar_right %}
+<div class="sidebar-section-ws">
+    <div class="sidebar-header-ws">
+        <h3 class="text-h1" style="font-size: 1.25rem;">Filtros Globais</h3>
+    </div>
+    <div class="sidebar-content-ws" style="display: flex; flex-direction: column; gap: 1.25rem; margin-top: 1.5rem;">
+        <div class="form-group">
+            <label class="form-label">Projeto</label>
+            <select id="filterProject" class="form-select" onchange="applyKanbanFilters()">
+                <option value="">Todos os Projetos</option>
+            </select>
+        </div>
+        <div class="form-group">
+            <label class="form-label">Quem</label>
+            <select id="filterResponsible" class="form-select" onchange="applyKanbanFilters()">
+                <option value="">Todos os Colaboradores</option>
+            </select>
+        </div>
+        <div class="form-group">
+            <label class="form-label">Quando</label>
+            <div style="display: flex; gap: 0.5rem; align-items: center;">
+                <input type="date" id="filterDateStart" class="form-input" style="padding: 0.4rem;"
+                    onchange="applyKanbanFilters()">
+                <span style="color: var(--text-tertiary);">até</span>
+                <input type="date" id="filterDateEnd" class="form-input" style="padding: 0.4rem;"
+                    onchange="applyKanbanFilters()">
+            </div>
+        </div>
+        <div class="form-group">
+            <label class="form-label">Livre</label>
+            <input type="text" id="filterSearch" class="form-input" placeholder="O que você busca?"
+                onkeyup="applyKanbanFilters()">
+        </div>
+        <button class="btn btn-secondary w-100" onclick="resetKanbanFilters()">Limpar Filtros</button>
+    </div>
+</div>
+{% endblock %}

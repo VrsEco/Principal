@@ -1,0 +1,378 @@
+<div class="sidebar-header" style="padding: 1.5rem; text-align: center;">
+    <a href="/companies">
+        <img src="/static/img/logo-versus.png" alt="Versus" style="max-width: 140px; height: auto;">
+    </a>
+</div>
+
+{% if active_company %}
+<div class="company-badge-wrapper" style="padding: 0 1.25rem 1.25rem 1.25rem;">
+    <div style="
+        font-size: 0.75rem; 
+        font-weight: 700; 
+        color: #15803d; 
+        background: #f0fdf4; 
+        padding: 0.75rem; 
+        border-radius: var(--btn-radius); 
+        border: 1px solid #dcfce7;
+        text-align: center;
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
+        box-shadow: 0 2px 4px rgba(21, 128, 61, 0.05);
+        transition: var(--transition);
+        cursor: default;
+    " title="{{ active_company.name }}">
+        <span style="opacity: 0.7; margin-right: 4px;">AA -</span> {{ active_company.name }}
+    </div>
+</div>
+{% endif %}
+
+<nav class="sidebar-nav">
+    <span class="sidebar-section-title">Acesso Rápido</span>
+
+    <a href="/portal" class="nav-link {{ 'active' if request.path == '/portal' }}">
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <rect x="3" y="3" width="7" height="7"></rect>
+            <rect x="14" y="3" width="7" height="7"></rect>
+            <rect x="14" y="14" width="7" height="7"></rect>
+            <rect x="3" y="14" width="7" height="7"></rect>
+        </svg>
+        Portal
+    </a>
+
+    <a href="/my-work" class="nav-link {{ 'active' if request.path == '/my-work' }}">
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <rect x="3" y="3" width="18" height="18" rx="2" ry="2"></rect>
+            <line x1="9" y1="3" x2="9" y2="21"></line>
+        </svg>
+        Meu Trabalho
+    </a>
+
+    <a href="/dashboard" class="nav-link {{ 'active' if request.path == '/dashboard' }}">
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <path d="M3 3v18h18"></path>
+            <path d="M18 17l-6-6-4 4-4-4"></path>
+        </svg>
+        Dashboard
+    </a>
+
+    <span class="sidebar-section-title">Módulos</span>
+
+    <!-- Gestão da Rotina -->
+    <div
+        class="sidebar-group {{ 'open' if '/process' in request.path or '/routines' in request.path or '/projects' in request.path or '/meetings' in request.path or '/activities' in request.path }}">
+        <button class="nav-button" onclick="toggleSidebarGroup(this)">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"></path>
+                <polyline points="22 4 12 14.01 9 11.01"></polyline>
+            </svg>
+            Gestão da Rotina
+            <svg class="chevron" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                stroke-width="3">
+                <polyline points="6 9 12 15 18 9"></polyline>
+            </svg>
+        </button>
+        <div class="sub-menu">
+            <!-- Subgrupo: Projetos -->
+            <div class="sidebar-subgroup {{ 'open' if '/projects' in request.path }}">
+                <button class="subgroup-button" onclick="toggleSidebarGroup(this)">
+                    Gestão de Projetos
+                    <svg class="chevron" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                        stroke-width="3">
+                        <polyline points="6 9 12 15 18 9"></polyline>
+                    </svg>
+                </button>
+                <div class="subgroup-content">
+                    <a href="/project-portfolios"
+                        class="sub-nav-link {{ 'active' if '/project-portfolios' in request.path }}">Portfólio de
+                        Projetos</a>
+                    <a href="/projects" class="sub-nav-link {{ 'active' if request.path == '/projects' }}">Projetos</a>
+                    <a href="/projects/analysis"
+                        class="sub-nav-link {{ 'active' if request.path == '/projects/analysis' }}">Análise de
+                        Projetos</a>
+                </div>
+            </div>
+
+            <!-- Subgrupo: Processos -->
+            <div class="sidebar-subgroup {{ 'open' if '/process' in request.path }}">
+                <button class="subgroup-button" onclick="toggleSidebarGroup(this)">
+                    Gestão de Processos
+                    <svg class="chevron" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                        stroke-width="3">
+                        <polyline points="6 9 12 15 18 9"></polyline>
+                    </svg>
+                </button>
+                <div class="subgroup-content">
+                    <a href="/process-map"
+                        class="sub-nav-link {{ 'active' if request.path == '/process-map' }}">Arquitetura de
+                        Processos</a>
+                    <a href="/processes" class="sub-nav-link {{ 'active' if request.path == '/processes' }}">Modelagem
+                        de
+                        Processos</a>
+                    <a href="/process-routines"
+                        class="sub-nav-link {{ 'active' if '/process-routines' in request.path }}">Rotina de
+                        Processos</a>
+                    <a href="/process-instances"
+                        class="sub-nav-link {{ 'active' if '/process-instances' in request.path }}">Instâncias de
+                        Processos</a>
+                </div>
+            </div>
+
+            <!-- Subgrupo: Reuniões -->
+            <div class="sidebar-subgroup {{ 'open' if '/meetings' in request.path }}">
+                <button class="subgroup-button" onclick="toggleSidebarGroup(this)">
+                    Gestão de Reuniões
+                    <svg class="chevron" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                        stroke-width="3">
+                        <polyline points="6 9 12 15 18 9"></polyline>
+                    </svg>
+                </button>
+                <div class="subgroup-content">
+                    <a href="/meetings" class="sub-nav-link {{ 'active' if '/meetings' in request.path }}">Gestão de
+                        Reuniões</a>
+                </div>
+            </div>
+
+            <!-- Gestão de Ocorrências (was Central de Atividades and Process Occurrences inside Processes) -->
+            <a href="/process-occurrences" class="sub-nav-link {{ 'active' if '/process-occurrences' in request.path }}"
+                style="margin-top: 0.5rem; display: flex; align-items: center; justify-content: space-between; padding-right: 1rem; color: var(--text-secondary); font-weight: 500;">
+                Gestão de Ocorrências
+            </a>
+
+            <!-- Análise de Eficiência -->
+            <a href="/efficiency-analysis" class="sub-nav-link {{ 'active' if '/efficiency-analysis' in request.path }}"
+                style="margin-top: 0.5rem; display: flex; align-items: center; justify-content: space-between; padding-right: 1rem; color: var(--text-secondary); font-weight: 500;">
+                Análise de Eficiência
+            </a>
+        </div>
+    </div>
+
+
+    <!-- Gestão Estratégica -->
+    <div class="sidebar-group {{ 'open' if '/indicators' in request.path or '/strategic' in request.path }}">
+        <button class="nav-button" onclick="toggleSidebarGroup(this)">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <circle cx="12" cy="12" r="10"></circle>
+                <circle cx="12" cy="12" r="6"></circle>
+                <circle cx="12" cy="12" r="2"></circle>
+            </svg>
+            Gestão Estratégica
+            <svg class="chevron" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                stroke-width="3">
+                <polyline points="6 9 12 15 18 9"></polyline>
+            </svg>
+        </button>
+        <div class="sub-menu">
+            <a href="{{ url_for('plans.plans_list') }}"
+                class="sub-nav-link {{ 'active' if '/plans' in request.path }}">Planejamento
+                Estratégico</a>
+            <a href="/indicators" class="sub-nav-link {{ 'active' if '/indicators' in request.path }}">Indicadores</a>
+        </div>
+    </div>
+
+    <!-- Gestão Financeira -->
+    <div class="sidebar-group">
+        <button class="nav-button" onclick="toggleSidebarGroup(this)">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <line x1="12" y1="1" x2="12" y2="23"></line>
+                <path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"></path>
+            </svg>
+            Gestão Financeira
+            <svg class="chevron" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                stroke-width="3">
+                <polyline points="6 9 12 15 18 9"></polyline>
+            </svg>
+        </button>
+        <div class="sub-menu">
+            <a href="#" class="sub-nav-link">Fluxo de Caixa</a>
+            <a href="#" class="sub-nav-link">DRE</a>
+        </div>
+    </div>
+
+    <!-- Work Agents (Escritório de IA) -->
+    <div class="sidebar-group {{ 'open' if '/agents/board' in request.path or '/agents/cadastro' in request.path }}">
+        <button class="nav-button" onclick="toggleSidebarGroup(this)">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <path d="M12 2a10 10 0 1 0 10 10A10 10 0 0 0 12 2zm0 18a8 8 0 1 1 8-8 8 8 0 0 1-8 8z"></path>
+                <path d="M12 6a1 1 0 1 0 0-2 1 1 0 0 0 0 2z"></path>
+                <path d="M11 10h2v8h-2z"></path>
+            </svg>
+            Agentes de Trabalho
+            <svg class="chevron" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                stroke-width="3">
+                <polyline points="6 9 12 15 18 9"></polyline>
+            </svg>
+        </button>
+        <div class="sub-menu">
+            <a href="/agents/board" class="sub-nav-link {{ 'active' if request.path == '/agents/board' }}">
+                Escritório de IA (Board)
+            </a>
+            <a href="/agents/engineering" class="sub-nav-link {{ 'active' if request.path == '/agents/engineering' }}">
+                Squad de Engenharia
+            </a>
+            <a href="/agents/logs" class="sub-nav-link {{ 'active' if request.path == '/agents/logs' }}">
+                Log de Conversas
+            </a>
+            <a href="/agents/cadastro" class="sub-nav-link {{ 'active' if request.path == '/agents/cadastro' }}">
+                Onboarding Assistido
+            </a>
+        </div>
+    </div>
+
+    <span class="sidebar-section-title">Sistema</span>
+    <!-- Sistema -->
+    {% if has_permission('companies', 'view') or has_permission('users', 'view') %}
+    <div
+        class="sidebar-group {{ 'open' if '/companies' in request.path or '/users' in request.path or '/integrations' in request.path or '/settings' in request.path }}">
+        <button class="nav-button" onclick="toggleSidebarGroup(this)">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <circle cx="12" cy="12" r="3"></circle>
+                <path
+                    d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z">
+                </path>
+            </svg>
+            Sistema
+            <svg class="chevron" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                stroke-width="3">
+                <polyline points="6 9 12 15 18 9"></polyline>
+            </svg>
+        </button>
+        <div class="sub-menu">
+            {% if has_permission('companies', 'view') %}
+            <a href="/companies" class="sub-nav-link {{ 'active' if '/companies' in request.path }}">Empresas</a>
+            {% endif %}
+
+            {% if has_permission('users', 'view') %}
+            <a href="#" class="sub-nav-link">Usuários</a>
+            {% endif %}
+
+            {% if current_user.role == 'admin' %}
+            <a href="#" class="sub-nav-link">Integrações</a>
+            <a href="#" class="sub-nav-link">Configurações</a>
+            {% endif %}
+        </div>
+    </div>
+    {% endif %}
+</nav>
+
+<div style="padding: 1.5rem 1rem; border-top: 1px solid var(--border); margin-top: auto;">
+    <a href="#" class="nav-link">
+        <div
+            style="width: 32px; height: 32px; border-radius: 50%; background: var(--special-gradient); color: white; display: flex; align-items: center; justify-content: center; font-weight: 700; font-size: 0.75rem;">
+            MV
+        </div>
+        Meu Perfil
+    </a>
+</div>
+
+<style>
+    /* Styles matching app.html but scoped for this partial if necessary */
+    .sidebar-nav {
+        display: flex;
+        flex-direction: column;
+        gap: 0.25rem;
+        padding: 0.5rem;
+        flex: 1;
+    }
+
+    .sidebar-section-title {
+        font-size: 0.65rem;
+        font-weight: 700;
+        text-transform: uppercase;
+        color: var(--text-tertiary);
+        margin: 1.5rem 0.75rem 0.5rem 0.75rem;
+        letter-spacing: 0.05em;
+    }
+
+    .nav-link,
+    .nav-button,
+    .subgroup-button {
+        display: flex;
+        align-items: center;
+        gap: 0.75rem;
+        padding: 0.75rem 1rem;
+        border-radius: 12px;
+        color: var(--text-secondary);
+        text-decoration: none;
+        font-size: 0.9rem;
+        font-weight: 500;
+        transition: all 0.2s;
+        border: none;
+        background: transparent;
+        width: 100%;
+        text-align: left;
+        cursor: pointer;
+    }
+
+    .nav-link:hover,
+    .nav-button:hover,
+    .subgroup-button:hover {
+        background: var(--surface-secondary);
+        color: var(--primary);
+    }
+
+    .nav-link.active {
+        background: var(--primary-light);
+        color: var(--primary);
+        font-weight: 600;
+    }
+
+    .sidebar-group,
+    .sidebar-subgroup {
+        display: flex;
+        flex-direction: column;
+    }
+
+    .sub-menu,
+    .subgroup-content {
+        display: none;
+        flex-direction: column;
+        padding-left: 2.75rem;
+        margin-top: 0.25rem;
+        gap: 0.25rem;
+    }
+
+    .sidebar-group.open>.sub-menu,
+    .sidebar-subgroup.open>.subgroup-content {
+        display: flex;
+    }
+
+    .sidebar-group .chevron,
+    .sidebar-subgroup .chevron {
+        margin-left: auto;
+        transition: transform 0.2s;
+    }
+
+    .sidebar-group.open>.nav-button .chevron,
+    .sidebar-subgroup.open>.subgroup-button .chevron {
+        transform: rotate(180deg);
+    }
+
+    .sub-nav-link {
+        padding: 0.5rem 0.75rem;
+        font-size: 0.85rem;
+        color: var(--text-tertiary);
+        text-decoration: none;
+        border-radius: 8px;
+        transition: all 0.2s;
+    }
+
+    .sub-nav-link:hover {
+        color: var(--primary);
+        background: var(--surface-secondary);
+    }
+
+    .sub-nav-link.active {
+        color: var(--primary);
+        font-weight: 600;
+    }
+</style>
+
+<script>
+    if (typeof toggleSidebarGroup === 'undefined') {
+        function toggleSidebarGroup(btn) {
+            const group = btn.parentElement;
+            group.classList.toggle('open');
+        }
+    }
+</script>

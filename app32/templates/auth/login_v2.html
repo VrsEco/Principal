@@ -1,0 +1,442 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+
+<head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Login | Versus Gestão</title>
+    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700&display=swap"
+        rel="stylesheet" />
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" />
+    <style>
+        :root {
+            /* App 32 Colors Palette */
+            --primary: #2563eb;
+            --primary-dark: #1e40af;
+            --secondary: #7c3aed;
+            --accent: #fbbf24;
+            --text-main: #102542;
+            --text-muted: #3a4f71;
+            --border-color: rgba(43, 97, 206, 0.16);
+            --radius-lg: 28px;
+            --radius-tile: 22px;
+        }
+
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+        }
+
+        body {
+            font-family: 'Poppins', sans-serif;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            min-height: 100vh;
+            padding: 24px;
+            background: radial-gradient(circle at 10% 20%, rgba(206, 226, 255, 0.65), transparent 55%),
+                radial-gradient(circle at 90% 10%, rgba(255, 242, 200, 0.6), transparent 50%),
+                linear-gradient(135deg, #f3f6fc 0%, #ffffff 55%, #fdf4d6 100%);
+            color: var(--text-main);
+        }
+
+        .login-experience {
+            position: relative;
+            width: min(1180px, 94vw);
+            height: min(820px, calc(100vh - 64px));
+            min-height: 600px;
+            padding: 36px 40px;
+            border-radius: var(--radius-lg);
+            background: linear-gradient(155deg, rgba(255, 255, 255, 0.92), rgba(237, 245, 255, 0.86));
+            border: 1px solid var(--border-color);
+            box-shadow: 0 34px 60px rgba(23, 46, 110, 0.18);
+            overflow: hidden;
+        }
+
+        .login-experience__art {
+            position: absolute;
+            inset: 0;
+            pointer-events: none;
+            z-index: 0;
+        }
+
+        .login-art__grid {
+            position: absolute;
+            inset: -60px;
+            background-image: linear-gradient(0deg, rgba(43, 97, 206, 0.12) 1px, transparent 1px),
+                linear-gradient(90deg, rgba(43, 97, 206, 0.12) 1px, transparent 1px);
+            background-size: 44px 44px;
+            opacity: 0.45;
+        }
+
+        .login-art__trend {
+            position: absolute;
+            inset: 10% 8% 8% 8%;
+            filter: drop-shadow(0 22px 38px rgba(25, 65, 150, 0.2));
+            mix-blend-mode: multiply;
+            opacity: 0.5;
+        }
+
+        .login-grid {
+            position: relative;
+            display: grid;
+            grid-template-columns: repeat(2, minmax(280px, 1fr));
+            grid-template-rows: repeat(2, 1fr);
+            gap: 12px;
+            z-index: 1;
+            height: 100%;
+        }
+
+        .login-tile {
+            position: relative;
+            padding: 32px;
+            border-radius: var(--radius-tile);
+            background: linear-gradient(160deg, rgba(246, 250, 255, 0.55), rgba(229, 238, 255, 0.45));
+            border: 1px solid rgba(43, 97, 206, 0.08);
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            /* Vertical centering */
+            align-items: center;
+            /* Horizontal centering */
+            gap: 12px;
+            box-shadow: 0 18px 32px rgba(15, 56, 125, 0.06);
+            overflow: hidden;
+            height: 100%;
+            backdrop-filter: blur(14px);
+            text-align: center;
+            /* Center text content */
+        }
+
+        .login-tile::after {
+            content: "";
+            position: absolute;
+            inset: 0;
+            border-radius: inherit;
+            background: linear-gradient(140deg, rgba(43, 97, 206, 0.14), rgba(255, 196, 56, 0.1), transparent 70%);
+            opacity: 0.5;
+            pointer-events: none;
+        }
+
+        .login-tile>* {
+            position: relative;
+            z-index: 1;
+        }
+
+        .login-tile--brand {
+            justify-content: center;
+            align-items: center;
+            gap: 20px;
+            text-align: center;
+            padding: 32px 28px;
+        }
+
+        .brand-emblem__image {
+            width: clamp(180px, 90%, 270px);
+            height: auto;
+            border-radius: 12px;
+            box-shadow: 0 12px 24px rgba(15, 56, 125, 0.15);
+        }
+
+        .brand-mission {
+            font-size: 13px;
+            line-height: 1.65;
+            color: rgba(16, 37, 66, 0.85);
+            border-top: 2px solid rgba(37, 99, 235, 0.3);
+            padding-top: 16px;
+            font-weight: 400;
+            max-width: 300px;
+        }
+
+        .login-eyebrow {
+            font-size: 11px;
+            letter-spacing: 0.34em;
+            text-transform: uppercase;
+            color: var(--primary);
+            font-weight: 600;
+            margin-bottom: 4px;
+        }
+
+        .login-heading {
+            font-size: 22px;
+            font-weight: 600;
+            color: var(--text-main);
+            margin-bottom: 8px;
+            line-height: 1.2;
+        }
+
+        .login-tile__text {
+            color: var(--text-muted);
+            font-size: 13px;
+            line-height: 1.5;
+        }
+
+        .system-badges {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 8px;
+            margin-top: auto;
+        }
+
+        .system-badge {
+            padding: 6px 14px;
+            border-radius: 999px;
+            border: 1px solid rgba(27, 78, 155, 0.26);
+            background: white;
+            font-size: 11px;
+            font-weight: 700;
+            color: var(--primary);
+        }
+
+        .login-form {
+            display: grid;
+            gap: 12px;
+            margin-top: 8px;
+        }
+
+        .form-field {
+            display: grid;
+            gap: 4px;
+        }
+
+        .form-field label {
+            font-size: 10px;
+            font-weight: 700;
+            text-transform: uppercase;
+            color: #4d5f80;
+            letter-spacing: 0.05em;
+        }
+
+        .form-field input {
+            padding: 10px 14px;
+            border-radius: 8px;
+            border: 1px solid #e5e7eb;
+            font-size: 13px;
+            font-family: inherit;
+            transition: all 0.2s;
+        }
+
+        .form-field input:focus {
+            outline: none;
+            border-color: var(--primary);
+            box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.1);
+        }
+
+        .form-meta {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            font-size: 11px;
+            color: var(--text-muted);
+        }
+
+        .checkbox-remember {
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            cursor: pointer;
+        }
+
+        .btn-submit {
+            width: 100%;
+            padding: 12px;
+            background: linear-gradient(135deg, var(--primary), var(--secondary));
+            color: white;
+            border: none;
+            border-radius: 10px;
+            font-size: 14px;
+            font-weight: 600;
+            cursor: pointer;
+            box-shadow: 0 10px 20px rgba(37, 99, 235, 0.2);
+            transition: all 0.2s;
+        }
+
+        .btn-submit:hover {
+            transform: translateY(-1px);
+            filter: brightness(1.1);
+        }
+
+        .management-quote {
+            margin: 0;
+            font-size: 16px;
+            line-height: 1.6;
+            font-style: italic;
+            color: rgba(15, 42, 90, 0.9);
+            text-align: center;
+            justify-self: center;
+        }
+
+        .quote-author {
+            font-size: 11px;
+            letter-spacing: 0.2em;
+            text-transform: uppercase;
+            color: var(--text-muted);
+            font-weight: 700;
+            margin-top: 8px;
+        }
+
+        .alert {
+            padding: 10px;
+            border-radius: 8px;
+            font-size: 12px;
+            margin-bottom: 12px;
+            display: none;
+        }
+
+        .alert-error {
+            background: #fee2e2;
+            color: #b91c1c;
+            border: 1px solid #fca5a5;
+        }
+
+        .alert-success {
+            background: #dcfce7;
+            color: #15803d;
+            border: 1px solid #86efac;
+        }
+
+        /* Responsive Port from App 31 */
+        @media (max-width: 900px) {
+            .login-experience {
+                padding: 30px 24px;
+                height: auto;
+                width: 96vw;
+                max-height: none;
+            }
+
+            .login-grid {
+                grid-template-columns: 1fr;
+                grid-template-rows: auto;
+                gap: 20px;
+            }
+
+            .login-tile--systems,
+            .login-tile--quote {
+                display: none;
+            }
+
+            .login-tile--brand {
+                order: -1;
+                background: transparent;
+                box-shadow: none;
+                border: none;
+                padding-bottom: 0;
+            }
+
+            .brand-emblem__image {
+                width: 180px;
+            }
+        }
+    </style>
+</head>
+
+<body>
+    <div class="login-experience">
+        <div class="login-experience__art">
+            <div class="login-art__grid"></div>
+            <svg class="login-art__trend" viewBox="0 0 480 320" preserveAspectRatio="none">
+                <defs>
+                    <linearGradient id="trendGradient" x1="0" y1="1" x2="1" y2="0">
+                        <stop offset="0%" stop-color="#2563eb" />
+                        <stop offset="100%" stop-color="#fbbf24" />
+                    </linearGradient>
+                </defs>
+                <polyline points="52,250 128,220 188,210 248,180 324,140 420,90" fill="none"
+                    stroke="url(#trendGradient)" stroke-width="8" stroke-linecap="round" />
+            </svg>
+        </div>
+
+        <div class="login-grid">
+            <!-- 1. Brand -->
+            <section class="login-tile login-tile--brand">
+                <img src="/static/img/versus-logo.png" alt="Versus" class="brand-emblem__image" />
+                <p class="brand-mission">Auxiliando os gestores e as organizações nas definições e alcance dos seus
+                    objetivos.</p>
+            </section>
+
+            <!-- 2. Systems -->
+            <section class="login-tile login-tile--systems">
+                <span class="login-eyebrow">Sistema Versus</span>
+                <h2 class="login-heading">Evolução constante.</h2>
+                <p class="login-tile__text">Módulos em sincronia para conectar estratégia, rotinas, desempenho e
+                    finanças.</p>
+            </section>
+
+            <!-- 3. Form -->
+            <section class="login-tile login-tile--form">
+                <div style="margin-bottom: 20px;">
+                    <span class="login-eyebrow">Acesso seguro</span>
+                    <h2 class="login-heading">Entrar no sistema</h2>
+                </div>
+                <div id="alert" class="alert"></div>
+                <form id="loginForm" class="login-form" style="width: 100%; max-width: 320px; text-align: left;">
+                    <div class="form-field">
+                        <label>E-mail corporativo</label>
+                        <input type="email" id="email" placeholder="voce@empresa.com" required />
+                    </div>
+                    <div class="form-field">
+                        <label>Senha</label>
+                        <input type="password" id="password" placeholder="Digite sua senha" required />
+                    </div>
+                    <div class="form-meta">
+                        <label class="checkbox-remember">
+                            <input type="checkbox" id="remember" />
+                            <span>Lembrar meu acesso</span>
+                        </label>
+                        <a href="#" style="color: var(--primary); text-decoration: none; font-weight: 600;">Esqueceu a
+                            senha?</a>
+                    </div>
+                    <button type="submit" class="btn-submit" id="submitBtn">Entrar na Central</button>
+                </form>
+            </section>
+
+            <!-- 4. Quote -->
+            <section class="login-tile login-tile--quote">
+                <blockquote class="management-quote">"A melhor maneira de prever o futuro é criá-lo."</blockquote>
+                <div class="quote-author">Peter Drucker</div>
+            </section>
+        </div>
+    </div>
+
+    <script>
+        const form = document.getElementById('loginForm');
+        const alert = document.getElementById('alert');
+        const submitBtn = document.getElementById('submitBtn');
+
+        form.addEventListener('submit', async (e) => {
+            e.preventDefault();
+            const email = document.getElementById('email').value;
+            const password = document.getElementById('password').value;
+
+            submitBtn.disabled = true;
+            submitBtn.textContent = 'Autenticando...';
+            alert.style.display = 'none';
+
+            try {
+                const response = await fetch('/login', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ email, password })
+                });
+                const data = await response.json();
+                if (data.success) {
+                    alert.textContent = 'Sucesso! Redirecionando...';
+                    alert.className = 'alert alert-success';
+                    alert.style.display = 'block';
+                    setTimeout(() => window.location.href = data.redirect || '/dashboard', 600);
+                } else {
+                    throw new Error(data.message || 'Erro no login');
+                }
+            } catch (err) {
+                alert.textContent = err.message;
+                alert.className = 'alert alert-error';
+                alert.style.display = 'block';
+                submitBtn.disabled = false;
+                submitBtn.textContent = 'Entrar na Central';
+            }
+        });
+    </script>
+</body>
+
+</html>

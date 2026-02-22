@@ -1,0 +1,804 @@
+{% extends "layouts/workspace.html" %}
+
+{% block title %}Ocorrências de Processos | Versus{% endblock %}
+
+{% block workspace_content %}
+<div class="workspace-header workspace-header-occurrences">
+    <div class="header-content">
+        <h1 class="text-h1">🔔 Ocorrências</h1>
+        <p class="text-secondary">Gerencie melhorias, incidentes e feedback de Processos e Projetos.</p>
+    </div>
+
+    <div class="header-actions-group">
+        <div class="score-summary-card">
+            <div class="score-summary-icon">📊</div>
+            <div class="score-summary-content">
+                <span class="score-summary-label">Pontuação Total</span>
+                <span class="score-summary-value" id="totalScoreValue">--</span>
+            </div>
+        </div>
+        <button class="btn btn-primary" onclick="openOccurrenceModal()">➕ Nova Ocorrência</button>
+    </div>
+</div>
+
+<div class="occurrences-grid mt-4" id="occurrencesGrid">
+    <!-- Shimmers -->
+    <div class="loading-shimmer" style="height: 100px; border-radius: 12px;"></div>
+    <div class="loading-shimmer" style="height: 100px; border-radius: 12px;"></div>
+</div>
+
+<!-- Modal: Nova Ocorrência -->
+<div class="custom-modal-overlay" id="occurrenceModal">
+    <div class="custom-modal-content">
+        <div class="modal-header">
+            <h3 class="modal-title font-bold" id="occurrenceModalTitle">Nova Ocorrência</h3>
+            <button type="button" class="btn-close-custom" onclick="closeModal('occurrenceModal')">&times;</button>
+        </div>
+        <div class="modal-body">
+            <form id="occurrenceForm">
+                <input type="hidden" name="id" id="occId">
+                <input type="hidden" name="company_id" value="{{ company.id if company else 0 }}">
+
+                <div class="form-group mb-3">
+                    <label class="form-label">Título *</label>
+                    <input type="text" class="form-select-custom" name="title" id="occTitle" required
+                        placeholder="Resumo da ocorrência" style="background-image: none;">
+                </div>
+
+                <!-- Context Selector -->
+                <div class="form-row"
+                    style="display: grid; grid-template-columns: 1fr 2fr; gap: 1rem; align-items: start; margin-bottom: 1rem;">
+                    <div class="form-group">
+                        <label class="form-label">Contexto *</label>
+                        <select class="form-select-custom" id="occContextType" onchange="toggleContextFields()">
+                            <option value="process">Processo</option>
+                            <option value="project">Projeto</option>
+                        </select>
+                    </div>
+                    <div class="form-group" id="groupProcess">
+                        <label class="form-label">Processo *</label>
+                        <select class="form-select-custom" name="process_id" id="occProcess">
+                            <option value="">Selecione...</option>
+                            <!-- Populated by JS -->
+                        </select>
+                    </div>
+                    <div class="form-group" id="groupProject" style="display: none;">
+                        <label class="form-label">Projeto *</label>
+                        <select class="form-select-custom" name="project_id" id="occProject">
+                            <option value="">Selecione...</option>
+                            <!-- Populated by JS -->
+                        </select>
+                    </div>
+                </div>
+
+                <div class="form-row"
+                    style="display: grid; grid-template-columns: 1fr 1fr; gap: 1rem; margin-bottom: 1rem;">
+                    <div class="form-group">
+                        <label class="form-label">Tipo *</label>
+                        <select class="form-select-custom" name="type" id="occType" required>
+                            <option value="positive">Positiva</option>
+                            <option value="negative">Negativa</option>
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label">Impacto/Score</label>
+                        <input type="number" class="form-select-custom" name="score" id="occScore" value="0"
+                            placeholder="+/- pontos" style="background-image: none;">
+                    </div>
+                </div>
+
+                <div class="form-group mb-3">
+                    <label class="form-label">Colaboradores Envolvidos *</label>
+                    <select class="form-select-custom" name="collaborators_ids" id="occCollaborators" multiple
+                        style="height: 100px;">
+                        <!-- Populated by JS -->
+                    </select>
+                    <div class="text-tertiary" style="font-size: 0.75rem; margin-top: 0.25rem;">Segure Ctrl/Cmd para
+                        selecionar múltiplos.</div>
+                </div>
+
+                <div class="form-group">
+                    <label class="form-label">Descrição Detalhada</label>
+                    <textarea class="form-select-custom" name="description" id="occDescription" rows="4"
+                        style="background-image: none; height: auto;"></textarea>
+                </div>
+            </form>
+        </div>
+        <div class="modal-footer">
+            <button type="button" class="btn btn-secondary" onclick="closeModal('occurrenceModal')">Cancelar</button>
+            <button type="button" class="btn btn-primary" onclick="submitOccurrenceForm()">Salvar</button>
+        </div>
+    </div>
+</div>
+
+<script>
+    const companyId = parseInt('{{ company.id if company else 0 }}') || null;
+    let allOccurrences = [];
+    let processes = [];
+    let projects = [];
+    let employees = [];
+
+    async function init() {
+        await Promise.all([
+            loadOccurrences(),
+            loadContextData()
+        ]);
+    }
+
+    async function loadContextData() {
+        try {
+            const resProc = await fetch(`/api/processes?company_id=${companyId}`);
+            if (resProc.ok) processes = await resProc.json();
+
+            const resProj = await fetch(`/api/projects?company_id=${companyId}`);
+            if (resProj.ok) projects = await resProj.json();
+
+            const resEmp = await fetch(`/api/companies/${companyId}/employees`);
+            if (resEmp.ok) {
+                const data = await resEmp.json();
+                employees = data.employees || [];
+            }
+
+            populateDropdowns();
+        } catch (e) { console.error("Error loading context data", e); }
+    }
+
+    function populateDropdowns() {
+        // Modal Dropdowns
+        const procSel = document.getElementById('occProcess');
+        const filterProc = document.getElementById('filterProcess');
+        const procOpts = '<option value="">Selecione...</option>' + processes.map(p => `<option value="${p.id}">${p.code ? p.code + ' - ' : ''}${p.name}</option>`).join('');
+        procSel.innerHTML = procOpts;
+        if (filterProc) filterProc.innerHTML = '<option value="">Todos</option>' + processes.map(p => `<option value="${p.id}">${p.code ? p.code + ' - ' : ''}${p.name}</option>`).join('');
+
+        const projSel = document.getElementById('occProject');
+        const filterProj = document.getElementById('filterProject');
+        const projOpts = '<option value="">Selecione...</option>' + projects.map(p => `<option value="${p.id}">${p.name}</option>`).join('');
+        projSel.innerHTML = projOpts;
+        if (filterProj) filterProj.innerHTML = '<option value="">Todos</option>' + projects.map(p => `<option value="${p.id}">${p.name}</option>`).join('');
+
+        const empSel = document.getElementById('occCollaborators');
+        const filterCollab = document.getElementById('filterCollaborator');
+        const empOpts = employees.map(e => `<option value="${e.id}">${e.name}</option>`).join('');
+        empSel.innerHTML = empOpts;
+        if (filterCollab) filterCollab.innerHTML = '<option value="">Todos</option>' + employees.map(e => `<option value="${e.id}">${e.name}</option>`).join('');
+    }
+
+    async function loadOccurrences() {
+        try {
+            const res = await fetch(`/api/occurrences?company_id=${companyId}`);
+            if (res.ok) {
+                allOccurrences = await res.json();
+                applyFilters(); // Initial render with filters
+            }
+        } catch (err) {
+            console.error('Erro ao carregar ocorrências:', err);
+            document.getElementById('occurrencesGrid').innerHTML = '<p class="text-danger">Erro ao carregar dados.</p>';
+        }
+    }
+
+    function toggleContextFields() {
+        const type = document.getElementById('occContextType').value;
+        if (type === 'process') {
+            document.getElementById('groupProcess').style.display = 'block';
+            document.getElementById('groupProject').style.display = 'none';
+            document.getElementById('occProject').value = '';
+        } else {
+            document.getElementById('groupProcess').style.display = 'none';
+            document.getElementById('groupProject').style.display = 'block';
+            document.getElementById('occProcess').value = '';
+        }
+    }
+
+    function getSelectedValues(select) {
+        return Array.from(select.selectedOptions).map(option => parseInt(option.value));
+    }
+
+    function setMultiSelect(select, values) {
+        if (!values) values = [];
+        Array.from(select.options).forEach(option => {
+            option.selected = values.includes(parseInt(option.value));
+        });
+    }
+
+    function openOccurrenceModal(id = null) {
+        document.getElementById('occurrenceModal').classList.add('active');
+        const form = document.getElementById('occurrenceForm');
+
+        if (id) {
+            const occ = allOccurrences.find(o => o.id === id);
+            document.getElementById('occurrenceModalTitle').textContent = 'Editar Ocorrência';
+            document.getElementById('occId').value = occ.id;
+            document.getElementById('occTitle').value = occ.title;
+            // Map old types to new simple types if needed for editing, or keep raw
+            // If old type is not in select, it might show empty. Let's just set raw value.
+            document.getElementById('occType').value = occ.type;
+            document.getElementById('occScore').value = occ.score;
+            document.getElementById('occDescription').value = occ.description;
+
+            if (occ.project_id) {
+                document.getElementById('occContextType').value = 'project';
+                document.getElementById('occProject').value = occ.project_id;
+            } else {
+                document.getElementById('occContextType').value = 'process';
+                document.getElementById('occProcess').value = occ.process_id;
+            }
+            toggleContextFields();
+
+            let ids = occ.collaborators_ids || [];
+            if (ids.length === 0 && occ.employee_id) ids = [occ.employee_id];
+            setMultiSelect(document.getElementById('occCollaborators'), ids);
+
+        } else {
+            document.getElementById('occurrenceModalTitle').textContent = 'Nova Ocorrência';
+            form.reset();
+            document.getElementById('occId').value = '';
+            toggleContextFields();
+        }
+    }
+
+    function closeModal(id) { document.getElementById(id).classList.remove('active'); }
+
+    async function submitOccurrenceForm() {
+        const form = document.getElementById('occurrenceForm');
+        // Simple manual validation
+        if (!document.getElementById('occTitle').value) {
+            alert('Preencha o título.');
+            return;
+        }
+
+        const formData = new FormData(form);
+        const data = Object.fromEntries(formData.entries());
+
+        data.collaborators_ids = getSelectedValues(document.getElementById('occCollaborators'));
+
+        if (document.getElementById('occContextType').value === 'process') {
+            data.project_id = null;
+            if (!data.process_id) { alert('Selecione um Processo'); return; }
+        } else {
+            data.process_id = null;
+            if (!data.project_id) { alert('Selecione um Projeto'); return; }
+        }
+
+        data.score = parseInt(data.score) || 0;
+        if (!data.id) delete data.id;
+
+        const url = data.id ? `/api/occurrences/${data.id}` : '/api/occurrences';
+        const method = data.id ? 'PUT' : 'POST';
+
+        try {
+            const res = await fetch(url, {
+                method: method,
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(data)
+            });
+
+            if (res.ok) {
+                closeModal('occurrenceModal');
+                loadOccurrences();
+            } else {
+                const err = await res.json();
+                alert('Erro: ' + JSON.stringify(err));
+            }
+        } catch (e) { console.error(e); alert('Erro de conexão'); }
+    }
+
+    function applyFilters() {
+        const type = document.getElementById('filterType').value;
+        const process = document.getElementById('filterProcess') ? document.getElementById('filterProcess').value : '';
+        const project = document.getElementById('filterProject') ? document.getElementById('filterProject').value : '';
+        const collaborator = document.getElementById('filterCollaborator') ? document.getElementById('filterCollaborator').value : '';
+        const dateStart = document.getElementById('filterDateStart') ? document.getElementById('filterDateStart').value : '';
+        const dateEnd = document.getElementById('filterDateEnd') ? document.getElementById('filterDateEnd').value : '';
+        const search = document.getElementById('searchInput') ? document.getElementById('searchInput').value.toLowerCase() : '';
+
+        const filtered = allOccurrences.filter(occ => {
+            // Type Filter with legacy mapping support
+            let typeMatch = true;
+            if (type === 'positive') {
+                typeMatch = ['positive', 'compliment', 'improvement', 'idea'].includes(occ.type) || occ.score > 0;
+            } else if (type === 'negative') {
+                typeMatch = ['negative', 'incident', 'complaint'].includes(occ.type) || occ.score < 0;
+            }
+
+            // Other filters
+            const processMatch = !process || occ.process_id == process;
+            const projectMatch = !project || occ.project_id == project;
+
+            // Collaborator Logic: check if select ID is in list
+            let collabMatch = true;
+            if (collaborator) {
+                const cId = parseInt(collaborator);
+                const ids = occ.collaborators_ids || [];
+                if (ids.length === 0 && occ.employee_id) ids.push(occ.employee_id);
+                collabMatch = ids.includes(cId);
+            }
+
+            // Date Range
+            let dateMatch = true;
+            if (dateStart || dateEnd) {
+                const occDate = new Date(occ.created_at); // YYYY-MM-DD string works
+                if (dateStart) dateMatch = dateMatch && occDate >= new Date(dateStart);
+                if (dateEnd) dateMatch = dateMatch && occDate <= new Date(dateEnd);
+            }
+
+            // Search
+            const contextName = occ.process_name || occ.project_name || '';
+            const searchMatch = !search ||
+                occ.title.toLowerCase().includes(search) ||
+                contextName.toLowerCase().includes(search);
+
+            return typeMatch && processMatch && projectMatch && collabMatch && dateMatch && searchMatch;
+        });
+
+        renderOccurrences(filtered);
+        updateScoreCard(filtered);
+    }
+
+    function updateScoreCard(filteredData) {
+        const total = filteredData.reduce((acc, curr) => acc + (curr.score || 0), 0);
+        const el = document.getElementById('totalScoreValue');
+        if (el) {
+            el.textContent = (total > 0 ? '+' : '') + total;
+            el.style.color = total >= 0 ? 'var(--success)' : 'var(--danger)';
+        }
+    }
+
+    function resetFilters() {
+        if (document.getElementById('filterType')) document.getElementById('filterType').value = '';
+        if (document.getElementById('filterProcess')) document.getElementById('filterProcess').value = '';
+        if (document.getElementById('filterProject')) document.getElementById('filterProject').value = '';
+        if (document.getElementById('filterCollaborator')) document.getElementById('filterCollaborator').value = '';
+        if (document.getElementById('filterDateStart')) document.getElementById('filterDateStart').value = '';
+        if (document.getElementById('filterDateEnd')) document.getElementById('filterDateEnd').value = '';
+        if (document.getElementById('searchInput')) document.getElementById('searchInput').value = '';
+        applyFilters();
+    }
+
+    function renderOccurrences(data) {
+        const grid = document.getElementById('occurrencesGrid');
+        if (!data || data.length === 0) {
+            grid.innerHTML = `
+                <div class="empty-state" style="padding: 4rem;">
+                    <div class="empty-state-icon">🔔</div>
+                    <h3 class="text-h3">Nenhuma ocorrência encontrada</h3>
+                    <p class="text-secondary">Nenhum feedback ou incidente registrado para os filtros atuais.</p>
+                </div>
+            `;
+            return;
+        }
+
+        const typeLabels = {
+            'positive': 'Positiva',
+            'negative': 'Negativa',
+            'improvement': 'Melhoria',
+            'incident': 'Incidente',
+            'compliment': 'Elogio',
+            'complaint': 'Reclamação',
+            'idea': 'Ideia',
+            'other': 'Outro'
+        };
+
+        const typeColors = {
+            'positive': 'var(--success)',
+            'negative': 'var(--danger)',
+            'improvement': 'var(--success)',
+            'compliment': 'var(--success)',
+            'incident': 'var(--danger)',
+            'complaint': 'var(--warning)',
+            'idea': 'var(--primary)',
+            'other': 'var(--text-secondary)'
+        };
+
+        // Background colors for chips
+        const typeBgColors = {
+            'positive': 'rgba(16, 185, 129, 0.1)',
+            'negative': 'rgba(239, 68, 68, 0.1)',
+            'improvement': 'rgba(16, 185, 129, 0.1)',
+            'compliment': 'rgba(16, 185, 129, 0.1)',
+            'incident': 'rgba(239, 68, 68, 0.1)',
+            'complaint': 'rgba(245, 158, 11, 0.1)',
+            'idea': 'rgba(59, 130, 246, 0.1)',
+            'other': 'rgba(100, 116, 139, 0.1)'
+        };
+
+        grid.innerHTML = data.map(o => {
+            const color = typeColors[o.type] || 'var(--text-secondary)';
+            const bgColor = typeBgColors[o.type] || 'rgba(100, 116, 139, 0.1)';
+            const label = typeLabels[o.type] || o.type;
+            const dateStr = new Date(o.created_at).toLocaleDateString('pt-BR');
+
+            // Context Display
+            let contextLabel = 'Geral';
+            if (o.process_name) {
+                contextLabel = `Processo: ${o.process_name}`;
+            } else if (o.project_name) {
+                contextLabel = `Projeto: ${o.project_name}`;
+            }
+
+            // Collaborators Display (Multiple)
+            let empDetail = '<span class="text-tertiary">Nenhum</span>';
+
+            if (o.collaborators_ids && o.collaborators_ids.length > 0) {
+                const names = o.collaborators_ids.map(id => {
+                    const e = employees.find(emp => emp.id === id);
+                    return e ? e.name : null;
+                }).filter(n => n);
+
+                if (names.length > 0) {
+                    if (names.length === 1) empDetail = names[0];
+                    else if (names.length === 2) empDetail = `${names[0]} e ${names[1]}`;
+                    else empDetail = `${names[0]}, ${names[1]} e +${names.length - 2}`;
+                }
+            } else if (o.employee_name) {
+                empDetail = o.employee_name;
+            }
+
+            return `
+            <div class="occurrence-row" style="border-left-color: ${color};">
+                <!-- Line 1: Type | Title | Context -->
+                <div class="occ-main-info">
+                    <div style="display: flex; align-items: center; gap: 8px; flex-wrap: wrap;">
+                        <span class="badge-chip" style="color: ${color}; background: ${bgColor}; border: 1px solid ${color};">
+                            ${label}
+                        </span>
+                        <h3 class="occ-title">${o.title}</h3>
+                        <span class="occ-context">${contextLabel}</span>
+                    </div>
+                </div>
+
+                <!-- Line 2: Meta | Collaborators | Score -->
+                <div class="occ-meta-row">
+                    <div class="occ-meta-item">
+                        <span>📅 ${dateStr}</span>
+                    </div>
+                    
+                    <div class="occ-meta-item" style="flex: 1;">
+                        <span>👥 ${empDetail}</span>
+                    </div>
+
+                    <div class="occ-score-box" style="color: ${o.score >= 0 ? 'var(--success)' : 'var(--danger)'}; border-color: ${o.score >= 0 ? 'var(--success)' : 'var(--danger)'}">
+                        ${o.score > 0 ? '+' : ''}${o.score} pts
+                    </div>
+                    
+                    <button class="btn-icon-action" onclick="event.stopPropagation(); openOccurrenceModal(${o.id});" title="Editar">✏️</button>
+                    <button class="btn-icon-action btn-icon-delete" onclick="event.stopPropagation(); deleteOccurrence(${o.id});" title="Excluir">🗑️</button>
+                </div>
+            </div>
+            `;
+        }).join('');
+    }
+
+    async function deleteOccurrence(id) {
+        if (!confirm('Tem certeza que deseja excluir esta ocorrência?')) {
+            return;
+        }
+
+        try {
+            const res = await fetch(`/api/occurrences/${id}`, {
+                method: 'DELETE'
+            });
+
+            if (res.ok) {
+                loadOccurrences();
+            } else {
+                const err = await res.json();
+                alert('Erro ao excluir: ' + JSON.stringify(err));
+            }
+        } catch (e) {
+            console.error(e);
+            alert('Erro de conexão ao excluir');
+        }
+    }
+
+    document.addEventListener('DOMContentLoaded', init);
+</script>
+
+<style>
+    .score-summary-card {
+        display: flex;
+        align-items: center;
+        gap: 1rem;
+        background: linear-gradient(135deg, rgba(255, 255, 255, 0.95) 0%, rgba(249, 250, 251, 0.95) 100%);
+        backdrop-filter: blur(10px);
+        border: 1px solid rgba(15, 23, 42, 0.08);
+        border-radius: 16px;
+        padding: 1rem 1.5rem;
+        box-shadow: 0 10px 30px rgba(15, 23, 42, 0.08);
+        transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    }
+
+    .score-summary-card:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 15px 40px rgba(15, 23, 42, 0.12);
+    }
+
+    .score-summary-icon {
+        font-size: 2rem;
+        line-height: 1;
+    }
+
+    .score-summary-content {
+        display: flex;
+        flex-direction: column;
+        gap: 0.25rem;
+    }
+
+    .score-summary-label {
+        font-size: 0.75rem;
+        color: #64748b;
+        text-transform: uppercase;
+        font-weight: 700;
+        letter-spacing: 0.05em;
+    }
+
+    .score-summary-value {
+        font-size: 1.75rem;
+        font-weight: 800;
+        font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+        line-height: 1;
+    }
+
+    .workspace-header-occurrences {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        gap: 1.5rem;
+        flex-wrap: wrap;
+    }
+
+    .header-actions-group {
+        display: flex;
+        gap: 1rem;
+        align-items: center;
+        flex-wrap: wrap;
+    }
+
+    .occurrences-grid {
+        display: flex;
+        flex-direction: column;
+        gap: 0.5rem;
+    }
+
+    .occurrence-row {
+        background: var(--surface-primary);
+        border: 1px solid var(--border);
+        border-radius: 12px;
+        padding: 0.75rem 1rem;
+        display: flex;
+        flex-direction: column;
+        gap: 0.5rem;
+        transition: var(--transition);
+        position: relative;
+        border-left-width: 4px;
+    }
+
+    .occurrence-row:hover {
+        box-shadow: var(--shadow-sm);
+    }
+
+    .occ-main-info {
+        display: flex;
+        align-items: center;
+        flex-wrap: wrap;
+        width: 100%;
+        gap: 0.5rem;
+    }
+
+    .badge-chip {
+        font-size: 0.65rem;
+        font-weight: 700;
+        padding: 2px 8px;
+        border-radius: 12px;
+        text-transform: uppercase;
+        white-space: nowrap;
+    }
+
+    .occ-title {
+        font-size: 1rem;
+        font-weight: 700;
+        color: var(--text-primary);
+        margin: 0;
+        line-height: 1.2;
+    }
+
+    .occ-context {
+        font-size: 0.8rem;
+        color: var(--text-secondary);
+        font-weight: 500;
+        white-space: nowrap;
+    }
+
+    .occ-meta-row {
+        display: flex;
+        align-items: center;
+        gap: 1rem;
+        font-size: 0.85rem;
+        color: var(--text-tertiary);
+    }
+
+    .occ-score-box {
+        font-weight: 700;
+        font-family: monospace;
+        font-size: 0.9rem;
+        padding: 2px 6px;
+        border: 1px solid;
+        border-radius: 6px;
+        background: var(--surface-secondary);
+    }
+
+    .btn-icon-action {
+        width: 28px;
+        height: 28px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        border-radius: 6px;
+        border: 1px solid transparent;
+        background: transparent;
+        cursor: pointer;
+        transition: all 0.2s;
+        font-size: 0.9rem;
+    }
+
+    .btn-icon-action:hover {
+        background: var(--surface-secondary);
+    }
+
+    .btn-icon-delete:hover {
+        background: rgba(239, 68, 68, 0.1);
+        border-color: var(--danger);
+    }
+
+
+    /* Modal Styles */
+    .custom-modal-overlay {
+        position: fixed;
+        top: 0;
+        left: 0;
+        width: 100%;
+        height: 100%;
+        background: rgba(0, 0, 0, 0.5);
+        backdrop-filter: blur(4px);
+        z-index: 9999;
+        display: none;
+        align-items: center;
+        justify-content: center;
+    }
+
+    .custom-modal-overlay.active {
+        display: flex;
+        animation: fadeIn 0.2s ease-out;
+    }
+
+    .custom-modal-content {
+        background: var(--surface-primary);
+        padding: 0;
+        border-radius: 16px;
+        width: 90%;
+        max-width: 600px;
+        box-shadow: var(--shadow-lg);
+        max-height: 90vh;
+        overflow-y: auto;
+    }
+
+    .modal-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        padding: 1.5rem;
+        border-bottom: 1px solid var(--border);
+    }
+
+    .modal-body {
+        padding: 1.5rem;
+    }
+
+    .modal-footer {
+        padding: 1.5rem;
+        border-top: 1px solid var(--border);
+        display: flex;
+        justify-content: flex-end;
+        gap: 0.5rem;
+    }
+
+    .btn-close-custom {
+        background: none;
+        border: none;
+        font-size: 1.5rem;
+        color: var(--text-secondary);
+        cursor: pointer;
+    }
+
+    .form-select-custom {
+        width: 100%;
+        padding: 0.75rem 1rem;
+        background: var(--surface);
+        border: 1px solid var(--border);
+        border-radius: 8px;
+        color: var(--text-primary);
+        font-family: inherit;
+        font-size: 0.9rem;
+        transition: var(--transition);
+    }
+
+    @keyframes fadeIn {
+        from {
+            opacity: 0;
+        }
+
+        to {
+            opacity: 1;
+        }
+    }
+
+    @media (max-width: 768px) {
+        .occ-meta-row {
+            flex-wrap: wrap;
+        }
+
+        .score-summary-card {
+            display: none;
+        }
+    }
+</style>
+{% endblock %}
+
+{% block sidebar_right %}
+<div class="sidebar-section-ws" id="sectionFilters">
+    <div class="sidebar-header-ws">
+        <h3 class="text-h3">Filtros</h3>
+    </div>
+    <div class="sidebar-content-ws">
+        <div class="form-group mb-4">
+            <label class="form-label">Tipo</label>
+            <select class="form-select-custom" id="filterType" onchange="applyFilters()">
+                <option value="">Todos</option>
+                <option value="positive">Positiva</option>
+                <option value="negative">Negativa</option>
+            </select>
+        </div>
+
+        <div class="form-group mb-4">
+            <label class="form-label">Colaborador</label>
+            <select class="form-select-custom" id="filterCollaborator" onchange="applyFilters()">
+                <option value="">Todos</option>
+                <!-- Populated by JS -->
+            </select>
+        </div>
+
+        <div class="form-group mb-4">
+            <label class="form-label">Processo</label>
+            <select class="form-select-custom" id="filterProcess" onchange="applyFilters()">
+                <option value="">Todos</option>
+                <!-- Populated by JS -->
+            </select>
+        </div>
+
+        <div class="form-group mb-4">
+            <label class="form-label">Projeto</label>
+            <select class="form-select-custom" id="filterProject" onchange="applyFilters()">
+                <option value="">Todos</option>
+                <!-- Populated by JS -->
+            </select>
+        </div>
+
+        <div class="form-group mb-4">
+            <label class="form-label">Período</label>
+            <div style="display: flex; gap: 0.5rem; flex-direction: column;">
+                <input type="date" class="form-select-custom" id="filterDateStart" onchange="applyFilters()"
+                    style="background-image: none;" placeholder="Data Inicial">
+                <input type="date" class="form-select-custom" id="filterDateEnd" onchange="applyFilters()"
+                    style="background-image: none;" placeholder="Data Final">
+            </div>
+        </div>
+
+        <div class="form-group mb-4">
+            <label class="form-label">Busca</label>
+            <input type="text" class="form-select-custom" id="searchInput" placeholder="Título..."
+                oninput="applyFilters()" style="background-image: none;">
+        </div>
+        <button class="btn btn-secondary w-100" onclick="resetFilters()">Limpar Filtros</button>
+    </div>
+</div>
+{% endblock %}

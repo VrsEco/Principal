@@ -1,0 +1,1649 @@
+{% extends "layouts/workspace.html" %}
+
+{% block title %}Detalhes do Processo | Versus{% endblock %}
+
+{% block breadcrumb %}
+<a href="/dashboard">Dashboard</a>
+<span class="sep">/</span>
+<a href="/processes">Processos</a>
+<span class="sep">/</span>
+<span class="current" id="breadcrumbName">Carregando...</span>
+{% endblock %}
+
+{% block navbar_actions %}
+<!-- Botões removidos conforme solicitado -->
+{% endblock %}
+
+
+{% block workspace_content %}
+<div class="process-details-container" id="processDetails">
+    <!-- Header Section -->
+    <div class="workspace-header">
+        <div class="header-content">
+            <div style="display: flex; align-items: center; gap: 1rem; margin-bottom: 0.5rem;">
+                <span class="badge" id="detArea"
+                    style="background: var(--primary-light); color: var(--primary);">Área</span>
+                <span class="badge" id="detStage">Estágio</span>
+            </div>
+            <h1 class="text-h1" id="detName">Carregando Processo...</h1>
+            <p class="text-secondary" id="detDescription">Aguarde enquanto carregamos as informações.</p>
+        </div>
+    </div>
+
+    <!-- Stats Grid -->
+    <div class="stats-overview">
+        <div class="stat-card">
+            <span class="stat-label">Dono</span>
+            <div class="stat-value-container">
+                <span class="stat-value" style="font-size: 1.25rem;" id="detOwner">--</span>
+            </div>
+        </div>
+        <div class="stat-card">
+            <span class="stat-label">Responsável</span>
+            <div class="stat-value-container">
+                <span class="stat-value" style="font-size: 1.25rem;" id="detResponsible">--</span>
+            </div>
+        </div>
+        <div class="stat-card">
+            <span class="stat-label">Macroprocesso</span>
+            <div class="stat-value-container">
+                <span class="stat-value" style="font-size: 1.25rem;" id="detMacro">--</span>
+            </div>
+        </div>
+        <div class="stat-card">
+            <span class="stat-label">Indicadores</span>
+            <div class="stat-value-container">
+                <span class="stat-value" id="detIndicatorCount">0</span>
+            </div>
+        </div>
+    </div>
+
+    <!-- Tabs Navigation -->
+    <div class="tabs-nav mt-5">
+        <button class="tab-btn active" onclick="switchTab('modeling')">📐 Fluxo</button>
+        <button class="tab-btn" onclick="switchTab('pops')">📋 POP</button>
+        <button class="tab-btn" onclick="switchTab('routine')">📅 Rotinas do Processo</button>
+        <button class="tab-btn" onclick="switchTab('indicators')">📊 Indicadores</button>
+        <button class="tab-btn" onclick="switchTab('occurrences')">🔔 Ocorrências</button>
+    </div>
+
+    <!-- Tab: Modeling -->
+    <div id="tab-modeling" class="tab-content active">
+        <div class="card p-4 mt-4">
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1rem;">
+                <h2 class="text-h2">📐 Fluxo de Processo</h2>
+                <input type="file" id="flowUploadInput" style="display: none;" accept="image/*,.pdf"
+                    onchange="uploadFlowDocument(this)">
+                <button class="btn btn-secondary btn-sm"
+                    onclick="document.getElementById('flowUploadInput').click()">Upload Novo Fluxo</button>
+            </div>
+            <div class="flow-container" id="flowContainer">
+                <div class="empty-state" onclick="document.getElementById('flowUploadInput').click()"
+                    style="cursor: pointer;">
+                    <div class="empty-icon">📐</div>
+                    <p>Nenhum documento de fluxo anexado.</p>
+                    <span class="text-tertiary" style="font-size: 0.8rem;">Clique para fazer upload</span>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div id="tab-pops" class="tab-content">
+        <div class="pop-manager mt-4">
+            <div class="pop-create-form" id="routineCreateForm">
+                <div class="pop-code-group">
+                    <label class="pop-field-label">Código</label>
+                    <div class="pop-code-input">
+                        <span class="pop-code-base" id="routineCodeBase"
+                            style="font-size: 0.8rem; color: var(--text-tertiary);">--.</span>
+                        <input type="text" id="newRoutineSuffix" placeholder="01" class="form-control" maxlength="3"
+                            style="width: 70px; font-weight: 700; text-align: center;">
+                    </div>
+                </div>
+                <div class="pop-name-group">
+                    <label class="pop-field-label">Nome da atividade</label>
+                    <input type="text" id="newRoutineName" class="form-control" placeholder="Descreva a atividade...">
+                </div>
+                <div class="pop-order-group" style="width: 100px;">
+                    <label class="pop-field-label">Ordem</label>
+                    <input type="number" id="newRoutineOrder" value="0" class="form-control" style="width: 100%;">
+                </div>
+                <button class="btn btn-primary" onclick="createRoutineInline()" style="white-space: nowrap;">Criar
+                    Atividade</button>
+            </div>
+
+            <div id="routinesSidebarList" style="display: none;"></div>
+
+            <div id="routinesList">
+                <!-- JS will populate -->
+            </div>
+        </div>
+    </div>
+
+    <!-- Tab: Indicators -->
+    <div id="tab-indicators" class="tab-content">
+        <div class="indicators-grid mt-4" id="indicatorsGrid">
+            <!-- JS will populate -->
+        </div>
+    </div>
+
+    <!-- Tab: Rotina -->
+    <div id="tab-routine" class="tab-content">
+        <!-- Process Schedules Section -->
+        <div class="card p-4 mt-4">
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1.5rem;">
+                <h2 class="text-h2">🕒 Rotinas do Processo</h2>
+                <a href="{{ url_for('processes.process_routines_page', company_id=company.id) }}"
+                    class="btn btn-secondary btn-sm" target="_blank">
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"></path>
+                        <polyline points="15 3 21 3 21 9"></polyline>
+                        <line x1="10" y1="14" x2="21" y2="3"></line>
+                    </svg>
+                    Gerenciar Rotinas
+                </a>
+            </div>
+
+            <div id="routineSchedules" class="table-responsive">
+                <table class="table table-hover">
+                    <thead>
+                        <tr style="border-bottom: 2px solid var(--border);">
+                            <th style="width: 25%; padding: 1rem;">Nome</th>
+                            <th style="width: 20%; padding: 1rem;">Frequência</th>
+                            <th style="width: 10%; padding: 1rem;">Início</th>
+                            <th style="width: 15%; padding: 1rem;">Prazo</th>
+                            <th style="width: 25%; padding: 1rem;">Equipe Executora</th>
+                        </tr>
+                    </thead>
+                    <tbody id="routineSchedulesBody">
+                        <!-- JS will populate -->
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+
+    <!-- Tab: Occurrences -->
+    <div id="tab-occurrences" class="tab-content">
+        <div class="card p-4 mt-4">
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1.5rem;">
+                <h2 class="text-h2">🔔 Histórico de Ocorrências</h2>
+                <button class="btn btn-primary btn-sm" onclick="openOccurrenceModal()">
+                    ➕ Nova Ocorrência
+                </button>
+            </div>
+
+            <div id="occurrencesList" class="occurrence-list">
+                <!-- JS will populate -->
+                <p class="text-tertiary">Carregando ocorrências...</p>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Modal: Novo Roteiro -->
+<div id="routineModal" class="modal">
+    <div class="modal-content">
+        <div class="modal-header">
+            <h3>Nova Atividade (POP)</h3>
+            <button class="btn-close" onclick="closeModal('routineModal')">&times;</button>
+        </div>
+        <form id="routineForm">
+            <input type="hidden" name="process_id" value="{{ process_id }}">
+            <div class="form-group">
+                <label class="form-label">Nome da Atividade</label>
+                <input type="text" class="form-control" name="name" required
+                    placeholder="Ex: Conferência de Documentos">
+            </div>
+            <div class="form-row" style="display: grid; grid-template-columns: 1fr 1fr; gap: 1rem;">
+                <div class="form-group">
+                    <label class="form-label">Código/Sufixo</label>
+                    <input type="text" class="form-control" name="code" placeholder="Ex: 01">
+                </div>
+                <div class="form-group">
+                    <label class="form-label">Ordem</label>
+                    <input type="number" class="form-control" name="order_index" value="0">
+                </div>
+            </div>
+            <div class="form-group">
+                <label class="form-label">Descrição</label>
+                <textarea class="form-control" name="description" rows="2"></textarea>
+            </div>
+            <div class="modal-actions">
+                <button type="button" class="btn btn-secondary" onclick="closeModal('routineModal')">Cancelar</button>
+                <button type="submit" class="btn btn-primary">Criar Atividade</button>
+            </div>
+        </form>
+    </div>
+</div>
+
+
+<!-- Modal: Novo Passo -->
+<div id="stepModal" class="modal">
+    <div class="modal-content">
+        <div class="modal-header">
+            <h3>Novo Passo da Atividade</h3>
+            <button class="btn-close" onclick="closeModal('stepModal')">&times;</button>
+        </div>
+        <form id="stepForm">
+            <input type="hidden" name="routine_id" id="modalStepRoutineId">
+            <div class="form-group">
+                <label class="form-label">O que deve ser feito? (Nome) *</label>
+                <input type="text" class="form-control" name="name" required placeholder="Ex: Abrir sistema de gestão">
+            </div>
+            <div class="form-group">
+                <label class="form-label">Como fazer? (Detalhamento)</label>
+                <textarea class="form-control" name="description" rows="3"
+                    placeholder="Instruções detalhadas..."></textarea>
+            </div>
+            <div class="form-group">
+                <label class="form-label">Resultado Esperado</label>
+                <input type="text" class="form-control" name="expected_result" placeholder="Ex: Tela de login aberta">
+            </div>
+            <div class="modal-actions">
+                <button type="button" class="btn btn-secondary" onclick="closeModal('stepModal')">Cancelar</button>
+                <button type="submit" class="btn btn-primary">Salvar Passo</button>
+            </div>
+        </form>
+    </div>
+</div>
+
+<!-- Modal: Nova Ocorrência (Multi-select) -->
+<div id="occurrenceModal" class="modal">
+    <div class="modal-content">
+        <div class="modal-header">
+            <h3 id="occurrenceModalTitle">Nova Ocorrência</h3>
+            <button class="btn-close" onclick="closeModal('occurrenceModal')">&times;</button>
+        </div>
+        <form id="occurrenceForm">
+            <input type="hidden" name="id" id="occId">
+            <input type="hidden" name="process_id" value="{{ process_id }}">
+
+            <div class="form-group">
+                <label class="form-label">Título *</label>
+                <input type="text" class="form-control" name="title" id="occTitle" required
+                    placeholder="Resumo da ocorrência">
+            </div>
+
+            <div class="form-row" style="display: grid; grid-template-columns: 1fr 1fr; gap: 1rem;">
+                <div class="form-group">
+                    <label class="form-label">Tipo *</label>
+                    <select class="form-control" name="type" id="occType" required>
+                        <option value="positive">Positiva</option>
+                        <option value="negative">Negativa</option>
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label class="form-label">Impacto/Score</label>
+                    <input type="number" class="form-control" name="score" id="occScore" value="0"
+                        placeholder="Ex: -5 ou +10">
+                </div>
+            </div>
+
+            <div class="form-group">
+                <label class="form-label">Colaboradores Envolvidos *</label>
+                <select class="form-control" name="collaborators_ids" id="occCollaborators" multiple
+                    style="height: 100px;">
+                    <!-- JS will populate -->
+                </select>
+                <div class="form-text text-tertiary" style="font-size: 0.8rem;">Segure Ctrl/Cmd para selecionar
+                    múltiplos.</div>
+            </div>
+
+            <div class="form-group">
+                <label class="form-label">Descrição Detalhada</label>
+                <textarea class="form-control" name="description" id="occDescription" rows="4"></textarea>
+            </div>
+
+            <div class="modal-actions">
+                <button type="button" class="btn btn-secondary"
+                    onclick="closeModal('occurrenceModal')">Cancelar</button>
+                <button type="submit" class="btn btn-primary">Salvar Ocorrência</button>
+            </div>
+        </form>
+    </div>
+</div>
+
+<style>
+    /* POP Manager and Activity Styles from APP31 */
+    .pop-manager {
+        display: flex;
+        flex-direction: column;
+        gap: 1.5rem;
+    }
+
+    .pop-create-form {
+        display: grid;
+        grid-template-columns: auto 1fr auto auto;
+        gap: 1rem;
+        align-items: end;
+        background: var(--surface-secondary);
+        padding: 1.25rem;
+        border-radius: 12px;
+        border: 1px solid var(--border);
+        overflow: hidden;
+    }
+
+    .pop-name-group {
+        min-width: 200px;
+    }
+
+    .pop-order-group {
+        width: 80px;
+    }
+
+    .pop-field-label {
+        font-size: 0.75rem;
+        text-transform: uppercase;
+        letter-spacing: .05em;
+        color: var(--text-tertiary);
+        font-weight: 600;
+        margin-bottom: 0.5rem;
+    }
+
+    .pop-code-group {
+        min-width: 180px;
+        display: flex;
+        flex-direction: column;
+    }
+
+    .pop-code-input {
+        display: inline-flex;
+        align-items: center;
+        gap: 0.25rem;
+    }
+
+    .pop-code-base {
+        background: var(--primary-light);
+        border: 1px solid var(--primary-glow);
+        border-radius: 8px;
+        padding: 0.5rem;
+        font-size: 0.75rem;
+        font-family: monospace;
+        color: var(--primary);
+    }
+
+    .pop-code-input input {
+        width: 70px;
+        text-align: center;
+        padding: 0.5rem;
+        border-radius: 8px;
+        border: 1px solid var(--border);
+        font-weight: 600;
+    }
+
+    .activity-card {
+        background: var(--surface);
+        border: 1px solid var(--border);
+        border-radius: 16px;
+        padding: 1.5rem;
+        display: flex;
+        flex-direction: column;
+        gap: 1.25rem;
+        transition: var(--transition);
+    }
+
+    .activity-card.collapsed {
+        padding: 1rem 1.5rem;
+        background: var(--surface-secondary);
+    }
+
+    .activity-card.collapsed .activity-entries,
+    .activity-card.collapsed .activity-card-meta label,
+    .activity-card.collapsed .activity-actions button:not([data-action="toggle-collapse"]) {
+        display: none;
+    }
+
+    .activity-card-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: flex-end;
+        gap: 1rem;
+    }
+
+    .activity-card-meta {
+        display: flex;
+        gap: 1rem;
+        align-items: flex-end;
+    }
+
+    .activity-title-input {
+        font-size: 1.1rem;
+        font-weight: 700;
+        min-width: 300px;
+    }
+
+    .activity-code-badge {
+        padding: 0.5rem 0.75rem;
+        background: var(--primary-light);
+        color: var(--primary);
+        border-radius: 8px;
+        font-family: monospace;
+        font-weight: 700;
+    }
+
+    .activity-actions {
+        display: flex;
+        gap: 0.5rem;
+    }
+
+    .btn-icon {
+        background: transparent;
+        border: 1px solid transparent;
+        padding: 5px;
+        border-radius: 6px;
+        transition: all 0.2s;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        cursor: pointer;
+    }
+
+    .btn-icon:hover {
+        background: #fee2e2;
+        border-color: #f87171;
+    }
+
+    .activity-entries {
+        display: flex;
+        flex-direction: column;
+        gap: 1rem;
+    }
+
+    .activity-entry-form {
+        border: 1px solid var(--border);
+        border-radius: 12px;
+        padding: 1.25rem;
+        background: var(--surface-secondary);
+        display: flex;
+        flex-direction: column;
+        gap: 1rem;
+    }
+
+    .entry-preview {
+        display: flex;
+        gap: 0;
+        border-radius: 8px;
+        overflow: hidden;
+        border: 1px solid var(--border);
+        background: white;
+    }
+
+    .entry-preview.single {
+        display: block;
+    }
+
+    .entry-preview.dual .entry-image-preview {
+        display: flex;
+    }
+
+    .entry-image-preview {
+        width: 280px;
+        min-width: 150px;
+        background: #f8fafc;
+        display: none;
+        align-items: center;
+        justify-content: center;
+        border-right: 1px solid var(--border);
+        position: relative;
+    }
+
+    .entry-image-preview img {
+        max-width: 100%;
+        max-height: 400px;
+        object-fit: contain;
+    }
+
+    .resize-divider {
+        width: 8px;
+        background: var(--border);
+        cursor: col-resize;
+        transition: var(--transition);
+        display: flex;
+        align-items: center;
+        justify-content: center;
+    }
+
+    .entry-preview.single .resize-divider {
+        display: none;
+    }
+
+    .resize-divider:hover {
+        background: var(--primary);
+    }
+
+    .entry-text {
+        flex: 1;
+        min-width: 200px;
+    }
+
+    .entry-text textarea {
+        width: 100%;
+        border: none;
+        padding: 1rem;
+        resize: vertical;
+        min-height: 150px;
+        font-family: inherit;
+        font-size: 0.95rem;
+        line-height: 1.6;
+    }
+
+    .entry-controls {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        flex-wrap: wrap;
+        gap: 1rem;
+    }
+
+    .avatar-sm {
+        width: 32px;
+        height: 32px;
+        background: var(--primary);
+        color: white;
+        border-radius: 8px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 0.9rem;
+        font-weight: 700;
+        flex-shrink: 0;
+    }
+
+    /* Restored Base Styles */
+    .stats-overview {
+        display: grid;
+        grid-template-columns: repeat(4, 1fr);
+        gap: 1.5rem;
+    }
+
+    @media (max-width: 992px) {
+        .stats-overview {
+            grid-template-columns: repeat(2, 1fr);
+        }
+    }
+
+    @media (max-width: 576px) {
+        .stats-overview {
+            grid-template-columns: 1fr;
+        }
+    }
+
+    .stat-card {
+        background: var(--surface);
+        padding: 1.5rem;
+        border-radius: 16px;
+        border: 1px solid var(--border);
+        display: flex;
+        flex-direction: column;
+        gap: 0.5rem;
+    }
+
+    .stat-label {
+        font-size: 0.85rem;
+        font-weight: 600;
+        color: var(--text-tertiary);
+        text-transform: uppercase;
+        letter-spacing: 0.05em;
+    }
+
+    .stat-value {
+        font-size: 2rem;
+        font-weight: 700;
+        color: var(--text-primary);
+    }
+
+    .tabs-nav {
+        display: flex;
+        gap: 1rem;
+        border-bottom: 1px solid var(--border);
+        padding-bottom: 0.5rem;
+    }
+
+    .tab-btn {
+        background: none;
+        border: none;
+        padding: 0.5rem 1rem;
+        font-weight: 600;
+        color: var(--text-tertiary);
+        cursor: pointer;
+        transition: var(--transition);
+        border-bottom: 2px solid transparent;
+    }
+
+    .tab-btn:hover {
+        color: var(--primary);
+    }
+
+    .tab-btn.active {
+        color: var(--primary);
+        border-bottom-color: var(--primary);
+    }
+
+    .tab-content {
+        display: none;
+    }
+
+    .tab-content.active {
+        display: block;
+    }
+
+    .flow-container {
+        background: var(--surface-secondary);
+        border-radius: 12px;
+        min-height: 400px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        border: 1px dashed var(--border);
+    }
+
+    /* Side Sidebar Cards */
+    .sidebar-card {
+        padding: 1rem;
+        border: 1px solid var(--border);
+        border-radius: 10px;
+        margin-bottom: 0.75rem;
+        cursor: pointer;
+        transition: var(--transition);
+    }
+
+    .sidebar-card:hover {
+        border-color: var(--primary);
+        background: var(--primary-light);
+    }
+
+    .sidebar-card.active {
+        border-color: var(--primary);
+        background: var(--primary-light);
+        box-shadow: 0 4px 12px var(--primary-glow);
+    }
+
+    /* Modal Styles */
+    .modal {
+        display: none;
+        position: fixed;
+        top: 0;
+        left: 0;
+        width: 100%;
+        height: 100%;
+        background: rgba(0, 0, 0, 0.5);
+        z-index: 1000;
+        backdrop-filter: blur(4px);
+    }
+
+    .modal-content {
+        background: white;
+        max-width: 500px;
+        margin: 10vh auto;
+        border-radius: 20px;
+        padding: 2rem;
+        box-shadow: var(--shadow-xl);
+    }
+
+    .modal-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        margin-bottom: 1.5rem;
+    }
+
+    .modal-actions {
+        display: flex;
+        justify-content: flex-end;
+        gap: 1rem;
+        margin-top: 2rem;
+    }
+
+    .btn-close {
+        background: none;
+        border: none;
+        font-size: 1.5rem;
+        cursor: pointer;
+        color: var(--text-tertiary);
+    }
+
+    /* Table Spacing Improvements (Routine Tab) */
+    #routineSchedules table {
+        width: 100%;
+        border-collapse: separate;
+        border-spacing: 0 0.5rem;
+    }
+
+    #routineSchedules th {
+        color: var(--text-tertiary);
+        font-size: 0.9rem;
+        text-transform: uppercase;
+        letter-spacing: 0.05em;
+        font-weight: 700;
+        text-align: left;
+    }
+
+    #routineSchedules td {
+        background: var(--surface);
+        padding: 1.25rem 1rem !important;
+        border-top: 1px solid var(--border);
+        border-bottom: 1px solid var(--border);
+        font-size: 0.9rem;
+    }
+
+    #routineSchedules td:first-child {
+        border-left: 1px solid var(--border);
+        border-radius: 12px 0 0 12px;
+    }
+
+    #routineSchedules td:last-child {
+        border-right: 1px solid var(--border);
+        border-radius: 0 12px 12px 0;
+    }
+
+    #routineSchedules tr:hover td {
+        border-color: var(--primary);
+        background: var(--primary-light);
+    }
+
+    .user-avatar-group {
+        display: flex;
+        align-items: center;
+        gap: 0.75rem;
+    }
+
+    /* Print Styles */
+    @media print {
+
+        .tabs-nav,
+        .navbar,
+        .sidebar,
+        .btn,
+        .breadcrumb,
+        .sidebar-right {
+            display: none !important;
+        }
+
+        .workspace-content {
+            margin: 0 !important;
+            padding: 0 !important;
+        }
+
+        .tab-content {
+            display: block !important;
+            opacity: 1 !important;
+        }
+
+        .card {
+            border: 1px solid #eee !important;
+            box-shadow: none !important;
+        }
+    }
+
+    /* Hide right sidebar for this page to let main content expand */
+    #sidebar-right {
+        display: none;
+    }
+
+    .workspace-main {
+        max-width: 100%;
+    }
+</style>
+
+<script>
+    const processId = "{{ process_id }}";
+    const companyId = "{{ company_id }}";
+    window.companyId = companyId;
+    let state = {
+        process: null,
+        routines: [],
+        indicators: [],
+        schedules: [],
+        occurrences: [],
+        employees: []
+    };
+
+    /**
+     * Adiciona um novo passo a uma atividade
+     */
+    async function showNewStepForm(routineId) {
+        console.log('showNewStepForm called for routine:', routineId);
+
+        if (!state.routines || !Array.isArray(state.routines)) {
+            alert('Erro: Estado de rotinas não inicializado corretamente.');
+            return;
+        }
+
+        try {
+            const routine = state.routines.find(r => String(r.id) === String(routineId));
+            if (!routine) throw new Error('Atividade não encontrada no estado local.');
+
+            const order = (routine.steps?.length || 0) + 1;
+
+            const res = await fetch('/api/process-steps', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    routine_id: routineId,
+                    name: `Passo ${order}`,
+                    description: '',
+                    layout: 'single',
+                    order_index: order
+                })
+            });
+
+            if (res.ok) {
+                const newStep = await res.json();
+                await fetchRoutines();
+                renderRoutines();
+
+                setTimeout(() => {
+                    if (typeof enableStepEdit === 'function') {
+                        enableStepEdit(newStep.id);
+                        const el = document.getElementById(`step-${newStep.id}`);
+                        if (el) el.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                        const descInput = document.getElementById(`step-desc-${newStep.id}`);
+                        if (descInput) descInput.focus();
+                    }
+                }, 300);
+            } else {
+                const err = await res.json();
+                alert('Erro ao criar passo: ' + (err.error || err.message || 'Erro desconhecido'));
+            }
+        } catch (err) {
+            console.error('showNewStepForm error:', err);
+            alert('Falha ao adicionar passo: ' + err.message);
+        }
+    }
+    window.showNewStepForm = showNewStepForm;
+
+    document.addEventListener('DOMContentLoaded', () => {
+        init();
+        const routineForm = document.getElementById('routineForm');
+        const stepForm = document.getElementById('stepForm');
+        const occurrenceForm = document.getElementById('occurrenceForm');
+
+        // Moved to bottom of file to ensure functions are defined
+        // if (routineForm) routineForm.addEventListener('submit', handleRoutineSubmit);
+        // if (stepForm) stepForm.addEventListener('submit', handleStepSubmit);
+        // if (occurrenceForm) occurrenceForm.addEventListener('submit', handleOccurrenceSubmit);
+    });
+</script>
+<script src="/static/js/process_details_occurrences.js"></script>
+<script>
+
+    async function handleRoutineSubmit(e) {
+        e.preventDefault();
+        const form = e.target;
+        const data = Object.fromEntries(new FormData(form));
+
+        try {
+            const res = await fetch(`/api/process-routines`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(data)
+            });
+
+            if (res.ok) {
+                closeModal('routineModal');
+                form.reset();
+                await fetchRoutines();
+                renderRoutines();
+            } else {
+                const err = await res.json();
+                alert('Erro: ' + (err.error || 'Falha ao criar'));
+            }
+        } catch (err) { console.error(err); }
+    }
+
+    async function handleStepSubmit(e) {
+        e.preventDefault();
+        const form = e.target;
+        const data = Object.fromEntries(new FormData(form));
+
+        try {
+            const res = await fetch('/api/process-steps', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(data)
+            });
+
+            if (res.ok) {
+                closeModal('stepModal');
+                form.reset();
+                await fetchRoutines();
+                renderRoutines();
+            } else {
+                const err = await res.json();
+                alert('Erro: ' + (err.error || 'Falha ao criar passo'));
+            }
+        } catch (err) { console.error(err); }
+    }
+
+    async function init() {
+        try {
+            await fetchProcess();
+            // Fetch employees for the dropdown using the company_id from process
+            if (state.process && state.process.company_id) {
+                fetchEmployees(state.process.company_id);
+            }
+
+            await Promise.all([
+                fetchRoutines(),
+                fetchIndicators(),
+                fetchSchedules(),
+                fetchOccurrences()
+            ]);
+            renderProcess();
+            renderRoutines();
+            renderIndicators();
+            renderInstances();
+            renderOccurrences();
+        } catch (error) {
+            console.error("Error loading process details:", error);
+            document.getElementById('detName').textContent = "Erro ao carregar dados";
+            document.getElementById('detDescription').textContent = "Houve um problema ao carregar as informações deste processo. Por favor, tente novamente.";
+        }
+    }
+
+
+    // Occurrences logic moved to external file
+    async function fetchProcess() {
+        const res = await fetch(`/api/processes/${processId}`);
+        if (!res.ok) throw new Error('Falha ao carregar processo');
+        state.process = await res.json();
+    }
+
+    async function fetchRoutines() {
+        try {
+            const res = await fetch(`/api/process-routines?process_id=${processId}`);
+            if (!res.ok) throw new Error('Falha ao carregar roteiros');
+            const data = await res.json();
+            // The API returns the list directly
+            state.routines = Array.isArray(data) ? data : (data.routines || []);
+        } catch (e) {
+            console.error('Erro ao buscar roteiros:', e);
+            state.routines = [];
+        }
+    }
+
+    async function fetchIndicators() {
+        // Now state.process is guaranteed to be loaded
+        const res = await fetch(`/api/indicators?company_id=${state.process.company_id}&process_id=${processId}`);
+        if (!res.ok) throw new Error('Falha ao carregar indicadores');
+        state.indicators = await res.json();
+    }
+
+    async function fetchSchedules() {
+        // Busca rotinas (agendamentos) associadas diretamente ao processo
+        try {
+            const res = await fetch(`/api/process-schedules?process_id=${processId}`);
+            if (!res.ok) throw new Error('Falha ao carregar agendamentos');
+            const data = await res.json();
+            state.schedules = Array.isArray(data) ? data : (data.schedules || []);
+        } catch (e) {
+            console.warn('Erro ao buscar agendamentos:', e);
+            state.schedules = [];
+        }
+    }
+
+    async function fetchEmployees(companyId) {
+        try {
+            const res = await fetch(`/api/companies/${companyId}/employees`);
+            if (!res.ok) return;
+            const data = await res.json();
+            state.employees = data.employees || data || [];
+            populateEmployeeSelect();
+        } catch (e) {
+            console.warn('Erro ao buscar colaboradores:', e);
+            state.employees = [];
+        }
+    }
+
+    function renderProcess() {
+        document.getElementById('breadcrumbName').textContent = state.process.name;
+
+        // Format: CODE - NAME
+        const processDisplayName = state.process.code ? `${state.process.code} - ${state.process.name}` : state.process.name;
+        document.getElementById('detName').textContent = processDisplayName;
+
+        document.getElementById('detDescription').textContent = state.process.description || 'Sem descrição definida.';
+        document.getElementById('detOwner').textContent = state.process.macro?.owner || '--';
+        document.getElementById('detResponsible').textContent = state.process.responsible || '--';
+        document.getElementById('detIndicatorCount').textContent = state.indicators.length;
+
+        const areaName = state.process.macro?.area?.name || 'Área';
+        const areaCode = state.process.macro?.area?.code;
+        document.getElementById('detArea').textContent = areaCode ? `${areaCode} - ${areaName}` : areaName;
+
+        const macroName = state.process.macro?.name || state.process.macro_id || '--';
+        const macroCode = state.process.macro?.code;
+        document.getElementById('detMacro').textContent = macroCode ? `${macroCode} - ${macroName}` : macroName;
+
+        const stage = document.getElementById('detStage');
+        stage.textContent = getStageLabel(state.process.kanban_stage);
+        stage.className = `badge stage-${state.process.kanban_stage}`;
+
+        renderFlow();
+    }
+
+    function renderFlow() {
+        const flowContainer = document.getElementById('flowContainer');
+        if (state.process.flow_document) {
+            const isPdf = state.process.flow_document.toLowerCase().endsWith('.pdf');
+            if (isPdf) {
+                flowContainer.innerHTML = `
+                    <div style="width: 100%; height: 600px; display: flex; flex-direction: column;">
+                        <iframe src="/uploads/${state.process.flow_document}" style="width: 100%; height: 100%; border: none; border-radius: 8px;"></iframe>
+                        <p class="text-tertiary mt-2" style="font-size: 0.8rem;">Arquivo PDF: ${state.process.flow_document}</p>
+                    </div>
+                `;
+            } else {
+                flowContainer.innerHTML = `
+                    <div style="width: 100%; display: flex; flex-direction: column; align-items: center; gap: 1rem;">
+                        <img src="/uploads/${state.process.flow_document}" alt="Fluxo do Processo" 
+                            style="max-width: 100%; max-height: 800px; border-radius: 8px; box-shadow: var(--shadow-md); cursor: pointer;"
+                            onclick="window.open('/uploads/${state.process.flow_document}', '_blank')">
+                        <p class="text-tertiary" style="font-size: 0.8rem;">Arquivo: ${state.process.flow_document}</p>
+                    </div>
+                `;
+            }
+        } else {
+            flowContainer.innerHTML = `
+                <div class="empty-state" onclick="document.getElementById('flowUploadInput').click()" style="cursor: pointer;">
+                    <div class="empty-icon">📐</div>
+                    <p>Nenhum documento de fluxo anexado.</p>
+                    <span class="text-tertiary" style="font-size: 0.8rem;">Clique para fazer upload</span>
+                </div>
+            `;
+        }
+    }
+
+    async function uploadFlowDocument(input) {
+        if (!input.files || !input.files[0]) return;
+
+        const file = input.files[0];
+        const formData = new FormData();
+        formData.append('flow_document', file);
+
+        // Show loading state
+        const btn = document.querySelector('button[onclick*="flowUploadInput"]');
+        const originalText = btn.textContent;
+        btn.textContent = 'Enviando...';
+        btn.disabled = true;
+
+        try {
+            const res = await fetch(`/api/processes/${processId}`, {
+                method: 'PUT',
+                body: formData
+            });
+
+            if (res.ok) {
+                const updatedProcess = await res.json();
+                state.process = updatedProcess;
+                renderFlow();
+                // Opcional: toast ou mensagem de sucesso
+            } else {
+                const err = await res.json();
+                alert('Erro no upload: ' + (err.error || 'Erro desconhecido'));
+            }
+        } catch (err) {
+            console.error('Error uploading flow:', err);
+            alert('Erro de conexão ao fazer upload.');
+        } finally {
+            btn.textContent = originalText;
+            btn.disabled = false;
+        }
+    }
+
+    function getStageLabel(stage) {
+        const stages = { 'inbox': 'Entrada', 'designing': 'Modelando', 'deploying': 'Implantando', 'stabilizing': 'Estabilizando', 'stable': 'Estável' };
+        return stages[stage] || 'Experimental';
+    }
+
+    function switchTab(tab) {
+        document.querySelectorAll('.tab-btn').forEach(btn => btn.classList.remove('active'));
+        document.querySelectorAll('.tab-content').forEach(content => content.classList.remove('active'));
+        event.currentTarget.classList.add('active');
+        document.getElementById(`tab-${tab}`).classList.add('active');
+    }
+
+    function renderRoutines() {
+        const sidebar = document.getElementById('routinesSidebarList');
+        const list = document.getElementById('routinesList');
+
+        // Update code base for creation form
+        const codeBase = state.process.code ? state.process.code + '.' : '';
+        document.getElementById('routineCodeBase').textContent = codeBase;
+
+        // Auto-fill suffix if empty
+        const suffixInput = document.getElementById('newRoutineSuffix');
+        if (suffixInput && !suffixInput.value) {
+            const nextNum = (state.routines.length + 1).toString().padStart(2, '0');
+            suffixInput.value = nextNum;
+        }
+
+        // Auto-set order
+        const orderInput = document.getElementById('newRoutineOrder');
+        if (orderInput && (!orderInput.value || orderInput.value == '0' || orderInput.value == '')) {
+            const nextOrder = state.routines.length + 1;
+            orderInput.value = nextOrder;
+        }
+
+        if (state.routines.length === 0) {
+            if (sidebar) sidebar.innerHTML = '<p class="text-tertiary p-2">Nenhuma atividade.</p>';
+            list.innerHTML = `
+                <div class="empty-state p-5">
+                    <div class="empty-icon">📋</div>
+                    <h3>Sem atividades cadastradas</h3>
+                    <p>Use o formulário acima para cadastrar os Procedimentos Operacionais Padrão (POPs).</p>
+                </div>
+            `;
+            return;
+        }
+
+        if (sidebar) {
+            sidebar.innerHTML = state.routines.map(r => `
+                <div class="sidebar-card" onclick="scrollToRoutine(${r.id})">
+                    <div style="font-weight: 600; font-size: 0.85rem;">${r.code || ''} ${r.name}</div>
+                    <div style="font-size: 0.75rem; color: var(--text-tertiary);">${r.steps?.length || 0} passos</div>
+                </div>
+            `).join('');
+        }
+
+        list.innerHTML = state.routines.sort((a, b) => a.order_index - b.order_index).map(r => renderActivityCard(r)).join('');
+        initResizeDividers();
+    }
+
+    function renderActivityCard(r) {
+        return `
+            <div class="activity-card" id="routine-${r.id}">
+                <div class="activity-card-header">
+                    <div class="activity-card-meta">
+                        <div class="pop-code-group">
+                            <label class="pop-field-label">Código</label>
+                            <input type="text" id="routine-code-${r.id}" class="form-control form-control-sm font-monospace" value="${r.code || ''}" disabled>
+                        </div>
+                        <div class="pop-code-group" style="flex: 1;">
+                            <label class="pop-field-label">Nome da atividade</label>
+                            <input type="text" id="routine-name-${r.id}" class="form-control activity-title-input" value="${r.name}" 
+                                style="font-weight: 700; border: none; background: transparent; padding-left: 0;" disabled>
+                        </div>
+                        <div class="pop-code-group" style="width: 100px;">
+                            <label class="pop-field-label">Ordem</label>
+                            <input type="number" id="routine-order-${r.id}" class="form-control form-control-sm" value="${r.order_index || 0}" disabled style="width: 100%;">
+                        </div>
+                    </div>
+                    <div class="activity-actions" style="gap: 0.75rem;">
+                        <button type="button" class="btn btn-primary btn-sm" onclick="window.showNewStepForm(${r.id})">➕ Passo</button>
+                        <button class="btn btn-secondary btn-sm edit-btn" onclick="enableRoutineEdit(${r.id})">✏️ Editar</button>
+                        <button class="btn btn-primary btn-sm save-btn" style="display:none" onclick="saveRoutineChanges(${r.id})">💾 Salvar</button>
+                        <button class="btn btn-icon btn-sm" onclick="deleteActivity(${r.id})" title="Remover Atividade">🗑️ Excluir</button>
+                        <button class="btn btn-secondary btn-sm" data-action="toggle-collapse" onclick="toggleActivityCollapse(${r.id})">↕</button>
+                    </div>
+                </div>
+                
+                <div class="activity-entries" id="steps-container-${r.id}">
+                    ${(r.steps || []).sort((a, b) => a.order_index - b.order_index).map((s, idx) => `
+                        <div class="activity-entry-form" id="step-${s.id}">
+                            <div class="entry-controls" style="border-bottom: 1px solid var(--border); padding-bottom: 0.5rem; margin-bottom: 0.5rem;">
+                                <div style="display: flex; align-items: center; gap: 1rem;">
+                                    <div class="step-number" style="background: var(--primary); color: white; width: 24px; height: 24px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 0.75rem; font-weight: 700;">${idx + 1}</div>
+                                    <strong style="font-size: 0.85rem; color: var(--text-secondary);">ETAPA #${idx + 1}</strong>
+                                </div>
+                                <div style="display: flex; gap: 0.5rem; align-items: center;">
+                                    <label class="pop-field-label" style="margin-bottom: 0; font-size: 0.7rem;">LAYOUT:</label>
+                                    <select id="step-layout-${s.id}" class="form-control form-control-sm" style="width: auto;" disabled>
+                                        <option value="single" ${s.layout === 'single' ? 'selected' : ''}>Texto apenas</option>
+                                        <option value="dual" ${s.layout === 'dual' ? 'selected' : ''}>Texto + Imagem</option>
+                                    </select>
+                                </div>
+                            </div>
+
+                            <div class="entry-preview ${s.layout || 'single'}" style="background: #fff; border-radius: 8px;">
+                                <div class="entry-image-preview" style="width: ${s.image_width || 280}px; border-right: ${s.layout === 'dual' ? '1px solid var(--border)' : 'none'};">
+                                    ${s.image_path ? `
+                                        <img src="/uploads/${s.image_path}" alt="Passo ${idx + 1}">
+                                        <button class="btn btn-icon btn-sm remove-img-btn" style="position: absolute; top: 5px; right: 5px; background: rgba(255,255,255,0.8); border: 1px solid var(--border); display: none;" 
+                                            onclick="removeStepImage(${s.id})">×</button>
+                                    ` : `
+                                        <div style="text-align: center; color: var(--text-tertiary); font-size: 0.8rem; padding: 2rem; width: 100%;">
+                                            <input type="file" id="file-${s.id}" class="step-file-input" style="display:none" onchange="uploadStepImage(${s.id}, this)" disabled>
+                                            <label for="file-${s.id}" class="step-file-label" style="cursor:pointer; color: var(--text-tertiary); font-weight: 600; display: block; pointer-events: none;">
+                                                <div style="font-size: 1.5rem; margin-bottom: 0.5rem;">📷</div>
+                                                Adicionar Imagem
+                                            </label>
+                                        </div>
+                                    `}
+                                </div>
+                                <div class="resize-divider" data-step-id="${s.id}"></div>
+                                <div class="entry-content-stack" style="flex: 1; padding: 1rem; display: flex; flex-direction: column; gap: 0.75rem; border-left: none;">
+                                    <div>
+                                        <textarea id="step-desc-${s.id}" class="form-control form-control-sm" rows="6" style="border-color: transparent; background: #f8fafc; font-size: 0.9rem;" disabled
+                                            placeholder="Descreva o passo aqui..."
+                                            onfocus="this.style.borderColor='var(--primary)'" onblur="this.style.borderColor='transparent'">${s.description || ''}</textarea>
+                                    </div>
+                                    <div style="display: flex; justify-content: flex-end; gap: 0.5rem; margin-top: 0.5rem; padding-top: 0.5rem; border-top: 1px solid #f1f5f9;">
+                                        <button class="btn btn-secondary btn-sm" id="step-edit-btn-${s.id}" onclick="enableStepEdit(${s.id})">✏️ Editar</button>
+                                        <button class="btn btn-primary btn-sm" id="step-save-btn-${s.id}" style="display:none" onclick="saveStepChanges(${s.id})">💾 Salvar Passo</button>
+                                        <button class="btn btn-secondary btn-sm" style="color: #ef4444;" onclick="deleteStep(${s.id})">🗑️ Excluir</button>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    `).join('')}
+                    <!-- Placeholder for adding new step -->
+                    <div id="new-step-placeholder-${r.id}"></div>
+                </div>
+            </div>
+        `;
+    }
+
+
+    function toggleActivityCollapse(id) {
+        document.getElementById(`routine-${id}`).classList.toggle('collapsed');
+    }
+
+    function initResizeDividers() {
+        document.querySelectorAll('.resize-divider').forEach(divider => {
+            let isResizing = false;
+            const stepId = divider.dataset.stepId;
+            const preview = divider.parentElement;
+            const imagePreview = preview.querySelector('.entry-image-preview');
+
+            divider.addEventListener('mousedown', (e) => {
+                isResizing = true;
+                document.body.style.cursor = 'col-resize';
+            });
+
+            document.addEventListener('mousemove', (e) => {
+                if (!isResizing) return;
+                const rect = preview.getBoundingClientRect();
+                const newWidth = e.clientX - rect.left;
+                if (newWidth > 100 && newWidth < rect.width * 0.8) {
+                    imagePreview.style.width = newWidth + 'px';
+                }
+            });
+
+            document.addEventListener('mouseup', () => {
+                if (isResizing) {
+                    isResizing = false;
+                    document.body.style.cursor = 'default';
+                    const finalWidth = parseInt(imagePreview.style.width);
+                    // Persist locally for immediate save or auto-save if desired
+                    // updateStepField(stepId, 'image_width', finalWidth); 
+                }
+            });
+        });
+    }
+
+    async function updateStepField(id, field, value) {
+        const data = {};
+        data[field] = value;
+        try {
+            await fetch(`/api/process-steps/${id}`, {
+                method: 'PUT',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(data)
+            });
+        } catch (err) { console.error(err); }
+    }
+
+    function enableRoutineEdit(id) {
+        const card = document.getElementById(`routine-${id}`);
+        card.querySelector('.edit-btn').style.display = 'none';
+        card.querySelector('.save-btn').style.display = 'inline-block';
+        card.querySelectorAll('.activity-card-meta input').forEach(input => {
+            input.disabled = false;
+            if (input.classList.contains('activity-title-input')) {
+                input.style.background = '#f8fafc';
+                input.style.border = '1px solid var(--border)';
+            }
+        });
+    }
+
+    async function saveRoutineChanges(id) {
+        const data = {
+            code: document.getElementById(`routine-code-${id}`).value,
+            name: document.getElementById(`routine-name-${id}`).value,
+            order_index: parseInt(document.getElementById(`routine-order-${id}`).value) || 0
+        };
+        try {
+            const res = await fetch(`/api/process-routines/${id}`, {
+                method: 'PUT',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(data)
+            });
+            if (res.ok) {
+                await fetchRoutines();
+                renderRoutines();
+            }
+        } catch (err) { console.error(err); }
+    }
+
+    function enableStepEdit(id) {
+        const step = document.getElementById(`step-${id}`);
+        document.getElementById(`step-edit-btn-${id}`).style.display = 'none';
+        document.getElementById(`step-save-btn-${id}`).style.display = 'inline-block';
+        step.querySelectorAll('input, textarea, select').forEach(el => el.disabled = false);
+
+        // Enable image removal and upload
+        const removeBtn = step.querySelector('.remove-img-btn');
+        if (removeBtn) removeBtn.style.display = 'block';
+
+        const fileLabel = step.querySelector('.step-file-label');
+        if (fileLabel) {
+            fileLabel.style.pointerEvents = 'auto';
+            fileLabel.style.color = 'var(--primary)';
+        }
+    }
+
+    async function saveStepChanges(id) {
+        const stepEl = document.getElementById(`step-${id}`);
+        const imgPreview = stepEl.querySelector('.entry-image-preview');
+        const data = {
+            description: document.getElementById(`step-desc-${id}`).value,
+            layout: document.getElementById(`step-layout-${id}`).value,
+            image_width: imgPreview ? parseInt(imgPreview.style.width) : 280
+        };
+        try {
+            const res = await fetch(`/api/process-steps/${id}`, {
+                method: 'PUT',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(data)
+            });
+            if (res.ok) {
+                await fetchRoutines();
+                renderRoutines();
+            }
+        } catch (err) { console.error(err); }
+    }
+
+    async function createRoutineInline() {
+        const suffix = document.getElementById('newRoutineSuffix').value;
+        const name = document.getElementById('newRoutineName').value;
+        const order = document.getElementById('newRoutineOrder').value;
+        const codeBase = document.getElementById('routineCodeBase').textContent;
+
+        if (!name || !suffix) {
+            alert('Informe o nome e o número da atividade.');
+            return;
+        }
+
+        const code = codeBase + suffix;
+
+        try {
+            const res = await fetch('/api/process-routines', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    process_id: processId,
+                    name: name,
+                    code: code,
+                    order_index: parseInt(order)
+                })
+            });
+
+            if (res.ok) {
+                document.getElementById('newRoutineSuffix').value = '';
+                document.getElementById('newRoutineName').value = '';
+                document.getElementById('newRoutineOrder').value = '';
+                await fetchRoutines();
+                renderRoutines();
+            } else {
+                const err = await res.json();
+                alert('Erro: ' + (err.error || 'Falha ao criar'));
+            }
+        } catch (err) { console.error(err); }
+    }
+
+
+    async function uploadStepImage(id, input) {
+        if (!input.files || !input.files[0]) return;
+        const formData = new FormData();
+        formData.append('image', input.files[0]);
+
+        try {
+            const res = await fetch(`/api/process-steps/${id}`, {
+                method: 'PUT',
+                body: formData
+            });
+            if (res.ok) await init();
+        } catch (err) { console.error(err); }
+    }
+
+    async function removeStepImage(id) {
+        if (!confirm('Remover imagem deste passo?')) return;
+        const formData = new FormData();
+        formData.append('remove_image', '1');
+
+        try {
+            const res = await fetch(`/api/process-steps/${id}`, {
+                method: 'PUT',
+                body: formData
+            });
+            if (res.ok) await init();
+        } catch (err) { console.error(err); }
+    }
+
+    async function deleteActivity(id) {
+        console.log('deleteActivity called with id:', id);
+        if (!confirm('Tem certeza que deseja excluir esta atividade e todos os seus passos?')) return;
+        try {
+            const res = await fetch(`/api/process-routines/${id}`, { method: 'DELETE' });
+            if (res.ok) {
+                await fetchRoutines();
+                renderRoutines();
+            } else {
+                const err = await res.json();
+                alert('Erro ao excluir: ' + (err.error || err.message || 'Erro desconhecido'));
+            }
+        } catch (err) {
+            console.error('Delete activity error:', err);
+            alert('Erro de conexão ao tentar excluir a atividade.');
+        }
+    }
+    window.deleteActivity = deleteActivity;
+
+    async function deleteSchedule(id) {
+        if (!confirm('Deseja realmente remover o agendamento desta rotina?')) return;
+        try {
+            const res = await fetch(`/api/companies/${companyId}/process-routines/${id}`, { method: 'DELETE' });
+            if (res.ok) {
+                await fetchSchedules();
+                renderInstances();
+            } else {
+                const err = await res.json();
+                alert('Erro ao excluir agendamento: ' + (err.message || 'Erro desconhecido'));
+            }
+        } catch (err) {
+            console.error('Delete schedule error:', err);
+            alert('Erro de conexão.');
+        }
+    }
+    window.deleteSchedule = deleteSchedule;
+
+    async function deleteStep(id) {
+        console.log('deleteStep called with id:', id);
+        if (!confirm('Excluir este passo?')) return;
+        try {
+            const res = await fetch(`/api/process-steps/${id}`, { method: 'DELETE' });
+            if (res.ok) {
+                await fetchRoutines();
+                renderRoutines();
+            } else {
+                const err = await res.json();
+                alert('Erro ao excluir passo: ' + (err.error || err.message || 'Erro desconhecido'));
+            }
+        } catch (err) {
+            console.error('Delete step error:', err);
+            alert('Erro de conexão ao tentar excluir o passo.');
+        }
+    }
+    window.deleteStep = deleteStep;
+
+    function scrollToRoutine(id) {
+        const el = document.getElementById(`routine-${id}`);
+        if (el) {
+            el.scrollIntoView({ behavior: 'smooth', block: 'start' });
+            el.style.boxShadow = '0 0 0 3px var(--primary-light)';
+            setTimeout(() => el.style.boxShadow = '', 2000);
+        }
+    }
+
+    function renderIndicators() {
+        const grid = document.getElementById('indicatorsGrid');
+        if (state.indicators.length === 0) {
+            grid.innerHTML = '<p class="text-tertiary text-center p-5">Nenhum indicador vinculado.</p>';
+            return;
+        }
+        grid.innerHTML = state.indicators.map(i => `
+            <div class="card p-4">
+                <span class="indicator-code">${i.code}</span>
+                <h4 class="text-h3 mt-2">${i.name}</h4>
+                <div class="mt-3">
+                    <span style="font-size: 1.5rem; font-weight: 700;">${i.last_value || '--'}</span>
+                    <span style="color: var(--text-tertiary);">${i.unit || ''}</span>
+                </div>
+                <a href="/indicators/${i.id}" class="btn btn-secondary btn-sm mt-3" style="width:100%">Ver Indicador</a>
+            </div>
+        `).join('');
+    }
+
+    function renderInstances() {
+        const tbody = document.getElementById('routineSchedulesBody');
+
+        if (!state.schedules || state.schedules.length === 0) {
+            tbody.innerHTML = '<tr><td colspan="5" class="text-tertiary text-center p-4">Nenhuma rotina agendada para este processo.</td></tr>';
+            return;
+        }
+
+        const typeLabels = {
+            'daily': 'Diário',
+            'weekly': 'Semanal',
+            'monthly': 'Mensal',
+            'quarterly': 'Trimestral',
+            'yearly': 'Anual',
+            'specific': 'Específico'
+        };
+
+        tbody.innerHTML = state.schedules.map(s => {
+            const freqLabel = typeLabels[s.schedule_type] || s.schedule_type || 'N/D';
+            const freqDetail = s.schedule_value ? ` (${s.schedule_value})` : '';
+
+            let duration = '--';
+            if (s.deadline_days) duration = `${s.deadline_days}d`;
+            else if (s.deadline_hours !== null && s.deadline_hours !== undefined) duration = `${s.deadline_hours}h`;
+
+            const hasTeam = s.team && s.team.length > 0;
+            const teamDisplay = hasTeam ? s.team.join(', ') : 'Não definida';
+            const avatarChar = hasTeam ? s.team[0][0].toUpperCase() : '?';
+
+            return `
+                <tr>
+                    <td style="vertical-align: middle;"><strong>${s.name}</strong></td>
+                    <td style="vertical-align: middle;"><span class="badge" style="background: var(--surface-secondary); color: var(--text-primary); border: 1px solid var(--border); font-size: 0.9rem;">${freqLabel}${freqDetail}</span></td>
+                    <td style="vertical-align: middle;"><span style="font-weight: 600; font-family: monospace;">${s.trigger_value || '--'}</span></td>
+                    <td style="vertical-align: middle;">${duration}</td>
+                    <td style="vertical-align: middle;">
+                        <div class="user-avatar-group">
+                            <div class="avatar-sm" style="${!hasTeam ? 'background: var(--surface-tertiary); color: var(--text-tertiary);' : ''}">${avatarChar}</div>
+                            <span style="font-size: 0.9rem;">${teamDisplay}</span>
+                        </div>
+                    </td>
+                </tr>
+            `;
+        }).join('');
+    }
+
+    function closeModal(id) { document.getElementById(id).style.display = 'none'; }
+
+    // Initialize event listeners after functions are defined
+    document.addEventListener('DOMContentLoaded', () => {
+        const routineForm = document.getElementById('routineForm');
+        const stepForm = document.getElementById('stepForm');
+        const occurrenceForm = document.getElementById('occurrenceForm');
+
+        if (routineForm) routineForm.addEventListener('submit', handleRoutineSubmit);
+        if (stepForm) stepForm.addEventListener('submit', handleStepSubmit);
+        if (occurrenceForm) occurrenceForm.addEventListener('submit', handleOccurrenceSubmit);
+    });
+</script>
+
+<style>
+    .indicator-code {
+        font-size: 0.7rem;
+        font-weight: 700;
+        color: var(--primary);
+        background: var(--primary-light);
+        padding: 2px 6px;
+        border-radius: 4px;
+        text-transform: uppercase;
+    }
+
+    /* Occurrence Styles */
+    .occurrence-list {
+        display: flex;
+        flex-direction: column;
+        gap: 1rem;
+    }
+
+    .occurrence-card {
+        background: var(--surface);
+        border: 1px solid var(--border);
+        border-radius: 12px;
+        padding: 1.25rem;
+        transition: var(--transition);
+    }
+
+    .occurrence-card:hover {
+        box-shadow: var(--shadow-sm);
+        transform: translateY(-2px);
+    }
+
+    .occ-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: flex-start;
+        margin-bottom: 0.75rem;
+    }
+
+    .occ-title-group {
+        display: flex;
+        align-items: center;
+        gap: 0.75rem;
+    }
+
+    .occ-title-group h3 {
+        font-size: 1.1rem;
+        font-weight: 600;
+        margin: 0;
+    }
+
+    .occ-actions {
+        display: flex;
+        align-items: center;
+        gap: 0.75rem;
+    }
+
+    .occ-score {
+        font-weight: 700;
+        font-family: monospace;
+        font-size: 0.95rem;
+    }
+
+    .occ-desc {
+        color: var(--text-secondary);
+        font-size: 0.95rem;
+        line-height: 1.5;
+        margin-bottom: 1rem;
+    }
+
+    .occ-footer {
+        display: flex;
+        gap: 1.5rem;
+        font-size: 0.85rem;
+        color: var(--text-tertiary);
+        border-top: 1px solid var(--border);
+        padding-top: 0.75rem;
+    }
+</style>
+{% endblock %}
+
+{% block sidebar_right %}{% endblock %}

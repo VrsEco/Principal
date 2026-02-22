@@ -1,0 +1,545 @@
+<!-- The Board Room Interface: Orquestração Hierárquica Gestão Versus -->
+<style>
+    :root {
+        --board-bg: #0f172a;
+        --board-card: #1e293b;
+        --board-accent: #3b82f6;
+        --board-text: #f8fafc;
+        --cso-color: #10b981;
+        --skeptic-color: #f43f5e;
+        --coo-color: #8b5cf6;
+        --supervisor-color: #f59e0b;
+    }
+
+    #board-container {
+        font-family: 'Inter', system-ui, -apple-system, sans-serif;
+        background-color: var(--board-bg);
+        color: var(--board-text);
+        border-radius: 12px;
+        overflow: hidden;
+        display: flex;
+        flex-direction: row;
+        /* Horizontal layout for sidebar */
+        height: 600px;
+        box-shadow: 0 10px 25px rgba(0, 0, 0, 0.3);
+        border: 1px solid #334155;
+    }
+
+    #board-main {
+        flex: 1;
+        display: flex;
+        flex-direction: column;
+        border-right: 1px solid #334155;
+    }
+
+    #board-evidence-sidebar {
+        width: 320px;
+        background: #1e293b;
+        padding: 20px;
+        overflow-y: auto;
+        display: none;
+        /* Only show if evidence exists */
+    }
+
+    .evidence-card {
+        background: #0f172a;
+        border: 1px solid #3b82f6;
+        border-radius: 8px;
+        padding: 12px;
+        margin-bottom: 15px;
+        font-size: 0.8rem;
+        animation: slideIn 0.3s ease-out;
+    }
+
+    @keyframes slideIn {
+        from {
+            opacity: 0;
+            transform: translateX(20px);
+        }
+
+        to {
+            opacity: 1;
+            transform: translateX(0);
+        }
+    }
+
+    .evidence-tag {
+        background: rgba(16, 185, 129, 0.2);
+        color: #10b981;
+        font-size: 0.65rem;
+        padding: 2px 6px;
+        border-radius: 4px;
+        text-transform: uppercase;
+        font-weight: bold;
+        display: inline-block;
+        margin-bottom: 8px;
+    }
+
+    /* Header */
+    .board-header {
+        padding: 15px 20px;
+        background: #1e293b;
+        border-bottom: 1px solid #334155;
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+    }
+
+    .board-header h3 {
+        margin: 0;
+        font-size: 1.1rem;
+        display: flex;
+        align-items: center;
+        gap: 10px;
+    }
+
+    .board-badge {
+        background: rgba(59, 130, 246, 0.2);
+        color: #60a5fa;
+        padding: 4px 8px;
+        border-radius: 4px;
+        font-size: 0.75rem;
+        font-weight: bold;
+    }
+
+    /* Message Area */
+    #board-messages {
+        flex: 1;
+        padding: 20px;
+        overflow-y: auto;
+        display: flex;
+        flex-direction: column;
+        gap: 15px;
+        background-image: radial-gradient(circle at 2px 2px, #334155 1px, transparent 0);
+        background-size: 32px 32px;
+    }
+
+    .message {
+        max-width: 85%;
+        padding: 12px 16px;
+        border-radius: 12px;
+        font-size: 0.9rem;
+        line-height: 1.5;
+        position: relative;
+        animation: fadeIn 0.3s ease-out;
+    }
+
+    @keyframes fadeIn {
+        from {
+            opacity: 0;
+            transform: translateY(10px);
+        }
+
+        to {
+            opacity: 1;
+            transform: translateY(0);
+        }
+    }
+
+    .message-user {
+        align-self: flex-end;
+        background: var(--board-accent);
+        color: white;
+        border-bottom-right-radius: 2px;
+    }
+
+    .message-agent {
+        align-self: flex-start;
+        background: var(--board-card);
+        border-bottom-left-radius: 2px;
+        border: 1px solid #334155;
+    }
+
+    .agent-header {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        margin-bottom: 6px;
+        font-weight: bold;
+        font-size: 0.8rem;
+        text-transform: uppercase;
+    }
+
+    .icon-cso {
+        color: var(--cso-color);
+    }
+
+    .icon-skeptic {
+        color: var(--skeptic-color);
+    }
+
+    .icon-coo {
+        color: var(--coo-color);
+    }
+
+    .icon-supervisor {
+        color: var(--supervisor-color);
+    }
+
+    /* Decision Area */
+    #board-decision-panel {
+        background: #1e293b;
+        border-top: 1px solid #334155;
+        padding: 20px;
+        display: none;
+        /* Only show when WAITING_APPROVAL */
+    }
+
+    .decision-content {
+        background: rgba(15, 23, 42, 0.5);
+        border: 1px solid #475569;
+        border-radius: 8px;
+        padding: 15px;
+        margin-bottom: 15px;
+        font-size: 0.85rem;
+    }
+
+    .decision-actions {
+        display: flex;
+        gap: 10px;
+    }
+
+    .btn-board {
+        padding: 10px 20px;
+        border-radius: 6px;
+        border: none;
+        font-weight: bold;
+        cursor: pointer;
+        transition: all 0.2s;
+        flex: 1;
+    }
+
+    .btn-approve {
+        background: var(--cso-color);
+        color: white;
+    }
+
+    .btn-approve:hover {
+        background: #059669;
+        transform: scale(1.02);
+    }
+
+    .btn-reject {
+        background: #475569;
+        color: white;
+    }
+
+    .btn-reject:hover {
+        background: #334155;
+    }
+
+    /* Input Area */
+    .board-input-area {
+        padding: 15px 20px;
+        background: #1e293b;
+        border-top: 1px solid #334155;
+        display: flex;
+        gap: 10px;
+    }
+
+    #strategy-input {
+        flex: 1;
+        background: #0f172a;
+        border: 1px solid #334155;
+        color: white;
+        padding: 10px 15px;
+        border-radius: 6px;
+        outline: none;
+    }
+
+    #strategy-input:focus {
+        border-color: var(--board-accent);
+    }
+
+    .btn-send {
+        background: var(--board-accent);
+        color: white;
+        width: 40px;
+        height: 40px;
+        border-radius: 6px;
+        border: none;
+        cursor: pointer;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+    }
+
+    .loader {
+        display: none;
+        margin: 10px auto;
+        width: 30px;
+        height: 30px;
+        border: 3px solid rgba(255, 255, 255, 0.1);
+        border-top-color: var(--board-accent);
+        border-radius: 50%;
+        animation: spin 1s linear infinite;
+    }
+
+    @keyframes spin {
+        to {
+            transform: rotate(360deg);
+        }
+    }
+
+    /* Feedback Modal Sim */
+    #feedback-overlay {
+        display: none;
+        position: fixed;
+        top: 0;
+        left: 0;
+        right: 0;
+        bottom: 0;
+        background: rgba(0, 0, 0, 0.8);
+        z-index: 1000;
+        align-items: center;
+        justify-content: center;
+    }
+</style>
+
+<div id="board-container">
+    <div id="board-main">
+        <div class="board-header">
+            <h3>
+                <i class="fas fa-users-cog"></i>
+                THE BOARD <span class="board-badge">CÉREBRO AI</span>
+            </h3>
+            <button id="reset-board" style="background:transparent; border:none; color:#64748b; cursor:pointer;"
+                title="Limpar Sessão">
+                <i class="fas fa-sync-alt"></i>
+            </button>
+        </div>
+
+        <div id="board-messages">
+            <div class="message message-agent">
+                <div class="agent-header icon-supervisor">
+                    <i class="fas fa-crown"></i> SUPERVISOR
+                </div>
+                Bem-vindo à Board Room. Descreva seu objetivo estratégico para iniciarmos a deliberação.
+            </div>
+        </div>
+
+        <div id="board-decision-panel">
+            <div style="font-size: 0.8rem; color: #94a3b8; margin-bottom: 10px; font-weight: bold;">
+                <i class="fas fa-exclamation-triangle"></i> VALIDAÇÃO HUMANA REQUERIDA
+            </div>
+            <div class="decision-content" id="final-plan-preview">
+                <!-- Plano do COO aparecerá aqui -->
+            </div>
+            <div class="decision-actions">
+                <button class="btn-board btn-approve" onclick="boardUI.handleDecision('APPROVE')">
+                    <i class="fas fa-check"></i> APROVAR E EXECUTAR
+                </button>
+                <button class="btn-board btn-reject" onclick="boardUI.showFeedbackForm()">
+                    <i class="fas fa-undo"></i> SOLICITAR REVISÃO
+                </button>
+            </div>
+        </div>
+
+        <div class="loader" id="board-loader"></div>
+
+        <div class="board-input-area" id="main-input-container">
+            <input type="text" id="strategy-input" placeholder="Ex: Dobrar o faturamento no varejo em 1 ano...">
+            <button class="btn-send" id="send-btn" onclick="boardUI.startSession()">
+                <i class="fas fa-paper-plane"></i>
+            </button>
+        </div>
+    </div>
+
+    <!-- Evidence Sidebar -->
+    <div id="board-evidence-sidebar">
+        <h4 style="font-size: 0.9rem; margin-top: 0; color: #94a3b8; display: flex; align-items: center; gap: 8px;">
+            <i class="fas fa-database"></i> DADOS VERIFICADOS
+        </h4>
+        <div id="evidence-list">
+            <!-- Evidence cards will be injected here -->
+        </div>
+    </div>
+</div>
+
+<!-- Overlay para Feedback -->
+<div id="feedback-overlay">
+    <div
+        style="background: var(--board-card); padding: 25px; border-radius: 12px; width: 400px; border: 1px solid #334155;">
+        <h4 style="margin: 0 0 15px 0;">O que o conselho deve revisar?</h4>
+        <textarea id="feedback-text"
+            style="width: 100%; height: 100px; background: #0f172a; border: 1px solid #334155; color: white; padding: 10px; border-radius: 6px; margin-bottom: 15px;"
+            placeholder="Ex: O plano ignora o risco de logística..."></textarea>
+        <div style="display: flex; gap: 10px;">
+            <button class="btn-board btn-approve" style="flex: 1;" onclick="boardUI.handleDecision('REJECT')">ENVIAR
+                FEEDBACK</button>
+            <button class="btn-board btn-reject" style="flex: 0.5;"
+                onclick="document.getElementById('feedback-overlay').style.display='none'">CANCELAR</button>
+        </div>
+    </div>
+</div>
+
+<script>
+    const boardUI = {
+        threadId: localStorage.getItem('board_thread_id') || null,
+        isProcessing: false,
+        historyJson: [],
+
+        init() {
+            if (this.threadId) {
+                console.log("Sessão ativa encontrada:", this.threadId);
+            }
+
+            document.getElementById('strategy_input')?.addEventListener('keypress', (e) => {
+                if (e.key === 'Enter') this.startSession();
+            });
+
+            document.getElementById('reset-board').onclick = () => {
+                localStorage.removeItem('board_thread_id');
+                location.reload();
+            };
+        },
+
+        setLoading(loading) {
+            this.isProcessing = loading;
+            document.getElementById('board-loader').style.display = loading ? 'block' : 'none';
+            document.getElementById('send-btn').disabled = loading;
+        },
+
+        appendEvidence(evidence) {
+            const sidebar = document.getElementById('board-evidence-sidebar');
+            sidebar.style.display = 'block';
+            const list = document.getElementById('evidence-list');
+
+            const card = document.createElement('div');
+            card.className = 'evidence-card';
+
+            let contentHtml = '';
+            if (typeof evidence.content === 'object') {
+                contentHtml = `<pre style="font-size:0.7rem; color:#60a5fa; margin:0; white-space: pre-wrap; word-break: break-all;">${JSON.stringify(evidence.content, null, 2)}</pre>`;
+            } else {
+                contentHtml = `<div>${evidence.content}</div>`;
+            }
+
+            card.innerHTML = `
+                <span class="evidence-tag"><i class="fas fa-check-circle"></i> ${evidence.tool}</span>
+                <div style="color:#f8fafc; font-weight:bold; margin-bottom:5px;">${evidence.content.tipo || 'Dados Extraídos'}</div>
+                ${contentHtml}
+            `;
+            list.appendChild(card);
+            list.scrollTop = list.scrollHeight;
+        },
+
+        appendMessage(name, content, role) {
+            const container = document.getElementById('board-messages');
+            const msgDiv = document.createElement('div');
+            msgDiv.className = `message ${role === 'user' ? 'message-user' : 'message-agent'}`;
+
+            let iconClass = 'fas fa-robot';
+            let colorClass = '';
+
+            if (name === 'CSO') { iconClass = 'fas fa-bullseye'; colorClass = 'icon-cso'; }
+            if (name === 'Skeptic') { iconClass = 'fas fa-user-shield'; colorClass = 'icon-skeptic'; }
+            if (name === 'COO') { iconClass = 'fas fa-cogs'; colorClass = 'icon-coo'; }
+            if (name === 'Supervisor') { iconClass = 'fas fa-crown'; colorClass = 'icon-supervisor'; }
+
+            msgDiv.innerHTML = `
+                ${role !== 'user' ? `<div class="agent-header ${colorClass}"><i class="${iconClass}"></i> ${name}</div>` : ''}
+                <div>${content.replace(/\n/g, '<br>')}</div>
+            `;
+
+            container.appendChild(msgDiv);
+            container.scrollTop = container.scrollHeight;
+        },
+
+        async startSession() {
+            const input = document.getElementById('strategy-input');
+            const goal = input.value.trim();
+            if (!goal || this.isProcessing) return;
+
+            this.appendMessage('Você', goal, 'user');
+            input.value = '';
+            this.setLoading(true);
+
+            try {
+                const response = await fetch('/api/ai/board/start', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ strategy_goal: goal, user_id: 'current' })
+                });
+
+                const data = await response.json();
+                if (data.success) {
+                    this.threadId = data.thread_id;
+                    localStorage.setItem('board_thread_id', this.threadId);
+                    this.processResult(data);
+                } else {
+                    this.appendMessage('Sistema', 'Erro: ' + data.error, 'agent');
+                }
+            } catch (e) {
+                this.appendMessage('Sistema', 'Falha na conexão com o conselho.', 'agent');
+            } finally {
+                this.setLoading(false);
+            }
+        },
+
+        processResult(data) {
+            if (data.messages) {
+                // Pegamos apenas as novas mensagens
+                const newMessages = data.messages.slice(this.historyJson.length);
+                newMessages.forEach(m => {
+                    this.appendMessage(m.name, m.content, m.role);
+                });
+                this.historyJson = data.messages;
+            }
+
+            if (data.evidence_data && data.evidence_data.length > 0) {
+                document.getElementById('evidence-list').innerHTML = ''; // Limpa para mostrar atual
+                data.evidence_data.forEach(ev => this.appendEvidence(ev));
+            }
+
+            if (data.status === 'WAITING_APPROVAL') {
+                document.getElementById('board-decision-panel').style.display = 'block';
+                document.getElementById('main-input-container').style.display = 'none';
+
+                const cooMsg = [...data.messages].reverse().find(m => m.name === 'COO');
+                document.getElementById('final-plan-preview').innerHTML = cooMsg ?
+                    `<strong>Resumo do Plano Tático:</strong><br>${cooMsg.content.substring(0, 300)}...` :
+                    'Plano consolidado pronto para aprovação.';
+            } else if (data.status === 'COMPLETED') {
+                document.getElementById('board-decision-panel').style.display = 'none';
+                document.getElementById('main-input-container').style.display = 'flex';
+            }
+        },
+
+        showFeedbackForm() {
+            document.getElementById('feedback-overlay').style.display = 'flex';
+        },
+
+        async handleDecision(action) {
+            const feedback = document.getElementById('feedback-text').value;
+            document.getElementById('feedback-overlay').style.display = 'none';
+            document.getElementById('board-decision-panel').style.display = 'none';
+            this.setLoading(true);
+
+            try {
+                const response = await fetch('/api/ai/board/resume', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        thread_id: this.threadId,
+                        action: action,
+                        feedback: feedback
+                    })
+                });
+
+                const data = await response.json();
+                if (data.success) {
+                    this.processResult(data);
+                    document.getElementById('feedback-text').value = '';
+                }
+            } catch (e) {
+                this.appendMessage('Sistema', 'Erro ao processar decisão.', 'agent');
+            } finally {
+                this.setLoading(false);
+            }
+        }
+    };
+
+    // Auto-init
+    boardUI.init();
+</script>

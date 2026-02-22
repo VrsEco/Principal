@@ -1,0 +1,837 @@
+{% extends "base.html" %}
+{% block title %}Minhas Atividades | Versus Gestão{% endblock %}
+{% block body_class %}my-work-page{% endblock %}
+{% block extra_head %}
+<link rel="stylesheet" href="{{ url_for('static', filename='css/my-work.css') }}" />
+<link rel="stylesheet" href="{{ url_for('static', filename='css/my-work-multiselect.css') }}" />
+<style>
+  .insight-card--incidents .incidents-summary {
+    display: grid;
+    gap: 8px;
+    margin: 12px 0;
+  }
+
+  .incidents-summary .incident-row {
+    display: flex;
+    justify-content: space-between;
+    font-size: 13px;
+    color: #475569;
+  }
+
+  .incident-label {
+    font-weight: 600;
+  }
+
+  .incident-label--positive {
+    color: #059669;
+  }
+
+  .incident-label--negative {
+    color: #dc2626;
+  }
+
+  .incident-row--total .incident-label {
+    color: #0f172a;
+  }
+
+  .incident-value {
+    font-weight: 700;
+    color: #0f172a;
+  }
+
+  .incident-value--negative {
+    color: #dc2626;
+  }
+
+  .incident-value--total {
+    color: #2563eb;
+  }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="my-work-container">
+
+  <h1 class="work-page-title" id="pageTitle">Gestão de Atividades</h1>
+  <!-- Layout Principal: Conteúdo + Sidebar -->
+  <div class="my-work-scale-wrapper">
+    <div class="my-work-layout my-work-scale">
+
+    <!-- Coluna Principal (Esquerda) -->
+    <div class="my-work-main">
+      <div class="work-header">
+        <div class="work-header__cards">
+          <!-- Performance Score -->
+          <div class="header-card performance-card">
+            <div class="performance-card__score">
+              <div class="score-circle" data-score="0">
+                <svg viewBox="0 0 100 100">
+                  <defs>
+                    <linearGradient id="scoreGradient" x1="0%" y1="0%" x2="100%" y2="100%">
+                      <stop offset="0%" stop-color="#667eea" />
+                      <stop offset="100%" stop-color="#764ba2" />
+                    </linearGradient>
+                  </defs>
+                  <circle cx="50" cy="50" r="45" class="score-bg"></circle>
+                  <circle cx="50" cy="50" r="45" class="score-progress" style="--score: 0"></circle>
+                </svg>
+                <div class="score-value">
+                  <span class="score-number" id="performancePointsValue">0</span>
+                  <span class="score-detail">
+                    <span class="score-max" id="performancePointsMax">de 0 pts</span>
+                    <span class="score-percent" id="performancePointsPercent">(0%)</span>
+                  </span>
+                </div>
+              </div>
+            </div>
+            <div class="performance-card__info">
+              <h3>Performance Score</h3>
+              <p class="performance-status performance-status--good" id="performanceStatusText">Excelente desempenho!</p>
+            </div>
+          </div>
+
+          <div class="header-card insight-card insight-card--bars">
+            <div class="insight-card__header">
+              <h3>Produtividade Semanal</h3>
+              <span class="insight-card__badge insight-card__badge--neutral" id="weeklyTrendBadge">0%</span>
+            </div>
+            <div class="mini-bar-chart">
+              <div class="bar" data-day-index="1"><span>S</span></div>
+              <div class="bar" data-day-index="2"><span>T</span></div>
+              <div class="bar" data-day-index="3"><span>Q</span></div>
+              <div class="bar" data-day-index="4"><span>Q</span></div>
+              <div class="bar" data-day-index="5"><span>S</span></div>
+              <div class="bar" data-day-index="6"><span>S</span></div>
+              <div class="bar" data-day-index="0"><span>D</span></div>
+            </div>
+            <p class="insight-card__summary" id="weeklySummaryText">0 atividades nesta semana</p>
+          </div>
+
+          <div class="header-card insight-card insight-card--incidents">
+            <div class="insight-card__header">
+              <h3>Ocorrências</h3>
+            </div>
+            <div class="incidents-summary">
+              <div class="incident-row">
+                <span class="incident-label incident-label--positive">Positivas</span>
+                <span class="incident-value" id="incidentPositiveValue">0 pts</span>
+              </div>
+              <div class="incident-row">
+                <span class="incident-label incident-label--negative">Negativas</span>
+                <span class="incident-value incident-value--negative" id="incidentNegativeValue">0 pts</span>
+              </div>
+              <div class="incident-row incident-row--total">
+                <span class="incident-label">Resultado</span>
+                <span class="incident-value incident-value--total" id="incidentResultValue">0 pts</span>
+              </div>
+            </div>
+            <p class="insight-card__summary" id="incidentSummary">Sem ocorrências registradas</p>
+          </div>
+
+          <div class="header-card insight-card insight-card--donut">
+            <div class="insight-card__header">
+              <h3>Taxa de Conclusão</h3>
+            </div>
+            <div class="report-donut">
+              <svg viewBox="0 0 100 100">
+                <circle cx="50" cy="50" r="40" fill="none" stroke="#e5e7eb" stroke-width="12"></circle>
+                <circle id="completionDonutStroke" cx="50" cy="50" r="40" fill="none" stroke="#10b981" stroke-width="12" stroke-dasharray="251.2"
+                  stroke-dashoffset="50.24" transform="rotate(-90 50 50)"></circle>
+              </svg>
+              <div class="donut-center">
+                <span class="donut-value" id="completionDonutValue">0%</span>
+              </div>
+            </div>
+            <p class="insight-card__summary" id="completionRateSummary">0 de 0 atividades concluídas</p>
+          </div>
+        </div>
+      </div>
+
+      <!-- Status Cards -->
+      <div class="status-summary">
+        <div class="stat-card stat-card--pending">
+          <div class="stat-card__icon">
+            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <circle cx="12" cy="12" r="10"></circle>
+              <polyline points="12 6 12 12 16 14"></polyline>
+            </svg>
+          </div>
+          <div class="stat-card__content">
+            <div class="stat-card__value" id="stat-pending">0</div>
+            <div class="stat-card__label">Abertas</div>
+          </div>
+        </div>
+
+        <div class="stat-card stat-card--overdue">
+          <div class="stat-card__icon">
+            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <circle cx="12" cy="12" r="10"></circle>
+              <line x1="12" y1="8" x2="12" y2="12"></line>
+              <line x1="12" y1="16" x2="12.01" y2="16"></line>
+            </svg>
+          </div>
+          <div class="stat-card__content">
+            <div class="stat-card__value" id="stat-overdue">0</div>
+            <div class="stat-card__label">Atrasadas (em aberto)</div>
+          </div>
+        </div>
+
+        <div class="stat-card stat-card--total">
+          <div class="stat-card__icon">
+            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <circle cx="12" cy="12" r="10"></circle>
+              <path d="M8 13h8"></path>
+              <path d="M9.5 9.5a3.5 3.5 0 0 0 5 5"></path>
+            </svg>
+          </div>
+          <div class="stat-card__content">
+            <div class="stat-card__value" id="stat-total">0</div>
+            <div class="stat-card__label">Total</div>
+          </div>
+        </div>
+
+        <div class="stat-card stat-card--report">
+          <div class="stat-card__content stat-card__content--center">
+            <div class="stat-card__label">Emitir relatório</div>
+            <a
+              class="stat-card__link"
+              href="{{ url_for('my_work.my_work_report_compact') }}"
+              target="_blank"
+              rel="noopener"
+            >
+              Relatório
+            </a>
+          </div>
+        </div>
+      </div>
+
+      <!-- Painel de Filtros -->
+      <section class="filters-panel">
+        <div class="filters-panel__header">
+          <div class="filters-panel__title">
+            <h3>Filtros</h3>
+            <p>Personalize a visualização das atividades</p>
+          </div>
+          <div class="filters-panel__actions">
+            <button type="button" class="filters-panel__clear" id="filtersClearButton" title="Limpar todos os filtros">
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <path d="M3 6h18"></path>
+                <path d="M19 6v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6"></path>
+                <path d="M8 6V4c0-1 1-2 2-2h4c1 0 2 1 2 2v2"></path>
+                <line x1="10" y1="11" x2="10" y2="17"></line>
+                <line x1="14" y1="11" x2="14" y2="17"></line>
+              </svg>
+              <span class="clear-text">Limpar filtros</span>
+            </button>
+            <button type="button" class="filters-panel__toggle" id="filtersPanelToggle" aria-expanded="true">
+              <span class="toggle-text">Ocultar filtros</span>
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <polyline points="18 15 12 9 6 15"></polyline>
+              </svg>
+            </button>
+          </div>
+        </div>
+        <div class="filters-panel__body" id="filtersPanelBody">
+          <div class="filters-dashboard">
+        <div class="filter-card">
+          <div class="filter-card__header">
+            <h4>Empresas</h4>
+            <small>Vinculadas ao seu usuário</small>
+          </div>
+          <div class="filter-multiselect" id="companyMultiselect">
+            <div class="filter-multiselect__trigger" id="companyMultiselectTrigger">
+              <span class="filter-multiselect__label" id="companyMultiselectLabel">Todas as empresas</span>
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <polyline points="6 9 12 15 18 9"></polyline>
+              </svg>
+            </div>
+            <div class="filter-multiselect__dropdown" id="companyMultiselectDropdown">
+              <div class="multiselect-search">
+                <input type="text" placeholder="Buscar empresa..." id="companySearchInput">
+              </div>
+              <label class="multiselect-option">
+                <input type="checkbox" id="selectAllCompanies" checked>
+                <span>Todas</span>
+              </label>
+              <div class="multiselect-options" id="companyList"></div>
+            </div>
+          </div>
+        </div>
+
+        <div class="filter-card">
+          <div class="filter-card__header">
+            <h4>Responsáveis</h4>
+            <small>Selecione um ou mais</small>
+          </div>
+          <div class="filter-multiselect" id="responsibleMultiselect">
+            <div class="filter-multiselect__trigger" id="responsibleMultiselectTrigger">
+              <span class="filter-multiselect__label" id="responsibleMultiselectLabel">Todos os responsáveis</span>
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <polyline points="6 9 12 15 18 9"></polyline>
+              </svg>
+            </div>
+            <div class="filter-multiselect__dropdown" id="responsibleMultiselectDropdown">
+              <div class="multiselect-search">
+                <input type="text" placeholder="Buscar responsável..." id="responsibleSearchInput">
+              </div>
+              <label class="multiselect-option">
+                <input type="checkbox" id="selectAllResponsibles" checked>
+                <span>Todos</span>
+              </label>
+              <div class="multiselect-options" id="responsibleList"></div>
+            </div>
+          </div>
+        </div>
+
+        <div class="filter-card">
+          <div class="filter-card__header">
+            <h4>Executores</h4>
+            <small>Selecione um ou mais</small>
+          </div>
+          <div class="filter-multiselect" id="executorMultiselect">
+            <div class="filter-multiselect__trigger" id="executorMultiselectTrigger">
+              <span class="filter-multiselect__label" id="executorMultiselectLabel">Todos os executores</span>
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <polyline points="6 9 12 15 18 9"></polyline>
+              </svg>
+            </div>
+            <div class="filter-multiselect__dropdown" id="executorMultiselectDropdown">
+              <div class="multiselect-search">
+                <input type="text" placeholder="Buscar executor..." id="executorSearchInput">
+              </div>
+              <label class="multiselect-option">
+                <input type="checkbox" id="selectAllExecutors" checked>
+                <span>Todos</span>
+              </label>
+              <div class="multiselect-options" id="executorList"></div>
+            </div>
+          </div>
+        </div>
+
+        <div class="filter-card">
+          <div class="filter-card__header">
+            <h4>Tipo de registro</h4>
+            <small>Processos e Projetos</small>
+          </div>
+          <div class="filter-multiselect" id="processMultiselect">
+            <div class="filter-multiselect__trigger" id="processMultiselectTrigger">
+              <span class="filter-multiselect__label" id="processMultiselectLabel">Todos os processos</span>
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <polyline points="6 9 12 15 18 9"></polyline>
+              </svg>
+            </div>
+            <div class="filter-multiselect__dropdown" id="processMultiselectDropdown">
+              <div class="multiselect-search">
+                <input type="text" placeholder="Buscar processo..." id="processSearchInput">
+              </div>
+              <label class="multiselect-option">
+                <input type="checkbox" id="selectAllProcesses" checked>
+                <span>Todos</span>
+              </label>
+              <div class="multiselect-options" id="processList"></div>
+            </div>
+          </div>
+          <div class="filter-multiselect" id="projectMultiselect" style="margin-top: 12px;">
+            <div class="filter-multiselect__trigger" id="projectMultiselectTrigger">
+              <span class="filter-multiselect__label" id="projectMultiselectLabel">Todos os projetos</span>
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <polyline points="6 9 12 15 18 9"></polyline>
+              </svg>
+            </div>
+            <div class="filter-multiselect__dropdown" id="projectMultiselectDropdown">
+              <div class="multiselect-search">
+                <input type="text" placeholder="Buscar projeto..." id="projectSearchInput">
+              </div>
+              <label class="multiselect-option">
+                <input type="checkbox" id="selectAllProjects" checked>
+                <span>Todos</span>
+              </label>
+              <div class="multiselect-options" id="projectList"></div>
+            </div>
+          </div>
+        </div>
+
+        <div class="filter-card">
+          <div class="filter-card__header">
+            <h4>Dono de Processos</h4>
+            <small>Selecione nenhum, um, vários ou todos</small>
+          </div>
+          <div class="filter-multiselect" id="processOwnerMultiselect">
+            <div class="filter-multiselect__trigger" id="processOwnerMultiselectTrigger">
+              <span class="filter-multiselect__label" id="processOwnerMultiselectLabel">Todos os donos</span>
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <polyline points="6 9 12 15 18 9"></polyline>
+              </svg>
+            </div>
+            <div class="filter-multiselect__dropdown" id="processOwnerMultiselectDropdown">
+              <div class="multiselect-search">
+                <input type="text" placeholder="Buscar dono..." id="processOwnerSearchInput">
+              </div>
+              <label class="multiselect-option">
+                <input type="checkbox" id="selectAllProcessOwners" checked>
+                <span>Todos</span>
+              </label>
+              <div class="multiselect-options" id="processOwnerList"></div>
+            </div>
+          </div>
+        </div>
+
+        <div class="filter-card filter-card--controls">
+          <div class="filter-quick-controls filter-quick-controls--compact">
+            <div class="filter-input-wrapper" data-ref="21">
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <circle cx="11" cy="11" r="8"></circle>
+                <line x1="21" y1="21" x2="16.65" y2="16.65"></line>
+              </svg>
+              <input type="text" class="filter-text-input" placeholder="Busca por palavras" id="searchInput" />
+            </div>
+
+            <div class="filter-select-wrapper" data-ref="25">
+              <select class="filter-select" id="sortSelect" aria-label="Ordenação">
+                <option value="" selected>Ordenação</option>
+                <option value="deadline">Prazo</option>
+                <option value="company">Empresa</option>
+                <option value="responsible">Responsável</option>
+                <option value="executor">Executor</option>
+                <option value="project">Projeto</option>
+                <option value="process">Processo</option>
+              </select>
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <polyline points="6 9 12 15 18 9"></polyline>
+              </svg>
+            </div>
+            <div class="filter-multiselect filter-multiselect--compact" id="deliveryMultiselect">
+              <div class="filter-multiselect__trigger" id="deliveryMultiselectTrigger">
+                <span class="filter-multiselect__label" id="deliveryMultiselectLabel">Todos os status</span>
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                  <polyline points="6 9 12 15 18 9"></polyline>
+                </svg>
+              </div>
+              <div class="filter-multiselect__dropdown" id="deliveryMultiselectDropdown">
+                <div class="multiselect-search">
+                  <input type="text" placeholder="Buscar status..." id="deliverySearchInput">
+                </div>
+                <label class="multiselect-option">
+                  <input type="checkbox" id="selectAllDeliveryTags" checked>
+                  <span>Todos</span>
+                </label>
+                <div class="multiselect-options" id="deliveryList"></div>
+              </div>
+            </div>
+
+          </div>
+        </div>
+
+        <div class="filter-card filter-card--wide filter-card--tight">
+          <div class="filter-card__header">
+            <h4>Período de vencimento</h4>
+          </div>
+          <div class="date-range">
+            <label class="date-field">
+              <span>De</span>
+              <input type="date" id="filterDueDateStart">
+            </label>
+            <label class="date-field">
+              <span>Até</span>
+              <input type="date" id="filterDueDateEnd">
+            </label>
+            <div class="date-range-actions">
+              <button type="button" class="btn btn-secondary btn-clear-period" id="filterDueDateClear">
+                Limpar
+              </button>
+              <button type="button" class="btn btn-secondary btn-quick-range" id="filterDueDateToday">
+                Hoje
+              </button>
+              <button type="button" class="btn btn-secondary btn-quick-range" id="filterDueDateUntilYesterday">
+                Até ontem
+              </button>
+              <button type="button" class="btn btn-secondary btn-quick-range" id="filterDueDateWeek">
+                Semana
+              </button>
+              <button type="button" class="btn btn-secondary btn-quick-range" id="filterDueDateMonth">
+                Mês
+              </button>
+            </div>
+          </div>
+        </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- Company Overview (só aparece na visão de empresa) -->
+      <div class="company-overview" id="companyOverview" style="display: none;">
+        <div class="company-overview__loader" id="companyOverviewLoader">
+          <div class="placeholder-spinner"></div>
+          <p>Carregando visão da empresa...</p>
+        </div>
+        <div class="company-overview__body" id="companyOverviewBody" style="display: none;"></div>
+      </div>
+
+      <!-- Team Overview (só aparece na visão de equipe) -->
+      <div class="team-overview" id="teamOverview" style="display: none;">
+        <div class="team-overview__loader" id="teamOverviewLoader">
+          <div class="placeholder-spinner"></div>
+          <p>Carregando dados da equipe...</p>
+        </div>
+        <div class="team-overview-grid" id="teamOverviewBody" style="display: none;"></div>
+      </div>
+
+      <!-- Lista de Atividades -->
+      <section class="activities-panel">
+        <div class="activities-panel__header">
+          <div class="activities-panel__title">
+            <h3>Atividades e Instâncias</h3>
+            <p>Veja e gerencie suas tarefas atuais</p>
+          </div>
+          <button type="button" class="activities-panel__toggle" id="activitiesPanelToggle" aria-expanded="true">
+            <span class="activities-toggle-text">Ocultar atividades</span>
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <polyline points="18 15 12 9 6 15"></polyline>
+            </svg>
+          </button>
+        </div>
+        <div class="activities-panel__body" id="activitiesPanelBody">
+          <div class="activities-list" id="activitiesList" data-state="loading">
+            <div class="activity-placeholder">
+              <div class="placeholder-spinner"></div>
+              <p>Carregando atividades...</p>
+            </div>
+          </div>
+
+          <!-- Empty State (quando não há atividades) -->
+          <div class="empty-state" id="emptyState" style="display: none;">
+            <svg width="120" height="120" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1">
+              <polyline points="22 12 18 12 15 21 9 3 6 12 2 12"></polyline>
+            </svg>
+            <h3>Nenhuma atividade encontrada</h3>
+            <p>Não há atividades para os filtros selecionados.</p>
+          </div>
+        </div>
+      </section>
+
+    </div>
+    <!-- FIM Coluna Principal -->
+
+    <!-- Sidebar Direito - Controle de Horas -->
+    <aside class="my-work-sidebar">
+
+      <!-- Painel de Horas -->
+      <div class="time-tracker-panel">
+        <div class="time-tracker-header">
+          <h3>⏱️ Controle de Horas</h3>
+        </div>
+
+        <!-- Visão do Dia -->
+        <div class="time-view time-view--day" id="timeViewDay">
+
+          <!-- Resumo do Dia -->
+          <div class="time-summary">
+            <div class="time-summary__item">
+              <span class="time-summary__label">Capacidade</span>
+              <span class="time-summary__value" id="dayCapacityValue">8h</span>
+            </div>
+            <div class="time-summary__item">
+              <span class="time-summary__label">Previsto</span>
+              <span class="time-summary__value time-summary__value--planned" id="dayPlannedValue">6h 30min</span>
+            </div>
+            <div class="time-summary__item">
+              <span class="time-summary__label">Realizado</span>
+              <span class="time-summary__value time-summary__value--done" id="dayDoneValue">4h 15min</span>
+            </div>
+          </div>
+
+          <!-- Barra de Progresso do Dia -->
+          <div class="time-progress-bar">
+            <div class="time-progress-track">
+              <div class="time-progress-fill time-progress-fill--done" id="dayProgressDone" style="width: 0%;" title="0h / 8h">
+                <span class="time-progress-label" id="dayProgressPercent">0%</span>
+              </div>
+              <div class="time-progress-fill time-progress-fill--planned" id="dayProgressPlanned" style="width: 0%;" title="0h restante">
+              </div>
+            </div>
+            <div class="time-progress-legend">
+              <span class="legend-item legend-item--done">Realizado</span>
+              <span class="legend-item legend-item--planned">Previsto</span>
+              <span class="legend-item legend-item--free">Livre</span>
+            </div>
+          </div>
+
+          <!-- Detalhamento por Tipo -->
+          <div class="time-breakdown">
+
+            <!-- Atividades de Projetos -->
+            <div class="time-breakdown-item">
+              <div class="time-breakdown-header">
+                <div class="time-breakdown-icon time-breakdown-icon--project">📁</div>
+                <div class="time-breakdown-info">
+                  <span class="time-breakdown-title">Atividades de Projetos</span>
+                  <span class="time-breakdown-count" id="dayProjectsCount">3 atividades</span>
+                </div>
+              </div>
+              <div class="time-breakdown-values">
+                <div class="time-value">
+                  <span class="time-value-label">Previsto:</span>
+                  <span class="time-value-number" id="dayProjectsPlanned">4h</span>
+                </div>
+                <div class="time-value">
+                  <span class="time-value-label">Realizado:</span>
+                  <span class="time-value-number time-value-number--done" id="dayProjectsDone">2h 45min</span>
+                </div>
+              </div>
+              <div class="time-mini-bar">
+                <div class="time-mini-bar-fill" id="dayProjectsBar" style="width: 0%"></div>
+              </div>
+            </div>
+
+            <!-- Instâncias de Processos -->
+            <div class="time-breakdown-item">
+              <div class="time-breakdown-header">
+                <div class="time-breakdown-icon time-breakdown-icon--process">⚙️</div>
+                <div class="time-breakdown-info">
+                  <span class="time-breakdown-title">Instâncias de Processos</span>
+                  <span class="time-breakdown-count" id="dayProcessesCount">2 instâncias</span>
+                </div>
+              </div>
+              <div class="time-breakdown-values">
+                <div class="time-value">
+                  <span class="time-value-label">Previsto:</span>
+                  <span class="time-value-number" id="dayProcessesPlanned">2h 30min</span>
+                </div>
+                <div class="time-value">
+                  <span class="time-value-label">Realizado:</span>
+                  <span class="time-value-number time-value-number--done" id="dayProcessesDone">1h 30min</span>
+                </div>
+              </div>
+              <div class="time-mini-bar">
+                <div class="time-mini-bar-fill" id="dayProcessesBar" style="width: 0%"></div>
+              </div>
+            </div>
+
+            <!-- Outros / Tempo Livre -->
+            <div class="time-breakdown-item time-breakdown-item--other">
+              <div class="time-breakdown-header">
+                <div class="time-breakdown-icon time-breakdown-icon--other">📋</div>
+                <div class="time-breakdown-info">
+                  <span class="time-breakdown-title">Outros / Disponível</span>
+                  <span class="time-breakdown-count">Diferença</span>
+                </div>
+              </div>
+              <div class="time-breakdown-values">
+                <div class="time-value">
+                  <span class="time-value-label">Disponível:</span>
+                  <span class="time-value-number time-value-number--available" id="dayAvailableValue">1h 30min</span>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Alerta de Sobrecarga -->
+          <div class="time-alert time-alert--warning" style="display: none;" id="overloadAlert">
+            ⚠️ <strong>Atenção:</strong> Você tem mais horas previstas do que sua capacidade do dia!
+          </div>
+
+        </div>
+
+      </div>
+
+    </aside>
+    <!-- FIM Sidebar -->
+
+    </div>
+  </div>
+  <!-- FIM Layout Principal -->
+
+  <!-- ============================================
+       MODALS
+       ============================================ -->
+
+  <!-- Modal: Adicionar Horas -->
+  <div class="modal-overlay" id="modalAddHours" style="display: none;">
+    <div class="modal-container">
+      <div class="modal-header">
+        <h3>⏱️ Adicionar Horas Trabalhadas</h3>
+        <button class="modal-close" onclick="closeModal('modalAddHours')" data-ref="12">&times;</button>
+      </div>
+
+      <div class="modal-body">
+        <div class="modal-activity-info" id="addHoursActivityInfo">
+          <!-- Será preenchido dinamicamente -->
+        </div>
+
+        <form id="formAddHours">
+          <div class="form-group">
+            <label for="workDate">Data do Trabalho *</label>
+            <input type="date" id="workDate" name="work_date" class="form-input" required data-ref="22" />
+            <small class="form-hint">Data em que as horas foram trabalhadas</small>
+          </div>
+
+          <div class="form-group">
+            <label for="hoursWorked">Horas Trabalhadas *</label>
+            <div class="hours-input-group">
+              <input type="number" id="hoursWorked" name="hours" class="form-input" min="0" max="24" step="0.25"
+                placeholder="0" required data-ref="23" />
+              <span class="input-suffix">horas</span>
+            </div>
+            <small class="form-hint">Use decimais: 0.25 = 15min | 0.5 = 30min | 0.75 = 45min | 1 = 1h</small>
+          </div>
+
+          <div class="form-group">
+            <label for="workDescription">Descrição do Trabalho (Opcional)</label>
+            <textarea id="workDescription" name="description" class="form-textarea" rows="3"
+              placeholder="Descreva brevemente o que foi feito..." data-ref="27"></textarea>
+          </div>
+
+          <div class="hours-summary">
+            <div class="summary-item">
+              <span class="summary-label">Horas já registradas:</span>
+              <span class="summary-value" id="currentHours">0h</span>
+            </div>
+            <div class="summary-item">
+              <span class="summary-label">Horas estimadas:</span>
+              <span class="summary-value" id="estimatedHours">0h</span>
+            </div>
+            <div class="summary-item summary-item--total">
+              <span class="summary-label">Total após adição:</span>
+              <span class="summary-value" id="totalHoursAfter">0h</span>
+            </div>
+          </div>
+        </form>
+      </div>
+
+      <div class="modal-footer">
+        <button type="button" class="btn btn-secondary" onclick="closeModal('modalAddHours')"
+          data-ref="13">Cancelar</button>
+        <button type="submit" form="formAddHours" class="btn btn-primary" data-ref="14">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <polyline points="20 6 9 17 4 12"></polyline>
+          </svg>
+          Registrar Horas
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Modal: Adicionar Comentário -->
+  <div class="modal-overlay" id="modalAddComment" style="display: none;">
+    <div class="modal-container">
+      <div class="modal-header">
+        <h3>💬 Adicionar Comentário / Anotação</h3>
+        <button class="modal-close" onclick="closeModal('modalAddComment')" data-ref="15">&times;</button>
+      </div>
+
+      <div class="modal-body">
+        <div class="modal-activity-info" id="addCommentActivityInfo">
+          <!-- Será preenchido dinamicamente -->
+        </div>
+
+        <form id="formAddComment">
+          <div class="form-group">
+            <label for="commentType">Tipo de Comentário</label>
+            <select id="commentType" name="comment_type" class="form-select" data-ref="26">
+              <option value="note">📝 Nota / Observação</option>
+              <option value="progress">📈 Atualização de Progresso</option>
+              <option value="issue">⚠️ Problema Identificado</option>
+              <option value="solution">💡 Solução Proposta</option>
+              <option value="question">❓ Dúvida</option>
+            </select>
+          </div>
+
+          <div class="form-group">
+            <label for="commentText">Comentário *</label>
+            <textarea id="commentText" name="comment" class="form-textarea" rows="5"
+              placeholder="Digite seu comentário ou anotação..." required data-ref="28"></textarea>
+            <small class="form-hint">Seja claro e objetivo. Suas anotações ajudam no acompanhamento.</small>
+          </div>
+
+          <div class="form-group">
+            <label class="form-checkbox">
+              <input type="checkbox" id="commentPrivate" name="is_private" data-ref="24" />
+              <span>Comentário privado (apenas eu posso ver)</span>
+            </label>
+          </div>
+        </form>
+
+        <!-- Comentários Anteriores -->
+        <div class="previous-comments" id="previousComments">
+          <h4>Comentários Anteriores</h4>
+          <div class="comments-list" id="commentsList">
+            <p class="no-comments">Nenhum comentário ainda.</p>
+          </div>
+        </div>
+      </div>
+
+
+      <div class="modal-footer">
+        <button type="button" class="btn btn-secondary" onclick="closeModal('modalAddComment')"
+          data-ref="16">Cancelar</button>
+        <button type="submit" form="formAddComment" class="btn btn-primary" data-ref="17">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"></path>
+          </svg>
+          Adicionar Comentário
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Modal: Finalizar Atividade -->
+  <div class="modal-overlay" id="modalComplete" style="display: none;">
+    <div class="modal-container modal-container--small">
+      <div class="modal-header">
+        <h3>✅ Finalizar Atividade</h3>
+        <button class="modal-close" onclick="closeModal('modalComplete')" data-ref="18">&times;</button>
+      </div>
+
+      <div class="modal-body">
+        <div class="modal-activity-info" id="completeActivityInfo">
+          <!-- Será preenchido dinamicamente -->
+        </div>
+
+        <div class="completion-alert">
+          <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"></path>
+            <polyline points="22 4 12 14.01 9 11.01"></polyline>
+          </svg>
+          <p>Você está prestes a <strong>finalizar esta atividade</strong>.</p>
+          <p class="completion-alert__text">Deseja adicionar um comentário final?</p>
+        </div>
+
+        <form id="formComplete">
+          <div class="form-group">
+            <label for="completionComment">Comentário Final (Opcional)</label>
+            <textarea id="completionComment" name="completion_comment" class="form-textarea" rows="3"
+              placeholder="Descreva o resultado, aprendizados ou observações finais..." data-ref="29"></textarea>
+          </div>
+
+          <div class="completion-summary">
+            <div class="summary-row">
+              <span>Status Atual:</span>
+              <span class="status-badge" id="currentStatus">Em Andamento</span>
+            </div>
+            <div class="summary-row">
+              <span>Novo Status:</span>
+              <span class="status-badge status-badge--completed">✅ Concluída</span>
+            </div>
+          </div>
+        </form>
+      </div>
+
+      <div class="modal-footer">
+        <button type="button" class="btn btn-secondary" onclick="closeModal('modalComplete')"
+          data-ref="19">Cancelar</button>
+        <button type="submit" form="formComplete" class="btn btn-success" data-ref="20">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <polyline points="20 6 9 17 4 12"></polyline>
+          </svg>
+          Confirmar Finalização
+        </button>
+      </div>
+    </div>
+  </div>
+
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script src="{{ url_for('static', filename='js/my-work.js') }}"></script>
+{% endblock %}

@@ -1,0 +1,47 @@
+
+Schema of company_projects:
+  - id: integer
+  - company_id: integer
+  - plan_id: integer
+  - title: text
+  - description: text
+  - status: text
+  - priority: text
+  - owner: text
+  - start_date: date
+  - end_date: date
+  - okr_area_ref: text
+  - activities: text
+  - notes: text
+  - created_at: text
+  - updated_at: text
+  - responsible_id: integer
+  - okr_reference: text
+  - indicator_reference: text
+  - code: text
+  - code_sequence: integer
+  - plan_type: text
+  - estimated_hours: numeric
+  - worked_hours: numeric
+  - executor_id: integer
+  - is_archived: boolean
+
+Schema of project_activities:
+  - id: integer
+  - project_id: integer
+  - code: character varying
+  - title: character varying
+  - description: text
+  - status: character varying
+  - stage: character varying
+  - priority: character varying
+  - deadline: date
+  - estimated_hours: numeric
+  - worked_hours: numeric
+  - amount: numeric
+  - responsible_id: integer
+  - executor_id: integer
+  - metadata: json
+  - is_deleted: boolean
+  - created_at: timestamp without time zone
+  - updated_at: timestamp without time zone

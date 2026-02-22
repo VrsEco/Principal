@@ -1,0 +1,19 @@
+{
+  "timestamp": "20251010_114711",
+  "data_hora": "2025-10-10T11:47:11.873397",
+  "banco": "instance\\pevapp22.db",
+  "tabelas": {
+    "companies": 4,
+    "sqlite_sequence": 11,
+    "plans": 4,
+    "participants": 5,
+    "company_data": 3,
+    "drivers": 5,
+    "process_areas": 10,
+    "macro_processes": 26,
+    "processes": 63,
+    "okrs": 5,
+    "projects": 5,
+    "process_activities": 28
+  }
+}

@@ -1,0 +1,31 @@
+{% extends "layouts/base.html" %}
+
+{% block layout %}
+<div class="layout-form-centered" style="min-height: 100vh; padding: 24px; display: flex; flex-direction: column; align-items: center; justify-content: center;">
+  
+  <div class="form-card">
+    <header class="form-header">
+      <h1 class="text-h1">{% block form_title %}Título do Formulário{% endblock %}</h1>
+      <div class="subtitle text-sm" style="margin-top: 8px;">
+        {% block form_subtitle %}
+          <!-- Ex: Empresa: <strong>Versus</strong> <span class="info-badge">Código: V1</span> -->
+        {% endblock %}
+      </div>
+    </header>
+
+    <form method="POST" action="{% block form_action %}{% endblock %}" id="mainForm">
+      {% block form_content %}
+        <!-- Conteúdo do form vai aqui -->
+      {% endblock %}
+
+      <div class="form-actions">
+        {% block form_buttons %}
+          <button type="button" class="btn btn-secondary" onclick="window.history.back()">Cancelar</button>
+          <button type="submit" class="btn btn-primary">Salvar</button>
+        {% endblock %}
+      </div>
+    </form>
+  </div>
+  
+</div>
+{% endblock %}

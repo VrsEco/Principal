@@ -1,0 +1,1934 @@
+from flask import Blueprint, render_template, url_for, request, jsonify
+from flask_login import login_required
+from datetime import datetime
+import json
+from config_database import get_db
+from sqlalchemy import inspect
+from modules.pev.implantation_data import (
+    build_final_report_payload,
+    build_overview_payload,
+    build_persona_segments,
+    build_competitive_segments,
+    build_value_canvas_segments,
+    build_plan_context,
+    load_alignment_agenda,
+    load_alignment_canvas,
+    load_alignment_project,
+    load_financial_model,
+    load_segments,
+    load_structures,
+    summarize_structures_for_report,
+    calculate_investment_summary_by_block,
+)
+
+pev_bp = Blueprint('pev', __name__, url_prefix='/pev')
+
+
+FALLBACK_PRODUCTS = {
+    8: [
+        {
+            'id': 1,
+            'plan_id': 8,
+            'name': 'Projetos Marceneiros',
+            'description': '',
+            'sale_price': 10000.0,
+            'sale_price_notes': 'Valor em USD',
+            'variable_costs_percent': 32.0,
+            'variable_costs_value': 3200.0,
+            'variable_costs_notes': 'Insumos 30% e PCP 2%',
+            'variable_expenses_percent': 0.0,
+            'variable_expenses_value': 0.0,
+            'variable_expenses_notes': '',
+            'unit_contribution_margin_percent': 68.0,
+            'unit_contribution_margin_value': 6800.0,
+            'unit_contribution_margin_notes': 'Valor a validar com o mercado',
+            'market_size_monthly_units': 600.0,
+            'market_size_monthly_revenue': 6000000.0,
+            'market_size_notes': '200 marceneiros x 3 projetos por mes = 600 projetos por mes. A validar',
+            'market_share_goal_monthly_units': 120.0,
+            'market_share_goal_percent': 20.0,
+            'market_share_goal_notes': 'Nossa capacidade operacional e de 4 projetos por dia x 30 dias = 120 projetos por mes',
+            'is_deleted': False,
+            'created_at': None,
+            'updated_at': None
+        }
+    ]
+}
+
+def _ensure_product_table() -> bool:
+    """
+    Garantir que a tabela de produtos exista antes de executar queries.
+    Cria automaticamente caso ainda não tenha sido criada.
+    """
+    try:
+        from models import db
+        from models.product import Product
+
+        engine = db.engine
+        inspector = inspect(engine)
+        table_name = Product.__tablename__
+
+        if table_name not in inspector.get_table_names():
+            Product.__table__.create(engine)
+
+        return True
+    except Exception as err:
+        print(f"[Products] Failed to ensure table: {err}")
+        return False
+
+
+def _resolve_plan_id():
+    """Return plan id from query parameters. Raises error if not provided."""
+    plan_id = request.args.get('plan_id')
+    if plan_id:
+        try:
+            return int(plan_id)
+        except (TypeError, ValueError):
+            print(f"[ERROR] plan_id inválido: {plan_id}")
+            pass
+    
+    view_args = getattr(request, 'view_args', None) or {}
+    plan_id = view_args.get('plan_id')
+    if plan_id:
+        try:
+            return int(plan_id)
+        except (TypeError, ValueError):
+            print(f"[ERROR] plan_id inválido em view_args: {plan_id}")
+            pass
+    
+    # ERRO: plan_id não foi fornecido - isso NÃO deve acontecer!
+    print(f"[CRITICAL ERROR] plan_id não fornecido na URL! request.url: {request.url}")
+    raise ValueError("plan_id é obrigatório e deve ser passado na URL")
+
+
+def _get_plan_context(plan_id: int):
+    """Fetch plan and company information for headers and reports."""
+    db = get_db()
+    return build_plan_context(db, plan_id)
+
+
+@pev_bp.route('/dashboard')
+def pev_dashboard():
+    db = get_db()
+    companies = db.get_companies()
+
+    companies_with_plans = []
+    for company in companies:
+        plans = db.get_plans_by_company(company['id'])
+        company_with_plans = company.copy()
+        company_with_plans['plans'] = [
+            {
+                'id': plan['id'], 
+                'name': plan['name'],
+                'plan_mode': plan.get('plan_mode', 'evolucao')  # Include plan_mode
+            }
+            for plan in plans
+        ]
+        companies_with_plans.append(company_with_plans)
+
+    highlights = [
+        {"title": "Planejamentos Ativos", "value": "3", "trend": "+1"},
+        {"title": "Participantes", "value": "15", "trend": "+3"},
+        {"title": "Projetos em Andamento", "value": "8", "trend": "+2"}
+    ]
+
+    timeline = [
+        {"date": "2025-01-15", "event": "Inicio do planejamento estrategico", "status": "completed"},
+        {"date": "2025-02-01", "event": "Entrevistas com participantes", "status": "in_progress"},
+        {"date": "2025-03-15", "event": "Definicao de direcionadores", "status": "pending"},
+        {"date": "2025-04-30", "event": "Aprovacao final do plano", "status": "pending"}
+    ]
+
+    return render_template(
+        "plan_selector_compact.html",
+        user_name="Fabiano Ferreira",
+        companies=companies_with_plans,
+        highlights=highlights,
+        timeline=timeline
+    )
+
+
+@pev_bp.route('/implantacao')
+def pev_implantacao_overview():
+    plan_id = _resolve_plan_id()
+    db = get_db()
+    payload = build_overview_payload(db, plan_id)
+    plan = payload["plan"]
+    project_info = load_alignment_project(db, plan_id)
+    
+    # Link direto para o projeto GRV criado para este planejamento
+    if plan.get("company_id"):
+        # Buscar projeto vinculado a este plan
+        try:
+            conn = db._get_connection()
+            cursor = conn.cursor()
+            cursor.execute(
+                "SELECT id FROM company_projects WHERE plan_id = %s AND plan_type = 'PEV' ORDER BY created_at DESC LIMIT 1",
+                (plan_id,)
+            )
+            project_row = cursor.fetchone()
+            conn.close()
+            
+            if project_row:
+                project_dict = dict(project_row)
+                grv_project_id = project_dict.get('id')
+                # Link direto para o projeto (Kanban)
+                plan["project_link"] = url_for("grv.grv_project_manage", company_id=plan.get("company_id"), project_id=grv_project_id)
+                print(f"✅ Link direto para projeto GRV ID {grv_project_id} configurado")
+            else:
+                # Se não tiver projeto, vai para lista de projetos
+                plan["project_link"] = url_for("grv.grv_projects_projects", company_id=plan.get("company_id"))
+                print(f"⚠️ Nenhum projeto vinculado ao plan {plan_id}, link para lista de projetos")
+        except Exception as e:
+            print(f"⚠️ Erro ao buscar projeto vinculado: {e}")
+            plan["project_link"] = url_for("grv.grv_projects_projects", company_id=plan.get("company_id"))
+    else:
+        plan["project_link"] = url_for("grv.grv_dashboard")
+    return render_template(
+        "plan_implantacao.html",
+        user_name=plan.get("consultant", "Consultor responsavel"),
+        plan=plan,
+        macro_phases=payload["macro_phases"],
+        checkpoints=payload["checkpoints"],
+        dashboard=payload["dashboard"],
+    )
+
+@pev_bp.route('/implantacao/alinhamento/canvas-expectativas')
+def implantacao_canvas_expectativas():
+    plan_id = _resolve_plan_id()
+    
+    # Log para debug
+    print(f"DEBUG: Canvas Expectativas - plan_id resolvido: {plan_id}")
+    print(f"DEBUG: request.args: {request.args}")
+    
+    db = get_db()
+    plan = build_plan_context(db, plan_id)
+    
+    # Log do plan
+    print(f"DEBUG: plan loaded: {plan.get('id') if plan else 'None'}")
+    
+    canvas_data = load_alignment_canvas(db, plan_id)
+    return render_template(
+        "implantacao/alinhamento_canvas_expectativas.html",
+        user_name=plan.get("consultant", "Consultor responsavel"),
+        plan_id=plan_id,
+        plan=plan,  # Passar o plan completo também
+        socios=canvas_data.get("socios", []),
+        alinhamento=canvas_data.get("alinhamento", {}),
+    )
+
+@pev_bp.route('/implantacao/alinhamento/agenda-planejamento')
+def implantacao_agenda_planejamento():
+    plan_id = _resolve_plan_id()
+    db = get_db()
+    plan = build_plan_context(db, plan_id)
+    agenda_data = load_alignment_agenda(db, plan_id)
+    return render_template(
+        "implantacao/alinhamento_agenda_planejamento.html",
+        user_name=plan.get("consultant", "Consultor responsavel"),
+        projeto=agenda_data.get("projeto", {}),
+        atividades=agenda_data.get("atividades", []),
+    )
+
+@pev_bp.route('/implantacao/modelo/canvas-proposta-valor')
+def implantacao_canvas_proposta_valor():
+    plan_id = _resolve_plan_id()
+    db = get_db()
+    plan = build_plan_context(db, plan_id)
+    segments = load_segments(db, plan_id)
+    segmentos = build_value_canvas_segments(segments)
+    return render_template(
+        "implantacao/modelo_canvas_proposta_valor.html",
+        user_name=plan.get("consultant", "Consultor responsavel"),
+        plan_id=plan_id,
+        segmentos=segmentos,
+    )
+
+@pev_bp.route('/implantacao/modelo/mapa-persona')
+def implantacao_mapa_persona():
+    plan_id = _resolve_plan_id()
+    db = get_db()
+    plan = build_plan_context(db, plan_id)
+    segments = load_segments(db, plan_id)
+    segmentos = build_persona_segments(segments)
+    return render_template(
+        "implantacao/modelo_mapa_persona.html",
+        user_name=plan.get("consultant", "Consultor responsavel"),
+        plan_id=plan_id,
+        segmentos=segmentos,
+    )
+
+@pev_bp.route('/implantacao/modelo/matriz-diferenciais')
+def implantacao_matriz_diferenciais():
+    plan_id = _resolve_plan_id()
+    db = get_db()
+    plan = build_plan_context(db, plan_id)
+    segments = load_segments(db, plan_id)
+    segmentos = build_competitive_segments(segments)
+    return render_template(
+        "implantacao/modelo_matriz_diferenciais.html",
+        user_name=plan.get("consultant", "Consultor responsavel"),
+        plan_id=plan_id,
+        segmentos=segmentos,
+    )
+
+@pev_bp.route('/implantacao/modelo/produtos')
+@login_required
+def implantacao_produtos():
+    """Cadastro de Produtos - Modelo & Mercado"""
+    plan_id = _resolve_plan_id()
+    db = get_db()
+    plan = build_plan_context(db, plan_id)
+    
+    return render_template(
+        "implantacao/modelo_produtos.html",
+        user_name=plan.get("consultant", "Consultor responsável"),
+        plan_id=plan_id,
+        plan=plan
+    )
+
+@pev_bp.route('/implantacao/modelo/modelagem-financeira')
+def implantacao_modelagem_financeira():
+    plan_id = _resolve_plan_id()
+    db = get_db()
+    plan = build_plan_context(db, plan_id)
+    financeiro = load_financial_model(db, plan_id)
+    return render_template(
+        "implantacao/modelo_modelagem_financeira.html",
+        user_name=plan.get("consultant", "Consultor responsavel"),
+        plan_id=plan_id,
+        premissas=financeiro.get("premissas", []),
+        investimento=financeiro.get("investimento", {}),
+        fluxo_negocio=financeiro.get("fluxo_negocio", {}),
+        fluxo_investidor=financeiro.get("fluxo_investidor", {}),
+        capacidades=financeiro.get("capacidades", []),
+        resumo_capacidades=financeiro.get("resumo_capacidades", {}),
+    )
+
+@pev_bp.route('/implantacao/executivo/playbook-comercial')
+def implantacao_playbook_comercial():
+    pilares = [
+        {
+            "nome": "Metas trimestrais",
+            "descricao": "Crescimento gradual para garantir qualidade de entrega.",
+            "detalhes": [
+                "Trimestre 1: 120 clientes recorrentes (assinaturas e eventos)",
+                "Trimestre 2: 220 clientes recorrentes",
+                "Trimestre 3: 320 clientes recorrentes com foco em eventos corporativos",
+                "Conversao target: 35% em degustacoes guiadas"
+            ]
+        },
+        {
+            "nome": "Processo comercial",
+            "descricao": "Etapas padronizadas para garantir consistencia no relacionamento.",
+            "detalhes": [
+                "Prospecao consultiva (social selling, parcerias locais)",
+                "Degustacao guiada com storytelling",
+                "Workshop de co-criacao de experiencias",
+                "Fechamento com pacotes personalizaveis e onboarding"
+            ]
+        },
+        {
+            "nome": "Ferramentas e rotinas",
+            "descricao": "Sistemas e rituais para controlar pipeline e relacionamento.",
+            "detalhes": [
+                "CRM leve integrado ao WhatsApp Business",
+                "Dashboard semanal com pipeline e metas",
+                "Rituais de follow-up (48h pos degustacao)",
+                "Scripts e playbooks de storytelling"
+            ]
+        }
+    ]
+
+    equipe = {
+        "estrutura": [
+            "1 lider comercial (estrategia e relacionamento B2B)",
+            "2 consultores de experiencia (eventos, assinaturas, parcerias)",
+            "1 analista de relacionamento (community e fidelizacao)"
+        ],
+        "capacidades": [
+            "Storytelling e degustacao guiada",
+            "Negociacao consultiva com clubes e empresas",
+            "Gestao de pipeline e indicadores comerciales"
+        ]
+    }
+
+    return render_template(
+        "implantacao/execution_playbook_comercial.html",
+        user_name="Fabiano Ferreira",
+        pilares=pilares,
+        equipe=equipe
+    )
+
+
+@pev_bp.route('/implantacao/executivo/mapa-processos')
+def implantacao_mapa_processos():
+    processos = [
+        {
+            "nome": "Producao diaria",
+            "objetivo": "Garantir produtos frescos com padrao artesanal.",
+            "macro_etapas": [
+                "Planejamento de insumos (D-2)",
+                "Preparo e mise en place (D-1)",
+                "Execucao de fornadas (D)",
+                "Controle de qualidade e ajustes finais"
+            ],
+            "indicadores": [
+                "Aderencia a ficha tecnica 98%",
+                "Desperdicio maximo 3%",
+                "Satisfacao do cliente (degustacoes) >= 90%"
+            ]
+        },
+        {
+            "nome": "Experiencia em loja",
+            "objetivo": "Criar jornada memoravel em todas as visitas.",
+            "macro_etapas": [
+                "Acolhimento e entendimento do momento",
+                "Apresentacao guiada dos produtos",
+                "Oferta de experiencia complementar",
+                "Registro de preferencia no CRM"
+            ],
+            "indicadores": [
+                "Taxa de recomendacao 85%",
+                "Ticket medio projetado R$ 65",
+                "Clientes recorrentes (30 dias) >= 45%"
+            ]
+        },
+        {
+            "nome": "Eventos e catering",
+            "objetivo": "Executar eventos premium mantendo padrao da marca.",
+            "macro_etapas": [
+                "Briefing consultivo",
+                "Degustacao e definicao de cardapio",
+                "Execucao com embaixador da marca",
+                "Feedback e plano de recompra"
+            ],
+            "indicadores": [
+                "Satisfacao do evento >= 92%",
+                "Tempo maximo de resposta: 24h",
+                "Recompra em ate 90 dias: 40%"
+            ]
+        }
+    ]
+
+    capacidade = {
+        "linha_producao": "600 unidades por dia com equipe base; possibilidade de reforco em ate 30%.",
+        "turnos": [
+            "Madrugada (preparo, fornos)",
+            "Manha (acabamento, montagem experiencias)",
+            "Tarde (eventos e reposicao)"
+        ],
+        "planejamento_picos": [
+            "Calendario de datas especiais",
+            "Banco de talentos para reforcos pontuais",
+            "Parcerias logisticas para eventos externos"
+        ]
+    }
+
+    return render_template(
+        "implantacao/execution_mapa_processos.html",
+        user_name="Fabiano Ferreira",
+        processos=processos,
+        capacidade=capacidade
+    )
+
+
+@pev_bp.route('/implantacao/executivo/modelo-financeiro-base')
+def implantacao_modelo_financeiro_base():
+    premissas = {
+        "ticket_medio": "R$ 65 loja / R$ 220 assinatura / R$ 2.500 eventos",
+        "mix_receita": [
+            "Loja fisica: 45%",
+            "Assinaturas premium: 30%",
+            "Eventos corporativos: 20%",
+            "Workshops e experiencias: 5%"
+        ],
+        "margem": {
+            "bruta": "Projetada em 48% apos otimizar fornecedores",
+            "contribuicao": "35% media com mix ideal de produtos"
+        }
+    }
+
+    custos = {
+        "fixos": [
+            "Locacao ponto premium",
+            "Folha equipe (operacao, comercial, suporte)",
+            "Marketing e conteudo",
+            "Tecnologia e licencas"
+        ],
+        "variaveis": [
+            "Ingredientes premium",
+            "Embalagens e brindes experienciais",
+            "Comissao parcerias corporativas"
+        ],
+        "investimentos": [
+            "Ambientacao e equipamentos",
+            "Plataforma digital / CRM",
+            "Fundo de contingencia (3 meses de operacao)"
+        ]
+    }
+
+    indicadores = [
+        {"nome": "Ponto de equilibrio", "valor": "Mes 9 com vendas projetadas", "observacao": "Monitorar mix para proteger margem"},
+        {"nome": "Payback", "valor": "24 meses (cenario base)", "observacao": "Plano de aceleracao reduz para 20 meses"},
+        {"nome": "CAC payback loja", "valor": "1,8 meses", "observacao": "Campanhas de relacao prolongam ciclo de vida"},
+        {"nome": "LTV / CAC", "valor": "3,9", "observacao": "Meta de superar 4,5 apos trimestre 2"}
+    ]
+
+    return render_template(
+        "implantacao/execution_modelo_financeiro_base.html",
+        user_name="Fabiano Ferreira",
+        premissas=premissas,
+        custos=custos,
+        indicadores=indicadores
+    )
+
+
+@pev_bp.route('/implantacao/financeiro/plano-investimento')
+def implantacao_plano_investimento():
+    fases = [
+        {
+            "nome": "Fase 1 - Implantacao",
+            "periodo": "Meses 0 a 3",
+            "foco": "Estruturar ponto fisico, equipe base e operacao piloto.",
+            "aporte": "R$ 320.000",
+            "principais_itens": [
+                "Reforma e ambientacao do ponto premium",
+                "Equipamentos de producao e vitrine refrigerada",
+                "Capital de giro para tres meses"
+            ]
+        },
+        {
+            "nome": "Fase 2 - Expansao de experiencias",
+            "periodo": "Meses 4 a 9",
+            "foco": "Ampliar portfolio de eventos e assinaturas.",
+            "aporte": "R$ 120.000",
+            "principais_itens": [
+                "Montagem de laboratorio de experiencias",
+                "Equipe dedicada a eventos corporativos",
+                "Campanhas de marketing segmentado"
+            ]
+        },
+        {
+            "nome": "Fase 3 - Segunda unidade",
+            "periodo": "Meses 12 a 18",
+            "foco": "Replicar modelo em bairro estrategico.",
+            "aporte": "R$ 280.000",
+            "principais_itens": [
+                "Estudo de viabilidade e negociacao do ponto",
+                "Treinamento de equipe replicadora",
+                "Almoxarifado compartilhado e logistica"
+            ]
+        }
+    ]
+
+    fontes = {
+        "recursos_proprios": "R$ 220.000 - aporte inicial dos socios",
+        "linha_credito": "R$ 200.000 - linha Sebrae com carencia de 12 meses",
+        "investidores": "R$ 300.000 - rodada anjo direcionada a expansao",
+        "incentivos": "R$ 20.000 - programas regionais para empreendedores"
+    }
+
+    return render_template(
+        "implantacao/financeiro_plano_investimento.html",
+        user_name="Fabiano Ferreira",
+        fases=fases,
+        fontes=fontes
+    )
+
+
+@pev_bp.route('/implantacao/financeiro/fluxo-caixa')
+def implantacao_fluxo_caixa():
+    cenarios = [
+        {
+            "nome": "Base",
+            "descricao": "Vendas previstas com maturacao gradual da base de clientes.",
+            "acumulado": "Saldo positivo a partir do mes 8",
+            "observacoes": [
+                "Receita mensal media R$ 138 mil ao final do ano 1",
+                "Margem de contribuicao media 35%",
+                "Reserva de emergencia equivalente a dois meses de custos"
+            ]
+        },
+        {
+            "nome": "Otimista",
+            "descricao": "Conversao acelerada em eventos corporativos e assinaturas.",
+            "acumulado": "Ponto de equilibrio antecipado para o mes 6",
+            "observacoes": [
+                "Incremento de 15% nas vendas de eventos",
+                "Aumento do ticket medio para R$ 72",
+                "Possibilidade de antecipar abertura da segunda unidade"
+            ]
+        },
+        {
+            "nome": "Conservador",
+            "descricao": "Adocao gradual com maior dependencia da loja fisica.",
+            "acumulado": "Saldo positivo somente no mes 11",
+            "observacoes": [
+                "Renegociacao de fornecedores para reduzir custos variaveis",
+                "Campanhas extras para aquisicao de assinantes",
+                "Uso do fundo de contingencia nos tres primeiros meses"
+            ]
+        }
+    ]
+
+    gatilhos = [
+        "Revisar precos e margem se fluxo projetado ficar 10% abaixo do estimado por dois meses.",
+        "Acionar plano de reducao de custos variaveis se margem de contribuicao cair abaixo de 30%.",
+        "Aumentar investimento em marketing se relacao LTV/CAC cair abaixo de 3,5."
+    ]
+
+    return render_template(
+        "implantacao/financeiro_fluxo_caixa.html",
+        user_name="Fabiano Ferreira",
+        cenarios=cenarios,
+        gatilhos=gatilhos
+    )
+
+
+@pev_bp.route('/implantacao/financeiro/matriz-indicadores')
+def implantacao_matriz_indicadores_financeiros():
+    indicadores = [
+        {
+            "categoria": "Receita",
+            "itens": [
+                {"nome": "Ticket medio loja", "meta": "R$ 65", "periodicidade": "Mensal", "responsavel": "Lider comercial"},
+                {"nome": "Assinaturas ativas", "meta": "200 ate mes 6", "periodicidade": "Semanal", "responsavel": "Analista de relacionamento"},
+                {"nome": "Eventos corporativos", "meta": "8 por mes a partir do mes 5", "periodicidade": "Mensal", "responsavel": "Consultor de experiencias"}
+            ]
+        },
+        {
+            "categoria": "Margens",
+            "itens": [
+                {"nome": "Margem bruta", "meta": "48%", "periodicidade": "Mensal", "responsavel": "Controller"},
+                {"nome": "Desperdicio producao", "meta": "<= 3%", "periodicidade": "Semanal", "responsavel": "Chef de producao"},
+                {"nome": "Custo por experiencia", "meta": "<= R$ 18", "periodicidade": "Evento", "responsavel": "Coordenador de eventos"}
+            ]
+        },
+        {
+            "categoria": "Caixa",
+            "itens": [
+                {"nome": "Dias de capital de giro", "meta": ">= 45 dias", "periodicidade": "Mensal", "responsavel": "Ana Paula"},
+                {"nome": "LTV / CAC", "meta": ">= 4,5", "periodicidade": "Trimestral", "responsavel": "Fabiano"},
+                {"nome": "Inadimplencia assinaturas", "meta": "<= 2%", "periodicidade": "Mensal", "responsavel": "Analista financeiro"}
+            ]
+        }
+    ]
+
+    rituais = [
+        "Painel financeiro atualizado semanalmente em ferramenta compartilhada.",
+        "Reuniao financeira semanal para revisar indicadores criticos.",
+        "Comite mensal com socios para validar ajustes estrategicos."
+    ]
+
+    return render_template(
+        "implantacao/financeiro_matriz_indicadores.html",
+        user_name="Fabiano Ferreira",
+        indicadores=indicadores,
+        rituais=rituais
+    )
+
+
+@pev_bp.route('/implantacao/entrega/relatorio-final')
+def implantacao_relatorio_final():
+    plan_id = _resolve_plan_id()
+    db = get_db()
+    plan = build_plan_context(db, plan_id)
+    canvas_data = load_alignment_canvas(db, plan_id)
+    agenda_project = load_alignment_project(db, plan_id)
+    principles = db.list_alignment_principles(plan_id)
+    segments = load_segments(db, plan_id)
+    competitive_segments = build_competitive_segments(segments)
+    estruturas = load_structures(db, plan_id)
+    financeiro = load_financial_model(db, plan_id)
+    report_payload = build_final_report_payload(
+        plan,
+        canvas_data,
+        agenda_project,
+        principles,
+        competitive_segments,
+        summarize_structures_for_report(estruturas),
+        financeiro,
+    )
+    return render_template(
+        "implantacao/entrega_relatorio_final.html",
+        user_name=plan.get("consultant", "Consultor responsavel"),
+        plan=report_payload.get("plan"),
+        alinhamento=report_payload.get("alinhamento"),
+        segmentos=report_payload.get("segmentos"),
+        estruturas=report_payload.get("estruturas"),
+        financeiro=report_payload.get("financeiro"),
+        projeto=agenda_project,
+        issued_at=report_payload.get("issued_at"),
+    )
+
+@pev_bp.route('/implantacao/entrega/projeto-executivo')
+def implantacao_projeto_executivo():
+    cronograma = [
+        {"marco": "Kick-off implantacao", "periodo": "Semanas 1-2", "entregas": ["Planejamento detalhado", "Matriz RACI validada"]},
+        {"marco": "Obra e ambientacao", "periodo": "Semanas 3-8", "entregas": ["Ponto pronto para operacao", "Testes de infraestrutura"]},
+        {"marco": "Operacao piloto", "periodo": "Semanas 9-12", "entregas": ["Processos validados", "Feedbacks estruturados"]},
+        {"marco": "Lancamento oficial", "periodo": "Semana 13", "entregas": ["Evento de lancamento", "Campanha integrada"]},
+        {"marco": "Expansao de experiencias", "periodo": "Semanas 14-20", "entregas": ["Workshops mensais", "Cliente corporativo ancora"]}
+    ]
+
+    governance = [
+        "PMO leve liderado pelo consultor da implantacao.",
+        "Uso de painel Kanban com status das entregas.",
+        "Rito semanal com socios para priorizacao e destravamento."
+    ]
+
+    riscos = [
+        {"risco": "Atraso em fornecedores chaves", "mitigacao": "Contratos com backup e estoque minimo estrategico."},
+        {"risco": "Margem abaixo do planejado nos primeiros meses", "mitigacao": "Ajustes rapidos no mix e precificacao dinamica."},
+        {"risco": "Sobrecarga da equipe piloto", "mitigacao": "Banco de horas e profissionais reserva treinados."}
+    ]
+
+    return render_template(
+        "implantacao/entrega_projeto_executivo.html",
+        user_name="Fabiano Ferreira",
+        cronograma=cronograma,
+        governance=governance,
+        riscos=riscos
+    )
+
+
+@pev_bp.route('/implantacao/entrega/painel-governanca')
+def implantacao_painel_governanca():
+    indicadores = [
+        {"categoria": "Cadencia", "itens": ["Reuniao executiva semanal", "Checkpoint operacional semanal", "Comite financeiro mensal"]},
+        {"categoria": "Decisoes", "itens": ["Registro de decisoes em ata", "Follow-up em 48h", "Atualizacao semanal do RACI"]},
+        {"categoria": "Clima e desempenho", "itens": ["Pulse check com equipe", "Reconhecimento de boas praticas", "Plano de apoio em picos"]}
+    ]
+
+    painels = [
+        {"nome": "Dashboard de implantacao", "descricao": "Visao geral de macro fases, status e responsaveis.", "ferramenta": "Notion + Sheets"},
+        {"nome": "Painel financeiro", "descricao": "Fluxo de caixa, indicadores e alertas automaticos.", "ferramenta": "Looker Studio"},
+        {"nome": "Painel de experiencia", "descricao": "NPS, feedbacks e melhorias em andamento.", "ferramenta": "Notion + Forms"}
+    ]
+
+    return render_template(
+        "implantacao/entrega_painel_governanca.html",
+        user_name="Fabiano Ferreira",
+        indicadores=indicadores,
+        painels=painels
+    )
+
+
+@pev_bp.route('/implantacao/executivo')
+def implantacao_executivo_intro():
+    """Página de introdução/dashboard da fase de Estruturas de Execução"""
+    plan_id = _resolve_plan_id()
+    db = get_db()
+    plan = build_plan_context(db, plan_id)
+    estruturas = load_structures(db, plan_id)
+    resumo_investimentos = calculate_investment_summary_by_block(estruturas)
+    
+    return render_template(
+        "implantacao/execution_intro.html",
+        user_name=plan.get("consultant", "Consultor responsavel"),
+        plan=plan,
+        resumo_investimentos=resumo_investimentos,
+    )
+
+
+@pev_bp.route('/implantacao/executivo/estruturas')
+def implantacao_estruturas():
+    plan_id = _resolve_plan_id()
+    db = get_db()
+    plan = build_plan_context(db, plan_id)
+    estruturas = load_structures(db, plan_id)
+    return render_template(
+        "implantacao/execution_estruturas.html",
+        user_name=plan.get("consultant", "Consultor responsavel"),
+        plan=plan,
+        estruturas=estruturas,
+    )
+
+
+# ========== APIs para Canvas de Expectativas ==========
+
+@pev_bp.route('/api/implantacao/<int:plan_id>/alignment/members', methods=['POST'])
+def add_alignment_member(plan_id: int):
+    """Add new alignment member (socio)"""
+    try:
+        data = request.get_json() or {}
+        
+        # Validate required fields
+        if not data.get('name'):
+            return jsonify({'success': False, 'error': 'Nome é obrigatório'}), 400
+        
+        from config_database import get_db
+        db = get_db()
+        conn = db._get_connection()
+        cursor = conn.cursor()
+        
+        cursor.execute('''
+            INSERT INTO plan_alignment_members (plan_id, name, role, motivation, commitment, risk)
+            VALUES (%s, %s, %s, %s, %s, %s)
+            RETURNING id
+        ''', (
+            plan_id,
+            data.get('name'),
+            data.get('role'),
+            data.get('motivation'),
+            data.get('commitment'),
+            data.get('risk')
+        ))
+        
+        member_id = cursor.fetchone()[0]
+        conn.commit()
+        conn.close()
+        
+        return jsonify({'success': True, 'id': member_id}), 201
+        
+    except Exception as e:
+        print(f"Error adding alignment member: {e}")
+        return jsonify({'success': False, 'error': str(e)}), 500
+
+
+@pev_bp.route('/api/implantacao/<int:plan_id>/alignment/members/<int:member_id>', methods=['PUT'])
+def update_alignment_member(plan_id: int, member_id: int):
+    """Update alignment member"""
+    try:
+        data = request.get_json() or {}
+        
+        from config_database import get_db
+        db = get_db()
+        conn = db._get_connection()
+        cursor = conn.cursor()
+        
+        cursor.execute('''
+            UPDATE plan_alignment_members
+            SET name = %s, role = %s, motivation = %s, commitment = %s, risk = %s
+            WHERE id = %s AND plan_id = %s
+        ''', (
+            data.get('name'),
+            data.get('role'),
+            data.get('motivation'),
+            data.get('commitment'),
+            data.get('risk'),
+            member_id,
+            plan_id
+        ))
+        
+        conn.commit()
+        conn.close()
+        
+        return jsonify({'success': True}), 200
+        
+    except Exception as e:
+        print(f"Error updating alignment member: {e}")
+        return jsonify({'success': False, 'error': str(e)}), 500
+
+
+@pev_bp.route('/api/implantacao/<int:plan_id>/alignment/members/<int:member_id>', methods=['DELETE'])
+def delete_alignment_member(plan_id: int, member_id: int):
+    """Delete alignment member"""
+    try:
+        from config_database import get_db
+        db = get_db()
+        conn = db._get_connection()
+        cursor = conn.cursor()
+        
+        cursor.execute('DELETE FROM plan_alignment_members WHERE id = %s AND plan_id = %s', (member_id, plan_id))
+        
+        conn.commit()
+        conn.close()
+        
+        return jsonify({'success': True}), 200
+        
+    except Exception as e:
+        print(f"Error deleting alignment member: {e}")
+        return jsonify({'success': False, 'error': str(e)}), 500
+
+
+@pev_bp.route('/api/implantacao/<int:plan_id>/alignment/overview', methods=['POST', 'PUT'])
+def save_alignment_overview(plan_id: int):
+    """Save or update alignment overview"""
+    try:
+        data = request.get_json() or {}
+        
+        from config_database import get_db
+        db = get_db()
+        conn = db._get_connection()
+        cursor = conn.cursor()
+        
+        # Check if record exists
+        cursor.execute('SELECT plan_id FROM plan_alignment_overview WHERE plan_id = %s', (plan_id,))
+        exists = cursor.fetchone()
+        
+        criterios_json = json.dumps(data.get('criterios_decisao', []))
+        
+        if exists:
+            # Update
+            cursor.execute('''
+                UPDATE plan_alignment_overview
+                SET shared_vision = %s, financial_goals = %s, decision_criteria = %s, notes = %s, updated_at = CURRENT_TIMESTAMP
+                WHERE plan_id = %s
+            ''', (
+                data.get('visao_compartilhada'),
+                data.get('metas_financeiras'),
+                criterios_json,
+                data.get('notas'),
+                plan_id
+            ))
+        else:
+            # Insert
+            cursor.execute('''
+                INSERT INTO plan_alignment_overview (plan_id, shared_vision, financial_goals, decision_criteria, notes)
+                VALUES (%s, %s, %s, %s, %s)
+            ''', (
+                plan_id,
+                data.get('visao_compartilhada'),
+                data.get('metas_financeiras'),
+                criterios_json,
+                data.get('notas')
+            ))
+        
+        conn.commit()
+        conn.close()
+        
+        return jsonify({'success': True}), 200
+        
+    except Exception as e:
+        print(f"Error saving alignment overview: {e}")
+        return jsonify({'success': False, 'error': str(e)}), 500
+
+
+# ========== APIs para Modelo & Mercado (Segmentos) ==========
+
+@pev_bp.route('/api/implantacao/<int:plan_id>/segments', methods=['POST'])
+def create_segment(plan_id: int):
+    """Create new segment"""
+    try:
+        data = request.get_json() or {}
+        
+        print(f"=== CREATE SEGMENT DEBUG ===")
+        print(f"plan_id: {plan_id}")
+        print(f"data recebido: {data}")
+        
+        # Validate required fields
+        if not data.get('name'):
+            return jsonify({'success': False, 'error': 'Nome é obrigatório'}), 400
+        
+        from config_database import get_db
+        db = get_db()
+        
+        # Preparar dados para salvar
+        segment_data = {
+            'name': data.get('name', ''),
+            'description': data.get('description', ''),
+            'audiences': data.get('audiences', []),
+            'differentials': data.get('differentials', []),
+            'evidences': data.get('evidences', []),
+            'personas': [],
+            'competitors_matrix': [],
+            'strategy': data.get('strategy', {})
+        }
+        
+        print(f"Dados preparados: {segment_data}")
+        
+        segment_id = db.create_plan_segment(plan_id, segment_data)
+        
+        print(f"Segment ID criado: {segment_id}")
+        
+        if segment_id:
+            return jsonify({'success': True, 'id': segment_id}), 201
+        else:
+            return jsonify({'success': False, 'error': 'Erro ao criar segmento no banco'}), 500
+        
+    except Exception as e:
+        import traceback
+        print(f"Error creating segment: {e}")
+        print(f"Traceback: {traceback.format_exc()}")
+        return jsonify({'success': False, 'error': f'Erro no servidor: {str(e)}'}), 500
+
+
+@pev_bp.route('/api/implantacao/<int:plan_id>/segments/<int:segment_id>', methods=['PUT'])
+def update_segment(plan_id: int, segment_id: int):
+    """Update segment"""
+    try:
+        data = request.get_json() or {}
+        
+        from config_database import get_db
+        db = get_db()
+
+        # Buscar segmento existente para preservar dados que n�o foram enviados
+        existing_segments = db.list_plan_segments(plan_id) or []
+        current_segment = next((seg for seg in existing_segments if seg.get('id') == segment_id), None)
+        if not current_segment:
+            return jsonify({'success': False, 'error': 'Segmento n�o encontrado'}), 404
+
+        existing_strategy = current_segment.get('strategy') or {}
+        incoming_strategy = data.get('strategy') or {}
+        merged_strategy = {**existing_strategy, **incoming_strategy}
+
+        payload = {
+            'name': data.get('name', current_segment.get('name')),
+            'description': data.get('description', current_segment.get('description')),
+            'audiences': data.get('audiences', current_segment.get('audiences') or []),
+            'differentials': data.get('differentials', current_segment.get('differentials') or []),
+            'evidences': data.get('evidences', current_segment.get('evidences') or []),
+            'personas': data.get('personas', current_segment.get('personas') or []),
+            'competitors_matrix': data.get('competitors_matrix', current_segment.get('competitors_matrix') or []),
+            'strategy': merged_strategy,
+        }
+        
+        success = db.update_plan_segment(segment_id, plan_id, payload)
+        
+        if success:
+            return jsonify({'success': True}), 200
+        else:
+            return jsonify({'success': False, 'error': 'Erro ao atualizar segmento'}), 500
+        
+    except Exception as e:
+        print(f"Error updating segment: {e}")
+        return jsonify({'success': False, 'error': str(e)}), 500
+
+
+@pev_bp.route('/api/implantacao/<int:plan_id>/segments/<int:segment_id>', methods=['DELETE'])
+def delete_segment(plan_id: int, segment_id: int):
+    """Delete segment"""
+    try:
+        from config_database import get_db
+        db = get_db()
+        
+        success = db.delete_plan_segment(segment_id, plan_id)
+        
+        if success:
+            return jsonify({'success': True}), 200
+        else:
+            return jsonify({'success': False, 'error': 'Erro ao deletar segmento'}), 500
+        
+    except Exception as e:
+        print(f"Error deleting segment: {e}")
+        return jsonify({'success': False, 'error': str(e)}), 500
+
+
+# ========== APIs para Produtos (Modelo & Mercado) ==========
+
+@pev_bp.route('/api/implantacao/<int:plan_id>/products', methods=['GET'])
+@login_required
+def list_products(plan_id: int):
+    """List all products for a plan"""
+    from models import db
+    from models.product import Product
+
+    table_ready = _ensure_product_table()
+
+    products = []
+    if table_ready:
+        try:
+            products = (
+                Product.query.filter_by(plan_id=plan_id, is_deleted=False)
+                .order_by(Product.name)
+                .all()
+            )
+        except Exception as err:
+            db.session.rollback()
+            print(f"Error listing products: {err}")
+            products = []
+    elif plan_id not in FALLBACK_PRODUCTS:
+        return jsonify({'success': False, 'error': 'Tabela de produtos indisponivel'}), 500
+
+    if not products and plan_id in FALLBACK_PRODUCTS:
+        return jsonify({'success': True, 'products': FALLBACK_PRODUCTS[plan_id]}), 200
+
+    return jsonify({
+        'success': True,
+        'products': [product.to_dict() for product in products]
+    }), 200
+
+
+@pev_bp.route('/api/implantacao/<int:plan_id>/products/totals', methods=['GET'])
+@login_required
+def get_products_totals(plan_id: int):
+    """
+    Get totalized values from products based on market share goals
+    Returns: Faturamento, Custos Variáveis, Despesas Variáveis, Margem de Contribuição (% and values)
+    """
+    from models import db
+    from models.product import Product
+    from decimal import Decimal
+
+    table_ready = _ensure_product_table()
+    
+    products_data = []
+    
+    # Tentar buscar do banco
+    if table_ready:
+        try:
+            products = (
+                Product.query.filter_by(plan_id=plan_id, is_deleted=False)
+                .all()
+            )
+            products_data = [p.to_dict() for p in products]
+        except Exception as err:
+            db.session.rollback()
+            print(f"Error loading products from DB: {err}")
+            products_data = []
+    
+    # Se não houver produtos no banco, usar FALLBACK
+    if not products_data and plan_id in FALLBACK_PRODUCTS:
+        products_data = FALLBACK_PRODUCTS[plan_id]
+        print(f"📦 Usando FALLBACK_PRODUCTS para plan_id={plan_id}: {len(products_data)} produtos")
+    
+    try:
+        # Calcular totais baseados na meta de market share
+        total_faturamento = Decimal('0')
+        total_custos = Decimal('0')
+        total_despesas = Decimal('0')
+        
+        for product in products_data:
+            # Unidades vendidas = meta de market share
+            units = Decimal(str(product.get('market_share_goal_monthly_units') or 0))
+            
+            # Faturamento = preço × unidades
+            faturamento = Decimal(str(product.get('sale_price') or 0)) * units
+            total_faturamento += faturamento
+            
+            # Custos Variáveis = custo unitário × unidades
+            custos = Decimal(str(product.get('variable_costs_value') or 0)) * units
+            total_custos += custos
+            
+            # Despesas Variáveis = despesa unitária × unidades
+            despesas = Decimal(str(product.get('variable_expenses_value') or 0)) * units
+            total_despesas += despesas
+        
+        # Margem de Contribuição = Faturamento - Custos - Despesas
+        total_margem = total_faturamento - total_custos - total_despesas
+        
+        # Calcular percentuais em relação ao faturamento
+        perc_custos = (total_custos / total_faturamento * 100) if total_faturamento > 0 else Decimal('0')
+        perc_despesas = (total_despesas / total_faturamento * 100) if total_faturamento > 0 else Decimal('0')
+        perc_margem = (total_margem / total_faturamento * 100) if total_faturamento > 0 else Decimal('0')
+        
+        return jsonify({
+            'success': True,
+            'totals': {
+                'faturamento': {
+                    'valor': float(total_faturamento),
+                    'percentual': 100.0
+                },
+                'custos_variaveis': {
+                    'valor': float(total_custos),
+                    'percentual': float(perc_custos)
+                },
+                'despesas_variaveis': {
+                    'valor': float(total_despesas),
+                    'percentual': float(perc_despesas)
+                },
+                'margem_contribuicao': {
+                    'valor': float(total_margem),
+                    'percentual': float(perc_margem)
+                }
+            }
+        }), 200
+        
+    except Exception as err:
+        print(f"Error calculating products totals: {err}")
+        return jsonify({
+            'success': False,
+            'error': 'Erro ao calcular totalizados'
+        }), 500
+
+
+@pev_bp.route('/api/implantacao/<int:plan_id>/products', methods=['POST'])
+@login_required
+def create_product(plan_id: int):
+    """Create new product"""
+    data = request.get_json() or {}
+
+    if not data.get('name'):
+        return jsonify({'success': False, 'error': 'Nome do produto e obrigatorio'}), 400
+
+    if not data.get('sale_price'):
+        return jsonify({'success': False, 'error': 'Preco de venda e obrigatorio'}), 400
+
+    from models import db
+    from models.product import Product
+
+    if not _ensure_product_table():
+        return jsonify({'success': False, 'error': 'Tabela de produtos indisponivel'}), 500
+
+    try:
+        product = Product.from_dict(data)
+        product.plan_id = plan_id
+
+        db.session.add(product)
+        db.session.commit()
+
+        print(f"Produto criado com ID: {product.id}")
+
+        return jsonify({
+            'success': True,
+            'id': product.id,
+            'product': product.to_dict()
+        }), 201
+    except Exception as err:
+        db.session.rollback()
+        print(f"Error creating product: {err}")
+        return jsonify({'success': False, 'error': f'Erro ao criar produto: {err}'}), 500
+
+@pev_bp.route('/api/implantacao/<int:plan_id>/products/<int:product_id>', methods=['GET'])
+@login_required
+def get_product(plan_id: int, product_id: int):
+    """Get single product"""
+    from models import db
+    from models.product import Product
+
+    if not _ensure_product_table():
+        return jsonify({'success': False, 'error': 'Tabela de produtos indisponivel'}), 500
+
+    try:
+        product = Product.query.filter_by(
+            id=product_id,
+            plan_id=plan_id,
+            is_deleted=False
+        ).first()
+    except Exception as err:
+        db.session.rollback()
+        print(f"Error getting product: {err}")
+        return jsonify({'success': False, 'error': str(err)}), 500
+
+    if not product:
+        return jsonify({'success': False, 'error': 'Produto nao encontrado'}), 404
+
+    return jsonify({
+        'success': True,
+        'product': product.to_dict()
+    }), 200
+
+@pev_bp.route('/api/implantacao/<int:plan_id>/products/<int:product_id>', methods=['PUT'])
+@login_required
+def update_product(plan_id: int, product_id: int):
+    """Update product"""
+    data = request.get_json() or {}
+
+    from models import db
+    from models.product import Product
+
+    if not _ensure_product_table():
+        return jsonify({'success': False, 'error': 'Tabela de produtos indisponivel'}), 500
+
+    try:
+        product = Product.query.filter_by(
+            id=product_id,
+            plan_id=plan_id,
+            is_deleted=False
+        ).first()
+
+        if not product:
+            return jsonify({'success': False, 'error': 'Produto nao encontrado'}), 404
+
+        Product.from_dict(data, product)
+        db.session.commit()
+
+        print(f"Produto {product_id} atualizado com sucesso")
+
+        return jsonify({
+            'success': True,
+            'product': product.to_dict()
+        }), 200
+    except Exception as err:
+        db.session.rollback()
+        print(f"Error updating product: {err}")
+        return jsonify({'success': False, 'error': str(err)}), 500
+
+@pev_bp.route('/api/implantacao/<int:plan_id>/products/<int:product_id>', methods=['DELETE'])
+@login_required
+def delete_product(plan_id: int, product_id: int):
+    """Delete product (soft delete)"""
+    from models import db
+    from models.product import Product
+
+    if not _ensure_product_table():
+        return jsonify({'success': False, 'error': 'Tabela de produtos indisponivel'}), 500
+
+    try:
+        product = Product.query.filter_by(
+            id=product_id,
+            plan_id=plan_id,
+            is_deleted=False
+        ).first()
+
+        if not product:
+            return jsonify({'success': False, 'error': 'Produto nao encontrado'}), 404
+
+        product.is_deleted = True
+        db.session.commit()
+
+        print(f"Produto {product_id} deletado com sucesso")
+
+        return jsonify({'success': True}), 200
+    except Exception as err:
+        db.session.rollback()
+        print(f"Error deleting product: {err}")
+        return jsonify({'success': False, 'error': str(err)}), 500
+
+# ========== APIs para Estruturas de Execução ==========
+
+@pev_bp.route('/api/implantacao/<int:plan_id>/structures/<int:structure_id>', methods=['GET'])
+def get_structure(plan_id: int, structure_id: int):
+    """Get single structure item with installments"""
+    try:
+        from config_database import get_db
+        db = get_db()
+        
+        # Buscar estrutura
+        structures = db.list_plan_structures(plan_id)
+        structure = next((s for s in structures if s.get('id') == structure_id), None)
+        
+        if not structure:
+            return jsonify({'success': False, 'error': 'Estrutura não encontrada'}), 404
+        
+        # Buscar parcelas
+        all_installments = db.list_plan_structure_installments(plan_id)
+        installments = [inst for inst in all_installments if inst.get('structure_id') == structure_id]
+        
+        structure['installments'] = installments
+        
+        return jsonify({'success': True, 'data': structure}), 200
+        
+    except Exception as e:
+        print(f"Error getting structure: {e}")
+        return jsonify({'success': False, 'error': str(e)}), 500
+
+
+@pev_bp.route('/api/implantacao/<int:plan_id>/structures', methods=['POST'])
+def create_structure(plan_id: int):
+    """Create new structure item"""
+    try:
+        data = request.get_json() or {}
+        
+        print(f"\n{'='*60}")
+        print(f"🔵 CREATE STRUCTURE - plan_id={plan_id}")
+        print(f"📦 Data received: {data}")
+        print(f"{'='*60}\n")
+        
+        # Validate required fields
+        if not data.get('area'):
+            return jsonify({'success': False, 'error': 'Área é obrigatória'}), 400
+        if not data.get('block'):
+            return jsonify({'success': False, 'error': 'Bloco é obrigatório'}), 400
+        if not data.get('description'):
+            return jsonify({'success': False, 'error': 'Descrição é obrigatória'}), 400
+        
+        from config_database import get_db
+        db = get_db()
+        
+        print(f"✅ Validação OK, criando estrutura...")
+        
+        # Criar estrutura
+        structure_id = db.create_plan_structure(plan_id, data)
+        
+        print(f"📝 Structure ID retornado: {structure_id}")
+        
+        if structure_id:
+            # Criar parcelas se fornecidas
+            installments = data.get('installments', [])
+            print(f"📋 Parcelas a criar: {len(installments)}")
+            
+            if installments:
+                for idx, inst in enumerate(installments):
+                    print(f"  Criando parcela {idx+1}/{len(installments)}: {inst}")
+                    inst_id = db.create_plan_structure_installment(structure_id, inst)
+                    print(f"  ✅ Parcela criada com ID: {inst_id}")
+            
+            print(f"✅ Estrutura criada com sucesso! ID={structure_id}\n")
+            return jsonify({'success': True, 'id': structure_id}), 201
+        else:
+            print(f"❌ ERRO: create_plan_structure retornou 0 ou None\n")
+            return jsonify({'success': False, 'error': 'Erro ao criar estrutura no banco'}), 500
+        
+    except Exception as e:
+        import traceback
+        error_trace = traceback.format_exc()
+        print(f"\n{'='*60}")
+        print(f"❌ EXCEPTION ao criar estrutura:")
+        print(f"Error: {e}")
+        print(f"Traceback:\n{error_trace}")
+        print(f"{'='*60}\n")
+        return jsonify({'success': False, 'error': f'Erro no servidor: {str(e)}'}), 500
+
+
+@pev_bp.route('/api/implantacao/<int:plan_id>/structures/<int:structure_id>', methods=['PUT'])
+def update_structure(plan_id: int, structure_id: int):
+    """Update structure item"""
+    try:
+        data = request.get_json() or {}
+        
+        from config_database import get_db
+        db = get_db()
+        
+        # Atualizar estrutura
+        success = db.update_plan_structure(structure_id, plan_id, data)
+        
+        if success:
+            # Atualizar parcelas se fornecidas
+            installments = data.get('installments')
+            if installments is not None:  # Pode ser lista vazia
+                # Deletar parcelas antigas
+                db.delete_plan_structure_installments(structure_id)
+                # Criar novas parcelas
+                for inst in installments:
+                    db.create_plan_structure_installment(structure_id, inst)
+            
+            return jsonify({'success': True}), 200
+        else:
+            return jsonify({'success': False, 'error': 'Erro ao atualizar estrutura'}), 500
+        
+    except Exception as e:
+        import traceback
+        print(f"Error updating structure: {e}")
+        print(f"Traceback: {traceback.format_exc()}")
+        return jsonify({'success': False, 'error': str(e)}), 500
+
+
+@pev_bp.route('/api/implantacao/<int:plan_id>/structures/<int:structure_id>', methods=['DELETE'])
+def delete_structure(plan_id: int, structure_id: int):
+    """Delete structure item"""
+    try:
+        from config_database import get_db
+        db = get_db()
+        
+        success = db.delete_plan_structure(structure_id, plan_id)
+        
+        if success:
+            return jsonify({'success': True}), 200
+        else:
+            return jsonify({'success': False, 'error': 'Erro ao deletar estrutura'}), 500
+        
+    except Exception as e:
+        print(f"Error deleting structure: {e}")
+        return jsonify({'success': False, 'error': str(e)}), 500
+
+
+@pev_bp.route('/api/implantacao/<int:plan_id>/structures/capacities', methods=['GET'])
+def list_structure_capacities(plan_id: int):
+    """List revenue capacities configured per structure area"""
+    try:
+        from config_database import get_db
+        db = get_db()
+
+        capacities = db.list_plan_structure_capacities(plan_id)
+        return jsonify({'success': True, 'data': capacities}), 200
+    except Exception as e:
+        print(f"Error listing structure capacities: {e}")
+        return jsonify({'success': False, 'error': str(e)}), 500
+
+
+@pev_bp.route('/api/implantacao/<int:plan_id>/structures/capacities', methods=['POST'])
+def create_structure_capacity(plan_id: int):
+    """Create or overwrite a capacity entry for a structure area"""
+    try:
+        data = request.get_json() or {}
+        area = data.get('area')
+        if not area:
+            return jsonify({'success': False, 'error': '�?rea Ǹ obrigat��ria'}), 400
+
+        from config_database import get_db
+        db = get_db()
+
+        capacity_id = db.create_plan_structure_capacity(plan_id, data)
+        if capacity_id:
+            return jsonify({'success': True, 'id': capacity_id}), 201
+        return jsonify({'success': False, 'error': 'Erro ao salvar capacidade'}), 500
+    except Exception as e:
+        print(f"Error creating structure capacity: {e}")
+        return jsonify({'success': False, 'error': str(e)}), 500
+
+
+@pev_bp.route('/api/implantacao/<int:plan_id>/structures/capacities/<int:capacity_id>', methods=['PUT'])
+def update_structure_capacity(plan_id: int, capacity_id: int):
+    """Update an existing capacity entry"""
+    try:
+        data = request.get_json() or {}
+        if not data.get('area'):
+            return jsonify({'success': False, 'error': '�?rea Ǹ obrigat��ria'}), 400
+
+        from config_database import get_db
+        db = get_db()
+
+        success = db.update_plan_structure_capacity(capacity_id, plan_id, data)
+        if success:
+            return jsonify({'success': True}), 200
+        return jsonify({'success': False, 'error': 'Capacidade nǜo encontrada ou nǜo atualizada'}), 404
+    except Exception as e:
+        print(f"Error updating structure capacity: {e}")
+        return jsonify({'success': False, 'error': str(e)}), 500
+
+
+@pev_bp.route('/api/implantacao/<int:plan_id>/structures/capacities/<int:capacity_id>', methods=['DELETE'])
+def delete_structure_capacity(plan_id: int, capacity_id: int):
+    """Delete a capacity entry"""
+    try:
+        from config_database import get_db
+        db = get_db()
+
+        success = db.delete_plan_structure_capacity(capacity_id, plan_id)
+        if success:
+            return jsonify({'success': True}), 200
+        return jsonify({'success': False, 'error': 'Capacidade nǜo encontrada'}), 404
+    except Exception as e:
+        print(f"Error deleting structure capacity: {e}")
+        return jsonify({'success': False, 'error': str(e)}), 500
+
+
+# ==================== FINANCIAL MODEL APIS ====================
+
+# PREMISSAS
+@pev_bp.route('/api/implantacao/<int:plan_id>/finance/premises', methods=['POST'])
+def create_premise(plan_id: int):
+    """Create financial premise"""
+    try:
+        data = request.get_json() or {}
+        
+        if not data.get('description'):
+            return jsonify({'success': False, 'error': 'Descrição é obrigatória'}), 400
+        
+        from config_database import get_db
+        db = get_db()
+        
+        premise_id = db.create_plan_finance_premise(plan_id, data)
+        
+        if premise_id:
+            return jsonify({'success': True, 'id': premise_id}), 201
+        else:
+            return jsonify({'success': False, 'error': 'Erro ao criar premissa'}), 500
+        
+    except Exception as e:
+        print(f"Error creating premise: {e}")
+        return jsonify({'success': False, 'error': str(e)}), 500
+
+
+@pev_bp.route('/api/implantacao/<int:plan_id>/finance/premises/<int:premise_id>', methods=['PUT'])
+def update_premise(plan_id: int, premise_id: int):
+    """Update financial premise"""
+    try:
+        data = request.get_json() or {}
+        
+        from config_database import get_db
+        db = get_db()
+        
+        success = db.update_plan_finance_premise(premise_id, plan_id, data)
+        
+        if success:
+            return jsonify({'success': True}), 200
+        else:
+            return jsonify({'success': False, 'error': 'Erro ao atualizar premissa'}), 500
+        
+    except Exception as e:
+        print(f"Error updating premise: {e}")
+        return jsonify({'success': False, 'error': str(e)}), 500
+
+
+@pev_bp.route('/api/implantacao/<int:plan_id>/finance/premises/<int:premise_id>', methods=['DELETE'])
+def delete_premise(plan_id: int, premise_id: int):
+    """Delete financial premise"""
+    try:
+        from config_database import get_db
+        db = get_db()
+        
+        success = db.delete_plan_finance_premise(premise_id, plan_id)
+        
+        if success:
+            return jsonify({'success': True}), 200
+        else:
+            return jsonify({'success': False, 'error': 'Erro ao deletar premissa'}), 500
+        
+    except Exception as e:
+        print(f"Error deleting premise: {e}")
+        return jsonify({'success': False, 'error': str(e)}), 500
+
+
+# CUSTOS VARIÁVEIS
+@pev_bp.route('/api/implantacao/<int:plan_id>/finance/variable_costs', methods=['POST'])
+def create_variable_cost(plan_id: int):
+    """Create variable cost"""
+    try:
+        data = request.get_json() or {}
+        
+        if not data.get('description'):
+            return jsonify({'success': False, 'error': 'Descrição é obrigatória'}), 400
+        
+        from config_database import get_db
+        db = get_db()
+        
+        cost_id = db.create_plan_finance_variable_cost(plan_id, data)
+        
+        if cost_id:
+            return jsonify({'success': True, 'id': cost_id}), 201
+        else:
+            return jsonify({'success': False, 'error': 'Erro ao criar custo variável'}), 500
+        
+    except Exception as e:
+        print(f"Error creating variable cost: {e}")
+        return jsonify({'success': False, 'error': str(e)}), 500
+
+
+@pev_bp.route('/api/implantacao/<int:plan_id>/finance/variable_costs/<int:cost_id>', methods=['PUT'])
+def update_variable_cost(plan_id: int, cost_id: int):
+    """Update variable cost"""
+    try:
+        data = request.get_json() or {}
+        
+        from config_database import get_db
+        db = get_db()
+        
+        success = db.update_plan_finance_variable_cost(cost_id, plan_id, data)
+        
+        if success:
+            return jsonify({'success': True}), 200
+        else:
+            return jsonify({'success': False, 'error': 'Erro ao atualizar custo variável'}), 500
+        
+    except Exception as e:
+        print(f"Error updating variable cost: {e}")
+        return jsonify({'success': False, 'error': str(e)}), 500
+
+
+@pev_bp.route('/api/implantacao/<int:plan_id>/finance/variable_costs/<int:cost_id>', methods=['DELETE'])
+def delete_variable_cost(plan_id: int, cost_id: int):
+    """Delete variable cost"""
+    try:
+        from config_database import get_db
+        db = get_db()
+        
+        success = db.delete_plan_finance_variable_cost(cost_id, plan_id)
+        
+        if success:
+            return jsonify({'success': True}), 200
+        else:
+            return jsonify({'success': False, 'error': 'Erro ao deletar custo variável'}), 500
+        
+    except Exception as e:
+        print(f"Error deleting variable cost: {e}")
+        return jsonify({'success': False, 'error': str(e)}), 500
+
+
+# REGRAS DE DESTINAÇÃO
+@pev_bp.route('/api/implantacao/<int:plan_id>/finance/result_rules', methods=['POST'])
+def create_result_rule(plan_id: int):
+    """Create result distribution rule"""
+    try:
+        data = request.get_json() or {}
+        
+        if not data.get('description'):
+            return jsonify({'success': False, 'error': 'Descrição é obrigatória'}), 400
+        
+        from config_database import get_db
+        db = get_db()
+        
+        rule_id = db.create_plan_finance_result_rule(plan_id, data)
+        
+        if rule_id:
+            return jsonify({'success': True, 'id': rule_id}), 201
+        else:
+            return jsonify({'success': False, 'error': 'Erro ao criar regra de destinação'}), 500
+        
+    except Exception as e:
+        print(f"Error creating result rule: {e}")
+        return jsonify({'success': False, 'error': str(e)}), 500
+
+
+@pev_bp.route('/api/implantacao/<int:plan_id>/finance/result_rules/<int:rule_id>', methods=['PUT'])
+def update_result_rule(plan_id: int, rule_id: int):
+    """Update result distribution rule"""
+    try:
+        data = request.get_json() or {}
+        
+        from config_database import get_db
+        db = get_db()
+        
+        success = db.update_plan_finance_result_rule(rule_id, plan_id, data)
+        
+        if success:
+            return jsonify({'success': True}), 200
+        else:
+            return jsonify({'success': False, 'error': 'Erro ao atualizar regra de destinação'}), 500
+        
+    except Exception as e:
+        print(f"Error updating result rule: {e}")
+        return jsonify({'success': False, 'error': str(e)}), 500
+
+
+@pev_bp.route('/api/implantacao/<int:plan_id>/finance/result_rules/<int:rule_id>', methods=['DELETE'])
+def delete_result_rule(plan_id: int, rule_id: int):
+    """Delete result distribution rule"""
+    try:
+        from config_database import get_db
+        db = get_db()
+        
+        success = db.delete_plan_finance_result_rule(rule_id, plan_id)
+        
+        if success:
+            return jsonify({'success': True}), 200
+        else:
+            return jsonify({'success': False, 'error': 'Erro ao deletar regra de destinação'}), 500
+        
+    except Exception as e:
+        print(f"Error deleting result rule: {e}")
+        return jsonify({'success': False, 'error': str(e)}), 500
+
+
+# MÉTRICAS
+@pev_bp.route('/api/implantacao/<int:plan_id>/finance/metrics', methods=['PUT'])
+def update_metrics(plan_id: int):
+    """Update financial metrics (payback, TIR, notes)"""
+    try:
+        data = request.get_json() or {}
+        
+        from config_database import get_db
+        db = get_db()
+        
+        success = db.update_plan_finance_metrics(plan_id, data)
+        
+        if success:
+            return jsonify({'success': True}), 200
+        else:
+            return jsonify({'success': False, 'error': 'Erro ao atualizar métricas'}), 500
+        
+    except Exception as e:
+        print(f"Error updating metrics: {e}")
+        return jsonify({'success': False, 'error': str(e)}), 500
+
+
+# DISTRIBUIÇÃO DE LUCROS
+@pev_bp.route('/api/implantacao/<int:plan_id>/finance/profit_distribution', methods=['GET'])
+def get_profit_distribution(plan_id: int):
+    """Get profit distribution percentage"""
+    try:
+        from config_database import get_db
+        db = get_db()
+        
+        data = db.get_plan_profit_distribution(plan_id)
+        
+        return jsonify({'success': True, 'data': data}), 200
+        
+    except Exception as e:
+        print(f"Error getting profit distribution: {e}")
+        return jsonify({'success': False, 'error': str(e)}), 500
+
+
+@pev_bp.route('/api/implantacao/<int:plan_id>/finance/profit_distribution', methods=['PUT'])
+def update_profit_distribution(plan_id: int):
+    """Update profit distribution percentage"""
+    try:
+        data = request.get_json() or {}
+        
+        from config_database import get_db
+        db = get_db()
+        
+        success = db.update_plan_profit_distribution(plan_id, data)
+        
+        if success:
+            return jsonify({'success': True}), 200
+        else:
+            return jsonify({'success': False, 'error': 'Erro ao atualizar distribuição de lucros'}), 500
+        
+    except Exception as e:
+        print(f"Error updating profit distribution: {e}")
+        return jsonify({'success': False, 'error': str(e)}), 500
+
+
+# INVESTMENT CONTRIBUTIONS (New Structure)
+@pev_bp.route('/api/implantacao/<int:plan_id>/finance/investment/contributions', methods=['POST'])
+def create_investment_contribution(plan_id: int):
+    """Create investment contribution (aporte)"""
+    try:
+        data = request.get_json() or {}
+        
+        item_id = data.get('item_id')
+        if not item_id:
+            return jsonify({'success': False, 'error': 'item_id é obrigatório'}), 400
+        
+        from config_database import get_db
+        db = get_db()
+        
+        contribution_id = db.create_plan_investment_contribution(item_id, data)
+        
+        if contribution_id:
+            return jsonify({'success': True, 'id': contribution_id}), 201
+        else:
+            return jsonify({'success': False, 'error': 'Erro ao criar aporte'}), 500
+        
+    except Exception as e:
+        print(f"Error creating investment contribution: {e}")
+        return jsonify({'success': False, 'error': str(e)}), 500
+
+
+@pev_bp.route('/api/implantacao/<int:plan_id>/finance/investment/contributions/<int:contribution_id>', methods=['PUT'])
+def update_investment_contribution(plan_id: int, contribution_id: int):
+    """Update investment contribution"""
+    try:
+        data = request.get_json() or {}
+        
+        from config_database import get_db
+        db = get_db()
+        
+        success = db.update_plan_investment_contribution(contribution_id, data)
+        
+        if success:
+            return jsonify({'success': True}), 200
+        else:
+            return jsonify({'success': False, 'error': 'Erro ao atualizar aporte'}), 500
+        
+    except Exception as e:
+        print(f"Error updating investment contribution: {e}")
+        return jsonify({'success': False, 'error': str(e)}), 500
+
+
+@pev_bp.route('/api/implantacao/<int:plan_id>/finance/investment/contributions/<int:contribution_id>', methods=['DELETE'])
+def delete_investment_contribution(plan_id: int, contribution_id: int):
+    """Delete investment contribution"""
+    try:
+        from config_database import get_db
+        db = get_db()
+        
+        success = db.delete_plan_investment_contribution(contribution_id)
+        
+        if success:
+            return jsonify({'success': True}), 200
+        else:
+            return jsonify({'success': False, 'error': 'Erro ao deletar aporte'}), 500
+        
+    except Exception as e:
+        print(f"Error deleting investment contribution: {e}")
+        return jsonify({'success': False, 'error': str(e)}), 500
+
+
+# FUNDING SOURCES (New Structure)
+@pev_bp.route('/api/implantacao/<int:plan_id>/finance/funding_sources', methods=['POST'])
+def create_funding_source_new(plan_id: int):
+    """Create funding source (new structure)"""
+    try:
+        data = request.get_json() or {}
+        
+        if not data.get('source_type'):
+            return jsonify({'success': False, 'error': 'Tipo da fonte é obrigatório'}), 400
+        
+        from config_database import get_db
+        db = get_db()
+        
+        source_id = db.create_plan_funding_source(plan_id, data)
+        
+        if source_id:
+            return jsonify({'success': True, 'id': source_id}), 201
+        else:
+            return jsonify({'success': False, 'error': 'Erro ao criar fonte de recursos'}), 500
+        
+    except Exception as e:
+        print(f"Error creating funding source: {e}")
+        return jsonify({'success': False, 'error': str(e)}), 500
+
+
+@pev_bp.route('/api/implantacao/<int:plan_id>/finance/funding_sources/<int:source_id>', methods=['PUT'])
+def update_funding_source_new(plan_id: int, source_id: int):
+    """Update funding source (new structure)"""
+    try:
+        data = request.get_json() or {}
+        
+        from config_database import get_db
+        db = get_db()
+        
+        success = db.update_plan_funding_source(source_id, plan_id, data)
+        
+        if success:
+            return jsonify({'success': True}), 200
+        else:
+            return jsonify({'success': False, 'error': 'Erro ao atualizar fonte de recursos'}), 500
+        
+    except Exception as e:
+        print(f"Error updating funding source: {e}")
+        return jsonify({'success': False, 'error': str(e)}), 500
+
+
+@pev_bp.route('/api/implantacao/<int:plan_id>/finance/funding_sources/<int:source_id>', methods=['DELETE'])
+def delete_funding_source_new(plan_id: int, source_id: int):
+    """Delete funding source (new structure)"""
+    try:
+        from config_database import get_db
+        db = get_db()
+        
+        success = db.delete_plan_funding_source(source_id, plan_id)
+        
+        if success:
+            return jsonify({'success': True}), 200
+        else:
+            return jsonify({'success': False, 'error': 'Erro ao deletar fonte de recursos'}), 500
+        
+    except Exception as e:
+        print(f"Error deleting funding source: {e}")
+        return jsonify({'success': False, 'error': str(e)}), 500
+
+
+# GETTERS
+@pev_bp.route('/api/implantacao/<int:plan_id>/finance/investment/categories', methods=['GET'])
+def get_investment_categories(plan_id: int):
+    """Get investment categories for a plan"""
+    try:
+        from config_database import get_db
+        db = get_db()
+        
+        categories = db.get_plan_investment_categories(plan_id)
+        
+        return jsonify({'success': True, 'data': categories}), 200
+        
+    except Exception as e:
+        print(f"Error getting investment categories: {e}")
+        return jsonify({'success': False, 'error': str(e)}), 500
+
+
+@pev_bp.route('/api/implantacao/<int:plan_id>/finance/investment/items/<int:category_id>', methods=['GET'])
+def get_investment_items(plan_id: int, category_id: int):
+    """Get investment items for a category"""
+    try:
+        from config_database import get_db
+        db = get_db()
+        
+        items = db.get_plan_investment_items(category_id)
+        
+        return jsonify({'success': True, 'data': items}), 200
+        
+    except Exception as e:
+        print(f"Error getting investment items: {e}")
+        return jsonify({'success': False, 'error': str(e)}), 500
+
+
+@pev_bp.route('/api/implantacao/<int:plan_id>/finance/investment/contributions', methods=['GET'])
+def list_investment_contributions(plan_id: int):
+    """List investment contributions filtered by item_id"""
+    try:
+        item_id = request.args.get('item_id', type=int)
+        
+        if not item_id:
+            return jsonify({'success': False, 'error': 'item_id é obrigatório'}), 400
+        
+        from config_database import get_db
+        db = get_db()
+        
+        contributions = db.list_plan_investment_contributions(item_id)
+        
+        return jsonify({'success': True, 'data': contributions}), 200
+        
+    except Exception as e:
+        print(f"Error listing investment contributions: {e}")
+        return jsonify({'success': False, 'error': str(e)}), 500
+
+
+@pev_bp.route('/api/implantacao/<int:plan_id>/finance/funding_sources', methods=['GET'])
+def list_funding_sources(plan_id: int):
+    """List funding sources for a plan"""
+    try:
+        from config_database import get_db
+        db = get_db()
+        
+        sources = db.list_plan_funding_sources(plan_id)
+        
+        return jsonify({'success': True, 'data': sources}), 200
+        
+    except Exception as e:
+        print(f"Error listing funding sources: {e}")
+        return jsonify({'success': False, 'error': str(e)}), 500

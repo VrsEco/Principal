@@ -1,0 +1,1183 @@
+{% extends "modules/plans/base_planning.html" %}
+
+{% block planning_content %}
+{% set months_pt =
+{'01':'jan','02':'fev','03':'mar','04':'abr','05':'mai','06':'jun','07':'jul','08':'ago','09':'set','10':'out','11':'nov','12':'dez'}
+%}
+<div class="planning-header no-print"
+    style="margin-bottom: 32px; display: flex; justify-content: space-between; align-items: flex-start;">
+    <div>
+        <h1 style="font-size: 32px; font-weight: 800; color: #0f172a; margin-bottom: 8px;">Viabilidade Financeira</h1>
+        <p style="color: #64748b; font-size: 16px;">Estruturação financeira completa do novo negócio.</p>
+    </div>
+    <div style="display: flex; gap: 12px;">
+        <button onclick="window.print()" class="nav-button"
+            style="background: #f8fafc; color: #475569; padding: 12px 24px; border-radius: 12px; font-weight: 600; border: 1px solid #e2e8f0; cursor: pointer; display: flex; align-items: center; gap: 8px;">
+            <i class="fa-solid fa-print"></i> Imprimir
+        </button>
+        <button onclick="saveFinance()" class="nav-button"
+            style="background: #2563eb; color: #ffffff; padding: 12px 24px; border-radius: 12px; font-weight: 600; border: none; cursor: pointer; display: flex; align-items: center; gap: 8px;">
+            <i class="fa-solid fa-floppy-disk"></i> Salvar Tudo
+        </button>
+        <button onclick="completeSection()" class="nav-button"
+            style="background: #10b981; color: #ffffff; padding: 12px 24px; border-radius: 12px; font-weight: 600; border: none; cursor: pointer;">
+            <i class="fa-solid fa-check"></i> Concluir Etapa
+        </button>
+    </div>
+</div>
+
+<!-- Tabs Navigation -->
+<div class="no-print"
+    style="display: flex; gap: 24px; margin-bottom: 32px; border-bottom: 2px solid #f1f5f9; padding-bottom: 0;">
+    <button onclick="switchTab('investments')" class="tab-btn active" data-tab="investments">1. Investimentos</button>
+    <button onclick="switchTab('results')" class="tab-btn" data-tab="results">2. Resultados Operacionais</button>
+    <button onclick="switchTab('cashflow')" class="tab-btn" data-tab="cashflow">3. Fluxos de Caixa</button>
+    <button onclick="switchTab('funding')" class="tab-btn" data-tab="funding">4. Fontes & Distribuição</button>
+    <button onclick="switchTab('analysis')" class="tab-btn" data-tab="analysis">5. Análise & Viabilidade</button>
+</div>
+
+<div id="financeTabsContainer">
+    <!-- TAB 1: INVESTIMENTOS -->
+    <div id="tab-investments" class="tab-content active">
+        <div style="display: grid; grid-template-columns: 1fr 2fr; gap: 24px;">
+            <!-- Capital de Giro -->
+            <div class="planning-card" style="grid-column: span 2;">
+                <h3 style="font-size: 18px; font-weight: 700; color: #0f172a; margin-bottom: 24px;">Detalhamento do
+                    Capital de Giro</h3>
+
+                <div style="display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 24px;">
+                    <!-- CAIXA -->
+                    <div class="wc-group">
+                        <div
+                            style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px;">
+                            <h4 style="font-size: 14px; font-weight: 800; color: #64748b; text-transform: uppercase;">1.
+                                Caixa</h4>
+                            <button onclick="addWCItem('cash')" class="button-text"
+                                style="color: #2563eb; font-size: 12px; font-weight: 700;">+ Adicionar</button>
+                        </div>
+                        <div id="cashItemsContainer" style="display: flex; flex-direction: column; gap: 8px;">
+                            {% for item in section_content.working_capital.cash_items|default([]) %}
+                            <div class="wc-row cash-row"
+                                style="background: #f8fafc; padding: 12px; border-radius: 12px; border: 1px solid #e2e8f0;">
+                                <div
+                                    style="display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-bottom: 8px;">
+                                    <input type="number" class="wc-value" value="{{ item.value }}"
+                                        placeholder="Valor R$"
+                                        style="width:100%; padding:6px; border:1px solid #cbd5e1; border-radius:6px; font-size:12px;">
+                                    <input type="text" class="wc-contrib-date" value="{{ item.contribution_date }}"
+                                        placeholder="Aporte (YYYY.MM)"
+                                        style="width:100%; padding:6px; border:1px solid #cbd5e1; border-radius:6px; font-size:12px;">
+                                </div>
+                                <input type="text" class="wc-desc" value="{{ item.description }}"
+                                    placeholder="Descrição"
+                                    style="width:100%; padding:6px; border:1px solid #cbd5e1; border-radius:6px; font-size:12px; margin-bottom: 4px;">
+                                <div style="display: flex; justify-content: space-between; align-items: center;">
+                                    <input type="text" class="wc-avail-date" value="{{ item.availability_date }}"
+                                        placeholder="Disponib. (YYYY.MM)"
+                                        style="width:120px; padding:4px; border:1px solid #cbd5e1; border-radius:6px; font-size:10px;">
+                                    <button onclick="this.closest('.wc-row').remove()"
+                                        style="color:#ef4444; border:none; background:none;"><i
+                                            class="fa-solid fa-trash-can"></i></button>
+                                </div>
+                            </div>
+                            {% endfor %}
+                        </div>
+                        <div
+                            style="margin-top: 12px; text-align: right; border-top: 1px dashed #e2e8f0; padding-top: 8px;">
+                            <span style="font-size: 11px; font-weight: 700; color: #64748b;">Subtotal: </span>
+                            <span id="subtotal-cash" style="font-size: 13px; font-weight: 800; color: #0f172a;">R$
+                                0,00</span>
+                        </div>
+                    </div>
+
+                    <!-- CONTAS A RECEBER -->
+                    <div class="wc-group">
+                        <div
+                            style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px;">
+                            <h4 style="font-size: 14px; font-weight: 800; color: #64748b; text-transform: uppercase;">2.
+                                Contas a Receber</h4>
+                            <button onclick="addWCItem('receivables')" class="button-text"
+                                style="color: #2563eb; font-size: 12px; font-weight: 700;">+ Adicionar</button>
+                        </div>
+                        <div id="receivablesItemsContainer" style="display: flex; flex-direction: column; gap: 8px;">
+                            {% for item in section_content.working_capital.receivables_items|default([]) %}
+                            <div class="wc-row receivables-row"
+                                style="background: #f8fafc; padding: 12px; border-radius: 12px; border: 1px solid #e2e8f0;">
+                                <div
+                                    style="display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-bottom: 8px;">
+                                    <input type="number" class="wc-value" value="{{ item.value }}"
+                                        placeholder="Valor R$"
+                                        style="width:100%; padding:6px; border:1px solid #cbd5e1; border-radius:6px; font-size:12px;">
+                                    <input type="text" class="wc-contrib-date" value="{{ item.contribution_date }}"
+                                        placeholder="Aporte (YYYY.MM)"
+                                        style="width:100%; padding:6px; border:1px solid #cbd5e1; border-radius:6px; font-size:12px;">
+                                </div>
+                                <input type="text" class="wc-desc" value="{{ item.description }}"
+                                    placeholder="Descrição"
+                                    style="width:100%; padding:6px; border:1px solid #cbd5e1; border-radius:6px; font-size:12px; margin-bottom: 4px;">
+                                <div style="display: flex; justify-content: space-between; align-items: center;">
+                                    <input type="text" class="wc-avail-date" value="{{ item.availability_date }}"
+                                        placeholder="Disponib. (YYYY.MM)"
+                                        style="width:120px; padding:4px; border:1px solid #cbd5e1; border-radius:6px; font-size:10px;">
+                                    <button onclick="this.closest('.wc-row').remove()"
+                                        style="color:#ef4444; border:none; background:none;"><i
+                                            class="fa-solid fa-trash-can"></i></button>
+                                </div>
+                            </div>
+                            {% endfor %}
+                        </div>
+                        <div
+                            style="margin-top: 12px; text-align: right; border-top: 1px dashed #e2e8f0; padding-top: 8px;">
+                            <span style="font-size: 11px; font-weight: 700; color: #64748b;">Subtotal: </span>
+                            <span id="subtotal-receivables"
+                                style="font-size: 13px; font-weight: 800; color: #0f172a;">R$ 0,00</span>
+                        </div>
+                    </div>
+
+                    <!-- ESTOQUES -->
+                    <div class="wc-group">
+                        <div
+                            style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px;">
+                            <h4 style="font-size: 14px; font-weight: 800; color: #64748b; text-transform: uppercase;">3.
+                                Estoques</h4>
+                            <button onclick="addWCItem('inventory')" class="button-text"
+                                style="color: #2563eb; font-size: 12px; font-weight: 700;">+ Adicionar</button>
+                        </div>
+                        <div id="inventoryItemsContainer" style="display: flex; flex-direction: column; gap: 8px;">
+                            {% for item in section_content.working_capital.inventory_items|default([]) %}
+                            <div class="wc-row inventory-row"
+                                style="background: #f8fafc; padding: 12px; border-radius: 12px; border: 1px solid #e2e8f0;">
+                                <div
+                                    style="display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-bottom: 8px;">
+                                    <input type="number" class="wc-value" value="{{ item.value }}"
+                                        placeholder="Valor R$"
+                                        style="width:100%; padding:6px; border:1px solid #cbd5e1; border-radius:6px; font-size:12px;">
+                                    <input type="text" class="wc-contrib-date" value="{{ item.contribution_date }}"
+                                        placeholder="Aporte (YYYY.MM)"
+                                        style="width:100%; padding:6px; border:1px solid #cbd5e1; border-radius:6px; font-size:12px;">
+                                </div>
+                                <input type="text" class="wc-desc" value="{{ item.description }}"
+                                    placeholder="Descrição"
+                                    style="width:100%; padding:6px; border:1px solid #cbd5e1; border-radius:6px; font-size:12px; margin-bottom: 4px;">
+                                <div style="display: flex; justify-content: space-between; align-items: center;">
+                                    <input type="text" class="wc-avail-date" value="{{ item.availability_date }}"
+                                        placeholder="Disponib. (YYYY.MM)"
+                                        style="width:120px; padding:4px; border:1px solid #cbd5e1; border-radius:6px; font-size:10px;">
+                                    <button onclick="this.closest('.wc-row').remove()"
+                                        style="color:#ef4444; border:none; background:none;"><i
+                                            class="fa-solid fa-trash-can"></i></button>
+                                </div>
+                            </div>
+                            {% endfor %}
+                        </div>
+                        <div
+                            style="margin-top: 12px; text-align: right; border-top: 1px dashed #e2e8f0; padding-top: 8px;">
+                            <span style="font-size: 11px; font-weight: 700; color: #64748b;">Subtotal: </span><span
+                                id="subtotal-inventory" style="font-size: 13px; font-weight: 800; color: #0f172a;">R$
+                                0,00</span>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Resumo dos Totais (Calculado) -->
+                <div
+                    style="margin-top: 32px; padding: 20px; background: #eff6ff; border-radius: 16px; border: 1px solid #bfdbfe; display: flex; justify-content: space-between; align-items: center;">
+                    <div>
+                        <h4 style="font-size: 13px; font-weight: 800; color: #1e40af; text-transform: uppercase;">Total
+                            Capital de Giro</h4>
+                        <p style="font-size: 11px; color: #3b82f6;">Soma consolidada de todos os aportes planejados.</p>
+                    </div>
+                    <div id="wc-grand-total" style="font-size: 24px; font-weight: 800; color: #1e40af;">
+                        R$ 0,00
+                    </div>
+                </div>
+
+                <!-- Parâmetros de Prazos (Keep for reference/legacy) -->
+                <details style="margin-top: 20px;">
+                    <summary style="font-size: 12px; color: #64748b; cursor: pointer; font-weight: 600;">Configurações
+                        Avançadas de Prazo Médio</summary>
+                    <div
+                        style="display: grid; grid-template-columns: repeat(4, 1fr); gap: 16px; margin-top: 12px; padding: 16px; background: #f8fafc; border-radius: 12px;">
+                        <div>
+                            <label class="field-label" style="font-size: 10px;">Reserva Mínima (R$)</label>
+                            <input type="number" id="cash_reserve"
+                                value="{{ section_content.working_capital.cash_reserve|default(0) }}"
+                                style="width:100%; border: 1px solid #e2e8f0; border-radius: 8px; padding: 8px; font-size: 12px;">
+                        </div>
+                        <div>
+                            <label class="field-label" style="font-size: 10px;">Recebimento (Dias)</label>
+                            <input type="number" id="receivables_days"
+                                value="{{ section_content.working_capital.receivables_days|default(30) }}"
+                                style="width:100%; border: 1px solid #e2e8f0; border-radius: 8px; padding: 8px; font-size: 12px;">
+                        </div>
+                        <div>
+                            <label class="field-label" style="font-size: 10px;">Estocagem (Dias)</label>
+                            <input type="number" id="inventory_days"
+                                value="{{ section_content.working_capital.inventory_days|default(30) }}"
+                                style="width:100%; border: 1px solid #e2e8f0; border-radius: 8px; padding: 8px; font-size: 12px;">
+                        </div>
+                        <div>
+                            <label class="field-label" style="font-size: 10px;">Pagamento (Dias)</label>
+                            <input type="number" id="payable_days"
+                                value="{{ section_content.working_capital.payable_days|default(30) }}"
+                                style="width:100%; border: 1px solid #e2e8f0; border-radius: 8px; padding: 8px; font-size: 12px;">
+                        </div>
+                    </div>
+                </details>
+            </div>
+
+            <!-- Imobilizado & Capex (Automated from Execution) -->
+            <div class="planning-card" style="grid-column: span 2;">
+                <h3 style="font-size: 18px; font-weight: 700; color: #0f172a; margin-bottom: 20px;">Investimento em
+                    Ativos (Imobilizado)</h3>
+                <div style="overflow-x: auto;">
+                    <table style="width: 100%; border-collapse: collapse;">
+                        <thead>
+                            <tr style="text-align: left; border-bottom: 2px solid #f1f5f9;">
+                                <th style="padding: 12px; font-size: 11px; text-transform: uppercase; color: #64748b;">
+                                    Item / Descrição</th>
+                                <th style="padding: 12px; font-size: 11px; text-transform: uppercase; color: #64748b;">
+                                    Tipo</th>
+                                <th style="padding: 12px; font-size: 11px; text-transform: uppercase; color: #64748b;">
+                                    Data Pagamento</th>
+                                <th
+                                    style="padding: 12px; font-size: 11px; text-transform: uppercase; color: #64748b; text-align: right;">
+                                    Valor (R$)</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% set total_capex = 0 %}
+                            {% for period in consolidated.timeline %}
+                            {% if period.investment > 0 %}
+                            <tr style="border-bottom: 1px solid #f1f5f9;">
+                                <td style="padding: 12px; font-size: 13px; font-weight: 600;">Investimentos do Mês {{
+                                    period.period }}</td>
+                                <td style="padding: 12px; font-size: 12px; color: #64748b;">CAPEX Consolidado</td>
+                                <td style="padding: 12px; font-size: 12px; color: #64748b;">{{ period.period }}</td>
+                                <td style="padding: 12px; font-size: 13px; font-weight: 700; text-align: right;">{{
+                                    "{:,.2f}".format(period.investment) }}</td>
+                            </tr>
+                            {% endif %}
+                            {% endfor %}
+                        </tbody>
+                        <tfoot>
+                            <tr style="background: #f8fafc;">
+                                <td colspan="3" style="padding: 12px; font-weight: 800; text-align: right;">Total Capex
+                                    Projetado</td>
+                                <td style="padding: 12px; font-weight: 800; text-align: right; color: #2563eb;">R$ {{
+                                    "{:,.2f}".format(consolidated.summary.total_investment) }}</td>
+                            </tr>
+                        </tfoot>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- TAB 2: RESULTADOS OPERACIONAIS -->
+    <div id="tab-results" class="tab-content" style="display: none;">
+        <div class="planning-card">
+            <h3 style="font-size: 18px; font-weight: 700; color: #0f172a; margin-bottom: 8px;">Resultado Operacional
+                Projetado</h3>
+            <p style="font-size: 13px; color: #64748b; margin-bottom: 24px;">
+                <i class="fa-solid fa-circle-info" style="color: #3b82f6; margin-right: 4px;"></i>
+                Esta DRE apresenta o resultado do início da operação até o final do <strong>RampUp</strong>, período em
+                que as operações atingem sua estabilização planejada.
+            </p>
+            <div style="overflow-x: auto;">
+                <table style="width: 100%; border-collapse: separate; border-spacing: 0;">
+                    <thead>
+                        <tr style="text-align: left; background: #f8fafc;">
+                            <th
+                                style="padding: 12px; font-size: 11px; font-weight: 800; color: #64748b; border-bottom: 1px solid #e2e8f0; width: 140px; position: sticky; left: 0; background: #f8fafc; z-index: 10;">
+                                Mês / Período</th>
+                            {% for t in consolidated.timeline[:consolidated.ramp_up_end_index + 1] %}
+                            <th
+                                style="padding: 12px; font-size: 11px; text-align: center; border-bottom: 1px solid #e2e8f0; min-width: 100px;">
+                                {{ t.period }}</th>
+                            {% endfor %}
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr>
+                            <td
+                                style="padding: 12px; font-size: 12px; font-weight: 700; position: sticky; left: 0; background: white; border-bottom: 1px dashed #f1f5f9;">
+                                (+) Receita</td>
+                            {% for t in consolidated.timeline[:consolidated.ramp_up_end_index + 1] %}
+                            <td
+                                style="padding: 12px; font-size: 12px; text-align: right; border-bottom: 1px dashed #f1f5f9;">
+                                {{ "{:,.2f}".format(t.revenue) }}</td>
+                            {% endfor %}
+                        </tr>
+                        <tr>
+                            <td
+                                style="padding: 12px; font-size: 12px; font-weight: 700; position: sticky; left: 0; background: white; border-bottom: 1px dashed #f1f5f9;">
+                                (-) Custos Variáveis</td>
+                            {% for t in consolidated.timeline[:consolidated.ramp_up_end_index + 1] %}
+                            <td
+                                style="padding: 12px; font-size: 12px; text-align: right; color: #ef4444; border-bottom: 1px dashed #f1f5f9;">
+                                ({{ "{:,.2f}".format(t.variable_costs) }})</td>
+                            {% endfor %}
+                        </tr>
+                        <tr>
+                            <td
+                                style="padding: 12px; font-size: 12px; font-weight: 700; position: sticky; left: 0; background: white; border-bottom: 1px dashed #f1f5f9;">
+                                (-) Despesas Variáveis</td>
+                            {% for t in consolidated.timeline[:consolidated.ramp_up_end_index + 1] %}
+                            <td
+                                style="padding: 12px; font-size: 12px; text-align: right; color: #ef4444; border-bottom: 1px dashed #f1f5f9;">
+                                ({{ "{:,.2f}".format(t.variable_expenses) }})</td>
+                            {% endfor %}
+                        </tr>
+                        <tr style="background: #eff6ff;">
+                            <td
+                                style="padding: 12px; font-size: 12px; font-weight: 800; position: sticky; left: 0; background: #eff6ff; border-bottom: 1px solid #e2e8f0;">
+                                (=) Margem Contrib.</td>
+                            {% for t in consolidated.timeline[:consolidated.ramp_up_end_index + 1] %}
+                            <td
+                                style="padding: 12px; font-size: 12px; text-align: right; font-weight: 800; color: #2563eb; border-bottom: 1px solid #e2e8f0;">
+                                {{ "{:,.2f}".format(t.gmc) }}</td>
+                            {% endfor %}
+                        </tr>
+                        <tr>
+                            <td
+                                style="padding: 12px; font-size: 12px; font-weight: 700; position: sticky; left: 0; background: white; border-bottom: 1px dashed #f1f5f9;">
+                                (-) Custos Fixos</td>
+                            {% for t in consolidated.timeline[:consolidated.ramp_up_end_index + 1] %}
+                            <td
+                                style="padding: 12px; font-size: 12px; text-align: right; color: #ef4444; border-bottom: 1px dashed #f1f5f9;">
+                                ({{ "{:,.2f}".format(t.fixed_costs) }})</td>
+                            {% endfor %}
+                        </tr>
+                        <tr>
+                            <td
+                                style="padding: 12px; font-size: 12px; font-weight: 700; position: sticky; left: 0; background: white; border-bottom: 1px solid #e2e8f0;">
+                                (-) Despesas Fixas</td>
+                            {% for t in consolidated.timeline[:consolidated.ramp_up_end_index + 1] %}
+                            <td
+                                style="padding: 12px; font-size: 12px; text-align: right; color: #ef4444; border-bottom: 1px solid #e2e8f0;">
+                                ({{ "{:,.2f}".format(t.fixed_expenses) }})</td>
+                            {% endfor %}
+                        </tr>
+                        <tr style="background: #f0fdf4;">
+                            <td
+                                style="padding: 12px; font-size: 12px; font-weight: 800; position: sticky; left: 0; background: #f0fdf4;">
+                                (=) Res. Operacional</td>
+                            {% for t in consolidated.timeline[:consolidated.ramp_up_end_index + 1] %}
+                            <td
+                                style="padding: 12px; font-size: 12px; text-align: right; font-weight: 800; color: #10b981;">
+                                {{ "{:,.2f}".format(t.operating_result) }}</td>
+                            {% endfor %}
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+
+    <!-- TAB 3: FLUXOS DE CAIXA -->
+    <div id="tab-cashflow" class="tab-content" style="display: none;">
+        <div style="display: flex; flex-direction: column; gap: 32px;">
+
+            <!-- 1. Fluxo de Caixa do Negócio -->
+            <div class="planning-card">
+                <div style="margin-bottom: 20px;">
+                    <h3 style="font-size: 18px; font-weight: 700; color: #0f172a;">1. Fluxo de Caixa do Negócio</h3>
+                    <p style="font-size: 12px; color: #64748b; margin-top: 4px;">Demonstração completa da operação,
+                        investimentos e destinações.</p>
+                </div>
+
+                <div style="overflow-x: auto; max-height: 500px; overflow-y: auto;">
+                    <table style="width: 100%; border-collapse: separate; border-spacing: 0; font-size: 11px;">
+                        <thead>
+                            <tr style="text-align: left; background: #f8fafc;">
+                                <th
+                                    style="padding: 10px; border-bottom: 2px solid #e2e8f0; text-align: left; font-weight: 800; color: #475569; position: sticky; top: 0; left: 0; background: #f8fafc; z-index: 20; min-width: 100px;">
+                                    Período</th>
+                                <th
+                                    style="padding: 10px; border-bottom: 2px solid #e2e8f0; text-align: right; font-weight: 800; color: #475569; position: sticky; top: 0; background: #f8fafc; z-index: 10;">
+                                    Receita</th>
+                                <th
+                                    style="padding: 10px; border-bottom: 2px solid #e2e8f0; text-align: right; font-weight: 800; color: #475569; position: sticky; top: 0; background: #f8fafc; z-index: 10;">
+                                    Variáveis</th>
+                                <th
+                                    style="padding: 10px; border-bottom: 2px solid #e2e8f0; text-align: right; font-weight: 800; color: #475569; position: sticky; top: 0; background: #f8fafc; z-index: 10;">
+                                    Margem Contr.</th>
+                                <th
+                                    style="padding: 10px; border-bottom: 2px solid #e2e8f0; text-align: right; font-weight: 800; color: #475569; position: sticky; top: 0; background: #f8fafc; z-index: 10;">
+                                    Fixos</th>
+                                <th
+                                    style="padding: 10px; border-bottom: 2px solid #e2e8f0; text-align: right; font-weight: 800; color: #475569; position: sticky; top: 0; background: #f8fafc; z-index: 10;">
+                                    Res. Operac.</th>
+                                <th
+                                    style="padding: 10px; border-bottom: 2px solid #e2e8f0; text-align: right; font-weight: 800; color: #475569; position: sticky; top: 0; background: #f8fafc; z-index: 10;">
+                                    Destinação Geral</th>
+                                <th
+                                    style="padding: 10px; border-bottom: 2px solid #e2e8f0; text-align: right; font-weight: 800; color: #475569; position: sticky; top: 0; background: #f8fafc; z-index: 10;">
+                                    Res. Período</th>
+                                <th
+                                    style="padding: 10px; border-bottom: 2px solid #e2e8f0; text-align: right; font-weight: 800; color: #475569; position: sticky; top: 0; background: #f8fafc; z-index: 10;">
+                                    Res. Acum.</th>
+                                <th
+                                    style="padding: 10px; border-bottom: 2px solid #e2e8f0; text-align: right; font-weight: 800; color: #475569; position: sticky; top: 0; background: #f8fafc; z-index: 10;">
+                                    Investimento</th>
+                                <th
+                                    style="padding: 10px; border-bottom: 2px solid #e2e8f0; text-align: right; font-weight: 800; color: #475569; position: sticky; top: 0; background: #f8fafc; z-index: 10;">
+                                    Empr/Financ</th>
+                                <th
+                                    style="padding: 10px; border-bottom: 2px solid #e2e8f0; text-align: right; font-weight: 800; color: #475569; position: sticky; top: 0; background: #f8fafc; z-index: 10;">
+                                    Saldo Total</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for t in consolidated.timeline %}
+                            {% set month_parts = t.period.split('-') %}
+                            {% set month_label = months_pt[month_parts[1]] ~ "/" ~ month_parts[0]|truncate(4, True, '')
+                            %}
+                            {% set variables_total = t.variable_costs + t.variable_expenses %}
+                            {% set fixed_total = t.fixed_costs + t.fixed_expenses %}
+                            {% set res_periodo = t.operating_result - t.distributions %}
+                            <tr style="border-bottom: 1px solid #f1f5f9;">
+                                <td
+                                    style="padding: 8px 10px; font-weight: 700; color: #0f172a; position: sticky; left: 0; background: white; border-bottom: 1px solid #f1f5f9; z-index: 5;">
+                                    {{ month_label }}</td>
+                                <td style="padding: 8px 10px; text-align: right;">{{ "{:,.2f}".format(t.revenue) }}</td>
+                                <td style="padding: 8px 10px; text-align: right; color: #ef4444;">({{
+                                    "{:,.2f}".format(variables_total) }})</td>
+                                <td style="padding: 8px 10px; text-align: right; font-weight: 600; color: #2563eb;">{{
+                                    "{:,.2f}".format(t.gmc) }}</td>
+                                <td style="padding: 8px 10px; text-align: right; color: #ef4444;">({{
+                                    "{:,.2f}".format(fixed_total) }})</td>
+                                <td
+                                    style="padding: 8px 10px; text-align: right; font-weight: 700; color: {% if t.operating_result >= 0 %}#10b981{% else %}#ef4444{% endif %};">
+                                    {{ "{:,.2f}".format(t.operating_result) }}</td>
+                                <td style="padding: 8px 10px; text-align: right; color: #64748b;">({{
+                                    "{:,.2f}".format(t.total_destinations) }})</td>
+                                <td style="padding: 8px 10px; text-align: right; font-weight: 600;">{{
+                                    "{:,.2f}".format(res_periodo) }}</td>
+                                <td
+                                    style="padding: 8px 10px; text-align: right; font-weight: 700; color: #334155; background: #fafafa;">
+                                    {{ "{:,.2f}".format(t.cumulative_net_operating) }}</td>
+                                <td style="padding: 8px 10px; text-align: right; color: #f97316;">({{
+                                    "{:,.2f}".format(t.investment) }})</td>
+                                <td style="padding: 8px 10px; text-align: right; color: #10b981;">{{
+                                    "{:,.2f}".format(t.loans) }}</td>
+                                <td
+                                    style="padding: 8px 10px; text-align: right; font-weight: 800; color: #0369a1; background: #f0f9ff;">
+                                    {{ "{:,.2f}".format(t.cumulative_business) }}</td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+
+            <!-- 2. Fluxo de Caixa do Investimento -->
+            <div class="planning-card">
+                <div style="margin-bottom: 20px;">
+                    <h3 style="font-size: 18px; font-weight: 700; color: #9a3412;">2. Fluxo de Caixa do Investimento
+                        (CAPEX)</h3>
+                    <p style="font-size: 12px; color: #64748b; margin-top: 4px;">Acompanhamento das necessidades de
+                        capital (Investimentos) vs. Fontes de Financiamento.</p>
+                </div>
+
+                <div style="overflow-x: auto; max-height: 400px; overflow-y: auto;">
+                    <table style="width: 100%; border-collapse: separate; border-spacing: 0; font-size: 11px;">
+                        <thead>
+                            <tr style="text-align: left; background: #fff7ed;">
+                                <th
+                                    style="padding: 10px; border-bottom: 2px solid #fed7aa; font-weight: 800; color: #9a3412; position: sticky; top: 0; left: 0; background: #fff7ed; z-index: 20; min-width: 100px;">
+                                    Periodo</th>
+                                <th
+                                    style="padding: 10px; border-bottom: 2px solid #fed7aa; text-align: right; font-weight: 800; color: #9a3412; position: sticky; top: 0; background: #fff7ed; z-index: 10;">
+                                    Investimentos</th>
+                                <th
+                                    style="padding: 10px; border-bottom: 2px solid #fed7aa; text-align: right; font-weight: 800; color: #9a3412; position: sticky; top: 0; background: #fff7ed; z-index: 10;">
+                                    Fontes de Recursos</th>
+                                <th
+                                    style="padding: 10px; border-bottom: 2px solid #fed7aa; text-align: right; font-weight: 800; color: #9a3412; position: sticky; top: 0; background: #fff7ed; z-index: 10;">
+                                    Saldo do Periodo</th>
+                                <th
+                                    style="padding: 10px; border-bottom: 2px solid #fed7aa; text-align: right; font-weight: 800; color: #9a3412; position: sticky; top: 0; background: #fff7ed; z-index: 10;">
+                                    Saldo Acumulado</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for t in consolidated.timeline %}
+                            {% set month_parts = t.period.split('-') %}
+                            {% set month_label = months_pt[month_parts[1]] ~ "/" ~ month_parts[0]|truncate(4, True, '')
+                            %}
+                            {% set total_sources_period = t.sources_equity + t.loans %}
+                            <tr style="border-bottom: 1px solid #fed7aa;">
+                                <td
+                                    style="padding: 8px 10px; font-weight: 700; color: #9a3412; position: sticky; left: 0; background: white; border-bottom: 1px solid #fed7aa; z-index: 5;">
+                                    {{ month_label }}</td>
+                                <td style="padding: 8px 10px; text-align: right; color: #ea580c;">({{
+                                    "{:,.2f}".format(t.investment) }})</td>
+                                <td style="padding: 8px 10px; text-align: right; color: #10b981;">{{
+                                    "{:,.2f}".format(total_sources_period) }}</td>
+                                <td
+                                    style="padding: 8px 10px; text-align: right; font-weight: 600; color: {% if t.investment_flow >= 0 %}#10b981{% else %}#ea580c{% endif %};">
+                                    {{ "{:,.2f}".format(t.investment_flow) }}</td>
+                                <td
+                                    style="padding: 8px 10px; text-align: right; font-weight: 800; color: #9a3412; background: #fffaf0;">
+                                    {{ "{:,.2f}".format(t.cumulative_investment) }}</td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+
+            <!-- 3. Fluxo de Caixa do Investidor -->
+            <div class="planning-card">
+                <div style="margin-bottom: 20px;">
+                    <h3 style="font-size: 18px; font-weight: 700; color: #0369a1;">3. Fluxo de Caixa do Investidor (ROI)
+                    </h3>
+                    <p style="font-size: 12px; color: #64748b; margin-top: 4px;">Visão do retorno: <strong>Aportes
+                            (negativos)</strong> vs. <strong>Recebimentos (positivos)</strong>.</p>
+                </div>
+
+                <!-- ROI Chart -->
+                <div class="no-print"
+                    style="height: 300px; margin-bottom: 32px; background: #f8fafc; border-radius: 16px; padding: 16px; border: 1px solid #e2e8f0;">
+                    <canvas id="roiChart"></canvas>
+                </div>
+
+                <div style="overflow-x: auto; max-height: 400px; overflow-y: auto;">
+                    <table style="width: 100%; border-collapse: separate; border-spacing: 0; font-size: 12px;">
+                        <thead>
+                            <tr style="text-align: left; background: #f0f9ff;">
+                                <th
+                                    style="padding: 12px; border-bottom: 2px solid #bae6fd; font-weight: 800; color: #0369a1; position: sticky; top: 0; left: 0; background: #f0f9ff; z-index: 20; min-width: 120px;">
+                                    Período</th>
+                                <th
+                                    style="padding: 12px; border-bottom: 2px solid #bae6fd; text-align: right; font-weight: 800; color: #0369a1; position: sticky; top: 0; background: #f0f9ff; z-index: 10;">
+                                    (-) Aportes / Investimento</th>
+                                <th
+                                    style="padding: 12px; border-bottom: 2px solid #bae6fd; text-align: right; font-weight: 800; color: #0369a1; position: sticky; top: 0; background: #f0f9ff; z-index: 10;">
+                                    (+) Distribuições / Lucros</th>
+                                <th
+                                    style="padding: 12px; border-bottom: 2px solid #bae6fd; text-align: right; font-weight: 800; color: #0369a1; position: sticky; top: 0; background: #f0f9ff; z-index: 10;">
+                                    Fluxo Líquido (Investidor)</th>
+                                <th
+                                    style="padding: 12px; border-bottom: 2px solid #bae6fd; text-align: right; font-weight: 800; color: #0369a1; position: sticky; top: 0; background: #f0f9ff; z-index: 10;">
+                                    Saldo Acumulado</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for t in consolidated.timeline %}
+                            {% set month_parts = t.period.split('-') %}
+                            {% set month_label = months_pt[month_parts[1]] ~ " de " ~ month_parts[0] %}
+                            <tr style="border-bottom: 1px solid #e0f2fe;">
+                                <td
+                                    style="padding: 10px 12px; font-weight: 700; color: #0369a1; position: sticky; left: 0; background: white; border-bottom: 1px solid #e0f2fe; z-index: 5;">
+                                    {{ month_label }}</td>
+                                <td style="padding: 10px 12px; text-align: right; color: #ef4444; font-weight: 600;">
+                                    {% if t.sources_equity > 0 %}({{ "{:,.2f}".format(t.sources_equity) }}){% else %}-{%
+                                    endif %}
+                                </td>
+                                <td style="padding: 10px 12px; text-align: right; color: #10b981; font-weight: 600;">
+                                    {% if t.distributions > 0 %}{{ "{:,.2f}".format(t.distributions) }}{% else %}-{%
+                                    endif %}
+                                </td>
+                                <td
+                                    style="padding: 10px 12px; text-align: right; font-weight: 700; color: {% if t.investor_net_flow >= 0 %}#10b981{% else %}#ef4444{% endif %};">
+                                    {{ "{:,.2f}".format(t.investor_net_flow) }}
+                                </td>
+                                <td
+                                    style="padding: 10px 12px; text-align: right; font-weight: 900; color: #0369a1; background: #f0f9ff;">
+                                    {{ "{:,.2f}".format(t.cumulative_investor) }}
+                                </td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+
+                <div
+                    style="margin-top: 24px; padding: 20px; background: #f8fafc; border-radius: 16px; border: 1px solid #e2e8f0; display: grid; grid-template-columns: repeat(5, 1fr); gap: 16px;">
+                    <div>
+                        <span
+                            style="font-size: 10px; font-weight: 800; color: #94a3b8; text-transform: uppercase;">Investimento</span>
+                        <span style="font-size: 18px; font-weight: 800; color: #ef4444; display: block;">R$ {{
+                            "{:,.2f}".format(consolidated.summary.total_equity) }}</span>
+                    </div>
+                    <div>
+                        <span
+                            style="font-size: 10px; font-weight: 800; color: #94a3b8; text-transform: uppercase;">Retorno
+                            Acum.</span>
+                        <span style="font-size: 18px; font-weight: 800; color: #10b981; display: block;">R$ {{
+                            "{:,.2f}".format(consolidated.timeline|sum(attribute='distributions')) }}</span>
+                    </div>
+                    <div>
+                        <span
+                            style="font-size: 10px; font-weight: 800; color: #94a3b8; text-transform: uppercase;">Líquido</span>
+                        <span style="font-size: 18px; font-weight: 800; color: #0369a1; display: block;">R$ {{
+                            "{:,.2f}".format(consolidated.timeline|sum(attribute='investor_net_flow')) }}</span>
+                    </div>
+                    <div>
+                        <span style="font-size: 10px; font-weight: 800; color: #94a3b8; text-transform: uppercase;">ROI
+                            total</span>
+                        <span style="font-size: 18px; font-weight: 800; color: #0f172a; display: block;">{{
+                            "{:.2f}".format(consolidated.metrics.roi) }}%</span>
+                    </div>
+                    <div>
+                        <span style="font-size: 10px; font-weight: 800; color: #94a3b8; text-transform: uppercase;">TIR
+                            Projetada</span>
+                        <span style="font-size: 18px; font-weight: 800; color: #020617; display: block;">
+                            {% if consolidated.metrics.tir is not none %}
+                            {{ "{:.2f}".format(consolidated.metrics.tir) }}% <small
+                                style="font-size: 10px;">a.a.</small>
+                            {% else %}
+                            <small style="font-size: 10px; color: #ef4444; font-weight: 600;">Parâmetros incorretos para
+                                cálculo aceitável</small>
+                            {% endif %}
+                        </span>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- TAB 4: FONTES & DISTRIBUIÇÃO -->
+    <div id="tab-funding" class="tab-content" style="display: none;">
+        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 24px;">
+            <!-- Fontes de Recursos -->
+            <div class="planning-card">
+                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px;">
+                    <h3 style="font-size: 18px; font-weight: 700; color: #0f172a;">Fontes de Financiamento</h3>
+                    <button onclick="addSource()" class="button-text" style="color: #2563eb; font-weight: 700;">+
+                        Adicionar</button>
+                </div>
+                <div id="sourcesContainer" style="display: flex; flex-direction: column; gap: 12px;">
+                    {% if section_content.sources_v2 %}
+                    {% for s in section_content.sources_v2 %}
+                    <div class="source-row"
+                        style="display: grid; grid-template-columns: 2fr 1fr 1.5fr 1.5fr auto; gap: 12px; align-items: end;">
+                        <div>
+                            <label class="field-label">Nome/Descrição</label>
+                            <input type="text" class="source-name" value="{{ s.name }}"
+                                style="width:100%; padding:8px; border:1px solid #e2e8f0; border-radius:8px;">
+                        </div>
+                        <div>
+                            <label class="field-label">Valor (R$)</label>
+                            <input type="number" class="source-value" value="{{ s.amount }}"
+                                style="width:100%; padding:8px; border:1px solid #e2e8f0; border-radius:8px;">
+                        </div>
+                        <div>
+                            <label class="field-label">Tipo de Origem</label>
+                            <select class="source-type"
+                                style="width:100%; padding:8px; border:1px solid #e2e8f0; border-radius:8px;">
+                                <option value="propria" {% if s.type=='propria' %}selected{% endif %}>Própria (Sócios)
+                                </option>
+                                <option value="financiamento" {% if s.type=='financiamento' %}selected{% endif %}>Empr.
+                                    / Financ</option>
+                                <option value="outras" {% if s.type=='outras' %}selected{% endif %}>Outras Fontes
+                                </option>
+                            </select>
+                        </div>
+                        <div>
+                            <label class="field-label">Data Disponibilidade</label>
+                            <input type="text" class="source-date" value="{{ s.date }}" placeholder="YYYY.MM"
+                                style="width:100%; padding:8px; border:1px solid #e2e8f0; border-radius:8px;">
+                        </div>
+                        <button onclick="this.parentElement.remove()"
+                            style="color:#ef4444; border:none; background:none; padding-bottom:10px;"><i
+                                class="fa-solid fa-trash"></i></button>
+                    </div>
+                    {% endfor %}
+                    {% elif section_content.sources %}
+                    {% for key, val in section_content.sources.items() %}
+                    <div class="source-row"
+                        style="display: grid; grid-template-columns: 2fr 1fr 1.5fr 1.5fr auto; gap: 12px; align-items: end;">
+                        <div>
+                            <label class="field-label">Nome/Descrição</label>
+                            <input type="text" class="source-name" value="{{ key }}"
+                                style="width:100%; padding:8px; border:1px solid #e2e8f0; border-radius:8px;">
+                        </div>
+                        <div>
+                            <label class="field-label">Valor (R$)</label>
+                            <input type="number" class="source-value" value="{{ val }}"
+                                style="width:100%; padding:8px; border:1px solid #e2e8f0; border-radius:8px;">
+                        </div>
+                        <div>
+                            <label class="field-label">Tipo de Origem</label>
+                            <select class="source-type"
+                                style="width:100%; padding:8px; border:1px solid #e2e8f0; border-radius:8px;">
+                                <option value="propria" selected>Própria (Sócios)</option>
+                                <option value="financiamento">Empr. / Financ</option>
+                                <option value="outras">Outras Fontes</option>
+                            </select>
+                        </div>
+                        <div>
+                            <label class="field-label">Data Disponibilidade</label>
+                            <input type="text" class="source-date"
+                                value="{{ section_content.source_dates[key]|default('') }}" placeholder="YYYY.MM"
+                                style="width:100%; padding:8px; border:1px solid #e2e8f0; border-radius:8px;">
+                        </div>
+                        <button onclick="this.parentElement.remove()"
+                            style="color:#ef4444; border:none; background:none; padding-bottom:10px;"><i
+                                class="fa-solid fa-trash"></i></button>
+                    </div>
+                    {% endfor %}
+                    {% endif %}
+                </div>
+            </div>
+
+            <!-- Destinação de Resultados -->
+            <div class="planning-card">
+                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px;">
+                    <h3 style="font-size: 18px; font-weight: 700; color: #0f172a;">Destinação de Resultados</h3>
+                    <button onclick="addDestination()" class="button-text" style="color: #2563eb; font-weight: 700;">+
+                        Adicionar Regra</button>
+                </div>
+                <div id="distributionsContainer" style="display: flex; flex-direction: column; gap: 12px;">
+                    {% for dist in section_content.profit_distribution %}
+                    <div class="dist-row"
+                        style="display: grid; grid-template-columns: 2fr 1fr 1.5fr 1fr auto; gap: 12px; align-items: end;">
+                        <div>
+                            <label class="field-label">Nome/Descrição</label>
+                            <input type="text" class="dist-name" value="{{ dist.description }}"
+                                placeholder="Ex: Dividendos Sócios"
+                                style="width:100%; padding:8px; border:1px solid #e2e8f0; border-radius:8px;">
+                        </div>
+                        <div>
+                            <label class="field-label">% do Resultado</label>
+                            <input type="number" class="dist-pct" value="{{ dist.percentage }}"
+                                style="width:100%; padding:8px; border:1px solid #e2e8f0; border-radius:8px;">
+                        </div>
+                        <div>
+                            <label class="field-label">Tipo de Destinação</label>
+                            <select class="dist-type"
+                                style="width:100%; padding:8px; border:1px solid #e2e8f0; border-radius:8px;">
+                                <option value="socio" {% if dist.type=='socio' %}selected{% endif %}>Distribuição Sócios
+                                </option>
+                                <option value="outras" {% if dist.type=='outras' %}selected{% endif %}>Outras
+                                    Destinações</option>
+                            </select>
+                        </div>
+                        <div>
+                            <label class="field-label">Data de Início</label>
+                            <input type="text" class="dist-start-date" value="{{ dist.start_date|default('') }}"
+                                placeholder="YYYY.MM"
+                                style="width:100%; padding:8px; border:1px solid #e2e8f0; border-radius:8px;">
+                        </div>
+                        <button onclick="this.parentElement.remove()"
+                            style="color:#ef4444; border:none; background:none; padding-bottom:10px;"><i
+                                class="fa-solid fa-trash"></i></button>
+                    </div>
+                    {% endfor %}
+                </div>
+                <div
+                    style="margin-top: 20px; padding: 12px; background: #f8fafc; border-radius: 10px; border: 1px dashed #e2e8f0;">
+                    <p style="font-size: 11px; color: #64748b;">As porcentagens são aplicadas sobre o <strong>Resultado
+                            Operacional Positivo</strong> do mês.</p>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- TAB 5: ANÁLISE & VIABILIDADE -->
+    <div id="tab-analysis" class="tab-content" style="display: none;">
+        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 24px;">
+            <!-- Parâmetros -->
+            <div class="planning-card">
+                <h3 style="font-size: 18px; font-weight: 700; color: #0f172a; margin-bottom: 24px;">Configurações da
+                    Análise</h3>
+                <div style="display: grid; gap: 24px;">
+                    <div>
+                        <label class="field-label">Data de Início da Análise</label>
+                        <input type="month" id="analysis_start_date"
+                            value="{{ consolidated.params.start_date|default('')|replace('.','-') }}"
+                            style="width: 100%; padding: 12px; border: 1px solid #e2e8f0; border-radius: 10px; font-weight: 700; background: #fdfdfd;">
+                        <p style="font-size: 11px; color: #94a3b8; margin-top: 6px;">
+                            <i class="fa-solid fa-wand-magic-sparkles"></i>
+                            Deixe vazio para detecção automática (Mês 1 = Primeiro evento financeiro).
+                        </p>
+                    </div>
+
+                    <div>
+                        <label class="field-label">Período de Análise (Meses)</label>
+                        <div style="display: flex; gap: 12px; align-items: center;">
+                            <input type="number" id="period_months"
+                                value="{{ consolidated.params.period_months|default(60) }}"
+                                style="width: 120px; padding: 12px; border: 1px solid #e2e8f0; border-radius: 10px; font-weight: 700; text-align: center;">
+
+                            <div
+                                style="display: flex; gap: 6px; background: #f1f5f9; padding: 4px; border-radius: 10px;">
+                                <button type="button" onclick="setPeriod(12)" class="preset-btn">1 ano</button>
+                                <button type="button" onclick="setPeriod(24)" class="preset-btn">2 anos</button>
+                                <button type="button" onclick="setPeriod(60)" class="preset-btn">5 anos</button>
+                                <button type="button" onclick="setPeriod(120)" class="preset-btn">10 anos</button>
+                            </div>
+                        </div>
+                        <p style="font-size: 11px; color: #94a3b8; margin-top: 6px;">Horizonte de projeção para VPL, TIR
+                            e Payback.</p>
+                    </div>
+
+                    <div>
+                        <label class="field-label">Custo de Oportunidade (% a.a.)</label>
+                        <input type="number" id="opportunity_cost_annual"
+                            value="{{ consolidated.params.opportunity_cost_annual|default(12) }}"
+                            style="width: 100%; padding: 12px; border: 1px solid #e2e8f0; border-radius: 10px; font-weight: 700;">
+                        <p style="font-size: 11px; color: #94a3b8; margin-top: 6px;">Taxa de retorno mínima exigida para
+                            cálculo do VPL.</p>
+                    </div>
+                </div>
+
+                <div style="margin-top: 32px; padding-top: 24px; border-top: 1px solid #f1f5f9;">
+                    <h4
+                        style="font-size: 14px; font-weight: 800; color: #64748b; text-transform: uppercase; margin-bottom: 16px;">
+                        Métricas Calculadas</h4>
+                    <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 16px;">
+                        <div
+                            style="background: #f8fafc; padding: 16px; border-radius: 12px; border: 1px solid #e2e8f0;">
+                            <span style="font-size: 11px; font-weight: 700; color: #64748b; display: block;">TIR
+                                Projetada</span>
+                            <span style="font-size: 20px; font-weight: 800; color: #0f172a; display: block;">
+                                {% if consolidated.metrics.tir is not none %}
+                                {{ "{:.2f}".format(consolidated.metrics.tir) }}% a.a.
+                                {% else %}
+                                <span style="font-size: 13px; color: #ef4444; font-weight: 700;">Parâmetros incorretos
+                                    para um cálculo dentro do aceitável.</span>
+                                {% endif %}
+                            </span>
+                        </div>
+                        <div
+                            style="background: #f8fafc; padding: 16px; border-radius: 12px; border: 1px solid #e2e8f0;">
+                            <span style="font-size: 11px; font-weight: 700; color: #64748b; display: block;">ROI
+                                (Payback Time)</span>
+                            <span style="font-size: 20px; font-weight: 800; color: #0f172a;">{{
+                                consolidated.metrics.payback }} meses</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Resumo Executivo -->
+            <div class="planning-card">
+                <h3 style="font-size: 18px; font-weight: 700; color: #0f172a; margin-bottom: 20px;">Resumo Executivo
+                    (Board)</h3>
+                <label class="field-label">Texto para o Relatório Final</label>
+                <textarea id="executive_summary"
+                    style="width: 100%; height: 320px; border-radius: 12px; border: 1px solid #e2e8f0; padding: 16px; font-size: 14px; line-height: 1.6;">{{ section_content.executive_summary|default('') }}</textarea>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+    function switchTab(tabId) {
+        document.querySelectorAll('.tab-content').forEach(c => c.style.display = 'none');
+        document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+        document.getElementById('tab-' + tabId).style.display = 'block';
+        document.querySelector(`.tab-btn[data-tab="${tabId}"]`).classList.add('active');
+    }
+
+    function addSource() {
+        document.getElementById('sourcesContainer').insertAdjacentHTML('beforeend', `
+            <div class="source-row" style="display: grid; grid-template-columns: 2fr 1fr 1.5fr 1.5fr auto; gap: 12px; align-items: end;">
+                <div><input type="text" class="source-name" placeholder="Descrição" style="width:100%; padding:8px; border:1px solid #e2e8f0; border-radius:8px;"></div>
+                <div><input type="number" class="source-value" placeholder="Valor" style="width:100%; padding:8px; border:1px solid #e2e8f0; border-radius:8px;"></div>
+                <div>
+                    <select class="source-type" style="width:100%; padding:8px; border:1px solid #e2e8f0; border-radius:8px;">
+                        <option value="propria">Própria (Sócios)</option>
+                        <option value="financiamento">Empr. / Financ</option>
+                        <option value="outras">Outras Fontes</option>
+                    </select>
+                </div>
+                <div><input type="text" class="source-date" placeholder="YYYY.MM" style="width:100%; padding:8px; border:1px solid #e2e8f0; border-radius:8px;"></div>
+                <button onclick="this.parentElement.remove()" style="color:#ef4444; border:none; background:none; padding-bottom:10px;"><i class="fa-solid fa-trash"></i></button>
+            </div>
+        `);
+    }
+
+    function addDestination() {
+        document.getElementById('distributionsContainer').insertAdjacentHTML('beforeend', `
+            <div class="dist-row" style="display: grid; grid-template-columns: 2fr 1fr 1.5fr 1fr auto; gap: 12px; align-items: end;">
+                <div><input type="text" class="dist-name" placeholder="Nome/Descrição" style="width:100%; padding:8px; border:1px solid #e2e8f0; border-radius:8px;"></div>
+                <div><input type="number" class="dist-pct" placeholder="% do Resultado" style="width:100%; padding:8px; border:1px solid #e2e8f0; border-radius:8px;"></div>
+                <div>
+                    <select class="dist-type" style="width:100%; padding:8px; border:1px solid #e2e8f0; border-radius:8px;">
+                        <option value="socio">Distribuição Sócios</option>
+                        <option value="outras">Outras Destinações</option>
+                    </select>
+                </div>
+                <div><input type="text" class="dist-start-date" placeholder="YYYY.MM" style="width:100%; padding:8px; border:1px solid #e2e8f0; border-radius:8px;"></div>
+                <button onclick="this.parentElement.remove()" style="color:#ef4444; border:none; background:none; padding-bottom:10px;"><i class="fa-solid fa-trash"></i></button>
+            </div>
+        `);
+    }
+
+    function updateWCTotals() {
+        let grandTotal = 0;
+        const fmt = new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' });
+        ['cash', 'receivables', 'inventory'].forEach(cat => {
+            let catTotal = 0;
+            document.querySelectorAll(`.${cat}-row .wc-value`).forEach(input => {
+                catTotal += parseFloat(input.value) || 0;
+            });
+            const subtotalEl = document.getElementById(`subtotal-${cat}`);
+            if (subtotalEl) subtotalEl.innerText = fmt.format(catTotal);
+            grandTotal += catTotal;
+        });
+
+        document.getElementById('wc-grand-total').innerText = fmt.format(grandTotal);
+    }
+
+    function addWCItem(category) {
+        const container = document.getElementById(category + 'ItemsContainer');
+        const html = `
+            <div class="wc-row ${category}-row" style="background: #f8fafc; padding: 12px; border-radius: 12px; border: 1px solid #e2e8f0;">
+                <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-bottom: 8px;">
+                    <input type="number" class="wc-value" onchange="updateWCTotals()" placeholder="Valor R$" style="width:100%; padding:6px; border:1px solid #cbd5e1; border-radius:6px; font-size:12px;">
+                    <input type="text" class="wc-contrib-date" placeholder="Aporte (YYYY.MM)" style="width:100%; padding:6px; border:1px solid #cbd5e1; border-radius:6px; font-size:12px;">
+                </div>
+                <input type="text" class="wc-desc" placeholder="Descrição" style="width:100%; padding:6px; border:1px solid #cbd5e1; border-radius:6px; font-size:12px; margin-bottom: 4px;">
+                <div style="display: flex; justify-content: space-between; align-items: center;">
+                    <input type="text" class="wc-avail-date" placeholder="Disponib. (YYYY.MM)" style="width:120px; padding:4px; border:1px solid #cbd5e1; border-radius:6px; font-size:10px;">
+                    <button onclick="this.closest('.wc-row').remove(); updateWCTotals();" style="color:#ef4444; border:none; background:none;"><i class="fa-solid fa-trash-can"></i></button>
+                </div>
+            </div>
+        `;
+        container.insertAdjacentHTML('beforeend', html);
+        updateWCTotals();
+    }
+
+    // Initialize totals
+    document.addEventListener('DOMContentLoaded', () => {
+        updateWCTotals();
+        // Add event listeners to existing inputs
+        document.querySelectorAll('.wc-value').forEach(input => {
+            input.addEventListener('change', updateWCTotals);
+        });
+
+        // Initialize ROI Chart
+        initROIChart();
+    });
+
+    function initROIChart() {
+        const ctx = document.getElementById('roiChart');
+        if (!ctx) return;
+
+        const timeline = {{ consolidated.timeline | tojson
+    }};
+    const monthsPt = { '01': 'Jan', '02': 'Fev', '03': 'Mar', '04': 'Abr', '05': 'Mai', '06': 'Jun', '07': 'Jul', '08': 'Ago', '09': 'Set', '10': 'Out', '11': 'Nov', '12': 'Dez' };
+    const labels = timeline.map(t => {
+        const parts = t.period.split('-');
+        return `${monthsPt[parts[1]]}/${parts[0].substring(2)}`;
+    });
+    const investorFlows = timeline.map(t => t.investor_net_flow);
+    const cumulative = [];
+    let running = 0;
+    timeline.forEach(t => {
+        running += t.investor_net_flow;
+        cumulative.push(running);
+    });
+
+    new Chart(ctx, {
+        type: 'bar',
+        data: {
+            labels: labels,
+            datasets: [
+                {
+                    label: 'Fluxo Mensal (R$)',
+                    data: investorFlows,
+                    backgroundColor: investorFlows.map(v => v >= 0 ? 'rgba(16, 185, 129, 0.6)' : 'rgba(239, 68, 68, 0.6)'),
+                    borderColor: investorFlows.map(v => v >= 0 ? '#10b981' : '#ef4444'),
+                    borderWidth: 1,
+                    order: 2
+                },
+                {
+                    label: 'Acumulado (VPL)',
+                    data: cumulative,
+                    type: 'line',
+                    borderColor: '#2563eb',
+                    backgroundColor: 'transparent',
+                    borderWidth: 3,
+                    pointRadius: 0,
+                    tension: 0.4,
+                    order: 1
+                }
+            ]
+        },
+        options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            plugins: {
+                legend: { position: 'top', labels: { font: { family: 'Inter', weight: '600', size: 11 } } },
+                tooltip: {
+                    callbacks: {
+                        label: function (context) {
+                            let label = context.dataset.label || '';
+                            if (label) label += ': ';
+                            if (context.parsed.y !== null) {
+                                label += new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(context.parsed.y);
+                            }
+                            return label;
+                        }
+                    }
+                }
+            },
+            scales: {
+                y: {
+                    beginAtZero: true,
+                    grid: { color: '#f1f5f9' },
+                    ticks: { font: { size: 10 } }
+                },
+                x: {
+                    grid: { display: false },
+                    ticks: { font: { size: 10 }, maxRotation: 45, minRotation: 45 }
+                }
+            }
+        }
+    });
+    }
+
+    function setPeriod(months) {
+        document.getElementById('period_months').value = months;
+        // Visual feedback
+        document.querySelectorAll('.preset-btn').forEach(btn => {
+            btn.classList.toggle('active', btn.innerText.includes(months === 120 ? '10' : months === 60 ? '5' : months === 24 ? '2' : '1'));
+        });
+    }
+
+    async function saveFinance() {
+        const sources_v2 = Array.from(document.querySelectorAll('.source-row')).map(row => ({
+            name: row.querySelector('.source-name').value,
+            amount: parseFloat(row.querySelector('.source-value').value) || 0,
+            type: row.querySelector('.source-type').value,
+            date: row.querySelector('.source-date').value
+        })).filter(s => s.name);
+
+        const collectWCItems = (category) => {
+            return Array.from(document.querySelectorAll(`.${category}-row`)).map(row => ({
+                value: parseFloat(row.querySelector('.wc-value').value) || 0,
+                contribution_date: row.querySelector('.wc-contrib-date').value,
+                availability_date: row.querySelector('.wc-avail-date').value,
+                description: row.querySelector('.wc-desc').value
+            })).filter(item => item.value > 0);
+        };
+
+        const profit_distribution = Array.from(document.querySelectorAll('.dist-row')).map(row => ({
+            description: row.querySelector('.dist-name').value,
+            percentage: parseFloat(row.querySelector('.dist-pct').value) || 0,
+            type: row.querySelector('.dist-type').value,
+            start_date: row.querySelector('.dist-start-date').value
+        })).filter(r => r.description);
+
+        const data = {
+            analysis_params: {
+                period_months: parseInt(document.getElementById('period_months').value) || 60,
+                start_date: document.getElementById('analysis_start_date').value.replace('-', '.'),
+                opportunity_cost_annual: parseFloat(document.getElementById('opportunity_cost_annual').value) || 12
+            },
+            working_capital: {
+                cash_reserve: parseFloat(document.getElementById('cash_reserve').value) || 0,
+                receivables_days: parseInt(document.getElementById('receivables_days').value) || 30,
+                inventory_days: parseInt(document.getElementById('inventory_days').value) || 30,
+                payable_days: parseInt(document.getElementById('payable_days').value) || 30,
+                cash_items: collectWCItems('cash'),
+                receivables_items: collectWCItems('receivables'),
+                inventory_items: collectWCItems('inventory')
+            },
+            executive_summary: document.getElementById('executive_summary').value,
+            sources_v2: sources_v2,
+            sources: {}, // Clear legacy
+            source_dates: {},
+            profit_distribution: profit_distribution
+        };
+
+        const response = await fetch('/api/plans/{{ plan.id }}/implantation/finance?company_id={{ company.id }}', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(data)
+        });
+
+        if (response.ok) {
+            alert('Estudo financeiro atualizado e salvo!');
+            location.reload();
+        } else {
+            alert('Erro ao salvar estudo financeiro.');
+        }
+    }
+
+    async function completeSection() {
+        await saveFinance();
+        await fetch(`/api/plans/{{ plan.id }}/sections/finance/complete`, { method: 'POST' });
+        window.location.href = "{{ url_for('plans.implantation_section', plan_id=plan.id, section='projects') }}";
+    }
+</script>
+
+<style>
+    .tab-btn {
+        padding: 12px 16px;
+        border: none;
+        background: none;
+        color: #64748b;
+        font-weight: 600;
+        cursor: pointer;
+        border-bottom: 3px solid transparent;
+        transition: all 0.2s;
+    }
+
+    .tab-btn:hover {
+        color: #0f172a;
+    }
+
+    .tab-btn.active {
+        color: #2563eb;
+        border-bottom-color: #2563eb;
+    }
+
+    .field-label {
+        display: block;
+        font-size: 11px;
+        font-weight: 800;
+        color: #94a3b8;
+        text-transform: uppercase;
+        margin-bottom: 6px;
+    }
+
+    .preset-btn {
+        padding: 6px 12px;
+        font-size: 11px;
+        font-weight: 700;
+        border: none;
+        background: transparent;
+        color: #64748b;
+        cursor: pointer;
+        border-radius: 6px;
+        transition: all 0.2s;
+    }
+
+    .preset-btn:hover {
+        background: #e2e8f0;
+        color: #0f172a;
+    }
+
+    .preset-btn.active {
+        background: #ffffff;
+        color: #2563eb;
+        box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
+    }
+
+    @media print {
+        .no-print {
+            display: none !important;
+        }
+
+        .tab-content {
+            display: block !important;
+            margin-bottom: 40px;
+            page-break-inside: avoid;
+        }
+
+        .planning-card {
+            border: 1px solid #e2e8f0 !important;
+            box-shadow: none !important;
+        }
+    }
+</style>
+{% endblock %}

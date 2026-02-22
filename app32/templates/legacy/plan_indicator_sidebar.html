@@ -1,0 +1,44 @@
+{% set nav_groups = indicator_sidebar_nav or [] %}
+{% if nav_groups and company is defined and company.id is not none %}
+  {% set href_map = {
+    'indicators-tree': url_for('grv.grv_indicators_tree', company_id=company.id),
+    'indicators-list': url_for('grv.grv_indicators_list', company_id=company.id),
+    'indicators-goals': url_for('grv.grv_indicators_goals', company_id=company.id),
+    'indicators-data': url_for('grv.grv_indicators_data', company_id=company.id),
+    'indicators-analysis': url_for('grv.grv_indicators_analysis', company_id=company.id)
+  } %}
+  {% set indicator_active = indicator_active_id | default('', true) %}
+  <aside class="project-sidebar plan-indicators-sidebar surface-card">
+    <span class="project-sidebar-title">Gestão de Indicadores</span>
+    <nav class="project-nav">
+      {% for group in nav_groups %}
+        {% if group.title %}
+          <span class="project-nav-group-title">{{ group.title }}</span>
+        {% endif %}
+        {% for item in group.get('items', []) %}
+          {% set item_id = item.id %}
+          {% set item_url = item.url or href_map.get(item_id) or (item.href if item.href is defined else '#') %}
+          {% set item_shortcut = item.shortcut | default('', true) %}
+          {% set link_title = item.description | default('', true) %}
+          {% if item_shortcut %}
+            {% if link_title %}
+              {% set link_title = link_title ~ ' – ' %}
+            {% endif %}
+            {% set link_title = link_title ~ 'Atalho: ' ~ item_shortcut %}
+          {% endif %}
+          {% set is_active = (indicator_active and indicator_active == item_id) or (item.active is defined and item.active) %}
+          <a
+            class="project-nav-link{% if is_active %} is-active{% endif %}"
+            href="{{ item_url or '#' }}"
+            {% if link_title %}title="{{ link_title }}"{% endif %}
+          >
+            <span>{{ item.name }}</span>
+            {% if item_shortcut %}
+              <span class="project-nav-shortcut">{{ item_shortcut }}</span>
+            {% endif %}
+          </a>
+        {% endfor %}
+      {% endfor %}
+    </nav>
+  </aside>
+{% endif %}

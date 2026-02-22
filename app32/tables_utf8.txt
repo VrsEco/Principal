@@ -1,0 +1,135 @@
+Tables in public schema:
+activity_comments
+activity_work_logs
+agent_actions
+agent_messages
+ai_agents
+alembic_version
+alignment_records
+app_compliance_report_items
+app_compliance_reports
+cadastro_sessions
+companies
+company_data
+company_performance_settings
+company_projects
+company_records
+directional_records
+drivers
+employees
+indicator_data
+indicator_goals
+indicator_groups
+indicators
+interviews
+key_results
+key_results_area
+macro_processes
+market_records
+meeting_agenda_items
+meetings
+misalignment_records
+notes
+occurrences
+okr_area_preliminary_records
+okr_area_records
+okr_global_key_results
+okr_global_records
+okr_preliminary_records
+okrs
+okrs_area
+okrs_global
+participants
+plan_alignment_agenda
+plan_alignment_members
+plan_alignment_overview
+plan_alignment_principles
+plan_alignment_project
+plan_drivers
+plan_finance_business_distribution
+plan_finance_business_periods
+plan_finance_capital_giro
+plan_finance_funding_sources
+plan_finance_investment_categories
+plan_finance_investment_contributions
+plan_finance_investment_items
+plan_finance_investments
+plan_finance_investor_periods
+plan_finance_metrics
+plan_finance_premises
+plan_finance_profit_distribution
+plan_finance_result_rules
+plan_finance_sources
+plan_finance_variable_costs
+plan_implantation_checkpoints
+plan_implantation_dashboard
+plan_implantation_data
+plan_implantation_phases
+plan_participants
+plan_product_monthly_growth
+plan_product_rampup_entries
+plan_products
+plan_sales_rampup_config
+plan_section_status
+plan_sections
+plan_segments
+plan_structure_capacities
+plan_structure_installments
+plan_structures
+plans
+portfolios
+process_activities
+process_activity_entries
+process_areas
+process_instance_collaborators
+process_instances
+process_instances_debug
+process_routines
+process_steps
+processes
+project_activities
+project_activity_collaborators
+project_task_hours_summary
+project_tasks
+projects
+report_instances
+report_models
+report_patterns
+report_templates
+roles
+routine_collaborators
+routine_tasks
+routine_triggers
+routines
+team_members
+teams
+ui_catalog
+ui_elements_v2
+ui_pages_v2
+user_logs
+users
+vision_records
+workshop_discussions
+
+Count of projects: 1
+Count of project_tasks: 2
+
+Projects columns:
+  - id: integer
+  - plan_id: integer
+  - title: text
+  - description: text
+  - status: text
+  - priority: text
+  - owner: text
+  - start_date: timestamp without time zone
+  - deadline: timestamp without time zone
+  - created_at: timestamp without time zone
+  - updated_at: timestamp without time zone
+  - okr_links: jsonb
+  - kpis: jsonb
+  - progress: integer
+  - portfolio_id: integer
+  - notes: text
+  - company_id: integer
+  - budget: character varying

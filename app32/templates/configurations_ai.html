@@ -1,0 +1,399 @@
+{% extends "base.html" %}
+{% block title %}Configurações de IA{% endblock %}
+
+{% block extra_head %}
+{{ super() }}
+<style>
+    .ai-config-page {
+        --bali-blue: #00a3ad;
+        --bali-blue-strong: #008a92;
+        --bali-blue-light: #e6f7f9;
+        max-width: 1400px;
+        margin: 0 auto;
+        padding: 32px 0 64px;
+        display: flex;
+        flex-direction: column;
+        gap: 32px;
+    }
+
+    .ai-header {
+        display: flex;
+        flex-direction: column;
+        gap: 8px;
+    }
+
+    .ai-header h1 {
+        margin: 0;
+    }
+
+    .ai-header p {
+        color: var(--color-muted);
+        max-width: 700px;
+        margin: 0;
+    }
+
+    /* Tabs */
+    .ai-tabs {
+        display: flex;
+        gap: 24px;
+        border-bottom: 1px solid var(--color-border);
+        margin-bottom: 16px;
+    }
+
+    .ai-tab {
+        padding: 12px 0;
+        background: none;
+        border: none;
+        color: var(--color-muted);
+        font-weight: 500;
+        cursor: pointer;
+        position: relative;
+        font-size: 15px;
+    }
+
+    .ai-tab.active {
+        color: var(--bali-blue);
+    }
+
+    .ai-tab.active::after {
+        content: '';
+        position: absolute;
+        bottom: -1px;
+        left: 0;
+        width: 100%;
+        height: 2px;
+        background: var(--bali-blue);
+    }
+
+    /* Cards Grid */
+    .agents-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+        gap: 24px;
+    }
+
+    .agent-card {
+        background: #fff;
+        border: 1px solid var(--color-border);
+        border-radius: 12px;
+        padding: 24px;
+        display: flex;
+        flex-direction: column;
+        gap: 16px;
+        transition: all 0.2s;
+    }
+
+    .agent-card:hover {
+        border-color: var(--bali-blue);
+        transform: translateY(-2px);
+        box-shadow: var(--shadow-md);
+    }
+
+    .agent-header {
+        display: flex;
+        align-items: center;
+        gap: 12px;
+    }
+
+    .agent-icon {
+        width: 48px;
+        height: 48px;
+        border-radius: 10px;
+        background: var(--bali-blue-light);
+        color: var(--bali-blue);
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 24px;
+    }
+
+    .agent-info h3 {
+        margin: 0;
+        font-size: 16px;
+        font-weight: 600;
+    }
+
+    .agent-info span {
+        font-size: 12px;
+        color: var(--color-muted);
+    }
+
+    .agent-status {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        margin-top: auto;
+        padding-top: 16px;
+        border-top: 1px solid var(--color-border);
+    }
+
+    .status-badge {
+        padding: 4px 10px;
+        border-radius: 20px;
+        font-size: 11px;
+        font-weight: 600;
+        text-transform: uppercase;
+    }
+
+    .status-badge.active {
+        background: #dcfce7;
+        color: #166534;
+    }
+
+    .status-badge.inactive {
+        background: #f1f5f9;
+        color: #64748b;
+    }
+
+    /* Logs Table */
+    .logs-container {
+        background: #fff;
+        border: 1px solid var(--color-border);
+        border-radius: 12px;
+        overflow: hidden;
+    }
+
+    .table-responsive {
+        overflow-x: auto;
+    }
+
+    .logs-table {
+        width: 100%;
+        border-collapse: collapse;
+        font-size: 14px;
+    }
+
+    .logs-table th,
+    .logs-table td {
+        padding: 12px 24px;
+        text-align: left;
+        border-bottom: 1px solid var(--color-border);
+    }
+
+    .logs-table th {
+        background: #f8fafc;
+        font-weight: 600;
+        color: #475569;
+    }
+
+    .logs-table tr:last-child td {
+        border-bottom: none;
+    }
+
+    .log-direction {
+        display: inline-block;
+        padding: 2px 8px;
+        border-radius: 4px;
+        font-size: 11px;
+        font-weight: 600;
+    }
+
+    .dir-in {
+        background: #eff6ff;
+        color: #1e40af;
+    }
+
+    /* Inbound */
+    .dir-out {
+        background: #f0fdf4;
+        color: #166534;
+    }
+
+    /* Outbound */
+</style>
+{% endblock %}
+
+{% block body %}
+{% set active_nav = 'dashboard' %}
+{{ super() }}
+{% endblock %}
+
+{% block content %}
+<section class="ai-config-page">
+    <header class="ai-header">
+        <span class="section-eyebrow">Configurações</span>
+        <h1>Inteligência Artificial</h1>
+        <p>Gerencie os agentes inteligentes, monitore logs de conversação e configure integrações de modelos.</p>
+    </header>
+
+    <!-- Tabs Navigation -->
+    <div class="ai-tabs">
+        <button class="ai-tab active" onclick="switchTab('agents')">Agentes</button>
+        <button class="ai-tab" onclick="switchTab('logs')">Logs de Comunicação</button>
+        <button class="ai-tab" onclick="switchTab('settings')">Configurações Globais</button>
+    </div>
+
+    <!-- Tab Content: Agents -->
+    <div id="tab-agents" class="tab-content">
+        <div class="agents-grid">
+            <!-- Simulated Standard Agents -->
+            {% if not agents %}
+            <!-- Fallback if DB is empty -->
+            {% set default_agents = [
+            {'name': 'Agente PEV', 'icon': '📈', 'desc': 'Planejamento Estratégico e Mercado', 'status': 'active'},
+            {'name': 'Agente de Processos', 'icon': '⚙️', 'desc': 'Otimização e Mapeamento', 'status': 'active'},
+            {'name': 'Agente de Rotina', 'icon': '📅', 'desc': 'Gestão Diária e Cobrança', 'status': 'inactive'},
+            {'name': 'Agente de Performance', 'icon': '📊', 'desc': 'Análise de Indicadores', 'status': 'active'},
+            {'name': 'Agente de Cadastro', 'icon': '📝', 'desc': 'Wizard de Entrada de Dados', 'status': 'active'}
+            ] %}
+            {% for agent in default_agents %}
+            <article class="agent-card">
+                <div class="agent-header">
+                    <div class="agent-icon">{{ agent.icon }}</div>
+                    <div class="agent-info">
+                        <h3>{{ agent.name }}</h3>
+                        <span>{{ agent.desc }}</span>
+                    </div>
+                </div>
+                <div class="agent-status">
+                    <span class="status-badge {{ agent.status }}">{{ 'Ativo' if agent.status == 'active' else 'Inativo'
+                        }}</span>
+                    <label class="switch">
+                        <input type="checkbox" {{ 'checked' if agent.status=='active' }}>
+                        <span class="slider round"></span>
+                    </label>
+                </div>
+            </article>
+            {% endfor %}
+            {% else %}
+            {% for agent in agents %}
+            <article class="agent-card">
+                <div class="agent-header">
+                    <div class="agent-icon">🤖</div>
+                    <div class="agent-info">
+                        <h3>{{ agent.name }}</h3>
+                        <span>{{ agent.description }}</span>
+                    </div>
+                </div>
+                <div class="agent-status">
+                    <span class="status-badge {{ 'active' if agent.status == 'active' else 'inactive' }}">
+                        {{ agent.status|upper }}
+                    </span>
+                    <button class="btn btn-sm btn-outline-secondary"
+                        onclick="editAgent('{{ agent.id }}')">Configurar</button>
+                </div>
+            </article>
+            {% endfor %}
+            {% endif %}
+        </div>
+    </div>
+
+    <!-- Tab Content: Logs -->
+    <div id="tab-logs" class="tab-content" style="display: none;">
+        <div class="logs-container">
+            <div class="table-actions"
+                style="padding: 16px; border-bottom: 1px solid var(--color-border); display: flex; justify-content: flex-end;">
+                <button class="btn btn-sm btn-outline-primary" onclick="loadLogs()">Atualizar</button>
+            </div>
+            <div class="table-responsive">
+                <table class="logs-table">
+                    <thead>
+                        <tr>
+                            <th>Data/Hora</th>
+                            <th>Agente</th>
+                            <th>Usuário</th>
+                            <th>Canal</th>
+                            <th>Direção</th>
+                            <th>Mensagem</th>
+                        </tr>
+                    </thead>
+                    <tbody id="logs-tbody">
+                        <tr>
+                            <td colspan="6" style="text-align: center; color: var(--color-muted);">Carregando logs...
+                            </td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+
+    <!-- Tab Content: Global Settings -->
+    <div id="tab-settings" class="tab-content" style="display: none;">
+        <div class="card" style="max-width: 800px;">
+            <div class="card-body">
+                <h3>Chaves de API e Modelos</h3>
+                <form>
+                    <div class="form-group mb-4">
+                        <label>Modelo Padrão (LLM)</label>
+                        <select class="form-control">
+                            <option>GPT-4o (OpenAI)</option>
+                            <option>Claude 3.5 Sonnet (Anthropic)</option>
+                            <option>Gemini 1.5 Pro (Google)</option>
+                        </select>
+                        <small class="form-text text-muted">Modelo utilizado para agentes que não possuem override
+                            específico.</small>
+                    </div>
+
+                    <div class="form-group mb-4">
+                        <label>Log de Auditoria</label>
+                        <div class="form-check">
+                            <input type="checkbox" class="form-check-input" id="logEmails" checked>
+                            <label class="form-check-label" for="logEmails">Salvar cópia de e-mails enviados</label>
+                        </div>
+                        <div class="form-check">
+                            <input type="checkbox" class="form-check-input" id="logChats" checked>
+                            <label class="form-check-label" for="logChats">Salvar histórico de chat
+                                (Messenger/Web)</label>
+                        </div>
+                    </div>
+
+                    <button type="button" class="btn btn-primary">Salvar Alterações</button>
+                </form>
+            </div>
+        </div>
+    </div>
+
+</section>
+{% endblock %}
+
+{% block scripts %}
+{{ super() }}
+<script>
+    function switchTab(tabName) {
+        // Hide all tabs
+        document.querySelectorAll('.tab-content').forEach(el => el.style.display = 'none');
+        document.querySelectorAll('.ai-tab').forEach(el => el.classList.remove('active'));
+
+        // Show selected
+        document.getElementById('tab-' + tabName).style.display = 'block';
+        event.target.classList.add('active');
+
+        if (tabName === 'logs') {
+            loadLogs();
+        }
+    }
+
+    function loadLogs() {
+        fetch('/api/configs/ai/logs?limit=50')
+            .then(res => res.json())
+            .then(data => {
+                const tbody = document.getElementById('logs-tbody');
+                tbody.innerHTML = '';
+
+                if (data.logs.length === 0) {
+                    tbody.innerHTML = '<tr><td colspan="6" style="text-align: center;">Nenhum registro encontrado.</td></tr>';
+                    return;
+                }
+
+                data.logs.forEach(log => {
+                    const row = `
+                        <tr>
+                            <td>${new Date(log.created_at).toLocaleString('pt-BR')}</td>
+                            <td>${log.agent_name || log.agent_type}</td>
+                            <td>${log.user_id || 'Sistema'}</td>
+                            <td>${log.channel}</td>
+                            <td><span class="log-direction ${log.direction === 'inbound' ? 'dir-in' : 'dir-out'}">${log.direction}</span></td>
+                            <td title="${log.content}">${log.content.substring(0, 60)}${log.content.length > 60 ? '...' : ''}</td>
+                        </tr>
+                    `;
+                    tbody.innerHTML += row;
+                });
+            })
+            .catch(err => {
+                console.error(err);
+                document.getElementById('logs-tbody').innerHTML = '<tr><td colspan="6" style="color: red;">Erro ao carregar logs.</td></tr>';
+            });
+    }
+</script>
+{% endblock %}

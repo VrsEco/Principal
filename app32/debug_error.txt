@@ -1,0 +1,20 @@
+﻿Traceback (most recent call last):
+  File "<frozen runpy>", line 198, in _run_module_as_main
+  File "<frozen runpy>", line 88, in _run_code
+  File "C:\GestaoVersus\app32\src\intelligence\work_agents\test_routing_v2.py", line 3, in <module>
+    from src.intelligence.work_agents.graph import work_agent_graph
+  File "C:\GestaoVersus\app32\src\intelligence\work_agents\graph.py", line 8, in <module>
+    from src.intelligence.work_agents.agents import get_agent_node, SYSTEM_PROMPTS
+  File "C:\GestaoVersus\app32\src\intelligence\work_agents\agents.py", line 3, in <module>
+    from src.intelligence.llm import model_with_tools
+  File "C:\GestaoVersus\app32\src\intelligence\llm.py", line 2, in <module>
+    from langchain_openai import ChatOpenAI
+  File "C:\Users\mff20\anaconda3\Lib\site-packages\langchain_openai\__init__.py", line 3, in <module>
+    from langchain_openai.chat_models import AzureChatOpenAI, ChatOpenAI
+  File "C:\Users\mff20\anaconda3\Lib\site-packages\langchain_openai\chat_models\__init__.py", line 3, in <module>
+    from langchain_openai.chat_models.azure import AzureChatOpenAI
+  File "C:\Users\mff20\anaconda3\Lib\site-packages\langchain_openai\chat_models\azure.py", line 20, in <module>
+    from langchain_openai.chat_models.base import BaseChatOpenAI, _get_default_model_profile
+  File "C:\Users\mff20\anaconda3\Lib\site-packages\langchain_openai\chat_models\base.py", line 43, in <module>
+    from langchain_core.exceptions import ContextOverflowError
+ImportError: cannot import name 'ContextOverflowError' from 'langchain_core.exceptions' (C:\Users\mff20\anaconda3\Lib\site-packages\langchain_core\exceptions.py)

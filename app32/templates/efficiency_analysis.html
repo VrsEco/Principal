@@ -1,0 +1,834 @@
+{% extends "layouts/workspace.html" %}
+
+{% block title %}Análise de Eficiência - Versus{% endblock %}
+
+{% block head %}
+<style>
+    .efficiency-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: flex-start;
+        gap: 16px;
+        margin-bottom: 24px;
+    }
+
+    .efficiency-description {
+        color: var(--text-secondary);
+        font-size: 0.9rem;
+        margin-top: 6px;
+        max-width: 600px;
+        line-height: 1.5;
+    }
+
+    /* Stats Cards */
+    .stats-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+        gap: 16px;
+        margin-bottom: 24px;
+    }
+
+    .stat-card {
+        padding: 16px;
+        border-radius: 16px;
+        background: var(--surface-primary);
+        border: 1px solid var(--border);
+        box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
+    }
+
+    .stat-label {
+        font-size: 0.75rem;
+        font-weight: 700;
+        text-transform: uppercase;
+        letter-spacing: 0.05em;
+        color: var(--text-tertiary);
+        margin-bottom: 8px;
+    }
+
+    .stat-value {
+        font-size: 2rem;
+        font-weight: 700;
+        color: var(--text-primary);
+        line-height: 1.2;
+    }
+
+    .stat-detail {
+        font-size: 0.8rem;
+        color: var(--text-secondary);
+        margin-top: 8px;
+        display: flex;
+        align-items: center;
+        gap: 8px;
+    }
+
+    /* Score Grid */
+    .score-section {
+        margin-bottom: 32px;
+    }
+
+    .score-section-title {
+        font-size: 0.85rem;
+        font-weight: 700;
+        text-transform: uppercase;
+        letter-spacing: 0.05em;
+        color: var(--text-secondary);
+        margin-bottom: 12px;
+    }
+
+    .score-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+        gap: 16px;
+    }
+
+    .score-card {
+        border-radius: 16px;
+        border: 1px solid var(--border);
+        padding: 16px;
+        background: var(--surface-secondary);
+        display: flex;
+        flex-direction: column;
+        gap: 12px;
+    }
+
+    .score-card.total {
+        background: linear-gradient(135deg, rgba(37, 99, 235, 0.05), rgba(37, 99, 235, 0.1));
+        border-color: rgba(37, 99, 235, 0.2);
+    }
+
+    .score-card-title {
+        font-size: 0.9rem;
+        font-weight: 700;
+        color: var(--text-primary);
+    }
+
+    .score-card-body {
+        display: grid;
+        gap: 8px;
+    }
+
+    .score-card-row {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        font-size: 0.85rem;
+        color: var(--text-secondary);
+        border-bottom: 1px solid var(--border-light);
+        padding-bottom: 4px;
+        margin-bottom: 4px;
+    }
+
+    .score-card-row:last-child {
+        border-bottom: none;
+        padding-bottom: 0;
+        margin-bottom: 0;
+    }
+
+    .score-card-row strong {
+        font-size: 1.1rem;
+        color: var(--text-primary);
+    }
+
+    .score-chip {
+        display: inline-flex;
+        align-items: center;
+        gap: 4px;
+        font-size: 0.75rem;
+        font-weight: 600;
+        padding: 2px 8px;
+        border-radius: 12px;
+        background: var(--border);
+        color: var(--text-secondary);
+    }
+
+    .score-chip.positive {
+        background: rgba(16, 185, 129, 0.1);
+        color: #059669;
+    }
+
+    .score-chip.negative {
+        background: rgba(239, 68, 68, 0.1);
+        color: #b91c1c;
+    }
+
+    .score-chip.neutral {
+        background: rgba(59, 130, 246, 0.1);
+        color: #2563eb;
+    }
+
+    .score-card-detail {
+        margin-top: 4px;
+        font-size: 0.75rem;
+        color: var(--text-tertiary);
+        display: flex;
+        gap: 8px;
+        flex-wrap: wrap;
+    }
+
+    /* Filters (Moved to Sidebar Right in base layout if possible, but keeping inline for logic consistency as per request) */
+    /* Assuming filters are inline for this specific page based on "mesmas funções" */
+
+    /* Collaborators Grid */
+    .collaborators-grid {
+        display: grid;
+        gap: 16px;
+        grid-template-columns: repeat(auto-fit, minmax(350px, 1fr));
+        margin-top: 24px;
+    }
+
+    .collaborator-card {
+        border-radius: 16px;
+        border: 1px solid var(--border);
+        background: var(--surface-primary);
+        padding: 20px;
+        display: flex;
+        flex-direction: column;
+        gap: 16px;
+        transition: transform 0.2s, box-shadow 0.2s;
+    }
+
+    .collaborator-card:hover {
+        transform: translateY(-2px);
+        border-color: var(--primary);
+        box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1);
+    }
+
+    .collaborator-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: flex-start;
+        padding-bottom: 12px;
+        border-bottom: 1px solid var(--border);
+    }
+
+    .collaborator-info h3 {
+        font-size: 1.1rem;
+        font-weight: 700;
+        color: var(--text-primary);
+        margin: 0;
+        display: flex;
+        align-items: center;
+        gap: 8px;
+    }
+
+    .collaborator-info p {
+        font-size: 0.85rem;
+        color: var(--text-secondary);
+        margin: 4px 0 0;
+    }
+
+    .total-score-badge {
+        text-align: right;
+    }
+
+    .total-score-badge span {
+        font-size: 0.7rem;
+        text-transform: uppercase;
+        color: var(--text-tertiary);
+        font-weight: 700;
+        display: block;
+    }
+
+    .total-score-badge strong {
+        font-size: 1.5rem;
+        color: var(--primary);
+        font-weight: 800;
+    }
+
+    /* Modal Styles */
+    .detail-modal {
+        position: fixed;
+        inset: 0;
+        background: rgba(15, 23, 42, 0.8);
+        backdrop-filter: blur(4px);
+        display: none;
+        align-items: center;
+        justify-content: center;
+        padding: 24px;
+        z-index: 2000;
+    }
+
+    .detail-modal.is-open {
+        display: flex;
+    }
+
+    .detail-modal-content {
+        background: var(--surface-primary);
+        width: 100%;
+        max-width: 1000px;
+        max-height: 90vh;
+        border-radius: 20px;
+        display: flex;
+        flex-direction: column;
+        overflow: hidden;
+        box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.25);
+    }
+
+    .detail-modal-header {
+        padding: 20px 24px;
+        border-bottom: 1px solid var(--border);
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+    }
+
+    .detail-modal-header h3 {
+        font-size: 1.25rem;
+        font-weight: 700;
+        margin: 0;
+    }
+
+    .detail-modal-body {
+        padding: 24px;
+        overflow-y: auto;
+        display: flex;
+        flex-direction: column;
+        gap: 24px;
+    }
+
+    .detail-section-title {
+        font-size: 0.95rem;
+        font-weight: 700;
+        color: var(--text-secondary);
+        margin-bottom: 12px;
+        border-left: 4px solid var(--primary);
+        padding-left: 12px;
+    }
+
+    .detail-table-container {
+        border: 1px solid var(--border);
+        border-radius: 12px;
+        overflow: hidden;
+    }
+
+    .detail-table {
+        width: 100%;
+        border-collapse: collapse;
+        font-size: 0.85rem;
+    }
+
+    .detail-table th {
+        background: var(--surface-secondary);
+        padding: 12px;
+        text-align: left;
+        font-weight: 600;
+        color: var(--text-secondary);
+        border-bottom: 1px solid var(--border);
+    }
+
+    .detail-table td {
+        padding: 12px;
+        border-bottom: 1px solid var(--border-light);
+        color: var(--text-primary);
+    }
+
+    .detail-table tr:last-child td {
+        border-bottom: none;
+    }
+
+    .empty-state {
+        text-align: center;
+        padding: 40px;
+        color: var(--text-tertiary);
+    }
+
+    /* Side Filters Styling */
+    .filter-group {
+        margin-bottom: 1.25rem;
+    }
+
+    .filter-label {
+        display: block;
+        font-size: 0.8rem;
+        font-weight: 600;
+        color: var(--text-secondary);
+        margin-bottom: 0.5rem;
+    }
+
+    .filter-input,
+    .filter-select {
+        width: 100%;
+        padding: 0.625rem 0.875rem;
+        border-radius: 8px;
+        border: 1px solid var(--border);
+        background: var(--surface-primary);
+        color: var(--text-primary);
+        font-size: 0.875rem;
+        transition: all 0.2s ease;
+    }
+
+    .filter-input:focus,
+    .filter-select:focus {
+        border-color: var(--primary);
+        outline: none;
+        box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.1);
+    }
+
+    .filter-input::placeholder {
+        color: var(--text-tertiary);
+    }
+</style>
+{% endblock %}
+
+{% block breadcrumb %}
+<a href="/dashboard">Dashboard</a>
+<span class="sep">/</span>
+<span class="current">Gestão da Eficiência</span>
+{% endblock %}
+
+{% block navbar_actions %}
+<div style="display: flex; align-items: center; gap: 0.75rem;">
+    <button class="btn btn-secondary btn-sm" onclick="toggleSidebar('right')">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <polygon points="22 3 2 3 10 12.46 10 19 14 21 14 12.46 22 3"></polygon>
+        </svg>
+        Filtros
+    </button>
+
+</div>
+{% endblock %}
+
+{% block sidebar_right %}
+<div style="padding: 1.5rem;">
+    <div class="sidebar-header-ws">
+        <h3 class="text-h3">Filtros</h3>
+        <p class="text-body-secondary" style="font-size: 0.8rem;">Refine a visualização dos dados.</p>
+    </div>
+
+    <div class="filter-group">
+        <label class="filter-label">Buscar Colaborador</label>
+        <input type="text" id="searchInput" class="filter-input" placeholder="Nome do colaborador...">
+    </div>
+
+    <div class="filter-group">
+        <label class="filter-label">Filtrar por Atividade</label>
+        <select id="filterActivity" class="filter-select">
+            <option value="">Todos</option>
+            <option value="with_activities">Com atividades</option>
+            <option value="with_occurrences">Com ocorrências</option>
+        </select>
+    </div>
+
+    <div style="margin-top: 2rem;">
+        <button class="btn btn-secondary w-100" onclick="clearAllFilters()">
+            Limpar Filtros
+        </button>
+    </div>
+</div>
+{% endblock %}
+
+{% block workspace_content %}
+<div class="fade-in">
+    <div class="efficiency-header">
+        <div>
+            <h1 class="text-h1">Gestão da Eficiência</h1>
+            <p class="efficiency-description">
+                Visualização consolidada da eficiência dos colaboradores por atividades de projetos,
+                instâncias de processos e ocorrências registradas.
+            </p>
+        </div>
+        <div>
+            <button class="btn btn-primary btn-sm" id="btnDetailModal">
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path>
+                    <polyline points="14 2 14 8 20 8"></polyline>
+                    <line x1="16" y1="13" x2="8" y2="13"></line>
+                    <line x1="16" y1="17" x2="8" y2="17"></line>
+                    <polyline points="10 9 9 9 8 9"></polyline>
+                </svg>
+                Detalhar / Exportar
+            </button>
+        </div>
+    </div>
+
+    <!-- Global Stats -->
+    <div class="stats-grid">
+        <div class="stat-card">
+            <div class="stat-label">Em Andamento</div>
+            <div class="stat-value" id="statInProgress">0</div>
+            <div class="stat-detail">
+                <span style="color: var(--success);">●</span> <span id="statInProgressOnTime">0</span> no prazo
+            </div>
+            <div class="stat-detail" style="margin-top: 4px;">
+                <span style="color: var(--danger);">●</span> <span id="statInProgressLate">0</span> atrasadas
+            </div>
+        </div>
+        <div class="stat-card">
+            <div class="stat-label">Concluídas</div>
+            <div class="stat-value" id="statCompleted">0</div>
+            <div class="stat-detail">
+                <span style="color: var(--success);">●</span> <span id="statCompletedOnTime">0</span> no prazo
+            </div>
+            <div class="stat-detail" style="margin-top: 4px;">
+                <span style="color: var(--danger);">●</span> <span id="statCompletedLate">0</span> atrasadas
+            </div>
+        </div>
+        <div class="stat-card">
+            <div class="stat-label">Pontuação Total</div>
+            <div class="stat-value" id="scoreOverallTotal">0</div>
+            <div class="stat-detail">
+                Global da Empresa
+            </div>
+        </div>
+    </div>
+
+    <!-- Consolidated Scores -->
+    <div class="score-section">
+        <div class="score-section-title">Totalizados Consolidados</div>
+        <div class="score-grid">
+            <div class="score-card">
+                <div class="score-card-title">Ocorrências</div>
+                <div class="score-card-body">
+                    <div class="score-card-row">
+                        <span>Positivo</span>
+                        <strong id="scoreOccPositive" style="color: var(--success);">0</strong>
+                    </div>
+                    <div class="score-card-row">
+                        <span>Negativo</span>
+                        <strong id="scoreOccNegative" style="color: var(--danger);">0</strong>
+                    </div>
+                    <div class="score-card-row">
+                        <span>Total (Pontos)</span>
+                        <strong id="scoreOccTotal">0</strong>
+                    </div>
+                </div>
+                <div class="score-card-detail">
+                    <span class="score-chip positive">Positivas: <span id="scoreOccPositiveCount">0</span></span>
+                    <span class="score-chip negative">Negativas: <span id="scoreOccNegativeCount">0</span></span>
+                </div>
+            </div>
+
+            <div class="score-card">
+                <div class="score-card-title">Processos</div>
+                <div class="score-card-body">
+                    <div class="score-card-row">
+                        <span>Positivo</span>
+                        <strong id="scoreProcessPositive" style="color: var(--success);">0</strong>
+                    </div>
+                    <div class="score-card-row">
+                        <span>Negativo</span>
+                        <strong id="scoreProcessNegative" style="color: var(--danger);">0</strong>
+                    </div>
+                    <div class="score-card-row">
+                        <span>Total</span>
+                        <strong id="scoreProcessTotal">0</strong>
+                    </div>
+                </div>
+                <div class="score-card-detail">
+                    <span class="score-chip neutral">Registros: <span id="scoreProcessCount">0</span></span>
+                </div>
+            </div>
+
+            <div class="score-card">
+                <div class="score-card-title">Projetos</div>
+                <div class="score-card-body">
+                    <div class="score-card-row">
+                        <span>Positivo</span>
+                        <strong id="scoreProjectPositive" style="color: var(--success);">0</strong>
+                    </div>
+                    <div class="score-card-row">
+                        <span>Negativo</span>
+                        <strong id="scoreProjectNegative" style="color: var(--danger);">0</strong>
+                    </div>
+                    <div class="score-card-row">
+                        <span>Total</span>
+                        <strong id="scoreProjectTotal">0</strong>
+                    </div>
+                </div>
+                <div class="score-card-detail">
+                    <span class="score-chip neutral">Registros: <span id="scoreProjectCount">0</span></span>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="score-section-title">Desempenho por Colaborador</div>
+    <div id="collaboratorsGrid" class="collaborators-grid">
+        <!-- Cards inserted via JS -->
+    </div>
+</div>
+
+<!-- Modal Detalhes -->
+<div class="detail-modal" id="detailModal">
+    <div class="detail-modal-content">
+        <div class="detail-modal-header">
+            <h3>Detalhamento das Pontuações</h3>
+            <button class="btn-icon" id="detailModalClose">
+                <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <line x1="18" y1="6" x2="6" y2="18"></line>
+                    <line x1="6" y1="6" x2="18" y2="18"></line>
+                </svg>
+            </button>
+        </div>
+        <div class="detail-modal-body">
+            <div class="detail-section">
+                <div class="detail-section-title">Entregas de Projetos</div>
+                <div id="projectDetailWrapper" class="detail-table-container"></div>
+            </div>
+            <div class="detail-section">
+                <div class="detail-section-title">Entregas de Processos</div>
+                <div id="processDetailWrapper" class="detail-table-container"></div>
+            </div>
+            <div class="detail-section">
+                <div class="detail-section-title">Ocorrências</div>
+                <div id="occurrenceDetailWrapper" class="detail-table-container"></div>
+            </div>
+        </div>
+        <div class="modal-footer-ws" style="display: flex; justify-content: flex-end; padding: 1.5rem;">
+            <button class="btn btn-secondary" onclick="window.print()">
+                🖨️ Imprimir
+            </button>
+        </div>
+    </div>
+</div>
+
+<script>
+    const companyId = {{ company_id | default (1) }};
+    let allData = [];
+    let filteredData = [];
+
+    // Formatters
+    function formatScore(value) {
+        return Number(value || 0).toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+    }
+    function formatDate(value) {
+        if (!value) return '—';
+        const d = new Date(value);
+        return isNaN(d) ? value : d.toLocaleDateString('pt-BR');
+    }
+    function formatDateTime(value) {
+        if (!value) return '—';
+        const d = new Date(value);
+        return isNaN(d) ? value : `${d.toLocaleDateString('pt-BR')} ${d.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })}`;
+    }
+
+    // Logic
+    async function loadEfficiencyData() {
+        try {
+            const res = await fetch(`/api/companies/${companyId}/efficiency/collaborators`);
+            if (!res.ok) throw new Error(await res.text());
+            allData = await res.json();
+            filteredData = allData;
+            renderCollaborators();
+            updateStats();
+        } catch (e) {
+            console.error(e);
+            document.getElementById('collaboratorsGrid').innerHTML = `<div class="empty-state">Erro ao carregar dados: ${e.message}</div>`;
+        }
+    }
+
+    function renderCollaborators() {
+        const grid = document.getElementById('collaboratorsGrid');
+        if (!filteredData.length) {
+            grid.innerHTML = `<div class="empty-state">Nenhum colaborador encontrado com os filtros atuais.</div>`;
+            return;
+        }
+
+        grid.innerHTML = filteredData.map(c => {
+            const totalScore = (c.delivery_scores?.overall?.total || 0) + (c.positive_occurrences?.score || 0) + (c.negative_occurrences?.score || 0);
+
+            return `
+            <div class="collaborator-card">
+                <div class="collaborator-header">
+                    <div class="collaborator-info">
+                        <h3><span class="user-avatar-mini" style="width:24px; height:24px; font-size: 0.6rem;">${c.employee_name.substring(0, 2).toUpperCase()}</span> ${c.employee_name}</h3>
+                        <p>${c.in_progress.total + c.completed.total} atividades · ${c.positive_occurrences.count + c.negative_occurrences.count} ocorrências</p>
+                    </div>
+                    <div class="total-score-badge">
+                        <span>Total Geral</span>
+                        <strong>${formatScore(totalScore)}</strong>
+                    </div>
+                </div>
+                
+                <div class="score-card-body" style="grid-template-columns: 1fr; gap: 4px;">
+                    <div class="score-card-row">
+                        <span>Projetos</span>
+                        <strong>${formatScore(c.delivery_scores?.project?.total)}</strong>
+                    </div>
+                    <div class="score-card-row">
+                        <span>Processos</span>
+                        <strong>${formatScore(c.delivery_scores?.process?.total)}</strong>
+                    </div>
+                    <div class="score-card-row">
+                        <span>Ocorrências</span>
+                        <strong>${formatScore((c.positive_occurrences?.score || 0) + (c.negative_occurrences?.score || 0))}</strong>
+                    </div>
+                </div>
+                
+                <div style="display: flex; gap: 8px; margin-top: auto;">
+                    <div class="stat-detail" title="Concluídas no Prazo">
+                        <span style="color: var(--success);">●</span> ${c.completed.on_time}
+                    </div>
+                    <div class="stat-detail" title="Atrasadas">
+                        <span style="color: var(--danger);">●</span> ${c.completed.late}
+                    </div>
+                </div>
+            </div>
+            `;
+        }).join('');
+    }
+
+    function updateStats() {
+        // Aggregate logic similar to app31 template
+        const totals = filteredData.reduce((acc, d) => {
+            acc.inProgress += d.in_progress.total;
+            acc.inProgressOnTime += d.in_progress.on_time;
+            acc.inProgressLate += d.in_progress.late;
+
+            acc.completed += d.completed.total;
+            acc.completedOnTime += d.completed.on_time;
+            acc.completedLate += d.completed.late;
+
+            acc.occPos += d.positive_occurrences.score || 0;
+            acc.occNeg += d.negative_occurrences.score || 0;
+            acc.occPosCount += d.positive_occurrences.count || 0;
+            acc.occNegCount += d.negative_occurrences.count || 0;
+
+            acc.procPos += d.delivery_scores?.process?.positive || 0;
+            acc.procNeg += d.delivery_scores?.process?.negative || 0;
+            acc.procTotal += d.delivery_scores?.process?.total || 0;
+            acc.procCount += (d.delivery_scores?.process?.count || 0);
+
+            acc.projPos += d.delivery_scores?.project?.positive || 0;
+            acc.projNeg += d.delivery_scores?.project?.negative || 0;
+            acc.projTotal += d.delivery_scores?.project?.total || 0;
+            acc.projCount += (d.delivery_scores?.project?.count || 0);
+
+            return acc;
+        }, {
+            inProgress: 0, inProgressOnTime: 0, inProgressLate: 0,
+            completed: 0, completedOnTime: 0, completedLate: 0,
+            occPos: 0, occNeg: 0, occPosCount: 0, occNegCount: 0,
+            procPos: 0, procNeg: 0, procTotal: 0, procCount: 0,
+            projPos: 0, projNeg: 0, projTotal: 0, projCount: 0
+        });
+
+        document.getElementById('statInProgress').textContent = totals.inProgress;
+        document.getElementById('statInProgressOnTime').textContent = totals.inProgressOnTime;
+        document.getElementById('statInProgressLate').textContent = totals.inProgressLate;
+
+        document.getElementById('statCompleted').textContent = totals.completed;
+        document.getElementById('statCompletedOnTime').textContent = totals.completedOnTime;
+        document.getElementById('statCompletedLate').textContent = totals.completedLate;
+
+        const totalOverall = totals.occPos + totals.occNeg + totals.procTotal + totals.projTotal;
+        document.getElementById('scoreOverallTotal').textContent = formatScore(totalOverall);
+
+        document.getElementById('scoreOccPositive').textContent = formatScore(totals.occPos);
+        document.getElementById('scoreOccNegative').textContent = formatScore(totals.occNeg);
+        document.getElementById('scoreOccTotal').textContent = formatScore(totals.occPos + totals.occNeg);
+        document.getElementById('scoreOccPositiveCount').textContent = totals.occPosCount;
+        document.getElementById('scoreOccNegativeCount').textContent = totals.occNegCount;
+
+        document.getElementById('scoreProcessPositive').textContent = formatScore(totals.procPos);
+        document.getElementById('scoreProcessNegative').textContent = formatScore(totals.procNeg);
+        document.getElementById('scoreProcessTotal').textContent = formatScore(totals.procTotal);
+        // document.getElementById('scoreProcessCount').textContent = totals.procCount; // Need to implement counting records
+
+        document.getElementById('scoreProjectPositive').textContent = formatScore(totals.projPos);
+        document.getElementById('scoreProjectNegative').textContent = formatScore(totals.projNeg);
+        document.getElementById('scoreProjectTotal').textContent = formatScore(totals.projTotal);
+    }
+
+    function applyFilters() {
+        const search = document.getElementById('searchInput').value.toLowerCase();
+        const type = document.getElementById('filterActivity').value;
+
+        filteredData = allData.filter(d => {
+            if (search && !d.employee_name.toLowerCase().includes(search)) return false;
+
+            if (type === 'with_activities') {
+                if ((d.in_progress.total + d.completed.total) === 0) return false;
+            }
+            if (type === 'with_occurrences') {
+                if ((d.positive_occurrences.count + d.negative_occurrences.count) === 0) return false;
+            }
+            return true;
+        });
+        renderCollaborators();
+        updateStats();
+    }
+
+    function clearAllFilters() {
+        document.getElementById('searchInput').value = '';
+        document.getElementById('filterActivity').value = '';
+        applyFilters();
+    }
+
+    // Modal logic
+    const modal = document.getElementById('detailModal');
+    document.getElementById('btnDetailModal').onclick = () => {
+        populateDetailModal();
+        modal.classList.add('is-open');
+    };
+    document.getElementById('detailModalClose').onclick = () => modal.classList.remove('is-open'); // Close on X
+    modal.onclick = (e) => { if (e.target === modal) modal.classList.remove('is-open'); }; // Close on backdrop
+
+    function populateDetailModal() {
+        // Collect all records from filtered data
+        const projects = [];
+        const processes = [];
+        const occurrences = [];
+
+        filteredData.forEach(c => {
+            if (c.delivery_records?.project) projects.push(...c.delivery_records.project.map(r => ({ ...r, employee_name: c.employee_name })));
+            if (c.delivery_records?.process) processes.push(...c.delivery_records.process.map(r => ({ ...r, employee_name: c.employee_name })));
+
+            if (c.occurrence_records?.positive) occurrences.push(...c.occurrence_records.positive.map(r => ({ ...r, employee_name: c.employee_name, sentiment: 'positive' })));
+            if (c.occurrence_records?.negative) occurrences.push(...c.occurrence_records.negative.map(r => ({ ...r, employee_name: c.employee_name, sentiment: 'negative' })));
+        });
+
+        renderTable('projectDetailWrapper', projects, ['Colaborador', 'Projeto', 'Atividade', 'Entrega', 'Pontos'], r => `
+            <td>${r.employee_name}</td>
+            <td>${r.project_name || '-'}</td>
+            <td>${r.activity_title}</td>
+            <td>${formatDate(r.completion_date)}</td>
+            <td>${formatScore(r.points)}</td>
+        `);
+
+        renderTable('processDetailWrapper', processes, ['Colaborador', 'Processo', 'Instância', 'Entrega', 'Pontos'], r => `
+            <td>${r.employee_name}</td>
+            <td>${r.process_name || '-'}</td>
+            <td>${r.instance_title}</td>
+            <td>${formatDate(r.completion_date)}</td>
+            <td>${formatScore(r.points)}</td>
+        `);
+
+        renderTable('occurrenceDetailWrapper', occurrences, ['Colaborador', 'Tipo', 'Título', 'Data', 'Pontos'], r => `
+            <td>${r.employee_name}</td>
+            <td><span class="score-chip ${r.sentiment}">${r.type}</span></td>
+            <td>${r.title}</td>
+            <td>${formatDate(r.created_at)}</td>
+            <td>${formatScore(r.score)}</td>
+        `);
+    }
+
+    function renderTable(containerId, data, headers, rowFn) {
+        const container = document.getElementById(containerId);
+        if (!data.length) {
+            container.innerHTML = '<div class="empty-state">Nenhum registro encontrado.</div>';
+            return;
+        }
+
+        // Sort by date equivalent
+        data.sort((a, b) => new Date(b.created_at || b.completion_date) - new Date(a.created_at || a.completion_date));
+
+        const headerHTML = headers.map(h => `<th>${h}</th>`).join('');
+        const rowsHTML = data.map(r => `<tr>${rowFn(r)}</tr>`).join('');
+
+        container.innerHTML = `
+            <table class="detail-table">
+                <thead><tr>${headerHTML}</tr></thead>
+                <tbody>${rowsHTML}</tbody>
+            </table>
+        `;
+    }
+
+    // Init
+    document.addEventListener('DOMContentLoaded', () => {
+        loadEfficiencyData();
+        document.getElementById('searchInput').oninput = applyFilters;
+        document.getElementById('filterActivity').onchange = applyFilters;
+    });
+</script>
+{% endblock %}

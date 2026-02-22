@@ -1,0 +1,841 @@
+{% extends "layouts/workspace.html" %}
+
+{% block title %}Portfólio de Projetos | Versus{% endblock %}
+
+{% block navbar_actions %}
+<div style="display: flex; align-items: center; gap: 0.75rem;">
+    <button class="btn btn-secondary btn-sm" onclick="toggleSidebar('right')">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <circle cx="11" cy="11" r="8"></circle>
+            <line x1="21" y1="21" x2="16.65" y2="16.65"></line>
+        </svg>
+        Filtros
+    </button>
+    <div class="user-avatar-mini" title="Meu Perfil">MV</div>
+</div>
+{% endblock %}
+
+{% block workspace_content %}
+<div class="workspace-header"
+    style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1.5rem;">
+    <div class="header-content">
+        <h1 class="text-h1">📁 Portfólio de Projetos</h1>
+        <p class="text-secondary">Consolidação dos portfólios estratégicos com visão rápida de responsáveis, códigos e
+            quantidade de projetos associados.</p>
+    </div>
+    <div class="header-actions">
+        <button id="newPortfolioButton" class="btn btn-primary" type="button">
+            ➕ Novo Portfólio
+        </button>
+    </div>
+</div>
+
+<!-- Summary Section (Standardized with My Work) -->
+<div class="dashboard-summary-container" id="dashboard-summary">
+    <div class="dashboard-summary-header" onclick="toggleCollapsible('dashboard-summary')">
+        <svg class="chevron" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+            stroke-width="3">
+            <polyline points="6 9 12 15 18 9"></polyline>
+        </svg>
+        <h3>📊 Resumo Estatístico</h3>
+    </div>
+    <div class="dashboard-summary-content">
+        <div class="work-header" style="margin: 0; border-radius: 0; box-shadow: none; border: none;">
+            <div class="work-header__cards" id="portfolioSummary">
+                <div class="loading-shimmer"
+                    style="height: 100px; border-radius: 12px; background: rgba(255,255,255,0.1);">
+                </div>
+                <div class="loading-shimmer"
+                    style="height: 100px; border-radius: 12px; background: rgba(255,255,255,0.1);">
+                </div>
+                <div class="loading-shimmer"
+                    style="height: 100px; border-radius: 12px; background: rgba(255,255,255,0.1);">
+                </div>
+                <div class="loading-shimmer"
+                    style="height: 100px; border-radius: 12px; background: rgba(255,255,255,0.1);">
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Portfolios Table (Standardized with My Work) -->
+<section class="activities-panel">
+    <div class="table-responsive">
+        <table class="data-table">
+            <thead>
+                <tr>
+                    <th>Portfólio</th>
+                    <th>Código</th>
+                    <th>Responsável</th>
+                    <th>Projetos</th>
+                    <th>Notas</th>
+                    <th style="width: 120px;">Ações</th>
+                </tr>
+            </thead>
+            <tbody id="portfolioTableBody">
+                <tr>
+                    <td colspan="6" class="text-center text-secondary p-5">Carregando portfólios...</td>
+                </tr>
+            </tbody>
+        </table>
+    </div>
+</section>
+
+<!-- Modal for Create/Edit Portfolio -->
+<div id="portfolioModal" class="modal-backdrop" role="dialog" aria-modal="true" aria-hidden="true">
+    <div class="modal-content">
+        <header class="modal-header">
+            <h2 id="modalTitle">Novo Portfólio</h2>
+            <button type="button" class="modal-close" id="closeModalButton" aria-label="Fechar">×</button>
+        </header>
+        <form id="portfolioForm" class="modal-body">
+            <input type="hidden" id="portfolioId">
+
+            <div class="form-group">
+                <label for="portfolioCode" class="form-label">Código *</label>
+                <input id="portfolioCode" type="text" class="form-control" placeholder="Ex: PORT-001" required>
+            </div>
+
+            <div class="form-group">
+                <label for="portfolioName" class="form-label">Nome do Portfólio *</label>
+                <input id="portfolioName" type="text" class="form-control" placeholder="Ex: Transformação Digital"
+                    required>
+            </div>
+
+            <div class="form-group">
+                <label for="portfolioResponsible" class="form-label">Responsável</label>
+                <select id="portfolioResponsible" class="form-control">
+                    <option value="">Selecione um responsável</option>
+                </select>
+            </div>
+
+            <div class="form-group">
+                <label for="portfolioNotes" class="form-label">Observações</label>
+                <textarea id="portfolioNotes" class="form-control" rows="4"
+                    placeholder="Detalhes relevantes sobre o portfólio"></textarea>
+            </div>
+
+            <footer class="modal-footer">
+                <button type="button" class="btn btn-secondary" id="cancelModalButton">Cancelar</button>
+                <button type="submit" class="btn btn-primary">Salvar Portfólio</button>
+            </footer>
+        </form>
+    </div>
+</div>
+<style>
+    .work-header {
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        border-radius: 20px;
+        padding: 1.25rem 1.5rem !important;
+        margin-bottom: 1.5rem !important;
+        box-shadow: var(--shadow-xl);
+        position: relative;
+    }
+
+    /* Dashboard Summary pattern from My Work */
+    .dashboard-summary-container {
+        margin-bottom: 2rem;
+        background: var(--surface);
+        border-radius: 20px;
+        border: 1px solid var(--border);
+        overflow: hidden;
+        box-shadow: var(--shadow-sm);
+    }
+
+    .dashboard-summary-header {
+        display: flex;
+        align-items: center;
+        gap: 0.75rem;
+        cursor: pointer;
+        padding: 0.85rem 1.5rem;
+        background: var(--surface);
+        user-select: none;
+        transition: var(--transition);
+        border-bottom: 1px solid var(--border);
+    }
+
+    .dashboard-summary-header:hover {
+        background: var(--surface-secondary);
+    }
+
+    .dashboard-summary-header h3 {
+        font-size: 0.75rem;
+        font-weight: 700;
+        color: var(--text-secondary);
+        text-transform: uppercase;
+        margin: 0;
+        letter-spacing: 0.05em;
+    }
+
+    .dashboard-summary-header .chevron {
+        transition: transform 0.2s;
+        color: var(--text-tertiary);
+    }
+
+    .dashboard-summary-container.collapsed .dashboard-summary-header .chevron {
+        transform: rotate(-90deg);
+    }
+
+    .dashboard-summary-container.collapsed .dashboard-summary-content {
+        display: none;
+    }
+
+    .work-header::before {
+        content: '';
+        position: absolute;
+        top: 0;
+        right: 0;
+        width: 200px;
+        height: 200px;
+        background: radial-gradient(circle, rgba(255, 255, 255, 0.1) 0%, transparent 70%);
+        pointer-events: none;
+    }
+
+    .work-header__cards {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+        gap: 1rem;
+        position: relative;
+        z-index: 1;
+        width: 100%;
+    }
+
+    .header-card {
+        background: rgba(255, 255, 255, 0.95);
+        backdrop-filter: blur(10px);
+        border-radius: 12px;
+        padding: 1rem 1.25rem;
+        display: flex;
+        flex-direction: row;
+        align-items: center;
+        gap: 1rem;
+        transition: var(--transition);
+        border: 1px solid rgba(255, 255, 255, 0.35);
+        box-shadow: 0 8px 32px rgba(0, 0, 0, 0.08);
+        min-height: 90px;
+    }
+
+    .header-card .card-icon {
+        width: 44px;
+        height: 44px;
+        border-radius: 10px;
+        background: var(--primary-light);
+        color: var(--primary);
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        flex-shrink: 0;
+        font-size: 1.25rem;
+    }
+
+    .header-card__info {
+        display: flex;
+        flex-direction: column;
+        gap: 2px;
+    }
+
+    .header-card:hover {
+        transform: translateY(-2px);
+        box-shadow: var(--shadow-lg);
+    }
+
+    .header-card .label {
+        font-size: 0.7rem;
+        text-transform: uppercase;
+        letter-spacing: 0.1em;
+        color: var(--primary);
+        font-weight: 700;
+    }
+
+    .header-card .value {
+        font-size: 1.75rem;
+        font-weight: 800;
+        color: var(--text-primary);
+    }
+
+    .header-card small {
+        color: var(--text-tertiary);
+        font-size: 0.7rem;
+        line-height: 1.2;
+    }
+
+    .activities-panel {
+        background: var(--surface);
+        border-radius: 24px;
+        padding: 1.5rem;
+        box-shadow: 0 20px 45px rgba(15, 23, 42, 0.08);
+        border: 1px solid var(--border);
+        margin-bottom: 2.5rem;
+    }
+
+    .portfolio-pill {
+        display: inline-flex;
+        align-items: center;
+        gap: 6px;
+        border-radius: 999px;
+        padding: 4px 10px;
+        font-size: 0.75rem;
+        font-weight: 600;
+        background: var(--primary-light);
+        color: var(--primary);
+    }
+
+    .portfolio-actions {
+        display: flex;
+        gap: 0.5rem;
+    }
+
+    .btn-portfolio-action {
+        padding: 0;
+        background: transparent;
+        border: none;
+        color: var(--primary);
+        font-weight: 600;
+        font-size: 0.8rem;
+        cursor: pointer;
+        transition: var(--transition);
+    }
+
+    .btn-portfolio-action:hover {
+        color: var(--primary-dark);
+        text-decoration: underline;
+    }
+
+    .btn-portfolio-action.danger {
+        color: var(--danger);
+    }
+
+    .btn-portfolio-action.danger:hover {
+        color: var(--danger-dark);
+    }
+
+
+    .modal-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        padding: 1.5rem;
+        border-bottom: 1px solid var(--border);
+    }
+
+    .modal-header h2 {
+        margin: 0;
+        font-size: 1.25rem;
+        font-weight: 700;
+        color: var(--text-primary);
+    }
+
+    .modal-close {
+        border: none;
+        background: transparent;
+        font-size: 1.75rem;
+        cursor: pointer;
+        color: var(--text-tertiary);
+        line-height: 1;
+        padding: 0;
+        width: 32px;
+        height: 32px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        border-radius: 8px;
+        transition: var(--transition);
+    }
+
+    .modal-close:hover {
+        background: var(--surface-secondary);
+        color: var(--text-primary);
+    }
+
+    .modal-body {
+        padding: 1.5rem;
+        display: flex;
+        flex-direction: column;
+        gap: 1rem;
+    }
+
+    .modal-footer {
+        display: flex;
+        justify-content: flex-end;
+        gap: 0.75rem;
+        padding: 1.5rem;
+        border-top: 1px solid var(--border);
+    }
+
+    /* Surface Card & Data Table Styles */
+    .surface-card {
+        background: var(--surface);
+        border-radius: 16px;
+        box-shadow: var(--shadow-md);
+        padding: 1.5rem;
+        border: 1px solid var(--border);
+    }
+
+    .data-table {
+        width: 100%;
+        border-collapse: separate;
+        border-spacing: 0;
+    }
+
+    .data-table th {
+        text-align: left;
+        padding: 1rem;
+        font-size: 0.75rem;
+        font-weight: 700;
+        text-transform: uppercase;
+        letter-spacing: 0.05em;
+        color: var(--text-tertiary);
+        border-bottom: 2px solid var(--border);
+    }
+
+    .data-table td {
+        padding: 1rem;
+        border-bottom: 1px solid var(--border);
+        color: var(--text-secondary);
+        font-size: 0.9rem;
+    }
+
+    .data-table tr:last-child td {
+        border-bottom: none;
+    }
+
+    .data-table tr:hover td {
+        background: rgba(0, 0, 0, 0.01);
+    }
+
+    /* Loading Shimmer */
+    .loading-shimmer {
+        background: linear-gradient(90deg, var(--surface-secondary) 25%, var(--background) 50%, var(--surface-secondary) 75%);
+        background-size: 200% 100%;
+        animation: loading-shimmer-anim 1.5s infinite;
+    }
+
+    @keyframes loading-shimmer-anim {
+        0% {
+            background-position: 200% 0;
+        }
+
+        100% {
+            background-position: -200% 0;
+        }
+    }
+
+    @media (max-width: 768px) {
+        .workspace-header {
+            flex-direction: column;
+            align-items: flex-start !important;
+        }
+
+        .header-actions {
+            width: 100%;
+            display: flex;
+            gap: 0.5rem;
+            margin-top: 1rem;
+        }
+
+        .work-header__cards {
+            grid-template-columns: 1fr;
+        }
+
+        /* Hide summary section on smaller screens to prevent overlap issues */
+        .dashboard-summary-container {
+            display: none;
+        }
+    }
+</style>
+{% endblock %}
+
+
+{% block sidebar_right %}
+<div class="sidebar-header-ws">
+    <h3 class="text-h3">🔍 Filtros</h3>
+</div>
+<div class="sidebar-content-ws">
+    <div class="form-group mb-4">
+        <label for="filterName" class="form-label">Portfólio</label>
+        <input id="filterName" type="text" class="form-control" placeholder="Filtrar por nome...">
+    </div>
+
+    <div class="form-group mb-4">
+        <label for="filterCode" class="form-label">Código</label>
+        <input id="filterCode" type="text" class="form-control" placeholder="Filtrar por código...">
+    </div>
+
+    <div class="form-group mb-4">
+        <label for="filterResponsible" class="form-label">Responsável</label>
+        <input id="filterResponsible" type="text" class="form-control" placeholder="Filtrar por responsável...">
+    </div>
+
+    <button class="btn btn-secondary w-100 mt-2" onclick="clearFilters()">
+        🧹 Limpar Filtros
+    </button>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+    const companyId = parseInt('{{ company.id if company else 0 }}') || null;
+
+    if (!companyId) {
+        console.warn('Contexto de empresa não encontrado. Algumas funcionalidades podem não funcionar.');
+    }
+
+    function toggleCollapsible(id) {
+        const el = document.getElementById(id);
+        if (el) el.classList.toggle('collapsed');
+    }
+
+    // Helper to show messages/toasts
+    function showMessage(msg, type = 'info') {
+        const n = document.createElement('div');
+        n.style.cssText = `
+            position: fixed;
+            top: 20px;
+            right: 20px;
+            padding: 16px 24px;
+            border-radius: 12px;
+            color: white;
+            font-weight: 600;
+            z-index: 10000;
+            max-width: 400px;
+            box-shadow: var(--shadow-lg);
+            animation: fadeIn 0.3s ease-out;
+            background: ${type === 'success' ? '#10b981' : type === 'error' ? '#ef4444' : type === 'warning' ? '#f59e0b' : '#3b82f6'};
+        `;
+        n.textContent = msg;
+        document.body.appendChild(n);
+        setTimeout(() => {
+            n.style.opacity = '0';
+            n.style.transform = 'translateY(-10px)';
+            n.style.transition = 'all 0.3s ease-out';
+            setTimeout(() => n.remove(), 300);
+        }, 5000);
+    }
+    let allPortfolios = [];
+    let employees = [];
+    const filterData = {
+        name: '',
+        code: '',
+        responsible: ''
+    };
+
+    // DOM Elements
+    const summaryContainer = document.getElementById('portfolioSummary');
+    const tableBody = document.getElementById('portfolioTableBody');
+    const newButton = document.getElementById('newPortfolioButton');
+    const modalBackdrop = document.getElementById('portfolioModal');
+    const modalTitle = document.getElementById('modalTitle');
+    const form = document.getElementById('portfolioForm');
+    const cancelBtn = document.getElementById('cancelModalButton');
+    const closeBtn = document.getElementById('closeModalButton');
+
+    const fieldId = document.getElementById('portfolioId');
+    const fieldCode = document.getElementById('portfolioCode');
+    const fieldName = document.getElementById('portfolioName');
+    const fieldResponsible = document.getElementById('portfolioResponsible');
+    const fieldNotes = document.getElementById('portfolioNotes');
+
+    // Initialize
+    document.addEventListener('DOMContentLoaded', () => {
+        loadEmployees();
+        loadPortfolios();
+    });
+
+    // Event Listeners
+    newButton.addEventListener('click', () => openModal());
+    cancelBtn.addEventListener('click', closeModal);
+    closeBtn.addEventListener('click', closeModal);
+
+    // Filter Listeners
+    document.getElementById('filterName').addEventListener('input', applyFilters);
+    document.getElementById('filterCode').addEventListener('input', applyFilters);
+    document.getElementById('filterResponsible').addEventListener('input', applyFilters);
+
+    modalBackdrop.addEventListener('click', (event) => {
+        if (event.target === modalBackdrop) {
+            closeModal();
+        }
+    });
+
+    form.addEventListener('submit', async (event) => {
+        event.preventDefault();
+        await savePortfolio();
+    });
+
+    tableBody.addEventListener('click', async (event) => {
+        const button = event.target.closest('button[data-action]');
+        if (!button) return;
+
+        const action = button.dataset.action;
+        const portfolioId = button.dataset.id;
+        const portfolio = allPortfolios.find(p => String(p.id) === String(portfolioId));
+        if (!portfolio) return;
+
+        if (action === 'edit') {
+            openModal(portfolio);
+        } else if (action === 'delete') {
+            await deletePortfolio(portfolio);
+        }
+    });
+
+    // Functions
+    async function loadEmployees() {
+        if (!companyId) return;
+        try {
+            const res = await fetch(`/api/companies/${companyId}/employees`);
+            const data = await res.json();
+            if (data.success && data.employees) {
+                employees = data.employees;
+                const options = ['<option value="">Selecione um responsável</option>']
+                    .concat(employees.map(emp => `<option value="${emp.id}">${emp.name}</option>`));
+                fieldResponsible.innerHTML = options.join('');
+            }
+        } catch (err) {
+            console.error('Erro ao carregar colaboradores:', err);
+        }
+    }
+
+    async function loadPortfolios(showToast = false) {
+        if (!companyId) {
+            tableBody.innerHTML = '<tr><td colspan="6" class="text-center text-secondary p-5">Favor selecionar uma empresa para visualizar os portfólios.</td></tr>';
+            summaryContainer.innerHTML = '<div class="header-card"><span class="label">Aviso</span><span class="value">—</span><small>Empresa não identificada</small></div>';
+            return;
+        }
+        try {
+            tableBody.innerHTML = '<tr><td colspan="6" class="text-center text-secondary p-5">Carregando portfólios...</td></tr>';
+
+            const res = await fetch(`/api/companies/${companyId}/portfolios`);
+            const data = await res.json();
+
+            if (!res.ok || !data.success) {
+                throw new Error(data.message || 'Erro ao listar portfólios');
+            }
+
+            allPortfolios = data.portfolios || [];
+            renderSummary();
+            renderTable();
+
+            if (showToast) {
+                showMessage('Portfólios atualizados.', 'success');
+            }
+        } catch (err) {
+            console.error('Erro ao carregar portfólios:', err);
+            tableBody.innerHTML = `<tr><td colspan="6" class="text-center text-secondary p-5">${err.message}</td></tr>`;
+            summaryContainer.innerHTML = '<div class="header-card"><span class="label">Erro</span><span class="value">—</span><small>Falha ao carregar dados</small></div>';
+        }
+    }
+
+    function renderSummary() {
+        if (!allPortfolios.length) {
+            summaryContainer.innerHTML = `
+        <div class="header-card">
+          <div class="card-icon">📁</div>
+          <div class="header-card__info">
+            <span class="label">Portfólios</span>
+            <span class="value">0</span>
+            <small>Registre o primeiro portfólio para começar.</small>
+          </div>
+        </div>`;
+            return;
+        }
+
+        const total = allPortfolios.length;
+        const withResponsible = allPortfolios.filter(p => p.responsible_name).length;
+        const notesCount = allPortfolios.filter(p => p.notes).length;
+        const projectTotal = allPortfolios.reduce((sum, p) => sum + (p.project_count || 0), 0);
+
+        summaryContainer.innerHTML = `
+      <div class="header-card">
+        <div class="card-icon">📁</div>
+        <div class="header-card__info">
+            <span class="label">Portfólios ativos</span>
+            <span class="value">${total}</span>
+            <small>Total cadastrado para a empresa</small>
+        </div>
+      </div>
+      <div class="header-card">
+        <div class="card-icon">👤</div>
+        <div class="header-card__info">
+            <span class="label">Responsáveis definidos</span>
+            <span class="value">${withResponsible}</span>
+            <small>${withResponsible ? 'Portfólios com owner definido' : 'Nenhum responsável associado'}</small>
+        </div>
+      </div>
+      <div class="header-card">
+        <div class="card-icon">📝</div>
+        <div class="header-card__info">
+            <span class="label">Notas registradas</span>
+            <span class="value">${notesCount}</span>
+            <small>Portfólios com contexto adicional</small>
+        </div>
+      </div>
+      <div class="header-card">
+        <div class="card-icon">📊</div>
+        <div class="header-card__info">
+            <span class="label">Projetos vinculados</span>
+            <span class="value">${projectTotal}</span>
+            <small>Total informado nas integrações</small>
+        </div>
+      </div>`;
+    }
+
+    function applyFilters() {
+        filterData.name = document.getElementById('filterName').value.trim().toLowerCase();
+        filterData.code = document.getElementById('filterCode').value.trim().toLowerCase();
+        filterData.responsible = document.getElementById('filterResponsible').value.trim().toLowerCase();
+        renderTable();
+    }
+
+    function clearFilters() {
+        document.getElementById('filterName').value = '';
+        document.getElementById('filterCode').value = '';
+        document.getElementById('filterResponsible').value = '';
+        filterData.name = '';
+        filterData.code = '';
+        filterData.responsible = '';
+        renderTable();
+    }
+
+    function renderTable() {
+        const filtered = allPortfolios.filter(p => {
+            const matchName = p.name.toLowerCase().includes(filterData.name);
+            const matchCode = p.code.toLowerCase().includes(filterData.code);
+            const matchResp = (p.responsible_name || '').toLowerCase().includes(filterData.responsible);
+            return matchName && matchCode && matchResp;
+        });
+
+        if (!filtered.length) {
+            tableBody.innerHTML = `<tr><td colspan="6" class="text-center text-secondary p-5">${allPortfolios.length ? 'Nenhum resultado encontrado para os filtros aplicados.' : 'Nenhum portfólio cadastrado até o momento.'}</td></tr>`;
+            return;
+        }
+
+        tableBody.innerHTML = filtered.map(portfolio => {
+            const responsible = portfolio.responsible_name || '<span style="color: var(--text-tertiary);">—</span>';
+            const notes = portfolio.notes || '<span style="color: var(--text-tertiary); font-size: 0.85rem;">Sem notas</span>';
+            const projects = portfolio.project_count != null ? portfolio.project_count : 0;
+            const createdDate = portfolio.created_at ? formatDate(portfolio.created_at) : '—';
+
+            return `
+        <tr>
+          <td>
+            <div style="display: flex; flex-direction: column; gap: 4px;">
+              <strong style="color: var(--text-primary); font-size: 0.95rem;">${portfolio.name}</strong>
+              <span style="color: var(--text-tertiary); font-size: 0.8rem;">Criado em ${createdDate}</span>
+            </div>
+          </td>
+          <td><span class="portfolio-pill">${portfolio.code}</span></td>
+          <td>${responsible}</td>
+          <td>${projects}</td>
+          <td style="max-width: 300px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">${notes}</td>
+          <td>
+            <div class="portfolio-actions">
+              <button class="btn-portfolio-action" type="button" data-action="edit" data-id="${portfolio.id}">Editar</button>
+              <button class="btn-portfolio-action danger" type="button" data-action="delete" data-id="${portfolio.id}">Excluir</button>
+            </div>
+          </td>
+        </tr>`;
+        }).join('');
+    }
+
+    function openModal(portfolio = null) {
+        modalBackdrop.classList.add('open');
+        modalBackdrop.setAttribute('aria-hidden', 'false');
+
+        if (portfolio) {
+            modalTitle.textContent = 'Editar Portfólio';
+            fieldId.value = portfolio.id;
+            fieldCode.value = portfolio.code;
+            fieldName.value = portfolio.name;
+            fieldResponsible.value = portfolio.responsible_id || '';
+            fieldNotes.value = portfolio.notes || '';
+        } else {
+            modalTitle.textContent = 'Novo Portfólio';
+            fieldId.value = '';
+            form.reset();
+        }
+
+        fieldCode.focus();
+    }
+
+    function closeModal() {
+        modalBackdrop.classList.remove('open');
+        modalBackdrop.setAttribute('aria-hidden', 'true');
+        form.reset();
+        fieldId.value = '';
+    }
+
+    async function savePortfolio() {
+        const payload = {
+            code: fieldCode.value.trim(),
+            name: fieldName.value.trim(),
+            responsible_id: fieldResponsible.value || null,
+            notes: fieldNotes.value.trim()
+        };
+
+        if (!payload.code || !payload.name) {
+            showMessage('Informe código e nome do portfólio.', 'error');
+            return;
+        }
+
+        try {
+            const isEdit = Boolean(fieldId.value);
+            const url = isEdit
+                ? `/api/companies/${companyId}/portfolios/${fieldId.value}`
+                : `/api/companies/${companyId}/portfolios`;
+            const method = isEdit ? 'PUT' : 'POST';
+
+            const res = await fetch(url, {
+                method,
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(payload)
+            });
+
+            const data = await res.json();
+            if (!res.ok || !data.success) {
+                throw new Error(data.message || 'Falha ao salvar portfólio');
+            }
+
+            showMessage(data.message || 'Portfólio salvo com sucesso', 'success');
+            closeModal();
+            await loadPortfolios();
+        } catch (err) {
+            console.error(err);
+            showMessage(err.message, 'error');
+        }
+    }
+
+    async function deletePortfolio(portfolio) {
+        const confirmDelete = confirm(`Deseja realmente excluir o portfólio "${portfolio.name}"?`);
+        if (!confirmDelete) return;
+
+        try {
+            const res = await fetch(`/api/companies/${companyId}/portfolios/${portfolio.id}`, {
+                method: 'DELETE'
+            });
+
+            const data = await res.json();
+            if (!res.ok || !data.success) {
+                throw new Error(data.message || 'Erro ao excluir portfólio');
+            }
+
+            showMessage(data.message || 'Portfólio removido', 'success');
+            await loadPortfolios();
+        } catch (err) {
+            console.error(err);
+            showMessage(err.message, 'error');
+        }
+    }
+
+    function formatDate(value) {
+        if (!value) return '—';
+        try {
+            const date = new Date(value);
+            if (Number.isNaN(date.getTime())) return value;
+            return date.toLocaleDateString('pt-BR');
+        } catch (error) {
+            return value;
+        }
+    }
+</script>
+{% endblock %}

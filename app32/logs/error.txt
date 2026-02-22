@@ -1,0 +1,190 @@
+Initializing extensions...
+  SQLAlchemy initialized
+  Marshmallow initialized
+  Flask-RESTful initialized
+Registering API resources...
+  API resources registered
+Database tables created successfully!
+Starting APP32...
+Dashboard: http://127.0.0.1:5032/dashboard
+Companies: http://127.0.0.1:5032/companies
+API: http://127.0.0.1:5032/api/companies
+
+ * Serving Flask app 'app'
+ * Debug mode: on
+WARNING: This is a development server. Do not use it in a production deployment. Use a production WSGI server instead.
+ * Running on http://127.0.0.1:5032
+Press CTRL+C to quit
+ * Restarting with watchdog (windowsapi)
+ * Debugger is active!
+ * Debugger PIN: 674-064-700
+ * Detected change in 'C:\\Users\\mff20\\anaconda3\\Lib\\site-packages\\flask\\app.py', reloading
+ * Detected change in 'C:\\Users\\mff20\\anaconda3\\Lib\\site-packages\\flask_restful\\__init__.py', reloading
+ * Detected change in 'C:\\Users\\mff20\\anaconda3\\Lib\\site-packages\\flask_cors\\extension.py', reloading
+ * Detected change in 'C:\\Users\\mff20\\anaconda3\\Lib\\site-packages\\sqlalchemy\\orm\\state.py', reloading
+ * Detected change in 'C:\\Users\\mff20\\anaconda3\\Lib\\site-packages\\sqlalchemy\\orm\\decl_base.py', reloading
+127.0.0.1 - - [02/Jan/2026 15:22:56] "GET /seed-demo HTTP/1.1" 500 -
+Traceback (most recent call last):
+  File "C:\Users\mff20\anaconda3\Lib\site-packages\flask\app.py", line 1478, in __call__
+    return self.wsgi_app(environ, start_response)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\mff20\anaconda3\Lib\site-packages\flask\app.py", line 1458, in wsgi_app
+    response = self.handle_exception(e)
+               ^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\mff20\anaconda3\Lib\site-packages\flask_restful\__init__.py", line 298, in error_router
+    return original_handler(e)
+           ^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\mff20\anaconda3\Lib\site-packages\flask_cors\extension.py", line 176, in wrapped_function
+    return cors_after_request(app.make_response(f(*args, **kwargs)))
+                                                ^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\mff20\anaconda3\Lib\site-packages\flask\app.py", line 1455, in wsgi_app
+    response = self.full_dispatch_request()
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\mff20\anaconda3\Lib\site-packages\flask\app.py", line 869, in full_dispatch_request
+    rv = self.handle_user_exception(e)
+         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\mff20\anaconda3\Lib\site-packages\flask_restful\__init__.py", line 298, in error_router
+    return original_handler(e)
+           ^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\mff20\anaconda3\Lib\site-packages\flask_cors\extension.py", line 176, in wrapped_function
+    return cors_after_request(app.make_response(f(*args, **kwargs)))
+                                                ^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\mff20\anaconda3\Lib\site-packages\flask\app.py", line 867, in full_dispatch_request
+    rv = self.dispatch_request()
+         ^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\mff20\anaconda3\Lib\site-packages\flask\app.py", line 852, in dispatch_request
+    return self.ensure_sync(self.view_functions[rule.endpoint])(**view_args)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\GestaoVersus\app32\app.py", line 214, in seed_demo
+    project = Project(
+              ^^^^^^^^
+  File "<string>", line 4, in __init__
+  File "C:\Users\mff20\anaconda3\Lib\site-packages\sqlalchemy\orm\state.py", line 566, in _initialize_instance
+    with util.safe_reraise():
+  File "C:\Users\mff20\anaconda3\Lib\site-packages\sqlalchemy\util\langhelpers.py", line 146, in __exit__
+    raise exc_value.with_traceback(exc_tb)
+  File "C:\Users\mff20\anaconda3\Lib\site-packages\sqlalchemy\orm\state.py", line 564, in _initialize_instance
+    manager.original_init(*mixed[1:], **kwargs)
+  File "C:\Users\mff20\anaconda3\Lib\site-packages\sqlalchemy\orm\decl_base.py", line 2142, in _declarative_constructor
+    raise TypeError(
+TypeError: 'progress' is an invalid keyword argument for Project
+127.0.0.1 - - [02/Jan/2026 15:22:56] "GET /seed-demo?__debugger__=yes&cmd=resource&f=style.css HTTP/1.1" 200 -
+127.0.0.1 - - [02/Jan/2026 15:22:56] "GET /seed-demo?__debugger__=yes&cmd=resource&f=debugger.js HTTP/1.1" 200 -
+127.0.0.1 - - [02/Jan/2026 15:22:56] "GET /seed-demo?__debugger__=yes&cmd=resource&f=console.png HTTP/1.1" 200 -
+127.0.0.1 - - [02/Jan/2026 15:22:57] "GET /seed-demo?__debugger__=yes&cmd=resource&f=console.png HTTP/1.1" 304 -
+127.0.0.1 - - [02/Jan/2026 15:22:57] "GET /seed-demo?__debugger__=yes&cmd=resource&f=console.png HTTP/1.1" 200 -
+Initializing extensions...
+  SQLAlchemy initialized
+  Marshmallow initialized
+  Flask-RESTful initialized
+Registering API resources...
+  API resources registered
+Database tables created successfully!
+Starting APP32...
+Dashboard: http://127.0.0.1:5032/dashboard
+Companies: http://127.0.0.1:5032/companies
+API: http://127.0.0.1:5032/api/companies
+
+ * Restarting with watchdog (windowsapi)
+ * Debugger is active!
+ * Debugger PIN: 674-064-700
+127.0.0.1 - - [02/Jan/2026 15:24:22] "GET /projects HTTP/1.1" 200 -
+127.0.0.1 - - [02/Jan/2026 15:24:22] "GET /static/css/app32.css HTTP/1.1" 304 -
+127.0.0.1 - - [02/Jan/2026 15:24:23] "GET /static/js/projects.js HTTP/1.1" 200 -
+127.0.0.1 - - [02/Jan/2026 15:24:23] "GET /static/img/logo-versus.png HTTP/1.1" 304 -
+127.0.0.1 - - [02/Jan/2026 15:24:23] "GET /api/companies HTTP/1.1" 200 -
+127.0.0.1 - - [02/Jan/2026 15:24:23] "GET /api/projects HTTP/1.1" 200 -
+127.0.0.1 - - [02/Jan/2026 15:24:53] "GET /projects/new HTTP/1.1" 200 -
+127.0.0.1 - - [02/Jan/2026 15:24:54] "GET /static/css/app32.css HTTP/1.1" 304 -
+127.0.0.1 - - [02/Jan/2026 15:24:54] "GET /static/img/logo-versus.png HTTP/1.1" 304 -
+127.0.0.1 - - [02/Jan/2026 15:24:54] "GET /api/plans HTTP/1.1" 200 -
+127.0.0.1 - - [02/Jan/2026 15:24:54] "GET /api/debug/routes HTTP/1.1" 404 -
+127.0.0.1 - - [02/Jan/2026 15:26:28] "GET /seed-demo HTTP/1.1" 500 -
+Traceback (most recent call last):
+  File "C:\Users\mff20\anaconda3\Lib\site-packages\flask\app.py", line 1478, in __call__
+    return self.wsgi_app(environ, start_response)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\mff20\anaconda3\Lib\site-packages\flask\app.py", line 1458, in wsgi_app
+    response = self.handle_exception(e)
+               ^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\mff20\anaconda3\Lib\site-packages\flask_restful\__init__.py", line 298, in error_router
+    return original_handler(e)
+           ^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\mff20\anaconda3\Lib\site-packages\flask_cors\extension.py", line 176, in wrapped_function
+    return cors_after_request(app.make_response(f(*args, **kwargs)))
+                                                ^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\mff20\anaconda3\Lib\site-packages\flask\app.py", line 1455, in wsgi_app
+    response = self.full_dispatch_request()
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\mff20\anaconda3\Lib\site-packages\flask\app.py", line 869, in full_dispatch_request
+    rv = self.handle_user_exception(e)
+         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\mff20\anaconda3\Lib\site-packages\flask_restful\__init__.py", line 298, in error_router
+    return original_handler(e)
+           ^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\mff20\anaconda3\Lib\site-packages\flask_cors\extension.py", line 176, in wrapped_function
+    return cors_after_request(app.make_response(f(*args, **kwargs)))
+                                                ^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\mff20\anaconda3\Lib\site-packages\flask\app.py", line 867, in full_dispatch_request
+    rv = self.dispatch_request()
+         ^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\mff20\anaconda3\Lib\site-packages\flask\app.py", line 852, in dispatch_request
+    return self.ensure_sync(self.view_functions[rule.endpoint])(**view_args)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\GestaoVersus\app32\app.py", line 214, in seed_demo
+    project = Project(
+              ^^^^^^^^
+  File "<string>", line 4, in __init__
+  File "C:\Users\mff20\anaconda3\Lib\site-packages\sqlalchemy\orm\state.py", line 566, in _initialize_instance
+    with util.safe_reraise():
+  File "C:\Users\mff20\anaconda3\Lib\site-packages\sqlalchemy\util\langhelpers.py", line 146, in __exit__
+    raise exc_value.with_traceback(exc_tb)
+  File "C:\Users\mff20\anaconda3\Lib\site-packages\sqlalchemy\orm\state.py", line 564, in _initialize_instance
+    manager.original_init(*mixed[1:], **kwargs)
+  File "C:\Users\mff20\anaconda3\Lib\site-packages\sqlalchemy\orm\decl_base.py", line 2142, in _declarative_constructor
+    raise TypeError(
+TypeError: 'progress' is an invalid keyword argument for Project
+127.0.0.1 - - [02/Jan/2026 15:26:31] "GET /seed-demo?__debugger__=yes&cmd=resource&f=debugger.js HTTP/1.1" 304 -
+127.0.0.1 - - [02/Jan/2026 15:26:31] "GET /seed-demo?__debugger__=yes&cmd=resource&f=style.css HTTP/1.1" 304 -
+127.0.0.1 - - [02/Jan/2026 15:26:31] "GET /seed-demo?__debugger__=yes&cmd=resource&f=console.png HTTP/1.1" 304 -
+127.0.0.1 - - [02/Jan/2026 15:29:14] "GET /projects/new HTTP/1.1" 200 -
+127.0.0.1 - - [02/Jan/2026 15:29:14] "GET /static/css/app32.css HTTP/1.1" 304 -
+127.0.0.1 - - [02/Jan/2026 15:29:14] "GET /static/img/logo-versus.png HTTP/1.1" 304 -
+127.0.0.1 - - [02/Jan/2026 15:29:15] "GET /api/plans HTTP/1.1" 200 -
+127.0.0.1 - - [02/Jan/2026 15:29:15] "GET /api/debug/routes HTTP/1.1" 404 -
+127.0.0.1 - - [02/Jan/2026 15:30:40] "GET /dashboard HTTP/1.1" 200 -
+127.0.0.1 - - [02/Jan/2026 15:30:43] "GET /static/img/logo-versus.png HTTP/1.1" 304 -
+127.0.0.1 - - [02/Jan/2026 15:30:43] "GET /static/css/app32.css HTTP/1.1" 304 -
+127.0.0.1 - - [02/Jan/2026 15:31:23] "GET /api/projects HTTP/1.1" 200 -
+127.0.0.1 - - [02/Jan/2026 15:31:53] "GET /companies HTTP/1.1" 200 -
+127.0.0.1 - - [02/Jan/2026 15:31:53] "GET /static/css/app32.css HTTP/1.1" 304 -
+127.0.0.1 - - [02/Jan/2026 15:31:53] "GET /static/img/logo-versus.png HTTP/1.1" 304 -
+127.0.0.1 - - [02/Jan/2026 15:31:54] "GET /static/js/companies.js HTTP/1.1" 304 -
+127.0.0.1 - - [02/Jan/2026 15:31:54] "GET /api/companies HTTP/1.1" 200 -
+127.0.0.1 - - [02/Jan/2026 15:32:21] "GET /projects HTTP/1.1" 200 -
+127.0.0.1 - - [02/Jan/2026 15:32:22] "GET /static/css/app32.css HTTP/1.1" 304 -
+127.0.0.1 - - [02/Jan/2026 15:32:22] "GET /static/js/projects.js HTTP/1.1" 304 -
+127.0.0.1 - - [02/Jan/2026 15:32:22] "GET /static/img/logo-versus.png HTTP/1.1" 304 -
+127.0.0.1 - - [02/Jan/2026 15:32:22] "GET /api/companies HTTP/1.1" 200 -
+127.0.0.1 - - [02/Jan/2026 15:32:22] "GET /api/projects HTTP/1.1" 200 -
+127.0.0.1 - - [02/Jan/2026 15:33:09] "GET /projects/new HTTP/1.1" 200 -
+127.0.0.1 - - [02/Jan/2026 15:33:09] "GET /static/css/app32.css HTTP/1.1" 304 -
+127.0.0.1 - - [02/Jan/2026 15:33:09] "GET /static/img/logo-versus.png HTTP/1.1" 304 -
+127.0.0.1 - - [02/Jan/2026 15:33:10] "GET /api/plans HTTP/1.1" 200 -
+127.0.0.1 - - [02/Jan/2026 15:33:10] "GET /api/debug/routes HTTP/1.1" 404 -
+ * Detected change in 'C:\\GestaoVersus\\app32\\models\\project.py', reloading
+Initializing extensions...
+  SQLAlchemy initialized
+  Marshmallow initialized
+  Flask-RESTful initialized
+Registering API resources...
+  API resources registered
+Database tables created successfully!
+Starting APP32...
+Dashboard: http://127.0.0.1:5032/dashboard
+Companies: http://127.0.0.1:5032/companies
+API: http://127.0.0.1:5032/api/companies
+
+ * Restarting with watchdog (windowsapi)
+ * Debugger is active!
+ * Debugger PIN: 674-064-700

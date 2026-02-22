@@ -1,0 +1,1055 @@
+{#
+  Análise de Viabilidade - GestaoVersus
+  Estruturado conforme REPORT_STANDARDS.md
+  Integra projeto vinculado, agenda e governanca financeira
+#}
+
+{% extends "reports/base_report.html" %}
+{% from "reports/components.html" import
+  section_header,
+  story_card,
+  data_table,
+  custom_table,
+  result_grid,
+  highlight_box,
+  model7_card,
+  responsive_grid,
+  two_column,
+  subsection,
+  cover_meta_grid,
+  status_badge,
+  format_percent,
+  format_date,
+  format_number
+%}
+
+{% macro format_currency(value) -%}
+  {{ format_number(value or 0, 2) }}
+{%- endmacro %}
+
+{% block page_title %}Análise de Viabilidade - {{ plan.plan_name }} - GestaoVersus{% endblock %}
+{% block meta_description %}Relatorio final do plano {{ plan.plan_name }} para {{ plan.company_name }}, consolidando alinhamento, modelo, estruturas e viabilidade financeira.{% endblock %}
+
+{% block extra_css %}
+  <style>
+    .cover-page.book-cover {
+      background: radial-gradient(circle at top right, rgba(255, 255, 255, 0.18) 0%, transparent 52%), linear-gradient(135deg, #122a5f 0%, #183877 38%, #1f4aa0 72%, #2b5bc7 100%);
+      padding: 95px 82px 110px;
+    }
+
+    .cover-ribbon {
+      display: flex;
+      gap: 12px;
+      margin-bottom: 24px;
+    }
+
+    .cover-ribbon span {
+      display: inline-flex;
+      align-items: center;
+      padding: 6px 16px;
+      border-radius: 999px;
+      font-size: 12px;
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+      background: rgba(255, 255, 255, 0.16);
+      color: #e2e8f0;
+    }
+
+    .cover-tagline {
+      font-size: 13px;
+      letter-spacing: 0.16em;
+      text-transform: uppercase;
+      color: rgba(255, 255, 255, 0.72);
+      margin-bottom: 42px;
+    }
+
+    .cover-detail-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+      gap: 24px;
+      position: relative;
+      z-index: 1;
+    }
+
+    .cover-detail-grid h3 {
+      font-size: 24px;
+      font-weight: 600;
+      margin-bottom: 12px;
+    }
+
+    .cover-detail-grid p {
+      font-size: 15px;
+      color: rgba(255, 255, 255, 0.85);
+      line-height: 1.7;
+    }
+
+    .cover-upcoming h4 {
+      font-size: 15px;
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+      margin-bottom: 10px;
+      color: rgba(255, 255, 255, 0.76);
+    }
+
+    .cover-upcoming ul {
+      list-style: none;
+      padding: 0;
+      margin: 0;
+      display: grid;
+      gap: 10px;
+    }
+
+    .cover-upcoming li {
+      font-size: 14px;
+      line-height: 1.6;
+      color: rgba(255, 255, 255, 0.85);
+      background: rgba(15, 23, 42, 0.32);
+      border-radius: 14px;
+      padding: 12px 16px;
+    }
+
+    .cover-upcoming li strong {
+      display: block;
+      font-size: 12px;
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+      color: rgba(255, 255, 255, 0.56);
+      margin-bottom: 4px;
+    }
+
+    .story-list.compact li {
+      margin-bottom: 6px;
+    }
+
+    .section-body .report-link {
+      color: #2563eb;
+      text-decoration: none;
+      font-weight: 600;
+    }
+
+    .section-body .report-link:hover {
+      text-decoration: underline;
+    }
+
+    /* Ajustes para layout mais compacto em todas as páginas */
+    .model7-report .page {
+      margin-bottom: 18px;
+      page-break-after: auto;
+      min-height: auto;
+    }
+
+    .model7-report .page.portrait {
+      padding-top: 8mm;
+      padding-bottom: 8mm;
+      min-height: auto;
+    }
+
+    .model7-report .section-header {
+      margin-bottom: 12px;
+    }
+
+    .model7-report .section-body {
+      margin-top: 12px;
+      gap: 14px;
+    }
+
+    .model7-report .model7-card,
+    .model7-report .story-block,
+    .model7-report .highlight-box {
+      padding: 16px 18px;
+      gap: 10px;
+    }
+
+    .model7-report .model7-grid,
+    .model7-report .result-summary-grid,
+    .model7-report .responsive-grid {
+      gap: 16px;
+    }
+
+    /* Forçar todas as páginas para retrato na impressão */
+    @media print {
+      @page {
+        size: A4 portrait !important;
+        margin: 5mm;
+      }
+
+      .page {
+        page: portrait !important;
+      }
+
+      /* Garantir que não haja páginas landscape */
+      .page.landscape {
+        page: portrait !important;
+        padding: 5mm !important;
+        min-height: calc(297mm - 10mm) !important;
+      }
+    }
+  </style>
+{% endblock %}
+
+{% block cover_page %}
+  <section class="page portrait cover-page book-cover">
+    <div style="position: relative; z-index: 1;">
+      <div class="cover-ribbon">
+        <span>{{ plan.status }}</span>
+        <span>Plano {{ plan.plan_id }}</span>
+      </div>
+      <h1>Análise de Viabilidade</h1>
+      <h2>{{ plan.plan_name }}</h2>
+
+      {{ cover_meta_grid([
+        {"label": "Empresa", "value": plan.company_name},
+        {"label": "Consultor", "value": "Fabiano Ferreira"},
+        {"label": "Patrocinador", "value": "Antonio Carlos e Tom"},
+        {"label": "Ultima atualizacao", "value": plan.last_update}
+      ]) }}
+
+      {# Layout em duas colunas: Projeto à esquerda, Versus à direita #}
+      <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 40px; margin-top: 36px; position: relative; z-index: 1;">
+        {# Coluna Esquerda - Projeto #}
+        <div style="text-align: left;">
+          <h3>{{ projeto.nome }}</h3>
+          {% if projeto.descricao %}
+            <p>{{ projeto.descricao }}</p>
+          {% else %}
+            <p>Projeto vinculado ao plano de implantacao para acompanhamento tatico no GRV.</p>
+          {% endif %}
+          
+          {% set agenda_preview = (alinhamento.agenda or [])[:3] %}
+          {% if agenda_preview %}
+            <div class="cover-upcoming" style="margin-top: 24px;">
+              <h4>Proximos marcos</h4>
+              <ul>
+                {% for item in agenda_preview %}
+                  <li>
+                    <strong>{{ item.quando or "Em definicao" }}</strong>
+                    {{ item.oque }}
+                    {% if item.quem %}
+                      <br><span style="opacity:0.75;">Responsavel: {{ item.quem }}</span>
+                    {% endif %}
+                  </li>
+                {% endfor %}
+              </ul>
+            </div>
+          {% endif %}
+        </div>
+        
+        {# Coluna Direita - Versus #}
+        <div style="text-align: right; display: flex; flex-direction: column; justify-content: flex-end;">
+          <p style="margin: 0; font-size: 14px; color: rgba(255, 255, 255, 0.9); font-weight: 600; letter-spacing: 0.02em; line-height: 1.4;">Versus Gestão Corporativa</p>
+          <p style="margin: 0; font-size: 11px; color: rgba(255, 255, 255, 0.7); line-height: 1.4;">Todos os direitos reservados</p>
+          <p style="margin: 0; font-size: 11px; color: rgba(255, 255, 255, 0.8); line-height: 1.4;">www.gestaoversus.com.br</p>
+        </div>
+      </div>
+    </div>
+  </section>
+{% endblock %}
+
+{% block content %}
+
+{# ---------------------------------------------------------
+   01. Resumo executivo e projeto vinculado
+   --------------------------------------------------------- #}
+<section class="page portrait">
+  {{ section_header("01", "Resumo Executivo & Projeto Vinculado", "Panorama geral do plano, do projeto associado no GRV e da cadencia de implantacao") }}
+  <div class="section-body">
+    {% call responsive_grid("260px") %}
+      {% call model7_card("Planejamento", plan.plan_name) %}
+        <div style="margin-bottom: 12px;">{{ status_badge(plan.status, "info") }}</div>
+        <ul class="story-list compact">
+          <li><strong>Ultima atualizacao:</strong> {{ plan.last_update }}</li>
+          <li><strong>Consultor responsavel:</strong> Fabiano Ferreira</li>
+        </ul>
+      {% endcall %}
+
+      {% call model7_card("Projeto Vinculado", projeto.nome) %}
+        {% if projeto.descricao %}
+          <p>{{ projeto.descricao }}</p>
+        {% endif %}
+        {% if projeto.observacoes %}
+          <ul class="story-list compact">
+            {% for obs in projeto.observacoes[:4] %}
+              <li>{{ obs }}</li>
+            {% endfor %}
+          </ul>
+          {% if projeto.observacoes|length > 4 %}
+            <p class="story-note">+ {{ projeto.observacoes|length - 4 }} observacoes registradas no modulo de implantacao.</p>
+          {% endif %}
+        {% else %}
+          <p class="story-note">Sem observacoes adicionais registradas para este projeto.</p>
+        {% endif %}
+        {% if plan.company_id and projeto.grv_project_id %}
+          <p class="story-note">
+            Kanban ativo:
+            <a class="report-link" href="{{ url_for('grv.grv_project_manage', company_id=plan.company_id, project_id=projeto.grv_project_id) }}" target="_blank" rel="noopener">
+              GRV &rsaquo; Projeto {{ projeto.grv_project_id }}
+            </a>
+          </p>
+        {% endif %}
+      {% endcall %}
+
+      {% call model7_card("Escopo Consolidado") %}
+        <ul class="story-list compact">
+          <li><strong>Segmentos mapeados:</strong> {{ segmentos|length }}</li>
+          <li><strong>Estruturas priorizadas:</strong> {{ estruturas|length }}</li>
+          <li><strong>Capacidades avaliadas:</strong> {{ financeiro.capacidades|length }}</li>
+        </ul>
+      {% endcall %}
+    {% endcall %}
+
+    {% set atividades = alinhamento.agenda or [] %}
+    {% if atividades %}
+      {% set proximas = atividades[:4] %}
+      {% call subsection("Proximas atividades priorizadas") %}
+        <p style="margin-bottom: 12px; color: #475569;">
+          Destaques da agenda operacional vinculada ao projeto. Lista completa na secao de Alinhamento.
+        </p>
+        {% call(rows) custom_table(
+          ["Atividade", "Responsavel", "Prazo", "Como vamos executar"],
+          proximas
+        ) %}
+          {% for item in rows %}
+            <tr>
+              <td>{{ item.oque }}</td>
+              <td>{{ item.quem or "-" }}</td>
+              <td>{{ item.quando or "-" }}</td>
+              <td>{{ item.como or "-" }}</td>
+            </tr>
+          {% endfor %}
+        {% endcall %}
+        {% if atividades|length > proximas|length %}
+          <p class="story-note" style="margin-top: 10px;">
+            + {{ atividades|length - proximas|length }} atividades adicionais registradas na agenda completa.
+          </p>
+        {% endif %}
+      {% endcall %}
+    {% endif %}
+  </div>
+</section>
+
+{# ---------------------------------------------------------
+   02. Alinhamento estrategico
+   --------------------------------------------------------- #}
+<section class="page portrait">
+  {{ section_header("02", "Alinhamento Estrategico") }}
+
+  <div class="section-body">
+    {% set visao = alinhamento.visao %}
+    {% if visao %}
+      {% if visao is string %}
+        <p class="narrative-intro">
+          A visao compartilhada do negocio esta ancorada em "{{ visao }}", direcionando as decisoes de implantacao.
+        </p>
+      {% elif visao is iterable %}
+        <p class="narrative-intro">
+          Os elementos essenciais da visao compartilhada foram consolidados nos pontos a seguir:
+        </p>
+        <ul class="story-list">
+          {% for item in visao %}
+            <li>{{ item }}</li>
+          {% endfor %}
+        </ul>
+      {% endif %}
+    {% endif %}
+
+    {% if alinhamento.metas %}
+      {{ story_card("Metas Financeiras Priorizadas", alinhamento.metas) }}
+    {% endif %}
+
+    {% call story_card("Equipe Decisora") %}
+      {% if alinhamento.socios %}
+        <div class="story-columns">
+          {% for socio in alinhamento.socios %}
+            <div>
+              <h5>{{ socio.nome }}</h5>
+              <ul class="story-list">
+                {% if socio.papel %}<li><strong>Papel:</strong> {{ socio.papel }}</li>{% endif %}
+                {% if socio.motivacao %}<li><strong>Motivacao:</strong> {{ socio.motivacao }}</li>{% endif %}
+                {% if socio.compromisso %}<li><strong>Compromisso:</strong> {{ socio.compromisso }}</li>{% endif %}
+                {% if socio.risco %}<li><strong>Tolerancia a risco:</strong> {{ socio.risco }}</li>{% endif %}
+              </ul>
+            </div>
+          {% endfor %}
+        </div>
+      {% else %}
+        <p class="story-note">
+          Ainda nao registramos socios com papel definido nesta etapa. O cadastro pode ser feito no modulo de alinhamento.
+        </p>
+      {% endif %}
+    {% endcall %}
+
+    {% if alinhamento.principios %}
+      {{ story_card("Principios Orientadores", alinhamento.principios) }}
+    {% endif %}
+
+    {% if alinhamento.agenda %}
+      {% call story_card("Agenda de Convergencia") %}
+        <p>A agenda consolida compromissos que sustentam a implantacao e garantem ritmo executivo.</p>
+        {% call(rows) custom_table(
+          ["O que", "Quem", "Quando", "Como"],
+          alinhamento.agenda
+        ) %}
+          {% for item in rows %}
+            <tr>
+              <td>{{ item.oque }}</td>
+              <td>{{ item.quem }}</td>
+              <td>{{ item.quando }}</td>
+              <td>{{ item.como }}</td>
+            </tr>
+          {% endfor %}
+        {% endcall %}
+      {% endcall %}
+    {% endif %}
+  </div>
+</section>
+
+{# ---------------------------------------------------------
+   03. Modelo e Mercado
+   --------------------------------------------------------- #}
+<section class="page portrait">
+  {{ section_header("03", "Modelo & Mercado") }}
+  
+  <div class="section-body">
+    {% if segmentos %}
+      {% for segmento in segmentos %}
+        {% call model7_card(segmento.nome or "Segmento") %}
+          {% set proposta = segmento.proposta or segmento.value_proposition or {} %}
+          {% set publico = proposta.publico or proposta.segmentos or segmento.audiences or [] %}
+          {% set diferenciais = proposta.diferenciais or segmento.differentials or [] %}
+          {% set evidencias = proposta.comprobacoes or proposta.provas or segmento.evidences or [] %}
+          {% set personas = segmento.personas or [] %}
+
+          {% call two_column() %}
+            <div>
+              <strong>Publico-alvo</strong>
+              <ul>
+                {% if publico %}
+                  {% for item in publico %}
+                    <li>{{ item }}</li>
+                  {% endfor %}
+                {% else %}
+                  <li>Sem dados mapeados.</li>
+                {% endif %}
+              </ul>
+            </div>
+            <div>
+              <strong>Diferenciais</strong>
+              <ul>
+                {% if diferenciais %}
+                  {% for item in diferenciais %}
+                    <li>{{ item }}</li>
+                  {% endfor %}
+                {% else %}
+                  <li>Sem diferenciais registrados.</li>
+                {% endif %}
+              </ul>
+            </div>
+            <div>
+              <strong>Evidencias</strong>
+              <ul>
+                {% if evidencias %}
+                  {% for item in evidencias %}
+                    <li>{{ item }}</li>
+                  {% endfor %}
+                {% else %}
+                  <li>Sem evidencias cadastradas.</li>
+                {% endif %}
+              </ul>
+            </div>
+            <div>
+              <strong>Personas chave</strong>
+              <ul>
+                {% if personas %}
+                  {% for persona in personas %}
+                    <li><strong>{{ persona.nome or persona.name }}:</strong> {{ persona.perfil or persona.descricao or persona.description }}</li>
+                  {% endfor %}
+                {% else %}
+                  <li>Personas ainda nao definidas.</li>
+                {% endif %}
+              </ul>
+            </div>
+          {% endcall %}
+
+          {% if segmento.produtos %}
+            <div style="margin-top: 20px;">
+              <h5 style="font-size: 16px; font-weight: 600; margin-bottom: 12px;">Portfolio de produtos</h5>
+              {% call(rows) custom_table(
+                ["Produto", "Preco de venda", "Custos variaveis", "Despesas variaveis", "Margem contrib. unit.", "Mercado", "Meta market share"],
+                segmento.produtos
+              ) %}
+                {% for produto in rows %}
+                  <tr>
+                    <td style="min-width: 140px;">
+                      <div style="font-weight: 600; color: #0f172a;">{{ produto.nome }}</div>
+                      {% if produto.observacoes %}
+                        <div style="font-size: 12px; color: #64748b;">{{ produto.observacoes }}</div>
+                      {% endif %}
+                    </td>
+                    <td>{{ produto.preco_venda }}</td>
+                    <td>{{ produto.custos_variaveis }}</td>
+                    <td>{{ produto.despesas_variaveis }}</td>
+                    <td>{{ produto.margem_contribuicao }}</td>
+                    <td>{{ produto.mercado }}</td>
+                    <td>{{ produto.meta_market_share }}</td>
+                  </tr>
+                {% endfor %}
+              {% endcall %}
+            </div>
+          {% endif %}
+
+          {% if segmento.totais %}
+            {% set totais = segmento.totais %}
+            {% call highlight_box("info", "Resumo do segmento") %}
+              <ul style="margin: 12px 0 0 18px;">
+                <li>Produtos cadastrados: {{ totais.produtos_registrados }}</li>
+                {% if totais.faturamento_mensal.valor_formatado %}
+                  <li>Faturamento mensal estimado: {{ totais.faturamento_mensal.valor_formatado }}</li>
+                {% endif %}
+                {% if totais.margem_contribuicao.valor_formatado or totais.margem_contribuicao.percentual_formatado %}
+                  <li>Margem de contribuicao total:
+                    {% if totais.margem_contribuicao.percentual_formatado %}{{ totais.margem_contribuicao.percentual_formatado }}{% endif %}
+                    {% if totais.margem_contribuicao.valor_formatado %}{% if totais.margem_contribuicao.percentual_formatado %} | {% endif %}{{ totais.margem_contribuicao.valor_formatado }}{% endif %}
+                  </li>
+                {% endif %}
+              </ul>
+            {% endcall %}
+          {% endif %}
+        {% endcall %}
+      {% endfor %}
+    {% else %}
+      <p class="story-note">Nenhum segmento foi cadastrado para este plano.</p>
+    {% endif %}
+  </div>
+</section>
+
+{# ---------------------------------------------------------
+   04. Estruturas de Execucao
+   --------------------------------------------------------- #}
+<section class="page portrait">
+  {{ section_header("04", "Estruturas de Execucao") }}
+  
+  <div class="section-body">
+    {% if estruturas %}
+      {% call responsive_grid() %}
+        {% for area in estruturas %}
+          {% call model7_card(area.area) %}
+            {% if area.capacidade_formatada or area.capacidade %}
+              <p style="font-size:13px; color:#1d4ed8; margin: 0 0 8px;">
+                Capacidade suportada: {{ area.capacidade_formatada or area.capacidade }}
+                {% if area.capacidade_observacoes %}<br><span style="color:#64748b;">{{ area.capacidade_observacoes }}</span>{% endif %}
+              </p>
+            {% endif %}
+            <ul>
+              {% for bloco in area.resumo %}
+                <li>
+                  <strong>{{ bloco.escopo }}:</strong>
+                  <ul style="margin-top:4px;">
+                    {% for ponto in bloco.pontos %}
+                      <li>{{ ponto }}</li>
+                    {% endfor %}
+                  </ul>
+                </li>
+              {% endfor %}
+            </ul>
+          {% endcall %}
+        {% endfor %}
+      {% endcall %}
+    {% else %}
+      <p class="story-note">As estruturas ainda nao foram priorizadas neste plano.</p>
+    {% endif %}
+  </div>
+</section>
+
+{# ---------------------------------------------------------
+   05. ModeFin - Modelagem Financeira
+   --------------------------------------------------------- #}
+<section class="page portrait">
+  {{ section_header("05", "ModeFin - Modelagem Financeira") }}
+
+  {% set products_totals = modefin_products_totals or {} %}
+  {% set fixed_costs = modefin_fixed_costs or {} %}
+  {% set investment_flow = modefin_investment_flow or {} %}
+  {% set investment_totals = investment_flow.get('totals', {}) %}
+  {% set analysis_metrics_data = analysis_metrics or {} %}
+
+  <div class="section-body">
+    {% call subsection("Resultados") %}
+      {% set faturamento_meta = products_totals.get('faturamento', {}) %}
+      {% set margem_totais = products_totals.get('margem_contribuicao', {}) %}
+      {% set custos_variaveis = products_totals.get('custos_variaveis', {}) %}
+      {% set despesas_variaveis = products_totals.get('despesas_variaveis', {}) %}
+
+      {% call responsive_grid("240px") %}
+        {% call model7_card("Produtos cadastrados") %}
+          <p style="font-size:32px; font-weight:700; margin:0;">{{ products_totals.get('count', 0) }}</p>
+          <p class="story-note">Produtos com pricing e margens configurados no ModeFin.</p>
+        {% endcall %}
+
+        {% call model7_card("Faturamento alvo") %}
+          <p style="font-size:24px; font-weight:600; margin:0;">{{ format_currency(faturamento_meta.get('valor', 0)) }}</p>
+          <p class="story-note">Receita mensal projetada considerando metas de market share.</p>
+        {% endcall %}
+
+        {% call model7_card("Margem de contribuição média") %}
+          <p style="font-size:24px; font-weight:600; margin:0;">{{ format_currency(margem_totais.get('valor', 0)) }}</p>
+          <p class="story-note">Equivalente a {{ format_percent(margem_totais.get('percentual', 0)) }} do faturamento projetado.</p>
+        {% endcall %}
+
+        {% call model7_card("Gastos fixos mensais") %}
+          <p style="font-size:24px; font-weight:600; margin:0;">{{ format_currency(fixed_costs.get('total_gastos_mensal', 0)) }}</p>
+          <p class="story-note">Custos + despesas fixas consolidados das estruturas.</p>
+        {% endcall %}
+      {% endcall %}
+
+      {{ result_grid([
+        {"label": "Faturamento mensal", "value": format_currency(faturamento_meta.get('valor', 0)), "note": format_percent(faturamento_meta.get('percentual', 0)) ~ " da meta"},
+        {"label": "Custos variaveis", "value": format_currency(custos_variaveis.get('valor', 0)), "note": format_percent(custos_variaveis.get('percentual', 0))},
+        {"label": "Despesas variaveis", "value": format_currency(despesas_variaveis.get('valor', 0)), "note": format_percent(despesas_variaveis.get('percentual', 0))},
+        {"label": "Margem de contribuicao", "value": format_currency(margem_totais.get('valor', 0)), "note": format_percent(margem_totais.get('percentual', 0))}
+      ]) }}
+
+      {% if modefin_products %}
+        <h4 class="report-subtitle">Produtos e margens</h4>
+        {% call(rows) custom_table(
+          ["Produto", "Preco venda", "Margem unitaria", "Meta market share", "Unidades meta"],
+          modefin_products
+        ) %}
+          {% for product in rows %}
+            <tr>
+              <td>{{ product.name }}</td>
+              <td>{{ format_currency(product.sale_price) }}</td>
+              <td>{{ format_percent(product.unit_contribution_margin_percent) }}</td>
+              <td>{{ format_percent(product.market_share_goal_percent) }}</td>
+              <td>{{ format_number(product.market_share_goal_monthly_units, 0) }}</td>
+            </tr>
+          {% endfor %}
+        {% endcall %}
+      {% else %}
+        <p class="story-note">Nenhum produto cadastrado no ModeFin.</p>
+      {% endif %}
+
+      {% if financeiro.premissas %}
+        <h4 class="report-subtitle">Premissas principais</h4>
+        {% call(rows) custom_table(
+          ["Descricao", "Sugestao", "Ajustado", "Observacoes", "Memoria de calculo"],
+          financeiro.premissas
+        ) %}
+          {% for item in rows %}
+            <tr>
+              <td>{{ item.indicador }}</td>
+              <td>{{ item.sugestao }}</td>
+              <td>{{ item.ajustado }}</td>
+              <td>{{ item.observacoes }}</td>
+              <td>{{ item.memoria }}</td>
+            </tr>
+          {% endfor %}
+        {% endcall %}
+      {% else %}
+        <p class="story-note">Nenhuma premissa financeira cadastrada.</p>
+      {% endif %}
+    {% endcall %}
+
+    {% call subsection("Investimentos") %}
+      {% set capital_total = investment_totals.get('capital_giro', 0) %}
+      {% set imobilizado_total = investment_totals.get('imobilizado', 0) %}
+      {% set investimento_total = investment_totals.get('investimentos', 0) %}
+      {{ result_grid([
+        {"label": "Capital de giro planejado", "value": format_currency(capital_total)},
+        {"label": "Imobilizado (estruturas)", "value": format_currency(imobilizado_total)},
+        {"label": "Total investido", "value": format_currency(investimento_total)}
+      ]) }}
+
+      {% if modefin_investimentos_resumo %}
+        <h4 class="report-subtitle">Investimentos por bloco estrutural</h4>
+        {% call(rows) custom_table(
+          ["Bloco", "Investimentos", "Custos fixos (mensal)", "Despesas fixas (mensal)", "Total mensal"],
+          modefin_investimentos_resumo
+        ) %}
+          {% for item in rows %}
+            <tr>
+              <td>{{ item.bloco }}</td>
+              <td>{{ item.investimentos_formatado or format_currency(item.investimentos or 0) }}</td>
+              <td>{{ item.custos_fixos_mensal_formatado or format_currency(item.custos_fixos_mensal or 0) }}</td>
+              <td>{{ item.despesas_fixas_mensal_formatado or format_currency(item.despesas_fixas_mensal or 0) }}</td>
+              <td>{{ item.total_gastos_mensal_formatado or format_currency(item.total_gastos_mensal or 0) }}</td>
+            </tr>
+          {% endfor %}
+        {% endcall %}
+      {% else %}
+        <p class="story-note">Sem investimentos imobilizados registrados.</p>
+      {% endif %}
+
+      {% if modefin_capital_giro %}
+        <h4 class="report-subtitle">Capital de giro planejado</h4>
+        {% call(rows) custom_table(["Tipo", "Descricao", "Data", "Valor"], modefin_capital_giro) %}
+          {% for item in rows %}
+            {% set tipo = (item.item_type or "") | replace("_", " ") | title %}
+            <tr>
+              <td>{{ tipo or "Item" }}</td>
+              <td>{{ item.description or "-" }}</td>
+              <td>{{ item.contribution_date or "-" }}</td>
+              <td>{{ format_currency(item.amount or 0) }}</td>
+            </tr>
+          {% endfor %}
+        {% endcall %}
+
+        {% set cg_totals = namespace(caixa=0.0, recebiveis=0.0, estoques=0.0, total=0.0) %}
+        {% for item in modefin_capital_giro %}
+          {% set valor = (item.amount or 0) | float %}
+          {% set cg_totals.total = cg_totals.total + valor %}
+          {% set tipo = (item.item_type or "") | lower %}
+          {% if tipo == 'caixa' %}
+            {% set cg_totals.caixa = cg_totals.caixa + valor %}
+          {% elif tipo == 'recebiveis' %}
+            {% set cg_totals.recebiveis = cg_totals.recebiveis + valor %}
+          {% elif tipo == 'estoques' %}
+            {% set cg_totals.estoques = cg_totals.estoques + valor %}
+          {% endif %}
+        {% endfor %}
+
+        {% call highlight_box("info", "Totais por categoria") %}
+          <ul style="margin:12px 0 0 18px;">
+            <li>Caixa: {{ format_currency(cg_totals.caixa) }}</li>
+            <li>Recebiveis: {{ format_currency(cg_totals.recebiveis) }}</li>
+            <li>Estoques: {{ format_currency(cg_totals.estoques) }}</li>
+            <li><strong>Total planejado:</strong> {{ format_currency(cg_totals.total) }}</li>
+          </ul>
+        {% endcall %}
+      {% else %}
+        <p class="story-note">Capital de giro ainda nao planejado.</p>
+      {% endif %}
+    {% endcall %}
+
+    {% call subsection("Fontes de Recursos") %}
+      {% if modefin_funding_sources %}
+        {% set total_fontes = investment_totals.get('fontes', 0) %}
+        {% if total_fontes %}
+          {{ result_grid([
+            {"label": "Total de recursos cadastrados", "value": format_currency(total_fontes)}
+          ]) }}
+        {% endif %}
+
+        {% call(rows) custom_table(
+          ["Tipo", "Categoria", "Valor", "Disponibilidade", "Observacoes"],
+          modefin_funding_sources
+        ) %}
+          {% for fonte in rows %}
+            <tr>
+              <td>{{ fonte.source_type or "-" }}</td>
+              <td>{{ fonte.source_category or "-" }}</td>
+              <td>{{ fonte.amount_formatted or format_currency(fonte.amount or 0) }}</td>
+              <td>{{ fonte.contribution_date or "-" }}</td>
+              <td>{{ fonte.notes or "-" }}</td>
+            </tr>
+          {% endfor %}
+        {% endcall %}
+      {% else %}
+        <p class="story-note">Nenhuma fonte de recurso cadastrada.</p>
+      {% endif %}
+    {% endcall %}
+
+    {% call subsection("Distribuicao de Lucros e Destinacoes") %}
+      <h4 class="report-subtitle">Distribuicao de lucros</h4>
+      {% if modefin_profit_distribution %}
+        {% call(rows) custom_table(
+          ["Percentual", "Inicio", "Observacoes"],
+          modefin_profit_distribution
+        ) %}
+          {% for item in rows %}
+            <tr>
+              <td>{{ format_percent(item.percentage or 0) }}</td>
+              <td>{{ item.start_date or "-" }}</td>
+              <td>{{ item.notes or "-" }}</td>
+            </tr>
+          {% endfor %}
+        {% endcall %}
+      {% else %}
+        <p class="story-note">Distribuicao de lucros nao definida.</p>
+      {% endif %}
+
+      <h4 class="report-subtitle">Outras destinacoes</h4>
+      {% if modefin_result_rules %}
+        {% call(rows) custom_table(
+          ["Descricao", "Percentual", "Inicio", "Observacoes"],
+          modefin_result_rules
+        ) %}
+          {% for regra in rows %}
+            <tr>
+              <td>{{ regra.description or "-" }}</td>
+              <td>{{ format_percent(regra.percentage or 0) }}</td>
+              <td>{{ regra.start_date or "-" }}</td>
+              <td>{{ regra.notes or "-" }}</td>
+            </tr>
+          {% endfor %}
+        {% endcall %}
+      {% else %}
+        <p class="story-note">Sem destinacoes adicionais cadastradas.</p>
+      {% endif %}
+    {% endcall %}
+
+    {% call subsection("Fluxo de Caixa do Investimento") %}
+      {% if investment_flow.has_rows %}
+        {% call(rows) custom_table(
+          ["Periodo", "Cap. Giro", "Imobilizado", "Total Invest.", "Fontes", "Saldo Periodo", "Saldo Acum."],
+          investment_flow.rows
+        ) %}
+          {% for row in rows %}
+            {% set saldo_periodo = row.saldo_periodo or 0 %}
+            {% set saldo_acumulado = row.saldo_acumulado or 0 %}
+            {% set capital = row.capital_giro or 0 %}
+            {% set imobilizado = row.imobilizado or 0 %}
+            {% set investimentos = row.investimentos or 0 %}
+            {% set fontes = row.fontes or 0 %}
+            <tr>
+              <td>{{ row.period_label or "-" }}</td>
+              <td style="text-align:right; font-size:11px;">{{ "-" if capital == 0 else format_number(capital, 2) }}</td>
+              <td style="text-align:right; font-size:11px;">{{ "-" if imobilizado == 0 else format_number(imobilizado, 2) }}</td>
+              <td style="text-align:right; font-size:11px;"><strong>{{ format_number(investimentos, 2) }}</strong></td>
+              <td style="text-align:right; font-size:11px; color:#059669;">{{ "-" if fontes == 0 else format_number(fontes, 2) }}</td>
+              <td style="text-align:right; font-size:11px; {% if saldo_periodo < 0 %}color:#dc2626;{% else %}color:#047857;{% endif %}"><strong>{{ format_number(saldo_periodo, 2) }}</strong></td>
+              <td style="text-align:right; font-size:11px; {% if saldo_acumulado < 0 %}color:#dc2626;{% else %}color:#047857;{% endif %}"><strong>{{ format_number(saldo_acumulado, 2) }}</strong></td>
+            </tr>
+          {% endfor %}
+          <tr style="font-weight:700; border-top:2px solid #cbd5e1;">
+            <td><strong>Total</strong></td>
+            <td style="text-align:right; font-size:11px;"><strong>{{ format_number(investment_totals.get('capital_giro', 0), 2) }}</strong></td>
+            <td style="text-align:right; font-size:11px;"><strong>{{ format_number(investment_totals.get('imobilizado', 0), 2) }}</strong></td>
+            <td style="text-align:right; font-size:11px;"><strong>{{ format_number(investment_totals.get('investimentos', 0), 2) }}</strong></td>
+            <td style="text-align:right; font-size:11px;"><strong>{{ format_number(investment_totals.get('fontes', 0), 2) }}</strong></td>
+            <td style="text-align:right; font-size:11px;"><strong>{{ format_number(investment_totals.get('saldo_periodo', 0), 2) }}</strong></td>
+            <td style="text-align:right; font-size:11px;"><strong>{{ format_number(investment_flow.get('saldo_final', 0), 2) }}</strong></td>
+          </tr>
+        {% endcall %}
+
+        {% set saldo_final = investment_flow.get('saldo_final', 0) %}
+        {% if saldo_final >= 0 %}
+          {% call highlight_box("success", "Saldo positivo") %}
+            <p>As fontes de recursos cadastradas cobrem o investimento total previsto, com saldo acumulado de {{ format_currency(saldo_final) }}.</p>
+          {% endcall %}
+        {% else %}
+          {% call highlight_box("warning", "Saldo negativo") %}
+            <p>Os investimentos excedem os recursos cadastrados em {{ format_currency(saldo_final | abs) }}. Avalie reforço de capital ou ajustes no plano.</p>
+          {% endcall %}
+        {% endif %}
+      {% else %}
+        <p class="story-note">Nenhum movimento de investimento ou fonte cadastrado.</p>
+      {% endif %}
+    {% endcall %}
+
+    {% call subsection("Fluxo de Caixa do Negocio") %}
+      {% if modefin_business_flow and modefin_business_flow.has_rows %}
+        {% call(rows) custom_table(
+          ["Periodo", "Receita", "Var.", "Margem", "Fixos", "Result. Op.", "Destin.", "Result. Per."],
+          modefin_business_flow.rows
+        ) %}
+          {% for row in rows %}
+            {% set resultado_op = row.resultado_operacional or 0 %}
+            {% set resultado_periodo = row.resultado_periodo or 0 %}
+            <tr>
+              <td>{{ row.periodo or "-" }}</td>
+              <td style="text-align:right; font-size:11px;">{{ format_number(row.receita or 0, 2) }}</td>
+              <td style="text-align:right; font-size:11px;">{{ format_number((row.custo_variavel or 0) + (row.despesa_variavel or 0), 2) }}</td>
+              <td style="text-align:right; font-size:11px;">{{ format_number(row.margem or 0, 2) }}</td>
+              <td style="text-align:right; font-size:11px;">{{ format_number(row.fixos_total or 0, 2) }}</td>
+              <td style="text-align:right; font-size:11px; {% if resultado_op < 0 %}color:#dc2626;{% else %}color:#047857;{% endif %}">{{ format_number(resultado_op, 2) }}</td>
+              <td style="text-align:right; font-size:11px;">{{ format_number(row.distribuicao or 0, 2) }}</td>
+              <td style="text-align:right; font-size:11px; {% if resultado_periodo < 0 %}color:#dc2626;{% else %}color:#047857;{% endif %}"><strong>{{ format_number(resultado_periodo, 2) }}</strong></td>
+            </tr>
+          {% endfor %}
+        {% endcall %}
+      {% else %}
+        <p class="story-note">Sem periodos de fluxo do negocio cadastrados.</p>
+      {% endif %}
+    {% endcall %}
+
+    {% call subsection("Fluxo de Caixa do Investidor") %}
+      {% if modefin_investor_flow and modefin_investor_flow.has_rows %}
+        {% call(rows) custom_table(
+          ["Periodo", "Aporte", "Distribuicao", "Saldo Periodo", "Saldo Acum."],
+          modefin_investor_flow.rows
+        ) %}
+          {% for row in rows %}
+            {% set saldo_periodo = row.saldo_periodo or 0 %}
+            {% set saldo_acumulado = row.saldo_acumulado or 0 %}
+            {% set aporte = row.aporte or 0 %}
+            {% set distribuicao = row.distribuicao or 0 %}
+            <tr>
+              <td>{{ row.periodo or "-" }}</td>
+              <td style="text-align:right; font-size:11px;">{{ "-" if aporte == 0 else format_number(aporte, 2) }}</td>
+              <td style="text-align:right; font-size:11px; color:#059669;">{{ "-" if distribuicao == 0 else format_number(distribuicao, 2) }}</td>
+              <td style="text-align:right; font-size:11px; {% if saldo_periodo < 0 %}color:#dc2626;{% else %}color:#047857;{% endif %}"><strong>{{ format_number(saldo_periodo, 2) }}</strong></td>
+              <td style="text-align:right; font-size:11px; {% if saldo_acumulado < 0 %}color:#dc2626;{% else %}color:#047857;{% endif %}"><strong>{{ format_number(saldo_acumulado, 2) }}</strong></td>
+            </tr>
+          {% endfor %}
+          <tr style="font-weight:700; border-top:2px solid #cbd5e1;">
+            <td><strong>Total</strong></td>
+            <td style="text-align:right; font-size:11px;"><strong>{{ format_number(modefin_investor_flow.rows | sum(attribute='aporte'), 2) }}</strong></td>
+            <td style="text-align:right; font-size:11px;"><strong>{{ format_number(modefin_investor_flow.rows | sum(attribute='distribuicao'), 2) }}</strong></td>
+            <td style="text-align:right; font-size:11px;">-</td>
+            <td style="text-align:right; font-size:11px;">-</td>
+          </tr>
+        {% endcall %}
+      {% else %}
+        <p class="story-note">Sem dados de fluxo do investidor registrados.</p>
+      {% endif %}
+    {% endcall %}
+
+    {% call subsection("Analise de Viabilidade") %}
+      {% set investimento_total = analysis_metrics_data.get('total_investimentos', 0) %}
+      {% set resultado_operacional = analysis_metrics_data.get('resultado_operacional', 0) %}
+      {% set periodo_analise = analysis_metrics_data.get('periodo_meses', 0) %}
+      {% set custo_oportunidade = analysis_metrics_data.get('custo_oportunidade_percent', 0) %}
+      {{ result_grid([
+        {"label": "Investimento total", "value": format_currency(investimento_total)},
+        {"label": "Resultado operacional mensal", "value": format_currency(resultado_operacional)},
+        {"label": "Periodo de analise", "value": (periodo_analise | int) ~ " meses"},
+        {"label": "Custo de oportunidade", "value": format_percent(custo_oportunidade)}
+      ]) }}
+
+      {% set payback = analysis_metrics_data.get('payback_meses') %}
+      {% set payback_inicio = analysis_metrics_data.get('payback_inicio') %}
+      {% set payback_fim = analysis_metrics_data.get('payback_fim') %}
+      {% set roi = analysis_metrics_data.get('roi_percent') %}
+      {% set tir = analysis_metrics_data.get('tir_percent') %}
+      {% set vpl = analysis_metrics_data.get('vpl') %}
+      
+      {% if payback and payback_inicio and payback_fim %}
+        {% set payback_display = '%.0f meses (%s a %s)' % (payback, payback_inicio, payback_fim) %}
+      {% elif payback and payback_inicio %}
+        {% set payback_display = '%.0f meses (início: %s, ainda não recuperado)' % (payback, payback_inicio) %}
+      {% elif payback %}
+        {% set payback_display = '%.1f meses' % payback %}
+      {% else %}
+        {% set payback_display = "-" %}
+      {% endif %}
+      
+      {{ result_grid([
+        {"label": "Payback", "value": payback_display},
+        {"label": "ROI", "value": roi and format_percent(roi) or "-"},
+        {"label": "TIR", "value": tir and ('%.1f%% a.a.' % tir) or "-"},
+        {"label": "VPL", "value": (vpl and vpl != 0) and format_currency(vpl) or "-"}
+      ]) }}
+
+      {% call highlight_box("info", "Parametros considerados") %}
+        <ul style="margin:12px 0 0 18px;">
+          <li>Periodo de analise: {{ periodo_analise | int }} meses</li>
+          <li>Custo de oportunidade: {{ format_percent(custo_oportunidade) }} ao ano</li>
+        </ul>
+      {% endcall %}
+
+      {% if modefin_executive_summary %}
+        {% call highlight_box("info", "Resumo Executivo") %}
+          <p>{{ modefin_executive_summary }}</p>
+        {% endcall %}
+      {% else %}
+        <p class="story-note">Nenhum resumo executivo cadastrado.</p>
+      {% endif %}
+    {% endcall %}
+  </div>
+</section>
+{# ---------------------------------------------------------
+   06. Projeto vinculado e atividades
+   --------------------------------------------------------- #}
+<section class="page portrait">
+  {{ section_header("06", "Projeto Vinculado & Atividades") }}
+
+  <div class="section-body">
+    {% call responsive_grid("260px") %}
+      {% set projeto_titulo = plan.plan_name or "Planejamento | Agenda do Planejamento" %}
+      {% call model7_card("Projeto vinculado", projeto_titulo) %}
+        {% if projeto and projeto.codigo %}
+          <p><strong>Codigo:</strong> {{ projeto.codigo }}</p>
+        {% endif %}
+        {% if projeto.descricao %}
+          <p>{{ projeto.descricao }}</p>
+        {% endif %}
+        {% if projeto.observacoes %}
+          <ul class="story-list compact">
+            {% for obs in projeto.observacoes %}
+              <li>{{ obs }}</li>
+            {% endfor %}
+          </ul>
+        {% else %}
+          <p class="story-note">Sem observacoes adicionais registradas.</p>
+        {% endif %}
+        {% if projeto.company_id and projeto.grv_project_id %}
+          <p class="story-note">
+            Kanban ativo:
+            <a class="report-link" href="{{ url_for('grv.grv_project_manage', company_id=projeto.company_id, project_id=projeto.grv_project_id) }}" target="_blank" rel="noopener">
+              GRV &rsaquo; Projeto {{ projeto.codigo or projeto.grv_project_id }}
+            </a>
+          </p>
+        {% endif %}
+      {% endcall %}
+
+      {% call model7_card("Resumo operacional") %}
+        <ul class="story-list compact">
+          <li><strong>Status do plano:</strong> {{ plan.status }}</li>
+          <li><strong>Consultor responsavel:</strong> Fabiano Ferreira</li>
+          {% if projeto and projeto.atividades_grv %}
+            <li><strong>Atividades projeto GRV:</strong> {{ projeto.atividades_grv|length }}</li>
+          {% endif %}
+        </ul>
+      {% endcall %}
+    {% endcall %}
+
+    {# Exibir atividades da agenda do PEV #}
+    {% if projeto_atividades %}
+      {% call subsection("Agenda de atividades do PEV") %}
+        {% call(rows) custom_table(["O que", "Quem", "Quando", "Como"], projeto_atividades) %}
+          {% for item in rows %}
+            <tr>
+              <td>{{ item.oque }}</td>
+              <td>{{ item.quem }}</td>
+              <td>{{ item.quando }}</td>
+              <td>{{ item.como }}</td>
+            </tr>
+          {% endfor %}
+        {% endcall %}
+      {% endcall %}
+    {% endif %}
+    
+    {# Exibir atividades do projeto GRV vinculado #}
+    {% if projeto and projeto.atividades_grv %}
+      {% call subsection("Atividades do Projeto GRV") %}
+        {% call(rows) custom_table(["Código", "O que", "Quem", "Quando", "Como", "Status"], projeto.atividades_grv) %}
+          {% for atividade in rows %}
+            <tr>
+              <td>{{ atividade.code or "-" }}</td>
+              <td>{{ atividade.what or "-" }}</td>
+              <td>{{ atividade.who or "-" }}</td>
+              <td>{{ atividade.when or "-" }}</td>
+              <td>{{ atividade.how or "-" }}</td>
+              <td>
+                {% if atividade.status == 'completed' %}
+                  Concluído
+                {% elif atividade.status == 'executing' %}
+                  Executando
+                {% elif atividade.status == 'waiting' %}
+                  Aguardando
+                {% elif atividade.status == 'pending' %}
+                  Pendência
+                {% elif atividade.status == 'suspended' %}
+                  Suspenso
+                {% else %}
+                  {{ atividade.status or "Inbox" }}
+                {% endif %}
+              </td>
+            </tr>
+          {% endfor %}
+        {% endcall %}
+      {% endcall %}
+    {% endif %}
+    
+    {% if not projeto_atividades and (not projeto or not projeto.atividades_grv) %}
+      <p class="story-note">Nenhuma atividade foi cadastrada neste projeto.</p>
+    {% endif %}
+  </div>
+</section>
+
+{% endblock %}
+
+{% block footer %}
+  <span>Versus Gestao Corporativa - Todos os Direitos Reservados - Emitido em: {{ issued_at }}</span>
+  <span>Consultor responsavel: Fabiano Ferreira</span>
+{% endblock %}

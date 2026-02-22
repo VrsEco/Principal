@@ -1,0 +1,482 @@
+{% extends "layouts/workspace.html" %}
+
+{% block title %}Rotina dos Processos | Versus{% endblock %}
+
+{% block workspace_content %}
+<div class="workspace-header" style="display: flex; justify-content: space-between; align-items: center;">
+  <div class="header-content">
+    <h1 class="text-h1">📅 Rotina dos Processos</h1>
+    <p class="text-secondary">Visão geral dos agendamentos e procedimentos operacionais (POPs) definidos.</p>
+  </div>
+  <div class="header-actions">
+    <!-- Future: Add 'New Routine' button if independent creation is supported -->
+  </div>
+</div>
+
+<div class="d-flex justify-content-end mb-3">
+  <a href="{{ url_for('processes.routine_details_page', company_id=company.id, routine_id='new') }}"
+    class="btn btn-primary">
+    <span>➕</span> Adicionar Rotina
+  </a>
+</div>
+
+<div class="routines-grid mt-4" id="routinesGrid">
+  <div class="loading-shimmer" style="height: 120px; border-radius: 12px;"></div>
+  <div class="loading-shimmer" style="height: 120px; border-radius: 12px;"></div>
+  <div class="loading-shimmer" style="height: 120px; border-radius: 12px;"></div>
+</div>
+
+<style>
+  .routines-grid {
+    display: flex;
+    flex-direction: column;
+    gap: 0.75rem;
+  }
+
+  .routine-card {
+    background: var(--surface-primary);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    padding: 1rem 1.25rem;
+    display: flex;
+    flex-direction: column;
+    gap: 0.5rem;
+    transition: var(--transition);
+    position: relative;
+  }
+
+  .routine-card:hover {
+    border-color: var(--primary);
+    box-shadow: var(--shadow-sm);
+    transform: translateY(-1px);
+  }
+
+  .rt-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    gap: 1rem;
+  }
+
+  .rt-title-group {
+    display: flex;
+    flex-direction: column;
+  }
+
+  .rt-name {
+    font-size: 1.1rem;
+    font-weight: 700;
+    color: var(--text-primary);
+    margin: 0;
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+  }
+
+  .rt-process {
+    font-size: 0.85rem;
+    color: var(--text-secondary);
+    font-weight: 500;
+    margin-top: 2px;
+  }
+
+  .rt-process strong {
+    color: var(--primary);
+  }
+
+  .rt-meta {
+    display: flex;
+    align-items: center;
+    gap: 1.5rem;
+    font-size: 0.85rem;
+    color: var(--text-tertiary);
+    margin-top: 0.5rem;
+    flex-wrap: wrap;
+  }
+
+  .rt-schedule-badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    padding: 4px 10px;
+    background: var(--surface-secondary);
+    color: var(--text-primary);
+    border-radius: 6px;
+    font-size: 0.8rem;
+    font-weight: 600;
+    border: 1px solid var(--border);
+  }
+
+  .rt-actions {
+    display: flex;
+    gap: 0.5rem;
+    align-items: center;
+  }
+
+  .btn-rt-action {
+    width: 32px;
+    height: 32px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: 8px;
+    border: 1px solid transparent;
+    background: var(--surface-secondary);
+    color: var(--text-secondary);
+    transition: all 0.2s;
+    cursor: pointer;
+    text-decoration: none;
+  }
+
+  .btn-rt-action:hover {
+    background: var(--surface-tertiary);
+    color: var(--primary);
+  }
+
+  .btn-rt-start {
+    background: var(--primary-light);
+    color: var(--primary);
+    border-color: var(--primary-light);
+    width: auto;
+    padding: 0 12px;
+  }
+
+  .btn-rt-start:hover {
+    background: var(--primary);
+    color: white;
+  }
+
+  .btn-rt-edit {
+    background: #e0e7ff;
+    color: #4338ca;
+    border-color: #c7d2fe;
+    width: auto;
+    padding: 0 12px;
+    gap: 4px;
+  }
+
+  .btn-rt-edit:hover {
+    background: #4338ca;
+    color: white;
+  }
+
+  .btn-rt-danger {
+    background: #fee2e2;
+    color: #b91c1c;
+    border-color: #fecaca;
+    width: auto !important;
+    padding: 0 12px !important;
+    gap: 4px;
+    display: flex !important;
+  }
+
+  .btn-rt-danger:hover {
+    background: #ef4444;
+    color: white;
+    border-color: #ef4444;
+  }
+
+  .rt-team {
+    display: flex;
+    align-items: center;
+    gap: 4px;
+  }
+
+  .rt-avatar {
+    width: 24px;
+    height: 24px;
+    border-radius: 50%;
+    background: var(--primary-light);
+    color: var(--primary);
+    font-size: 0.7rem;
+    font-weight: 700;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border: 2px solid var(--surface-primary);
+    margin-left: -8px;
+  }
+
+  .rt-avatar:first-child {
+    margin-left: 0;
+  }
+
+  @media (max-width: 768px) {
+    .rt-header {
+      flex-direction: column;
+    }
+
+    .rt-actions {
+      width: 100%;
+      justify-content: flex-end;
+      margin-top: 0.5rem;
+    }
+
+    .rt-meta {
+      flex-direction: column;
+      align-items: flex-start;
+      gap: 0.5rem;
+    }
+  }
+</style>
+
+<script>
+  const companyId = parseInt('{{ company.id if company else 0 }}') || null;
+  let allRoutines = [];
+
+  async function loadRoutines() {
+    try {
+      const res = await fetch(`/api/companies/${companyId}/process-routines`);
+      const data = await res.json();
+      if (data.success && data.routines) {
+        allRoutines = data.routines;
+        renderRoutines(allRoutines);
+        populateFilters();
+      } else {
+        document.getElementById('routinesGrid').innerHTML = '<p class="p-5 text-center text-secondary">Falha ao carregar dados.</p>';
+      }
+    } catch (err) {
+      console.error('Erro ao carregar rotinas:', err);
+      document.getElementById('routinesGrid').innerHTML = '<p class="p-5 text-center text-secondary">Erro de conexão.</p>';
+    }
+  }
+
+  function populateFilters() {
+    // Processes
+    const pSelect = document.getElementById('filterProcess');
+    const processes = [...new Set(allRoutines.map(r => JSON.stringify({ id: r.process_id, name: r.process_name, code: r.process_code })))]
+      .map(s => JSON.parse(s))
+      .filter((v, i, a) => a.findIndex(t => t.id === v.id) === i); // Unique by ID
+
+    processes.forEach(p => {
+      const opt = document.createElement('option');
+      opt.value = p.id;
+      opt.textContent = `${p.code ? p.code + ' - ' : ''}${p.name}`;
+      pSelect.appendChild(opt);
+    });
+
+    // Executors (Flatten list)
+    // This assumes r.collaborators is available in API response as seen in previous file
+    /* 
+       However, looking at step 246, the API returns `collaborators` array.
+       We'll need to parse unique executors across all routines.
+    */
+    const executorsMap = new Map();
+    allRoutines.forEach(r => {
+      if (r.collaborators) {
+        r.collaborators.forEach(c => {
+          if (c.employee_id && c.employee_name) {
+            executorsMap.set(c.employee_id, c.employee_name);
+          }
+        });
+      }
+    });
+
+    const eSelect = document.getElementById('filterExecutor');
+    executorsMap.forEach((name, id) => {
+      const opt = document.createElement('option');
+      opt.value = id;
+      opt.textContent = name;
+      eSelect.appendChild(opt);
+    });
+  }
+
+  function applyFilters() {
+    const search = document.getElementById('filterSearch').value.toLowerCase();
+    const procId = document.getElementById('filterProcess').value;
+    const execId = document.getElementById('filterExecutor').value;
+    const schedule = document.getElementById('filterSchedule').value;
+
+    const filtered = allRoutines.filter(r => {
+      const nameMatch = r.name.toLowerCase().includes(search) ||
+        (r.process_name || '').toLowerCase().includes(search);
+      const procMatch = !procId || r.process_id == procId;
+      const schedMatch = !schedule || r.schedule_type == schedule;
+
+      let execMatch = true;
+      if (execId) {
+        execMatch = r.collaborators && r.collaborators.some(c => c.employee_id == execId);
+      }
+
+      return nameMatch && procMatch && schedMatch && execMatch;
+    });
+
+    renderRoutines(filtered);
+  }
+
+  function resetFilters() {
+    document.getElementById('filterSearch').value = '';
+    document.getElementById('filterProcess').value = '';
+    document.getElementById('filterExecutor').value = '';
+    document.getElementById('filterSchedule').value = '';
+    renderRoutines(allRoutines);
+  }
+
+  function renderRoutines(data) {
+    const grid = document.getElementById('routinesGrid');
+    if (!data || data.length === 0) {
+      grid.innerHTML = `
+                <div class="empty-state p-5 text-center">
+                    <div style="font-size: 3rem; margin-bottom: 1rem;">📅</div>
+                    <h3>Nenhuma rotina encontrada</h3>
+                    <p class="text-secondary">Nenhum agendamento corresponde aos filtros selecionados.</p>
+                </div>
+            `;
+      return;
+    }
+
+    const scheduleLabels = {
+      'daily': 'Diário', 'weekly': 'Semanal', 'monthly': 'Mensal',
+      'quarterly': 'Trimestral', 'yearly': 'Anual', 'specific': 'Específico'
+    };
+
+    grid.innerHTML = data.map(r => {
+      const schedLabel = scheduleLabels[r.schedule_type] || r.schedule_type || 'Manual';
+      const processLabel = `${r.process_code ? r.process_code + ' - ' : ''}${r.process_name || 'Processo Indefinido'}`;
+
+      // Team rendering
+      let teamHtml = '<span class="text-tertiary">Sem executores</span>';
+      if (r.collaborators && r.collaborators.length > 0) {
+        const avatars = r.collaborators.slice(0, 3).map(c => {
+          const initial = (c.employee_name || '?')[0];
+          return `<div class="rt-avatar" title="${c.employee_name}">${initial}</div>`;
+        }).join('');
+        const remaining = r.collaborators.length > 3 ? `<span class="text-sm text-tertiary ms-1">+${r.collaborators.length - 3}</span>` : '';
+        teamHtml = `<div class="rt-team">${avatars}${remaining}</div>`;
+      }
+
+      // Next deadline
+      let deadlineHtml = '';
+      if (r.deadline_days) deadlineHtml = `<span>⏱️ SLA: ${r.deadline_days}d</span>`;
+
+      return `
+            <div class="routine-card">
+                <div class="rt-header">
+                    <div class="rt-title-group">
+                        <h3 class="rt-name">${r.name}</h3>
+                        <div class="rt-process">Processo: <strong>${processLabel}</strong></div>
+                    </div>
+                    <div class="rt-actions">
+                        <button class="btn-rt-action btn-rt-start" onclick="startInstance(${r.process_id}, '${r.name}', ${r.id})" title="Iniciar Agora">
+                            ⚡ Iniciar
+                        </button>
+                        <a href="/companies/${companyId}/routines/${r.id}" class="btn-rt-action btn-rt-edit" title="Editar Rotina">
+                            ✏️ Editar
+                        </a>
+                        <button class="btn-rt-action btn-rt-danger" onclick="deleteRoutine(${r.id}, '${r.name}')" title="Excluir Rotina">
+                            🗑️ Excluir
+                        </button>
+                        <a href="/process-map/process/${r.process_id}?tab=routines" class="btn-rt-action" title="Ver Detalhes">
+                            ℹ️
+                        </a>
+                    </div>
+                </div>
+                
+                <div class="rt-meta">
+                    <div class="rt-schedule-badge">
+                        <span>📅</span> ${schedLabel}
+                    </div>
+                    ${deadlineHtml}
+                    <div style="flex:1"></div>
+                    ${teamHtml}
+                </div>
+            </div>
+            `;
+    }).join('');
+  }
+
+  async function deleteRoutine(id, name) {
+    if (!confirm(`Tem certeza que deseja excluir a rotina "${name}"?`)) return;
+
+    try {
+      const res = await fetch(`/api/companies/${companyId}/process-routines/${id}`, {
+        method: 'DELETE'
+      });
+
+      if (res.ok) {
+        allRoutines = allRoutines.filter(r => r.id !== id);
+        renderRoutines(allRoutines);
+      } else {
+        const err = await res.json();
+        alert('Erro ao excluir: ' + (err.message || 'Erro desconhecido'));
+      }
+    } catch (e) {
+      console.error(e);
+      alert('Erro de conexão ao excluir rotina.');
+    }
+  }
+
+  async function startInstance(processId, routineName, routineId) {
+    if (!confirm(`Confirmar início da execução: ${routineName}?`)) return;
+
+    try {
+      const res = await fetch(`/api/companies/${companyId}/process-instances`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          process_id: processId,
+          routine_id: routineId,
+          title: routineName,
+          status: 'in_progress',
+          company_id: companyId,
+          due_date: new Date().toISOString().split('T')[0],
+          trigger_type: 'manual'
+        })
+      });
+
+      if (res.ok) {
+        // Redirect to instances page to see the new instance
+        window.location.href = `/companies/${companyId}/process-instances`;
+      } else {
+        const err = await res.json();
+        alert('Erro: ' + (err.error || err.message));
+      }
+    } catch (e) {
+      console.error(e);
+      alert('Erro de conexão.');
+    }
+  }
+
+  document.addEventListener('DOMContentLoaded', loadRoutines);
+</script>
+{% endblock %}
+
+{% block sidebar_right %}
+<div class="sidebar-section-ws" id="sectionFilters">
+  <div class="sidebar-header-ws">
+    <h3 class="text-h3">Filtros</h3>
+  </div>
+  <div class="sidebar-content-ws">
+    <div class="form-group mb-4">
+      <label class="form-label">Busca</label>
+      <input type="text" class="form-control" id="filterSearch" placeholder="Nome da rotina..."
+        onkeyup="applyFilters()">
+    </div>
+    <div class="form-group mb-4">
+      <label class="form-label">Processo</label>
+      <select class="form-control" id="filterProcess" onchange="applyFilters()">
+        <option value="">Todos</option>
+      </select>
+    </div>
+    <div class="form-group mb-4">
+      <label class="form-label">Executor</label>
+      <select class="form-control" id="filterExecutor" onchange="applyFilters()">
+        <option value="">Todos</option>
+      </select>
+    </div>
+    <div class="form-group mb-4">
+      <label class="form-label">Periodicidade</label>
+      <select class="form-control" id="filterSchedule" onchange="applyFilters()">
+        <option value="">Todas</option>
+        <option value="daily">Diário</option>
+        <option value="weekly">Semanal</option>
+        <option value="monthly">Mensal</option>
+        <option value="quarterly">Trimestral</option>
+        <option value="yearly">Anual</option>
+        <option value="specific">Específico</option>
+      </select>
+    </div>
+    <button class="btn btn-secondary w-100" onclick="resetFilters()">Limpar Filtros</button>
+  </div>
+</div>
+{% endblock %}

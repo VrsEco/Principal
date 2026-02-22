@@ -1,0 +1,200 @@
+{% extends "reports/base_report.html" %}
+{% from "reports/components.html" import cover_meta_grid, section_header, model7_card, responsive_grid %}
+
+{% block page_title %}Relatorio de Implantacao - {{ plan.plan_name }}{% endblock %}
+{% block report_title_cover %}Estudo e Analise de Viabilidade de Implantacao de Negocio{% endblock %}
+{% block report_subtitle %}{{ plan.plan_name }}{% endblock %}
+
+{% block cover_meta %}
+  {{ cover_meta_grid([
+    {"label": "Empresa", "value": plan.company_name},
+    {"label": "Consultor", "value": plan.consultant or "Nao informado"},
+    {"label": "Emitido em", "value": issued_at},
+    {"label": "Versao", "value": plan.version or "v1.0"}
+  ]) }}
+{% endblock %}
+
+{% block cover %}
+  <p class="cover-intro">
+    Relatorio executivo que sintetiza o planejamento, as estruturas priorizadas e as premissas financeiras para dar inicio a implantacao do negocio.
+  </p>
+{% endblock %}
+
+{% block extra_css %}
+  <style>
+    .cover-intro {
+      max-width: 540px;
+      font-size: var(--font-size-base);
+      line-height: var(--line-height-relaxed);
+      color: rgba(255, 255, 255, 0.86);
+      margin-top: var(--spacing-lg);
+    }
+
+    .executive-metrics {
+      display: grid;
+      grid-template-columns: repeat(4, minmax(0, 1fr));
+      gap: var(--spacing-sm);
+      margin-bottom: var(--spacing-xl);
+    }
+
+    .executive-metric {
+      padding: 14px 18px;
+      border-radius: var(--radius-md);
+      background: var(--color-background-alt);
+      border: 1px solid rgba(15, 23, 42, 0.06);
+      box-shadow: var(--shadow-sm);
+      display: flex;
+      flex-direction: column;
+      gap: 6px;
+      min-height: 94px;
+    }
+
+    .executive-metric .metric-label {
+      font-size: var(--font-size-xs);
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+      color: var(--color-text-light);
+    }
+
+    .executive-metric .metric-value {
+      font-size: 26px;
+      font-weight: var(--font-weight-semibold);
+      color: var(--color-text-primary);
+      line-height: 1.2;
+    }
+
+    .executive-metric .metric-note {
+      font-size: var(--font-size-sm);
+      color: var(--color-text-muted);
+      line-height: 1.45;
+    }
+
+    .executive-info .story-list {
+      margin: 10px 0 0;
+      padding: 0;
+      list-style: none;
+      color: var(--color-text-secondary);
+    }
+
+    .executive-info .story-list li {
+      margin-bottom: 6px;
+    }
+
+    .executive-info .story-note {
+      margin-top: 8px;
+    }
+
+    .executive-info a {
+      color: #2563eb;
+      font-weight: var(--font-weight-semibold);
+      text-decoration: none;
+    }
+
+    .executive-info a:hover {
+      text-decoration: underline;
+    }
+
+    @media print {
+      .executive-metrics {
+        gap: 10px;
+      }
+
+      .executive-metric {
+        box-shadow: none;
+      }
+    }
+  </style>
+{% endblock %}
+
+{% block content %}
+  <section class="page portrait">
+    {{ section_header("01", "Resumo Executivo") }}
+
+    <div class="section-body">
+      <div class="executive-metrics">
+        <div class="executive-metric">
+          <span class="metric-label">Segmentos</span>
+          <span class="metric-value">{{ segmentos_count }}</span>
+          <span class="metric-note">Mercados com proposta de valor detalhada</span>
+        </div>
+        <div class="executive-metric">
+          <span class="metric-label">Estruturas</span>
+          <span class="metric-value">{{ estruturas_count }}</span>
+          <span class="metric-note">Areas operacionais priorizadas para implantacao</span>
+        </div>
+        <div class="executive-metric">
+          <span class="metric-label">Atividades mapeadas</span>
+          <span class="metric-value">{{ atividades_count }}</span>
+          <span class="metric-note">Itens criticos na agenda de implantacao</span>
+        </div>
+        <div class="executive-metric">
+          <span class="metric-label">Investimento total</span>
+          <span class="metric-value">{{ investimento_total or "-" }}</span>
+          <span class="metric-note">Capex consolidado (capital de giro + estruturas)</span>
+        </div>
+      </div>
+
+      {% call responsive_grid("260px") %}
+        {% call model7_card("Planejamento") %}
+          <div class="executive-info">
+            <ul class="story-list">
+              <li><strong>Plano:</strong> {{ plan.plan_name }}</li>
+              <li><strong>Status:</strong> {{ plan.status or "Nao informado" }}</li>
+              <li><strong>Versao:</strong> {{ plan.version or "v1.0" }}</li>
+              <li><strong>Consultor:</strong> {{ plan.consultant or "Nao informado" }}</li>
+            </ul>
+          </div>
+        {% endcall %}
+
+        {% call model7_card("Projeto vinculado") %}
+          <div class="executive-info">
+            {% if projeto.nome %}
+              <p><strong>{{ projeto.nome }}</strong></p>
+            {% else %}
+              <p><strong>Projeto nao vinculado</strong></p>
+            {% endif %}
+
+            {% if projeto.descricao %}
+              <p>{{ projeto.descricao }}</p>
+            {% else %}
+              <p class="story-note">Sem descricao cadastrada.</p>
+            {% endif %}
+
+            {% if plan.company_id and projeto.grv_project_id %}
+              <p><a href="{{ url_for('grv.grv_project_manage', company_id=plan.company_id, project_id=projeto.grv_project_id) }}" target="_blank" rel="noopener">Abrir quadro Kanban</a></p>
+            {% endif %}
+          </div>
+        {% endcall %}
+
+        {% call model7_card("Escopo consolidado") %}
+          <div class="executive-info">
+            <ul class="story-list">
+              <li>Segmentos validados: <strong>{{ segmentos_count }}</strong></li>
+              <li>Estruturas priorizadas: <strong>{{ estruturas_count }}</strong></li>
+              <li>Atividades planejadas: <strong>{{ atividades_count }}</strong></li>
+              <li>Investimento consolidado: <strong>{{ investimento_total or "-" }}</strong></li>
+            </ul>
+          </div>
+        {% endcall %}
+
+        {% call model7_card("Proximos marcos") %}
+          <div class="executive-info">
+            {% if proximas_atividades %}
+              <ul class="story-list">
+                {% for atividade in proximas_atividades %}
+                  <li>
+                    <strong>{{ atividade.oque }}</strong>
+                    {% if atividade.quem %}<br><span>Responsavel: {{ atividade.quem }}</span>{% endif %}
+                    {% if atividade.quando %}<br><span>Prazo: {{ atividade.quando }}</span>{% endif %}
+                  </li>
+                {% endfor %}
+              </ul>
+            {% else %}
+              <p class="story-note">Agenda em definicao.</p>
+            {% endif %}
+          </div>
+        {% endcall %}
+      {% endcall %}
+    </div>
+  </section>
+{% endblock %}

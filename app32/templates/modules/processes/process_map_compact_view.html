@@ -1,0 +1,629 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+
+<head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Mapa de Processos - {{ company_name }}</title>
+    <style>
+        :root {
+            --primary: #3b82f6;
+            --primary-hover: #2563eb;
+            --surface: #ffffff;
+            --surface-secondary: #f8fafc;
+            --border: #e2e8f0;
+            --text-primary: #1e293b;
+            --text-secondary: #64748b;
+            --text-tertiary: #94a3b8;
+            --shadow-sm: 0 1px 2px 0 rgb(0 0 0 / 0.05);
+            --shadow-md: 0 4px 6px -1px rgb(0 0 0 / 0.1);
+        }
+
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+        }
+
+        body {
+            font-family: "Inter", "Segoe UI", sans-serif;
+            background: #1a1a1a;
+            /* Dark background like app31 */
+            color: var(--text-primary);
+            min-height: 100vh;
+            -webkit-print-color-adjust: exact !important;
+            print-color-adjust: exact !important;
+        }
+
+        /* Toolbar */
+        .toolbar {
+            position: sticky;
+            top: 0;
+            z-index: 100;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 0.75rem 1.5rem;
+            background: var(--surface);
+            border-bottom: 1px solid var(--border);
+            box-shadow: var(--shadow-sm);
+        }
+
+        .toolbar-title {
+            font-size: 1rem;
+            font-weight: 700;
+            color: var(--text-primary);
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+
+        .toolbar-actions {
+            display: flex;
+            align-items: center;
+            gap: 0.75rem;
+        }
+
+        .btn {
+            display: inline-flex;
+            align-items: center;
+            gap: 0.5rem;
+            padding: 0.5rem 1rem;
+            border-radius: 6px;
+            font-size: 0.875rem;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.2s;
+            border: 1px solid var(--border);
+            background: var(--surface);
+            color: var(--text-primary);
+        }
+
+        .btn:hover {
+            background: var(--surface-secondary);
+        }
+
+        .btn-primary {
+            background: var(--primary);
+            color: white;
+            border-color: var(--primary);
+        }
+
+        .btn-primary:hover {
+            background: var(--primary-hover);
+            border-color: var(--primary-hover);
+        }
+
+        .zoom-controls {
+            display: flex;
+            align-items: center;
+            gap: 0.25rem;
+            background: var(--surface-secondary);
+            padding: 0.25rem;
+            border-radius: 8px;
+            border: 1px solid var(--border);
+        }
+
+        .btn-zoom {
+            padding: 0.4rem;
+            width: 32px;
+            height: 32px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            border: none;
+            background: transparent;
+            font-size: 1.1rem;
+            border-radius: 4px;
+        }
+
+        .btn-zoom:hover {
+            background: var(--surface);
+            box-shadow: var(--shadow-sm);
+        }
+
+        #zoomLevel {
+            font-size: 0.75rem;
+            font-weight: 700;
+            color: var(--text-secondary);
+            min-width: 45px;
+            text-align: center;
+        }
+
+        /* Map Content */
+        .viewer-viewport {
+            padding: 2rem;
+            overflow: auto;
+            display: block;
+            /* Simpler block display to avoid flex scrolling issues */
+            height: calc(100vh - 60px);
+            background: #1a1a1a;
+        }
+
+        .map-container {
+            background: white;
+            padding: 2.5rem;
+            width: 100%;
+            max-width: 1400px;
+            box-shadow: 0 10px 40px rgba(0, 0, 0, 0.5);
+            border-radius: 8px;
+            margin: 0 auto;
+            min-height: 100%;
+            /* Ensure it fills viewport if content is short */
+            font-size: 1rem;
+            /* This will be adjusted by zoom */
+            transition: font-size 0.2s ease-out;
+            color: #1e293b;
+        }
+
+        /* MP-2 Layout Styles (Copied and adapted from app32 process_map_v2.html) */
+        .mp2-view {
+            display: flex;
+            flex-direction: column;
+            gap: 0.07em;
+        }
+
+        .mp2-area-section {
+            display: flex;
+            border: 1px solid var(--border);
+            border-radius: 0.8em;
+            overflow: hidden;
+            background: var(--surface);
+        }
+
+        .mp2-area-sidebar {
+            width: 3.55em;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: white;
+            padding: 1.5em 0;
+            flex-shrink: 0;
+        }
+
+        .mp2-area-name {
+            writing-mode: vertical-rl;
+            transform: rotate(180deg);
+            font-weight: 800;
+            font-size: 0.85em;
+            /* Changed to em for scaling */
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            text-align: center;
+        }
+
+        .mp2-macros-grid {
+            flex: 1;
+            display: grid;
+            /* Use auto-fit with em minmax for responsive reflow on zoom */
+            grid-template-columns: repeat(auto-fit, minmax(22em, 1fr));
+            gap: 0.07em;
+            padding: 0.07em;
+        }
+
+        .mp2-macro-box {
+            border: 1px solid var(--border);
+            border-radius: 0.5em;
+            padding: 0.75em;
+            background: var(--surface-secondary);
+            display: flex;
+            flex-direction: column;
+            min-height: 8em;
+        }
+
+        .mp2-macro-title {
+            font-size: 0.8em;
+            font-weight: 700;
+            margin-bottom: 0.75em;
+            color: var(--text-primary);
+            text-align: center;
+            border-bottom: 1.5px solid var(--border);
+            padding-bottom: 0.5em;
+            text-transform: uppercase;
+        }
+
+        .mp2-processes-list {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 0.07em;
+        }
+
+        .mp2-process-card {
+            background: var(--surface);
+            border: 1px solid var(--border);
+            border-radius: 0.4em;
+            padding: 0.5em;
+            display: flex;
+            align-items: stretch;
+            gap: 0.6em;
+            text-decoration: none;
+            color: var(--text-primary);
+            min-height: 3.5em;
+        }
+
+        .mp2-process-badges {
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            gap: 0.25em;
+            padding-right: 0.4em;
+            border-right: 1px solid var(--border);
+        }
+
+        .indicator-stage {
+            width: 0.75em;
+            height: 0.75em;
+            border-radius: 50%;
+        }
+
+        .indicator-perf {
+            width: 0.75em;
+            height: 0.75em;
+            border-radius: 2px;
+        }
+
+        .mp2-process-name {
+            flex: 1;
+            font-size: 0.7em;
+            font-weight: 600;
+            line-height: 1.3;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            text-align: center;
+            color: var(--text-primary);
+        }
+
+        .macro-footer {
+            font-size: 0.65em;
+            color: var(--text-tertiary);
+            text-align: center;
+            padding-top: 0.5em;
+            margin-top: auto;
+            border-top: 1px solid var(--border);
+            font-style: italic;
+        }
+
+        @media print {
+            @page {
+                size: portrait;
+                margin: 5mm;
+            }
+
+            .toolbar {
+                display: none !important;
+            }
+
+            body {
+                background: white !important;
+                margin: 0 !important;
+                padding: 0 !important;
+                width: 100% !important;
+            }
+
+            .viewer-viewport {
+                padding: 0 !important;
+                overflow: visible;
+                height: auto;
+                display: block;
+                background: white !important;
+            }
+
+            .map-container {
+                box-shadow: none !important;
+                padding: 0 !important;
+                width: 100% !important;
+                max-width: none !important;
+                margin: 0 !important;
+                min-height: 0 !important;
+                border: none !important;
+                font-size: 8.5pt !important;
+                /* Base print size */
+            }
+
+            .mp2-area-section {
+                break-inside: avoid;
+                page-break-inside: avoid;
+                margin-bottom: 0.07em !important;
+                border-width: 1pt !important;
+                width: 100% !important;
+            }
+
+            .mp2-macros-grid {
+                grid-template-columns: repeat(3, 1fr) !important;
+                gap: 0.07em !important;
+                padding: 0.07em !important;
+            }
+
+            .mp2-macro-box {
+                min-height: 0 !important;
+                padding: 2pt !important;
+            }
+
+            .mp2-process-card {
+                min-height: 0 !important;
+                padding: 2pt !important;
+                height: auto !important;
+                /* Allow height to be dynamic if needed, or keep fixed if strictly necessary */
+            }
+
+            .mp2-processes-list {
+                gap: 0.07em !important;
+            }
+
+            .mp2-process-name {
+                font-size: 7pt !important;
+            }
+
+            /* Novo Rodapé de Impressão */
+            .footer-print {
+                display: flex !important;
+                position: fixed;
+                bottom: 0;
+                left: 0;
+                right: 0;
+                justify-content: space-between;
+                font-size: 7pt;
+                color: #94a3b8;
+                border-top: 1px solid #e2e8f0;
+                padding-top: 4px;
+                background: white;
+                z-index: 1000;
+            }
+
+            /* Ajuste para não cortar o conteúdo pelo rodapé fixo */
+            body {
+                padding-bottom: 0 !important;
+            }
+
+            .page-count:after {
+                content: "Página " counter(page) " de " counter(pages);
+            }
+        }
+
+        /* Rodapé oculto na tela, visível na impressão */
+        .footer-print {
+            display: none !important;
+        }
+
+        /* Scrollbar */
+        ::-webkit-scrollbar {
+            width: 8px;
+            height: 8px;
+        }
+
+        ::-webkit-scrollbar-track {
+            background: var(--surface-secondary);
+        }
+
+        ::-webkit-scrollbar-thumb {
+            background: var(--border);
+            border-radius: 4px;
+        }
+
+        ::-webkit-scrollbar-thumb:hover {
+            background: var(--text-tertiary);
+        }
+    </style>
+</head>
+
+<body>
+    <div class="toolbar">
+        <div class="toolbar-title">
+            <span>Mapa de Processos - {{ company_name }}</span>
+        </div>
+
+        <div class="toolbar-actions">
+            <div class="zoom-controls">
+                <button class="btn-zoom" onclick="zoomOut()" title="Diminuir Zoom">➖</button>
+                <span id="zoomLevel">100%</span>
+                <button class="btn-zoom" onclick="zoomIn()" title="Aumentar Zoom">➕</button>
+                <button class="btn-zoom" onclick="zoomFit()" title="Ajustar à Largura"
+                    style="margin-left: 4px; font-size: 0.9rem;">↔️</button>
+                <button class="btn-zoom" onclick="resetZoom()" title="Resetar Zoom"
+                    style="margin-left: 4px; font-size: 0.9rem;">🔄</button>
+            </div>
+
+            <button class="btn btn-primary" onclick="window.print()">
+                <span>🖨️ Imprimir Mapa</span>
+            </button>
+
+            <button class="btn" onclick="window.close()" title="Fechar Aba">
+                <span>✕ Fechar</span>
+            </button>
+        </div>
+    </div>
+
+    <div class="viewer-viewport" id="viewport">
+        <div class="map-container" id="printableMap">
+            <!-- Header e Legenda Super Compactados -->
+            <div style="border-bottom: 1px solid #1e293b; padding-bottom: 0.25rem; margin-bottom: 0.5rem;">
+                <!-- Linha 1: Título Centralizado -->
+                <div style="display: flex; justify-content: center; align-items: center; margin-bottom: 0.4rem;">
+                    <h1
+                        style="font-size: 1.25rem; font-weight: 800; color: #1e293b; text-transform: uppercase; margin: 0; text-align: center;">
+                        Mapa de Processos - {{ company_name }}
+                    </h1>
+                </div>
+
+                <!-- Linha 2: Legenda e Data -->
+                <div
+                    style="display: flex; justify-content: space-between; align-items: center; gap: 1rem; flex-wrap: wrap;">
+                    <div style="display: flex; align-items: center; gap: 1rem; flex-wrap: wrap;">
+                        <!-- Modelagem -->
+                        <div style="display: flex; align-items: center; gap: 0.4rem;">
+                            <span
+                                style="font-size: 0.6rem; font-weight: 700; color: #475569; text-transform: uppercase;">Modelagem:</span>
+                            <div
+                                style="display: flex; align-items: center; gap: 0.5rem; font-size: 0.65rem; font-weight: 600;">
+                                <div style="display: flex; align-items: center; gap: 0.15rem;"><span
+                                        class="indicator-stage"
+                                        style="background: #cbd5e1; width: 8px; height: 8px; border: 0.5px solid rgba(0,0,0,0.1);"></span>
+                                    Fora</div>
+                                <div style="display: flex; align-items: center; gap: 0.15rem;"><span
+                                        class="indicator-stage"
+                                        style="background: #93c5fd; width: 8px; height: 8px; border: 0.5px solid rgba(0,0,0,0.1);"></span>
+                                    Des.</div>
+                                <div style="display: flex; align-items: center; gap: 0.15rem;"><span
+                                        class="indicator-stage"
+                                        style="background: #3b82f6; width: 8px; height: 8px; border: 0.5px solid rgba(0,0,0,0.1);"></span>
+                                    Imp.</div>
+                                <div style="display: flex; align-items: center; gap: 0.15rem;"><span
+                                        class="indicator-stage"
+                                        style="background: #a855f7; width: 8px; height: 8px; border: 0.5px solid rgba(0,0,0,0.1);"></span>
+                                    Est.</div>
+                                <div style="display: flex; align-items: center; gap: 0.15rem;"><span
+                                        class="indicator-stage"
+                                        style="background: #6366f1; width: 8px; height: 8px; border: 0.5px solid rgba(0,0,0,0.1);"></span>
+                                    Estabilizado</div>
+                            </div>
+                        </div>
+
+                        <div style="width: 1px; height: 12px; background: #cbd5e1;"></div>
+
+                        <!-- Desempenho -->
+                        <div style="display: flex; align-items: center; gap: 0.4rem;">
+                            <span
+                                style="font-size: 0.6rem; font-weight: 700; color: #475569; text-transform: uppercase;">Desemp.:</span>
+                            <div
+                                style="display: flex; align-items: center; gap: 0.5rem; font-size: 0.65rem; font-weight: 600;">
+                                <div style="display: flex; align-items: center; gap: 0.15rem;"><span
+                                        class="indicator-perf"
+                                        style="background: #ef4444; width: 8px; height: 8px; border: 0.5px solid rgba(0,0,0,0.1);"></span>
+                                    Crítico</div>
+                                <div style="display: flex; align-items: center; gap: 0.15rem;"><span
+                                        class="indicator-perf"
+                                        style="background: #f59e0b; width: 8px; height: 8px; border: 0.5px solid rgba(0,0,0,0.1);"></span>
+                                    Abaixo</div>
+                                <div style="display: flex; align-items: center; gap: 0.15rem;"><span
+                                        class="indicator-perf"
+                                        style="background: #10b981; width: 8px; height: 8px; border: 0.5px solid rgba(0,0,0,0.1);"></span>
+                                    Sat.</div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div style="font-size: 0.6rem; color: #64748b; font-weight: 600; text-transform: uppercase;">
+                        Gerado em: {{ now }}
+                    </div>
+                </div>
+            </div>
+
+            <div class="mp2-view">
+                {% if not areas %}
+                <div style="padding: 4rem; text-align: center; color: var(--text-tertiary);">
+                    <p>Nenhum dado encontrado para o mapa de processos.</p>
+                </div>
+                {% else %}
+                {% for area in areas %}
+                <div class="mp2-area-section" style="border-color: {{ area.color or '#3b82f6' }}">
+                    <div class="mp2-area-sidebar" style="background: {{ area.color or '#3b82f6' }}">
+                        <div class="mp2-area-name">{{ area.display_name }}</div>
+                    </div>
+                    <div class="mp2-macros-grid">
+                        {% if not area.macros %}
+                        <div
+                            style="grid-column: 1/-1; padding: 1rem; color: var(--text-tertiary); font-size: 0.8rem; text-align: center;">
+                            Nenhum macroprocesso nesta área
+                        </div>
+                        {% else %}
+                        {% for macro in area.macros %}
+                        <div class="mp2-macro-box">
+                            <div class="mp2-macro-title">{{ macro.display_name }}</div>
+                            <div class="mp2-processes-list">
+                                {% if not macro.processes %}
+                                <div
+                                    style="grid-column: 1/-1; padding: 0.5rem; color: var(--text-tertiary); font-size: 0.65rem; text-align: center; border: 1px dashed var(--border); border-radius: 4px;">
+                                    Sem processos
+                                </div>
+                                {% else %}
+                                {% for p in macro.processes %}
+                                <div class="mp2-process-card">
+                                    <div class="mp2-process-badges">
+                                        <div class="indicator-stage" style="background: {{ p.stage_color }}"
+                                            title="Etapa: {{ p.kanban_stage }}"></div>
+                                        <div class="indicator-perf" style="background: {{ p.perf_color }}"
+                                            title="Desempenho: {{ p.performance_level or 'N/A' }}"></div>
+                                    </div>
+                                    <div class="mp2-process-name">{{ p.display_name }}</div>
+                                </div>
+                                {% endfor %}
+                                {% endif %}
+                            </div>
+                            <div class="macro-footer">Dono: {{ macro.owner or '-' }}</div>
+                        </div>
+                        {% endfor %}
+                        {% endif %}
+                    </div>
+                </div>
+                {% endfor %}
+                {% endif %}
+            </div>
+
+            <!-- Novo Rodapé Estilizado -->
+            <div
+                style="margin-top: 0.05rem; padding-top: 0.05rem; border-top: 1px solid #e2e8f0; display: flex; justify-content: space-between; font-size: 0.65rem; color: #94a3b8; font-weight: 600;">
+                <span>Versus Gestão Corporativa - Todos os direitos reservados.</span>
+                <span class="page-count"></span>
+            </div>
+
+            <!-- Elemento fixo exclusivo para a impressão física/PDF -->
+            <div class="footer-print">
+                <span>Versus Gestão Corporativa - Todos os direitos reservados.</span>
+                <span class="page-count"></span>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        let currentZoom = 100;
+        const mapEl = document.getElementById('printableMap');
+        const zoomDisplay = document.getElementById('zoomLevel');
+
+        function updateZoom() {
+            // Adjust font-size instead of scale for true responsive zoom (reflowing columns)
+            mapEl.style.fontSize = `${currentZoom}%`;
+            zoomDisplay.textContent = `${currentZoom}%`;
+        }
+
+        function zoomIn() {
+            if (currentZoom < 300) {
+                currentZoom += 10;
+                updateZoom();
+            }
+        }
+
+        function zoomOut() {
+            if (currentZoom > 30) {
+                currentZoom -= 10;
+                updateZoom();
+            }
+        }
+
+        function zoomFit() {
+            const viewport = document.getElementById('viewport');
+            const availableWidth = viewport.clientWidth - 80;
+            const targetWidth = 1400; // Reference width for 100% font-size
+            currentZoom = Math.floor((availableWidth / targetWidth) * 100);
+            if (currentZoom > 150) currentZoom = 150;
+            if (currentZoom < 50) currentZoom = 50;
+            updateZoom();
+        }
+
+        function resetZoom() {
+            currentZoom = 100;
+            updateZoom();
+        }
+
+        // Handle mouse wheel zoom with Ctrl
+        window.addEventListener('wheel', (e) => {
+            if (e.ctrlKey) {
+                e.preventDefault();
+                if (e.deltaY < 0) zoomIn();
+                else zoomOut();
+            }
+        }, { passive: false });
+    </script>
+</body>
+
+</html>

@@ -1,0 +1,239 @@
+{% extends "layouts/form.html" %}
+
+{% block title %}
+{% if indicator_id %}Editar Indicador{% else %}Novo Indicador{% endif %} | Versus
+{% endblock %}
+
+{% block form_title %}
+{% if indicator_id %}📊 Editar Indicador{% else %}🚀 Novo Indicador{% endif %}
+{% endblock %}
+
+{% block form_subtitle %}
+Defina os parâmetros e vínculos do novo indicador de desempenho.
+{% endblock %}
+
+{% block form_content %}
+<input type="hidden" id="indicatorId" value="{{ indicator_id or '' }}">
+
+<div class="form-grid">
+    <div class="form-group col-span-2">
+        <label class="form-label">Nome do Indicador *</label>
+        <input type="text" class="form-control" name="name" id="name" required placeholder="Ex: Faturamento Mensal">
+    </div>
+
+    <div class="form-group">
+        <label class="form-label">Código *</label>
+        <input type="text" class="form-control" name="code" id="code" required placeholder="IND-001">
+    </div>
+
+    <div class="form-group">
+        <label class="form-label">Empresa *</label>
+        <select class="form-select" name="company_id" id="company_id" required>
+            <option value="">Selecione a empresa...</option>
+        </select>
+    </div>
+
+    <div class="form-group">
+        <label class="form-label">Grupo de Indicadores</label>
+        <select class="form-select" name="group_id" id="group_id">
+            <option value="">Nenhum</option>
+        </select>
+    </div>
+
+    <div class="form-group">
+        <label class="form-label">Unidade de Medida</label>
+        <input type="text" class="form-control" name="unit" id="unit" placeholder="Ex: R$, %, kg">
+    </div>
+
+    <div class="form-group">
+        <label class="form-label">Polaridade</label>
+        <select class="form-select" name="polarity" id="polarity">
+            <option value="positive">Quanto maior melhor (Crescente)</option>
+            <option value="negative">Quanto menor melhor (Decrescente)</option>
+        </select>
+    </div>
+
+    <div class="divider col-span-2" style="margin: 1.5rem 0; border-top: 1px solid var(--border);"></div>
+    <h3 class="text-h3 col-span-2 mb-3">Vínculos Estratégicos</h3>
+
+    <div class="form-group">
+        <label class="form-label">Plano Estratégico</label>
+        <select class="form-select" name="plan_id" id="plan_id">
+            <option value="">Nenhum</option>
+        </select>
+    </div>
+
+    <div class="form-group">
+        <label class="form-label">Projeto (OPEX/CAPEX)</label>
+        <select class="form-select" name="project_id" id="project_id">
+            <option value="">Nenhum</option>
+        </select>
+    </div>
+
+    <div class="form-group">
+        <label class="form-label">Processo de Negócio</label>
+        <select class="form-select" name="process_id" id="process_id">
+            <option value="">Nenhum</option>
+        </select>
+    </div>
+
+    <div class="form-group">
+        <label class="form-label">OKR (Resultado Chave)</label>
+        <select class="form-select" name="okr_id" id="okr_id">
+            <option value="">Nenhum</option>
+        </select>
+    </div>
+
+    <div class="form-group">
+        <label class="form-label">Fonte de Dados</label>
+        <input type="text" class="form-control" name="data_source" id="data_source" placeholder="Ex: ERP, Planilha, BI">
+    </div>
+
+    <div class="form-group col-span-2">
+        <label class="form-label">Fórmula de Cálculo</label>
+        <textarea class="form-control" name="formula" id="formula" rows="2"
+            placeholder="Descreva como o valor é calculado..."></textarea>
+    </div>
+
+    <div class="form-group col-span-2">
+        <label class="form-label">Observações</label>
+        <textarea class="form-control" name="notes" id="notes" rows="3"
+            placeholder="Informações adicionais sobre a coleta de dados..."></textarea>
+    </div>
+</div>
+
+<div id="formStatus" class="mt-4" style="display: none;"></div>
+{% endblock %}
+
+{% block form_buttons %}
+<button type="button" class="btn btn-secondary" onclick="window.location.href='/indicators'">Voltar</button>
+<button type="submit" class="btn btn-primary" id="saveBtn">Salvar Indicador</button>
+{% endblock %}
+
+{% block extra_body %}
+<script>
+    const indicatorId = document.getElementById('indicatorId').value;
+
+    document.addEventListener('DOMContentLoaded', async () => {
+        await Promise.all([
+            fetchOptions('/api/companies', 'company_id'),
+            fetchOptions('/api/indicator-groups', 'group_id'),
+            fetchOptions('/api/plans', 'plan_id'),
+            fetchOptions('/api/projects', 'project_id'),
+            fetchOptions('/api/processes', 'process_id')
+        ]);
+
+        if (indicatorId) {
+            loadIndicatorData(indicatorId);
+        }
+    });
+
+    async function fetchOptions(url, selectId) {
+        try {
+            const res = await fetch(url);
+            const data = await res.json();
+            const select = document.getElementById(selectId);
+            data.forEach(item => {
+                const opt = document.createElement('option');
+                opt.value = item.id;
+                opt.textContent = item.name;
+                select.appendChild(opt);
+            });
+        } catch (e) {
+            console.error(`Error fetching ${selectId}:`, e);
+        }
+    }
+
+    async function loadIndicatorData(id) {
+        try {
+            const res = await fetch(`/api/indicators/${id}`);
+            const data = await res.json();
+
+            Object.keys(data).forEach(key => {
+                const el = document.getElementById(key);
+                if (el) el.value = data[key] || '';
+            });
+        } catch (e) {
+            console.error('Error loading indicator:', e);
+        }
+    }
+
+    document.getElementById('mainForm').addEventListener('submit', async (e) => {
+        e.preventDefault();
+        const saveBtn = document.getElementById('saveBtn');
+        const status = document.getElementById('formStatus');
+
+        saveBtn.disabled = true;
+        saveBtn.textContent = 'Salvando...';
+
+        const formData = new FormData(e.target);
+        const data = Object.fromEntries(formData.entries());
+
+        // Convert empty IDs to null
+        ['group_id', 'plan_id', 'project_id', 'process_id', 'okr_id'].forEach(key => {
+            if (!data[key]) data[key] = null;
+        });
+
+        // Set company_id from form
+        data.company_id = parseInt(data.company_id);
+
+        try {
+            const url = indicatorId ? `/api/indicators/${indicatorId}` : '/api/indicators';
+            const method = indicatorId ? 'PUT' : 'POST';
+
+            const res = await fetch(url, {
+                method: method,
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(data)
+            });
+
+            if (res.ok) {
+                status.innerHTML = '<div class="alert alert-success">Indicador salvo com sucesso! Redirecionando...</div>';
+                status.style.display = 'block';
+                setTimeout(() => window.location.href = '/indicators', 1500);
+            } else {
+                const err = await res.json();
+                status.innerHTML = `<div class="alert alert-danger">Erro: ${JSON.stringify(err.errors || err.error)}</div>`;
+                status.style.display = 'block';
+                saveBtn.disabled = false;
+                saveBtn.textContent = 'Salvar Indicador';
+            }
+        } catch (e) {
+            status.innerHTML = `<div class="alert alert-danger">Erro de conexão: ${e.message}</div>`;
+            status.style.display = 'block';
+            saveBtn.disabled = false;
+            saveBtn.textContent = 'Salvar Indicador';
+        }
+    });
+</script>
+
+<style>
+    .form-grid {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 1.5rem;
+    }
+
+    .col-span-2 {
+        grid-column: span 2;
+    }
+
+    .alert {
+        padding: 1rem;
+        border-radius: 8px;
+        margin-bottom: 1rem;
+    }
+
+    .alert-success {
+        background: #d1fae5;
+        color: #065f46;
+        border: 1px solid #10b981;
+    }
+
+    .alert-danger {
+        background: #fee2e2;
+        color: #991b1b;
+        border: 1px solid #ef4444;
+    }
+</style>
+{% endblock %}

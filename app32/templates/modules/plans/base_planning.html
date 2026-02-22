@@ -1,0 +1,170 @@
+{% extends "layouts/workspace.html" %}
+<!-- DEBUG: APP32 Planning Base Layout Loaded -->
+
+{% block head %}
+<style>
+    /* Planning Contextual Styles */
+    .plan-badge {
+        display: inline-flex;
+        align-items: center;
+        padding: 4px 12px;
+        border-radius: 999px;
+        font-size: 11px;
+        font-weight: 700;
+        text-transform: uppercase;
+        letter-spacing: 0.05em;
+        margin-bottom: 8px;
+    }
+
+    .plan-badge-growth {
+        background: #e0f2fe;
+        color: #0369a1;
+        border: 1px solid #bae6fd;
+    }
+
+    .plan-badge-implantation {
+        background: #fefce8;
+        color: #a16207;
+        border: 1px solid #fef08a;
+    }
+
+    .planning-sidebar-menu {
+        display: flex;
+        flex-direction: column;
+        gap: 0.5rem;
+    }
+
+    .menu-item {
+        display: flex;
+        align-items: center;
+        gap: 12px;
+        padding: 12px 16px;
+        border-radius: 12px;
+        color: var(--text-secondary);
+        text-decoration: none;
+        font-weight: 500;
+        transition: all 0.2s;
+        position: relative;
+    }
+
+    .menu-item:hover {
+        background: var(--surface-secondary);
+        color: var(--text-primary);
+    }
+
+    .menu-item.active {
+        background: var(--primary-light);
+        color: var(--primary);
+        font-weight: 600;
+    }
+
+    .menu-item-status {
+        margin-left: auto;
+        width: 10px;
+        height: 10px;
+        border-radius: 50%;
+    }
+
+    .status-pending {
+        background: #e2e8f0;
+    }
+
+    .status-in_progress {
+        background: #fbbf24;
+        border: 2px solid white;
+        box-shadow: 0 0 0 1px #fbbf24;
+    }
+
+    .status-completed {
+        background: #22c55e;
+        border: 2px solid white;
+        box-shadow: 0 0 0 1px #22c55e;
+    }
+
+    /* Main Content Area */
+    .planning-container {
+        max-width: 1100px;
+        margin: 0 auto;
+        width: 100%;
+    }
+
+    /* Premium Cards in APP32 context */
+    .planning-card {
+        background: var(--surface);
+        border-radius: var(--card-radius);
+        border: 1px solid var(--border);
+        box-shadow: var(--shadow-sm);
+        padding: 2rem;
+        margin-bottom: 1.5rem;
+        transition: var(--transition);
+    }
+
+    .planning-card:hover {
+        box-shadow: var(--shadow-md);
+    }
+</style>
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+{% endblock %}
+
+{% block breadcrumb %}
+<a href="{{ url_for('plans.plans_list') }}">PEV</a>
+<span class="sep">/</span>
+<span class="current">{{ plan.title }}</span>
+{% endblock %}
+
+{% block navbar_actions %}
+<div style="display: flex; align-items: center; gap: 0.75rem;">
+    <button class="btn btn-secondary btn-sm" onclick="toggleSidebar('right')">
+        <i class="fa-solid fa-list-check" style="margin-right: 8px;"></i>
+        Etapas do Plano
+    </button>
+    <div class="user-avatar-mini" title="Meu Perfil">MV</div>
+</div>
+{% endblock %}
+
+{% block sidebar_right %}
+<div class="sidebar-header-ws">
+    <span class="plan-badge plan-badge-{{ plan.mode }}">
+        {{ "Crescimento" if plan.mode == "growth" else "Implantação" }}
+    </span>
+    <h3 class="text-h3" style="margin-bottom: 4px;">{{ plan.title }}</h3>
+    <p class="text-secondary" style="font-size: 0.8rem; margin: 0;">{{ plan.progress }}% concluído</p>
+</div>
+
+<div class="sidebar-content-ws">
+    <nav class="planning-sidebar-menu">
+        {% for section in sections %}
+        {% set route_name = 'plans.growth_section' if plan.mode == 'growth' else 'plans.implantation_section' %}
+        <a href="{{ url_for(route_name, plan_id=plan.id, section=section.key) }}"
+            class="menu-item {% if active_section == section.key %}active{% endif %}">
+            <i class="fa-solid fa-{{ section.icon }}"></i>
+            <span>{{ section.title }}</span>
+            {% if section.completable %}
+            <div class="menu-item-status status-{{ section.status }}"></div>
+            {% endif %}
+        </a>
+        {% endfor %}
+    </nav>
+
+    <div style="margin-top: 2rem; padding-top: 1.5rem; border-top: 1px solid var(--border);">
+        <div style="background: var(--background); border-radius: 12px; padding: 12px;">
+            <div
+                style="display: flex; justify-content: space-between; font-size: 11px; margin-bottom: 6px; font-weight: 700; color: var(--text-tertiary); text-transform: uppercase;">
+                <span>Progresso Geral</span>
+                <span>{{ plan.progress }}%</span>
+            </div>
+            <div style="height: 6px; background: var(--border); border-radius: 3px; overflow: hidden;">
+                <div
+                    style="width: {{ plan.progress }}%; height: 100%; background: var(--special-gradient); transition: width 0.5s ease;">
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block workspace_content %}
+<div class="planning-container fade-in">
+    {% block planning_content %}{% endblock %}
+</div>
+{% endblock %}

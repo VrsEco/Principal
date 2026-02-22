@@ -1,0 +1,668 @@
+{% extends "layouts/workspace.html" %}
+
+{% block title %}Instâncias de Processos | Versus{% endblock %}
+
+{% block workspace_content %}
+<div class="workspace-header" style="display: flex; justify-content: space-between; align-items: center;">
+    <div class="header-content">
+        <h1 class="text-h1">⚡ Instâncias de Processos</h1>
+        <p class="text-secondary">Acompanhe as execuções em tempo real e o histórico de processos realizados.</p>
+    </div>
+</div>
+
+<div class="instances-grid mt-4" id="instancesGrid">
+    <!-- Shimmer loading states -->
+    <div class="loading-shimmer" style="height: 120px; border-radius: 16px;"></div>
+    <div class="loading-shimmer" style="height: 120px; border-radius: 16px;"></div>
+    <div class="loading-shimmer" style="height: 120px; border-radius: 16px;"></div>
+</div>
+
+<style>
+    .instances-grid {
+        display: flex;
+        flex-direction: column;
+        gap: 0.5rem;
+    }
+
+    .instance-card {
+        background: var(--surface-primary);
+        border: 1px solid var(--border);
+        border-radius: 12px;
+        padding: 0.75rem 1rem;
+        display: flex;
+        flex-direction: column;
+        gap: 0.25rem;
+        transition: var(--transition);
+        position: relative;
+    }
+
+    .instance-card:hover {
+        border-color: var(--primary);
+        box-shadow: var(--shadow-sm);
+        z-index: 1;
+    }
+
+    .compact-row {
+        display: flex;
+        align-items: center;
+        flex-wrap: wrap;
+        width: 100%;
+        gap: 0.5rem;
+    }
+
+    .instance-code {
+        font-size: 0.7rem;
+        font-weight: 800;
+        background: var(--surface-secondary);
+        color: var(--text-tertiary);
+        padding: 2px 6px;
+        border-radius: 4px;
+        text-transform: uppercase;
+        white-space: nowrap;
+    }
+
+    .instance-name {
+        font-size: 1rem;
+        font-weight: 700;
+        color: var(--text-primary);
+        margin: 0;
+        line-height: 1.2;
+    }
+
+    .instance-process {
+        font-size: 0.8rem;
+        color: var(--text-secondary);
+        font-weight: 500;
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
+    }
+
+    .compact-meta {
+        font-size: 0.75rem;
+        color: var(--text-secondary);
+        display: flex;
+        align-items: center;
+        gap: 0.75rem;
+        flex-wrap: wrap;
+    }
+
+    .compact-meta strong {
+        color: var(--text-tertiary);
+        font-weight: 700;
+        font-size: 0.7rem;
+        text-transform: uppercase;
+        margin-right: 2px;
+    }
+
+    .instance-badges {
+        display: flex;
+        align-items: center;
+        gap: 4px;
+        margin-left: auto;
+    }
+
+    .badge {
+        font-size: 0.65rem;
+        font-weight: 700;
+        padding: 2px 8px;
+        border-radius: 12px;
+        text-transform: uppercase;
+        white-space: nowrap;
+    }
+
+    .badge.status-pending {
+        background: #f1f5f9;
+        color: #64748b;
+    }
+
+    .badge.status-in_progress {
+        background: var(--primary-light);
+        color: var(--primary);
+    }
+
+    .badge.status-completed {
+        background: var(--success-light);
+        color: var(--success);
+    }
+
+    .badge.status-overdue {
+        background: var(--danger-light);
+        color: var(--danger);
+    }
+
+    .instance-actions {
+        display: flex;
+        gap: 0.5rem;
+        margin-left: auto;
+    }
+
+    .btn-instance-action {
+        padding: 4px 10px;
+        border-radius: 6px;
+        font-size: 0.7rem;
+        font-weight: 700;
+        cursor: pointer;
+        transition: var(--transition);
+        border: 1px solid transparent;
+        text-decoration: none;
+        display: inline-flex;
+        align-items: center;
+        gap: 4px;
+        background: var(--surface-secondary);
+        color: var(--text-primary);
+        white-space: nowrap;
+    }
+
+    .btn-instance-action:hover {
+        background: var(--surface);
+        border-color: var(--border);
+    }
+
+    .btn-instance-action.action-complete {
+        background: var(--success-light);
+        color: var(--success);
+    }
+
+    .btn-instance-action.action-delete {
+        background: var(--danger-light);
+        color: var(--danger);
+    }
+
+    .sep {
+        color: var(--border);
+        margin: 0 2px;
+    }
+
+    @media (max-width: 768px) {
+        .instance-card {
+            padding: 1rem;
+            gap: 0.5rem;
+        }
+
+        .compact-row {
+            flex-direction: column;
+            align-items: flex-start;
+            gap: 0.5rem;
+        }
+
+        .instance-badges {
+            margin-left: 0;
+            margin-top: 0.25rem;
+        }
+
+        .instance-actions {
+            margin-left: 0;
+            margin-top: 0.5rem;
+            width: 100%;
+            justify-content: flex-end;
+        }
+
+        .compact-meta {
+            gap: 0.5rem;
+        }
+
+        /* Force name to a new line on very small screens if needed, but flex-wrap handles most */
+    }
+</style>
+
+<script>
+    const companyId = parseInt('{{ company.id if company else 0 }}') || null;
+    let allInstances = [];
+
+    async function loadInstances() {
+        try {
+            const res = await fetch(`/api/companies/${companyId}/process-instances`);
+            allInstances = await res.json();
+            renderInstances(allInstances);
+            populateProcessFilter();
+        } catch (err) {
+            console.error('Erro ao carregar instâncias:', err);
+        }
+    }
+
+    function populateProcessFilter() {
+        const select = document.getElementById('filterProcess');
+        const processes = [...new Set(allInstances.map(i => ({ id: i.process_id, name: i.process_name })))]
+            .filter((v, i, a) => a.findIndex(t => t.id === v.id) === i);
+
+        processes.forEach(p => {
+            if (!p.id) return;
+            const opt = document.createElement('option');
+            opt.value = p.id;
+            opt.textContent = p.name;
+            select.appendChild(opt);
+        });
+    }
+
+    function applyFilters() {
+        const status = document.getElementById('filterStatus').value;
+        const priority = document.getElementById('filterPriority').value;
+        const processId = document.getElementById('filterProcess').value;
+        const search = document.getElementById('searchInput').value.toLowerCase();
+
+        const filtered = allInstances.filter(inst => {
+            const statusMatch = !status || inst.status === status;
+            const priorityMatch = !priority || (inst.priority || 'normal') === priority;
+            const processMatch = !processId || inst.process_id == processId;
+            const searchMatch = !search || inst.title.toLowerCase().includes(search) || (inst.instance_code || '').toLowerCase().includes(search);
+            return statusMatch && priorityMatch && processMatch && searchMatch;
+        });
+
+        renderInstances(filtered);
+    }
+
+    function resetFilters() {
+        document.getElementById('filterStatus').value = '';
+        document.getElementById('filterPriority').value = '';
+        document.getElementById('filterProcess').value = '';
+        document.getElementById('searchInput').value = '';
+        renderInstances(allInstances);
+    }
+
+    function renderInstances(data) {
+        const grid = document.getElementById('instancesGrid');
+        if (!data || data.length === 0) {
+            grid.innerHTML = `
+                <div class="empty-state" style="grid-column: 1/-1; padding: 4rem;">
+                    <div class="empty-state-icon">⚡</div>
+                    <h3 class="text-h3">Nenhuma instância encontrada</h3>
+                    <p class="text-secondary">Ajuste os filtros ou inicie um processo através da aba de Rotinas.</p>
+                </div>
+            `;
+            return;
+        }
+
+        grid.innerHTML = data.map(inst => {
+            const statusLabels = {
+                'pending': 'Pendente',
+                'in_progress': 'Executando',
+                'completed': 'Concluído',
+                'overdue': 'Atrasado'
+            };
+
+            const priorityLabels = {
+                'low': 'Baixa',
+                'normal': 'Normal',
+                'high': 'Alta',
+                'urgent': 'Urgente'
+            };
+
+            const processCode = inst.process_code ? `${inst.process_code} - ` : '';
+            const processLabel = `${processCode}${inst.process_name || 'Processo'}`;
+
+            const hoursDisplay = inst.estimated_hours || inst.actual_hours
+                ? `Prev: ${inst.estimated_hours || 0}h | Real: ${inst.actual_hours || inst.worked_hours || 0}h`
+                : 'Não def.';
+
+            const startedLabel = inst.started_at ? new Date(inst.started_at).toLocaleDateString() : null;
+            const dueDateLabel = inst.due_date ? new Date(inst.due_date).toLocaleDateString() : 'Não def.';
+            const triggerLabel = inst.trigger_type === 'automatic' ? '🔄 Automático' : '👤 Manual';
+            const scoreWeight = inst.score_weight || 1.0;
+
+            const collabs = inst.normalized_collaborators || [];
+            const ownerName = collabs.find(c => c.role === 'owner')?.name || '--';
+            const responsibleName = collabs.find(c => c.role === 'responsible')?.name || '--';
+            const executors = collabs.filter(c => c.role === 'executor').map(c => c.name);
+            const executorSummary = summarizeNames(executors) || 'Sem executores';
+            // Format Code Pattern to: AB.C.1.3.1-1 (ProcessCode-Seq)
+            // Fix display for legacy codes (e.g. AA.AB.C.001 -> AB.C-1)
+            let instanceCodeDisplay = inst.instance_code;
+            if (instanceCodeDisplay && instanceCodeDisplay.includes('.') && !instanceCodeDisplay.includes('-')) {
+                try {
+                    const parts = instanceCodeDisplay.split('.');
+                    if (parts.length > 2) {
+                        const seq = parseInt(parts.pop());
+                        parts.shift(); // Remove Company Code
+                        instanceCodeDisplay = `${parts.join('.')}-${seq}`;
+                    }
+                } catch (e) { }
+            }
+
+            return `
+                <div class="instance-card">
+                    <!-- Line 1: Code | Title | Process | Status | Priority -->
+                    <div class="compact-row" style="margin-bottom: 2px;">
+                        <div style="display: flex; align-items: center; gap: 8px; flex-wrap: wrap;">
+                            ${instanceCodeDisplay ? `<div class="instance-code">${instanceCodeDisplay}</div>` : ''}
+                            <h3 class="instance-name">${inst.title}</h3>
+                            <span class="instance-process">${processLabel}</span>
+                        </div>
+                        
+                        <div class="instance-badges">
+                            <span class="badge status-${inst.status}">${statusLabels[inst.status] || inst.status}</span>
+                            <span class="badge priority-${inst.priority || 'normal'}" style="border: 1px solid currentColor;">${priorityLabels[inst.priority] || 'Normal'}</span>
+                        </div>
+                    </div>
+
+                    <!-- Line 2: Meta | Collaborators | Actions -->
+                <div class="compact-row" style="justify-content: flex-start; align-items: center; margin-top: 2px;">
+                    <div class="compact-meta">
+                        <span><strong>Horas:</strong> ${hoursDisplay}</span>
+                        <span><strong>Peso:</strong> ${scoreWeight}</span>
+                        <span class="sep">|</span>
+
+                        <span><strong>Dono:</strong> ${ownerName}</span>
+                        <span><strong>Resp:</strong> ${responsibleName}</span>
+                        <span><strong>Exec:</strong> ${executorSummary}</span>
+                    </div>
+
+                    <div class="instance-actions">
+                        <a href="/my-work/process-instance/${inst.id}" class="btn-instance-action" title="Infos / Horas">
+                            <span class="d-none d-md-inline">Infos</span>
+                            <span class="d-inline d-md-none">ℹ️</span>
+                        </a>
+                        <button class="btn-instance-action action-complete" onclick="openCompleteModal(${inst.id})" ${inst.status === 'completed' ? 'disabled' : ''} title="Finalizar">
+                            <span class="d-none d-md-inline">Finalizar</span>
+                            <span class="d-inline d-md-none">✅</span>
+                        </button>
+                        <button class="btn-instance-action action-delete" onclick="confirmDeleteInstance(${inst.id})" title="Excluir">
+                            <span class="d-none d-md-inline">Excluir</span>
+                            <span class="d-inline d-md-none">🗑️</span>
+                        </button>
+                    </div>
+                </div>
+                </div>
+            `;
+        }).join('');
+    }
+
+    function summarizeNames(names) {
+        if (!names || names.length === 0) return '';
+        if (names.length === 1) return names[0];
+        if (names.length === 2) return `${names[0]} e ${names[1]} `;
+        return `${names[0]}, ${names[1]} e mais ${names.length - 2} `;
+    }
+
+    document.addEventListener('DOMContentLoaded', loadInstances);
+
+    async function confirmDeleteInstance(id) {
+        if (!confirm('Deseja realmente excluir esta instância de processo? Esta ação não pode ser desfeita.')) return;
+
+        try {
+            const res = await fetch(`/api/process-instances/${id}?company_id=${companyId}`, {
+                method: 'DELETE'
+            });
+
+            if (res.ok) {
+                allInstances = allInstances.filter(i => i.id !== id);
+                renderInstances(allInstances);
+            } else {
+                let errMessage = 'Erro desconhecido';
+                try {
+                    const err = await res.json();
+                    errMessage = err.error || err.message || JSON.stringify(err);
+                } catch (e) {
+                    errMessage = res.status + ' ' + res.statusText;
+                }
+                alert('Erro ao excluir: ' + errMessage);
+            }
+        } catch (err) {
+            console.error(err);
+            alert('Erro de rede: Não foi possível conectar ao servidor.');
+        }
+    }
+
+    let currentInstanceId = null;
+
+    function openCompleteModal(id) {
+        currentInstanceId = id;
+        const inst = allInstances.find(i => i.id === id);
+        if (inst) {
+            document.getElementById('modalInstanceTitle').textContent = inst.title;
+
+            // Populate Deadline
+            const dueDateLabel = inst.due_date ? new Date(inst.due_date).toLocaleDateString() : 'Não definido';
+            document.getElementById('modalInstanceDueDate').textContent = dueDateLabel;
+
+            // Set default date to today for completion
+            const today = new Date().toISOString().split('T')[0];
+            document.getElementById('completionDate').value = today;
+        }
+        document.getElementById('completeModal').classList.add('active');
+    }
+
+    function closeCompleteModal() {
+        document.getElementById('completeModal').classList.remove('active');
+    }
+
+    async function submitCompletion() {
+        const comment = document.getElementById('completionComment').value;
+        const btn = document.querySelector('#completeModal .btn-success');
+        const originalText = btn.textContent;
+
+        try {
+            btn.disabled = true;
+            btn.textContent = 'Finalizando...';
+
+            const completionDate = document.getElementById('completionDate').value;
+
+            // Validate date
+            if (!completionDate) {
+                alert('Por favor, informe a data de finalização.');
+                btn.disabled = false;
+                btn.textContent = originalText;
+                return;
+            }
+
+            const res = await fetch(`/api/process-instances/${currentInstanceId}?company_id=${companyId}`, {
+                method: 'PUT',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    status: 'completed',
+                    notes: comment,
+                    end_date: completionDate
+                })
+            });
+
+            if (res.ok) {
+                const updated = await res.json();
+                allInstances = allInstances.map(i => i.id === currentInstanceId ? updated : i);
+                renderInstances(allInstances);
+
+                renderInstances(allInstances);
+
+                closeCompleteModal();
+                document.getElementById('completionComment').value = '';
+            } else {
+                let errMessage = 'Erro desconhecido';
+                try {
+                    const err = await res.json();
+                    errMessage = err.error || err.message || JSON.stringify(err);
+                } catch (e) {
+                    errMessage = res.status + ' ' + res.statusText;
+                }
+                alert('Erro ao finalizar: ' + errMessage);
+            }
+        } catch (err) {
+            console.error(err);
+            alert('Erro de rede: Não foi possível conectar ao servidor.');
+        } finally {
+            btn.disabled = false;
+            btn.textContent = originalText;
+        }
+    }
+</script>
+
+<!-- Custom Modal Finalizar -->
+<div class="custom-modal-overlay" id="completeModal">
+    <div class="custom-modal-content">
+        <div class="modal-header">
+            <h5 class="modal-title font-bold">Finalizar Execução</h5>
+            <button type="button" class="btn-close-custom" onclick="closeCompleteModal()">&times;</button>
+        </div>
+        <div class="modal-body">
+            <p class="text-secondary mb-4">Você está finalizando a execução de: <br><strong id="modalInstanceTitle"
+                    class="text-primary"></strong></p>
+
+            <!-- Deadline moved from card -->
+            <div class="mb-3 p-3" style="background: var(--surface-secondary); border-radius: 8px; font-size: 0.9rem;">
+                <strong>Prazo Previsto:</strong> <span id="modalInstanceDueDate">--</span>
+            </div>
+
+            <div class="form-group mb-3">
+                <label class="form-label">Data de Finalização</label>
+                <input type="date" class="form-select-custom" id="completionDate" style="background-image: none;">
+            </div>
+            <div class="form-group">
+                <label class="form-label">Comentário / Notas de Entrega</label>
+                <textarea class="form-select-custom" id="completionComment" rows="4"
+                    placeholder="Descreva brevemente o resultado ou observações importantes..."
+                    style="background-image: none; height: auto;"></textarea>
+            </div>
+        </div>
+        <div class="modal-footer">
+            <button type="button" class="btn btn-secondary" onclick="closeCompleteModal()">Cancelar</button>
+            <button type="button" class="btn btn-success" onclick="submitCompletion()">Confirmar
+                Finalização</button>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block sidebar_right %}
+<div class="sidebar-section-ws" id="sectionFilters">
+    <div class="sidebar-header-ws collapsible-header" onclick="toggleCollapsible('sectionFilters')">
+        <h3 class="text-h3">Filtros</h3>
+        <svg class="chevron" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+            stroke-width="2">
+            <polyline points="6 9 12 15 18 9"></polyline>
+        </svg>
+    </div>
+    <div class="sidebar-content-ws collapsible-content">
+        <div class="form-group mb-4">
+            <label class="form-label">Status</label>
+            <select class="form-select-custom" id="filterStatus" onchange="applyFilters()">
+                <option value="">Todos</option>
+                <option value="pending">Pendente</option>
+                <option value="in_progress">Em Andamento</option>
+                <option value="completed">Concluído</option>
+                <option value="overdue">Atrasado</option>
+            </select>
+        </div>
+        <div class="form-group mb-4">
+            <label class="form-label">Prioridade</label>
+            <select class="form-select-custom" id="filterPriority" onchange="applyFilters()">
+                <option value="">Todas</option>
+                <option value="low">Baixa</option>
+                <option value="normal">Normal</option>
+                <option value="high">Alta</option>
+                <option value="urgent">Urgente</option>
+            </select>
+        </div>
+        <div class="form-group mb-4">
+            <label class="form-label">Processo</label>
+            <select class="form-select-custom" id="filterProcess" onchange="applyFilters()">
+                <option value="">Todos os Processos</option>
+            </select>
+        </div>
+        <div class="form-group mb-4">
+            <label class="form-label">Busca</label>
+            <input type="text" class="form-select-custom" id="searchInput" placeholder="Título da execução..."
+                oninput="applyFilters()" style="background-image: none;">
+        </div>
+        <button class="btn btn-secondary w-100" onclick="resetFilters()">Limpar Filtros</button>
+    </div>
+</div>
+
+<style>
+    /* Custom Select Styling */
+    .form-select-custom {
+        width: 100%;
+        padding: 0.875rem 2.5rem 0.875rem 1.25rem;
+        background: var(--surface);
+        border: 1.5px solid var(--border);
+        border-radius: var(--btn-radius);
+        color: var(--text-primary);
+        font-family: inherit;
+        font-size: 0.9rem;
+        font-weight: 500;
+        transition: var(--transition);
+        cursor: pointer;
+        appearance: none;
+        background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='16' height='16' viewBox='0 0 24 24' fill='none' stroke='%2364748b' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpolyline points='6 9 12 15 18 9'%3E%3C/polyline%3E%3C/svg%3E");
+        background-repeat: no-repeat;
+        background-position: right 1rem center;
+        background-size: 16px;
+    }
+
+    .form-select-custom:hover {
+        border-color: var(--primary);
+    }
+
+    .form-select-custom:focus {
+        outline: none;
+        border-color: var(--primary);
+        box-shadow: 0 0 0 4px var(--primary-light);
+    }
+
+    /* Custom Modal Styles */
+    .custom-modal-overlay {
+        position: fixed;
+        top: 0;
+        left: 0;
+        width: 100%;
+        height: 100%;
+        background: rgba(0, 0, 0, 0.5);
+        backdrop-filter: blur(4px);
+        z-index: 9999;
+        display: none;
+        align-items: center;
+        justify-content: center;
+    }
+
+    .custom-modal-overlay.active {
+        display: flex;
+        animation: fadeIn 0.2s ease-out;
+    }
+
+    .custom-modal-content {
+        background: var(--surface-primary);
+        padding: 0;
+        border-radius: 16px;
+        width: 90%;
+        max-width: 500px;
+        box-shadow: var(--shadow-lg);
+        max-height: 90vh;
+        overflow-y: auto;
+    }
+
+    .modal-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        padding: 1.5rem;
+        border-bottom: 1px solid var(--border);
+    }
+
+    .modal-body {
+        padding: 1.5rem;
+    }
+
+    .modal-footer {
+        padding: 1.5rem;
+        border-top: 1px solid var(--border);
+        display: flex;
+        justify-content: flex-end;
+        gap: 0.5rem;
+    }
+
+    .btn-close-custom {
+        background: none;
+        border: none;
+        font-size: 1.5rem;
+        color: var(--text-secondary);
+        cursor: pointer;
+    }
+
+    @keyframes fadeIn {
+        from {
+            opacity: 0;
+        }
+
+        to {
+            opacity: 1;
+        }
+    }
+</style>
+{% endblock %}

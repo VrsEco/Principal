@@ -1,0 +1,315 @@
+{% extends "layouts/base.html" %}
+
+{% block content %}
+<div class="report-container">
+    <!-- Header de Relatório -->
+    <div class="no-print"
+        style="background: #0f172a; padding: 20px; display: flex; justify-content: space-between; align-items: center; color: white;">
+        <div>
+            <h2 style="margin: 0; font-size: 18px; font-weight: 800;">Relatório de Plano de Implantação</h2>
+            <p style="margin: 0; font-size: 12px; opacity: 0.7;">Visualização Premium para Investidores e Sócios</p>
+        </div>
+        <button onclick="window.print()"
+            style="background: #2563eb; color: white; border: none; padding: 10px 20px; border-radius: 8px; font-weight: 600; cursor: pointer;">
+            <i class="fa-solid fa-print"></i> Imprimir PDF
+        </button>
+    </div>
+
+    {% set alignment = implantation_data.alignment %}
+    {% set model = implantation_data.model %}
+    {% set execution = implantation_data.execution %}
+    {% set finance = implantation_data.finance %}
+
+    <!-- Pagina 1: Alinhamento Estratégico -->
+    <div class="report-page">
+        <header style="display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 60px;">
+            <div>
+                <img src="/static/img/logo-dark.png" alt="Logo" style="height: 40px; margin-bottom: 16px;">
+                <div style="font-size: 14px; color: #64748b; font-weight: 600;">{{ company.name }}</div>
+            </div>
+            <div style="text-align: right;">
+                <h1 style="font-size: 32px; font-weight: 900; margin: 0; color: #0f172a;">PLANO DE IMPLANTAÇÃO</h1>
+                <div style="color: #2563eb; font-weight: 800; letter-spacing: 0.1em; font-size: 12px;">VERSÃO 2.0 |
+                    MODELO EXECUTIVO</div>
+            </div>
+        </header>
+
+        <section class="report-section">
+            <h3 class="section-title">01. Alinhamento & Fundamentos</h3>
+            <div style="display: grid; grid-template-columns: 2fr 1fr; gap: 40px;">
+                <div>
+                    <h4 class="field-label">Tesal Estratégica</h4>
+                    <p class="field-text">{{ alignment.strategic_thesis|default('Não definida') }}</p>
+
+                    <h4 class="field-label" style="margin-top: 32px;">Propósito / "North Star"</h4>
+                    <p class="field-text" style="font-weight: 700; color: #2563eb;">{{ alignment.purpose|default('Não
+                        definido') }}</p>
+                </div>
+                <div style="background: #f8fafc; padding: 24px; border-radius: 20px;">
+                    <h4 class="field-label">Critérios de Decisão</h4>
+                    <ul class="report-list">
+                        {% for criterion in alignment.decision_criteria|default([]) %}
+                        <li style="margin-bottom: 6px;">{{ criterion }}</li>
+                        {% endfor %}
+                    </ul>
+                </div>
+            </div>
+        </section>
+    </div>
+
+    <!-- Pagina 2: Modelo & Mercado - Mix de Produtos -->
+    <div class="report-page" style="page-break-before: always;">
+        <section class="report-section">
+            <h3 class="section-title">02. Engenharia de Produtos & Margens</h3>
+            <div style="margin-bottom: 40px;">
+                <table class="report-table">
+                    <thead>
+                        <tr>
+                            <th>Produto/Serviço</th>
+                            <th style="text-align: right;">Preço</th>
+                            <th style="text-align: right;">Custo Dir.</th>
+                            <th style="text-align: right;">Margem %</th>
+                            <th style="text-align: right;">Meta Share</th>
+                            <th style="text-align: right;">Faturamento</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% set total_rev = namespace(val=0) %}
+                        {% for prod in model.products|default([]) %}
+                        {% set mcu = prod.sale_price - prod.variable_costs_value - prod.variable_expenses_value %}
+                        {% set mcu_pct = (mcu / prod.sale_price * 100) if prod.sale_price > 0 else 0 %}
+                        {% set rev = prod.sale_price * prod.market_share_goal_monthly_units %}
+                        {% set total_rev.val = total_rev.val + rev %}
+                        <tr>
+                            <td><strong>{{ prod.name }}</strong><br><small style="color:#64748b;">{{
+                                    prod.description|default('') }}</small></td>
+                            <td style="text-align: right;">R$ {{
+                                "{:,.2f}".format(prod.sale_price).replace(',','X').replace('.',',').replace('X','.') }}
+                            </td>
+                            <td style="text-align: right;">{{ prod.variable_costs_percent }}%</td>
+                            <td style="text-align: right; color: #10b981; font-weight: 700;">{{
+                                "{:,.1f}".format(mcu_pct) }}%</td>
+                            <td style="text-align: right;">{{ prod.market_share_goal_monthly_units }} un.</td>
+                            <td style="text-align: right; font-weight: 700;">R$ {{
+                                "{:,.2f}".format(rev).replace(',','X').replace('.',',').replace('X','.') }}</td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                    <tfoot>
+                        <tr style="background: #f8fafc; font-weight: 900;">
+                            <td colspan="5">FATURAMENTO MENSAL ESTIMADO (FULL SCALE)</td>
+                            <td style="text-align: right; color: #2563eb;">R$ {{
+                                "{:,.2f}".format(total_rev.val).replace(',','X').replace('.',',').replace('X','.') }}
+                            </td>
+                        </tr>
+                    </tfoot>
+                </table>
+            </div>
+
+            <h3 class="section-title" style="margin-top: 40px;">03. Segmentação & Posicionamento</h3>
+            {% for segment in model.segments|default([]) %}
+            <div style="margin-bottom: 40px; border: 1px solid #f1f5f9; padding: 24px; border-radius: 16px;">
+                <h4 style="font-size: 18px; font-weight: 800; color: #2563eb; margin-bottom: 24px;">Segmento: {{
+                    segment.name }}</h4>
+                <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 32px; margin-bottom: 24px;">
+                    <div>
+                        <h5 class="field-label">Posicionamento</h5>
+                        <p class="field-text" style="font-style: italic;">"{{ segment.positioning|default('N/D') }}"</p>
+                    </div>
+                    <div>
+                        <h5 class="field-label">Promessa Central</h5>
+                        <p class="field-text">{{ segment.central_promise|default('N/D') }}</p>
+                    </div>
+                </div>
+                <div style="margin-bottom: 24px;">
+                    <h5 class="field-label">Matriz de Diferenciais</h5>
+                    <table class="report-table" style="font-size: 11px;">
+                        <thead>
+                            <tr>
+                                <th>Critério</th>
+                                <th>Nós</th>
+                                <th>Conc. A</th>
+                                <th>Conc. B</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for item in segment.differential_matrix|default([]) %}
+                            <tr>
+                                <td><strong>{{ item.criterion }}</strong></td>
+                                <td style="background:#f0f9ff;">{{ item.our_company }}</td>
+                                <td>{{ item.competitor_a }}</td>
+                                <td>{{ item.competitor_b }}</td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+                <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 32px;">
+                    <div style="background: #f8fafc; padding: 20px; border-radius: 12px;">
+                        <h5 class="field-label">Personas</h5>
+                        {% for persona in segment.personas|default([]) %}
+                        <div style="font-size: 12px; margin-bottom: 12px;"><strong>{{ persona.name }}</strong> ({{
+                            persona.age }}): {{ persona.profile }}</div>
+                        {% endfor %}
+                    </div>
+                    <div>
+                        <h5 class="field-label">Ações Estratégicas</h5>
+                        <ul class="report-list">{% for step in segment.next_steps|default([]) %}<li>{{ step }}</li>{%
+                            endfor %}</ul>
+                    </div>
+                </div>
+            </div>
+            {% endfor %}
+        </section>
+    </div>
+
+    <!-- Pagina 3: Execução e Finanças -->
+    <div class="report-page" style="page-break-before: always;">
+        <h3 class="section-title">04. Estruturas & Viabilidade</h3>
+        {% set total_inv = namespace(val=0) %}
+        {% for inv in finance.investments|default([]) %}{% set total_inv.val = total_inv.val + inv.amount %}{% endfor %}
+
+        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 32px; margin-bottom: 40px;">
+            <div style="background: #0f172a; color: white; padding: 24px; border-radius: 16px; text-align: center;">
+                <div class="field-label" style="color: white; opacity: 0.6;">Faturamento Alvo</div>
+                <div style="font-size: 26px; font-weight: 900;">R$ {{
+                    "{:,.2f}".format(total_rev.val).replace(',','X').replace('.',',').replace('X','.') }}</div>
+            </div>
+            <div style="background: #f0fdf4; color: #16a34a; padding: 24px; border-radius: 16px; text-align: center;">
+                <div class="field-label">Investimento Total</div>
+                <div style="font-size: 26px; font-weight: 900;">R$ {{
+                    "{:,.2f}".format(total_inv.val).replace(',','X').replace('.',',').replace('X','.') }}</div>
+            </div>
+        </div>
+
+        <section class="report-section">
+            <h4 class="field-label">Premissas do Negócio</h4>
+            <div style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 16px;">
+                {% for pre in finance.premises|default([]) %}
+                <div style="padding: 16px; background: white; border: 1px solid #e2e8f0; border-radius: 12px;">
+                    <div style="font-size: 11px; color: #64748b; font-weight: 800;">{{ pre.description }}</div>
+                    <div style="font-size: 18px; font-weight: 800; color: #0f172a;">{{ pre.value }}</div>
+                </div>
+                {% endfor %}
+            </div>
+
+            <h4 class="field-label" style="margin-top: 40px;">Plano de Investimento por Categoria</h4>
+            <table class="report-table">
+                <thead>
+                    <tr>
+                        <th>Categoria</th>
+                        <th>Descrição</th>
+                        <th style="text-align: right;">Valor</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for inv in finance.investments|default([]) %}
+                    <tr>
+                        <td><span
+                                style="background: #f1f5f9; padding: 2px 8px; border-radius: 4px; font-size: 10px; font-weight: 800;">{{
+                                inv.category|upper }}</span></td>
+                        <td>{{ inv.description }}</td>
+                        <td style="text-align: right; font-weight: 700;">R$ {{
+                            "{:,.2f}".format(inv.amount).replace(',','X').replace('.',',').replace('X','.') }}</td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </section>
+    </div>
+</div>
+
+<style>
+    .report-container {
+        max-width: 1000px;
+        margin: 0 auto;
+        background: white;
+    }
+
+    .report-page {
+        padding: 60px;
+        min-height: 1400px;
+        background: white;
+        color: #0f172a;
+    }
+
+    .section-title {
+        font-size: 28px;
+        font-weight: 900;
+        color: #0f172a;
+        margin-bottom: 32px;
+        border-bottom: 4px solid #f1f5f9;
+        padding-bottom: 12px;
+    }
+
+    .field-label {
+        font-size: 11px;
+        font-weight: 800;
+        color: #64748b;
+        text-transform: uppercase;
+        letter-spacing: 0.1em;
+        margin-bottom: 12px;
+    }
+
+    .field-text {
+        font-size: 16px;
+        color: #1e293b;
+        line-height: 1.6;
+    }
+
+    .report-table {
+        width: 100%;
+        border-collapse: collapse;
+        font-size: 13px;
+        margin-bottom: 12px;
+    }
+
+    .report-table th {
+        text-align: left;
+        padding: 12px;
+        border-bottom: 2px solid #f1f5f9;
+        color: #64748b;
+        font-weight: 800;
+        font-size: 10px;
+        text-transform: uppercase;
+    }
+
+    .report-table td {
+        padding: 10px 12px;
+        border-bottom: 1px solid #f8fafc;
+        vertical-align: top;
+    }
+
+    .report-list {
+        padding-left: 20px;
+        margin: 0;
+    }
+
+    .report-list li {
+        margin-bottom: 4px;
+        font-size: 14px;
+        color: #1e293b;
+    }
+
+    @media print {
+        .no-print {
+            display: none !important;
+        }
+
+        .report-page {
+            padding: 0;
+            margin: 0;
+            min-height: auto;
+        }
+
+        .report-container {
+            max-width: 100%;
+        }
+
+        @page {
+            margin: 1.5cm;
+            size: A4;
+        }
+    }
+</style>
+{% endblock %}

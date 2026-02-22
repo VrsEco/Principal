@@ -1,201 +1,48 @@
-# ============================================
-# GestaoVersus - Git Ignore
-# ============================================
-# Arquivos e diretórios a NUNCA commitar
-# ============================================
-
-# ==========================================
-# Environment Variables (CRÍTICO!)
-# ==========================================
-.env
-.env.local
-.env.production
-.env.development
-.env.*.local
-*.env
-
-# ==========================================
-# Python
-# ==========================================
-__pycache__/
-*.py[cod]
-*$py.class
-*.so
-.Python
-build/
-develop-eggs/
-dist/
-downloads/
-eggs/
-.eggs/
-lib/
-lib64/
-parts/
-sdist/
-var/
-wheels/
-pip-wheel-metadata/
-share/python-wheels/
-*.egg-info/
-.installed.cfg
-*.egg
-MANIFEST
-
-# ==========================================
-# Virtual Environments
-# ==========================================
-venv/
-ENV/
-env/
-.venv
-.ENV
-.env.venv
-
-# ==========================================
-# Flask
-# ==========================================
-instance/
-.webassets-cache
-
-# ==========================================
-# Database
-# ==========================================
-*.db
-*.sqlite
-*.sqlite3
-database.db
-pevapp*.db
-backup_*.db
-*.sql
-*.dump
-
-# ==========================================
-# Logs
-# ==========================================
-*.log
-logs/
-*.log.*
-server_log.txt
-
-# ==========================================
-# Backups
-# ==========================================
-backups/
-*.backup
-backup_*/
-backups_migration/
-
-# ==========================================
-# Uploads & Temporary Files
-# ==========================================
-uploads/
-temp_pdfs/
-*.pdf
-*.tmp
-*.temp
-
-# ==========================================
-# IDE & Editor Files
-# ==========================================
-.vscode/
-.idea/
-*.swp
-*.swo
-*~
+# OS files
 .DS_Store
-Thumbs.db
-
-# ==========================================
-# Testing
-# ==========================================
-.pytest_cache/
-.coverage
-htmlcov/
-.tox/
-.nox/
-coverage.xml
-*.cover
-.hypothesis/
-
-# ==========================================
-# Jupyter Notebook
-# ==========================================
-.ipynb_checkpoints
-
-# ==========================================
-# Docker
-# ==========================================
-docker-compose.override.yml
-
-# ==========================================
-# Secrets & Credentials (CRÍTICO!)
-# ==========================================
-credentials/
-*.pem
-*.key
-*.crt
-*.p12
-*.jks
-*.keystore
-gcp-key.json
-aws-credentials.json
-*-key.json
-secrets.yaml
-secrets.yml
-
-# ==========================================
-# OS Files
-# ==========================================
-.DS_Store
-.DS_Store?
-._*
-.Spotlight-V100
-.Trashes
-ehthumbs.db
 Thumbs.db
 desktop.ini
 
-# ==========================================
-# Migrations (Opcional - descomentar se necessário)
-# ==========================================
-# migrations/versions/*.py
+# Python environments (recursive)
+**/.venv/
+**/venv/
+**/ENV/
+**/env/
+**/__pycache__/
+**/*.py[cod]
+**/*$py.class
+**/*.egg-info/
 
-# ==========================================
-# Documentação Temporária
-# ==========================================
-_TEMP_*.md
-_OLD_*.md
-_BACKUP_*.md
+# IDEs
+**/.vscode/
+**/.idea/
+**/.cursor/
+**/.agent/
+**/.ai/
+**/.cursorrules
 
-# ==========================================
-# Node (se houver frontend separado)
-# ==========================================
-node_modules/
-npm-debug.log
-yarn-error.log
-package-lock.json
-yarn.lock
+# Logs and databases
+**/*.log
+**/*.sqlite
+**/instance/
+**/.pytest_cache/
 
-# ==========================================
-# Build Artifacts
-# ==========================================
-*.pyc
-*.pyo
-*.pyd
-.Python
-*.so
-*.dll
-*.dylib
+# Project specific ignores
+**/2026.01 - XML - Entradas/
+**/Antigos/
+**/Fiscal_Gas/
+**/Referencias/
+**/backup/
+**/volume_backups/
+**/archive/
+**/__pycache__/
 
-# ==========================================
-# SSL Certificates (Locais)
-# ==========================================
-nginx/ssl/*.pem
-nginx/ssl/*.key
-nginx/ssl/*.crt
+# Secret files
+**/.env
+**/*.key
+**/*.pem
 
-# ==========================================
-# Manter estruturas vazias
-# ==========================================
-!.gitkeep
-!*/
+# Other large or unnecessary folders
+**/.git_legacy_root/
+**/.git_legacy_app31/
+**/node_modules/

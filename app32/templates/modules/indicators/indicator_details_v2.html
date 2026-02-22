@@ -1,0 +1,644 @@
+{% extends "layouts/workspace.html" %}
+
+{% block title %}Detalhes do Indicador | Versus{% endblock %}
+
+{% block breadcrumb %}
+<a href="/dashboard">Dashboard</a>
+<span class="sep">/</span>
+<a href="/indicators">Indicadores</a>
+<span class="sep">/</span>
+<span class="current" id="breadcrumbName">Carregando...</span>
+{% endblock %}
+
+{% block navbar_actions %}
+<div style="display: flex; align-items: center; gap: 0.75rem;">
+    <a href="/indicators/{{ indicator_id }}/edit" class="btn btn-secondary btn-sm">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <path d="M11 4H4a2 2 0 00-2 2v14a2 2 0 002 2h14a2 2 0 002-2v-7"></path>
+            <path d="M18.5 2.5a2.121 2.121 0 013 3L12 15l-4 1 1-4 9.5-9.5z"></path>
+        </svg>
+        Configurações
+    </a>
+    <button class="btn btn-secondary btn-sm" onclick="openRecordModal()">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <path d="M12 5v14M5 12h14"></path>
+        </svg>
+        Lançar Valor
+    </button>
+    <button class="btn btn-primary btn-sm" onclick="openGoalModal()">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <circle cx="12" cy="12" r="10"></circle>
+            <path d="M12 8v8M8 12h8"></path>
+        </svg>
+        Nova Meta
+    </button>
+</div>
+{% endblock %}
+
+
+{% block workspace_content %}
+<div class="indicator-details-container" id="indicatorDetails">
+    <!-- Header Section -->
+    <div class="workspace-header">
+        <div class="header-content">
+            <div style="display: flex; align-items: center; gap: 1rem; margin-bottom: 0.5rem;">
+                <span class="indicator-code" id="detCode">IND-000</span>
+                <span class="indicator-group-badge" id="detGroup">Grupo</span>
+            </div>
+            <h1 class="text-h1" id="detName">Carregando Indicador...</h1>
+            <p class="text-secondary" id="detDescription">Aguarde enquanto carregamos as informações.</p>
+        </div>
+    </div>
+
+    <!-- Stats Grid -->
+    <div class="stats-overview">
+        <div class="stat-card">
+            <span class="stat-label">Último Valor</span>
+            <div class="stat-value-container">
+                <span class="stat-value" id="detLastValue">--</span>
+                <span class="stat-unit" id="detUnit"></span>
+            </div>
+            <span class="stat-trend positive" id="detTrend">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <polyline points="23 6 13.5 15.5 8.5 10.5 1 18"></polyline>
+                    <polyline points="17 6 23 6 23 12"></polyline>
+                </svg>
+                --
+            </span>
+        </div>
+        <div class="stat-card">
+            <span class="stat-label">Meta Atual</span>
+            <div class="stat-value-container">
+                <span class="stat-value" id="detCurrentGoal">--</span>
+                <span class="stat-unit" id="detUnitGoal"></span>
+            </div>
+            <span class="stat-helper" id="detGoalDeadline">Sem meta ativa</span>
+        </div>
+        <div class="stat-card">
+            <span class="stat-label">Desempenho</span>
+            <div class="stat-value-container">
+                <span class="stat-value" id="detPerformance">0%</span>
+            </div>
+            <div class="progress-bar-container">
+                <div class="progress-bar" id="detProgressBar" style="width: 0%"></div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Chart Section -->
+    <div class="workspace-section mt-5" id="chartSection">
+        <div class="card p-4">
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1.5rem;">
+                <h2 class="text-h2" style="margin: 0;">📊 Gráfico de Desempenho</h2>
+                <div class="chart-legend" id="chartLegend"></div>
+            </div>
+            <div style="height: 350px; width: 100%;">
+                <canvas id="indicatorChart"></canvas>
+            </div>
+        </div>
+    </div>
+
+    <!-- History Section -->
+    <div class="workspace-section mt-5">
+        <h2 class="text-h2 mb-4">📈 Histórico de Registros</h2>
+        <div class="history-table-wrapper">
+            <table class="history-table">
+                <thead>
+                    <tr>
+                        <th>Data</th>
+                        <th>Valor Lançado</th>
+                        <th>Meta Relacionada</th>
+                        <th>Notas</th>
+                        <th style="text-align: right;">Ações</th>
+                    </tr>
+                </thead>
+                <tbody id="recordsTableBody">
+                    <!-- JS will populate -->
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+
+<!-- Modal: Novo Registro -->
+<div id="recordModal" class="modal">
+    <div class="modal-content">
+        <div class="modal-header">
+            <h3>Lançar Valor</h3>
+            <button class="btn-close" onclick="closeModal('recordModal')">&times;</button>
+        </div>
+        <form id="recordForm">
+            <input type="hidden" name="company_id" id="modalRecordCompanyId" value="">
+            <div class="form-group">
+                <label class="form-label">Meta Relacionada</label>
+                <select class="form-select" name="goal_id" id="modalRecordGoalId" required>
+                    <option value="">Selecione a meta...</option>
+                </select>
+            </div>
+            <div class="form-group">
+                <label class="form-label">Data do Registro</label>
+                <input type="date" class="form-control" name="record_date" id="modalRecordDate" required>
+            </div>
+            <div class="form-group">
+                <label class="form-label">Valor</label>
+                <input type="number" step="0.01" class="form-control" name="value" id="modalRecordValue" required>
+            </div>
+            <div class="form-group">
+                <label class="form-label">Notas</label>
+                <textarea class="form-control" name="notes" rows="2"></textarea>
+            </div>
+            <div class="modal-actions">
+                <button type="button" class="btn btn-secondary" onclick="closeModal('recordModal')">Cancelar</button>
+                <button type="submit" class="btn btn-primary">Salvar Registro</button>
+            </div>
+        </form>
+    </div>
+</div>
+
+<!-- Modal: Nova Meta -->
+<div id="goalModal" class="modal">
+    <div class="modal-content">
+        <div class="modal-header">
+            <h3>Nova Meta</h3>
+            <button class="btn-close" onclick="closeModal('goalModal')">&times;</button>
+        </div>
+        <form id="goalForm">
+            <input type="hidden" name="company_id" id="modalGoalCompanyId" value="">
+            <input type="hidden" name="indicator_id" id="modalGoalIndicatorId" value="{{ indicator_id }}">
+
+            <div class="form-group">
+                <label class="form-label">Valor Alvo</label>
+                <input type="number" step="0.01" class="form-control" name="goal_value" required>
+            </div>
+            <div class="form-group">
+                <label class="form-label">Prazo Final</label>
+                <input type="date" class="form-control" name="goal_date" required>
+            </div>
+            <div class="form-group">
+                <label class="form-label">Tipo de Meta</label>
+                <select class="form-select" name="goal_type">
+                    <option value="single">Meta Única</option>
+                    <option value="monthly">Mensal</option>
+                    <option value="quarterly">Trimestral</option>
+                </select>
+            </div>
+            <div class="form-group">
+                <label class="form-label">Status</label>
+                <select class="form-select" name="status">
+                    <option value="active">Ativa</option>
+                    <option value="planned">Planejada</option>
+                </select>
+            </div>
+            <div class="modal-actions">
+                <button type="button" class="btn btn-secondary" onclick="closeModal('goalModal')">Cancelar</button>
+                <button type="submit" class="btn btn-primary">Criar Meta</button>
+            </div>
+        </form>
+    </div>
+</div>
+
+<style>
+    .stats-overview {
+        display: grid;
+        grid-template-columns: repeat(3, 1fr);
+        gap: 1.5rem;
+    }
+
+    .stat-card {
+        background: var(--surface);
+        padding: 1.5rem;
+        border-radius: 16px;
+        border: 1px solid var(--border);
+        display: flex;
+        flex-direction: column;
+        gap: 0.5rem;
+    }
+
+    .stat-label {
+        font-size: 0.85rem;
+        font-weight: 600;
+        color: var(--text-tertiary);
+        text-transform: uppercase;
+        letter-spacing: 0.05em;
+    }
+
+    .stat-value-container {
+        display: flex;
+        align-items: baseline;
+        gap: 0.5rem;
+    }
+
+    .stat-value {
+        font-size: 2rem;
+        font-weight: 700;
+        color: var(--text-primary);
+    }
+
+    .stat-unit {
+        color: var(--text-tertiary);
+        font-weight: 500;
+    }
+
+    .stat-trend {
+        display: flex;
+        align-items: center;
+        gap: 0.25rem;
+        font-size: 0.85rem;
+        font-weight: 600;
+    }
+
+    .stat-trend.positive {
+        color: var(--success);
+    }
+
+    .stat-trend.negative {
+        color: var(--danger);
+    }
+
+    .stat-helper {
+        font-size: 0.85rem;
+        color: var(--text-tertiary);
+    }
+
+    .progress-bar-container {
+        height: 8px;
+        background: var(--surface-secondary);
+        border-radius: 4px;
+        margin-top: 0.5rem;
+        overflow: hidden;
+    }
+
+    .progress-bar {
+        height: 100%;
+        background: var(--primary);
+        border-radius: 4px;
+        transition: width 0.5s ease;
+    }
+
+    .history-table {
+        width: 100%;
+        border-collapse: collapse;
+    }
+
+    .history-table th {
+        text-align: left;
+        padding: 1rem;
+        border-bottom: 1.5px solid var(--border);
+        color: var(--text-tertiary);
+        font-weight: 600;
+        font-size: 0.85rem;
+        text-transform: uppercase;
+    }
+
+    .history-table td {
+        padding: 1.25rem 1rem;
+        border-bottom: 1px solid var(--border);
+        font-size: 0.9375rem;
+    }
+
+    .goal-card-sidebar {
+        padding: 1rem;
+        border: 1px solid var(--border);
+        border-radius: 12px;
+        margin-bottom: 1rem;
+        transition: var(--transition);
+        cursor: pointer;
+    }
+
+    .goal-card-sidebar:hover {
+        border-color: var(--primary);
+        background: var(--primary-light);
+    }
+
+    .goal-card-sidebar.active {
+        border-color: var(--primary);
+        background: var(--primary-light);
+        box-shadow: 0 4px 12px var(--primary-glow);
+    }
+
+    .indicator-code {
+        font-size: 0.75rem;
+        font-weight: 700;
+        color: var(--primary);
+        background: var(--primary-light);
+        padding: 4px 10px;
+        border-radius: 6px;
+    }
+
+    .indicator-group-badge {
+        font-size: 0.75rem;
+        font-weight: 600;
+        color: var(--text-secondary);
+        background: var(--surface-secondary);
+        padding: 4px 10px;
+        border-radius: 6px;
+    }
+
+    /* Modal Styles */
+    .modal {
+        display: none;
+        position: fixed;
+        top: 0;
+        left: 0;
+        width: 100%;
+        height: 100%;
+        background: rgba(0, 0, 0, 0.5);
+        z-index: 1000;
+        backdrop-filter: blur(4px);
+    }
+
+    .modal-content {
+        background: white;
+        max-width: 500px;
+        margin: 10vh auto;
+        border-radius: 20px;
+        padding: 2rem;
+        box-shadow: var(--shadow-xl);
+    }
+
+    .modal-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        margin-bottom: 1.5rem;
+    }
+
+    .modal-actions {
+        display: flex;
+        justify-content: flex-end;
+        gap: 1rem;
+        margin-top: 2rem;
+    }
+
+    .btn-close {
+        background: none;
+        border: none;
+        font-size: 1.5rem;
+        cursor: pointer;
+        color: var(--text-tertiary);
+    }
+</style>
+
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+
+<script>
+    const indicatorId = window.location.pathname.split('/')[2];
+    let state = {
+        indicator: null,
+        goals: [],
+        records: [],
+        chart: null
+    };
+
+    document.addEventListener('DOMContentLoaded', () => {
+        init();
+
+        document.getElementById('recordForm').addEventListener('submit', handleRecordSubmit);
+    });
+
+    async function init() {
+        await fetchIndicator();
+        await fetchGoals();
+        renderIndicator();
+        renderGoals();
+        renderRecords();
+        renderChart();
+    }
+
+    async function fetchIndicator() {
+        const res = await fetch(`/api/indicators/${indicatorId}`);
+        state.indicator = await res.json();
+    }
+
+    async function fetchGoals() {
+        const res = await fetch(`/api/indicator-goals?indicator_id=${indicatorId}`);
+        state.goals = await res.json();
+
+        // Fetch all records for this indicator in one go
+        const rRes = await fetch(`/api/indicator-data?indicator_id=${indicatorId}`);
+        const records = await rRes.json();
+
+        // Add goal labels to records for display
+        records.forEach(r => {
+            const goal = state.goals.find(g => g.id === r.goal_id);
+            r.goal_label = goal ? `Meta ${goal.id} (${goal.goal_value})` : `Meta ${r.goal_id}`;
+        });
+
+        state.records = records.sort((a, b) => new Date(b.record_date) - new Date(a.record_date));
+    }
+
+    function renderIndicator() {
+        document.getElementById('breadcrumbName').textContent = state.indicator.name;
+        document.getElementById('detName').textContent = state.indicator.name;
+        document.getElementById('detCode').textContent = state.indicator.code;
+        document.getElementById('detUnit').textContent = state.indicator.unit || '';
+        document.getElementById('detUnitGoal').textContent = state.indicator.unit || '';
+        document.getElementById('detDescription').textContent = state.indicator.formula || 'Sem fórmula definida.';
+        document.getElementById('modalRecordCompanyId').value = state.indicator.company_id;
+        document.getElementById('modalGoalCompanyId').value = state.indicator.company_id;
+
+        const lastValue = state.records.length > 0 ? state.records[0].value : null;
+        document.getElementById('detLastValue').textContent = lastValue !== null ? lastValue : '--';
+
+        const activeGoal = state.goals.find(g => g.status === 'active') || state.goals[0];
+        if (activeGoal) {
+            document.getElementById('detCurrentGoal').textContent = activeGoal.goal_value;
+            document.getElementById('detGoalDeadline').textContent = `Prazo: ${activeGoal.goal_date}`;
+
+            if (lastValue !== null) {
+                const perf = (lastValue / activeGoal.goal_value) * 100;
+                const cappedPerf = Math.min(perf, 100);
+                document.getElementById('detPerformance').textContent = `${Math.round(perf)}%`;
+                document.getElementById('detProgressBar').style.width = `${cappedPerf}%`;
+            }
+        }
+    }
+
+    function renderGoals() {
+        const list = document.getElementById('activeGoalsList');
+        const modalSelect = document.getElementById('modalRecordGoalId');
+
+        list.innerHTML = state.goals.map(goal => `
+            <div class="goal-card-sidebar ${goal.status === 'active' ? 'active' : ''}">
+                <div style="display: flex; justify-content: space-between; margin-bottom: 0.25rem;">
+                    <span style="font-weight: 700; color: var(--text-primary);">${goal.goal_value} ${state.indicator.unit || ''}</span>
+                    <span class="badge" style="font-size: 0.7rem; background: ${goal.status === 'active' ? 'var(--success)' : 'var(--border)'}; color: white;">${goal.status}</span>
+                </div>
+                <div style="font-size: 0.8rem; color: var(--text-tertiary);">${goal.goal_date}</div>
+            </div>
+        `).join('');
+
+        modalSelect.innerHTML = '<option value="">Selecione a meta...</option>' +
+            state.goals.map(goal => `<option value="${goal.id}">Meta ${goal.id} - ${goal.goal_value} (${goal.goal_date})</option>`).join('');
+    }
+
+    function renderRecords() {
+        const tbody = document.getElementById('recordsTableBody');
+        if (state.records.length === 0) {
+            tbody.innerHTML = '<tr><td colspan="5" class="text-center py-5 text-tertiary">Nenhum registro encontrado.</td></tr>';
+            return;
+        }
+
+        tbody.innerHTML = state.records.map(record => `
+            <tr>
+                <td><strong>${record.record_date}</strong></td>
+                <td><span style="font-weight: 600; color: var(--primary);">${record.value} ${state.indicator.unit || ''}</span></td>
+                <td><span class="indicator-group-badge" style="background: var(--primary-light); color: var(--primary); border: none;">${record.goal_label}</span></td>
+                <td><span class="text-tertiary">${record.notes || '--'}</span></td>
+                <td style="text-align: right;">
+                    <button class="btn-icon" onclick="deleteRecord(${record.id})">
+                        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 6h18M19 6v14a2 2 0 01-2 2H7a2 2 0 01-2-2V6m3 0V4a2 2 0 012-2h4a2 2 0 012 2v2"></path></svg>
+                    </button>
+                </td>
+            </tr>
+        `).join('');
+    }
+
+    function renderChart() {
+        const ctx = document.getElementById('indicatorChart').getContext('2d');
+
+        // Prepare data - sorted by date ASC for chart
+        const sortedRecords = [...state.records].sort((a, b) => new Date(a.record_date) - new Date(b.record_date));
+
+        if (state.chart) {
+            state.chart.destroy();
+        }
+
+        const labels = sortedRecords.map(r => r.record_date);
+        const values = sortedRecords.map(r => r.value);
+
+        // Find current goal line
+        const activeGoal = state.goals.find(g => g.status === 'active') || state.goals[0];
+        const goalValues = activeGoal ? sortedRecords.map(() => activeGoal.goal_value) : [];
+
+        state.chart = new Chart(ctx, {
+            type: 'line',
+            data: {
+                labels: labels,
+                datasets: [
+                    {
+                        label: 'Realizado',
+                        data: values,
+                        borderColor: '#2563eb',
+                        backgroundColor: 'rgba(37, 99, 235, 0.1)',
+                        borderWidth: 3,
+                        tension: 0.4,
+                        fill: true,
+                        pointBackgroundColor: '#2563eb',
+                        pointBorderColor: '#fff',
+                        pointHoverRadius: 6
+                    },
+                    {
+                        label: 'Meta',
+                        data: goalValues,
+                        borderColor: '#ef4444',
+                        borderWidth: 2,
+                        borderDash: [5, 5],
+                        pointRadius: 0,
+                        fill: false
+                    }
+                ]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                plugins: {
+                    legend: { display: false }
+                },
+                scales: {
+                    y: {
+                        beginAtZero: true,
+                        grid: { color: 'rgba(0,0,0,0.05)' }
+                    },
+                    x: {
+                        grid: { display: false }
+                    }
+                }
+            }
+        });
+    }
+
+    function openRecordModal() {
+        document.getElementById('modalRecordDate').value = new Date().toISOString().split('T')[0];
+        document.getElementById('recordModal').style.display = 'block';
+    }
+
+    function openGoalModal() {
+        document.getElementById('goalModal').style.display = 'block';
+    }
+
+    function closeModal(id) {
+        document.getElementById(id).style.display = 'none';
+    }
+
+    async function handleRecordSubmit(e) {
+        e.preventDefault();
+        const formData = new FormData(e.target);
+        const data = Object.fromEntries(formData.entries());
+        data.value = parseFloat(data.value);
+        data.goal_id = parseInt(data.goal_id);
+
+        try {
+            const res = await fetch('/api/indicator-data', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(data)
+            });
+
+            if (res.ok) {
+                closeModal('recordModal');
+                init();
+            } else {
+                alert('Erro ao salvar registro.');
+            }
+        } catch (err) {
+            console.error(err);
+        }
+    }
+
+    async function handleGoalSubmit(e) {
+        e.preventDefault();
+        const formData = new FormData(e.target);
+        const data = Object.fromEntries(formData.entries());
+        data.goal_value = parseFloat(data.goal_value);
+        data.indicator_id = parseInt(data.indicator_id);
+        data.company_id = parseInt(data.company_id);
+
+        try {
+            const res = await fetch('/api/indicator-goals', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(data)
+            });
+
+            if (res.ok) {
+                closeModal('goalModal');
+                init();
+            } else {
+                const err = await res.json();
+                alert('Erro ao criar meta: ' + JSON.stringify(err.errors || err.error));
+            }
+        } catch (err) {
+            console.error(err);
+        }
+    }
+
+    document.getElementById('goalForm').addEventListener('submit', handleGoalSubmit);
+
+    async function deleteRecord(id) {
+        if (!confirm('Excluir este registro?')) return;
+        await fetch(`/api/indicator-data/${id}`, { method: 'DELETE' });
+        init();
+    }
+</script>
+{% endblock %}
+
+{% block sidebar_right %}
+<div class="sidebar-header-ws">
+    <h3 class="text-h3">Metas Ativas</h3>
+</div>
+<div class="sidebar-content-ws" id="activeGoalsList">
+    <div class="loading-shimmer" style="height: 60px; margin-bottom: 10px; border-radius: 8px;"></div>
+    <div class="loading-shimmer" style="height: 60px; margin-bottom: 10px; border-radius: 8px;"></div>
+</div>
+{% endblock %}

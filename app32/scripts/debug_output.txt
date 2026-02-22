@@ -1,0 +1,30 @@
+﻿DEBUG: Registering Jinja filters...
+=== ADMIN USER ===
+  ID: 6, Email: admin@gestaoversus.com.br, Role: admin
+  Employee vinculado: ID=4, Nome=Fabiano Gerente Operacional
+
+=== COLABORADORES COM "MARCOS" ===
+  ID=45, Nome=Marcos Ferreira, user_id=5, email=versus@gestaoversus.com.br
+
+=== ATIVIDADES RECENTES DE PROJETO ===
+DEBUG: CLOUD_SQL_CONNECTION_NAME='None'
+DEBUG: Using standard DATABASE_URL connection
+  task_id=34, what=Teste My Work, employee_id=71, employee=Diretor Geral, company_id=37, stage=inbox
+  task_id=33, what=Atividade Teste 04, employee_id=71, employee=Diretor Geral, company_id=37, stage=inbox
+  task_id=32, what=Atividade Teste 03, employee_id=71, employee=Diretor Geral, company_id=37, stage=inbox
+  task_id=31, what=Atividade Teste, employee_id=71, employee=Diretor Geral, company_id=37, stage=inbox
+  task_id=30, what=Resumo da ReuniÒo: Reuniao Teste, employee_id=None, employee=None, company_id=37, stage=inbox
+  task_id=29, what=ReuniÒo Atividade 01, employee_id=None, employee=None, company_id=37, stage=completed
+  task_id=28, what=Teste 02, employee_id=66, employee=Ferreira Colaborador, company_id=37, stage=completed
+  task_id=27, what=Atividade Teste, employee_id=66, employee=Ferreira Colaborador, company_id=37, stage=completed
+  task_id=26, what=Criptografia, employee_id=63, employee=Trillian Astra, company_id=36, stage=inbox
+  task_id=25, what=Arquitetura Vetorial, employee_id=61, employee=Arthur Dent, company_id=36, stage=inbox
+
+=== DIAGNËSTICO _fetch_v2_project_rows ===
+  get_employee_from_user(6) = 4
+  get_user_employees = [{'company_id': 5, 'company_name': 'Versus Gestao Corporativa', 'company_code': 'AA', 'employee_id': 4, 'employee_name': 'Fabiano Gerente Operacional', 'employee_email': 'admin@gestaoversus.com.br'}, {'company_id': 32, 'company_name': 'Versus Tech Demo', 'company_code': 'VT001', 'employee_id': 46, 'employee_name': 'Admin Versus', 'employee_email': 'admin@gestaoversus.com.br'}, {'company_id': 37, 'company_name': 'Versus Exemplo 200', 'company_code': 'V20', 'employee_id': 71, 'employee_name': 'Diretor Geral', 'employee_email': 'admin@gestaoversus.com.br'}]
+  all_employee_ids = [4, 46, 71]
+
+=== CONCLUS├O ===
+Se employee_id do admin != employee_id do Diretor Marcos,
+a atividade nÒo aparecerß no My Work com scope="me".

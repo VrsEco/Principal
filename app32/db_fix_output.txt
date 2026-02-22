@@ -1,0 +1,15 @@
+Finding constraints for activity_work_logs...
+Constraint: activity_work_logs_hours_worked_check, Def: CHECK (((hours_worked > (0)::numeric) AND (hours_worked <= (24)::numeric)))
+Constraint: activity_work_logs_id_not_null, Def: NOT NULL id
+Constraint: activity_work_logs_activity_type_not_null, Def: NOT NULL activity_type
+Constraint: activity_work_logs_activity_id_not_null, Def: NOT NULL activity_id
+Constraint: activity_work_logs_employee_id_not_null, Def: NOT NULL employee_id
+Constraint: activity_work_logs_work_date_not_null, Def: NOT NULL work_date
+Constraint: activity_work_logs_hours_worked_not_null, Def: NOT NULL hours_worked
+Constraint: activity_work_logs_pkey, Def: PRIMARY KEY (id)
+Constraint: activity_work_logs_employee_id_fkey, Def: FOREIGN KEY (employee_id) REFERENCES employees(id) ON DELETE CASCADE
+Constraint: activity_work_logs_activity_type_check, Def: CHECK (((activity_type)::text = ANY (ARRAY[('project'::character varying)::text, ('process'::character varying)::text, ('process_instance'::character varying)::text])))
+Dropping constraint activity_work_logs_activity_type_check
+Dropped check constraint.
+Adding constraint activity_work_logs_activity_type_check supporting process_instance
+Added new check constraint supporting project, process, process_instance.

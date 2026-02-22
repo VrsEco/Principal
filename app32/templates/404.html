@@ -1,0 +1,56 @@
+{% extends "layouts/app.html" %}
+
+{% block title %}Página Não Encontrada - 404{% endblock %}
+
+{% block content %}
+<div style="min-height: 60vh; display: flex; align-items: center; justify-content: center; padding: 40px 24px;">
+
+    <div style="max-width: 600px; text-align: center; display: grid; gap: 24px;">
+
+        <!-- Ilustração 404 -->
+        <div
+            style="font-size: 120px; font-weight: 700; background: linear-gradient(135deg, #3b82f6, #8b5cf6); -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text;">
+            404
+        </div>
+
+        <!-- Mensagem -->
+        <div>
+            <h1 class="text-h1" style="margin-bottom: 12px;">Página Não Encontrada</h1>
+            <p class="text-sm" style="font-size: 15px; line-height: 1.6;">
+                Desculpe, a página que você está procurando não existe ou foi movida.
+            </p>
+        </div>
+
+        <!-- Ações -->
+        <div style="display: flex; gap: 12px; justify-content: center; flex-wrap: wrap;">
+            <a href="/" class="btn btn-primary">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <path d="M3 9l9-7 9 7v11a2 2 0 01-2 2H5a2 2 0 01-2-2z"></path>
+                </svg>
+                Voltar ao Início
+            </a>
+            <button onclick="window.history.back()" class="btn btn-secondary">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <line x1="19" y1="12" x2="5" y2="12"></line>
+                    <polyline points="12 19 5 12 12 5"></polyline>
+                </svg>
+                Voltar
+            </button>
+        </div>
+
+        <!-- Links Úteis -->
+        <div style="margin-top: 24px; padding-top: 24px; border-top: 1px solid var(--color-border);">
+            <p class="text-sm" style="margin-bottom: 12px; font-weight: 600;">Links Úteis:</p>
+            <div style="display: flex; gap: 16px; justify-content: center; flex-wrap: wrap;">
+                <a href="/companies"
+                    style="color: var(--color-primary); text-decoration: none; font-size: 14px;">Empresas</a>
+                <a href="/grv" style="color: var(--color-primary); text-decoration: none; font-size: 14px;">GRV</a>
+                <a href="/my-work" style="color: var(--color-primary); text-decoration: none; font-size: 14px;">Minhas
+                    Atividades</a>
+            </div>
+        </div>
+
+    </div>
+
+</div>
+{% endblock %}

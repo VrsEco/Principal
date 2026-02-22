@@ -1,0 +1,71 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>{% block title %}Gestão Versus{% endblock %}</title>
+  <link rel="stylesheet" href="{{ url_for('static', filename='css/app32.css') }}">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <link rel="apple-touch-icon" sizes="180x180"
+    href="{{ url_for('static', filename='img/favicon/apple-touch-icon.png') }}">
+  <link rel="icon" type="image/png" sizes="32x32"
+    href="{{ url_for('static', filename='img/favicon/favicon-32x32.png') }}">
+  <link rel="icon" type="image/png" sizes="16x16"
+    href="{{ url_for('static', filename='img/favicon/favicon-16x16.png') }}">
+  <link rel="manifest" href="{{ url_for('static', filename='site.webmanifest') }}">
+  <link rel="shortcut icon" href="{{ url_for('static', filename='favicon.ico') }}">
+  <meta name="apple-mobile-web-app-title" content="Versus">
+  <meta name="application-name" content="Versus">
+  <meta name="msapplication-TileColor" content="#ffffff">
+  <meta name="theme-color" content="#ffffff">
+  {% block head %}{% endblock %}
+</head>
+
+<body>
+
+  <script>
+    {% if company and company.id %}
+    window.companyId = {{ company.id }};
+    window.company = {{ (company.to_dict() if company.to_dict else company) | tojson }};
+    {% elif company_id %}
+    window.companyId = {{ company_id }};
+    {% endif %}
+
+    {% if plan and plan.id %}
+    window.planId = '{{ plan.id }}';
+    {% elif plan_id %}
+    window.planId = '{{ plan_id }}';
+    {% endif %}
+
+    {% if portfolio and portfolio.id %}
+    window.portfolioId = {{ portfolio.id }};
+    {% elif portfolio_id %}
+    window.portfolioId = {{ portfolio_id }};
+    {% endif %}
+  </script>
+  {% block layout %}{% endblock %}
+
+  <script>
+    // Script básico para UX
+    document.addEventListener('DOMContentLoaded', () => {
+      // Auto-fechar alertas
+      setTimeout(() => {
+        const alerts = document.querySelectorAll('.alert');
+        alerts.forEach(a => a.style.display = 'none');
+      }, 5000);
+    });
+
+    function toggleCollapsible(id) {
+      const el = document.getElementById(id);
+      if (el) {
+        el.classList.toggle('collapsed');
+      }
+    }
+  </script>
+  {% include 'components/onboarding_widget.html' %}
+  {% block scripts %}{% endblock %}
+</body>
+
+</html>

@@ -1,0 +1,350 @@
+{% extends "modules/plans/base_planning.html" %}
+
+{% block planning_content %}
+<div class="planning-header"
+    style="display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 32px;">
+    <div>
+        <h1 style="font-size: 32px; font-weight: 800; color: #0f172a; margin-bottom: 8px;">Direcionadores Estratégicos
+        </h1>
+        <p style="color: #64748b; font-size: 16px;">Defina os pilares, oportunidades e ameaças que guiarão o crescimento
+            da empresa.</p>
+    </div>
+    <div style="display: flex; gap: 12px;">
+        <button onclick="openDriverModal()" class="nav-button"
+            style="background: #2563eb; color: #ffffff; padding: 12px 24px; border-radius: 12px; font-weight: 600; display: flex; align-items: center; gap: 8px; border: none; cursor: pointer;">
+            <i class="fa-solid fa-plus"></i> Novo Direcionador
+        </button>
+        <button onclick="completeSection()" class="nav-button"
+            style="background: #10b981; color: #ffffff; padding: 12px 24px; border-radius: 12px; font-weight: 600; display: flex; align-items: center; gap: 8px; border: none; cursor: pointer;">
+            <i class="fa-solid fa-check"></i> Concluir Etapa
+        </button>
+    </div>
+</div>
+
+<!-- Tabs for filtering types -->
+<div style="display: flex; gap: 12px; margin-bottom: 24px; border-bottom: 1px solid #e2e8f0; padding-bottom: 12px;">
+    <button class="tab-btn active" data-type="all">Todos</button>
+    <button class="tab-btn" data-type="driver">Direcionadores</button>
+    <button class="tab-btn" data-type="opportunity">Oportunidades</button>
+    <button class="tab-btn" data-type="threat">Ameaças</button>
+</div>
+
+<div id="driversGrid" style="display: grid; grid-template-columns: repeat(auto-fill, minmax(350px, 1fr)); gap: 24px;">
+    {% for driver in drivers %}
+    <div class="planning-card driver-card" data-type="{{ driver.type }}"
+        style="padding: 24px; position: relative; transition: all 0.3s ease;">
+        <div style="display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 16px;">
+            <span class="badge-type badge-{{ driver.type }}">
+                {{ "Direcionador" if driver.type == "driver" else "Oportunidade" if driver.type == "opportunity" else
+                "Ameaça" }}
+            </span>
+            <div style="display: flex; gap: 8px;">
+                <button class="icon-btn" onclick='editDriver({{ driver.to_dict() | tojson | safe }})'><i
+                        class="fa-solid fa-pen"></i></button>
+                <button class="icon-btn text-error" onclick="deleteDriver({{ driver.id }})"><i
+                        class="fa-solid fa-trash"></i></button>
+            </div>
+        </div>
+
+        <p style="font-size: 16px; font-weight: 500; color: #1e293b; line-height: 1.6; margin-bottom: 20px;">
+            {{ driver.description }}
+        </p>
+
+        <div
+            style="display: flex; justify-content: space-between; align-items: center; padding-top: 16px; border-top: 1px solid #f1f5f9;">
+            <div
+                style="display: flex; align-items: center; gap: 6px; font-size: 12px; font-weight: 700; color: #64748b;">
+                <i class="fa-solid fa-gauge-high"></i>
+                PRIORIDADE: <span class="priority-{{ driver.priority }}">{{ driver.priority|upper }}</span>
+            </div>
+            <div style="font-size: 12px; color: #94a3b8;">
+                <i class="fa-solid fa-link"></i> 0 OKRs vinculados
+            </div>
+        </div>
+    </div>
+    {% else %}
+    <div
+        style="grid-column: 1 / -1; padding: 64px; text-align: center; background: #ffffff; border-radius: 24px; border: 2px dashed #e2e8f0;">
+        <div style="font-size: 48px; color: #cbd5e1; margin-bottom: 20px;">
+            <i class="fa-solid fa-compass"></i>
+        </div>
+        <h3 style="font-size: 20px; font-weight: 700; color: #0f172a; margin-bottom: 8px;">Nenhum direcionador
+            cadastrado</h3>
+        <p style="color: #64748b; margin-bottom: 24px;">Comece definindo o que impulsionará o crescimento da sua
+            empresa.</p>
+        <button onclick="openDriverModal()"
+            style="background: #2563eb; color: #ffffff; padding: 10px 20px; border-radius: 10px; border: none; font-weight: 600; cursor: pointer;">
+            Adicionar Primeiro Direcionador
+        </button>
+    </div>
+    {% endfor %}
+</div>
+
+<!-- Modal Example -->
+<div id="driverModal"
+    style="display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.5); z-index: 25000; align-items: center; justify-content: center; backdrop-filter: blur(4px);">
+    <div class="planning-card" style="width: 100%; max-width: 500px; margin: 20px;">
+        <h3 style="font-size: 20px; font-weight: 700; color: #0f172a; margin-bottom: 20px;" id="driverModalTitle">Novo
+            Direcionador</h3>
+        <form id="driverForm">
+            <input type="hidden" id="driverId">
+            <div style="margin-bottom: 16px;">
+                <label
+                    style="display: block; font-size: 14px; font-weight: 600; color: #475569; margin-bottom: 6px;">Tipo</label>
+                <select id="typeSelect"
+                    style="width: 100%; padding: 10px; border: 1px solid #e2e8f0; border-radius: 8px;">
+                    <option value="driver">Direcionador (Fator Interno/Positivo)</option>
+                    <option value="opportunity">Oportunidade (Fator Externo/Positivo)</option>
+                    <option value="threat">Ameaça (Fator Externo/Negativo)</option>
+                </select>
+            </div>
+            <div style="margin-bottom: 16px;">
+                <label
+                    style="display: block; font-size: 14px; font-weight: 600; color: #475569; margin-bottom: 6px;">Descrição</label>
+                <textarea id="descInput"
+                    style="width: 100%; padding: 10px; border: 1px solid #e2e8f0; border-radius: 8px; min-height: 100px;"
+                    placeholder="Ex: Expandir para o mercado do Nordeste focando em logística interna."></textarea>
+            </div>
+            <div style="margin-bottom: 24px;">
+                <label
+                    style="display: block; font-size: 14px; font-weight: 600; color: #475569; margin-bottom: 6px;">Prioridade</label>
+                <div style="display: flex; gap: 12px;">
+                    <label style="flex: 1; cursor: pointer;">
+                        <input type="radio" name="priority" value="low" style="display: none;">
+                        <div class="priority-opt">Baixa</div>
+                    </label>
+                    <label style="flex: 1; cursor: pointer;">
+                        <input type="radio" name="priority" value="medium" checked style="display: none;">
+                        <div class="priority-opt">Média</div>
+                    </label>
+                    <label style="flex: 1; cursor: pointer;">
+                        <input type="radio" name="priority" value="high" style="display: none;">
+                        <div class="priority-opt">Alta</div>
+                    </label>
+                </div>
+            </div>
+            <div style="display: flex; gap: 12px; justify-content: flex-end;">
+                <button type="button" onclick="closeDriverModal()"
+                    style="padding: 10px 20px; border-radius: 8px; border: 1px solid #e2e8f0; background: #ffffff; color: #64748b; font-weight: 600;">Cancelar</button>
+                <button type="submit"
+                    style="padding: 10px 24px; border-radius: 8px; background: #2563eb; color: #ffffff; border: none; font-weight: 600;">Salvar</button>
+            </div>
+        </form>
+    </div>
+</div>
+
+<style>
+    .badge-type {
+        padding: 4px 10px;
+        border-radius: 6px;
+        font-size: 11px;
+        font-weight: 700;
+        text-transform: uppercase;
+    }
+
+    .badge-driver {
+        background: #e0f2fe;
+        color: #0369a1;
+    }
+
+    .badge-opportunity {
+        background: #f0fdf4;
+        color: #16a34a;
+    }
+
+    .badge-threat {
+        background: #fef2f2;
+        color: #991b1b;
+    }
+
+    .priority-low {
+        color: #64748b;
+    }
+
+    .priority-medium {
+        color: #d97706;
+    }
+
+    .priority-high {
+        color: #dc2626;
+    }
+
+    .tab-btn {
+        background: transparent;
+        border: none;
+        color: #64748b;
+        font-weight: 600;
+        padding: 8px 16px;
+        cursor: pointer;
+        border-radius: 8px;
+        transition: all 0.2s;
+    }
+
+    .tab-btn:hover {
+        background: #f1f5f9;
+        color: #0f172a;
+    }
+
+    .tab-btn.active {
+        color: #2563eb;
+        background: #eff6ff;
+    }
+
+    .icon-btn {
+        background: transparent;
+        border: none;
+        color: #94a3b8;
+        cursor: pointer;
+        font-size: 14px;
+        transition: all 0.2s;
+    }
+
+    .icon-btn:hover {
+        color: #0f172a;
+        transform: scale(1.1);
+    }
+
+    .text-error:hover {
+        color: #dc2626;
+    }
+
+    .priority-opt {
+        text-align: center;
+        padding: 10px;
+        border: 1px solid #e2e8f0;
+        border-radius: 8px;
+        font-size: 13px;
+        font-weight: 600;
+        color: #64748b;
+        transition: all 0.2s;
+    }
+
+    input[type="radio"]:checked+.priority-opt {
+        border-color: #2563eb;
+        background: #eff6ff;
+        color: #2563eb;
+    }
+</style>
+
+<script>
+    function openDriverModal() {
+        document.getElementById('driverModal').style.display = 'flex';
+    }
+
+    function closeDriverModal() {
+        document.getElementById('driverModal').style.display = 'none';
+        document.getElementById('driverForm').reset();
+        document.getElementById('driverId').value = '';
+        document.getElementById('driverModalTitle').innerText = 'Novo Direcionador';
+    }
+
+    // Simple tab filtering
+    document.querySelectorAll('.tab-btn').forEach(btn => {
+        btn.addEventListener('click', () => {
+            document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+            btn.classList.add('active');
+
+            const type = btn.dataset.type;
+            document.querySelectorAll('.driver-card').forEach(card => {
+                if (type === 'all' || card.dataset.type === type) {
+                    card.style.display = 'block';
+                } else {
+                    card.style.display = 'none';
+                }
+            });
+        });
+    });
+
+    // Edit driver function
+    function editDriver(driver) {
+        document.getElementById('driverModalTitle').innerText = 'Editar Direcionador';
+        document.getElementById('driverId').value = driver.id;
+        document.getElementById('typeSelect').value = driver.type;
+        document.getElementById('descInput').value = driver.description;
+
+        // Set priority radio
+        const priorityRadio = document.querySelector(`input[name="priority"][value="${driver.priority}"]`);
+        if (priorityRadio) priorityRadio.checked = true;
+
+        openDriverModal();
+    }
+
+    // Delete driver function
+    async function deleteDriver(driverId) {
+        if (!confirm('Tem certeza que deseja excluir este direcionador?')) return;
+
+        try {
+            const response = await fetch(`/api/plans/{{ plan.id }}/drivers/${driverId}?company_id={{ company.id }}`, {
+                method: 'DELETE'
+            });
+
+            if (response.ok) {
+                location.reload();
+            } else {
+                const err = await response.json();
+                alert('Erro ao excluir: ' + (err.error || 'Erro desconhecido'));
+            }
+        } catch (error) {
+            console.error('Error:', error);
+            alert('Erro de conexão ao excluir.');
+        }
+    }
+
+    // API Call for Create/Update
+    document.getElementById('driverForm').addEventListener('submit', async (e) => {
+        e.preventDefault();
+
+        const driverId = document.getElementById('driverId').value;
+        const data = {
+            type: document.getElementById('typeSelect').value,
+            description: document.getElementById('descInput').value,
+            priority: document.querySelector('input[name="priority"]:checked').value
+        };
+
+        try {
+            let url = `/api/plans/{{ plan.id }}/drivers?company_id={{ company.id }}`;
+            let method = 'POST';
+
+            if (driverId) {
+                url = `/api/plans/{{ plan.id }}/drivers/${driverId}?company_id={{ company.id }}`;
+                method = 'PUT';
+            }
+
+            const response = await fetch(url, {
+                method: method,
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(data)
+            });
+
+            if (response.ok) {
+                location.reload();
+            } else {
+                const err = await response.json();
+                alert('Erro ao salvar: ' + JSON.stringify(err.errors || err.error));
+            }
+        } catch (error) {
+            console.error('Error:', error);
+            alert('Erro de conexão.');
+        }
+    });
+
+    async function completeSection() {
+        if (!confirm('Deseja concluir o mapeamento de Direcionadores e avançar para os OKRs Globais?')) return;
+
+        try {
+            const response = await fetch(`/plans/{{ plan.id }}/sections/drivers/complete`, {
+                method: 'POST'
+            });
+
+            if (response.ok) {
+                window.location.href = "{{ url_for('plans.growth_section', plan_id=plan.id, section='okrs_global') }}";
+            } else {
+                alert('Erro ao concluir etapa.');
+            }
+        } catch (e) {
+            console.error(e);
+            alert('Erro de conexão.');
+        }
+    }
+</script>
+{% endblock %}

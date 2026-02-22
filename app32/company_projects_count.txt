@@ -1,0 +1,3 @@
+Count of company_projects: 75
+Count of project_activities: 74
+Count of plan_alignment_project: 0

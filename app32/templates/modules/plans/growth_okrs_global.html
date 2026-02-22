@@ -1,0 +1,504 @@
+{% extends "modules/plans/base_planning.html" %}
+
+{% block planning_content %}
+<div class="planning-header"
+    style="display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 32px;">
+    <div>
+        <h1 style="font-size: 32px; font-weight: 800; color: #0f172a; margin-bottom: 8px;">OKRs Globais</h1>
+        <p style="color: #64748b; font-size: 16px;">Defina os grandes objetivos da organização e os resultados-chave
+            (KRs) para o período.</p>
+    </div>
+    <div style="display: flex; gap: 12px;">
+        <button class="nav-button"
+            style="background: #ffffff; color: #0f172a; border: 1px solid #e2e8f0; padding: 12px 24px; border-radius: 12px; font-weight: 600;">
+            <i class="fa-solid fa-wand-sparkles"></i> Sugerir com AI
+        </button>
+        <button onclick="openOkrModal()" class="nav-button"
+            style="background: #2563eb; color: #ffffff; padding: 12px 24px; border-radius: 12px; font-weight: 600; border: none; cursor: pointer;">
+            <i class="fa-solid fa-plus"></i> Novo Objetivo
+        </button>
+        <button onclick="completeSection()" class="nav-button"
+            style="background: #10b981; color: #ffffff; padding: 12px 24px; border-radius: 12px; font-weight: 600; border: none; cursor: pointer; display: flex; align-items: center; gap: 8px;">
+            <i class="fa-solid fa-check"></i> Concluir Etapa
+        </button>
+    </div>
+</div>
+
+<div id="okrsContainer">
+    {% for okr in okrs %}
+    <div class="planning-card" style="padding: 0; overflow: hidden; margin-bottom: 24px;">
+        <div
+            style="padding: 24px; background: #f8fafc; border-bottom: 1px solid #e2e8f0; display: flex; justify-content: space-between; align-items: center;">
+            <div style="display: flex; gap: 16px; align-items: center;">
+                <div
+                    style="width: 48px; height: 48px; border-radius: 16px; background: #eff6ff; color: #2563eb; display: flex; align-items: center; justify-content: center; font-size: 20px;">
+                    <i class="fa-solid fa-target-crosshairs"></i>
+                </div>
+                <div>
+                    <h4 style="font-size: 18px; font-weight: 700; color: #0f172a;">{{ okr.objective }}</h4>
+                    <p style="font-size: 13px; color: #64748b;">
+                        Tipo: <span style="font-weight: 600; text-transform: capitalize;">{{ okr.type }}</span>
+                        {% if okr.deadline %}| Prazo: {{ okr.deadline.strftime('%d/%m/%Y') }}{% endif %}
+                        {% if okr.directionals and okr.directionals|length > 0 %}
+                        <br>
+                        <span style="display: inline-block; margin-top: 4px; color: #475569;">
+                            <i class="fa-solid fa-link" style="font-size: 11px; margin-right: 4px;"></i>
+                            {% for d_id in okr.directionals %}
+                            {% for driver in drivers if driver.id == d_id %}
+                            <span
+                                style="background: #e0f2fe; color: #0284c7; padding: 2px 8px; border-radius: 6px; font-size: 11px; font-weight: 600;">
+                                {{ driver.description | truncate(40) }}
+                            </span>
+                            {% endfor %}
+                            {% endfor %}
+                        </span>
+                        {% endif %}
+                    </p>
+                </div>
+            </div>
+            <div style="display: flex; gap: 12px; align-items: center;">
+                <div style="text-align: right; margin-right: 12px;">
+                    <span
+                        style="font-size: 11px; font-weight: 700; color: #94a3b8; text-transform: uppercase; display: block; margin-bottom: 2px;">Progresso</span>
+                    <span style="font-size: 18px; font-weight: 800; color: #2563eb;">0%</span>
+                </div>
+                <button class="icon-btn" onclick='editOkr({{ okr.to_dict() | tojson | safe }})'><i
+                        class="fa-solid fa-pen"></i></button>
+                <button class="icon-btn text-error" onclick="deleteOkr({{ okr.id }})"><i
+                        class="fa-solid fa-trash"></i></button>
+            </div>
+        </div>
+
+        <div style="padding: 24px;">
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px;">
+                <div
+                    style="font-size: 12px; font-weight: 700; color: #94a3b8; text-transform: uppercase; letter-spacing: 0.05em;">
+                    Resultados-Chave (Key Results)</div>
+                <button onclick="openKrModal({{ okr.id }})"
+                    style="font-size: 12px; font-weight: 700; color: #2563eb; background: transparent; border: none; cursor: pointer;">
+                    <i class="fa-solid fa-plus-circle"></i> Adicionar KR
+                </button>
+            </div>
+
+            <div style="display: flex; flex-direction: column; gap: 12px;">
+                {% for kr in okr.key_results %}
+                <div style="padding: 16px; border: 1px solid #f1f5f9; border-radius: 12px; display: flex; justify-content: space-between; align-items: center; transition: all 0.2s;"
+                    class="kr-item">
+                    <div style="display: flex; align-items: center; gap: 16px;">
+                        <div style="width: 6px; height: 32px; background: #e2e8f0; border-radius: 3px;"></div>
+                        <div>
+                            <div style="font-weight: 600; color: #1e293b;">{{ kr.label }}</div>
+                            <div style="font-size: 12px; color: #64748b;">
+                                Meta: <span style="font-weight: 500;">{{ kr.target }}</span>
+                                {% if kr.metric %}| Métrica: {{ kr.metric }}{% endif %}
+                                {% if kr.owner %}| Resp: {{ kr.owner }}{% endif %}
+                            </div>
+                        </div>
+                    </div>
+                    <div style="display: flex; gap: 8px;">
+                        <button class="icon-btn" style="font-size: 12px;"
+                            onclick='openKrModal({{ okr.id }}, {{ kr.to_dict() | tojson | safe }})'><i
+                                class="fa-solid fa-pencil"></i></button>
+                        <button class="icon-btn text-error" style="font-size: 12px;" onclick="deleteKr({{ kr.id }})"><i
+                                class="fa-solid fa-xmark"></i></button>
+                    </div>
+                </div>
+                {% else %}
+                <div
+                    style="text-align: center; padding: 20px; background: #f8fafc; border-radius: 12px; color: #94a3b8; font-size: 13px; border: 1px dashed #e2e8f0;">
+                    Nenhum KR definido para este objetivo.
+                </div>
+                {% endfor %}
+            </div>
+        </div>
+    </div>
+    {% else %}
+    <div
+        style="padding: 80px; text-align: center; background: #ffffff; border-radius: 32px; border: 2px dashed #e2e8f0;">
+        <div style="font-size: 64px; color: #cbd5e1; margin-bottom: 24px;">
+            <i class="fa-solid fa-bullseye"></i>
+        </div>
+        <h3 style="font-size: 22px; font-weight: 700; color: #0f172a; margin-bottom: 8px;">Defina suas metas globais
+        </h3>
+        <p style="color: #64748b; margin-bottom: 32px; max-width: 450px; margin-left: auto; margin-right: auto;">
+            Os OKRs Globais representam a visão de longo prazo e as prioridades máximas da empresa vinculadas a este
+            planejamento.
+        </p>
+        <button onclick="openOkrModal()"
+            style="background: #2563eb; color: #ffffff; padding: 14px 28px; border-radius: 12px; border: none; font-weight: 700; cursor: pointer;">
+            Criar Primeiro OKR Global
+        </button>
+    </div>
+    {% endfor %}
+</div>
+
+<!-- Modal Novo OKR -->
+<div id="okrModal"
+    style="display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.5); z-index: 25000; align-items: center; justify-content: center; backdrop-filter: blur(4px);">
+    <div class="planning-card" style="width: 100%; max-width: 550px; margin: 20px;">
+        <h3 style="font-size: 22px; font-weight: 800; color: #0f172a; margin-bottom: 24px;" id="okrModalTitle">Novo
+            Objetivo Global</h3>
+        <form id="okrForm">
+            <input type="hidden" id="okrId">
+            <div style="margin-bottom: 20px;">
+                <label
+                    style="display: block; font-size: 14px; font-weight: 700; color: #475569; margin-bottom: 8px;">Objetivo
+                    (O que queremos atingir?)</label>
+                <textarea id="okrObjective" required
+                    style="width: 100%; padding: 14px; border: 1px solid #e2e8f0; border-radius: 12px; font-size: 15px; min-height: 80px;"
+                    placeholder="Ex: Tornar-se a plataforma de gestão líder no Nordeste"></textarea>
+            </div>
+
+            <div style="margin-bottom: 20px;">
+                <label
+                    style="display: block; font-size: 14px; font-weight: 700; color: #475569; margin-bottom: 8px;">Direcionador
+                    Estratégico (Opcional)</label>
+                <select id="okrDriver"
+                    style="width: 100%; padding: 12px; border: 1px solid #e2e8f0; border-radius: 12px; background-color: #fff;">
+                    <option value="">Selecione um direcionador...</option>
+                    {% for driver in drivers %}
+                    <option value="{{ driver.id }}">{{ driver.description }}</option>
+                    {% endfor %}
+                </select>
+            </div>
+
+            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 16px; margin-bottom: 20px;">
+                <div>
+                    <label
+                        style="display: block; font-size: 14px; font-weight: 700; color: #475569; margin-bottom: 8px;">Tipo</label>
+                    <select id="okrType"
+                        style="width: 100%; padding: 12px; border: 1px solid #e2e8f0; border-radius: 12px;">
+                        <option value="aceleracao">Aceleração</option>
+                        <option value="estruturante">Estruturante</option>
+                    </select>
+                </div>
+                <div>
+                    <label
+                        style="display: block; font-size: 14px; font-weight: 700; color: #475569; margin-bottom: 8px;">Prazo</label>
+                    <input type="date" id="okrDeadline"
+                        style="width: 100%; padding: 12px; border: 1px solid #e2e8f0; border-radius: 12px;">
+                </div>
+            </div>
+
+            <div style="display: flex; gap: 16px; justify-content: flex-end; margin-top: 32px;">
+                <button type="button" onclick="closeOkrModal()"
+                    style="padding: 12px 24px; border-radius: 12px; border: 1px solid #e2e8f0; background: #ffffff; color: #64748b; font-weight: 700;">Cancelar</button>
+                <button type="submit"
+                    style="padding: 12px 32px; border-radius: 12px; background: #2563eb; color: #ffffff; border: none; font-weight: 700;">Salvar
+                    Objetivo</button>
+            </div>
+        </form>
+    </div>
+</div>
+
+<!-- Modal Novo Key Result -->
+<div id="krModal"
+    style="display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.5); z-index: 25000; align-items: center; justify-content: center; backdrop-filter: blur(4px);">
+    <div class="planning-card" style="width: 100%; max-width: 550px; margin: 20px;">
+        <h3 style="font-size: 22px; font-weight: 800; color: #0f172a; margin-bottom: 24px;" id="krModalTitle">Novo
+            Resultado-Chave</h3>
+        <form id="krForm">
+            <input type="hidden" id="krOkrId">
+            <input type="hidden" id="krId">
+
+            <div style="margin-bottom: 20px;">
+                <label style="display: block; font-size: 14px; font-weight: 700; color: #475569; margin-bottom: 8px;">
+                    Descrição do KR (Como vamos medir o sucesso?)
+                </label>
+                <textarea id="krLabel" required
+                    style="width: 100%; padding: 14px; border: 1px solid #e2e8f0; border-radius: 12px; font-size: 15px; min-height: 80px;"
+                    placeholder="Ex: Atingir R$ 10MM em faturamento recorrente"></textarea>
+            </div>
+
+            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 16px; margin-bottom: 20px;">
+                <div>
+                    <label
+                        style="display: block; font-size: 14px; font-weight: 700; color: #475569; margin-bottom: 8px;">Meta
+                        Numérica</label>
+                    <input type="text" id="krTarget" required
+                        style="width: 100%; padding: 12px; border: 1px solid #e2e8f0; border-radius: 12px;"
+                        placeholder="Ex: R$ 10MM">
+                </div>
+                <div>
+                    <label
+                        style="display: block; font-size: 14px; font-weight: 700; color: #475569; margin-bottom: 8px;">Unidade/Métrica</label>
+                    <input type="text" id="krMetric"
+                        style="width: 100%; padding: 12px; border: 1px solid #e2e8f0; border-radius: 12px;"
+                        placeholder="Ex: BRL, %, Unidades">
+                </div>
+            </div>
+
+            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 16px; margin-bottom: 20px;">
+                <div>
+                    <label
+                        style="display: block; font-size: 14px; font-weight: 700; color: #475569; margin-bottom: 8px;">Prazo</label>
+                    <input type="date" id="krDeadline"
+                        style="width: 100%; padding: 12px; border: 1px solid #e2e8f0; border-radius: 12px;">
+                </div>
+                <div>
+                    <label
+                        style="display: block; font-size: 14px; font-weight: 700; color: #475569; margin-bottom: 8px;">Responsável</label>
+                    <select id="krOwner" required
+                        style="width: 100%; padding: 12px; border: 1px solid #e2e8f0; border-radius: 12px; background-color: #fff;">
+                        <option value="">Selecione um responsável...</option>
+                        {% for p in participants %}
+                        {% set p_name = p.employee.name if p.employee else (p.user.name if p.user else 'Participante #'
+                        ~ p.id) %}
+                        <option value="{{ p_name }}">{{ p_name }}</option>
+                        {% endfor %}
+                    </select>
+                </div>
+            </div>
+
+            <div style="display: flex; gap: 16px; justify-content: flex-end; margin-top: 32px;">
+                <button type="button" onclick="closeKrModal()"
+                    style="padding: 12px 24px; border-radius: 12px; border: 1px solid #e2e8f0; background: #ffffff; color: #64748b; font-weight: 700;">Cancelar</button>
+                <button type="submit"
+                    style="padding: 12px 32px; border-radius: 12px; background: #2563eb; color: #ffffff; border: none; font-weight: 700;">Salvar
+                    KR</button>
+            </div>
+        </form>
+    </div>
+</div>
+
+<style>
+    .kr-item:hover {
+        background: #f8fafc;
+        border-color: #cbd5e1;
+    }
+
+    .icon-btn {
+        background: transparent;
+        border: none;
+        color: #94a3b8;
+        cursor: pointer;
+        padding: 6px;
+        transition: all 0.2s;
+    }
+
+    .icon-btn:hover {
+        color: #0f172a;
+        transform: scale(1.1);
+    }
+
+    .text-error:hover {
+        color: #dc2626;
+    }
+</style>
+
+<script>
+    function openOkrModal() {
+        document.getElementById('okrModal').style.display = 'flex';
+    }
+
+    function closeOkrModal() {
+        document.getElementById('okrModal').style.display = 'none';
+        document.getElementById('okrForm').reset();
+        document.getElementById('okrId').value = '';
+        document.getElementById('okrModalTitle').innerText = 'Novo Objetivo Global';
+    }
+
+    // Edit OKR Global
+    function editOkr(okr) {
+        document.getElementById('okrModalTitle').innerText = 'Editar Objetivo Global';
+        document.getElementById('okrId').value = okr.id;
+        document.getElementById('okrObjective').value = okr.objective;
+        document.getElementById('okrType').value = okr.type;
+
+        // Set deadline if exists
+        if (okr.deadline) {
+            const datePart = okr.deadline.split('T')[0];
+            document.getElementById('okrDeadline').value = datePart;
+        }
+
+        // Set driver if exists
+        if (okr.directionals && okr.directionals.length > 0) {
+            document.getElementById('okrDriver').value = okr.directionals[0];
+        }
+
+        openOkrModal();
+    }
+
+    // Delete OKR Global
+    async function deleteOkr(okrId) {
+        if (!confirm('Tem certeza que deseja excluir este OKR Global?')) return;
+
+        try {
+            const response = await fetch(`/api/okrs-global/${okrId}`, {
+                method: 'DELETE'
+            });
+
+            if (response.ok) {
+                location.reload();
+            } else {
+                const err = await response.json();
+                alert('Erro ao excluir: ' + (err.error || 'Erro desconhecido'));
+            }
+        } catch (error) {
+            console.error('Error:', error);
+            alert('Erro de conexão ao excluir.');
+        }
+    }
+
+    document.getElementById('okrForm').addEventListener('submit', async (e) => {
+        e.preventDefault();
+
+        const okrId = document.getElementById('okrId').value;
+        const data = {
+            company_id: window.companyId,
+            plan_id: parseInt(window.planId),
+            objective: document.getElementById('okrObjective').value,
+            type: document.getElementById('okrType').value,
+            deadline: document.getElementById('okrDeadline').value || null,
+            directionals: document.getElementById('okrDriver').value ? [parseInt(document.getElementById('okrDriver').value)] : []
+        };
+
+        try {
+            let url = '/api/okrs-global';
+            let method = 'POST';
+
+            if (okrId) {
+                url = `/api/okrs-global/${okrId}`;
+                method = 'PUT';
+            }
+
+            const response = await fetch(url, {
+                method: method,
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(data)
+            });
+
+            if (response.ok) {
+                location.reload();
+            } else {
+                const err = await response.json();
+                alert('Erro ao salvar: ' + JSON.stringify(err.errors || err.error));
+            }
+        } catch (error) {
+            console.error('Error:', error);
+            alert('Erro de conexão.');
+        }
+    });
+
+    // Key Results Logic
+    let currentKrId = null;
+
+    function openKrModal(okrId, krData = null) {
+        document.getElementById('krModal').style.display = 'flex';
+        document.getElementById('krOkrId').value = okrId;
+
+        const modalTitle = document.getElementById('krModalTitle');
+        const form = document.getElementById('krForm');
+
+        if (krData) {
+            currentKrId = krData.id;
+            modalTitle.innerText = "Editar Resultado-Chave";
+            document.getElementById('krId').value = krData.id;
+            document.getElementById('krLabel').value = krData.label;
+            document.getElementById('krTarget').value = krData.target;
+            document.getElementById('krMetric').value = krData.metric || '';
+            document.getElementById('krOwner').value = krData.owner || '';
+
+            if (krData.deadline) {
+                // Format date YYYY-MM-DD
+                const datePart = krData.deadline.split('T')[0];
+                document.getElementById('krDeadline').value = datePart;
+            } else {
+                document.getElementById('krDeadline').value = '';
+            }
+        } else {
+            currentKrId = null;
+            modalTitle.innerText = "Novo Resultado-Chave";
+            form.reset();
+            document.getElementById('krOkrId').value = okrId;
+            document.getElementById('krId').value = '';
+        }
+    }
+
+    function closeKrModal() {
+        document.getElementById('krModal').style.display = 'none';
+        document.getElementById('krForm').reset();
+        currentKrId = null;
+    }
+
+    async function deleteKr(krId) {
+        if (!confirm('Tem certeza que deseja remover este KR?')) return;
+
+        try {
+            const response = await fetch(`/api/key-results/${krId}`, {
+                method: 'DELETE'
+            });
+
+            if (response.ok) {
+                location.reload();
+            } else {
+                const err = await response.json();
+                alert('Erro ao excluir: ' + JSON.stringify(err.errors || err.error));
+            }
+        } catch (error) {
+            console.error('Error:', error);
+            alert('Erro ao excluir KR.');
+        }
+    }
+
+    document.getElementById('krForm').addEventListener('submit', async (e) => {
+        e.preventDefault();
+
+        const okrId = document.getElementById('krOkrId').value;
+        const krId = document.getElementById('krId').value;
+
+        const data = {
+            okr_global_id: parseInt(okrId),
+            label: document.getElementById('krLabel').value,
+            target: document.getElementById('krTarget').value,
+            metric: document.getElementById('krMetric').value,
+            owner: document.getElementById('krOwner').value,
+            deadline: document.getElementById('krDeadline').value || null
+        };
+
+        try {
+            let url = '/api/key-results';
+            let method = 'POST';
+
+            if (krId) {
+                url = `/api/key-results/${krId}`;
+                method = 'PUT';
+            }
+
+            const response = await fetch(url, {
+                method: method,
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(data)
+            });
+
+            if (response.ok) {
+                location.reload();
+            } else {
+                const err = await response.json();
+                alert('Erro ao salvar: ' + JSON.stringify(err.errors || err.error));
+            }
+        } catch (error) {
+            console.error('Error:', error);
+            alert('Erro de conexão ao salvar KR.');
+        }
+    });
+    async function completeSection() {
+        if (!confirm('Deseja concluir o mapeamento de OKRs Globais e avançar para os OKRs de Área?')) return;
+
+        try {
+            const response = await fetch(`/plans/{{ plan.id }}/sections/okrs_global/complete`, {
+                method: 'POST'
+            });
+
+            if (response.ok) {
+                window.location.href = "{{ url_for('plans.growth_section', plan_id=plan.id, section='okrs_area') }}";
+            } else {
+                alert('Erro ao concluir etapa.');
+            }
+        } catch (e) {
+            console.error(e);
+            alert('Erro de conexão.');
+        }
+    }
+</script>
+{% endblock %}

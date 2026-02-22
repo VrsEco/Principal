@@ -1,0 +1,1627 @@
+﻿{% extends "layouts/workspace.html" %}
+
+{% block title %}Gestão de Reuniões - Versus Gestão Corporativa{% endblock %}
+
+{% block breadcrumb %}
+<a href="/dashboard">Dashboard</a>
+<span class="sep">/</span>
+<span class="current">Gestão de Reuniões</span>
+{% endblock %}
+
+{% block navbar_actions %}
+<div style="display: flex; align-items: center; gap: 0.75rem;">
+    <button class="btn btn-secondary btn-sm" onclick="toggleSidebar('right')">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <polygon points="22 3 2 3 10 12.46 10 19 14 21 14 12.46 22 3"></polygon>
+        </svg>
+        Filtros
+    </button>
+</div>
+{% endblock %}
+
+{% block head %}
+<link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="{{ url_for('static', filename='css/my-work.css') }}" />
+<style>
+    :root {
+        --primary-gradient: linear-gradient(135deg, #2563eb 0%, #7c3aed 100%);
+        --surface-card: #ffffff;
+        --bg-main: #f8fafc;
+        --text-main: #0f172a;
+        --text-muted: #64748b;
+        --border-color: rgba(15, 23, 42, 0.08);
+        --radius-lg: 16px;
+        --radius-md: 12px;
+        --shadow-sm: 0 1px 2px 0 rgb(0 0 0 / 0.05);
+        --shadow-md: 0 4px 12px -1px rgb(0 0 0 / 0.1);
+        --shadow-lg: 0 10px 24px -3px rgb(0 0 0 / 0.1);
+    }
+
+    /* Glassmorphism Surface Card Standardized */
+    .surface-card-meeting {
+        background: rgba(255, 255, 255, 0.95);
+        backdrop-filter: blur(12px);
+        -webkit-backdrop-filter: blur(12px);
+        border: 1px solid var(--border-color);
+        border-radius: var(--radius-lg);
+        box-shadow: var(--shadow-lg);
+        padding: 24px;
+        transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    }
+
+    .section-eyebrow {
+        text-transform: uppercase;
+        letter-spacing: 0.1em;
+        font-weight: 700;
+        font-size: 0.75rem;
+        color: #3b82f6;
+        margin-bottom: 0.5rem;
+        display: block;
+    }
+
+    /* Meeting Card Revamp */
+    .meeting-card {
+        background: #ffffff;
+        border: 1px solid var(--border-color);
+        border-radius: var(--radius-md);
+        padding: 20px;
+        transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+        position: relative;
+        overflow: hidden;
+        cursor: pointer;
+    }
+
+    .meeting-card::before {
+        content: '';
+        position: absolute;
+        top: 0;
+        left: 0;
+        width: 4px;
+        height: 100%;
+        background: var(--primary-gradient);
+        opacity: 0;
+        transition: opacity 0.3s ease;
+    }
+
+    .meeting-card:hover {
+        transform: translateY(-4px);
+        box-shadow: var(--shadow-lg);
+        border-color: transparent !important;
+    }
+
+    .meeting-card:hover::before {
+        opacity: 1;
+    }
+
+    /* Status Badges */
+    .status-badge {
+        padding: 4px 12px;
+        border-radius: 9999px;
+        font-size: 0.75rem;
+        font-weight: 600;
+        display: inline-flex;
+        align-items: center;
+        gap: 6px;
+    }
+
+    .status-draft {
+        background: #f1f5f9;
+        color: #475569;
+    }
+
+    .status-in_progress {
+        background: #dbeafe;
+        color: #1e40af;
+    }
+
+    .status-completed {
+        background: #d1fae5;
+        color: #065f46;
+    }
+
+    /* Buttons Modernization */
+    .button.button-primary {
+        background: var(--primary-gradient);
+        border: none;
+        color: white;
+        padding: 12px 28px;
+        border-radius: var(--radius-md);
+        font-weight: 600;
+        box-shadow: 0 4px 14px 0 rgba(37, 99, 235, 0.39);
+        transition: all 0.2s ease;
+        display: inline-flex;
+        align-items: center;
+        gap: 8px;
+        cursor: pointer;
+    }
+
+    .button.button-primary:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 6px 20px rgba(37, 99, 235, 0.23);
+        filter: brightness(1.1);
+    }
+
+    .button.button-outline {
+        border: 2px solid #e2e8f0;
+        background: transparent;
+        color: #475569;
+        font-weight: 600;
+        border-radius: var(--radius-md);
+        padding: 10px 20px;
+        transition: all 0.2s ease;
+        cursor: pointer;
+        display: inline-flex;
+        align-items: center;
+        gap: 8px;
+    }
+
+    .button.button-outline:hover {
+        border-color: #3b82f6;
+        color: #3b82f6;
+        background: rgba(59, 130, 246, 0.05);
+    }
+
+    .button.button-ghost {
+        background: transparent;
+        border: none;
+        color: var(--text-muted);
+        cursor: pointer;
+        padding: 8px;
+        border-radius: 8px;
+        transition: all 0.2s;
+    }
+
+    .button.button-ghost:hover {
+        background: rgba(15, 23, 42, 0.05);
+        color: var(--text-main);
+    }
+
+    /* Tabs revamping */
+    .tab-btn {
+        padding: 14px 24px;
+        background: transparent;
+        border: none;
+        cursor: pointer;
+        font-weight: 600;
+        font-size: 0.9rem;
+        color: var(--text-muted);
+        transition: all 0.3s ease;
+        border-radius: var(--radius-md);
+        margin-right: 8px;
+    }
+
+    .tab-btn:hover {
+        color: var(--text-main);
+        background: rgba(15, 23, 42, 0.04);
+    }
+
+    .tab-btn.active {
+        background: white;
+        color: #2563eb;
+        box-shadow: var(--shadow-md);
+    }
+
+    /* Form improvements */
+    .form-label {
+        font-weight: 600;
+        color: var(--text-main);
+        margin-bottom: 6px;
+        display: block;
+        font-size: 0.875rem;
+    }
+
+    .form-input,
+    .form-textarea,
+    .form-select {
+        border: 1px solid var(--border-color);
+        border-radius: var(--radius-md);
+        padding: 12px 16px;
+        width: 100%;
+        font-family: inherit;
+        transition: all 0.2s ease;
+        background: #f8fafc;
+        color: var(--text-main);
+    }
+
+    .form-input:focus,
+    .form-textarea:focus,
+    .form-select:focus {
+        background: white;
+        border-color: #3b82f6;
+        box-shadow: 0 0 0 4px rgba(59, 130, 246, 0.1);
+        outline: none;
+    }
+
+    /* Animations */
+    @keyframes fadeInUp {
+        from {
+            opacity: 0;
+            transform: translateY(10px);
+        }
+
+        to {
+            opacity: 1;
+            transform: translateY(0);
+        }
+    }
+
+    .meetings-grid>div {
+        animation: fadeInUp 0.4s ease forwards;
+    }
+
+    /* List items improved */
+    .guest-item,
+    .agenda-item,
+    .participant-item,
+    .activity-item {
+        background: #ffffff;
+        border: 1px solid var(--border-color);
+        border-radius: var(--radius-md);
+        transition: all 0.2s ease;
+        display: flex;
+        align-items: center;
+        padding: 12px 16px;
+        margin-bottom: 12px;
+    }
+
+    .guest-item:hover,
+    .agenda-item:hover {
+        border-color: #3b82f6;
+        box-shadow: var(--shadow-md);
+    }
+
+    .choice-label {
+        transition: all 0.2s ease;
+    }
+
+    .choice-label:hover {
+        border-color: #3b82f6 !important;
+        background: rgba(59, 130, 246, 0.05);
+    }
+
+    .workspace-main {
+        background-color: var(--bg-main) !important;
+    }
+</style>
+{% endblock %}
+
+{% block sidebar_right %}
+<div class="sidebar-header-ws">
+    <h3 class="text-h3">ðŸ” Filtros</h3>
+</div>
+<div class="sidebar-content-ws" style="display: flex; flex-direction: column; gap: 16px;">
+    <div>
+        <label class="form-label">TÃ­tulo</label>
+        <input type="text" id="filter-title" class="form-input" placeholder="Filtrar por tÃ­tulo..."
+            oninput="filtrarReuniãoes()">
+    </div>
+    <div>
+        <label class="form-label">Data Agendamento</label>
+        <input type="date" id="filter-scheduled-date" class="form-input" onchange="filtrarReuniãoes()">
+    </div>
+    <div>
+        <label class="form-label">Data RealizaÃ§Ã£o</label>
+        <input type="date" id="filter-actual-date" class="form-input" onchange="filtrarReuniãoes()">
+    </div>
+    <div>
+        <label class="form-label">Participantes</label>
+        <input type="text" id="filter-participants" class="form-input" placeholder="Nome..."
+            oninput="filtrarReuniãoes()">
+    </div>
+    <div>
+        <label class="form-label">Busca Livre</label>
+        <input type="text" id="filter-free" class="form-input" placeholder="Palavra-chave..."
+            oninput="filtrarReuniãoes()">
+    </div>
+    <button class="button button-outline" onclick="limparFiltros()" style="width: 100%;">Limpar Filtros</button>
+    <div id="filter-results-count"
+        style="font-size: 0.85rem; color: var(--text-muted); text-align: center; display: none;">
+        Mostrando <span id="visible-count">0</span> de {{ meetings|length }}
+    </div>
+</div>
+{% endblock %}
+
+{% block workspace_content %}
+<div class="fade-in">
+    <section class="meeting-management" data-company-id="{{ company.id }}">
+        <div class="surface-card-meeting">
+            <div class="card-header"
+                style="display:flex;justify-content:space-between;align-items:flex-start;gap:16px;margin-bottom: 24px;">
+                <div>
+                    <span class="section-eyebrow">Acompanhamento Corporativo</span>
+                    <h1 class="text-h1" style="margin: 0;">Gestão de Reuniões</h1>
+                    <p class="text-secondary" style="margin-top:8px;max-width:640px; font-size: 1rem;">
+                        Organize e acompanhe as decisões da sua equipe com um sistema inteligente de atas e atividades.
+                    </p>
+                </div>
+                <div style="display:flex;gap:12px;flex-wrap:wrap;">
+                    <button type="button" class="button button-primary" onclick="novaReuniao()" data-ref="01">
+                        <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none"
+                            stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                            <line x1="12" y1="5" x2="12" y2="19"></line>
+                            <line x1="5" y1="12" x2="19" y2="12"></line>
+                        </svg>
+                        Nova Reunião</button>
+                </div>
+            </div>
+
+            <!-- Filtros movidos para Sidebar -->
+            <div id="meetings-list-section">
+
+                <!-- Lista de Reuniões -->
+                <div style="margin-top: 12px;">
+                    <div id="meetings-grid" class="meetings-grid"
+                        style="display: grid; grid-template-columns: repeat(auto-fill, minmax(340px, 1fr)); gap: 20px;">
+                        {% for meeting in meetings %}
+                        {% set p_data = meeting.participants or {} %}
+                        {% set p_internal = (p_data.get('internal', []) if p_data is mapping else []) %}
+                        {% set p_external = (p_data.get('external', []) if p_data is mapping else p_data if p_data is
+                        iterable else []) %}
+
+                        {% set g_data = meeting.guests or {} %}
+                        {% set g_internal = (g_data.get('internal', []) if g_data is mapping else []) %}
+                        {% set g_external = (g_data.get('external', []) if g_data is mapping else g_data if g_data is
+                        iterable else []) %}
+
+                        {% set participants_list = (p_internal|map(attribute='name')|list +
+                        p_external|map(attribute='name')|list + g_internal|map(attribute='name')|list +
+                        g_external|map(attribute='name')|list) %}
+                        {% set participants_str = participants_list | join(', ') %}
+
+                        {# Build broad search text including agenda and notes #}
+                        {% set agenda_str = (meeting.agenda|map(attribute='title')|list if meeting.agenda else []) |
+                        join(' ') %}
+                        {% set search_text = (meeting.title ~ ' ' ~ (meeting.meeting_notes or '') ~ ' ' ~
+                        (meeting.invite_notes or '') ~ ' ' ~ participants_str ~ ' ' ~ agenda_str)|lower %}
+
+                        <div class="meeting-card" data-status="{{ meeting.status or 'draft' }}"
+                            data-title="{{ meeting.title|lower|e }}" data-sch-date="{{ meeting.scheduled_date or '' }}"
+                            data-act-date="{{ meeting.actual_date or '' }}"
+                            data-participants="{{ participants_str|lower|e }}" data-search-free="{{ search_text|e }}"
+                            onclick="editarReuniao({{ meeting.id }})" role="button" tabindex="0"
+                            onkeydown="if (event.key === 'Enter' || event.key === ' ') { event.preventDefault(); editarReuniao({{ meeting.id }}); }">
+                            <div style="display: flex; justify-content: space-between; align-items: start; gap: 16px;">
+                                <div style="flex: 1;">
+                                    <h4
+                                        style="margin: 0 0 10px 0; font-size: 1.125rem; font-weight: 600; color: var(--text-main);">
+                                        {{
+                                        meeting.title }}</h4>
+                                    <div
+                                        style="color: var(--text-muted); font-size: 0.875rem; display: flex; gap: 16px; align-items: center; margin-bottom: 12px;">
+                                        <span style="display: flex; align-items: center; gap: 6px;">
+                                            <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16"
+                                                viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
+                                                stroke-linecap="round" stroke-linejoin="round">
+                                                <rect x="3" y="4" width="18" height="18" rx="2" ry="2"></rect>
+                                                <line x1="16" y1="2" x2="16" y2="6"></line>
+                                                <line x1="8" y1="2" x2="8" y2="6"></line>
+                                                <line x1="3" y1="10" x2="21" y2="10"></line>
+                                            </svg>
+                                            {{ meeting.scheduled_date or 'Sem data' }}
+                                        </span>
+                                        {% if meeting.scheduled_time %}
+                                        <span style="display: flex; align-items: center; gap: 6px;">
+                                            <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16"
+                                                viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
+                                                stroke-linecap="round" stroke-linejoin="round">
+                                                <circle cx="12" cy="12" r="10"></circle>
+                                                <polyline points="12 6 12 12 16 14"></polyline>
+                                            </svg>
+                                            {{ meeting.scheduled_time }}
+                                        </span>
+                                        {% endif %}
+                                    </div>
+                                    {% if meeting.status %}
+                                    <div style="margin-top: 8px;">
+                                        {% if meeting.status == 'draft' %}
+                                        <span class="status-badge status-draft">Rascunho</span>
+                                        {% elif meeting.status == 'in_progress' %}
+                                        <span class="status-badge status-in_progress">Em Andamento</span>
+                                        {% elif meeting.status == 'completed' %}
+                                        <span class="status-badge status-completed">Concluída</span>
+                                        {% endif %}
+                                    </div>
+                                    {% endif %}
+                                </div>
+                                <div style="display: flex; gap: 10px; align-items: center;">
+                                    <button type="button" class="button button-sm button-outline"
+                                        onclick="event.stopPropagation(); gerarRelatorioReuniao({{ meeting.id }})"
+                                        title="Gerar relatrio desta reuniao">
+                                        <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16"
+                                            viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
+                                            stroke-linecap="round" stroke-linejoin="round">
+                                            <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path>
+                                            <polyline points="14 2 14 8 20 8"></polyline>
+                                            <line x1="16" y1="13" x2="8" y2="13"></line>
+                                            <line x1="16" y1="17" x2="8" y2="17"></line>
+                                            <polyline points="10 9 9 9 8 9"></polyline>
+                                        </svg>
+                                        Relatório
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+                        {% endfor %}
+                    </div>
+
+                    {% if not meetings %}
+                    <div class="empty-state"
+                        style="text-align: center; padding: 60px 24px; background: rgba(248, 250, 252, 0.4); border-radius: 16px; border: 2px dashed rgba(37, 99, 235, 0.1);">
+                        <div style="font-size: 64px; margin-bottom: 20px; filter: grayscale(1); opacity: 0.5;">??</div>
+                        <h4 style="margin: 0 0 10px 0; color: var(--text-main); font-size: 1.25rem;">Nenhuma reuniao
+                            agendada</h4>
+                        <p style="color: var(--text-muted); margin: 0 0 28px 0;">Organize sua primeira reuniao para
+                            comear um acompanhamento eficiente.</p>
+                        <button onclick="novaReuniao()" class="button button-primary">
+                            <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24"
+                                fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"
+                                stroke-linejoin="round">
+                                <line x1="12" y1="5" x2="12" y2="19"></line>
+                                <line x1="5" y1="12" x2="19" y2="12"></line>
+                            </svg>
+                            Agendar Primeira Reunião
+                        </button>
+                    </div>
+                    {% endif %}
+                </div>
+            </div>
+
+            <!-- Editor de Reunião (3 Abas) -->
+            <div class="meeting-editor-section" id="meeting-editor-section" style="display: none; margin-top: 24px;">
+                <div
+                    style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 24px; padding-bottom: 20px; border-bottom: 1px solid var(--border-color);">
+                    <div>
+                        <span class="section-eyebrow">Acompanhamento</span>
+                        <h3 id="meeting-editor-title"
+                            style="margin: 4px 0 0 0; font-weight: 700; color: var(--text-main); font-size: 1.5rem;">
+                            Nova Reunião</h3>
+                    </div>
+                    <div style="display: flex; gap: 12px;">
+                        <button type="button" onclick="gerarRelatorioReuniao(currentMeetingId)"
+                            id="btn-gerar-ata-editor" class="button button-outline"
+                            style="border-color: var(--accent); color: var(--accent); display: none;">
+                            <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24"
+                                fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"
+                                stroke-linejoin="round">
+                                <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path>
+                                <polyline points="14 2 14 8 20 8"></polyline>
+                                <line x1="16" y1="13" x2="8" y2="13"></line>
+                                <line x1="16" y1="17" x2="8" y2="17"></line>
+                                <polyline points="10 9 9 9 8 9"></polyline>
+                            </svg>
+                            Gerar Ata
+                        </button>
+                        <button type="button" onclick="fecharEditor()" class="button button-outline" data-ref="04">
+                            <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24"
+                                fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"
+                                stroke-linejoin="round">
+                                <line x1="19" y1="12" x2="5" y2="12"></line>
+                                <polyline points="12 19 5 12 12 5"></polyline>
+                            </svg>
+                            Voltar Lista
+                        </button>
+                    </div>
+                </div>
+
+                <input type="hidden" id="current-meeting-id" value="">
+
+                <!-- Tabs -->
+                <div class="tabs-container" style="border-bottom: 2px solid var(--border-color); margin-bottom: 24px;">
+                    <div class="tabs" style="display: flex; gap: 8px;">
+                        <button class="tab-btn active" onclick="trocarAba('agendamento')" id="tab-agendamento"
+                            type="button">
+                            a) Agendamento
+                        </button>
+                        <button class="tab-btn" onclick="trocarAba('realizacação')" id="tab-realizacação" type="button">
+                            b) Realização
+                        </button>
+                        <button class="tab-btn" onclick="trocarAba('atividades')" id="tab-atividades" type="button">
+                            c) Atividades
+                        </button>
+                    </div>
+                </div>
+
+                <!-- SESSO A: Agendamento -->
+                <div class="tab-content active" id="content-agendamento">
+                    <div class="form-section">
+                        <div class="form-group">
+                            <label class="form-label">Título da Reunião *</label>
+                            <input type="text" id="meeting-title" class="form-input"
+                                placeholder="Ex: Planejamento Estratgico Q4">
+                        </div>
+
+                        <div class="form-row" style="display: grid; grid-template-columns: 1fr 1fr; gap: 1rem;">
+                            <div class="form-group">
+                                <label class="form-label">Data Prevista</label>
+                                <input type="date" id="meeting-scheduled-date" class="form-input">
+                            </div>
+                            <div class="form-group">
+                                <label class="form-label">Hora Prevista</label>
+                                <input type="time" id="meeting-scheduled-time" class="form-input">
+                            </div>
+                        </div>
+
+                        <!-- Convidados da Organização -->
+                        <div class="form-group">
+                            <label class="form-label">Convidados da Organização</label>
+                            <div style="display: flex; gap: 12px; margin-bottom: 12px;">
+                                <select id="employee-select" class="form-input" style="flex: 1;">
+                                    <option value="">Selecione um colaborador...</option>
+                                    {% for employee in employees %}
+                                    <option value="{{ employee.id }}" data-name="{{ employee.name }}"
+                                        data-email="{{ employee.email or '' }}"
+                                        data-whatsapp="{{ employee.whatsapp or '' }}">
+                                        {{ employee.name }}
+                                    </option>
+                                    {% endfor %}
+                                </select>
+                                <button type="button" class="button button-primary" onclick="adicionarColaborador()">+
+                                    Adicionar</button>
+                            </div>
+                            <div id="guests-internal-list" class="guests-list"></div>
+                        </div>
+
+                        <!-- Convidados Externos -->
+                        <div class="form-group">
+                            <label class="form-label">Convidados Externos</label>
+                            <div
+                                style="display: grid; grid-template-columns: 2fr 2fr 2fr auto; gap: 12px; margin-bottom: 12px;">
+                                <input type="text" id="external-name" class="form-input" placeholder="Nome">
+                                <input type="email" id="external-email" class="form-input" placeholder="E-mail">
+                                <input type="text" id="external-whatsapp" class="form-input" placeholder="WhatsApp">
+                                <button type="button" class="button button-primary" onclick="adicionarExterno()">+
+                                    Adicionar</button>
+                            </div>
+                            <div id="guests-external-list" class="guests-list"></div>
+                        </div>
+
+                        <!-- Pauta -->
+                        <div class="form-group">
+                            <label class="form-label">Pauta da Reunião</label>
+                            <div style="display: flex; gap: 12px; margin-bottom: 12px;">
+                                <input type="text" id="agenda-item-input" class="form-input"
+                                    placeholder="Digite um tópico da pauta" style="flex: 1;">
+                                <button type="button" class="button button-primary" onclick="adicionarPauta()">+
+                                    Adicionar</button>
+                                <button type="button" class="button button-outline" onclick="mostrarPautaSalva()">??
+                                    Reutilizar</button>
+                            </div>
+                            <div id="agenda-list" class="agenda-list"></div>
+
+                            <!-- Modal para selecionar pauta salva -->
+                            <div id="saved-agenda-modal"
+                                style="display: none; margin-top: 12px; padding: 16px; border: 1px solid var(--border-color); border-radius: 12px; background: #f8fafc;">
+                                <h4 style="margin: 0 0 12px 0; color: var(--text-main);">Pautas Salvas</h4>
+                                <div id="saved-agenda-list" style="max-height: 200px; overflow-y: auto;">
+                                    {% for item in agenda_items %}
+                                    <div class="saved-agenda-item"
+                                        style="padding: 10px; cursor: pointer; border-bottom: 1px solid var(--border-color); transition: background 0.2s ease;"
+                                        onmouseover="this.style.background='rgba(59, 130, 246, 0.05)'"
+                                        onmouseout="this.style.background='transparent'"
+                                        onclick="usarPautaSalva({{ item.id }}, {{ item.title | tojson | safe }})">
+                                        <div style="font-weight: 600; color: var(--text-main);">{{ item.title }}</div>
+                                        {% if item.description %}<div
+                                            style="font-size: 0.75rem; color: var(--text-muted);">{{ item.description }}
+                                        </div>{% endif %}
+                                        <div style="font-size: 0.75rem; color: #3b82f6;">Usado {{ item.usage_count }}x
+                                        </div>
+                                    </div>
+                                    {% endfor %}
+                                </div>
+                                <button type="button" class="button button-ghost" onclick="fecharPautaSalva()"
+                                    style="margin-top: 12px;">Fechar</button>
+                            </div>
+                        </div>
+
+                        <!-- Observaes -->
+                        <div class="form-group">
+                            <label class="form-label">Observaes do Convite</label>
+                            <textarea id="meeting-invite-notes" class="form-textarea" rows="4"
+                                placeholder="Informações adicionais para os convidados..."></textarea>
+                        </div>
+
+                        <!-- Botes -->
+                        <div style="display: flex; gap: 12px; justify-content: flex-end; margin-top: 24px;">
+                            <button type="button" class="button button-outline"
+                                onclick="fecharEditor()">Cancelar</button>
+                            <button type="button" class="button button-outline"
+                                onclick="salvarPreliminares({ advance: false })">?? Salvar
+                                Agendamento</button>
+                            <button type="button" class="button button-primary"
+                                onclick="salvarPreliminares({ advance: true })">?? Salvar e Avançar para Realização
+                                ?</button>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- SESSO B: Realização -->
+                <div class="tab-content" id="content-realizacação" style="display: none;">
+                    <div class="form-section">
+                        <div
+                            style="background: #eff6ff; padding: 20px; border-radius: 12px; margin-bottom: 24px; border: 1px solid #dbeafe; display: flex; justify-content: space-between; align-items: center;">
+                            <div>
+                                <p style="margin: 0; color: #1e40af; font-weight: 600;">
+                                    Status atual: <span id="meeting-status-display"
+                                        style="text-transform: uppercase; font-weight: 700;">Rascunho</span>
+                                </p>
+                            </div>
+                            <button type="button" class="button button-primary" onclick="iniciarReuniao()"
+                                id="btn-iniciar-reuniao">
+                                ?? Iniciar Reunião
+                            </button>
+                        </div>
+
+                        <div class="form-row" style="display: grid; grid-template-columns: 1fr 1fr; gap: 20px;">
+                            <div class="form-group">
+                                <label class="form-label">Data da Realização</label>
+                                <input type="date" id="meeting-actual-date" class="form-input">
+                            </div>
+                            <div class="form-group">
+                                <label class="form-label">Hora da Realização</label>
+                                <input type="time" id="meeting-actual-time" class="form-input">
+                            </div>
+                        </div>
+
+                        <!-- Participantes -->
+                        <div class="form-group">
+                            <label class="form-label">Participantes (Efetivos)</label>
+                            <p style="font-size: 0.875rem; color: var(--text-muted); margin-bottom: 8px;">
+                                Arraste dos convidados ou adicione novos colaboradores/externos
+                            </p>
+                            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-bottom: 12px;">
+                                <div style="display: flex; gap: 8px;">
+                                    <select id="participant-internal-select" class="form-select" style="flex: 1;">
+                                        <option value="">Colaborador...</option>
+                                    </select>
+                                    <button type="button" class="button button-primary"
+                                        onclick="adicionarParticipanteEfetivo('internal')">+</button>
+                                </div>
+                                <div style="display: flex; gap: 8px;">
+                                    <input type="text" id="participant-external-input" class="form-input"
+                                        placeholder="Convidado Externo..." style="flex: 1;">
+                                    <button type="button" class="button button-primary"
+                                        onclick="adicionarParticipanteEfetivo('external')">+</button>
+                                </div>
+                            </div>
+                            <div id="participants-list" class="participants-list"
+                                style="display: grid; grid-template-columns: 1fr 1fr; gap: 12px;"></div>
+                        </div>
+
+                        <!-- Assuntos Discutidos -->
+                        <div class="form-group">
+                            <label class="form-label">Assuntos Discutidos</label>
+                            <div id="discussions-list" class="discussions-list"></div>
+                            <button type="button" class="button button-outline" onclick="adicionarDiscussação()"
+                                style="margin-top: 8px;">+ Adicionar Discusso</button>
+                        </div>
+
+                        <!-- Notas Gerais -->
+                        <div class="form-group">
+                            <label class="form-label">Notas Gerais e Decises</label>
+                            <textarea id="meeting-notes" class="form-textarea" rows="4"
+                                placeholder="Notas finais, concluses e decisões tomadas..."></textarea>
+                        </div>
+
+                        <!-- Botes de Ao da Realização -->
+                        <div
+                            style="display: flex; gap: 12px; justify-content: flex-end; margin-top: 32px; padding-top: 24px; border-top: 1px solid var(--border-color);">
+                            <button type="button" class="button button-outline"
+                                onclick="salvarExecucação({ advance: false })">?? Salvar
+                                Discusses e Decises</button>
+                            <button type="button" class="button button-primary"
+                                onclick="salvarExecucação({ advance: true })">?? Salvar e Definir Atividades ?</button>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- SESSO C: Atividades -->
+                <div class="tab-content" id="content-atividades" style="display: none;">
+                    <div class="form-section">
+                        <!-- Projeto Vinculado -->
+                        <div
+                            style="background: #f8fafc; padding: 20px; border-radius: 12px; margin-bottom: 24px; border: 1px solid var(--border-color); display: flex; justify-content: space-between; align-items: center;">
+                            <div>
+                                <p style="margin: 0; color: var(--text-main);">
+                                    <strong>Projeto Vinculado:</strong> <span id="project-link-display"
+                                        style="color: #3b82f6;">Nenhum</span>
+                                </p>
+                            </div>
+                            <button type="button" class="button button-primary" onclick="finalizarReuniao()"
+                                id="btn-finalizar-reuniao">
+                                ? Finalizar Reunião
+                            </button>
+                        </div>
+
+                        <!-- Atividades Planejadas -->
+                        <div class="form-group">
+                            <label class="form-label">Acordado a ser feito (Plano de Ao)</label>
+                            <p style="font-size: 0.875rem; color: var(--text-muted); margin-bottom: 12px;">
+                                Defina as atividades, responsveis e prazos acordados durante a reuniao.
+                            </p>
+                            <div id="activities-list" class="activities-list"></div>
+                            <div style="display: flex; gap: 12px; margin-top: 16px;">
+                                <button type="button" class="button button-primary" onclick="adicionarAtividade()">+
+                                    Nova Atividade</button>
+                                <button type="button" class="button button-outline"
+                                    onclick="atualizarListaAtividades(this)" id="sync-activities-btn">
+                                    ?? Sincronizar com Projeto
+                                </button>
+                            </div>
+                        </div>
+
+                        <div style="margin-top: 40px; padding-top: 24px; border-top: 2px dashed var(--border-color);">
+                            <h3
+                                style="margin-bottom: 16px; font-weight: 700; font-size: 1.1rem; color: var(--text-main);">
+                                Atividades Confirmadas no Projeto</h3>
+                            <div id="generated-activities-list" class="generated-activities-list"></div>
+                        </div>
+                    </div>
+                </div>
+                <!-- Modal de Seleção de Projeto ação Iniciar -->
+                <div id="project-selection-modal" class="modal"
+                    style="display: none; position: fixed; z-index: 1001; left: 0; top: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.5);">
+                    <div class="surface-card-meeting" style="max-width: 500px; margin: 10% auto; padding: 32px;">
+                        <h3 class="text-h1" style="font-size: 1.5rem; margin-bottom: 12px;">Vincular Projeto</h3>
+                        <p class="text-secondary" style="margin-bottom: 24px; font-size: 0.95rem;">Como você deseja
+                            vincular esta reuniao a um projeto?</p>
+
+                        <div class="form-group" style="margin-bottom: 24px;">
+                            <div style="display: flex; flex-direction: column; gap: 12px;">
+                                <label
+                                    style="display: flex; align-items: center; gap: 12px; cursor: pointer; padding: 16px; border: 1px solid var(--border-color); border-radius: 12px; transition: all 0.2s;"
+                                    class="choice-label"
+                                    onclick="document.getElementById('project-choice-new').click()">
+                                    <input type="radio" name="project_choice" id="project-choice-new" value="new"
+                                        checked onchange="handleProjectChoiceChange()">
+                                    <div>
+                                        <div style="font-weight: 600; color: var(--text-main);">Criar um Novo Projeto
+                                        </div>
+                                        <div style="font-size: 0.75rem; color: var(--text-muted);">Um projeto ser
+                                            gerado automaticamente com o nome da reuniao.</div>
+                                    </div>
+                                </label>
+
+                                <label
+                                    style="display: flex; align-items: center; gap: 12px; cursor: pointer; padding: 16px; border: 1px solid var(--border-color); border-radius: 12px; transition: all 0.2s;"
+                                    class="choice-label"
+                                    onclick="document.getElementById('project-choice-existing').click()">
+                                    <input type="radio" name="project_choice" id="project-choice-existing"
+                                        value="existing" onchange="handleProjectChoiceChange()">
+                                    <div>
+                                        <div style="font-weight: 600; color: var(--text-main);">Vincular a um Projeto
+                                            Existente</div>
+                                        <div style="font-size: 0.75rem; color: var(--text-muted);">Selecione um dos
+                                            projetos vigentes da empresa.</div>
+                                    </div>
+                                </label>
+                            </div>
+                        </div>
+
+                        <div id="existing-project-select-container" class="form-group"
+                            style="display: none; margin-bottom: 24px; animation: fadeInUp 0.3s ease;">
+                            <label class="form-label" style="font-size: 0.8rem; letter-spacing: 0.05em;">SELECIONE O
+                                PROJETO</label>
+                            <select id="meeting-existing-project-id" class="form-select">
+                                <option value="">-- Selecione o projeto --</option>
+                                {% for project in projects %}
+                                <option value="{{ project.id }}">{{ project.name }}</option>
+                                {% endfor %}
+                            </select>
+                        </div>
+
+                        <div
+                            style="display: flex; gap: 12px; justify-content: flex-end; padding-top: 16px; border-top: 1px solid var(--border-color);">
+                            <button type="button" class="button button-outline"
+                                onclick="fecharModalProjeto()">Cancelar</button>
+                            <button type="button" class="button button-primary"
+                                onclick="confirmarInicioReuniao(event)">??
+                                Confirmar e Iniciar</button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </section>
+</div>
+{% endblock %}
+
+{% block scripts %}
+{{ super() }}
+<script>
+    // Dados globais
+    let currentMeetingId = null;
+    let currentMeetingStatus = 'draft';
+    let linkedProjectId = null;
+    let linkedProjectTitle = null;
+    let linkedProjectCode = null;
+    let guestsInternal = [];
+    let guestsExternal = [];
+    let agendaItems = [];
+    let participants = { internal: [], external: [] };
+    let discussions = [];
+    let activities = [];
+    let employeesData = [];
+    const projectTitleMap = {};
+    const projectCodeMap = {};
+    {% for project in projects %}
+    projectTitleMap['{{ project.id }}'] = JSON.parse('{{ project.name | tojson | safe if project.name else "null" }}');
+    projectCodeMap['{{ project.id }}'] = JSON.parse('{{ project.name | default("", true) | tojson | safe }}');
+    {% endfor %}
+
+    function resolveActivityCode(activity) {
+        if (!activity) return null;
+        const candidates = [
+            activity.code, activity.activity_code, activity.activityCode,
+            activity.identifier, activity.activity_identifier, activity.activityIdentifier,
+            activity.activity_id, activity.activityId, activity.id
+        ];
+        for (const candidate of candidates) {
+            if (candidate) return candidate;
+        }
+        return null;
+    }
+
+    function resolveActivityProjectTitle(activity, fallbackTitle) {
+        if (!activity) return fallbackTitle || linkedProjectTitle || '';
+        if (activity.project_title) return activity.project_title;
+        if (activity.project_name) return activity.project_name;
+        if (activity.project && activity.project.name) return activity.project.name;
+        const projectId = activity.project_id || activity.projectId;
+        if (projectId && projectTitleMap[String(projectId)]) return projectTitleMap[String(projectId)];
+        if (activity.source_project_title) return activity.source_project_title;
+        if (activity.source_project_name) return activity.source_project_name;
+        return fallbackTitle || linkedProjectTitle || '';
+    }
+
+    function resolveActivityProjectCode(activity, fallbackCode) {
+        if (!activity) return fallbackCode || linkedProjectCode || '';
+        const projectSpecific = activity.project_code || activity.projectCode;
+        if (projectSpecific) return projectSpecific;
+        if (activity.project && activity.project.code) return activity.project.code;
+        const projectId = activity.project_id || activity.projectId;
+        if (projectId && projectCodeMap[String(projectId)]) return projectCodeMap[String(projectId)];
+        const sourceCode = activity.source_project_code || activity.sourceProjectCode;
+        if (sourceCode) return sourceCode;
+        return fallbackCode || linkedProjectCode || '';
+    }
+
+    function updateProjectLinkDisplay(projectId, projectTitle, projectCode) {
+        const previousProjectId = linkedProjectId;
+        const previousProjectTitle = linkedProjectTitle;
+        const previousProjectCode = linkedProjectCode;
+
+        linkedProjectId = projectId || null;
+        if (linkedProjectId) {
+            const key = String(linkedProjectId);
+            const inferredTitle = projectTitle || projectTitleMap[key] || null;
+            const inferredCode = projectCode || projectCodeMap[key] || null;
+
+            if (previousProjectId !== linkedProjectId) {
+                linkedProjectTitle = inferredTitle;
+                linkedProjectCode = inferredCode;
+            } else {
+                linkedProjectTitle = inferredTitle || previousProjectTitle || null;
+                linkedProjectCode = inferredCode || previousProjectCode || null;
+            }
+        } else {
+            linkedProjectTitle = projectTitle || null;
+            linkedProjectCode = projectCode || null;
+        }
+        const display = document.getElementById('project-link-display');
+        if (!display) return;
+
+        if (linkedProjectId) {
+            const computedTitle = linkedProjectTitle || 'Projeto vinculado';
+            const codeHtml = linkedProjectCode ? ` <span style="color: var(--text-muted);">(${linkedProjectCode})</span>` : '';
+            display.innerHTML = `<strong>${computedTitle}</strong>${codeHtml}  <a href="/grv/company/{{ company.id }}/project/${linkedProjectId}" target="_blank" style="color: #3b82f6; text-decoration: none; font-weight: 600;">Ver Projeto ?</a>`;
+        } else {
+            display.textContent = 'Nenhum';
+        }
+    }
+
+    window.novaReuniao = function () {
+        document.getElementById("btn-gerar-ata-editor").style.display = "none";
+        currentMeetingId = null;
+        currentMeetingStatus = 'draft';
+        document.getElementById('meeting-editor-title').textContent = 'Nova Reunião';
+        limparFormulario();
+        updateMeetingStatus('draft');
+        document.getElementById('meetings-list-section').style.display = 'none';
+        document.getElementById('meeting-editor-section').style.display = 'block';
+        trocarAba('agendamento');
+        window.scrollTo({ top: 0, behavior: 'smooth' });
+    }
+
+    window.editarReuniao = async function (meetingId) {
+        document.getElementById("btn-gerar-ata-editor").style.display = "flex";
+        currentMeetingId = meetingId;
+        document.getElementById('meeting-editor-title').textContent = 'Editar Reunião';
+
+        try {
+            const response = await fetch(`/meetings/api/meeting/${meetingId}`);
+            const data = await response.json();
+
+            if (data.success) {
+                const meeting = data.meeting;
+                if (!meeting) return;
+
+                document.getElementById('meeting-title').value = meeting.title || '';
+                document.getElementById('meeting-scheduled-date').value = meeting.scheduled_date || '';
+                document.getElementById('meeting-scheduled-time').value = meeting.scheduled_time || '';
+                document.getElementById('meeting-invite-notes').value = meeting.invite_notes || '';
+                document.getElementById('meeting-actual-date').value = meeting.actual_date || '';
+                document.getElementById('meeting-actual-time').value = meeting.actual_time || '';
+                document.getElementById('meeting-notes').value = meeting.meeting_notes || '';
+
+                guestsInternal = meeting.guests?.internal || [];
+                guestsExternal = meeting.guests?.external || [];
+                agendaItems = meeting.agenda || [];
+                participants = meeting.participants || { internal: [], external: [] };
+                if (Array.isArray(participants)) {
+                    participants = { internal: participants, external: [] };
+                }
+                discussions = meeting.discussions || [];
+                activities = meeting.activities || [];
+
+                updateProjectLinkDisplay(meeting.project_id || null, meeting.project_title || null, meeting.project_code || null);
+
+                renderGuestsInternal();
+                renderGuestsExternal();
+                renderAgenda();
+                renderParticipants();
+                renderDiscussions();
+                renderActivities();
+                await atualizarAtividades();
+
+                updateMeetingStatus(meeting.status || 'draft');
+
+                document.getElementById('meetings-list-section').style.display = 'none';
+                document.getElementById('meeting-editor-section').style.display = 'block';
+                window.scrollTo({ top: 0, behavior: 'smooth' });
+            }
+        } catch (error) {
+            console.error('Erro ação carregar reuniao:', error);
+        }
+    }
+
+    window.fecharEditor = function () {
+        document.getElementById('meeting-editor-section').style.display = 'none';
+        document.getElementById('meetings-list-section').style.display = 'block';
+        limparFormulario();
+    }
+
+    window.gerarRelatorioReuniao = function (meetingId) {
+        const url = `/meetings/company/{{ company.id }}/meeting/${meetingId}/report`;
+        window.open(url, '_blank');
+    }
+
+    function trocarAba(aba) {
+        document.querySelectorAll('.tab-btn').forEach(btn => btn.classList.remove('active'));
+        document.querySelectorAll('.tab-content').forEach(content => content.style.display = 'none');
+        document.getElementById(`tab-${aba}`).classList.add('active');
+        document.getElementById(`content-${aba}`).style.display = 'block';
+        if (aba === 'atividades') atualizarAtividades();
+    }
+
+    function adicionarColaborador() {
+        const select = document.getElementById('employee-select');
+        const option = select.options[select.selectedIndex];
+        if (!option.value) return;
+        const guest = { id: option.value, name: option.dataset.name, email: option.dataset.email, whatsapp: option.dataset.whatsapp };
+        if (!guestsInternal.find(g => g.id == guest.id)) {
+            guestsInternal.push(guest);
+            renderGuestsInternal();
+        }
+        select.value = '';
+    }
+
+    function renderGuestsInternal() {
+        const container = document.getElementById('guests-internal-list');
+        container.innerHTML = guestsInternal.map((guest, index) => `
+        <div class="guest-item">
+            <div style="flex: 1;">
+                <strong>${guest.name}</strong><br>
+                <small style="color: var(--text-muted);">${guest.email || 'Sem e-mail'} | ${guest.whatsapp || 'Sem WhatsApp'}</small>
+            </div>
+            <button type="button" class="button button-sm button-ghost" onclick="removerGuestInternal(${index})" style="color: #ef4444;">?</button>
+        </div>
+    `).join('');
+    }
+
+    function removerGuestInternal(index) {
+        guestsInternal.splice(index, 1);
+        renderGuestsInternal();
+    }
+
+    function adicionarExterno() {
+        const name = document.getElementById('external-name').value.trim();
+        const email = document.getElementById('external-email').value.trim();
+        const whatsapp = document.getElementById('external-whatsapp').value.trim();
+        if (!name) return alert('Nome  obrigatrio');
+        guestsExternal.push({ name, email, whatsapp });
+        document.getElementById('external-name').value = '';
+        document.getElementById('external-email').value = '';
+        document.getElementById('external-whatsapp').value = '';
+        renderGuestsExternal();
+    }
+
+    function renderGuestsExternal() {
+        const container = document.getElementById('guests-external-list');
+        container.innerHTML = guestsExternal.map((guest, index) => `
+        <div class="guest-item">
+            <div style="flex: 1;">
+                <strong>${guest.name}</strong><br>
+                <small style="color: var(--text-muted);">${guest.email || 'Sem e-mail'} | ${guest.whatsapp || 'Sem WhatsApp'}</small>
+            </div>
+            <button type="button" class="button button-sm button-ghost" onclick="removerGuestExternal(${index})" style="color: #ef4444;">?</button>
+        </div>
+    `).join('');
+    }
+
+    function removerGuestExternal(index) {
+        guestsExternal.splice(index, 1);
+        renderGuestsExternal();
+    }
+
+    function adicionarPauta() {
+        const input = document.getElementById('agenda-item-input');
+        const title = input.value.trim();
+        if (!title) return;
+        agendaItems.push({ title });
+        input.value = '';
+        renderAgenda();
+    }
+
+    function renderAgenda() {
+        const container = document.getElementById('agenda-list');
+        container.innerHTML = agendaItems.map((item, index) => `
+        <div class="agenda-item">
+            <span style="flex: 1; font-weight: 500;">${index + 1}. ${item.title}</span>
+            <button type="button" class="button button-sm button-ghost" onclick="removerAgenda(${index})" style="color: #ef4444;">?</button>
+        </div>
+    `).join('');
+    }
+
+    function removerAgenda(index) {
+        agendaItems.splice(index, 1);
+        renderAgenda();
+    }
+
+    function mostrarPautaSalva() { document.getElementById('saved-agenda-modal').style.display = 'block'; }
+    function fecharPautaSalva() { document.getElementById('saved-agenda-modal').style.display = 'none'; }
+    function usarPautaSalva(itemId, title) {
+        agendaItems.push({ title });
+        renderAgenda();
+        fetch(`/meetings/api/agenda-item/${itemId}/use`, { method: 'POST' });
+        fecharPautaSalva();
+    }
+
+    async function salvarPreliminares(options = {}) {
+        const { advance = false } = options;
+        const title = document.getElementById('meeting-title').value.trim();
+        if (!title) return alert('Título  obrigatrio');
+
+        const data = {
+            title,
+            scheduled_date: document.getElementById('meeting-scheduled-date').value,
+            scheduled_time: document.getElementById('meeting-scheduled-time').value,
+            invite_notes: document.getElementById('meeting-invite-notes').value,
+            guests: { internal: guestsInternal, external: guestsExternal },
+            agenda: agendaItems
+        };
+
+        try {
+            let response;
+            if (currentMeetingId) {
+                response = await fetch(`/meetings/api/meeting/${currentMeetingId}/preliminares`, {
+                    method: 'PUT',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(data)
+                });
+            } else {
+                response = await fetch(`/meetings/api/company/{{ company.id }}/meeting`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(data)
+                });
+            }
+
+            const result = await response.json();
+            if (result.success) {
+                if (result.meeting_id) currentMeetingId = result.meeting_id;
+                if (advance) {
+                    trocarAba('realizacação');
+                    window.scrollTo({ top: 0, behavior: 'smooth' });
+                } else {
+                    alert('Agendamento salvo com sucesso');
+                }
+            }
+        } catch (error) {
+            console.error('Erro ação salvar:', error);
+        }
+    }
+
+    function gerarConvite() {
+        const title = document.getElementById('meeting-title').value.trim();
+        const date = document.getElementById('meeting-scheduled-date').value;
+        const time = document.getElementById('meeting-scheduled-time').value;
+        if (!title || !date) return alert('Título e data so obrigatrios');
+
+        const ics = `BEGIN:VCALENDAR\nVERSION:2.0\nBEGIN:VEVENT\nSUMMARY:${title}\nDTSTART:${date.replace(/-/g, '')}T${time ? time.replace(':', '') + '00' : '090000'}\nDESCRIPTION:Reunião: ${title}\nEND:VEVENT\nEND:VCALENDAR`;
+        const blob = new Blob([ics], { type: 'text/calendar' });
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = `reuniao-${title.replace(/\s+/g, '-').toLowerCase()}.ics`;
+        a.click();
+    }
+
+    function iniciarReuniao() {
+        if (!currentMeetingId) return alert('Salve a reuniao primeiro');
+        document.getElementById('project-selection-modal').style.display = 'block';
+    }
+
+    function fecharModalProjeto() {
+        document.getElementById('project-selection-modal').style.display = 'none';
+    }
+
+    function handleProjectChoiceChange() {
+        const isExisting = document.getElementById('project-choice-existing').checked;
+        document.getElementById('existing-project-select-container').style.display = isExisting ? 'block' : 'none';
+    }
+
+    async function confirmarInicioReuniao() {
+        const btn = event.target.closest('button');
+        if (btn) btn.disabled = true;
+
+        const choice = document.querySelector('input[name="project_choice"]:checked').value;
+        const projectId = document.getElementById('meeting-existing-project-id').value;
+
+        if (choice === 'existing' && !projectId) {
+            if (btn) btn.disabled = false;
+            return alert('Por favor, selecione um projeto existente.');
+        }
+
+        try {
+            const payload = {
+                project_type: choice,
+                project_id: choice === 'existing' ? projectId : null
+            };
+
+            const response = await fetch(`/meetings/api/meeting/${currentMeetingId}/iniciar`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(payload)
+            });
+            const result = await response.json();
+
+            if (result.success) {
+                fecharModalProjeto();
+                updateMeetingStatus('in_progress');
+                if (result.project_id) updateProjectLinkDisplay(result.project_id, result.project_title, result.project_code);
+                const now = new Date();
+                document.getElementById('meeting-actual-date').value = result.actual_date || now.toISOString().split('T')[0];
+                document.getElementById('meeting-actual-time').value = result.actual_time || now.toTimeString().split(' ')[0].substring(0, 5);
+            } else {
+                alert('Erro: ' + result.message);
+            }
+        } catch (error) {
+            console.error('Erro ação iniciar:', error);
+            alert('Erro ação processar requisio.');
+        } finally {
+            if (btn) btn.disabled = false;
+        }
+    }
+
+    function adicionarDiscussação() {
+        discussions.push({ title: '', discussion: '' });
+        renderDiscussions();
+    }
+
+    function renderDiscussions() {
+        const container = document.getElementById('discussions-list');
+        container.innerHTML = discussions.map((disc, index) => `
+        <div class="discussion-item" style="background: #fff; padding: 16px; border-radius: 12px; border: 1px solid var(--border-color); margin-bottom: 12px;">
+            <div style="display: flex; gap: 12px; margin-bottom: 12px;">
+                <input type="text" class="form-input" placeholder="Tpico / Título" 
+                       value="${disc.title || ''}" onchange="discussions[${index}].title = this.value" style="flex: 1;">
+                <button type="button" class="button button-sm button-ghost" onclick="removerDiscussação(${index})" style="color: #ef4444;">?</button>
+            </div>
+            <textarea class="form-textarea" rows="3" placeholder="Discusso e definies..."
+                      onchange="discussions[${index}].discussion = this.value">${disc.discussion || ''}</textarea>
+        </div>
+    `).join('');
+    }
+
+    function removerDiscussação(index) {
+        discussions.splice(index, 1);
+        renderDiscussions();
+    }
+
+    function adicionarAtividade() {
+        activities.push({ title: '', responsible: '', deadline: '', how: '', project_id: null, employee_id: null });
+        renderActivities();
+    }
+
+    function renderActivities() {
+        const container = document.getElementById('activities-list');
+        container.innerHTML = activities.map((act, index) => {
+            const employeeOptions = employeesData.map(emp =>
+                `<option value="${emp.id}" ${act.employee_id == emp.id ? 'selected' : ''}>${emp.name}</option>`
+            ).join('');
+
+            return `
+            <div class="activity-item" style="background: #fff; padding: 16px; border-radius: 12px; border: 1px solid var(--border-color); margin-bottom: 12px;">
+                <div style="display: grid; grid-template-columns: 2fr 1fr 1fr auto; gap: 12px; margin-bottom: 12px;">
+                    <input type="text" class="form-input" placeholder="Atividade" value="${act.title || ''}" onchange="activities[${index}].title = this.value">
+                    <select class="form-select" onchange="activities[${index}].employee_id = this.value; activities[${index}].responsible = this.options[this.selectedIndex].text">
+                        <option value="">Responsvel...</option>
+                        ${employeeOptions}
+                    </select>
+                    <input type="date" class="form-input" value="${act.deadline || ''}" onchange="activities[${index}].deadline = this.value">
+                    <button type="button" class="button button-sm button-ghost" onclick="removerAtividadeComConfirmacação(${index})" style="color: #ef4444;">?</button>
+                </div>
+                <div style="display: grid; grid-template-columns: 2fr 1fr; gap: 12px;">
+                    <textarea class="form-textarea" rows="2" placeholder="Como executar..." onchange="activities[${index}].how = this.value">${act.how || ''}</textarea>
+                    <select class="form-select" onchange="activities[${index}].project_id = this.value">
+                        <option value="">Projeto Padro</option>
+                        {% for project in projects %}<option value="{{ project.id }}" ${act.project_id == "{{ project.id }}" ? 'selected' : ''}>{{ project.name }}</option>{% endfor %}
+                    </select>
+                </div>
+            </div>
+            `;
+        }).join('');
+    }
+
+    function adicionarParticipanteEfetivo(type) {
+        if (type === 'internal') {
+            const select = document.getElementById('participant-internal-select');
+            const option = select.options[select.selectedIndex];
+            if (!option.value) return;
+            const participant = { id: option.value, name: option.dataset.name };
+            if (!participants.internal.find(p => p.id == participant.id)) {
+                participants.internal.push(participant);
+                renderParticipants();
+            }
+            select.value = '';
+        } else {
+            const input = document.getElementById('participant-external-input');
+            const name = input.value.trim();
+            if (!name) return;
+            participants.external.push({ name: name });
+            renderParticipants();
+            input.value = '';
+        }
+    }
+
+    function removerParticipantEfetivo(type, index) {
+        if (type === 'internal') {
+            participants.internal.splice(index, 1);
+        } else {
+            participants.external.splice(index, 1);
+        }
+        renderParticipants();
+    }
+
+    function renderParticipants() {
+        // Populate Internal Select
+        const internalSelect = document.getElementById('participant-internal-select');
+        if (internalSelect) {
+            const currentVal = internalSelect.value;
+            internalSelect.innerHTML = '<option value="">Colaborador...</option>';
+            employeesData.forEach(emp => {
+                const isGuest = guestsInternal.find(g => g.id == emp.id);
+                const label = isGuest ? `? ${emp.name}` : emp.name;
+                internalSelect.innerHTML += `<option value="${emp.id}" data-name="${emp.name}" ${currentVal == emp.id ? 'selected' : ''}>${label}</option>`;
+            });
+        }
+
+        const container = document.getElementById('participants-list');
+        if (!container) return;
+
+        let html = '';
+        participants.internal.forEach((p, index) => {
+            html += `
+            <div class="participant-item" style="border-left: 3px solid #3b82f6; display: flex; justify-content: space-between; align-items: center; padding: 8px 12px; background: #f8fafc; border-radius: 8px;">
+                <div style="flex: 1;">
+                    <div style="font-weight: 600; font-size: 0.9rem;">${p.name}</div>
+                    <div style="font-size: 0.7rem; color: #3b82f6; font-weight: 600; text-transform: uppercase;">Colaborador</div>
+                </div>
+                <button type="button" class="button button-sm button-ghost" onclick="removerParticipantEfetivo('internal', ${index})" style="color: #ef4444; padding: 4px;">?</button>
+            </div>`;
+        });
+
+        participants.external.forEach((p, index) => {
+            html += `
+            <div class="participant-item" style="border-left: 3px solid #10b981; display: flex; justify-content: space-between; align-items: center; padding: 8px 12px; background: #f8fafc; border-radius: 8px;">
+                <div style="flex: 1;">
+                    <div style="font-weight: 600; font-size: 0.9rem;">${p.name}</div>
+                    <div style="font-size: 0.7rem; color: #10b981; font-weight: 600; text-transform: uppercase;">Externo</div>
+                </div>
+                <button type="button" class="button button-sm button-ghost" onclick="removerParticipantEfetivo('external', ${index})" style="color: #ef4444; padding: 4px;">?</button>
+            </div>`;
+        });
+
+        container.innerHTML = html;
+    }
+
+    async function persistExecucação(options = {}) {
+        const { silent = false } = options;
+        if (!currentMeetingId) return { success: false };
+        const payload = {
+            actual_date: document.getElementById('meeting-actual-date').value,
+            actual_time: document.getElementById('meeting-actual-time').value,
+            participants, discussions, activities,
+            meeting_notes: document.getElementById('meeting-notes').value,
+            status: currentMeetingStatus
+        };
+        try {
+            const response = await fetch(`/meetings/api/meeting/${currentMeetingId}/execucação`, {
+                method: 'PUT',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(payload)
+            });
+            return await response.json();
+        } catch (error) { return { success: false }; }
+    }
+
+    async function salvarExecucação(options = {}) {
+        const { advance = false } = options;
+        const result = await persistExecucação();
+        if (result.success) {
+            await atualizarAtividades();
+            if (advance) {
+                trocarAba('atividades');
+                window.scrollTo({ top: 0, behavior: 'smooth' });
+            } else {
+                alert('Dados da realização salvos com sucesso');
+            }
+        }
+    }
+
+    async function finalizarReuniao() {
+        if (!currentMeetingId) return;
+        if (!confirm('Deseja finalizar a reuniao?')) return;
+        try {
+            const response = await fetch(`/meetings/api/meeting/${currentMeetingId}/finalizar`, { method: 'POST' });
+            const result = await response.json();
+            if (result.success) {
+                updateMeetingStatus('completed');
+                trocarAba('atividades');
+            }
+        } catch (error) { console.error(error); }
+    }
+
+    async function atualizarAtividades() {
+        if (!currentMeetingId) return;
+        try {
+            const response = await fetch('/meetings/api/meeting/' + currentMeetingId + '/atividades');
+            const result = await response.json();
+            if (!result.success) return;
+
+            const container = document.getElementById('generated-activities-list');
+            const mergedMap = new Map();
+            [...(result.project_activities || []), ...(result.meeting_activities || [])].forEach(act => {
+                const key = [act.title || '', act.responsible || '', act.deadline || ''].join('|');
+                if (!mergedMap.has(key)) mergedMap.set(key, act);
+            });
+
+            const mergedActivities = Array.from(mergedMap.values());
+            if (!mergedActivities.length) {
+                container.innerHTML = '<p style="text-align: center; color: var(--text-muted); opacity: 0.6;">Nenhuma atividade gerada ainda.</p>';
+            } else {
+                container.innerHTML = mergedActivities.map(act => {
+                    const activityCode = resolveActivityCode(act);
+                    const projectCode = resolveActivityProjectCode(act, result.project_code || linkedProjectCode);
+                    const projectTitle = resolveActivityProjectTitle(act, result.project_title || linkedProjectTitle);
+                    return `
+                    <div class="activity-item" style="margin-bottom: 12px; padding: 16px;">
+                        <div style="font-weight: 600; font-size: 1rem; color: var(--text-main);">${activityCode ? activityCode + ' - ' : ''}${act.title}</div>
+                        <div style="font-size: 0.875rem; color: var(--text-muted); margin-top: 4px;">
+                             Projeto: ${projectCode ? projectCode + ' - ' : ''}${projectTitle}
+                        </div>
+                        <div style="font-size: 0.875rem; color: var(--text-muted); margin-top: 2px;">
+                             Responsvel: ${act.responsible || 'N/D'} | Prazo: ${act.deadline || 'N/D'}
+                        </div>
+                    </div>
+                `;
+                }).join('');
+            }
+            updateProjectLinkDisplay(result.project_id || linkedProjectId, result.project_title || linkedProjectTitle, result.project_code || linkedProjectCode);
+        } catch (error) { console.error(error); }
+    }
+
+    function updateMeetingStatus(status) {
+        currentMeetingStatus = status;
+        const statusMap = { 'draft': 'Rascunho', 'in_progress': 'Em Andamento', 'completed': 'Finalizada' };
+        const display = document.getElementById('meeting-status-display');
+        if (display) display.textContent = statusMap[status] || status;
+
+        const startBtn = document.getElementById('btn-iniciar-reuniao');
+        if (startBtn) startBtn.style.display = (status === 'draft') ? 'inline-flex' : 'none';
+
+        const finishBtn = document.getElementById('btn-finalizar-reuniao');
+        if (finishBtn) {
+            if (status === 'completed') {
+                finishBtn.disabled = true;
+                finishBtn.textContent = 'Reunião Finalizada';
+            } else {
+                finishBtn.disabled = false;
+                finishBtn.textContent = '? Finalizar Reunião';
+            }
+        }
+    }
+
+    function limparFormulario() {
+        currentMeetingStatus = 'draft';
+        ['meeting-title', 'meeting-scheduled-date', 'meeting-scheduled-time', 'meeting-invite-notes', 'meeting-actual-date', 'meeting-actual-time', 'meeting-notes'].forEach(id => {
+            const el = document.getElementById(id);
+            if (el) el.value = '';
+        });
+        updateProjectLinkDisplay(null, null, null);
+        guestsInternal = []; guestsExternal = []; agendaItems = [];
+        participants = { internal: [], external: [] }; discussions = []; activities = [];
+        renderGuestsInternal(); renderGuestsExternal(); renderAgenda();
+        renderParticipants(); renderDiscussions(); renderActivities();
+        const container = document.getElementById('generated-activities-list');
+        if (container) container.innerHTML = '<p style="text-align: center; color: var(--text-muted);">Nenhuma atividade gerada ainda.</p>';
+        updateMeetingStatus('draft');
+    }
+
+    async function atualizarListaAtividades(btn) {
+        if (!currentMeetingId) return alert('Salve a reuniao primeiro');
+        if (btn) { btn.disabled = true; btn.textContent = 'Verificando...'; }
+
+        try {
+            const checkRes = await fetch('/meetings/api/meeting/' + currentMeetingId + '/check-sync');
+            const check = await checkRes.json();
+            if (check.is_synced) {
+                alert('Atividades j sincronizadas');
+                return;
+            }
+            if (!confirm('Deseja sincronizar as atividades com o projeto?')) return;
+
+            const payload = {
+                activities, participants, discussions,
+                meeting_notes: document.getElementById('meeting-notes').value,
+                status: currentMeetingStatus,
+                actual_date: document.getElementById('meeting-actual-date').value,
+                actual_time: document.getElementById('meeting-actual-time').value
+            };
+
+            const syncRes = await fetch('/meetings/api/meeting/' + currentMeetingId + '/sync-activities', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(payload)
+            });
+            const sync = await syncRes.json();
+            if (sync.success) {
+                alert('Sincronizado com sucesso');
+                await atualizarAtividades();
+            }
+        } catch (e) { console.error(e); }
+        finally { if (btn) { btn.disabled = false; btn.textContent = '?? Atualizar Lista'; } }
+    }
+
+    async function removerAtividadeComConfirmacação(index) {
+        const activity = activities[index];
+        if (!confirm('Deseja remover esta atividade do projeto vinculado também?')) return;
+        if (currentMeetingId && linkedProjectId && activity?.title) {
+            await fetch('/meetings/api/meeting/' + currentMeetingId + '/remove-from-project', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ title: activity.title })
+            });
+        }
+        activities.splice(index, 1);
+        renderActivities();
+        await persistExecucação({ silent: true });
+        await atualizarAtividades();
+    }
+
+    // FILTROS
+    window.filtrarReuniãoes = function () {
+        const titleF = document.getElementById('filter-title').value.toLowerCase().trim();
+        const schDateF = document.getElementById('filter-scheduled-date').value;
+        const actDateF = document.getElementById('filter-actual-date').value;
+        const partF = document.getElementById('filter-participants').value.toLowerCase().trim();
+        const freeF = document.getElementById('filter-free').value.toLowerCase().trim();
+
+        const cards = document.querySelectorAll('.meeting-card');
+        const resultsCountEl = document.getElementById('filter-results-count');
+        const visibleCountEl = document.getElementById('visible-count');
+
+        let visibleCount = 0;
+        const isFiltering = titleF || schDateF || actDateF || partF || freeF;
+
+        cards.forEach(card => {
+            const title = card.getAttribute('data-title') || '';
+            const schDate = card.getAttribute('data-sch-date') || '';
+            const actDate = card.getAttribute('data-act-date') || '';
+            const parts = card.getAttribute('data-participants') || '';
+            const freeText = card.getAttribute('data-search-free') || '';
+
+            let match = true;
+
+            if (titleF && !title.includes(titleF)) match = false;
+
+            // Date comparison: only exact match for now as they are YYYY-MM-DD
+            if (schDateF && schDate !== schDateF) {
+                // Try comparing just the date part if it's ISO/Full
+                if (!schDate.startsWith(schDateF)) match = false;
+            }
+            if (actDateF && actDate !== actDateF) {
+                if (!actDate.startsWith(actDateF)) match = false;
+            }
+
+            if (partF && !parts.includes(partF)) match = false;
+
+            // Free search: check if all words in freeF are present in freeText
+            if (freeF) {
+                const words = freeF.split(/\s+/);
+                const allWordsMatch = words.every(word => freeText.includes(word));
+                if (!allWordsMatch) match = false;
+            }
+
+            if (match) {
+                card.style.display = 'block';
+                visibleCount++;
+            } else {
+                card.style.display = 'none';
+            }
+        });
+
+        // Update count display
+        if (isFiltering) {
+            resultsCountEl.style.display = 'block';
+            visibleCountEl.textContent = visibleCount;
+        } else {
+            resultsCountEl.style.display = 'none';
+        }
+
+        // Toggle Empty State if needed
+        const grid = document.getElementById('meetings-grid');
+        let emptyState = document.querySelector('.empty-state-search');
+
+        if (visibleCount === 0 && cards.length > 0) {
+            if (!emptyState) {
+                emptyState = document.createElement('div');
+                emptyState.className = 'empty-state-search';
+                emptyState.style.textAlign = 'center';
+                emptyState.style.padding = '60px 24px';
+                emptyState.style.gridColumn = '1 / -1';
+                emptyState.style.background = 'rgba(248, 250, 252, 0.4)';
+                emptyState.style.borderRadius = '16px';
+                emptyState.style.border = '2px dashed rgba(37, 99, 235, 0.1)';
+                emptyState.innerHTML = `
+                    <div style="font-size: 48px; margin-bottom: 16px; opacity: 0.5;">??</div>
+                    <h4 style="color: var(--text-main); margin-bottom: 8px;">Nenhuma reuniao encontrada</h4>
+                    <p style="color: var(--text-muted); margin-bottom: 20px;">Tente ajustar seus filtros ou termos de busca.</p>
+                    <button class="button button-outline" onclick="limparFiltros()">Limpar todos os filtros</button>
+                `;
+                grid.appendChild(emptyState);
+            }
+        } else if (emptyState) {
+            emptyState.remove();
+        }
+    };
+
+    window.limparFiltros = function () {
+        document.getElementById('filter-title').value = '';
+        document.getElementById('filter-scheduled-date').value = '';
+        document.getElementById('filter-actual-date').value = '';
+        document.getElementById('filter-participants').value = '';
+        document.getElementById('filter-free').value = '';
+        filtrarReuniãoes();
+    };
+
+    document.addEventListener('DOMContentLoaded', () => {
+        try {
+            employeesData = JSON.parse('{{ employees | tojson | safe if employees else "[]" }}');
+        } catch (e) {
+            console.error('Error parsing employeesData:', e);
+            employeesData = [];
+        }
+    });
+</script>
+{% endblock %}

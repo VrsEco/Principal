@@ -1,0 +1,126 @@
+{% extends "modules/plans/base_planning.html" %}
+
+{% block planning_content %}
+<div class="planning-header" style="margin-bottom: 32px;">
+    <h1 style="font-size: 32px; font-weight: 800; color: #0f172a; margin-bottom: 8px;">Dashboard de Crescimento</h1>
+    <p style="color: #64748b; font-size: 16px;">Visualize o status e os próximos passos do seu planejamento estratégico.
+    </p>
+</div>
+
+<!-- KPI Cards -->
+<div
+    style="display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 20px; margin-bottom: 32px;">
+    <div class="planning-card" style="padding: 20px; display: flex; align-items: center; gap: 16px;">
+        <div
+            style="width: 52px; height: 52px; border-radius: 14px; background: #eff6ff; color: #2563eb; display: flex; align-items: center; justify-content: center; font-size: 22px; flex-shrink: 0;">
+            <i class="fa-solid fa-compass"></i>
+        </div>
+        <div>
+            <div style="font-size: 13px; color: #64748b; font-weight: 600; margin-bottom: 2px;">Direcionadores</div>
+            <div style="font-size: 28px; font-weight: 800; color: #0f172a; line-height: 1;">{{ drivers_count|default(0)
+                }}</div>
+        </div>
+    </div>
+    <div class="planning-card" style="padding: 20px; display: flex; align-items: center; gap: 16px;">
+        <div
+            style="width: 52px; height: 52px; border-radius: 14px; background: #fdf2f8; color: #db2777; display: flex; align-items: center; justify-content: center; font-size: 22px; flex-shrink: 0;">
+            <i class="fa-solid fa-bullseye"></i>
+        </div>
+        <div>
+            <div style="font-size: 13px; color: #64748b; font-weight: 600; margin-bottom: 2px;">OKRs Ativos</div>
+            <div style="font-size: 28px; font-weight: 800; color: #0f172a; line-height: 1;">{{ okrs_count|default(0) }}
+            </div>
+        </div>
+    </div>
+    <div class="planning-card" style="padding: 20px; display: flex; align-items: center; gap: 16px;">
+        <div
+            style="width: 52px; height: 52px; border-radius: 14px; background: #f0fdf4; color: #16a34a; display: flex; align-items: center; justify-content: center; font-size: 22px; flex-shrink: 0;">
+            <i class="fa-solid fa-check-to-slot"></i>
+        </div>
+        <div>
+            <div style="font-size: 13px; color: #64748b; font-weight: 600; margin-bottom: 2px;">Seções Concluídas</div>
+            <div style="font-size: 28px; font-weight: 800; color: #0f172a; line-height: 1;">{{
+                completed_sections|default(0) }}<span style="font-size: 16px; font-weight: 600; color: #94a3b8;">/{{
+                    total_completable }}</span></div>
+        </div>
+    </div>
+</div>
+
+<!-- Lista Unificada de Etapas -->
+<div class="planning-card" style="padding: 28px;">
+    <h3 style="font-size: 18px; font-weight: 700; color: #0f172a; margin-bottom: 24px;">
+        <i class="fa-solid fa-map-signs" style="color: #2563eb; margin-right: 10px;"></i>
+        Jornada do Planejamento
+    </h3>
+
+    <div style="display: flex; flex-direction: column; gap: 0;">
+        {% for section in sections %}
+        {% if section.key != 'dashboard' %}
+        {% set is_projects = section.key == 'projects' %}
+        {% set is_done = section.completable and section.status == 'completed' %}
+        {% set is_wip = section.completable and section.status == 'in_progress' %}
+
+        <div style="display: flex; align-items: center; gap: 16px; padding: 16px 12px; border-radius: 14px; transition: background 0.15s; {% if not loop.last %}border-bottom: 1px solid #f1f5f9;{% endif %}"
+            onmouseover="this.style.background='#f8fafc'" onmouseout="this.style.background='transparent'">
+
+            <!-- Ícone com cor de status -->
+            <div style="width: 44px; height: 44px; border-radius: 12px; flex-shrink: 0; display: flex; align-items: center; justify-content: center; font-size: 16px;
+                {% if is_projects %}background:#eff6ff; color:#2563eb;
+                {% elif is_done %}background:#dcfce7; color:#16a34a;
+                {% elif is_wip %}background:#fef9c3; color:#ca8a04;
+                {% else %}background:#f1f5f9; color:#94a3b8;{% endif %}">
+                <i class="fa-solid fa-{{ section.icon }}"></i>
+            </div>
+
+            <!-- Título + Descrição -->
+            <div style="flex: 1; min-width: 0;">
+                <div style="display: flex; align-items: center; gap: 10px; margin-bottom: 2px;">
+                    <span style="font-size: 15px; font-weight: 700; color: #0f172a;">{{ section.title }}</span>
+                    <span style="font-size: 10px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.06em; padding: 2px 8px; border-radius: 999px;
+                        {% if is_projects %}background:#eff6ff; color:#2563eb;
+                        {% elif is_done %}background:#dcfce7; color:#15803d;
+                        {% elif is_wip %}background:#fef9c3; color:#a16207;
+                        {% else %}background:#f1f5f9; color:#94a3b8;{% endif %}">
+                        {% if is_projects %}Projetos
+                        {% elif not section.completable %}Relatório
+                        {% elif is_done %}Concluído ✓
+                        {% elif is_wip %}Em Andamento
+                        {% else %}Pendente{% endif %}
+                    </span>
+                </div>
+                <span style="font-size: 13px; color: #64748b;">
+                    {% if section.key == 'participants' %}Defina os responsáveis e envolvidos no planejamento.
+                    {% elif section.key == 'drivers' %}Identifique os direcionadores estratégicos de crescimento.
+                    {% elif section.key == 'okrs_global' %}OKRs corporativos alinhados à visão estratégica.
+                    {% elif section.key == 'okrs_area' %}OKRs por área para desdobramento da estratégia.
+                    {% elif section.key == 'projects' %}Projetos estratégicos para operacionalizar o crescimento.
+                    {% elif section.key == 'final_report' %}Visualize o consolidado e gere o PDF do planejamento.
+                    {% endif %}
+                </span>
+            </div>
+
+            <!-- Botão de Acesso -->
+            <a href="{{ url_for('plans.growth_section', plan_id=plan.id, section=section.key) }}" style="display: inline-flex; align-items: center; gap: 7px; padding: 9px 18px; border-radius: 10px; font-size: 13px; font-weight: 700; text-decoration: none; white-space: nowrap; flex-shrink: 0;
+               {% if is_projects %}background:#2563eb; color:#ffffff;
+               {% elif is_done %}background:#f0fdf4; color:#16a34a; border: 1px solid #bbf7d0;
+               {% elif is_wip %}background:#fffbeb; color:#d97706; border: 1px solid #fde68a;
+               {% else %}background:#f8fafc; color:#374151; border: 1px solid #e2e8f0;{% endif %}"
+                onmouseover="this.style.opacity='0.85'" onmouseout="this.style.opacity='1'">
+                {% if is_projects %}
+                <i class="fa-solid fa-briefcase"></i> Gerenciar
+                {% elif not section.completable %}
+                <i class="fa-solid fa-file-pdf"></i> Abrir
+                {% elif is_done %}
+                <i class="fa-solid fa-rotate-right"></i> Revisar
+                {% elif is_wip %}
+                <i class="fa-solid fa-play"></i> Continuar
+                {% else %}
+                <i class="fa-solid fa-arrow-right"></i> Iniciar
+                {% endif %}
+            </a>
+        </div>
+        {% endif %}
+        {% endfor %}
+    </div>
+</div>
+{% endblock %}

@@ -1,0 +1,25 @@
+============================================================
+COMPARATIVO DE TABELAS: LOCAL vs CLOUD
+============================================================
+
+☁️  Conectando ao CLOUD...
+DEBUG: CLOUD_SQL_CONNECTION_NAME='vrs-eco-478714:southamerica-east1:gestaoversus-db-prod'
+✅ CLOUD: 87 tabelas encontradas.
+
+💻 Conectando ao LOCAL...
+✅ LOCAL: 91 tabelas encontradas.
+   (Confirmado: Parece ser o banco Local)
+
+------------------------------------------------------------
+RELATÓRIO DE DIVERGÊNCIAS
+------------------------------------------------------------
+
+📍 Apenas no LOCAL (4):
+   - ui_audit_log
+   - ui_elements
+   - ui_pages
+   - v_ui_elements_full
+
+☁️  Nenhuma tabela exclusiva do Cloud.
+
+🔗 Tabelas em comum: 87

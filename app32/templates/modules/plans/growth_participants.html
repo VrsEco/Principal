@@ -1,0 +1,231 @@
+{% extends "modules/plans/base_planning.html" %}
+
+{% block planning_content %}
+<div class="planning-header"
+    style="display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 32px;">
+    <div>
+        <h1 style="font-size: 32px; font-weight: 800; color: #0f172a; margin-bottom: 8px;">Participantes do Planejamento
+        </h1>
+        <p style="color: #64748b; font-size: 16px;">Gerencie quem tem acesso e quais são as responsabilidades de cada
+            membro
+            neste plano.</p>
+    </div>
+    <button onclick="completeSection()" class="nav-button"
+        style="background: #10b981; color: #ffffff; padding: 12px 24px; border-radius: 12px; font-weight: 600; display: flex; align-items: center; gap: 8px; border: none; cursor: pointer;">
+        <i class="fa-solid fa-check"></i> Concluir Etapa
+    </button>
+</div>
+
+<div class="planning-card">
+    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 24px;">
+        <h3 style="font-size: 20px; font-weight: 700;">Equipe Estratégica</h3>
+        <button onclick="openModal('addParticipantModal')" class="nav-button"
+            style="background: #2563eb; color: #ffffff; padding: 10px 20px; border-radius: 10px; font-weight: 600; cursor: pointer; border: none;">
+            <i class="fa-solid fa-user-plus"></i> Convidar Participante
+        </button>
+    </div>
+
+    <table style="width: 100%; border-collapse: separate; border-spacing: 0 12px;">
+        <thead>
+            <tr style="text-align: left; color: #64748b; font-size: 13px; font-weight: 700; text-transform: uppercase;">
+                <th style="padding: 0 16px;">Membro</th>
+                <th style="padding: 0 16px;">Papel</th>
+                <th style="padding: 0 16px;">Departamento</th>
+                <th style="padding: 0 16px; text-align: right;">Ações</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for p in participants %}
+            <tr style="background: #f8fafc; border-radius: 12px;">
+                <td style="padding: 16px; border-radius: 12px 0 0 12px;">
+                    <div style="display: flex; align-items: center; gap: 12px;">
+                        <div
+                            style="width: 40px; height: 40px; border-radius: 50%; background: #2563eb; color: #ffffff; display: flex; align-items: center; justify-content: center; font-weight: 700;">
+                            {{ (p.employee.name or '??')[:2].upper() }}</div>
+                        <div>
+                            <div style="font-weight: 700; color: #0f172a;">{{ p.employee.name or 'Desconhecido' }}</div>
+                            <div style="font-size: 12px; color: #64748b;">{{ p.employee.email or '' }}</div>
+                        </div>
+                    </div>
+                </td>
+                <td style="padding: 16px;"><span style="font-size: 14px; font-weight: 500; color: #0f172a;">
+                        {{ p.role|title }}
+                    </span></td>
+                <td style="padding: 16px;"><span
+                        style="padding: 4px 10px; border-radius: 6px; background: #e2e8f0; color: #475569; font-size: 12px; font-weight: 700;">
+                        {{ p.employee.department or 'Geral' }}
+                    </span>
+                </td>
+                <td style="padding: 16px; border-radius: 0 12px 12px 0; text-align: right;">
+                    <button onclick="removeParticipant('{{ p.id }}')" class="icon-btn"
+                        style="color: #ef4444; cursor: pointer; border: none; background: transparent;">
+                        <i class="fa-solid fa-trash"></i>
+                    </button>
+                </td>
+            </tr>
+            {% else %}
+            <tr>
+                <td colspan="4" style="text-align: center; padding: 32px; color: #94a3b8;">
+                    Nenhum participante adicionado ainda.
+                </td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+</div>
+
+<div class="planning-card" style="background: #fff8eb; border: 1px solid #fee2e2;">
+    <h4 style="color: #92400e; font-size: 16px; font-weight: 700; margin-bottom: 8px;"><i
+            class="fa-solid fa-triangle-exclamation"></i> Importante</h4>
+    <p style="color: #b45309; font-size: 14px;">Definir bem o Owner e os Editores garante que o planejamento mantenha a
+        integridade dos dados durante as reuniões estratégicas.</p>
+</div>
+
+<!-- Modal Adicionar Participante -->
+<div id="addParticipantModal" class="fixed inset-0 bg-gray-900 bg-opacity-50 hidden items-center justify-center"
+    style="display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; z-index: 50; background-color: rgba(0,0,0,0.5);">
+    <div class="bg-white rounded-xl shadow-xl p-6 w-full max-w-md"
+        style="background: white; border-radius: 12px; padding: 24px; width: 100%; max-width: 500px; margin: 100px auto;">
+        <div class="flex justify-between items-center mb-4"
+            style="display: flex; justify-content: space-between; margin-bottom: 16px;">
+            <h3 class="text-xl font-bold text-slate-800" style="font-size: 20px; font-weight: 700;">Adicionar
+                Participante</h3>
+            <button onclick="closeModal('addParticipantModal')" class="text-gray-400 hover:text-gray-600"
+                style="background: none; border: none; font-size: 20px; cursor: pointer;">
+                <i class="fa-solid fa-xmark"></i>
+            </button>
+        </div>
+
+        <form id="addParticipantForm" onsubmit="submitAddParticipant(event)">
+            <div class="space-y-4" style="display: flex; flex-direction: column; gap: 16px;">
+                <div>
+                    <label class="block text-sm font-medium text-slate-700 mb-1"
+                        style="display: block; margin-bottom: 4px; font-weight: 600;">Colaborador</label>
+                    <select name="employee_id" required class="w-full rounded-lg border-slate-300"
+                        style="width: 100%; padding: 10px; border: 1px solid #cbd5e1; border-radius: 8px;">
+                        <option value="">Selecione um colaborador...</option>
+                        {% for emp in employees %}
+                        <option value="{{ emp.id }}">{{ emp.name }} - {{ emp.department or 'N/A' }}</option>
+                        {% endfor %}
+                    </select>
+                </div>
+
+                <div>
+                    <label class="block text-sm font-medium text-slate-700 mb-1"
+                        style="display: block; margin-bottom: 4px; font-weight: 600;">Papel</label>
+                    <select name="role" required class="w-full rounded-lg border-slate-300"
+                        style="width: 100%; padding: 10px; border: 1px solid #cbd5e1; border-radius: 8px;">
+                        <option value="viewer">Visualizador (Viewer)</option>
+                        <option value="editor">Editor</option>
+                        <option value="owner">Dono (Owner)</option>
+                    </select>
+                    <p class="text-xs text-slate-500 mt-1" style="font-size: 12px; color: #64748b; margin-top: 4px;">
+                        Viewers apenas visualizam. Editors podem alterar dados. Owners gerenciam acesso.
+                    </p>
+                </div>
+
+                <div class="flex justify-end gap-3 pt-4"
+                    style="display: flex; justify-content: flex-end; gap: 12px; margin-top: 16px;">
+                    <button type="button" onclick="closeModal('addParticipantModal')"
+                        class="px-4 py-2 text-slate-600 bg-slate-100 rounded-lg hover:bg-slate-200"
+                        style="padding: 8px 16px; background: #f1f5f9; border: none; border-radius: 8px; cursor: pointer;">
+                        Cancelar
+                    </button>
+                    <button type="submit" class="px-4 py-2 text-white bg-blue-600 rounded-lg hover:bg-blue-700"
+                        style="padding: 8px 16px; background: #2563eb; color: white; border: none; border-radius: 8px; cursor: pointer;">
+                        Adicionar
+                    </button>
+                </div>
+            </div>
+        </form>
+    </div>
+</div>
+
+<script>
+    function openModal(modalId) {
+        document.getElementById(modalId).style.display = 'flex';
+    }
+
+    function closeModal(modalId) {
+        document.getElementById(modalId).style.display = 'none';
+    }
+
+    async function submitAddParticipant(event) {
+        event.preventDefault();
+        const form = event.target;
+        const formData = new FormData(form);
+
+        const data = {
+            employee_id: parseInt(formData.get('employee_id')),
+            role: formData.get('role')
+        };
+
+        try {
+            const response = await fetch('/api/plans/{{ plan.id }}/participants?company_id={{ company.id }}', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify(data)
+            });
+
+            if (response.ok) {
+                window.location.reload();
+            } else {
+                const error = await response.json();
+                alert('Erro ao adicionar participante: ' + (error.error || JSON.stringify(error.errors)));
+            }
+        } catch (e) {
+            console.error(e);
+            alert('Erro de conexão ao adicionar participante.');
+        }
+    }
+
+    async function removeParticipant(participantId) {
+        if (!confirm('Tem certeza que deseja remover este participante?')) return;
+
+        try {
+            const response = await fetch(`/api/plans/{{ plan.id }}/participants/${participantId}?company_id={{ company.id }}`, {
+                method: 'DELETE'
+            });
+
+            if (response.ok) {
+                window.location.reload();
+            } else {
+                const error = await response.json();
+                alert('Erro ao remover participante: ' + error.error);
+            }
+        } catch (e) {
+            console.error(e);
+            alert('Erro de conexão ao remover participante.');
+        }
+    }
+
+    async function completeSection() {
+        const nextSection = "{{ 'drivers' if plan.mode == 'growth' else 'alignment' }}";
+        const routeName = "{{ 'plans.growth_section' if plan.mode == 'growth' else 'plans.implantation_section' }}";
+
+        if (!confirm('Deseja concluir esta etapa e avançar para ' + (nextSection === 'drivers' ? 'os Direcionadores' : 'o Alinhamento') + '?')) return;
+
+        try {
+            const response = await fetch(`/plans/{{ plan.id }}/sections/participants/complete`, {
+                method: 'POST'
+            });
+
+            if (response.ok) {
+                // Use the route mapping if possible, or construct URL
+                if (nextSection === 'drivers') {
+                    window.location.href = "{{ url_for('plans.growth_section', plan_id=plan.id, section='drivers') }}";
+                } else {
+                    window.location.href = "{{ url_for('plans.implantation_section', plan_id=plan.id, section='alignment') }}";
+                }
+            } else {
+                alert('Erro ao concluir etapa.');
+            }
+        } catch (e) {
+            console.error(e);
+            alert('Erro de conexão.');
+        }
+    }
+</script>
+{% endblock %}

@@ -1,0 +1,350 @@
+{
+  "indicators": {
+    "columns": [
+      {
+        "column_name": "id",
+        "data_type": "integer",
+        "is_nullable": "NO"
+      },
+      {
+        "column_name": "company_id",
+        "data_type": "integer",
+        "is_nullable": "NO"
+      },
+      {
+        "column_name": "group_id",
+        "data_type": "integer",
+        "is_nullable": "YES"
+      },
+      {
+        "column_name": "code",
+        "data_type": "text",
+        "is_nullable": "NO"
+      },
+      {
+        "column_name": "name",
+        "data_type": "text",
+        "is_nullable": "NO"
+      },
+      {
+        "column_name": "process_id",
+        "data_type": "integer",
+        "is_nullable": "YES"
+      },
+      {
+        "column_name": "project_id",
+        "data_type": "integer",
+        "is_nullable": "YES"
+      },
+      {
+        "column_name": "department_id",
+        "data_type": "integer",
+        "is_nullable": "YES"
+      },
+      {
+        "column_name": "collaborators",
+        "data_type": "text",
+        "is_nullable": "YES"
+      },
+      {
+        "column_name": "unit",
+        "data_type": "text",
+        "is_nullable": "YES"
+      },
+      {
+        "column_name": "formula",
+        "data_type": "text",
+        "is_nullable": "YES"
+      },
+      {
+        "column_name": "polarity",
+        "data_type": "text",
+        "is_nullable": "YES"
+      },
+      {
+        "column_name": "data_source",
+        "data_type": "text",
+        "is_nullable": "YES"
+      },
+      {
+        "column_name": "notes",
+        "data_type": "text",
+        "is_nullable": "YES"
+      },
+      {
+        "column_name": "created_at",
+        "data_type": "text",
+        "is_nullable": "YES"
+      },
+      {
+        "column_name": "updated_at",
+        "data_type": "text",
+        "is_nullable": "YES"
+      },
+      {
+        "column_name": "okr_reference",
+        "data_type": "text",
+        "is_nullable": "YES"
+      },
+      {
+        "column_name": "okr_reference_label",
+        "data_type": "text",
+        "is_nullable": "YES"
+      },
+      {
+        "column_name": "plan_id",
+        "data_type": "text",
+        "is_nullable": "YES"
+      },
+      {
+        "column_name": "okr_id",
+        "data_type": "integer",
+        "is_nullable": "YES"
+      },
+      {
+        "column_name": "okr_level",
+        "data_type": "text",
+        "is_nullable": "YES"
+      }
+    ],
+    "sample": {
+      "id": 1,
+      "company_id": 5,
+      "group_id": 2,
+      "code": "AA.I.1.1.IND.001",
+      "name": "Tete 02",
+      "process_id": 45,
+      "project_id": 27,
+      "department_id": null,
+      "collaborators": "[3]",
+      "unit": "R$",
+      "formula": "Teste teste teste teste",
+      "polarity": "positive",
+      "data_source": "Teste teste teste",
+      "notes": "teste",
+      "created_at": "2025-10-13 00:33:38",
+      "updated_at": "2025-10-13 00:33:38",
+      "okr_reference": null,
+      "okr_reference_label": null,
+      "plan_id": null,
+      "okr_id": null,
+      "okr_level": null
+    }
+  },
+  "indicator_data": {
+    "columns": [
+      {
+        "column_name": "id",
+        "data_type": "integer",
+        "is_nullable": "NO"
+      },
+      {
+        "column_name": "company_id",
+        "data_type": "integer",
+        "is_nullable": "NO"
+      },
+      {
+        "column_name": "goal_id",
+        "data_type": "integer",
+        "is_nullable": "NO"
+      },
+      {
+        "column_name": "record_date",
+        "data_type": "date",
+        "is_nullable": "NO"
+      },
+      {
+        "column_name": "value",
+        "data_type": "real",
+        "is_nullable": "NO"
+      },
+      {
+        "column_name": "notes",
+        "data_type": "text",
+        "is_nullable": "YES"
+      },
+      {
+        "column_name": "created_at",
+        "data_type": "text",
+        "is_nullable": "YES"
+      },
+      {
+        "column_name": "updated_at",
+        "data_type": "text",
+        "is_nullable": "YES"
+      }
+    ],
+    "sample": {
+      "id": 1,
+      "company_id": 5,
+      "goal_id": 1,
+      "record_date": "2025-10-13",
+      "value": 150.0,
+      "notes": null,
+      "created_at": "2025-10-13 00:34:45",
+      "updated_at": "2025-10-13 00:34:45"
+    }
+  },
+  "indicator_goals": {
+    "columns": [
+      {
+        "column_name": "id",
+        "data_type": "integer",
+        "is_nullable": "NO"
+      },
+      {
+        "column_name": "company_id",
+        "data_type": "integer",
+        "is_nullable": "NO"
+      },
+      {
+        "column_name": "indicator_id",
+        "data_type": "integer",
+        "is_nullable": "NO"
+      },
+      {
+        "column_name": "code",
+        "data_type": "text",
+        "is_nullable": "NO"
+      },
+      {
+        "column_name": "goal_value",
+        "data_type": "real",
+        "is_nullable": "NO"
+      },
+      {
+        "column_name": "goal_date",
+        "data_type": "date",
+        "is_nullable": "NO"
+      },
+      {
+        "column_name": "responsible_id",
+        "data_type": "integer",
+        "is_nullable": "YES"
+      },
+      {
+        "column_name": "status",
+        "data_type": "text",
+        "is_nullable": "YES"
+      },
+      {
+        "column_name": "notes",
+        "data_type": "text",
+        "is_nullable": "YES"
+      },
+      {
+        "column_name": "created_at",
+        "data_type": "text",
+        "is_nullable": "YES"
+      },
+      {
+        "column_name": "updated_at",
+        "data_type": "text",
+        "is_nullable": "YES"
+      },
+      {
+        "column_name": "goal_type",
+        "data_type": "text",
+        "is_nullable": "YES"
+      },
+      {
+        "column_name": "period_start",
+        "data_type": "date",
+        "is_nullable": "YES"
+      },
+      {
+        "column_name": "period_end",
+        "data_type": "date",
+        "is_nullable": "YES"
+      },
+      {
+        "column_name": "evaluation_basis",
+        "data_type": "text",
+        "is_nullable": "YES"
+      },
+      {
+        "column_name": "okr_reference",
+        "data_type": "text",
+        "is_nullable": "YES"
+      },
+      {
+        "column_name": "okr_reference_label",
+        "data_type": "text",
+        "is_nullable": "YES"
+      }
+    ],
+    "sample": {
+      "id": 1,
+      "company_id": 5,
+      "indicator_id": 1,
+      "code": "META-0001",
+      "goal_value": 120000.0,
+      "goal_date": "2025-12-31",
+      "responsible_id": 3,
+      "status": "active",
+      "notes": "120 mil por m\u00c3\u00aas.",
+      "created_at": "2025-10-13 00:34:29",
+      "updated_at": "2025-10-13 00:35:54",
+      "goal_type": "single",
+      "period_start": null,
+      "period_end": null,
+      "evaluation_basis": "value",
+      "okr_reference": null,
+      "okr_reference_label": null
+    }
+  },
+  "indicator_groups": {
+    "columns": [
+      {
+        "column_name": "id",
+        "data_type": "integer",
+        "is_nullable": "NO"
+      },
+      {
+        "column_name": "company_id",
+        "data_type": "integer",
+        "is_nullable": "NO"
+      },
+      {
+        "column_name": "parent_id",
+        "data_type": "integer",
+        "is_nullable": "YES"
+      },
+      {
+        "column_name": "code",
+        "data_type": "text",
+        "is_nullable": "NO"
+      },
+      {
+        "column_name": "name",
+        "data_type": "text",
+        "is_nullable": "NO"
+      },
+      {
+        "column_name": "description",
+        "data_type": "text",
+        "is_nullable": "YES"
+      },
+      {
+        "column_name": "created_at",
+        "data_type": "text",
+        "is_nullable": "YES"
+      },
+      {
+        "column_name": "updated_at",
+        "data_type": "text",
+        "is_nullable": "YES"
+      }
+    ],
+    "sample": {
+      "id": 1,
+      "company_id": 5,
+      "parent_id": null,
+      "code": "AA.I.1",
+      "name": "Grupo Inicial - - -",
+      "description": "Grupo cadastrado manualmente para testes.",
+      "created_at": "2025-10-12 23:58:46",
+      "updated_at": "2025-10-13 00:09:41"
+    }
+  }
+}

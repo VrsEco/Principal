@@ -1,0 +1,35 @@
+﻿<!-- Empresas - Cadastro Unificado -->
+            <a href="/companies" class="module-card">
+                <div class="module-icon">ÃƒÂ°Ã…Â¸Ã‚ÂÃ‚Â¢</div>
+                <h2 class="module-title">Empresas</h2>
+                <p class="module-description">Cadastro unificado por abas: Geral, PEV e GRV.</p>
+                <div class="module-status status-active">ÃƒÂ¢Ã…Â“Ã¢Â€Âœ Ativo</div>
+            </a>
+
+            <!-- GEV - GestÃƒÂƒÃ‚Â£o EstratÃƒÂƒÃ‚Â©gica Versus (em breve) -->
+            <div class="module-card coming-soon" aria-label="GestÃƒÂƒÃ‚Â£o EstratÃƒÂƒÃ‚Â©gica (em breve)">
+                <div class="module-icon">GEV</div>
+                <h2 class="module-title">GestÃƒÂƒÃ‚Â£o EstratÃƒÂƒÃ‚Â©gica</h2>
+                <p class="module-description">Dashboards, mÃƒÂƒÃ‚Â©tricas de performance e relatÃƒÂƒÃ‚Â³rios executivos.</p>
+                <div class="module-status status-coming-soon">ÃƒÂ¢Ã‚ÂÃ‚Â³ Em breve</div>
+            </div>
+
+            <!-- GFV - GestÃƒÂƒÃ‚Â£o Financeira Versus (em breve) -->
+            <div class="module-card coming-soon" aria-label="GestÃƒÂƒÃ‚Â£o Financeira (em breve)">
+                <div class="module-icon">GFV</div>
+                <h2 class="module-title">GestÃƒÂƒÃ‚Â£o Financeira</h2>
+                <p class="module-description">OrÃƒÂƒÃ‚Â§amentos, fluxo de caixa, custos e indicadores financeiros.</p>
+                <div class="module-status status-coming-soon">ÃƒÂ¢Ã‚ÂÃ‚Â³ Em breve</div>
+            </div>
+
+            <!-- CFG - ConfiguraÃƒÂƒÃ‚Â§ÃƒÂƒÃ‚Âµes -->
+            <a href="/configs" class="module-card">
+                <div class="module-icon">CFG</div>
+                <h2 class="module-title">ConfiguraÃƒÂƒÃ‚Â§ÃƒÂƒÃ‚Âµes</h2>
+                <p class="module-description">Central de configuraÃƒÂƒÃ‚Â§ÃƒÂƒÃ‚Âµes do sistema, relatÃƒÂƒÃ‚Â³rios e padrÃƒÂƒÃ‚Âµes globais.</p>
+                <div class="module-status status-active">ÃƒÂ¢Ã…Â“Ã¢Â€Âœ Ativo</div>
+            </a>
+        </div>
+
+
+        

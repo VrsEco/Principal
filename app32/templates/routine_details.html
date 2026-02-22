@@ -1,0 +1,617 @@
+{% extends "layouts/workspace.html" %}
+
+{% block title %}{{ 'Nova Rotina' if is_new else 'Editar Rotina' }} | Versus{% endblock %}
+
+{% block breadcrumb %}
+<a href="/dashboard">Dashboard</a>
+<span class="sep">/</span>
+<a href="/process-routines">Rotinas</a>
+<span class="sep">/</span>
+<span class="current">{{ 'Nova' if is_new else 'Editar' }}</span>
+{% endblock %}
+
+{% block navbar_actions %}{% endblock %}
+
+{% block workspace_content %}
+<div class="workspace-wrapper">
+    <div class="workspace-header" style="display: flex; justify-content: space-between; align-items: flex-start;">
+        <div class="header-content">
+            <h1 class="text-h1">{{ '➕ Nova Rotina' if is_new else '🔄 Gerenciar Rotina' }}</h1>
+            <p class="text-secondary">{{ 'Cadastre os detalhes de agendamento e execução.' if is_new else routine.name
+                }}</p>
+        </div>
+        <div class="header-actions">
+            <a href="/process-routines" class="btn btn-secondary">
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
+                    stroke-linecap="round" stroke-linejoin="round">
+                    <line x1="19" y1="12" x2="5" y2="12"></line>
+                    <polyline points="12 19 5 12 12 5"></polyline>
+                </svg>
+                Voltar
+            </a>
+        </div>
+    </div>
+
+    <!-- Sistema de Abas -->
+    <div class="tabs-container surface-card shadow-sm">
+        <div class="tabs-header">
+            <button class="tab-button active" data-tab="routine" onclick="switchTab('routine')">
+                <span>📋</span> Dados da Rotina
+            </button>
+            <button class="tab-button" data-tab="collaborators" onclick="switchTab('collaborators')" {% if is_new
+                %}disabled style="opacity: 0.5; cursor: not-allowed;" {% endif %}>
+                <span>👥</span> Executores
+            </button>
+        </div>
+
+        <!-- Aba: Dados da Rotina -->
+        <div id="tab-routine" class="tab-content active">
+            <form id="routineDataForm">
+                <div class="form-grid">
+                    <!-- Row 1: Nome da Rotina | Processo Associado -->
+                    <div class="form-group">
+                        <label class="form-label">Nome da Rotina *</label>
+                        <input type="text" name="name" class="form-control" value="{{ routine.name }}" required>
+                    </div>
+
+                    <div class="form-group">
+                        <label class="form-label">Processo Associado *</label>
+                        <select name="process_id" class="form-select-custom" required>
+                            <option value="">Selecione um processo...</option>
+                            {% for process in processes %}
+                            <option value="{{ process.id }}" {{ 'selected' if routine.process_id==process.id else '' }}>
+                                {{ process.code }} - {{ process.name }}
+                            </option>
+                            {% endfor %}
+                        </select>
+                    </div>
+
+                    <!-- Row 2: Tipo de Agendamento (full width) -->
+                    <div class="form-group" style="grid-column: 1 / -1;">
+                        <label class="form-label">Tipo de Agendamento *</label>
+                        <select name="schedule_type" class="form-select-custom" id="scheduleType" required>
+                            <option value="daily" {{ 'selected' if routine.schedule_type=='daily' else '' }}>🌅 Diário
+                            </option>
+                            <option value="weekly" {{ 'selected' if routine.schedule_type=='weekly' else '' }}>📅
+                                Semanal
+                            </option>
+                            <option value="monthly" {{ 'selected' if routine.schedule_type=='monthly' else '' }}>📆
+                                Mensal
+                            </option>
+                            <option value="quarterly" {{ 'selected' if routine.schedule_type=='quarterly' else '' }}>📊
+                                Trimestral</option>
+                            <option value="yearly" {{ 'selected' if routine.schedule_type=='yearly' else '' }}>🎉 Anual
+                            </option>
+                            <option value="specific" {{ 'selected' if routine.schedule_type=='specific' else '' }}>📌
+                                Data
+                                Específica</option>
+                        </select>
+                    </div>
+
+                    <!-- Row 3: Detalhes do Agendamento (full width) -->
+                    <div class="form-group" id="scheduleValueGroup" style="grid-column: 1 / -1;">
+                        <label class="form-label" id="scheduleValueLabel">Detalhes do Agendamento *</label>
+                        <input type="text" name="schedule_value" class="form-control" id="scheduleValue"
+                            value="{{ routine.schedule_value or '' }}">
+                        <span class="form-hint" id="scheduleValueHint"></span>
+                    </div>
+
+                    <!-- Checkboxes para dias da semana -->
+                    <div class="form-group" id="weekdaysGroup" style="display: none; grid-column: 1 / -1;">
+                        <label class="form-label">Dias da Semana *</label>
+                        <div class="weekdays-grid">
+                            {% set selected_days = (routine.schedule_value or '').split(',') %}
+                            {% for day, label in [('segunda', 'Segunda'), ('terca', 'Terça'), ('quarta', 'Quarta'),
+                            ('quinta', 'Quinta'), ('sexta', 'Sexta'), ('sabado', 'Sábado'), ('domingo', 'Domingo')] %}
+                            <label class="weekday-checkbox-label">
+                                <input type="checkbox" name="weekday" value="{{ day }}" {{ 'checked' if day in
+                                    selected_days else '' }}>
+                                <span>{{ label }}</span>
+                            </label>
+                            {% endfor %}
+                        </div>
+                    </div>
+
+
+                    <!-- Row 4: Prazo (Dias) | Prazo (Horas) | Peso de Pontuação -->
+                    <div class="compact-fields-row">
+                        <div class="form-group form-group-compact">
+                            <label class="form-label">⏱️ Prazo (Dias)</label>
+                            <input type="number" name="deadline_days" class="form-control-compact" min="0" max="365"
+                                value="{{ routine.deadline_days or 0 }}">
+                        </div>
+
+                        <div class="form-group form-group-compact">
+                            <label class="form-label">⏰ Prazo (Horas)</label>
+                            <input type="number" name="deadline_hours" class="form-control-compact" min="0" max="24"
+                                value="{{ routine.deadline_hours or 0 }}">
+                        </div>
+
+                        <div class="form-group form-group-compact">
+                            <label class="form-label">⭐ Peso de Pontuação *</label>
+                            <input type="number" name="score_weight" class="form-control-compact" min="0.1" step="0.1"
+                                max="10" value="{{ routine.score_weight or 1.0 }}" required>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="form-group" style="margin-top: 1.5rem;">
+                    <label class="form-label">Descrição / Instruções</label>
+                    <textarea name="description" class="form-control"
+                        rows="4">{{ routine.description or '' }}</textarea>
+                </div>
+
+                <div class="form-actions" style="margin-top: 2rem; display: flex; gap: 1rem; align-items: center;">
+                    {% if not is_new %}
+                    <button type="button" class="btn btn-outline-danger" onclick="deleteRoutine()"
+                        style="margin-right: auto;">
+                        <i class="fas fa-trash me-2"></i> Excluir Rotina
+                    </button>
+                    {% else %}
+                    <div style="flex: 1"></div>
+                    {% endif %}
+                    <a href="/process-routines" class="btn btn-secondary">Cancelar</a>
+                    <button type="submit" class="btn btn-primary">💾 Salvar Alterações</button>
+                </div>
+            </form>
+        </div>
+
+        <!-- Aba: Executores -->
+        <div id="tab-collaborators" class="tab-content">
+            <div id="collaboratorFormCard" class="surface-secondary p-4 rounded-3 mb-4"
+                style="display: none; border: 1px dashed var(--border);">
+                <h4 class="text-h4 mb-3">Adicionar Executor</h4>
+                <form id="collaboratorForm">
+                    <input type="hidden" id="collaboratorId" name="collaborator_id">
+                    <div class="form-grid">
+                        <div class="form-group">
+                            <label class="form-label">Colaborador *</label>
+                            <select name="employee_id" id="collaboratorEmployeeId" class="form-select"
+                                required></select>
+                        </div>
+                        <div class="form-group">
+                            <label class="form-label">Horas/Dedicação *</label>
+                            <input type="number" name="hours_used" id="hoursUsed" class="form-control" step="0.5"
+                                min="0.5" required>
+                        </div>
+                    </div>
+                    <div class="form-group mt-3">
+                        <label class="form-label">Notas</label>
+                        <textarea name="notes" id="collaboratorNotes" class="form-control" rows="2"></textarea>
+                    </div>
+                    <div class="d-flex justify-content-end gap-2 mt-3">
+                        <button type="button" class="btn btn-secondary btn-sm"
+                            onclick="cancelCollaboratorForm()">Cancelar</button>
+                        <button type="submit" class="btn btn-primary btn-sm">Salvar Executor</button>
+                    </div>
+                </form>
+            </div>
+
+            <div class="d-flex justify-content-between align-items-center mb-4">
+                <h3 class="text-h3">Equipe Executora</h3>
+                <button class="btn btn-primary btn-sm" onclick="openAddCollaboratorForm()">➕ Adicionar</button>
+            </div>
+
+            <table class="routines-table">
+                <thead>
+                    <tr>
+                        <th>Nome</th>
+                        <th>Dedicação</th>
+                        <th>Notas</th>
+                        <th>Ações</th>
+                    </tr>
+                </thead>
+                <tbody id="collaboratorsTableBody">
+                    <!-- JS -->
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+
+<style>
+    /* Form Grid Layout */
+    .form-grid {
+        display: grid;
+        grid-template-columns: repeat(2, 1fr);
+        gap: 1.5rem;
+        margin-bottom: 1rem;
+    }
+
+    @media (max-width: 768px) {
+        .form-grid {
+            grid-template-columns: 1fr;
+        }
+    }
+
+    .tabs-header {
+        display: flex;
+        border-bottom: 1px solid var(--border);
+        background: var(--surface-secondary);
+        padding: 0 1rem;
+    }
+
+    .tab-button {
+        padding: 1rem 1.5rem;
+        background: none;
+        border: none;
+        font-weight: 600;
+        color: var(--text-tertiary);
+        cursor: pointer;
+        border-bottom: 2px solid transparent;
+        transition: all 0.2s;
+    }
+
+    .tab-button.active {
+        color: var(--primary);
+        border-bottom-color: var(--primary);
+    }
+
+    .tab-content {
+        display: none;
+        padding: 2rem;
+    }
+
+    .tab-content.active {
+        display: block;
+    }
+
+    .weekdays-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fill, minmax(140px, 1fr));
+        gap: 0.5rem;
+        margin-top: 0.5rem;
+    }
+
+    .weekday-checkbox-label {
+        display: flex;
+        align-items: center;
+        gap: 0.5rem;
+        padding: 0.5rem 0.75rem;
+        background: var(--surface-secondary);
+        border: 1px solid var(--border);
+        border-radius: 8px;
+        cursor: pointer;
+        font-size: 0.85rem;
+    }
+
+    .weekday-checkbox-label:hover {
+        border-color: var(--primary);
+    }
+
+    .weekday-checkbox-label input:checked+span {
+        color: var(--primary);
+        font-weight: 700;
+    }
+
+    .form-hint {
+        font-size: 0.8rem;
+        color: var(--text-secondary);
+        margin-top: 8px;
+        display: block;
+        background: var(--primary-light);
+        padding: 0.75rem 1rem;
+        border-radius: 8px;
+        border-left: 3px solid var(--primary);
+        line-height: 1.5;
+    }
+
+    .form-hint:empty {
+        display: none;
+    }
+
+    /* Custom Select Styling */
+    .form-select-custom {
+        width: 100%;
+        padding: 0.875rem 2.5rem 0.875rem 1.25rem;
+        background: var(--surface);
+        border: 1.5px solid var(--border);
+        border-radius: var(--btn-radius);
+        color: var(--text-primary);
+        font-family: inherit;
+        font-size: 1rem;
+        font-weight: 500;
+        transition: var(--transition);
+        cursor: pointer;
+        appearance: none;
+        background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='16' height='16' viewBox='0 0 24 24' fill='none' stroke='%2364748b' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpolyline points='6 9 12 15 18 9'%3E%3C/polyline%3E%3C/svg%3E");
+        background-repeat: no-repeat;
+        background-position: right 1rem center;
+        background-size: 16px;
+    }
+
+    .form-select-custom:hover {
+        border-color: var(--primary);
+        background-color: var(--surface);
+    }
+
+    .form-select-custom:focus {
+        outline: none;
+        border-color: var(--primary);
+        background: white;
+        box-shadow: 0 0 0 4px var(--primary-light);
+    }
+
+    .form-select-custom option {
+        padding: 0.75rem;
+        font-weight: 500;
+    }
+
+    /* Compact Fields Row - 3 columns in one line */
+    .compact-fields-row {
+        grid-column: 1 / -1;
+        display: grid;
+        grid-template-columns: repeat(3, 1fr);
+        gap: 1.5rem;
+    }
+
+    @media (max-width: 768px) {
+        .compact-fields-row {
+            grid-template-columns: 1fr;
+        }
+    }
+
+    /* Compact Form Fields */
+    .form-group-compact {
+        /* No max-width needed - grid handles sizing */
+    }
+
+    .form-control-compact {
+        width: 100%;
+        padding: 0.875rem 1rem;
+        background: var(--surface);
+        border: 1.5px solid var(--border);
+        border-radius: var(--btn-radius);
+        color: var(--text-primary);
+        font-family: inherit;
+        font-size: 1rem;
+        font-weight: 600;
+        text-align: center;
+        transition: var(--transition);
+    }
+
+    .form-control-compact:focus {
+        outline: none;
+        border-color: var(--primary);
+        background: white;
+        box-shadow: 0 0 0 4px var(--primary-light);
+    }
+
+    .form-control-compact:hover {
+        border-color: var(--primary);
+    }
+
+    /* Remove spinner arrows from number inputs */
+    .form-control-compact::-webkit-outer-spin-button,
+    .form-control-compact::-webkit-inner-spin-button {
+        -webkit-appearance: none;
+        margin: 0;
+    }
+
+    .form-control-compact[type=number] {
+        -moz-appearance: textfield;
+    }
+</style>
+
+<script>
+    const companyId = parseInt('{{ company.id if company else 0 }}') || null;
+    const routineId = parseInt('{{ routine.id or "" }}') || null;
+    const isNew = {{ 'true' if is_new else 'false' }};
+
+    function switchTab(t) {
+        console.log('Switching to tab:', t);
+        const tabs = ['routine', 'collaborators'];
+        if (!tabs.includes(t)) return;
+
+        // Update buttons
+        document.querySelectorAll('.tab-button').forEach(b => {
+            b.classList.remove('active');
+            if (b.dataset.tab === t) b.classList.add('active');
+        });
+
+        // Update content
+        document.querySelectorAll('.tab-content').forEach(c => {
+            c.classList.remove('active');
+            if (c.id === `tab-${t}`) c.classList.add('active');
+        });
+
+        // Load data if needed
+        if (t === 'collaborators' && routineId) {
+            loadCollaborators();
+        }
+    }
+
+    // Handle tab from URL on load
+    document.addEventListener('DOMContentLoaded', () => {
+        const urlParams = new URLSearchParams(window.location.search);
+        const activeTab = urlParams.get('tab');
+        if (activeTab && (activeTab === 'routine' || (activeTab === 'collaborators' && !isNew))) {
+            switchTab(activeTab);
+        }
+    });
+
+    const scheduleType = document.getElementById('scheduleType');
+    const scheduleValueGroup = document.getElementById('scheduleValueGroup');
+    const scheduleValue = document.getElementById('scheduleValue');
+    const scheduleValueLabel = document.getElementById('scheduleValueLabel');
+    const scheduleValueHint = document.getElementById('scheduleValueHint');
+    const weekdaysGroup = document.getElementById('weekdaysGroup');
+
+    function updateScheduleFields() {
+        const type = scheduleType.value;
+        weekdaysGroup.style.display = type === 'weekly' ? 'block' : 'none';
+        scheduleValueGroup.style.display = type === 'weekly' ? 'none' : 'block';
+
+        // Clear previous values
+        scheduleValue.placeholder = '';
+        scheduleValueHint.textContent = '';
+
+        if (type === 'daily') {
+            scheduleValue.type = 'time';
+            scheduleValueLabel.textContent = '🕐 Horário';
+            scheduleValue.placeholder = '09:00';
+            scheduleValueHint.textContent = 'Horário em que a rotina deve ser executada diariamente';
+        } else if (type === 'monthly') {
+            scheduleValue.type = 'number';
+            scheduleValueLabel.textContent = '📅 Dia do Mês';
+            scheduleValue.placeholder = '15';
+            scheduleValue.min = '1';
+            scheduleValue.max = '31';
+            scheduleValueHint.textContent = 'Dia do mês (1-31) em que a rotina será executada';
+        } else if (type === 'quarterly') {
+            scheduleValue.type = 'text';
+            scheduleValueLabel.textContent = '📊 Mês e Dia do Trimestre';
+            scheduleValue.placeholder = 'Ex: 2-15 (segundo mês, dia 15)';
+            scheduleValueHint.textContent = 'Formato: MÊS-DIA (Mês: 1-3 do trimestre, Dia: 1-31). Ex: "2-15" = segundo mês do trimestre, dia 15';
+        } else if (type === 'yearly') {
+            scheduleValue.type = 'text';
+            scheduleValueLabel.textContent = '🎉 Dia e Mês do Ano';
+            scheduleValue.placeholder = 'Ex: 15/03, 21/12';
+            scheduleValueHint.textContent = 'Formato: DD/MM (Dia: 01-31, Mês: 01-12). Ex: "15/03" = 15 de março de cada ano';
+        } else if (type === 'specific') {
+            scheduleValue.type = 'date';
+            scheduleValueLabel.textContent = '📌 Data Específica';
+            scheduleValueHint.textContent = 'Data única em que a rotina será executada';
+        } else {
+            scheduleValue.type = 'text';
+            scheduleValueLabel.textContent = 'Valor/Detalhe';
+        }
+    }
+
+    scheduleType.addEventListener('change', updateScheduleFields);
+    updateScheduleFields();
+
+    document.getElementById('routineDataForm').addEventListener('submit', async function (e) {
+        e.preventDefault();
+        const formData = new FormData(this);
+        const data = Object.fromEntries(formData);
+
+        if (data.schedule_type === 'weekly') {
+            const days = Array.from(document.querySelectorAll('input[name="weekday"]:checked')).map(cb => cb.value);
+            data.schedule_value = days.join(',');
+        }
+
+        const url = isNew ? `/api/companies/${companyId}/process-routines` : `/api/companies/${companyId}/process-routines/${routineId}`;
+        const method = isNew ? 'POST' : 'PUT';
+
+        const res = await fetch(url, {
+            method,
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(data)
+        });
+        const result = await res.json();
+
+        if (result.success) {
+            alert('Sucesso!');
+            if (isNew) window.location.href = `/companies/${companyId}/routines/${result.routine_id}?tab=collaborators`;
+            else window.location.reload();
+        } else {
+            alert('Erro: ' + result.message);
+        }
+    });
+
+    async function deleteRoutine() {
+        if (!routineId) return;
+        if (!confirm('Deseja realmente excluir esta rotina?')) return;
+
+        try {
+            const res = await fetch(`/api/companies/${companyId}/process-routines/${routineId}`, {
+                method: 'DELETE'
+            });
+            const result = await res.json();
+            if (result.success) {
+                alert('Rotina excluída com sucesso.');
+                window.location.href = `/companies/${companyId}/process-routines`;
+            } else {
+                alert('Erro ao excluir: ' + result.message);
+            }
+        } catch (e) {
+            console.error(e);
+            alert('Erro de conexão ao excluir.');
+        }
+    }
+
+    let collaboratorsState = [];
+
+    async function loadCollaborators() {
+        if (!routineId) return;
+        const res = await fetch(`/api/routines/${routineId}/collaborators`);
+        const result = await res.json();
+        const tbody = document.getElementById('collaboratorsTableBody');
+
+        if (result.success) {
+            collaboratorsState = result.collaborators || [];
+            tbody.innerHTML = collaboratorsState.map(c => `
+                <tr>
+                    <td>
+                        <div class="fw-bold">${c.employee_name}</div>
+                        <div class="text-tertiary small">${c.employee_email}</div>
+                    </td>
+                    <td><span class="badge bg-light text-dark border">${c.hours_used}h</span></td>
+                    <td><div class="text-tertiary small">${c.notes || '-'}</div></td>
+                    <td>
+                        <button class="btn btn-link btn-sm" onclick="editCollaboratorById(${c.id})">✏️</button>
+                        <button class="btn btn-link btn-sm text-danger" onclick="deleteCollaborator(${c.id})">🗑️</button>
+                    </td>
+                </tr>
+            `).join('');
+        }
+    }
+
+    function editCollaboratorById(id) {
+        const c = collaboratorsState.find(item => item.id === id);
+        if (c) editCollaborator(c);
+    }
+
+    function openAddCollaboratorForm() {
+        document.getElementById('collaboratorFormCard').style.display = 'block';
+        loadEmployees();
+    }
+
+    async function loadEmployees() {
+        const res = await fetch(`/api/companies/${companyId}/employees`);
+        const result = await res.json();
+        const select = document.getElementById('collaboratorEmployeeId');
+        select.innerHTML = result.employees.map(e => `<option value="${e.id}">${e.name}</option>`).join('');
+    }
+
+    document.getElementById('collaboratorForm').addEventListener('submit', async function (e) {
+        e.preventDefault();
+        const data = Object.fromEntries(new FormData(this));
+        const cId = document.getElementById('collaboratorId').value;
+        const url = cId ? `/api/routines/${routineId}/collaborators/${cId}` : `/api/routines/${routineId}/collaborators`;
+        const method = cId ? 'PUT' : 'POST';
+
+        const res = await fetch(url, {
+            method,
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(data)
+        });
+        if ((await res.json()).success) {
+            cancelCollaboratorForm();
+            loadCollaborators();
+        }
+    });
+
+    function cancelCollaboratorForm() {
+        document.getElementById('collaboratorFormCard').style.display = 'none';
+        document.getElementById('collaboratorForm').reset();
+    }
+
+    function editCollaborator(c) {
+        openAddCollaboratorForm();
+        document.getElementById('collaboratorId').value = c.id;
+        document.getElementById('collaboratorEmployeeId').value = c.employee_id;
+        document.getElementById('hoursUsed').value = c.hours_used;
+        document.getElementById('collaboratorNotes').value = c.notes;
+    }
+
+    async function deleteCollaborator(id) {
+        if (!confirm('Remover executor?')) return;
+        await fetch(`/api/routines/${routineId}/collaborators/${id}`, { method: 'DELETE' });
+        loadCollaborators();
+    }
+</script>
+{% endblock %}
+
+{% block sidebar_right %}{% endblock %}

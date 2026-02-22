@@ -1,0 +1,71 @@
+name: Deploy to Configr
+
+on:
+  push:
+    branches:
+      - main
+
+jobs:
+  validate:
+    name: 🧪 Validate Code
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: '3.12'
+
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install flake8
+          # Apenas checagem de sintaxe para ser rápido
+          
+      - name: Check Syntax (Flake8)
+        run: |
+          # Checa apenas erros fatais e de sintaxe (E9, F63, F7, F82)
+          flake8 . --count --select=E9,F63,F7,F82 --show-source --statistics
+
+  deploy:
+    name: 🚀 Deploy to Configr
+    needs: validate
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Executing remote ssh commands to deploy
+        uses: appleboy/ssh-action@master
+        with:
+          host: ${{ secrets.CONFIGR_HOST }}
+          username: ${{ secrets.CONFIGR_USER }}
+          key: ${{ secrets.CONFIGR_SSH_PRIVATE_KEY }}
+          port: ${{ secrets.CONFIGR_PORT }}
+          script: |
+            cd /home/app2/public_html
+            
+            # Atualizar código
+            git fetch origin main
+            git reset --hard origin/main
+            
+            # Ativar venv e atualizar
+            if [ -d "venv" ]; then
+              source venv/bin/activate
+            elif [ -d ".venv" ]; then
+              source .venv/bin/activate
+            fi
+            
+            pip install -r requirements.txt
+            
+            # Migrações
+            export FLASK_APP=app_pev.py
+            flask db upgrade
+            
+            # Restart da aplicação (Apache/Passenger no Configr)
+            mkdir -p tmp
+            touch tmp/restart.txt
+            
+            echo "✅ Deploy concluído com sucesso em $(date)"

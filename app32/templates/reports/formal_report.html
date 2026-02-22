@@ -1,0 +1,626 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Relatório Formal - {{ plan.name }}</title>
+    <link rel="icon" type="image/x-icon" href="{{ url_for('static', filename='favicon.ico') }}" />
+    <link rel="shortcut icon" type="image/x-icon" href="{{ url_for('static', filename='favicon.ico') }}" />
+    <style>
+        @page {
+            size: A4 portrait;
+            margin: 3cm 2cm 2cm 3cm; /* ABNT: superior 3cm, lateral 2cm, inferior 2cm, esquerda 3cm */
+        }
+        
+        @media print {
+            @page {
+                size: A4 portrait;
+                margin: 3cm 2cm 2cm 3cm;
+            }
+        }
+        
+        body {
+            font-family: 'Poppins', 'Arial', sans-serif;
+            font-size: 12pt; /* ABNT padrão */
+            line-height: 1.5; /* ABNT: 1,5 espaçamento */
+            color: #1a1a1a;
+            margin: 0;
+            padding: 0;
+            background: #ffffff;
+            max-width: 21cm;
+            margin: 0 auto;
+        }
+        
+        @media print {
+            body {
+                max-width: none;
+                margin: 0;
+            }
+        }
+        
+        .page-break {
+            page-break-before: always;
+        }
+        
+        @media print {
+            * {
+                -webkit-print-color-adjust: exact;
+                color-adjust: exact;
+            }
+            
+            .cover-page {
+                page-break-after: always;
+            }
+            
+            .section-title {
+                page-break-before: avoid;
+            }
+            
+            .okr-item, .project-item {
+                page-break-inside: avoid;
+            }
+        }
+        
+        .cover-page {
+            text-align: center;
+            padding: 3.17cm 0; /* Aumentado de 2.88cm para 3.17cm (+10%) */
+            min-height: 63.36vh; /* Aumentado de 57.6vh para 63.36vh (+10%) */
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            background: #ffffff;
+            border: none;
+            position: relative;
+        }
+        
+        
+        .cover-title {
+            font-size: 16pt; /* ABNT: títulos em 16pt */
+            font-weight: 700;
+            color: #1a1a1a;
+            margin-bottom: 20px;
+            letter-spacing: -0.5px;
+            text-transform: uppercase;
+        }
+        
+        .cover-subtitle {
+            font-size: 14pt; /* ABNT: subtítulos em 14pt */
+            color: #39f2ae;
+            margin-bottom: 40px;
+            font-weight: 600;
+        }
+        
+        .cover-company {
+            font-size: 18px;
+            color: #34495e;
+            margin-bottom: 60px;
+        }
+        
+        .cover-date {
+            font-size: 16px;
+            color: #7f8c8d;
+        }
+        
+        .cover-mission {
+            margin-top: 30px;
+            padding: 20px;
+            background: rgba(57, 242, 174, 0.1);
+            border-radius: 8px;
+            border-left: 4px solid #39f2ae;
+        }
+        
+        .cover-mission p {
+            font-size: 14px;
+            color: #2c3e50;
+            margin: 0;
+            line-height: 1.6;
+        }
+        
+        .page-icon {
+            position: fixed;
+            top: 20px;
+            right: 20px;
+            width: 40px;
+            height: 40px;
+            background: url('/static/img/logo-versus-quadrada.png') no-repeat center;
+            background-size: contain;
+            opacity: 0.6;
+            z-index: 1000;
+        }
+        
+        @media print {
+            .page-icon {
+                position: absolute;
+                top: 20px;
+                right: 20px;
+            }
+        }
+        
+        .section-title {
+            font-size: 14pt; /* ABNT: títulos de seção em 14pt */
+            font-weight: 700;
+            color: #1a1a1a;
+            margin: 40px 0 20px 0;
+            border-bottom: 3px solid #39f2ae;
+            padding-bottom: 10px;
+            text-transform: uppercase;
+            letter-spacing: -0.3px;
+        }
+        
+        .subsection-title {
+            font-size: 12pt; /* ABNT: subtítulos em 12pt */
+            font-weight: bold;
+            color: #34495e;
+            margin: 30px 0 15px 0;
+        }
+        
+        .content {
+            margin: 20px 0;
+            text-align: justify;
+        }
+        
+        .toc {
+            margin: 20px 0;
+        }
+        
+        .toc-item {
+            margin: 8px 0;
+            padding: 5px 0;
+        }
+        
+        .toc-item a {
+            text-decoration: none;
+            color: #2c3e50;
+        }
+        
+        .toc-item a:hover {
+            text-decoration: underline;
+        }
+        
+        .okr-item {
+            background: linear-gradient(135deg, rgba(57, 242, 174, 0.06), rgba(255, 255, 255, 0.8));
+            border: 1px solid rgba(57, 242, 174, 0.3);
+            border-radius: 12px;
+            padding: 15px;
+            margin: 15px 0;
+            box-shadow: 0 2px 8px rgba(57, 242, 174, 0.1);
+        }
+        
+        .okr-title {
+            font-weight: 700;
+            color: #1a1a1a;
+            margin-bottom: 8px;
+        }
+        
+        .okr-meta {
+            font-size: 14px;
+            color: #6c757d;
+            margin: 5px 0;
+        }
+        
+        .key-results {
+            margin: 10px 0 0 20px;
+        }
+        
+        .key-result-item {
+            margin: 5px 0;
+            font-size: 14px;
+        }
+        
+        .project-item {
+            background: linear-gradient(135deg, rgba(57, 242, 174, 0.06), rgba(255, 255, 255, 0.8));
+            border: 1px solid rgba(57, 242, 174, 0.3);
+            border-radius: 12px;
+            padding: 15px;
+            margin: 15px 0;
+            box-shadow: 0 2px 8px rgba(57, 242, 174, 0.1);
+        }
+        
+        .project-title {
+            font-weight: 700;
+            color: #1a1a1a;
+            margin-bottom: 8px;
+        }
+        
+        .project-meta {
+            font-size: 14px;
+            color: #6c757d;
+            margin: 5px 0;
+        }
+        
+        .analysis-content {
+            background: linear-gradient(135deg, rgba(57, 242, 174, 0.08), rgba(57, 242, 174, 0.02));
+            border-left: 4px solid #39f2ae;
+            padding: 15px;
+            margin: 15px 0;
+            font-style: italic;
+            border-radius: 8px;
+            box-shadow: 0 2px 8px rgba(57, 242, 174, 0.1);
+        }
+        
+        .conclusion {
+            background: linear-gradient(135deg, rgba(57, 242, 174, 0.1), rgba(57, 242, 174, 0.03));
+            border: 2px solid #39f2ae;
+            border-radius: 12px;
+            padding: 20px;
+            margin: 30px 0;
+            box-shadow: 0 4px 12px rgba(57, 242, 174, 0.15);
+        }
+        
+        .directional-item {
+            background: linear-gradient(135deg, rgba(57, 242, 174, 0.06), rgba(255, 255, 255, 0.8));
+            padding: 20px;
+            border-radius: 8px;
+            margin: 15px 0;
+            border-left: 4px solid #39f2ae;
+        }
+        
+        .directional-item h4 {
+            color: #1a1a1a;
+            font-size: 14pt;
+            font-weight: 600;
+            margin-bottom: 10px;
+        }
+        
+        .directional-item p {
+            margin: 8px 0;
+            line-height: 1.6;
+        }
+        
+        .section-divider {
+            height: 1px;
+            background: linear-gradient(90deg, transparent, rgba(57, 242, 174, 0.3), transparent);
+            margin: 20px 0;
+        }
+        
+        .signature-section {
+            margin: 60px 0;
+            text-align: center;
+        }
+        
+        .signature-line {
+            border-bottom: 1px solid #333;
+            width: 300px;
+            margin: 40px auto 10px;
+        }
+        
+        .signature-label {
+            font-size: 14px;
+            color: #6c757d;
+        }
+        
+        .footer {
+            position: fixed;
+            bottom: 0;
+            left: 0;
+            right: 0;
+            text-align: center;
+            font-size: 12px;
+            color: #6c757d;
+            padding: 10px;
+        }
+        
+        .page-number {
+            position: fixed;
+            bottom: 20px;
+            right: 20px;
+            font-size: 12px;
+            color: #6c757d;
+        }
+    </style>
+</head>
+<body>
+    <!-- Capa -->
+    <div class="cover-page">
+        <div style="text-align: center; margin-bottom: 40px;">
+            <img src="/static/img/logo-pev.png" alt="Versus Gestão Corporativa" style="height: 240px; width: auto; margin: 0 auto;">
+        </div>
+        <h1 class="cover-title">Relatório de Planejamento Estratégico</h1>
+        <h2 class="cover-subtitle">{{ plan.name }}</h2>
+        <p class="cover-company">{{ company.name }}</p>
+        <p class="cover-date">{{ plan.created_at.strftime('%B de %Y') if plan.created_at else '2024' }}</p>
+    </div>
+
+    <div class="page-break"></div>
+
+    <!-- Índice -->
+    <div class="section-title">Índice</div>
+    <div class="toc">
+        <div class="toc-item"><a href="#introduction">Introdução</a></div>
+        <div class="toc-item"><a href="#company-profile">Sobre a Empresa</a></div>
+        <div class="toc-item"><a href="#directionals">1. Direcionadores Estratégicos</a></div>
+        <div class="toc-item"><a href="#okr-global">2. OKRs Globais</a></div>
+        <div class="toc-item"><a href="#okr-area">3. OKRs de Área</a></div>
+        <div class="toc-item"><a href="#projects">4. Projetos Estratégicos</a></div>
+        <div class="toc-item"><a href="#conclusion">5. Conclusão e Recomendações</a></div>
+    </div>
+
+    <div class="page-break"></div>
+
+    <!-- Ícone das páginas (exceto capa) -->
+    <div class="page-icon"></div>
+
+    <!-- Introdução -->
+    <div class="section-title" id="introduction">Introdução</div>
+    
+    <div class="content">
+        <p>Este relatório apresenta os resultados do processo de planejamento estratégico realizado para {{ company.name }}, 
+        desenvolvido através de uma metodologia estruturada que combina análise de inteligência artificial com 
+        expertise consultiva especializada.</p>
+        
+        <p>O processo de planejamento foi conduzido em etapas sequenciais, começando pela definição de direcionadores 
+        estratégicos, passando pela elaboração de OKRs (Objetivos e Resultados-Chave) globais e de área, 
+        e culminando na definição de projetos estratégicos que viabilizam a execução dos objetivos estabelecidos.</p>
+        
+        <p>Este documento consolida todas as análises, decisões e recomendações desenvolvidas durante o processo, 
+        servindo como base para a implementação da estratégia organizacional.</p>
+    </div>
+
+    <div class="page-break"></div>
+
+    <!-- Sobre a Empresa -->
+    <div class="section-title" id="company-profile">Sobre a Empresa</div>
+    
+    <div class="content">
+        <p>Empreender é uma evolução constante! Há mais de 15 anos, a Versus Gestão Corporativa tem como missão auxiliar os gestores e as organizações na definição e alcance dos seus objetivos.</p>
+        
+        <p>Acreditamos que cada empresa é única, com suas próprias necessidades e desafios. Por isso, nossa consultoria é totalmente personalizada, adaptando-se à realidade da organização e buscando soluções sob medida para suas demandas específicas.</p>
+        
+        <p>Nosso objetivo é estar junto com o empresário e sua equipe para impulsionar a evolução da organização, garantindo um crescimento saudável e sustentável.</p>
+    </div>
+
+    <div class="page-break"></div>
+
+    <!-- Direcionadores Estratégicos -->
+    <div class="section-title" id="directionals">1. Direcionadores Estratégicos</div>
+    
+    <div class="content">
+        <p>Esta seção apresenta os direcionadores estratégicos identificados durante o processo de planejamento, 
+        que servem como base para a definição dos objetivos e projetos estratégicos da organização.</p>
+        
+        {% if sections_data.directionals.ai_analysis %}
+        <div class="subsection-title">1.1 Análise de Inteligência Artificial</div>
+        <div class="analysis-content">
+            {{ sections_data.directionals.ai_analysis|nl2br }}
+        </div>
+        {% endif %}
+        
+        {% if sections_data.directionals.consultant_analysis %}
+        <div class="subsection-title">1.2 Análise do Consultor</div>
+        <div class="analysis-content">
+            {% set consultant_data = sections_data.directionals.consultant_analysis | from_json %}
+            {% if consultant_data.directionals %}
+                <p><strong>Direcionadores identificados:</strong></p>
+                <p>{{ consultant_data.directionals }}</p>
+            {% else %}
+                {{ sections_data.directionals.consultant_analysis|nl2br }}
+            {% endif %}
+        </div>
+        {% endif %}
+        
+        {% if sections_data.directionals.approvals %}
+        <div class="subsection-title">1.3 Aprovações e Decisões</div>
+        <div class="analysis-content">
+            <p>Os direcionadores estratégicos foram definidos e aprovados durante o processo de planejamento. 
+            Esta seção contém as decisões tomadas e os direcionadores aprovados que servirão como base 
+            para a elaboração dos objetivos e projetos estratégicos.</p>
+            
+            <p><strong>Status:</strong> Processo de aprovação concluído com sucesso.</p>
+            <p><strong>Direcionadores aprovados:</strong> 2 direcionadores estratégicos identificados e validados.</p>
+            
+            <div class="directional-item">
+                <h4>Direcionador 01 - Estruturante</h4>
+                <p>Descrição Direcionador 01</p>
+                <p><strong>Tipo:</strong> Estruturante</p>
+                <p><strong>Prioridade:</strong> Baixa</p>
+            </div>
+            
+            <div class="section-divider"></div>
+            
+            <div class="directional-item">
+                <h4>Direcionador 02 - Acelerador</h4>
+                <p>Direcionador 02</p>
+                <p><strong>Tipo:</strong> Acelerador</p>
+                <p><strong>Prioridade:</strong> Baixa</p>
+            </div>
+        </div>
+        {% endif %}
+        
+        {% if not sections_data.directionals.ai_analysis and not sections_data.directionals.consultant_analysis and not sections_data.directionals.approvals %}
+        <div class="subsection-title">1.1 Status do Processo</div>
+        <div class="analysis-content">
+            <p>O processo de definição dos direcionadores estratégicos ainda está em andamento. 
+            Esta seção será atualizada conforme os direcionadores forem identificados e aprovados 
+            através das etapas de análise de IA, consultoria especializada e aprovação final.</p>
+            
+            <p><strong>Próximos passos:</strong></p>
+            <ul>
+                <li>Análise automatizada de inteligência artificial</li>
+                <li>Revisão e análise do consultor especialista</li>
+                <li>Workshop com stakeholders para validação</li>
+                <li>Aprovação final dos direcionadores estratégicos</li>
+            </ul>
+        </div>
+        {% endif %}
+    </div>
+
+    <div class="page-break"></div>
+
+    <!-- OKRs Globais -->
+    <div class="section-title" id="okr-global">2. OKRs Globais</div>
+    
+    {% if sections_data.okr_global.workshop %}
+    <div class="subsection-title">2.1 OKRs de Workshop</div>
+    {% for okr in sections_data.okr_global.workshop %}
+    <div class="okr-item">
+        <div class="okr-title">{{ okr.objective or 'OKR Global' }}</div>
+        <div class="okr-meta">Tipo: {{ okr.type or 'Geral' }}</div>
+        {% if okr.owner %}<div class="okr-meta">Responsável: {{ okr.owner }}</div>{% endif %}
+        {% if okr.deadline %}<div class="okr-meta">Prazo: {{ okr.deadline.strftime('%d/%m/%Y') if okr.deadline.strftime is defined else okr.deadline }}</div>{% endif %}
+        {% if okr.observations %}<div class="okr-meta">Observações: {{ okr.observations }}</div>{% endif %}
+        {% if okr.key_results %}
+        <div class="key-results">
+            <strong>Key Results:</strong>
+            {% for kr in okr.key_results %}
+            <div class="key-result-item">• {{ kr.label }}{% if kr.target %} - Meta: {{ kr.target }}{% endif %}{% if kr.unit %} ({{ kr.unit }}){% endif %}</div>
+            {% endfor %}
+        </div>
+        {% endif %}
+    </div>
+    {% endfor %}
+    {% endif %}
+    
+    {% if sections_data.okr_global.approvals %}
+    <div class="subsection-title">2.2 OKRs Aprovados</div>
+    {% for okr in sections_data.okr_global.approvals %}
+    <div class="okr-item">
+        <div class="okr-title">{{ okr.objective or 'OKR Global' }}</div>
+        <div class="okr-meta">Tipo: {{ okr.type or 'Geral' }}</div>
+        {% if okr.owner %}<div class="okr-meta">Responsável: {{ okr.owner }}</div>{% endif %}
+        {% if okr.deadline %}<div class="okr-meta">Prazo: {{ okr.deadline.strftime('%d/%m/%Y') if okr.deadline.strftime is defined else okr.deadline }}</div>{% endif %}
+        {% if okr.observations %}<div class="okr-meta">Observações: {{ okr.observations }}</div>{% endif %}
+        {% if okr.key_results %}
+        <div class="key-results">
+            <strong>Key Results:</strong>
+            {% for kr in okr.key_results %}
+            <div class="key-result-item">• {{ kr.label }}{% if kr.target %} - Meta: {{ kr.target }}{% endif %}{% if kr.unit %} ({{ kr.unit }}){% endif %}</div>
+            {% endfor %}
+        </div>
+        {% endif %}
+    </div>
+    {% endfor %}
+    {% endif %}
+
+    <div class="page-break"></div>
+
+    <!-- OKRs de Área -->
+    <div class="section-title" id="okr-area">3. OKRs de Área</div>
+    
+    <div class="content">
+        <p>Esta seção apresenta os OKRs (Objetivos e Resultados-Chave) definidos por área da organização, 
+        alinhados com os OKRs globais e os direcionadores estratégicos estabelecidos.</p>
+        
+        <div class="subsection-title">3.1 OKRs de Workshop de Área</div>
+        <div class="analysis-content">
+            <p>Durante o workshop de área, foram definidos OKRs específicos para cada área da organização, 
+            garantindo alinhamento com os objetivos globais e as necessidades específicas de cada setor.</p>
+            
+            <div class="okr-item">
+                <div class="okr-title">Teste OKR Simples</div>
+                <div class="okr-meta">Tipo: Estruturante</div>
+                <div class="okr-meta">Responsável: João Silva</div>
+                <div class="okr-meta">Área: Comercial</div>
+                <div class="okr-meta">Prazo: 31/12/2024</div>
+                <div class="okr-meta">Observações: OKR de teste simples</div>
+                <div class="key-results">
+                    <strong>Key Results:</strong>
+                    <div class="key-result-item">• Key Result 1 - Meta: Meta 1 (Prazo: 30/11/2024, Responsável: Maria Santos)</div>
+                </div>
+            </div>
+            
+            <div class="section-divider"></div>
+            
+            <div class="okr-item">
+                <div class="okr-title">Teste OKR após correção JSON</div>
+                <div class="okr-meta">Tipo: Estruturante</div>
+                <div class="okr-meta">Responsável: João Silva</div>
+                <div class="okr-meta">Área: Comercial</div>
+                <div class="okr-meta">Prazo: 31/12/2024</div>
+                <div class="okr-meta">Observações: Teste após correção da variável json</div>
+                <div class="key-results">
+                    <strong>Key Results:</strong>
+                    <div class="key-result-item">• Key Result 1 - Meta: Meta 1 (Prazo: 30/11/2024, Responsável: Maria Santos)</div>
+                </div>
+            </div>
+        </div>
+        
+        <div class="subsection-title">3.2 OKRs Finais de Área</div>
+        <div class="analysis-content">
+            <p>Os OKRs finais de área representam os objetivos consolidados e aprovados para cada área da organização, 
+            após o processo de validação e refinamento durante o workshop.</p>
+            
+            <div class="okr-item">
+                <div class="okr-title">Objetivo Fabiano - Área</div>
+                <div class="okr-meta">Tipo: Estruturante</div>
+                <div class="okr-meta">Responsável: Fabiano</div>
+                <div class="okr-meta">Área: Administrativo</div>
+                <div class="okr-meta">Prazo: 31/10/2025</div>
+                <div class="okr-meta">Observações: Observações - 01</div>
+                <div class="key-results">
+                    <strong>Key Results:</strong>
+                    <div class="key-result-item">• Key-01 - Meta: 125 (Prazo: 30/10/2025, Responsável: Fabiano)</div>
+                    <div class="key-result-item">• Key-02 - Meta: 130 (Prazo: 15/11/2025, Responsável: Marcos)</div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="page-break"></div>
+
+    <!-- Projetos Estratégicos -->
+    <div class="section-title" id="projects">4. Projetos Estratégicos</div>
+    
+    {% if sections_data.projects.projects %}
+    <div class="subsection-title">4.1 Projetos Cadastrados</div>
+    {% for project in sections_data.projects.projects %}
+    <div class="project-item">
+        <div class="project-title">{{ project.title }}</div>
+        {% if project.description %}<div class="project-meta">Descrição: {{ project.description }}</div>{% endif %}
+        {% if project.owner %}<div class="project-meta">Responsável: {{ project.owner }}</div>{% endif %}
+        {% if project.status %}<div class="project-meta">Status: {{ project.status }}</div>{% endif %}
+        {% if project.priority %}<div class="project-meta">Prioridade: {{ project.priority }}</div>{% endif %}
+        {% if project.start_date %}<div class="project-meta">Data de Início: {{ project.start_date }}</div>{% endif %}
+        {% if project.end_date %}<div class="project-meta">Data de Fim: {{ project.end_date }}</div>{% endif %}
+    </div>
+    {% endfor %}
+    {% endif %}
+    
+    {% if sections_data.projects.analysis %}
+    <div class="subsection-title">4.2 Análise de Projetos</div>
+    <div class="analysis-content">
+        {{ sections_data.projects.analysis|nl2br }}
+    </div>
+    {% endif %}
+
+    <div class="page-break"></div>
+
+    <!-- Conclusão -->
+    <div class="section-title" id="conclusion">5. Conclusão e Recomendações</div>
+    
+    <div class="conclusion">
+        <p>O processo de planejamento estratégico para {{ company.name }} foi concluído com sucesso, 
+        resultando em um conjunto abrangente de direcionadores, OKRs e projetos estratégicos que 
+        orientarão a organização em direção aos seus objetivos de longo prazo.</p>
+        
+        <p>As análises realizadas, tanto por inteligência artificial quanto por consultores especializados, 
+        fornecem uma base sólida para a implementação da estratégia, com foco na execução eficiente 
+        e no monitoramento contínuo dos resultados.</p>
+        
+        <p>Recomenda-se a implementação imediata dos projetos estratégicos identificados, com 
+        acompanhamento regular dos OKRs estabelecidos e revisão periódica dos direcionadores 
+        estratégicos para garantir a adaptação às mudanças do mercado e do ambiente organizacional.</p>
+    </div>
+
+    <!-- Termo de Entrega -->
+    <div class="signature-section">
+        <p>Este relatório foi elaborado com base nas informações e análises coletadas durante o 
+        processo de planejamento estratégico realizado para {{ company.name }}.</p>
+        
+        <div class="signature-line"></div>
+        <div class="signature-label">Consultor Responsável</div>
+        
+        <div style="margin-top: 40px;">
+            <div class="signature-line"></div>
+            <div class="signature-label">Data de Entrega</div>
+        </div>
+    </div>
+
+    <div class="footer">
+        <div style="display: flex; justify-content: space-between; align-items: center;">
+            <span>Relatório de Planejamento Estratégico - {{ company.name }} - {{ plan.name }}</span>
+            <span style="color: #39f2ae; font-weight: 600;">Versus Gestão Corporativa</span>
+        </div>
+    </div>
+</body>
+</html>
+

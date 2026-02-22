@@ -1,0 +1,20 @@
+﻿    console.log('  - editarReuniao:', typeof window.editarReuniao);
+    console.log('  - novaReuniao:', typeof window.novaReuniao);
+    console.log('  - fecharEditor:', typeof window.fecharEditor);
+    console.log('  - gerarRelatorioReuniao:', typeof window.gerarRelatorioReuniao);
+
+    // Carregar dados dos funcionÃ¡rios de forma segura
+    document.addEventListener('DOMContentLoaded', function () {
+        try {
+            employeesData = {{ employees | tojson | safe }
+        };
+        console.log('Dados dos funcionários carregados:', employeesData.length);
+    } catch (e) {
+        console.error('Erro ao carregar dados dos funcionários:', e);
+        employeesData = [];
+    }
+    });
+
+</script>
+
+{% endblock %}

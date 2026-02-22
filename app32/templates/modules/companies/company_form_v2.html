@@ -1,0 +1,899 @@
+{% extends "layouts/app.html" %}
+
+{% block title %}{{ 'Configurações' if company_id else 'Nova Empresa' }} - Versus{% endblock %}
+
+{% block page_title %}Configurações / Empresas{% endblock %}
+
+{% block content %}
+<div style="max-width: 1100px; margin: 0 auto; padding-bottom: 5rem;">
+    <!-- Header -->
+    <div style="margin-bottom: 2.5rem; display: flex; justify-content: space-between; align-items: flex-end;">
+        <div>
+            <h1 class="text-h1" id="page-main-title">{{ 'Configurações da Unidade' if company_id else 'Cadastrar
+                Empresa' }}</h1>
+            <p class="text-subtitle">Gestão de identidade, usuários e parâmetros operacionais.</p>
+        </div>
+        <button class="btn btn-secondary" onclick="window.location.href='/companies'">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
+                style="margin-right: 8px;">
+                <path d="M19 12H5M12 19l-7-7 7-7" />
+            </svg>
+            Voltar
+        </button>
+    </div>
+
+    {% if company_id %}
+    <!-- Tabs Navigation -->
+    <div class="tabs-container mb-5" style="overflow-x: auto;">
+        <div class="tabs-list"
+            style="display: flex; gap: 0.5rem; border-bottom: 1px solid var(--border); padding-bottom: 2px; min-width: max-content;">
+            <button class="tab-btn active" data-tab="dados" onclick="switchTab('dados')">Identidade</button>
+            <button class="tab-btn" data-tab="economico" onclick="switchTab('economico')">Econômico</button>
+            <button class="tab-btn" data-tab="cargos" onclick="switchTab('cargos')">Cargos & Funções</button>
+            <button class="tab-btn" data-tab="colaboradores" onclick="switchTab('colaboradores')">Colaboradores</button>
+            <button class="tab-btn" data-tab="usuarios" onclick="switchTab('usuarios')">Acessos</button>
+            <button class="tab-btn" data-tab="pontuacao" onclick="switchTab('pontuacao')">Pontuação</button>
+            <button class="tab-btn" data-tab="config" onclick="switchTab('config')">Sistema</button>
+        </div>
+    </div>
+    {% endif %}
+
+    <div id="tab-content">
+        <!-- Tab: DADOS (Identidade) -->
+        <div id="content-dados" class="tab-pane active">
+            <form id="company-form" onsubmit="return handleSubmit(event)">
+                <input type="hidden" id="company-id" value="{{ company_id or '' }}">
+                <div class="card mb-4" style="border-radius: 24px;">
+                    <div class="card-body">
+                        <h3 style="font-size: 1.25rem; font-weight: 700; margin-bottom: 2rem;">Dados do Registro</h3>
+                        <div style="display: grid; grid-template-columns: 2fr 1fr; gap: 1.5rem; margin-bottom: 1.5rem;">
+                            <div class="form-group">
+                                <label class="form-label">Razão Social <span
+                                        style="color: var(--danger);">*</span></label>
+                                <input type="text" id="name" class="form-control" placeholder="Razão Social Completa"
+                                    required>
+                            </div>
+                            <div class="form-group">
+                                <label class="form-label">Código <span style="color: var(--danger);">*</span></label>
+                                <input type="text" id="client_code" class="form-control" placeholder="V1" required>
+                            </div>
+                        </div>
+                        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1.5rem; margin-bottom: 1.5rem;">
+                            <div class="form-group">
+                                <label class="form-label">Nome Fantasia / Apelido</label>
+                                <input type="text" id="legal_name" class="form-control" placeholder="Ex: Gestão Versus">
+                            </div>
+                            <div class="form-group">
+                                <label class="form-label">Propósito / Missão</label>
+                                <input type="text" id="mission" class="form-control"
+                                    placeholder="A razão de existir da empresa">
+                            </div>
+                        </div>
+                        <div class="form-group mb-4">
+                            <label class="form-label">Descrição Estratégica</label>
+                            <textarea id="description" class="form-control" rows="2"></textarea>
+                        </div>
+                        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1.5rem;">
+                            <div class="form-group">
+                                <label class="form-label">Visão</label>
+                                <textarea id="vision" class="form-control" rows="2"></textarea>
+                            </div>
+                            <div class="form-group">
+                                <label class="form-label">Valores</label>
+                                <textarea id="values" class="form-control" rows="2"></textarea>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <button type="submit" class="btn btn-special" style="width: 100%;">Salvar Identidade</button>
+            </form>
+        </div>
+
+        <!-- Tab: ECONOMICO -->
+        <div id="content-economico" class="tab-pane" style="display: none;">
+            <div class="card" style="border-radius: 24px;">
+                <div class="card-body">
+                    <h3 style="font-size: 1.25rem; font-weight: 700; margin-bottom: 2rem;">Cadastro Econômico</h3>
+                    <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1.5rem; margin-bottom: 1.5rem;">
+                        <div class="form-group">
+                            <label class="form-label">CNPJ</label>
+                            <input type="text" id="cnpj" class="form-control" placeholder="00.000.000/0000-00">
+                        </div>
+                        <div class="form-group">
+                            <label class="form-label">Segmento</label>
+                            <select id="segment" class="form-control">
+                                <option value="">-- Selecione --</option>
+                                <option value="Tecnologia">Tecnologia</option>
+                                <option value="Serviços">Serviços</option>
+                                <option value="Indústria">Indústria</option>
+                                <option value="Varejo">Varejo</option>
+                            </select>
+                        </div>
+                    </div>
+                    <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1.5rem; margin-bottom: 1.5rem;">
+                        <div class="form-group">
+                            <label class="form-label">Porte</label>
+                            <select id="size" class="form-control">
+                                <option value="">-- Selecione --</option>
+                                <option value="Pequeno">Pequeno</option>
+                                <option value="Médio">Médio</option>
+                                <option value="Grande">Grande</option>
+                            </select>
+                        </div>
+                        <div class="form-group">
+                            <label class="form-label">Cidade</label>
+                            <input type="text" id="city" class="form-control" placeholder="Ex: São Paulo">
+                        </div>
+                        <div class="form-group">
+                            <label class="form-label">Estado (UF)</label>
+                            <input type="text" id="state" class="form-control" maxlength="2" placeholder="Ex: SP">
+                        </div>
+                    </div>
+                    <button class="btn btn-special" onclick="handleSubmit()">Atualizar Dados Econômicos</button>
+                </div>
+            </div>
+        </div>
+
+        <!-- Tab: CARGOS -->
+        <div id="content-cargos" class="tab-pane" style="display: none;">
+            <div class="card" style="border-radius: 24px;">
+                <div class="card-body">
+                    <div
+                        style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 2rem;">
+                        <h3 style="font-size: 1.25rem; font-weight: 700;">Funções & Cargos</h3>
+                        <button class="btn btn-primary" onclick="showAddRoleModal()">Adicionar Cargo</button>
+                    </div>
+                    <table class="table-v2" style="width: 100%;">
+                        <thead>
+                            <tr>
+                                <th>Cargo</th>
+                                <th>Departamento</th>
+                                <th>Planejado</th>
+                                <th style="text-align: right;">Ações</th>
+                            </tr>
+                        </thead>
+                        <tbody id="roles-list-body"></tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+
+        <!-- Tab: COLABORADORES -->
+        <div id="content-colaboradores" class="tab-pane" style="display: none;">
+            <div class="card" style="border-radius: 24px;">
+                <div class="card-body">
+                    <div
+                        style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 2rem;">
+                        <h3 style="font-size: 1.25rem; font-weight: 700;">Base de Colaboradores</h3>
+                        <button class="btn btn-primary" onclick="showEmployeeModal()">Novo Colaborador</button>
+                    </div>
+                    <div style="overflow-x: auto;">
+                        <table class="table-v2" style="width: 100%;">
+                            <thead>
+                                <tr>
+                                    <th>Nome / Contato</th>
+                                    <th>Departamento</th>
+                                    <th>Status</th>
+                                    <th>Admissão</th>
+                                    <th style="text-align: right;">Ações</th>
+                                </tr>
+                            </thead>
+                            <tbody id="employees-full-body"></tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Tab: USUARIOS (Acessos) -->
+        <div id="content-usuarios" class="tab-pane" style="display: none;">
+            <div class="card" style="border-radius: 24px;">
+                <div class="card-body">
+                    <div
+                        style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 2.5rem;">
+                        <h3 style="font-size: 1.25rem; font-weight: 700;">Usuários com Acesso</h3>
+                        <button class="btn btn-primary" onclick="showAddUserModal()">Vincular Novo</button>
+                    </div>
+                    <table class="table-v2" style="width: 100%;">
+                        <thead>
+                            <tr>
+                                <th>Usuário</th>
+                                <th>Perfil</th>
+                                <th>Status</th>
+                                <th style="text-align: right;">Ações</th>
+                            </tr>
+                        </thead>
+                        <tbody id="users-list-body"></tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+
+        <!-- Tab: PONTUACAO -->
+        <div id="content-pontuacao" class="tab-pane" style="display: none;">
+            <div class="card" style="border-radius: 24px;">
+                <div class="card-body">
+                    <h3 style="font-size: 1.25rem; font-weight: 700; margin-bottom: 2rem;">Critérios de Pontuação (KIs)
+                    </h3>
+                    <form onsubmit="handlePerformanceSubmit(event)">
+                        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1.5rem; margin-bottom: 1.5rem;">
+                            <div class="form-group">
+                                <label class="form-label">Pontos - Entrega no Prazo</label>
+                                <input type="number" id="on_time_score" class="form-control" step="0.1">
+                            </div>
+                            <div class="form-group">
+                                <label class="form-label">Pontos - Entrega em Atraso</label>
+                                <input type="number" id="late_score" class="form-control" step="0.1">
+                            </div>
+                        </div>
+                        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1.5rem; margin-bottom: 1.5rem;">
+                            <div class="form-group">
+                                <label class="form-label">Penalidade Diária (Atraso)</label>
+                                <input type="number" id="daily_delay_penalty" class="form-control" step="0.1">
+                            </div>
+                            <div class="form-group">
+                                <label class="form-label">Penalidade - Registro Tardio</label>
+                                <input type="number" id="late_registration_penalty" class="form-control" step="0.1">
+                            </div>
+                        </div>
+                        <button type="submit" class="btn btn-special">Salvar Critérios</button>
+                    </form>
+                </div>
+            </div>
+        </div>
+
+        <!-- Tab: CONFIG (Sistema) -->
+        <div id="content-config" class="tab-pane" style="display: none;">
+            <div class="card" style="border-radius: 24px;">
+                <div class="card-body">
+                    <h3 style="font-size: 1.25rem; font-weight: 700; margin-bottom: 2rem;">Configurações de Instância
+                    </h3>
+                    <div style="display: grid; gap: 1.5rem;">
+                        <div
+                            style="padding: 1.5rem; border: 1px solid var(--border); border-radius: 16px; display: flex; align-items: center; justify-content: space-between;">
+                            <div>
+                                <h5 style="font-weight: 600;">Unidade Ativa</h5>
+                                <p style="font-size: 0.85rem; color: var(--text-tertiary);">Define se a empresa está
+                                    disponível no portal.</p>
+                            </div>
+                            <label class="switch">
+                                <input type="checkbox" id="is_active">
+                                <span class="slider round"></span>
+                            </label>
+                        </div>
+                        <div class="form-group">
+                            <label class="form-label">URL da Logo (PNG/SVG)</label>
+                            <input type="text" id="logo_primary" class="form-control" placeholder="https://...">
+                        </div>
+                    </div>
+                    <button class="btn btn-special" style="margin-top: 2rem; width: 100%;"
+                        onclick="handleSubmit()">Salvar Configurações do Sistema</button>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Modal: Adicionar Usuário -->
+<div id="user-modal" class="modal" style="display: none; align-items: center; justify-content: center;">
+    <div class="modal-content" style="max-width: 500px; border-radius: 32px; padding: 2.5rem;">
+        <h2 style="font-size: 1.5rem; font-weight: 700; margin-bottom: 0.5rem;">Vincular Acesso ao Sistema</h2>
+        <p style="color: var(--text-secondary); margin-bottom: 1.5rem;">
+            Vincule um Colaborador da empresa a um Usuário do sistema existente. </p>
+
+        <form id="add-user-form" onsubmit="handleAddUser(event)">
+            <div class="form-group mb-4">
+                <label class="form-label">Selecionar Colaborador <span style="color: var(--danger);">*</span></label>
+                <select id="link-employee-id" class="form-control" required>
+                    <option value="">Carregando colaboradores...</option>
+                </select>
+                <small style="color: var(--text-tertiary); margin-top: 4px; display: block;">Colaboradores sem acesso
+                    ativo.</small>
+            </div>
+
+            <div class="form-group mb-4">
+                <label class="form-label">Selecionar Usuário do Sistema <span
+                        style="color: var(--danger);">*</span></label>
+                <select id="link-user-id" class="form-control" required>
+                    <option value="">Carregando usuários...</option>
+                </select>
+                <small style="color: var(--text-tertiary); margin-top: 4px; display: block;">Usuários cadastrados
+                    disponíveis para vínculo.</small>
+            </div>
+
+            <div style="margin-bottom: 2rem; display: flex; justify-content: flex-end;">
+                <button type="button" class="btn btn-sm btn-outline" style="font-size: 0.85rem;"
+                    onclick="alert('Funcionalidade de cadastro global ainda em desenvolvimento. Por favor, contate o administrador.');">
+                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
+                        style="margin-right: 4px;">
+                        <circle cx="12" cy="12" r="10"></circle>
+                        <line x1="12" y1="8" x2="12" y2="16"></line>
+                        <line x1="8" y1="12" x2="16" y2="12"></line>
+                    </svg>
+                    Cadastrar Novo Usuário
+                </button>
+            </div>
+
+            <div style="display: flex; gap: 1rem; margin-top: 2rem;">
+                <button type="button" class="btn btn-secondary" style="flex: 1;"
+                    onclick="hideAddUserModal()">Cancelar</button>
+                <button type="submit" class="btn btn-special" style="flex: 1;">Vincular Acesso</button>
+            </div>
+        </form>
+    </div>
+</div>
+
+<!-- Modal: Adicionar/Editar Cargo -->
+<div id="role-modal" class="modal" style="display: none; align-items: center; justify-content: center;">
+    <div class="modal-content" style="max-width: 500px; border-radius: 32px; padding: 2.5rem;">
+        <h2 style="font-size: 1.5rem; font-weight: 700; margin-bottom: 0.5rem;">Novo Cargo / Função</h2>
+        <p style="color: var(--text-secondary); margin-bottom: 2rem;">Cadastre uma nova função na estrutura
+            organizacional.</p>
+
+        <form id="add-role-form" onsubmit="handleAddRole(event)">
+            <input type="hidden" id="edit-role-id">
+            <div class="form-group mb-4">
+                <label class="form-label">Título do Cargo</label>
+                <input type="text" id="role-title" class="form-control" placeholder="Ex: Analista Financeiro" required>
+            </div>
+            <div class="form-group mb-3">
+                <label class="form-label">Departamento</label>
+                <input type="text" id="role-department" class="form-control" placeholder="Ex: Financeiro">
+            </div>
+            <div class="form-group mb-4">
+                <label class="form-label">Headcount Planejado</label>
+                <input type="number" id="role-headcount" class="form-control" value="1" min="1">
+            </div>
+
+            <div style="display: flex; gap: 1rem; margin-top: 2.5rem;">
+                <button type="button" class="btn btn-secondary" style="flex: 1;"
+                    onclick="hideAddRoleModal()">Cancelar</button>
+                <button type="submit" id="btn-save-role" class="btn btn-special" style="flex: 1;">Criar Cargo</button>
+            </div>
+        </form>
+    </div>
+</div>
+
+<!-- Modal: Editar Colaborador -->
+<div id="employee-modal" class="modal" style="display: none; align-items: center; justify-content: center;">
+    <div class="modal-content" style="max-width: 500px; border-radius: 32px; padding: 2.5rem;">
+        <h2 style="font-size: 1.5rem; font-weight: 700; margin-bottom: 0.5rem;">Dados do Colaborador</h2>
+        <p style="color: var(--text-secondary); margin-bottom: 2rem;">Atualize as informações do membro da equipe.</p>
+        <form id="employee-form" onsubmit="handleEmployeeSubmit(event)">
+            <input type="hidden" id="edit-employee-id">
+            <div class="form-group mb-4">
+                <label class="form-label">Nome Completo</label>
+                <input type="text" id="emp-name" class="form-control" required>
+            </div>
+            <div class="form-group mb-4">
+                <label class="form-label">Cargo / Função</label>
+                <select id="emp-role-id" class="form-control">
+                    <option value="">-- Sem Cargo --</option>
+                </select>
+            </div>
+            <div class="form-group mb-4">
+                <label class="form-label">Departamento</label>
+                <input type="text" id="emp-department" class="form-control" placeholder="Preenchido pelo cargo"
+                    readonly>
+            </div>
+            <div class="form-group mb-4">
+                <label class="form-label">Status</label>
+                <select id="emp-status" class="form-control">
+                    <option value="active">Ativo</option>
+                    <option value="inactive">Inativo</option>
+                </select>
+            </div>
+            <div style="display: flex; gap: 1rem; margin-top: 2rem;">
+                <button type="button" class="btn btn-secondary" style="flex: 1;"
+                    onclick="hideEmployeeModal()">Cancelar</button>
+                <button type="submit" class="btn btn-special" style="flex: 1;">Salvar</button>
+            </div>
+        </form>
+    </div>
+</div>
+
+<style>
+    .tab-btn {
+        background: none;
+        border: none;
+        padding: 0.75rem 1.5rem;
+        cursor: pointer;
+        font-weight: 600;
+        color: var(--text-tertiary);
+        border-bottom: 2px solid transparent;
+        transition: all 0.2s;
+        display: flex;
+        align-items: center;
+    }
+
+    .tab-btn:hover {
+        color: var(--primary);
+    }
+
+    .tab-btn.active {
+        color: var(--primary);
+        border-bottom-color: var(--primary);
+    }
+
+    .table-v2 td {
+        padding: 1.25rem 1rem;
+        border-bottom: 1px solid var(--border-light);
+    }
+
+    .switch {
+        position: relative;
+        display: inline-block;
+        width: 44px;
+        height: 24px;
+    }
+
+    .switch input {
+        opacity: 0;
+        width: 0;
+        height: 0;
+    }
+
+    .slider {
+        position: absolute;
+        cursor: pointer;
+        top: 0;
+        left: 0;
+        right: 0;
+        bottom: 0;
+        background-color: #E2E8F0;
+        transition: .3s;
+        border-radius: 34px;
+    }
+
+    .slider:before {
+        position: absolute;
+        content: "";
+        height: 18px;
+        width: 18px;
+        left: 3px;
+        bottom: 3px;
+        background-color: white;
+        transition: .3s;
+        border-radius: 50%;
+    }
+
+    input:checked+.slider {
+        background: var(--special-gradient);
+    }
+
+    input:checked+.slider:before {
+        transform: translateX(20px);
+    }
+
+    .modal {
+        position: fixed;
+        z-index: 25000;
+        left: 0;
+        top: 0;
+        width: 100%;
+        height: 100%;
+        background: rgba(0, 0, 0, 0.5);
+        backdrop-filter: blur(4px);
+    }
+</style>
+
+<script>
+    const companyId = "{{ company_id or '' }}";
+
+    document.addEventListener('DOMContentLoaded', () => {
+        if (companyId) {
+            loadCompanyData();
+            loadUserData();
+            loadRolesData();
+            loadEmployeesFullData();
+            loadPerformanceSettings();
+
+            const urlParams = new URLSearchParams(window.location.search);
+            const tab = urlParams.get('tab');
+            if (tab) switchTab(tab);
+        }
+    });
+
+    function switchTab(tabId) {
+        document.querySelectorAll('.tab-pane').forEach(p => p.style.display = 'none');
+        document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+        document.getElementById(`content-${tabId}`).style.display = 'block';
+        document.querySelector(`[data-tab="${tabId}"]`).classList.add('active');
+        const url = new URL(window.location);
+        url.searchParams.set('tab', tabId);
+        window.history.pushState({}, '', url);
+    }
+
+    async function loadCompanyData() {
+        const r = await fetch(`/api/companies/${companyId}`);
+        const c = await r.json();
+        document.getElementById('name').value = c.name;
+        document.getElementById('client_code').value = c.client_code;
+        document.getElementById('legal_name').value = c.legal_name || '';
+        document.getElementById('cnpj').value = c.cnpj || '';
+        document.getElementById('description').value = c.description || '';
+        document.getElementById('segment').value = c.segment || '';
+        document.getElementById('size').value = c.size || '';
+        document.getElementById('city').value = c.city || '';
+        document.getElementById('state').value = c.state || '';
+        document.getElementById('mission').value = c.mission || '';
+        document.getElementById('vision').value = c.vision || '';
+        document.getElementById('values').value = c.values || '';
+        if (document.getElementById('is_active')) document.getElementById('is_active').checked = c.is_active !== false;
+        if (document.getElementById('logo_primary')) document.getElementById('logo_primary').value = c.logo_primary || '';
+    }
+
+    async function loadRolesData() {
+        if (!companyId) return;
+        try {
+            const r = await fetch(`/api/companies/${companyId}/roles`);
+            if (!r.ok) throw new Error('Falha ao carregar cargos');
+            const roles = await r.json();
+            const body = document.getElementById('roles-list-body');
+            body.innerHTML = roles.map(r => `
+                <tr>
+                    <td><div style="font-weight: 600;">${r.title}</div></td>
+                    <td>${r.department || '-'}</td>
+                    <td>${r.headcount_planned || 1}</td>
+                    <td style="text-align: right; display: flex; gap: 0.5rem; justify-content: flex-end;">
+                        <button class="btn btn-icon" onclick="editRole(${r.id})" title="Editar" style="color: var(--primary);">
+                            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"></path><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4L18.5 2.5z"></path></svg>
+                        </button>
+                        <button class="btn btn-icon" onclick="deleteRole(${r.id})" title="Excluir" style="color: var(--danger);">
+                            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="3 6 5 6 21 6"></polyline><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path></svg>
+                        </button>
+                    </td>
+                </tr>
+            `).join('') || '<tr><td colspan="4" style="text-align: center; color: var(--text-tertiary);">Nenhum cargo cadastrado.</td></tr>';
+
+            // Populate Employee Role Select
+            const empRoleSelect = document.getElementById('emp-role-id');
+            if (empRoleSelect) {
+                const currentVal = empRoleSelect.value;
+                empRoleSelect.innerHTML = '<option value="">-- Selecione um Cargo --</option>' +
+                    roles.map(r => `<option value="${r.id}" data-dept="${r.department || ''}">${r.title}</option>`).join('');
+                empRoleSelect.value = currentVal;
+
+                // Sync department field
+                empRoleSelect.onchange = (e) => {
+                    const opt = e.target.options[e.target.selectedIndex];
+                    document.getElementById('emp-department').value = opt.dataset.dept || '';
+                };
+            }
+        } catch (err) {
+            console.error(err);
+            document.getElementById('roles-list-body').innerHTML = '<tr><td colspan="4" style="text-align: center; color: var(--danger);">Erro ao carregar dados.</td></tr>';
+        }
+    }
+
+    async function loadEmployeesFullData() {
+        if (!companyId) return;
+        const r = await fetch(`/api/companies/${companyId}/employees/full`);
+        const emps = await r.json();
+        const body = document.getElementById('employees-full-body');
+        body.innerHTML = emps.map(e => `
+            <tr>
+                <td>
+                    <div style="font-weight: 600;">${e.name}</div>
+                    <div style="font-size: 0.8rem; color: var(--text-tertiary);">${e.email || e.phone || '-'}</div>
+                </td>
+                <td>
+                    <div style="font-weight: 600;">${e.role_title || '-'}</div>
+                    <div style="font-size: 0.75rem; color: var(--text-tertiary);">${e.department || ''}</div>
+                </td>
+                <td><span class="badge ${e.status === 'active' ? 'badge-success' : 'badge-secondary'}">${e.status}</span></td>
+                <td>${e.hire_date || '-'}</td>
+                <td style="text-align: right; display: flex; gap: 0.5rem; justify-content: flex-end;">
+                    <button class="btn btn-icon" onclick="editEmployee(${e.id})" title="Editar" style="color: var(--primary);">
+                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"></path><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4L18.5 2.5z"></path></svg>
+                    </button>
+                    <button class="btn btn-icon" onclick="deleteEmployee(${e.id})" title="Excluir" style="color: var(--danger);">
+                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="3 6 5 6 21 6"></polyline><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path></svg>
+                    </button>
+                </td>
+            </tr>
+        `).join('') || '<tr><td colspan="5" style="text-align: center; color: var(--text-tertiary);">Nenhum colaborador encontrado.</td></tr>';
+    }
+
+    async function loadPerformanceSettings() {
+        if (!companyId) return;
+        const r = await fetch(`/api/companies/${companyId}/performance-settings`);
+        const s = await r.json();
+        document.getElementById('on_time_score').value = s.on_time_score;
+        document.getElementById('late_score').value = s.late_score;
+        document.getElementById('daily_delay_penalty').value = s.daily_delay_penalty;
+        document.getElementById('late_registration_penalty').value = s.late_registration_penalty;
+    }
+
+    async function handleSubmit(e) {
+        if (e) e.preventDefault();
+        const data = {
+            name: document.getElementById('name').value,
+            client_code: document.getElementById('client_code').value.toUpperCase(),
+            legal_name: document.getElementById('legal_name').value,
+            cnpj: document.getElementById('cnpj').value,
+            description: document.getElementById('description').value,
+            segment: document.getElementById('segment').value,
+            size: document.getElementById('size').value,
+            city: document.getElementById('city').value,
+            state: document.getElementById('state').value,
+            mission: document.getElementById('mission').value,
+            vision: document.getElementById('vision').value,
+            values: document.getElementById('values').value,
+            logo_primary: document.getElementById('logo_primary') ? document.getElementById('logo_primary').value : null,
+            is_active: document.getElementById('is_active').checked
+        };
+        const r = await fetch(`/api/companies/${companyId}`, {
+            method: 'PUT',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(data)
+        });
+        if (r.ok) alert('Dados atualizados com sucesso!');
+    }
+
+    async function handlePerformanceSubmit(e) {
+        e.preventDefault();
+        const data = {
+            on_time_score: document.getElementById('on_time_score').value,
+            late_score: document.getElementById('late_score').value,
+            daily_delay_penalty: document.getElementById('daily_delay_penalty').value,
+            late_registration_penalty: document.getElementById('late_registration_penalty').value
+        };
+        const r = await fetch(`/api/companies/${companyId}/performance-settings`, {
+            method: 'PUT',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(data)
+        });
+        if (r.ok) alert('Critérios de pontuação salvos!');
+    }
+
+    function loadUserData() {
+        if (!companyId) return;
+        fetch(`/api/companies/${companyId}/users`).then(r => r.json()).then(users => {
+            const body = document.getElementById('users-list-body');
+            body.innerHTML = users.map(u => {
+                const isActive = u.status === 'active';
+                const statusBadge = isActive
+                    ? `<span style="color: var(--success); font-weight: 500;">Ativo</span>`
+                    : `<span style="color: var(--text-tertiary); font-weight: 500;">Inativo</span>`;
+
+                const actionButton = isActive
+                    ? `<button class="btn btn-icon" onclick="removeUserAccess(${u.id})" title="Inativar Acesso" style="color: var(--danger);">
+                            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M18.36 6.64a9 9 0 1 1-12.73 0"></path><line x1="12" y1="2" x2="12" y2="12"></line></svg>
+                       </button>`
+                    : `<button class="btn btn-icon" onclick="reactivateUserAccess(${u.id})" title="Reativar Acesso" style="color: var(--success);">
+                            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="20 6 9 17 4 12"></polyline></svg>
+                       </button>`;
+
+                return `
+                <tr style="${!isActive ? 'opacity: 0.6;' : ''}">
+                    <td>
+                        <div style="font-weight: 600;">${u.name}</div>
+                        <div style="font-size: 0.85rem; color: var(--text-tertiary);">${u.user_email || u.email}</div>
+                    </td>
+                    <td><span class="badge ${u.user_role === 'admin' ? 'badge-primary' : 'badge-secondary'}">${u.user_role}</span></td>
+                    <td>${statusBadge}</td>
+                    <td style="text-align: right;">${actionButton}</td>
+                </tr>
+                `;
+            }).join('');
+        });
+    }
+
+    async function showAddUserModal() {
+        document.getElementById('user-modal').style.display = 'flex';
+
+        // Load unlinked employees
+        try {
+            const empRes = await fetch(`/api/companies/${companyId}/unlinked-employees`);
+            const empSelect = document.getElementById('link-employee-id');
+            if (empRes.ok) {
+                const employees = await empRes.json();
+                if (employees.length === 0) {
+                    empSelect.innerHTML = '<option value="">Nenhum colaborador sem acesso encontrado... crie um primeiro!</option>';
+                    empSelect.disabled = true;
+                } else {
+                    empSelect.disabled = false;
+                    empSelect.innerHTML = '<option value="">-- Selecione o Colaborador --</option>' +
+                        employees.map(e => `<option value="${e.id}">${e.name} ${e.email ? '(' + e.email + ')' : ''}</option>`).join('');
+                }
+            } else {
+                empSelect.disabled = true;
+                empSelect.innerHTML = '<option value="">Erro ao carregar colaboradores</option>';
+            }
+        } catch (e) {
+            console.error(e);
+        }
+
+        // Load system users
+        try {
+            const userRes = await fetch(`/api/system-users`);
+            const userSelect = document.getElementById('link-user-id');
+            if (userRes.ok) {
+                const users = await userRes.json();
+                userSelect.innerHTML = '<option value="">-- Selecione o Usuário --</option>' +
+                    users.map(u => `<option value="${u.id}">${u.name} (${u.email})</option>`).join('');
+            } else {
+                userSelect.innerHTML = '<option value="">Erro ao carregar usuários</option>';
+            }
+        } catch (e) {
+            console.error(e);
+        }
+    }
+
+    function hideAddUserModal() { document.getElementById('user-modal').style.display = 'none'; }
+
+    function showAddRoleModal() {
+        document.getElementById('edit-role-id').value = '';
+        document.getElementById('add-role-form').reset();
+        document.getElementById('btn-save-role').textContent = 'Criar Cargo';
+        document.getElementById('role-modal').style.display = 'flex';
+    }
+    function hideAddRoleModal() { document.getElementById('role-modal').style.display = 'none'; }
+
+    async function editRole(roleId) {
+        const r = await fetch(`/api/companies/${companyId}/roles/${roleId}`);
+        const role = await r.json();
+        document.getElementById('edit-role-id').value = role.id;
+        document.getElementById('role-title').value = role.title;
+        document.getElementById('role-department').value = role.department || '';
+        document.getElementById('role-headcount').value = role.headcount_planned || 1;
+        document.getElementById('btn-save-role').textContent = 'Salvar Alterações';
+        document.getElementById('role-modal').style.display = 'flex';
+    }
+
+    async function handleAddUser(e) {
+        e.preventDefault();
+        const data = {
+            employee_id: document.getElementById('link-employee-id').value,
+            user_id: document.getElementById('link-user-id').value
+        };
+        try {
+            const r = await fetch(`/api/companies/${companyId}/link-user`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(data)
+            });
+            const result = await r.json();
+            if (r.ok) {
+                hideAddUserModal();
+                loadUserData();
+                loadEmployeesFullData();
+                document.getElementById('add-user-form').reset();
+                alert('Acesso vinculado com sucesso!');
+            } else {
+                alert('Erro ao vincular usuário: ' + (result.error || 'Erro desconhecido'));
+            }
+        } catch (err) {
+            console.error(err);
+            alert('Falha na comunicação com o servidor.');
+        }
+    }
+
+    async function handleAddRole(e) {
+        if (e) e.preventDefault();
+        const btn = e ? e.submitter : null;
+        if (btn) btn.disabled = true;
+
+        try {
+            const data = {
+                title: document.getElementById('role-title').value,
+                department: document.getElementById('role-department').value,
+                headcount_planned: parseInt(document.getElementById('role-headcount').value) || 1
+            };
+
+            const roleIdToEdit = document.getElementById('edit-role-id').value;
+            const url = roleIdToEdit ? `/api/companies/${companyId}/roles/${roleIdToEdit}` : `/api/companies/${companyId}/roles`;
+            const method = roleIdToEdit ? 'PUT' : 'POST';
+
+            const r = await fetch(url, {
+                method: method,
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(data)
+            });
+
+            const result = await r.json();
+
+            if (r.ok) {
+                hideAddRoleModal();
+                loadRolesData();
+                document.getElementById('add-role-form').reset();
+                alert(roleIdToEdit ? 'Cargo atualizado!' : 'Cargo criado com sucesso!');
+            } else {
+                alert('Erro ao salvar cargo: ' + (result.error || 'Erro desconhecido'));
+            }
+        } catch (err) {
+            console.error(err);
+            alert('Falha na comunicação com o servidor.');
+        } finally {
+            if (btn) btn.disabled = false;
+        }
+    }
+
+    async function removeUserAccess(empId) {
+        if (!confirm('Deseja realmente inativar este colaborador e remover seu acesso a esta empresa?')) return;
+        try {
+            const r = await fetch(`/api/companies/${companyId}/employees/${empId}`, { method: 'DELETE' });
+            if (r.ok) { loadUserData(); loadEmployeesFullData(); alert('Acesso inativado.'); }
+            else alert('Erro ao inativar acesso.');
+        } catch (e) { alert('Erro na comunicação.'); }
+    }
+
+    async function reactivateUserAccess(empId) {
+        if (!confirm('Deseja reativar o acesso e o cadastro deste colaborador na empresa?')) return;
+        try {
+            const r = await fetch(`/api/companies/${companyId}/employees/${empId}`, {
+                method: 'PUT',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ status: 'active' })
+            });
+            if (r.ok) { loadUserData(); loadEmployeesFullData(); alert('Acesso reativado com sucesso.'); }
+            else alert('Erro ao reativar acesso.');
+        } catch (e) { alert('Erro na comunicação.'); }
+    }
+
+    async function deleteRole(roleId) {
+        if (!confirm('Deseja excluir este cargo permanentemente?')) return;
+        try {
+            const r = await fetch(`/api/companies/${companyId}/roles/${roleId}`, { method: 'DELETE' });
+            if (r.ok) { loadRolesData(); alert('Cargo excluído.'); }
+            else alert('Erro ao excluir cargo.');
+        } catch (e) { alert('Erro na comunicação.'); }
+    }
+
+    async function deleteEmployee(empId) {
+        if (!confirm('Deseja excluir este colaborador permanentemente?')) return;
+        try {
+            const r = await fetch(`/api/companies/${companyId}/employees/${empId}`, { method: 'DELETE' });
+            if (r.ok) { loadEmployeesFullData(); alert('Colaborador excluído.'); }
+            else alert('Erro ao excluir colaborador.');
+        } catch (e) { alert('Erro na comunicação.'); }
+    }
+
+    function showEmployeeModal() {
+        document.getElementById('edit-employee-id').value = '';
+        document.getElementById('employee-form').reset();
+        document.getElementById('employee-modal').style.display = 'flex';
+    }
+
+    function hideEmployeeModal() { document.getElementById('employee-modal').style.display = 'none'; }
+
+    async function editEmployee(empId) {
+        const r = await fetch(`/api/companies/${companyId}/employees/${empId}`);
+        const emp = await r.json();
+        document.getElementById('edit-employee-id').value = emp.id;
+        document.getElementById('emp-name').value = emp.name;
+        document.getElementById('emp-role-id').value = emp.role_id || '';
+        document.getElementById('emp-department').value = emp.department || '';
+        document.getElementById('emp-status').value = emp.status || 'active';
+        document.getElementById('employee-modal').style.display = 'flex';
+    }
+
+    async function handleEmployeeSubmit(e) {
+        if (e) e.preventDefault();
+        const data = {
+            name: document.getElementById('emp-name').value,
+            role_id: document.getElementById('emp-role-id').value || null,
+            department: document.getElementById('emp-department').value,
+            status: document.getElementById('emp-status').value
+        };
+        const empId = document.getElementById('edit-employee-id').value;
+        const url = empId ? `/api/companies/${companyId}/employees/${empId}` : `/api/companies/${companyId}/employees`;
+        const method = empId ? 'PUT' : 'POST';
+
+        const r = await fetch(url, {
+            method: method,
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(data)
+        });
+        if (r.ok) {
+            hideEmployeeModal();
+            loadEmployeesFullData();
+            alert(empId ? 'Colaborador atualizado!' : 'Colaborador cadastrado!');
+        } else {
+            const err = await r.json();
+            alert('Erro ao salvar colaborador: ' + (err.error || 'Erro desconhecido'));
+        }
+    }
+</script>
+{% endblock %}

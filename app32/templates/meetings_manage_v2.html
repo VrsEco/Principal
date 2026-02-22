@@ -1,0 +1,631 @@
+﻿{% extends "layouts/workspace.html" %}
+
+{% block title %}Gestão de Reuniões - Versus Gestao Corporativa{% endblock %}
+
+{% block head %}
+<link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+<style>
+    :root {
+        --primary-gradient: linear-gradient(135deg, #2563eb 0%, #7c3aed 100%);
+        --surface-card: #ffffff;
+        --bg-main: #f8fafc;
+        --text-main: #0f172a;
+        --text-muted: #64748b;
+        --border-color: rgba(15, 23, 42, 0.08);
+        --radius-lg: 16px;
+        --radius-md: 12px;
+        --shadow-sm: 0 1px 2px 0 rgb(0 0 0 / 0.05);
+        --shadow-md: 0 4px 12px -1px rgb(0 0 0 / 0.1);
+        --shadow-lg: 0 10px 24px -3px rgb(0 0 0 / 0.1);
+    }
+
+    body {
+        font-family: 'Outfit', sans-serif;
+    }
+
+    .app-main {
+        padding-bottom: 80px;
+    }
+
+    .meeting-card {
+        background: #ffffff;
+        border: 1px solid var(--border-color);
+        border-radius: var(--radius-md);
+        padding: 20px;
+        transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+        position: relative;
+        overflow: hidden;
+        cursor: pointer;
+    }
+
+    .meeting-card::before {
+        content: '';
+        position: absolute;
+        top: 0;
+        left: 0;
+        width: 4px;
+        height: 100%;
+        background: var(--primary-gradient);
+        opacity: 0;
+        transition: opacity 0.3s ease;
+    }
+
+    .meeting-card:hover {
+        transform: translateY(-4px);
+        box-shadow: var(--shadow-lg);
+        border-color: transparent !important;
+    }
+
+    .meeting-card:hover::before {
+        opacity: 1;
+    }
+
+    .status-badge {
+        padding: 4px 12px;
+        border-radius: 9999px;
+        font-size: 0.75rem;
+        font-weight: 600;
+        display: inline-flex;
+        align-items: center;
+        gap: 6px;
+    }
+
+    .status-draft {
+        background: #f1f5f9;
+        color: #475569;
+    }
+
+    .status-in_progress {
+        background: #dbeafe;
+        color: #1e40af;
+    }
+
+    .status-completed {
+        background: #d1fae5;
+        color: #065f46;
+    }
+
+    .meetings-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fill, minmax(340px, 1fr));
+        gap: 20px;
+    }
+
+    .tab-btn {
+        padding: 14px 24px;
+        background: transparent;
+        border: none;
+        cursor: pointer;
+        font-weight: 600;
+        font-size: 0.9rem;
+        color: var(--text-muted);
+        transition: all 0.3s ease;
+        border-radius: var(--radius-md);
+        margin-right: 8px;
+    }
+
+    .tab-btn:hover {
+        color: var(--text-main);
+        background: rgba(15, 23, 42, 0.04);
+    }
+
+    .tab-btn.active {
+        background: white;
+        color: #2563eb;
+        box-shadow: var(--shadow-md);
+    }
+
+    .form-label {
+        font-weight: 600;
+        color: var(--text-main);
+        margin-bottom: 6px;
+        display: block;
+        font-size: 0.875rem;
+    }
+
+    .form-input,
+    .form-textarea,
+    .form-select {
+        border: 1px solid var(--border-color);
+        border-radius: var(--radius-md);
+        padding: 12px 16px;
+        width: 100%;
+        font-family: inherit;
+        transition: all 0.2s ease;
+        background: #f8fafc;
+        color: var(--text-main);
+    }
+
+    .form-input:focus,
+    .form-textarea:focus {
+        background: white;
+        border-color: #3b82f6;
+        box-shadow: 0 0 0 4px rgba(59, 130, 246, 0.1);
+        outline: none;
+    }
+
+    @keyframes fadeInUp {
+        from {
+            opacity: 0;
+            transform: translateY(10px);
+        }
+
+        to {
+            opacity: 1;
+            transform: translateY(0);
+        }
+    }
+
+    .fade-in {
+        animation: fadeInUp 0.5s ease-out forwards;
+    }
+
+    .button {
+        display: inline-flex;
+        align-items: center;
+        gap: 8px;
+        padding: 10px 20px;
+        border-radius: var(--radius-md);
+        font-weight: 600;
+        transition: all 0.2s;
+        cursor: pointer;
+        border: none;
+    }
+
+    .button-primary {
+        background: var(--primary-gradient);
+        color: white;
+        box-shadow: 0 4px 12px rgba(37, 99, 235, 0.2);
+    }
+
+    .button-primary:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 6px 16px rgba(37, 99, 235, 0.3);
+    }
+
+    .button-outline {
+        border: 1px solid var(--border-color);
+        background: white;
+        color: var(--text-main);
+    }
+
+    .button-outline:hover {
+        background: #f8fafc;
+        border-color: #3b82f6;
+    }
+
+    .button-ghost {
+        background: transparent;
+        color: var(--text-muted);
+    }
+
+    .button-ghost:hover {
+        background: rgba(15, 23, 42, 0.04);
+        color: var(--text-main);
+    }
+
+    .section-eyebrow {
+        text-transform: uppercase;
+        letter-spacing: 0.1em;
+        font-weight: 700;
+        font-size: 0.75rem;
+        color: #3b82f6;
+        margin-bottom: 4px;
+        display: block;
+    }
+</style>
+{% endblock %}
+
+{% block workspace_content %}
+<div class="fade-in">
+    <div class="surface-card" style="padding: 32px; border-radius: 20px; background: white; box-shadow:
+        var(--shadow-lg);">
+        <div class="card-header"
+            style="display:flex;justify-content:space-between;align-items:flex-start;gap:24px; margin-bottom: 32px;">
+            <div>
+                <span class="section-eyebrow">Acompanhamento Corporativo</span>
+                <h1 style="font-size: 2.25rem; font-weight: 800; color: var(--text-main); margin: 0;">Gestão de
+                    Reuniões</h1>
+                <p style="color: var(--text-muted); margin-top: 12px; font-size: 1.1rem; max-width: 600px;">
+                    Planeje pautas, registre atas em tempo real e gere atividades automaticamente para sua equipe.
+                </p>
+            </div>
+            <div style="display:flex;gap:12px;flex-wrap:wrap;">
+                <button type="button" class="button button-primary" onclick="novaReuniao()">
+                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                        stroke-width="2.5">
+                        <line x1="12" y1="5" x2="12" y2="19"></line>
+                        <line x1="5" y1="12" x2="19" y2="12"></line>
+                    </svg>
+                    Nova Reunião
+                </button>
+            </div>
+        </div>
+
+        <div id="meetings-list-section">
+            <!-- Lista de Reuniões -->
+            <div style="margin-top: 24px;">
+                <div id="meetings-grid" class="meetings-grid">
+                    {% for meeting in meetings %}
+                    <div class="meeting-card" data-status="{{ meeting.status or 'draft' }}"
+                        onclick="editarReuniao('{{ meeting.id }}')" role="button" tabindex="0"
+                        onkeydown="if (event.key === 'Enter' || event.key === ' ') { event.preventDefault(); editarReuniao('{{ meeting.id }}'); }">
+                        <div style="display: flex; justify-content: space-between; align-items: start; gap: 16px;">
+                            <div style="flex: 1;">
+                                <h4
+                                    style="margin: 0 0 10px 0; font-size: 1.25rem; font-weight: 700; color: var(--text-main);">
+                                    {{ meeting.title }}</h4>
+                                <div
+                                    style="color: var(--text-muted); font-size: 0.875rem; display: flex; gap: 16px; align-items: center; margin-bottom: 12px;">
+                                    <span style="display: flex; align-items: center; gap: 6px;">
+                                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none"
+                                            stroke="currentColor" stroke-width="2">
+                                            <rect x="3" y="4" width="18" height="18" rx="2" ry="2"></rect>
+                                            <line x1="16" y1="2" x2="16" y2="6"></line>
+                                            <line x1="8" y1="2" x2="8" y2="6"></line>
+                                            <line x1="3" y1="10" x2="21" y2="10"></line>
+                                        </svg>
+                                        {{ meeting.scheduled_date or 'Sem data' }}
+                                    </span>
+                                    {% if meeting.scheduled_time %}
+                                    <span style="display: flex; align-items: center; gap: 6px;">
+                                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none"
+                                            stroke="currentColor" stroke-width="2">
+                                            <circle cx="12" cy="12" r="10"></circle>
+                                            <polyline points="12 6 12 12 16 14"></polyline>
+                                        </svg>
+                                        {{ meeting.scheduled_time }}
+                                    </span>
+                                    {% endif %}
+                                </div>
+                                {% if meeting.status %}
+                                <div style="margin-top: 8px;">
+                                    {% if meeting.status == 'draft' %}
+                                    <span class="status-badge status-draft">Rascunho</span>
+                                    {% elif meeting.status == 'in_progress' %}
+                                    <span class="status-badge status-in_progress">Em Andamento</span>
+                                    {% elif meeting.status == 'completed' %}
+                                    <span class="status-badge status-completed">Concluída</span>
+                                    {% endif %}
+                                </div>
+                                {% endif %}
+                            </div>
+                            <div style="display: flex; gap: 8px; align-items: center;">
+                                <button type="button" class="button button-ghost" style="padding: 8px;"
+                                    onclick="event.stopPropagation(); editarReuniao('{{ meeting.id }}')"
+                                    title="Editar reunião">
+                                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                                        stroke-width="2">
+                                        <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"></path>
+                                        <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"></path>
+                                    </svg>
+                                </button>
+                                <button type="button" class="button button-outline" style="padding: 8px;"
+                                    onclick="event.stopPropagation(); gerarRelatorioReuniao('{{ meeting.id }}')"
+                                    title="Relatório">
+                                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                                        stroke-width="2">
+                                        <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path>
+                                        <polyline points="14 2 14 8 20 8"></polyline>
+                                        <line x1="16" y1="13" x2="8" y2="13"></line>
+                                        <line x1="16" y1="17" x2="8" y2="17"></line>
+                                    </svg>
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                    {% endfor %}
+                </div>
+
+                {% if not meetings %}
+                <div class="empty-state" style="text-align: center; padding: 60px 24px; background: #f8fafc;
+                    border-radius: 16px; border: 2px dashed #e2e8f0; margin-top: 24px;">
+                    <div style="font-size: 64px; margin-bottom: 20px; opacity: 0.5;">??</div>
+                    <h4 style="font-size: 1.5rem; font-weight: 700; color: var(--text-main); margin-bottom: 8px;">
+                        Nenhuma reunião cadastrada</h4>
+                    <p style="color: var(--text-muted); margin-bottom: 24px;">Organize sua primeira reunião agora
+                        mesmo!</p>
+                    <button onclick="novaReuniao()" class="button button-primary">
+                        + Criar Primeira Reunião
+                    </button>
+                </div>
+                {% endif %}
+            </div>
+        </div>
+
+        <div class="meeting-editor-section" id="meeting-editor-section"
+            style="display: none; margin-top: 32px; animation: fadeInUp 0.4s ease;">
+            <div
+                style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 24px; padding-bottom: 20px; border-bottom: 1px solid var(--border-color);">
+                <div>
+                    <span class="section-eyebrow">Configuração</span>
+                    <h3 id="meeting-editor-title" style="font-size: 1.75rem; font-weight: 800; color: var(--text-main);
+                        margin: 4px 0 0 0;">Nova Reunião</h3>
+                </div>
+                <button type="button" onclick="fecharEditor()" class="button button-outline">
+                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <line x1="19" y1="12" x2="5" y2="12"></line>
+                        <polyline points="12 19 5 12 12 5"></polyline>
+                    </svg>
+                    Voltar à Lista
+                </button>
+            </div>
+
+            <input type="hidden" id="current-meeting-id" value="">
+
+            <div class="tabs-container" style="margin-bottom: 32px;">
+                <div class="tabs"
+                    style="display: flex; gap: 4px; background: #f1f5f9; padding: 4px; border-radius: 12px;">
+                    <button class="tab-btn active" onclick="trocarAba('preliminares')" id="tab-preliminares"
+                        type="button" style="flex: 1;">Preliminares</button>
+                    <button class="tab-btn" onclick="trocarAba('execucao')" id="tab-execucao" type="button"
+                        style="flex: 1;">Execução</button>
+                    <button class="tab-btn" onclick="trocarAba('atividades')" id="tab-atividades" type="button"
+                        style="flex: 1;">Atividades</button>
+                </div>
+            </div>
+
+            <div class="tab-content active" id="content-preliminares">
+                <div class="form-section">
+                    <div class="form-group">
+                        <label class="form-label">Título da Reunião *</label>
+                        <input type="text" id="meeting-title" class="form-input" placeholder="Ex: Kick-off Projeto
+                            Alpha">
+                    </div>
+
+                    <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 20px; margin-bottom: 24px;">
+                        <div class="form-group">
+                            <label class="form-label">Data Prevista</label>
+                            <input type="date" id="meeting-scheduled-date" class="form-input">
+                        </div>
+                        <div class="form-group">
+                            <label class="form-label">Hora Prevista</label>
+                            <input type="time" id="meeting-scheduled-time" class="form-input">
+                        </div>
+                    </div>
+
+                    <div class="form-group">
+                        <label class="form-label">Convidados Internos</label>
+                        <div style="display: flex; gap: 12px; margin-bottom: 12px;">
+                            <select id="employee-select" class="form-select" style="flex: 1;">
+                                <option value="">Selecione um colaborador...</option>
+                                {% for employee in employees %}<option value="{{ employee.id }}" data-name="{{
+                                    employee.name }}" data-email="{{ employee.email or '' }}" data-whatsapp="{{
+                                    employee.whatsapp or '' }}">{{ employee.name }}</option>{% endfor %}
+                            </select>
+                            <button type="button" class="button button-primary" onclick="adicionarColaborador()">+
+                                Adicionar</button>
+                        </div>
+                        <div id="guests-internal-list"></div>
+                    </div>
+
+                    <div class="form-group" style="margin-top: 24px;">
+                        <label class="form-label">Convidados Externos</label>
+                        <div style="display: grid; grid-template-columns: 2fr 2fr 2fr auto; gap: 12px; margin-bottom:
+                            12px;">
+                            <input type="text" id="external-name" class="form-input" placeholder="Nome">
+                            <input type="email" id="external-email" class="form-input" placeholder="E-mail">
+                            <input type="text" id="external-whatsapp" class="form-input" placeholder="WhatsApp">
+                            <button type="button" class="button button-primary" onclick="adicionarExterno()">+
+                                Adicionar</button>
+                        </div>
+                        <div id="guests-external-list"></div>
+                    </div>
+
+                    <div class="form-group" style="margin-top: 24px;">
+                        <label class="form-label">Pauta</label>
+                        <div style="display: flex; gap: 12px; margin-bottom: 12px;">
+                            <input type="text" id="agenda-item-input" class="form-input" placeholder="Tópico da
+                                pauta..." style="flex: 1;">
+                            <button type="button" class="button button-primary" onclick="adicionarPauta()">+
+                                Adicionar</button>
+                            <button type="button" class="button button-outline" onclick="mostrarPautaSalva()">??
+                                Reutilizar</button>
+                        </div>
+                        <div id="agenda-list"></div>
+                        <div id="saved-agenda-modal" style="display: none; background: #f8fafc; padding: 20px;
+                            border-radius: 12px; margin-top: 12px; border: 1px solid var(--border-color);">
+                            <h4 style="margin-bottom: 12px;">Pautas Sugeridas</h4>
+                            <div id="saved-agenda-list" style="max-height: 200px; overflow-y: auto;">
+                                {% for item in agenda_items %}<div class="saved-agenda-item"
+                                    onclick="usarPautaSalva('{{ item.id }}', '{{ item.title|safe }}' )" style="padding:
+                                    10px; cursor: pointer; border-bottom: 1px solid #e2e8f0;"><strong>{{ item.title
+                                        }}</strong></div>{% endfor %}
+                            </div>
+                            <button type="button" class="button button-ghost" onclick="fecharPautaSalva()"
+                                style="margin-top: 12px;">Fechar</button>
+                        </div>
+                    </div>
+
+                    <div class="form-group" style="margin-top: 24px;">
+                        <label class="form-label">Observações do Convite</label>
+                        <textarea id="meeting-invite-notes" class="form-textarea" rows="3" placeholder="Notas
+                            extras para o convite..."></textarea>
+                    </div>
+
+                    <div style="display: flex; gap: 12px; justify-content: flex-end; margin-top: 32px; padding-top:
+                        24px; border-top: 1px solid #e2e8f0;">
+                        <button type="button" class="button button-ghost" onclick="fecharEditor()">Cancelar</button>
+                        <button type="button" class="button button-primary" onclick="salvarPreliminares()">??
+                            Salvar Preliminares</button>
+                        <button type="button" class="button button-outline" onclick="gerarConvite()">?? Convite
+                            (.ics)</button>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Execução e Atividades Abas (Similares ao manage.html) -->
+            <div class="tab-content" id="content-execucao" style="display: none;">
+                <div class="form-section">
+                    <div style="background: #eff6ff; padding: 24px; border-radius: 16px; border: 1px solid #dbeafe;
+                        margin-bottom: 32px;">
+                        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom:
+                            24px;">
+                            <span style="font-weight: 700; color: #1e40af;">STATUS: <span
+                                    id="meeting-status-display">RASCUNHO</span></span>
+                            <button type="button" class="button button-primary" onclick="iniciarReuniao()"
+                                id="btn-iniciar-reuniao">?? Iniciar Reunião</button>
+                        </div>
+                        <div id="project-selection-section" style="background: white; padding: 20px; border-radius:
+                            12px; border: 1px dashed #3b82f6;">
+                            <label class="form-label" style="color: #1e40af;">Projeto de Destino</label>
+                            <div style="display: flex; gap: 20px; margin: 12px 0;">
+                                <label style="display: flex; align-items: center; gap: 8px; cursor: pointer;"><input
+                                        type="radio" name="target-project-type" value="new" checked onchange="document.getElementById('existing-project-selector').style.display='none'
+                                        "> Novo Projeto</label>
+                                <label style="display: flex; align-items: center; gap: 8px; cursor: pointer;"><input
+                                        type="radio" name="target-project-type" value="existing" onchange="document.getElementById('existing-project-selector').style.display='block'
+                                        "> Projeto Existente</label>
+                            </div>
+                            <div id="existing-project-selector" style="display: none;">
+                                <select id="meeting-target-project-id" class="form-select">{% for p in projects %}
+                                    <option value="{{ p.id }}">{{ p.name or p.title }}</option>{% endfor %}
+                                </select>
+                            </div>
+                        </div>
+                    </div>
+                    <!-- Mais campos aqui (data real, hora real, participantes, etc) -->
+                    <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 20px; margin-bottom: 24px;">
+                        <div class="form-group"><label class="form-label">Data Real</label><input type="date"
+                                id="meeting-actual-date" class="form-input"></div>
+                        <div class="form-group"><label class="form-label">Hora Real</label><input type="time"
+                                id="meeting-actual-time" class="form-input"></div>
+                    </div>
+
+                    <div class="form-group"><label class="form-label">Participantes</label>
+                        <div id="participants-list"></div><button type="button" class="button button-outline"
+                            onclick="adicionarParticipante()">+ Adicionar Participante</button>
+                    </div>
+                    <div class="form-group"><label class="form-label">Atividades</label>
+                        <div id="activities-list"></div><button type="button" class="button button-outline"
+                            onclick="adicionarAtividade()">+ Gerar Atividade</button>
+                    </div>
+                    <div class="form-group"><label class="form-label">Notas Finais</label><textarea id="meeting-notes"
+                            class="form-textarea" rows="4"></textarea></div>
+
+                    <div style="display: flex; gap: 12px; justify-content: flex-end; margin-top: 32px;">
+                        <button type="button" class="button button-outline" onclick="salvarExecucao()">?? Salvar
+                            Execução</button>
+                        <button type="button" class="button button-primary" onclick="finalizarReuniao()"
+                            id="btn-finalizar-reuniao">? Finalizar Reunião</button>
+                    </div>
+                </div>
+            </div>
+
+            <div class="tab-content" id="content-atividades" style="display: none;">
+                <div class="form-section">
+                    <div style="background: #f8fafc; padding: 20px; border-radius: 12px; border: 1px solid #e2e8f0;
+                        margin-bottom: 24px;">
+                        <strong>Projeto:</strong> <span id="project-link-display" style="color:
+                            #3b82f6;">Nenhum</span>
+                    </div>
+                    <div id="generated-activities-list"></div>
+                    <button type="button" class="button button-primary" onclick="atualizarAtividades()"
+                        style="margin-top: 24px;">?? Sincronizar</button>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+{{ super() }}
+<script>
+    // Mesma lógica do manage.html com pequenas adaptações
+    let currentMeetingId = null;
+    let currentMeetingStatus = 'draft';
+    let linkedProjectId = null;
+    let linkedProjectTitle = null;
+    let guestsInternal = [];
+    let guestsExternal = [];
+    let agendaItems = [];
+    let participants = { internal: [], external: [] };
+    let discussions = [];
+    let activities = [];
+    let employeesData = [];
+    const projectTitleMap = {};
+    {% for project in projects %} projectTitleMap['{{ project.id }}'] = {{ project.name | tojson | safe }}; {% endfor %}
+
+    function updateProjectLinkDisplay(projectId, projectTitle) {
+        linkedProjectId = projectId || null;
+        linkedProjectTitle = projectTitle || (projectId ? projectTitleMap[String(projectId)] : null);
+        const display = document.getElementById('project-link-display');
+        if (display) {
+            display.innerHTML = linkedProjectId ? `<strong>${linkedProjectTitle}</strong> · <a href='/grv/company/{{ company.id if company else 0 }}/project/${linkedProjectId}' target='_blank' style='color: #3b82f6; font-weight:600;'>Ver Projeto ?</a>` : 'Nenhum';
+        }
+    }
+
+    window.novaReuniao = function () {
+        currentMeetingId = null; currentMeetingStatus = 'draft';
+        limparFormulario();
+        document.getElementById('meetings-list-section').style.display = 'none';
+        document.getElementById('meeting-editor-section').style.display = 'block';
+        trocarAba('preliminares');
+    };
+
+    window.editarReuniao = async function (id) {
+        currentMeetingId = id;
+        const res = await fetch(`/meetings/api/meeting/${id}`);
+        const data = await res.json();
+        if (data.success) {
+            const m = data.meeting;
+            document.getElementById('meeting-title').value = m.title || '';
+            document.getElementById('meeting-scheduled-date').value = m.scheduled_date || '';
+            document.getElementById('meeting-scheduled-time').value = m.scheduled_time || '';
+            guestsInternal = m.guests?.internal || [];
+            guestsExternal = m.guests?.external || [];
+            agendaItems = m.agenda || [];
+            updateProjectLinkDisplay(m.project_id, m.project_title);
+            renderGuestsInternal(); renderGuestsExternal(); renderAgenda();
+            document.getElementById('meetings-list-section').style.display = 'none';
+            document.getElementById('meeting-editor-section').style.display = 'block';
+        }
+    };
+
+    function trocarAba(aba) {
+        document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+        document.querySelectorAll('.tab-content').forEach(c => c.style.display = 'none');
+        document.getElementById(`tab-${aba}`).classList.add('active');
+        document.getElementById(`content-${aba}`).style.display = 'block';
+    }
+
+    function renderGuestsInternal() {
+        const c = document.getElementById('guests-internal-list');
+        c.innerHTML = guestsInternal.map((g, i) => `<div style='padding: 8px; background: #f8fafc; border-radius: 8px; margin-bottom: 4px; display: flex; justify-content: space-between;'>${g.name} <span onclick='guestsInternal.splice(${i},1);renderGuestsInternal()' style='color: red; cursor: pointer;'>?</span></div>`).join('');
+    }
+
+    function renderGuestsExternal() {
+        const c = document.getElementById('guests-external-list');
+        c.innerHTML = guestsExternal.map((g, i) => `<div style='padding: 8px; background: #f8fafc; border-radius: 8px; margin-bottom: 4px; display: flex; justify-content: space-between;'>${g.name} <span onclick='guestsExternal.splice(${i},1);renderGuestsExternal()' style='color: red; cursor: pointer;'>?</span></div>`).join('');
+    }
+
+    function renderAgenda() {
+        const c = document.getElementById('agenda-list');
+        c.innerHTML = agendaItems.map((g, i) => `<div style='padding: 8px; background: #f8fafc; border-radius: 8px; margin-bottom: 4px; display: flex; justify-content: space-between;'>${i + 1}. ${g.title} <span onclick='agendaItems.splice(${i},1);renderAgenda()' style='color: red; cursor: pointer;'>?</span></div>`).join('');
+    }
+
+    function limparFormulario() {
+        document.getElementById('meeting-title').value = '';
+        guestsInternal = []; guestsExternal = []; agendaItems = [];
+        renderGuestsInternal(); renderGuestsExternal(); renderAgenda();
+    }
+
+    window.fecharEditor = () => {
+        document.getElementById('meeting-editor-section').style.display = 'none';
+        document.getElementById('meetings-list-section').style.display = 'block';
+    };
+
+    function mostrarPautaSalva() { document.getElementById('saved-agenda-modal').style.display = 'block'; }
+    function fecharPautaSalva() { document.getElementById('saved-agenda-modal').style.display = 'none'; }
+    function usarPautaSalva(id, title) { agendaItems.push({ title }); renderAgenda(); fecharPautaSalva(); }
+
+    document.addEventListener('DOMContentLoaded', () => {
+        try {
+            employeesData = JSON.parse('{{ employees | tojson | safe if employees else "[]" }}');
+        } catch (e) {
+            employeesData = [];
+        }
+    });
+</script>
+{% endblock %}

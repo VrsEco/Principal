@@ -1,0 +1,310 @@
+{% extends "layouts/app.html" %}
+
+{% block title %}Planejamento Estratégico & OKRs | Versus{% endblock %}
+
+{% block page_title %}Planejamento / OKRs{% endblock %}
+
+{% block content %}
+<div class="okr-container fade-in">
+    <header class="okr-header">
+        <div class="header-left">
+            <h1 class="text-h1">Planejamento Estratégico</h1>
+            <p class="text-subtitle">Acompanhe os Objetivos e Resultados Chave da organização.</p>
+        </div>
+        <div class="header-actions">
+            <div class="view-toggle">
+                <button class="toggle-btn active" onclick="switchTab('global')">Global</button>
+                <button class="toggle-btn" onclick="switchTab('area')">Áreas / Times</button>
+            </div>
+            <button class="btn btn-primary" onclick="window.location.href='/okrs/new'">
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
+                    style="margin-right: 8px;">
+                    <line x1="12" y1="5" x2="12" y2="19"></line>
+                    <line x1="5" y1="12" x2="19" y2="12"></line>
+                </svg>
+                Novo Objetivo
+            </button>
+        </div>
+    </header>
+
+    <!-- Global Progress Summary -->
+    <div class="stats-row mt-4">
+        <div class="stat-card">
+            <label>Objetivos Ativos</label>
+            <div class="value" id="totalObjectives">0</div>
+        </div>
+        <div class="stat-card">
+            <label>Expectativa de Progresso</label>
+            <div class="value">65%</div>
+            <div class="progress-bar-small">
+                <div class="fill" style="width: 65%;"></div>
+            </div>
+        </div>
+        <div class="stat-card">
+            <label>Progresso Real</label>
+            <div class="value text-primary">58%</div>
+            <div class="progress-bar-small">
+                <div class="fill primary" style="width: 58%;"></div>
+            </div>
+        </div>
+    </div>
+
+    <!-- OKR List -->
+    <div class="okr-list-section mt-5">
+        <div id="okrList" class="okr-grid">
+            <!-- Shimmers -->
+            <div class="loading-shimmer" style="height: 200px; border-radius: 16px;"></div>
+            <div class="loading-shimmer" style="height: 200px; border-radius: 16px;"></div>
+            <div class="loading-shimmer" style="height: 200px; border-radius: 16px;"></div>
+        </div>
+    </div>
+</div>
+
+<style>
+    .okr-container {
+        max-width: 1200px;
+        margin: 0 auto;
+    }
+
+    .okr-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: flex-end;
+        margin-bottom: 2rem;
+    }
+
+    .view-toggle {
+        background: var(--surface-secondary);
+        padding: 4px;
+        border-radius: 12px;
+        display: flex;
+        gap: 4px;
+        margin-right: 1rem;
+    }
+
+    .toggle-btn {
+        padding: 8px 20px;
+        border: none;
+        background: transparent;
+        color: var(--text-secondary);
+        font-weight: 600;
+        cursor: pointer;
+        border-radius: 10px;
+        transition: var(--transition);
+    }
+
+    .toggle-btn.active {
+        background: var(--surface-primary);
+        color: var(--primary);
+        box-shadow: var(--shadow-sm);
+    }
+
+    .stats-row {
+        display: grid;
+        grid-template-columns: repeat(3, 1fr);
+        gap: 1.5rem;
+    }
+
+    .stat-card {
+        background: var(--surface-primary);
+        padding: 1.5rem;
+        border-radius: 16px;
+        border: 1px solid var(--border);
+    }
+
+    .stat-card label {
+        font-size: 0.8rem;
+        color: var(--text-tertiary);
+        text-transform: uppercase;
+        font-weight: 700;
+        margin-bottom: 0.5rem;
+        display: block;
+    }
+
+    .stat-card .value {
+        font-size: 2rem;
+        font-weight: 800;
+    }
+
+    .okr-grid {
+        display: grid;
+        gap: 2rem;
+    }
+
+    .okr-card {
+        background: var(--surface-primary);
+        border: 1px solid var(--border);
+        border-radius: 20px;
+        overflow: hidden;
+        transition: var(--transition);
+    }
+
+    .okr-card:hover {
+        border-color: var(--primary);
+        box-shadow: var(--shadow-md);
+    }
+
+    .okr-card-header {
+        padding: 1.5rem;
+        border-bottom: 1px solid var(--border);
+        display: flex;
+        justify-content: space-between;
+        align-items: flex-start;
+        background: linear-gradient(to right, var(--surface-secondary), var(--surface-primary));
+    }
+
+    .okr-type-badge {
+        padding: 4px 10px;
+        border-radius: 6px;
+        font-size: 0.7rem;
+        font-weight: 800;
+        text-transform: uppercase;
+        margin-bottom: 0.5rem;
+        display: inline-block;
+    }
+
+    .type-aceleracao {
+        background: var(--primary-light);
+        color: var(--primary);
+    }
+
+    .type-estruturante {
+        background: var(--success-light);
+        color: var(--success);
+    }
+
+    .kr-list {
+        padding: 1.5rem;
+        display: grid;
+        gap: 1rem;
+    }
+
+    .kr-item {
+        display: grid;
+        grid-template-columns: 1fr 200px 100px;
+        align-items: center;
+        gap: 1.5rem;
+        padding: 1rem;
+        background: var(--surface-secondary);
+        border-radius: 12px;
+    }
+
+    .kr-name {
+        font-weight: 600;
+        font-size: 0.95rem;
+    }
+
+    .kr-target {
+        font-size: 0.85rem;
+        color: var(--text-secondary);
+        text-align: right;
+    }
+
+    .progress-bar-wrapper {
+        width: 100%;
+        height: 8px;
+        background: var(--border);
+        border-radius: 4px;
+        overflow: hidden;
+        margin-top: 4px;
+    }
+
+    .progress-bar-fill {
+        height: 100%;
+        background: var(--primary);
+        transition: width 0.5s ease;
+    }
+
+    .loading-shimmer {
+        background: linear-gradient(90deg, var(--border) 25%, var(--surface-secondary) 50%, var(--border) 75%);
+        background-size: 200% 100%;
+        animation: shimmer 1.5s infinite;
+    }
+
+    @keyframes shimmer {
+        0% {
+            background-position: -200% 0;
+        }
+
+        100% {
+            background-position: 200% 0;
+        }
+    }
+</style>
+
+<script>
+    let currentTab = 'global';
+    let okrs = [];
+
+    document.addEventListener('DOMContentLoaded', () => {
+        fetchOKRs();
+    });
+
+    function switchTab(tab) {
+        currentTab = tab;
+        document.querySelectorAll('.toggle-btn').forEach(btn => btn.classList.toggle('active', btn.textContent.toLowerCase().includes(tab === 'global' ? 'global' : 'área')));
+        renderOKRs();
+    }
+
+    async function fetchOKRs() {
+        try {
+            const endpoint = currentTab === 'global' ? '/api/okrs-global' : '/api/okrs-area';
+            const res = await fetch(endpoint);
+            okrs = await res.json();
+            renderOKRs();
+        } catch (err) {
+            console.error('Erro ao carregar OKRs:', err);
+        }
+    }
+
+    function renderOKRs() {
+        const list = document.getElementById('okrList');
+        document.getElementById('totalObjectives').textContent = okrs.length;
+
+        if (okrs.length === 0) {
+            list.innerHTML = '<div class="text-center p-5 text-tertiary">Nenhum objetivo encontrado para este escopo.</div>';
+            return;
+        }
+
+        list.innerHTML = okrs.map(okr => `
+            <div class="okr-card fade-in">
+                <div class="okr-card-header">
+                    <div>
+                        <span class="okr-type-badge type-${okr.type}">${okr.type}</span>
+                        <h2 class="text-h2">${okr.objective}</h2>
+                        <p class="text-small text-tertiary">Dono: ${okr.owner || 'Não definido'} | Prazo: ${okr.deadline || '--'}</p>
+                    </div>
+                    <div class="text-right">
+                        <div class="text-h2 text-primary">60%</div>
+                        <p class="text-small">Média ponderada</p>
+                    </div>
+                </div>
+                <div class="kr-list">
+                    ${(okr.key_results || []).map(kr => `
+                        <div class="kr-item">
+                            <div class="kr-info">
+                                <div class="kr-name">${kr.label}</div>
+                                <div class="progress-bar-wrapper">
+                                    <div class="progress-bar-fill" style="width: 50%;"></div>
+                                </div>
+                            </div>
+                            <div class="kr-target">
+                                Meta: <strong>${kr.target}</strong><br>
+                                <span class="text-tertiary">${kr.metric}</span>
+                            </div>
+                            <div class="text-right">
+                                <button class="btn btn-sm btn-ghost" onclick="openKRDetails(${kr.id})">Lançar</button>
+                            </div>
+                        </div>
+                    `).join('')}
+                    <button class="btn btn-ghost btn-sm" onclick="openNewKRModal(${okr.id})">+ Novo Resultado Chave</button>
+                </div>
+            </div>
+        `).join('');
+    }
+
+    function openNewOKRModal() {
+        alert('Funcionalidade de criação será implementada na sequência.');
+    }
+</script>
+{% endblock %}

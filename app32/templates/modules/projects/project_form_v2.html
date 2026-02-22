@@ -1,0 +1,276 @@
+{% extends "layouts/workspace.html" %}
+
+{% block title %}{{ 'Editar' if project_id else 'Novo' }} Projeto - Versus{% endblock %}
+
+{% block breadcrumb %}
+<a href="/dashboard">Dashboard</a>
+<span class="sep">/</span>
+<a href="/projects">Projetos</a>
+<span class="sep">/</span>
+<span class="current">{{ 'Editar' if project_id else 'Novo' }}</span>
+{% endblock %}
+
+{% block navbar_actions %}
+{% endblock %}
+
+{% block workspace_content %}
+<div class="workspace-header mb-5 fade-in" style="padding-top: 1rem;">
+    <div style="display: flex; align-items: center; gap: 1rem; margin-bottom: 1rem;">
+        <h1 class="text-h1">{{ 'Editar' if project_id else 'Cadastrar Novo' }} Projeto</h1>
+    </div>
+    <p class="text-subtitle">Defina os objetivos, prazos e responsabilidades desta iniciativa estratégica.</p>
+</div>
+
+<div class="row fade-in">
+    <div class="col-lg-12">
+        <form id="project-form" class="card" style="padding: 2.5rem; border-radius: 24px; background: var(--surface);">
+            <div class="form-section">
+                <h3
+                    style="font-size: 1.125rem; font-weight: 700; margin-bottom: 2rem; display: flex; align-items: center; gap: 0.75rem;">
+                    <div style="width: 8px; height: 24px; background: var(--primary); border-radius: 4px;"></div>
+                    Informações Gerais
+                </h3>
+
+                <div class="mb-4">
+                    <label class="form-label" for="name">Título do Projeto <span class="text-danger">*</span></label>
+                    <input type="text" id="name" name="name" class="form-control"
+                        placeholder="Ex: Expansão Logística Região Sul" required>
+                </div>
+
+                <div class="row">
+                    <div class="col-md-12 mb-4">
+                        <label class="form-label" for="portfolio-plan-select">Portfólio ou Plano Estratégico</label>
+                        <select id="portfolio-plan-select" class="form-control">
+                            <option value="">Nenhum (Opcional)</option>
+                            <optgroup label="Portfólios" id="optgroup-portfolios"></optgroup>
+                            <optgroup label="Planos Estratégicos" id="optgroup-plans"></optgroup>
+                        </select>
+                        <input type="hidden" name="plan_id" id="hidden-plan-id">
+                        <input type="hidden" name="portfolio_id" id="hidden-portfolio-id">
+                    </div>
+                </div>
+
+                <div class="row">
+                    <div class="col-md-12 mb-4">
+                        <label class="form-label" for="owner">Responsável pelo Projeto</label>
+                        <select id="owner" name="owner" class="form-control">
+                            <option value="">Selecione o Responsável</option>
+                        </select>
+                    </div>
+                </div>
+
+                <div class="mb-4">
+                    <label class="form-label" for="notes">Descrição e Justificativa</label>
+                    <textarea id="notes" name="notes" class="form-control" rows="4"
+                        placeholder="Descreva os objetivos principais e os resultados esperados deste projeto..."></textarea>
+                </div>
+            </div>
+
+            <div class="form-section mt-5">
+                <h3
+                    style="font-size: 1.125rem; font-weight: 700; margin-bottom: 2rem; display: flex; align-items: center; gap: 0.75rem;">
+                    <div style="width: 8px; height: 24px; background: var(--accent); border-radius: 4px;"></div>
+                    Cronograma e Status
+                </h3>
+
+                <div class="row">
+                    <div class="col-md-4 mb-4">
+                        <label class="form-label" for="status">Status Atual</label>
+                        <select id="status" name="status" class="form-control">
+                            <option value="planned">Planejado</option>
+                            <option value="in_progress">Em Andamento</option>
+                            <option value="on_hold">Em Pausa</option>
+                            <option value="completed">Concluído</option>
+                            <option value="cancelled">Cancelado</option>
+                            <option value="archived">Arquivado</option>
+                        </select>
+                    </div>
+                    <div class="col-md-4 mb-4">
+                        <label class="form-label" for="priority">Prioridade</label>
+                        <select id="priority" name="priority" class="form-control">
+                            <option value="low">Baixa</option>
+                            <option value="medium" selected>Média</option>
+                            <option value="high">Alta</option>
+                        </select>
+                    </div>
+                    <div class="col-md-4 mb-4">
+                        <label class="form-label" for="deadline">Prazo Final (Deadline)</label>
+                        <input type="date" id="deadline" name="deadline" class="form-control">
+                    </div>
+                </div>
+
+                <div class="row">
+                    <div class="col-md-4 mb-4">
+                        <label class="form-label" for="progress">Progresso (%)</label>
+                        <input type="number" id="progress" name="progress" class="form-control" min="0" max="100"
+                            value="0">
+                    </div>
+                    <div class="col-md-8 mb-4">
+                        <label class="form-label" for="budget">Orçamento Estimado</label>
+                        <input type="text" id="budget" name="budget" class="form-control"
+                            placeholder="Ex: R$ 50.000,00">
+                    </div>
+                </div>
+            </div>
+
+            <div class="mt-5" style="display: flex; gap: 1rem; justify-content: flex-end;">
+                <button type="button" class="btn btn-secondary" onclick="window.location.href='/projects'">
+                    Cancelar
+                </button>
+                <button type="submit" class="btn btn-special" id="btn-submit">
+                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"></path>
+                        <polyline points="17 21 17 13 7 13 7 21"></polyline>
+                        <polyline points="7 3 7 8 15 8"></polyline>
+                    </svg>
+                    Salvar Projeto
+                </button>
+            </div>
+        </form>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+    const projectId = JSON.parse('{{ project_id | tojson if project_id else "null" }}');
+    const form = document.getElementById('project-form');
+    const companyId = parseInt('{{ company.id if company else 0 }}') || null;
+
+    document.addEventListener('DOMContentLoaded', async () => {
+        try {
+            // Load plans
+            const plansResponse = await fetch('/api/plans');
+            const plansList = await plansResponse.json();
+
+            if (Array.isArray(plansList)) {
+                const group = document.getElementById('optgroup-plans');
+                plansList.forEach(plan => {
+                    const option = document.createElement('option');
+                    option.value = `plan-${plan.id}`;
+                    option.textContent = `${plan.name}${plan.company_name ? ' (' + plan.company_name + ')' : ''}`;
+                    group.appendChild(option);
+                });
+            }
+
+            // Load portfolios
+            if (companyId) {
+                const portfoliosResponse = await fetch(`/api/companies/${companyId}/portfolios`);
+                const portfoliosData = await portfoliosResponse.json();
+                if (portfoliosData.success && portfoliosData.portfolios) {
+                    const group = document.getElementById('optgroup-portfolios');
+                    portfoliosData.portfolios.forEach(portfolio => {
+                        const option = document.createElement('option');
+                        option.value = `portfolio-${portfolio.id}`;
+                        option.textContent = `[${portfolio.code}] ${portfolio.name}`;
+                        group.appendChild(option);
+                    });
+                }
+            }
+
+            // Load employees for Owner (Responsible) select
+            if (companyId) {
+                const employeesResponse = await fetch(`/api/companies/${companyId}/employees`);
+                const employeesData = await employeesResponse.json();
+                if (employeesData.employees) {
+                    const ownerSelect = document.getElementById('owner');
+                    employeesData.employees.forEach(emp => {
+                        const option = document.createElement('option');
+                        option.value = emp.name;
+                        option.textContent = emp.name;
+                        ownerSelect.appendChild(option);
+                    });
+                }
+            }
+
+            if (projectId) {
+                const response = await fetch(`/api/projects/${projectId}`);
+                const project = await response.json();
+
+                // Fill form fields
+                Object.keys(project).forEach(key => {
+                    const input = form.elements[key];
+                    if (input) {
+                        if (input.type === 'date' && project[key]) {
+                            input.value = project[key].split('T')[0];
+                        } else {
+                            input.value = project[key];
+                        }
+                    }
+                });
+
+                // Set unified Portfolio/Plan select
+                const select = document.getElementById('portfolio-plan-select');
+                if (project.plan_id) {
+                    select.value = `plan-${project.plan_id}`;
+                } else if (project.portfolio_id) {
+                    select.value = `portfolio-${project.portfolio_id}`;
+                }
+            }
+        } catch (error) {
+            console.error('Error loading form data:', error);
+        }
+    });
+
+    form.onsubmit = async (e) => {
+        e.preventDefault();
+        const btn = document.getElementById('btn-submit');
+        const originalText = btn.innerHTML;
+        btn.disabled = true;
+        btn.innerHTML = 'Salvando...';
+
+        const formData = new FormData(form);
+        const data = Object.fromEntries(formData.entries());
+
+        // Value conversions
+        if (data.progress) data.progress = parseInt(data.progress);
+
+        const unifiedValue = document.getElementById('portfolio-plan-select').value;
+
+        // Populate IDs from the unified select, but preserve existing ones from hidden fields if not specifically changed
+        if (unifiedValue.startsWith('plan-')) {
+            data.plan_id = parseInt(unifiedValue.replace('plan-', ''));
+            data.portfolio_id = null; // Clear portfolio if plan is selected
+        } else if (unifiedValue.startsWith('portfolio-')) {
+            data.portfolio_id = parseInt(unifiedValue.replace('portfolio-', ''));
+            data.plan_id = null; // Clear plan if portfolio is selected
+        } else {
+            data.plan_id = null;
+            data.portfolio_id = null;
+        }
+
+        // Clean up other optional fields
+        if (data.owner === "") data.owner = null;
+        if (data.deadline === "") data.deadline = null;
+        if (data.budget === "") data.budget = null;
+        if (data.notes === "") data.notes = null;
+
+        if (companyId) data.company_id = companyId;
+
+        const url = projectId ? `/api/projects/${projectId}` : '/api/projects';
+        const method = projectId ? 'PUT' : 'POST';
+
+        try {
+            const response = await fetch(url, {
+                method: method,
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(data)
+            });
+
+            if (response.ok) {
+                window.location.href = '/projects';
+            } else {
+                const result = await response.json();
+                alert('Erro ao salvar: ' + (result.message || JSON.stringify(result.errors || result.error)));
+                btn.disabled = false;
+                btn.innerHTML = originalText;
+            }
+        } catch (error) {
+            console.error('Error saving project:', error);
+            alert('Erro de conexão ao salvar projeto.');
+            btn.disabled = false;
+            btn.innerHTML = originalText;
+        }
+    };
+</script>
+{% endblock %}

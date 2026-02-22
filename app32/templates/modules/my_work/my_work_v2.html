@@ -1,0 +1,824 @@
+{% extends "layouts/workspace.html" %}
+
+{% block title %}Minhas Atividades - Versus{% endblock %}
+
+{% block head %}
+<!-- Reusing existing CSS -->
+<link rel="stylesheet" href="{{ url_for('static', filename='css/my-work.css') }}" />
+<link rel="stylesheet" href="{{ url_for('static', filename='css/my-work-multiselect.css') }}" />
+<style>
+    /* Adjustments for Workspace Layout */
+    .layout-workspace .workspace-sidebar,
+    .layout-workspace .workspace-sidebar-right {
+        padding: 1.25rem;
+        background: var(--surface);
+    }
+
+    /* Override my-work.css container constraints */
+    .my-work-container {
+        max-width: 100% !important;
+        width: 100% !important;
+        padding: 0 5rem 0 2.5rem !important;
+        box-sizing: border-box !important;
+        background: transparent !important;
+        min-height: auto !important;
+        overflow-x: hidden !important;
+    }
+
+    .my-work-scale-wrapper,
+    .my-work-layout {
+        display: block !important;
+        zoom: 1 !important;
+        width: 100% !important;
+        max-width: none !important;
+    }
+
+    .workspace-main {
+        padding: 1.25rem 0 !important;
+        min-width: 0 !important;
+        overflow-x: hidden !important;
+    }
+
+    /* Force specific sidebar width for filters if needed */
+    #sidebar-left {
+        width: 300px;
+    }
+
+    #sidebar-right {
+        width: 340px;
+    }
+
+    /* Fix for multiselects in sidebar */
+    .filter-card {
+        min-height: auto !important;
+        margin-bottom: 1rem;
+        border-radius: 12px !important;
+        position: relative;
+        /* Ensure dropdowns are relative to card if needed */
+    }
+
+    .filter-multiselect__dropdown {
+        position: fixed !important;
+        /* Float over everything */
+        width: 260px !important;
+        left: auto !important;
+        z-index: 9999 !important;
+    }
+
+    /* Compact Header Cards */
+    .work-header {
+        padding: 0.85rem 0 !important;
+        width: 100% !important;
+        box-sizing: border-box !important;
+    }
+
+    /* Scope Selector API-Ready */
+    .scope-selector {
+        display: flex;
+        background: #f3f4f6;
+        padding: 4px;
+        border-radius: 12px;
+        gap: 4px;
+        border: 1px solid var(--border);
+    }
+
+    .scope-btn {
+        padding: 6px 16px;
+        border-radius: 8px;
+        font-size: 0.8rem;
+        font-weight: 600;
+        cursor: pointer;
+        transition: all 0.2s;
+        border: none !important;
+        background: transparent !important;
+        color: var(--text-secondary) !important;
+    }
+
+    .scope-btn:hover {
+        color: var(--text-primary) !important;
+        background: rgba(0, 0, 0, 0.05) !important;
+    }
+
+    .scope-btn.active {
+        background: white !important;
+        color: var(--primary) !important;
+        box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05) !important;
+    }
+
+    .work-header__cards {
+        display: grid !important;
+        grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)) !important;
+        /* Reduced min-width to prevent overflow */
+        gap: 0.75rem !important;
+        width: 100% !important;
+    }
+
+    .header-card {
+        padding: 0.6rem 1rem !important;
+        gap: 0.85rem !important;
+        flex-direction: row !important;
+        align-items: center !important;
+        min-height: 80px !important;
+        /* Forces a much lower height */
+    }
+
+    .performance-card__score,
+    .report-donut {
+        width: 65px !important;
+        height: 65px !important;
+        flex-shrink: 0 !important;
+    }
+
+    .score-circle,
+    .report-donut svg {
+        width: 65px !important;
+        height: 65px !important;
+    }
+
+    .score-number,
+    .donut-value {
+        font-size: 1rem !important;
+        font-weight: 700 !important;
+    }
+
+    .score-detail {
+        display: flex !important;
+        flex-direction: column !important;
+        align-items: center !important;
+        font-size: 0.55rem !important;
+        color: var(--text-tertiary) !important;
+        margin-top: -2px !important;
+        line-height: 1.2 !important;
+    }
+
+    .score-value {
+        display: flex !important;
+        flex-direction: column !important;
+        align-items: center !important;
+        justify-content: center !important;
+        width: 100% !important;
+        height: 100% !important;
+    }
+
+    .performance-card__info,
+    .insight-card__info {
+        text-align: left !important;
+        margin: 0 !important;
+        display: flex !important;
+        flex-direction: column !important;
+        justify-content: center !important;
+        flex: 1 !important;
+    }
+
+    .performance-card__info h3,
+    .insight-card__header h3 {
+        font-size: 0.8rem !important;
+        margin-bottom: 2px !important;
+    }
+
+    .performance-status,
+    .insight-card__summary {
+        margin: 0 !important;
+        font-size: 0.65rem !important;
+    }
+
+    .mini-bar-chart {
+        height: 30px !important;
+    }
+
+    /* Adjust Status Bar gap */
+    .status-summary {
+        gap: 0.5rem !important;
+    }
+
+    /* Ocorrências Card Responsive Fix */
+    .header-card--incidents {
+        display: flex !important;
+        flex-direction: row !important;
+        flex-wrap: wrap !important;
+        align-items: center !important;
+        gap: 0.75rem !important;
+        min-width: 180px !important;
+    }
+
+    .incidents-graphic {
+        display: flex !important;
+        flex-direction: column !important;
+        gap: 4px !important;
+        flex-shrink: 0 !important;
+        padding-right: 0.75rem !important;
+        border-right: 1px solid var(--border);
+    }
+
+    .incident-item {
+        display: flex !important;
+        align-items: center !important;
+        gap: 6px !important;
+        white-space: nowrap !important;
+    }
+
+    .incident-value {
+        font-weight: 700 !important;
+        font-size: 0.95rem !important;
+        line-height: 1 !important;
+        min-width: 15px !important;
+        text-align: right !important;
+    }
+
+    .incident-label {
+        font-size: 0.6rem !important;
+        font-weight: 500 !important;
+        color: var(--text-secondary) !important;
+    }
+
+
+
+
+
+    .score-bg {
+        fill: rgba(0, 0, 0, 0.05) !important;
+        stroke: #eee !important;
+    }
+
+    .score-progress {
+        fill: none !important;
+    }
+
+    /* INDICATORS COLLAPSIBLE GLOBAL SECTION */
+    .dashboard-summary-container {
+        margin-bottom: 2rem;
+    }
+
+    .dashboard-summary-header {
+        display: flex;
+        align-items: center;
+        gap: 0.75rem;
+        cursor: pointer;
+        padding: 0.5rem 0 1.5rem 0;
+        user-select: none;
+    }
+
+    .dashboard-summary-header h3 {
+        font-size: 0.85rem !important;
+        font-weight: 700 !important;
+        color: var(--text-secondary) !important;
+        text-transform: uppercase !important;
+        margin: 0 !important;
+        letter-spacing: 0.05em !important;
+    }
+
+    .dashboard-summary-header .chevron {
+        transition: transform 0.2s;
+        color: var(--text-tertiary);
+    }
+
+    .dashboard-summary-container.collapsed .dashboard-summary-header .chevron {
+        transform: rotate(-90deg);
+    }
+
+    .dashboard-summary-container.collapsed .dashboard-summary-content {
+        display: none !important;
+    }
+
+    .work-header {
+        padding: 1.5rem 1.5rem !important;
+        margin-bottom: 1.5rem !important;
+    }
+
+    /* Responsiveness for Header/Navbar */
+    @media (max-width: 768px) {
+        .navbar-breadcrumb {
+            display: none !important;
+        }
+
+        .my-work-container {
+            padding: 0 1rem !important;
+        }
+
+        .btn-filter-text {
+            display: none !important;
+        }
+
+        .navbar-actions .btn {
+            padding: 0.5rem !important;
+            min-width: 40px !important;
+            justify-content: center !important;
+        }
+    }
+</style>
+{% endblock %}
+
+{% block breadcrumb %}
+<a href="/dashboard">Cenário</a>
+<span class="sep">/</span>
+<span class="current">Minhas Atividades</span>
+{% endblock %}
+
+
+{% block navbar_actions %}
+<div style="display: flex; align-items: center; gap: 0.75rem;">
+    <!-- Scope Selector (Somente para Admin/Client ou gestores) -->
+    <div class="scope-selector">
+        <button class="scope-btn active" data-scope="me" title="Minhas Atividades">Eu</button>
+        <button class="scope-btn" data-scope="team" title="Minha Equipe">Equipe</button>
+        <button class="scope-btn" data-scope="company" title="Toda a Empresa">Empresa</button>
+    </div>
+
+    <button class="btn btn-secondary btn-sm" onclick="toggleSidebar('right')" title="Filtros">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <circle cx="11" cy="11" r="8"></circle>
+            <line x1="21" y1="21" x2="16.65" y2="16.65"></line>
+        </svg>
+        <span class="btn-filter-text">Filtros</span>
+    </button>
+</div>
+{% endblock %}
+
+{% block workspace_content %}
+<div class="my-work-container">
+    <!-- Dashboard Summary - GLOBAL COLLAPSIBLE SECTION -->
+    <div class="dashboard-summary-container" id="dashboard-summary">
+        <div class="dashboard-summary-header" onclick="toggleCollapsible('dashboard-summary')">
+            <svg class="chevron" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                stroke-width="3">
+                <polyline points="6 9 12 15 18 9"></polyline>
+            </svg>
+            <h3>Dashboard de Performance</h3>
+        </div>
+
+        <div class="dashboard-summary-content">
+            <!-- Header Dashboard Section -->
+            <div class="work-header" style="padding: 1.5rem; border-radius: 20px;">
+                <div class="work-header__cards">
+                    <!-- Performance Score -->
+                    <div class="header-card performance-card">
+                        <div class="performance-card__score">
+                            <div class="score-circle" data-score="0">
+                                <svg viewBox="0 0 100 100">
+                                    <defs>
+                                        <linearGradient id="scoreGradient" x1="0%" y1="0%" x2="100%" y2="100%">
+                                            <stop offset="0%" stop-color="#667eea" />
+                                            <stop offset="100%" stop-color="#764ba2" />
+                                        </linearGradient>
+                                    </defs>
+                                    <circle cx="50" cy="50" r="45" class="score-bg"></circle>
+                                    <circle cx="50" cy="50" r="45" class="score-progress" style="--score: 0"></circle>
+                                </svg>
+                                <div class="score-value"
+                                    style="display: flex; flex-direction: column; align-items: center;">
+                                    <span class="score-number" id="performancePointsValue"
+                                        style="font-size: 1.1rem !important; font-weight: 800; line-height: 1;">0</span>
+                                    <div class="score-detail"
+                                        style="display: flex; flex-direction: column; align-items: center;">
+                                        <span class="score-max" id="performancePointsMax" style="font-size: 0.55rem;">de
+                                            0
+                                            pts</span>
+                                        <span class="score-percent" id="performancePointsPercent"
+                                            style="font-size: 0.55rem;">(0%)</span>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="performance-card__info">
+                            <h3 style="font-size: 0.9rem; margin-bottom: 4px;">Performance Score</h3>
+                            <p class="performance-status performance-status--good" id="performanceStatusText"
+                                style="font-size: 0.7rem; padding: 2px 8px;">Calculando...</p>
+                        </div>
+                    </div>
+
+                    <!-- Taxa de Conclusão -->
+                    <div class="header-card insight-card insight-card--donut">
+                        <div class="report-donut">
+                            <svg viewBox="0 0 100 100">
+                                <circle cx="50" cy="50" r="40" fill="none" stroke="#e5e7eb" stroke-width="12"></circle>
+                                <circle id="completionDonutStroke" cx="50" cy="50" r="40" fill="none" stroke="#10b981"
+                                    stroke-width="12" stroke-dasharray="251.2" stroke-dashoffset="0"
+                                    transform="rotate(-90 50 50)"></circle>
+                            </svg>
+                            <div class="donut-center">
+                                <span class="donut-value" id="completionDonutValue">0%</span>
+                            </div>
+                        </div>
+                        <div class="insight-card__info">
+                            <h3 style="margin: 0; font-size: 0.9rem;">Taxa de Conclusão</h3>
+                            <p class="insight-card__summary" id="completionRateSummary"
+                                style="margin: 0; font-size: 0.7rem;">0
+                                concluídas</p>
+                        </div>
+                    </div>
+
+                    <!-- Produtividade -->
+                    <div class="header-card insight-card insight-card--bars">
+                        <div class="mini-bar-chart" style="width: 65px; display: flex; align-items: flex-end;">
+                            <div class="bar" data-day-index="1"></div>
+                            <div class="bar" data-day-index="2"></div>
+                            <div class="bar" data-day-index="3"></div>
+                            <div class="bar" data-day-index="4"></div>
+                            <div class="bar" data-day-index="5"></div>
+                        </div>
+                        <div class="insight-card__info">
+                            <h3 style="margin: 0; font-size: 0.9rem;">Produtividade</h3>
+                            <p class="insight-card__summary" id="weeklySummaryText"
+                                style="margin: 0; font-size: 0.7rem;">0
+                                atividades</p>
+                        </div>
+                    </div>
+
+                    <!-- Ocorrências -->
+                    <div class="header-card insight-card header-card--incidents">
+                        <div class="incidents-graphic">
+                            <div class="incident-item">
+                                <div id="incidentPositiveValue" class="incident-value" style="color: var(--success);">0
+                                </div>
+                                <div class="incident-label">Positivos</div>
+                            </div>
+                            <div class="incident-item">
+                                <div id="incidentNegativeValue" class="incident-value" style="color: var(--danger);">0
+                                </div>
+                                <div class="incident-label">Negativos</div>
+                            </div>
+                        </div>
+                        <div class="insight-card__info">
+                            <h3 style="margin: 0; font-size: 0.8rem;">Ocorrências</h3>
+                            <p style="margin: 0; font-size: 0.65rem; color: var(--text-tertiary);">Feedback Semanal</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="status-summary"
+                style="margin-bottom: 2rem; display: grid; grid-template-columns: repeat(auto-fit, minmax(100px, 1fr)); gap: 0.75rem;">
+                <!-- Consolidação de Tempo -->
+                <div class="stat-card"
+                    style="flex-direction: column; align-items: center; text-align: center; padding: 0.75rem 1rem; background: var(--color-bg-secondary);">
+                    <div class="stat-card__value" id="main-done"
+                        style="font-size: 1.5rem; margin-bottom: 0.15rem; color: var(--color-success);">0h</div>
+                    <div class="stat-card__label"
+                        style="font-size: 0.75rem; color: var(--color-text-primary); font-weight: 600;">🕒 Total
+                        Realizado
+                    </div>
+                    <div class="stat-card__helper" style="font-size: 0.7rem; color: var(--color-text-tertiary);">Prev:
+                        <span id="main-planned" style="font-weight: 700;">0h</span>
+                    </div>
+                    <div class="stat-card__footer"
+                        style="font-size: 0.6rem; color: var(--color-text-tertiary); margin-top: 2px;">
+                        Com o total de Processos e Projetos
+                    </div>
+                </div>
+
+                <div class="stat-card"
+                    style="flex-direction: column; align-items: center; text-align: center; padding: 0.75rem 1rem; background: var(--color-bg-secondary);">
+                    <div class="stat-card__value" id="main-projects-done"
+                        style="font-size: 1.5rem; margin-bottom: 0.15rem; color: var(--color-success);">0h</div>
+                    <div class="stat-card__label"
+                        style="font-size: 0.75rem; color: var(--color-text-primary); font-weight: 600;">📁 Projetos
+                    </div>
+                    <div class="stat-card__helper" style="font-size: 0.7rem; color: var(--color-text-tertiary);">Prev:
+                        <span id="main-projects-planned" style="font-weight: 700;">0h</span>
+                    </div>
+                </div>
+
+                <div class="stat-card"
+                    style="flex-direction: column; align-items: center; text-align: center; padding: 0.75rem 1rem; background: var(--color-bg-secondary);">
+                    <div class="stat-card__value" id="main-processes-done"
+                        style="font-size: 1.5rem; margin-bottom: 0.15rem; color: var(--color-success);">0h</div>
+                    <div class="stat-card__label"
+                        style="font-size: 0.75rem; color: var(--color-text-primary); font-weight: 600;">⚙️ Processos
+                    </div>
+                    <div class="stat-card__helper" style="font-size: 0.7rem; color: var(--color-text-tertiary);">Prev:
+                        <span id="main-processes-planned" style="font-weight: 700;">0h</span>
+                    </div>
+                </div>
+
+                <!-- Blocos de Atividades -->
+                <div class="stat-card stat-card--pending"
+                    style="flex-direction: column; align-items: center; text-align: center; padding: 0.75rem 1rem;">
+                    <div class="stat-card__value" id="stat-pending"
+                        style="font-size: 1.5rem; margin-bottom: 0.15rem; color: var(--color-warning);">0</div>
+                    <div class="stat-card__label" style="font-size: 0.7rem; color: var(--color-text-tertiary);">Abertas
+                    </div>
+                </div>
+                <div class="stat-card stat-card--overdue"
+                    style="flex-direction: column; align-items: center; text-align: center; padding: 0.75rem 1rem;">
+                    <div class="stat-card__value" id="stat-overdue"
+                        style="font-size: 1.5rem; margin-bottom: 0.15rem; color: var(--color-danger);">0</div>
+                    <div class="stat-card__label" style="font-size: 0.7rem; color: var(--color-text-tertiary);">
+                        Atrasadas
+                    </div>
+                </div>
+                <div class="stat-card stat-card--total"
+                    style="flex-direction: column; align-items: center; text-align: center; padding: 0.75rem 1rem;">
+                    <div class="stat-card__value" id="stat-total"
+                        style="font-size: 1.5rem; margin-bottom: 0.15rem; color: var(--color-primary);">0</div>
+                    <div class="stat-card__label" style="font-size: 0.7rem; color: var(--color-text-tertiary);">Total
+                    </div>
+                </div>
+                <a href="/my-work/export-pdf" class="stat-card stat-card--report"
+                    style="flex-direction: column; align-items: center; text-align: center; padding: 0.75rem 1rem; text-decoration: none; justify-content: center; background: var(--color-bg-tertiary); border-style: dashed;">
+                    <div style="font-size: 1.4rem; margin-bottom: 0.15rem;">📄</div>
+                    <div style="font-size: 0.7rem; font-weight: 600; color: var(--color-text-primary);">Relatório</div>
+                </a>
+            </div>
+        </div>
+    </div>
+
+    <!-- Activities List -->
+    <section class="activities-panel">
+        <div class="activities-panel__header" style="display: none;">
+            <!-- Hidden header, using workspace style -->
+            <button id="activitiesPanelToggle" aria-expanded="true"></button>
+        </div>
+        <div class="activities-panel__body">
+            <div class="activities-list" id="activitiesList" data-state="loading">
+                <div class="activity-placeholder">
+                    <div class="placeholder-spinner"></div>
+                    <p>Carregando atividades...</p>
+                </div>
+            </div>
+
+            <div class="empty-state" id="emptyState" style="display: none;">
+                <svg width="60" height="60" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1">
+                    <polyline points="22 12 18 12 15 21 9 3 6 12 2 12"></polyline>
+                </svg>
+                <h3>Nenhuma atividade</h3>
+                <p>Ajuste os filtros para ver mais.</p>
+            </div>
+        </div>
+    </section>
+</div>
+
+<!-- All the modals from the original template -->
+{% include 'modules/my_work_modals.html' %}
+{% endblock %}
+
+{% block sidebar_right %}
+<div class="sidebar-filters-v2"
+    style="padding: 0; display: flex; flex-direction: column; gap: 1rem; padding-bottom: 2rem;">
+    <h4
+        style="font-size: 0.75rem; font-weight: 700; color: var(--accent); text-transform: uppercase; margin-bottom: 0.5rem; letter-spacing: 0.05em;">
+        Configurações de Filtro
+    </h4>
+
+    <!-- 1. Buscador Principal -->
+    <div class="filter-card filter-card--controls">
+        <div class="filter-input-wrapper">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <circle cx="11" cy="11" r="8"></circle>
+                <line x1="21" y1="21" x2="16.65" y2="16.65"></line>
+            </svg>
+            <input type="text" class="filter-text-input" placeholder="Buscar atividade..." id="searchInput" />
+        </div>
+    </div>
+
+    <!-- 2. Empresas -->
+    <div class="filter-card" id="filter-companies">
+        <div class="filter-card__header collapsible-header" onclick="toggleCollapsible('filter-companies')">
+            <h4>Empresas</h4>
+            <svg class="chevron" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                stroke-width="2">
+                <polyline points="6 9 12 15 18 9"></polyline>
+            </svg>
+        </div>
+        <div class="collapsible-content">
+            <div class="filter-multiselect" id="companyMultiselect">
+                <div class="filter-multiselect__trigger" id="companyMultiselectTrigger">
+                    <span class="filter-multiselect__label" id="companyMultiselectLabel">Todas</span>
+                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <polyline points="6 9 12 15 18 9"></polyline>
+                    </svg>
+                </div>
+                <div class="filter-multiselect__dropdown" id="companyMultiselectDropdown">
+                    <div class="multiselect-search">
+                        <input type="text" placeholder="Filtrar..." id="companySearchInput">
+                    </div>
+                    <label class="multiselect-option">
+                        <input type="checkbox" id="selectAllCompanies" checked>
+                        <span>Todas</span>
+                    </label>
+                    <div class="multiselect-options" id="companyList"></div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- 3. Equipe (Responsáveis e Executores) -->
+    <div class="filter-card" id="filter-team">
+        <div class="filter-card__header collapsible-header" onclick="toggleCollapsible('filter-team')">
+            <h4>Equipe</h4>
+            <svg class="chevron" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                stroke-width="2">
+                <polyline points="6 9 12 15 18 9"></polyline>
+            </svg>
+        </div>
+        <div class="collapsible-content" style="display: flex; flex-direction: column; gap: 10px;">
+            <!-- Responsáveis -->
+            <div class="filter-multiselect" id="responsibleMultiselect">
+                <div class="filter-multiselect__trigger" id="responsibleMultiselectTrigger">
+                    <span class="filter-multiselect__label" id="responsibleMultiselectLabel">Responsáveis</span>
+                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <polyline points="6 9 12 15 18 9"></polyline>
+                    </svg>
+                </div>
+                <div class="filter-multiselect__dropdown" id="responsibleMultiselectDropdown">
+                    <div class="multiselect-search">
+                        <input type="text" placeholder="Filtrar..." id="responsibleSearchInput">
+                    </div>
+                    <label class="multiselect-option">
+                        <input type="checkbox" id="selectAllResponsibles" checked>
+                        <span>Todos</span>
+                    </label>
+                    <div class="multiselect-options" id="responsibleList"></div>
+                </div>
+            </div>
+            <!-- Executores -->
+            <div class="filter-multiselect" id="executorMultiselect">
+                <div class="filter-multiselect__trigger" id="executorMultiselectTrigger">
+                    <span class="filter-multiselect__label" id="executorMultiselectLabel">Executores</span>
+                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <polyline points="6 9 12 15 18 9"></polyline>
+                    </svg>
+                </div>
+                <div class="filter-multiselect__dropdown" id="executorMultiselectDropdown">
+                    <div class="multiselect-search">
+                        <input type="text" placeholder="Filtrar..." id="executorSearchInput">
+                    </div>
+                    <label class="multiselect-option">
+                        <input type="checkbox" id="selectAllExecutors" checked>
+                        <span>Todos</span>
+                    </label>
+                    <div class="multiselect-options" id="executorList"></div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- 4. Registros (Processos e Projetos) -->
+    <div class="filter-card" id="filter-records">
+        <div class="filter-card__header collapsible-header" onclick="toggleCollapsible('filter-records')">
+            <h4>Processos e Projetos</h4>
+            <svg class="chevron" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                stroke-width="2">
+                <polyline points="6 9 12 15 18 9"></polyline>
+            </svg>
+        </div>
+        <div class="collapsible-content" style="display: flex; flex-direction: column; gap: 10px;">
+            <div class="filter-multiselect" id="processMultiselect">
+                <div class="filter-multiselect__trigger" id="processMultiselectTrigger">
+                    <span class="filter-multiselect__label" id="processMultiselectLabel">Processos</span>
+                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <polyline points="6 9 12 15 18 9"></polyline>
+                    </svg>
+                </div>
+                <div class="filter-multiselect__dropdown" id="processMultiselectDropdown">
+                    <div class="multiselect-search">
+                        <input type="text" placeholder="Filtrar..." id="processSearchInput">
+                    </div>
+                    <label class="multiselect-option">
+                        <input type="checkbox" id="selectAllProcesses" checked>
+                        <span>Todos</span>
+                    </label>
+                    <div class="multiselect-options" id="processList"></div>
+                </div>
+            </div>
+            <div class="filter-multiselect" id="projectMultiselect">
+                <div class="filter-multiselect__trigger" id="projectMultiselectTrigger">
+                    <span class="filter-multiselect__label" id="projectMultiselectLabel">Projetos</span>
+                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <polyline points="6 9 12 15 18 9"></polyline>
+                    </svg>
+                </div>
+                <div class="filter-multiselect__dropdown" id="projectMultiselectDropdown">
+                    <div class="multiselect-search">
+                        <input type="text" placeholder="Filtrar..." id="projectSearchInput">
+                    </div>
+                    <label class="multiselect-option">
+                        <input type="checkbox" id="selectAllProjects" checked>
+                        <span>Todos</span>
+                    </label>
+                    <div class="multiselect-options" id="projectList"></div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- 5. Dono de Processos -->
+    <div class="filter-card" id="filter-owners">
+        <div class="filter-card__header collapsible-header" onclick="toggleCollapsible('filter-owners')">
+            <h4>Dono de Processos</h4>
+            <svg class="chevron" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                stroke-width="2">
+                <polyline points="6 9 12 15 18 9"></polyline>
+            </svg>
+        </div>
+        <div class="collapsible-content">
+            <div class="filter-multiselect" id="processOwnerMultiselect">
+                <div class="filter-multiselect__trigger" id="processOwnerMultiselectTrigger">
+                    <span class="filter-multiselect__label" id="processOwnerMultiselectLabel">Dono</span>
+                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <polyline points="6 9 12 15 18 9"></polyline>
+                    </svg>
+                </div>
+                <div class="filter-multiselect__dropdown" id="processOwnerMultiselectDropdown">
+                    <div class="multiselect-search">
+                        <input type="text" placeholder="Filtrar..." id="processOwnerSearchInput">
+                    </div>
+                    <label class="multiselect-option">
+                        <input type="checkbox" id="selectAllProcessOwners" checked>
+                        <span>Todos</span>
+                    </label>
+                    <div class="multiselect-options" id="processOwnerList"></div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- 6. Status & Ordenação -->
+    <div class="filter-card" id="filter-status">
+        <div class="filter-card__header collapsible-header" onclick="toggleCollapsible('filter-status')">
+            <h4>Status & Ordenação</h4>
+            <svg class="chevron" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                stroke-width="2">
+                <polyline points="6 9 12 15 18 9"></polyline>
+            </svg>
+        </div>
+        <div class="collapsible-content">
+            <div class="filter-multiselect" id="deliveryMultiselect" style="margin-bottom: 8px;">
+                <div class="filter-multiselect__trigger" id="deliveryMultiselectTrigger">
+                    <span class="filter-multiselect__label" id="deliveryMultiselectLabel">Status de
+                        Entrega</span>
+                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <polyline points="6 9 12 15 18 9"></polyline>
+                    </svg>
+                </div>
+                <div class="filter-multiselect__dropdown" id="deliveryMultiselectDropdown">
+                    <div class="multiselect-search">
+                        <input type="text" placeholder="Filtrar..." id="deliverySearchInput">
+                    </div>
+                    <label class="multiselect-option">
+                        <input type="checkbox" id="selectAllDeliveryTags" checked>
+                        <span>Todos</span>
+                    </label>
+                    <div class="multiselect-options" id="deliveryList"></div>
+                </div>
+            </div>
+
+            <div class="filter-select-wrapper">
+                <select class="filter-select" id="sortSelect" style="font-size: 0.85rem;">
+                    <option value="" selected>Ordenar por...</option>
+                    <option value="deadline">Prazo</option>
+                    <option value="company">Empresa</option>
+                    <option value="responsible">Responsável</option>
+                    <option value="executor">Executor</option>
+                    <option value="project">Projeto</option>
+                    <option value="process">Processo</option>
+                </select>
+            </div>
+        </div>
+    </div>
+
+    <!-- 7. Período -->
+    <div class="filter-card" id="filter-period">
+        <div class="filter-card__header collapsible-header" onclick="toggleCollapsible('filter-period')">
+            <h4>Período</h4>
+            <svg class="chevron" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                stroke-width="2">
+                <polyline points="6 9 12 15 18 9"></polyline>
+            </svg>
+        </div>
+        <div class="collapsible-content" style="display: flex; flex-direction: column; gap: 8px;">
+            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 4px;">
+                <input type="date" id="filterDueDateStart" class="form-control"
+                    style="font-size: 0.8rem; padding: 0.5rem;">
+                <input type="date" id="filterDueDateEnd" class="form-control"
+                    style="font-size: 0.8rem; padding: 0.5rem;">
+            </div>
+            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 4px; margin-top: 4px;">
+                <button class="btn btn-ghost" id="filterDueDateToday"
+                    style="font-size: 0.7rem; padding: 4px;">Hoje</button>
+                <button class="btn btn-ghost" id="filterDueDateUntilYesterday"
+                    style="font-size: 0.7rem; padding: 4px;">Até Ontem</button>
+                <button class="btn btn-ghost" id="filterDueDateWeek"
+                    style="font-size: 0.7rem; padding: 4px;">Semana</button>
+                <button class="btn btn-ghost" id="filterDueDateMonth"
+                    style="font-size: 0.7rem; padding: 4px;">Mês</button>
+                <button class="btn btn-ghost" id="filterDueDateClear"
+                    style="grid-column: span 2; font-size: 0.7rem; padding: 4px; border: 1px dashed var(--border);">Limpar
+                    Período</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Limpar Filtros -->
+    <button id="filtersClearButton" class="btn btn-outline-danger"
+        style="width: 100%; border-radius: 10px; margin-top: 1rem; font-size: 0.85rem; font-weight: 600; padding: 0.75rem;">
+        Limpar Tudo
+    </button>
+
+    <!-- Hidden elements for stats JS reliance -->
+    <div id="weeklyTrendBadge" style="display: none;"></div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script src="{{ url_for('static', filename='js/my-work.js') }}"></script>
+{% endblock %}

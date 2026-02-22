@@ -1,0 +1,29 @@
+{% extends "layouts/workspace.html" %}
+
+{% block breadcrumb %}
+<span class="current">DIAGNÓSTICO V2</span>
+{% endblock %}
+
+{% block workspace_content %}
+<div style="padding: 3rem; text-align: left;">
+    <h1 style="font-size: 2rem; color: #10b981; font-weight: 900;">Diagnóstico de Templates V2 (Corrigido)</h1>
+
+    <h3>🔍 Onde o Flask procura templates:</h3>
+    <ul>
+        {% for p in paths %}
+        <li>{{ p }}</li>
+        {% endfor %}
+    </ul>
+
+    <h3>📂 Onde encontrei 'modules/plans/base_planning_v2.html':</h3>
+    <ul>
+        {% for f in found %}
+        <li>✅ {{ f }}</li>
+        {% else %}
+        <li style="color: red;">❌ NÃO ENCONTRADO EM NENHUM DESSES CAMINHOS!</li>
+        {% endfor %}
+    </ul>
+
+    <p style="margin-top: 1rem;">Verifique se o arquivo base_planning_v2.html existe EXATAMENTE neste caminho.</p>
+</div>
+{% endblock %}

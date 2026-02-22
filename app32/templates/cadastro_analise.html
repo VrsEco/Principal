@@ -1,0 +1,559 @@
+{% extends "base.html" %}
+{% block title %}Análise de Completude - Agente de Cadastro{% endblock %}
+
+{% block body %}
+  {% set active_nav = 'dashboard' %}
+  {{ super() }}
+{% endblock %}
+
+{% block extra_head %}
+  {{ super() }}
+  <style>
+    .analise-page {
+      max-width: 1200px;
+      margin: 0 auto;
+      padding: 32px 20px 64px;
+    }
+
+    .analise-header {
+      margin-bottom: 32px;
+    }
+
+    .analise-header h1 {
+      font-size: 32px;
+      margin-bottom: 8px;
+    }
+
+    .analise-header p {
+      color: var(--color-muted);
+      font-size: 16px;
+    }
+
+    .company-selector {
+      background: var(--color-bg-secondary);
+      border-radius: 12px;
+      padding: 24px;
+      margin-bottom: 32px;
+    }
+
+    .company-selector select {
+      width: 100%;
+      padding: 12px 16px;
+      border: 1px solid var(--color-border);
+      border-radius: 8px;
+      background: var(--color-bg);
+      color: var(--color-text);
+      font-size: 15px;
+    }
+
+    .analise-card {
+      background: var(--color-bg-secondary);
+      border-radius: 16px;
+      padding: 32px;
+      box-shadow: 0 4px 16px rgba(0, 0, 0, 0.1);
+      margin-bottom: 24px;
+    }
+
+    .completude-header {
+      display: flex;
+      align-items: center;
+      gap: 24px;
+      margin-bottom: 32px;
+      padding-bottom: 24px;
+      border-bottom: 2px solid var(--color-border);
+    }
+
+    .completude-circle {
+      width: 120px;
+      height: 120px;
+      border-radius: 50%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 32px;
+      font-weight: 700;
+      position: relative;
+      background: conic-gradient(
+        from 0deg,
+        #3af1ae 0%,
+        #3af1ae var(--percent, 0%),
+        var(--color-border) var(--percent, 0%),
+        var(--color-border) 100%
+      );
+    }
+
+    .completude-circle::before {
+      content: '';
+      position: absolute;
+      width: 90%;
+      height: 90%;
+      border-radius: 50%;
+      background: var(--color-bg-secondary);
+    }
+
+    .completude-circle span {
+      position: relative;
+      z-index: 1;
+    }
+
+    .completude-info h2 {
+      margin: 0 0 8px 0;
+      font-size: 24px;
+    }
+
+    .completude-info p {
+      margin: 0;
+      color: var(--color-muted);
+    }
+
+    .status-badge {
+      display: inline-block;
+      padding: 6px 12px;
+      border-radius: 20px;
+      font-size: 13px;
+      font-weight: 600;
+      margin-left: 12px;
+    }
+
+    .status-badge.completo {
+      background: rgba(16, 185, 129, 0.2);
+      color: #10b981;
+    }
+
+    .status-badge.incompleto {
+      background: rgba(239, 68, 68, 0.2);
+      color: #ef4444;
+    }
+
+    .campos-section {
+      margin-top: 32px;
+    }
+
+    .campos-section h3 {
+      font-size: 18px;
+      margin-bottom: 16px;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .campo-item {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 16px;
+      background: var(--color-bg);
+      border-radius: 8px;
+      margin-bottom: 12px;
+      border-left: 4px solid transparent;
+    }
+
+    .campo-item.obrigatorio {
+      border-left-color: #ef4444;
+    }
+
+    .campo-item.recomendado-alta {
+      border-left-color: #f59e0b;
+    }
+
+    .campo-item.recomendado-media {
+      border-left-color: #3b82f6;
+    }
+
+    .campo-item.recomendado-baixa {
+      border-left-color: #8b5cf6;
+    }
+
+    .campo-item.opcional {
+      border-left-color: var(--color-border);
+    }
+
+    .campo-item.preenchido {
+      opacity: 0.6;
+    }
+
+    .campo-info {
+      flex: 1;
+    }
+
+    .campo-info strong {
+      display: block;
+      margin-bottom: 4px;
+      font-size: 15px;
+    }
+
+    .campo-info small {
+      color: var(--color-muted);
+      font-size: 13px;
+    }
+
+    .campo-status {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+    }
+
+    .campo-status-icon {
+      font-size: 20px;
+    }
+
+    .impacto-card {
+      background: var(--color-bg);
+      border-radius: 8px;
+      padding: 16px;
+      margin-top: 12px;
+      border-left: 3px solid #3af1ae;
+    }
+
+    .impacto-card h4 {
+      font-size: 14px;
+      margin: 0 0 8px 0;
+      color: var(--color-text);
+    }
+
+    .impacto-card p {
+      margin: 4px 0;
+      font-size: 13px;
+      color: var(--color-muted);
+    }
+
+    .criticidade-badge {
+      display: inline-block;
+      padding: 4px 8px;
+      border-radius: 4px;
+      font-size: 11px;
+      font-weight: 600;
+      margin-left: 8px;
+    }
+
+    .criticidade-badge.critico {
+      background: rgba(239, 68, 68, 0.2);
+      color: #ef4444;
+    }
+
+    .criticidade-badge.alto {
+      background: rgba(245, 158, 11, 0.2);
+      color: #f59e0b;
+    }
+
+    .criticidade-badge.medio {
+      background: rgba(59, 130, 246, 0.2);
+      color: #3b82f6;
+    }
+
+    .criticidade-badge.baixo {
+      background: rgba(139, 92, 246, 0.2);
+      color: #8b5cf6;
+    }
+
+    .relatorio-section {
+      margin-top: 32px;
+      padding-top: 32px;
+      border-top: 2px solid var(--color-border);
+    }
+
+    .relatorio-texto {
+      background: var(--color-bg);
+      border-radius: 8px;
+      padding: 24px;
+      white-space: pre-line;
+      line-height: 1.8;
+      font-size: 14px;
+      color: var(--color-text);
+    }
+
+    .btn {
+      padding: 12px 24px;
+      border-radius: 8px;
+      font-weight: 600;
+      cursor: pointer;
+      transition: all 0.2s;
+      border: none;
+      font-size: 15px;
+      text-decoration: none;
+      display: inline-block;
+    }
+
+    .btn-primary {
+      background: linear-gradient(135deg, #3af1ae 0%, #10b981 100%);
+      color: #000;
+    }
+
+    .btn-primary:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 4px 12px rgba(58, 241, 174, 0.3);
+    }
+
+    .loading {
+      text-align: center;
+      padding: 40px;
+      color: var(--color-muted);
+    }
+
+    .spinner {
+      border: 3px solid var(--color-border);
+      border-top: 3px solid #3af1ae;
+      border-radius: 50%;
+      width: 40px;
+      height: 40px;
+      animation: spin 1s linear infinite;
+      margin: 0 auto 16px;
+    }
+
+    @keyframes spin {
+      0% { transform: rotate(0deg); }
+      100% { transform: rotate(360deg); }
+    }
+  </style>
+{% endblock %}
+
+{% block content %}
+<div class="analise-page">
+  <div class="analise-header">
+    <h1>📊 Análise de Completude</h1>
+    <p>Identifique campos faltantes e entenda o impacto no sistema</p>
+  </div>
+
+  <!-- Seletor de Empresa -->
+  <div class="company-selector">
+    <label for="company-select" style="display: block; margin-bottom: 8px; font-weight: 600;">
+      Selecione a empresa para analisar:
+    </label>
+    <select id="company-select" onchange="analisarEmpresa()">
+      <option value="">Carregando empresas...</option>
+    </select>
+  </div>
+
+  <!-- Área de Análise -->
+  <div id="analise-area" style="display: none;">
+    <!-- Header de Completude -->
+    <div class="analise-card">
+      <div class="completude-header">
+        <div class="completude-circle" id="completude-circle">
+          <span id="completude-percent">0%</span>
+        </div>
+        <div class="completude-info">
+          <h2>
+            <span id="company-name">Empresa</span>
+            <span class="status-badge" id="status-badge">incompleto</span>
+          </h2>
+          <p id="completude-desc">Análise de completude do cadastro</p>
+        </div>
+      </div>
+
+      <!-- Campos Faltantes -->
+      <div class="campos-section" id="campos-section">
+        <!-- Será preenchido dinamicamente -->
+      </div>
+
+      <!-- Relatório -->
+      <div class="relatorio-section">
+        <h3>📋 Relatório Detalhado</h3>
+        <div class="relatorio-texto" id="relatorio-texto"></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Loading -->
+  <div id="loading" class="loading" style="display: none;">
+    <div class="spinner"></div>
+    <p>Analisando cadastro...</p>
+  </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+{{ super() }}
+<script>
+let empresas = [];
+
+async function carregarEmpresas() {
+  try {
+    const response = await fetch('/api/companies');
+    const result = await response.json();
+    
+    if (result.success && result.companies) {
+      empresas = result.companies;
+      const select = document.getElementById('company-select');
+      select.innerHTML = '<option value="">Selecione uma empresa...</option>';
+      
+      empresas.forEach(empresa => {
+        const option = document.createElement('option');
+        option.value = empresa.id;
+        option.textContent = empresa.name || `Empresa #${empresa.id}`;
+        select.appendChild(option);
+      });
+    }
+  } catch (error) {
+    console.error('Erro ao carregar empresas:', error);
+    document.getElementById('company-select').innerHTML = '<option value="">Erro ao carregar empresas</option>';
+  }
+}
+
+async function analisarEmpresa() {
+  const companyId = document.getElementById('company-select').value;
+  
+  if (!companyId) {
+    document.getElementById('analise-area').style.display = 'none';
+    return;
+  }
+  
+  mostrarLoading(true);
+  document.getElementById('analise-area').style.display = 'none';
+  
+  try {
+    const response = await fetch(`/api/cadastro-agent/empresa/${companyId}/analisar`);
+    const result = await response.json();
+    
+    if (result.success) {
+      const data = result.data;
+      exibirAnalise(data);
+    } else {
+      alert('Erro ao analisar: ' + (result.error || 'Erro desconhecido'));
+    }
+  } catch (error) {
+    alert('Erro ao conectar com o servidor: ' + error.message);
+  } finally {
+    mostrarLoading(false);
+  }
+}
+
+function exibirAnalise(data) {
+  // Atualizar header
+  document.getElementById('company-name').textContent = data.company_name;
+  document.getElementById('completude-percent').textContent = data.completude_percentual + '%';
+  
+  const circle = document.getElementById('completude-circle');
+  circle.style.setProperty('--percent', data.completude_percentual + '%');
+  
+  const statusBadge = document.getElementById('status-badge');
+  statusBadge.textContent = data.status_completude;
+  statusBadge.className = 'status-badge ' + data.status_completude;
+  
+  // Exibir campos
+  const camposSection = document.getElementById('campos-section');
+  camposSection.innerHTML = '';
+  
+  const camposFaltantes = data.campos_faltantes;
+  const impactos = data.impactos || {};
+  
+  // Obrigatórios
+  if (camposFaltantes.obrigatorios && camposFaltantes.obrigatorios.length > 0) {
+    const section = criarSecaoCampos('🔴 Campos Obrigatórios Faltantes', camposFaltantes.obrigatorios, 'obrigatorio', impactos);
+    camposSection.appendChild(section);
+  }
+  
+  // Recomendados Alta
+  if (camposFaltantes.recomendados_alta && camposFaltantes.recomendados_alta.length > 0) {
+    const section = criarSecaoCampos('🟠 Campos Recomendados (Alta Prioridade)', camposFaltantes.recomendados_alta, 'recomendado-alta', impactos);
+    camposSection.appendChild(section);
+  }
+  
+  // Recomendados Média
+  if (camposFaltantes.recomendados_media && camposFaltantes.recomendados_media.length > 0) {
+    const section = criarSecaoCampos('🔵 Campos Recomendados (Média Prioridade)', camposFaltantes.recomendados_media, 'recomendado-media', impactos);
+    camposSection.appendChild(section);
+  }
+  
+  // Recomendados Baixa
+  if (camposFaltantes.recomendados_baixa && camposFaltantes.recomendados_baixa.length > 0) {
+    const section = criarSecaoCampos('🟣 Campos Recomendados (Baixa Prioridade)', camposFaltantes.recomendados_baixa, 'recomendado-baixa', impactos);
+    camposSection.appendChild(section);
+  }
+  
+  // Opcionais
+  if (camposFaltantes.opcionais && camposFaltantes.opcionais.length > 0) {
+    const section = criarSecaoCampos('⚪ Campos Opcionais', camposFaltantes.opcionais, 'opcional', impactos);
+    camposSection.appendChild(section);
+  }
+  
+  // Relatório
+  document.getElementById('relatorio-texto').textContent = data.relatorio || 'Nenhum relatório disponível.';
+  
+  // Exibir área
+  document.getElementById('analise-area').style.display = 'block';
+}
+
+function criarSecaoCampos(titulo, campos, classe, impactos) {
+  const section = document.createElement('div');
+  section.className = 'campos-section';
+  
+  const h3 = document.createElement('h3');
+  h3.textContent = titulo;
+  section.appendChild(h3);
+  
+  campos.forEach(campo => {
+    const item = document.createElement('div');
+    item.className = `campo-item ${classe}`;
+    
+    const impacto = impactos[campo] || {};
+    
+    item.innerHTML = `
+      <div class="campo-info">
+        <strong>${obterLabelCampo(campo)}</strong>
+        <small>${impacto.recomendacao || 'Preencher quando possível'}</small>
+        ${impacto.criticidade ? `<span class="criticidade-badge ${impacto.criticidade.toLowerCase()}">${impacto.criticidade}</span>` : ''}
+        ${impacto.impacto_pev || impacto.impacto_grv ? `
+          <div class="impacto-card">
+            <h4>Impactos Identificados:</h4>
+            ${impacto.impacto_pev ? `<p><strong>PEV:</strong> ${impacto.impacto_pev}</p>` : ''}
+            ${impacto.impacto_grv ? `<p><strong>GRV:</strong> ${impacto.impacto_grv}</p>` : ''}
+            ${impacto.impacto_relatorios ? `<p><strong>Relatórios:</strong> ${impacto.impacto_relatorios}</p>` : ''}
+          </div>
+        ` : ''}
+      </div>
+      <div class="campo-status">
+        <span class="campo-status-icon">❌</span>
+        <span>Faltando</span>
+      </div>
+    `;
+    
+    section.appendChild(item);
+  });
+  
+  return section;
+}
+
+function obterLabelCampo(campo) {
+  const labels = {
+    'name': 'Nome Fantasia',
+    'client_code': 'Código do Cliente',
+    'legal_name': 'Razão Social',
+    'cnpj': 'CNPJ',
+    'segment': 'Segmento/Indústria',
+    'city': 'Cidade',
+    'state': 'Estado (UF)',
+    'coverage_physical': 'Cobertura Física',
+    'coverage_online': 'Presença Online',
+    'experience_total': 'Experiência Total',
+    'experience_segment': 'Experiência no Segmento',
+    'mission': 'Missão',
+    'vision': 'Visão',
+    'values': 'Valores'
+  };
+  return labels[campo] || campo;
+}
+
+function mostrarLoading(mostrar) {
+  document.getElementById('loading').style.display = mostrar ? 'block' : 'none';
+}
+
+// Carregar empresas ao carregar a página
+document.addEventListener('DOMContentLoaded', carregarEmpresas);
+</script>
+{% endblock %}
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+

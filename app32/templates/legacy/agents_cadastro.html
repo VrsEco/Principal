@@ -1,0 +1,1402 @@
+{% extends "base.html" %}
+{% block title %}Agente de Cadastro - Assistente Conversacional{% endblock %}
+
+{% block body %}
+  {% set active_nav = 'agents' %}
+  {{ super() }}
+{% endblock %}
+
+{% block extra_head %}
+  {{ super() }}
+  <style>
+    /* Forçar fundo branco para toda a área de agentes */
+    .agents-layout {
+      display: flex;
+      justify-content: center;
+      align-items: stretch;
+      min-height: calc(100vh - 80px);
+      gap: 24px;
+      padding: 24px;
+      width: 100%;
+      max-width: 1400px;
+      margin: 0 auto;
+      background: #ffffff !important;
+    }
+    
+    /* Garantir que o body também tenha fundo branco */
+    body {
+      background: #ffffff !important;
+    }
+
+    .agents-chat-container {
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      background: #ffffff;
+      border-radius: 16px;
+      overflow: hidden;
+      box-shadow: 0 4px 16px rgba(0, 0, 0, 0.1);
+    }
+
+    .chat-header {
+      padding: 20px 24px;
+      border-bottom: 1px solid #e5e7eb;
+      background: #ffffff;
+    }
+
+    .chat-header h2 {
+      margin: 0;
+      font-size: 20px;
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      color: #000000;
+    }
+
+    .chat-messages {
+      flex: 1;
+      overflow-y: auto;
+      padding: 24px;
+      display: flex;
+      flex-direction: column;
+      gap: 16px;
+      background: #ffffff;
+    }
+
+    .message {
+      display: flex;
+      gap: 12px;
+      animation: fadeIn 0.3s ease;
+    }
+
+    @keyframes fadeIn {
+      from { opacity: 0; transform: translateY(10px); }
+      to { opacity: 1; transform: translateY(0); }
+    }
+
+    .message.agent {
+      flex-direction: row;
+    }
+
+    .message.user {
+      flex-direction: row-reverse;
+    }
+
+    .message-avatar {
+      width: 40px;
+      height: 40px;
+      border-radius: 50%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 20px;
+      flex-shrink: 0;
+    }
+
+    .message.agent .message-avatar {
+      background: linear-gradient(135deg, #3af1ae 0%, #10b981 100%);
+      color: #000;
+    }
+
+    .message.user .message-avatar {
+      background: #ffffff;
+      border: 2px solid #e5e7eb;
+      color: #000000;
+    }
+
+    .message-content {
+      flex: 1;
+      max-width: 70%;
+    }
+
+    .message.agent .message-content {
+      background: #f3f4f6 !important;
+      border-radius: 12px;
+      padding: 16px;
+      border-left: 3px solid #3af1ae;
+      color: #000000 !important;
+    }
+
+    .message.user .message-content {
+      background: #e5e7eb !important;
+      border-radius: 12px;
+      padding: 16px;
+      border-right: 3px solid #3af1ae;
+      color: #000000 !important;
+    }
+
+    .message-text {
+      margin: 0;
+      line-height: 1.6;
+      color: #000000 !important;
+    }
+
+    .message-options {
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+      margin-top: 12px;
+    }
+
+    .option-button {
+      padding: 12px 16px;
+      background: #f9fafb !important;
+      border: 1px solid #e5e7eb !important;
+      border-radius: 8px;
+      cursor: pointer;
+      transition: all 0.2s;
+      text-align: left;
+      color: #000000 !important;
+      font-size: 14px;
+    }
+
+    .option-button:hover {
+      background: #e5e7eb !important;
+      border-color: #3af1ae !important;
+      transform: translateX(4px);
+      color: #000000 !important;
+    }
+
+    .message-actions {
+      display: flex;
+      gap: 8px;
+      margin-top: 12px;
+      flex-wrap: wrap;
+    }
+
+    .action-button {
+      padding: 8px 16px;
+      background: linear-gradient(135deg, #3af1ae 0%, #10b981 100%);
+      color: #000;
+      border: none;
+      border-radius: 6px;
+      cursor: pointer;
+      font-size: 13px;
+      font-weight: 600;
+      transition: all 0.2s;
+    }
+
+    .action-button:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 4px 12px rgba(58, 241, 174, 0.3);
+    }
+
+    .action-button.secondary {
+      background: #f9fafb;
+      color: #000000;
+      border: 1px solid #e5e7eb;
+    }
+
+    .chat-input-area {
+      padding: 20px 24px;
+      border-top: 1px solid #e5e7eb;
+      background: #ffffff;
+    }
+
+    .chat-input-wrapper {
+      display: flex;
+      gap: 12px;
+      align-items: flex-end;
+    }
+
+    .chat-input {
+      flex: 1;
+      padding: 12px 16px;
+      border: 1px solid #e5e7eb;
+      border-radius: 12px;
+      background: #ffffff;
+      color: #000000;
+      font-size: 15px;
+      resize: none;
+      min-height: 50px;
+      max-height: 150px;
+      font-family: inherit;
+    }
+
+    .chat-input:focus {
+      outline: none;
+      border-color: #3af1ae;
+      box-shadow: 0 0 0 3px rgba(58, 241, 174, 0.1);
+    }
+
+    .send-button {
+      padding: 12px 24px;
+      background: linear-gradient(135deg, #3af1ae 0%, #10b981 100%);
+      color: #000;
+      border: none;
+      border-radius: 12px;
+      cursor: pointer;
+      font-weight: 600;
+      transition: all 0.2s;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .send-button:hover:not(:disabled) {
+      transform: translateY(-2px);
+      box-shadow: 0 4px 12px rgba(58, 241, 174, 0.3);
+    }
+
+    .send-button:disabled {
+      opacity: 0.5;
+      cursor: not-allowed;
+    }
+
+    .typing-indicator {
+      display: flex;
+      gap: 4px;
+      padding: 16px;
+      background: #f3f4f6;
+      border-radius: 12px;
+      border-left: 3px solid #3af1ae;
+    }
+
+    .typing-dot {
+      width: 8px;
+      height: 8px;
+      border-radius: 50%;
+      background: #3af1ae;
+      animation: typing 1.4s infinite;
+    }
+
+    .typing-dot:nth-child(2) {
+      animation-delay: 0.2s;
+    }
+
+    .typing-dot:nth-child(3) {
+      animation-delay: 0.4s;
+    }
+
+    @keyframes typing {
+      0%, 60%, 100% { transform: translateY(0); }
+      30% { transform: translateY(-10px); }
+    }
+
+    .data-preview {
+      background: #f9fafb;
+      border-radius: 8px;
+      padding: 16px;
+      margin-top: 12px;
+      border: 1px solid #e5e7eb;
+    }
+
+    .data-preview h4 {
+      margin: 0 0 12px 0;
+      font-size: 14px;
+      color: #000000;
+    }
+
+    .data-row {
+      display: flex;
+      justify-content: space-between;
+      padding: 8px 0;
+      border-bottom: 1px solid #e5e7eb;
+      font-size: 13px;
+    }
+
+    .data-row:last-child {
+      border-bottom: none;
+    }
+
+    .data-row strong {
+      color: #000000;
+    }
+
+    .data-row span {
+      color: #6b7280;
+    }
+
+    .confirm-buttons {
+      display: flex;
+      gap: 8px;
+      margin-top: 12px;
+    }
+    
+    /* Forçar fundo branco em todos os elementos da página de agentes */
+    .app-main,
+    .app-main > *,
+    main,
+    main > * {
+      background: #ffffff !important;
+      color: #000000 !important;
+    }
+    
+    /* Garantir que o conteúdo principal também seja branco */
+    #chatMessages {
+      background: #ffffff !important;
+    }
+    
+    /* Forçar texto preto em todos os elementos de mensagem */
+    .message * {
+      color: #000000 !important;
+    }
+    
+    .message.agent .message-content,
+    .message.user .message-content {
+      color: #000000 !important;
+      background: #f3f4f6 !important;
+    }
+    
+    .message.user .message-content {
+      background: #e5e7eb !important;
+    }
+    
+    /* Sobrescrever qualquer estilo global que possa estar afetando */
+    .agents-chat-container .message-content,
+    .agents-chat-container .message-text,
+    .agents-chat-container .option-button {
+      background: #f3f4f6 !important;
+      color: #000000 !important;
+    }
+    
+    .agents-chat-container .message.user .message-content {
+      background: #e5e7eb !important;
+      color: #000000 !important;
+    }
+    
+    .agents-chat-container .option-button {
+      background: #f9fafb !important;
+      color: #000000 !important;
+      border: 1px solid #e5e7eb !important;
+    }
+    
+    /* Forçar estilos nos botões de opção */
+    .option-button,
+    .option-button * {
+      background: #f9fafb !important;
+      color: #000000 !important;
+      border-color: #e5e7eb !important;
+    }
+
+    .report-export-controls {
+      margin-top: 12px;
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
+      align-items: center;
+      font-size: 14px;
+      color: #0f172a;
+    }
+
+    .report-export-label {
+      font-weight: 600;
+      color: #0f172a;
+      white-space: nowrap;
+    }
+
+    .report-export-select {
+      background: #ffffff;
+      border: 1px solid #e5e7eb;
+      border-radius: 8px;
+      padding: 8px 12px;
+      font-size: 14px;
+      color: #0f172a;
+      min-width: 200px;
+      transition: border-color 0.2s, box-shadow 0.2s;
+    }
+
+    .report-export-select:focus {
+      outline: none;
+      border-color: #3af1ae;
+      box-shadow: 0 0 0 2px rgba(58, 241, 174, 0.3);
+    }
+
+    .report-export-button {
+      background: #f3f4f6;
+      border: 1px solid #e5e7eb;
+      border-radius: 8px;
+      padding: 8px 14px;
+      font-size: 14px;
+      color: #0f172a;
+      cursor: pointer;
+      transition: transform 0.2s, box-shadow 0.2s;
+    }
+
+    .report-export-button:hover {
+      transform: translateY(-1px);
+      box-shadow: 0 4px 10px rgba(15, 23, 42, 0.15);
+      border-color: #3af1ae;
+    }
+  </style>
+{% endblock %}
+
+{% block content %}
+  <div class="agents-layout">
+    <div class="agents-chat-container">
+    <div class="chat-header">
+      <h2>
+        <span>🤖</span>
+        <span>Agente de Cadastro</span>
+      </h2>
+      <div class="report-export-controls">
+        <span class="report-export-label">Exportar relatório:</span>
+        <select id="exportSeveritySelect" class="report-export-select" aria-label="Filtro de severidade para exportação">
+          <option value="all">Total / todas as páginas</option>
+          <option value="alerts">Apenas alertas</option>
+          <option value="errors">Apenas erros</option>
+          <option value="ok">Apenas itens OK</option>
+        </select>
+        <button type="button" class="report-export-button" onclick="handleExport('txt')">Exportar TXT</button>
+        <button type="button" class="report-export-button" onclick="handleExport('pdf')">Exportar PDF</button>
+      </div>
+    </div>
+    
+    <div class="chat-messages" id="chatMessages">
+      <!-- Mensagens serão inseridas aqui -->
+    </div>
+    
+    <div class="chat-input-area">
+      <div class="chat-input-wrapper">
+        <textarea 
+          id="chatInput" 
+          class="chat-input" 
+          placeholder="Digite sua mensagem ou escolha uma opção acima..."
+          rows="1"
+          onkeydown="handleKeyDown(event)"
+        ></textarea>
+        <button class="send-button" id="sendButton" onclick="enviarMensagem()" disabled>
+          <span>Enviar</span>
+          <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <line x1="22" y1="2" x2="11" y2="13"></line>
+            <polygon points="22 2 15 22 11 13 2 9 22 2"></polygon>
+          </svg>
+        </button>
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+{{ super() }}
+<script>
+let conversationContext = {
+  estado: 'inicial',
+  dados_coletados: {},
+  empresa_id: null,
+  usuario_id: null,
+  tipo_cadastro: null,
+  session_id: null  // ID da sessão persistida no backend
+};
+
+let ultimoRelatorioConformidade = null;
+let ultimoRelatorioId = null;
+let ultimoFiltroConformidade = 'all';
+let complianceTestContext = {
+  company_id: 13,
+  plan_id: 1,
+  project_id: 1,
+  process_id: 1,
+  instance_id: 1,
+  routine_id: 1,
+  meeting_id: 1
+};
+
+// Função para corrigir estilos de mensagens existentes
+function corrigirEstilosMensagens() {
+  const messages = document.querySelectorAll('.message');
+  messages.forEach(msg => {
+    msg.style.background = 'transparent';
+    
+    const content = msg.querySelector('.message-content');
+    if (content) {
+      if (msg.classList.contains('agent')) {
+        content.style.setProperty('background', '#f3f4f6', 'important');
+        content.style.setProperty('color', '#000000', 'important');
+        content.style.borderLeft = '3px solid #3af1ae';
+      } else {
+        content.style.setProperty('background', '#e5e7eb', 'important');
+        content.style.setProperty('color', '#000000', 'important');
+        content.style.borderRight = '3px solid #3af1ae';
+      }
+      content.style.borderRadius = '12px';
+      content.style.padding = '16px';
+    }
+    
+    const text = msg.querySelector('.message-text');
+    if (text) {
+      text.style.setProperty('color', '#000000', 'important');
+    }
+    
+    const avatar = msg.querySelector('.message-avatar');
+    if (avatar) {
+      if (msg.classList.contains('agent')) {
+        avatar.style.background = 'linear-gradient(135deg, #3af1ae 0%, #10b981 100%)';
+        avatar.style.color = '#000000';
+      } else {
+        avatar.style.background = '#ffffff';
+        avatar.style.border = '2px solid #e5e7eb';
+        avatar.style.color = '#000000';
+      }
+    }
+    
+    // Corrigir botões de opção
+    const optionButtons = msg.querySelectorAll('.option-button');
+    optionButtons.forEach(btn => {
+      btn.style.setProperty('background', '#f9fafb', 'important');
+      btn.style.setProperty('color', '#000000', 'important');
+      btn.style.setProperty('border-color', '#e5e7eb', 'important');
+      btn.style.setProperty('border', '1px solid #e5e7eb', 'important');
+    });
+  });
+}
+
+// Inicializar conversa
+document.addEventListener('DOMContentLoaded', function() {
+  // Garantir fundo branco em todos os elementos
+  const chatMessages = document.getElementById('chatMessages');
+  if (chatMessages) {
+    chatMessages.style.background = '#ffffff';
+    chatMessages.style.color = '#000000';
+  }
+  
+  const agentsLayout = document.querySelector('.agents-layout');
+  if (agentsLayout) {
+    agentsLayout.style.background = '#ffffff';
+  }
+  
+  const exportSelect = document.getElementById('exportSeveritySelect');
+  if (exportSelect) {
+    exportSelect.value = ultimoFiltroConformidade;
+  }
+  
+  iniciarConversa();
+  
+  // Corrigir estilos após um pequeno delay para garantir que as mensagens foram criadas
+  setTimeout(corrigirEstilosMensagens, 100);
+  
+  // Auto-resize textarea
+  const chatInput = document.getElementById('chatInput');
+  chatInput.addEventListener('input', function() {
+    this.style.height = 'auto';
+    this.style.height = Math.min(this.scrollHeight, 150) + 'px';
+    document.getElementById('sendButton').disabled = !this.value.trim();
+  });
+});
+
+function iniciarConversa() {
+  adicionarMensagem('agent', 'Olá! Sou o Agente de Cadastro. Como posso ajudá-lo hoje?', [
+    { text: 'Cadastro de Empresa Real', action: 'iniciar_cadastro_real' },
+    { text: 'Cadastro de Empresa Modelo', action: 'iniciar_cadastro_modelo' },
+    { text: 'Validação de Cadastro Geral', action: 'validacao_geral' },
+    { text: 'Validação de Função Específica', action: 'validacao_especifica' },
+    { text: 'Teste de Conformidade do APP', action: 'abrir_teste_conformidade' },
+    { text: 'Histórico de Conformidade', action: 'ver_historico_conformidade' }
+  ]);
+}
+
+function adicionarMensagem(tipo, texto, opcoes = null, acoes = null, dadosPreview = null) {
+  const messagesContainer = document.getElementById('chatMessages');
+  const messageDiv = document.createElement('div');
+  messageDiv.className = `message ${tipo}`;
+  // Garantir que o container da mensagem não tenha fundo escuro
+  messageDiv.style.background = 'transparent';
+  
+  const avatar = document.createElement('div');
+  avatar.className = 'message-avatar';
+  avatar.textContent = tipo === 'agent' ? '🤖' : '👤';
+  // Garantir cores do avatar
+  if (tipo === 'agent') {
+    avatar.style.background = 'linear-gradient(135deg, #3af1ae 0%, #10b981 100%)';
+    avatar.style.color = '#000000';
+  } else {
+    avatar.style.background = '#ffffff';
+    avatar.style.border = '2px solid #e5e7eb';
+    avatar.style.color = '#000000';
+  }
+  
+  const content = document.createElement('div');
+  content.className = 'message-content';
+  // Garantir fundo e cor corretos sempre
+  if (tipo === 'agent') {
+    content.style.background = '#f3f4f6';
+    content.style.color = '#000000';
+    content.style.borderLeft = '3px solid #3af1ae';
+  } else {
+    content.style.background = '#e5e7eb';
+    content.style.color = '#000000';
+    content.style.borderRight = '3px solid #3af1ae';
+  }
+  content.style.borderRadius = '12px';
+  content.style.padding = '16px';
+  
+  const text = document.createElement('p');
+  text.className = 'message-text';
+  text.textContent = texto;
+  text.style.setProperty('color', '#000000', 'important');
+  text.style.margin = '0';
+  text.style.lineHeight = '1.6';
+  content.appendChild(text);
+  
+  // Preview de dados (ex: dados da empresa buscados por CNPJ)
+  if (dadosPreview) {
+    const preview = document.createElement('div');
+    preview.className = 'data-preview';
+    preview.style.background = '#f9fafb';
+    preview.style.color = '#000000';
+    preview.innerHTML = `<h4 style="color: #000000;">📋 Dados Encontrados:</h4>`;
+    
+    Object.entries(dadosPreview).forEach(([key, value]) => {
+      const row = document.createElement('div');
+      row.className = 'data-row';
+      row.style.color = '#000000';
+      row.innerHTML = `<strong style="color: #000000;">${key}:</strong> <span style="color: #6b7280;">${value}</span>`;
+      preview.appendChild(row);
+    });
+    
+    content.appendChild(preview);
+  }
+  
+  // Opções de resposta
+  if (opcoes && opcoes.length > 0) {
+    const optionsDiv = document.createElement('div');
+    optionsDiv.className = 'message-options';
+    opcoes.forEach(opcao => {
+      const button = document.createElement('button');
+      button.className = 'option-button';
+      button.textContent = opcao.text;
+      button.style.setProperty('background', '#f9fafb', 'important');
+      button.style.setProperty('color', '#000000', 'important');
+      button.style.setProperty('border-color', '#e5e7eb', 'important');
+      button.style.setProperty('border', '1px solid #e5e7eb', 'important');
+      button.onclick = () => processarOpcao(opcao.action, opcao.text, opcao.data);
+      optionsDiv.appendChild(button);
+    });
+    content.appendChild(optionsDiv);
+  }
+  
+  // Ações (botões de confirmação, etc)
+  if (acoes && acoes.length > 0) {
+    const actionsDiv = document.createElement('div');
+    actionsDiv.className = 'message-actions';
+    acoes.forEach(acao => {
+      const button = document.createElement('button');
+      button.className = `action-button ${acao.type || 'primary'}`;
+      button.textContent = acao.text;
+      // Garantir estilos dos botões de ação
+      if (acao.type === 'secondary') {
+        button.style.background = '#f9fafb';
+        button.style.color = '#000000';
+        button.style.border = '1px solid #e5e7eb';
+      } else {
+        button.style.background = 'linear-gradient(135deg, #3af1ae 0%, #10b981 100%)';
+        button.style.color = '#000000';
+      }
+      button.style.borderRadius = '6px';
+      button.style.padding = '8px 16px';
+      button.style.cursor = 'pointer';
+      button.onclick = () => processarAcao(acao.action, acao.data);
+      actionsDiv.appendChild(button);
+    });
+    content.appendChild(actionsDiv);
+  }
+  
+  messageDiv.appendChild(avatar);
+  messageDiv.appendChild(content);
+  messagesContainer.appendChild(messageDiv);
+  
+  // Scroll para baixo
+  messagesContainer.scrollTop = messagesContainer.scrollHeight;
+}
+
+function mostrarDigitando() {
+  const messagesContainer = document.getElementById('chatMessages');
+  const typingDiv = document.createElement('div');
+  typingDiv.className = 'message agent';
+  typingDiv.id = 'typingIndicator';
+  typingDiv.style.background = 'transparent';
+  
+  const avatar = document.createElement('div');
+  avatar.className = 'message-avatar';
+  avatar.textContent = '🤖';
+  avatar.style.background = 'linear-gradient(135deg, #3af1ae 0%, #10b981 100%)';
+  avatar.style.color = '#000000';
+  
+  const content = document.createElement('div');
+  content.className = 'typing-indicator';
+  content.style.background = '#f3f4f6';
+  content.style.borderLeft = '3px solid #3af1ae';
+  content.style.borderRadius = '12px';
+  content.style.padding = '16px';
+  content.innerHTML = `
+    <div class="typing-dot" style="background: #3af1ae;"></div>
+    <div class="typing-dot" style="background: #3af1ae;"></div>
+    <div class="typing-dot" style="background: #3af1ae;"></div>
+  `;
+  
+  typingDiv.appendChild(avatar);
+  typingDiv.appendChild(content);
+  messagesContainer.appendChild(typingDiv);
+  messagesContainer.scrollTop = messagesContainer.scrollHeight;
+}
+
+function removerDigitando() {
+  const indicator = document.getElementById('typingIndicator');
+  if (indicator) indicator.remove();
+}
+
+async function processarOpcao(acao, texto, data = null) {
+  adicionarMensagem('user', texto);
+  mostrarDigitando();
+  
+  try {
+    let response;
+    
+    switch(acao) {
+      case 'iniciar_cadastro_real':
+        response = await iniciarCadastroReal();
+        break;
+      case 'iniciar_cadastro_modelo':
+        response = await iniciarCadastroModelo();
+        break;
+      case 'validacao_geral':
+        response = await validacaoGeral();
+        break;
+      case 'validacao_especifica':
+        response = await validacaoEspecifica();
+        break;
+      case 'abrir_teste_conformidade':
+        response = await abrirTesteConformidade();
+        break;
+      case 'executar_teste_conformidade':
+        response = await executarTesteConformidade(data);
+        break;
+      case 'executar_teste_pagina':
+        response = await executarTestePaginaEspecifica();
+        break;
+      case 'configurar_parametros_conformidade':
+        response = configurarContextoConformidade();
+        break;
+      case 'ver_historico_conformidade':
+        response = await listarHistoricoConformidade();
+        break;
+      case 'abrir_relatorio_salvo':
+        response = await abrirRelatorioConformidadeSalvo(data);
+        break;
+      case 'continuar_cadastro':
+        response = await listarCadastrosPendentes();
+        break;
+      case 'continuar_cadastro_id':
+        response = await continuarCadastroEmpresa(data);
+        break;
+      case 'novo_cadastro':
+        response = await iniciarNovoCadastro();
+        break;
+      case 'exportar_relatorio_txt':
+        exportarRelatorio('txt', data?.filter);
+        response = { mensagem: 'Exportação TXT iniciada.' };
+        break;
+      case 'exportar_relatorio_pdf':
+        exportarRelatorio('pdf', data?.filter);
+        response = { mensagem: 'Exportação PDF iniciada.' };
+        break;
+      default:
+        response = await processarMensagem(texto);
+    }
+    
+    removerDigitando();
+    processarRespostaAgente(response);
+  } catch (error) {
+    removerDigitando();
+    adicionarMensagem('agent', '❌ Erro: ' + error.message);
+  }
+}
+
+async function processarAcao(acao, dados) {
+  mostrarDigitando();
+  
+  try {
+    let response;
+    
+    switch(acao) {
+      case 'confirmar_dados_empresa':
+        response = await confirmarDadosEmpresa(dados);
+        break;
+      case 'pular_pergunta':
+        response = await pularPergunta();
+        break;
+      case 'mostrar_relatorio_conformidade':
+        response = gerarResumoCompletoConformidade();
+        break;
+      case 'exportar_relatorio_txt':
+        exportarRelatorio('txt', dados?.filter);
+        response = { mensagem: 'Exportação TXT iniciada.' };
+        break;
+      case 'exportar_relatorio_pdf':
+        exportarRelatorio('pdf', dados?.filter);
+        response = { mensagem: 'Exportação PDF iniciada.' };
+        break;
+      default:
+        response = { mensagem: 'Ação não reconhecida' };
+    }
+    
+    removerDigitando();
+    processarRespostaAgente(response);
+  } catch (error) {
+    removerDigitando();
+    adicionarMensagem('agent', '❌ Erro: ' + error.message);
+  }
+}
+
+async function iniciarCadastroReal() {
+  conversationContext.estado = 'escolhendo_continuar';
+  conversationContext.tipo_cadastro = 'real';
+  
+  return {
+    mensagem: 'Vamos cadastrar uma empresa real. Você gostaria de continuar um cadastro anterior ou iniciar um novo?',
+    opcoes: [
+      { text: 'Continuar cadastro anterior', action: 'continuar_cadastro' },
+      { text: 'Iniciar novo cadastro', action: 'novo_cadastro' }
+    ]
+  };
+}
+
+async function iniciarCadastroModelo() {
+  conversationContext.estado = 'escolhendo_continuar';
+  conversationContext.tipo_cadastro = 'modelo';
+  
+  return {
+    mensagem: 'Vamos cadastrar uma empresa modelo (exemplo). Você gostaria de continuar um cadastro anterior ou iniciar um novo?',
+    opcoes: [
+      { text: 'Continuar cadastro anterior', action: 'continuar_cadastro' },
+      { text: 'Iniciar novo cadastro', action: 'novo_cadastro' }
+    ]
+  };
+}
+
+async function validacaoGeral() {
+  // Implementar validação geral
+  return {
+    mensagem: 'Vou analisar o cadastro geral. Qual empresa você gostaria de validar?',
+    estado: 'aguardando_empresa_validacao'
+  };
+}
+
+async function validacaoEspecifica() {
+  // Implementar validação específica
+  return {
+    mensagem: 'Vou analisar uma função específica. Qual empresa e qual função você gostaria de validar?',
+    estado: 'aguardando_empresa_funcao'
+  };
+}
+
+async function abrirTesteConformidade() {
+  return {
+    mensagem: 'Posso executar o Teste de Conformidade usando o catálogo de endereçamento. Qual modo deseja utilizar?',
+    opcoes: [
+      { text: 'Varredura completa', action: 'executar_teste_conformidade', data: { scope: 'full', limit: 5, filter: 'all' } },
+      { text: 'Somente alertas', action: 'executar_teste_conformidade', data: { scope: 'full', limit: 5, filter: 'warnings' } },
+      { text: 'Somente erros', action: 'executar_teste_conformidade', data: { scope: 'full', limit: 5, filter: 'errors' } },
+      { text: 'Somente páginas ativas', action: 'executar_teste_conformidade', data: { scope: 'active', limit: 5, filter: 'all' } },
+      { text: 'Validar página por código', action: 'executar_teste_pagina' },
+      { text: 'Configurar parâmetros de teste', action: 'configurar_parametros_conformidade' }
+    ]
+  };
+}
+
+async function executarTesteConformidade(data = {}) {
+  const payload = {
+    scope: (data && data.scope) ? data.scope : 'full',
+    limit: (data && data.limit) ? data.limit : 5,
+    filter: (data && data.filter) ? data.filter : ultimoFiltroConformidade,
+    test_context: complianceTestContext
+  };
+
+  if (data && data.page_code) {
+    payload.page_code = data.page_code;
+  }
+
+  const response = await fetch('/agents/api/teste-conformidade', {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json'
+    },
+    body: JSON.stringify(payload)
+  });
+
+  const result = await response.json();
+  if (!result.success) {
+    return {
+      mensagem: 'Erro ao executar o teste de conformidade: ' + (result.error || 'Falha desconhecida.')
+    };
+  }
+
+  const resposta = result.data || {};
+  ultimoFiltroConformidade = resposta.filtro || payload.filter || 'all';
+  if (resposta.relatorio) {
+    ultimoRelatorioConformidade = resposta.relatorio;
+    if (!resposta.dados_preview) {
+      const preview = gerarPreviewConformidade(resposta.relatorio);
+      if (preview) {
+        resposta.dados_preview = preview;
+      }
+    }
+  }
+  return resposta;
+}
+
+async function executarTestePaginaEspecifica() {
+  const codigo = window.prompt('Informe o código da página (ex: 014) para validar:');
+  if (!codigo) {
+    return {
+      mensagem: 'Teste cancelado. Nenhum código informado.'
+    };
+  }
+  return await executarTesteConformidade({ scope: 'page', page_code: codigo });
+}
+
+function configurarContextoConformidade() {
+  const campos = [
+    { key: 'company_id', label: 'ID padrão da empresa (company_id)' },
+    { key: 'plan_id', label: 'ID padrão do plano (plan_id)' },
+    { key: 'project_id', label: 'ID padrão do projeto (project_id)' },
+    { key: 'process_id', label: 'ID padrão do processo (process_id)' },
+    { key: 'instance_id', label: 'ID de instância de processo (instance_id)' },
+    { key: 'routine_id', label: 'ID da rotina (routine_id)' },
+    { key: 'meeting_id', label: 'ID da reunião (meeting_id)' }
+  ];
+
+  campos.forEach((campo) => {
+    const atual = complianceTestContext[campo.key] ?? '';
+    const entrada = window.prompt(`${campo.label}:`, atual);
+    if (entrada !== null && entrada.trim() !== '') {
+      const valorNumber = Number(entrada);
+      complianceTestContext[campo.key] = Number.isNaN(valorNumber) ? entrada.trim() : valorNumber;
+    }
+  });
+
+  return {
+    mensagem: 'Contexto de teste atualizado. Próximas execuções usarão esses valores.',
+    dados_preview: {
+      'Empresa padrão': complianceTestContext.company_id || 'não definido',
+      'Plano padrão': complianceTestContext.plan_id || 'não definido',
+      'Projeto padrão': complianceTestContext.project_id || 'não definido'
+    }
+  };
+}
+
+function normalizeExportSeverity(severity) {
+  const normalized = (severity || 'all').toLowerCase();
+  const mapping = {
+    alerts: 'warnings',
+    alertas: 'warnings',
+    warn: 'warnings',
+    warnings_only: 'warnings',
+    warning: 'warnings',
+    errors: 'errors',
+    error: 'errors',
+    fail: 'errors',
+    fails: 'errors',
+    success: 'ok',
+    ok: 'ok',
+  };
+  return mapping[normalized] || normalized;
+}
+
+function exportarRelatorio(formato = 'txt', severity = null) {
+  if (!ultimoRelatorioId) {
+    alert('Nenhum relatório disponível para exportação.');
+    return;
+  }
+  const exportSelect = document.getElementById('exportSeveritySelect');
+  const selectedSeverity = exportSelect ? exportSelect.value : null;
+  const requestedSeverity = severity || selectedSeverity || ultimoFiltroConformidade || 'all';
+  const filtroFinal = normalizeExportSeverity(requestedSeverity);
+  const url = `/agents/api/teste-conformidade/${ultimoRelatorioId}/export?format=${encodeURIComponent(formato)}&filter=${encodeURIComponent(filtroFinal)}`;
+  window.open(url, '_blank');
+}
+
+function handleExport(formato) {
+  exportarRelatorio(formato);
+}
+
+async function listarHistoricoConformidade() {
+  try {
+    const response = await fetch('/agents/api/teste-conformidade/historico');
+    const result = await response.json();
+
+    if (!result.success) {
+      return { mensagem: 'Erro ao carregar o histórico: ' + (result.error || 'Falha desconhecida.') };
+    }
+
+    const historico = result.data || [];
+    if (!historico.length) {
+      return {
+        mensagem: 'Não encontrei relatórios anteriores. Execute um teste para criar um novo registro.'
+      };
+    }
+
+    const opcoes = historico.map((item) => {
+      const contexto = item.test_context || {};
+      const contextoTexto = contexto.company_id ? ` - Empresa ${contexto.company_id}` : '';
+      return {
+        text: `${formatarDataRelatorio(item.generated_at)}  ${item.scope.toUpperCase()}  OK:${item.ok} ??:${item.warn} ?:${item.fail}${contextoTexto}`,
+        action: 'abrir_relatorio_salvo',
+        data: { report_id: item.id }
+      };
+    });
+
+    return {
+      mensagem: 'Selecione um relatório para visualizar os detalhes:',
+      opcoes
+    };
+  } catch (error) {
+    return { mensagem: 'Erro ao acessar histórico: ' + error.message };
+  }
+}
+
+function gerarResumoCompletoConformidade() {
+  if (!ultimoRelatorioConformidade) {
+    return {
+      mensagem: 'Ainda não existe um relatório de conformidade disponível. Execute um teste primeiro.'
+    };
+  }
+
+  const relatorio = ultimoRelatorioConformidade;
+  const overview = relatorio.overview || {};
+  const linhas = [
+    'Relatório completo de conformidade',
+    `Gerado em: ${relatorio.generated_at || 'agora mesmo'}`,
+    `Escopo: ${relatorio.scope || 'full'}`,
+    `Total: ${overview.total_pages || 0} | OK: ${overview.ok || 0} | Alertas: ${overview.warn || 0} | Falhas: ${overview.fail || 0}`,
+    ''
+  ];
+
+  const contexto = relatorio.test_context || overview.test_context || {};
+  if (Object.keys(contexto).length) {
+    linhas.splice(4, 0, `Contexto usado: company_id=${contexto.company_id ?? '-'} | plan_id=${contexto.plan_id ?? '-'} | projeto=${contexto.project_id ?? '-'}`);
+  }
+
+  const detalhes = relatorio.results || [];
+  if (!detalhes.length) {
+    linhas.push('Nenhuma página encontrada no catálogo para este modo.');
+    return { mensagem: linhas.join('\n') };
+  }
+
+  const limiteDetalhes = 20;
+  detalhes.slice(0, limiteDetalhes).forEach(registro => {
+    const icon = registro.status === 'ok' ? '[OK]' : (registro.status === 'fail' ? '[FAIL]' : '[WARN]');
+    linhas.push(`${icon} ${registro.page_code || '---'} ${registro.page_name || ''}`);
+    if (registro.checks) {
+      registro.checks.forEach(check => {
+        linhas.push(`   - ${check.item}: ${check.detail}`);
+      });
+    }
+    linhas.push('');
+  });
+
+  if (detalhes.length > limiteDetalhes) {
+    linhas.push(`... +${detalhes.length - limiteDetalhes} páginas adicionais ocultadas para manter a resposta objetiva.`);
+  }
+
+  return {
+    mensagem: linhas.join('\n')
+  };
+}
+
+function formatarDataRelatorio(dataStr) {
+  if (!dataStr) return 'Sem data';
+  const data = new Date(dataStr);
+  if (Number.isNaN(data.getTime())) {
+    return dataStr;
+  }
+  return data.toLocaleString('pt-BR', { dateStyle: 'short', timeStyle: 'short' });
+}
+
+async function listarCadastrosPendentes() {
+  try {
+    const response = await fetch('/agents/api/cadastros-pendentes');
+    const result = await response.json();
+    
+    if (result.success && result.data.length > 0) {
+      const opcoes = result.data.map(cadastro => ({
+        text: `${cadastro.empresa_nome || 'Empresa sem nome'} (${cadastro.progresso}% completo)`,
+        action: 'continuar_cadastro_id',
+        data: cadastro.id
+      }));
+      
+      return {
+        mensagem: 'Encontrei os seguintes cadastros em andamento. Qual você gostaria de continuar?',
+        opcoes: opcoes
+      };
+    } else {
+      return {
+        mensagem: 'Não encontrei cadastros pendentes. Vamos iniciar um novo?',
+        opcoes: [
+          { text: 'Sim, iniciar novo', action: 'novo_cadastro' },
+          { text: 'Não, voltar ao menu', action: 'voltar_menu' }
+        ]
+      };
+    }
+  } catch (error) {
+    return {
+      mensagem: 'Erro ao buscar cadastros pendentes. Vamos iniciar um novo cadastro?',
+      opcoes: [
+        { text: 'Sim, iniciar novo', action: 'novo_cadastro' }
+      ]
+    };
+  }
+}
+
+async function iniciarNovoCadastro() {
+  // Limpar session_id para criar nova sessão
+  conversationContext.session_id = null;
+  conversationContext.estado = 'cadastrando_usuario';
+  conversationContext.dados_coletados = {};
+  
+  // A primeira mensagem criará a sessão no backend
+  return await processarMensagem('iniciar novo cadastro');
+}
+
+async function continuarCadastroEmpresa(empresaId) {
+  try {
+    const response = await fetch(`/agents/api/continuar-cadastro/${empresaId}`);
+    const result = await response.json();
+    
+    if (result.success) {
+      conversationContext.empresa_id = empresaId;
+      return result.data;
+    } else {
+      return {
+        mensagem: '❌ Erro: ' + (result.error || 'Erro ao continuar cadastro')
+      };
+    }
+  } catch (error) {
+    return {
+      mensagem: '❌ Erro: ' + error.message
+    };
+  }
+}
+
+
+async function validacaoGeralPorNome(nome) {
+  try {
+    const response = await fetch('/agents/api/validacao-geral', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ empresa: nome })
+    });
+    const result = await response.json();
+    if (result.success && result.data) {
+      return result.data;
+    }
+    return {
+      mensagem: 'Erro: ' + (result.error || 'Não foi possível validar esta empresa.')
+    };
+  } catch (error) {
+    return {
+      mensagem: 'Erro: ' + error.message
+    };
+  }
+}
+
+async function processarMensagem(texto) {
+  const input = document.getElementById('chatInput');
+  input.value = '';
+  input.style.height = 'auto';
+  document.getElementById('sendButton').disabled = true;
+  
+  mostrarDigitando();
+  
+  try {
+    if (conversationContext.estado === 'aguardando_empresa_validacao') {
+      const resposta = await validacaoGeralPorNome(texto);
+      removerDigitando();
+      conversationContext.estado = resposta.estado || 'inicial';
+      conversationContext.session_id = null;
+      conversationContext.tipo_cadastro = null;
+      conversationContext.dados_coletados = {};
+      return resposta;
+    }
+
+    // Log do contexto antes de enviar
+    console.log('Enviando mensagem. Session ID:', conversationContext.session_id);
+    
+    const response = await fetch('/agents/api/conversar', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json'
+      },
+      body: JSON.stringify({
+        mensagem: texto,
+        session_id: conversationContext.session_id,  // Enviar session_id ao invés de contexto completo
+        tipo_cadastro: conversationContext.tipo_cadastro
+      })
+    });
+    
+    const result = await response.json();
+    removerDigitando();
+    
+    if (result.success) {
+      console.log('Resposta recebida:', result.data);
+      return result.data;
+    } else {
+      return {
+        mensagem: '❌ Erro: ' + (result.error || 'Erro desconhecido')
+      };
+    }
+  } catch (error) {
+    removerDigitando();
+    return {
+      mensagem: '❌ Erro ao processar mensagem: ' + error.message
+    };
+  }
+}
+
+function processarRespostaAgente(resposta) {
+  if (resposta.mensagem) {
+    adicionarMensagem('agent', resposta.mensagem, resposta.opcoes, resposta.acoes, resposta.dados_preview);
+  }
+  
+  // Atualizar session_id se recebido (primeira vez)
+  if (resposta.session_id) {
+    conversationContext.session_id = resposta.session_id;
+    console.log('Session ID recebido:', resposta.session_id);
+  }
+  
+  // Atualizar contexto local (apenas para exibição, dados reais estão no backend)
+  if (resposta.estado) {
+    conversationContext.estado = resposta.estado;
+  }
+  
+  if (resposta.dados_coletados) {
+    // Atualizar contexto local para referência (dados reais estão salvos no backend)
+    conversationContext.dados_coletados = resposta.dados_coletados;
+    console.log('Dados coletados atualizados (local):', conversationContext.dados_coletados);
+  }
+
+  if (resposta.relatorio_id) {
+    ultimoRelatorioId = resposta.relatorio_id;
+  }
+
+  if (resposta.relatorio) {
+    ultimoRelatorioConformidade = resposta.relatorio;
+    if (!resposta.relatorio_id && resposta.relatorio.report_id) {
+      ultimoRelatorioId = resposta.relatorio.report_id;
+    }
+    if (resposta.relatorio.test_context) {
+      complianceTestContext = { ...complianceTestContext, ...resposta.relatorio.test_context };
+    }
+  }
+
+  if (resposta.filtro) {
+    ultimoFiltroConformidade = resposta.filtro;
+    const exportSelect = document.getElementById('exportSeveritySelect');
+    if (exportSelect) {
+      exportSelect.value = resposta.filtro;
+    }
+  }
+
+  if (resposta.test_context) {
+    complianceTestContext = { ...complianceTestContext, ...resposta.test_context };
+  }
+  
+  if (resposta.campo_atual) {
+    conversationContext.campo_atual = resposta.campo_atual;
+  }
+  
+  if (resposta.empresa_id) {
+    conversationContext.empresa_id = resposta.empresa_id;
+  }
+  
+  if (resposta.usuario_id) {
+    conversationContext.usuario_id = resposta.usuario_id;
+  }
+}
+
+async function confirmarDadosEmpresa(dados) {
+  // Confirmar dados da empresa buscados por CNPJ
+  conversationContext.dados_coletados = { ...conversationContext.dados_coletados, ...dados };
+  
+  return await processarMensagem('confirmar dados da empresa');
+}
+
+async function pularPergunta() {
+  return await processarMensagem('pular esta pergunta');
+}
+
+async function finalizarCadastroCompleto() {
+  try {
+    if (!conversationContext.session_id) {
+      return {
+        mensagem: '❌ Erro: Sessão não encontrada. Por favor, inicie um novo cadastro.'
+      };
+    }
+    
+    // Buscar dados atualizados da sessão
+    const sessaoResponse = await fetch(`/agents/api/sessao/${conversationContext.session_id}`);
+    const sessaoResult = await sessaoResponse.json();
+    
+    if (!sessaoResult.success) {
+      return {
+        mensagem: '❌ Erro: Sessão não encontrada'
+      };
+    }
+    
+    const sessao = sessaoResult.data;
+    
+    const response = await fetch('/agents/api/finalizar-cadastro', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json'
+      },
+      body: JSON.stringify({
+        session_id: conversationContext.session_id,
+        dados: sessao.dados_coletados,  // Usar dados da sessão
+        tipo: sessao.tipo_cadastro
+      })
+    });
+    
+    const result = await response.json();
+    
+    if (result.success) {
+      const data = result.data;
+      conversationContext.empresa_id = data.empresa_id;
+      conversationContext.usuario_id = data.usuario_id;
+      
+      // Marcar sessão como concluída (opcional - pode deletar ou marcar como concluída)
+      
+      return {
+        mensagem: data.mensagem,
+        estado: 'cadastro_completo',
+        proximos_passos: data.proximos_passos || []
+      };
+    } else {
+      return {
+        mensagem: '❌ Erro: ' + (result.error || 'Erro ao finalizar cadastro')
+      };
+    }
+  } catch (error) {
+    return {
+      mensagem: '❌ Erro ao finalizar: ' + error.message
+    };
+  }
+}
+
+async function editarDadosEmpresa() {
+  return {
+    mensagem: 'Qual campo você gostaria de editar? (nome, razão social, cidade, estado, etc)',
+    estado: 'editando_dados_empresa'
+  };
+}
+
+function handleKeyDown(event) {
+  if (event.key === 'Enter' && !event.shiftKey) {
+    event.preventDefault();
+    enviarMensagem();
+  }
+}
+
+async function enviarMensagem() {
+  const input = document.getElementById('chatInput');
+  const texto = input.value.trim();
+  
+  if (!texto) return;
+  
+  adicionarMensagem('user', texto);
+  const resposta = await processarMensagem(texto);
+  processarRespostaAgente(resposta);
+}
+</script>
+{% endblock %}

@@ -1,0 +1,1 @@
+['id', 'company_id', 'title', 'parent_role_id', 'reports_to', 'department', 'color', 'headcount_planned', 'weekly_hours', 'notes', 'created_at', 'updated_at']

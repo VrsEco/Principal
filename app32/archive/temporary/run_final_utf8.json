@@ -1,0 +1,127 @@
+﻿{
+  "apiVersion": "serving.knative.dev/v1",
+  "kind": "Service",
+  "metadata": {
+    "annotations": {
+      "run.googleapis.com/client-name": "gcloud",
+      "run.googleapis.com/client-version": "550.0.0",
+      "run.googleapis.com/ingress": "all",
+      "run.googleapis.com/ingress-status": "all",
+      "run.googleapis.com/operation-id": "7f460672-fe49-4ad3-b8a6-58eac8041314",
+      "run.googleapis.com/urls": "[\"https://app-gestaoversus-55743558564.southamerica-east1.run.app\",\"https://app-gestaoversus-zaquivo64q-rj.a.run.app\"]",
+      "serving.knative.dev/creator": "55743558564-compute@developer.gserviceaccount.com",
+      "serving.knative.dev/lastModifier": "55743558564-compute@developer.gserviceaccount.com"
+    },
+    "creationTimestamp": "2025-12-08T12:50:18.431731Z",
+    "generation": 23,
+    "labels": {
+      "cloud.googleapis.com/location": "southamerica-east1",
+      "run.googleapis.com/satisfiesPzs": "true"
+    },
+    "name": "app-gestaoversus",
+    "namespace": "55743558564",
+    "resourceVersion": "AAZGOYWG9sg",
+    "selfLink": "/apis/serving.knative.dev/v1/namespaces/55743558564/services/app-gestaoversus",
+    "uid": "de715462-481b-496d-96d3-f3be7f7cb5c5"
+  },
+  "spec": {
+    "template": {
+      "metadata": {
+        "annotations": {
+          "autoscaling.knative.dev/maxScale": "10",
+          "run.googleapis.com/client-name": "gcloud",
+          "run.googleapis.com/client-version": "550.0.0",
+          "run.googleapis.com/startup-cpu-boost": "true"
+        },
+        "labels": {
+          "client.knative.dev/nonce": "jrfqzgvjzx",
+          "run.googleapis.com/startupProbeType": "Default"
+        }
+      },
+      "spec": {
+        "containerConcurrency": 160,
+        "containers": [
+          {
+            "env": [
+              {
+                "name": "CLOUD_SQL_CONNECTION_NAME",
+                "value": "vrs-eco-478714:southamerica-east1:gestaoversus-db-prod"
+              },
+              {
+                "name": "FLASK_ENV",
+                "value": "production"
+              },
+              {
+                "name": "DOMAIN",
+                "value": "app.gestaoversus.com.br"
+              }
+            ],
+            "image": "southamerica-east1-docker.pkg.dev/vrs-eco-478714/my-app-repo/my-backend:463f60772aa2292961c9309ead5baead341021a4",
+            "name": "my-backend-1",
+            "ports": [
+              {
+                "containerPort": 5002,
+                "name": "http1"
+              }
+            ],
+            "resources": {
+              "limits": {
+                "cpu": "2",
+                "memory": "512Mi"
+              }
+            },
+            "startupProbe": {
+              "failureThreshold": 1,
+              "periodSeconds": 240,
+              "tcpSocket": {
+                "port": 5002
+              },
+              "timeoutSeconds": 240
+            }
+          }
+        ],
+        "serviceAccountName": "55743558564-compute@developer.gserviceaccount.com",
+        "timeoutSeconds": 300
+      }
+    },
+    "traffic": [
+      {
+        "latestRevision": true,
+        "percent": 100
+      }
+    ]
+  },
+  "status": {
+    "address": {
+      "url": "https://app-gestaoversus-zaquivo64q-rj.a.run.app"
+    },
+    "conditions": [
+      {
+        "lastTransitionTime": "2025-12-18T12:58:47.558856Z",
+        "status": "True",
+        "type": "Ready"
+      },
+      {
+        "lastTransitionTime": "2025-12-18T12:58:43.237663Z",
+        "status": "True",
+        "type": "ConfigurationsReady"
+      },
+      {
+        "lastTransitionTime": "2025-12-18T12:58:47.509511Z",
+        "status": "True",
+        "type": "RoutesReady"
+      }
+    ],
+    "latestCreatedRevisionName": "app-gestaoversus-00023-sgj",
+    "latestReadyRevisionName": "app-gestaoversus-00023-sgj",
+    "observedGeneration": 23,
+    "traffic": [
+      {
+        "latestRevision": true,
+        "percent": 100,
+        "revisionName": "app-gestaoversus-00023-sgj"
+      }
+    ],
+    "url": "https://app-gestaoversus-zaquivo64q-rj.a.run.app"
+  }
+}

@@ -1,0 +1,269 @@
+python : Exception in thread 
+Thread-1 (run_loop):
+No linha:1 caractere:1
++ python trace_mapper.py > 
+trace_output.txt 2>&1
++ ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+~~~~~~~~~~~~~~~~
+    + CategoryInfo          : N 
+   otSpecified: (Exception in   
+  thread Thread-1 (run_loop):   
+ :String) [], RemoteExceptio    
+n
+    + FullyQualifiedErrorId : N 
+   ativeCommandError
+ 
+Traceback (most recent call 
+last):
+  File "C:\Users\mff20\anaconda3
+\Lib\threading.py", line 1045, 
+in _bootstrap_inner
+    self.run()
+  File "C:\Users\mff20\anaconda3
+\Lib\threading.py", line 982, 
+in run
+    self._target(*self._args, 
+**self._kwargs)
+  File "C:\GestaoVersus\app32\se
+rvices\engineering_service.py", 
+line 26, in run_loop
+    print("\U0001f6e0\ufe0f 
+SQUAD DE ENGENHARIA [ONLINE]: 
+Monitorando sistema...")
+  File "C:\Users\mff20\anaconda3
+\Lib\encodings\cp1252.py", line 
+19, in encode
+    return codecs.charmap_encode
+(input,self.errors,encoding_tabl
+e)[0]
+           ^^^^^^^^^^^^^^^^^^^^^
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+^^
+UnicodeEncodeError: 'charmap' 
+codec can't encode characters 
+in position 0-1: character maps 
+to <undefined>
+Exception in thread Thread-2 
+(run_loop):
+Traceback (most recent call 
+last):
+  File "C:\Users\mff20\anaconda3
+\Lib\threading.py", line 1045, 
+in _bootstrap_inner
+    self.run()
+  File "C:\Users\mff20\anaconda3
+\Lib\threading.py", line 982, 
+in run
+    self._target(*self._args, 
+**self._kwargs)
+  File "C:\GestaoVersus\app32\se
+rvices\engineering_service.py", 
+line 26, in run_loop
+    print("\U0001f6e0\ufe0f 
+SQUAD DE ENGENHARIA [ONLINE]: 
+Monitorando sistema...")
+  File "C:\Users\mff20\anaconda3
+\Lib\encodings\cp1252.py", line 
+19, in encode
+    return codecs.charmap_encode
+(input,self.errors,encoding_tabl
+e)[0]
+           ^^^^^^^^^^^^^^^^^^^^^
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+^^
+UnicodeEncodeError: 'charmap' 
+codec can't encode characters 
+in position 0-1: character maps 
+to <undefined>
+Traceback (most recent call 
+last):
+  File "C:\Users\mff20\anaconda3
+\Lib\site-packages\sqlalchemy\en
+gine\base.py", line 1969, in 
+_exec_single_context
+    self.dialect.do_execute(
+  File "C:\Users\mff20\anaconda3
+\Lib\site-packages\sqlalchemy\en
+gine\default.py", line 922, in 
+do_execute
+    cursor.execute(statement, 
+parameters)
+psycopg2.errors.UndefinedColumn:
+ ERRO:  coluna 
+processes.flow_mermaid n?o 
+existe
+LINE 1: 
+...ocesses.flow_document AS 
+processes_flow_document, 
+processes....
+                                
+                             ^
+
+
+The above exception was the 
+direct cause of the following 
+exception:
+
+Traceback (most recent call 
+last):
+  File "C:\GestaoVersus\app32\tr
+ace_mapper.py", line 25, in 
+<module>
+    print(f"Processes count: 
+{len(Process.query.all())}")
+                                
+  ^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\mff20\anaconda3
+\Lib\site-packages\sqlalchemy\or
+m\query.py", line 2693, in all
+    return self._iter().all()  
+# type: ignore
+           ^^^^^^^^^^^^
+  File "C:\Users\mff20\anaconda3
+\Lib\site-packages\sqlalchemy\or
+m\query.py", line 2847, in _iter
+    result: 
+Union[ScalarResult[_T], 
+Result[_T]] = 
+self.session.execute(
+                                
+                  
+^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\mff20\anaconda3
+\Lib\site-packages\sqlalchemy\or
+m\session.py", line 2308, in 
+execute
+    return 
+self._execute_internal(
+           
+^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\mff20\anaconda3
+\Lib\site-packages\sqlalchemy\or
+m\session.py", line 2190, in 
+_execute_internal
+    result: Result[Any] = compil
+e_state_cls.orm_execute_statemen
+t(
+                          ^^^^^^
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+^^
+  File "C:\Users\mff20\anaconda3
+\Lib\site-packages\sqlalchemy\or
+m\context.py", line 293, in 
+orm_execute_statement
+    result = conn.execute(
+             ^^^^^^^^^^^^^
+  File "C:\Users\mff20\anaconda3
+\Lib\site-packages\sqlalchemy\en
+gine\base.py", line 1416, in 
+execute
+    return meth(
+           ^^^^^
+  File "C:\Users\mff20\anaconda3
+\Lib\site-packages\sqlalchemy\sq
+l\elements.py", line 516, in 
+_execute_on_connection
+    return connection._execute_c
+lauseelement(
+           ^^^^^^^^^^^^^^^^^^^^^
+^^^^^^^^^^^^^
+  File "C:\Users\mff20\anaconda3
+\Lib\site-packages\sqlalchemy\en
+gine\base.py", line 1639, in 
+_execute_clauseelement
+    ret = self._execute_context(
+          ^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\mff20\anaconda3
+\Lib\site-packages\sqlalchemy\en
+gine\base.py", line 1848, in 
+_execute_context
+    return 
+self._exec_single_context(
+           
+^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\mff20\anaconda3
+\Lib\site-packages\sqlalchemy\en
+gine\base.py", line 1988, in 
+_exec_single_context
+    
+self._handle_dbapi_exception(
+  File "C:\Users\mff20\anaconda3
+\Lib\site-packages\sqlalchemy\en
+gine\base.py", line 2343, in 
+_handle_dbapi_exception
+    raise sqlalchemy_exception.w
+ith_traceback(exc_info[2]) from 
+e
+  File "C:\Users\mff20\anaconda3
+\Lib\site-packages\sqlalchemy\en
+gine\base.py", line 1969, in 
+_exec_single_context
+    self.dialect.do_execute(
+  File "C:\Users\mff20\anaconda3
+\Lib\site-packages\sqlalchemy\en
+gine\default.py", line 922, in 
+do_execute
+    cursor.execute(statement, 
+parameters)
+sqlalchemy.exc.ProgrammingError:
+ (psycopg2.errors.UndefinedColum
+n) ERRO:  coluna 
+processes.flow_mermaid n?o 
+existe
+LINE 1: 
+...ocesses.flow_document AS 
+processes_flow_document, 
+processes....
+                                
+                             ^
+
+[SQL: SELECT processes.id AS 
+processes_id, 
+processes.company_id AS 
+processes_company_id, 
+processes.macro_id AS 
+processes_macro_id, 
+processes.code AS 
+processes_code, processes.name 
+AS processes_name, 
+processes.description AS 
+processes_description, 
+processes.responsible AS 
+processes_responsible, 
+processes.responsible_id AS 
+processes_responsible_id, 
+processes.owner_employee_id AS 
+processes_owner_employee_id, 
+processes.kanban_stage AS 
+processes_kanban_stage, 
+processes.structuring_level AS 
+processes_structuring_level, 
+processes.performance_level AS 
+processes_performance_level, 
+processes.order_index AS 
+processes_order_index, 
+processes.flow_document AS 
+processes_flow_document, 
+processes.flow_mermaid AS 
+processes_flow_mermaid, 
+processes.notes AS 
+processes_notes, 
+processes.is_active AS 
+processes_is_active, 
+processes.created_at AS 
+processes_created_at 
+FROM processes]
+(Background on this error at: 
+https://sqlalche.me/e/20/f405)
+DEBUG: Importing app...
+DEBUG: Registering Jinja filters...
+DEBUG: Importing models...
+DEBUG: Creating app...
+DEBUG: Registering Jinja filters...
+DEBUG: Setting up app context...
+DEBUG: Running query on ProcessArea...
+Areas count: 20
+DEBUG: Running query on MacroProcess...
+Macros count: 54
+DEBUG: Running query on Process...
+DEBUG: Error occurred!

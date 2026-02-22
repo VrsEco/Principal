@@ -1,0 +1,125 @@
+{% extends "modules/plans/base_planning.html" %}
+
+{% block planning_content %}
+<div class="planning-header"
+    style="display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 32px;">
+    <div>
+        <h1 style="font-size: 32px; font-weight: 800; color: #0f172a; margin-bottom: 8px;">Análise de Mercado</h1>
+        <p style="color: #64748b; font-size: 16px;">Quem é o seu público e por que eles escolheriam você?</p>
+    </div>
+    <button onclick="saveMarket()" class="nav-button"
+        style="background: #2563eb; color: #ffffff; padding: 12px 24px; border-radius: 12px; font-weight: 600;">
+        <i class="fa-solid fa-floppy-disk"></i> Salvar Mercado
+    </button>
+</div>
+
+<div style="display: grid; grid-template-columns: 1.5fr 1fr; gap: 24px;">
+    <div style="display: flex; flex-direction: column; gap: 24px;">
+        <!-- Persona Analysis -->
+        <div class="planning-card">
+            <h3 style="font-size: 18px; font-weight: 700; color: #0f172a; margin-bottom: 20px;">Perfil do Cliente Ideal
+                (Persona)</h3>
+            <div style="margin-bottom: 16px;">
+                <label
+                    style="display: block; font-size: 14px; font-weight: 700; color: #475569; margin-bottom: 8px;">Principais
+                    Dores</label>
+                <textarea id="market_pains"
+                    style="width: 100%; min-height: 100px; padding: 12px; border-radius: 10px; border: 1px solid #e2e8f0;">{{ section_content.pains }}</textarea>
+            </div>
+            <div>
+                <label
+                    style="display: block; font-size: 14px; font-weight: 700; color: #475569; margin-bottom: 8px;">Ganhos
+                    Desejados</label>
+                <textarea id="market_gains"
+                    style="width: 100%; min-height: 100px; padding: 12px; border-radius: 10px; border: 1px solid #e2e8f0;">{{ section_content.gains }}</textarea>
+            </div>
+        </div>
+
+        <!-- Value Proposition -->
+        <div class="planning-card">
+            <h3 style="font-size: 18px; font-weight: 700; color: #0f172a; margin-bottom: 20px;">Proposta de Valor</h3>
+            <p style="font-size: 13px; color: #64748b; margin-bottom: 16px;">Como o seu produto ou serviço resolve os
+                problemas da persona de forma única?</p>
+            <textarea id="value_prop"
+                style="width: 100%; min-height: 150px; padding: 16px; border-radius: 12px; border: 1px solid #e2e8f0; font-size: 15px;">{{ section_content.value_prop }}</textarea>
+        </div>
+    </div>
+
+    <aside style="display: flex; flex-direction: column; gap: 24px;">
+        <!-- TAM/SAM/SOM or Competitors -->
+        <div class="planning-card">
+            <h3 style="font-size: 18px; font-weight: 700; color: #0f172a; margin-bottom: 16px;">Concorrentes Diretos
+            </h3>
+            <div id="competitorsContainer" style="display: flex; flex-direction: column; gap: 10px;">
+                {% for comp in section_content.competitors %}
+                <div class="comp-item"
+                    style="padding: 12px; background: #f8fafc; border-radius: 10px; border: 1px solid #e2e8f0; display: flex; align-items: center; gap: 10px;">
+                    <input type="text" class="comp-input" value="{{ comp }}"
+                        style="flex: 1; background: transparent; border: none; font-size: 14px; font-weight: 600;">
+                    <button onclick="this.parentElement.remove()"
+                        style="color: #94a3b8; background: transparent; border: none; cursor: pointer;"><i
+                            class="fa-solid fa-xmark"></i></button>
+                </div>
+                {% endfor %}
+                <button onclick="addCompetitor()"
+                    style="padding: 12px; background: transparent; border: 2px dashed #e2e8f0; border-radius: 10px; color: #64748b; font-size: 13px; font-weight: 600; cursor: pointer;">
+                    + Adicionar Concorrente
+                </button>
+            </div>
+        </div>
+
+        <div class="planning-card" style="background: #eff6ff; border-color: #bfdbfe;">
+            <h4 style="color: #1e40af; font-size: 15px; font-weight: 700; margin-bottom: 10px;"><i
+                    class="fa-solid fa-lightbulb"></i> Dica do @FRONTEND</h4>
+            <p style="color: #1e40af; font-size: 13px; line-height: 1.5;">Uma proposta de valor matadora deve ser clara
+                o suficiente para que seu cliente entenda em menos de 10 segundos.</p>
+        </div>
+    </aside>
+</div>
+
+<script>
+    function addCompetitor() {
+        const container = document.getElementById('competitorsContainer');
+        const btn = container.lastElementChild;
+        const div = document.createElement('div');
+        div.className = 'comp-item';
+        div.style = 'padding: 12px; background: #f8fafc; border-radius: 10px; border: 1px solid #e2e8f0; display: flex; align-items: center; gap: 10px;';
+        div.innerHTML = `
+            <input type="text" class="comp-input" placeholder="Nome do concorrente" style="flex: 1; background: transparent; border: none; font-size: 14px; font-weight: 600;">
+            <button onclick="this.parentElement.remove()" style="color: #94a3b8; background: transparent; border: none; cursor: pointer;"><i class="fa-solid fa-xmark"></i></button>
+        `;
+        container.insertBefore(div, btn);
+        div.querySelector('input').focus();
+    }
+
+    async function saveMarket() {
+        const competitors = Array.from(document.querySelectorAll('.comp-input'))
+            .map(i => i.value)
+            .filter(v => v.trim() !== "");
+
+        const data = {
+            pains: document.getElementById('market_pains').value,
+            gains: document.getElementById('market_gains').value,
+            value_prop: document.getElementById('value_prop').value,
+            competitors: competitors
+        };
+
+        try {
+            const response = await fetch(`/api/plans/${window.planId}/implantation/market?company_id=${window.companyId}`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(data)
+            });
+
+            if (response.ok) {
+                alert('Análise de mercado salva!');
+                location.reload();
+            } else {
+                alert('Erro ao salvar análise.');
+            }
+        } catch (error) {
+            console.error('Error:', error);
+        }
+    }
+</script>
+{% endblock %}

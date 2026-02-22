@@ -1,0 +1,880 @@
+{% extends "base.html" %}
+{% block title %}GRV | Rotinas{% endblock %}
+{% block body %}{% set active_nav = 'routine-work-distribution' %}{{ super() }}{% endblock %}
+
+{% block extra_head %}
+{{ super() }}
+<style>
+  .routines-shell {
+    display: grid;
+    grid-template-columns: 240px minmax(0, 1fr);
+    gap: 16px;
+    align-items: start;
+  }
+
+  .routines-main {
+    background: #fff;
+    border-radius: 16px;
+    border: 1px solid rgba(15, 23, 42, 0.08);
+    padding: 18px 22px;
+    box-shadow: 0 8px 28px rgba(15, 23, 42, 0.08);
+    display: grid;
+    gap: 18px;
+  }
+
+  .routines-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    gap: 12px;
+    flex-wrap: wrap;
+  }
+
+  .header-right {
+    display: flex;
+    gap: 12px;
+    flex-wrap: wrap;
+    align-items: center;
+    justify-content: flex-end;
+  }
+
+  .routines-header h1 {
+    margin: 0;
+    font-size: 20px;
+    font-weight: 700;
+    color: #0f172a;
+  }
+
+  .routines-header p {
+    margin: 4px 0 0;
+    font-size: 13px;
+    color: #475569;
+    max-width: 540px;
+  }
+
+  .summary-pills {
+    display: flex;
+    gap: 10px;
+    flex-wrap: wrap;
+  }
+
+  .summary-pill {
+    border-radius: 999px;
+    background: rgba(59, 130, 246, 0.1);
+    border: 1px solid rgba(59, 130, 246, 0.3);
+    color: #1d4ed8;
+    font-weight: 600;
+    font-size: 12px;
+    padding: 6px 12px;
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+  }
+
+  .create-routine-btn {
+    border-radius: 999px;
+    background: linear-gradient(120deg, #2563eb, #1d4ed8);
+    border: none;
+    color: #fff;
+    font-weight: 600;
+    font-size: 13px;
+    padding: 10px 18px;
+    text-decoration: none;
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+  }
+
+  .create-routine-btn:hover {
+    opacity: 0.92;
+  }
+
+  .filters-card {
+    border: 1px solid rgba(15, 23, 42, 0.08);
+    border-radius: 12px;
+    background: #f8fafc;
+    padding: 0 16px 10px;
+  }
+
+  .filters-card > summary {
+    cursor: pointer;
+    list-style: none;
+    padding: 12px 0;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    font-weight: 600;
+    font-size: 14px;
+    color: #0f172a;
+  }
+
+  .filters-card > summary::-webkit-details-marker {
+    display: none;
+  }
+
+  .filters-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+    gap: 12px;
+    margin-top: 4px;
+  }
+
+  .filter-field {
+    display: grid;
+    gap: 4px;
+  }
+
+  .filter-field label {
+    font-size: 12px;
+    color: #475569;
+    font-weight: 600;
+    text-transform: uppercase;
+  }
+
+  .filter-field input,
+  .filter-field select {
+    border: 1px solid rgba(15, 23, 42, 0.16);
+    border-radius: 10px;
+    padding: 8px 10px;
+    font-size: 13px;
+    background: #fff;
+  }
+
+  .filters-actions {
+    display: flex;
+    justify-content: flex-end;
+    gap: 10px;
+    margin-top: 12px;
+  }
+
+  .filters-actions button {
+    border-radius: 10px;
+    font-weight: 600;
+    font-size: 13px;
+    padding: 8px 12px;
+    border: 1px solid rgba(15, 23, 42, 0.1);
+    background: #fff;
+    cursor: pointer;
+  }
+
+  .filters-actions button.primary {
+    background: #1d4ed8;
+    color: #fff;
+    border-color: #1d4ed8;
+  }
+
+  .routines-table-wrapper {
+    overflow: auto;
+    border: 1px solid rgba(15, 23, 42, 0.08);
+    border-radius: 14px;
+  }
+
+  table.routines-table {
+    width: 100%;
+    border-collapse: collapse;
+    min-width: 960px;
+  }
+
+  table.routines-table thead th {
+    text-transform: uppercase;
+    font-size: 11px;
+    letter-spacing: 0.06em;
+    text-align: left;
+    padding: 10px 12px;
+    color: #64748b;
+    background: #f8fafc;
+  }
+
+  table.routines-table tbody tr {
+    border-top: 1px solid rgba(15, 23, 42, 0.06);
+  }
+
+  table.routines-table tbody td {
+    padding: 12px;
+    font-size: 13px;
+    color: #0f172a;
+    vertical-align: middle;
+  }
+
+  .routine-meta {
+    display: grid;
+    gap: 2px;
+  }
+
+  .routine-meta .routine-name {
+    font-weight: 600;
+  }
+
+  .routine-meta small {
+    color: #475569;
+    font-size: 12px;
+  }
+
+  .collaborator-pill {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    padding: 6px 10px;
+    background: rgba(14, 165, 233, 0.12);
+    border-radius: 999px;
+    border: 1px solid rgba(14, 165, 233, 0.4);
+    font-weight: 600;
+    font-size: 12px;
+    color: #0369a1;
+  }
+
+  .collaborator-pill span {
+    font-variant-numeric: tabular-nums;
+  }
+
+  .status-chip {
+    border-radius: 999px;
+    padding: 6px 12px;
+    font-weight: 600;
+    font-size: 12px;
+    text-transform: capitalize;
+    display: inline-flex;
+    align-items: center;
+  }
+
+  .status-chip.pending {
+    background: rgba(217, 119, 6, 0.12);
+    color: #b45309;
+  }
+
+  .status-chip.in_progress {
+    background: rgba(79, 70, 229, 0.12);
+    color: #4338ca;
+  }
+
+  .status-chip.completed {
+    background: rgba(16, 185, 129, 0.12);
+    color: #047857;
+  }
+
+  .status-chip.paused {
+    background: rgba(148, 163, 184, 0.2);
+    color: #334155;
+  }
+
+  .status-chip.overdue {
+    background: rgba(239, 68, 68, 0.12);
+    color: #b91c1c;
+  }
+
+  .trigger-button {
+    border: 1px solid rgba(34, 197, 94, 0.5);
+    background: linear-gradient(130deg, rgba(34, 197, 94, 0.15), rgba(16, 185, 129, 0.2));
+    color: #047857;
+    font-weight: 700;
+    font-size: 12px;
+    padding: 8px 12px;
+    border-radius: 10px;
+    cursor: pointer;
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    min-width: 140px;
+    justify-content: center;
+  }
+
+  .trigger-button[disabled] {
+    opacity: 0.6;
+    cursor: not-allowed;
+  }
+
+  .routine-actions {
+    display: flex;
+    gap: 8px;
+    align-items: center;
+    flex-wrap: wrap;
+    justify-content: flex-start;
+  }
+
+  .routine-actions .action-link,
+  .routine-actions .action-delete {
+    border-radius: 999px;
+    border: 1px solid rgba(15, 23, 42, 0.15);
+    background: #fff;
+    color: #0f172a;
+    font-weight: 600;
+    font-size: 12px;
+    padding: 6px 12px;
+    cursor: pointer;
+    text-decoration: none;
+  }
+
+  .routine-actions .action-delete {
+    border-color: rgba(220, 38, 38, 0.4);
+    color: #dc2626;
+  }
+
+  .routine-actions .action-link:hover,
+  .routine-actions .action-delete:hover,
+  .trigger-button:hover {
+    opacity: 0.85;
+  }
+
+  .toast {
+    position: fixed;
+    bottom: 24px;
+    right: 24px;
+    min-width: 220px;
+    padding: 12px 16px;
+    border-radius: 12px;
+    color: #fff;
+    font-weight: 600;
+    display: none;
+    z-index: 99;
+  }
+
+  .toast.success {
+    background: linear-gradient(120deg, #059669, #10b981);
+  }
+
+  .toast.error {
+    background: linear-gradient(120deg, #dc2626, #ef4444);
+  }
+
+  .empty-state {
+    text-align: center;
+    padding: 30px 20px;
+    background: #f8fafc;
+    border-radius: 12px;
+    border: 1px dashed rgba(15, 23, 42, 0.2);
+    font-size: 14px;
+    color: #475569;
+  }
+
+  @media (max-width: 1100px) {
+    .routines-shell {
+      grid-template-columns: minmax(0, 1fr);
+    }
+
+    .routines-main {
+      padding: 16px;
+    }
+  }
+</style>
+{% endblock %}
+
+{% block content %}
+{% set sidebar_template_name = sidebar_template if sidebar_template is defined else 'routines_sidebar.html' %}
+<div class="project-layout plan-layout routines-shell" data-sidebar-toggle>
+  {% include sidebar_template_name %}
+
+  <div class="project-content plan-content routines-main">
+    <header class="routines-header">
+      <div>
+        <h1>Rotinas do Processo</h1>
+        <p>
+          Visualize rapidamente quem são os colaboradores atribuídos, ajuste filtros por coluna e dispare novas instâncias manualmente.
+        </p>
+      </div>
+      <div class="header-right">
+        <div class="summary-pills">
+          <span class="summary-pill">
+            <strong>{{ routines|length }}</strong> rotinas
+          </span>
+          <span class="summary-pill">
+            <strong>{{ '%02d'|format(total_collaborators|default(0)) }}</strong> colaboradores atribuídos
+          </span>
+        </div>
+        <a
+          href="{{ url_for('routine_details', company_id=company.id, routine_id='new') }}"
+          class="create-routine-btn"
+        >
+          + Nova rotina
+        </a>
+      </div>
+    </header>
+
+    <details class="filters-card" open>
+      <summary>
+        Filtros por coluna
+        <small style="font-weight: 500; color: #64748b;">Clique para expandir/ocultar</small>
+      </summary>
+      <div class="filters-grid">
+        <div class="filter-field">
+          <label for="filterSearch">Busca geral</label>
+          <input type="search" id="filterSearch" placeholder="Código, rotina, processo..." />
+        </div>
+        <div class="filter-field">
+          <label for="filterProcess">Processo</label>
+          <input type="search" id="filterProcess" placeholder="Ex: Onboarding" />
+        </div>
+        <div class="filter-field">
+          <label for="filterRoutine">Rotina</label>
+          <input type="search" id="filterRoutine" placeholder="Ex: Revisar contrato" />
+        </div>
+        <div class="filter-field">
+          <label for="filterTrigger">Gatilho</label>
+          <select id="filterTrigger">
+            <option value="all">Todos</option>
+            {% for trigger in filter_options.trigger %}
+            <option value="{{ trigger|lower }}">{{ trigger|title }}</option>
+            {% endfor %}
+          </select>
+        </div>
+        <div class="filter-field">
+          <label for="filterFrequency">Frequência</label>
+          <select id="filterFrequency">
+            <option value="all">Todas</option>
+            {% for frequency in filter_options.frequency %}
+            <option value="{{ frequency|lower }}">{{ frequency }}</option>
+            {% endfor %}
+          </select>
+        </div>
+        <div class="filter-field">
+          <label for="filterStatus">Status</label>
+          <select id="filterStatus">
+            <option value="all">Todos</option>
+            {% for status in filter_options.status %}
+            {% set status_value = status|lower %}
+            <option value="{{ status_value }}">{{ status_value.replace('_', ' ')|title }}</option>
+            {% endfor %}
+          </select>
+        </div>
+        <div class="filter-field">
+          <label for="filterCollaborators">Mínimo de exec.</label>
+          <input type="number" id="filterCollaborators" min="0" placeholder="0" />
+        </div>
+        <div class="filter-field">
+          <label for="filterHours">Mínimo de horas</label>
+          <input type="number" id="filterHours" min="0" step="0.5" placeholder="0" />
+        </div>
+        <div class="filter-field">
+          <label for="filterDeadline">Próxima execução</label>
+          <select id="filterDeadline">
+            <option value="all">Todas</option>
+            <option value="today">Hoje</option>
+            <option value="week">Próxima semana</option>
+            <option value="overdue">Atrasadas (em aberto)</option>
+          </select>
+        </div>
+      </div>
+      <div class="filters-actions">
+        <button type="button" id="filtersReset">Limpar filtros</button>
+        <button type="button" id="filtersApply" class="primary">Aplicar</button>
+      </div>
+    </details>
+
+    {% if routines %}
+    <div class="routines-table-wrapper">
+      <table class="routines-table" id="routinesTable">
+        <thead>
+          <tr>
+            {% for header in headers %}
+            <th>{{ header.title }}</th>
+            {% endfor %}
+          </tr>
+        </thead>
+        <tbody>
+          {% for routine in routines %}
+          {% set collaborator_names = routine.collaborators | map(attribute='employee_name') | list %}
+          {% set collaborator_display = collaborator_names[:3]|join(', ') %}
+          <tr
+            class="routine-row"
+            data-process="{{ (routine.process_name|default(''))|lower }}"
+            data-routine="{{ (routine.name or routine.title or '')|lower }}"
+            data-trigger="{{ (routine.trigger_type or 'manual')|lower }}"
+            data-frequency="{{ (routine.frequency_label)|lower }}"
+            data-status="{{ (routine.status or 'pending')|lower }}"
+            data-collaborators="{{ routine.collaborators_count|default(0) }}"
+            data-hours="{{ routine.estimated_hours|default(0) }}"
+            data-deadline="{{ routine.next_run or '' }}"
+          >
+            <td>
+              <div class="routine-meta">
+                <span class="routine-name">{{ routine.process_name }}</span>
+              </div>
+            </td>
+            <td>
+              <div class="routine-meta">
+                <span class="routine-name">{{ routine.name or routine.title or 'Rotina sem nome' }}</span>
+                {% if routine.description %}
+                <small>{{ routine.description }}</small>
+                {% endif %}
+              </div>
+            </td>
+            <td>{{ routine.trigger_type_label }}</td>
+            <td>{{ routine.frequency_label }}</td>
+            <td>
+              <span class="collaborator-pill" title="{{ collaborator_names|join(', ') }}">
+                <span>{{ '%02d'|format(routine.collaborators_count|default(0)) }}</span>
+                exec.
+              </span>
+              {% if collaborator_display %}
+              <small style="display:block; font-size:11px; color:#475569; margin-top:2px;">
+                {{ collaborator_display }}{% if collaborator_names|length > 3 %} +{{ collaborator_names|length - 3 }}{% endif %}
+              </small>
+              {% endif %}
+            </td>
+            <td>{{ routine.estimated_hours|default(0) }}h</td>
+            <td>
+              <span class="status-chip {{ (routine.status or 'pending')|lower }}">
+                {{ routine.status_label }}
+              </span>
+            </td>
+            <td>
+              {% if routine.next_run %}
+              <strong>{{ routine.next_run }}</strong>
+              {% else %}
+              <span>N/D</span>
+              {% endif %}
+            </td>
+            <td>
+              <div class="routine-actions">
+                <a
+                  href="{{ url_for('routine_details', company_id=company.id, routine_id=routine.id) }}"
+                  class="action-link"
+                >
+                  Editar
+                </a>
+                <button
+                  type="button"
+                  class="action-delete routine-delete-button"
+                  data-routine-id="{{ routine.id }}"
+                >
+                  Excluir
+                </button>
+                <button
+                  type="button"
+                  class="trigger-button"
+                  data-process-id="{{ routine.process_id }}"
+                  data-routine-id="{{ routine.id }}"
+                  data-title="{{ routine.name or routine.title or routine.process_name }}"
+                  data-description="{{ routine.description or '' }}"
+                  data-deadline="{{ routine.next_run or '' }}"
+                  data-collaborators='{{ routine.collaborators | tojson | safe }}'
+                  onclick="return window.dispatchRoutineTrigger ? window.dispatchRoutineTrigger(event, this) : false;"
+                >
+                  Disparar agora
+                </button>
+              </div>
+            </td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+    {% else %}
+    <div class="empty-state">
+      Nenhuma rotina cadastrada para esta empresa. Configure um processo com colaboradores para visualizar aqui.
+    </div>
+    {% endif %}
+  </div>
+</div>
+
+<div class="toast" id="routineToast"></div>
+
+{% endblock %}
+
+{% block extra_scripts %}
+{{ super() }}
+<script>
+  (function () {
+    const companyId = Number({{ company.id or 0 }});
+    const toast = document.getElementById('routineToast');
+    const routineTriggerTracker = new Set();
+
+    function showToast (message, type = 'success') {
+      if (!toast) return;
+      toast.textContent = message;
+      toast.className = `toast ${type}`;
+      toast.style.display = 'block';
+      setTimeout(() => {
+        toast.style.display = 'none';
+      }, 4000);
+    }
+
+    async function triggerInstance (button) {
+      const processAttr = button?.dataset?.processId;
+      const processId = processAttr ? Number(processAttr) : null;
+
+      if (!processId) {
+        showToast('Rotina precisa estar vinculada a um processo para ser disparada.', 'error');
+        return;
+      }
+
+      if (!companyId) {
+        showToast('Empresa não identificada. Recarregue a página e tente novamente.', 'error');
+        return;
+      }
+
+      let collaborators = [];
+      const collaboratorsRaw = button.dataset.collaborators;
+      if (collaboratorsRaw) {
+        try {
+          const parsed = JSON.parse(collaboratorsRaw);
+          if (Array.isArray(parsed)) {
+            collaborators = parsed.map(col => ({
+              id: col.employee_id || col.id || null,
+              name: col.name || col.employee_name || '',
+              email: col.email || '',
+              role: (col.role || 'executor').toLowerCase(),
+              hours: col.hours || col.assigned_hours || 0
+            }));
+          }
+        } catch (err) {
+          console.warn('Falha ao interpretar colaboradores da rotina', err);
+        }
+      }
+
+      const payload = {
+        process_id: processId,
+        routine_id: Number(button.dataset.routineId) || null,
+        title: button.dataset.title || 'Instância manual',
+        description: button.dataset.description || '',
+        due_date: button.dataset.deadline || null,
+        priority: 'normal',
+        trigger_type: 'manual',
+        assigned_collaborators: collaborators
+      };
+
+      const routineKey = String(payload.routine_id || processId || button.dataset.routineId || '');
+      if (routineTriggerTracker.has(routineKey)) {
+        return;
+      }
+
+      try {
+        routineTriggerTracker.add(routineKey);
+        button.disabled = true;
+        button.setAttribute('data-triggering', '1');
+        const response = await fetch(`/api/companies/${companyId}/process-instances`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(payload)
+        });
+
+        if (!response.ok) {
+          const error = await response.json().catch(() => ({}));
+          throw new Error(error.error || 'Erro ao disparar instância.');
+        }
+
+        showToast('Instância criada com sucesso!');
+      } catch (error) {
+        console.error('[Rotinas] Falha ao disparar instância', error);
+        showToast(error.message || 'Erro ao disparar instância.', 'error');
+      } finally {
+        routineTriggerTracker.delete(routineKey);
+        button.disabled = false;
+        button.removeAttribute('data-triggering');
+      }
+    }
+
+    async function deleteRoutine (routineId, button) {
+      if (!routineId) {
+        showToast('Rotina inválida.', 'error');
+        return;
+      }
+
+      if (!window.confirm('Deseja excluir esta rotina?')) {
+        return;
+      }
+
+      try {
+        button.disabled = true;
+        const response = await fetch(
+          `/api/companies/${companyId}/process-routines/${routineId}`,
+          { method: 'DELETE' }
+        );
+        const result = await response.json().catch(() => ({}));
+
+        if (!response.ok) {
+          throw new Error(result.message || 'Erro ao excluir rotina.');
+        }
+
+        showToast(result.message || 'Rotina excluída com sucesso!');
+        setTimeout(() => window.location.reload(), 700);
+      } catch (error) {
+        console.error('[Rotinas] Falha ao excluir rotina', error);
+        showToast(error.message || 'Erro ao excluir rotina.', 'error');
+      } finally {
+        button.disabled = false;
+      }
+    }
+
+    window.dispatchRoutineTrigger = function (event, button) {
+      if (event) {
+        event.preventDefault();
+        event.stopPropagation();
+      }
+      if (!button) {
+        return false;
+      }
+      if (button.disabled || button.getAttribute('data-triggering') === '1') {
+        return false;
+      }
+      triggerInstance(button);
+      return false;
+    };
+
+    const table = document.getElementById('routinesTable');
+    if (!table) {
+      return;
+    }
+
+    const rows = Array.from(table.querySelectorAll('.routine-row'));
+    const filters = {
+      search: '',
+      process: '',
+      routine: '',
+      trigger: 'all',
+      frequency: 'all',
+      status: 'all',
+      collaborators: '',
+      hours: '',
+      deadline: 'all'
+    };
+
+    const inputs = {
+      search: document.getElementById('filterSearch'),
+      process: document.getElementById('filterProcess'),
+      routine: document.getElementById('filterRoutine'),
+      trigger: document.getElementById('filterTrigger'),
+      frequency: document.getElementById('filterFrequency'),
+      status: document.getElementById('filterStatus'),
+      collaborators: document.getElementById('filterCollaborators'),
+      hours: document.getElementById('filterHours'),
+      deadline: document.getElementById('filterDeadline')
+    };
+
+    const resetButton = document.getElementById('filtersReset');
+    const applyButton = document.getElementById('filtersApply');
+
+    function normalize(value) {
+      return (value || '').toString().trim().toLowerCase();
+    }
+
+    function applyFilters () {
+      rows.forEach((row) => {
+        const processValue = row.dataset.process || '';
+        const routineValue = row.dataset.routine || '';
+        const triggerValue = row.dataset.trigger || '';
+        const frequencyValue = row.dataset.frequency || '';
+        const statusValue = row.dataset.status || '';
+        const collaboratorsValue = parseInt(row.dataset.collaborators || '0', 10);
+        const hoursValue = parseFloat(row.dataset.hours || '0');
+        const deadlineValue = row.dataset.deadline || '';
+
+        const matchesSearch = !filters.search || row.innerText.toLowerCase().includes(filters.search);
+        const matchesProcess = !filters.process || processValue.includes(filters.process);
+        const matchesRoutine = !filters.routine || routineValue.includes(filters.routine);
+        const matchesTrigger = filters.trigger === 'all' || triggerValue === filters.trigger;
+        const matchesFrequency = filters.frequency === 'all' || frequencyValue === filters.frequency;
+        const matchesStatus = filters.status === 'all' || statusValue === filters.status;
+        const matchesCollaborators = !filters.collaborators || collaboratorsValue >= Number(filters.collaborators);
+        const matchesHours = !filters.hours || hoursValue >= Number(filters.hours);
+
+        let matchesDeadline = true;
+        if (filters.deadline !== 'all') {
+          const deadlineDate = deadlineValue ? new Date(deadlineValue) : null;
+          const today = new Date();
+          today.setHours(0, 0, 0, 0);
+          if (!deadlineDate || Number.isNaN(deadlineDate.getTime())) {
+            matchesDeadline = false;
+          } else {
+            const compareDate = new Date(deadlineDate);
+            compareDate.setHours(0, 0, 0, 0);
+            if (filters.deadline === 'today') {
+              matchesDeadline = compareDate.getTime() === today.getTime();
+            } else if (filters.deadline === 'week') {
+              const weekAhead = new Date(today);
+              weekAhead.setDate(weekAhead.getDate() + 7);
+              matchesDeadline = compareDate >= today && compareDate <= weekAhead;
+            } else if (filters.deadline === 'overdue') {
+              matchesDeadline = compareDate < today;
+            }
+          }
+        }
+
+        const shouldShow =
+          matchesSearch &&
+          matchesProcess &&
+          matchesRoutine &&
+          matchesTrigger &&
+          matchesFrequency &&
+          matchesStatus &&
+          matchesCollaborators &&
+          matchesHours &&
+          matchesDeadline;
+
+        row.style.display = shouldShow ? '' : 'none';
+      });
+    }
+
+    function syncFilters () {
+      filters.search = normalize(inputs.search?.value);
+      filters.process = normalize(inputs.process?.value);
+      filters.routine = normalize(inputs.routine?.value);
+      filters.trigger = inputs.trigger?.value || 'all';
+      filters.frequency = inputs.frequency?.value || 'all';
+      filters.status = inputs.status?.value || 'all';
+      filters.collaborators = inputs.collaborators?.value || '';
+      filters.hours = inputs.hours?.value || '';
+      filters.deadline = inputs.deadline?.value || 'all';
+    }
+
+    function resetFilters () {
+      Object.values(inputs).forEach((input) => {
+        if (!input) return;
+        if (input.tagName === 'SELECT') {
+          input.value = 'all';
+        } else {
+          input.value = '';
+        }
+      });
+      syncFilters();
+      applyFilters();
+    }
+
+    [inputs.search, inputs.process, inputs.routine].forEach((input) => {
+      input?.addEventListener('input', () => {
+        syncFilters();
+        applyFilters();
+      });
+    });
+
+    [inputs.trigger, inputs.frequency, inputs.status, inputs.deadline].forEach((select) => {
+      select?.addEventListener('change', () => {
+        syncFilters();
+        applyFilters();
+      });
+    });
+
+    [inputs.collaborators, inputs.hours].forEach((input) => {
+      input?.addEventListener('input', () => {
+        syncFilters();
+        applyFilters();
+      });
+    });
+
+    applyButton?.addEventListener('click', () => {
+      syncFilters();
+      applyFilters();
+    });
+
+    resetButton?.addEventListener('click', () => resetFilters());
+
+    syncFilters();
+    applyFilters();
+
+    table.querySelectorAll('.trigger-button').forEach((button) => {
+      button.addEventListener('click', (event) => {
+        event.preventDefault();
+        event.stopPropagation();
+        triggerInstance(button);
+      });
+    });
+
+    table.querySelectorAll('.routine-delete-button').forEach((button) => {
+      button.addEventListener('click', (event) => {
+        event.preventDefault();
+        event.stopPropagation();
+        deleteRoutine(button.dataset.routineId, button);
+      });
+    });
+  })();
+</script>
+{% endblock %}

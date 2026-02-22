@@ -1,0 +1,101 @@
+# ============================================
+# GestaoVersus - Google Cloud Run
+# ============================================
+# Configuração para deploy no Cloud Run
+# ============================================
+
+apiVersion: serving.knative.dev/v1
+kind: Service
+metadata:
+  name: gestaoversos
+  labels:
+    app: gestaoversos
+    environment: production
+spec:
+  template:
+    metadata:
+      annotations:
+        # Autoscaling
+        autoscaling.knative.dev/minScale: "1"
+        autoscaling.knative.dev/maxScale: "10"
+        autoscaling.knative.dev/target: "80"
+        
+        # Cloud SQL
+        run.googleapis.com/cloudsql-instances: "PROJECT_ID:REGION:INSTANCE_NAME"
+        
+        # VPC Connector
+        run.googleapis.com/vpc-access-connector: "CONNECTOR_NAME"
+        run.googleapis.com/vpc-access-egress: "private-ranges-only"
+        
+    spec:
+      containerConcurrency: 80
+      timeoutSeconds: 300
+      
+      containers:
+        - name: gestaoversos-app
+          image: gcr.io/PROJECT_ID/gestaoversos:latest
+          
+          ports:
+            - name: http1
+              containerPort: 5002
+          
+          env:
+            # Flask
+            - name: FLASK_ENV
+              value: "production"
+            
+            - name: FLASK_APP
+              value: "app_pev.py"
+            
+            # Secret Manager
+            - name: SECRET_KEY
+              valueFrom:
+                secretKeyRef:
+                  name: flask-secret-key
+                  key: latest
+            
+            - name: DATABASE_URL
+              valueFrom:
+                secretKeyRef:
+                  name: database-url
+                  key: latest
+            
+            - name: REDIS_URL
+              valueFrom:
+                secretKeyRef:
+                  name: redis-url
+                  key: latest
+          
+          resources:
+            limits:
+              cpu: "2000m"
+              memory: "512Mi"
+          
+          livenessProbe:
+            httpGet:
+              path: /health
+              port: 5002
+            initialDelaySeconds: 30
+            periodSeconds: 30
+            timeoutSeconds: 10
+            failureThreshold: 3
+          
+          readinessProbe:
+            httpGet:
+              path: /health
+              port: 5002
+            initialDelaySeconds: 10
+            periodSeconds: 10
+            timeoutSeconds: 5
+            failureThreshold: 2
+
+  traffic:
+    - percent: 100
+      latestRevision: true
+
+# ⚠️ IMPORTANTE:
+# 1. Substitua PROJECT_ID, REGION, INSTANCE_NAME, CONNECTOR_NAME
+# 2. Configure secrets no Secret Manager
+# 3. Build image: gcloud builds submit --tag gcr.io/PROJECT_ID/gestaoversos
+# 4. Deploy: gcloud run services replace cloudrun.yaml
+

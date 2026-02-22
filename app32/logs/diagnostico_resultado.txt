@@ -1,0 +1,45 @@
+﻿================================================================================
+DIAGNËSTICO - GeraþÒo de PDF My Work
+================================================================================
+
+1. VersÒo do Python:
+   3.11.7 | packaged by Anaconda, Inc. | (main, Dec 15 2023, 18:05:47) [MSC v.1916 64 bit (AMD64)]
+
+2. Verificando reportlab:
+python : Traceback (most 
+recent call last):
+No linha:1 caractere:1
++ python diagnostico_pdf.py 
+2>&1 | Out-File -Encoding 
+utf8 diagnostico_ ...
++ ~~~~~~~~~~~~~~~~~~~~~~~~~~
+~~~~
+    + CategoryInfo          
+    : NotSpecified: (Trace  
+  back (most recent call    
+ last)::String) [], Remo    
+teException
+    + FullyQualifiedErrorId 
+    : NativeCommandError
+ 
+  File "C:\GestaoVersus\app3
+1\diagnostico_pdf.py", line 
+24, in <module>
+    print(f"   \u2713 
+reportlab instalado - 
+versÒo: 
+{reportlab.Version}")
+  File "C:\Users\mff20\anaco
+nda3\Lib\encodings\cp1252.py
+", line 19, in encode
+    return codecs.charmap_en
+code(input,self.errors,encod
+ing_table)[0]
+           ^^^^^^^^^^^^^^^^^
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+^^^^^^^^^^
+UnicodeEncodeError: 
+'charmap' codec can't 
+encode character '\u2713' 
+in position 3: character 
+maps to <undefined>

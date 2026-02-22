@@ -1,0 +1,631 @@
+{% extends "layouts/workspace.html" %}
+
+{% block title %}Projetos - Versus{% endblock %}
+
+{% block head %}
+<link rel="stylesheet" href="{{ url_for('static', filename='css/my-work.css') }}" />
+<style>
+    /* Projects Page Specific Adjustments */
+    .projects-container {
+        padding: 0 5rem 0 2.5rem !important;
+    }
+
+    .project-row {
+        background: var(--surface);
+        border-radius: 16px;
+        padding: 1rem 1.5rem;
+        border: 1px solid var(--border);
+        display: grid;
+        grid-template-columns: auto 1fr auto auto;
+        align-items: center;
+        gap: 1.5rem;
+        transition: all 0.2s ease;
+        margin-bottom: 1rem;
+    }
+
+    .project-row:hover {
+        transform: translateY(-2px);
+        box-shadow: var(--shadow-md);
+        border-color: var(--primary-light);
+    }
+
+    .project-info {
+        display: flex;
+        flex-direction: column;
+        gap: 0.25rem;
+        min-width: 0;
+    }
+
+    .project-title {
+        font-size: 1.1rem;
+        font-weight: 700;
+        color: var(--text-primary);
+        margin: 0;
+    }
+
+    .project-subtitle {
+        font-size: 0.85rem;
+        color: var(--text-tertiary);
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
+    }
+
+    .project-meta-pills {
+        display: flex;
+        gap: 0.5rem;
+        align-items: center;
+    }
+
+    .pill {
+        font-size: 0.65rem;
+        font-weight: 700;
+        padding: 0.25rem 0.6rem;
+        border-radius: 6px;
+        text-transform: uppercase;
+        letter-spacing: 0.05em;
+    }
+
+    .pill--planned {
+        background: #e0e7ff;
+        color: #4338ca;
+    }
+
+    .pill--in_progress {
+        background: #dcfce7;
+        color: #15803d;
+    }
+
+    .pill--on_hold {
+        background: #fef9c3;
+        color: #a16207;
+    }
+
+    .pill--completed {
+        background: #f0fdf4;
+        color: #166534;
+    }
+
+    .pill--cancelled {
+        background: #fef2f2;
+        color: #b91c1c;
+    }
+
+    .project-progress-compact {
+        width: 120px;
+        display: flex;
+        flex-direction: column;
+        gap: 4px;
+    }
+
+    .progress-track-mini {
+        height: 6px;
+        background: var(--surface-secondary);
+        border-radius: 3px;
+        overflow: hidden;
+    }
+
+    .progress-fill-mini {
+        height: 100%;
+        background: var(--primary);
+        border-radius: 3px;
+    }
+
+    .project-actions {
+        display: flex;
+        gap: 0.5rem;
+    }
+
+    /* Dashboard Summary Styles */
+    .dashboard-summary-container {
+        background: var(--surface);
+        border-radius: 20px;
+        border: 1px solid var(--border);
+        margin-bottom: 2rem;
+        overflow: hidden;
+        box-shadow: var(--shadow-sm);
+    }
+
+    .workspace-header {
+        margin-bottom: 2rem;
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        padding-top: 1rem;
+    }
+
+    .workspace-header-actions {
+        display: flex;
+        align-items: center;
+        gap: 1rem;
+    }
+
+    .status-summary {
+        display: flex;
+        gap: 1.25rem;
+        flex-wrap: wrap;
+        margin-bottom: 2rem;
+    }
+
+    .dashboard-summary-header {
+        padding: 1rem 1.5rem;
+        background: var(--surface-secondary);
+        display: flex;
+        align-items: center;
+        gap: 0.75rem;
+        cursor: pointer;
+        transition: background 0.2s;
+        border-bottom: 1px solid var(--border);
+    }
+
+    .dashboard-summary-header:hover {
+        background: var(--border-light);
+    }
+
+    .dashboard-summary-header h3 {
+        margin: 0;
+        font-size: 0.9rem;
+        font-weight: 700;
+        color: var(--text-secondary);
+        text-transform: uppercase;
+        letter-spacing: 0.05em;
+    }
+
+    .dashboard-summary-header .chevron {
+        transition: transform 0.3s ease;
+        color: var(--text-tertiary);
+    }
+
+    .dashboard-summary-content {
+        padding: 1.5rem;
+        max-height: 1000px;
+        transition: max-height 0.4s ease-in-out, padding 0.4s ease-in-out;
+    }
+
+    /* Refine stat-cards for horizontal display */
+    .status-summary .stat-card {
+        flex: 1;
+        min-width: 240px;
+        background: var(--surface);
+        border: 1px solid var(--border);
+        border-radius: 16px;
+        padding: 1.25rem;
+        display: flex;
+        align-items: center;
+        gap: 1rem;
+        transition: all 0.2s ease;
+    }
+
+    .status-summary .stat-card:hover {
+        transform: translateY(-3px);
+        box-shadow: var(--shadow-md);
+        border-color: var(--primary-light);
+    }
+
+    .stat-card__icon {
+        width: 48px;
+        height: 48px;
+        border-radius: 12px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        background: var(--surface-secondary);
+        color: var(--primary);
+        flex-shrink: 0;
+    }
+
+    .stat-card--total .stat-card__icon {
+        color: var(--primary);
+        background: #eef2ff;
+    }
+
+    .stat-card--progress .stat-card__icon {
+        color: var(--success);
+        background: #f0fdf4;
+    }
+
+    .stat-card--overdue .stat-card__icon {
+        color: var(--danger);
+        background: #fef2f2;
+    }
+
+    .stat-card__value {
+        font-size: 1.75rem;
+        font-weight: 800;
+        color: var(--text-primary);
+        line-height: 1.2;
+    }
+
+    .stat-card__label {
+        font-size: 0.8rem;
+        font-weight: 600;
+        color: var(--text-tertiary);
+        text-transform: uppercase;
+        letter-spacing: 0.025em;
+    }
+
+    /* Override breadcrumb separator */
+    .sep {
+        margin: 0 0.5rem;
+        color: var(--text-tertiary);
+    }
+
+    /* Responsiveness */
+    @media (max-width: 1400px) {
+        .projects-container {
+            padding: 0 2rem !important;
+        }
+    }
+
+    @media (max-width: 1100px) {
+        .kanban-board {
+            grid-template-columns: repeat(2, 1fr);
+        }
+    }
+
+    @media (max-width: 768px) {
+        .projects-container {
+            padding: 0 1rem !important;
+        }
+
+        .workspace-header {
+            flex-direction: column;
+            align-items: flex-start;
+            gap: 1.5rem;
+        }
+
+        .workspace-header-actions {
+            width: 100%;
+            justify-content: space-between;
+        }
+
+        .workspace-header-actions .btn-primary {
+            flex: 1;
+            justify-content: center;
+        }
+
+        .workspace-header h1 {
+            font-size: 1.5rem;
+        }
+
+        .project-row {
+            grid-template-columns: 1fr;
+            gap: 1rem;
+            padding: 1.25rem;
+        }
+
+        .project-info {
+            gap: 0.5rem;
+        }
+
+        .project-subtitle {
+            white-space: normal;
+        }
+
+        .project-meta-pills {
+            flex-wrap: wrap;
+            gap: 0.25rem 0.5rem;
+        }
+
+        .project-progress-compact {
+            width: 100%;
+            margin-top: 0.5rem;
+        }
+
+        .project-actions {
+            justify-content: flex-end;
+            border-top: 1px solid var(--border-light);
+            padding-top: 0.75rem;
+            margin-top: 0.5rem;
+        }
+
+        .kanban-board {
+            grid-template-columns: 1fr;
+        }
+
+        .status-summary .stat-card {
+            min-width: 100%;
+        }
+    }
+</style>
+{% endblock %}
+
+{% block breadcrumb %}
+<a href="/dashboard">Dashboard</a>
+<span class="sep">/</span>
+<span class="current">Projetos Corporativos</span>
+{% endblock %}
+
+{% block navbar_actions %}
+<div style="display: flex; align-items: center; gap: 0.75rem;">
+    <button class="btn btn-secondary btn-sm" onclick="toggleSidebar('right')">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <polygon points="22 3 2 3 10 12.46 10 19 14 21 14 12.46 22 3"></polygon>
+        </svg>
+        Filtros
+    </button>
+</div>
+{% endblock %}
+
+{% block workspace_content %}
+<div class="projects-container">
+    <div class="workspace-header">
+        <div class="fade-in">
+            <h1 class="text-h1">📁 Projetos Corporativos</h1>
+            <p class="text-subtitle">Gestão de iniciativas, marcos e cronogramas estratégicos.</p>
+        </div>
+
+        <div class="workspace-header-actions">
+
+            <button class="btn btn-primary" onclick="window.location.href='/projects/new'">
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <line x1="12" y1="5" x2="12" y2="19"></line>
+                    <line x1="5" y1="12" x2="19" y2="12"></line>
+                </svg>
+                Novo Projeto
+            </button>
+        </div>
+    </div>
+
+    <!-- Dashboard Summary (Collapsible like My Work) -->
+    <div class="dashboard-summary-container" id="projects-summary">
+        <div class="dashboard-summary-header" onclick="toggleCollapsible('projects-summary')">
+            <svg class="chevron" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                stroke-width="3">
+                <polyline points="6 9 12 15 18 9"></polyline>
+            </svg>
+            <h3>Dashboard de Visão Geral</h3>
+        </div>
+
+        <div class="dashboard-summary-content">
+            <div class="status-summary fade-in">
+                <!-- 1. Total -->
+                <div class="stat-card stat-card--total">
+                    <div class="stat-card__icon">
+                        <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                            stroke-width="2">
+                            <path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z">
+                            </path>
+                        </svg>
+                    </div>
+                    <div class="stat-card__content">
+                        <div class="stat-card__value" id="project-count-total">0</div>
+                        <div class="stat-card__label">Total de Projetos</div>
+                    </div>
+                </div>
+
+                <!-- 2. Em Andamento -->
+                <div class="stat-card stat-card--progress">
+                    <div class="stat-card__icon">
+                        <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                            stroke-width="2">
+                            <polyline points="22 12 18 12 15 21 9 3 6 12 2 12"></polyline>
+                        </svg>
+                    </div>
+                    <div class="stat-card__content">
+                        <div class="stat-card__value" id="stats-active">0</div>
+                        <div class="stat-card__label">Em Andamento</div>
+                    </div>
+                </div>
+
+                <!-- 3. Atrasados -->
+                <div class="stat-card stat-card--overdue">
+                    <div class="stat-card__icon">
+                        <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                            stroke-width="2">
+                            <circle cx="12" cy="12" r="10"></circle>
+                            <line x1="12" y1="8" x2="12" y2="12"></line>
+                            <line x1="12" y1="16" x2="12.01" y2="16"></line>
+                        </svg>
+                    </div>
+                    <div class="stat-card__content">
+                        <div class="stat-card__value" id="stats-delayed">0</div>
+                        <div class="stat-card__label">Atrasados</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Main List View -->
+    <div id="loading-state" class="text-center py-5">
+        <div class="placeholder-spinner"></div>
+        <p class="mt-4" style="color: var(--text-secondary); font-weight: 500;">Carregando projetos estratégicos...</p>
+    </div>
+
+    <div id="empty-state" class="empty-state" style="display: none;">
+        <svg width="60" height="60" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1">
+            <polyline points="22 12 18 12 15 21 9 3 6 12 2 12"></polyline>
+        </svg>
+        <h3>Nenhum projeto encontrado</h3>
+        <p>Ajuste os filtros para ver mais projetos ou cadastrar um novo.</p>
+    </div>
+
+    <div id="projects-list-container" class="activities-list fade-in">
+        <!-- Rows rendered by JS -->
+    </div>
+
+
+</div>
+{% endblock %}
+
+{% block sidebar_right %}
+<div class="sidebar-header-ws">
+    <h3 class="text-h3">🔍 Filtros Avançados</h3>
+    <p class="text-sm text-tertiary">Filtros dinâmicos como no App31.</p>
+</div>
+
+<div class="sidebar-content-ws" style="display: flex; flex-direction: column; gap: 1rem;">
+    <!-- 1. Buscar por Texto -->
+    <div class="filter-card filter-card--controls" style="min-height: auto; padding: 1rem;">
+        <div class="filter-input-wrapper">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <circle cx="11" cy="11" r="8"></circle>
+                <line x1="21" y1="21" x2="16.65" y2="16.65"></line>
+            </svg>
+            <input type="text" id="filter-search" class="filter-text-input" placeholder="Buscar por texto..."
+                onkeyup="filterProjects()">
+        </div>
+    </div>
+
+    <!-- 2. Status -->
+    <div class="filter-card" style="min-height: auto; padding: 1rem;">
+        <label class="form-label">Status</label>
+        <select id="filter-status" class="filter-select" onchange="filterProjects()">
+            <option value="">Todos os Status</option>
+            <option value="planned">Planejado</option>
+            <option value="in_progress">Em Andamento</option>
+            <option value="on_hold">Em Pausa</option>
+            <option value="completed">Concluído</option>
+            <option value="cancelled">Cancelado</option>
+            <option value="archived">Arquivado</option>
+        </select>
+    </div>
+
+    <!-- 3. Prioridade -->
+    <div class="filter-card" style="min-height: auto; padding: 1rem;">
+        <label class="form-label">Prioridade</label>
+        <select id="filter-priority" class="filter-select" onchange="filterProjects()">
+            <option value="">Todas as Prioridades</option>
+            <option value="high">Alta</option>
+            <option value="medium">Média</option>
+            <option value="low">Baixa</option>
+        </select>
+    </div>
+
+    <!-- 4. Responsável -->
+    <div class="filter-card" style="min-height: auto; padding: 1rem;">
+        <label class="form-label">Responsável</label>
+        <select id="filter-responsible" class="filter-select" onchange="filterProjects()">
+            <option value="">Todos os Responsáveis</option>
+            <!-- Filled by JS -->
+        </select>
+    </div>
+
+    <!-- 5. Portfólio / Planejamento -->
+    <div class="filter-card" style="min-height: auto; padding: 1rem;">
+        <label class="form-label">Portfólio / Planejamento</label>
+        <select id="filter-portfolio-plan" class="filter-select" onchange="filterProjects()">
+            <option value="">Todos</option>
+            <optgroup label="Portfólios" id="optgroup-portfolios"></optgroup>
+            <optgroup label="Planos Estratégicos" id="optgroup-plans"></optgroup>
+        </select>
+    </div>
+
+    <!-- 6. Mostrar Projetos Arquivados -->
+    <div class="filter-card"
+        style="min-height: auto; padding: 1rem; flex-direction: row; align-items: center; gap: 0.75rem;">
+        <input type="checkbox" id="filter-archived" onchange="filterProjects()"
+            style="width: 18px; height: 18px; accent-color: var(--primary);">
+        <label for="filter-archived"
+            style="margin: 0; font-size: 0.85rem; font-weight: 600; color: var(--text-secondary); cursor: pointer;">Mostrar
+            projetos arquivados</label>
+    </div>
+
+    <button class="btn btn-outline-danger w-100" onclick="clearFilters()"
+        style="margin-top: 1rem; border-radius: 12px; padding: 0.75rem;">
+        Limpar Tudo
+    </button>
+</div>
+
+<style>
+    /* View Toggle UI from My Work */
+    .view-toggle {
+        display: flex;
+        background: var(--surface-secondary);
+        padding: 4px;
+        border-radius: 12px;
+        gap: 4px;
+    }
+
+    .toggle-btn {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        padding: 8px 16px;
+        border: none;
+        background: transparent;
+        color: var(--text-tertiary);
+        font-size: 0.85rem;
+        font-weight: 600;
+        border-radius: 8px;
+        cursor: pointer;
+        transition: 0.2s;
+    }
+
+    .toggle-btn.active {
+        background: var(--surface);
+        color: var(--primary);
+        box-shadow: var(--shadow-sm);
+    }
+
+    .placeholder-spinner {
+        width: 48px;
+        height: 48px;
+        border: 4px solid var(--border);
+        border-top-color: var(--primary);
+        border-radius: 50%;
+        animation: spin 1s linear infinite;
+        margin: 0 auto;
+    }
+
+    @keyframes spin {
+        to {
+            transform: rotate(360deg);
+        }
+    }
+
+    /* Kanban specific styles */
+    .kanban-board {
+        display: grid;
+        grid-template-columns: repeat(4, 1fr);
+        gap: 1.5rem;
+    }
+
+    .kanban-column {
+        background: var(--surface-secondary);
+        border-radius: 16px;
+        padding: 1.25rem;
+        display: flex;
+        flex-direction: column;
+        gap: 1rem;
+        min-height: 500px;
+    }
+
+    .kanban-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        margin-bottom: 0.5rem;
+    }
+
+    .kanban-header h3 {
+        font-size: 0.8rem;
+        font-weight: 800;
+        color: var(--text-secondary);
+        text-transform: uppercase;
+        letter-spacing: 0.05em;
+        margin: 0;
+    }
+
+    .kanban-header .count {
+        background: var(--surface);
+        padding: 2px 8px;
+        border-radius: 10px;
+        font-size: 0.75rem;
+        font-weight: 700;
+        color: var(--text-tertiary);
+    }
+
+    .kanban-cards {
+        display: flex;
+        flex-direction: column;
+        gap: 1rem;
+        min-height: 100px;
+    }
+</style>
+{% endblock %}
+
+{% block scripts %}
+<script src="{{ url_for('static', filename='js/projects.js') }}"></script>
+{% endblock %}

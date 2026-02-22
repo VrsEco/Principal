@@ -1,0 +1,1588 @@
+﻿{% extends "layouts/workspace.html" %}
+
+{% block title %}{{ project.code }} - {{ project.name }} | Gestão Versus{% endblock %}
+
+{% block head %}
+<link rel="stylesheet" href="{{ url_for('static', filename='css/my-work.css') }}" />
+<style>
+    /* Kanban Board Layout from processes_v2 */
+    .kanban-board-ws {
+        display: flex;
+        gap: 1.5rem;
+        padding-bottom: 1.5rem;
+        overflow-x: auto;
+        min-height: calc(100vh - 300px);
+        align-items: flex-start;
+    }
+
+    .kanban-column-ws {
+        flex: 0 0 320px;
+        background: var(--surface-secondary);
+        border-radius: 20px;
+        border: 1px solid var(--border);
+        display: flex;
+        flex-direction: column;
+        max-height: calc(100vh - 250px);
+        transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+        overflow: hidden;
+    }
+
+    .kanban-column-ws.collapsed {
+        flex: 0 0 80px;
+        max-height: 400px;
+    }
+
+    /* Title when expanded - shows full title */
+    .kanban-column-title {
+        display: flex;
+        align-items: center;
+        gap: 0.5rem;
+    }
+
+    /* Title when collapsed - shows abbreviation */
+    .collapsed-title {
+        display: none;
+        font-weight: 700;
+        color: var(--primary);
+        font-size: 1rem;
+        text-align: center;
+        white-space: nowrap;
+    }
+
+    /* When collapsed, hide full title and show abbreviated */
+    .kanban-column-ws.collapsed .kanban-column-title {
+        display: none;
+    }
+
+    .kanban-column-ws.collapsed .collapsed-title {
+        display: block;
+    }
+
+    .kanban-column-ws.collapsed .kanban-column-header-ws {
+        border-bottom: none;
+        padding: 1rem 0.5rem;
+        flex-direction: column;
+        justify-content: center;
+    }
+
+    .kanban-column-ws.collapsed .kanban-dropzone-ws {
+        display: none;
+    }
+
+    .kanban-column-ws.collapsed .kanban-column-count {
+        display: none;
+    }
+
+    .kanban-column-header-ws {
+        padding: 1.25rem;
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        border-bottom: 1px solid var(--border);
+        cursor: pointer;
+        user-select: none;
+        background: rgba(255, 255, 255, 0.5);
+        backdrop-filter: blur(4px);
+    }
+
+    .kanban-column-header-ws h3 {
+        font-size: 0.9rem;
+        font-weight: 800;
+        text-transform: uppercase;
+        color: var(--text-secondary);
+        margin: 0;
+        display: flex;
+        align-items: center;
+        gap: 0.5rem;
+    }
+
+    .kanban-column-count {
+        font-size: 0.85rem;
+        font-weight: 700;
+        color: var(--text-tertiary);
+        background: var(--surface-secondary);
+        padding: 2px 8px;
+        border-radius: 10px;
+    }
+
+    .kanban-dropzone-ws {
+        flex: 1;
+        padding: 1rem;
+        overflow-y: auto;
+        display: flex;
+        flex-direction: column;
+        gap: 1rem;
+        min-height: 100px;
+    }
+
+    /* Process-style Card */
+    .kanban-card-ws {
+        background: var(--surface);
+        padding: 1.25rem;
+        border-radius: 16px;
+        border: 1px solid var(--border);
+        box-shadow: var(--shadow-sm);
+        cursor: grab;
+        transition: var(--transition);
+        display: flex;
+        flex-direction: column;
+        gap: 0.75rem;
+        position: relative;
+    }
+
+    .kanban-card-ws:active {
+        cursor: grabbing;
+    }
+
+    .kanban-card-ws:hover {
+        border-color: var(--primary);
+        transform: translateY(-3px);
+        box-shadow: var(--shadow-md);
+    }
+
+    /* Priority Colors for Cards */
+    .kanban-card-ws.prio-high {
+        border-left: 4px solid var(--danger);
+        background: linear-gradient(to right, rgba(239, 68, 68, 0.05), var(--surface));
+    }
+
+    .kanban-card-ws.prio-normal {
+        border-left: 4px solid var(--primary);
+        background: linear-gradient(to right, rgba(37, 99, 235, 0.05), var(--surface));
+    }
+
+    .kanban-card-ws.prio-low {
+        border-left: 4px solid var(--text-tertiary);
+        background: linear-gradient(to right, rgba(148, 163, 184, 0.05), var(--surface));
+    }
+
+    .card-top-row {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+    }
+
+    .card-code {
+        font-size: 0.65rem;
+        font-weight: 700;
+        color: var(--text-tertiary);
+        background: var(--surface-secondary);
+        padding: 2px 6px;
+        border-radius: 4px;
+    }
+
+    .tech-badges {
+        display: flex;
+        gap: 4px;
+    }
+
+    .tech-badge {
+        font-size: 0.6rem;
+        font-weight: 800;
+        padding: 1px 5px;
+        border-radius: 3px;
+        background: var(--surface-secondary);
+        color: var(--text-tertiary);
+        transition: all 0.2s ease;
+    }
+
+    .tech-badge.active {
+        background: var(--primary-light);
+        color: var(--primary);
+    }
+
+    .card-title {
+        font-weight: 700;
+        font-size: 0.95rem;
+        line-height: 1.4;
+        color: var(--text-primary);
+    }
+
+    .card-people {
+        display: flex;
+        flex-direction: column;
+        gap: 4px;
+    }
+
+    .person-tag {
+        font-size: 0.75rem;
+        color: var(--text-secondary);
+        display: flex;
+        align-items: center;
+        gap: 6px;
+    }
+
+    .person-tag .label {
+        font-weight: 800;
+        color: var(--text-tertiary);
+        font-size: 0.65rem;
+        text-transform: uppercase;
+        width: 14px;
+    }
+
+    .card-footer-meta {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        margin-top: 0.5rem;
+        padding-top: 0.75rem;
+        border-top: 1px solid var(--border-light);
+    }
+
+    .deadline-badge {
+        font-size: 0.75rem;
+        font-weight: 600;
+        display: flex;
+        align-items: center;
+        gap: 4px;
+    }
+
+    .deadline-badge.overdue {
+        color: var(--danger);
+        font-weight: 800;
+    }
+
+    .hours-badge {
+        font-size: 0.75rem;
+        color: var(--text-tertiary);
+        font-weight: 500;
+    }
+
+    /* Diary Log Styles */
+    .diary-log-section {
+        margin-top: 2rem;
+        padding-top: 1.5rem;
+        border-top: 1px solid var(--border);
+    }
+
+    .diary-log-history {
+        display: flex;
+        flex-direction: column;
+        gap: 12px;
+        margin-top: 12px;
+        max-height: 400px;
+        overflow-y: auto;
+        padding-right: 4px;
+    }
+
+    .diary-log-entry {
+        background: #f8fafc;
+        border-left: 4px solid var(--primary);
+        padding: 1rem;
+        border-radius: 12px;
+        font-size: 0.9rem;
+        transition: var(--transition);
+        box-shadow: var(--shadow-sm);
+    }
+
+    .diary-log-entry.completion {
+        background: #f0fdf4;
+        border-left-color: var(--success);
+    }
+
+    .diary-log-entry.cancellation {
+        background: #fef2f2;
+        border-left-color: var(--danger);
+    }
+
+    .diary-log-entry.transfer {
+        background: #faf5ff;
+        border-left-color: #8b5cf6;
+    }
+
+    .diary-log-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        margin-bottom: 0.5rem;
+    }
+
+    .diary-log-title {
+        font-weight: 700;
+        font-size: 0.85rem;
+        color: var(--text-primary);
+        display: flex;
+        align-items: center;
+        gap: 6px;
+    }
+
+    .diary-log-date {
+        font-size: 0.75rem;
+        color: var(--text-tertiary);
+        font-weight: 500;
+    }
+
+    .diary-log-text {
+        color: var(--text-secondary);
+        line-height: 1.5;
+        white-space: pre-wrap;
+    }
+
+    .btn-add-diary {
+        background: var(--primary-light);
+        color: var(--primary);
+        border: none;
+        padding: 0.5rem 1rem;
+        border-radius: 8px;
+        font-size: 0.85rem;
+        font-weight: 700;
+        cursor: pointer;
+        display: flex;
+        align-items: center;
+        gap: 6px;
+        transition: var(--transition);
+    }
+
+    .btn-add-diary:hover {
+        background: var(--primary);
+        color: white;
+    }
+
+    /* Confirmation Popups */
+    .confirm-popup-card {
+        max-width: 450px !important;
+        border-radius: 24px !important;
+        padding: 2rem !important;
+    }
+
+    .confirm-popup-header {
+        margin-bottom: 1.5rem;
+        text-align: center;
+    }
+
+    .confirm-popup-title {
+        font-size: 1.25rem;
+        font-weight: 800;
+        color: var(--text-primary);
+        margin-bottom: 0.5rem;
+    }
+
+    .confirm-popup-subtitle {
+        font-size: 0.9rem;
+        color: var(--text-tertiary);
+    }
+
+    /* Card action buttons */
+    /* Dashboard Summary from projects_v2 */
+    .dashboard-summary-container {
+        background: var(--surface);
+        border-radius: 20px;
+        border: 1px solid var(--border);
+        margin-bottom: 2rem;
+        overflow: hidden;
+        box-shadow: var(--shadow-sm);
+    }
+
+    .dashboard-summary-header {
+        padding: 1rem 1.5rem;
+        background: var(--surface-secondary);
+        display: flex;
+        align-items: center;
+        gap: 0.75rem;
+        cursor: pointer;
+        transition: background 0.2s;
+        border-bottom: 1px solid var(--border);
+    }
+
+    .dashboard-summary-header h3 {
+        margin: 0;
+        font-size: 0.9rem;
+        font-weight: 700;
+        color: var(--text-secondary);
+        text-transform: uppercase;
+        letter-spacing: 0.05em;
+    }
+
+    .dashboard-summary-header .chevron {
+        transition: transform 0.3s ease;
+        color: var(--text-tertiary);
+    }
+
+    .dashboard-summary-content {
+        padding: 1.5rem;
+        max-height: 1000px;
+        transition: all 0.4s ease-in-out;
+        overflow: hidden;
+    }
+
+    .dashboard-summary-container.collapsed .dashboard-summary-content {
+        max-height: 0;
+        padding: 0 1.5rem;
+        opacity: 0;
+    }
+
+    .dashboard-summary-container.collapsed .dashboard-summary-header {
+        border-bottom: none;
+    }
+
+    .dashboard-summary-container.collapsed .chevron {
+        transform: rotate(-90deg);
+    }
+
+
+    .project-stats-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+        gap: 1.25rem;
+    }
+
+    .mini-stat-card {
+        background: var(--surface);
+        padding: 1.25rem;
+        border-radius: 16px;
+        border: 1px solid var(--border);
+        display: flex;
+        flex-direction: column;
+        gap: 0.5rem;
+        transition: var(--transition);
+    }
+
+    .mini-stat-card:hover {
+        transform: translateY(-2px);
+        box-shadow: var(--shadow-md);
+        border-color: var(--primary-light);
+    }
+
+    .mini-stat-value {
+        font-size: 1.5rem;
+        font-weight: 800;
+        color: var(--text-primary);
+    }
+
+    .mini-stat-label {
+        font-size: 0.75rem;
+        font-weight: 700;
+        color: var(--text-tertiary);
+        text-transform: uppercase;
+    }
+
+    /* Sidebar Collapsible */
+    .collapsible-content {
+        max-height: 500px;
+        overflow: hidden;
+        transition: all 0.3s ease;
+    }
+
+    .sidebar-section-ws.collapsed .collapsible-content {
+        max-height: 0;
+        margin-top: 0 !important;
+        opacity: 0;
+    }
+
+    .sidebar-section-ws.collapsed .chevron {
+        transform: rotate(-90deg);
+    }
+
+    .sidebar-header-ws {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        cursor: pointer;
+    }
+
+    /* Form Styles in Modal */
+    .form-grid {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 1.5rem;
+    }
+
+    .form-group {
+        display: flex;
+        flex-direction: column;
+        gap: 0.5rem;
+    }
+
+    .form-group--full {
+        grid-column: span 2;
+    }
+
+    .form-label {
+        font-size: 0.85rem;
+        font-weight: 700;
+        color: var(--text-secondary);
+    }
+
+    .form-input,
+    .form-select,
+    .form-textarea {
+        padding: 0.75rem 1rem;
+        border-radius: 12px;
+        border: 1px solid var(--border);
+        background: var(--surface);
+        font-family: inherit;
+        font-size: 0.95rem;
+        transition: var(--transition);
+    }
+
+    .form-input:focus,
+    .form-select:focus,
+    .form-textarea:focus {
+        border-color: var(--primary);
+        box-shadow: 0 0 0 4px var(--primary-glow);
+        outline: none;
+    }
+
+    /* Header Adjustments */
+    .workspace-header {
+        margin-bottom: 2rem;
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        padding-top: 1rem;
+    }
+
+    .workspace-header-actions {
+        display: flex;
+        align-items: center;
+        gap: 1rem;
+    }
+
+    /* Responsividade: Colunas empilhadas em telas pequenas */
+    @media (max-width: 992px) {
+        .workspace-header {
+            flex-direction: column;
+            align-items: flex-start;
+            gap: 1.5rem;
+        }
+
+        .workspace-header-actions {
+            width: 100%;
+            justify-content: space-between;
+        }
+
+        .workspace-header-actions .btn-primary {
+            flex: 1;
+            justify-content: center;
+        }
+
+        .kanban-board-ws {
+            flex-direction: column;
+            align-items: stretch;
+            overflow-x: hidden;
+        }
+
+        .kanban-column-ws {
+            flex: 1 1 auto;
+            width: 100%;
+            max-height: none;
+        }
+
+        .kanban-column-ws.collapsed {
+            flex: 0 0 auto;
+            width: 100%;
+            max-height: 56px;
+            height: 56px;
+        }
+
+        /* Modal responsiveness */
+        .modal-card {
+            width: 100%;
+            max-height: 95vh;
+            border-radius: 16px;
+        }
+
+        .modal-header,
+        .modal-body,
+        .modal-footer {
+            padding: 1.25rem;
+        }
+
+        /* Form grid becomes single column on mobile */
+        .form-grid {
+            grid-template-columns: 1fr;
+            gap: 1rem;
+        }
+
+        .form-group--full {
+            grid-column: span 1;
+        }
+
+        /* Work log form grid also single column */
+        #addHoursForm .form-grid {
+            grid-template-columns: 1fr !important;
+        }
+
+        /* Stack buttons vertically on very small screens */
+        .modal-footer {
+            flex-direction: column-reverse;
+        }
+
+        .modal-footer .btn {
+            width: 100%;
+        }
+    }
+
+    /* Extra small devices */
+    @media (max-width: 576px) {
+        .modal-backdrop {
+            padding: 10px;
+        }
+
+        .modal-card {
+            border-radius: 12px;
+        }
+
+        .modal-header h3 {
+            font-size: 1.1rem;
+        }
+
+        .form-label {
+            font-size: 0.8rem;
+        }
+
+        .form-input,
+        .form-select,
+        .form-textarea {
+            font-size: 0.9rem;
+            padding: 0.65rem 0.85rem;
+        }
+    }
+
+
+
+    .modal-backdrop.open {
+        display: flex;
+    }
+
+    .modal-card {
+        background: var(--surface);
+        border-radius: 20px;
+        width: min(700px, 100%);
+        max-height: 90vh;
+        overflow-y: auto;
+        box-shadow: var(--shadow-xl);
+        display: flex;
+        flex-direction: column;
+        animation: modalSlideIn 0.3s ease-out;
+    }
+
+    @keyframes modalSlideIn {
+        from {
+            opacity: 0;
+            transform: translateY(-20px) scale(0.95);
+        }
+
+        to {
+            opacity: 1;
+            transform: translateY(0) scale(1);
+        }
+    }
+
+    .modal-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        padding: 1.5rem 2rem;
+        border-bottom: 1px solid var(--border);
+        background: var(--surface-secondary);
+    }
+
+    .modal-header h3 {
+        margin: 0;
+        font-size: 1.25rem;
+        font-weight: 700;
+        color: var(--text-primary);
+    }
+
+    .modal-header .btn-icon {
+        border: none;
+        background: transparent;
+        cursor: pointer;
+        color: var(--text-tertiary);
+        padding: 0.5rem;
+        border-radius: 8px;
+        transition: var(--transition);
+        display: flex;
+        align-items: center;
+        justify-content: center;
+    }
+
+    .modal-header .btn-icon:hover {
+        background: var(--surface);
+        color: var(--text-primary);
+    }
+
+    .modal-body {
+        padding: 2rem;
+        flex: 1;
+        overflow-y: auto;
+    }
+
+    .modal-footer {
+        display: flex;
+        justify-content: flex-end;
+        gap: 0.75rem;
+        padding: 1.5rem 2rem;
+        border-top: 1px solid var(--border);
+        background: var(--surface-secondary);
+    }
+</style>
+{% endblock %}
+
+{% block breadcrumb %}
+<a href="/dashboard">Dashboard</a>
+<span class="sep">/</span>
+<a href="/projects">Projetos Corporativos</a>
+<span class="sep">/</span>
+<span class="current">{{ project.code }} - {{ project.name }}</span>
+{% endblock %}
+
+{% block navbar_actions %}
+<div style="display: flex; align-items: center; gap: 0.75rem;">
+    <button class="btn btn-secondary btn-sm" onclick="toggleSidebar('right')">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <polygon points="22 3 2 3 10 12.46 10 19 14 21 14 12.46 22 3"></polygon>
+        </svg>
+        Filtros
+    </button>
+</div>
+{% endblock %}
+
+{% block workspace_content %}
+<div class="fade-in">
+    <div class="workspace-header">
+        <div class="header-content">
+            <h1 class="text-h1">📋 <span style="color: var(--text-tertiary); font-weight: 500; font-size: 0.875em;">{{
+                    project.code }}</span> {{ project.name }}</h1>
+            <p class="text-secondary">{{ project.notes or 'Gerencie as atividades e acompanhe o progresso deste
+                projeto.' }}</p>
+        </div>
+        <div class="workspace-header-actions">
+            <button class="btn btn-primary" onclick="openTaskModal()">
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <line x1="12" y1="5" x2="12" y2="19"></line>
+                    <line x1="5" y1="12" x2="19" y2="12"></line>
+                </svg>
+                Nova Atividade
+            </button>
+        </div>
+    </div>
+
+    <!-- Dashboard Summary Toolbar -->
+    <div class="dashboard-summary-container" id="project-summary-box">
+        <div class="dashboard-summary-header" onclick="toggleCollapsible('project-summary-box')">
+            <svg class="chevron" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                stroke-width="3">
+                <polyline points="6 9 12 15 18 9"></polyline>
+            </svg>
+            <h3>Visão Geral do Projeto</h3>
+        </div>
+        <div class="dashboard-summary-content">
+            <div class="project-stats-grid">
+                <div class="mini-stat-card">
+                    <div style="display: flex; justify-content: space-between; align-items: baseline;">
+                        <span class="mini-stat-value" id="stat-progress">0%</span>
+                        <span class="mini-stat-label">Completude</span>
+                    </div>
+                    <div class="progress-track-mini"
+                        style="height: 4px; background: var(--border-light); border-radius: 2px; margin-top: 8px; overflow: hidden;">
+                        <div id="stat-progress-bar" class="progress-fill-mini"
+                            style="height: 100%; width: 0%; background: var(--success); transition: width 0.5s ease;">
+                        </div>
+                    </div>
+                </div>
+                <div class="mini-stat-card">
+                    <span class="mini-stat-value" id="stat-total-tasks">0</span>
+                    <span class="mini-stat-label">Total Atividades</span>
+                </div>
+                <div class="mini-stat-card">
+                    <span class="mini-stat-value" id="stat-completed-tasks">0</span>
+                    <span class="mini-stat-label">Concluídas</span>
+                </div>
+                <div class="mini-stat-card">
+                    <span class="mini-stat-value" id="stat-hours-estimated">0h</span>
+                    <span class="mini-stat-label">Previsto</span>
+                </div>
+                <div class="mini-stat-card">
+                    <span class="mini-stat-value" id="stat-hours-worked">0h</span>
+                    <span class="mini-stat-label">Realizado</span>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Kanban Board Workspace Style -->
+    <div class="kanban-board-ws no-scrollbar" id="kanbanBoard">
+        {% for stage in stages %}
+        <div class="kanban-column-ws" data-stage="{{ stage.slug }}" id="col-{{ stage.slug }}">
+            <div class="kanban-column-header-ws" onclick="toggleColumn(this)">
+                <div class="kanban-column-title">
+                    <svg class="chevron" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                        stroke-width="2.5">
+                        <polyline points="6 9 12 15 18 9"></polyline>
+                    </svg>
+                    <h3 id="title-{{ stage.slug }}">{{ stage.title }}</h3>
+                </div>
+                <span class="collapsed-title" id="collapsed-title-{{ stage.slug }}"></span>
+                <span class="kanban-column-count" id="count-{{ stage.slug }}">0</span>
+            </div>
+            <div class="kanban-dropzone-ws" id="body-{{ stage.slug }}" data-stage="{{ stage.slug }}"
+                ondragover="handleDragOver(event)" ondragleave="handleDragLeave(event)" ondrop="handleDrop(event)">
+                <!-- Cards converted via JS -->
+            </div>
+        </div>
+        {% endfor %}
+    </div>
+</div>
+
+<!-- Task Modal -->
+<div class="modal-backdrop" id="taskModal">
+    <div class="modal-card">
+        <div class="modal-header">
+            <h3 class="text-h3" id="modalTitle">Nova Atividade</h3>
+            <button class="btn-icon" onclick="closeTaskModal()">
+                <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <line x1="18" y1="6" x2="6" y2="18"></line>
+                    <line x1="6" y1="6" x2="18" y2="18"></line>
+                </svg>
+            </button>
+        </div>
+        <form id="taskForm">
+            <div class="modal-body">
+                <input type="hidden" id="taskId">
+                <div class="form-grid">
+                    <div class="form-group form-group--full">
+                        <label class="form-label">O quê? (Descrição) *</label>
+                        <input type="text" id="taskWhat" class="form-input"
+                            placeholder="Ex: Definir requisitos funcionais" required>
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label">Quem? (Responsável)</label>
+                        <select id="taskEmployeeId" class="form-select">
+                            <option value="">Selecione um responsável</option>
+                            <!-- Employees populated by JS -->
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label">Quando? (Prazo)</label>
+                        <input type="date" id="taskDueDate" class="form-input">
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label">Horas Previstas</label>
+                        <input type="number" id="taskEstimatedHours" class="form-input" step="0.5" min="0">
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label">Peso Score</label>
+                        <input type="number" id="taskScoreWeight" class="form-input" step="0.1" min="0.1" value="1.0">
+                    </div>
+                    <div class="form-group form-group--full">
+                        <label class="form-label">Como? (Método/Processo)</label>
+                        <textarea id="taskHow" class="form-textarea" rows="2"
+                            placeholder="Descreva como será executado..."></textarea>
+                    </div>
+                    <div class="form-group form-group--full">
+                        <label class="form-label">Observações</label>
+                        <textarea id="taskNotes" class="form-textarea" rows="3"
+                            placeholder="Detalhes adicionais..."></textarea>
+                    </div>
+                </div>
+
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" onclick="closeTaskModal()">Cancelar</button>
+                <button type="submit" class="btn btn-primary">Salvar Atividade</button>
+            </div>
+        </form>
+    </div>
+</div>
+
+<!-- Diary Log Add Popup -->
+<div class="modal-backdrop" id="diaryLogPopup">
+    <div class="modal-card confirm-popup-card">
+        <div class="confirm-popup-header">
+            <h3 class="confirm-popup-title">➕ Adicionar Registro</h3>
+            <p class="confirm-popup-subtitle">O que foi feito ou observado?</p>
+        </div>
+        <div class="modal-body">
+            <div class="form-group">
+                <label class="form-label">Descrição do Registro</label>
+                <textarea id="diaryLogContent" class="form-textarea" rows="4"
+                    placeholder="Descreva aqui os detalhes..."></textarea>
+            </div>
+        </div>
+        <div class="modal-footer" style="padding: 1rem 0 0 0;">
+            <button type="button" class="btn btn-secondary" style="flex: 1;"
+                onclick="closeDiaryLogPopup()">Cancelar</button>
+            <button type="button" class="btn btn-primary" style="flex: 1;" onclick="submitDiaryLog()">Adicionar</button>
+        </div>
+    </div>
+</div>
+
+<!-- Task Completion Confirmation Popup -->
+<div class="modal-backdrop" id="completionPopup">
+    <div class="modal-card confirm-popup-card">
+        <div class="confirm-popup-header">
+            <h3 class="confirm-popup-title">✅ Confirmar Conclusão</h3>
+            <p class="confirm-popup-subtitle">Registre os detalhes da conclusão</p>
+        </div>
+        <div class="modal-body">
+            <div class="form-group">
+                <label class="form-label">Data de Conclusão</label>
+                <input type="date" id="completionDateInput" class="form-input">
+            </div>
+            <div class="form-group" style="margin-top: 1rem;">
+                <label class="form-label">Observação (Opcional)</label>
+                <textarea id="completionNoteInput" class="form-textarea" rows="2"
+                    placeholder="Notas sobre a conclusão..."></textarea>
+            </div>
+        </div>
+        <div class="modal-footer" style="padding: 1rem 0 0 0;">
+            <button type="button" class="btn btn-secondary" style="flex: 1;"
+                onclick="cancelCompletionPopup()">Cancelar</button>
+            <button type="button" class="btn btn-primary" style="flex: 1;"
+                onclick="confirmCompletionPopup()">Concluir</button>
+        </div>
+    </div>
+</div>
+
+<!-- Task Cancellation Popup -->
+<div class="modal-backdrop" id="cancellationPopup">
+    <div class="modal-card confirm-popup-card">
+        <div class="confirm-popup-header">
+            <h3 class="confirm-popup-title">↩️ Cancelar Conclusão</h3>
+            <p class="confirm-popup-subtitle">Por que esta atividade está sendo reaberta?</p>
+        </div>
+        <div class="modal-body">
+            <div class="form-group">
+                <label class="form-label">Data do Cancelamento</label>
+                <input type="date" id="cancellationDateInput" class="form-input">
+            </div>
+            <div class="form-group" style="margin-top: 1rem;">
+                <label class="form-label">Motivo (Opcional)</label>
+                <textarea id="cancellationNoteInput" class="form-textarea" rows="2"
+                    placeholder="Descreva o motivo..."></textarea>
+            </div>
+        </div>
+        <div class="modal-footer" style="padding: 1rem 0 0 0;">
+            <button type="button" class="btn btn-secondary" style="flex: 1;"
+                onclick="cancelCancellationPopup()">Voltar</button>
+            <button type="button" class="btn btn-danger" style="flex: 1; background: var(--danger); color: white;"
+                onclick="confirmCancellationPopup()">Confirmar</button>
+        </div>
+    </div>
+</div>
+
+{% endblock %}
+
+{% block scripts %}
+<script>
+    const PROJECT_ID = parseInt("{{ project.id }}");
+    const PROJECT_OWNER = "{{ project.owner or 'Sem Gestor' }}";
+    const COMPANY_ID = parseInt("{{ company.id if company else '0' }}");
+    let allTasks = [];
+    let employeeNames = {}; // Global mapping for backup
+    let draggedTaskId = null;
+
+    const stageAbbreviations = {
+        'inbox': 'CE',
+        'waiting': 'A',
+        'executing': 'E',
+        'pending': 'P',
+        'suspended': 'S',
+        'completed': 'CD'
+    };
+
+    async function loadTasks() {
+        try {
+            const response = await fetch(`/api/projects/${PROJECT_ID}/tasks`);
+            allTasks = await response.json();
+            renderKanban();
+            updateStats();
+        } catch (error) {
+            console.error('Erro ao carregar atividades:', error);
+        }
+    }
+
+    function renderKanban(tasksToRender = null) {
+        const tasks = tasksToRender || allTasks;
+
+        // Clear columns
+        document.querySelectorAll('.kanban-dropzone-ws').forEach(body => {
+            body.innerHTML = '';
+        });
+
+        const grouped = tasks.reduce((acc, task) => {
+            const stage = task.stage || 'inbox';
+            if (!acc[stage]) acc[stage] = [];
+            acc[stage].push(task);
+            return acc;
+        }, {});
+
+        // Update counts and render cards
+        Object.keys(grouped).forEach(stage => {
+            const body = document.getElementById(`body-${stage}`);
+            const count = document.getElementById(`count-${stage}`);
+            if (body && count) {
+                count.textContent = grouped[stage].length;
+                grouped[stage].forEach(task => {
+                    body.appendChild(createCard(task));
+                });
+            }
+        });
+
+        // Set counters for empty stages and update both title formats
+        document.querySelectorAll('.kanban-column-ws').forEach(col => {
+            const stage = col.dataset.stage;
+            const count = grouped[stage] ? grouped[stage].length : 0;
+            const countEl = document.getElementById(`count-${stage}`);
+            if (countEl) countEl.textContent = count;
+
+            // Update collapsed title (abbreviation + count)
+            const collapsedTitle = document.getElementById(`collapsed-title-${stage}`);
+            if (collapsedTitle) {
+                const abbrev = stageAbbreviations[stage] || stage.charAt(0).toUpperCase();
+                collapsedTitle.textContent = `${abbrev} - ${count}`;
+            }
+
+            // Update expanded title (full name stays as is, count is separate)
+            const titleEl = document.getElementById(`title-${stage}`);
+            if (titleEl) {
+                // Title text is already set by Jinja, we just ensure count is updated
+                // The count is displayed separately in the span.kanban-column-count
+            }
+        });
+    }
+
+    function applyKanbanFilters() {
+        const responsibleId = document.getElementById('filterResponsible').value;
+        const deadline = document.getElementById('filterDeadline').value;
+        const search = document.getElementById('filterSearch').value.toLowerCase();
+
+        const filteredTasks = allTasks.filter(task => {
+            // Filter by Responsible
+            if (responsibleId && task.employee_id != responsibleId) return false;
+
+            // Filter by Deadline
+            if (deadline) {
+                if (!task.due_date) return false;
+                const taskDate = task.due_date.split('T')[0]; // Normalize ISO or string
+                if (taskDate !== deadline) return false;
+            }
+
+            // Filter by Search (Livre)
+            if (search) {
+                const content = `${task.what} ${task.how} ${task.notes} ${task.id} ${task.code || ''}`.toLowerCase();
+                if (!content.includes(search)) return false;
+            }
+
+            return true;
+        });
+
+        renderKanban(filteredTasks);
+    }
+
+    function resetKanbanFilters() {
+        document.getElementById('filterResponsible').value = '';
+        document.getElementById('filterDeadline').value = '';
+        document.getElementById('filterSearch').value = '';
+        renderKanban(allTasks);
+    }
+
+    function createCard(task) {
+        const card = document.createElement('div');
+        card.className = 'kanban-card-ws';
+        card.draggable = true;
+        card.dataset.id = task.id;
+
+        card.ondragstart = (e) => {
+            draggedTaskId = task.id;
+            card.classList.add('dragging');
+            e.dataTransfer.setData('text/plain', task.id);
+        };
+
+        card.ondragend = () => {
+            card.classList.remove('dragging');
+            draggedTaskId = null;
+        };
+
+        const deadlineDate = task.due_date ? new Date(task.due_date) : null;
+        const isOverdue = deadlineDate && deadlineDate < new Date() && task.stage !== 'completed';
+        const deadlineLabel = deadlineDate ? deadlineDate.toLocaleDateString('pt-BR') : '-';
+        const hoursLabel = task.estimated_hours ? `${task.estimated_hours}h` : '0h';
+
+        // Robust name detection: task.employee_name (from API) OR mapping lookup OR task.who OR fallback
+        let ownerName = task.employee_name;
+        if (!ownerName && task.employee_id && employeeNames[task.employee_id]) {
+            ownerName = employeeNames[task.employee_id];
+        }
+        if (!ownerName) ownerName = task.who || 'Sem responsável';
+
+        const priority = task.priority || 'normal';
+
+        // Add priority class for coloring
+        card.classList.add(`prio-${priority}`);
+
+        card.innerHTML = `
+            <div class="card-top-row">
+                <span class="card-code">${task.code || '#' + task.id}</span>
+                <div style="display: flex; gap: 0.5rem; align-items: center;">
+                    <div class="deadline-badge ${isOverdue ? 'overdue' : ''}" style="font-size: 0.65rem;">
+                        <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3">
+                            <rect x="3" y="4" width="18" height="18" rx="2" ry="2"></rect>
+                            <line x1="16" y1="2" x2="16" y2="6"></line>
+                        </svg>
+                        ${deadlineLabel}
+                    </div>
+                </div>
+            </div>
+            
+            <div class="card-title">${task.what}</div>
+            
+            <div class="card-people" style="margin-top: 4px;">
+                <div class="person-tag" title="Responsável pela Atividade">
+                    <span class="label" style="color: var(--primary); width: 22px; font-weight: 900;">RA:</span> 
+                    <span style="font-weight: 600; color: var(--text-primary);">${ownerName}</span>
+                </div>
+                <div class="person-tag" title="Responsável pelo Projeto">
+                    <span class="label" style="color: var(--text-tertiary); width: 22px; font-weight: 900;">RP:</span> 
+                    <span style="font-size: 0.72rem; color: var(--text-secondary);">${PROJECT_OWNER}</span>
+                </div>
+            </div>
+            
+            <div class="card-footer-meta" style="margin-top: 4px; padding-top: 8px;">
+                <div class="hours-badge">
+                    <span style="color: var(--text-primary); font-weight: 700;">${task.worked_hours || 0}h</span> / ${hoursLabel}
+                </div>
+                
+                <div style="display:flex; gap: 0.25rem;">
+                    <button class="btn-icon" onclick="openTaskModal(${task.id})" style="padding: 4px; color: var(--primary); background: var(--primary-light); border-radius: 6px;" title="Editar Atividade">
+                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
+                            <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"></path>
+                            <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"></path>
+                        </svg>
+                    </button>
+                    ${task.id ? `
+                    <a href="/my-work/project-task/${task.id}?from=project" class="btn-icon" style="padding: 4px; color: var(--success); background: #dcfce7; border-radius: 6px; text-decoration: none; display: flex; align-items: center; justify-content: center;" title="+Horas / Info">
+                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
+                            <circle cx="12" cy="12" r="10"></circle>
+                            <polyline points="12 6 12 12 16 14"></polyline>
+                        </svg>
+                    </a>
+                    ` : ''}
+                </div>
+            </div>
+        `;
+
+        return card;
+    }
+
+    function getPriorityClass(p) {
+        switch (p) {
+            case 'high': return 'badge-danger';
+            case 'normal': return 'badge-primary';
+            case 'low': return 'badge-secondary';
+            default: return 'badge-light';
+        }
+    }
+
+    function updateStats() {
+        const total = allTasks.length;
+        const completed = allTasks.filter(t => t.stage === 'completed').length;
+        const estHours = allTasks.reduce((sum, t) => sum + (parseFloat(t.estimated_hours) || 0), 0);
+        const workedHours = allTasks.reduce((sum, t) => sum + (parseFloat(t.worked_hours) || 0), 0);
+        const progress = total > 0 ? Math.round((completed / total) * 100) : 0;
+
+        const setStat = (id, val) => {
+            const el = document.getElementById(id);
+            if (el) el.textContent = val;
+        };
+
+        setStat('stat-total-tasks', total);
+        setStat('stat-completed-tasks', completed);
+        setStat('stat-hours-estimated', `${estHours}h`);
+        setStat('stat-hours-worked', `${workedHours}h`);
+        setStat('stat-progress', `${progress}%`);
+        const progressBar = document.getElementById('stat-progress-bar');
+        if (progressBar) progressBar.style.width = `${progress}%`;
+    }
+
+    let currentTaskLogs = [];
+    let pendingDrop = null;
+
+    // Confirmation Popups Logic
+    function openCompletionPopup(taskId, targetStage) {
+        pendingDrop = { taskId, targetStage };
+        const today = new Date().toISOString().split('T')[0];
+        document.getElementById('completionDateInput').value = today;
+        document.getElementById('completionNoteInput').value = '';
+        document.getElementById('completionPopup').classList.add('open');
+    }
+
+    function cancelCompletionPopup() {
+        document.getElementById('completionPopup').classList.remove('open');
+        pendingDrop = null;
+        renderKanban(); // Revert card position
+    }
+
+    async function confirmCompletionPopup() {
+        const date = document.getElementById('completionDateInput').value;
+        const note = document.getElementById('completionNoteInput').value.trim();
+
+        if (!date) {
+            alert('Por favor, informe a data de conclusão.');
+            return;
+        }
+
+        const { taskId, targetStage } = pendingDrop;
+        const task = allTasks.find(t => t.id == taskId);
+
+        const newLog = {
+            timestamp: new Date().toISOString(),
+            text: note || `Atividade concluída em ${new Date(date).toLocaleDateString('pt-BR')}`,
+            type: 'completion',
+            date: date
+        };
+
+        const updatedLogs = [...(task.logs || []), newLog];
+
+        try {
+            const response = await fetch(`/api/projects/${PROJECT_ID}/tasks/${taskId}/stage`, {
+                method: 'PATCH',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    stage: targetStage,
+                    completion_date: date,
+                    logs: updatedLogs
+                })
+            });
+
+            if (response.ok) {
+                task.stage = targetStage;
+                task.completion_date = date;
+                task.logs = updatedLogs;
+                task.status = 'completed';
+                renderKanban();
+                updateStats();
+                document.getElementById('completionPopup').classList.remove('open');
+                pendingDrop = null;
+            } else {
+                const err = await response.json();
+                throw new Error(err.error || err.message || 'Falha ao concluir atividade');
+            }
+        } catch (error) {
+            console.error(error);
+            alert('Erro ao concluir atividade: ' + error.message);
+            renderKanban();
+        }
+    }
+
+    function openCancellationPopup(taskId, targetStage) {
+        pendingDrop = { taskId, targetStage };
+        const today = new Date().toISOString().split('T')[0];
+        document.getElementById('cancellationDateInput').value = today;
+        document.getElementById('cancellationNoteInput').value = '';
+        document.getElementById('cancellationPopup').classList.add('open');
+    }
+
+    function cancelCancellationPopup() {
+        document.getElementById('cancellationPopup').classList.remove('open');
+        pendingDrop = null;
+        renderKanban(); // Revert card position
+    }
+
+    async function confirmCancellationPopup() {
+        const date = document.getElementById('cancellationDateInput').value;
+        const note = document.getElementById('cancellationNoteInput').value.trim();
+
+        if (!date) {
+            alert('Por favor, informe a data do cancelamento.');
+            return;
+        }
+
+        const { taskId, targetStage } = pendingDrop;
+        const task = allTasks.find(t => t.id == taskId);
+
+        const newLog = {
+            timestamp: new Date().toISOString(),
+            text: note || 'Conclusão cancelada (Atividade reaberta)',
+            type: 'cancellation',
+            date: date
+        };
+
+        const updatedLogs = [...(task.logs || []), newLog];
+
+        try {
+            const response = await fetch(`/api/projects/${PROJECT_ID}/tasks/${taskId}/stage`, {
+                method: 'PATCH',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    stage: targetStage,
+                    completion_date: null,
+                    logs: updatedLogs
+                })
+            });
+
+            if (response.ok) {
+                task.stage = targetStage;
+                task.completion_date = null;
+                task.logs = updatedLogs;
+                task.status = 'in_progress';
+                renderKanban();
+                updateStats();
+                document.getElementById('cancellationPopup').classList.remove('open');
+                pendingDrop = null;
+            } else {
+                const err = await response.json();
+                throw new Error(err.error || err.message || 'Falha ao reabrir atividade');
+            }
+        } catch (error) {
+            console.error(error);
+            alert('Erro ao reabrir atividade: ' + error.message);
+            renderKanban();
+        }
+    }
+
+    // Drag and Drop Logic
+    function handleDragOver(e) {
+        e.preventDefault();
+        const col = e.currentTarget;
+        col.setAttribute('data-dropping', 'true');
+    }
+
+    function handleDragLeave(e) {
+        const col = e.currentTarget;
+        col.removeAttribute('data-dropping');
+    }
+
+    async function handleDrop(e) {
+        e.preventDefault();
+        const col = e.currentTarget;
+        col.removeAttribute('data-dropping');
+
+        const taskId = e.dataTransfer.getData('text/plain');
+        const targetStage = col.dataset.stage;
+
+        const task = allTasks.find(t => t.id == taskId);
+        if (!task || task.stage === targetStage) return;
+
+        const oldStage = task.stage;
+
+        // Intercept Completion
+        if (targetStage === 'completed' && oldStage !== 'completed') {
+            openCompletionPopup(taskId, targetStage);
+            return;
+        }
+
+        // Intercept Re-opening
+        if (oldStage === 'completed' && targetStage !== 'completed') {
+            openCancellationPopup(taskId, targetStage);
+            return;
+        }
+
+        // Normal movement
+        try {
+            const response = await fetch(`/api/projects/${PROJECT_ID}/tasks/${taskId}/stage`, {
+                method: 'PATCH',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ stage: targetStage })
+            });
+            if (response.ok) {
+                task.stage = targetStage;
+                renderKanban();
+                updateStats();
+            } else {
+                const err = await response.json();
+                alert('Erro ao mover atividade: ' + (err.error || err.message || 'Erro desconhecido'));
+                renderKanban();
+            }
+        } catch (error) {
+            console.error(error);
+            alert('Erro ao mover atividade. Verifique sua conexão.');
+            renderKanban();
+        }
+    }
+
+    // Modal Logic
+    const taskModal = document.getElementById('taskModal');
+    const taskForm = document.getElementById('taskForm');
+
+    function openTaskModal(taskId = null) {
+        const title = document.getElementById('modalTitle');
+        const idField = document.getElementById('taskId');
+
+        if (taskId) {
+            const task = allTasks.find(t => t.id == taskId);
+            title.textContent = 'Editar Atividade';
+            idField.value = task.id;
+            document.getElementById('taskWhat').value = task.what || '';
+            document.getElementById('taskEmployeeId').value = task.employee_id || '';
+            document.getElementById('taskDueDate').value = task.due_date || '';
+            document.getElementById('taskEstimatedHours').value = task.estimated_hours || '';
+            document.getElementById('taskScoreWeight').value = task.score_weight || 1.0;
+            document.getElementById('taskHow').value = task.how || '';
+            document.getElementById('taskNotes').value = task.notes || '';
+
+        } else {
+            title.textContent = 'Nova Atividade';
+            idField.value = '';
+            taskForm.reset();
+            currentTaskLogs = [];
+        }
+
+        taskModal.classList.add('open');
+    }
+
+    function closeTaskModal() {
+        taskModal.classList.remove('open');
+    }
+
+    taskForm.onsubmit = async (e) => {
+        e.preventDefault();
+        const taskId = document.getElementById('taskId').value;
+        const payload = {
+            what: document.getElementById('taskWhat').value,
+            employee_id: document.getElementById('taskEmployeeId').value || null,
+            due_date: document.getElementById('taskDueDate').value || null,
+            estimated_hours: document.getElementById('taskEstimatedHours').value || 0,
+            score_weight: document.getElementById('taskScoreWeight').value || 1.0,
+            how: document.getElementById('taskHow').value,
+            notes: document.getElementById('taskNotes').value,
+            logs: currentTaskLogs
+        };
+
+        const url = taskId ? `/api/projects/${PROJECT_ID}/tasks/${taskId}` : `/api/projects/${PROJECT_ID}/tasks`;
+        const method = taskId ? 'PUT' : 'POST';
+
+        try {
+            const response = await fetch(url, {
+                method,
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(payload)
+            });
+            if (response.ok) {
+                closeTaskModal();
+                loadTasks();
+            } else {
+                alert('Erro ao salvar atividade.');
+            }
+        } catch (error) {
+            console.error(error);
+        }
+    };
+
+    async function deleteTask(taskId) {
+        if (!confirm('Tem certeza que deseja excluir esta atividade?')) return;
+        try {
+            const response = await fetch(`/api/projects/${PROJECT_ID}/tasks/${taskId}`, {
+                method: 'DELETE'
+            });
+            if (response.ok) loadTasks();
+        } catch (error) {
+            console.error(error);
+        }
+    }
+
+    async function loadEmployees() {
+        try {
+            const response = await fetch(`/api/companies/${COMPANY_ID}/employees`);
+            const data = await response.json();
+            const select = document.getElementById('taskEmployeeId');
+            // logSelect removed
+            const filterSelect = document.getElementById('filterResponsible'); // New filter select
+
+            data.employees.forEach(emp => {
+                employeeNames[emp.id] = emp.name; // Store in mapping
+
+                const opt = document.createElement('option');
+                opt.value = emp.id;
+                opt.textContent = emp.name;
+                select.appendChild(opt);
+
+                // opt2 removed
+                // logSelect.appendChild removed
+
+                const optFilter = opt.cloneNode(true); // Clone for filter select
+                filterSelect.appendChild(optFilter);
+            });
+
+            // Re-render Kanban cards if names were missing on initial load
+            if (Object.keys(employeeNames).length > 0) {
+                renderKanban();
+            }
+        } catch (error) {
+            console.error('Erro ao carregar colaboradores:', error);
+        }
+    }
+
+    async function deleteProject(id) {
+        if (!confirm('Tem certeza que deseja excluir ESTE PROJETO INTEIRO? Esta ação não pode ser desfeita.')) return;
+        try {
+            const response = await fetch(`/api/projects/${id}`, { method: 'DELETE' });
+            if (response.ok) window.location.href = '/projects';
+        } catch (error) {
+            console.error('Erro ao excluir projeto:', error);
+        }
+    }
+
+    async function archiveProject() {
+        if (!confirm('Deseja arquivar este projeto?')) return;
+        try {
+            const response = await fetch(`/api/projects/${PROJECT_ID}/status`, {
+                method: 'PATCH',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ status: 'archived' })
+            });
+            if (response.ok) window.location.reload();
+        } catch (error) {
+            console.error(error);
+        }
+    }
+
+    function toggleColumn(header) {
+        const column = header.parentElement;
+        column.classList.toggle('collapsed');
+    }
+
+    function toggleCollapsible(id) {
+        const el = document.getElementById(id);
+        if (el) el.classList.toggle('collapsed');
+    }
+
+    // Close modal when clicking on backdrop
+    taskModal.addEventListener('click', (e) => {
+        if (e.target === taskModal) {
+            closeTaskModal();
+        }
+    });
+
+    // Initialize
+    loadTasks();
+    loadEmployees();
+
+</script>
+{% endblock %}
+
+{% block sidebar_right %}
+<!-- Filtros -->
+<div class="sidebar-section-ws">
+    <div class="sidebar-header-ws">
+        <h3 class="text-h3">Filtros</h3>
+    </div>
+    <div class="sidebar-content-ws" style="display: flex; flex-direction: column; gap: 1.25rem; margin-top: 1.5rem;">
+
+        <div class="form-group">
+            <label class="form-label" style="font-size: 0.75rem;">Quem (Responsável)</label>
+            <select id="filterResponsible" class="form-select" onchange="applyKanbanFilters()">
+                <option value="">Todos</option>
+                <!-- Populated by loadEmployees -->
+            </select>
+        </div>
+
+        <div class="form-group">
+            <label class="form-label" style="font-size: 0.75rem;">Quando (Vencimento)</label>
+            <input type="date" id="filterDeadline" class="form-input" onchange="applyKanbanFilters()">
+        </div>
+
+        <div class="form-group">
+            <label class="form-label" style="font-size: 0.75rem;">Livre (O que | Como | Obs)</label>
+            <input type="text" id="filterSearch" class="form-input" placeholder="Pesquisar..."
+                onkeyup="applyKanbanFilters()">
+        </div>
+
+        <button class="btn btn-secondary w-100" onclick="resetKanbanFilters()" style="margin-top: 0.5rem;">
+            Limpar Filtros
+        </button>
+    </div>
+</div>
+{% endblock %}

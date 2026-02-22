@@ -1,0 +1,709 @@
+{% extends "modules/plans/base_planning.html" %}
+
+{% macro tag_input(label, class_name, items) %}
+<div>
+    <label class="field-label">{{ label }}</label>
+    <div
+        style="border:1px solid #e2e8f0; border-radius:10px; padding:6px; background:white; min-height:42px; display:flex; flex-wrap:wrap; gap:6px;">
+        <div class="tags-container" data-class="{{ class_name }}" style="display:flex; flex-wrap:wrap; gap:4px;">
+            {% for item in items|default([]) %}<span class="tag-pill"
+                style="background:#eff6ff; color:#2563eb; padding:2px 10px; border-radius:15px; font-size:12px; font-weight:600; display:flex; align-items:center; gap:6px;">{{
+                item }} <i class="fa-solid fa-xmark" onclick="this.parentElement.remove()"
+                    style="cursor:pointer; font-size:10px;"></i></span>{% endfor %}
+        </div>
+        <input type="text" onkeydown="handleTagKey(event, this)" placeholder="..."
+            style="border:none; outline:none; flex:1; font-size:13px;">
+    </div>
+</div>
+{% endmacro %}
+
+{% block planning_content %}
+<div class="planning-header no-print" style="margin-bottom: 32px;">
+    <div style="display: flex; justify-content: space-between; align-items: flex-start;">
+        <div>
+            <h1 style="font-size: 32px; font-weight: 800; color: #0f172a; margin-bottom: 8px;">Modelo & Mercado</h1>
+            <p style="color: #64748b; font-size: 16px;">Fundamentação estratégica do novo negócio em 4 dimensões.</p>
+        </div>
+        <div style="display: flex; gap: 12px;">
+            <button onclick="saveModel()" class="nav-button"
+                style="background: #2563eb; color: #ffffff; padding: 12px 24px; border-radius: 12px; font-weight: 600; border: none; cursor: pointer; display: flex; align-items: center; gap: 8px;">
+                <i class="fa-solid fa-floppy-disk"></i> Salvar Tudo
+            </button>
+            <button onclick="completeSection()" class="nav-button"
+                style="background: #10b981; color: #ffffff; padding: 12px 24px; border-radius: 12px; font-weight: 600; border: none; cursor: pointer;">
+                <i class="fa-solid fa-check"></i> Concluir
+            </button>
+        </div>
+    </div>
+
+    <!-- Sub-navigation Tabs -->
+    <div style="display: flex; gap: 24px; margin-top: 32px; border-bottom: 2px solid #f1f5f9; padding-bottom: 0;">
+        <button onclick="switchTab('canvas')" class="tab-btn active" data-tab="canvas">1. Canvas de Proposta</button>
+        <button onclick="switchTab('personas')" class="tab-btn" data-tab="personas">2. Mapa de Persona &
+            Jornada</button>
+        <button onclick="switchTab('differentials')" class="tab-btn" data-tab="differentials">3. Matriz de
+            Diferenciais</button>
+        <button onclick="switchTab('products')" class="tab-btn" data-tab="products">4. Produtos e Margens</button>
+    </div>
+</div>
+
+<div id="modelTabsContainer">
+    <!-- TAB 1: CANVAS DE PROPOSTA DE VALOR -->
+    <div id="tab-canvas" class="tab-content active">
+        <div id="segmentsCanvasContainer">
+            {% for segment in section_content.segments|default([]) %}
+            <div class="segment-block planning-card" data-segment-index="{{ loop.index0 }}"
+                style="margin-bottom: 24px; border-left: 4px solid #2563eb;">
+                <div style="display: flex; justify-content: space-between; margin-bottom: 20px;">
+                    <div style="flex: 1; margin-right: 24px;">
+                        <label class="field-label">Nome do Segmento *</label>
+                        <input type="text" class="segment-name" value="{{ segment.name }}" oninput="syncNames(this)"
+                            placeholder="Nome do Segmento"
+                            style="font-size: 18px; font-weight: 700; border: none; border-bottom: 2px solid #e2e8f0; background: transparent; width: 100%;">
+                    </div>
+                    <button onclick="removeSegment(this)"
+                        style="color: #ef4444; background: none; border: none; cursor: pointer;"><i
+                            class="fa-solid fa-trash"></i></button>
+                </div>
+
+                <div style="margin-bottom: 20px;">
+                    <label class="field-label">Descrição do Segmento</label>
+                    <textarea class="segment-description"
+                        style="width: 100%; min-height: 60px; padding: 12px; border-radius: 10px; border: 1px solid #e2e8f0;">{{ segment.description|default('') }}</textarea>
+                </div>
+
+                <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 24px;">
+                    <div style="display: flex; flex-direction: column; gap: 20px;">
+                        {{ tag_input('Público Atendido', 'audiences', segment.audiences) }}
+                        {{ tag_input('Problemas Observados', 'problems', segment.problems) }}
+                        {{ tag_input('Parcerias Chave', 'key_partners', segment.key_partners) }}
+                    </div>
+                    <div>
+                        <label class="field-label">Nossa Solução</label>
+                        <textarea class="segment-solution"
+                            style="width: 100%; min-height: 180px; padding: 12px; border-radius: 10px; border: 1px solid #e2e8f0;">{{ segment.solution|default('') }}</textarea>
+                    </div>
+                </div>
+            </div>
+            {% endfor %}
+        </div>
+        <button onclick="addNewSegment()" class="button-secondary"
+            style="width: 100%; padding: 16px; border-radius: 12px; font-weight: 700;">+ Adicionar Novo
+            Segmento</button>
+    </div>
+
+    <!-- TAB 2: MAPA DE PERSONA E JORNADA -->
+    <div id="tab-personas" class="tab-content" style="display: none;">
+        <div id="segmentsPersonasContainer">
+            {% for segment in section_content.segments|default([]) %}
+            <div class="persona-segment-block planning-card" data-segment-index="{{ loop.index0 }}"
+                style="margin-bottom: 24px;">
+                <h3
+                    style="font-size: 16px; font-weight: 800; color: #1e293b; margin-bottom: 20px; text-transform: uppercase;">
+                    Segmento: <span class="seg-display-name">{{ segment.name }}</span></h3>
+                <div class="personas-list">
+                    {% for persona in segment.personas|default([]) %}
+                    <div class="persona-card"
+                        style="background: #f8fafc; padding: 24px; border-radius: 16px; border: 1px solid #e2e8f0; margin-bottom: 24px;">
+                        <div
+                            style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 24px;">
+                            <h4
+                                style="font-size: 14px; font-weight: 800; color: #64748b; text-transform: uppercase; letter-spacing: 0.1em;">
+                                Persona</h4>
+                            <button onclick="this.closest('.persona-card').remove()"
+                                style="color: #ef4444; background: none; border: none; cursor: pointer;"><i
+                                    class="fa-solid fa-xmark"></i></button>
+                        </div>
+
+                        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 24px;">
+                            <div style="display: flex; flex-direction: column; gap: 16px;">
+                                <div>
+                                    <label class="field-label">Nome *</label>
+                                    <input type="text" class="persona-name" value="{{ persona.name }}"
+                                        placeholder="Ex: Maria Alves"
+                                        style="width: 100%; font-weight: 700; border: none; border-bottom: 1px solid #cbd5e1; background: transparent; padding: 8px 0;">
+                                </div>
+                                <div>
+                                    <label class="field-label">Idade</label>
+                                    <input type="text" class="persona-age" value="{{ persona.age|default('') }}"
+                                        placeholder="Ex: 35 anos"
+                                        style="width: 100%; border: none; border-bottom: 1px solid #cbd5e1; background: transparent; padding: 8px 0;">
+                                </div>
+                                <div>
+                                    <label class="field-label">Perfil</label>
+                                    <textarea class="persona-profile"
+                                        placeholder="Descreva as dores e características..."
+                                        style="width: 100%; min-height: 100px; font-size: 14px; border: 1px solid #e2e8f0; border-radius: 10px; padding: 12px; background: white;">{{ persona.profile }}</textarea>
+                                </div>
+                            </div>
+                            <div style="display: flex; flex-direction: column; gap: 16px;">
+                                {{ tag_input('Objetivos', 'persona-goals', persona.goals) }}
+                                {{ tag_input('Desafios', 'persona-challenges', persona.challenges) }}
+                                {{ tag_input('Jornada', 'persona-journey', persona.journey) }}
+                            </div>
+                        </div>
+                    </div>
+                    {% endfor %}
+                </div>
+                <button onclick="addNewPersona(this)" class="button-secondary"
+                    style="width: 100%; padding: 12px; border-radius: 12px; font-weight: 700;">+ Adicionar
+                    Persona</button>
+            </div>
+            {% endfor %}
+        </div>
+    </div>
+
+    <!-- TAB 3: MATRIZ DE DIFERENCIAIS -->
+    <div id="tab-differentials" class="tab-content" style="display: none;">
+        <div id="segmentsDifferentialsContainer">
+            {% for segment in section_content.segments|default([]) %}
+            <div class="diff-segment-block planning-card" data-segment-index="{{ loop.index0 }}"
+                style="margin-bottom: 32px;">
+                <h3 style="font-size: 16px; font-weight: 800; color: #1e293b; margin-bottom: 24px;">Matriz de
+                    Diferenciais: <span class="seg-display-name">{{ segment.name }}</span></h3>
+
+                <!-- Estratégia e Posicionamento -->
+                <div
+                    style="background: #f8fafc; padding: 24px; border-radius: 16px; border: 1px solid #e2e8f0; margin-bottom: 32px;">
+                    <h4
+                        style="font-size: 14px; font-weight: 800; color: #64748b; text-transform: uppercase; letter-spacing: 0.1em; margin-bottom: 20px;">
+                        Estratégia e Posicionamento</h4>
+                    <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 24px;">
+                        <div style="display: flex; flex-direction: column; gap: 16px;">
+                            <div>
+                                <label class="field-label">Posicionamento</label>
+                                <textarea class="segment-positioning"
+                                    style="width: 100%; min-height: 80px; padding: 12px; border-radius: 10px; border: 1px solid #e2e8f0; background: white;">{{ segment.positioning|default('') }}</textarea>
+                            </div>
+                            <div>
+                                <label class="field-label">Promessa Central</label>
+                                <textarea class="segment-central-promise"
+                                    style="width: 100%; min-height: 80px; padding: 12px; border-radius: 10px; border: 1px solid #e2e8f0; background: white;">{{ segment.central_promise|default('') }}</textarea>
+                            </div>
+                        </div>
+                        <div>
+                            {{ tag_input('Próximos Passos', 'segment-next-steps', segment.next_steps) }}
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Matriz de Diferenciais (Tabela) -->
+                <div>
+                    <div
+                        style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px;">
+                        <h4
+                            style="font-size: 14px; font-weight: 800; color: #64748b; text-transform: uppercase; letter-spacing: 0.1em;">
+                            Matriz de Diferenciais (Comparativo)</h4>
+                        <button onclick="addDifferentialRow(this)" class="button-text"
+                            style="color: #2563eb; font-weight: 700; font-size: 13px;">+ Adicionar Critério</button>
+                    </div>
+                    <div style="overflow-x: auto;">
+                        <table style="width: 100%; border-collapse: separate; border-spacing: 0 8px;">
+                            <thead>
+                                <tr
+                                    style="text-align: left; color: #64748b; font-size: 11px; text-transform: uppercase;">
+                                    <th style="padding: 12px; width: 25%;">Critério *</th>
+                                    <th style="width: 18%;">Nossa Empresa</th>
+                                    <th style="width: 18%;">Concorrente A</th>
+                                    <th style="width: 18%;">Concorrente B</th>
+                                    <th style="width: 18%;">Observação</th>
+                                    <th style="width: 30px;"></th>
+                                </tr>
+                            </thead>
+                            <tbody class="differential-matrix-body">
+                                {% for item in segment.differential_matrix|default([]) %}
+                                <tr class="diff-row" style="background: white; border-bottom: 1px solid #f1f5f9;">
+                                    <td style="padding: 12px;"><input type="text" class="diff-criterion"
+                                            value="{{ item.criterion }}"
+                                            style="width: 100%; border: none; background: transparent; font-weight: 700;">
+                                    </td>
+                                    <td><input type="text" class="diff-ours" value="{{ item.our_company|default('') }}"
+                                            style="width: 100%; border: none; background: transparent;"></td>
+                                    <td><input type="text" class="diff-comp-a"
+                                            value="{{ item.competitor_a|default('') }}"
+                                            style="width: 100%; border: none; background: transparent;"></td>
+                                    <td><input type="text" class="diff-comp-b"
+                                            value="{{ item.competitor_b|default('') }}"
+                                            style="width: 100%; border: none; background: transparent;"></td>
+                                    <td><input type="text" class="diff-obs" value="{{ item.observation|default('') }}"
+                                            style="width: 100%; border: none; background: transparent;"></td>
+                                    <td style="text-align: right;"><button onclick="this.closest('tr').remove()"
+                                            style="color: #ef4444; background: none; border: none; cursor: pointer;"><i
+                                                class="fa-solid fa-trash"></i></button></td>
+                                </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+            {% endfor %}
+        </div>
+    </div>
+
+    <!-- TAB 4: PRODUTOS E MARGENS -->
+    <div id="tab-products" class="tab-content" style="display: none;">
+        <div style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 16px; margin-bottom: 24px;">
+            <div
+                style="background: white; padding: 20px; border-radius: 16px; border: 1px solid #e2e8f0; box-shadow: 0 4px 6px -1px rgb(0 0 0 / 0.1);">
+                <label class="field-label">Faturamento Total Esperado</label>
+                <div id="summaryRevenue" style="font-size: 24px; font-weight: 800; color: #0f172a;">R$ 0,00</div>
+            </div>
+            <div
+                style="background: white; padding: 20px; border-radius: 16px; border: 1px solid #e2e8f0; box-shadow: 0 4px 6px -1px rgb(0 0 0 / 0.1);">
+                <label class="field-label">Margem de Contribuição Média</label>
+                <div id="summaryMargin" style="font-size: 24px; font-weight: 800; color: #10b981;">0,00%</div>
+            </div>
+            <div
+                style="background: white; padding: 20px; border-radius: 16px; border: 1px solid #e2e8f0; box-shadow: 0 4px 6px -1px rgb(0 0 0 / 0.1);">
+                <label class="field-label">Soma de Metas de Vendas</label>
+                <div id="summaryShare" style="font-size: 24px; font-weight: 800; color: #2563eb;">0 un</div>
+            </div>
+        </div>
+
+        <div class="planning-card">
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 24px;">
+                <h3 style="font-size: 18px; font-weight: 700; color: #0f172a;">Mix de Produtos & Engenharia de Preços
+                </h3>
+                <button onclick="openProductModal()" class="button-secondary"
+                    style="background: #0f172a; color: white;">+ Novo Produto</button>
+            </div>
+            <table style="width: 100%; border-collapse: separate; border-spacing: 0 8px;">
+                <thead>
+                    <tr style="text-align: left; color: #64748b; font-size: 11px; text-transform: uppercase;">
+                        <th style="padding: 12px;">Produto/Serviço</th>
+                        <th>Preço</th>
+                        <th>Custo Dir.</th>
+                        <th>Desp. Variáv.</th>
+                        <th>Margem %</th>
+                        <th>Meta Un</th>
+                        <th>Faturamento</th>
+                        <th style="text-align: right; padding-right: 12px;">Ações</th>
+                    </tr>
+                </thead>
+                <tbody id="productsTableBody"></tbody>
+            </table>
+        </div>
+    </div>
+</div>
+
+<!-- Modal de Produto Avançado -->
+<div id="productModal"
+    style="display:none; position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.5); z-index:25000; justify-content:center; align-items:center;">
+    <div
+        style="background:white; width:900px; max-height:85vh; border-radius:24px; overflow:hidden; display:flex; flex-direction:column; box-shadow:0 25px 50px -12px rgb(0 0 0 / 0.25);">
+        <div
+            style="padding:24px; border-bottom:1px solid #f1f5f9; display:flex; justify-content:space-between; align-items:center;">
+            <h3 id="modalTitle" style="font-size:20px; font-weight:800; color:#0f172a;">Detalhar Produto</h3>
+            <button onclick="closeProductModal()" style="background:none; border:none; cursor:pointer;"><i
+                    class="fa-solid fa-xmark"></i></button>
+        </div>
+        <div style="padding:32px; overflow-y:auto; flex:1;">
+            <div style="display:grid; grid-template-columns: 1.5fr 1fr; gap:32px;">
+                <div>
+                    <div style="margin-bottom:24px;">
+                        <label class="field-label">Identificação</label>
+                        <input id="pName" type="text" placeholder="Nome do Produto"
+                            style="width:100%; font-size:18px; font-weight:700; border-radius:12px; border:1px solid #e2e8f0; padding:12px; margin-bottom:12px;">
+                        <textarea id="pDesc" placeholder="Descrição rápida..."
+                            style="width:100%; height:80px; border-radius:12px; border:1px solid #e2e8f0; padding:12px;"></textarea>
+                    </div>
+                    <div style="background:#f8fafc; padding:24px; border-radius:16px; border:1px solid #e2e8f0;">
+                        <h4
+                            style="font-size:13px; font-weight:800; color:#475569; text-transform:uppercase; margin-bottom:16px;">
+                            Engenharia de Preços</h4>
+                        <div style="display:grid; grid-template-columns: 1fr 1fr; gap:16px;">
+                            <div><label class="field-label">Preço de Venda (R$)</label><input id="pPrice" type="number"
+                                    step="0.01" oninput="recalcProduct()" class="modal-input"></div>
+                            <div><label class="field-label">Obs. sobre Preço</label><input id="pPriceNotes" type="text"
+                                    class="modal-input"></div>
+                            <div style="grid-column: span 2; height:1px; background:#e2e8f0; margin:8px 0;"></div>
+                            <div><label class="field-label">Custos Diretos (%)</label><input id="pCostPct" type="number"
+                                    oninput="syncProductValue('cost')" class="modal-input"></div>
+                            <div><label class="field-label">Custos Diretos (R$)</label><input id="pCostVal"
+                                    type="number" step="0.01" oninput="syncProductPct('cost')" class="modal-input">
+                            </div>
+                            <div><label class="field-label">Desp. Variáveis (%)</label><input id="pExpPct" type="number"
+                                    oninput="syncProductValue('exp')" class="modal-input"></div>
+                            <div><label class="field-label">Desp. Variáveis (R$)</label><input id="pExpVal"
+                                    type="number" step="0.01" oninput="syncProductPct('exp')" class="modal-input"></div>
+                            <div
+                                style="grid-column: span 2; background:#0f172a; padding:16px; border-radius:12px; display:flex; justify-content:space-between; align-items:center;">
+                                <span style="color:white; font-size:13px; font-weight:700;">Margem Unitária</span>
+                                <div style="text-align:right;">
+                                    <div id="pMarginVal" style="color:white; font-size:18px; font-weight:800;">R$ 0,00
+                                    </div>
+                                    <div id="pMarginPct" style="color:#10b981; font-size:13px; font-weight:700;">0,00%
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <div>
+                    <div style="margin-bottom:24px;">
+                        <h4
+                            style="font-size:13px; font-weight:800; color:#475569; text-transform:uppercase; margin-bottom:16px;">
+                            Metas & Escala</h4>
+                        <div style="display:flex; flex-direction:column; gap:16px;">
+                            <div><label class="field-label">Tamanho Mercado (un)</label><input id="pMarketUnits"
+                                    type="number" class="modal-input"></div>
+                            <div><label class="field-label">Minha Meta (un)</label><input id="pShareUnits" type="number"
+                                    oninput="recalcProduct()" class="modal-input"></div>
+                        </div>
+                    </div>
+                    <div>
+                        <div
+                            style="display:flex; justify-content:space-between; align-items:center; margin-bottom:12px;">
+                            <h4 style="font-size:13px; font-weight:800; color:#475569; text-transform:uppercase;">
+                                Ramp-up (YYYY.MM)</h4>
+                            <button onclick="addRampMonth()"
+                                style="background:none; border:none; color:#2563eb; font-weight:700; font-size:12px; cursor:pointer;">+
+                                Mês</button>
+                        </div>
+                        <div style="max-height:200px; overflow-y:auto; border:1px solid #e2e8f0; border-radius:12px;">
+                            <table style="width:100%; font-size:12px;">
+                                <thead style="background:#f8fafc; position:sticky; top:0;">
+                                    <tr>
+                                        <th style="padding:8px;">Mês (YYYY.MM)</th>
+                                        <th style="padding:8px;">%</th>
+                                        <th style="padding:8px;">Un</th>
+                                        <th></th>
+                                    </tr>
+                                </thead>
+                                <tbody id="pRangeBody"></tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div
+            style="padding:24px; background:#f8fafc; border-top:1px solid #e2e8f0; display:flex; justify-content:flex-end; gap:12px;">
+            <button onclick="closeProductModal()" class="button-secondary">Cancelar</button>
+            <button onclick="commitProduct()"
+                style="background:#2563eb; color:white; padding:12px 32px; border-radius:12px; font-weight:700; border:none; cursor:pointer;">Confirmar</button>
+        </div>
+    </div>
+</div>
+
+<style>
+    .tab-btn {
+        padding: 12px 16px;
+        border: none;
+        background: none;
+        color: #64748b;
+        font-weight: 600;
+        cursor: pointer;
+        border-bottom: 3px solid transparent;
+    }
+
+    .tab-btn.active {
+        color: #2563eb;
+        border-bottom-color: #2563eb;
+    }
+
+    .field-label {
+        display: block;
+        font-size: 11px;
+        font-weight: 800;
+        color: #94a3b8;
+        text-transform: uppercase;
+        margin-bottom: 6px;
+    }
+
+    .modal-input {
+        width: 100%;
+        padding: 10px;
+        border-radius: 10px;
+        border: 1px solid #e2e8f0;
+        font-weight: 600;
+    }
+
+    .button-secondary {
+        background: #f1f5f9;
+        border: 1px solid #e2e8f0;
+        color: #475569;
+        cursor: pointer;
+        padding: 12px 24px;
+        border-radius: 12px;
+    }
+</style>
+
+<script>
+    let products = {{ section_content.products|default ([]) | tojson }};
+    let currentEditingId = null;
+    let nextSegmentId = {{ section_content.segments| length if section_content.segments else 0 }};
+
+    function switchTab(tabId) {
+        document.querySelectorAll('.tab-content').forEach(c => c.style.display = 'none');
+        document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+        document.getElementById('tab-' + tabId).style.display = 'block';
+        document.querySelector(`.tab-btn[data-tab="${tabId}"]`).classList.add('active');
+        if (tabId === 'products') renderProductsTable();
+    }
+
+    function syncNames(input) {
+        const index = input.closest('[data-segment-index]').dataset.segmentIndex;
+        document.querySelectorAll(`[data-segment-index="${index}"] .seg-display-name`).forEach(span => span.innerText = input.value || 'Novo Segmento');
+    }
+
+    function removeSegment(btn) {
+        if (!confirm('Remover segmento?')) return;
+        const index = btn.closest('[data-segment-index]').dataset.segmentIndex;
+        document.querySelectorAll(`[data-segment-index="${index}"]`).forEach(b => b.remove());
+    }
+
+    function addNewSegment() {
+        const index = nextSegmentId++;
+        const name = `Novo Segmento ${index + 1}`;
+
+        // Tab 1: Canvas
+        document.getElementById('segmentsCanvasContainer').insertAdjacentHTML('beforeend', `
+            <div class="segment-block planning-card" data-segment-index="${index}" style="margin-bottom: 24px; border-left: 4px solid #2563eb;">
+                <div style="display: flex; justify-content: space-between; margin-bottom: 20px;">
+                    <div style="flex: 1; margin-right: 24px;">
+                        <label class="field-label">Nome do Segmento *</label>
+                        <input type="text" class="segment-name" value="${name}" oninput="syncNames(this)" style="font-size: 18px; font-weight: 700; border: none; border-bottom: 2px solid #e2e8f0; background: transparent; width: 100%;">
+                    </div>
+                    <button onclick="removeSegment(this)" style="color: #ef4444; background: none; border: none; cursor: pointer;"><i class="fa-solid fa-trash"></i></button>
+                </div>
+                <div style="margin-bottom: 20px;">
+                    <label class="field-label">Descrição do Segmento</label>
+                    <textarea class="segment-description" style="width: 100%; min-height: 60px; padding: 12px; border-radius: 10px; border: 1px solid #e2e8f0;"></textarea>
+                </div>
+                <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 24px;">
+                    <div style="display: flex; flex-direction: column; gap: 20px;">
+                        ${renderTagInput('Público Atendido', 'audiences')}
+                        ${renderTagInput('Problemas Observados', 'problems')}
+                        ${renderTagInput('Parcerias Chave', 'key_partners')}
+                    </div>
+                    <div><label class="field-label">Nossa Solução</label><textarea class="segment-solution" style="width: 100%; min-height: 180px; padding: 12px; border-radius: 10px; border: 1px solid #e2e8f0;"></textarea></div>
+                </div>
+            </div>
+        `);
+
+        // Tab 2: Personas
+        document.getElementById('segmentsPersonasContainer').insertAdjacentHTML('beforeend', `
+            <div class="persona-segment-block planning-card" data-segment-index="${index}" style="margin-bottom: 24px;">
+                <h3 style="font-size: 16px; font-weight: 800; color: #1e293b; margin-bottom: 20px; text-transform: uppercase;">Segmento: <span class="seg-display-name">${name}</span></h3>
+                <div class="personas-list"></div>
+                <button onclick="addNewPersona(this)" class="button-secondary" style="width: 100%; padding: 12px; border-radius: 12px; font-weight: 700;">+ Adicionar Persona</button>
+            </div>
+        `);
+
+        // Tab 3: Differentials
+        document.getElementById('segmentsDifferentialsContainer').insertAdjacentHTML('beforeend', `
+            <div class="diff-segment-block planning-card" data-segment-index="${index}" style="margin-bottom: 32px;">
+                <h3 style="font-size: 16px; font-weight: 800; color: #1e293b; margin-bottom: 24px;">Matriz de Diferenciais: <span class="seg-display-name">${name}</span></h3>
+                <div style="background: #f8fafc; padding: 24px; border-radius: 16px; border: 1px solid #e2e8f0; margin-bottom: 32px;">
+                    <h4 class="field-label">Estratégia e Posicionamento</h4>
+                    <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 24px;">
+                        <div style="display: flex; flex-direction: column; gap: 16px;">
+                            <div><label class="field-label">Posicionamento</label><textarea class="segment-positioning" style="width: 100%; min-height: 80px; padding: 12px; border-radius: 10px; border: 1px solid #e2e8f0; background: white;"></textarea></div>
+                            <div><label class="field-label">Promessa Central</label><textarea class="segment-central-promise" style="width: 100%; min-height: 80px; padding: 12px; border-radius: 10px; border: 1px solid #e2e8f0; background: white;"></textarea></div>
+                        </div>
+                        <div>${renderTagInput('Próximos Passos', 'segment-next-steps')}</div>
+                    </div>
+                </div>
+                <div>
+                     <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px;">
+                        <h4 class="field-label">Matriz de Diferenciais (Comparativo)</h4>
+                        <button onclick="addDifferentialRow(this)" class="button-text" style="color: #2563eb; font-weight: 700; font-size: 13px;">+ Adicionar Critério</button>
+                    </div>
+                    <table style="width: 100%; border-collapse: separate; border-spacing: 0 8px;">
+                        <thead><tr style="text-align: left; color: #64748b; font-size: 11px; text-transform: uppercase;"><th style="padding: 12px; width: 25%;">Critério *</th><th style="width: 18%;">Nós</th><th style="width: 18%;">Conc. A</th><th style="width: 18%;">Conc. B</th><th style="width: 18%;">Obs.</th><th style="width: 30px;"></th></tr></thead>
+                        <tbody class="differential-matrix-body"></tbody>
+                    </table>
+                </div>
+            </div>
+        `);
+    }
+
+    function addNewPersona(btn) {
+        btn.previousElementSibling.insertAdjacentHTML('beforeend', `
+            <div class="persona-card" style="background:#f8fafc; padding:24px; border-radius:16px; border:1px solid #e2e8f0; margin-bottom:24px;">
+                <div style="display:flex; justify-content:space-between; margin-bottom:16px;"><h4 class="field-label">Persona</h4><button onclick="this.closest('.persona-card').remove()" style="color:#ef4444; border:none; background:none; cursor:pointer;"><i class="fa-solid fa-xmark"></i></button></div>
+                <div style="display:grid; grid-template-columns:1fr 1fr; gap:24px;">
+                    <div>
+                        <label class="field-label">Nome</label><input type="text" class="persona-name" style="width:100%; padding:8px; border-radius:8px; border:1px solid #e2e8f0; margin-bottom:12px;">
+                        <label class="field-label">Idade</label><input type="text" class="persona-age" style="width:100%; padding:8px; border-radius:8px; border:1px solid #e2e8f0; margin-bottom:12px;">
+                        <label class="field-label">Perfil</label><textarea class="persona-profile" style="width:100%; border-radius:10px; border:1px solid #e2e8f0; height:80px; padding:8px;"></textarea>
+                    </div>
+                    <div style="display:flex; flex-direction:column; gap:12px;">${renderTagInput('Objetivos', 'persona-goals')}${renderTagInput('Desafios', 'persona-challenges')}${renderTagInput('Jornada', 'persona-journey')}</div>
+                </div>
+            </div>
+        `);
+    }
+
+    function renderTagInput(label, cls) {
+        return `<div><label class="field-label">${label}</label><div class="tag-input-wrapper" style="border: 1px solid #e2e8f0; border-radius: 10px; padding: 6px; background: white; display: flex; flex-wrap: wrap; gap: 6px; align-items: center;"><div class="tags-container" data-class="${cls}" style="display: flex; flex-wrap: wrap; gap: 4px;"></div><input type="text" class="tag-field-input" onkeydown="handleTagKey(event, this)" placeholder="..." style="border: none; outline: none; flex: 1; font-size: 13px;"></div></div>`;
+    }
+
+    function addDifferentialRow(btn) {
+        const body = btn.parentElement.nextElementSibling.querySelector('tbody') || btn.parentElement.nextElementSibling.nextElementSibling.querySelector('tbody');
+        body.insertAdjacentHTML('beforeend', `<tr class="diff-row"><td style="padding:12px"><input type="text" class="diff-criterion" style="width:100%; border:none; font-weight:700"></td><td><input type="text" class="diff-ours" style="width:100%; border:none"></td><td><input type="text" class="diff-comp-a" style="width:100%; border:none"></td><td><input type="text" class="diff-comp-b" style="width:100%; border:none"></td><td><input type="text" class="diff-obs" style="width:100%; border:none"></td><td style="text-align:right"><button onclick="this.closest('tr').remove()" style="color:#ef4444; border:none; background:none"><i class="fa-solid fa-trash"></i></button></td></tr>`);
+    }
+
+    // PRODUCT LOGIC
+    function openProductModal(id = null) {
+        currentEditingId = id;
+        const p = id ? products.find(prod => (prod.id || prod.name) === id) : {
+            name: '', description: '', sale_price: 0, sale_price_notes: '',
+            variable_costs_value: 0, variable_costs_percent: 0,
+            variable_expenses_value: 0, variable_expenses_percent: 0,
+            market_size_monthly_units: 0, market_share_goal_monthly_units: 0,
+            ramp_up_entries: []
+        };
+        document.getElementById('pName').value = p.name;
+        document.getElementById('pDesc').value = p.description || '';
+        document.getElementById('pPrice').value = p.sale_price;
+        document.getElementById('pPriceNotes').value = p.sale_price_notes || '';
+        document.getElementById('pCostPct').value = p.variable_costs_percent;
+        document.getElementById('pCostVal').value = p.variable_costs_value;
+        document.getElementById('pExpPct').value = p.variable_expenses_percent;
+        document.getElementById('pExpVal').value = p.variable_expenses_value;
+        document.getElementById('pMarketUnits').value = p.market_size_monthly_units;
+        document.getElementById('pShareUnits').value = p.market_share_goal_monthly_units;
+        renderRampEntries(p.ramp_up_entries);
+        recalcProduct();
+        document.getElementById('productModal').style.display = 'flex';
+    }
+
+    function renderRampEntries(entries) {
+        const body = document.getElementById('pRangeBody');
+        body.innerHTML = '';
+        (entries || []).forEach(en => {
+            body.insertAdjacentHTML('beforeend', `<tr><td style="padding:8px"><input type="text" class="ramp-period" value="${en.month_period}" placeholder="YYYY.MM" style="width:80px; border:none; font-family:monospace"></td><td><input type="number" class="ramp-pct" value="${en.percentage}" oninput="recalcProduct()" style="width:50px; border:none">%</td><td class="ramp-un" style="color:#64748b">0</td><td><button onclick="this.closest('tr').remove()" style="color:#ef4444; border:none; background:none"><i class="fa-solid fa-trash"></i></button></td></tr>`);
+        });
+    }
+
+    function addRampMonth() {
+        const now = new Date();
+        const mock = `${now.getFullYear()}.${String(now.getMonth() + 1).padStart(2, '0')}`;
+        document.getElementById('pRangeBody').insertAdjacentHTML('beforeend', `<tr><td style="padding:8px"><input type="text" class="ramp-period" value="${mock}" placeholder="YYYY.MM" style="width:80px; border:none; font-family:monospace"></td><td><input type="number" class="ramp-pct" value="100" oninput="recalcProduct()" style="width:50px; border:none">%</td><td class="ramp-un" style="color:#64748b">0</td><td><button onclick="this.closest('tr').remove()" style="color:#ef4444; border:none; background:none"><i class="fa-solid fa-trash"></i></button></td></tr>`);
+        recalcProduct();
+    }
+
+    function syncProductValue(type) {
+        const p = parseFloat(document.getElementById('pPrice').value) || 0;
+        const pct = parseFloat(document.getElementById(type === 'cost' ? 'pCostPct' : 'pExpPct').value) || 0;
+        document.getElementById(type === 'cost' ? 'pCostVal' : 'pExpVal').value = ((p * pct) / 100).toFixed(2);
+        recalcProduct();
+    }
+
+    function syncProductPct(type) {
+        const p = parseFloat(document.getElementById('pPrice').value) || 0;
+        const val = parseFloat(document.getElementById(type === 'cost' ? 'pCostVal' : 'pExpVal').value) || 0;
+        if (p > 0) document.getElementById(type === 'cost' ? 'pCostPct' : 'pExpPct').value = ((val / p) * 100).toFixed(2);
+        recalcProduct();
+    }
+
+    function recalcProduct() {
+        const p = parseFloat(document.getElementById('pPrice').value) || 0;
+        const c = parseFloat(document.getElementById('pCostVal').value) || 0;
+        const e = parseFloat(document.getElementById('pExpVal').value) || 0;
+        const s = parseFloat(document.getElementById('pShareUnits').value) || 0;
+        const mcu = p - c - e;
+        document.getElementById('pMarginVal').innerText = `R$ ${mcu.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}`;
+        document.getElementById('pMarginPct').innerText = `${p > 0 ? (mcu / p * 100).toFixed(2) : '0.00'}%`;
+        document.querySelectorAll('#pRangeBody tr').forEach(row => {
+            const pct = parseFloat(row.querySelector('.ramp-pct').value) || 0;
+            row.querySelector('.ramp-un').innerText = Math.round(s * pct / 100);
+        });
+    }
+
+    function commitProduct() {
+        const p = {
+            id: currentEditingId || Date.now().toString(),
+            name: document.getElementById('pName').value,
+            description: document.getElementById('pDesc').value,
+            sale_price: parseFloat(document.getElementById('pPrice').value) || 0,
+            sale_price_notes: document.getElementById('pPriceNotes').value,
+            variable_costs_percent: parseFloat(document.getElementById('pCostPct').value) || 0,
+            variable_costs_value: parseFloat(document.getElementById('pCostVal').value) || 0,
+            variable_expenses_percent: parseFloat(document.getElementById('pExpPct').value) || 0,
+            variable_expenses_value: parseFloat(document.getElementById('pExpVal').value) || 0,
+            market_size_monthly_units: parseFloat(document.getElementById('pMarketUnits').value) || 0,
+            market_share_goal_monthly_units: parseFloat(document.getElementById('pShareUnits').value) || 0,
+            ramp_up_entries: Array.from(document.querySelectorAll('#pRangeBody tr')).map(row => ({
+                month_period: row.querySelector('.ramp-period').value,
+                percentage: parseFloat(row.querySelector('.ramp-pct').value) || 0
+            }))
+        };
+        if (!p.name) return alert('Nome é obrigatório');
+        const idx = products.findIndex(px => (px.id || px.name) === currentEditingId);
+        if (idx >= 0) products[idx] = p; else products.push(p);
+        renderProductsTable(); closeProductModal();
+    }
+
+    function renderProductsTable() {
+        const body = document.getElementById('productsTableBody');
+        body.innerHTML = '';
+        let tRev = 0, tW = 0, tU = 0;
+        products.forEach(p => {
+            const mcu = p.sale_price - p.variable_costs_value - p.variable_expenses_value;
+            const rev = p.sale_price * p.market_share_goal_monthly_units;
+            tRev += rev; tU += p.market_share_goal_monthly_units; tW += (p.sale_price > 0 ? (mcu / p.sale_price * 100) : 0) * rev;
+            body.insertAdjacentHTML('beforeend', `<tr style="background:#f8fafc; cursor:pointer" onclick="openProductModal('${p.id || p.name}')"><td style="padding:12px"><strong>${p.name}</strong></td><td>R$ ${p.sale_price.toLocaleString('pt-BR')}</td><td>${p.variable_costs_percent}%</td><td>${p.variable_expenses_percent}%</td><td style="color:#10b981; font-weight:700">${p.sale_price > 0 ? (mcu / p.sale_price * 100).toFixed(2) : '0'}%</td><td style="color:#2563eb; font-weight:700">${p.market_share_goal_monthly_units}</td><td style="font-weight:800">R$ ${rev.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}</td><td style="text-align:right"><button onclick="event.stopPropagation(); removeProduct('${p.id || p.name}')" style="color:#ef4444; border:none; background:none"><i class="fa-solid fa-trash"></i></button></td></tr>`);
+        });
+        document.getElementById('summaryRevenue').innerText = `R$ ${tRev.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}`;
+        document.getElementById('summaryMargin').innerText = `${tRev > 0 ? (tW / tRev).toFixed(2) : '0'}%`;
+        document.getElementById('summaryShare').innerText = `${tU} un`;
+    }
+
+    function removeProduct(id) { products = products.filter(p => (p.id || p.name) !== id); renderProductsTable(); }
+    function closeProductModal() { document.getElementById('productModal').style.display = 'none'; currentEditingId = null; }
+
+    function handleTagKey(event, input) {
+        if (event.key === 'Enter') {
+            event.preventDefault();
+            const val = input.value.trim();
+            if (val) {
+                input.previousElementSibling.insertAdjacentHTML('beforeend', `<span class="tag-pill" style="background:#eff6ff; color:#2563eb; padding:2px 10px; border-radius:15px; font-size:12px; font-weight:600; display:flex; align-items:center; gap:6px;">${val} <i class="fa-solid fa-xmark" onclick="this.parentElement.remove()" style="cursor:pointer; font-size:10px;"></i></span>`);
+                input.value = '';
+            }
+        }
+    }
+
+    async function saveModel() {
+        const getTags = (root, cls) => Array.from(root.querySelectorAll(`.tags-container[data-class="${cls}"] .tag-pill`)).map(t => t.innerText.replace('×', '').trim());
+        const segments = Array.from(document.querySelectorAll('.segment-block')).map(card => {
+            const idx = card.dataset.segmentIndex;
+            const pTab = document.querySelector(`.persona-segment-block[data-segment-index="${idx}"]`);
+            const dTab = document.querySelector(`.diff-segment-block[data-segment-index="${idx}"]`);
+            return {
+                name: card.querySelector('.segment-name').value,
+                description: card.querySelector('.segment-description').value,
+                audiences: getTags(card, 'audiences'),
+                problems: getTags(card, 'problems'),
+                solution: card.querySelector('.segment-solution').value,
+                key_partners: getTags(card, 'key_partners'),
+                positioning: dTab.querySelector('.segment-positioning').value,
+                central_promise: dTab.querySelector('.segment-central-promise').value,
+                next_steps: getTags(dTab, 'segment-next-steps'),
+                differential_matrix: Array.from(dTab.querySelectorAll('.diff-row')).map(row => ({
+                    criterion: row.querySelector('.diff-criterion').value,
+                    our_company: row.querySelector('.diff-ours').value,
+                    competitor_a: row.querySelector('.diff-comp-a').value,
+                    competitor_b: row.querySelector('.diff-comp-b').value,
+                    observation: row.querySelector('.diff-obs').value
+                })).filter(r => r.criterion),
+                personas: Array.from(pTab.querySelectorAll('.persona-card')).map(p => ({
+                    name: p.querySelector('.persona-name').value, age: p.querySelector('.persona-age').value, profile: p.querySelector('.persona-profile').value, goals: getTags(p, 'persona-goals'), challenges: getTags(p, 'persona-challenges'), journey: getTags(p, 'persona-journey')
+                })).filter(p => p.name)
+            };
+        });
+        const resp = await fetch('/api/plans/{{ plan.id }}/implantation/model?company_id={{ company.id }}', {
+            method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ segments, products })
+        });
+        if (resp.ok) alert('Salvo com sucesso!'); else alert('Erro ao salvar: Verifique os campos.');
+    }
+
+    async function completeSection() { await saveModel(); fetch(`/api/plans/{{ plan.id }}/sections/model/complete`, { method: 'POST' }); window.location.href = "{{ url_for('plans.implantation_section', plan_id=plan.id, section='execution') }}"; }
+
+    renderProductsTable();
+</script>
+
+
+{% endblock %}

@@ -1,0 +1,765 @@
+{% extends "layouts/workspace.html" %}
+
+{% block title %}Arquitetura & Mapa de Processos | Versus{% endblock %}
+
+{% block breadcrumb %}
+<a href="/dashboard">Dashboard</a>
+<span class="sep">/</span>
+<a href="/processes">Processos</a>
+<span class="sep">/</span>
+<span class="current">Arquitetura & Mapa</span>
+{% endblock %}
+
+{% block navbar_actions %}{% endblock %}
+
+{% block workspace_content %}
+<div class="arch-container" id="processArchitectureContainer"
+    data-company-id="{{ (company_id or session.get('active_company_id') or 'null') | tojson }}">
+    <!-- Header -->
+    <div class="workspace-header" style="margin-bottom: 1rem;">
+        <h1 class="text-h1">🏗️ Arquitetura de Negócios</h1>
+        <p class="text-secondary">Defina a estrutura hierárquica e visualize o mapa geral da organização.</p>
+    </div>
+
+    <!-- Abas de Navegação Estilo App31 -->
+    <div class="arch-tabs">
+        <button class="arch-tab active" onclick="switchTab('visual')">🗺️ Mapa Geral</button>
+        <button class="arch-tab" onclick="switchTab('areas')">🏢 Áreas</button>
+        <button class="arch-tab" onclick="switchTab('macros')">📊 Macroprocessos</button>
+        <button class="arch-tab" onclick="switchTab('processes')">⚙️ Processos</button>
+    </div>
+
+    <!-- Painel: Mapa Visual -->
+    <div id="panel-visual" class="arch-panel active">
+        <div class="map-controls"
+            style="display: flex; gap: 0.5rem; background: var(--surface-secondary); padding: 0.25rem; border-radius: 8px; width: fit-content; margin-bottom: 1rem;">
+            <button class="btn btn-sm btn-view-type active" onclick="switchMapView('classic')">🏢 Clássico</button>
+            <button class="btn btn-sm btn-view-type" onclick="switchMapView('mp2')">📊 MP-2 (Compacto)</button>
+            <div style="width: 1px; background: var(--border); margin: 4px 6px;"></div>
+            <button class="btn btn-sm" onclick="openMP2()"
+                style="background: var(--surface); color: var(--primary); border: 1px solid var(--primary); font-weight: 600;">👁️
+                Visualizar MP-2 (Aba)</button>
+        </div>
+
+        <!-- Legenda (Visível no Mapa) - Versão Compacta & Responsiva -->
+        <div class="map-legend p-2"
+            style="background: var(--surface-secondary); border-radius: 8px; border: 1px solid var(--border); margin-bottom: 1rem;">
+            <div
+                style="display: flex; gap: 1rem; align-items: center; justify-content: center; flex-wrap: wrap; font-size: 0.7rem;">
+                <!-- Modelagem -->
+                <div style="display: flex; align-items: center; gap: 0.4rem; flex-wrap: wrap;">
+                    <span
+                        style="font-weight: 700; color: var(--text-tertiary); text-transform: uppercase; font-size: 0.65rem;">Modelagem:</span>
+                    <div style="display: flex; align-items: center; gap: 0.4rem;">
+                        <span class="indicator-stage" style="background: #cbd5e1; width: 8px; height: 8px;"></span> Fora
+                        <span class="indicator-stage" style="background: #93c5fd; width: 8px; height: 8px;"></span>
+                        Desenho
+                        <span class="indicator-stage" style="background: #3b82f6; width: 8px; height: 8px;"></span>
+                        Implantação
+                        <span class="indicator-stage" style="background: #a855f7; width: 8px; height: 8px;"></span>
+                        Estabilização
+                        <span class="indicator-stage" style="background: #6366f1; width: 8px; height: 8px;"></span>
+                        Estabilizado
+                    </div>
+                </div>
+
+                <div class="legend-sep" style="width: 1px; height: 12px; background: var(--border);"></div>
+
+                <!-- Desempenho -->
+                <div style="display: flex; align-items: center; gap: 0.4rem; flex-wrap: wrap;">
+                    <span
+                        style="font-weight: 700; color: var(--text-tertiary); text-transform: uppercase; font-size: 0.65rem;">Desempenho:</span>
+                    <div style="display: flex; align-items: center; gap: 0.4rem;">
+                        <span class="indicator-perf" style="background: #ef4444; width: 8px; height: 8px;"></span>
+                        Crítico
+                        <span class="indicator-perf" style="background: #f59e0b; width: 8px; height: 8px;"></span>
+                        Abaixo
+                        <span class="indicator-perf" style="background: #10b981; width: 8px; height: 8px;"></span>
+                        Satisfatório
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div id="processMap" class="process-map-grid no-scrollbar">
+            <div class="loading-state p-5 text-center">
+                <div class="spinner"></div>
+                <p class="text-secondary">Carregando mapa...</p>
+            </div>
+        </div>
+
+        <!-- Informações de Impressão (Apenas para Print) -->
+        <div class="print-info-only mt-4"
+            style="display: none; font-size: 0.75rem; color: var(--text-tertiary); justify-content: space-between;">
+            <span>Impressão em: <span id="printDate">--/--/---- --:--</span></span>
+            <span>Gestão Versus - Architecture Map</span>
+        </div>
+    </div>
+
+    <!-- Painel: Gestão de Áreas -->
+    <div id="panel-areas" class="arch-panel">
+        <div class="grid-form-list">
+            <div class="card p-5" style="padding: 2.5rem !important;">
+                <h3 class="text-h3 mb-3">Nova Área</h3>
+                <form id="formArea" class="arch-form">
+                    <input type="hidden" name="id">
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label class="form-label">Sequência *</label>
+                            <input type="number" name="code" class="form-control" placeholder="Ex: 1" required min="1">
+                        </div>
+                        <div class="form-group">
+                            <label class="form-label">Cor</label>
+                            <input type="color" name="color" class="form-control" style="height: 45px; padding: 5px;"
+                                value="#3b82f6">
+                        </div>
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label">Nome da Área *</label>
+                        <input type="text" name="name" class="form-control" placeholder="Ex: Gerencial, Comercial..."
+                            required>
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label">Descrição</label>
+                        <textarea name="description" class="form-control" rows="2"
+                            placeholder="Descreva o escopo desta área"></textarea>
+                    </div>
+                    <div class="form-actions-row">
+                        <button type="reset" class="btn btn-secondary btn-sm">Limpar</button>
+                        <button type="submit" class="btn btn-primary btn-sm">Salvar Área</button>
+                    </div>
+                </form>
+            </div>
+            <div class="card p-0 overflow-hidden">
+                <table class="arch-table">
+                    <thead>
+                        <tr>
+                            <th>Nome</th>
+                            <th>Ações</th>
+                        </tr>
+                    </thead>
+                    <tbody id="listAreas"></tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+
+    <!-- Painel: Gestão de Macros -->
+    <div id="panel-macros" class="arch-panel">
+        <div class="grid-form-list">
+            <div class="card p-5" style="padding: 2.5rem !important;">
+                <h3 class="text-h3 mb-3">Novo Macroprocesso</h3>
+                <form id="formMacro" class="arch-form">
+                    <input type="hidden" name="id">
+                    <div class="form-group">
+                        <label class="form-label">Área *</label>
+                        <select name="area_id" id="selectMacroArea" class="form-control" required>
+                            <option value="">Selecione a área...</option>
+                        </select>
+                    </div>
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label class="form-label">Sequência *</label>
+                            <input type="number" name="order_index" class="form-control" placeholder="Ex: 1" required
+                                min="1">
+                        </div>
+                        <div class="form-group">
+                            <label class="form-label">Dono do Processo *</label>
+                            <input type="text" name="owner" class="form-control" placeholder="Nome do responsável"
+                                required>
+                        </div>
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label">Nome do Macroprocesso *</label>
+                        <input type="text" name="name" class="form-control"
+                            placeholder="Ex: Gestão Comercial, Gestão Financeira..." required>
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label">Descrição</label>
+                        <textarea name="description" class="form-control" rows="2"
+                            placeholder="Descreva o objetivo e escopo deste macroprocesso"></textarea>
+                    </div>
+                    <div class="form-actions-row">
+                        <button type="reset" class="btn btn-secondary btn-sm">Limpar</button>
+                        <button type="submit" class="btn btn-primary btn-sm">Salvar Macro</button>
+                    </div>
+                </form>
+            </div>
+            <div class="card p-0 overflow-hidden">
+                <table class="arch-table">
+                    <thead>
+                        <tr>
+                            <th>Nome</th>
+                            <th>Dono</th>
+                            <th>Ações</th>
+                        </tr>
+                    </thead>
+                    <tbody id="listMacros"></tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+
+    <!-- Painel: Gestão de Processos -->
+    <div id="panel-processes" class="arch-panel">
+        <div class="grid-form-list">
+            <div class="card p-5" style="padding: 2.5rem !important;">
+                <h3 class="text-h3 mb-3">Novo Processo</h3>
+                <form id="formProcess" class="arch-form">
+                    <input type="hidden" name="id">
+                    <div class="form-group">
+                        <label class="form-label">Macroprocesso *</label>
+                        <select name="macro_id" id="selectProcessMacro" class="form-control" required>
+                            <option value="">Selecione o macro...</option>
+                        </select>
+                    </div>
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label class="form-label">Sequência *</label>
+                            <input type="number" name="order_index" class="form-control" placeholder="Ex: 1" required
+                                min="1">
+                        </div>
+                        <div class="form-group">
+                            <label class="form-label">Responsável</label>
+                            <select name="responsible" id="selectProcessResponsible" class="form-control">
+                                <option value="">Selecione um colaborador...</option>
+                            </select>
+                        </div>
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label">Nome do Processo *</label>
+                        <input type="text" name="name" class="form-control"
+                            placeholder="Ex: Contas a Pagar, Atendimento ao Cliente..." required>
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label">Nível de Desempenho</label>
+                        <select name="performance_level" class="form-control">
+                            <option value="">Fora de Escopo</option>
+                            <option value="critical">Desemp. Crítico (Vermelho)</option>
+                            <option value="below">Desemp. Abaixo (Amarelo)</option>
+                            <option value="satisfactory">Desemp. Satisfatório (Verde)</option>
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label">Descrição</label>
+                        <textarea name="description" class="form-control" rows="2"
+                            placeholder="Descreva o objetivo e escopo deste processo"></textarea>
+                    </div>
+                    <div class="form-actions-row">
+                        <button type="reset" class="btn btn-secondary btn-sm">Limpar</button>
+                        <button type="submit" class="btn btn-primary btn-sm">Salvar Processo</button>
+                    </div>
+                </form>
+            </div>
+            <div class="card p-0 overflow-hidden">
+                <table class="arch-table">
+                    <thead>
+                        <tr>
+                            <th>Nome</th>
+                            <th>Responsável</th>
+                            <th>Ações</th>
+                        </tr>
+                    </thead>
+                    <tbody id="listProcesses"></tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+</div>
+
+{% block sidebar_right %}{% endblock %}
+
+<style>
+    /* Ocultar sidebar direita nesta tela específica */
+    .workspace-sidebar-right {
+        display: none !important;
+    }
+
+    /* Garantir que o conteúdo principal use todo o espaço */
+    .workspace-main {
+        flex: 1;
+        width: 100%;
+    }
+
+    .arch-container {
+        padding: 2.5rem;
+        padding-bottom: 5rem;
+    }
+
+    .card {
+        border-radius: 16px;
+        box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.1), 0 8px 10px -6px rgba(0, 0, 0, 0.1);
+        border: 1px solid var(--border);
+        background: var(--surface);
+    }
+
+    /* Tabs Styling - Clean & Modern */
+    .arch-tabs {
+        display: flex;
+        gap: 0.5rem;
+        background: var(--surface-secondary);
+        padding: 0.4rem;
+        border-radius: 12px;
+        margin-bottom: 1rem;
+        border: 1px solid var(--border);
+        flex-wrap: wrap;
+        /* Permite quebrar em várias linhas no mobile */
+    }
+
+    .arch-tab {
+        flex: 1;
+        padding: 0.75rem 1rem;
+        border: none;
+        background: transparent;
+        color: var(--text-secondary);
+        font-weight: 600;
+        font-size: 0.9rem;
+        border-radius: 8px;
+        cursor: pointer;
+        transition: var(--transition);
+        white-space: nowrap;
+    }
+
+    .arch-tab:hover {
+        background: rgba(255, 255, 255, 0.5);
+        color: var(--primary);
+    }
+
+    .arch-tab.active {
+        background: var(--surface);
+        color: var(--primary);
+        box-shadow: var(--shadow-sm);
+    }
+
+    /* Panel Visibility */
+    .arch-panel {
+        display: none;
+        animation: fadeIn 0.3s ease;
+    }
+
+    .arch-panel.active {
+        display: block;
+    }
+
+    /* Grid Layout for Management */
+    .grid-form-list {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 2rem;
+        align-items: start;
+    }
+
+    @media (max-width: 1200px) {
+        .grid-form-list {
+            grid-template-columns: 1fr;
+            /* Stack vertically on medium/small screens */
+        }
+    }
+
+    .arch-form .form-row {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 1rem;
+    }
+
+    @media (max-width: 576px) {
+        .arch-form .form-row {
+            grid-template-columns: 1fr;
+            /* Stack form rows on mobile */
+        }
+
+        .card.p-5 {
+            padding: 1.5rem !important;
+            /* Smaller padding on mobile */
+        }
+    }
+
+    .form-actions-row {
+        display: flex;
+        justify-content: flex-end;
+        gap: 0.75rem;
+        margin-top: 1.5rem;
+        padding-top: 1.5rem;
+        border-top: 1px solid var(--border);
+    }
+
+    .form-group {
+        margin-bottom: 1.5rem;
+    }
+
+    .form-label {
+        display: block;
+        margin-bottom: 0.5rem;
+        font-weight: 600;
+        color: var(--text-primary);
+        padding-left: 0.25rem;
+    }
+
+    /* Table Styling */
+    .arch-table {
+        width: 100%;
+        border-collapse: collapse;
+        font-size: 0.9rem;
+    }
+
+    .arch-table th {
+        text-align: left;
+        padding: 1rem;
+        background: var(--surface-secondary);
+        color: var(--text-tertiary);
+        font-weight: 700;
+        text-transform: uppercase;
+        font-size: 0.75rem;
+        letter-spacing: 0.05em;
+    }
+
+    .arch-table td {
+        padding: 1rem;
+        border-bottom: 1px solid var(--border);
+        color: var(--text-primary);
+    }
+
+    .arch-table tr:last-child td {
+        border-bottom: none;
+    }
+
+    .arch-table tr:hover td {
+        background: var(--background);
+    }
+
+    /* Process Map Grid (The Columns) */
+    .process-map-grid {
+        display: flex;
+        flex-wrap: nowrap;
+        gap: 2rem;
+        overflow-x: auto;
+        padding-bottom: 2rem;
+        min-height: 60vh;
+    }
+
+    .area-column {
+        min-width: 320px;
+        max-width: 400px;
+        display: flex;
+        flex-direction: column;
+        gap: 1.5rem;
+    }
+
+    .area-header {
+        padding: 1.25rem;
+        border-radius: 12px;
+        color: white;
+        text-align: center;
+        box-shadow: var(--shadow-md);
+    }
+
+    .area-header h2 {
+        font-size: 1.15rem;
+        font-weight: 700;
+        margin: 0;
+        text-transform: uppercase;
+    }
+
+    .macro-group {
+        background: var(--surface-secondary);
+        border-radius: 16px;
+        padding: 1rem;
+        border: 1px solid var(--border);
+        display: flex;
+        flex-direction: column;
+        gap: 0.75rem;
+    }
+
+    .macro-title {
+        font-size: 0.85rem;
+        font-weight: 700;
+        color: var(--text-tertiary);
+        text-transform: uppercase;
+        padding: 0.25rem 0.5rem;
+        border-bottom: 1.5px solid var(--border);
+        margin-bottom: 0.5rem;
+    }
+
+    .process-link-card {
+        background: var(--surface);
+        padding: 0.85rem;
+        border-radius: 10px;
+        border: 1px solid var(--border);
+        text-decoration: none;
+        color: inherit;
+        transition: var(--transition);
+        display: flex;
+        flex-direction: column;
+        gap: 0.2rem;
+    }
+
+    .process-link-card:hover {
+        transform: translateX(4px);
+        border-color: var(--primary);
+        box-shadow: var(--shadow-sm);
+    }
+
+    .process-link-code {
+        font-size: 0.65rem;
+        font-weight: 700;
+        color: var(--text-tertiary);
+    }
+
+    .process-link-name {
+        font-weight: 600;
+        font-size: 0.9rem;
+    }
+
+    .btn-view-type {
+        background: transparent;
+        color: var(--text-secondary);
+        border: none;
+        padding: 0.4rem 1rem;
+        font-size: 0.8rem;
+    }
+
+    .btn-view-type.active {
+        background: var(--surface);
+        color: var(--primary);
+        box-shadow: var(--shadow-sm);
+    }
+
+    .indicator-stage {
+        display: inline-block;
+        width: 12px;
+        height: 12px;
+        border-radius: 50%;
+        border: 1px solid rgba(0, 0, 0, 0.1);
+    }
+
+    .indicator-perf {
+        display: inline-block;
+        width: 11px;
+        height: 11px;
+        border-radius: 2px;
+        border: 1px solid rgba(0, 0, 0, 0.2);
+    }
+
+    .process-link-meta {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        margin-top: 0.25rem;
+        padding-top: 0.25rem;
+        border-top: 1px solid var(--border-light, #f1f5f9);
+        font-size: 0.65rem;
+        color: var(--text-tertiary);
+    }
+
+    .macro-footer {
+        font-size: 0.7rem;
+        color: var(--text-tertiary);
+        text-align: center;
+        padding-top: 0.5rem;
+        margin-top: auto;
+        /* Empurra para o rodapé do bloco */
+        border-top: 1px solid var(--border);
+        font-style: italic;
+    }
+
+    /* MP-2 View Styles */
+    .process-map-grid.mp2-view {
+        display: flex;
+        flex-direction: column;
+        gap: 1.5rem;
+        overflow-x: hidden;
+    }
+
+    .mp2-area-section {
+        display: flex;
+        border: 1px solid var(--border);
+        border-radius: 12px;
+        overflow: hidden;
+        background: var(--surface);
+    }
+
+    .mp2-area-sidebar {
+        width: 40px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        background: var(--primary);
+        color: white;
+        padding: 1rem 0;
+    }
+
+    .mp2-area-name {
+        writing-mode: vertical-rl;
+        transform: rotate(180deg);
+        font-weight: 700;
+        font-size: 0.75rem;
+        text-transform: uppercase;
+        letter-spacing: 1px;
+    }
+
+    .mp2-macros-grid {
+        flex: 1;
+        display: grid;
+        grid-template-columns: repeat(3, 1fr);
+        gap: 1rem;
+        padding: 1rem;
+    }
+
+    .mp2-macro-box {
+        border: 1px solid var(--border);
+        border-radius: 8px;
+        padding: 0.75rem;
+        background: var(--surface-secondary);
+        display: flex;
+        flex-direction: column;
+        min-height: 120px;
+        /* Garantir um tamanho mínimo para ver o efeito de empurrar para o rodapé */
+    }
+
+    .mp2-macro-title {
+        font-size: 0.75rem;
+        font-weight: 700;
+        margin-bottom: 0.75rem;
+        color: var(--text-primary);
+        text-align: center;
+        border-bottom: 1px solid var(--border);
+        padding-bottom: 0.4rem;
+    }
+
+    .mp2-processes-list {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 0.5rem;
+    }
+
+    .mp2-process-card {
+        background: var(--surface);
+        border: 1px solid var(--border);
+        border-radius: 6px;
+        padding: 0.5rem;
+        display: flex;
+        align-items: stretch;
+        gap: 0.6rem;
+        text-decoration: none;
+        color: var(--text-primary);
+        transition: var(--transition);
+        min-height: 50px;
+    }
+
+    .mp2-process-card:hover {
+        border-color: var(--primary);
+        background: var(--surface-secondary);
+        transform: translateY(-2px);
+        box-shadow: var(--shadow-sm);
+    }
+
+    .mp2-process-badges {
+        display: flex;
+        flex-direction: column;
+        justify-content: center;
+        gap: 4px;
+        padding-right: 0.5rem;
+        border-right: 1px solid var(--border);
+    }
+
+    .mp2-badge {
+        width: 10px;
+        height: 10px;
+        border-radius: 2px;
+    }
+
+    .mp2-process-name {
+        flex: 1;
+        font-size: 0.75rem;
+        font-weight: 600;
+        line-height: 1.3;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        text-align: center;
+        color: var(--text-primary);
+    }
+
+    @media (max-width: 1200px) {
+        .mp2-macros-grid {
+            grid-template-columns: repeat(2, 1fr);
+        }
+    }
+
+    @media (max-width: 768px) {
+        .mp2-macros-grid {
+            grid-template-columns: 1fr;
+        }
+
+        .mp2-processes-list {
+            grid-template-columns: 1fr;
+        }
+
+        .mp2-area-section {
+            flex-direction: column;
+        }
+
+        .mp2-area-sidebar {
+            width: 100%;
+            height: 30px;
+            padding: 0;
+        }
+
+        .mp2-area-name {
+            writing-mode: horizontal-tb;
+            transform: none;
+            font-size: 0.7rem;
+        }
+    }
+
+    @media print {
+
+        .arch-tabs,
+        .map-controls,
+        .dropdown,
+        .navbar_actions,
+        .btn,
+        .arch-tab,
+        .workspace-header p,
+        .breadcrumb {
+            display: none !important;
+        }
+
+        .arch-container {
+            padding: 0 !important;
+        }
+
+        .print-info-only {
+            display: flex !important;
+        }
+
+        .process-map-grid {
+            display: block !important;
+            overflow: visible !important;
+        }
+
+        .area-column {
+            page-break-inside: avoid;
+            margin-bottom: 2rem;
+        }
+
+        .mp2-area-section {
+            page-break-inside: avoid;
+        }
+    }
+
+    @keyframes fadeIn {
+        from {
+            opacity: 0;
+            transform: translateY(5px);
+        }
+
+        to {
+            opacity: 1;
+            transform: translateY(0);
+        }
+    }
+</style>
+
+<script src="{{ url_for('static', filename='js/process_architecture.js') }}"></script>
+{% endblock %}

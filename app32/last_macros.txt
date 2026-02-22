@@ -1,0 +1,11 @@
+Listing last 10 Macroprocesses:
+ID: 57 | Name: GERIR DOCUMENTOS E CONHECIMENTOS | Area ID: 17 | Company ID: 14 | Code: AB.C.3.4
+ID: 56 | Name: GERIR TIC | Area ID: 17 | Company ID: 14 | Code: AB.C.3.6
+ID: 55 | Name: GERIR ATIVO IMOBILIZADO | Area ID: 17 | Company ID: 14 | Code: AB.C.3.5
+ID: 54 | Name: GERIR TRIBUTOS E DEPTO PESSOAL | Area ID: 17 | Company ID: 14 | Code: AB.C.3.3
+ID: 53 | Name: GERIR RECURSOS FINANCEIROS | Area ID: 17 | Company ID: 14 | Code: AB.C.3.2
+ID: 52 | Name: GERIR PESSOAS | Area ID: 17 | Company ID: 14 | Code: AB.C.3.1
+ID: 51 | Name: GERIR JURIDICO | Area ID: 17 | Company ID: 14 | Code: AB.C.3.7
+ID: 50 | Name: GERIR COMERCIAL E ENTREGAS | Area ID: 16 | Company ID: 14 | Code: AB.C.2.3
+ID: 49 | Name: GERIR ESTOQUE E DISTRIBUIÇÃO | Area ID: 16 | Company ID: 14 | Code: AB.C.2.2
+ID: 48 | Name: GERIR COMPRAS | Area ID: 16 | Company ID: 14 | Code: AB.C.2.1

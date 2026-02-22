@@ -1,0 +1,235 @@
+<!DOCTYPE html>
+<html lang="pt-br">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Gestão Versus | Agente Inteligente</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap');
+
+        body {
+            font-family: 'Inter', sans-serif;
+            background-color: #f9fafb;
+        }
+
+        .chat-container {
+            height: calc(100vh - 160px);
+        }
+
+        .scrollbar-hide::-webkit-scrollbar {
+            display: none;
+        }
+
+        .message-bubble {
+            max-width: 80%;
+        }
+
+        .markdown-content p {
+            margin-bottom: 0.5rem;
+        }
+
+        .markdown-content ul {
+            list-style-type: disc;
+            margin-left: 1.5rem;
+            margin-bottom: 0.5rem;
+        }
+
+        .markdown-content code {
+            background-color: #edf2f7;
+            padding: 0.2rem 0.4rem;
+            border-radius: 0.25rem;
+            font-size: 0.875em;
+        }
+    </style>
+</head>
+
+<body class="flex h-screen overflow-hidden">
+
+    <!-- Sidebar (Desktop) -->
+    <aside id="sidebar" class="hidden md:flex flex-col w-64 bg-slate-900 text-white transition-all duration-300">
+        <div class="p-6 border-b border-slate-800">
+            <h1 class="text-xl font-bold flex items-center gap-2">
+                <i class="fas fa-robot text-blue-400"></i>
+                Gestão Versus
+            </h1>
+            <p class="text-xs text-slate-400 mt-1">Inteligência Artificial v2.0</p>
+        </div>
+        <div class="flex-1 overflow-y-auto p-4 space-y-2 scrollbar-hide">
+            <button onclick="newChat()"
+                class="w-full flex items-center gap-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg p-3 transition-all mb-4">
+                <i class="fas fa-plus"></i>
+                Nova Conversa
+            </button>
+            <div id="chat-history" class="space-y-1">
+                <!-- Histórico Mock -->
+                <div
+                    class="p-2 hover:bg-slate-800 rounded cursor-pointer text-sm text-slate-300 border-l-2 border-blue-500 bg-slate-800">
+                    Sessão Atual
+                </div>
+                <div class="p-2 hover:bg-slate-800 rounded cursor-pointer text-sm text-slate-500">
+                    Regras SEFAZ 15k
+                </div>
+            </div>
+        </div>
+        <div class="p-4 border-t border-slate-800 text-xs text-slate-500">
+            © 2026 Versus Tecnologia
+        </div>
+    </aside>
+
+    <!-- Main Content -->
+    <main class="flex-1 flex flex-col relative bg-slate-50">
+
+        <!-- Header -->
+        <header class="bg-white border-b border-slate-200 p-4 flex items-center justify-between shadow-sm">
+            <div class="flex items-center gap-3">
+                <button class="md:hidden text-slate-600">
+                    <i class="fas fa-bars text-xl"></i>
+                </button>
+                <div
+                    class="h-10 w-10 bg-blue-100 rounded-full flex items-center justify-center text-blue-600 font-bold">
+                    GV
+                </div>
+                <div>
+                    <h2 class="font-semibold text-slate-800">Assistente Especialista</h2>
+                    <div class="flex items-center gap-1.5">
+                        <span class="h-2 w-2 bg-green-500 rounded-full"></span>
+                        <span class="text-xs text-slate-500">Online</span>
+                    </div>
+                </div>
+            </div>
+            <div class="flex items-center gap-4 text-slate-400">
+                <i class="far fa-question-circle cursor-pointer hover:text-slate-600 transition"></i>
+                <i class="fas fa-cog cursor-pointer hover:text-slate-600 transition"></i>
+            </div>
+        </header>
+
+        <!-- Chat Area -->
+        <div id="chat-window" class="flex-1 overflow-y-auto p-4 md:p-8 space-y-6 scrollbar-hide chat-container">
+            <!-- Boas-vindas -->
+            <div class="flex justify-center">
+                <div class="bg-blue-50 border border-blue-100 rounded-2xl p-6 max-w-lg text-center">
+                    <i class="fas fa-shield-halved text-3xl text-blue-500 mb-3"></i>
+                    <h3 class="text-lg font-semibold text-slate-800 mb-2">Bem-vindo ao Gestão Versus v2.0</h3>
+                    <p class="text-sm text-slate-600">Eu sou sua inteligência de apoio. Posso consultar regras de
+                        negócio, analisar dados do banco e ajudar na tomada de decisão.</p>
+                </div>
+            </div>
+        </div>
+
+        <!-- Feedback Indicador -->
+        <div id="typing-indicator"
+            class="hidden absolute bottom-24 left-8 bg-white shadow-md rounded-full px-4 py-2 flex items-center gap-2 border border-slate-100">
+            <div class="flex gap-1">
+                <span class="h-1.5 w-1.5 bg-blue-400 rounded-full animate-bounce"></span>
+                <span class="h-1.5 w-1.5 bg-blue-400 rounded-full animate-bounce" style="animation-delay: 0.2s"></span>
+                <span class="h-1.5 w-1.5 bg-blue-400 rounded-full animate-bounce" style="animation-delay: 0.4s"></span>
+            </div>
+            <span class="text-xs text-slate-500 font-medium">O especialista está processando...</span>
+        </div>
+
+        <!-- Input Area -->
+        <footer class="bg-white border-t border-slate-200 p-4 shadow-lg">
+            <div class="max-w-4xl mx-auto flex items-center gap-2 bg-slate-50 rounded-xl p-2 border border-slate-200">
+                <input type="text" id="user-input" placeholder="Faça uma pergunta sobre processos ou dados..."
+                    class="flex-1 bg-transparent border-none focus:ring-0 p-2 text-slate-700 placeholder-slate-400"
+                    onkeypress="if(event.key === 'Enter') sendMessage()">
+                <button onclick="sendMessage()"
+                    class="bg-blue-600 hover:bg-blue-700 text-white h-10 w-10 rounded-lg flex items-center justify-center transition-all shadow-md active:scale-95">
+                    <i class="fas fa-paper-plane"></i>
+                </button>
+            </div>
+            <p class="text-[10px] text-center text-slate-400 mt-2">Versão 2.0.0-PRO | Enterprise Security Enabled</p>
+        </footer>
+    </main>
+
+    <!-- Toast Error -->
+    <div id="error-toast"
+        class="hidden fixed top-4 right-4 bg-red-600 text-white px-6 py-3 rounded-lg shadow-2xl z-50 flex items-center gap-3 animate-slide-in">
+        <i class="fas fa-circle-exclamation text-xl"></i>
+        <div>
+            <p class="font-bold text-sm">Erro de Conexão</p>
+            <p class="text-xs opacity-90">Não foi possível processar sua mensagem.</p>
+        </div>
+    </div>
+
+    <script>
+        const chatWindow = document.getElementById('chat-window');
+        const userInput = document.getElementById('user-input');
+        const typingIndicator = document.getElementById('typing-indicator');
+
+        // Gera ou recupera Thread ID
+        let threadId = localStorage.getItem('gv_thread_id') || `gv_user_${Math.random().toString(36).substr(2, 9)}`;
+        localStorage.setItem('gv_thread_id', threadId);
+
+        function appendMessage(role, content) {
+            const isUser = role === 'user';
+            const wrapper = document.createElement('div');
+            wrapper.className = `flex ${isUser ? 'justify-end' : 'justify-start'} animate-fade-in`;
+
+            const htmlContent = isUser ? content : marked.parse(content);
+
+            wrapper.innerHTML = `
+                <div class="message-bubble ${isUser ? 'bg-blue-600 text-white rounded-2xl rounded-tr-sm shadow-md' : 'bg-white border border-slate-200 text-slate-800 rounded-2xl rounded-tl-sm shadow-sm md:max-w-xl'} p-4">
+                    <div class="${!isUser ? 'markdown-content' : ''}">
+                        ${htmlContent}
+                    </div>
+                    <div class="mt-1 text-[10px] ${isUser ? 'text-blue-200' : 'text-slate-400'} flex items-center gap-1">
+                        ${new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                        ${isUser ? '<i class="fas fa-check-double text-blue-300"></i>' : ''}
+                    </div>
+                </div>
+            `;
+
+            chatWindow.appendChild(wrapper);
+            chatWindow.scrollTop = chatWindow.scrollHeight;
+        }
+
+        async function sendMessage() {
+            const text = userInput.value.trim();
+            if (!text) return;
+
+            // Interface
+            userInput.value = '';
+            appendMessage('user', text);
+            typingIndicator.classList.remove('hidden');
+
+            try {
+                const response = await fetch('/api/v2/chat', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ message: text, thread_id: threadId })
+                });
+
+                if (!response.ok) throw new Error('API Indisponível');
+
+                const data = await response.json();
+
+                typingIndicator.classList.add('hidden');
+                appendMessage('agent', data.response);
+
+            } catch (error) {
+                typingIndicator.classList.add('hidden');
+                showError();
+            }
+        }
+
+        function showError() {
+            const toast = document.getElementById('error-toast');
+            toast.classList.remove('hidden');
+            setTimeout(() => toast.classList.add('hidden'), 4000);
+        }
+
+        function newChat() {
+            chatWindow.innerHTML = '';
+            threadId = `gv_user_${Math.random().toString(36).substr(2, 9)}`;
+            localStorage.setItem('gv_thread_id', threadId);
+            location.reload();
+        }
+    </script>
+</body>
+
+</html>

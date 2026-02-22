@@ -1,0 +1,430 @@
+{% extends "layouts/workspace.html" %}
+
+{% block breadcrumb %}
+<span class="current">Planejamento Estratégico de Valor</span>
+{% endblock %}
+
+{% block navbar_actions %}
+<div style="display: flex; align-items: center; gap: 0.75rem;">
+    <button onclick="openNewPlanModal()" class="btn btn-primary btn-sm">
+        <i class="fa-solid fa-plus"></i> Novo Plano
+    </button>
+    <div class="user-avatar-mini" title="Meu Perfil">MV</div>
+</div>
+{% endblock %}
+
+{% block workspace_content %}
+<div class="planning-container fade-in" style="padding: 2rem 0;">
+    <div class="workspace-header" style="margin-bottom: 3rem;">
+        <h1 class="text-h1">🎯 Planejamento Estratégico</h1>
+        <p class="text-subtitle">Gerencie seus planos de expansão, implantação e crescimento de valor.</p>
+    </div>
+
+    <div style="display: grid; grid-template-columns: repeat(auto-fill, minmax(360px, 1fr)); gap: 2rem;">
+        {% for plan in plans %}
+        <div class="planning-card" style="position: relative; display: flex; flex-direction: column;">
+
+            <div style="position: absolute; top: 1.5rem; right: 1.5rem; z-index: 10;">
+                <div class="dropdown-actions">
+                    <button class="btn-icon" onclick="togglePlanActions(event, {{ plan.id }})">
+                        <i class="fa-solid fa-ellipsis-vertical"></i>
+                    </button>
+                    <div id="actions-{{ plan.id }}" class="dropdown-menu-actions">
+                        <button class="btn-edit-plan" data-id="{{ plan.id }}" data-title="{{ plan.title }}"
+                            data-desc="{{ plan.description or '' }}" onclick="handleEditClick(this, event)">
+                            <i class="fa-solid fa-pen-to-square"></i> Editar
+                        </button>
+                        <button class="delete" data-id="{{ plan.id }}" data-title="{{ plan.title }}"
+                            onclick="handleDeleteClick(this, event)">
+                            <i class="fa-solid fa-trash"></i> Excluir
+                        </button>
+                    </div>
+                </div>
+            </div>
+
+            <div style="cursor: pointer; flex-grow: 1;"
+                onclick="window.location.href='{{ url_for('plans.growth_dashboard', plan_id=plan.id) if plan.mode == 'growth' else url_for('plans.implantation_dashboard', plan_id=plan.id) }}'">
+
+                <div
+                    style="display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 1.5rem; padding-right: 2rem;">
+                    <span class="plan-badge plan-badge-{{ plan.mode }}">
+                        {{ "Crescimento" if plan.mode == 'growth' else "Implantação" }}
+                    </span>
+                    <span
+                        style="font-size: 11px; color: var(--text-tertiary); font-weight: 700; text-transform: uppercase;">
+                        Criado em {{ plan.created_at.strftime('%d/%m/%Y') }}
+                    </span>
+                </div>
+
+                <h3 style="font-size: 1.25rem; font-weight: 700; color: var(--text-primary); margin-bottom: 0.75rem;">{{
+                    plan.title }}</h3>
+                <p style="color: var(--text-secondary); font-size: 0.9rem; line-height: 1.6; margin-bottom: 2rem;">
+                    {{ plan.description or "Sem descrição fornecida para este planejamento estratégico." }}
+                </p>
+
+                <div
+                    style="background: var(--background); border-radius: 12px; padding: 1.25rem; margin-bottom: 1.5rem;">
+                    <div
+                        style="display: flex; justify-content: space-between; font-size: 11px; margin-bottom: 8px; font-weight: 700; color: var(--text-tertiary); text-transform: uppercase;">
+                        <span>Progresso do Plano</span>
+                        <span>{{ plan.progress }}%</span>
+                    </div>
+                    <div style="height: 6px; background: var(--border); border-radius: 3px; overflow: hidden;">
+                        <div
+                            style="width: {{ plan.progress }}%; height: 100%; background: var(--special-gradient); transition: width 0.5s ease;">
+                        </div>
+                    </div>
+                </div>
+
+                <div
+                    style="display: flex; align-items: center; gap: 8px; color: var(--primary); font-weight: 700; font-size: 0.85rem; border-top: 1px solid var(--border); padding-top: 1.25rem;">
+                    Acessar Planejamento <i class="fa-solid fa-arrow-right-long"></i>
+                </div>
+            </div>
+        </div>
+        {% else %}
+        <div
+            style="grid-column: 1 / -1; padding: 5rem; text-align: center; background: var(--surface); border-radius: 2rem; border: 2px dashed var(--border);">
+            <div style="font-size: 4rem; color: var(--border); margin-bottom: 1.5rem;">
+                <i class="fa-solid fa-folder-open"></i>
+            </div>
+            <h2 class="text-h1" style="font-size: 1.5rem;">Pronto para sua nova jornada?</h2>
+            <p class="text-secondary" style="margin-bottom: 2rem;">Você ainda não possui nenhum planejamento estratégico
+                ativo.</p>
+            <button onclick="openNewPlanModal()" class="btn btn-primary">
+                Criar Meu Primeiro Plano
+            </button>
+        </div>
+        {% endfor %}
+    </div>
+</div>
+
+<!-- Modal Novo Plano -->
+<div id="newPlanModal" class="modal-backdrop">
+    <div class="modal-content" style="max-width: 500px;">
+        <header class="modal-header">
+            <h2 class="text-h3">Novo Planejamento</h2>
+            <button type="button" class="modal-close" onclick="closeNewPlanModal()">×</button>
+        </header>
+        <form id="newPlanForm" class="modal-body">
+            <div class="form-group">
+                <label class="form-label">Título do Plano</label>
+                <input type="text" id="planTitle" class="form-control" required
+                    placeholder="Ex: Planejamento 2026 - Escala Nordeste">
+            </div>
+
+            <div class="form-group">
+                <label class="form-label">Perfil do Planejamento</label>
+                <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1rem;">
+                    <label style="cursor: pointer;">
+                        <input type="radio" name="planMode" value="growth" checked style="display: none;">
+                        <div class="mode-opt">
+                            <i class="fa-solid fa-chart-line"
+                                style="font-size: 1.25rem; margin-bottom: 0.5rem;"></i><br>
+                            <strong>Crescimento</strong>
+                            <p style="font-size: 0.7rem; margin-top: 4px; color: var(--text-tertiary);">Focado em OKRs e
+                                Escala</p>
+                        </div>
+                    </label>
+                    <label style="cursor: pointer;">
+                        <input type="radio" name="planMode" value="implantation" style="display: none;">
+                        <div class="mode-opt">
+                            <i class="fa-solid fa-gears" style="font-size: 1.25rem; margin-bottom: 0.5rem;"></i><br>
+                            <strong>Implantação</strong>
+                            <p style="font-size: 0.7rem; margin-top: 4px; color: var(--text-tertiary);">Focado em
+                                Estrutura</p>
+                        </div>
+                    </label>
+                </div>
+            </div>
+
+            <div class="form-group">
+                <label class="form-label">Descrição (Opcional)</label>
+                <textarea id="planDesc" class="form-control" style="min-height: 80px;"
+                    placeholder="Breve resumo dos objetivos..."></textarea>
+            </div>
+
+            <footer class="modal-footer">
+                <button type="button" class="btn btn-secondary" onclick="closeNewPlanModal()">Cancelar</button>
+                <button type="submit" class="btn btn-primary">Criar Planejamento</button>
+            </footer>
+        </form>
+    </div>
+</div>
+
+<!-- Modal Editar Plano -->
+<div id="editPlanModal" class="modal-backdrop">
+    <div class="modal-content" style="max-width: 500px;">
+        <header class="modal-header">
+            <h2 class="text-h3">Editar Planejamento</h2>
+            <button type="button" class="modal-close" onclick="closeEditPlanModal()">×</button>
+        </header>
+        <form id="editPlanForm" class="modal-body">
+            <input type="hidden" id="editPlanId">
+            <div class="form-group">
+                <label class="form-label">Título do Plano</label>
+                <input type="text" id="editPlanTitle" class="form-control" required>
+            </div>
+
+            <div class="form-group">
+                <label class="form-label">Descrição</label>
+                <textarea id="editPlanDesc" class="form-control" style="min-height: 80px;"></textarea>
+            </div>
+
+            <footer class="modal-footer">
+                <button type="button" class="btn btn-secondary" onclick="closeEditPlanModal()">Cancelar</button>
+                <button type="submit" class="btn btn-primary">Salvar Alterações</button>
+            </footer>
+        </form>
+    </div>
+</div>
+
+<style>
+    .plan-badge {
+        display: inline-flex;
+        align-items: center;
+        padding: 4px 12px;
+        border-radius: 999px;
+        font-size: 11px;
+        font-weight: 700;
+        text-transform: uppercase;
+        letter-spacing: 0.05em;
+    }
+
+    .plan-badge-growth {
+        background: #e0f2fe;
+        color: #0369a1;
+        border: 1px solid #bae6fd;
+    }
+
+    .plan-badge-implantation {
+        background: #fefce8;
+        color: #a16207;
+        border: 1px solid #fef08a;
+    }
+
+    .planning-card {
+        background: var(--surface);
+        border-radius: var(--card-radius);
+        border: 1px solid var(--border);
+        box-shadow: var(--shadow-sm);
+        padding: 2rem;
+        transition: var(--transition);
+        height: 100%;
+    }
+
+    .planning-card:hover {
+        transform: translateY(-8px);
+        box-shadow: var(--shadow-lg);
+        border-color: var(--primary-light);
+    }
+
+    .mode-opt {
+        border: 2px solid var(--border);
+        border-radius: 16px;
+        padding: 1.5rem;
+        text-align: center;
+        transition: var(--transition);
+        color: var(--text-tertiary);
+    }
+
+    input[type="radio"]:checked+.mode-opt {
+        border-color: var(--primary);
+        background: var(--primary-light);
+        color: var(--primary);
+    }
+
+
+    .dropdown-actions {
+        position: relative;
+    }
+
+    .btn-icon {
+        background: transparent;
+        border: none;
+        color: var(--text-tertiary);
+        cursor: pointer;
+        padding: 5px 10px;
+        border-radius: 4px;
+        transition: var(--transition);
+    }
+
+    .btn-icon:hover {
+        background: var(--background);
+        color: var(--text-primary);
+    }
+
+    .dropdown-menu-actions {
+        position: absolute;
+        top: 100%;
+        right: 0;
+        background: var(--surface);
+        border: 1px solid var(--border);
+        border-radius: 8px;
+        box-shadow: var(--shadow-md);
+        display: none;
+        z-index: 100;
+        min-width: 150px;
+        padding: 0.5rem 0;
+    }
+
+    .dropdown-menu-actions.show {
+        display: block;
+    }
+
+    .dropdown-menu-actions button {
+        width: 100%;
+        text-align: left;
+        padding: 0.6rem 1rem;
+        background: none;
+        border: none;
+        font-size: 0.85rem;
+        color: var(--text-primary);
+        cursor: pointer;
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        transition: var(--transition);
+    }
+
+    .dropdown-menu-actions button:hover {
+        background: var(--background);
+        color: var(--primary);
+    }
+
+    .dropdown-menu-actions button.delete:hover {
+        color: var(--danger, #ef4444);
+        background: #fef2f2;
+    }
+</style>
+
+{% block scripts %}
+<script>
+    function openNewPlanModal() {
+        document.getElementById('newPlanModal').classList.add('open');
+    }
+    function closeNewPlanModal() {
+        document.getElementById('newPlanModal').classList.remove('open');
+        document.getElementById('newPlanForm').reset();
+    }
+
+    function togglePlanActions(event, planId) {
+        event.stopPropagation();
+        const menus = document.querySelectorAll('.dropdown-menu-actions');
+        menus.forEach(m => {
+            if (m.id !== `actions-${planId}`) m.classList.remove('show');
+        });
+        document.getElementById(`actions-${planId}`).classList.toggle('show');
+    }
+
+    // Close menus on click outside
+    window.addEventListener('click', () => {
+        document.querySelectorAll('.dropdown-menu-actions').forEach(m => m.classList.remove('show'));
+    });
+
+    function handleEditClick(btn, event) {
+        event.stopPropagation();
+        const id = btn.getAttribute('data-id');
+        const title = btn.getAttribute('data-title');
+        const desc = btn.getAttribute('data-desc');
+        openEditPlanModal(id, title, desc);
+    }
+
+    function handleDeleteClick(btn, event) {
+        event.stopPropagation();
+        const id = btn.getAttribute('data-id');
+        const title = btn.getAttribute('data-title');
+        confirmDeletePlan(id, title);
+    }
+
+    function openEditPlanModal(id, title, description) {
+        document.getElementById('editPlanId').value = id;
+        document.getElementById('editPlanTitle').value = title;
+        document.getElementById('editPlanDesc').value = description;
+        document.getElementById('editPlanModal').classList.add('open');
+    }
+
+    function closeEditPlanModal() {
+        document.getElementById('editPlanModal').classList.remove('open');
+    }
+
+    async function confirmDeletePlan(id, title) {
+        if (confirm(`Tem certeza que deseja excluir o planejamento "${title}"? Esta ação é irreversível e apagará todos os dados associados.`)) {
+            try {
+                const response = await fetch(`/plans/${id}/delete`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' }
+                });
+
+                if (response.ok) {
+                    window.location.reload();
+                } else {
+                    const err = await response.json();
+                    alert('Erro ao excluir: ' + (err.error || 'Erro desconhecido'));
+                }
+            } catch (error) {
+                console.error('Error:', error);
+            }
+        }
+    }
+
+    document.getElementById('editPlanForm').addEventListener('submit', async (e) => {
+        e.preventDefault();
+        const id = document.getElementById('editPlanId').value;
+        const data = {
+            title: document.getElementById('editPlanTitle').value,
+            description: document.getElementById('editPlanDesc').value
+        };
+
+        try {
+            const response = await fetch(`/plans/${id}/update`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(data)
+            });
+
+            if (response.ok) {
+                window.location.reload();
+            } else {
+                const err = await response.json();
+                alert('Erro ao atualizar: ' + (err.error || 'Erro desconhecido'));
+            }
+        } catch (error) {
+            console.error('Error:', error);
+        }
+    });
+
+    document.getElementById('newPlanForm').addEventListener('submit', async (e) => {
+        e.preventDefault();
+        const data = {
+            company_id: window.companyId,
+            title: document.getElementById('planTitle').value,
+            mode: document.querySelector('input[name="planMode"]:checked').value,
+            description: document.getElementById('planDesc').value
+        };
+
+        try {
+            const response = await fetch('/api/plans', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(data)
+            });
+
+            if (response.ok) {
+                const plan = await response.json();
+                if (plan.mode === 'growth') {
+                    window.location.href = `/plans/${plan.id}/growth`;
+                } else {
+                    window.location.href = `/plans/${plan.id}/implantation`;
+                }
+            } else {
+                const err = await response.json();
+                alert('Erro ao criar: ' + JSON.stringify(err.errors || err.error));
+            }
+        } catch (error) {
+            console.error('Error:', error);
+        }
+    });
+</script>
+{% endblock %}
+{% endblock %}

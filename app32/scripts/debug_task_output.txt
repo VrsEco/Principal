@@ -1,0 +1,21 @@
+﻿python : Traceback (most recent 
+call last):
+No linha:1 caractere:1
++ python scripts\debug_task_plan
+ejamento.py *>&1 | Out-File 
+-FilePath s ...
++ ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+~~~~~~~~~~~~~~~~
+    + CategoryInfo          : N 
+   otSpecified: (Traceback (mo  
+  st recent call last)::Strin   
+ g) [], RemoteException
+    + FullyQualifiedErrorId : N 
+   ativeCommandError
+ 
+  File "C:\GestaoVersus\app32\sc
+ripts\debug_task_planejamento.py
+", line 5, in <module>
+    from app import app
+ModuleNotFoundError: No module 
+named 'app'
