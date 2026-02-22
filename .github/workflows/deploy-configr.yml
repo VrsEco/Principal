@@ -47,25 +47,34 @@ jobs:
           script: |
             cd /home/app2/public_html
             
-            # Atualizar código
+            # Atualizar código (Monorepo)
             git fetch origin main
             git reset --hard origin/main
             
-            # Ativar venv e atualizar
-            if [ -d "venv" ]; then
+            # Entrar na pasta do APP de produção atual (app32)
+            cd app32
+            
+            # Ativar venv e atualizar (Pode estar no root ou dentro do app)
+            if [ -d "../venv" ]; then
+              source ../venv/bin/activate
+            elif [ -d "../.venv" ]; then
+              source ../.venv/bin/activate
+            elif [ -d "venv" ]; then
               source venv/bin/activate
-            elif [ -d ".venv" ]; then
-              source .venv/bin/activate
             fi
             
             pip install -r requirements.txt
             
-            # Migrações
-            export FLASK_APP=app_pev.py
-            flask db upgrade
+            # Migrações (usando app.py como principal)
+            export FLASK_APP=app.py
+            # flask db upgrade  # Descomente quando o Alembic estiver configurado no app32
             
             # Restart da aplicação (Apache/Passenger no Configr)
+            # Geralmente o tmp/restart.txt fica na raiz de cada app no Passenger
             mkdir -p tmp
             touch tmp/restart.txt
             
-            echo "✅ Deploy concluído com sucesso em $(date)"
+            # Se o servidor usa um passenger_wsgi.py na raiz de public_html, 
+            # você precisará garantir que ele aponte para app32.app:app
+            
+            echo "✅ Deploy do APP32 concluído com sucesso em $(date)"
