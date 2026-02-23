@@ -10,6 +10,7 @@ python-dotenv
 requests
 
 # Database (PostgreSQL)
+# psycopg2-binary é para dev/CI; em produção usamos psycopg2 compilado (instalado via pip no servidor)
 psycopg2-binary
 sqlalchemy
 alembic
@@ -28,6 +29,12 @@ numpy<2.0.0
 
 # Scheduling & Background Tasks
 apscheduler
+
+# Telegram Bot Integration
+pyTelegramBotAPI
+
+# PDF Generation
+reportlab
 
 # Testing
 pytest
