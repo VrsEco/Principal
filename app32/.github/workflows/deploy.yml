@@ -1,0 +1,29 @@
+name: Deploy to Production
+
+on:
+  push:
+    branches:
+      - main
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v3
+
+      - name: Deploy via SSH
+        uses: appleboy/ssh-action@master
+        with:
+          host: ${{ secrets.SERVER_IP }}
+          username: ${{ secrets.SERVER_USER }}
+          key: ${{ secrets.SSH_PRIVATE_KEY }}
+          port: ${{ secrets.SERVER_PORT }}
+          script: |
+            cd ${{ secrets.PROJECT_PATH }}
+            git pull origin main
+            # Se houver migrations ou dependencias a atualizar:
+            # ../virtualenv/bin/pip install -r requirements.txt
+            # ../virtualenv/bin/python manage.py db upgrade
+            # Reiniciar o serviço (Gunicorn/Nginx se necessário)
+            # pkill -HUP gunicorn (se estiver rodando via gunicorn)

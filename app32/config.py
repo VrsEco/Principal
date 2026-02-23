@@ -18,7 +18,7 @@ class Config:
     _env_database_url = normalize_database_url(os.environ.get("DATABASE_URL"))
     SQLALCHEMY_DATABASE_URI = (
         _env_database_url
-        or f"postgresql://postgres:{_default_password}@localhost:5432/bd_app_versus"
+        or f"postgresql://postgres:{_default_password}@localhost:5432/bdversusv2"
     )
     SQLALCHEMY_TRACK_MODIFICATIONS = False
 
@@ -91,7 +91,7 @@ class DevelopmentConfig(Config):
     _dev_database_url = normalize_database_url(os.environ.get("DEV_DATABASE_URL"))
     SQLALCHEMY_DATABASE_URI = (
         _dev_database_url
-        or f"postgresql://postgres:{_dev_password}@localhost:5432/bd_app_versus"
+        or f"postgresql://postgres:{_dev_password}@localhost:5432/bdversusv2"
     )
 
 
@@ -101,7 +101,7 @@ class ProductionConfig(Config):
     DEBUG = False
     _prod_database_url = normalize_database_url(os.environ.get("DATABASE_URL"))
     SQLALCHEMY_DATABASE_URI = (
-        _prod_database_url or "postgresql://user:password@localhost/bd_app_versus"
+        _prod_database_url or "postgresql://user:password@localhost/bdversusv2"
     )
 
 
