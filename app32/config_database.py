@@ -51,7 +51,7 @@ class DatabaseConfig:
             return {
                 "host": host,
                 "port": int(os.environ.get("POSTGRES_PORT", 5432)),
-                "database": os.environ.get("POSTGRES_DB", "bd_app_versus"),
+                "database": os.environ.get("POSTGRES_DB", "bdversusv2"),
                 "user": os.environ.get("POSTGRES_USER", "mff2000"),
                 # Nunca mantenha senhas em código: exigir variável de ambiente ou emitir erro claro
                 "password": os.environ.get("POSTGRES_PASSWORD") or "",
