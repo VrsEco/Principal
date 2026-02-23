@@ -104,11 +104,12 @@ def create_app(config_name=None):
         from flask_login import current_user
 
         # Public endpoints that don't require authentication
-        public_endpoints = ['auth.login', 'static', 'dev.seed_demo', 'dev.debug_routes']
+        public_endpoints = ['auth.login', 'static', 'dev.seed_demo', 'dev.debug_routes', 'telegram.telegram_webhook']
         
         # 1. Check if user is authenticated
         if not current_user.is_authenticated:
-            if request.endpoint and request.endpoint not in public_endpoints:
+            # Além dos public_endpoints, libere também prefixos abertos (ex: webhooks externos)
+            if request.endpoint and request.endpoint not in public_endpoints and not request.path.startswith('/webhook/'):
                 # If it's an API call, return 401
                 if '/api/' in request.path:
                     return jsonify({"error": "Authentication required"}), 401
@@ -134,6 +135,10 @@ def create_app(config_name=None):
     # Inicializa o Squad de Engenharia em Background (Self-Healing)
     from services.engineering_service import engineering_service
     engineering_service.start_worker(app)
+
+    # Inicializa o Scheduler (Rotinas e Proatividade Sapiens Fase 4)
+    from services.scheduler_service import initialize_scheduler
+    initialize_scheduler(app)
 
     return app
 
@@ -278,7 +283,8 @@ def register_blueprints(app):
     # from api.routes.ai_board import ai_board_bp
     from api.routes.onboarding import onboarding_bp
     from api.routes.plans import plans_bp
-
+    from api.routes.users import usuarios_bp
+ 
     app.register_blueprint(main_bp)
     app.register_blueprint(auth_bp)
     app.register_blueprint(companies_bp)
@@ -298,7 +304,11 @@ def register_blueprints(app):
     # app.register_blueprint(ai_board_bp)
     app.register_blueprint(onboarding_bp)
     app.register_blueprint(plans_bp)
+    app.register_blueprint(usuarios_bp)
 
+    # Webhook Telegram (Sapiens Fase 3)
+    from api.webhooks.telegram_webhook import telegram_bp
+    app.register_blueprint(telegram_bp, url_prefix='/webhook')
 
 
 

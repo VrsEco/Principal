@@ -1,0 +1,739 @@
+{% extends "layouts/app.html" %}
+
+{% block page_title %}Sapiens - IA Versus{% endblock %}
+
+{% block head %}
+{{ super() }}
+<script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
+<style>
+    :root {
+        --chat-sidebar-width: 320px;
+        --chat-bg: #0b141a;
+        --chat-header-bg: #202c33;
+        --chat-sidebar-bg: #111b21;
+        --chat-bubble-ai: #202c33;
+        --chat-bubble-user: #005c4b;
+        --chat-footer-bg: #202c33;
+        --chat-text-primary: #e9edef;
+        --chat-text-secondary: #8696a0;
+        --chat-accent: #00a884;
+    }
+
+    .sapiens-layout {
+        display: flex;
+        height: calc(100vh - 84px);
+        /* Altura descontando o header do app */
+        margin: 0;
+        background: var(--chat-bg);
+        color: var(--chat-text-primary);
+        font-family: 'Poppins', sans-serif;
+        overflow: hidden;
+    }
+
+    /* BARRA LATERAL (CONTATOS) */
+    .chat-sidebar {
+        width: var(--chat-sidebar-width);
+        min-width: var(--chat-sidebar-width);
+        background: var(--chat-sidebar-bg);
+        border-right: 1px solid rgba(255, 255, 255, 0.05);
+        display: flex;
+        flex-direction: column;
+        z-index: 10;
+    }
+
+    .sidebar-header {
+        padding: 1.5rem;
+        background: var(--chat-header-bg);
+        display: flex;
+        align-items: center;
+        gap: 1rem;
+    }
+
+    .sidebar-header h1 {
+        font-size: 1.25rem;
+        font-weight: 700;
+        margin: 0;
+        color: var(--chat-accent);
+    }
+
+    .contacts-list {
+        flex: 1;
+        overflow-y: auto;
+        padding: 0.5rem 0;
+    }
+
+    .contact-item {
+        display: flex;
+        align-items: center;
+        gap: 1rem;
+        padding: 1rem 1.5rem;
+        cursor: pointer;
+        transition: all 0.2s;
+        border-bottom: 1px solid rgba(134, 150, 160, 0.08);
+    }
+
+    .contact-item:hover {
+        background: rgba(255, 255, 255, 0.05);
+    }
+
+    .contact-item.active {
+        background: rgba(255, 255, 255, 0.1);
+    }
+
+    .contact-avatar {
+        width: 48px;
+        height: 48px;
+        border-radius: 50%;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 1.5rem;
+        background: var(--chat-header-bg);
+        border: 2px solid rgba(255, 255, 255, 0.1);
+    }
+
+    .contact-item.active .contact-avatar {
+        border-color: var(--chat-accent);
+    }
+
+    .contact-info {
+        flex: 1;
+        overflow: hidden;
+    }
+
+    .contact-name {
+        font-weight: 600;
+        font-size: 0.95rem;
+        margin-bottom: 2px;
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+    }
+
+    .contact-last-msg {
+        font-size: 0.8rem;
+        color: var(--chat-text-secondary);
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
+    }
+
+    .status-dot {
+        width: 8px;
+        height: 8px;
+        background: var(--chat-accent);
+        border-radius: 50%;
+        display: inline-block;
+    }
+
+    /* ÁREA DE CHAT (DIREITA) */
+    .chat-main {
+        flex: 1;
+        display: flex;
+        flex-direction: column;
+        background-image: url('https://user-images.githubusercontent.com/15075759/28719144-86dc0f70-73b1-11e7-911d-60d70fcded21.png');
+        /* WhatsApp pattern */
+        background-size: contain;
+        position: relative;
+    }
+
+    .chat-header {
+        height: 64px;
+        background: var(--chat-header-bg);
+        padding: 0 1.5rem;
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        z-index: 5;
+    }
+
+    .current-contact {
+        display: flex;
+        align-items: center;
+        gap: 0.75rem;
+    }
+
+    .current-avatar {
+        width: 40px;
+        height: 40px;
+        border-radius: 50%;
+        background: var(--chat-bg);
+        display: flex;
+        align-items: center;
+        justify-content: center;
+    }
+
+    .current-info h3 {
+        font-size: 1rem;
+        margin: 0;
+        font-weight: 600;
+    }
+
+    .current-info p {
+        font-size: 0.75rem;
+        margin: 0;
+        color: var(--chat-accent);
+    }
+
+    .chat-messages {
+        flex: 1;
+        overflow-y: auto;
+        padding: 2rem 5%;
+        display: flex;
+        flex-direction: column;
+        gap: 0.5rem;
+        scroll-behavior: smooth;
+    }
+
+    /* MENSAGENS */
+    .msg-row {
+        display: flex;
+        width: 100%;
+        margin-bottom: 4px;
+    }
+
+    .msg-row.user {
+        justify-content: flex-end;
+    }
+
+    .msg-bubble {
+        padding: 8px 12px;
+        border-radius: 8px;
+        max-width: 85%;
+        font-size: 0.9rem;
+        line-height: 1.5;
+        position: relative;
+        box-shadow: 0 1px 0.5px rgba(0, 0, 0, 0.13);
+    }
+
+    .user .msg-bubble {
+        background: var(--chat-bubble-user);
+        border-top-right-radius: 0;
+    }
+
+    .assistant .msg-bubble {
+        background: var(--chat-bubble-ai);
+        border-top-left-radius: 0;
+    }
+
+    .msg-meta {
+        font-size: 0.65rem;
+        color: rgba(255, 255, 255, 0.5);
+        text-align: right;
+        margin-top: 4px;
+        display: flex;
+        align-items: center;
+        justify-content: flex-end;
+        gap: 4px;
+    }
+
+    .msg-author {
+        font-size: 0.75rem;
+        font-weight: 700;
+        color: var(--chat-accent);
+        margin-bottom: 4px;
+    }
+
+    /* INPUT */
+    .chat-footer {
+        padding: 10px 1.5rem;
+        background: var(--chat-footer-bg);
+        display: flex;
+        align-items: center;
+        gap: 1rem;
+    }
+
+    .input-box {
+        flex: 1;
+        background: #2a3942;
+        border-radius: 8px;
+        padding: 9px 12px;
+        display: flex;
+        align-items: center;
+    }
+
+    .input-box textarea {
+        flex: 1;
+        background: transparent;
+        border: none;
+        color: white;
+        outline: none;
+        resize: none;
+        font-size: 0.95rem;
+        max-height: 100px;
+    }
+
+    .footer-btn {
+        background: transparent;
+        border: none;
+        color: var(--chat-text-secondary);
+        cursor: pointer;
+        font-size: 1.25rem;
+        transition: color 0.2s;
+    }
+
+    .footer-btn:hover {
+        color: white;
+    }
+
+    .send-btn {
+        color: var(--chat-accent) !important;
+    }
+
+    /* ALERTAS TÉCNICOS */
+    .tech-alert-toast {
+        position: absolute;
+        top: 80px;
+        left: 50%;
+        transform: translateX(-50%);
+        background: #1e293b;
+        border: 1px solid #38bdf8;
+        border-radius: 12px;
+        padding: 1rem;
+        display: flex;
+        align-items: center;
+        gap: 1rem;
+        box-shadow: 0 20px 50px rgba(0, 0, 0, 0.5);
+        z-index: 100;
+        width: 90%;
+        max-width: 600px;
+        animation: slideDown 0.3s ease-out;
+    }
+
+    @keyframes slideDown {
+        from {
+            transform: translate(-50%, -100%);
+            opacity: 0;
+        }
+
+        to {
+            transform: translate(-50%, 0);
+            opacity: 1;
+        }
+    }
+
+    /* Estilização marked (Markdown) */
+    .msg-bubble h3 {
+        font-size: 1rem;
+        margin: 0.5rem 0;
+        color: #ffca28;
+    }
+
+    .msg-bubble ul {
+        padding-left: 1.2rem;
+        margin: 0.5rem 0;
+    }
+
+    .msg-bubble code {
+        background: rgba(255, 255, 255, 0.1);
+        padding: 2px 4px;
+        border-radius: 4px;
+        font-family: monospace;
+    }
+
+    .msg-bubble p {
+        margin-bottom: 0.5rem;
+    }
+
+    .msg-bubble p:last-child {
+        margin-bottom: 0;
+    }
+
+    /* MOBILE RESPONSIVE */
+    @media (max-width: 768px) {
+        .chat-sidebar {
+            position: absolute;
+            left: 0;
+            top: 0;
+            bottom: 0;
+            width: 100%;
+            transition: transform 0.3s ease;
+        }
+
+        .chat-sidebar.hidden {
+            transform: translateX(-100%);
+        }
+
+        .chat-main {
+            width: 100%;
+        }
+
+        .back-btn {
+            display: block !important;
+        }
+    }
+
+    .back-btn {
+        display: none;
+        margin-right: 1rem;
+        font-size: 1.25rem;
+        cursor: pointer;
+    }
+
+    /* Scrollbar minimalista */
+    ::-webkit-scrollbar {
+        width: 6px;
+    }
+
+    ::-webkit-scrollbar-track {
+        background: transparent;
+    }
+
+    ::-webkit-scrollbar-thumb {
+        background: rgba(255, 255, 255, 0.1);
+        border-radius: 10px;
+    }
+
+    ::-webkit-scrollbar-thumb:hover {
+        background: rgba(255, 255, 255, 0.2);
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="sapiens-layout">
+    <!-- BARRA LATERAL -->
+    <aside class="chat-sidebar" id="sidebar">
+        <div class="sidebar-header">
+            <h1>Sapiens</h1>
+        </div>
+
+        <div class="contacts-list">
+            <!-- SAPiens Principal -->
+            <div class="contact-item active" onclick="selectContact('sapiens')">
+                <div class="contact-avatar">🧭</div>
+                <div class="contact-info">
+                    <div class="contact-name">
+                        <span>Sapiens</span>
+                        <span class="status-dot"></span>
+                    </div>
+                    <div class="contact-last-msg">Líder Supervisor & Especialistas</div>
+                </div>
+            </div>
+
+            <!-- Squad de Engenharia -->
+            <div class="contact-item" onclick="selectContact('engineering')">
+                <div class="contact-avatar">🛠️</div>
+                <div class="contact-info">
+                    <div class="contact-name">
+                        <span>Squad Engenharia</span>
+                        <span class="status-dot" style="background: #38bdf8;"></span>
+                    </div>
+                    <div class="contact-last-msg">@Arquitetos & @QA Automation</div>
+                </div>
+            </div>
+        </div>
+    </aside>
+
+    <!-- ÁREA DE CHAT -->
+    <main class="chat-main">
+        <!-- HEADER DO CHAT -->
+        <header class="chat-header">
+            <div class="current-contact">
+                <div class="back-btn" onclick="toggleSidebar(true)"><i class="fas fa-arrow-left"></i></div>
+                <div class="current-avatar" id="activeAvatar">🧭</div>
+                <div class="current-info">
+                    <h3 id="activeName">Sapiens</h3>
+                    <p id="activeStatus">Online</p>
+                </div>
+            </div>
+            <div class="chat-actions">
+                <button class="footer-btn" title="Limpar conversa" onclick="clearLocalChat()"><i
+                        class="fas fa-trash-alt"></i></button>
+            </div>
+        </header>
+
+        <!-- ALERTA TÉCNICO FLUTUANTE (Para Engenharia) -->
+        <div id="techAlert" style="display: none;" class="tech-alert-toast">
+            <div style="font-size: 24px;">🔧</div>
+            <div style="flex: 1;">
+                <strong id="techAlertTitle" style="display: block; color: #38bdf8; font-size: 0.9rem;">Reparo
+                    Pendente</strong>
+                <p id="techAlertMsg" style="margin: 0; font-size: 0.8rem; color: var(--chat-text-secondary);"></p>
+            </div>
+            <div style="display: flex; gap: 0.5rem;">
+                <button id="btnApprove" onclick="handleAction('approve')"
+                    style="background: #10b981; color: white; border: none; padding: 6px 12px; border-radius: 6px; font-size: 0.75rem; font-weight: 700; cursor: pointer;">Aprovar</button>
+                <button onclick="document.getElementById('techAlert').style.display='none'"
+                    style="background: transparent; border: none; color: white; cursor: pointer;"><i
+                        class="fas fa-times"></i></button>
+            </div>
+        </div>
+
+        <!-- MENSAGENS -->
+        <div class="chat-messages" id="chatMessages">
+            <!-- Conteúdo dinâmico via JS -->
+        </div>
+
+        <!-- FOOTER / INPUT -->
+        <footer class="chat-footer">
+            <button class="footer-btn"><i class="far fa-smile"></i></button>
+            <button class="footer-btn"><i class="fas fa-paperclip"></i></button>
+            <div class="input-box">
+                <textarea id="userInput" placeholder="Mensagem" rows="1"></textarea>
+            </div>
+            <button id="sendBtn" class="footer-btn send-btn" onclick="sendMessage()"><i
+                    class="fas fa-paper-plane"></i></button>
+        </footer>
+    </main>
+</div>
+{% endblock %}
+
+{% block scripts %}
+{{ super() }}
+<script>
+    const chatMessages = document.getElementById('chatMessages');
+    const userInput = document.getElementById('userInput');
+    const sendBtn = document.getElementById('sendBtn');
+
+    let activeContact = 'sapiens';
+    let history = [];
+    let currentActionId = null;
+
+    // Configurando o Marked
+    marked.setOptions({
+        gfm: true,
+        breaks: true
+    });
+
+    async function selectContact(id) {
+        activeContact = id;
+
+        // UI Updates
+        document.querySelectorAll('.contact-item').forEach(item => {
+            item.classList.remove('active');
+            if (item.innerText.includes(id === 'sapiens' ? 'Sapiens' : 'Squad')) item.classList.add('active');
+        });
+
+        const names = { sapiens: 'Sapiens', engineering: 'Squad Engenharia' };
+        const avatars = { sapiens: '🧭', engineering: '🛠️' };
+        const status = { sapiens: 'Líder Supervisor & Especialistas', engineering: 'Auditores de Código & Self-Healing' };
+
+        document.getElementById('activeName').innerText = names[id];
+        document.getElementById('activeAvatar').innerText = avatars[id];
+        document.getElementById('activeStatus').innerText = status[id];
+
+        if (window.innerWidth < 768) toggleSidebar(false);
+
+        // Load specific history
+        await loadChatHistory();
+
+        if (id === 'engineering') checkActions();
+    }
+
+    function toggleSidebar(show) {
+        const sidebar = document.getElementById('sidebar');
+        if (show) sidebar.classList.remove('hidden');
+        else sidebar.classList.add('hidden');
+    }
+
+    async function loadChatHistory() {
+        chatMessages.innerHTML = '<div style="text-align:center; padding: 2rem; color: var(--chat-text-secondary);">Carregando histórico...</div>';
+
+        try {
+            const resp = await fetch(`/api/agents/history?contact=${activeContact}`);
+            const data = await resp.json();
+
+            chatMessages.innerHTML = '';
+            history = [];
+
+            if (data.success && data.history.length > 0) {
+                data.history.forEach(msg => {
+                    const role = msg.direction === 'inbound' ? 'user' : 'assistant';
+                    const agent = msg.metadata ? msg.metadata.agent : null;
+                    addMessageUI(role, msg.content, agent, msg.created_at);
+                    history.push({ role, content: msg.content });
+                });
+            } else {
+                addWelcomeMessage();
+            }
+        } catch (e) {
+            console.error('History Error:', e);
+            chatMessages.innerHTML = '';
+            addWelcomeMessage();
+        }
+    }
+
+    function addWelcomeMessage() {
+        const content = activeContact === 'sapiens'
+            ? "Olá! Eu sou o Sapiens, Agente de IA da Versus. Estou aqui com nosso time de especialistas para auxiliar na gestão do seu negócio. Como posso ajudar?"
+            : "Squad de Engenharia de Elite online. Relate falhas técnicas, Tracebacks ou peça melhorias no sistema.";
+        addMessageUI('assistant', content, activeContact === 'sapiens' ? 'Supervisor' : '@Arquitetos');
+    }
+
+    function addMessageUI(role, content, author = null, time = null) {
+        const row = document.createElement('div');
+        row.className = `msg-row ${role}`;
+
+        const timestamp = time ? new Date(time).toLocaleTimeString([], { hour: '2h-digit', minute: '2h-digit' }) : new Date().toLocaleTimeString([], { hour: '2h-digit', minute: '2h-digit' });
+
+        let authorLabel = '';
+        if (role === 'assistant') {
+            const name = author ? formatAgentName(author) : (activeContact === 'sapiens' ? 'Supervisor' : '@Arquitetos');
+            authorLabel = `<div class="msg-author">${name}</div>`;
+        }
+
+        row.innerHTML = `
+            <div class="msg-bubble">
+                ${authorLabel}
+                <div class="msg-text">${role === 'assistant' ? marked.parse(content) : escapeHtml(content)}</div>
+                <div class="msg-meta">
+                    ${timestamp}
+                    ${role === 'user' ? '<i class="fas fa-check-double"></i>' : ''}
+                </div>
+            </div>
+        `;
+
+        chatMessages.appendChild(row);
+        chatMessages.scrollTop = chatMessages.scrollHeight;
+    }
+
+    function formatAgentName(id) {
+        if (id.startsWith('@')) return id;
+        const names = {
+            'strategist': '🧠 Estrategista',
+            'business_architect': '🏗️ Negócios',
+            'operations': '⚡ Operações',
+            'finance': '💰 Financeiro',
+            'auditor': '🛡️ Auditor',
+            'sapiens': '🧭 Sapiens',
+            'end': 'Líder',
+            'engineering_squad': '@Arquitetos'
+        };
+        return names[id] || id;
+    }
+
+    function escapeHtml(text) {
+        const div = document.createElement('div');
+        div.textContent = text;
+        return div.innerHTML;
+    }
+
+    async function sendMessage() {
+        const text = userInput.value.trim();
+        if (!text) return;
+
+        userInput.value = '';
+        userInput.style.height = 'auto';
+        addMessageUI('user', text);
+
+        // Indicator
+        const typingId = 'typing-' + Date.now();
+        const typingRow = document.createElement('div');
+        typingRow.className = 'msg-row assistant';
+        typingRow.id = typingId;
+        typingRow.innerHTML = `<div class="msg-bubble"><div style="display:flex; gap:4px; padding: 4px 10px;">
+                                <div class="status-dot" style="animation: pulse 1s infinite"></div>
+                                <div class="status-dot" style="animation: pulse 1s infinite 0.3s"></div>
+                                <div class="status-dot" style="animation: pulse 1s infinite 0.6s"></div>
+                               </div></div>`;
+        chatMessages.appendChild(typingRow);
+        chatMessages.scrollTop = chatMessages.scrollHeight;
+
+        try {
+            const resp = await fetch('/api/agents/chat', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    message: text,
+                    contact: activeContact,
+                    history: history.slice(-5) // Send some context
+                })
+            });
+            const result = await resp.json();
+
+            document.getElementById(typingId).remove();
+
+            if (result.success) {
+                addMessageUI('assistant', result.response, result.agent);
+                history.push({ role: 'assistant', content: result.response });
+                if (activeContact === 'engineering') checkActions();
+            } else {
+                addMessageUI('assistant', '⚠️ Erro: ' + result.error);
+            }
+        } catch (e) {
+            document.getElementById(typingId).remove();
+            addMessageUI('assistant', '⚠️ Erro de conexão com o servidor.');
+        }
+    }
+
+    // CHECK FOR ENGINEERING ACTIONS
+    async function checkActions() {
+        if (activeContact !== 'engineering') return;
+        try {
+            const resp = await fetch('/api/agents/actions/pending');
+            const data = await resp.json();
+            if (data.success && data.actions.length > 0) {
+                const action = data.actions[0];
+                currentActionId = action.id;
+                document.getElementById('techAlert').style.display = 'flex';
+                document.getElementById('techAlertMsg').textContent = action.description;
+                if (action.status === 'awaiting_approval') {
+                    document.getElementById('techAlertTitle').textContent = "Proposta de Correção Pronta";
+                    document.getElementById('btnApprove').style.display = 'block';
+                } else {
+                    document.getElementById('techAlertTitle').textContent = "Analisando Falha Tecnológica...";
+                    document.getElementById('btnApprove').style.display = 'none';
+                }
+            } else {
+                document.getElementById('techAlert').style.display = 'none';
+            }
+        } catch (e) { }
+    }
+
+    async function handleAction(type) {
+        const resp = await fetch(`/api/agents/actions/${type}/${currentActionId}`, { method: 'POST' });
+        const data = await resp.json();
+        if (data.success) {
+            document.getElementById('techAlert').style.display = 'none';
+            addMessageUI('assistant', `✅ **AÇÃO EXECUTADA:** ${data.message}`, '@ARQUITETO');
+        }
+    }
+
+    function clearLocalChat() {
+        if (confirm('Deseja limpar as mensagens locais?')) {
+            loadChatHistory();
+        }
+    }
+
+    // Event Listeners
+    userInput.addEventListener('keydown', e => {
+        if (e.key === 'Enter' && !e.shiftKey) {
+            e.preventDefault();
+            sendMessage();
+        }
+    });
+
+    userInput.addEventListener('input', function () {
+        this.style.height = 'auto';
+        this.style.height = (this.scrollHeight) + 'px';
+    });
+
+    // Init
+    document.addEventListener('DOMContentLoaded', () => {
+        // Checar parâmetro contact na URL
+        const params = new URLSearchParams(window.location.search);
+        const contactParam = params.get('contact');
+        if (contactParam) selectContact(contactParam);
+        else selectContact('sapiens');
+
+        setInterval(checkActions, 30000);
+    });
+
+</script>
+<style>
+    @keyframes pulse {
+
+        0%,
+        100% {
+            opacity: 0.3;
+            transform: scale(0.8);
+        }
+
+        50% {
+            opacity: 1;
+            transform: scale(1.1);
+        }
+    }
+</style>
+{% endblock %}

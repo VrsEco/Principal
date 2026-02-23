@@ -147,13 +147,32 @@ def portal():
 
     return render_template('auth/portal.html', companies=companies, urgencies=activities, stats=stats)
 
-@auth_bp.route('/profile')
+@auth_bp.route('/profile', methods=['GET', 'POST'])
 @login_required
 def profile():
     """User profile page"""
-    # For now, redirect to portal as a placeholder
-    # TODO: Create a dedicated profile page
-    return redirect(url_for('auth.portal'))
+    from models import db
+    if request.method == 'POST':
+        data = request.get_json()
+        name = data.get('name')
+        whatsapp = data.get('whatsapp')
+        telegram = data.get('telegram')
+        
+        if not name:
+            return jsonify({"success": False, "message": "Nome é obrigatório"}), 400
+            
+        current_user.name = name
+        current_user.whatsapp = whatsapp
+        current_user.telegram = telegram
+        
+        try:
+            db.session.commit()
+            return jsonify({"success": True, "message": "Perfil atualizado com sucesso!"})
+        except Exception as e:
+            db.session.rollback()
+            return jsonify({"success": False, "message": f"Erro ao salvar: {str(e)}"}), 500
+            
+    return render_template('auth/profile.html', user=current_user)
 
 @auth_bp.route('/logout')
 @login_required

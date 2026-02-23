@@ -6,35 +6,29 @@ from langchain_core.messages import HumanMessage, AIMessage
 agents_bp = Blueprint('agents', __name__)
 cadastro_service = CadastroAgentService()
 
+@agents_bp.route('/sapiens')
+@login_required
+def sapiens_page():
+    """Interface unificada estilo WhatsApp para todos os agentes de IA"""
+    return render_template('sapiens.html')
+
 @agents_bp.route('/agents/board')
 @login_required
 def ai_board():
-    return render_template('ai_board.html', 
-                           agent_name='Sapiens & Especialistas',
-                           agent_description='Escritório de IA: 6 Especialistas sob comando de um Líder Supervisor.')
+    from flask import redirect, url_for
+    return redirect(url_for('agents.sapiens_page', contact='sapiens'))
 
 @agents_bp.route('/agents/logs')
 @login_required
 def get_agent_logs_page():
-    from models import AgentMessage
-    from flask import session
-    
-    company_id = session.get('active_company_id')
-    logs = AgentMessage.query.filter_by(
-        company_id=company_id,
-        user_id=current_user.id,
-        agent_type='work_agent_squad'
-    ).order_by(AgentMessage.created_at.desc()).limit(100).all()
-    
-    return render_template('agent_logs.html', logs=logs)
+    from flask import redirect, url_for
+    return redirect(url_for('agents.sapiens_page', view='logs'))
 
 @agents_bp.route('/agents/engineering')
 @login_required
 def get_engineering_board():
-    """Renderiza o Board focado no Squad de Engenharia"""
-    return render_template('engineering_board.html', 
-                          agent_name='Squad de Engenharia',
-                          agent_description='Auditores de Código & Self-Healing: @ARQUITETO, @QA, @BACKEND.')
+    from flask import redirect, url_for
+    return redirect(url_for('agents.sapiens_page', contact='engineering'))
 
 @agents_bp.route('/api/agents/chat', methods=['POST'])
 @login_required
@@ -46,18 +40,28 @@ def agents_chat():
     data = request.get_json()
     message = data.get('message')
     history = data.get('history', [])
+    contact = data.get('contact', 'sapiens') # 'sapiens' ou 'engineering'
     
     company_id = session.get('active_company_id')
     
+    # Define o prefixo se for engenharia
+    processed_message = message
+    agent_type = 'work_agent_squad'
+    
+    if contact == 'engineering' and '[CANAL ENGENHARIA]' not in message:
+        processed_message = f"[CANAL ENGENHARIA] {message}"
+        agent_type = 'engineering_squad'
+
     # 1. Salva a mensagem do usuário (Inbound)
     user_msg = AgentMessage(
         company_id=company_id,
         user_id=current_user.id,
-        agent_type='work_agent_squad',
+        agent_type=agent_type,
         agent_name='Usuário',
         direction='inbound',
         content=message,
-        channel='platform'
+        channel='platform',
+        metadata_json={"contact": contact}
     )
     db.session.add(user_msg)
     
@@ -72,7 +76,7 @@ def agents_chat():
         elif role in ['assistant', 'ai']:
             messages.append(AIMessage(content=content))
     
-    messages.append(HumanMessage(content=message))
+    messages.append(HumanMessage(content=processed_message))
     
     try:
         inputs = {
@@ -96,12 +100,12 @@ def agents_chat():
         ai_msg = AgentMessage(
             company_id=company_id,
             user_id=current_user.id,
-            agent_type='work_agent_squad',
+            agent_type=agent_type,
             agent_name=agent_executor,
             direction='outbound',
             content=final_text,
             channel='platform',
-            metadata_json={"agent": agent_executor}
+            metadata_json={"agent": agent_executor, "contact": contact}
         )
         db.session.add(ai_msg)
         db.session.commit()
@@ -143,12 +147,29 @@ def get_chat_history():
     from flask import session
     
     company_id = session.get('active_company_id')
-    # Carrega as últimas 30 mensagens desse usuário nessa empresa
-    messages = AgentMessage.query.filter_by(
-        company_id=company_id,
-        user_id=current_user.id,
-        agent_type='work_agent_squad'
-    ).order_by(AgentMessage.created_at.asc()).limit(50).all()
+    contact = request.args.get('contact', 'sapiens')
+    
+    agent_type = 'work_agent_squad'
+    if contact == 'engineering':
+        agent_type = 'engineering_squad'
+        # Legado: Buscar mensagens que contém [CANAL ENGENHARIA] se for engineering
+        from sqlalchemy import or_
+        messages = AgentMessage.query.filter(
+            AgentMessage.company_id == company_id,
+            AgentMessage.user_id == current_user.id,
+            or_(
+                AgentMessage.agent_type == 'engineering_squad',
+                AgentMessage.content.contains('[CANAL ENGENHARIA]')
+            )
+        ).order_by(AgentMessage.created_at.asc()).limit(100).all()
+    else:
+        # Padrão: Sapiens
+        messages = AgentMessage.query.filter(
+            AgentMessage.company_id == company_id,
+            AgentMessage.user_id == current_user.id,
+            AgentMessage.agent_type == 'work_agent_squad',
+            ~AgentMessage.content.contains('[CANAL ENGENHARIA]')
+        ).order_by(AgentMessage.created_at.asc()).limit(100).all()
     
     return jsonify({
         "success": True,

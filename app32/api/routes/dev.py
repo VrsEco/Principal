@@ -164,3 +164,11 @@ def seed_demo():
     db.session.commit()
 
     return {"message": "Demo data seeded successfully!"}, 200
+
+@dev_bp.route('/trigger-proactive')
+def trigger_proactive():
+    """Debug: Manually trigger the Sapiens morning summary"""
+    from services.proactive_service import send_morning_summaries
+    from flask import current_app
+    send_morning_summaries(current_app._get_current_object())
+    return {"message": "Proactive morning summary triggered!"}, 200
