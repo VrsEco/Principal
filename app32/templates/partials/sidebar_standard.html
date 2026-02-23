@@ -1,4 +1,4 @@
-<div class="sidebar-header" style="padding: 1.5rem; text-align: center;">
+<div class="sidebar-header" style="padding: 1.5rem; text-align: center; background-color: white !important;">
     <a href="/companies">
         <img src="/static/img/logo-versus.png" alt="Versus" style="max-width: 140px; height: auto;">
     </a>
@@ -189,29 +189,23 @@
         </div>
     </div>
 
-    <!-- Work Agents (Escritório de IA) -->
-    <div class="sidebar-group {{ 'open' if '/agents/board' in request.path or '/agents/cadastro' in request.path }}">
+    <!-- IA Sapiens (Unificado) -->
+    <div class="sidebar-group {{ 'open' if '/sapiens' in request.path or '/agents/cadastro' in request.path }}">
         <button class="nav-button" onclick="toggleSidebarGroup(this)">
             <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                 <path d="M12 2a10 10 0 1 0 10 10A10 10 0 0 0 12 2zm0 18a8 8 0 1 1 8-8 8 8 0 0 1-8 8z"></path>
                 <path d="M12 6a1 1 0 1 0 0-2 1 1 0 0 0 0 2z"></path>
                 <path d="M11 10h2v8h-2z"></path>
             </svg>
-            Agentes de Trabalho
+            Sapiens & IA
             <svg class="chevron" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor"
                 stroke-width="3">
                 <polyline points="6 9 12 15 18 9"></polyline>
             </svg>
         </button>
         <div class="sub-menu">
-            <a href="/agents/board" class="sub-nav-link {{ 'active' if request.path == '/agents/board' }}">
-                Escritório de IA (Board)
-            </a>
-            <a href="/agents/engineering" class="sub-nav-link {{ 'active' if request.path == '/agents/engineering' }}">
-                Squad de Engenharia
-            </a>
-            <a href="/agents/logs" class="sub-nav-link {{ 'active' if request.path == '/agents/logs' }}">
-                Log de Conversas
+            <a href="/sapiens" class="sub-nav-link {{ 'active' if request.path == '/sapiens' }}">
+                Sapiens (Chat)
             </a>
             <a href="/agents/cadastro" class="sub-nav-link {{ 'active' if request.path == '/agents/cadastro' }}">
                 Onboarding Assistido
@@ -242,8 +236,9 @@
             <a href="/companies" class="sub-nav-link {{ 'active' if '/companies' in request.path }}">Empresas</a>
             {% endif %}
 
-            {% if has_permission('users', 'view') %}
-            <a href="#" class="sub-nav-link">Usuários</a>
+            {% if current_user.role == 'admin' %}
+            <a href="{{ url_for('usuarios.index') }}"
+                class="sub-nav-link {{ 'active' if request.path == '/usuarios' }}">Usuários</a>
             {% endif %}
 
             {% if current_user.role == 'admin' %}
@@ -256,10 +251,10 @@
 </nav>
 
 <div style="padding: 1.5rem 1rem; border-top: 1px solid var(--border); margin-top: auto;">
-    <a href="#" class="nav-link">
+    <a href="{{ url_for('auth.profile') }}" class="nav-link">
         <div
             style="width: 32px; height: 32px; border-radius: 50%; background: var(--special-gradient); color: white; display: flex; align-items: center; justify-content: center; font-weight: 700; font-size: 0.75rem;">
-            MV
+            {{ current_user.name[0].upper() if current_user.name else 'U' }}
         </div>
         Meu Perfil
     </a>

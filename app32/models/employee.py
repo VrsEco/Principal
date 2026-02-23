@@ -18,6 +18,7 @@ class Employee(db.Model):
     email = db.Column(db.String(120))
     phone = db.Column(db.String(20))
     whatsapp = db.Column(db.String(20))
+    telegram = db.Column(db.String(50))
     department = db.Column(db.String(100))
     hire_date = db.Column(db.Date)
     status = db.Column(db.String(20), default="active") # active, inactive, vacation
@@ -60,6 +61,7 @@ class Employee(db.Model):
             "email": self.email,
             "phone": self.phone,
             "whatsapp": self.whatsapp,
+            "telegram": self.telegram,
             "department": self.department,
             "hire_date": format_date(self.hire_date),
             "status": self.status,

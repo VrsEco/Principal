@@ -10,6 +10,7 @@ from schemas import ma
 
 def create_app(config_name=None):
     app = Flask(__name__)
+    app.config['TEMPLATES_AUTO_RELOAD'] = True
     print("DEBUG: Registering Jinja filters...")
 
     @app.template_filter('format_date_br')
@@ -312,8 +313,7 @@ def register_blueprints(app):
 
 
 
-app = create_app()
-
 if __name__ == '__main__':
+    app = create_app()
     print("Starting APP32 modularized version...")
     app.run(debug=True, port=5032)

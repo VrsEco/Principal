@@ -36,6 +36,8 @@ class UserEmployeeService:
             user = User(
                 name=user_data['name'],
                 email=user_data['email'],
+                whatsapp=user_data.get('whatsapp'),
+                telegram=user_data.get('telegram'),
                 role=user_data.get('role', 'client')  # admin, collaborator, client
             )
             user.set_password(user_data['password'])

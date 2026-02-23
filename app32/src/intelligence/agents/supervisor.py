@@ -11,15 +11,24 @@ def supervisor_node(state: WorkAgentState):
     messages = state["messages"]
     last_message = messages[-1]
 
+    # Normaliza o tipo da mensagem (pode ser tupla ou BaseMessage)
+    msg_type = ""
+    if isinstance(last_message, tuple):
+        msg_type = last_message[0]
+    elif hasattr(last_message, 'type'):
+        msg_type = last_message.type
+
     # Se a última mensagem veio de uma AI (Agente Especialista) e não é uma chamada de ferramenta,
     # significa que o especialista já respondeu. O Supervisor deve entregar ao usuário (END).
-    if last_message.type == "ai" and not getattr(last_message, 'tool_calls', None):
+    is_ai = msg_type == "ai"
+    has_tools = getattr(last_message, 'tool_calls', None) if not isinstance(last_message, tuple) else False
+    
+    if is_ai and not has_tools:
         print("--- SUPERVISOR: Resposta final do especialista recebida, encerrando fluxo. ---")
         return {"next_node": "end"}
     
     # Se a última mensagem é do tipo 'tool', significa que uma ferramenta acabou de rodar.
-    # O Supervisor DEVE encaminhar de volta ao Agente que pediu a ferramenta para ele dar o veredito.
-    if last_message.type == "tool":
+    if msg_type == "tool":
         # Tenta identificar qual foi o último agente que falou antes da tool
         # Por simplicidade neste grafo v2, o Supervisor pode redelegar ou usar o histórico
         print("--- SUPERVISOR: Ferramenta executada, devolvendo ao especialista para conclusão. ---")
@@ -29,6 +38,13 @@ def supervisor_node(state: WorkAgentState):
     system_prompt = (
         "Você é o Supervisor Central do Ecossistema Gestão Versus. Sua função é orquestrar o atendimento.\n"
         "Analise a solicitação do usuário e encaminhe para o Agente Especialista mais adequado:\n\n"
+        
+        "LEI DE CONFORMIDADE ARQUITETURAL (INVIOLAVEL):\n"
+        "- MUTACAO DE DADOS (criar, editar, excluir, registrar): O agente DEVE usar as ferramentas "
+        "MCP que espelham os Models do app (ORM). NUNCA invente dados ou grave fora da estrutura do sistema.\n"
+        "- ANALISE DE DADOS (consultar, cruzar, calcular): O agente PODE usar query_database() livremente "
+        "com SQL SELECT. Isso equivale a um humano analisando relatorios.\n"
+        "- PRINCIPIO: Tudo que o Sapiens faz deve ser visivel e editavel pelo usuario humano no app.\n\n"
         
         "AGENTES DISPONÍVEIS:\n"
         "1. 'strategist' (Estrategista): Para Planejamento Estratégico, Análise de Mercado, Cenários, SWOT e OKRs visionários.\n"
@@ -67,7 +83,11 @@ def supervisor_node(state: WorkAgentState):
 
     # HEURÍSTICA DE REFORÇO: Se o supervisor decidir 'end' mas houver sinais de comando na mensagem,
     # forçamos para o Sapiens ou Operations para evitar o 'eco' do fallback.
-    text_content = last_message.content.lower()
+    if isinstance(last_message, tuple):
+        text_content = last_message[1].lower()
+    else:
+        text_content = last_message.content.lower()
+        
     command_signals = ['http', 'tela', 'alterar', 'mudar', 'status', 'inativa', 'cadastrar', 'criar', 'desativar', 'erro', 'bug', 'falha']
     if next_node == "end" and any(sig in text_content for sig in command_signals):
         print(f"--- SUPERVISOR: Detectado sinal de comando em '{next_node}'. Forçando 'operations' ou 'engineering'. ---")

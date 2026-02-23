@@ -151,6 +151,48 @@ def setup_routine_jobs():
     logger.info("✅ Jobs de rotina configurados!")
 
 
+def setup_chat_timeout_job(app):
+    """
+    Monitora inatividade de chats (10min aviso / 30s encerramento)
+    """
+    from services.chat_timeout_service import ChatTimeoutService
+    
+    scheduler_service.add_job(
+        func=lambda: ChatTimeoutService.check_and_handle_timeouts(app),
+        trigger="interval",
+        seconds=30,
+        job_id="chat_timeout_monitor",
+        name="Monitor de Inatividade de Chat"
+    )
+
+    logger.info("✅ Job de Timeout de Chat configurado!")
+
+
+def setup_proactive_jobs(app):
+    """
+    Configura jobs proativos (Sapiens Fase 4)
+    """
+    logger.info("🔧 Configurando jobs proativos do Sapiens...")
+
+    # Job: Resumo Matinal às 08:00h
+    scheduler_service.add_job(
+        func=lambda: send_proactive_morning_summary(app),
+        trigger="cron",
+        job_id="proactive_morning_summary",
+        hour=8,
+        minute=0,
+        name="Resumo Matinal Proativo (Telegram)",
+    )
+
+    logger.info("✅ Jobs proativos configurados!")
+
+
+def send_proactive_morning_summary(app):
+    """Bridge para o proactive_service"""
+    from services.proactive_service import send_morning_summaries
+    send_morning_summaries(app)
+
+
 def check_overdue_tasks():
     """
     Verifica e atualiza status de tarefas atrasadas
@@ -169,7 +211,7 @@ def check_overdue_tasks():
         logger.error(f"❌ Erro ao verificar tarefas: {e}")
 
 
-def initialize_scheduler():
+def initialize_scheduler(app):
     """
     Inicializa o scheduler com todos os jobs configurados
     Deve ser chamado no startup da aplicação
@@ -177,8 +219,14 @@ def initialize_scheduler():
     logger.info("🚀 Inicializando Scheduler Service...")
 
     try:
-        # Configurar jobs
+        # Configurar jobs de sistema
         setup_routine_jobs()
+        
+        # Configurar jobs proativos (Fase 4)
+        setup_proactive_jobs(app)
+
+        # Configurar monitor de chat
+        setup_chat_timeout_job(app)
 
         # Iniciar scheduler
         scheduler_service.start()

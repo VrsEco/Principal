@@ -1,72 +1,27 @@
-{% extends "layouts/app.html" %}
+{% extends "layouts/workspace.html" %}
 
-{% block title %}Empresas - Versus{% endblock %}
+{% block title %}Empresas | Versus{% endblock %}
 
-{% block page_title %}Configurações / Empresas{% endblock %}
+{% block breadcrumb %}
+<span class="current" style="color: var(--text-tertiary);">Configurações</span>
+<span class="sep">/</span>
+<span class="current">Empresas</span>
+{% endblock %}
 
-{% block content %}
-<div class="content-header"
-    style="margin-bottom: 3rem; display: flex; justify-content: space-between; align-items: flex-end;">
-    <div>
-        <h1 class="text-h1">Empresas</h1>
-        <p class="text-subtitle">Unidades e corporações do ecossistema Versus.</p>
+{% block workspace_content %}
+<div class="workspace-header" style="display: flex; justify-content: space-between; align-items: center;">
+    <div class="header-content">
+        <h1 class="text-h1">🏢 Empresas</h1>
+        <p class="text-secondary">Unidades e corporações do ecossistema Versus.</p>
     </div>
-    <button class="btn btn-special" onclick="window.location.href='/companies/new'">
-        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-            <line x1="12" y1="5" x2="12" y2="19"></line>
-            <line x1="5" y1="12" x2="19" y2="12"></line>
-        </svg>
-        Nova Empresa
-    </button>
-</div>
-
-<!-- Filters Section - App2 Style -->
-<div class="card mb-4" id="companies-filter-section"
-    style="background: rgba(255, 255, 255, 0.4); backdrop-filter: blur(10px); border: 1.5px solid var(--border);">
-    <div class="card-body">
-        <div class="collapsible-header" onclick="toggleCollapsible('companies-filter-section')"
-            style="margin-bottom: 1rem; padding-bottom: 0.5rem; border-bottom: 1px solid var(--border);">
-            <div style="display: flex; align-items: center; gap: 0.75rem;">
-                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                    <polygon points="22 3 2 3 10 12.46 10 19 14 21 14 12.46 22 3"></polygon>
-                </svg>
-                <h4
-                    style="font-size: 0.85rem; font-weight: 700; color: var(--text-secondary); text-transform: uppercase; margin: 0; letter-spacing: 0.05em;">
-                    Filtros de Visão</h4>
-            </div>
-            <svg class="chevron" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor"
-                stroke-width="2">
-                <polyline points="6 9 12 15 18 9"></polyline>
+    <div class="header-actions">
+        <button class="btn btn-special" onclick="window.location.href='/companies/new'">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <line x1="12" y1="5" x2="12" y2="19"></line>
+                <line x1="5" y1="12" x2="19" y2="12"></line>
             </svg>
-        </div>
-
-        <div class="collapsible-content">
-            <div class="filters-row">
-                <div class="filter-group" style="flex: 2;">
-                    <label class="form-label" for="filter-search">Pesquisar Unidade</label>
-                    <input type="text" id="filter-search" class="form-control"
-                        placeholder="Nome, razão social ou código d" onkeyup="filterCompanies()">
-                </div>
-                <div class="filter-group">
-                    <label class="form-label" for="filter-segment">Segmento</label>
-                    <select id="filter-segment" class="form-control" onchange="filterCompanies()">
-                        <option value="">TODOS</option>
-                        <option value="Tecnologia">TECNOLOGIA</option>
-                        <option value="Serviços">SERVIÇOS</option>
-                        <option value="Indústria">INDÚSTRIA</option>
-                    </select>
-                </div>
-                <div class="filter-group">
-                    <label class="form-label" for="filter-size">Porte</label>
-                    <select id="filter-size" class="form-control" onchange="filterCompanies()">
-                        <option value="">TODOS</option>
-                        <option value="Pequeno">PEQUENO</option>
-                        <option value="Médio">MÉDIO</option>
-                        <option value="Grande">GRANDE</option>
-                    </select>
-                </div>
-            </div>
-        </div>
+            Nova Empresa
+        </button>
     </div>
 </div>
 
@@ -87,33 +42,33 @@
             <polyline points="9 22 9 12 15 12 15 22"></polyline>
         </svg>
     </div>
-    <h3 style="font-size: 1.5rem; font-weight: 700; margin-bottom: 0.5rem;">Nada por aqui ainda</h3>
+    <h3 class="text-h3" style="font-weight: 700; margin-bottom: 0.5rem;">Nada por aqui ainda</h3>
     <p class="text-secondary">Parece que ainda não há empresas cadastradas que correspondam aos seus filtros.</p>
     <button class="btn btn-special mt-4" onclick="window.location.href='/companies/new'">
         Cadastrar Primeira Unidade
     </button>
 </div>
 
-<div id="companies-grid" class="companies-grid" style="display: none;">
+<div id="companies-grid" class="instances-grid mt-4" style="display: none;">
     <!-- Cards are rendered by static/js/companies.js -->
 </div>
 
 <!-- Delete Modal App2 Ref Style -->
-<div id="delete-modal" class="modal" style="display: none;">
-    <div class="modal-content" style="border-radius: 28px; border: none; overflow: hidden;">
-        <div class="modal-header" style="background: #fff; padding: 2rem 2rem 1rem 2rem; border: none;">
-            <h3 style="font-size: 1.5rem; font-weight: 700; color: var(--danger);">Suspender Unidade?</h3>
+<div class="custom-modal-overlay" id="delete-modal">
+    <div class="custom-modal-content">
+        <div class="modal-header">
+            <h5 class="modal-title font-bold text-danger">Suspender Unidade?</h5>
+            <button type="button" class="btn-close-custom" onclick="closeDeleteModal()">&times;</button>
         </div>
-        <div class="modal-body" style="padding: 1rem 2rem 2rem 2rem;">
-            <p style="font-size: 1.05rem; line-height: 1.6;">Você está prestes a remover <strong
-                    id="delete-company-name" style="color: var(--text-primary);"></strong>. Esta ação ocultará todos os
-                processos vinculados a esta empresa.</p>
+        <div class="modal-body">
+            <p class="text-secondary mb-4">Você está prestes a remover <strong id="delete-company-name"
+                    class="text-primary"></strong>. Esta ação ocultará todos os processos vinculados a esta empresa.</p>
         </div>
-        <div class="modal-footer"
-            style="padding: 1.5rem 2rem; display: flex; gap: 1rem; border: none; background: var(--surface-secondary);">
-            <button class="btn btn-secondary" style="flex: 1;" onclick="closeDeleteModal()">Não, Manter</button>
-            <button class="btn btn-primary" style="background: var(--danger); flex: 1;" onclick="confirmDelete()">Sim,
-                Confirmar</button>
+        <div class="modal-footer">
+            <button class="btn btn-secondary" onclick="closeDeleteModal()">Não, Manter</button>
+            <button class="btn btn-danger"
+                style="background-color: var(--danger); border-color: var(--danger); color: white;"
+                onclick="confirmDelete()">Sim, Confirmar</button>
         </div>
     </div>
 </div>
@@ -124,7 +79,316 @@
             transform: rotate(360deg);
         }
     }
-</style>
 
+    .instances-grid {
+        display: flex;
+        flex-direction: column;
+        gap: 0.5rem;
+    }
+
+    .instance-card {
+        background: var(--surface-primary);
+        border: 1px solid var(--border);
+        border-radius: 12px;
+        padding: 0.75rem 1rem;
+        display: flex;
+        flex-direction: column;
+        gap: 0.25rem;
+        transition: var(--transition);
+        position: relative;
+    }
+
+    .instance-card:hover {
+        border-color: var(--primary);
+        box-shadow: var(--shadow-sm);
+        z-index: 1;
+    }
+
+    .compact-row {
+        display: flex;
+        align-items: center;
+        flex-wrap: wrap;
+        width: 100%;
+        gap: 0.5rem;
+    }
+
+    .instance-code {
+        font-size: 0.7rem;
+        font-weight: 800;
+        background: var(--surface-secondary);
+        color: var(--text-tertiary);
+        padding: 2px 6px;
+        border-radius: 4px;
+        text-transform: uppercase;
+        white-space: nowrap;
+    }
+
+    .instance-name {
+        font-size: 1rem;
+        font-weight: 700;
+        color: var(--text-primary);
+        margin: 0;
+        line-height: 1.2;
+    }
+
+    .instance-process {
+        font-size: 0.8rem;
+        color: var(--text-secondary);
+        font-weight: 500;
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
+    }
+
+    .compact-meta {
+        font-size: 0.75rem;
+        color: var(--text-secondary);
+        display: flex;
+        align-items: center;
+        gap: 0.75rem;
+        flex-wrap: wrap;
+    }
+
+    .compact-meta strong {
+        color: var(--text-tertiary);
+        font-weight: 700;
+        font-size: 0.7rem;
+        text-transform: uppercase;
+        margin-right: 2px;
+    }
+
+    .instance-badges {
+        display: flex;
+        align-items: center;
+        gap: 4px;
+        margin-left: auto;
+    }
+
+    .badge {
+        font-size: 0.65rem;
+        font-weight: 700;
+        padding: 2px 8px;
+        border-radius: 12px;
+        text-transform: uppercase;
+        white-space: nowrap;
+    }
+
+    .badge.status-active {
+        background: var(--success-light);
+        color: var(--success);
+    }
+
+    .badge.status-inactive {
+        background: var(--danger-light);
+        color: var(--danger);
+    }
+
+    .instance-actions {
+        display: flex;
+        gap: 0.5rem;
+        margin-left: auto;
+    }
+
+    .btn-instance-action {
+        padding: 4px 10px;
+        border-radius: 6px;
+        font-size: 0.7rem;
+        font-weight: 700;
+        cursor: pointer;
+        transition: var(--transition);
+        border: 1px solid transparent;
+        text-decoration: none;
+        display: inline-flex;
+        align-items: center;
+        gap: 4px;
+        background: var(--surface-secondary);
+        color: var(--text-primary);
+        white-space: nowrap;
+    }
+
+    .btn-instance-action:hover {
+        background: var(--surface);
+        border-color: var(--border);
+    }
+
+    .btn-instance-action.action-edit {
+        background: var(--primary-light);
+        color: var(--primary);
+    }
+
+    .btn-instance-action.action-delete {
+        background: var(--danger-light);
+        color: var(--danger);
+    }
+
+    .sep {
+        color: var(--border);
+        margin: 0 2px;
+    }
+
+    @media (max-width: 768px) {
+        .instance-card {
+            padding: 1rem;
+            gap: 0.5rem;
+        }
+
+        .compact-row {
+            flex-direction: column;
+            align-items: flex-start;
+            gap: 0.5rem;
+        }
+
+        .instance-badges {
+            margin-left: 0;
+            margin-top: 0.25rem;
+        }
+
+        .instance-actions {
+            margin-left: 0;
+            margin-top: 0.5rem;
+            width: 100%;
+            justify-content: flex-end;
+        }
+
+        .compact-meta {
+            gap: 0.5rem;
+        }
+    }
+
+    .custom-modal-overlay {
+        position: fixed;
+        top: 0;
+        left: 0;
+        width: 100%;
+        height: 100%;
+        background: rgba(0, 0, 0, 0.5);
+        backdrop-filter: blur(4px);
+        z-index: 9999;
+        display: none;
+        align-items: center;
+        justify-content: center;
+    }
+
+    .custom-modal-overlay.active {
+        display: flex;
+        animation: fadeIn 0.2s ease-out;
+    }
+
+    .custom-modal-content {
+        background: var(--surface-primary);
+        padding: 0;
+        border-radius: 16px;
+        width: 90%;
+        max-width: 500px;
+        box-shadow: var(--shadow-lg);
+        max-height: 90vh;
+        overflow-y: auto;
+    }
+
+    .modal-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        padding: 1.5rem;
+        border-bottom: 1px solid var(--border);
+    }
+
+    .modal-body {
+        padding: 1.5rem;
+    }
+
+    .modal-footer {
+        padding: 1.5rem;
+        border-top: 1px solid var(--border);
+        display: flex;
+        justify-content: flex-end;
+        gap: 0.5rem;
+    }
+
+    .btn-close-custom {
+        background: none;
+        border: none;
+        font-size: 1.5rem;
+        color: var(--text-secondary);
+        cursor: pointer;
+    }
+
+    @keyframes fadeIn {
+        from {
+            opacity: 0;
+        }
+
+        to {
+            opacity: 1;
+        }
+    }
+
+    .form-select-custom {
+        width: 100%;
+        padding: 0.875rem 2.5rem 0.875rem 1.25rem;
+        background: var(--surface);
+        border: 1.5px solid var(--border);
+        border-radius: var(--btn-radius);
+        color: var(--text-primary);
+        font-family: inherit;
+        font-size: 0.9rem;
+        font-weight: 500;
+        transition: var(--transition);
+        cursor: pointer;
+        appearance: none;
+        background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='16' height='16' viewBox='0 0 24 24' fill='none' stroke='%2364748b' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpolyline points='6 9 12 15 18 9'%3E%3C/polyline%3E%3C/svg%3E");
+        background-repeat: no-repeat;
+        background-position: right 1rem center;
+        background-size: 16px;
+    }
+
+    .form-select-custom:hover {
+        border-color: var(--primary);
+    }
+
+    .form-select-custom:focus {
+        outline: none;
+        border-color: var(--primary);
+        box-shadow: 0 0 0 4px var(--primary-light);
+    }
+</style>
 <script src="{{ url_for('static', filename='js/companies.js') }}"></script>
+{% endblock %}
+
+{% block sidebar_right %}
+<div class="sidebar-section-ws" id="sectionFilters">
+    <div class="sidebar-header-ws collapsible-header" onclick="toggleCollapsible('sectionFilters')">
+        <h3 class="text-h3">Filtros</h3>
+        <svg class="chevron" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+            stroke-width="2">
+            <polyline points="6 9 12 15 18 9"></polyline>
+        </svg>
+    </div>
+    <div class="sidebar-content-ws collapsible-content">
+        <div class="form-group mb-4">
+            <label class="form-label" for="filter-segment">Segmento</label>
+            <select id="filter-segment" class="form-select-custom" onchange="filterCompanies()">
+                <option value="">TODOS</option>
+                <option value="Tecnologia">TECNOLOGIA</option>
+                <option value="Serviços">SERVIÇOS</option>
+                <option value="Indústria">INDÚSTRIA</option>
+            </select>
+        </div>
+        <div class="form-group mb-4">
+            <label class="form-label" for="filter-size">Porte</label>
+            <select id="filter-size" class="form-select-custom" onchange="filterCompanies()">
+                <option value="">TODOS</option>
+                <option value="Pequeno">PEQUENO</option>
+                <option value="Médio">MÉDIO</option>
+                <option value="Grande">GRANDE</option>
+            </select>
+        </div>
+        <div class="form-group mb-4">
+            <label class="form-label" for="filter-search">Pesquisar</label>
+            <input type="text" id="filter-search" class="form-select-custom" placeholder="Nome, código, etc..."
+                oninput="filterCompanies()" style="background-image: none;">
+        </div>
+        <button class="btn btn-secondary w-100" onclick="resetCompaniesFilters()">Limpar Filtros</button>
+    </div>
+</div>
 {% endblock %}

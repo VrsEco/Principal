@@ -625,7 +625,11 @@
         }
 
         grid.innerHTML = filteredData.map(c => {
-            const totalScore = (c.delivery_scores?.overall?.total || 0) + (c.positive_occurrences?.score || 0) + (c.negative_occurrences?.score || 0);
+            const deliveryTotal = (c.delivery_scores?.overall?.total || 0);
+            const occurrenceTotal = (c.positive_occurrences?.score || 0) + (c.negative_occurrences?.score || 0);
+            const totalActual = deliveryTotal + occurrenceTotal;
+            const totalPotential = (c.delivery_scores?.overall?.potential || 0);
+            const totalAssigned = (c.delivery_scores?.overall?.assigned || 0);
 
             return `
             <div class="collaborator-card">
@@ -635,25 +639,26 @@
                         <p>${c.in_progress.total + c.completed.total} atividades · ${c.positive_occurrences.count + c.negative_occurrences.count} ocorrências</p>
                     </div>
                     <div class="total-score-badge">
-                        <span>Total Geral</span>
-                        <strong>${formatScore(totalScore)}</strong>
+                        <span>Total Geral / Máx</span>
+                        <strong>${formatScore(totalActual)} / ${formatScore(totalPotential)}</strong>
                     </div>
                 </div>
                 
                 <div class="score-card-body" style="grid-template-columns: 1fr; gap: 4px;">
                     <div class="score-card-row">
-                        <span>Projetos</span>
-                        <strong>${formatScore(c.delivery_scores?.project?.total)}</strong>
+                        <span>Projetos (Atual / Máx)</span>
+                        <strong>${formatScore(c.delivery_scores?.project?.total)} / ${formatScore(c.delivery_scores?.project?.potential)}</strong>
                     </div>
                     <div class="score-card-row">
-                        <span>Processos</span>
-                        <strong>${formatScore(c.delivery_scores?.process?.total)}</strong>
+                        <span>Processos (Atual / Máx)</span>
+                        <strong>${formatScore(c.delivery_scores?.process?.total)} / ${formatScore(c.delivery_scores?.process?.potential)}</strong>
                     </div>
                     <div class="score-card-row">
                         <span>Ocorrências</span>
-                        <strong>${formatScore((c.positive_occurrences?.score || 0) + (c.negative_occurrences?.score || 0))}</strong>
+                        <strong>${formatScore(occurrenceTotal)}</strong>
                     </div>
                 </div>
+
                 
                 <div style="display: flex; gap: 8px; margin-top: auto;">
                     <div class="stat-detail" title="Concluídas no Prazo">
@@ -688,19 +693,23 @@
             acc.procNeg += d.delivery_scores?.process?.negative || 0;
             acc.procTotal += d.delivery_scores?.process?.total || 0;
             acc.procCount += (d.delivery_scores?.process?.count || 0);
+            acc.procPotential += (d.delivery_scores?.process?.potential || 0);
+            acc.procAssigned += (d.delivery_scores?.process?.assigned || 0);
 
             acc.projPos += d.delivery_scores?.project?.positive || 0;
             acc.projNeg += d.delivery_scores?.project?.negative || 0;
             acc.projTotal += d.delivery_scores?.project?.total || 0;
             acc.projCount += (d.delivery_scores?.project?.count || 0);
+            acc.projPotential += (d.delivery_scores?.project?.potential || 0);
+            acc.projAssigned += (d.delivery_scores?.project?.assigned || 0);
 
             return acc;
         }, {
             inProgress: 0, inProgressOnTime: 0, inProgressLate: 0,
             completed: 0, completedOnTime: 0, completedLate: 0,
             occPos: 0, occNeg: 0, occPosCount: 0, occNegCount: 0,
-            procPos: 0, procNeg: 0, procTotal: 0, procCount: 0,
-            projPos: 0, projNeg: 0, projTotal: 0, projCount: 0
+            procPos: 0, procNeg: 0, procTotal: 0, procCount: 0, procPotential: 0, procAssigned: 0,
+            projPos: 0, projNeg: 0, projTotal: 0, projCount: 0, projPotential: 0, projAssigned: 0
         });
 
         document.getElementById('statInProgress').textContent = totals.inProgress;
@@ -712,7 +721,11 @@
         document.getElementById('statCompletedLate').textContent = totals.completedLate;
 
         const totalOverall = totals.occPos + totals.occNeg + totals.procTotal + totals.projTotal;
-        document.getElementById('scoreOverallTotal').textContent = formatScore(totalOverall);
+        const totalPotential = totals.procPotential + totals.projPotential;
+        const totalAssigned = totals.procAssigned + totals.projAssigned;
+
+        document.getElementById('scoreOverallTotal').textContent = `${formatScore(totalOverall)} / ${formatScore(totalPotential)}`;
+        // If you want to show the 45 points total somewhere, could be in a secondary stat
 
         document.getElementById('scoreOccPositive').textContent = formatScore(totals.occPos);
         document.getElementById('scoreOccNegative').textContent = formatScore(totals.occNeg);
@@ -722,12 +735,14 @@
 
         document.getElementById('scoreProcessPositive').textContent = formatScore(totals.procPos);
         document.getElementById('scoreProcessNegative').textContent = formatScore(totals.procNeg);
-        document.getElementById('scoreProcessTotal').textContent = formatScore(totals.procTotal);
-        // document.getElementById('scoreProcessCount').textContent = totals.procCount; // Need to implement counting records
+        document.getElementById('scoreProcessTotal').textContent = `${formatScore(totals.procTotal)} / ${formatScore(totals.procPotential)}`;
+        document.getElementById('scoreProcessCount').textContent = `${totals.procCount} entregues (Max total: ${formatScore(totals.procAssigned)})`;
 
         document.getElementById('scoreProjectPositive').textContent = formatScore(totals.projPos);
         document.getElementById('scoreProjectNegative').textContent = formatScore(totals.projNeg);
-        document.getElementById('scoreProjectTotal').textContent = formatScore(totals.projTotal);
+        document.getElementById('scoreProjectTotal').textContent = `${formatScore(totals.projTotal)} / ${formatScore(totals.projPotential)}`;
+        document.getElementById('scoreProjectCount').textContent = `${totals.projCount} entregues (Max total: ${formatScore(totals.projAssigned)})`;
+
     }
 
     function applyFilters() {
@@ -738,7 +753,7 @@
             if (search && !d.employee_name.toLowerCase().includes(search)) return false;
 
             if (type === 'with_activities') {
-                if ((d.in_progress.total + d.completed.total) === 0) return false;
+                return (d.in_progress.total + d.completed.total) > 0;
             }
             if (type === 'with_occurrences') {
                 if ((d.positive_occurrences.count + d.negative_occurrences.count) === 0) return false;

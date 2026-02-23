@@ -144,22 +144,32 @@ def _project_activities_table_available(cursor) -> bool:
     """Detecta se a tabela project_activities existe no schema atual."""
     global _PROJECT_ACTIVITIES_TABLE_EXISTS
     if _PROJECT_ACTIVITIES_TABLE_EXISTS is None:
-        cursor.execute(
-            """
-            SELECT EXISTS (
-                SELECT 1
-                FROM information_schema.tables
-                WHERE table_schema = 'public'
-                  AND table_name = 'project_activities'
+        try:
+            cursor.execute(
+                """
+                SELECT EXISTS (
+                    SELECT 1
+                    FROM information_schema.tables
+                    WHERE table_schema = 'public'
+                      AND table_name = 'project_activities'
+                )
+                """
             )
-            """
-        )
-        row = cursor.fetchone()
-        if isinstance(row, dict):
-            exists = list(row.values())[0]
-        else:
-            exists = row[0] if row else False
-        _PROJECT_ACTIVITIES_TABLE_EXISTS = bool(exists)
+            row = cursor.fetchone()
+            if isinstance(row, dict):
+                exists = list(row.values())[0]
+            else:
+                exists = row[0] if row else False
+            _PROJECT_ACTIVITIES_TABLE_EXISTS = bool(exists)
+        except Exception:
+            # Em caso de erro (ex: transação abortada), não atualizar o cache
+            # e tentar fazer um rollback no cursor se possível para não travar
+            try:
+                if hasattr(cursor, 'connection'):
+                    cursor.connection.rollback()
+            except:
+                pass
+            return False
     return bool(_PROJECT_ACTIVITIES_TABLE_EXISTS)
 
 
@@ -167,22 +177,30 @@ def _process_collaborators_table_available(cursor) -> bool:
     """Detecta se process_instance_collaborators está disponível."""
     global _PROCESS_COLLAB_TABLE_EXISTS
     if _PROCESS_COLLAB_TABLE_EXISTS is None:
-        cursor.execute(
-            """
-            SELECT EXISTS (
-                SELECT 1
-                FROM information_schema.tables
-                WHERE table_schema = 'public'
-                  AND table_name = 'process_instance_collaborators'
+        try:
+            cursor.execute(
+                """
+                SELECT EXISTS (
+                    SELECT 1
+                    FROM information_schema.tables
+                    WHERE table_schema = 'public'
+                      AND table_name = 'process_instance_collaborators'
+                )
+                """
             )
-            """
-        )
-        row = cursor.fetchone()
-        if isinstance(row, dict):
-            exists = list(row.values())[0]
-        else:
-            exists = row[0] if row else False
-        _PROCESS_COLLAB_TABLE_EXISTS = bool(exists)
+            row = cursor.fetchone()
+            if isinstance(row, dict):
+                exists = list(row.values())[0]
+            else:
+                exists = row[0] if row else False
+            _PROCESS_COLLAB_TABLE_EXISTS = bool(exists)
+        except Exception:
+            try:
+                if hasattr(cursor, 'connection'):
+                    cursor.connection.rollback()
+            except:
+                pass
+            return False
     return bool(_PROCESS_COLLAB_TABLE_EXISTS)
 
 
@@ -929,7 +947,7 @@ def _fetch_v2_project_rows(
                 p.created_at,
                 p.updated_at,
                 'PRJ-' || p.id AS project_code,
-                pl.name AS plan_name,
+                pl.title AS plan_name,
                 c.name AS company_name
             FROM project_tasks pt
             JOIN projects p ON p.id = pt.project_id
@@ -1031,7 +1049,7 @@ def _fetch_normalized_project_rows(
             cp.created_at,
             cp.updated_at,
             cp.code AS project_code,
-            pl.name AS plan_name,
+            pl.title AS plan_name,
             c.name AS company_name
         FROM project_activities pa
         JOIN company_projects cp ON cp.id = pa.project_id
@@ -1111,8 +1129,8 @@ def _fetch_project_rows_from_json(
             cp.updated_at,
             cp.code,
             cp.activities,
-            pl.name AS plan_name,
-            pl.plan_mode AS plan_mode,
+            pl.title AS plan_name,
+            pl.mode AS plan_mode,
             c.name AS company_name,
             c.client_code AS company_code
         FROM company_projects cp
@@ -1928,7 +1946,7 @@ def _fetch_projects_for_employee(cursor, employee_ids: List[int]):
             cp.worked_hours,
             cp.created_at,
             cp.updated_at,
-            pl.name AS plan_name,
+            pl.title AS plan_name,
             co.name AS company_name
         FROM company_projects cp
         LEFT JOIN employees resp ON resp.id = cp.responsible_id
@@ -1969,7 +1987,7 @@ def _fetch_company_projects(cursor, company_id: int):
             cp.worked_hours,
             cp.created_at,
             cp.updated_at,
-            pl.name AS plan_name,
+            pl.title AS plan_name,
             co.name AS company_name
         FROM company_projects cp
         LEFT JOIN employees resp ON resp.id = cp.responsible_id
@@ -2018,7 +2036,7 @@ def _fetch_projects_for_members(cursor, member_ids: Sequence[int]):
             cp.worked_hours,
             cp.created_at,
             cp.updated_at,
-            pl.name AS plan_name,
+            pl.title AS plan_name,
             co.name AS company_name
         FROM company_projects cp
         LEFT JOIN employees resp ON resp.id = cp.responsible_id

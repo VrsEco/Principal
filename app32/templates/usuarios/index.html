@@ -1,344 +1,192 @@
-{% extends "base.html" %}
+{% extends "layouts/app.html" %}
 
-{% block title %}Gerenciamento de Usuários{% endblock %}
+{% block title %}Gestão de Usuários - Versus{% endblock %}
 
-{% block extra_head %}
+{% block page_title %}Configurações / Usuários{% endblock %}
+
+{% block content %}
+<div style="max-width: 1100px; margin: 0 auto; padding-bottom: 5rem;">
+    <!-- Header -->
+    <div style="margin-bottom: 2.5rem; display: flex; justify-content: space-between; align-items: flex-end;">
+        <div>
+            <h1 class="text-h1">Gestão de Usuários</h1>
+            <p class="text-subtitle">Controle de acessos, perfis e vínculos com unidades de negócio.</p>
+        </div>
+        <div style="display: flex; gap: 1rem;">
+            <a href="{{ url_for('usuarios.vincular') }}" class="btn btn-secondary">
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
+                    style="margin-right: 8px;">
+                    <path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71" />
+                    <path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71" />
+                </svg>
+                Vincular Existente
+            </a>
+            <a href="{{ url_for('usuarios.cadastrar') }}" class="btn btn-primary">
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
+                    style="margin-right: 8px;">
+                    <path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2" />
+                    <circle cx="9" cy="7" r="4" />
+                    <line x1="19" y1="8" x2="19" y2="14" />
+                    <line x1="22" y1="11" x2="16" y2="11" />
+                </svg>
+                Novo Usuário
+            </a>
+        </div>
+    </div>
+
+    <!-- Users Table Card -->
+    <div class="card" style="border-radius: 24px;">
+        <div class="card-body">
+            <div style="overflow-x: auto;">
+                <table class="table-v2" style="width: 100%;">
+                    <thead>
+                        <tr>
+                            <th>Identidade</th>
+                            <th>Perfil</th>
+                            <th>Unidades Vinculadas</th>
+                            <th style="text-align: right;">Ações</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for user in users %}
+                        <tr>
+                            <td>
+                                <div style="display: flex; align-items: center; gap: 1rem;">
+                                    <div
+                                        style="width: 40px; height: 40px; border-radius: 12px; background: var(--primary-light); color: var(--primary); display: flex; align-items: center; justify-content: center; font-weight: 700; font-size: 1.1rem;">
+                                        {{ (user.name[0] if user.name else user.email[0]) | upper }}
+                                    </div>
+                                    <div>
+                                        <div style="font-weight: 600; color: var(--text-main);">{{ user.name or 'Sem
+                                            Nome' }}</div>
+                                        <div style="font-size: 0.85rem; color: var(--text-tertiary);">{{ user.email }}
+                                        </div>
+                                    </div>
+                                </div>
+                            </td>
+                            <td>
+                                <span
+                                    class="badge {{ 'badge-primary' if user.role == 'admin' else 'badge-secondary' }}">
+                                    {{ 'Administrador' if user.role == 'admin' else ('Colaborador' if user.role in
+                                    ['collaborator', 'consultant'] else 'Cliente') }}
+                                </span>
+                            </td>
+                            <td>
+                                <div style="display: flex; flex-wrap: wrap; gap: 0.5rem;">
+                                    {% set count = namespace(value=0) %}
+                                    {% for emp in employees if emp.user_id == user.id %}
+                                    {% for company in companies if company.id == emp.company_id %}
+                                    <span
+                                        style="font-size: 0.75rem; background: var(--bg-body); border: 1px solid var(--border); padding: 2px 8px; border-radius: 6px; color: var(--text-secondary);">
+                                        {{ company.name }}
+                                    </span>
+                                    {% set count.value = count.value + 1 %}
+                                    {% endfor %}
+                                    {% endfor %}
+                                    {% if count.value == 0 %}
+                                    <span
+                                        style="font-size: 0.75rem; color: var(--text-tertiary); font-style: italic;">Nenhuma
+                                        unidade</span>
+                                    {% endif %}
+                                </div>
+                            </td>
+                            <td style="text-align: right;">
+                                <div style="display: flex; gap: 0.5rem; justify-content: flex-end;">
+                                    <a href="{{ url_for('usuarios.editar', user_id=user.id) }}" class="btn btn-icon"
+                                        title="Editar" style="color: var(--primary);">
+                                        <svg width="18" height="18" viewBox="0 0 24 24" fill="none"
+                                            stroke="currentColor" stroke-width="2" stroke-linecap="round"
+                                            stroke-linejoin="round">
+                                            <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7" />
+                                            <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4L18.5 2.5z" />
+                                        </svg>
+                                    </a>
+                                    <button class="btn btn-icon"
+                                        onclick="handleDeleteUser({{ user.id }}, '{{ user.name or user.email }}')"
+                                        title="Excluir" style="color: var(--danger);">
+                                        <svg width="18" height="18" viewBox="0 0 24 24" fill="none"
+                                            stroke="currentColor" stroke-width="2" stroke-linecap="round"
+                                            stroke-linejoin="round">
+                                            <polyline points="3 6 5 6 21 6" />
+                                            <path
+                                                d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2" />
+                                        </svg>
+                                    </button>
+                                </div>
+                            </td>
+                        </tr>
+                        {% endfor %}
+                        {% if not users %}
+                        <tr>
+                            <td colspan="4" style="text-align: center; padding: 4rem; color: var(--text-tertiary);">
+                                <div style="margin-bottom: 1rem;">
+                                    <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                                        stroke-width="1.5" style="opacity: 0.5;">
+                                        <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2" />
+                                        <circle cx="9" cy="7" r="4" />
+                                        <path d="M23 21v-2a4 4 0 0 0-3-3.87" />
+                                        <path d="M16 3.13a4 4 0 0 1 0 7.75" />
+                                    </svg>
+                                </div>
+                                <h3 style="font-weight: 600; color: var(--text-main);">Nenhum usuário cadastrado</h3>
+                                <p>Comece criando o primeiro usuário do sistema para gerenciar permissões.</p>
+                            </td>
+                        </tr>
+                        {% endif %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+</div>
+
 <style>
-    .usuarios-container {
-        max-width: 1400px;
-        margin: 0 auto;
-        padding: 40px 20px;
+    .table-v2 td {
+        padding: 1.25rem 1rem;
+        border-bottom: 1px solid var(--border-light);
     }
 
-    .page-header {
-        margin-bottom: 40px;
-    }
-
-    .page-title {
-        font-size: 32px;
-        font-weight: 700;
-        color: #1e293b;
-        margin-bottom: 8px;
-    }
-
-    .page-subtitle {
-        font-size: 16px;
-        color: #64748b;
-    }
-
-    .actions-bar {
-        display: flex;
-        gap: 12px;
-        margin-bottom: 30px;
-        flex-wrap: wrap;
-    }
-
-    .btn {
-        padding: 12px 24px;
-        border-radius: 8px;
-        font-weight: 600;
-        font-size: 14px;
-        border: none;
-        cursor: pointer;
-        transition: all 0.2s;
+    .badge {
         display: inline-flex;
-        align-items: center;
-        gap: 8px;
-    }
-
-    .btn-primary {
-        background: linear-gradient(135deg, #3b82f6, #2563eb);
-        color: white;
-    }
-
-    .btn-primary:hover {
-        transform: translateY(-2px);
-        box-shadow: 0 8px 16px rgba(59, 130, 246, 0.3);
-    }
-
-    .btn-secondary {
-        background: linear-gradient(135deg, #8b5cf6, #7c3aed);
-        color: white;
-    }
-
-    .btn-secondary:hover {
-        transform: translateY(-2px);
-        box-shadow: 0 8px 16px rgba(139, 92, 246, 0.3);
-    }
-
-    .users-grid {
-        display: grid;
-        grid-template-columns: repeat(auto-fill, minmax(350px, 1fr));
-        gap: 24px;
-    }
-
-    .user-card {
-        background: white;
-        border-radius: 12px;
-        padding: 24px;
-        box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
-        transition: all 0.3s;
-        border: 1px solid #e2e8f0;
-    }
-
-    .user-card:hover {
-        transform: translateY(-4px);
-        box-shadow: 0 12px 24px rgba(0, 0, 0, 0.12);
-    }
-
-    .user-header {
-        display: flex;
-        align-items: center;
-        gap: 16px;
-        margin-bottom: 16px;
-    }
-
-    .user-avatar {
-        width: 56px;
-        height: 56px;
-        border-radius: 50%;
-        background: linear-gradient(135deg, #3b82f6, #8b5cf6);
-        display: flex;
-        align-items: center;
-        justify-content: center;
-        color: white;
-        font-size: 24px;
-        font-weight: 700;
-    }
-
-    .user-info {
-        flex: 1;
-    }
-
-    .user-name {
-        font-size: 18px;
-        font-weight: 700;
-        color: #1e293b;
-        margin-bottom: 4px;
-    }
-
-    .user-email {
-        font-size: 14px;
-        color: #64748b;
-    }
-
-    .user-role {
-        display: inline-block;
-        padding: 4px 12px;
-        border-radius: 999px;
-        font-size: 12px;
-        font-weight: 600;
-        margin-bottom: 16px;
-    }
-
-    .role-admin {
-        background: #fef3c7;
-        color: #92400e;
-    }
-
-    .role-consultant {
-        background: #ddd6fe;
-        color: #5b21b6;
-    }
-
-    .role-client {
-        background: #dbeafe;
-        color: #1e40af;
-    }
-
-    .user-companies {
-        margin-bottom: 16px;
-    }
-
-    .companies-label {
-        font-size: 12px;
-        font-weight: 600;
-        color: #64748b;
-        text-transform: uppercase;
-        letter-spacing: 0.05em;
-        margin-bottom: 8px;
-    }
-
-    .company-tag {
-        display: inline-block;
         padding: 4px 10px;
-        background: #f1f5f9;
-        border-radius: 6px;
-        font-size: 13px;
-        color: #475569;
-        margin-right: 6px;
-        margin-bottom: 6px;
-    }
-
-    .user-actions {
-        display: flex;
-        gap: 8px;
-    }
-
-    .btn-sm {
-        padding: 8px 16px;
-        font-size: 13px;
-    }
-
-    .btn-edit {
-        background: #10b981;
-        color: white;
-    }
-
-    .btn-edit:hover {
-        background: #059669;
-    }
-
-    .btn-delete {
-        background: #ef4444;
-        color: white;
-    }
-
-    .btn-delete:hover {
-        background: #dc2626;
-    }
-
-    .empty-state {
-        text-align: center;
-        padding: 60px 20px;
-    }
-
-    .empty-icon {
-        font-size: 64px;
-        margin-bottom: 16px;
-        opacity: 0.3;
-    }
-
-    .empty-title {
-        font-size: 20px;
+        border-radius: 8px;
+        font-size: 0.75rem;
         font-weight: 600;
-        color: #64748b;
-        margin-bottom: 8px;
+        text-transform: uppercase;
+        letter-spacing: 0.02em;
     }
 
-    .empty-text {
-        color: #94a3b8;
-        margin-bottom: 24px;
+    .badge-primary {
+        background: var(--primary-light);
+        color: var(--primary);
+    }
+
+    .badge-secondary {
+        background: var(--bg-body);
+        color: var(--text-secondary);
+        border: 1px solid var(--border);
     }
 </style>
 {% endblock %}
 
-{% block content %}
-<div class="usuarios-container">
-    <div class="page-header">
-        <h1 class="page-title">👥 Gerenciamento de Usuários</h1>
-        <p class="page-subtitle">Cadastre, edite e gerencie usuários e suas permissões</p>
-    </div>
-
-    <div class="actions-bar">
-        <a href="{{ url_for('usuarios.cadastrar') }}" class="btn btn-primary">
-            <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none"
-                stroke="currentColor" stroke-width="2">
-                <path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"></path>
-                <circle cx="9" cy="7" r="4"></circle>
-                <line x1="19" y1="8" x2="19" y2="14"></line>
-                <line x1="22" y1="11" x2="16" y2="11"></line>
-            </svg>
-            Novo Usuário + Empresa
-        </a>
-
-        <a href="{{ url_for('usuarios.vincular') }}" class="btn btn-secondary">
-            <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none"
-                stroke="currentColor" stroke-width="2">
-                <path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"></path>
-                <path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"></path>
-            </svg>
-            Vincular Usuário Existente
-        </a>
-    </div>
-
-    {% if users %}
-    <div class="users-grid">
-        {% for user in users %}
-        <div class="user-card">
-            <div class="user-header">
-                <div class="user-avatar">
-                    {{ user.name[0].upper() if user.name else user.email[0].upper() }}
-                </div>
-                <div class="user-info">
-                    <div class="user-name">{{ user.name or user.email.split('@')[0] }}</div>
-                    <div class="user-email">{{ user.email }}</div>
-                </div>
-            </div>
-
-            <div class="user-role role-{{ user.role }}">
-                {% if user.role == 'admin' %}
-                🔑 Administrador
-                {% elif user.role == 'consultant' %}
-                💼 Consultor
-                {% else %}
-                👤 Cliente
-                {% endif %}
-            </div>
-
-            <div class="user-companies">
-                <div class="companies-label">Empresas Vinculadas</div>
-                {% set user_employees = namespace(items=[]) %}
-                {% for emp in employees if emp.user_id == user.id %}
-                {% set _ = user_employees.items.append(emp) %}
-                {% endfor %}
-
-                {% if user_employees.items %}
-                {% for emp in user_employees.items %}
-                {% for company in companies if company.id == emp.company_id %}
-                <span class="company-tag">{{ company.name }}</span>
-                {% endfor %}
-                {% endfor %}
-                {% else %}
-                <span class="company-tag" style="opacity: 0.5;">Nenhuma empresa</span>
-                {% endif %}
-            </div>
-
-            <div class="user-actions">
-                <a href="{{ url_for('usuarios.editar', user_id=user.id) }}" class="btn btn-sm btn-edit">
-                    ✏️ Editar
-                </a>
-                <button onclick="deleteUser({{ user.id }}, '{{ user.name or user.email }}')"
-                    class="btn btn-sm btn-delete">
-                    🗑️ Excluir
-                </button>
-            </div>
-        </div>
-        {% endfor %}
-    </div>
-    {% else %}
-    <div class="empty-state">
-        <div class="empty-icon">👥</div>
-        <div class="empty-title">Nenhum usuário cadastrado</div>
-        <p class="empty-text">Comece cadastrando o primeiro usuário do sistema</p>
-        <a href="{{ url_for('usuarios.cadastrar') }}" class="btn btn-primary">
-            Cadastrar Primeiro Usuário
-        </a>
-    </div>
-    {% endif %}
-</div>
-
+{% block scripts %}
 <script>
-    async function deleteUser(userId, userName) {
-        if (!confirm(`Tem certeza que deseja excluir o usuário "${userName}"?\n\nEsta ação não pode ser desfeita.`)) {
-            return;
-        }
+    async function handleDeleteUser(userId, name) {
+        if (!confirm(`Tem certeza que deseja desativar o usuário "${name}"?`)) return;
 
         try {
             const response = await fetch(`/usuarios/api/delete/${userId}`, {
                 method: 'DELETE'
             });
-
             const result = await response.json();
 
             if (result.success) {
-                alert('Usuário excluído com sucesso!');
                 window.location.reload();
             } else {
-                alert('Erro ao excluir usuário: ' + result.error);
+                alert('Erro ao excluir: ' + (result.message || 'Erro desconhecido'));
             }
         } catch (error) {
-            alert('Erro ao excluir usuário: ' + error.message);
+            alert('Erro de conexão: ' + error.message);
         }
     }
 </script>

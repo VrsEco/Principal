@@ -1,0 +1,144 @@
+{% extends "layouts/app.html" %}
+
+{% block title %}Novo Usuário - Versus{% endblock %}
+
+{% block page_title %}Configurações / Usuários / Novo{% endblock %}
+
+{% block content %}
+<div style="max-width: 800px; margin: 0 auto; padding-bottom: 5rem;">
+    <!-- Header -->
+    <div style="margin-bottom: 2.5rem; display: flex; justify-content: space-between; align-items: flex-end;">
+        <div>
+            <h1 class="text-h1">Cadastrar Usuário</h1>
+            <p class="text-subtitle">Crie um novo perfil de acesso ao sistema.</p>
+        </div>
+        <button class="btn btn-secondary" onclick="window.location.href='/usuarios'">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
+                style="margin-right: 8px;">
+                <path d="M19 12H5M12 19l-7-7 7-7" />
+            </svg>
+            Voltar
+        </button>
+    </div>
+
+    <div id="alert-container"></div>
+
+    <form id="cadastrarForm" onsubmit="return handleRegistration(event)">
+        <div class="card mb-4" style="border-radius: 24px;">
+            <div class="card-body">
+                <h3 style="font-size: 1.25rem; font-weight: 700; margin-bottom: 2rem;">Dados Básicos</h3>
+
+                <div class="form-group mb-4">
+                    <label class="form-label">Nome Completo <span style="color: var(--danger);">*</span></label>
+                    <input type="text" id="name" class="form-control" placeholder="Ex: João Silva" required>
+                </div>
+
+                <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1.5rem; margin-bottom: 1.5rem;">
+                    <div class="form-group">
+                        <label class="form-label">E-mail Corporativo <span
+                                style="color: var(--danger);">*</span></label>
+                        <input type="email" id="email" class="form-control" placeholder="email@empresa.com" required>
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label">Perfil de Acesso <span style="color: var(--danger);">*</span></label>
+                        <select id="role" class="form-control" required>
+                            <option value="collaborator">Colaborador</option>
+                            <option value="client">Cliente</option>
+                            <option value="admin">Administrador (Total)</option>
+                        </select>
+                    </div>
+                </div>
+
+                <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1.5rem; margin-bottom: 1.5rem;">
+                    <div class="form-group">
+                        <label class="form-label">Senha Temporária <span style="color: var(--danger);">*</span></label>
+                        <input type="password" id="password" class="form-control" placeholder="Mín. 6 caracteres"
+                            required minlength="6">
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label">Confirmar Senha <span style="color: var(--danger);">*</span></label>
+                        <input type="password" id="confirm-password" class="form-control" placeholder="Repita a senha"
+                            required minlength="6">
+                    </div>
+                </div>
+
+                <h3 style="font-size: 1.25rem; font-weight: 700; margin: 2.5rem 0 1.5rem 0;">Comunicação (Opcional)</h3>
+
+                <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1.5rem;">
+                    <div class="form-group">
+                        <label class="form-label">WhatsApp</label>
+                        <input type="text" id="whatsapp" class="form-control" placeholder="Ex: 11988887777">
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label">Telegram (@username)</label>
+                        <input type="text" id="telegram" class="form-control" placeholder="Ex: @joaosilva">
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <button type="submit" id="submitBtn" class="btn btn-special" style="width: 100%; padding: 1rem;">
+            Criar Registro de Usuário
+        </button>
+    </form>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+    async function handleRegistration(e) {
+        e.preventDefault();
+
+        const name = document.getElementById('name').value;
+        const email = document.getElementById('email').value;
+        const role = document.getElementById('role').value;
+        const password = document.getElementById('password').value;
+        const confirmPassword = document.getElementById('confirm-password').value;
+        const whatsapp = document.getElementById('whatsapp').value;
+        const telegram = document.getElementById('telegram').value;
+        const alertContainer = document.getElementById('alert-container');
+        const submitBtn = document.getElementById('submitBtn');
+
+        if (password !== confirmPassword) {
+            showAlert('As senhas não conferem.', 'danger');
+            return;
+        }
+
+        submitBtn.disabled = true;
+        submitBtn.textContent = 'Processando...';
+
+        try {
+            const r = await fetch('/api/usuarios', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    name, email, role, password, whatsapp, telegram
+                })
+            });
+            const result = await r.json();
+
+            if (result.success) {
+                showAlert('Usuário criado com sucesso! Redirecionando...', 'success');
+                setTimeout(() => window.location.href = '/usuarios', 1200);
+            } else {
+                showAlert('Erro: ' + (result.message || 'Falha no cadastro'), 'danger');
+                submitBtn.disabled = false;
+                submitBtn.textContent = 'Criar Registro de Usuário';
+            }
+        } catch (err) {
+            showAlert('Erro de conexão.', 'danger');
+            submitBtn.disabled = false;
+            submitBtn.textContent = 'Criar Registro de Usuário';
+        }
+    }
+
+    function showAlert(msg, type) {
+        const container = document.getElementById('alert-container');
+        container.innerHTML = `
+            <div class="alert alert-${type} mb-4" style="border-radius: 12px; padding: 1rem; border: 1px solid transparent; ${type === 'danger' ? 'background: #fee2e2; color: #991b1b; border-color: #fecaca;' : 'background: #dcfce7; color: #166534; border-color: #bbf7d0;'}">
+                ${msg}
+            </div>
+        `;
+    }
+</script>
+{% endblock %}

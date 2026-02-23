@@ -247,11 +247,12 @@
       </div>
 
       <div class="progress-bar">
-        <div class="progress-fill" style="width: {{ audit_summary.coverage_percentage }}%"></div>
+        <div class="progress-fill" style="width: {{ audit_summary.coverage_percentage | default(0) }}%;"></div>
       </div>
 
       <div class="quick-actions">
-        <a href="/configs/system/audit" class="action-btn primary" onclick="event.stopPropagation()" data-ref="05">Ver Detalhes</a>
+        <a href="/configs/system/audit" class="action-btn primary" onclick="event.stopPropagation()" data-ref="05">Ver
+          Detalhes</a>
         <a href="/logs/" class="action-btn secondary" onclick="event.stopPropagation()" data-ref="06">Ver Logs</a>
       </div>
     </div>
@@ -284,38 +285,40 @@
 
       <div class="quick-actions">
         <a href="/logs/" class="action-btn primary" onclick="event.stopPropagation()" data-ref="07">Ver Logs</a>
-        <a href="/logs/export" class="action-btn secondary" onclick="event.stopPropagation()" data-ref="08">Exportar CSV</a>
+        <a href="/logs/export" class="action-btn secondary" onclick="event.stopPropagation()" data-ref="08">Exportar
+          CSV</a>
       </div>
     </div>
 
     <!-- Card 3: Segurança e Acesso -->
-    <div class="system-card">
+    <div class="system-card" onclick="window.location.href='{{ url_for('usuarios.index') }}';">
       <div class="card-header">
         <div class="card-icon security">🔐</div>
         <div class="card-content">
-          <h3>Segurança e Acesso</h3>
-          <p>Gerencie permissões, controle de acesso e políticas de segurança do sistema.</p>
-          <span class="card-badge badge-coming">🚀 Em breve</span>
+          <h3>Gestão de Usuários</h3>
+          <p>Gerencie permissões, controle de acesso e contatos (WhatsApp/Telegram).</p>
+          <span class="card-badge badge-active">✅ Ativo</span>
         </div>
       </div>
 
       <div class="card-stats">
         <div class="stat-item">
-          <span class="stat-value">-</span>
+          <span class="stat-value">{{ users_count or '-' }}</span>
           <span class="stat-label">Usuários Ativos</span>
         </div>
         <div class="stat-item">
-          <span class="stat-value">-</span>
-          <span class="stat-label">Roles</span>
+          <span class="stat-value">3</span>
+          <span class="stat-label">Perfil (Roles)</span>
         </div>
         <div class="stat-item">
-          <span class="stat-value">-</span>
-          <span class="stat-label">Permissões</span>
+          <span class="stat-value">{{ users_with_contacts or '-' }}</span>
+          <span class="stat-label">Com Contatos</span>
         </div>
       </div>
 
       <div class="quick-actions">
-        <button class="action-btn secondary" disabled data-ref="01">Em desenvolvimento</button>
+        <a href="{{ url_for('usuarios.index') }}" class="action-btn primary"
+          onclick="event.stopPropagation()">Gerenciar</a>
       </div>
     </div>
 

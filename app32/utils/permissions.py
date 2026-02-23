@@ -3,6 +3,21 @@ from flask import abort, request, jsonify
 from flask_login import current_user
 from models import Employee, Role, db
 
+
+def admin_required(f):
+    """
+    Decorator to restrict access to systems administrators.
+    """
+    @wraps(f)
+    def decorated_function(*args, **kwargs):
+        if not current_user.is_authenticated or current_user.role != "admin":
+            if request.path.startswith("/api/"):
+                return jsonify({"error": "Acesso negado: Apenas administradores"}), 403
+            abort(403, description="Acesso negado: Apenas administradores")
+        return f(*args, **kwargs)
+
+    return decorated_function
+
 def has_permission(company_id, resource, action):
     """
     Checks if the current user has permission for a specific resource and action in a company.

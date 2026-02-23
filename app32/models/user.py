@@ -16,6 +16,8 @@ class User(UserMixin, db.Model):
     role = db.Column(
         db.String(20), nullable=False, default="collaborator"
     )  # admin, collaborator, client
+    whatsapp = db.Column(db.String(20), nullable=True)
+    telegram = db.Column(db.String(50), nullable=True)
     is_active = db.Column(db.Boolean, default=True, nullable=False)
     created_at = db.Column(db.DateTime, default=datetime.utcnow, nullable=False)
     updated_at = db.Column(
@@ -39,6 +41,8 @@ class User(UserMixin, db.Model):
             "email": self.email,
             "name": self.name,
             "role": self.role,
+            "whatsapp": self.whatsapp,
+            "telegram": self.telegram,
             "is_active": self.is_active,
             "created_at": self.created_at.isoformat() if hasattr(self.created_at, 'isoformat') else self.created_at,
             "updated_at": self.updated_at.isoformat() if hasattr(self.updated_at, 'isoformat') else self.updated_at,

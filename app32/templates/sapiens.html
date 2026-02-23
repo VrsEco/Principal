@@ -1,308 +1,355 @@
 {% extends "layouts/app.html" %}
 
-{% block page_title %}Sapiens - IA Versus{% endblock %}
+{% block body_class %}{{ super() }} page-sapiens-chat{% endblock %}
+
+{% block page_title %}Sapiens V3 - Inteligência Versus{% endblock %}
 
 {% block head %}
 {{ super() }}
 <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
 <style>
+    /* THEME TELEGRAM PREMIUM - SQUAD ENGENHARIA ELITE */
     :root {
-        --chat-sidebar-width: 320px;
-        --chat-bg: #0b141a;
-        --chat-header-bg: #202c33;
-        --chat-sidebar-bg: #111b21;
-        --chat-bubble-ai: #202c33;
-        --chat-bubble-user: #005c4b;
-        --chat-footer-bg: #202c33;
-        --chat-text-primary: #e9edef;
-        --chat-text-secondary: #8696a0;
-        --chat-accent: #00a884;
+        --tg-sidebar-width: 320px;
+        --tg-bg: #ffffff;
+        --tg-sidebar-bg: #ffffff;
+        --tg-header-bg: #ffffff;
+        --tg-active-item: #f4f4f5;
+        --tg-bubble-user: #effdde;
+        --tg-bubble-ai: #ffffff;
+        --tg-text-primary: #1c1c1c;
+        --tg-text-secondary: #707579;
+        --tg-accent: #3390ec;
+        --tg-border: #dfe1e5;
+        --tg-chat-bg: #e7ebf0;
     }
 
-    .sapiens-layout {
-        display: flex;
-        height: calc(100vh - 84px);
-        /* Altura descontando o header do app */
-        margin: 0;
-        background: var(--chat-bg);
-        color: var(--chat-text-primary);
-        font-family: 'Poppins', sans-serif;
+    /* Reset global constraints for this page - RADICAL RESET */
+    body.page-sapiens-chat .main-content {
+        padding: 0 !important;
+        margin: 0 !important;
+        overflow: hidden !important;
+        height: calc(100vh - 84px) !important;
+        width: 100% !important;
+        max-width: 100% !important;
+    }
+
+    /* Remove gaps from potential parent containers */
+    body.page-sapiens-chat .app-container,
+    body.page-sapiens-chat .main-wrapper {
+        overflow: hidden !important;
+        height: 100vh !important;
+    }
+
+    /* Hide the global widget on this page */
+    #sapiens-widget-container {
+        display: none !important;
+    }
+
+    /* TELEGRAM LAYOUT DEFINITION */
+    .telegram-layout {
+        display: grid;
+        grid-template-columns: var(--tg-sidebar-width) 1fr;
+        height: 100%;
+        width: 100%;
+        background: var(--tg-bg);
+        position: relative;
         overflow: hidden;
     }
 
-    /* BARRA LATERAL (CONTATOS) */
-    .chat-sidebar {
-        width: var(--chat-sidebar-width);
-        min-width: var(--chat-sidebar-width);
-        background: var(--chat-sidebar-bg);
-        border-right: 1px solid rgba(255, 255, 255, 0.05);
+    /* SIDEBAR (CONTACTS) */
+    .tg-sidebar {
+        border-right: 1px solid var(--tg-border);
         display: flex;
         flex-direction: column;
+        background: var(--tg-sidebar-bg) !important;
         z-index: 10;
+        overflow: hidden;
     }
 
-    .sidebar-header {
-        padding: 1.5rem;
-        background: var(--chat-header-bg);
+    .tg-sidebar-header {
+        padding: 0.75rem 1rem;
+        border-bottom: 1px solid var(--tg-border);
+    }
+
+    .tg-search-wrapper {
+        background: #f1f1f2;
+        border-radius: 20px;
+        padding: 0.5rem 1rem;
         display: flex;
         align-items: center;
-        gap: 1rem;
+        gap: 0.5rem;
     }
 
-    .sidebar-header h1 {
-        font-size: 1.25rem;
-        font-weight: 700;
-        margin: 0;
-        color: var(--chat-accent);
+    .tg-search-wrapper input {
+        border: none;
+        background: transparent;
+        width: 100%;
+        font-size: 0.9rem;
+        outline: none;
+        color: var(--tg-text-primary);
     }
 
-    .contacts-list {
+    .tg-contacts-list {
         flex: 1;
         overflow-y: auto;
-        padding: 0.5rem 0;
     }
 
-    .contact-item {
+    /* INDIVIDUAL CONTACT */
+    .tg-contact-item {
         display: flex;
         align-items: center;
-        gap: 1rem;
-        padding: 1rem 1.5rem;
+        gap: 0.75rem;
+        padding: 0.75rem 1rem;
         cursor: pointer;
-        transition: all 0.2s;
-        border-bottom: 1px solid rgba(134, 150, 160, 0.08);
+        transition: background 0.2s;
+        border-bottom: 1px solid #f8f8f8;
+        color: var(--tg-text-primary);
     }
 
-    .contact-item:hover {
-        background: rgba(255, 255, 255, 0.05);
+    .tg-contact-item:hover {
+        background: var(--tg-active-item);
     }
 
-    .contact-item.active {
-        background: rgba(255, 255, 255, 0.1);
+    .tg-contact-item.active {
+        background: var(--tg-accent) !important;
+        color: white !important;
     }
 
-    .contact-avatar {
-        width: 48px;
-        height: 48px;
+    .tg-avatar {
+        width: 50px;
+        height: 50px;
         border-radius: 50%;
         display: flex;
         align-items: center;
         justify-content: center;
-        font-size: 1.5rem;
-        background: var(--chat-header-bg);
-        border: 2px solid rgba(255, 255, 255, 0.1);
+        font-size: 1.3rem;
+        background: #e1e9f1;
+        flex-shrink: 0;
+        font-weight: 600;
+        color: #55a2f1;
     }
 
-    .contact-item.active .contact-avatar {
-        border-color: var(--chat-accent);
+    .tg-contact-item.active .tg-avatar {
+        background: rgba(255, 255, 255, 0.2) !important;
+        color: white !important;
     }
 
-    .contact-info {
+    .tg-contact-info {
         flex: 1;
         overflow: hidden;
     }
 
-    .contact-name {
+    .tg-contact-name {
         font-weight: 600;
         font-size: 0.95rem;
         margin-bottom: 2px;
-        display: flex;
-        justify-content: space-between;
-        align-items: center;
-    }
-
-    .contact-last-msg {
-        font-size: 0.8rem;
-        color: var(--chat-text-secondary);
         white-space: nowrap;
         overflow: hidden;
         text-overflow: ellipsis;
     }
 
-    .status-dot {
-        width: 8px;
-        height: 8px;
-        background: var(--chat-accent);
-        border-radius: 50%;
-        display: inline-block;
+    .tg-contact-preview {
+        font-size: 0.8rem;
+        color: var(--tg-text-secondary);
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
     }
 
-    /* ÁREA DE CHAT (DIREITA) */
-    .chat-main {
-        flex: 1;
+    .tg-contact-item.active .tg-contact-preview {
+        color: rgba(255, 255, 255, 0.8) !important;
+    }
+
+    /* CHAT AREA WITH WALLPAPER */
+    .tg-chat-area {
         display: flex;
         flex-direction: column;
-        background-image: url('https://user-images.githubusercontent.com/15075759/28719144-86dc0f70-73b1-11e7-911d-60d70fcded21.png');
-        /* WhatsApp pattern */
-        background-size: contain;
+        background: var(--tg-chat-bg);
         position: relative;
+        overflow: hidden;
+        border-right: 1.8px solid var(--tg-border);
+        /* Containment border */
     }
 
-    .chat-header {
-        height: 64px;
-        background: var(--chat-header-bg);
+    .tg-chat-area::before {
+        content: "";
+        position: absolute;
+        inset: 0;
+        background-image: url('https://user-images.githubusercontent.com/15075759/28719144-86dc0f70-73b1-11e7-911d-60d70fcded21.png');
+        background-size: 440px;
+        opacity: 0.08;
+        /* Slightly more visible for the Telegram feel */
+        pointer-events: none;
+    }
+
+    /* CHAT HEADER */
+    .tg-chat-header {
+        height: 60px;
+        background: var(--tg-header-bg) !important;
         padding: 0 1.5rem;
         display: flex;
         align-items: center;
         justify-content: space-between;
+        border-bottom: 1px solid var(--tg-border);
+        z-index: 10;
+        color: var(--tg-text-primary);
+    }
+
+    .tg-chat-header-title {
+        font-weight: 700;
+        font-size: 1.05rem;
+    }
+
+    .tg-chat-header-status {
+        font-size: 0.8rem;
+        color: var(--tg-accent);
+    }
+
+    /* MESSAGES AREA */
+    .tg-messages-container {
+        flex: 1;
+        overflow-y: auto;
+        padding: 1.5rem 10% 2.5rem 10%;
+        /* Centered feel like Telegram */
+        display: flex;
+        flex-direction: column;
+        gap: 0.75rem;
         z-index: 5;
     }
 
-    .current-contact {
-        display: flex;
-        align-items: center;
-        gap: 0.75rem;
-    }
-
-    .current-avatar {
-        width: 40px;
-        height: 40px;
-        border-radius: 50%;
-        background: var(--chat-bg);
-        display: flex;
-        align-items: center;
-        justify-content: center;
-    }
-
-    .current-info h3 {
-        font-size: 1rem;
-        margin: 0;
-        font-weight: 600;
-    }
-
-    .current-info p {
-        font-size: 0.75rem;
-        margin: 0;
-        color: var(--chat-accent);
-    }
-
-    .chat-messages {
-        flex: 1;
-        overflow-y: auto;
-        padding: 2rem 5%;
-        display: flex;
-        flex-direction: column;
-        gap: 0.5rem;
-        scroll-behavior: smooth;
-    }
-
-    /* MENSAGENS */
-    .msg-row {
+    .tg-msg-row {
         display: flex;
         width: 100%;
         margin-bottom: 4px;
     }
 
-    .msg-row.user {
+    .tg-msg-row.user {
         justify-content: flex-end;
     }
 
-    .msg-bubble {
-        padding: 8px 12px;
-        border-radius: 8px;
+    .tg-msg-row.assistant {
+        justify-content: flex-start;
+    }
+
+    .tg-bubble {
         max-width: 85%;
-        font-size: 0.9rem;
-        line-height: 1.5;
+        padding: 0.6rem 0.9rem;
+        border-radius: 15px;
         position: relative;
-        box-shadow: 0 1px 0.5px rgba(0, 0, 0, 0.13);
+        box-shadow: 0 1px 1px rgba(0, 0, 0, 0.1);
+        font-size: 0.95rem;
+        line-height: 1.45;
     }
 
-    .user .msg-bubble {
-        background: var(--chat-bubble-user);
-        border-top-right-radius: 0;
+    .tg-msg-row.user .tg-bubble {
+        background: var(--tg-bubble-user);
+        border-bottom-right-radius: 4px;
+        color: #1c1c1c;
     }
 
-    .assistant .msg-bubble {
-        background: var(--chat-bubble-ai);
-        border-top-left-radius: 0;
+    .tg-msg-row.assistant .tg-bubble {
+        background: var(--tg-bubble-ai);
+        border-bottom-left-radius: 4px;
+        color: #1c1c1c;
+        border: 1px solid #e2e2e2;
     }
 
-    .msg-meta {
+    .tg-msg-meta {
         font-size: 0.65rem;
-        color: rgba(255, 255, 255, 0.5);
+        color: #6a6a6a;
         text-align: right;
-        margin-top: 4px;
+        margin-top: 2px;
         display: flex;
         align-items: center;
         justify-content: flex-end;
         gap: 4px;
     }
 
-    .msg-author {
-        font-size: 0.75rem;
+    .tg-bubble-author {
         font-weight: 700;
-        color: var(--chat-accent);
-        margin-bottom: 4px;
+        font-size: 0.85rem;
+        color: var(--tg-accent);
+        margin-bottom: 3px;
     }
 
-    /* INPUT */
-    .chat-footer {
-        padding: 10px 1.5rem;
-        background: var(--chat-footer-bg);
+    /* INPUT AREA */
+    .tg-input-area {
+        background: var(--tg-header-bg) !important;
+        padding: 0.75rem 1.5rem 1.25rem 1.5rem;
+        display: flex;
+        align-items: flex-end;
+        gap: 0.75rem;
+        border-top: 1px solid var(--tg-border);
+        z-index: 10;
+    }
+
+    .tg-input-wrapper {
+        flex: 1;
+        background: #f4f4f5;
+        border-radius: 24px;
+        padding: 0.4rem 1.2rem;
         display: flex;
         align-items: center;
-        gap: 1rem;
+        border: 1px solid var(--tg-border);
     }
 
-    .input-box {
-        flex: 1;
-        background: #2a3942;
-        border-radius: 8px;
-        padding: 9px 12px;
-        display: flex;
-        align-items: center;
-    }
-
-    .input-box textarea {
-        flex: 1;
-        background: transparent;
+    .tg-input-wrapper textarea {
+        width: 100%;
         border: none;
-        color: white;
+        background: transparent;
         outline: none;
+        padding: 0.4rem 0;
         resize: none;
-        font-size: 0.95rem;
-        max-height: 100px;
+        max-height: 150px;
+        font-family: inherit;
+        font-size: 1rem;
+        line-height: 1.4;
+        color: var(--tg-text-primary);
     }
 
-    .footer-btn {
-        background: transparent;
-        border: none;
-        color: var(--chat-text-secondary);
-        cursor: pointer;
-        font-size: 1.25rem;
-        transition: color 0.2s;
-    }
-
-    .footer-btn:hover {
+    .tg-send-btn {
+        width: 50px;
+        height: 50px;
+        border-radius: 50%;
+        background: var(--tg-accent);
         color: white;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        border: none;
+        cursor: pointer;
+        transition: all 0.2s;
+        box-shadow: 0 2px 5px rgba(51, 144, 236, 0.3);
     }
 
-    .send-btn {
-        color: var(--chat-accent) !important;
+    .tg-send-btn:hover {
+        background: #2b80d6;
+        transform: translateY(-2px);
     }
 
-    /* ALERTAS TÉCNICOS */
-    .tech-alert-toast {
+    /* TECH ALERT (SQUAD) */
+    .tech-alert {
         position: absolute;
-        top: 80px;
+        top: 75px;
         left: 50%;
         transform: translateX(-50%);
-        background: #1e293b;
-        border: 1px solid #38bdf8;
+        width: 80%;
+        background: white;
+        border: 1px solid var(--tg-border);
+        padding: 0.75rem 1.25rem;
         border-radius: 12px;
-        padding: 1rem;
-        display: flex;
+        box-shadow: 0 10px 25px rgba(0, 0, 0, 0.1);
+        display: none;
         align-items: center;
-        gap: 1rem;
-        box-shadow: 0 20px 50px rgba(0, 0, 0, 0.5);
-        z-index: 100;
-        width: 90%;
-        max-width: 600px;
+        justify-content: space-between;
+        z-index: 20;
         animation: slideDown 0.3s ease-out;
     }
 
     @keyframes slideDown {
         from {
-            transform: translate(-50%, -100%);
+            transform: translate(-50%, -20px);
             opacity: 0;
         }
 
@@ -312,274 +359,217 @@
         }
     }
 
-    /* Estilização marked (Markdown) */
-    .msg-bubble h3 {
-        font-size: 1rem;
-        margin: 0.5rem 0;
-        color: #ffca28;
+    .msg-text pre {
+        background: #f8f8f8;
+        padding: 12px;
+        border-radius: 8px;
+        margin: 8px 0;
+        border: 1px solid #eee;
+        overflow-x: auto;
+        font-size: 0.85rem;
     }
 
-    .msg-bubble ul {
-        padding-left: 1.2rem;
-        margin: 0.5rem 0;
-    }
-
-    .msg-bubble code {
-        background: rgba(255, 255, 255, 0.1);
+    .msg-text code {
+        background: #f0f0f0;
         padding: 2px 4px;
         border-radius: 4px;
         font-family: monospace;
-    }
-
-    .msg-bubble p {
-        margin-bottom: 0.5rem;
-    }
-
-    .msg-bubble p:last-child {
-        margin-bottom: 0;
-    }
-
-    /* MOBILE RESPONSIVE */
-    @media (max-width: 768px) {
-        .chat-sidebar {
-            position: absolute;
-            left: 0;
-            top: 0;
-            bottom: 0;
-            width: 100%;
-            transition: transform 0.3s ease;
-        }
-
-        .chat-sidebar.hidden {
-            transform: translateX(-100%);
-        }
-
-        .chat-main {
-            width: 100%;
-        }
-
-        .back-btn {
-            display: block !important;
-        }
-    }
-
-    .back-btn {
-        display: none;
-        margin-right: 1rem;
-        font-size: 1.25rem;
-        cursor: pointer;
-    }
-
-    /* Scrollbar minimalista */
-    ::-webkit-scrollbar {
-        width: 6px;
-    }
-
-    ::-webkit-scrollbar-track {
-        background: transparent;
-    }
-
-    ::-webkit-scrollbar-thumb {
-        background: rgba(255, 255, 255, 0.1);
-        border-radius: 10px;
-    }
-
-    ::-webkit-scrollbar-thumb:hover {
-        background: rgba(255, 255, 255, 0.2);
     }
 </style>
 {% endblock %}
 
 {% block content %}
-<div class="sapiens-layout">
-    <!-- BARRA LATERAL -->
-    <aside class="chat-sidebar" id="sidebar">
-        <div class="sidebar-header">
-            <h1>Sapiens</h1>
-        </div>
-
-        <div class="contacts-list">
-            <!-- SAPiens Principal -->
-            <div class="contact-item active" onclick="selectContact('sapiens')">
-                <div class="contact-avatar">🧭</div>
-                <div class="contact-info">
-                    <div class="contact-name">
-                        <span>Sapiens</span>
-                        <span class="status-dot"></span>
-                    </div>
-                    <div class="contact-last-msg">Líder Supervisor & Especialistas</div>
-                </div>
+<div class="telegram-layout">
+    <!-- BARRA LATERAL (CONTATOS) -->
+    <aside class="tg-sidebar" id="tgSidebar">
+        <div class="tg-sidebar-header">
+            <div class="tg-search-wrapper">
+                <i class="fas fa-search" style="color: var(--tg-text-secondary);"></i>
+                <input type="text" placeholder="Procurar conversas..." id="contactSearch">
             </div>
-
-            <!-- Squad de Engenharia -->
-            <div class="contact-item" onclick="selectContact('engineering')">
-                <div class="contact-avatar">🛠️</div>
-                <div class="contact-info">
-                    <div class="contact-name">
-                        <span>Squad Engenharia</span>
-                        <span class="status-dot" style="background: #38bdf8;"></span>
-                    </div>
-                    <div class="contact-last-msg">@Arquitetos & @QA Automation</div>
-                </div>
+        </div>
+        <div class="tg-contacts-list" id="contactsList">
+            <div style="padding: 3rem 1rem; text-align: center; color: var(--tg-text-secondary);">
+                <i class="fas fa-circle-notch fa-spin fa-2x"></i>
+                <p style="margin-top: 1rem;">Conectando ao Sapiens...</p>
             </div>
         </div>
     </aside>
 
     <!-- ÁREA DE CHAT -->
-    <main class="chat-main">
-        <!-- HEADER DO CHAT -->
-        <header class="chat-header">
-            <div class="current-contact">
-                <div class="back-btn" onclick="toggleSidebar(true)"><i class="fas fa-arrow-left"></i></div>
-                <div class="current-avatar" id="activeAvatar">🧭</div>
-                <div class="current-info">
-                    <h3 id="activeName">Sapiens</h3>
-                    <p id="activeStatus">Online</p>
+    <section class="tg-chat-area">
+        <header class="tg-chat-header">
+            <div style="display: flex; align-items: center; gap: 1rem;">
+                <div class="tg-chat-header-info">
+                    <div class="tg-chat-header-title" id="activeName">Versus Sapiens</div>
+                    <div class="tg-chat-header-status" id="activeStatus">visto recentemente</div>
                 </div>
             </div>
-            <div class="chat-actions">
-                <button class="footer-btn" title="Limpar conversa" onclick="clearLocalChat()"><i
-                        class="fas fa-trash-alt"></i></button>
+            <div class="tg-header-actions">
+                <button onclick="clearHistory()"
+                    style="background:none; border:none; color: var(--tg-text-secondary); cursor: pointer; font-size: 1.1rem;"
+                    title="Reiniciar Sessão">
+                    <i class="fas fa-sync-alt"></i>
+                </button>
             </div>
         </header>
 
-        <!-- ALERTA TÉCNICO FLUTUANTE (Para Engenharia) -->
-        <div id="techAlert" style="display: none;" class="tech-alert-toast">
-            <div style="font-size: 24px;">🔧</div>
-            <div style="flex: 1;">
-                <strong id="techAlertTitle" style="display: block; color: #38bdf8; font-size: 0.9rem;">Reparo
-                    Pendente</strong>
-                <p id="techAlertMsg" style="margin: 0; font-size: 0.8rem; color: var(--chat-text-secondary);"></p>
+        <!-- SQUAD ALERT -->
+        <div id="techAlert" class="tech-alert">
+            <div style="display: flex; gap: 1rem; align-items: center;">
+                <div class="tg-avatar"
+                    style="width: 40px; height: 40px; background: var(--tg-accent); color: white; border-radius: 10px;">
+                    🛠️</div>
+                <div>
+                    <strong style="display: block; font-size: 0.9rem;">Intervenção da Engenharia</strong>
+                    <p id="techAlertMsg" style="font-size: 0.8rem; margin: 0; color: #555;">Analisando estrutura de
+                        dados...</p>
+                </div>
             </div>
             <div style="display: flex; gap: 0.5rem;">
-                <button id="btnApprove" onclick="handleAction('approve')"
-                    style="background: #10b981; color: white; border: none; padding: 6px 12px; border-radius: 6px; font-size: 0.75rem; font-weight: 700; cursor: pointer;">Aprovar</button>
-                <button onclick="document.getElementById('techAlert').style.display='none'"
-                    style="background: transparent; border: none; color: white; cursor: pointer;"><i
-                        class="fas fa-times"></i></button>
+                <button id="btnApprove" class="btn btn-primary" onclick="handleAction('approve')"
+                    style="font-size: 0.75rem; padding: 0.4rem 0.8rem;">Aplicar Fix</button>
+                <button class="btn btn-light" onclick="document.getElementById('techAlert').style.display='none'"
+                    style="font-size: 0.75rem; padding: 0.4rem 0.8rem;">Dispensar</button>
             </div>
         </div>
 
-        <!-- MENSAGENS -->
-        <div class="chat-messages" id="chatMessages">
-            <!-- Conteúdo dinâmico via JS -->
+        <div class="tg-messages-container" id="chatMessages">
+            <!-- Messages will be injected here -->
         </div>
 
-        <!-- FOOTER / INPUT -->
-        <footer class="chat-footer">
-            <button class="footer-btn"><i class="far fa-smile"></i></button>
-            <button class="footer-btn"><i class="fas fa-paperclip"></i></button>
-            <div class="input-box">
-                <textarea id="userInput" placeholder="Mensagem" rows="1"></textarea>
+        <div class="tg-input-area">
+            <button class="attach-btn"
+                style="background:none; border:none; color: var(--tg-text-secondary); font-size: 1.4rem; cursor: pointer; padding-bottom: 5px;">
+                <i class="far fa-smile"></i>
+            </button>
+            <div class="tg-input-wrapper">
+                <textarea id="userInput" placeholder="Escreva uma mensagem..." rows="1"></textarea>
             </div>
-            <button id="sendBtn" class="footer-btn send-btn" onclick="sendMessage()"><i
-                    class="fas fa-paper-plane"></i></button>
-        </footer>
-    </main>
+            <button class="tg-send-btn" onclick="sendMessage()" id="sendBtn">
+                <i class="fas fa-paper-plane"
+                    style="transform: rotate(45deg); margin-left: -3px; margin-top: -2px;"></i>
+            </button>
+        </div>
+    </section>
 </div>
 {% endblock %}
 
 {% block scripts %}
-{{ super() }}
 <script>
-    const chatMessages = document.getElementById('chatMessages');
-    const userInput = document.getElementById('userInput');
-    const sendBtn = document.getElementById('sendBtn');
-
     let activeContact = 'sapiens';
-    let history = [];
+    let activeUserId = null;
+    let chatHistory = [];
+    let contacts = [];
     let currentActionId = null;
 
-    // Configurando o Marked
-    marked.setOptions({
-        gfm: true,
-        breaks: true
-    });
+    const chatMessages = document.getElementById('chatMessages');
+    const contactsList = document.getElementById('contactsList');
+    const userInput = document.getElementById('userInput');
 
-    async function selectContact(id) {
-        activeContact = id;
+    marked.setOptions({ gfm: true, breaks: true });
 
-        // UI Updates
-        document.querySelectorAll('.contact-item').forEach(item => {
-            item.classList.remove('active');
-            if (item.innerText.includes(id === 'sapiens' ? 'Sapiens' : 'Squad')) item.classList.add('active');
-        });
-
-        const names = { sapiens: 'Sapiens', engineering: 'Squad Engenharia' };
-        const avatars = { sapiens: '🧭', engineering: '🛠️' };
-        const status = { sapiens: 'Líder Supervisor & Especialistas', engineering: 'Auditores de Código & Self-Healing' };
-
-        document.getElementById('activeName').innerText = names[id];
-        document.getElementById('activeAvatar').innerText = avatars[id];
-        document.getElementById('activeStatus').innerText = status[id];
-
-        if (window.innerWidth < 768) toggleSidebar(false);
-
-        // Load specific history
-        await loadChatHistory();
-
-        if (id === 'engineering') checkActions();
-    }
-
-    function toggleSidebar(show) {
-        const sidebar = document.getElementById('sidebar');
-        if (show) sidebar.classList.remove('hidden');
-        else sidebar.classList.add('hidden');
-    }
-
-    async function loadChatHistory() {
-        chatMessages.innerHTML = '<div style="text-align:center; padding: 2rem; color: var(--chat-text-secondary);">Carregando histórico...</div>';
-
+    async function loadContacts() {
         try {
-            const resp = await fetch(`/api/agents/history?contact=${activeContact}`);
+            const resp = await fetch('/api/agents/contacts');
             const data = await resp.json();
-
-            chatMessages.innerHTML = '';
-            history = [];
-
-            if (data.success && data.history.length > 0) {
-                data.history.forEach(msg => {
-                    const role = msg.direction === 'inbound' ? 'user' : 'assistant';
-                    const agent = msg.metadata ? msg.metadata.agent : null;
-                    addMessageUI(role, msg.content, agent, msg.created_at);
-                    history.push({ role, content: msg.content });
-                });
-            } else {
-                addWelcomeMessage();
+            if (data.success) {
+                contacts = data.contacts;
+                renderContacts();
             }
         } catch (e) {
-            console.error('History Error:', e);
-            chatMessages.innerHTML = '';
-            addWelcomeMessage();
+            console.error('Erro contatos:', e);
         }
     }
 
-    function addWelcomeMessage() {
-        const content = activeContact === 'sapiens'
-            ? "Olá! Eu sou o Sapiens, Agente de IA da Versus. Estou aqui com nosso time de especialistas para auxiliar na gestão do seu negócio. Como posso ajudar?"
-            : "Squad de Engenharia de Elite online. Relate falhas técnicas, Tracebacks ou peça melhorias no sistema.";
-        addMessageUI('assistant', content, activeContact === 'sapiens' ? 'Supervisor' : '@Arquitetos');
+    function renderContacts() {
+        contactsList.innerHTML = '';
+        contacts.forEach(c => {
+            const div = document.createElement('div');
+            div.className = `tg-contact-item ${activeContact === c.id ? 'active' : ''}`;
+            div.onclick = () => selectContact(c);
+
+            div.innerHTML = `
+                <div class="tg-avatar">${c.avatar}</div>
+                <div class="tg-contact-info">
+                    <div class="tg-contact-name">${c.name}</div>
+                    <div class="tg-contact-preview">${c.description}</div>
+                </div>
+            `;
+            contactsList.appendChild(div);
+        });
+    }
+
+    async function selectContact(contact) {
+        activeContact = contact.id;
+        activeUserId = contact.type === 'user' ? contact.id : null;
+
+        document.getElementById('activeName').innerText = contact.name;
+        document.getElementById('activeStatus').innerText = contact.status === 'online' ? 'agente online' : 'visto recentemente';
+
+        renderContacts();
+        await loadChatHistory();
+
+        if (activeContact === 'engineering') checkActions();
+        else document.getElementById('techAlert').style.display = 'none';
+    }
+
+    async function loadChatHistory() {
+        chatMessages.innerHTML = `
+            <div style="flex:1; display:flex; align-items:center; justify-content:center; flex-direction:column; opacity:0.6;">
+                <i class="fas fa-circle-notch fa-spin fa-2x" style="color:var(--tg-accent)"></i>
+                <p style="margin-top:1rem; font-size:0.9rem;">Carregando histórico...</p>
+            </div>
+        `;
+
+        const url = new URL('/api/agents/history', window.location.origin);
+        url.searchParams.append('contact', activeContact);
+        if (activeUserId) url.searchParams.append('user_id', activeUserId);
+
+        try {
+            const resp = await fetch(url.toString());
+            const data = await resp.json();
+
+            chatMessages.innerHTML = '';
+            chatHistory = [];
+
+            if (data.success && data.history.length > 0) {
+                data.history.forEach(m => {
+                    const role = m.direction === 'inbound' ? 'user' : 'assistant';
+                    addMessageUI(role, m.content, m.agent_name, m.created_at);
+                    chatHistory.push({ role: role, content: m.content });
+                });
+            } else {
+                chatMessages.innerHTML = `
+                    <div style="text-align:center; padding: 4rem 1rem; color: #888; font-size: 0.85rem;">
+                        <div style="background: rgba(0,0,0,0.05); display: inline-block; padding: 4px 12px; border-radius: 12px;">
+                            Início da conversa com ${activeContact === 'sapiens' ? 'o Sapiens' : 'a Engenharia'}
+                        </div>
+                    </div>
+                `;
+            }
+        } catch (e) {
+            chatMessages.innerHTML = '<div style="text-align:center; padding: 2rem; color: #f44336;">Não foi possível carregar o histórico.</div>';
+        }
     }
 
     function addMessageUI(role, content, author = null, time = null) {
         const row = document.createElement('div');
-        row.className = `msg-row ${role}`;
+        row.className = `tg-msg-row ${role}`;
 
-        const timestamp = time ? new Date(time).toLocaleTimeString([], { hour: '2h-digit', minute: '2h-digit' }) : new Date().toLocaleTimeString([], { hour: '2h-digit', minute: '2h-digit' });
+        const timestamp = time ? new Date(time).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) :
+            new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
 
-        let authorLabel = '';
-        if (role === 'assistant') {
-            const name = author ? formatAgentName(author) : (activeContact === 'sapiens' ? 'Supervisor' : '@Arquitetos');
-            authorLabel = `<div class="msg-author">${name}</div>`;
-        }
+        const authorLabel = (role === 'assistant' && author) ?
+            `<div class="tg-bubble-author">${formatAgentName(author)}</div>` : '';
 
         row.innerHTML = `
-            <div class="msg-bubble">
+            <div class="tg-bubble">
                 ${authorLabel}
                 <div class="msg-text">${role === 'assistant' ? marked.parse(content) : escapeHtml(content)}</div>
-                <div class="msg-meta">
+                <div class="tg-msg-meta">
                     ${timestamp}
-                    ${role === 'user' ? '<i class="fas fa-check-double"></i>' : ''}
+                    ${role === 'user' ? '<i class="fas fa-check-double" style="color: #4fae4e; font-size:0.75rem;"></i>' : ''}
                 </div>
             </div>
         `;
@@ -588,25 +578,20 @@
         chatMessages.scrollTop = chatMessages.scrollHeight;
     }
 
-    function formatAgentName(id) {
-        if (id.startsWith('@')) return id;
-        const names = {
-            'strategist': '🧠 Estrategista',
-            'business_architect': '🏗️ Negócios',
-            'operations': '⚡ Operações',
-            'finance': '💰 Financeiro',
-            'auditor': '🛡️ Auditor',
-            'sapiens': '🧭 Sapiens',
-            'end': 'Líder',
-            'engineering_squad': '@Arquitetos'
-        };
-        return names[id] || id;
-    }
-
     function escapeHtml(text) {
         const div = document.createElement('div');
         div.textContent = text;
         return div.innerHTML;
+    }
+
+    function formatAgentName(name) {
+        const map = {
+            'work_agent_squad': 'Sapiens',
+            'engineering_squad': 'Squad Engenharia',
+            '@ARQUITETO': 'Arquiteto',
+            '@QA_AUTOMATION': 'QA-Bot'
+        };
+        return map[name] || name;
     }
 
     async function sendMessage() {
@@ -617,16 +602,11 @@
         userInput.style.height = 'auto';
         addMessageUI('user', text);
 
-        // Indicator
         const typingId = 'typing-' + Date.now();
         const typingRow = document.createElement('div');
-        typingRow.className = 'msg-row assistant';
+        typingRow.className = 'tg-msg-row assistant';
         typingRow.id = typingId;
-        typingRow.innerHTML = `<div class="msg-bubble"><div style="display:flex; gap:4px; padding: 4px 10px;">
-                                <div class="status-dot" style="animation: pulse 1s infinite"></div>
-                                <div class="status-dot" style="animation: pulse 1s infinite 0.3s"></div>
-                                <div class="status-dot" style="animation: pulse 1s infinite 0.6s"></div>
-                               </div></div>`;
+        typingRow.innerHTML = `<div class="tg-bubble" style="color:#aaa;">digitando...</div>`;
         chatMessages.appendChild(typingRow);
         chatMessages.scrollTop = chatMessages.scrollHeight;
 
@@ -637,27 +617,21 @@
                 body: JSON.stringify({
                     message: text,
                     contact: activeContact,
-                    history: history.slice(-5) // Send some context
+                    history: chatHistory.slice(-5)
                 })
             });
             const result = await resp.json();
-
             document.getElementById(typingId).remove();
 
             if (result.success) {
                 addMessageUI('assistant', result.response, result.agent);
-                history.push({ role: 'assistant', content: result.response });
-                if (activeContact === 'engineering') checkActions();
-            } else {
-                addMessageUI('assistant', '⚠️ Erro: ' + result.error);
+                chatHistory.push({ role: 'assistant', content: result.response });
             }
         } catch (e) {
             document.getElementById(typingId).remove();
-            addMessageUI('assistant', '⚠️ Erro de conexão com o servidor.');
         }
     }
 
-    // CHECK FOR ENGINEERING ACTIONS
     async function checkActions() {
         if (activeContact !== 'engineering') return;
         try {
@@ -668,13 +642,6 @@
                 currentActionId = action.id;
                 document.getElementById('techAlert').style.display = 'flex';
                 document.getElementById('techAlertMsg').textContent = action.description;
-                if (action.status === 'awaiting_approval') {
-                    document.getElementById('techAlertTitle').textContent = "Proposta de Correção Pronta";
-                    document.getElementById('btnApprove').style.display = 'block';
-                } else {
-                    document.getElementById('techAlertTitle').textContent = "Analisando Falha Tecnológica...";
-                    document.getElementById('btnApprove').style.display = 'none';
-                }
             } else {
                 document.getElementById('techAlert').style.display = 'none';
             }
@@ -686,17 +653,16 @@
         const data = await resp.json();
         if (data.success) {
             document.getElementById('techAlert').style.display = 'none';
-            addMessageUI('assistant', `✅ **AÇÃO EXECUTADA:** ${data.message}`, '@ARQUITETO');
+            addMessageUI('assistant', `✅ **REPARO EXECUTADO:** ${data.message}`, 'engineering_squad');
         }
     }
 
-    function clearLocalChat() {
-        if (confirm('Deseja limpar as mensagens locais?')) {
+    function clearHistory() {
+        if (confirm('Isso irá recarregar o histórico do servidor. Deseja continuar?')) {
             loadChatHistory();
         }
     }
 
-    // Event Listeners
     userInput.addEventListener('keydown', e => {
         if (e.key === 'Enter' && !e.shiftKey) {
             e.preventDefault();
@@ -709,31 +675,14 @@
         this.style.height = (this.scrollHeight) + 'px';
     });
 
-    // Init
     document.addEventListener('DOMContentLoaded', () => {
-        // Checar parâmetro contact na URL
+        loadContacts();
         const params = new URLSearchParams(window.location.search);
         const contactParam = params.get('contact');
-        if (contactParam) selectContact(contactParam);
-        else selectContact('sapiens');
+        if (contactParam) selectContact({ id: contactParam, name: contactParam.toUpperCase(), type: 'bot' });
+        else selectContact({ id: 'sapiens', name: 'Versus Sapiens', status: 'online', avatar: '🧭', type: 'bot' });
 
         setInterval(checkActions, 30000);
     });
-
 </script>
-<style>
-    @keyframes pulse {
-
-        0%,
-        100% {
-            opacity: 0.3;
-            transform: scale(0.8);
-        }
-
-        50% {
-            opacity: 1;
-            transform: scale(1.1);
-        }
-    }
-</style>
 {% endblock %}

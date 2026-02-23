@@ -23,7 +23,7 @@
   {% block head %}{% endblock %}
 </head>
 
-<body>
+<body class="{% block body_class %}{% endblock %}">
 
   <script>
     {% if company and company.id %}
@@ -64,7 +64,7 @@
       }
     }
   </script>
-  {% include 'components/onboarding_widget.html' %}
+  {% include 'components/sapiens_widget.html' %}
   {% block scripts %}{% endblock %}
 </body>
 

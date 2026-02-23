@@ -28,14 +28,19 @@ def run_mcp_server():
     # Isso garante que tanto o Agente interno quanto Agentes externos (MCP)
     # usem exatamente a mesma lógica de negócio (Regra do Espelhamento).
     for tool in system_tools:
-        # Registra a ferramenta no MCP usando as informações da ferramenta LangChain
-        @mcp.tool(name=tool.name)
-        def anonymous_tool_wrapper(*args, _tool=tool, **kwargs):
-            # O wrapper invoca a ferramenta original
-            return _tool.invoke(kwargs if kwargs else args[0] if args else {})
-        
-        # Ajusta o docstring para o MCP reconhecer a descrição
-        anonymous_tool_wrapper.__doc__ = tool.description
+        # FastMCP usa introspecção da função Python (assinatura e docstring)
+        # Vamos passar a função original (tool.func) para gerar o Schema exato
+        if hasattr(tool, 'func'):
+            mcp.tool(name=tool.name, description=tool.description)(tool.func)
+        else:
+            # Caso não tenha func, fallback
+            def make_wrapper(t):
+                @mcp.tool(name=t.name, description=t.description)
+                def mcp_tool_wrapper(*args, **kwargs):
+                    return t.invoke(kwargs if kwargs else args[0] if args else {})
+                return mcp_tool_wrapper
+            make_wrapper(tool)
+
 
     # Ferramentas Adicionais de Diagnóstico de Sistema
     @mcp.tool()

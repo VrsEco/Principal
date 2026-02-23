@@ -2,6 +2,8 @@ from typing import TypedDict, Annotated, List, Literal
 from langchain_core.messages import BaseMessage
 from langgraph.graph import StateGraph, START, END
 from langgraph.prebuilt import ToolNode
+from langgraph.checkpoint.memory import MemorySaver
+from contextlib import contextmanager
 
 # Imports dos Agentes
 from src.intelligence.work_agents.state import WorkAgentState
@@ -12,7 +14,7 @@ from src.intelligence.tools import tools  # Compartilha as ferramentas existente
 from src.intelligence.agents.supervisor import supervisor_node
 
 # --- 1. Definição do Grafo ---
-def create_work_agent_workflow():
+def create_work_agent_workflow(checkpointer=None):
     """
     Constrói a estrutura do grafo de Agentes de Trabalho (Work Agents V2).
     """
@@ -78,6 +80,10 @@ def create_work_agent_workflow():
         messages = state["messages"]
         last_message = messages[-1]
         
+        # Se for tupla, não tem tool_calls
+        if isinstance(last_message, tuple):
+            return "supervisor"
+            
         # Se o agente chamou uma ferramenta
         if hasattr(last_message, 'tool_calls') and last_message.tool_calls:
             return "tools"
@@ -96,7 +102,8 @@ def create_work_agent_workflow():
     # Tools -> Supervisor (Ciclo Fechado)
     workflow.add_edge("tools", "supervisor")
 
-    return workflow.compile()
+    return workflow.compile(checkpointer=checkpointer)
 
 # Grafo compilado pronto para uso
-work_agent_graph = create_work_agent_workflow()
+memory = MemorySaver()
+work_agent_graph = create_work_agent_workflow(checkpointer=memory)

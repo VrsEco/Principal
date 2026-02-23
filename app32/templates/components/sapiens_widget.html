@@ -1,0 +1,541 @@
+<!-- Sapiens Global Widget: IA Versus Quick Access -->
+<script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
+<style>
+    #sapiens-widget-container {
+        position: fixed;
+        bottom: 24px;
+        right: 24px;
+        z-index: 25000;
+        /* Seguindo a Regra de Ouro: Modais sempre com z-index: 25000 */
+        font-family: 'Poppins', 'Inter', sans-serif;
+    }
+
+    /* Launcher Button */
+    #sapiens-launcher {
+        width: 64px;
+        height: 64px;
+        border-radius: 50%;
+        background: linear-gradient(135deg, #00a884 0%, #005c4b 100%);
+        color: white;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        box-shadow: 0 8px 24px rgba(0, 168, 132, 0.3);
+        cursor: pointer;
+        transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+        position: relative;
+        border: 2px solid rgba(255, 255, 255, 0.2);
+    }
+
+    #sapiens-launcher:hover {
+        transform: scale(1.1) rotate(5deg);
+        box-shadow: 0 12px 32px rgba(0, 168, 132, 0.4);
+    }
+
+    #sapiens-launcher i {
+        font-size: 28px;
+    }
+
+    /* Notification dot */
+    .sapiens-pulse {
+        position: absolute;
+        top: 0;
+        right: 0;
+        width: 16px;
+        height: 16px;
+        background: #ef4444;
+        border-radius: 50%;
+        border: 2px solid white;
+        display: none;
+    }
+
+    /* Chat Window */
+    #sapiens-chat-window {
+        position: absolute;
+        bottom: 80px;
+        right: 0;
+        width: 380px;
+        height: 580px;
+        max-height: calc(100vh - 120px);
+        background: #0b141a;
+        /* Dark theme matching Sapiens.html */
+        border-radius: 16px;
+        box-shadow: 0 20px 50px rgba(0, 0, 0, 0.4);
+        display: none;
+        flex-direction: column;
+        overflow: hidden;
+        border: 1px solid rgba(255, 255, 255, 0.1);
+        animation: widgetSlideUp 0.3s ease-out;
+    }
+
+    @keyframes widgetSlideUp {
+        from {
+            transform: translateY(20px);
+            opacity: 0;
+        }
+
+        to {
+            transform: translateY(0);
+            opacity: 1;
+        }
+    }
+
+    /* Header */
+    .sapiens-widget-header {
+        background: #202c33;
+        color: white;
+        padding: 16px;
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+    }
+
+    .header-contact-info {
+        display: flex;
+        align-items: center;
+        gap: 12px;
+    }
+
+    .header-avatar {
+        width: 40px;
+        height: 40px;
+        border-radius: 50%;
+        background: #111b21;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 20px;
+        border: 1px solid rgba(0, 168, 132, 0.3);
+    }
+
+    .header-text h4 {
+        margin: 0;
+        font-size: 15px;
+        font-weight: 600;
+        color: #e9edef;
+    }
+
+    .header-text span {
+        font-size: 12px;
+        color: #00a884;
+    }
+
+    /* Contact Selector Tabs */
+    .sapiens-tabs {
+        display: flex;
+        background: #111b21;
+        padding: 4px;
+        gap: 4px;
+    }
+
+    .sapiens-tab {
+        flex: 1;
+        padding: 8px;
+        text-align: center;
+        font-size: 12px;
+        color: #8696a0;
+        cursor: pointer;
+        border-radius: 8px;
+        transition: all 0.2s;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        gap: 6px;
+    }
+
+    .sapiens-tab.active {
+        background: #202c33;
+        color: #00a884;
+        font-weight: 600;
+    }
+
+    /* Messages Area */
+    #sapiens-widget-messages {
+        flex: 1;
+        padding: 20px;
+        overflow-y: auto;
+        display: flex;
+        flex-direction: column;
+        gap: 12px;
+        background-image: url('https://user-images.githubusercontent.com/15075759/28719144-86dc0f70-73b1-11e7-911d-60d70fcded21.png');
+        background-size: 400px;
+        background-blend-mode: overlay;
+        background-color: #0b141a;
+    }
+
+    .widget-msg {
+        max-width: 85%;
+        padding: 10px 14px;
+        border-radius: 12px;
+        font-size: 13.5px;
+        line-height: 1.5;
+        position: relative;
+        word-wrap: break-word;
+    }
+
+    .widget-msg.assistant {
+        background: #202c33;
+        color: #e9edef;
+        align-self: flex-start;
+        border-top-left-radius: 2px;
+    }
+
+    .widget-msg.user {
+        background: #005c4b;
+        color: white;
+        align-self: flex-end;
+        border-top-right-radius: 2px;
+    }
+
+    .msg-timestamp {
+        font-size: 10px;
+        opacity: 0.6;
+        margin-top: 4px;
+        text-align: right;
+    }
+
+    .msg-author-badge {
+        font-size: 11px;
+        font-weight: 700;
+        color: #00a884;
+        margin-bottom: 4px;
+    }
+
+    /* Input Area */
+    .sapiens-widget-input-area {
+        padding: 12px 16px;
+        background: #202c33;
+        display: flex;
+        gap: 12px;
+        align-items: center;
+    }
+
+    #sapiens-widget-input {
+        flex: 1;
+        background: #2a3942;
+        border: none;
+        color: white;
+        padding: 10px 16px;
+        border-radius: 8px;
+        outline: none;
+        font-size: 14px;
+        max-height: 120px;
+        resize: none;
+    }
+
+    .sapiens-widget-send {
+        background: transparent;
+        color: #00a884;
+        border: none;
+        cursor: pointer;
+        font-size: 20px;
+        transition: transform 0.2s;
+    }
+
+    .sapiens-widget-send:hover {
+        transform: scale(1.2);
+    }
+
+    /* Markdown Styling inside widget */
+    .widget-msg p {
+        margin: 0 0 8px 0;
+    }
+
+    .widget-msg p:last-child {
+        margin-bottom: 0;
+    }
+
+    .widget-msg ul,
+    .widget-msg ol {
+        padding-left: 18px;
+        margin: 8px 0;
+    }
+
+    .widget-msg code {
+        background: rgba(255, 255, 255, 0.1);
+        padding: 2px 4px;
+        border-radius: 4px;
+        font-family: monospace;
+    }
+
+    /* Typing indicator */
+    .typing-indicator {
+        display: flex;
+        gap: 4px;
+        padding: 8px 12px;
+        background: #202c33;
+        border-radius: 12px;
+        width: fit-content;
+        align-self: flex-start;
+        display: none;
+    }
+
+    .dot {
+        width: 6px;
+        height: 6px;
+        background: #8696a0;
+        border-radius: 50%;
+        animation: typingBounce 1s infinite alternate;
+    }
+
+    .dot:nth-child(2) {
+        animation-delay: 0.2s;
+    }
+
+    .dot:nth-child(3) {
+        animation-delay: 0.4s;
+    }
+
+    @keyframes typingBounce {
+        from {
+            transform: translateY(0);
+            opacity: 0.4;
+        }
+
+        to {
+            transform: translateY(-4px);
+            opacity: 1;
+        }
+    }
+
+    /* Responsive */
+    @media (max-width: 480px) {
+        #sapiens-chat-window {
+            width: calc(100vw - 40px);
+            right: -10px;
+            bottom: 70px;
+        }
+    }
+</style>
+
+<div id="sapiens-widget-container">
+    <!-- Chat Window -->
+    <div id="sapiens-chat-window">
+        <!-- Header -->
+        <div class="sapiens-widget-header">
+            <div class="header-contact-info">
+                <div class="header-avatar" id="widget-active-avatar">🧭</div>
+                <div class="header-text">
+                    <h4 id="widget-active-name">Sapiens</h4>
+                    <span id="widget-active-status">Online</span>
+                </div>
+            </div>
+            <i class="fas fa-times" style="cursor:pointer; color: #8696a0;" onclick="sapiensWidget.toggle()"></i>
+        </div>
+
+        <!-- Contact Tabs -->
+        <div class="sapiens-tabs">
+            <div class="sapiens-tab active" onclick="sapiensWidget.selectContact('sapiens')">
+                <span>🧭</span> Sapiens
+            </div>
+            <div class="sapiens-tab" onclick="sapiensWidget.selectContact('engineering')">
+                <span>🛠️</span> Squad
+            </div>
+        </div>
+
+        <!-- Messages Area -->
+        <div id="sapiens-widget-messages">
+            <!-- Messages go here -->
+        </div>
+
+        <!-- Typing Indicator -->
+        <div id="widget-typing" class="typing-indicator" style="margin-left: 20px; margin-bottom: 20px;">
+            <div class="dot"></div>
+            <div class="dot"></div>
+            <div class="dot"></div>
+        </div>
+
+        <!-- Input Area -->
+        <div class="sapiens-widget-input-area">
+            <textarea id="sapiens-widget-input" placeholder="Digite uma mensagem..." rows="1"></textarea>
+            <button class="sapiens-widget-send" onclick="sapiensWidget.sendMessage()">
+                <i class="fas fa-paper-plane"></i>
+            </button>
+        </div>
+    </div>
+
+    <!-- Launcher Button -->
+    <div id="sapiens-launcher" onclick="sapiensWidget.toggle()">
+        <i class="fas fa-compass"></i>
+        <div class="sapiens-pulse" id="widget-notification"></div>
+    </div>
+</div>
+
+<script>
+    const sapiensWidget = {
+        isOpen: false,
+        activeContact: 'sapiens',
+        history: [],
+
+        init() {
+            // Configure marked
+            if (typeof marked !== 'undefined') {
+                marked.setOptions({ gfm: true, breaks: true });
+            }
+
+            // Enter key support
+            const input = document.getElementById('sapiens-widget-input');
+            input.addEventListener('keydown', (e) => {
+                if (e.key === 'Enter' && !e.shiftKey) {
+                    e.preventDefault();
+                    this.sendMessage();
+                }
+            });
+
+            // Auto-resize textarea
+            input.addEventListener('input', function () {
+                this.style.height = 'auto';
+                this.style.height = (this.scrollHeight) + 'px';
+            });
+
+            // Initial history load if needed (optional)
+        },
+
+        toggle() {
+            this.isOpen = !this.isOpen;
+            const window = document.getElementById('sapiens-chat-window');
+            window.style.display = this.isOpen ? 'flex' : 'none';
+
+            if (this.isOpen && this.history.length === 0) {
+                this.loadHistory();
+            }
+        },
+
+        selectContact(id) {
+            if (this.activeContact === id) return;
+            this.activeContact = id;
+
+            // UI Updates
+            document.querySelectorAll('.sapiens-tab').forEach(tab => {
+                tab.classList.toggle('active', tab.innerText.toLowerCase().includes(id === 'sapiens' ? 'sapiens' : 'squad'));
+            });
+
+            const names = { sapiens: 'Sapiens', engineering: 'Squad Engenharia' };
+            const avatars = { sapiens: '🧭', engineering: '🛠️' };
+            const status = { sapiens: 'Líder Supervisor', engineering: 'Auditores' };
+
+            document.getElementById('widget-active-name').innerText = names[id];
+            document.getElementById('widget-active-avatar').innerText = avatars[id];
+            document.getElementById('widget-active-status').innerText = status[id];
+
+            this.loadHistory();
+        },
+
+        async loadHistory() {
+            const container = document.getElementById('sapiens-widget-messages');
+            container.innerHTML = '<div style="text-align:center; padding: 10px; color: #8696a0; font-size: 12px;">Sincronizando...</div>';
+
+            try {
+                const resp = await fetch(`/api/agents/history?contact=${this.activeContact}`);
+                const data = await resp.json();
+
+                container.innerHTML = '';
+                this.history = [];
+
+                if (data.success && data.history.length > 0) {
+                    data.history.forEach(msg => {
+                        const role = msg.direction === 'inbound' ? 'user' : 'assistant';
+                        const agent = msg.metadata ? msg.metadata.agent : null;
+                        this.appendMessage(msg.content, role, agent);
+                        this.history.push({ role, content: msg.content });
+                    });
+                } else {
+                    this.addWelcomeMessage();
+                }
+            } catch (e) {
+                console.error("Widget History Error", e);
+                container.innerHTML = '';
+                this.addWelcomeMessage();
+            }
+        },
+
+        addWelcomeMessage() {
+            const content = this.activeContact === 'sapiens'
+                ? "Olá! Sou o Sapiens. Como posso auxiliar na gestão da sua empresa hoje?"
+                : "Squad de Engenharia a postos. Algo parou de funcionar ou precisa de melhoria?";
+            this.appendMessage(content, 'assistant', this.activeContact === 'sapiens' ? 'sapiens' : 'engineering_squad');
+        },
+
+        appendMessage(text, role, agent = null) {
+            const container = document.getElementById('sapiens-widget-messages');
+            const div = document.createElement('div');
+            div.className = `widget-msg ${role}`;
+
+            let authorHtml = '';
+            if (role === 'assistant') {
+                const name = this.formatAgentName(agent || (this.activeContact === 'sapiens' ? 'sapiens' : 'engineering_squad'));
+                authorHtml = `<div class="msg-author-badge">${name}</div>`;
+            }
+
+            const timestamp = new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+
+            div.innerHTML = `
+                ${authorHtml}
+                <div class="msg-content">${role === 'assistant' ? marked.parse(text) : this.escapeHtml(text)}</div>
+                <div class="msg-timestamp">${timestamp}</div>
+            `;
+
+            container.appendChild(div);
+            container.scrollTop = container.scrollHeight;
+        },
+
+        formatAgentName(id) {
+            const names = {
+                'strategist': '🧠 Estrategista',
+                'business_architect': '🏗️ Negócios',
+                'operations': '⚡ Operações',
+                'finance': '💰 Financeiro',
+                'auditor': '🛡️ Auditor',
+                'sapiens': '🧭 Sapiens',
+                'engineering_squad': '🛠️ Engenharia'
+            };
+            return names[id] || id;
+        },
+
+        escapeHtml(text) {
+            const div = document.createElement('div');
+            div.textContent = text;
+            return div.innerHTML;
+        },
+
+        async sendMessage() {
+            const input = document.getElementById('sapiens-widget-input');
+            const text = input.value.trim();
+            if (!text) return;
+
+            this.appendMessage(text, 'user');
+            input.value = '';
+            input.style.height = 'auto';
+
+            document.getElementById('widget-typing').style.display = 'flex';
+            document.getElementById('sapiens-widget-messages').scrollTop = document.getElementById('sapiens-widget-messages').scrollHeight;
+
+            try {
+                const response = await fetch('/api/agents/chat', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        message: text,
+                        contact: this.activeContact,
+                        history: this.history.slice(-3)
+                    })
+                });
+                const data = await response.json();
+
+                document.getElementById('widget-typing').style.display = 'none';
+
+                if (data.success) {
+                    this.appendMessage(data.response, 'assistant', data.agent);
+                    this.history.push({ role: 'assistant', content: data.response });
+                }
+            } catch (e) {
+                document.getElementById('widget-typing').style.display = 'none';
+                this.appendMessage("⚠️ Erro de conexão.", 'assistant');
+            }
+        }
+    };
+
+    // Initialize
+    document.addEventListener('DOMContentLoaded', () => sapiensWidget.init());
+</script>

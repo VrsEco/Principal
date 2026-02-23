@@ -40,33 +40,37 @@ class EngineeringService:
         pending = AgentAction.query.filter_by(type='technical_fix', status='pending').all()
         
         for action in pending:
-            print(f"🧠 [ANALYSIS] @ARQUITETO analisando ticket #{action.id}...")
-            
-            # Simulação de análise técnica real
-            # Em produção, aqui chamaríamos um agente de IA de engenharia especializado
-            error_info = action.payload.get('error', '')
-            
-            # Proposta de Patch
-            patch_proposal = {
-                "proposed_fix": f"Ajuste defensivo para tratar o erro: {error_info[:40]}...",
-                "files": [action.payload.get('file', 'unknown')],
-                "confidence": 0.95
-            }
-            
-            action.status = 'awaiting_approval'
-            action.handling_agent = '@QA_AUTOMATION'
-            action.payload['proposal'] = patch_proposal
-            db.session.commit()
-            
-            # Notificação via WhatsApp
-            phone = action.user_id # No mundo real, buscaríamos o fone do user_id
-            msg = (
-                f"✅ *Gestão Versus: Solução Pronta!*\n\n"
-                f"O Time de Engenharia analisou o erro no ticket #{action.id}.\n"
-                f"*Proposta:* {patch_proposal['proposed_fix']}\n\n"
-                f"Acesse o Board de IA para aprovar a aplicação do hotfix."
-            )
-            whatsapp_service.send_message("5511999999999", msg) # Mock phone for demo
+            try:
+                print(f"🧠 [ANALYSIS] @ARQUITETO analisando ticket #{action.id}...")
+                
+                # Simulação de análise técnica real
+                # Em produção, aqui chamaríamos um agente de IA de engenharia especializado
+                error_info = action.payload.get('error', '')
+                
+                # Proposta de Patch
+                patch_proposal = {
+                    "proposed_fix": f"Ajuste defensivo para tratar o erro: {error_info[:40]}...",
+                    "files": [action.payload.get('file', 'unknown')],
+                    "confidence": 0.95
+                }
+                
+                action.status = 'awaiting_approval'
+                action.handling_agent = '@QA_AUTOMATION'
+                action.payload['proposal'] = patch_proposal
+                db.session.commit()
+                
+                # Notificação via WhatsApp
+                phone = action.user_id # No mundo real, buscaríamos o fone do user_id
+                msg = (
+                    f"✅ *Gestão Versus: Solução Pronta!*\n\n"
+                    f"O Time de Engenharia analisou o erro no ticket #{action.id}.\n"
+                    f"*Proposta:* {patch_proposal['proposed_fix']}\n\n"
+                    f"Acesse o Board de IA para aprovar a aplicação do hotfix."
+                )
+                whatsapp_service.send_message("5511999999999", msg) # Mock phone for demo
+            except Exception as e:
+                db.session.rollback()
+                print(f"❌ erro ao processar ação #{getattr(action, 'id', 'unknown')}: {e}")
 
     def execute_repair(self, action_id):
         """Executa o reparo aprovado com suporte a Rollback @QA_AUTOMATION"""

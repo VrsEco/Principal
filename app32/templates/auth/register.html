@@ -195,14 +195,8 @@
                     Nome Completo
                     <span class="required">*</span>
                 </label>
-                <input 
-                    type="text" 
-                    class="form-control" 
-                    id="name" 
-                    name="name" 
-                    required
-                    placeholder="Digite o nome completo"
-                 data-ref="02">
+                <input type="text" class="form-control" id="name" name="name" required
+                    placeholder="Digite o nome completo" data-ref="02">
                 <small class="form-text">Nome que será exibido no sistema</small>
             </div>
 
@@ -211,14 +205,8 @@
                     Email
                     <span class="required">*</span>
                 </label>
-                <input 
-                    type="email" 
-                    class="form-control" 
-                    id="email" 
-                    name="email" 
-                    required
-                    placeholder="usuario@exemplo.com"
-                 data-ref="03">
+                <input type="email" class="form-control" id="email" name="email" required
+                    placeholder="usuario@exemplo.com" data-ref="03">
                 <small class="form-text">Email será usado para login</small>
             </div>
 
@@ -227,15 +215,8 @@
                     Senha
                     <span class="required">*</span>
                 </label>
-                <input 
-                    type="password" 
-                    class="form-control" 
-                    id="password" 
-                    name="password" 
-                    required
-                    placeholder="Digite uma senha segura"
-                    minlength="6"
-                 data-ref="04">
+                <input type="password" class="form-control" id="password" name="password" required
+                    placeholder="Digite uma senha segura" minlength="6" data-ref="04">
                 <div class="password-strength" id="passwordStrength">
                     <div class="password-strength-bar"></div>
                 </div>
@@ -247,16 +228,23 @@
                     Confirmar Senha
                     <span class="required">*</span>
                 </label>
-                <input 
-                    type="password" 
-                    class="form-control" 
-                    id="confirm_password" 
-                    name="confirm_password" 
-                    required
-                    placeholder="Digite a senha novamente"
-                    minlength="6"
-                 data-ref="05">
+                <input type="password" class="form-control" id="confirm_password" name="confirm_password" required
+                    placeholder="Digite a senha novamente" minlength="6" data-ref="05">
                 <small class="form-text" id="confirmPasswordText">Digite a senha novamente</small>
+            </div>
+
+            <div class="form-group">
+                <label for="whatsapp">WhatsApp (DDD + Número)</label>
+                <input type="text" class="form-control" id="whatsapp" name="whatsapp" placeholder="Ex: 11988887777"
+                    data-ref="08">
+                <small class="form-text">Usado para notificações automáticas</small>
+            </div>
+
+            <div class="form-group">
+                <label for="telegram">Telegram (Username ou Número)</label>
+                <input type="text" class="form-control" id="telegram" name="telegram" placeholder="@usuario ou número"
+                    data-ref="09">
+                <small class="form-text">Usado para interação com agentes</small>
             </div>
 
             <div class="form-group">
@@ -277,7 +265,7 @@
             </div>
 
             <div class="form-actions">
-                <a href="{{ url_for('auth.list_users_page') }}" class="btn btn-secondary" data-ref="07">
+                <a href="{{ url_for('usuarios.index') }}" class="btn btn-secondary" data-ref="07">
                     <i class="fas fa-arrow-left"></i> Cancelar
                 </a>
                 <button type="submit" class="btn btn-primary" id="submitBtn" data-ref="01">
@@ -292,136 +280,138 @@
 {% block scripts %}
 {{ super() }}
 <script>
-const form = document.getElementById('registerForm');
-const submitBtn = document.getElementById('submitBtn');
-const alertDiv = document.getElementById('alert');
-const passwordInput = document.getElementById('password');
-const confirmPasswordInput = document.getElementById('confirm_password');
-const confirmPasswordText = document.getElementById('confirmPasswordText');
-const passwordStrength = document.getElementById('passwordStrength');
+    const form = document.getElementById('registerForm');
+    const submitBtn = document.getElementById('submitBtn');
+    const alertDiv = document.getElementById('alert');
+    const passwordInput = document.getElementById('password');
+    const confirmPasswordInput = document.getElementById('confirm_password');
+    const confirmPasswordText = document.getElementById('confirmPasswordText');
+    const passwordStrength = document.getElementById('passwordStrength');
 
-// Password strength indicator
-passwordInput.addEventListener('input', function() {
-    const password = this.value;
-    
-    if (password.length === 0) {
-        passwordStrength.style.display = 'none';
-        return;
-    }
-    
-    passwordStrength.style.display = 'block';
-    
-    let strength = 0;
-    if (password.length >= 6) strength++;
-    if (password.length >= 10) strength++;
-    if (/[a-z]/.test(password) && /[A-Z]/.test(password)) strength++;
-    if (/[0-9]/.test(password)) strength++;
-    if (/[^a-zA-Z0-9]/.test(password)) strength++;
-    
-    passwordStrength.className = 'password-strength';
-    if (strength <= 2) {
-        passwordStrength.classList.add('weak');
-    } else if (strength <= 3) {
-        passwordStrength.classList.add('medium');
-    } else {
-        passwordStrength.classList.add('strong');
-    }
-});
+    // Password strength indicator
+    passwordInput.addEventListener('input', function () {
+        const password = this.value;
 
-// Confirm password validation
-confirmPasswordInput.addEventListener('input', function() {
-    if (this.value.length === 0) {
-        confirmPasswordText.className = 'form-text';
-        confirmPasswordText.textContent = 'Digite a senha novamente';
-        this.classList.remove('error');
-        return;
-    }
-    
-    if (this.value !== passwordInput.value) {
-        confirmPasswordText.className = 'form-text error';
-        confirmPasswordText.textContent = '❌ As senhas não coincidem';
-        this.classList.add('error');
-    } else {
-        confirmPasswordText.className = 'form-text';
-        confirmPasswordText.textContent = '✓ As senhas coincidem';
-        confirmPasswordText.style.color = '#2ecc71';
-        this.classList.remove('error');
-    }
-});
+        if (password.length === 0) {
+            passwordStrength.style.display = 'none';
+            return;
+        }
 
-// Form submission
-form.addEventListener('submit', async function(e) {
-    e.preventDefault();
-    
-    const name = document.getElementById('name').value.trim();
-    const email = document.getElementById('email').value.trim();
-    const password = passwordInput.value;
-    const confirmPassword = confirmPasswordInput.value;
-    const role = document.getElementById('role').value;
-    
-    // Validation
-    if (!name || !email || !password || !role) {
-        showAlert('Por favor, preencha todos os campos obrigatórios', 'danger');
-        return;
-    }
-    
-    if (password.length < 6) {
-        showAlert('A senha deve ter pelo menos 6 caracteres', 'danger');
-        return;
-    }
-    
-    if (password !== confirmPassword) {
-        showAlert('As senhas não coincidem', 'danger');
-        return;
-    }
-    
-    // Submit
-    submitBtn.disabled = true;
-    submitBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Cadastrando...';
-    
-    try {
-        const response = await fetch('/auth/register', {
-            method: 'POST',
-            headers: {
-                'Content-Type': 'application/json'
-            },
-            body: JSON.stringify({
-                name: name,
-                email: email,
-                password: password,
-                role: role
-            })
-        });
-        
-        const data = await response.json();
-        
-        if (data.success) {
-            showAlert('Usuário cadastrado com sucesso! Redirecionando...', 'success');
-            setTimeout(() => {
-                window.location.href = '{{ url_for("auth.list_users_page") }}';
-            }, 1500);
+        passwordStrength.style.display = 'block';
+
+        let strength = 0;
+        if (password.length >= 6) strength++;
+        if (password.length >= 10) strength++;
+        if (/[a-z]/.test(password) && /[A-Z]/.test(password)) strength++;
+        if (/[0-9]/.test(password)) strength++;
+        if (/[^a-zA-Z0-9]/.test(password)) strength++;
+
+        passwordStrength.className = 'password-strength';
+        if (strength <= 2) {
+            passwordStrength.classList.add('weak');
+        } else if (strength <= 3) {
+            passwordStrength.classList.add('medium');
         } else {
-            showAlert(data.message || 'Erro ao cadastrar usuário', 'danger');
+            passwordStrength.classList.add('strong');
+        }
+    });
+
+    // Confirm password validation
+    confirmPasswordInput.addEventListener('input', function () {
+        if (this.value.length === 0) {
+            confirmPasswordText.className = 'form-text';
+            confirmPasswordText.textContent = 'Digite a senha novamente';
+            this.classList.remove('error');
+            return;
+        }
+
+        if (this.value !== passwordInput.value) {
+            confirmPasswordText.className = 'form-text error';
+            confirmPasswordText.textContent = '❌ As senhas não coincidem';
+            this.classList.add('error');
+        } else {
+            confirmPasswordText.className = 'form-text';
+            confirmPasswordText.textContent = '✓ As senhas coincidem';
+            confirmPasswordText.style.color = '#2ecc71';
+            this.classList.remove('error');
+        }
+    });
+
+    // Form submission
+    form.addEventListener('submit', async function (e) {
+        e.preventDefault();
+
+        const name = document.getElementById('name').value.trim();
+        const email = document.getElementById('email').value.trim();
+        const password = passwordInput.value;
+        const confirmPassword = confirmPasswordInput.value;
+        const role = document.getElementById('role').value;
+        const whatsapp = document.getElementById('whatsapp').value.trim();
+        const telegram = document.getElementById('telegram').value.trim();
+
+        // Validation
+        if (!name || !email || !password || !role) {
+            showAlert('Por favor, preencha todos os campos obrigatórios', 'danger');
+            return;
+        }
+
+        if (password.length < 6) {
+            showAlert('A senha deve ter pelo menos 6 caracteres', 'danger');
+            return;
+        }
+
+        if (password !== confirmPassword) {
+            showAlert('As senhas não coincidem', 'danger');
+            return;
+        }
+
+        // Submit
+        submitBtn.disabled = true;
+        submitBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Cadastrando...';
+
+        try {
+            const response = await fetch('/api/usuarios', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify({
+                    name: name,
+                    email: email,
+                    password: password,
+                    role: role,
+                    whatsapp: whatsapp || null,
+                    telegram: telegram || null
+                })
+            });
+
+            const data = await response.json();
+
+            if (data.success) {
+                showAlert('Usuário cadastrado com sucesso! Redirecionando...', 'success');
+                setTimeout(() => {
+                    window.location.href = '{{ url_for("usuarios.index") }}';
+                }, 1500);
+            } else {
+                showAlert(data.message || 'Erro ao cadastrar usuário', 'danger');
+                submitBtn.disabled = false;
+                submitBtn.innerHTML = '<i class="fas fa-save"></i> Cadastrar Usuário';
+            }
+        } catch (error) {
+            console.error('Erro:', error);
+            showAlert('Erro ao cadastrar usuário. Tente novamente.', 'danger');
             submitBtn.disabled = false;
             submitBtn.innerHTML = '<i class="fas fa-save"></i> Cadastrar Usuário';
         }
-    } catch (error) {
-        console.error('Erro:', error);
-        showAlert('Erro ao cadastrar usuário. Tente novamente.', 'danger');
-        submitBtn.disabled = false;
-        submitBtn.innerHTML = '<i class="fas fa-save"></i> Cadastrar Usuário';
-    }
-});
+    });
 
-function showAlert(message, type) {
-    alertDiv.className = `alert alert-${type}`;
-    alertDiv.textContent = message;
-    alertDiv.style.display = 'block';
-    
-    // Scroll to top to show alert
-    window.scrollTo({ top: 0, behavior: 'smooth' });
-}
+    function showAlert(message, type) {
+        alertDiv.className = `alert alert-${type}`;
+        alertDiv.textContent = message;
+        alertDiv.style.display = 'block';
+
+        // Scroll to top to show alert
+        window.scrollTo({ top: 0, behavior: 'smooth' });
+    }
 </script>
 {% endblock %}
-
-

@@ -53,6 +53,7 @@ def agents_chat():
         agent_type = 'engineering_squad'
 
     # 1. Salva a mensagem do usuário (Inbound)
+    thread_id = f"user_{current_user.id}_{contact}"
     user_msg = AgentMessage(
         company_id=company_id,
         user_id=current_user.id,
@@ -61,7 +62,10 @@ def agents_chat():
         direction='inbound',
         content=message,
         channel='platform',
-        metadata_json={"contact": contact}
+        metadata_json={
+            "contact": contact,
+            "thread_id": thread_id
+        }
     )
     db.session.add(user_msg)
     
@@ -79,42 +83,68 @@ def agents_chat():
     messages.append(HumanMessage(content=processed_message))
     
     try:
-        inputs = {
-            "messages": messages,
-            "user_id": current_user.id,
-            "company_id": company_id,
-            "next_node": None
-        }
+        from src.intelligence.memory import get_checkpointer
+        from src.intelligence.work_agents.graph import create_work_agent_workflow
         
-        result = work_agent_graph.invoke(inputs)
-        messages_result = result["messages"]
-        
-        if messages_result[-1].type == "ai":
-            final_text = messages_result[-1].content
-        else:
-            final_text = "Estou aqui! Analisei sua mensagem, mas não identifiquei uma tarefa específica para meus especialistas. Como posso ser útil?"
-        
-        agent_executor = result.get("next_node", "end")
-        
-        # 2. Salva a resposta da IA (Outbound)
-        ai_msg = AgentMessage(
-            company_id=company_id,
-            user_id=current_user.id,
-            agent_type=agent_type,
-            agent_name=agent_executor,
-            direction='outbound',
-            content=final_text,
-            channel='platform',
-            metadata_json={"agent": agent_executor, "contact": contact}
-        )
-        db.session.add(ai_msg)
-        db.session.commit()
-        
-        return jsonify({
-            "success": True,
-            "response": final_text,
-            "agent": agent_executor
-        })
+        # 2. Configura a Memória Persistente (SQL) via Thread ID
+        config = {"configurable": {"thread_id": thread_id}}
+
+        with get_checkpointer() as checkpointer:
+            graph = create_work_agent_workflow(checkpointer=checkpointer)
+            
+            # Verifica se já existe um estado no banco para esta thread
+            state = graph.get_state(config)
+            
+            if not state.values or not state.values.get("messages"):
+                # Se o banco está vazio, enviamos Historico + Nova para inicializar
+                graph_input_messages = messages
+                print(f"--- CHAT: Inicializando nova thread SQL para {thread_id} ---")
+            else:
+                # Se já tem mensagens no DB, enviamos APENAS a nova (evita duplicação)
+                graph_input_messages = [HumanMessage(content=processed_message)]
+                print(f"--- CHAT: Retomando thread SQL {thread_id} (Histórico no DB) ---")
+
+            inputs = {
+                "messages": graph_input_messages,
+                "user_id": current_user.id,
+                "company_id": company_id,
+                "next_node": None
+            }
+            
+            # Invoca o grafo com persistência SQL
+            result = graph.invoke(inputs, config=config)
+            messages_result = result["messages"]
+            
+            if messages_result[-1].type == "ai":
+                final_text = messages_result[-1].content
+            else:
+                final_text = "Estou aqui! Planejei os próximos passos, mas não identifiquei uma tarefa específica. Como posso ser útil?"
+            
+            agent_executor = result.get("next_node", "end")
+            
+            # 3. Salva a resposta da IA no log de mensagens (Visual apenas)
+            ai_msg = AgentMessage(
+                company_id=company_id,
+                user_id=current_user.id,
+                agent_type=agent_type,
+                agent_name=agent_executor,
+                direction='outbound',
+                content=final_text,
+                channel='platform',
+                metadata_json={
+                    "agent": agent_executor, 
+                    "contact": contact,
+                    "thread_id": thread_id
+                }
+            )
+            db.session.add(ai_msg)
+            db.session.commit()
+            
+            return jsonify({
+                "success": True,
+                "response": final_text,
+                "agent": agent_executor
+            })
     except Exception as e:
         import traceback
         traceback.print_exc()
@@ -148,32 +178,97 @@ def get_chat_history():
     
     company_id = session.get('active_company_id')
     contact = request.args.get('contact', 'sapiens')
+    target_user_id = request.args.get('user_id')
+    
+    # Se não for especificado user_id, usa o atual
+    # Se for admin, pode ver de outros, senão, apenas o seu
+    if not target_user_id or current_user.role != 'admin':
+        target_user_id = current_user.id
     
     agent_type = 'work_agent_squad'
     if contact == 'engineering':
         agent_type = 'engineering_squad'
-        # Legado: Buscar mensagens que contém [CANAL ENGENHARIA] se for engineering
         from sqlalchemy import or_
         messages = AgentMessage.query.filter(
             AgentMessage.company_id == company_id,
-            AgentMessage.user_id == current_user.id,
+            AgentMessage.user_id == target_user_id,
             or_(
                 AgentMessage.agent_type == 'engineering_squad',
                 AgentMessage.content.contains('[CANAL ENGENHARIA]')
             )
         ).order_by(AgentMessage.created_at.asc()).limit(100).all()
     else:
-        # Padrão: Sapiens
-        messages = AgentMessage.query.filter(
+        # Padrão: Sapiens ou um usuário específico
+        filters = [
             AgentMessage.company_id == company_id,
-            AgentMessage.user_id == current_user.id,
-            AgentMessage.agent_type == 'work_agent_squad',
+            AgentMessage.user_id == target_user_id,
             ~AgentMessage.content.contains('[CANAL ENGENHARIA]')
-        ).order_by(AgentMessage.created_at.asc()).limit(100).all()
+        ]
+        
+        # Se o "contact" for um ID numérico, estamos vendo a conversa de um usuário específico com o Sapiens
+        # Nesse caso, o agent_type deve ser o padrão do Sapiens
+        messages = AgentMessage.query.filter(*filters).order_by(AgentMessage.created_at.asc()).limit(100).all()
     
     return jsonify({
         "success": True,
         "history": [m.to_dict() for m in messages]
+    })
+
+@agents_bp.route('/api/agents/contacts', methods=['GET'])
+@login_required
+def get_agents_contacts():
+    from models import db, AgentMessage, User
+    from flask import session
+    from sqlalchemy import func
+    
+    company_id = session.get('active_company_id')
+    
+    # 1. Contatos Fixos (Bots)
+    contacts = [
+        {
+            "id": "sapiens",
+            "name": "Sapiens",
+            "avatar": "🧭",
+            "status": "online",
+            "description": "Líder Supervisor & Especialistas",
+            "type": "bot"
+        },
+        {
+            "id": "engineering",
+            "name": "Squad Engenharia",
+            "avatar": "🛠️",
+            "status": "online",
+            "description": "@Arquitetos & @QA Automation",
+            "type": "bot"
+        }
+    ]
+    
+    # 2. Usuários que interagiram (apenas para Admins)
+    if current_user.role == 'admin':
+        # Busca subquery de usuários com mensagens
+        user_ids_query = db.session.query(AgentMessage.user_id).filter(
+            AgentMessage.company_id == company_id
+        ).distinct()
+        
+        users = User.query.filter(User.id.in_(user_ids_query)).all()
+        
+        for u in users:
+            # Pula o próprio usuário admin para não duplicar se ele for o contato principal
+            if u.id == current_user.id:
+                continue
+                
+            contacts.append({
+                "id": str(u.id),
+                "name": u.name,
+                "avatar": u.name[0].upper(),
+                "status": "recent",
+                "description": u.email,
+                "type": "user"
+            })
+            
+    return jsonify({
+        "success": True,
+        "contacts": contacts
     })
 
 @agents_bp.route('/api/agents/actions/approve/<int:action_id>', methods=['POST'])

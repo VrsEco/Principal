@@ -372,6 +372,7 @@ body {
     flex: 1;
     padding: 1rem 2.5rem 2.5rem 2.5rem;
     width: 100%;
+    box-sizing: border-box !important;
 }
 
 /* Cards - App2 Style (High Radius & Soft Shadow) */
