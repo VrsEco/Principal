@@ -47,20 +47,41 @@ jobs:
           command_timeout: 10m
           script: |
             set -e
-            # PROJECT_PATH deve ser o diretório /srv/.../www (raiz do git)
-            echo "📂 Atualizando código na raiz do projeto..."
+            # PROJECT_PATH deve ser o diretório /srv/.../www (raiz do git) ou a pasta do app
+            echo "📂 Acessando diretório do projeto..."
             cd ${{ secrets.PROJECT_PATH }}
+            
+            echo "📍 Local atual: $(pwd)"
+            echo "📄 Listando arquivos:"
+            ls -F
+
+            echo "🌐 Atualizando código via Git..."
             git fetch origin main
             git reset --hard origin/main
 
-            echo "📦 Instalando dependências do APP32..."
-            PIP=/srv/appgestaoversuscombr.45a4cd4b.configr.cloud/.virtualenv/3.12/bin/pip
-            $PIP install -r app32/requirements.txt --quiet
+            # Detecta se estamos na raiz do repo ou dentro da pasta app32
+            if [ -f "app32/requirements.txt" ]; then
+                APP_DIR="app32"
+                REQ_PATH="app32/requirements.txt"
+                echo "✅ Detectado: Raiz do repositório"
+            elif [ -f "requirements.txt" ]; then
+                APP_DIR="."
+                REQ_PATH="requirements.txt"
+                echo "✅ Detectado: Dentro da pasta do App"
+            else
+                echo "❌ ERRO: requirements.txt não encontrado em $(pwd) ou app32/"
+                ls -R
+                exit 1
+            fi
 
-            echo "🗃️ Executando migrations do banco de dados (APP32)..."
+            echo "📦 Instalando dependências ($REQ_PATH)..."
+            PIP=/srv/appgestaoversuscombr.45a4cd4b.configr.cloud/.virtualenv/3.12/bin/pip
+            $PIP install -r $REQ_PATH --quiet
+
+            echo "🗃️ Executando migrations do banco de dados..."
             PYTHON=/srv/appgestaoversuscombr.45a4cd4b.configr.cloud/.virtualenv/3.12/bin/python
             set +e
-            cd app32
+            cd $APP_DIR
             $PYTHON -c "
             import sys, os
             sys.path.insert(0, '.')
@@ -68,21 +89,30 @@ jobs:
             load_dotenv('.env')
             os.environ.setdefault('FLASK_CONFIG', 'production')
             from flask_migrate import upgrade
-            from app import create_app
-            app = create_app('production')
-            with app.app_context():
-                upgrade()
-            print('✅ Migrations OK')
+            try:
+                from app import create_app
+                app = create_app('production')
+                with app.app_context():
+                    upgrade()
+                print('✅ Migrations OK')
+            except ImportError as e:
+                print(f'⚠️ Erro de import na migration: {e}')
+                print(f'path: {sys.path}')
             " 2>&1 || echo "⚠️ Migrations falharam ou não há migrações pendentes"
-            cd ..
+            
+            # Volta para a base se entramos em app32
+            if [ "$APP_DIR" != "." ]; then cd ..; fi
             set -e
 
             echo "🔄 Reiniciando o servidor (Passenger/uWSGI)..."
-            # Toca arquivos de reinicialização na raiz e na pasta do app
             mkdir -p tmp
             touch tmp/restart.txt
-            touch app32/tmp/restart.txt
-            # Força recarregamento uWSGI se configurado
-            touch etc/uwsgi/uwsgi.ini 2>/dev/null || true
+            if [ -d "app32" ]; then
+                mkdir -p app32/tmp
+                touch app32/tmp/restart.txt
+            fi
             
-            echo "✅ Deploy de APP32 concluído com sucesso!"
+            # Força recarregamento uWSGI se houver arquivo
+            find . -name "uwsgi.ini" -exec touch {} + 2>/dev/null || true
+            
+            echo "✅ Deploy concluído com sucesso!"
