@@ -46,3 +46,7 @@ desktop.ini
 **/.git_legacy_root/
 **/.git_legacy_app31/
 **/node_modules/
+
+# Ignore nested repos causing CI warnings
+app31/
+.agent/skills/
