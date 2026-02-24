@@ -1,0 +1,24 @@
+[flake8]
+ignore = E501, W503, E203, E402
+exclude =
+    .git,
+    __pycache__,
+    venv,
+    .venv,
+    app32/.venv,
+    app31,
+    docs,
+    migrations,
+    static,
+    backups,
+    uploads,
+    temp_relatorios,
+    temp_pdfs,
+    node_modules,
+    data,
+    archive,
+    seeds,
+    .agent,
+    instance,
+    knowledge
+max-line-length = 120
