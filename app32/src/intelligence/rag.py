@@ -43,11 +43,29 @@ class KnowledgeBase:
             api_key=api_key
         )
         
-        self.vector_store = Chroma(
-            collection_name=self.collection_name,
-            embedding_function=self.embeddings,
-            persist_directory=self.persist_directory
-        )
+        try:
+            self.vector_store = Chroma(
+                collection_name=self.collection_name,
+                embedding_function=self.embeddings,
+                persist_directory=self.persist_directory
+            )
+        except Exception as e:
+            logger.error(f"Erro ao carregar o Chroma DB (provável corrupção): {e}")
+            logger.info("Tentando recriar o banco de dados vetorial do zero...")
+            import shutil
+            if os.path.exists(self.persist_directory):
+                try:
+                    shutil.rmtree(self.persist_directory)
+                except Exception as ex:
+                    logger.warning(f"Aviso ao deletar diretório do Chroma: {ex}")
+            
+            self.vector_store = Chroma(
+                collection_name=self.collection_name,
+                embedding_function=self.embeddings,
+                persist_directory=self.persist_directory
+            )
+            logger.info("Chroma DB recriado com sucesso.")
+            
         logger.info(f"KnowledgeBase inicializada (ChromaDB: {self.persist_directory})")
 
     def add_documents(self, texts: list[str], metadatas: list[dict] = None):

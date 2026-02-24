@@ -21,35 +21,24 @@ class ChatTimeoutService:
             # 1. Identifica threads ativas na última hora (otimização)
             # Uma thread é definida por (user_id, channel, thread_id)
             try:
-                # Query para as últimas mensagens de cada thread
-                subquery = db.session.query(
-                    AgentMessage.user_id,
-                    AgentMessage.channel,
-                    AgentMessage.metadata_json['thread_id'].astext.label('thread_id'),
-                    db.func.max(AgentMessage.created_at).label('last_at')
-                ).filter(
-                    # Apenas mensagens das últimas 2 horas
+                # Busca todas as mensagens das últimas 2 horas (otimização e compatível com todos os bancos de dados)
+                recent_all_msgs = db.session.query(AgentMessage).filter(
                     AgentMessage.created_at > datetime.utcnow() - timedelta(hours=2)
-                ).group_by(
-                    AgentMessage.user_id, 
-                    AgentMessage.channel, 
-                    'thread_id'
-                ).subquery()
-
-                # Busca as mensagens reais correspondentes aos agrupamentos
-                recent_threads = db.session.query(AgentMessage).join(
-                    subquery,
-                    (AgentMessage.user_id == subquery.c.user_id) &
-                    (AgentMessage.channel == subquery.c.channel) &
-                    (AgentMessage.metadata_json['thread_id'].astext == subquery.c.thread_id) &
-                    (AgentMessage.created_at == subquery.c.last_at)
                 ).all()
 
-                for msg in recent_threads:
-                    # Ignorar se o thread_id estiver vazio
-                    if not msg.metadata_json.get('thread_id'):
+                # Agrupa por (user_id, channel, thread_id) para pegar a última mensagem de cada thread
+                latest_threads = {}
+                for msg in recent_all_msgs:
+                    thread_id = msg.metadata_json.get('thread_id')
+                    if not thread_id:
                         continue
+                    
+                    key = (msg.user_id, msg.channel, thread_id)
+                    # Verifica se deve substituir a anterior
+                    if key not in latest_threads or msg.created_at > latest_threads[key].created_at:
+                        latest_threads[key] = msg
 
+                for key, msg in latest_threads.items():
                     # Casos:
                     # A - Inatividade > 10 min e ainda não enviou aviso
                     if msg.created_at < ten_minutes_ago:
