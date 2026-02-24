@@ -102,7 +102,6 @@ def get_db():
 
 def switch_database(db_type: str, **kwargs):
     """Switch database type"""
-    global db_config
     db_config.db_type = db_type
     db_config.config = kwargs
     return db_config.get_database_instance()

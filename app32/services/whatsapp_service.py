@@ -4,6 +4,8 @@ import requests
 from typing import List, Optional, Dict, Any
 from datetime import datetime
 
+logger = logging.getLogger(__name__)
+
 
 class WhatsAppService:
     """Service for WhatsApp integration with multiple providers"""

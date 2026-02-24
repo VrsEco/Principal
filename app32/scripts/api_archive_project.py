@@ -1,4 +1,13 @@
 # Adicionar este código no app_pev.py após a função api_company_project
+from flask import request, jsonify, current_app as app
+import logging
+
+logger = logging.getLogger(__name__)
+
+def _open_portfolio_connection():
+    # Helper to open connection if used standalone (dummy for lint)
+    from database import get_db
+    return get_db()._get_connection()
 
 @app.route(
     "/api/companies/<int:company_id>/projects/<int:project_id>/archive",

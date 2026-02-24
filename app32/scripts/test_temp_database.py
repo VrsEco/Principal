@@ -64,8 +64,7 @@ def main():
                 return False
 
         # Teste do Flask app
-        print("
-🏗️  Testando Flask app...")
+        print("\n🏗️  Testando Flask app...")
         app = Flask(__name__)
         app.config.from_object(config)
         db.init_app(app)
@@ -99,8 +98,8 @@ def main():
             else:
                 print("⚠️ Admin não encontrado - será criado no primeiro acesso")
 
-        print("
-🎉 TESTE DO BANCO TEMPORÁRIO APROVADO!"        print("✅ Todas as verificações passaram")
+        print("\n🎉 TESTE DO BANCO TEMPORÁRIO APROVADO!")
+        print("✅ Todas as verificações passaram")
         return True
 
     except Exception as e:

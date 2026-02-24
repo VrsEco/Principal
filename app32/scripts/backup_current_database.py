@@ -72,7 +72,8 @@ def main():
                         # Verificar tamanho do arquivo
                         if os.path.exists(backup_file):
                             size_mb = os.path.getsize(backup_file) / (1024 * 1024)
-                            print(".1f"                            print("✅ BACKUP CONCLUÍDO COM SUCESSO!")
+                            print(f"📊 Tamanho: {size_mb:.1f} MB")
+                            print("✅ BACKUP CONCLUÍDO COM SUCESSO!")
                             print(f"📂 Local: {os.path.abspath(backup_file)}")
                         else:
                             print("❌ Arquivo de backup não foi criado")

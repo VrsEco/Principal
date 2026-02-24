@@ -98,8 +98,7 @@ def main():
                 print(f"📚 Tabelas originais: {len(original_tables)}")
 
                 # Verificar dados preservados
-                print("
-🔍 Verificando dados:")
+                print("\n🔍 Verificando dados:")
                 for table in ['users', 'companies', 'employees', 'projects']:
                     try:
                         result = conn.execute(text(f"SELECT COUNT(*) FROM {table}"))
