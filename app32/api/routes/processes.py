@@ -167,7 +167,7 @@ def process_routines_redirect():
     if company_id:
         return redirect(url_for('processes.process_routines_page', company_id=company_id))
     
-    return redirect(url_for('main.dashboard'))
+    return redirect(url_for('my_work.my_work'))
 
 @processes_bp.route('/process-instances')
 @permission_required('processes', 'view')
@@ -185,7 +185,7 @@ def process_instances_redirect():
     if company_id:
         return redirect(url_for('processes.process_instances_page', company_id=company_id))
     
-    return redirect(url_for('main.dashboard'))
+    return redirect(url_for('my_work.my_work'))
 
 @processes_bp.route('/companies/<int:company_id>/process-instances')
 @permission_required('processes', 'view')
@@ -210,7 +210,7 @@ def process_occurrences_redirect():
     if company_id:
         return redirect(url_for('processes.process_occurrences_page', company_id=company_id))
     
-    return redirect(url_for('main.dashboard'))
+    return redirect(url_for('my_work.my_work'))
 
 @processes_bp.route('/companies/<int:company_id>/process-occurrences')
 @permission_required('processes', 'view')

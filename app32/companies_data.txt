@@ -1,0 +1,13 @@
+Total de empresas: 12
+ID: 5 | Nome: Versus Gestao Corporativa | Razão Social: Versus Consultoria LTDA
+ID: 14 | Nome: Gas Evolution | Razão Social: Evolution Gas LTDA
+ID: 15 | Nome: Souto Costa Advogados Associados | Razão Social: Souto Costa Advogados Associados LTDA
+ID: 31 | Nome: Gandu Investimentos e Participações | Razão Social: Gandu Motor LTDA
+ID: 13 | Nome: Save Water | Razão Social: Stela Baptista Serviço e Comércio LTDA
+ID: 35 | Nome: Elite Tech Solucoes V2 | Razão Social: None
+ID: 25 | Nome: Eua - Moveis Planejados | Razão Social: Moveis EUA LTD
+ID: 26 | Nome: Vertrau Cozinhas | Razão Social: Vertrau Cozinhas
+ID: 33 | Nome: Test Company | Razão Social: None
+ID: 32 | Nome: Versus Tech Demo | Razão Social: None
+ID: 36 | Nome: Titan Corp | Razão Social: None
+ID: 37 | Nome: Versus Exemplo 200 | Razão Social: Versus Exmplo 200

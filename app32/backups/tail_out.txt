@@ -1,0 +1,150 @@
+ERROR:services.chat_timeout_service:Erro no processamento de timeouts de chat: Neither 'BinaryExpression' object nor 'Comparator' object has an attribute 'astext'
+INFO:apscheduler.executors.default:Job "Monitor de Inatividade de Chat (trigger: interval[0:00:30], next run at: 2026-02-23 22:10:18 -03)" executed successfully
+INFO:apscheduler.executors.default:Running job "Monitor de Inatividade de Chat (trigger: interval[0:00:30], next run at: 2026-02-23 22:10:48 -03)" (scheduled at 2026-02-23 22:10:18.051710-03:00)
+ERROR:services.chat_timeout_service:Erro no processamento de timeouts de chat: Neither 'BinaryExpression' object nor 'Comparator' object has an attribute 'astext'
+INFO:apscheduler.executors.default:Job "Monitor de Inatividade de Chat (trigger: interval[0:00:30], next run at: 2026-02-23 22:10:48 -03)" executed successfully
+INFO:apscheduler.executors.default:Running job "Monitor de Inatividade de Chat (trigger: interval[0:00:30], next run at: 2026-02-23 22:11:18 -03)" (scheduled at 2026-02-23 22:10:48.051710-03:00)
+ERROR:services.chat_timeout_service:Erro no processamento de timeouts de chat: Neither 'BinaryExpression' object nor 'Comparator' object has an attribute 'astext'
+INFO:apscheduler.executors.default:Job "Monitor de Inatividade de Chat (trigger: interval[0:00:30], next run at: 2026-02-23 22:11:18 -03)" executed successfully
+INFO:apscheduler.executors.default:Running job "Monitor de Inatividade de Chat (trigger: interval[0:00:30], next run at: 2026-02-23 22:11:48 -03)" (scheduled at 2026-02-23 22:11:18.051710-03:00)
+ERROR:services.chat_timeout_service:Erro no processamento de timeouts de chat: Neither 'BinaryExpression' object nor 'Comparator' object has an attribute 'astext'
+INFO:apscheduler.executors.default:Job "Monitor de Inatividade de Chat (trigger: interval[0:00:30], next run at: 2026-02-23 22:11:48 -03)" executed successfully
+INFO:apscheduler.executors.default:Running job "Monitor de Inatividade de Chat (trigger: interval[0:00:30], next run at: 2026-02-23 22:12:18 -03)" (scheduled at 2026-02-23 22:11:48.051710-03:00)
+ERROR:services.chat_timeout_service:Erro no processamento de timeouts de chat: Neither 'BinaryExpression' object nor 'Comparator' object has an attribute 'astext'
+INFO:apscheduler.executors.default:Job "Monitor de Inatividade de Chat (trigger: interval[0:00:30], next run at: 2026-02-23 22:12:18 -03)" executed successfully
+INFO:apscheduler.executors.default:Running job "Monitor de Inatividade de Chat (trigger: interval[0:00:30], next run at: 2026-02-23 22:12:48 -03)" (scheduled at 2026-02-23 22:12:18.051710-03:00)
+ERROR:services.chat_timeout_service:Erro no processamento de timeouts de chat: Neither 'BinaryExpression' object nor 'Comparator' object has an attribute 'astext'
+INFO:apscheduler.executors.default:Job "Monitor de Inatividade de Chat (trigger: interval[0:00:30], next run at: 2026-02-23 22:12:48 -03)" executed successfully
+INFO:apscheduler.executors.default:Running job "Monitor de Inatividade de Chat (trigger: interval[0:00:30], next run at: 2026-02-23 22:13:18 -03)" (scheduled at 2026-02-23 22:12:48.051710-03:00)
+ERROR:services.chat_timeout_service:Erro no processamento de timeouts de chat: Neither 'BinaryExpression' object nor 'Comparator' object has an attribute 'astext'
+INFO:apscheduler.executors.default:Job "Monitor de Inatividade de Chat (trigger: interval[0:00:30], next run at: 2026-02-23 22:13:18 -03)" executed successfully
+INFO:apscheduler.executors.default:Running job "Monitor de Inatividade de Chat (trigger: interval[0:00:30], next run at: 2026-02-23 22:13:48 -03)" (scheduled at 2026-02-23 22:13:18.051710-03:00)
+ERROR:services.chat_timeout_service:Erro no processamento de timeouts de chat: Neither 'BinaryExpression' object nor 'Comparator' object has an attribute 'astext'
+INFO:apscheduler.executors.default:Job "Monitor de Inatividade de Chat (trigger: interval[0:00:30], next run at: 2026-02-23 22:13:48 -03)" executed successfully
+INFO:apscheduler.executors.default:Running job "Monitor de Inatividade de Chat (trigger: interval[0:00:30], next run at: 2026-02-23 22:14:18 -03)" (scheduled at 2026-02-23 22:13:48.051710-03:00)
+ERROR:services.chat_timeout_service:Erro no processamento de timeouts de chat: Neither 'BinaryExpression' object nor 'Comparator' object has an attribute 'astext'
+INFO:apscheduler.executors.default:Job "Monitor de Inatividade de Chat (trigger: interval[0:00:30], next run at: 2026-02-23 22:14:18 -03)" executed successfully
+INFO:apscheduler.executors.default:Running job "Monitor de Inatividade de Chat (trigger: interval[0:00:30], next run at: 2026-02-23 22:14:48 -03)" (scheduled at 2026-02-23 22:14:18.051710-03:00)
+ERROR:services.chat_timeout_service:Erro no processamento de timeouts de chat: Neither 'BinaryExpression' object nor 'Comparator' object has an attribute 'astext'
+INFO:apscheduler.executors.default:Job "Monitor de Inatividade de Chat (trigger: interval[0:00:30], next run at: 2026-02-23 22:14:48 -03)" executed successfully
+INFO:apscheduler.executors.default:Running job "Monitor de Inatividade de Chat (trigger: interval[0:00:30], next run at: 2026-02-23 22:15:18 -03)" (scheduled at 2026-02-23 22:14:48.051710-03:00)
+ERROR:services.chat_timeout_service:Erro no processamento de timeouts de chat: Neither 'BinaryExpression' object nor 'Comparator' object has an attribute 'astext'
+INFO:apscheduler.executors.default:Job "Monitor de Inatividade de Chat (trigger: interval[0:00:30], next run at: 2026-02-23 22:15:18 -03)" executed successfully
+INFO:apscheduler.executors.default:Running job "Monitor de Inatividade de Chat (trigger: interval[0:00:30], next run at: 2026-02-23 22:15:48 -03)" (scheduled at 2026-02-23 22:15:18.051710-03:00)
+ERROR:services.chat_timeout_service:Erro no processamento de timeouts de chat: Neither 'BinaryExpression' object nor 'Comparator' object has an attribute 'astext'
+INFO:apscheduler.executors.default:Job "Monitor de Inatividade de Chat (trigger: interval[0:00:30], next run at: 2026-02-23 22:15:48 -03)" executed successfully
+INFO:apscheduler.executors.default:Running job "Monitor de Inatividade de Chat (trigger: interval[0:00:30], next run at: 2026-02-23 22:16:18 -03)" (scheduled at 2026-02-23 22:15:48.051710-03:00)
+ERROR:services.chat_timeout_service:Erro no processamento de timeouts de chat: Neither 'BinaryExpression' object nor 'Comparator' object has an attribute 'astext'
+INFO:apscheduler.executors.default:Job "Monitor de Inatividade de Chat (trigger: interval[0:00:30], next run at: 2026-02-23 22:16:18 -03)" executed successfully
+[pid: 1213372|app: 0|req: 2/2] 2804:214:400a:23a4:c599:7792:b4c1:29ed () {52 vars in 870 bytes} [Mon Feb 23 22:15:57 2026] GET / => generated 199 bytes in 1 msecs (HTTP/2.0 302) 5 headers in 147 bytes (2 switches on core 0)
+[pid: 1213372|app: 0|req: 3/3] 2804:214:400a:23a4:c599:7792:b4c1:29ed () {52 vars in 880 bytes} [Mon Feb 23 22:15:57 2026] GET /login => generated 14401 bytes in 12 msecs (HTTP/2.0 200) 4 headers in 128 bytes (2 switches on core 0)
+[pid: 1213372|app: 0|req: 4/4] 2804:214:400a:23a4:c599:7792:b4c1:29ed () {56 vars in 937 bytes} [Mon Feb 23 22:16:08 2026] POST /login => generated 57 bytes in 23 msecs (HTTP/2.0 401) 4 headers in 165 bytes (1 switches on core 0)
+INFO:apscheduler.executors.default:Running job "Monitor de Inatividade de Chat (trigger: interval[0:00:30], next run at: 2026-02-23 22:16:48 -03)" (scheduled at 2026-02-23 22:16:18.051710-03:00)
+ERROR:services.chat_timeout_service:Erro no processamento de timeouts de chat: Neither 'BinaryExpression' object nor 'Comparator' object has an attribute 'astext'
+INFO:apscheduler.executors.default:Job "Monitor de Inatividade de Chat (trigger: interval[0:00:30], next run at: 2026-02-23 22:16:48 -03)" executed successfully
+[pid: 1213372|app: 0|req: 5/5] 2804:214:400a:23a4:c599:7792:b4c1:29ed () {56 vars in 937 bytes} [Mon Feb 23 22:16:28 2026] POST /login => generated 57 bytes in 3 msecs (HTTP/2.0 401) 4 headers in 165 bytes (1 switches on core 0)
+INFO:apscheduler.executors.default:Running job "Monitor de Inatividade de Chat (trigger: interval[0:00:30], next run at: 2026-02-23 22:17:18 -03)" (scheduled at 2026-02-23 22:16:48.051710-03:00)
+ERROR:services.chat_timeout_service:Erro no processamento de timeouts de chat: Neither 'BinaryExpression' object nor 'Comparator' object has an attribute 'astext'
+INFO:apscheduler.executors.default:Job "Monitor de Inatividade de Chat (trigger: interval[0:00:30], next run at: 2026-02-23 22:17:18 -03)" executed successfully
+INFO:apscheduler.executors.default:Running job "Monitor de Inatividade de Chat (trigger: interval[0:00:30], next run at: 2026-02-23 22:17:48 -03)" (scheduled at 2026-02-23 22:17:18.051710-03:00)
+ERROR:services.chat_timeout_service:Erro no processamento de timeouts de chat: Neither 'BinaryExpression' object nor 'Comparator' object has an attribute 'astext'
+INFO:apscheduler.executors.default:Job "Monitor de Inatividade de Chat (trigger: interval[0:00:30], next run at: 2026-02-23 22:17:48 -03)" executed successfully
+INFO:apscheduler.executors.default:Running job "Monitor de Inatividade de Chat (trigger: interval[0:00:30], next run at: 2026-02-23 22:18:18 -03)" (scheduled at 2026-02-23 22:17:48.051710-03:00)
+ERROR:services.chat_timeout_service:Erro no processamento de timeouts de chat: Neither 'BinaryExpression' object nor 'Comparator' object has an attribute 'astext'
+INFO:apscheduler.executors.default:Job "Monitor de Inatividade de Chat (trigger: interval[0:00:30], next run at: 2026-02-23 22:18:18 -03)" executed successfully
+INFO:apscheduler.executors.default:Running job "Monitor de Inatividade de Chat (trigger: interval[0:00:30], next run at: 2026-02-23 22:18:48 -03)" (scheduled at 2026-02-23 22:18:18.051710-03:00)
+ERROR:services.chat_timeout_service:Erro no processamento de timeouts de chat: Neither 'BinaryExpression' object nor 'Comparator' object has an attribute 'astext'
+INFO:apscheduler.executors.default:Job "Monitor de Inatividade de Chat (trigger: interval[0:00:30], next run at: 2026-02-23 22:18:48 -03)" executed successfully
+INFO:apscheduler.executors.default:Running job "Monitor de Inatividade de Chat (trigger: interval[0:00:30], next run at: 2026-02-23 22:19:18 -03)" (scheduled at 2026-02-23 22:18:48.051710-03:00)
+ERROR:services.chat_timeout_service:Erro no processamento de timeouts de chat: Neither 'BinaryExpression' object nor 'Comparator' object has an attribute 'astext'
+INFO:apscheduler.executors.default:Job "Monitor de Inatividade de Chat (trigger: interval[0:00:30], next run at: 2026-02-23 22:19:18 -03)" executed successfully
+INFO:apscheduler.executors.default:Running job "Monitor de Inatividade de Chat (trigger: interval[0:00:30], next run at: 2026-02-23 22:19:48 -03)" (scheduled at 2026-02-23 22:19:18.051710-03:00)
+ERROR:services.chat_timeout_service:Erro no processamento de timeouts de chat: Neither 'BinaryExpression' object nor 'Comparator' object has an attribute 'astext'
+INFO:apscheduler.executors.default:Job "Monitor de Inatividade de Chat (trigger: interval[0:00:30], next run at: 2026-02-23 22:19:48 -03)" executed successfully
+INFO:apscheduler.executors.default:Running job "Monitor de Inatividade de Chat (trigger: interval[0:00:30], next run at: 2026-02-23 22:20:18 -03)" (scheduled at 2026-02-23 22:19:48.051710-03:00)
+ERROR:services.chat_timeout_service:Erro no processamento de timeouts de chat: Neither 'BinaryExpression' object nor 'Comparator' object has an attribute 'astext'
+INFO:apscheduler.executors.default:Job "Monitor de Inatividade de Chat (trigger: interval[0:00:30], next run at: 2026-02-23 22:20:18 -03)" executed successfully
+INFO:apscheduler.executors.default:Running job "Monitor de Inatividade de Chat (trigger: interval[0:00:30], next run at: 2026-02-23 22:20:48 -03)" (scheduled at 2026-02-23 22:20:18.051710-03:00)
+ERROR:services.chat_timeout_service:Erro no processamento de timeouts de chat: Neither 'BinaryExpression' object nor 'Comparator' object has an attribute 'astext'
+INFO:apscheduler.executors.default:Job "Monitor de Inatividade de Chat (trigger: interval[0:00:30], next run at: 2026-02-23 22:20:48 -03)" executed successfully
+INFO:apscheduler.executors.default:Running job "Monitor de Inatividade de Chat (trigger: interval[0:00:30], next run at: 2026-02-23 22:21:18 -03)" (scheduled at 2026-02-23 22:20:48.051710-03:00)
+ERROR:services.chat_timeout_service:Erro no processamento de timeouts de chat: Neither 'BinaryExpression' object nor 'Comparator' object has an attribute 'astext'
+INFO:apscheduler.executors.default:Job "Monitor de Inatividade de Chat (trigger: interval[0:00:30], next run at: 2026-02-23 22:21:18 -03)" executed successfully
+INFO:apscheduler.executors.default:Running job "Monitor de Inatividade de Chat (trigger: interval[0:00:30], next run at: 2026-02-23 22:21:48 -03)" (scheduled at 2026-02-23 22:21:18.051710-03:00)
+ERROR:services.chat_timeout_service:Erro no processamento de timeouts de chat: Neither 'BinaryExpression' object nor 'Comparator' object has an attribute 'astext'
+INFO:apscheduler.executors.default:Job "Monitor de Inatividade de Chat (trigger: interval[0:00:30], next run at: 2026-02-23 22:21:48 -03)" executed successfully
+INFO:apscheduler.executors.default:Running job "Monitor de Inatividade de Chat (trigger: interval[0:00:30], next run at: 2026-02-23 22:22:18 -03)" (scheduled at 2026-02-23 22:21:48.051710-03:00)
+ERROR:services.chat_timeout_service:Erro no processamento de timeouts de chat: Neither 'BinaryExpression' object nor 'Comparator' object has an attribute 'astext'
+INFO:apscheduler.executors.default:Job "Monitor de Inatividade de Chat (trigger: interval[0:00:30], next run at: 2026-02-23 22:22:18 -03)" executed successfully
+INFO:apscheduler.executors.default:Running job "Monitor de Inatividade de Chat (trigger: interval[0:00:30], next run at: 2026-02-23 22:22:48 -03)" (scheduled at 2026-02-23 22:22:18.051710-03:00)
+ERROR:services.chat_timeout_service:Erro no processamento de timeouts de chat: Neither 'BinaryExpression' object nor 'Comparator' object has an attribute 'astext'
+INFO:apscheduler.executors.default:Job "Monitor de Inatividade de Chat (trigger: interval[0:00:30], next run at: 2026-02-23 22:22:48 -03)" executed successfully
+INFO:apscheduler.executors.default:Running job "Monitor de Inatividade de Chat (trigger: interval[0:00:30], next run at: 2026-02-23 22:23:18 -03)" (scheduled at 2026-02-23 22:22:48.051710-03:00)
+ERROR:services.chat_timeout_service:Erro no processamento de timeouts de chat: Neither 'BinaryExpression' object nor 'Comparator' object has an attribute 'astext'
+INFO:apscheduler.executors.default:Job "Monitor de Inatividade de Chat (trigger: interval[0:00:30], next run at: 2026-02-23 22:23:18 -03)" executed successfully
+INFO:apscheduler.executors.default:Running job "Monitor de Inatividade de Chat (trigger: interval[0:00:30], next run at: 2026-02-23 22:23:48 -03)" (scheduled at 2026-02-23 22:23:18.051710-03:00)
+ERROR:services.chat_timeout_service:Erro no processamento de timeouts de chat: Neither 'BinaryExpression' object nor 'Comparator' object has an attribute 'astext'
+INFO:apscheduler.executors.default:Job "Monitor de Inatividade de Chat (trigger: interval[0:00:30], next run at: 2026-02-23 22:23:48 -03)" executed successfully
+INFO:apscheduler.executors.default:Running job "Monitor de Inatividade de Chat (trigger: interval[0:00:30], next run at: 2026-02-23 22:24:18 -03)" (scheduled at 2026-02-23 22:23:48.051710-03:00)
+ERROR:services.chat_timeout_service:Erro no processamento de timeouts de chat: Neither 'BinaryExpression' object nor 'Comparator' object has an attribute 'astext'
+INFO:apscheduler.executors.default:Job "Monitor de Inatividade de Chat (trigger: interval[0:00:30], next run at: 2026-02-23 22:24:18 -03)" executed successfully
+INFO:apscheduler.executors.default:Running job "Monitor de Inatividade de Chat (trigger: interval[0:00:30], next run at: 2026-02-23 22:24:48 -03)" (scheduled at 2026-02-23 22:24:18.051710-03:00)
+ERROR:services.chat_timeout_service:Erro no processamento de timeouts de chat: Neither 'BinaryExpression' object nor 'Comparator' object has an attribute 'astext'
+INFO:apscheduler.executors.default:Job "Monitor de Inatividade de Chat (trigger: interval[0:00:30], next run at: 2026-02-23 22:24:48 -03)" executed successfully
+INFO:apscheduler.executors.default:Running job "Monitor de Inatividade de Chat (trigger: interval[0:00:30], next run at: 2026-02-23 22:25:18 -03)" (scheduled at 2026-02-23 22:24:48.051710-03:00)
+ERROR:services.chat_timeout_service:Erro no processamento de timeouts de chat: Neither 'BinaryExpression' object nor 'Comparator' object has an attribute 'astext'
+INFO:apscheduler.executors.default:Job "Monitor de Inatividade de Chat (trigger: interval[0:00:30], next run at: 2026-02-23 22:25:18 -03)" executed successfully
+INFO:apscheduler.executors.default:Running job "Monitor de Inatividade de Chat (trigger: interval[0:00:30], next run at: 2026-02-23 22:25:48 -03)" (scheduled at 2026-02-23 22:25:18.051710-03:00)
+ERROR:services.chat_timeout_service:Erro no processamento de timeouts de chat: Neither 'BinaryExpression' object nor 'Comparator' object has an attribute 'astext'
+INFO:apscheduler.executors.default:Job "Monitor de Inatividade de Chat (trigger: interval[0:00:30], next run at: 2026-02-23 22:25:48 -03)" executed successfully
+INFO:apscheduler.executors.default:Running job "Monitor de Inatividade de Chat (trigger: interval[0:00:30], next run at: 2026-02-23 22:26:18 -03)" (scheduled at 2026-02-23 22:25:48.051710-03:00)
+ERROR:services.chat_timeout_service:Erro no processamento de timeouts de chat: Neither 'BinaryExpression' object nor 'Comparator' object has an attribute 'astext'
+INFO:apscheduler.executors.default:Job "Monitor de Inatividade de Chat (trigger: interval[0:00:30], next run at: 2026-02-23 22:26:18 -03)" executed successfully
+INFO:apscheduler.executors.default:Running job "Monitor de Inatividade de Chat (trigger: interval[0:00:30], next run at: 2026-02-23 22:26:48 -03)" (scheduled at 2026-02-23 22:26:18.051710-03:00)
+ERROR:services.chat_timeout_service:Erro no processamento de timeouts de chat: Neither 'BinaryExpression' object nor 'Comparator' object has an attribute 'astext'
+INFO:apscheduler.executors.default:Job "Monitor de Inatividade de Chat (trigger: interval[0:00:30], next run at: 2026-02-23 22:26:48 -03)" executed successfully
+INFO:apscheduler.executors.default:Running job "Monitor de Inatividade de Chat (trigger: interval[0:00:30], next run at: 2026-02-23 22:27:18 -03)" (scheduled at 2026-02-23 22:26:48.051710-03:00)
+ERROR:services.chat_timeout_service:Erro no processamento de timeouts de chat: Neither 'BinaryExpression' object nor 'Comparator' object has an attribute 'astext'
+INFO:apscheduler.executors.default:Job "Monitor de Inatividade de Chat (trigger: interval[0:00:30], next run at: 2026-02-23 22:27:18 -03)" executed successfully
+INFO:apscheduler.executors.default:Running job "Monitor de Inatividade de Chat (trigger: interval[0:00:30], next run at: 2026-02-23 22:27:48 -03)" (scheduled at 2026-02-23 22:27:18.051710-03:00)
+ERROR:services.chat_timeout_service:Erro no processamento de timeouts de chat: Neither 'BinaryExpression' object nor 'Comparator' object has an attribute 'astext'
+INFO:apscheduler.executors.default:Job "Monitor de Inatividade de Chat (trigger: interval[0:00:30], next run at: 2026-02-23 22:27:48 -03)" executed successfully
+INFO:apscheduler.executors.default:Running job "Monitor de Inatividade de Chat (trigger: interval[0:00:30], next run at: 2026-02-23 22:28:18 -03)" (scheduled at 2026-02-23 22:27:48.051710-03:00)
+ERROR:services.chat_timeout_service:Erro no processamento de timeouts de chat: Neither 'BinaryExpression' object nor 'Comparator' object has an attribute 'astext'
+INFO:apscheduler.executors.default:Job "Monitor de Inatividade de Chat (trigger: interval[0:00:30], next run at: 2026-02-23 22:28:18 -03)" executed successfully
+INFO:apscheduler.executors.default:Running job "Monitor de Inatividade de Chat (trigger: interval[0:00:30], next run at: 2026-02-23 22:28:48 -03)" (scheduled at 2026-02-23 22:28:18.051710-03:00)
+ERROR:services.chat_timeout_service:Erro no processamento de timeouts de chat: Neither 'BinaryExpression' object nor 'Comparator' object has an attribute 'astext'
+INFO:apscheduler.executors.default:Job "Monitor de Inatividade de Chat (trigger: interval[0:00:30], next run at: 2026-02-23 22:28:48 -03)" executed successfully
+INFO:apscheduler.executors.default:Running job "Monitor de Inatividade de Chat (trigger: interval[0:00:30], next run at: 2026-02-23 22:29:18 -03)" (scheduled at 2026-02-23 22:28:48.051710-03:00)
+ERROR:services.chat_timeout_service:Erro no processamento de timeouts de chat: Neither 'BinaryExpression' object nor 'Comparator' object has an attribute 'astext'
+INFO:apscheduler.executors.default:Job "Monitor de Inatividade de Chat (trigger: interval[0:00:30], next run at: 2026-02-23 22:29:18 -03)" executed successfully
+INFO:apscheduler.executors.default:Running job "Monitor de Inatividade de Chat (trigger: interval[0:00:30], next run at: 2026-02-23 22:29:48 -03)" (scheduled at 2026-02-23 22:29:18.051710-03:00)
+ERROR:services.chat_timeout_service:Erro no processamento de timeouts de chat: Neither 'BinaryExpression' object nor 'Comparator' object has an attribute 'astext'
+INFO:apscheduler.executors.default:Job "Monitor de Inatividade de Chat (trigger: interval[0:00:30], next run at: 2026-02-23 22:29:48 -03)" executed successfully
+INFO:apscheduler.executors.default:Running job "Monitor de Inatividade de Chat (trigger: interval[0:00:30], next run at: 2026-02-23 22:30:18 -03)" (scheduled at 2026-02-23 22:29:48.051710-03:00)
+ERROR:services.chat_timeout_service:Erro no processamento de timeouts de chat: Neither 'BinaryExpression' object nor 'Comparator' object has an attribute 'astext'
+INFO:apscheduler.executors.default:Job "Monitor de Inatividade de Chat (trigger: interval[0:00:30], next run at: 2026-02-23 22:30:18 -03)" executed successfully
+INFO:apscheduler.executors.default:Running job "Monitor de Inatividade de Chat (trigger: interval[0:00:30], next run at: 2026-02-23 22:30:48 -03)" (scheduled at 2026-02-23 22:30:18.051710-03:00)
+ERROR:services.chat_timeout_service:Erro no processamento de timeouts de chat: Neither 'BinaryExpression' object nor 'Comparator' object has an attribute 'astext'
+INFO:apscheduler.executors.default:Job "Monitor de Inatividade de Chat (trigger: interval[0:00:30], next run at: 2026-02-23 22:30:48 -03)" executed successfully
+INFO:apscheduler.executors.default:Running job "Monitor de Inatividade de Chat (trigger: interval[0:00:30], next run at: 2026-02-23 22:31:18 -03)" (scheduled at 2026-02-23 22:30:48.051710-03:00)
+ERROR:services.chat_timeout_service:Erro no processamento de timeouts de chat: Neither 'BinaryExpression' object nor 'Comparator' object has an attribute 'astext'
+INFO:apscheduler.executors.default:Job "Monitor de Inatividade de Chat (trigger: interval[0:00:30], next run at: 2026-02-23 22:31:18 -03)" executed successfully
+INFO:apscheduler.executors.default:Running job "Monitor de Inatividade de Chat (trigger: interval[0:00:30], next run at: 2026-02-23 22:31:48 -03)" (scheduled at 2026-02-23 22:31:18.051710-03:00)
+ERROR:services.chat_timeout_service:Erro no processamento de timeouts de chat: Neither 'BinaryExpression' object nor 'Comparator' object has an attribute 'astext'
+INFO:apscheduler.executors.default:Job "Monitor de Inatividade de Chat (trigger: interval[0:00:30], next run at: 2026-02-23 22:31:48 -03)" executed successfully
+INFO:apscheduler.executors.default:Running job "Monitor de Inatividade de Chat (trigger: interval[0:00:30], next run at: 2026-02-23 22:32:18 -03)" (scheduled at 2026-02-23 22:31:48.051710-03:00)
+ERROR:services.chat_timeout_service:Erro no processamento de timeouts de chat: Neither 'BinaryExpression' object nor 'Comparator' object has an attribute 'astext'
+INFO:apscheduler.executors.default:Job "Monitor de Inatividade de Chat (trigger: interval[0:00:30], next run at: 2026-02-23 22:32:18 -03)" executed successfully
+INFO:apscheduler.executors.default:Running job "Monitor de Inatividade de Chat (trigger: interval[0:00:30], next run at: 2026-02-23 22:32:48 -03)" (scheduled at 2026-02-23 22:32:18.051710-03:00)
+ERROR:services.chat_timeout_service:Erro no processamento de timeouts de chat: Neither 'BinaryExpression' object nor 'Comparator' object has an attribute 'astext'
+INFO:apscheduler.executors.default:Job "Monitor de Inatividade de Chat (trigger: interval[0:00:30], next run at: 2026-02-23 22:32:48 -03)" executed successfully
+INFO:apscheduler.executors.default:Running job "Monitor de Inatividade de Chat (trigger: interval[0:00:30], next run at: 2026-02-23 22:33:18 -03)" (scheduled at 2026-02-23 22:32:48.051710-03:00)
+ERROR:services.chat_timeout_service:Erro no processamento de timeouts de chat: Neither 'BinaryExpression' object nor 'Comparator' object has an attribute 'astext'
+INFO:apscheduler.executors.default:Job "Monitor de Inatividade de Chat (trigger: interval[0:00:30], next run at: 2026-02-23 22:33:18 -03)" executed successfully
+SIGINT/SIGTERM received...killing workers...
+Mon Feb 23 22:33:15 2026 - received message 0 from emperor
+worker 1 buried after 1 seconds
+goodbye to uWSGI.
+VACUUM WARNING: unix socket /srv/appgestaoversuscombr.45a4cd4b.configr.cloud/etc/uwsgi/app.sock changed inode. Skip removal
+VACUUM: unix socket /srv/appgestaoversuscombr.45a4cd4b.configr.cloud/etc/uwsgi/stats (stats) removed.

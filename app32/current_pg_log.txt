@@ -1,0 +1,10 @@
+2026-02-23 14:17:37 -03 LOG:  starting PostgreSQL 14.20, compiled by Visual C++ build 1944, 64-bit
+2026-02-23 14:17:37 -03 LOG:  listening on IPv6 address "::", port 5432
+2026-02-23 14:17:37 -03 LOG:  listening on IPv4 address "0.0.0.0", port 5432
+2026-02-23 14:17:37 -03 LOG:  database system was shut down at 2026-02-23 14:11:08 -03
+2026-02-23 14:17:37 -03 LOG:  database system is ready to accept connections
+2026-02-23 14:18:40 -03 LOG:  could not receive data from client: An existing connection was forcibly closed by the remote host.
+	
+2026-02-23 14:18:40 -03 LOG:  could not receive data from client: An existing connection was forcibly closed by the remote host.
+	
+2026-02-23 14:18:40 -03 LOG:  unexpected EOF on client connection with an open transaction

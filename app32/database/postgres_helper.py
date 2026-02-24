@@ -263,6 +263,7 @@ class PostgresCursor:
 
     def __init__(self, conn):
         self.conn = conn
+        self.connection = conn
         self._result = None
         self._description = None
 

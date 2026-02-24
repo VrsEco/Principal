@@ -11,7 +11,7 @@ def index():
     """Redirect to login or dashboard based on auth status"""
     from flask_login import current_user
     if current_user.is_authenticated:
-        return redirect(url_for('main.dashboard'))
+        return redirect(url_for('my_work.my_work'))
     return redirect(url_for('auth.login'))
 
 @main_bp.route('/styleguide')
@@ -247,13 +247,6 @@ def dashboard_filter_options():
         traceback.print_exc()
         return jsonify({"error": str(e)}), 500
 
-@main_bp.route('/dashboard')
-@login_required
-def dashboard():
-    """Dashboard page"""
-    from flask import session
-    active_company_id = session.get('active_company_id')
-    return render_template('modules/dashboard_v2.html', active_company_id=active_company_id)
 
 @main_bp.route('/main')
 @login_required

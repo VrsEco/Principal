@@ -41,7 +41,7 @@ def portfolios_page_redirect():
         )
 
     # Fallback to dashboard if no company found
-    return redirect(url_for("main.dashboard"))
+    return redirect(url_for("my_work.my_work"))
 
 
 @portfolios_bp.route("/companies/<int:company_id>/project-portfolios")

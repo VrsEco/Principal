@@ -1,0 +1,414 @@
+=== RELATÓRIO DE COMPARAÇÃO DE BANCO DE DADOS (APP31 vs APP32) ===
+
+[TABELA REMOVIDA/RENOMEADA] activity_comments (Existe apenas no APP31)
+
+[TABELA] activity_work_logs
+
+[TABELA NOVA] agent_actions (Existe apenas no APP32)
+
+[TABELA NOVA] agent_messages (Existe apenas no APP32)
+
+[TABELA] ai_agents
+  ! [TIPO ALTERADO] button_text: text -> character varying
+  ! [TIPO ALTERADO] cache_enabled: integer -> boolean
+  ! [TIPO ALTERADO] created_at: text -> timestamp without time zone
+  ! [TIPO ALTERADO] execution_mode: text -> character varying
+  ! [TIPO ALTERADO] format_type: text -> character varying
+  ! [TIPO ALTERADO] id: text -> character varying
+  ! [TIPO ALTERADO] name: text -> character varying
+  ! [TIPO ALTERADO] optional_data: text -> json
+  ! [TIPO ALTERADO] output_field: text -> character varying
+  ! [TIPO ALTERADO] page: text -> character varying
+  ! [TIPO ALTERADO] required_data: text -> json
+  ! [TIPO ALTERADO] section: text -> character varying
+  ! [TIPO ALTERADO] status: text -> character varying
+  ! [TIPO ALTERADO] updated_at: text -> timestamp without time zone
+  ! [TIPO ALTERADO] version: text -> character varying
+
+[TABELA REMOVIDA/RENOMEADA] alembic_version (Existe apenas no APP31)
+
+[TABELA REMOVIDA/RENOMEADA] alignment_records (Existe apenas no APP31)
+
+[TABELA REMOVIDA/RENOMEADA] app_compliance_report_items (Existe apenas no APP31)
+
+[TABELA REMOVIDA/RENOMEADA] app_compliance_reports (Existe apenas no APP31)
+
+[TABELA NOVA] cadastro_sessions (Existe apenas no APP32)
+
+[TABELA] companies
+  + [COLUNA NOVA] is_active (boolean)
+  + [COLUNA NOVA] logo_icon (character varying)
+  + [COLUNA NOVA] logo_primary (character varying)
+  + [COLUNA NOVA] logo_secondary (character varying)
+  - [COLUNA REMOVIDA] cnaes (text)
+  - [COLUNA REMOVIDA] financial_total_margin (text)
+  - [COLUNA REMOVIDA] financial_total_revenue (text)
+  - [COLUNA REMOVIDA] grv_config (text)
+  - [COLUNA REMOVIDA] headcount_operational (integer)
+  - [COLUNA REMOVIDA] headcount_strategic (integer)
+  - [COLUNA REMOVIDA] headcount_tactical (integer)
+  - [COLUNA REMOVIDA] logo_banner (text)
+  - [COLUNA REMOVIDA] logo_horizontal (text)
+  - [COLUNA REMOVIDA] logo_square (text)
+  - [COLUNA REMOVIDA] logo_vertical (text)
+  - [COLUNA REMOVIDA] pev_config (text)
+  ! [TIPO ALTERADO] city: text -> character varying
+  ! [TIPO ALTERADO] client_code: text -> character varying
+  ! [TIPO ALTERADO] cnpj: text -> character varying
+  ! [TIPO ALTERADO] coverage_online: text -> character varying
+  ! [TIPO ALTERADO] coverage_physical: text -> character varying
+  ! [TIPO ALTERADO] created_at: text -> timestamp without time zone
+  ! [TIPO ALTERADO] experience_segment: text -> character varying
+  ! [TIPO ALTERADO] experience_total: text -> character varying
+  ! [TIPO ALTERADO] industry: text -> character varying
+  ! [TIPO ALTERADO] legal_name: text -> character varying
+  ! [TIPO ALTERADO] name: text -> character varying
+  ! [TIPO ALTERADO] size: text -> character varying
+  ! [TIPO ALTERADO] state: text -> character varying
+
+[TABELA REMOVIDA/RENOMEADA] company_data (Existe apenas no APP31)
+
+[TABELA] company_performance_settings
+
+[TABELA REMOVIDA/RENOMEADA] company_projects (Existe apenas no APP31)
+
+[TABELA REMOVIDA/RENOMEADA] company_records (Existe apenas no APP31)
+
+[TABELA REMOVIDA/RENOMEADA] directional_records (Existe apenas no APP31)
+
+[TABELA REMOVIDA/RENOMEADA] drivers (Existe apenas no APP31)
+
+[TABELA] employees
+  + [COLUNA NOVA] telegram (character varying)
+  ! [TIPO ALTERADO] created_at: text -> timestamp without time zone
+  ! [TIPO ALTERADO] department: text -> character varying
+  ! [TIPO ALTERADO] email: text -> character varying
+  ! [TIPO ALTERADO] hire_date: text -> date
+  ! [TIPO ALTERADO] name: text -> character varying
+  ! [TIPO ALTERADO] phone: text -> character varying
+  ! [TIPO ALTERADO] status: text -> character varying
+  ! [TIPO ALTERADO] updated_at: text -> timestamp without time zone
+  ! [TIPO ALTERADO] weekly_hours: real -> numeric
+  ! [TIPO ALTERADO] whatsapp: text -> character varying
+
+[TABELA] indicator_data
+  ! [TIPO ALTERADO] created_at: text -> timestamp without time zone
+  ! [TIPO ALTERADO] updated_at: text -> timestamp without time zone
+  ! [TIPO ALTERADO] value: real -> numeric
+
+[TABELA] indicator_goals
+  - [COLUNA REMOVIDA] okr_reference (text)
+  - [COLUNA REMOVIDA] okr_reference_label (text)
+  ! [TIPO ALTERADO] code: text -> character varying
+  ! [TIPO ALTERADO] created_at: text -> timestamp without time zone
+  ! [TIPO ALTERADO] evaluation_basis: text -> character varying
+  ! [TIPO ALTERADO] goal_type: text -> character varying
+  ! [TIPO ALTERADO] goal_value: real -> numeric
+  ! [TIPO ALTERADO] status: text -> character varying
+  ! [TIPO ALTERADO] updated_at: text -> timestamp without time zone
+
+[TABELA] indicator_groups
+  ! [TIPO ALTERADO] code: text -> character varying
+  ! [TIPO ALTERADO] created_at: text -> timestamp without time zone
+  ! [TIPO ALTERADO] name: text -> character varying
+  ! [TIPO ALTERADO] updated_at: text -> timestamp without time zone
+
+[TABELA] indicators
+  - [COLUNA REMOVIDA] okr_reference_label (text)
+  - [COLUNA REMOVIDA] plan_id (text)
+  ! [TIPO ALTERADO] code: text -> character varying
+  ! [TIPO ALTERADO] collaborators: text -> json
+  ! [TIPO ALTERADO] created_at: text -> timestamp without time zone
+  ! [TIPO ALTERADO] name: text -> character varying
+  ! [TIPO ALTERADO] okr_level: text -> character varying
+  ! [TIPO ALTERADO] okr_reference: text -> character varying
+  ! [TIPO ALTERADO] polarity: text -> character varying
+  ! [TIPO ALTERADO] unit: text -> character varying
+  ! [TIPO ALTERADO] updated_at: text -> timestamp without time zone
+
+[TABELA REMOVIDA/RENOMEADA] interviews (Existe apenas no APP31)
+
+[TABELA NOVA] key_results (Existe apenas no APP32)
+
+[TABELA NOVA] key_results_area (Existe apenas no APP32)
+
+[TABELA] macro_processes
+  ! [TIPO ALTERADO] code: text -> character varying
+  ! [TIPO ALTERADO] created_at: text -> timestamp without time zone
+  ! [TIPO ALTERADO] name: text -> character varying
+  ! [TIPO ALTERADO] owner: text -> character varying
+  ! [TIPO ALTERADO] updated_at: text -> timestamp without time zone
+
+[TABELA REMOVIDA/RENOMEADA] market_records (Existe apenas no APP31)
+
+[TABELA] meeting_agenda_items
+  - [COLUNA REMOVIDA] updated_at (timestamp without time zone)
+  ! [TIPO ALTERADO] title: text -> character varying
+
+[TABELA] meetings
+  ! [TIPO ALTERADO] actual_time: text -> character varying
+  ! [TIPO ALTERADO] scheduled_time: text -> character varying
+  ! [TIPO ALTERADO] status: text -> character varying
+  ! [TIPO ALTERADO] title: text -> character varying
+
+[TABELA REMOVIDA/RENOMEADA] misalignment_records (Existe apenas no APP31)
+
+[TABELA] notes
+
+[TABELA] occurrences
+  + [COLUNA NOVA] collaborators_ids (json)
+  ! [TIPO ALTERADO] created_at: text -> timestamp without time zone
+  ! [TIPO ALTERADO] title: text -> character varying
+  ! [TIPO ALTERADO] type: text -> character varying
+  ! [TIPO ALTERADO] updated_at: text -> timestamp without time zone
+
+[TABELA REMOVIDA/RENOMEADA] okr_area_preliminary_records (Existe apenas no APP31)
+
+[TABELA REMOVIDA/RENOMEADA] okr_area_records (Existe apenas no APP31)
+
+[TABELA REMOVIDA/RENOMEADA] okr_global_key_results (Existe apenas no APP31)
+
+[TABELA REMOVIDA/RENOMEADA] okr_global_records (Existe apenas no APP31)
+
+[TABELA REMOVIDA/RENOMEADA] okr_preliminary_records (Existe apenas no APP31)
+
+[TABELA REMOVIDA/RENOMEADA] okrs (Existe apenas no APP31)
+
+[TABELA NOVA] okrs_area (Existe apenas no APP32)
+
+[TABELA NOVA] okrs_global (Existe apenas no APP32)
+
+[TABELA REMOVIDA/RENOMEADA] participants (Existe apenas no APP31)
+
+[TABELA REMOVIDA/RENOMEADA] plan_alignment_agenda (Existe apenas no APP31)
+
+[TABELA REMOVIDA/RENOMEADA] plan_alignment_members (Existe apenas no APP31)
+
+[TABELA REMOVIDA/RENOMEADA] plan_alignment_overview (Existe apenas no APP31)
+
+[TABELA REMOVIDA/RENOMEADA] plan_alignment_principles (Existe apenas no APP31)
+
+[TABELA REMOVIDA/RENOMEADA] plan_alignment_project (Existe apenas no APP31)
+
+[TABELA NOVA] plan_drivers (Existe apenas no APP32)
+
+[TABELA REMOVIDA/RENOMEADA] plan_finance_business_distribution (Existe apenas no APP31)
+
+[TABELA REMOVIDA/RENOMEADA] plan_finance_business_periods (Existe apenas no APP31)
+
+[TABELA REMOVIDA/RENOMEADA] plan_finance_capital_giro (Existe apenas no APP31)
+
+[TABELA REMOVIDA/RENOMEADA] plan_finance_funding_sources (Existe apenas no APP31)
+
+[TABELA REMOVIDA/RENOMEADA] plan_finance_investment_categories (Existe apenas no APP31)
+
+[TABELA REMOVIDA/RENOMEADA] plan_finance_investment_contributions (Existe apenas no APP31)
+
+[TABELA REMOVIDA/RENOMEADA] plan_finance_investment_items (Existe apenas no APP31)
+
+[TABELA REMOVIDA/RENOMEADA] plan_finance_investments (Existe apenas no APP31)
+
+[TABELA REMOVIDA/RENOMEADA] plan_finance_investor_periods (Existe apenas no APP31)
+
+[TABELA REMOVIDA/RENOMEADA] plan_finance_metrics (Existe apenas no APP31)
+
+[TABELA REMOVIDA/RENOMEADA] plan_finance_premises (Existe apenas no APP31)
+
+[TABELA REMOVIDA/RENOMEADA] plan_finance_profit_distribution (Existe apenas no APP31)
+
+[TABELA REMOVIDA/RENOMEADA] plan_finance_result_rules (Existe apenas no APP31)
+
+[TABELA REMOVIDA/RENOMEADA] plan_finance_sources (Existe apenas no APP31)
+
+[TABELA REMOVIDA/RENOMEADA] plan_finance_variable_costs (Existe apenas no APP31)
+
+[TABELA REMOVIDA/RENOMEADA] plan_implantation_checkpoints (Existe apenas no APP31)
+
+[TABELA REMOVIDA/RENOMEADA] plan_implantation_dashboard (Existe apenas no APP31)
+
+[TABELA NOVA] plan_implantation_data (Existe apenas no APP32)
+
+[TABELA REMOVIDA/RENOMEADA] plan_implantation_phases (Existe apenas no APP31)
+
+[TABELA NOVA] plan_participants (Existe apenas no APP32)
+
+[TABELA REMOVIDA/RENOMEADA] plan_product_monthly_growth (Existe apenas no APP31)
+
+[TABELA REMOVIDA/RENOMEADA] plan_product_rampup_entries (Existe apenas no APP31)
+
+[TABELA REMOVIDA/RENOMEADA] plan_products (Existe apenas no APP31)
+
+[TABELA REMOVIDA/RENOMEADA] plan_sales_rampup_config (Existe apenas no APP31)
+
+[TABELA NOVA] plan_section_status (Existe apenas no APP32)
+
+[TABELA REMOVIDA/RENOMEADA] plan_sections (Existe apenas no APP31)
+
+[TABELA REMOVIDA/RENOMEADA] plan_segments (Existe apenas no APP31)
+
+[TABELA REMOVIDA/RENOMEADA] plan_structure_capacities (Existe apenas no APP31)
+
+[TABELA REMOVIDA/RENOMEADA] plan_structure_installments (Existe apenas no APP31)
+
+[TABELA REMOVIDA/RENOMEADA] plan_structures (Existe apenas no APP31)
+
+[TABELA] plans
+  + [COLUNA NOVA] meta_data (json)
+  + [COLUNA NOVA] mode (character varying)
+  + [COLUNA NOVA] progress (integer)
+  + [COLUNA NOVA] title (character varying)
+  - [COLUNA REMOVIDA] end_date (date)
+  - [COLUNA REMOVIDA] name (text)
+  - [COLUNA REMOVIDA] plan_mode (character varying)
+  - [COLUNA REMOVIDA] start_date (date)
+  - [COLUNA REMOVIDA] year (integer)
+  ! [TIPO ALTERADO] created_at: text -> timestamp without time zone
+  ! [TIPO ALTERADO] status: text -> character varying
+
+[TABELA] portfolios
+  ! [TIPO ALTERADO] code: text -> character varying
+  ! [TIPO ALTERADO] created_at: text -> timestamp without time zone
+  ! [TIPO ALTERADO] name: text -> character varying
+  ! [TIPO ALTERADO] updated_at: text -> timestamp without time zone
+
+[TABELA REMOVIDA/RENOMEADA] process_activities (Existe apenas no APP31)
+
+[TABELA REMOVIDA/RENOMEADA] process_activity_entries (Existe apenas no APP31)
+
+[TABELA] process_areas
+  ! [TIPO ALTERADO] code: text -> character varying
+  ! [TIPO ALTERADO] color: text -> character varying
+  ! [TIPO ALTERADO] created_at: text -> timestamp without time zone
+  ! [TIPO ALTERADO] name: text -> character varying
+  ! [TIPO ALTERADO] updated_at: text -> timestamp without time zone
+
+[TABELA] process_instance_collaborators
+
+[TABELA] process_instances
+  + [COLUNA NOVA] actual_end_date (date)
+  + [COLUNA NOVA] collaborators_json (json)
+  + [COLUNA NOVA] score_weight (numeric)
+  - [COLUNA REMOVIDA] assigned_collaborators (text)
+  - [COLUNA REMOVIDA] metadata (text)
+  ! [TIPO ALTERADO] actual_hours: real -> numeric
+  ! [TIPO ALTERADO] created_at: text -> timestamp without time zone
+  ! [TIPO ALTERADO] created_by: text -> character varying
+  ! [TIPO ALTERADO] due_date: timestamp without time zone -> date
+  ! [TIPO ALTERADO] estimated_hours: real -> numeric
+  ! [TIPO ALTERADO] instance_code: text -> character varying
+  ! [TIPO ALTERADO] priority: text -> character varying
+  ! [TIPO ALTERADO] status: text -> character varying
+  ! [TIPO ALTERADO] title: text -> character varying
+  ! [TIPO ALTERADO] trigger_type: text -> character varying
+  ! [TIPO ALTERADO] updated_at: text -> timestamp without time zone
+
+[TABELA REMOVIDA/RENOMEADA] process_instances_debug (Existe apenas no APP31)
+
+[TABELA NOVA] process_routines (Existe apenas no APP32)
+
+[TABELA NOVA] process_steps (Existe apenas no APP32)
+
+[TABELA] processes
+  + [COLUNA NOVA] flow_mermaid (text)
+  + [COLUNA NOVA] is_active (boolean)
+  - [COLUNA REMOVIDA] updated_at (text)
+  ! [TIPO ALTERADO] code: text -> character varying
+  ! [TIPO ALTERADO] created_at: text -> timestamp without time zone
+  ! [TIPO ALTERADO] flow_document: text -> character varying
+  ! [TIPO ALTERADO] kanban_stage: text -> character varying
+  ! [TIPO ALTERADO] name: text -> character varying
+  ! [TIPO ALTERADO] performance_level: text -> character varying
+  ! [TIPO ALTERADO] responsible: text -> character varying
+  ! [TIPO ALTERADO] structuring_level: text -> character varying
+
+[TABELA REMOVIDA/RENOMEADA] project_activities (Existe apenas no APP31)
+
+[TABELA] project_activity_collaborators
+
+[TABELA NOVA] project_task_hours_summary (Existe apenas no APP32)
+
+[TABELA NOVA] project_tasks (Existe apenas no APP32)
+
+[TABELA] projects
+  + [COLUNA NOVA] budget (character varying)
+  + [COLUNA NOVA] company_id (integer)
+  + [COLUNA NOVA] deadline (date)
+  + [COLUNA NOVA] kpis (json)
+  + [COLUNA NOVA] notes (text)
+  + [COLUNA NOVA] okr_links (json)
+  + [COLUNA NOVA] portfolio_id (integer)
+  + [COLUNA NOVA] progress (integer)
+  - [COLUNA REMOVIDA] description (text)
+  - [COLUNA REMOVIDA] end_date (timestamp without time zone)
+  - [COLUNA REMOVIDA] start_date (timestamp without time zone)
+  ! [TIPO ALTERADO] created_at: time without time zone -> timestamp without time zone
+  ! [TIPO ALTERADO] owner: text -> character varying
+  ! [TIPO ALTERADO] priority: text -> character varying
+  ! [TIPO ALTERADO] status: text -> character varying
+  ! [TIPO ALTERADO] title: text -> character varying
+  ! [TIPO ALTERADO] updated_at: time without time zone -> timestamp without time zone
+
+[TABELA REMOVIDA/RENOMEADA] report_instances (Existe apenas no APP31)
+
+[TABELA REMOVIDA/RENOMEADA] report_models (Existe apenas no APP31)
+
+[TABELA REMOVIDA/RENOMEADA] report_patterns (Existe apenas no APP31)
+
+[TABELA REMOVIDA/RENOMEADA] report_templates (Existe apenas no APP31)
+
+[TABELA] roles
+  + [COLUNA NOVA] permissions (json)
+  ! [TIPO ALTERADO] color: text -> character varying
+  ! [TIPO ALTERADO] created_at: text -> timestamp without time zone
+  ! [TIPO ALTERADO] department: text -> character varying
+  ! [TIPO ALTERADO] reports_to: text -> character varying
+  ! [TIPO ALTERADO] title: text -> character varying
+  ! [TIPO ALTERADO] updated_at: text -> timestamp without time zone
+  ! [TIPO ALTERADO] weekly_hours: integer -> numeric
+
+[TABELA] routine_collaborators
+  ! [TIPO ALTERADO] created_at: text -> timestamp without time zone
+  ! [TIPO ALTERADO] hours_used: real -> numeric
+  ! [TIPO ALTERADO] updated_at: text -> timestamp without time zone
+
+[TABELA REMOVIDA/RENOMEADA] routine_tasks (Existe apenas no APP31)
+
+[TABELA REMOVIDA/RENOMEADA] routine_triggers (Existe apenas no APP31)
+
+[TABELA] routines
+  + [COLUNA NOVA] code (character varying)
+  + [COLUNA NOVA] order_index (integer)
+  + [COLUNA NOVA] score_weight (numeric)
+  ! [TIPO ALTERADO] created_at: text -> timestamp without time zone
+  ! [TIPO ALTERADO] deadline_date: text -> date
+  ! [TIPO ALTERADO] is_active: integer -> boolean
+  ! [TIPO ALTERADO] name: text -> character varying
+  ! [TIPO ALTERADO] schedule_type: text -> character varying
+  ! [TIPO ALTERADO] schedule_value: text -> character varying
+  ! [TIPO ALTERADO] updated_at: text -> timestamp without time zone
+
+[TABELA] team_members
+  + [COLUNA NOVA] created_at (timestamp without time zone)
+  + [COLUNA NOVA] updated_at (timestamp without time zone)
+
+[TABELA] teams
+
+[TABELA REMOVIDA/RENOMEADA] ui_catalog (Existe apenas no APP31)
+
+[TABELA REMOVIDA/RENOMEADA] ui_elements_v2 (Existe apenas no APP31)
+
+[TABELA REMOVIDA/RENOMEADA] ui_pages_v2 (Existe apenas no APP31)
+
+[TABELA REMOVIDA/RENOMEADA] user_logs (Existe apenas no APP31)
+
+[TABELA] users
+  + [COLUNA NOVA] telegram (character varying)
+  + [COLUNA NOVA] whatsapp (character varying)
+  ! [TIPO ALTERADO] email: text -> character varying
+  ! [TIPO ALTERADO] name: text -> character varying
+  ! [TIPO ALTERADO] password_hash: text -> character varying
+  ! [TIPO ALTERADO] role: text -> character varying
+
+[TABELA REMOVIDA/RENOMEADA] vision_records (Existe apenas no APP31)
+
+[TABELA REMOVIDA/RENOMEADA] workshop_discussions (Existe apenas no APP31)

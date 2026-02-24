@@ -25,38 +25,8 @@ def company_edit(company_id):
     tab = request.args.get('tab', 'dados')
     return render_template('modules/companies/company_form_v2.html', company_id=company_id, active_tab=tab)
 
-# API Endpoints for better management
-@companies_bp.route('/api/companies', methods=['GET'])
-@permission_required('companies', 'view')
-def get_companies():
-    companies = Company.query.order_by(Company.name).all()
-    return jsonify([c.to_dict() for c in companies])
-
-@companies_bp.route('/api/companies/<int:company_id>', methods=['GET'])
-@permission_required('companies', 'view')
-def get_company(company_id):
-    company = Company.query.get_or_404(company_id)
-    return jsonify(company.to_dict())
-
-@companies_bp.route('/api/companies', methods=['POST'])
-@permission_required('companies', 'create')
-def create_company():
-    data = request.json
-    company = Company(**data)
-    db.session.add(company)
-    db.session.commit()
-    return jsonify(company.to_dict()), 201
-
-@companies_bp.route('/api/companies/<int:company_id>', methods=['PUT'])
-@permission_required('companies', 'edit')
-def update_company(company_id):
-    company = Company.query.get_or_404(company_id)
-    data = request.json
-    for key, value in data.items():
-        if hasattr(company, key):
-            setattr(company, key, value)
-    db.session.commit()
-    return jsonify(company.to_dict())
+# Complex nested components logic goes to routes.
+# Core CRUD functionality should be exclusively in api/resources/company.py
 
 @companies_bp.route('/api/companies/<int:company_id>/users', methods=['GET'])
 @permission_required('companies', 'view')

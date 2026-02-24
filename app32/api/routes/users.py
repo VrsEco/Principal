@@ -13,7 +13,7 @@ def index():
     """Render user management page"""
     if current_user.role != 'admin':
         flash('Acesso negado. Apenas administradores podem gerenciar usuários.', 'error')
-        return redirect(url_for('main.dashboard'))
+        return redirect(url_for('my_work.my_work'))
     
     users = User.query.all()
     employees = Employee.query.all()

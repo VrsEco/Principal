@@ -1,0 +1,9 @@
+Total de projetos para ID 5: 8
+- ID: 6 | Nome: Teste | Status: planned | Progresso: 0%
+- ID: 5 | Nome: Teste Fabiano | Status: planned | Progresso: 14%
+- ID: 13 | Nome: Fabiano Prejeto Crescimento | Status: planned | Progresso: 0%
+- ID: 14 | Nome: Teste Ultimo Fabiano | Status: planned | Progresso: 0%
+- ID: 15 | Nome: Teste Fabiano | Status: planned | Progresso: 0%
+- ID: 16 | Nome: Fabiano Crescimento 2026 | Status: planned | Progresso: 0%
+- ID: 17 | Nome: Implementação de CRM de Elite | Status: completed | Progresso: 0%
+- ID: 18 | Nome: Implantação Teste Fabiano | Status: planned | Progresso: 0%

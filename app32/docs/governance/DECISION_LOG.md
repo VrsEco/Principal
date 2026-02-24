@@ -224,6 +224,17 @@ Cada decisão deve conter:
 
 ---
 
+### **#018 - Padronização da Versão do PostgreSQL (PostgreSQL 14)**
+
+**Data:** 22/02/2026  
+**Contexto:** Divergência entre ambientes de desenvolvimento (rodando PG 18) e produção (rodando PG 14). Necessidade de paridade de ambiente para evitar bugs de incompatibilidade e garantir que scripts de migração funcionem em ambos.  
+**Decisão:** Fixar o PostgreSQL versão 14 como padrão oficial do projeto Gestão Versus. Todos os ambientes locais (APP32) devem migrar para o binário da versão 14.  
+**Alternativas:** Atualizar a produção para a versão 18 (descartado por estabilidade do ambiente atual).  
+**Consequências:** +Paridade entre Dev e Prod, +Confiabilidade nas migrações, -Necessidade de reconfigurar serviços locais que apontavam para PG 18.  
+**Status:** ✅ Ativa
+
+---
+
 ## 📝 Como Adicionar Nova Decisão
 
 1. Copie o template abaixo

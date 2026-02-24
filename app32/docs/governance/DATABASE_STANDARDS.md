@@ -18,7 +18,7 @@
 ## 🏗️ Infraestrutura
 
 ### PostgreSQL
-*   **Versão Mínima:** 15 (Suporte a extensões modernas).
+*   **Versão Mínima:** 14 (Padrão de paridade com produção).
 *   **Obrigatório:** Instalação local ou via Docker. O uso de arquivos `.db` ou `sqlite3` está **TERMINANTEMENTE PROIBIDO**.
 *   **Extensões:** `pgvector` deve estar habilitado para futuras migrações de vetores do Chroma para o banco principal.
 

@@ -35,7 +35,7 @@
 
 | Tecnologia | Versão | Uso | Status |
 |------------|--------|-----|--------|
-| **PostgreSQL** | 15+ | Único banco aceito (Prod e Dev) | ✅ Obrigatório |
+| **PostgreSQL** | 14 | Único banco aceito (Prod e Dev) | ✅ Obrigatório |
 | **psycopg2-binary** | - | Driver de conexão PostgreSQL | ✅ Obrigatório |
 | **pgvector** | - | Extensão Postgres para busca vetorial | ✅ Recomendado |
 

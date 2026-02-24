@@ -3,9 +3,11 @@
     const noteBoard = document.getElementById("noteBoard");
     const noteForm = document.getElementById("noteForm");
     const noteText = document.getElementById("noteText");
-    const actionCreate = document.getElementById("action-create");
-    const actionEdit = document.getElementById("action-edit");
-    const actionDelete = document.getElementById("action-delete");
+    const btnSaveNote = document.getElementById("btnSaveNote");
+    const btnCancelEdit = document.getElementById("btnCancelEdit");
+    let isEditing = false;
+    let editNoteId = null;
+
     const noteDetailsModalTitle = document.getElementById("noteDetailsModalTitle");
     const noteDetailsModalMeta = document.getElementById("noteDetailsModalMeta");
     const noteDetailsModalBody = document.getElementById("noteDetailsModalBody");
@@ -119,16 +121,17 @@
                 const locationText = note.location || "";
 
                 return `
-          <div class="note-row ${selectedNoteId === noteId ? "selected" : ""}" data-id="${noteId}" draggable="true">
-            <div class="note-row-top">
-              <label class="note-select">
-                <input type="checkbox" ${selectedNoteId === noteId ? "checked" : ""} />
-              </label>
-              <span class="note-row-meta">${metaText}</span>
+          <div class="note-row ${selectedNoteId === noteId ? "selected" : ""}" data-id="${noteId}">
+            <div class="note-row-top" style="display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid rgba(0,0,0,0.05); padding-bottom: 6px; margin-bottom: 6px;">
+              <span class="note-row-meta" style="flex: 1;">${metaText}</span>
+              <div class="note-row-actions" style="display: flex; gap: 8px;">
+                <button type="button" class="btn-icon btn-edit-note" title="Editar" style="background: none; border: none; cursor: pointer; color: var(--primary); padding: 4px;"><i class="fas fa-edit"></i></button>
+                <button type="button" class="btn-icon btn-delete-note" title="Excluir" style="background: none; border: none; cursor: pointer; color: #ef4444; padding: 4px;"><i class="fas fa-trash"></i></button>
+              </div>
             </div>
-            <div class="note-row-bottom">
-              <p class="note-row-text">${note.text}</p>
-              ${locationText ? `<span class="note-row-location">${locationText}</span>` : ""}
+            <div class="note-row-bottom" style="cursor: pointer;" title="Clique para ver detalhes">
+              <p class="note-row-text">${escapeHtml(note.text)}</p>
+              ${locationText ? `<span class="note-row-location">${escapeHtml(locationText)}</span>` : ""}
             </div>
           </div>
         `;
@@ -138,9 +141,6 @@
 
     function updateSelection(id) {
         selectedNoteId = id;
-        if (actionCreate) actionCreate.disabled = !id;
-        if (actionEdit) actionEdit.disabled = !id;
-        if (actionDelete) actionDelete.disabled = !id;
         renderNotes();
     }
 
@@ -248,152 +248,109 @@
             const text = noteText.value.trim();
             if (!text) return;
 
-            // Disable form while saving
             noteText.disabled = true;
-            const submitBtn = noteForm.querySelector('button[type="submit"]');
-            const originalBtnText = submitBtn.textContent;
-            submitBtn.textContent = "Salvando...";
-            submitBtn.disabled = true;
+            btnSaveNote.disabled = true;
+            const originalBtnText = btnSaveNote.textContent;
+            btnSaveNote.textContent = isEditing ? "Atualizando..." : "Salvando...";
 
             try {
-                const savedNote = await saveNoteToServer(text);
+                if (isEditing && editNoteId) {
+                    const updatedNote = await updateNoteOnServer(editNoteId, text);
+                    const index = notes.findIndex((n) => n.id === editNoteId);
+                    if (index >= 0) {
+                        notes[index] = { ...updatedNote, id: String(updatedNote.id) };
+                    }
+                    btnSaveNote.textContent = "✓ Atualizada!";
+                    cancelEditMode();
+                } else {
+                    const savedNote = await saveNoteToServer(text);
+                    notes.unshift({ ...savedNote, id: String(savedNote.id) });
+                    noteText.value = "";
+                    updateSelection(String(savedNote.id));
+                    btnSaveNote.textContent = "✓ Salva!";
+                }
 
-                // Add to local list
-                notes.unshift({
-                    ...savedNote,
-                    id: String(savedNote.id),
-                });
-
-                noteText.value = "";
-                updateSelection(String(savedNote.id));
-
-                // Show success feedback
-                submitBtn.textContent = "✓ Salva!";
                 setTimeout(() => {
-                    submitBtn.textContent = originalBtnText;
+                    if (btnSaveNote) btnSaveNote.textContent = isEditing ? "Atualizar" : "Salvar";
                 }, 2000);
+
+                renderNotes();
             } catch (error) {
-                alert(`Erro ao salvar nota: ${error.message}`);
-                submitBtn.textContent = originalBtnText;
+                alert(`Erro: ${error.message}`);
+                btnSaveNote.textContent = originalBtnText;
             } finally {
                 noteText.disabled = false;
-                submitBtn.disabled = false;
-                noteText.focus();
+                btnSaveNote.disabled = false;
+                if (!isEditing) noteText.focus();
             }
         });
+    }
+
+    function cancelEditMode() {
+        isEditing = false;
+        editNoteId = null;
+        noteText.value = "";
+        if (btnSaveNote) btnSaveNote.textContent = "Salvar";
+        if (btnCancelEdit) btnCancelEdit.style.display = "none";
+    }
+
+    if (btnCancelEdit) {
+        btnCancelEdit.addEventListener("click", cancelEditMode);
     }
 
     if (noteBoard) {
-        noteBoard.addEventListener("click", (event) => {
+        noteBoard.addEventListener("click", async (event) => {
             const row = event.target.closest(".note-row");
             if (!row) return;
+
             const id = row.dataset.id;
-            updateSelection(selectedNoteId === id ? null : id);
             const note = notes.find((n) => n.id === id);
-            if (note) {
-                openNoteModal(note);
-            }
-        });
-    }
-
-    if (actionEdit) {
-        actionEdit.addEventListener("click", async () => {
-            if (!selectedNoteId) return;
-
-            const note = notes.find((n) => n.id === selectedNoteId);
             if (!note) return;
 
-            const newText = prompt(`Editar nota ${note.code}:`, note.text);
+            const btnEdit = event.target.closest(".btn-edit-note");
+            const btnDelete = event.target.closest(".btn-delete-note");
 
-            if (newText === null) return; // Cancelled
-
-            const trimmedText = newText.trim();
-            if (!trimmedText) {
-                alert("O texto da nota não pode estar vazio.");
+            if (btnEdit) {
+                isEditing = true;
+                editNoteId = id;
+                noteText.value = note.text;
+                if (btnSaveNote) btnSaveNote.textContent = "Atualizar";
+                if (btnCancelEdit) btnCancelEdit.style.display = "block";
+                noteText.focus();
                 return;
             }
 
-            if (trimmedText === note.text) return; // No changes
+            if (btnDelete) {
+                const confirmed = confirm(
+                    `Tem certeza que deseja excluir a nota "${note.code || 'selecionada'}"?\n\nEsta ação não pode ser desfeita.`
+                );
 
-            // Disable button while updating
-            actionEdit.disabled = true;
-            const originalBtnText = actionEdit.textContent;
-            actionEdit.textContent = "Atualizando...";
+                if (!confirmed) return;
 
-            try {
-                const updatedNote = await updateNoteOnServer(selectedNoteId, trimmedText);
+                const originalHtml = btnDelete.innerHTML;
+                btnDelete.innerHTML = '<i class="fas fa-spinner fa-spin"></i>';
+                btnDelete.disabled = true;
 
-                // Update in local list
-                const index = notes.findIndex((n) => n.id === selectedNoteId);
-                if (index >= 0) {
-                    notes[index] = {
-                        ...updatedNote,
-                        id: String(updatedNote.id),
-                    };
+                try {
+                    await deleteNoteFromServer(id);
+                    const index = notes.findIndex((n) => n.id === id);
+                    if (index >= 0) {
+                        notes.splice(index, 1);
+                    }
+                    if (isEditing && editNoteId === id) {
+                        cancelEditMode();
+                    }
+                    updateSelection(null);
+                } catch (error) {
+                    alert(`Erro ao excluir nota: ${error.message}`);
+                    btnDelete.innerHTML = originalHtml;
+                    btnDelete.disabled = false;
                 }
-
-                renderNotes();
-
-                // Show success feedback
-                actionEdit.textContent = "✓ Atualizada!";
-                setTimeout(() => {
-                    actionEdit.textContent = originalBtnText;
-                    actionEdit.disabled = false;
-                }, 2000);
-            } catch (error) {
-                alert(`Erro ao atualizar nota: ${error.message}`);
-                actionEdit.textContent = originalBtnText;
-                actionEdit.disabled = false;
+                return;
             }
-        });
-    }
 
-    if (actionDelete) {
-        actionDelete.addEventListener("click", async () => {
-            if (!selectedNoteId) return;
-
-            const note = notes.find((n) => n.id === selectedNoteId);
-            if (!note) return;
-
-            const confirmed = confirm(
-                `Tem certeza que deseja excluir a nota "${note.code}"?\n\nEsta ação não pode ser desfeita.`
-            );
-
-            if (!confirmed) return;
-
-            // Disable button while deleting
-            actionDelete.disabled = true;
-            const originalBtnText = actionDelete.textContent;
-            actionDelete.textContent = "Excluindo...";
-
-            try {
-                await deleteNoteFromServer(selectedNoteId);
-
-                // Remove from local list
-                const index = notes.findIndex((n) => n.id === selectedNoteId);
-                if (index >= 0) {
-                    notes.splice(index, 1);
-                }
-
-                updateSelection(null);
-
-                // Show success feedback
-                actionDelete.textContent = "✓ Excluída!";
-                setTimeout(() => {
-                    actionDelete.textContent = originalBtnText;
-                }, 2000);
-            } catch (error) {
-                alert(`Erro ao excluir nota: ${error.message}`);
-                actionDelete.textContent = originalBtnText;
-                actionDelete.disabled = false;
-            }
-        });
-    }
-
-    if (actionCreate) {
-        actionCreate.addEventListener("click", () => {
-            if (!selectedNoteId) return;
-            alert(`Criar atividade a partir da nota selecionada (${selectedNoteId}).`);
+            // Clicked somewhere else (like the bottom part), open modal
+            openNoteModal(note);
         });
     }
 

@@ -1,0 +1,12 @@
+ID: 5 | Code: AA | Name: Versus Gestao Corporativa
+ID: 14 | Code: AB | Name: Gas Evolution
+ID: 15 | Code: AI | Name: Souto Costa Advogados Associados
+ID: 31 | Code: AU | Name: Gandu Investimentos e Participações
+ID: 13 | Code: AL | Name: Save Water
+ID: 35 | Code: None | Name: Elite Tech Solucoes V2
+ID: 25 | Code: AS | Name: Eua - Moveis Planejados
+ID: 26 | Code: AN | Name: Vertrau Cozinhas
+ID: 33 | Code: YG | Name: Test Company
+ID: 32 | Code: VT001 | Name: Versus Tech Demo
+ID: 36 | Code: None | Name: Titan Corp
+ID: 37 | Code: VV | Name: Versus Exemplo 200

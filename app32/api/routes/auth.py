@@ -54,7 +54,7 @@ def portal():
                 return jsonify({"success": False, "message": "Acesso negado a esta empresa"}), 403
         
         session['active_company_id'] = company_id
-        return jsonify({"success": True, "redirect": "/dashboard"})
+        return jsonify({"success": True, "redirect": "/my-work"})
 
     # GET: Show list of companies
     if current_user.role == 'admin':

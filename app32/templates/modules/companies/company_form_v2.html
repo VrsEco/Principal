@@ -620,15 +620,46 @@
             mission: document.getElementById('mission').value,
             vision: document.getElementById('vision').value,
             values: document.getElementById('values').value,
-            logo_primary: document.getElementById('logo_primary') ? document.getElementById('logo_primary').value : null,
-            is_active: document.getElementById('is_active').checked
+            logo_primary: (document.getElementById('logo_primary') && document.getElementById('logo_primary').value) ? document.getElementById('logo_primary').value : null,
+            is_active: document.getElementById('is_active') ? document.getElementById('is_active').checked : true
         };
-        const r = await fetch(`/api/companies/${companyId}`, {
-            method: 'PUT',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify(data)
-        });
-        if (r.ok) alert('Dados atualizados com sucesso!');
+
+        // Convert empty strings to null for schema validation
+        for (let key in data) {
+            if (data[key] === "") {
+                data[key] = null;
+            }
+        }
+
+        const url = companyId ? `/api/companies/${companyId}` : `/api/companies`;
+        const method = companyId ? 'PUT' : 'POST';
+
+        try {
+            const r = await fetch(url, {
+                method: method,
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(data)
+            });
+            const result = await r.json();
+
+            if (r.ok) {
+                alert(companyId ? 'Dados atualizados com sucesso!' : 'Empresa cadastrada com sucesso!');
+                if (!companyId && result.id) {
+                    window.location.href = `/companies/${result.id}/edit`;
+                }
+            } else {
+                let errorMsg = 'Erro ao atualizar dados.';
+                if (result.errors) {
+                    errorMsg += '\\n' + JSON.stringify(result.errors, null, 2);
+                } else if (result.error) {
+                    errorMsg += '\\n' + result.error;
+                }
+                alert(errorMsg);
+            }
+        } catch (err) {
+            console.error(err);
+            alert('Falha na comunicação com o servidor.');
+        }
     }
 
     async function handlePerformanceSubmit(e) {
