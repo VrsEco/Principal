@@ -5,6 +5,8 @@ exclude =
     __pycache__,
     venv,
     .venv,
+    app32/.venv,
+    app31,
     docs,
     migrations,
     static,
@@ -12,5 +14,11 @@ exclude =
     uploads,
     temp_relatorios,
     temp_pdfs,
-    node_modules
+    node_modules,
+    data,
+    archive,
+    seeds,
+    .agent,
+    instance,
+    knowledge
 max-line-length = 120
