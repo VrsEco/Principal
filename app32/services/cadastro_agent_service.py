@@ -629,7 +629,7 @@ class CadastroAgentService:
         
         # Se está aguardando um campo, tentar usar a mensagem como resposta
         if estado == 'aguardando_campo':
-            campo = contexto.get('campo_atual') or dados_coletados.get('campo_atual')
+            campo = dados_coletados.get('campo_atual')
             if campo:
                 return self._processar_resposta_campo(campo, mensagem, dados_coletados, tipo_cadastro)
         
