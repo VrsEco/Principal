@@ -59,12 +59,16 @@ class KnowledgeBase:
                 except Exception as ex:
                     logger.warning(f"Aviso ao deletar diretório do Chroma: {ex}")
             
-            self.vector_store = Chroma(
-                collection_name=self.collection_name,
-                embedding_function=self.embeddings,
-                persist_directory=self.persist_directory
-            )
-            logger.info("Chroma DB recriado com sucesso.")
+            try:
+                self.vector_store = Chroma(
+                    collection_name=self.collection_name,
+                    embedding_function=self.embeddings,
+                    persist_directory=self.persist_directory
+                )
+                logger.info("Chroma DB recriado com sucesso.")
+            except Exception as critical_error:
+                logger.error(f"Falha CRÍTICA ao recriar Chroma DB: {critical_error}")
+                self.vector_store = None
             
         logger.info(f"KnowledgeBase inicializada (ChromaDB: {self.persist_directory})")
 
@@ -72,6 +76,9 @@ class KnowledgeBase:
         """
         Adiciona novos documentos (regras/conhecimento) à coleção.
         """
+        if not self.vector_store:
+            logger.error("Chroma DB não está disponível.")
+            return False
         try:
             self.vector_store.add_texts(texts=texts, metadatas=metadatas)
             logger.info(f"Adicionados {len(texts)} documentos à KnowledgeBase.")
@@ -84,6 +91,9 @@ class KnowledgeBase:
         """
         Busca os k documentos mais similares à query.
         """
+        if not self.vector_store:
+            logger.error("Chroma DB não está disponível.")
+            return []
         try:
             # Verifica se há documentos na coleção (aproximado)
             # No LangChain Chroma, similarity_search retorna lista vazia se não houver nada
