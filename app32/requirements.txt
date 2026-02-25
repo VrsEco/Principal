@@ -21,7 +21,7 @@ langchain-core==0.2.43
 langchain-openai==0.1.25
 langgraph==0.2.16
 langgraph-checkpoint==1.0.12
-langgraph-checkpoint-postgres==1.0.12
+langgraph-checkpoint-postgres==1.0.9
 pydantic==2.8.2
 
 # Knowledge Base (RAG)
