@@ -31,6 +31,7 @@ jobs:
 
             echo "📦 Instalando/atualizando dependências Python..."
             PIP=/srv/appgestaoversuscombr.45a4cd4b.configr.cloud/.virtualenv/3.12/bin/pip
+            $PIP install --upgrade langchain langchain-openai langchain-core langgraph langgraph-prebuilt pydantic --quiet
             $PIP install -r requirements.txt --quiet
 
             echo "🗃️ Executando migrations do banco de dados..."

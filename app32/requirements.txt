@@ -16,13 +16,11 @@ sqlalchemy
 alembic
 
 # AI Intelligence & Orchestration (OpenAI + LangGraph)
-langchain>=1.2.10
-langchain-openai>=1.1.10
-langchain-core>=1.2.15
-langgraph>=1.0.9
-langgraph-prebuilt>=1.0.8
-langgraph-checkpoint-postgres>=2.1.2
-pydantic>=2.12.5
+langchain
+langchain-openai
+langgraph
+langgraph-checkpoint-postgres
+pydantic
 
 # Knowledge Base (RAG)
 chromadb
