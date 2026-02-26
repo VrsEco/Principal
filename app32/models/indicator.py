@@ -53,7 +53,7 @@ class Indicator(db.Model):
     
     # Relationships
     process = db.relationship('Process', backref='indicators', lazy=True)
-    project_id = db.Column(db.Integer, db.ForeignKey("projects.id"), nullable=True)
+    project_id = db.Column(db.Integer, db.ForeignKey("company_projects.id"), nullable=True)
     department_id = db.Column(db.Integer, nullable=True)
     okr_id = db.Column(db.Integer, nullable=True)
     

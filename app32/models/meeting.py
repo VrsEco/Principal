@@ -6,7 +6,7 @@ class Meeting(db.Model):
 
     id = db.Column(db.Integer, primary_key=True)
     company_id = db.Column(db.Integer, db.ForeignKey('companies.id', ondelete='CASCADE'), nullable=False)
-    project_id = db.Column(db.Integer, db.ForeignKey('projects.id', ondelete='SET NULL'), nullable=True)
+    project_id = db.Column(db.Integer, db.ForeignKey('company_projects.id', ondelete='SET NULL'), nullable=True)
     title = db.Column(db.String(255), nullable=False)
     scheduled_date = db.Column(db.Date)
     scheduled_time = db.Column(db.String(10))

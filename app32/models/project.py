@@ -5,7 +5,7 @@ from . import db
 class Project(db.Model):
     """Project model"""
 
-    __tablename__ = "projects"
+    __tablename__ = "company_projects"
     __table_args__ = {'extend_existing': True}
 
     id = db.Column(db.Integer, primary_key=True)
@@ -117,7 +117,7 @@ class ProjectTask(db.Model):
     __table_args__ = {'extend_existing': True}
 
     id = db.Column(db.Integer, primary_key=True)
-    project_id = db.Column(db.Integer, db.ForeignKey("projects.id"), nullable=False)
+    project_id = db.Column(db.Integer, db.ForeignKey("company_projects.id"), nullable=False)
     what = db.Column(db.Text, nullable=False)
     who = db.Column(db.String(200)) # Legacy field, keep for now
     employee_id = db.Column(db.Integer, db.ForeignKey("employees.id")) # New link to Employee

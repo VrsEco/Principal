@@ -114,6 +114,7 @@ class ProcessInstance(db.Model):
     
     # Collaborators
     collaborators_json = db.Column(db.JSON) 
+    assigned_collaborators = db.Column("assigned_collaborators", db.JSON) 
     
     notes = db.Column(db.Text)
     created_by = db.Column(db.String(100))
