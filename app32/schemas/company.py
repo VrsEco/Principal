@@ -5,7 +5,7 @@ Company Schema - Marshmallow schema for Company model serialization/deserializat
 from marshmallow import fields, validate, validates, ValidationError
 from schemas import ma
 from models import db
-from models.company import Company
+from models import Company
 
 
 class CompanySchema(ma.SQLAlchemyAutoSchema):

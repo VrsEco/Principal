@@ -107,8 +107,7 @@ def dashboard_stats():
     q_okrs_a = apply_base_filters(OKRArea.query, OKRArea)
     
     # Task Counts
-    from models.project import ProjectTask
-    from models.process import ProcessInstance
+    from models import ProjectTask, Project, ProcessInstance
     
     q_proj_tasks = ProjectTask.query
     q_proc_inst = ProcessInstance.query

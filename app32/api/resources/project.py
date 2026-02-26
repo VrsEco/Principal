@@ -44,8 +44,7 @@ def get_request_company_id():
     # 4. Fallback: authenticated user
     from flask_login import current_user
     if current_user.is_authenticated:
-        from models.company import Company
-        from models.employee import Employee
+        from models import Company, Employee
         
         if current_user.role == 'admin':
             first = Company.query.filter_by(is_active=True).order_by(Company.id).first()

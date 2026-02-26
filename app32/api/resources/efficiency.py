@@ -31,7 +31,7 @@ class EfficiencyCollaborators(Resource):
         today = date.today()
 
         # 1.1 Fetch Performance Settings
-        from models.company_performance_settings import CompanyPerformanceSettings
+        from models import CompanyPerformanceSettings
         settings = CompanyPerformanceSettings.query.filter_by(company_id=company_id).first()
         
         # Default settings if none configured
@@ -40,7 +40,7 @@ class EfficiencyCollaborators(Resource):
         DAILY_PENALTY_BASE = float(settings.daily_delay_penalty) if settings else -1.0
 
         # 2. Fetch Project Data (Inclusive)
-        from models.project import ProjectTask, ProjectActivityCollaborator
+        from models import ProjectTask, ProjectActivityCollaborator
         tasks = ProjectTask.query.join(Project).filter(Project.company_id == company_id).all()
         
         task_ids = [t.id for t in tasks]
@@ -130,7 +130,7 @@ class EfficiencyCollaborators(Resource):
                         results[emp_id]["in_progress"]["on_time"] += 1
 
         # 3. Fetch Process Instances (Inclusive)
-        from models.process import ProcessInstance, ProcessInstanceCollaborator
+        from models import ProcessInstance, ProcessInstanceCollaborator
         instances = ProcessInstance.query.filter_by(company_id=company_id).all()
         
         inst_ids = [i.id for i in instances]

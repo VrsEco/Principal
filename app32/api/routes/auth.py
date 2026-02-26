@@ -1,10 +1,6 @@
 from flask import Blueprint, render_template, request, jsonify, redirect, url_for, session
 from flask_login import login_user, logout_user, login_required, current_user
-from models.user import User
-from models.employee import Employee
-from models.company import Company
-from models.project import ProjectTask
-from models.process import ProcessInstance
+from models import User, Employee, Company, ProjectTask, ProcessInstance
 from datetime import date, datetime, timedelta
 
 auth_bp = Blueprint('auth', __name__)

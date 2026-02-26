@@ -15,9 +15,7 @@ from schemas.process import (
     process_step_schema, process_steps_schema,
     process_instance_schema, process_instances_schema
 )
-from models import db, ProcessArea, MacroProcess, Process, ProcessRoutine, ProcessStep, ProcessInstance, Company
-from models.indicator import Indicator
-from models.activity_work_log import ActivityWorkLog
+from models import db, ProcessArea, MacroProcess, Process, ProcessRoutine, ProcessStep, ProcessInstance, Company, Indicator, ActivityWorkLog
 from utils.permissions import permission_required
 from database import get_db
 
@@ -50,8 +48,7 @@ def natural_sort_key(s):
 def get_request_company_id():
     from flask import session
     from flask_login import current_user
-    from models.company import Company
-    from models.employee import Employee
+    from models import Company, Employee
     
     def clean(val):
         if val is None: return None
@@ -360,8 +357,7 @@ class ProcessInstanceListResource(Resource):
             
             # Auto-generate instance_code if missing
             if not data.get('instance_code'):
-                from models.company import Company
-                from models.process import Process
+                from models import Company, Process
                 
                 comp = Company.query.get(cid)
                 proc = Process.query.get(data.get('process_id'))
@@ -375,7 +371,7 @@ class ProcessInstanceListResource(Resource):
 
             # Auto-populate collaborators from Process definition if not provided
             if not data.get('collaborators_json'):
-                from models.employee import Employee
+                from models import Employee
                 collaborators = []
                 
                 # Fetch Process Owner
@@ -457,7 +453,7 @@ class ProcessInstanceListResource(Resource):
             
             # Populate normalized collaborators table
             if data.get('collaborators_json'):
-                from models.process import ProcessInstanceCollaborator
+                from models import ProcessInstanceCollaborator
                 for c in data['collaborators_json']:
                     try:
                         collab_obj = ProcessInstanceCollaborator(

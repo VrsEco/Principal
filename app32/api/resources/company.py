@@ -6,8 +6,7 @@ from flask import request
 from flask_restful import Resource
 from marshmallow import ValidationError
 from utils.permissions import permission_required
-from models import db
-from models.company import Company
+from models import db, Company
 from schemas.company import company_schema, companies_schema
 
 

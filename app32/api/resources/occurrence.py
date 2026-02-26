@@ -2,13 +2,11 @@
 from flask import request
 from flask_restful import Resource
 from marshmallow import ValidationError
-from models import db, Occurrence
+from models import db, Occurrence, Company, Employee
 from schemas.occurrence import occurrence_schema, occurrences_schema
 from utils.permissions import permission_required
 from flask import session
 from flask_login import current_user
-from models.company import Company
-from models.employee import Employee
 
 def get_request_company_id():
     def clean(val):

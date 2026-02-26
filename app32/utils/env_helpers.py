@@ -59,27 +59,18 @@ def normalize_docker_host(host: str | None) -> str:
     if value.lower() != _DOCKER_SPECIAL_HOST:
         return value
 
-    # If explicitly forced, use it
-    if _is_truthy(os.environ.get("PEV_FORCE_DOCKER_HOST")):
-        return value
+    # If NOT inside docker and NOT forced, avoid checking host.docker.internal to prevent hangs
+    if not running_inside_docker() and not _is_truthy(os.environ.get("PEV_FORCE_DOCKER_HOST")):
+        fallback = os.environ.get("PEV_FALLBACK_DB_HOST", _DEFAULT_LOCAL_HOST).strip()
+        return fallback or _DEFAULT_LOCAL_HOST
 
     # Check if we can resolve host.docker.internal
     can_resolve = _can_resolve_host(_DOCKER_SPECIAL_HOST)
     
-    # If running inside Docker
-    if running_inside_docker():
-        # If can't resolve host.docker.internal, try localhost
-        # This handles Windows Docker Desktop issues
-        if not can_resolve:
-            print(
-                f"⚠️  WARNING: Cannot resolve '{_DOCKER_SPECIAL_HOST}'. "
-                f"Falling back to '{_DEFAULT_LOCAL_HOST}'. "
-                f"If your PostgreSQL is on the host machine, ensure it's accessible."
-            )
-            return _DEFAULT_LOCAL_HOST
+    # If running inside Docker or forced
+    if can_resolve:
         return value
-
-    # Running outside Docker - always use localhost fallback
+    
     fallback = os.environ.get("PEV_FALLBACK_DB_HOST", _DEFAULT_LOCAL_HOST).strip()
     return fallback or _DEFAULT_LOCAL_HOST
 

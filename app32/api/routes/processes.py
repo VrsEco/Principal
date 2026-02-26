@@ -6,10 +6,7 @@ from werkzeug.utils import secure_filename
 from datetime import datetime
 
 from database import get_db
-from models import db
-from models.company import Company
-from models.process import Process, ProcessInstance
-from models.employee import Employee
+from models import db, Company, Process, ProcessInstance, Employee
 from utils.permissions import permission_required
 
 processes_bp = Blueprint('processes', __name__)
@@ -38,7 +35,7 @@ def processes_list():
             if first:
                 company_id = first.id
         else:
-            from models.employee import Employee
+            from models import Employee
             emp = Employee.query.filter_by(user_id=current_user.id, status='active').first()
             if emp:
                 company_id = emp.company_id
@@ -62,7 +59,7 @@ def process_map():
             if first:
                 company_id = first.id
         else:
-            from models.employee import Employee
+            from models import Employee
             emp = Employee.query.filter_by(user_id=current_user.id, status='active').first()
             if emp:
                 company_id = emp.company_id

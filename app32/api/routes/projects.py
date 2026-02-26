@@ -1,5 +1,5 @@
 from flask import Blueprint, render_template, session
-from models.company import Company
+from models import Company
 from flask_login import current_user
 
 from utils.permissions import permission_required
@@ -7,7 +7,7 @@ from utils.permissions import permission_required
 projects_bp = Blueprint('projects', __name__)
 
 def get_active_company():
-    from models.employee import Employee
+    from models import Employee
     company_id = session.get('active_company_id')
     print(f"DEBUG route: get_active_company - session id: {company_id}")
     
@@ -57,7 +57,7 @@ def project_edit(project_id):
 @permission_required('projects', 'view')
 def project_manage(project_id):
     """Project management (Kanban) page"""
-    from models.project import Project
+    from models import Project
     project = Project.query.get_or_404(project_id)
     company = get_active_company()
     
