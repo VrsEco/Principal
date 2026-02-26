@@ -24,6 +24,16 @@ RECENT_ACTIVITY_DAYS = 30
 _CLOSED_STATUSES = {"completed", "done", "cancelled", "canceled", "archived"}
 
 
+def _fetch_process_rows_from_json(*args, **kwargs):
+    """Legacy fallback - moved to discovery_service."""
+    return []
+
+
+def _fetch_project_rows_from_json(*args, **kwargs):
+    """Legacy fallback - moved to discovery_service."""
+    return []
+
+
 def _activity_delivery_category(activity: Dict[str, Any]) -> str:
     """Return the simplified delivery category for an activity."""
     status = (activity.get("status") or "").lower()
@@ -285,100 +295,10 @@ def get_user_employees(user_id: int) -> List[Dict[str, Any]]:
 def get_filter_options(user_id: int) -> Dict[str, List[Dict[str, Any]]]:
     """
     Return company, collaborator, project and process directories for filters.
-    
-    Regras por role:
-    - admin: vê todas as empresas e todos os colaboradores
-    - client: vê apenas empresas vinculadas e seus colaboradores
-    - collaborator: vê apenas empresas vinculadas, mas apenas ele mesmo nos colaboradores
+    Architecture v2.0 - Redirecting to modular discovery_service.
     """
-    from models.user import User
-    
-    # Obter role do usuário
-    user = User.query.get(user_id)
-    if not user:
-        return {
-            "companies": [],
-            "collaborators": [],
-            "projects": [],
-            "processes": [],
-        }
-    
-    user_role = user.role
-    if user_role == 'consultant':
-        user_role = 'collaborator'  # Normalizar legado
-    
-    # Admin: buscar todas as empresas
-    if user_role == 'admin':
-        from models.company import Company
-        all_companies = Company.query.order_by(Company.name).all()
-        unique_companies = [
-            {
-                "company_id": c.id,
-                "company_name": c.name,
-                "company_code": getattr(c, "client_code", None),
-            }
-            for c in all_companies
-        ]
-        company_ids = [c.id for c in all_companies]
-    else:
-        # Client e Collaborator: apenas empresas vinculadas
-        base_companies = get_user_employees(user_id)
-        unique_companies: List[Dict[str, Any]] = []
-        seen_ids = set()
-
-        for company in base_companies:
-            company_id = company.get("company_id")
-            if not company_id or company_id in seen_ids:
-                continue
-            seen_ids.add(company_id)
-            unique_companies.append(
-                {
-                    "company_id": company_id,
-                    "company_name": company.get("company_name") or "Empresa",
-                    "company_code": company.get("company_code"),
-                }
-            )
-
-        company_ids = [item["company_id"] for item in unique_companies]
-
-    result = {
-        "companies": unique_companies,
-        "collaborators": [],
-        "projects": [],
-        "processes": [],
-    }
-
-    if not company_ids:
-        return result
-
-    conn = pg_connect()
-    cursor = conn.cursor()
-    try:
-        # Collaborator: retorna apenas ele mesmo nos colaboradores
-        if user_role == 'collaborator':
-            employee_id = get_employee_from_user(user_id)
-            if employee_id:
-                from models.employee import Employee
-                employee = Employee.query.get(employee_id)
-                if employee:
-                    result["collaborators"] = [
-                        {
-                            "id": employee.id,
-                            "name": employee.name,
-                            "email": employee.email,
-                            "company_id": employee.company_id,
-                            "company_name": employee.company.name if employee.company else "Empresa",
-                        }
-                    ]
-        else:
-            # Admin e Client: todos os colaboradores das empresas
-            result["collaborators"] = _fetch_collaborator_directory(cursor, company_ids)
-        
-        result["projects"] = _fetch_project_directory(cursor, company_ids)
-        result["processes"] = _fetch_process_directory(cursor, company_ids)
-        return result
-    finally:
-        conn.close()
+    from services.my_work.discovery_service import get_filter_options_v2
+    return get_filter_options_v2(user_id)
 
 
 def _fetch_collaborator_directory(cursor, company_ids: List[int]) -> List[Dict[str, Any]]:
@@ -1317,125 +1237,8 @@ def _fetch_normalized_process_rows(
             process_ids=process_ids,
         )
 
-    query = f"""
-        WITH collaborator_data AS (
-            SELECT
-                pic.process_instance_id,
-                json_agg(
-                    json_build_object(
-                        'id', pic.employee_id,
-                        'name', collab.name,
-                        'role', pic.role,
-                        'hours', pic.estimated_hours
-                    )
-                ) FILTER (WHERE pic.id IS NOT NULL) AS collaborators_json
-            FROM process_instance_collaborators pic
-            LEFT JOIN employees collab ON collab.id = pic.employee_id
-            WHERE pic.is_deleted = FALSE
-            GROUP BY pic.process_instance_id
-        )
-        SELECT
-            pi.*,
-            c.name AS company_name,
-            p.name AS process_name,
-            p.code AS process_code,
-            coalesce(collab.collaborators_json, '[]'::json) AS normalized_collaborators
-        FROM process_instances pi
-        {' '.join(joins)}
-        LEFT JOIN collaborator_data collab ON collab.process_instance_id = pi.id
-        LEFT JOIN companies c ON c.id = pi.company_id
-        LEFT JOIN processes p ON p.id = pi.process_id
-        {where_clause}
-        ORDER BY pi.due_date NULLS LAST, pi.updated_at DESC
-    """
-
-    cursor.execute(query, params)
-    rows = cursor.fetchall()
-    return [_process_row_from_normalized(row) for row in rows]
-
-
-def _fetch_process_rows_from_json(
-    cursor,
-    employee_ids: Optional[Sequence[int]] = None,
-    company_ids: Optional[Sequence[int]] = None,
-    process_ids: Optional[Sequence[int]] = None,
-) -> List[Dict[str, Any]]:
-    target_ids = {
-        value for value in (_safe_int(eid) for eid in (employee_ids or [])) if value
-    }
-    
-    # Construir lookup com TODOS os colaboradores das empresas filtradas
-    employee_directory: Dict[int, Dict[str, Any]] = {}
-    employee_lookup: Dict[str, Set[int]] = {}
-    if company_ids:
-        employee_directory, employee_lookup = _build_employee_lookup_by_companies(
-            cursor, company_ids
-        )
-    elif target_ids:
-        employee_directory, employee_lookup = _build_employee_lookup(
-            cursor, target_ids
-        )
-    
-    filters: List[str] = []
-    params: List[Any] = []
-
-    if company_ids:
-        placeholders = ",".join(["%s"] * len(company_ids))
-        filters.append(f"pi.company_id IN ({placeholders})")
-        params.extend(company_ids)
-
-    if process_ids:
-        placeholders = ",".join(["%s"] * len(process_ids))
-        filters.append(f"pi.process_id IN ({placeholders})")
-        params.extend(process_ids)
-
-    where_clause = f"WHERE {' AND '.join(filters)}" if filters else ""
-
-    cursor.execute(
-        f"""
-        SELECT
-            pi.*,
-            c.name AS company_name,
-            p.name AS process_name,
-            p.code AS process_code
-        FROM process_instances pi
-        LEFT JOIN companies c ON c.id = pi.company_id
-        LEFT JOIN processes p ON p.id = pi.process_id
-        {where_clause}
-        ORDER BY pi.due_date NULLS LAST, pi.updated_at DESC
-        """,
-        tuple(params),
-    )
-
-    results: List[Dict[str, Any]] = []
-    for row in cursor.fetchall():
-        collaborators = _parse_collaborators(row.get("assigned_collaborators"))
-        
-        # Enriquecer collaborators com employee_id baseado em nome/email
-        if employee_lookup:
-            for collab in collaborators:
-                if not _safe_int(collab.get("id") or collab.get("employee_id")):
-                    match = _match_employee_from_lookup(
-                        collab.get("name") or collab.get("email"), employee_lookup
-                    )
-                    if match:
-                        collab["id"] = match
-                        collab["employee_id"] = match
-        
-        if target_ids:
-            collaborator_ids = {
-                cid
-                for cid in (_safe_int(collab.get("id") or collab.get("employee_id")) for collab in collaborators)
-                if cid is not None
-            }
-            if not collaborator_ids & target_ids:
-                continue
-
-        data = dict(row)
-        data["normalized_collaborators"] = collaborators
-        results.append(_process_row_from_normalized(data))
-
-    return results
+# As funções _fetch_normalized_project_rows, _fetch_project_rows_from_json, _fetch_v2_project_rows,
+# _fetch_normalized_process_rows e seus utilitários foram movidas para services/my_work/
 
 
 def get_user_activities(
@@ -1447,59 +1250,26 @@ def get_user_activities(
     employee_ids: Optional[List[int]] = None,
 ) -> List[Dict]:
     """
-    Retorna atividades conforme escopo
-
-    Args:
-        employee_id: ID do colaborador
-        scope: 'me', 'team' ou 'company'
-        filters: Filtros adicionais (filter, search, sort)
-        company_id: ID da empresa para filtrar (opcional, legado)
-        company_ids: Lista de empresas para filtrar (prioritário)
-
-    Returns:
-        Lista de atividades (projetos + processos)
+    Retorna atividades conforme escopo.
+    Architecture v2.0 - Redirecting to discovery_service.
     """
+    from models.employee import Employee
+    from services.my_work.discovery_service import get_user_activities_v2
+    
     if employee_id is None:
         return []
 
-    filters = (filters or {}).copy()
+    emp = Employee.query.get(employee_id)
+    if not emp or not emp.user_id:
+        return []
 
-    if company_id and not company_ids:
-        company_ids = [company_id]
-
-    conn = pg_connect()
-    cursor = conn.cursor()
-
-    target_employee_ids = _normalize_employee_ids(employee_id, employee_ids)
-
-    try:
-        if scope == "me":
-            activities: List[Dict] = []
-            # Busca otimizada em lote para todos os employee_ids do usuário
-            activities = _collect_my_activities(
-                cursor, 
-                employee_ids=target_employee_ids, 
-                company_ids=company_ids
-            )
-            activities = _apply_filters(activities, filters)
-            activities = _apply_sort(activities, filters.get("sort", "deadline"))
-        elif scope == "team":
-            activities = _get_team_activities(
-                cursor, employee_id, filters, company_ids=company_ids
-            )
-        elif scope == "company":
-            activities = _get_company_activities(
-                cursor, employee_id, filters, company_ids=company_ids
-            )
-        else:
-            activities = []
-
-        conn.close()
-        return activities
-
-    except Exception as e:
-        conn.close()
-        raise e
+    return get_user_activities_v2(
+        user_id=emp.user_id,
+        scope=scope,
+        filters=filters,
+        company_ids=company_ids or ([company_id] if company_id else None),
+        employee_ids=employee_ids
+    )
 
 
 def _get_my_activities(
