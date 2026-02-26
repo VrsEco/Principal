@@ -114,7 +114,7 @@ class ProcessInstance(db.Model):
     
     # Collaborators
     collaborators_json = db.Column(db.JSON) 
-    assigned_collaborators = db.Column("assigned_collaborators", db.JSON) 
+    # assigned_collaborators was removed since it does not exist in the db schema and is crashing production
     
     notes = db.Column(db.Text)
     created_by = db.Column(db.String(100))
