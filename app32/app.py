@@ -23,7 +23,11 @@ def create_app(config_name=None):
     # Configuration
     from config import config as app_configs
     if config_name is None:
-        config_name = os.environ.get('FLASK_CONFIG', 'default')
+        config_name = os.environ.get('FLASK_ENV') or os.environ.get('FLASK_CONFIG', 'default')
+        
+    # Garante fallback seguro
+    if config_name not in app_configs:
+        config_name = 'default'
     
     app.config.from_object(app_configs[config_name])
     
@@ -45,19 +49,28 @@ def create_app(config_name=None):
         from models.user import User
         return User.query.get(int(user_id))
 
+    print("DEBUG: Registering API resources...")
     # RESTful API
     api = Api(app)
     register_api_resources(api)
+    print("DEBUG: API resources registered.")
 
+    print("DEBUG: Registering blueprints...")
     # Blueprints
     register_blueprints(app)
+    print("DEBUG: Blueprints registered.")
 
     # Ensure Upload Dirs
     for folder in ['flows', 'pop']:
         os.makedirs(os.path.join(app.config['UPLOAD_FOLDER'], folder), exist_ok=True)
 
+    print("DEBUG: Checking DB connection and creating tables...")
     with app.app_context():
-        db.create_all()
+        try:
+            db.create_all()
+            print("DEBUG: DB tables verified/created successfully.")
+        except Exception as e:
+            print(f"DEBUG: Error in db.create_all(): {e}")
 
     @app.context_processor
     def inject_permissions():
@@ -132,15 +145,19 @@ def create_app(config_name=None):
                     # Redirect to selection page for UI routes
                     if '/api/' not in request.path:
                         return redirect(url_for('auth.portal'))
-
-    # Inicializa o Squad de Engenharia em Background (Self-Healing)
+    
+    print("DEBUG: Starting Engineering Service worker...")
     from services.engineering_service import engineering_service
     engineering_service.start_worker(app)
+    print("DEBUG: Engineering Service worker started.")
 
+    print("DEBUG: Initializing Scheduler...")
     # Inicializa o Scheduler (Rotinas e Proatividade Sapiens Fase 4)
     from services.scheduler_service import initialize_scheduler
     initialize_scheduler(app)
+    print("DEBUG: Scheduler initialized.")
 
+    print("DEBUG: create_app() finished successfully.")
     return app
 
 def register_api_resources(api):
@@ -165,7 +182,6 @@ def register_api_resources(api):
         ProcessRoutineListResource, ProcessRoutineResource,
         ProcessStepListResource, ProcessStepResource,
         ProcessInstanceListResource, ProcessInstanceResource,
-        ProcessScheduleListResource,
         ProcessInstanceWorkLogResource, ActivityWorkLogItemResource
     )
     from api.resources.okr import (
@@ -214,7 +230,6 @@ def register_api_resources(api):
     api.add_resource(ProcessInstanceResource, '/api/process-instances/<int:instance_id>')
     api.add_resource(ProcessInstanceWorkLogResource, '/api/process-instances/<int:instance_id>/work-logs')
     api.add_resource(ActivityWorkLogItemResource, '/api/activity-work-logs/<int:log_id>')
-    api.add_resource(ProcessScheduleListResource, '/api/process-schedules')
     api.add_resource(OKRGlobalListResource, '/api/okrs-global')
     api.add_resource(OKRGlobalResource, '/api/okrs-global/<int:okr_id>')
     api.add_resource(KeyResultListResource, '/api/key-results')
@@ -310,8 +325,6 @@ def register_blueprints(app):
     # Webhook Telegram (Sapiens Fase 3)
     from api.webhooks.telegram_webhook import telegram_bp
     app.register_blueprint(telegram_bp, url_prefix='/webhook')
-
-
 
 if __name__ == '__main__':
     app = create_app()

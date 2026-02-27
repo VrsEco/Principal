@@ -2,11 +2,13 @@ import os
 from datetime import timedelta
 from dotenv import load_dotenv
 from urllib.parse import quote_plus
+from pathlib import Path
 
 from utils.env_helpers import normalize_database_url
 
-load_dotenv()
-
+# Força o carregamento do .env local da pasta base 'app32' (impede problemas no wsgi root)
+env_path = Path(__file__).resolve().parent / ".env"
+load_dotenv(dotenv_path=env_path)
 
 class Config:
     """Base configuration class"""
