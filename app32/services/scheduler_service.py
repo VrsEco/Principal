@@ -106,7 +106,7 @@ def process_daily_routines():
 
     try:
         # Importar aqui para evitar circular import
-        from routine_scheduler import process_routines
+        from scripts.routine_scheduler import process_routines
 
         # Executar o processamento de rotinas
         success = process_routines()
@@ -202,7 +202,7 @@ def check_overdue_tasks():
 
     try:
         # Importar aqui para evitar circular import
-        from routine_scheduler import update_overdue_tasks
+        from scripts.routine_scheduler import update_overdue_tasks
 
         update_overdue_tasks()
         logger.info("✅ Verificação de tarefas concluída!")
