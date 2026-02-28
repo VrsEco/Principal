@@ -1,12 +1,11 @@
 from functools import wraps
 from flask import abort, request, session
 from flask_login import current_user
-from models.employee import Employee
-
 def has_permission(company_id, resource, action):
     """
     Checks if the current user has a specific permission in a company.
     """
+    from models.employee import Employee
     if not current_user.is_authenticated:
         return False
     
@@ -52,6 +51,7 @@ def permission_required(resource, action):
                     return f(*args, **kwargs)
                 
                 # 2. For non-admins, check if they have permission in ANY company they belong to
+                from models.employee import Employee
                 user_employees = Employee.query.filter_by(user_id=current_user.id).all()
                 if not user_employees:
                     if request.path.startswith('/api/'):
