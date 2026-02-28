@@ -13,7 +13,7 @@ class Occurrence(db.Model):
     
     process_id = db.Column(db.Integer, db.ForeignKey('processes.id'), nullable=True)
     # Corrected FK to match Project model's table
-    project_id = db.Column(db.Integer, db.ForeignKey('company_projects.id'), nullable=True)
+    project_id = db.Column(db.Integer, db.ForeignKey('projects.id'), nullable=True)
     
     title = db.Column(db.String(255), nullable=False)
     description = db.Column(db.Text)
