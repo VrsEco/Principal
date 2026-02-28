@@ -21,21 +21,24 @@ jobs:
           username: ${{ secrets.SERVER_USER }}
           key: ${{ secrets.SSH_PRIVATE_KEY }}
           port: ${{ secrets.SERVER_PORT }}
-          command_timeout: 10m
+          command_timeout: 15m
           script: |
             set -e
+            BASE=/srv/appgestaoversuscombr.45a4cd4b.configr.cloud
+            APP=$BASE/www
+            PYTHON=$BASE/.virtualenv/3.12/bin/python
+            PIP=$BASE/.virtualenv/3.12/bin/pip
+
             echo "📂 Atualizando código..."
-            cd ${{ secrets.PROJECT_PATH }}
+            cd $APP
             git fetch origin main
             git reset --hard origin/main
 
             echo "📦 Instalando/atualizando dependências Python..."
-            PIP=/srv/appgestaoversuscombr.45a4cd4b.configr.cloud/.virtualenv/3.12/bin/pip
             $PIP install langchain langchain-openai langchain-core langgraph langgraph-prebuilt pydantic --quiet
             $PIP install -r requirements.txt --quiet
 
             echo "🗃️ Executando migrations do banco de dados..."
-            PYTHON=/srv/appgestaoversuscombr.45a4cd4b.configr.cloud/.virtualenv/3.12/bin/python
             set +e
             $PYTHON -c "
             import sys, os
@@ -52,8 +55,15 @@ jobs:
             " 2>&1 || echo "⚠️  Migrations falharam ou não há migrações pendentes"
             set -e
 
-            echo "🔄 Reiniciando o servidor..."
-            touch /srv/appgestaoversuscombr.45a4cd4b.configr.cloud/www/tmp/restart.txt
-            touch /srv/appgestaoversuscombr.45a4cd4b.configr.cloud/etc/uwsgi/uwsgi.ini
+            echo "🔄 Reiniciando o servidor uWSGI..."
+            # Método 1: touch no uwsgi_configr.ini (o uWSGI monitora via py-autoreload)
+            touch $APP/uwsgi_configr.ini
+            # Método 2: touch no socket ini para forçar reload
+            touch $BASE/etc/uwsgi/uwsgi.ini 2>/dev/null || true
+            # Método 3: touch em passenger_wsgi.py para reload do app
+            touch $APP/passenger_wsgi.py
+            # Aguarda o reload
+            sleep 5
 
             echo "✅ Deploy concluído com sucesso!"
+
