@@ -116,10 +116,20 @@ def create_app(config_name=None):
     def enforce_login():
         from flask import request, redirect, url_for, jsonify, session
         from flask_login import current_user
-
+        import os
+        from datetime import datetime
+        log_path = '/srv/appgestaoversuscombr.45a4cd4b.configr.cloud/www/app32/request_debug.log'
+        
         # Public endpoints that don't require authentication
         public_endpoints = ['auth.login', 'static', 'dev.seed_demo', 'dev.debug_routes', 'telegram.telegram_webhook']
         
+        try:
+            with open(log_path, 'a') as f:
+                f.write(f"[{datetime.now()}] {request.method} {request.path}\n")
+                f.write(f"  Auth: {current_user.is_authenticated}, Active Company: {session.get('active_company_id')}\n")
+        except:
+            pass
+
         # 1. Check if user is authenticated
         if not current_user.is_authenticated:
             # Além dos public_endpoints, libere também prefixos abertos (ex: webhooks externos)
@@ -144,6 +154,10 @@ def create_app(config_name=None):
                 if request.endpoint and request.endpoint not in allowed_post_login:
                     # Redirect to selection page for UI routes
                     if '/api/' not in request.path:
+                        try:
+                            with open(log_path, 'a') as f:
+                                f.write(f"  No active company, redirecting UI to portal\n")
+                        except: pass
                         return redirect(url_for('auth.portal'))
     
     print("DEBUG: Starting Engineering Service worker...")
