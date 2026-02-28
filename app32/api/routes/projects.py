@@ -7,29 +7,39 @@ from utils.permissions import permission_required
 projects_bp = Blueprint('projects', __name__)
 
 def get_active_company():
-    from models import Employee
-    company_id = session.get('active_company_id')
-    print(f"DEBUG route: get_active_company - session id: {company_id}")
+    from models import Employee, Company
+    import os
+    from datetime import datetime
+    log_path = '/srv/appgestaoversuscombr.45a4cd4b.configr.cloud/www/app32/route_debug.log'
     
+    company_id = session.get('active_company_id')
+    
+    with open(log_path, 'a') as f:
+        f.write(f"[{datetime.now()}] get_active_company called. Session ID: {company_id}\n")
+        f.write(f"  User: {current_user.id if current_user.is_authenticated else 'Anon'}, Role: {current_user.role if current_user.is_authenticated else 'None'}\n")
+
     if not company_id and current_user.is_authenticated:
         emp = Employee.query.filter_by(user_id=current_user.id, status='active').first()
         if emp:
             company_id = emp.company_id
-            print(f"DEBUG route: found company {company_id} for user {current_user.id} via employee")
         elif current_user.role == 'admin':
             first = Company.query.filter_by(is_active=True).order_by(Company.id).first()
             if first:
                 company_id = first.id
-                print(f"DEBUG route: admin fallback to company {company_id}")
         
         if company_id:
             session['active_company_id'] = company_id
+            with open(log_path, 'a') as f:
+                f.write(f"  Fallback set company_id to: {company_id}\n")
     
     if company_id:
         res = Company.query.get(company_id)
-        print(f"DEBUG route: returning company {res.id if res else 'None'}")
+        with open(log_path, 'a') as f:
+            f.write(f"  Returning Company: {res.name if res else 'NOT_FOUND'}\n")
         return res
-    print("DEBUG route: returning no company")
+        
+    with open(log_path, 'a') as f:
+        f.write(f"  Returning None\n")
     return None
 
 @projects_bp.route('/projects')
