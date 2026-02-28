@@ -8,15 +8,10 @@ projects_bp = Blueprint('projects', __name__)
 
 def get_active_company():
     from models import Employee, Company
-    import os
-    from datetime import datetime
-    log_path = '/srv/appgestaoversuscombr.45a4cd4b.configr.cloud/www/app32/route_debug.log'
+    import logging
     
     company_id = session.get('active_company_id')
-    
-    with open(log_path, 'a') as f:
-        f.write(f"[{datetime.now()}] get_active_company called. Session ID: {company_id}\n")
-        f.write(f"  User: {current_user.id if current_user.is_authenticated else 'Anon'}, Role: {current_user.role if current_user.is_authenticated else 'None'}\n")
+    logging.debug(f"[get_active_company] Initial Session ID: {company_id}")
 
     if not company_id and current_user.is_authenticated:
         emp = Employee.query.filter_by(user_id=current_user.id, status='active').first()
@@ -29,17 +24,12 @@ def get_active_company():
         
         if company_id:
             session['active_company_id'] = company_id
-            with open(log_path, 'a') as f:
-                f.write(f"  Fallback set company_id to: {company_id}\n")
+            logging.debug(f"[get_active_company] Fallback set company_id to: {company_id}")
     
     if company_id:
         res = Company.query.get(company_id)
-        with open(log_path, 'a') as f:
-            f.write(f"  Returning Company: {res.name if res else 'NOT_FOUND'}\n")
         return res
         
-    with open(log_path, 'a') as f:
-        f.write(f"  Returning None\n")
     return None
 
 @projects_bp.route('/projects')

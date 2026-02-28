@@ -4,7 +4,8 @@
 
 {% block head %}
 {% if company %}
-<meta name="company-id" content="{{ company.id }}">
+<!-- DEBUG: Active Company: {{ active_company.name if active_company else 'NONE' }} (ID: {{ active_company.id if active_company else 'NONE' }}) -->
+<meta name="company-id" content="{{ active_company.id if active_company else '' }}">
 {% endif %}
 <link rel="stylesheet" href="{{ url_for('static', filename='css/my-work.css') }}" />
 
