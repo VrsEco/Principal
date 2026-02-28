@@ -51,7 +51,7 @@ class Company(db.Model):
     is_active = db.Column(db.Boolean, default=True, nullable=False, index=True)
 
     # Relationships
-    # plans will be added via backref in Plan model
+    plans = db.relationship("Plan", back_populates="company", lazy="dynamic")
 
     def __repr__(self):
         return f"<Company {self.id}: {self.name}>"

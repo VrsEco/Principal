@@ -104,6 +104,6 @@ def create_work_agent_workflow(checkpointer=None):
 
     return workflow.compile(checkpointer=checkpointer)
 
-# Grafo compilado pronto para uso
-memory = MemorySaver()
-work_agent_graph = create_work_agent_workflow(checkpointer=memory)
+# Grafo compilado pronto para uso utilizando persistência centralizada
+from src.intelligence.memory import memory_checkpointer
+work_agent_graph = create_work_agent_workflow(checkpointer=memory_checkpointer)

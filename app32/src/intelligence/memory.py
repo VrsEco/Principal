@@ -1,24 +1,22 @@
 import logging
-from langgraph.checkpoint.postgres import PostgresSaver
-from src.core.database import db
+from langgraph.checkpoint.memory import MemorySaver
 
 logger = logging.getLogger(__name__)
 
 from contextlib import contextmanager
 
+# Usaremos MemorySaver enquanto houver incompatibilidade de libpq no ambiente local
+memory_checkpointer = MemorySaver()
+
 @contextmanager
 def get_checkpointer():
     """
-    Inicializa e retorna o PostgresSaver para persistência de estado do LangGraph.
-    Utiliza uma conexão síncrona com o PostgreSQL.
+    Retorna o MemorySaver para persistência de estado do LangGraph (Em memória).
+    Nota: Em produção ou com libpq atualizada, deve-se usar PostgresSaver.
     """
     try:
-        db_url = db.db_url
-        with PostgresSaver.from_conn_string(db_url) as checkpointer:
-            # Garante que as tabelas existam
-            checkpointer.setup()
-            logger.info("LangGraph PostgresSaver inicializado com sucesso via conn_string.")
-            yield checkpointer
+        logger.info("LangGraph MemorySaver utilizado (Sincronização em memória).")
+        yield memory_checkpointer
     except Exception as e:
-        logger.error(f"Erro ao inicializar o checkpointer: {e}")
+        logger.error(f"Erro ao utilizar o checkpointer em memória: {e}")
         raise e

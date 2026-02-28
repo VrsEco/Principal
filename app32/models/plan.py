@@ -32,7 +32,7 @@ class Plan(db.Model):
     )
     
     # Relationships
-    company = db.relationship("Company", backref=db.backref("plans", lazy="dynamic"))
+    company = db.relationship("Company", back_populates="plans")
 
     # Relationships
     participants = db.relationship(
