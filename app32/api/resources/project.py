@@ -5,6 +5,14 @@ from models import db, Project
 from schemas.project import project_schema, projects_schema
 from utils.permissions import permission_required
 
+# GLOBAL DEBUG LOG
+try:
+    with open('/srv/appgestaoversuscombr.45a4cd4b.configr.cloud/www/app32/import_debug.log', 'a') as f:
+        import datetime
+        f.write(f"[{datetime.datetime.now()}] api.resources.project IMPORTED\n")
+except:
+    pass
+
 def get_request_company_id():
     from flask import session
     
