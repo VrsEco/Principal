@@ -1,76 +1,30 @@
 from functools import wraps
-from flask import abort, request, jsonify
+from flask import abort, request, session
 from flask_login import current_user
-from models import Employee, Role, db
-
-
-def admin_required(f):
-    """
-    Decorator to restrict access to systems administrators.
-    """
-    @wraps(f)
-    def decorated_function(*args, **kwargs):
-        if not current_user.is_authenticated or current_user.role != "admin":
-            if request.path.startswith("/api/"):
-                return jsonify({"error": "Acesso negado: Apenas administradores"}), 403
-            abort(403, description="Acesso negado: Apenas administradores")
-        return f(*args, **kwargs)
-
-    return decorated_function
+from models.employee import Employee
 
 def has_permission(company_id, resource, action):
     """
-    Checks if the current user has permission for a specific resource and action in a company.
-    
-    :param company_id: ID of the company
-    :param resource: Name of the resource (e.g., 'projects', 'indicators', 'processes')
-    :param action: Action to perform ('view', 'create', 'edit', 'delete')
-    :return: Boolean
+    Checks if the current user has a specific permission in a company.
     """
     if not current_user.is_authenticated:
         return False
     
-    # Global Admin has all permissions
     if current_user.role == 'admin':
         return True
-    
-    if not company_id:
-        return False
         
-    print(f"DEBUG: Checking perm for user {current_user.id} in company {company_id}: {resource}.{action}")
-    
-    # Get the employee record for the current user and company
     employee = Employee.query.filter_by(user_id=current_user.id, company_id=company_id).first()
     if not employee:
-        print(f"DEBUG: No employee record found for user {current_user.id} in company {company_id}")
         return False
         
-    if not employee.role_id:
-        print(f"DEBUG: Employee found but no role_id assigned.")
-        return False
-    
-    # Get the role permissions
-    role = Role.query.get(employee.role_id)
-    if not role or not role.permissions:
-        print(f"DEBUG: Role {employee.role_id} not found or has no permissions.")
-        return False
-    
-    resource_perms = role.permissions.get(resource)
-    print(f"DEBUG: Resource permissions for '{resource}': {resource_perms}")
-    
-    if not resource_perms:
-        return False
+    # Superusers in their own company have all permissions
+    if employee.role == 'superuser':
+        return True
         
-    if isinstance(resource_perms, list):
-        result = action in resource_perms
-        print(f"DEBUG: Action '{action}' in list: {result}")
-        return result
-    elif isinstance(resource_perms, dict):
-        result = resource_perms.get(action, False)
-        print(f"DEBUG: Action '{action}' in dict: {result}")
-        return result
-        
-    return False
+    # Check specific permission in permissions JSON
+    perms = employee.permissions or {}
+    res_perms = perms.get(resource, [])
+    return action in res_perms
 
 def permission_required(resource, action):
     """
@@ -80,17 +34,6 @@ def permission_required(resource, action):
     def decorator(f):
         @wraps(f)
         def decorated_function(*args, **kwargs):
-            import os
-            from datetime import datetime
-            log_path = '/srv/appgestaoversuscombr.45a4cd4b.configr.cloud/www/app32/permission_check.log'
-            try:
-                with open(log_path, 'a') as lf:
-                    lf.write(f"[{datetime.now()}] {request.method} {request.path} -> {resource}.{action}\n")
-                    lf.flush()
-                    os.fsync(lf.fileno())
-            except:
-                pass
-                
             # Try to find company_id in kwargs or request.args
             company_id = kwargs.get('company_id') or request.args.get('company_id', type=int)
             
@@ -136,3 +79,12 @@ def permission_required(resource, action):
             return f(*args, **kwargs)
         return decorated_function
     return decorator
+
+def admin_required(f):
+    """Decorator to require admin role"""
+    @wraps(f)
+    def decorated_function(*args, **kwargs):
+        if not current_user.is_authenticated or current_user.role != 'admin':
+            abort(403, description="Acesso negado: Apenas administradores")
+        return f(*args, **kwargs)
+    return decorated_function
