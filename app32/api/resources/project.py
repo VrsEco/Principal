@@ -1,6 +1,6 @@
 from flask import request, jsonify
 from flask_restful import Resource
-from models import Project, Company
+from models import db, Project, Company
 from schemas.project import project_schema, projects_schema
 from utils.permissions import permission_required, has_permission
 
