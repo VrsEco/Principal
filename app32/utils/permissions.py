@@ -80,10 +80,16 @@ def permission_required(resource, action):
     def decorator(f):
         @wraps(f)
         def decorated_function(*args, **kwargs):
-            from flask import current_app
-            current_app.logger.error(f"[PERM_DEBUG] check: {resource}.{action} for PATH {request.path}")
-            current_app.logger.error(f"  User: {current_user.id if current_user.is_authenticated else 'Anonymous'}, Role: {current_user.role if current_user.is_authenticated else 'None'}")
-            current_app.logger.error(f"  Args: {dict(request.args)}")
+            import os
+            from datetime import datetime
+            log_path = '/srv/appgestaoversuscombr.45a4cd4b.configr.cloud/www/app32/permission_check.log'
+            try:
+                with open(log_path, 'a') as lf:
+                    lf.write(f"[{datetime.now()}] {request.method} {request.path} -> {resource}.{action}\n")
+                    lf.flush()
+                    os.fsync(lf.fileno())
+            except:
+                pass
                 
             # Try to find company_id in kwargs or request.args
             company_id = kwargs.get('company_id') or request.args.get('company_id', type=int)
@@ -96,19 +102,15 @@ def permission_required(resource, action):
                         company_id = data.get('company_id')
                 except:
                     pass
-            
-            current_app.logger.error(f"  Resolved company_id for perm: {company_id}")
 
             if not company_id:
                 # 1. Admins have access to everything
                 if current_user.role == 'admin':
-                    current_app.logger.error(f"  Admin bypass - proceeding")
                     return f(*args, **kwargs)
                 
                 # 2. For non-admins, check if they have permission in ANY company they belong to
                 user_employees = Employee.query.filter_by(user_id=current_user.id).all()
                 if not user_employees:
-                    current_app.logger.error(f"  Access denied: No company association")
                     if request.path.startswith('/api/'):
                         return {"error": "Access denied: User is not associated with any company."}, 403
                     abort(403, description="Access denied: User is not associated with any company.")
@@ -120,7 +122,6 @@ def permission_required(resource, action):
                         break
                 
                 if not has_any_permission:
-                    current_app.logger.error(f"  Permission denied: No company with {action} on {resource}")
                     if request.path.startswith('/api/'):
                         return {"error": f"Permission denied: {action} on {resource}"}, 403
                     abort(403, description=f"Permission denied: User does not have '{action}' permission on '{resource}' in any associated company.")
@@ -128,12 +129,10 @@ def permission_required(resource, action):
                 return f(*args, **kwargs)
 
             if not has_permission(company_id, resource, action):
-                current_app.logger.error(f"  Permission denied: {action} on {resource} for company {company_id}")
                 if request.path.startswith('/api/'):
                     return {"error": f"Permission denied: {action} on {resource}"}, 403
                 abort(403, description=f"Permission denied: {action} on {resource}")
                 
-            current_app.logger.error(f"  Permission OK - proceeding")
             return f(*args, **kwargs)
         return decorated_function
     return decorator
