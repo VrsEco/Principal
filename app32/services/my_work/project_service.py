@@ -85,7 +85,15 @@ def fetch_normalized_project_rows(
         
     target_employee_ids = set(safe_int(eid) for eid in (employee_ids or []) if safe_int(eid))
     if target_employee_ids:
-        query = query.filter(ProjectTask.employee_id.in_(target_employee_ids))
+        # Include tasks assigned to these employees OR tasks with no employee assigned (NULL)
+        # NULL tasks belong to the company scope and should be visible to responsible managers
+        from sqlalchemy import or_
+        query = query.filter(
+            or_(
+                ProjectTask.employee_id.in_(target_employee_ids),
+                ProjectTask.employee_id == None
+            )
+        )
 
     for pt, prj, plan_name, plan_mode, company_name, company_code, employee_name_joined in query.all():
         # Anti-N+1: Prevent pt.code and prj.code from querying the database

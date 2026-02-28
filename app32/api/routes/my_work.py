@@ -113,15 +113,17 @@ def project_task_view(task_id):
 @my_work_bp.route('/my-work/api/filter-options')
 @login_required
 def my_work_filter_options():
-    from services.my_work_service import get_filter_options
+    from services.my_work.discovery_service import get_filter_options_v2
     try:
-        data = get_filter_options(current_user.id)
+        data = get_filter_options_v2(current_user.id)
         logger.info(f"📊 Filter Options Response: {len(data.get('companies', []))} companies, {len(data.get('collaborators', []))} collabs, role={data.get('user_role')}")
         return jsonify({
             "success": True,
             "data": data
         })
     except Exception as e:
+        logger.error(f"filter-options error: {e}")
+        import traceback; traceback.print_exc()
         return jsonify({"success": False, "error": str(e)}), 500
 
 @my_work_bp.route('/my-work/api/activities')
