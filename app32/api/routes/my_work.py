@@ -3,6 +3,9 @@ from flask_login import login_required, current_user
 from datetime import datetime
 from models import db, User, Company, Employee, Project, ProjectTask, Process, ProcessInstance
 from services.pdf_service import PDFGenerator
+import logging
+
+logger = logging.getLogger(__name__)
 
 my_work_bp = Blueprint('my_work', __name__)
 
@@ -113,6 +116,7 @@ def my_work_filter_options():
     from services.my_work_service import get_filter_options
     try:
         data = get_filter_options(current_user.id)
+        logger.info(f"📊 Filter Options Response: {len(data.get('companies', []))} companies, {len(data.get('collaborators', []))} collabs, role={data.get('user_role')}")
         return jsonify({
             "success": True,
             "data": data
@@ -130,18 +134,34 @@ def my_work_api_activities():
     # user = User.query.get(current_user.id) # Redundante pois current_user já é o objeto User
     scope = request.args.get('scope', 'me')
 
+    def _parse_ints(val_str):
+        if not val_str: return None
+        res = []
+        for i in val_str.split(','):
+            i = i.strip()
+            if i and i.isdigit():
+                res.append(int(i))
+        return res if res else None
+
     # Parsing filters
-    company_ids_str = request.args.get('company_ids')
-    company_ids = [int(i) for i in company_ids_str.split(',') if i.strip()] if company_ids_str else None
+    company_ids = _parse_ints(request.args.get('company_ids'))
+
+    # Merge responsible_ids and executor_ids into a single list of employee_ids to filter
+    r_ids = _parse_ints(request.args.get('responsible_ids')) or []
+    e_ids = _parse_ints(request.args.get('executor_ids')) or []
+    all_emp_ids = list(set(r_ids + e_ids))
 
     # Normalizing request parameters to filters dict
     filters = {
         "search": request.args.get('search'),
         "sort": request.args.get('sort', 'deadline'),
-        "project_ids": [int(i) for i in request.args.get('project_ids', '').split(',') if i.strip()] if request.args.get('project_ids') else None,
-        "process_ids": [int(i) for i in request.args.get('process_ids', '').split(',') if i.strip()] if request.args.get('process_ids') else None,
+        "project_ids": _parse_ints(request.args.get('project_ids')),
+        "process_ids": _parse_ints(request.args.get('process_ids')),
+        "employee_ids": all_emp_ids if all_emp_ids else None
     }
 
+
+    logger.info(f"📊 API Request: scope={scope}, company_ids={company_ids}, filters={filters}")
     try:
         activities = get_user_activities_v2(
             user_id=current_user.id,
@@ -169,7 +189,14 @@ def my_work_occurrences_summary():
     
     employee_id = get_employee_from_user(current_user.id)
     company_ids_str = request.args.get('company_ids')
-    company_ids = [int(i) for i in company_ids_str.split(',') if i.strip()] if company_ids_str else None
+    
+    company_ids = None
+    if company_ids_str:
+        company_ids = []
+        for i in company_ids_str.split(','):
+            i = i.strip()
+            if i and i.isdigit():
+                company_ids.append(int(i))
     
     try:
         summary = get_occurrences_summary(employee_id, company_ids=company_ids)
@@ -178,4 +205,37 @@ def my_work_occurrences_summary():
             "data": summary
         })
     except Exception as e:
+        return jsonify({"success": False, "error": str(e)}), 500
+
+@my_work_bp.route('/my-work/api/team-overview')
+@login_required
+def my_work_team_overview():
+    from services.my_work_service import get_team_overview, get_employee_from_user
+    
+    employee_id = get_employee_from_user(current_user.id)
+    company_id_str = request.args.get('company_id')
+    company_id = int(company_id_str) if company_id_str and company_id_str.isdigit() else None
+    
+    try:
+        data = get_team_overview(employee_id, company_id)
+        return jsonify({"success": True, "data": data})
+    except Exception as e:
+        logger.error(f"Team Overview Error: {e}")
+        return jsonify({"success": False, "error": str(e)}), 500
+
+@my_work_bp.route('/my-work/api/company-overview')
+@login_required
+def my_work_company_overview():
+    from services.my_work.metrics_service import get_company_overview_v2
+    from services.my_work_service import get_employee_from_user
+    
+    employee_id = get_employee_from_user(current_user.id)
+    company_id_str = request.args.get('company_id')
+    company_id = int(company_id_str) if company_id_str and company_id_str.isdigit() else None
+    
+    try:
+        data = get_company_overview_v2(employee_id, company_id)
+        return jsonify({"success": True, "data": data})
+    except Exception as e:
+        logger.error(f"Company Overview Error: {e}")
         return jsonify({"success": False, "error": str(e)}), 500

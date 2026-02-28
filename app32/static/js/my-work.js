@@ -394,12 +394,38 @@ async function loadFilterOptions() {
     state.projectsDirectory = data.projects || [];
     state.processesDirectory = data.processes || [];
 
+    console.log(`🔍 [Admin Check] User Role: ${data.user_role || 'N/A'}, Companies Found: ${state.companies.length}`);
+
     // Tentar carregar filtros do cache
     const hasCache = loadFiltersFromCache();
+    console.log(`📦 [Cache Check] hasCache: ${hasCache}, selectedIds: ${state.selectedCompanyIds.length}`);
 
-    // Se não houver cache, inicializar com TODAS selecionadas por padrão
-    if (!hasCache) {
-      // Sempre inicializar com todas as empresas selecionadas na primeira vez
+    // Validar IDs carregados do cache contra o que o servidor enviou (evita IDs zumbis de outros ambientes)
+    if (hasCache) {
+      if (state.companies.length > 0) {
+        const validIds = new Set(state.companies.map(c => c.company_id));
+        const originalCount = state.selectedCompanyIds.length;
+        state.selectedCompanyIds = state.selectedCompanyIds.filter(id => validIds.has(id));
+        console.log(`✅ [Validation] Filtered Company IDs from ${originalCount} to ${state.selectedCompanyIds.length}`);
+      }
+      if (state.collaborators.length > 0) {
+        const validIds = new Set(state.collaborators.map(c => c.id));
+        state.selectedResponsibleIds = state.selectedResponsibleIds.filter(id => validIds.has(id));
+        state.selectedExecutorIds = state.selectedExecutorIds.filter(id => validIds.has(id));
+      }
+      if (state.projectsDirectory.length > 0) {
+        const validIds = new Set(state.projectsDirectory.map(p => p.id));
+        state.selectedProjectIds = state.selectedProjectIds.filter(id => validIds.has(id));
+      }
+      if (state.processesDirectory.length > 0) {
+        const validIds = new Set(state.processesDirectory.map(p => p.id));
+        state.selectedProcessIds = state.selectedProcessIds.filter(id => validIds.has(id));
+      }
+    }
+
+    // Se não houver cache OU se após validação as seleções ficaram inconsistentes, inicializar com TODAS selecionadas por padrão
+    if (!hasCache || state.selectedCompanyIds.length === 0) {
+      console.log('🔄 [Initialization] Resetting to all companies/collaborators');
       state.selectedCompanyIds = state.companies.map(company => company.company_id);
       state.selectedResponsibleIds = state.collaborators.map(c => c.id);
       state.selectedExecutorIds = state.collaborators.map(c => c.id);
@@ -451,7 +477,24 @@ function setupMultiselect(config) {
     return;
   }
 
+  if (trigger.dataset.multiselectInitialized) {
+    trigger.dispatchEvent(new CustomEvent('multiselect:re-sync'));
+    return;
+  }
+
   const selectedSet = new Set(state[config.stateKey] || []);
+
+  function reSync() {
+    selectedSet.clear();
+    const current = state[config.stateKey] || [];
+    current.forEach(id => selectedSet.add(id));
+    renderOptions(searchInput?.value || '');
+    updateLabel();
+    updateSelectAll();
+  }
+
+  trigger.addEventListener('multiselect:re-sync', reSync);
+
   if (config.selectAllByDefault && !selectedSet.size && options.length) {
     options.forEach(option => selectedSet.add(option.id));
     state[config.stateKey] = Array.from(selectedSet);
@@ -600,6 +643,7 @@ function setupMultiselect(config) {
 
   trigger.addEventListener('click', event => {
     event.stopPropagation();
+    console.log(`🖱️ [Trigger Click] ${config.key || 'unknown'} - Dropdown state: ${dropdown.classList.contains('is-open')}`);
     dropdownRegistry.forEach(close => close());
     dropdown.classList.toggle('is-open');
     trigger.classList.toggle('active');
@@ -610,7 +654,10 @@ function setupMultiselect(config) {
       closeHandler();
     }
   });
+
+  trigger.dataset.multiselectInitialized = 'true';
 }
+
 
 function buildCompanyLabel(company) {
   const name = company.company_name || company.name || `Empresa ${company.company_id || ''}`.trim();
@@ -1189,8 +1236,6 @@ async function loadActivitiesData() {
     // Atualizar lista de donos de processos a partir das atividades carregadas
     updateProcessOwnersFromActivities();
 
-    updateStats(data.stats);
-    updateInsightCards();
     await updateIncidentSummary();
     renderActivities();
 
@@ -1207,8 +1252,6 @@ async function loadActivitiesData() {
     console.error('Erro ao carregar atividades:', error);
     window.showMessage(error.message || 'Erro ao carregar atividades', 'error');
     state.activities = [];
-    updateStats({ pending: 0, in_progress: 0, overdue: 0, completed: 0 });
-    updateInsightCards([]);
     renderActivities();
   } finally {
     setActivitiesLoading(false);
@@ -1607,6 +1650,7 @@ function renderActivities() {
 
   const filteredActivities = getFilteredActivities();
   updateInsightCards(filteredActivities);
+  updateStatsFromActivities(filteredActivities);
   updateTimeTracking(calculateTimeFromActivities(filteredActivities));
 
   activitiesList.querySelectorAll('.activity-item').forEach(item => item.remove());
@@ -2585,6 +2629,35 @@ function renderCompanyRanking(ranking = []) {
   `).join('');
 }
 
+function updateStatsFromActivities(activities) {
+  const stats = { pending: 0, in_progress: 0, overdue: 0, completed: 0 };
+  (activities || []).forEach(activity => {
+    const status = (activity.status || '').toLowerCase();
+    if (CLOSED_STATUS_SET.has(status)) {
+      stats.completed += 1;
+    } else if (status === 'in_progress' || status === 'executing' || status === 'ongoing') {
+      stats.in_progress += 1;
+    } else {
+      stats.pending += 1;
+    }
+
+    if (activity.is_overdue && !CLOSED_STATUS_SET.has(status)) {
+      stats.overdue += 1;
+    }
+  });
+
+  const statPending = document.getElementById('stat-pending');
+  const statOverdue = document.getElementById('stat-overdue');
+  const statTotal = document.getElementById('stat-total');
+
+  const openActivities = stats.pending + stats.in_progress;
+  const totalActivities = openActivities + stats.completed;
+
+  if (statPending) animateValue(statPending, 0, openActivities, 1000);
+  if (statOverdue) animateValue(statOverdue, 0, stats.overdue, 1000);
+  if (statTotal) animateValue(statTotal, Number(statTotal.textContent) || 0, totalActivities, 1000);
+}
+
 function updateStats(stats) {
   if (!stats) return;
 
@@ -2991,13 +3064,9 @@ function calculateTimeFromActivities(activities) {
     const estimated = safeNumber(activity.estimated_hours || activity.estimated_time);
     const worked = safeNumber(activity.worked_hours || activity.actual_hours);
     const type = normalizeActivityType(activity);
-    const dueDate = parseActivityDate(activity);
 
-    const includeInDay = dueDate ? isSameDay(dueDate, today) : true;
+    accumulateSummary(daySummary, type, estimated, worked);
 
-    if (includeInDay) {
-      accumulateSummary(daySummary, type, estimated, worked);
-    }
   });
 
   daySummary.available = Math.max(daySummary.capacity - daySummary.planned, 0);
