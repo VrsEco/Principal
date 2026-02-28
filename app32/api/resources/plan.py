@@ -10,23 +10,8 @@ import json
 class PlanListResource(Resource):
     @permission_required('plans', 'view')
     def get(self):
-        from flask import session
-        company_id = request.args.get('company_id', type=int)
-        
-        if not company_id:
-            company_id = session.get('active_company_id')
-            
-        # Fallback to employee's company if needed
-        if not company_id:
-            from flask_login import current_user
-            if current_user.is_authenticated:
-                from models import Employee, Company
-                if current_user.role == 'admin':
-                    first = Company.query.filter_by(is_active=True).first()
-                    if first: company_id = first.id
-                else:
-                    emp = Employee.query.filter_by(user_id=current_user.id, status='active').first()
-                    if emp: company_id = emp.company_id
+        from api.resources.project import get_request_company_id
+        company_id = get_request_company_id()
                     
         if not company_id:
             return {"error": "company_id is required"}, 400
