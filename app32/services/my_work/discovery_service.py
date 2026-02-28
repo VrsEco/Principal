@@ -151,8 +151,15 @@ def get_user_activities_v2(
         if my_employee_ids:
             target_employee_ids = my_employee_ids
         else:
-            logger.warning(f"⚠️ Scale 'me' requested but no employee records for user {user_id}")
-            return []
+            # Fallback: user has no employee record linked. Show all activities
+            # from their associated companies (same as scope=company).
+            # This is common for admin/consultant users in production.
+            logger.warning(
+                f"⚠️ scope='me' requested but no employee records for user {user_id}. "
+                f"Falling back to scope='company' for companies={company_ids}"
+            )
+            # target_employee_ids remains [] → no employee filter → all company activities
+            scope = "company"
     elif scope == "team":
         target_employee_ids = employee_ids or []
     elif scope == "company":
