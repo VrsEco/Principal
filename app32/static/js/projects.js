@@ -7,6 +7,9 @@ let allPortfolios = [];
 let allPlans = [];
 let currentView = 'grid'; // Default view: 'grid' now refers to the List/Row view
 
+// Read company_id injected by Jinja2 into the page
+const PAGE_COMPANY_ID = document.querySelector('meta[name="company-id"]')?.content || '';
+
 document.addEventListener('DOMContentLoaded', () => {
     initPage();
 });
@@ -31,13 +34,18 @@ async function initPage() {
 
 async function loadPortfolios() {
     try {
-        // We need company_id. Let's try to get it from a global if available, or just fetch
-        const response = await fetch('/api/companies');
-        const companies = await response.json();
-        const firstCompany = Array.isArray(companies) ? companies[0] : (companies.data ? companies.data[0] : null);
+        // Use the company_id from the page (injected by Jinja2)
+        let companyId = PAGE_COMPANY_ID;
 
-        if (firstCompany) {
-            const companyId = firstCompany.id || firstCompany.company_id;
+        if (!companyId) {
+            // Fallback: fetch from /api/companies
+            const response = await fetch('/api/companies');
+            const companies = await response.json();
+            const firstCompany = Array.isArray(companies) ? companies[0] : (companies.data ? companies.data[0] : null);
+            if (firstCompany) companyId = firstCompany.id || firstCompany.company_id;
+        }
+
+        if (companyId) {
             const portResponse = await fetch(`/api/companies/${companyId}/portfolios`);
             const portData = await portResponse.json();
             allPortfolios = portData.portfolios || [];
@@ -59,8 +67,15 @@ async function loadPortfolios() {
 
 async function loadPlans() {
     try {
-        const response = await fetch('/api/plans');
-        allPlans = await response.json();
+        const plansUrl = PAGE_COMPANY_ID ? `/api/plans?company_id=${PAGE_COMPANY_ID}` : '/api/plans';
+        const response = await fetch(plansUrl);
+        if (!response.ok) {
+            console.warn('Could not load plans:', response.status);
+            allPlans = [];
+            return;
+        }
+        const data = await response.json();
+        allPlans = Array.isArray(data) ? data : (data.data || []);
 
         const optgroup = document.getElementById('optgroup-plans');
         if (optgroup) {
@@ -73,8 +88,10 @@ async function loadPlans() {
         }
     } catch (e) {
         console.error('Error loading plans:', e);
+        allPlans = [];
     }
 }
+
 
 function populateResponsibleFilter() {
     const list = document.getElementById('filter-responsible');
@@ -104,7 +121,9 @@ async function loadProjects() {
     if (empty) empty.style.display = 'none';
 
     try {
-        const response = await fetch('/api/projects');
+        // Pass company_id explicitly to avoid session dependency
+        const url = PAGE_COMPANY_ID ? `/api/projects?company_id=${PAGE_COMPANY_ID}` : '/api/projects';
+        const response = await fetch(url);
         const data = await response.json();
         allProjects = Array.isArray(data) ? data : (data.data || []);
 

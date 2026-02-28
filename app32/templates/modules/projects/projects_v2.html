@@ -3,7 +3,11 @@
 {% block title %}Projetos - Versus{% endblock %}
 
 {% block head %}
+{% if company %}
+<meta name="company-id" content="{{ company.id }}">
+{% endif %}
 <link rel="stylesheet" href="{{ url_for('static', filename='css/my-work.css') }}" />
+
 <style>
     /* Projects Page Specific Adjustments */
     .projects-container {
