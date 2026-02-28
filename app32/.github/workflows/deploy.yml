@@ -25,11 +25,12 @@ jobs:
           script: |
             set -e
             BASE=/srv/appgestaoversuscombr.45a4cd4b.configr.cloud
-            APP=$BASE/www
+            WWW=$BASE/www
+            APP=$WWW/app32
             PYTHON=$BASE/.virtualenv/3.12/bin/python
             PIP=$BASE/.virtualenv/3.12/bin/pip
 
-            echo "📂 Atualizando código..."
+            echo "📂 Atualizando código em $APP ..."
             cd $APP
             git fetch origin main
             git reset --hard origin/main
@@ -40,6 +41,7 @@ jobs:
 
             echo "🗃️ Executando migrations do banco de dados..."
             set +e
+            cd $APP
             $PYTHON -c "
             import sys, os
             sys.path.insert(0, '.')
@@ -55,15 +57,7 @@ jobs:
             " 2>&1 || echo "⚠️  Migrations falharam ou não há migrações pendentes"
             set -e
 
-            echo "🔄 Reiniciando o servidor uWSGI..."
-            # Método 1: touch no uwsgi_configr.ini (o uWSGI monitora via py-autoreload)
-            touch $APP/uwsgi_configr.ini
-            # Método 2: touch no socket ini para forçar reload
-            touch $BASE/etc/uwsgi/uwsgi.ini 2>/dev/null || true
-            # Método 3: touch em passenger_wsgi.py para reload do app
-            touch $APP/passenger_wsgi.py
-            # Aguarda o reload
-            sleep 5
-
-            echo "✅ Deploy concluído com sucesso!"
+            echo "🔄 Reiniciando o servidor uWSGI (método Configr)..."
+            touch $WWW/restart.txt
+            echo "✅ Deploy concluído com sucesso! (restart.txt tocado em $WWW)"
 
