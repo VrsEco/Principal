@@ -1,111 +1,43 @@
-from flask import request
+from flask import request, jsonify
 from flask_restful import Resource
-from marshmallow import ValidationError
-from models import db, Project
+from models import Project, Company
 from schemas.project import project_schema, projects_schema
-from utils.permissions import permission_required
-
-# GLOBAL DEBUG LOG
-try:
-    with open('/srv/appgestaoversuscombr.45a4cd4b.configr.cloud/www/app32/import_debug.log', 'a') as f:
-        import datetime
-        f.write(f"[{datetime.datetime.now()}] api.resources.project IMPORTED\n")
-except:
-    pass
+from utils.permissions import permission_required, has_permission
 
 def get_request_company_id():
     from flask import session
+    from flask_login import current_user
     
-    def clean(val):
-        if val is None: return None
-        s = str(val).strip().lower()
-        if s in ('null', 'undefined', 'none', ''): return None
+    # 1. Try Query Arg
+    val = request.args.get('company_id')
+    if val:
         try:
             return int(float(val))
-        except (ValueError, TypeError):
-            return None
-
-    # 1. Try Query Arg
-    cid = clean(request.args.get('company_id'))
-    if cid is not None: 
-        print(f"DEBUG: get_request_company_id - from query arg: {cid}")
-        return cid
-    
-    # 2. Try JSON Body
-    try:
-        if request.is_json:
-            data = request.get_json(silent=True)
-            if data:
-                cid = clean(data.get('company_id'))
-                if cid is not None: 
-                    print(f"DEBUG: get_request_company_id - from JSON: {cid}")
-                    return cid
-    except:
-        pass
-
-    # 3. Try Session
-    cid = clean(session.get('active_company_id'))
+        except:
+            pass
+            
+    # 2. Try session
+    cid = session.get('active_company_id')
     if cid:
-        print(f"DEBUG: get_request_company_id - from session: {cid}")
-        return cid
-
-    # 4. Fallback: authenticated user
-    from flask_login import current_user
-    if current_user.is_authenticated:
-        from models import Company, Employee
+        return int(cid)
         
-        if current_user.role == 'admin':
-            first = Company.query.filter_by(is_active=True).order_by(Company.id).first()
-            if first:
-                print(f"DEBUG: get_request_company_id - admin fallback: {first.id}")
-                return first.id
-        else:
-            emp = Employee.query.filter_by(user_id=current_user.id, status='active').first()
-            if emp:
-                print(f"DEBUG: get_request_company_id - employee fallback: {emp.company_id}")
-                return emp.company_id
-                
+    # 3. Try current_user
+    if current_user.is_authenticated and current_user.role == 'admin':
+        # Default to the first active company
+        first = Company.query.filter_by(is_active=True).order_by(Company.id).first()
+        if first:
+            return first.id
+            
     return None
 
 class ProjectListResource(Resource):
     @permission_required('projects', 'view')
     def get(self):
         """List all projects, optionally filtered by company_id and plan_id."""
-        from flask import session
-        from flask_login import current_user
-        from datetime import datetime
-        
-        raw_cid = request.args.get('company_id')
-        log_path = '/srv/appgestaoversuscombr.45a4cd4b.configr.cloud/www/app32/logs/proj_api_debug.log'
-        
-        # Direct file logging for debugging in production
-        try:
-            with open(log_path, 'a') as lf:
-                lf.write(f"\n[{datetime.now()}] --- PROJECT GET REQUEST ---\n")
-                lf.write(f"  URL args: {dict(request.args)}\n")
-                lf.write(f"  session: {dict(session)}\n")
-                lf.write(f"  user authenticated: {current_user.is_authenticated}\n")
-                if current_user.is_authenticated:
-                    lf.write(f"  user id: {current_user.id}, role: {current_user.role}\n")
-        except Exception as le:
-            # Fallback for local dev or perm issue
-            pass
-        
         company_id = get_request_company_id()
         plan_id = request.args.get('plan_id', type=int)
         
-        try:
-            with open(log_path, 'a') as lf:
-                lf.write(f"  get_request_company_id resolved: {company_id}\n")
-        except:
-            pass
-        
         if not company_id:
-            try:
-                with open(log_path, 'a') as lf:
-                    lf.write(f"  RETURNING [] because company_id is None\n")
-            except:
-                pass
             return [], 200
             
         query = Project.query.filter_by(company_id=company_id).order_by(Project.id.asc())
@@ -113,149 +45,226 @@ class ProjectListResource(Resource):
             query = query.filter_by(plan_id=plan_id)
             
         projects = query.all()
-        
-        try:
-            with open(log_path, 'a') as lf:
-                lf.write(f"  found {len(projects)} projects for {company_id}\n")
-        except:
-            pass
-        
         return projects_schema.dump(projects), 200
 
     @permission_required('projects', 'create')
     def post(self):
         """Create a new project."""
-        try:
-            data = request.get_json()
-            cid = get_request_company_id()
-            if cid:
-                data['company_id'] = cid
-            
-            # Handle portfolio creation if needed
-            portfolio_option = data.pop('portfolio_option', None)
-            
-            if portfolio_option == 'new':
-                # Create a new portfolio with the plan name
-                from models import Portfolio, Plan
-                plan_id = data.get('plan_id')
-                
-                if plan_id:
-                    plan = Plan.query.get(plan_id)
-                    if plan:
-                        # Check if portfolio already exists for this plan
-                        existing_portfolio = Portfolio.query.filter_by(
-                            company_id=cid,
-                            name=plan.title  # FIXED: use 'title' instead of 'name'
-                        ).first()
-                        
-                        if existing_portfolio:
-                            data['portfolio_id'] = existing_portfolio.id
-                        else:
-                            # Create new portfolio
-                            new_portfolio = Portfolio(
-                                company_id=cid,
-                                code=f"PLAN-{plan_id}",
-                                name=plan.title,  # FIXED: use 'title' instead of 'name'
-                                notes=f"Portfólio criado automaticamente para o plano: {plan.title}"  # FIXED
-                            )
-                            db.session.add(new_portfolio)
-                            db.session.flush()  # Get the ID without committing
-                            data['portfolio_id'] = new_portfolio.id
-            
-            # Ensure IDs are integers or None
-            for field in ['plan_id', 'portfolio_id']:
-                if field in data:
-                    val = data[field]
-                    if val is None or str(val).strip().lower() in ('null', 'undefined', ''):
-                        data[field] = None
-                    else:
-                        try:
-                            data[field] = int(float(val))
-                        except (ValueError, TypeError):
-                            data[field] = None
-                
-            project = project_schema.load(data)
-            db.session.add(project)
-            db.session.commit()
-            return project_schema.dump(project), 201
-        except ValidationError as err:
-            db.session.rollback()
-            return {"errors": err.messages}, 400
-        except Exception as e:
-            db.session.rollback()
-            return {"error": str(e)}, 500
+        data = request.get_json()
+        new_project = Project(
+            company_id=get_request_company_id(),
+            name=data['name'],
+            plan_id=data.get('plan_id'),
+            owner=data.get('owner'),
+            status=data.get('status', 'planned'),
+            deadline=data.get('deadline'),
+            budget=data.get('budget'),
+            notes=data.get('notes'),
+            priority=data.get('priority', 'medium'),
+            portfolio_id=data.get('portfolio_id')
+        )
+        db.session.add(new_project)
+        db.session.commit()
+        return project_schema.dump(new_project), 201
 
 class ProjectResource(Resource):
     @permission_required('projects', 'view')
     def get(self, project_id):
-        """Get a single project."""
+        """Get a specific project by ID."""
         project = Project.query.get_or_404(project_id)
         return project_schema.dump(project), 200
 
     @permission_required('projects', 'edit')
     def put(self, project_id):
-        """Update a project."""
+        """Update an existing project."""
         project = Project.query.get_or_404(project_id)
-        try:
-            data = request.get_json()
-            cid = get_request_company_id()
-            
-            # Handle portfolio creation if needed
-            portfolio_option = data.pop('portfolio_option', None)
-            if portfolio_option == 'new':
-                from models import Portfolio, Plan
-                plan_id = data.get('plan_id') or project.plan_id
-                if plan_id:
-                    plan = Plan.query.get(plan_id)
-                    if plan:
-                        existing_portfolio = Portfolio.query.filter_by(
-                            company_id=cid,
-                            name=plan.title
-                        ).first()
-                        
-                        if existing_portfolio:
-                            data['portfolio_id'] = existing_portfolio.id
-                        else:
-                            new_portfolio = Portfolio(
-                                company_id=cid,
-                                code=f"PLAN-{plan_id}",
-                                name=plan.title,
-                                notes=f"Portfólio criado automaticamente para o plano: {plan.title}"
-                            )
-                            db.session.add(new_portfolio)
-                            db.session.flush()
-                            data['portfolio_id'] = new_portfolio.id
-
-            # Ensure IDs are integers or None
-            for field in ['plan_id', 'portfolio_id']:
-                if field in data:
-                    val = data[field]
-                    if val is None or str(val).strip().lower() in ('null', 'undefined', ''):
-                        data[field] = None
-                    else:
-                        try:
-                            data[field] = int(float(val) if val else 0) if val else None
-                        except (ValueError, TypeError):
-                            data[field] = None
-                
-            print(f"DEBUG: Project PUT data before schema load: {data}")
-            project = project_schema.load(data, instance=project, partial=True)
-            db.session.commit()
-            return project_schema.dump(project), 200
-        except ValidationError as err:
-            return {"errors": err.messages}, 400
-        except Exception as e:
-            db.session.rollback()
-            return {"error": str(e)}, 500
+        data = request.get_json()
+        
+        project.name = data.get('name', project.name)
+        project.plan_id = data.get('plan_id', project.plan_id)
+        project.owner = data.get('owner', project.owner)
+        project.status = data.get('status', project.status)
+        project.deadline = data.get('deadline', project.deadline)
+        project.budget = data.get('budget', project.budget)
+        project.notes = data.get('notes', project.notes)
+        project.priority = data.get('priority', project.priority)
+        project.portfolio_id = data.get('portfolio_id', project.portfolio_id)
+        
+        db.session.commit()
+        return project_schema.dump(project), 200
 
     @permission_required('projects', 'delete')
     def delete(self, project_id):
         """Delete a project."""
         project = Project.query.get_or_404(project_id)
-        try:
-            db.session.delete(project)
+        db.session.delete(project)
+        db.session.commit()
+        return '', 204
+
+class ProjectTaskListResource(Resource):
+    @permission_required('projects', 'view')
+    def get(self, project_id):
+        """List all tasks for a project."""
+        from models.project import ProjectTask
+        from schemas.project import project_tasks_schema
+        tasks = ProjectTask.query.filter_by(project_id=project_id).all()
+        return project_tasks_schema.dump(tasks), 200
+
+    @permission_required('projects', 'edit')
+    def post(self, project_id):
+        """Add a new task to a project."""
+        from models.project import ProjectTask
+        from schemas.project import project_task_schema
+        data = request.get_json()
+        new_task = ProjectTask(
+            project_id=project_id,
+            what=data['what'],
+            who=data.get('who'),
+            employee_id=data.get('employee_id'),
+            due_date=data.get('due_date'),
+            how=data.get('how'),
+            amount=data.get('amount'),
+            status=data.get('status', 'planned'),
+            stage=data.get('stage', 'inbox'),
+            priority=data.get('priority', 'normal'),
+            notes=data.get('notes')
+        )
+        db.session.add(new_task)
+        db.session.commit()
+        return project_task_schema.dump(new_task), 201
+
+class ProjectTaskResource(Resource):
+    @permission_required('projects', 'view')
+    def get(self, project_id, task_id):
+        """Get a specific project task."""
+        from models.project import ProjectTask
+        from schemas.project import project_task_schema
+        task = ProjectTask.query.filter_by(project_id=project_id, id=task_id).first_or_404()
+        return project_task_schema.dump(task), 200
+
+    @permission_required('projects', 'edit')
+    def put(self, project_id, task_id):
+        """Update a project task."""
+        from models.project import ProjectTask
+        from schemas.project import project_task_schema
+        task = ProjectTask.query.filter_by(project_id=project_id, id=task_id).first_or_404()
+        data = request.get_json()
+        
+        task.what = data.get('what', task.what)
+        task.who = data.get('who', task.who)
+        task.employee_id = data.get('employee_id', task.employee_id)
+        task.due_date = data.get('due_date', task.due_date)
+        task.how = data.get('how', task.how)
+        task.amount = data.get('amount', task.amount)
+        task.status = data.get('status', task.status)
+        task.stage = data.get('stage', task.stage)
+        task.priority = data.get('priority', task.priority)
+        task.notes = data.get('notes', task.notes)
+        
+        # Update completion date if stage becomes 'completed'
+        if task.stage == 'completed' and not task.completion_date:
+            from datetime import datetime
+            task.completion_date = datetime.now().date()
+        
+        # Log entry if provided
+        if 'new_log' in data:
+            if not task.logs: task.logs = []
+            from datetime import datetime
+            task.logs.append({
+                "date": datetime.now().isoformat(),
+                "text": data['new_log']
+            })
+            
+        db.session.commit()
+        return project_task_schema.dump(task), 200
+
+    @permission_required('projects', 'edit')
+    def delete(self, project_id, task_id):
+        """Delete a project task."""
+        from models.project import ProjectTask
+        task = ProjectTask.query.filter_by(project_id=project_id, id=task_id).first_or_404()
+        db.session.delete(task)
+        db.session.commit()
+        return '', 204
+
+class ProjectTaskStageResource(Resource):
+    @permission_required('projects', 'edit')
+    def patch(self, project_id, task_id):
+        """Update only the stage of a task."""
+        from models.project import ProjectTask
+        from schemas.project import project_task_schema
+        task = ProjectTask.query.filter_by(project_id=project_id, id=task_id).first_or_404()
+        data = request.get_json()
+        
+        if 'stage' in data:
+            task.stage = data['stage']
+            if task.stage == 'completed' and not task.completion_date:
+                from datetime import datetime
+                task.completion_date = datetime.now().date()
             db.session.commit()
-            return {"message": "Project deleted successfully"}, 200
-        except Exception as e:
-            db.session.rollback()
-            return {"error": str(e)}, 500
+            
+        return project_task_schema.dump(task), 200
+
+class ProjectTaskCollaboratorListResource(Resource):
+    @permission_required('projects', 'view')
+    def get(self, project_id, task_id):
+        from models.project import ProjectActivityCollaborator
+        from schemas.project import project_activity_collaborator_schema
+        collaborators = ProjectActivityCollaborator.query.filter_by(activity_id=task_id, is_deleted=False).all()
+        return project_activity_collaborator_schema.dump(collaborators, many=True), 200
+
+    @permission_required('projects', 'edit')
+    def post(self, project_id, task_id):
+        from models.project import ProjectActivityCollaborator
+        from schemas.project import project_activity_collaborator_schema
+        data = request.get_json()
+        new_collab = ProjectActivityCollaborator(
+            activity_id=task_id,
+            employee_id=data['employee_id'],
+            role=data.get('role', 'executor'),
+            notes=data.get('notes')
+        )
+        db.session.add(new_collab)
+        db.session.commit()
+        return project_activity_collaborator_schema.dump(new_collab), 201
+
+class ProjectTaskCollaboratorResource(Resource):
+    @permission_required('projects', 'edit')
+    def delete(self, project_id, task_id, collaborator_id):
+        from models.project import ProjectActivityCollaborator
+        collab = ProjectActivityCollaborator.query.filter_by(activity_id=task_id, id=collaborator_id).first_or_404()
+        collab.is_deleted = True
+        db.session.commit()
+        return '', 204
+
+class ProjectTaskHoursSummaryResource(Resource):
+    @permission_required('projects', 'view')
+    def get(self, project_id, task_id):
+        from models.project import ProjectTaskHoursSummary
+        summary = ProjectTaskHoursSummary.query.filter_by(task_id=task_id).first()
+        if not summary:
+            return {"total_estimated_hours": 0, "total_worked_hours": 0}, 200
+        return {
+            "total_estimated_hours": float(summary.total_estimated_hours),
+            "total_worked_hours": float(summary.total_worked_hours)
+        }, 200
+
+class ProjectAllTasksResource(Resource):
+    @permission_required('projects', 'view')
+    def get(self):
+        """List all tasks across all projects for a company, or all tasks if missing company context."""
+        from models.project import Project, ProjectTask
+        from schemas.project import project_tasks_schema
+        
+        company_id = get_request_company_id()
+        if company_id:
+            tasks = ProjectTask.query.join(Project).filter(Project.company_id == company_id).all()
+        else:
+            # Fallback for admins with no context: all tasks
+            from flask_login import current_user
+            if current_user.role == 'admin':
+                tasks = ProjectTask.query.all()
+            else:
+                return [], 200
+        
+        return project_tasks_schema.dump(tasks), 200
