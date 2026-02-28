@@ -58,11 +58,59 @@
     }
 
     .filter-multiselect__dropdown {
-        position: fixed !important;
-        /* Float over everything */
-        width: 260px !important;
-        left: auto !important;
-        z-index: 9999 !important;
+        position: absolute !important;
+        top: 100%;
+        left: 0;
+        width: 280px !important;
+        z-index: 25001 !important;
+        background: white;
+        border: 1px solid var(--border);
+        border-radius: 12px;
+        box-shadow: var(--shadow-xl);
+        display: none;
+        opacity: 0;
+        transition: opacity 0.2s ease;
+    }
+
+    .filter-multiselect__dropdown.is-open {
+        display: block !important;
+        opacity: 1 !important;
+        pointer-events: auto !important;
+    }
+
+    /* Ensure container doesn't clip the absolute dropdown */
+    .filter-card,
+    .collapsible-content,
+    .filter-multiselect {
+        overflow: visible !important;
+    }
+
+    /* Collapsible States for Filter Cards */
+    .filter-card .collapsible-content {
+        transition: max-height 0.3s ease-out, opacity 0.3s ease-out;
+        max-height: 2000px;
+        opacity: 1;
+    }
+
+    .filter-card.collapsed .collapsible-content {
+        max-height: 0;
+        opacity: 0;
+        overflow: hidden !important;
+        margin: 0 !important;
+        padding: 0 !important;
+    }
+
+    .filter-card .chevron {
+        transition: transform 0.3s ease;
+    }
+
+    .filter-card.collapsed .chevron {
+        transform: rotate(-180deg);
+    }
+
+    .filter-card.collapsed {
+        min-height: auto !important;
+        padding-bottom: 0.5rem !important;
     }
 
     /* Compact Header Cards */

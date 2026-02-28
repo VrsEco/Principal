@@ -151,10 +151,18 @@ def telegram_webhook():
 def setup_webhook(host_url):
     """
     Seta o Webhook na API do telegram indicando sua URL pública (ngrok/domínio)
-    Exemplo: setup_webhook("https://seungrok.ngrok.io/webhook/telegram")
+    Exemplo: setup_webhook("https://seungrok.ngrok.io/")
     """
-    bot.remove_webhook()
-    webhook_url = f"{host_url.rstrip('/')}/webhook/telegram"
-    bot.set_webhook(url=webhook_url)
-    logger.info(f"✅ Webhook do Telegram registrado: {webhook_url}")
-    return webhook_url
+    if not TOKEN:
+        logger.error("❌ Não foi possível configurar o Webhook: TELEGRAM_BOT_TOKEN não definido.")
+        return None
+
+    try:
+        bot.remove_webhook()
+        webhook_url = f"{host_url.rstrip('/')}/webhook/telegram"
+        bot.set_webhook(url=webhook_url)
+        logger.info(f"✅ Webhook do Telegram registrado com sucesso: {webhook_url}")
+        return webhook_url
+    except Exception as e:
+        logger.error(f"❌ Erro ao registrar Webhook do Telegram: {str(e)}")
+        return None

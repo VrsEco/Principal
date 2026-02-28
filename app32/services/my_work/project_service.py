@@ -64,8 +64,64 @@ def fetch_normalized_project_rows(
     """
     Fetch and normalize project activities from both table activities and legacy JSON.
     """
-    # 1. Fetch from normalized tables (project_tasks) - Skeleton for now
-    table_activities = [] 
+    # 1. Fetch from normalized tables (project_tasks)
+    table_activities = []
+    
+    from models.project import ProjectTask, Project
+    from models.employee import Employee
+    query = db.session.query(
+        ProjectTask, Project, Plan.title.label("plan_name"), Plan.mode.label("plan_mode"),
+        Company.name.label("company_name"), Company.client_code.label("company_code"),
+        Employee.name.label("employee_name_joined")
+    ).join(Project, Project.id == ProjectTask.project_id)\
+     .outerjoin(Plan, Plan.id == Project.plan_id)\
+     .outerjoin(Company, Company.id == Project.company_id)\
+     .outerjoin(Employee, Employee.id == ProjectTask.employee_id)
+     
+    if company_ids:
+        query = query.filter(Project.company_id.in_(company_ids))
+    if project_ids:
+        query = query.filter(ProjectTask.project_id.in_(project_ids))
+        
+    target_employee_ids = set(safe_int(eid) for eid in (employee_ids or []) if safe_int(eid))
+    if target_employee_ids:
+        query = query.filter(ProjectTask.employee_id.in_(target_employee_ids))
+
+    for pt, prj, plan_name, plan_mode, company_name, company_code, employee_name_joined in query.all():
+        # Anti-N+1: Prevent pt.code and prj.code from querying the database
+        c_code = company_code or (company_name[:2].upper() if company_name else 'CP')
+        prj_code = f"{c_code}.J.{prj.id}"
+        pt_code = f"{c_code}.J.{prj.id}.{pt.id}"
+        emp_name = employee_name_joined or pt.who or "Sem responsável"
+        
+        table_activities.append({
+            "id": pt.id,
+            "company_id": prj.company_id,
+            "plan_id": prj.plan_id,
+            "title": pt.what or prj.name,
+            "description": pt.how,
+            "status": pt.status,
+            "priority": pt.priority,
+            "responsible_id": pt.employee_id,
+            "responsible_name": emp_name,
+            "executor_id": pt.employee_id,
+            "executor_name": emp_name,
+            "start_date": prj.created_at.isoformat() if hasattr(prj.created_at, 'isoformat') else prj.created_at,
+            "end_date": prj.deadline.isoformat() if hasattr(prj.deadline, 'isoformat') else prj.deadline,
+            "deadline_date": pt.due_date,
+            "deadline": pt.due_date.isoformat() if hasattr(pt.due_date, 'isoformat') else pt.due_date,
+            "estimated_hours": float(pt.estimated_hours or 0),
+            "worked_hours": float(pt.worked_hours or 0),
+            "company_name": company_name,
+            "plan_name": plan_name,
+            "plan_mode": plan_mode,
+            "project_id": prj.id,
+            "project_code": prj_code,
+            "project_title": prj.name,
+            "activity_code": pt_code,
+            "metadata": None,
+            "type": "project"
+        })
     
     # 2. Fetch from legacy JSON activities
     legacy_activities = fetch_project_rows_from_json(
@@ -186,6 +242,7 @@ def _project_activity_row_from_normalized(row: Dict[str, Any]) -> Dict[str, Any]
         "start_date": row.get("start_date"),
         "end_date": row.get("end_date"),
         "deadline_date": row.get("activity_deadline") or row.get("end_date"),
+        "deadline": row.get("activity_deadline") or row.get("end_date"),
         "estimated_hours": row.get("estimated_hours"),
         "worked_hours": row.get("worked_hours"),
         "company_name": row.get("company_name"),
@@ -196,4 +253,5 @@ def _project_activity_row_from_normalized(row: Dict[str, Any]) -> Dict[str, Any]
         "project_title": row.get("project_title"),
         "activity_code": row.get("activity_code"),
         "metadata": row.get("metadata"),
+        "type": "project",
     }

@@ -80,6 +80,10 @@ class Config:
     # Rate Limiting
     RATELIMIT_STORAGE_URL = REDIS_URL
 
+    # Telegram Webhook
+    EXTERNAL_URL = os.environ.get("EXTERNAL_URL")
+    TELEGRAM_SETUP_WEBHOOK = os.environ.get("TELEGRAM_SETUP_WEBHOOK", "false").lower() == "true"
+
 
 class DevelopmentConfig(Config):
     """Development configuration"""

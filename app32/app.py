@@ -323,8 +323,13 @@ def register_blueprints(app):
     app.register_blueprint(usuarios_bp)
 
     # Webhook Telegram (Sapiens Fase 3)
-    from api.webhooks.telegram_webhook import telegram_bp
+    from api.webhooks.telegram_webhook import telegram_bp, setup_webhook
     app.register_blueprint(telegram_bp, url_prefix='/webhook')
+
+    # Configuração automática do Webhook se EXTERNAL_URL estiver definido e SETUP ativo
+    if app.config.get('TELEGRAM_SETUP_WEBHOOK') and app.config.get('EXTERNAL_URL'):
+        print(f"🤖 [TELEGRAM] Verificando registro de Webhook para: {app.config.get('EXTERNAL_URL')}")
+        setup_webhook(app.config.get('EXTERNAL_URL'))
 
 if __name__ == '__main__':
     app = create_app()
