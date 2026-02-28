@@ -63,10 +63,25 @@ class ProjectListResource(Resource):
     @permission_required('projects', 'view')
     def get(self):
         """List all projects, optionally filtered by company_id and plan_id."""
+        import logging
+        logger = logging.getLogger(__name__)
+        
+        # Log incoming request details
+        from flask import session
+        from flask_login import current_user
+        
+        raw_cid = request.args.get('company_id')
+        logger.warning(f"[PROJECTS_API] raw company_id from URL: {raw_cid!r}")
+        logger.warning(f"[PROJECTS_API] session content: {dict(session)}")
+        logger.warning(f"[PROJECTS_API] user authenticated: {current_user.is_authenticated}")
+        
         company_id = get_request_company_id()
         plan_id = request.args.get('plan_id', type=int)
         
+        logger.warning(f"[PROJECTS_API] resolved company_id: {company_id}")
+        
         if not company_id:
+            logger.warning("[PROJECTS_API] company_id is None, returning []")
             return [], 200
             
         query = Project.query.filter_by(company_id=company_id).order_by(Project.id.asc())
@@ -74,6 +89,7 @@ class ProjectListResource(Resource):
             query = query.filter_by(plan_id=plan_id)
             
         projects = query.all()
+        logger.warning(f"[PROJECTS_API] found {len(projects)} projects for company_id={company_id}")
         return projects_schema.dump(projects), 200
 
     @permission_required('projects', 'create')
