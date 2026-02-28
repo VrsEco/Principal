@@ -68,29 +68,36 @@ class ProjectListResource(Resource):
         from datetime import datetime
         
         raw_cid = request.args.get('company_id')
+        log_path = '/srv/appgestaoversuscombr.45a4cd4b.configr.cloud/www/app32/logs/proj_api_debug.log'
         
         # Direct file logging for debugging in production
         try:
-            with open('/tmp/proj_api_debug.log', 'a') as lf:
-                lf.write(f"\n[{datetime.now()}] --- REQUEST ---\n")
-                lf.write(f"  raw company_id from URL: {raw_cid!r}\n")
+            with open(log_path, 'a') as lf:
+                lf.write(f"\n[{datetime.now()}] --- PROJECT GET REQUEST ---\n")
+                lf.write(f"  URL args: {dict(request.args)}\n")
                 lf.write(f"  session: {dict(session)}\n")
                 lf.write(f"  user authenticated: {current_user.is_authenticated}\n")
                 if current_user.is_authenticated:
                     lf.write(f"  user id: {current_user.id}, role: {current_user.role}\n")
         except Exception as le:
+            # Fallback for local dev or perm issue
             pass
         
         company_id = get_request_company_id()
         plan_id = request.args.get('plan_id', type=int)
         
         try:
-            with open('/tmp/proj_api_debug.log', 'a') as lf:
-                lf.write(f"  resolved company_id: {company_id}\n")
+            with open(log_path, 'a') as lf:
+                lf.write(f"  get_request_company_id resolved: {company_id}\n")
         except:
             pass
         
         if not company_id:
+            try:
+                with open(log_path, 'a') as lf:
+                    lf.write(f"  RETURNING [] because company_id is None\n")
+            except:
+                pass
             return [], 200
             
         query = Project.query.filter_by(company_id=company_id).order_by(Project.id.asc())
@@ -100,8 +107,8 @@ class ProjectListResource(Resource):
         projects = query.all()
         
         try:
-            with open('/tmp/proj_api_debug.log', 'a') as lf:
-                lf.write(f"  found {len(projects)} projects\n")
+            with open(log_path, 'a') as lf:
+                lf.write(f"  found {len(projects)} projects for {company_id}\n")
         except:
             pass
         
