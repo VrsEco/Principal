@@ -110,7 +110,8 @@ def get_user_activities_v2(
     scope: str = "me",
     filters: Optional[Dict] = None,
     company_ids: Optional[List[int]] = None,
-    employee_ids: Optional[List[int]] = None
+    employee_ids: Optional[List[int]] = None,
+    active_company_id: Optional[int] = None
 ) -> List[Dict[str, Any]]:
     """
     Unified entry point for user activities list.
@@ -143,125 +144,162 @@ def get_user_activities_v2(
 
     if not company_ids:
         logger.warning(f"⚠️ No company_ids found for user {user_id}")
-        return []
+        return [], {"me": 0, "company": 0, "general": 0}
 
-    # 2. Setup resolution based on scope
-    target_employee_ids = []
-    if scope == "me":
-        if my_employee_ids:
-            target_employee_ids = my_employee_ids
-        else:
-            # Fallback: user has no employee record linked. Show all activities
-            # from their associated companies (same as scope=company).
-            # This is common for admin/consultant users in production.
-            logger.warning(
-                f"⚠️ scope='me' requested but no employee records for user {user_id}. "
-                f"Falling back to scope='company' for companies={company_ids}"
-            )
-            # target_employee_ids remains [] → no employee filter → all company activities
-            scope = "company"
-    elif scope == "team":
-        target_employee_ids = employee_ids or []
-    elif scope == "company":
-        target_employee_ids = [] # Empty means no filter by employee
+    # 2. Scope resolution
+    # Always fetch everything in target company_ids to calculate counts correctly
+    allowed_company_ids = company_ids if company_ids else [c["company_id"] for c in associated if c.get("company_id")]
     
+    # Identify the "active" company for specific filtering
+    # If not provided, try to use the first available one
+    if not active_company_id and allowed_company_ids:
+        active_company_id = allowed_company_ids[0]
+
     # 3. Build lookup for identity resolution
-    directory, lookup = build_employee_lookup_v2(company_ids)
+    directory, lookup = build_employee_lookup_v2(allowed_company_ids)
     
-    # 4. Fetch project activities
+    # 4 & 5. Fetch ALL activities for allowed companies (without employee filter to get counts)
     project_rows = fetch_normalized_project_rows(
-        employee_ids=target_employee_ids or filters.get("employee_ids"),
-        company_ids=company_ids,
+        employee_ids=None,
+        company_ids=allowed_company_ids,
         project_ids=filters.get("project_ids"),
         employee_lookup=lookup,
         employee_directory=directory
     )
-    logger.info(f"📋 Found {len(project_rows)} project activities for companies {company_ids}")
-    
-    # 5. Fetch process activities
     process_rows = fetch_normalized_process_rows(
-        employee_ids=target_employee_ids or filters.get("employee_ids"),
-        company_ids=company_ids,
+        employee_ids=None,
+        company_ids=allowed_company_ids,
         process_ids=filters.get("process_ids"),
         employee_lookup=lookup,
         employee_directory=directory
     )
-    logger.info(f"⚙️ Found {len(process_rows)} process activities for companies {company_ids}")
     
-    # 6. Combine and Enrich
-    all_activities = project_rows + process_rows
-    logger.info(f"✅ Total activities found: {len(all_activities)}")
-    
+    all_raw = project_rows + process_rows
+    logger.info(f"📊 Raw Discovery: Found {len(all_raw)} total activities across all allowed companies.")
+
     today = date.today()
-    for act in all_activities:
-        # 6.1 Calculate Overdue
+    me_count = 0
+    company_scope_count = 0
+    general_count = 0
+    
+    # Search and sidebar filter parameters
+    search_term = (filters.get("search") or "").lower().strip()
+    # filters.get("employee_ids") are the specific employees selected in the sidebar
+    sidebar_emp_ids = set(filters.get("employee_ids") or [])
+    
+    final_activities = []
+    
+    # Filter and Enrich
+    for act in all_raw:
+        # A. Basic Sidebar Filtering (Applies to all scopes counters)
+        
+        # 1. Search filter
+        if search_term:
+            title = (act.get("title") or "").lower()
+            desc = (act.get("description") or "").lower()
+            p_title = (act.get("project_title") or "").lower()
+            if search_term not in title and search_term not in desc and search_term not in p_title:
+                continue
+
+        # 2. Employee filter (sidebar selection)
+        if sidebar_emp_ids:
+            act_emp_ids = set()
+            if act.get("type") == "project":
+                if act.get("responsible_id"): act_emp_ids.add(act.get("responsible_id"))
+                if act.get("executor_id"): act_emp_ids.add(act.get("executor_id"))
+            else:
+                collabs = act.get("collaborators_json") or []
+                for c in collabs:
+                    cid = c.get("id") or c.get("employee_id")
+                    if cid: act_emp_ids.add(cid)
+            
+            if not (act_emp_ids & sidebar_emp_ids):
+                continue
+
+        # B. Calculate Overdue and metadata
         deadline_val = act.get("deadline")
-        status = (act.get("status") or "").lower()
+        act_status = (act.get("status") or "").lower()
+        is_overdue = False
         if deadline_val:
             try:
                 d_dt = None
                 if isinstance(deadline_val, str):
-                    try:
-                        d_dt = date.fromisoformat(deadline_val[:10])
-                    except ValueError:
-                        pass
-                elif hasattr(deadline_val, 'date'):
-                    d_dt = deadline_val.date()
-                elif isinstance(deadline_val, date):
-                    d_dt = deadline_val
-                
+                    try: d_dt = date.fromisoformat(deadline_val[:10])
+                    except ValueError: pass
+                elif hasattr(deadline_val, 'date'): d_dt = deadline_val.date()
+                elif isinstance(deadline_val, date): d_dt = deadline_val
                 if d_dt:
-                    act["is_overdue"] = d_dt < today and status not in ("completed", "done")
-                else:
-                    act["is_overdue"] = False
-            except Exception as e:
-                logger.warning(f"Error parsing date {deadline_val}: {e}")
-                act["is_overdue"] = False
-        else:
-            act["is_overdue"] = False
+                    is_overdue = d_dt < today and act_status not in ("completed", "done", "cancelado")
+            except: pass
+        act["is_overdue"] = is_overdue
 
-        # 6.2 Calculate Assignment info (Crucial for Frontend V2)
-        if scope == 'me':
-            act["viewer_is_directly_assigned"] = True
-            if act.get("type") == "project":
-                if act.get("executor_id") in my_employee_ids:
-                     act["assignment"] = {"type": "executor", "label": "⚙️ Executor"}
-                else:
-                     act["assignment"] = {"type": "responsible", "label": "👤 Responsável"}
-            else:
-                act["assignment"] = {"type": "assigned", "label": "⚙️ Executor"}
+        # Determine if it's "Mine" (globally)
+        is_mine = False
+        if act.get("type") == "project":
+            is_mine = act.get("responsible_id") in my_employee_ids or act.get("executor_id") in my_employee_ids
         else:
-            # Check if user is among collaborators for 'team' or 'company' scope
-            is_assigned = False
-            if act.get("type") == "project":
-                is_assigned = act.get("responsible_id") in my_employee_ids or act.get("executor_id") in my_employee_ids
-            else:
-                collabs = act.get("collaborators_json") or []
-                is_assigned = any((c.get("id") or c.get("employee_id")) in my_employee_ids for c in collabs)
+            collabs = act.get("collaborators_json") or []
+            is_mine = any((c.get("id") or c.get("employee_id")) in my_employee_ids for c in collabs)
+        
+        # Determine if it's in active company
+        is_in_active_company = (act.get("company_id") == active_company_id)
+        
+        # C. Update Counters (Only for items that matched A)
+        if is_mine and is_in_active_company:
+            me_count += 1
             
-            act["viewer_is_directly_assigned"] = is_assigned
-            if is_assigned:
-                 act["assignment"] = {"type": "assigned", "label": "⚙️ Atribuído"}
-            else:
-                 act["assignment"] = {"type": "none", "label": ""}
+        if is_in_active_company:
+            company_scope_count += 1
+            
+        general_count += 1
 
-    # 7. Sort
-    # Sorting logic - safer approach to handle mix of date/datetime/None
+        # D. Determine if it enters the final list based on requested scope
+        include = False
+        if scope == "me":
+            if is_mine and is_in_active_company:
+                include = True
+        elif scope == "company":
+            if is_in_active_company:
+                include = True
+        elif scope == "general":
+            # Geral scope respects sidebar company filter
+            if not company_ids or act.get("company_id") in company_ids:
+                include = True
+            
+        if include:
+            # Enrich Assignment for UI
+            if is_mine:
+                act["viewer_is_directly_assigned"] = True
+                if act.get("type") == "project":
+                    if act.get("executor_id") in my_employee_ids:
+                        act["assignment"] = {"type": "executor", "label": "⚙️ Executor"}
+                    else:
+                        act["assignment"] = {"type": "responsible", "label": "👤 Responsável"}
+                else:
+                    act["assignment"] = {"type": "assigned", "label": "⚙️ Executor"}
+            else:
+                act["viewer_is_directly_assigned"] = False
+                act["assignment"] = {"type": "none", "label": ""}
+            
+            final_activities.append(act)
+
+    # 7. Sort final list
     def get_sort_key(x):
         d_val = x.get("deadline_date")
         d_obj = None
         if isinstance(d_val, str):
-            try:
-                d_obj = date.fromisoformat(d_val[:10])
-            except:
-                pass
-        elif hasattr(d_val, 'date'):
-            d_obj = d_val.date()
-        elif isinstance(d_val, date):
-            d_obj = d_val
-        
-        return (d_obj or date(9999, 12, 31), safe_int(x.get("id")) or 0)
+            try: d_obj = date.fromisoformat(d_val[:10])
+            except: pass
+        elif hasattr(d_val, 'date'): d_obj = d_val.date()
+        elif isinstance(d_val, date): d_obj = d_val
+        return (d_obj or date(9999, 12, 31), x.get("id") or 0)
 
-    all_activities.sort(key=get_sort_key)
-
-    return all_activities
+    final_activities.sort(key=get_sort_key)
+    
+    scope_counts = {
+        "me": me_count,
+        "company": company_scope_count,
+        "general": general_count
+    }
+    
+    return final_activities, scope_counts

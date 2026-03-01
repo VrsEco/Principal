@@ -163,13 +163,16 @@ def my_work_api_activities():
     }
 
 
-    logger.info(f"📊 API Request: scope={scope}, company_ids={company_ids}, filters={filters}")
+    active_company_id = request.args.get('active_company_id', type=int)
+
+    logger.info(f"📊 API Request: scope={scope}, company_ids={company_ids}, active_company={active_company_id}")
     try:
-        activities = get_user_activities_v2(
+        activities, scope_counts = get_user_activities_v2(
             user_id=current_user.id,
             scope=scope,
             filters=filters,
-            company_ids=company_ids
+            company_ids=company_ids,
+            active_company_id=active_company_id
         )
         
         stats = _calculate_stats_from_activities(activities)
@@ -177,7 +180,8 @@ def my_work_api_activities():
         return jsonify({
             "success": True,
             "data": activities,
-            "stats": stats
+            "stats": stats,
+            "scope_counts": scope_counts
         })
     except Exception as e:
         import traceback

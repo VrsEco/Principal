@@ -58,7 +58,7 @@ const DELIVERY_FILTER_OPTIONS = [
 const DELIVERY_FILTER_VALUES = DELIVERY_FILTER_OPTIONS.map(option => option.value);
 
 const state = {
-  currentScope: 'me', // 'me', 'team', 'company'
+  currentScope: 'me', // 'me', 'company', 'general'
   searchQuery: '',
   sortBy: 'deadline',
   activities: [],
@@ -267,7 +267,7 @@ const FILTER_MULTISELECTS = [
     selectAllByDefault: true,
     optionsProvider: () => getCollaboratorOptions(),
     labels: {
-      empty: 'Todos os responsáveis',
+      empty: 'Filtre por empresa para ver responsáveis',
       all: 'Todos os responsáveis',
       summary: count => `${count} responsáveis`
     },
@@ -285,7 +285,7 @@ const FILTER_MULTISELECTS = [
     selectAllByDefault: true,
     optionsProvider: () => getCollaboratorOptions(),
     labels: {
-      empty: 'Todos os executores',
+      empty: 'Filtre por empresa para ver executores',
       all: 'Todos os executores',
       summary: count => `${count} executores`
     },
@@ -303,7 +303,7 @@ const FILTER_MULTISELECTS = [
     selectAllByDefault: true,
     optionsProvider: () => getProjectOptions(),
     labels: {
-      empty: 'Nenhum projeto',
+      empty: 'Filtre por empresa para ver projetos',
       all: 'Todos os projetos',
       summary: count => `${count} projetos`
     },
@@ -321,7 +321,7 @@ const FILTER_MULTISELECTS = [
     selectAllByDefault: true,
     optionsProvider: () => getProcessOptions(),
     labels: {
-      empty: 'Nenhum processo',
+      empty: 'Filtre por empresa para ver processos',
       all: 'Todos os processos',
       summary: count => `${count} processos`
     },
@@ -340,7 +340,7 @@ const FILTER_MULTISELECTS = [
     requireSelection: false,
     optionsProvider: () => getProcessOwnerOptions(),
     labels: {
-      empty: 'Nenhum dono',
+      empty: 'Filtre por empresa para ver donos',
       all: 'Todos os donos',
       summary: count => `${count} donos`
     },
@@ -666,45 +666,57 @@ function buildCompanyLabel(company) {
 }
 
 function getCollaboratorOptions() {
-  return (state.collaborators || []).map(collaborator => ({
-    id: collaborator.id,
-    label: collaborator.name || 'Colaborador sem nome',
-    helper: collaborator.company_name || ''
-  }));
+  const selectedCids = new Set(state.selectedCompanyIds || []);
+  return (state.collaborators || [])
+    .filter(c => selectedCids.has(c.company_id))
+    .map(collaborator => ({
+      id: collaborator.id,
+      label: collaborator.name || 'Colaborador sem nome',
+      helper: collaborator.company_name || ''
+    }));
 }
 
 function getProjectOptions() {
-  return (state.projectsDirectory || []).map(project => {
-    const name = project.title || project.name || 'Projeto sem título';
-    const code = project.code || project.project_code || '';
-    const label = code ? `${code}-${name}` : name;
-    return {
-      id: project.id,
-      label,
-      helper: project.company_name || ''
-    };
-  });
+  const selectedCids = new Set(state.selectedCompanyIds || []);
+  return (state.projectsDirectory || [])
+    .filter(p => selectedCids.has(p.company_id))
+    .map(project => {
+      const name = project.title || project.name || 'Projeto sem título';
+      const code = project.code || project.project_code || '';
+      const label = code ? `${code}-${name}` : name;
+      return {
+        id: project.id,
+        label,
+        helper: project.company_name || ''
+      };
+    });
 }
 
 function getProcessOptions() {
-  return (state.processesDirectory || []).map(process => {
-    const name = process.title || process.name || 'Processo sem título';
-    const code = process.code || process.process_code || '';
-    const label = code ? `${code} - ${name}` : name;
-    return {
-      id: process.id,
-      label,
-      helper: process.company_name || ''
-    };
-  });
+  const selectedCids = new Set(state.selectedCompanyIds || []);
+  return (state.processesDirectory || [])
+    .filter(p => selectedCids.has(p.company_id))
+    .map(process => {
+      const name = process.title || process.name || 'Processo sem título';
+      const code = process.code || process.process_code || '';
+      const label = code ? `${code} - ${name}` : name;
+      return {
+        id: process.id,
+        label,
+        helper: process.company_name || ''
+      };
+    });
 }
 
 function getProcessOwnerOptions() {
-  return (state.processOwnersDirectory || []).map(owner => ({
-    id: owner.id,
-    label: owner.name || 'Dono sem nome',
-    helper: owner.company_name || ''
-  }));
+  const selectedCids = new Set(state.selectedCompanyIds || []);
+  return (state.processOwnersDirectory || [])
+    .filter(o => !o.company_id || selectedCids.has(o.company_id))
+    .map(owner => ({
+      id: owner.id,
+      label: owner.name || 'Dono sem nome',
+      helper: owner.company_name || ''
+    }));
 }
 
 function updateProcessOwnersFromActivities() {
@@ -1157,8 +1169,11 @@ async function loadActivitiesData() {
 
     setActivitiesLoading(true);
 
+    const activeCompanyId = window.companyId || '';
+
     const params = new URLSearchParams({
-      scope: state.currentScope
+      scope: state.currentScope,
+      active_company_id: activeCompanyId
     });
 
     // Adicionar company_ids se houver seleção
@@ -1226,6 +1241,10 @@ async function loadActivitiesData() {
     }
 
     state.activities = Array.isArray(data.data) ? data.data : [];
+
+    if (data.scope_counts) {
+      updateScopeButtons(data.scope_counts);
+    }
 
     try {
       await hydrateProcessActivities();
@@ -1399,6 +1418,56 @@ function buildExecutorNames(record) {
     });
   }
   return dedupeNames(names);
+}
+
+function handleCompanySelectionChange() {
+  console.log('🏢 [Company Selection Change] Refreshing dependent filters...');
+  const selectedCids = new Set(state.selectedCompanyIds || []);
+
+  // 1. Cleanup orphaned selections in other filters
+  if (state.collaborators?.length) {
+    const validCollaboratorIds = new Set(
+      state.collaborators
+        .filter(c => selectedCids.has(c.company_id))
+        .map(c => c.id)
+    );
+    state.selectedResponsibleIds = state.selectedResponsibleIds.filter(id => validCollaboratorIds.has(id));
+    state.selectedExecutorIds = state.selectedExecutorIds.filter(id => validCollaboratorIds.has(id));
+  }
+
+  if (state.projectsDirectory?.length) {
+    const validProjectIds = new Set(
+      state.projectsDirectory
+        .filter(p => selectedCids.has(p.company_id))
+        .map(p => p.id)
+    );
+    state.selectedProjectIds = state.selectedProjectIds.filter(id => validProjectIds.has(id));
+  }
+
+  if (state.processesDirectory?.length) {
+    const validProcessIds = new Set(
+      state.processesDirectory
+        .filter(p => selectedCids.has(p.company_id))
+        .map(p => p.id)
+    );
+    state.selectedProcessIds = state.selectedProcessIds.filter(id => validProcessIds.has(id));
+  }
+
+  // 2. Trigger re-sync on all dependent multiselects to update their lists and labels
+  const dependentKeys = ['responsible', 'executor', 'projects', 'processes', 'processOwners'];
+  dependentKeys.forEach(key => {
+    const config = FILTER_MULTISELECTS.find(m => m.key === key);
+    if (config) {
+      const trigger = document.getElementById(config.triggerId);
+      if (trigger) {
+        trigger.dispatchEvent(new CustomEvent('multiselect:re-sync'));
+      }
+    }
+  });
+
+  // 3. Normal flow: save and load
+  saveFiltersToCache();
+  loadActivitiesData();
 }
 
 function findFirstCollaboratorByRole(collaborators, role) {
@@ -3975,6 +4044,21 @@ function initializeReportLink() {
 window.openModal = openModal;
 window.closeModal = closeModal;
 window.updateReportLink = updateReportLink;
+
+function updateScopeButtons(counts) {
+  const btnMe = document.getElementById('scope-btn-me');
+  const btnCompany = document.getElementById('scope-btn-company');
+  const btnGeneral = document.getElementById('scope-btn-general');
+
+  if (btnMe) {
+    btnMe.disabled = (counts.me === 0);
+    if (counts.me === 0 && state.currentScope === 'me') {
+      // Optional: auto-switch if no data in current scope? User might find it confusing
+    }
+  }
+  if (btnCompany) btnCompany.disabled = (counts.company === 0);
+  if (btnGeneral) btnGeneral.disabled = (counts.general === 0);
+}
 
 function initializeScopeSelector() {
   const scopeButtons = document.querySelectorAll('.scope-btn');
