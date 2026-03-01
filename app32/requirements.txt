@@ -14,6 +14,7 @@ requests
 psycopg2-binary
 sqlalchemy
 alembic
+flask-migrate
 
 # AI Intelligence & Orchestration (OpenAI + LangGraph)
 langchain>=0.2.16,<0.3.0
