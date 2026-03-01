@@ -2,10 +2,13 @@ from flask import request, jsonify, Blueprint
 import telebot
 import os
 import logging
+import traceback
+import logging
 from threading import Thread
 
 # Import LangGraph
 from src.intelligence.work_agents.graph import work_agent_graph
+from src.intelligence.tools import escalate_technical_issue
 
 logger = logging.getLogger(__name__)
 
@@ -126,8 +129,35 @@ def process_telegram_message(app, message: telebot.types.Message):
                 bot.reply_to(message, response_text)
                 
         except Exception as e:
-            logger.error(f"Erro processando mensagem do telegram: {str(e)}")
-            bot.reply_to(message, "Desculpe, ocorreu um erro interno ao processar sua solicitação no Gestão Versus.")
+            tb = traceback.format_exc()
+            logger.error(f"❌ Erro crítico no Telegram Webhook: {str(e)}\n{tb}")
+            
+            # Tentar escalonar para o Time de Engenharia (@AI_ENGINEER / @ARQUITETO)
+            try:
+                with app.app_context():
+                    error_msg = f"Crash no Webhook do Telegram: {str(e)}"
+                    context = f"Usuário TG ID: {telegram_id}\n\nTraceback:\n{tb}"
+                    # Invocamos diretamente a lógica da tool ou o service
+                    from models.agent_action import AgentAction
+                    from models import db
+                    
+                    action = AgentAction(
+                        type='technical_fix',
+                        status='pending',
+                        requesting_agent='telegram_webhook',
+                        handling_agent='engineering_squad',
+                        title='Crash no Webhook do Telegram',
+                        description=error_msg,
+                        payload={"error": str(e), "traceback": tb, "telegram_id": telegram_id, "file": "api/webhooks/telegram_webhook.py"},
+                        user_id=getattr(user, 'id', None) if 'user' in locals() else None
+                    )
+                    db.session.add(action)
+                    db.session.commit()
+                    logger.info(f"✅ Erro escalonado via Ticket #{action.id}")
+            except Exception as esc_err:
+                logger.error(f"Falha ao escalonar erro: {esc_err}")
+
+            bot.reply_to(message, "Desculpe, ocorreu um erro interno ao processar sua solicitação no Gestão Versus. O time de engenharia foi notificado.")
 
 # Rota HTTP (Webhook) que será chamada pelo servidor do Telegram
 @telegram_bp.route('/telegram', methods=['POST'])
