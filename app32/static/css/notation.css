@@ -75,9 +75,9 @@ textarea:focus {
 
 .note-row {
     background: var(--surface-secondary);
-    border: 1px solid var(--border);
+    border: 1.5px solid #e2e8f0;
     border-radius: 14px;
-    padding: 1rem;
+    padding: 1.25rem;
     display: flex;
     flex-direction: column;
     gap: 0.5rem;
@@ -116,12 +116,13 @@ textarea:focus {
     margin: 0;
     font-size: 0.9375rem;
     color: var(--text-primary);
-    overflow: hidden;
-    text-overflow: ellipsis;
-    display: -webkit-box;
-    -webkit-line-clamp: 3;
-    -webkit-box-orient: vertical;
+    overflow: visible;
+    text-overflow: unset;
+    display: block;
     line-height: 1.5;
+    word-break: break-word;
+    overflow-wrap: break-word;
+    white-space: pre-wrap;
 }
 
 .note-row-location {

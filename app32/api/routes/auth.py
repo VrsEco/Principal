@@ -1,7 +1,8 @@
 from flask import Blueprint, render_template, request, jsonify, redirect, url_for, session
 from flask_login import login_user, logout_user, login_required, current_user
-from models import User, Employee, Company, ProjectTask, ProcessInstance
+from models import User, Employee, Company, ProjectTask, ProcessInstance, Project
 from datetime import date, datetime, timedelta
+from sqlalchemy.orm import joinedload
 
 auth_bp = Blueprint('auth', __name__)
 
@@ -77,7 +78,7 @@ def portal():
 
     if employee_ids:
         # 1. Project Tasks
-        tasks = ProjectTask.query.filter(
+        tasks = ProjectTask.query.options(joinedload(ProjectTask.project)).filter(
             ProjectTask.employee_id.in_(employee_ids),
             ProjectTask.status.notin_(['completed', 'done', 'cancelled'])
         ).all()
@@ -98,11 +99,13 @@ def portal():
             if is_overdue or (task_date and task_date <= next_week):
                 activities.append({
                     "type": "projeto",
+                    "category": "Projeto",
+                    "company_id": t.project.company_id if t.project else None,
                     "title": t.what,
                     "code": t.code,
                     "due_date": t.due_date,
                     "status": t.status,
-                    "priority": "Normal",
+                    "priority": t.priority or "Normal",
                     "is_overdue": is_overdue,
                     "is_planned": task_date > today if task_date else False
                 })
@@ -124,19 +127,35 @@ def portal():
                     stats["overdue"] += 1
                 else:
                     stats["planned"] += 1
+                stats["hours_total"] += float(inst.estimated_hours or 0)
 
                 # Filtra para a lista
                 if is_overdue or (inst_date and inst_date <= next_week):
                     activities.append({
                         "type": "processo",
+                        "category": "Processo",
+                        "company_id": inst.company_id,
                         "title": inst.title,
                         "code": inst.instance_code,
                         "due_date": inst.due_date,
                         "status": inst.status,
-                        "priority": "Alta",
+                        "priority": inst.priority or "Alta",
                         "is_overdue": is_overdue,
                         "is_planned": inst_date > today if inst_date else False
                     })
+
+    # Map companies for display names (Code - Name)
+    comp_display = {c.id: f"{c.client_code} - {c.name}" if c.client_code else c.name for c in companies}
+    
+    for act in activities:
+        cid = act.get('company_id')
+        if cid:
+            if cid not in comp_display:
+                c = Company.query.get(cid)
+                if c:
+                    comp_display[cid] = f"{c.client_code} - {c.name}" if c.client_code else c.name
+            
+            act['type'] = comp_display.get(cid, act['type'])
 
     # Sort activities: Overdue first, then by date
     activities.sort(key=lambda x: (not x['is_overdue'], (x['due_date'].date() if isinstance(x['due_date'], datetime) else x['due_date']) if x['due_date'] else date.max))
