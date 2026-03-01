@@ -4,28 +4,7 @@
     </a>
 </div>
 
-{% if active_company %}
-<div class="company-badge-wrapper" style="padding: 0 1.25rem 1.25rem 1.25rem;">
-    <div style="
-        font-size: 0.75rem; 
-        font-weight: 700; 
-        color: #15803d; 
-        background: #f0fdf4; 
-        padding: 0.75rem; 
-        border-radius: var(--btn-radius); 
-        border: 1px solid #dcfce7;
-        text-align: center;
-        white-space: nowrap;
-        overflow: hidden;
-        text-overflow: ellipsis;
-        box-shadow: 0 2px 4px rgba(21, 128, 61, 0.05);
-        transition: var(--transition);
-        cursor: default;
-    " title="{{ active_company.name }}">
-        <span style="opacity: 0.7; margin-right: 4px;">AA -</span> {{ active_company.name }}
-    </div>
-</div>
-{% endif %}
+
 
 <nav class="sidebar-nav">
     <span class="sidebar-section-title">Acesso Rápido</span>

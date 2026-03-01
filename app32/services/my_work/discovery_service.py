@@ -35,7 +35,7 @@ def get_filter_options_v2(user_id: int) -> Dict[str, List[Dict[str, Any]]]:
 
     # 1. Resolve Companies based on Role
     if user_role == 'admin':
-        all_comps = Company.query.order_by(Company.name).all()
+        all_comps = Company.query.filter(Company.is_active == True).order_by(Company.name).all()
         unique_companies = [
             {
                 "company_id": c.id,
@@ -52,6 +52,11 @@ def get_filter_options_v2(user_id: int) -> Dict[str, List[Dict[str, Any]]]:
         seen_ids = set()
         for c in base_companies:
             cid = c.get("company_id")
+            # Filter inactive companies from associations
+            is_active = c.get("is_active")
+            if is_active is False: # Explicitly inactive
+                continue
+
             if cid and cid not in seen_ids:
                 seen_ids.add(cid)
                 unique_companies.append({
@@ -129,16 +134,22 @@ def get_user_activities_v2(
     # Target companies resolution
     if not company_ids:
         if user_role == 'admin':
-            company_ids = [c.id for c in Company.query.all()]
-            logger.info(f"👔 Admin Global Search: Found {len(company_ids)} companies.")
+            company_ids = [c.id for c in Company.query.filter(Company.is_active == True).all()]
+            logger.info(f"👔 Admin Global Search: Found {len(company_ids)} active companies.")
         else:
-            company_ids = [c["company_id"] for c in associated if c.get("company_id")]
-            logger.info(f"👤 Regular Search: Linked to {len(company_ids)} companies.")
+            # Re-fetch associations with is_active filter or rely on the previous logic
+            company_ids = [c["company_id"] for c in associated if c.get("company_id") and c.get("is_active") is not False]
+            logger.info(f"👤 Regular Search: Linked to {len(company_ids)} active companies.")
     else:
         # If company_ids provided, ensure they are within user access (skip for admin)
         if user_role != 'admin':
-            my_cids = set([c["company_id"] for c in associated if c.get("company_id")])
+            my_cids = set([c["company_id"] for c in associated if c.get("company_id") and c.get("is_active") is not False])
             company_ids = [cid for cid in company_ids if cid in my_cids]
+        else:
+            # Even for admin, if explicitids provided, should we filter out inactive ones globally?
+            # Usually yes if the rule is strict.
+            active_ids = set([c.id for c in Company.query.filter(Company.is_active == True).all()])
+            company_ids = [cid for cid in company_ids if cid in active_ids]
 
     logger.info(f"🔍 Discovery [scope={scope}]: user={user_id}, role={user_role}, target_companies={company_ids}")
 
