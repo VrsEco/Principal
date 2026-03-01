@@ -55,10 +55,16 @@ fi
 
 # 4. Reinício da Aplicação
 echo "🔄 Reiniciando servidor uWSGI (Passenger/Configr)..."
+# Toca o restart.txt na raiz e no tmp (padrão Passenger)
 touch $WWW/restart.txt
-# Backup do reinício: tocar o wsgi também
+mkdir -p $WWW/tmp && touch $WWW/tmp/restart.txt
+
+# Toca o WSGI na pasta da app E na raiz do www
 if [ -f "passenger_wsgi.py" ]; then
     touch passenger_wsgi.py
+fi
+if [ -f "$WWW/passenger_wsgi.py" ]; then
+    touch "$WWW/passenger_wsgi.py"
 fi
 
 echo "----------------------------------------------------"
