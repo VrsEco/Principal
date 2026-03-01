@@ -1,0 +1,16 @@
+Traceback (most recent call last):
+  File "C:\GestaoVersus\app32\audit_telegram.py", line 6, in <module>
+    app = create_app('production')
+          ^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\GestaoVersus\app32\app.py", line 63, in create_app
+    register_blueprints(app)
+  File "C:\GestaoVersus\app32\app.py", line 348, in register_blueprints
+    print(f"\U0001f916 [TELEGRAM] Verificando registro de Webhook para: {app.config.get('EXTERNAL_URL')}")
+  File "C:\Users\mff20\anaconda3\Lib\encodings\cp1252.py", line 19, in encode
+    return codecs.charmap_encode(input,self.errors,encoding_table)[0]
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+UnicodeEncodeError: 'charmap' codec can't encode character '\U0001f916' in position 0: character maps to <undefined>
+DEBUG: Registering Jinja filters...
+DEBUG: Registering API resources...
+DEBUG: API resources registered.
+DEBUG: Registering blueprints...

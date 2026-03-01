@@ -345,7 +345,7 @@ def register_blueprints(app):
 
     # Configuração automática do Webhook se EXTERNAL_URL estiver definido e SETUP ativo
     if app.config.get('TELEGRAM_SETUP_WEBHOOK') and app.config.get('EXTERNAL_URL'):
-        print(f"🤖 [TELEGRAM] Verificando registro de Webhook para: {app.config.get('EXTERNAL_URL')}")
+        print(f"BOT [TELEGRAM] Verificando registro de Webhook para: {app.config.get('EXTERNAL_URL')}")
         setup_webhook(app.config.get('EXTERNAL_URL'))
 
 if __name__ == '__main__':

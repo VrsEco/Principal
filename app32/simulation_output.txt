@@ -1,0 +1,109 @@
+INFO:services.scheduler_service:\U0001f4c5 Scheduler Service inicializado
+INFO:services.scheduler_service:\U0001f680 Inicializando Scheduler Service...
+INFO:services.scheduler_service:\U0001f527 Configurando jobs de rotina...
+INFO:apscheduler.scheduler:Adding job tentatively -- it will be properly scheduled when the scheduler starts
+INFO:services.scheduler_service:\u2705 Job 'process_daily_routines' adicionado: cron {'hour': 0, 'minute': 1, 'name': 'Processamento Dißrio de Rotinas'}
+INFO:apscheduler.scheduler:Adding job tentatively -- it will be properly scheduled when the scheduler starts
+INFO:services.scheduler_service:\u2705 Job 'check_overdue_tasks' adicionado: cron {'minute': 0, 'name': 'VerificaþÒo de Tarefas Atrasadas'}
+INFO:services.scheduler_service:\u2705 Jobs de rotina configurados!
+INFO:services.scheduler_service:\U0001f527 Configurando jobs proativos do Sapiens...
+INFO:apscheduler.scheduler:Adding job tentatively -- it will be properly scheduled when the scheduler starts
+INFO:services.scheduler_service:\u2705 Job 'proactive_morning_summary' adicionado: cron {'hour': 8, 'minute': 0, 'name': 'Resumo Matinal Proativo (Telegram)'}
+INFO:services.scheduler_service:\u2705 Jobs proativos configurados!
+INFO:apscheduler.scheduler:Adding job tentatively -- it will be properly scheduled when the scheduler starts
+INFO:services.scheduler_service:\u2705 Job 'chat_timeout_monitor' adicionado: interval {'seconds': 30, 'name': 'Monitor de Inatividade de Chat'}
+INFO:services.scheduler_service:\u2705 Job de Timeout de Chat configurado!
+INFO:apscheduler.scheduler:Added job "Processamento Dißrio de Rotinas" to job store "default"
+INFO:apscheduler.scheduler:Added job "VerificaþÒo de Tarefas Atrasadas" to job store "default"
+INFO:apscheduler.scheduler:Added job "Resumo Matinal Proativo (Telegram)" to job store "default"
+INFO:apscheduler.scheduler:Added job "Monitor de Inatividade de Chat" to job store "default"
+INFO:apscheduler.scheduler:Scheduler started
+INFO:services.scheduler_service:\u2705 Scheduler iniciado com sucesso
+INFO:services.scheduler_service:\U0001f4cb Jobs agendados: 4
+INFO:services.scheduler_service:  - chat_timeout_monitor: pr¾xima execuþÒo em 2026-03-01 16:38:12.412032-03:00
+INFO:services.scheduler_service:  - check_overdue_tasks: pr¾xima execuþÒo em 2026-03-01 17:00:00-03:00
+INFO:services.scheduler_service:  - process_daily_routines: pr¾xima execuþÒo em 2026-03-02 00:01:00-03:00
+INFO:services.scheduler_service:  - proactive_morning_summary: pr¾xima execuþÒo em 2026-03-02 08:00:00-03:00
+INFO:services.scheduler_service:================================================================================
+INFO:services.scheduler_service:\u2705 SCHEDULER ATIVO E FUNCIONANDO!
+INFO:services.scheduler_service:================================================================================
+INFO:api.webhooks.telegram_webhook:Mensagem recebida do Telegram ID 551989445: Ola Sapiens, teste de diagnostico sem emojis
+ERROR:api.webhooks.telegram_webhook:\u274c Erro crÝtico no Telegram Webhook: A request to the Telegram API was unsuccessful. Error code: 400. Description: Bad Request: field "message_id" must be a Number
+Traceback (most recent call last):
+  File "C:\GestaoVersus\app32\api\webhooks\telegram_webhook.py", line 50, in process_telegram_message
+    bot.reply_to(message, msg, parse_mode='Markdown')
+  File "C:\Users\mff20\anaconda3\Lib\site-packages\telebot\__init__.py", line 6442, in reply_to
+    return self.send_message(message.chat.id, text, reply_parameters=reply_parameters, **kwargs)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\mff20\anaconda3\Lib\site-packages\telebot\__init__.py", line 1834, in send_message
+    apihelper.send_message(
+  File "C:\Users\mff20\anaconda3\Lib\site-packages\telebot\apihelper.py", line 282, in send_message
+    return _make_request(token, method_url, params=payload, method='post')
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\mff20\anaconda3\Lib\site-packages\telebot\apihelper.py", line 168, in _make_request
+    json_result = _check_result(method_name, result)
+                  ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\mff20\anaconda3\Lib\site-packages\telebot\apihelper.py", line 197, in _check_result
+    raise ApiTelegramException(method_name, result, result_json)
+telebot.apihelper.ApiTelegramException: A request to the Telegram API was unsuccessful. Error code: 400. Description: Bad Request: field "message_id" must be a Number
+
+ERROR:api.webhooks.telegram_webhook:Falha ao escalonar erro: (psycopg2.errors.NotNullViolation) null value in column "company_id" of relation "agent_actions" violates not-null constraint
+DETAIL:  Failing row contains (5, technical_fix, pending, telegram_webhook, engineering_squad, Crash no Webhook do Telegram, Crash no Webhook do Telegram: A request to the Telegram API was ..., {"error": "A request to the Telegram API was unsuccessful. Error..., null, null, null, null, null, 2026-03-01 19:37:58.578073, null, null).
+
+[SQL: INSERT INTO agent_actions (type, status, requesting_agent, handling_agent, title, description, payload, original_file, backup_content, company_id, user_id, user_feedback, created_at, resolved_at, executed_at) VALUES (%(type)s, %(status)s, %(requesting_agent)s, %(handling_agent)s, %(title)s, %(description)s, %(payload)s, %(original_file)s, %(backup_content)s, %(company_id)s, %(user_id)s, %(user_feedback)s, %(created_at)s, %(resolved_at)s, %(executed_at)s) RETURNING agent_actions.id]
+[parameters: {'type': 'technical_fix', 'status': 'pending', 'requesting_agent': 'telegram_webhook', 'handling_agent': 'engineering_squad', 'title': 'Crash no Webhook do Telegram', 'description': 'Crash no Webhook do Telegram: A request to the Telegram API was unsuccessful. Error code: 400. Description: Bad Request: field "message_id" must be a Number', 'payload': '{"error": "A request to the Telegram API was unsuccessful. Error code: 400. Description: Bad Request: field \\"message_id\\" must be a Number", "trac ... (1519 characters truncated) ... : 400. Description: Bad Request: field \\"message_id\\" must be a Number\\n", "telegram_id": "551989445", "file": "api/webhooks/telegram_webhook.py"}', 'original_file': None, 'backup_content': None, 'company_id': None, 'user_id': None, 'user_feedback': None, 'created_at': datetime.datetime(2026, 3, 1, 19, 37, 58, 578073), 'resolved_at': None, 'executed_at': None}]
+(Background on this error at: https://sqlalche.me/e/20/gkpj)
+Traceback (most recent call last):
+  File "C:\GestaoVersus\app32\api\webhooks\telegram_webhook.py", line 50, in process_telegram_message
+    bot.reply_to(message, msg, parse_mode='Markdown')
+  File "C:\Users\mff20\anaconda3\Lib\site-packages\telebot\__init__.py", line 6442, in reply_to
+    return self.send_message(message.chat.id, text, reply_parameters=reply_parameters, **kwargs)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\mff20\anaconda3\Lib\site-packages\telebot\__init__.py", line 1834, in send_message
+    apihelper.send_message(
+  File "C:\Users\mff20\anaconda3\Lib\site-packages\telebot\apihelper.py", line 282, in send_message
+    return _make_request(token, method_url, params=payload, method='post')
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\mff20\anaconda3\Lib\site-packages\telebot\apihelper.py", line 168, in _make_request
+    json_result = _check_result(method_name, result)
+                  ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\mff20\anaconda3\Lib\site-packages\telebot\apihelper.py", line 197, in _check_result
+    raise ApiTelegramException(method_name, result, result_json)
+telebot.apihelper.ApiTelegramException: A request to the Telegram API was unsuccessful. Error code: 400. Description: Bad Request: field "message_id" must be a Number
+
+During handling of the above exception, another exception occurred:
+
+Traceback (most recent call last):
+  File "C:\GestaoVersus\app32\debug_telegram_crash_v2.py", line 28, in <module>
+    process_telegram_message(app, message)
+  File "C:\GestaoVersus\app32\api\webhooks\telegram_webhook.py", line 160, in process_telegram_message
+    bot.reply_to(message, "Desculpe, ocorreu um erro interno ao processar sua solicitaþÒo no GestÒo Versus. O time de engenharia foi notificado.")
+  File "C:\Users\mff20\anaconda3\Lib\site-packages\telebot\__init__.py", line 6442, in reply_to
+    return self.send_message(message.chat.id, text, reply_parameters=reply_parameters, **kwargs)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\mff20\anaconda3\Lib\site-packages\telebot\__init__.py", line 1834, in send_message
+    apihelper.send_message(
+  File "C:\Users\mff20\anaconda3\Lib\site-packages\telebot\apihelper.py", line 282, in send_message
+    return _make_request(token, method_url, params=payload, method='post')
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\mff20\anaconda3\Lib\site-packages\telebot\apihelper.py", line 168, in _make_request
+    json_result = _check_result(method_name, result)
+                  ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\mff20\anaconda3\Lib\site-packages\telebot\apihelper.py", line 197, in _check_result
+    raise ApiTelegramException(method_name, result, result_json)
+telebot.apihelper.ApiTelegramException: A request to the Telegram API was unsuccessful. Error code: 400. Description: Bad Request: field "message_id" must be a Number
+DEBUG: Registering Jinja filters...
+DEBUG: Registering API resources...
+DEBUG: API resources registered.
+DEBUG: Registering blueprints...
+DEBUG: Blueprints registered.
+DEBUG: Checking DB connection and creating tables...
+DEBUG: DB tables verified/created successfully.
+DEBUG: Starting Engineering Service worker...
+­ƒøá´©Å SQUAD DE ENGENHARIA [ONLINE]: Monitorando sistema...
+DEBUG: Engineering Service worker started.
+DEBUG: Initializing Scheduler...
+DEBUG: Scheduler initialized.
+DEBUG: create_app() finished successfully.
+Starting simulation...
+CRASH: A request to the Telegram API was unsuccessful. Error code: 400. Description: Bad Request: field "message_id" must be a Number

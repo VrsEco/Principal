@@ -23,12 +23,12 @@ class EngineeringService:
         """Inicia a thread de monitoramento do squad de engenharia"""
         def run_loop():
             with app.app_context():
-                print("🛠️ SQUAD DE ENGENHARIA [ONLINE]: Monitorando sistema...")
+                print("[SQUAD ENGENHARIA] Monitorando sistema...")
                 while not self._stop_event.is_set():
                     try:
                         self._process_pending_escalations()
                     except Exception as e:
-                        print(f"❌ erro no Engineering Worker: {e}")
+                        print(f"FAILED Engineering Worker: {e}")
                     time.sleep(15) # Intervalo de verificação
 
         thread = threading.Thread(target=run_loop, daemon=True)
@@ -37,11 +37,12 @@ class EngineeringService:
 
     def _process_pending_escalations(self):
         """Busca e analisa falhas reportadas pelo squad de trabalho"""
+        # Filtro global de sistema permitido para squad de engenharia
         pending = AgentAction.query.filter_by(type='technical_fix', status='pending').all()
         
         for action in pending:
             try:
-                print(f"🧠 [ANALYSIS] @ARQUITETO analisando ticket #{action.id}...")
+                print(f"[ANALYSIS] @ARQUITETO analisando ticket #{action.id}...")
                 
                 # Simulação de análise técnica real
                 # Em produção, aqui chamaríamos um agente de IA de engenharia especializado
@@ -70,7 +71,7 @@ class EngineeringService:
                 whatsapp_service.send_message("5511999999999", msg) # Mock phone for demo
             except Exception as e:
                 db.session.rollback()
-                print(f"❌ erro ao processar ação #{getattr(action, 'id', 'unknown')}: {e}")
+                print(f"FAILED processing action #{getattr(action, 'id', 'unknown')}: {e}")
 
     def execute_repair(self, action_id):
         """Executa o reparo aprovado com suporte a Rollback @QA_AUTOMATION"""
@@ -95,7 +96,7 @@ class EngineeringService:
             
             # 2. Aplica o Patches (Aqui simularíamos a escrita real do patch)
             # No futuro, o Agente de IA usaria replace_file_content aqui.
-            print(f"🔧 Aplicando hotfix no arquivo: {file_path}")
+            print(f"REPAIR: Aplicando hotfix no arquivo: {file_path}")
             
             # Marcamos como executado
             action.status = 'executed'

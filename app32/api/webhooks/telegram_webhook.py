@@ -136,10 +136,21 @@ def process_telegram_message(app, message: telebot.types.Message):
             try:
                 with app.app_context():
                     error_msg = f"Crash no Webhook do Telegram: {str(e)}"
-                    context = f"Usuário TG ID: {telegram_id}\n\nTraceback:\n{tb}"
-                    # Invocamos diretamente a lógica da tool ou o service
+                    context_info = f"Usuário TG ID: {telegram_id}\n\nTraceback:\n{tb}"
+                    
+                    # 🔍 Recuperar company_id para conformidade multi-tenancy (@ARQUITETO)
+                    # Se usuário não existe, tentamos pegar a empresa do ID 1 ou a primeira do banco
+                    from models.company import Company
                     from models.agent_action import AgentAction
                     from models import db
+                    
+                    effective_company_id = None
+                    if 'user' in locals() and user and user.employees:
+                        effective_company_id = user.employees[0].company_id
+                    else:
+                        # Fallback seguro para erros de infra/sistema
+                        first_company = Company.query.first()
+                        effective_company_id = first_company.id if first_company else 1
                     
                     action = AgentAction(
                         type='technical_fix',
@@ -149,33 +160,38 @@ def process_telegram_message(app, message: telebot.types.Message):
                         title='Crash no Webhook do Telegram',
                         description=error_msg,
                         payload={"error": str(e), "traceback": tb, "telegram_id": telegram_id, "file": "api/webhooks/telegram_webhook.py"},
-                        user_id=getattr(user, 'id', None) if 'user' in locals() else None
+                        company_id=effective_company_id,
+                        user_id=getattr(user, 'id', None) if 'user' in locals() and user else None
                     )
                     db.session.add(action)
                     db.session.commit()
                     logger.info(f"✅ Erro escalonado via Ticket #{action.id}")
             except Exception as esc_err:
-                logger.error(f"Falha ao escalonar erro: {esc_err}")
+                logger.error(f"Falha catastrófica ao escalonar erro: {esc_err}")
 
             bot.reply_to(message, "Desculpe, ocorreu um erro interno ao processar sua solicitação no Gestão Versus. O time de engenharia foi notificado.")
 
 # Rota HTTP (Webhook) que será chamada pelo servidor do Telegram
 @telegram_bp.route('/telegram', methods=['POST'])
 def telegram_webhook():
-    if request.headers.get('content-type') == 'application/json':
-        json_string = request.get_data().decode('utf-8')
-        update = telebot.types.Update.de_json(json_string)
-        
-        # Iniciar thread separada para não causar TIMEOUT no servidor do Telegram
-        if update.message and update.message.text:
-            from flask import current_app
-            app = current_app._get_current_object()
-            t = Thread(target=process_telegram_message, args=(app, update.message,))
-            t.start()
+    try:
+        if request.headers.get('content-type') == 'application/json':
+            json_string = request.get_data().decode('utf-8')
+            update = telebot.types.Update.de_json(json_string)
             
-        return '', 200
-    else:
-        return "Not found", 404
+            # Iniciar thread separada para não causar TIMEOUT no servidor do Telegram
+            if update.message and update.message.text:
+                from flask import current_app
+                app = current_app._get_current_object()
+                t = Thread(target=process_telegram_message, args=(app, update.message,))
+                t.start()
+                
+            return '', 200
+        else:
+            return "Not found", 404
+    except Exception as e:
+        logger.error(f"❌ Erro Crítico na Rota do Webhook: {e}")
+        return str(e), 500
 
 # Script manual para registrar o webhook no Telegram
 def setup_webhook(host_url):
