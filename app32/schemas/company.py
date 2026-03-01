@@ -80,7 +80,7 @@ class CompanySchema(ma.SQLAlchemyAutoSchema):
         return obj.logo_count
 
     @validates("client_code")
-    def validate_client_code(self, value):
+    def validate_client_code(self, value, **kwargs):
         """Ensure client_code is unique if provided."""
         if value:
             existing = Company.query.filter(
