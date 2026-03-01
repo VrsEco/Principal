@@ -1,0 +1,889 @@
+*** Starting uWSGI 2.0.31 (64bit) on [Sun Mar  1 13:11:24 2026] ***
+compiled with version: 11.4.0 on 19 December 2025 22:17:41
+os: Linux-4.18.16-x86_64-linode118 #1 SMP PREEMPT Mon Oct 29 15:38:25 UTC 2018
+nodename: ip-69-164-205-75
+machine: x86_64
+clock source: unix
+pcre jit disabled
+detected number of CPU cores: 1
+current working directory: /etc/uwsgi/3.12/apps-enabled
+detected binary path: /var/www/.pyenv/versions/3.12.12/bin/uwsgi
+chdir() to /srv/appgestaoversuscombr.45a4cd4b.configr.cloud/www
+your processes number limit is 7892
+your memory page size is 4096 bytes
+ *** WARNING: you have enabled harakiri without post buffering. Slow upload could be rejected on post-unbuffered webservers *** 
+detected max file descriptor number: 1024
+lock engine: pthread robust mutexes
+thunder lock: disabled (you can enable it with --thunder-lock)
+uwsgi socket 0 inherited UNIX address /srv/appgestaoversuscombr.45a4cd4b.configr.cloud/etc/uwsgi/app.sock fd 3
+Python version: 3.12.12 (main, Dec 19 2025, 19:15:44) [GCC 11.4.0]
+Python main interpreter initialized at 0x7f417cfd1dd0
+python threads support enabled
+your server socket listen backlog is limited to 100 connections
+your mercy for graceful operations on workers is 60 seconds
+mapped 162224 bytes (158 KB) for 1 cores
+*** Operational MODE: single process ***
+added /srv/appgestaoversuscombr.45a4cd4b.configr.cloud/.virtualenv/3.12/lib/python3.12/site-packages/ to pythonpath.
+DEBUG: Registering Jinja filters...
+DEBUG: Registering API resources...
+DEBUG: API resources registered.
+DEBUG: Registering blueprints...
+DEBUG: Blueprints registered.
+DEBUG: Checking DB connection and creating tables...
+DEBUG: DB tables verified/created successfully.
+DEBUG: Starting Engineering Service worker...
+🛠️ SQUAD DE ENGENHARIA [ONLINE]: Monitorando sistema...
+DEBUG: Engineering Service worker started.
+DEBUG: Initializing Scheduler...
+INFO:services.scheduler_service:📅 Scheduler Service inicializado
+INFO:services.scheduler_service:🚀 Inicializando Scheduler Service...
+INFO:services.scheduler_service:🔧 Configurando jobs de rotina...
+INFO:apscheduler.scheduler:Adding job tentatively -- it will be properly scheduled when the scheduler starts
+INFO:services.scheduler_service:✅ Job 'process_daily_routines' adicionado: cron {'hour': 0, 'minute': 1, 'name': 'Processamento Diário de Rotinas'}
+INFO:apscheduler.scheduler:Adding job tentatively -- it will be properly scheduled when the scheduler starts
+INFO:services.scheduler_service:✅ Job 'check_overdue_tasks' adicionado: cron {'minute': 0, 'name': 'Verificação de Tarefas Atrasadas'}
+INFO:services.scheduler_service:✅ Jobs de rotina configurados!
+INFO:services.scheduler_service:🔧 Configurando jobs proativos do Sapiens...
+INFO:apscheduler.scheduler:Adding job tentatively -- it will be properly scheduled when the scheduler starts
+INFO:services.scheduler_service:✅ Job 'proactive_morning_summary' adicionado: cron {'hour': 8, 'minute': 0, 'name': 'Resumo Matinal Proativo (Telegram)'}
+INFO:services.scheduler_service:✅ Jobs proativos configurados!
+INFO:apscheduler.scheduler:Adding job tentatively -- it will be properly scheduled when the scheduler starts
+INFO:services.scheduler_service:✅ Job 'chat_timeout_monitor' adicionado: interval {'seconds': 30, 'name': 'Monitor de Inatividade de Chat'}
+INFO:services.scheduler_service:✅ Job de Timeout de Chat configurado!
+INFO:apscheduler.scheduler:Added job "Processamento Diário de Rotinas" to job store "default"
+INFO:apscheduler.scheduler:Added job "Verificação de Tarefas Atrasadas" to job store "default"
+INFO:apscheduler.scheduler:Added job "Resumo Matinal Proativo (Telegram)" to job store "default"
+INFO:apscheduler.scheduler:Added job "Monitor de Inatividade de Chat" to job store "default"
+INFO:apscheduler.scheduler:Scheduler started
+INFO:services.scheduler_service:✅ Scheduler iniciado com sucesso
+INFO:services.scheduler_service:📋 Jobs agendados: 4
+INFO:services.scheduler_service:  - chat_timeout_monitor: próxima execução em 2026-03-01 13:12:00.218130-03:00
+INFO:services.scheduler_service:  - check_overdue_tasks: próxima execução em 2026-03-01 14:00:00-03:00
+INFO:services.scheduler_service:  - process_daily_routines: próxima execução em 2026-03-02 00:01:00-03:00
+INFO:services.scheduler_service:  - proactive_morning_summary: próxima execução em 2026-03-02 08:00:00-03:00
+INFO:services.scheduler_service:================================================================================
+INFO:services.scheduler_service:✅ SCHEDULER ATIVO E FUNCIONANDO!
+INFO:services.scheduler_service:================================================================================
+DEBUG: Scheduler initialized.
+DEBUG: create_app() finished successfully.
+WSGI app 0 (mountpoint='') ready in 6 seconds on interpreter 0x7f417cfd1dd0 pid: 434339 (default app)
+*** uWSGI is running in multiple interpreter mode ***
+gracefully (RE)spawned uWSGI master process (pid: 434339)
+spawned uWSGI worker 1 (pid: 517459, cores: 1)
+*** Stats server enabled on /srv/appgestaoversuscombr.45a4cd4b.configr.cloud/etc/uwsgi/stats fd: 12 ***
+INFO:apscheduler.executors.default:Running job "Monitor de Inatividade de Chat (trigger: interval[0:00:30], next run at: 2026-03-01 13:12:00 -03)" (scheduled at 2026-03-01 13:12:00.218130-03:00)
+INFO:apscheduler.executors.default:Job "Monitor de Inatividade de Chat (trigger: interval[0:00:30], next run at: 2026-03-01 13:12:30 -03)" executed successfully
+INFO:apscheduler.executors.default:Running job "Monitor de Inatividade de Chat (trigger: interval[0:00:30], next run at: 2026-03-01 13:13:00 -03)" (scheduled at 2026-03-01 13:12:30.218130-03:00)
+INFO:apscheduler.executors.default:Job "Monitor de Inatividade de Chat (trigger: interval[0:00:30], next run at: 2026-03-01 13:13:00 -03)" executed successfully
+INFO:apscheduler.executors.default:Running job "Monitor de Inatividade de Chat (trigger: interval[0:00:30], next run at: 2026-03-01 13:13:30 -03)" (scheduled at 2026-03-01 13:13:00.218130-03:00)
+INFO:apscheduler.executors.default:Job "Monitor de Inatividade de Chat (trigger: interval[0:00:30], next run at: 2026-03-01 13:13:30 -03)" executed successfully
+INFO:apscheduler.executors.default:Running job "Monitor de Inatividade de Chat (trigger: interval[0:00:30], next run at: 2026-03-01 13:14:00 -03)" (scheduled at 2026-03-01 13:13:30.218130-03:00)
+INFO:apscheduler.executors.default:Job "Monitor de Inatividade de Chat (trigger: interval[0:00:30], next run at: 2026-03-01 13:14:00 -03)" executed successfully
+INFO:apscheduler.executors.default:Running job "Monitor de Inatividade de Chat (trigger: interval[0:00:30], next run at: 2026-03-01 13:14:30 -03)" (scheduled at 2026-03-01 13:14:00.218130-03:00)
+INFO:apscheduler.executors.default:Job "Monitor de Inatividade de Chat (trigger: interval[0:00:30], next run at: 2026-03-01 13:14:30 -03)" executed successfully
+INFO:apscheduler.executors.default:Running job "Monitor de Inatividade de Chat (trigger: interval[0:00:30], next run at: 2026-03-01 13:15:00 -03)" (scheduled at 2026-03-01 13:14:30.218130-03:00)
+INFO:apscheduler.executors.default:Job "Monitor de Inatividade de Chat (trigger: interval[0:00:30], next run at: 2026-03-01 13:15:00 -03)" executed successfully
+INFO:apscheduler.executors.default:Running job "Monitor de Inatividade de Chat (trigger: interval[0:00:30], next run at: 2026-03-01 13:15:30 -03)" (scheduled at 2026-03-01 13:15:00.218130-03:00)
+INFO:apscheduler.executors.default:Job "Monitor de Inatividade de Chat (trigger: interval[0:00:30], next run at: 2026-03-01 13:15:30 -03)" executed successfully
+[pid: 517459|app: 0|req: 1/1] 2804:389:811c:bc51:945e:aff:fe28:1e83 () {60 vars in 1447 bytes} [Sun Mar  1 13:15:10 2026] GET /portal => generated 137852 bytes in 95 msecs (HTTP/2.0 200) 4 headers in 129 bytes (1 switches on core 0)
+announcing my loyalty to the Emperor...
+[pid: 517459|app: 0|req: 2/2] 2804:389:811c:bc51:945e:aff:fe28:1e83 () {56 vars in 1268 bytes} [Sun Mar  1 13:15:11 2026] GET /api/notes/ => generated 7550 bytes in 7 msecs (HTTP/2.0 200) 4 headers in 119 bytes (1 switches on core 0)
+[pid: 517459|app: 0|req: 3/3] 2804:389:811c:bc51:945e:aff:fe28:1e83 () {62 vars in 1478 bytes} [Sun Mar  1 13:15:16 2026] GET /portal => generated 137852 bytes in 18 msecs (HTTP/2.0 200) 4 headers in 129 bytes (1 switches on core 0)
+[pid: 517459|app: 0|req: 4/4] 2804:389:811c:bc51:945e:aff:fe28:1e83 () {56 vars in 1268 bytes} [Sun Mar  1 13:15:16 2026] GET /api/notes/ => generated 7550 bytes in 4 msecs (HTTP/2.0 200) 4 headers in 119 bytes (1 switches on core 0)
+INFO:apscheduler.executors.default:Running job "Monitor de Inatividade de Chat (trigger: interval[0:00:30], next run at: 2026-03-01 13:16:00 -03)" (scheduled at 2026-03-01 13:15:30.218130-03:00)
+INFO:apscheduler.executors.default:Job "Monitor de Inatividade de Chat (trigger: interval[0:00:30], next run at: 2026-03-01 13:16:00 -03)" executed successfully
+[pid: 517459|app: 0|req: 5/5] 2804:389:811c:bc51:945e:aff:fe28:1e83 () {62 vars in 1374 bytes} [Sun Mar  1 13:15:31 2026] POST /portal => generated 39 bytes in 3 msecs (HTTP/2.0 200) 5 headers in 444 bytes (1 switches on core 0)
+[pid: 517459|app: 0|req: 6/6] 2804:389:811c:bc51:945e:aff:fe28:1e83 () {60 vars in 1447 bytes} [Sun Mar  1 13:15:31 2026] GET /my-work => generated 80585 bytes in 72 msecs (HTTP/2.0 200) 4 headers in 128 bytes (1 switches on core 0)
+INFO:api.routes.my_work:📊 Filter Options Response: 9 companies, 40 collabs, role=admin
+[pid: 517459|app: 0|req: 7/7] 2804:389:811c:bc51:945e:aff:fe28:1e83 () {56 vars in 1287 bytes} [Sun Mar  1 13:15:32 2026] GET /my-work/api/filter-options => generated 52709 bytes in 47 msecs (HTTP/2.0 200) 4 headers in 120 bytes (1 switches on core 0)
+INFO:api.routes.my_work:📊 API Request: scope=me, company_ids=[4, 7, 2, 8, 1, 3, 6, 9, 5], active_company=None
+INFO:services.my_work.discovery_service:🔍 Discovery [scope=me]: user=3, role=admin, target_companies=[4, 7, 2, 8, 1, 3, 6, 9, 5]
+INFO:services.my_work.discovery_service:📊 Raw Discovery: Found 163 total activities across all allowed companies.
+[pid: 517459|app: 0|req: 8/8] 2804:389:811c:bc51:945e:aff:fe28:1e83 () {56 vars in 1426 bytes} [Sun Mar  1 13:15:32 2026] GET /my-work/api/activities?scope=me&company_ids=4%2C7%2C2%2C8%2C1%2C3%2C6%2C9%2C5&delivery_tags=open => generated 7155 bytes in 82 msecs (HTTP/2.0 200) 4 headers in 119 bytes (1 switches on core 0)
+DEBUG: CLOUD_SQL_CONNECTION_NAME='None'
+DEBUG: Using standard DATABASE_URL connection
+[pid: 517459|app: 0|req: 9/9] 2804:389:811c:bc51:945e:aff:fe28:1e83 () {56 vars in 1388 bytes} [Sun Mar  1 13:15:32 2026] GET /my-work/api/occurrences/summary?company_ids=4%2C7%2C2%2C8%2C1%2C3%2C6%2C9%2C5 => generated 92 bytes in 14 msecs (HTTP/2.0 200) 4 headers in 117 bytes (1 switches on core 0)
+[pid: 517459|app: 0|req: 10/10] 2804:389:811c:bc51:945e:aff:fe28:1e83 () {58 vars in 1132 bytes} [Sun Mar  1 13:15:33 2026] GET /static/site.webmanifest => generated 0 bytes in 8 msecs (HTTP/2.0 304) 6 headers in 233 bytes (0 switches on core 0)
+[pid: 517459|app: 0|req: 11/11] 2804:214:400a:23a4:8cc8:d6a:30e1:2551 () {58 vars in 1200 bytes} [Sun Mar  1 13:15:40 2026] POST /portal => generated 39 bytes in 2 msecs (HTTP/2.0 200) 5 headers in 447 bytes (2 switches on core 0)
+[pid: 517459|app: 0|req: 12/12] 2804:214:400a:23a4:8cc8:d6a:30e1:2551 () {56 vars in 1205 bytes} [Sun Mar  1 13:15:41 2026] GET /my-work => generated 80585 bytes in 6 msecs (HTTP/2.0 200) 4 headers in 128 bytes (1 switches on core 0)
+INFO:api.routes.my_work:📊 Filter Options Response: 9 companies, 40 collabs, role=admin
+[pid: 517459|app: 0|req: 13/13] 2804:214:400a:23a4:8cc8:d6a:30e1:2551 () {52 vars in 1114 bytes} [Sun Mar  1 13:15:41 2026] GET /my-work/api/filter-options => generated 52709 bytes in 17 msecs (HTTP/2.0 200) 4 headers in 120 bytes (1 switches on core 0)
+INFO:api.routes.my_work:📊 API Request: scope=me, company_ids=[4, 7, 2, 8, 1, 3, 6, 9, 5], active_company=None
+INFO:services.my_work.discovery_service:🔍 Discovery [scope=me]: user=3, role=admin, target_companies=[4, 7, 2, 8, 1, 3, 6, 9, 5]
+INFO:services.my_work.discovery_service:📊 Raw Discovery: Found 163 total activities across all allowed companies.
+[pid: 517459|app: 0|req: 14/14] 2804:214:400a:23a4:8cc8:d6a:30e1:2551 () {52 vars in 4381 bytes} [Sun Mar  1 13:15:41 2026] GET /my-work/api/activities?scope=me&active_company_id=&company_ids=4%2C7%2C2%2C8%2C1%2C3%2C6%2C9%2C5&process_ids=220%2C226%2C227%2C222%2C223%2C225%2C87%2C88%2C89%2C90%2C91%2C113%2C108%2C92%2C112%2C116%2C102%2C117%2C111%2C110%2C231%2C138%2C106%2C118%2C114%2C103%2C99%2C115%2C133%2C97%2C107%2C101%2C98%2C137%2C109%2C105%2C100%2C104%2C134%2C135%2C136%2C139%2C132%2C129%2C130%2C131%2C241%2C253%2C254%2C255%2C256%2C257%2C258%2C261%2C262%2C264%2C272%2C273%2C274%2C265%2C266%2C259%2C260%2C263%2C247%2C144%2C142%2C143%2C140%2C141%2C145%2C146%2C147%2C148%2C149%2C150%2C151%2C152%2C153%2C154%2C155%2C156%2C228%2C157%2C211%2C217%2C218%2C202%2C203%2C204%2C206%2C205%2C166%2C178%2C175%2C168%2C176%2C173%2C28%2C174%2C177%2C127%2C207%2C208%2C209%2C229%2C210%2C269%2C270%2C271%2C267%2C268%2C49%2C50%2C51%2C52%2C53%2C54%2C55%2C56%2C238%2C57%2C58%2C59%2C242%2C74%2C72%2C232%2C73%2C246%2C75%2C233%2C234%2C244%2C221%2C245%2C230%2C240%2C60%2C235%2C61%2C236%2C62%2C239%2C243%2C237%2C63%2C64%2C65%2C66%2C67%2C68%2C76%2C69%2C70%2C77%2C120%2C121%2C123%2C122%2C126%2C128%2C119%2C94%2C71%2C78%2C93%2C79%2C125%2C96%2C95%2C80%2C81%2C82%2C83%2C84%2C124%2C85%2C86%2C158%2C159%2C160%2C161%2C162%2C163%2C164%2C165%2C181%2C169%2C172%2C170%2C171%2C167%2C179%2C248%2C249%2C250%2C251%2C252%2C275%2C276%2C277%2C278%2C279%2C182%2C183%2C184%2C185%2C186%2C189%2C190%2C198%2C197%2C196%2C195%2C194%2C193%2C216%2C215%2C212%2C213%2C214%2C180%2C187%2C188%2C191%2C192%2C199%2C200%2C201%2C1%2C2%2C3%2C4%2C5%2C6%2C7%2C8%2C9%2C10%2C11%2C12%2C13%2C14%2C15%2C16%2C17%2C19%2C20%2C21%2C22%2C23%2C24%2C25%2C26%2C27%2C29%2C30%2C31%2C32%2C33%2C34%2C35%2C36%2C37%2C38%2C39%2C40%2C41%2C42%2C43%2C44%2C45%2C46%2C47%2C48%2C18 => generated 7155 bytes in 39 msecs (HTTP/2.0 200) 4 headers in 119 bytes (1 switches on core 0)
+[pid: 517459|app: 0|req: 15/15] 2804:214:400a:23a4:8cc8:d6a:30e1:2551 () {52 vars in 1215 bytes} [Sun Mar  1 13:15:42 2026] GET /my-work/api/occurrences/summary?company_ids=4%2C7%2C2%2C8%2C1%2C3%2C6%2C9%2C5 => generated 92 bytes in 4 msecs (HTTP/2.0 200) 4 headers in 117 bytes (1 switches on core 0)
+[pid: 517459|app: 0|req: 16/16] 2804:214:400a:23a4:8cc8:d6a:30e1:2551 () {56 vars in 1210 bytes} [Sun Mar  1 13:15:46 2026] GET /companies => generated 48652 bytes in 10 msecs (HTTP/2.0 200) 4 headers in 128 bytes (1 switches on core 0)
+[pid: 517459|app: 0|req: 17/17] 2804:214:400a:23a4:8cc8:d6a:30e1:2551 () {52 vars in 1107 bytes} [Sun Mar  1 13:15:46 2026] GET /api/companies?all=true => generated 5182 bytes in 5 msecs (HTTP/2.0 200) 4 headers in 119 bytes (1 switches on core 0)
+[pid: 517459|app: 0|req: 18/18] 2804:214:400a:23a4:8cc8:d6a:30e1:2551 () {56 vars in 1226 bytes} [Sun Mar  1 13:15:49 2026] GET /companies/4/edit => generated 80647 bytes in 28 msecs (HTTP/2.0 200) 4 headers in 128 bytes (1 switches on core 0)
+[pid: 517459|app: 0|req: 19/19] 2804:214:400a:23a4:8cc8:d6a:30e1:2551 () {52 vars in 1101 bytes} [Sun Mar  1 13:15:49 2026] GET /api/companies/4 => generated 543 bytes in 4 msecs (HTTP/2.0 200) 4 headers in 118 bytes (1 switches on core 0)
+[pid: 517459|app: 0|req: 20/20] 2804:214:400a:23a4:8cc8:d6a:30e1:2551 () {52 vars in 1113 bytes} [Sun Mar  1 13:15:49 2026] GET /api/companies/4/users => generated 3 bytes in 4 msecs (HTTP/2.0 200) 4 headers in 116 bytes (1 switches on core 0)
+[pid: 517459|app: 0|req: 21/21] 2804:214:400a:23a4:8cc8:d6a:30e1:2551 () {52 vars in 1113 bytes} [Sun Mar  1 13:15:49 2026] GET /api/companies/4/roles => generated 3 bytes in 4 msecs (HTTP/2.0 200) 4 headers in 116 bytes (1 switches on core 0)
+[pid: 517459|app: 0|req: 22/22] 2804:214:400a:23a4:8cc8:d6a:30e1:2551 () {52 vars in 1131 bytes} [Sun Mar  1 13:15:49 2026] GET /api/companies/4/employees/full => generated 3 bytes in 6 msecs (HTTP/2.0 200) 4 headers in 116 bytes (1 switches on core 0)
+[pid: 517459|app: 0|req: 23/23] 2804:214:400a:23a4:8cc8:d6a:30e1:2551 () {52 vars in 1143 bytes} [Sun Mar  1 13:15:49 2026] GET /api/companies/4/performance-settings => generated 197 bytes in 4 msecs (HTTP/2.0 200) 4 headers in 118 bytes (1 switches on core 0)
+DEBUG: Updating company 4 with data: {'name': 'Eua - Moveis Planejados', 'client_code': 'AS', 'legal_name': 'Moveis EUA LTD', 'cnpj': None, 'description': None, 'segment': None, 'size': None, 'city': None, 'state': None, 'mission': None, 'vision': None, 'values': None, 'logo_primary': None, 'is_active': False}
+DEBUG: Company 4 updated successfully
+[pid: 517459|app: 0|req: 24/24] 2804:214:400a:23a4:8cc8:d6a:30e1:2551 () {58 vars in 1240 bytes} [Sun Mar  1 13:15:53 2026] PUT /api/companies/4 => generated 538 bytes in 19 msecs (HTTP/2.0 200) 4 headers in 156 bytes (1 switches on core 0)
+INFO:apscheduler.executors.default:Running job "Monitor de Inatividade de Chat (trigger: interval[0:00:30], next run at: 2026-03-01 13:16:30 -03)" (scheduled at 2026-03-01 13:16:00.218130-03:00)
+INFO:apscheduler.executors.default:Job "Monitor de Inatividade de Chat (trigger: interval[0:00:30], next run at: 2026-03-01 13:16:30 -03)" executed successfully
+[pid: 517459|app: 0|req: 25/25] 2804:214:400a:23a4:8cc8:d6a:30e1:2551 () {56 vars in 1230 bytes} [Sun Mar  1 13:16:01 2026] GET /companies => generated 48652 bytes in 9 msecs (HTTP/2.0 200) 4 headers in 128 bytes (1 switches on core 0)
+[pid: 517459|app: 0|req: 26/26] 2804:214:400a:23a4:8cc8:d6a:30e1:2551 () {52 vars in 1107 bytes} [Sun Mar  1 13:16:01 2026] GET /api/companies?all=true => generated 5177 bytes in 6 msecs (HTTP/2.0 200) 4 headers in 119 bytes (1 switches on core 0)
+[pid: 517459|app: 0|req: 27/27] 2804:214:400a:23a4:8cc8:d6a:30e1:2551 () {56 vars in 1226 bytes} [Sun Mar  1 13:16:11 2026] GET /companies/5/edit => generated 80647 bytes in 6 msecs (HTTP/2.0 200) 4 headers in 128 bytes (1 switches on core 0)
+[pid: 517459|app: 0|req: 28/28] 2804:214:400a:23a4:8cc8:d6a:30e1:2551 () {52 vars in 1101 bytes} [Sun Mar  1 13:16:11 2026] GET /api/companies/5 => generated 555 bytes in 4 msecs (HTTP/2.0 200) 4 headers in 118 bytes (1 switches on core 0)
+[pid: 517459|app: 0|req: 29/29] 2804:214:400a:23a4:8cc8:d6a:30e1:2551 () {52 vars in 1113 bytes} [Sun Mar  1 13:16:11 2026] GET /api/companies/5/users => generated 3 bytes in 2 msecs (HTTP/2.0 200) 4 headers in 116 bytes (1 switches on core 0)
+[pid: 517459|app: 0|req: 30/30] 2804:214:400a:23a4:8cc8:d6a:30e1:2551 () {52 vars in 1113 bytes} [Sun Mar  1 13:16:11 2026] GET /api/companies/5/roles => generated 233 bytes in 2 msecs (HTTP/2.0 200) 4 headers in 118 bytes (1 switches on core 0)
+[pid: 517459|app: 0|req: 31/31] 2804:214:400a:23a4:8cc8:d6a:30e1:2551 () {52 vars in 1131 bytes} [Sun Mar  1 13:16:11 2026] GET /api/companies/5/employees/full => generated 1219 bytes in 3 msecs (HTTP/2.0 200) 4 headers in 119 bytes (1 switches on core 0)
+[pid: 517459|app: 0|req: 32/32] 2804:214:400a:23a4:8cc8:d6a:30e1:2551 () {52 vars in 1143 bytes} [Sun Mar  1 13:16:11 2026] GET /api/companies/5/performance-settings => generated 197 bytes in 7 msecs (HTTP/2.0 200) 4 headers in 118 bytes (1 switches on core 0)
+DEBUG: Updating company 5 with data: {'name': 'Vertrau Cozinhas', 'client_code': 'AN', 'legal_name': 'Vertrau Cozinhas', 'cnpj': None, 'description': None, 'segment': None, 'size': None, 'city': None, 'state': None, 'mission': None, 'vision': None, 'values': None, 'logo_primary': None, 'is_active': False}
+DEBUG: Company 5 updated successfully
+[pid: 517459|app: 0|req: 33/33] 2804:214:400a:23a4:8cc8:d6a:30e1:2551 () {58 vars in 1240 bytes} [Sun Mar  1 13:16:15 2026] PUT /api/companies/5 => generated 533 bytes in 9 msecs (HTTP/2.0 200) 4 headers in 156 bytes (1 switches on core 0)
+[pid: 517459|app: 0|req: 34/34] 2804:214:400a:23a4:8cc8:d6a:30e1:2551 () {56 vars in 1230 bytes} [Sun Mar  1 13:16:21 2026] GET /companies => generated 48652 bytes in 5 msecs (HTTP/2.0 200) 4 headers in 128 bytes (1 switches on core 0)
+[pid: 517459|app: 0|req: 35/35] 2804:214:400a:23a4:8cc8:d6a:30e1:2551 () {52 vars in 1107 bytes} [Sun Mar  1 13:16:21 2026] GET /api/companies?all=true => generated 5155 bytes in 4 msecs (HTTP/2.0 200) 4 headers in 119 bytes (1 switches on core 0)
+[pid: 517459|app: 0|req: 36/36] 2804:214:400a:23a4:8cc8:d6a:30e1:2551 () {56 vars in 1206 bytes} [Sun Mar  1 13:16:25 2026] GET /portal => generated 135637 bytes in 21 msecs (HTTP/2.0 200) 4 headers in 129 bytes (1 switches on core 0)
+[pid: 517459|app: 0|req: 37/37] 2804:214:400a:23a4:8cc8:d6a:30e1:2551 () {52 vars in 1094 bytes} [Sun Mar  1 13:16:25 2026] GET /api/notes/ => generated 7550 bytes in 4 msecs (HTTP/2.0 200) 4 headers in 119 bytes (1 switches on core 0)
+INFO:apscheduler.executors.default:Running job "Monitor de Inatividade de Chat (trigger: interval[0:00:30], next run at: 2026-03-01 13:17:00 -03)" (scheduled at 2026-03-01 13:16:30.218130-03:00)
+INFO:apscheduler.executors.default:Job "Monitor de Inatividade de Chat (trigger: interval[0:00:30], next run at: 2026-03-01 13:17:00 -03)" executed successfully
+INFO:apscheduler.executors.default:Running job "Monitor de Inatividade de Chat (trigger: interval[0:00:30], next run at: 2026-03-01 13:17:30 -03)" (scheduled at 2026-03-01 13:17:00.218130-03:00)
+INFO:apscheduler.executors.default:Job "Monitor de Inatividade de Chat (trigger: interval[0:00:30], next run at: 2026-03-01 13:17:30 -03)" executed successfully
+INFO:apscheduler.executors.default:Running job "Monitor de Inatividade de Chat (trigger: interval[0:00:30], next run at: 2026-03-01 13:18:00 -03)" (scheduled at 2026-03-01 13:17:30.218130-03:00)
+INFO:apscheduler.executors.default:Job "Monitor de Inatividade de Chat (trigger: interval[0:00:30], next run at: 2026-03-01 13:18:00 -03)" executed successfully
+[pid: 517459|app: 0|req: 38/38] 2804:214:400a:23a4:8cc8:d6a:30e1:2551 () {58 vars in 1200 bytes} [Sun Mar  1 13:17:30 2026] POST /portal => generated 39 bytes in 7 msecs (HTTP/2.0 200) 5 headers in 447 bytes (1 switches on core 0)
+[pid: 517459|app: 0|req: 39/39] 2804:214:400a:23a4:8cc8:d6a:30e1:2551 () {56 vars in 1205 bytes} [Sun Mar  1 13:17:30 2026] GET /my-work => generated 80585 bytes in 6 msecs (HTTP/2.0 200) 4 headers in 128 bytes (1 switches on core 0)
+INFO:api.routes.my_work:📊 Filter Options Response: 7 companies, 36 collabs, role=admin
+[pid: 517459|app: 0|req: 40/40] 2804:214:400a:23a4:8cc8:d6a:30e1:2551 () {52 vars in 1114 bytes} [Sun Mar  1 13:17:30 2026] GET /my-work/api/filter-options => generated 51832 bytes in 17 msecs (HTTP/2.0 200) 4 headers in 120 bytes (1 switches on core 0)
+INFO:api.routes.my_work:📊 API Request: scope=me, company_ids=[7, 2, 8, 1, 3, 6, 9], active_company=None
+INFO:services.my_work.discovery_service:🔍 Discovery [scope=me]: user=3, role=admin, target_companies=[7, 2, 8, 1, 3, 6, 9]
+INFO:services.my_work.discovery_service:📊 Raw Discovery: Found 156 total activities across all allowed companies.
+[pid: 517459|app: 0|req: 41/41] 2804:214:400a:23a4:8cc8:d6a:30e1:2551 () {52 vars in 4365 bytes} [Sun Mar  1 13:17:31 2026] GET /my-work/api/activities?scope=me&active_company_id=&company_ids=7%2C2%2C8%2C1%2C3%2C6%2C9&process_ids=220%2C226%2C227%2C222%2C223%2C225%2C87%2C88%2C89%2C90%2C91%2C113%2C108%2C92%2C112%2C116%2C102%2C117%2C111%2C110%2C231%2C138%2C106%2C118%2C114%2C103%2C99%2C115%2C133%2C97%2C107%2C101%2C98%2C137%2C109%2C105%2C100%2C104%2C134%2C135%2C136%2C139%2C132%2C129%2C130%2C131%2C241%2C253%2C254%2C255%2C256%2C257%2C258%2C261%2C262%2C264%2C272%2C273%2C274%2C265%2C266%2C259%2C260%2C263%2C247%2C144%2C142%2C143%2C140%2C141%2C145%2C146%2C147%2C148%2C149%2C150%2C151%2C152%2C153%2C154%2C155%2C156%2C228%2C157%2C211%2C217%2C218%2C202%2C203%2C204%2C206%2C205%2C166%2C178%2C175%2C168%2C176%2C173%2C28%2C174%2C177%2C127%2C207%2C208%2C209%2C229%2C210%2C269%2C270%2C271%2C267%2C268%2C49%2C50%2C51%2C52%2C53%2C54%2C55%2C56%2C238%2C57%2C58%2C59%2C242%2C74%2C72%2C232%2C73%2C246%2C75%2C233%2C234%2C244%2C221%2C245%2C230%2C240%2C60%2C235%2C61%2C236%2C62%2C239%2C243%2C237%2C63%2C64%2C65%2C66%2C67%2C68%2C76%2C69%2C70%2C77%2C120%2C121%2C123%2C122%2C126%2C128%2C119%2C94%2C71%2C78%2C93%2C79%2C125%2C96%2C95%2C80%2C81%2C82%2C83%2C84%2C124%2C85%2C86%2C158%2C159%2C160%2C161%2C162%2C163%2C164%2C165%2C181%2C169%2C172%2C170%2C171%2C167%2C179%2C248%2C249%2C250%2C251%2C252%2C275%2C276%2C277%2C278%2C279%2C182%2C183%2C184%2C185%2C186%2C189%2C190%2C198%2C197%2C196%2C195%2C194%2C193%2C216%2C215%2C212%2C213%2C214%2C180%2C187%2C188%2C191%2C192%2C199%2C200%2C201%2C1%2C2%2C3%2C4%2C5%2C6%2C7%2C8%2C9%2C10%2C11%2C12%2C13%2C14%2C15%2C16%2C17%2C19%2C20%2C21%2C22%2C23%2C24%2C25%2C26%2C27%2C29%2C30%2C31%2C32%2C33%2C34%2C35%2C36%2C37%2C38%2C39%2C40%2C41%2C42%2C43%2C44%2C45%2C46%2C47%2C48%2C18 => generated 7158 bytes in 38 msecs (HTTP/2.0 200) 4 headers in 119 bytes (1 switches on core 0)
+[pid: 517459|app: 0|req: 42/42] 2804:214:400a:23a4:8cc8:d6a:30e1:2551 () {52 vars in 1199 bytes} [Sun Mar  1 13:17:31 2026] GET /my-work/api/occurrences/summary?company_ids=7%2C2%2C8%2C1%2C3%2C6%2C9 => generated 92 bytes in 4 msecs (HTTP/2.0 200) 4 headers in 117 bytes (1 switches on core 0)
+[pid: 517459|app: 0|req: 43/43] 2804:389:811c:bc51:945e:aff:fe28:1e83 () {62 vars in 1478 bytes} [Sun Mar  1 13:17:47 2026] GET /my-work => generated 80585 bytes in 6 msecs (HTTP/2.0 200) 4 headers in 128 bytes (1 switches on core 0)
+INFO:api.routes.my_work:📊 Filter Options Response: 7 companies, 36 collabs, role=admin
+[pid: 517459|app: 0|req: 44/44] 2804:389:811c:bc51:945e:aff:fe28:1e83 () {56 vars in 1287 bytes} [Sun Mar  1 13:17:47 2026] GET /my-work/api/filter-options => generated 51832 bytes in 14 msecs (HTTP/2.0 200) 4 headers in 120 bytes (1 switches on core 0)
+INFO:api.routes.my_work:📊 API Request: scope=me, company_ids=[4, 7, 2, 8, 1, 3, 6, 9, 5], active_company=None
+INFO:services.my_work.discovery_service:🔍 Discovery [scope=me]: user=3, role=admin, target_companies=[7, 2, 8, 1, 3, 6, 9]
+INFO:services.my_work.discovery_service:📊 Raw Discovery: Found 156 total activities across all allowed companies.
+[pid: 517459|app: 0|req: 45/45] 2804:389:811c:bc51:945e:aff:fe28:1e83 () {56 vars in 1426 bytes} [Sun Mar  1 13:17:47 2026] GET /my-work/api/activities?scope=me&company_ids=4%2C7%2C2%2C8%2C1%2C3%2C6%2C9%2C5&delivery_tags=open => generated 7158 bytes in 36 msecs (HTTP/2.0 200) 4 headers in 119 bytes (1 switches on core 0)
+[pid: 517459|app: 0|req: 46/46] 2804:389:811c:bc51:945e:aff:fe28:1e83 () {56 vars in 1388 bytes} [Sun Mar  1 13:17:48 2026] GET /my-work/api/occurrences/summary?company_ids=4%2C7%2C2%2C8%2C1%2C3%2C6%2C9%2C5 => generated 92 bytes in 4 msecs (HTTP/2.0 200) 4 headers in 117 bytes (2 switches on core 0)
+[pid: 517459|app: 0|req: 47/47] 2804:389:811c:bc51:945e:aff:fe28:1e83 () {58 vars in 1132 bytes} [Sun Mar  1 13:17:48 2026] GET /static/site.webmanifest => generated 0 bytes in 1 msecs (HTTP/2.0 304) 6 headers in 233 bytes (0 switches on core 0)
+INFO:apscheduler.executors.default:Running job "Monitor de Inatividade de Chat (trigger: interval[0:00:30], next run at: 2026-03-01 13:18:30 -03)" (scheduled at 2026-03-01 13:18:00.218130-03:00)
+INFO:apscheduler.executors.default:Job "Monitor de Inatividade de Chat (trigger: interval[0:00:30], next run at: 2026-03-01 13:18:30 -03)" executed successfully
+INFO:api.routes.my_work:📊 API Request: scope=me, company_ids=[4, 7, 2, 8, 1, 3, 6, 9, 5], active_company=None
+INFO:services.my_work.discovery_service:🔍 Discovery [scope=me]: user=3, role=admin, target_companies=[7, 2, 8, 1, 3, 6, 9]
+INFO:services.my_work.discovery_service:📊 Raw Discovery: Found 156 total activities across all allowed companies.
+[pid: 517459|app: 0|req: 48/48] 2804:389:811c:bc51:945e:aff:fe28:1e83 () {56 vars in 1426 bytes} [Sun Mar  1 13:18:06 2026] GET /my-work/api/activities?scope=me&company_ids=4%2C7%2C2%2C8%2C1%2C3%2C6%2C9%2C5&delivery_tags=open => generated 7158 bytes in 34 msecs (HTTP/2.0 200) 4 headers in 119 bytes (2 switches on core 0)
+[pid: 517459|app: 0|req: 49/49] 2804:389:811c:bc51:945e:aff:fe28:1e83 () {56 vars in 1388 bytes} [Sun Mar  1 13:18:06 2026] GET /my-work/api/occurrences/summary?company_ids=4%2C7%2C2%2C8%2C1%2C3%2C6%2C9%2C5 => generated 92 bytes in 4 msecs (HTTP/2.0 200) 4 headers in 117 bytes (1 switches on core 0)
+INFO:api.routes.my_work:📊 API Request: scope=me, company_ids=[4, 7, 2, 8, 1, 3, 6, 9, 5], active_company=None
+INFO:services.my_work.discovery_service:🔍 Discovery [scope=me]: user=3, role=admin, target_companies=[7, 2, 8, 1, 3, 6, 9]
+INFO:services.my_work.discovery_service:📊 Raw Discovery: Found 156 total activities across all allowed companies.
+[pid: 517459|app: 0|req: 50/50] 2804:389:811c:bc51:945e:aff:fe28:1e83 () {56 vars in 1426 bytes} [Sun Mar  1 13:18:07 2026] GET /my-work/api/activities?scope=me&company_ids=4%2C7%2C2%2C8%2C1%2C3%2C6%2C9%2C5&delivery_tags=open => generated 7158 bytes in 36 msecs (HTTP/2.0 200) 4 headers in 119 bytes (1 switches on core 0)
+[pid: 517459|app: 0|req: 51/51] 2804:389:811c:bc51:945e:aff:fe28:1e83 () {56 vars in 1388 bytes} [Sun Mar  1 13:18:07 2026] GET /my-work/api/occurrences/summary?company_ids=4%2C7%2C2%2C8%2C1%2C3%2C6%2C9%2C5 => generated 92 bytes in 4 msecs (HTTP/2.0 200) 4 headers in 117 bytes (1 switches on core 0)
+INFO:api.routes.my_work:📊 API Request: scope=me, company_ids=[4, 2, 8, 1, 3, 6, 9, 5], active_company=None
+INFO:services.my_work.discovery_service:🔍 Discovery [scope=me]: user=3, role=admin, target_companies=[2, 8, 1, 3, 6, 9]
+INFO:services.my_work.discovery_service:📊 Raw Discovery: Found 122 total activities across all allowed companies.
+[pid: 517459|app: 0|req: 52/52] 2804:389:811c:bc51:945e:aff:fe28:1e83 () {56 vars in 1418 bytes} [Sun Mar  1 13:18:09 2026] GET /my-work/api/activities?scope=me&company_ids=4%2C2%2C8%2C1%2C3%2C6%2C9%2C5&delivery_tags=open => generated 85191 bytes in 34 msecs (HTTP/2.0 200) 4 headers in 120 bytes (1 switches on core 0)
+[pid: 517459|app: 0|req: 53/53] 2804:389:811c:bc51:945e:aff:fe28:1e83 () {56 vars in 1380 bytes} [Sun Mar  1 13:18:10 2026] GET /my-work/api/occurrences/summary?company_ids=4%2C2%2C8%2C1%2C3%2C6%2C9%2C5 => generated 92 bytes in 5 msecs (HTTP/2.0 200) 4 headers in 117 bytes (1 switches on core 0)
+INFO:api.routes.my_work:📊 API Request: scope=me, company_ids=[4, 2, 8, 1, 3, 6, 9, 5, 7], active_company=None
+INFO:services.my_work.discovery_service:🔍 Discovery [scope=me]: user=3, role=admin, target_companies=[2, 8, 1, 3, 6, 9, 7]
+INFO:services.my_work.discovery_service:📊 Raw Discovery: Found 156 total activities across all allowed companies.
+[pid: 517459|app: 0|req: 54/54] 2804:389:811c:bc51:945e:aff:fe28:1e83 () {56 vars in 1426 bytes} [Sun Mar  1 13:18:10 2026] GET /my-work/api/activities?scope=me&company_ids=4%2C2%2C8%2C1%2C3%2C6%2C9%2C5%2C7&delivery_tags=open => generated 85191 bytes in 39 msecs (HTTP/2.0 200) 4 headers in 120 bytes (1 switches on core 0)
+[pid: 517459|app: 0|req: 55/55] 2804:389:811c:bc51:945e:aff:fe28:1e83 () {56 vars in 1388 bytes} [Sun Mar  1 13:18:11 2026] GET /my-work/api/occurrences/summary?company_ids=4%2C2%2C8%2C1%2C3%2C6%2C9%2C5%2C7 => generated 92 bytes in 5 msecs (HTTP/2.0 200) 4 headers in 117 bytes (1 switches on core 0)
+INFO:api.routes.my_work:📊 API Request: scope=me, company_ids=[4, 2, 8, 1, 3, 6, 9, 5, 7], active_company=None
+INFO:services.my_work.discovery_service:🔍 Discovery [scope=me]: user=3, role=admin, target_companies=[2, 8, 1, 3, 6, 9, 7]
+INFO:services.my_work.discovery_service:📊 Raw Discovery: Found 156 total activities across all allowed companies.
+[pid: 517459|app: 0|req: 56/56] 2804:389:811c:bc51:945e:aff:fe28:1e83 () {56 vars in 1426 bytes} [Sun Mar  1 13:18:12 2026] GET /my-work/api/activities?scope=me&company_ids=4%2C2%2C8%2C1%2C3%2C6%2C9%2C5%2C7&delivery_tags=open => generated 85191 bytes in 53 msecs (HTTP/2.0 200) 4 headers in 120 bytes (1 switches on core 0)
+[pid: 517459|app: 0|req: 57/57] 2804:389:811c:bc51:945e:aff:fe28:1e83 () {56 vars in 1388 bytes} [Sun Mar  1 13:18:12 2026] GET /my-work/api/occurrences/summary?company_ids=4%2C2%2C8%2C1%2C3%2C6%2C9%2C5%2C7 => generated 92 bytes in 5 msecs (HTTP/2.0 200) 4 headers in 117 bytes (1 switches on core 0)
+INFO:api.routes.my_work:📊 API Request: scope=me, company_ids=[4, 2, 8, 1, 3, 6, 9, 5, 7], active_company=None
+INFO:services.my_work.discovery_service:🔍 Discovery [scope=me]: user=3, role=admin, target_companies=[2, 8, 1, 3, 6, 9, 7]
+INFO:services.my_work.discovery_service:📊 Raw Discovery: Found 156 total activities across all allowed companies.
+[pid: 517459|app: 0|req: 58/58] 2804:389:811c:bc51:945e:aff:fe28:1e83 () {56 vars in 1426 bytes} [Sun Mar  1 13:18:12 2026] GET /my-work/api/activities?scope=me&company_ids=4%2C2%2C8%2C1%2C3%2C6%2C9%2C5%2C7&delivery_tags=open => generated 85191 bytes in 38 msecs (HTTP/2.0 200) 4 headers in 120 bytes (1 switches on core 0)
+[pid: 517459|app: 0|req: 59/59] 2804:389:811c:bc51:945e:aff:fe28:1e83 () {56 vars in 1388 bytes} [Sun Mar  1 13:18:13 2026] GET /my-work/api/occurrences/summary?company_ids=4%2C2%2C8%2C1%2C3%2C6%2C9%2C5%2C7 => generated 92 bytes in 4 msecs (HTTP/2.0 200) 4 headers in 117 bytes (1 switches on core 0)
+[pid: 517459|app: 0|req: 60/60] 2804:389:811c:bc51:945e:aff:fe28:1e83 () {62 vars in 1373 bytes} [Sun Mar  1 13:18:20 2026] POST /portal => generated 39 bytes in 2 msecs (HTTP/2.0 200) 5 headers in 445 bytes (1 switches on core 0)
+[pid: 517459|app: 0|req: 61/61] 2804:389:811c:bc51:945e:aff:fe28:1e83 () {60 vars in 1448 bytes} [Sun Mar  1 13:18:20 2026] GET /my-work => generated 80585 bytes in 6 msecs (HTTP/2.0 200) 4 headers in 128 bytes (1 switches on core 0)
+[pid: 517459|app: 0|req: 62/62] 2804:389:811c:bc51:945e:aff:fe28:1e83 () {58 vars in 1132 bytes} [Sun Mar  1 13:18:21 2026] GET /static/site.webmanifest => generated 0 bytes in 1 msecs (HTTP/2.0 304) 6 headers in 233 bytes (0 switches on core 0)
+INFO:api.routes.my_work:📊 Filter Options Response: 7 companies, 36 collabs, role=admin
+[pid: 517459|app: 0|req: 63/63] 2804:389:811c:bc51:945e:aff:fe28:1e83 () {56 vars in 1288 bytes} [Sun Mar  1 13:18:21 2026] GET /my-work/api/filter-options => generated 51832 bytes in 15 msecs (HTTP/2.0 200) 4 headers in 120 bytes (1 switches on core 0)
+INFO:api.routes.my_work:📊 API Request: scope=me, company_ids=[4, 2, 8, 1, 3, 6, 9, 5, 7], active_company=None
+INFO:services.my_work.discovery_service:🔍 Discovery [scope=me]: user=3, role=admin, target_companies=[2, 8, 1, 3, 6, 9, 7]
+INFO:services.my_work.discovery_service:📊 Raw Discovery: Found 156 total activities across all allowed companies.
+[pid: 517459|app: 0|req: 64/64] 2804:389:811c:bc51:945e:aff:fe28:1e83 () {56 vars in 1427 bytes} [Sun Mar  1 13:18:21 2026] GET /my-work/api/activities?scope=me&company_ids=4%2C2%2C8%2C1%2C3%2C6%2C9%2C5%2C7&delivery_tags=open => generated 85191 bytes in 38 msecs (HTTP/2.0 200) 4 headers in 120 bytes (1 switches on core 0)
+[pid: 517459|app: 0|req: 65/65] 2804:389:811c:bc51:945e:aff:fe28:1e83 () {56 vars in 1389 bytes} [Sun Mar  1 13:18:21 2026] GET /my-work/api/occurrences/summary?company_ids=4%2C2%2C8%2C1%2C3%2C6%2C9%2C5%2C7 => generated 92 bytes in 4 msecs (HTTP/2.0 200) 4 headers in 117 bytes (1 switches on core 0)
+INFO:apscheduler.executors.default:Running job "Monitor de Inatividade de Chat (trigger: interval[0:00:30], next run at: 2026-03-01 13:19:00 -03)" (scheduled at 2026-03-01 13:18:30.218130-03:00)
+INFO:apscheduler.executors.default:Job "Monitor de Inatividade de Chat (trigger: interval[0:00:30], next run at: 2026-03-01 13:19:00 -03)" executed successfully
+[pid: 517459|app: 0|req: 66/66] 2804:389:811c:bc51:945e:aff:fe28:1e83 () {60 vars in 1457 bytes} [Sun Mar  1 13:18:37 2026] GET /process-map => generated 237 bytes in 2 msecs (HTTP/2.0 302) 6 headers in 456 bytes (1 switches on core 0)
+[pid: 517459|app: 0|req: 67/67] 2804:389:811c:bc51:945e:aff:fe28:1e83 () {60 vars in 1482 bytes} [Sun Mar  1 13:18:38 2026] GET /process-map?company_id=1 => generated 61268 bytes in 14 msecs (HTTP/2.0 200) 5 headers in 417 bytes (1 switches on core 0)
+[pid: 517459|app: 0|req: 68/68] 2804:389:811c:bc51:945e:aff:fe28:1e83 () {56 vars in 1347 bytes} [Sun Mar  1 13:18:38 2026] GET /api/process-areas?company_id=1&_cb=1772381917963 => generated 646 bytes in 6 msecs (HTTP/2.0 200) 4 headers in 118 bytes (1 switches on core 0)
+[pid: 517459|app: 0|req: 69/69] 2804:389:811c:bc51:945e:aff:fe28:1e83 () {56 vars in 1351 bytes} [Sun Mar  1 13:18:38 2026] GET /api/macro-processes?company_id=1&_cb=1772381917963 => generated 7196 bytes in 12 msecs (HTTP/2.0 200) 4 headers in 119 bytes (1 switches on core 0)
+[pid: 517459|app: 0|req: 70/70] 2804:389:811c:bc51:945e:aff:fe28:1e83 () {56 vars in 1339 bytes} [Sun Mar  1 13:18:38 2026] GET /api/processes?company_id=1&_cb=1772381917963 => generated 63807 bytes in 117 msecs (HTTP/2.0 200) 4 headers in 120 bytes (1 switches on core 0)
+[pid: 517459|app: 0|req: 71/71] 2804:389:811c:bc51:945e:aff:fe28:1e83 () {58 vars in 1149 bytes} [Sun Mar  1 13:18:38 2026] GET /static/site.webmanifest => generated 0 bytes in 1 msecs (HTTP/2.0 304) 6 headers in 233 bytes (0 switches on core 0)
+[pid: 517459|app: 0|req: 72/72] 2804:389:811c:bc51:945e:aff:fe28:1e83 () {56 vars in 1333 bytes} [Sun Mar  1 13:18:38 2026] GET /api/dashboard/filter-options?company_id=1 => generated 4585 bytes in 9 msecs (HTTP/2.0 200) 4 headers in 119 bytes (1 switches on core 0)
+[pid: 517459|app: 0|req: 73/73] 2804:389:811c:bc51:945e:aff:fe28:1e83 () {60 vars in 1469 bytes} [Sun Mar  1 13:18:43 2026] GET /processes => generated 51444 bytes in 12 msecs (HTTP/2.0 200) 5 headers in 417 bytes (1 switches on core 0)
+[pid: 517459|app: 0|req: 74/74] 2804:389:811c:bc51:945e:aff:fe28:1e83 () {56 vars in 1296 bytes} [Sun Mar  1 13:18:43 2026] GET /api/process-areas?company_id=1 => generated 646 bytes in 3 msecs (HTTP/2.0 200) 4 headers in 118 bytes (1 switches on core 0)
+[pid: 517459|app: 0|req: 75/75] 2804:389:811c:bc51:945e:aff:fe28:1e83 () {58 vars in 1134 bytes} [Sun Mar  1 13:18:43 2026] GET /static/site.webmanifest => generated 0 bytes in 1 msecs (HTTP/2.0 304) 6 headers in 233 bytes (0 switches on core 0)
+[pid: 517459|app: 0|req: 76/76] 2804:389:811c:bc51:945e:aff:fe28:1e83 () {56 vars in 1288 bytes} [Sun Mar  1 13:18:43 2026] GET /api/processes?company_id=1 => generated 63807 bytes in 113 msecs (HTTP/2.0 200) 4 headers in 120 bytes (1 switches on core 0)
+INFO:apscheduler.executors.default:Running job "Monitor de Inatividade de Chat (trigger: interval[0:00:30], next run at: 2026-03-01 13:19:30 -03)" (scheduled at 2026-03-01 13:19:00.218130-03:00)
+INFO:apscheduler.executors.default:Job "Monitor de Inatividade de Chat (trigger: interval[0:00:30], next run at: 2026-03-01 13:19:30 -03)" executed successfully
+INFO:apscheduler.executors.default:Running job "Monitor de Inatividade de Chat (trigger: interval[0:00:30], next run at: 2026-03-01 13:20:00 -03)" (scheduled at 2026-03-01 13:19:30.218130-03:00)
+INFO:apscheduler.executors.default:Job "Monitor de Inatividade de Chat (trigger: interval[0:00:30], next run at: 2026-03-01 13:20:00 -03)" executed successfully
+INFO:apscheduler.executors.default:Running job "Monitor de Inatividade de Chat (trigger: interval[0:00:30], next run at: 2026-03-01 13:20:30 -03)" (scheduled at 2026-03-01 13:20:00.218130-03:00)
+INFO:apscheduler.executors.default:Job "Monitor de Inatividade de Chat (trigger: interval[0:00:30], next run at: 2026-03-01 13:20:30 -03)" executed successfully
+INFO:apscheduler.executors.default:Running job "Monitor de Inatividade de Chat (trigger: interval[0:00:30], next run at: 2026-03-01 13:21:00 -03)" (scheduled at 2026-03-01 13:20:30.218130-03:00)
+INFO:apscheduler.executors.default:Job "Monitor de Inatividade de Chat (trigger: interval[0:00:30], next run at: 2026-03-01 13:21:00 -03)" executed successfully
+INFO:apscheduler.executors.default:Running job "Monitor de Inatividade de Chat (trigger: interval[0:00:30], next run at: 2026-03-01 13:21:30 -03)" (scheduled at 2026-03-01 13:21:00.218130-03:00)
+INFO:apscheduler.executors.default:Job "Monitor de Inatividade de Chat (trigger: interval[0:00:30], next run at: 2026-03-01 13:21:30 -03)" executed successfully
+INFO:apscheduler.executors.default:Running job "Monitor de Inatividade de Chat (trigger: interval[0:00:30], next run at: 2026-03-01 13:22:00 -03)" (scheduled at 2026-03-01 13:21:30.218130-03:00)
+INFO:apscheduler.executors.default:Job "Monitor de Inatividade de Chat (trigger: interval[0:00:30], next run at: 2026-03-01 13:22:00 -03)" executed successfully
+INFO:apscheduler.executors.default:Running job "Monitor de Inatividade de Chat (trigger: interval[0:00:30], next run at: 2026-03-01 13:22:30 -03)" (scheduled at 2026-03-01 13:22:00.218130-03:00)
+INFO:apscheduler.executors.default:Job "Monitor de Inatividade de Chat (trigger: interval[0:00:30], next run at: 2026-03-01 13:22:30 -03)" executed successfully
+INFO:apscheduler.executors.default:Running job "Monitor de Inatividade de Chat (trigger: interval[0:00:30], next run at: 2026-03-01 13:23:00 -03)" (scheduled at 2026-03-01 13:22:30.218130-03:00)
+INFO:apscheduler.executors.default:Job "Monitor de Inatividade de Chat (trigger: interval[0:00:30], next run at: 2026-03-01 13:23:00 -03)" executed successfully
+INFO:apscheduler.executors.default:Running job "Monitor de Inatividade de Chat (trigger: interval[0:00:30], next run at: 2026-03-01 13:23:30 -03)" (scheduled at 2026-03-01 13:23:00.218130-03:00)
+INFO:apscheduler.executors.default:Job "Monitor de Inatividade de Chat (trigger: interval[0:00:30], next run at: 2026-03-01 13:23:30 -03)" executed successfully
+INFO:apscheduler.executors.default:Running job "Monitor de Inatividade de Chat (trigger: interval[0:00:30], next run at: 2026-03-01 13:24:00 -03)" (scheduled at 2026-03-01 13:23:30.218130-03:00)
+INFO:apscheduler.executors.default:Job "Monitor de Inatividade de Chat (trigger: interval[0:00:30], next run at: 2026-03-01 13:24:00 -03)" executed successfully
+INFO:apscheduler.executors.default:Running job "Monitor de Inatividade de Chat (trigger: interval[0:00:30], next run at: 2026-03-01 13:24:30 -03)" (scheduled at 2026-03-01 13:24:00.218130-03:00)
+INFO:apscheduler.executors.default:Job "Monitor de Inatividade de Chat (trigger: interval[0:00:30], next run at: 2026-03-01 13:24:30 -03)" executed successfully
+[pid: 517459|app: 0|req: 77/77] 2804:214:400a:23a4:8cc8:d6a:30e1:2551 () {56 vars in 1204 bytes} [Sun Mar  1 13:24:10 2026] GET /portal => generated 135637 bytes in 31 msecs (HTTP/2.0 200) 4 headers in 129 bytes (1 switches on core 0)
+[pid: 517459|app: 0|req: 78/78] 2804:214:400a:23a4:8cc8:d6a:30e1:2551 () {52 vars in 1094 bytes} [Sun Mar  1 13:24:11 2026] GET /api/notes/ => generated 7550 bytes in 4 msecs (HTTP/2.0 200) 4 headers in 119 bytes (1 switches on core 0)
+[pid: 517459|app: 0|req: 79/79] 2804:214:400a:23a4:8cc8:d6a:30e1:2551 () {60 vars in 1257 bytes} [Sun Mar  1 13:24:14 2026] GET /portal => generated 135637 bytes in 20 msecs (HTTP/2.0 200) 4 headers in 129 bytes (1 switches on core 0)
+[pid: 517459|app: 0|req: 80/80] 2804:214:400a:23a4:8cc8:d6a:30e1:2551 () {56 vars in 1147 bytes} [Sun Mar  1 13:24:14 2026] GET /api/notes/ => generated 7550 bytes in 4 msecs (HTTP/2.0 200) 4 headers in 119 bytes (1 switches on core 0)
+INFO:apscheduler.executors.default:Running job "Monitor de Inatividade de Chat (trigger: interval[0:00:30], next run at: 2026-03-01 13:25:00 -03)" (scheduled at 2026-03-01 13:24:30.218130-03:00)
+INFO:apscheduler.executors.default:Job "Monitor de Inatividade de Chat (trigger: interval[0:00:30], next run at: 2026-03-01 13:25:00 -03)" executed successfully
+[pid: 517459|app: 0|req: 81/81] 2804:214:400a:23a4:8cc8:d6a:30e1:2551 () {58 vars in 1200 bytes} [Sun Mar  1 13:24:39 2026] POST /portal => generated 39 bytes in 3 msecs (HTTP/2.0 200) 5 headers in 447 bytes (1 switches on core 0)
+[pid: 517459|app: 0|req: 82/82] 2804:214:400a:23a4:8cc8:d6a:30e1:2551 () {56 vars in 1205 bytes} [Sun Mar  1 13:24:39 2026] GET /my-work => generated 80585 bytes in 9 msecs (HTTP/2.0 200) 4 headers in 128 bytes (1 switches on core 0)
+INFO:api.routes.my_work:📊 Filter Options Response: 7 companies, 36 collabs, role=admin
+[pid: 517459|app: 0|req: 83/83] 2804:214:400a:23a4:8cc8:d6a:30e1:2551 () {52 vars in 1114 bytes} [Sun Mar  1 13:24:40 2026] GET /my-work/api/filter-options => generated 51832 bytes in 14 msecs (HTTP/2.0 200) 4 headers in 120 bytes (1 switches on core 0)
+INFO:api.routes.my_work:📊 API Request: scope=me, company_ids=[7, 2, 8, 1, 3, 6, 9], active_company=None
+INFO:services.my_work.discovery_service:🔍 Discovery [scope=me]: user=3, role=admin, target_companies=[7, 2, 8, 1, 3, 6, 9]
+INFO:services.my_work.discovery_service:📊 Raw Discovery: Found 156 total activities across all allowed companies.
+[pid: 517459|app: 0|req: 84/84] 2804:214:400a:23a4:8cc8:d6a:30e1:2551 () {52 vars in 4365 bytes} [Sun Mar  1 13:24:40 2026] GET /my-work/api/activities?scope=me&active_company_id=&company_ids=7%2C2%2C8%2C1%2C3%2C6%2C9&process_ids=220%2C226%2C227%2C222%2C223%2C225%2C87%2C88%2C89%2C90%2C91%2C113%2C108%2C92%2C112%2C116%2C102%2C117%2C111%2C110%2C231%2C138%2C106%2C118%2C114%2C103%2C99%2C115%2C133%2C97%2C107%2C101%2C98%2C137%2C109%2C105%2C100%2C104%2C134%2C135%2C136%2C139%2C132%2C129%2C130%2C131%2C241%2C253%2C254%2C255%2C256%2C257%2C258%2C261%2C262%2C264%2C272%2C273%2C274%2C265%2C266%2C259%2C260%2C263%2C247%2C144%2C142%2C143%2C140%2C141%2C145%2C146%2C147%2C148%2C149%2C150%2C151%2C152%2C153%2C154%2C155%2C156%2C228%2C157%2C211%2C217%2C218%2C202%2C203%2C204%2C206%2C205%2C166%2C178%2C175%2C168%2C176%2C173%2C28%2C174%2C177%2C127%2C207%2C208%2C209%2C229%2C210%2C269%2C270%2C271%2C267%2C268%2C49%2C50%2C51%2C52%2C53%2C54%2C55%2C56%2C238%2C57%2C58%2C59%2C242%2C74%2C72%2C232%2C73%2C246%2C75%2C233%2C234%2C244%2C221%2C245%2C230%2C240%2C60%2C235%2C61%2C236%2C62%2C239%2C243%2C237%2C63%2C64%2C65%2C66%2C67%2C68%2C76%2C69%2C70%2C77%2C120%2C121%2C123%2C122%2C126%2C128%2C119%2C94%2C71%2C78%2C93%2C79%2C125%2C96%2C95%2C80%2C81%2C82%2C83%2C84%2C124%2C85%2C86%2C158%2C159%2C160%2C161%2C162%2C163%2C164%2C165%2C181%2C169%2C172%2C170%2C171%2C167%2C179%2C248%2C249%2C250%2C251%2C252%2C275%2C276%2C277%2C278%2C279%2C182%2C183%2C184%2C185%2C186%2C189%2C190%2C198%2C197%2C196%2C195%2C194%2C193%2C216%2C215%2C212%2C213%2C214%2C180%2C187%2C188%2C191%2C192%2C199%2C200%2C201%2C1%2C2%2C3%2C4%2C5%2C6%2C7%2C8%2C9%2C10%2C11%2C12%2C13%2C14%2C15%2C16%2C17%2C19%2C20%2C21%2C22%2C23%2C24%2C25%2C26%2C27%2C29%2C30%2C31%2C32%2C33%2C34%2C35%2C36%2C37%2C38%2C39%2C40%2C41%2C42%2C43%2C44%2C45%2C46%2C47%2C48%2C18 => generated 7158 bytes in 38 msecs (HTTP/2.0 200) 4 headers in 119 bytes (1 switches on core 0)
+[pid: 517459|app: 0|req: 85/85] 2804:214:400a:23a4:8cc8:d6a:30e1:2551 () {52 vars in 1199 bytes} [Sun Mar  1 13:24:40 2026] GET /my-work/api/occurrences/summary?company_ids=7%2C2%2C8%2C1%2C3%2C6%2C9 => generated 92 bytes in 6 msecs (HTTP/2.0 200) 4 headers in 117 bytes (1 switches on core 0)
+INFO:apscheduler.executors.default:Running job "Monitor de Inatividade de Chat (trigger: interval[0:00:30], next run at: 2026-03-01 13:25:30 -03)" (scheduled at 2026-03-01 13:25:00.218130-03:00)
+INFO:apscheduler.executors.default:Job "Monitor de Inatividade de Chat (trigger: interval[0:00:30], next run at: 2026-03-01 13:25:30 -03)" executed successfully
+INFO:apscheduler.executors.default:Running job "Monitor de Inatividade de Chat (trigger: interval[0:00:30], next run at: 2026-03-01 13:26:00 -03)" (scheduled at 2026-03-01 13:25:30.218130-03:00)
+INFO:apscheduler.executors.default:Job "Monitor de Inatividade de Chat (trigger: interval[0:00:30], next run at: 2026-03-01 13:26:00 -03)" executed successfully
+INFO:apscheduler.executors.default:Running job "Monitor de Inatividade de Chat (trigger: interval[0:00:30], next run at: 2026-03-01 13:26:30 -03)" (scheduled at 2026-03-01 13:26:00.218130-03:00)
+INFO:apscheduler.executors.default:Job "Monitor de Inatividade de Chat (trigger: interval[0:00:30], next run at: 2026-03-01 13:26:30 -03)" executed successfully
+[pid: 517459|app: 0|req: 86/86] 2804:214:400a:23a4:8cc8:d6a:30e1:2551 () {60 vars in 1258 bytes} [Sun Mar  1 13:26:15 2026] GET /my-work => generated 80585 bytes in 5 msecs (HTTP/2.0 200) 4 headers in 128 bytes (2 switches on core 0)
+INFO:api.routes.my_work:📊 Filter Options Response: 7 companies, 36 collabs, role=admin
+[pid: 517459|app: 0|req: 87/87] 2804:214:400a:23a4:8cc8:d6a:30e1:2551 () {56 vars in 1167 bytes} [Sun Mar  1 13:26:15 2026] GET /my-work/api/filter-options => generated 51832 bytes in 14 msecs (HTTP/2.0 200) 4 headers in 120 bytes (2 switches on core 0)
+INFO:api.routes.my_work:📊 API Request: scope=me, company_ids=[7, 2, 8, 1, 3, 6, 9], active_company=None
+INFO:services.my_work.discovery_service:🔍 Discovery [scope=me]: user=3, role=admin, target_companies=[7, 2, 8, 1, 3, 6, 9]
+INFO:services.my_work.discovery_service:📊 Raw Discovery: Found 156 total activities across all allowed companies.
+[pid: 517459|app: 0|req: 88/88] 2804:214:400a:23a4:8cc8:d6a:30e1:2551 () {56 vars in 4418 bytes} [Sun Mar  1 13:26:16 2026] GET /my-work/api/activities?scope=me&active_company_id=&company_ids=7%2C2%2C8%2C1%2C3%2C6%2C9&process_ids=220%2C226%2C227%2C222%2C223%2C225%2C87%2C88%2C89%2C90%2C91%2C113%2C108%2C92%2C112%2C116%2C102%2C117%2C111%2C110%2C231%2C138%2C106%2C118%2C114%2C103%2C99%2C115%2C133%2C97%2C107%2C101%2C98%2C137%2C109%2C105%2C100%2C104%2C134%2C135%2C136%2C139%2C132%2C129%2C130%2C131%2C241%2C253%2C254%2C255%2C256%2C257%2C258%2C261%2C262%2C264%2C272%2C273%2C274%2C265%2C266%2C259%2C260%2C263%2C247%2C144%2C142%2C143%2C140%2C141%2C145%2C146%2C147%2C148%2C149%2C150%2C151%2C152%2C153%2C154%2C155%2C156%2C228%2C157%2C211%2C217%2C218%2C202%2C203%2C204%2C206%2C205%2C166%2C178%2C175%2C168%2C176%2C173%2C28%2C174%2C177%2C127%2C207%2C208%2C209%2C229%2C210%2C269%2C270%2C271%2C267%2C268%2C49%2C50%2C51%2C52%2C53%2C54%2C55%2C56%2C238%2C57%2C58%2C59%2C242%2C74%2C72%2C232%2C73%2C246%2C75%2C233%2C234%2C244%2C221%2C245%2C230%2C240%2C60%2C235%2C61%2C236%2C62%2C239%2C243%2C237%2C63%2C64%2C65%2C66%2C67%2C68%2C76%2C69%2C70%2C77%2C120%2C121%2C123%2C122%2C126%2C128%2C119%2C94%2C71%2C78%2C93%2C79%2C125%2C96%2C95%2C80%2C81%2C82%2C83%2C84%2C124%2C85%2C86%2C158%2C159%2C160%2C161%2C162%2C163%2C164%2C165%2C181%2C169%2C172%2C170%2C171%2C167%2C179%2C248%2C249%2C250%2C251%2C252%2C275%2C276%2C277%2C278%2C279%2C182%2C183%2C184%2C185%2C186%2C189%2C190%2C198%2C197%2C196%2C195%2C194%2C193%2C216%2C215%2C212%2C213%2C214%2C180%2C187%2C188%2C191%2C192%2C199%2C200%2C201%2C1%2C2%2C3%2C4%2C5%2C6%2C7%2C8%2C9%2C10%2C11%2C12%2C13%2C14%2C15%2C16%2C17%2C19%2C20%2C21%2C22%2C23%2C24%2C25%2C26%2C27%2C29%2C30%2C31%2C32%2C33%2C34%2C35%2C36%2C37%2C38%2C39%2C40%2C41%2C42%2C43%2C44%2C45%2C46%2C47%2C48%2C18 => generated 7158 bytes in 37 msecs (HTTP/2.0 200) 4 headers in 119 bytes (1 switches on core 0)
+[pid: 517459|app: 0|req: 89/89] 2804:214:400a:23a4:8cc8:d6a:30e1:2551 () {52 vars in 1199 bytes} [Sun Mar  1 13:26:16 2026] GET /my-work/api/occurrences/summary?company_ids=7%2C2%2C8%2C1%2C3%2C6%2C9 => generated 92 bytes in 4 msecs (HTTP/2.0 200) 4 headers in 117 bytes (1 switches on core 0)
+[pid: 517459|app: 0|req: 90/90] 2804:214:400a:23a4:8cc8:d6a:30e1:2551 () {60 vars in 1258 bytes} [Sun Mar  1 13:26:17 2026] GET /my-work => generated 80585 bytes in 5 msecs (HTTP/2.0 200) 4 headers in 128 bytes (1 switches on core 0)
+INFO:api.routes.my_work:📊 Filter Options Response: 7 companies, 36 collabs, role=admin
+[pid: 517459|app: 0|req: 91/91] 2804:214:400a:23a4:8cc8:d6a:30e1:2551 () {56 vars in 1167 bytes} [Sun Mar  1 13:26:18 2026] GET /my-work/api/filter-options => generated 51832 bytes in 13 msecs (HTTP/2.0 200) 4 headers in 120 bytes (2 switches on core 0)
+INFO:api.routes.my_work:📊 API Request: scope=me, company_ids=[7, 2, 8, 1, 3, 6, 9], active_company=None
+INFO:services.my_work.discovery_service:🔍 Discovery [scope=me]: user=3, role=admin, target_companies=[7, 2, 8, 1, 3, 6, 9]
+INFO:services.my_work.discovery_service:📊 Raw Discovery: Found 156 total activities across all allowed companies.
+[pid: 517459|app: 0|req: 92/92] 2804:214:400a:23a4:8cc8:d6a:30e1:2551 () {56 vars in 4418 bytes} [Sun Mar  1 13:26:18 2026] GET /my-work/api/activities?scope=me&active_company_id=&company_ids=7%2C2%2C8%2C1%2C3%2C6%2C9&process_ids=220%2C226%2C227%2C222%2C223%2C225%2C87%2C88%2C89%2C90%2C91%2C113%2C108%2C92%2C112%2C116%2C102%2C117%2C111%2C110%2C231%2C138%2C106%2C118%2C114%2C103%2C99%2C115%2C133%2C97%2C107%2C101%2C98%2C137%2C109%2C105%2C100%2C104%2C134%2C135%2C136%2C139%2C132%2C129%2C130%2C131%2C241%2C253%2C254%2C255%2C256%2C257%2C258%2C261%2C262%2C264%2C272%2C273%2C274%2C265%2C266%2C259%2C260%2C263%2C247%2C144%2C142%2C143%2C140%2C141%2C145%2C146%2C147%2C148%2C149%2C150%2C151%2C152%2C153%2C154%2C155%2C156%2C228%2C157%2C211%2C217%2C218%2C202%2C203%2C204%2C206%2C205%2C166%2C178%2C175%2C168%2C176%2C173%2C28%2C174%2C177%2C127%2C207%2C208%2C209%2C229%2C210%2C269%2C270%2C271%2C267%2C268%2C49%2C50%2C51%2C52%2C53%2C54%2C55%2C56%2C238%2C57%2C58%2C59%2C242%2C74%2C72%2C232%2C73%2C246%2C75%2C233%2C234%2C244%2C221%2C245%2C230%2C240%2C60%2C235%2C61%2C236%2C62%2C239%2C243%2C237%2C63%2C64%2C65%2C66%2C67%2C68%2C76%2C69%2C70%2C77%2C120%2C121%2C123%2C122%2C126%2C128%2C119%2C94%2C71%2C78%2C93%2C79%2C125%2C96%2C95%2C80%2C81%2C82%2C83%2C84%2C124%2C85%2C86%2C158%2C159%2C160%2C161%2C162%2C163%2C164%2C165%2C181%2C169%2C172%2C170%2C171%2C167%2C179%2C248%2C249%2C250%2C251%2C252%2C275%2C276%2C277%2C278%2C279%2C182%2C183%2C184%2C185%2C186%2C189%2C190%2C198%2C197%2C196%2C195%2C194%2C193%2C216%2C215%2C212%2C213%2C214%2C180%2C187%2C188%2C191%2C192%2C199%2C200%2C201%2C1%2C2%2C3%2C4%2C5%2C6%2C7%2C8%2C9%2C10%2C11%2C12%2C13%2C14%2C15%2C16%2C17%2C19%2C20%2C21%2C22%2C23%2C24%2C25%2C26%2C27%2C29%2C30%2C31%2C32%2C33%2C34%2C35%2C36%2C37%2C38%2C39%2C40%2C41%2C42%2C43%2C44%2C45%2C46%2C47%2C48%2C18 => generated 7158 bytes in 38 msecs (HTTP/2.0 200) 4 headers in 119 bytes (1 switches on core 0)
+[pid: 517459|app: 0|req: 93/93] 2804:214:400a:23a4:8cc8:d6a:30e1:2551 () {52 vars in 1199 bytes} [Sun Mar  1 13:26:18 2026] GET /my-work/api/occurrences/summary?company_ids=7%2C2%2C8%2C1%2C3%2C6%2C9 => generated 92 bytes in 5 msecs (HTTP/2.0 200) 4 headers in 117 bytes (1 switches on core 0)
+INFO:apscheduler.executors.default:Running job "Monitor de Inatividade de Chat (trigger: interval[0:00:30], next run at: 2026-03-01 13:27:00 -03)" (scheduled at 2026-03-01 13:26:30.218130-03:00)
+INFO:apscheduler.executors.default:Job "Monitor de Inatividade de Chat (trigger: interval[0:00:30], next run at: 2026-03-01 13:27:00 -03)" executed successfully
+INFO:apscheduler.executors.default:Running job "Monitor de Inatividade de Chat (trigger: interval[0:00:30], next run at: 2026-03-01 13:27:30 -03)" (scheduled at 2026-03-01 13:27:00.218130-03:00)
+INFO:apscheduler.executors.default:Job "Monitor de Inatividade de Chat (trigger: interval[0:00:30], next run at: 2026-03-01 13:27:30 -03)" executed successfully
+INFO:apscheduler.executors.default:Running job "Monitor de Inatividade de Chat (trigger: interval[0:00:30], next run at: 2026-03-01 13:28:00 -03)" (scheduled at 2026-03-01 13:27:30.218130-03:00)
+INFO:apscheduler.executors.default:Job "Monitor de Inatividade de Chat (trigger: interval[0:00:30], next run at: 2026-03-01 13:28:00 -03)" executed successfully
+INFO:apscheduler.executors.default:Running job "Monitor de Inatividade de Chat (trigger: interval[0:00:30], next run at: 2026-03-01 13:28:30 -03)" (scheduled at 2026-03-01 13:28:00.218130-03:00)
+INFO:apscheduler.executors.default:Job "Monitor de Inatividade de Chat (trigger: interval[0:00:30], next run at: 2026-03-01 13:28:30 -03)" executed successfully
+INFO:apscheduler.executors.default:Running job "Monitor de Inatividade de Chat (trigger: interval[0:00:30], next run at: 2026-03-01 13:29:00 -03)" (scheduled at 2026-03-01 13:28:30.218130-03:00)
+INFO:apscheduler.executors.default:Job "Monitor de Inatividade de Chat (trigger: interval[0:00:30], next run at: 2026-03-01 13:29:00 -03)" executed successfully
+INFO:apscheduler.executors.default:Running job "Monitor de Inatividade de Chat (trigger: interval[0:00:30], next run at: 2026-03-01 13:29:30 -03)" (scheduled at 2026-03-01 13:29:00.218130-03:00)
+INFO:apscheduler.executors.default:Job "Monitor de Inatividade de Chat (trigger: interval[0:00:30], next run at: 2026-03-01 13:29:30 -03)" executed successfully
+INFO:apscheduler.executors.default:Running job "Monitor de Inatividade de Chat (trigger: interval[0:00:30], next run at: 2026-03-01 13:30:00 -03)" (scheduled at 2026-03-01 13:29:30.218130-03:00)
+INFO:apscheduler.executors.default:Job "Monitor de Inatividade de Chat (trigger: interval[0:00:30], next run at: 2026-03-01 13:30:00 -03)" executed successfully
+INFO:apscheduler.executors.default:Running job "Monitor de Inatividade de Chat (trigger: interval[0:00:30], next run at: 2026-03-01 13:30:30 -03)" (scheduled at 2026-03-01 13:30:00.218130-03:00)
+INFO:apscheduler.executors.default:Job "Monitor de Inatividade de Chat (trigger: interval[0:00:30], next run at: 2026-03-01 13:30:30 -03)" executed successfully
+INFO:apscheduler.executors.default:Running job "Monitor de Inatividade de Chat (trigger: interval[0:00:30], next run at: 2026-03-01 13:31:00 -03)" (scheduled at 2026-03-01 13:30:30.218130-03:00)
+INFO:apscheduler.executors.default:Job "Monitor de Inatividade de Chat (trigger: interval[0:00:30], next run at: 2026-03-01 13:31:00 -03)" executed successfully
+INFO:apscheduler.executors.default:Running job "Monitor de Inatividade de Chat (trigger: interval[0:00:30], next run at: 2026-03-01 13:31:30 -03)" (scheduled at 2026-03-01 13:31:00.218130-03:00)
+INFO:apscheduler.executors.default:Job "Monitor de Inatividade de Chat (trigger: interval[0:00:30], next run at: 2026-03-01 13:31:30 -03)" executed successfully
+[pid: 517459|app: 0|req: 94/94] 2804:214:400a:23a4:8cc8:d6a:30e1:2551 () {54 vars in 1144 bytes} [Sun Mar  1 13:31:03 2026] GET /my-work => generated 80585 bytes in 7 msecs (HTTP/2.0 200) 4 headers in 128 bytes (1 switches on core 0)
+INFO:api.routes.my_work:📊 Filter Options Response: 7 companies, 36 collabs, role=admin
+[pid: 517459|app: 0|req: 95/95] 2804:214:400a:23a4:8cc8:d6a:30e1:2551 () {52 vars in 1114 bytes} [Sun Mar  1 13:31:03 2026] GET /my-work/api/filter-options => generated 51832 bytes in 14 msecs (HTTP/2.0 200) 4 headers in 120 bytes (1 switches on core 0)
+INFO:api.routes.my_work:📊 API Request: scope=me, company_ids=[7, 2, 8, 1, 3, 6, 9], active_company=None
+INFO:services.my_work.discovery_service:🔍 Discovery [scope=me]: user=3, role=admin, target_companies=[7, 2, 8, 1, 3, 6, 9]
+INFO:services.my_work.discovery_service:📊 Raw Discovery: Found 156 total activities across all allowed companies.
+[pid: 517459|app: 0|req: 96/96] 2804:214:400a:23a4:8cc8:d6a:30e1:2551 () {52 vars in 4365 bytes} [Sun Mar  1 13:31:04 2026] GET /my-work/api/activities?scope=me&active_company_id=&company_ids=7%2C2%2C8%2C1%2C3%2C6%2C9&process_ids=220%2C226%2C227%2C222%2C223%2C225%2C87%2C88%2C89%2C90%2C91%2C113%2C108%2C92%2C112%2C116%2C102%2C117%2C111%2C110%2C231%2C138%2C106%2C118%2C114%2C103%2C99%2C115%2C133%2C97%2C107%2C101%2C98%2C137%2C109%2C105%2C100%2C104%2C134%2C135%2C136%2C139%2C132%2C129%2C130%2C131%2C241%2C253%2C254%2C255%2C256%2C257%2C258%2C261%2C262%2C264%2C272%2C273%2C274%2C265%2C266%2C259%2C260%2C263%2C247%2C144%2C142%2C143%2C140%2C141%2C145%2C146%2C147%2C148%2C149%2C150%2C151%2C152%2C153%2C154%2C155%2C156%2C228%2C157%2C211%2C217%2C218%2C202%2C203%2C204%2C206%2C205%2C166%2C178%2C175%2C168%2C176%2C173%2C28%2C174%2C177%2C127%2C207%2C208%2C209%2C229%2C210%2C269%2C270%2C271%2C267%2C268%2C49%2C50%2C51%2C52%2C53%2C54%2C55%2C56%2C238%2C57%2C58%2C59%2C242%2C74%2C72%2C232%2C73%2C246%2C75%2C233%2C234%2C244%2C221%2C245%2C230%2C240%2C60%2C235%2C61%2C236%2C62%2C239%2C243%2C237%2C63%2C64%2C65%2C66%2C67%2C68%2C76%2C69%2C70%2C77%2C120%2C121%2C123%2C122%2C126%2C128%2C119%2C94%2C71%2C78%2C93%2C79%2C125%2C96%2C95%2C80%2C81%2C82%2C83%2C84%2C124%2C85%2C86%2C158%2C159%2C160%2C161%2C162%2C163%2C164%2C165%2C181%2C169%2C172%2C170%2C171%2C167%2C179%2C248%2C249%2C250%2C251%2C252%2C275%2C276%2C277%2C278%2C279%2C182%2C183%2C184%2C185%2C186%2C189%2C190%2C198%2C197%2C196%2C195%2C194%2C193%2C216%2C215%2C212%2C213%2C214%2C180%2C187%2C188%2C191%2C192%2C199%2C200%2C201%2C1%2C2%2C3%2C4%2C5%2C6%2C7%2C8%2C9%2C10%2C11%2C12%2C13%2C14%2C15%2C16%2C17%2C19%2C20%2C21%2C22%2C23%2C24%2C25%2C26%2C27%2C29%2C30%2C31%2C32%2C33%2C34%2C35%2C36%2C37%2C38%2C39%2C40%2C41%2C42%2C43%2C44%2C45%2C46%2C47%2C48%2C18 => generated 7158 bytes in 37 msecs (HTTP/2.0 200) 4 headers in 119 bytes (1 switches on core 0)
+[pid: 517459|app: 0|req: 97/97] 2804:214:400a:23a4:8cc8:d6a:30e1:2551 () {52 vars in 1199 bytes} [Sun Mar  1 13:31:04 2026] GET /my-work/api/occurrences/summary?company_ids=7%2C2%2C8%2C1%2C3%2C6%2C9 => generated 92 bytes in 4 msecs (HTTP/2.0 200) 4 headers in 117 bytes (1 switches on core 0)
+INFO:apscheduler.executors.default:Running job "Monitor de Inatividade de Chat (trigger: interval[0:00:30], next run at: 2026-03-01 13:32:00 -03)" (scheduled at 2026-03-01 13:31:30.218130-03:00)
+INFO:apscheduler.executors.default:Job "Monitor de Inatividade de Chat (trigger: interval[0:00:30], next run at: 2026-03-01 13:32:00 -03)" executed successfully
+INFO:apscheduler.executors.default:Running job "Monitor de Inatividade de Chat (trigger: interval[0:00:30], next run at: 2026-03-01 13:32:30 -03)" (scheduled at 2026-03-01 13:32:00.218130-03:00)
+INFO:apscheduler.executors.default:Job "Monitor de Inatividade de Chat (trigger: interval[0:00:30], next run at: 2026-03-01 13:32:30 -03)" executed successfully
+INFO:apscheduler.executors.default:Running job "Monitor de Inatividade de Chat (trigger: interval[0:00:30], next run at: 2026-03-01 13:33:00 -03)" (scheduled at 2026-03-01 13:32:30.218130-03:00)
+INFO:apscheduler.executors.default:Job "Monitor de Inatividade de Chat (trigger: interval[0:00:30], next run at: 2026-03-01 13:33:00 -03)" executed successfully
+INFO:apscheduler.executors.default:Running job "Monitor de Inatividade de Chat (trigger: interval[0:00:30], next run at: 2026-03-01 13:33:30 -03)" (scheduled at 2026-03-01 13:33:00.218130-03:00)
+INFO:apscheduler.executors.default:Job "Monitor de Inatividade de Chat (trigger: interval[0:00:30], next run at: 2026-03-01 13:33:30 -03)" executed successfully
+INFO:apscheduler.executors.default:Running job "Monitor de Inatividade de Chat (trigger: interval[0:00:30], next run at: 2026-03-01 13:34:00 -03)" (scheduled at 2026-03-01 13:33:30.218130-03:00)
+INFO:apscheduler.executors.default:Job "Monitor de Inatividade de Chat (trigger: interval[0:00:30], next run at: 2026-03-01 13:34:00 -03)" executed successfully
+INFO:apscheduler.executors.default:Running job "Monitor de Inatividade de Chat (trigger: interval[0:00:30], next run at: 2026-03-01 13:34:30 -03)" (scheduled at 2026-03-01 13:34:00.218130-03:00)
+INFO:apscheduler.executors.default:Job "Monitor de Inatividade de Chat (trigger: interval[0:00:30], next run at: 2026-03-01 13:34:30 -03)" executed successfully
+INFO:apscheduler.executors.default:Running job "Monitor de Inatividade de Chat (trigger: interval[0:00:30], next run at: 2026-03-01 13:35:00 -03)" (scheduled at 2026-03-01 13:34:30.218130-03:00)
+INFO:apscheduler.executors.default:Job "Monitor de Inatividade de Chat (trigger: interval[0:00:30], next run at: 2026-03-01 13:35:00 -03)" executed successfully
+INFO:apscheduler.executors.default:Running job "Monitor de Inatividade de Chat (trigger: interval[0:00:30], next run at: 2026-03-01 13:35:30 -03)" (scheduled at 2026-03-01 13:35:00.218130-03:00)
+INFO:apscheduler.executors.default:Job "Monitor de Inatividade de Chat (trigger: interval[0:00:30], next run at: 2026-03-01 13:35:30 -03)" executed successfully
+INFO:apscheduler.executors.default:Running job "Monitor de Inatividade de Chat (trigger: interval[0:00:30], next run at: 2026-03-01 13:36:00 -03)" (scheduled at 2026-03-01 13:35:30.218130-03:00)
+INFO:apscheduler.executors.default:Job "Monitor de Inatividade de Chat (trigger: interval[0:00:30], next run at: 2026-03-01 13:36:00 -03)" executed successfully
+INFO:apscheduler.executors.default:Running job "Monitor de Inatividade de Chat (trigger: interval[0:00:30], next run at: 2026-03-01 13:36:30 -03)" (scheduled at 2026-03-01 13:36:00.218130-03:00)
+INFO:apscheduler.executors.default:Job "Monitor de Inatividade de Chat (trigger: interval[0:00:30], next run at: 2026-03-01 13:36:30 -03)" executed successfully
+INFO:apscheduler.executors.default:Running job "Monitor de Inatividade de Chat (trigger: interval[0:00:30], next run at: 2026-03-01 13:37:00 -03)" (scheduled at 2026-03-01 13:36:30.218130-03:00)
+INFO:apscheduler.executors.default:Job "Monitor de Inatividade de Chat (trigger: interval[0:00:30], next run at: 2026-03-01 13:37:00 -03)" executed successfully
+INFO:apscheduler.executors.default:Running job "Monitor de Inatividade de Chat (trigger: interval[0:00:30], next run at: 2026-03-01 13:37:30 -03)" (scheduled at 2026-03-01 13:37:00.218130-03:00)
+INFO:apscheduler.executors.default:Job "Monitor de Inatividade de Chat (trigger: interval[0:00:30], next run at: 2026-03-01 13:37:30 -03)" executed successfully
+INFO:apscheduler.executors.default:Running job "Monitor de Inatividade de Chat (trigger: interval[0:00:30], next run at: 2026-03-01 13:38:00 -03)" (scheduled at 2026-03-01 13:37:30.218130-03:00)
+INFO:apscheduler.executors.default:Job "Monitor de Inatividade de Chat (trigger: interval[0:00:30], next run at: 2026-03-01 13:38:00 -03)" executed successfully
+INFO:apscheduler.executors.default:Running job "Monitor de Inatividade de Chat (trigger: interval[0:00:30], next run at: 2026-03-01 13:38:30 -03)" (scheduled at 2026-03-01 13:38:00.218130-03:00)
+INFO:apscheduler.executors.default:Job "Monitor de Inatividade de Chat (trigger: interval[0:00:30], next run at: 2026-03-01 13:38:30 -03)" executed successfully
+INFO:api.routes.my_work:📊 API Request: scope=company, company_ids=[7, 2, 8, 1, 3, 6, 9], active_company=None
+INFO:services.my_work.discovery_service:🔍 Discovery [scope=company]: user=3, role=admin, target_companies=[7, 2, 8, 1, 3, 6, 9]
+INFO:services.my_work.discovery_service:📊 Raw Discovery: Found 156 total activities across all allowed companies.
+[pid: 517459|app: 0|req: 98/98] 2804:214:400a:23a4:8cc8:d6a:30e1:2551 () {52 vars in 4375 bytes} [Sun Mar  1 13:38:15 2026] GET /my-work/api/activities?scope=company&active_company_id=&company_ids=7%2C2%2C8%2C1%2C3%2C6%2C9&process_ids=220%2C226%2C227%2C222%2C223%2C225%2C87%2C88%2C89%2C90%2C91%2C113%2C108%2C92%2C112%2C116%2C102%2C117%2C111%2C110%2C231%2C138%2C106%2C118%2C114%2C103%2C99%2C115%2C133%2C97%2C107%2C101%2C98%2C137%2C109%2C105%2C100%2C104%2C134%2C135%2C136%2C139%2C132%2C129%2C130%2C131%2C241%2C253%2C254%2C255%2C256%2C257%2C258%2C261%2C262%2C264%2C272%2C273%2C274%2C265%2C266%2C259%2C260%2C263%2C247%2C144%2C142%2C143%2C140%2C141%2C145%2C146%2C147%2C148%2C149%2C150%2C151%2C152%2C153%2C154%2C155%2C156%2C228%2C157%2C211%2C217%2C218%2C202%2C203%2C204%2C206%2C205%2C166%2C178%2C175%2C168%2C176%2C173%2C28%2C174%2C177%2C127%2C207%2C208%2C209%2C229%2C210%2C269%2C270%2C271%2C267%2C268%2C49%2C50%2C51%2C52%2C53%2C54%2C55%2C56%2C238%2C57%2C58%2C59%2C242%2C74%2C72%2C232%2C73%2C246%2C75%2C233%2C234%2C244%2C221%2C245%2C230%2C240%2C60%2C235%2C61%2C236%2C62%2C239%2C243%2C237%2C63%2C64%2C65%2C66%2C67%2C68%2C76%2C69%2C70%2C77%2C120%2C121%2C123%2C122%2C126%2C128%2C119%2C94%2C71%2C78%2C93%2C79%2C125%2C96%2C95%2C80%2C81%2C82%2C83%2C84%2C124%2C85%2C86%2C158%2C159%2C160%2C161%2C162%2C163%2C164%2C165%2C181%2C169%2C172%2C170%2C171%2C167%2C179%2C248%2C249%2C250%2C251%2C252%2C275%2C276%2C277%2C278%2C279%2C182%2C183%2C184%2C185%2C186%2C189%2C190%2C198%2C197%2C196%2C195%2C194%2C193%2C216%2C215%2C212%2C213%2C214%2C180%2C187%2C188%2C191%2C192%2C199%2C200%2C201%2C1%2C2%2C3%2C4%2C5%2C6%2C7%2C8%2C9%2C10%2C11%2C12%2C13%2C14%2C15%2C16%2C17%2C19%2C20%2C21%2C22%2C23%2C24%2C25%2C26%2C27%2C29%2C30%2C31%2C32%2C33%2C34%2C35%2C36%2C37%2C38%2C39%2C40%2C41%2C42%2C43%2C44%2C45%2C46%2C47%2C48%2C18 => generated 39231 bytes in 48 msecs (HTTP/2.0 200) 4 headers in 120 bytes (1 switches on core 0)
+[pid: 517459|app: 0|req: 99/99] 2804:214:400a:23a4:8cc8:d6a:30e1:2551 () {52 vars in 1199 bytes} [Sun Mar  1 13:38:16 2026] GET /my-work/api/occurrences/summary?company_ids=7%2C2%2C8%2C1%2C3%2C6%2C9 => generated 92 bytes in 5 msecs (HTTP/2.0 200) 4 headers in 117 bytes (1 switches on core 0)
+INFO:api.routes.my_work:📊 API Request: scope=general, company_ids=[7, 2, 8, 1, 3, 6, 9], active_company=None
+INFO:services.my_work.discovery_service:🔍 Discovery [scope=general]: user=3, role=admin, target_companies=[7, 2, 8, 1, 3, 6, 9]
+INFO:services.my_work.discovery_service:📊 Raw Discovery: Found 156 total activities across all allowed companies.
+[pid: 517459|app: 0|req: 100/100] 2804:214:400a:23a4:8cc8:d6a:30e1:2551 () {52 vars in 4375 bytes} [Sun Mar  1 13:38:19 2026] GET /my-work/api/activities?scope=general&active_company_id=&company_ids=7%2C2%2C8%2C1%2C3%2C6%2C9&process_ids=220%2C226%2C227%2C222%2C223%2C225%2C87%2C88%2C89%2C90%2C91%2C113%2C108%2C92%2C112%2C116%2C102%2C117%2C111%2C110%2C231%2C138%2C106%2C118%2C114%2C103%2C99%2C115%2C133%2C97%2C107%2C101%2C98%2C137%2C109%2C105%2C100%2C104%2C134%2C135%2C136%2C139%2C132%2C129%2C130%2C131%2C241%2C253%2C254%2C255%2C256%2C257%2C258%2C261%2C262%2C264%2C272%2C273%2C274%2C265%2C266%2C259%2C260%2C263%2C247%2C144%2C142%2C143%2C140%2C141%2C145%2C146%2C147%2C148%2C149%2C150%2C151%2C152%2C153%2C154%2C155%2C156%2C228%2C157%2C211%2C217%2C218%2C202%2C203%2C204%2C206%2C205%2C166%2C178%2C175%2C168%2C176%2C173%2C28%2C174%2C177%2C127%2C207%2C208%2C209%2C229%2C210%2C269%2C270%2C271%2C267%2C268%2C49%2C50%2C51%2C52%2C53%2C54%2C55%2C56%2C238%2C57%2C58%2C59%2C242%2C74%2C72%2C232%2C73%2C246%2C75%2C233%2C234%2C244%2C221%2C245%2C230%2C240%2C60%2C235%2C61%2C236%2C62%2C239%2C243%2C237%2C63%2C64%2C65%2C66%2C67%2C68%2C76%2C69%2C70%2C77%2C120%2C121%2C123%2C122%2C126%2C128%2C119%2C94%2C71%2C78%2C93%2C79%2C125%2C96%2C95%2C80%2C81%2C82%2C83%2C84%2C124%2C85%2C86%2C158%2C159%2C160%2C161%2C162%2C163%2C164%2C165%2C181%2C169%2C172%2C170%2C171%2C167%2C179%2C248%2C249%2C250%2C251%2C252%2C275%2C276%2C277%2C278%2C279%2C182%2C183%2C184%2C185%2C186%2C189%2C190%2C198%2C197%2C196%2C195%2C194%2C193%2C216%2C215%2C212%2C213%2C214%2C180%2C187%2C188%2C191%2C192%2C199%2C200%2C201%2C1%2C2%2C3%2C4%2C5%2C6%2C7%2C8%2C9%2C10%2C11%2C12%2C13%2C14%2C15%2C16%2C17%2C19%2C20%2C21%2C22%2C23%2C24%2C25%2C26%2C27%2C29%2C30%2C31%2C32%2C33%2C34%2C35%2C36%2C37%2C38%2C39%2C40%2C41%2C42%2C43%2C44%2C45%2C46%2C47%2C48%2C18 => generated 190827 bytes in 42 msecs (HTTP/2.0 200) 4 headers in 121 bytes (1 switches on core 0)
+[pid: 517459|app: 0|req: 101/101] 2804:214:400a:23a4:8cc8:d6a:30e1:2551 () {52 vars in 1128 bytes} [Sun Mar  1 13:38:19 2026] GET /api/companies/1/process-instances => generated 769 bytes in 8 msecs (HTTP/2.0 200) 4 headers in 118 bytes (2 switches on core 0)
+[pid: 517459|app: 0|req: 102/102] 2804:214:400a:23a4:8cc8:d6a:30e1:2551 () {52 vars in 1128 bytes} [Sun Mar  1 13:38:19 2026] GET /api/companies/2/process-instances => generated 763 bytes in 3 msecs (HTTP/2.0 200) 4 headers in 118 bytes (1 switches on core 0)
+[pid: 517459|app: 0|req: 103/103] 2804:214:400a:23a4:8cc8:d6a:30e1:2551 () {52 vars in 1112 bytes} [Sun Mar  1 13:38:19 2026] GET /api/companies/2/processes => generated 37247 bytes in 73 msecs (HTTP/2.0 200) 4 headers in 120 bytes (1 switches on core 0)
+[pid: 517459|app: 0|req: 104/104] 2804:214:400a:23a4:8cc8:d6a:30e1:2551 () {52 vars in 1112 bytes} [Sun Mar  1 13:38:19 2026] GET /api/companies/1/processes => generated 63807 bytes in 104 msecs (HTTP/2.0 200) 4 headers in 120 bytes (1 switches on core 0)
+[pid: 517459|app: 0|req: 105/105] 2804:214:400a:23a4:8cc8:d6a:30e1:2551 () {52 vars in 1199 bytes} [Sun Mar  1 13:38:19 2026] GET /my-work/api/occurrences/summary?company_ids=7%2C2%2C8%2C1%2C3%2C6%2C9 => generated 92 bytes in 5 msecs (HTTP/2.0 200) 4 headers in 117 bytes (1 switches on core 0)
+INFO:api.routes.my_work:📊 API Request: scope=general, company_ids=[7, 2, 8, 1, 3, 6, 9], active_company=None
+INFO:services.my_work.discovery_service:🔍 Discovery [scope=general]: user=3, role=admin, target_companies=[7, 2, 8, 1, 3, 6, 9]
+INFO:services.my_work.discovery_service:📊 Raw Discovery: Found 156 total activities across all allowed companies.
+[pid: 517459|app: 0|req: 106/106] 2804:214:400a:23a4:8cc8:d6a:30e1:2551 () {52 vars in 1247 bytes} [Sun Mar  1 13:38:26 2026] GET /my-work/api/activities?scope=general&active_company_id=&company_ids=7%2C2%2C8%2C1%2C3%2C6%2C9 => generated 190827 bytes in 40 msecs (HTTP/2.0 200) 4 headers in 121 bytes (1 switches on core 0)
+[pid: 517459|app: 0|req: 107/107] 2804:214:400a:23a4:8cc8:d6a:30e1:2551 () {52 vars in 1199 bytes} [Sun Mar  1 13:38:27 2026] GET /my-work/api/occurrences/summary?company_ids=7%2C2%2C8%2C1%2C3%2C6%2C9 => generated 92 bytes in 4 msecs (HTTP/2.0 200) 4 headers in 117 bytes (2 switches on core 0)
+INFO:apscheduler.executors.default:Running job "Monitor de Inatividade de Chat (trigger: interval[0:00:30], next run at: 2026-03-01 13:39:00 -03)" (scheduled at 2026-03-01 13:38:30.218130-03:00)
+INFO:apscheduler.executors.default:Job "Monitor de Inatividade de Chat (trigger: interval[0:00:30], next run at: 2026-03-01 13:39:00 -03)" executed successfully
+INFO:api.routes.my_work:📊 API Request: scope=company, company_ids=[7, 2, 8, 1, 3, 6, 9], active_company=None
+INFO:services.my_work.discovery_service:🔍 Discovery [scope=company]: user=3, role=admin, target_companies=[7, 2, 8, 1, 3, 6, 9]
+INFO:services.my_work.discovery_service:📊 Raw Discovery: Found 156 total activities across all allowed companies.
+[pid: 517459|app: 0|req: 108/108] 2804:214:400a:23a4:8cc8:d6a:30e1:2551 () {52 vars in 1247 bytes} [Sun Mar  1 13:38:34 2026] GET /my-work/api/activities?scope=company&active_company_id=&company_ids=7%2C2%2C8%2C1%2C3%2C6%2C9 => generated 39231 bytes in 37 msecs (HTTP/2.0 200) 4 headers in 120 bytes (1 switches on core 0)
+[pid: 517459|app: 0|req: 109/109] 2804:214:400a:23a4:8cc8:d6a:30e1:2551 () {52 vars in 1199 bytes} [Sun Mar  1 13:38:34 2026] GET /my-work/api/occurrences/summary?company_ids=7%2C2%2C8%2C1%2C3%2C6%2C9 => generated 92 bytes in 6 msecs (HTTP/2.0 200) 4 headers in 117 bytes (1 switches on core 0)
+INFO:apscheduler.executors.default:Running job "Monitor de Inatividade de Chat (trigger: interval[0:00:30], next run at: 2026-03-01 13:39:30 -03)" (scheduled at 2026-03-01 13:39:00.218130-03:00)
+INFO:apscheduler.executors.default:Job "Monitor de Inatividade de Chat (trigger: interval[0:00:30], next run at: 2026-03-01 13:39:30 -03)" executed successfully
+INFO:api.routes.my_work:📊 API Request: scope=company, company_ids=[7, 2, 8, 1, 3, 6, 9], active_company=None
+INFO:services.my_work.discovery_service:🔍 Discovery [scope=company]: user=3, role=admin, target_companies=[7, 2, 8, 1, 3, 6, 9]
+INFO:services.my_work.discovery_service:📊 Raw Discovery: Found 156 total activities across all allowed companies.
+[pid: 517459|app: 0|req: 110/110] 2804:214:400a:23a4:8cc8:d6a:30e1:2551 () {52 vars in 1247 bytes} [Sun Mar  1 13:39:08 2026] GET /my-work/api/activities?scope=company&active_company_id=&company_ids=7%2C2%2C8%2C1%2C3%2C6%2C9 => generated 39231 bytes in 37 msecs (HTTP/2.0 200) 4 headers in 120 bytes (1 switches on core 0)
+[pid: 517459|app: 0|req: 111/111] 2804:214:400a:23a4:8cc8:d6a:30e1:2551 () {52 vars in 1199 bytes} [Sun Mar  1 13:39:09 2026] GET /my-work/api/occurrences/summary?company_ids=7%2C2%2C8%2C1%2C3%2C6%2C9 => generated 92 bytes in 5 msecs (HTTP/2.0 200) 4 headers in 117 bytes (1 switches on core 0)
+INFO:api.routes.my_work:📊 API Request: scope=company, company_ids=[7, 2, 8, 1, 3, 6, 9], active_company=None
+INFO:services.my_work.discovery_service:🔍 Discovery [scope=company]: user=3, role=admin, target_companies=[7, 2, 8, 1, 3, 6, 9]
+INFO:services.my_work.discovery_service:📊 Raw Discovery: Found 156 total activities across all allowed companies.
+[pid: 517459|app: 0|req: 112/112] 2804:214:400a:23a4:8cc8:d6a:30e1:2551 () {52 vars in 1285 bytes} [Sun Mar  1 13:39:15 2026] GET /my-work/api/activities?scope=company&active_company_id=&company_ids=7%2C2%2C8%2C1%2C3%2C6%2C9&delivery_tags=open => generated 39231 bytes in 56 msecs (HTTP/2.0 200) 4 headers in 120 bytes (1 switches on core 0)
+[pid: 517459|app: 0|req: 113/113] 2804:214:400a:23a4:8cc8:d6a:30e1:2551 () {52 vars in 1199 bytes} [Sun Mar  1 13:39:16 2026] GET /my-work/api/occurrences/summary?company_ids=7%2C2%2C8%2C1%2C3%2C6%2C9 => generated 92 bytes in 4 msecs (HTTP/2.0 200) 4 headers in 117 bytes (1 switches on core 0)
+INFO:apscheduler.executors.default:Running job "Monitor de Inatividade de Chat (trigger: interval[0:00:30], next run at: 2026-03-01 13:40:00 -03)" (scheduled at 2026-03-01 13:39:30.218130-03:00)
+INFO:apscheduler.executors.default:Job "Monitor de Inatividade de Chat (trigger: interval[0:00:30], next run at: 2026-03-01 13:40:00 -03)" executed successfully
+INFO:api.routes.my_work:📊 API Request: scope=company, company_ids=[7, 2, 8, 1, 3, 6, 9], active_company=None
+INFO:services.my_work.discovery_service:🔍 Discovery [scope=company]: user=3, role=admin, target_companies=[7, 2, 8, 1, 3, 6, 9]
+INFO:services.my_work.discovery_service:📊 Raw Discovery: Found 156 total activities across all allowed companies.
+[pid: 517459|app: 0|req: 114/114] 2804:214:400a:23a4:8cc8:d6a:30e1:2551 () {52 vars in 1247 bytes} [Sun Mar  1 13:39:53 2026] GET /my-work/api/activities?scope=company&active_company_id=&company_ids=7%2C2%2C8%2C1%2C3%2C6%2C9 => generated 39231 bytes in 52 msecs (HTTP/2.0 200) 4 headers in 120 bytes (1 switches on core 0)
+[pid: 517459|app: 0|req: 115/115] 2804:214:400a:23a4:8cc8:d6a:30e1:2551 () {52 vars in 1199 bytes} [Sun Mar  1 13:39:53 2026] GET /my-work/api/occurrences/summary?company_ids=7%2C2%2C8%2C1%2C3%2C6%2C9 => generated 92 bytes in 6 msecs (HTTP/2.0 200) 4 headers in 117 bytes (1 switches on core 0)
+INFO:api.routes.my_work:📊 API Request: scope=company, company_ids=[7, 2, 8, 1, 3, 6, 9], active_company=None
+INFO:services.my_work.discovery_service:🔍 Discovery [scope=company]: user=3, role=admin, target_companies=[7, 2, 8, 1, 3, 6, 9]
+INFO:services.my_work.discovery_service:📊 Raw Discovery: Found 156 total activities across all allowed companies.
+[pid: 517459|app: 0|req: 116/116] 2804:214:400a:23a4:8cc8:d6a:30e1:2551 () {52 vars in 1285 bytes} [Sun Mar  1 13:39:56 2026] GET /my-work/api/activities?scope=company&active_company_id=&company_ids=7%2C2%2C8%2C1%2C3%2C6%2C9&delivery_tags=open => generated 39231 bytes in 42 msecs (HTTP/2.0 200) 4 headers in 120 bytes (1 switches on core 0)
+[pid: 517459|app: 0|req: 117/117] 2804:214:400a:23a4:8cc8:d6a:30e1:2551 () {52 vars in 1199 bytes} [Sun Mar  1 13:39:56 2026] GET /my-work/api/occurrences/summary?company_ids=7%2C2%2C8%2C1%2C3%2C6%2C9 => generated 92 bytes in 4 msecs (HTTP/2.0 200) 4 headers in 117 bytes (1 switches on core 0)
+INFO:apscheduler.executors.default:Running job "Monitor de Inatividade de Chat (trigger: interval[0:00:30], next run at: 2026-03-01 13:40:30 -03)" (scheduled at 2026-03-01 13:40:00.218130-03:00)
+INFO:apscheduler.executors.default:Job "Monitor de Inatividade de Chat (trigger: interval[0:00:30], next run at: 2026-03-01 13:40:30 -03)" executed successfully
+INFO:api.routes.my_work:📊 API Request: scope=company, company_ids=[7, 2, 8, 1, 3, 6, 9], active_company=None
+INFO:services.my_work.discovery_service:🔍 Discovery [scope=company]: user=3, role=admin, target_companies=[7, 2, 8, 1, 3, 6, 9]
+INFO:services.my_work.discovery_service:📊 Raw Discovery: Found 156 total activities across all allowed companies.
+[pid: 517459|app: 0|req: 118/118] 2804:214:400a:23a4:8cc8:d6a:30e1:2551 () {52 vars in 1247 bytes} [Sun Mar  1 13:40:01 2026] GET /my-work/api/activities?scope=company&active_company_id=&company_ids=7%2C2%2C8%2C1%2C3%2C6%2C9 => generated 39231 bytes in 45 msecs (HTTP/2.0 200) 4 headers in 120 bytes (1 switches on core 0)
+[pid: 517459|app: 0|req: 119/119] 2804:214:400a:23a4:8cc8:d6a:30e1:2551 () {52 vars in 1199 bytes} [Sun Mar  1 13:40:01 2026] GET /my-work/api/occurrences/summary?company_ids=7%2C2%2C8%2C1%2C3%2C6%2C9 => generated 92 bytes in 4 msecs (HTTP/2.0 200) 4 headers in 117 bytes (1 switches on core 0)
+INFO:api.routes.my_work:📊 API Request: scope=company, company_ids=[7, 2, 8, 1, 3, 6, 9], active_company=None
+INFO:services.my_work.discovery_service:🔍 Discovery [scope=company]: user=3, role=admin, target_companies=[7, 2, 8, 1, 3, 6, 9]
+INFO:services.my_work.discovery_service:📊 Raw Discovery: Found 156 total activities across all allowed companies.
+[pid: 517459|app: 0|req: 120/120] 2804:214:400a:23a4:8cc8:d6a:30e1:2551 () {52 vars in 1295 bytes} [Sun Mar  1 13:40:04 2026] GET /my-work/api/activities?scope=company&active_company_id=&company_ids=7%2C2%2C8%2C1%2C3%2C6%2C9&delivery_tags=completed => generated 39231 bytes in 37 msecs (HTTP/2.0 200) 4 headers in 120 bytes (1 switches on core 0)
+[pid: 517459|app: 0|req: 121/121] 2804:214:400a:23a4:8cc8:d6a:30e1:2551 () {52 vars in 1199 bytes} [Sun Mar  1 13:40:04 2026] GET /my-work/api/occurrences/summary?company_ids=7%2C2%2C8%2C1%2C3%2C6%2C9 => generated 92 bytes in 4 msecs (HTTP/2.0 200) 4 headers in 117 bytes (1 switches on core 0)
+INFO:api.routes.my_work:📊 API Request: scope=company, company_ids=[7, 2, 8, 1, 3, 6, 9], active_company=None
+INFO:services.my_work.discovery_service:🔍 Discovery [scope=company]: user=3, role=admin, target_companies=[7, 2, 8, 1, 3, 6, 9]
+INFO:services.my_work.discovery_service:📊 Raw Discovery: Found 156 total activities across all allowed companies.
+[pid: 517459|app: 0|req: 122/122] 2804:214:400a:23a4:8cc8:d6a:30e1:2551 () {52 vars in 1247 bytes} [Sun Mar  1 13:40:06 2026] GET /my-work/api/activities?scope=company&active_company_id=&company_ids=7%2C2%2C8%2C1%2C3%2C6%2C9 => generated 39231 bytes in 41 msecs (HTTP/2.0 200) 4 headers in 120 bytes (1 switches on core 0)
+[pid: 517459|app: 0|req: 123/123] 2804:214:400a:23a4:8cc8:d6a:30e1:2551 () {52 vars in 1199 bytes} [Sun Mar  1 13:40:07 2026] GET /my-work/api/occurrences/summary?company_ids=7%2C2%2C8%2C1%2C3%2C6%2C9 => generated 92 bytes in 4 msecs (HTTP/2.0 200) 4 headers in 117 bytes (1 switches on core 0)
+INFO:api.routes.my_work:📊 API Request: scope=company, company_ids=[7, 2, 8, 1, 3, 6, 9], active_company=None
+INFO:services.my_work.discovery_service:🔍 Discovery [scope=company]: user=3, role=admin, target_companies=[7, 2, 8, 1, 3, 6, 9]
+INFO:services.my_work.discovery_service:📊 Raw Discovery: Found 156 total activities across all allowed companies.
+[pid: 517459|app: 0|req: 124/124] 2804:214:400a:23a4:8cc8:d6a:30e1:2551 () {52 vars in 1285 bytes} [Sun Mar  1 13:40:10 2026] GET /my-work/api/activities?scope=company&active_company_id=&company_ids=7%2C2%2C8%2C1%2C3%2C6%2C9&delivery_tags=open => generated 39231 bytes in 38 msecs (HTTP/2.0 200) 4 headers in 120 bytes (1 switches on core 0)
+[pid: 517459|app: 0|req: 125/125] 2804:214:400a:23a4:8cc8:d6a:30e1:2551 () {52 vars in 1199 bytes} [Sun Mar  1 13:40:10 2026] GET /my-work/api/occurrences/summary?company_ids=7%2C2%2C8%2C1%2C3%2C6%2C9 => generated 92 bytes in 4 msecs (HTTP/2.0 200) 4 headers in 117 bytes (1 switches on core 0)
+[pid: 517459|app: 0|req: 126/126] 2804:214:400a:23a4:8cc8:d6a:30e1:2551 () {54 vars in 1144 bytes} [Sun Mar  1 13:40:13 2026] GET /my-work => generated 80585 bytes in 7 msecs (HTTP/2.0 200) 4 headers in 128 bytes (1 switches on core 0)
+INFO:api.routes.my_work:📊 Filter Options Response: 7 companies, 36 collabs, role=admin
+[pid: 517459|app: 0|req: 127/127] 2804:214:400a:23a4:8cc8:d6a:30e1:2551 () {52 vars in 1114 bytes} [Sun Mar  1 13:40:14 2026] GET /my-work/api/filter-options => generated 51832 bytes in 14 msecs (HTTP/2.0 200) 4 headers in 120 bytes (1 switches on core 0)
+INFO:api.routes.my_work:📊 API Request: scope=me, company_ids=[7, 2, 8, 1, 3, 6, 9], active_company=None
+INFO:services.my_work.discovery_service:🔍 Discovery [scope=me]: user=3, role=admin, target_companies=[7, 2, 8, 1, 3, 6, 9]
+INFO:services.my_work.discovery_service:📊 Raw Discovery: Found 156 total activities across all allowed companies.
+[pid: 517459|app: 0|req: 128/128] 2804:214:400a:23a4:8cc8:d6a:30e1:2551 () {52 vars in 1275 bytes} [Sun Mar  1 13:40:14 2026] GET /my-work/api/activities?scope=me&active_company_id=&company_ids=7%2C2%2C8%2C1%2C3%2C6%2C9&delivery_tags=open => generated 7158 bytes in 35 msecs (HTTP/2.0 200) 4 headers in 119 bytes (1 switches on core 0)
+[pid: 517459|app: 0|req: 129/129] 2804:214:400a:23a4:8cc8:d6a:30e1:2551 () {52 vars in 1199 bytes} [Sun Mar  1 13:40:14 2026] GET /my-work/api/occurrences/summary?company_ids=7%2C2%2C8%2C1%2C3%2C6%2C9 => generated 92 bytes in 4 msecs (HTTP/2.0 200) 4 headers in 117 bytes (1 switches on core 0)
+INFO:apscheduler.executors.default:Running job "Monitor de Inatividade de Chat (trigger: interval[0:00:30], next run at: 2026-03-01 13:41:00 -03)" (scheduled at 2026-03-01 13:40:30.218130-03:00)
+INFO:apscheduler.executors.default:Job "Monitor de Inatividade de Chat (trigger: interval[0:00:30], next run at: 2026-03-01 13:41:00 -03)" executed successfully
+INFO:apscheduler.executors.default:Running job "Monitor de Inatividade de Chat (trigger: interval[0:00:30], next run at: 2026-03-01 13:41:30 -03)" (scheduled at 2026-03-01 13:41:00.218130-03:00)
+INFO:apscheduler.executors.default:Job "Monitor de Inatividade de Chat (trigger: interval[0:00:30], next run at: 2026-03-01 13:41:30 -03)" executed successfully
+INFO:apscheduler.executors.default:Running job "Monitor de Inatividade de Chat (trigger: interval[0:00:30], next run at: 2026-03-01 13:42:00 -03)" (scheduled at 2026-03-01 13:41:30.218130-03:00)
+INFO:apscheduler.executors.default:Job "Monitor de Inatividade de Chat (trigger: interval[0:00:30], next run at: 2026-03-01 13:42:00 -03)" executed successfully
+[pid: 517459|app: 0|req: 130/130] 2804:214:400a:23a4:8cc8:d6a:30e1:2551 () {52 vars in 1138 bytes} [Sun Mar  1 13:41:50 2026] GET /api/companies/7/projects/11/activities => generated 207 bytes in 3 msecs (HTTP/2.0 404) 4 headers in 133 bytes (2 switches on core 0)
+INFO:apscheduler.executors.default:Running job "Monitor de Inatividade de Chat (trigger: interval[0:00:30], next run at: 2026-03-01 13:42:30 -03)" (scheduled at 2026-03-01 13:42:00.218130-03:00)
+INFO:apscheduler.executors.default:Job "Monitor de Inatividade de Chat (trigger: interval[0:00:30], next run at: 2026-03-01 13:42:30 -03)" executed successfully
+INFO:apscheduler.executors.default:Running job "Monitor de Inatividade de Chat (trigger: interval[0:00:30], next run at: 2026-03-01 13:43:00 -03)" (scheduled at 2026-03-01 13:42:30.218130-03:00)
+INFO:apscheduler.executors.default:Job "Monitor de Inatividade de Chat (trigger: interval[0:00:30], next run at: 2026-03-01 13:43:00 -03)" executed successfully
+INFO:apscheduler.executors.default:Running job "Monitor de Inatividade de Chat (trigger: interval[0:00:30], next run at: 2026-03-01 13:43:30 -03)" (scheduled at 2026-03-01 13:43:00.218130-03:00)
+INFO:apscheduler.executors.default:Job "Monitor de Inatividade de Chat (trigger: interval[0:00:30], next run at: 2026-03-01 13:43:30 -03)" executed successfully
+INFO:apscheduler.executors.default:Running job "Monitor de Inatividade de Chat (trigger: interval[0:00:30], next run at: 2026-03-01 13:44:00 -03)" (scheduled at 2026-03-01 13:43:30.218130-03:00)
+INFO:apscheduler.executors.default:Job "Monitor de Inatividade de Chat (trigger: interval[0:00:30], next run at: 2026-03-01 13:44:00 -03)" executed successfully
+INFO:apscheduler.executors.default:Running job "Monitor de Inatividade de Chat (trigger: interval[0:00:30], next run at: 2026-03-01 13:44:30 -03)" (scheduled at 2026-03-01 13:44:00.218130-03:00)
+INFO:apscheduler.executors.default:Job "Monitor de Inatividade de Chat (trigger: interval[0:00:30], next run at: 2026-03-01 13:44:30 -03)" executed successfully
+INFO:apscheduler.executors.default:Running job "Monitor de Inatividade de Chat (trigger: interval[0:00:30], next run at: 2026-03-01 13:45:00 -03)" (scheduled at 2026-03-01 13:44:30.218130-03:00)
+INFO:apscheduler.executors.default:Job "Monitor de Inatividade de Chat (trigger: interval[0:00:30], next run at: 2026-03-01 13:45:00 -03)" executed successfully
+INFO:apscheduler.executors.default:Running job "Monitor de Inatividade de Chat (trigger: interval[0:00:30], next run at: 2026-03-01 13:45:30 -03)" (scheduled at 2026-03-01 13:45:00.218130-03:00)
+INFO:apscheduler.executors.default:Job "Monitor de Inatividade de Chat (trigger: interval[0:00:30], next run at: 2026-03-01 13:45:30 -03)" executed successfully
+INFO:apscheduler.executors.default:Running job "Monitor de Inatividade de Chat (trigger: interval[0:00:30], next run at: 2026-03-01 13:46:00 -03)" (scheduled at 2026-03-01 13:45:30.218130-03:00)
+INFO:apscheduler.executors.default:Job "Monitor de Inatividade de Chat (trigger: interval[0:00:30], next run at: 2026-03-01 13:46:00 -03)" executed successfully
+INFO:apscheduler.executors.default:Running job "Monitor de Inatividade de Chat (trigger: interval[0:00:30], next run at: 2026-03-01 13:46:30 -03)" (scheduled at 2026-03-01 13:46:00.218130-03:00)
+INFO:apscheduler.executors.default:Job "Monitor de Inatividade de Chat (trigger: interval[0:00:30], next run at: 2026-03-01 13:46:30 -03)" executed successfully
+INFO:apscheduler.executors.default:Running job "Monitor de Inatividade de Chat (trigger: interval[0:00:30], next run at: 2026-03-01 13:47:00 -03)" (scheduled at 2026-03-01 13:46:30.218130-03:00)
+INFO:apscheduler.executors.default:Job "Monitor de Inatividade de Chat (trigger: interval[0:00:30], next run at: 2026-03-01 13:47:00 -03)" executed successfully
+INFO:apscheduler.executors.default:Running job "Monitor de Inatividade de Chat (trigger: interval[0:00:30], next run at: 2026-03-01 13:47:30 -03)" (scheduled at 2026-03-01 13:47:00.218130-03:00)
+INFO:apscheduler.executors.default:Job "Monitor de Inatividade de Chat (trigger: interval[0:00:30], next run at: 2026-03-01 13:47:30 -03)" executed successfully
+INFO:apscheduler.executors.default:Running job "Monitor de Inatividade de Chat (trigger: interval[0:00:30], next run at: 2026-03-01 13:48:00 -03)" (scheduled at 2026-03-01 13:47:30.218130-03:00)
+INFO:apscheduler.executors.default:Job "Monitor de Inatividade de Chat (trigger: interval[0:00:30], next run at: 2026-03-01 13:48:00 -03)" executed successfully
+INFO:apscheduler.executors.default:Running job "Monitor de Inatividade de Chat (trigger: interval[0:00:30], next run at: 2026-03-01 13:48:30 -03)" (scheduled at 2026-03-01 13:48:00.218130-03:00)
+INFO:apscheduler.executors.default:Job "Monitor de Inatividade de Chat (trigger: interval[0:00:30], next run at: 2026-03-01 13:48:30 -03)" executed successfully
+INFO:apscheduler.executors.default:Running job "Monitor de Inatividade de Chat (trigger: interval[0:00:30], next run at: 2026-03-01 13:49:00 -03)" (scheduled at 2026-03-01 13:48:30.218130-03:00)
+INFO:apscheduler.executors.default:Job "Monitor de Inatividade de Chat (trigger: interval[0:00:30], next run at: 2026-03-01 13:49:00 -03)" executed successfully
+INFO:apscheduler.executors.default:Running job "Monitor de Inatividade de Chat (trigger: interval[0:00:30], next run at: 2026-03-01 13:49:30 -03)" (scheduled at 2026-03-01 13:49:00.218130-03:00)
+INFO:apscheduler.executors.default:Job "Monitor de Inatividade de Chat (trigger: interval[0:00:30], next run at: 2026-03-01 13:49:30 -03)" executed successfully
+INFO:apscheduler.executors.default:Running job "Monitor de Inatividade de Chat (trigger: interval[0:00:30], next run at: 2026-03-01 13:50:00 -03)" (scheduled at 2026-03-01 13:49:30.218130-03:00)
+INFO:apscheduler.executors.default:Job "Monitor de Inatividade de Chat (trigger: interval[0:00:30], next run at: 2026-03-01 13:50:00 -03)" executed successfully
+INFO:apscheduler.executors.default:Running job "Monitor de Inatividade de Chat (trigger: interval[0:00:30], next run at: 2026-03-01 13:50:30 -03)" (scheduled at 2026-03-01 13:50:00.218130-03:00)
+INFO:apscheduler.executors.default:Job "Monitor de Inatividade de Chat (trigger: interval[0:00:30], next run at: 2026-03-01 13:50:30 -03)" executed successfully
+INFO:apscheduler.executors.default:Running job "Monitor de Inatividade de Chat (trigger: interval[0:00:30], next run at: 2026-03-01 13:51:00 -03)" (scheduled at 2026-03-01 13:50:30.218130-03:00)
+INFO:apscheduler.executors.default:Job "Monitor de Inatividade de Chat (trigger: interval[0:00:30], next run at: 2026-03-01 13:51:00 -03)" executed successfully
+INFO:apscheduler.executors.default:Running job "Monitor de Inatividade de Chat (trigger: interval[0:00:30], next run at: 2026-03-01 13:51:30 -03)" (scheduled at 2026-03-01 13:51:00.218130-03:00)
+INFO:apscheduler.executors.default:Job "Monitor de Inatividade de Chat (trigger: interval[0:00:30], next run at: 2026-03-01 13:51:30 -03)" executed successfully
+INFO:apscheduler.executors.default:Running job "Monitor de Inatividade de Chat (trigger: interval[0:00:30], next run at: 2026-03-01 13:52:00 -03)" (scheduled at 2026-03-01 13:51:30.218130-03:00)
+INFO:apscheduler.executors.default:Job "Monitor de Inatividade de Chat (trigger: interval[0:00:30], next run at: 2026-03-01 13:52:00 -03)" executed successfully
+INFO:apscheduler.executors.default:Running job "Monitor de Inatividade de Chat (trigger: interval[0:00:30], next run at: 2026-03-01 13:52:30 -03)" (scheduled at 2026-03-01 13:52:00.218130-03:00)
+INFO:apscheduler.executors.default:Job "Monitor de Inatividade de Chat (trigger: interval[0:00:30], next run at: 2026-03-01 13:52:30 -03)" executed successfully
+INFO:apscheduler.executors.default:Running job "Monitor de Inatividade de Chat (trigger: interval[0:00:30], next run at: 2026-03-01 13:53:00 -03)" (scheduled at 2026-03-01 13:52:30.218130-03:00)
+INFO:apscheduler.executors.default:Job "Monitor de Inatividade de Chat (trigger: interval[0:00:30], next run at: 2026-03-01 13:53:00 -03)" executed successfully
+INFO:apscheduler.executors.default:Running job "Monitor de Inatividade de Chat (trigger: interval[0:00:30], next run at: 2026-03-01 13:53:30 -03)" (scheduled at 2026-03-01 13:53:00.218130-03:00)
+INFO:apscheduler.executors.default:Job "Monitor de Inatividade de Chat (trigger: interval[0:00:30], next run at: 2026-03-01 13:53:30 -03)" executed successfully
+INFO:apscheduler.executors.default:Running job "Monitor de Inatividade de Chat (trigger: interval[0:00:30], next run at: 2026-03-01 13:54:00 -03)" (scheduled at 2026-03-01 13:53:30.218130-03:00)
+INFO:apscheduler.executors.default:Job "Monitor de Inatividade de Chat (trigger: interval[0:00:30], next run at: 2026-03-01 13:54:00 -03)" executed successfully
+INFO:apscheduler.executors.default:Running job "Monitor de Inatividade de Chat (trigger: interval[0:00:30], next run at: 2026-03-01 13:54:30 -03)" (scheduled at 2026-03-01 13:54:00.218130-03:00)
+INFO:apscheduler.executors.default:Job "Monitor de Inatividade de Chat (trigger: interval[0:00:30], next run at: 2026-03-01 13:54:30 -03)" executed successfully
+INFO:apscheduler.executors.default:Running job "Monitor de Inatividade de Chat (trigger: interval[0:00:30], next run at: 2026-03-01 13:55:00 -03)" (scheduled at 2026-03-01 13:54:30.218130-03:00)
+INFO:apscheduler.executors.default:Job "Monitor de Inatividade de Chat (trigger: interval[0:00:30], next run at: 2026-03-01 13:55:00 -03)" executed successfully
+INFO:apscheduler.executors.default:Running job "Monitor de Inatividade de Chat (trigger: interval[0:00:30], next run at: 2026-03-01 13:55:30 -03)" (scheduled at 2026-03-01 13:55:00.218130-03:00)
+INFO:apscheduler.executors.default:Job "Monitor de Inatividade de Chat (trigger: interval[0:00:30], next run at: 2026-03-01 13:55:30 -03)" executed successfully
+INFO:apscheduler.executors.default:Running job "Monitor de Inatividade de Chat (trigger: interval[0:00:30], next run at: 2026-03-01 13:56:00 -03)" (scheduled at 2026-03-01 13:55:30.218130-03:00)
+INFO:apscheduler.executors.default:Job "Monitor de Inatividade de Chat (trigger: interval[0:00:30], next run at: 2026-03-01 13:56:00 -03)" executed successfully
+INFO:apscheduler.executors.default:Running job "Monitor de Inatividade de Chat (trigger: interval[0:00:30], next run at: 2026-03-01 13:56:30 -03)" (scheduled at 2026-03-01 13:56:00.218130-03:00)
+INFO:apscheduler.executors.default:Job "Monitor de Inatividade de Chat (trigger: interval[0:00:30], next run at: 2026-03-01 13:56:30 -03)" executed successfully
+INFO:apscheduler.executors.default:Running job "Monitor de Inatividade de Chat (trigger: interval[0:00:30], next run at: 2026-03-01 13:57:00 -03)" (scheduled at 2026-03-01 13:56:30.218130-03:00)
+INFO:apscheduler.executors.default:Job "Monitor de Inatividade de Chat (trigger: interval[0:00:30], next run at: 2026-03-01 13:57:00 -03)" executed successfully
+INFO:apscheduler.executors.default:Running job "Monitor de Inatividade de Chat (trigger: interval[0:00:30], next run at: 2026-03-01 13:57:30 -03)" (scheduled at 2026-03-01 13:57:00.218130-03:00)
+INFO:apscheduler.executors.default:Job "Monitor de Inatividade de Chat (trigger: interval[0:00:30], next run at: 2026-03-01 13:57:30 -03)" executed successfully
+INFO:apscheduler.executors.default:Running job "Monitor de Inatividade de Chat (trigger: interval[0:00:30], next run at: 2026-03-01 13:58:00 -03)" (scheduled at 2026-03-01 13:57:30.218130-03:00)
+INFO:apscheduler.executors.default:Job "Monitor de Inatividade de Chat (trigger: interval[0:00:30], next run at: 2026-03-01 13:58:00 -03)" executed successfully
+INFO:apscheduler.executors.default:Running job "Monitor de Inatividade de Chat (trigger: interval[0:00:30], next run at: 2026-03-01 13:58:30 -03)" (scheduled at 2026-03-01 13:58:00.218130-03:00)
+INFO:apscheduler.executors.default:Job "Monitor de Inatividade de Chat (trigger: interval[0:00:30], next run at: 2026-03-01 13:58:30 -03)" executed successfully
+INFO:apscheduler.executors.default:Running job "Monitor de Inatividade de Chat (trigger: interval[0:00:30], next run at: 2026-03-01 13:59:00 -03)" (scheduled at 2026-03-01 13:58:30.218130-03:00)
+INFO:apscheduler.executors.default:Job "Monitor de Inatividade de Chat (trigger: interval[0:00:30], next run at: 2026-03-01 13:59:00 -03)" executed successfully
+INFO:apscheduler.executors.default:Running job "Monitor de Inatividade de Chat (trigger: interval[0:00:30], next run at: 2026-03-01 13:59:30 -03)" (scheduled at 2026-03-01 13:59:00.218130-03:00)
+INFO:apscheduler.executors.default:Job "Monitor de Inatividade de Chat (trigger: interval[0:00:30], next run at: 2026-03-01 13:59:30 -03)" executed successfully
+INFO:apscheduler.executors.default:Running job "Monitor de Inatividade de Chat (trigger: interval[0:00:30], next run at: 2026-03-01 14:00:00 -03)" (scheduled at 2026-03-01 13:59:30.218130-03:00)
+INFO:apscheduler.executors.default:Job "Monitor de Inatividade de Chat (trigger: interval[0:00:30], next run at: 2026-03-01 14:00:00 -03)" executed successfully
+INFO:apscheduler.executors.default:Running job "Verificação de Tarefas Atrasadas (trigger: cron[minute='0'], next run at: 2026-03-01 15:00:00 -03)" (scheduled at 2026-03-01 14:00:00-03:00)
+INFO:services.scheduler_service:⏰ Verificando tarefas atrasadas...
+DEBUG: CLOUD_SQL_CONNECTION_NAME='None'
+DEBUG: Using standard DATABASE_URL connection
+Error initializing database: (psycopg2.errors.UndefinedColumn) column "description" of relation "company_projects" does not exist
+LINE 3: ...                  id, company_id, plan_id, title, descriptio...
+                                                             ^
+
+[SQL: 
+                INSERT INTO company_projects (
+                    id, company_id, plan_id, title, description, status, priority,
+                    owner, responsible_id, start_date, end_date, okr_area_ref,
+                    okr_reference, indicator_reference, activities, notes,
+                    code, code_sequence, created_at, updated_at
+                )
+                SELECT
+                    p.id,
+                    COALESCE(pl.company_id, 0),
+                    p.plan_id,
+                    p.title,
+                    p.description,
+                    p.status,
+                    p.priority,
+                    p.owner,
+                    NULL,
+                    p.start_date,
+                    p.end_date,
+                    NULL,
+                    NULL,
+                    NULL,
+                    NULL,
+                    NULL,
+                    NULL,
+                    NULL,
+                    p.created_at,
+                    p.updated_at
+                FROM projects p
+                LEFT JOIN plans pl ON pl.id = p.plan_id
+                LEFT JOIN company_projects cp ON cp.id = p.id
+                WHERE cp.id IS NULL;
+            ]
+(Background on this error at: https://sqlalche.me/e/20/f405)
+✗ Erro ao verificar tarefas atrasadas: (psycopg2.errors.UndefinedTable) relation "routine_tasks" does not exist
+LINE 2:                 SELECT rt.* FROM routine_tasks rt
+                                         ^
+
+[SQL: 
+                SELECT rt.* FROM routine_tasks rt
+                JOIN routines r ON r.id = rt.routine_id
+                WHERE r.company_id = %(p0)s AND rt.status = %(p1)s
+                ORDER BY rt.deadline_date ASC
+            ]
+[parameters: {'p0': 4, 'p1': 'pending'}]
+(Background on this error at: https://sqlalche.me/e/20/f405)
+INFO:services.scheduler_service:✅ Verificação de tarefas concluída!
+INFO:apscheduler.executors.default:Job "Verificação de Tarefas Atrasadas (trigger: cron[minute='0'], next run at: 2026-03-01 15:00:00 -03)" executed successfully
+INFO:apscheduler.executors.default:Running job "Monitor de Inatividade de Chat (trigger: interval[0:00:30], next run at: 2026-03-01 14:00:30 -03)" (scheduled at 2026-03-01 14:00:00.218130-03:00)
+INFO:apscheduler.executors.default:Job "Monitor de Inatividade de Chat (trigger: interval[0:00:30], next run at: 2026-03-01 14:00:30 -03)" executed successfully
+INFO:apscheduler.executors.default:Running job "Monitor de Inatividade de Chat (trigger: interval[0:00:30], next run at: 2026-03-01 14:01:00 -03)" (scheduled at 2026-03-01 14:00:30.218130-03:00)
+INFO:apscheduler.executors.default:Job "Monitor de Inatividade de Chat (trigger: interval[0:00:30], next run at: 2026-03-01 14:01:00 -03)" executed successfully
+INFO:apscheduler.executors.default:Running job "Monitor de Inatividade de Chat (trigger: interval[0:00:30], next run at: 2026-03-01 14:01:30 -03)" (scheduled at 2026-03-01 14:01:00.218130-03:00)
+INFO:apscheduler.executors.default:Job "Monitor de Inatividade de Chat (trigger: interval[0:00:30], next run at: 2026-03-01 14:01:30 -03)" executed successfully
+INFO:apscheduler.executors.default:Running job "Monitor de Inatividade de Chat (trigger: interval[0:00:30], next run at: 2026-03-01 14:02:00 -03)" (scheduled at 2026-03-01 14:01:30.218130-03:00)
+INFO:apscheduler.executors.default:Job "Monitor de Inatividade de Chat (trigger: interval[0:00:30], next run at: 2026-03-01 14:02:00 -03)" executed successfully
+INFO:apscheduler.executors.default:Running job "Monitor de Inatividade de Chat (trigger: interval[0:00:30], next run at: 2026-03-01 14:02:30 -03)" (scheduled at 2026-03-01 14:02:00.218130-03:00)
+INFO:apscheduler.executors.default:Job "Monitor de Inatividade de Chat (trigger: interval[0:00:30], next run at: 2026-03-01 14:02:30 -03)" executed successfully
+INFO:apscheduler.executors.default:Running job "Monitor de Inatividade de Chat (trigger: interval[0:00:30], next run at: 2026-03-01 14:03:00 -03)" (scheduled at 2026-03-01 14:02:30.218130-03:00)
+INFO:apscheduler.executors.default:Job "Monitor de Inatividade de Chat (trigger: interval[0:00:30], next run at: 2026-03-01 14:03:00 -03)" executed successfully
+INFO:apscheduler.executors.default:Running job "Monitor de Inatividade de Chat (trigger: interval[0:00:30], next run at: 2026-03-01 14:03:30 -03)" (scheduled at 2026-03-01 14:03:00.218130-03:00)
+INFO:apscheduler.executors.default:Job "Monitor de Inatividade de Chat (trigger: interval[0:00:30], next run at: 2026-03-01 14:03:30 -03)" executed successfully
+INFO:apscheduler.executors.default:Running job "Monitor de Inatividade de Chat (trigger: interval[0:00:30], next run at: 2026-03-01 14:04:00 -03)" (scheduled at 2026-03-01 14:03:30.218130-03:00)
+INFO:apscheduler.executors.default:Job "Monitor de Inatividade de Chat (trigger: interval[0:00:30], next run at: 2026-03-01 14:04:00 -03)" executed successfully
+INFO:apscheduler.executors.default:Running job "Monitor de Inatividade de Chat (trigger: interval[0:00:30], next run at: 2026-03-01 14:04:30 -03)" (scheduled at 2026-03-01 14:04:00.218130-03:00)
+INFO:apscheduler.executors.default:Job "Monitor de Inatividade de Chat (trigger: interval[0:00:30], next run at: 2026-03-01 14:04:30 -03)" executed successfully
+INFO:apscheduler.executors.default:Running job "Monitor de Inatividade de Chat (trigger: interval[0:00:30], next run at: 2026-03-01 14:05:00 -03)" (scheduled at 2026-03-01 14:04:30.218130-03:00)
+INFO:apscheduler.executors.default:Job "Monitor de Inatividade de Chat (trigger: interval[0:00:30], next run at: 2026-03-01 14:05:00 -03)" executed successfully
+INFO:apscheduler.executors.default:Running job "Monitor de Inatividade de Chat (trigger: interval[0:00:30], next run at: 2026-03-01 14:05:30 -03)" (scheduled at 2026-03-01 14:05:00.218130-03:00)
+INFO:apscheduler.executors.default:Job "Monitor de Inatividade de Chat (trigger: interval[0:00:30], next run at: 2026-03-01 14:05:30 -03)" executed successfully
+INFO:apscheduler.executors.default:Running job "Monitor de Inatividade de Chat (trigger: interval[0:00:30], next run at: 2026-03-01 14:06:00 -03)" (scheduled at 2026-03-01 14:05:30.218130-03:00)
+INFO:apscheduler.executors.default:Job "Monitor de Inatividade de Chat (trigger: interval[0:00:30], next run at: 2026-03-01 14:06:00 -03)" executed successfully
+INFO:apscheduler.executors.default:Running job "Monitor de Inatividade de Chat (trigger: interval[0:00:30], next run at: 2026-03-01 14:06:30 -03)" (scheduled at 2026-03-01 14:06:00.218130-03:00)
+INFO:apscheduler.executors.default:Job "Monitor de Inatividade de Chat (trigger: interval[0:00:30], next run at: 2026-03-01 14:06:30 -03)" executed successfully
+INFO:apscheduler.executors.default:Running job "Monitor de Inatividade de Chat (trigger: interval[0:00:30], next run at: 2026-03-01 14:07:00 -03)" (scheduled at 2026-03-01 14:06:30.218130-03:00)
+INFO:apscheduler.executors.default:Job "Monitor de Inatividade de Chat (trigger: interval[0:00:30], next run at: 2026-03-01 14:07:00 -03)" executed successfully
+INFO:apscheduler.executors.default:Running job "Monitor de Inatividade de Chat (trigger: interval[0:00:30], next run at: 2026-03-01 14:07:30 -03)" (scheduled at 2026-03-01 14:07:00.218130-03:00)
+INFO:apscheduler.executors.default:Job "Monitor de Inatividade de Chat (trigger: interval[0:00:30], next run at: 2026-03-01 14:07:30 -03)" executed successfully
+INFO:apscheduler.executors.default:Running job "Monitor de Inatividade de Chat (trigger: interval[0:00:30], next run at: 2026-03-01 14:08:00 -03)" (scheduled at 2026-03-01 14:07:30.218130-03:00)
+INFO:apscheduler.executors.default:Job "Monitor de Inatividade de Chat (trigger: interval[0:00:30], next run at: 2026-03-01 14:08:00 -03)" executed successfully
+INFO:apscheduler.executors.default:Running job "Monitor de Inatividade de Chat (trigger: interval[0:00:30], next run at: 2026-03-01 14:08:30 -03)" (scheduled at 2026-03-01 14:08:00.218130-03:00)
+INFO:apscheduler.executors.default:Job "Monitor de Inatividade de Chat (trigger: interval[0:00:30], next run at: 2026-03-01 14:08:30 -03)" executed successfully
+INFO:apscheduler.executors.default:Running job "Monitor de Inatividade de Chat (trigger: interval[0:00:30], next run at: 2026-03-01 14:09:00 -03)" (scheduled at 2026-03-01 14:08:30.218130-03:00)
+INFO:apscheduler.executors.default:Job "Monitor de Inatividade de Chat (trigger: interval[0:00:30], next run at: 2026-03-01 14:09:00 -03)" executed successfully
+INFO:apscheduler.executors.default:Running job "Monitor de Inatividade de Chat (trigger: interval[0:00:30], next run at: 2026-03-01 14:09:30 -03)" (scheduled at 2026-03-01 14:09:00.218130-03:00)
+INFO:apscheduler.executors.default:Job "Monitor de Inatividade de Chat (trigger: interval[0:00:30], next run at: 2026-03-01 14:09:30 -03)" executed successfully
+INFO:apscheduler.executors.default:Running job "Monitor de Inatividade de Chat (trigger: interval[0:00:30], next run at: 2026-03-01 14:10:00 -03)" (scheduled at 2026-03-01 14:09:30.218130-03:00)
+INFO:apscheduler.executors.default:Job "Monitor de Inatividade de Chat (trigger: interval[0:00:30], next run at: 2026-03-01 14:10:00 -03)" executed successfully
+INFO:apscheduler.executors.default:Running job "Monitor de Inatividade de Chat (trigger: interval[0:00:30], next run at: 2026-03-01 14:10:30 -03)" (scheduled at 2026-03-01 14:10:00.218130-03:00)
+INFO:apscheduler.executors.default:Job "Monitor de Inatividade de Chat (trigger: interval[0:00:30], next run at: 2026-03-01 14:10:30 -03)" executed successfully
+INFO:apscheduler.executors.default:Running job "Monitor de Inatividade de Chat (trigger: interval[0:00:30], next run at: 2026-03-01 14:11:00 -03)" (scheduled at 2026-03-01 14:10:30.218130-03:00)
+INFO:apscheduler.executors.default:Job "Monitor de Inatividade de Chat (trigger: interval[0:00:30], next run at: 2026-03-01 14:11:00 -03)" executed successfully
+INFO:apscheduler.executors.default:Running job "Monitor de Inatividade de Chat (trigger: interval[0:00:30], next run at: 2026-03-01 14:11:30 -03)" (scheduled at 2026-03-01 14:11:00.218130-03:00)
+INFO:apscheduler.executors.default:Job "Monitor de Inatividade de Chat (trigger: interval[0:00:30], next run at: 2026-03-01 14:11:30 -03)" executed successfully
+INFO:apscheduler.executors.default:Running job "Monitor de Inatividade de Chat (trigger: interval[0:00:30], next run at: 2026-03-01 14:12:00 -03)" (scheduled at 2026-03-01 14:11:30.218130-03:00)
+INFO:apscheduler.executors.default:Job "Monitor de Inatividade de Chat (trigger: interval[0:00:30], next run at: 2026-03-01 14:12:00 -03)" executed successfully
+INFO:apscheduler.executors.default:Running job "Monitor de Inatividade de Chat (trigger: interval[0:00:30], next run at: 2026-03-01 14:12:30 -03)" (scheduled at 2026-03-01 14:12:00.218130-03:00)
+INFO:apscheduler.executors.default:Job "Monitor de Inatividade de Chat (trigger: interval[0:00:30], next run at: 2026-03-01 14:12:30 -03)" executed successfully
+INFO:apscheduler.executors.default:Running job "Monitor de Inatividade de Chat (trigger: interval[0:00:30], next run at: 2026-03-01 14:13:00 -03)" (scheduled at 2026-03-01 14:12:30.218130-03:00)
+INFO:apscheduler.executors.default:Job "Monitor de Inatividade de Chat (trigger: interval[0:00:30], next run at: 2026-03-01 14:13:00 -03)" executed successfully
+INFO:apscheduler.executors.default:Running job "Monitor de Inatividade de Chat (trigger: interval[0:00:30], next run at: 2026-03-01 14:13:30 -03)" (scheduled at 2026-03-01 14:13:00.218130-03:00)
+INFO:apscheduler.executors.default:Job "Monitor de Inatividade de Chat (trigger: interval[0:00:30], next run at: 2026-03-01 14:13:30 -03)" executed successfully
+[pid: 517459|app: 0|req: 131/131] 2804:389:811c:bc51:945e:aff:fe28:1e83 () {62 vars in 1512 bytes} [Sun Mar  1 14:13:21 2026] GET /process-map?company_id=1 => generated 61268 bytes in 16 msecs (HTTP/2.0 200) 5 headers in 417 bytes (1 switches on core 0)
+[pid: 517459|app: 0|req: 132/132] 2804:389:811c:bc51:945e:aff:fe28:1e83 () {56 vars in 1347 bytes} [Sun Mar  1 14:13:21 2026] GET /api/process-areas?company_id=1&_cb=1772385201217 => generated 646 bytes in 3 msecs (HTTP/2.0 200) 4 headers in 118 bytes (1 switches on core 0)
+[pid: 517459|app: 0|req: 133/133] 2804:389:811c:bc51:945e:aff:fe28:1e83 () {56 vars in 1351 bytes} [Sun Mar  1 14:13:21 2026] GET /api/macro-processes?company_id=1&_cb=1772385201217 => generated 7196 bytes in 5 msecs (HTTP/2.0 200) 4 headers in 119 bytes (1 switches on core 0)
+[pid: 517459|app: 0|req: 134/134] 2804:389:811c:bc51:945e:aff:fe28:1e83 () {56 vars in 1339 bytes} [Sun Mar  1 14:13:21 2026] GET /api/processes?company_id=1&_cb=1772385201217 => generated 63807 bytes in 110 msecs (HTTP/2.0 200) 4 headers in 120 bytes (1 switches on core 0)
+[pid: 517459|app: 0|req: 135/135] 2804:389:811c:bc51:945e:aff:fe28:1e83 () {56 vars in 1333 bytes} [Sun Mar  1 14:13:22 2026] GET /api/dashboard/filter-options?company_id=1 => generated 4585 bytes in 8 msecs (HTTP/2.0 200) 4 headers in 119 bytes (1 switches on core 0)
+[pid: 517459|app: 0|req: 136/136] 2804:389:811c:bc51:945e:aff:fe28:1e83 () {58 vars in 1149 bytes} [Sun Mar  1 14:13:22 2026] GET /static/site.webmanifest => generated 0 bytes in 1 msecs (HTTP/2.0 304) 6 headers in 233 bytes (0 switches on core 0)
+[pid: 517459|app: 0|req: 137/137] 2804:389:811c:bc51:945e:aff:fe28:1e83 () {60 vars in 1463 bytes} [Sun Mar  1 14:13:27 2026] GET /portal => generated 135637 bytes in 22 msecs (HTTP/2.0 200) 4 headers in 129 bytes (1 switches on core 0)
+[pid: 517459|app: 0|req: 138/138] 2804:389:811c:bc51:945e:aff:fe28:1e83 () {56 vars in 1267 bytes} [Sun Mar  1 14:13:27 2026] GET /api/notes/ => generated 7550 bytes in 3 msecs (HTTP/2.0 200) 4 headers in 119 bytes (1 switches on core 0)
+INFO:apscheduler.executors.default:Running job "Monitor de Inatividade de Chat (trigger: interval[0:00:30], next run at: 2026-03-01 14:14:00 -03)" (scheduled at 2026-03-01 14:13:30.218130-03:00)
+INFO:apscheduler.executors.default:Job "Monitor de Inatividade de Chat (trigger: interval[0:00:30], next run at: 2026-03-01 14:14:00 -03)" executed successfully
+INFO:apscheduler.executors.default:Running job "Monitor de Inatividade de Chat (trigger: interval[0:00:30], next run at: 2026-03-01 14:14:30 -03)" (scheduled at 2026-03-01 14:14:00.218130-03:00)
+INFO:apscheduler.executors.default:Job "Monitor de Inatividade de Chat (trigger: interval[0:00:30], next run at: 2026-03-01 14:14:30 -03)" executed successfully
+INFO:apscheduler.executors.default:Running job "Monitor de Inatividade de Chat (trigger: interval[0:00:30], next run at: 2026-03-01 14:15:00 -03)" (scheduled at 2026-03-01 14:14:30.218130-03:00)
+INFO:apscheduler.executors.default:Job "Monitor de Inatividade de Chat (trigger: interval[0:00:30], next run at: 2026-03-01 14:15:00 -03)" executed successfully
+INFO:apscheduler.executors.default:Running job "Monitor de Inatividade de Chat (trigger: interval[0:00:30], next run at: 2026-03-01 14:15:30 -03)" (scheduled at 2026-03-01 14:15:00.218130-03:00)
+INFO:apscheduler.executors.default:Job "Monitor de Inatividade de Chat (trigger: interval[0:00:30], next run at: 2026-03-01 14:15:30 -03)" executed successfully
+INFO:apscheduler.executors.default:Running job "Monitor de Inatividade de Chat (trigger: interval[0:00:30], next run at: 2026-03-01 14:16:00 -03)" (scheduled at 2026-03-01 14:15:30.218130-03:00)
+INFO:apscheduler.executors.default:Job "Monitor de Inatividade de Chat (trigger: interval[0:00:30], next run at: 2026-03-01 14:16:00 -03)" executed successfully
+INFO:apscheduler.executors.default:Running job "Monitor de Inatividade de Chat (trigger: interval[0:00:30], next run at: 2026-03-01 14:16:30 -03)" (scheduled at 2026-03-01 14:16:00.218130-03:00)
+INFO:apscheduler.executors.default:Job "Monitor de Inatividade de Chat (trigger: interval[0:00:30], next run at: 2026-03-01 14:16:30 -03)" executed successfully
+INFO:apscheduler.executors.default:Running job "Monitor de Inatividade de Chat (trigger: interval[0:00:30], next run at: 2026-03-01 14:17:00 -03)" (scheduled at 2026-03-01 14:16:30.218130-03:00)
+INFO:apscheduler.executors.default:Job "Monitor de Inatividade de Chat (trigger: interval[0:00:30], next run at: 2026-03-01 14:17:00 -03)" executed successfully
+INFO:apscheduler.executors.default:Running job "Monitor de Inatividade de Chat (trigger: interval[0:00:30], next run at: 2026-03-01 14:17:30 -03)" (scheduled at 2026-03-01 14:17:00.218130-03:00)
+INFO:apscheduler.executors.default:Job "Monitor de Inatividade de Chat (trigger: interval[0:00:30], next run at: 2026-03-01 14:17:30 -03)" executed successfully
+INFO:apscheduler.executors.default:Running job "Monitor de Inatividade de Chat (trigger: interval[0:00:30], next run at: 2026-03-01 14:18:00 -03)" (scheduled at 2026-03-01 14:17:30.218130-03:00)
+INFO:apscheduler.executors.default:Job "Monitor de Inatividade de Chat (trigger: interval[0:00:30], next run at: 2026-03-01 14:18:00 -03)" executed successfully
+INFO:apscheduler.executors.default:Running job "Monitor de Inatividade de Chat (trigger: interval[0:00:30], next run at: 2026-03-01 14:18:30 -03)" (scheduled at 2026-03-01 14:18:00.218130-03:00)
+INFO:apscheduler.executors.default:Job "Monitor de Inatividade de Chat (trigger: interval[0:00:30], next run at: 2026-03-01 14:18:30 -03)" executed successfully
+INFO:apscheduler.executors.default:Running job "Monitor de Inatividade de Chat (trigger: interval[0:00:30], next run at: 2026-03-01 14:19:00 -03)" (scheduled at 2026-03-01 14:18:30.218130-03:00)
+INFO:apscheduler.executors.default:Job "Monitor de Inatividade de Chat (trigger: interval[0:00:30], next run at: 2026-03-01 14:19:00 -03)" executed successfully
+INFO:api.routes.my_work:📊 API Request: scope=me, company_ids=None, active_company=None
+INFO:services.my_work.discovery_service:👔 Admin Global Search: Found 7 active companies.
+INFO:services.my_work.discovery_service:🔍 Discovery [scope=me]: user=3, role=admin, target_companies=[1, 2, 3, 6, 7, 8, 9]
+INFO:services.my_work.discovery_service:📊 Raw Discovery: Found 156 total activities across all allowed companies.
+[pid: 517459|app: 0|req: 139/139] 2804:214:400a:23a4:8cc8:d6a:30e1:2551 () {52 vars in 1291 bytes} [Sun Mar  1 14:18:57 2026] GET /my-work/api/activities?scope=me&active_company_id=&project_selection=none&process_selection=none&delivery_tags=open => generated 33909 bytes in 39 msecs (HTTP/2.0 200) 4 headers in 120 bytes (2 switches on core 0)
+INFO:api.routes.my_work:📊 API Request: scope=me, company_ids=[6], active_company=None
+INFO:services.my_work.discovery_service:🔍 Discovery [scope=me]: user=3, role=admin, target_companies=[6]
+INFO:services.my_work.discovery_service:📊 Raw Discovery: Found 17 total activities across all allowed companies.
+[pid: 517459|app: 0|req: 140/140] 2804:214:400a:23a4:8cc8:d6a:30e1:2551 () {52 vars in 1319 bytes} [Sun Mar  1 14:18:57 2026] GET /my-work/api/activities?scope=me&active_company_id=&company_ids=6&project_selection=none&process_selection=none&delivery_tags=open => generated 13458 bytes in 16 msecs (HTTP/2.0 200) 4 headers in 120 bytes (1 switches on core 0)
+[pid: 517459|app: 0|req: 141/141] 2804:214:400a:23a4:8cc8:d6a:30e1:2551 () {52 vars in 1151 bytes} [Sun Mar  1 14:18:57 2026] GET /my-work/api/occurrences/summary?company_ids=6 => generated 92 bytes in 4 msecs (HTTP/2.0 200) 4 headers in 117 bytes (1 switches on core 0)
+[pid: 517459|app: 0|req: 142/142] 2804:214:400a:23a4:8cc8:d6a:30e1:2551 () {52 vars in 1151 bytes} [Sun Mar  1 14:18:57 2026] GET /my-work/api/occurrences/summary?company_ids=6 => generated 92 bytes in 5 msecs (HTTP/2.0 200) 4 headers in 117 bytes (1 switches on core 0)
+INFO:apscheduler.executors.default:Running job "Monitor de Inatividade de Chat (trigger: interval[0:00:30], next run at: 2026-03-01 14:19:30 -03)" (scheduled at 2026-03-01 14:19:00.218130-03:00)
+INFO:apscheduler.executors.default:Job "Monitor de Inatividade de Chat (trigger: interval[0:00:30], next run at: 2026-03-01 14:19:30 -03)" executed successfully
+INFO:api.routes.my_work:📊 API Request: scope=me, company_ids=[6], active_company=None
+INFO:services.my_work.discovery_service:🔍 Discovery [scope=me]: user=3, role=admin, target_companies=[6]
+INFO:services.my_work.discovery_service:📊 Raw Discovery: Found 17 total activities across all allowed companies.
+[pid: 517459|app: 0|req: 143/143] 2804:214:400a:23a4:8cc8:d6a:30e1:2551 () {52 vars in 1319 bytes} [Sun Mar  1 14:19:07 2026] GET /my-work/api/activities?scope=me&active_company_id=&company_ids=6&project_selection=none&process_selection=none&delivery_tags=open => generated 13458 bytes in 15 msecs (HTTP/2.0 200) 4 headers in 120 bytes (1 switches on core 0)
+[pid: 517459|app: 0|req: 144/144] 2804:214:400a:23a4:8cc8:d6a:30e1:2551 () {52 vars in 1151 bytes} [Sun Mar  1 14:19:07 2026] GET /my-work/api/occurrences/summary?company_ids=6 => generated 92 bytes in 4 msecs (HTTP/2.0 200) 4 headers in 117 bytes (1 switches on core 0)
+INFO:api.routes.my_work:📊 API Request: scope=me, company_ids=[6], active_company=None
+INFO:services.my_work.discovery_service:🔍 Discovery [scope=me]: user=3, role=admin, target_companies=[6]
+INFO:services.my_work.discovery_service:📊 Raw Discovery: Found 17 total activities across all allowed companies.
+[pid: 517459|app: 0|req: 145/145] 2804:214:400a:23a4:8cc8:d6a:30e1:2551 () {52 vars in 1319 bytes} [Sun Mar  1 14:19:11 2026] GET /my-work/api/activities?scope=me&active_company_id=&company_ids=6&project_selection=none&process_selection=none&delivery_tags=open => generated 13458 bytes in 14 msecs (HTTP/2.0 200) 4 headers in 120 bytes (1 switches on core 0)
+[pid: 517459|app: 0|req: 146/146] 2804:214:400a:23a4:8cc8:d6a:30e1:2551 () {52 vars in 1151 bytes} [Sun Mar  1 14:19:11 2026] GET /my-work/api/occurrences/summary?company_ids=6 => generated 92 bytes in 4 msecs (HTTP/2.0 200) 4 headers in 117 bytes (1 switches on core 0)
+INFO:api.routes.my_work:📊 API Request: scope=me, company_ids=[6], active_company=None
+INFO:services.my_work.discovery_service:🔍 Discovery [scope=me]: user=3, role=admin, target_companies=[6]
+INFO:services.my_work.discovery_service:📊 Raw Discovery: Found 17 total activities across all allowed companies.
+[pid: 517459|app: 0|req: 147/147] 2804:214:400a:23a4:8cc8:d6a:30e1:2551 () {52 vars in 1273 bytes} [Sun Mar  1 14:19:14 2026] GET /my-work/api/activities?scope=me&active_company_id=&company_ids=6&project_selection=none&delivery_tags=open => generated 13458 bytes in 15 msecs (HTTP/2.0 200) 4 headers in 120 bytes (1 switches on core 0)
+[pid: 517459|app: 0|req: 148/148] 2804:214:400a:23a4:8cc8:d6a:30e1:2551 () {52 vars in 1151 bytes} [Sun Mar  1 14:19:14 2026] GET /my-work/api/occurrences/summary?company_ids=6 => generated 92 bytes in 4 msecs (HTTP/2.0 200) 4 headers in 117 bytes (1 switches on core 0)
+INFO:api.routes.my_work:📊 API Request: scope=me, company_ids=[6], active_company=None
+INFO:services.my_work.discovery_service:🔍 Discovery [scope=me]: user=3, role=admin, target_companies=[6]
+INFO:services.my_work.discovery_service:📊 Raw Discovery: Found 17 total activities across all allowed companies.
+[pid: 517459|app: 0|req: 149/149] 2804:214:400a:23a4:8cc8:d6a:30e1:2551 () {52 vars in 1227 bytes} [Sun Mar  1 14:19:16 2026] GET /my-work/api/activities?scope=me&active_company_id=&company_ids=6&delivery_tags=open => generated 13458 bytes in 14 msecs (HTTP/2.0 200) 4 headers in 120 bytes (1 switches on core 0)
+[pid: 517459|app: 0|req: 150/150] 2804:214:400a:23a4:8cc8:d6a:30e1:2551 () {52 vars in 1151 bytes} [Sun Mar  1 14:19:16 2026] GET /my-work/api/occurrences/summary?company_ids=6 => generated 92 bytes in 4 msecs (HTTP/2.0 200) 4 headers in 117 bytes (1 switches on core 0)
+INFO:apscheduler.executors.default:Running job "Monitor de Inatividade de Chat (trigger: interval[0:00:30], next run at: 2026-03-01 14:20:00 -03)" (scheduled at 2026-03-01 14:19:30.218130-03:00)
+INFO:apscheduler.executors.default:Job "Monitor de Inatividade de Chat (trigger: interval[0:00:30], next run at: 2026-03-01 14:20:00 -03)" executed successfully
+INFO:apscheduler.executors.default:Running job "Monitor de Inatividade de Chat (trigger: interval[0:00:30], next run at: 2026-03-01 14:20:30 -03)" (scheduled at 2026-03-01 14:20:00.218130-03:00)
+INFO:apscheduler.executors.default:Job "Monitor de Inatividade de Chat (trigger: interval[0:00:30], next run at: 2026-03-01 14:20:30 -03)" executed successfully
+INFO:apscheduler.executors.default:Running job "Monitor de Inatividade de Chat (trigger: interval[0:00:30], next run at: 2026-03-01 14:21:00 -03)" (scheduled at 2026-03-01 14:20:30.218130-03:00)
+INFO:apscheduler.executors.default:Job "Monitor de Inatividade de Chat (trigger: interval[0:00:30], next run at: 2026-03-01 14:21:00 -03)" executed successfully
+INFO:apscheduler.executors.default:Running job "Monitor de Inatividade de Chat (trigger: interval[0:00:30], next run at: 2026-03-01 14:21:30 -03)" (scheduled at 2026-03-01 14:21:00.218130-03:00)
+INFO:apscheduler.executors.default:Job "Monitor de Inatividade de Chat (trigger: interval[0:00:30], next run at: 2026-03-01 14:21:30 -03)" executed successfully
+INFO:apscheduler.executors.default:Running job "Monitor de Inatividade de Chat (trigger: interval[0:00:30], next run at: 2026-03-01 14:22:00 -03)" (scheduled at 2026-03-01 14:21:30.218130-03:00)
+INFO:apscheduler.executors.default:Job "Monitor de Inatividade de Chat (trigger: interval[0:00:30], next run at: 2026-03-01 14:22:00 -03)" executed successfully
+INFO:apscheduler.executors.default:Running job "Monitor de Inatividade de Chat (trigger: interval[0:00:30], next run at: 2026-03-01 14:22:30 -03)" (scheduled at 2026-03-01 14:22:00.218130-03:00)
+INFO:apscheduler.executors.default:Job "Monitor de Inatividade de Chat (trigger: interval[0:00:30], next run at: 2026-03-01 14:22:30 -03)" executed successfully
+INFO:apscheduler.executors.default:Running job "Monitor de Inatividade de Chat (trigger: interval[0:00:30], next run at: 2026-03-01 14:23:00 -03)" (scheduled at 2026-03-01 14:22:30.218130-03:00)
+INFO:apscheduler.executors.default:Job "Monitor de Inatividade de Chat (trigger: interval[0:00:30], next run at: 2026-03-01 14:23:00 -03)" executed successfully
+INFO:apscheduler.executors.default:Running job "Monitor de Inatividade de Chat (trigger: interval[0:00:30], next run at: 2026-03-01 14:23:30 -03)" (scheduled at 2026-03-01 14:23:00.218130-03:00)
+INFO:apscheduler.executors.default:Job "Monitor de Inatividade de Chat (trigger: interval[0:00:30], next run at: 2026-03-01 14:23:30 -03)" executed successfully
+INFO:apscheduler.executors.default:Running job "Monitor de Inatividade de Chat (trigger: interval[0:00:30], next run at: 2026-03-01 14:24:00 -03)" (scheduled at 2026-03-01 14:23:30.218130-03:00)
+INFO:apscheduler.executors.default:Job "Monitor de Inatividade de Chat (trigger: interval[0:00:30], next run at: 2026-03-01 14:24:00 -03)" executed successfully
+INFO:apscheduler.executors.default:Running job "Monitor de Inatividade de Chat (trigger: interval[0:00:30], next run at: 2026-03-01 14:24:30 -03)" (scheduled at 2026-03-01 14:24:00.218130-03:00)
+INFO:apscheduler.executors.default:Job "Monitor de Inatividade de Chat (trigger: interval[0:00:30], next run at: 2026-03-01 14:24:30 -03)" executed successfully
+INFO:apscheduler.executors.default:Running job "Monitor de Inatividade de Chat (trigger: interval[0:00:30], next run at: 2026-03-01 14:25:00 -03)" (scheduled at 2026-03-01 14:24:30.218130-03:00)
+INFO:apscheduler.executors.default:Job "Monitor de Inatividade de Chat (trigger: interval[0:00:30], next run at: 2026-03-01 14:25:00 -03)" executed successfully
+INFO:apscheduler.executors.default:Running job "Monitor de Inatividade de Chat (trigger: interval[0:00:30], next run at: 2026-03-01 14:25:30 -03)" (scheduled at 2026-03-01 14:25:00.218130-03:00)
+INFO:apscheduler.executors.default:Job "Monitor de Inatividade de Chat (trigger: interval[0:00:30], next run at: 2026-03-01 14:25:30 -03)" executed successfully
+INFO:apscheduler.executors.default:Running job "Monitor de Inatividade de Chat (trigger: interval[0:00:30], next run at: 2026-03-01 14:26:00 -03)" (scheduled at 2026-03-01 14:25:30.218130-03:00)
+INFO:apscheduler.executors.default:Job "Monitor de Inatividade de Chat (trigger: interval[0:00:30], next run at: 2026-03-01 14:26:00 -03)" executed successfully
+INFO:apscheduler.executors.default:Running job "Monitor de Inatividade de Chat (trigger: interval[0:00:30], next run at: 2026-03-01 14:26:30 -03)" (scheduled at 2026-03-01 14:26:00.218130-03:00)
+INFO:apscheduler.executors.default:Job "Monitor de Inatividade de Chat (trigger: interval[0:00:30], next run at: 2026-03-01 14:26:30 -03)" executed successfully
+INFO:apscheduler.executors.default:Running job "Monitor de Inatividade de Chat (trigger: interval[0:00:30], next run at: 2026-03-01 14:27:00 -03)" (scheduled at 2026-03-01 14:26:30.218130-03:00)
+INFO:apscheduler.executors.default:Job "Monitor de Inatividade de Chat (trigger: interval[0:00:30], next run at: 2026-03-01 14:27:00 -03)" executed successfully
+INFO:apscheduler.executors.default:Running job "Monitor de Inatividade de Chat (trigger: interval[0:00:30], next run at: 2026-03-01 14:27:30 -03)" (scheduled at 2026-03-01 14:27:00.218130-03:00)
+INFO:apscheduler.executors.default:Job "Monitor de Inatividade de Chat (trigger: interval[0:00:30], next run at: 2026-03-01 14:27:30 -03)" executed successfully
+INFO:apscheduler.executors.default:Running job "Monitor de Inatividade de Chat (trigger: interval[0:00:30], next run at: 2026-03-01 14:28:00 -03)" (scheduled at 2026-03-01 14:27:30.218130-03:00)
+INFO:apscheduler.executors.default:Job "Monitor de Inatividade de Chat (trigger: interval[0:00:30], next run at: 2026-03-01 14:28:00 -03)" executed successfully
+INFO:apscheduler.executors.default:Running job "Monitor de Inatividade de Chat (trigger: interval[0:00:30], next run at: 2026-03-01 14:28:30 -03)" (scheduled at 2026-03-01 14:28:00.218130-03:00)
+INFO:apscheduler.executors.default:Job "Monitor de Inatividade de Chat (trigger: interval[0:00:30], next run at: 2026-03-01 14:28:30 -03)" executed successfully
+INFO:apscheduler.executors.default:Running job "Monitor de Inatividade de Chat (trigger: interval[0:00:30], next run at: 2026-03-01 14:29:00 -03)" (scheduled at 2026-03-01 14:28:30.218130-03:00)
+INFO:apscheduler.executors.default:Job "Monitor de Inatividade de Chat (trigger: interval[0:00:30], next run at: 2026-03-01 14:29:00 -03)" executed successfully
+INFO:apscheduler.executors.default:Running job "Monitor de Inatividade de Chat (trigger: interval[0:00:30], next run at: 2026-03-01 14:29:30 -03)" (scheduled at 2026-03-01 14:29:00.218130-03:00)
+INFO:apscheduler.executors.default:Job "Monitor de Inatividade de Chat (trigger: interval[0:00:30], next run at: 2026-03-01 14:29:30 -03)" executed successfully
+INFO:apscheduler.executors.default:Running job "Monitor de Inatividade de Chat (trigger: interval[0:00:30], next run at: 2026-03-01 14:30:00 -03)" (scheduled at 2026-03-01 14:29:30.218130-03:00)
+INFO:apscheduler.executors.default:Job "Monitor de Inatividade de Chat (trigger: interval[0:00:30], next run at: 2026-03-01 14:30:00 -03)" executed successfully
+INFO:apscheduler.executors.default:Running job "Monitor de Inatividade de Chat (trigger: interval[0:00:30], next run at: 2026-03-01 14:30:30 -03)" (scheduled at 2026-03-01 14:30:00.218130-03:00)
+INFO:apscheduler.executors.default:Job "Monitor de Inatividade de Chat (trigger: interval[0:00:30], next run at: 2026-03-01 14:30:30 -03)" executed successfully
+INFO:apscheduler.executors.default:Running job "Monitor de Inatividade de Chat (trigger: interval[0:00:30], next run at: 2026-03-01 14:31:00 -03)" (scheduled at 2026-03-01 14:30:30.218130-03:00)
+INFO:apscheduler.executors.default:Job "Monitor de Inatividade de Chat (trigger: interval[0:00:30], next run at: 2026-03-01 14:31:00 -03)" executed successfully
+INFO:apscheduler.executors.default:Running job "Monitor de Inatividade de Chat (trigger: interval[0:00:30], next run at: 2026-03-01 14:31:30 -03)" (scheduled at 2026-03-01 14:31:00.218130-03:00)
+INFO:apscheduler.executors.default:Job "Monitor de Inatividade de Chat (trigger: interval[0:00:30], next run at: 2026-03-01 14:31:30 -03)" executed successfully
+INFO:apscheduler.executors.default:Running job "Monitor de Inatividade de Chat (trigger: interval[0:00:30], next run at: 2026-03-01 14:32:00 -03)" (scheduled at 2026-03-01 14:31:30.218130-03:00)
+INFO:apscheduler.executors.default:Job "Monitor de Inatividade de Chat (trigger: interval[0:00:30], next run at: 2026-03-01 14:32:00 -03)" executed successfully
+INFO:apscheduler.executors.default:Running job "Monitor de Inatividade de Chat (trigger: interval[0:00:30], next run at: 2026-03-01 14:32:30 -03)" (scheduled at 2026-03-01 14:32:00.218130-03:00)
+INFO:apscheduler.executors.default:Job "Monitor de Inatividade de Chat (trigger: interval[0:00:30], next run at: 2026-03-01 14:32:30 -03)" executed successfully
+INFO:apscheduler.executors.default:Running job "Monitor de Inatividade de Chat (trigger: interval[0:00:30], next run at: 2026-03-01 14:33:00 -03)" (scheduled at 2026-03-01 14:32:30.218130-03:00)
+INFO:apscheduler.executors.default:Job "Monitor de Inatividade de Chat (trigger: interval[0:00:30], next run at: 2026-03-01 14:33:00 -03)" executed successfully
+INFO:apscheduler.executors.default:Running job "Monitor de Inatividade de Chat (trigger: interval[0:00:30], next run at: 2026-03-01 14:33:30 -03)" (scheduled at 2026-03-01 14:33:00.218130-03:00)
+INFO:apscheduler.executors.default:Job "Monitor de Inatividade de Chat (trigger: interval[0:00:30], next run at: 2026-03-01 14:33:30 -03)" executed successfully
+INFO:apscheduler.executors.default:Running job "Monitor de Inatividade de Chat (trigger: interval[0:00:30], next run at: 2026-03-01 14:34:00 -03)" (scheduled at 2026-03-01 14:33:30.218130-03:00)
+INFO:apscheduler.executors.default:Job "Monitor de Inatividade de Chat (trigger: interval[0:00:30], next run at: 2026-03-01 14:34:00 -03)" executed successfully
+INFO:apscheduler.executors.default:Running job "Monitor de Inatividade de Chat (trigger: interval[0:00:30], next run at: 2026-03-01 14:34:30 -03)" (scheduled at 2026-03-01 14:34:00.218130-03:00)
+INFO:apscheduler.executors.default:Job "Monitor de Inatividade de Chat (trigger: interval[0:00:30], next run at: 2026-03-01 14:34:30 -03)" executed successfully
+INFO:apscheduler.executors.default:Running job "Monitor de Inatividade de Chat (trigger: interval[0:00:30], next run at: 2026-03-01 14:35:00 -03)" (scheduled at 2026-03-01 14:34:30.218130-03:00)
+INFO:apscheduler.executors.default:Job "Monitor de Inatividade de Chat (trigger: interval[0:00:30], next run at: 2026-03-01 14:35:00 -03)" executed successfully
+INFO:apscheduler.executors.default:Running job "Monitor de Inatividade de Chat (trigger: interval[0:00:30], next run at: 2026-03-01 14:35:30 -03)" (scheduled at 2026-03-01 14:35:00.218130-03:00)
+INFO:apscheduler.executors.default:Job "Monitor de Inatividade de Chat (trigger: interval[0:00:30], next run at: 2026-03-01 14:35:30 -03)" executed successfully
+INFO:apscheduler.executors.default:Running job "Monitor de Inatividade de Chat (trigger: interval[0:00:30], next run at: 2026-03-01 14:36:00 -03)" (scheduled at 2026-03-01 14:35:30.218130-03:00)
+INFO:apscheduler.executors.default:Job "Monitor de Inatividade de Chat (trigger: interval[0:00:30], next run at: 2026-03-01 14:36:00 -03)" executed successfully
+INFO:apscheduler.executors.default:Running job "Monitor de Inatividade de Chat (trigger: interval[0:00:30], next run at: 2026-03-01 14:36:30 -03)" (scheduled at 2026-03-01 14:36:00.218130-03:00)
+INFO:apscheduler.executors.default:Job "Monitor de Inatividade de Chat (trigger: interval[0:00:30], next run at: 2026-03-01 14:36:30 -03)" executed successfully
+INFO:apscheduler.executors.default:Running job "Monitor de Inatividade de Chat (trigger: interval[0:00:30], next run at: 2026-03-01 14:37:00 -03)" (scheduled at 2026-03-01 14:36:30.218130-03:00)
+INFO:apscheduler.executors.default:Job "Monitor de Inatividade de Chat (trigger: interval[0:00:30], next run at: 2026-03-01 14:37:00 -03)" executed successfully
+INFO:apscheduler.executors.default:Running job "Monitor de Inatividade de Chat (trigger: interval[0:00:30], next run at: 2026-03-01 14:37:30 -03)" (scheduled at 2026-03-01 14:37:00.218130-03:00)
+INFO:apscheduler.executors.default:Job "Monitor de Inatividade de Chat (trigger: interval[0:00:30], next run at: 2026-03-01 14:37:30 -03)" executed successfully
+INFO:apscheduler.executors.default:Running job "Monitor de Inatividade de Chat (trigger: interval[0:00:30], next run at: 2026-03-01 14:38:00 -03)" (scheduled at 2026-03-01 14:37:30.218130-03:00)
+INFO:apscheduler.executors.default:Job "Monitor de Inatividade de Chat (trigger: interval[0:00:30], next run at: 2026-03-01 14:38:00 -03)" executed successfully
+INFO:apscheduler.executors.default:Running job "Monitor de Inatividade de Chat (trigger: interval[0:00:30], next run at: 2026-03-01 14:38:30 -03)" (scheduled at 2026-03-01 14:38:00.218130-03:00)
+INFO:apscheduler.executors.default:Job "Monitor de Inatividade de Chat (trigger: interval[0:00:30], next run at: 2026-03-01 14:38:30 -03)" executed successfully
+INFO:apscheduler.executors.default:Running job "Monitor de Inatividade de Chat (trigger: interval[0:00:30], next run at: 2026-03-01 14:39:00 -03)" (scheduled at 2026-03-01 14:38:30.218130-03:00)
+INFO:apscheduler.executors.default:Job "Monitor de Inatividade de Chat (trigger: interval[0:00:30], next run at: 2026-03-01 14:39:00 -03)" executed successfully
+INFO:apscheduler.executors.default:Running job "Monitor de Inatividade de Chat (trigger: interval[0:00:30], next run at: 2026-03-01 14:39:30 -03)" (scheduled at 2026-03-01 14:39:00.218130-03:00)
+INFO:apscheduler.executors.default:Job "Monitor de Inatividade de Chat (trigger: interval[0:00:30], next run at: 2026-03-01 14:39:30 -03)" executed successfully
+INFO:apscheduler.executors.default:Running job "Monitor de Inatividade de Chat (trigger: interval[0:00:30], next run at: 2026-03-01 14:40:00 -03)" (scheduled at 2026-03-01 14:39:30.218130-03:00)
+INFO:apscheduler.executors.default:Job "Monitor de Inatividade de Chat (trigger: interval[0:00:30], next run at: 2026-03-01 14:40:00 -03)" executed successfully
+INFO:apscheduler.executors.default:Running job "Monitor de Inatividade de Chat (trigger: interval[0:00:30], next run at: 2026-03-01 14:40:30 -03)" (scheduled at 2026-03-01 14:40:00.218130-03:00)
+INFO:apscheduler.executors.default:Job "Monitor de Inatividade de Chat (trigger: interval[0:00:30], next run at: 2026-03-01 14:40:30 -03)" executed successfully
+INFO:apscheduler.executors.default:Running job "Monitor de Inatividade de Chat (trigger: interval[0:00:30], next run at: 2026-03-01 14:41:00 -03)" (scheduled at 2026-03-01 14:40:30.218130-03:00)
+INFO:apscheduler.executors.default:Job "Monitor de Inatividade de Chat (trigger: interval[0:00:30], next run at: 2026-03-01 14:41:00 -03)" executed successfully
+INFO:apscheduler.executors.default:Running job "Monitor de Inatividade de Chat (trigger: interval[0:00:30], next run at: 2026-03-01 14:41:30 -03)" (scheduled at 2026-03-01 14:41:00.218130-03:00)
+INFO:apscheduler.executors.default:Job "Monitor de Inatividade de Chat (trigger: interval[0:00:30], next run at: 2026-03-01 14:41:30 -03)" executed successfully
+INFO:apscheduler.executors.default:Running job "Monitor de Inatividade de Chat (trigger: interval[0:00:30], next run at: 2026-03-01 14:42:00 -03)" (scheduled at 2026-03-01 14:41:30.218130-03:00)
+INFO:apscheduler.executors.default:Job "Monitor de Inatividade de Chat (trigger: interval[0:00:30], next run at: 2026-03-01 14:42:00 -03)" executed successfully
+INFO:apscheduler.executors.default:Running job "Monitor de Inatividade de Chat (trigger: interval[0:00:30], next run at: 2026-03-01 14:42:30 -03)" (scheduled at 2026-03-01 14:42:00.218130-03:00)
+INFO:apscheduler.executors.default:Job "Monitor de Inatividade de Chat (trigger: interval[0:00:30], next run at: 2026-03-01 14:42:30 -03)" executed successfully
+INFO:apscheduler.executors.default:Running job "Monitor de Inatividade de Chat (trigger: interval[0:00:30], next run at: 2026-03-01 14:43:00 -03)" (scheduled at 2026-03-01 14:42:30.218130-03:00)
+INFO:apscheduler.executors.default:Job "Monitor de Inatividade de Chat (trigger: interval[0:00:30], next run at: 2026-03-01 14:43:00 -03)" executed successfully
+INFO:apscheduler.executors.default:Running job "Monitor de Inatividade de Chat (trigger: interval[0:00:30], next run at: 2026-03-01 14:43:30 -03)" (scheduled at 2026-03-01 14:43:00.218130-03:00)
+INFO:apscheduler.executors.default:Job "Monitor de Inatividade de Chat (trigger: interval[0:00:30], next run at: 2026-03-01 14:43:30 -03)" executed successfully
+INFO:apscheduler.executors.default:Running job "Monitor de Inatividade de Chat (trigger: interval[0:00:30], next run at: 2026-03-01 14:44:00 -03)" (scheduled at 2026-03-01 14:43:30.218130-03:00)
+INFO:apscheduler.executors.default:Job "Monitor de Inatividade de Chat (trigger: interval[0:00:30], next run at: 2026-03-01 14:44:00 -03)" executed successfully
+INFO:apscheduler.executors.default:Running job "Monitor de Inatividade de Chat (trigger: interval[0:00:30], next run at: 2026-03-01 14:44:30 -03)" (scheduled at 2026-03-01 14:44:00.218130-03:00)
+INFO:apscheduler.executors.default:Job "Monitor de Inatividade de Chat (trigger: interval[0:00:30], next run at: 2026-03-01 14:44:30 -03)" executed successfully
+INFO:apscheduler.executors.default:Running job "Monitor de Inatividade de Chat (trigger: interval[0:00:30], next run at: 2026-03-01 14:45:00 -03)" (scheduled at 2026-03-01 14:44:30.218130-03:00)
+INFO:apscheduler.executors.default:Job "Monitor de Inatividade de Chat (trigger: interval[0:00:30], next run at: 2026-03-01 14:45:00 -03)" executed successfully
+INFO:apscheduler.executors.default:Running job "Monitor de Inatividade de Chat (trigger: interval[0:00:30], next run at: 2026-03-01 14:45:30 -03)" (scheduled at 2026-03-01 14:45:00.218130-03:00)
+INFO:apscheduler.executors.default:Job "Monitor de Inatividade de Chat (trigger: interval[0:00:30], next run at: 2026-03-01 14:45:30 -03)" executed successfully
+INFO:apscheduler.executors.default:Running job "Monitor de Inatividade de Chat (trigger: interval[0:00:30], next run at: 2026-03-01 14:46:00 -03)" (scheduled at 2026-03-01 14:45:30.218130-03:00)
+INFO:apscheduler.executors.default:Job "Monitor de Inatividade de Chat (trigger: interval[0:00:30], next run at: 2026-03-01 14:46:00 -03)" executed successfully
+INFO:apscheduler.executors.default:Running job "Monitor de Inatividade de Chat (trigger: interval[0:00:30], next run at: 2026-03-01 14:46:30 -03)" (scheduled at 2026-03-01 14:46:00.218130-03:00)
+INFO:apscheduler.executors.default:Job "Monitor de Inatividade de Chat (trigger: interval[0:00:30], next run at: 2026-03-01 14:46:30 -03)" executed successfully
+INFO:apscheduler.executors.default:Running job "Monitor de Inatividade de Chat (trigger: interval[0:00:30], next run at: 2026-03-01 14:47:00 -03)" (scheduled at 2026-03-01 14:46:30.218130-03:00)
+INFO:apscheduler.executors.default:Job "Monitor de Inatividade de Chat (trigger: interval[0:00:30], next run at: 2026-03-01 14:47:00 -03)" executed successfully
+INFO:apscheduler.executors.default:Running job "Monitor de Inatividade de Chat (trigger: interval[0:00:30], next run at: 2026-03-01 14:47:30 -03)" (scheduled at 2026-03-01 14:47:00.218130-03:00)
+INFO:apscheduler.executors.default:Job "Monitor de Inatividade de Chat (trigger: interval[0:00:30], next run at: 2026-03-01 14:47:30 -03)" executed successfully
+INFO:apscheduler.executors.default:Running job "Monitor de Inatividade de Chat (trigger: interval[0:00:30], next run at: 2026-03-01 14:48:00 -03)" (scheduled at 2026-03-01 14:47:30.218130-03:00)
+INFO:apscheduler.executors.default:Job "Monitor de Inatividade de Chat (trigger: interval[0:00:30], next run at: 2026-03-01 14:48:00 -03)" executed successfully
+INFO:apscheduler.executors.default:Running job "Monitor de Inatividade de Chat (trigger: interval[0:00:30], next run at: 2026-03-01 14:48:30 -03)" (scheduled at 2026-03-01 14:48:00.218130-03:00)
+INFO:apscheduler.executors.default:Job "Monitor de Inatividade de Chat (trigger: interval[0:00:30], next run at: 2026-03-01 14:48:30 -03)" executed successfully
+INFO:apscheduler.executors.default:Running job "Monitor de Inatividade de Chat (trigger: interval[0:00:30], next run at: 2026-03-01 14:49:00 -03)" (scheduled at 2026-03-01 14:48:30.218130-03:00)
+INFO:apscheduler.executors.default:Job "Monitor de Inatividade de Chat (trigger: interval[0:00:30], next run at: 2026-03-01 14:49:00 -03)" executed successfully
+INFO:apscheduler.executors.default:Running job "Monitor de Inatividade de Chat (trigger: interval[0:00:30], next run at: 2026-03-01 14:49:30 -03)" (scheduled at 2026-03-01 14:49:00.218130-03:00)
+INFO:apscheduler.executors.default:Job "Monitor de Inatividade de Chat (trigger: interval[0:00:30], next run at: 2026-03-01 14:49:30 -03)" executed successfully
+INFO:apscheduler.executors.default:Running job "Monitor de Inatividade de Chat (trigger: interval[0:00:30], next run at: 2026-03-01 14:50:00 -03)" (scheduled at 2026-03-01 14:49:30.218130-03:00)
+INFO:apscheduler.executors.default:Job "Monitor de Inatividade de Chat (trigger: interval[0:00:30], next run at: 2026-03-01 14:50:00 -03)" executed successfully
+INFO:apscheduler.executors.default:Running job "Monitor de Inatividade de Chat (trigger: interval[0:00:30], next run at: 2026-03-01 14:50:30 -03)" (scheduled at 2026-03-01 14:50:00.218130-03:00)
+INFO:apscheduler.executors.default:Job "Monitor de Inatividade de Chat (trigger: interval[0:00:30], next run at: 2026-03-01 14:50:30 -03)" executed successfully
+INFO:apscheduler.executors.default:Running job "Monitor de Inatividade de Chat (trigger: interval[0:00:30], next run at: 2026-03-01 14:51:00 -03)" (scheduled at 2026-03-01 14:50:30.218130-03:00)
+INFO:apscheduler.executors.default:Job "Monitor de Inatividade de Chat (trigger: interval[0:00:30], next run at: 2026-03-01 14:51:00 -03)" executed successfully
+INFO:apscheduler.executors.default:Running job "Monitor de Inatividade de Chat (trigger: interval[0:00:30], next run at: 2026-03-01 14:51:30 -03)" (scheduled at 2026-03-01 14:51:00.218130-03:00)
+INFO:apscheduler.executors.default:Job "Monitor de Inatividade de Chat (trigger: interval[0:00:30], next run at: 2026-03-01 14:51:30 -03)" executed successfully
+INFO:apscheduler.executors.default:Running job "Monitor de Inatividade de Chat (trigger: interval[0:00:30], next run at: 2026-03-01 14:52:00 -03)" (scheduled at 2026-03-01 14:51:30.218130-03:00)
+INFO:apscheduler.executors.default:Job "Monitor de Inatividade de Chat (trigger: interval[0:00:30], next run at: 2026-03-01 14:52:00 -03)" executed successfully
+INFO:apscheduler.executors.default:Running job "Monitor de Inatividade de Chat (trigger: interval[0:00:30], next run at: 2026-03-01 14:52:30 -03)" (scheduled at 2026-03-01 14:52:00.218130-03:00)
+INFO:apscheduler.executors.default:Job "Monitor de Inatividade de Chat (trigger: interval[0:00:30], next run at: 2026-03-01 14:52:30 -03)" executed successfully
+INFO:apscheduler.executors.default:Running job "Monitor de Inatividade de Chat (trigger: interval[0:00:30], next run at: 2026-03-01 14:53:00 -03)" (scheduled at 2026-03-01 14:52:30.218130-03:00)
+INFO:apscheduler.executors.default:Job "Monitor de Inatividade de Chat (trigger: interval[0:00:30], next run at: 2026-03-01 14:53:00 -03)" executed successfully
+INFO:apscheduler.executors.default:Running job "Monitor de Inatividade de Chat (trigger: interval[0:00:30], next run at: 2026-03-01 14:53:30 -03)" (scheduled at 2026-03-01 14:53:00.218130-03:00)
+INFO:apscheduler.executors.default:Job "Monitor de Inatividade de Chat (trigger: interval[0:00:30], next run at: 2026-03-01 14:53:30 -03)" executed successfully
+INFO:apscheduler.executors.default:Running job "Monitor de Inatividade de Chat (trigger: interval[0:00:30], next run at: 2026-03-01 14:54:00 -03)" (scheduled at 2026-03-01 14:53:30.218130-03:00)
+INFO:apscheduler.executors.default:Job "Monitor de Inatividade de Chat (trigger: interval[0:00:30], next run at: 2026-03-01 14:54:00 -03)" executed successfully
+INFO:apscheduler.executors.default:Running job "Monitor de Inatividade de Chat (trigger: interval[0:00:30], next run at: 2026-03-01 14:54:30 -03)" (scheduled at 2026-03-01 14:54:00.218130-03:00)
+INFO:apscheduler.executors.default:Job "Monitor de Inatividade de Chat (trigger: interval[0:00:30], next run at: 2026-03-01 14:54:30 -03)" executed successfully
+INFO:apscheduler.executors.default:Running job "Monitor de Inatividade de Chat (trigger: interval[0:00:30], next run at: 2026-03-01 14:55:00 -03)" (scheduled at 2026-03-01 14:54:30.218130-03:00)
+INFO:apscheduler.executors.default:Job "Monitor de Inatividade de Chat (trigger: interval[0:00:30], next run at: 2026-03-01 14:55:00 -03)" executed successfully
+INFO:apscheduler.executors.default:Running job "Monitor de Inatividade de Chat (trigger: interval[0:00:30], next run at: 2026-03-01 14:55:30 -03)" (scheduled at 2026-03-01 14:55:00.218130-03:00)
+INFO:apscheduler.executors.default:Job "Monitor de Inatividade de Chat (trigger: interval[0:00:30], next run at: 2026-03-01 14:55:30 -03)" executed successfully
+INFO:apscheduler.executors.default:Running job "Monitor de Inatividade de Chat (trigger: interval[0:00:30], next run at: 2026-03-01 14:56:00 -03)" (scheduled at 2026-03-01 14:55:30.218130-03:00)
+INFO:apscheduler.executors.default:Job "Monitor de Inatividade de Chat (trigger: interval[0:00:30], next run at: 2026-03-01 14:56:00 -03)" executed successfully
+INFO:apscheduler.executors.default:Running job "Monitor de Inatividade de Chat (trigger: interval[0:00:30], next run at: 2026-03-01 14:56:30 -03)" (scheduled at 2026-03-01 14:56:00.218130-03:00)
+INFO:apscheduler.executors.default:Job "Monitor de Inatividade de Chat (trigger: interval[0:00:30], next run at: 2026-03-01 14:56:30 -03)" executed successfully
+INFO:apscheduler.executors.default:Running job "Monitor de Inatividade de Chat (trigger: interval[0:00:30], next run at: 2026-03-01 14:57:00 -03)" (scheduled at 2026-03-01 14:56:30.218130-03:00)
+INFO:apscheduler.executors.default:Job "Monitor de Inatividade de Chat (trigger: interval[0:00:30], next run at: 2026-03-01 14:57:00 -03)" executed successfully
+INFO:apscheduler.executors.default:Running job "Monitor de Inatividade de Chat (trigger: interval[0:00:30], next run at: 2026-03-01 14:57:30 -03)" (scheduled at 2026-03-01 14:57:00.218130-03:00)
+INFO:apscheduler.executors.default:Job "Monitor de Inatividade de Chat (trigger: interval[0:00:30], next run at: 2026-03-01 14:57:30 -03)" executed successfully
+INFO:apscheduler.executors.default:Running job "Monitor de Inatividade de Chat (trigger: interval[0:00:30], next run at: 2026-03-01 14:58:00 -03)" (scheduled at 2026-03-01 14:57:30.218130-03:00)
+INFO:apscheduler.executors.default:Job "Monitor de Inatividade de Chat (trigger: interval[0:00:30], next run at: 2026-03-01 14:58:00 -03)" executed successfully
+INFO:apscheduler.executors.default:Running job "Monitor de Inatividade de Chat (trigger: interval[0:00:30], next run at: 2026-03-01 14:58:30 -03)" (scheduled at 2026-03-01 14:58:00.218130-03:00)
+INFO:apscheduler.executors.default:Job "Monitor de Inatividade de Chat (trigger: interval[0:00:30], next run at: 2026-03-01 14:58:30 -03)" executed successfully
+INFO:apscheduler.executors.default:Running job "Monitor de Inatividade de Chat (trigger: interval[0:00:30], next run at: 2026-03-01 14:59:00 -03)" (scheduled at 2026-03-01 14:58:30.218130-03:00)
+INFO:apscheduler.executors.default:Job "Monitor de Inatividade de Chat (trigger: interval[0:00:30], next run at: 2026-03-01 14:59:00 -03)" executed successfully
+INFO:apscheduler.executors.default:Running job "Monitor de Inatividade de Chat (trigger: interval[0:00:30], next run at: 2026-03-01 14:59:30 -03)" (scheduled at 2026-03-01 14:59:00.218130-03:00)
+INFO:apscheduler.executors.default:Job "Monitor de Inatividade de Chat (trigger: interval[0:00:30], next run at: 2026-03-01 14:59:30 -03)" executed successfully
+INFO:apscheduler.executors.default:Running job "Monitor de Inatividade de Chat (trigger: interval[0:00:30], next run at: 2026-03-01 15:00:00 -03)" (scheduled at 2026-03-01 14:59:30.218130-03:00)
+INFO:apscheduler.executors.default:Job "Monitor de Inatividade de Chat (trigger: interval[0:00:30], next run at: 2026-03-01 15:00:00 -03)" executed successfully
+Sun Mar  1 14:59:31 2026 - received message 1 from emperor
+...gracefully killing workers...
+Gracefully killing worker 1 (pid: 517459)...
+Sun Mar  1 14:59:32 2026 - received message 0 from emperor
+SIGINT/SIGTERM received...killing workers...
+worker 1 buried after 1 seconds
+goodbye to uWSGI.
+VACUUM WARNING: unix socket /srv/appgestaoversuscombr.45a4cd4b.configr.cloud/etc/uwsgi/app.sock changed inode. Skip removal
+VACUUM: unix socket /srv/appgestaoversuscombr.45a4cd4b.configr.cloud/etc/uwsgi/stats (stats) removed.
+*** Starting uWSGI 2.0.31 (64bit) on [Sun Mar  1 14:59:35 2026] ***
+compiled with version: 11.4.0 on 19 December 2025 22:17:41
+os: Linux-4.18.16-x86_64-linode118 #1 SMP PREEMPT Mon Oct 29 15:38:25 UTC 2018
+nodename: ip-69-164-205-75
+machine: x86_64
+clock source: unix
+pcre jit disabled
+detected number of CPU cores: 1
+current working directory: /etc/uwsgi/3.12/apps-enabled
+detected binary path: /var/www/.pyenv/versions/3.12.12/bin/uwsgi
+setgid() to 33
+set additional group 999 (ssh-users)
+setuid() to 1047
+chdir() to /srv/appgestaoversuscombr.45a4cd4b.configr.cloud/www
+your processes number limit is 7892
+your memory page size is 4096 bytes
+ *** WARNING: you have enabled harakiri without post buffering. Slow upload could be rejected on post-unbuffered webservers *** 
+detected max file descriptor number: 1024
+lock engine: pthread robust mutexes
+thunder lock: disabled (you can enable it with --thunder-lock)
+uwsgi socket 0 bound to UNIX address /srv/appgestaoversuscombr.45a4cd4b.configr.cloud/etc/uwsgi/app.sock fd 3
+Python version: 3.12.12 (main, Dec 19 2025, 19:15:44) [GCC 11.4.0]
+Python main interpreter initialized at 0x7f4cb732edd0
+python threads support enabled
+your server socket listen backlog is limited to 100 connections
+your mercy for graceful operations on workers is 60 seconds
+mapped 162224 bytes (158 KB) for 1 cores
+*** Operational MODE: single process ***
+added /srv/appgestaoversuscombr.45a4cd4b.configr.cloud/.virtualenv/3.12/lib/python3.12/site-packages/ to pythonpath.
+ModuleNotFoundError: No module named 'django'
+unable to load app 0 (mountpoint='') (callable not found or import error)
+*** no app loaded. going in full dynamic mode ***
+*** uWSGI is running in multiple interpreter mode ***
+spawned uWSGI master process (pid: 546491)
+spawned uWSGI worker 1 (pid: 546508, cores: 1)
+*** Stats server enabled on /srv/appgestaoversuscombr.45a4cd4b.configr.cloud/etc/uwsgi/stats fd: 10 ***
+--- no python application found, check your startup logs for errors ---
+[pid: 546508|app: -1|req: -1/1] 52.70.7.23 () {36 vars in 567 bytes} [Sun Mar  1 15:18:17 2026] GET / => generated 21 bytes in 2 msecs (HTTP/1.1 500) 2 headers in 83 bytes (0 switches on core 0)
+announcing my loyalty to the Emperor...
+--- no python application found, check your startup logs for errors ---
+[pid: 546508|app: -1|req: -1/2] 2804:214:400a:23a4:8cc8:d6a:30e1:2551 () {58 vars in 1197 bytes} [Sun Mar  1 15:25:33 2026] GET /my-work => generated 21 bytes in 0 msecs (HTTP/2.0 500) 2 headers in 83 bytes (1 switches on core 0)
+--- no python application found, check your startup logs for errors ---
+[pid: 546508|app: -1|req: -1/3] 2804:214:400a:23a4:8cc8:d6a:30e1:2551 () {58 vars in 1197 bytes} [Sun Mar  1 15:25:39 2026] GET /my-work => generated 21 bytes in 0 msecs (HTTP/2.0 500) 2 headers in 83 bytes (1 switches on core 0)
+--- no python application found, check your startup logs for errors ---
+[pid: 546508|app: -1|req: -1/4] 2804:214:400a:23a4:8cc8:d6a:30e1:2551 () {54 vars in 1130 bytes} [Sun Mar  1 15:25:43 2026] GET / => generated 21 bytes in 0 msecs (HTTP/2.0 500) 2 headers in 83 bytes (0 switches on core 0)
+--- no python application found, check your startup logs for errors ---
+[pid: 546508|app: -1|req: -1/5] 2804:214:400a:23a4:8cc8:d6a:30e1:2551 () {54 vars in 1130 bytes} [Sun Mar  1 15:27:06 2026] GET / => generated 21 bytes in 0 msecs (HTTP/2.0 500) 2 headers in 83 bytes (1 switches on core 0)
+--- no python application found, check your startup logs for errors ---
+[pid: 546508|app: -1|req: -1/6] 54.166.8.211 () {34 vars in 542 bytes} [Sun Mar  1 15:27:21 2026] GET / => generated 21 bytes in 0 msecs (HTTP/1.1 500) 2 headers in 83 bytes (0 switches on core 0)

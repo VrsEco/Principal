@@ -10,8 +10,8 @@ import sqlalchemy as sa
 
 
 # revision identifiers, used by Alembic.
-revision = '20260205_2000_create_portfolios'
-down_revision = None  # Update this if there are previous migrations
+revision = '20260205_2000'
+down_revision = None
 branch_labels = None
 depends_on = None
 

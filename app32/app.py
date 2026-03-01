@@ -36,8 +36,11 @@ def create_app(config_name=None):
     app.config['MAX_CONTENT_LENGTH'] = 16 * 1024 * 1024
 
     # Extensions
+    from flask_migrate import Migrate
+    migrate = Migrate()
     db.init_app(app)
     ma.init_app(app)
+    migrate.init_app(app, db)
 
     # Login Manager
     login_manager = LoginManager()
