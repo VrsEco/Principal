@@ -1951,6 +1951,7 @@ function createActivityElement(activity) {
   wrapper.dataset.title = activity.title || '';
   wrapper.dataset.description = activity.description || '';
   wrapper.dataset.companyId = activity.company_id || '';
+  wrapper.dataset.companyCode = activity.company_code || '';
   wrapper.dataset.projectId = activity.project_id || '';
   wrapper.dataset.instanceId = activity.instance_id || activity.id;
 
@@ -1958,7 +1959,7 @@ function createActivityElement(activity) {
   const assignmentLabel = activity.assignment?.label || '';
   const metaBadge = '';
   const typeLabel = activity.type === 'process' ? 'PROCESSO' : 'PROJETO';
-  const priorityLabel = getPriorityLabel(activity.priority);
+  const priorityLabel = getPriorityLabel(activity);
   const deadlineInfo = formatDeadline(activity);
   const secondaryInfo = formatSecondaryInfo(activity);
   const progressBar = renderProgressBar(activity);
@@ -2133,7 +2134,7 @@ function createActivityElement(activity) {
         ${titleContent}
       </h3>
       ${instanceContent}
-      ${activity.type !== 'process' && activity.description ? `<p class="activity-item__description">${activity.description}</p>` : ''}
+      ${activity.description ? `<p class="activity-item__description">${activity.description}</p>` : ''}
       ${progressBar}
       <div class="activity-item__footer">
         <div class="activity-item__info">
@@ -2165,8 +2166,20 @@ function getPriorityClass(priority) {
   return 'activity-item--low';
 }
 
-function getPriorityLabel(priority) {
-  const normalized = (priority || 'normal').toLowerCase();
+function getPriorityLabel(activity) {
+  const priority = typeof activity === 'string' ? activity : (activity.priority || 'normal');
+  const normalized = priority.toLowerCase();
+
+  // Se for prioridade normal, exibe o código e nome da empresa conforme solicitado
+  if (normalized === 'normal' && typeof activity === 'object') {
+    const companyCode = activity.company_code || '';
+    const companyName = activity.company_name || '';
+    if (companyCode || companyName) {
+      const label = companyCode ? `${companyCode} - ${companyName}` : companyName;
+      return `<span class="priority-badge priority-badge--normal" title="Empresa: ${companyName}">${label}</span>`;
+    }
+  }
+
   const labels = {
     urgent: 'Urgente',
     high: 'Alta Prioridade',
@@ -3430,6 +3443,50 @@ function populateActivityInfo(modalId, activity) {
     <p>${activity.type === 'project' ? '📁 Atividade de Projeto' : '⚙️ Instância de Processo'}</p>
     ${details.length ? `<ul class="activity-details">${details.join('')}</ul>` : ''}
   `;
+
+  // Renderizar comentários (logs) se existirem
+  renderComments(activity.logs || []);
+}
+
+function renderComments(logs) {
+  const list = document.getElementById('commentsList');
+  if (!list) return;
+
+  if (!logs || !logs.length) {
+    list.innerHTML = '<p class="no-comments">Nenhum comentário ainda.</p>';
+    return;
+  }
+
+  // Ordenar logs por timestamp decrescente (mais recentes primeiro)
+  const sortedLogs = [...logs].sort((a, b) => {
+    return new Date(b.timestamp || 0) - new Date(a.timestamp || 0);
+  });
+
+  list.innerHTML = sortedLogs.map(log => {
+    const date = log.timestamp ? new Date(log.timestamp).toLocaleString('pt-BR') : 'Data desconhecida';
+    const typeLabel = {
+      'note': 'Nota',
+      'progress': 'Progresso',
+      'issue': 'Problema',
+      'solution': 'Solução',
+      'question': 'Dúvida',
+      'manual': 'Comentário',
+      'hours': 'Horas',
+      'completion': 'Finalização'
+    }[log.type] || 'Anotação';
+
+    return `
+      <div class="comment-item comment-item--${log.type || 'manual'}">
+        <div class="comment-header">
+          <span class="comment-type">${typeLabel}</span>
+          <span class="comment-date">${date}</span>
+        </div>
+        <div class="comment-text">
+          ${log.text || log.content || ''}
+        </div>
+      </div>
+    `;
+  }).join('');
 }
 
 function updateHoursSummary() {
@@ -3814,6 +3871,7 @@ function initializeActivityActions() {
     const description = activity.dataset.description || '';
     const companyId = activity.dataset.companyId ? parseInt(activity.dataset.companyId, 10) : null;
     const instanceId = activity.dataset.instanceId ? parseInt(activity.dataset.instanceId, 10) : activityId;
+    const companyCode = activity.dataset.companyCode || '';
 
     // Extract project_id from dataset
     const projectId = activity.dataset.projectId ? parseInt(activity.dataset.projectId, 10) : null;
@@ -3833,9 +3891,16 @@ function initializeActivityActions() {
       plan_name: planName,
       description,
       company_id: companyId,
+      company_code: companyCode,
       project_id: projectId,
       instance_id: instanceId
     };
+
+    // Tentar recuperar logs do estado global para preencher o modal
+    const stateActivity = state.activities.find(a => a.id === activityId && a.type === activityType);
+    if (stateActivity && stateActivity.logs) {
+      activityData.logs = stateActivity.logs;
+    }
 
     // Identificar ação pelo data-action
     const action = btn.dataset.action;

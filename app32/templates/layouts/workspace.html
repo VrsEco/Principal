@@ -4,38 +4,36 @@
 <div class="layout-workspace">
     <!-- Navbar Compacta -->
     <nav class="workspace-navbar">
-        <div style="display: flex; align-items: center; gap: 1rem;">
-            <button class="btn-icon" onclick="toggleSidebar('left')">
-                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+        <div class="navbar-left">
+            <button class="btn-icon sidebar-toggle" onclick="toggleSidebar('left')" title="Menu Lateral">
+                <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                     <line x1="3" y1="12" x2="21" y2="12"></line>
                     <line x1="3" y1="6" x2="21" y2="6"></line>
                     <line x1="3" y1="18" x2="21" y2="18"></line>
                 </svg>
             </button>
-            <a href="/" class="navbar-brand">
-                <img src="{{ url_for('static', filename='img/versus-logo-compact.png') }}" alt="V" style="height: 32px;"
-                    onerror="this.style.display='none'">
-                <span style="font-weight: 700; letter-spacing: -0.5px;">Versus</span>
+            <a href="/" class="navbar-brand-logo" title="Gestão Versus">
+                <img src="{{ url_for('static', filename='img/versus-logo-compact.png') }}" alt="Versus"
+                    style="height: 32px;" onerror="this.style.display='none'">
             </a>
+
+            {% if active_company %}
+            <div class="navbar-company-info" title="{{ active_company.name }}">
+                <span class="company-code">{{ active_company.client_code or 'VS' }}</span>
+                <span class="company-sep">-</span>
+                <span class="company-name">{{ active_company.name }}</span>
+            </div>
+            {% endif %}
         </div>
 
-        <div class="navbar-breadcrumb">
-            {% block breadcrumb %}
-            <a href="/my-work">Meu Trabalho</a>
-            <span class="sep">/</span>
-            <span class="current">Workspace</span>
-            {% endblock %}
-        </div>
-
-        <div class="navbar-actions">
+        <div class="navbar-right">
             {% block navbar_actions %}
             <div style="display: flex; align-items: center; gap: 0.75rem;">
-                <button class="btn btn-secondary btn-sm" onclick="toggleSidebar('right')">
-                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                        <circle cx="11" cy="11" r="8"></circle>
-                        <line x1="21" y1="21" x2="16.65" y2="16.65"></line>
+                <button class="btn-icon filter-toggle" onclick="toggleSidebar('right')" title="Filtros">
+                    <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <polygon points="22 3 2 3 10 12.46 10 19 14 21 14 12.46 22 3"></polygon>
                     </svg>
-                    Filtros
+                    <span class="btn-text">Filtros</span>
                 </button>
                 <div class="user-avatar-mini" title="Meu Perfil">MV</div>
             </div>
@@ -93,12 +91,123 @@
         color: var(--primary);
     }
 
-    .navbar-breadcrumb {
+    /* Header New Styles */
+    .workspace-navbar {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        padding: 0 1.5rem;
+        height: 64px;
+        background: var(--surface);
+        border-bottom: 1px solid var(--border);
+        box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
+    }
+
+    .navbar-left {
+        display: flex;
+        align-items: center;
+        gap: 1.25rem;
+        min-width: 0;
+        /* Permite que o conteúdo encolha */
+        flex: 1;
+    }
+
+    .navbar-right {
+        display: flex;
+        align-items: center;
+        gap: 1rem;
+        flex-shrink: 0;
+    }
+
+    .navbar-company-info {
         display: flex;
         align-items: center;
         gap: 0.5rem;
+        background: var(--surface-secondary);
+        padding: 6px 14px;
+        border-radius: 99px;
+        border: 1px solid var(--border);
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
+        max-width: 400px;
+    }
+
+    .company-code {
+        font-weight: 700;
+        color: var(--primary);
         font-size: 0.9rem;
-        flex: 1;
+    }
+
+    .company-sep {
+        color: var(--text-tertiary);
+    }
+
+    .company-name {
+        font-weight: 500;
+        color: var(--text-primary);
+        font-size: 0.9rem;
+        overflow: hidden;
+        text-overflow: ellipsis;
+    }
+
+    .btn-icon.filter-toggle {
+        background: var(--primary-light);
+        color: var(--primary);
+        border: 1px solid rgba(37, 99, 235, 0.1);
+        padding: 8px 16px;
+        border-radius: 12px;
+        font-weight: 600;
+        gap: 0.5rem;
+    }
+
+    .btn-icon.filter-toggle:hover {
+        background: var(--primary);
+        color: #fff;
+    }
+
+    /* Responsividade solicitada */
+    @media (max-width: 768px) {
+        .navbar-company-info {
+            max-width: 200px;
+        }
+
+        .btn-text {
+            display: none;
+        }
+
+        .navbar-brand-logo {
+            order: 3;
+            /* Logo por último */
+        }
+
+        .navbar-company-info {
+            order: 2;
+            /* Empresa depois */
+        }
+
+        .sidebar-toggle {
+            order: 1;
+            /* Sidebar primeiro */
+        }
+    }
+
+    @media (max-width: 580px) {
+        .navbar-brand-logo {
+            display: none;
+            /* Esconde logo se não houver espaço */
+        }
+    }
+
+    @media (max-width: 420px) {
+        .company-name {
+            display: none;
+            /* Esconde nome, mantém código */
+        }
+
+        .navbar-company-info {
+            padding: 6px 10px;
+        }
     }
 
     .navbar-breadcrumb a {

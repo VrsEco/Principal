@@ -61,6 +61,7 @@ def fetch_normalized_process_rows(
     query = db.session.query(
         ProcessInstance,
         Company.name.label("company_name"),
+        Company.client_code.label("company_code"),
         Process.name.label("process_name"),
         Process.code.label("process_code")
     ).join(Company, Company.id == ProcessInstance.company_id, isouter=True)\
@@ -105,6 +106,7 @@ def fetch_normalized_process_rows(
             "instance_id": pi.id,
             "company_id": pi.company_id,
             "company_name": r.company_name,
+            "company_code": r.company_code,
             "process_id": pi.process_id,
             "process_name": r.process_name,
             "process_code": r.process_code,
@@ -127,6 +129,7 @@ def _process_row_from_normalized(data: Dict[str, Any]) -> Dict[str, Any]:
         "id": data.get("instance_id"),
         "company_id": data.get("company_id"),
         "company_name": data.get("company_name"),
+        "company_code": data.get("company_code"),
         "process_id": data.get("process_id"),
         "process_name": data.get("process_name"),
         "process_code": data.get("process_code"),

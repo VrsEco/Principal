@@ -28,8 +28,9 @@ Acesse sua pasta `app32` e rode o script que a Squad de Elite criou para você:
 
 ## 🏗️ Regras de Ouro para Versionamento
 
-1. **PARE** de criar pastas novas para "grandes mudanças" (ex: app33, app34). Use o **Git Branches**. 
+1. **CUIDADO com Shadowing (Shadow Files):** Se você mover arquivos de lugar (ex: de `routes/` para `api/routes/`), certifique-se de que os arquivos antigos foram apagados no servidor. Arquivos duplicados fazem o Python carregar o código errado.
 2. **Sempre use o Alembic:** Nunca rode SQL na mão no servidor. Se mudar o modelo de dados localmente, rode `flask db migrate` e o script de deploy fará o resto no servidor.
-3. **Não mude nada direto no Configr:** Todas as mudanças devem vir do seu DEV via Git.
+3. **Gerencie Dependências:** Toda nova biblioteca instalada localmente (ex: `pip install flask-migrate`) deve ser adicionada ao `requirements.txt` (`pip freeze > requirements.txt`). O servidor não as instalará automaticamente se você esquecer disso.
+4. **Não mude nada direto no Configr:** Todas as mudanças devem vir do seu DEV via Git.
 
 **Squad de Engenharia de Elite - Gestão Versus** 🚀
