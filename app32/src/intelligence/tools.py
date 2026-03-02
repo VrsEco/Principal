@@ -748,7 +748,7 @@ def update_user_contacts(user_id: int, whatsapp: str = None, telegram: str = Non
         if telegram is not None: user_to_update.telegram = telegram
         
         db.session.commit()
-        return f"Contatos do usuário '{user.name}' atualizados com sucesso."
+        return f"Contatos do usuário '{user_to_update.name}' atualizados com sucesso."
     except Exception as e:
         db.session.rollback()
         return f"Erro ao atualizar contatos: {str(e)}"
