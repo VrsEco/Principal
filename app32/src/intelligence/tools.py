@@ -44,16 +44,53 @@ import json
 import os
 import re
 
+from src.intelligence.tool_context import active_user_id_ctx, active_company_id_ctx
+
 def get_active_company_id():
     """Recupera o ID da empresa ativa de forma resiliente (Sessão, Ambiente ou Contexto)."""
+    # 1. Tentar contexto (Thread-safe)
+    cid = active_company_id_ctx.get()
+    if cid:
+        return cid
+    
+    # 2. Tentar ambiente (Cuidado! Pode ter race conditions em multi-thread process-wide)
+    env_cid = os.environ.get('ACTIVE_COMPANY_ID')
+    if env_cid:
+        return int(env_cid)
+
+    # 3. Tentar sessão Flask
     try:
         from flask import session
-        cid = session.get('active_company_id') or session.get('company_id')
-        if cid:
-            return cid
+        sess_cid = session.get('active_company_id') or session.get('company_id')
+        if sess_cid:
+            return sess_cid
     except:
         pass
-    return os.environ.get('ACTIVE_COMPANY_ID')
+    
+    return None
+
+
+def get_active_user_id():
+    """Recupera o ID do usuario logado ou via webhook de forma resiliente."""
+    # 1. Tentar contexto (Thread-safe)
+    uid = active_user_id_ctx.get()
+    if uid:
+        return uid
+        
+    # 2. Tentar ambiente
+    env_uid = os.environ.get('ACTIVE_USER_ID')
+    if env_uid:
+        return int(env_uid)
+
+    # 3. Tentar Flask-Login
+    try:
+        from flask_login import current_user
+        if current_user and getattr(current_user, 'is_authenticated', False):
+            return current_user.id
+    except:
+        pass
+    
+    return None
 
 def sanitize_output(data):
     """Sanitiza strings para evitar erros de encoding no terminal Windows (Gold Rule)."""
@@ -142,10 +179,10 @@ def escalate_technical_issue(error_description: str, context: str):
     from models.agent_action import AgentAction
     from services.whatsapp_service import whatsapp_service
     from flask import session
-    from flask_login import current_user
+    
     
     company_id = get_active_company_id()
-    user_id = current_user.id if current_user.is_authenticated else None
+    user_id = get_active_user_id()
     
     try:
         # 1. Cria o registro da ação de auditoria/reparo
@@ -328,9 +365,9 @@ def list_my_companies(search_term: str = None):
     """
     from models.company import Company
     from models.employee import Employee
-    from flask_login import current_user
     
-    user_id = getattr(current_user, 'id', None)
+    
+    user_id = get_active_user_id()
     if not user_id:
         return "Erro: Usuário não autenticado."
         
@@ -449,9 +486,10 @@ def get_my_work(scope: str = 'me', company_ids: str = None):
     from services.my_work_service import get_user_activities, get_user_employees, _get_company_activities_unrestricted
     from models.user import User
     from flask import session
-    from flask_login import current_user
     
-    user_id = getattr(current_user, 'id', None)
+    user_id = get_active_user_id()
+    print(f"--- TOOL [get_my_work]: user_id={user_id} | scope={scope} | ctx_user={active_user_id_ctx.get()} ---")
+    
     if not user_id:
         return "Erro: Usuário não autenticado."
         
@@ -530,13 +568,81 @@ def get_my_work(scope: str = 'me', company_ids: str = None):
         return f"Erro ao buscar atividades via MCP: {str(e)}"
 
 @tool
+def get_user_summary(target_user: str = None, range: str = 'today'):
+    """
+    Gera um relatório consolidado de atividades, processos e REUNIÕES de um usuário.
+    Use isto para 'meu resumo' ou para 'resumo do Fulano'.
+    :param target_user: ID (inteiro), Email ou Nome do usuário. Se omitido, busca o próprio resumo.
+    :param range: 'today' para resumo do dia ou 'week' para resumo da semana (domingo a sábado).
+    """
+    from services.proactive_service import get_user_summary_report
+    from models.user import User
+    from models.employee import Employee
+    from sqlalchemy import or_
+
+    requesting_user_id = get_active_user_id()
+    if not requesting_user_id:
+        return "Erro: Usuário não autenticado."
+
+    try:
+        req_user = User.query.get(requesting_user_id)
+        if not req_user:
+            return "Erro: Seu usuário não foi encontrado."
+        
+        # 1. Identificar o usuário alvo
+        if not target_user:
+            target = req_user
+        else:
+            # Busca flexível por ID, Email ou Nome
+            if str(target_user).isdigit():
+                target = User.query.get(int(target_user))
+            else:
+                target = User.query.filter(
+                    or_(
+                        User.email.ilike(f"{target_user}"),
+                        User.name.ilike(f"%{target_user}%")
+                    )
+                ).first()
+            
+            if not target:
+                return f"Erro: Usuário '{target_user}' não encontrado."
+
+        # 2. Verificação de Permissão (RBAC Multi-tenancy)
+        if req_user.id != target.id:
+            req_role = getattr(req_user, 'role', 'collaborator')
+            
+            if req_role == 'admin':
+                # Admins podem ver usuários de empresas às quais estão vinculados
+                # Para simplificar na arquitetura Versus, Admin vê todos se não houver restrição explícita no Employee
+                pass # Por enquanto admin tem passe livre se for o papel 'admin' global
+            elif req_role == 'client':
+                # Cliente vê apenas usuários que pertencem à mesma empresa que ele (vias Employee)
+                req_companies = [e.company_id for e in Employee.query.filter_by(user_id=req_user.id).all()]
+                target_companies = [e.company_id for e in Employee.query.filter_by(user_id=target.id).all()]
+                
+                # Check intersection
+                if not set(req_companies).intersection(target_companies):
+                    return f"Erro: Você não tem permissão para visualizar o resumo de {target.name}. Usuário pertence a outras empresas."
+            else:
+                return "Erro: Colaboradores podem visualizar apenas o seu próprio resumo. Use 'meu resumo'."
+
+        # 3. Gerar Relatório
+        report = get_user_summary_report(target, date_range=range)
+        
+        prefix = f"📊 RESUMO DE {target.name.upper()} ({range.upper()})\n\n" if req_user.id != target.id and "está 100% em dia" not in report else ""
+        return prefix + report
+        
+    except Exception as e:
+        return f"Erro ao gerar resumo: {str(e)}"
+
+@tool
 def list_system_users():
     """
     Lista todos os usuários cadastrados no sistema. (Admin Only)
     Retorna nome, email, papel e contatos (WhatsApp/Telegram).
     """
     from models.user import User
-    from flask_login import current_user
+    
     
     if getattr(current_user, 'role', 'collaborator') != 'admin':
         return "Erro: Apenas administradores podem listar usuários."
@@ -568,7 +674,7 @@ def register_system_user(name: str, email: str, role: str = 'collaborator', what
     """
     from models.user import User
     from models import db
-    from flask_login import current_user
+    
     import secrets
     import string
     
@@ -613,7 +719,7 @@ def update_user_contacts(user_id: int, whatsapp: str = None, telegram: str = Non
     """
     from models.user import User
     from models import db
-    from flask_login import current_user
+    
     
     try:
         user = User.query.get(user_id)
@@ -984,7 +1090,7 @@ def get_tasks_today(scope: str = "me"):
     Ideal para o briefing matinal e cobranças proativas.
     :param scope: 'me' para o usuário logado, 'team' para a equipe, 'company' para toda a empresa.
     """
-    from flask_login import current_user
+    
     from datetime import date
     import json
 
@@ -1055,13 +1161,15 @@ def get_tasks_today(scope: str = "me"):
 
 
 @tool
-def complete_task(task_type: str, task_id: int, evidence_description: str = None, completion_date: str = None):
+def complete_task(task_type: str, task_id: int, evidence_description: str = None, completion_date: str = None, notification_email: str = None, notification_whatsapp: str = None):
     """
-    Marca uma tarefa de projeto ou instância de processo como CONCLUÍDA.
+    Marca uma tarefa de projeto ou instância de processo como CONCLUÍDA e opcionalmente notifica interessados.
     :param task_type: Tipo da tarefa: 'project_task' ou 'process_instance'
     :param task_id: ID da tarefa ou instância a ser concluída.
-    :param evidence_description: Descrição do que foi feito como evidência. Ex: 'Relatório enviado ao cliente via e-mail'
+    :param evidence_description: Descrição do que foi feito como evidência/observação. Ex: 'Relatório enviado ao cliente via e-mail'
     :param completion_date: Opcional data da conclusão no formato YYYY-MM-DD. Se omitida, usa HOJE.
+    :param notification_email: Opcional e-mail para notificar sobre a conclusão.
+    :param notification_whatsapp: Opcional número de WhatsApp (com DDD) para notificar.
     """
     from datetime import datetime
 
@@ -1099,11 +1207,28 @@ def complete_task(task_type: str, task_id: int, evidence_description: str = None
                 except:
                     pass
 
+            # 1. Notificações (@ARQUITETO)
+            notif_msg = []
+            if notification_email:
+                from services.email_service import email_service
+                body = f"A tarefa '{task.what}' do projeto '{task.project.name}' foi CONCLUÍDA.\nEvidência: {evidence_description or 'N/A'}"
+                email_service.send_email(to_emails=[notification_email], subject="Notificação de Conclusão - Gestão Versus", body=body)
+                notif_msg.append(f"e-mail enviado para {notification_email}")
+            
+            if notification_whatsapp:
+                from services.whatsapp_service import whatsapp_service
+                wa_body = f"✅ *Conclusão de Tarefa*\n\nAtividade: {task.what}\nProjeto: {task.project.name}\nStatus: CONCLUÍDA\nEvidência: {evidence_description or 'N/A'}"
+                whatsapp_service.send_message(notification_whatsapp, wa_body)
+                notif_msg.append(f"WhatsApp enviado para {notification_whatsapp}")
+
+            notif_status = f" | Notificações: {', '.join(notif_msg)}" if notif_msg else ""
+
             return (
                 f"✅ Tarefa '{task.what}' (ID {task_id}) marcada como concluída!\n"
                 f"   Data registrada: {final_date}\n"
                 f"   Projeto ID: {task.project_id}\n"
                 f"   Evidência registrada: {evidence_description or 'Não informada'}"
+                f"{notif_status}"
             )
 
         elif task_type == 'process_instance':
@@ -1143,12 +1268,12 @@ def log_work_hours(task_type: str, task_id: int, hours: float, description: str,
     :param work_date: Data do trabalho no formato YYYY-MM-DD. Se omitido, usa hoje.
     """
     from datetime import datetime, date
-    from flask_login import current_user
+    
 
     try:
         work_dt = datetime.strptime(work_date, '%Y-%m-%d').date() if work_date else date.today()
 
-        user_id = current_user.id if current_user.is_authenticated else None
+        user_id = get_active_user_id()
         company_id = get_active_company_id()
 
         if task_type == 'project_task':
@@ -1227,7 +1352,7 @@ def request_deadline_extension(task_type: str, task_id: int, new_deadline: str, 
     :param new_deadline: Nova data proposta no formato YYYY-MM-DD. Ex: '2026-03-15'
     :param reason: Motivo do adiamento. Ex: 'Cliente solicitou revisão adicional do escopo'
     """
-    from flask_login import current_user
+    
     from models.agent_action import AgentAction
     from services.whatsapp_service import whatsapp_service
     from services.email_service import email_service
@@ -1275,7 +1400,7 @@ def request_deadline_extension(task_type: str, task_id: int, new_deadline: str, 
                 "requester": requester_name
             },
             company_id=int(company_id) if company_id else None,
-            user_id=current_user.id if current_user.is_authenticated else None
+            user_id=get_active_user_id()
         )
         db.session.add(action)
         db.session.commit()
