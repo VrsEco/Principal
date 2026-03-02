@@ -3,7 +3,7 @@ import telebot
 import os
 import logging
 import traceback
-import logging
+from datetime import datetime
 from threading import Thread
 
 # Import LangGraph
@@ -47,7 +47,7 @@ def process_telegram_message(app, message: telebot.types.Message):
                     "Parece que seu número do Telegram ainda não está vinculado à sua conta no sistema.\n"
                     f"Para me autorizar, acesse o sistema Gestão Versus, vá em seu perfil e informe seu Telegram ID: `{telegram_id}`"
                 )
-                bot.reply_to(message, msg, parse_mode='Markdown')
+                bot.send_message(message.chat.id, msg, parse_mode='Markdown', reply_to_message_id=message.message_id)
                 return
             
             # Se encontrou o usuário: enviar aviso de digitando
@@ -86,7 +86,7 @@ def process_telegram_message(app, message: telebot.types.Message):
             # 4. Extrai a resposta final
             final_messages = response.get("messages", [])
             if not final_messages:
-                bot.reply_to(message, "Processamento concluído, mas sem mensagem de retorno.")
+                bot.send_message(message.chat.id, "Processamento concluído, mas sem mensagem de retorno.", reply_to_message_id=message.message_id)
                 return
                 
             last_message = final_messages[-1]
@@ -123,10 +123,10 @@ def process_telegram_message(app, message: telebot.types.Message):
 
             # 6. Responde ao Telegram
             try:
-                bot.reply_to(message, response_text, parse_mode='Markdown')
+                bot.send_message(message.chat.id, response_text, parse_mode='Markdown', reply_to_message_id=message.message_id)
             except Exception as markdown_err:
                 logger.warning(f"Erro ao parsear Markdown. Tentando plain text. Erro: {markdown_err}")
-                bot.reply_to(message, response_text)
+                bot.send_message(message.chat.id, response_text, reply_to_message_id=message.message_id)
                 
         except Exception as e:
             tb = traceback.format_exc()
@@ -169,12 +169,19 @@ def process_telegram_message(app, message: telebot.types.Message):
             except Exception as esc_err:
                 logger.error(f"Falha catastrófica ao escalonar erro: {esc_err}")
 
-            bot.reply_to(message, "Desculpe, ocorreu um erro interno ao processar sua solicitação no Gestão Versus. O time de engenharia foi notificado.")
+            bot.send_message(message.chat.id, "Desculpe, ocorreu um erro interno ao processar sua solicitação no Gestão Versus. O time de engenharia foi notificado.", reply_to_message_id=message.message_id)
 
 # Rota HTTP (Webhook) que será chamada pelo servidor do Telegram
 @telegram_bp.route('/telegram', methods=['POST'])
 def telegram_webhook():
     try:
+        # Emergency Log for Production Debug (@ARQUITETO)
+        with open('request_debug.log', 'a') as f:
+            now_str = datetime.now().strftime('%Y-%m-%d %H:%M:%S')
+            f.write(f"\n--- REQ: {now_str} ---\n")
+            if request.is_json:
+                f.write(f"SQUAD: Recebido JSON do Telegram\n")
+            
         if request.headers.get('content-type') == 'application/json':
             json_string = request.get_data().decode('utf-8')
             update = telebot.types.Update.de_json(json_string)
@@ -190,8 +197,12 @@ def telegram_webhook():
         else:
             return "Not found", 404
     except Exception as e:
+        import traceback
+        tb = traceback.format_exc()
         logger.error(f"❌ Erro Crítico na Rota do Webhook: {e}")
-        return str(e), 500
+        with open('request_debug.log', 'a') as f:
+            f.write(f"ERROR: {str(e)}\n{tb}\n")
+        return f"Internal Error Logged: {str(e)}", 500
 
 # Script manual para registrar o webhook no Telegram
 def setup_webhook(host_url):
