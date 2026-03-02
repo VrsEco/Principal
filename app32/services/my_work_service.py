@@ -1263,13 +1263,14 @@ def get_user_activities(
     if not emp or not emp.user_id:
         return []
 
-    return get_user_activities_v2(
+    activities, _ = get_user_activities_v2(
         user_id=emp.user_id,
         scope=scope,
         filters=filters,
         company_ids=company_ids or ([company_id] if company_id else None),
         employee_ids=employee_ids
     )
+    return activities
 
 
 def _get_my_activities(
