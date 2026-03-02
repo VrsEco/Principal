@@ -92,6 +92,14 @@ def get_active_user_id():
     
     return None
 
+def get_active_user():
+    """Recupera o objeto User do banco de dados baseado no contexto ativo."""
+    uid = get_active_user_id()
+    if uid:
+        from models.user import User
+        return User.query.get(uid)
+    return None
+
 def sanitize_output(data):
     """Sanitiza strings para evitar erros de encoding no terminal Windows (Gold Rule)."""
     if isinstance(data, str):
@@ -202,7 +210,8 @@ def escalate_technical_issue(error_description: str, context: str):
         
         # 2. Notifica o usuário via WhatsApp (Simulado ou Real)
         # Buscamos o telefone do usuário se disponível, ou usamos um placeholder
-        phone = getattr(current_user, 'phone', None) or "5511999999999" 
+        user = get_active_user()
+        phone = getattr(user, 'phone', None) or "5511999999999" 
         
         wa_message = (
             f"🚨 *Gestão Versus: Alerta de Sistema*\n\n"
@@ -643,8 +652,8 @@ def list_system_users():
     """
     from models.user import User
     
-    
-    if getattr(current_user, 'role', 'collaborator') != 'admin':
+    user = get_active_user()
+    if not user or getattr(user, 'role', 'collaborator') != 'admin':
         return "Erro: Apenas administradores podem listar usuários."
         
     try:
@@ -678,7 +687,8 @@ def register_system_user(name: str, email: str, role: str = 'collaborator', what
     import secrets
     import string
     
-    if getattr(current_user, 'role', 'collaborator') != 'admin':
+    user = get_active_user()
+    if not user or getattr(user, 'role', 'collaborator') != 'admin':
         return "Erro: Acesso restrito a administradores."
         
     try:
@@ -722,16 +732,20 @@ def update_user_contacts(user_id: int, whatsapp: str = None, telegram: str = Non
     
     
     try:
-        user = User.query.get(user_id)
-        if not user:
+        user_to_update = User.query.get(user_id)
+        if not user_to_update:
             return f"Erro: Usuário ID {user_id} não encontrado."
             
         # Segurança: Admin ou o próprio usuário
-        if getattr(current_user, 'role', 'collaborator') != 'admin' and current_user.id != user_id:
+        current_user_obj = get_active_user()
+        if not current_user_obj:
+            return "Erro: Usuário não identificado."
+            
+        if getattr(current_user_obj, 'role', 'collaborator') != 'admin' and current_user_obj.id != user_id:
             return "Erro: Você não tem permissão para alterar os dados deste usuário."
             
-        if whatsapp is not None: user.whatsapp = whatsapp
-        if telegram is not None: user.telegram = telegram
+        if whatsapp is not None: user_to_update.whatsapp = whatsapp
+        if telegram is not None: user_to_update.telegram = telegram
         
         db.session.commit()
         return f"Contatos do usuário '{user.name}' atualizados com sucesso."
@@ -1364,7 +1378,9 @@ def request_deadline_extension(task_type: str, task_id: int, new_deadline: str, 
         # Busca a tarefa
         task_name = f"Tarefa ID {task_id}"
         current_deadline = "N/A"
-        requester_name = current_user.name if current_user.is_authenticated else "Usuário"
+        
+        user = get_active_user()
+        requester_name = user.name if user else "Usuário"
 
         if task_type == 'project_task':
             from models.project import ProjectTask
