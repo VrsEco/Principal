@@ -58,30 +58,46 @@ def process_telegram_message(app, message: telebot.types.Message):
             thread_id = f"tg_{telegram_id}"
             config = {"configurable": {"thread_id": thread_id}}
             
+            # --- CONTEXTO DE AGENTE (Thread-Safe) ---
+            from src.intelligence.tool_context import active_user_id_ctx, active_company_id_ctx
+            token_uid = active_user_id_ctx.set(user.id)
+            token_cid = None
+            
+            # Set employee/company context temporarily for legacy services (@ARQUITETO)
+            os.environ['ACTIVE_USER_ID'] = str(user.id)
+            if hasattr(user, 'employees') and user.employees:
+                cid = user.employees[0].company_id
+                os.environ['ACTIVE_COMPANY_ID'] = str(cid)
+                token_cid = active_company_id_ctx.set(cid)
+            
             # 3. Invoca o Work Agent (Graph V2) com Persistência SQL
             from src.intelligence.memory import get_checkpointer
             from src.intelligence.work_agents.graph import create_work_agent_workflow
             
-            # Set employee/company context temporarily for the LLM context if available.
-            if hasattr(user, 'employees') and user.employees:
-                os.environ['ACTIVE_COMPANY_ID'] = str(user.employees[0].company_id)
-            
-            with get_checkpointer() as checkpointer:
-                graph = create_work_agent_workflow(checkpointer=checkpointer)
-                
-                # Verifica se já existe um estado no banco para esta thread
-                state = graph.get_state(config)
+            try:
+                with get_checkpointer() as checkpointer:
+                    graph = create_work_agent_workflow(checkpointer=checkpointer)
+                    
+                    # Verifica se já existe um estado no banco para esta thread
+                    state = graph.get_state(config)
                 
                 # Para Telegram, não temos histórico externo fácil, então enviamos a mensagem atual.
                 # Se não houver estado, ela inicia a thread. Se houver, ela adiciona à thread SQL.
                 inputs = {"messages": [("user", user_msg)]}
                 
-                logger.info(f"Enviando para LangGraph (SQL) na thread {thread_id}...")
+                logger.info(f"Enviando para LangGraph (SQL) na thread {thread_id} para usuário {user.id}...")
                 response = graph.invoke(inputs, config=config)
-            
-            # Limpa env temporário
-            if 'ACTIVE_COMPANY_ID' in os.environ:
-                del os.environ['ACTIVE_COMPANY_ID']
+            finally:
+                # Limpa env temporário
+                if 'ACTIVE_COMPANY_ID' in os.environ:
+                    del os.environ['ACTIVE_COMPANY_ID']
+                if 'ACTIVE_USER_ID' in os.environ:
+                    del os.environ['ACTIVE_USER_ID']
+                
+                # Reseta contextos de thread (@ARQUITETO)
+                active_user_id_ctx.reset(token_uid)
+                if token_cid:
+                    active_company_id_ctx.reset(token_cid)
             
             # 4. Extrai a resposta final
             final_messages = response.get("messages", [])

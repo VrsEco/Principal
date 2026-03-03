@@ -100,9 +100,9 @@ def supervisor_node(state: WorkAgentState):
             print(f"--- SUPERVISOR: Detectado sinal de comando em '{next_node}'. Forçando 'operations' ou 'engineering'. ---")
             next_node = "engineering" if 'erro' in text_content or 'bug' in text_content else "operations"
 
-    # Se a resposta do LLM tiver conteúdo, e o próximo nó for 'end', 
-    # retornamos a mensagem para que o usuário receba algo em vez de um eco.
-    if response.content and next_node == "end":
+    # Se a resposta do LLM tiver conteúdo informativo (e não apenas o ID do nó), e o próximo nó for 'end', 
+    # retornamos a mensagem para que o usuário receba algo em vez de um eco 'end'.
+    if response.content and next_node == "end" and response.content.lower().strip() not in valid_nodes:
         print(f"--- SUPERVISOR: Retornando resposta direta do roteador. Content: {response.content[:50]}... ---")
         return {"messages": [response], "next_node": "end"}
 

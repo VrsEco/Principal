@@ -67,6 +67,18 @@ def get_active_company_id():
     except:
         pass
     
+    # 4. Tentar achar empresa do usuário se tivermos UID (Resiliência p/ Telegram)
+    uid = get_active_user_id()
+    if uid:
+        try:
+            from services.my_work_service import get_user_employees
+            from models.user import User
+            user_assoc = get_user_employees(uid)
+            if user_assoc:
+                return user_assoc[0].get('company_id')
+        except:
+            pass
+            
     return None
 
 
