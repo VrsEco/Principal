@@ -498,11 +498,12 @@ def update_plan_section(plan_id: int, section_key: str, status: str = 'completed
         return f"Erro ao atualizar seção: {str(e)}"
 
 @tool
-def get_my_work(scope: str = 'me', company_ids: str = None):
+def get_my_work(scope: str = 'me', company_ids: str = None, search_term: str = None):
     """
     Retorna a lista de atividades (Projetos e Processos) pendentes para o usuário logado.
     :param scope: 'me' para minhas atividades, 'team' para equipe, 'company' para toda a empresa.
     :param company_ids: Opcional, ids de empresas separados por virgula (ex: "31,32"). Se vazio, busca pendências em TODAS as empresas permitidas.
+    :param search_term: Opcional, filtra atividades por título, descrição ou nome de empresa. Use para buscar tarefas de um colega específico (ex: "atividades de Caroline").
     """
     from services.my_work_service import get_user_activities, get_user_employees, _get_company_activities_unrestricted
     from models.user import User
@@ -545,7 +546,8 @@ def get_my_work(scope: str = 'me', company_ids: str = None):
 
         filters = {
             "delivery_tags": ["open"],
-            "sort": "deadline"
+            "sort": "deadline",
+            "search": search_term
         }
 
         # 3. Busca de supervisão vs pessoal
