@@ -183,14 +183,30 @@ def get_agent_node(agent_name: str):
     """Factory para criar nós dos agentes de trabalho"""
     
     def agent_node(state):
-        messages = state["messages"]
-        # Injeta o System Prompt correto
-        prompt = SYSTEM_PROMPTS.get(agent_name, "Você é um assistente do Gestão Versus.")
+        from src.intelligence.tool_context import set_sapiens_context
         
-        # Prepara mensagens com o System Prompt no início
-        sys_msg = SystemMessage(content=prompt)
-        response = model_with_tools.invoke([sys_msg] + messages)
+        # RESGATE DE CONTEXTO (@ARQUITETO):
+        # Garante que o ContextVar esteja setado nesta thread/node a partir do State
+        user_id = state.get("user_id")
+        company_id = state.get("company_id")
         
-        return {"messages": [response]}
+        token = None
+        if user_id or company_id:
+            token = set_sapiens_context(
+                user_id=user_id,
+                company_id=company_id
+                # Os demais campos podem ser inferidos ou passados se necessário
+            )
+
+        try:
+            messages = state["messages"]
+            prompt = SYSTEM_PROMPTS.get(agent_name, "Você é um assistente do Gestão Versus.")
+            sys_msg = SystemMessage(content=prompt)
+            response = model_with_tools.invoke([sys_msg] + messages)
+            return {"messages": [response]}
+        finally:
+            if token:
+                from src.intelligence.tool_context import reset_sapiens_context
+                reset_sapiens_context(token)
             
     return agent_node

@@ -1,0 +1,17 @@
+Traceback (most recent call last):
+  File "C:\GestaoVersus\app32\api\webhooks\telegram_webhook.py", line 50, in process_telegram_message
+    bot.reply_to(message, msg, parse_mode='Markdown')
+  File "C:\Users\mff20\anaconda3\Lib\site-packages\telebot\__init__.py", line 6442, in reply_to
+    return self.send_message(message.chat.id, text, reply_parameters=reply_parameters, **kwargs)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\mff20\anaconda3\Lib\site-packages\telebot\__init__.py", line 1834, in send_message
+    apihelper.send_message(
+  File "C:\Users\mff20\anaconda3\Lib\site-packages\telebot\apihelper.py", line 282, in send_message
+    return _make_request(token, method_url, params=payload, method='post')
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\mff20\anaconda3\Lib\site-packages\telebot\apihelper.py", line 168, in _make_request
+    json_result = _check_result(method_name, result)
+                  ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\mff20\anaconda3\Lib\site-packages\telebot\apihelper.py", line 197, in _check_result
+    raise ApiTelegramException(method_name, result, result_json)
+telebot.apihelper.ApiTelegramException: A request to the Telegram API was unsuccessful. Error code: 400. Description: Bad Request: chat not found

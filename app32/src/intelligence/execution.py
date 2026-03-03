@@ -51,9 +51,14 @@ def run_agent_with_context(
         with get_checkpointer() as checkpointer:
             graph = create_work_agent_workflow(checkpointer=checkpointer)
             
-            inputs = {"messages": [("user", user_msg)]}
+            # Passar IDs explicitamente para o Estado do LangGraph
+            inputs = {
+                "messages": [("user", user_msg)],
+                "user_id": user_id,
+                "company_id": company_id
+            }
             
-            logger.info(f"SAPIENS INVOKE [{channel.upper()}]: Thread {thread_id} | User {user_id}")
+            logger.info(f"SAPIENS INVOKE [{channel.upper()}]: Thread {thread_id} | User {user_id} | Company {company_id}")
             response = graph.invoke(inputs, config=config)
             return response
             

@@ -53,7 +53,7 @@ def get_best_company_id(user: User) -> Optional[int]:
     # Se for admin e não tiver funcionários diretos, pegamos a primeira empresa ativa
     from models.company import Company
     if user.role == 'admin':
-        first_company = Company.query.filter_by(status='active').first()
+        first_company = Company.query.filter_by(is_active=True).first()
         if first_company:
             return first_company.id
 

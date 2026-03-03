@@ -141,6 +141,20 @@ def agents_chat():
             "error": str(e)
         }), 500
 
+@agents_bp.route('/api/agents/diagnostics', methods=['GET'])
+@login_required
+def agents_diagnostics():
+    """Rota de diagnóstico profundo para o Agente Sapiens V2 (@ARQUITETO)"""
+    from flask import session
+    from src.intelligence.diagnostics import run_deep_diagnostics
+    
+    # Simula o contexto do Agente para o diagnóstico
+    company_id = session.get('active_company_id')
+    user_id = current_user.id
+    
+    report = run_deep_diagnostics(user_id, company_id)
+    return jsonify(report)
+
 @agents_bp.route('/api/agents/actions/pending', methods=['GET'])
 @login_required
 def get_pending_actions():
