@@ -37,8 +37,6 @@ AUDITORIA DE CONFORMIDADE (@QA_AUTOMATION) - Checklist para novas tools:
 ======================================================================================
 """
 from langchain_core.tools import tool
-from flask import session
-from flask_login import current_user
 from models import db
 from src.intelligence.rag import knowledge_base
 from sqlalchemy import text
@@ -46,28 +44,91 @@ import json
 import os
 import re
 
+from src.intelligence.tool_context import (
+    active_user_id_ctx, 
+    active_company_id_ctx,
+    get_sapiens_context
+)
+
 def get_active_company_id():
-    """Recupera o ID da empresa ativa de forma resiliente (Sessão, Ambiente ou Contexto)."""
+    """Recupera o ID da empresa ativa de forma resiliente (@ARQUITETO)."""
+    # 1. Prioridade: Contexto Unificado Sapiens
+    identity = get_sapiens_context()
+    if identity.company_id:
+        return identity.company_id
+    
+    # 2. Legado: Contexto Direto (Thread-safe)
+    cid = active_company_id_ctx.get()
+    if cid:
+        return cid
+    
+    # 3. Legado: Ambiente
+    env_cid = os.environ.get('ACTIVE_COMPANY_ID')
+    if env_cid:
+        return int(env_cid)
+
+    # 4. Sessão Flask (apenas se estiver em request web)
     try:
-        from flask import session
-        cid = session.get('active_company_id') or session.get('company_id')
-        if cid:
-            return cid
+        from flask import session, has_request_context
+        if has_request_context():
+            sess_cid = session.get('active_company_id') or session.get('company_id')
+            if sess_cid:
+                return sess_cid
     except:
         pass
-    return os.environ.get('ACTIVE_COMPANY_ID')
+    
+    # 5. Fallback: Lookup por User ID
+    uid = get_active_user_id()
+    if uid:
+        try:
+            # Import inline para evitar circular dependency
+            from models.employee import Employee
+            first_emp = Employee.query.filter_by(user_id=uid).first()
+            if first_emp:
+                return first_emp.company_id
+        except:
+            pass
+            
+    return None
 
 
 def get_active_user_id():
-    """Recupera o ID do usuario logado ou via webhook de forma resiliente."""
+    """Recupera o ID do usuario logado ou via canal (Telegram/WA/etc) (@ARQUITETO)."""
+    # 1. Prioridade: Contexto Unificado Sapiens
+    identity = get_sapiens_context()
+    if identity.user_id:
+        return identity.user_id
+        
+    # 2. Legado: Contexto Direto
+    uid = active_user_id_ctx.get()
+    if uid:
+        return uid
+        
+    # 3. Legado: Ambiente
+    env_uid = os.environ.get('ACTIVE_USER_ID')
+    if env_uid:
+        return int(env_uid)
+
+    # 4. Flask-Login (Apenas Web)
     try:
         from flask_login import current_user
-        if current_user and getattr(current_user, 'is_authenticated', False):
+        from flask import has_request_context
+        if has_request_context() and current_user and getattr(current_user, 'is_authenticated', False):
             return current_user.id
     except:
         pass
-    usr_id = os.environ.get('ACTIVE_USER_ID')
-    return int(usr_id) if usr_id else None
+    
+    return None
+
+def get_active_user():
+    """Recupera o objeto User do banco de dados baseado no contexto ativo."""
+    uid = get_active_user_id()
+    if uid:
+        from models.user import User
+        # Usar session explicitamente para evitar erros de context
+        return db.session.get(User, uid)
+    return None
+    return None
 
 def sanitize_output(data):
     """Sanitiza strings para evitar erros de encoding no terminal Windows (Gold Rule)."""
@@ -179,7 +240,8 @@ def escalate_technical_issue(error_description: str, context: str):
         
         # 2. Notifica o usuário via WhatsApp (Simulado ou Real)
         # Buscamos o telefone do usuário se disponível, ou usamos um placeholder
-        phone = getattr(current_user, 'phone', None) or "5511999999999" 
+        user = get_active_user()
+        phone = getattr(user, 'phone', None) or "5511999999999" 
         
         wa_message = (
             f"🚨 *Gestão Versus: Alerta de Sistema*\n\n"
@@ -454,26 +516,20 @@ def update_plan_section(plan_id: int, section_key: str, status: str = 'completed
         return f"Erro ao atualizar seção: {str(e)}"
 
 @tool
-def get_my_work(scope: str = 'me', company_ids: str = None):
+def get_my_work(scope: str = 'me', company_ids: str = None, search_term: str = None):
     """
     Retorna a lista de atividades (Projetos e Processos) pendentes para o usuário logado.
     :param scope: 'me' para minhas atividades, 'team' para equipe, 'company' para toda a empresa.
     :param company_ids: Opcional, ids de empresas separados por virgula (ex: "31,32"). Se vazio, busca pendências em TODAS as empresas permitidas.
+    :param search_term: Opcional, filtra atividades por título, descrição ou nome de empresa. Use para buscar tarefas de um colega específico (ex: "atividades de Caroline").
     """
     from services.my_work_service import get_user_activities, get_user_employees, _get_company_activities_unrestricted
     from models.user import User
     from flask import session
     
-    
-    import logging as _logging
-    _log = _logging.getLogger(__name__)
     user_id = get_active_user_id()
-    # Fallback extra: ler direto da ENV (contexto Telegram)
-    if not user_id:
-        _raw = os.environ.get('ACTIVE_USER_ID')
-        if _raw:
-            user_id = int(_raw)
-    _log.warning(f"[get_my_work] user_id={user_id} | ACTIVE_USER_ID_env={os.environ.get('ACTIVE_USER_ID')}")
+    print(f"--- TOOL [get_my_work]: user_id={user_id} | scope={scope} | ctx_user={active_user_id_ctx.get()} ---")
+    
     if not user_id:
         return "Erro: Usuário não autenticado."
         
@@ -508,7 +564,8 @@ def get_my_work(scope: str = 'me', company_ids: str = None):
 
         filters = {
             "delivery_tags": ["open"],
-            "sort": "deadline"
+            "sort": "deadline",
+            "search": search_term
         }
 
         # 3. Busca de supervisão vs pessoal
@@ -552,6 +609,74 @@ def get_my_work(scope: str = 'me', company_ids: str = None):
         return f"Erro ao buscar atividades via MCP: {str(e)}"
 
 @tool
+def get_user_summary(target_user: str = None, range: str = 'today'):
+    """
+    Gera um relatório consolidado de atividades, processos e REUNIÕES de um usuário.
+    Use isto para 'meu resumo' ou para 'resumo do Fulano'.
+    :param target_user: ID (inteiro), Email ou Nome do usuário. Se omitido, busca o próprio resumo.
+    :param range: 'today' para resumo do dia ou 'week' para resumo da semana (domingo a sábado).
+    """
+    from services.proactive_service import get_user_summary_report
+    from models.user import User
+    from models.employee import Employee
+    from sqlalchemy import or_
+
+    requesting_user_id = get_active_user_id()
+    if not requesting_user_id:
+        return "Erro: Usuário não autenticado."
+
+    try:
+        req_user = User.query.get(requesting_user_id)
+        if not req_user:
+            return "Erro: Seu usuário não foi encontrado."
+        
+        # 1. Identificar o usuário alvo
+        if not target_user:
+            target = req_user
+        else:
+            # Busca flexível por ID, Email ou Nome
+            if str(target_user).isdigit():
+                target = User.query.get(int(target_user))
+            else:
+                target = User.query.filter(
+                    or_(
+                        User.email.ilike(f"{target_user}"),
+                        User.name.ilike(f"%{target_user}%")
+                    )
+                ).first()
+            
+            if not target:
+                return f"Erro: Usuário '{target_user}' não encontrado."
+
+        # 2. Verificação de Permissão (RBAC Multi-tenancy)
+        if req_user.id != target.id:
+            req_role = getattr(req_user, 'role', 'collaborator')
+            
+            if req_role == 'admin':
+                # Admins podem ver usuários de empresas às quais estão vinculados
+                # Para simplificar na arquitetura Versus, Admin vê todos se não houver restrição explícita no Employee
+                pass # Por enquanto admin tem passe livre se for o papel 'admin' global
+            elif req_role == 'client':
+                # Cliente vê apenas usuários que pertencem à mesma empresa que ele (vias Employee)
+                req_companies = [e.company_id for e in Employee.query.filter_by(user_id=req_user.id).all()]
+                target_companies = [e.company_id for e in Employee.query.filter_by(user_id=target.id).all()]
+                
+                # Check intersection
+                if not set(req_companies).intersection(target_companies):
+                    return f"Erro: Você não tem permissão para visualizar o resumo de {target.name}. Usuário pertence a outras empresas."
+            else:
+                return "Erro: Colaboradores podem visualizar apenas o seu próprio resumo. Use 'meu resumo'."
+
+        # 3. Gerar Relatório
+        report = get_user_summary_report(target, date_range=range)
+        
+        prefix = f"📊 RESUMO DE {target.name.upper()} ({range.upper()})\n\n" if req_user.id != target.id and "está 100% em dia" not in report else ""
+        return prefix + report
+        
+    except Exception as e:
+        return f"Erro ao gerar resumo: {str(e)}"
+
+@tool
 def list_system_users():
     """
     Lista todos os usuários cadastrados no sistema. (Admin Only)
@@ -559,8 +684,8 @@ def list_system_users():
     """
     from models.user import User
     
-    
-    if getattr(current_user, 'role', 'collaborator') != 'admin':
+    user = get_active_user()
+    if not user or getattr(user, 'role', 'collaborator') != 'admin':
         return "Erro: Apenas administradores podem listar usuários."
         
     try:
@@ -594,7 +719,8 @@ def register_system_user(name: str, email: str, role: str = 'collaborator', what
     import secrets
     import string
     
-    if getattr(current_user, 'role', 'collaborator') != 'admin':
+    user = get_active_user()
+    if not user or getattr(user, 'role', 'collaborator') != 'admin':
         return "Erro: Acesso restrito a administradores."
         
     try:
@@ -638,19 +764,23 @@ def update_user_contacts(user_id: int, whatsapp: str = None, telegram: str = Non
     
     
     try:
-        user = User.query.get(user_id)
-        if not user:
+        user_to_update = User.query.get(user_id)
+        if not user_to_update:
             return f"Erro: Usuário ID {user_id} não encontrado."
             
         # Segurança: Admin ou o próprio usuário
-        if getattr(current_user, 'role', 'collaborator') != 'admin' and current_user.id != user_id:
+        current_user_obj = get_active_user()
+        if not current_user_obj:
+            return "Erro: Usuário não identificado."
+            
+        if getattr(current_user_obj, 'role', 'collaborator') != 'admin' and current_user_obj.id != user_id:
             return "Erro: Você não tem permissão para alterar os dados deste usuário."
             
-        if whatsapp is not None: user.whatsapp = whatsapp
-        if telegram is not None: user.telegram = telegram
+        if whatsapp is not None: user_to_update.whatsapp = whatsapp
+        if telegram is not None: user_to_update.telegram = telegram
         
         db.session.commit()
-        return f"Contatos do usuário '{user.name}' atualizados com sucesso."
+        return f"Contatos do usuário '{user_to_update.name}' atualizados com sucesso."
     except Exception as e:
         db.session.rollback()
         return f"Erro ao atualizar contatos: {str(e)}"
@@ -1280,7 +1410,9 @@ def request_deadline_extension(task_type: str, task_id: int, new_deadline: str, 
         # Busca a tarefa
         task_name = f"Tarefa ID {task_id}"
         current_deadline = "N/A"
-        requester_name = current_user.name if current_user.is_authenticated else "Usuário"
+        
+        user = get_active_user()
+        requester_name = user.name if user else "Usuário"
 
         if task_type == 'project_task':
             from models.project import ProjectTask

@@ -81,27 +81,30 @@ def supervisor_node(state: WorkAgentState):
             next_node = node
             break
 
-    # HEURÍSTICA DE REFORÇO: Se o supervisor decidir 'end' mas houver sinais de comando na mensagem,
+    # HEURÍSTICA DE REFORÇO: 
+    # 1. Se o supervisor decidir 'end' mas houver sinais de comando ou SAUDAÇÃO na mensagem,
     # forçamos para o Sapiens ou Operations para evitar o 'eco' do fallback.
     if isinstance(last_message, tuple):
         text_content = last_message[1].lower()
     else:
-        text_content = getattr(last_message, 'content', '').lower()
+        text_content = last_message.content.lower()
         
+    greetings = ['oi', 'ola', 'olá', 'bom dia', 'boa tarde', 'boa noite', 'ei', 'sapien', 'sapiens']
     command_signals = ['http', 'tela', 'alterar', 'mudar', 'status', 'inativa', 'cadastrar', 'criar', 'desativar', 'erro', 'bug', 'falha']
-    if next_node == "end" and any(sig in text_content for sig in command_signals):
-        print(f"--- SUPERVISOR: Detectado sinal de comando em '{next_node}'. Forçando 'operations' ou 'engineering'. ---")
-        next_node = "engineering" if 'erro' in text_content or 'bug' in text_content else "operations"
+    
+    if next_node == "end":
+        if any(greet in text_content for greet in greetings):
+            print(f"--- SUPERVISOR: Saudação detectada. Forçando 'sapiens'. ---")
+            next_node = "sapiens"
+        elif any(sig in text_content for sig in command_signals):
+            print(f"--- SUPERVISOR: Detectado sinal de comando em '{next_node}'. Forçando 'operations' ou 'engineering'. ---")
+            next_node = "engineering" if 'erro' in text_content or 'bug' in text_content else "operations"
 
-    # REGRA CRÍTICA: O Supervisor nunca deve retornar 'end' sem ter passado por um agente.
-    # Se não há mensagem de IA no histórico, forçamos para sapiens.
-    has_ai_response = any(
-        (hasattr(m, 'type') and m.type == 'ai') or (isinstance(m, tuple) and m[0] == 'assistant')
-        for m in messages
-    )
-    if next_node == "end" and not has_ai_response:
-        print("--- SUPERVISOR: Sem resposta AI ainda, forçando 'sapiens'. ---")
-        next_node = "sapiens"
+    # Se a resposta do LLM tiver conteúdo informativo (e não apenas o ID do nó), e o próximo nó for 'end', 
+    # retornamos a mensagem para que o usuário receba algo em vez de um eco 'end'.
+    if response.content and next_node == "end" and response.content.lower().strip() not in valid_nodes:
+        print(f"--- SUPERVISOR: Retornando resposta direta do roteador. Content: {response.content[:50]}... ---")
+        return {"messages": [response], "next_node": "end"}
 
     print(f"--- SUPERVISOR DECISION: {next_node} ---")
     return {"next_node": next_node}
