@@ -1,0 +1,123 @@
+INFO:services.scheduler_service:\U0001f4c5 Scheduler Service inicializado
+INFO:services.scheduler_service:\U0001f680 Inicializando Scheduler Service...
+INFO:services.scheduler_service:\U0001f527 Configurando jobs de rotina...
+INFO:apscheduler.scheduler:Adding job tentatively -- it will be properly scheduled when the scheduler starts
+INFO:services.scheduler_service:\u2705 Job 'process_daily_routines' adicionado: cron {'hour': 0, 'minute': 1, 'name': 'Processamento Dißrio de Rotinas'}
+INFO:apscheduler.scheduler:Adding job tentatively -- it will be properly scheduled when the scheduler starts
+INFO:services.scheduler_service:\u2705 Job 'check_overdue_tasks' adicionado: cron {'minute': 0, 'name': 'VerificaþÒo de Tarefas Atrasadas'}
+INFO:services.scheduler_service:\u2705 Jobs de rotina configurados!
+INFO:services.scheduler_service:\U0001f527 Configurando jobs proativos do Sapiens...
+INFO:apscheduler.scheduler:Adding job tentatively -- it will be properly scheduled when the scheduler starts
+INFO:services.scheduler_service:\u2705 Job 'proactive_morning_summary' adicionado: cron {'hour': 8, 'minute': 0, 'name': 'Resumo Matinal Proativo (Telegram)'}
+INFO:services.scheduler_service:\u2705 Jobs proativos configurados!
+INFO:apscheduler.scheduler:Adding job tentatively -- it will be properly scheduled when the scheduler starts
+INFO:services.scheduler_service:\u2705 Job 'chat_timeout_monitor' adicionado: interval {'seconds': 30, 'name': 'Monitor de Inatividade de Chat'}
+INFO:services.scheduler_service:\u2705 Job de Timeout de Chat configurado!
+INFO:apscheduler.scheduler:Added job "Processamento Dißrio de Rotinas" to job store "default"
+INFO:apscheduler.scheduler:Added job "VerificaþÒo de Tarefas Atrasadas" to job store "default"
+INFO:apscheduler.scheduler:Added job "Resumo Matinal Proativo (Telegram)" to job store "default"
+INFO:apscheduler.scheduler:Added job "Monitor de Inatividade de Chat" to job store "default"
+INFO:apscheduler.scheduler:Scheduler started
+INFO:services.scheduler_service:\u2705 Scheduler iniciado com sucesso
+INFO:services.scheduler_service:\U0001f4cb Jobs agendados: 4
+INFO:services.scheduler_service:  - chat_timeout_monitor: pr¾xima execuþÒo em 2026-03-02 08:27:21.021597-03:00
+INFO:services.scheduler_service:  - check_overdue_tasks: pr¾xima execuþÒo em 2026-03-02 09:00:00-03:00
+INFO:services.scheduler_service:  - process_daily_routines: pr¾xima execuþÒo em 2026-03-03 00:01:00-03:00
+INFO:services.scheduler_service:  - proactive_morning_summary: pr¾xima execuþÒo em 2026-03-03 08:00:00-03:00
+INFO:services.scheduler_service:================================================================================
+INFO:services.scheduler_service:\u2705 SCHEDULER ATIVO E FUNCIONANDO!
+INFO:services.scheduler_service:================================================================================
+Traceback (most recent call last):
+DEBUG: Registering Jinja filters...
+DEBUG: Registering API resources...
+DEBUG: API resources registered.
+DEBUG: Registering blueprints...
+BOT [TELEGRAM] Verificando registro de Webhook para: https://app.gestaoversus.com.br
+DEBUG: Blueprints registered.
+DEBUG: Checking DB connection and creating tables...
+DEBUG: DB tables verified/created successfully.
+DEBUG: Starting Engineering Service worker...
+[SQUAD ENGENHARIA] Monitorando sistema...
+DEBUG: Engineering Service worker started.
+DEBUG: Initializing Scheduler...
+DEBUG: Scheduler initialized.
+DEBUG: create_app() finished successfully.
+Gerando exemplo para: Fabiano Ferreira (TG: 8507771166)
+  File "C:\Users\mff20\anaconda3\Lib\site-packages\sqlalchemy\engine\base.py", line 2112, in _exec_insertmany_context
+    dialect.do_execute(
+  File "C:\Users\mff20\anaconda3\Lib\site-packages\sqlalchemy\engine\default.py", line 922, in do_execute
+    cursor.execute(statement, parameters)
+psycopg2.errors.NotNullViolation: null value in column "process_id" of relation "process_instances" violates not-null constraint
+DETAIL:  Failing row contains (45, 9, null, null, null, [EXEMPLO] ConferÛncia de Estoque 1, null, open, normal, 2026-02-25 00:00:00, null, null, null, 0, 0, null, null, null, manual, 2026-03-02 11:26:51.132407, 2026-03-02 11:26:51.132407, null, 23, null, 0.00, null, null, 1.00).
+
+
+The above exception was the direct cause of the following exception:
+
+Traceback (most recent call last):
+  File "c:\GestaoVersus\app32\scripts\send_example_summary.py", line 131, in <module>
+    run_test()
+  File "c:\GestaoVersus\app32\scripts\send_example_summary.py", line 79, in run_test
+    project = Project.query.filter_by(company_id=cid).first()
+              ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\mff20\anaconda3\Lib\site-packages\sqlalchemy\orm\query.py", line 2748, in first
+    return self.limit(1)._iter().first()  # type: ignore
+           ^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\mff20\anaconda3\Lib\site-packages\sqlalchemy\orm\query.py", line 2847, in _iter
+    result: Union[ScalarResult[_T], Result[_T]] = self.session.execute(
+                                                  ^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\mff20\anaconda3\Lib\site-packages\sqlalchemy\orm\session.py", line 2308, in execute
+    return self._execute_internal(
+           ^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\mff20\anaconda3\Lib\site-packages\sqlalchemy\orm\session.py", line 2169, in _execute_internal
+    ) = compile_state_cls.orm_pre_session_exec(
+        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\mff20\anaconda3\Lib\site-packages\sqlalchemy\orm\context.py", line 551, in orm_pre_session_exec
+    session._autoflush()
+  File "C:\Users\mff20\anaconda3\Lib\site-packages\sqlalchemy\orm\session.py", line 3021, in _autoflush
+    raise e.with_traceback(sys.exc_info()[2])
+  File "C:\Users\mff20\anaconda3\Lib\site-packages\sqlalchemy\orm\session.py", line 3010, in _autoflush
+    self.flush()
+  File "C:\Users\mff20\anaconda3\Lib\site-packages\sqlalchemy\orm\session.py", line 4312, in flush
+    self._flush(objects)
+  File "C:\Users\mff20\anaconda3\Lib\site-packages\sqlalchemy\orm\session.py", line 4447, in _flush
+    with util.safe_reraise():
+  File "C:\Users\mff20\anaconda3\Lib\site-packages\sqlalchemy\util\langhelpers.py", line 146, in __exit__
+    raise exc_value.with_traceback(exc_tb)
+  File "C:\Users\mff20\anaconda3\Lib\site-packages\sqlalchemy\orm\session.py", line 4408, in _flush
+    flush_context.execute()
+  File "C:\Users\mff20\anaconda3\Lib\site-packages\sqlalchemy\orm\unitofwork.py", line 466, in execute
+    rec.execute(self)
+  File "C:\Users\mff20\anaconda3\Lib\site-packages\sqlalchemy\orm\unitofwork.py", line 642, in execute
+    util.preloaded.orm_persistence.save_obj(
+  File "C:\Users\mff20\anaconda3\Lib\site-packages\sqlalchemy\orm\persistence.py", line 93, in save_obj
+    _emit_insert_statements(
+  File "C:\Users\mff20\anaconda3\Lib\site-packages\sqlalchemy\orm\persistence.py", line 1136, in _emit_insert_statements
+    result = connection.execute(
+             ^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\mff20\anaconda3\Lib\site-packages\sqlalchemy\engine\base.py", line 1416, in execute
+    return meth(
+           ^^^^^
+  File "C:\Users\mff20\anaconda3\Lib\site-packages\sqlalchemy\sql\elements.py", line 516, in _execute_on_connection
+    return connection._execute_clauseelement(
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\mff20\anaconda3\Lib\site-packages\sqlalchemy\engine\base.py", line 1639, in _execute_clauseelement
+    ret = self._execute_context(
+          ^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\mff20\anaconda3\Lib\site-packages\sqlalchemy\engine\base.py", line 1843, in _execute_context
+    return self._exec_insertmany_context(
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\mff20\anaconda3\Lib\site-packages\sqlalchemy\engine\base.py", line 2120, in _exec_insertmany_context
+    self._handle_dbapi_exception(
+  File "C:\Users\mff20\anaconda3\Lib\site-packages\sqlalchemy\engine\base.py", line 2343, in _handle_dbapi_exception
+    raise sqlalchemy_exception.with_traceback(exc_info[2]) from e
+  File "C:\Users\mff20\anaconda3\Lib\site-packages\sqlalchemy\engine\base.py", line 2112, in _exec_insertmany_context
+    dialect.do_execute(
+  File "C:\Users\mff20\anaconda3\Lib\site-packages\sqlalchemy\engine\default.py", line 922, in do_execute
+    cursor.execute(statement, parameters)
+sqlalchemy.exc.IntegrityError: (raised as a result of Query-invoked autoflush; consider using a session.no_autoflush block if this flush is occurring prematurely)
+(psycopg2.errors.NotNullViolation) null value in column "process_id" of relation "process_instances" violates not-null constraint
+DETAIL:  Failing row contains (45, 9, null, null, null, [EXEMPLO] ConferÛncia de Estoque 1, null, open, normal, 2026-02-25 00:00:00, null, null, null, 0, 0, null, null, null, manual, 2026-03-02 11:26:51.132407, 2026-03-02 11:26:51.132407, null, 23, null, 0.00, null, null, 1.00).
+
+[SQL: INSERT INTO process_instances (company_id, process_id, routine_id, instance_code, title, description, status, priority, due_date, actual_end_date, started_at, completed_at, worked_hours, estimated_hours, actual_hours, notes, created_by, trigger_type, ... 2081 characters truncated ... p23, sen_counter) ORDER BY sen_counter RETURNING process_instances.id, process_instances.id AS id__1]
+[parameters: {'executor_id__0': None, 'due_date__0': datetime.date(2026, 2, 25), 'responsible_id__0': 23, 'trigger_type__0': 'manual', 'estimated_hours__0': 0, 'instance_code__0': None, 'created_by__0': None, 'owner_employee_id__0': None, 'notes__0': None, 'company_id__0': 9, 'updated_at__0': datetime.datetime(2026, 3, 2, 11, 26, 51, 132407), 'routine_id__0': None, 'actual_hours__0': 0, 'score_weight__0': 1.0, 'title__0': '[EXEMPLO] ConferÛncia de Estoque 1', 'created_at__0': datetime.datetime(2026, 3, 2, 11, 26, 51, 132407), 'priority__0': 'normal', 'completed_at__0': None, 'worked_hours__0': 0, 'started_at__0': None, 'process_id__0': None, 'status__0': 'open', 'description__0': None, 'actual_end_date__0': None, 'executor_id__1': None, 'due_date__1': datetime.date(2026, 2, 25), 'responsible_id__1': 23, 'trigger_type__1': 'manual', 'estimated_hours__1': 0, 'instance_code__1': None, 'created_by__1': None, 'owner_employee_id__1': None, 'notes__1': None, 'company_id__1': 9, 'updated_at__1': datetime.datetime(2026, 3, 2, 11, 26, 51, 132407), 'routine_id__1': None, 'actual_hours__1': 0, 'score_weight__1': 1.0, 'title__1': '[EXEMPLO] ConferÛncia de Estoque 2', 'created_at__1': datetime.datetime(2026, 3, 2, 11, 26, 51, 132407), 'priority__1': 'normal', 'completed_at__1': None, 'worked_hours__1': 0, 'started_at__1': None, 'process_id__1': None, 'status__1': 'open', 'description__1': None, 'actual_end_date__1': None, 'executor_id__2': None, 'due_date__2': datetime.date(2026, 2, 25), 'responsible_id__2': 23, 'trigger_type__2': 'manual', 'estimated_hours__2': 0, 'instance_code__2': None, 'created_by__2': None, 'owner_employee_id__2': None, 'notes__2': None, 'company_id__2': 9, 'updated_at__2': datetime.datetime(2026, 3, 2, 11, 26, 51, 132407), 'routine_id__2': None, 'actual_hours__2': 0, 'score_weight__2': 1.0, 'title__2': '[EXEMPLO] ConferÛncia de Estoque 3', 'created_at__2': datetime.datetime(2026, 3, 2, 11, 26, 51, 132407), 'priority__2': 'normal', 'completed_at__2': None, 'worked_hours__2': 0, 'started_at__2': None, 'process_id__2': None, 'status__2': 'open', 'description__2': None, 'actual_end_date__2': None}]
+(Background on this error at: https://sqlalche.me/e/20/gkpj)

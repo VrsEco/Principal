@@ -1,0 +1,50 @@
+INFO:services.scheduler_service:â Job 'proactive_morning_summary' adicionado: cron {'hour': 8, 'minute': 0, 'name': 'Resumo Matinal Proativo (Telegram)'}
+INFO:apscheduler.scheduler:Added job "Resumo Matinal Proativo (Telegram)" to job store "default"
+INFO:services.scheduler_service:â Job 'proactive_morning_summary' adicionado: cron {'hour': 8, 'minute': 0, 'name': 'Resumo Matinal Proativo (Telegram)'}
+INFO:apscheduler.scheduler:Added job "Resumo Matinal Proativo (Telegram)" to job store "default"
+[pid: 551055|app: 0|req: 82/82] 91.108.5.35 () {38 vars in 550 bytes} [Sun Mar  1 16:04:53 2026] POST /webhook/telegram => generated 0 bytes in 1 msecs (HTTP/1.1 200) 4 headers in 124 bytes (2 switches on core 0)
+INFO:api.webhooks.telegram_webhook:Mensagem recebida do Telegram ID 8507771166: oi
+INFO:api.webhooks.telegram_webhook:Enviando para LangGraph (SQL) na thread tg_8507771166...
+ERROR:api.webhooks.telegram_webhook:Erro processando mensagem do telegram: 'User' object has no attribute 'employees'
+[pid: 551055|app: 0|req: 83/83] 91.108.5.129 () {38 vars in 551 bytes} [Sun Mar  1 16:07:35 2026] POST /webhook/telegram => generated 0 bytes in 1 msecs (HTTP/1.1 200) 4 headers in 124 bytes (2 switches on core 0)
+INFO:api.webhooks.telegram_webhook:Mensagem recebida do Telegram ID 8507771166: oi
+INFO:api.webhooks.telegram_webhook:Enviando para LangGraph (SQL) na thread tg_8507771166...
+ERROR:api.webhooks.telegram_webhook:Erro processando mensagem do telegram: 'User' object has no attribute 'employees'
+Exception in thread Thread-4 (process_telegram_message):
+  File "/srv/appgestaoversuscombr.45a4cd4b.configr.cloud/www/app32/api/webhooks/telegram_webhook.py", line 99, in process_telegram_message
+AttributeError: 'User' object has no attribute 'employees'
+  File "/srv/appgestaoversuscombr.45a4cd4b.configr.cloud/www/app32/api/webhooks/telegram_webhook.py", line 130, in process_telegram_message
+    raise ApiTelegramException(method_name, result, result_json)
+telebot.apihelper.ApiTelegramException: A request to the Telegram API was unsuccessful. Error code: 400. Description: Bad Request: message to be replied not found
+[pid: 551055|app: 0|req: 84/84] 91.108.5.35 () {38 vars in 550 bytes} [Sun Mar  1 16:20:59 2026] POST /webhook/telegram => generated 0 bytes in 5 msecs (HTTP/1.1 200) 4 headers in 124 bytes (1 switches on core 0)
+INFO:api.webhooks.telegram_webhook:Mensagem recebida do Telegram ID 8507771166: oi
+INFO:api.webhooks.telegram_webhook:Enviando para LangGraph (SQL) na thread tg_8507771166...
+ERROR:api.webhooks.telegram_webhook:Erro processando mensagem do telegram: 'User' object has no attribute 'employees'
+ERROR:app:Exception on /webhook/telegram [POST]
+  File "/srv/appgestaoversuscombr.45a4cd4b.configr.cloud/www/app32/api/webhooks/telegram_webhook.py", line 137, in telegram_webhook
+[pid: 551055|app: 0|req: 85/85] 2804:214:400a:23a4:8cc8:d6a:30e1:2551 () {38 vars in 558 bytes} [Sun Mar  1 16:43:19 2026] POST /webhook/telegram => generated 265 bytes in 15 msecs (HTTP/1.1 500) 4 headers in 145 bytes (1 switches on core 0)
+ERROR:app:Exception on /webhook/telegram [POST]
+  File "/srv/appgestaoversuscombr.45a4cd4b.configr.cloud/www/app32/api/webhooks/telegram_webhook.py", line 137, in telegram_webhook
+[pid: 551055|app: 0|req: 86/86] 2804:214:400a:23a4:8cc8:d6a:30e1:2551 () {38 vars in 558 bytes} [Sun Mar  1 16:43:33 2026] POST /webhook/telegram => generated 265 bytes in 2 msecs (HTTP/1.1 500) 4 headers in 145 bytes (2 switches on core 0)
+ERROR:app:Exception on /webhook/telegram [POST]
+  File "/srv/appgestaoversuscombr.45a4cd4b.configr.cloud/www/app32/api/webhooks/telegram_webhook.py", line 137, in telegram_webhook
+[pid: 551055|app: 0|req: 92/92] 2804:214:400a:23a4:8cc8:d6a:30e1:2551 () {38 vars in 558 bytes} [Sun Mar  1 16:56:54 2026] POST /webhook/telegram => generated 265 bytes in 10 msecs (HTTP/1.1 500) 4 headers in 145 bytes (2 switches on core 0)
+ERROR:app:Exception on /webhook/telegram [POST]
+  File "/srv/appgestaoversuscombr.45a4cd4b.configr.cloud/www/app32/api/webhooks/telegram_webhook.py", line 137, in telegram_webhook
+[pid: 551055|app: 0|req: 101/101] 2804:214:400a:23a4:8cc8:d6a:30e1:2551 () {38 vars in 558 bytes} [Sun Mar  1 17:02:04 2026] POST /webhook/telegram => generated 265 bytes in 2 msecs (HTTP/1.1 500) 4 headers in 145 bytes (2 switches on core 0)
+ERROR:app:Exception on /webhook/telegram [POST]
+  File "/srv/appgestaoversuscombr.45a4cd4b.configr.cloud/www/app32/api/webhooks/telegram_webhook.py", line 137, in telegram_webhook
+[pid: 551055|app: 0|req: 102/102] 2804:214:400a:23a4:8cc8:d6a:30e1:2551 () {38 vars in 558 bytes} [Sun Mar  1 17:04:07 2026] POST /webhook/telegram => generated 265 bytes in 3 msecs (HTTP/1.1 500) 4 headers in 145 bytes (1 switches on core 0)
+ERROR:app:Exception on /webhook/telegram [POST]
+  File "/srv/appgestaoversuscombr.45a4cd4b.configr.cloud/www/app32/api/webhooks/telegram_webhook.py", line 137, in telegram_webhook
+[pid: 551055|app: 0|req: 103/103] 2804:214:400a:23a4:8cc8:d6a:30e1:2551 () {38 vars in 558 bytes} [Sun Mar  1 17:11:11 2026] POST /webhook/telegram => generated 265 bytes in 2 msecs (HTTP/1.1 500) 4 headers in 145 bytes (2 switches on core 0)
+[pid: 551055|app: 0|req: 104/104] 91.108.5.35 () {38 vars in 550 bytes} [Sun Mar  1 17:16:03 2026] POST /webhook/telegram => generated 0 bytes in 3 msecs (HTTP/1.1 200) 4 headers in 124 bytes (2 switches on core 0)
+INFO:api.webhooks.telegram_webhook:Mensagem recebida do Telegram ID 8507771166: oi
+INFO:api.webhooks.telegram_webhook:Enviando para LangGraph (SQL) na thread tg_8507771166...
+ERROR:api.webhooks.telegram_webhook:Erro processando mensagem do telegram: 'User' object has no attribute 'employees'
+[pid: 551055|app: 0|req: 109/109] 91.108.5.35 () {38 vars in 550 bytes} [Sun Mar  1 17:25:07 2026] POST /webhook/telegram => generated 0 bytes in 1 msecs (HTTP/1.1 200) 4 headers in 124 bytes (2 switches on core 0)
+INFO:api.webhooks.telegram_webhook:Mensagem recebida do Telegram ID 8507771166: oi
+INFO:api.webhooks.telegram_webhook:Enviando para LangGraph (SQL) na thread tg_8507771166...
+ERROR:api.webhooks.telegram_webhook:Erro processando mensagem do telegram: 'User' object has no attribute 'employees'
+INFO:services.scheduler_service:â Job 'proactive_morning_summary' adicionado: cron {'hour': 8, 'minute': 0, 'name': 'Resumo Matinal Proativo (Telegram)'}
+INFO:apscheduler.scheduler:Added job "Resumo Matinal Proativo (Telegram)" to job store "default"

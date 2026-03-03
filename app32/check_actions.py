@@ -1,22 +1,12 @@
 
 from app import create_app
-from models import db, AgentAction
-import json
+from models.agent_action import AgentAction
+import os
 
-app = create_app('production')
+os.environ['TELEGRAM_SETUP_WEBHOOK'] = 'false'
+app = create_app('development')
 with app.app_context():
-    try:
-        actions = AgentAction.query.order_by(AgentAction.id.desc()).limit(10).all()
-        result = []
-        for a in actions:
-            result.append({
-                'id': a.id,
-                'type': a.type,
-                'title': a.title,
-                'status': a.status,
-                'description': a.description,
-                'payload': a.payload
-            })
-        print(json.dumps(result, indent=2))
-    except Exception as e:
-        print(f"Error: {e}")
+    actions = AgentAction.query.order_by(AgentAction.id.desc()).limit(3).all()
+    print("Recent Agent Actions:")
+    for a in actions:
+        print(f"ID: {a.id} | Title: {a.title} | Company: {a.company_id} | Status: {a.status}")

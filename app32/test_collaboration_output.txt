@@ -1,0 +1,44 @@
+TESTE DE COLABORACAO MULTI-AGENTE (SQUAD V2.0)
+
+[DEMANDA]: Quero expandir minha receita vendendo para o setor p·blico atravÚs de licitaþ§es. Defina meus OKRs para o pr¾ximo trimestre e como devo estruturar minha ßrea de licitaþ§es para suportar isso.
+
+--- SUPERVISOR DECISION: strategist (Collaborations: 0) ---
+--- GRAPH ROUTING: Decision 'strategist' -> Node 'strategist' ---
+
+--- ATIVIDADE NO NË: supervisor ---
+[SUPERVISOR DECISION]: Pr¾ximo -> strategist
+[COLLABORATION COUNT]: 0
+
+--- ATIVIDADE NO NË: strategist ---
+
+--- ATIVIDADE NO NË: tools ---
+[TOOLS]: Regra: MËDULO: OKRs (Objectives and Key Results)
+OKR Ú uma metodologia de gestÒo de metas que conecta os objetivos estratÚgicos Ós aþ§es do dia a dia.
+  - OBJETIVO (O): Qualitativo, inspirador, de curto prazo (trimestral). Ex: 'Tornar-se referÛncia regional em atendimento'.
+  - RESULTADO-CHAVE (KR):...
+--- SUPERVISOR DECISION: sapiens (Collaborations: 0) ---
+--- GRAPH ROUTING: Decision 'sapiens' -> Node 'sapiens' ---
+
+--- ATIVIDADE NO NË: supervisor ---
+[SUPERVISOR DECISION]: Pr¾ximo -> sapiens
+[COLLABORATION COUNT]: 0
+
+--- ATIVIDADE NO NË: sapiens ---
+[SAPIENS]: Para definir seus OKRs (Objectives and Key Results) para expandir a receita atravÚs de licitaþ§es no setor p·blico, siga estas diretrizes:
+
+### Objetivo (O):
+- **Expandir a Receita no Setor P·blico atravÚs de Licitaþ§es**
+
+### Resultados-Chave (KRs):
+1. **Participar de 10 licitaþ§es no pr¾ximo trime...
+--- SUPERVISOR: Avaliando necessidade de colaboraþÒo (Turno 0) ---
+--- SUPERVISOR DECISION: end (Collaborations: 0) ---
+--- GRAPH ROUTING: Decision 'end' -> Node '__end__' ---
+
+--- ATIVIDADE NO NË: supervisor ---
+[SUPERVISOR DECISION]: Pr¾ximo -> end
+[COLLABORATION COUNT]: 0
+
+================================================================================
+FIM DO TESTE DE COLABORACAO
+================================================================================

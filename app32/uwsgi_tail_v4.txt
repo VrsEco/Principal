@@ -1,0 +1,100 @@
+INFO:httpx:HTTP Request: POST https://api.openai.com/v1/chat/completions "HTTP/1.1 200 OK"
+--- GRAPH ROUTING: Decision 'end' -> Node '__end__' ---
+Sun Mar  1 19:44:19 2026 - SIGPIPE: writing to a closed pipe/socket/fd (probably the client disconnected) on request /webhook/telegram (ip 91.108.5.35) !!!
+Sun Mar  1 19:44:19 2026 - uwsgi_response_write_headers_do(): Broken pipe [core/writer.c line 248] during POST /webhook/telegram (91.108.5.35)
+OSError: write error
+[pid: 571826|app: 0|req: 68/68] 91.108.5.35 () {38 vars in 550 bytes} [Sun Mar  1 19:44:18 2026] POST /webhook/telegram => generated 0 bytes in 1360 msecs (HTTP/1.1 200) 4 headers in 0 bytes (0 switches on core 0)
+INFO:api.webhooks.telegram_webhook:Mensagem recebida do Telegram ID 8507771166: oi
+INFO:api.webhooks.telegram_webhook:Enviando para LangGraph (SQL) na thread tg_8507771166...
+INFO:httpx:HTTP Request: POST https://api.openai.com/v1/chat/completions "HTTP/1.1 200 OK"
+--- GRAPH ROUTING: Decision 'end' -> Node '__end__' ---
+Sun Mar  1 19:44:20 2026 - SIGPIPE: writing to a closed pipe/socket/fd (probably the client disconnected) on request /webhook/telegram (ip 91.108.5.35) !!!
+Sun Mar  1 19:44:20 2026 - uwsgi_response_write_headers_do(): Broken pipe [core/writer.c line 248] during POST /webhook/telegram (91.108.5.35)
+OSError: write error
+[pid: 571826|app: 0|req: 69/69] 91.108.5.35 () {38 vars in 550 bytes} [Sun Mar  1 19:44:19 2026] POST /webhook/telegram => generated 0 bytes in 1293 msecs (HTTP/1.1 200) 4 headers in 0 bytes (0 switches on core 0)
+INFO:api.webhooks.telegram_webhook:Mensagem recebida do Telegram ID 8507771166: oi
+INFO:api.webhooks.telegram_webhook:Enviando para LangGraph (SQL) na thread tg_8507771166...
+INFO:httpx:HTTP Request: POST https://api.openai.com/v1/chat/completions "HTTP/1.1 200 OK"
+--- GRAPH ROUTING: Decision 'end' -> Node '__end__' ---
+[pid: 571826|app: 0|req: 70/70] 91.108.5.35 () {38 vars in 550 bytes} [Sun Mar  1 19:44:22 2026] POST /webhook/telegram => generated 0 bytes in 1469 msecs (HTTP/1.1 200) 4 headers in 124 bytes (1 switches on core 0)
+INFO:api.webhooks.telegram_webhook:Mensagem recebida do Telegram ID 8507771166: quais as atividades tenho em aberto na empresa AA - Versus Gestão Corporativa?
+INFO:api.webhooks.telegram_webhook:Enviando para LangGraph (SQL) na thread tg_8507771166...
+INFO:httpx:HTTP Request: POST https://api.openai.com/v1/chat/completions "HTTP/1.1 200 OK"
+--- SUPERVISOR DECISION: operations ---
+--- GRAPH ROUTING: Decision 'operations' -> Node 'operations' ---
+INFO:httpx:HTTP Request: POST https://api.openai.com/v1/chat/completions "HTTP/1.1 200 OK"
+--- SUPERVISOR: Ferramenta executada, devolvendo ao especialista para conclusão. ---
+INFO:httpx:HTTP Request: POST https://api.openai.com/v1/chat/completions "HTTP/1.1 200 OK"
+--- SUPERVISOR DECISION: sapiens ---
+--- GRAPH ROUTING: Decision 'sapiens' -> Node 'sapiens' ---
+INFO:httpx:HTTP Request: POST https://api.openai.com/v1/chat/completions "HTTP/1.1 200 OK"
+--- SUPERVISOR: Resposta final do especialista recebida, encerrando fluxo. ---
+--- GRAPH ROUTING: Decision 'end' -> Node '__end__' ---
+[pid: 571826|app: 0|req: 71/71] 91.108.5.35 () {38 vars in 550 bytes} [Sun Mar  1 19:44:24 2026] POST /webhook/telegram => generated 0 bytes in 4171 msecs (HTTP/1.1 200) 4 headers in 124 bytes (1 switches on core 0)
+INFO:api.webhooks.telegram_webhook:Mensagem recebida do Telegram ID 8507771166: oi
+INFO:api.webhooks.telegram_webhook:Enviando para LangGraph (SQL) na thread tg_8507771166...
+[ANALYSIS] @ARQUITETO analisando ticket #4...
+INFO:services.whatsapp_service:Z-API configuration incomplete
+[ANALYSIS] @ARQUITETO analisando ticket #5...
+INFO:services.whatsapp_service:Z-API configuration incomplete
+[ANALYSIS] @ARQUITETO analisando ticket #6...
+INFO:services.whatsapp_service:Z-API configuration incomplete
+INFO:httpx:HTTP Request: POST https://api.openai.com/v1/chat/completions "HTTP/1.1 200 OK"
+--- GRAPH ROUTING: Decision 'end' -> Node '__end__' ---
+[pid: 571826|app: 0|req: 72/72] 91.108.5.35 () {38 vars in 550 bytes} [Sun Mar  1 19:44:28 2026] POST /webhook/telegram => generated 0 bytes in 1785 msecs (HTTP/1.1 200) 4 headers in 124 bytes (1 switches on core 0)
+INFO:api.webhooks.telegram_webhook:Mensagem recebida do Telegram ID 8507771166: oi
+INFO:api.webhooks.telegram_webhook:Enviando para LangGraph (SQL) na thread tg_8507771166...
+INFO:httpx:HTTP Request: POST https://api.openai.com/v1/chat/completions "HTTP/1.1 200 OK"
+--- GRAPH ROUTING: Decision 'end' -> Node '__end__' ---
+[pid: 571826|app: 0|req: 73/73] 91.108.5.35 () {38 vars in 550 bytes} [Sun Mar  1 19:44:30 2026] POST /webhook/telegram => generated 0 bytes in 1501 msecs (HTTP/1.1 200) 4 headers in 124 bytes (1 switches on core 0)
+INFO:api.webhooks.telegram_webhook:Mensagem recebida do Telegram ID 8507771166: oiee
+INFO:api.webhooks.telegram_webhook:Enviando para LangGraph (SQL) na thread tg_8507771166...
+INFO:httpx:HTTP Request: POST https://api.openai.com/v1/chat/completions "HTTP/1.1 200 OK"
+--- GRAPH ROUTING: Decision 'end' -> Node '__end__' ---
+[pid: 571826|app: 0|req: 74/74] 91.108.5.35 () {38 vars in 550 bytes} [Sun Mar  1 19:44:31 2026] POST /webhook/telegram => generated 0 bytes in 1519 msecs (HTTP/1.1 200) 4 headers in 124 bytes (1 switches on core 0)
+INFO:apscheduler.executors.default:Running job "Monitor de Inatividade de Chat (trigger: interval[0:00:30], next run at: 2026-03-01 19:45:14 -03)" (scheduled at 2026-03-01 19:44:44.430572-03:00)
+INFO:apscheduler.executors.default:Job "Monitor de Inatividade de Chat (trigger: interval[0:00:30], next run at: 2026-03-01 19:45:14 -03)" executed successfully
+INFO:apscheduler.executors.default:Running job "Monitor de Inatividade de Chat (trigger: interval[0:00:30], next run at: 2026-03-01 19:45:44 -03)" (scheduled at 2026-03-01 19:45:14.430572-03:00)
+INFO:apscheduler.executors.default:Job "Monitor de Inatividade de Chat (trigger: interval[0:00:30], next run at: 2026-03-01 19:45:44 -03)" executed successfully
+INFO:apscheduler.executors.default:Running job "Monitor de Inatividade de Chat (trigger: interval[0:00:30], next run at: 2026-03-01 19:46:14 -03)" (scheduled at 2026-03-01 19:45:44.430572-03:00)
+INFO:apscheduler.executors.default:Job "Monitor de Inatividade de Chat (trigger: interval[0:00:30], next run at: 2026-03-01 19:46:14 -03)" executed successfully
+INFO:apscheduler.executors.default:Running job "Monitor de Inatividade de Chat (trigger: interval[0:00:30], next run at: 2026-03-01 19:46:44 -03)" (scheduled at 2026-03-01 19:46:14.430572-03:00)
+INFO:apscheduler.executors.default:Job "Monitor de Inatividade de Chat (trigger: interval[0:00:30], next run at: 2026-03-01 19:46:44 -03)" executed successfully
+INFO:apscheduler.executors.default:Running job "Monitor de Inatividade de Chat (trigger: interval[0:00:30], next run at: 2026-03-01 19:47:14 -03)" (scheduled at 2026-03-01 19:46:44.430572-03:00)
+INFO:apscheduler.executors.default:Job "Monitor de Inatividade de Chat (trigger: interval[0:00:30], next run at: 2026-03-01 19:47:14 -03)" executed successfully
+INFO:apscheduler.executors.default:Running job "Monitor de Inatividade de Chat (trigger: interval[0:00:30], next run at: 2026-03-01 19:47:44 -03)" (scheduled at 2026-03-01 19:47:14.430572-03:00)
+INFO:apscheduler.executors.default:Job "Monitor de Inatividade de Chat (trigger: interval[0:00:30], next run at: 2026-03-01 19:47:44 -03)" executed successfully
+INFO:apscheduler.executors.default:Running job "Monitor de Inatividade de Chat (trigger: interval[0:00:30], next run at: 2026-03-01 19:48:14 -03)" (scheduled at 2026-03-01 19:47:44.430572-03:00)
+INFO:apscheduler.executors.default:Job "Monitor de Inatividade de Chat (trigger: interval[0:00:30], next run at: 2026-03-01 19:48:14 -03)" executed successfully
+INFO:apscheduler.executors.default:Running job "Monitor de Inatividade de Chat (trigger: interval[0:00:30], next run at: 2026-03-01 19:48:44 -03)" (scheduled at 2026-03-01 19:48:14.430572-03:00)
+INFO:apscheduler.executors.default:Job "Monitor de Inatividade de Chat (trigger: interval[0:00:30], next run at: 2026-03-01 19:48:44 -03)" executed successfully
+INFO:apscheduler.executors.default:Running job "Monitor de Inatividade de Chat (trigger: interval[0:00:30], next run at: 2026-03-01 19:49:14 -03)" (scheduled at 2026-03-01 19:48:44.430572-03:00)
+INFO:apscheduler.executors.default:Job "Monitor de Inatividade de Chat (trigger: interval[0:00:30], next run at: 2026-03-01 19:49:14 -03)" executed successfully
+INFO:apscheduler.executors.default:Running job "Monitor de Inatividade de Chat (trigger: interval[0:00:30], next run at: 2026-03-01 19:49:44 -03)" (scheduled at 2026-03-01 19:49:14.430572-03:00)
+INFO:apscheduler.executors.default:Job "Monitor de Inatividade de Chat (trigger: interval[0:00:30], next run at: 2026-03-01 19:49:44 -03)" executed successfully
+INFO:apscheduler.executors.default:Running job "Monitor de Inatividade de Chat (trigger: interval[0:00:30], next run at: 2026-03-01 19:50:14 -03)" (scheduled at 2026-03-01 19:49:44.430572-03:00)
+INFO:apscheduler.executors.default:Job "Monitor de Inatividade de Chat (trigger: interval[0:00:30], next run at: 2026-03-01 19:50:14 -03)" executed successfully
+INFO:apscheduler.executors.default:Running job "Monitor de Inatividade de Chat (trigger: interval[0:00:30], next run at: 2026-03-01 19:50:44 -03)" (scheduled at 2026-03-01 19:50:14.430572-03:00)
+INFO:apscheduler.executors.default:Job "Monitor de Inatividade de Chat (trigger: interval[0:00:30], next run at: 2026-03-01 19:50:44 -03)" executed successfully
+INFO:apscheduler.executors.default:Running job "Monitor de Inatividade de Chat (trigger: interval[0:00:30], next run at: 2026-03-01 19:51:14 -03)" (scheduled at 2026-03-01 19:50:44.430572-03:00)
+INFO:apscheduler.executors.default:Job "Monitor de Inatividade de Chat (trigger: interval[0:00:30], next run at: 2026-03-01 19:51:14 -03)" executed successfully
+INFO:apscheduler.executors.default:Running job "Monitor de Inatividade de Chat (trigger: interval[0:00:30], next run at: 2026-03-01 19:51:44 -03)" (scheduled at 2026-03-01 19:51:14.430572-03:00)
+INFO:apscheduler.executors.default:Job "Monitor de Inatividade de Chat (trigger: interval[0:00:30], next run at: 2026-03-01 19:51:44 -03)" executed successfully
+INFO:apscheduler.executors.default:Running job "Monitor de Inatividade de Chat (trigger: interval[0:00:30], next run at: 2026-03-01 19:52:14 -03)" (scheduled at 2026-03-01 19:51:44.430572-03:00)
+INFO:apscheduler.executors.default:Job "Monitor de Inatividade de Chat (trigger: interval[0:00:30], next run at: 2026-03-01 19:52:14 -03)" executed successfully
+INFO:apscheduler.executors.default:Running job "Monitor de Inatividade de Chat (trigger: interval[0:00:30], next run at: 2026-03-01 19:52:44 -03)" (scheduled at 2026-03-01 19:52:14.430572-03:00)
+INFO:apscheduler.executors.default:Job "Monitor de Inatividade de Chat (trigger: interval[0:00:30], next run at: 2026-03-01 19:52:44 -03)" executed successfully
+INFO:apscheduler.executors.default:Running job "Monitor de Inatividade de Chat (trigger: interval[0:00:30], next run at: 2026-03-01 19:53:14 -03)" (scheduled at 2026-03-01 19:52:44.430572-03:00)
+INFO:apscheduler.executors.default:Job "Monitor de Inatividade de Chat (trigger: interval[0:00:30], next run at: 2026-03-01 19:53:14 -03)" executed successfully
+INFO:apscheduler.executors.default:Running job "Monitor de Inatividade de Chat (trigger: interval[0:00:30], next run at: 2026-03-01 19:53:44 -03)" (scheduled at 2026-03-01 19:53:14.430572-03:00)
+INFO:apscheduler.executors.default:Job "Monitor de Inatividade de Chat (trigger: interval[0:00:30], next run at: 2026-03-01 19:53:44 -03)" executed successfully
+INFO:api.webhooks.telegram_webhook:Mensagem recebida do Telegram ID 8507771166: Quais projetos estão abertos na empresa Gandu Investimentos?
+INFO:api.webhooks.telegram_webhook:Enviando para LangGraph (SQL) na thread tg_8507771166...
+INFO:httpx:HTTP Request: POST https://api.openai.com/v1/chat/completions "HTTP/1.1 200 OK"
+--- GRAPH ROUTING: Decision 'end' -> Node '__end__' ---
+[pid: 571826|app: 0|req: 75/75] 91.108.5.35 () {38 vars in 550 bytes} [Sun Mar  1 19:53:27 2026] POST /webhook/telegram => generated 0 bytes in 2674 msecs (HTTP/1.1 200) 4 headers in 124 bytes (1 switches on core 0)
+INFO:apscheduler.executors.default:Running job "Monitor de Inatividade de Chat (trigger: interval[0:00:30], next run at: 2026-03-01 19:54:14 -03)" (scheduled at 2026-03-01 19:53:44.430572-03:00)
+INFO:services.chat_timeout_service:--- TIMEOUT WARNING: User 3 (platform) ---
+INFO:apscheduler.executors.default:Job "Monitor de Inatividade de Chat (trigger: interval[0:00:30], next run at: 2026-03-01 19:54:14 -03)" executed successfully
+INFO:apscheduler.executors.default:Running job "Monitor de Inatividade de Chat (trigger: interval[0:00:30], next run at: 2026-03-01 19:54:44 -03)" (scheduled at 2026-03-01 19:54:14.430572-03:00)
+INFO:apscheduler.executors.default:Job "Monitor de Inatividade de Chat (trigger: interval[0:00:30], next run at: 2026-03-01 19:54:44 -03)" executed successfully

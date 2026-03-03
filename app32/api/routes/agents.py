@@ -95,32 +95,20 @@ def agents_chat():
             # Verifica se já existe um estado no banco para esta thread
             state = graph.get_state(config)
             
-            if not state.values or not state.values.get("messages"):
-                # Se o banco está vazio, enviamos Historico + Nova para inicializar
-                graph_input_messages = messages
-                print(f"--- CHAT: Inicializando nova thread SQL para {thread_id} ---")
-            else:
-                # Se já tem mensagens no DB, enviamos APENAS a nova (evita duplicação)
-                graph_input_messages = [HumanMessage(content=processed_message)]
-                print(f"--- CHAT: Retomando thread SQL {thread_id} (Histórico no DB) ---")
-
-            inputs = {
-                "messages": graph_input_messages,
-                "user_id": current_user.id,
-                "company_id": company_id,
-                "next_node": None
-            }
+            # 2. Executa o Agente com Contexto Unificado (@ARQUITETO)
+            from src.intelligence.execution import run_agent_with_context, extract_response_text
             
-            # Invoca o grafo com persistência SQL
-            result = graph.invoke(inputs, config=config)
-            messages_result = result["messages"]
+            response = run_agent_with_context(
+                user_id=current_user.id,
+                user_msg=processed_message,
+                channel="web",
+                thread_prefix="web",
+                company_id=company_id,
+                metadata={"agent_type": agent_type, "contact": contact}
+            )
             
-            if messages_result[-1].type == "ai":
-                final_text = messages_result[-1].content
-            else:
-                final_text = "Estou aqui! Planejei os próximos passos, mas não identifiquei uma tarefa específica. Como posso ser útil?"
-            
-            agent_executor = result.get("next_node", "end")
+            final_text = extract_response_text(response)
+            agent_executor = response.get("next_node", "end")
             
             # 3. Salva a resposta da IA no log de mensagens (Visual apenas)
             ai_msg = AgentMessage(
@@ -134,7 +122,7 @@ def agents_chat():
                 metadata_json={
                     "agent": agent_executor, 
                     "contact": contact,
-                    "thread_id": thread_id
+                    "thread_id": f"web_{current_user.id}"
                 }
             )
             db.session.add(ai_msg)

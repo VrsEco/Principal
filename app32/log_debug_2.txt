@@ -1,0 +1,1000 @@
+INFO:apscheduler.executors.default:Running job "Monitor de Inatividade de Chat (trigger: interval[0:00:30], next run at: 2026-03-01 19:13:04 -03)" (scheduled at 2026-03-01 19:12:34.418709-03:00)
+INFO:apscheduler.executors.default:Job "Monitor de Inatividade de Chat (trigger: interval[0:00:30], next run at: 2026-03-01 19:13:04 -03)" executed successfully
+INFO:apscheduler.executors.default:Running job "Monitor de Inatividade de Chat (trigger: interval[0:00:30], next run at: 2026-03-01 19:13:34 -03)" (scheduled at 2026-03-01 19:13:04.418709-03:00)
+INFO:apscheduler.executors.default:Job "Monitor de Inatividade de Chat (trigger: interval[0:00:30], next run at: 2026-03-01 19:13:34 -03)" executed successfully
+INFO:apscheduler.executors.default:Running job "Monitor de Inatividade de Chat (trigger: interval[0:00:30], next run at: 2026-03-01 19:14:04 -03)" (scheduled at 2026-03-01 19:13:34.418709-03:00)
+INFO:apscheduler.executors.default:Job "Monitor de Inatividade de Chat (trigger: interval[0:00:30], next run at: 2026-03-01 19:14:04 -03)" executed successfully
+INFO:apscheduler.executors.default:Running job "Monitor de Inatividade de Chat (trigger: interval[0:00:30], next run at: 2026-03-01 19:14:34 -03)" (scheduled at 2026-03-01 19:14:04.418709-03:00)
+INFO:apscheduler.executors.default:Job "Monitor de Inatividade de Chat (trigger: interval[0:00:30], next run at: 2026-03-01 19:14:34 -03)" executed successfully
+INFO:apscheduler.executors.default:Running job "Monitor de Inatividade de Chat (trigger: interval[0:00:30], next run at: 2026-03-01 19:15:04 -03)" (scheduled at 2026-03-01 19:14:34.418709-03:00)
+INFO:apscheduler.executors.default:Job "Monitor de Inatividade de Chat (trigger: interval[0:00:30], next run at: 2026-03-01 19:15:04 -03)" executed successfully
+INFO:apscheduler.executors.default:Running job "Monitor de Inatividade de Chat (trigger: interval[0:00:30], next run at: 2026-03-01 19:15:34 -03)" (scheduled at 2026-03-01 19:15:04.418709-03:00)
+INFO:apscheduler.executors.default:Job "Monitor de Inatividade de Chat (trigger: interval[0:00:30], next run at: 2026-03-01 19:15:34 -03)" executed successfully
+INFO:apscheduler.executors.default:Running job "Monitor de Inatividade de Chat (trigger: interval[0:00:30], next run at: 2026-03-01 19:16:04 -03)" (scheduled at 2026-03-01 19:15:34.418709-03:00)
+INFO:apscheduler.executors.default:Job "Monitor de Inatividade de Chat (trigger: interval[0:00:30], next run at: 2026-03-01 19:16:04 -03)" executed successfully
+INFO:apscheduler.executors.default:Running job "Monitor de Inatividade de Chat (trigger: interval[0:00:30], next run at: 2026-03-01 19:16:34 -03)" (scheduled at 2026-03-01 19:16:04.418709-03:00)
+INFO:apscheduler.executors.default:Job "Monitor de Inatividade de Chat (trigger: interval[0:00:30], next run at: 2026-03-01 19:16:34 -03)" executed successfully
+INFO:apscheduler.executors.default:Running job "Monitor de Inatividade de Chat (trigger: interval[0:00:30], next run at: 2026-03-01 19:17:04 -03)" (scheduled at 2026-03-01 19:16:34.418709-03:00)
+INFO:apscheduler.executors.default:Job "Monitor de Inatividade de Chat (trigger: interval[0:00:30], next run at: 2026-03-01 19:17:04 -03)" executed successfully
+INFO:apscheduler.executors.default:Running job "Monitor de Inatividade de Chat (trigger: interval[0:00:30], next run at: 2026-03-01 19:17:34 -03)" (scheduled at 2026-03-01 19:17:04.418709-03:00)
+INFO:apscheduler.executors.default:Job "Monitor de Inatividade de Chat (trigger: interval[0:00:30], next run at: 2026-03-01 19:17:34 -03)" executed successfully
+INFO:apscheduler.executors.default:Running job "Monitor de Inatividade de Chat (trigger: interval[0:00:30], next run at: 2026-03-01 19:18:04 -03)" (scheduled at 2026-03-01 19:17:34.418709-03:00)
+INFO:apscheduler.executors.default:Job "Monitor de Inatividade de Chat (trigger: interval[0:00:30], next run at: 2026-03-01 19:18:04 -03)" executed successfully
+INFO:apscheduler.executors.default:Running job "Monitor de Inatividade de Chat (trigger: interval[0:00:30], next run at: 2026-03-01 19:18:34 -03)" (scheduled at 2026-03-01 19:18:04.418709-03:00)
+INFO:apscheduler.executors.default:Job "Monitor de Inatividade de Chat (trigger: interval[0:00:30], next run at: 2026-03-01 19:18:34 -03)" executed successfully
+INFO:apscheduler.executors.default:Running job "Monitor de Inatividade de Chat (trigger: interval[0:00:30], next run at: 2026-03-01 19:19:04 -03)" (scheduled at 2026-03-01 19:18:34.418709-03:00)
+INFO:apscheduler.executors.default:Job "Monitor de Inatividade de Chat (trigger: interval[0:00:30], next run at: 2026-03-01 19:19:04 -03)" executed successfully
+INFO:apscheduler.executors.default:Running job "Monitor de Inatividade de Chat (trigger: interval[0:00:30], next run at: 2026-03-01 19:19:34 -03)" (scheduled at 2026-03-01 19:19:04.418709-03:00)
+INFO:apscheduler.executors.default:Job "Monitor de Inatividade de Chat (trigger: interval[0:00:30], next run at: 2026-03-01 19:19:34 -03)" executed successfully
+INFO:apscheduler.executors.default:Running job "Monitor de Inatividade de Chat (trigger: interval[0:00:30], next run at: 2026-03-01 19:20:04 -03)" (scheduled at 2026-03-01 19:19:34.418709-03:00)
+INFO:apscheduler.executors.default:Job "Monitor de Inatividade de Chat (trigger: interval[0:00:30], next run at: 2026-03-01 19:20:04 -03)" executed successfully
+INFO:apscheduler.executors.default:Running job "Monitor de Inatividade de Chat (trigger: interval[0:00:30], next run at: 2026-03-01 19:20:34 -03)" (scheduled at 2026-03-01 19:20:04.418709-03:00)
+INFO:apscheduler.executors.default:Job "Monitor de Inatividade de Chat (trigger: interval[0:00:30], next run at: 2026-03-01 19:20:34 -03)" executed successfully
+INFO:apscheduler.executors.default:Running job "Monitor de Inatividade de Chat (trigger: interval[0:00:30], next run at: 2026-03-01 19:21:04 -03)" (scheduled at 2026-03-01 19:20:34.418709-03:00)
+INFO:apscheduler.executors.default:Job "Monitor de Inatividade de Chat (trigger: interval[0:00:30], next run at: 2026-03-01 19:21:04 -03)" executed successfully
+INFO:apscheduler.executors.default:Running job "Monitor de Inatividade de Chat (trigger: interval[0:00:30], next run at: 2026-03-01 19:21:34 -03)" (scheduled at 2026-03-01 19:21:04.418709-03:00)
+INFO:apscheduler.executors.default:Job "Monitor de Inatividade de Chat (trigger: interval[0:00:30], next run at: 2026-03-01 19:21:34 -03)" executed successfully
+INFO:apscheduler.executors.default:Running job "Monitor de Inatividade de Chat (trigger: interval[0:00:30], next run at: 2026-03-01 19:22:04 -03)" (scheduled at 2026-03-01 19:21:34.418709-03:00)
+INFO:apscheduler.executors.default:Job "Monitor de Inatividade de Chat (trigger: interval[0:00:30], next run at: 2026-03-01 19:22:04 -03)" executed successfully
+INFO:apscheduler.executors.default:Running job "Monitor de Inatividade de Chat (trigger: interval[0:00:30], next run at: 2026-03-01 19:22:34 -03)" (scheduled at 2026-03-01 19:22:04.418709-03:00)
+INFO:apscheduler.executors.default:Job "Monitor de Inatividade de Chat (trigger: interval[0:00:30], next run at: 2026-03-01 19:22:34 -03)" executed successfully
+INFO:apscheduler.executors.default:Running job "Monitor de Inatividade de Chat (trigger: interval[0:00:30], next run at: 2026-03-01 19:23:04 -03)" (scheduled at 2026-03-01 19:22:34.418709-03:00)
+INFO:apscheduler.executors.default:Job "Monitor de Inatividade de Chat (trigger: interval[0:00:30], next run at: 2026-03-01 19:23:04 -03)" executed successfully
+INFO:apscheduler.executors.default:Running job "Monitor de Inatividade de Chat (trigger: interval[0:00:30], next run at: 2026-03-01 19:23:34 -03)" (scheduled at 2026-03-01 19:23:04.418709-03:00)
+INFO:apscheduler.executors.default:Job "Monitor de Inatividade de Chat (trigger: interval[0:00:30], next run at: 2026-03-01 19:23:34 -03)" executed successfully
+INFO:apscheduler.executors.default:Running job "Monitor de Inatividade de Chat (trigger: interval[0:00:30], next run at: 2026-03-01 19:24:04 -03)" (scheduled at 2026-03-01 19:23:34.418709-03:00)
+INFO:apscheduler.executors.default:Job "Monitor de Inatividade de Chat (trigger: interval[0:00:30], next run at: 2026-03-01 19:24:04 -03)" executed successfully
+INFO:apscheduler.executors.default:Running job "Monitor de Inatividade de Chat (trigger: interval[0:00:30], next run at: 2026-03-01 19:24:34 -03)" (scheduled at 2026-03-01 19:24:04.418709-03:00)
+INFO:apscheduler.executors.default:Job "Monitor de Inatividade de Chat (trigger: interval[0:00:30], next run at: 2026-03-01 19:24:34 -03)" executed successfully
+INFO:apscheduler.executors.default:Running job "Monitor de Inatividade de Chat (trigger: interval[0:00:30], next run at: 2026-03-01 19:25:04 -03)" (scheduled at 2026-03-01 19:24:34.418709-03:00)
+INFO:apscheduler.executors.default:Job "Monitor de Inatividade de Chat (trigger: interval[0:00:30], next run at: 2026-03-01 19:25:04 -03)" executed successfully
+INFO:apscheduler.executors.default:Running job "Monitor de Inatividade de Chat (trigger: interval[0:00:30], next run at: 2026-03-01 19:25:34 -03)" (scheduled at 2026-03-01 19:25:04.418709-03:00)
+INFO:apscheduler.executors.default:Job "Monitor de Inatividade de Chat (trigger: interval[0:00:30], next run at: 2026-03-01 19:25:34 -03)" executed successfully
+INFO:apscheduler.executors.default:Running job "Monitor de Inatividade de Chat (trigger: interval[0:00:30], next run at: 2026-03-01 19:26:04 -03)" (scheduled at 2026-03-01 19:25:34.418709-03:00)
+INFO:apscheduler.executors.default:Job "Monitor de Inatividade de Chat (trigger: interval[0:00:30], next run at: 2026-03-01 19:26:04 -03)" executed successfully
+INFO:apscheduler.executors.default:Running job "Monitor de Inatividade de Chat (trigger: interval[0:00:30], next run at: 2026-03-01 19:26:34 -03)" (scheduled at 2026-03-01 19:26:04.418709-03:00)
+INFO:apscheduler.executors.default:Job "Monitor de Inatividade de Chat (trigger: interval[0:00:30], next run at: 2026-03-01 19:26:34 -03)" executed successfully
+INFO:apscheduler.executors.default:Running job "Monitor de Inatividade de Chat (trigger: interval[0:00:30], next run at: 2026-03-01 19:27:04 -03)" (scheduled at 2026-03-01 19:26:34.418709-03:00)
+INFO:apscheduler.executors.default:Job "Monitor de Inatividade de Chat (trigger: interval[0:00:30], next run at: 2026-03-01 19:27:04 -03)" executed successfully
+INFO:apscheduler.executors.default:Running job "Monitor de Inatividade de Chat (trigger: interval[0:00:30], next run at: 2026-03-01 19:27:34 -03)" (scheduled at 2026-03-01 19:27:04.418709-03:00)
+INFO:apscheduler.executors.default:Job "Monitor de Inatividade de Chat (trigger: interval[0:00:30], next run at: 2026-03-01 19:27:34 -03)" executed successfully
+INFO:apscheduler.executors.default:Running job "Monitor de Inatividade de Chat (trigger: interval[0:00:30], next run at: 2026-03-01 19:28:04 -03)" (scheduled at 2026-03-01 19:27:34.418709-03:00)
+INFO:apscheduler.executors.default:Job "Monitor de Inatividade de Chat (trigger: interval[0:00:30], next run at: 2026-03-01 19:28:04 -03)" executed successfully
+INFO:apscheduler.executors.default:Running job "Monitor de Inatividade de Chat (trigger: interval[0:00:30], next run at: 2026-03-01 19:28:34 -03)" (scheduled at 2026-03-01 19:28:04.418709-03:00)
+INFO:apscheduler.executors.default:Job "Monitor de Inatividade de Chat (trigger: interval[0:00:30], next run at: 2026-03-01 19:28:34 -03)" executed successfully
+INFO:apscheduler.executors.default:Running job "Monitor de Inatividade de Chat (trigger: interval[0:00:30], next run at: 2026-03-01 19:29:04 -03)" (scheduled at 2026-03-01 19:28:34.418709-03:00)
+INFO:apscheduler.executors.default:Job "Monitor de Inatividade de Chat (trigger: interval[0:00:30], next run at: 2026-03-01 19:29:04 -03)" executed successfully
+INFO:apscheduler.executors.default:Running job "Monitor de Inatividade de Chat (trigger: interval[0:00:30], next run at: 2026-03-01 19:29:34 -03)" (scheduled at 2026-03-01 19:29:04.418709-03:00)
+INFO:apscheduler.executors.default:Job "Monitor de Inatividade de Chat (trigger: interval[0:00:30], next run at: 2026-03-01 19:29:34 -03)" executed successfully
+INFO:apscheduler.executors.default:Running job "Monitor de Inatividade de Chat (trigger: interval[0:00:30], next run at: 2026-03-01 19:30:04 -03)" (scheduled at 2026-03-01 19:29:34.418709-03:00)
+INFO:apscheduler.executors.default:Job "Monitor de Inatividade de Chat (trigger: interval[0:00:30], next run at: 2026-03-01 19:30:04 -03)" executed successfully
+INFO:apscheduler.executors.default:Running job "Monitor de Inatividade de Chat (trigger: interval[0:00:30], next run at: 2026-03-01 19:30:34 -03)" (scheduled at 2026-03-01 19:30:04.418709-03:00)
+INFO:apscheduler.executors.default:Job "Monitor de Inatividade de Chat (trigger: interval[0:00:30], next run at: 2026-03-01 19:30:34 -03)" executed successfully
+INFO:apscheduler.executors.default:Running job "Monitor de Inatividade de Chat (trigger: interval[0:00:30], next run at: 2026-03-01 19:31:04 -03)" (scheduled at 2026-03-01 19:30:34.418709-03:00)
+INFO:apscheduler.executors.default:Job "Monitor de Inatividade de Chat (trigger: interval[0:00:30], next run at: 2026-03-01 19:31:04 -03)" executed successfully
+INFO:apscheduler.executors.default:Running job "Monitor de Inatividade de Chat (trigger: interval[0:00:30], next run at: 2026-03-01 19:31:34 -03)" (scheduled at 2026-03-01 19:31:04.418709-03:00)
+INFO:apscheduler.executors.default:Job "Monitor de Inatividade de Chat (trigger: interval[0:00:30], next run at: 2026-03-01 19:31:34 -03)" executed successfully
+INFO:apscheduler.executors.default:Running job "Monitor de Inatividade de Chat (trigger: interval[0:00:30], next run at: 2026-03-01 19:32:04 -03)" (scheduled at 2026-03-01 19:31:34.418709-03:00)
+INFO:apscheduler.executors.default:Job "Monitor de Inatividade de Chat (trigger: interval[0:00:30], next run at: 2026-03-01 19:32:04 -03)" executed successfully
+INFO:apscheduler.executors.default:Running job "Monitor de Inatividade de Chat (trigger: interval[0:00:30], next run at: 2026-03-01 19:32:34 -03)" (scheduled at 2026-03-01 19:32:04.418709-03:00)
+INFO:apscheduler.executors.default:Job "Monitor de Inatividade de Chat (trigger: interval[0:00:30], next run at: 2026-03-01 19:32:34 -03)" executed successfully
+INFO:apscheduler.executors.default:Running job "Monitor de Inatividade de Chat (trigger: interval[0:00:30], next run at: 2026-03-01 19:33:04 -03)" (scheduled at 2026-03-01 19:32:34.418709-03:00)
+INFO:apscheduler.executors.default:Job "Monitor de Inatividade de Chat (trigger: interval[0:00:30], next run at: 2026-03-01 19:33:04 -03)" executed successfully
+INFO:apscheduler.executors.default:Running job "Monitor de Inatividade de Chat (trigger: interval[0:00:30], next run at: 2026-03-01 19:33:34 -03)" (scheduled at 2026-03-01 19:33:04.418709-03:00)
+INFO:apscheduler.executors.default:Job "Monitor de Inatividade de Chat (trigger: interval[0:00:30], next run at: 2026-03-01 19:33:34 -03)" executed successfully
+INFO:apscheduler.executors.default:Running job "Monitor de Inatividade de Chat (trigger: interval[0:00:30], next run at: 2026-03-01 19:34:04 -03)" (scheduled at 2026-03-01 19:33:34.418709-03:00)
+INFO:apscheduler.executors.default:Job "Monitor de Inatividade de Chat (trigger: interval[0:00:30], next run at: 2026-03-01 19:34:04 -03)" executed successfully
+INFO:apscheduler.executors.default:Running job "Monitor de Inatividade de Chat (trigger: interval[0:00:30], next run at: 2026-03-01 19:34:34 -03)" (scheduled at 2026-03-01 19:34:04.418709-03:00)
+INFO:apscheduler.executors.default:Job "Monitor de Inatividade de Chat (trigger: interval[0:00:30], next run at: 2026-03-01 19:34:34 -03)" executed successfully
+INFO:apscheduler.executors.default:Running job "Monitor de Inatividade de Chat (trigger: interval[0:00:30], next run at: 2026-03-01 19:35:04 -03)" (scheduled at 2026-03-01 19:34:34.418709-03:00)
+INFO:apscheduler.executors.default:Job "Monitor de Inatividade de Chat (trigger: interval[0:00:30], next run at: 2026-03-01 19:35:04 -03)" executed successfully
+INFO:apscheduler.executors.default:Running job "Monitor de Inatividade de Chat (trigger: interval[0:00:30], next run at: 2026-03-01 19:35:34 -03)" (scheduled at 2026-03-01 19:35:04.418709-03:00)
+INFO:apscheduler.executors.default:Job "Monitor de Inatividade de Chat (trigger: interval[0:00:30], next run at: 2026-03-01 19:35:34 -03)" executed successfully
+INFO:apscheduler.executors.default:Running job "Monitor de Inatividade de Chat (trigger: interval[0:00:30], next run at: 2026-03-01 19:36:04 -03)" (scheduled at 2026-03-01 19:35:34.418709-03:00)
+INFO:apscheduler.executors.default:Job "Monitor de Inatividade de Chat (trigger: interval[0:00:30], next run at: 2026-03-01 19:36:04 -03)" executed successfully
+INFO:apscheduler.executors.default:Running job "Monitor de Inatividade de Chat (trigger: interval[0:00:30], next run at: 2026-03-01 19:36:34 -03)" (scheduled at 2026-03-01 19:36:04.418709-03:00)
+INFO:apscheduler.executors.default:Job "Monitor de Inatividade de Chat (trigger: interval[0:00:30], next run at: 2026-03-01 19:36:34 -03)" executed successfully
+INFO:apscheduler.executors.default:Running job "Monitor de Inatividade de Chat (trigger: interval[0:00:30], next run at: 2026-03-01 19:37:04 -03)" (scheduled at 2026-03-01 19:36:34.418709-03:00)
+INFO:apscheduler.executors.default:Job "Monitor de Inatividade de Chat (trigger: interval[0:00:30], next run at: 2026-03-01 19:37:04 -03)" executed successfully
+INFO:apscheduler.executors.default:Running job "Monitor de Inatividade de Chat (trigger: interval[0:00:30], next run at: 2026-03-01 19:37:34 -03)" (scheduled at 2026-03-01 19:37:04.418709-03:00)
+INFO:apscheduler.executors.default:Job "Monitor de Inatividade de Chat (trigger: interval[0:00:30], next run at: 2026-03-01 19:37:34 -03)" executed successfully
+INFO:apscheduler.executors.default:Running job "Monitor de Inatividade de Chat (trigger: interval[0:00:30], next run at: 2026-03-01 19:38:04 -03)" (scheduled at 2026-03-01 19:37:34.418709-03:00)
+INFO:apscheduler.executors.default:Job "Monitor de Inatividade de Chat (trigger: interval[0:00:30], next run at: 2026-03-01 19:38:04 -03)" executed successfully
+INFO:apscheduler.executors.default:Running job "Monitor de Inatividade de Chat (trigger: interval[0:00:30], next run at: 2026-03-01 19:38:34 -03)" (scheduled at 2026-03-01 19:38:04.418709-03:00)
+INFO:apscheduler.executors.default:Job "Monitor de Inatividade de Chat (trigger: interval[0:00:30], next run at: 2026-03-01 19:38:34 -03)" executed successfully
+INFO:apscheduler.executors.default:Running job "Monitor de Inatividade de Chat (trigger: interval[0:00:30], next run at: 2026-03-01 19:39:04 -03)" (scheduled at 2026-03-01 19:38:34.418709-03:00)
+INFO:apscheduler.executors.default:Job "Monitor de Inatividade de Chat (trigger: interval[0:00:30], next run at: 2026-03-01 19:39:04 -03)" executed successfully
+INFO:apscheduler.executors.default:Running job "Monitor de Inatividade de Chat (trigger: interval[0:00:30], next run at: 2026-03-01 19:39:34 -03)" (scheduled at 2026-03-01 19:39:04.418709-03:00)
+INFO:apscheduler.executors.default:Job "Monitor de Inatividade de Chat (trigger: interval[0:00:30], next run at: 2026-03-01 19:39:34 -03)" executed successfully
+INFO:apscheduler.executors.default:Running job "Monitor de Inatividade de Chat (trigger: interval[0:00:30], next run at: 2026-03-01 19:40:04 -03)" (scheduled at 2026-03-01 19:39:34.418709-03:00)
+INFO:apscheduler.executors.default:Job "Monitor de Inatividade de Chat (trigger: interval[0:00:30], next run at: 2026-03-01 19:40:04 -03)" executed successfully
+INFO:apscheduler.executors.default:Running job "Monitor de Inatividade de Chat (trigger: interval[0:00:30], next run at: 2026-03-01 19:40:34 -03)" (scheduled at 2026-03-01 19:40:04.418709-03:00)
+INFO:apscheduler.executors.default:Job "Monitor de Inatividade de Chat (trigger: interval[0:00:30], next run at: 2026-03-01 19:40:34 -03)" executed successfully
+INFO:apscheduler.executors.default:Running job "Monitor de Inatividade de Chat (trigger: interval[0:00:30], next run at: 2026-03-01 19:41:04 -03)" (scheduled at 2026-03-01 19:40:34.418709-03:00)
+INFO:apscheduler.executors.default:Job "Monitor de Inatividade de Chat (trigger: interval[0:00:30], next run at: 2026-03-01 19:41:04 -03)" executed successfully
+INFO:apscheduler.executors.default:Running job "Monitor de Inatividade de Chat (trigger: interval[0:00:30], next run at: 2026-03-01 19:41:34 -03)" (scheduled at 2026-03-01 19:41:04.418709-03:00)
+INFO:apscheduler.executors.default:Job "Monitor de Inatividade de Chat (trigger: interval[0:00:30], next run at: 2026-03-01 19:41:34 -03)" executed successfully
+INFO:apscheduler.executors.default:Running job "Monitor de Inatividade de Chat (trigger: interval[0:00:30], next run at: 2026-03-01 19:42:04 -03)" (scheduled at 2026-03-01 19:41:34.418709-03:00)
+INFO:apscheduler.executors.default:Job "Monitor de Inatividade de Chat (trigger: interval[0:00:30], next run at: 2026-03-01 19:42:04 -03)" executed successfully
+...brutally killing workers...
+INFO:apscheduler.executors.default:Running job "Monitor de Inatividade de Chat (trigger: interval[0:00:30], next run at: 2026-03-01 19:42:34 -03)" (scheduled at 2026-03-01 19:42:04.418709-03:00)
+INFO:apscheduler.executors.default:Job "Monitor de Inatividade de Chat (trigger: interval[0:00:30], next run at: 2026-03-01 19:42:34 -03)" executed successfully
+INFO:apscheduler.executors.default:Running job "Monitor de Inatividade de Chat (trigger: interval[0:00:30], next run at: 2026-03-01 19:43:04 -03)" (scheduled at 2026-03-01 19:42:34.418709-03:00)
+INFO:apscheduler.executors.default:Job "Monitor de Inatividade de Chat (trigger: interval[0:00:30], next run at: 2026-03-01 19:43:04 -03)" executed successfully
+Sun Mar  1 19:42:36 2026 - worker 1 (pid: 559488) is taking too much time to die...NO MERCY !!!
+worker 1 buried after 1 seconds
+binary reloading uWSGI...
+chdir() to /etc/uwsgi/3.12/apps-enabled
+closing all non-uwsgi socket fds > 2 (max_fd = 1024)...
+found fd 3 mapped to socket 0 (/srv/appgestaoversuscombr.45a4cd4b.configr.cloud/etc/uwsgi/app.sock)
+running /var/www/.pyenv/versions/3.12.12/bin/uwsgi
+*** has_emperor mode detected (fd: 8) ***
+[uWSGI] getting INI configuration from appgestaoversuscombr.45a4cd4b.configr.cloud.ini
+*** Starting uWSGI 2.0.31 (64bit) on [Sun Mar  1 19:42:37 2026] ***
+compiled with version: 11.4.0 on 19 December 2025 22:17:41
+os: Linux-4.18.16-x86_64-linode118 #1 SMP PREEMPT Mon Oct 29 15:38:25 UTC 2018
+nodename: ip-69-164-205-75
+machine: x86_64
+clock source: unix
+pcre jit disabled
+detected number of CPU cores: 1
+current working directory: /etc/uwsgi/3.12/apps-enabled
+detected binary path: /var/www/.pyenv/versions/3.12.12/bin/uwsgi
+chdir() to /srv/appgestaoversuscombr.45a4cd4b.configr.cloud/www
+your processes number limit is 7892
+your memory page size is 4096 bytes
+detected max file descriptor number: 1024
+lock engine: pthread robust mutexes
+thunder lock: disabled (you can enable it with --thunder-lock)
+uwsgi socket 0 inherited UNIX address /srv/appgestaoversuscombr.45a4cd4b.configr.cloud/etc/uwsgi/app.sock fd 3
+Python version: 3.12.12 (main, Dec 19 2025, 19:15:44) [GCC 11.4.0]
+Python main interpreter initialized at 0x7f6775e18dd0
+python threads support enabled
+your server socket listen backlog is limited to 100 connections
+your mercy for graceful operations on workers is 60 seconds
+mapped 162224 bytes (158 KB) for 1 cores
+*** Operational MODE: single process ***
+added /srv/appgestaoversuscombr.45a4cd4b.configr.cloud/.virtualenv/3.12/lib/python3.12/site-packages/ to pythonpath.
+added /srv/appgestaoversuscombr.45a4cd4b.configr.cloud/www/app32/ to pythonpath.
+DEBUG: Registering Jinja filters...
+DEBUG: Registering API resources...
+DEBUG: API resources registered.
+DEBUG: Registering blueprints...
+DEBUG: Blueprints registered.
+DEBUG: Checking DB connection and creating tables...
+DEBUG: DB tables verified/created successfully.
+DEBUG: Starting Engineering Service worker...
+[SQUAD ENGENHARIA] Monitorando sistema...
+DEBUG: Engineering Service worker started.
+DEBUG: Initializing Scheduler...
+INFO:services.scheduler_service:📅 Scheduler Service inicializado
+INFO:services.scheduler_service:🚀 Inicializando Scheduler Service...
+INFO:services.scheduler_service:🔧 Configurando jobs de rotina...
+INFO:apscheduler.scheduler:Adding job tentatively -- it will be properly scheduled when the scheduler starts
+INFO:services.scheduler_service:✅ Job 'process_daily_routines' adicionado: cron {'hour': 0, 'minute': 1, 'name': 'Processamento Diário de Rotinas'}
+INFO:apscheduler.scheduler:Adding job tentatively -- it will be properly scheduled when the scheduler starts
+INFO:services.scheduler_service:✅ Job 'check_overdue_tasks' adicionado: cron {'minute': 0, 'name': 'Verificação de Tarefas Atrasadas'}
+INFO:services.scheduler_service:✅ Jobs de rotina configurados!
+INFO:services.scheduler_service:🔧 Configurando jobs proativos do Sapiens...
+INFO:apscheduler.scheduler:Adding job tentatively -- it will be properly scheduled when the scheduler starts
+INFO:services.scheduler_service:✅ Job 'proactive_morning_summary' adicionado: cron {'hour': 8, 'minute': 0, 'name': 'Resumo Matinal Proativo (Telegram)'}
+INFO:services.scheduler_service:✅ Jobs proativos configurados!
+INFO:apscheduler.scheduler:Adding job tentatively -- it will be properly scheduled when the scheduler starts
+INFO:services.scheduler_service:✅ Job 'chat_timeout_monitor' adicionado: interval {'seconds': 30, 'name': 'Monitor de Inatividade de Chat'}
+INFO:services.scheduler_service:✅ Job de Timeout de Chat configurado!
+INFO:apscheduler.scheduler:Added job "Processamento Diário de Rotinas" to job store "default"
+INFO:apscheduler.scheduler:Added job "Verificação de Tarefas Atrasadas" to job store "default"
+INFO:apscheduler.scheduler:Added job "Resumo Matinal Proativo (Telegram)" to job store "default"
+INFO:apscheduler.scheduler:Added job "Monitor de Inatividade de Chat" to job store "default"
+INFO:apscheduler.scheduler:Scheduler started
+INFO:services.scheduler_service:✅ Scheduler iniciado com sucesso
+INFO:services.scheduler_service:📋 Jobs agendados: 4
+INFO:services.scheduler_service:  - chat_timeout_monitor: próxima execução em 2026-03-01 19:43:14.430572-03:00
+INFO:services.scheduler_service:  - check_overdue_tasks: próxima execução em 2026-03-01 20:00:00-03:00
+INFO:services.scheduler_service:  - process_daily_routines: próxima execução em 2026-03-02 00:01:00-03:00
+INFO:services.scheduler_service:  - proactive_morning_summary: próxima execução em 2026-03-02 08:00:00-03:00
+INFO:services.scheduler_service:================================================================================
+INFO:services.scheduler_service:✅ SCHEDULER ATIVO E FUNCIONANDO!
+INFO:services.scheduler_service:================================================================================
+DEBUG: Scheduler initialized.
+DEBUG: create_app() finished successfully.
+WSGI app 0 (mountpoint='') ready in 6 seconds on interpreter 0x7f6775e18dd0 pid: 546491 (default app)
+*** uWSGI is running in multiple interpreter mode ***
+gracefully (RE)spawned uWSGI master process (pid: 546491)
+spawned uWSGI worker 1 (pid: 571826, cores: 1)
+*** Stats server enabled on /srv/appgestaoversuscombr.45a4cd4b.configr.cloud/etc/uwsgi/stats fd: 13 ***
+INFO:api.webhooks.telegram_webhook:Mensagem recebida do Telegram ID 8507771166: oi
+INFO:src.intelligence.memory:LangGraph: ConnectionPool (Postgres) inicializado com sucesso.
+INFO:api.webhooks.telegram_webhook:Enviando para LangGraph (SQL) na thread tg_8507771166...
+INFO:httpx:HTTP Request: POST https://api.openai.com/v1/chat/completions "HTTP/1.1 200 OK"
+--- SUPERVISOR DECISION: sapiens ---
+--- GRAPH ROUTING: Decision 'sapiens' -> Node 'sapiens' ---
+INFO:httpx:HTTP Request: POST https://api.openai.com/v1/chat/completions "HTTP/1.1 200 OK"
+--- SUPERVISOR: Resposta final do especialista recebida, encerrando fluxo. ---
+--- GRAPH ROUTING: Decision 'end' -> Node '__end__' ---
+Sun Mar  1 19:42:48 2026 - SIGPIPE: writing to a closed pipe/socket/fd (probably the client disconnected) on request /webhook/telegram (ip 91.108.5.35) !!!
+Sun Mar  1 19:42:48 2026 - uwsgi_response_write_headers_do(): Broken pipe [core/writer.c line 248] during POST /webhook/telegram (91.108.5.35)
+OSError: write error
+[pid: 571826|app: 0|req: 1/1] 91.108.5.35 () {38 vars in 550 bytes} [Sun Mar  1 19:42:44 2026] POST /webhook/telegram => generated 0 bytes in 4110 msecs (HTTP/1.1 200) 4 headers in 0 bytes (0 switches on core 0)
+announcing my loyalty to the Emperor...
+INFO:api.webhooks.telegram_webhook:Mensagem recebida do Telegram ID 8507771166: oi
+INFO:api.webhooks.telegram_webhook:Enviando para LangGraph (SQL) na thread tg_8507771166...
+INFO:httpx:HTTP Request: POST https://api.openai.com/v1/chat/completions "HTTP/1.1 200 OK"
+--- SUPERVISOR DECISION: sapiens ---
+--- GRAPH ROUTING: Decision 'sapiens' -> Node 'sapiens' ---
+INFO:httpx:HTTP Request: POST https://api.openai.com/v1/chat/completions "HTTP/1.1 200 OK"
+--- SUPERVISOR: Resposta final do especialista recebida, encerrando fluxo. ---
+--- GRAPH ROUTING: Decision 'end' -> Node '__end__' ---
+Sun Mar  1 19:42:50 2026 - SIGPIPE: writing to a closed pipe/socket/fd (probably the client disconnected) on request /webhook/telegram (ip 91.108.5.35) !!!
+Sun Mar  1 19:42:50 2026 - uwsgi_response_write_headers_do(): Broken pipe [core/writer.c line 248] during POST /webhook/telegram (91.108.5.35)
+OSError: write error
+[pid: 571826|app: 0|req: 2/2] 91.108.5.35 () {38 vars in 550 bytes} [Sun Mar  1 19:42:48 2026] POST /webhook/telegram => generated 0 bytes in 2088 msecs (HTTP/1.1 200) 4 headers in 0 bytes (0 switches on core 0)
+INFO:api.webhooks.telegram_webhook:Mensagem recebida do Telegram ID 8507771166: oi
+INFO:api.webhooks.telegram_webhook:Enviando para LangGraph (SQL) na thread tg_8507771166...
+INFO:httpx:HTTP Request: POST https://api.openai.com/v1/chat/completions "HTTP/1.1 200 OK"
+--- SUPERVISOR DECISION: sapiens ---
+--- GRAPH ROUTING: Decision 'sapiens' -> Node 'sapiens' ---
+INFO:httpx:HTTP Request: POST https://api.openai.com/v1/chat/completions "HTTP/1.1 200 OK"
+--- SUPERVISOR: Resposta final do especialista recebida, encerrando fluxo. ---
+--- GRAPH ROUTING: Decision 'end' -> Node '__end__' ---
+Sun Mar  1 19:42:53 2026 - SIGPIPE: writing to a closed pipe/socket/fd (probably the client disconnected) on request /webhook/telegram (ip 91.108.5.35) !!!
+Sun Mar  1 19:42:53 2026 - uwsgi_response_write_headers_do(): Broken pipe [core/writer.c line 248] during POST /webhook/telegram (91.108.5.35)
+OSError: write error
+[pid: 571826|app: 0|req: 3/3] 91.108.5.35 () {38 vars in 550 bytes} [Sun Mar  1 19:42:50 2026] POST /webhook/telegram => generated 0 bytes in 2829 msecs (HTTP/1.1 200) 4 headers in 0 bytes (0 switches on core 0)
+INFO:api.webhooks.telegram_webhook:Mensagem recebida do Telegram ID 8507771166: oi
+INFO:api.webhooks.telegram_webhook:Enviando para LangGraph (SQL) na thread tg_8507771166...
+INFO:httpx:HTTP Request: POST https://api.openai.com/v1/chat/completions "HTTP/1.1 200 OK"
+--- SUPERVISOR DECISION: sapiens ---
+--- GRAPH ROUTING: Decision 'sapiens' -> Node 'sapiens' ---
+INFO:httpx:HTTP Request: POST https://api.openai.com/v1/chat/completions "HTTP/1.1 200 OK"
+--- SUPERVISOR: Resposta final do especialista recebida, encerrando fluxo. ---
+--- GRAPH ROUTING: Decision 'end' -> Node '__end__' ---
+Sun Mar  1 19:42:55 2026 - SIGPIPE: writing to a closed pipe/socket/fd (probably the client disconnected) on request /webhook/telegram (ip 91.108.5.35) !!!
+Sun Mar  1 19:42:55 2026 - uwsgi_response_write_headers_do(): Broken pipe [core/writer.c line 248] during POST /webhook/telegram (91.108.5.35)
+OSError: write error
+[pid: 571826|app: 0|req: 4/4] 91.108.5.35 () {38 vars in 550 bytes} [Sun Mar  1 19:42:53 2026] POST /webhook/telegram => generated 0 bytes in 1956 msecs (HTTP/1.1 200) 4 headers in 0 bytes (0 switches on core 0)
+INFO:api.webhooks.telegram_webhook:Mensagem recebida do Telegram ID 8507771166: oi
+INFO:api.webhooks.telegram_webhook:Enviando para LangGraph (SQL) na thread tg_8507771166...
+INFO:httpx:HTTP Request: POST https://api.openai.com/v1/chat/completions "HTTP/1.1 200 OK"
+--- SUPERVISOR DECISION: sapiens ---
+--- GRAPH ROUTING: Decision 'sapiens' -> Node 'sapiens' ---
+INFO:httpx:HTTP Request: POST https://api.openai.com/v1/chat/completions "HTTP/1.1 200 OK"
+--- SUPERVISOR: Resposta final do especialista recebida, encerrando fluxo. ---
+--- GRAPH ROUTING: Decision 'end' -> Node '__end__' ---
+Sun Mar  1 19:42:57 2026 - SIGPIPE: writing to a closed pipe/socket/fd (probably the client disconnected) on request /webhook/telegram (ip 91.108.5.35) !!!
+Sun Mar  1 19:42:57 2026 - uwsgi_response_write_headers_do(): Broken pipe [core/writer.c line 248] during POST /webhook/telegram (91.108.5.35)
+OSError: write error
+[pid: 571826|app: 0|req: 5/5] 91.108.5.35 () {38 vars in 550 bytes} [Sun Mar  1 19:42:55 2026] POST /webhook/telegram => generated 0 bytes in 1669 msecs (HTTP/1.1 200) 4 headers in 0 bytes (0 switches on core 0)
+INFO:api.webhooks.telegram_webhook:Mensagem recebida do Telegram ID 8507771166: oi
+INFO:api.webhooks.telegram_webhook:Enviando para LangGraph (SQL) na thread tg_8507771166...
+INFO:httpx:HTTP Request: POST https://api.openai.com/v1/chat/completions "HTTP/1.1 200 OK"
+--- SUPERVISOR DECISION: sapiens ---
+--- GRAPH ROUTING: Decision 'sapiens' -> Node 'sapiens' ---
+INFO:httpx:HTTP Request: POST https://api.openai.com/v1/chat/completions "HTTP/1.1 200 OK"
+--- SUPERVISOR: Resposta final do especialista recebida, encerrando fluxo. ---
+--- GRAPH ROUTING: Decision 'end' -> Node '__end__' ---
+Sun Mar  1 19:42:59 2026 - SIGPIPE: writing to a closed pipe/socket/fd (probably the client disconnected) on request /webhook/telegram (ip 91.108.5.35) !!!
+Sun Mar  1 19:42:59 2026 - uwsgi_response_write_headers_do(): Broken pipe [core/writer.c line 248] during POST /webhook/telegram (91.108.5.35)
+OSError: write error
+[pid: 571826|app: 0|req: 6/6] 91.108.5.35 () {38 vars in 550 bytes} [Sun Mar  1 19:42:57 2026] POST /webhook/telegram => generated 0 bytes in 2529 msecs (HTTP/1.1 200) 4 headers in 0 bytes (0 switches on core 0)
+INFO:api.webhooks.telegram_webhook:Mensagem recebida do Telegram ID 8507771166: oi
+INFO:api.webhooks.telegram_webhook:Enviando para LangGraph (SQL) na thread tg_8507771166...
+INFO:httpx:HTTP Request: POST https://api.openai.com/v1/chat/completions "HTTP/1.1 200 OK"
+--- SUPERVISOR DECISION: sapiens ---
+--- GRAPH ROUTING: Decision 'sapiens' -> Node 'sapiens' ---
+INFO:httpx:HTTP Request: POST https://api.openai.com/v1/chat/completions "HTTP/1.1 200 OK"
+--- SUPERVISOR: Resposta final do especialista recebida, encerrando fluxo. ---
+--- GRAPH ROUTING: Decision 'end' -> Node '__end__' ---
+Sun Mar  1 19:43:01 2026 - SIGPIPE: writing to a closed pipe/socket/fd (probably the client disconnected) on request /webhook/telegram (ip 91.108.5.35) !!!
+Sun Mar  1 19:43:01 2026 - uwsgi_response_write_headers_do(): Broken pipe [core/writer.c line 248] during POST /webhook/telegram (91.108.5.35)
+OSError: write error
+[pid: 571826|app: 0|req: 7/7] 91.108.5.35 () {38 vars in 550 bytes} [Sun Mar  1 19:42:59 2026] POST /webhook/telegram => generated 0 bytes in 1743 msecs (HTTP/1.1 200) 4 headers in 0 bytes (0 switches on core 0)
+INFO:api.webhooks.telegram_webhook:Mensagem recebida do Telegram ID 8507771166: oi
+INFO:api.webhooks.telegram_webhook:Enviando para LangGraph (SQL) na thread tg_8507771166...
+INFO:httpx:HTTP Request: POST https://api.openai.com/v1/chat/completions "HTTP/1.1 200 OK"
+--- SUPERVISOR DECISION: sapiens ---
+--- GRAPH ROUTING: Decision 'sapiens' -> Node 'sapiens' ---
+INFO:httpx:HTTP Request: POST https://api.openai.com/v1/chat/completions "HTTP/1.1 200 OK"
+--- SUPERVISOR: Resposta final do especialista recebida, encerrando fluxo. ---
+--- GRAPH ROUTING: Decision 'end' -> Node '__end__' ---
+Sun Mar  1 19:43:03 2026 - SIGPIPE: writing to a closed pipe/socket/fd (probably the client disconnected) on request /webhook/telegram (ip 91.108.5.35) !!!
+Sun Mar  1 19:43:03 2026 - uwsgi_response_write_headers_do(): Broken pipe [core/writer.c line 248] during POST /webhook/telegram (91.108.5.35)
+OSError: write error
+[pid: 571826|app: 0|req: 8/8] 91.108.5.35 () {38 vars in 550 bytes} [Sun Mar  1 19:43:01 2026] POST /webhook/telegram => generated 0 bytes in 2514 msecs (HTTP/1.1 200) 4 headers in 0 bytes (0 switches on core 0)
+INFO:api.webhooks.telegram_webhook:Mensagem recebida do Telegram ID 8507771166: oi
+INFO:api.webhooks.telegram_webhook:Enviando para LangGraph (SQL) na thread tg_8507771166...
+INFO:httpx:HTTP Request: POST https://api.openai.com/v1/chat/completions "HTTP/1.1 200 OK"
+--- SUPERVISOR DECISION: sapiens ---
+--- GRAPH ROUTING: Decision 'sapiens' -> Node 'sapiens' ---
+INFO:httpx:HTTP Request: POST https://api.openai.com/v1/chat/completions "HTTP/1.1 200 OK"
+--- SUPERVISOR: Resposta final do especialista recebida, encerrando fluxo. ---
+--- GRAPH ROUTING: Decision 'end' -> Node '__end__' ---
+Sun Mar  1 19:43:06 2026 - SIGPIPE: writing to a closed pipe/socket/fd (probably the client disconnected) on request /webhook/telegram (ip 91.108.5.35) !!!
+Sun Mar  1 19:43:06 2026 - uwsgi_response_write_headers_do(): Broken pipe [core/writer.c line 248] during POST /webhook/telegram (91.108.5.35)
+OSError: write error
+[pid: 571826|app: 0|req: 9/9] 91.108.5.35 () {38 vars in 550 bytes} [Sun Mar  1 19:43:03 2026] POST /webhook/telegram => generated 0 bytes in 2371 msecs (HTTP/1.1 200) 4 headers in 0 bytes (0 switches on core 0)
+INFO:api.webhooks.telegram_webhook:Mensagem recebida do Telegram ID 8507771166: oi
+INFO:api.webhooks.telegram_webhook:Enviando para LangGraph (SQL) na thread tg_8507771166...
+INFO:httpx:HTTP Request: POST https://api.openai.com/v1/chat/completions "HTTP/1.1 200 OK"
+--- SUPERVISOR DECISION: sapiens ---
+--- GRAPH ROUTING: Decision 'sapiens' -> Node 'sapiens' ---
+INFO:httpx:HTTP Request: POST https://api.openai.com/v1/chat/completions "HTTP/1.1 200 OK"
+--- SUPERVISOR: Resposta final do especialista recebida, encerrando fluxo. ---
+--- GRAPH ROUTING: Decision 'end' -> Node '__end__' ---
+Sun Mar  1 19:43:09 2026 - SIGPIPE: writing to a closed pipe/socket/fd (probably the client disconnected) on request /webhook/telegram (ip 91.108.5.35) !!!
+Sun Mar  1 19:43:09 2026 - uwsgi_response_write_headers_do(): Broken pipe [core/writer.c line 248] during POST /webhook/telegram (91.108.5.35)
+OSError: write error
+[pid: 571826|app: 0|req: 10/10] 91.108.5.35 () {38 vars in 550 bytes} [Sun Mar  1 19:43:06 2026] POST /webhook/telegram => generated 0 bytes in 2762 msecs (HTTP/1.1 200) 4 headers in 0 bytes (0 switches on core 0)
+INFO:api.webhooks.telegram_webhook:Mensagem recebida do Telegram ID 8507771166: oi
+INFO:api.webhooks.telegram_webhook:Enviando para LangGraph (SQL) na thread tg_8507771166...
+INFO:httpx:HTTP Request: POST https://api.openai.com/v1/chat/completions "HTTP/1.1 200 OK"
+--- SUPERVISOR DECISION: sapiens ---
+--- GRAPH ROUTING: Decision 'sapiens' -> Node 'sapiens' ---
+INFO:httpx:HTTP Request: POST https://api.openai.com/v1/chat/completions "HTTP/1.1 200 OK"
+--- SUPERVISOR: Resposta final do especialista recebida, encerrando fluxo. ---
+--- GRAPH ROUTING: Decision 'end' -> Node '__end__' ---
+Sun Mar  1 19:43:13 2026 - SIGPIPE: writing to a closed pipe/socket/fd (probably the client disconnected) on request /webhook/telegram (ip 91.108.5.35) !!!
+Sun Mar  1 19:43:13 2026 - uwsgi_response_write_headers_do(): Broken pipe [core/writer.c line 248] during POST /webhook/telegram (91.108.5.35)
+OSError: write error
+[pid: 571826|app: 0|req: 11/11] 91.108.5.35 () {38 vars in 550 bytes} [Sun Mar  1 19:43:09 2026] POST /webhook/telegram => generated 0 bytes in 4233 msecs (HTTP/1.1 200) 4 headers in 0 bytes (0 switches on core 0)
+INFO:api.webhooks.telegram_webhook:Mensagem recebida do Telegram ID 8507771166: oi
+INFO:api.webhooks.telegram_webhook:Enviando para LangGraph (SQL) na thread tg_8507771166...
+INFO:apscheduler.executors.default:Running job "Monitor de Inatividade de Chat (trigger: interval[0:00:30], next run at: 2026-03-01 19:43:14 -03)" (scheduled at 2026-03-01 19:43:14.430572-03:00)
+INFO:apscheduler.executors.default:Job "Monitor de Inatividade de Chat (trigger: interval[0:00:30], next run at: 2026-03-01 19:43:44 -03)" executed successfully
+INFO:httpx:HTTP Request: POST https://api.openai.com/v1/chat/completions "HTTP/1.1 200 OK"
+--- SUPERVISOR DECISION: sapiens ---
+--- GRAPH ROUTING: Decision 'sapiens' -> Node 'sapiens' ---
+INFO:httpx:HTTP Request: POST https://api.openai.com/v1/chat/completions "HTTP/1.1 200 OK"
+--- SUPERVISOR: Resposta final do especialista recebida, encerrando fluxo. ---
+--- GRAPH ROUTING: Decision 'end' -> Node '__end__' ---
+Sun Mar  1 19:43:15 2026 - SIGPIPE: writing to a closed pipe/socket/fd (probably the client disconnected) on request /webhook/telegram (ip 91.108.5.35) !!!
+Sun Mar  1 19:43:15 2026 - uwsgi_response_write_headers_do(): Broken pipe [core/writer.c line 248] during POST /webhook/telegram (91.108.5.35)
+OSError: write error
+[pid: 571826|app: 0|req: 12/12] 91.108.5.35 () {38 vars in 550 bytes} [Sun Mar  1 19:43:13 2026] POST /webhook/telegram => generated 0 bytes in 2557 msecs (HTTP/1.1 200) 4 headers in 0 bytes (0 switches on core 0)
+INFO:api.webhooks.telegram_webhook:Mensagem recebida do Telegram ID 8507771166: oi
+INFO:api.webhooks.telegram_webhook:Enviando para LangGraph (SQL) na thread tg_8507771166...
+INFO:httpx:HTTP Request: POST https://api.openai.com/v1/chat/completions "HTTP/1.1 200 OK"
+--- SUPERVISOR DECISION: sapiens ---
+--- GRAPH ROUTING: Decision 'sapiens' -> Node 'sapiens' ---
+INFO:httpx:HTTP Request: POST https://api.openai.com/v1/chat/completions "HTTP/1.1 200 OK"
+--- SUPERVISOR: Resposta final do especialista recebida, encerrando fluxo. ---
+--- GRAPH ROUTING: Decision 'end' -> Node '__end__' ---
+Sun Mar  1 19:43:18 2026 - SIGPIPE: writing to a closed pipe/socket/fd (probably the client disconnected) on request /webhook/telegram (ip 91.108.5.35) !!!
+Sun Mar  1 19:43:18 2026 - uwsgi_response_write_headers_do(): Broken pipe [core/writer.c line 248] during POST /webhook/telegram (91.108.5.35)
+OSError: write error
+[pid: 571826|app: 0|req: 13/13] 91.108.5.35 () {38 vars in 550 bytes} [Sun Mar  1 19:43:15 2026] POST /webhook/telegram => generated 0 bytes in 2991 msecs (HTTP/1.1 200) 4 headers in 0 bytes (0 switches on core 0)
+INFO:api.webhooks.telegram_webhook:Mensagem recebida do Telegram ID 8507771166: oi
+INFO:api.webhooks.telegram_webhook:Enviando para LangGraph (SQL) na thread tg_8507771166...
+INFO:httpx:HTTP Request: POST https://api.openai.com/v1/chat/completions "HTTP/1.1 200 OK"
+--- SUPERVISOR DECISION: sapiens ---
+--- GRAPH ROUTING: Decision 'sapiens' -> Node 'sapiens' ---
+INFO:httpx:HTTP Request: POST https://api.openai.com/v1/chat/completions "HTTP/1.1 200 OK"
+--- SUPERVISOR: Resposta final do especialista recebida, encerrando fluxo. ---
+--- GRAPH ROUTING: Decision 'end' -> Node '__end__' ---
+Sun Mar  1 19:43:21 2026 - SIGPIPE: writing to a closed pipe/socket/fd (probably the client disconnected) on request /webhook/telegram (ip 91.108.5.35) !!!
+Sun Mar  1 19:43:21 2026 - uwsgi_response_write_headers_do(): Broken pipe [core/writer.c line 248] during POST /webhook/telegram (91.108.5.35)
+OSError: write error
+[pid: 571826|app: 0|req: 14/14] 91.108.5.35 () {38 vars in 550 bytes} [Sun Mar  1 19:43:18 2026] POST /webhook/telegram => generated 0 bytes in 2222 msecs (HTTP/1.1 200) 4 headers in 0 bytes (0 switches on core 0)
+INFO:api.webhooks.telegram_webhook:Mensagem recebida do Telegram ID 8507771166: oi
+INFO:api.webhooks.telegram_webhook:Enviando para LangGraph (SQL) na thread tg_8507771166...
+INFO:httpx:HTTP Request: POST https://api.openai.com/v1/chat/completions "HTTP/1.1 200 OK"
+--- GRAPH ROUTING: Decision 'end' -> Node '__end__' ---
+Sun Mar  1 19:43:22 2026 - SIGPIPE: writing to a closed pipe/socket/fd (probably the client disconnected) on request /webhook/telegram (ip 91.108.5.35) !!!
+Sun Mar  1 19:43:22 2026 - uwsgi_response_write_headers_do(): Broken pipe [core/writer.c line 248] during POST /webhook/telegram (91.108.5.35)
+OSError: write error
+[pid: 571826|app: 0|req: 15/15] 91.108.5.35 () {38 vars in 550 bytes} [Sun Mar  1 19:43:21 2026] POST /webhook/telegram => generated 0 bytes in 1333 msecs (HTTP/1.1 200) 4 headers in 0 bytes (0 switches on core 0)
+INFO:api.webhooks.telegram_webhook:Mensagem recebida do Telegram ID 8507771166: oi
+INFO:api.webhooks.telegram_webhook:Enviando para LangGraph (SQL) na thread tg_8507771166...
+INFO:httpx:HTTP Request: POST https://api.openai.com/v1/chat/completions "HTTP/1.1 200 OK"
+--- GRAPH ROUTING: Decision 'end' -> Node '__end__' ---
+Sun Mar  1 19:43:23 2026 - SIGPIPE: writing to a closed pipe/socket/fd (probably the client disconnected) on request /webhook/telegram (ip 91.108.5.35) !!!
+Sun Mar  1 19:43:23 2026 - uwsgi_response_write_headers_do(): Broken pipe [core/writer.c line 248] during POST /webhook/telegram (91.108.5.35)
+OSError: write error
+[pid: 571826|app: 0|req: 16/16] 91.108.5.35 () {38 vars in 550 bytes} [Sun Mar  1 19:43:22 2026] POST /webhook/telegram => generated 0 bytes in 1228 msecs (HTTP/1.1 200) 4 headers in 0 bytes (0 switches on core 0)
+INFO:api.webhooks.telegram_webhook:Mensagem recebida do Telegram ID 8507771166: oi
+INFO:api.webhooks.telegram_webhook:Enviando para LangGraph (SQL) na thread tg_8507771166...
+INFO:httpx:HTTP Request: POST https://api.openai.com/v1/chat/completions "HTTP/1.1 200 OK"
+--- GRAPH ROUTING: Decision 'end' -> Node '__end__' ---
+Sun Mar  1 19:43:24 2026 - SIGPIPE: writing to a closed pipe/socket/fd (probably the client disconnected) on request /webhook/telegram (ip 91.108.5.35) !!!
+Sun Mar  1 19:43:24 2026 - uwsgi_response_write_headers_do(): Broken pipe [core/writer.c line 248] during POST /webhook/telegram (91.108.5.35)
+OSError: write error
+[pid: 571826|app: 0|req: 17/17] 91.108.5.35 () {38 vars in 550 bytes} [Sun Mar  1 19:43:23 2026] POST /webhook/telegram => generated 0 bytes in 1393 msecs (HTTP/1.1 200) 4 headers in 0 bytes (0 switches on core 0)
+INFO:api.webhooks.telegram_webhook:Mensagem recebida do Telegram ID 8507771166: oi
+INFO:api.webhooks.telegram_webhook:Enviando para LangGraph (SQL) na thread tg_8507771166...
+INFO:httpx:HTTP Request: POST https://api.openai.com/v1/chat/completions "HTTP/1.1 200 OK"
+--- GRAPH ROUTING: Decision 'end' -> Node '__end__' ---
+Sun Mar  1 19:43:26 2026 - SIGPIPE: writing to a closed pipe/socket/fd (probably the client disconnected) on request /webhook/telegram (ip 91.108.5.35) !!!
+Sun Mar  1 19:43:26 2026 - uwsgi_response_write_headers_do(): Broken pipe [core/writer.c line 248] during POST /webhook/telegram (91.108.5.35)
+OSError: write error
+[pid: 571826|app: 0|req: 18/18] 91.108.5.35 () {38 vars in 550 bytes} [Sun Mar  1 19:43:24 2026] POST /webhook/telegram => generated 0 bytes in 1379 msecs (HTTP/1.1 200) 4 headers in 0 bytes (0 switches on core 0)
+INFO:api.webhooks.telegram_webhook:Mensagem recebida do Telegram ID 8507771166: oi
+INFO:api.webhooks.telegram_webhook:Enviando para LangGraph (SQL) na thread tg_8507771166...
+INFO:httpx:HTTP Request: POST https://api.openai.com/v1/chat/completions "HTTP/1.1 200 OK"
+--- GRAPH ROUTING: Decision 'end' -> Node '__end__' ---
+Sun Mar  1 19:43:27 2026 - SIGPIPE: writing to a closed pipe/socket/fd (probably the client disconnected) on request /webhook/telegram (ip 91.108.5.35) !!!
+Sun Mar  1 19:43:27 2026 - uwsgi_response_write_headers_do(): Broken pipe [core/writer.c line 248] during POST /webhook/telegram (91.108.5.35)
+OSError: write error
+[pid: 571826|app: 0|req: 19/19] 91.108.5.35 () {38 vars in 550 bytes} [Sun Mar  1 19:43:26 2026] POST /webhook/telegram => generated 0 bytes in 1280 msecs (HTTP/1.1 200) 4 headers in 0 bytes (0 switches on core 0)
+Sun Mar  1 19:43:27 2026 - SIGPIPE: writing to a closed pipe/socket/fd (probably the client disconnected) on request /api/agents/history?contact=sapiens (ip 2804:214:400a:23a4:8cc8:d6a:30e1:2551) !!!
+Sun Mar  1 19:43:27 2026 - uwsgi_response_writev_headers_and_body_do(): Broken pipe [core/writer.c line 306] during GET /api/agents/history?contact=sapiens (2804:214:400a:23a4:8cc8:d6a:30e1:2551)
+OSError: write error
+[pid: 571826|app: 0|req: 20/20] 2804:214:400a:23a4:8cc8:d6a:30e1:2551 () {52 vars in 1129 bytes} [Sun Mar  1 19:43:27 2026] GET /api/agents/history?contact=sapiens => generated 0 bytes in 8 msecs (HTTP/2.0 200) 4 headers in 0 bytes (0 switches on core 0)
+--- CHAT: Inicializando nova thread SQL para user_3_sapiens ---
+INFO:httpx:HTTP Request: POST https://api.openai.com/v1/chat/completions "HTTP/1.1 200 OK"
+--- SUPERVISOR DECISION: operations ---
+--- GRAPH ROUTING: Decision 'operations' -> Node 'operations' ---
+INFO:httpx:HTTP Request: POST https://api.openai.com/v1/chat/completions "HTTP/1.1 200 OK"
+--- SUPERVISOR: Ferramenta executada, devolvendo ao especialista para conclusão. ---
+INFO:httpx:HTTP Request: POST https://api.openai.com/v1/chat/completions "HTTP/1.1 200 OK"
+--- SUPERVISOR DECISION: operations ---
+--- GRAPH ROUTING: Decision 'operations' -> Node 'operations' ---
+INFO:httpx:HTTP Request: POST https://api.openai.com/v1/chat/completions "HTTP/1.1 200 OK"
+DEBUG: CLOUD_SQL_CONNECTION_NAME='None'
+DEBUG: Using standard DATABASE_URL connection
+INFO:services.my_work.discovery_service:🔍 Discovery [scope=me]: user=3, role=admin, target_companies=[7]
+INFO:services.my_work.discovery_service:📊 Raw Discovery: Found 34 total activities across all allowed companies.
+--- SUPERVISOR: Ferramenta executada, devolvendo ao especialista para conclusão. ---
+INFO:httpx:HTTP Request: POST https://api.openai.com/v1/chat/completions "HTTP/1.1 200 OK"
+--- SUPERVISOR DECISION: operations ---
+--- GRAPH ROUTING: Decision 'operations' -> Node 'operations' ---
+INFO:httpx:HTTP Request: POST https://api.openai.com/v1/chat/completions "HTTP/1.1 200 OK"
+INFO:services.whatsapp_service:Z-API configuration incomplete
+--- SUPERVISOR: Ferramenta executada, devolvendo ao especialista para conclusão. ---
+INFO:httpx:HTTP Request: POST https://api.openai.com/v1/chat/completions "HTTP/1.1 200 OK"
+--- SUPERVISOR DECISION: engineering ---
+--- GRAPH ROUTING: Decision 'engineering' -> Node 'engineering' ---
+INFO:httpx:HTTP Request: POST https://api.openai.com/v1/chat/completions "HTTP/1.1 429 Too Many Requests"
+INFO:openai._base_client:Retrying request to /chat/completions in 0.738000 seconds
+INFO:httpx:HTTP Request: POST https://api.openai.com/v1/chat/completions "HTTP/1.1 429 Too Many Requests"
+INFO:openai._base_client:Retrying request to /chat/completions in 0.738000 seconds
+INFO:httpx:HTTP Request: POST https://api.openai.com/v1/chat/completions "HTTP/1.1 429 Too Many Requests"
+ERROR:src.intelligence.memory:Erro ao utilizar o checkpointer Postgres: Error code: 429 - {'error': {'message': 'Rate limit reached for gpt-4o in organization org-TFC2M3NrIYM6nfy7o6yDWllw on tokens per min (TPM): Limit 30000, Used 30000, Requested 369. Please try again in 738ms. Visit https://platform.openai.com/account/rate-limits to learn more.', 'type': 'tokens', 'param': None, 'code': 'rate_limit_exceeded'}}. Usando fallback em memória.
+Traceback (most recent call last):
+  File "/srv/appgestaoversuscombr.45a4cd4b.configr.cloud/www/app32/src/intelligence/memory.py", line 42, in get_checkpointer
+    yield PostgresSaver(conn)
+  File "/srv/appgestaoversuscombr.45a4cd4b.configr.cloud/www/app32/api/routes/agents.py", line 115, in agents_chat
+    result = graph.invoke(inputs, config=config)
+             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/srv/appgestaoversuscombr.45a4cd4b.configr.cloud/.virtualenv/3.12/lib/python3.12/site-packages/langgraph/pregel/__init__.py", line 1617, in invoke
+    for chunk in self.stream(
+                 ^^^^^^^^^^^^
+  File "/srv/appgestaoversuscombr.45a4cd4b.configr.cloud/.virtualenv/3.12/lib/python3.12/site-packages/langgraph/pregel/__init__.py", line 1303, in stream
+    _panic_or_proceed(all_futures, loop.step)
+  File "/srv/appgestaoversuscombr.45a4cd4b.configr.cloud/.virtualenv/3.12/lib/python3.12/site-packages/langgraph/pregel/__init__.py", line 1733, in _panic_or_proceed
+    raise exc
+  File "/srv/appgestaoversuscombr.45a4cd4b.configr.cloud/.virtualenv/3.12/lib/python3.12/site-packages/langgraph/pregel/executor.py", line 59, in done
+    task.result()
+  File "/var/www/.pyenv/versions/3.12.12/lib/python3.12/concurrent/futures/_base.py", line 449, in result
+    return self.__get_result()
+           ^^^^^^^^^^^^^^^^^^^
+  File "/var/www/.pyenv/versions/3.12.12/lib/python3.12/concurrent/futures/_base.py", line 401, in __get_result
+    raise self._exception
+  File "/var/www/.pyenv/versions/3.12.12/lib/python3.12/concurrent/futures/thread.py", line 59, in run
+    result = self.fn(*self.args, **self.kwargs)
+             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/srv/appgestaoversuscombr.45a4cd4b.configr.cloud/.virtualenv/3.12/lib/python3.12/site-packages/langgraph/pregel/retry.py", line 26, in run_with_retry
+    task.proc.invoke(task.input, task.config)
+  File "/srv/appgestaoversuscombr.45a4cd4b.configr.cloud/.virtualenv/3.12/lib/python3.12/site-packages/langchain_core/runnables/base.py", line 2877, in invoke
+    input = context.run(step.invoke, input, config, **kwargs)
+            ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/srv/appgestaoversuscombr.45a4cd4b.configr.cloud/.virtualenv/3.12/lib/python3.12/site-packages/langgraph/utils.py", line 102, in invoke
+    ret = context.run(self.func, input, **kwargs)
+          ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/srv/appgestaoversuscombr.45a4cd4b.configr.cloud/www/app32/src/intelligence/work_agents/agents.py", line 201, in agent_node
+    response = model_with_tools.invoke([sys_msg] + messages)
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/srv/appgestaoversuscombr.45a4cd4b.configr.cloud/.virtualenv/3.12/lib/python3.12/site-packages/langchain_core/runnables/base.py", line 5093, in invoke
+    return self.bound.invoke(
+           ^^^^^^^^^^^^^^^^^^
+  File "/srv/appgestaoversuscombr.45a4cd4b.configr.cloud/.virtualenv/3.12/lib/python3.12/site-packages/langchain_core/language_models/chat_models.py", line 277, in invoke
+    self.generate_prompt(
+  File "/srv/appgestaoversuscombr.45a4cd4b.configr.cloud/.virtualenv/3.12/lib/python3.12/site-packages/langchain_core/language_models/chat_models.py", line 777, in generate_prompt
+    return self.generate(prompt_messages, stop=stop, callbacks=callbacks, **kwargs)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/srv/appgestaoversuscombr.45a4cd4b.configr.cloud/.virtualenv/3.12/lib/python3.12/site-packages/langchain_core/language_models/chat_models.py", line 634, in generate
+    raise e
+  File "/srv/appgestaoversuscombr.45a4cd4b.configr.cloud/.virtualenv/3.12/lib/python3.12/site-packages/langchain_core/language_models/chat_models.py", line 624, in generate
+    self._generate_with_cache(
+  File "/srv/appgestaoversuscombr.45a4cd4b.configr.cloud/.virtualenv/3.12/lib/python3.12/site-packages/langchain_core/language_models/chat_models.py", line 846, in _generate_with_cache
+    result = self._generate(
+             ^^^^^^^^^^^^^^^
+  File "/srv/appgestaoversuscombr.45a4cd4b.configr.cloud/.virtualenv/3.12/lib/python3.12/site-packages/langchain_openai/chat_models/base.py", line 686, in _generate
+    response = self.client.create(**payload)
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/srv/appgestaoversuscombr.45a4cd4b.configr.cloud/.virtualenv/3.12/lib/python3.12/site-packages/openai/_utils/_utils.py", line 286, in wrapper
+    return func(*args, **kwargs)
+           ^^^^^^^^^^^^^^^^^^^^^
+  File "/srv/appgestaoversuscombr.45a4cd4b.configr.cloud/.virtualenv/3.12/lib/python3.12/site-packages/openai/resources/chat/completions/completions.py", line 1147, in create
+    return self._post(
+           ^^^^^^^^^^^
+  File "/srv/appgestaoversuscombr.45a4cd4b.configr.cloud/.virtualenv/3.12/lib/python3.12/site-packages/openai/_base_client.py", line 1259, in post
+    return cast(ResponseT, self.request(cast_to, opts, stream=stream, stream_cls=stream_cls))
+                           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/srv/appgestaoversuscombr.45a4cd4b.configr.cloud/.virtualenv/3.12/lib/python3.12/site-packages/openai/_base_client.py", line 1047, in request
+    raise self._make_status_error_from_response(err.response) from None
+openai.RateLimitError: Error code: 429 - {'error': {'message': 'Rate limit reached for gpt-4o in organization org-TFC2M3NrIYM6nfy7o6yDWllw on tokens per min (TPM): Limit 30000, Used 30000, Requested 369. Please try again in 738ms. Visit https://platform.openai.com/account/rate-limits to learn more.', 'type': 'tokens', 'param': None, 'code': 'rate_limit_exceeded'}}
+
+During handling of the above exception, another exception occurred:
+
+Traceback (most recent call last):
+  File "/srv/appgestaoversuscombr.45a4cd4b.configr.cloud/www/app32/api/routes/agents.py", line 92, in agents_chat
+    with get_checkpointer() as checkpointer:
+         ^^^^^^^^^^^^^^^^^^
+  File "/var/www/.pyenv/versions/3.12.12/lib/python3.12/contextlib.py", line 194, in __exit__
+    raise RuntimeError("generator didn't stop after throw()")
+RuntimeError: generator didn't stop after throw()
+Sun Mar  1 19:43:33 2026 - SIGPIPE: writing to a closed pipe/socket/fd (probably the client disconnected) on request /api/agents/chat (ip 2804:214:400a:23a4:8cc8:d6a:30e1:2551) !!!
+Sun Mar  1 19:43:33 2026 - uwsgi_response_writev_headers_and_body_do(): Broken pipe [core/writer.c line 306] during POST /api/agents/chat (2804:214:400a:23a4:8cc8:d6a:30e1:2551)
+OSError: write error
+[pid: 571826|app: 0|req: 21/21] 2804:214:400a:23a4:8cc8:d6a:30e1:2551 () {58 vars in 1221 bytes} [Sun Mar  1 19:43:27 2026] POST /api/agents/chat => generated 0 bytes in 5603 msecs (HTTP/2.0 500) 4 headers in 0 bytes (0 switches on core 0)
+INFO:api.webhooks.telegram_webhook:Mensagem recebida do Telegram ID 8507771166: oi
+INFO:api.webhooks.telegram_webhook:Enviando para LangGraph (SQL) na thread tg_8507771166...
+INFO:httpx:HTTP Request: POST https://api.openai.com/v1/chat/completions "HTTP/1.1 200 OK"
+--- GRAPH ROUTING: Decision 'end' -> Node '__end__' ---
+Sun Mar  1 19:43:34 2026 - SIGPIPE: writing to a closed pipe/socket/fd (probably the client disconnected) on request /webhook/telegram (ip 91.108.5.35) !!!
+Sun Mar  1 19:43:34 2026 - uwsgi_response_write_headers_do(): Broken pipe [core/writer.c line 248] during POST /webhook/telegram (91.108.5.35)
+OSError: write error
+[pid: 571826|app: 0|req: 22/22] 91.108.5.35 () {38 vars in 550 bytes} [Sun Mar  1 19:43:33 2026] POST /webhook/telegram => generated 0 bytes in 1359 msecs (HTTP/1.1 200) 4 headers in 0 bytes (0 switches on core 0)
+INFO:api.webhooks.telegram_webhook:Mensagem recebida do Telegram ID 8507771166: oi
+INFO:api.webhooks.telegram_webhook:Enviando para LangGraph (SQL) na thread tg_8507771166...
+INFO:httpx:HTTP Request: POST https://api.openai.com/v1/chat/completions "HTTP/1.1 200 OK"
+--- GRAPH ROUTING: Decision 'end' -> Node '__end__' ---
+Sun Mar  1 19:43:35 2026 - SIGPIPE: writing to a closed pipe/socket/fd (probably the client disconnected) on request /webhook/telegram (ip 91.108.5.35) !!!
+Sun Mar  1 19:43:35 2026 - uwsgi_response_write_headers_do(): Broken pipe [core/writer.c line 248] during POST /webhook/telegram (91.108.5.35)
+OSError: write error
+[pid: 571826|app: 0|req: 23/23] 91.108.5.35 () {38 vars in 550 bytes} [Sun Mar  1 19:43:34 2026] POST /webhook/telegram => generated 0 bytes in 1265 msecs (HTTP/1.1 200) 4 headers in 0 bytes (0 switches on core 0)
+INFO:api.webhooks.telegram_webhook:Mensagem recebida do Telegram ID 8507771166: oi
+INFO:api.webhooks.telegram_webhook:Enviando para LangGraph (SQL) na thread tg_8507771166...
+INFO:httpx:HTTP Request: POST https://api.openai.com/v1/chat/completions "HTTP/1.1 200 OK"
+--- GRAPH ROUTING: Decision 'end' -> Node '__end__' ---
+Sun Mar  1 19:43:37 2026 - SIGPIPE: writing to a closed pipe/socket/fd (probably the client disconnected) on request /webhook/telegram (ip 91.108.5.35) !!!
+Sun Mar  1 19:43:37 2026 - uwsgi_response_write_headers_do(): Broken pipe [core/writer.c line 248] during POST /webhook/telegram (91.108.5.35)
+OSError: write error
+[pid: 571826|app: 0|req: 24/24] 91.108.5.35 () {38 vars in 550 bytes} [Sun Mar  1 19:43:35 2026] POST /webhook/telegram => generated 0 bytes in 1753 msecs (HTTP/1.1 200) 4 headers in 0 bytes (0 switches on core 0)
+INFO:api.webhooks.telegram_webhook:Mensagem recebida do Telegram ID 8507771166: oi
+INFO:api.webhooks.telegram_webhook:Enviando para LangGraph (SQL) na thread tg_8507771166...
+INFO:httpx:HTTP Request: POST https://api.openai.com/v1/chat/completions "HTTP/1.1 200 OK"
+--- GRAPH ROUTING: Decision 'end' -> Node '__end__' ---
+Sun Mar  1 19:43:38 2026 - SIGPIPE: writing to a closed pipe/socket/fd (probably the client disconnected) on request /webhook/telegram (ip 91.108.5.35) !!!
+Sun Mar  1 19:43:38 2026 - uwsgi_response_write_headers_do(): Broken pipe [core/writer.c line 248] during POST /webhook/telegram (91.108.5.35)
+OSError: write error
+[pid: 571826|app: 0|req: 25/25] 91.108.5.35 () {38 vars in 550 bytes} [Sun Mar  1 19:43:37 2026] POST /webhook/telegram => generated 0 bytes in 1298 msecs (HTTP/1.1 200) 4 headers in 0 bytes (0 switches on core 0)
+INFO:api.webhooks.telegram_webhook:Mensagem recebida do Telegram ID 8507771166: oi
+INFO:api.webhooks.telegram_webhook:Enviando para LangGraph (SQL) na thread tg_8507771166...
+INFO:httpx:HTTP Request: POST https://api.openai.com/v1/chat/completions "HTTP/1.1 200 OK"
+--- GRAPH ROUTING: Decision 'end' -> Node '__end__' ---
+Sun Mar  1 19:43:40 2026 - SIGPIPE: writing to a closed pipe/socket/fd (probably the client disconnected) on request /webhook/telegram (ip 91.108.5.35) !!!
+Sun Mar  1 19:43:40 2026 - uwsgi_response_write_headers_do(): Broken pipe [core/writer.c line 248] during POST /webhook/telegram (91.108.5.35)
+OSError: write error
+[pid: 571826|app: 0|req: 26/26] 91.108.5.35 () {38 vars in 550 bytes} [Sun Mar  1 19:43:38 2026] POST /webhook/telegram => generated 0 bytes in 1270 msecs (HTTP/1.1 200) 4 headers in 0 bytes (0 switches on core 0)
+INFO:api.webhooks.telegram_webhook:Mensagem recebida do Telegram ID 8507771166: oi
+INFO:api.webhooks.telegram_webhook:Enviando para LangGraph (SQL) na thread tg_8507771166...
+INFO:httpx:HTTP Request: POST https://api.openai.com/v1/chat/completions "HTTP/1.1 200 OK"
+--- GRAPH ROUTING: Decision 'end' -> Node '__end__' ---
+Sun Mar  1 19:43:41 2026 - SIGPIPE: writing to a closed pipe/socket/fd (probably the client disconnected) on request /webhook/telegram (ip 91.108.5.35) !!!
+Sun Mar  1 19:43:41 2026 - uwsgi_response_write_headers_do(): Broken pipe [core/writer.c line 248] during POST /webhook/telegram (91.108.5.35)
+OSError: write error
+[pid: 571826|app: 0|req: 27/27] 91.108.5.35 () {38 vars in 550 bytes} [Sun Mar  1 19:43:40 2026] POST /webhook/telegram => generated 0 bytes in 1230 msecs (HTTP/1.1 200) 4 headers in 0 bytes (0 switches on core 0)
+INFO:api.webhooks.telegram_webhook:Mensagem recebida do Telegram ID 8507771166: oi
+INFO:api.webhooks.telegram_webhook:Enviando para LangGraph (SQL) na thread tg_8507771166...
+INFO:httpx:HTTP Request: POST https://api.openai.com/v1/chat/completions "HTTP/1.1 200 OK"
+--- GRAPH ROUTING: Decision 'end' -> Node '__end__' ---
+Sun Mar  1 19:43:42 2026 - SIGPIPE: writing to a closed pipe/socket/fd (probably the client disconnected) on request /webhook/telegram (ip 91.108.5.35) !!!
+Sun Mar  1 19:43:42 2026 - uwsgi_response_write_headers_do(): Broken pipe [core/writer.c line 248] during POST /webhook/telegram (91.108.5.35)
+OSError: write error
+[pid: 571826|app: 0|req: 28/28] 91.108.5.35 () {38 vars in 550 bytes} [Sun Mar  1 19:43:41 2026] POST /webhook/telegram => generated 0 bytes in 1230 msecs (HTTP/1.1 200) 4 headers in 0 bytes (0 switches on core 0)
+INFO:api.webhooks.telegram_webhook:Mensagem recebida do Telegram ID 8507771166: oi
+INFO:api.webhooks.telegram_webhook:Enviando para LangGraph (SQL) na thread tg_8507771166...
+INFO:httpx:HTTP Request: POST https://api.openai.com/v1/chat/completions "HTTP/1.1 200 OK"
+--- GRAPH ROUTING: Decision 'end' -> Node '__end__' ---
+Sun Mar  1 19:43:43 2026 - SIGPIPE: writing to a closed pipe/socket/fd (probably the client disconnected) on request /webhook/telegram (ip 91.108.5.35) !!!
+Sun Mar  1 19:43:43 2026 - uwsgi_response_write_headers_do(): Broken pipe [core/writer.c line 248] during POST /webhook/telegram (91.108.5.35)
+OSError: write error
+[pid: 571826|app: 0|req: 29/29] 91.108.5.35 () {38 vars in 550 bytes} [Sun Mar  1 19:43:42 2026] POST /webhook/telegram => generated 0 bytes in 1319 msecs (HTTP/1.1 200) 4 headers in 0 bytes (0 switches on core 0)
+INFO:api.webhooks.telegram_webhook:Mensagem recebida do Telegram ID 8507771166: oi
+[ANALYSIS] @ARQUITETO analisando ticket #3...
+INFO:services.whatsapp_service:Z-API configuration incomplete
+INFO:apscheduler.executors.default:Running job "Monitor de Inatividade de Chat (trigger: interval[0:00:30], next run at: 2026-03-01 19:44:14 -03)" (scheduled at 2026-03-01 19:43:44.430572-03:00)
+INFO:apscheduler.executors.default:Job "Monitor de Inatividade de Chat (trigger: interval[0:00:30], next run at: 2026-03-01 19:44:14 -03)" executed successfully
+INFO:api.webhooks.telegram_webhook:Enviando para LangGraph (SQL) na thread tg_8507771166...
+INFO:httpx:HTTP Request: POST https://api.openai.com/v1/chat/completions "HTTP/1.1 200 OK"
+--- GRAPH ROUTING: Decision 'end' -> Node '__end__' ---
+Sun Mar  1 19:43:45 2026 - SIGPIPE: writing to a closed pipe/socket/fd (probably the client disconnected) on request /webhook/telegram (ip 91.108.5.35) !!!
+Sun Mar  1 19:43:45 2026 - uwsgi_response_write_headers_do(): Broken pipe [core/writer.c line 248] during POST /webhook/telegram (91.108.5.35)
+OSError: write error
+[pid: 571826|app: 0|req: 30/30] 91.108.5.35 () {38 vars in 550 bytes} [Sun Mar  1 19:43:43 2026] POST /webhook/telegram => generated 0 bytes in 1433 msecs (HTTP/1.1 200) 4 headers in 0 bytes (0 switches on core 0)
+INFO:api.webhooks.telegram_webhook:Mensagem recebida do Telegram ID 8507771166: oi
+INFO:api.webhooks.telegram_webhook:Enviando para LangGraph (SQL) na thread tg_8507771166...
+INFO:httpx:HTTP Request: POST https://api.openai.com/v1/chat/completions "HTTP/1.1 200 OK"
+--- GRAPH ROUTING: Decision 'end' -> Node '__end__' ---
+Sun Mar  1 19:43:46 2026 - SIGPIPE: writing to a closed pipe/socket/fd (probably the client disconnected) on request /webhook/telegram (ip 91.108.5.35) !!!
+Sun Mar  1 19:43:46 2026 - uwsgi_response_write_headers_do(): Broken pipe [core/writer.c line 248] during POST /webhook/telegram (91.108.5.35)
+OSError: write error
+[pid: 571826|app: 0|req: 31/31] 91.108.5.35 () {38 vars in 550 bytes} [Sun Mar  1 19:43:45 2026] POST /webhook/telegram => generated 0 bytes in 1249 msecs (HTTP/1.1 200) 4 headers in 0 bytes (0 switches on core 0)
+INFO:api.webhooks.telegram_webhook:Mensagem recebida do Telegram ID 8507771166: oi
+INFO:api.webhooks.telegram_webhook:Enviando para LangGraph (SQL) na thread tg_8507771166...
+INFO:httpx:HTTP Request: POST https://api.openai.com/v1/chat/completions "HTTP/1.1 200 OK"
+--- GRAPH ROUTING: Decision 'end' -> Node '__end__' ---
+Sun Mar  1 19:43:47 2026 - SIGPIPE: writing to a closed pipe/socket/fd (probably the client disconnected) on request /webhook/telegram (ip 91.108.5.35) !!!
+Sun Mar  1 19:43:47 2026 - uwsgi_response_write_headers_do(): Broken pipe [core/writer.c line 248] during POST /webhook/telegram (91.108.5.35)
+OSError: write error
+[pid: 571826|app: 0|req: 32/32] 91.108.5.35 () {38 vars in 550 bytes} [Sun Mar  1 19:43:46 2026] POST /webhook/telegram => generated 0 bytes in 1272 msecs (HTTP/1.1 200) 4 headers in 0 bytes (0 switches on core 0)
+INFO:api.webhooks.telegram_webhook:Mensagem recebida do Telegram ID 8507771166: oi
+INFO:api.webhooks.telegram_webhook:Enviando para LangGraph (SQL) na thread tg_8507771166...
+INFO:httpx:HTTP Request: POST https://api.openai.com/v1/chat/completions "HTTP/1.1 200 OK"
+--- GRAPH ROUTING: Decision 'end' -> Node '__end__' ---
+Sun Mar  1 19:43:49 2026 - SIGPIPE: writing to a closed pipe/socket/fd (probably the client disconnected) on request /webhook/telegram (ip 91.108.5.35) !!!
+Sun Mar  1 19:43:49 2026 - uwsgi_response_write_headers_do(): Broken pipe [core/writer.c line 248] during POST /webhook/telegram (91.108.5.35)
+OSError: write error
+[pid: 571826|app: 0|req: 33/33] 91.108.5.35 () {38 vars in 550 bytes} [Sun Mar  1 19:43:47 2026] POST /webhook/telegram => generated 0 bytes in 1249 msecs (HTTP/1.1 200) 4 headers in 0 bytes (0 switches on core 0)
+INFO:api.webhooks.telegram_webhook:Mensagem recebida do Telegram ID 8507771166: oi
+INFO:api.webhooks.telegram_webhook:Enviando para LangGraph (SQL) na thread tg_8507771166...
+INFO:httpx:HTTP Request: POST https://api.openai.com/v1/chat/completions "HTTP/1.1 200 OK"
+--- GRAPH ROUTING: Decision 'end' -> Node '__end__' ---
+Sun Mar  1 19:43:50 2026 - SIGPIPE: writing to a closed pipe/socket/fd (probably the client disconnected) on request /webhook/telegram (ip 91.108.5.35) !!!
+Sun Mar  1 19:43:50 2026 - uwsgi_response_write_headers_do(): Broken pipe [core/writer.c line 248] during POST /webhook/telegram (91.108.5.35)
+OSError: write error
+[pid: 571826|app: 0|req: 34/34] 91.108.5.35 () {38 vars in 550 bytes} [Sun Mar  1 19:43:49 2026] POST /webhook/telegram => generated 0 bytes in 1318 msecs (HTTP/1.1 200) 4 headers in 0 bytes (0 switches on core 0)
+INFO:api.webhooks.telegram_webhook:Mensagem recebida do Telegram ID 8507771166: oi
+INFO:api.webhooks.telegram_webhook:Enviando para LangGraph (SQL) na thread tg_8507771166...
+INFO:httpx:HTTP Request: POST https://api.openai.com/v1/chat/completions "HTTP/1.1 200 OK"
+--- GRAPH ROUTING: Decision 'end' -> Node '__end__' ---
+Sun Mar  1 19:43:51 2026 - SIGPIPE: writing to a closed pipe/socket/fd (probably the client disconnected) on request /webhook/telegram (ip 91.108.5.35) !!!
+Sun Mar  1 19:43:51 2026 - uwsgi_response_write_headers_do(): Broken pipe [core/writer.c line 248] during POST /webhook/telegram (91.108.5.35)
+OSError: write error
+[pid: 571826|app: 0|req: 35/35] 91.108.5.35 () {38 vars in 550 bytes} [Sun Mar  1 19:43:50 2026] POST /webhook/telegram => generated 0 bytes in 1344 msecs (HTTP/1.1 200) 4 headers in 0 bytes (0 switches on core 0)
+INFO:api.webhooks.telegram_webhook:Mensagem recebida do Telegram ID 8507771166: oi
+INFO:api.webhooks.telegram_webhook:Enviando para LangGraph (SQL) na thread tg_8507771166...
+INFO:httpx:HTTP Request: POST https://api.openai.com/v1/chat/completions "HTTP/1.1 200 OK"
+--- GRAPH ROUTING: Decision 'end' -> Node '__end__' ---
+Sun Mar  1 19:43:53 2026 - SIGPIPE: writing to a closed pipe/socket/fd (probably the client disconnected) on request /webhook/telegram (ip 91.108.5.35) !!!
+Sun Mar  1 19:43:53 2026 - uwsgi_response_write_headers_do(): Broken pipe [core/writer.c line 248] during POST /webhook/telegram (91.108.5.35)
+OSError: write error
+[pid: 571826|app: 0|req: 36/36] 91.108.5.35 () {38 vars in 550 bytes} [Sun Mar  1 19:43:51 2026] POST /webhook/telegram => generated 0 bytes in 1572 msecs (HTTP/1.1 200) 4 headers in 0 bytes (0 switches on core 0)
+INFO:api.webhooks.telegram_webhook:Mensagem recebida do Telegram ID 8507771166: oi
+INFO:api.webhooks.telegram_webhook:Enviando para LangGraph (SQL) na thread tg_8507771166...
+INFO:httpx:HTTP Request: POST https://api.openai.com/v1/chat/completions "HTTP/1.1 200 OK"
+--- GRAPH ROUTING: Decision 'end' -> Node '__end__' ---
+Sun Mar  1 19:43:54 2026 - SIGPIPE: writing to a closed pipe/socket/fd (probably the client disconnected) on request /webhook/telegram (ip 91.108.5.35) !!!
+Sun Mar  1 19:43:54 2026 - uwsgi_response_write_headers_do(): Broken pipe [core/writer.c line 248] during POST /webhook/telegram (91.108.5.35)
+OSError: write error
+[pid: 571826|app: 0|req: 37/37] 91.108.5.35 () {38 vars in 550 bytes} [Sun Mar  1 19:43:53 2026] POST /webhook/telegram => generated 0 bytes in 1346 msecs (HTTP/1.1 200) 4 headers in 0 bytes (0 switches on core 0)
+INFO:api.webhooks.telegram_webhook:Mensagem recebida do Telegram ID 8507771166: oi
+INFO:api.webhooks.telegram_webhook:Enviando para LangGraph (SQL) na thread tg_8507771166...
+INFO:httpx:HTTP Request: POST https://api.openai.com/v1/chat/completions "HTTP/1.1 200 OK"
+--- GRAPH ROUTING: Decision 'end' -> Node '__end__' ---
+Sun Mar  1 19:43:56 2026 - SIGPIPE: writing to a closed pipe/socket/fd (probably the client disconnected) on request /webhook/telegram (ip 91.108.5.35) !!!
+Sun Mar  1 19:43:56 2026 - uwsgi_response_write_headers_do(): Broken pipe [core/writer.c line 248] during POST /webhook/telegram (91.108.5.35)
+OSError: write error
+[pid: 571826|app: 0|req: 38/38] 91.108.5.35 () {38 vars in 550 bytes} [Sun Mar  1 19:43:54 2026] POST /webhook/telegram => generated 0 bytes in 1448 msecs (HTTP/1.1 200) 4 headers in 0 bytes (0 switches on core 0)
+INFO:api.webhooks.telegram_webhook:Mensagem recebida do Telegram ID 8507771166: oi
+INFO:api.webhooks.telegram_webhook:Enviando para LangGraph (SQL) na thread tg_8507771166...
+INFO:httpx:HTTP Request: POST https://api.openai.com/v1/chat/completions "HTTP/1.1 200 OK"
+--- GRAPH ROUTING: Decision 'end' -> Node '__end__' ---
+Sun Mar  1 19:43:57 2026 - SIGPIPE: writing to a closed pipe/socket/fd (probably the client disconnected) on request /webhook/telegram (ip 91.108.5.35) !!!
+Sun Mar  1 19:43:57 2026 - uwsgi_response_write_headers_do(): Broken pipe [core/writer.c line 248] during POST /webhook/telegram (91.108.5.35)
+OSError: write error
+[pid: 571826|app: 0|req: 39/39] 91.108.5.35 () {38 vars in 550 bytes} [Sun Mar  1 19:43:56 2026] POST /webhook/telegram => generated 0 bytes in 1280 msecs (HTTP/1.1 200) 4 headers in 0 bytes (0 switches on core 0)
+INFO:api.webhooks.telegram_webhook:Mensagem recebida do Telegram ID 8507771166: oi
+INFO:api.webhooks.telegram_webhook:Enviando para LangGraph (SQL) na thread tg_8507771166...
+INFO:httpx:HTTP Request: POST https://api.openai.com/v1/chat/completions "HTTP/1.1 200 OK"
+--- GRAPH ROUTING: Decision 'end' -> Node '__end__' ---
+Sun Mar  1 19:43:58 2026 - SIGPIPE: writing to a closed pipe/socket/fd (probably the client disconnected) on request /webhook/telegram (ip 91.108.5.35) !!!
+Sun Mar  1 19:43:58 2026 - uwsgi_response_write_headers_do(): Broken pipe [core/writer.c line 248] during POST /webhook/telegram (91.108.5.35)
+OSError: write error
+[pid: 571826|app: 0|req: 40/40] 91.108.5.35 () {38 vars in 550 bytes} [Sun Mar  1 19:43:57 2026] POST /webhook/telegram => generated 0 bytes in 1375 msecs (HTTP/1.1 200) 4 headers in 0 bytes (0 switches on core 0)
+INFO:api.webhooks.telegram_webhook:Mensagem recebida do Telegram ID 8507771166: oi
+INFO:api.webhooks.telegram_webhook:Enviando para LangGraph (SQL) na thread tg_8507771166...
+INFO:httpx:HTTP Request: POST https://api.openai.com/v1/chat/completions "HTTP/1.1 200 OK"
+--- GRAPH ROUTING: Decision 'end' -> Node '__end__' ---
+Sun Mar  1 19:44:00 2026 - SIGPIPE: writing to a closed pipe/socket/fd (probably the client disconnected) on request /webhook/telegram (ip 91.108.5.35) !!!
+Sun Mar  1 19:44:00 2026 - uwsgi_response_write_headers_do(): Broken pipe [core/writer.c line 248] during POST /webhook/telegram (91.108.5.35)
+OSError: write error
+[pid: 571826|app: 0|req: 41/41] 91.108.5.35 () {38 vars in 550 bytes} [Sun Mar  1 19:43:58 2026] POST /webhook/telegram => generated 0 bytes in 1324 msecs (HTTP/1.1 200) 4 headers in 0 bytes (0 switches on core 0)
+INFO:api.webhooks.telegram_webhook:Mensagem recebida do Telegram ID 8507771166: oi
+INFO:api.webhooks.telegram_webhook:Enviando para LangGraph (SQL) na thread tg_8507771166...
+INFO:httpx:HTTP Request: POST https://api.openai.com/v1/chat/completions "HTTP/1.1 200 OK"
+--- GRAPH ROUTING: Decision 'end' -> Node '__end__' ---
+Sun Mar  1 19:44:01 2026 - SIGPIPE: writing to a closed pipe/socket/fd (probably the client disconnected) on request /webhook/telegram (ip 91.108.5.35) !!!
+Sun Mar  1 19:44:01 2026 - uwsgi_response_write_headers_do(): Broken pipe [core/writer.c line 248] during POST /webhook/telegram (91.108.5.35)
+OSError: write error
+[pid: 571826|app: 0|req: 42/42] 91.108.5.35 () {38 vars in 550 bytes} [Sun Mar  1 19:44:00 2026] POST /webhook/telegram => generated 0 bytes in 1493 msecs (HTTP/1.1 200) 4 headers in 0 bytes (0 switches on core 0)
+Sun Mar  1 19:44:01 2026 - SIGPIPE: writing to a closed pipe/socket/fd (probably the client disconnected) on request /my-work (ip 2804:214:400a:23a4:8cc8:d6a:30e1:2551) !!!
+Sun Mar  1 19:44:01 2026 - uwsgi_response_writev_headers_and_body_do(): Broken pipe [core/writer.c line 306] during GET /my-work (2804:214:400a:23a4:8cc8:d6a:30e1:2551)
+OSError: write error
+[pid: 571826|app: 0|req: 43/43] 2804:214:400a:23a4:8cc8:d6a:30e1:2551 () {54 vars in 1144 bytes} [Sun Mar  1 19:44:01 2026] GET /my-work => generated 0 bytes in 69 msecs (HTTP/2.0 200) 4 headers in 0 bytes (0 switches on core 0)
+Sun Mar  1 19:44:01 2026 - SIGPIPE: writing to a closed pipe/socket/fd (probably the client disconnected) on request /my-work (ip 2804:214:400a:23a4:8cc8:d6a:30e1:2551) !!!
+Sun Mar  1 19:44:01 2026 - uwsgi_response_writev_headers_and_body_do(): Broken pipe [core/writer.c line 306] during GET /my-work (2804:214:400a:23a4:8cc8:d6a:30e1:2551)
+OSError: write error
+[pid: 571826|app: 0|req: 44/44] 2804:214:400a:23a4:8cc8:d6a:30e1:2551 () {54 vars in 1144 bytes} [Sun Mar  1 19:44:01 2026] GET /my-work => generated 0 bytes in 4 msecs (HTTP/2.0 200) 4 headers in 0 bytes (0 switches on core 0)
+INFO:api.webhooks.telegram_webhook:Mensagem recebida do Telegram ID 8507771166: oi
+INFO:api.webhooks.telegram_webhook:Enviando para LangGraph (SQL) na thread tg_8507771166...
+INFO:httpx:HTTP Request: POST https://api.openai.com/v1/chat/completions "HTTP/1.1 200 OK"
+--- GRAPH ROUTING: Decision 'end' -> Node '__end__' ---
+Sun Mar  1 19:44:03 2026 - SIGPIPE: writing to a closed pipe/socket/fd (probably the client disconnected) on request /webhook/telegram (ip 91.108.5.35) !!!
+Sun Mar  1 19:44:03 2026 - uwsgi_response_write_headers_do(): Broken pipe [core/writer.c line 248] during POST /webhook/telegram (91.108.5.35)
+OSError: write error
+[pid: 571826|app: 0|req: 45/45] 91.108.5.35 () {38 vars in 550 bytes} [Sun Mar  1 19:44:01 2026] POST /webhook/telegram => generated 0 bytes in 1377 msecs (HTTP/1.1 200) 4 headers in 0 bytes (0 switches on core 0)
+INFO:api.routes.my_work:📊 API Request: scope=company, company_ids=[7, 2, 8, 1, 3, 6, 9], active_company=None
+INFO:services.my_work.discovery_service:🔍 Discovery [scope=company]: user=3, role=admin, target_companies=[7, 2, 8, 1, 3, 6, 9]
+INFO:services.my_work.discovery_service:📊 Raw Discovery: Found 156 total activities across all allowed companies.
+Sun Mar  1 19:44:03 2026 - SIGPIPE: writing to a closed pipe/socket/fd (probably the client disconnected) on request /my-work/api/activities?scope=company&active_company_id=&company_ids=7%2C2%2C8%2C1%2C3%2C6%2C9 (ip 2804:214:400a:23a4:8cc8:d6a:30e1:2551) !!!
+Sun Mar  1 19:44:03 2026 - uwsgi_response_writev_headers_and_body_do(): Broken pipe [core/writer.c line 306] during GET /my-work/api/activities?scope=company&active_company_id=&company_ids=7%2C2%2C8%2C1%2C3%2C6%2C9 (2804:214:400a:23a4:8cc8:d6a:30e1:2551)
+OSError: write error
+[pid: 571826|app: 0|req: 46/46] 2804:214:400a:23a4:8cc8:d6a:30e1:2551 () {52 vars in 1247 bytes} [Sun Mar  1 19:44:03 2026] GET /my-work/api/activities?scope=company&active_company_id=&company_ids=7%2C2%2C8%2C1%2C3%2C6%2C9 => generated 0 bytes in 38 msecs (HTTP/2.0 200) 4 headers in 0 bytes (0 switches on core 0)
+INFO:api.webhooks.telegram_webhook:Mensagem recebida do Telegram ID 8507771166: oi
+INFO:api.webhooks.telegram_webhook:Enviando para LangGraph (SQL) na thread tg_8507771166...
+INFO:httpx:HTTP Request: POST https://api.openai.com/v1/chat/completions "HTTP/1.1 200 OK"
+--- GRAPH ROUTING: Decision 'end' -> Node '__end__' ---
+Sun Mar  1 19:44:04 2026 - SIGPIPE: writing to a closed pipe/socket/fd (probably the client disconnected) on request /webhook/telegram (ip 91.108.5.35) !!!
+Sun Mar  1 19:44:04 2026 - uwsgi_response_write_headers_do(): Broken pipe [core/writer.c line 248] during POST /webhook/telegram (91.108.5.35)
+OSError: write error
+[pid: 571826|app: 0|req: 47/47] 91.108.5.35 () {38 vars in 550 bytes} [Sun Mar  1 19:44:03 2026] POST /webhook/telegram => generated 0 bytes in 1546 msecs (HTTP/1.1 200) 4 headers in 0 bytes (0 switches on core 0)
+Sun Mar  1 19:44:04 2026 - SIGPIPE: writing to a closed pipe/socket/fd (probably the client disconnected) on request / (ip 2804:214:400a:23a4:8cc8:d6a:30e1:2551) !!!
+Sun Mar  1 19:44:04 2026 - uwsgi_response_writev_headers_and_body_do(): Broken pipe [core/writer.c line 306] during GET / (2804:214:400a:23a4:8cc8:d6a:30e1:2551)
+OSError: write error
+[pid: 571826|app: 0|req: 48/48] 2804:214:400a:23a4:8cc8:d6a:30e1:2551 () {54 vars in 1130 bytes} [Sun Mar  1 19:44:04 2026] GET / => generated 0 bytes in 2 msecs (HTTP/2.0 302) 5 headers in 0 bytes (0 switches on core 0)
+INFO:api.webhooks.telegram_webhook:Mensagem recebida do Telegram ID 8507771166: oi
+INFO:api.webhooks.telegram_webhook:Enviando para LangGraph (SQL) na thread tg_8507771166...
+INFO:httpx:HTTP Request: POST https://api.openai.com/v1/chat/completions "HTTP/1.1 200 OK"
+--- GRAPH ROUTING: Decision 'end' -> Node '__end__' ---
+Sun Mar  1 19:44:05 2026 - SIGPIPE: writing to a closed pipe/socket/fd (probably the client disconnected) on request /webhook/telegram (ip 91.108.5.35) !!!
+Sun Mar  1 19:44:05 2026 - uwsgi_response_write_headers_do(): Broken pipe [core/writer.c line 248] during POST /webhook/telegram (91.108.5.35)
+OSError: write error
+[pid: 571826|app: 0|req: 49/49] 91.108.5.35 () {38 vars in 550 bytes} [Sun Mar  1 19:44:04 2026] POST /webhook/telegram => generated 0 bytes in 1269 msecs (HTTP/1.1 200) 4 headers in 0 bytes (0 switches on core 0)
+Sun Mar  1 19:44:06 2026 - SIGPIPE: writing to a closed pipe/socket/fd (probably the client disconnected) on request /login (ip 2804:214:400a:23a4:8cc8:d6a:30e1:2551) !!!
+Sun Mar  1 19:44:06 2026 - uwsgi_response_writev_headers_and_body_do(): Broken pipe [core/writer.c line 306] during GET /login (2804:214:400a:23a4:8cc8:d6a:30e1:2551)
+OSError: write error
+[pid: 571826|app: 0|req: 50/50] 2804:214:400a:23a4:8cc8:d6a:30e1:2551 () {54 vars in 1140 bytes} [Sun Mar  1 19:44:05 2026] GET /login => generated 0 bytes in 6 msecs (HTTP/2.0 200) 4 headers in 0 bytes (0 switches on core 0)
+ERROR:api.webhooks.telegram_webhook:❌ Erro Crítico na Rota do Webhook: User.__init__() missing 2 required positional arguments: 'is_bot' and 'first_name'
+Sun Mar  1 19:44:06 2026 - SIGPIPE: writing to a closed pipe/socket/fd (probably the client disconnected) on request /webhook/telegram (ip 2804:214:400a:23a4:8cc8:d6a:30e1:2551) !!!
+Sun Mar  1 19:44:06 2026 - uwsgi_response_writev_headers_and_body_do(): Broken pipe [core/writer.c line 306] during POST /webhook/telegram (2804:214:400a:23a4:8cc8:d6a:30e1:2551)
+OSError: write error
+[pid: 571826|app: 0|req: 51/51] 2804:214:400a:23a4:8cc8:d6a:30e1:2551 () {38 vars in 558 bytes} [Sun Mar  1 19:44:06 2026] POST /webhook/telegram => generated 0 bytes in 7 msecs (HTTP/1.1 500) 4 headers in 0 bytes (0 switches on core 0)
+Sun Mar  1 19:44:06 2026 - SIGPIPE: writing to a closed pipe/socket/fd (probably the client disconnected) on request /webhook/telegram (ip 2804:214:400a:23a4:8cc8:d6a:30e1:2551) !!!
+Sun Mar  1 19:44:06 2026 - uwsgi_response_write_headers_do(): Broken pipe [core/writer.c line 248] during HEAD /webhook/telegram (2804:214:400a:23a4:8cc8:d6a:30e1:2551)
+[pid: 571826|app: 0|req: 52/52] 2804:214:400a:23a4:8cc8:d6a:30e1:2551 () {34 vars in 476 bytes} [Sun Mar  1 19:44:06 2026] HEAD /webhook/telegram => generated 0 bytes in 0 msecs (HTTP/1.1 405) 5 headers in 0 bytes (0 switches on core 0)
+INFO:api.webhooks.telegram_webhook:Mensagem recebida do Telegram ID 8507771166: oi
+INFO:api.webhooks.telegram_webhook:Enviando para LangGraph (SQL) na thread tg_8507771166...
+INFO:httpx:HTTP Request: POST https://api.openai.com/v1/chat/completions "HTTP/1.1 200 OK"
+--- GRAPH ROUTING: Decision 'end' -> Node '__end__' ---
+Sun Mar  1 19:44:07 2026 - SIGPIPE: writing to a closed pipe/socket/fd (probably the client disconnected) on request /webhook/telegram (ip 91.108.5.35) !!!
+Sun Mar  1 19:44:07 2026 - uwsgi_response_write_headers_do(): Broken pipe [core/writer.c line 248] during POST /webhook/telegram (91.108.5.35)
+OSError: write error
+[pid: 571826|app: 0|req: 53/53] 91.108.5.35 () {38 vars in 550 bytes} [Sun Mar  1 19:44:06 2026] POST /webhook/telegram => generated 0 bytes in 1507 msecs (HTTP/1.1 200) 4 headers in 0 bytes (0 switches on core 0)
+Sun Mar  1 19:44:07 2026 - SIGPIPE: writing to a closed pipe/socket/fd (probably the client disconnected) on request / (ip 2804:214:400a:23a4:8cc8:d6a:30e1:2551) !!!
+Sun Mar  1 19:44:07 2026 - uwsgi_response_write_headers_do(): Broken pipe [core/writer.c line 248] during HEAD / (2804:214:400a:23a4:8cc8:d6a:30e1:2551)
+[pid: 571826|app: 0|req: 54/54] 2804:214:400a:23a4:8cc8:d6a:30e1:2551 () {34 vars in 444 bytes} [Sun Mar  1 19:44:07 2026] HEAD / => generated 0 bytes in 0 msecs (HTTP/1.1 302) 5 headers in 0 bytes (0 switches on core 0)
+INFO:api.webhooks.telegram_webhook:Mensagem recebida do Telegram ID 8507771166: oi
+INFO:api.webhooks.telegram_webhook:Enviando para LangGraph (SQL) na thread tg_8507771166...
+INFO:httpx:HTTP Request: POST https://api.openai.com/v1/chat/completions "HTTP/1.1 200 OK"
+--- GRAPH ROUTING: Decision 'end' -> Node '__end__' ---
+Sun Mar  1 19:44:08 2026 - SIGPIPE: writing to a closed pipe/socket/fd (probably the client disconnected) on request /webhook/telegram (ip 91.108.5.35) !!!
+Sun Mar  1 19:44:08 2026 - uwsgi_response_write_headers_do(): Broken pipe [core/writer.c line 248] during POST /webhook/telegram (91.108.5.35)
+OSError: write error
+[pid: 571826|app: 0|req: 55/55] 91.108.5.35 () {38 vars in 550 bytes} [Sun Mar  1 19:44:07 2026] POST /webhook/telegram => generated 0 bytes in 1393 msecs (HTTP/1.1 200) 4 headers in 0 bytes (0 switches on core 0)
+INFO:api.webhooks.telegram_webhook:Mensagem recebida do Telegram ID 8507771166: oi
+INFO:api.webhooks.telegram_webhook:Enviando para LangGraph (SQL) na thread tg_8507771166...
+INFO:httpx:HTTP Request: POST https://api.openai.com/v1/chat/completions "HTTP/1.1 200 OK"
+--- GRAPH ROUTING: Decision 'end' -> Node '__end__' ---
+Sun Mar  1 19:44:10 2026 - SIGPIPE: writing to a closed pipe/socket/fd (probably the client disconnected) on request /webhook/telegram (ip 91.108.5.35) !!!
+Sun Mar  1 19:44:10 2026 - uwsgi_response_write_headers_do(): Broken pipe [core/writer.c line 248] during POST /webhook/telegram (91.108.5.35)
+OSError: write error
+[pid: 571826|app: 0|req: 56/56] 91.108.5.35 () {38 vars in 550 bytes} [Sun Mar  1 19:44:08 2026] POST /webhook/telegram => generated 0 bytes in 1336 msecs (HTTP/1.1 200) 4 headers in 0 bytes (0 switches on core 0)
+INFO:api.webhooks.telegram_webhook:Mensagem recebida do Telegram ID 8507771166: oi
+INFO:api.webhooks.telegram_webhook:Enviando para LangGraph (SQL) na thread tg_8507771166...
+INFO:httpx:HTTP Request: POST https://api.openai.com/v1/chat/completions "HTTP/1.1 200 OK"
+--- GRAPH ROUTING: Decision 'end' -> Node '__end__' ---
+Sun Mar  1 19:44:11 2026 - SIGPIPE: writing to a closed pipe/socket/fd (probably the client disconnected) on request /webhook/telegram (ip 91.108.5.35) !!!
+Sun Mar  1 19:44:11 2026 - uwsgi_response_write_headers_do(): Broken pipe [core/writer.c line 248] during POST /webhook/telegram (91.108.5.35)
+OSError: write error
+[pid: 571826|app: 0|req: 57/57] 91.108.5.35 () {38 vars in 550 bytes} [Sun Mar  1 19:44:10 2026] POST /webhook/telegram => generated 0 bytes in 1485 msecs (HTTP/1.1 200) 4 headers in 0 bytes (0 switches on core 0)
+INFO:api.webhooks.telegram_webhook:Mensagem recebida do Telegram ID 8507771166: oi
+INFO:api.webhooks.telegram_webhook:Enviando para LangGraph (SQL) na thread tg_8507771166...
+INFO:httpx:HTTP Request: POST https://api.openai.com/v1/chat/completions "HTTP/1.1 200 OK"
+--- GRAPH ROUTING: Decision 'end' -> Node '__end__' ---
+Sun Mar  1 19:44:13 2026 - SIGPIPE: writing to a closed pipe/socket/fd (probably the client disconnected) on request /webhook/telegram (ip 91.108.5.35) !!!
+Sun Mar  1 19:44:13 2026 - uwsgi_response_write_headers_do(): Broken pipe [core/writer.c line 248] during POST /webhook/telegram (91.108.5.35)
+OSError: write error
+[pid: 571826|app: 0|req: 58/58] 91.108.5.35 () {38 vars in 550 bytes} [Sun Mar  1 19:44:11 2026] POST /webhook/telegram => generated 0 bytes in 1446 msecs (HTTP/1.1 200) 4 headers in 0 bytes (0 switches on core 0)
+INFO:api.webhooks.telegram_webhook:Mensagem recebida do Telegram ID 8507771166: oi
+INFO:api.webhooks.telegram_webhook:Enviando para LangGraph (SQL) na thread tg_8507771166...
+INFO:httpx:HTTP Request: POST https://api.openai.com/v1/chat/completions "HTTP/1.1 200 OK"
+--- GRAPH ROUTING: Decision 'end' -> Node '__end__' ---
+INFO:apscheduler.executors.default:Running job "Monitor de Inatividade de Chat (trigger: interval[0:00:30], next run at: 2026-03-01 19:44:44 -03)" (scheduled at 2026-03-01 19:44:14.430572-03:00)
+INFO:apscheduler.executors.default:Job "Monitor de Inatividade de Chat (trigger: interval[0:00:30], next run at: 2026-03-01 19:44:44 -03)" executed successfully
+Sun Mar  1 19:44:14 2026 - SIGPIPE: writing to a closed pipe/socket/fd (probably the client disconnected) on request /webhook/telegram (ip 91.108.5.35) !!!
+Sun Mar  1 19:44:14 2026 - uwsgi_response_write_headers_do(): Broken pipe [core/writer.c line 248] during POST /webhook/telegram (91.108.5.35)
+OSError: write error
+[pid: 571826|app: 0|req: 59/59] 91.108.5.35 () {38 vars in 550 bytes} [Sun Mar  1 19:44:13 2026] POST /webhook/telegram => generated 0 bytes in 1266 msecs (HTTP/1.1 200) 4 headers in 0 bytes (0 switches on core 0)
+INFO:api.webhooks.telegram_webhook:Mensagem recebida do Telegram ID 8507771166: oi
+ERROR:api.webhooks.telegram_webhook:❌ Erro crítico no Telegram Webhook: A request to the Telegram API was unsuccessful. Error code: 429. Description: Too Many Requests: retry after 3
+Traceback (most recent call last):
+  File "/srv/appgestaoversuscombr.45a4cd4b.configr.cloud/www/app32/api/webhooks/telegram_webhook.py", line 54, in process_telegram_message
+    bot.send_chat_action(message.chat.id, 'typing')
+  File "/srv/appgestaoversuscombr.45a4cd4b.configr.cloud/.virtualenv/3.12/lib/python3.12/site-packages/telebot/__init__.py", line 4304, in send_chat_action
+    return apihelper.send_chat_action(
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/srv/appgestaoversuscombr.45a4cd4b.configr.cloud/.virtualenv/3.12/lib/python3.12/site-packages/telebot/apihelper.py", line 890, in send_chat_action
+    return _make_request(token, method_url, params=payload)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/srv/appgestaoversuscombr.45a4cd4b.configr.cloud/.virtualenv/3.12/lib/python3.12/site-packages/telebot/apihelper.py", line 168, in _make_request
+    json_result = _check_result(method_name, result)
+                  ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/srv/appgestaoversuscombr.45a4cd4b.configr.cloud/.virtualenv/3.12/lib/python3.12/site-packages/telebot/apihelper.py", line 197, in _check_result
+    raise ApiTelegramException(method_name, result, result_json)
+telebot.apihelper.ApiTelegramException: A request to the Telegram API was unsuccessful. Error code: 429. Description: Too Many Requests: retry after 3
+
+INFO:api.webhooks.telegram_webhook:✅ Erro escalonado via Ticket #4
+Sun Mar  1 19:44:15 2026 - SIGPIPE: writing to a closed pipe/socket/fd (probably the client disconnected) on request /webhook/telegram (ip 91.108.5.35) !!!
+Sun Mar  1 19:44:15 2026 - uwsgi_response_write_headers_do(): Broken pipe [core/writer.c line 248] during POST /webhook/telegram (91.108.5.35)
+OSError: write error
+[pid: 571826|app: 0|req: 60/60] 91.108.5.35 () {38 vars in 550 bytes} [Sun Mar  1 19:44:14 2026] POST /webhook/telegram => generated 0 bytes in 777 msecs (HTTP/1.1 200) 4 headers in 0 bytes (0 switches on core 0)
+INFO:api.webhooks.telegram_webhook:Mensagem recebida do Telegram ID 8507771166: oi
+ERROR:api.webhooks.telegram_webhook:❌ Erro crítico no Telegram Webhook: A request to the Telegram API was unsuccessful. Error code: 429. Description: Too Many Requests: retry after 3
+Traceback (most recent call last):
+  File "/srv/appgestaoversuscombr.45a4cd4b.configr.cloud/www/app32/api/webhooks/telegram_webhook.py", line 54, in process_telegram_message
+    bot.send_chat_action(message.chat.id, 'typing')
+  File "/srv/appgestaoversuscombr.45a4cd4b.configr.cloud/.virtualenv/3.12/lib/python3.12/site-packages/telebot/__init__.py", line 4304, in send_chat_action
+    return apihelper.send_chat_action(
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/srv/appgestaoversuscombr.45a4cd4b.configr.cloud/.virtualenv/3.12/lib/python3.12/site-packages/telebot/apihelper.py", line 890, in send_chat_action
+    return _make_request(token, method_url, params=payload)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/srv/appgestaoversuscombr.45a4cd4b.configr.cloud/.virtualenv/3.12/lib/python3.12/site-packages/telebot/apihelper.py", line 168, in _make_request
+    json_result = _check_result(method_name, result)
+                  ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/srv/appgestaoversuscombr.45a4cd4b.configr.cloud/.virtualenv/3.12/lib/python3.12/site-packages/telebot/apihelper.py", line 197, in _check_result
+    raise ApiTelegramException(method_name, result, result_json)
+telebot.apihelper.ApiTelegramException: A request to the Telegram API was unsuccessful. Error code: 429. Description: Too Many Requests: retry after 3
+
+INFO:api.webhooks.telegram_webhook:✅ Erro escalonado via Ticket #5
+Sun Mar  1 19:44:16 2026 - SIGPIPE: writing to a closed pipe/socket/fd (probably the client disconnected) on request /webhook/telegram (ip 91.108.5.35) !!!
+Sun Mar  1 19:44:16 2026 - uwsgi_response_write_headers_do(): Broken pipe [core/writer.c line 248] during POST /webhook/telegram (91.108.5.35)
+OSError: write error
+[pid: 571826|app: 0|req: 61/61] 91.108.5.35 () {38 vars in 550 bytes} [Sun Mar  1 19:44:15 2026] POST /webhook/telegram => generated 0 bytes in 785 msecs (HTTP/1.1 200) 4 headers in 0 bytes (0 switches on core 0)
+Sun Mar  1 19:44:16 2026 - SIGPIPE: writing to a closed pipe/socket/fd (probably the client disconnected) on request /login (ip 2804:214:400a:23a4:8cc8:d6a:30e1:2551) !!!
+Sun Mar  1 19:44:16 2026 - uwsgi_response_writev_headers_and_body_do(): Broken pipe [core/writer.c line 306] during GET /login (2804:214:400a:23a4:8cc8:d6a:30e1:2551)
+OSError: write error
+[pid: 571826|app: 0|req: 62/62] 2804:214:400a:23a4:8cc8:d6a:30e1:2551 () {52 vars in 879 bytes} [Sun Mar  1 19:44:16 2026] GET /login => generated 0 bytes in 0 msecs (HTTP/2.0 200) 4 headers in 0 bytes (0 switches on core 0)
+INFO:api.webhooks.telegram_webhook:Mensagem recebida do Telegram ID 8507771166: oi
+ERROR:api.webhooks.telegram_webhook:❌ Erro crítico no Telegram Webhook: A request to the Telegram API was unsuccessful. Error code: 429. Description: Too Many Requests: retry after 3
+Traceback (most recent call last):
+  File "/srv/appgestaoversuscombr.45a4cd4b.configr.cloud/www/app32/api/webhooks/telegram_webhook.py", line 54, in process_telegram_message
+    bot.send_chat_action(message.chat.id, 'typing')
+  File "/srv/appgestaoversuscombr.45a4cd4b.configr.cloud/.virtualenv/3.12/lib/python3.12/site-packages/telebot/__init__.py", line 4304, in send_chat_action
+    return apihelper.send_chat_action(
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/srv/appgestaoversuscombr.45a4cd4b.configr.cloud/.virtualenv/3.12/lib/python3.12/site-packages/telebot/apihelper.py", line 890, in send_chat_action
+    return _make_request(token, method_url, params=payload)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/srv/appgestaoversuscombr.45a4cd4b.configr.cloud/.virtualenv/3.12/lib/python3.12/site-packages/telebot/apihelper.py", line 168, in _make_request
+    json_result = _check_result(method_name, result)
+                  ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/srv/appgestaoversuscombr.45a4cd4b.configr.cloud/.virtualenv/3.12/lib/python3.12/site-packages/telebot/apihelper.py", line 197, in _check_result
+    raise ApiTelegramException(method_name, result, result_json)
+telebot.apihelper.ApiTelegramException: A request to the Telegram API was unsuccessful. Error code: 429. Description: Too Many Requests: retry after 3
+
+INFO:api.webhooks.telegram_webhook:✅ Erro escalonado via Ticket #6
+Sun Mar  1 19:44:16 2026 - SIGPIPE: writing to a closed pipe/socket/fd (probably the client disconnected) on request /webhook/telegram (ip 91.108.5.35) !!!
+Sun Mar  1 19:44:16 2026 - uwsgi_response_write_headers_do(): Broken pipe [core/writer.c line 248] during POST /webhook/telegram (91.108.5.35)
+OSError: write error
+[pid: 571826|app: 0|req: 63/63] 91.108.5.35 () {38 vars in 550 bytes} [Sun Mar  1 19:44:16 2026] POST /webhook/telegram => generated 0 bytes in 754 msecs (HTTP/1.1 200) 4 headers in 0 bytes (0 switches on core 0)
+Sun Mar  1 19:44:16 2026 - SIGPIPE: writing to a closed pipe/socket/fd (probably the client disconnected) on request / (ip 2804:214:400a:23a4:8cc8:d6a:30e1:2551) !!!
+Sun Mar  1 19:44:16 2026 - uwsgi_response_write_headers_do(): Broken pipe [core/writer.c line 248] during HEAD / (2804:214:400a:23a4:8cc8:d6a:30e1:2551)
+[pid: 571826|app: 0|req: 64/64] 2804:214:400a:23a4:8cc8:d6a:30e1:2551 () {34 vars in 444 bytes} [Sun Mar  1 19:44:16 2026] HEAD / => generated 0 bytes in 0 msecs (HTTP/1.1 302) 5 headers in 0 bytes (0 switches on core 0)
+INFO:api.webhooks.telegram_webhook:Mensagem recebida do Telegram ID 8507771166: oi
+INFO:api.webhooks.telegram_webhook:Enviando para LangGraph (SQL) na thread tg_8507771166...
+INFO:httpx:HTTP Request: POST https://api.openai.com/v1/chat/completions "HTTP/1.1 200 OK"
+--- GRAPH ROUTING: Decision 'end' -> Node '__end__' ---
+Sun Mar  1 19:44:18 2026 - SIGPIPE: writing to a closed pipe/socket/fd (probably the client disconnected) on request /webhook/telegram (ip 91.108.5.35) !!!
+Sun Mar  1 19:44:18 2026 - uwsgi_response_write_headers_do(): Broken pipe [core/writer.c line 248] during POST /webhook/telegram (91.108.5.35)
+OSError: write error
+[pid: 571826|app: 0|req: 65/65] 91.108.5.35 () {38 vars in 550 bytes} [Sun Mar  1 19:44:16 2026] POST /webhook/telegram => generated 0 bytes in 1301 msecs (HTTP/1.1 200) 4 headers in 0 bytes (0 switches on core 0)
+Sun Mar  1 19:44:18 2026 - SIGPIPE: writing to a closed pipe/socket/fd (probably the client disconnected) on request /login (ip 2804:214:400a:23a4:8cc8:d6a:30e1:2551) !!!
+Sun Mar  1 19:44:18 2026 - uwsgi_response_writev_headers_and_body_do(): Broken pipe [core/writer.c line 306] during GET /login (2804:214:400a:23a4:8cc8:d6a:30e1:2551)
+OSError: write error
+[pid: 571826|app: 0|req: 66/66] 2804:214:400a:23a4:8cc8:d6a:30e1:2551 () {52 vars in 879 bytes} [Sun Mar  1 19:44:18 2026] GET /login => generated 0 bytes in 0 msecs (HTTP/2.0 200) 4 headers in 0 bytes (0 switches on core 0)
+[pid: 571826|app: 0|req: 67/67] 2804:214:400a:23a4:8cc8:d6a:30e1:2551 () {52 vars in 879 bytes} [Sun Mar  1 19:44:18 2026] GET /login => generated 14401 bytes in 0 msecs (HTTP/2.0 200) 4 headers in 128 bytes (1 switches on core 0)
+INFO:api.webhooks.telegram_webhook:Mensagem recebida do Telegram ID 8507771166: oi
+INFO:api.webhooks.telegram_webhook:Enviando para LangGraph (SQL) na thread tg_8507771166...
+INFO:httpx:HTTP Request: POST https://api.openai.com/v1/chat/completions "HTTP/1.1 200 OK"
+--- GRAPH ROUTING: Decision 'end' -> Node '__end__' ---
+Sun Mar  1 19:44:19 2026 - SIGPIPE: writing to a closed pipe/socket/fd (probably the client disconnected) on request /webhook/telegram (ip 91.108.5.35) !!!
+Sun Mar  1 19:44:19 2026 - uwsgi_response_write_headers_do(): Broken pipe [core/writer.c line 248] during POST /webhook/telegram (91.108.5.35)
+OSError: write error
+[pid: 571826|app: 0|req: 68/68] 91.108.5.35 () {38 vars in 550 bytes} [Sun Mar  1 19:44:18 2026] POST /webhook/telegram => generated 0 bytes in 1360 msecs (HTTP/1.1 200) 4 headers in 0 bytes (0 switches on core 0)
+INFO:api.webhooks.telegram_webhook:Mensagem recebida do Telegram ID 8507771166: oi
+INFO:api.webhooks.telegram_webhook:Enviando para LangGraph (SQL) na thread tg_8507771166...
+INFO:httpx:HTTP Request: POST https://api.openai.com/v1/chat/completions "HTTP/1.1 200 OK"
+--- GRAPH ROUTING: Decision 'end' -> Node '__end__' ---
+Sun Mar  1 19:44:20 2026 - SIGPIPE: writing to a closed pipe/socket/fd (probably the client disconnected) on request /webhook/telegram (ip 91.108.5.35) !!!
+Sun Mar  1 19:44:20 2026 - uwsgi_response_write_headers_do(): Broken pipe [core/writer.c line 248] during POST /webhook/telegram (91.108.5.35)
+OSError: write error
+[pid: 571826|app: 0|req: 69/69] 91.108.5.35 () {38 vars in 550 bytes} [Sun Mar  1 19:44:19 2026] POST /webhook/telegram => generated 0 bytes in 1293 msecs (HTTP/1.1 200) 4 headers in 0 bytes (0 switches on core 0)
+INFO:api.webhooks.telegram_webhook:Mensagem recebida do Telegram ID 8507771166: oi
+INFO:api.webhooks.telegram_webhook:Enviando para LangGraph (SQL) na thread tg_8507771166...
+INFO:httpx:HTTP Request: POST https://api.openai.com/v1/chat/completions "HTTP/1.1 200 OK"
+--- GRAPH ROUTING: Decision 'end' -> Node '__end__' ---
+[pid: 571826|app: 0|req: 70/70] 91.108.5.35 () {38 vars in 550 bytes} [Sun Mar  1 19:44:22 2026] POST /webhook/telegram => generated 0 bytes in 1469 msecs (HTTP/1.1 200) 4 headers in 124 bytes (1 switches on core 0)
+INFO:api.webhooks.telegram_webhook:Mensagem recebida do Telegram ID 8507771166: quais as atividades tenho em aberto na empresa AA - Versus Gestão Corporativa?
+INFO:api.webhooks.telegram_webhook:Enviando para LangGraph (SQL) na thread tg_8507771166...
+INFO:httpx:HTTP Request: POST https://api.openai.com/v1/chat/completions "HTTP/1.1 200 OK"
+--- SUPERVISOR DECISION: operations ---
+--- GRAPH ROUTING: Decision 'operations' -> Node 'operations' ---
+INFO:httpx:HTTP Request: POST https://api.openai.com/v1/chat/completions "HTTP/1.1 200 OK"
+--- SUPERVISOR: Ferramenta executada, devolvendo ao especialista para conclusão. ---
+INFO:httpx:HTTP Request: POST https://api.openai.com/v1/chat/completions "HTTP/1.1 200 OK"
+--- SUPERVISOR DECISION: sapiens ---
+--- GRAPH ROUTING: Decision 'sapiens' -> Node 'sapiens' ---
+INFO:httpx:HTTP Request: POST https://api.openai.com/v1/chat/completions "HTTP/1.1 200 OK"
+--- SUPERVISOR: Resposta final do especialista recebida, encerrando fluxo. ---
+--- GRAPH ROUTING: Decision 'end' -> Node '__end__' ---
+[pid: 571826|app: 0|req: 71/71] 91.108.5.35 () {38 vars in 550 bytes} [Sun Mar  1 19:44:24 2026] POST /webhook/telegram => generated 0 bytes in 4171 msecs (HTTP/1.1 200) 4 headers in 124 bytes (1 switches on core 0)
+INFO:api.webhooks.telegram_webhook:Mensagem recebida do Telegram ID 8507771166: oi
+INFO:api.webhooks.telegram_webhook:Enviando para LangGraph (SQL) na thread tg_8507771166...
+[ANALYSIS] @ARQUITETO analisando ticket #4...
+INFO:services.whatsapp_service:Z-API configuration incomplete
+[ANALYSIS] @ARQUITETO analisando ticket #5...
+INFO:services.whatsapp_service:Z-API configuration incomplete
+[ANALYSIS] @ARQUITETO analisando ticket #6...
+INFO:services.whatsapp_service:Z-API configuration incomplete
+INFO:httpx:HTTP Request: POST https://api.openai.com/v1/chat/completions "HTTP/1.1 200 OK"
+--- GRAPH ROUTING: Decision 'end' -> Node '__end__' ---
+[pid: 571826|app: 0|req: 72/72] 91.108.5.35 () {38 vars in 550 bytes} [Sun Mar  1 19:44:28 2026] POST /webhook/telegram => generated 0 bytes in 1785 msecs (HTTP/1.1 200) 4 headers in 124 bytes (1 switches on core 0)
+INFO:api.webhooks.telegram_webhook:Mensagem recebida do Telegram ID 8507771166: oi
+INFO:api.webhooks.telegram_webhook:Enviando para LangGraph (SQL) na thread tg_8507771166...
+INFO:httpx:HTTP Request: POST https://api.openai.com/v1/chat/completions "HTTP/1.1 200 OK"
+--- GRAPH ROUTING: Decision 'end' -> Node '__end__' ---
+[pid: 571826|app: 0|req: 73/73] 91.108.5.35 () {38 vars in 550 bytes} [Sun Mar  1 19:44:30 2026] POST /webhook/telegram => generated 0 bytes in 1501 msecs (HTTP/1.1 200) 4 headers in 124 bytes (1 switches on core 0)
+INFO:api.webhooks.telegram_webhook:Mensagem recebida do Telegram ID 8507771166: oiee
+INFO:api.webhooks.telegram_webhook:Enviando para LangGraph (SQL) na thread tg_8507771166...
+INFO:httpx:HTTP Request: POST https://api.openai.com/v1/chat/completions "HTTP/1.1 200 OK"
+--- GRAPH ROUTING: Decision 'end' -> Node '__end__' ---
+[pid: 571826|app: 0|req: 74/74] 91.108.5.35 () {38 vars in 550 bytes} [Sun Mar  1 19:44:31 2026] POST /webhook/telegram => generated 0 bytes in 1519 msecs (HTTP/1.1 200) 4 headers in 124 bytes (1 switches on core 0)
+INFO:apscheduler.executors.default:Running job "Monitor de Inatividade de Chat (trigger: interval[0:00:30], next run at: 2026-03-01 19:45:14 -03)" (scheduled at 2026-03-01 19:44:44.430572-03:00)
+INFO:apscheduler.executors.default:Job "Monitor de Inatividade de Chat (trigger: interval[0:00:30], next run at: 2026-03-01 19:45:14 -03)" executed successfully
+INFO:apscheduler.executors.default:Running job "Monitor de Inatividade de Chat (trigger: interval[0:00:30], next run at: 2026-03-01 19:45:44 -03)" (scheduled at 2026-03-01 19:45:14.430572-03:00)
+INFO:apscheduler.executors.default:Job "Monitor de Inatividade de Chat (trigger: interval[0:00:30], next run at: 2026-03-01 19:45:44 -03)" executed successfully
+INFO:apscheduler.executors.default:Running job "Monitor de Inatividade de Chat (trigger: interval[0:00:30], next run at: 2026-03-01 19:46:14 -03)" (scheduled at 2026-03-01 19:45:44.430572-03:00)
+INFO:apscheduler.executors.default:Job "Monitor de Inatividade de Chat (trigger: interval[0:00:30], next run at: 2026-03-01 19:46:14 -03)" executed successfully
+INFO:apscheduler.executors.default:Running job "Monitor de Inatividade de Chat (trigger: interval[0:00:30], next run at: 2026-03-01 19:46:44 -03)" (scheduled at 2026-03-01 19:46:14.430572-03:00)
+INFO:apscheduler.executors.default:Job "Monitor de Inatividade de Chat (trigger: interval[0:00:30], next run at: 2026-03-01 19:46:44 -03)" executed successfully
+INFO:apscheduler.executors.default:Running job "Monitor de Inatividade de Chat (trigger: interval[0:00:30], next run at: 2026-03-01 19:47:14 -03)" (scheduled at 2026-03-01 19:46:44.430572-03:00)
+INFO:apscheduler.executors.default:Job "Monitor de Inatividade de Chat (trigger: interval[0:00:30], next run at: 2026-03-01 19:47:14 -03)" executed successfully
+INFO:apscheduler.executors.default:Running job "Monitor de Inatividade de Chat (trigger: interval[0:00:30], next run at: 2026-03-01 19:47:44 -03)" (scheduled at 2026-03-01 19:47:14.430572-03:00)
+INFO:apscheduler.executors.default:Job "Monitor de Inatividade de Chat (trigger: interval[0:00:30], next run at: 2026-03-01 19:47:44 -03)" executed successfully
+INFO:apscheduler.executors.default:Running job "Monitor de Inatividade de Chat (trigger: interval[0:00:30], next run at: 2026-03-01 19:48:14 -03)" (scheduled at 2026-03-01 19:47:44.430572-03:00)
+INFO:apscheduler.executors.default:Job "Monitor de Inatividade de Chat (trigger: interval[0:00:30], next run at: 2026-03-01 19:48:14 -03)" executed successfully
+INFO:apscheduler.executors.default:Running job "Monitor de Inatividade de Chat (trigger: interval[0:00:30], next run at: 2026-03-01 19:48:44 -03)" (scheduled at 2026-03-01 19:48:14.430572-03:00)
+INFO:apscheduler.executors.default:Job "Monitor de Inatividade de Chat (trigger: interval[0:00:30], next run at: 2026-03-01 19:48:44 -03)" executed successfully
+INFO:apscheduler.executors.default:Running job "Monitor de Inatividade de Chat (trigger: interval[0:00:30], next run at: 2026-03-01 19:49:14 -03)" (scheduled at 2026-03-01 19:48:44.430572-03:00)
+INFO:apscheduler.executors.default:Job "Monitor de Inatividade de Chat (trigger: interval[0:00:30], next run at: 2026-03-01 19:49:14 -03)" executed successfully
+INFO:apscheduler.executors.default:Running job "Monitor de Inatividade de Chat (trigger: interval[0:00:30], next run at: 2026-03-01 19:49:44 -03)" (scheduled at 2026-03-01 19:49:14.430572-03:00)
+INFO:apscheduler.executors.default:Job "Monitor de Inatividade de Chat (trigger: interval[0:00:30], next run at: 2026-03-01 19:49:44 -03)" executed successfully
+INFO:apscheduler.executors.default:Running job "Monitor de Inatividade de Chat (trigger: interval[0:00:30], next run at: 2026-03-01 19:50:14 -03)" (scheduled at 2026-03-01 19:49:44.430572-03:00)
+INFO:apscheduler.executors.default:Job "Monitor de Inatividade de Chat (trigger: interval[0:00:30], next run at: 2026-03-01 19:50:14 -03)" executed successfully
+INFO:apscheduler.executors.default:Running job "Monitor de Inatividade de Chat (trigger: interval[0:00:30], next run at: 2026-03-01 19:50:44 -03)" (scheduled at 2026-03-01 19:50:14.430572-03:00)
+INFO:apscheduler.executors.default:Job "Monitor de Inatividade de Chat (trigger: interval[0:00:30], next run at: 2026-03-01 19:50:44 -03)" executed successfully
+INFO:apscheduler.executors.default:Running job "Monitor de Inatividade de Chat (trigger: interval[0:00:30], next run at: 2026-03-01 19:51:14 -03)" (scheduled at 2026-03-01 19:50:44.430572-03:00)
+INFO:apscheduler.executors.default:Job "Monitor de Inatividade de Chat (trigger: interval[0:00:30], next run at: 2026-03-01 19:51:14 -03)" executed successfully
+INFO:apscheduler.executors.default:Running job "Monitor de Inatividade de Chat (trigger: interval[0:00:30], next run at: 2026-03-01 19:51:44 -03)" (scheduled at 2026-03-01 19:51:14.430572-03:00)
+INFO:apscheduler.executors.default:Job "Monitor de Inatividade de Chat (trigger: interval[0:00:30], next run at: 2026-03-01 19:51:44 -03)" executed successfully
+INFO:apscheduler.executors.default:Running job "Monitor de Inatividade de Chat (trigger: interval[0:00:30], next run at: 2026-03-01 19:52:14 -03)" (scheduled at 2026-03-01 19:51:44.430572-03:00)
+INFO:apscheduler.executors.default:Job "Monitor de Inatividade de Chat (trigger: interval[0:00:30], next run at: 2026-03-01 19:52:14 -03)" executed successfully
+INFO:apscheduler.executors.default:Running job "Monitor de Inatividade de Chat (trigger: interval[0:00:30], next run at: 2026-03-01 19:52:44 -03)" (scheduled at 2026-03-01 19:52:14.430572-03:00)
+INFO:apscheduler.executors.default:Job "Monitor de Inatividade de Chat (trigger: interval[0:00:30], next run at: 2026-03-01 19:52:44 -03)" executed successfully
+INFO:apscheduler.executors.default:Running job "Monitor de Inatividade de Chat (trigger: interval[0:00:30], next run at: 2026-03-01 19:53:14 -03)" (scheduled at 2026-03-01 19:52:44.430572-03:00)
+INFO:apscheduler.executors.default:Job "Monitor de Inatividade de Chat (trigger: interval[0:00:30], next run at: 2026-03-01 19:53:14 -03)" executed successfully
+INFO:apscheduler.executors.default:Running job "Monitor de Inatividade de Chat (trigger: interval[0:00:30], next run at: 2026-03-01 19:53:44 -03)" (scheduled at 2026-03-01 19:53:14.430572-03:00)
+INFO:apscheduler.executors.default:Job "Monitor de Inatividade de Chat (trigger: interval[0:00:30], next run at: 2026-03-01 19:53:44 -03)" executed successfully
+INFO:api.webhooks.telegram_webhook:Mensagem recebida do Telegram ID 8507771166: Quais projetos estão abertos na empresa Gandu Investimentos?
+INFO:api.webhooks.telegram_webhook:Enviando para LangGraph (SQL) na thread tg_8507771166...
+INFO:httpx:HTTP Request: POST https://api.openai.com/v1/chat/completions "HTTP/1.1 200 OK"
+--- GRAPH ROUTING: Decision 'end' -> Node '__end__' ---
+[pid: 571826|app: 0|req: 75/75] 91.108.5.35 () {38 vars in 550 bytes} [Sun Mar  1 19:53:27 2026] POST /webhook/telegram => generated 0 bytes in 2674 msecs (HTTP/1.1 200) 4 headers in 124 bytes (1 switches on core 0)
+INFO:apscheduler.executors.default:Running job "Monitor de Inatividade de Chat (trigger: interval[0:00:30], next run at: 2026-03-01 19:54:14 -03)" (scheduled at 2026-03-01 19:53:44.430572-03:00)
+INFO:services.chat_timeout_service:--- TIMEOUT WARNING: User 3 (platform) ---
+INFO:apscheduler.executors.default:Job "Monitor de Inatividade de Chat (trigger: interval[0:00:30], next run at: 2026-03-01 19:54:14 -03)" executed successfully
+INFO:apscheduler.executors.default:Running job "Monitor de Inatividade de Chat (trigger: interval[0:00:30], next run at: 2026-03-01 19:54:44 -03)" (scheduled at 2026-03-01 19:54:14.430572-03:00)
+INFO:apscheduler.executors.default:Job "Monitor de Inatividade de Chat (trigger: interval[0:00:30], next run at: 2026-03-01 19:54:44 -03)" executed successfully

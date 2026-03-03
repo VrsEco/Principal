@@ -1,0 +1,68 @@
+INFO:services.scheduler_service:\U0001f4c5 Scheduler Service inicializado
+INFO:services.scheduler_service:\U0001f680 Inicializando Scheduler Service...
+INFO:services.scheduler_service:\U0001f527 Configurando jobs de rotina...
+INFO:apscheduler.scheduler:Adding job tentatively -- it will be properly scheduled when the scheduler starts
+INFO:services.scheduler_service:\u2705 Job 'process_daily_routines' adicionado: cron {'hour': 0, 'minute': 1, 'name': 'Processamento Dißrio de Rotinas'}
+INFO:apscheduler.scheduler:Adding job tentatively -- it will be properly scheduled when the scheduler starts
+INFO:services.scheduler_service:\u2705 Job 'check_overdue_tasks' adicionado: cron {'minute': 0, 'name': 'VerificaþÒo de Tarefas Atrasadas'}
+INFO:services.scheduler_service:\u2705 Jobs de rotina configurados!
+INFO:services.scheduler_service:\U0001f527 Configurando jobs proativos do Sapiens...
+INFO:apscheduler.scheduler:Adding job tentatively -- it will be properly scheduled when the scheduler starts
+INFO:services.scheduler_service:\u2705 Job 'proactive_morning_summary' adicionado: cron {'hour': 8, 'minute': 0, 'name': 'Resumo Matinal Proativo (Telegram)'}
+INFO:services.scheduler_service:\u2705 Jobs proativos configurados!
+INFO:apscheduler.scheduler:Adding job tentatively -- it will be properly scheduled when the scheduler starts
+INFO:services.scheduler_service:\u2705 Job 'chat_timeout_monitor' adicionado: interval {'seconds': 30, 'name': 'Monitor de Inatividade de Chat'}
+INFO:services.scheduler_service:\u2705 Job de Timeout de Chat configurado!
+INFO:apscheduler.scheduler:Added job "Processamento Dißrio de Rotinas" to job store "default"
+INFO:apscheduler.scheduler:Added job "VerificaþÒo de Tarefas Atrasadas" to job store "default"
+INFO:apscheduler.scheduler:Added job "Resumo Matinal Proativo (Telegram)" to job store "default"
+INFO:apscheduler.scheduler:Added job "Monitor de Inatividade de Chat" to job store "default"
+INFO:apscheduler.scheduler:Scheduler started
+INFO:services.scheduler_service:\u2705 Scheduler iniciado com sucesso
+INFO:services.scheduler_service:\U0001f4cb Jobs agendados: 4
+INFO:services.scheduler_service:  - chat_timeout_monitor: pr¾xima execuþÒo em 2026-03-02 20:40:35.278778-03:00
+INFO:services.scheduler_service:  - check_overdue_tasks: pr¾xima execuþÒo em 2026-03-02 21:00:00-03:00
+INFO:services.scheduler_service:  - process_daily_routines: pr¾xima execuþÒo em 2026-03-03 00:01:00-03:00
+INFO:services.scheduler_service:  - proactive_morning_summary: pr¾xima execuþÒo em 2026-03-03 08:00:00-03:00
+INFO:services.scheduler_service:================================================================================
+INFO:services.scheduler_service:\u2705 SCHEDULER ATIVO E FUNCIONANDO!
+INFO:services.scheduler_service:================================================================================
+C:\GestaoVersus\app32\check_gandu.py:18: LegacyAPIWarning: The Query.get() method is considered legacy as of the 1.x series of SQLAlchemy and becomes a legacy construct in 2.0. The method is now available as Session.get() (deprecated since: 2.0) (Background on SQLAlchemy 2.0 at: https://sqlalche.me/e/b8d9)
+  user = User.query.get(emp.user_id) if emp.user_id else None
+INFO:services.my_work.discovery_service:\U0001f464 Regular Search: Linked to 1 active companies.
+INFO:services.my_work.discovery_service:\U0001f50d Discovery [scope=me]: user=4, role=collaborator, target_companies=[7]
+INFO:services.my_work.discovery_service:\U0001f4ca Raw Discovery: Found 28 total activities across all allowed companies.
+INFO:services.my_work.discovery_service:\U0001f454 Admin Global Search: Found 8 active companies.
+INFO:services.my_work.discovery_service:\U0001f50d Discovery [scope=me]: user=3, role=admin, target_companies=[1, 2, 3, 5, 6, 7, 8, 9]
+INFO:services.my_work.discovery_service:\U0001f4ca Raw Discovery: Found 159 total activities across all allowed companies.
+DEBUG: Registering Jinja filters...
+DEBUG: Registering API resources...
+DEBUG: API resources registered.
+DEBUG: Registering blueprints...
+BOT [TELEGRAM] Verificando registro de Webhook para: https://app.gestaoversus.com.br
+DEBUG: Blueprints registered.
+DEBUG: Checking DB connection and creating tables...
+DEBUG: DB tables verified/created successfully.
+DEBUG: Starting Engineering Service worker...
+[SQUAD ENGENHARIA] Monitorando sistema...
+DEBUG: Engineering Service worker started.
+DEBUG: Initializing Scheduler...
+DEBUG: Scheduler initialized.
+DEBUG: create_app() finished successfully.
+Empresa: ID=7, Name=Gandu Investimentos e Participaþ§es
+  Employee: ID=21, Name=Joaquim Lopes, UserID=None, UserName=N/A
+  Testing get_user_activities for Employee ID=21...
+    Type: <class 'list'>
+    Content: []
+  Employee: ID=22, Name=Fabiano Ferreira, UserID=None, UserName=N/A
+  Testing get_user_activities for Employee ID=22...
+    Type: <class 'list'>
+    Content: []
+  Employee: ID=25, Name=Caroline Marques, UserID=4, UserName=Caroline Marques
+  Testing get_user_activities for Employee ID=25...
+    Type: <class 'list'>
+    Content: []
+  Employee: ID=30, Name=Fabiano Ferreira, UserID=3, UserName=Fabiano Ferreira
+  Testing get_user_activities for Employee ID=30...
+    Type: <class 'list'>
+    Content: [{'id': 137, 'company_id': 1, 'plan_id': None, 'title': 'Verificar Faturamento Ideal da Empresa Nova e Atual', 'description': 'Considerar os dois CNPJs, ', 'status': 'completed', 'priority': 'normal', 'responsible_id': 24, 'responsible_name': 'Fabiano', 'executor_id': 24, 'executor_name': 'Fabiano', 'start_date': '2026-02-24T10:05:16.976800', 'end_date': None, 'deadline_date': datetime.date(2025, 11, 30), 'deadline': '2025-11-30', 'estimated_hours': 0.0, 'worked_hours': 0.0, 'company_name': 'Sav

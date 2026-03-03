@@ -1,0 +1,8 @@
+app       576667  0.0  0.0   8400   664 ?        Ss   20:55   0:00 tail -f /srv/appgestaoversuscombr.45a4cd4b.configr.cloud/log/uwsgi/uwsgi.log
+root      584897  0.0  0.2  55412  5060 ?        Ss   21:54   0:00 /var/www/.pyenv/versions/3.12.12/bin/uwsgi --emperor /etc/uwsgi/3.12/apps-enabled/ --die-on-term --logto /var/log/uwsgi/uwsgi-3.12.log
+app2      584904  0.1  4.7 225636 96776 ?        S    21:54   0:02 /var/www/.pyenv/versions/3.12.12/bin/uwsgi --ini app619.45a4cd4b.configr.cloud.ini
+app       584905  0.0  0.4  64820  8724 ?        S    21:54   0:00 /var/www/.pyenv/versions/3.12.12/bin/uwsgi --ini appgestaoversuscombr.45a4cd4b.configr.cloud.ini
+app       584911  0.0  0.3  65224  7152 ?        S    21:54   0:00 /var/www/.pyenv/versions/3.12.12/bin/uwsgi --ini appgestaoversuscombr.45a4cd4b.configr.cloud.ini
+app2      584919  0.0  4.3 225636 88640 ?        S    21:55   0:00 /var/www/.pyenv/versions/3.12.12/bin/uwsgi --ini app619.45a4cd4b.configr.cloud.ini
+app       587665  0.0  0.1   9968  3500 ?        Ss   22:18   0:00 bash -c ps aux | grep uwsgi
+app       587667  0.0  0.1   9216  2336 ?        S    22:18   0:00 grep uwsgi

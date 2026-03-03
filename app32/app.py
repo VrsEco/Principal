@@ -343,6 +343,10 @@ def register_blueprints(app):
     from api.webhooks.telegram_webhook import telegram_bp, setup_webhook
     app.register_blueprint(telegram_bp, url_prefix='/webhook')
 
+    # Webhook WhatsApp/Instagram (Sapiens Fase 4)
+    from api.webhooks.whatsapp_webhook import whatsapp_webhook_bp
+    app.register_blueprint(whatsapp_webhook_bp, url_prefix='/webhook')
+
     # Configuração automática do Webhook se EXTERNAL_URL estiver definido e SETUP ativo
     if app.config.get('TELEGRAM_SETUP_WEBHOOK') and app.config.get('EXTERNAL_URL'):
         print(f"BOT [TELEGRAM] Verificando registro de Webhook para: {app.config.get('EXTERNAL_URL')}")

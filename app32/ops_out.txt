@@ -1,0 +1,2 @@
+Agent content: 
+Tool calls: [{'name': 'list_my_companies', 'args': {'search_term': 'Gandu Investimentos'}, 'id': 'call_wPRIYkGen9sNDJybJlQ8rrbW', 'type': 'tool_call'}]

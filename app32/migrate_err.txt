@@ -1,0 +1,39 @@
+Traceback (most recent call last):
+  File "<frozen runpy>", line 198, in _run_module_as_main
+  File "<frozen runpy>", line 88, in _run_code
+  File "C:\Users\mff20\anaconda3\Scripts\flask.exe\__main__.py", line 6, in <module>
+  File "C:\Users\mff20\anaconda3\Lib\site-packages\flask\cli.py", line 1064, in main
+    cli.main()
+  File "C:\Users\mff20\anaconda3\Lib\site-packages\click\core.py", line 1078, in main
+    rv = self.invoke(ctx)
+         ^^^^^^^^^^^^^^^^
+  File "C:\Users\mff20\anaconda3\Lib\site-packages\click\core.py", line 1682, in invoke
+    cmd_name, cmd, args = self.resolve_command(ctx, args)
+                          ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\mff20\anaconda3\Lib\site-packages\click\core.py", line 1729, in resolve_command
+    cmd = self.get_command(ctx, cmd_name)
+          ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\mff20\anaconda3\Lib\site-packages\flask\cli.py", line 579, in get_command
+    app = info.load_app()
+          ^^^^^^^^^^^^^^^
+  File "C:\Users\mff20\anaconda3\Lib\site-packages\flask\cli.py", line 313, in load_app
+    app = locate_app(import_name, None, raise_if_not_found=False)
+          ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\mff20\anaconda3\Lib\site-packages\flask\cli.py", line 236, in locate_app
+    return find_best_app(module)
+           ^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\mff20\anaconda3\Lib\site-packages\flask\cli.py", line 64, in find_best_app
+    app = app_factory()
+          ^^^^^^^^^^^^^
+  File "C:\GestaoVersus\app32\app.py", line 63, in create_app
+    register_blueprints(app)
+  File "C:\GestaoVersus\app32\app.py", line 311, in register_blueprints
+    from api.routes.agents import agents_bp
+  File "C:\GestaoVersus\app32\api\routes\agents.py", line 101
+    from src.intelligence.execution import run_agent_with_context, extract_response_text
+    ^
+IndentationError: expected an indented block after 'if' statement on line 98
+DEBUG: Registering Jinja filters...
+DEBUG: Registering API resources...
+DEBUG: API resources registered.
+DEBUG: Registering blueprints...

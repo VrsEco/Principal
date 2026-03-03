@@ -1,0 +1,20 @@
+--
+KeyError: 'date'
+[pid: 551055|app: 0|req: 101/101] 2804:214:400a:23a4:8cc8:d6a:30e1:2551 () {38 vars in 558 bytes} [Sun Mar  1 17:02:04 2026] POST /webhook/telegram => generated 265 bytes in 2 msecs (HTTP/1.1 500) 4 headers in 145 bytes (2 switches on core 0)
+INFO:apscheduler.executors.default:Running job "Monitor de Inatividade de Chat (trigger: interval[0:00:30], next run at: 2026-03-01 17:02:45 -03)" (scheduled at 2026-03-01 17:02:15.174971-03:00)
+--
+KeyError: 'date'
+[pid: 551055|app: 0|req: 102/102] 2804:214:400a:23a4:8cc8:d6a:30e1:2551 () {38 vars in 558 bytes} [Sun Mar  1 17:04:07 2026] POST /webhook/telegram => generated 265 bytes in 3 msecs (HTTP/1.1 500) 4 headers in 145 bytes (1 switches on core 0)
+INFO:apscheduler.executors.default:Running job "Monitor de Inatividade de Chat (trigger: interval[0:00:30], next run at: 2026-03-01 17:04:45 -03)" (scheduled at 2026-03-01 17:04:15.174971-03:00)
+--
+KeyError: 'date'
+[pid: 551055|app: 0|req: 103/103] 2804:214:400a:23a4:8cc8:d6a:30e1:2551 () {38 vars in 558 bytes} [Sun Mar  1 17:11:11 2026] POST /webhook/telegram => generated 265 bytes in 2 msecs (HTTP/1.1 500) 4 headers in 145 bytes (2 switches on core 0)
+INFO:apscheduler.executors.default:Running job "Monitor de Inatividade de Chat (trigger: interval[0:00:30], next run at: 2026-03-01 17:11:45 -03)" (scheduled at 2026-03-01 17:11:15.174971-03:00)
+--
+INFO:apscheduler.executors.default:Job "Monitor de Inatividade de Chat (trigger: interval[0:00:30], next run at: 2026-03-01 17:16:15 -03)" executed successfully
+[pid: 551055|app: 0|req: 104/104] 91.108.5.35 () {38 vars in 550 bytes} [Sun Mar  1 17:16:03 2026] POST /webhook/telegram => generated 0 bytes in 3 msecs (HTTP/1.1 200) 4 headers in 124 bytes (2 switches on core 0)
+INFO:api.webhooks.telegram_webhook:Mensagem recebida do Telegram ID 8507771166: oi
+--
+INFO:apscheduler.executors.default:Job "Monitor de Inatividade de Chat (trigger: interval[0:00:30], next run at: 2026-03-01 17:25:15 -03)" executed successfully
+[pid: 551055|app: 0|req: 109/109] 91.108.5.35 () {38 vars in 550 bytes} [Sun Mar  1 17:25:07 2026] POST /webhook/telegram => generated 0 bytes in 1 msecs (HTTP/1.1 200) 4 headers in 124 bytes (2 switches on core 0)
+INFO:api.webhooks.telegram_webhook:Mensagem recebida do Telegram ID 8507771166: oi

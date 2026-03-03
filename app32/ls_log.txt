@@ -1,0 +1,1 @@
+-rw-rw---- 1 app www-users 505220 Mar  1 21:59 /srv/appgestaoversuscombr.45a4cd4b.configr.cloud/log/uwsgi/uwsgi.log

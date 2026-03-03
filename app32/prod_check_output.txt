@@ -1,0 +1,6 @@
+Argument expected for the -c option
+usage: /srv/appgestaoversuscombr.45a4cd4b.configr.cloud/.virtualenv/3.12/bin/python [option] ... [-c cmd | -m mod | file | -] [arg] ...
+Try `python -h' for more information.
+bash: line 3: import: command not found
+bash: -c: line 4: syntax error near unexpected token `0,'
+bash: -c: line 4: `sys.path.insert(0, '.')'

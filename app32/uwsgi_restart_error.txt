@@ -1,0 +1,100 @@
+INFO:apscheduler.executors.default:Job "Monitor de Inatividade de Chat (trigger: interval[0:00:30], next run at: 2026-03-01 19:51:44 -03)" executed successfully
+INFO:apscheduler.executors.default:Running job "Monitor de Inatividade de Chat (trigger: interval[0:00:30], next run at: 2026-03-01 19:52:14 -03)" (scheduled at 2026-03-01 19:51:44.430572-03:00)
+INFO:apscheduler.executors.default:Job "Monitor de Inatividade de Chat (trigger: interval[0:00:30], next run at: 2026-03-01 19:52:14 -03)" executed successfully
+INFO:apscheduler.executors.default:Running job "Monitor de Inatividade de Chat (trigger: interval[0:00:30], next run at: 2026-03-01 19:52:44 -03)" (scheduled at 2026-03-01 19:52:14.430572-03:00)
+INFO:apscheduler.executors.default:Job "Monitor de Inatividade de Chat (trigger: interval[0:00:30], next run at: 2026-03-01 19:52:44 -03)" executed successfully
+INFO:apscheduler.executors.default:Running job "Monitor de Inatividade de Chat (trigger: interval[0:00:30], next run at: 2026-03-01 19:53:14 -03)" (scheduled at 2026-03-01 19:52:44.430572-03:00)
+INFO:apscheduler.executors.default:Job "Monitor de Inatividade de Chat (trigger: interval[0:00:30], next run at: 2026-03-01 19:53:14 -03)" executed successfully
+INFO:apscheduler.executors.default:Running job "Monitor de Inatividade de Chat (trigger: interval[0:00:30], next run at: 2026-03-01 19:53:44 -03)" (scheduled at 2026-03-01 19:53:14.430572-03:00)
+INFO:apscheduler.executors.default:Job "Monitor de Inatividade de Chat (trigger: interval[0:00:30], next run at: 2026-03-01 19:53:44 -03)" executed successfully
+INFO:api.webhooks.telegram_webhook:Mensagem recebida do Telegram ID 8507771166: Quais projetos estão abertos na empresa Gandu Investimentos?
+INFO:api.webhooks.telegram_webhook:Enviando para LangGraph (SQL) na thread tg_8507771166...
+INFO:httpx:HTTP Request: POST https://api.openai.com/v1/chat/completions "HTTP/1.1 200 OK"
+--- GRAPH ROUTING: Decision 'end' -> Node '__end__' ---
+[pid: 571826|app: 0|req: 75/75] 91.108.5.35 () {38 vars in 550 bytes} [Sun Mar  1 19:53:27 2026] POST /webhook/telegram => generated 0 bytes in 2674 msecs (HTTP/1.1 200) 4 headers in 124 bytes (1 switches on core 0)
+INFO:apscheduler.executors.default:Running job "Monitor de Inatividade de Chat (trigger: interval[0:00:30], next run at: 2026-03-01 19:54:14 -03)" (scheduled at 2026-03-01 19:53:44.430572-03:00)
+INFO:services.chat_timeout_service:--- TIMEOUT WARNING: User 3 (platform) ---
+INFO:apscheduler.executors.default:Job "Monitor de Inatividade de Chat (trigger: interval[0:00:30], next run at: 2026-03-01 19:54:14 -03)" executed successfully
+INFO:apscheduler.executors.default:Running job "Monitor de Inatividade de Chat (trigger: interval[0:00:30], next run at: 2026-03-01 19:54:44 -03)" (scheduled at 2026-03-01 19:54:14.430572-03:00)
+INFO:apscheduler.executors.default:Job "Monitor de Inatividade de Chat (trigger: interval[0:00:30], next run at: 2026-03-01 19:54:44 -03)" executed successfully
+*** Starting uWSGI 2.0.31 (64bit) on [Sun Mar  1 21:54:55 2026] ***
+compiled with version: 11.4.0 on 19 December 2025 22:17:41
+os: Linux-4.18.16-x86_64-linode118 #1 SMP PREEMPT Mon Oct 29 15:38:25 UTC 2018
+nodename: ip-69-164-205-75
+machine: x86_64
+clock source: unix
+pcre jit disabled
+detected number of CPU cores: 1
+current working directory: /etc/uwsgi/3.12/apps-enabled
+detected binary path: /var/www/.pyenv/versions/3.12.12/bin/uwsgi
+setgid() to 33
+set additional group 999 (ssh-users)
+setuid() to 1047
+chdir() to /srv/appgestaoversuscombr.45a4cd4b.configr.cloud/www
+your processes number limit is 7892
+your memory page size is 4096 bytes
+ *** WARNING: you have enabled harakiri without post buffering. Slow upload could be rejected on post-unbuffered webservers *** 
+detected max file descriptor number: 1024
+lock engine: pthread robust mutexes
+thunder lock: disabled (you can enable it with --thunder-lock)
+uwsgi socket 0 bound to UNIX address /srv/appgestaoversuscombr.45a4cd4b.configr.cloud/etc/uwsgi/app.sock fd 3
+Python version: 3.12.12 (main, Dec 19 2025, 19:15:44) [GCC 11.4.0]
+Python main interpreter initialized at 0x7fe2073ebdd0
+python threads support enabled
+your server socket listen backlog is limited to 100 connections
+your mercy for graceful operations on workers is 60 seconds
+mapped 162224 bytes (158 KB) for 1 cores
+*** Operational MODE: single process ***
+added /srv/appgestaoversuscombr.45a4cd4b.configr.cloud/.virtualenv/3.12/lib/python3.12/site-packages/ to pythonpath.
+ModuleNotFoundError: No module named 'django'
+unable to load app 0 (mountpoint='') (callable not found or import error)
+*** no app loaded. going in full dynamic mode ***
+*** uWSGI is running in multiple interpreter mode ***
+spawned uWSGI master process (pid: 584827)
+spawned uWSGI worker 1 (pid: 584833, cores: 1)
+*** Stats server enabled on /srv/appgestaoversuscombr.45a4cd4b.configr.cloud/etc/uwsgi/stats fd: 10 ***
+Sun Mar  1 21:54:55 2026 - received message 0 from emperor
+SIGINT/SIGTERM received...killing workers...
+worker 1 buried after 1 seconds
+goodbye to uWSGI.
+VACUUM: unix socket /srv/appgestaoversuscombr.45a4cd4b.configr.cloud/etc/uwsgi/app.sock removed.
+VACUUM: unix socket /srv/appgestaoversuscombr.45a4cd4b.configr.cloud/etc/uwsgi/stats (stats) removed.
+*** Starting uWSGI 2.0.31 (64bit) on [Sun Mar  1 21:54:58 2026] ***
+compiled with version: 11.4.0 on 19 December 2025 22:17:41
+os: Linux-4.18.16-x86_64-linode118 #1 SMP PREEMPT Mon Oct 29 15:38:25 UTC 2018
+nodename: ip-69-164-205-75
+machine: x86_64
+clock source: unix
+pcre jit disabled
+detected number of CPU cores: 1
+current working directory: /etc/uwsgi/3.12/apps-enabled
+detected binary path: /var/www/.pyenv/versions/3.12.12/bin/uwsgi
+setgid() to 33
+set additional group 999 (ssh-users)
+setuid() to 1047
+chdir() to /srv/appgestaoversuscombr.45a4cd4b.configr.cloud/www
+your processes number limit is 7892
+your memory page size is 4096 bytes
+ *** WARNING: you have enabled harakiri without post buffering. Slow upload could be rejected on post-unbuffered webservers *** 
+detected max file descriptor number: 1024
+lock engine: pthread robust mutexes
+thunder lock: disabled (you can enable it with --thunder-lock)
+uwsgi socket 0 bound to UNIX address /srv/appgestaoversuscombr.45a4cd4b.configr.cloud/etc/uwsgi/app.sock fd 3
+Python version: 3.12.12 (main, Dec 19 2025, 19:15:44) [GCC 11.4.0]
+Python main interpreter initialized at 0x7f9a99174dd0
+python threads support enabled
+your server socket listen backlog is limited to 100 connections
+your mercy for graceful operations on workers is 60 seconds
+mapped 162224 bytes (158 KB) for 1 cores
+*** Operational MODE: single process ***
+added /srv/appgestaoversuscombr.45a4cd4b.configr.cloud/.virtualenv/3.12/lib/python3.12/site-packages/ to pythonpath.
+ModuleNotFoundError: No module named 'django'
+unable to load app 0 (mountpoint='') (callable not found or import error)
+*** no app loaded. going in full dynamic mode ***
+*** uWSGI is running in multiple interpreter mode ***
+spawned uWSGI master process (pid: 584905)
+spawned uWSGI worker 1 (pid: 584911, cores: 1)
+*** Stats server enabled on /srv/appgestaoversuscombr.45a4cd4b.configr.cloud/etc/uwsgi/stats fd: 10 ***
+--- no python application found, check your startup logs for errors ---
+[pid: 584911|app: -1|req: -1/1] 2804:214:400a:23a4:8cc8:d6a:30e1:2551 () {60 vars in 1269 bytes} [Sun Mar  1 21:55:04 2026] GET /portal => generated 21 bytes in 0 msecs (HTTP/2.0 500) 2 headers in 83 bytes (1 switches on core 0)
+announcing my loyalty to the Emperor...

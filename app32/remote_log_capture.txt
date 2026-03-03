@@ -1,0 +1,2538 @@
+-rw-rw-rw- 1 app app 108918 Mar  1 17:16 /srv/appgestaoversuscombr.45a4cd4b.configr.cloud/www/app32/request_debug.log
+[2026-02-28 17:32:09.155034] POST /login
+  Auth: False, Active Company: None
+[2026-02-28 17:32:09.338970] POST /portal
+  Auth: False, Active Company: None
+[2026-02-28 17:32:09.341838] GET /login
+  Auth: False, Active Company: None
+[2026-02-28 17:32:09.355325] GET /api/projects
+  Auth: False, Active Company: None
+[2026-02-28 17:33:06.391968] POST /login
+  Auth: False, Active Company: None
+[2026-02-28 17:33:06.581662] POST /portal
+  Auth: False, Active Company: None
+[2026-02-28 17:33:06.583533] GET /login
+  Auth: False, Active Company: None
+[2026-02-28 17:33:06.586001] GET /api/projects
+  Auth: False, Active Company: None
+[2026-02-28 17:33:53.174717] POST /login
+  Auth: False, Active Company: None
+[2026-02-28 17:33:53.305664] POST /portal
+  Auth: True, Active Company: None
+[2026-02-28 17:33:53.311377] GET /api/projects
+  Auth: True, Active Company: 1
+[2026-02-28 17:36:09.449787] POST /login
+  Auth: False, Active Company: None
+[2026-02-28 17:36:09.648136] POST /portal
+  Auth: True, Active Company: None
+[2026-02-28 17:36:09.653316] GET /api/projects
+  Auth: True, Active Company: 1
+[2026-02-28 17:36:09.712370] POST /portal
+  Auth: True, Active Company: 1
+[2026-02-28 17:36:09.715587] GET /api/projects
+  Auth: True, Active Company: 2
+[2026-02-28 17:41:09.363423] GET /api/projects
+  Auth: True, Active Company: 1
+[2026-02-28 18:30:04.454059] GET /api/projects
+  Auth: True, Active Company: 1
+[2026-02-28 18:30:07.909660] GET /api/projects
+  Auth: True, Active Company: 1
+[2026-02-28 18:30:19.015210] GET /
+  Auth: True, Active Company: 1
+[2026-02-28 18:30:19.168822] GET /my-work
+  Auth: True, Active Company: 1
+[2026-02-28 18:30:19.656310] GET /my-work/api/filter-options
+  Auth: True, Active Company: 1
+[2026-02-28 18:30:19.863340] GET /my-work/api/activities
+  Auth: True, Active Company: 1
+[2026-02-28 18:30:20.035344] GET /my-work/api/occurrences/summary
+  Auth: True, Active Company: 1
+[2026-02-28 18:30:22.469465] GET /my-work
+  Auth: True, Active Company: 1
+[2026-02-28 18:30:22.809500] GET /my-work/api/filter-options
+  Auth: True, Active Company: 1
+[2026-02-28 18:30:23.028075] GET /my-work/api/activities
+  Auth: True, Active Company: 1
+[2026-02-28 18:30:23.183388] GET /my-work/api/occurrences/summary
+  Auth: True, Active Company: 1
+[2026-02-28 18:30:29.003923] GET /project-portfolios
+  Auth: True, Active Company: 1
+[2026-02-28 18:30:29.150294] GET /companies/1/project-portfolios
+  Auth: True, Active Company: 1
+[2026-02-28 18:30:29.451003] GET /api/companies/1/employees
+  Auth: True, Active Company: 1
+[2026-02-28 18:30:29.457571] GET /api/companies/1/portfolios
+  Auth: True, Active Company: 1
+[2026-02-28 18:30:31.290003] GET /projects
+  Auth: True, Active Company: 1
+[2026-02-28 18:30:31.638436] GET /api/companies/1/portfolios
+  Auth: True, Active Company: 1
+[2026-02-28 18:30:31.642066] GET /api/plans
+  Auth: True, Active Company: 1
+[2026-02-28 18:30:31.791398] GET /api/projects
+  Auth: True, Active Company: 1
+[2026-02-28 18:30:45.807704] GET /portal
+  Auth: True, Active Company: 1
+[2026-02-28 18:30:46.085730] GET /api/notes/
+  Auth: True, Active Company: 1
+[2026-02-28 18:30:48.216239] POST /portal
+  Auth: True, Active Company: 1
+[2026-02-28 18:30:48.381200] GET /my-work
+  Auth: True, Active Company: 2
+[2026-02-28 18:30:48.730160] GET /my-work/api/filter-options
+  Auth: True, Active Company: 2
+[2026-02-28 18:30:48.927721] GET /my-work/api/activities
+  Auth: True, Active Company: 2
+[2026-02-28 18:30:49.089760] GET /my-work/api/occurrences/summary
+  Auth: True, Active Company: 2
+[2026-02-28 18:30:55.072306] GET /projects
+  Auth: True, Active Company: 2
+[2026-02-28 18:30:55.870251] GET /api/plans
+  Auth: True, Active Company: 2
+[2026-02-28 18:30:55.873687] GET /api/companies/2/portfolios
+  Auth: True, Active Company: 2
+[2026-02-28 18:30:56.028686] GET /api/projects
+  Auth: True, Active Company: 2
+[2026-02-28 18:31:02.550492] GET /portal
+  Auth: True, Active Company: 2
+[2026-02-28 18:31:02.744483] GET /api/notes/
+  Auth: True, Active Company: 2
+[2026-02-28 18:31:06.881303] POST /portal
+  Auth: True, Active Company: 2
+[2026-02-28 18:31:07.045057] GET /my-work
+  Auth: True, Active Company: 9
+[2026-02-28 18:31:07.375019] GET /my-work/api/filter-options
+  Auth: True, Active Company: 9
+[2026-02-28 18:31:07.545633] GET /my-work/api/activities
+  Auth: True, Active Company: 9
+[2026-02-28 18:31:07.707843] GET /my-work/api/occurrences/summary
+  Auth: True, Active Company: 9
+[2026-02-28 18:31:14.325190] GET /projects
+  Auth: True, Active Company: 9
+[2026-02-28 18:31:14.539260] GET /api/companies/9/portfolios
+  Auth: True, Active Company: 9
+[2026-02-28 18:31:14.543074] GET /api/plans
+  Auth: True, Active Company: 9
+[2026-02-28 18:31:14.689593] GET /api/projects
+  Auth: True, Active Company: 9
+[2026-02-28 18:31:23.322304] GET /process-map
+  Auth: True, Active Company: 9
+[2026-02-28 18:31:23.478803] GET /process-map
+  Auth: True, Active Company: 9
+[2026-02-28 18:31:23.725841] GET /api/process-areas
+  Auth: True, Active Company: 9
+[2026-02-28 18:31:23.731455] GET /api/macro-processes
+  Auth: True, Active Company: 9
+[2026-02-28 18:31:23.741149] GET /api/processes
+  Auth: True, Active Company: 9
+[2026-02-28 18:31:23.999702] GET /api/dashboard/filter-options
+  Auth: True, Active Company: 9
+[2026-02-28 18:31:29.493307] GET /process-instances
+  Auth: True, Active Company: 9
+[2026-02-28 18:31:29.636351] GET /companies/9/process-instances
+  Auth: True, Active Company: 9
+[2026-02-28 18:31:30.312398] GET /api/companies/9/process-instances
+  Auth: True, Active Company: 9
+[2026-02-28 18:31:33.104088] GET /process-routines
+  Auth: True, Active Company: 9
+[2026-02-28 18:31:33.246995] GET /companies/9/process-routines
+  Auth: True, Active Company: 9
+[2026-02-28 18:31:33.456433] GET /api/companies/9/process-routines
+  Auth: True, Active Company: 9
+[2026-02-28 18:31:38.986525] GET /portal
+  Auth: True, Active Company: 9
+[2026-02-28 18:31:39.181445] GET /api/notes/
+  Auth: True, Active Company: 9
+[2026-02-28 18:51:40.983481] POST /portal
+  Auth: True, Active Company: 9
+[2026-02-28 18:51:41.142600] GET /my-work
+  Auth: True, Active Company: 1
+[2026-02-28 18:51:41.443579] GET /my-work/api/filter-options
+  Auth: True, Active Company: 1
+[2026-02-28 18:51:41.599293] GET /my-work/api/activities
+  Auth: True, Active Company: 1
+[2026-02-28 18:51:41.747901] GET /my-work/api/occurrences/summary
+  Auth: True, Active Company: 1
+[2026-02-28 18:51:49.037629] GET /projects
+  Auth: True, Active Company: 1
+[2026-02-28 18:51:49.234882] GET /api/companies/1/portfolios
+  Auth: True, Active Company: 1
+[2026-02-28 18:51:49.238328] GET /api/plans
+  Auth: True, Active Company: 1
+[2026-02-28 18:51:49.374551] GET /api/projects
+  Auth: True, Active Company: 1
+[2026-02-28 18:51:55.128791] GET /projects/analysis
+  Auth: True, Active Company: 1
+[2026-02-28 18:51:55.441367] GET /api/projects/all-tasks
+  Auth: True, Active Company: 1
+[2026-02-28 18:51:55.481429] GET /api/projects
+  Auth: True, Active Company: 1
+[2026-02-28 18:51:55.525042] GET /api/user-employee/employees/1
+  Auth: True, Active Company: 1
+[2026-02-28 18:52:27.317878] GET /api/projects/4/tasks/33/hours-summary
+  Auth: True, Active Company: 1
+[2026-02-28 18:52:34.407710] PUT /api/projects/4/tasks/33
+  Auth: True, Active Company: 1
+[2026-02-28 18:52:34.573401] GET /api/projects/all-tasks
+  Auth: True, Active Company: 1
+[2026-02-28 18:52:39.266910] GET /api/projects/24/tasks/1/hours-summary
+  Auth: True, Active Company: 1
+[2026-02-28 18:52:43.216924] PUT /api/projects/24/tasks/1
+  Auth: True, Active Company: 1
+[2026-02-28 18:52:43.359850] GET /api/projects/all-tasks
+  Auth: True, Active Company: 1
+[2026-02-28 18:52:48.447842] GET /api/projects/4/tasks/126/hours-summary
+  Auth: True, Active Company: 1
+[2026-02-28 18:52:54.342062] PUT /api/projects/4/tasks/126
+  Auth: True, Active Company: 1
+[2026-02-28 18:52:54.494496] GET /api/projects/all-tasks
+  Auth: True, Active Company: 1
+[2026-02-28 18:52:57.158324] GET /api/projects/4/tasks/141/hours-summary
+  Auth: True, Active Company: 1
+[2026-02-28 18:53:02.062327] PUT /api/projects/4/tasks/141
+  Auth: True, Active Company: 1
+[2026-02-28 18:53:02.206253] GET /api/projects/all-tasks
+  Auth: True, Active Company: 1
+[2026-02-28 18:53:10.477361] GET /api/projects/9/tasks/34/hours-summary
+  Auth: True, Active Company: 1
+[2026-02-28 18:53:15.085274] PUT /api/projects/9/tasks/34
+  Auth: True, Active Company: 1
+[2026-02-28 18:53:15.232981] GET /api/projects/all-tasks
+  Auth: True, Active Company: 1
+[2026-02-28 18:53:25.878204] GET /api/projects/13/tasks/55/hours-summary
+  Auth: True, Active Company: 1
+[2026-02-28 18:53:29.867198] PUT /api/projects/13/tasks/55
+  Auth: True, Active Company: 1
+[2026-02-28 18:53:30.021373] GET /api/projects/all-tasks
+  Auth: True, Active Company: 1
+[2026-02-28 18:53:33.367183] GET /api/projects/15/tasks/66/hours-summary
+  Auth: True, Active Company: 1
+[2026-02-28 18:53:37.716168] PUT /api/projects/15/tasks/66
+  Auth: True, Active Company: 1
+[2026-02-28 18:53:37.868229] GET /api/projects/all-tasks
+  Auth: True, Active Company: 1
+[2026-02-28 18:55:08.712650] GET /my-work
+  Auth: True, Active Company: 1
+[2026-02-28 18:55:09.114787] GET /my-work/api/filter-options
+  Auth: True, Active Company: 1
+[2026-02-28 18:55:09.284732] GET /my-work/api/activities
+  Auth: True, Active Company: 1
+[2026-02-28 18:55:09.439888] GET /my-work/api/occurrences/summary
+  Auth: True, Active Company: 1
+[2026-02-28 18:55:11.936776] GET /my-work/api/activities
+  Auth: True, Active Company: 1
+[2026-02-28 18:55:12.074964] GET /my-work/api/occurrences/summary
+  Auth: True, Active Company: 1
+[2026-02-28 18:55:13.787829] GET /my-work/api/activities
+  Auth: True, Active Company: 1
+[2026-02-28 18:55:13.927830] GET /my-work/api/occurrences/summary
+  Auth: True, Active Company: 1
+[2026-02-28 18:55:14.552430] GET /my-work/api/activities
+  Auth: True, Active Company: 1
+[2026-02-28 18:55:14.688401] GET /my-work/api/occurrences/summary
+  Auth: True, Active Company: 1
+[2026-02-28 18:55:20.689373] GET /project-portfolios
+  Auth: True, Active Company: 1
+[2026-02-28 18:55:20.830541] GET /companies/1/project-portfolios
+  Auth: True, Active Company: 1
+[2026-02-28 18:55:21.092080] GET /api/companies/1/portfolios
+  Auth: True, Active Company: 1
+[2026-02-28 18:55:21.096563] GET /api/companies/1/employees
+  Auth: True, Active Company: 1
+[2026-02-28 18:55:23.182916] GET /projects
+  Auth: True, Active Company: 1
+[2026-02-28 18:55:23.355425] GET /api/companies/1/portfolios
+  Auth: True, Active Company: 1
+[2026-02-28 18:55:23.361015] GET /api/plans
+  Auth: True, Active Company: 1
+[2026-02-28 18:55:23.495338] GET /api/projects
+  Auth: True, Active Company: 1
+[2026-02-28 18:55:29.252042] GET /projects/4/edit
+  Auth: True, Active Company: 1
+[2026-02-28 18:55:29.538910] GET /api/plans
+  Auth: True, Active Company: 1
+[2026-02-28 18:55:29.665957] GET /api/companies/1/portfolios
+  Auth: True, Active Company: 1
+[2026-02-28 18:55:29.796772] GET /api/companies/1/employees
+  Auth: True, Active Company: 1
+[2026-02-28 18:55:29.929613] GET /api/projects/4
+  Auth: True, Active Company: 1
+[2026-02-28 18:55:39.216370] PUT /api/projects/4
+  Auth: True, Active Company: 1
+[2026-02-28 18:55:39.371267] GET /projects
+  Auth: True, Active Company: 1
+[2026-02-28 18:55:39.985417] GET /api/companies/1/portfolios
+  Auth: True, Active Company: 1
+[2026-02-28 18:55:39.989251] GET /api/plans
+  Auth: True, Active Company: 1
+[2026-02-28 18:55:40.115145] GET /api/projects
+  Auth: True, Active Company: 1
+[2026-02-28 18:55:45.312460] GET /portal
+  Auth: True, Active Company: 1
+[2026-02-28 18:55:45.515247] GET /api/notes/
+  Auth: True, Active Company: 1
+[2026-02-28 18:55:56.418759] POST /portal
+  Auth: True, Active Company: 1
+[2026-02-28 18:55:56.558939] GET /my-work
+  Auth: True, Active Company: 1
+[2026-02-28 18:55:56.860515] GET /my-work/api/filter-options
+  Auth: True, Active Company: 1
+[2026-02-28 18:55:57.013651] GET /my-work/api/activities
+  Auth: True, Active Company: 1
+[2026-02-28 18:55:57.151790] GET /my-work/api/occurrences/summary
+  Auth: True, Active Company: 1
+[2026-02-28 18:55:59.035939] GET /my-work/api/activities
+  Auth: True, Active Company: 1
+[2026-02-28 18:55:59.172924] GET /my-work/api/occurrences/summary
+  Auth: True, Active Company: 1
+[2026-02-28 18:55:59.737922] GET /my-work/api/activities
+  Auth: True, Active Company: 1
+[2026-02-28 18:55:59.873983] GET /my-work/api/occurrences/summary
+  Auth: True, Active Company: 1
+[2026-02-28 18:56:11.840761] GET /project-portfolios
+  Auth: True, Active Company: 1
+[2026-02-28 18:56:11.973692] GET /companies/1/project-portfolios
+  Auth: True, Active Company: 1
+[2026-02-28 18:56:12.360212] GET /api/companies/1/employees
+  Auth: True, Active Company: 1
+[2026-02-28 18:56:12.363768] GET /api/companies/1/portfolios
+  Auth: True, Active Company: 1
+[2026-02-28 18:56:24.107768] POST /api/companies/1/portfolios
+  Auth: True, Active Company: 1
+[2026-02-28 18:56:24.264275] GET /api/companies/1/portfolios
+  Auth: True, Active Company: 1
+[2026-02-28 18:56:34.233610] GET /my-work
+  Auth: True, Active Company: 1
+[2026-02-28 18:56:34.655656] GET /my-work/api/filter-options
+  Auth: True, Active Company: 1
+[2026-02-28 18:56:34.834606] GET /my-work/api/activities
+  Auth: True, Active Company: 1
+[2026-02-28 18:56:34.978570] GET /my-work/api/occurrences/summary
+  Auth: True, Active Company: 1
+[2026-02-28 18:56:36.678618] GET /my-work/api/activities
+  Auth: True, Active Company: 1
+[2026-02-28 18:56:36.816969] GET /my-work/api/occurrences/summary
+  Auth: True, Active Company: 1
+[2026-02-28 18:56:37.351533] GET /my-work/api/activities
+  Auth: True, Active Company: 1
+[2026-02-28 18:56:37.486480] GET /my-work/api/occurrences/summary
+  Auth: True, Active Company: 1
+[2026-02-28 19:08:49.762937] GET /project-portfolios
+  Auth: True, Active Company: 1
+[2026-02-28 19:08:49.909492] GET /companies/1/project-portfolios
+  Auth: True, Active Company: 1
+[2026-02-28 19:08:50.247409] GET /api/companies/1/employees
+  Auth: True, Active Company: 1
+[2026-02-28 19:08:50.256101] GET /api/companies/1/portfolios
+  Auth: True, Active Company: 1
+[2026-02-28 19:08:52.369417] GET /projects
+  Auth: True, Active Company: 1
+[2026-02-28 19:08:52.570470] GET /api/companies/1/portfolios
+  Auth: True, Active Company: 1
+[2026-02-28 19:08:52.588085] GET /api/plans
+  Auth: True, Active Company: 1
+[2026-02-28 19:08:52.745870] GET /api/projects
+  Auth: True, Active Company: 1
+[2026-02-28 19:08:57.451633] GET /projects/4/manage
+  Auth: True, Active Company: 1
+[2026-02-28 19:08:57.806570] GET /api/projects/4/tasks
+  Auth: True, Active Company: 1
+[2026-02-28 19:08:57.824890] GET /api/companies/1/employees
+  Auth: True, Active Company: 1
+[2026-02-28 19:09:07.760221] GET /my-work
+  Auth: True, Active Company: 1
+[2026-02-28 19:09:08.079754] GET /my-work/api/filter-options
+  Auth: True, Active Company: 1
+[2026-02-28 19:09:08.253359] GET /my-work/api/activities
+  Auth: True, Active Company: 1
+[2026-02-28 19:09:08.397063] GET /my-work/api/occurrences/summary
+  Auth: True, Active Company: 1
+[2026-02-28 19:26:42.774486] GET /my-work
+  Auth: True, Active Company: 1
+[2026-02-28 19:26:43.316185] GET /my-work/api/filter-options
+  Auth: True, Active Company: 1
+[2026-02-28 19:26:43.518131] GET /my-work/api/activities
+  Auth: True, Active Company: 1
+[2026-02-28 19:26:43.672658] GET /my-work/api/occurrences/summary
+  Auth: True, Active Company: 1
+[2026-02-28 19:39:12.482594] GET /my-work
+  Auth: True, Active Company: 1
+[2026-02-28 19:39:13.046558] GET /my-work/api/filter-options
+  Auth: True, Active Company: 1
+[2026-02-28 19:39:13.252113] GET /my-work/api/activities
+  Auth: True, Active Company: 1
+[2026-02-28 19:39:13.402122] GET /my-work/api/occurrences/summary
+  Auth: True, Active Company: 1
+[2026-02-28 19:40:50.733151] GET /my-work
+  Auth: True, Active Company: 1
+[2026-02-28 19:40:51.206289] GET /my-work/api/filter-options
+  Auth: True, Active Company: 1
+[2026-02-28 19:40:51.391216] GET /my-work/api/activities
+  Auth: True, Active Company: 1
+[2026-02-28 19:40:51.542788] GET /my-work/api/occurrences/summary
+  Auth: True, Active Company: 1
+[2026-02-28 19:40:57.263892] GET /projects
+  Auth: True, Active Company: 1
+[2026-02-28 19:40:57.560386] GET /api/companies/1/portfolios
+  Auth: True, Active Company: 1
+[2026-02-28 19:40:57.565810] GET /api/plans
+  Auth: True, Active Company: 1
+[2026-02-28 19:40:57.736721] GET /api/projects
+  Auth: True, Active Company: 1
+[2026-02-28 19:41:08.776217] GET /projects/analysis
+  Auth: True, Active Company: 1
+[2026-02-28 19:41:09.210622] GET /api/projects/all-tasks
+  Auth: True, Active Company: 1
+[2026-02-28 19:41:09.252594] GET /api/projects
+  Auth: True, Active Company: 1
+[2026-02-28 19:41:09.301243] GET /api/user-employee/employees/1
+  Auth: True, Active Company: 1
+[2026-02-28 19:41:43.408675] GET /my-work
+  Auth: True, Active Company: 1
+[2026-02-28 19:41:43.730458] GET /my-work/api/filter-options
+  Auth: True, Active Company: 1
+[2026-02-28 19:41:43.904677] GET /my-work/api/activities
+  Auth: True, Active Company: 1
+[2026-02-28 19:41:44.060001] GET /my-work/api/occurrences/summary
+  Auth: True, Active Company: 1
+[2026-02-28 20:06:16.535587] GET /my-work
+  Auth: False, Active Company: None
+[2026-02-28 20:06:16.682427] GET /login
+  Auth: False, Active Company: None
+[2026-02-28 20:06:40.477619] POST /login
+  Auth: False, Active Company: None
+[2026-02-28 20:06:41.603966] GET /portal
+  Auth: True, Active Company: None
+[2026-02-28 20:06:41.926518] GET /api/notes/
+  Auth: True, Active Company: None
+[2026-02-28 20:06:54.002527] GET /my-work
+  Auth: True, Active Company: None
+  No active company, redirecting UI to portal
+[2026-02-28 20:06:54.159193] GET /portal
+  Auth: True, Active Company: None
+[2026-02-28 20:06:54.426627] GET /api/notes/
+  Auth: True, Active Company: None
+[2026-02-28 20:07:05.378440] GET /my-work
+  Auth: True, Active Company: None
+  No active company, redirecting UI to portal
+[2026-02-28 20:07:05.527775] GET /portal
+  Auth: True, Active Company: None
+[2026-02-28 20:07:05.789780] GET /api/notes/
+  Auth: True, Active Company: None
+[2026-02-28 20:07:18.758740] GET /my-work
+  Auth: True, Active Company: None
+  No active company, redirecting UI to portal
+[2026-02-28 20:07:18.886112] GET /portal
+  Auth: True, Active Company: None
+[2026-02-28 20:07:19.202719] GET /api/notes/
+  Auth: True, Active Company: None
+[2026-02-28 20:07:44.082448] POST /portal
+  Auth: True, Active Company: None
+[2026-02-28 20:07:44.262525] GET /my-work
+  Auth: True, Active Company: 1
+[2026-02-28 20:07:44.710077] GET /my-work/api/filter-options
+  Auth: True, Active Company: 1
+[2026-02-28 20:07:44.848586] GET /static/site.webmanifest
+  Auth: False, Active Company: None
+[2026-02-28 20:07:44.922432] GET /my-work/api/activities
+  Auth: True, Active Company: 1
+[2026-02-28 20:07:45.214085] GET /my-work/api/occurrences/summary
+  Auth: True, Active Company: 1
+[2026-02-28 20:09:11.716195] GET /my-work/api/activities
+  Auth: True, Active Company: 1
+[2026-02-28 20:09:17.515758] GET /api/companies/1/process-instances
+  Auth: True, Active Company: 1
+[2026-02-28 20:09:17.522062] GET /api/companies/1/processes
+  Auth: True, Active Company: 1
+[2026-02-28 20:09:17.627878] GET /api/companies/2/process-instances
+  Auth: True, Active Company: 1
+[2026-02-28 20:09:17.631997] GET /api/companies/2/processes
+  Auth: True, Active Company: 1
+[2026-02-28 20:09:18.870190] GET /my-work/api/occurrences/summary
+  Auth: True, Active Company: 1
+[2026-02-28 20:10:53.565824] GET /my-work
+  Auth: True, Active Company: 1
+[2026-02-28 20:10:57.457409] GET /my-work/api/filter-options
+  Auth: True, Active Company: 1
+[2026-02-28 20:10:57.820069] GET /my-work/api/activities
+  Auth: True, Active Company: 1
+[2026-02-28 20:10:58.433052] GET /my-work/api/occurrences/summary
+  Auth: True, Active Company: 1
+[2026-02-28 20:11:01.844207] GET /my-work/api/activities
+  Auth: True, Active Company: 1
+[2026-02-28 20:11:02.101542] GET /my-work/api/occurrences/summary
+  Auth: True, Active Company: 1
+[2026-02-28 20:11:22.593323] GET /my-work/api/activities
+  Auth: True, Active Company: 1
+[2026-02-28 20:11:23.180578] GET /api/companies/1/processes
+  Auth: True, Active Company: 1
+[2026-02-28 20:11:23.297041] GET /api/companies/2/process-instances
+  Auth: True, Active Company: 1
+[2026-02-28 20:11:23.302287] GET /api/companies/2/processes
+  Auth: True, Active Company: 1
+[2026-02-28 20:11:23.370673] GET /api/companies/1/process-instances
+  Auth: True, Active Company: 1
+[2026-02-28 20:11:23.571361] GET /my-work/api/occurrences/summary
+  Auth: True, Active Company: 1
+[2026-02-28 20:11:38.177997] GET /my-work
+  Auth: True, Active Company: 1
+[2026-02-28 20:11:41.604184] GET /my-work/api/filter-options
+  Auth: True, Active Company: 1
+[2026-02-28 20:11:42.706606] GET /my-work/api/activities
+  Auth: True, Active Company: 1
+[2026-02-28 20:11:43.306753] GET /my-work/api/occurrences/summary
+  Auth: True, Active Company: 1
+[2026-02-28 20:11:55.011070] GET /my-work
+  Auth: True, Active Company: 1
+[2026-02-28 20:11:56.275455] GET /my-work/api/filter-options
+  Auth: True, Active Company: 1
+[2026-02-28 20:11:56.613508] GET /my-work/api/activities
+  Auth: True, Active Company: 1
+[2026-02-28 20:11:56.704494] GET /static/site.webmanifest
+  Auth: False, Active Company: None
+[2026-02-28 20:11:56.946946] GET /my-work/api/occurrences/summary
+  Auth: True, Active Company: 1
+[2026-02-28 20:15:05.996585] GET /my-work/api/activities
+  Auth: True, Active Company: 1
+[2026-02-28 20:15:10.976716] GET /api/companies/1/process-instances
+  Auth: True, Active Company: 1
+[2026-02-28 20:15:10.981673] GET /api/companies/1/processes
+  Auth: True, Active Company: 1
+[2026-02-28 20:15:11.099560] GET /api/companies/2/process-instances
+  Auth: True, Active Company: 1
+[2026-02-28 20:15:11.104161] GET /api/companies/2/processes
+  Auth: True, Active Company: 1
+[2026-02-28 20:15:11.729752] GET /my-work/api/occurrences/summary
+  Auth: True, Active Company: 1
+[2026-02-28 20:45:45.057649] GET /
+  Auth: False, Active Company: None
+[2026-02-28 20:45:45.246172] GET /login
+  Auth: False, Active Company: None
+[2026-02-28 20:45:47.302037] POST /login
+  Auth: False, Active Company: None
+[2026-02-28 20:45:59.926213] POST /login
+  Auth: False, Active Company: None
+[2026-02-28 20:46:12.887017] POST /login
+  Auth: False, Active Company: None
+[2026-02-28 20:46:13.831613] GET /portal
+  Auth: True, Active Company: None
+[2026-02-28 20:46:14.096856] GET /api/notes/
+  Auth: True, Active Company: None
+[2026-02-28 21:10:16.710295] GET /portal
+  Auth: True, Active Company: 1
+[2026-02-28 21:10:17.313590] GET /api/notes/
+  Auth: True, Active Company: 1
+[2026-02-28 21:16:35.686447] GET /portal
+  Auth: True, Active Company: 1
+[2026-02-28 21:16:36.767887] GET /api/notes/
+  Auth: True, Active Company: 1
+[2026-02-28 21:16:39.492754] GET /portal
+  Auth: True, Active Company: 1
+[2026-02-28 21:16:44.049368] GET /api/notes/
+  Auth: True, Active Company: 1
+[2026-02-28 21:18:19.810472] DELETE /api/notes/16
+  Auth: True, Active Company: 1
+[2026-02-28 21:32:53.774908] GET /portal
+  Auth: True, Active Company: 1
+[2026-02-28 21:32:54.279746] GET /api/notes/
+  Auth: True, Active Company: 1
+[2026-02-28 21:32:58.483235] GET /portal
+  Auth: True, Active Company: 1
+[2026-02-28 21:32:59.162129] GET /api/notes/
+  Auth: True, Active Company: 1
+[2026-02-28 21:33:01.000833] GET /portal
+  Auth: True, Active Company: 1
+[2026-02-28 21:33:01.899124] GET /api/notes/
+  Auth: True, Active Company: 1
+[2026-02-28 21:33:14.035730] GET /portal
+  Auth: True, Active Company: None
+[2026-02-28 21:33:14.388030] GET /api/notes/
+  Auth: True, Active Company: None
+[2026-02-28 21:33:18.171916] GET /portal
+  Auth: True, Active Company: None
+[2026-02-28 21:33:18.431904] GET /api/notes/
+  Auth: True, Active Company: None
+[2026-02-28 21:34:03.276218] GET /
+  Auth: False, Active Company: None
+[2026-02-28 21:34:03.411534] GET /login
+  Auth: False, Active Company: None
+[2026-02-28 21:34:05.936912] POST /login
+  Auth: False, Active Company: None
+[2026-02-28 21:34:06.867568] GET /portal
+  Auth: True, Active Company: None
+[2026-02-28 21:34:07.307641] GET /api/notes/
+  Auth: True, Active Company: None
+[2026-02-28 21:34:18.793800] POST /portal
+  Auth: True, Active Company: None
+[2026-02-28 21:34:18.960619] GET /my-work
+  Auth: True, Active Company: 1
+[2026-02-28 21:34:19.576052] GET /static/site.webmanifest
+  Auth: False, Active Company: None
+[2026-02-28 21:34:19.832381] GET /my-work/api/filter-options
+  Auth: True, Active Company: 1
+[2026-02-28 21:34:20.001152] GET /my-work/api/activities
+  Auth: True, Active Company: 1
+[2026-02-28 21:34:20.479728] GET /my-work/api/occurrences/summary
+  Auth: True, Active Company: 1
+[2026-02-28 21:34:28.335860] GET /my-work/api/activities
+  Auth: True, Active Company: 1
+[2026-02-28 21:34:28.756310] GET /api/companies/1/process-instances
+  Auth: True, Active Company: 1
+[2026-02-28 21:34:28.761513] GET /api/companies/1/processes
+  Auth: True, Active Company: 1
+[2026-02-28 21:34:28.866989] GET /api/companies/2/process-instances
+  Auth: True, Active Company: 1
+[2026-02-28 21:34:28.871299] GET /api/companies/2/processes
+  Auth: True, Active Company: 1
+[2026-02-28 21:34:29.069315] GET /my-work/api/occurrences/summary
+  Auth: True, Active Company: 1
+[2026-02-28 21:34:33.272749] GET /my-work/api/activities
+  Auth: True, Active Company: 1
+[2026-02-28 21:34:33.568247] GET /my-work/api/occurrences/summary
+  Auth: True, Active Company: 1
+[2026-02-28 21:34:37.325239] GET /my-work/api/activities
+  Auth: True, Active Company: 1
+[2026-02-28 21:34:37.998682] GET /my-work/api/occurrences/summary
+  Auth: True, Active Company: 1
+[2026-02-28 21:34:41.464293] GET /my-work/api/activities
+  Auth: True, Active Company: 1
+[2026-02-28 21:34:41.876174] GET /my-work/api/occurrences/summary
+  Auth: True, Active Company: 1
+[2026-02-28 21:34:45.233577] GET /my-work/api/activities
+  Auth: True, Active Company: 1
+[2026-02-28 21:34:45.701793] GET /my-work/api/occurrences/summary
+  Auth: True, Active Company: 1
+[2026-02-28 21:34:57.259467] GET /my-work/api/activities
+  Auth: True, Active Company: 1
+[2026-02-28 21:34:57.929424] GET /my-work/api/occurrences/summary
+  Auth: True, Active Company: 1
+[2026-02-28 21:35:11.930152] GET /my-work/api/activities
+  Auth: True, Active Company: 1
+[2026-02-28 21:35:12.499180] GET /my-work/api/occurrences/summary
+  Auth: True, Active Company: 1
+[2026-02-28 21:35:21.193911] GET /my-work/api/activities
+  Auth: True, Active Company: 1
+[2026-02-28 21:35:22.153203] GET /my-work/api/occurrences/summary
+  Auth: True, Active Company: 1
+[2026-02-28 21:35:22.510754] GET /my-work/api/activities
+  Auth: True, Active Company: 1
+[2026-02-28 21:35:22.789227] GET /my-work/api/occurrences/summary
+  Auth: True, Active Company: 1
+[2026-02-28 21:35:32.137605] GET /my-work/api/activities
+  Auth: True, Active Company: 1
+[2026-02-28 21:35:32.401502] GET /my-work/api/occurrences/summary
+  Auth: True, Active Company: 1
+[2026-02-28 21:35:34.746535] GET /my-work/api/activities
+  Auth: True, Active Company: 1
+[2026-02-28 21:35:35.171083] GET /my-work/api/occurrences/summary
+  Auth: True, Active Company: 1
+[2026-02-28 21:35:37.006012] GET /my-work/api/activities
+  Auth: True, Active Company: 1
+[2026-02-28 21:35:37.670154] GET /my-work/api/occurrences/summary
+  Auth: True, Active Company: 1
+[2026-02-28 21:35:39.228133] GET /my-work/api/activities
+  Auth: True, Active Company: 1
+[2026-02-28 21:35:39.740071] GET /my-work/api/occurrences/summary
+  Auth: True, Active Company: 1
+[2026-02-28 21:36:01.282930] GET /my-work
+  Auth: True, Active Company: 1
+[2026-02-28 21:36:01.728883] GET /my-work/api/filter-options
+  Auth: True, Active Company: 1
+[2026-02-28 21:36:02.109357] GET /static/site.webmanifest
+  Auth: False, Active Company: None
+[2026-02-28 21:36:02.119980] GET /my-work/api/activities
+  Auth: True, Active Company: 1
+[2026-02-28 21:36:02.675451] GET /my-work/api/occurrences/summary
+  Auth: True, Active Company: 1
+[2026-02-28 21:36:05.374503] GET /my-work
+  Auth: True, Active Company: 1
+[2026-02-28 21:36:05.714088] GET /static/site.webmanifest
+  Auth: False, Active Company: None
+[2026-02-28 21:36:07.096567] GET /my-work/api/filter-options
+  Auth: True, Active Company: 1
+[2026-02-28 21:36:07.241442] GET /my-work/api/activities
+  Auth: True, Active Company: 1
+[2026-02-28 21:36:07.515087] GET /my-work/api/occurrences/summary
+  Auth: True, Active Company: 1
+[2026-02-28 21:38:15.862967] GET /project-portfolios
+  Auth: True, Active Company: 1
+[2026-02-28 21:38:16.012999] GET /companies/1/project-portfolios
+  Auth: True, Active Company: 1
+[2026-02-28 21:38:16.354008] GET /api/companies/1/employees
+  Auth: True, Active Company: 1
+[2026-02-28 21:38:16.357454] GET /api/companies/1/portfolios
+  Auth: True, Active Company: 1
+[2026-02-28 21:38:16.634219] GET /static/site.webmanifest
+  Auth: False, Active Company: None
+[2026-02-28 21:38:22.507010] GET /projects
+  Auth: True, Active Company: 1
+[2026-02-28 21:38:22.724444] GET /static/site.webmanifest
+  Auth: False, Active Company: None
+[2026-02-28 21:38:22.957848] GET /api/companies/1/portfolios
+  Auth: True, Active Company: 1
+[2026-02-28 21:38:22.964627] GET /api/plans
+  Auth: True, Active Company: 1
+[2026-02-28 21:38:23.117312] GET /api/projects
+  Auth: True, Active Company: 1
+[2026-02-28 21:38:39.948743] GET /portal
+  Auth: True, Active Company: None
+[2026-02-28 21:38:40.516570] GET /api/notes/
+  Auth: True, Active Company: None
+[2026-02-28 21:38:54.249856] GET /static/site.webmanifest
+  Auth: False, Active Company: None
+[2026-02-28 21:43:03.038878] GET /my-work
+  Auth: True, Active Company: 1
+[2026-02-28 21:43:03.639098] GET /my-work/api/filter-options
+  Auth: True, Active Company: 1
+[2026-02-28 21:43:03.854885] GET /static/site.webmanifest
+  Auth: False, Active Company: None
+[2026-02-28 21:43:04.064039] GET /my-work/api/activities
+  Auth: True, Active Company: 1
+[2026-02-28 21:43:04.379836] GET /my-work/api/occurrences/summary
+  Auth: True, Active Company: 1
+[2026-02-28 21:43:25.375719] GET /my-work/api/activities
+  Auth: True, Active Company: 1
+[2026-02-28 21:43:25.668049] GET /api/companies/2/process-instances
+  Auth: True, Active Company: 1
+[2026-02-28 21:43:25.673799] GET /api/companies/2/processes
+  Auth: True, Active Company: 1
+[2026-02-28 21:43:25.880441] GET /my-work/api/occurrences/summary
+  Auth: True, Active Company: 1
+[2026-02-28 21:43:30.961824] GET /my-work/api/activities
+  Auth: True, Active Company: 1
+[2026-02-28 21:43:31.245003] GET /my-work/api/occurrences/summary
+  Auth: True, Active Company: 1
+[2026-02-28 21:43:48.323299] GET /my-work/api/activities
+  Auth: True, Active Company: 1
+[2026-02-28 21:43:48.796893] GET /api/companies/1/process-instances
+  Auth: True, Active Company: 1
+[2026-02-28 21:43:48.801955] GET /api/companies/1/processes
+  Auth: True, Active Company: 1
+[2026-02-28 21:43:49.286259] GET /my-work/api/occurrences/summary
+  Auth: True, Active Company: 1
+[2026-02-28 21:43:59.891776] GET /my-work/api/activities
+  Auth: True, Active Company: 1
+[2026-02-28 21:44:00.662920] GET /my-work/api/occurrences/summary
+  Auth: True, Active Company: 1
+[2026-02-28 21:48:52.019541] GET /projects
+  Auth: True, Active Company: 1
+[2026-02-28 21:48:52.356129] GET /api/companies/1/portfolios
+  Auth: True, Active Company: 1
+[2026-02-28 21:48:52.361572] GET /api/plans
+  Auth: True, Active Company: 1
+[2026-02-28 21:48:52.538668] GET /api/projects
+  Auth: True, Active Company: 1
+[2026-02-28 21:48:52.717567] GET /static/site.webmanifest
+  Auth: False, Active Company: None
+[2026-02-28 21:48:56.261134] GET /projects
+  Auth: True, Active Company: 1
+[2026-02-28 21:48:56.466876] GET /static/site.webmanifest
+  Auth: False, Active Company: None
+[2026-02-28 21:48:56.875649] GET /api/companies/1/portfolios
+  Auth: True, Active Company: 1
+[2026-02-28 21:48:56.881309] GET /api/plans
+  Auth: True, Active Company: 1
+[2026-02-28 21:48:57.025033] GET /api/projects
+  Auth: True, Active Company: 1
+[2026-02-28 21:48:58.698788] GET /projects
+  Auth: True, Active Company: 1
+[2026-02-28 21:48:58.876941] GET /static/site.webmanifest
+  Auth: False, Active Company: None
+[2026-02-28 21:48:59.159054] GET /api/companies/1/portfolios
+  Auth: True, Active Company: 1
+[2026-02-28 21:48:59.164804] GET /api/plans
+  Auth: True, Active Company: 1
+[2026-02-28 21:48:59.309022] GET /api/projects
+  Auth: True, Active Company: 1
+[2026-02-28 23:30:07.142865] GET /login
+  Auth: False, Active Company: None
+[2026-02-28 23:30:12.140967] POST /login
+  Auth: False, Active Company: None
+[2026-02-28 23:30:23.417098] POST /login
+  Auth: False, Active Company: None
+[2026-02-28 23:30:24.317185] GET /portal
+  Auth: True, Active Company: None
+[2026-02-28 23:30:24.586187] GET /api/notes/
+  Auth: True, Active Company: None
+[2026-02-28 23:30:42.286731] POST /portal
+  Auth: True, Active Company: None
+[2026-02-28 23:30:42.443557] GET /my-work
+  Auth: True, Active Company: 7
+[2026-02-28 23:30:42.788928] GET /my-work/api/filter-options
+  Auth: True, Active Company: 7
+[2026-02-28 23:30:42.984851] GET /my-work/api/activities
+  Auth: True, Active Company: 7
+[2026-02-28 23:30:43.303920] GET /my-work/api/occurrences/summary
+  Auth: True, Active Company: 7
+[2026-02-28 23:31:13.050993] GET /process-map
+  Auth: True, Active Company: 7
+[2026-02-28 23:31:13.208858] GET /process-map
+  Auth: True, Active Company: 7
+[2026-02-28 23:31:13.577397] GET /api/process-areas
+  Auth: True, Active Company: 7
+[2026-02-28 23:31:13.580870] GET /api/macro-processes
+  Auth: True, Active Company: 7
+[2026-02-28 23:31:13.589453] GET /api/processes
+  Auth: True, Active Company: 7
+[2026-02-28 23:31:13.754586] GET /api/dashboard/filter-options
+  Auth: True, Active Company: 7
+[2026-02-28 23:31:19.775330] GET /process-map/compact
+  Auth: True, Active Company: 7
+[2026-02-28 23:33:22.313377] GET /
+  Auth: True, Active Company: 7
+[2026-02-28 23:33:22.461045] GET /my-work
+  Auth: True, Active Company: 7
+[2026-02-28 23:33:22.987555] GET /my-work/api/filter-options
+  Auth: True, Active Company: 7
+[2026-02-28 23:33:23.259495] GET /my-work/api/activities
+  Auth: True, Active Company: 7
+[2026-02-28 23:33:23.555949] GET /my-work/api/occurrences/summary
+  Auth: True, Active Company: 7
+[2026-02-28 23:33:29.338587] GET /portal
+  Auth: True, Active Company: 7
+[2026-02-28 23:33:29.577060] GET /api/notes/
+  Auth: True, Active Company: 7
+[2026-02-28 23:35:11.543352] PUT /api/macro-processes/204
+  Auth: True, Active Company: 7
+[2026-02-28 23:35:11.687819] GET /api/process-areas
+  Auth: True, Active Company: 7
+[2026-02-28 23:35:11.691319] GET /api/macro-processes
+  Auth: True, Active Company: 7
+[2026-02-28 23:35:11.696792] GET /api/processes
+  Auth: True, Active Company: 7
+[2026-02-28 23:35:11.843858] GET /api/dashboard/filter-options
+  Auth: True, Active Company: 7
+[2026-02-28 23:35:24.354913] PUT /api/macro-processes/204
+  Auth: True, Active Company: 7
+[2026-02-28 23:35:24.489030] GET /api/process-areas
+  Auth: True, Active Company: 7
+[2026-02-28 23:35:24.492582] GET /api/macro-processes
+  Auth: True, Active Company: 7
+[2026-02-28 23:35:24.497871] GET /api/processes
+  Auth: True, Active Company: 7
+[2026-02-28 23:35:24.640078] GET /api/dashboard/filter-options
+  Auth: True, Active Company: 7
+[2026-02-28 23:35:53.544257] PUT /api/macro-processes/225
+  Auth: True, Active Company: 7
+[2026-02-28 23:35:53.686468] GET /api/process-areas
+  Auth: True, Active Company: 7
+[2026-02-28 23:35:53.689768] GET /api/macro-processes
+  Auth: True, Active Company: 7
+[2026-02-28 23:35:53.694585] GET /api/processes
+  Auth: True, Active Company: 7
+[2026-02-28 23:35:53.833282] GET /api/dashboard/filter-options
+  Auth: True, Active Company: 7
+[2026-02-28 23:36:05.356818] PUT /api/macro-processes/216
+  Auth: True, Active Company: 7
+[2026-02-28 23:36:05.494623] GET /api/process-areas
+  Auth: True, Active Company: 7
+[2026-02-28 23:36:05.498816] GET /api/macro-processes
+  Auth: True, Active Company: 7
+[2026-02-28 23:36:05.504672] GET /api/processes
+  Auth: True, Active Company: 7
+[2026-02-28 23:36:05.645543] GET /api/dashboard/filter-options
+  Auth: True, Active Company: 7
+[2026-02-28 23:36:37.547746] POST /api/macro-processes
+  Auth: True, Active Company: 7
+[2026-02-28 23:36:37.691621] GET /api/process-areas
+  Auth: True, Active Company: 7
+[2026-02-28 23:36:37.695041] GET /api/macro-processes
+  Auth: True, Active Company: 7
+[2026-02-28 23:36:37.700212] GET /api/processes
+  Auth: True, Active Company: 7
+[2026-02-28 23:36:37.844200] GET /api/dashboard/filter-options
+  Auth: True, Active Company: 7
+[2026-02-28 23:37:39.353946] PUT /api/processes/226
+  Auth: True, Active Company: 7
+[2026-02-28 23:37:39.504548] GET /api/process-areas
+  Auth: True, Active Company: 7
+[2026-02-28 23:37:39.508050] GET /api/macro-processes
+  Auth: True, Active Company: 7
+[2026-02-28 23:37:39.513771] GET /api/processes
+  Auth: True, Active Company: 7
+[2026-02-28 23:37:39.656090] GET /api/dashboard/filter-options
+  Auth: True, Active Company: 7
+[2026-02-28 23:38:15.413457] PUT /api/processes/227
+  Auth: True, Active Company: 7
+[2026-02-28 23:38:15.555591] GET /api/process-areas
+  Auth: True, Active Company: 7
+[2026-02-28 23:38:15.559185] GET /api/macro-processes
+  Auth: True, Active Company: 7
+[2026-02-28 23:38:15.564432] GET /api/processes
+  Auth: True, Active Company: 7
+[2026-02-28 23:38:15.706062] GET /api/dashboard/filter-options
+  Auth: True, Active Company: 7
+[2026-02-28 23:38:28.216151] PUT /api/processes/227
+  Auth: True, Active Company: 7
+[2026-02-28 23:38:28.352773] GET /api/process-areas
+  Auth: True, Active Company: 7
+[2026-02-28 23:38:28.356193] GET /api/macro-processes
+  Auth: True, Active Company: 7
+[2026-02-28 23:38:28.361192] GET /api/processes
+  Auth: True, Active Company: 7
+[2026-02-28 23:38:28.501303] GET /api/dashboard/filter-options
+  Auth: True, Active Company: 7
+[2026-02-28 23:38:47.987204] PUT /api/processes/222
+  Auth: True, Active Company: 7
+[2026-02-28 23:38:48.131972] GET /api/process-areas
+  Auth: True, Active Company: 7
+[2026-02-28 23:38:48.135279] GET /api/macro-processes
+  Auth: True, Active Company: 7
+[2026-02-28 23:38:48.140406] GET /api/processes
+  Auth: True, Active Company: 7
+[2026-02-28 23:38:48.286481] GET /api/dashboard/filter-options
+  Auth: True, Active Company: 7
+[2026-02-28 23:39:02.904977] PUT /api/processes/223
+  Auth: True, Active Company: 7
+[2026-02-28 23:39:03.056093] GET /api/process-areas
+  Auth: True, Active Company: 7
+[2026-02-28 23:39:03.068253] GET /api/macro-processes
+  Auth: True, Active Company: 7
+[2026-02-28 23:39:03.077306] GET /api/processes
+  Auth: True, Active Company: 7
+[2026-02-28 23:39:03.226036] GET /api/dashboard/filter-options
+  Auth: True, Active Company: 7
+[2026-02-28 23:39:15.727673] PUT /api/processes/223
+  Auth: True, Active Company: 7
+[2026-02-28 23:39:15.867877] GET /api/process-areas
+  Auth: True, Active Company: 7
+[2026-02-28 23:39:15.872348] GET /api/macro-processes
+  Auth: True, Active Company: 7
+[2026-02-28 23:39:15.877441] GET /api/processes
+  Auth: True, Active Company: 7
+[2026-02-28 23:39:16.018958] GET /api/dashboard/filter-options
+  Auth: True, Active Company: 7
+[2026-02-28 23:39:32.600032] PUT /api/processes/225
+  Auth: True, Active Company: 7
+[2026-02-28 23:39:32.741677] GET /api/process-areas
+  Auth: True, Active Company: 7
+[2026-02-28 23:39:32.746081] GET /api/macro-processes
+  Auth: True, Active Company: 7
+[2026-02-28 23:39:32.751132] GET /api/processes
+  Auth: True, Active Company: 7
+[2026-02-28 23:39:32.893349] GET /api/dashboard/filter-options
+  Auth: True, Active Company: 7
+[2026-02-28 23:40:16.442330] POST /api/processes
+  Auth: True, Active Company: 7
+[2026-02-28 23:40:16.580666] GET /api/process-areas
+  Auth: True, Active Company: 7
+[2026-02-28 23:40:16.585401] GET /api/macro-processes
+  Auth: True, Active Company: 7
+[2026-02-28 23:40:16.590746] GET /api/processes
+  Auth: True, Active Company: 7
+[2026-02-28 23:40:16.739455] GET /api/dashboard/filter-options
+  Auth: True, Active Company: 7
+[2026-02-28 23:40:39.290087] DELETE /api/processes/280
+  Auth: True, Active Company: 7
+[2026-02-28 23:40:39.439284] GET /api/process-areas
+  Auth: True, Active Company: 7
+[2026-02-28 23:40:39.443969] GET /api/macro-processes
+  Auth: True, Active Company: 7
+[2026-02-28 23:40:39.451078] GET /api/processes
+  Auth: True, Active Company: 7
+[2026-02-28 23:40:39.595650] GET /api/dashboard/filter-options
+  Auth: True, Active Company: 7
+[2026-02-28 23:40:48.877824] PUT /api/processes/220
+  Auth: True, Active Company: 7
+[2026-02-28 23:40:49.014384] GET /api/process-areas
+  Auth: True, Active Company: 7
+[2026-02-28 23:40:49.017903] GET /api/macro-processes
+  Auth: True, Active Company: 7
+[2026-02-28 23:40:49.023809] GET /api/processes
+  Auth: True, Active Company: 7
+[2026-02-28 23:40:49.166276] GET /api/dashboard/filter-options
+  Auth: True, Active Company: 7
+[2026-02-28 23:41:07.781858] GET /process-map/compact
+  Auth: True, Active Company: 7
+[2026-02-28 23:41:39.646706] PUT /api/processes/220
+  Auth: True, Active Company: 7
+[2026-02-28 23:41:39.790492] GET /api/process-areas
+  Auth: True, Active Company: 7
+[2026-02-28 23:41:39.793864] GET /api/macro-processes
+  Auth: True, Active Company: 7
+[2026-02-28 23:41:39.798838] GET /api/processes
+  Auth: True, Active Company: 7
+[2026-02-28 23:41:39.943498] GET /api/dashboard/filter-options
+  Auth: True, Active Company: 7
+[2026-02-28 23:42:19.439730] POST /api/processes
+  Auth: True, Active Company: 7
+[2026-02-28 23:42:19.592109] GET /api/process-areas
+  Auth: True, Active Company: 7
+[2026-02-28 23:42:19.595732] GET /api/macro-processes
+  Auth: True, Active Company: 7
+[2026-02-28 23:42:19.601403] GET /api/processes
+  Auth: True, Active Company: 7
+[2026-02-28 23:42:19.751574] GET /api/dashboard/filter-options
+  Auth: True, Active Company: 7
+[2026-02-28 23:42:41.257618] POST /api/processes
+  Auth: True, Active Company: 7
+[2026-02-28 23:42:41.396706] GET /api/process-areas
+  Auth: True, Active Company: 7
+[2026-02-28 23:42:41.402012] GET /api/macro-processes
+  Auth: True, Active Company: 7
+[2026-02-28 23:42:41.410386] GET /api/processes
+  Auth: True, Active Company: 7
+[2026-02-28 23:42:41.558179] GET /api/dashboard/filter-options
+  Auth: True, Active Company: 7
+[2026-02-28 23:42:58.060186] DELETE /api/processes/224
+  Auth: True, Active Company: 7
+[2026-02-28 23:42:58.193210] GET /api/process-areas
+  Auth: True, Active Company: 7
+[2026-02-28 23:42:58.196369] GET /api/macro-processes
+  Auth: True, Active Company: 7
+[2026-02-28 23:42:58.201510] GET /api/processes
+  Auth: True, Active Company: 7
+[2026-02-28 23:42:58.343162] GET /api/dashboard/filter-options
+  Auth: True, Active Company: 7
+[2026-02-28 23:43:01.162765] GET /process-map/compact
+  Auth: True, Active Company: 7
+[2026-02-28 23:43:44.433062] POST /api/processes
+  Auth: True, Active Company: 7
+[2026-02-28 23:43:44.572367] GET /api/process-areas
+  Auth: True, Active Company: 7
+[2026-02-28 23:43:44.576813] GET /api/macro-processes
+  Auth: True, Active Company: 7
+[2026-02-28 23:43:44.582490] GET /api/processes
+  Auth: True, Active Company: 7
+[2026-02-28 23:43:44.728001] GET /api/dashboard/filter-options
+  Auth: True, Active Company: 7
+[2026-02-28 23:44:16.497990] POST /api/processes
+  Auth: True, Active Company: 7
+[2026-02-28 23:44:16.635944] GET /api/process-areas
+  Auth: True, Active Company: 7
+[2026-02-28 23:44:16.641502] GET /api/macro-processes
+  Auth: True, Active Company: 7
+[2026-02-28 23:44:16.647453] GET /api/processes
+  Auth: True, Active Company: 7
+[2026-02-28 23:44:16.804077] GET /api/dashboard/filter-options
+  Auth: True, Active Company: 7
+[2026-02-28 23:44:38.989812] POST /api/processes
+  Auth: True, Active Company: 7
+[2026-02-28 23:44:39.126644] GET /api/process-areas
+  Auth: True, Active Company: 7
+[2026-02-28 23:44:39.135765] GET /api/macro-processes
+  Auth: True, Active Company: 7
+[2026-02-28 23:44:39.140970] GET /api/processes
+  Auth: True, Active Company: 7
+[2026-02-28 23:44:39.287203] GET /api/dashboard/filter-options
+  Auth: True, Active Company: 7
+[2026-02-28 23:44:54.629349] POST /api/processes
+  Auth: True, Active Company: 7
+[2026-02-28 23:44:54.761371] GET /api/process-areas
+  Auth: True, Active Company: 7
+[2026-02-28 23:44:54.764805] GET /api/macro-processes
+  Auth: True, Active Company: 7
+[2026-02-28 23:44:54.770017] GET /api/processes
+  Auth: True, Active Company: 7
+[2026-02-28 23:44:54.918924] GET /api/dashboard/filter-options
+  Auth: True, Active Company: 7
+[2026-02-28 23:45:17.725942] PUT /api/processes/226
+  Auth: True, Active Company: 7
+[2026-02-28 23:45:17.864724] GET /api/process-areas
+  Auth: True, Active Company: 7
+[2026-02-28 23:45:17.868189] GET /api/macro-processes
+  Auth: True, Active Company: 7
+[2026-02-28 23:45:17.873423] GET /api/processes
+  Auth: True, Active Company: 7
+[2026-02-28 23:45:18.023920] GET /api/dashboard/filter-options
+  Auth: True, Active Company: 7
+[2026-02-28 23:45:30.950420] PUT /api/processes/227
+  Auth: True, Active Company: 7
+[2026-02-28 23:45:31.086464] GET /api/process-areas
+  Auth: True, Active Company: 7
+[2026-02-28 23:45:31.091142] GET /api/macro-processes
+  Auth: True, Active Company: 7
+[2026-02-28 23:45:31.098990] GET /api/processes
+  Auth: True, Active Company: 7
+[2026-02-28 23:45:31.255602] GET /api/dashboard/filter-options
+  Auth: True, Active Company: 7
+[2026-02-28 23:45:37.538687] PUT /api/processes/222
+  Auth: True, Active Company: 7
+[2026-02-28 23:45:37.672048] GET /api/process-areas
+  Auth: True, Active Company: 7
+[2026-02-28 23:45:37.680164] GET /api/macro-processes
+  Auth: True, Active Company: 7
+[2026-02-28 23:45:37.685574] GET /api/processes
+  Auth: True, Active Company: 7
+[2026-02-28 23:45:37.837648] GET /api/dashboard/filter-options
+  Auth: True, Active Company: 7
+[2026-02-28 23:45:50.355782] GET /process-map/compact
+  Auth: True, Active Company: 7
+[2026-02-28 23:46:25.608274] GET /process-map
+  Auth: True, Active Company: 7
+[2026-02-28 23:46:26.139380] GET /api/process-areas
+  Auth: True, Active Company: 7
+[2026-02-28 23:46:26.144156] GET /api/macro-processes
+  Auth: True, Active Company: 7
+[2026-02-28 23:46:26.151379] GET /api/processes
+  Auth: True, Active Company: 7
+[2026-02-28 23:46:26.309816] GET /api/dashboard/filter-options
+  Auth: True, Active Company: 7
+[2026-02-28 23:47:26.635164] GET /my-work
+  Auth: True, Active Company: 7
+[2026-02-28 23:47:26.957104] GET /my-work/api/filter-options
+  Auth: True, Active Company: 7
+[2026-02-28 23:47:27.127701] GET /my-work/api/activities
+  Auth: True, Active Company: 7
+[2026-02-28 23:47:27.434161] GET /my-work/api/occurrences/summary
+  Auth: True, Active Company: 7
+[2026-02-28 23:47:29.156338] GET /process-map
+  Auth: True, Active Company: 7
+[2026-02-28 23:47:29.344340] GET /api/process-areas
+  Auth: True, Active Company: 7
+[2026-02-28 23:47:29.347544] GET /api/macro-processes
+  Auth: True, Active Company: 7
+[2026-02-28 23:47:29.352715] GET /api/processes
+  Auth: True, Active Company: 7
+[2026-02-28 23:47:29.501264] GET /api/dashboard/filter-options
+  Auth: True, Active Company: 7
+[2026-02-28 23:48:28.302723] POST /api/processes
+  Auth: True, Active Company: 7
+[2026-02-28 23:48:28.441051] GET /api/process-areas
+  Auth: True, Active Company: 7
+[2026-02-28 23:48:28.447420] GET /api/macro-processes
+  Auth: True, Active Company: 7
+[2026-02-28 23:48:28.453173] GET /api/processes
+  Auth: True, Active Company: 7
+[2026-02-28 23:48:28.605754] GET /api/dashboard/filter-options
+  Auth: True, Active Company: 7
+[2026-02-28 23:48:51.822094] POST /api/processes
+  Auth: True, Active Company: 7
+[2026-02-28 23:48:51.957908] GET /api/process-areas
+  Auth: True, Active Company: 7
+[2026-02-28 23:48:51.961337] GET /api/macro-processes
+  Auth: True, Active Company: 7
+[2026-02-28 23:48:51.966564] GET /api/processes
+  Auth: True, Active Company: 7
+[2026-02-28 23:48:52.122539] GET /api/dashboard/filter-options
+  Auth: True, Active Company: 7
+[2026-02-28 23:49:08.251111] POST /api/processes
+  Auth: True, Active Company: 7
+[2026-02-28 23:49:08.391280] GET /api/process-areas
+  Auth: True, Active Company: 7
+[2026-02-28 23:49:08.397075] GET /api/macro-processes
+  Auth: True, Active Company: 7
+[2026-02-28 23:49:08.404517] GET /api/processes
+  Auth: True, Active Company: 7
+[2026-02-28 23:49:08.570789] GET /api/dashboard/filter-options
+  Auth: True, Active Company: 7
+[2026-02-28 23:49:35.050603] POST /api/processes
+  Auth: True, Active Company: 7
+[2026-02-28 23:49:35.186665] GET /api/process-areas
+  Auth: True, Active Company: 7
+[2026-02-28 23:49:35.191180] GET /api/macro-processes
+  Auth: True, Active Company: 7
+[2026-02-28 23:49:35.196454] GET /api/processes
+  Auth: True, Active Company: 7
+[2026-02-28 23:49:35.355748] GET /api/dashboard/filter-options
+  Auth: True, Active Company: 7
+[2026-02-28 23:49:52.796401] POST /api/processes
+  Auth: True, Active Company: 7
+[2026-02-28 23:49:52.931105] GET /api/process-areas
+  Auth: True, Active Company: 7
+[2026-02-28 23:49:52.934592] GET /api/macro-processes
+  Auth: True, Active Company: 7
+[2026-02-28 23:49:52.940028] GET /api/processes
+  Auth: True, Active Company: 7
+[2026-02-28 23:49:53.099039] GET /api/dashboard/filter-options
+  Auth: True, Active Company: 7
+[2026-02-28 23:50:10.005382] POST /api/processes
+  Auth: True, Active Company: 7
+[2026-02-28 23:50:10.220785] GET /api/process-areas
+  Auth: True, Active Company: 7
+[2026-02-28 23:50:10.225504] GET /api/macro-processes
+  Auth: True, Active Company: 7
+[2026-02-28 23:50:10.230911] GET /api/processes
+  Auth: True, Active Company: 7
+[2026-02-28 23:50:10.392778] GET /api/dashboard/filter-options
+  Auth: True, Active Company: 7
+[2026-02-28 23:50:25.751987] POST /api/processes
+  Auth: True, Active Company: 7
+[2026-02-28 23:50:25.888318] GET /api/process-areas
+  Auth: True, Active Company: 7
+[2026-02-28 23:50:25.892869] GET /api/macro-processes
+  Auth: True, Active Company: 7
+[2026-02-28 23:50:25.900116] GET /api/processes
+  Auth: True, Active Company: 7
+[2026-02-28 23:50:26.074099] GET /api/dashboard/filter-options
+  Auth: True, Active Company: 7
+[2026-02-28 23:50:51.113993] POST /api/processes
+  Auth: True, Active Company: 7
+[2026-02-28 23:50:51.247579] GET /api/process-areas
+  Auth: True, Active Company: 7
+[2026-02-28 23:50:51.253892] GET /api/macro-processes
+  Auth: True, Active Company: 7
+[2026-02-28 23:50:51.261393] GET /api/processes
+  Auth: True, Active Company: 7
+[2026-02-28 23:50:51.426380] GET /api/dashboard/filter-options
+  Auth: True, Active Company: 7
+[2026-02-28 23:51:41.721550] POST /api/processes
+  Auth: True, Active Company: 7
+[2026-02-28 23:51:41.858646] GET /api/process-areas
+  Auth: True, Active Company: 7
+[2026-02-28 23:51:41.864798] GET /api/macro-processes
+  Auth: True, Active Company: 7
+[2026-02-28 23:51:41.870020] GET /api/processes
+  Auth: True, Active Company: 7
+[2026-02-28 23:51:42.035624] GET /api/dashboard/filter-options
+  Auth: True, Active Company: 7
+[2026-02-28 23:51:43.402774] GET /process-map/compact
+  Auth: True, Active Company: 7
+[2026-02-28 23:52:04.746315] PUT /api/processes/295
+  Auth: True, Active Company: 7
+[2026-02-28 23:52:04.899521] GET /api/process-areas
+  Auth: True, Active Company: 7
+[2026-02-28 23:52:04.905838] GET /api/macro-processes
+  Auth: True, Active Company: 7
+[2026-02-28 23:52:04.915181] GET /api/processes
+  Auth: True, Active Company: 7
+[2026-02-28 23:52:05.169322] GET /api/dashboard/filter-options
+  Auth: True, Active Company: 7
+[2026-02-28 23:52:06.982906] GET /process-map/compact
+  Auth: True, Active Company: 7
+[2026-02-28 23:52:45.020279] POST /api/processes
+  Auth: True, Active Company: 7
+[2026-02-28 23:52:45.176110] GET /api/process-areas
+  Auth: True, Active Company: 7
+[2026-02-28 23:52:45.182768] GET /api/macro-processes
+  Auth: True, Active Company: 7
+[2026-02-28 23:52:45.192135] GET /api/processes
+  Auth: True, Active Company: 7
+[2026-02-28 23:52:45.381267] GET /api/dashboard/filter-options
+  Auth: True, Active Company: 7
+[2026-02-28 23:52:58.422656] POST /api/processes
+  Auth: True, Active Company: 7
+[2026-02-28 23:52:58.560265] GET /api/process-areas
+  Auth: True, Active Company: 7
+[2026-02-28 23:52:58.566004] GET /api/macro-processes
+  Auth: True, Active Company: 7
+[2026-02-28 23:52:58.571629] GET /api/processes
+  Auth: True, Active Company: 7
+[2026-02-28 23:52:58.752262] GET /api/dashboard/filter-options
+  Auth: True, Active Company: 7
+[2026-02-28 23:53:20.781956] POST /api/processes
+  Auth: True, Active Company: 7
+[2026-02-28 23:53:20.918025] GET /api/process-areas
+  Auth: True, Active Company: 7
+[2026-02-28 23:53:20.921217] GET /api/macro-processes
+  Auth: True, Active Company: 7
+[2026-02-28 23:53:20.926196] GET /api/processes
+  Auth: True, Active Company: 7
+[2026-02-28 23:53:21.094998] GET /api/dashboard/filter-options
+  Auth: True, Active Company: 7
+[2026-02-28 23:53:42.584956] POST /api/processes
+  Auth: True, Active Company: 7
+[2026-02-28 23:53:42.721555] GET /api/process-areas
+  Auth: True, Active Company: 7
+[2026-02-28 23:53:42.724915] GET /api/macro-processes
+  Auth: True, Active Company: 7
+[2026-02-28 23:53:42.729937] GET /api/processes
+  Auth: True, Active Company: 7
+[2026-02-28 23:53:42.900619] GET /api/dashboard/filter-options
+  Auth: True, Active Company: 7
+[2026-02-28 23:54:11.960758] PUT /api/macro-processes/228
+  Auth: True, Active Company: 7
+[2026-02-28 23:54:12.097910] GET /api/process-areas
+  Auth: True, Active Company: 7
+[2026-02-28 23:54:12.102987] GET /api/macro-processes
+  Auth: True, Active Company: 7
+[2026-02-28 23:54:12.109452] GET /api/processes
+  Auth: True, Active Company: 7
+[2026-02-28 23:54:12.280331] GET /api/dashboard/filter-options
+  Auth: True, Active Company: 7
+[2026-02-28 23:55:43.854213] POST /api/processes
+  Auth: True, Active Company: 7
+[2026-02-28 23:55:44.020357] GET /api/process-areas
+  Auth: True, Active Company: 7
+[2026-02-28 23:55:44.024649] GET /api/macro-processes
+  Auth: True, Active Company: 7
+[2026-02-28 23:55:44.030160] GET /api/processes
+  Auth: True, Active Company: 7
+[2026-02-28 23:55:44.234622] GET /api/dashboard/filter-options
+  Auth: True, Active Company: 7
+[2026-02-28 23:55:59.504480] POST /api/processes
+  Auth: True, Active Company: 7
+[2026-02-28 23:55:59.654931] GET /api/process-areas
+  Auth: True, Active Company: 7
+[2026-02-28 23:55:59.658537] GET /api/macro-processes
+  Auth: True, Active Company: 7
+[2026-02-28 23:55:59.663693] GET /api/processes
+  Auth: True, Active Company: 7
+[2026-02-28 23:55:59.855641] GET /api/dashboard/filter-options
+  Auth: True, Active Company: 7
+[2026-02-28 23:56:21.798612] POST /api/processes
+  Auth: True, Active Company: 7
+[2026-02-28 23:56:21.956689] GET /api/process-areas
+  Auth: True, Active Company: 7
+[2026-02-28 23:56:21.963519] GET /api/macro-processes
+  Auth: True, Active Company: 7
+[2026-02-28 23:56:21.970618] GET /api/processes
+  Auth: True, Active Company: 7
+[2026-02-28 23:56:22.168694] GET /api/dashboard/filter-options
+  Auth: True, Active Company: 7
+[2026-02-28 23:57:09.893053] POST /api/processes
+  Auth: True, Active Company: 7
+[2026-02-28 23:57:10.050385] GET /api/process-areas
+  Auth: True, Active Company: 7
+[2026-02-28 23:57:10.053876] GET /api/macro-processes
+  Auth: True, Active Company: 7
+[2026-02-28 23:57:10.058937] GET /api/processes
+  Auth: True, Active Company: 7
+[2026-02-28 23:57:10.271401] GET /api/dashboard/filter-options
+  Auth: True, Active Company: 7
+[2026-02-28 23:57:47.303559] POST /api/processes
+  Auth: True, Active Company: 7
+[2026-02-28 23:57:47.457788] GET /api/process-areas
+  Auth: True, Active Company: 7
+[2026-02-28 23:57:47.461877] GET /api/macro-processes
+  Auth: True, Active Company: 7
+[2026-02-28 23:57:47.469151] GET /api/processes
+  Auth: True, Active Company: 7
+[2026-02-28 23:57:47.665927] GET /api/dashboard/filter-options
+  Auth: True, Active Company: 7
+[2026-02-28 23:58:50.277877] GET /process-map/compact
+  Auth: True, Active Company: 7
+[2026-02-28 23:59:06.063618] POST /api/processes
+  Auth: True, Active Company: 7
+[2026-02-28 23:59:06.217729] GET /api/process-areas
+  Auth: True, Active Company: 7
+[2026-02-28 23:59:06.221044] GET /api/macro-processes
+  Auth: True, Active Company: 7
+[2026-02-28 23:59:06.229726] GET /api/processes
+  Auth: True, Active Company: 7
+[2026-02-28 23:59:06.441556] GET /api/dashboard/filter-options
+  Auth: True, Active Company: 7
+[2026-02-28 23:59:22.120843] POST /api/processes
+  Auth: True, Active Company: 7
+[2026-02-28 23:59:22.274495] GET /api/process-areas
+  Auth: True, Active Company: 7
+[2026-02-28 23:59:22.277655] GET /api/macro-processes
+  Auth: True, Active Company: 7
+[2026-02-28 23:59:22.282827] GET /api/processes
+  Auth: True, Active Company: 7
+[2026-02-28 23:59:22.484814] GET /api/dashboard/filter-options
+  Auth: True, Active Company: 7
+[2026-02-28 23:59:41.826699] POST /api/processes
+  Auth: True, Active Company: 7
+[2026-02-28 23:59:41.979047] GET /api/process-areas
+  Auth: True, Active Company: 7
+[2026-02-28 23:59:41.984757] GET /api/macro-processes
+  Auth: True, Active Company: 7
+[2026-02-28 23:59:41.989842] GET /api/processes
+  Auth: True, Active Company: 7
+[2026-02-28 23:59:42.196065] GET /api/dashboard/filter-options
+  Auth: True, Active Company: 7
+[2026-03-01 00:00:14.321620] GET /process-map/compact
+  Auth: True, Active Company: 7
+[2026-03-01 00:11:26.091732] POST /webhook/telegram
+  Auth: False, Active Company: None
+[2026-03-01 00:11:41.103635] POST /webhook/telegram
+  Auth: False, Active Company: None
+[2026-03-01 00:12:21.349196] GET /portal
+  Auth: True, Active Company: 7
+[2026-03-01 00:12:21.736537] GET /api/notes/
+  Auth: True, Active Company: 7
+[2026-03-01 00:12:37.144997] DELETE /api/notes/14
+  Auth: True, Active Company: 7
+[2026-03-01 00:12:56.470744] DELETE /api/notes/10
+  Auth: True, Active Company: 7
+[2026-03-01 00:14:11.067589] POST /portal
+  Auth: True, Active Company: 7
+[2026-03-01 00:14:11.247661] GET /my-work
+  Auth: True, Active Company: 1
+[2026-03-01 00:14:11.754170] GET /my-work/api/filter-options
+  Auth: True, Active Company: 1
+[2026-03-01 00:14:12.045698] GET /my-work/api/activities
+  Auth: True, Active Company: 1
+[2026-03-01 00:14:12.479206] GET /my-work/api/occurrences/summary
+  Auth: True, Active Company: 1
+[2026-03-01 00:14:22.307530] GET /companies
+  Auth: True, Active Company: 1
+[2026-03-01 00:14:22.580360] GET /api/companies
+  Auth: True, Active Company: 1
+[2026-03-01 00:14:27.047513] GET /companies/4/edit
+  Auth: True, Active Company: 1
+[2026-03-01 00:14:27.332755] GET /api/companies/4
+  Auth: True, Active Company: 1
+[2026-03-01 00:14:27.346163] GET /api/companies/4/users
+  Auth: True, Active Company: 1
+[2026-03-01 00:14:27.350650] GET /api/companies/4/roles
+  Auth: True, Active Company: 1
+[2026-03-01 00:14:27.354449] GET /api/companies/4/employees/full
+  Auth: True, Active Company: 1
+[2026-03-01 00:14:27.364956] GET /api/companies/4/performance-settings
+  Auth: True, Active Company: 1
+[2026-03-01 00:14:32.810063] PUT /api/companies/4
+  Auth: True, Active Company: 1
+[2026-03-01 00:14:57.976605] GET /portal
+  Auth: True, Active Company: None
+[2026-03-01 00:14:58.771815] GET /api/notes/
+  Auth: True, Active Company: None
+[2026-03-01 00:15:14.003398] POST /portal
+  Auth: True, Active Company: None
+[2026-03-01 00:15:14.232187] GET /my-work
+  Auth: True, Active Company: 1
+[2026-03-01 00:15:14.662031] GET /my-work/api/filter-options
+  Auth: True, Active Company: 1
+[2026-03-01 00:15:14.902035] GET /my-work/api/activities
+  Auth: True, Active Company: 1
+[2026-03-01 00:15:15.236788] GET /static/site.webmanifest
+  Auth: False, Active Company: None
+[2026-03-01 00:15:15.371903] GET /my-work/api/occurrences/summary
+  Auth: True, Active Company: 1
+[2026-03-01 00:16:07.777607] GET /my-work/api/activities
+  Auth: True, Active Company: 1
+[2026-03-01 00:16:08.221699] GET /api/companies/1/process-instances
+  Auth: True, Active Company: 1
+[2026-03-01 00:16:08.227002] GET /api/companies/1/processes
+  Auth: True, Active Company: 1
+[2026-03-01 00:16:08.338322] GET /api/companies/2/process-instances
+  Auth: True, Active Company: 1
+[2026-03-01 00:16:08.343030] GET /api/companies/2/processes
+  Auth: True, Active Company: 1
+[2026-03-01 00:16:08.611542] GET /my-work/api/occurrences/summary
+  Auth: True, Active Company: 1
+[2026-03-01 00:16:10.606463] GET /my-work/api/activities
+  Auth: True, Active Company: 1
+[2026-03-01 00:16:11.036651] GET /my-work/api/occurrences/summary
+  Auth: True, Active Company: 1
+[2026-03-01 00:16:17.546452] GET /my-work/api/activities
+  Auth: True, Active Company: 1
+[2026-03-01 00:16:17.991435] GET /my-work/api/occurrences/summary
+  Auth: True, Active Company: 1
+[2026-03-01 00:17:34.352417] GET /projects
+  Auth: True, Active Company: 1
+[2026-03-01 00:17:34.780408] GET /api/companies/1/portfolios
+  Auth: True, Active Company: 1
+[2026-03-01 00:17:34.785613] GET /api/plans
+  Auth: True, Active Company: 1
+[2026-03-01 00:17:35.034582] GET /api/projects
+  Auth: True, Active Company: 1
+[2026-03-01 00:17:35.088580] GET /static/site.webmanifest
+  Auth: False, Active Company: None
+[2026-03-01 00:28:11.558361] GET /my-work
+  Auth: True, Active Company: 1
+[2026-03-01 00:28:12.721664] GET /my-work/api/filter-options
+  Auth: True, Active Company: 1
+[2026-03-01 00:28:12.957221] GET /my-work/api/activities
+  Auth: True, Active Company: 1
+[2026-03-01 00:28:13.311620] GET /static/site.webmanifest
+  Auth: False, Active Company: None
+[2026-03-01 00:28:13.401545] GET /my-work/api/occurrences/summary
+  Auth: True, Active Company: 1
+[2026-03-01 00:28:19.721728] GET /portal
+  Auth: True, Active Company: 1
+[2026-03-01 00:28:19.982617] GET /api/notes/
+  Auth: True, Active Company: 1
+[2026-03-01 00:30:33.932483] POST /portal
+  Auth: True, Active Company: 1
+[2026-03-01 00:30:34.146712] GET /my-work
+  Auth: True, Active Company: 1
+[2026-03-01 00:30:34.542884] GET /my-work/api/filter-options
+  Auth: True, Active Company: 1
+[2026-03-01 00:30:34.773098] GET /my-work/api/activities
+  Auth: True, Active Company: 1
+[2026-03-01 00:30:35.152596] GET /static/site.webmanifest
+  Auth: False, Active Company: None
+[2026-03-01 00:30:35.202159] GET /my-work/api/occurrences/summary
+  Auth: True, Active Company: 1
+[2026-03-01 00:30:35.817175] GET /api/agents/history
+  Auth: True, Active Company: 1
+[2026-03-01 00:31:11.942238] POST /api/agents/chat
+  Auth: True, Active Company: 1
+[2026-03-01 00:31:42.821935] POST /api/agents/chat
+  Auth: True, Active Company: 1
+[2026-03-01 00:32:26.133469] POST /api/agents/chat
+  Auth: True, Active Company: 1
+[2026-03-01 00:33:21.291708] GET /project-portfolios
+  Auth: True, Active Company: 1
+[2026-03-01 00:33:21.504342] GET /companies/1/project-portfolios
+  Auth: True, Active Company: 1
+[2026-03-01 00:33:22.087745] GET /api/companies/1/employees
+  Auth: True, Active Company: 1
+[2026-03-01 00:33:22.093858] GET /api/companies/1/portfolios
+  Auth: True, Active Company: 1
+[2026-03-01 00:33:22.691718] GET /static/site.webmanifest
+  Auth: False, Active Company: None
+[2026-03-01 00:33:29.722420] POST /portal
+  Auth: True, Active Company: 1
+[2026-03-01 00:33:29.932323] GET /my-work
+  Auth: True, Active Company: 2
+[2026-03-01 00:33:30.321746] GET /my-work/api/filter-options
+  Auth: True, Active Company: 2
+[2026-03-01 00:33:30.341085] GET /static/site.webmanifest
+  Auth: False, Active Company: None
+[2026-03-01 00:33:30.551890] GET /my-work/api/activities
+  Auth: True, Active Company: 2
+[2026-03-01 00:33:30.992449] GET /my-work/api/occurrences/summary
+  Auth: True, Active Company: 2
+[2026-03-01 00:33:31.826992] GET /api/agents/history
+  Auth: True, Active Company: 2
+[2026-03-01 00:33:36.436651] GET /api/agents/history
+  Auth: True, Active Company: 2
+[2026-03-01 00:33:53.536870] POST /api/agents/chat
+  Auth: True, Active Company: 2
+[2026-03-01 00:34:29.847094] POST /api/agents/chat
+  Auth: True, Active Company: 2
+[2026-03-01 00:34:52.846870] GET /my-work
+  Auth: True, Active Company: 2
+[2026-03-01 00:34:53.251723] GET /my-work/api/filter-options
+  Auth: True, Active Company: 2
+[2026-03-01 00:34:53.471896] GET /my-work/api/activities
+  Auth: True, Active Company: 2
+[2026-03-01 00:34:53.831266] GET /static/site.webmanifest
+  Auth: False, Active Company: None
+[2026-03-01 00:34:53.912009] GET /my-work/api/occurrences/summary
+  Auth: True, Active Company: 2
+[2026-03-01 00:53:16.142561] GET /
+  Auth: False, Active Company: None
+[2026-03-01 00:53:16.274882] GET /login
+  Auth: False, Active Company: None
+[2026-03-01 00:53:21.891164] POST /login
+  Auth: False, Active Company: None
+[2026-03-01 00:53:29.321153] POST /login
+  Auth: False, Active Company: None
+[2026-03-01 00:53:30.189835] GET /portal
+  Auth: True, Active Company: None
+[2026-03-01 00:53:30.437830] GET /api/notes/
+  Auth: True, Active Company: None
+[2026-03-01 00:53:43.165889] POST /portal
+  Auth: True, Active Company: None
+[2026-03-01 00:53:43.303669] GET /my-work
+  Auth: True, Active Company: 1
+[2026-03-01 00:53:43.725548] GET /my-work/api/filter-options
+  Auth: True, Active Company: 1
+[2026-03-01 00:53:43.911181] GET /my-work/api/activities
+  Auth: True, Active Company: 1
+[2026-03-01 00:53:44.345584] GET /my-work/api/occurrences/summary
+  Auth: True, Active Company: 1
+[2026-03-01 00:53:47.562865] GET /my-work
+  Auth: True, Active Company: 1
+[2026-03-01 00:53:47.988709] GET /my-work/api/filter-options
+  Auth: True, Active Company: 1
+[2026-03-01 00:53:48.146270] GET /my-work/api/activities
+  Auth: True, Active Company: 1
+[2026-03-01 00:53:48.324486] GET /my-work/api/occurrences/summary
+  Auth: True, Active Company: 1
+[2026-03-01 09:39:14.542304] GET /login
+  Auth: False, Active Company: None
+[2026-03-01 09:39:19.329449] POST /login
+  Auth: False, Active Company: None
+[2026-03-01 09:39:25.341007] POST /login
+  Auth: False, Active Company: None
+[2026-03-01 09:39:26.260069] GET /portal
+  Auth: True, Active Company: None
+[2026-03-01 09:39:26.816131] GET /api/notes/
+  Auth: True, Active Company: None
+[2026-03-01 10:03:49.460336] POST /portal
+  Auth: True, Active Company: None
+[2026-03-01 10:03:49.683265] GET /my-work
+  Auth: True, Active Company: 1
+[2026-03-01 10:03:50.283958] GET /my-work/api/filter-options
+  Auth: True, Active Company: 1
+[2026-03-01 10:03:50.477894] GET /my-work/api/activities
+  Auth: True, Active Company: 1
+[2026-03-01 10:03:50.804937] GET /my-work/api/occurrences/summary
+  Auth: True, Active Company: 1
+[2026-03-01 10:03:55.948043] GET /my-work/api/activities
+  Auth: True, Active Company: 1
+[2026-03-01 10:03:56.393799] GET /api/companies/1/process-instances
+  Auth: True, Active Company: 1
+[2026-03-01 10:03:56.399455] GET /api/companies/2/process-instances
+  Auth: True, Active Company: 1
+[2026-03-01 10:03:56.403736] GET /api/companies/1/processes
+  Auth: True, Active Company: 1
+[2026-03-01 10:03:56.513604] GET /api/companies/2/processes
+  Auth: True, Active Company: 1
+[2026-03-01 10:03:56.723980] GET /my-work/api/occurrences/summary
+  Auth: True, Active Company: 1
+[2026-03-01 10:03:59.423133] GET /my-work/api/activities
+  Auth: True, Active Company: 1
+[2026-03-01 10:03:59.857622] GET /my-work/api/occurrences/summary
+  Auth: True, Active Company: 1
+[2026-03-01 10:10:49.357389] GET /projects
+  Auth: True, Active Company: 1
+[2026-03-01 10:10:49.637634] GET /api/companies/1/portfolios
+  Auth: True, Active Company: 1
+[2026-03-01 10:10:49.643025] GET /api/plans
+  Auth: True, Active Company: 1
+[2026-03-01 10:10:49.776255] GET /api/projects
+  Auth: True, Active Company: 1
+[2026-03-01 10:11:07.000245] GET /process-occurrences
+  Auth: True, Active Company: 1
+[2026-03-01 10:11:07.129271] GET /companies/1/process-occurrences
+  Auth: True, Active Company: 1
+[2026-03-01 10:11:07.461763] GET /api/occurrences
+  Auth: True, Active Company: 1
+[2026-03-01 10:11:07.473776] GET /api/processes
+  Auth: True, Active Company: 1
+[2026-03-01 10:11:07.708685] GET /api/projects
+  Auth: True, Active Company: 1
+[2026-03-01 10:11:08.040251] GET /api/companies/1/employees
+  Auth: True, Active Company: 1
+[2026-03-01 10:11:09.972771] GET /efficiency-analysis
+  Auth: True, Active Company: 1
+[2026-03-01 10:11:10.157250] GET /api/companies/1/efficiency/collaborators
+  Auth: True, Active Company: 1
+[2026-03-01 10:11:35.929662] GET /companies
+  Auth: True, Active Company: 1
+[2026-03-01 10:11:36.170198] GET /api/companies
+  Auth: True, Active Company: 1
+[2026-03-01 10:11:38.742184] GET /companies/4/edit
+  Auth: True, Active Company: 1
+[2026-03-01 10:11:39.025083] GET /api/companies/4
+  Auth: True, Active Company: 1
+[2026-03-01 10:11:39.033798] GET /api/companies/4/users
+  Auth: True, Active Company: 1
+[2026-03-01 10:11:39.036079] GET /api/companies/4/roles
+  Auth: True, Active Company: 1
+[2026-03-01 10:11:39.038310] GET /api/companies/4/employees/full
+  Auth: True, Active Company: 1
+[2026-03-01 10:11:39.040818] GET /api/companies/4/performance-settings
+  Auth: True, Active Company: 1
+[2026-03-01 10:11:41.834546] PUT /api/companies/4
+  Auth: True, Active Company: 1
+[2026-03-01 10:12:17.240325] PUT /api/companies/4
+  Auth: True, Active Company: 1
+[2026-03-01 10:15:23.744916] GET /portal
+  Auth: True, Active Company: 1
+[2026-03-01 10:15:24.207559] GET /api/notes/
+  Auth: True, Active Company: 1
+[2026-03-01 10:30:27.607718] GET /portal
+  Auth: True, Active Company: 1
+[2026-03-01 10:30:27.967080] GET /api/notes/
+  Auth: True, Active Company: 1
+[2026-03-01 10:31:16.455527] POST /portal
+  Auth: True, Active Company: 1
+[2026-03-01 10:31:16.668049] GET /my-work
+  Auth: True, Active Company: 1
+[2026-03-01 10:31:17.134008] GET /my-work/api/filter-options
+  Auth: True, Active Company: 1
+[2026-03-01 10:31:17.313055] GET /my-work/api/activities
+  Auth: True, Active Company: 1
+[2026-03-01 10:31:17.795907] GET /my-work/api/occurrences/summary
+  Auth: True, Active Company: 1
+[2026-03-01 10:31:23.850652] GET /companies
+  Auth: True, Active Company: 1
+[2026-03-01 10:31:24.059499] GET /api/companies
+  Auth: True, Active Company: 1
+[2026-03-01 10:31:24.352396] GET /
+  Auth: False, Active Company: None
+[2026-03-01 10:31:24.576211] GET /login
+  Auth: False, Active Company: None
+[2026-03-01 10:31:28.405617] GET /companies/4/edit
+  Auth: True, Active Company: 1
+[2026-03-01 10:31:28.786636] GET /api/companies/4
+  Auth: True, Active Company: 1
+[2026-03-01 10:31:28.790807] GET /api/companies/4/users
+  Auth: True, Active Company: 1
+[2026-03-01 10:31:28.802171] GET /api/companies/4/roles
+  Auth: True, Active Company: 1
+[2026-03-01 10:31:28.804899] GET /api/companies/4/performance-settings
+  Auth: True, Active Company: 1
+[2026-03-01 10:31:28.807194] GET /api/companies/4/employees/full
+  Auth: True, Active Company: 1
+[2026-03-01 10:31:32.021542] PUT /api/companies/4
+  Auth: True, Active Company: 1
+[2026-03-01 10:33:12.985022] PUT /api/companies/4
+  Auth: True, Active Company: 1
+[2026-03-01 10:33:34.686900] GET /companies/4/edit
+  Auth: True, Active Company: 1
+[2026-03-01 10:33:35.245007] GET /api/companies/4
+  Auth: True, Active Company: 1
+[2026-03-01 10:33:35.248541] GET /api/companies/4/users
+  Auth: True, Active Company: 1
+[2026-03-01 10:33:35.251402] GET /api/companies/4/roles
+  Auth: True, Active Company: 1
+[2026-03-01 10:33:35.254266] GET /api/companies/4/employees/full
+  Auth: True, Active Company: 1
+[2026-03-01 10:33:35.258478] GET /api/companies/4/performance-settings
+  Auth: True, Active Company: 1
+[2026-03-01 10:33:36.740610] GET /companies/4/edit
+  Auth: True, Active Company: 1
+[2026-03-01 10:33:37.259755] GET /api/companies/4
+  Auth: True, Active Company: 1
+[2026-03-01 10:33:37.263326] GET /api/companies/4/users
+  Auth: True, Active Company: 1
+[2026-03-01 10:33:37.265537] GET /api/companies/4/roles
+  Auth: True, Active Company: 1
+[2026-03-01 10:33:37.267687] GET /api/companies/4/employees/full
+  Auth: True, Active Company: 1
+[2026-03-01 10:33:37.270128] GET /api/companies/4/performance-settings
+  Auth: True, Active Company: 1
+[2026-03-01 10:33:41.325110] PUT /api/companies/4
+  Auth: True, Active Company: 1
+[2026-03-01 10:33:44.922946] GET /portal
+  Auth: True, Active Company: 1
+[2026-03-01 10:33:45.189408] GET /api/notes/
+  Auth: True, Active Company: 1
+[2026-03-01 10:33:47.183486] GET /logout
+  Auth: True, Active Company: 1
+[2026-03-01 10:33:47.312342] GET /login
+  Auth: False, Active Company: None
+[2026-03-01 10:34:04.796807] GET /login
+  Auth: False, Active Company: None
+[2026-03-01 10:34:07.824612] POST /login
+  Auth: False, Active Company: None
+[2026-03-01 10:34:08.808018] GET /portal
+  Auth: True, Active Company: None
+[2026-03-01 10:34:09.283639] GET /api/notes/
+  Auth: True, Active Company: None
+[2026-03-01 10:34:16.879415] POST /portal
+  Auth: True, Active Company: None
+[2026-03-01 10:34:17.096005] GET /my-work
+  Auth: True, Active Company: 1
+[2026-03-01 10:34:17.617539] GET /my-work/api/filter-options
+  Auth: True, Active Company: 1
+[2026-03-01 10:34:17.683137] GET /static/site.webmanifest
+  Auth: False, Active Company: None
+[2026-03-01 10:34:17.768513] GET /my-work/api/activities
+  Auth: True, Active Company: 1
+[2026-03-01 10:34:18.060513] GET /my-work/api/occurrences/summary
+  Auth: True, Active Company: 1
+[2026-03-01 10:34:28.066758] GET /companies
+  Auth: True, Active Company: 1
+[2026-03-01 10:34:28.244328] GET /static/site.webmanifest
+  Auth: False, Active Company: None
+[2026-03-01 10:34:28.380635] GET /api/companies
+  Auth: True, Active Company: 1
+[2026-03-01 10:34:32.297296] GET /companies/4/edit
+  Auth: True, Active Company: 1
+[2026-03-01 10:34:32.647755] GET /api/companies/4
+  Auth: True, Active Company: 1
+[2026-03-01 10:34:32.651539] GET /api/companies/4/users
+  Auth: True, Active Company: 1
+[2026-03-01 10:34:32.653844] GET /api/companies/4/roles
+  Auth: True, Active Company: 1
+[2026-03-01 10:34:32.655955] GET /api/companies/4/employees/full
+  Auth: True, Active Company: 1
+[2026-03-01 10:34:32.658515] GET /api/companies/4/performance-settings
+  Auth: True, Active Company: 1
+[2026-03-01 10:34:32.693429] GET /static/site.webmanifest
+  Auth: False, Active Company: None
+[2026-03-01 10:34:35.971853] PUT /api/companies/4
+  Auth: True, Active Company: 1
+[2026-03-01 10:45:31.714084] POST /login
+  Auth: False, Active Company: None
+[2026-03-01 10:45:37.513044] POST /login
+  Auth: False, Active Company: None
+[2026-03-01 10:45:38.428187] GET /portal
+  Auth: True, Active Company: None
+[2026-03-01 10:45:38.740201] GET /api/notes/
+  Auth: True, Active Company: None
+[2026-03-01 10:45:41.387371] POST /portal
+  Auth: True, Active Company: None
+[2026-03-01 10:45:41.545707] GET /my-work
+  Auth: True, Active Company: 1
+[2026-03-01 10:45:42.005151] GET /my-work/api/filter-options
+  Auth: True, Active Company: 1
+[2026-03-01 10:45:42.175019] GET /my-work/api/activities
+  Auth: True, Active Company: 1
+[2026-03-01 10:45:42.562206] GET /my-work/api/occurrences/summary
+  Auth: True, Active Company: 1
+[2026-03-01 10:45:47.136415] GET /companies
+  Auth: True, Active Company: 1
+[2026-03-01 10:45:47.468361] GET /api/companies
+  Auth: True, Active Company: 1
+[2026-03-01 10:45:50.170380] GET /companies/4/edit
+  Auth: True, Active Company: 1
+[2026-03-01 10:45:50.573446] GET /api/companies/4
+  Auth: True, Active Company: 1
+[2026-03-01 10:45:50.587637] GET /api/companies/4/users
+  Auth: True, Active Company: 1
+[2026-03-01 10:45:50.590118] GET /api/companies/4/roles
+  Auth: True, Active Company: 1
+[2026-03-01 10:45:50.592864] GET /api/companies/4/employees/full
+  Auth: True, Active Company: 1
+[2026-03-01 10:45:50.595417] GET /api/companies/4/performance-settings
+  Auth: True, Active Company: 1
+[2026-03-01 10:45:53.397423] PUT /api/companies/4
+  Auth: True, Active Company: 1
+[2026-03-01 10:46:00.134463] GET /usuarios
+  Auth: True, Active Company: 1
+[2026-03-01 10:46:02.423487] GET /companies
+  Auth: True, Active Company: 1
+[2026-03-01 10:46:02.696115] GET /api/companies
+  Auth: True, Active Company: 1
+[2026-03-01 10:46:05.491345] GET /companies/4/edit
+  Auth: True, Active Company: 1
+[2026-03-01 10:46:05.841024] GET /api/companies/4
+  Auth: True, Active Company: 1
+[2026-03-01 10:46:05.847889] GET /api/companies/4/users
+  Auth: True, Active Company: 1
+[2026-03-01 10:46:05.850595] GET /api/companies/4/roles
+  Auth: True, Active Company: 1
+[2026-03-01 10:46:05.852854] GET /api/companies/4/employees/full
+  Auth: True, Active Company: 1
+[2026-03-01 10:46:05.856162] GET /api/companies/4/performance-settings
+  Auth: True, Active Company: 1
+[2026-03-01 10:46:22.179305] GET /portal
+  Auth: True, Active Company: 1
+[2026-03-01 10:46:22.442752] GET /api/notes/
+  Auth: True, Active Company: 1
+[2026-03-01 11:04:47.172561] GET /
+  Auth: False, Active Company: None
+[2026-03-01 11:04:47.209544] GET /login
+  Auth: False, Active Company: None
+[2026-03-01 11:16:47.387961] GET /my-work
+  Auth: True, Active Company: 2
+[2026-03-01 11:16:48.017026] GET /my-work/api/filter-options
+  Auth: True, Active Company: 2
+[2026-03-01 11:16:48.262216] GET /my-work/api/activities
+  Auth: True, Active Company: 2
+[2026-03-01 11:16:48.532520] GET /my-work/api/occurrences/summary
+  Auth: True, Active Company: 2
+[2026-03-01 11:16:48.737476] GET /static/site.webmanifest
+  Auth: False, Active Company: None
+[2026-03-01 11:16:52.001980] GET /portal
+  Auth: True, Active Company: 2
+[2026-03-01 11:16:52.251653] GET /api/notes/
+  Auth: True, Active Company: 2
+[2026-03-01 11:34:25.937774] GET /login
+  Auth: False, Active Company: None
+[2026-03-01 11:34:29.115938] POST /login
+  Auth: False, Active Company: None
+[2026-03-01 11:34:33.918713] POST /login
+  Auth: False, Active Company: None
+[2026-03-01 11:34:34.786095] GET /portal
+  Auth: True, Active Company: None
+[2026-03-01 11:34:34.986038] GET /api/notes/
+  Auth: True, Active Company: None
+[2026-03-01 11:34:54.696760] POST /api/notes/
+  Auth: True, Active Company: None
+[2026-03-01 11:35:17.885641] POST /api/notes/
+  Auth: True, Active Company: None
+[2026-03-01 11:35:32.278213] POST /api/notes/
+  Auth: True, Active Company: None
+[2026-03-01 11:35:49.949030] POST /api/notes/
+  Auth: True, Active Company: None
+[2026-03-01 11:36:01.817223] POST /api/notes/
+  Auth: True, Active Company: None
+[2026-03-01 11:36:12.836043] POST /api/notes/
+  Auth: True, Active Company: None
+[2026-03-01 11:36:26.129147] POST /api/notes/
+  Auth: True, Active Company: None
+[2026-03-01 11:36:37.482835] POST /api/notes/
+  Auth: True, Active Company: None
+[2026-03-01 11:36:55.857707] POST /api/notes/
+  Auth: True, Active Company: None
+[2026-03-01 11:37:07.991612] POST /api/notes/
+  Auth: True, Active Company: None
+[2026-03-01 11:37:19.888908] POST /api/notes/
+  Auth: True, Active Company: None
+[2026-03-01 11:37:33.221135] POST /api/notes/
+  Auth: True, Active Company: None
+[2026-03-01 11:37:41.962773] POST /api/notes/
+  Auth: True, Active Company: None
+[2026-03-01 11:37:52.929298] POST /api/notes/
+  Auth: True, Active Company: None
+[2026-03-01 11:38:07.296289] POST /api/notes/
+  Auth: True, Active Company: None
+[2026-03-01 11:38:28.185789] POST /api/notes/
+  Auth: True, Active Company: None
+[2026-03-01 11:38:41.628553] POST /api/notes/
+  Auth: True, Active Company: None
+[2026-03-01 11:38:55.864187] POST /api/notes/
+  Auth: True, Active Company: None
+[2026-03-01 11:39:48.851515] POST /portal
+  Auth: True, Active Company: None
+[2026-03-01 11:39:48.995862] GET /my-work
+  Auth: True, Active Company: 1
+[2026-03-01 11:39:49.347456] GET /my-work/api/filter-options
+  Auth: True, Active Company: 1
+[2026-03-01 11:39:49.509391] GET /my-work/api/activities
+  Auth: True, Active Company: 1
+[2026-03-01 11:39:49.924358] GET /my-work/api/occurrences/summary
+  Auth: True, Active Company: 1
+[2026-03-01 11:39:54.868973] GET /companies
+  Auth: True, Active Company: 1
+[2026-03-01 11:39:55.097927] GET /api/companies
+  Auth: True, Active Company: 1
+[2026-03-01 11:40:05.685174] GET /companies/4/edit
+  Auth: True, Active Company: 1
+[2026-03-01 11:40:06.134690] GET /api/companies/4
+  Auth: True, Active Company: 1
+[2026-03-01 11:40:06.138792] GET /api/companies/4/users
+  Auth: True, Active Company: 1
+[2026-03-01 11:40:06.141417] GET /api/companies/4/roles
+  Auth: True, Active Company: 1
+[2026-03-01 11:40:06.147644] GET /api/companies/4/employees/full
+  Auth: True, Active Company: 1
+[2026-03-01 11:40:06.150438] GET /api/companies/4/performance-settings
+  Auth: True, Active Company: 1
+[2026-03-01 11:40:09.924732] PUT /api/companies/4
+  Auth: True, Active Company: 1
+[2026-03-01 11:42:08.382210] GET /portal
+  Auth: True, Active Company: 2
+[2026-03-01 11:42:09.641995] GET /api/notes/
+  Auth: True, Active Company: 2
+[2026-03-01 11:52:10.590663] GET /portal
+  Auth: True, Active Company: 2
+[2026-03-01 11:52:10.927186] GET /api/notes/
+  Auth: True, Active Company: 2
+[2026-03-01 11:54:58.038703] GET /login
+  Auth: False, Active Company: None
+[2026-03-01 11:55:01.828368] POST /login
+  Auth: False, Active Company: None
+[2026-03-01 11:55:11.764235] POST /login
+  Auth: False, Active Company: None
+[2026-03-01 11:55:12.685063] GET /portal
+  Auth: True, Active Company: None
+[2026-03-01 11:55:12.921023] GET /api/notes/
+  Auth: True, Active Company: None
+[2026-03-01 12:03:26.555070] GET /portal
+  Auth: True, Active Company: 2
+[2026-03-01 12:03:27.552521] GET /api/notes/
+  Auth: True, Active Company: 2
+[2026-03-01 12:04:53.394106] GET /portal
+  Auth: True, Active Company: None
+[2026-03-01 12:04:53.670128] GET /api/notes/
+  Auth: True, Active Company: None
+[2026-03-01 12:05:04.507967] GET /portal
+  Auth: True, Active Company: None
+[2026-03-01 12:05:04.905404] GET /api/notes/
+  Auth: True, Active Company: None
+[2026-03-01 12:05:07.724681] GET /portal
+  Auth: True, Active Company: None
+[2026-03-01 12:05:08.164288] GET /api/notes/
+  Auth: True, Active Company: None
+[2026-03-01 12:05:33.101311] GET /portal
+  Auth: True, Active Company: None
+[2026-03-01 12:05:33.303880] GET /api/notes/
+  Auth: True, Active Company: None
+[2026-03-01 12:05:34.997518] GET /portal
+  Auth: True, Active Company: None
+[2026-03-01 12:05:35.343662] GET /api/notes/
+  Auth: True, Active Company: None
+[2026-03-01 12:05:55.247712] GET /portal
+  Auth: True, Active Company: 2
+[2026-03-01 12:05:55.553787] GET /api/notes/
+  Auth: True, Active Company: 2
+[2026-03-01 12:06:29.272441] POST /api/notes/
+  Auth: True, Active Company: 2
+[2026-03-01 12:22:18.517209] GET /portal
+  Auth: True, Active Company: None
+[2026-03-01 12:22:18.873257] GET /api/notes/
+  Auth: True, Active Company: None
+[2026-03-01 12:22:25.806728] GET /portal
+  Auth: True, Active Company: None
+[2026-03-01 12:22:26.253620] GET /api/notes/
+  Auth: True, Active Company: None
+[2026-03-01 12:22:29.778820] GET /portal
+  Auth: True, Active Company: None
+[2026-03-01 12:22:30.156920] GET /api/notes/
+  Auth: True, Active Company: None
+[2026-03-01 12:23:04.756960] GET /login
+  Auth: False, Active Company: None
+[2026-03-01 12:23:17.824026] POST /login
+  Auth: False, Active Company: None
+[2026-03-01 12:23:18.782062] GET /portal
+  Auth: True, Active Company: None
+[2026-03-01 12:23:19.246330] GET /api/notes/
+  Auth: True, Active Company: None
+[2026-03-01 12:23:29.729698] GET /portal
+  Auth: True, Active Company: None
+[2026-03-01 12:23:30.201217] GET /api/notes/
+  Auth: True, Active Company: None
+[2026-03-01 12:37:24.725813] GET /portal
+  Auth: True, Active Company: 2
+[2026-03-01 12:37:25.828432] GET /api/notes/
+  Auth: True, Active Company: 2
+[2026-03-01 12:37:48.617107] GET /portal
+  Auth: True, Active Company: 2
+[2026-03-01 12:37:48.861303] GET /api/notes/
+  Auth: True, Active Company: 2
+[2026-03-01 12:38:03.051464] POST /portal
+  Auth: True, Active Company: 2
+[2026-03-01 12:38:03.286606] GET /my-work
+  Auth: True, Active Company: 1
+[2026-03-01 12:38:03.701404] GET /my-work/api/filter-options
+  Auth: True, Active Company: 1
+[2026-03-01 12:38:03.941476] GET /my-work/api/activities
+  Auth: True, Active Company: 1
+[2026-03-01 12:38:04.297024] GET /static/site.webmanifest
+  Auth: False, Active Company: None
+[2026-03-01 12:38:04.372058] GET /my-work/api/occurrences/summary
+  Auth: True, Active Company: 1
+[2026-03-01 12:38:24.773534] GET /portal
+  Auth: True, Active Company: 1
+[2026-03-01 12:38:25.027418] GET /api/notes/
+  Auth: True, Active Company: 1
+[2026-03-01 12:38:52.341744] GET /portal
+  Auth: True, Active Company: 1
+[2026-03-01 12:38:52.596520] GET /api/notes/
+  Auth: True, Active Company: 1
+[2026-03-01 12:39:04.577688] POST /portal
+  Auth: True, Active Company: 1
+[2026-03-01 12:39:04.797179] GET /my-work
+  Auth: True, Active Company: 2
+[2026-03-01 12:39:05.211708] GET /my-work/api/filter-options
+  Auth: True, Active Company: 2
+[2026-03-01 12:39:05.227504] GET /static/site.webmanifest
+  Auth: False, Active Company: None
+[2026-03-01 12:39:05.451580] GET /my-work/api/activities
+  Auth: True, Active Company: 2
+[2026-03-01 12:39:05.887092] GET /my-work/api/occurrences/summary
+  Auth: True, Active Company: 2
+[2026-03-01 12:39:20.151594] GET /api/agents/history
+  Auth: True, Active Company: 2
+[2026-03-01 12:40:16.796406] POST /api/agents/chat
+  Auth: True, Active Company: 2
+[2026-03-01 12:40:28.316944] POST /api/agents/chat
+  Auth: True, Active Company: 2
+[2026-03-01 12:43:32.710796] POST /api/agents/chat
+  Auth: True, Active Company: 2
+[2026-03-01 12:45:22.883228] GET /
+  Auth: False, Active Company: None
+[2026-03-01 12:45:22.969223] GET /
+  Auth: False, Active Company: None
+[2026-03-01 12:45:22.975854] GET /login
+  Auth: False, Active Company: None
+[2026-03-01 12:45:23.067010] GET /login
+  Auth: False, Active Company: None
+[2026-03-01 12:46:50.487585] POST /portal
+  Auth: True, Active Company: None
+[2026-03-01 12:46:50.736573] GET /my-work
+  Auth: True, Active Company: 1
+[2026-03-01 12:46:51.166102] GET /my-work/api/filter-options
+  Auth: True, Active Company: 1
+[2026-03-01 12:46:51.347499] GET /my-work/api/activities
+  Auth: True, Active Company: 1
+[2026-03-01 12:46:51.645805] GET /my-work/api/occurrences/summary
+  Auth: True, Active Company: 1
+[2026-03-01 12:58:08.927923] GET /my-work
+  Auth: True, Active Company: 1
+[2026-03-01 12:58:09.400243] GET /my-work/api/filter-options
+  Auth: True, Active Company: 1
+[2026-03-01 12:58:09.686327] GET /my-work/api/activities
+  Auth: True, Active Company: 1
+[2026-03-01 12:58:09.883681] GET /my-work/api/occurrences/summary
+  Auth: True, Active Company: 1
+[2026-03-01 12:58:15.475413] GET /portal
+  Auth: True, Active Company: 1
+[2026-03-01 12:58:15.781016] GET /api/notes/
+  Auth: True, Active Company: 1
+[2026-03-01 12:58:19.020150] GET /portal
+  Auth: True, Active Company: 1
+[2026-03-01 12:58:19.493476] GET /api/notes/
+  Auth: True, Active Company: 1
+[2026-03-01 12:58:25.511348] GET /portal
+  Auth: True, Active Company: 1
+[2026-03-01 12:58:25.693319] GET /api/notes/
+  Auth: True, Active Company: 1
+[2026-03-01 12:58:28.734110] GET /portal
+  Auth: True, Active Company: 1
+[2026-03-01 12:58:29.095152] GET /api/notes/
+  Auth: True, Active Company: 1
+[2026-03-01 12:58:30.061219] GET /portal
+  Auth: True, Active Company: 1
+[2026-03-01 12:58:30.434338] GET /api/notes/
+  Auth: True, Active Company: 1
+[2026-03-01 13:15:10.795468] GET /portal
+  Auth: True, Active Company: 2
+[2026-03-01 13:15:11.176934] GET /api/notes/
+  Auth: True, Active Company: 2
+[2026-03-01 13:15:16.671764] GET /portal
+  Auth: True, Active Company: 2
+[2026-03-01 13:15:16.931896] GET /api/notes/
+  Auth: True, Active Company: 2
+[2026-03-01 13:15:31.702217] POST /portal
+  Auth: True, Active Company: 2
+[2026-03-01 13:15:31.932402] GET /my-work
+  Auth: True, Active Company: 7
+[2026-03-01 13:15:32.437315] GET /my-work/api/filter-options
+  Auth: True, Active Company: 7
+[2026-03-01 13:15:32.696665] GET /my-work/api/activities
+  Auth: True, Active Company: 7
+[2026-03-01 13:15:32.987314] GET /my-work/api/occurrences/summary
+  Auth: True, Active Company: 7
+[2026-03-01 13:15:33.021845] GET /static/site.webmanifest
+  Auth: False, Active Company: None
+[2026-03-01 13:15:40.956411] POST /portal
+  Auth: True, Active Company: 1
+[2026-03-01 13:15:41.205930] GET /my-work
+  Auth: True, Active Company: 1
+[2026-03-01 13:15:41.752473] GET /my-work/api/filter-options
+  Auth: True, Active Company: 1
+[2026-03-01 13:15:41.925450] GET /my-work/api/activities
+  Auth: True, Active Company: 1
+[2026-03-01 13:15:42.099876] GET /my-work/api/occurrences/summary
+  Auth: True, Active Company: 1
+[2026-03-01 13:15:46.049481] GET /companies
+  Auth: True, Active Company: 1
+[2026-03-01 13:15:46.330470] GET /api/companies
+  Auth: True, Active Company: 1
+[2026-03-01 13:15:49.417866] GET /companies/4/edit
+  Auth: True, Active Company: 1
+[2026-03-01 13:15:49.770628] GET /api/companies/4
+  Auth: True, Active Company: 1
+[2026-03-01 13:15:49.779377] GET /api/companies/4/users
+  Auth: True, Active Company: 1
+[2026-03-01 13:15:49.783289] GET /api/companies/4/roles
+  Auth: True, Active Company: 1
+[2026-03-01 13:15:49.787706] GET /api/companies/4/employees/full
+  Auth: True, Active Company: 1
+[2026-03-01 13:15:49.793953] GET /api/companies/4/performance-settings
+  Auth: True, Active Company: 1
+[2026-03-01 13:15:53.558984] PUT /api/companies/4
+  Auth: True, Active Company: 1
+[2026-03-01 13:16:01.460821] GET /companies
+  Auth: True, Active Company: 1
+[2026-03-01 13:16:01.650286] GET /api/companies
+  Auth: True, Active Company: 1
+[2026-03-01 13:16:11.540855] GET /companies/5/edit
+  Auth: True, Active Company: 1
+[2026-03-01 13:16:11.809535] GET /api/companies/5
+  Auth: True, Active Company: 1
+[2026-03-01 13:16:11.814495] GET /api/companies/5/users
+  Auth: True, Active Company: 1
+[2026-03-01 13:16:11.817215] GET /api/companies/5/roles
+  Auth: True, Active Company: 1
+[2026-03-01 13:16:11.822509] GET /api/companies/5/employees/full
+  Auth: True, Active Company: 1
+[2026-03-01 13:16:11.825534] GET /api/companies/5/performance-settings
+  Auth: True, Active Company: 1
+[2026-03-01 13:16:15.958650] PUT /api/companies/5
+  Auth: True, Active Company: 1
+[2026-03-01 13:16:21.112146] GET /companies
+  Auth: True, Active Company: 1
+[2026-03-01 13:16:21.304710] GET /api/companies
+  Auth: True, Active Company: 1
+[2026-03-01 13:16:25.512646] GET /portal
+  Auth: True, Active Company: 1
+[2026-03-01 13:16:25.719494] GET /api/notes/
+  Auth: True, Active Company: 1
+[2026-03-01 13:17:30.475418] POST /portal
+  Auth: True, Active Company: 1
+[2026-03-01 13:17:30.614419] GET /my-work
+  Auth: True, Active Company: 1
+[2026-03-01 13:17:30.959930] GET /my-work/api/filter-options
+  Auth: True, Active Company: 1
+[2026-03-01 13:17:31.118591] GET /my-work/api/activities
+  Auth: True, Active Company: 1
+[2026-03-01 13:17:31.286895] GET /my-work/api/occurrences/summary
+  Auth: True, Active Company: 1
+[2026-03-01 13:17:47.236040] GET /my-work
+  Auth: True, Active Company: 7
+[2026-03-01 13:17:47.686642] GET /my-work/api/filter-options
+  Auth: True, Active Company: 7
+[2026-03-01 13:17:47.916623] GET /my-work/api/activities
+  Auth: True, Active Company: 7
+[2026-03-01 13:17:48.166532] GET /my-work/api/occurrences/summary
+  Auth: True, Active Company: 7
+[2026-03-01 13:17:48.306967] GET /static/site.webmanifest
+  Auth: False, Active Company: None
+[2026-03-01 13:18:06.335571] GET /my-work/api/activities
+  Auth: True, Active Company: 7
+[2026-03-01 13:18:06.570674] GET /my-work/api/occurrences/summary
+  Auth: True, Active Company: 7
+[2026-03-01 13:18:07.675744] GET /my-work/api/activities
+  Auth: True, Active Company: 7
+[2026-03-01 13:18:07.925756] GET /my-work/api/occurrences/summary
+  Auth: True, Active Company: 7
+[2026-03-01 13:18:09.635741] GET /my-work/api/activities
+  Auth: True, Active Company: 7
+[2026-03-01 13:18:10.076192] GET /my-work/api/occurrences/summary
+  Auth: True, Active Company: 7
+[2026-03-01 13:18:10.815665] GET /my-work/api/activities
+  Auth: True, Active Company: 7
+[2026-03-01 13:18:11.256343] GET /my-work/api/occurrences/summary
+  Auth: True, Active Company: 7
+[2026-03-01 13:18:12.335965] GET /my-work/api/activities
+  Auth: True, Active Company: 7
+[2026-03-01 13:18:12.810571] GET /my-work/api/occurrences/summary
+  Auth: True, Active Company: 7
+[2026-03-01 13:18:12.935836] GET /my-work/api/activities
+  Auth: True, Active Company: 7
+[2026-03-01 13:18:13.190709] GET /my-work/api/occurrences/summary
+  Auth: True, Active Company: 7
+[2026-03-01 13:18:20.656338] POST /portal
+  Auth: True, Active Company: 7
+[2026-03-01 13:18:20.900792] GET /my-work
+  Auth: True, Active Company: 1
+[2026-03-01 13:18:21.317440] GET /static/site.webmanifest
+  Auth: False, Active Company: None
+[2026-03-01 13:18:21.326156] GET /my-work/api/filter-options
+  Auth: True, Active Company: 1
+[2026-03-01 13:18:21.571020] GET /my-work/api/activities
+  Auth: True, Active Company: 1
+[2026-03-01 13:18:21.830696] GET /my-work/api/occurrences/summary
+  Auth: True, Active Company: 1
+[2026-03-01 13:18:37.950688] GET /process-map
+  Auth: True, Active Company: 1
+[2026-03-01 13:18:38.165907] GET /process-map
+  Auth: True, Active Company: 1
+[2026-03-01 13:18:38.461290] GET /api/process-areas
+  Auth: True, Active Company: 1
+[2026-03-01 13:18:38.468001] GET /api/macro-processes
+  Auth: True, Active Company: 1
+[2026-03-01 13:18:38.480705] GET /api/processes
+  Auth: True, Active Company: 1
+[2026-03-01 13:18:38.598278] GET /static/site.webmanifest
+  Auth: False, Active Company: None
+[2026-03-01 13:18:38.815797] GET /api/dashboard/filter-options
+  Auth: True, Active Company: 1
+[2026-03-01 13:18:43.175939] GET /processes
+  Auth: True, Active Company: 1
+[2026-03-01 13:18:43.467211] GET /api/process-areas
+  Auth: True, Active Company: 1
+[2026-03-01 13:18:43.478359] GET /static/site.webmanifest
+  Auth: False, Active Company: None
+[2026-03-01 13:18:43.487538] GET /api/processes
+  Auth: True, Active Company: 1
+[2026-03-01 13:24:10.743927] GET /portal
+  Auth: True, Active Company: 1
+[2026-03-01 13:24:11.151476] GET /api/notes/
+  Auth: True, Active Company: 1
+[2026-03-01 13:24:14.455391] GET /portal
+  Auth: True, Active Company: 1
+[2026-03-01 13:24:14.982547] GET /api/notes/
+  Auth: True, Active Company: 1
+[2026-03-01 13:24:39.572171] POST /portal
+  Auth: True, Active Company: 1
+[2026-03-01 13:24:39.736473] GET /my-work
+  Auth: True, Active Company: 1
+[2026-03-01 13:24:40.147277] GET /my-work/api/filter-options
+  Auth: True, Active Company: 1
+[2026-03-01 13:24:40.342860] GET /my-work/api/activities
+  Auth: True, Active Company: 1
+[2026-03-01 13:24:40.533072] GET /my-work/api/occurrences/summary
+  Auth: True, Active Company: 1
+[2026-03-01 13:26:15.406689] GET /my-work
+  Auth: True, Active Company: 1
+[2026-03-01 13:26:15.859814] GET /my-work/api/filter-options
+  Auth: True, Active Company: 1
+[2026-03-01 13:26:16.010375] GET /my-work/api/activities
+  Auth: True, Active Company: 1
+[2026-03-01 13:26:16.173766] GET /my-work/api/occurrences/summary
+  Auth: True, Active Company: 1
+[2026-03-01 13:26:17.893384] GET /my-work
+  Auth: True, Active Company: 1
+[2026-03-01 13:26:18.352967] GET /my-work/api/filter-options
+  Auth: True, Active Company: 1
+[2026-03-01 13:26:18.521017] GET /my-work/api/activities
+  Auth: True, Active Company: 1
+[2026-03-01 13:26:18.704488] GET /my-work/api/occurrences/summary
+  Auth: True, Active Company: 1
+[2026-03-01 13:31:03.433512] GET /my-work
+  Auth: True, Active Company: 1
+[2026-03-01 13:31:03.889103] GET /my-work/api/filter-options
+  Auth: True, Active Company: 1
+[2026-03-01 13:31:04.068569] GET /my-work/api/activities
+  Auth: True, Active Company: 1
+[2026-03-01 13:31:04.232948] GET /my-work/api/occurrences/summary
+  Auth: True, Active Company: 1
+[2026-03-01 13:38:15.975287] GET /my-work/api/activities
+  Auth: True, Active Company: 1
+[2026-03-01 13:38:16.166900] GET /my-work/api/occurrences/summary
+  Auth: True, Active Company: 1
+[2026-03-01 13:38:19.293044] GET /my-work/api/activities
+  Auth: True, Active Company: 1
+[2026-03-01 13:38:19.620372] GET /api/companies/1/process-instances
+  Auth: True, Active Company: 1
+[2026-03-01 13:38:19.628171] GET /api/companies/2/process-instances
+  Auth: True, Active Company: 1
+[2026-03-01 13:38:19.631895] GET /api/companies/2/processes
+  Auth: True, Active Company: 1
+[2026-03-01 13:38:19.705787] GET /api/companies/1/processes
+  Auth: True, Active Company: 1
+[2026-03-01 13:38:19.950043] GET /my-work/api/occurrences/summary
+  Auth: True, Active Company: 1
+[2026-03-01 13:38:26.710545] GET /my-work/api/activities
+  Auth: True, Active Company: 1
+[2026-03-01 13:38:27.030507] GET /my-work/api/occurrences/summary
+  Auth: True, Active Company: 1
+[2026-03-01 13:38:34.123170] GET /my-work/api/activities
+  Auth: True, Active Company: 1
+[2026-03-01 13:38:34.299957] GET /my-work/api/occurrences/summary
+  Auth: True, Active Company: 1
+[2026-03-01 13:39:08.897586] GET /my-work/api/activities
+  Auth: True, Active Company: 1
+[2026-03-01 13:39:09.080396] GET /my-work/api/occurrences/summary
+  Auth: True, Active Company: 1
+[2026-03-01 13:39:15.813797] GET /my-work/api/activities
+  Auth: True, Active Company: 1
+[2026-03-01 13:39:16.013281] GET /my-work/api/occurrences/summary
+  Auth: True, Active Company: 1
+[2026-03-01 13:39:53.429060] GET /my-work/api/activities
+  Auth: True, Active Company: 1
+[2026-03-01 13:39:53.627603] GET /my-work/api/occurrences/summary
+  Auth: True, Active Company: 1
+[2026-03-01 13:39:56.811438] GET /my-work/api/activities
+  Auth: True, Active Company: 1
+[2026-03-01 13:39:56.991768] GET /my-work/api/occurrences/summary
+  Auth: True, Active Company: 1
+[2026-03-01 13:40:01.615344] GET /my-work/api/activities
+  Auth: True, Active Company: 1
+[2026-03-01 13:40:01.806818] GET /my-work/api/occurrences/summary
+  Auth: True, Active Company: 1
+[2026-03-01 13:40:04.087875] GET /my-work/api/activities
+  Auth: True, Active Company: 1
+[2026-03-01 13:40:04.263564] GET /my-work/api/occurrences/summary
+  Auth: True, Active Company: 1
+[2026-03-01 13:40:06.952987] GET /my-work/api/activities
+  Auth: True, Active Company: 1
+[2026-03-01 13:40:07.157471] GET /my-work/api/occurrences/summary
+  Auth: True, Active Company: 1
+[2026-03-01 13:40:10.384926] GET /my-work/api/activities
+  Auth: True, Active Company: 1
+[2026-03-01 13:40:10.569953] GET /my-work/api/occurrences/summary
+  Auth: True, Active Company: 1
+[2026-03-01 13:40:13.720555] GET /my-work
+  Auth: True, Active Company: 1
+[2026-03-01 13:40:14.075994] GET /my-work/api/filter-options
+  Auth: True, Active Company: 1
+[2026-03-01 13:40:14.242490] GET /my-work/api/activities
+  Auth: True, Active Company: 1
+[2026-03-01 13:40:14.421022] GET /my-work/api/occurrences/summary
+  Auth: True, Active Company: 1
+[2026-03-01 13:41:50.522952] GET /api/companies/7/projects/11/activities
+  Auth: True, Active Company: 1
+[2026-03-01 14:13:21.278195] GET /process-map
+  Auth: True, Active Company: 1
+[2026-03-01 14:13:21.721791] GET /api/process-areas
+  Auth: True, Active Company: 1
+[2026-03-01 14:13:21.725157] GET /api/macro-processes
+  Auth: True, Active Company: 1
+[2026-03-01 14:13:21.730664] GET /api/processes
+  Auth: True, Active Company: 1
+[2026-03-01 14:13:22.041587] GET /api/dashboard/filter-options
+  Auth: True, Active Company: 1
+[2026-03-01 14:13:22.340701] GET /static/site.webmanifest
+  Auth: False, Active Company: None
+[2026-03-01 14:13:27.451350] GET /portal
+  Auth: True, Active Company: 1
+[2026-03-01 14:13:27.691138] GET /api/notes/
+  Auth: True, Active Company: 1
+[2026-03-01 14:18:57.009274] GET /my-work/api/activities
+  Auth: True, Active Company: 1
+[2026-03-01 14:18:57.380562] GET /my-work/api/activities
+  Auth: True, Active Company: 1
+[2026-03-01 14:18:57.402327] GET /my-work/api/occurrences/summary
+  Auth: True, Active Company: 1
+[2026-03-01 14:18:57.530155] GET /my-work/api/occurrences/summary
+  Auth: True, Active Company: 1
+[2026-03-01 14:19:07.828165] GET /my-work/api/activities
+  Auth: True, Active Company: 1
+[2026-03-01 14:19:07.969323] GET /my-work/api/occurrences/summary
+  Auth: True, Active Company: 1
+[2026-03-01 14:19:11.236716] GET /my-work/api/activities
+  Auth: True, Active Company: 1
+[2026-03-01 14:19:11.378618] GET /my-work/api/occurrences/summary
+  Auth: True, Active Company: 1
+[2026-03-01 14:19:14.052251] GET /my-work/api/activities
+  Auth: True, Active Company: 1
+[2026-03-01 14:19:14.191743] GET /my-work/api/occurrences/summary
+  Auth: True, Active Company: 1
+[2026-03-01 14:19:16.032784] GET /my-work/api/activities
+  Auth: True, Active Company: 1
+[2026-03-01 14:19:16.172755] GET /my-work/api/occurrences/summary
+  Auth: True, Active Company: 1
+[2026-03-01 15:45:55.336517] GET /
+  Auth: False, Active Company: None
+[2026-03-01 15:46:30.778642] GET /login
+  Auth: False, Active Company: None
+[2026-03-01 15:56:34.210377] GET /
+  Auth: True, Active Company: 1
+[2026-03-01 15:56:34.362381] GET /my-work
+  Auth: True, Active Company: 1
+[2026-03-01 15:56:34.928895] GET /my-work/api/filter-options
+  Auth: True, Active Company: 1
+[2026-03-01 15:56:35.242367] GET /my-work/api/activities
+  Auth: True, Active Company: 1
+[2026-03-01 15:56:35.417314] GET /my-work/api/occurrences/summary
+  Auth: True, Active Company: 1
+[2026-03-01 15:57:20.467064] GET /
+  Auth: True, Active Company: 1
+[2026-03-01 15:57:20.661486] GET /my-work
+  Auth: True, Active Company: 1
+[2026-03-01 15:57:21.112129] GET /my-work/api/filter-options
+  Auth: True, Active Company: 1
+[2026-03-01 15:57:21.342337] GET /my-work/api/activities
+  Auth: True, Active Company: 1
+[2026-03-01 15:57:21.606990] GET /my-work/api/occurrences/summary
+  Auth: True, Active Company: 1
+[2026-03-01 15:57:21.726539] GET /static/site.webmanifest
+  Auth: False, Active Company: None
+[2026-03-01 15:57:22.292034] GET /my-work
+  Auth: True, Active Company: 1
+[2026-03-01 15:57:22.566247] GET /static/site.webmanifest
+  Auth: False, Active Company: None
+[2026-03-01 15:57:22.567339] GET /my-work/api/filter-options
+  Auth: True, Active Company: 1
+[2026-03-01 15:57:22.786777] GET /my-work/api/activities
+  Auth: True, Active Company: 1
+[2026-03-01 15:57:23.026784] GET /my-work/api/occurrences/summary
+  Auth: True, Active Company: 1
+[2026-03-01 15:57:34.151793] GET /process-routines
+  Auth: True, Active Company: 1
+[2026-03-01 15:57:34.351807] GET /companies/1/process-routines
+  Auth: True, Active Company: 1
+[2026-03-01 15:57:34.582254] GET /api/companies/1/process-routines
+  Auth: True, Active Company: 1
+[2026-03-01 15:57:34.621392] GET /static/site.webmanifest
+  Auth: False, Active Company: None
+[2026-03-01 15:57:41.062550] GET /portal
+  Auth: True, Active Company: 1
+[2026-03-01 15:57:41.406808] GET /api/notes/
+  Auth: True, Active Company: 1
+[2026-03-01 15:57:53.397674] GET /portal
+  Auth: True, Active Company: 1
+[2026-03-01 15:57:53.652618] GET /api/notes/
+  Auth: True, Active Company: 1
+[2026-03-01 15:59:02.860604] GET /my-work/api/activities
+  Auth: True, Active Company: 1
+[2026-03-01 15:59:03.018913] GET /my-work/api/occurrences/summary
+  Auth: True, Active Company: 1
+[2026-03-01 15:59:07.336999] GET /my-work/api/activities
+  Auth: True, Active Company: 1
+[2026-03-01 15:59:07.479918] GET /my-work/api/occurrences/summary
+  Auth: True, Active Company: 1
+[2026-03-01 15:59:13.928578] GET /my-work/api/activities
+  Auth: True, Active Company: 1
+[2026-03-01 15:59:14.242623] GET /api/companies/1/process-instances
+  Auth: True, Active Company: 1
+[2026-03-01 15:59:14.252137] GET /api/companies/1/processes
+  Auth: True, Active Company: 1
+[2026-03-01 15:59:14.363406] GET /api/companies/2/processes
+  Auth: True, Active Company: 1
+[2026-03-01 15:59:14.429323] GET /api/companies/2/process-instances
+  Auth: True, Active Company: 1
+[2026-03-01 15:59:14.565597] GET /my-work/api/occurrences/summary
+  Auth: True, Active Company: 1
+[2026-03-01 15:59:24.266187] GET /my-work/api/activities
+  Auth: True, Active Company: 1
+[2026-03-01 15:59:24.564189] GET /my-work/api/occurrences/summary
+  Auth: True, Active Company: 1
+[2026-03-01 15:59:34.827902] GET /my-work/api/activities
+  Auth: True, Active Company: 1
+[2026-03-01 15:59:35.123451] GET /my-work/api/occurrences/summary
+  Auth: True, Active Company: 1
+[2026-03-01 15:59:35.575899] GET /my-work/api/activities
+  Auth: True, Active Company: 1
+[2026-03-01 15:59:35.717932] GET /my-work/api/occurrences/summary
+  Auth: True, Active Company: 1
+[2026-03-01 15:59:41.295059] GET /my-work/api/activities
+  Auth: True, Active Company: 1
+[2026-03-01 15:59:41.596941] GET /my-work/api/occurrences/summary
+  Auth: True, Active Company: 1
+[2026-03-01 15:59:49.779571] GET /projects
+  Auth: True, Active Company: 1
+[2026-03-01 15:59:50.104576] GET /api/companies/1/portfolios
+  Auth: True, Active Company: 1
+[2026-03-01 15:59:50.117333] GET /api/plans
+  Auth: True, Active Company: 1
+[2026-03-01 15:59:50.253678] GET /api/projects
+  Auth: True, Active Company: 1
+[2026-03-01 16:00:39.183349] GET /portal
+  Auth: True, Active Company: 1
+[2026-03-01 16:00:39.577791] GET /api/notes/
+  Auth: True, Active Company: 1
+[2026-03-01 16:00:45.794968] DELETE /api/notes/35
+  Auth: True, Active Company: 1
+[2026-03-01 16:01:16.501600] POST /portal
+  Auth: True, Active Company: 1
+[2026-03-01 16:01:16.681776] GET /my-work
+  Auth: True, Active Company: 1
+[2026-03-01 16:01:17.002308] GET /my-work/api/filter-options
+  Auth: True, Active Company: 1
+[2026-03-01 16:01:17.180071] GET /my-work/api/activities
+  Auth: True, Active Company: 1
+[2026-03-01 16:01:17.361799] GET /my-work/api/occurrences/summary
+  Auth: True, Active Company: 1
+[2026-03-01 16:01:43.896695] GET /api/companies/7/projects/11/activities
+  Auth: True, Active Company: 1
+[2026-03-01 16:01:50.598753] GET /my-work/project-task/11
+  Auth: True, Active Company: 1
+[2026-03-01 16:01:56.341005] GET /grv/company/7/projects/11/manage
+  Auth: True, Active Company: 1
+[2026-03-01 16:02:19.934328] GET /my-work/api/activities
+  Auth: True, Active Company: 1
+[2026-03-01 16:02:20.234210] GET /api/companies/1/process-instances
+  Auth: True, Active Company: 1
+[2026-03-01 16:02:20.239099] GET /api/companies/1/processes
+  Auth: True, Active Company: 1
+[2026-03-01 16:02:20.351398] GET /api/companies/2/process-instances
+  Auth: True, Active Company: 1
+[2026-03-01 16:02:20.355818] GET /api/companies/2/processes
+  Auth: True, Active Company: 1
+[2026-03-01 16:02:20.552824] GET /my-work/api/occurrences/summary
+  Auth: True, Active Company: 1
+[2026-03-01 16:03:48.314021] GET /my-work/api/activities
+  Auth: True, Active Company: 1
+[2026-03-01 16:03:48.635661] GET /my-work/api/occurrences/summary
+  Auth: True, Active Company: 1
+[2026-03-01 16:03:48.707610] GET /my-work/api/activities
+  Auth: True, Active Company: 1
+[2026-03-01 16:03:48.851651] GET /my-work/api/occurrences/summary
+  Auth: True, Active Company: 1
+[2026-03-01 16:03:52.638707] GET /my-work/api/activities
+  Auth: True, Active Company: 1
+[2026-03-01 16:03:52.931233] GET /my-work/api/occurrences/summary
+  Auth: True, Active Company: 1
+[2026-03-01 16:04:07.204264] GET /my-work/api/activities
+  Auth: True, Active Company: 1
+[2026-03-01 16:04:07.553214] GET /my-work/api/occurrences/summary
+  Auth: True, Active Company: 1
+[2026-03-01 16:04:20.128230] GET /my-work
+  Auth: True, Active Company: 1
+[2026-03-01 16:04:20.440228] GET /my-work/api/filter-options
+  Auth: True, Active Company: 1
+[2026-03-01 16:04:20.625242] GET /my-work/api/activities
+  Auth: True, Active Company: 1
+[2026-03-01 16:04:20.795453] GET /my-work/api/occurrences/summary
+  Auth: True, Active Company: 1
+[2026-03-01 16:04:29.070509] GET /projects
+  Auth: True, Active Company: 1
+[2026-03-01 16:04:29.298298] GET /api/companies/1/portfolios
+  Auth: True, Active Company: 1
+[2026-03-01 16:04:29.303582] GET /api/plans
+  Auth: True, Active Company: 1
+[2026-03-01 16:04:29.435229] GET /api/projects
+  Auth: True, Active Company: 1
+[2026-03-01 16:04:53.646409] POST /webhook/telegram
+  Auth: False, Active Company: None
+[2026-03-01 16:07:35.697069] POST /webhook/telegram
+  Auth: False, Active Company: None
+[2026-03-01 16:20:59.035887] POST /webhook/telegram
+  Auth: False, Active Company: None
+[2026-03-01 16:43:19.559679] POST /webhook/telegram
+  Auth: False, Active Company: None
+[2026-03-01 16:43:33.719703] POST /webhook/telegram
+  Auth: False, Active Company: None
+[2026-03-01 16:44:00.094821] GET /portal
+  Auth: True, Active Company: 1
+[2026-03-01 16:44:00.694034] GET /api/notes/
+  Auth: True, Active Company: 1
+[2026-03-01 16:50:44.489861] DELETE /api/notes/28
+  Auth: True, Active Company: 1
+[2026-03-01 16:52:19.294176] DELETE /api/notes/20
+  Auth: True, Active Company: 1
+[2026-03-01 16:53:02.438557] DELETE /api/notes/11
+  Auth: True, Active Company: 1
+[2026-03-01 16:56:54.570901] POST /webhook/telegram
+  Auth: False, Active Company: None
+[2026-03-01 16:58:14.659642] POST /portal
+  Auth: True, Active Company: 1
+[2026-03-01 16:58:14.880442] GET /my-work
+  Auth: True, Active Company: 1
+[2026-03-01 16:58:15.315961] GET /my-work/api/filter-options
+  Auth: True, Active Company: 1
+[2026-03-01 16:58:15.542318] GET /my-work/api/activities
+  Auth: True, Active Company: 1
+[2026-03-01 16:58:15.728580] GET /my-work/api/occurrences/summary
+  Auth: True, Active Company: 1
+[2026-03-01 16:58:18.118608] GET /api/agents/history
+  Auth: True, Active Company: 1
+[2026-03-01 16:58:27.539607] POST /api/agents/chat
+  Auth: True, Active Company: 1
+[2026-03-01 17:00:12.707234] POST /api/agents/chat
+  Auth: True, Active Company: 1
+[2026-03-01 17:02:04.200351] POST /webhook/telegram
+  Auth: False, Active Company: None
+[2026-03-01 17:04:07.280821] POST /webhook/telegram
+  Auth: False, Active Company: None
+[2026-03-01 17:11:11.960239] POST /webhook/telegram
+  Auth: False, Active Company: None
+[2026-03-01 17:16:03.753935] POST /webhook/telegram
+  Auth: False, Active Company: None

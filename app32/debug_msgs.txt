@@ -1,0 +1,25 @@
+DEBUG: Registering Jinja filters...
+DEBUG: Registering API resources...
+DEBUG: API resources registered.
+DEBUG: Registering blueprints...
+DEBUG: Blueprints registered.
+DEBUG: Checking DB connection and creating tables...
+DEBUG: DB tables verified/created successfully.
+DEBUG: Starting Engineering Service worker...
+[SQUAD ENGENHARIA] Monitorando sistema...
+DEBUG: Engineering Service worker started.
+DEBUG: Initializing Scheduler...
+DEBUG: Scheduler initialized.
+DEBUG: create_app() finished successfully.
+MSG_28_START
+DIR: outbound
+FROM: Sapiens
+CONTENT: Conversa encerrada por inatividade. Quando precisar, estou à disposição!
+DATE: 2026-03-01 20:21:15.177364
+MSG_28_END
+MSG_27_START
+DIR: outbound
+FROM: Sapiens
+CONTENT: Por inatividade iremos encerrar essa conversa, você tem 30 segundo para interagir comigo.
+DATE: 2026-03-01 20:10:45.182121
+MSG_27_END
