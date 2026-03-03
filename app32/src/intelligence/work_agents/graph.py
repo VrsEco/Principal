@@ -29,7 +29,18 @@ def create_work_agent_workflow(checkpointer=None):
     for name in agent_names:
         workflow.add_node(name, get_agent_node(name))
         
-    workflow.add_node("tools", ToolNode(tools))
+    _base_tool_node = ToolNode(tools)
+    def wrapped_tool_node(state: WorkAgentState):
+        from src.intelligence.tool_context import set_sapiens_context, reset_sapiens_context
+        u = state.get('user_id')
+        c = state.get('company_id')
+        token = set_sapiens_context(u, c)
+        try:
+            return _base_tool_node.invoke(state)
+        finally:
+            reset_sapiens_context(token)
+            
+    workflow.add_node("tools", wrapped_tool_node)
 
     # 3. Definição das Arestas (Estrutura do Fluxo)
     
