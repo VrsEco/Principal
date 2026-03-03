@@ -78,10 +78,11 @@ def portal():
 
     if employee_ids:
         # 1. Project Tasks
-        tasks = ProjectTask.query.options(joinedload(ProjectTask.project)).filter(
+        tasks = ProjectTask.query.join(Project).join(Company).filter(
             ProjectTask.employee_id.in_(employee_ids),
-            ProjectTask.status.notin_(['completed', 'done', 'cancelled'])
-        ).all()
+            ProjectTask.status.notin_(['completed', 'done', 'cancelled']),
+            Company.is_active == True
+        ).options(joinedload(ProjectTask.project)).all()
         
         for t in tasks:
             task_date = (t.due_date.date() if isinstance(t.due_date, datetime) else t.due_date) if t.due_date else None
@@ -111,8 +112,9 @@ def portal():
                 })
             
         # 2. Process Instances
-        all_instances = ProcessInstance.query.filter(
-            ProcessInstance.status.notin_(['completed', 'done', 'cancelled'])
+        all_instances = ProcessInstance.query.join(Company).filter(
+            ProcessInstance.status.notin_(['completed', 'done', 'cancelled']),
+            Company.is_active == True
         ).all()
         
         for inst in all_instances:
