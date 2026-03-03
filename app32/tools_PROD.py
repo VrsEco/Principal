@@ -37,6 +37,8 @@ AUDITORIA DE CONFORMIDADE (@QA_AUTOMATION) - Checklist para novas tools:
 ======================================================================================
 """
 from langchain_core.tools import tool
+from flask import session
+from flask_login import current_user
 from models import db
 from src.intelligence.rag import knowledge_base
 from sqlalchemy import text
