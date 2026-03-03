@@ -30,9 +30,12 @@ def supervisor_node(state: WorkAgentState):
     # Se a última mensagem é do tipo 'tool', significa que uma ferramenta acabou de rodar.
     if msg_type == "tool":
         # Tenta identificar qual foi o último agente que falou antes da tool
-        # Por simplicidade neste grafo v2, o Supervisor pode redelegar ou usar o histórico
         print("--- SUPERVISOR: Ferramenta executada, devolvendo ao especialista para conclusão. ---")
-        # Vamos usar a lógica de roteamento abaixo para decidir, mas garantindo que não seja 'end'
+        last_agent = state.get("next_node")
+        if last_agent and last_agent != "end":
+            print(f"--- SUPERVISOR DECISION (RETORNO): {last_agent} ---")
+            return {"next_node": last_agent}
+        # Se por algum motivo não tiver, segue o fluxo normal
     
     # Prompt de Roteamento Avançado
     system_prompt = (
@@ -65,12 +68,23 @@ def supervisor_node(state: WorkAgentState):
         "Responda EXCLUSIVAMENTE com o ID do agente: 'strategist', 'business_architect', 'operations', 'finance', 'auditor', 'sapiens', 'engineering' ou 'end'."
     )
     
-    # Invoca o LLM Router (gpt-4o-mini geralmente)
-    response = llm_router.invoke([
-        SystemMessage(content=system_prompt)
-    ] + messages)
+    # Invoca o LLM Router (gpt-4o-mini) garantindo schema estruturado
+    from pydantic import BaseModel, Field
     
-    decision = response.content.lower().strip()
+    class RouteDecision(BaseModel):
+        destination: str = Field(description="Exatamente um destes valores: strategist, business_architect, operations, finance, auditor, sapiens, engineering, end")
+
+    llm_structured = llm_router.with_structured_output(RouteDecision)
+    
+    try:
+        response_data = llm_structured.invoke([
+            SystemMessage(content=system_prompt)
+        ] + messages)
+        decision = response_data.destination.lower().strip()
+    except Exception as e:
+        print(f"--- SUPERVISOR: Erro ao fazer parsing estruturado: {e}. Fallback para LLM padrão. ---")
+        response = llm_router.invoke([SystemMessage(content=system_prompt)] + messages)
+        decision = response.content.lower().strip()
     
     # Validação/Mapping de Segurança
     valid_nodes = ["strategist", "business_architect", "operations", "finance", "auditor", "sapiens", "engineering", "end"]
@@ -100,11 +114,6 @@ def supervisor_node(state: WorkAgentState):
             print(f"--- SUPERVISOR: Detectado sinal de comando em '{next_node}'. Forçando 'operations' ou 'engineering'. ---")
             next_node = "engineering" if 'erro' in text_content or 'bug' in text_content else "operations"
 
-    # Se a resposta do LLM tiver conteúdo informativo (e não apenas o ID do nó), e o próximo nó for 'end', 
-    # retornamos a mensagem para que o usuário receba algo em vez de um eco 'end'.
-    if response.content and next_node == "end" and response.content.lower().strip() not in valid_nodes:
-        print(f"--- SUPERVISOR: Retornando resposta direta do roteador. Content: {response.content[:50]}... ---")
-        return {"messages": [response], "next_node": "end"}
-
     print(f"--- SUPERVISOR DECISION: {next_node} ---")
     return {"next_node": next_node}
+
