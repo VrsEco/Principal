@@ -120,4 +120,7 @@ class ChatTimeoutService:
             if user and user.telegram:
                 bot.send_message(user.telegram, text)
         except Exception as e:
-            logger.error(f"Erro ao enviar Telegram proativo: {e}")
+            if "chat not found" in str(e).lower():
+                logger.warning(f"⚠️ Telegram proativo falhou: chat {user_id} não encontrado (usuário bloqueou o bot ou ID inválido)")
+            else:
+                logger.error(f"Erro ao enviar Telegram proativo: {e}")
