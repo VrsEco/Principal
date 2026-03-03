@@ -50,31 +50,31 @@ def supervisor_node(state: WorkAgentState):
         "- PRINCIPIO: Tudo que o Sapiens faz deve ser visivel e editavel pelo usuario humano no app.\n\n"
         
         "AGENTES DISPONÍVEIS:\n"
-        "1. 'strategist' (Estrategista): Para Planejamento Estratégico, Análise de Mercado, Cenários, SWOT e OKRs visionários.\n"
-        "2. 'business_architect' (Arquiteto de Negócios): Para Mapeamento de Processos, Organograma, Eficiência e Maturidade Empresarial.\n"
-        "3. 'operations' (Operações/COO): Para Prazos, Gestão de Projetos, Cobrança de Tarefas e Monitoramento de Metas/KPIs.\n"
-        "4. 'finance' (Financeiro/CFO): Para DRE, Fluxo de Caixa, Balanço, Viabilidade (VPL/TIR), Custos e Precificação.\n"
-        "5. 'auditor' (Auditor/Compliance): Para Auditoria de TRANSAÇÕES de negócio, Riscos Operacionais e Conformidade com Processos.\n"
-        "6. 'sapiens' (Onboarding & Manual Vivo): Para dúvidas de uso do sistema, cadastros assistidos, saudações e 'Como fazer X?' (Manual de Operações).\n"
-        "7. 'engineering' (Engenharia): Para reporte de bugs, erros de sistema, tracebacks, falhas técnicas e problemas de banco de dados.\n"
-        "8. 'end': Use apenas se a conversa estiver CLARAMENTE encerrada com um 'tchau' ou 'adeus'.\n\n"
+        "1. 'strategist' (Estrategista): Para Planejamento Estratégico, Visão, OKRs de longo prazo e análise de mercado.\n"
+        "2. 'business_architect' (Arquiteto de Negócios): Para Mapeamento de PROCESSOS, Áreas, Hierarquias e Eficiência.\n"
+        "3. 'operations' (Operações/COO): Para TAREFAS, ATIVIDADES, PRAZOS, cobrar entregas, consultar o que está em aberto, o que vence hoje/amanhã, e gestão de equipes.\n"
+        "4. 'finance' (Financeiro/CFO): Para DRE, Fluxo de Caixa, Balanço e Custos.\n"
+        "5. 'auditor' (Auditor/Compliance): Para Auditoria de transações e riscos.\n"
+        "6. 'sapiens' (Onboarding & Manual Vivo): Para dúvidas de USO do sistema, saudações, ajuda geral e manual de operações.\n"
+        "7. 'engineering' (Engenharia): Para bugs, erros técnicos e falhas.\n"
+        "8. 'end': Use apenas no final absoluto da conversa.\n\n"
         
-        "DIRETRIZ DE CONFLITO:\n"
-        "- Se o usuário disser 'Oi', 'Olá' ou fizer perguntas gerais sobre o sistema, USE 'sapiens'.\n"
-        "- Se o usuário colar um erro técnico (traceback) ou mencionar 'bug', 'falha' ou 'erro', USE 'engineering'.\n"
-        "- Se for análise de dados financeiros, USE 'finance'.\n"
-        "- Se for cobrança ou prazo, USE 'operations'.\n\n"
+        "DIRETRIZ DE DECISÃO:\n"
+        "- Perguntas sobre 'quem tem tal tarefa?', 'o que tenho para hoje?', 'atividades de fulano' -> SEMPRE 'operations'.\n"
+        "- 'Oi', 'Quem é você?' -> 'sapiens'.\n"
+        "- 'Como cadastro um cliente?' -> 'sapiens'.\n"
         
         "Responda EXCLUSIVAMENTE com o ID do agente: 'strategist', 'business_architect', 'operations', 'finance', 'auditor', 'sapiens', 'engineering' ou 'end'."
     )
     
-    # Invoca o LLM Router (gpt-4o-mini) garantindo schema estruturado
+    # Invoca o LLM Router (gpt-4o para maior precisão no roteamento)
     from pydantic import BaseModel, Field
+    from src.intelligence.llm import llm_expert  # Mudamos para llm_expert (@ARQUITETO)
     
     class RouteDecision(BaseModel):
         destination: str = Field(description="Exatamente um destes valores: strategist, business_architect, operations, finance, auditor, sapiens, engineering, end")
 
-    llm_structured = llm_router.with_structured_output(RouteDecision)
+    llm_structured = llm_expert.with_structured_output(RouteDecision)
     
     try:
         response_data = llm_structured.invoke([
@@ -83,6 +83,7 @@ def supervisor_node(state: WorkAgentState):
         decision = response_data.destination.lower().strip()
     except Exception as e:
         print(f"--- SUPERVISOR: Erro ao fazer parsing estruturado: {e}. Fallback para LLM padrão. ---")
+        from src.intelligence.llm import llm_router
         response = llm_router.invoke([SystemMessage(content=system_prompt)] + messages)
         decision = response.content.lower().strip()
     
@@ -104,15 +105,20 @@ def supervisor_node(state: WorkAgentState):
         text_content = last_message.content.lower()
         
     greetings = ['oi', 'ola', 'olá', 'bom dia', 'boa tarde', 'boa noite', 'ei', 'sapien', 'sapiens']
-    command_signals = ['http', 'tela', 'alterar', 'mudar', 'status', 'inativa', 'cadastrar', 'criar', 'desativar', 'erro', 'bug', 'falha']
+    # Adicionado 'tarefa', 'atividade', 'pendencia', 'aberto' aos sinais de comando
+    command_signals = [
+        'http', 'tela', 'alterar', 'mudar', 'status', 'inativa', 'cadastrar', 'criar', 
+        'desativar', 'erro', 'bug', 'falha', 'tarefa', 'atividade', 'atividades', 
+        'pendencia', 'pendencia', 'aberto', 'abertas', 'vencido', 'vencida'
+    ]
     
     if next_node == "end":
         if any(greet in text_content for greet in greetings):
             print(f"--- SUPERVISOR: Saudação detectada. Forçando 'sapiens'. ---")
             next_node = "sapiens"
         elif any(sig in text_content for sig in command_signals):
-            print(f"--- SUPERVISOR: Detectado sinal de comando em '{next_node}'. Forçando 'operations' ou 'engineering'. ---")
-            next_node = "engineering" if 'erro' in text_content or 'bug' in text_content else "operations"
+            print(f"--- SUPERVISOR: Detectado sinal de comando em '{next_node}'. Forçando 'operations'. ---")
+            next_node = "engineering" if any(x in text_content for x in ['erro', 'bug', 'falha']) else "operations"
 
     print(f"--- SUPERVISOR DECISION: {next_node} ---")
     return {"next_node": next_node}

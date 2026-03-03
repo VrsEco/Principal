@@ -80,8 +80,13 @@ def process_telegram_message(app, message: telebot.types.Message):
             
             # 4. Auditoria de Mensagem (Log no Banco de Dados)
             from models.agent_message import AgentMessage
-            from models import db
             
+            # Recupera o nome do agente que deu a palavra final
+            final_agent_name = response.get("next_node") or "sapiens"
+            if final_agent_name == "end":
+                # Busca se houve algum agente antes no histórico recente deste invoke
+                final_agent_name = "sapiens" # Fallback padrão
+
             # Mensagem do Usuário
             db.session.add(AgentMessage(
                 company_id=company_id,
@@ -98,20 +103,26 @@ def process_telegram_message(app, message: telebot.types.Message):
                 company_id=company_id,
                 user_id=user.id,
                 agent_type='work_agent_squad',
-                agent_name='sapiens',
+                agent_name=final_agent_name,
                 direction='outbound',
                 channel='telegram',
                 content=response_text,
-                metadata_json={"thread_id": thread_id, "contact": "sapiens", "telegram_id": telegram_id}
+                metadata_json={"thread_id": thread_id, "contact": "sapiens", "telegram_id": telegram_id, "agent": final_agent_name}
             ))
             db.session.commit()
 
-            # 5. Responde ao Telegram
+            # 5. Responde ao Telegram (Utilizando HTML para maior robustez @ARQUITETO)
             try:
-                bot.send_message(message.chat.id, response_text, parse_mode='Markdown')
-            except Exception as markdown_err:
-                logger.warning(f"Erro ao parsear Markdown. Tentando plain text. Erro: {markdown_err}")
-                bot.send_message(message.chat.id, response_text)
+                # Converte Markdown básico para HTML se necessário, ou apenas manda como HTML
+                # telebot suporta parse_mode='HTML'
+                # Markdown do gpt-4o às vezes quebra o parse_mode='Markdown' do Telegram (v2)
+                bot.send_message(message.chat.id, response_text, parse_mode='HTML')
+            except Exception as html_err:
+                logger.warning(f"Erro ao enviar via HTML: {html_err}. Tentando Markdown.")
+                try:
+                    bot.send_message(message.chat.id, response_text, parse_mode='Markdown')
+                except:
+                    bot.send_message(message.chat.id, response_text)
                 
         except Exception as e:
             tb = traceback.format_exc()
