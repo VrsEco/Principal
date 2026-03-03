@@ -36,52 +36,52 @@ def process_telegram_message(app, message: telebot.types.Message):
             
             logger.info(f"Mensagem recebida do Telegram ID {telegram_id}: {user_msg}")
             
-            # 1. Tentar achar quem é o usuário no Gestão Versus associado a este Telegram ID
-            # Por enquanto usando .telegram, mas o banco já deve estar alimentado com isso.
-            user = User.query.filter_by(telegram=telegram_id).first()
+            # 1. Resolve Identity (@ARQUITETO)
+            from src.intelligence.identity import resolve_user_identity, get_best_company_id
+            user = resolve_user_identity(telegram_id, 'telegram')
             
             if not user:
                 # Fallback: Usuário não vinculado. Mandar mensagem pedindo vinculo.
                 msg = (
                     "Olá! Eu sou o Sapiens, do Gestão Versus. 🤖\n\n"
-                    "Parece que seu número do Telegram ainda não está vinculado à sua conta no sistema.\n"
+                    "Parece que seu Telegram ainda não está vinculado à sua conta no sistema.\n"
                     f"Para me autorizar, acesse o sistema Gestão Versus, vá em seu perfil e informe seu Telegram ID: `{telegram_id}`"
                 )
-                bot.send_message(message.chat.id, msg, parse_mode='Markdown', reply_to_message_id=message.message_id)
+                try:
+                    bot.send_message(message.chat.id, msg, parse_mode='Markdown')
+                except:
+                    bot.send_message(message.chat.id, msg)
                 return
             
-            # Se encontrou o usuário: enviar aviso de digitando
-            bot.send_chat_action(message.chat.id, 'typing')
+            # 2. Identify Company Context
+            company_id = get_best_company_id(user)
             
-            # 2. Executa o Agente com Contexto Unificado (@ARQUITETO)
+            # Se encontrou o usuário: enviar aviso de digitando
+            try:
+                bot.send_chat_action(message.chat.id, 'typing')
+            except: pass
+            
+            # 3. Executa o Agente com Contexto Unificado (@ARQUITETO)
             from src.intelligence.execution import run_agent_with_context, extract_response_text
             
             # Usamos tg_{telegram_id} para manter histórico vinculado ao chat do Telegram
             thread_id = f"tg_{telegram_id}"
             
-            # Buscamos a empresa principal do usuário para o contexto inicial
-            company_id = None
-            if hasattr(user, 'employees') and user.employees:
-                company_id = user.employees[0].company_id
-
             response = run_agent_with_context(
                 user_id=user.id,
                 user_msg=user_msg,
                 channel="telegram",
                 thread_id=thread_id,
                 company_id=company_id,
-                metadata={"chat_id": message.chat.id, "telegram_id": telegram_id}
+                metadata={"contact": "sapiens", "telegram_id": telegram_id}
             )
             
-            # 3. Extrai a resposta final
             response_text = extract_response_text(response)
             
-            if not response_text or response_text.strip() == "":
-                bot.send_message(message.chat.id, "Processamento concluído, mas sem mensagem de retorno.", reply_to_message_id=message.message_id)
-                return
-            
-            # 4. Salva no Banco de Dados para rastreio de logs e timeout
+            # 4. Auditoria de Mensagem (Log no Banco de Dados)
             from models.agent_message import AgentMessage
+            from models import db
+            
             # Mensagem do Usuário
             db.session.add(AgentMessage(
                 company_id=company_id,
@@ -106,12 +106,12 @@ def process_telegram_message(app, message: telebot.types.Message):
             ))
             db.session.commit()
 
-            # 6. Responde ao Telegram
+            # 5. Responde ao Telegram
             try:
-                bot.send_message(message.chat.id, response_text, parse_mode='Markdown', reply_to_message_id=message.message_id)
+                bot.send_message(message.chat.id, response_text, parse_mode='Markdown')
             except Exception as markdown_err:
                 logger.warning(f"Erro ao parsear Markdown. Tentando plain text. Erro: {markdown_err}")
-                bot.send_message(message.chat.id, response_text, reply_to_message_id=message.message_id)
+                bot.send_message(message.chat.id, response_text)
                 
         except Exception as e:
             tb = traceback.format_exc()
@@ -121,19 +121,18 @@ def process_telegram_message(app, message: telebot.types.Message):
             try:
                 with app.app_context():
                     error_msg = f"Crash no Webhook do Telegram: {str(e)}"
-                    context_info = f"Usuário TG ID: {telegram_id}\n\nTraceback:\n{tb}"
                     
                     # 🔍 Recuperar company_id para conformidade multi-tenancy (@ARQUITETO)
-                    # Se usuário não existe, tentamos pegar a empresa do ID 1 ou a primeira do banco
                     from models.company import Company
                     from models.agent_action import AgentAction
                     from models import db
                     
                     effective_company_id = None
-                    if 'user' in locals() and user and user.employees:
-                        effective_company_id = user.employees[0].company_id
-                    else:
-                        # Fallback seguro para erros de infra/sistema
+                    if 'user' in locals() and user:
+                        from src.intelligence.identity import get_best_company_id
+                        effective_company_id = get_best_company_id(user)
+                    
+                    if not effective_company_id:
                         first_company = Company.query.first()
                         effective_company_id = first_company.id if first_company else 1
                     
