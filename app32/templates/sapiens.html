@@ -587,6 +587,14 @@
     function formatAgentName(name) {
         const map = {
             'work_agent_squad': 'Sapiens',
+            'sapiens': 'Sapiens',
+            'end': 'Sapiens',
+            'operations': 'Operações',
+            'strategist': 'Estrategista',
+            'business_architect': 'Negócios',
+            'finance': 'Financeiro',
+            'auditor': 'Auditor',
+            'engineering': 'Squad Engenharia',
             'engineering_squad': 'Squad Engenharia',
             '@ARQUITETO': 'Arquiteto',
             '@QA_AUTOMATION': 'QA-Bot'
@@ -620,8 +628,19 @@
                     history: chatHistory.slice(-5)
                 })
             });
-            const result = await resp.json();
+            let result = null;
+            try {
+                result = await resp.json();
+            } catch (_) { }
             document.getElementById(typingId).remove();
+
+            if (!resp.ok || !result || !result.success) {
+                const errMsg = (result && (result.error || result.message))
+                    ? (result.error || result.message)
+                    : `Erro HTTP ${resp.status}`;
+                addMessageUI('assistant', `⚠️ Não consegui responder agora: ${errMsg}`, activeContact === 'engineering' ? 'engineering_squad' : 'sapiens');
+                return;
+            }
 
             if (result.success) {
                 addMessageUI('assistant', result.response, result.agent);
@@ -629,6 +648,7 @@
             }
         } catch (e) {
             document.getElementById(typingId).remove();
+            addMessageUI('assistant', '⚠️ Erro de conexão com o servidor.', activeContact === 'engineering' ? 'engineering_squad' : 'sapiens');
         }
     }
 

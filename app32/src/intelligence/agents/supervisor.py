@@ -105,6 +105,16 @@ def supervisor_node(state: WorkAgentState):
         text_content = last_message.content.lower()
         
     greetings = ['oi', 'ola', 'olá', 'bom dia', 'boa tarde', 'boa noite', 'ei', 'sapien', 'sapiens']
+    company_listing_signals = [
+        'quais empresas',
+        'minhas empresas',
+        'empresas em meu nome',
+        'empresas no meu nome',
+        'empresa em meu nome',
+        'empresa no meu nome',
+        'empresas que tenho acesso',
+        'empresas vinculadas a mim',
+    ]
     # Adicionado 'tarefa', 'atividade', 'pendencia', 'aberto' aos sinais de comando
     command_signals = [
         'http', 'tela', 'alterar', 'mudar', 'status', 'inativa', 'cadastrar', 'criar', 
@@ -112,7 +122,10 @@ def supervisor_node(state: WorkAgentState):
         'pendencia', 'pendencia', 'aberto', 'abertas', 'vencido', 'vencida'
     ]
     
-    if next_node == "end":
+    if any(sig in text_content for sig in company_listing_signals):
+        print("--- SUPERVISOR: Consulta de empresas detectada. Forcando 'sapiens'. ---")
+        next_node = "sapiens"
+    elif next_node == "end":
         if any(greet in text_content for greet in greetings):
             print(f"--- SUPERVISOR: Saudação detectada. Forçando 'sapiens'. ---")
             next_node = "sapiens"

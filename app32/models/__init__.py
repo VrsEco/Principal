@@ -40,6 +40,7 @@ from .company_performance_settings import CompanyPerformanceSettings
 from .ai_agent import AIAgent
 from .agent_message import AgentMessage
 from .agent_action import AgentAction
+from .agent_menu import AgentMenuOption, AgentMenuSession
 
 __all__ = [
     'db', 'Company', 'User', 'Role', 'Team', 'Employee',
@@ -50,5 +51,5 @@ __all__ = [
     'ProcessArea', 'MacroProcess', 'Process', 'ProcessRoutine', 'ProcessStep', 'ProcessInstance', 'ProcessInstanceCollaborator',
     'Routine', 'RoutineCollaborator',
     'Meeting', 'MeetingAgendaItem', 'Note', 'ActivityWorkLog', 'Occurrence', 'CompanyPerformanceSettings',
-    'AIAgent', 'AgentMessage', 'AgentAction'
+    'AIAgent', 'AgentMessage', 'AgentAction', 'AgentMenuOption', 'AgentMenuSession'
 ]

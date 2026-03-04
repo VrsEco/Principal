@@ -174,6 +174,18 @@
                     data-ref="03">
             </div>
 
+            <div class="form-group">
+                <label for="whatsapp">WhatsApp</label>
+                <input type="text" id="whatsapp" name="whatsapp" value="{{ user.whatsapp if user else '' }}"
+                    placeholder="Ex: 5571999999999" data-ref="09">
+            </div>
+
+            <div class="form-group">
+                <label for="telegram">Telegram ID</label>
+                <input type="text" id="telegram" name="telegram" value="{{ user.telegram if user else '' }}"
+                    placeholder="Ex: 123456789" data-ref="10">
+            </div>
+
             {% if user and user.role == 'admin' %}
             <div class="form-group">
                 <label for="role">Perfil</label>
@@ -233,6 +245,8 @@
 
         const formData = {
             name: document.getElementById('name').value,
+            whatsapp: document.getElementById('whatsapp').value,
+            telegram: document.getElementById('telegram').value,
         {% if user and user.role == 'admin' %}
         role: document.getElementById('role').value,
             {% endif %}

@@ -1,6 +1,7 @@
 from flask import request, jsonify, Blueprint
 import telebot
 import os
+import json
 import logging
 import traceback
 from datetime import datetime
@@ -14,12 +15,33 @@ logger = logging.getLogger(__name__)
 
 telegram_bp = Blueprint('telegram', __name__)
 
-# Initialize bot with the specific token
-TOKEN = os.environ.get('TELEGRAM_BOT_TOKEN')
-if not TOKEN:
-    logger.error("TELEGRAM_BOT_TOKEN not found in environment variables!")
+def _resolve_telegram_token():
+    """
+    Resolve token por ambiente para impedir mistura entre DEV e PRODUCAO.
+    - DEV: usa EXCLUSIVAMENTE TELEGRAM_BOT_TOKEN_DEV.
+    - PROD: usa TELEGRAM_BOT_TOKEN_PROD ou fallback TELEGRAM_BOT_TOKEN.
+    """
+    telegram_env = (os.environ.get("TELEGRAM_ENV") or "").strip().lower()
+    flask_env = (os.environ.get("FLASK_ENV") or os.environ.get("FLASK_CONFIG") or "").strip().lower()
+    is_dev = telegram_env in {"dev", "development", "local", "test"} or flask_env in {"dev", "development", "default", "testing"}
 
-bot = telebot.TeleBot(TOKEN, threaded=False)
+    if is_dev:
+        dev_token = os.environ.get("TELEGRAM_BOT_TOKEN_DEV")
+        return dev_token, "DEV"
+
+    prod_token = os.environ.get("TELEGRAM_BOT_TOKEN_PROD") or os.environ.get("TELEGRAM_BOT_TOKEN")
+    return prod_token, "PROD"
+
+
+TOKEN, TOKEN_CONTEXT = _resolve_telegram_token()
+if not TOKEN:
+    logger.warning(
+        "Telegram bot desativado para contexto %s. Configure o token correto no ambiente.",
+        TOKEN_CONTEXT
+    )
+    bot = None
+else:
+    bot = telebot.TeleBot(TOKEN, threaded=False)
 
 def process_telegram_message(app, message: telebot.types.Message):
     """
@@ -29,6 +51,10 @@ def process_telegram_message(app, message: telebot.types.Message):
     from models import db
     from models.user import User
     
+    if not bot:
+        logger.warning("process_telegram_message chamado sem bot/token ativo.")
+        return
+
     with app.app_context():
         try:
             telegram_id = str(message.from_user.id)
@@ -56,7 +82,17 @@ def process_telegram_message(app, message: telebot.types.Message):
             # 2. Identify Company Context
             company_id = get_best_company_id(user)
             
-            # Se encontrou o usuário: enviar aviso de digitando
+            # Se encontrou o usuário: enviar confirmação imediata para reduzir percepção de latência.
+            try:
+                bot.send_message(
+                    message.chat.id,
+                    "Aguarde, processando sua solicitação.",
+                    reply_to_message_id=message.message_id
+                )
+            except Exception as ack_err:
+                logger.debug(f"Falha ao enviar mensagem intermediária de processamento: {ack_err}")
+
+            # Mantém também a ação de digitação enquanto processa.
             try:
                 bot.send_chat_action(message.chat.id, 'typing')
             except: pass
@@ -164,33 +200,49 @@ def process_telegram_message(app, message: telebot.types.Message):
             except Exception as esc_err:
                 logger.error(f"Falha catastrófica ao escalonar erro: {esc_err}")
 
-            bot.send_message(message.chat.id, "Desculpe, ocorreu um erro interno ao processar sua solicitação no Gestão Versus. O time de engenharia foi notificado.", reply_to_message_id=message.message_id)
+            if bot:
+                bot.send_message(message.chat.id, "Desculpe, ocorreu um erro interno ao processar sua solicitação no Gestão Versus. O time de engenharia foi notificado.", reply_to_message_id=message.message_id)
 
 # Rota HTTP (Webhook) que será chamada pelo servidor do Telegram
 @telegram_bp.route('/telegram', methods=['POST'])
 def telegram_webhook():
     try:
-        # Emergency Log for Production Debug (@ARQUITETO)
-        with open('request_debug.log', 'a') as f:
-            now_str = datetime.now().strftime('%Y-%m-%d %H:%M:%S')
-            f.write(f"\n--- REQ: {now_str} ---\n")
-            if request.is_json:
-                f.write(f"SQUAD: Recebido JSON do Telegram\n")
-            
-        if request.headers.get('content-type') == 'application/json':
-            json_string = request.get_data().decode('utf-8')
-            update = telebot.types.Update.de_json(json_string)
-            
-            # Iniciar thread separada para não causar TIMEOUT no servidor do Telegram
-            if update.message and update.message.text:
-                from flask import current_app
-                app = current_app._get_current_object()
-                t = Thread(target=process_telegram_message, args=(app, update.message,))
-                t.start()
-                
+        if not bot:
+            logger.warning("Webhook Telegram recebido, mas bot esta inativo para este ambiente.")
             return '', 200
+
+        if not request.is_json:
+            logger.warning("Webhook Telegram recebeu Content-Type invalido: %s", request.content_type)
+            return "Unsupported Media Type", 415
+
+        payload = request.get_json(silent=True)
+        if not payload:
+            logger.warning("Webhook Telegram recebeu payload JSON vazio/invalido.")
+            return "Invalid JSON", 400
+
+        update = telebot.types.Update.de_json(json.dumps(payload))
+        if not update:
+            logger.warning("Webhook Telegram recebeu update vazio.")
+            return '', 200
+
+        # Captura diferentes tipos de update com texto.
+        incoming_message = None
+        for attr in ("message", "edited_message", "channel_post", "edited_channel_post"):
+            candidate = getattr(update, attr, None)
+            if candidate and getattr(candidate, "text", None):
+                incoming_message = candidate
+                break
+
+        # Iniciar thread separada para não causar timeout no servidor do Telegram
+        if incoming_message:
+            from flask import current_app
+            app = current_app._get_current_object()
+            t = Thread(target=process_telegram_message, args=(app, incoming_message))
+            t.start()
         else:
-            return "Not found", 404
+            logger.info("Update Telegram sem mensagem textual; ignorado.")
+
+        return '', 200
     except Exception as e:
         import traceback
         tb = traceback.format_exc()
@@ -205,8 +257,8 @@ def setup_webhook(host_url):
     Seta o Webhook na API do telegram indicando sua URL pública (ngrok/domínio)
     Exemplo: setup_webhook("https://seungrok.ngrok.io/")
     """
-    if not TOKEN:
-        logger.error("❌ Não foi possível configurar o Webhook: TELEGRAM_BOT_TOKEN não definido.")
+    if not TOKEN or not bot:
+        logger.error("❌ Não foi possível configurar o Webhook: token Telegram ausente/inativo para contexto %s.", TOKEN_CONTEXT)
         return None
 
     try:

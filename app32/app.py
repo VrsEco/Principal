@@ -347,10 +347,19 @@ def register_blueprints(app):
     from api.webhooks.whatsapp_webhook import whatsapp_webhook_bp
     app.register_blueprint(whatsapp_webhook_bp, url_prefix='/webhook')
 
-    # Configuração automática do Webhook se EXTERNAL_URL estiver definido e SETUP ativo
-    if app.config.get('TELEGRAM_SETUP_WEBHOOK') and app.config.get('EXTERNAL_URL'):
+    # Configuracao automatica do Webhook:
+    # - PRODUCAO: permitido normalmente.
+    # - DEV: permitido somente com override + token DEV dedicado.
+    allow_dev_webhook = os.environ.get('TELEGRAM_ALLOW_DEV_WEBHOOK', 'false').lower() == 'true'
+    has_dev_token = bool(os.environ.get('TELEGRAM_BOT_TOKEN_DEV'))
+    is_debug = app.config.get('DEBUG', False)
+    should_setup_webhook = (not is_debug) or (allow_dev_webhook and has_dev_token)
+
+    if app.config.get('TELEGRAM_SETUP_WEBHOOK') and app.config.get('EXTERNAL_URL') and should_setup_webhook:
         print(f"BOT [TELEGRAM] Verificando registro de Webhook para: {app.config.get('EXTERNAL_URL')}")
         setup_webhook(app.config.get('EXTERNAL_URL'))
+    elif is_debug and app.config.get('TELEGRAM_SETUP_WEBHOOK') and not has_dev_token:
+        print("BOT [TELEGRAM] DEV sem TELEGRAM_BOT_TOKEN_DEV: webhook nao sera registrado para evitar mistura com producao.")
 
 if __name__ == '__main__':
     app = create_app()

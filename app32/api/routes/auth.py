@@ -170,17 +170,21 @@ def profile():
     """User profile page"""
     from models import db
     if request.method == 'POST':
-        data = request.get_json()
-        name = data.get('name')
-        whatsapp = data.get('whatsapp')
-        telegram = data.get('telegram')
+        data = request.get_json(silent=True) or {}
+        name = (data.get('name') or '').strip()
         
         if not name:
             return jsonify({"success": False, "message": "Nome é obrigatório"}), 400
             
         current_user.name = name
-        current_user.whatsapp = whatsapp
-        current_user.telegram = telegram
+        # Atualiza canais somente quando informados no payload
+        # para evitar apagar valores existentes por envio parcial.
+        if 'whatsapp' in data:
+            whatsapp = (data.get('whatsapp') or '').strip()
+            current_user.whatsapp = whatsapp or None
+        if 'telegram' in data:
+            telegram = (data.get('telegram') or '').strip()
+            current_user.telegram = telegram or None
         
         try:
             db.session.commit()

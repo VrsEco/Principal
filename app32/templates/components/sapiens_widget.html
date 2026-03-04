@@ -488,6 +488,8 @@
                 'finance': '💰 Financeiro',
                 'auditor': '🛡️ Auditor',
                 'sapiens': '🧭 Sapiens',
+                'end': '🧭 Sapiens',
+                'engineering': '🛠️ Engenharia',
                 'engineering_squad': '🛠️ Engenharia'
             };
             return names[id] || id;
@@ -521,9 +523,20 @@
                         history: this.history.slice(-3)
                     })
                 });
-                const data = await response.json();
+                let data = null;
+                try {
+                    data = await response.json();
+                } catch (_) { }
 
                 document.getElementById('widget-typing').style.display = 'none';
+
+                if (!response.ok || !data || !data.success) {
+                    const errMsg = (data && (data.error || data.message))
+                        ? (data.error || data.message)
+                        : `Erro HTTP ${response.status}`;
+                    this.appendMessage(`⚠️ Não consegui responder agora: ${errMsg}`, 'assistant');
+                    return;
+                }
 
                 if (data.success) {
                     this.appendMessage(data.response, 'assistant', data.agent);

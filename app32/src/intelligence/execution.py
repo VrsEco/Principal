@@ -1,9 +1,10 @@
 import os
 import logging
-from typing import Dict, Any, List, Optional
+from typing import Dict, Any, Optional
 from src.intelligence.tool_context import set_sapiens_context, reset_sapiens_context
 from src.intelligence.memory import get_checkpointer
 from src.intelligence.work_agents.graph import create_work_agent_workflow
+from src.intelligence.menu_engine import handle_menu_message
 
 logger = logging.getLogger(__name__)
 
@@ -48,6 +49,22 @@ def run_agent_with_context(
         os.environ['ACTIVE_COMPANY_ID'] = str(company_id)
 
     try:
+        # 0) Interceptação opcional por Menu Engine (persistido em banco).
+        menu_result = handle_menu_message(
+            user_id=user_id,
+            company_id=company_id,
+            channel=channel,
+            thread_id=thread_id,
+            message=user_msg,
+        )
+        if menu_result.handled:
+            return {
+                "messages": [("ai", menu_result.response_text or "")],
+                "next_node": "sapiens",
+            }
+        if menu_result.override_message:
+            user_msg = menu_result.override_message
+
         with get_checkpointer() as checkpointer:
             graph = create_work_agent_workflow(checkpointer=checkpointer)
             
