@@ -54,12 +54,42 @@ else
 fi
 
 # 4. Reinício da Aplicação
-echo "🔄 Reiniciando servidor uWSGI (Passenger/Configr)..."
-# Toca o restart.txt na raiz e no tmp (padrão Passenger)
+echo "🔄 Reiniciando servidor uWSGI (Configr)..."
+UWSGI_APP_INI="appgestaoversuscombr.45a4cd4b.configr.cloud.ini"
+set +e
+UWSGI_PIDS=$(pgrep -f "uwsgi --ini $UWSGI_APP_INI")
+set -e
+
+if [ -n "$UWSGI_PIDS" ]; then
+    echo "   - Encerrando workers/vassal atuais: $UWSGI_PIDS"
+    set +e
+    pkill -TERM -f "uwsgi --ini $UWSGI_APP_INI"
+    set -e
+
+    echo "   - Aguardando Emperor recriar o vassal..."
+    RESTART_OK=0
+    for i in {1..20}; do
+        set +e
+        NEW_UWSGI_PIDS=$(pgrep -f "uwsgi --ini $UWSGI_APP_INI")
+        set -e
+        if [ -n "$NEW_UWSGI_PIDS" ]; then
+            echo "   - uWSGI ativo novamente com PID(s): $NEW_UWSGI_PIDS"
+            RESTART_OK=1
+            break
+        fi
+        sleep 1
+    done
+
+    if [ "$RESTART_OK" -ne 1 ]; then
+        echo "⚠️  Aviso: não foi possível confirmar restart do uWSGI por PID."
+    fi
+else
+    echo "⚠️  Aviso: PIDs do uWSGI não encontrados; aplicando fallback por toque de arquivos."
+fi
+
+# Fallback/pass-through para ambientes que ainda respeitam restart por arquivo.
 touch $WWW/restart.txt
 mkdir -p $WWW/tmp && touch $WWW/tmp/restart.txt
-
-# Toca o WSGI na pasta da app E na raiz do www
 if [ -f "passenger_wsgi.py" ]; then
     touch passenger_wsgi.py
 fi
