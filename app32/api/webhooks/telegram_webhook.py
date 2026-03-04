@@ -23,6 +23,11 @@ def _resolve_telegram_token():
     """
     telegram_env = (os.environ.get("TELEGRAM_ENV") or "").strip().lower()
     flask_env = (os.environ.get("FLASK_ENV") or os.environ.get("FLASK_CONFIG") or "").strip().lower()
+    is_prod = telegram_env in {"prod", "production", "live"} or flask_env in {"prod", "production"}
+    if is_prod:
+        prod_token = os.environ.get("TELEGRAM_BOT_TOKEN_PROD") or os.environ.get("TELEGRAM_BOT_TOKEN")
+        return prod_token, "PROD"
+
     is_dev = telegram_env in {"dev", "development", "local", "test"} or flask_env in {"dev", "development", "default", "testing"}
 
     if is_dev:
@@ -99,29 +104,46 @@ def process_telegram_message(app, message: telebot.types.Message):
             
             # 3. Executa o Agente com Contexto Unificado (@ARQUITETO)
             from src.intelligence.execution import run_agent_with_context, extract_response_text
-            
+            from src.intelligence.menu_engine import handle_menu_message
+
             # Usamos tg_{telegram_id} para manter histórico vinculado ao chat do Telegram
             thread_id = f"tg_{telegram_id}"
-            
-            response = run_agent_with_context(
+            final_agent_name = "sapiens"
+
+            # Hardening Telegram:
+            # Força interceptação de menu no próprio webhook para evitar fallback indevido ao LLM.
+            menu_result = handle_menu_message(
                 user_id=user.id,
-                user_msg=user_msg,
+                company_id=company_id,
                 channel="telegram",
                 thread_id=thread_id,
-                company_id=company_id,
-                metadata={"contact": "sapiens", "telegram_id": telegram_id}
+                message=user_msg,
             )
-            
-            response_text = extract_response_text(response)
+            if menu_result.handled:
+                response_text = menu_result.response_text or "Nao foi possivel processar o menu."
+                logger.info(
+                    "MENU INTERCEPT [TELEGRAM]: user=%s company=%s thread=%s message=%r",
+                    user.id, company_id, thread_id, user_msg
+                )
+            else:
+                effective_msg = menu_result.override_message or user_msg
+                response = run_agent_with_context(
+                    user_id=user.id,
+                    user_msg=effective_msg,
+                    channel="telegram",
+                    thread_id=thread_id,
+                    company_id=company_id,
+                    metadata={"contact": "sapiens", "telegram_id": telegram_id}
+                )
+                response_text = extract_response_text(response)
+
+                # Recupera o nome do agente que deu a palavra final
+                final_agent_name = response.get("next_node") or "sapiens"
+                if final_agent_name == "end":
+                    final_agent_name = "sapiens"  # Fallback padrão
             
             # 4. Auditoria de Mensagem (Log no Banco de Dados)
             from models.agent_message import AgentMessage
-            
-            # Recupera o nome do agente que deu a palavra final
-            final_agent_name = response.get("next_node") or "sapiens"
-            if final_agent_name == "end":
-                # Busca se houve algum agente antes no histórico recente deste invoke
-                final_agent_name = "sapiens" # Fallback padrão
 
             # Mensagem do Usuário
             db.session.add(AgentMessage(
