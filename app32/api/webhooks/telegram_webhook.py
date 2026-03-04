@@ -15,6 +15,47 @@ logger = logging.getLogger(__name__)
 
 telegram_bp = Blueprint('telegram', __name__)
 
+
+def _normalize_text_basic(value: str) -> str:
+    return (value or "").strip().lower()
+
+
+def _is_menu_like_message(text: str) -> bool:
+    lower = _normalize_text_basic(text)
+    if not lower:
+        return False
+    return (
+        lower == "menu"
+        or lower.startswith("menu ")
+        or lower == "/menu"
+        or lower.startswith("/menu ")
+    )
+
+
+def _fallback_root_menu(company_id):
+    try:
+        from src.intelligence.menu_engine import list_menu_options
+
+        roots = list_menu_options(
+            company_id=company_id,
+            parent_code=None,
+            include_inactive=False,
+            include_global=True,
+        )
+        if not roots:
+            return "Nenhuma opcao de menu ativa encontrada."
+
+        lines = ["Selecione uma opcao do menu principal:"]
+        for opt in roots:
+            lines.append(f"{opt.code} - {opt.title}")
+        lines.append("")
+        lines.append("Voce pode responder com o codigo (ex: 1.4) ou 'menu 1.4 executar ...'.")
+        return "\n".join(lines)
+    except Exception as exc:
+        logger.exception("Falha ao montar menu fallback no Telegram: %s", exc)
+        return "Nao consegui abrir o menu agora. Tente novamente em alguns segundos."
+
+
 def _resolve_telegram_token():
     """
     Resolve token por ambiente para impedir mistura entre DEV e PRODUCAO.
@@ -109,20 +150,33 @@ def process_telegram_message(app, message: telebot.types.Message):
             # Usamos tg_{telegram_id} para manter histórico vinculado ao chat do Telegram
             thread_id = f"tg_{telegram_id}"
             final_agent_name = "sapiens"
+            menu_like = _is_menu_like_message(user_msg)
 
             # Hardening Telegram:
             # Força interceptação de menu no próprio webhook para evitar fallback indevido ao LLM.
-            menu_result = handle_menu_message(
-                user_id=user.id,
-                company_id=company_id,
-                channel="telegram",
-                thread_id=thread_id,
-                message=user_msg,
-            )
-            if menu_result.handled:
-                response_text = menu_result.response_text or "Nao foi possivel processar o menu."
+            menu_result = None
+            try:
+                menu_result = handle_menu_message(
+                    user_id=user.id,
+                    company_id=company_id,
+                    channel="telegram",
+                    thread_id=thread_id,
+                    message=user_msg,
+                )
+            except Exception as menu_err:
+                logger.exception("Erro no handle_menu_message do Telegram: %s", menu_err)
+
+            if menu_result and menu_result.handled:
+                response_text = menu_result.response_text or _fallback_root_menu(company_id)
                 logger.info(
                     "MENU INTERCEPT [TELEGRAM]: user=%s company=%s thread=%s message=%r",
+                    user.id, company_id, thread_id, user_msg
+                )
+            elif menu_like:
+                # Garantia operacional: mensagem de menu nunca cai no LLM.
+                response_text = _fallback_root_menu(company_id)
+                logger.warning(
+                    "MENU FALLBACK FORCADO [TELEGRAM]: user=%s company=%s thread=%s message=%r",
                     user.id, company_id, thread_id, user_msg
                 )
             else:
