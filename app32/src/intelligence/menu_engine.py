@@ -39,7 +39,17 @@ SUMMARY_WIZARD_STATUSES = {
     "awaiting_summary_status",
 }
 SUMMARY_EMAIL_CONFIRM_STATUS = "awaiting_summary_email_confirmation"
-SUMMARY_EMAIL_OFFER_SUFFIX = "Quer que eu te envie este relatorio por e-mail? (responda: sim ou nao)"
+SUMMARY_EMAIL_CUSTOM_STATUS = "awaiting_summary_email_custom"
+SUMMARY_SELECTION_STATUSES = SUMMARY_WIZARD_STATUSES | {
+    SUMMARY_EMAIL_CONFIRM_STATUS,
+    SUMMARY_EMAIL_CUSTOM_STATUS,
+}
+SUMMARY_EMAIL_OFFER_SUFFIX = (
+    "Quer que eu te envie este relatorio por e-mail?\n"
+    "1 - Enviar para meu e-mail cadastrado\n"
+    "2 - Informar outro e-mail\n"
+    "Responda com 1, 2 ou nao."
+)
 
 
 def handle_menu_message(
@@ -73,7 +83,7 @@ def handle_menu_message(
             and _parse_selection_number_date(text) is not None
         )
         is_summary_selection_reply = (
-            session.status in SUMMARY_WIZARD_STATUSES
+            session.status in SUMMARY_SELECTION_STATUSES
             and _parse_selection_number_date(text) is not None
         )
 
@@ -96,6 +106,9 @@ def handle_menu_message(
 
         if session.status == SUMMARY_EMAIL_CONFIRM_STATUS:
             return _handle_summary_email_confirmation_state(session, text, lower)
+
+        if session.status == SUMMARY_EMAIL_CUSTOM_STATUS:
+            return _handle_summary_email_custom_state(session, text, lower)
 
         if session.status in SUMMARY_WIZARD_STATUSES:
             return _handle_summary_wizard_state(session, text, lower)
@@ -992,20 +1005,6 @@ def _handle_summary_email_confirmation_state(
     text: str,
     lower: str,
 ) -> MenuInterceptResult:
-    first_word = lower.split(" ")[0] if lower else ""
-    if first_word in CANCEL_WORDS:
-        _reset_session(session)
-        return MenuInterceptResult(
-            handled=True,
-            response_text="Perfeito. Nao enviarei por e-mail. Se quiser outro resumo, digite menu 3.5.",
-        )
-
-    if not _is_affirmative_confirmation_text(text):
-        return MenuInterceptResult(
-            handled=True,
-            response_text="Responda com 'sim' para enviar por e-mail ou 'nao' para encerrar.",
-        )
-
     payload = dict(session.collected_data or {})
     report_text = str(payload.get("_summary_report_text") or "").strip()
     if not report_text:
@@ -1015,17 +1014,123 @@ def _handle_summary_email_confirmation_state(
             response_text="Nao consegui recuperar o relatorio para envio por e-mail. Gere um novo resumo em menu 3.5.",
         )
 
-    from models.user import User
-    from services.email_service import email_service
-
-    requester = User.query.get(session.user_id)
-    target_email = str(getattr(requester, "email", "") or "").strip()
-    if not target_email:
+    first_word = lower.split(" ")[0] if lower else ""
+    if first_word in CANCEL_WORDS:
         _reset_session(session)
         return MenuInterceptResult(
             handled=True,
-            response_text="Nao encontrei um e-mail valido no seu cadastro. Atualize seu e-mail e tente novamente.",
+            response_text="Perfeito. Nao enviarei por e-mail. Se quiser outro resumo, digite menu 3.5.",
         )
+
+    selected_index = _extract_selection_index(text)
+    if selected_index == 1:
+        target_email = _resolve_user_primary_email(session.user_id)
+        if not target_email:
+            return MenuInterceptResult(
+                handled=True,
+                response_text=(
+                    "Nao encontrei um e-mail valido no seu cadastro.\n"
+                    "Escolha 2 para informar outro e-mail."
+                ),
+            )
+        return _send_summary_report_email(payload=payload, target_email=target_email, report_text=report_text, session=session)
+
+    if selected_index == 2:
+        session.status = SUMMARY_EMAIL_CUSTOM_STATUS
+        session.collected_data = payload
+        session.missing_fields = []
+        db.session.commit()
+        return MenuInterceptResult(
+            handled=True,
+            response_text="Informe o e-mail de destino (ex: nome@empresa.com.br).",
+        )
+
+    if selected_index is not None:
+        return MenuInterceptResult(
+            handled=True,
+            response_text="Opcao invalida. Responda com 1, 2 ou nao.",
+        )
+
+    direct_email = _extract_email_from_text(text)
+    if direct_email:
+        return _send_summary_report_email(payload=payload, target_email=direct_email, report_text=report_text, session=session)
+
+    if _is_affirmative_confirmation_text(text):
+        target_email = _resolve_user_primary_email(session.user_id)
+        if not target_email:
+            return MenuInterceptResult(
+                handled=True,
+                response_text=(
+                    "Nao encontrei um e-mail valido no seu cadastro.\n"
+                    "Escolha 2 para informar outro e-mail."
+                ),
+            )
+        return _send_summary_report_email(payload=payload, target_email=target_email, report_text=report_text, session=session)
+
+    return MenuInterceptResult(
+        handled=True,
+        response_text="Responda com 1 (meu e-mail), 2 (outro e-mail) ou nao.",
+    )
+
+
+def _handle_summary_email_custom_state(
+    session: AgentMenuSession,
+    text: str,
+    lower: str,
+) -> MenuInterceptResult:
+    payload = dict(session.collected_data or {})
+    report_text = str(payload.get("_summary_report_text") or "").strip()
+    if not report_text:
+        _reset_session(session)
+        return MenuInterceptResult(
+            handled=True,
+            response_text="Nao consegui recuperar o relatorio para envio por e-mail. Gere um novo resumo em menu 3.5.",
+        )
+
+    first_word = lower.split(" ")[0] if lower else ""
+    if first_word in CANCEL_WORDS:
+        session.status = SUMMARY_EMAIL_CONFIRM_STATUS
+        session.collected_data = payload
+        session.missing_fields = []
+        db.session.commit()
+        return MenuInterceptResult(
+            handled=True,
+            response_text=f"Sem problemas.\n\n{SUMMARY_EMAIL_OFFER_SUFFIX}",
+        )
+
+    selected_index = _extract_selection_index(text)
+    if selected_index == 1:
+        target_email = _resolve_user_primary_email(session.user_id)
+        if not target_email:
+            return MenuInterceptResult(
+                handled=True,
+                response_text="Nao encontrei um e-mail valido no seu cadastro. Informe outro e-mail de destino.",
+            )
+        return _send_summary_report_email(payload=payload, target_email=target_email, report_text=report_text, session=session)
+
+    if selected_index == 2:
+        return MenuInterceptResult(
+            handled=True,
+            response_text="Informe o e-mail de destino (ex: nome@empresa.com.br).",
+        )
+
+    direct_email = _extract_email_from_text(text)
+    if not direct_email:
+        return MenuInterceptResult(
+            handled=True,
+            response_text="E-mail invalido. Informe um e-mail valido (ex: nome@empresa.com.br) ou responda nao para cancelar.",
+        )
+
+    return _send_summary_report_email(payload=payload, target_email=direct_email, report_text=report_text, session=session)
+
+
+def _send_summary_report_email(
+    payload: Dict[str, Any],
+    target_email: str,
+    report_text: str,
+    session: AgentMenuSession,
+) -> MenuInterceptResult:
+    from services.email_service import email_service
 
     subject = _build_summary_email_subject_from_payload(payload)
     sent = email_service.send_email(
@@ -1044,6 +1149,35 @@ def _handle_summary_email_confirmation_state(
         handled=True,
         response_text="Tentei enviar o e-mail, mas houve uma falha no serviço agora. Posso tentar novamente.",
     )
+
+
+def _resolve_user_primary_email(user_id: int) -> Optional[str]:
+    from models.user import User
+
+    user = User.query.get(user_id)
+    email = str(getattr(user, "email", "") or "").strip()
+    if _is_valid_email_address(email):
+        return email
+    return None
+
+
+def _extract_email_from_text(text: str) -> Optional[str]:
+    match = re.search(r"([A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Za-z]{2,})", str(text or ""))
+    if not match:
+        return None
+    candidate = str(match.group(1) or "").strip()
+    if _is_valid_email_address(candidate):
+        return candidate
+    return None
+
+
+def _is_valid_email_address(value: str) -> bool:
+    email = str(value or "").strip()
+    if not email:
+        return False
+    if len(email) > 254:
+        return False
+    return bool(re.fullmatch(r"[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Za-z]{2,}", email))
 
 
 def _is_affirmative_confirmation_text(value: str) -> bool:
