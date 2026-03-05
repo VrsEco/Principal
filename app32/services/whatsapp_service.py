@@ -11,11 +11,54 @@ class WhatsAppService:
     """Service for WhatsApp integration with multiple providers"""
 
     def __init__(self):
+        self.provider = "z-api"
+        self.api_key = None
+        self.webhook_url = None
+        self.instance_id = None
+        self.client_token = None
+        self._load_env_config()
+
+    def _load_env_config(self) -> None:
         self.provider = os.environ.get("WHATSAPP_PROVIDER", "z-api")
         self.api_key = os.environ.get("WHATSAPP_API_KEY")
         self.webhook_url = os.environ.get("WHATSAPP_WEBHOOK_URL")
         self.instance_id = os.environ.get("WHATSAPP_INSTANCE_ID")
         self.client_token = os.environ.get("WHATSAPP_CLIENT_TOKEN")
+
+    def _load_db_config_fallback(self) -> None:
+        """
+        Fallback para credenciais salvas em integrations (quando .env não tiver as chaves).
+        Mantém compatibilidade com a tela de integrações do sistema.
+        """
+        try:
+            from database.postgresql_db import get_integration
+
+            record = get_integration("whatsapp_integration")
+            if not record:
+                return
+
+            config = record.get("config") if isinstance(record.get("config"), dict) else {}
+            provider = (config.get("provider") or record.get("provider") or self.provider or "z-api")
+            provider = str(provider).strip().lower() or "z-api"
+
+            self.provider = provider
+            self.api_key = self.api_key or config.get("api_key") or config.get("account_sid")
+            self.instance_id = self.instance_id or config.get("instance_id") or config.get("whatsapp_number")
+            self.client_token = self.client_token or config.get("client_token")
+            self.webhook_url = self.webhook_url or config.get("webhook_url")
+        except Exception as err:
+            logger.debug("Falha ao carregar configuracao WhatsApp do DB: %s", err)
+
+    def _reload_runtime_config(self) -> None:
+        self._load_env_config()
+
+        provider = (self.provider or "z-api").strip().lower()
+        if provider == "z-api" and (not self.api_key or not self.instance_id):
+            self._load_db_config_fallback()
+        elif provider == "twilio" and (not self.api_key or not self.instance_id):
+            self._load_db_config_fallback()
+        elif provider == "webhook" and not self.webhook_url:
+            self._load_db_config_fallback()
 
     def _zapi_headers(self) -> Dict[str, str]:
         headers: Dict[str, str] = {}
@@ -67,6 +110,7 @@ class WhatsAppService:
             True if sent successfully, False otherwise
         """
         try:
+            self._reload_runtime_config()
             if self.provider == "z-api":
                 return self._send_zapi_message(phone_number, message, media_url)
             elif self.provider == "twilio":
@@ -198,6 +242,7 @@ class WhatsAppService:
             Resultado do teste de conexÃ£o
         """
         try:
+            self._reload_runtime_config()
             if self.provider == "z-api":
                 return self._test_zapi_connection()
             elif self.provider == "twilio":
