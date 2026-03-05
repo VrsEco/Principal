@@ -352,9 +352,9 @@ def _render_summary_email_html(user_name: str, range_label: str, body_text: str,
     return f"""
 <!doctype html>
 <html lang="pt-BR">
-  <body style="margin:0;padding:0;background:#f5f7fb;font-family:Segoe UI,Arial,sans-serif;color:#0f172a;">
+  <body style="margin:0;padding:0;background:#f2faf7;font-family:Segoe UI,Arial,sans-serif;color:#0f172a;">
     <div style="max-width:920px;margin:24px auto;padding:0 14px;">
-      <div style="background:linear-gradient(135deg,#0f172a 0%,#1d4ed8 55%,#2563eb 100%);color:#fff;border-radius:16px;padding:24px 28px;box-shadow:0 8px 22px rgba(15,23,42,.20);">
+      <div style="background:linear-gradient(135deg,#050505 0%,#0f172a 55%,#0f766e 100%);color:#fff;border-radius:16px;padding:24px 28px;box-shadow:0 8px 22px rgba(15,23,42,.22);">
         <div style="font-size:11px;opacity:.95;letter-spacing:.8px;text-transform:uppercase;font-weight:700;">Sapiens • Versus Gestão Corporativa</div>
         <h1 style="margin:10px 0 6px;font-size:25px;line-height:1.25;font-weight:800;">Resumo de atividades {safe_range}</h1>
         <div style="font-size:14px;opacity:.98;line-height:1.5;">
@@ -363,16 +363,16 @@ def _render_summary_email_html(user_name: str, range_label: str, body_text: str,
         </div>
       </div>
 
-      <div style="background:#ffffff;border:1px solid #dbe3ef;border-radius:16px;padding:22px 24px;margin-top:14px;line-height:1.65;">
+      <div style="background:#ffffff;border:1px solid #cceee4;border-radius:16px;padding:22px 24px;margin-top:14px;line-height:1.65;">
         {body_html}
       </div>
 
-      <div style="background:#ffffff;border:1px solid #dbe3ef;border-radius:16px;padding:18px 24px;margin-top:14px;">
+      <div style="background:#ffffff;border:1px solid #cceee4;border-radius:16px;padding:18px 24px;margin-top:14px;">
         <div style="font-size:16px;font-weight:800;color:#0f172a;">Sapiens Versus</div>
-        <div style="font-size:14px;color:#1e3a8a;font-weight:700;margin-top:2px;">Versus Gestão Corporativa</div>
+        <div style="font-size:14px;color:#0f766e;font-weight:700;margin-top:2px;">Versus Gestão Corporativa</div>
         <div style="font-size:13px;color:#334155;margin-top:8px;">
           E-mail:
-          <a href="mailto:sapiens@gestaoversus.com.br" style="color:#1d4ed8;text-decoration:none;">sapiens@gestaoversus.com.br</a>
+          <a href="mailto:sapiens@gestaoversus.com.br" style="color:#0f766e;text-decoration:none;">sapiens@gestaoversus.com.br</a>
         </div>
         <div style="font-size:13px;color:#334155;margin-top:4px;">Telefone: 71 9 8238-5225</div>
         <div style="margin-top:14px;">
@@ -402,20 +402,20 @@ def _render_summary_body_html(body_text: str) -> str:
     section_styles = {
         "projetos": {
             "label": "Projetos",
-            "color": "#1d4ed8",
-            "bg": "#eff6ff",
+            "color": "#0f766e",
+            "bg": "#ecfdf5",
             "icon": "📁",
         },
         "processos": {
             "label": "Processos",
-            "color": "#7c3aed",
-            "bg": "#f5f3ff",
+            "color": "#166534",
+            "bg": "#f0fdf4",
             "icon": "⚙️",
         },
         "reunioes": {
             "label": "Reuniões",
-            "color": "#0f766e",
-            "bg": "#ecfeff",
+            "color": "#115e59",
+            "bg": "#f0fdfa",
             "icon": "🤝",
         },
     }
@@ -449,7 +449,7 @@ def _render_summary_body_html(body_text: str) -> str:
 
         if lowered.startswith("resumo das atividades"):
             parts.append(
-                f"<div style='margin:10px 0 8px;padding:8px 12px;border-left:4px solid #2563eb;background:#eff6ff;color:#1e3a8a;font-size:13px;font-weight:800;border-radius:8px;'>{html.escape(stripped)}</div>"
+                f"<div style='margin:10px 0 8px;padding:8px 12px;border-left:4px solid #0f766e;background:#ecfdf5;color:#065f46;font-size:13px;font-weight:800;border-radius:8px;'>{html.escape(stripped)}</div>"
             )
             continue
 
@@ -462,9 +462,9 @@ def _render_summary_body_html(body_text: str) -> str:
         if expect_company_name and line.startswith("- "):
             company_name = html.escape(line[2:].strip())
             parts.append(
-                "<div style='margin:12px 0 8px;padding:10px 14px;border:1px solid #dbeafe;"
-                "border-left:5px solid #1d4ed8;border-radius:12px;background:#f8fbff;'>"
-                "<div style='font-size:11px;font-weight:800;color:#1e3a8a;letter-spacing:.6px;"
+                "<div style='margin:12px 0 8px;padding:10px 14px;border:1px solid #cceee4;"
+                "border-left:5px solid #0f766e;border-radius:12px;background:#f6fffb;'>"
+                "<div style='font-size:11px;font-weight:800;color:#065f46;letter-spacing:.6px;"
                 "text-transform:uppercase;margin-bottom:3px;'>Empresa</div>"
                 f"<div style='font-size:16px;font-weight:800;color:#0f172a;'>{company_name}</div>"
                 "</div>"
@@ -515,7 +515,7 @@ def _render_summary_body_html(body_text: str) -> str:
                 if current_section == "reunioes":
                     section_color = section_styles[current_section]["color"]
                     parts.append(
-                        f"<div style='margin:4px 0 4px 64px;padding:7px 10px;background:#f8fafc;"
+                        f"<div style='margin:4px 0 4px 64px;padding:7px 10px;background:#f6fffb;"
                         f"border-left:3px solid {section_color};border-radius:8px;font-size:13px;color:#1e293b;'>"
                         f"{content}</div>"
                     )
@@ -536,7 +536,7 @@ def _render_summary_body_html(body_text: str) -> str:
             content = html.escape(line[6:].strip())
             section_color = section_styles[current_section]["color"] if current_section else "#334155"
             parts.append(
-                f"<div style='margin:4px 0 4px 64px;padding:7px 10px;background:#f8fafc;"
+                f"<div style='margin:4px 0 4px 64px;padding:7px 10px;background:#f6fffb;"
                 f"border-left:3px solid {section_color};border-radius:8px;font-size:13px;color:#1e293b;'>"
                 f"{content}</div>"
             )
