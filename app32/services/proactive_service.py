@@ -1,6 +1,7 @@
 import logging
 import html
 from datetime import datetime, date, timedelta
+from sqlalchemy import func
 from models import db, User, Employee
 from models.project import ProjectTask, ProjectActivityCollaborator
 from models.process import ProcessInstance, ProcessInstanceCollaborator
@@ -235,13 +236,22 @@ def send_morning_summaries(app):
     """
     with app.app_context():
         logger.info("🌤️ Iniciando envio de resumos matinais proativos...")
-        users = User.query.filter(User.telegram.isnot(None), User.is_active == True).all()
+        users = User.query.filter(
+            User.is_active == True,
+            User.telegram.isnot(None),
+            func.trim(User.telegram) != ''
+        ).all()
         for user in users:
             try:
+                chat_id = (user.telegram or "").strip()
+                if not chat_id:
+                    logger.warning("Usuário %s sem chat_id Telegram válido; resumo ignorado.", user.id)
+                    continue
+
                 message = get_user_summary_report(user, date_range='today')
                 if message:
                     logger.info(f"Enviando resumo matinal para {user.name} ({len(message)} chars)")
-                    bot.send_message(user.telegram, message, parse_mode='HTML')
+                    bot.send_message(chat_id, message, parse_mode='HTML')
             except Exception as e:
                 logger.error(f"Erro ao enviar resumo para usuário {user.id}: {e}")
 
@@ -265,6 +275,7 @@ def notify_task_completion(app, task, completed_by_user):
                 admins = User.query.join(Employee).filter(
                     Employee.company_id == task.company_id,
                     User.telegram.isnot(None),
+                    func.trim(User.telegram) != '',
                     Employee.role_id == 1
                 ).all()
                 recipients.extend(admins)
@@ -282,7 +293,10 @@ def notify_task_completion(app, task, completed_by_user):
 
             for admin in recipients:
                 try:
-                    bot.send_message(admin.telegram, msg, parse_mode='HTML')
+                    chat_id = (admin.telegram or "").strip()
+                    if not chat_id:
+                        continue
+                    bot.send_message(chat_id, msg, parse_mode='HTML')
                 except Exception as e:
                     logger.error(f"Erro ao enviar notificação para {admin.name}: {e}")
         except Exception as e:

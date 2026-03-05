@@ -337,12 +337,37 @@ def setup_webhook(host_url):
         logger.error("❌ Não foi possível configurar o Webhook: token Telegram ausente/inativo para contexto %s.", TOKEN_CONTEXT)
         return None
 
-    try:
-        bot.remove_webhook()
-        webhook_url = f"{host_url.rstrip('/')}/webhook/telegram"
-        bot.set_webhook(url=webhook_url)
-        logger.info(f"✅ Webhook do Telegram registrado com sucesso: {webhook_url}")
-        return webhook_url
-    except Exception as e:
-        logger.error(f"❌ Erro ao registrar Webhook do Telegram: {str(e)}")
-        return None
+    webhook_url = f"{host_url.rstrip('/')}/webhook/telegram"
+
+    # @ARQUITETO: não removemos webhook antes de setar.
+    # Em caso de falha de rede temporária no boot, remover antes causa outage total.
+    max_attempts = 3
+    for attempt in range(1, max_attempts + 1):
+        try:
+            result = bot.set_webhook(url=webhook_url)
+            if result is False:
+                raise RuntimeError("Telegram API retornou False no set_webhook.")
+
+            info = bot.get_webhook_info()
+            current_url = getattr(info, "url", "") or ""
+            if current_url != webhook_url:
+                raise RuntimeError(f"Webhook divergente após set: '{current_url}'")
+
+            logger.info(f"✅ Webhook do Telegram registrado com sucesso: {webhook_url}")
+            return webhook_url
+        except Exception as e:
+            logger.error(
+                "❌ Erro ao registrar Webhook do Telegram (tentativa %s/%s): %s",
+                attempt,
+                max_attempts,
+                str(e),
+            )
+            if attempt < max_attempts:
+                try:
+                    from time import sleep
+                    sleep(2)
+                except Exception:
+                    pass
+
+    logger.error("❌ Falha final ao registrar Webhook do Telegram para URL: %s", webhook_url)
+    return None
