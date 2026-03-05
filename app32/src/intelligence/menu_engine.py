@@ -1407,6 +1407,18 @@ def _prompt_summary_company_selection(
 
     payload = dict(payload or {})
     payload["_summary_company_choices"] = choices
+
+    auto_selected_payload = _apply_single_summary_company_selection(
+        payload=payload,
+        choices=choices,
+    )
+    if auto_selected_payload is not None:
+        return _prompt_summary_collaborator_selection(
+            session=session,
+            option=option,
+            payload=auto_selected_payload,
+        )
+
     session.status = "awaiting_summary_company"
     session.collected_data = payload
     session.missing_fields = []
@@ -1415,6 +1427,25 @@ def _prompt_summary_company_selection(
         handled=True,
         response_text=_format_summary_company_prompt(option, choices),
     )
+
+
+def _apply_single_summary_company_selection(
+    payload: Dict[str, Any],
+    choices: List[Dict[str, Any]],
+) -> Optional[Dict[str, Any]]:
+    if len(choices or []) != 1:
+        return None
+
+    selected = choices[0] or {}
+    company_id = selected.get("company_id")
+    if not company_id:
+        return None
+
+    updated_payload = dict(payload or {})
+    updated_payload["_summary_company_id"] = int(company_id)
+    updated_payload["_summary_company_label"] = selected.get("label")
+    updated_payload["empresa"] = selected.get("company_name")
+    return updated_payload
 
 
 def _prompt_summary_collaborator_selection(

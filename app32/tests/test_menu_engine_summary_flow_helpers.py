@@ -40,6 +40,35 @@ def test_format_summary_period_prompt_has_guidance():
     assert "Exemplo: 01/03/2026 a 31/03/2026" in text
 
 
+def test_apply_single_summary_company_selection():
+    payload = {"periodo": "hoje"}
+    choices = [
+        {
+            "index": 1,
+            "company_id": 77,
+            "company_name": "Empresa X",
+            "label": "EX - Empresa X",
+        }
+    ]
+
+    updated = menu_engine._apply_single_summary_company_selection(payload, choices)
+
+    assert updated is not None
+    assert updated["_summary_company_id"] == 77
+    assert updated["_summary_company_label"] == "EX - Empresa X"
+    assert updated["empresa"] == "Empresa X"
+
+
+def test_apply_single_summary_company_selection_returns_none_for_multiple():
+    payload = {"periodo": "hoje"}
+    choices = [
+        {"index": 1, "company_id": 1, "company_name": "A", "label": "A"},
+        {"index": 2, "company_id": 2, "company_name": "B", "label": "B"},
+    ]
+
+    assert menu_engine._apply_single_summary_company_selection(payload, choices) is None
+
+
 def test_is_affirmative_confirmation_text():
     assert menu_engine._is_affirmative_confirmation_text("sim")
     assert menu_engine._is_affirmative_confirmation_text("pode enviar por email")
