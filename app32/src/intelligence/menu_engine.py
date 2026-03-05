@@ -905,28 +905,69 @@ def _handle_summary_collaborator_state(
         _reset_session(session)
         return MenuInterceptResult(handled=True, response_text="Acao cancelada. Digite 'menu' para retomar.")
 
-    selected_index = _extract_selection_index(text)
-    if selected_index is None:
+    if first_word in {"todos", "todas", "todo", "all"}:
+        selected_indexes = [0]
+    else:
+        selected_indexes = _extract_selection_indexes(text, allow_zero=True)
+    if not selected_indexes:
         return MenuInterceptResult(
             handled=True,
-            response_text="Formato invalido. Responda apenas com o numero do colaborador. Exemplo: 1",
+            response_text=(
+                "Formato invalido. Responda com 0 (todos), um numero (ex: 1) "
+                "ou varios numeros (ex: 1,3,4)."
+            ),
         )
 
     payload = dict(session.collected_data or {})
     choices = payload.get("_summary_collaborator_choices") or []
-    selected = next(
-        (item for item in choices if int(item.get("index", -1)) == int(selected_index)),
-        None,
-    )
-    if not selected:
+    if not choices:
         return MenuInterceptResult(
             handled=True,
-            response_text="Indice de colaborador invalido. Escolha uma opcao da lista.",
+            response_text="Nao encontrei colaboradores para esta empresa. Escolha outra empresa.",
         )
 
-    payload["_summary_employee_id"] = int(selected.get("employee_id"))
-    payload["_summary_employee_name"] = selected.get("name")
-    payload["colaborador"] = selected.get("name")
+    by_index = {
+        int(item.get("index", -1)): item
+        for item in choices
+        if item.get("index") is not None
+    }
+    select_all = 0 in selected_indexes
+    selected_items: List[Dict[str, Any]] = []
+    if select_all:
+        selected_items = list(choices)
+    else:
+        invalid = [idx for idx in selected_indexes if idx not in by_index]
+        if invalid:
+            invalid_list = ", ".join(str(v) for v in invalid)
+            return MenuInterceptResult(
+                handled=True,
+                response_text=f"Indice de colaborador invalido ({invalid_list}). Escolha opcao(oes) da lista.",
+            )
+        selected_items = [by_index[idx] for idx in selected_indexes]
+
+    if not selected_items:
+        return MenuInterceptResult(
+            handled=True,
+            response_text="Nao consegui identificar colaboradores validos para o filtro informado.",
+        )
+
+    employee_ids = [int(item.get("employee_id")) for item in selected_items if item.get("employee_id") is not None]
+    employee_names = [str(item.get("name") or "").strip() for item in selected_items if str(item.get("name") or "").strip()]
+    if not employee_ids:
+        return MenuInterceptResult(
+            handled=True,
+            response_text="Nao consegui identificar colaboradores validos para o filtro informado.",
+        )
+
+    payload["_summary_all_collaborators"] = bool(select_all)
+    payload["_summary_employee_ids"] = employee_ids
+    payload["_summary_employee_names"] = employee_names
+    payload["_summary_employee_id"] = int(employee_ids[0])
+    payload["_summary_employee_name"] = _format_summary_collaborator_selection_label(
+        employee_names,
+        all_selected=bool(select_all),
+    )
+    payload["colaborador"] = payload["_summary_employee_name"]
 
     return _prompt_summary_status_selection(session=session, option=option, payload=payload)
 
@@ -1130,9 +1171,8 @@ def _send_summary_report_email(
     report_text: str,
     session: AgentMenuSession,
 ) -> MenuInterceptResult:
-    from services.email_service import email_service
-
     subject = _build_summary_email_subject_from_payload(payload)
+    email_service = _build_summary_email_service()
     sent = email_service.send_email(
         to_emails=[target_email],
         subject=subject,
@@ -1149,6 +1189,113 @@ def _send_summary_report_email(
         handled=True,
         response_text="Tentei enviar o e-mail, mas houve uma falha no serviço agora. Posso tentar novamente.",
     )
+
+
+def _build_summary_email_service():
+    from services.email_service import EmailService
+
+    service = EmailService()
+    integration = _resolve_active_email_integration()
+    if not integration:
+        return service
+
+    try:
+        _apply_email_integration_to_service(service, integration)
+    except Exception:
+        logger.exception("Falha ao aplicar configuracao de e-mail da integracao no envio do resumo.")
+    return service
+
+
+def _resolve_active_email_integration() -> Optional[Dict[str, Any]]:
+    try:
+        from database.postgresql_db import get_integration, list_integrations
+    except Exception:
+        return None
+
+    try:
+        preferred = get_integration("email_integration")
+        if preferred and _is_email_integration_record(preferred):
+            return preferred
+    except Exception:
+        logger.exception("Falha ao buscar integracao 'email_integration'.")
+
+    try:
+        integrations = list_integrations() or []
+    except Exception:
+        logger.exception("Falha ao listar integracoes para envio de resumo por e-mail.")
+        return None
+
+    for record in integrations:
+        if _is_email_integration_record(record):
+            return record
+    return None
+
+
+def _is_email_integration_record(record: Dict[str, Any]) -> bool:
+    if not isinstance(record, dict):
+        return False
+
+    record_type = _normalize_integration_service(record.get("type"))
+    if record_type == "email":
+        return True
+
+    record_id = str(record.get("id") or "").strip().lower()
+    if record_id == "email_integration":
+        return True
+
+    inferred = _normalize_integration_service(record_id)
+    if inferred == "email":
+        return True
+    if record_id.endswith("_integration"):
+        inferred = _normalize_integration_service(record_id[: -len("_integration")])
+        if inferred == "email":
+            return True
+    return False
+
+
+def _normalize_integration_service(value: Any) -> str:
+    normalized = str(value or "").strip().lower().replace("_", "-")
+    aliases = {
+        "mail": "email",
+        "e-mail": "email",
+    }
+    return aliases.get(normalized, normalized)
+
+
+def _apply_email_integration_to_service(service: Any, integration: Dict[str, Any]) -> None:
+    config = integration.get("config") if isinstance(integration, dict) else {}
+    config = config if isinstance(config, dict) else {}
+    provider = str(
+        config.get("provider")
+        or integration.get("provider")
+        or ""
+    ).strip().lower()
+    if provider in {"", "disabled", "none"}:
+        return
+
+    service.provider = provider
+    service.smtp_server = config.get("server") or service.smtp_server
+    service.smtp_port = _coerce_int(config.get("port"), default=service.smtp_port or 587)
+    service.smtp_username = config.get("username") or service.smtp_username
+    service.smtp_secret = config.get("password") or service.smtp_secret
+    service.default_sender = config.get("default_sender") or config.get("from_email") or service.default_sender
+    service.from_name = config.get("from_name") or service.from_name
+    service.webhook_url = config.get("webhook_url") or service.webhook_url
+
+    service.inbound_protocol = str(config.get("inbound_protocol") or service.inbound_protocol or "").strip().lower()
+    service.inbound_host = config.get("inbound_host") or service.inbound_host
+    service.inbound_port = _coerce_int(config.get("inbound_port"), default=service.inbound_port or 0)
+    service.inbound_username = config.get("inbound_username") or service.inbound_username
+    service.inbound_password = config.get("inbound_password") or service.inbound_password
+    if "inbound_use_ssl" in config:
+        service.inbound_use_ssl = bool(config.get("inbound_use_ssl"))
+
+
+def _coerce_int(value: Any, default: int) -> int:
+    try:
+        return int(value)
+    except (TypeError, ValueError):
+        return int(default)
 
 
 def _resolve_user_primary_email(user_id: int) -> Optional[str]:
@@ -1419,10 +1566,11 @@ def _format_summary_collaborator_prompt(
     choices: List[Dict[str, Any]],
 ) -> str:
     lines = [f"{option.code} - {option.title}", "", "Escolha o colaborador:"]
+    lines.append("0 - Todos os colaboradores")
     for item in choices:
         lines.append(f"{item['index']} - {item['label']}")
     lines.append("")
-    lines.append("Responda apenas com o numero do colaborador. Exemplo: 1")
+    lines.append("Responda com 0 (todos), um numero (ex: 1) ou varios (ex: 1,3,4).")
     return "\n".join(lines)
 
 
@@ -1446,6 +1594,59 @@ def _extract_selection_index(text: str) -> Optional[int]:
     if right:
         return None
     return idx
+
+
+def _extract_selection_indexes(
+    text: str,
+    *,
+    allow_zero: bool = False,
+) -> Optional[List[int]]:
+    raw = str(text or "").strip()
+    if not raw:
+        return None
+
+    normalized = re.sub(r"\s+e\s+", ",", raw, flags=re.IGNORECASE)
+    normalized = normalized.replace(";", ",")
+    normalized = re.sub(r"\s+", ",", normalized)
+    normalized = re.sub(r",+", ",", normalized).strip(",")
+    if not normalized:
+        return None
+    if not re.fullmatch(r"\d{1,3}(?:,\d{1,3})*", normalized):
+        return None
+
+    parsed: List[int] = []
+    seen = set()
+    for token in normalized.split(","):
+        idx = int(token)
+        if idx < 0:
+            return None
+        if idx == 0 and not allow_zero:
+            return None
+        if idx in seen:
+            continue
+        seen.add(idx)
+        parsed.append(idx)
+    return parsed or None
+
+
+def _format_summary_collaborator_selection_label(
+    names: List[str],
+    *,
+    all_selected: bool = False,
+) -> str:
+    if all_selected:
+        return "Todos os colaboradores"
+
+    clean_names = [str(name or "").strip() for name in (names or []) if str(name or "").strip()]
+    if not clean_names:
+        return "Colaboradores selecionados"
+    if len(clean_names) == 1:
+        return clean_names[0]
+    if len(clean_names) == 2:
+        return f"{clean_names[0]} e {clean_names[1]}"
+    if len(clean_names) == 3:
+        return f"{clean_names[0]}, {clean_names[1]} e {clean_names[2]}"
+    return f"{clean_names[0]}, {clean_names[1]}, {clean_names[2]} e mais {len(clean_names) - 3}"
 
 
 def _load_open_choices(
@@ -2750,22 +2951,56 @@ def _execute_summary_menu_report(
             "Use o formato: DD/MM/AAAA a DD/MM/AAAA."
         )
 
-    selected_employee_id = payload.get("_summary_employee_id")
-    if not selected_employee_id:
+    selected_employee_ids_raw = payload.get("_summary_employee_ids")
+    employee_ids: List[int] = []
+    if isinstance(selected_employee_ids_raw, list):
+        for raw_id in selected_employee_ids_raw:
+            try:
+                parsed_id = int(raw_id)
+            except (TypeError, ValueError):
+                continue
+            if parsed_id > 0 and parsed_id not in employee_ids:
+                employee_ids.append(parsed_id)
+
+    if not employee_ids:
+        selected_employee_id = payload.get("_summary_employee_id")
+        if selected_employee_id:
+            try:
+                employee_ids = [int(selected_employee_id)]
+            except (TypeError, ValueError):
+                employee_ids = []
+
+    if not employee_ids:
         return "Nao consegui identificar o colaborador selecionado."
-    selected_employee_id = int(selected_employee_id)
-    employee = Employee.query.get(selected_employee_id)
-    if not employee or int(employee.company_id or 0) != selected_company_id:
+
+    employee_rows = (
+        Employee.query.filter(
+            Employee.company_id == selected_company_id,
+            Employee.id.in_(employee_ids),
+        )
+        .all()
+    )
+    if not employee_rows:
         return "Colaborador selecionado nao pertence a empresa escolhida."
 
-    employee_ids = [selected_employee_id]
-    collaborator_terms = []
-    employee_name = str(employee.name or "").strip()
-    employee_email = str(employee.email or "").strip().lower()
-    if employee_name:
-        collaborator_terms.append(employee_name.lower())
-    if employee_email:
-        collaborator_terms.append(employee_email)
+    employees_by_id = {int(emp.id): emp for emp in employee_rows}
+    missing_ids = [emp_id for emp_id in employee_ids if emp_id not in employees_by_id]
+    if missing_ids:
+        return "Colaborador selecionado nao pertence a empresa escolhida."
+
+    collaborator_terms: List[str] = []
+    employee_names: List[str] = []
+    for emp_id in employee_ids:
+        employee = employees_by_id.get(emp_id)
+        if not employee:
+            continue
+        employee_name = str(employee.name or "").strip()
+        employee_email = str(employee.email or "").strip().lower()
+        if employee_name:
+            employee_names.append(employee_name)
+            collaborator_terms.append(employee_name.lower())
+        if employee_email:
+            collaborator_terms.append(employee_email)
 
     status_key = str(payload.get("_summary_status") or "open").strip().lower()
     company_label = (
@@ -2775,8 +3010,12 @@ def _execute_summary_menu_report(
     )
 
     normalized_payload = dict(payload or {})
-    if employee_name:
-        normalized_payload["colaborador"] = employee_name
+    collaborator_label = _format_summary_collaborator_selection_label(
+        employee_names,
+        all_selected=bool(payload.get("_summary_all_collaborators")),
+    )
+    if collaborator_label:
+        normalized_payload["colaborador"] = collaborator_label
 
     open_tasks = _merge_report_items(
         _load_project_tasks_report(
@@ -3621,6 +3860,15 @@ def _resolve_my_work_collaborator_label(
         or ""
     ).strip()
     if explicit:
+        explicit_norm = explicit.lower()
+        if explicit_norm in {"todos", "todos os colaboradores", "todos colaboradores"}:
+            return "de todos os colaboradores"
+        if (
+            ", " in explicit
+            or " e " in explicit_norm
+            or " e mais " in explicit_norm
+        ):
+            return f"dos colaboradores {explicit}"
         return f"do colaborador {explicit}"
 
     names = {
