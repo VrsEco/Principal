@@ -239,7 +239,7 @@ def dashboard_filter_options():
             "companies": [{"id": c.id, "name": c.name} for c in companies],
             "employees": [{"id": e.id, "name": e.name} for e in employees],
             "projects": [{"id": p.id, "name": p.name} for p in projects],
-            "processes": [{"id": p.id, "name": p.name} for p in processes]
+            "processes": [{"id": p.id, "name": p.name, "code": p.code} for p in processes]
         })
     except Exception as e:
         import traceback

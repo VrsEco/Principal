@@ -779,7 +779,7 @@
             data.processes.forEach(p => {
                 const opt = document.createElement('option');
                 opt.value = p.id;
-                opt.textContent = p.name;
+                opt.textContent = `${p.code ? p.code + ' - ' : ''}${p.name}`;
                 processSelect.appendChild(opt);
             });
 

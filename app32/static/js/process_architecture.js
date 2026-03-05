@@ -154,8 +154,7 @@ function renderMapClassic(container) {
                             <div class="macro-title">${macro.code ? `<span style='font-family:monospace; color: var(--text-tertiary); font-size:0.75em;'>${macro.code}</span> ` : ''}${macro.name}</div>
                             ${macroProcesses.map(p => `
                                 <a href="/processes/${p.id}" class="process-link-card">
-                                    <span class="process-link-code">${p.code || ''}</span>
-                                    <span class="process-link-name">${p.name}</span>
+                                    <span class="process-link-name">${p.code ? p.code + ' - ' : ''}${p.name}</span>
                                     <div class="process-link-meta">
                                         <div style="display: flex; gap: 6px; align-items: center;">
                                             <span class="indicator-stage" style="background: ${getStageColor(p.kanban_stage)}" title="Etapa"></span>
@@ -196,7 +195,7 @@ function renderMapMP2(container) {
                                                 <div class="indicator-stage" style="background: ${getStageColor(p.kanban_stage)}; width: 10px; height: 10px;"></div>
                                                 <div class="indicator-perf" style="background: ${getPerfColor(p.performance_level)}; width: 9px; height: 9px;"></div>
                                             </div>
-                                            <div class="mp2-process-name">${p.name}</div>
+                                            <div class="mp2-process-name">${p.code ? p.code + ' - ' : ''}${p.name}</div>
                                         </a>
                                     `).join('')}
                                     ${macroProcesses.length === 0 ? '<div style="grid-column: 1/-1; text-align:center; font-size:0.6rem; color:var(--text-tertiary)">Sem processos</div>' : ''}
