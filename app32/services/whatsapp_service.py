@@ -38,6 +38,20 @@ class WhatsAppService:
             text = (response.text or "").strip()
             return text[:300] if text else "Sem detalhe retornado pelo provedor."
 
+    @staticmethod
+    def _coerce_bool(value: Any) -> Optional[bool]:
+        if isinstance(value, bool):
+            return value
+        if isinstance(value, (int, float)):
+            return bool(value)
+        if isinstance(value, str):
+            normalized = value.strip().lower()
+            if normalized in {"true", "1", "yes", "sim", "connected", "online"}:
+                return True
+            if normalized in {"false", "0", "no", "nao", "disconnected", "offline"}:
+                return False
+        return None
+
     def send_message(
         self, phone_number: str, message: str, media_url: Optional[str] = None
     ) -> bool:
@@ -211,18 +225,39 @@ class WhatsAppService:
 
             if response.status_code == 200:
                 result = response.json()
-                if result.get("status") == "connected":
+                connected = None
+                if isinstance(result, dict):
+                    connected = self._coerce_bool(result.get("connected"))
+                    if connected is None:
+                        # Compatibilidade com respostas legadas/variantes
+                        connected = self._coerce_bool(result.get("status"))
+                    if connected is None:
+                        connected = self._coerce_bool(result.get("instanceStatus"))
+                else:
+                    connected = self._coerce_bool(result)
+
+                if connected is True:
                     return {
                         "success": True,
                         "provider": "z-api",
-                        "message": "ConexÃ£o Z-API estabelecida com sucesso",
+                        "message": "Conexao Z-API estabelecida com sucesso",
                     }
+
+                if isinstance(result, dict):
+                    reason = (
+                        result.get("error")
+                        or result.get("message")
+                        or result.get("status")
+                        or f"connected={result.get('connected')}, smartphoneConnected={result.get('smartphoneConnected')}"
+                    )
                 else:
-                    return {
-                        "success": False,
-                        "error": f'Z-API nÃ£o conectado: {result.get("status", "unknown")}',
-                        "provider": "z-api",
-                    }
+                    reason = str(result)
+
+                return {
+                    "success": False,
+                    "error": f"Z-API nao conectado: {reason}",
+                    "provider": "z-api",
+                }
             else:
                 detail = self._extract_provider_error(response)
                 hint = ""
