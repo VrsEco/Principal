@@ -12,54 +12,14 @@ from models.meeting import Meeting
 from models.company import Company
 from models.agent_action import AgentAction
 from api.webhooks.telegram_webhook import bot
+from src.core.theme_tokens import (
+    get_summary_email_theme,
+    get_summary_email_section_styles,
+)
 
 logger = logging.getLogger(__name__)
 EMAIL_FALLBACK_SUFFIX = "Registros acima da capacidade deste canal, quer que eu te envie por e-mail?"
 EMAIL_FALLBACK_FRAGMENT = "Registros acima da capacidade deste canal"
-
-# Tokens de identidade visual (e-mail) - Versus Gestão Corporativa
-SUMMARY_EMAIL_THEME = {
-    "page_bg": "#f2faf7",
-    "header_gradient": "linear-gradient(135deg,#050505 0%,#0f172a 55%,#0f766e 100%)",
-    "card_bg": "#ffffff",
-    "card_border": "#cceee4",
-    "signature_accent": "#0f766e",
-    "text_primary": "#0f172a",
-    "text_secondary": "#334155",
-    "text_muted": "#64748b",
-    "summary_chip_bg": "#ecfdf5",
-    "summary_chip_border": "#0f766e",
-    "summary_chip_text": "#065f46",
-    "company_box_bg": "#f6fffb",
-    "company_box_border": "#cceee4",
-    "company_box_border_accent": "#0f766e",
-    "company_box_label": "#065f46",
-    "item_bg_soft": "#f6fffb",
-    "warning_bg": "#fffbeb",
-    "warning_border": "#f59e0b",
-    "warning_text": "#92400e",
-}
-
-SUMMARY_EMAIL_SECTION_STYLES = {
-    "projetos": {
-        "label": "Projetos",
-        "color": "#0f766e",
-        "bg": "#ecfdf5",
-        "icon": "📁",
-    },
-    "processos": {
-        "label": "Processos",
-        "color": "#166534",
-        "bg": "#f0fdf4",
-        "icon": "⚙️",
-    },
-    "reunioes": {
-        "label": "Reuniões",
-        "color": "#115e59",
-        "bg": "#f0fdfa",
-        "icon": "🤝",
-    },
-}
 
 
 def _format_my_work_report_compat(report_formatter, **kwargs):
@@ -388,7 +348,7 @@ def _build_summary_email_subject(user_name: str, date_range: str, today: date) -
 
 
 def _render_summary_email_html(user_name: str, range_label: str, body_text: str, generated_at: str) -> str:
-    theme = SUMMARY_EMAIL_THEME
+    theme = get_summary_email_theme()
     safe_user = html.escape(str(user_name or "Colaborador"))
     safe_range = html.escape(str(range_label or "de hoje"))
     safe_generated_at = html.escape(str(generated_at or ""))
@@ -435,7 +395,7 @@ def _render_summary_email_html(user_name: str, range_label: str, body_text: str,
 
 
 def _render_summary_body_html(body_text: str) -> str:
-    theme = SUMMARY_EMAIL_THEME
+    theme = get_summary_email_theme()
     lines = str(body_text or "").splitlines()
     parts = []
     current_section = None
@@ -445,7 +405,7 @@ def _render_summary_body_html(body_text: str) -> str:
         normalized = unicodedata.normalize("NFD", str(text or "").lower().strip())
         return "".join(ch for ch in normalized if unicodedata.category(ch) != "Mn")
 
-    section_styles = SUMMARY_EMAIL_SECTION_STYLES
+    section_styles = get_summary_email_section_styles()
 
     for raw in lines:
         line = raw.rstrip()
