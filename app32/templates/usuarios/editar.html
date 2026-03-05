@@ -93,6 +93,11 @@
                                 </small>
                             </div>
                         </div>
+                        <div class="form-group" style="margin-top: 1rem;">
+                            <label class="form-label">Instagram (ID ou @usuario)</label>
+                            <input type="text" id="instagram" class="form-control" value="{{ user.instagram or '' }}"
+                                placeholder="Ex: @empresa ou 1784...">
+                        </div>
                     </div>
                 </div>
 
@@ -296,6 +301,7 @@
         const is_active = document.getElementById('is_active').value === 'true';
         const whatsapp = document.getElementById('whatsapp').value;
         const telegram = document.getElementById('telegram').value;
+        const instagram = document.getElementById('instagram').value;
         const alertContainer = document.getElementById('alert-container');
         const submitBtn = document.getElementById('submitBtn');
 
@@ -307,7 +313,7 @@
                 method: 'PUT',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({
-                    name, role, is_active, whatsapp, telegram
+                    name, role, is_active, whatsapp, telegram, instagram
                 })
             });
             const result = await r.json();

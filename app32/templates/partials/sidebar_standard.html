@@ -214,8 +214,10 @@
             {% endif %}
 
             {% if current_user.role == 'admin' %}
-            <a href="#" class="sub-nav-link">Integrações</a>
-            <a href="#" class="sub-nav-link">Configurações</a>
+            <a href="{{ url_for('integrations.integrations_page') }}"
+                class="sub-nav-link {{ 'active' if '/integrations' in request.path }}">Integrações</a>
+            <a href="{{ url_for('configs.system_settings') }}"
+                class="sub-nav-link {{ 'active' if '/configs/system' in request.path }}">Configurações</a>
             {% endif %}
         </div>
     </div>

@@ -185,6 +185,9 @@ def profile():
         if 'telegram' in data:
             telegram = (data.get('telegram') or '').strip()
             current_user.telegram = telegram or None
+        if 'instagram' in data:
+            instagram = (data.get('instagram') or '').strip()
+            current_user.instagram = instagram or None
         
         try:
             db.session.commit()

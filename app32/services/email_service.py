@@ -1,6 +1,8 @@
 ﻿import logging
 import os
 import smtplib
+import poplib
+import imaplib
 import requests
 from email.mime.text import MIMEText
 from email.mime.multipart import MIMEMultipart
@@ -22,6 +24,16 @@ class EmailService:
         self.smtp_username = os.environ.get("MAIL_USERNAME")
         self.smtp_secret = os.environ.get("MAIL_PASSWORD")
         self.webhook_url = os.environ.get("EMAIL_WEBHOOK_URL")
+        self.inbound_protocol = (
+            os.environ.get("EMAIL_INBOUND_PROTOCOL", "").strip().lower()
+        )
+        self.inbound_host = os.environ.get("EMAIL_INBOUND_HOST")
+        self.inbound_port = int(os.environ.get("EMAIL_INBOUND_PORT") or 0)
+        self.inbound_username = os.environ.get("EMAIL_INBOUND_USERNAME")
+        self.inbound_password = os.environ.get("EMAIL_INBOUND_PASSWORD")
+        self.inbound_use_ssl = (
+            os.environ.get("EMAIL_INBOUND_USE_SSL", "true").strip().lower() == "true"
+        )
 
     def send_email(
         self,
@@ -172,13 +184,97 @@ class EmailService:
         """
         try:
             if self.provider == "smtp":
-                return self._test_smtp_connection()
+                result = self._test_smtp_connection()
             elif self.provider == "webhook":
-                return self._test_webhook_connection()
+                result = self._test_webhook_connection()
             else:
-                return self._test_local_connection()
+                result = self._test_local_connection()
+
+            if self._has_inbound_config():
+                inbound_result = self._test_inbound_connection()
+                result["inbound"] = inbound_result
+                if not inbound_result.get("success"):
+                    result["success"] = False
+            else:
+                result["inbound"] = {
+                    "success": True,
+                    "enabled": False,
+                    "message": "Leitura inbound não configurada",
+                }
+
+            return result
         except Exception as e:
             return {"success": False, "error": str(e), "provider": self.provider}
+
+    def _has_inbound_config(self) -> bool:
+        protocol = (self.inbound_protocol or "").strip().lower()
+        return bool(
+            protocol
+            and self.inbound_host
+            and self.inbound_username
+            and self.inbound_password
+        )
+
+    def _test_inbound_connection(self) -> Dict[str, Any]:
+        """Testa conexão de leitura de e-mails (POP3/IMAP)."""
+        protocol = (self.inbound_protocol or "").strip().lower()
+        if protocol in {"pop3", "pop3_ssl", "pop3s"}:
+            return self._test_pop3_connection()
+        if protocol in {"imap", "imap_ssl", "imaps"}:
+            return self._test_imap_connection()
+        return {
+            "success": False,
+            "enabled": True,
+            "provider": protocol or "unknown",
+            "error": "Protocolo inbound inválido. Use POP3 ou IMAP.",
+        }
+
+    def _test_pop3_connection(self) -> Dict[str, Any]:
+        port = self.inbound_port or (995 if self.inbound_use_ssl else 110)
+        try:
+            if self.inbound_use_ssl:
+                client = poplib.POP3_SSL(self.inbound_host, port, timeout=10)
+            else:
+                client = poplib.POP3(self.inbound_host, port, timeout=10)
+            client.user(self.inbound_username)
+            client.pass_(self.inbound_password)
+            client.quit()
+            return {
+                "success": True,
+                "enabled": True,
+                "provider": "pop3",
+                "message": f"Conexão POP3 estabelecida com {self.inbound_host}:{port}",
+            }
+        except Exception as e:
+            return {
+                "success": False,
+                "enabled": True,
+                "provider": "pop3",
+                "error": str(e),
+            }
+
+    def _test_imap_connection(self) -> Dict[str, Any]:
+        port = self.inbound_port or (993 if self.inbound_use_ssl else 143)
+        try:
+            if self.inbound_use_ssl:
+                client = imaplib.IMAP4_SSL(self.inbound_host, port)
+            else:
+                client = imaplib.IMAP4(self.inbound_host, port)
+            client.login(self.inbound_username, self.inbound_password)
+            client.logout()
+            return {
+                "success": True,
+                "enabled": True,
+                "provider": "imap",
+                "message": f"Conexão IMAP estabelecida com {self.inbound_host}:{port}",
+            }
+        except Exception as e:
+            return {
+                "success": False,
+                "enabled": True,
+                "provider": "imap",
+                "error": str(e),
+            }
 
     def _test_smtp_connection(self) -> Dict[str, Any]:
         """Testa conexÃ£o SMTP"""

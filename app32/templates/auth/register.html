@@ -248,6 +248,13 @@
             </div>
 
             <div class="form-group">
+                <label for="instagram">Instagram (ID ou @usuario)</label>
+                <input type="text" class="form-control" id="instagram" name="instagram" placeholder="@empresa ou 1784..."
+                    data-ref="09a">
+                <small class="form-text">Usado para autorização do canal Instagram</small>
+            </div>
+
+            <div class="form-group">
                 <label for="role">
                     Perfil de Acesso
                     <span class="required">*</span>
@@ -348,6 +355,7 @@
         const role = document.getElementById('role').value;
         const whatsapp = document.getElementById('whatsapp').value.trim();
         const telegram = document.getElementById('telegram').value.trim();
+        const instagram = document.getElementById('instagram').value.trim();
 
         // Validation
         if (!name || !email || !password || !role) {
@@ -381,7 +389,8 @@
                     password: password,
                     role: role,
                     whatsapp: whatsapp || null,
-                    telegram: telegram || null
+                    telegram: telegram || null,
+                    instagram: instagram || null
                 })
             });
 

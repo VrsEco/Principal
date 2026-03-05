@@ -1,6 +1,7 @@
 from flask import Blueprint, render_template, request, jsonify
 from flask_login import login_required, current_user
 from services.cadastro_agent_service import CadastroAgentService
+from langchain_core.messages import HumanMessage, AIMessage
 
 agents_bp = Blueprint('agents', __name__)
 cadastro_service = CadastroAgentService()
@@ -33,18 +34,14 @@ def get_engineering_board():
 @login_required
 def agents_chat():
     from models import db, AgentMessage
+    from src.intelligence.work_agents.graph import work_agent_graph
     from flask import session
     
-    data = request.get_json(silent=True) or {}
-    message = (data.get('message') or '').strip()
+    data = request.get_json()
+    message = data.get('message')
+    history = data.get('history', [])
     contact = data.get('contact', 'sapiens') # 'sapiens' ou 'engineering'
     
-    if not message:
-        return jsonify({
-            "success": False,
-            "error": "Mensagem vazia. Informe o que deseja executar."
-        }), 400
-
     company_id = session.get('active_company_id')
     
     # Define o prefixo se for engenharia
@@ -55,10 +52,8 @@ def agents_chat():
         processed_message = f"[CANAL ENGENHARIA] {message}"
         agent_type = 'engineering_squad'
 
-    # Thread unica e consistente entre logs e execucao do agente.
-    thread_id = f"web_{current_user.id}_{contact}"
-
     # 1. Salva a mensagem do usuário (Inbound)
+    thread_id = f"user_{current_user.id}_{contact}"
     user_msg = AgentMessage(
         company_id=company_id,
         user_id=current_user.id,
@@ -72,54 +67,73 @@ def agents_chat():
             "thread_id": thread_id
         }
     )
-
+    db.session.add(user_msg)
+    
+    # Prepara as mensagens para o LangGraph
+    messages = []
+    for msg in history:
+        role = msg.get('role') or msg.get('type')
+        content = msg.get('content') or msg.get('message')
+        
+        if role in ['user', 'human']:
+            messages.append(HumanMessage(content=content))
+        elif role in ['assistant', 'ai']:
+            messages.append(AIMessage(content=content))
+    
+    messages.append(HumanMessage(content=processed_message))
+    
     try:
-        db.session.add(user_msg)
-        db.session.commit()
+        from src.intelligence.memory import get_checkpointer
+        from src.intelligence.work_agents.graph import create_work_agent_workflow
+        
+        # 2. Configura a Memória Persistente (SQL) via Thread ID
+        config = {"configurable": {"thread_id": thread_id}}
 
-        # 2. Executa o Agente com Contexto Unificado (@ARQUITETO)
-        from src.intelligence.execution import run_agent_with_context, extract_response_text
-
-        response = run_agent_with_context(
-            user_id=current_user.id,
-            user_msg=processed_message,
-            channel="web",
-            thread_id=thread_id,
-            company_id=company_id,
-            metadata={"agent_type": agent_type, "contact": contact}
-        )
-
-        final_text = extract_response_text(response)
-        fallback_agent = "engineering_squad" if contact == "engineering" else "sapiens"
-        agent_executor = response.get("next_node") or fallback_agent
-        if agent_executor == "end":
-            agent_executor = fallback_agent
-
-        # 3. Salva a resposta da IA no log de mensagens (Visual apenas)
-        ai_msg = AgentMessage(
-            company_id=company_id,
-            user_id=current_user.id,
-            agent_type=agent_type,
-            agent_name=agent_executor,
-            direction='outbound',
-            content=final_text,
-            channel='platform',
-            metadata_json={
-                "agent": agent_executor,
-                "contact": contact,
-                "thread_id": thread_id
-            }
-        )
-        db.session.add(ai_msg)
-        db.session.commit()
-
-        return jsonify({
-            "success": True,
-            "response": final_text,
-            "agent": agent_executor
-        })
+        with get_checkpointer() as checkpointer:
+            graph = create_work_agent_workflow(checkpointer=checkpointer)
+            
+            # Verifica se já existe um estado no banco para esta thread
+            state = graph.get_state(config)
+            
+            # 2. Executa o Agente com Contexto Unificado (@ARQUITETO)
+            from src.intelligence.execution import run_agent_with_context, extract_response_text
+            
+            response = run_agent_with_context(
+                user_id=current_user.id,
+                user_msg=processed_message,
+                channel="web",
+                thread_prefix="web",
+                company_id=company_id,
+                metadata={"agent_type": agent_type, "contact": contact}
+            )
+            
+            final_text = extract_response_text(response)
+            agent_executor = response.get("next_node", "end")
+            
+            # 3. Salva a resposta da IA no log de mensagens (Visual apenas)
+            ai_msg = AgentMessage(
+                company_id=company_id,
+                user_id=current_user.id,
+                agent_type=agent_type,
+                agent_name=agent_executor,
+                direction='outbound',
+                content=final_text,
+                channel='platform',
+                metadata_json={
+                    "agent": agent_executor, 
+                    "contact": contact,
+                    "thread_id": f"web_{current_user.id}"
+                }
+            )
+            db.session.add(ai_msg)
+            db.session.commit()
+            
+            return jsonify({
+                "success": True,
+                "response": final_text,
+                "agent": agent_executor
+            })
     except Exception as e:
-        db.session.rollback()
         import traceback
         traceback.print_exc()
         return jsonify({
@@ -258,258 +272,6 @@ def get_agents_contacts():
         "success": True,
         "contacts": contacts
     })
-
-
-@agents_bp.route('/api/agents', methods=['GET'])
-@login_required
-def list_agents():
-    from models.ai_agent import AIAgent
-
-    rows = AIAgent.query.order_by(AIAgent.created_at.desc()).all()
-    agents = []
-    for row in rows:
-        item = row.to_dict()
-        activation = item.get("activation", {})
-        agents.append(
-            {
-                "id": item.get("id"),
-                "name": item.get("name"),
-                "description": item.get("description"),
-                "status": item.get("status"),
-                "page": activation.get("page"),
-                "section": activation.get("section"),
-                "version": item.get("version"),
-            }
-        )
-
-    return jsonify({"success": True, "agents": agents})
-
-
-@agents_bp.route('/api/agents/<string:agent_id>/test', methods=['POST'])
-@login_required
-def test_agent(agent_id):
-    from models.ai_agent import AIAgent
-    from services.ai_service import AIService
-
-    agent = AIAgent.query.filter_by(id=agent_id).first()
-    if not agent:
-        return jsonify({"success": False, "error": "Agente nao encontrado."}), 404
-
-    prompt_configured = bool((agent.prompt_template or "").strip())
-    ai_result = AIService().test_connection()
-
-    result = {
-        "agent_id": agent.id,
-        "agent_name": agent.name,
-        "agent_status": agent.status,
-        "prompt_configured": prompt_configured,
-        "ai_connection": ai_result,
-    }
-
-    success = bool(ai_result.get("success")) and prompt_configured
-    if not prompt_configured:
-        result["warning"] = "Prompt template do agente nao configurado."
-
-    return jsonify({"success": success, "result": result})
-
-
-def _menu_admin_guard():
-    if current_user.role != 'admin':
-        return jsonify({
-            "success": False,
-            "error": "Apenas administradores podem editar o menu de agentes."
-        }), 403
-    return None
-
-
-def _to_bool(value, default=True):
-    if value is None:
-        return default
-    if isinstance(value, bool):
-        return value
-    return str(value).strip().lower() in {'1', 'true', 't', 'yes', 'y', 'sim'}
-
-
-@agents_bp.route('/api/agents/menu/options', methods=['GET'])
-@login_required
-def list_agent_menu_options():
-    from flask import session
-    from src.intelligence.menu_engine import list_menu_options
-
-    active_company_id = session.get('active_company_id')
-    parent_code = request.args.get('parent_code')
-    include_inactive = request.args.get('include_inactive', 'false').lower() == 'true'
-    include_global = request.args.get('include_global', 'true').lower() == 'true'
-
-    # Admin pode consultar menu de qualquer empresa explicitamente
-    company_id_param = request.args.get('company_id')
-    if current_user.role == 'admin' and company_id_param is not None:
-        try:
-            company_id = int(company_id_param)
-        except ValueError:
-            return jsonify({"success": False, "error": "company_id invalido"}), 400
-    else:
-        company_id = active_company_id
-
-    options = list_menu_options(
-        company_id=company_id,
-        parent_code=parent_code,
-        include_inactive=include_inactive,
-        include_global=include_global,
-    )
-
-    return jsonify({
-        "success": True,
-        "options": [opt.to_dict(include_children=False) for opt in options]
-    })
-
-
-@agents_bp.route('/api/agents/menu/options', methods=['POST'])
-@login_required
-def create_agent_menu_option():
-    guard = _menu_admin_guard()
-    if guard:
-        return guard
-
-    from flask import session
-    from models import db
-    from models.agent_menu import AgentMenuOption
-
-    data = request.get_json(silent=True) or {}
-    code = (data.get('code') or '').strip()
-    title = (data.get('title') or '').strip()
-    if not code or not title:
-        return jsonify({
-            "success": False,
-            "error": "Campos obrigatorios: code e title."
-        }), 400
-
-    company_id = data.get('company_id', session.get('active_company_id'))
-    if company_id in ('', 'null', 'None'):
-        company_id = None
-    if company_id is not None:
-        try:
-            company_id = int(company_id)
-        except (TypeError, ValueError):
-            return jsonify({"success": False, "error": "company_id invalido"}), 400
-    parent_id = data.get('parent_id')
-    parent_code = data.get('parent_code')
-
-    if parent_id is None and parent_code:
-        candidates = AgentMenuOption.query.filter(
-            AgentMenuOption.code == parent_code
-        ).all()
-        parent = next((p for p in candidates if p.company_id == company_id), None) or next(
-            (p for p in candidates if p.company_id is None),
-            None
-        )
-        if not parent:
-            return jsonify({"success": False, "error": "parent_code nao encontrado"}), 400
-        parent_id = parent.id
-
-    existing = AgentMenuOption.query.filter_by(company_id=company_id, code=code).first()
-    if existing:
-        return jsonify({
-            "success": False,
-            "error": f"Ja existe opcao com codigo '{code}' para esta empresa."
-        }), 409
-
-    option = AgentMenuOption(
-        company_id=company_id,
-        parent_id=parent_id,
-        code=code,
-        title=title,
-        action_key=data.get('action_key'),
-        description=data.get('description'),
-        required_fields=data.get('required_fields') or [],
-        keywords=data.get('keywords') or [],
-        confirmation_template=data.get('confirmation_template'),
-        execution_template=data.get('execution_template'),
-        sort_order=int(data.get('sort_order', 0) or 0),
-        is_active=_to_bool(data.get('is_active'), default=True),
-        created_by_user_id=current_user.id
-    )
-
-    try:
-        db.session.add(option)
-        db.session.commit()
-        return jsonify({
-            "success": True,
-            "option": option.to_dict(include_children=False)
-        }), 201
-    except Exception as e:
-        db.session.rollback()
-        return jsonify({"success": False, "error": str(e)}), 500
-
-
-@agents_bp.route('/api/agents/menu/options/<int:option_id>', methods=['PUT', 'PATCH'])
-@login_required
-def update_agent_menu_option(option_id):
-    guard = _menu_admin_guard()
-    if guard:
-        return guard
-
-    from models import db
-    from models.agent_menu import AgentMenuOption
-
-    option = AgentMenuOption.query.get(option_id)
-    if not option:
-        return jsonify({"success": False, "error": "Opcao nao encontrada."}), 404
-
-    data = request.get_json(silent=True) or {}
-
-    allowed_fields = {
-        'code', 'title', 'action_key', 'description', 'required_fields', 'keywords',
-        'confirmation_template', 'execution_template', 'sort_order', 'is_active',
-        'parent_id', 'company_id'
-    }
-
-    for field, value in data.items():
-        if field in allowed_fields:
-            setattr(option, field, value)
-
-    if data.get('is_active', None) is not None:
-        option.is_active = _to_bool(data.get('is_active'), default=option.is_active)
-
-    if data.get('company_id', None) in ('', 'null', 'None'):
-        option.company_id = None
-    elif data.get('company_id', None) is not None:
-        try:
-            option.company_id = int(data.get('company_id'))
-        except (TypeError, ValueError):
-            return jsonify({"success": False, "error": "company_id invalido"}), 400
-
-    if data.get('sort_order', None) is not None:
-        try:
-            option.sort_order = int(data.get('sort_order'))
-        except (TypeError, ValueError):
-            return jsonify({"success": False, "error": "sort_order invalido"}), 400
-
-    parent_code = data.get('parent_code')
-    if parent_code is not None:
-        if not parent_code:
-            option.parent_id = None
-        else:
-            candidates = AgentMenuOption.query.filter(
-                AgentMenuOption.code == parent_code
-            ).all()
-            parent = next((p for p in candidates if p.company_id == option.company_id), None) or next(
-                (p for p in candidates if p.company_id is None),
-                None
-            )
-            if not parent:
-                return jsonify({"success": False, "error": "parent_code nao encontrado"}), 400
-            option.parent_id = parent.id
-
-    try:
-        db.session.commit()
-        return jsonify({
-            "success": True,
-            "option": option.to_dict(include_children=False)
-        })
-    except Exception as e:
-        db.session.rollback()
-        return jsonify({"success": False, "error": str(e)}), 500
 
 @agents_bp.route('/api/agents/actions/approve/<int:action_id>', methods=['POST'])
 @login_required

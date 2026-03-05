@@ -111,6 +111,9 @@ def register():
             password = data.get("password", "")
             name = data.get("name", "").strip()
             role = data.get("role", "collaborator").strip()
+            whatsapp = (data.get("whatsapp") or "").strip() or None
+            telegram = (data.get("telegram") or "").strip() or None
+            instagram = (data.get("instagram") or "").strip() or None
 
             if not email or not password or not name:
                 return (
@@ -124,7 +127,15 @@ def register():
                 )
 
             # Create user
-            user = auth_service.create_user(email, password, name, role)
+            user = auth_service.create_user(
+                email,
+                password,
+                name,
+                role,
+                whatsapp=whatsapp,
+                telegram=telegram,
+                instagram=instagram,
+            )
 
             if user:
                 return jsonify(
@@ -172,6 +183,9 @@ def profile():
                 if getattr(current_user, "role", None) == "admin"
                 else None
             )
+            whatsapp = (data.get("whatsapp") or "").strip() if "whatsapp" in data else None
+            telegram = (data.get("telegram") or "").strip() if "telegram" in data else None
+            instagram = (data.get("instagram") or "").strip() if "instagram" in data else None
             is_active = (
                 data.get("is_active")
                 if getattr(current_user, "role", None) == "admin"
@@ -186,6 +200,9 @@ def profile():
                 name=name if name else None,
                 role=role if role else None,
                 is_active=is_active,
+                whatsapp=whatsapp,
+                telegram=telegram,
+                instagram=instagram,
             )
 
             if success:
@@ -448,6 +465,9 @@ def update_user(user_id):
         name = data.get("name", "").strip()
         role = data.get("role", "").strip()
         is_active = data.get("is_active")
+        whatsapp = (data.get("whatsapp") or "").strip() if "whatsapp" in data else None
+        telegram = (data.get("telegram") or "").strip() if "telegram" in data else None
+        instagram = (data.get("instagram") or "").strip() if "instagram" in data else None
 
         if is_active is not None and isinstance(is_active, str):
             is_active = is_active.lower() in ["true", "1", "yes", "on"]
@@ -457,6 +477,9 @@ def update_user(user_id):
             name=name if name else None,
             role=role if role else None,
             is_active=is_active,
+            whatsapp=whatsapp,
+            telegram=telegram,
+            instagram=instagram,
         )
 
         if success:

@@ -1,0 +1,250 @@
+[2026-03-02 20:42:13.707353] GET /api/projects
+  Auth: True, Active Company: 1
+[2026-03-02 20:42:54.249243] POST /webhook/telegram
+  Auth: False, Active Company: None
+[2026-03-02 20:47:12.614539] POST /webhook/telegram
+  Auth: False, Active Company: None
+[2026-03-02 21:02:14.587210] POST /webhook/telegram
+  Auth: False, Active Company: None
+[2026-03-02 21:02:31.894156] GET /api/agents/history
+  Auth: True, Active Company: 1
+[2026-03-02 21:02:34.680568] POST /api/agents/chat
+  Auth: True, Active Company: 1
+[2026-03-02 21:03:01.257483] POST /api/agents/chat
+  Auth: True, Active Company: 1
+[2026-03-02 21:03:20.176733] GET /my-work
+  Auth: True, Active Company: 1
+[2026-03-02 21:03:20.460675] GET /my-work/api/filter-options
+  Auth: True, Active Company: 1
+[2026-03-02 21:03:20.613208] GET /my-work/api/activities
+  Auth: True, Active Company: 1
+[2026-03-02 21:03:20.772780] GET /my-work/api/occurrences/summary
+  Auth: True, Active Company: 1
+[2026-03-02 21:03:22.600765] GET /api/agents/history
+  Auth: True, Active Company: 1
+[2026-03-02 21:05:29.957205] POST /webhook/telegram
+  Auth: False, Active Company: None
+[2026-03-02 21:22:29.349562] POST /webhook/telegram
+  Auth: False, Active Company: None
+[2026-03-02 21:22:42.160152] POST /api/agents/chat
+  Auth: True, Active Company: 1
+[2026-03-02 21:23:00.340608] POST /api/agents/chat
+  Auth: True, Active Company: 1
+[2026-03-02 21:30:32.914395] GET /
+  Auth: False, Active Company: None
+[2026-03-02 21:30:33.657241] GET /login
+  Auth: False, Active Company: None
+[2026-03-02 21:37:55.127699] GET /static/site.webmanifest
+  Auth: False, Active Company: None
+[2026-03-02 22:14:18.047985] POST /webhook/telegram
+  Auth: False, Active Company: None
+[2026-03-02 22:15:08.861661] POST /api/agents/chat
+  Auth: True, Active Company: 1
+[2026-03-02 22:15:41.336867] POST /api/agents/chat
+  Auth: True, Active Company: 1
+[2026-03-02 22:33:14.934352] GET /
+  Auth: False, Active Company: None
+[2026-03-02 22:33:22.927464] GET /login
+  Auth: False, Active Company: None
+[2026-03-02 22:41:58.768243] GET /my-work
+  Auth: True, Active Company: 1
+[2026-03-02 22:41:59.073188] GET /my-work/api/filter-options
+  Auth: True, Active Company: 1
+[2026-03-02 22:41:59.244598] GET /my-work/api/activities
+  Auth: True, Active Company: 1
+[2026-03-02 22:41:59.427215] GET /my-work/api/occurrences/summary
+  Auth: True, Active Company: 1
+[2026-03-02 22:52:20.397879] POST /webhook/telegram
+  Auth: False, Active Company: None
+[2026-03-02 22:52:55.540377] GET /api/agents/history
+  Auth: True, Active Company: 1
+[2026-03-02 22:52:59.109865] POST /api/agents/chat
+  Auth: True, Active Company: 1
+[2026-03-02 22:53:31.490928] POST /api/agents/chat
+  Auth: True, Active Company: 1
+[2026-03-02 23:21:11.463435] GET /
+  Auth: False, Active Company: None
+[2026-03-02 23:21:15.995930] GET /login
+  Auth: False, Active Company: None
+[2026-03-02 23:36:26.376354] GET /
+  Auth: False, Active Company: None
+[2026-03-02 23:36:28.079665] GET /login
+  Auth: False, Active Company: None
+[2026-03-02 23:43:51.950894] GET /
+  Auth: False, Active Company: None
+[2026-03-02 23:43:52.892200] GET /login
+  Auth: False, Active Company: None
+[2026-03-02 23:46:53.286021] POST /webhook/telegram
+  Auth: False, Active Company: None
+[2026-03-02 23:48:56.787479] GET /
+  Auth: False, Active Company: None
+[2026-03-02 23:48:56.974666] GET /login
+  Auth: False, Active Company: None
+[2026-03-02 23:49:03.373396] POST /login
+  Auth: False, Active Company: None
+[2026-03-02 23:49:04.276187] GET /portal
+  Auth: True, Active Company: None
+[2026-03-02 23:49:04.507700] GET /api/notes/
+  Auth: True, Active Company: None
+[2026-03-02 23:49:06.818838] POST /portal
+  Auth: True, Active Company: None
+[2026-03-02 23:49:06.955157] GET /my-work
+  Auth: True, Active Company: 1
+[2026-03-02 23:49:07.276240] GET /my-work/api/filter-options
+  Auth: True, Active Company: 1
+[2026-03-02 23:49:07.474775] GET /my-work/api/activities
+  Auth: True, Active Company: 1
+[2026-03-02 23:49:07.644700] GET /my-work/api/occurrences/summary
+  Auth: True, Active Company: 1
+[2026-03-03 00:02:12.750964] GET /plans/
+  Auth: True, Active Company: 1
+[2026-03-03 00:02:27.833152] GET /indicators
+  Auth: True, Active Company: 1
+[2026-03-03 00:02:28.185344] GET /api/indicator-groups
+  Auth: True, Active Company: 1
+[2026-03-03 00:02:28.198652] GET /api/indicators
+  Auth: True, Active Company: 1
+[2026-03-03 00:02:28.222568] GET /api/companies
+  Auth: True, Active Company: 1
+[2026-03-03 00:02:28.226314] GET /api/plans
+  Auth: True, Active Company: 1
+[2026-03-03 00:02:37.307640] GET /indicators/new
+  Auth: True, Active Company: 1
+[2026-03-03 00:02:47.769677] GET /portal
+  Auth: True, Active Company: 1
+[2026-03-03 00:02:48.025515] GET /api/notes/
+  Auth: True, Active Company: 1
+[2026-03-03 00:08:41.408570] HEAD /api/agents/diagnostics
+  Auth: False, Active Company: None
+[2026-03-03 00:08:41.530606] GET /api/agents/diagnostics
+  Auth: False, Active Company: None
+[2026-03-03 00:09:49.730283] HEAD /sapiens
+  Auth: False, Active Company: None
+[2026-03-03 00:09:49.871884] HEAD /login
+  Auth: False, Active Company: None
+[2026-03-03 00:09:50.013411] GET /sapiens
+  Auth: False, Active Company: None
+[2026-03-03 00:09:50.155357] GET /login
+  Auth: False, Active Company: None
+[2026-03-03 00:11:42.767315] POST /portal
+  Auth: True, Active Company: 1
+[2026-03-03 00:11:42.905004] GET /my-work
+  Auth: True, Active Company: 2
+[2026-03-03 00:11:43.191351] GET /my-work/api/filter-options
+  Auth: True, Active Company: 2
+[2026-03-03 00:11:43.341367] GET /my-work/api/activities
+  Auth: True, Active Company: 2
+[2026-03-03 00:11:43.505392] GET /my-work/api/occurrences/summary
+  Auth: True, Active Company: 2
+[2026-03-03 00:13:49.484254] GET /api/agents/diagnostics
+  Auth: True, Active Company: 2
+[2026-03-03 00:13:56.215605] GET /api/agents/history
+  Auth: True, Active Company: 2
+[2026-03-03 00:13:58.988769] POST /api/agents/chat
+  Auth: True, Active Company: 2
+[2026-03-03 00:14:44.857297] POST /api/agents/chat
+  Auth: True, Active Company: 2
+[2026-03-03 00:15:00.693738] POST /webhook/telegram
+  Auth: False, Active Company: None
+[2026-03-03 00:18:42.928151] POST /api/agents/chat
+  Auth: True, Active Company: 2
+[2026-03-03 00:18:57.171829] POST /api/agents/chat
+  Auth: True, Active Company: 2
+[2026-03-03 00:28:55.518741] GET /api/agents/diagnostics
+  Auth: True, Active Company: 2
+[2026-03-03 00:36:51.344364] GET /portal
+  Auth: True, Active Company: 2
+[2026-03-03 00:36:51.541399] GET /api/notes/
+  Auth: True, Active Company: 2
+[2026-03-03 00:36:59.732214] POST /api/notes/
+  Auth: True, Active Company: 2
+[2026-03-03 00:37:07.332560] POST /api/notes/
+  Auth: True, Active Company: 2
+[2026-03-03 00:37:16.151120] POST /api/notes/
+  Auth: True, Active Company: 2
+[2026-03-03 00:39:56.405333] POST /api/notes/
+  Auth: True, Active Company: 2
+[2026-03-03 01:01:46.267875] GET /login
+  Auth: False, Active Company: None
+[2026-03-03 01:03:06.322357] GET /portal
+  Auth: True, Active Company: 2
+[2026-03-03 01:03:06.508406] GET /api/notes/
+  Auth: True, Active Company: 2
+[2026-03-03 01:03:25.179119] GET /portal
+  Auth: True, Active Company: 2
+[2026-03-03 01:03:25.581022] GET /api/notes/
+  Auth: True, Active Company: 2
+[2026-03-03 01:03:28.005270] GET /portal
+  Auth: True, Active Company: 2
+[2026-03-03 01:03:28.384388] GET /api/notes/
+  Auth: True, Active Company: 2
+[2026-03-03 01:03:58.365615] GET /portal
+  Auth: False, Active Company: None
+[2026-03-03 01:03:58.491029] GET /login
+  Auth: False, Active Company: None
+[2026-03-03 01:04:00.877188] POST /login
+  Auth: False, Active Company: None
+[2026-03-03 01:04:01.730749] GET /portal
+  Auth: True, Active Company: None
+[2026-03-03 01:04:02.136860] GET /api/notes/
+  Auth: True, Active Company: None
+[2026-03-03 01:08:27.475240] POST /portal
+  Auth: True, Active Company: 2
+[2026-03-03 01:08:27.627747] GET /my-work
+  Auth: True, Active Company: 7
+[2026-03-03 01:08:27.929254] GET /my-work/api/filter-options
+  Auth: True, Active Company: 7
+[2026-03-03 01:08:28.094277] GET /my-work/api/activities
+  Auth: True, Active Company: 7
+[2026-03-03 01:08:28.273360] GET /my-work/api/occurrences/summary
+  Auth: True, Active Company: 7
+[2026-03-03 01:08:29.957257] GET /api/agents/history
+  Auth: True, Active Company: 7
+[2026-03-03 01:08:52.979236] POST /api/agents/chat
+  Auth: True, Active Company: 7
+[2026-03-03 01:09:06.180558] POST /webhook/telegram
+  Auth: False, Active Company: None
+[2026-03-03 01:09:49.463012] POST /portal
+  Auth: True, Active Company: None
+[2026-03-03 01:09:49.627447] GET /my-work
+  Auth: True, Active Company: 2
+[2026-03-03 01:09:50.224011] GET /static/site.webmanifest
+  Auth: False, Active Company: None
+[2026-03-03 01:09:50.367906] GET /my-work/api/filter-options
+  Auth: True, Active Company: 2
+[2026-03-03 01:09:50.545363] GET /my-work/api/activities
+  Auth: True, Active Company: 2
+[2026-03-03 01:09:50.829176] GET /my-work/api/occurrences/summary
+  Auth: True, Active Company: 2
+[2026-03-03 01:09:52.046773] GET /api/agents/history
+  Auth: True, Active Company: 2
+[2026-03-03 01:10:03.318851] POST /api/agents/chat
+  Auth: True, Active Company: 2
+[2026-03-03 03:10:39.282128] GET /
+  Auth: False, Active Company: None
+[2026-03-03 08:09:22.560968] POST /webhook/telegram
+  Auth: False, Active Company: None
+[2026-03-03 08:10:46.332812] GET /login
+  Auth: False, Active Company: None
+[2026-03-03 08:10:58.895009] POST /login
+  Auth: False, Active Company: None
+[2026-03-03 08:10:59.778156] GET /portal
+  Auth: True, Active Company: None
+[2026-03-03 08:11:00.075601] GET /api/notes/
+  Auth: True, Active Company: None
+[2026-03-03 08:20:17.377670] POST /portal
+  Auth: True, Active Company: None
+[2026-03-03 08:20:17.533817] GET /my-work
+  Auth: True, Active Company: 1
+[2026-03-03 08:20:17.879476] GET /my-work/api/filter-options
+  Auth: True, Active Company: 1
+[2026-03-03 08:20:18.054486] GET /my-work/api/activities
+  Auth: True, Active Company: 1
+[2026-03-03 08:20:18.239506] GET /my-work/api/occurrences/summary
+  Auth: True, Active Company: 1
+[2026-03-03 08:20:19.723046] GET /api/agents/history
+  Auth: True, Active Company: 1
+[2026-03-03 08:20:25.246125] POST /api/agents/chat
+  Auth: True, Active Company: 1
+[2026-03-03 08:20:35.252176] POST /webhook/telegram
+  Auth: False, Active Company: None

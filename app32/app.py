@@ -3,9 +3,64 @@ from flask_cors import CORS
 from flask_login import LoginManager
 from flask_restful import Api
 import os
+from sqlalchemy import inspect, or_, text
 
 from models import db
 from schemas import ma
+
+
+def _backfill_user_channel_contacts():
+    """Move legacy contacts from employees to users when user fields are empty."""
+    from models.employee import Employee
+    from models.user import User
+
+    employees = (
+        Employee.query.filter(Employee.user_id.isnot(None))
+        .filter(or_(Employee.whatsapp.isnot(None), Employee.telegram.isnot(None)))
+        .all()
+    )
+    if not employees:
+        return {"users_updated": 0, "whatsapp_filled": 0, "telegram_filled": 0}
+
+    user_ids = sorted({emp.user_id for emp in employees if emp.user_id})
+    users_by_id = {user.id: user for user in User.query.filter(User.id.in_(user_ids)).all()}
+
+    users_updated = 0
+    whatsapp_filled = 0
+    telegram_filled = 0
+
+    for emp in employees:
+        user = users_by_id.get(emp.user_id)
+        if not user:
+            continue
+
+        changed = False
+        emp_whatsapp = (emp.whatsapp or "").strip()
+        emp_telegram = (emp.telegram or "").strip()
+        user_whatsapp = (user.whatsapp or "").strip()
+        user_telegram = (user.telegram or "").strip()
+
+        if emp_whatsapp and not user_whatsapp:
+            user.whatsapp = emp_whatsapp
+            whatsapp_filled += 1
+            changed = True
+
+        if emp_telegram and not user_telegram:
+            user.telegram = emp_telegram
+            telegram_filled += 1
+            changed = True
+
+        if changed:
+            users_updated += 1
+
+    if users_updated:
+        db.session.commit()
+
+    return {
+        "users_updated": users_updated,
+        "whatsapp_filled": whatsapp_filled,
+        "telegram_filled": telegram_filled,
+    }
 
 
 def create_app(config_name=None):
@@ -71,8 +126,25 @@ def create_app(config_name=None):
     with app.app_context():
         try:
             db.create_all()
+            inspector = inspect(db.engine)
+            table_names = set(inspector.get_table_names())
+            if "users" in table_names:
+                user_columns = {col["name"] for col in inspector.get_columns("users")}
+                if "instagram" not in user_columns:
+                    with db.engine.begin() as conn:
+                        conn.execute(text("ALTER TABLE users ADD COLUMN instagram VARCHAR(100)"))
+                    print("DEBUG: users.instagram column added successfully.")
+            if {"users", "employees"}.issubset(table_names):
+                stats = _backfill_user_channel_contacts()
+                print(
+                    "DEBUG: users contact backfill completed "
+                    f"(users={stats['users_updated']}, "
+                    f"whatsapp={stats['whatsapp_filled']}, "
+                    f"telegram={stats['telegram_filled']})."
+                )
             print("DEBUG: DB tables verified/created successfully.")
         except Exception as e:
+            db.session.rollback()
             print(f"DEBUG: Error in db.create_all(): {e}")
 
     @app.context_processor
@@ -146,7 +218,14 @@ def create_app(config_name=None):
         # 2. If authenticated, ensure company is selected
         else:
             # Endpoints allowed without selecting a company
-            allowed_post_login = ['auth.portal', 'auth.logout', 'static', 'dev.seed_demo', 'dev.debug_routes']
+            allowed_post_login = [
+                'auth.portal',
+                'auth.logout',
+                'static',
+                'dev.seed_demo',
+                'dev.debug_routes',
+                'integrations.integrations_page',
+            ]
             
             active_company_id = session.get('active_company_id')
             # Normalize 'null' and 'undefined' strings that might come from frontend/session issues
@@ -310,6 +389,7 @@ def register_blueprints(app):
     from api.notes import notes_bp
     from api.routes.agents import agents_bp
     from api.routes.configs import configs_bp
+    from api.routes.integrations import integrations_bp
     from api.routes.portfolios import portfolios_bp
     from api.user_employee import user_employee_bp
     from api.routes.meetings import meetings_bp
@@ -331,6 +411,7 @@ def register_blueprints(app):
     app.register_blueprint(notes_bp)
     app.register_blueprint(agents_bp)
     app.register_blueprint(configs_bp)
+    app.register_blueprint(integrations_bp)
     app.register_blueprint(portfolios_bp)
     app.register_blueprint(user_employee_bp)
     app.register_blueprint(meetings_bp, url_prefix='/meetings')
@@ -346,6 +427,10 @@ def register_blueprints(app):
     # Webhook WhatsApp/Instagram (Sapiens Fase 4)
     from api.webhooks.whatsapp_webhook import whatsapp_webhook_bp
     app.register_blueprint(whatsapp_webhook_bp, url_prefix='/webhook')
+
+    # Webhook Email (Sapiens)
+    from api.webhooks.email_webhook import email_webhook_bp
+    app.register_blueprint(email_webhook_bp, url_prefix='/webhook')
 
     # Configuracao automatica do Webhook:
     # - PRODUCAO: permitido normalmente.

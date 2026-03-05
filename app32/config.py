@@ -47,6 +47,17 @@ class Config:
     MAIL_USERNAME = os.environ.get("MAIL_USERNAME")
     MAIL_PASSWORD = os.environ.get("MAIL_PASSWORD")
     MAIL_DEFAULT_SENDER = os.environ.get("MAIL_DEFAULT_SENDER")
+    EMAIL_PROVIDER = os.environ.get("EMAIL_PROVIDER", "smtp")
+    EMAIL_WEBHOOK_URL = os.environ.get("EMAIL_WEBHOOK_URL")
+    EMAIL_INBOUND_PROTOCOL = os.environ.get("EMAIL_INBOUND_PROTOCOL", "pop3")
+    EMAIL_INBOUND_HOST = os.environ.get("EMAIL_INBOUND_HOST")
+    EMAIL_INBOUND_PORT = int(os.environ.get("EMAIL_INBOUND_PORT") or 995)
+    EMAIL_INBOUND_USERNAME = os.environ.get("EMAIL_INBOUND_USERNAME")
+    EMAIL_INBOUND_PASSWORD = os.environ.get("EMAIL_INBOUND_PASSWORD")
+    EMAIL_INBOUND_USE_SSL = (
+        os.environ.get("EMAIL_INBOUND_USE_SSL", "true").lower() == "true"
+    )
+    EMAIL_AUTO_REPLY = os.environ.get("EMAIL_AUTO_REPLY", "false").lower() == "true"
 
     # File Uploads
     MAX_CONTENT_LENGTH = 16 * 1024 * 1024  # 16MB max file size
@@ -68,6 +79,30 @@ class Config:
     )  # z-api, twilio, webhook
     WHATSAPP_API_KEY = os.environ.get("WHATSAPP_API_KEY")
     WHATSAPP_WEBHOOK_URL = os.environ.get("WHATSAPP_WEBHOOK_URL")
+    WHATSAPP_INSTANCE_ID = os.environ.get("WHATSAPP_INSTANCE_ID")
+    TWILIO_ACCOUNT_SID = os.environ.get("TWILIO_ACCOUNT_SID")
+    TWILIO_AUTH_TOKEN = os.environ.get("TWILIO_AUTH_TOKEN")
+
+    # Telegram Integration
+    TELEGRAM_PROVIDER = os.environ.get("TELEGRAM_PROVIDER", "bot_api")
+    TELEGRAM_BOT_TOKEN = os.environ.get("TELEGRAM_BOT_TOKEN")
+    TELEGRAM_BOT_TOKEN_DEV = os.environ.get("TELEGRAM_BOT_TOKEN_DEV")
+    TELEGRAM_BOT_TOKEN_PROD = os.environ.get("TELEGRAM_BOT_TOKEN_PROD")
+    TELEGRAM_WEBHOOK_URL = os.environ.get("TELEGRAM_WEBHOOK_URL")
+    TELEGRAM_WEBHOOK_PATH = os.environ.get("TELEGRAM_WEBHOOK_PATH", "/webhook/telegram")
+    TELEGRAM_ENV = os.environ.get("TELEGRAM_ENV")
+
+    # Instagram Integration
+    INSTAGRAM_PROVIDER = os.environ.get("INSTAGRAM_PROVIDER", "meta")
+    INSTAGRAM_ACCESS_TOKEN = os.environ.get("INSTAGRAM_ACCESS_TOKEN")
+    INSTAGRAM_BUSINESS_ACCOUNT_ID = os.environ.get("INSTAGRAM_BUSINESS_ACCOUNT_ID")
+    INSTAGRAM_WEBHOOK_URL = os.environ.get("INSTAGRAM_WEBHOOK_URL")
+    INSTAGRAM_GRAPH_API_BASE = os.environ.get(
+        "INSTAGRAM_GRAPH_API_BASE", "https://graph.facebook.com/v21.0"
+    )
+    INSTAGRAM_APP_ID = os.environ.get("INSTAGRAM_APP_ID")
+    INSTAGRAM_APP_SECRET = os.environ.get("INSTAGRAM_APP_SECRET")
+    INSTAGRAM_VERIFY_TOKEN = os.environ.get("INSTAGRAM_VERIFY_TOKEN")
 
     # Redis for Celery
     REDIS_URL = os.environ.get("REDIS_URL") or "redis://localhost:6379/0"

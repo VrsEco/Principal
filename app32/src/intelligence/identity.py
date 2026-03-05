@@ -1,12 +1,12 @@
 import logging
 import re
 from typing import Optional, Set
+from urllib.parse import urlparse
 
-from sqlalchemy import func, or_
+from sqlalchemy import func
 
 from models.user import User
 from models.employee import Employee
-from models import db
 
 logger = logging.getLogger(__name__)
 
@@ -57,12 +57,47 @@ def _build_phone_variants(value: str) -> Set[str]:
     return {v for v in variants if v}
 
 
+def _build_instagram_variants(value: str) -> Set[str]:
+    raw = _normalize_text(value).lower()
+    variants: Set[str] = set()
+    if not raw:
+        return variants
+
+    variants.add(raw)
+
+    if raw.startswith("http://") or raw.startswith("https://"):
+        try:
+            parsed = urlparse(raw)
+            path = (parsed.path or "").strip("/")
+            if path:
+                handle = path.split("/")[0].strip().lower()
+                if handle:
+                    variants.add(handle)
+                    variants.add(f"@{handle}")
+        except Exception:
+            pass
+
+    if raw.startswith("@"):
+        variants.add(raw[1:])
+    else:
+        variants.add(f"@{raw}")
+
+    return {v for v in variants if v}
+
+
 def _find_user_by_whatsapp(identifier: str) -> Optional[User]:
     variants = _build_phone_variants(identifier)
     if not variants:
         return None
 
-    user = User.query.filter(User.whatsapp.in_(list(variants))).order_by(User.id.asc()).first()
+    user = (
+        User.query.filter(
+            User.is_active.is_(True),
+            User.whatsapp.in_(list(variants)),
+        )
+        .order_by(User.id.asc())
+        .first()
+    )
     if user:
         return user
 
@@ -73,7 +108,7 @@ def _find_user_by_whatsapp(identifier: str) -> Optional[User]:
     # Fallback DB-side para formatos mascarados (ex: +55 (71) 99999-0000)
     try:
         user = (
-            User.query.filter(User.whatsapp.isnot(None))
+            User.query.filter(User.is_active.is_(True), User.whatsapp.isnot(None))
             .filter(func.regexp_replace(User.whatsapp, r"\D", "", "g").in_(list(digits_variants)))
             .order_by(User.id.asc())
             .first()
@@ -84,67 +119,38 @@ def _find_user_by_whatsapp(identifier: str) -> Optional[User]:
         logger.debug("regexp_replace indisponivel para User.whatsapp: %s", err)
 
     # Fallback em Python (quando DB nao suporta regexp_replace)
-    candidates = User.query.filter(User.whatsapp.isnot(None)).order_by(User.id.asc()).all()
+    candidates = (
+        User.query.filter(User.is_active.is_(True), User.whatsapp.isnot(None))
+        .order_by(User.id.asc())
+        .all()
+    )
     for candidate in candidates:
         if _digits_only(candidate.whatsapp) in digits_variants:
             return candidate
     return None
 
 
-def _find_employee_user_by_whatsapp(identifier: str) -> Optional[User]:
-    variants = _build_phone_variants(identifier)
+def _find_user_by_instagram(identifier: str) -> Optional[User]:
+    variants = _build_instagram_variants(identifier)
     if not variants:
         return None
 
-    base_query = Employee.query.filter(Employee.user_id.isnot(None))
-
-    employee = (
-        base_query.filter(
-            or_(Employee.whatsapp.in_(list(variants)), Employee.phone.in_(list(variants)))
+    return (
+        User.query.filter(
+            User.is_active.is_(True),
+            User.instagram.isnot(None),
+            func.lower(func.trim(User.instagram)).in_(list(variants)),
         )
-        .order_by(Employee.id.asc())
+        .order_by(User.id.asc())
         .first()
     )
-    if employee and employee.user_id:
-        user = db.session.get(User, employee.user_id)
-        if user:
-            return user
-
-    digits_variants = {_digits_only(v) for v in variants if _digits_only(v)}
-    if not digits_variants:
-        return None
-
-    try:
-        employee = (
-            base_query.filter(
-                or_(
-                    func.regexp_replace(func.coalesce(Employee.whatsapp, ""), r"\D", "", "g").in_(list(digits_variants)),
-                    func.regexp_replace(func.coalesce(Employee.phone, ""), r"\D", "", "g").in_(list(digits_variants)),
-                )
-            )
-            .order_by(Employee.id.asc())
-            .first()
-        )
-        if employee and employee.user_id:
-            user = db.session.get(User, employee.user_id)
-            if user:
-                return user
-    except Exception as err:
-        logger.debug("regexp_replace indisponivel para Employee.whatsapp/phone: %s", err)
-
-    employees = base_query.order_by(Employee.id.asc()).all()
-    for candidate in employees:
-        if _digits_only(candidate.whatsapp) in digits_variants or _digits_only(candidate.phone) in digits_variants:
-            user = db.session.get(User, candidate.user_id)
-            if user:
-                return user
-    return None
 
 
 def resolve_user_identity(identifier: str, channel: str) -> Optional[User]:
     """
     Resolve a identidade de um usuario baseado em um identificador de canal.
     Canais suportados: telegram, whatsapp, email, instagram.
+    Politica de seguranca: somente usuarios ativos cadastrados em `users`.
     """
     if not identifier:
         return None
@@ -155,47 +161,31 @@ def resolve_user_identity(identifier: str, channel: str) -> Optional[User]:
         return None
 
     if channel == "telegram":
-        user = User.query.filter(func.trim(User.telegram) == identifier).order_by(User.id.asc()).first()
-        if user:
-            return user
-
-        employee = (
-            Employee.query.filter(Employee.user_id.isnot(None), func.trim(Employee.telegram) == identifier)
-            .order_by(Employee.id.asc())
+        return (
+            User.query.filter(
+                User.is_active.is_(True),
+                func.trim(User.telegram) == identifier,
+            )
+            .order_by(User.id.asc())
             .first()
         )
-        if employee and employee.user_id:
-            return db.session.get(User, employee.user_id)
-        return None
 
     if channel == "whatsapp":
-        user = _find_user_by_whatsapp(identifier)
-        if user:
-            return user
-        return _find_employee_user_by_whatsapp(identifier)
+        return _find_user_by_whatsapp(identifier)
 
     if channel == "email":
         normalized_email = _normalize_email(identifier)
-        user = User.query.filter(func.lower(User.email) == normalized_email).order_by(User.id.asc()).first()
-        if user:
-            return user
-
-        employee = (
-            Employee.query.filter(
-                Employee.user_id.isnot(None),
-                func.lower(Employee.email) == normalized_email
+        return (
+            User.query.filter(
+                User.is_active.is_(True),
+                func.lower(User.email) == normalized_email,
             )
-            .order_by(Employee.id.asc())
+            .order_by(User.id.asc())
             .first()
         )
-        if employee and employee.user_id:
-            return db.session.get(User, employee.user_id)
-        return None
 
     if channel == "instagram":
-        # Instagram pode reutilizar identificador de outro canal.
-        # Campo dedicado ainda nao existe no modelo.
-        return None
+        return _find_user_by_instagram(identifier)
 
     logger.warning("Canal de identidade nao suportado: %s", channel)
     return None

@@ -9,6 +9,7 @@ class UserCreateSchema(BaseModel):
     password: str = Field(..., min_length=6)
     whatsapp: Optional[str] = Field(None, max_length=20)
     telegram: Optional[str] = Field(None, max_length=50)
+    instagram: Optional[str] = Field(None, max_length=100)
     role: str = Field("collaborator", pattern="^(admin|collaborator|client)$")
 
 class UserUpdateSchema(BaseModel):
@@ -17,6 +18,7 @@ class UserUpdateSchema(BaseModel):
     name: Optional[str] = Field(None, min_length=2, max_length=100)
     whatsapp: Optional[str] = Field(None, max_length=20)
     telegram: Optional[str] = Field(None, max_length=50)
+    instagram: Optional[str] = Field(None, max_length=100)
     role: Optional[str] = Field(None, pattern="^(admin|collaborator|client)$")
     is_active: Optional[bool] = None
 

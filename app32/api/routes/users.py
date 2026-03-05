@@ -93,7 +93,8 @@ def create_user():
             email=validated_data.email,
             role=validated_data.role,
             whatsapp=validated_data.whatsapp,
-            telegram=validated_data.telegram
+            telegram=validated_data.telegram,
+            instagram=validated_data.instagram,
         )
         user.set_password(validated_data.password)
         
@@ -124,6 +125,7 @@ def update_user(user_id):
         if validated_data.role is not None and current_user.role == 'admin': user.role = validated_data.role
         if validated_data.whatsapp is not None: user.whatsapp = validated_data.whatsapp
         if validated_data.telegram is not None: user.telegram = validated_data.telegram
+        if validated_data.instagram is not None: user.instagram = validated_data.instagram
         if validated_data.is_active is not None and current_user.role == 'admin': user.is_active = validated_data.is_active
         
         db.session.commit()

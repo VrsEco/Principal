@@ -19,7 +19,15 @@ class AuthService:
     """Service for user authentication and management"""
 
     @staticmethod
-    def create_user(email, password, name, role="collaborator"):
+    def create_user(
+        email,
+        password,
+        name,
+        role="collaborator",
+        whatsapp=None,
+        telegram=None,
+        instagram=None,
+    ):
         """
         Create a new user
 
@@ -39,7 +47,15 @@ class AuthService:
                 return None
 
             # Create new user
-            user = User(email=email, name=name, role=role, is_active=True)
+            user = User(
+                email=email,
+                name=name,
+                role=role,
+                whatsapp=whatsapp,
+                telegram=telegram,
+                instagram=instagram,
+                is_active=True,
+            )
             user.set_password(password)
 
             db.session.add(user)
@@ -158,7 +174,15 @@ class AuthService:
             raise e
 
     @staticmethod
-    def update_user_profile(user, name=None, role=None, is_active=None):
+    def update_user_profile(
+        user,
+        name=None,
+        role=None,
+        is_active=None,
+        whatsapp=None,
+        telegram=None,
+        instagram=None,
+    ):
         """
         Update user profile
 
@@ -176,6 +200,9 @@ class AuthService:
                 "name": user.name,
                 "role": user.role,
                 "is_active": user.is_active,
+                "whatsapp": getattr(user, "whatsapp", None),
+                "telegram": getattr(user, "telegram", None),
+                "instagram": getattr(user, "instagram", None),
             }
 
             if name is not None:
@@ -184,6 +211,12 @@ class AuthService:
                 user.role = role
             if is_active is not None:
                 user.is_active = is_active
+            if whatsapp is not None:
+                user.whatsapp = whatsapp
+            if telegram is not None:
+                user.telegram = telegram
+            if instagram is not None:
+                user.instagram = instagram
 
             user.updated_at = datetime.utcnow()
             db.session.commit()
@@ -198,6 +231,9 @@ class AuthService:
                     "name": user.name,
                     "role": user.role,
                     "is_active": user.is_active,
+                    "whatsapp": getattr(user, "whatsapp", None),
+                    "telegram": getattr(user, "telegram", None),
+                    "instagram": getattr(user, "instagram", None),
                 },
                 description=f"Perfil atualizado por {user.name}",
             )

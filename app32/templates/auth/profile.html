@@ -186,6 +186,12 @@
                     placeholder="Ex: 123456789" data-ref="10">
             </div>
 
+            <div class="form-group">
+                <label for="instagram">Instagram (ID ou @usuario)</label>
+                <input type="text" id="instagram" name="instagram" value="{{ user.instagram if user else '' }}"
+                    placeholder="Ex: @empresa ou 1784..." data-ref="11">
+            </div>
+
             {% if user and user.role == 'admin' %}
             <div class="form-group">
                 <label for="role">Perfil</label>
@@ -247,6 +253,7 @@
             name: document.getElementById('name').value,
             whatsapp: document.getElementById('whatsapp').value,
             telegram: document.getElementById('telegram').value,
+            instagram: document.getElementById('instagram').value,
         {% if user and user.role == 'admin' %}
         role: document.getElementById('role').value,
             {% endif %}

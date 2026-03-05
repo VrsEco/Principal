@@ -8,9 +8,16 @@ Substitui conexões diretas ao SQLite
 from sqlalchemy import create_engine, text
 from sqlalchemy.engine.url import make_url
 from urllib.parse import quote_plus
+from pathlib import Path
 
 from utils.env_helpers import normalize_database_url, normalize_docker_host
 import os
+from dotenv import load_dotenv
+
+# Carrega .env local do projeto (app32) cedo para evitar fallback acidental
+# para defaults quando este módulo é importado antes de config.py.
+PROJECT_ENV_PATH = Path(__file__).resolve().parent.parent / ".env"
+load_dotenv(dotenv_path=PROJECT_ENV_PATH)
 
 # Configurações do PostgreSQL
 # Sempre construir a URL a partir de variáveis individuais para garantir encoding correto

@@ -9618,6 +9618,7 @@ def get_connection():
 
 
 def ensure_integrations_tables():
+    conn = None
     try:
         conn = get_connection()
         cursor = conn.cursor()
@@ -9635,23 +9636,65 @@ def ensure_integrations_tables():
             )
         """
         )
-        cursor.execute(
-            """
-            CREATE TABLE IF NOT EXISTS agent_integrations (
-                agent_id VARCHAR(64) NOT NULL,
-                integration_id VARCHAR(64) NOT NULL,
-                PRIMARY KEY (agent_id, integration_id),
-                FOREIGN KEY (agent_id) REFERENCES ai_agents(id) ON DELETE CASCADE,
-                FOREIGN KEY (integration_id) REFERENCES integrations(id) ON DELETE CASCADE
-            )
-        """
-        )
         conn.commit()
-        conn.close()
+
+        try:
+            cursor.execute(
+                """
+                CREATE TABLE IF NOT EXISTS agent_integrations (
+                    agent_id VARCHAR(64) NOT NULL,
+                    integration_id VARCHAR(64) NOT NULL,
+                    PRIMARY KEY (agent_id, integration_id),
+                    FOREIGN KEY (agent_id) REFERENCES ai_agents(id) ON DELETE CASCADE,
+                    FOREIGN KEY (integration_id) REFERENCES integrations(id) ON DELETE CASCADE
+                )
+            """
+            )
+            conn.commit()
+        except Exception as fk_error:
+            # Fallback para bases legadas onde ai_agents.id não possui UNIQUE/PK.
+            conn.rollback()
+            print(
+                "Warning: creating agent_integrations without FK to ai_agents due schema mismatch:",
+                fk_error,
+            )
+            cursor = conn.cursor()
+            cursor.execute(
+                """
+                CREATE TABLE IF NOT EXISTS agent_integrations (
+                    agent_id VARCHAR(64) NOT NULL,
+                    integration_id VARCHAR(64) NOT NULL,
+                    PRIMARY KEY (agent_id, integration_id),
+                    FOREIGN KEY (integration_id) REFERENCES integrations(id) ON DELETE CASCADE
+                )
+            """
+            )
+            conn.commit()
+
         return True
     except Exception as e:
+        if conn:
+            conn.rollback()
         print(f"Error ensuring integrations tables: {e}")
         return False
+    finally:
+        if conn:
+            conn.close()
+
+
+def _parse_integration_config(config_value: Any) -> Dict[str, Any]:
+    """Normalize integration config from DB to a dictionary."""
+    if not config_value:
+        return {}
+    if isinstance(config_value, dict):
+        return config_value
+    if isinstance(config_value, str):
+        try:
+            parsed = json.loads(config_value)
+            return parsed if isinstance(parsed, dict) else {"value": parsed}
+        except (json.JSONDecodeError, TypeError, ValueError):
+            return {"raw": config_value}
+    return {}
 
 
 def list_integrations():
@@ -9666,10 +9709,7 @@ def list_integrations():
         conn.close()
         items = []
         for r in rows:
-            try:
-                cfg = json.loads(r[5]) if r[5] else {}
-            except (json.JSONDecodeError, TypeError, ValueError):
-                cfg = {}
+            cfg = _parse_integration_config(r[5])
             items.append(
                 {
                     "id": r[0],
@@ -9692,10 +9732,7 @@ def _serialize_integration_row(row):
     """Helper to convert integration row tuples into dictionaries."""
     if not row:
         return None
-    try:
-        cfg = json.loads(row[5]) if row[5] else {}
-    except (json.JSONDecodeError, TypeError, ValueError):
-        cfg = {}
+    cfg = _parse_integration_config(row[5])
     return {
         "id": row[0],
         "name": row[1],

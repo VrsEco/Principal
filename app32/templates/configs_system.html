@@ -322,6 +322,38 @@
       </div>
     </div>
 
+    <!-- Card 4: Conexões e Integrações -->
+    <div class="system-card" onclick="window.location.href='{{ url_for('integrations.integrations_page') }}';">
+      <div class="card-header">
+        <div class="card-icon settings">🔌</div>
+        <div class="card-content">
+          <h3>Integrações e Conexões</h3>
+          <p>Configure IA, E-mail (SMTP/POP3/IMAP), WhatsApp, Telegram e Instagram.</p>
+          <span class="card-badge badge-active">✅ Ativo</span>
+        </div>
+      </div>
+
+      <div class="card-stats">
+        <div class="stat-item">
+          <span class="stat-value">5</span>
+          <span class="stat-label">Canais</span>
+        </div>
+        <div class="stat-item">
+          <span class="stat-value">API</span>
+          <span class="stat-label">Webhook</span>
+        </div>
+        <div class="stat-item">
+          <span class="stat-value">POP3</span>
+          <span class="stat-label">Inbound</span>
+        </div>
+      </div>
+
+      <div class="quick-actions">
+        <a href="{{ url_for('integrations.integrations_page') }}" class="action-btn primary"
+          onclick="event.stopPropagation()">Abrir Integrações</a>
+      </div>
+    </div>
+
     <!-- Card 4: Monitoramento -->
     <div class="system-card">
       <div class="card-header">

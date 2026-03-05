@@ -32,13 +32,16 @@ if __name__ == '__main__':
     
     public_url = start_ngrok(port)
     
-    if public_url:
+    dev_token = os.environ.get("TELEGRAM_BOT_TOKEN_DEV")
+    if public_url and dev_token:
         print("\n🤖 [TELEGRAM] Registrando Webhook na API do Telegram...")
         try:
             # Chama a função que criamos no telegram_webhook.py
             setup_webhook(public_url)
         except Exception as e:
             print(f"❌ Erro ao registrar Webhook: {str(e)}")
+    elif public_url and not dev_token:
+        print("\n⚠️ [TELEGRAM] TELEGRAM_BOT_TOKEN_DEV não configurado. Webhook DEV não será registrado para evitar mistura com produção.")
     
     app = create_app()
     print(f"\n⚡ [FLASK] Iniciando Servidor na porta {port}...")

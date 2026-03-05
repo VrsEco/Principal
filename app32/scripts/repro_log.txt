@@ -1,0 +1,11 @@
+--- Setup ---
+Inactive Company: Eua - Moveis Planejados (ID: 4)
+Project: Concepção Empresa de Móveis - EUA - Projeto de Implantacao (ID: 16) for company 4
+Using Employee: Fabiano - Gerente Adm/Fin (ID: 1)
+Task created: REPRO BUG TASK (ID: 173) for employee 1
+
+--- Simulation ---
+Task ID: 172, What: REPRO BUG TASK, Company: Eua - Moveis Planejados, Active: False
+Task ID: 173, What: REPRO BUG TASK, Company: Eua - Moveis Planejados, Active: False
+
+RESULT: Bug Reproduced! Task from inactive company is visible.
