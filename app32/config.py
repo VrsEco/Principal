@@ -80,6 +80,7 @@ class Config:
     WHATSAPP_API_KEY = os.environ.get("WHATSAPP_API_KEY")
     WHATSAPP_WEBHOOK_URL = os.environ.get("WHATSAPP_WEBHOOK_URL")
     WHATSAPP_INSTANCE_ID = os.environ.get("WHATSAPP_INSTANCE_ID")
+    WHATSAPP_CLIENT_TOKEN = os.environ.get("WHATSAPP_CLIENT_TOKEN")
     TWILIO_ACCOUNT_SID = os.environ.get("TWILIO_ACCOUNT_SID")
     TWILIO_AUTH_TOKEN = os.environ.get("TWILIO_AUTH_TOKEN")
 

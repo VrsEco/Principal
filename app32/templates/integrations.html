@@ -146,6 +146,8 @@
                       id="z-instance-id" class="form-control" /></div>
                   <div class="form-group"><label class="form-label">Token</label><input type="password" id="z-api-key"
                       class="form-control" /></div>
+                  <div class="form-group"><label class="form-label">Client Token (Opcional)</label><input type="password"
+                      id="z-client-token" class="form-control" placeholder="Necessário em contas Z-API com segurança adicional" /></div>
                 </div>
                 <div id="twilio-config" class="provider-config" style="display: none;">
                   <div class="form-group"><label class="form-label">Account SID</label><input type="text"
@@ -1055,6 +1057,8 @@
       if (provider === 'z-api') {
         document.getElementById('z-api-key').value = unmaskFormValue(config.api_key);
         document.getElementById('z-instance-id').value = config.instance_id || '';
+        const clientTokenEl = document.getElementById('z-client-token');
+        if (clientTokenEl) clientTokenEl.value = unmaskFormValue(config.client_token);
       } else if (provider === 'twilio') {
         document.getElementById('twilio-account-sid').value = config.account_sid || config.api_key || '';
         document.getElementById('twilio-auth-token').value = unmaskFormValue(config.auth_token);
@@ -1407,6 +1411,8 @@
       if (provider === 'z-api') {
         config.api_key = document.getElementById('z-api-key').value;
         config.instance_id = document.getElementById('z-instance-id').value;
+        const clientTokenEl = document.getElementById('z-client-token');
+        config.client_token = clientTokenEl ? clientTokenEl.value : '';
       } else if (provider === 'twilio') {
         config.account_sid = document.getElementById('twilio-account-sid').value;
         config.auth_token = document.getElementById('twilio-auth-token').value;

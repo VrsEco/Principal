@@ -39,6 +39,7 @@ FIELD_LABELS = {
     "inbound_username": "Usuario inbound",
     "inbound_password": "Senha inbound",
     "instance_id": "Instance ID",
+    "client_token": "Client Token (Z-API)",
     "account_sid": "Account SID",
     "auth_token": "Auth Token",
     "whatsapp_number": "Numero WhatsApp",
@@ -154,6 +155,7 @@ SERVICE_REQUIREMENTS = {
                 "external_services": [
                     "Conta Z-API",
                     "Instancia ativa no WhatsApp provider",
+                    "Se sua conta exigir seguranca adicional, informe tambem o Client Token",
                 ],
             },
             "twilio": {
@@ -373,6 +375,7 @@ def _default_service_config(service: str) -> Dict[str, Any]:
                 "provider": provider,
                 "api_key": os.environ.get("WHATSAPP_API_KEY"),
                 "instance_id": os.environ.get("WHATSAPP_INSTANCE_ID"),
+                "client_token": os.environ.get("WHATSAPP_CLIENT_TOKEN"),
                 "webhook_url": os.environ.get("WHATSAPP_WEBHOOK_URL"),
                 "account_sid": account_sid,
                 "auth_token": os.environ.get("TWILIO_AUTH_TOKEN"),
@@ -818,6 +821,7 @@ def _env_overrides_for_test(service: str, config: Dict[str, Any]) -> Dict[str, A
             "WHATSAPP_PROVIDER": provider,
             "WHATSAPP_API_KEY": config.get("api_key") if provider != "twilio" else account_sid,
             "WHATSAPP_INSTANCE_ID": config.get("instance_id") if provider != "twilio" else whatsapp_number,
+            "WHATSAPP_CLIENT_TOKEN": config.get("client_token"),
             "WHATSAPP_WEBHOOK_URL": config.get("webhook_url"),
             "TWILIO_ACCOUNT_SID": account_sid,
             "TWILIO_AUTH_TOKEN": config.get("auth_token"),

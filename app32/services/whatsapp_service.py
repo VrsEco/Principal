@@ -15,6 +15,28 @@ class WhatsAppService:
         self.api_key = os.environ.get("WHATSAPP_API_KEY")
         self.webhook_url = os.environ.get("WHATSAPP_WEBHOOK_URL")
         self.instance_id = os.environ.get("WHATSAPP_INSTANCE_ID")
+        self.client_token = os.environ.get("WHATSAPP_CLIENT_TOKEN")
+
+    def _zapi_headers(self) -> Dict[str, str]:
+        headers: Dict[str, str] = {}
+        if self.client_token:
+            headers["Client-Token"] = str(self.client_token).strip()
+        return headers
+
+    @staticmethod
+    def _extract_provider_error(response: requests.Response) -> str:
+        try:
+            payload = response.json()
+            if isinstance(payload, dict):
+                return (
+                    payload.get("error")
+                    or payload.get("message")
+                    or str(payload)
+                )
+            return str(payload)
+        except Exception:
+            text = (response.text or "").strip()
+            return text[:300] if text else "Sem detalhe retornado pelo provedor."
 
     def send_message(
         self, phone_number: str, message: str, media_url: Optional[str] = None
@@ -64,8 +86,22 @@ class WhatsAppService:
             payload["media"] = media_url
 
         try:
-            response = requests.post(url, json=payload, timeout=30)
-            return response.status_code == 200
+            response = requests.post(
+                url,
+                json=payload,
+                headers=self._zapi_headers(),
+                timeout=30,
+            )
+            if response.status_code == 200:
+                return True
+
+            detail = self._extract_provider_error(response)
+            logger.info(
+                "Z-API send_message falhou: status=%s detail=%s",
+                response.status_code,
+                detail,
+            )
+            return False
         except Exception as e:
             logger.info(f"Z-API error: {e}")
             return False
@@ -171,7 +207,7 @@ class WhatsAppService:
         try:
             # Testar conexÃ£o Z-API
             url = f"https://api.z-api.io/instances/{self.instance_id}/token/{self.api_key}/status"
-            response = requests.get(url, timeout=10)
+            response = requests.get(url, headers=self._zapi_headers(), timeout=10)
 
             if response.status_code == 200:
                 result = response.json()
@@ -188,9 +224,17 @@ class WhatsAppService:
                         "provider": "z-api",
                     }
             else:
+                detail = self._extract_provider_error(response)
+                hint = ""
+                if (
+                    response.status_code == 400
+                    and "client-token" in detail.lower()
+                    and not self.client_token
+                ):
+                    hint = " | Informe o Client Token no canal WhatsApp (Z-API)."
                 return {
                     "success": False,
-                    "error": f"Erro HTTP {response.status_code}",
+                    "error": f"Erro HTTP {response.status_code}: {detail}{hint}",
                     "provider": "z-api",
                 }
         except Exception as e:
