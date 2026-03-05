@@ -17,6 +17,50 @@ logger = logging.getLogger(__name__)
 EMAIL_FALLBACK_SUFFIX = "Registros acima da capacidade deste canal, quer que eu te envie por e-mail?"
 EMAIL_FALLBACK_FRAGMENT = "Registros acima da capacidade deste canal"
 
+# Tokens de identidade visual (e-mail) - Versus Gestão Corporativa
+SUMMARY_EMAIL_THEME = {
+    "page_bg": "#f2faf7",
+    "header_gradient": "linear-gradient(135deg,#050505 0%,#0f172a 55%,#0f766e 100%)",
+    "card_bg": "#ffffff",
+    "card_border": "#cceee4",
+    "signature_accent": "#0f766e",
+    "text_primary": "#0f172a",
+    "text_secondary": "#334155",
+    "text_muted": "#64748b",
+    "summary_chip_bg": "#ecfdf5",
+    "summary_chip_border": "#0f766e",
+    "summary_chip_text": "#065f46",
+    "company_box_bg": "#f6fffb",
+    "company_box_border": "#cceee4",
+    "company_box_border_accent": "#0f766e",
+    "company_box_label": "#065f46",
+    "item_bg_soft": "#f6fffb",
+    "warning_bg": "#fffbeb",
+    "warning_border": "#f59e0b",
+    "warning_text": "#92400e",
+}
+
+SUMMARY_EMAIL_SECTION_STYLES = {
+    "projetos": {
+        "label": "Projetos",
+        "color": "#0f766e",
+        "bg": "#ecfdf5",
+        "icon": "📁",
+    },
+    "processos": {
+        "label": "Processos",
+        "color": "#166534",
+        "bg": "#f0fdf4",
+        "icon": "⚙️",
+    },
+    "reunioes": {
+        "label": "Reuniões",
+        "color": "#115e59",
+        "bg": "#f0fdfa",
+        "icon": "🤝",
+    },
+}
+
 
 def _format_my_work_report_compat(report_formatter, **kwargs):
     formatter = getattr(report_formatter, "_format_my_work_report")
@@ -344,6 +388,7 @@ def _build_summary_email_subject(user_name: str, date_range: str, today: date) -
 
 
 def _render_summary_email_html(user_name: str, range_label: str, body_text: str, generated_at: str) -> str:
+    theme = SUMMARY_EMAIL_THEME
     safe_user = html.escape(str(user_name or "Colaborador"))
     safe_range = html.escape(str(range_label or "de hoje"))
     safe_generated_at = html.escape(str(generated_at or ""))
@@ -352,9 +397,9 @@ def _render_summary_email_html(user_name: str, range_label: str, body_text: str,
     return f"""
 <!doctype html>
 <html lang="pt-BR">
-  <body style="margin:0;padding:0;background:#f2faf7;font-family:Segoe UI,Arial,sans-serif;color:#0f172a;">
+  <body style="margin:0;padding:0;background:{theme['page_bg']};font-family:Segoe UI,Arial,sans-serif;color:{theme['text_primary']};">
     <div style="max-width:920px;margin:24px auto;padding:0 14px;">
-      <div style="background:linear-gradient(135deg,#050505 0%,#0f172a 55%,#0f766e 100%);color:#fff;border-radius:16px;padding:24px 28px;box-shadow:0 8px 22px rgba(15,23,42,.22);">
+      <div style="background:{theme['header_gradient']};color:#fff;border-radius:16px;padding:24px 28px;box-shadow:0 8px 22px rgba(15,23,42,.22);">
         <div style="font-size:11px;opacity:.95;letter-spacing:.8px;text-transform:uppercase;font-weight:700;">Sapiens • Versus Gestão Corporativa</div>
         <h1 style="margin:10px 0 6px;font-size:25px;line-height:1.25;font-weight:800;">Resumo de atividades {safe_range}</h1>
         <div style="font-size:14px;opacity:.98;line-height:1.5;">
@@ -363,24 +408,24 @@ def _render_summary_email_html(user_name: str, range_label: str, body_text: str,
         </div>
       </div>
 
-      <div style="background:#ffffff;border:1px solid #cceee4;border-radius:16px;padding:22px 24px;margin-top:14px;line-height:1.65;">
+      <div style="background:{theme['card_bg']};border:1px solid {theme['card_border']};border-radius:16px;padding:22px 24px;margin-top:14px;line-height:1.65;">
         {body_html}
       </div>
 
-      <div style="background:#ffffff;border:1px solid #cceee4;border-radius:16px;padding:18px 24px;margin-top:14px;">
-        <div style="font-size:16px;font-weight:800;color:#0f172a;">Sapiens Versus</div>
-        <div style="font-size:14px;color:#0f766e;font-weight:700;margin-top:2px;">Versus Gestão Corporativa</div>
-        <div style="font-size:13px;color:#334155;margin-top:8px;">
+      <div style="background:{theme['card_bg']};border:1px solid {theme['card_border']};border-radius:16px;padding:18px 24px;margin-top:14px;">
+        <div style="font-size:16px;font-weight:800;color:{theme['text_primary']};">Sapiens Versus</div>
+        <div style="font-size:14px;color:{theme['signature_accent']};font-weight:700;margin-top:2px;">Versus Gestão Corporativa</div>
+        <div style="font-size:13px;color:{theme['text_secondary']};margin-top:8px;">
           E-mail:
-          <a href="mailto:sapiens@gestaoversus.com.br" style="color:#0f766e;text-decoration:none;">sapiens@gestaoversus.com.br</a>
+          <a href="mailto:sapiens@gestaoversus.com.br" style="color:{theme['signature_accent']};text-decoration:none;">sapiens@gestaoversus.com.br</a>
         </div>
-        <div style="font-size:13px;color:#334155;margin-top:4px;">Telefone: 71 9 8238-5225</div>
+        <div style="font-size:13px;color:{theme['text_secondary']};margin-top:4px;">Telefone: 71 9 8238-5225</div>
         <div style="margin-top:14px;">
           <img src="cid:versus_signature_logo" alt="Versus Gestão Corporativa" style="max-width:280px;width:100%;height:auto;display:block;border:0;">
         </div>
       </div>
 
-      <div style="text-align:center;color:#64748b;font-size:12px;margin:14px 0 6px;">
+      <div style="text-align:center;color:{theme['text_muted']};font-size:12px;margin:14px 0 6px;">
         Mensagem automática enviada pelo Sapiens.
       </div>
     </div>
@@ -390,6 +435,7 @@ def _render_summary_email_html(user_name: str, range_label: str, body_text: str,
 
 
 def _render_summary_body_html(body_text: str) -> str:
+    theme = SUMMARY_EMAIL_THEME
     lines = str(body_text or "").splitlines()
     parts = []
     current_section = None
@@ -399,26 +445,7 @@ def _render_summary_body_html(body_text: str) -> str:
         normalized = unicodedata.normalize("NFD", str(text or "").lower().strip())
         return "".join(ch for ch in normalized if unicodedata.category(ch) != "Mn")
 
-    section_styles = {
-        "projetos": {
-            "label": "Projetos",
-            "color": "#0f766e",
-            "bg": "#ecfdf5",
-            "icon": "📁",
-        },
-        "processos": {
-            "label": "Processos",
-            "color": "#166534",
-            "bg": "#f0fdf4",
-            "icon": "⚙️",
-        },
-        "reunioes": {
-            "label": "Reuniões",
-            "color": "#115e59",
-            "bg": "#f0fdfa",
-            "icon": "🤝",
-        },
-    }
+    section_styles = SUMMARY_EMAIL_SECTION_STYLES
 
     for raw in lines:
         line = raw.rstrip()
@@ -431,25 +458,25 @@ def _render_summary_body_html(body_text: str) -> str:
 
         if lowered.startswith("olá,") or lowered.startswith("ola,"):
             parts.append(
-                f"<div style='font-size:17px;font-weight:800;color:#0f172a;margin:0 0 8px;'>{html.escape(stripped)}</div>"
+                f"<div style='font-size:17px;font-weight:800;color:{theme['text_primary']};margin:0 0 8px;'>{html.escape(stripped)}</div>"
             )
             continue
 
         if lowered.startswith("sou o sapiens"):
             parts.append(
-                f"<div style='font-size:14px;color:#334155;margin:0 0 10px;'>{html.escape(stripped)}</div>"
+                f"<div style='font-size:14px;color:{theme['text_secondary']};margin:0 0 10px;'>{html.escape(stripped)}</div>"
             )
             continue
 
         if "aprovações pendentes" in lowered or "aprovacoes pendentes" in lowered:
             parts.append(
-                f"<div style='margin:10px 0 8px;padding:8px 12px;border-left:4px solid #f59e0b;background:#fffbeb;color:#92400e;font-size:13px;font-weight:800;border-radius:8px;'>{html.escape(stripped)}</div>"
+                f"<div style='margin:10px 0 8px;padding:8px 12px;border-left:4px solid {theme['warning_border']};background:{theme['warning_bg']};color:{theme['warning_text']};font-size:13px;font-weight:800;border-radius:8px;'>{html.escape(stripped)}</div>"
             )
             continue
 
         if lowered.startswith("resumo das atividades"):
             parts.append(
-                f"<div style='margin:10px 0 8px;padding:8px 12px;border-left:4px solid #0f766e;background:#ecfdf5;color:#065f46;font-size:13px;font-weight:800;border-radius:8px;'>{html.escape(stripped)}</div>"
+                f"<div style='margin:10px 0 8px;padding:8px 12px;border-left:4px solid {theme['summary_chip_border']};background:{theme['summary_chip_bg']};color:{theme['summary_chip_text']};font-size:13px;font-weight:800;border-radius:8px;'>{html.escape(stripped)}</div>"
             )
             continue
 
@@ -462,11 +489,11 @@ def _render_summary_body_html(body_text: str) -> str:
         if expect_company_name and line.startswith("- "):
             company_name = html.escape(line[2:].strip())
             parts.append(
-                "<div style='margin:12px 0 8px;padding:10px 14px;border:1px solid #cceee4;"
-                "border-left:5px solid #0f766e;border-radius:12px;background:#f6fffb;'>"
-                "<div style='font-size:11px;font-weight:800;color:#065f46;letter-spacing:.6px;"
+                f"<div style='margin:12px 0 8px;padding:10px 14px;border:1px solid {theme['company_box_border']};"
+                f"border-left:5px solid {theme['company_box_border_accent']};border-radius:12px;background:{theme['company_box_bg']};'>"
+                f"<div style='font-size:11px;font-weight:800;color:{theme['company_box_label']};letter-spacing:.6px;"
                 "text-transform:uppercase;margin-bottom:3px;'>Empresa</div>"
-                f"<div style='font-size:16px;font-weight:800;color:#0f172a;'>{company_name}</div>"
+                f"<div style='font-size:16px;font-weight:800;color:{theme['text_primary']};'>{company_name}</div>"
                 "</div>"
             )
             expect_company_name = False
@@ -502,7 +529,7 @@ def _render_summary_body_html(body_text: str) -> str:
                 content_raw = "Agendamento de Reuniões"
 
             content = html.escape(content_raw)
-            section_color = section_styles[current_section]["color"] if current_section else "#334155"
+            section_color = section_styles[current_section]["color"] if current_section else theme["text_secondary"]
             parts.append(
                 f"<div style='margin:4px 0 4px 44px;font-size:12.5px;font-weight:700;color:{section_color};'>"
                 f"• {content}</div>"
@@ -515,7 +542,7 @@ def _render_summary_body_html(body_text: str) -> str:
                 if current_section == "reunioes":
                     section_color = section_styles[current_section]["color"]
                     parts.append(
-                        f"<div style='margin:4px 0 4px 64px;padding:7px 10px;background:#f6fffb;"
+                        f"<div style='margin:4px 0 4px 64px;padding:7px 10px;background:{theme['item_bg_soft']};"
                         f"border-left:3px solid {section_color};border-radius:8px;font-size:13px;color:#1e293b;'>"
                         f"{content}</div>"
                     )
@@ -528,15 +555,15 @@ def _render_summary_body_html(body_text: str) -> str:
                 continue
 
             parts.append(
-                f"<div style='margin:4px 0 4px 8px;font-size:14px;color:#0f172a;'>• {content}</div>"
+                f"<div style='margin:4px 0 4px 8px;font-size:14px;color:{theme['text_primary']};'>• {content}</div>"
             )
             continue
 
         if line.startswith("    - "):
             content = html.escape(line[6:].strip())
-            section_color = section_styles[current_section]["color"] if current_section else "#334155"
+            section_color = section_styles[current_section]["color"] if current_section else theme["text_secondary"]
             parts.append(
-                f"<div style='margin:4px 0 4px 64px;padding:7px 10px;background:#f6fffb;"
+                f"<div style='margin:4px 0 4px 64px;padding:7px 10px;background:{theme['item_bg_soft']};"
                 f"border-left:3px solid {section_color};border-radius:8px;font-size:13px;color:#1e293b;'>"
                 f"{content}</div>"
             )
@@ -544,12 +571,12 @@ def _render_summary_body_html(body_text: str) -> str:
 
         if re.match(r"^\d+\.\s", stripped):
             parts.append(
-                f"<div style='margin:4px 0 4px 8px;font-size:14px;color:#0f172a;font-weight:600;'>{html.escape(stripped)}</div>"
+                f"<div style='margin:4px 0 4px 8px;font-size:14px;color:{theme['text_primary']};font-weight:600;'>{html.escape(stripped)}</div>"
             )
             continue
 
         parts.append(
-            f"<div style='margin:4px 0;font-size:14px;color:#1f2937;'>{html.escape(stripped)}</div>"
+            f"<div style='margin:4px 0;font-size:14px;color:{theme['text_primary']};'>{html.escape(stripped)}</div>"
         )
 
     return "".join(parts)
