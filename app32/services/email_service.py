@@ -7,7 +7,9 @@ import requests
 from email.mime.text import MIMEText
 from email.mime.multipart import MIMEMultipart
 from email.mime.base import MIMEBase
+from email.mime.image import MIMEImage
 from email import encoders
+from email.utils import formataddr
 from typing import List, Optional, Dict, Any
 from datetime import datetime
 
@@ -23,6 +25,10 @@ class EmailService:
         self.smtp_port = int(os.environ.get("MAIL_PORT") or 587)
         self.smtp_username = os.environ.get("MAIL_USERNAME")
         self.smtp_secret = os.environ.get("MAIL_PASSWORD")
+        self.default_sender = os.environ.get("MAIL_DEFAULT_SENDER")
+        self.from_name = os.environ.get(
+            "MAIL_FROM_NAME", "Sapiens (Versus Gestão Corporativa)"
+        )
         self.webhook_url = os.environ.get("EMAIL_WEBHOOK_URL")
         self.inbound_protocol = (
             os.environ.get("EMAIL_INBOUND_PROTOCOL", "").strip().lower()
@@ -89,7 +95,8 @@ class EmailService:
         try:
             # Create message
             msg = MIMEMultipart("alternative")
-            msg["From"] = self.smtp_username
+            sender_value = self._resolve_sender_header()
+            msg["From"] = sender_value
             msg["To"] = ", ".join(to_emails)
             msg["Subject"] = subject
 
@@ -101,6 +108,7 @@ class EmailService:
             if html_body:
                 html_part = MIMEText(html_body, "html", "utf-8")
                 msg.attach(html_part)
+                self._attach_inline_logo_if_requested(msg=msg, html_body=html_body)
 
             # Add attachments
             if attachments:
@@ -128,6 +136,47 @@ class EmailService:
         except Exception:
             logger.exception("SMTP error")
             return False
+
+    def _resolve_sender_header(self) -> str:
+        if self.default_sender:
+            return self.default_sender
+        if self.smtp_username:
+            return formataddr((self.from_name, self.smtp_username))
+        return self.from_name
+
+    def _attach_inline_logo_if_requested(self, msg: MIMEMultipart, html_body: Optional[str]) -> None:
+        if not html_body:
+            return
+
+        cid = "versus_signature_logo"
+        if f"cid:{cid}" not in html_body:
+            return
+
+        candidates = [
+            os.path.join(os.getcwd(), "static", "img", "logo-versus-slogan.png"),
+            os.path.join(os.getcwd(), "static", "img", "versus-logo.png"),
+            os.path.join(os.getcwd(), "static", "img", "logo-versus.png"),
+        ]
+
+        for file_path in candidates:
+            if not os.path.exists(file_path):
+                continue
+            try:
+                with open(file_path, "rb") as img_file:
+                    img = MIMEImage(img_file.read())
+                img.add_header("Content-ID", f"<{cid}>")
+                img.add_header(
+                    "Content-Disposition",
+                    "inline",
+                    filename=os.path.basename(file_path),
+                )
+                msg.attach(img)
+                return
+            except Exception:
+                logger.exception("Falha ao anexar logo inline para assinatura.")
+                return
+
+        logger.warning("Logo de assinatura solicitada, mas arquivo não encontrado em static/img.")
 
     def _send_webhook_email(
         self,

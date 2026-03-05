@@ -889,7 +889,7 @@ def get_user_summary(target_user: str = None, range: str = 'today'):
     Gera um relatório consolidado de atividades, processos e REUNIÕES de um usuário.
     Use isto para 'meu resumo' ou para 'resumo do Fulano'.
     :param target_user: ID (inteiro), Email ou Nome do usuário. Se omitido, busca o próprio resumo.
-    :param range: 'today' para resumo do dia ou 'week' para resumo da semana (domingo a sábado).
+    :param range: 'today', 'week', 'month', 'next_15_days' ou período customizado (DD/MM/AAAA a DD/MM/AAAA).
     """
     from services.proactive_service import get_user_summary_report
     from models.user import User

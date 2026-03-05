@@ -3,7 +3,7 @@ import re
 import unicodedata
 import logging
 from dataclasses import dataclass
-from datetime import datetime, date
+from datetime import datetime, date, timedelta
 from typing import Any, Dict, List, Optional, Tuple
 
 from sqlalchemy import and_, or_, func
@@ -193,6 +193,7 @@ def _prepare_option_flow(
             payload=collected,
             company_id=session.company_id,
             user_id=session.user_id,
+            channel=session.channel or "web",
         )
         if direct_execution is not None:
             _reset_session(session)
@@ -229,6 +230,7 @@ def _handle_confirmation_state(
             payload=payload,
             company_id=session.company_id,
             user_id=session.user_id,
+            channel=session.channel or "web",
         )
         if direct_execution is not None:
             _reset_session(session)
@@ -299,6 +301,7 @@ def _handle_missing_fields_state(
             payload=merged,
             company_id=session.company_id,
             user_id=session.user_id,
+            channel=session.channel or "web",
         )
         if direct_execution is not None:
             _reset_session(session)
@@ -1003,6 +1006,7 @@ def _try_execute_direct_option(
     payload: Dict[str, Any],
     company_id: Optional[int],
     user_id: int,
+    channel: str = "web",
 ) -> Optional[str]:
     """
     Execução direta para ações críticas/repetitivas, reduzindo variação do LLM.
@@ -1014,13 +1018,37 @@ def _try_execute_direct_option(
     if action == "process_instance.complete":
         return _execute_complete_process_instance(payload=payload, company_id=company_id, user_id=user_id)
     if action == "my_work.open":
-        return _execute_my_work_report(action=action, payload=payload, company_id=company_id, user_id=user_id)
+        return _execute_my_work_report(
+            action=action,
+            payload=payload,
+            company_id=company_id,
+            user_id=user_id,
+            channel=channel,
+        )
     if action == "my_work.overdue":
-        return _execute_my_work_report(action=action, payload=payload, company_id=company_id, user_id=user_id)
+        return _execute_my_work_report(
+            action=action,
+            payload=payload,
+            company_id=company_id,
+            user_id=user_id,
+            channel=channel,
+        )
     if action == "my_work.due_range":
-        return _execute_my_work_report(action=action, payload=payload, company_id=company_id, user_id=user_id)
+        return _execute_my_work_report(
+            action=action,
+            payload=payload,
+            company_id=company_id,
+            user_id=user_id,
+            channel=channel,
+        )
     if action == "my_work.completed_range":
-        return _execute_my_work_report(action=action, payload=payload, company_id=company_id, user_id=user_id)
+        return _execute_my_work_report(
+            action=action,
+            payload=payload,
+            company_id=company_id,
+            user_id=user_id,
+            channel=channel,
+        )
     if action == "meeting.schedule":
         return _execute_schedule_meeting(payload=payload, company_id=company_id, user_id=user_id)
     if action == "meeting.start":
@@ -1874,6 +1902,7 @@ def _execute_my_work_report(
     payload: Dict[str, Any],
     company_id: Optional[int],
     user_id: int,
+    channel: str = "web",
 ) -> str:
     company_ids, company_label_or_error = _resolve_company_ids_for_payload(
         payload=payload,
@@ -1890,7 +1919,8 @@ def _execute_my_work_report(
         if not start_date or not end_date:
             return (
                 "Para esta consulta, informe o periodo no formato:\n"
-                "periodo: 01/03/2026 a 07/03/2026"
+                "periodo: 01/03/2026 a 07/03/2026\n"
+                "ou use periodos relativos: hoje | esta semana | este mes | proximos 15 dias"
             )
 
     tasks = _load_project_tasks_report(
@@ -1905,14 +1935,24 @@ def _execute_my_work_report(
         start_date=start_date,
         end_date=end_date,
     )
+    meetings = _load_meetings_report(
+        company_ids=company_ids,
+        mode=action,
+        start_date=start_date,
+        end_date=end_date,
+    )
 
     return _format_my_work_report(
         action=action,
         company_label=company_label_or_error,
         tasks=tasks,
         processes=processes,
+        meetings=meetings,
         start_date=start_date,
         end_date=end_date,
+        channel=channel,
+        payload=payload,
+        user_id=user_id,
     )
 
 
@@ -2006,6 +2046,10 @@ def _resolve_period_from_payload(payload: Dict[str, Any]) -> Tuple[Optional[date
         if parsed:
             return parsed
 
+        relative = _resolve_relative_period_text(period_value)
+        if relative:
+            return relative
+
     d1 = _parse_completion_date(str(payload.get("data_inicial") or payload.get("start_date") or "").strip())
     d2 = _parse_completion_date(str(payload.get("data_final") or payload.get("end_date") or "").strip())
     if d1 and d2:
@@ -2014,6 +2058,50 @@ def _resolve_period_from_payload(payload: Dict[str, Any]) -> Tuple[Optional[date
         return d2, d1
 
     return None, None
+
+
+def _resolve_relative_period_text(raw_value: str) -> Optional[Tuple[date, date]]:
+    text = _normalize_text(raw_value or "")
+    if not text:
+        return None
+
+    today = _local_today()
+
+    if text in {"hoje", "dia de hoje"}:
+        return today, today
+
+    if text in {"amanha", "amanhã"}:
+        target = today + timedelta(days=1)
+        return target, target
+
+    if "semana" in text:
+        # Semana corrente: de hoje ate domingo.
+        days_until_sunday = 6 - today.weekday()
+        if days_until_sunday < 0:
+            days_until_sunday = 0
+        return today, today + timedelta(days=days_until_sunday)
+
+    if any(token in text for token in {"este mes", "neste mes", "mes atual", "mês atual", "este mês", "neste mês"}):
+        first_day_next_month = (today.replace(day=1) + timedelta(days=32)).replace(day=1)
+        end_of_month = first_day_next_month - timedelta(days=1)
+        return today, end_of_month
+
+    m_days = re.search(r"proxim(?:o|os|a|as)\s+(\d{1,3})\s+dias?", text)
+    if m_days:
+        days = int(m_days.group(1))
+        if days <= 0:
+            return None
+        return today, today + timedelta(days=days - 1)
+
+    m_weeks = re.search(r"proxim(?:a|as|o|os)\s+(\d{1,2})\s+semanas?", text)
+    if m_weeks:
+        weeks = int(m_weeks.group(1))
+        if weeks <= 0:
+            return None
+        total_days = (weeks * 7) - 1
+        return today, today + timedelta(days=total_days)
+
+    return None
 
 
 def _parse_date_range(raw_value: str) -> Optional[Tuple[date, date]]:
@@ -2149,6 +2237,9 @@ def _load_project_tasks_report(
         completed = task.completion_date.isoformat() if getattr(task, "completion_date", None) else "-"
         responsible = task.employee.name if getattr(task, "employee", None) else (task.who or "Sem responsavel")
         items.append({
+            "company_id": company.id,
+            "company_code": company_code,
+            "company_name": company.name,
             "project_code": project_code,
             "project_name": project.name,
             "activity_code": activity_code,
@@ -2206,13 +2297,98 @@ def _load_process_instances_report(
         done = instance.actual_end_date.isoformat() if getattr(instance, "actual_end_date", None) else "-"
         owner_name = _resolve_process_owner_name(instance)
         items.append({
+            "company_id": company.id,
+            "company_code": company_code,
+            "company_name": company.name,
             "process_code": process_code,
+            "process_name": process.name,
             "instance_code": instance_code,
             "title": instance.title or process.name,
             "owner": owner_name,
             "due_date": due,
             "completion_date": done,
             "status": instance.status,
+        })
+    return items
+
+
+def _load_meetings_report(
+    company_ids: List[int],
+    mode: str,
+    start_date: Optional[date],
+    end_date: Optional[date],
+) -> List[Dict[str, Any]]:
+    from models.meeting import Meeting
+    from models.company import Company
+    from models.project import Project
+
+    today = _local_today()
+    query = (
+        db.session.query(Meeting, Company, Project)
+        .join(Company, Company.id == Meeting.company_id)
+        .outerjoin(Project, Project.id == Meeting.project_id)
+        .filter(Meeting.company_id.in_(company_ids))
+    )
+
+    status_expr = func.lower(func.coalesce(Meeting.status, ""))
+    if mode == "my_work.completed_range":
+        query = query.filter(status_expr == "completed")
+        if start_date and end_date:
+            query = query.filter(
+                or_(
+                    and_(Meeting.actual_date.isnot(None), Meeting.actual_date >= start_date, Meeting.actual_date <= end_date),
+                    and_(
+                        Meeting.actual_date.is_(None),
+                        Meeting.scheduled_date.isnot(None),
+                        Meeting.scheduled_date >= start_date,
+                        Meeting.scheduled_date <= end_date,
+                    ),
+                )
+            )
+        query = query.order_by(
+            Meeting.actual_date.asc().nullslast(),
+            Meeting.scheduled_date.asc().nullslast(),
+            Meeting.scheduled_time.asc().nullslast(),
+            Meeting.id.asc(),
+        )
+    else:
+        query = query.filter(status_expr != "completed")
+        if mode == "my_work.overdue":
+            query = query.filter(Meeting.scheduled_date.isnot(None), Meeting.scheduled_date < today)
+        elif mode == "my_work.due_range" and start_date and end_date:
+            query = query.filter(
+                Meeting.scheduled_date.isnot(None),
+                Meeting.scheduled_date >= start_date,
+                Meeting.scheduled_date <= end_date,
+            )
+        query = query.order_by(
+            Meeting.scheduled_date.asc().nullslast(),
+            Meeting.scheduled_time.asc().nullslast(),
+            Meeting.id.asc(),
+        )
+
+    rows = query.limit(120).all()
+    items: List[Dict[str, Any]] = []
+    for meeting, company, project in rows:
+        company_code = company.client_code or "CP"
+        meeting_code = f"{company_code}.R.{meeting.id}"
+        scheduled = meeting.scheduled_date.isoformat() if getattr(meeting, "scheduled_date", None) else "-"
+        completed = meeting.actual_date.isoformat() if getattr(meeting, "actual_date", None) else "-"
+        project_code = f"{company_code}.J.{project.id}" if project else "-"
+        project_name = project.name if project else "Sem projeto vinculado"
+
+        items.append({
+            "company_id": company.id,
+            "company_code": company_code,
+            "company_name": company.name,
+            "meeting_code": meeting_code,
+            "meeting_name": meeting.title or f"Reuniao {meeting.id}",
+            "project_code": project_code,
+            "project_name": project_name,
+            "scheduled_time": meeting.scheduled_time or "-",
+            "due_date": scheduled,
+            "completion_date": completed,
+            "status": meeting.status or "draft",
         })
     return items
 
@@ -2234,50 +2410,337 @@ def _format_my_work_report(
     company_label: str,
     tasks: List[Dict[str, Any]],
     processes: List[Dict[str, Any]],
+    meetings: List[Dict[str, Any]],
+    start_date: Optional[date],
+    end_date: Optional[date],
+    channel: str,
+    payload: Dict[str, Any],
+    user_id: int,
+) -> str:
+    style = _get_my_work_channel_style(channel=channel)
+    base_date = _format_date_br(_local_today())
+    period_label = _describe_my_work_period(
+        action=action,
+        start_date=start_date,
+        end_date=end_date,
+    )
+    manager_name = _resolve_report_user_name(user_id=user_id)
+    collaborator_label = _resolve_my_work_collaborator_label(
+        payload=payload,
+        tasks=tasks,
+        processes=processes,
+        fallback_name=manager_name,
+    )
+    normalized_company_label = str(company_label or "").strip().lower()
+    company_phrase = (
+        company_label
+        if normalized_company_label.startswith("empresa")
+        or normalized_company_label.startswith("empresas")
+        else f"empresa {company_label}"
+    )
+    manager_name_norm = manager_name.strip().lower()
+    collaborator_label_norm = collaborator_label.strip().lower()
+    if collaborator_label_norm == f"do colaborador {manager_name_norm}":
+        collaborator_label = "do seu contexto de atuação"
+
+    title = (
+        f"Resumo das atividades {period_label} nas {company_phrase}, "
+        f"{collaborator_label}, com referência em {base_date}."
+    )
+
+    company_groups = _group_my_work_by_company(tasks=tasks, processes=processes, meetings=meetings)
+    if not company_groups:
+        return f"{_sanitize_for_channel(title, channel)}\n\nNenhum item encontrado para o filtro informado."
+
+    date_name = "Conclusao" if action == "my_work.completed_range" else "Prazo"
+
+    lines = [_sanitize_for_channel(title, channel), ""]
+    for group_idx, comp in enumerate(company_groups):
+        if group_idx > 0:
+            lines.append("")
+
+        company_code = comp.get("company_code") or "CP"
+        company_name = comp.get("company_name") or "Empresa"
+        lines.append(style["header"]("Empresa"))
+        lines.append(
+            f"{style['bullet']}{_sanitize_for_channel(f'{company_code} - {company_name}', channel)}"
+        )
+        lines.append("")
+
+        lines.append(style["header"]("Projetos"))
+        projects = comp.get("projects") or []
+        if projects:
+            for project in projects:
+                project_label = f"{project['project_code']} - {project['project_name']}"
+                lines.append(f"{style['bullet']}{_sanitize_for_channel(project_label, channel)}")
+                lines.append(f"{style['sub_bullet']}{_sanitize_for_channel('Atividades', channel)}")
+                for activity in project.get("activities") or []:
+                    date_label = activity["completion_date"] if action == "my_work.completed_range" else activity["due_date"]
+                    activity_line = (
+                        f"{activity['activity_code']} - {activity['title']} | "
+                        f"Responsavel: {activity['responsible']} | {date_name}: {_format_date_br(date_label)}"
+                    )
+                    lines.append(f"{style['item_bullet']}{_sanitize_for_channel(activity_line, channel)}")
+        else:
+            lines.append(f"{style['bullet']}Sem atividades no periodo.")
+        lines.append("")
+
+        lines.append(style["header"]("Processos"))
+        process_groups = comp.get("processes") or []
+        if process_groups:
+            for proc in process_groups:
+                process_label = f"{proc['process_code']} - {proc['process_name']}"
+                lines.append(f"{style['bullet']}{_sanitize_for_channel(process_label, channel)}")
+                lines.append(f"{style['sub_bullet']}{_sanitize_for_channel('Instancias', channel)}")
+                for instance in proc.get("instances") or []:
+                    date_label = instance["completion_date"] if action == "my_work.completed_range" else instance["due_date"]
+                    instance_line = (
+                        f"{instance['instance_code']} - {instance['title']} | "
+                        f"Dono do Processo: {instance['owner']} | {date_name}: {_format_date_br(date_label)}"
+                    )
+                    lines.append(f"{style['item_bullet']}{_sanitize_for_channel(instance_line, channel)}")
+        else:
+            lines.append(f"{style['bullet']}Sem instancias no periodo.")
+        lines.append("")
+
+        lines.append(style["header"]("Reunioes Agendadas"))
+        meeting_items = comp.get("meetings") or []
+        if meeting_items:
+            for meeting in meeting_items:
+                date_label = meeting["completion_date"] if action == "my_work.completed_range" else meeting["due_date"]
+                project_ref = f"{meeting['project_code']} - {meeting['project_name']}" if meeting.get("project_code") else "-"
+                meeting_line = (
+                    f"{meeting['meeting_code']} - {meeting['meeting_name']} | "
+                    f"Projeto: {project_ref} | {date_name}: {_format_date_br(date_label)}"
+                )
+                if action != "my_work.completed_range" and meeting.get("scheduled_time") and meeting.get("scheduled_time") != "-":
+                    meeting_line += f" | Hora: {meeting['scheduled_time']}"
+                lines.append(f"{style['bullet']}{_sanitize_for_channel(meeting_line, channel)}")
+        else:
+            lines.append(f"{style['bullet']}Sem reunioes agendadas no periodo.")
+
+    return "\n".join(lines)
+
+
+def _group_my_work_by_company(
+    tasks: List[Dict[str, Any]],
+    processes: List[Dict[str, Any]],
+    meetings: List[Dict[str, Any]],
+) -> List[Dict[str, Any]]:
+    grouped: Dict[int, Dict[str, Any]] = {}
+
+    def _ensure_company(item: Dict[str, Any]) -> Dict[str, Any]:
+        cid = int(item.get("company_id") or 0)
+        company = grouped.get(cid)
+        if company:
+            return company
+
+        company = {
+            "company_id": cid,
+            "company_code": item.get("company_code") or "CP",
+            "company_name": item.get("company_name") or f"Empresa {cid}" if cid else "Empresa",
+            "projects_map": {},
+            "processes_map": {},
+            "meetings": [],
+        }
+        grouped[cid] = company
+        return company
+
+    for task in tasks or []:
+        company = _ensure_company(task)
+        project_code = task.get("project_code") or "SEM-CODIGO"
+        project_entry = company["projects_map"].get(project_code)
+        if not project_entry:
+            project_entry = {
+                "project_code": project_code,
+                "project_name": task.get("project_name") or "Sem nome",
+                "activities": [],
+            }
+            company["projects_map"][project_code] = project_entry
+        project_entry["activities"].append(task)
+
+    for proc in processes or []:
+        company = _ensure_company(proc)
+        process_code = proc.get("process_code") or "SEM-CODIGO"
+        process_entry = company["processes_map"].get(process_code)
+        if not process_entry:
+            process_entry = {
+                "process_code": process_code,
+                "process_name": proc.get("process_name") or "Sem nome",
+                "instances": [],
+            }
+            company["processes_map"][process_code] = process_entry
+        process_entry["instances"].append(proc)
+
+    for meeting in meetings or []:
+        company = _ensure_company(meeting)
+        company["meetings"].append(meeting)
+
+    companies: List[Dict[str, Any]] = []
+    for item in grouped.values():
+        projects = list(item["projects_map"].values())
+        projects.sort(key=lambda p: ((p.get("project_code") or ""), (p.get("project_name") or "")))
+        for p in projects:
+            p["activities"].sort(key=lambda a: ((a.get("due_date") or ""), (a.get("activity_code") or "")))
+
+        process_groups = list(item["processes_map"].values())
+        process_groups.sort(key=lambda p: ((p.get("process_code") or ""), (p.get("process_name") or "")))
+        for p in process_groups:
+            p["instances"].sort(key=lambda i: ((i.get("due_date") or ""), (i.get("instance_code") or "")))
+
+        meetings_sorted = sorted(
+            item["meetings"],
+            key=lambda m: ((m.get("due_date") or ""), (m.get("scheduled_time") or ""), (m.get("meeting_code") or "")),
+        )
+
+        companies.append({
+            "company_id": item["company_id"],
+            "company_code": item["company_code"],
+            "company_name": item["company_name"],
+            "projects": projects,
+            "processes": process_groups,
+            "meetings": meetings_sorted,
+        })
+
+    companies.sort(key=lambda c: ((c.get("company_code") or ""), (c.get("company_name") or "")))
+    return companies
+
+
+def _get_my_work_channel_style(channel: str) -> Dict[str, Any]:
+    normalized = str(channel or "web").strip().lower()
+    if normalized == "whatsapp":
+        return {
+            "header": lambda text: f"*{text}*",
+            "bullet": "• ",
+            "sub_bullet": "  ◦ ",
+            "item_bullet": "    ▪ ",
+        }
+    return {
+        "header": lambda text: text,
+        "bullet": "- ",
+        "sub_bullet": "  - ",
+        "item_bullet": "    - ",
+    }
+
+
+def _resolve_report_user_name(user_id: int) -> str:
+    from models.user import User
+
+    user = User.query.get(user_id)
+    if user and user.name:
+        return str(user.name).strip()
+    return "Gestor"
+
+
+def _resolve_my_work_collaborator_label(
+    payload: Dict[str, Any],
+    tasks: List[Dict[str, Any]],
+    processes: List[Dict[str, Any]],
+    fallback_name: str,
+) -> str:
+    explicit = str(
+        payload.get("colaborador")
+        or payload.get("colaborador_nome")
+        or payload.get("responsavel")
+        or payload.get("responsável")
+        or ""
+    ).strip()
+    if explicit:
+        return f"do colaborador {explicit}"
+
+    names = {
+        str(t.get("responsible") or "").strip()
+        for t in (tasks or [])
+        if str(t.get("responsible") or "").strip() and str(t.get("responsible")).strip().lower() != "sem responsavel"
+    }
+    names.update(
+        str(p.get("owner") or "").strip()
+        for p in (processes or [])
+        if str(p.get("owner") or "").strip() and str(p.get("owner")).strip().lower() != "sem dono definido"
+    )
+    names = {n for n in names if n}
+
+    if not names:
+        return f"do colaborador {fallback_name}"
+
+    ordered = sorted(names)
+    if len(ordered) == 1:
+        return f"do colaborador {ordered[0]}"
+    if len(ordered) == 2:
+        return f"dos colaboradores {ordered[0]} e {ordered[1]}"
+    return f"dos colaboradores {', '.join(ordered[:3])}"
+
+
+def _describe_my_work_period(
+    action: str,
     start_date: Optional[date],
     end_date: Optional[date],
 ) -> str:
+    today = _local_today()
     if action == "my_work.open":
-        title = f"Aqui estao as atividades em aberto para a {company_label}:"
-    elif action == "my_work.overdue":
-        title = f"Aqui estao as atividades vencidas para a {company_label}:"
-    elif action == "my_work.due_range":
-        title = (
-            f"Aqui estao as atividades a vencer no periodo {start_date.isoformat()} a {end_date.isoformat()} "
-            f"para a {company_label}:"
+        return "em aberto"
+    if action == "my_work.overdue":
+        return "atrasadas"
+    if action == "my_work.completed_range":
+        return (
+            f"concluidas no periodo de {_format_date_br(start_date)} a {_format_date_br(end_date)}"
+            if start_date and end_date else
+            "concluidas no periodo informado"
         )
-    else:
-        title = (
-            f"Aqui estao as atividades concluidas no periodo {start_date.isoformat()} a {end_date.isoformat()} "
-            f"para a {company_label}:"
-        )
+    if action != "my_work.due_range" or not start_date or not end_date:
+        return "com vencimento no periodo informado"
 
-    if not tasks and not processes:
-        return f"{title}\n\nNenhum item encontrado para o filtro informado."
+    if start_date == today and end_date == today:
+        return f"vencendo hoje ({_format_date_br(today)})"
 
-    lines = [title, ""]
-    if tasks:
-        lines.append("Projetos")
-        for idx, item in enumerate(tasks, start=1):
-            date_label = item["completion_date"] if action == "my_work.completed_range" else item["due_date"]
-            date_name = "Conclusao" if action == "my_work.completed_range" else "Prazo"
-            lines.append(
-                f"{idx}. {item['activity_code']} - {item['title']} | Projeto: {item['project_code']} - {item['project_name']} "
-                f"| Responsavel: {item['responsible']} | {date_name}: {date_label}"
+    if start_date == today:
+        if end_date == today + timedelta(days=6):
+            return (
+                f"vencendo nesta semana ({_format_date_br(start_date)} a {_format_date_br(end_date)})"
             )
-        lines.append("")
-
-    if processes:
-        lines.append("Processos")
-        for idx, item in enumerate(processes, start=1):
-            date_label = item["completion_date"] if action == "my_work.completed_range" else item["due_date"]
-            date_name = "Conclusao" if action == "my_work.completed_range" else "Prazo"
-            lines.append(
-                f"{idx}. {item['instance_code']} - {item['title']} | Processo: {item['process_code']} "
-                f"| Dono do Processo: {item['owner']} | {date_name}: {date_label}"
+        if end_date == today + timedelta(days=14):
+            return (
+                f"vencendo nos proximos 15 dias ({_format_date_br(start_date)} a {_format_date_br(end_date)})"
+            )
+        first_day_next_month = (today.replace(day=1) + timedelta(days=32)).replace(day=1)
+        end_of_month = first_day_next_month - timedelta(days=1)
+        if end_date == end_of_month:
+            return (
+                f"com vencimento neste mes ({_format_date_br(start_date)} a {_format_date_br(end_date)})"
             )
 
-    return "\n".join(lines)
+    return (
+        f"com vencimento no periodo de {_format_date_br(start_date)} a {_format_date_br(end_date)}"
+    )
+
+
+def _format_date_br(value: Any) -> str:
+    if not value:
+        return "-"
+    if isinstance(value, date):
+        return value.strftime("%d/%m/%Y")
+
+    raw = str(value).strip()
+    if not raw or raw == "-":
+        return "-"
+
+    token = raw.split("T")[0]
+    parsed = _parse_completion_date(token)
+    if parsed:
+        return parsed.strftime("%d/%m/%Y")
+    return raw
+
+
+def _sanitize_for_channel(value: Any, channel: str) -> str:
+    text = str(value or "")
+    if str(channel or "").strip().lower() == "telegram":
+        return (
+            text
+            .replace("&", "&amp;")
+            .replace("<", "&lt;")
+            .replace(">", "&gt;")
+        )
+    return text
 
 
 def _extract_id_from_code(code_value: str) -> Optional[int]:

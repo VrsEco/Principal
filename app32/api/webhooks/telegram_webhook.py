@@ -127,6 +127,52 @@ def process_telegram_message(app, message: telebot.types.Message):
             
             # 2. Identify Company Context
             company_id = get_best_company_id(user)
+
+            # Fluxo rápido: confirmação de envio por e-mail após resumo truncado.
+            try:
+                from services.proactive_service import try_handle_summary_email_confirmation
+
+                handled_email_confirm, email_confirm_response = try_handle_summary_email_confirmation(
+                    user=user,
+                    company_id=company_id,
+                    incoming_text=user_msg,
+                    channel="telegram",
+                )
+            except Exception as email_confirm_err:
+                logger.exception("Falha ao processar confirmação de e-mail do resumo: %s", email_confirm_err)
+                handled_email_confirm, email_confirm_response = False, None
+
+            if handled_email_confirm and email_confirm_response:
+                from models.agent_message import AgentMessage
+
+                thread_id = f"tg_{telegram_id}"
+                db.session.add(AgentMessage(
+                    company_id=company_id,
+                    user_id=user.id,
+                    agent_type='work_agent_squad',
+                    agent_name='Usuário',
+                    direction='inbound',
+                    channel='telegram',
+                    content=user_msg,
+                    metadata_json={"thread_id": thread_id, "contact": "sapiens", "telegram_id": telegram_id}
+                ))
+                db.session.add(AgentMessage(
+                    company_id=company_id,
+                    user_id=user.id,
+                    agent_type='work_agent_squad',
+                    agent_name='sapiens',
+                    direction='outbound',
+                    channel='telegram',
+                    content=email_confirm_response,
+                    metadata_json={"thread_id": thread_id, "contact": "sapiens", "telegram_id": telegram_id, "flow": "summary_email_confirmation"}
+                ))
+                db.session.commit()
+
+                try:
+                    bot.send_message(message.chat.id, email_confirm_response, parse_mode='HTML')
+                except Exception:
+                    bot.send_message(message.chat.id, email_confirm_response)
+                return
             
             # Se encontrou o usuário: enviar confirmação imediata para reduzir percepção de latência.
             try:
