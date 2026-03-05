@@ -187,6 +187,12 @@ def create_app(config_name=None):
             return dict(active_company=company)
         return dict(active_company=None)
 
+    @app.context_processor
+    def inject_visual_theme_tokens():
+        from src.core.theme_tokens import get_web_theme_tokens
+
+        return dict(vs_theme=get_web_theme_tokens())
+
     @app.before_request
     def enforce_login():
         from flask import request, redirect, url_for, jsonify, session

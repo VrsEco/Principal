@@ -66,3 +66,22 @@ def get_summary_email_section_styles() -> dict:
     """Retorna cópia profunda dos estilos de seção do e-mail."""
     return deepcopy(SUMMARY_EMAIL_SECTION_STYLES)
 
+
+def get_web_theme_tokens() -> dict:
+    """
+    Bridge dos tokens para o frontend web (Jinja/CSS vars).
+    Mantém o web alinhado à mesma base visual usada no e-mail.
+    """
+    base = get_summary_email_theme()
+    return {
+        "page_bg": base["page_bg"],
+        "surface_bg": base["card_bg"],
+        "border": base["card_border"],
+        "accent": base["signature_accent"],
+        "accent_dark": base["summary_chip_text"],
+        "accent_soft_bg": base["summary_chip_bg"],
+        "text_primary": base["text_primary"],
+        "text_secondary": base["text_secondary"],
+        "text_muted": base["text_muted"],
+        "header_gradient": base["header_gradient"],
+    }

@@ -19,6 +19,20 @@
   <link rel="stylesheet" href="{{ url_for('static', filename='css/grv-global-pattern.css') }}" />
   <link rel="stylesheet" href="{{ url_for('static', filename='css/responsive.css') }}" />
   <link rel="stylesheet" href="{{ url_for('static', filename='css/responsive.css') }}" />
+  <style id="versus-theme-tokens">
+    :root {
+      --vs-theme-page-bg: {{ (vs_theme.page_bg if vs_theme else '#f2faf7') }};
+      --vs-theme-surface-bg: {{ (vs_theme.surface_bg if vs_theme else '#ffffff') }};
+      --vs-theme-border: {{ (vs_theme.border if vs_theme else '#cceee4') }};
+      --vs-theme-accent: {{ (vs_theme.accent if vs_theme else '#0f766e') }};
+      --vs-theme-accent-dark: {{ (vs_theme.accent_dark if vs_theme else '#065f46') }};
+      --vs-theme-accent-soft-bg: {{ (vs_theme.accent_soft_bg if vs_theme else '#ecfdf5') }};
+      --vs-theme-text-primary: {{ (vs_theme.text_primary if vs_theme else '#0f172a') }};
+      --vs-theme-text-secondary: {{ (vs_theme.text_secondary if vs_theme else '#334155') }};
+      --vs-theme-text-muted: {{ (vs_theme.text_muted if vs_theme else '#64748b') }};
+      --vs-theme-header-gradient: {{ (vs_theme.header_gradient if vs_theme else 'linear-gradient(135deg,#050505 0%,#0f172a 55%,#0f766e 100%)') }};
+    }
+  </style>
   <style>
     /* UI Reference System Styles (Inline to avoid cache) */
     [data-ref] {
@@ -160,31 +174,31 @@
     }
 
     .header-nav a.nav-link {
-      color: #0f172a !important;
+      color: var(--vs-theme-text-primary, #0f172a) !important;
       text-decoration: none;
       font-weight: 600;
       padding: 8px 18px;
       border-radius: 999px;
       transition: all 0.25s;
       font-size: 14px;
-      background: #ffffff;
-      border: 1px solid #e2e8f0;
+      background: var(--vs-theme-surface-bg, #ffffff);
+      border: 1px solid var(--vs-theme-border, #e2e8f0);
       box-shadow: 0 8px 16px rgba(15, 23, 42, 0.08);
       backdrop-filter: blur(6px);
     }
 
     .header-nav a.nav-link:hover {
-      background: #eef2ff !important;
-      color: #1d4ed8 !important;
-      border-color: #c7d2fe;
-      box-shadow: 0 12px 26px rgba(37, 99, 235, 0.15);
+      background: var(--vs-theme-accent-soft-bg, #ecfdf5) !important;
+      color: var(--vs-theme-accent-dark, #065f46) !important;
+      border-color: var(--vs-theme-border, #cceee4);
+      box-shadow: 0 12px 26px rgba(15, 118, 110, 0.18);
       transform: translateY(-2px);
     }
 
     .header-nav a.nav-link.active {
-      background: #e0e7ff !important;
-      color: #1d4ed8 !important;
-      border-color: #c7d2fe;
+      background: var(--vs-theme-accent-soft-bg, #ecfdf5) !important;
+      color: var(--vs-theme-accent-dark, #065f46) !important;
+      border-color: var(--vs-theme-border, #cceee4);
     }
 
     .header-actions {
@@ -198,8 +212,8 @@
     }
 
     .app-header {
-      background: linear-gradient(180deg, #f8fafc 0%, #e2e8f0 100%) !important;
-      border-bottom: 1px solid rgba(15, 23, 42, 0.08) !important;
+      background: linear-gradient(180deg, var(--vs-theme-page-bg, #f8fafc) 0%, #e8f8f2 100%) !important;
+      border-bottom: 1px solid var(--vs-theme-border, #cceee4) !important;
       backdrop-filter: blur(18px) !important;
       box-shadow: 0 20px 32px rgba(15, 23, 42, 0.12) !important;
       justify-content: space-between;
@@ -207,7 +221,7 @@
       gap: 20px;
       flex-wrap: nowrap;
       padding: 18px 20px;
-      color: #0f172a;
+      color: var(--vs-theme-text-primary, #0f172a);
     }
 
     .header-brand {
@@ -237,8 +251,8 @@
 
     .user-pill {
       position: relative;
-      background: #ffffff !important;
-      border: 1px solid #e2e8f0 !important;
+      background: var(--vs-theme-surface-bg, #ffffff) !important;
+      border: 1px solid var(--vs-theme-border, #e2e8f0) !important;
       border-radius: 999px !important;
       padding: 8px 16px !important;
       box-shadow: 0 8px 18px rgba(15, 23, 42, 0.12) !important;
@@ -247,24 +261,24 @@
       display: flex;
       align-items: center;
       gap: 8px;
-      color: #0f172a;
+      color: var(--vs-theme-text-primary, #0f172a);
     }
 
     .user-pill:hover {
-      background: #f8fafc !important;
+      background: var(--vs-theme-page-bg, #f8fafc) !important;
       box-shadow: 0 12px 24px rgba(15, 23, 42, 0.16) !important;
     }
 
     .user-name {
-      color: #0f172a !important;
+      color: var(--vs-theme-text-primary, #0f172a) !important;
       font-weight: 600 !important;
       font-size: 14px !important;
     }
 
     #themeSelect {
-      background: #ffffff !important;
-      color: #0f172a !important;
-      border: 1px solid #e2e8f0 !important;
+      background: var(--vs-theme-surface-bg, #ffffff) !important;
+      color: var(--vs-theme-text-primary, #0f172a) !important;
+      border: 1px solid var(--vs-theme-border, #e2e8f0) !important;
       border-radius: 12px !important;
       padding: 8px 12px !important;
       font-size: 14px !important;
@@ -273,8 +287,8 @@
     }
 
     #themeSelect option {
-      background: #ffffff !important;
-      color: #0f172a !important;
+      background: var(--vs-theme-surface-bg, #ffffff) !important;
+      color: var(--vs-theme-text-primary, #0f172a) !important;
     }
 
     /* User Dropdown Menu */
