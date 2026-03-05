@@ -249,17 +249,21 @@ class ProjectAllTasksResource(Resource):
         from .project import get_request_company_id
         try:
             company_id = get_request_company_id()
-            print(f"DEBUG: ProjectAllTasksResource.get - company_id: {company_id}")
+            show_inactive = request.args.get('show_inactive', 'false').lower() == 'true'
+            
             if not company_id:
                 return [], 200
                 
             # Efficiently fetch tasks for projects of the current company
             from models import Project
-            tasks = ProjectTask.query.join(Project, ProjectTask.project_id == Project.id)\
-                                     .filter(Project.company_id == company_id)\
-                                     .order_by(ProjectTask.id.asc()).all()
+            query = ProjectTask.query.join(Project, ProjectTask.project_id == Project.id)\
+                                     .filter(Project.company_id == company_id)
             
-            print(f"DEBUG: ProjectAllTasksResource.get - found {len(tasks)} tasks")
+            if not show_inactive:
+                query = query.filter(Project.status.not_in(['completed', 'cancelled', 'archived']))
+                
+            tasks = query.order_by(ProjectTask.id.asc()).all()
+            
             return project_tasks_schema.dump(tasks), 200
         except Exception as e:
             import traceback

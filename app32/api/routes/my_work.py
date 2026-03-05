@@ -43,8 +43,11 @@ def export_my_work_pdf():
     if not employee:
         return jsonify({"error": "Employee not found for current user"}), 404
         
-    # Fetch tasks
-    tasks = ProjectTask.query.filter_by(employee_id=employee.id).all()
+    # Fetch tasks from active projects only
+    tasks = ProjectTask.query.join(Project).filter(
+        ProjectTask.employee_id == employee.id,
+        Project.status.not_in(['completed', 'cancelled', 'archived'])
+    ).all()
     # Fetch process instances
     all_instances = ProcessInstance.query.all()
     relevant_instances = []

@@ -121,8 +121,10 @@ async function loadProjects() {
     if (empty) empty.style.display = 'none';
 
     try {
-        // Pass company_id explicitly to avoid session dependency
-        const url = PAGE_COMPANY_ID ? `/api/projects?company_id=${PAGE_COMPANY_ID}` : '/api/projects';
+        // Pass company_id explicitly to avoid session dependency and show_inactive=true to filter client-side
+        const url = PAGE_COMPANY_ID
+            ? `/api/projects?company_id=${PAGE_COMPANY_ID}&show_inactive=true`
+            : '/api/projects?show_inactive=true';
         const response = await fetch(url);
         const data = await response.json();
         allProjects = Array.isArray(data) ? data : (data.data || []);
@@ -163,9 +165,9 @@ function applyFilters() {
     const showArchived = document.getElementById('filter-archived')?.checked || false;
 
     const filtered = allProjects.filter(project => {
-        // 1. Archive filter logic
-        const isArchived = project.status === 'archived';
-        if (!showArchived && isArchived) return false;
+        // 1. Archive/Cancelled/Completed filter logic (Hide if inactive and checkbox is OFF)
+        const isInactive = project.status === 'archived' || project.status === 'cancelled' || project.status === 'completed';
+        if (!showArchived && isInactive) return false;
 
         // 2. Search text
         const matchesSearch = (project.name || project.title || '').toLowerCase().includes(searchTerm) ||
@@ -284,6 +286,20 @@ function renderListView(projects) {
             </div>
 
             <div class="project-actions">
+                ${project.status !== 'completed' && project.status !== 'cancelled' ? `
+                    <button class="btn btn-icon text-success" onclick="completeProject(${project.id})" title="Concluir Projeto">
+                        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                            <path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"></path>
+                            <polyline points="22 4 12 14.01 9 11.01"></polyline>
+                        </svg>
+                    </button>
+                    <button class="btn btn-icon text-warning" onclick="cancelProject(${project.id})" title="Cancelar Projeto">
+                        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                            <circle cx="12" cy="12" r="10"></circle>
+                            <line x1="4.93" y1="4.93" x2="19.07" y2="19.07"></line>
+                        </svg>
+                    </button>
+                ` : ''}
                 <button class="btn btn-icon" onclick="manageProject(${project.id})" title="Gerir Atividades (Kanban)">
                     <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                         <rect x="3" y="3" width="18" height="18" rx="2" ry="2"></rect>
@@ -370,6 +386,37 @@ async function deleteProject(id) {
         } catch (error) {
             console.error('Error deleting project:', error);
         }
+    }
+}
+
+async function completeProject(id) {
+    if (confirm('Deseja marcar este projeto como CONCLUÍDO?')) {
+        await updateProjectStatus(id, 'completed');
+    }
+}
+
+async function cancelProject(id) {
+    if (confirm('Deseja marcar este projeto como CANCELADO?')) {
+        await updateProjectStatus(id, 'cancelled');
+    }
+}
+
+async function updateProjectStatus(id, newStatus) {
+    try {
+        const url = PAGE_COMPANY_ID ? `/api/projects/${id}?company_id=${PAGE_COMPANY_ID}` : `/api/projects/${id}`;
+        const response = await fetch(url, {
+            method: 'PUT',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ status: newStatus })
+        });
+        if (response.ok) {
+            await loadProjects();
+        } else {
+            const err = await response.json();
+            alert('Erro ao atualizar status: ' + (err.message || 'Erro desconhecido'));
+        }
+    } catch (error) {
+        console.error('Error updating project status:', error);
     }
 }
 

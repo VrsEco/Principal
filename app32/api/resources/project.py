@@ -33,14 +33,19 @@ def get_request_company_id():
 class ProjectListResource(Resource):
     @permission_required('projects', 'view')
     def get(self):
-        """List all projects, optionally filtered by company_id and plan_id."""
+        """List all projects, optionally filtered by company_id, plan_id, and inactive status."""
         company_id = get_request_company_id()
         plan_id = request.args.get('plan_id', type=int)
+        show_inactive = request.args.get('show_inactive', 'false').lower() == 'true'
         
         if not company_id:
             return [], 200
             
         query = Project.query.filter_by(company_id=company_id).order_by(Project.id.asc())
+        
+        if not show_inactive:
+            query = query.filter(Project.status.not_in(['completed', 'cancelled', 'archived']))
+            
         if plan_id:
             query = query.filter_by(plan_id=plan_id)
             
@@ -71,13 +76,21 @@ class ProjectResource(Resource):
     @permission_required('projects', 'view')
     def get(self, project_id):
         """Get a specific project by ID."""
-        project = Project.query.get_or_404(project_id)
+        company_id = get_request_company_id()
+        if not company_id:
+            return {"message": "Active company context required"}, 400
+            
+        project = Project.query.filter_by(id=project_id, company_id=company_id).first_or_404()
         return project_schema.dump(project), 200
 
     @permission_required('projects', 'edit')
     def put(self, project_id):
         """Update an existing project."""
-        project = Project.query.get_or_404(project_id)
+        company_id = get_request_company_id()
+        if not company_id:
+            return {"message": "Active company context required"}, 400
+            
+        project = Project.query.filter_by(id=project_id, company_id=company_id).first_or_404()
         data = request.get_json()
         
         project.name = data.get('name', project.name)
@@ -96,7 +109,11 @@ class ProjectResource(Resource):
     @permission_required('projects', 'delete')
     def delete(self, project_id):
         """Delete a project."""
-        project = Project.query.get_or_404(project_id)
+        company_id = get_request_company_id()
+        if not company_id:
+            return {"message": "Active company context required"}, 400
+            
+        project = Project.query.filter_by(id=project_id, company_id=company_id).first_or_404()
         db.session.delete(project)
         db.session.commit()
         return '', 204

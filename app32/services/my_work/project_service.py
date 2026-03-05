@@ -59,7 +59,8 @@ def fetch_normalized_project_rows(
     company_ids: Optional[Sequence[int]] = None,
     project_ids: Optional[Sequence[int]] = None,
     employee_lookup: Optional[Dict[str, Set[int]]] = None,
-    employee_directory: Optional[Dict[int, Dict[str, Any]]] = None
+    employee_directory: Optional[Dict[int, Dict[str, Any]]] = None,
+    include_inactive: bool = False
 ) -> List[Dict[str, Any]]:
     """
     Fetch and normalize project activities from both table activities and legacy JSON.
@@ -82,6 +83,10 @@ def fetch_normalized_project_rows(
         query = query.filter(Project.company_id.in_(company_ids))
     if project_ids:
         query = query.filter(ProjectTask.project_id.in_(project_ids))
+    
+    if not include_inactive:
+        # Hide completed, cancelled and archived projects globally
+        query = query.filter(Project.status.not_in(['completed', 'cancelled', 'archived']))
         
     target_employee_ids = set(safe_int(eid) for eid in (employee_ids or []) if safe_int(eid))
     if target_employee_ids:
@@ -138,7 +143,8 @@ def fetch_normalized_project_rows(
         company_ids=company_ids,
         project_ids=project_ids,
         employee_lookup=employee_lookup,
-        employee_directory=employee_directory
+        employee_directory=employee_directory,
+        include_inactive=include_inactive
     )
     
     return table_activities + legacy_activities
@@ -148,7 +154,8 @@ def fetch_project_rows_from_json(
     company_ids: Optional[Sequence[int]] = None,
     project_ids: Optional[Sequence[int]] = None,
     employee_lookup: Optional[Dict[str, Set[int]]] = None,
-    employee_directory: Optional[Dict[int, Dict[str, Any]]] = None
+    employee_directory: Optional[Dict[int, Dict[str, Any]]] = None,
+    include_inactive: bool = False
 ) -> List[Dict[str, Any]]:
     """
     Fetch project activities serialized in the 'activities' JSON column.
@@ -166,6 +173,9 @@ def fetch_project_rows_from_json(
         query = query.filter(Project.company_id.in_(company_ids))
     if project_ids:
         query = query.filter(Project.id.in_(project_ids))
+    
+    if not include_inactive:
+        query = query.filter(Project.status.not_in(['completed', 'cancelled', 'archived']))
     
     rows = query.all()
     results = []
