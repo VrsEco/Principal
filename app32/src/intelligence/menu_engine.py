@@ -38,6 +38,8 @@ SUMMARY_WIZARD_STATUSES = {
     "awaiting_summary_collaborator",
     "awaiting_summary_status",
 }
+SUMMARY_EMAIL_CONFIRM_STATUS = "awaiting_summary_email_confirmation"
+SUMMARY_EMAIL_OFFER_SUFFIX = "Quer que eu te envie este relatorio por e-mail? (responda: sim ou nao)"
 
 
 def handle_menu_message(
@@ -91,6 +93,9 @@ def handle_menu_message(
 
         if session.status == "awaiting_fields":
             return _handle_missing_fields_state(session, text, lower)
+
+        if session.status == SUMMARY_EMAIL_CONFIRM_STATUS:
+            return _handle_summary_email_confirmation_state(session, text, lower)
 
         if session.status in SUMMARY_WIZARD_STATUSES:
             return _handle_summary_wizard_state(session, text, lower)
@@ -966,8 +971,132 @@ def _handle_summary_status_state(
             response_text=f"Nao consegui gerar o resumo agora: {str(exc)}",
         )
 
+    normalized_channel = str(session.channel or "").strip().lower()
+    if normalized_channel == "telegram":
+        payload["_summary_report_text"] = report
+        session.status = SUMMARY_EMAIL_CONFIRM_STATUS
+        session.collected_data = payload
+        session.missing_fields = []
+        db.session.commit()
+        return MenuInterceptResult(
+            handled=True,
+            response_text=f"{report}\n\n{SUMMARY_EMAIL_OFFER_SUFFIX}",
+        )
+
     _reset_session(session)
     return MenuInterceptResult(handled=True, response_text=report)
+
+
+def _handle_summary_email_confirmation_state(
+    session: AgentMenuSession,
+    text: str,
+    lower: str,
+) -> MenuInterceptResult:
+    first_word = lower.split(" ")[0] if lower else ""
+    if first_word in CANCEL_WORDS:
+        _reset_session(session)
+        return MenuInterceptResult(
+            handled=True,
+            response_text="Perfeito. Nao enviarei por e-mail. Se quiser outro resumo, digite menu 3.5.",
+        )
+
+    if not _is_affirmative_confirmation_text(text):
+        return MenuInterceptResult(
+            handled=True,
+            response_text="Responda com 'sim' para enviar por e-mail ou 'nao' para encerrar.",
+        )
+
+    payload = dict(session.collected_data or {})
+    report_text = str(payload.get("_summary_report_text") or "").strip()
+    if not report_text:
+        _reset_session(session)
+        return MenuInterceptResult(
+            handled=True,
+            response_text="Nao consegui recuperar o relatorio para envio por e-mail. Gere um novo resumo em menu 3.5.",
+        )
+
+    from models.user import User
+    from services.email_service import email_service
+
+    requester = User.query.get(session.user_id)
+    target_email = str(getattr(requester, "email", "") or "").strip()
+    if not target_email:
+        _reset_session(session)
+        return MenuInterceptResult(
+            handled=True,
+            response_text="Nao encontrei um e-mail valido no seu cadastro. Atualize seu e-mail e tente novamente.",
+        )
+
+    subject = _build_summary_email_subject_from_payload(payload)
+    sent = email_service.send_email(
+        to_emails=[target_email],
+        subject=subject,
+        body=report_text,
+    )
+    _reset_session(session)
+    if sent:
+        return MenuInterceptResult(
+            handled=True,
+            response_text=f"Perfeito! ✅ Enviei o relatorio para {target_email}.",
+        )
+
+    return MenuInterceptResult(
+        handled=True,
+        response_text="Tentei enviar o e-mail, mas houve uma falha no serviço agora. Posso tentar novamente.",
+    )
+
+
+def _is_affirmative_confirmation_text(value: str) -> bool:
+    normalized = _normalize_text(value or "")
+    if not normalized:
+        return False
+
+    direct_hits = {
+        "sim",
+        "s",
+        "ok",
+        "claro",
+        "pode",
+        "pode sim",
+        "envia",
+        "envie",
+        "manda",
+        "quero",
+    }
+    if normalized in direct_hits:
+        return True
+
+    keyword_hits = (
+        "por email",
+        "por e-mail",
+        "pode enviar",
+        "envie por",
+        "manda por",
+        "quero por",
+    )
+    return any(keyword in normalized for keyword in keyword_hits)
+
+
+def _build_summary_email_subject_from_payload(payload: Dict[str, Any]) -> str:
+    collaborator = str(
+        payload.get("_summary_employee_name")
+        or payload.get("colaborador")
+        or "Colaborador"
+    ).strip()
+    company = str(
+        payload.get("_summary_company_label")
+        or payload.get("empresa")
+        or "Empresa"
+    ).strip()
+    period = str(payload.get("periodo") or "").strip()
+    status_label = str(payload.get("status") or "Todas").strip()
+
+    subject = f"Relatorio de Resumo - {collaborator} - {status_label}"
+    if period:
+        subject += f" ({period})"
+    if company:
+        subject += f" - {company}"
+    return subject
 
 
 def _format_summary_period_prompt(option: AgentMenuOption) -> str:
