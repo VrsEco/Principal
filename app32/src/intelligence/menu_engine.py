@@ -25,7 +25,19 @@ MENU_WORDS = ("menu", "opcao", "opção", "opcoes", "opções", "fluxo")
 CONFIRM_WORDS = {"sim", "confirmo", "ok", "pode", "confirmar"}
 CANCEL_WORDS = {"nao", "não", "cancelar", "cancela", "voltar", "parar"}
 EXECUTE_HINTS = ("executar", "fazer", "iniciar", "finalizar", "cadastrar", "editar")
-COMMAND_HINTS = ("cadastrar", "criar", "iniciar", "finalizar", "editar", "executar")
+COMMAND_HINTS = ("cadastrar", "criar", "iniciar", "finalizar", "editar", "executar", "resumo")
+SUMMARY_ACTION_PERIOD = {
+    "summary.today": "today",
+    "summary.week": "week",
+    "summary.month": "month",
+    "summary.custom": "custom",
+}
+SUMMARY_WIZARD_STATUSES = {
+    "awaiting_summary_dates",
+    "awaiting_summary_company",
+    "awaiting_summary_collaborator",
+    "awaiting_summary_status",
+}
 
 
 def handle_menu_message(
@@ -58,10 +70,17 @@ def handle_menu_message(
             session.status == "awaiting_item_selection"
             and _parse_selection_number_date(text) is not None
         )
+        is_summary_selection_reply = (
+            session.status in SUMMARY_WIZARD_STATUSES
+            and _parse_selection_number_date(text) is not None
+        )
 
         # Se o usuário iniciar um novo comando de menu enquanto há sessão pendente,
         # reinicia o estado para evitar "prisão" em fluxo anterior.
-        if session.status != "idle" and (_is_menu_request(lower) or (explicit_code and not is_item_selection_reply)):
+        if session.status != "idle" and (
+            _is_menu_request(lower)
+            or (explicit_code and not is_item_selection_reply and not is_summary_selection_reply)
+        ):
             _reset_session(session)
 
         if session.status == "awaiting_confirmation":
@@ -72,6 +91,9 @@ def handle_menu_message(
 
         if session.status == "awaiting_fields":
             return _handle_missing_fields_state(session, text, lower)
+
+        if session.status in SUMMARY_WIZARD_STATUSES:
+            return _handle_summary_wizard_state(session, text, lower)
 
         if explicit_code:
             option = _find_option_by_code(company_id, explicit_code)
@@ -168,6 +190,14 @@ def _prepare_option_flow(
     )
     if selection_flow is not None:
         return selection_flow
+
+    summary_flow = _prepare_summary_flow_if_applicable(
+        session=session,
+        option=option,
+        collected=collected,
+    )
+    if summary_flow is not None:
+        return summary_flow
 
     required_fields = _normalize_required_fields(option.required_fields)
     required_fields = _adjust_required_fields_for_context(
@@ -471,7 +501,19 @@ def _is_menu_request(lower_text: str) -> bool:
 
 def _looks_like_command(lower_text: str) -> bool:
     has_command = any(token in lower_text for token in COMMAND_HINTS)
-    has_scope = any(token in lower_text for token in ("projeto", "atividade", "processo", "instancia", "instância"))
+    has_scope = any(
+        token in lower_text
+        for token in (
+            "projeto",
+            "atividade",
+            "processo",
+            "instancia",
+            "instância",
+            "resumo",
+            "relatorio",
+            "relatório",
+        )
+    )
     return has_command and has_scope
 
 
@@ -626,6 +668,10 @@ def _is_read_only_action(action_key: Optional[str]) -> bool:
         "my_work.overdue",
         "my_work.due_range",
         "my_work.completed_range",
+        "summary.today",
+        "summary.week",
+        "summary.month",
+        "summary.custom",
         "onboarding.status",
         "onboarding.diagnose",
         "onboarding.go_live_check",
@@ -680,6 +726,463 @@ def _prepare_selection_flow_if_applicable(
         handled=True,
         response_text=_format_item_selection_prompt(option, selection),
     )
+
+
+def _prepare_summary_flow_if_applicable(
+    session: AgentMenuSession,
+    option: AgentMenuOption,
+    collected: Dict[str, Any],
+) -> Optional[MenuInterceptResult]:
+    action = (option.action_key or "").strip().lower()
+    period_kind = SUMMARY_ACTION_PERIOD.get(action)
+    if not period_kind:
+        return None
+
+    payload = _public_payload(collected)
+    payload["_summary_action"] = action
+
+    if period_kind == "today":
+        payload["periodo"] = "hoje"
+    elif period_kind == "week":
+        payload["periodo"] = "esta semana"
+    elif period_kind == "month":
+        payload["periodo"] = "este mes"
+    else:
+        start_date, end_date = _resolve_period_from_payload(payload)
+        if not start_date or not end_date:
+            session.status = "awaiting_summary_dates"
+            session.collected_data = payload
+            session.missing_fields = []
+            db.session.commit()
+            return MenuInterceptResult(
+                handled=True,
+                response_text=_format_summary_period_prompt(option),
+            )
+        payload["periodo"] = f"{start_date.strftime('%d/%m/%Y')} a {end_date.strftime('%d/%m/%Y')}"
+
+    return _prompt_summary_company_selection(session=session, option=option, payload=payload)
+
+
+def _handle_summary_wizard_state(
+    session: AgentMenuSession,
+    text: str,
+    lower: str,
+) -> MenuInterceptResult:
+    if session.status == "awaiting_summary_dates":
+        return _handle_summary_dates_state(session, text, lower)
+    if session.status == "awaiting_summary_company":
+        return _handle_summary_company_state(session, text, lower)
+    if session.status == "awaiting_summary_collaborator":
+        return _handle_summary_collaborator_state(session, text, lower)
+    if session.status == "awaiting_summary_status":
+        return _handle_summary_status_state(session, text, lower)
+
+    _reset_session(session)
+    return MenuInterceptResult(
+        handled=True,
+        response_text="Sessao de resumo reiniciada. Digite 'menu' para continuar.",
+    )
+
+
+def _handle_summary_dates_state(
+    session: AgentMenuSession,
+    text: str,
+    lower: str,
+) -> MenuInterceptResult:
+    option = session.selected_option
+    if not option:
+        _reset_session(session)
+        return MenuInterceptResult(handled=True, response_text="Sessao de menu reiniciada. Digite 'menu' para continuar.")
+
+    first_word = lower.split(" ")[0] if lower else ""
+    if first_word in CANCEL_WORDS:
+        _reset_session(session)
+        return MenuInterceptResult(handled=True, response_text="Acao cancelada. Digite 'menu' para retomar.")
+
+    payload = dict(session.collected_data or {})
+    fields = _extract_fields_from_text(text)
+    payload.update(fields)
+    if "periodo" not in payload:
+        payload["periodo"] = text.strip()
+
+    start_date, end_date = _resolve_period_from_payload(payload)
+    if not start_date or not end_date:
+        return MenuInterceptResult(
+            handled=True,
+            response_text=(
+                "Periodo invalido. Informe no formato:\n"
+                "DD/MM/AAAA a DD/MM/AAAA\n"
+                "Exemplo: 01/03/2026 a 31/03/2026"
+            ),
+        )
+
+    payload["data_inicial"] = start_date.isoformat()
+    payload["data_final"] = end_date.isoformat()
+    payload["periodo"] = f"{start_date.strftime('%d/%m/%Y')} a {end_date.strftime('%d/%m/%Y')}"
+
+    return _prompt_summary_company_selection(session=session, option=option, payload=payload)
+
+
+def _handle_summary_company_state(
+    session: AgentMenuSession,
+    text: str,
+    lower: str,
+) -> MenuInterceptResult:
+    option = session.selected_option
+    if not option:
+        _reset_session(session)
+        return MenuInterceptResult(handled=True, response_text="Sessao de menu reiniciada. Digite 'menu' para continuar.")
+
+    first_word = lower.split(" ")[0] if lower else ""
+    if first_word in CANCEL_WORDS:
+        _reset_session(session)
+        return MenuInterceptResult(handled=True, response_text="Acao cancelada. Digite 'menu' para retomar.")
+
+    selected_index = _extract_selection_index(text)
+    if selected_index is None:
+        return MenuInterceptResult(
+            handled=True,
+            response_text="Formato invalido. Responda apenas com o numero da empresa. Exemplo: 1",
+        )
+
+    payload = dict(session.collected_data or {})
+    choices = payload.get("_summary_company_choices") or []
+    selected = next(
+        (item for item in choices if int(item.get("index", -1)) == int(selected_index)),
+        None,
+    )
+    if not selected:
+        return MenuInterceptResult(
+            handled=True,
+            response_text="Indice de empresa invalido. Escolha uma opcao da lista.",
+        )
+
+    company_id = int(selected.get("company_id"))
+    if not _user_can_access_company(session.user_id, company_id):
+        _reset_session(session)
+        return MenuInterceptResult(
+            handled=True,
+            response_text="Voce nao possui acesso a empresa selecionada.",
+        )
+
+    payload["_summary_company_id"] = company_id
+    payload["_summary_company_label"] = selected.get("label")
+    payload["empresa"] = selected.get("company_name")
+
+    return _prompt_summary_collaborator_selection(session=session, option=option, payload=payload)
+
+
+def _handle_summary_collaborator_state(
+    session: AgentMenuSession,
+    text: str,
+    lower: str,
+) -> MenuInterceptResult:
+    option = session.selected_option
+    if not option:
+        _reset_session(session)
+        return MenuInterceptResult(handled=True, response_text="Sessao de menu reiniciada. Digite 'menu' para continuar.")
+
+    first_word = lower.split(" ")[0] if lower else ""
+    if first_word in CANCEL_WORDS:
+        _reset_session(session)
+        return MenuInterceptResult(handled=True, response_text="Acao cancelada. Digite 'menu' para retomar.")
+
+    selected_index = _extract_selection_index(text)
+    if selected_index is None:
+        return MenuInterceptResult(
+            handled=True,
+            response_text="Formato invalido. Responda apenas com o numero do colaborador. Exemplo: 1",
+        )
+
+    payload = dict(session.collected_data or {})
+    choices = payload.get("_summary_collaborator_choices") or []
+    selected = next(
+        (item for item in choices if int(item.get("index", -1)) == int(selected_index)),
+        None,
+    )
+    if not selected:
+        return MenuInterceptResult(
+            handled=True,
+            response_text="Indice de colaborador invalido. Escolha uma opcao da lista.",
+        )
+
+    payload["_summary_employee_id"] = int(selected.get("employee_id"))
+    payload["_summary_employee_name"] = selected.get("name")
+    payload["colaborador"] = selected.get("name")
+
+    return _prompt_summary_status_selection(session=session, option=option, payload=payload)
+
+
+def _handle_summary_status_state(
+    session: AgentMenuSession,
+    text: str,
+    lower: str,
+) -> MenuInterceptResult:
+    option = session.selected_option
+    if not option:
+        _reset_session(session)
+        return MenuInterceptResult(handled=True, response_text="Sessao de menu reiniciada. Digite 'menu' para continuar.")
+
+    first_word = lower.split(" ")[0] if lower else ""
+    if first_word in CANCEL_WORDS:
+        _reset_session(session)
+        return MenuInterceptResult(handled=True, response_text="Acao cancelada. Digite 'menu' para retomar.")
+
+    selected_index = _extract_selection_index(text)
+    if selected_index is None:
+        return MenuInterceptResult(
+            handled=True,
+            response_text="Formato invalido. Responda apenas com o numero do status. Exemplo: 1",
+        )
+
+    payload = dict(session.collected_data or {})
+    choices = payload.get("_summary_status_choices") or _summary_status_choices()
+    selected = next(
+        (item for item in choices if int(item.get("index", -1)) == int(selected_index)),
+        None,
+    )
+    if not selected:
+        return MenuInterceptResult(
+            handled=True,
+            response_text="Indice de status invalido. Escolha uma opcao da lista.",
+        )
+
+    payload["_summary_status"] = selected.get("key")
+    payload["status"] = selected.get("label")
+
+    try:
+        report = _execute_summary_menu_report(
+            payload=payload,
+            active_company_id=session.company_id,
+            user_id=session.user_id,
+            channel=session.channel or "web",
+        )
+    except Exception as exc:
+        db.session.rollback()
+        _reset_session(session)
+        logger.exception("Falha ao executar fluxo de resumo: %s", exc)
+        return MenuInterceptResult(
+            handled=True,
+            response_text=f"Nao consegui gerar o resumo agora: {str(exc)}",
+        )
+
+    _reset_session(session)
+    return MenuInterceptResult(handled=True, response_text=report)
+
+
+def _format_summary_period_prompt(option: AgentMenuOption) -> str:
+    return "\n".join(
+        [
+            f"{option.code} - {option.title}",
+            "",
+            "Informe a data inicial e final do período personalizado.",
+            "Formato: DD/MM/AAAA a DD/MM/AAAA",
+            "Exemplo: 01/03/2026 a 31/03/2026",
+        ]
+    )
+
+
+def _prompt_summary_company_selection(
+    session: AgentMenuSession,
+    option: AgentMenuOption,
+    payload: Dict[str, Any],
+) -> MenuInterceptResult:
+    choices = _load_summary_company_choices(user_id=session.user_id)
+    if not choices:
+        _reset_session(session)
+        return MenuInterceptResult(
+            handled=True,
+            response_text="Nenhuma empresa vinculada foi encontrada para gerar o resumo.",
+        )
+
+    payload = dict(payload or {})
+    payload["_summary_company_choices"] = choices
+    session.status = "awaiting_summary_company"
+    session.collected_data = payload
+    session.missing_fields = []
+    db.session.commit()
+    return MenuInterceptResult(
+        handled=True,
+        response_text=_format_summary_company_prompt(option, choices),
+    )
+
+
+def _prompt_summary_collaborator_selection(
+    session: AgentMenuSession,
+    option: AgentMenuOption,
+    payload: Dict[str, Any],
+) -> MenuInterceptResult:
+    company_id = payload.get("_summary_company_id")
+    if not company_id:
+        _reset_session(session)
+        return MenuInterceptResult(
+            handled=True,
+            response_text="Nao consegui identificar a empresa selecionada. Digite 'menu' e tente novamente.",
+        )
+
+    choices = _load_summary_collaborator_choices(company_id=int(company_id))
+    if not choices:
+        company_choices = payload.get("_summary_company_choices") or _load_summary_company_choices(user_id=session.user_id)
+        payload["_summary_company_choices"] = company_choices
+        session.status = "awaiting_summary_company"
+        session.collected_data = payload
+        session.missing_fields = []
+        db.session.commit()
+        return MenuInterceptResult(
+            handled=True,
+            response_text=(
+                "Nao encontrei colaboradores ativos na empresa selecionada. "
+                "Escolha outra empresa:\n\n"
+                f"{_format_summary_company_prompt(option, company_choices)}"
+            ),
+        )
+
+    payload = dict(payload or {})
+    payload["_summary_collaborator_choices"] = choices
+    session.status = "awaiting_summary_collaborator"
+    session.collected_data = payload
+    session.missing_fields = []
+    db.session.commit()
+    return MenuInterceptResult(
+        handled=True,
+        response_text=_format_summary_collaborator_prompt(option, choices),
+    )
+
+
+def _prompt_summary_status_selection(
+    session: AgentMenuSession,
+    option: AgentMenuOption,
+    payload: Dict[str, Any],
+) -> MenuInterceptResult:
+    choices = _summary_status_choices()
+    payload = dict(payload or {})
+    payload["_summary_status_choices"] = choices
+
+    session.status = "awaiting_summary_status"
+    session.collected_data = payload
+    session.missing_fields = []
+    db.session.commit()
+    return MenuInterceptResult(
+        handled=True,
+        response_text=_format_summary_status_prompt(option, choices),
+    )
+
+
+def _load_summary_company_choices(user_id: int) -> List[Dict[str, Any]]:
+    from models.company import Company
+
+    company_ids, _ = _resolve_company_ids_for_payload(
+        payload={},
+        active_company_id=None,
+        user_id=user_id,
+    )
+    if not company_ids:
+        return []
+
+    companies = (
+        Company.query.filter(Company.id.in_(company_ids))
+        .order_by(Company.name.asc())
+        .all()
+    )
+    choices: List[Dict[str, Any]] = []
+    for idx, company in enumerate(companies, start=1):
+        label = (
+            f"{company.client_code} - {company.name}"
+            if company.client_code else
+            company.name
+        )
+        choices.append(
+            {
+                "index": idx,
+                "company_id": company.id,
+                "company_name": company.name,
+                "company_code": company.client_code or "",
+                "label": label,
+            }
+        )
+    return choices
+
+
+def _load_summary_collaborator_choices(company_id: int) -> List[Dict[str, Any]]:
+    from models.employee import Employee
+
+    rows = (
+        Employee.query.filter(
+            Employee.company_id == company_id,
+            Employee.status == "active",
+        )
+        .order_by(Employee.name.asc(), Employee.id.asc())
+        .all()
+    )
+    choices: List[Dict[str, Any]] = []
+    for idx, employee in enumerate(rows, start=1):
+        name = str(employee.name or f"Colaborador {employee.id}").strip()
+        email = str(employee.email or "").strip()
+        label = f"{name} ({email})" if email else name
+        choices.append(
+            {
+                "index": idx,
+                "employee_id": employee.id,
+                "name": name,
+                "email": email,
+                "label": label,
+            }
+        )
+    return choices
+
+
+def _summary_status_choices() -> List[Dict[str, Any]]:
+    return [
+        {"index": 1, "key": "open", "label": "Abertas"},
+        {"index": 2, "key": "completed", "label": "Concluidas"},
+        {"index": 3, "key": "all", "label": "Todas"},
+    ]
+
+
+def _format_summary_company_prompt(
+    option: AgentMenuOption,
+    choices: List[Dict[str, Any]],
+) -> str:
+    lines = [f"{option.code} - {option.title}", "", "Escolha a empresa:"]
+    for item in choices:
+        lines.append(f"{item['index']} - {item['label']}")
+    lines.append("")
+    lines.append("Responda apenas com o numero da empresa. Exemplo: 1")
+    return "\n".join(lines)
+
+
+def _format_summary_collaborator_prompt(
+    option: AgentMenuOption,
+    choices: List[Dict[str, Any]],
+) -> str:
+    lines = [f"{option.code} - {option.title}", "", "Escolha o colaborador:"]
+    for item in choices:
+        lines.append(f"{item['index']} - {item['label']}")
+    lines.append("")
+    lines.append("Responda apenas com o numero do colaborador. Exemplo: 1")
+    return "\n".join(lines)
+
+
+def _format_summary_status_prompt(
+    option: AgentMenuOption,
+    choices: List[Dict[str, Any]],
+) -> str:
+    lines = [f"{option.code} - {option.title}", "", "Escolha o status:"]
+    for item in choices:
+        lines.append(f"{item['index']} - {item['label']}")
+    lines.append("")
+    lines.append("Responda apenas com o numero do status. Exemplo: 1")
+    return "\n".join(lines)
+
+
+def _extract_selection_index(text: str) -> Optional[int]:
+    parsed = _parse_selection_number_date(text)
+    if not parsed:
+        return None
+    idx, right = parsed
+    if right:
+        return None
+    return idx
 
 
 def _load_open_choices(
@@ -1956,6 +2459,184 @@ def _execute_my_work_report(
     )
 
 
+def _execute_summary_menu_report(
+    payload: Dict[str, Any],
+    active_company_id: Optional[int],
+    user_id: int,
+    channel: str = "web",
+) -> str:
+    from models.company import Company
+    from models.employee import Employee
+
+    selected_company_id = payload.get("_summary_company_id")
+    if not selected_company_id:
+        return "Nao consegui identificar a empresa selecionada para o resumo."
+    selected_company_id = int(selected_company_id)
+
+    if not _user_can_access_company(user_id, selected_company_id):
+        return "Voce nao possui acesso a empresa selecionada."
+
+    company = Company.query.get(selected_company_id)
+    if not company:
+        return "Empresa selecionada nao encontrada."
+
+    start_date, end_date = _resolve_period_from_payload(payload)
+    if not start_date or not end_date:
+        return (
+            "Nao consegui identificar o periodo do resumo.\n"
+            "Use o formato: DD/MM/AAAA a DD/MM/AAAA."
+        )
+
+    selected_employee_id = payload.get("_summary_employee_id")
+    if not selected_employee_id:
+        return "Nao consegui identificar o colaborador selecionado."
+    selected_employee_id = int(selected_employee_id)
+    employee = Employee.query.get(selected_employee_id)
+    if not employee or int(employee.company_id or 0) != selected_company_id:
+        return "Colaborador selecionado nao pertence a empresa escolhida."
+
+    employee_ids = [selected_employee_id]
+    collaborator_terms = []
+    employee_name = str(employee.name or "").strip()
+    employee_email = str(employee.email or "").strip().lower()
+    if employee_name:
+        collaborator_terms.append(employee_name.lower())
+    if employee_email:
+        collaborator_terms.append(employee_email)
+
+    status_key = str(payload.get("_summary_status") or "open").strip().lower()
+    company_label = (
+        f"empresa {company.client_code} - {company.name}"
+        if company.client_code else
+        f"empresa {company.name}"
+    )
+
+    normalized_payload = dict(payload or {})
+    if employee_name:
+        normalized_payload["colaborador"] = employee_name
+
+    open_tasks = _merge_report_items(
+        _load_project_tasks_report(
+            company_ids=[selected_company_id],
+            mode="my_work.overdue",
+            start_date=start_date,
+            end_date=end_date,
+            employee_ids=employee_ids,
+        ) + _load_project_tasks_report(
+            company_ids=[selected_company_id],
+            mode="my_work.due_range",
+            start_date=start_date,
+            end_date=end_date,
+            employee_ids=employee_ids,
+        ),
+        unique_key="activity_code",
+    )
+    open_processes = _merge_report_items(
+        _load_process_instances_report(
+            company_ids=[selected_company_id],
+            mode="my_work.overdue",
+            start_date=start_date,
+            end_date=end_date,
+            employee_ids=employee_ids,
+        ) + _load_process_instances_report(
+            company_ids=[selected_company_id],
+            mode="my_work.due_range",
+            start_date=start_date,
+            end_date=end_date,
+            employee_ids=employee_ids,
+        ),
+        unique_key="instance_code",
+    )
+    open_meetings = _merge_report_items(
+        _load_meetings_report(
+            company_ids=[selected_company_id],
+            mode="my_work.overdue",
+            start_date=start_date,
+            end_date=end_date,
+            collaborator_terms=collaborator_terms,
+        ) + _load_meetings_report(
+            company_ids=[selected_company_id],
+            mode="my_work.due_range",
+            start_date=start_date,
+            end_date=end_date,
+            collaborator_terms=collaborator_terms,
+        ),
+        unique_key="meeting_code",
+    )
+
+    completed_tasks = _load_project_tasks_report(
+        company_ids=[selected_company_id],
+        mode="my_work.completed_range",
+        start_date=start_date,
+        end_date=end_date,
+        employee_ids=employee_ids,
+    )
+    completed_processes = _load_process_instances_report(
+        company_ids=[selected_company_id],
+        mode="my_work.completed_range",
+        start_date=start_date,
+        end_date=end_date,
+        employee_ids=employee_ids,
+    )
+    completed_meetings = _load_meetings_report(
+        company_ids=[selected_company_id],
+        mode="my_work.completed_range",
+        start_date=start_date,
+        end_date=end_date,
+        collaborator_terms=collaborator_terms,
+    )
+
+    open_report = _format_my_work_report(
+        action="my_work.due_range",
+        company_label=company_label,
+        tasks=open_tasks,
+        processes=open_processes,
+        meetings=open_meetings,
+        start_date=start_date,
+        end_date=end_date,
+        channel=channel,
+        payload=normalized_payload,
+        user_id=user_id,
+    )
+    completed_report = _format_my_work_report(
+        action="my_work.completed_range",
+        company_label=company_label,
+        tasks=completed_tasks,
+        processes=completed_processes,
+        meetings=completed_meetings,
+        start_date=start_date,
+        end_date=end_date,
+        channel=channel,
+        payload=normalized_payload,
+        user_id=user_id,
+    )
+
+    if status_key == "open":
+        return open_report
+    if status_key == "completed":
+        return completed_report
+    if status_key == "all":
+        return (
+            "STATUS: ABERTAS\n"
+            f"{open_report}\n\n"
+            "STATUS: CONCLUIDAS\n"
+            f"{completed_report}"
+        )
+
+    return "Status invalido para resumo. Use: abertas, concluidas ou todas."
+
+
+def _merge_report_items(items: List[Dict[str, Any]], unique_key: str) -> List[Dict[str, Any]]:
+    merged: Dict[str, Dict[str, Any]] = {}
+    for item in items or []:
+        code = str(item.get(unique_key) or "").strip()
+        if not code:
+            code = json.dumps(item, ensure_ascii=False, sort_keys=True)
+        if code not in merged:
+            merged[code] = item
+    return list(merged.values())
+
+
 def _resolve_company_ids_for_payload(
     payload: Dict[str, Any],
     active_company_id: Optional[int],
@@ -2201,6 +2882,7 @@ def _load_project_tasks_report(
     mode: str,
     start_date: Optional[date],
     end_date: Optional[date],
+    employee_ids: Optional[List[int]] = None,
 ) -> List[Dict[str, Any]]:
     from models.project import ProjectTask, Project
     from models.company import Company
@@ -2212,6 +2894,11 @@ def _load_project_tasks_report(
         .join(Company, Company.id == Project.company_id)
         .filter(Project.company_id.in_(company_ids))
     )
+
+    if employee_ids is not None:
+        if not employee_ids:
+            return []
+        query = query.filter(ProjectTask.employee_id.in_(employee_ids))
 
     if mode == "my_work.completed_range":
         query = query.filter(or_(ProjectTask.status == "completed", ProjectTask.stage == "completed"))
@@ -2257,6 +2944,7 @@ def _load_process_instances_report(
     mode: str,
     start_date: Optional[date],
     end_date: Optional[date],
+    employee_ids: Optional[List[int]] = None,
 ) -> List[Dict[str, Any]]:
     from models.process import ProcessInstance, Process
     from models.company import Company
@@ -2268,6 +2956,17 @@ def _load_process_instances_report(
         .join(Company, Company.id == ProcessInstance.company_id)
         .filter(ProcessInstance.company_id.in_(company_ids))
     )
+
+    if employee_ids is not None:
+        if not employee_ids:
+            return []
+        query = query.filter(
+            or_(
+                ProcessInstance.owner_employee_id.in_(employee_ids),
+                ProcessInstance.responsible_id.in_(employee_ids),
+                ProcessInstance.executor_id.in_(employee_ids),
+            )
+        )
 
     if mode == "my_work.completed_range":
         query = query.filter(ProcessInstance.status == "completed")
@@ -2317,6 +3016,7 @@ def _load_meetings_report(
     mode: str,
     start_date: Optional[date],
     end_date: Optional[date],
+    collaborator_terms: Optional[List[str]] = None,
 ) -> List[Dict[str, Any]]:
     from models.meeting import Meeting
     from models.company import Company
@@ -2369,7 +3069,19 @@ def _load_meetings_report(
 
     rows = query.limit(120).all()
     items: List[Dict[str, Any]] = []
+    normalized_terms = [
+        str(term or "").strip().lower()
+        for term in (collaborator_terms or [])
+        if str(term or "").strip()
+    ]
     for meeting, company, project in rows:
+        if normalized_terms:
+            guests_raw = str(meeting.guests_json or "").lower()
+            if not guests_raw:
+                continue
+            if not any(term in guests_raw for term in normalized_terms):
+                continue
+
         company_code = company.client_code or "CP"
         meeting_code = f"{company_code}.R.{meeting.id}"
         scheduled = meeting.scheduled_date.isoformat() if getattr(meeting, "scheduled_date", None) else "-"
@@ -3211,6 +3923,11 @@ def _ensure_default_menu_seed() -> None:
         {"code": "3.2", "title": "Atividades Vencidas", "parent_code": "3", "action_key": "my_work.overdue", "required_fields": [{"key": "empresa", "label": "Empresa"}], "keywords": ["atividades vencidas", "tarefas vencidas"], "sort_order": 32},
         {"code": "3.3", "title": "Atividades a Vencer no Periodo", "parent_code": "3", "action_key": "my_work.due_range", "required_fields": [{"key": "empresa", "label": "Empresa"}, {"key": "periodo", "label": "Periodo"}], "keywords": ["a vencer", "proximo vencimento"], "sort_order": 33},
         {"code": "3.4", "title": "Atividades Concluidas no Periodo", "parent_code": "3", "action_key": "my_work.completed_range", "required_fields": [{"key": "empresa", "label": "Empresa"}, {"key": "periodo", "label": "Periodo"}], "keywords": ["concluidas no periodo", "atividades concluidas"], "sort_order": 34},
+        {"code": "3.5", "title": "Resumos", "parent_code": "3", "sort_order": 35},
+        {"code": "3.5.1", "title": "Hoje", "parent_code": "3.5", "action_key": "summary.today", "required_fields": [], "keywords": ["resumo hoje", "resumo do dia"], "sort_order": 36},
+        {"code": "3.5.2", "title": "Esta Semana", "parent_code": "3.5", "action_key": "summary.week", "required_fields": [], "keywords": ["resumo semana", "esta semana"], "sort_order": 37},
+        {"code": "3.5.3", "title": "Este Mes", "parent_code": "3.5", "action_key": "summary.month", "required_fields": [], "keywords": ["resumo mes", "este mes"], "sort_order": 38},
+        {"code": "3.5.4", "title": "Personalizado", "parent_code": "3.5", "action_key": "summary.custom", "required_fields": [{"key": "periodo", "label": "Periodo (Data inicial e final)"}], "keywords": ["resumo personalizado", "periodo personalizado"], "sort_order": 39},
         {"code": "4", "title": "Gestao de Reunioes", "parent_code": None, "sort_order": 40},
         {"code": "4.1", "title": "Agendar Reuniao", "parent_code": "4", "action_key": "meeting.schedule", "required_fields": [{"key": "titulo", "label": "Titulo da Reuniao"}, {"key": "data_hora", "label": "Data/Hora"}], "keywords": ["agendar reuniao", "marcar reuniao"], "sort_order": 41},
         {"code": "4.2", "title": "Iniciar Reuniao", "parent_code": "4", "action_key": "meeting.start", "required_fields": [{"key": "id_reuniao", "label": "ID da Reuniao"}], "keywords": ["iniciar reuniao", "comecar reuniao"], "sort_order": 42},
@@ -3250,6 +3967,56 @@ def _ensure_default_menu_upgrades() -> None:
     """
     Garante que novas opcoes padrao sejam adicionadas em bases ja inicializadas.
     """
+    root_3 = _ensure_menu_option_exists(
+        code="3",
+        title="Consultas de Trabalho",
+        parent_code=None,
+        sort_order=30,
+    )
+    if root_3:
+        _ensure_menu_option_exists(
+            code="3.5",
+            title="Resumos",
+            parent_code="3",
+            sort_order=35,
+        )
+        _ensure_menu_option_exists(
+            code="3.5.1",
+            title="Hoje",
+            parent_code="3.5",
+            action_key="summary.today",
+            required_fields=[],
+            keywords=["resumo hoje", "resumo do dia"],
+            sort_order=36,
+        )
+        _ensure_menu_option_exists(
+            code="3.5.2",
+            title="Esta Semana",
+            parent_code="3.5",
+            action_key="summary.week",
+            required_fields=[],
+            keywords=["resumo semana", "esta semana"],
+            sort_order=37,
+        )
+        _ensure_menu_option_exists(
+            code="3.5.3",
+            title="Este Mes",
+            parent_code="3.5",
+            action_key="summary.month",
+            required_fields=[],
+            keywords=["resumo mes", "este mes"],
+            sort_order=38,
+        )
+        _ensure_menu_option_exists(
+            code="3.5.4",
+            title="Personalizado",
+            parent_code="3.5",
+            action_key="summary.custom",
+            required_fields=[{"key": "periodo", "label": "Periodo (Data inicial e final)"}],
+            keywords=["resumo personalizado", "periodo personalizado"],
+            sort_order=39,
+        )
+
     root_5 = _ensure_menu_option_exists(
         code="5",
         title="Funcionamento e Onboarding",
