@@ -40,6 +40,7 @@ SUMMARY_WIZARD_STATUSES = {
 }
 SUMMARY_EMAIL_CONFIRM_STATUS = "awaiting_summary_email_confirmation"
 SUMMARY_EMAIL_CUSTOM_STATUS = "awaiting_summary_email_custom"
+COMPANY_SELECTION_STATUS = "awaiting_operation_company"
 SUMMARY_SELECTION_STATUSES = SUMMARY_WIZARD_STATUSES | {
     SUMMARY_EMAIL_CONFIRM_STATUS,
     SUMMARY_EMAIL_CUSTOM_STATUS,
@@ -119,6 +120,9 @@ def handle_menu_message(
 
         if session.status == "awaiting_fields":
             return _handle_missing_fields_state(session, text, lower)
+
+        if session.status == COMPANY_SELECTION_STATUS:
+            return _handle_operation_company_state(session, text, lower)
 
         if session.status == SUMMARY_EMAIL_CONFIRM_STATUS:
             return _handle_summary_email_confirmation_state(session, text, lower)
@@ -216,6 +220,14 @@ def _prepare_option_flow(
     collected = _extract_fields_from_text(text)
     session.selected_option_id = option.id
     session.last_user_message = text
+
+    company_selection_flow = _prepare_company_selection_flow_if_needed(
+        session=session,
+        option=option,
+        collected=collected,
+    )
+    if company_selection_flow is not None:
+        return company_selection_flow
 
     selection_flow = _prepare_selection_flow_if_applicable(
         session=session,
@@ -772,7 +784,12 @@ def _prepare_selection_flow_if_applicable(
     ):
         return None
 
-    selection = _load_open_choices(action=action, company_id=session.company_id, user_id=session.user_id)
+    effective_company_id = _resolve_effective_company_id_for_payload(
+        payload=collected,
+        fallback_company_id=session.company_id,
+        user_id=session.user_id,
+    )
+    selection = _load_open_choices(action=action, company_id=effective_company_id, user_id=session.user_id)
     if not selection.get("choices"):
         return None
 
@@ -807,10 +824,15 @@ def _prepare_missing_field_selection_flow_if_applicable(
     if "codigo_projeto" not in missing_keys:
         return None
 
+    effective_company_id = _resolve_effective_company_id_for_payload(
+        payload=collected,
+        fallback_company_id=session.company_id,
+        user_id=session.user_id,
+    )
     selection = _load_assisted_field_selection(
         action=action,
         field_key="codigo_projeto",
-        company_id=session.company_id,
+        company_id=effective_company_id,
         user_id=session.user_id,
     )
     if not selection.get("choices"):
@@ -865,8 +887,19 @@ def _prepare_summary_flow_if_applicable(
             return MenuInterceptResult(
                 handled=True,
                 response_text=_format_summary_period_prompt(option),
-            )
+                )
         payload["periodo"] = f"{start_date.strftime('%d/%m/%Y')} a {end_date.strftime('%d/%m/%Y')}"
+
+    applied_payload = _apply_preselected_summary_company_selection(
+        payload=payload,
+        user_id=session.user_id,
+    )
+    if applied_payload is not None:
+        return _prompt_summary_collaborator_selection(
+            session=session,
+            option=option,
+            payload=applied_payload,
+        )
 
     return _prompt_summary_company_selection(session=session, option=option, payload=payload)
 
@@ -928,7 +961,123 @@ def _handle_summary_dates_state(
     payload["data_final"] = end_date.isoformat()
     payload["periodo"] = f"{start_date.strftime('%d/%m/%Y')} a {end_date.strftime('%d/%m/%Y')}"
 
+    applied_payload = _apply_preselected_summary_company_selection(
+        payload=payload,
+        user_id=session.user_id,
+    )
+    if applied_payload is not None:
+        return _prompt_summary_collaborator_selection(
+            session=session,
+            option=option,
+            payload=applied_payload,
+        )
+
     return _prompt_summary_company_selection(session=session, option=option, payload=payload)
+
+
+def _prepare_company_selection_flow_if_needed(
+    session: AgentMenuSession,
+    option: AgentMenuOption,
+    collected: Dict[str, Any],
+) -> Optional[MenuInterceptResult]:
+    action = str(option.action_key or "").strip().lower()
+    normalized_channel = str(session.channel or "").strip().lower()
+    if not action or normalized_channel == "web":
+        return None
+
+    payload = _public_payload(collected)
+    if _resolve_explicit_company_id_from_payload(payload=payload, user_id=session.user_id):
+        return None
+
+    choices = _load_summary_company_choices(user_id=session.user_id)
+    if len(choices) <= 1:
+        return None
+
+    session.status = COMPANY_SELECTION_STATUS
+    session.collected_data = {
+        **payload,
+        "_operation_company_choices": choices,
+    }
+    session.missing_fields = []
+    db.session.commit()
+    return MenuInterceptResult(
+        handled=True,
+        response_text=_format_operation_company_prompt(option, choices),
+    )
+
+
+def _handle_operation_company_state(
+    session: AgentMenuSession,
+    text: str,
+    lower: str,
+) -> MenuInterceptResult:
+    option = session.selected_option
+    if not option:
+        _reset_session(session)
+        return MenuInterceptResult(handled=True, response_text="Sessao de menu reiniciada. Digite 'menu' para continuar.")
+
+    first_word = lower.split(" ")[0] if lower else ""
+    if first_word in CANCEL_WORDS:
+        _reset_session(session)
+        return MenuInterceptResult(handled=True, response_text="Acao cancelada. Digite 'menu' para retomar.")
+
+    selected_index = _extract_selection_index(text)
+    if selected_index is None:
+        return MenuInterceptResult(
+            handled=True,
+            response_text="Formato invalido. Responda apenas com o numero da empresa. Exemplo: 1",
+        )
+
+    payload = dict(session.collected_data or {})
+    choices = payload.get("_operation_company_choices") or []
+    selected = next(
+        (item for item in choices if int(item.get("index", -1)) == int(selected_index)),
+        None,
+    )
+    if not selected:
+        return MenuInterceptResult(
+            handled=True,
+            response_text="Indice de empresa invalido. Escolha uma opcao da lista.",
+        )
+
+    company_id = int(selected.get("company_id"))
+    if not _user_can_access_company(session.user_id, company_id):
+        _reset_session(session)
+        return MenuInterceptResult(
+            handled=True,
+            response_text="Voce nao possui acesso a empresa selecionada.",
+        )
+
+    payload["empresa"] = selected.get("company_name")
+    payload["_selected_company_id"] = company_id
+    payload["_selected_company_label"] = selected.get("label")
+    payload.pop("_operation_company_choices", None)
+
+    if str(option.action_key or "").strip().lower() in SUMMARY_ACTION_PERIOD:
+        payload["_summary_company_id"] = company_id
+        payload["_summary_company_label"] = selected.get("label")
+
+    selection_flow = _prepare_selection_flow_if_applicable(
+        session=session,
+        option=option,
+        collected=payload,
+    )
+    if selection_flow is not None:
+        return selection_flow
+
+    summary_flow = _prepare_summary_flow_if_applicable(
+        session=session,
+        option=option,
+        collected=payload,
+    )
+    if summary_flow is not None:
+        return summary_flow
+
+    return _advance_option_after_payload_collection(
+        session=session,
+        option=option,
+        payload=payload,
+    )
 
 
 def _handle_summary_company_state(
@@ -1498,6 +1647,18 @@ def _prompt_summary_company_selection(
     payload = dict(payload or {})
     payload["_summary_company_choices"] = choices
 
+    explicit_selected_payload = _apply_preselected_summary_company_selection(
+        payload=payload,
+        user_id=session.user_id,
+        choices=choices,
+    )
+    if explicit_selected_payload is not None:
+        return _prompt_summary_collaborator_selection(
+            session=session,
+            option=option,
+            payload=explicit_selected_payload,
+        )
+
     auto_selected_payload = _apply_single_summary_company_selection(
         payload=payload,
         choices=choices,
@@ -1533,6 +1694,34 @@ def _apply_single_summary_company_selection(
 
     updated_payload = dict(payload or {})
     updated_payload["_summary_company_id"] = int(company_id)
+    updated_payload["_summary_company_label"] = selected.get("label")
+    updated_payload["empresa"] = selected.get("company_name")
+    return updated_payload
+
+
+def _apply_preselected_summary_company_selection(
+    payload: Dict[str, Any],
+    user_id: int,
+    choices: Optional[List[Dict[str, Any]]] = None,
+) -> Optional[Dict[str, Any]]:
+    explicit_company_id = _resolve_explicit_company_id_from_payload(
+        payload=payload,
+        user_id=user_id,
+    )
+    if not explicit_company_id:
+        return None
+
+    available_choices = list(choices or payload.get("_summary_company_choices") or _load_summary_company_choices(user_id=user_id))
+    selected = next(
+        (item for item in available_choices if int(item.get("company_id", -1)) == int(explicit_company_id)),
+        None,
+    )
+    if not selected:
+        return None
+
+    updated_payload = dict(payload or {})
+    updated_payload["_summary_company_choices"] = available_choices
+    updated_payload["_summary_company_id"] = int(explicit_company_id)
     updated_payload["_summary_company_label"] = selected.get("label")
     updated_payload["empresa"] = selected.get("company_name")
     return updated_payload
@@ -1675,6 +1864,18 @@ def _format_summary_company_prompt(
     choices: List[Dict[str, Any]],
 ) -> str:
     lines = [f"{option.code} - {option.title}", "", "Escolha a empresa:"]
+    for item in choices:
+        lines.append(f"{item['index']} - {item['label']}")
+    lines.append("")
+    lines.append("Responda apenas com o numero da empresa. Exemplo: 1")
+    return "\n".join(lines)
+
+
+def _format_operation_company_prompt(
+    option: AgentMenuOption,
+    choices: List[Dict[str, Any]],
+) -> str:
+    lines = [f"{option.code} - {option.title}", "", "Escolha a empresa para continuar:"]
     for item in choices:
         lines.append(f"{item['index']} - {item['label']}")
     lines.append("")
@@ -2963,6 +3164,43 @@ def _resolve_single_company_for_operation(
             "Informe no formato: empresa: NOME_DA_EMPRESA"
         )
     return int(company_ids[0]), None
+
+
+def _resolve_explicit_company_id_from_payload(
+    payload: Dict[str, Any],
+    user_id: int,
+) -> Optional[int]:
+    selected_id = payload.get("_selected_company_id") or payload.get("_summary_company_id")
+    if selected_id is not None:
+        try:
+            selected_company_id = int(selected_id)
+        except (TypeError, ValueError):
+            selected_company_id = None
+        if selected_company_id and _user_can_access_company(user_id, selected_company_id):
+            return selected_company_id
+
+    company_ids, _ = _resolve_company_ids_for_payload(
+        payload=payload,
+        active_company_id=None,
+        user_id=user_id,
+    )
+    if len(company_ids) == 1:
+        return int(company_ids[0])
+    return None
+
+
+def _resolve_effective_company_id_for_payload(
+    payload: Dict[str, Any],
+    fallback_company_id: Optional[int],
+    user_id: int,
+) -> Optional[int]:
+    explicit_company_id = _resolve_explicit_company_id_from_payload(
+        payload=payload,
+        user_id=user_id,
+    )
+    if explicit_company_id:
+        return explicit_company_id
+    return fallback_company_id
 
 
 def _normalize_objective(value: str) -> str:

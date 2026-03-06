@@ -421,3 +421,135 @@ def test_try_execute_direct_option_creates_project_task_with_canonical_code(monk
     assert "AB.J.17.31" in text
     assert "AB.C.1.3.1" not in text
     assert "Fabiano Ferreira" in text
+
+
+def test_handle_menu_message_prompts_company_first_for_whatsapp_multi_company(monkeypatch):
+    option = AgentMenuOption(
+        code="1.4",
+        title="Cadastrar Atividade de Projeto",
+        action_key="project_task.create",
+    )
+    option.id = 14
+
+    class DummySession:
+        def __init__(self):
+            self.status = "idle"
+            self.missing_fields = []
+            self.company_id = 1
+            self.user_id = 10
+            self.channel = "whatsapp"
+            self.thread_id = "wa-1"
+            self.selected_option_id = None
+            self.last_user_message = None
+            self.collected_data = {}
+
+    session = DummySession()
+    choices = [
+        {
+            "index": 1,
+            "company_id": 7,
+            "company_name": "Save Water",
+            "company_code": "SV",
+            "label": "SV - Save Water",
+        },
+        {
+            "index": 2,
+            "company_id": 8,
+            "company_name": "Gas Evolution",
+            "company_code": "GX",
+            "label": "GX - Gas Evolution",
+        },
+    ]
+
+    monkeypatch.setattr(menu_engine, "_ensure_default_menu_seed", lambda: None)
+    monkeypatch.setattr(menu_engine, "_get_or_create_session", lambda **kwargs: session)
+    monkeypatch.setattr(menu_engine, "_find_option_by_code", lambda company_id, code: option)
+    monkeypatch.setattr(menu_engine, "_list_children", lambda company_id, parent_id: [])
+    monkeypatch.setattr(menu_engine, "_load_summary_company_choices", lambda user_id: choices)
+    monkeypatch.setattr(menu_engine, "_resolve_explicit_company_id_from_payload", lambda payload, user_id: None)
+    monkeypatch.setattr(menu_engine.db.session, "commit", lambda: None)
+    monkeypatch.setattr(menu_engine.db.session, "rollback", lambda: None)
+
+    result = menu_engine.handle_menu_message(
+        user_id=10,
+        company_id=1,
+        channel="whatsapp",
+        thread_id="wa-1",
+        message="1.4",
+    )
+
+    assert result.handled is True
+    assert "Escolha a empresa para continuar" in result.response_text
+    assert "1 - SV - Save Water" in result.response_text
+    assert "2 - GX - Gas Evolution" in result.response_text
+    assert session.status == menu_engine.COMPANY_SELECTION_STATUS
+    assert session.selected_option_id == 14
+    assert session.collected_data["_operation_company_choices"] == choices
+
+
+def test_prepare_missing_field_selection_uses_selected_company_from_payload(monkeypatch):
+    option = AgentMenuOption(
+        code="1.4",
+        title="Cadastrar Atividade de Projeto",
+        action_key="project_task.create",
+    )
+
+    class DummySession:
+        status = "idle"
+        company_id = 1
+        user_id = 99
+        collected_data = {}
+        missing_fields = []
+        channel = "whatsapp"
+
+    session = DummySession()
+    captured = {}
+
+    def fake_load_assisted_field_selection(action, field_key, company_id, user_id):
+        captured.update(
+            {
+                "action": action,
+                "field_key": field_key,
+                "company_id": company_id,
+                "user_id": user_id,
+            }
+        )
+        return {
+            "selection_kind": "project_picker",
+            "field_key": "codigo_projeto",
+            "value_key": "code",
+            "scope_label": "empresa Gas Evolution",
+            "item_label_plural": "projetos",
+            "choices": [
+                {
+                    "index": 1,
+                    "code": "GX.J.10",
+                    "title": "Projeto Integracao",
+                    "status": "planned",
+                    "progress": 0,
+                    "due_date": None,
+                }
+            ],
+        }
+
+    monkeypatch.setattr(menu_engine, "_load_assisted_field_selection", fake_load_assisted_field_selection)
+    monkeypatch.setattr(
+        menu_engine,
+        "_resolve_effective_company_id_for_payload",
+        lambda payload, fallback_company_id, user_id: 42,
+    )
+    monkeypatch.setattr(menu_engine.db.session, "commit", lambda: None)
+
+    result = menu_engine._prepare_missing_field_selection_flow_if_applicable(
+        session=session,
+        option=option,
+        collected={"empresa": "Gas Evolution", "_selected_company_id": 42},
+        missing_fields=[{"key": "codigo_projeto", "label": "Codigo do Projeto"}],
+    )
+
+    assert result is not None
+    assert result.handled is True
+    assert captured["company_id"] == 42
+    assert session.status == "awaiting_item_selection"
+    assert session.collected_data["empresa"] == "Gas Evolution"
+    assert session.collected_data["_selection_field_key"] == "codigo_projeto"
