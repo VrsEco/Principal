@@ -4,6 +4,7 @@ import sys
 sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), "..")))
 
 from src.intelligence import menu_engine
+from services.project_task_service import ProjectTaskService
 from models.agent_menu import AgentMenuOption
 
 
@@ -191,3 +192,198 @@ def test_email_validation_helpers():
     assert not menu_engine._is_valid_email_address("user@example")
     assert menu_engine._extract_email_from_text("manda para abc.teste+1@empresa.com.br") == "abc.teste+1@empresa.com.br"
     assert menu_engine._extract_email_from_text("sem email") is None
+
+
+def test_format_item_selection_prompt_for_project_picker_has_number_guidance():
+    option = AgentMenuOption(code="1.4", title="Cadastrar Atividade de Projeto", action_key="project_task.create")
+
+    text = menu_engine._format_item_selection_prompt(
+        option,
+        {
+            "selection_kind": "project_picker",
+            "scope_label": "empresa Save Water",
+            "choices": [
+                {
+                    "index": 1,
+                    "code": "SW.J.12",
+                    "title": "Implantacao ERP",
+                    "status": "in_progress",
+                    "progress": 65,
+                    "due_date": "2026-03-20",
+                }
+            ],
+        },
+    )
+
+    assert "Escolha o projeto ativo para a empresa Save Water" in text
+    assert "1 - SW.J.12 - Implantacao ERP" in text
+    assert "Status: Em andamento" in text
+    assert "Informe apenas o numero do projeto." in text
+    assert "codigo_projeto: AA.J.12" in text
+
+
+def test_handle_item_selection_state_for_project_picker_advances_to_remaining_fields(monkeypatch):
+    monkeypatch.setattr(menu_engine.db.session, "commit", lambda: None)
+
+    option = AgentMenuOption(
+        code="1.4",
+        title="Cadastrar Atividade de Projeto",
+        action_key="project_task.create",
+        required_fields=[
+            {"key": "codigo_projeto", "label": "Codigo do Projeto"},
+            {"key": "nome_atividade", "label": "Nome da Atividade"},
+        ],
+    )
+
+    class DummySession:
+        selected_option = option
+        status = "awaiting_item_selection"
+        collected_data = {
+            "_selection_action": "project_task.create",
+            "_selection_kind": "project_picker",
+            "_selection_field_key": "codigo_projeto",
+            "_selection_value_key": "code",
+            "_choices": [
+                {"index": 1, "code": "SW.J.11", "title": "Projeto A"},
+                {"index": 2, "code": "SW.J.22", "title": "Projeto B"},
+            ],
+        }
+        missing_fields = []
+        company_id = 1
+        user_id = 99
+        channel = "web"
+
+    session = DummySession()
+    result = menu_engine._handle_item_selection_state(session, "2", "2")
+
+    assert result.handled is True
+    assert result.response_text is not None
+    assert "Nome da Atividade" in result.response_text
+    assert "Codigo do Projeto" not in result.response_text
+    assert session.status == "awaiting_fields"
+    assert session.collected_data == {"codigo_projeto": "SW.J.22"}
+    assert session.missing_fields == [{"key": "nome_atividade", "label": "Nome da Atividade"}]
+
+
+def test_build_confirmation_display_items_formats_selected_project(monkeypatch):
+    option = AgentMenuOption(code="1.4", title="Cadastrar Atividade de Projeto", action_key="project_task.create")
+    monkeypatch.setattr(
+        menu_engine,
+        "_format_project_choice_line",
+        lambda value: "SW.J.12 - Implantacao ERP | Status: Em andamento | Progresso: 65% | Prazo: 20/03/2026",
+    )
+
+    items = menu_engine._build_confirmation_display_items(
+        option,
+        {"codigo_projeto": "SW.J.12", "nome_atividade": "Configurar dashboards"},
+    )
+
+    assert items[0].startswith("SW.J.12 - Implantacao ERP")
+    assert "nome_atividade: Configurar dashboards" in items
+
+
+def test_handle_menu_message_keeps_awaiting_fields_on_numbered_reply_with_fluxo(monkeypatch):
+    class DummySession:
+        def __init__(self):
+            self.status = "awaiting_fields"
+            self.missing_fields = [{"key": "nome_atividade", "label": "Nome da Atividade"}]
+            self.company_id = 1
+            self.user_id = 10
+            self.channel = "web"
+            self.thread_id = "abc"
+            self.was_reset = False
+
+    session = DummySession()
+
+    monkeypatch.setattr(menu_engine, "_ensure_default_menu_seed", lambda: None)
+    monkeypatch.setattr(menu_engine, "_get_or_create_session", lambda **kwargs: session)
+    monkeypatch.setattr(
+        menu_engine,
+        "_handle_missing_fields_state",
+        lambda current_session, text, lower: menu_engine.MenuInterceptResult(
+            handled=True,
+            response_text=f"capturado:{text}",
+        ),
+    )
+    monkeypatch.setattr(
+        menu_engine,
+        "_reset_session",
+        lambda current_session: setattr(current_session, "was_reset", True),
+    )
+
+    result = menu_engine.handle_menu_message(
+        user_id=10,
+        company_id=1,
+        channel="web",
+        thread_id="abc",
+        message="1: Teste Fabiano Fluxo",
+    )
+
+    assert result.handled is True
+    assert result.response_text == "capturado:1: Teste Fabiano Fluxo"
+    assert session.was_reset is False
+
+
+def test_try_execute_direct_option_creates_project_task_with_canonical_code(monkeypatch):
+    option = AgentMenuOption(
+        code="1.4",
+        title="Cadastrar Atividade de Projeto",
+        action_key="project_task.create",
+    )
+
+    class DummyTask:
+        id = 31
+        what = "Teste fabiano whatssapp"
+        code = "AB.J.17.31"
+
+    class DummyProject:
+        id = 17
+        name = "Lucro Real Gas Evolution"
+        code = "AB.J.17"
+
+    class DummyCompany:
+        client_code = "AB"
+        name = "Gas Evolution"
+
+    captured = {}
+
+    def fake_create_project_task(**kwargs):
+        captured.update(kwargs)
+        return (
+            {
+                "task": DummyTask(),
+                "project": DummyProject(),
+                "company": DummyCompany(),
+                "responsible_name": "Fabiano Ferreira",
+            },
+            None,
+        )
+
+    monkeypatch.setattr(
+        menu_engine,
+        "_resolve_company_ids_for_payload",
+        lambda payload, active_company_id, user_id: ([1], "empresa AB - Gas Evolution"),
+    )
+    monkeypatch.setattr(
+        ProjectTaskService,
+        "create_project_task",
+        staticmethod(fake_create_project_task),
+    )
+
+    text = menu_engine._try_execute_direct_option(
+        option=option,
+        payload={
+            "codigo_projeto": "AB.J.17",
+            "nome_atividade": "Teste fabiano whatssapp",
+        },
+        company_id=1,
+        user_id=10,
+    )
+
+    assert captured["project_code"] == "AB.J.17"
+    assert captured["task_name"] == "Teste fabiano whatssapp"
+    assert captured["allowed_company_ids"] == [1]
+    assert text is not None
+    assert "AB.J.17.31" in text
+    assert "AB.C.1.3.1" not in text
+    assert "Fabiano Ferreira" in text

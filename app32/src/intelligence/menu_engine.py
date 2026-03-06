@@ -86,12 +86,28 @@ def handle_menu_message(
             session.status in SUMMARY_SELECTION_STATUSES
             and _parse_selection_number_date(text) is not None
         )
+        is_missing_fields_reply = (
+            session.status == "awaiting_fields"
+            and bool(
+                _extract_numbered_fields_from_text(text, session.missing_fields or [])
+                or _extract_fields_from_text(text)
+            )
+        )
+        is_confirmation_adjustment_reply = (
+            session.status == "awaiting_confirmation"
+            and bool(_extract_fields_from_text(text))
+        )
 
         # Se o usuário iniciar um novo comando de menu enquanto há sessão pendente,
         # reinicia o estado para evitar "prisão" em fluxo anterior.
-        if session.status != "idle" and (
+        if session.status != "idle" and not (
+            is_item_selection_reply
+            or is_summary_selection_reply
+            or is_missing_fields_reply
+            or is_confirmation_adjustment_reply
+        ) and (
             _is_menu_request(lower)
-            or (explicit_code and not is_item_selection_reply and not is_summary_selection_reply)
+            or explicit_code
         ):
             _reset_session(session)
 
@@ -217,46 +233,10 @@ def _prepare_option_flow(
     if summary_flow is not None:
         return summary_flow
 
-    required_fields = _normalize_required_fields(option.required_fields)
-    required_fields = _adjust_required_fields_for_context(
-        action_key=(option.action_key or ""),
-        required_fields=required_fields,
+    return _advance_option_after_payload_collection(
         session=session,
-    )
-    missing = _missing_fields(required_fields, collected)
-
-    if missing:
-        session.status = "awaiting_fields"
-        session.collected_data = collected
-        session.missing_fields = missing
-        db.session.commit()
-        return MenuInterceptResult(
-            handled=True,
-            response_text=_format_missing_fields(option, missing, collected),
-        )
-
-    if _is_read_only_action(option.action_key):
-        direct_execution = _try_execute_direct_option(
-            option=option,
-            payload=collected,
-            company_id=session.company_id,
-            user_id=session.user_id,
-            channel=session.channel or "web",
-        )
-        if direct_execution is not None:
-            _reset_session(session)
-            return MenuInterceptResult(
-                handled=True,
-                response_text=direct_execution,
-            )
-
-    session.status = "awaiting_confirmation"
-    session.collected_data = collected
-    session.missing_fields = []
-    db.session.commit()
-    return MenuInterceptResult(
-        handled=True,
-        response_text=_format_confirmation(option, collected),
+        option=option,
+        payload=collected,
     )
 
 
@@ -325,28 +305,50 @@ def _handle_missing_fields_state(
     merged = dict(session.collected_data or {})
     merged.update(_extract_numbered_fields_from_text(text, session.missing_fields or []))
     merged.update(_extract_fields_from_text(text))
+    return _advance_option_after_payload_collection(
+        session=session,
+        option=option,
+        payload=merged,
+    )
 
+
+def _advance_option_after_payload_collection(
+    session: AgentMenuSession,
+    option: AgentMenuOption,
+    payload: Dict[str, Any],
+) -> MenuInterceptResult:
+    payload = _public_payload(payload)
     required_fields = _normalize_required_fields(option.required_fields)
     required_fields = _adjust_required_fields_for_context(
         action_key=(option.action_key or ""),
         required_fields=required_fields,
         session=session,
     )
-    missing = _missing_fields(required_fields, merged)
+    missing = _missing_fields(required_fields, payload)
 
     if missing:
-        session.collected_data = merged
+        assisted_selection = _prepare_missing_field_selection_flow_if_applicable(
+            session=session,
+            option=option,
+            collected=payload,
+            missing_fields=missing,
+        )
+        if assisted_selection is not None:
+            return assisted_selection
+
+        session.status = "awaiting_fields"
+        session.collected_data = payload
         session.missing_fields = missing
         db.session.commit()
         return MenuInterceptResult(
             handled=True,
-            response_text=_format_missing_fields(option, missing, merged),
+            response_text=_format_missing_fields(option, missing, payload),
         )
 
     if _is_read_only_action(option.action_key):
         direct_execution = _try_execute_direct_option(
             option=option,
-            payload=merged,
+            payload=payload,
             company_id=session.company_id,
             user_id=session.user_id,
             channel=session.channel or "web",
@@ -359,12 +361,12 @@ def _handle_missing_fields_state(
             )
 
     session.status = "awaiting_confirmation"
-    session.collected_data = merged
+    session.collected_data = payload
     session.missing_fields = []
     db.session.commit()
     return MenuInterceptResult(
         handled=True,
-        response_text=_format_confirmation(option, merged),
+        response_text=_format_confirmation(option, payload),
     )
 
 
@@ -386,9 +388,31 @@ def _handle_item_selection_state(
     hidden = dict(session.collected_data or {})
     choices = hidden.get("_choices") or []
     selection_action = str(hidden.get("_selection_action") or "").lower()
+    selection_kind = str(hidden.get("_selection_kind") or "").strip().lower()
+    selection_field_key = _slugify(str(hidden.get("_selection_field_key") or ""))
+    selection_value_key = str(hidden.get("_selection_value_key") or "code").strip() or "code"
 
     # Fallback: usuário pode informar o código diretamente.
     direct_fields = _extract_fields_from_text(text)
+    if selection_kind == "project_picker" and selection_field_key:
+        project_value = (
+            direct_fields.get(selection_field_key)
+            or direct_fields.get("project_code")
+            or direct_fields.get("codigo")
+        )
+        if project_value:
+            merged = _public_payload(hidden)
+            merged[selection_field_key] = str(project_value).strip()
+            for key, value in direct_fields.items():
+                if key in {selection_field_key, "project_code", "codigo"}:
+                    continue
+                merged[key] = value
+            return _advance_option_after_payload_collection(
+                session=session,
+                option=option,
+                payload=merged,
+            )
+
     if selection_action == "project_task.complete" and "codigo_atividade" in direct_fields:
         merged = _public_payload(hidden)
         merged.update(direct_fields)
@@ -447,6 +471,14 @@ def _handle_item_selection_state(
 
     parsed = _parse_selection_number_date(text)
     if not parsed:
+        if selection_kind == "project_picker":
+            return MenuInterceptResult(
+                handled=True,
+                response_text=(
+                    "Formato invalido. Informe apenas o numero do projeto (ex: 1).\n"
+                    "Se preferir, envie o codigo diretamente no formato codigo_projeto: AA.J.12."
+                ),
+            )
         if selection_action in {"meeting.start", "meeting.summarize", "onboarding.diagnose"}:
             return MenuInterceptResult(
                 handled=True,
@@ -478,6 +510,14 @@ def _handle_item_selection_state(
 
     date_iso = None
     if date_raw:
+        if selection_kind == "project_picker":
+            return MenuInterceptResult(
+                handled=True,
+                response_text=(
+                    "Formato invalido. Informe apenas o numero do projeto (ex: 1).\n"
+                    "Se preferir, envie o codigo diretamente no formato codigo_projeto: AA.J.12."
+                ),
+            )
         parsed_date = _parse_completion_date(date_raw)
         if not parsed_date:
             return MenuInterceptResult(
@@ -487,6 +527,13 @@ def _handle_item_selection_state(
         date_iso = parsed_date.isoformat()
 
     merged = _public_payload(hidden)
+    if selection_kind == "project_picker":
+        merged[selection_field_key or "codigo_projeto"] = selected.get(selection_value_key) or selected.get("code")
+        return _advance_option_after_payload_collection(
+            session=session,
+            option=option,
+            payload=merged,
+        )
     if selection_action == "project_task.complete":
         merged["codigo_atividade"] = selected.get("code")
     elif selection_action == "process_instance.complete":
@@ -738,6 +785,49 @@ def _prepare_selection_flow_if_applicable(
     session.status = "awaiting_item_selection"
     session.collected_data = hidden_payload
     session.missing_fields = []
+    db.session.commit()
+
+    return MenuInterceptResult(
+        handled=True,
+        response_text=_format_item_selection_prompt(option, selection),
+    )
+
+
+def _prepare_missing_field_selection_flow_if_applicable(
+    session: AgentMenuSession,
+    option: AgentMenuOption,
+    collected: Dict[str, Any],
+    missing_fields: List[Dict[str, str]],
+) -> Optional[MenuInterceptResult]:
+    action = (option.action_key or "").strip().lower()
+    if action not in {"project.update", "project.complete", "project_task.create"}:
+        return None
+
+    missing_keys = {_slugify(str(item.get("key") or "")) for item in (missing_fields or [])}
+    if "codigo_projeto" not in missing_keys:
+        return None
+
+    selection = _load_assisted_field_selection(
+        action=action,
+        field_key="codigo_projeto",
+        company_id=session.company_id,
+        user_id=session.user_id,
+    )
+    if not selection.get("choices"):
+        return None
+
+    hidden_payload = _public_payload(collected)
+    hidden_payload["_selection_action"] = action
+    hidden_payload["_selection_kind"] = selection.get("selection_kind") or "project_picker"
+    hidden_payload["_selection_field_key"] = selection.get("field_key") or "codigo_projeto"
+    hidden_payload["_selection_value_key"] = selection.get("value_key") or "code"
+    hidden_payload["_choices"] = selection["choices"]
+    hidden_payload["_scope_label"] = selection.get("scope_label")
+    hidden_payload["_item_label_plural"] = selection.get("item_label_plural")
+
+    session.status = "awaiting_item_selection"
+    session.collected_data = hidden_payload
+    session.missing_fields = missing_fields
     db.session.commit()
 
     return MenuInterceptResult(
@@ -1702,6 +1792,23 @@ def _load_open_choices(
     return {"choices": []}
 
 
+def _load_assisted_field_selection(
+    action: str,
+    field_key: str,
+    company_id: Optional[int],
+    user_id: int,
+) -> Dict[str, Any]:
+    company_ids = _resolve_company_scope(company_id=company_id, user_id=user_id)
+    if not company_ids:
+        return {"choices": []}
+
+    normalized_field = _slugify(field_key)
+    if normalized_field == "codigo_projeto" and action in {"project.update", "project.complete", "project_task.create"}:
+        return _load_active_project_choices(company_ids=company_ids)
+
+    return {"choices": []}
+
+
 def _resolve_company_scope(company_id: Optional[int], user_id: int) -> List[int]:
     if company_id:
         return [company_id]
@@ -1720,6 +1827,50 @@ def _resolve_company_scope(company_id: Optional[int], user_id: int) -> List[int]
             seen.add(cid)
             result.append(cid)
     return result
+
+
+def _load_active_project_choices(company_ids: List[int]) -> Dict[str, Any]:
+    from models.project import Project
+    from models.company import Company
+
+    rows = (
+        db.session.query(Project, Company)
+        .join(Company, Company.id == Project.company_id)
+        .filter(Project.company_id.in_(company_ids))
+        .filter(or_(Project.status.is_(None), ~Project.status.in_(["completed", "cancelled"])))
+        .order_by(Project.deadline.asc().nullslast(), Project.id.asc())
+        .limit(30)
+        .all()
+    )
+
+    choices = []
+    company_names = []
+    for idx, (project, company) in enumerate(rows, start=1):
+        company_code = company.client_code or "CP"
+        project_code = f"{company_code}.J.{project.id}"
+        deadline_str = project.deadline.isoformat() if getattr(project, "deadline", None) else "-"
+        choices.append({
+            "index": idx,
+            "id": project.id,
+            "company_id": company.id,
+            "company_name": company.name,
+            "code": project_code,
+            "title": project.name,
+            "status": project.status or "planned",
+            "progress": int(project.progress or 0),
+            "due_date": deadline_str,
+        })
+        company_names.append(company.name)
+
+    scope_label = _build_scope_label(company_names)
+    return {
+        "choices": choices,
+        "scope_label": scope_label,
+        "item_label_plural": "projetos",
+        "selection_kind": "project_picker",
+        "field_key": "codigo_projeto",
+        "value_key": "code",
+    }
 
 
 def _load_open_project_task_choices(company_ids: List[int]) -> Dict[str, Any]:
@@ -2011,6 +2162,8 @@ def _try_execute_direct_option(
     Retorna texto de resposta quando executado; None para seguir fluxo via LLM.
     """
     action = (option.action_key or "").strip().lower()
+    if action == "project_task.create":
+        return _execute_create_project_task(payload=payload, company_id=company_id, user_id=user_id)
     if action == "project_task.complete":
         return _execute_complete_project_task(payload=payload, company_id=company_id, user_id=user_id)
     if action == "process_instance.complete":
@@ -2062,6 +2215,74 @@ def _try_execute_direct_option(
     if action == "onboarding.go_live_check":
         return _execute_onboarding_go_live_check(payload=payload, company_id=company_id, user_id=user_id)
     return None
+
+
+def _execute_create_project_task(payload: Dict[str, Any], company_id: Optional[int], user_id: int) -> str:
+    from services.project_task_service import ProjectTaskService
+
+    project_code = str(
+        payload.get("codigo_projeto")
+        or payload.get("project_code")
+        or payload.get("codigo")
+        or ""
+    ).strip()
+    if not project_code:
+        return "Nao encontrei o codigo do projeto. Informe no formato: codigo_projeto: AA.J.12"
+
+    task_name = str(
+        payload.get("nome_atividade")
+        or payload.get("atividade")
+        or payload.get("task_name")
+        or payload.get("what")
+        or payload.get("titulo")
+        or ""
+    ).strip()
+    if not task_name:
+        return "Nao encontrei o nome da atividade. Informe no formato: nome_atividade: Nome da Atividade"
+
+    company_ids, company_label_or_error = _resolve_company_ids_for_payload(
+        payload=payload,
+        active_company_id=company_id,
+        user_id=user_id,
+    )
+    if not company_ids:
+        return company_label_or_error or "Nao foi possivel identificar a empresa do projeto."
+
+    result, error = ProjectTaskService.create_project_task(
+        project_code=project_code,
+        task_name=task_name,
+        user_id=user_id,
+        allowed_company_ids=company_ids,
+        responsible_name=str(payload.get("responsavel") or payload.get("who") or "").strip() or None,
+        due_date=str(payload.get("prazo") or payload.get("due_date") or payload.get("data_limite") or "").strip() or None,
+        description=str(payload.get("como") or payload.get("descricao") or payload.get("description") or "").strip() or None,
+        amount=str(payload.get("valor") or payload.get("amount") or "").strip() or None,
+        status=str(payload.get("status") or "planned").strip() or "planned",
+        stage=str(payload.get("etapa") or payload.get("stage") or "inbox").strip() or "inbox",
+        priority=str(payload.get("prioridade") or payload.get("priority") or "normal").strip() or "normal",
+        notes=str(payload.get("observacoes") or payload.get("notes") or "").strip() or None,
+    )
+    if error:
+        return error
+    if not result:
+        return "Nao foi possivel cadastrar a atividade de projeto."
+
+    task = result["task"]
+    project = result["project"]
+    company = result.get("company")
+    responsible_name = str(result.get("responsible_name") or "Nao informado").strip() or "Nao informado"
+
+    company_code = company.client_code if company and getattr(company, "client_code", None) else "CP"
+    project_name = project.name if getattr(project, "name", None) else f"Projeto {project.id}"
+    canonical_project_code = project.code if getattr(project, "code", None) else f"{company_code}.J.{project.id}"
+    activity_code = task.code if getattr(task, "code", None) else f"{canonical_project_code}.{task.id}"
+
+    return (
+        f"A atividade \"{task.what}\" foi cadastrada com sucesso no projeto "
+        f"\"{canonical_project_code} - {project_name}\".\n\n"
+        f"    Codigo da Atividade: {activity_code}\n"
+        f"    Responsavel: {responsible_name}"
+    )
 
 
 def _execute_schedule_meeting(payload: Dict[str, Any], company_id: Optional[int], user_id: int) -> str:
@@ -4061,11 +4282,17 @@ def _format_item_selection_prompt(
     choices = selection.get("choices") or []
     scope_label = selection.get("scope_label") or "empresa ativa"
     item_label_plural = selection.get("item_label_plural") or "itens"
+    selection_kind = str(selection.get("selection_kind") or "").strip().lower()
     article = "os"
     if item_label_plural.strip().lower() in {"atividades", "instancias de processo", "reunioes"}:
         article = "as"
 
     if not choices:
+        if selection_kind == "project_picker":
+            return (
+                "Nao encontrei projetos ativos no contexto atual.\n"
+                "Se preferir, informe o codigo diretamente no formato codigo_projeto: AA.J.12."
+            )
         return (
             f"Nao encontrei {item_label_plural} em aberto no contexto atual.\n"
             "Se quiser, informe o codigo diretamente no formato campo: valor."
@@ -4073,6 +4300,29 @@ def _format_item_selection_prompt(
 
     action = (option.action_key or "").strip().lower()
     header = f"{option.code} - {option.title}"
+    if selection_kind == "project_picker":
+        lines = [
+            header,
+            "",
+            f"Escolha o projeto ativo para a {scope_label}:",
+        ]
+        for item in choices:
+            code = item.get("code") or "-"
+            title = item.get("title") or "-"
+            status = _format_project_status_label(item.get("status"))
+            due_str = _format_date_br(item.get("due_date"))
+            progress = item.get("progress")
+            detail_parts = [f"Status: {status}"]
+            if progress is not None:
+                detail_parts.append(f"Progresso: {progress}%")
+            detail_parts.append(f"Prazo: {due_str}")
+            lines.append(f"{item['index']} - {code} - {title} | {' | '.join(detail_parts)}")
+        lines.append("")
+        lines.append("Informe apenas o numero do projeto.")
+        lines.append("Exemplo: 1")
+        lines.append("Se preferir, envie o codigo diretamente no formato codigo_projeto: AA.J.12")
+        return "\n".join(lines)
+
     if action == "onboarding.diagnose":
         lines = [
             header,
@@ -4147,6 +4397,18 @@ def _format_confirmation(option: AgentMenuOption, payload: Dict[str, Any]) -> st
 def _build_confirmation_display_items(option: AgentMenuOption, payload: Dict[str, Any]) -> List[str]:
     action = (option.action_key or "").strip().lower()
     items: List[str] = []
+
+    if action in {"project.update", "project.complete", "project_task.create"}:
+        project_code = str(payload.get("codigo_projeto") or "").strip()
+        if project_code:
+            pretty = _format_project_choice_line(project_code)
+            items.append(pretty or f"codigo_projeto: {project_code}")
+
+        for key, value in payload.items():
+            if key == "codigo_projeto":
+                continue
+            items.append(f"{key}: {value}")
+        return items
 
     if action == "project_task.complete":
         activity_code = str(payload.get("codigo_atividade") or "").strip()
@@ -4232,6 +4494,41 @@ def _format_project_task_choice_line(activity_code: str) -> Optional[str]:
     due_str = task.due_date.isoformat() if getattr(task, "due_date", None) else "-"
     canonical_code = task.code if hasattr(task, "code") and task.code else activity_code
     return f"{canonical_code} - {task.what} | {project_name} | Prazo: {due_str}"
+
+
+def _format_project_status_label(status: Any) -> str:
+    normalized = _slugify(str(status or ""))
+    labels = {
+        "planned": "Planejado",
+        "in_progress": "Em andamento",
+        "completed": "Concluido",
+        "cancelled": "Cancelado",
+    }
+    return labels.get(normalized, str(status or "Sem status"))
+
+
+def _format_project_choice_line(project_code: str) -> Optional[str]:
+    from models.project import Project
+    from models.company import Company
+
+    project_id = _extract_id_from_code(project_code)
+    if not project_id:
+        return None
+
+    project = Project.query.get(project_id)
+    if not project:
+        return None
+
+    company = Company.query.get(project.company_id)
+    company_code = company.client_code if company and company.client_code else "CP"
+    canonical_code = f"{company_code}.J.{project.id}"
+    deadline_str = _format_date_br(getattr(project, "deadline", None))
+    status_label = _format_project_status_label(getattr(project, "status", None))
+    progress = int(getattr(project, "progress", 0) or 0)
+    return (
+        f"{canonical_code} - {project.name} | Status: {status_label} | "
+        f"Progresso: {progress}% | Prazo: {deadline_str}"
+    )
 
 
 def _format_process_instance_choice_line(instance_code: str) -> Optional[str]:

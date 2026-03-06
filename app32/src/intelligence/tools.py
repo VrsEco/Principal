@@ -1482,6 +1482,71 @@ def get_tasks_today(scope: str = "me"):
 
 
 @tool
+def create_project_task(project_code: str, task_name: str, responsible_name: str = None, due_date: str = None, description: str = None, priority: str = "normal", notes: str = None):
+    """
+    Cria uma nova atividade em um projeto existente, respeitando o contexto multiempresa.
+    :param project_code: Código do projeto no formato EMPRESA.J.ID. Ex: 'AB.J.17'
+    :param task_name: Nome da atividade. Ex: 'Validar fluxo de WhatsApp'
+    :param responsible_name: Opcional nome do responsável. Se omitido, usa o usuário atual.
+    :param due_date: Opcional prazo no formato YYYY-MM-DD ou DD/MM/YYYY.
+    :param description: Opcional descrição/como executar.
+    :param priority: Prioridade da atividade. Ex: 'normal', 'high'
+    :param notes: Observações adicionais.
+    """
+    from models.employee import Employee
+    from models.user import User
+    from services.project_task_service import ProjectTaskService
+
+    user_id = get_active_user_id()
+    if not user_id:
+        return "Erro: Usuario nao autenticado."
+
+    active_company_id = get_active_company_id()
+    allowed_company_ids = [active_company_id] if active_company_id else []
+
+    if not allowed_company_ids:
+        user = User.query.get(user_id)
+        if user and str(getattr(user, "role", "")).lower() == "admin":
+            allowed_company_ids = None
+        else:
+            allowed_company_ids = [
+                int(emp.company_id)
+                for emp in Employee.query.filter(Employee.user_id == user_id).all()
+                if getattr(emp, "company_id", None)
+            ]
+            if not allowed_company_ids:
+                return "Erro: Nenhuma empresa vinculada ao usuario para criar a atividade."
+
+    result, error = ProjectTaskService.create_project_task(
+        project_code=project_code,
+        task_name=task_name,
+        user_id=user_id,
+        allowed_company_ids=allowed_company_ids,
+        responsible_name=responsible_name,
+        due_date=due_date,
+        description=description,
+        priority=priority,
+        notes=notes,
+    )
+    if error:
+        return sanitize_output(error)
+    if not result:
+        return "Erro: Nao foi possivel criar a atividade de projeto."
+
+    task = result["task"]
+    project = result["project"]
+    responsible = result.get("responsible_name") or "Nao informado"
+    project_code_label = project.code if getattr(project, "code", None) else project_code
+    activity_code = task.code if getattr(task, "code", None) else f"{project_code_label}.{task.id}"
+
+    return sanitize_output(
+        f"Atividade '{task.what}' cadastrada com sucesso no projeto '{project_code_label} - {project.name}'.\n"
+        f"Codigo da Atividade: {activity_code}\n"
+        f"Responsavel: {responsible}"
+    )
+
+
+@tool
 def complete_task(task_type: str, task_id: int, evidence_description: str = None, completion_date: str = None, notification_email: str = None, notification_whatsapp: str = None):
     """
     Marca uma tarefa de projeto ou instância de processo como CONCLUÍDA e opcionalmente notifica interessados.
@@ -1873,6 +1938,7 @@ tools = [
     send_meeting_minutes,
     # Fase 2 — Task Management
     get_tasks_today,
+    create_project_task,
     complete_task,
     log_work_hours,
     request_deadline_extension,
