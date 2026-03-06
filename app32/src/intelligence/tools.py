@@ -1656,36 +1656,101 @@ def log_work_hours(task_type: str, task_id: int, hours: float, description: str,
     :param work_date: Data do trabalho no formato YYYY-MM-DD. Se omitido, usa hoje.
     """
     from datetime import datetime, date
-    
+    from decimal import Decimal
+    from sqlalchemy import func
 
     try:
         work_dt = datetime.strptime(work_date, '%Y-%m-%d').date() if work_date else date.today()
+        if hours <= 0:
+            return "Erro: informe uma quantidade de horas maior que zero."
 
         user_id = get_active_user_id()
         company_id = get_active_company_id()
+        if not user_id:
+            return "Erro: usuário não autenticado."
 
         if task_type == 'project_task':
-            from models.project import ProjectTask
+            from models.project import ProjectTask, ProjectActivityCollaborator, ProjectTaskHoursSummary
             from models.activity_work_log import ActivityWorkLog
+            from models.employee import Employee
 
-            task = ProjectTask.query.get(task_id)
+            task = db.session.get(ProjectTask, task_id)
             if not task:
                 return f"Tarefa de projeto ID {task_id} não encontrada."
+            if not task.project:
+                return f"Erro: a tarefa {task_id} não possui projeto vinculado."
+            if company_id and int(company_id) != int(task.project.company_id):
+                return "Erro: a tarefa informada não pertence à empresa ativa do contexto."
+
+            employee = (
+                Employee.query.filter(
+                    Employee.user_id == user_id,
+                    Employee.company_id == task.project.company_id,
+                    Employee.status == 'active',
+                )
+                .order_by(Employee.id.asc())
+                .first()
+            )
+            if not employee:
+                return "Erro: não encontrei um colaborador ativo vinculado ao usuário na empresa desta tarefa."
 
             log = ActivityWorkLog(
-                project_task_id=task_id,
-                user_id=user_id,
-                company_id=int(company_id) if company_id else None,
-                hours_worked=hours,
+                activity_type='project',
+                activity_id=task_id,
+                employee_id=employee.id,
+                employee_name=employee.name,
+                hours_worked=Decimal(str(hours)),
                 description=description,
                 work_date=work_dt,
                 created_at=datetime.utcnow()
             )
             db.session.add(log)
 
-            # Atualiza status para in_progress se estava not_started
-            if task.status == 'not_started':
+            collaborator = ProjectActivityCollaborator.query.filter(
+                ProjectActivityCollaborator.activity_id == task_id,
+                ProjectActivityCollaborator.employee_id == employee.id,
+                ProjectActivityCollaborator.is_deleted.is_(False),
+            ).first()
+            if not collaborator:
+                collaborator = ProjectActivityCollaborator(
+                    activity_id=task_id,
+                    employee_id=employee.id,
+                    role='executor',
+                    estimated_hours=Decimal('0'),
+                    worked_hours=Decimal('0'),
+                    notes='Criado automaticamente via log_work_hours.',
+                )
+                db.session.add(collaborator)
+            collaborator.worked_hours = Decimal(str(collaborator.worked_hours or 0)) + Decimal(str(hours))
+
+            # Atualiza status para in_progress quando ainda nao iniciou de fato
+            if task.status in (None, '', 'not_started', 'planned'):
                 task.status = 'in_progress'
+            if task.stage in (None, '', 'inbox', 'todo', 'planned'):
+                task.stage = 'executing'
+
+            db.session.flush()
+            total_hours = (
+                db.session.query(func.coalesce(func.sum(ActivityWorkLog.hours_worked), 0))
+                .filter(
+                    ActivityWorkLog.activity_type == 'project',
+                    ActivityWorkLog.activity_id == task_id,
+                )
+                .scalar()
+            ) or 0
+            task.worked_hours = total_hours
+
+            summary = ProjectTaskHoursSummary.query.filter_by(task_id=task_id).first()
+            if not summary:
+                summary = ProjectTaskHoursSummary(
+                    task_id=task_id,
+                    total_estimated_hours=task.estimated_hours or Decimal('0'),
+                    total_worked_hours=total_hours,
+                )
+                db.session.add(summary)
+            else:
+                summary.total_estimated_hours = task.estimated_hours or Decimal('0')
+                summary.total_worked_hours = total_hours
 
             db.session.commit()
             return (
@@ -1696,16 +1761,32 @@ def log_work_hours(task_type: str, task_id: int, hours: float, description: str,
         elif task_type == 'process_instance':
             from models.process import ProcessInstance
             from models.activity_work_log import ActivityWorkLog
+            from models.employee import Employee
 
-            instance = ProcessInstance.query.get(task_id)
+            instance = db.session.get(ProcessInstance, task_id)
             if not instance:
                 return f"Instância de processo ID {task_id} não encontrada."
+            if company_id and int(company_id) != int(instance.company_id):
+                return "Erro: a instância informada não pertence à empresa ativa do contexto."
+
+            employee = (
+                Employee.query.filter(
+                    Employee.user_id == user_id,
+                    Employee.company_id == instance.company_id,
+                    Employee.status == 'active',
+                )
+                .order_by(Employee.id.asc())
+                .first()
+            )
+            if not employee:
+                return "Erro: não encontrei um colaborador ativo vinculado ao usuário na empresa desta instância."
 
             log = ActivityWorkLog(
-                process_instance_id=task_id,
-                user_id=user_id,
-                company_id=int(company_id) if company_id else None,
-                hours_worked=hours,
+                activity_type='process_instance',
+                activity_id=task_id,
+                employee_id=employee.id,
+                employee_name=employee.name,
+                hours_worked=Decimal(str(hours)),
                 description=description,
                 work_date=work_dt,
                 created_at=datetime.utcnow()
@@ -1714,9 +1795,19 @@ def log_work_hours(task_type: str, task_id: int, hours: float, description: str,
 
             if instance.status == 'pending':
                 instance.status = 'in_progress'
-            if not instance.worked_hours:
-                instance.worked_hours = 0
-            instance.worked_hours = float(instance.worked_hours) + hours
+
+            db.session.flush()
+            total_hours = (
+                db.session.query(func.coalesce(func.sum(ActivityWorkLog.hours_worked), 0))
+                .filter(
+                    ActivityWorkLog.activity_type == 'process_instance',
+                    ActivityWorkLog.activity_id == task_id,
+                )
+                .scalar()
+            ) or 0
+            instance.worked_hours = total_hours
+            if hasattr(instance, 'actual_hours'):
+                instance.actual_hours = float(total_hours)
 
             db.session.commit()
             return (
