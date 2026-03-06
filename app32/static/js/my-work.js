@@ -3988,67 +3988,78 @@ function initializeActivityActions() {
 function buildReportFiltersPayload() {
   const filters = {};
 
+  const toIntSet = (values) =>
+    new Set((values || []).map(v => parseInt(v, 10)).filter(v => Number.isInteger(v)));
+  const getSelectedFromAvailable = (selectedValues, availableOptions) => {
+    const availableIds = toIntSet((availableOptions || []).map(option => option.id));
+    const selectedIds = (selectedValues || [])
+      .map(v => parseInt(v, 10))
+      .filter(v => Number.isInteger(v) && availableIds.has(v));
+    return {
+      selectedIds,
+      availableCount: availableIds.size
+    };
+  };
+
   // Company IDs - só incluir se houver seleção (mesma lógica da API)
   if (state.selectedCompanyIds && state.selectedCompanyIds.length > 0) {
     filters.company_ids = state.selectedCompanyIds.map(id => parseInt(id));
   }
 
-  // Responsible IDs - só incluir se seleção parcial (mesma lógica da API)
-  const collaboratorTotal = state.collaborators?.length || 0;
+  // Responsible IDs - incluir apenas se seleção parcial dentro do contexto atual (empresa)
+  const responsibleCtx = getSelectedFromAvailable(state.selectedResponsibleIds, getCollaboratorOptions());
   if (
-    state.selectedResponsibleIds.length &&
-    state.selectedResponsibleIds.length < collaboratorTotal
+    responsibleCtx.availableCount > 0 &&
+    responsibleCtx.selectedIds.length > 0 &&
+    responsibleCtx.selectedIds.length < responsibleCtx.availableCount
   ) {
-    filters.responsible_ids = state.selectedResponsibleIds.map(id => parseInt(id));
+    filters.responsible_ids = responsibleCtx.selectedIds;
   }
 
-  // Executor IDs - só incluir se seleção parcial (mesma lógica da API)
+  // Executor IDs - incluir apenas se seleção parcial dentro do contexto atual (empresa)
+  const executorCtx = getSelectedFromAvailable(state.selectedExecutorIds, getCollaboratorOptions());
   if (
-    state.selectedExecutorIds.length &&
-    state.selectedExecutorIds.length < collaboratorTotal
+    executorCtx.availableCount > 0 &&
+    executorCtx.selectedIds.length > 0 &&
+    executorCtx.selectedIds.length < executorCtx.availableCount
   ) {
-    filters.executor_ids = state.selectedExecutorIds.map(id => parseInt(id));
+    filters.executor_ids = executorCtx.selectedIds;
   }
 
-  // Project IDs - só incluir se seleção parcial ou nenhum selecionado (mesma lógica da API)
-  const projectsTotal = state.projectsDirectory?.length || 0;
-  const projectNoneSelected =
-    projectsTotal > 0 && state.selectedProjectIds.length === 0;
-  if (projectNoneSelected) {
-    filters.project_selection = SELECTION_MODE_NONE;
-  } else if (
-    state.selectedProjectIds.length &&
-    state.selectedProjectIds.length < projectsTotal
+  // Project IDs - incluir apenas se seleção parcial dentro do contexto atual (empresa)
+  const projectCtx = getSelectedFromAvailable(state.selectedProjectIds, getProjectOptions());
+  if (
+    projectCtx.availableCount > 0 &&
+    projectCtx.selectedIds.length > 0 &&
+    projectCtx.selectedIds.length < projectCtx.availableCount
   ) {
-    filters.project_ids = state.selectedProjectIds.map(id => parseInt(id));
+    filters.project_ids = projectCtx.selectedIds;
   }
 
-  // Process IDs - só incluir se seleção parcial ou nenhum selecionado (mesma lógica da API)
-  const processesTotal = state.processesDirectory?.length || 0;
-  const processNoneSelected =
-    processesTotal > 0 && state.selectedProcessIds.length === 0;
-  if (processNoneSelected) {
-    filters.process_selection = SELECTION_MODE_NONE;
-  } else if (
-    state.selectedProcessIds.length &&
-    state.selectedProcessIds.length < processesTotal
+  // Process IDs - incluir apenas se seleção parcial dentro do contexto atual (empresa)
+  const processCtx = getSelectedFromAvailable(state.selectedProcessIds, getProcessOptions());
+  if (
+    processCtx.availableCount > 0 &&
+    processCtx.selectedIds.length > 0 &&
+    processCtx.selectedIds.length < processCtx.availableCount
   ) {
-    filters.process_ids = state.selectedProcessIds.map(id => parseInt(id));
+    filters.process_ids = processCtx.selectedIds;
   }
 
-  // Process Owner IDs - só incluir se houver seleção válida (não null)
-  if (state.selectedProcessOwnerIds && state.selectedProcessOwnerIds.length > 0) {
-    const validOwnerIds = state.selectedProcessOwnerIds
-      .map(id => id !== null && id !== undefined ? parseInt(id) : null)
-      .filter(id => id !== null);
-    if (validOwnerIds.length > 0) {
-      filters.process_owner_ids = validOwnerIds;
-    }
+  // Process Owner IDs - incluir somente quando parcial no contexto atual
+  const processOwnerCtx = getSelectedFromAvailable(state.selectedProcessOwnerIds, getProcessOwnerOptions());
+  if (
+    processOwnerCtx.availableCount > 0 &&
+    processOwnerCtx.selectedIds.length > 0 &&
+    processOwnerCtx.selectedIds.length < processOwnerCtx.availableCount
+  ) {
+    filters.process_owner_ids = processOwnerCtx.selectedIds;
   }
 
-  // Delivery Tags - só incluir se seleção parcial (mesma lógica da API)
+  // Delivery Tags - não enviar o padrão ["open"] (considerado default)
   const deliveryFilters = state.selectedDeliveryTags || [];
-  if (deliveryFilters.length < DELIVERY_FILTER_VALUES.length) {
+  const isDefaultDelivery = deliveryFilters.length === 1 && deliveryFilters[0] === 'open';
+  if (!isDefaultDelivery && deliveryFilters.length < DELIVERY_FILTER_VALUES.length) {
     filters.delivery_tags = deliveryFilters;
   }
 
@@ -4070,7 +4081,11 @@ function buildReportFiltersPayload() {
 
 // Função para atualizar os links do relatório (normal e compacto) com os filtros atuais
 function updateReportLink() {
-  const reportLinks = Array.from(document.querySelectorAll('.stat-card__link[href*="report"]'));
+  const reportLinks = Array.from(
+    document.querySelectorAll(
+      'a[data-report-link="my-work"], .stat-card__link[href*="/my-work/export-pdf"]'
+    )
+  );
   if (!reportLinks.length) return;
 
   const scope = state.currentScope || 'me';
@@ -4078,6 +4093,9 @@ function updateReportLink() {
 
   const params = new URLSearchParams();
   params.set('scope', scope);
+  if (window.companyId) {
+    params.set('active_company_id', String(window.companyId));
+  }
 
   if (Object.keys(filters).length > 0) {
     params.set('filters', JSON.stringify(filters));

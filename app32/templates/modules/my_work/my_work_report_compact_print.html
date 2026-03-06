@@ -1,0 +1,452 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+
+<head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Relatório My Work - {{ company_name }}</title>
+    <style>
+        :root {
+            --primary: #1e293b;
+            --accent: #0f766e;
+            --surface: #ffffff;
+            --surface-secondary: #f8fafc;
+            --border: #e2e8f0;
+            --text-primary: #0f172a;
+            --text-secondary: #475569;
+            --text-muted: #64748b;
+            --success: #16a34a;
+            --warning: #f59e0b;
+            --danger: #ef4444;
+            --info: #2563eb;
+            --shadow: 0 10px 40px rgba(0, 0, 0, .18);
+        }
+
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+        }
+
+        body {
+            font-family: "Inter", "Segoe UI", sans-serif;
+            background: #1a1a1a;
+            color: var(--text-primary);
+            min-height: 100vh;
+            -webkit-print-color-adjust: exact !important;
+            print-color-adjust: exact !important;
+        }
+
+        .toolbar {
+            position: sticky;
+            top: 0;
+            z-index: 100;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: .75rem 1.5rem;
+            background: var(--surface);
+            border-bottom: 1px solid var(--border);
+        }
+
+        .toolbar-title {
+            font-size: 1rem;
+            font-weight: 700;
+        }
+
+        .toolbar-actions {
+            display: flex;
+            gap: .75rem;
+        }
+
+        .btn {
+            display: inline-flex;
+            align-items: center;
+            gap: .4rem;
+            padding: .5rem .9rem;
+            border-radius: 8px;
+            border: 1px solid var(--border);
+            background: var(--surface);
+            color: var(--text-primary);
+            font-size: .85rem;
+            font-weight: 600;
+            cursor: pointer;
+        }
+
+        .btn-primary {
+            background: var(--accent);
+            border-color: var(--accent);
+            color: #fff;
+        }
+
+        .viewer {
+            padding: 2rem;
+            overflow: auto;
+            height: calc(100vh - 58px);
+            background: #1a1a1a;
+        }
+
+        .report {
+            background: #fff;
+            max-width: 1200px;
+            margin: 0 auto;
+            border-radius: 10px;
+            box-shadow: var(--shadow);
+            padding: 1.7rem;
+        }
+
+        .header {
+            display: flex;
+            align-items: flex-start;
+            justify-content: space-between;
+            gap: 1rem;
+            border-bottom: 1px solid var(--border);
+            padding-bottom: 1rem;
+            margin-bottom: 1rem;
+        }
+
+        .header h1 {
+            font-size: 1.25rem;
+            font-weight: 800;
+            color: var(--text-primary);
+            margin-bottom: .35rem;
+        }
+
+        .meta {
+            font-size: .78rem;
+            color: var(--text-secondary);
+            line-height: 1.45;
+        }
+
+        .logo {
+            max-height: 44px;
+            width: auto;
+        }
+
+        .stats {
+            display: grid;
+            grid-template-columns: repeat(5, minmax(120px, 1fr));
+            gap: .65rem;
+            margin-bottom: 1rem;
+        }
+
+        .filters-box {
+            border: 1px solid var(--border);
+            border-radius: 10px;
+            background: #f8fffd;
+            padding: .75rem .85rem;
+            margin-bottom: 1rem;
+        }
+
+        .filters-box__title {
+            font-size: .72rem;
+            color: var(--text-muted);
+            font-weight: 800;
+            text-transform: uppercase;
+            letter-spacing: .06em;
+            margin-bottom: .55rem;
+        }
+
+        .filters-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+            gap: .45rem .7rem;
+        }
+
+        .filter-item {
+            font-size: .78rem;
+            line-height: 1.35;
+            color: var(--text-secondary);
+        }
+
+        .filter-item strong {
+            color: var(--text-primary);
+            font-weight: 700;
+        }
+
+        .stat {
+            border: 1px solid var(--border);
+            border-radius: 10px;
+            padding: .65rem .75rem;
+            background: var(--surface-secondary);
+            text-align: center;
+        }
+
+        .stat__value {
+            font-size: 1.2rem;
+            font-weight: 800;
+            line-height: 1;
+            margin-bottom: .3rem;
+        }
+
+        .stat__label {
+            font-size: .72rem;
+            color: var(--text-muted);
+            text-transform: uppercase;
+            font-weight: 700;
+            letter-spacing: .04em;
+        }
+
+        .stat--total .stat__value {
+            color: var(--primary);
+        }
+
+        .stat--pending .stat__value {
+            color: var(--warning);
+        }
+
+        .stat--progress .stat__value {
+            color: var(--info);
+        }
+
+        .stat--done .stat__value {
+            color: var(--success);
+        }
+
+        .stat--overdue .stat__value {
+            color: var(--danger);
+        }
+
+        .table-wrap {
+            border: 1px solid var(--border);
+            border-radius: 10px;
+            overflow: hidden;
+        }
+
+        table {
+            width: 100%;
+            border-collapse: collapse;
+        }
+
+        thead th {
+            background: #0f172a;
+            color: #fff;
+            font-size: .74rem;
+            font-weight: 700;
+            text-transform: uppercase;
+            letter-spacing: .04em;
+            padding: .6rem .7rem;
+            text-align: left;
+        }
+
+        tbody td {
+            border-bottom: 1px solid var(--border);
+            font-size: .8rem;
+            color: var(--text-secondary);
+            padding: .55rem .7rem;
+            vertical-align: top;
+            white-space: normal;
+            word-break: break-word;
+            overflow-wrap: anywhere;
+        }
+
+        tbody tr:nth-child(even) {
+            background: #fafcfe;
+        }
+
+        .badge {
+            display: inline-block;
+            border-radius: 999px;
+            padding: .12rem .52rem;
+            font-size: .68rem;
+            font-weight: 700;
+            border: 1px solid var(--border);
+            background: #f8fafc;
+            color: var(--text-secondary);
+            white-space: nowrap;
+        }
+
+        .cell-preline {
+            white-space: pre-line;
+            line-height: 1.35;
+        }
+
+        .empty {
+            padding: 2.2rem 1rem;
+            text-align: center;
+            color: var(--text-muted);
+            font-size: .86rem;
+        }
+
+        .footer {
+            margin-top: .85rem;
+            padding-top: .55rem;
+            border-top: 1px solid var(--border);
+            display: flex;
+            justify-content: space-between;
+            gap: .5rem;
+            font-size: .68rem;
+            color: #94a3b8;
+            font-weight: 600;
+        }
+
+        @media print {
+            @page {
+                size: A4 portrait;
+                margin: 8mm;
+            }
+
+            .toolbar {
+                display: none !important;
+            }
+
+            body {
+                background: #fff !important;
+            }
+
+            .viewer {
+                padding: 0 !important;
+                height: auto !important;
+                overflow: visible !important;
+                background: #fff !important;
+            }
+
+            .report {
+                max-width: none !important;
+                margin: 0 !important;
+                border-radius: 0 !important;
+                box-shadow: none !important;
+                padding: 0 !important;
+            }
+
+            .stats {
+                gap: .35rem !important;
+            }
+
+            .filters-box {
+                padding: .45rem .55rem !important;
+                margin-bottom: .55rem !important;
+            }
+
+            .filters-box__title {
+                font-size: .62rem !important;
+                margin-bottom: .35rem !important;
+            }
+
+            .filter-item {
+                font-size: .64rem !important;
+            }
+
+            thead th,
+            tbody td {
+                font-size: .68rem !important;
+                padding: .35rem .45rem !important;
+            }
+
+            .footer {
+                position: fixed;
+                left: 0;
+                right: 0;
+                bottom: 0;
+                padding: 4px 8mm 0;
+                background: #fff;
+            }
+        }
+    </style>
+</head>
+
+<body>
+    <div class="toolbar">
+        <div class="toolbar-title">Relatório My Work • {{ company_name }}</div>
+        <div class="toolbar-actions">
+            <button class="btn btn-primary" onclick="window.print()">🖨️ Imprimir</button>
+            <button class="btn" onclick="window.close()">✕ Fechar</button>
+        </div>
+    </div>
+
+    <div class="viewer">
+        <div class="report">
+            <div class="header">
+                <div>
+                    <h1>Relatório de Atividades - My Work</h1>
+                    <div class="meta">
+                        <div><strong>Colaborador:</strong> {{ user_name }}</div>
+                        <div><strong>Gerado em:</strong> {{ generated_at }}</div>
+                    </div>
+                </div>
+                <img class="logo" src="{{ url_for('static', filename='img/logo-versus.png') }}"
+                    alt="Versus Gestão Corporativa">
+            </div>
+
+            <div class="filters-box">
+                <div class="filters-box__title">Filtros aplicados</div>
+                <div class="filters-grid">
+                    {% if active_filters %}
+                    {% for filter_item in active_filters %}
+                    <div class="filter-item">
+                        <strong>{{ filter_item.label }}:</strong> {{ filter_item.value }}
+                    </div>
+                    {% endfor %}
+                    {% else %}
+                    <div class="filter-item"><strong>Resumo:</strong> sem filtros acionados.</div>
+                    {% endif %}
+                </div>
+            </div>
+
+            <div class="stats">
+                <div class="stat stat--total">
+                    <div class="stat__value">{{ stats.total }}</div>
+                    <div class="stat__label">Total</div>
+                </div>
+                <div class="stat stat--pending">
+                    <div class="stat__value">{{ stats.pending }}</div>
+                    <div class="stat__label">Pendentes</div>
+                </div>
+                <div class="stat stat--progress">
+                    <div class="stat__value">{{ stats.in_progress }}</div>
+                    <div class="stat__label">Em andamento</div>
+                </div>
+                <div class="stat stat--done">
+                    <div class="stat__value">{{ stats.completed }}</div>
+                    <div class="stat__label">Concluídas</div>
+                </div>
+                <div class="stat stat--overdue">
+                    <div class="stat__value">{{ stats.overdue }}</div>
+                    <div class="stat__label">Atrasadas</div>
+                </div>
+            </div>
+
+            <div class="table-wrap">
+                <table>
+                    <thead>
+                        <tr>
+                            <th style="width: 8%;">Tipo</th>
+                            <th style="width: 19%;">Processo/Projeto</th>
+                            <th style="width: 29%;">Atividade/Instância</th>
+                            <th style="width: 18%;">Responsável</th>
+                            <th style="width: 12%;">Prazo</th>
+                            <th style="width: 14%;">Status</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% if activities %}
+                        {% for item in activities %}
+                        <tr>
+                            <td>{{ item.type or '-' }}</td>
+                            <td class="cell-preline">{{ item.process_project or '-' }}</td>
+                            <td class="cell-preline">{{ item.activity_instance or '-' }}</td>
+                            <td class="cell-preline">{{ item.responsible or '-' }}</td>
+                            <td>{{ item.due_date or '--' }}</td>
+                            <td>
+                                <span class="badge">{{ item.status_display or '-' }}</span>
+                            </td>
+                        </tr>
+                        {% endfor %}
+                        {% else %}
+                        <tr>
+                            <td colspan="6" class="empty">Nenhuma atividade encontrada no recorte atual.</td>
+                        </tr>
+                        {% endif %}
+                    </tbody>
+                </table>
+            </div>
+
+            <div class="footer">
+                <span>Versus Gestão Corporativa - Todos os direitos reservados.</span>
+                <span>www.gestaoversus.com.br</span>
+            </div>
+        </div>
+    </div>
+</body>
+
+</html>
