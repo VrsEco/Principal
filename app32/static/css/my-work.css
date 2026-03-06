@@ -541,9 +541,11 @@ body {
 }
 
 .activities-panel__body {
-  overflow: hidden;
+  overflow-y: auto;
   transition: max-height 0.3s ease, opacity 0.3s ease;
-  max-height: 4000px;
+  max-height: 20000px;
+  /* Alerta: Aumentado para suportar muitos registros sem cortar */
+  padding-bottom: 2rem;
 }
 
 .activities-panel__body.is-collapsed {

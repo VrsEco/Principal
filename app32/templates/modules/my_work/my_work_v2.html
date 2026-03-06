@@ -27,8 +27,10 @@
         padding: 0 5rem 0 2.5rem !important;
         box-sizing: border-box !important;
         background: transparent !important;
-        min-height: auto !important;
+        min-height: 100% !important;
+        height: auto !important;
         overflow-x: hidden !important;
+        overflow-y: visible !important;
     }
 
     .my-work-scale-wrapper,
@@ -43,6 +45,10 @@
         padding: 1.25rem 0 !important;
         min-width: 0 !important;
         overflow-x: hidden !important;
+        overflow-y: auto !important;
+        /* Barra de rolagem vertical solicitada */
+        max-height: calc(100vh - 64px);
+        /* Altura total menos navbar */
     }
 
     /* Force specific sidebar width for filters if needed */
