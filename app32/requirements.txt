@@ -38,6 +38,12 @@ pyTelegramBotAPI
 
 # PDF Generation
 reportlab
+weasyprint
+pypdf
+playwright
+
+# Report formatting / i18n
+babel
 
 # Testing
 pytest

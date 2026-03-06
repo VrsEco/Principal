@@ -227,6 +227,50 @@ def get_user_activities_v2(
             if not (act_emp_ids & sidebar_emp_ids):
                 continue
 
+        # 3. Status filter (delivery_tags)
+        # DELIVERY_FILTER_VALUES = ['open', 'completed']
+        status_filter = filters.get("delivery_tags")
+        if status_filter is not None:
+            closed_statuses = ['completed', 'done', 'cancelado', 'canceled', 'archived']
+            act_status = (act.get("status") or "").lower()
+            is_closed = act_status in closed_statuses
+            
+            match_open = 'open' in status_filter and not is_closed
+            match_completed = 'completed' in status_filter and is_closed
+            
+            if not (match_open or match_completed):
+                continue
+
+        # 4. Period filter (due_date)
+        start_filter = filters.get("due_date_start")
+        end_filter = filters.get("due_date_end")
+        if start_filter or end_filter:
+            raw_deadline = act.get("deadline_date") or act.get("due_date") or act.get("deadline")
+            act_date = None
+            if raw_deadline:
+                try:
+                    if isinstance(raw_deadline, str):
+                        act_date = date.fromisoformat(raw_deadline[:10])
+                    elif hasattr(raw_deadline, 'date'):
+                        act_date = raw_deadline.date()
+                    elif isinstance(raw_deadline, date):
+                        act_date = raw_deadline
+                except: pass
+
+            if start_filter:
+                try:
+                    start_dt = date.fromisoformat(start_filter)
+                    if not act_date or act_date < start_dt:
+                        continue
+                except: pass
+            
+            if end_filter:
+                try:
+                    end_dt = date.fromisoformat(end_filter)
+                    if not act_date or act_date > end_dt:
+                        continue
+                except: pass
+
         # B. Calculate Overdue and metadata
         deadline_val = act.get("deadline")
         act_status = (act.get("status") or "").lower()
@@ -252,11 +296,11 @@ def get_user_activities_v2(
             collabs = act.get("collaborators_json") or []
             is_mine = any((c.get("id") or c.get("employee_id")) in my_employee_ids for c in collabs)
         
-        # Determine if it's in active company
-        is_in_active_company = (act.get("company_id") == active_company_id)
+        # Determine if it's in active company context
+        is_in_active_company = (active_company_id and act.get("company_id") == active_company_id)
         
         # C. Update Counters (Only for items that matched A)
-        if is_mine and is_in_active_company:
+        if is_mine:
             me_count += 1
             
         if is_in_active_company:
@@ -267,7 +311,9 @@ def get_user_activities_v2(
         # D. Determine if it enters the final list based on requested scope
         include = False
         if scope == "me":
-            if is_mine and is_in_active_company:
+            # "Me" can be global across all allowed companies, or restricted if needed.
+            # Usually, people want to see their tasks across all their contexts.
+            if is_mine:
                 include = True
         elif scope == "company":
             if is_in_active_company:

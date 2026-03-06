@@ -156,13 +156,25 @@ def my_work_api_activities():
     e_ids = _parse_ints(request.args.get('executor_ids')) or []
     all_emp_ids = list(set(r_ids + e_ids))
 
+    # Parse delivery_tags (status filters)
+    delivery_tags = request.args.get('delivery_tags')
+    # If param is missing (None), return everything (delivery_tags_list = None)
+    # If param is provided but empty (''), return nothing (delivery_tags_list = [])
+    if delivery_tags is not None:
+        delivery_tags_list = [t.strip() for t in delivery_tags.split(',')] if delivery_tags.strip() else []
+    else:
+        delivery_tags_list = None
+
     # Normalizing request parameters to filters dict
     filters = {
         "search": request.args.get('search'),
         "sort": request.args.get('sort', 'deadline'),
         "project_ids": _parse_ints(request.args.get('project_ids')),
         "process_ids": _parse_ints(request.args.get('process_ids')),
-        "employee_ids": all_emp_ids if all_emp_ids else None
+        "employee_ids": all_emp_ids if all_emp_ids else None,
+        "due_date_start": request.args.get('due_date_start'),
+        "due_date_end": request.args.get('due_date_end'),
+        "delivery_tags": delivery_tags_list
     }
 
 

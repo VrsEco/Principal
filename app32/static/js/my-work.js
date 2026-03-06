@@ -75,7 +75,7 @@ const state = {
   selectedProjectIds: [],
   selectedProcessIds: [],
   selectedProcessOwnerIds: [],
-  selectedDeliveryTags: DELIVERY_FILTER_VALUES.slice(),
+  selectedDeliveryTags: ['open'],
   dueDateStart: '',
   dueDateEnd: '',
   filtersCollapsed: false,
@@ -131,7 +131,7 @@ function loadFiltersFromCache() {
     const cachedDelivery = filtersData.selectedDeliveryTags;
     state.selectedDeliveryTags = (Array.isArray(cachedDelivery) && cachedDelivery.length > 0)
       ? cachedDelivery
-      : DELIVERY_FILTER_VALUES.slice();
+      : ['open'];
     state.dueDateStart = filtersData.dueDateStart || '';
     state.dueDateEnd = filtersData.dueDateEnd || '';
     state.searchQuery = filtersData.searchQuery || '';
@@ -150,43 +150,58 @@ function loadFiltersFromCache() {
 }
 
 function clearAllFilters() {
-  // Resetar todos os filtros para valores padrão
-  state.selectedCompanyIds = state.companies.map(c => c.company_id);
-  state.selectedResponsibleIds = state.collaborators.map(c => c.id);
-  state.selectedExecutorIds = state.collaborators.map(c => c.id);
-  state.selectedProjectIds = state.projectsDirectory.map(p => p.id);
-  state.selectedProcessIds = state.processesDirectory.map(p => p.id);
-  state.selectedProcessOwnerIds = state.processOwnersDirectory.map(o => o.id);
-  state.selectedDeliveryTags = DELIVERY_FILTER_VALUES.slice();
+  // Resetar todos os filtros para valores padrão no estado
+  state.selectedCompanyIds = (state.companies || []).map(c => c.company_id);
+  state.selectedResponsibleIds = (state.collaborators || []).map(c => c.id);
+  state.selectedExecutorIds = (state.collaborators || []).map(c => c.id);
+  state.selectedProjectIds = (state.projectsDirectory || []).map(p => p.id);
+  state.selectedProcessIds = (state.processesDirectory || []).map(p => p.id);
+  state.selectedProcessOwnerIds = (state.processOwnersDirectory || []).map(o => o.id);
+  state.selectedDeliveryTags = ['open'];
   state.dueDateStart = '';
   state.dueDateEnd = '';
   state.searchQuery = '';
   state.sortBy = 'deadline';
 
-  // Atualizar UI
+  // Atualizar UI - Busca
   const searchInput = document.getElementById('searchInput');
-  if (searchInput) searchInput.value = '';
+  if (searchInput) {
+    searchInput.value = '';
+    const wrapper = searchInput.closest('.filter-input-wrapper');
+    toggleFilterHighlight(wrapper, false);
+  }
 
+  // Atualizar UI - Datas
   const startInput = document.getElementById('filterDueDateStart');
-  if (startInput) startInput.value = '';
-
   const endInput = document.getElementById('filterDueDateEnd');
-  if (endInput) endInput.value = '';
 
+  if (startInput) {
+    startInput.value = '';
+    startInput.removeAttribute('max');
+  }
+  if (endInput) {
+    endInput.value = '';
+    endInput.removeAttribute('min');
+  }
+
+  const dueDateCard = (startInput || endInput)?.closest('.filter-card');
+  if (dueDateCard) {
+    toggleFilterHighlight(dueDateCard, false);
+  }
+
+  // Atualizar UI - Ordenação
   const sortSelect = document.getElementById('sortSelect');
   if (sortSelect) sortSelect.value = '';
 
-  // Re-inicializar todos os multiselects
-  FILTER_MULTISELECTS.forEach(config => setupMultiselect(config));
+  // Re-inicializar todos os multiselects (isso dispara o evento de re-sync interno)
+  FILTER_MULTISELECTS.forEach(config => {
+    const trigger = document.getElementById(config.triggerId);
+    if (trigger) {
+      trigger.dispatchEvent(new CustomEvent('multiselect:re-sync'));
+    }
+  });
 
-  // Atualizar highlights
-  const wrapper = searchInput?.closest('.filter-input-wrapper');
-  toggleFilterHighlight(wrapper, false);
-
-  const dueDateCard = startInput?.closest('.filter-card');
-  toggleFilterHighlight(dueDateCard, false);
-
-  // Salvar e recarregar atividades
+  // Salvar no cache e recarregar dados
   saveFiltersToCache();
   loadActivitiesData();
 
@@ -229,6 +244,15 @@ document.addEventListener('DOMContentLoaded', async function () {
 });
 
 const dropdownRegistry = [];
+function closeAllDropdowns() {
+  dropdownRegistry.forEach(close => close());
+}
+
+document.addEventListener('click', event => {
+  if (!event.target.closest('.filter-multiselect')) {
+    closeAllDropdowns();
+  }
+});
 
 const FILTER_MULTISELECTS = [
   {
@@ -355,7 +379,7 @@ const FILTER_MULTISELECTS = [
     searchId: 'deliverySearchInput',
     selectAllId: 'selectAllDeliveryTags',
     stateKey: 'selectedDeliveryTags',
-    selectAllByDefault: true,
+    selectAllByDefault: false,
     requireSelection: false,
     optionsProvider: () =>
       DELIVERY_FILTER_OPTIONS.map(option => ({
@@ -471,11 +495,10 @@ function setupMultiselect(config) {
   const listEl = document.getElementById(config.listId);
   const searchInput = document.getElementById(config.searchId);
   const selectAllInput = document.getElementById(config.selectAllId);
-  const options = (typeof config.optionsProvider === 'function' ? config.optionsProvider() : []) || [];
 
-  if (!trigger || !dropdown || !labelEl || !listEl) {
-    return;
-  }
+  const getOptions = () => (typeof config.optionsProvider === 'function' ? config.optionsProvider() : []) || [];
+
+  if (!trigger || !dropdown || !labelEl || !listEl) return;
 
   if (trigger.dataset.multiselectInitialized) {
     trigger.dispatchEvent(new CustomEvent('multiselect:re-sync'));
@@ -483,40 +506,61 @@ function setupMultiselect(config) {
   }
 
   const selectedSet = new Set(state[config.stateKey] || []);
+  let currentOptions = getOptions();
 
   function reSync() {
+    currentOptions = getOptions();
+    const validIds = new Set(currentOptions.map(o => o.id));
+
+    // Sincronizar Set local com o estado global, mas apenas IDs válidos para a nova lista
+    const persisted = state[config.stateKey] || [];
     selectedSet.clear();
-    const current = state[config.stateKey] || [];
-    current.forEach(id => selectedSet.add(id));
+    persisted.forEach(id => {
+      if (validIds.has(id)) selectedSet.add(id);
+    });
+
+    // Se a lista mudou e ficou vazia após o filtro, e as opções originais tinham algo
+    // e o componente exige seleção, ou se queremos auto-selecionar tudo por padrão
+    if (config.selectAllByDefault && !selectedSet.size && currentOptions.length > 0) {
+      currentOptions.forEach(opt => selectedSet.add(opt.id));
+    }
+
+    state[config.stateKey] = Array.from(selectedSet);
     renderOptions(searchInput?.value || '');
     updateLabel();
     updateSelectAll();
   }
 
   trigger.addEventListener('multiselect:re-sync', reSync);
+  trigger.dataset.multiselectInitialized = "true";
 
-  if (config.selectAllByDefault && !selectedSet.size && options.length) {
-    options.forEach(option => selectedSet.add(option.id));
+  // Inicialização (se houver opções e o estado estiver vazio)
+  if (config.selectAllByDefault && !selectedSet.size && currentOptions.length > 0) {
+    currentOptions.forEach(opt => selectedSet.add(opt.id));
     state[config.stateKey] = Array.from(selectedSet);
   }
 
   function updateTriggerHighlight() {
     if (!trigger) return;
-    const total = options.length;
+    const total = currentOptions.length;
     if (!total) {
       toggleFilterHighlight(trigger, false);
       return;
     }
+    // "Ativo" se não estiver tudo selecionado
     let isActive = selectedSet.size < total;
+
+    // Se não for obrigatório ter seleção (ex: Status), "Ativo" se nada ou nem tudo
     if (!config.requireSelection) {
       isActive = selectedSet.size === 0 || selectedSet.size < total;
     }
+
     toggleFilterHighlight(trigger, isActive);
   }
 
   function updateLabel() {
     updateTriggerHighlight();
-    const total = options.length;
+    const total = currentOptions.length;
     const selectedCount = selectedSet.size;
     if (!total) {
       labelEl.textContent = 'Sem opções';
@@ -531,7 +575,7 @@ function setupMultiselect(config) {
       return;
     }
     if (selectedCount === 1) {
-      const option = options.find(opt => selectedSet.has(opt.id));
+      const option = currentOptions.find(opt => selectedSet.has(opt.id));
       labelEl.textContent = option?.label || '1 item';
       return;
     }
@@ -544,7 +588,7 @@ function setupMultiselect(config) {
 
   function updateSelectAll() {
     if (!selectAllInput) return;
-    const total = options.length;
+    const total = currentOptions.length;
     const selectedCount = selectedSet.size;
     selectAllInput.checked = total > 0 && selectedCount === total;
     selectAllInput.indeterminate = selectedCount > 0 && selectedCount < total;
@@ -554,7 +598,7 @@ function setupMultiselect(config) {
     const normalizedFilter = (filterText || '').trim().toLowerCase();
     listEl.innerHTML = '';
 
-    if (!options.length) {
+    if (!currentOptions.length) {
       const empty = document.createElement('div');
       empty.className = 'multiselect-option';
       empty.textContent = 'Nenhum item disponível';
@@ -562,17 +606,19 @@ function setupMultiselect(config) {
       return;
     }
 
-    options.forEach(option => {
+    currentOptions.forEach(option => {
       const searchable = `${option.label || ''} ${option.helper || ''}`.toLowerCase();
       if (normalizedFilter && !searchable.includes(normalizedFilter)) {
         return;
       }
       const label = document.createElement('label');
       label.className = 'multiselect-option';
+
       const checkbox = document.createElement('input');
       checkbox.type = 'checkbox';
       checkbox.value = option.id;
       checkbox.checked = selectedSet.has(option.id);
+
       checkbox.addEventListener('change', () => {
         if (checkbox.checked) {
           selectedSet.add(option.id);
@@ -580,16 +626,14 @@ function setupMultiselect(config) {
           selectedSet.delete(option.id);
         }
 
-        if (config.requireSelection && !selectedSet.size && options.length) {
-          options.forEach(opt => selectedSet.add(opt.id));
+        if (config.requireSelection && !selectedSet.size && currentOptions.length > 0) {
+          currentOptions.forEach(opt => selectedSet.add(opt.id));
         }
 
         state[config.stateKey] = Array.from(selectedSet);
         updateLabel();
         updateSelectAll();
-        if (typeof config.onChange === 'function') {
-          config.onChange();
-        }
+        if (typeof config.onChange === 'function') config.onChange();
       });
 
       const span = document.createElement('span');
@@ -603,16 +647,13 @@ function setupMultiselect(config) {
     });
   }
 
-  renderOptions();
-  updateLabel();
-  updateSelectAll();
-
+  // Bind UI inputs
   if (selectAllInput) {
     selectAllInput.addEventListener('change', () => {
       if (selectAllInput.checked) {
-        options.forEach(option => selectedSet.add(option.id));
+        currentOptions.forEach(opt => selectedSet.add(opt.id));
       } else if (config.requireSelection) {
-        options.forEach(option => selectedSet.add(option.id));
+        currentOptions.forEach(opt => selectedSet.add(opt.id));
         selectAllInput.checked = true;
       } else {
         selectedSet.clear();
@@ -622,17 +663,18 @@ function setupMultiselect(config) {
       renderOptions(searchInput?.value || '');
       updateLabel();
       updateSelectAll();
-      if (typeof config.onChange === 'function') {
-        config.onChange();
-      }
+      if (typeof config.onChange === 'function') config.onChange();
     });
   }
 
   if (searchInput) {
-    searchInput.addEventListener('input', event => {
-      renderOptions(event.target.value || '');
-    });
+    searchInput.addEventListener('input', ev => renderOptions(ev.target.value));
   }
+
+  // Initial render
+  renderOptions();
+  updateLabel();
+  updateSelectAll();
 
   const closeHandler = () => {
     dropdown.classList.remove('is-open');
@@ -643,19 +685,14 @@ function setupMultiselect(config) {
 
   trigger.addEventListener('click', event => {
     event.stopPropagation();
-    console.log(`🖱️ [Trigger Click] ${config.key || 'unknown'} - Dropdown state: ${dropdown.classList.contains('is-open')}`);
-    dropdownRegistry.forEach(close => close());
-    dropdown.classList.toggle('is-open');
-    trigger.classList.toggle('active');
-  });
-
-  document.addEventListener('click', event => {
-    if (!dropdown.contains(event.target) && !trigger.contains(event.target)) {
-      closeHandler();
+    const isOpen = dropdown.classList.contains('is-open');
+    closeAllDropdowns();
+    if (!isOpen) {
+      dropdown.classList.add('is-open');
+      trigger.classList.add('active');
+      if (searchInput) searchInput.focus();
     }
   });
-
-  trigger.dataset.multiselectInitialized = 'true';
 }
 
 
@@ -762,9 +799,16 @@ function updateProcessOwnersFromActivities() {
 }
 
 function handleCompanySelectionChange() {
-  // Permitir que nenhuma empresa seja selecionada
-  // (O backend/filtros irão lidar com isso adequadamente)
   saveFiltersToCache();
+
+  // Atualizar dependentes (Projetos, Processos, Colaboradores)
+  FILTER_MULTISELECTS.forEach(config => {
+    if (config.key !== 'company' && config.key !== 'delivery') {
+      const trigger = document.getElementById(config.triggerId);
+      if (trigger) trigger.dispatchEvent(new CustomEvent('multiselect:re-sync'));
+    }
+  });
+
   loadActivitiesData();
   if (state.currentScope === 'team') {
     loadTeamOverview();
@@ -4116,13 +4160,15 @@ function updateScopeButtons(counts) {
   const btnGeneral = document.getElementById('scope-btn-general');
 
   if (btnMe) {
-    btnMe.disabled = (counts.me === 0);
-    if (counts.me === 0 && state.currentScope === 'me') {
-      // Optional: auto-switch if no data in current scope? User might find it confusing
-    }
+    btnMe.innerHTML = `Eu <small style="opacity: 0.7; margin-left: 2px;">(${counts.me || 0})</small>`;
+    // btnMe.disabled = (counts.me === 0); // Removido para evitar bloqueio frustrante
   }
-  if (btnCompany) btnCompany.disabled = (counts.company === 0);
-  if (btnGeneral) btnGeneral.disabled = (counts.general === 0);
+  if (btnCompany) {
+    btnCompany.innerHTML = `Empresa <small style="opacity: 0.7; margin-left: 2px;">(${counts.company || 0})</small>`;
+  }
+  if (btnGeneral) {
+    btnGeneral.innerHTML = `Geral <small style="opacity: 0.7; margin-left: 2px;">(${counts.general || 0})</small>`;
+  }
 }
 
 function initializeScopeSelector() {
