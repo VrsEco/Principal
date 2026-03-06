@@ -1981,7 +1981,10 @@ def _load_summary_company_choices(user_id: int) -> List[Dict[str, Any]]:
         return []
 
     companies = (
-        Company.query.filter(Company.id.in_(company_ids))
+        Company.query.filter(
+            Company.id.in_(company_ids),
+            Company.is_active.is_(True),
+        )
         .order_by(Company.name.asc())
         .all()
     )
@@ -2490,8 +2493,12 @@ def _user_can_access_company(user_id: int, company_id: Optional[int]) -> bool:
     if not company_id:
         return False
     try:
+        from models.company import Company
         from models.user import User
         from models.employee import Employee
+        company = Company.query.get(company_id)
+        if not company or not bool(getattr(company, "is_active", True)):
+            return False
         user = User.query.get(user_id)
         if not user:
             return False
@@ -3815,23 +3822,11 @@ def _resolve_company_ids_for_payload(
     active_company_id: Optional[int],
     user_id: int,
 ) -> Tuple[List[int], str]:
-    from models.company import Company
-    from models.employee import Employee
-    from models.user import User
-
-    user = User.query.get(user_id)
-    is_admin = bool(user and str(getattr(user, "role", "")).lower() == "admin")
-
-    if is_admin:
-        accessible = Company.query.order_by(Company.name.asc()).all()
-    else:
-        accessible = (
-            db.session.query(Company)
-            .join(Employee, Employee.company_id == Company.id)
-            .filter(Employee.user_id == user_id)
-            .order_by(Company.name.asc())
-            .all()
-        )
+    accessible = [
+        company
+        for company in _load_accessible_companies_for_user(user_id=user_id)
+        if bool(getattr(company, "is_active", True))
+    ]
 
     if not accessible:
         return [], "Nenhuma empresa vinculada ao seu usuário."
@@ -3863,6 +3858,34 @@ def _resolve_company_ids_for_payload(
         return [chosen.id], f"empresa {label}"
 
     return [c.id for c in accessible], "empresas vinculadas"
+
+
+def _load_accessible_companies_for_user(user_id: int) -> List[Any]:
+    from models.company import Company
+    from models.employee import Employee
+    from models.user import User
+
+    user = User.query.get(user_id)
+    is_admin = bool(user and str(getattr(user, "role", "")).lower() == "admin")
+
+    if is_admin:
+        return (
+            Company.query.filter(Company.is_active.is_(True))
+            .order_by(Company.name.asc())
+            .all()
+        )
+
+    return (
+        db.session.query(Company)
+        .join(Employee, Employee.company_id == Company.id)
+        .filter(
+            Employee.user_id == user_id,
+            Company.is_active.is_(True),
+        )
+        .distinct()
+        .order_by(Company.name.asc())
+        .all()
+    )
 
 
 def _match_companies_by_term(companies: List[Any], term: str) -> List[Any]:

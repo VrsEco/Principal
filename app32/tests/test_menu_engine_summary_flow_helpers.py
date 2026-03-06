@@ -103,6 +103,62 @@ def test_cancel_words_include_finish_aliases():
     assert "finalizar" in menu_engine.CANCEL_WORDS
 
 
+def test_resolve_company_ids_for_payload_ignores_inactive_companies(monkeypatch):
+    class DummyCompany:
+        def __init__(self, company_id, name, client_code, is_active):
+            self.id = company_id
+            self.name = name
+            self.client_code = client_code
+            self.legal_name = name
+            self.is_active = is_active
+
+    monkeypatch.setattr(
+        menu_engine,
+        "_load_accessible_companies_for_user",
+        lambda user_id: [
+            DummyCompany(1, "Eua - Moveis Planejados", "AS", False),
+            DummyCompany(2, "Gas Evolution", "AB", True),
+        ],
+    )
+
+    company_ids, label = menu_engine._resolve_company_ids_for_payload(
+        payload={},
+        active_company_id=None,
+        user_id=10,
+    )
+
+    assert company_ids == [2]
+    assert label == "empresa AB - Gas Evolution"
+
+
+def test_resolve_company_ids_for_payload_does_not_match_inactive_company_term(monkeypatch):
+    class DummyCompany:
+        def __init__(self, company_id, name, client_code, is_active):
+            self.id = company_id
+            self.name = name
+            self.client_code = client_code
+            self.legal_name = name
+            self.is_active = is_active
+
+    monkeypatch.setattr(
+        menu_engine,
+        "_load_accessible_companies_for_user",
+        lambda user_id: [
+            DummyCompany(1, "Eua - Moveis Planejados", "AS", False),
+            DummyCompany(2, "Gas Evolution", "AB", True),
+        ],
+    )
+
+    company_ids, label = menu_engine._resolve_company_ids_for_payload(
+        payload={"empresa": "Eua"},
+        active_company_id=None,
+        user_id=10,
+    )
+
+    assert company_ids == []
+    assert "Nao encontrei empresa" in label
+
+
 def test_whatsapp_summary_status_keeps_email_confirmation_flow(monkeypatch):
     monkeypatch.setattr(menu_engine.db.session, "commit", lambda: None)
     monkeypatch.setattr(
