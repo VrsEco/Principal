@@ -98,6 +98,11 @@ def test_summary_email_offer_has_two_options():
     assert "2 - Informar outro e-mail" in offer
 
 
+def test_cancel_words_include_finish_aliases():
+    assert "fim" in menu_engine.CANCEL_WORDS
+    assert "finalizar" in menu_engine.CANCEL_WORDS
+
+
 def test_whatsapp_summary_status_keeps_email_confirmation_flow(monkeypatch):
     monkeypatch.setattr(menu_engine.db.session, "commit", lambda: None)
     monkeypatch.setattr(
@@ -295,7 +300,8 @@ def test_handle_item_selection_state_for_project_picker_advances_to_remaining_fi
     assert "Nome da Atividade" in result.response_text
     assert "Codigo do Projeto" not in result.response_text
     assert session.status == "awaiting_fields"
-    assert session.collected_data == {"codigo_projeto": "SW.J.22"}
+    assert session.collected_data["codigo_projeto"] == "SW.J.22"
+    assert session.collected_data["_nav_stack"][-1]["status"] == "awaiting_item_selection"
     assert session.missing_fields == [{"key": "nome_atividade", "label": "Nome da Atividade"}]
 
 
@@ -399,6 +405,81 @@ def test_handle_menu_message_keeps_awaiting_operation_company_on_numeric_reply(m
     assert result.handled is True
     assert result.response_text == "empresa:3"
     assert session.was_reset is False
+
+
+def test_handle_menu_message_voltar_restores_previous_company_prompt(monkeypatch):
+    option = AgentMenuOption(
+        code="1.4",
+        title="Cadastrar Atividade de Projeto",
+        action_key="project_task.create",
+    )
+    option.id = 14
+
+    previous_choices = [
+        {
+            "index": 1,
+            "company_id": 7,
+            "company_name": "Save Water",
+            "label": "AL - Save Water",
+        },
+        {
+            "index": 2,
+            "company_id": 8,
+            "company_name": "Gas Evolution",
+            "label": "AB - Gas Evolution",
+        },
+    ]
+
+    class DummySession:
+        def __init__(self):
+            self.status = "awaiting_item_selection"
+            self.company_id = 1
+            self.user_id = 10
+            self.channel = "whatsapp"
+            self.thread_id = "wa-2"
+            self.selected_option = option
+            self.selected_option_id = option.id
+            self.missing_fields = []
+            self.collected_data = {
+                "_selection_kind": "project_picker",
+                "_scope_label": "empresa Gas Evolution",
+                "_item_label_plural": "projetos",
+                "_choices": [
+                    {"index": 1, "code": "AB.J.17", "title": "Projeto 1"},
+                ],
+                "_nav_stack": [
+                    {
+                        "status": menu_engine.COMPANY_SELECTION_STATUS,
+                        "selected_option_id": option.id,
+                        "collected_data": {
+                            "_operation_company_choices": previous_choices,
+                        },
+                        "missing_fields": [],
+                    }
+                ],
+            }
+
+    session = DummySession()
+
+    monkeypatch.setattr(menu_engine, "_ensure_default_menu_seed", lambda: None)
+    monkeypatch.setattr(menu_engine, "_get_or_create_session", lambda **kwargs: session)
+    monkeypatch.setattr(menu_engine.db.session, "commit", lambda: None)
+    monkeypatch.setattr(menu_engine.db.session, "rollback", lambda: None)
+
+    result = menu_engine.handle_menu_message(
+        user_id=10,
+        company_id=1,
+        channel="whatsapp",
+        thread_id="wa-2",
+        message="voltar",
+    )
+
+    assert result.handled is True
+    assert "Escolha a empresa para continuar" in result.response_text
+    assert "1 - AL - Save Water" in result.response_text
+    assert session.status == menu_engine.COMPANY_SELECTION_STATUS
+    assert session.collected_data["_operation_company_choices"] == previous_choices
+    assert "_nav_stack" not in session.collected_data
 
 
 def test_try_execute_direct_option_creates_project_task_with_canonical_code(monkeypatch):

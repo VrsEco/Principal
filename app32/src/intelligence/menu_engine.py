@@ -23,7 +23,20 @@ class MenuInterceptResult:
 
 MENU_WORDS = ("menu", "opcao", "opção", "opcoes", "opções", "fluxo")
 CONFIRM_WORDS = {"sim", "confirmo", "ok", "pode", "confirmar"}
-CANCEL_WORDS = {"nao", "não", "cancelar", "cancela", "voltar", "parar"}
+BACK_WORDS = {"voltar", "volta", "retornar", "retorna", "anterior"}
+CANCEL_WORDS = {
+    "nao",
+    "não",
+    "cancelar",
+    "cancela",
+    "parar",
+    "fim",
+    "finalizar",
+    "finaliza",
+    "encerrar",
+    "encerra",
+    "sair",
+}
 EXECUTE_HINTS = ("executar", "fazer", "iniciar", "finalizar", "cadastrar", "editar")
 COMMAND_HINTS = ("cadastrar", "criar", "iniciar", "finalizar", "editar", "executar", "resumo")
 SUMMARY_ACTION_PERIOD = {
@@ -68,6 +81,7 @@ def handle_menu_message(
         return MenuInterceptResult()
 
     lower = _normalize_text(text)
+    first_word = lower.split(" ")[0] if lower else ""
 
     try:
         _ensure_default_menu_seed()
@@ -116,6 +130,9 @@ def handle_menu_message(
             or explicit_code
         ):
             _reset_session(session)
+
+        if first_word in BACK_WORDS:
+            return _handle_back_navigation(session)
 
         if session.status == "awaiting_confirmation":
             return _handle_confirmation_state(session, text, lower)
@@ -173,6 +190,39 @@ def handle_menu_message(
         return MenuInterceptResult()
 
     return MenuInterceptResult()
+
+
+def _handle_back_navigation(session: AgentMenuSession) -> MenuInterceptResult:
+    if str(session.status or "idle") == "idle":
+        return MenuInterceptResult(
+            handled=True,
+            response_text=_format_root_menu(session.company_id),
+        )
+
+    payload = dict(session.collected_data or {})
+    history = _extract_navigation_stack(payload)
+    if not history:
+        _reset_session(session)
+        return MenuInterceptResult(
+            handled=True,
+            response_text=_format_root_menu(session.company_id),
+        )
+
+    previous = history.pop() or {}
+    restored_payload = _payload_without_navigation(previous.get("collected_data") or {})
+    if history:
+        restored_payload["_nav_stack"] = history
+
+    session.status = str(previous.get("status") or "idle")
+    session.selected_option_id = previous.get("selected_option_id")
+    session.collected_data = restored_payload
+    session.missing_fields = list(previous.get("missing_fields") or [])
+    db.session.commit()
+
+    return MenuInterceptResult(
+        handled=True,
+        response_text=_render_current_session_prompt(session),
+    )
 
 
 def list_menu_options(
@@ -353,10 +403,12 @@ def _advance_option_after_payload_collection(
         if assisted_selection is not None:
             return assisted_selection
 
-        session.status = "awaiting_fields"
-        session.collected_data = payload
-        session.missing_fields = missing
-        db.session.commit()
+        _transition_session_state(
+            session=session,
+            status="awaiting_fields",
+            payload=payload,
+            missing_fields=missing,
+        )
         return MenuInterceptResult(
             handled=True,
             response_text=_format_missing_fields(option, missing, payload),
@@ -377,10 +429,12 @@ def _advance_option_after_payload_collection(
                 response_text=direct_execution,
             )
 
-    session.status = "awaiting_confirmation"
-    session.collected_data = payload
-    session.missing_fields = []
-    db.session.commit()
+    _transition_session_state(
+        session=session,
+        status="awaiting_confirmation",
+        payload=payload,
+        missing_fields=[],
+    )
     return MenuInterceptResult(
         handled=True,
         response_text=_format_confirmation(option, payload),
@@ -433,18 +487,22 @@ def _handle_item_selection_state(
     if selection_action == "project_task.complete" and "codigo_atividade" in direct_fields:
         merged = _public_payload(hidden)
         merged.update(direct_fields)
-        session.status = "awaiting_confirmation"
-        session.collected_data = merged
-        session.missing_fields = []
-        db.session.commit()
+        _transition_session_state(
+            session=session,
+            status="awaiting_confirmation",
+            payload=merged,
+            missing_fields=[],
+        )
         return MenuInterceptResult(handled=True, response_text=_format_confirmation(option, merged))
     if selection_action == "process_instance.complete" and "codigo_instancia" in direct_fields:
         merged = _public_payload(hidden)
         merged.update(direct_fields)
-        session.status = "awaiting_confirmation"
-        session.collected_data = merged
-        session.missing_fields = []
-        db.session.commit()
+        _transition_session_state(
+            session=session,
+            status="awaiting_confirmation",
+            payload=merged,
+            missing_fields=[],
+        )
         return MenuInterceptResult(handled=True, response_text=_format_confirmation(option, merged))
     if selection_action in {"meeting.start", "meeting.summarize"} and any(
         k in direct_fields for k in ("id_reuniao", "meeting_id", "codigo_reuniao", "codigo")
@@ -461,10 +519,12 @@ def _handle_item_selection_state(
             if key in {"id_reuniao", "meeting_id", "codigo_reuniao", "codigo"}:
                 continue
             merged[key] = value
-        session.status = "awaiting_confirmation"
-        session.collected_data = merged
-        session.missing_fields = []
-        db.session.commit()
+        _transition_session_state(
+            session=session,
+            status="awaiting_confirmation",
+            payload=merged,
+            missing_fields=[],
+        )
         return MenuInterceptResult(handled=True, response_text=_format_confirmation(option, merged))
     if selection_action == "onboarding.diagnose" and any(
         k in direct_fields for k in ("objetivo", "o_que_quer_funcionar", "objetivo_de_funcionamento")
@@ -480,10 +540,12 @@ def _handle_item_selection_state(
             if key in {"objetivo", "o_que_quer_funcionar", "objetivo_de_funcionamento"}:
                 continue
             merged[key] = value
-        session.status = "awaiting_confirmation"
-        session.collected_data = merged
-        session.missing_fields = []
-        db.session.commit()
+        _transition_session_state(
+            session=session,
+            status="awaiting_confirmation",
+            payload=merged,
+            missing_fields=[],
+        )
         return MenuInterceptResult(handled=True, response_text=_format_confirmation(option, merged))
 
     parsed = _parse_selection_number_date(text)
@@ -565,10 +627,12 @@ def _handle_item_selection_state(
     if date_iso:
         merged["data_finalizacao"] = date_iso
 
-    session.status = "awaiting_confirmation"
-    session.collected_data = merged
-    session.missing_fields = []
-    db.session.commit()
+    _transition_session_state(
+        session=session,
+        status="awaiting_confirmation",
+        payload=merged,
+        missing_fields=[],
+    )
     return MenuInterceptResult(
         handled=True,
         response_text=_format_confirmation(option, merged),
@@ -643,6 +707,105 @@ def _public_payload(payload: Dict[str, Any]) -> Dict[str, Any]:
         k: v for k, v in (payload or {}).items()
         if not str(k).startswith("_")
     }
+
+
+def _payload_without_navigation(payload: Dict[str, Any]) -> Dict[str, Any]:
+    cleaned = dict(payload or {})
+    cleaned.pop("_nav_stack", None)
+    return cleaned
+
+
+def _extract_navigation_stack(payload: Dict[str, Any]) -> List[Dict[str, Any]]:
+    raw = (payload or {}).get("_nav_stack")
+    if not isinstance(raw, list):
+        return []
+    return [dict(item) for item in raw if isinstance(item, dict)]
+
+
+def _build_session_snapshot(session: AgentMenuSession) -> Optional[Dict[str, Any]]:
+    if str(session.status or "idle") == "idle":
+        return None
+
+    return {
+        "status": str(session.status or "idle"),
+        "selected_option_id": getattr(session, "selected_option_id", None),
+        "collected_data": _payload_without_navigation(session.collected_data or {}),
+        "missing_fields": list(session.missing_fields or []),
+    }
+
+
+def _transition_session_state(
+    session: AgentMenuSession,
+    *,
+    status: str,
+    payload: Optional[Dict[str, Any]] = None,
+    missing_fields: Optional[List[Dict[str, Any]]] = None,
+    push_history: bool = True,
+) -> None:
+    history = _extract_navigation_stack(session.collected_data or {})
+    if push_history:
+        snapshot = _build_session_snapshot(session)
+        if snapshot is not None:
+            history.append(snapshot)
+            history = history[-12:]
+
+    next_payload = _payload_without_navigation(payload or {})
+    if history:
+        next_payload["_nav_stack"] = history
+
+    session.status = status
+    session.collected_data = next_payload
+    session.missing_fields = list(missing_fields or [])
+    db.session.commit()
+
+
+def _render_current_session_prompt(session: AgentMenuSession) -> str:
+    if str(session.status or "idle") == "idle":
+        return _format_root_menu(session.company_id)
+
+    option = session.selected_option
+    if not option:
+        return "Sessao de menu reiniciada. Digite 'menu' para continuar."
+
+    payload = dict(session.collected_data or {})
+    status = str(session.status or "idle")
+
+    if status == "awaiting_confirmation":
+        return _format_confirmation(option, payload)
+    if status == "awaiting_fields":
+        return _format_missing_fields(option, list(session.missing_fields or []), _public_payload(payload))
+    if status == "awaiting_item_selection":
+        return _format_item_selection_prompt(
+            option,
+            {
+                "selection_kind": payload.get("_selection_kind"),
+                "scope_label": payload.get("_scope_label"),
+                "item_label_plural": payload.get("_item_label_plural"),
+                "choices": payload.get("_choices") or [],
+            },
+        )
+    if status == COMPANY_SELECTION_STATUS:
+        return _format_operation_company_prompt(option, payload.get("_operation_company_choices") or [])
+    if status == "awaiting_summary_dates":
+        return _format_summary_period_prompt(option)
+    if status == "awaiting_summary_company":
+        return _format_summary_company_prompt(option, payload.get("_summary_company_choices") or [])
+    if status == "awaiting_summary_collaborator":
+        return _format_summary_collaborator_prompt(option, payload.get("_summary_collaborator_choices") or [])
+    if status == "awaiting_summary_status":
+        return _format_summary_status_prompt(
+            option,
+            payload.get("_summary_status_choices") or _summary_status_choices(),
+        )
+    if status == SUMMARY_EMAIL_CONFIRM_STATUS:
+        report_text = str(payload.get("_summary_report_text") or "").strip()
+        if report_text:
+            return f"{report_text}\n\n{SUMMARY_EMAIL_OFFER_SUFFIX}"
+        return SUMMARY_EMAIL_OFFER_SUFFIX
+    if status == SUMMARY_EMAIL_CUSTOM_STATUS:
+        return "Informe o e-mail de destino (ex: nome@empresa.com.br)."
+
+    return "Sessao de menu reiniciada. Digite 'menu' para continuar."
 
 
 def _parse_selection_number_date(text: str) -> Optional[Tuple[int, Optional[str]]]:
@@ -804,10 +967,12 @@ def _prepare_selection_flow_if_applicable(
     hidden_payload["_scope_label"] = selection.get("scope_label")
     hidden_payload["_item_label_plural"] = selection.get("item_label_plural")
 
-    session.status = "awaiting_item_selection"
-    session.collected_data = hidden_payload
-    session.missing_fields = []
-    db.session.commit()
+    _transition_session_state(
+        session=session,
+        status="awaiting_item_selection",
+        payload=hidden_payload,
+        missing_fields=[],
+    )
 
     return MenuInterceptResult(
         handled=True,
@@ -852,10 +1017,12 @@ def _prepare_missing_field_selection_flow_if_applicable(
     hidden_payload["_scope_label"] = selection.get("scope_label")
     hidden_payload["_item_label_plural"] = selection.get("item_label_plural")
 
-    session.status = "awaiting_item_selection"
-    session.collected_data = hidden_payload
-    session.missing_fields = missing_fields
-    db.session.commit()
+    _transition_session_state(
+        session=session,
+        status="awaiting_item_selection",
+        payload=hidden_payload,
+        missing_fields=missing_fields,
+    )
 
     return MenuInterceptResult(
         handled=True,
@@ -885,10 +1052,12 @@ def _prepare_summary_flow_if_applicable(
     else:
         start_date, end_date = _resolve_period_from_payload(payload)
         if not start_date or not end_date:
-            session.status = "awaiting_summary_dates"
-            session.collected_data = payload
-            session.missing_fields = []
-            db.session.commit()
+            _transition_session_state(
+                session=session,
+                status="awaiting_summary_dates",
+                payload=payload,
+                missing_fields=[],
+            )
             return MenuInterceptResult(
                 handled=True,
                 response_text=_format_summary_period_prompt(option),
@@ -998,13 +1167,15 @@ def _prepare_company_selection_flow_if_needed(
     if len(choices) <= 1:
         return None
 
-    session.status = COMPANY_SELECTION_STATUS
-    session.collected_data = {
-        **payload,
-        "_operation_company_choices": choices,
-    }
-    session.missing_fields = []
-    db.session.commit()
+    _transition_session_state(
+        session=session,
+        status=COMPANY_SELECTION_STATUS,
+        payload={
+            **payload,
+            "_operation_company_choices": choices,
+        },
+        missing_fields=[],
+    )
     return MenuInterceptResult(
         handled=True,
         response_text=_format_operation_company_prompt(option, choices),
@@ -1272,10 +1443,12 @@ def _handle_summary_status_state(
     normalized_channel = str(session.channel or "").strip().lower()
     if normalized_channel in {"telegram", "whatsapp"}:
         payload["_summary_report_text"] = report
-        session.status = SUMMARY_EMAIL_CONFIRM_STATUS
-        session.collected_data = payload
-        session.missing_fields = []
-        db.session.commit()
+        _transition_session_state(
+            session=session,
+            status=SUMMARY_EMAIL_CONFIRM_STATUS,
+            payload=payload,
+            missing_fields=[],
+        )
         return MenuInterceptResult(
             handled=True,
             response_text=f"{report}\n\n{SUMMARY_EMAIL_OFFER_SUFFIX}",
@@ -1321,10 +1494,12 @@ def _handle_summary_email_confirmation_state(
         return _send_summary_report_email(payload=payload, target_email=target_email, report_text=report_text, session=session)
 
     if selected_index == 2:
-        session.status = SUMMARY_EMAIL_CUSTOM_STATUS
-        session.collected_data = payload
-        session.missing_fields = []
-        db.session.commit()
+        _transition_session_state(
+            session=session,
+            status=SUMMARY_EMAIL_CUSTOM_STATUS,
+            payload=payload,
+            missing_fields=[],
+        )
         return MenuInterceptResult(
             handled=True,
             response_text="Informe o e-mail de destino (ex: nome@empresa.com.br).",
@@ -1374,14 +1549,7 @@ def _handle_summary_email_custom_state(
 
     first_word = lower.split(" ")[0] if lower else ""
     if first_word in CANCEL_WORDS:
-        session.status = SUMMARY_EMAIL_CONFIRM_STATUS
-        session.collected_data = payload
-        session.missing_fields = []
-        db.session.commit()
-        return MenuInterceptResult(
-            handled=True,
-            response_text=f"Sem problemas.\n\n{SUMMARY_EMAIL_OFFER_SUFFIX}",
-        )
+        return _handle_back_navigation(session)
 
     selected_index = _extract_selection_index(text)
     if selected_index == 1:
@@ -1675,10 +1843,12 @@ def _prompt_summary_company_selection(
             payload=auto_selected_payload,
         )
 
-    session.status = "awaiting_summary_company"
-    session.collected_data = payload
-    session.missing_fields = []
-    db.session.commit()
+    _transition_session_state(
+        session=session,
+        status="awaiting_summary_company",
+        payload=payload,
+        missing_fields=[],
+    )
     return MenuInterceptResult(
         handled=True,
         response_text=_format_summary_company_prompt(option, choices),
@@ -1749,10 +1919,12 @@ def _prompt_summary_collaborator_selection(
     if not choices:
         company_choices = payload.get("_summary_company_choices") or _load_summary_company_choices(user_id=session.user_id)
         payload["_summary_company_choices"] = company_choices
-        session.status = "awaiting_summary_company"
-        session.collected_data = payload
-        session.missing_fields = []
-        db.session.commit()
+        _transition_session_state(
+            session=session,
+            status="awaiting_summary_company",
+            payload=payload,
+            missing_fields=[],
+        )
         return MenuInterceptResult(
             handled=True,
             response_text=(
@@ -1764,10 +1936,12 @@ def _prompt_summary_collaborator_selection(
 
     payload = dict(payload or {})
     payload["_summary_collaborator_choices"] = choices
-    session.status = "awaiting_summary_collaborator"
-    session.collected_data = payload
-    session.missing_fields = []
-    db.session.commit()
+    _transition_session_state(
+        session=session,
+        status="awaiting_summary_collaborator",
+        payload=payload,
+        missing_fields=[],
+    )
     return MenuInterceptResult(
         handled=True,
         response_text=_format_summary_collaborator_prompt(option, choices),
@@ -1783,10 +1957,12 @@ def _prompt_summary_status_selection(
     payload = dict(payload or {})
     payload["_summary_status_choices"] = choices
 
-    session.status = "awaiting_summary_status"
-    session.collected_data = payload
-    session.missing_fields = []
-    db.session.commit()
+    _transition_session_state(
+        session=session,
+        status="awaiting_summary_status",
+        payload=payload,
+        missing_fields=[],
+    )
     return MenuInterceptResult(
         handled=True,
         response_text=_format_summary_status_prompt(option, choices),
