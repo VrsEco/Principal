@@ -10,6 +10,97 @@ from sqlalchemy import and_, or_, func
 
 from models import db
 from models.agent_menu import AgentMenuOption, AgentMenuSession
+from src.intelligence.workflows.company_selection import (
+    COMPANY_SELECTION_ROUTE_ADVANCE,
+    COMPANY_SELECTION_ROUTE_PROMPT,
+    OperationCompanySelectionCoordinator,
+)
+from src.intelligence.workflows.confirmation import (
+    CONFIRMATION_ROUTE_CANCELLED,
+    CONFIRMATION_ROUTE_DIRECT_RESPONSE,
+    CONFIRMATION_ROUTE_EXECUTION_PROMPT,
+    ConfirmationCoordinator,
+)
+from src.intelligence.workflows.direct_execution import (
+    DirectExecutionDispatcher,
+    DirectExecutionRequest,
+    build_handler_executor,
+)
+from src.intelligence.workflows.field_collection import (
+    FIELD_COLLECTION_ROUTE_PROMPT_MISSING,
+    FieldCollectionCoordinator,
+    adjust_required_fields_for_context as adjust_workflow_required_fields_for_context,
+    extract_numbered_fields_from_text as extract_workflow_numbered_fields_from_text,
+    missing_required_fields as find_workflow_missing_required_fields,
+)
+from src.intelligence.workflows.handlers import (
+    MeetingScheduleExecutionHandler,
+    MeetingScheduleRequest,
+    MeetingStartExecutionHandler,
+    MeetingStartRequest,
+    MeetingSummarizeExecutionHandler,
+    MeetingSummarizeRequest,
+    MyWorkExecutionHandler,
+    MyWorkExecutionRequest,
+    OnboardingDiagnoseExecutionHandler,
+    OnboardingDiagnoseRequest,
+    OnboardingGoLiveCheckExecutionHandler,
+    OnboardingGoLiveCheckRequest,
+    OnboardingStartExecutionHandler,
+    OnboardingStartRequest,
+    OnboardingStatusExecutionHandler,
+    OnboardingStatusRequest,
+    ProcessInstanceCompleteExecutionHandler,
+    ProcessInstanceCompleteRequest,
+    ProjectTaskCompleteExecutionHandler,
+    ProjectTaskCompleteRequest,
+    ProjectTaskCreateExecutionHandler,
+    ProjectTaskCreateRequest,
+    SummaryExecutionRequest,
+    SummaryWorkflowExecutionHandler,
+)
+from src.intelligence.workflows.presenters import (
+    WorkflowDisplayOption,
+    build_confirmation_display_items,
+    build_confirmation_text,
+    build_item_selection_prompt,
+    build_missing_fields_prompt,
+    build_operation_company_prompt,
+    build_summary_collaborator_prompt,
+    build_summary_company_prompt,
+    build_summary_period_prompt,
+    build_summary_status_prompt,
+)
+from src.intelligence.workflows.runtime import WorkflowRuntime
+from src.intelligence.workflows.schemas import WorkflowRequiredField
+from src.intelligence.workflows.selection import (
+    SELECTION_ROUTE_ADVANCE,
+    SELECTION_ROUTE_CONFIRM,
+    AssistedSelectionCoordinator,
+    build_assisted_selection_payload,
+)
+from src.intelligence.workflows.session import WorkflowSessionState
+from src.intelligence.workflows.session_runtime import (
+    SessionNavigationRuntime,
+    SessionPromptRenderer,
+    build_session_snapshot as build_workflow_session_snapshot,
+    extract_navigation_stack as extract_workflow_navigation_stack,
+    payload_without_navigation as workflow_payload_without_navigation,
+)
+from src.intelligence.workflows.summary import (
+    SUMMARY_ACTION_PERIOD_MAP,
+    SUMMARY_ROUTE_COMPLETED,
+    SUMMARY_ROUTE_PROMPT_COLLABORATOR,
+    SUMMARY_ROUTE_PROMPT_COMPANY,
+    SUMMARY_ROUTE_PROMPT_DATES,
+    SUMMARY_ROUTE_PROMPT_STATUS,
+    SUMMARY_ROUTE_EMAIL_CONFIRMATION,
+    SUMMARY_ROUTE_ERROR,
+    SUMMARY_ROUTE_RESET,
+    SUMMARY_STATUS_AWAITING_DATES,
+    SUMMARY_WIZARD_STATUSES,
+    SummaryWorkflowCoordinator,
+)
 
 logger = logging.getLogger(__name__)
 
@@ -39,18 +130,7 @@ CANCEL_WORDS = {
 }
 EXECUTE_HINTS = ("executar", "fazer", "iniciar", "finalizar", "cadastrar", "editar")
 COMMAND_HINTS = ("cadastrar", "criar", "iniciar", "finalizar", "editar", "executar", "resumo")
-SUMMARY_ACTION_PERIOD = {
-    "summary.today": "today",
-    "summary.week": "week",
-    "summary.month": "month",
-    "summary.custom": "custom",
-}
-SUMMARY_WIZARD_STATUSES = {
-    "awaiting_summary_dates",
-    "awaiting_summary_company",
-    "awaiting_summary_collaborator",
-    "awaiting_summary_status",
-}
+SUMMARY_ACTION_PERIOD = dict(SUMMARY_ACTION_PERIOD_MAP)
 SUMMARY_EMAIL_CONFIRM_STATUS = "awaiting_summary_email_confirmation"
 SUMMARY_EMAIL_CUSTOM_STATUS = "awaiting_summary_email_custom"
 COMPANY_SELECTION_STATUS = "awaiting_operation_company"
@@ -64,6 +144,34 @@ SUMMARY_EMAIL_OFFER_SUFFIX = (
     "2 - Informar outro e-mail\n"
     "Responda com 1, 2 ou nao."
 )
+
+
+def _build_session_prompt_renderer() -> SessionPromptRenderer:
+    return SessionPromptRenderer(
+        render_root_menu=_format_root_menu,
+        public_payload=_public_payload,
+        render_confirmation=_format_confirmation,
+        render_missing_fields=_format_missing_fields,
+        render_item_selection=_format_item_selection_prompt,
+        render_operation_company=_format_operation_company_prompt,
+        render_summary_period=_format_summary_period_prompt,
+        render_summary_company=_format_summary_company_prompt,
+        render_summary_collaborator=_format_summary_collaborator_prompt,
+        render_summary_status=_format_summary_status_prompt,
+        summary_status_choices=_summary_status_choices,
+        company_selection_status=COMPANY_SELECTION_STATUS,
+        summary_email_confirm_status=SUMMARY_EMAIL_CONFIRM_STATUS,
+        summary_email_custom_status=SUMMARY_EMAIL_CUSTOM_STATUS,
+        summary_email_offer_suffix=SUMMARY_EMAIL_OFFER_SUFFIX,
+    )
+
+
+def _build_session_navigation_runtime() -> SessionNavigationRuntime:
+    return SessionNavigationRuntime(
+        commit_session=lambda: db.session.commit(),
+        reset_session=_reset_session,
+        prompt_renderer=_build_session_prompt_renderer(),
+    )
 
 
 def handle_menu_message(
@@ -193,35 +301,10 @@ def handle_menu_message(
 
 
 def _handle_back_navigation(session: AgentMenuSession) -> MenuInterceptResult:
-    if str(session.status or "idle") == "idle":
-        return MenuInterceptResult(
-            handled=True,
-            response_text=_format_root_menu(session.company_id),
-        )
-
-    payload = dict(session.collected_data or {})
-    history = _extract_navigation_stack(payload)
-    if not history:
-        _reset_session(session)
-        return MenuInterceptResult(
-            handled=True,
-            response_text=_format_root_menu(session.company_id),
-        )
-
-    previous = history.pop() or {}
-    restored_payload = _payload_without_navigation(previous.get("collected_data") or {})
-    if history:
-        restored_payload["_nav_stack"] = history
-
-    session.status = str(previous.get("status") or "idle")
-    session.selected_option_id = previous.get("selected_option_id")
-    session.collected_data = restored_payload
-    session.missing_fields = list(previous.get("missing_fields") or [])
-    db.session.commit()
-
+    result = _build_session_navigation_runtime().handle_back_navigation(session)
     return MenuInterceptResult(
         handled=True,
-        response_text=_render_current_session_prompt(session),
+        response_text=result.response_text,
     )
 
 
@@ -317,41 +400,43 @@ def _handle_confirmation_state(
         _reset_session(session)
         return MenuInterceptResult(handled=True, response_text="Sessao de menu reiniciada. Digite 'menu' para continuar.")
 
-    first_word = lower.split(" ")[0] if lower else ""
-    if first_word in CONFIRM_WORDS:
-        payload = session.collected_data or {}
-        direct_execution = _try_execute_direct_option(
-            option=option,
-            payload=payload,
-            company_id=session.company_id,
-            user_id=session.user_id,
-            channel=session.channel or "web",
-        )
-        if direct_execution is not None:
-            _reset_session(session)
-            return MenuInterceptResult(handled=True, response_text=direct_execution)
-
-        prompt = _build_execution_prompt(
-            option,
-            _public_payload(payload),
-            original_user_text=session.last_user_message or text
-        )
-        _reset_session(session)
-        return MenuInterceptResult(handled=False, override_message=prompt)
-
-    if first_word in CANCEL_WORDS:
-        _reset_session(session)
-        return MenuInterceptResult(handled=True, response_text="Acao cancelada. Se quiser, digite 'menu' para escolher outra opcao.")
-
-    # Se o usuário mandar ajuste de dados em vez de "sim", atualiza e reconfirma.
-    updated = dict(session.collected_data or {})
-    updated.update(_extract_fields_from_text(text))
-    session.collected_data = updated
-    db.session.commit()
-    return MenuInterceptResult(
-        handled=True,
-        response_text=_format_confirmation(option, updated),
+    coordinator = _build_confirmation_coordinator()
+    workflow_state = WorkflowSessionState.from_agent_menu_session(
+        session,
+        workflow_code=option.code,
+        workflow_action_key=option.action_key,
     )
+    decision = coordinator.handle_reply(
+        workflow_state,
+        option=option,
+        text=text,
+        lower=lower,
+    )
+
+    if decision.route == CONFIRMATION_ROUTE_CANCELLED:
+        _reset_session(session)
+        return MenuInterceptResult(
+            handled=True,
+            response_text=decision.response_text or "Acao cancelada.",
+        )
+
+    if decision.route == CONFIRMATION_ROUTE_DIRECT_RESPONSE:
+        _reset_session(session)
+        return MenuInterceptResult(
+            handled=True,
+            response_text=decision.response_text,
+        )
+
+    if decision.route == CONFIRMATION_ROUTE_EXECUTION_PROMPT:
+        _reset_session(session)
+        return MenuInterceptResult(
+            handled=False,
+            override_message=decision.override_message,
+        )
+
+    session.collected_data = dict(decision.payload or {})
+    db.session.commit()
+    return MenuInterceptResult(handled=True, response_text=_format_confirmation(option, decision.payload))
 
 
 def _handle_missing_fields_state(
@@ -369,9 +454,13 @@ def _handle_missing_fields_state(
         _reset_session(session)
         return MenuInterceptResult(handled=True, response_text="Acao cancelada. Digite 'menu' para retomar.")
 
-    merged = dict(session.collected_data or {})
-    merged.update(_extract_numbered_fields_from_text(text, session.missing_fields or []))
-    merged.update(_extract_fields_from_text(text))
+    coordinator = _build_field_collection_coordinator()
+    workflow_state = WorkflowSessionState.from_agent_menu_session(
+        session,
+        workflow_code=option.code,
+        workflow_action_key=option.action_key,
+    )
+    merged = coordinator.merge_reply_payload(workflow_state, text=text)
     return _advance_option_after_payload_collection(
         session=session,
         option=option,
@@ -384,16 +473,21 @@ def _advance_option_after_payload_collection(
     option: AgentMenuOption,
     payload: Dict[str, Any],
 ) -> MenuInterceptResult:
-    payload = _public_payload(payload)
-    required_fields = _normalize_required_fields(option.required_fields)
-    required_fields = _adjust_required_fields_for_context(
-        action_key=(option.action_key or ""),
-        required_fields=required_fields,
-        session=session,
+    coordinator = _build_field_collection_coordinator()
+    workflow_state = WorkflowSessionState.from_agent_menu_session(
+        session,
+        workflow_code=option.code,
+        workflow_action_key=option.action_key,
     )
-    missing = _missing_fields(required_fields, payload)
+    decision = coordinator.evaluate_payload(
+        workflow_state=workflow_state,
+        raw_required_fields=option.required_fields,
+        payload=payload,
+    )
+    payload = decision.payload
+    missing = [field.model_dump() for field in decision.missing_fields]
 
-    if missing:
+    if decision.route == FIELD_COLLECTION_ROUTE_PROMPT_MISSING:
         assisted_selection = _prepare_missing_field_selection_flow_if_applicable(
             session=session,
             option=option,
@@ -456,186 +550,33 @@ def _handle_item_selection_state(
         _reset_session(session)
         return MenuInterceptResult(handled=True, response_text="Acao cancelada. Digite 'menu' para retomar.")
 
-    hidden = dict(session.collected_data or {})
-    choices = hidden.get("_choices") or []
-    selection_action = str(hidden.get("_selection_action") or "").lower()
-    selection_kind = str(hidden.get("_selection_kind") or "").strip().lower()
-    selection_field_key = _slugify(str(hidden.get("_selection_field_key") or ""))
-    selection_value_key = str(hidden.get("_selection_value_key") or "code").strip() or "code"
-
-    # Fallback: usuário pode informar o código diretamente.
-    direct_fields = _extract_fields_from_text(text)
-    if selection_kind == "project_picker" and selection_field_key:
-        project_value = (
-            direct_fields.get(selection_field_key)
-            or direct_fields.get("project_code")
-            or direct_fields.get("codigo")
-        )
-        if project_value:
-            merged = _public_payload(hidden)
-            merged[selection_field_key] = str(project_value).strip()
-            for key, value in direct_fields.items():
-                if key in {selection_field_key, "project_code", "codigo"}:
-                    continue
-                merged[key] = value
-            return _advance_option_after_payload_collection(
-                session=session,
-                option=option,
-                payload=merged,
-            )
-
-    if selection_action == "project_task.complete" and "codigo_atividade" in direct_fields:
-        merged = _public_payload(hidden)
-        merged.update(direct_fields)
-        _transition_session_state(
-            session=session,
-            status="awaiting_confirmation",
-            payload=merged,
-            missing_fields=[],
-        )
-        return MenuInterceptResult(handled=True, response_text=_format_confirmation(option, merged))
-    if selection_action == "process_instance.complete" and "codigo_instancia" in direct_fields:
-        merged = _public_payload(hidden)
-        merged.update(direct_fields)
-        _transition_session_state(
-            session=session,
-            status="awaiting_confirmation",
-            payload=merged,
-            missing_fields=[],
-        )
-        return MenuInterceptResult(handled=True, response_text=_format_confirmation(option, merged))
-    if selection_action in {"meeting.start", "meeting.summarize"} and any(
-        k in direct_fields for k in ("id_reuniao", "meeting_id", "codigo_reuniao", "codigo")
-    ):
-        merged = _public_payload(hidden)
-        meeting_value = (
-            direct_fields.get("id_reuniao")
-            or direct_fields.get("meeting_id")
-            or direct_fields.get("codigo_reuniao")
-            or direct_fields.get("codigo")
-        )
-        merged["id_reuniao"] = str(meeting_value).strip()
-        for key, value in direct_fields.items():
-            if key in {"id_reuniao", "meeting_id", "codigo_reuniao", "codigo"}:
-                continue
-            merged[key] = value
-        _transition_session_state(
-            session=session,
-            status="awaiting_confirmation",
-            payload=merged,
-            missing_fields=[],
-        )
-        return MenuInterceptResult(handled=True, response_text=_format_confirmation(option, merged))
-    if selection_action == "onboarding.diagnose" and any(
-        k in direct_fields for k in ("objetivo", "o_que_quer_funcionar", "objetivo_de_funcionamento")
-    ):
-        merged = _public_payload(hidden)
-        objective_value = (
-            direct_fields.get("objetivo")
-            or direct_fields.get("o_que_quer_funcionar")
-            or direct_fields.get("objetivo_de_funcionamento")
-        )
-        merged["objetivo"] = str(objective_value).strip()
-        for key, value in direct_fields.items():
-            if key in {"objetivo", "o_que_quer_funcionar", "objetivo_de_funcionamento"}:
-                continue
-            merged[key] = value
-        _transition_session_state(
-            session=session,
-            status="awaiting_confirmation",
-            payload=merged,
-            missing_fields=[],
-        )
-        return MenuInterceptResult(handled=True, response_text=_format_confirmation(option, merged))
-
-    parsed = _parse_selection_number_date(text)
-    if not parsed:
-        if selection_kind == "project_picker":
-            return MenuInterceptResult(
-                handled=True,
-                response_text=(
-                    "Formato invalido. Informe apenas o numero do projeto (ex: 1).\n"
-                    "Se preferir, envie o codigo diretamente no formato codigo_projeto: AA.J.12."
-                ),
-            )
-        if selection_action in {"meeting.start", "meeting.summarize", "onboarding.diagnose"}:
-            return MenuInterceptResult(
-                handled=True,
-                response_text=(
-                    "Formato invalido. Informe apenas o numero da opcao (ex: 1).\n"
-                    "Se quiser, voce tambem pode enviar o ID diretamente no formato campo: valor."
-                ),
-            )
-        return MenuInterceptResult(
-            handled=True,
-            response_text=(
-                "Formato invalido. Informe no formato numero: data (ex: 1: 27/02/2026).\n"
-                "Se quiser, voce tambem pode enviar o codigo diretamente no formato campo: valor."
-            ),
-        )
-
-    choice_index, date_raw = parsed
-    selected = None
-    for item in choices:
-        if int(item.get("index", -1)) == int(choice_index):
-            selected = item
-            break
-
-    if not selected:
-        return MenuInterceptResult(
-            handled=True,
-            response_text="Indice nao encontrado na lista. Informe um numero valido conforme as opcoes exibidas.",
-        )
-
-    date_iso = None
-    if date_raw:
-        if selection_kind == "project_picker":
-            return MenuInterceptResult(
-                handled=True,
-                response_text=(
-                    "Formato invalido. Informe apenas o numero do projeto (ex: 1).\n"
-                    "Se preferir, envie o codigo diretamente no formato codigo_projeto: AA.J.12."
-                ),
-            )
-        parsed_date = _parse_completion_date(date_raw)
-        if not parsed_date:
-            return MenuInterceptResult(
-                handled=True,
-                response_text="Data invalida. Use DD/MM/AAAA ou AAAA-MM-DD.",
-            )
-        date_iso = parsed_date.isoformat()
-
-    merged = _public_payload(hidden)
-    if selection_kind == "project_picker":
-        merged[selection_field_key or "codigo_projeto"] = selected.get(selection_value_key) or selected.get("code")
+    coordinator = _build_assisted_selection_coordinator()
+    workflow_state = WorkflowSessionState.from_agent_menu_session(
+        session,
+        workflow_code=option.code,
+        workflow_action_key=option.action_key,
+    )
+    decision = coordinator.handle_reply(workflow_state, text=text)
+    if decision.route == SELECTION_ROUTE_ADVANCE:
         return _advance_option_after_payload_collection(
             session=session,
             option=option,
-            payload=merged,
+            payload=decision.payload,
         )
-    if selection_action == "project_task.complete":
-        merged["codigo_atividade"] = selected.get("code")
-    elif selection_action == "process_instance.complete":
-        merged["codigo_instancia"] = selected.get("code")
-    elif selection_action in {"meeting.start", "meeting.summarize"}:
-        merged["id_reuniao"] = str(selected.get("id") or selected.get("code") or "")
-    elif selection_action == "onboarding.diagnose":
-        merged["objetivo"] = str(selected.get("objective") or selected.get("code") or "")
-    else:
-        merged["codigo"] = selected.get("code")
-
-    if date_iso:
-        merged["data_finalizacao"] = date_iso
-
-    _transition_session_state(
-        session=session,
-        status="awaiting_confirmation",
-        payload=merged,
-        missing_fields=[],
-    )
+    if decision.route == SELECTION_ROUTE_CONFIRM:
+        _transition_session_state(
+            session=session,
+            status="awaiting_confirmation",
+            payload=decision.payload,
+            missing_fields=[],
+        )
+        return MenuInterceptResult(
+            handled=True,
+            response_text=_format_confirmation(option, decision.payload),
+        )
     return MenuInterceptResult(
         handled=True,
-        response_text=_format_confirmation(option, merged),
+        response_text=decision.response_text or "Nao consegui processar a selecao agora.",
     )
 
 
@@ -710,28 +651,18 @@ def _public_payload(payload: Dict[str, Any]) -> Dict[str, Any]:
 
 
 def _payload_without_navigation(payload: Dict[str, Any]) -> Dict[str, Any]:
-    cleaned = dict(payload or {})
-    cleaned.pop("_nav_stack", None)
-    return cleaned
+    return workflow_payload_without_navigation(payload)
 
 
 def _extract_navigation_stack(payload: Dict[str, Any]) -> List[Dict[str, Any]]:
-    raw = (payload or {}).get("_nav_stack")
-    if not isinstance(raw, list):
-        return []
-    return [dict(item) for item in raw if isinstance(item, dict)]
+    return extract_workflow_navigation_stack(payload)
 
 
 def _build_session_snapshot(session: AgentMenuSession) -> Optional[Dict[str, Any]]:
-    if str(session.status or "idle") == "idle":
+    snapshot = build_workflow_session_snapshot(session)
+    if snapshot is None:
         return None
-
-    return {
-        "status": str(session.status or "idle"),
-        "selected_option_id": getattr(session, "selected_option_id", None),
-        "collected_data": _payload_without_navigation(session.collected_data or {}),
-        "missing_fields": list(session.missing_fields or []),
-    }
+    return snapshot.model_dump()
 
 
 def _transition_session_state(
@@ -742,70 +673,17 @@ def _transition_session_state(
     missing_fields: Optional[List[Dict[str, Any]]] = None,
     push_history: bool = True,
 ) -> None:
-    history = _extract_navigation_stack(session.collected_data or {})
-    if push_history:
-        snapshot = _build_session_snapshot(session)
-        if snapshot is not None:
-            history.append(snapshot)
-            history = history[-12:]
-
-    next_payload = _payload_without_navigation(payload or {})
-    if history:
-        next_payload["_nav_stack"] = history
-
-    session.status = status
-    session.collected_data = next_payload
-    session.missing_fields = list(missing_fields or [])
-    db.session.commit()
+    _build_session_navigation_runtime().transition_state(
+        session,
+        status=status,
+        payload=payload,
+        missing_fields=missing_fields,
+        push_history=push_history,
+    )
 
 
 def _render_current_session_prompt(session: AgentMenuSession) -> str:
-    if str(session.status or "idle") == "idle":
-        return _format_root_menu(session.company_id)
-
-    option = session.selected_option
-    if not option:
-        return "Sessao de menu reiniciada. Digite 'menu' para continuar."
-
-    payload = dict(session.collected_data or {})
-    status = str(session.status or "idle")
-
-    if status == "awaiting_confirmation":
-        return _format_confirmation(option, payload)
-    if status == "awaiting_fields":
-        return _format_missing_fields(option, list(session.missing_fields or []), _public_payload(payload))
-    if status == "awaiting_item_selection":
-        return _format_item_selection_prompt(
-            option,
-            {
-                "selection_kind": payload.get("_selection_kind"),
-                "scope_label": payload.get("_scope_label"),
-                "item_label_plural": payload.get("_item_label_plural"),
-                "choices": payload.get("_choices") or [],
-            },
-        )
-    if status == COMPANY_SELECTION_STATUS:
-        return _format_operation_company_prompt(option, payload.get("_operation_company_choices") or [])
-    if status == "awaiting_summary_dates":
-        return _format_summary_period_prompt(option)
-    if status == "awaiting_summary_company":
-        return _format_summary_company_prompt(option, payload.get("_summary_company_choices") or [])
-    if status == "awaiting_summary_collaborator":
-        return _format_summary_collaborator_prompt(option, payload.get("_summary_collaborator_choices") or [])
-    if status == "awaiting_summary_status":
-        return _format_summary_status_prompt(
-            option,
-            payload.get("_summary_status_choices") or _summary_status_choices(),
-        )
-    if status == SUMMARY_EMAIL_CONFIRM_STATUS:
-        report_text = str(payload.get("_summary_report_text") or "").strip()
-        if report_text:
-            return f"{report_text}\n\n{SUMMARY_EMAIL_OFFER_SUFFIX}"
-        return SUMMARY_EMAIL_OFFER_SUFFIX
-    if status == SUMMARY_EMAIL_CUSTOM_STATUS:
-        return "Informe o e-mail de destino (ex: nome@empresa.com.br)."
-
-    return "Sessao de menu reiniciada. Digite 'menu' para continuar."
+    return _build_session_prompt_renderer().render(session)
 
 
 def _parse_selection_number_date(text: str) -> Optional[Tuple[int, Optional[str]]]:
@@ -839,58 +717,21 @@ def _extract_numbered_fields_from_text(
     text: str,
     missing_fields: List[Dict[str, str]],
 ) -> Dict[str, str]:
-    """
-    Interpreta respostas no formato:
-    1: valor
-    2: valor
-    usando a ordem dos campos faltantes apresentados ao usuário.
-    """
-    data: Dict[str, str] = {}
-    if not text or not missing_fields:
-        return data
-
-    pattern = re.compile(r"(?:^|[\n;])\s*(\d{1,2})\s*[:=]\s*([^\n;]+)")
-    for idx_raw, value_raw in pattern.findall(text):
-        try:
-            pos = int(idx_raw) - 1
-        except ValueError:
-            continue
-        if pos < 0 or pos >= len(missing_fields):
-            continue
-
-        field = missing_fields[pos] or {}
-        key = _slugify(str(field.get("key") or ""))
-        value = value_raw.strip(" ,.")
-        if key and value:
-            data[key] = value
-
-    return data
+    return extract_workflow_numbered_fields_from_text(text, missing_fields)
 
 
 def _normalize_required_fields(raw_fields: Any) -> List[Dict[str, str]]:
-    normalized: List[Dict[str, str]] = []
-    for item in raw_fields or []:
-        if isinstance(item, dict):
-            key = _slugify(str(item.get("key") or item.get("label") or ""))
-            label = str(item.get("label") or item.get("key") or key or "Campo")
-            if key:
-                normalized.append({"key": key, "label": label})
-        else:
-            value = str(item).strip()
-            key = _slugify(value)
-            if key:
-                normalized.append({"key": key, "label": value})
-    return normalized
+    return [field.model_dump() for field in WorkflowRequiredField.normalize_many(raw_fields)]
 
 
 def _missing_fields(required_fields: List[Dict[str, str]], collected_data: Dict[str, Any]) -> List[Dict[str, str]]:
-    missing: List[Dict[str, str]] = []
-    normalized_data = {_slugify(k): str(v).strip() for k, v in (collected_data or {}).items() if str(v).strip()}
-    for field in required_fields:
-        key = field["key"]
-        if key not in normalized_data:
-            missing.append(field)
-    return missing
+    return [
+        field.model_dump()
+        for field in find_workflow_missing_required_fields(
+            WorkflowRequiredField.normalize_many(required_fields),
+            collected_data,
+        )
+    ]
 
 
 def _adjust_required_fields_for_context(
@@ -898,12 +739,14 @@ def _adjust_required_fields_for_context(
     required_fields: List[Dict[str, str]],
     session: AgentMenuSession,
 ) -> List[Dict[str, str]]:
-    action = (action_key or "").strip().lower()
-    if not action.startswith("my_work."):
-        return required_fields
-
-    # Para consultas de trabalho, empresa é inferida por contexto/scope acessível.
-    return [f for f in required_fields if str(f.get("key")) != "empresa"]
+    del session
+    return [
+        field.model_dump()
+        for field in adjust_workflow_required_fields_for_context(
+            action_key,
+            WorkflowRequiredField.normalize_many(required_fields),
+        )
+    ]
 
 
 def _is_read_only_action(action_key: Optional[str]) -> bool:
@@ -961,11 +804,11 @@ def _prepare_selection_flow_if_applicable(
     if not selection.get("choices"):
         return None
 
-    hidden_payload = dict(collected or {})
-    hidden_payload["_selection_action"] = action
-    hidden_payload["_choices"] = selection["choices"]
-    hidden_payload["_scope_label"] = selection.get("scope_label")
-    hidden_payload["_item_label_plural"] = selection.get("item_label_plural")
+    hidden_payload = build_assisted_selection_payload(
+        dict(collected or {}),
+        selection_action=action,
+        selection=selection,
+    )
 
     _transition_session_state(
         session=session,
@@ -1008,14 +851,14 @@ def _prepare_missing_field_selection_flow_if_applicable(
     if not selection.get("choices"):
         return None
 
-    hidden_payload = _public_payload(collected)
-    hidden_payload["_selection_action"] = action
-    hidden_payload["_selection_kind"] = selection.get("selection_kind") or "project_picker"
-    hidden_payload["_selection_field_key"] = selection.get("field_key") or "codigo_projeto"
-    hidden_payload["_selection_value_key"] = selection.get("value_key") or "code"
-    hidden_payload["_choices"] = selection["choices"]
-    hidden_payload["_scope_label"] = selection.get("scope_label")
-    hidden_payload["_item_label_plural"] = selection.get("item_label_plural")
+    hidden_payload = build_assisted_selection_payload(
+        _public_payload(collected),
+        selection_action=action,
+        selection=selection,
+        selection_kind=selection.get("selection_kind") or "project_picker",
+        selection_field_key=selection.get("field_key") or "codigo_projeto",
+        selection_value_key=selection.get("value_key") or "code",
+    )
 
     _transition_session_state(
         session=session,
@@ -1035,47 +878,21 @@ def _prepare_summary_flow_if_applicable(
     option: AgentMenuOption,
     collected: Dict[str, Any],
 ) -> Optional[MenuInterceptResult]:
-    action = (option.action_key or "").strip().lower()
-    period_kind = SUMMARY_ACTION_PERIOD.get(action)
-    if not period_kind:
+    coordinator = _build_summary_workflow_coordinator()
+    workflow_state = WorkflowSessionState.from_agent_menu_session(
+        session,
+        workflow_code=option.code,
+        workflow_action_key=option.action_key,
+    ).with_payload(_public_payload(collected))
+    decision = coordinator.prepare_initial_step(workflow_state)
+    if not decision.handled:
         return None
 
-    payload = _public_payload(collected)
-    payload["_summary_action"] = action
-
-    if period_kind == "today":
-        payload["periodo"] = "hoje"
-    elif period_kind == "week":
-        payload["periodo"] = "esta semana"
-    elif period_kind == "month":
-        payload["periodo"] = "este mes"
-    else:
-        start_date, end_date = _resolve_period_from_payload(payload)
-        if not start_date or not end_date:
-            _transition_session_state(
-                session=session,
-                status="awaiting_summary_dates",
-                payload=payload,
-                missing_fields=[],
-            )
-            return MenuInterceptResult(
-                handled=True,
-                response_text=_format_summary_period_prompt(option),
-                )
-        payload["periodo"] = f"{start_date.strftime('%d/%m/%Y')} a {end_date.strftime('%d/%m/%Y')}"
-
-    applied_payload = _apply_preselected_summary_company_selection(
-        payload=payload,
-        user_id=session.user_id,
+    return _apply_summary_route_decision(
+        session=session,
+        option=option,
+        decision=decision,
     )
-    if applied_payload is not None:
-        return _prompt_summary_collaborator_selection(
-            session=session,
-            option=option,
-            payload=applied_payload,
-        )
-
-    return _prompt_summary_company_selection(session=session, option=option, payload=payload)
 
 
 def _handle_summary_wizard_state(
@@ -1120,33 +937,22 @@ def _handle_summary_dates_state(
     if "periodo" not in payload:
         payload["periodo"] = text.strip()
 
-    start_date, end_date = _resolve_period_from_payload(payload)
-    if not start_date or not end_date:
-        return MenuInterceptResult(
-            handled=True,
-            response_text=(
-                "Periodo invalido. Informe no formato:\n"
-                "DD/MM/AAAA a DD/MM/AAAA\n"
-                "Exemplo: 01/03/2026 a 31/03/2026"
-            ),
-        )
-
-    payload["data_inicial"] = start_date.isoformat()
-    payload["data_final"] = end_date.isoformat()
-    payload["periodo"] = f"{start_date.strftime('%d/%m/%Y')} a {end_date.strftime('%d/%m/%Y')}"
-
-    applied_payload = _apply_preselected_summary_company_selection(
+    coordinator = _build_summary_workflow_coordinator()
+    workflow_state = WorkflowSessionState.from_agent_menu_session(
+        session,
+        workflow_code=option.code,
+        workflow_action_key=option.action_key,
+    ).with_payload(payload)
+    decision = coordinator.advance_custom_period(
+        workflow_state,
         payload=payload,
-        user_id=session.user_id,
     )
-    if applied_payload is not None:
-        return _prompt_summary_collaborator_selection(
-            session=session,
-            option=option,
-            payload=applied_payload,
-        )
-
-    return _prompt_summary_company_selection(session=session, option=option, payload=payload)
+    return _apply_summary_route_decision(
+        session=session,
+        option=option,
+        decision=decision,
+        push_history=False,
+    )
 
 
 def _prepare_company_selection_flow_if_needed(
@@ -1154,31 +960,37 @@ def _prepare_company_selection_flow_if_needed(
     option: AgentMenuOption,
     collected: Dict[str, Any],
 ) -> Optional[MenuInterceptResult]:
-    action = str(option.action_key or "").strip().lower()
     normalized_channel = str(session.channel or "").strip().lower()
-    if not action or normalized_channel == "web":
-        return None
-
-    payload = _public_payload(collected)
-    if _resolve_explicit_company_id_from_payload(payload=payload, user_id=session.user_id):
-        return None
-
-    choices = _load_summary_company_choices(user_id=session.user_id)
-    if len(choices) <= 1:
+    coordinator = _build_operation_company_selection_coordinator()
+    workflow_state = WorkflowSessionState.from_agent_menu_session(
+        session,
+        workflow_code=option.code,
+        workflow_action_key=option.action_key,
+    ).with_payload(_public_payload(collected))
+    decision = coordinator.prepare_initial_selection(
+        workflow_state,
+        normalized_channel=normalized_channel,
+        explicit_company_id=_resolve_explicit_company_id_from_payload(
+            payload=workflow_state.payload,
+            user_id=session.user_id,
+        ),
+        choices=_load_summary_company_choices(user_id=session.user_id),
+    )
+    if decision.route != COMPANY_SELECTION_ROUTE_PROMPT:
         return None
 
     _transition_session_state(
         session=session,
         status=COMPANY_SELECTION_STATUS,
-        payload={
-            **payload,
-            "_operation_company_choices": choices,
-        },
+        payload=decision.payload,
         missing_fields=[],
     )
     return MenuInterceptResult(
         handled=True,
-        response_text=_format_operation_company_prompt(option, choices),
+        response_text=_format_operation_company_prompt(
+            option,
+            [choice.model_dump() for choice in decision.choices],
+        ),
     )
 
 
@@ -1197,42 +1009,26 @@ def _handle_operation_company_state(
         _reset_session(session)
         return MenuInterceptResult(handled=True, response_text="Acao cancelada. Digite 'menu' para retomar.")
 
-    selected_index = _extract_selection_index(text)
-    if selected_index is None:
-        return MenuInterceptResult(
-            handled=True,
-            response_text="Formato invalido. Responda apenas com o numero da empresa. Exemplo: 1",
-        )
-
-    payload = dict(session.collected_data or {})
-    choices = payload.get("_operation_company_choices") or []
-    selected = next(
-        (item for item in choices if int(item.get("index", -1)) == int(selected_index)),
-        None,
+    coordinator = _build_operation_company_selection_coordinator()
+    workflow_state = WorkflowSessionState.from_agent_menu_session(
+        session,
+        workflow_code=option.code,
+        workflow_action_key=option.action_key,
     )
-    if not selected:
+    decision = coordinator.select_company(
+        workflow_state,
+        selected_index=_extract_selection_index(text),
+        user_can_access_company=_user_can_access_company,
+    )
+    if decision.route != COMPANY_SELECTION_ROUTE_ADVANCE:
+        if decision.should_reset_session:
+            _reset_session(session)
         return MenuInterceptResult(
             handled=True,
-            response_text="Indice de empresa invalido. Escolha uma opcao da lista.",
+            response_text=decision.response_text or "Nao consegui identificar a empresa selecionada.",
         )
 
-    company_id = int(selected.get("company_id"))
-    if not _user_can_access_company(session.user_id, company_id):
-        _reset_session(session)
-        return MenuInterceptResult(
-            handled=True,
-            response_text="Voce nao possui acesso a empresa selecionada.",
-        )
-
-    payload["empresa"] = selected.get("company_name")
-    payload["_selected_company_id"] = company_id
-    payload["_selected_company_label"] = selected.get("label")
-    payload.pop("_operation_company_choices", None)
-
-    if str(option.action_key or "").strip().lower() in SUMMARY_ACTION_PERIOD:
-        payload["_summary_company_id"] = company_id
-        payload["_summary_company_label"] = selected.get("label")
-
+    payload = dict(decision.payload or {})
     selection_flow = _prepare_selection_flow_if_applicable(
         session=session,
         option=option,
@@ -1272,37 +1068,22 @@ def _handle_summary_company_state(
         return MenuInterceptResult(handled=True, response_text="Acao cancelada. Digite 'menu' para retomar.")
 
     selected_index = _extract_selection_index(text)
-    if selected_index is None:
-        return MenuInterceptResult(
-            handled=True,
-            response_text="Formato invalido. Responda apenas com o numero da empresa. Exemplo: 1",
-        )
-
-    payload = dict(session.collected_data or {})
-    choices = payload.get("_summary_company_choices") or []
-    selected = next(
-        (item for item in choices if int(item.get("index", -1)) == int(selected_index)),
-        None,
+    coordinator = _build_summary_workflow_coordinator()
+    workflow_state = WorkflowSessionState.from_agent_menu_session(
+        session,
+        workflow_code=option.code,
+        workflow_action_key=option.action_key,
     )
-    if not selected:
-        return MenuInterceptResult(
-            handled=True,
-            response_text="Indice de empresa invalido. Escolha uma opcao da lista.",
-        )
-
-    company_id = int(selected.get("company_id"))
-    if not _user_can_access_company(session.user_id, company_id):
-        _reset_session(session)
-        return MenuInterceptResult(
-            handled=True,
-            response_text="Voce nao possui acesso a empresa selecionada.",
-        )
-
-    payload["_summary_company_id"] = company_id
-    payload["_summary_company_label"] = selected.get("label")
-    payload["empresa"] = selected.get("company_name")
-
-    return _prompt_summary_collaborator_selection(session=session, option=option, payload=payload)
+    decision = coordinator.select_company(
+        workflow_state,
+        selected_index=selected_index,
+    )
+    return _apply_summary_route_decision(
+        session=session,
+        option=option,
+        decision=decision,
+        push_history=False,
+    )
 
 
 def _handle_summary_collaborator_state(
@@ -1324,67 +1105,22 @@ def _handle_summary_collaborator_state(
         selected_indexes = [0]
     else:
         selected_indexes = _extract_selection_indexes(text, allow_zero=True)
-    if not selected_indexes:
-        return MenuInterceptResult(
-            handled=True,
-            response_text=(
-                "Formato invalido. Responda com 0 (todos), um numero (ex: 1) "
-                "ou varios numeros (ex: 1,3,4)."
-            ),
-        )
-
-    payload = dict(session.collected_data or {})
-    choices = payload.get("_summary_collaborator_choices") or []
-    if not choices:
-        return MenuInterceptResult(
-            handled=True,
-            response_text="Nao encontrei colaboradores para esta empresa. Escolha outra empresa.",
-        )
-
-    by_index = {
-        int(item.get("index", -1)): item
-        for item in choices
-        if item.get("index") is not None
-    }
-    select_all = 0 in selected_indexes
-    selected_items: List[Dict[str, Any]] = []
-    if select_all:
-        selected_items = list(choices)
-    else:
-        invalid = [idx for idx in selected_indexes if idx not in by_index]
-        if invalid:
-            invalid_list = ", ".join(str(v) for v in invalid)
-            return MenuInterceptResult(
-                handled=True,
-                response_text=f"Indice de colaborador invalido ({invalid_list}). Escolha opcao(oes) da lista.",
-            )
-        selected_items = [by_index[idx] for idx in selected_indexes]
-
-    if not selected_items:
-        return MenuInterceptResult(
-            handled=True,
-            response_text="Nao consegui identificar colaboradores validos para o filtro informado.",
-        )
-
-    employee_ids = [int(item.get("employee_id")) for item in selected_items if item.get("employee_id") is not None]
-    employee_names = [str(item.get("name") or "").strip() for item in selected_items if str(item.get("name") or "").strip()]
-    if not employee_ids:
-        return MenuInterceptResult(
-            handled=True,
-            response_text="Nao consegui identificar colaboradores validos para o filtro informado.",
-        )
-
-    payload["_summary_all_collaborators"] = bool(select_all)
-    payload["_summary_employee_ids"] = employee_ids
-    payload["_summary_employee_names"] = employee_names
-    payload["_summary_employee_id"] = int(employee_ids[0])
-    payload["_summary_employee_name"] = _format_summary_collaborator_selection_label(
-        employee_names,
-        all_selected=bool(select_all),
+    coordinator = _build_summary_workflow_coordinator()
+    workflow_state = WorkflowSessionState.from_agent_menu_session(
+        session,
+        workflow_code=option.code,
+        workflow_action_key=option.action_key,
     )
-    payload["colaborador"] = payload["_summary_employee_name"]
-
-    return _prompt_summary_status_selection(session=session, option=option, payload=payload)
+    decision = coordinator.select_collaborators(
+        workflow_state,
+        selected_indexes=selected_indexes,
+    )
+    return _apply_summary_route_decision(
+        session=session,
+        option=option,
+        decision=decision,
+        push_history=False,
+    )
 
 
 def _handle_summary_status_state(
@@ -1403,59 +1139,24 @@ def _handle_summary_status_state(
         return MenuInterceptResult(handled=True, response_text="Acao cancelada. Digite 'menu' para retomar.")
 
     selected_index = _extract_selection_index(text)
-    if selected_index is None:
-        return MenuInterceptResult(
-            handled=True,
-            response_text="Formato invalido. Responda apenas com o numero do status. Exemplo: 1",
-        )
-
-    payload = dict(session.collected_data or {})
-    choices = payload.get("_summary_status_choices") or _summary_status_choices()
-    selected = next(
-        (item for item in choices if int(item.get("index", -1)) == int(selected_index)),
-        None,
+    coordinator = _build_summary_workflow_coordinator()
+    workflow_state = WorkflowSessionState.from_agent_menu_session(
+        session,
+        workflow_code=option.code,
+        workflow_action_key=option.action_key,
     )
-    if not selected:
-        return MenuInterceptResult(
-            handled=True,
-            response_text="Indice de status invalido. Escolha uma opcao da lista.",
-        )
-
-    payload["_summary_status"] = selected.get("key")
-    payload["status"] = selected.get("label")
-
-    try:
-        report = _execute_summary_menu_report(
-            payload=payload,
-            active_company_id=session.company_id,
-            user_id=session.user_id,
-            channel=session.channel or "web",
-        )
-    except Exception as exc:
-        db.session.rollback()
-        _reset_session(session)
-        logger.exception("Falha ao executar fluxo de resumo: %s", exc)
-        return MenuInterceptResult(
-            handled=True,
-            response_text=f"Nao consegui gerar o resumo agora: {str(exc)}",
-        )
-
-    normalized_channel = str(session.channel or "").strip().lower()
-    if normalized_channel in {"telegram", "whatsapp"}:
-        payload["_summary_report_text"] = report
-        _transition_session_state(
-            session=session,
-            status=SUMMARY_EMAIL_CONFIRM_STATUS,
-            payload=payload,
-            missing_fields=[],
-        )
-        return MenuInterceptResult(
-            handled=True,
-            response_text=f"{report}\n\n{SUMMARY_EMAIL_OFFER_SUFFIX}",
-        )
-
-    _reset_session(session)
-    return MenuInterceptResult(handled=True, response_text=report)
+    decision = coordinator.select_status(
+        workflow_state,
+        selected_index=selected_index,
+    )
+    if decision.route == SUMMARY_ROUTE_RESET and decision.response_text:
+        logger.warning("Fluxo de resumo finalizado com reset apos erro: %s", decision.response_text)
+    return _apply_summary_route_decision(
+        session=session,
+        option=option,
+        decision=decision,
+        push_history=False,
+    )
 
 
 def _handle_summary_email_confirmation_state(
@@ -1793,15 +1494,553 @@ def _build_summary_email_subject_from_payload(payload: Dict[str, Any]) -> str:
 
 
 def _format_summary_period_prompt(option: AgentMenuOption) -> str:
-    return "\n".join(
-        [
-            f"{option.code} - {option.title}",
-            "",
-            "Informe a data inicial e final do período personalizado.",
-            "Formato: DD/MM/AAAA a DD/MM/AAAA",
-            "Exemplo: 01/03/2026 a 31/03/2026",
-        ]
+    return build_summary_period_prompt(_build_workflow_display_option(option))
+
+
+def _build_workflow_display_option(option: AgentMenuOption) -> WorkflowDisplayOption:
+    return WorkflowDisplayOption(
+        code=str(option.code or "").strip(),
+        title=str(option.title or "").strip(),
+        action_key=(str(option.action_key or "").strip() or None),
     )
+
+
+def _build_assisted_selection_coordinator() -> AssistedSelectionCoordinator:
+    return AssistedSelectionCoordinator(
+        extract_fields_from_text=_extract_fields_from_text,
+        parse_selection_number_date=_parse_selection_number_date,
+        parse_completion_date=_parse_completion_date,
+        public_payload=_public_payload,
+    )
+
+
+def _build_field_collection_coordinator() -> FieldCollectionCoordinator:
+    return FieldCollectionCoordinator(
+        extract_fields_from_text=_extract_fields_from_text,
+        public_payload=_public_payload,
+    )
+
+
+def _build_operation_company_selection_coordinator() -> OperationCompanySelectionCoordinator:
+    return OperationCompanySelectionCoordinator(
+        public_payload=_public_payload,
+        summary_action_keys=set(SUMMARY_ACTION_PERIOD.keys()),
+    )
+
+
+def _build_direct_execution_dispatcher() -> DirectExecutionDispatcher:
+    return DirectExecutionDispatcher(
+        {
+            "project_task.create": build_handler_executor(
+                handler_factory=_build_project_task_create_execution_handler,
+                request_model=ProjectTaskCreateRequest,
+            ),
+            "project_task.complete": build_handler_executor(
+                handler_factory=_build_project_task_complete_execution_handler,
+                request_model=ProjectTaskCompleteRequest,
+            ),
+            "process_instance.complete": build_handler_executor(
+                handler_factory=_build_process_instance_complete_execution_handler,
+                request_model=ProcessInstanceCompleteRequest,
+            ),
+            "my_work.open": build_handler_executor(
+                handler_factory=_build_my_work_execution_handler,
+                request_model=MyWorkExecutionRequest,
+                action_override="my_work.open",
+            ),
+            "my_work.overdue": build_handler_executor(
+                handler_factory=_build_my_work_execution_handler,
+                request_model=MyWorkExecutionRequest,
+                action_override="my_work.overdue",
+            ),
+            "my_work.due_range": build_handler_executor(
+                handler_factory=_build_my_work_execution_handler,
+                request_model=MyWorkExecutionRequest,
+                action_override="my_work.due_range",
+            ),
+            "my_work.completed_range": build_handler_executor(
+                handler_factory=_build_my_work_execution_handler,
+                request_model=MyWorkExecutionRequest,
+                action_override="my_work.completed_range",
+            ),
+            "meeting.schedule": build_handler_executor(
+                handler_factory=_build_meeting_schedule_execution_handler,
+                request_model=MeetingScheduleRequest,
+            ),
+            "meeting.start": build_handler_executor(
+                handler_factory=_build_meeting_start_execution_handler,
+                request_model=MeetingStartRequest,
+            ),
+            "meeting.summarize": build_handler_executor(
+                handler_factory=_build_meeting_summarize_execution_handler,
+                request_model=MeetingSummarizeRequest,
+            ),
+            "onboarding.status": build_handler_executor(
+                handler_factory=_build_onboarding_status_execution_handler,
+                request_model=OnboardingStatusRequest,
+            ),
+            "onboarding.diagnose": build_handler_executor(
+                handler_factory=_build_onboarding_diagnose_execution_handler,
+                request_model=OnboardingDiagnoseRequest,
+            ),
+            "onboarding.start": build_handler_executor(
+                handler_factory=_build_onboarding_start_execution_handler,
+                request_model=OnboardingStartRequest,
+            ),
+            "onboarding.go_live_check": build_handler_executor(
+                handler_factory=_build_onboarding_go_live_check_execution_handler,
+                request_model=OnboardingGoLiveCheckRequest,
+            ),
+        }
+    )
+
+
+def _build_confirmation_coordinator() -> ConfirmationCoordinator:
+    return ConfirmationCoordinator(
+        confirm_words=CONFIRM_WORDS,
+        cancel_words=CANCEL_WORDS,
+        extract_fields_from_text=_extract_fields_from_text,
+        public_payload=_public_payload,
+        try_execute_direct_option=_try_execute_direct_option,
+        build_execution_prompt=_build_execution_prompt,
+    )
+
+
+def _build_summary_workflow_coordinator() -> SummaryWorkflowCoordinator:
+    return SummaryWorkflowCoordinator(
+        resolve_period_from_payload=_resolve_period_from_payload,
+        apply_preselected_summary_company_selection=_apply_preselected_summary_company_selection,
+        apply_single_summary_company_selection=_apply_single_summary_company_selection,
+        load_summary_company_choices=_load_summary_company_choices,
+        load_summary_collaborator_choices=_load_summary_collaborator_choices,
+        summary_status_choices=_summary_status_choices,
+        user_can_access_company=_user_can_access_company,
+        execute_summary_menu_report=_execute_summary_menu_report,
+        format_summary_collaborator_selection_label=_format_summary_collaborator_selection_label,
+    )
+
+
+def _build_summary_execution_handler() -> SummaryWorkflowExecutionHandler:
+    from models.company import Company
+    from models.employee import Employee
+
+    return SummaryWorkflowExecutionHandler(
+        user_can_access_company=_user_can_access_company,
+        load_company_by_id=lambda company_id: db.session.get(Company, company_id),
+        resolve_period_from_payload=_resolve_period_from_payload,
+        load_employee_rows=lambda company_id, employee_ids: (
+            Employee.query.filter(
+                Employee.company_id == company_id,
+                Employee.id.in_(employee_ids),
+            ).all()
+        ),
+        format_summary_collaborator_selection_label=_format_summary_collaborator_selection_label,
+        load_project_tasks_report=_load_project_tasks_report,
+        load_process_instances_report=_load_process_instances_report,
+        load_meetings_report=_load_meetings_report,
+        merge_report_items=_merge_report_items,
+        format_my_work_report=_format_my_work_report,
+    )
+
+
+def _build_project_task_create_execution_handler() -> ProjectTaskCreateExecutionHandler:
+    from services.project_task_service import ProjectTaskService
+
+    return ProjectTaskCreateExecutionHandler(
+        resolve_company_ids_for_payload=_resolve_company_ids_for_payload,
+        create_project_task=ProjectTaskService.create_project_task,
+    )
+
+
+def _build_project_task_complete_execution_handler() -> ProjectTaskCompleteExecutionHandler:
+    from models.company import Company
+    from models.project import ProjectTask
+
+    return ProjectTaskCompleteExecutionHandler(
+        extract_id_from_code=_extract_id_from_code,
+        parse_completion_date=_parse_completion_date,
+        today_provider=_local_today,
+        load_task_by_id=lambda task_id: db.session.get(ProjectTask, task_id),
+        load_company_by_id=lambda company_id: db.session.get(Company, company_id),
+        user_can_access_company=_user_can_access_company,
+        commit_changes=lambda: db.session.commit(),
+        rollback_changes=lambda: db.session.rollback(),
+    )
+
+
+def _build_process_instance_complete_execution_handler() -> ProcessInstanceCompleteExecutionHandler:
+    from models.company import Company
+    from models.process import ProcessInstance
+
+    return ProcessInstanceCompleteExecutionHandler(
+        extract_id_from_code=_extract_id_from_code,
+        parse_completion_date=_parse_completion_date,
+        today_provider=_local_today,
+        load_instance_by_id=lambda instance_id: db.session.get(ProcessInstance, instance_id),
+        load_company_by_id=lambda company_id: db.session.get(Company, company_id),
+        user_can_access_company=_user_can_access_company,
+        commit_changes=lambda: db.session.commit(),
+    )
+
+
+def _build_my_work_execution_handler() -> MyWorkExecutionHandler:
+    return MyWorkExecutionHandler(
+        resolve_company_ids_for_payload=_resolve_company_ids_for_payload,
+        resolve_period_from_payload=_resolve_period_from_payload,
+        load_project_tasks_report=_load_project_tasks_report,
+        load_process_instances_report=_load_process_instances_report,
+        load_meetings_report=_load_meetings_report,
+        format_my_work_report=_format_my_work_report,
+    )
+
+
+def _build_onboarding_status_execution_handler() -> OnboardingStatusExecutionHandler:
+    from models.company import Company
+
+    return OnboardingStatusExecutionHandler(
+        resolve_single_company_for_operation=_resolve_single_company_for_operation,
+        load_company_by_id=lambda company_id: db.session.get(Company, company_id),
+    )
+
+
+def _build_onboarding_go_live_check_execution_handler() -> OnboardingGoLiveCheckExecutionHandler:
+    from models.company import Company
+    from models.employee import Employee
+    from models.project import Project, ProjectTask
+    from models.process import Process, ProcessInstance
+    from models.meeting import Meeting
+
+    def _load_operational_metrics(company_id: int) -> Dict[str, int]:
+        active_employees = Employee.query.filter(
+            Employee.company_id == company_id,
+            Employee.status == "active",
+        ).count()
+        employees_with_any_contact = Employee.query.filter(
+            Employee.company_id == company_id,
+            Employee.status == "active",
+            or_(
+                _has_text_expr(Employee.telegram),
+                _has_text_expr(Employee.whatsapp),
+                _has_text_expr(Employee.email),
+            ),
+        ).count()
+        projects_count = Project.query.filter(Project.company_id == company_id).count()
+        open_tasks_count = (
+            db.session.query(ProjectTask)
+            .join(Project, Project.id == ProjectTask.project_id)
+            .filter(Project.company_id == company_id)
+            .filter(~ProjectTask.status.in_(["completed", "cancelled"]))
+            .count()
+        )
+        processes_count = Process.query.filter(Process.company_id == company_id).count()
+        open_instances_count = ProcessInstance.query.filter(
+            ProcessInstance.company_id == company_id,
+            ProcessInstance.status != "completed",
+        ).count()
+        meetings_count = Meeting.query.filter(Meeting.company_id == company_id).count()
+        return {
+            "active_employees": active_employees,
+            "employees_with_any_contact": employees_with_any_contact,
+            "projects_count": projects_count,
+            "open_tasks_count": open_tasks_count,
+            "processes_count": processes_count,
+            "open_instances_count": open_instances_count,
+            "meetings_count": meetings_count,
+        }
+
+    return OnboardingGoLiveCheckExecutionHandler(
+        resolve_single_company_for_operation=_resolve_single_company_for_operation,
+        load_company_by_id=lambda company_id: db.session.get(Company, company_id),
+        load_operational_metrics=_load_operational_metrics,
+    )
+
+
+def _build_onboarding_start_execution_handler() -> OnboardingStartExecutionHandler:
+    from models.cadastro_session import CadastroSession
+
+    return OnboardingStartExecutionHandler(
+        resolve_single_company_for_operation=_resolve_single_company_for_operation,
+        create_session=lambda user_id, onboarding_type, company_id: CadastroSession.criar_sessao(
+            user_id=user_id,
+            tipo_cadastro=onboarding_type,
+            empresa_id=company_id,
+        ),
+    )
+
+
+def _build_onboarding_diagnose_execution_handler() -> OnboardingDiagnoseExecutionHandler:
+    from models.company import Company
+    from models.employee import Employee
+    from models.role import Role
+    from models.project import Project, ProjectTask
+    from models.process import Process, ProcessInstance
+    from models.meeting import Meeting
+
+    def _load_diagnostic_metrics(company_id: int) -> Dict[str, int]:
+        active_employees = Employee.query.filter(
+            Employee.company_id == company_id,
+            Employee.status == "active",
+        ).count()
+        roles_count = Role.query.filter(Role.company_id == company_id).count()
+        projects_count = Project.query.filter(Project.company_id == company_id).count()
+        open_tasks_count = (
+            db.session.query(ProjectTask)
+            .join(Project, Project.id == ProjectTask.project_id)
+            .filter(Project.company_id == company_id)
+            .filter(~ProjectTask.status.in_(["completed", "cancelled"]))
+            .count()
+        )
+        processes_count = Process.query.filter(Process.company_id == company_id).count()
+        open_instances_count = ProcessInstance.query.filter(
+            ProcessInstance.company_id == company_id,
+            ProcessInstance.status != "completed",
+        ).count()
+        meetings_count = Meeting.query.filter(Meeting.company_id == company_id).count()
+        employees_with_telegram = Employee.query.filter(
+            Employee.company_id == company_id,
+            _has_text_expr(Employee.telegram),
+        ).count()
+        employees_with_whatsapp = Employee.query.filter(
+            Employee.company_id == company_id,
+            _has_text_expr(Employee.whatsapp),
+        ).count()
+        employees_with_email = Employee.query.filter(
+            Employee.company_id == company_id,
+            _has_text_expr(Employee.email),
+        ).count()
+        employees_with_any_contact = Employee.query.filter(
+            Employee.company_id == company_id,
+            Employee.status == "active",
+            or_(
+                _has_text_expr(Employee.telegram),
+                _has_text_expr(Employee.whatsapp),
+                _has_text_expr(Employee.email),
+            ),
+        ).count()
+        return {
+            "active_employees": active_employees,
+            "roles_count": roles_count,
+            "projects_count": projects_count,
+            "open_tasks_count": open_tasks_count,
+            "processes_count": processes_count,
+            "open_instances_count": open_instances_count,
+            "meetings_count": meetings_count,
+            "employees_with_telegram": employees_with_telegram,
+            "employees_with_whatsapp": employees_with_whatsapp,
+            "employees_with_email": employees_with_email,
+            "employees_with_any_contact": employees_with_any_contact,
+        }
+
+    return OnboardingDiagnoseExecutionHandler(
+        resolve_single_company_for_operation=_resolve_single_company_for_operation,
+        load_company_by_id=lambda company_id: db.session.get(Company, company_id),
+        normalize_objective=_normalize_objective,
+        format_objective_label=_format_objective_label,
+        load_diagnostic_metrics=_load_diagnostic_metrics,
+    )
+
+
+def _build_meeting_schedule_execution_handler() -> MeetingScheduleExecutionHandler:
+    import json
+
+    from models.company import Company
+    from models.meeting import Meeting
+
+    def _create_draft_meeting(
+        *,
+        company_id: int,
+        title: str,
+        scheduled_date: date,
+        scheduled_time: str,
+        notes: str,
+        guest_dict: Dict[str, str],
+        agenda: List[Dict[str, Any]],
+    ):
+        try:
+            meeting = Meeting(
+                company_id=company_id,
+                title=title,
+                scheduled_date=scheduled_date,
+                scheduled_time=scheduled_time,
+                invite_notes=notes,
+                guests_json=json.dumps(guest_dict, ensure_ascii=False),
+                agenda_json=json.dumps(agenda, ensure_ascii=False),
+                status="draft",
+            )
+            db.session.add(meeting)
+            db.session.commit()
+            return meeting, None
+        except Exception as exc:
+            db.session.rollback()
+            return None, f"Erro ao agendar reuniao: {str(exc)}"
+
+    return MeetingScheduleExecutionHandler(
+        resolve_company_ids_for_payload=_resolve_company_ids_for_payload,
+        parse_meeting_datetime_input=_parse_meeting_datetime_input,
+        create_draft_meeting=_create_draft_meeting,
+        load_company_by_id=lambda company_id: db.session.get(Company, company_id),
+    )
+
+
+def _build_meeting_start_execution_handler() -> MeetingStartExecutionHandler:
+    from models.company import Company
+    from models.meeting import Meeting
+    from models.project import Project
+
+    def _ensure_linked_project(meeting: Any, started_at: datetime):
+        if getattr(meeting, "project_id", None):
+            return None, None
+        try:
+            project = Project(
+                company_id=meeting.company_id,
+                name=f"Reuniao - {meeting.title} ({started_at.strftime('%d/%m/%Y')})",
+                status="in_progress",
+                priority="medium",
+                owner="Sapiens",
+                deadline=started_at.date(),
+                notes=f"Projeto gerado automaticamente para a reuniao ID {meeting.id}: {meeting.title}",
+            )
+            db.session.add(project)
+            db.session.flush()
+            meeting.project_id = project.id
+            return project, None
+        except Exception as exc:
+            return None, f"Erro ao iniciar reuniao: {str(exc)}"
+
+    return MeetingStartExecutionHandler(
+        load_meeting_by_id=lambda meeting_id: db.session.get(Meeting, meeting_id),
+        user_can_access_company=_user_can_access_company,
+        now_provider=_local_now,
+        ensure_linked_project=_ensure_linked_project,
+        commit_changes=db.session.commit,
+        rollback_changes=db.session.rollback,
+        load_company_by_id=lambda company_id: db.session.get(Company, company_id),
+    )
+
+
+def _build_meeting_summarize_execution_handler() -> MeetingSummarizeExecutionHandler:
+    from models.meeting import Meeting
+
+    return MeetingSummarizeExecutionHandler(
+        load_meeting_by_id=lambda meeting_id: db.session.get(Meeting, meeting_id),
+        user_can_access_company=_user_can_access_company,
+    )
+
+
+def _apply_summary_route_decision(
+    session: AgentMenuSession,
+    option: AgentMenuOption,
+    decision,
+    *,
+    push_history: bool = True,
+) -> MenuInterceptResult:
+    if not decision or not getattr(decision, "handled", False):
+        return MenuInterceptResult()
+
+    route = str(getattr(decision, "route", "") or "")
+    payload = dict(getattr(decision, "payload", {}) or {})
+    status = getattr(decision, "status", None)
+    response_text = getattr(decision, "response_text", None)
+    report_text = getattr(decision, "report_text", None)
+
+    if route == SUMMARY_ROUTE_RESET:
+        _reset_session(session)
+        return MenuInterceptResult(
+            handled=True,
+            response_text=response_text or "Sessao de resumo reiniciada. Digite 'menu' para continuar.",
+        )
+
+    if route == SUMMARY_ROUTE_ERROR:
+        if status:
+            _transition_session_state(
+                session=session,
+                status=status,
+                payload=payload,
+                missing_fields=[],
+                push_history=False,
+            )
+        return MenuInterceptResult(
+            handled=True,
+            response_text=response_text or "Nao consegui processar o resumo agora.",
+        )
+
+    if route == SUMMARY_ROUTE_PROMPT_DATES:
+        _transition_session_state(
+            session=session,
+            status=status or SUMMARY_STATUS_AWAITING_DATES,
+            payload=payload,
+            missing_fields=[],
+            push_history=push_history,
+        )
+        return MenuInterceptResult(
+            handled=True,
+            response_text=_format_summary_period_prompt(option),
+        )
+
+    if route == SUMMARY_ROUTE_PROMPT_COMPANY:
+        choices = payload.get("_summary_company_choices") or []
+        _transition_session_state(
+            session=session,
+            status=status or "awaiting_summary_company",
+            payload=payload,
+            missing_fields=[],
+            push_history=push_history,
+        )
+        prompt = _format_summary_company_prompt(option, choices)
+        if response_text:
+            prompt = f"{response_text}\n\n{prompt}"
+        return MenuInterceptResult(handled=True, response_text=prompt)
+
+    if route == SUMMARY_ROUTE_PROMPT_COLLABORATOR:
+        choices = payload.get("_summary_collaborator_choices") or []
+        _transition_session_state(
+            session=session,
+            status=status or "awaiting_summary_collaborator",
+            payload=payload,
+            missing_fields=[],
+            push_history=push_history,
+        )
+        return MenuInterceptResult(
+            handled=True,
+            response_text=_format_summary_collaborator_prompt(option, choices),
+        )
+
+    if route == SUMMARY_ROUTE_PROMPT_STATUS:
+        choices = payload.get("_summary_status_choices") or _summary_status_choices()
+        _transition_session_state(
+            session=session,
+            status=status or "awaiting_summary_status",
+            payload=payload,
+            missing_fields=[],
+            push_history=push_history,
+        )
+        return MenuInterceptResult(
+            handled=True,
+            response_text=_format_summary_status_prompt(option, choices),
+        )
+
+    if route == SUMMARY_ROUTE_EMAIL_CONFIRMATION:
+        _transition_session_state(
+            session=session,
+            status=status or SUMMARY_EMAIL_CONFIRM_STATUS,
+            payload=payload,
+            missing_fields=[],
+            push_history=push_history,
+        )
+        final_report = report_text or ""
+        return MenuInterceptResult(
+            handled=True,
+            response_text=f"{final_report}\n\n{SUMMARY_EMAIL_OFFER_SUFFIX}",
+        )
+
+    if route == SUMMARY_ROUTE_COMPLETED:
+        _reset_session(session)
+        return MenuInterceptResult(
+            handled=True,
+            response_text=report_text or response_text or "",
+        )
+
+    return MenuInterceptResult()
 
 
 def _prompt_summary_company_selection(
@@ -1809,49 +2048,17 @@ def _prompt_summary_company_selection(
     option: AgentMenuOption,
     payload: Dict[str, Any],
 ) -> MenuInterceptResult:
-    choices = _load_summary_company_choices(user_id=session.user_id)
-    if not choices:
-        _reset_session(session)
-        return MenuInterceptResult(
-            handled=True,
-            response_text="Nenhuma empresa vinculada foi encontrada para gerar o resumo.",
-        )
-
-    payload = dict(payload or {})
-    payload["_summary_company_choices"] = choices
-
-    explicit_selected_payload = _apply_preselected_summary_company_selection(
-        payload=payload,
-        user_id=session.user_id,
-        choices=choices,
-    )
-    if explicit_selected_payload is not None:
-        return _prompt_summary_collaborator_selection(
-            session=session,
-            option=option,
-            payload=explicit_selected_payload,
-        )
-
-    auto_selected_payload = _apply_single_summary_company_selection(
-        payload=payload,
-        choices=choices,
-    )
-    if auto_selected_payload is not None:
-        return _prompt_summary_collaborator_selection(
-            session=session,
-            option=option,
-            payload=auto_selected_payload,
-        )
-
-    _transition_session_state(
+    coordinator = _build_summary_workflow_coordinator()
+    state = WorkflowSessionState.from_agent_menu_session(
+        session,
+        workflow_code=option.code,
+        workflow_action_key=option.action_key,
+    ).with_payload(payload)
+    decision = coordinator.prepare_company_prompt(state)
+    return _apply_summary_route_decision(
         session=session,
-        status="awaiting_summary_company",
-        payload=payload,
-        missing_fields=[],
-    )
-    return MenuInterceptResult(
-        handled=True,
-        response_text=_format_summary_company_prompt(option, choices),
+        option=option,
+        decision=decision,
     )
 
 
@@ -1907,44 +2114,17 @@ def _prompt_summary_collaborator_selection(
     option: AgentMenuOption,
     payload: Dict[str, Any],
 ) -> MenuInterceptResult:
-    company_id = payload.get("_summary_company_id")
-    if not company_id:
-        _reset_session(session)
-        return MenuInterceptResult(
-            handled=True,
-            response_text="Nao consegui identificar a empresa selecionada. Digite 'menu' e tente novamente.",
-        )
-
-    choices = _load_summary_collaborator_choices(company_id=int(company_id))
-    if not choices:
-        company_choices = payload.get("_summary_company_choices") or _load_summary_company_choices(user_id=session.user_id)
-        payload["_summary_company_choices"] = company_choices
-        _transition_session_state(
-            session=session,
-            status="awaiting_summary_company",
-            payload=payload,
-            missing_fields=[],
-        )
-        return MenuInterceptResult(
-            handled=True,
-            response_text=(
-                "Nao encontrei colaboradores ativos na empresa selecionada. "
-                "Escolha outra empresa:\n\n"
-                f"{_format_summary_company_prompt(option, company_choices)}"
-            ),
-        )
-
-    payload = dict(payload or {})
-    payload["_summary_collaborator_choices"] = choices
-    _transition_session_state(
+    coordinator = _build_summary_workflow_coordinator()
+    state = WorkflowSessionState.from_agent_menu_session(
+        session,
+        workflow_code=option.code,
+        workflow_action_key=option.action_key,
+    ).with_payload(payload)
+    decision = coordinator.prepare_collaborator_prompt(state)
+    return _apply_summary_route_decision(
         session=session,
-        status="awaiting_summary_collaborator",
-        payload=payload,
-        missing_fields=[],
-    )
-    return MenuInterceptResult(
-        handled=True,
-        response_text=_format_summary_collaborator_prompt(option, choices),
+        option=option,
+        decision=decision,
     )
 
 
@@ -1953,19 +2133,17 @@ def _prompt_summary_status_selection(
     option: AgentMenuOption,
     payload: Dict[str, Any],
 ) -> MenuInterceptResult:
-    choices = _summary_status_choices()
-    payload = dict(payload or {})
-    payload["_summary_status_choices"] = choices
-
-    _transition_session_state(
+    coordinator = _build_summary_workflow_coordinator()
+    state = WorkflowSessionState.from_agent_menu_session(
+        session,
+        workflow_code=option.code,
+        workflow_action_key=option.action_key,
+    ).with_payload(payload)
+    decision = coordinator.prepare_status_prompt(state)
+    return _apply_summary_route_decision(
         session=session,
-        status="awaiting_summary_status",
-        payload=payload,
-        missing_fields=[],
-    )
-    return MenuInterceptResult(
-        handled=True,
-        response_text=_format_summary_status_prompt(option, choices),
+        option=option,
+        decision=decision,
     )
 
 
@@ -2047,49 +2225,40 @@ def _format_summary_company_prompt(
     option: AgentMenuOption,
     choices: List[Dict[str, Any]],
 ) -> str:
-    lines = [f"{option.code} - {option.title}", "", "Escolha a empresa:"]
-    for item in choices:
-        lines.append(f"{item['index']} - {item['label']}")
-    lines.append("")
-    lines.append("Responda apenas com o numero da empresa. Exemplo: 1")
-    return "\n".join(lines)
+    return build_summary_company_prompt(
+        _build_workflow_display_option(option),
+        choices,
+    )
 
 
 def _format_operation_company_prompt(
     option: AgentMenuOption,
     choices: List[Dict[str, Any]],
 ) -> str:
-    lines = [f"{option.code} - {option.title}", "", "Escolha a empresa para continuar:"]
-    for item in choices:
-        lines.append(f"{item['index']} - {item['label']}")
-    lines.append("")
-    lines.append("Responda apenas com o numero da empresa. Exemplo: 1")
-    return "\n".join(lines)
+    return build_operation_company_prompt(
+        _build_workflow_display_option(option),
+        choices,
+    )
 
 
 def _format_summary_collaborator_prompt(
     option: AgentMenuOption,
     choices: List[Dict[str, Any]],
 ) -> str:
-    lines = [f"{option.code} - {option.title}", "", "Escolha o colaborador:"]
-    lines.append("0 - Todos os colaboradores")
-    for item in choices:
-        lines.append(f"{item['index']} - {item['label']}")
-    lines.append("")
-    lines.append("Responda com 0 (todos), um numero (ex: 1) ou varios (ex: 1,3,4).")
-    return "\n".join(lines)
+    return build_summary_collaborator_prompt(
+        _build_workflow_display_option(option),
+        choices,
+    )
 
 
 def _format_summary_status_prompt(
     option: AgentMenuOption,
     choices: List[Dict[str, Any]],
 ) -> str:
-    lines = [f"{option.code} - {option.title}", "", "Escolha o status:"]
-    for item in choices:
-        lines.append(f"{item['index']} - {item['label']}")
-    lines.append("")
-    lines.append("Responda apenas com o numero do status. Exemplo: 1")
-    return "\n".join(lines)
+    return build_summary_status_prompt(
+        _build_workflow_display_option(option),
+        choices,
+    )
 
 
 def _extract_selection_index(text: str) -> Optional[int]:
@@ -2550,785 +2719,115 @@ def _try_execute_direct_option(
     Execução direta para ações críticas/repetitivas, reduzindo variação do LLM.
     Retorna texto de resposta quando executado; None para seguir fluxo via LLM.
     """
-    action = (option.action_key or "").strip().lower()
-    if action == "project_task.create":
-        return _execute_create_project_task(payload=payload, company_id=company_id, user_id=user_id)
-    if action == "project_task.complete":
-        return _execute_complete_project_task(payload=payload, company_id=company_id, user_id=user_id)
-    if action == "process_instance.complete":
-        return _execute_complete_process_instance(payload=payload, company_id=company_id, user_id=user_id)
-    if action == "my_work.open":
-        return _execute_my_work_report(
-            action=action,
-            payload=payload,
-            company_id=company_id,
+    dispatcher = _build_direct_execution_dispatcher()
+    result = dispatcher.execute(
+        DirectExecutionRequest(
+            action_key=option.action_key,
+            payload=dict(payload or {}),
+            active_company_id=company_id,
             user_id=user_id,
             channel=channel,
         )
-    if action == "my_work.overdue":
-        return _execute_my_work_report(
-            action=action,
-            payload=payload,
-            company_id=company_id,
-            user_id=user_id,
-            channel=channel,
-        )
-    if action == "my_work.due_range":
-        return _execute_my_work_report(
-            action=action,
-            payload=payload,
-            company_id=company_id,
-            user_id=user_id,
-            channel=channel,
-        )
-    if action == "my_work.completed_range":
-        return _execute_my_work_report(
-            action=action,
-            payload=payload,
-            company_id=company_id,
-            user_id=user_id,
-            channel=channel,
-        )
-    if action == "meeting.schedule":
-        return _execute_schedule_meeting(payload=payload, company_id=company_id, user_id=user_id)
-    if action == "meeting.start":
-        return _execute_start_meeting(payload=payload, company_id=company_id, user_id=user_id)
-    if action == "meeting.summarize":
-        return _execute_summarize_meeting(payload=payload, company_id=company_id, user_id=user_id)
-    if action == "onboarding.status":
-        return _execute_onboarding_status(payload=payload, company_id=company_id, user_id=user_id)
-    if action == "onboarding.diagnose":
-        return _execute_onboarding_diagnose(payload=payload, company_id=company_id, user_id=user_id)
-    if action == "onboarding.start":
-        return _execute_onboarding_start(payload=payload, company_id=company_id, user_id=user_id)
-    if action == "onboarding.go_live_check":
-        return _execute_onboarding_go_live_check(payload=payload, company_id=company_id, user_id=user_id)
-    return None
+    )
+    if not result.executed:
+        return None
+    return result.response_text
 
 
 def _execute_create_project_task(payload: Dict[str, Any], company_id: Optional[int], user_id: int) -> str:
-    from services.project_task_service import ProjectTaskService
-
-    project_code = str(
-        payload.get("codigo_projeto")
-        or payload.get("project_code")
-        or payload.get("codigo")
-        or ""
-    ).strip()
-    if not project_code:
-        return "Nao encontrei o codigo do projeto. Informe no formato: codigo_projeto: AA.J.12"
-
-    task_name = str(
-        payload.get("nome_atividade")
-        or payload.get("atividade")
-        or payload.get("task_name")
-        or payload.get("what")
-        or payload.get("titulo")
-        or ""
-    ).strip()
-    if not task_name:
-        return "Nao encontrei o nome da atividade. Informe no formato: nome_atividade: Nome da Atividade"
-
-    company_ids, company_label_or_error = _resolve_company_ids_for_payload(
-        payload=payload,
-        active_company_id=company_id,
-        user_id=user_id,
+    handler = _build_project_task_create_execution_handler()
+    result = handler.execute(
+        ProjectTaskCreateRequest(
+            payload=dict(payload or {}),
+            active_company_id=company_id,
+            user_id=user_id,
+        )
     )
-    if not company_ids:
-        return company_label_or_error or "Nao foi possivel identificar a empresa do projeto."
-
-    result, error = ProjectTaskService.create_project_task(
-        project_code=project_code,
-        task_name=task_name,
-        user_id=user_id,
-        allowed_company_ids=company_ids,
-        responsible_name=str(payload.get("responsavel") or payload.get("who") or "").strip() or None,
-        due_date=str(payload.get("prazo") or payload.get("due_date") or payload.get("data_limite") or "").strip() or None,
-        description=str(payload.get("como") or payload.get("descricao") or payload.get("description") or "").strip() or None,
-        amount=str(payload.get("valor") or payload.get("amount") or "").strip() or None,
-        status=str(payload.get("status") or "planned").strip() or "planned",
-        stage=str(payload.get("etapa") or payload.get("stage") or "inbox").strip() or "inbox",
-        priority=str(payload.get("prioridade") or payload.get("priority") or "normal").strip() or "normal",
-        notes=str(payload.get("observacoes") or payload.get("notes") or "").strip() or None,
-    )
-    if error:
-        return error
-    if not result:
-        return "Nao foi possivel cadastrar a atividade de projeto."
-
-    task = result["task"]
-    project = result["project"]
-    company = result.get("company")
-    responsible_name = str(result.get("responsible_name") or "Nao informado").strip() or "Nao informado"
-
-    company_code = company.client_code if company and getattr(company, "client_code", None) else "CP"
-    project_name = project.name if getattr(project, "name", None) else f"Projeto {project.id}"
-    canonical_project_code = project.code if getattr(project, "code", None) else f"{company_code}.J.{project.id}"
-    activity_code = task.code if getattr(task, "code", None) else f"{canonical_project_code}.{task.id}"
-
-    return (
-        f"A atividade \"{task.what}\" foi cadastrada com sucesso no projeto "
-        f"\"{canonical_project_code} - {project_name}\".\n\n"
-        f"    Codigo da Atividade: {activity_code}\n"
-        f"    Responsavel: {responsible_name}"
-    )
+    return result.response_text
 
 
 def _execute_schedule_meeting(payload: Dict[str, Any], company_id: Optional[int], user_id: int) -> str:
-    from models.meeting import Meeting
-    from models.company import Company
-    import json
-
-    title = str(payload.get("titulo") or payload.get("title") or "").strip()
-    if not title:
-        return "Nao encontrei o titulo da reuniao. Informe no formato: titulo: Nome da Reuniao"
-
-    company_ids, company_label_or_error = _resolve_company_ids_for_payload(
-        payload=payload,
-        active_company_id=company_id,
-        user_id=user_id,
-    )
-    if not company_ids:
-        return company_label_or_error or "Nao foi possivel identificar a empresa da reuniao."
-    if len(company_ids) > 1:
-        return (
-            "Encontrei mais de uma empresa no seu contexto. "
-            "Informe no formato: empresa: NOME_DA_EMPRESA"
+    handler = _build_meeting_schedule_execution_handler()
+    result = handler.execute(
+        MeetingScheduleRequest(
+            payload=dict(payload or {}),
+            active_company_id=company_id,
+            user_id=user_id,
         )
-    target_company_id = int(company_ids[0])
-
-    datetime_raw = str(payload.get("data_hora") or payload.get("datahora") or "").strip()
-    date_raw = str(payload.get("data") or payload.get("date") or "").strip()
-    time_raw = str(payload.get("hora") or payload.get("time") or "").strip()
-    scheduled_date, scheduled_time, parse_error = _parse_meeting_datetime_input(
-        datetime_raw=datetime_raw,
-        date_raw=date_raw,
-        time_raw=time_raw,
     )
-    if parse_error:
-        return parse_error
-
-    guests_raw = str(
-        payload.get("convidados")
-        or payload.get("guests")
-        or payload.get("participantes")
-        or ""
-    ).strip()
-    agenda_raw = str(
-        payload.get("pauta")
-        or payload.get("agenda")
-        or payload.get("agenda_itens")
-        or payload.get("itens_agenda")
-        or ""
-    ).strip()
-    notes = str(
-        payload.get("observacoes")
-        or payload.get("notas")
-        or payload.get("notes")
-        or payload.get("dados")
-        or ""
-    ).strip()
-
-    guest_values = [item.strip() for item in re.split(r"[,\n;]+", guests_raw) if item and item.strip()]
-    guest_dict = {value: value for value in guest_values}
-
-    agenda_values = [item.strip() for item in re.split(r"[;\n]+", agenda_raw) if item and item.strip()]
-    agenda = [{"title": value} for value in agenda_values]
-
-    try:
-        meeting = Meeting(
-            company_id=target_company_id,
-            title=title,
-            scheduled_date=scheduled_date,
-            scheduled_time=scheduled_time,
-            invite_notes=notes,
-            guests_json=json.dumps(guest_dict, ensure_ascii=False),
-            agenda_json=json.dumps(agenda, ensure_ascii=False),
-            status="draft",
-        )
-        db.session.add(meeting)
-        db.session.commit()
-    except Exception as exc:
-        db.session.rollback()
-        return f"Erro ao agendar reuniao: {str(exc)}"
-
-    company = Company.query.get(target_company_id)
-    company_label = (
-        f"{company.client_code} - {company.name}"
-        if company and company.client_code
-        else (company.name if company else "empresa")
-    )
-    guests_label = ", ".join(guest_values) if guest_values else "Nenhum informado"
-    agenda_label = "; ".join(agenda_values) if agenda_values else "Sem pauta definida"
-    return (
-        f"Reuniao '{title}' agendada com sucesso!\n\n"
-        f"- ID: {meeting.id}\n"
-        f"- Empresa: {company_label}\n"
-        f"- Data/Hora: {scheduled_date.isoformat()} {scheduled_time}\n"
-        f"- Convidados: {guests_label}\n"
-        f"- Pauta: {agenda_label}"
-    )
+    return result.response_text
 
 
 def _execute_start_meeting(payload: Dict[str, Any], company_id: Optional[int], user_id: int) -> str:
-    from models.meeting import Meeting
-    from models.project import Project
-    from models.company import Company
-
-    meeting_value = str(
-        payload.get("id_reuniao")
-        or payload.get("meeting_id")
-        or payload.get("codigo_reuniao")
-        or payload.get("codigo")
-        or ""
-    ).strip()
-    if not meeting_value:
-        return "Nao encontrei o ID da reuniao. Informe no formato: id_reuniao: 123"
-
-    meeting_id = _extract_id_from_code(meeting_value)
-    if not meeting_id:
-        return f"Nao consegui identificar o ID da reuniao em '{meeting_value}'."
-
-    meeting = Meeting.query.get(meeting_id)
-    if not meeting:
-        return f"Reuniao ID {meeting_id} nao encontrada."
-
-    if company_id and meeting.company_id != company_id and not _user_can_access_company(user_id, meeting.company_id):
-        return "A reuniao informada nao pertence ao contexto da empresa ativa."
-    if not _user_can_access_company(user_id, meeting.company_id):
-        return "Voce nao possui acesso a esta reuniao."
-
-    if str(meeting.status or "").lower() == "completed":
-        return f"A reuniao '{meeting.title}' ja esta concluida."
-
-    now = _local_now()
-    meeting.actual_date = now.date()
-    meeting.actual_time = now.strftime("%H:%M")
-    meeting.status = "in_progress"
-
-    if not meeting.project_id:
-        proj = Project(
-            company_id=meeting.company_id,
-            name=f"Reuniao - {meeting.title} ({now.strftime('%d/%m/%Y')})",
-            status="in_progress",
-            priority="medium",
-            owner="Sapiens",
-            deadline=now.date(),
-            notes=f"Projeto gerado automaticamente para a reuniao ID {meeting.id}: {meeting.title}",
+    handler = _build_meeting_start_execution_handler()
+    result = handler.execute(
+        MeetingStartRequest(
+            payload=dict(payload or {}),
+            active_company_id=company_id,
+            user_id=user_id,
         )
-        db.session.add(proj)
-        db.session.flush()
-        meeting.project_id = proj.id
-
-    db.session.commit()
-
-    company = Company.query.get(meeting.company_id)
-    company_code = company.client_code if company and company.client_code else "CP"
-    project_code = f"{company_code}.J.{meeting.project_id}" if meeting.project_id else "-"
-    return (
-        f"Reuniao '{meeting.title}' iniciada com sucesso!\n\n"
-        f"- ID Reuniao: {meeting.id}\n"
-        f"- Inicio: {now.strftime('%Y-%m-%d %H:%M')}\n"
-        f"- Projeto vinculado: {project_code}"
     )
+    return result.response_text
 
 
 def _execute_summarize_meeting(payload: Dict[str, Any], company_id: Optional[int], user_id: int) -> str:
-    from models.meeting import Meeting
-    import json
-
-    meeting_value = str(
-        payload.get("id_reuniao")
-        or payload.get("meeting_id")
-        or payload.get("codigo_reuniao")
-        or payload.get("codigo")
-        or ""
-    ).strip()
-    if not meeting_value:
-        return "Nao encontrei o ID da reuniao. Informe no formato: id_reuniao: 123"
-
-    meeting_id = _extract_id_from_code(meeting_value)
-    if not meeting_id:
-        return f"Nao consegui identificar o ID da reuniao em '{meeting_value}'."
-
-    meeting = Meeting.query.get(meeting_id)
-    if not meeting:
-        return f"Reuniao ID {meeting_id} nao encontrada."
-
-    if company_id and meeting.company_id != company_id and not _user_can_access_company(user_id, meeting.company_id):
-        return "A reuniao informada nao pertence ao contexto da empresa ativa."
-    if not _user_can_access_company(user_id, meeting.company_id):
-        return "Voce nao possui acesso a esta reuniao."
-
-    try:
-        guests = json.loads(meeting.guests_json or "{}")
-        if not isinstance(guests, dict):
-            guests = {}
-    except Exception:
-        guests = {}
-
-    try:
-        discussions = json.loads(meeting.discussions_json or "[]")
-        if not isinstance(discussions, list):
-            discussions = []
-    except Exception:
-        discussions = []
-
-    try:
-        activities = json.loads(meeting.activities_json or "[]")
-        if not isinstance(activities, list):
-            activities = []
-    except Exception:
-        activities = []
-
-    scheduled_when = f"{meeting.scheduled_date.isoformat() if meeting.scheduled_date else '-'} {meeting.scheduled_time or '-'}"
-    actual_when = f"{meeting.actual_date.isoformat() if meeting.actual_date else '-'} {meeting.actual_time or '-'}"
-    status = meeting.status or "draft"
-
-    lines = [
-        f"Resumo da reuniao ID {meeting.id} - {meeting.title}",
-        f"- Status: {status}",
-        f"- Data prevista: {scheduled_when}",
-        f"- Data real: {actual_when}",
-    ]
-
-    if guests:
-        guest_names = list(guests.keys())
-        preview = ", ".join(guest_names[:10])
-        extra = "" if len(guest_names) <= 10 else f" (+{len(guest_names) - 10})"
-        lines.append(f"- Participantes: {preview}{extra}")
-    else:
-        lines.append("- Participantes: Nao registrados")
-
-    if meeting.project_id:
-        lines.append(f"- Projeto vinculado: {meeting.project_id}")
-
-    if discussions:
-        lines.append("")
-        lines.append("Principais pontos:")
-        for idx, item in enumerate(discussions[:10], start=1):
-            topic = str(item.get("title") or "Topico nao informado").strip()
-            decision = str(item.get("decision") or "").strip()
-            responsible = str(item.get("responsible") or "").strip()
-            deadline = str(item.get("deadline") or "").strip()
-            line = f"{idx}. {topic}"
-            details = []
-            if decision:
-                details.append(f"Decisao: {decision}")
-            if responsible:
-                details.append(f"Responsavel: {responsible}")
-            if deadline:
-                details.append(f"Prazo: {deadline}")
-            if details:
-                line += " | " + " | ".join(details)
-            lines.append(line)
-
-    if activities:
-        lines.append("")
-        lines.append("Atividades registradas:")
-        for idx, item in enumerate(activities[:10], start=1):
-            title = str(item.get("title") or "Atividade").strip()
-            responsible = str(item.get("responsible") or "Sem responsavel").strip()
-            deadline = str(item.get("deadline") or "-").strip()
-            lines.append(f"{idx}. {title} | Responsavel: {responsible} | Prazo: {deadline}")
-
-    if not discussions and not activities:
-        notes = str(meeting.meeting_notes or "").strip()
-        lines.append("")
-        if notes:
-            compact = " ".join(notes.split())
-            preview = compact[:900] + ("..." if len(compact) > 900 else "")
-            lines.append("Resumo registrado:")
-            lines.append(preview)
-        else:
-            lines.append("Nao ha discussoes, atividades ou ata registrada para esta reuniao.")
-
-    return "\n".join(lines)
+    handler = _build_meeting_summarize_execution_handler()
+    result = handler.execute(
+        MeetingSummarizeRequest(
+            payload=dict(payload or {}),
+            active_company_id=company_id,
+            user_id=user_id,
+        )
+    )
+    return result.response_text
 
 
 def _execute_onboarding_status(payload: Dict[str, Any], company_id: Optional[int], user_id: int) -> str:
-    from models.company import Company
-
-    selected_company_id, err = _resolve_single_company_for_operation(
-        payload=payload,
-        active_company_id=company_id,
-        user_id=user_id,
+    handler = _build_onboarding_status_execution_handler()
+    result = handler.execute(
+        OnboardingStatusRequest(
+            payload=dict(payload or {}),
+            active_company_id=company_id,
+            user_id=user_id,
+        )
     )
-    if not selected_company_id:
-        return err or "Nao foi possivel identificar a empresa para o onboarding."
-
-    company = Company.query.get(selected_company_id)
-    if not company:
-        return "Empresa nao encontrada."
-
-    field_map = [
-        ("client_code", "Codigo da Empresa"),
-        ("name", "Nome da Empresa"),
-        ("segment", "Segmento"),
-        ("city", "Cidade"),
-        ("state", "Estado (UF)"),
-        ("mission", "Missao"),
-        ("vision", "Visao"),
-        ("values", "Valores"),
-    ]
-    missing_labels = [label for field, label in field_map if not getattr(company, field, None)]
-    total_fields = len(field_map)
-    completed_fields = total_fields - len(missing_labels)
-    progress_pct = int(round((completed_fields / total_fields) * 100)) if total_fields else 0
-
-    label = f"{company.client_code} - {company.name}" if company.client_code else company.name
-    if missing_labels:
-        lines = [
-            f"Status de onboarding da empresa {label}: INCOMPLETO",
-            f"Progresso: {completed_fields}/{total_fields} campos ({progress_pct}%).",
-            "",
-            "Campos pendentes:",
-        ]
-        for idx, item in enumerate(missing_labels, start=1):
-            lines.append(f"{idx}. {item}")
-        lines.append("")
-        lines.append("Sugestoes:")
-        lines.append("1. Use menu 5.1 para diagnostico completo por objetivo.")
-        lines.append("2. Use menu 5.3 para iniciar onboarding assistido (cadastro guiado).")
-        return "\n".join(lines)
-
-    return (
-        f"Status de onboarding da empresa {label}: COMPLETO.\n"
-        f"Progresso: {completed_fields}/{total_fields} campos ({progress_pct}%).\n"
-        "Os principais campos cadastrais estao preenchidos."
-    )
+    return result.response_text
 
 
 def _execute_onboarding_diagnose(payload: Dict[str, Any], company_id: Optional[int], user_id: int) -> str:
-    from models.company import Company
-    from models.employee import Employee
-    from models.role import Role
-    from models.project import Project, ProjectTask
-    from models.process import Process, ProcessInstance
-    from models.meeting import Meeting
-
-    selected_company_id, err = _resolve_single_company_for_operation(
-        payload=payload,
-        active_company_id=company_id,
-        user_id=user_id,
+    handler = _build_onboarding_diagnose_execution_handler()
+    result = handler.execute(
+        OnboardingDiagnoseRequest(
+            payload=dict(payload or {}),
+            active_company_id=company_id,
+            user_id=user_id,
+        )
     )
-    if not selected_company_id:
-        return err or "Nao foi possivel identificar a empresa para diagnostico."
-
-    company = Company.query.get(selected_company_id)
-    if not company:
-        return "Empresa nao encontrada."
-
-    objective_raw = str(
-        payload.get("objetivo")
-        or payload.get("o_que_quer_funcionar")
-        or payload.get("objetivo_de_funcionamento")
-        or "geral"
-    ).strip()
-    objective = _normalize_objective(objective_raw)
-
-    active_employees = Employee.query.filter(
-        Employee.company_id == selected_company_id,
-        Employee.status == "active",
-    ).count()
-    roles_count = Role.query.filter(Role.company_id == selected_company_id).count()
-    projects_count = Project.query.filter(Project.company_id == selected_company_id).count()
-    open_tasks_count = (
-        db.session.query(ProjectTask)
-        .join(Project, Project.id == ProjectTask.project_id)
-        .filter(Project.company_id == selected_company_id)
-        .filter(~ProjectTask.status.in_(["completed", "cancelled"]))
-        .count()
-    )
-    processes_count = Process.query.filter(Process.company_id == selected_company_id).count()
-    open_instances_count = ProcessInstance.query.filter(
-        ProcessInstance.company_id == selected_company_id,
-        ProcessInstance.status != "completed",
-    ).count()
-    meetings_count = Meeting.query.filter(Meeting.company_id == selected_company_id).count()
-
-    employees_with_telegram = Employee.query.filter(
-        Employee.company_id == selected_company_id,
-        _has_text_expr(Employee.telegram),
-    ).count()
-    employees_with_whatsapp = Employee.query.filter(
-        Employee.company_id == selected_company_id,
-        _has_text_expr(Employee.whatsapp),
-    ).count()
-    employees_with_email = Employee.query.filter(
-        Employee.company_id == selected_company_id,
-        _has_text_expr(Employee.email),
-    ).count()
-    employees_with_any_contact = Employee.query.filter(
-        Employee.company_id == selected_company_id,
-        Employee.status == "active",
-        or_(
-            _has_text_expr(Employee.telegram),
-            _has_text_expr(Employee.whatsapp),
-            _has_text_expr(Employee.email),
-        ),
-    ).count()
-
-    pending: List[str] = []
-    suggestions: List[str] = []
-
-    # Base cadastral checks (sempre aplicados)
-    if not company.client_code:
-        pending.append("Definir codigo da empresa (client_code).")
-    if not company.segment:
-        pending.append("Preencher segmento da empresa.")
-    if not company.city or not company.state:
-        pending.append("Preencher cidade/estado da empresa.")
-    if not company.mission or not company.vision:
-        pending.append("Preencher missao e visao.")
-
-    # Objective-specific checks
-    if objective in {"afazeres", "projetos", "trabalho"}:
-        if projects_count == 0:
-            pending.append("Nao ha projetos cadastrados.")
-            suggestions.append("Use menu 1.1 para criar o primeiro projeto.")
-        if open_tasks_count == 0:
-            pending.append("Nao ha atividades de projeto em aberto.")
-            suggestions.append("Use menu 1.4 para cadastrar atividades.")
-
-    if objective in {"processos"}:
-        if processes_count == 0:
-            pending.append("Nao ha processos cadastrados.")
-            suggestions.append("Cadastre processos e rotinas antes de abrir instancias.")
-        if open_instances_count == 0:
-            pending.append("Nao ha instancias de processo em aberto.")
-            suggestions.append("Use menu 2.1 para iniciar instancias.")
-
-    if objective in {"reunioes"}:
-        if meetings_count == 0:
-            pending.append("Nao ha reunioes cadastradas.")
-            suggestions.append("Use menu 4.1 para agendar reunioes.")
-        if employees_with_any_contact == 0:
-            pending.append("Nenhum colaborador possui contato (email/whatsapp/telegram) para convites.")
-            suggestions.append("Atualize contatos no cadastro de colaboradores.")
-        else:
-            min_recommended = max(1, int(active_employees * 0.6)) if active_employees else 1
-            if employees_with_any_contact < min_recommended:
-                pending.append(
-                    f"Cobertura de contatos baixa para reunioes: {employees_with_any_contact}/{active_employees} colaboradores ativos com contato."
-                )
-                suggestions.append("Completar email/whatsapp/telegram dos colaboradores para melhorar convites e notificacoes.")
-
-    if objective in {"telegram"} and employees_with_telegram == 0:
-        pending.append("Nenhum colaborador ativo possui Telegram cadastrado.")
-        suggestions.append("Atualize o Telegram no perfil dos colaboradores.")
-
-    if objective in {"whatsapp"} and employees_with_whatsapp == 0:
-        pending.append("Nenhum colaborador ativo possui WhatsApp cadastrado.")
-        suggestions.append("Atualize o WhatsApp no perfil dos colaboradores.")
-
-    if objective in {"onboarding", "geral"}:
-        if roles_count == 0:
-            pending.append("Nao ha cargos/funcoes cadastrados.")
-            suggestions.append("Cadastre ao menos um cargo para estruturar a equipe.")
-        if active_employees == 0:
-            pending.append("Nao ha colaboradores ativos vinculados.")
-            suggestions.append("Vincule colaboradores ativos a empresa.")
-
-    company_label = f"{company.client_code} - {company.name}" if company.client_code else company.name
-    objective_label = _format_objective_label(objective_raw or "geral")
-    lines = [
-        f"Diagnostico de funcionamento ({objective_label}) - {company_label}",
-        "",
-        "Resumo atual:",
-        f"- Colaboradores ativos: {active_employees}",
-        f"- Cargos: {roles_count}",
-        f"- Projetos: {projects_count} | Atividades em aberto: {open_tasks_count}",
-        f"- Processos: {processes_count} | Instancias em aberto: {open_instances_count}",
-        f"- Reunioes: {meetings_count}",
-        f"- Contatos: Telegram={employees_with_telegram}, WhatsApp={employees_with_whatsapp}, Email={employees_with_email}",
-        "",
-    ]
-
-    if not pending:
-        lines.append("Status: pronto para operacao no objetivo informado.")
-        return "\n".join(lines)
-
-    lines.append("Pendencias para funcionar melhor:")
-    for idx, item in enumerate(pending, start=1):
-        lines.append(f"{idx}. {item}")
-
-    if suggestions:
-        lines.append("")
-        lines.append("Proximos passos sugeridos:")
-        for idx, item in enumerate(suggestions, start=1):
-            lines.append(f"{idx}. {item}")
-
-    return "\n".join(lines)
+    return result.response_text
 
 
 def _execute_onboarding_start(payload: Dict[str, Any], company_id: Optional[int], user_id: int) -> str:
-    from models.cadastro_session import CadastroSession
-
-    tipo_raw = str(
-        payload.get("tipo_cadastro")
-        or payload.get("tipo")
-        or payload.get("modelo")
-        or ""
-    ).strip().lower()
-
-    if tipo_raw in {"", "real", "empresa_real", "oficial"}:
-        tipo = "real"
-    elif tipo_raw in {"modelo", "exemplo", "mock"}:
-        tipo = "modelo"
-    else:
-        return "Tipo de cadastro invalido. Use: real ou modelo."
-
-    selected_company_id, _ = _resolve_single_company_for_operation(
-        payload=payload,
-        active_company_id=company_id,
-        user_id=user_id,
-        allow_none_company=True,
+    handler = _build_onboarding_start_execution_handler()
+    result = handler.execute(
+        OnboardingStartRequest(
+            payload=dict(payload or {}),
+            active_company_id=company_id,
+            user_id=user_id,
+        )
     )
-
-    session = CadastroSession.criar_sessao(
-        user_id=user_id,
-        tipo_cadastro=tipo,
-        empresa_id=selected_company_id,
-    )
-
-    if tipo == "real":
-        prompt = "Para comecar o cadastro da empresa real, informe o CNPJ."
-    else:
-        prompt = "Vamos criar uma empresa modelo. Informe o nome da empresa exemplo."
-
-    return (
-        f"Sessao de onboarding iniciada com sucesso (ID {session.id}).\n"
-        f"Tipo: {tipo}\n"
-        f"{prompt}\n"
-        "Quando quiser cancelar, responda: nao."
-    )
+    return result.response_text
 
 
 def _execute_onboarding_go_live_check(payload: Dict[str, Any], company_id: Optional[int], user_id: int) -> str:
-    from models.company import Company
-    from models.employee import Employee
-    from models.project import Project, ProjectTask
-    from models.process import Process, ProcessInstance
-    from models.meeting import Meeting
-
-    selected_company_id, err = _resolve_single_company_for_operation(
-        payload=payload,
-        active_company_id=company_id,
-        user_id=user_id,
+    handler = _build_onboarding_go_live_check_execution_handler()
+    result = handler.execute(
+        OnboardingGoLiveCheckRequest(
+            payload=dict(payload or {}),
+            active_company_id=company_id,
+            user_id=user_id,
+        )
     )
-    if not selected_company_id:
-        return err or "Nao foi possivel identificar a empresa para o checklist de producao."
-
-    company = Company.query.get(selected_company_id)
-    if not company:
-        return "Empresa nao encontrada."
-
-    active_employees = Employee.query.filter(
-        Employee.company_id == selected_company_id,
-        Employee.status == "active",
-    ).count()
-    employees_with_any_contact = Employee.query.filter(
-        Employee.company_id == selected_company_id,
-        Employee.status == "active",
-        or_(
-            _has_text_expr(Employee.telegram),
-            _has_text_expr(Employee.whatsapp),
-            _has_text_expr(Employee.email),
-        ),
-    ).count()
-
-    projects_count = Project.query.filter(Project.company_id == selected_company_id).count()
-    open_tasks_count = (
-        db.session.query(ProjectTask)
-        .join(Project, Project.id == ProjectTask.project_id)
-        .filter(Project.company_id == selected_company_id)
-        .filter(~ProjectTask.status.in_(["completed", "cancelled"]))
-        .count()
-    )
-    processes_count = Process.query.filter(Process.company_id == selected_company_id).count()
-    open_instances_count = ProcessInstance.query.filter(
-        ProcessInstance.company_id == selected_company_id,
-        ProcessInstance.status != "completed",
-    ).count()
-    meetings_count = Meeting.query.filter(Meeting.company_id == selected_company_id).count()
-
-    field_map = [
-        ("client_code", "Codigo da Empresa"),
-        ("name", "Nome da Empresa"),
-        ("segment", "Segmento"),
-        ("city", "Cidade"),
-        ("state", "Estado (UF)"),
-        ("mission", "Missao"),
-        ("vision", "Visao"),
-    ]
-    missing_core = [label for field, label in field_map if not getattr(company, field, None)]
-
-    blockers: List[str] = []
-    warnings: List[str] = []
-
-    if missing_core:
-        blockers.append("Campos cadastrais essenciais pendentes: " + ", ".join(missing_core))
-    if active_employees == 0:
-        blockers.append("Nao ha colaboradores ativos vinculados a empresa.")
-    if employees_with_any_contact == 0:
-        blockers.append("Nenhum colaborador ativo possui contato para notificacoes.")
-    elif active_employees > 0:
-        coverage = employees_with_any_contact / active_employees
-        if coverage < 0.4:
-            warnings.append(
-                f"Cobertura de contatos baixa ({employees_with_any_contact}/{active_employees})."
-            )
-
-    if projects_count == 0 and processes_count == 0:
-        blockers.append("Nao ha projetos nem processos cadastrados para operacao.")
-    else:
-        if open_tasks_count == 0 and open_instances_count == 0:
-            warnings.append("Nao ha atividades ou instancias em aberto para acompanhamento.")
-        if meetings_count == 0:
-            warnings.append("Nao ha reunioes cadastradas para registro de decisoes.")
-
-    if blockers:
-        go_live_status = "NAO PRONTO"
-    elif warnings:
-        go_live_status = "PRONTO COM ALERTAS"
-    else:
-        go_live_status = "PRONTO"
-
-    company_label = f"{company.client_code} - {company.name}" if company.client_code else company.name
-    lines = [
-        f"Checklist de prontidao para producao - {company_label}",
-        f"Status: {go_live_status}",
-        "",
-        "Resumo operacional:",
-        f"- Colaboradores ativos: {active_employees}",
-        f"- Colaboradores com contato: {employees_with_any_contact}",
-        f"- Projetos: {projects_count} | Atividades abertas: {open_tasks_count}",
-        f"- Processos: {processes_count} | Instancias abertas: {open_instances_count}",
-        f"- Reunioes cadastradas: {meetings_count}",
-    ]
-
-    if blockers:
-        lines.append("")
-        lines.append("Bloqueadores:")
-        for idx, item in enumerate(blockers, start=1):
-            lines.append(f"{idx}. {item}")
-
-    if warnings:
-        lines.append("")
-        lines.append("Alertas:")
-        for idx, item in enumerate(warnings, start=1):
-            lines.append(f"{idx}. {item}")
-
-    lines.append("")
-    if go_live_status == "PRONTO":
-        lines.append("Conclusao: empresa apta para subir em producao e iniciar monitoramento.")
-    elif go_live_status == "PRONTO COM ALERTAS":
-        lines.append("Conclusao: pode subir em producao, mas com plano de ajuste fino durante estabilizacao.")
-    else:
-        lines.append("Conclusao: resolver bloqueadores antes da subida para producao.")
-
-    return "\n".join(lines)
+    return result.response_text
 
 
 def _resolve_single_company_for_operation(
@@ -3423,123 +2922,27 @@ def _format_objective_label(value: str) -> str:
 
 
 def _execute_complete_project_task(payload: Dict[str, Any], company_id: Optional[int], user_id: int) -> str:
-    from models.project import ProjectTask
-    from models.company import Company
-
-    code_value = str(
-        payload.get("codigo_atividade")
-        or payload.get("activity_code")
-        or payload.get("task_code")
-        or payload.get("codigo")
-        or ""
-    ).strip()
-    if not code_value:
-        return "Nao encontrei o codigo da atividade. Informe no formato: codigo_atividade: AA.J.26.175"
-
-    task_id = _extract_id_from_code(code_value)
-    if not task_id:
-        return f"Nao consegui identificar o ID no codigo '{code_value}'."
-
-    task = ProjectTask.query.get(task_id)
-    if not task:
-        return f"Atividade de projeto com codigo '{code_value}' nao encontrada."
-
-    project = task.project
-    if not project:
-        return f"A atividade '{task.what}' nao possui projeto vinculado."
-
-    if company_id and project.company_id != company_id and not _user_can_access_company(user_id, project.company_id):
-        return "A atividade informada nao pertence ao contexto da empresa ativa."
-
-    desired_date = _parse_completion_date(
-        str(payload.get("completion_date") or payload.get("data_finalizacao") or "")
-    ) if (payload.get("completion_date") or payload.get("data_finalizacao")) else None
-    if (payload.get("completion_date") or payload.get("data_finalizacao")) and not desired_date:
-        return "Data de finalizacao invalida. Use DD/MM/AAAA ou AAAA-MM-DD."
-
-    final_date = desired_date or _local_today()
-
-    if task.status != "completed" or task.stage != "completed":
-        task.status = "completed"
-        task.stage = "completed"
-        task.completion_date = final_date
-        db.session.commit()
-    else:
-        if desired_date and task.completion_date != desired_date:
-            task.completion_date = desired_date
-            db.session.commit()
-        final_date = task.completion_date or final_date
-
-    try:
-        project.update_progress()
-        db.session.commit()
-    except Exception:
-        db.session.rollback()
-        # Recarrega e mantém conclusão já persistida
-        task = ProjectTask.query.get(task_id)
-        project = task.project if task else None
-
-    company = Company.query.get(project.company_id) if project else None
-    company_code = (company.client_code if company and company.client_code else "CP")
-    project_code = f"{company_code}.J.{project.id}" if project else "-"
-    activity_code = f"{project_code}.{task.id}"
-    project_name = project.name if project and project.name else f"Projeto {project.id if project else '-'}"
-
-    return (
-        f"A atividade de projeto com o codigo \"{activity_code}\" foi concluida com sucesso!\n\n"
-        f"- Projeto: {project_code} - {project_name}\n"
-        f"- Atividade: {task.what}\n"
-        f"- Data de Conclusao: {final_date.isoformat()}"
+    handler = _build_project_task_complete_execution_handler()
+    result = handler.execute(
+        ProjectTaskCompleteRequest(
+            payload=dict(payload or {}),
+            active_company_id=company_id,
+            user_id=user_id,
+        )
     )
+    return result.response_text
 
 
 def _execute_complete_process_instance(payload: Dict[str, Any], company_id: Optional[int], user_id: int) -> str:
-    from models.process import ProcessInstance
-    from models.company import Company
-
-    code_value = str(
-        payload.get("codigo_instancia")
-        or payload.get("instance_code")
-        or payload.get("codigo")
-        or ""
-    ).strip()
-    if not code_value:
-        return "Nao encontrei o codigo da instancia. Informe no formato: codigo_instancia: CODIGO"
-
-    instance_id = _extract_id_from_code(code_value)
-    if not instance_id:
-        return f"Nao consegui identificar o ID no codigo '{code_value}'."
-
-    instance = ProcessInstance.query.get(instance_id)
-    if not instance:
-        return f"Instancia de processo com codigo '{code_value}' nao encontrada."
-
-    if company_id and instance.company_id != company_id and not _user_can_access_company(user_id, instance.company_id):
-        return "A instancia informada nao pertence ao contexto da empresa ativa."
-
-    desired_date = _parse_completion_date(
-        str(payload.get("completion_date") or payload.get("data_finalizacao") or "")
-    ) if (payload.get("completion_date") or payload.get("data_finalizacao")) else None
-    if (payload.get("completion_date") or payload.get("data_finalizacao")) and not desired_date:
-        return "Data de finalizacao invalida. Use DD/MM/AAAA ou AAAA-MM-DD."
-
-    final_date = desired_date or _local_today()
-    if instance.status != "completed":
-        instance.status = "completed"
-    instance.actual_end_date = final_date
-    instance.completed_at = datetime.combine(final_date, datetime.min.time())
-    db.session.commit()
-
-    company = Company.query.get(instance.company_id)
-    company_code = company.client_code if company and company.client_code else "CP"
-    instance_code = instance.instance_code or f"{company_code}.C.{instance.process_id}.{instance.id}"
-    title = instance.title or f"Instancia {instance.id}"
-
-    return (
-        f"A instancia de processo com o codigo \"{instance_code}\" foi concluida com sucesso!\n\n"
-        f"- Instancia: {title}\n"
-        f"- Data de Conclusao: {final_date.isoformat()}"
+    handler = _build_process_instance_complete_execution_handler()
+    result = handler.execute(
+        ProcessInstanceCompleteRequest(
+            payload=dict(payload or {}),
+            active_company_id=company_id,
+            user_id=user_id,
+        )
     )
+    return result.response_text
 
 
 def _execute_my_work_report(
@@ -3549,56 +2952,17 @@ def _execute_my_work_report(
     user_id: int,
     channel: str = "web",
 ) -> str:
-    company_ids, company_label_or_error = _resolve_company_ids_for_payload(
-        payload=payload,
-        active_company_id=company_id,
-        user_id=user_id,
+    handler = _build_my_work_execution_handler()
+    result = handler.execute(
+        MyWorkExecutionRequest(
+            action=action,
+            payload=dict(payload or {}),
+            active_company_id=company_id,
+            user_id=user_id,
+            channel=channel or "web",
+        )
     )
-    if not company_ids:
-        return company_label_or_error or "Nao foi possivel identificar a empresa para consulta."
-
-    start_date = None
-    end_date = None
-    if action in {"my_work.due_range", "my_work.completed_range"}:
-        start_date, end_date = _resolve_period_from_payload(payload)
-        if not start_date or not end_date:
-            return (
-                "Para esta consulta, informe o periodo no formato:\n"
-                "periodo: 01/03/2026 a 07/03/2026\n"
-                "ou use periodos relativos: hoje | esta semana | este mes | proximos 15 dias"
-            )
-
-    tasks = _load_project_tasks_report(
-        company_ids=company_ids,
-        mode=action,
-        start_date=start_date,
-        end_date=end_date,
-    )
-    processes = _load_process_instances_report(
-        company_ids=company_ids,
-        mode=action,
-        start_date=start_date,
-        end_date=end_date,
-    )
-    meetings = _load_meetings_report(
-        company_ids=company_ids,
-        mode=action,
-        start_date=start_date,
-        end_date=end_date,
-    )
-
-    return _format_my_work_report(
-        action=action,
-        company_label=company_label_or_error,
-        tasks=tasks,
-        processes=processes,
-        meetings=meetings,
-        start_date=start_date,
-        end_date=end_date,
-        channel=channel,
-        payload=payload,
-        user_id=user_id,
-    )
+    return result.response_text
 
 
 def _execute_summary_menu_report(
@@ -3607,203 +2971,16 @@ def _execute_summary_menu_report(
     user_id: int,
     channel: str = "web",
 ) -> str:
-    from models.company import Company
-    from models.employee import Employee
-
-    selected_company_id = payload.get("_summary_company_id")
-    if not selected_company_id:
-        return "Nao consegui identificar a empresa selecionada para o resumo."
-    selected_company_id = int(selected_company_id)
-
-    if not _user_can_access_company(user_id, selected_company_id):
-        return "Voce nao possui acesso a empresa selecionada."
-
-    company = Company.query.get(selected_company_id)
-    if not company:
-        return "Empresa selecionada nao encontrada."
-
-    start_date, end_date = _resolve_period_from_payload(payload)
-    if not start_date or not end_date:
-        return (
-            "Nao consegui identificar o periodo do resumo.\n"
-            "Use o formato: DD/MM/AAAA a DD/MM/AAAA."
+    handler = _build_summary_execution_handler()
+    result = handler.execute(
+        SummaryExecutionRequest(
+            payload=dict(payload or {}),
+            active_company_id=active_company_id,
+            user_id=user_id,
+            channel=channel or "web",
         )
-
-    selected_employee_ids_raw = payload.get("_summary_employee_ids")
-    employee_ids: List[int] = []
-    if isinstance(selected_employee_ids_raw, list):
-        for raw_id in selected_employee_ids_raw:
-            try:
-                parsed_id = int(raw_id)
-            except (TypeError, ValueError):
-                continue
-            if parsed_id > 0 and parsed_id not in employee_ids:
-                employee_ids.append(parsed_id)
-
-    if not employee_ids:
-        selected_employee_id = payload.get("_summary_employee_id")
-        if selected_employee_id:
-            try:
-                employee_ids = [int(selected_employee_id)]
-            except (TypeError, ValueError):
-                employee_ids = []
-
-    if not employee_ids:
-        return "Nao consegui identificar o colaborador selecionado."
-
-    employee_rows = (
-        Employee.query.filter(
-            Employee.company_id == selected_company_id,
-            Employee.id.in_(employee_ids),
-        )
-        .all()
     )
-    if not employee_rows:
-        return "Colaborador selecionado nao pertence a empresa escolhida."
-
-    employees_by_id = {int(emp.id): emp for emp in employee_rows}
-    missing_ids = [emp_id for emp_id in employee_ids if emp_id not in employees_by_id]
-    if missing_ids:
-        return "Colaborador selecionado nao pertence a empresa escolhida."
-
-    collaborator_terms: List[str] = []
-    employee_names: List[str] = []
-    for emp_id in employee_ids:
-        employee = employees_by_id.get(emp_id)
-        if not employee:
-            continue
-        employee_name = str(employee.name or "").strip()
-        employee_email = str(employee.email or "").strip().lower()
-        if employee_name:
-            employee_names.append(employee_name)
-            collaborator_terms.append(employee_name.lower())
-        if employee_email:
-            collaborator_terms.append(employee_email)
-
-    status_key = str(payload.get("_summary_status") or "open").strip().lower()
-    company_label = (
-        f"empresa {company.client_code} - {company.name}"
-        if company.client_code else
-        f"empresa {company.name}"
-    )
-
-    normalized_payload = dict(payload or {})
-    collaborator_label = _format_summary_collaborator_selection_label(
-        employee_names,
-        all_selected=bool(payload.get("_summary_all_collaborators")),
-    )
-    if collaborator_label:
-        normalized_payload["colaborador"] = collaborator_label
-
-    open_tasks = _merge_report_items(
-        _load_project_tasks_report(
-            company_ids=[selected_company_id],
-            mode="my_work.overdue",
-            start_date=start_date,
-            end_date=end_date,
-            employee_ids=employee_ids,
-        ) + _load_project_tasks_report(
-            company_ids=[selected_company_id],
-            mode="my_work.due_range",
-            start_date=start_date,
-            end_date=end_date,
-            employee_ids=employee_ids,
-        ),
-        unique_key="activity_code",
-    )
-    open_processes = _merge_report_items(
-        _load_process_instances_report(
-            company_ids=[selected_company_id],
-            mode="my_work.overdue",
-            start_date=start_date,
-            end_date=end_date,
-            employee_ids=employee_ids,
-        ) + _load_process_instances_report(
-            company_ids=[selected_company_id],
-            mode="my_work.due_range",
-            start_date=start_date,
-            end_date=end_date,
-            employee_ids=employee_ids,
-        ),
-        unique_key="instance_code",
-    )
-    open_meetings = _merge_report_items(
-        _load_meetings_report(
-            company_ids=[selected_company_id],
-            mode="my_work.overdue",
-            start_date=start_date,
-            end_date=end_date,
-            collaborator_terms=collaborator_terms,
-        ) + _load_meetings_report(
-            company_ids=[selected_company_id],
-            mode="my_work.due_range",
-            start_date=start_date,
-            end_date=end_date,
-            collaborator_terms=collaborator_terms,
-        ),
-        unique_key="meeting_code",
-    )
-
-    completed_tasks = _load_project_tasks_report(
-        company_ids=[selected_company_id],
-        mode="my_work.completed_range",
-        start_date=start_date,
-        end_date=end_date,
-        employee_ids=employee_ids,
-    )
-    completed_processes = _load_process_instances_report(
-        company_ids=[selected_company_id],
-        mode="my_work.completed_range",
-        start_date=start_date,
-        end_date=end_date,
-        employee_ids=employee_ids,
-    )
-    completed_meetings = _load_meetings_report(
-        company_ids=[selected_company_id],
-        mode="my_work.completed_range",
-        start_date=start_date,
-        end_date=end_date,
-        collaborator_terms=collaborator_terms,
-    )
-
-    open_report = _format_my_work_report(
-        action="my_work.due_range",
-        company_label=company_label,
-        tasks=open_tasks,
-        processes=open_processes,
-        meetings=open_meetings,
-        start_date=start_date,
-        end_date=end_date,
-        channel=channel,
-        payload=normalized_payload,
-        user_id=user_id,
-    )
-    completed_report = _format_my_work_report(
-        action="my_work.completed_range",
-        company_label=company_label,
-        tasks=completed_tasks,
-        processes=completed_processes,
-        meetings=completed_meetings,
-        start_date=start_date,
-        end_date=end_date,
-        channel=channel,
-        payload=normalized_payload,
-        user_id=user_id,
-    )
-
-    if status_key == "open":
-        return open_report
-    if status_key == "completed":
-        return completed_report
-    if status_key == "all":
-        return (
-            "STATUS: ABERTAS\n"
-            f"{open_report}\n\n"
-            "STATUS: CONCLUIDAS\n"
-            f"{completed_report}"
-        )
-
-    return "Status invalido para resumo. Use: abertas, concluidas ou todas."
+    return result.report_text
 
 
 def _merge_report_items(items: List[Dict[str, Any]], unique_key: str) -> List[Dict[str, Any]]:
@@ -4721,204 +3898,36 @@ def _format_item_selection_prompt(
     option: AgentMenuOption,
     selection: Dict[str, Any],
 ) -> str:
-    choices = selection.get("choices") or []
-    scope_label = selection.get("scope_label") or "empresa ativa"
-    item_label_plural = selection.get("item_label_plural") or "itens"
-    selection_kind = str(selection.get("selection_kind") or "").strip().lower()
-    article = "os"
-    if item_label_plural.strip().lower() in {"atividades", "instancias de processo", "reunioes"}:
-        article = "as"
-
-    if not choices:
-        if selection_kind == "project_picker":
-            return (
-                "Nao encontrei projetos ativos no contexto atual.\n"
-                "Se preferir, informe o codigo diretamente no formato codigo_projeto: AA.J.12."
-            )
-        return (
-            f"Nao encontrei {item_label_plural} em aberto no contexto atual.\n"
-            "Se quiser, informe o codigo diretamente no formato campo: valor."
-        )
-
-    action = (option.action_key or "").strip().lower()
-    header = f"{option.code} - {option.title}"
-    if selection_kind == "project_picker":
-        lines = [
-            header,
-            "",
-            f"Escolha o projeto ativo para a {scope_label}:",
-        ]
-        for item in choices:
-            code = item.get("code") or "-"
-            title = item.get("title") or "-"
-            status = _format_project_status_label(item.get("status"))
-            due_str = _format_date_br(item.get("due_date"))
-            progress = item.get("progress")
-            detail_parts = [f"Status: {status}"]
-            if progress is not None:
-                detail_parts.append(f"Progresso: {progress}%")
-            detail_parts.append(f"Prazo: {due_str}")
-            lines.append(f"{item['index']} - {code} - {title} | {' | '.join(detail_parts)}")
-        lines.append("")
-        lines.append("Informe apenas o numero do projeto.")
-        lines.append("Exemplo: 1")
-        lines.append("Se preferir, envie o codigo diretamente no formato codigo_projeto: AA.J.12")
-        return "\n".join(lines)
-
-    if action == "onboarding.diagnose":
-        lines = [
-            header,
-            "",
-            "Selecione o objetivo do diagnostico:",
-        ]
-        for item in choices:
-            lines.append(f"{item['index']} - {item.get('title') or item.get('code') or '-'}")
-        lines.append("")
-        lines.append("Informe o numero da opcao.")
-        lines.append("Exemplo: 1")
-        return "\n".join(lines)
-
-    if action in {"meeting.start", "meeting.summarize"}:
-        lines = [
-            header,
-            "",
-            f"Existem {article} seguintes {item_label_plural} disponiveis para a {scope_label}:",
-        ]
-    else:
-        lines = [
-            header,
-            "",
-            f"Existem {article} seguintes {item_label_plural} em aberto para a {scope_label}:",
-        ]
-    for item in choices:
-        code = item.get("code") or "-"
-        title = item.get("title") or "-"
-        if action in {"meeting.start", "meeting.summarize"}:
-            status = item.get("status") or "-"
-            when = f"{item.get('scheduled_date') or '-'} {item.get('scheduled_time') or ''}".strip()
-            lines.append(f"{item['index']} - ID {code} - {title} | Status: {status} | Data: {when}")
-        else:
-            due_str = item.get("due_date") or "-"
-            detail = item.get("project_name") or item.get("process_code") or ""
-            if detail:
-                lines.append(f"{item['index']} - {code} - {title} | {detail} | Prazo: {due_str}")
-            else:
-                lines.append(f"{item['index']} - {code} - {title} | Prazo: {due_str}")
-
-    lines.append("")
-    if action in {"meeting.start", "meeting.summarize"}:
-        lines.append("Informe o numero da reuniao no formato:")
-        lines.append("numero")
-        lines.append("Exemplo: 1")
-    else:
-        lines.append(
-            "Informe o numero da atividade / instancia e a data que voce quer registrar como finalizacao, no formato:"
-        )
-        lines.append("numero: data")
-        lines.append("Exemplo: 1: 27/02/2026")
-        lines.append("Se quiser usar a data de hoje, envie apenas o numero. Exemplo: 1")
-    return "\n".join(lines)
+    return build_item_selection_prompt(
+        _build_workflow_display_option(option),
+        selection,
+        format_project_status_label=_format_project_status_label,
+        format_date_br=_format_date_br,
+    )
 
 
 def _format_confirmation(option: AgentMenuOption, payload: Dict[str, Any]) -> str:
-    payload = _public_payload(payload)
-    lines = [
-        "Confirme que voce quer:",
-        f"{option.code} - {option.title}",
-    ]
-    if payload:
-        lines.append("com os dados:")
-        for item in _build_confirmation_display_items(option, payload):
-            lines.append(f"- {item}")
-    else:
-        lines.append("sem dados adicionais.")
-    lines.append("Se estiver correto, responda 'sim'. Para cancelar, responda 'nao'.")
-    return "\n".join(lines)
+    return build_confirmation_text(
+        _build_workflow_display_option(option),
+        _public_payload(payload),
+        format_project_choice_line=_format_project_choice_line,
+        format_project_task_choice_line=_format_project_task_choice_line,
+        format_process_instance_choice_line=_format_process_instance_choice_line,
+        format_meeting_choice_line=_format_meeting_choice_line,
+        format_objective_label=_format_objective_label,
+    )
 
 
 def _build_confirmation_display_items(option: AgentMenuOption, payload: Dict[str, Any]) -> List[str]:
-    action = (option.action_key or "").strip().lower()
-    items: List[str] = []
-
-    if action in {"project.update", "project.complete", "project_task.create"}:
-        project_code = str(payload.get("codigo_projeto") or "").strip()
-        if project_code:
-            pretty = _format_project_choice_line(project_code)
-            items.append(pretty or f"codigo_projeto: {project_code}")
-
-        for key, value in payload.items():
-            if key == "codigo_projeto":
-                continue
-            items.append(f"{key}: {value}")
-        return items
-
-    if action == "project_task.complete":
-        activity_code = str(payload.get("codigo_atividade") or "").strip()
-        if activity_code:
-            pretty = _format_project_task_choice_line(activity_code)
-            items.append(pretty or f"codigo_atividade: {activity_code}")
-
-        if payload.get("data_finalizacao"):
-            items.append(f"data_finalizacao: {payload['data_finalizacao']}")
-
-        for key, value in payload.items():
-            if key in {"codigo_atividade", "data_finalizacao"}:
-                continue
-            items.append(f"{key}: {value}")
-        return items
-
-    if action == "process_instance.complete":
-        instance_code = str(payload.get("codigo_instancia") or "").strip()
-        if instance_code:
-            pretty = _format_process_instance_choice_line(instance_code)
-            items.append(pretty or f"codigo_instancia: {instance_code}")
-
-        if payload.get("data_finalizacao"):
-            items.append(f"data_finalizacao: {payload['data_finalizacao']}")
-
-        for key, value in payload.items():
-            if key in {"codigo_instancia", "data_finalizacao"}:
-                continue
-            items.append(f"{key}: {value}")
-        return items
-
-    if action in {"meeting.start", "meeting.summarize"}:
-        meeting_value = str(
-            payload.get("id_reuniao")
-            or payload.get("meeting_id")
-            or payload.get("codigo_reuniao")
-            or payload.get("codigo")
-            or ""
-        ).strip()
-        if meeting_value:
-            pretty = _format_meeting_choice_line(meeting_value)
-            items.append(pretty or f"id_reuniao: {meeting_value}")
-
-        for key, value in payload.items():
-            if key in {"id_reuniao", "meeting_id", "codigo_reuniao", "codigo"}:
-                continue
-            items.append(f"{key}: {value}")
-        return items
-
-    if action == "onboarding.diagnose":
-        objective_raw = str(
-            payload.get("objetivo")
-            or payload.get("o_que_quer_funcionar")
-            or payload.get("objetivo_de_funcionamento")
-            or ""
-        ).strip()
-        if objective_raw:
-            items.append(f"objetivo: {_format_objective_label(objective_raw)}")
-
-        for key, value in payload.items():
-            if key in {"objetivo", "o_que_quer_funcionar", "objetivo_de_funcionamento"}:
-                continue
-            items.append(f"{key}: {value}")
-        return items
-
-    for key, value in payload.items():
-        items.append(f"{key}: {value}")
-    return items
+    return build_confirmation_display_items(
+        _build_workflow_display_option(option),
+        dict(payload or {}),
+        format_project_choice_line=_format_project_choice_line,
+        format_project_task_choice_line=_format_project_task_choice_line,
+        format_process_instance_choice_line=_format_process_instance_choice_line,
+        format_meeting_choice_line=_format_meeting_choice_line,
+        format_objective_label=_format_objective_label,
+    )
 
 
 def _format_project_task_choice_line(activity_code: str) -> Optional[str]:
@@ -5012,25 +4021,11 @@ def _format_missing_fields(
     missing_fields: List[Dict[str, str]],
     payload: Dict[str, Any],
 ) -> str:
-    action = (option.action_key or "").strip().lower()
-    lines = [
-        f"Voce quer fazer {option.code} - {option.title}.",
-        "Para executar, faltam os seguintes dados:",
-    ]
-    for idx, field in enumerate(missing_fields, start=1):
-        lines.append(f"{idx} - {field['label']} ({field['key']})")
-    if payload:
-        lines.append("")
-        lines.append("Dados ja recebidos:")
-        for key, value in payload.items():
-            lines.append(f"- {key}: {value}")
-    lines.append("")
-    lines.append("Envie no formato: numero: valor")
-    if action == "onboarding.start":
-        lines.append("Exemplos:")
-        lines.append("1: real")
-        lines.append("1: modelo")
-    return "\n".join(lines)
+    return build_missing_fields_prompt(
+        _build_workflow_display_option(option),
+        missing_fields,
+        payload,
+    )
 
 
 def _get_or_create_session(
@@ -5145,22 +4140,22 @@ def _match_options_by_keywords(company_id: Optional[int], lower_text: str) -> Li
     else:
         query = query.filter(AgentMenuOption.company_id.is_(None))
 
-    options = _dedupe_by_code(query.order_by(AgentMenuOption.sort_order.asc(), AgentMenuOption.code.asc()).all(), company_id)
-    scored: List[Tuple[int, AgentMenuOption]] = []
-    for option in options:
-        score = 0
-        for keyword in option.keywords or []:
-            if _normalize_text(str(keyword)) in lower_text:
-                score += 2
-        # fallback pelo título
-        title_parts = _normalize_text(option.title).split()
-        for part in title_parts:
-            if len(part) > 3 and part in lower_text:
-                score += 1
-        if score > 0:
-            scored.append((score, option))
-    scored.sort(key=lambda item: (-item[0], item[1].sort_order, item[1].code))
-    return [item[1] for item in scored[:10]]
+    options = query.order_by(AgentMenuOption.sort_order.asc(), AgentMenuOption.code.asc()).all()
+    runtime = WorkflowRuntime()
+    discovery = runtime.discover_from_menu_options(
+        text=lower_text,
+        options=options,
+        preferred_company_id=company_id,
+        top_k=10,
+    )
+    options_by_id = {option.id: option for option in options}
+    matched_options: List[AgentMenuOption] = []
+    for match in discovery.matches:
+        option_id = match.workflow.source_option_id
+        option = options_by_id.get(option_id)
+        if option is not None:
+            matched_options.append(option)
+    return matched_options
 
 
 def _indicates_execute(lower_text: str) -> bool:

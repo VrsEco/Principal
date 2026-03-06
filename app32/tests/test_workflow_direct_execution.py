@@ -1,0 +1,155 @@
+import os
+import sys
+
+sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), "..")))
+
+from src.intelligence.workflows.direct_execution import (
+    DirectExecutionDispatcher,
+    DirectExecutionRequest,
+    build_direct_execution_request,
+    build_handler_executor,
+)
+from src.intelligence.workflows.handlers import MyWorkExecutionRequest
+
+
+class _DummyRequest:
+    def __init__(self, response_text: str):
+        self.response_text = response_text
+
+
+class _DummyHandler:
+    def __init__(self, sink):
+        self._sink = sink
+
+    def execute(self, request):
+        self._sink.append(request)
+        return _DummyRequest(response_text="executado")
+
+
+def test_direct_execution_dispatcher_executes_registered_handler():
+    dispatcher = DirectExecutionDispatcher(
+        {
+            "project_task.create": lambda request: (
+                f"{request.action_key}:{request.payload.get('nome_atividade')}:{request.active_company_id}:{request.user_id}:{request.channel}"
+            )
+        }
+    )
+
+    result = dispatcher.execute(
+        DirectExecutionRequest(
+            action_key="project_task.create",
+            payload={"nome_atividade": "Implementar V3"},
+            active_company_id=9,
+            user_id=10,
+            channel="whatsapp",
+        )
+    )
+
+    assert result.executed is True
+    assert result.response_text == "project_task.create:Implementar V3:9:10:whatsapp"
+
+
+def test_direct_execution_dispatcher_normalizes_action_key_and_returns_not_executed_for_unknown():
+    dispatcher = DirectExecutionDispatcher(
+        {
+            "meeting.schedule": lambda request: "ok",
+        }
+    )
+
+    known = dispatcher.execute(
+        DirectExecutionRequest(
+            action_key=" Meeting.Schedule ",
+            payload={},
+            active_company_id=None,
+            user_id=10,
+        )
+    )
+    unknown = dispatcher.execute(
+        DirectExecutionRequest(
+            action_key="summary.week",
+            payload={},
+            active_company_id=None,
+            user_id=10,
+        )
+    )
+
+    assert known.executed is True
+    assert known.response_text == "ok"
+    assert unknown.executed is False
+    assert unknown.response_text is None
+
+
+def test_direct_execution_dispatcher_treats_none_response_as_not_executed():
+    dispatcher = DirectExecutionDispatcher(
+        {
+            "onboarding.start": lambda request: None,
+        }
+    )
+
+    result = dispatcher.execute(
+        DirectExecutionRequest(
+            action_key="onboarding.start",
+            payload={},
+            active_company_id=1,
+            user_id=10,
+        )
+    )
+
+    assert result.executed is False
+    assert result.response_text is None
+
+
+def test_build_direct_execution_request_maps_shared_fields_and_action_override():
+    direct_request = DirectExecutionRequest(
+        action_key="my_work.open",
+        payload={"periodo": "esta semana"},
+        active_company_id=9,
+        user_id=10,
+        channel="telegram",
+    )
+
+    request = build_direct_execution_request(
+        direct_request,
+        MyWorkExecutionRequest,
+        action_override="my_work.overdue",
+    )
+
+    assert isinstance(request, MyWorkExecutionRequest)
+    assert request.action == "my_work.overdue"
+    assert request.payload == {"periodo": "esta semana"}
+    assert request.active_company_id == 9
+    assert request.user_id == 10
+    assert request.channel == "telegram"
+
+
+def test_build_handler_executor_builds_request_and_returns_response_text():
+    captured_requests = []
+
+    def _factory():
+        return _DummyHandler(captured_requests)
+
+    executor = build_handler_executor(
+        handler_factory=_factory,
+        request_model=MyWorkExecutionRequest,
+        action_override="my_work.completed_range",
+    )
+
+    response_text = executor(
+        DirectExecutionRequest(
+            action_key="my_work.open",
+            payload={"periodo": "este mes"},
+            active_company_id=3,
+            user_id=7,
+            channel="email",
+        )
+    )
+
+    assert response_text == "executado"
+    assert len(captured_requests) == 1
+    built_request = captured_requests[0]
+    assert isinstance(built_request, MyWorkExecutionRequest)
+    assert built_request.action == "my_work.completed_range"
+    assert built_request.payload == {"periodo": "este mes"}
+    assert built_request.active_company_id == 3
+    assert built_request.user_id == 7
+    assert built_request.channel == "email"
