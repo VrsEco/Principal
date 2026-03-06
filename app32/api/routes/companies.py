@@ -224,6 +224,8 @@ def link_company_user(company_id):
     data = request.json
     user_id = data.get('user_id')
     employee_id = data.get('employee_id')
+    start_date = data.get('start_date')
+    end_date = data.get('end_date')
     
     if not user_id or not employee_id:
         return jsonify({"error": "Usuário e Colaborador são obrigatórios"}), 400
@@ -244,9 +246,19 @@ def link_company_user(company_id):
     if existing_emp:
         return jsonify({"error": "Este usuário já está vinculado a outro colaborador nesta empresa"}), 400
         
-    # Realiza o vínculo
-    employee.user_id = user.id
-    employee.email = user.email # Opcional: sincronizar email
+    # Realiza o vínculo através do serviço que gerencia períodos
+    result = UserEmployeeService.assign_user_to_employee(
+        user_id=user.id, 
+        employee_id=employee.id, 
+        start_date=start_date, 
+        end_date=end_date
+    )
+    
+    if not result['success']:
+        return jsonify({"error": result['error']}), 400
+    
+    if not employee.email and user.email:
+        employee.email = user.email
     db.session.commit()
     
     return jsonify({"success": True}), 200
@@ -265,14 +277,41 @@ def update_company_employee(company_id, employee_id):
     db.session.commit()
     return jsonify(employee.to_dict())
 
+@companies_bp.route('/api/companies/<int:company_id>/employees/<int:employee_id>/access', methods=['DELETE'])
+@permission_required('companies', 'edit')
+def remove_company_user_access(company_id, employee_id):
+    from models.user_employee_assignment import UserEmployeeAssignment
+    from datetime import date
+    
+    employee = Employee.query.filter_by(id=employee_id, company_id=company_id).first_or_404()
+    
+    if not employee.user_id:
+        return jsonify({"error": "Colaborador não possui um usuário vinculado"}), 400
+        
+    assignment = UserEmployeeAssignment.query.filter_by(
+        employee_id=employee_id, 
+        user_id=employee.user_id, 
+        is_active=True
+    ).first()
+    
+    end_date = request.json.get('end_date') if request.is_json else date.today().isoformat()
+    
+    if assignment:
+        result = UserEmployeeService.terminate_assignment(assignment.id, end_date=end_date)
+        if not result['success']:
+            return jsonify({"error": result['error']}), 400
+    else:
+        # Fallback se não existir assignment
+        employee.user_id = None
+        db.session.commit()
+        
+    return jsonify({"success": True})
+
 @companies_bp.route('/api/companies/<int:company_id>/employees/<int:employee_id>', methods=['DELETE'])
 @permission_required('companies', 'edit')
 def delete_company_employee(company_id, employee_id):
     employee = Employee.query.filter_by(id=employee_id, company_id=company_id).first_or_404()
-    # Soft delete
+    # Soft delete do histórico/função do colaborador em si
     employee.status = 'inactive'
-    # Optional: If you don't want them to still be listed in "Acessos" with an active link,
-    # but the user said "inativar e não dizer sobre o vínculo". Disconnecting user_id might be needed if they can recreate a new one,  
-    # but we just keep user_id and set status to inactive.
     db.session.commit()
     return jsonify({"success": True})

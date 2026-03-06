@@ -7,6 +7,7 @@ from models import db
 from models.user import User
 from models.company import Company
 from models.employee import Employee
+from models.user_employee_assignment import UserEmployeeAssignment
 from models.role import Role
 from werkzeug.security import generate_password_hash
 
@@ -421,3 +422,86 @@ class UserEmployeeService:
                 'success': False,
                 'error': str(e)
             }
+
+    @staticmethod
+    def assign_user_to_employee(
+        user_id: int,
+        employee_id: int,
+        start_date: Optional[str] = None,
+        end_date: Optional[str] = None,
+        notes: Optional[str] = None
+    ) -> Dict[str, Any]:
+        """
+        Cria o vínculo (Associação/Acesso) entre um Usuário e um Colaborador (posição).
+        Utiliza controle por períodos.
+        """
+        from datetime import datetime, date
+        try:
+            # Validar entrada de datas
+            start_dt = datetime.strptime(start_date, '%Y-%m-%d').date() if start_date else date.today()
+            end_dt = datetime.strptime(end_date, '%Y-%m-%d').date() if end_date else None
+            
+            # Verificar se já existe vínculo ativo para este employee
+            existing_active = UserEmployeeAssignment.query.filter_by(
+                employee_id=employee_id,
+                is_active=True
+            ).filter((UserEmployeeAssignment.end_date == None) | (UserEmployeeAssignment.end_date >= start_dt)).first()
+            
+            if existing_active:
+                return {
+                    'success': False,
+                    'error': f'O colaborador já possui um usuário vinculado ativo (ID: {existing_active.user_id}). Finalize o vínculo atual primeiro.'
+                }
+            
+            # Criar a nova associação
+            assignment = UserEmployeeAssignment(
+                user_id=user_id,
+                employee_id=employee_id,
+                start_date=start_dt,
+                end_date=end_dt,
+                notes=notes,
+                is_active=True,
+                status='active'
+            )
+            
+            # Legado: atualizar o user_id no model Employee para manter compatibilidade
+            employee = Employee.query.get(employee_id)
+            if employee:
+                employee.user_id = user_id
+                
+            db.session.add(assignment)
+            db.session.commit()
+            
+            return {
+                'success': True,
+                'assignment': assignment.to_dict()
+            }
+        except Exception as e:
+            db.session.rollback()
+            return {'success': False, 'error': str(e)}
+
+    @staticmethod
+    def terminate_assignment(assignment_id: int, end_date: Optional[str] = None) -> Dict[str, Any]:
+        """Finaliza uma associação usuário x colaborador."""
+        from datetime import datetime, date
+        try:
+            assignment = UserEmployeeAssignment.query.get(assignment_id)
+            if not assignment:
+                return {'success': False, 'error': 'Associação não encontrada'}
+            
+            terminate_dt = datetime.strptime(end_date, '%Y-%m-%d').date() if end_date else date.today()
+            
+            assignment.end_date = terminate_dt
+            assignment.is_active = False
+            assignment.status = 'closed'
+            
+            # Legado: remover user_id do Employee se for a associação atual ativa
+            employee = Employee.query.get(assignment.employee_id)
+            if employee and employee.user_id == assignment.user_id:
+                employee.user_id = None
+            
+            db.session.commit()
+            return {'success': True}
+        except Exception as e:
+            db.session.rollback()
+            return {'success': False, 'error': str(e)}

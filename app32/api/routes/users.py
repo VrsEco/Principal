@@ -26,7 +26,8 @@ def index():
 @admin_required
 def cadastrar():
     """Render user registration page"""
-    return render_template('usuarios/cadastrar.html')
+    companies = Company.query.all()
+    return render_template('usuarios/cadastrar.html', companies=companies)
 
 @usuarios_bp.route('/usuarios/editar/<int:user_id>')
 @login_required
@@ -100,6 +101,16 @@ def create_user():
         
         db.session.add(user)
         db.session.commit()
+        
+        # Vincular empresas se houver
+        company_ids = data.get('company_ids', [])
+        if company_ids:
+            from services.user_employee_service import UserEmployeeService
+            UserEmployeeService.add_employee_to_multiple_companies(user.id, company_ids)
+            recent_employees = Employee.query.filter_by(user_id=user.id).all()
+            for emp in recent_employees:
+                if emp.company_id in company_ids:
+                    UserEmployeeService.assign_user_to_employee(user.id, emp.id)
         
         return jsonify({"success": True, "user": user.to_dict()}), 201
         

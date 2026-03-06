@@ -14,6 +14,7 @@ from .user import User
 from .role import Role
 from .team import Team
 from .employee import Employee
+from .user_employee_assignment import UserEmployeeAssignment
 
 # Planning Models
 from .plan import Plan, PlanParticipant, PlanSectionStatus, PlanDriver, PlanImplantationData
@@ -43,7 +44,7 @@ from .agent_action import AgentAction
 from .agent_menu import AgentMenuOption, AgentMenuSession
 
 __all__ = [
-    'db', 'Company', 'User', 'Role', 'Team', 'Employee',
+    'db', 'Company', 'User', 'Role', 'Team', 'Employee', 'UserEmployeeAssignment',
     'Plan', 'PlanParticipant', 'PlanSectionStatus', 'PlanDriver', 'PlanImplantationData',
     'Indicator', 'IndicatorGroup', 'IndicatorGoal', 'IndicatorData',
     'OKRGlobal', 'KeyResult', 'OKRArea', 'KeyResultArea',

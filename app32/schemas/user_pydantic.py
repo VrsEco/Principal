@@ -10,7 +10,7 @@ class UserCreateSchema(BaseModel):
     whatsapp: Optional[str] = Field(None, max_length=20)
     telegram: Optional[str] = Field(None, max_length=50)
     instagram: Optional[str] = Field(None, max_length=100)
-    role: str = Field("collaborator", pattern="^(admin|collaborator|client)$")
+    role: str = Field("user", pattern="^(admin|user|client)$")
 
 class UserUpdateSchema(BaseModel):
     model_config = ConfigDict(extra='forbid')
@@ -19,7 +19,7 @@ class UserUpdateSchema(BaseModel):
     whatsapp: Optional[str] = Field(None, max_length=20)
     telegram: Optional[str] = Field(None, max_length=50)
     instagram: Optional[str] = Field(None, max_length=100)
-    role: Optional[str] = Field(None, pattern="^(admin|collaborator|client)$")
+    role: Optional[str] = Field(None, pattern="^(admin|user|client)$")
     is_active: Optional[bool] = None
 
 class CompanyRegisterSchema(BaseModel):

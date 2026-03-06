@@ -301,6 +301,11 @@
                     disponíveis para vínculo.</small>
             </div>
 
+            <div class="form-group mb-4">
+                <label class="form-label">Data de Início <span style="color: var(--danger);">*</span></label>
+                <input type="date" id="link-start-date" class="form-control" required>
+            </div>
+
             <div style="margin-bottom: 2rem; display: flex; justify-content: flex-end;">
                 <button type="button" class="btn btn-sm btn-outline" style="font-size: 0.85rem;"
                     onclick="alert('Funcionalidade de cadastro global ainda em desenvolvimento. Por favor, contate o administrador.');">
@@ -344,6 +349,12 @@
                 <label class="form-label">Headcount Planejado</label>
                 <input type="number" id="role-headcount" class="form-control" value="1" min="1">
             </div>
+            <div class="form-group mb-4">
+                <label class="form-label">Cargo Superior</label>
+                <select id="role-parent-id" class="form-control">
+                    <option value="">-- Nenhum --</option>
+                </select>
+            </div>
 
             <div style="display: flex; gap: 1rem; margin-top: 2.5rem;">
                 <button type="button" class="btn btn-secondary" style="flex: 1;"
@@ -383,10 +394,39 @@
                     <option value="inactive">Inativo</option>
                 </select>
             </div>
+            <div class="form-group mb-4">
+                <label class="form-label">Horas Semanais</label>
+                <input type="number" id="emp-weekly-hours" class="form-control" step="0.5" value="40" min="0">
+            </div>
             <div style="display: flex; gap: 1rem; margin-top: 2rem;">
                 <button type="button" class="btn btn-secondary" style="flex: 1;"
                     onclick="hideEmployeeModal()">Cancelar</button>
                 <button type="submit" class="btn btn-special" style="flex: 1;">Salvar</button>
+            </div>
+        </form>
+    </div>
+</div>
+
+<!-- Modal: Encerrar Acesso -->
+<div id="remove-access-modal" class="modal" style="display: none; align-items: center; justify-content: center;">
+    <div class="modal-content" style="max-width: 400px; border-radius: 32px; padding: 2.5rem;">
+        <h2 style="font-size: 1.5rem; font-weight: 700; margin-bottom: 0.5rem; color: var(--danger);">Encerrar Acesso
+        </h2>
+        <p style="color: var(--text-secondary); margin-bottom: 1.5rem;">Informe a data de encerramento do vínculo
+            selecionado.</p>
+
+        <form id="remove-access-form" onsubmit="handleRemoveAccessSubmit(event)">
+            <input type="hidden" id="remove-emp-id">
+            <div class="form-group mb-4">
+                <label class="form-label">Data de Término <span style="color: var(--danger);">*</span></label>
+                <input type="date" id="remove-end-date" class="form-control" required>
+            </div>
+
+            <div style="display: flex; gap: 1rem; margin-top: 2rem;">
+                <button type="button" class="btn btn-secondary" style="flex: 1;"
+                    onclick="hideRemoveAccessModal()">Cancelar</button>
+                <button type="submit" class="btn btn-danger"
+                    style="flex: 1; background-color: var(--danger); border-color: transparent; color: white;">Confirmar</button>
             </div>
         </form>
     </div>
@@ -560,6 +600,15 @@
                     document.getElementById('emp-department').value = opt.dataset.dept || '';
                 };
             }
+
+            // Populate parent role select
+            const roleParentSelect = document.getElementById('role-parent-id');
+            if (roleParentSelect) {
+                const currentVal2 = roleParentSelect.value;
+                roleParentSelect.innerHTML = '<option value="">-- Nenhum --</option>' +
+                    roles.map(r => `<option value="${r.id}">${r.title}</option>`).join('');
+                roleParentSelect.value = currentVal2;
+            }
         } catch (err) {
             console.error(err);
             document.getElementById('roles-list-body').innerHTML = '<tr><td colspan="4" style="text-align: center; color: var(--danger);">Erro ao carregar dados.</td></tr>';
@@ -581,7 +630,7 @@
                     <div style="font-weight: 600;">${e.role_title || '-'}</div>
                     <div style="font-size: 0.75rem; color: var(--text-tertiary);">${e.department || ''}</div>
                 </td>
-                <td><span class="badge ${e.status === 'active' ? 'badge-success' : 'badge-secondary'}">${e.status}</span></td>
+                <td><span class="badge ${e.status === 'active' ? 'badge-success' : 'badge-secondary'}">${e.status}</span><br><small>${e.weekly_hours || '-'}h/sem</small></td>
                 <td>${e.hire_date || '-'}</td>
                 <td style="text-align: right; display: flex; gap: 0.5rem; justify-content: flex-end;">
                     <button class="btn btn-icon" onclick="editEmployee(${e.id})" title="Editar" style="color: var(--primary);">
@@ -769,6 +818,7 @@
         document.getElementById('role-title').value = role.title;
         document.getElementById('role-department').value = role.department || '';
         document.getElementById('role-headcount').value = role.headcount_planned || 1;
+        document.getElementById('role-parent-id').value = role.parent_role_id || '';
         document.getElementById('btn-save-role').textContent = 'Salvar Alterações';
         document.getElementById('role-modal').style.display = 'flex';
     }
@@ -777,7 +827,8 @@
         e.preventDefault();
         const data = {
             employee_id: document.getElementById('link-employee-id').value,
-            user_id: document.getElementById('link-user-id').value
+            user_id: document.getElementById('link-user-id').value,
+            start_date: document.getElementById('link-start-date').value
         };
         try {
             const r = await fetch(`/api/companies/${companyId}/link-user`, {
@@ -810,7 +861,8 @@
             const data = {
                 title: document.getElementById('role-title').value,
                 department: document.getElementById('role-department').value,
-                headcount_planned: parseInt(document.getElementById('role-headcount').value) || 1
+                headcount_planned: parseInt(document.getElementById('role-headcount').value) || 1,
+                parent_role_id: document.getElementById('role-parent-id').value || null
             };
 
             const roleIdToEdit = document.getElementById('edit-role-id').value;
@@ -841,13 +893,47 @@
         }
     }
 
-    async function removeUserAccess(empId) {
-        if (!confirm('Deseja realmente inativar este colaborador e remover seu acesso a esta empresa?')) return;
+    function removeUserAccess(empId) {
+        document.getElementById('remove-emp-id').value = empId;
+        document.getElementById('remove-end-date').value = new Date().toISOString().split('T')[0];
+        document.getElementById('remove-access-modal').style.display = 'flex';
+    }
+
+    function hideRemoveAccessModal() {
+        document.getElementById('remove-access-modal').style.display = 'none';
+    }
+
+    async function handleRemoveAccessSubmit(e) {
+        e.preventDefault();
+        const empId = document.getElementById('remove-emp-id').value;
+        const endDate = document.getElementById('remove-end-date').value;
+        const btn = e.submitter;
+        if (btn) btn.disabled = true;
+
         try {
-            const r = await fetch(`/api/companies/${companyId}/employees/${empId}`, { method: 'DELETE' });
-            if (r.ok) { loadUserData(); loadEmployeesFullData(); alert('Acesso inativado.'); }
-            else alert('Erro ao inativar acesso.');
-        } catch (e) { alert('Erro na comunicação.'); }
+            const r = await fetch(`/api/companies/${companyId}/employees/${empId}/access`, {
+                method: 'DELETE',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ end_date: endDate })
+            });
+            if (r.ok) {
+                hideRemoveAccessModal();
+                loadUserData();
+                loadEmployeesFullData();
+                alert('Acesso inativado com sucesso.');
+            } else {
+                let errorMsg = 'Erro ao inativar acesso.';
+                try {
+                    const result = await r.json();
+                    if (result.error) errorMsg += '\\n' + result.error;
+                } catch (e) { }
+                alert(errorMsg);
+            }
+        } catch (err) {
+            alert('Erro na comunicação com o servidor.');
+        } finally {
+            if (btn) btn.disabled = false;
+        }
     }
 
     async function reactivateUserAccess(empId) {
