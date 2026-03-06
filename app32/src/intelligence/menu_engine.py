@@ -83,6 +83,10 @@ def handle_menu_message(
             session.status == "awaiting_item_selection"
             and _parse_selection_number_date(text) is not None
         )
+        is_company_selection_reply = (
+            session.status == COMPANY_SELECTION_STATUS
+            and _parse_selection_number_date(text) is not None
+        )
         is_summary_selection_reply = (
             session.status in SUMMARY_SELECTION_STATUSES
             and _parse_selection_number_date(text) is not None
@@ -103,6 +107,7 @@ def handle_menu_message(
         # reinicia o estado para evitar "prisão" em fluxo anterior.
         if session.status != "idle" and not (
             is_item_selection_reply
+            or is_company_selection_reply
             or is_summary_selection_reply
             or is_missing_fields_reply
             or is_confirmation_adjustment_reply

@@ -358,6 +358,49 @@ def test_handle_menu_message_keeps_awaiting_fields_on_numbered_reply_with_fluxo(
     assert session.was_reset is False
 
 
+def test_handle_menu_message_keeps_awaiting_operation_company_on_numeric_reply(monkeypatch):
+    class DummySession:
+        def __init__(self):
+            self.status = menu_engine.COMPANY_SELECTION_STATUS
+            self.missing_fields = []
+            self.company_id = 1
+            self.user_id = 10
+            self.channel = "whatsapp"
+            self.thread_id = "wa-1"
+            self.was_reset = False
+
+    session = DummySession()
+
+    monkeypatch.setattr(menu_engine, "_ensure_default_menu_seed", lambda: None)
+    monkeypatch.setattr(menu_engine, "_get_or_create_session", lambda **kwargs: session)
+    monkeypatch.setattr(
+        menu_engine,
+        "_handle_operation_company_state",
+        lambda current_session, text, lower: menu_engine.MenuInterceptResult(
+            handled=True,
+            response_text=f"empresa:{text}",
+        ),
+    )
+    monkeypatch.setattr(
+        menu_engine,
+        "_reset_session",
+        lambda current_session: setattr(current_session, "was_reset", True),
+    )
+    monkeypatch.setattr(menu_engine.db.session, "rollback", lambda: None)
+
+    result = menu_engine.handle_menu_message(
+        user_id=10,
+        company_id=1,
+        channel="whatsapp",
+        thread_id="wa-1",
+        message="3",
+    )
+
+    assert result.handled is True
+    assert result.response_text == "empresa:3"
+    assert session.was_reset is False
+
+
 def test_try_execute_direct_option_creates_project_task_with_canonical_code(monkeypatch):
     option = AgentMenuOption(
         code="1.4",
