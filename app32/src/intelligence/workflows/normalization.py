@@ -50,3 +50,26 @@ def tokenize_text(value: str) -> List[str]:
 
 def token_set(value: str) -> Set[str]:
     return set(tokenize_text(value))
+
+
+def normalize_token_root(token: str) -> str:
+    normalized = normalize_text(token)
+    normalized = re.sub(r"[^a-z0-9]+", "", normalized)
+    if not normalized:
+        return ""
+    if len(normalized) <= 5:
+        return normalized
+    return normalized[:5]
+
+
+def token_roots(value: str) -> List[str]:
+    roots: List[str] = []
+    for token in tokenize_text(value):
+        root = normalize_token_root(token)
+        if root:
+            roots.append(root)
+    return roots
+
+
+def root_set(value: str) -> Set[str]:
+    return set(token_roots(value))

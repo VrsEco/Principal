@@ -1,4 +1,4 @@
-from typing import List, Optional
+from typing import Any, Dict, List, Optional
 
 from pydantic import BaseModel, ConfigDict, Field
 
@@ -19,6 +19,7 @@ class WorkflowDefinition(BaseModel):
     action_key: str
     description: Optional[str] = None
     keywords: List[str] = Field(default_factory=list)
+    intent_examples: List[str] = Field(default_factory=list)
     required_fields: List[WorkflowFieldDefinition] = Field(default_factory=list)
     confirmation_template: Optional[str] = None
     execution_template: Optional[str] = None
@@ -49,9 +50,17 @@ class WorkflowDiscoveryResult(BaseModel):
 
     request: WorkflowDiscoveryRequest
     matches: List[WorkflowMatch] = Field(default_factory=list)
+    telemetry: Dict[str, Any] = Field(default_factory=dict)
+
+    @property
+    def selected_match(self) -> Optional[WorkflowMatch]:
+        if not self.matches:
+            return None
+        return self.matches[0]
 
     @property
     def selected(self) -> Optional[WorkflowDefinition]:
-        if not self.matches:
+        selected_match = self.selected_match
+        if not selected_match:
             return None
-        return self.matches[0].workflow
+        return selected_match.workflow

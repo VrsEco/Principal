@@ -37,6 +37,12 @@ from .field_collection import (
     extract_numbered_fields_from_text,
     missing_required_fields,
 )
+from .evaluation import (
+    WorkflowEvaluationCase,
+    WorkflowEvaluationItem,
+    WorkflowEvaluationReport,
+    evaluate_workflow_discovery,
+)
 from .handlers import (
     MeetingScheduleExecutionHandler,
     MeetingScheduleRequest,
@@ -76,6 +82,10 @@ from .handlers import (
     SummaryWorkflowExecutionHandler,
 )
 from .matcher import LexicalWorkflowMatcher
+from .matcher import HybridWorkflowMatcher
+from .matcher import SemanticWorkflowMatcher
+from .matcher import WorkflowMatchReranker
+from .matcher import WorkflowMatchReranker
 from .presenters import (
     WorkflowDisplayOption,
     build_confirmation_display_items,
@@ -89,7 +99,11 @@ from .presenters import (
     build_summary_status_prompt,
 )
 from .registry import WorkflowRegistry
+from .reranker import CallableWorkflowReranker
+from .reranker import HeuristicWorkflowReranker
 from .runtime import WorkflowRuntime
+from .semantic_index import WorkflowSemanticIndex
+from .semantic_index import WorkflowSemanticProfile
 from .schemas import (
     AssistedSelectionContext,
     MeetingReferenceInput,
@@ -138,6 +152,9 @@ from .summary import (
 
 __all__ = [
     "LexicalWorkflowMatcher",
+    "HybridWorkflowMatcher",
+    "CallableWorkflowReranker",
+    "HeuristicWorkflowReranker",
     "AssistedSelectionContext",
     "adjust_required_fields_for_context",
     "build_missing_fields_prompt",
@@ -159,6 +176,7 @@ __all__ = [
     "build_direct_execution_request",
     "build_handler_executor",
     "extract_numbered_fields_from_text",
+    "evaluate_workflow_discovery",
     "AssistedSelectionCoordinator",
     "FIELD_COLLECTION_ROUTE_PROMPT_MISSING",
     "FIELD_COLLECTION_ROUTE_READY",
@@ -208,6 +226,7 @@ __all__ = [
     "ProjectTaskCreateInput",
     "ProjectTaskCreateRequest",
     "ProjectTaskCreateResult",
+    "SemanticWorkflowMatcher",
     "SessionNavigationResult",
     "SessionNavigationRuntime",
     "SessionPromptRenderer",
@@ -228,12 +247,18 @@ __all__ = [
     "SUMMARY_WIZARD_STATUSES",
     "SummaryRouteDecision",
     "SummaryWorkflowCoordinator",
+    "WorkflowSemanticIndex",
+    "WorkflowSemanticProfile",
     "WorkflowDefinition",
+    "WorkflowEvaluationCase",
+    "WorkflowEvaluationItem",
+    "WorkflowEvaluationReport",
     "WorkflowDisplayOption",
     "WorkflowDiscoveryRequest",
     "WorkflowDiscoveryResult",
     "WorkflowFieldDefinition",
     "WorkflowMatch",
+    "WorkflowMatchReranker",
     "WorkflowRequiredField",
     "WorkflowRegistry",
     "WorkflowRuntime",

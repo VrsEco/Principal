@@ -5,6 +5,7 @@ from typing import Dict, Iterable, List, Optional, Sequence
 from models.agent_menu import AgentMenuOption
 
 from .contracts import WorkflowDefinition, WorkflowFieldDefinition
+from .semantic_index import WorkflowSemanticIndex
 
 
 def _build_required_fields(raw_fields: Sequence[dict] | None) -> List[WorkflowFieldDefinition]:
@@ -41,6 +42,11 @@ def build_workflow_definition_from_option(option: AgentMenuOption) -> Optional[W
             for keyword in (option.keywords or [])
             if str(keyword).strip()
         ],
+        intent_examples=[
+            str(value).strip()
+            for value in [*(option.keywords or []), option.description]
+            if str(value or "").strip()
+        ],
         required_fields=_build_required_fields(option.required_fields or []),
         confirmation_template=(
             str(option.confirmation_template).strip()
@@ -64,6 +70,7 @@ class WorkflowRegistry:
         self._by_code: Dict[str, WorkflowDefinition] = {
             workflow.code: workflow for workflow in self._workflows
         }
+        self._semantic_index: Optional[WorkflowSemanticIndex] = None
 
     @classmethod
     def from_menu_options(
@@ -107,6 +114,11 @@ class WorkflowRegistry:
 
     def get_by_code(self, code: str) -> Optional[WorkflowDefinition]:
         return self._by_code.get(code)
+
+    def semantic_index(self) -> WorkflowSemanticIndex:
+        if self._semantic_index is None:
+            self._semantic_index = WorkflowSemanticIndex(self._workflows)
+        return self._semantic_index
 
     def __iter__(self):
         return iter(self._workflows)

@@ -31,14 +31,29 @@ Transformar o runtime atual em um modelo **workflow-first**, onde:
     - `WorkflowDiscoveryRequest`
     - `WorkflowDiscoveryResult`
 - `normalization.py`
-  - normalização e tokenização reutilizável
+  - normalização, tokenização e raízes léxicas reutilizáveis
 - `registry.py`
   - conversão de `AgentMenuOption` em workflows acionáveis
   - deduplicação por código, priorizando escopo da empresa
+  - cache local do índice semântico por catálogo montado
 - `matcher.py`
-  - ranqueamento lexical inicial para descoberta de workflows
+  - descoberta híbrida:
+    - `LexicalWorkflowMatcher`
+    - `SemanticWorkflowMatcher`
+    - `HybridWorkflowMatcher`
+  - suporte a rerank opcional sobre o top de candidatos
 - `runtime.py`
   - fachada do runtime para descoberta sobre catálogo vindo do menu atual
+  - cache de catálogos/registries por snapshot do menu
+- `semantic_index.py`
+  - perfis semânticos pré-computados por workflow
+  - tokens, raízes e bigramas cacheados para ranking semântico
+- `reranker.py`
+  - reranker heurístico real sobre o top-k do matcher híbrido
+  - pronto para futura troca por reranker LLM
+- `evaluation.py`
+  - suíte utilitária para medir assertividade do discovery
+  - produz relatório de acerto por caso de teste
 - `session.py`
   - contrato de estado transitório do workflow a partir de `AgentMenuSession`
 - `session_runtime.py`
@@ -120,10 +135,31 @@ Transformar o runtime atual em um modelo **workflow-first**, onde:
 O método `_match_options_by_keywords(...)` agora delega a descoberta ao
 `WorkflowRuntime`, reduzindo acoplamento e abrindo espaço para:
 
-- matcher semântico;
-- rerank por LLM;
+- matcher híbrido;
+- rerank por LLM/opcional;
 - coleta de parâmetros desacoplada;
 - sessão de workflow separada do menu legado.
+
+Na evolução da Fase 4, o runtime de discovery passou a operar em camadas:
+
+1. `LexicalWorkflowMatcher`
+   - mantém match explícito por código, título, palavra-chave e `action_key`;
+2. `SemanticWorkflowMatcher`
+   - usa descrição, exemplos de intenção, campos obrigatórios e raízes léxicas;
+   - permite recuperar intenções próximas mesmo sem phrase match exato;
+3. `HybridWorkflowMatcher`
+   - consolida score lexical + score semântico;
+   - aceita reranker opcional para desempate/repriorização dos melhores candidatos.
+
+Na Fase 4.2, o runtime também passou a expor telemetria do discovery em
+`WorkflowDiscoveryResult.telemetry`, incluindo:
+
+- quantidade de matches por estágio;
+- top candidatos léxicos;
+- top candidatos semânticos;
+- top final após rerank;
+- deltas aplicados pelo reranker;
+- workflow final selecionado e motivos.
 
 Além disso, o fluxo de `summary.*` já foi parcialmente migrado:
 
@@ -196,7 +232,8 @@ Na sequência, as primeiras execuções diretas também começaram a sair do
 ## Regras desta etapa
 - somente opções com `action_key` entram no catálogo de workflow;
 - itens de navegação do menu continuam existindo, mas não competem como fluxo executável;
-- o matcher novo é lexical e determinístico, sem alterar ainda o restante do estado conversacional.
+- o runtime de discovery agora é híbrido, mas ainda determinístico por padrão;
+- o rerank segue opcional e desacoplado, preparando a futura entrada de LLM sem deixar a execução sair do catálogo.
 
 ## Próximos passos recomendados
 
@@ -225,6 +262,6 @@ Na sequência, as primeiras execuções diretas também começaram a sair do
 - iniciar dispatcher/registry para execuções diretas
 
 ### Próxima frente sugerida
+- conectar um reranker LLM real sobre o top-k do `HybridWorkflowMatcher`
+- evoluir a camada semântica para embeddings/cache vetorial de workflows
 - padronizar presenters por canal (`web`, `whatsapp`, `telegram`)
-- concluir a extração de navegação/transições genéricas restantes
-- cobrir `SessionRuntime` com testes de integração do `menu_engine`
