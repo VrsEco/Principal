@@ -98,6 +98,40 @@ def test_summary_email_offer_has_two_options():
     assert "2 - Informar outro e-mail" in offer
 
 
+def test_whatsapp_summary_status_keeps_email_confirmation_flow(monkeypatch):
+    monkeypatch.setattr(menu_engine.db.session, "commit", lambda: None)
+    monkeypatch.setattr(
+        menu_engine,
+        "_execute_summary_menu_report",
+        lambda **kwargs: "RELATORIO TESTE",
+    )
+
+    option = AgentMenuOption(code="3.5.2", title="Esta Semana")
+
+    class DummySession:
+        selected_option = option
+        company_id = 1
+        user_id = 10
+        channel = "whatsapp"
+        status = "awaiting_summary_status"
+        missing_fields = []
+        collected_data = {
+            "_summary_status_choices": menu_engine._summary_status_choices(),
+            "periodo": "Esta Semana",
+            "colaborador": "Fabiano",
+        }
+
+    session = DummySession()
+
+    result = menu_engine._handle_summary_status_state(session, "1", "1")
+
+    assert result.handled is True
+    assert "RELATORIO TESTE" in result.response_text
+    assert "Enviar para meu e-mail cadastrado" in result.response_text
+    assert session.status == menu_engine.SUMMARY_EMAIL_CONFIRM_STATUS
+    assert session.collected_data["_summary_report_text"] == "RELATORIO TESTE"
+
+
 def test_summary_collaborator_prompt_has_all_and_multi_hint():
     option = AgentMenuOption(code="3.5.1", title="Hoje")
     text = menu_engine._format_summary_collaborator_prompt(

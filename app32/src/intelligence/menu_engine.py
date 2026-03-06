@@ -1116,7 +1116,7 @@ def _handle_summary_status_state(
         )
 
     normalized_channel = str(session.channel or "").strip().lower()
-    if normalized_channel == "telegram":
+    if normalized_channel in {"telegram", "whatsapp"}:
         payload["_summary_report_text"] = report
         session.status = SUMMARY_EMAIL_CONFIRM_STATUS
         session.collected_data = payload
