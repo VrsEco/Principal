@@ -1,0 +1,29 @@
+C:\Users\mff20\anaconda3\Lib\site-packages\paramiko\transport.py:219: CryptographyDeprecationWarning: Blowfish has been deprecated and will be removed in a future release
+  "class": algorithms.Blowfish,
+============================================================
+  DEPLOY REMOTO - Gest├úo Versus (Configr)
+============================================================
+
+­ƒöî Conectando a ip-69-164-205-75.cloudezapp.io:22122 como app2...
+  Ô£à Conectado!
+
+­ƒùâ´©Å  Executando migra├º├Áes de banco de dados...
+
+>>> cd /home/app2/public_html && /home/app2/.virtualenv/3.12/bin/python /tmp/run_mig...
+[STDERR] bash: line 1: /home/app2/.virtualenv/3.12/bin/python: No such file or directory
+
+  ÔÜá´©Å  C├│digo de sa├¡da: 127
+
+­ƒöä Reiniciando servidor (Passenger/uWSGI touch files)...
+
+>>> touch /home/app2/public_html/restart.txt...
+
+>>> mkdir -p /home/app2/public_html/tmp && touch /home/app2/public_html/tmp/restart....
+
+>>> pkill -HUP -f 'uwsgi' 2>/dev/null || true...
+  Ô£à Servidor reiniciado!
+
+============================================================
+  Ô£¿ DEPLOY CONCLU├ìDO COM SUCESSO!
+  ­ƒîÉ Acesse: https://app.gestaoversus.com.br
+============================================================

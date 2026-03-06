@@ -3,6 +3,7 @@ from models import db, Company, Employee, User, Role, CompanyPerformanceSettings
 from services.user_employee_service import UserEmployeeService
 from utils.permissions import permission_required
 from flask_login import login_required, current_user
+from utils.logo_processor import resize_and_save_logo, get_logo_url
 
 companies_bp = Blueprint('companies', __name__)
 
@@ -234,16 +235,17 @@ def link_company_user(company_id):
     if not employee:
         return jsonify({"error": "Colaborador não encontrado"}), 404
         
-    if employee.user_id:
-        return jsonify({"error": "O colaborador selecionado já possui um usuário vinculado"}), 400
-        
     user = User.query.get(user_id)
     if not user:
         return jsonify({"error": "Usuário do sistema não encontrado"}), 404
         
+    # Verifica se este colaborador já possui um usuário (bloqueia apenas se for um usuário DIFERENTE)
+    if employee.user_id and employee.user_id != user.id:
+        return jsonify({"error": f"O colaborador selecionado já possui outro usuário vinculado (ID: {employee.user_id})"}), 400
+        
     # Verifica se este usuário já está vinculado a outro colaborador nesta empresa
     existing_emp = Employee.query.filter_by(user_id=user.id, company_id=company_id).first()
-    if existing_emp:
+    if existing_emp and existing_emp.id != employee.id:
         return jsonify({"error": "Este usuário já está vinculado a outro colaborador nesta empresa"}), 400
         
     # Realiza o vínculo através do serviço que gerencia períodos
@@ -315,3 +317,34 @@ def delete_company_employee(company_id, employee_id):
     employee.status = 'inactive'
     db.session.commit()
     return jsonify({"success": True})
+
+@companies_bp.route('/api/companies/<int:company_id>/logo', methods=['POST'])
+@permission_required('companies', 'edit')
+def upload_company_logo(company_id):
+    if 'logo' not in request.files:
+        return jsonify({"error": "Nenhum arquivo enviado"}), 400
+    
+    file = request.files['logo']
+    if file.filename == '':
+        return jsonify({"error": "Nenhum arquivo selecionado"}), 400
+    
+    company = Company.query.get_or_404(company_id)
+    
+    try:
+        # Usamos o 'horizontal' como padrão para relatórios
+        logo_path = resize_and_save_logo(file, company_id, 'horizontal')
+        
+        # O logo_processor retorna o path relativo a partir de 'uploads/'
+        # mas para o template, precisamos que comece com /uploads/
+        full_path = f"/uploads/{logo_path}"
+        
+        company.logo_primary = full_path
+        db.session.commit()
+        
+        return jsonify({
+            "success": True, 
+            "logo_url": full_path
+        })
+    except Exception as e:
+        db.session.rollback()
+        return jsonify({"error": str(e)}), 500

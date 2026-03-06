@@ -262,8 +262,24 @@
                             </label>
                         </div>
                         <div class="form-group">
-                            <label class="form-label">URL da Logo (PNG/SVG)</label>
-                            <input type="text" id="logo_primary" class="form-control" placeholder="https://...">
+                            <label class="form-label">Logo da Unidade (Relatórios)</label>
+                            <div id="logo-upload-container" style="display: flex; align-items: center; gap: 1.5rem; padding: 1.25rem; border: 2px dashed var(--border); border-radius: 20px; background: rgba(0,0,0,0.02); transition: all 0.2s;">
+                                <div id="logo-preview-wrapper" style="width: 140px; height: 70px; display: flex; align-items: center; justify-content: center; background: white; border-radius: 12px; border: 1px solid var(--border); overflow: hidden; box-shadow: 0 4px 12px rgba(0,0,0,0.05);">
+                                    <img id="logo-preview" src="" alt="Logo" style="max-width: 90%; max-height: 90%; object-fit: contain; display: none;">
+                                    <span id="logo-empty-text" style="font-size: 0.75rem; color: var(--text-tertiary); font-weight: 500;">Sem Logo</span>
+                                </div>
+                                <div style="flex: 1;">
+                                    <p style="font-size: 0.85rem; color: var(--text-secondary); margin-bottom: 0.75rem; line-height: 1.4;">Carregue uma versão horizontal (PNG/SVG) para cabeçalhos de relatórios.</p>
+                                    <div style="display: flex; gap: 0.75rem;">
+                                        <button type="button" class="btn btn-sm btn-outline" style="font-size: 0.8rem; padding: 0.5rem 1rem;" onclick="document.getElementById('logo-file-input').click()">
+                                            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="margin-right: 6px;"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path><polyline points="17 8 12 3 7 8"></polyline><line x1="12" y1="3" x2="12" y2="15"></line></svg>
+                                            Escolher Arquivo
+                                        </button>
+                                        <input type="file" id="logo-file-input" style="display: none;" accept="image/*" onchange="handleLogoUpload(this)">
+                                        <input type="hidden" id="logo_primary" value="">
+                                    </div>
+                                </div>
+                            </div>
                         </div>
                     </div>
                     <button class="btn btn-special" style="margin-top: 2rem; width: 100%;"
@@ -560,7 +576,61 @@
         document.getElementById('vision').value = c.vision || '';
         document.getElementById('values').value = c.values || '';
         if (document.getElementById('is_active')) document.getElementById('is_active').checked = c.is_active !== false;
-        if (document.getElementById('logo_primary')) document.getElementById('logo_primary').value = c.logo_primary || '';
+        
+        const logoPrimary = document.getElementById('logo_primary');
+        if (logoPrimary) {
+            logoPrimary.value = c.logo_primary || '';
+            updateLogoPreview(c.logo_primary);
+        }
+    }
+
+    function updateLogoPreview(url) {
+        const preview = document.getElementById('logo-preview');
+        const emptyText = document.getElementById('logo-empty-text');
+        if (url) {
+            preview.src = url;
+            preview.style.display = 'block';
+            emptyText.style.display = 'none';
+        } else {
+            preview.src = '';
+            preview.style.display = 'none';
+            emptyText.style.display = 'block';
+        }
+    }
+
+    async function handleLogoUpload(input) {
+        if (!input.files || !input.files[0]) return;
+        
+        const formData = new FormData();
+        formData.append('logo', input.files[0]);
+        
+        try {
+            const btn = document.querySelector('button[onclick*="logo-file-input"]');
+            const originalText = btn.innerHTML;
+            btn.innerHTML = '<span class="spinner-border spinner-border-sm" role="status" aria-hidden="true"></span> Enviando...';
+            btn.disabled = true;
+
+            const r = await fetch(`/api/companies/${companyId}/logo`, {
+                method: 'POST',
+                body: formData
+            });
+            
+            const result = await r.json();
+            btn.innerHTML = originalText;
+            btn.disabled = false;
+
+            if (r.ok) {
+                document.getElementById('logo_primary').value = result.logo_url;
+                updateLogoPreview(result.logo_url);
+            } else {
+                alert(result.error || 'Erro ao enviar logo.');
+            }
+        } catch (err) {
+            console.error(err);
+            btn.innerHTML = originalText;
+            btn.disabled = false;
+            alert('Falha na conexão ao enviar logo.');
+        }
     }
 
     async function loadRolesData() {

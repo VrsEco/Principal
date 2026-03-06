@@ -10,9 +10,9 @@ class CompanyPerformanceSettings(db.Model):
     company_id = db.Column(
         db.Integer, db.ForeignKey("companies.id"), primary_key=True, nullable=False
     )
-    on_time_score = db.Column(db.Numeric(10, 2), nullable=False, default=0)
-    late_score = db.Column(db.Numeric(10, 2), nullable=False, default=0)
-    daily_delay_penalty = db.Column(db.Numeric(10, 2), nullable=False, default=0)
+    on_time_score = db.Column(db.Numeric(10, 2), nullable=False, default=5)
+    late_score = db.Column(db.Numeric(10, 2), nullable=False, default=-5)
+    daily_delay_penalty = db.Column(db.Numeric(10, 2), nullable=False, default=-1)
     late_registration_penalty = db.Column(db.Numeric(10, 2), nullable=False, default=-1)
     created_at = db.Column(db.DateTime, default=datetime.utcnow, nullable=False)
     updated_at = db.Column(

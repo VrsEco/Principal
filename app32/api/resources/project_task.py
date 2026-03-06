@@ -270,3 +270,70 @@ class ProjectAllTasksResource(Resource):
             print("ERROR in ProjectAllTasksResource:", str(e))
             print(traceback.format_exc())
             return {"error": str(e)}, 500
+class ProjectTaskTransferResource(Resource):
+    @permission_required('projects', 'edit')
+    def post(self, project_id, task_id):
+        """Transfer a task to another project."""
+        task = ProjectTask.query.filter_by(id=task_id, project_id=project_id).first_or_404()
+        data = request.get_json()
+        target_project_id = data.get('target_project_id')
+        note = data.get('note', '')
+
+        if not target_project_id:
+            return {"error": "Target project ID is required"}, 400
+        
+        if int(target_project_id) == int(project_id):
+            return {"error": "Target project must be different from current project"}, 400
+
+        target_project = Project.query.get(target_project_id)
+        if not target_project:
+            return {"error": "Target project not found"}, 404
+
+        # Verify target project belongs to the same company
+        current_project = Project.query.get(project_id)
+        if target_project.company_id != current_project.company_id:
+             return {"error": "Target project must belong to the same company"}, 403
+
+        # Update task
+        old_project_name = current_project.name
+        new_project_name = target_project.name
+        
+        task.project_id = target_project_id
+        task.stage = 'inbox' # Reset to inbox as per legacy requirements
+        task.status = 'planned'
+        
+        # Log the transfer
+        if not task.logs:
+            task.logs = []
+        
+        from flask_login import current_user
+        user_name = current_user.name if hasattr(current_user, 'name') else "Usuário"
+        
+        transfer_log = {
+            "timestamp": datetime.now().isoformat(),
+            "text": f"Atividade transferida de '{old_project_name}' para '{new_project_name}'",
+            "type": "transfer",
+            "note": note,
+            "old_project_id": project_id,
+            "new_project_id": target_project_id,
+            "user_name": user_name
+        }
+        
+        # Ensure task.logs is a list and append
+        current_logs = list(task.logs) if task.logs else []
+        current_logs.append(transfer_log)
+        task.logs = current_logs
+
+        try:
+            db.session.commit()
+            # Update both projects progress
+            current_project.update_progress()
+            target_project.update_progress()
+            db.session.commit()
+            
+            return {"success": True, "message": "Atividade transferida com sucesso"}, 200
+        except Exception as e:
+            db.session.rollback()
+            import traceback
+            traceback.print_exc()
+            return {"error": str(e)}, 500

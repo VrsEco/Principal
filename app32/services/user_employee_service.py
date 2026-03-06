@@ -464,10 +464,11 @@ class UserEmployeeService:
                 status='active'
             )
             
-            # Legado: atualizar o user_id no model Employee para manter compatibilidade
+            # Legado: atualizar o user_id no model Employee para manter compatibilidade e garantir que esteja ativo
             employee = Employee.query.get(employee_id)
             if employee:
                 employee.user_id = user_id
+                employee.status = 'active'
                 
             db.session.add(assignment)
             db.session.commit()

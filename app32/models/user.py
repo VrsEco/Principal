@@ -14,8 +14,8 @@ class User(UserMixin, db.Model):
     password_hash = db.Column(db.String(255), nullable=False)
     name = db.Column(db.String(100), nullable=False)
     role = db.Column(
-        db.String(20), nullable=False, default="collaborator"
-    )  # admin, collaborator, client
+        db.String(20), nullable=False, default="user"
+    )  # admin, user, client
     whatsapp = db.Column(db.String(20), nullable=True)
     telegram = db.Column(db.String(50), nullable=True)
     instagram = db.Column(db.String(100), nullable=True)

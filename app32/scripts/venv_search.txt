@@ -1,0 +1,16 @@
+C:\Users\mff20\anaconda3\Lib\site-packages\paramiko\transport.py:219: CryptographyDeprecationWarning: Blowfish has been deprecated and will be removed in a future release
+  "class": algorithms.Blowfish,
+CMD: find /home/app2/public_html/.venv -name python3 -o -name pyt
+OUT: 
+CMD: cat /home/app2/public_html/app32/uwsgi_configr.ini | head -3
+OUT: [uwsgi]
+chdir           = /srv/appgestaoversuscombr.45a4cd4b.configr.cloud/www
+pythonpath      = /srv/appgestaoversuscombr.45a4cd4b.configr.cloud/.virtualenv/3.12/lib/python3.12/site-packages
+
+module          = passenger_wsgi:application
+env             = 
+logto           = /srv/appgestaoversuscombr
+CMD: ls /home/app2/public_html/.venv/bin/
+OUT: 
+ERR: ls: cannot access '/home/app2/public_html/.venv/bin/': No such file or directory
+
