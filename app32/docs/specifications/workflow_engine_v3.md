@@ -197,6 +197,14 @@ legado e passam a convertê-lo para contratos Pydantic canônicos na camada
 Também foi iniciada a camada de `presenters/`, para tirar do `menu_engine`
 texto de prompt/confirmação que pertence ao runtime conversacional.
 
+Na evolução seguinte, os presenters também passaram a considerar o canal de
+saída (`web`, `whatsapp`, `telegram`), com:
+
+- sanitização específica por canal;
+- títulos/prompts com estilo consistente;
+- extração da montagem de `my_work.*` para presenter dedicado;
+- `SessionPromptRenderer` repassando o canal corrente ao runtime de render.
+
 Na sequência, a lógica de `awaiting_item_selection` também passou a migrar para
 o runtime dedicado, reduzindo ramificações específicas no `menu_engine`.
 

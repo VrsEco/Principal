@@ -4,6 +4,8 @@ from typing import Any, Callable, Dict, List, Optional
 
 from pydantic import BaseModel, ConfigDict
 
+from .channel_presenter import format_channel_heading, sanitize_for_channel
+
 
 class WorkflowDisplayOption(BaseModel):
     model_config = ConfigDict(extra="forbid")
@@ -22,10 +24,11 @@ def build_confirmation_text(
     format_process_instance_choice_line: Callable[[str], Optional[str]],
     format_meeting_choice_line: Callable[[str], Optional[str]],
     format_objective_label: Callable[[str], str],
+    channel: str = "web",
 ) -> str:
     lines = [
-        "Confirme que voce quer:",
-        f"{option.code} - {option.title}",
+        format_channel_heading("Confirme que voce quer:", channel),
+        format_channel_heading(f"{option.code} - {option.title}", channel),
     ]
     if payload:
         lines.append("com os dados:")
@@ -38,7 +41,7 @@ def build_confirmation_text(
             format_meeting_choice_line=format_meeting_choice_line,
             format_objective_label=format_objective_label,
         ):
-            lines.append(f"- {item}")
+            lines.append(f"- {sanitize_for_channel(item, channel)}")
     else:
         lines.append("sem dados adicionais.")
     lines.append("Se estiver correto, responda 'sim'. Para cancelar, responda 'nao'.")

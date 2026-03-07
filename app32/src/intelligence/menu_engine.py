@@ -61,11 +61,17 @@ from src.intelligence.workflows.handlers import (
 )
 from src.intelligence.workflows.presenters import (
     WorkflowDisplayOption,
+    build_my_work_report,
     build_confirmation_display_items,
     build_confirmation_text,
     build_item_selection_prompt,
     build_missing_fields_prompt,
     build_operation_company_prompt,
+    describe_my_work_period,
+    get_bullet_style,
+    group_my_work_by_company,
+    resolve_my_work_collaborator_label,
+    sanitize_for_channel,
     build_summary_collaborator_prompt,
     build_summary_company_prompt,
     build_summary_period_prompt,
@@ -611,7 +617,10 @@ def _handle_confirmation_state(
 
     session.collected_data = dict(decision.payload or {})
     db.session.commit()
-    return MenuInterceptResult(handled=True, response_text=_format_confirmation(option, decision.payload))
+    return MenuInterceptResult(
+        handled=True,
+        response_text=_format_confirmation(option, decision.payload, session.channel or "web"),
+    )
 
 
 def _handle_missing_fields_state(
@@ -680,7 +689,7 @@ def _advance_option_after_payload_collection(
         )
         return MenuInterceptResult(
             handled=True,
-            response_text=_format_missing_fields(option, missing, payload),
+            response_text=_format_missing_fields(option, missing, payload, session.channel or "web"),
         )
 
     if _is_read_only_action(option.action_key):
@@ -706,7 +715,7 @@ def _advance_option_after_payload_collection(
     )
     return MenuInterceptResult(
         handled=True,
-        response_text=_format_confirmation(option, payload),
+        response_text=_format_confirmation(option, payload, session.channel or "web"),
     )
 
 
@@ -747,7 +756,7 @@ def _handle_item_selection_state(
         )
         return MenuInterceptResult(
             handled=True,
-            response_text=_format_confirmation(option, decision.payload),
+            response_text=_format_confirmation(option, decision.payload, session.channel or "web"),
         )
     return MenuInterceptResult(
         handled=True,
@@ -994,7 +1003,7 @@ def _prepare_selection_flow_if_applicable(
 
     return MenuInterceptResult(
         handled=True,
-        response_text=_format_item_selection_prompt(option, selection),
+        response_text=_format_item_selection_prompt(option, selection, session.channel or "web"),
     )
 
 
@@ -1044,7 +1053,7 @@ def _prepare_missing_field_selection_flow_if_applicable(
 
     return MenuInterceptResult(
         handled=True,
-        response_text=_format_item_selection_prompt(option, selection),
+        response_text=_format_item_selection_prompt(option, selection, session.channel or "web"),
     )
 
 
@@ -1165,6 +1174,7 @@ def _prepare_company_selection_flow_if_needed(
         response_text=_format_operation_company_prompt(
             option,
             [choice.model_dump() for choice in decision.choices],
+            session.channel or "web",
         ),
     )
 
@@ -1668,8 +1678,8 @@ def _build_summary_email_subject_from_payload(payload: Dict[str, Any]) -> str:
     return subject
 
 
-def _format_summary_period_prompt(option: AgentMenuOption) -> str:
-    return build_summary_period_prompt(_build_workflow_display_option(option))
+def _format_summary_period_prompt(option: AgentMenuOption, channel: str = "web") -> str:
+    return build_summary_period_prompt(_build_workflow_display_option(option), channel=channel)
 
 
 def _build_workflow_display_option(option: AgentMenuOption) -> WorkflowDisplayOption:
@@ -2149,7 +2159,7 @@ def _apply_summary_route_decision(
         )
         return MenuInterceptResult(
             handled=True,
-            response_text=_format_summary_period_prompt(option),
+            response_text=_format_summary_period_prompt(option, session.channel or "web"),
         )
 
     if route == SUMMARY_ROUTE_PROMPT_COMPANY:
@@ -2161,7 +2171,7 @@ def _apply_summary_route_decision(
             missing_fields=[],
             push_history=push_history,
         )
-        prompt = _format_summary_company_prompt(option, choices)
+        prompt = _format_summary_company_prompt(option, choices, session.channel or "web")
         if response_text:
             prompt = f"{response_text}\n\n{prompt}"
         return MenuInterceptResult(handled=True, response_text=prompt)
@@ -2177,7 +2187,7 @@ def _apply_summary_route_decision(
         )
         return MenuInterceptResult(
             handled=True,
-            response_text=_format_summary_collaborator_prompt(option, choices),
+            response_text=_format_summary_collaborator_prompt(option, choices, session.channel or "web"),
         )
 
     if route == SUMMARY_ROUTE_PROMPT_STATUS:
@@ -2191,7 +2201,7 @@ def _apply_summary_route_decision(
         )
         return MenuInterceptResult(
             handled=True,
-            response_text=_format_summary_status_prompt(option, choices),
+            response_text=_format_summary_status_prompt(option, choices, session.channel or "web"),
         )
 
     if route == SUMMARY_ROUTE_EMAIL_CONFIRMATION:
@@ -2399,40 +2409,48 @@ def _summary_status_choices() -> List[Dict[str, Any]]:
 def _format_summary_company_prompt(
     option: AgentMenuOption,
     choices: List[Dict[str, Any]],
+    channel: str = "web",
 ) -> str:
     return build_summary_company_prompt(
         _build_workflow_display_option(option),
         choices,
+        channel=channel,
     )
 
 
 def _format_operation_company_prompt(
     option: AgentMenuOption,
     choices: List[Dict[str, Any]],
+    channel: str = "web",
 ) -> str:
     return build_operation_company_prompt(
         _build_workflow_display_option(option),
         choices,
+        channel=channel,
     )
 
 
 def _format_summary_collaborator_prompt(
     option: AgentMenuOption,
     choices: List[Dict[str, Any]],
+    channel: str = "web",
 ) -> str:
     return build_summary_collaborator_prompt(
         _build_workflow_display_option(option),
         choices,
+        channel=channel,
     )
 
 
 def _format_summary_status_prompt(
     option: AgentMenuOption,
     choices: List[Dict[str, Any]],
+    channel: str = "web",
 ) -> str:
     return build_summary_status_prompt(
         _build_workflow_display_option(option),
         choices,
+        channel=channel,
     )
 
 
@@ -3677,109 +3695,21 @@ def _format_my_work_report(
     payload: Dict[str, Any],
     user_id: int,
 ) -> str:
-    style = _get_my_work_channel_style(channel=channel)
-    base_date = _format_date_br(_local_today())
-    period_label = _describe_my_work_period(
-        action=action,
-        start_date=start_date,
-        end_date=end_date,
-    )
     manager_name = _resolve_report_user_name(user_id=user_id)
-    collaborator_label = _resolve_my_work_collaborator_label(
-        payload=payload,
+    return build_my_work_report(
+        action=action,
+        company_label=company_label,
         tasks=tasks,
         processes=processes,
-        fallback_name=manager_name,
+        meetings=meetings,
+        start_date=start_date,
+        end_date=end_date,
+        channel=channel,
+        payload=payload,
+        manager_name=manager_name,
+        reference_date=_local_today(),
+        format_date_br=_format_date_br,
     )
-    normalized_company_label = str(company_label or "").strip().lower()
-    company_phrase = (
-        company_label
-        if normalized_company_label.startswith("empresa")
-        or normalized_company_label.startswith("empresas")
-        else f"empresa {company_label}"
-    )
-    manager_name_norm = manager_name.strip().lower()
-    collaborator_label_norm = collaborator_label.strip().lower()
-    if collaborator_label_norm == f"do colaborador {manager_name_norm}":
-        collaborator_label = "do seu contexto de atuação"
-
-    title = (
-        f"Resumo das atividades {period_label} nas {company_phrase}, "
-        f"{collaborator_label}, com referência em {base_date}."
-    )
-
-    company_groups = _group_my_work_by_company(tasks=tasks, processes=processes, meetings=meetings)
-    if not company_groups:
-        return f"{_sanitize_for_channel(title, channel)}\n\nNenhum item encontrado para o filtro informado."
-
-    date_name = "Conclusao" if action == "my_work.completed_range" else "Prazo"
-
-    lines = [_sanitize_for_channel(title, channel), ""]
-    for group_idx, comp in enumerate(company_groups):
-        if group_idx > 0:
-            lines.append("")
-
-        company_code = comp.get("company_code") or "CP"
-        company_name = comp.get("company_name") or "Empresa"
-        lines.append(style["header"]("Empresa"))
-        lines.append(
-            f"{style['bullet']}{_sanitize_for_channel(f'{company_code} - {company_name}', channel)}"
-        )
-        lines.append("")
-
-        lines.append(style["header"]("Projetos"))
-        projects = comp.get("projects") or []
-        if projects:
-            for project in projects:
-                project_label = f"{project['project_code']} - {project['project_name']}"
-                lines.append(f"{style['bullet']}{_sanitize_for_channel(project_label, channel)}")
-                lines.append(f"{style['sub_bullet']}{_sanitize_for_channel('Atividades', channel)}")
-                for activity in project.get("activities") or []:
-                    date_label = activity["completion_date"] if action == "my_work.completed_range" else activity["due_date"]
-                    activity_line = (
-                        f"{activity['activity_code']} - {activity['title']} | "
-                        f"Responsavel: {activity['responsible']} | {date_name}: {_format_date_br(date_label)}"
-                    )
-                    lines.append(f"{style['item_bullet']}{_sanitize_for_channel(activity_line, channel)}")
-        else:
-            lines.append(f"{style['bullet']}Sem atividades no periodo.")
-        lines.append("")
-
-        lines.append(style["header"]("Processos"))
-        process_groups = comp.get("processes") or []
-        if process_groups:
-            for proc in process_groups:
-                process_label = f"{proc['process_code']} - {proc['process_name']}"
-                lines.append(f"{style['bullet']}{_sanitize_for_channel(process_label, channel)}")
-                lines.append(f"{style['sub_bullet']}{_sanitize_for_channel('Instancias', channel)}")
-                for instance in proc.get("instances") or []:
-                    date_label = instance["completion_date"] if action == "my_work.completed_range" else instance["due_date"]
-                    instance_line = (
-                        f"{instance['instance_code']} - {instance['title']} | "
-                        f"Dono do Processo: {instance['owner']} | {date_name}: {_format_date_br(date_label)}"
-                    )
-                    lines.append(f"{style['item_bullet']}{_sanitize_for_channel(instance_line, channel)}")
-        else:
-            lines.append(f"{style['bullet']}Sem instancias no periodo.")
-        lines.append("")
-
-        lines.append(style["header"]("Reunioes Agendadas"))
-        meeting_items = comp.get("meetings") or []
-        if meeting_items:
-            for meeting in meeting_items:
-                date_label = meeting["completion_date"] if action == "my_work.completed_range" else meeting["due_date"]
-                project_ref = f"{meeting['project_code']} - {meeting['project_name']}" if meeting.get("project_code") else "-"
-                meeting_line = (
-                    f"{meeting['meeting_code']} - {meeting['meeting_name']} | "
-                    f"Projeto: {project_ref} | {date_name}: {_format_date_br(date_label)}"
-                )
-                if action != "my_work.completed_range" and meeting.get("scheduled_time") and meeting.get("scheduled_time") != "-":
-                    meeting_line += f" | Hora: {meeting['scheduled_time']}"
-                lines.append(f"{style['bullet']}{_sanitize_for_channel(meeting_line, channel)}")
-        else:
-            lines.append(f"{style['bullet']}Sem reunioes agendadas no periodo.")
-
-    return "\n".join(lines)
 
 
 def _group_my_work_by_company(
@@ -3787,100 +3717,11 @@ def _group_my_work_by_company(
     processes: List[Dict[str, Any]],
     meetings: List[Dict[str, Any]],
 ) -> List[Dict[str, Any]]:
-    grouped: Dict[int, Dict[str, Any]] = {}
-
-    def _ensure_company(item: Dict[str, Any]) -> Dict[str, Any]:
-        cid = int(item.get("company_id") or 0)
-        company = grouped.get(cid)
-        if company:
-            return company
-
-        company = {
-            "company_id": cid,
-            "company_code": item.get("company_code") or "CP",
-            "company_name": item.get("company_name") or f"Empresa {cid}" if cid else "Empresa",
-            "projects_map": {},
-            "processes_map": {},
-            "meetings": [],
-        }
-        grouped[cid] = company
-        return company
-
-    for task in tasks or []:
-        company = _ensure_company(task)
-        project_code = task.get("project_code") or "SEM-CODIGO"
-        project_entry = company["projects_map"].get(project_code)
-        if not project_entry:
-            project_entry = {
-                "project_code": project_code,
-                "project_name": task.get("project_name") or "Sem nome",
-                "activities": [],
-            }
-            company["projects_map"][project_code] = project_entry
-        project_entry["activities"].append(task)
-
-    for proc in processes or []:
-        company = _ensure_company(proc)
-        process_code = proc.get("process_code") or "SEM-CODIGO"
-        process_entry = company["processes_map"].get(process_code)
-        if not process_entry:
-            process_entry = {
-                "process_code": process_code,
-                "process_name": proc.get("process_name") or "Sem nome",
-                "instances": [],
-            }
-            company["processes_map"][process_code] = process_entry
-        process_entry["instances"].append(proc)
-
-    for meeting in meetings or []:
-        company = _ensure_company(meeting)
-        company["meetings"].append(meeting)
-
-    companies: List[Dict[str, Any]] = []
-    for item in grouped.values():
-        projects = list(item["projects_map"].values())
-        projects.sort(key=lambda p: ((p.get("project_code") or ""), (p.get("project_name") or "")))
-        for p in projects:
-            p["activities"].sort(key=lambda a: ((a.get("due_date") or ""), (a.get("activity_code") or "")))
-
-        process_groups = list(item["processes_map"].values())
-        process_groups.sort(key=lambda p: ((p.get("process_code") or ""), (p.get("process_name") or "")))
-        for p in process_groups:
-            p["instances"].sort(key=lambda i: ((i.get("due_date") or ""), (i.get("instance_code") or "")))
-
-        meetings_sorted = sorted(
-            item["meetings"],
-            key=lambda m: ((m.get("due_date") or ""), (m.get("scheduled_time") or ""), (m.get("meeting_code") or "")),
-        )
-
-        companies.append({
-            "company_id": item["company_id"],
-            "company_code": item["company_code"],
-            "company_name": item["company_name"],
-            "projects": projects,
-            "processes": process_groups,
-            "meetings": meetings_sorted,
-        })
-
-    companies.sort(key=lambda c: ((c.get("company_code") or ""), (c.get("company_name") or "")))
-    return companies
+    return group_my_work_by_company(tasks=tasks, processes=processes, meetings=meetings)
 
 
 def _get_my_work_channel_style(channel: str) -> Dict[str, Any]:
-    normalized = str(channel or "web").strip().lower()
-    if normalized == "whatsapp":
-        return {
-            "header": lambda text: f"*{text}*",
-            "bullet": "• ",
-            "sub_bullet": "  ◦ ",
-            "item_bullet": "    ▪ ",
-        }
-    return {
-        "header": lambda text: text,
-        "bullet": "- ",
-        "sub_bullet": "  - ",
-        "item_bullet": "    - ",
-    }
+    return get_bullet_style(channel)
 
 
 def _resolve_report_user_name(user_id: int) -> str:
@@ -3898,46 +3739,12 @@ def _resolve_my_work_collaborator_label(
     processes: List[Dict[str, Any]],
     fallback_name: str,
 ) -> str:
-    explicit = str(
-        payload.get("colaborador")
-        or payload.get("colaborador_nome")
-        or payload.get("responsavel")
-        or payload.get("responsável")
-        or ""
-    ).strip()
-    if explicit:
-        explicit_norm = explicit.lower()
-        if explicit_norm in {"todos", "todos os colaboradores", "todos colaboradores"}:
-            return "de todos os colaboradores"
-        if (
-            ", " in explicit
-            or " e " in explicit_norm
-            or " e mais " in explicit_norm
-        ):
-            return f"dos colaboradores {explicit}"
-        return f"do colaborador {explicit}"
-
-    names = {
-        str(t.get("responsible") or "").strip()
-        for t in (tasks or [])
-        if str(t.get("responsible") or "").strip() and str(t.get("responsible")).strip().lower() != "sem responsavel"
-    }
-    names.update(
-        str(p.get("owner") or "").strip()
-        for p in (processes or [])
-        if str(p.get("owner") or "").strip() and str(p.get("owner")).strip().lower() != "sem dono definido"
+    return resolve_my_work_collaborator_label(
+        payload=payload,
+        tasks=tasks,
+        processes=processes,
+        fallback_name=fallback_name,
     )
-    names = {n for n in names if n}
-
-    if not names:
-        return f"do colaborador {fallback_name}"
-
-    ordered = sorted(names)
-    if len(ordered) == 1:
-        return f"do colaborador {ordered[0]}"
-    if len(ordered) == 2:
-        return f"dos colaboradores {ordered[0]} e {ordered[1]}"
-    return f"dos colaboradores {', '.join(ordered[:3])}"
 
 
 def _describe_my_work_period(
@@ -3945,41 +3752,12 @@ def _describe_my_work_period(
     start_date: Optional[date],
     end_date: Optional[date],
 ) -> str:
-    today = _local_today()
-    if action == "my_work.open":
-        return "em aberto"
-    if action == "my_work.overdue":
-        return "atrasadas"
-    if action == "my_work.completed_range":
-        return (
-            f"concluidas no periodo de {_format_date_br(start_date)} a {_format_date_br(end_date)}"
-            if start_date and end_date else
-            "concluidas no periodo informado"
-        )
-    if action != "my_work.due_range" or not start_date or not end_date:
-        return "com vencimento no periodo informado"
-
-    if start_date == today and end_date == today:
-        return f"vencendo hoje ({_format_date_br(today)})"
-
-    if start_date == today:
-        if end_date == today + timedelta(days=6):
-            return (
-                f"vencendo nesta semana ({_format_date_br(start_date)} a {_format_date_br(end_date)})"
-            )
-        if end_date == today + timedelta(days=14):
-            return (
-                f"vencendo nos proximos 15 dias ({_format_date_br(start_date)} a {_format_date_br(end_date)})"
-            )
-        first_day_next_month = (today.replace(day=1) + timedelta(days=32)).replace(day=1)
-        end_of_month = first_day_next_month - timedelta(days=1)
-        if end_date == end_of_month:
-            return (
-                f"com vencimento neste mes ({_format_date_br(start_date)} a {_format_date_br(end_date)})"
-            )
-
-    return (
-        f"com vencimento no periodo de {_format_date_br(start_date)} a {_format_date_br(end_date)}"
+    return describe_my_work_period(
+        action=action,
+        start_date=start_date,
+        end_date=end_date,
+        today=_local_today(),
+        format_date_br=_format_date_br,
     )
 
 
@@ -4001,15 +3779,7 @@ def _format_date_br(value: Any) -> str:
 
 
 def _sanitize_for_channel(value: Any, channel: str) -> str:
-    text = str(value or "")
-    if str(channel or "").strip().lower() == "telegram":
-        return (
-            text
-            .replace("&", "&amp;")
-            .replace("<", "&lt;")
-            .replace(">", "&gt;")
-        )
-    return text
+    return sanitize_for_channel(value, channel)
 
 
 def _extract_id_from_code(code_value: str) -> Optional[int]:
@@ -4072,16 +3842,18 @@ def _format_ambiguous_options(candidates: List[AgentMenuOption]) -> str:
 def _format_item_selection_prompt(
     option: AgentMenuOption,
     selection: Dict[str, Any],
+    channel: str = "web",
 ) -> str:
     return build_item_selection_prompt(
         _build_workflow_display_option(option),
         selection,
         format_project_status_label=_format_project_status_label,
         format_date_br=_format_date_br,
+        channel=channel,
     )
 
 
-def _format_confirmation(option: AgentMenuOption, payload: Dict[str, Any]) -> str:
+def _format_confirmation(option: AgentMenuOption, payload: Dict[str, Any], channel: str = "web") -> str:
     return build_confirmation_text(
         _build_workflow_display_option(option),
         _public_payload(payload),
@@ -4090,6 +3862,7 @@ def _format_confirmation(option: AgentMenuOption, payload: Dict[str, Any]) -> st
         format_process_instance_choice_line=_format_process_instance_choice_line,
         format_meeting_choice_line=_format_meeting_choice_line,
         format_objective_label=_format_objective_label,
+        channel=channel,
     )
 
 
@@ -4195,11 +3968,13 @@ def _format_missing_fields(
     option: AgentMenuOption,
     missing_fields: List[Dict[str, str]],
     payload: Dict[str, Any],
+    channel: str = "web",
 ) -> str:
     return build_missing_fields_prompt(
         _build_workflow_display_option(option),
         missing_fields,
         payload,
+        channel=channel,
     )
 
 

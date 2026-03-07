@@ -2,6 +2,7 @@ from __future__ import annotations
 
 from typing import Any, Callable, Dict, List
 
+from .channel_presenter import format_channel_heading, sanitize_for_channel
 from .confirmation_presenter import WorkflowDisplayOption
 
 
@@ -11,6 +12,7 @@ def build_item_selection_prompt(
     *,
     format_project_status_label: Callable[[Any], str],
     format_date_br: Callable[[Any], str],
+    channel: str = "web",
 ) -> str:
     choices = selection.get("choices") or []
     scope_label = selection.get("scope_label") or "empresa ativa"
@@ -32,12 +34,12 @@ def build_item_selection_prompt(
         )
 
     action = str(option.action_key or "").strip().lower()
-    header = f"{option.code} - {option.title}"
+    header = format_channel_heading(f"{option.code} - {option.title}", channel)
     if selection_kind == "project_picker":
         lines = [
             header,
             "",
-            f"Escolha o projeto ativo para a {scope_label}:",
+            f"Escolha o projeto ativo para a {sanitize_for_channel(scope_label, channel)}:",
         ]
         for item in choices:
             code = item.get("code") or "-"
@@ -49,7 +51,10 @@ def build_item_selection_prompt(
             if progress is not None:
                 detail_parts.append(f"Progresso: {progress}%")
             detail_parts.append(f"Prazo: {due_str}")
-            lines.append(f"{item['index']} - {code} - {title} | {' | '.join(detail_parts)}")
+            lines.append(
+                f"{item['index']} - {sanitize_for_channel(code, channel)} - "
+                f"{sanitize_for_channel(title, channel)} | {sanitize_for_channel(' | '.join(detail_parts), channel)}"
+            )
         lines.append("")
         lines.append("Informe apenas o numero do projeto.")
         lines.append("Exemplo: 1")
@@ -63,7 +68,7 @@ def build_item_selection_prompt(
             "Selecione o objetivo do diagnostico:",
         ]
         for item in choices:
-            lines.append(f"{item['index']} - {item.get('title') or item.get('code') or '-'}")
+            lines.append(f"{item['index']} - {sanitize_for_channel(item.get('title') or item.get('code') or '-', channel)}")
         lines.append("")
         lines.append("Informe o numero da opcao.")
         lines.append("Exemplo: 1")
@@ -73,13 +78,13 @@ def build_item_selection_prompt(
         lines = [
             header,
             "",
-            f"Existem {article} seguintes {item_label_plural} disponiveis para a {scope_label}:",
+            f"Existem {article} seguintes {sanitize_for_channel(item_label_plural, channel)} disponiveis para a {sanitize_for_channel(scope_label, channel)}:",
         ]
     else:
         lines = [
             header,
             "",
-            f"Existem {article} seguintes {item_label_plural} em aberto para a {scope_label}:",
+            f"Existem {article} seguintes {sanitize_for_channel(item_label_plural, channel)} em aberto para a {sanitize_for_channel(scope_label, channel)}:",
         ]
     for item in choices:
         code = item.get("code") or "-"
@@ -87,14 +92,24 @@ def build_item_selection_prompt(
         if action in {"meeting.start", "meeting.summarize"}:
             status = item.get("status") or "-"
             when = f"{item.get('scheduled_date') or '-'} {item.get('scheduled_time') or ''}".strip()
-            lines.append(f"{item['index']} - ID {code} - {title} | Status: {status} | Data: {when}")
+            lines.append(
+                f"{item['index']} - ID {sanitize_for_channel(code, channel)} - "
+                f"{sanitize_for_channel(title, channel)} | Status: {sanitize_for_channel(status, channel)} | "
+                f"Data: {sanitize_for_channel(when, channel)}"
+            )
         else:
             due_str = item.get("due_date") or "-"
             detail = item.get("project_name") or item.get("process_code") or ""
             if detail:
-                lines.append(f"{item['index']} - {code} - {title} | {detail} | Prazo: {due_str}")
+                lines.append(
+                    f"{item['index']} - {sanitize_for_channel(code, channel)} - {sanitize_for_channel(title, channel)} | "
+                    f"{sanitize_for_channel(detail, channel)} | Prazo: {sanitize_for_channel(due_str, channel)}"
+                )
             else:
-                lines.append(f"{item['index']} - {code} - {title} | Prazo: {due_str}")
+                lines.append(
+                    f"{item['index']} - {sanitize_for_channel(code, channel)} - {sanitize_for_channel(title, channel)} | "
+                    f"Prazo: {sanitize_for_channel(due_str, channel)}"
+                )
 
     lines.append("")
     if action in {"meeting.start", "meeting.summarize"}:

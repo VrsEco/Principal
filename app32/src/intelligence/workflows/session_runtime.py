@@ -51,14 +51,14 @@ class SessionPromptRenderer:
         *,
         render_root_menu: Callable[[Optional[int]], str],
         public_payload: Callable[[Dict[str, Any]], Dict[str, Any]],
-        render_confirmation: Callable[[Any, Dict[str, Any]], str],
-        render_missing_fields: Callable[[Any, List[Dict[str, Any]], Dict[str, Any]], str],
-        render_item_selection: Callable[[Any, Dict[str, Any]], str],
-        render_operation_company: Callable[[Any, List[Dict[str, Any]]], str],
-        render_summary_period: Callable[[Any], str],
-        render_summary_company: Callable[[Any, List[Dict[str, Any]]], str],
-        render_summary_collaborator: Callable[[Any, List[Dict[str, Any]]], str],
-        render_summary_status: Callable[[Any, List[Dict[str, Any]]], str],
+        render_confirmation: Callable[[Any, Dict[str, Any], str], str],
+        render_missing_fields: Callable[[Any, List[Dict[str, Any]], Dict[str, Any], str], str],
+        render_item_selection: Callable[[Any, Dict[str, Any], str], str],
+        render_operation_company: Callable[[Any, List[Dict[str, Any]], str], str],
+        render_summary_period: Callable[[Any, str], str],
+        render_summary_company: Callable[[Any, List[Dict[str, Any]], str], str],
+        render_summary_collaborator: Callable[[Any, List[Dict[str, Any]], str], str],
+        render_summary_status: Callable[[Any, List[Dict[str, Any]], str], str],
         summary_status_choices: Callable[[], List[Dict[str, Any]]],
         company_selection_status: str,
         summary_email_confirm_status: str,
@@ -95,14 +95,16 @@ class SessionPromptRenderer:
 
         payload = dict(getattr(session, "collected_data", {}) or {})
         status = str(getattr(session, "status", "idle") or "idle")
+        channel = str(getattr(session, "channel", "web") or "web")
 
         if status == "awaiting_confirmation":
-            return self._render_confirmation(option, payload)
+            return self._render_confirmation(option, payload, channel)
         if status == "awaiting_fields":
             return self._render_missing_fields(
                 option,
                 list(getattr(session, "missing_fields", []) or []),
                 self._public_payload(payload_without_navigation(payload)),
+                channel,
             )
         if status == "awaiting_item_selection":
             return self._render_item_selection(
@@ -113,19 +115,21 @@ class SessionPromptRenderer:
                     "item_label_plural": payload.get("_item_label_plural"),
                     "choices": payload.get("_choices") or [],
                 },
+                channel,
             )
         if status == self._company_selection_status:
-            return self._render_operation_company(option, payload.get("_operation_company_choices") or [])
+            return self._render_operation_company(option, payload.get("_operation_company_choices") or [], channel)
         if status == "awaiting_summary_dates":
-            return self._render_summary_period(option)
+            return self._render_summary_period(option, channel)
         if status == "awaiting_summary_company":
-            return self._render_summary_company(option, payload.get("_summary_company_choices") or [])
+            return self._render_summary_company(option, payload.get("_summary_company_choices") or [], channel)
         if status == "awaiting_summary_collaborator":
-            return self._render_summary_collaborator(option, payload.get("_summary_collaborator_choices") or [])
+            return self._render_summary_collaborator(option, payload.get("_summary_collaborator_choices") or [], channel)
         if status == "awaiting_summary_status":
             return self._render_summary_status(
                 option,
                 payload.get("_summary_status_choices") or self._summary_status_choices(),
+                channel,
             )
         if status == self._summary_email_confirm_status:
             report_text = str(payload.get("_summary_report_text") or "").strip()

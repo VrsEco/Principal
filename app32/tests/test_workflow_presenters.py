@@ -7,7 +7,10 @@ from src.intelligence.workflows.presenters import (
     WorkflowDisplayOption,
     build_confirmation_display_items,
     build_confirmation_text,
+    build_missing_fields_prompt,
+    build_operation_company_prompt,
     build_summary_collaborator_prompt,
+    build_summary_company_prompt,
     build_summary_period_prompt,
 )
 
@@ -82,3 +85,56 @@ def test_confirmation_presenter_builds_text():
     assert "5.1 - Diagnosticar Funcionamento" in text
     assert "- objetivo: MELHORAR VENDAS" in text
     assert "responda 'sim'" in text.lower()
+
+
+def test_confirmation_presenter_supports_whatsapp_heading():
+    option = WorkflowDisplayOption(
+        code="1.4",
+        title="Cadastrar Atividade de Projeto",
+        action_key="project_task.create",
+    )
+
+    text = build_confirmation_text(
+        option,
+        {"codigo_projeto": "AA.J.17"},
+        format_project_choice_line=lambda value: value,
+        format_project_task_choice_line=lambda value: None,
+        format_process_instance_choice_line=lambda value: None,
+        format_meeting_choice_line=lambda value: None,
+        format_objective_label=lambda value: value,
+        channel="whatsapp",
+    )
+
+    assert "*Confirme que voce quer:*" in text
+    assert "*1.4 - Cadastrar Atividade de Projeto*" in text
+
+
+def test_summary_company_presenter_sanitizes_telegram_labels():
+    option = WorkflowDisplayOption(code="3.5.1", title="Hoje", action_key="summary.today")
+
+    text = build_summary_company_prompt(
+        option,
+        [{"index": 1, "label": "AA <Versus> & Co"}],
+        channel="telegram",
+    )
+
+    assert "AA &lt;Versus&gt; &amp; Co" in text
+
+
+def test_missing_fields_and_company_prompt_support_channel_formatting():
+    option = WorkflowDisplayOption(code="1.4", title="Cadastrar Atividade", action_key="project_task.create")
+
+    fields_text = build_missing_fields_prompt(
+        option,
+        [{"key": "nome", "label": "Nome <Atividade>"}],
+        {"empresa": "AA & Co"},
+        channel="whatsapp",
+    )
+    company_text = build_operation_company_prompt(
+        option,
+        [{"index": 1, "label": "AA - Versus"}],
+        channel="whatsapp",
+    )
+
+    assert "*Voce quer fazer 1.4 - Cadastrar Atividade.*" in fields_text
+    assert "*1.4 - Cadastrar Atividade*" in company_text

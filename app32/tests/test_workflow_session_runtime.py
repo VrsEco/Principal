@@ -19,18 +19,20 @@ def _build_renderer() -> SessionPromptRenderer:
         public_payload=lambda payload: {
             key: value for key, value in (payload or {}).items() if not str(key).startswith("_")
         },
-        render_confirmation=lambda option, payload: f"confirm:{option.code}:{payload.get('nome')}",
-        render_missing_fields=lambda option, missing_fields, payload: (
-            f"fields:{option.code}:{payload}:{len(missing_fields)}"
+        render_confirmation=lambda option, payload, channel: (
+            f"confirm:{option.code}:{payload.get('nome')}:{channel}"
         ),
-        render_item_selection=lambda option, selection: (
-            f"select:{option.code}:{selection.get('selection_kind')}:{len(selection.get('choices') or [])}"
+        render_missing_fields=lambda option, missing_fields, payload, channel: (
+            f"fields:{option.code}:{payload}:{len(missing_fields)}:{channel}"
         ),
-        render_operation_company=lambda option, choices: f"company:{option.code}:{len(choices)}",
-        render_summary_period=lambda option: f"period:{option.code}",
-        render_summary_company=lambda option, choices: f"summary-company:{option.code}:{len(choices)}",
-        render_summary_collaborator=lambda option, choices: f"summary-collab:{option.code}:{len(choices)}",
-        render_summary_status=lambda option, choices: f"summary-status:{option.code}:{len(choices)}",
+        render_item_selection=lambda option, selection, channel: (
+            f"select:{option.code}:{selection.get('selection_kind')}:{len(selection.get('choices') or [])}:{channel}"
+        ),
+        render_operation_company=lambda option, choices, channel: f"company:{option.code}:{len(choices)}:{channel}",
+        render_summary_period=lambda option, channel: f"period:{option.code}:{channel}",
+        render_summary_company=lambda option, choices, channel: f"summary-company:{option.code}:{len(choices)}:{channel}",
+        render_summary_collaborator=lambda option, choices, channel: f"summary-collab:{option.code}:{len(choices)}:{channel}",
+        render_summary_status=lambda option, choices, channel: f"summary-status:{option.code}:{len(choices)}:{channel}",
         summary_status_choices=lambda: [{"index": 1, "label": "Abertas"}],
         company_selection_status="awaiting_operation_company",
         summary_email_confirm_status="awaiting_summary_email_confirmation",
@@ -83,6 +85,15 @@ def test_build_session_snapshot_ignores_idle_state():
     assert build_session_snapshot(session) is None
 
 
+def test_session_prompt_renderer_passes_session_channel():
+    renderer = _build_renderer()
+    session = _build_session(channel="whatsapp")
+
+    text = renderer.render(session)
+
+    assert text == "fields:3.5.1:{'nome': 'Ana'}:1:whatsapp"
+
+
 def test_prompt_renderer_sanitizes_hidden_payload_on_missing_fields():
     renderer = _build_renderer()
     session = _build_session(
@@ -95,7 +106,7 @@ def test_prompt_renderer_sanitizes_hidden_payload_on_missing_fields():
 
     text = renderer.render(session)
 
-    assert text == "fields:3.5.1:{'nome': 'Ana'}:1"
+    assert text == "fields:3.5.1:{'nome': 'Ana'}:1:web"
 
 
 def test_navigation_runtime_transition_pushes_previous_snapshot():
@@ -157,7 +168,7 @@ def test_navigation_runtime_handle_back_navigation_restores_previous_snapshot():
     assert session.status == "awaiting_fields"
     assert session.collected_data == {"nome": "Ana"}
     assert session.missing_fields == [{"key": "prazo"}]
-    assert result.response_text == "fields:3.5.1:{'nome': 'Ana'}:1"
+    assert result.response_text == "fields:3.5.1:{'nome': 'Ana'}:1:web"
 
 
 def test_navigation_runtime_handle_back_navigation_resets_when_history_missing():
