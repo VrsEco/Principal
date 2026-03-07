@@ -29,6 +29,11 @@ def _parse_args() -> argparse.Namespace:
         default=0.70,
         help="Acurácia mínima esperada para retornar sucesso.",
     )
+    parser.add_argument(
+        "--config",
+        default=os.environ.get("FLASK_CONFIG", "development"),
+        help="Configuração Flask usada para criar a aplicação.",
+    )
     return parser.parse_args()
 
 
@@ -38,7 +43,7 @@ def main() -> int:
     sys.path.insert(0, project_root)
 
     load_dotenv(os.path.join(project_root, ".env"))
-    os.environ.setdefault("FLASK_CONFIG", "development")
+    os.environ["FLASK_CONFIG"] = args.config
 
     from sqlalchemy import or_
 
@@ -50,7 +55,7 @@ def main() -> int:
         evaluate_workflow_discovery,
     )
 
-    app = create_app(os.environ.get("FLASK_CONFIG", "development"))
+    app = create_app(args.config)
     with app.app_context():
         query = AgentMenuOption.query.filter(AgentMenuOption.is_active.is_(True))
         if args.company_id is not None:

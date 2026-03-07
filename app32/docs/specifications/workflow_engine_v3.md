@@ -309,3 +309,5 @@ Na sequência, as primeiras execuções diretas também começaram a sair do
 - conectar um reranker LLM real sobre o top-k do `HybridWorkflowMatcher`
 - evoluir a camada semântica para embeddings/cache vetorial de workflows
 - padronizar presenters por canal (`web`, `whatsapp`, `telegram`)
+
+- `scripts/qa/run_workflow_discovery_evaluation.py`: runner utilitário com `--config` para validar discovery em development ou production.
